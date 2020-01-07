@@ -579,46 +579,37 @@ def si_setcc_uniform : PatFrag <
 // SDNodes PatFrags for d16 loads
 //===----------------------------------------------------------------------===//
 
-class LoadD16Frag <SDPatternOperator op> : PatFrag<(ops node:$ptr, node:$tied_in), (op node:$ptr, node:$tied_in)>;
-class LocalLoadD16 <SDPatternOperator op> : LoadD16Frag <op>, LocalAddress;
-class GlobalLoadD16 <SDPatternOperator op> : LoadD16Frag <op>, GlobalLoadAddress;
-class PrivateLoadD16 <SDPatternOperator op> : LoadD16Frag <op>, PrivateAddress;
-class FlatLoadD16 <SDPatternOperator op> : LoadD16Frag <op>, FlatLoadAddress;
+class LoadD16Frag <SDPatternOperator op> : PatFrag<
+  (ops node:$ptr, node:$tied_in),
+  (op node:$ptr, node:$tied_in)> {
+  let IsLoad = 1;
+}
 
-def load_d16_hi_local : LocalLoadD16 <SIload_d16_hi>;
-def az_extloadi8_d16_hi_local : LocalLoadD16 <SIload_d16_hi_u8>;
-def sextloadi8_d16_hi_local : LocalLoadD16 <SIload_d16_hi_i8>;
+foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
+let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
 
-def load_d16_hi_global : GlobalLoadD16 <SIload_d16_hi>;
-def az_extloadi8_d16_hi_global : GlobalLoadD16 <SIload_d16_hi_u8>;
-def sextloadi8_d16_hi_global : GlobalLoadD16 <SIload_d16_hi_i8>;
+def load_d16_hi_#as : LoadD16Frag <SIload_d16_hi>;
 
-def load_d16_hi_private : PrivateLoadD16 <SIload_d16_hi>;
-def az_extloadi8_d16_hi_private : PrivateLoadD16 <SIload_d16_hi_u8>;
-def sextloadi8_d16_hi_private : PrivateLoadD16 <SIload_d16_hi_i8>;
+def az_extloadi8_d16_hi_#as : LoadD16Frag <SIload_d16_hi_u8> {
+  let MemoryVT = i8;
+}
 
-def load_d16_hi_flat : FlatLoadD16 <SIload_d16_hi>;
-def az_extloadi8_d16_hi_flat : FlatLoadD16 <SIload_d16_hi_u8>;
-def sextloadi8_d16_hi_flat : FlatLoadD16 <SIload_d16_hi_i8>;
+def sextloadi8_d16_hi_#as : LoadD16Frag <SIload_d16_hi_i8> {
+  let MemoryVT = i8;
+}
 
+def load_d16_lo_#as : LoadD16Frag <SIload_d16_lo>;
 
-def load_d16_lo_local : LocalLoadD16 <SIload_d16_lo>;
-def az_extloadi8_d16_lo_local : LocalLoadD16 <SIload_d16_lo_u8>;
-def sextloadi8_d16_lo_local : LocalLoadD16 <SIload_d16_lo_i8>;
+def az_extloadi8_d16_lo_#as : LoadD16Frag <SIload_d16_lo_u8> {
+  let MemoryVT = i8;
+}
 
-def load_d16_lo_global : GlobalLoadD16 <SIload_d16_lo>;
-def az_extloadi8_d16_lo_global : GlobalLoadD16 <SIload_d16_lo_u8>;
-def sextloadi8_d16_lo_global : GlobalLoadD16 <SIload_d16_lo_i8>;
+def sextloadi8_d16_lo_#as : LoadD16Frag <SIload_d16_lo_i8> {
+  let MemoryVT = i8;
+}
 
-def load_d16_lo_private : PrivateLoadD16 <SIload_d16_lo>;
-def az_extloadi8_d16_lo_private : PrivateLoadD16 <SIload_d16_lo_u8>;
-def sextloadi8_d16_lo_private : PrivateLoadD16 <SIload_d16_lo_i8>;
-
-def load_d16_lo_flat : FlatLoadD16 <SIload_d16_lo>;
-def az_extloadi8_d16_lo_flat : FlatLoadD16 <SIload_d16_lo_u8>;
-def sextloadi8_d16_lo_flat : FlatLoadD16 <SIload_d16_lo_i8>;
-
-
+} // End let AddressSpaces = ...
+} // End foreach AddrSpace
 
 def lshr_rev : PatFrag <
   (ops node:$src1, node:$src0),
