@@ -1153,6 +1153,7 @@ private:
     virtual void ParseLexedMemberInitializers();
     virtual void ParseLexedMethodDefs();
     virtual void ParseLexedAttributes();
+    virtual void ParseLexedPragmas();
   };
 
   /// Inner node of the LateParsedDeclaration tree that parses
@@ -1166,6 +1167,7 @@ private:
     void ParseLexedMemberInitializers() override;
     void ParseLexedMethodDefs() override;
     void ParseLexedAttributes() override;
+    void ParseLexedPragmas() override;
 
   private:
     Parser *Self;
@@ -1193,6 +1195,26 @@ private:
     void ParseLexedAttributes() override;
 
     void addDecl(Decl *D) { Decls.push_back(D); }
+  };
+
+  /// Contains the lexed tokens of a pragma with arguments that
+  /// may reference member variables and so need to be parsed at the
+  /// end of the class declaration after parsing all other member
+  /// member declarations.
+  class LateParsedPragma : public LateParsedDeclaration {
+    Parser *Self = nullptr;
+    AccessSpecifier AS = AS_none;
+    CachedTokens Toks;
+
+  public:
+    explicit LateParsedPragma(Parser *P, AccessSpecifier AS)
+        : Self(P), AS(AS) {}
+
+    void takeToks(CachedTokens &Cached) { Toks.swap(Cached); }
+    const CachedTokens &toks() const { return Toks; }
+    AccessSpecifier getAccessSpecifier() const { return AS; }
+
+    void ParseLexedPragmas() override;
   };
 
   // A list of late-parsed attributes.  Used by ParseGNUAttributes.
@@ -1454,6 +1476,8 @@ private:
   void ParseLexedMemberInitializers(ParsingClass &Class);
   void ParseLexedMemberInitializer(LateParsedMemberInitializer &MI);
   void ParseLexedObjCMethodDefs(LexedMethod &LM, bool parseMethod);
+  void ParseLexedPragmas(ParsingClass &Class);
+  void ParseLexedPragma(LateParsedPragma &LP);
   bool ConsumeAndStoreFunctionPrologue(CachedTokens &Toks);
   bool ConsumeAndStoreInitializer(CachedTokens &Toks, CachedInitKind CIK);
   bool ConsumeAndStoreConditional(CachedTokens &Toks);
@@ -2875,7 +2899,7 @@ private:
   /// Parses declarative OpenMP directives.
   DeclGroupPtrTy ParseOpenMPDeclarativeDirectiveWithExtDecl(
       AccessSpecifier &AS, ParsedAttributesWithRange &Attrs,
-      DeclSpec::TST TagType = DeclSpec::TST_unspecified,
+      bool Delayed = false, DeclSpec::TST TagType = DeclSpec::TST_unspecified,
       Decl *TagDecl = nullptr);
   /// Parse 'omp declare reduction' construct.
   DeclGroupPtrTy ParseOpenMPDeclareReductionDirective(AccessSpecifier AS);
