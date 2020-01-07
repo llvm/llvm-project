@@ -29110,9 +29110,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
     if (SrcVT == MVT::v2i64 && !IsSigned && Subtarget.is64Bit() &&
-        Subtarget.hasAVX() && !Subtarget.hasAVX512()) {
-      // TODO Any SSE41+ subtarget should work here but BLENDV codegen ends up
-      // a lot worse than it should be.
+        Subtarget.hasSSE41() && !Subtarget.hasAVX512()) {
       SDValue Zero = DAG.getConstant(0, dl, SrcVT);
       SDValue One  = DAG.getConstant(1, dl, SrcVT);
       SDValue Sign = DAG.getNode(ISD::OR, dl, SrcVT,
