@@ -379,11 +379,11 @@ StringRef TParamCommandComment::getParamName(const FullComment *FC) const {
   assert(isPositionValid());
   const TemplateParameterList *TPL = FC->getDeclInfo()->TemplateParameters;
   for (unsigned i = 0, e = getDepth(); i != e; ++i) {
-    if (i == e-1)
+    assert(TPL && "Unknown TemplateParameterList");
+    if (i == e - 1)
       return TPL->getParam(getIndex(i))->getName();
     const NamedDecl *Param = TPL->getParam(getIndex(i));
-    if (const TemplateTemplateParmDecl *TTP =
-          dyn_cast<TemplateTemplateParmDecl>(Param))
+    if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(Param))
       TPL = TTP->getTemplateParameters();
   }
   return "";
