@@ -777,7 +777,7 @@ defm : Arithmetic_i16_0Hi_Pats<umax, V_MAX_U16_e64>;
 defm : Arithmetic_i16_0Hi_Pats<lshl_rev, V_LSHLREV_B16_e64>;
 defm : Arithmetic_i16_0Hi_Pats<lshr_rev, V_LSHRREV_B16_e64>;
 defm : Arithmetic_i16_0Hi_Pats<ashr_rev, V_ASHRREV_I16_e64>;
-}
+}  // End Predicates = [Has16BitInsts, isGFX7GFX8GFX9]
 
 def : ZExt_i16_i1_Pat<zext>;
 def : ZExt_i16_i1_Pat<anyext>;
@@ -796,7 +796,7 @@ def : GCNPat<
   (V_SUB_U16_e64 $src0, NegSubInlineConst16:$src1)
 >;
 
-} // End Predicates = [Has16BitInsts, isGFX7GFX8GFX9]
+} // End Predicates = [Has16BitInsts]
 
 
 //===----------------------------------------------------------------------===//
