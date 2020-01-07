@@ -16,6 +16,7 @@ struct fltSemantics;
 } // namespace llvm
 
 namespace mlir {
+class AffineExpr;
 class AffineMap;
 class FloatType;
 class IndexType;
@@ -245,6 +246,9 @@ public:
 
   /// Whether the given dimension size indicates a dynamic dimension.
   static constexpr bool isDynamic(int64_t dSize) { return dSize < 0; }
+  static constexpr bool isDynamicStrideOrOffset(int64_t dStrideOrOffset) {
+    return dStrideOrOffset == kDynamicStrideOrOffset;
+  }
 };
 
 /// Vector types represent multi-dimensional SIMD vectors, and have a fixed
@@ -548,6 +552,9 @@ public:
 LogicalResult getStridesAndOffset(MemRefType t,
                                   SmallVectorImpl<int64_t> &strides,
                                   int64_t &offset);
+LogicalResult getStridesAndOffset(MemRefType t,
+                                  SmallVectorImpl<AffineExpr> &strides,
+                                  AffineExpr &offset);
 
 /// Given a list of strides (in which MemRefType::getDynamicStrideOrOffset()
 /// represents a dynamic value), return the single result AffineMap which
@@ -569,6 +576,13 @@ LogicalResult getStridesAndOffset(MemRefType t,
 AffineMap makeStridedLinearLayoutMap(ArrayRef<int64_t> strides, int64_t offset,
                                      MLIRContext *context);
 
+/// Return a version of `t` with identity layout if it can be determined
+/// statically that the layout is the canonical contiguous strided layout.
+/// Otherwise pass `t`'s layout into `simplifyAffineMap` and return a copy of
+/// `t` with simplifed layout.
+MemRefType canonicalizeStridedLayout(MemRefType t);
+
+/// Return true if the layout for `t` is compatible with strided semantics.
 bool isStrided(MemRefType t);
 
 } // end namespace mlir
