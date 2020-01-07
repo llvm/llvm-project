@@ -766,7 +766,22 @@ def : GCNPat <
 
 let Predicates = [Has16BitInsts] in {
 
+// Undo sub x, c -> add x, -c canonicalization since c is more likely
+// an inline immediate than -c.
+// TODO: Also do for 64-bit.
+def : GCNPat<
+  (add i16:$src0, (i16 NegSubInlineConst16:$src1)),
+  (V_SUB_U16_e64 $src0, NegSubInlineConst16:$src1)
+>;
+
+
 let Predicates = [Has16BitInsts, isGFX7GFX8GFX9] in {
+
+def : GCNPat<
+  (i32 (zext (add i16:$src0, (i16 NegSubInlineConst16:$src1)))),
+  (V_SUB_U16_e64 $src0, NegSubInlineConst16:$src1)
+>;
+
 defm : Arithmetic_i16_0Hi_Pats<add, V_ADD_U16_e64>;
 defm : Arithmetic_i16_0Hi_Pats<mul, V_MUL_LO_U16_e64>;
 defm : Arithmetic_i16_0Hi_Pats<sub, V_SUB_U16_e64>;
@@ -786,14 +801,6 @@ def : GCNPat <
   (i16 (sext i1:$src)),
   (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                      /*src1mod*/(i32 0), /*src1*/(i32 -1), $src)
->;
-
-// Undo sub x, c -> add x, -c canonicalization since c is more likely
-// an inline immediate than -c.
-// TODO: Also do for 64-bit.
-def : GCNPat<
-  (add i16:$src0, (i16 NegSubInlineConst16:$src1)),
-  (V_SUB_U16_e64 $src0, NegSubInlineConst16:$src1)
 >;
 
 } // End Predicates = [Has16BitInsts]
