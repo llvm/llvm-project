@@ -3927,8 +3927,8 @@ static int __kmp_reset_root(int gtid, kmp_root_t *root) {
   }
   __kmp_reap_thread(root->r.r_uber_thread, 1);
 
-  // We canot put root thread to __kmp_thread_pool, so we have to reap it istead
-  // of freeing.
+  // We canot put root thread to __kmp_thread_pool, so we have to reap it
+  // instead of freeing.
   root->r.r_uber_thread = NULL;
   /* mark root as no longer in use */
   root->r.r_begin = FALSE;

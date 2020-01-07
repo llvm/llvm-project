@@ -87,7 +87,7 @@ if(WIN32)
   endforeach()
 else()
   # It is difficult to create a dummy assembly file that compiles into an
-  # exectuable for every architecture and then check the C compiler to
+  # executable for every architecture and then check the C compiler to
   # see if -x assembler-with-cpp exists and works, so we assume it does for non-Windows.
   set(LIBOMP_HAVE_X_ASSEMBLER_WITH_CPP_FLAG TRUE)
 endif()

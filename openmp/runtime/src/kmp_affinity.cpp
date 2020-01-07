@@ -1124,7 +1124,7 @@ static int __kmp_affinity_create_apicid_map(AddrUnsPair **address2os,
     // - Older OSes are usually found on machines with older chips, which do not
     //   support HT.
     // - The performance penalty for mistakenly identifying a machine as HT when
-    //   it isn't (which results in blocktime being incorrecly set to 0) is
+    //   it isn't (which results in blocktime being incorrectly set to 0) is
     //   greater than the penalty when for mistakenly identifying a machine as
     //   being 1 thread/core when it is really HT enabled (which results in
     //   blocktime being incorrectly set to a positive value).
@@ -4194,7 +4194,7 @@ static void __kmp_aux_affinity_initialize(void) {
   if (__kmp_affinity_top_method == affinity_top_method_all) {
     // In the default code path, errors are not fatal - we just try using
     // another method. We only emit a warning message if affinity is on, or the
-    // verbose flag is set, an the nowarnings flag was not set.
+    // verbose flag is set, and the nowarnings flag was not set.
     const char *file_name = NULL;
     int line = 0;
 #if KMP_USE_HWLOC

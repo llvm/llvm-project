@@ -495,7 +495,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_PARALLEL_END)(void) {
 // argument to __kmp_GOMP_fork_call).
 //
 // Conversely, KMP_DISPATCH_NEXT returns and inclusive upper bound in *p_ub,
-// but the Gnu codegen expects an excluside upper bound, so the adjustment
+// but the Gnu codegen expects an exclusive upper bound, so the adjustment
 // "*p_ub += stride" compensates for the discrepancy.
 //
 // Correction: the gnu codegen always adjusts the upper bound by +-1, not the
@@ -1743,7 +1743,7 @@ void __GOMP_taskloop(void (*func)(void *), void *data,
 
 // 4 byte version of GOMP_doacross_post
 // This verison needs to create a temporary array which converts 4 byte
-// integers into 8 byte integeres
+// integers into 8 byte integers
 template <typename T, bool need_conversion = (sizeof(long) == 4)>
 void __kmp_GOMP_doacross_post(T *count);
 

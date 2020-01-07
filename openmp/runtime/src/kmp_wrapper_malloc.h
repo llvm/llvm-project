@@ -24,7 +24,7 @@
    On Linux* OS, alloca() function is declared in <alloca.h> header, while on
    Windows* OS there is no <alloca.h> header, function _alloca() (note
    underscore!) is declared in <malloc.h>. This header eliminates these
-   differences, so client code incluiding "kmp_wrapper_malloc.h" can rely on
+   differences, so client code including "kmp_wrapper_malloc.h" can rely on
    following routines:
 
         malloc

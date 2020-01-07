@@ -372,7 +372,7 @@ AffParseFilename             "%1$s: parsing %2$s."
 MsgExiting                   "%1$s - exiting."
 IncompatibleLibrary          "Incompatible %1$s library with version %2$s found."
 IttFunctionError             "ittnotify: Function %1$s failed:"
-IttUnknownError              "ittnofify: Error #%1$d."
+IttUnknownError              "ittnotify: Error #%1$d."
 EnvMiddleWarn                "%1$s must be set prior to first parallel region or certain API calls; ignored."
 CnsLockNotDestroyed          "Lock initialized at %1$s(%2$d) was not destroyed"
                                  # %1, %2, %3, %4 -- file, line, func, col
