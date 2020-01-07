@@ -1938,7 +1938,7 @@ def : GCNPat<
 // the ignored src1.
 def : GCNPat<
   (int_amdgcn_readfirstlane (i32 imm:$src)),
-  (S_MOV_B32 $src)
+  (S_MOV_B32 SReg_32:$src)
 >;
 
 multiclass BFMPatterns <ValueType vt, InstSI BFM, InstSI MOV> {
