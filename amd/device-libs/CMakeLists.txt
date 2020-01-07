@@ -99,7 +99,7 @@ set ( CPACK_GENERATOR "DEB;RPM" CACHE STRING "Default packaging generators." )
 
 ## Debian package values
 set ( CPACK_DEBIAN_PACKAGE_MAINTAINER "AMD" )
-set ( CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm" )
+set ( CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm" CACHE PATH "CPACK packaging path prefix default" )
 set ( CPACK_DEBIAN_PACKAGE_DEPENDS "" )
 
 include ( CPack )
