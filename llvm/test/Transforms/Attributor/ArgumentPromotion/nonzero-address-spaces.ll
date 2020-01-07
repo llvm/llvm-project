@@ -13,8 +13,6 @@ define i32 @bar() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call addrspace(1) i32 @foo()
 ; CHECK-NEXT:    unreachable
-; CHECK:       entry.split:
-; CHECK-NEXT:    unreachable
 ;
 
 entry:
