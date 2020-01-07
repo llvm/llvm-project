@@ -665,7 +665,8 @@ lldb::StateType Dpu::GetThreadState(uint32_t thread_index,
     description = "memory fault";
     stop_reason = eStopReasonException;
     return eStateCrashed;
-  } else if (m_context->ScheduledThread(thread_index) && stepping) {
+  } else if (m_context->GetPcOfThread(thread_index) != 0 &&
+             m_context->ScheduledThread(thread_index) && stepping) {
     description = "stepping";
     stop_reason = eStopReasonTrace;
   } else if (m_context->GetPcOfThread(thread_index) != 0 && stepping) {
