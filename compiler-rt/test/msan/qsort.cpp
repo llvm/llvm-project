@@ -74,5 +74,12 @@ int main(int argc, char *argv[]) {
   __msan_check_mem_is_initialized(p, sizeof(long) * kSize1);
   assert(seen2);
   delete[] p;
+
+  p = new long[0];
+  qsort(p, 0, sizeof(long), compar1);
+  delete[] p;
+
+  qsort(nullptr, 0, sizeof(long), compar1);
+
   return 0;
 }
