@@ -179,6 +179,8 @@ private:
 
   InstructionSelector::ComplexRendererFns
   selectDS1Addr1Offset(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectDS64Bit4ByteAligned(MachineOperand &Root) const;
 
   std::pair<Register, int64_t>
   getPtrBaseWithConstantOffset(Register Root,
