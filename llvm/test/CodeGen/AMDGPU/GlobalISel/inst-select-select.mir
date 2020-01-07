@@ -88,7 +88,6 @@ body: |
 
 ...
 
-# FIXME: Handle arbitrary address spaces
 ---
 name:            select_p1_scc
 legalized:       true
@@ -114,6 +113,35 @@ body: |
     %3:sgpr(p1) = COPY $sgpr4_sgpr5
     %4:sgpr(s32) = G_ICMP intpred(eq), %0, %1
     %5:sgpr(p1) = G_SELECT %4, %2, %3
+    S_ENDPGM 0, implicit %5
+
+...
+
+---
+name:            select_p999_scc
+legalized:       true
+regBankSelected: true
+
+body: |
+  bb.0:
+    liveins:  $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
+
+    ; GCN-LABEL: name: select_p999_scc
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
+    ; GCN: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
+    ; GCN: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
+    ; GCN: S_CMP_EQ_U32 [[COPY]], [[COPY1]], implicit-def $scc
+    ; GCN: [[COPY4:%[0-9]+]]:sreg_32 = COPY $scc
+    ; GCN: $scc = COPY [[COPY4]]
+    ; GCN: [[S_CSELECT_B64_:%[0-9]+]]:sreg_64 = S_CSELECT_B64 [[COPY2]], [[COPY3]], implicit $scc
+    ; GCN: S_ENDPGM 0, implicit [[S_CSELECT_B64_]]
+    %0:sgpr(s32) = COPY $sgpr0
+    %1:sgpr(s32) = COPY $sgpr1
+    %2:sgpr(p999) = COPY $sgpr2_sgpr3
+    %3:sgpr(p999) = COPY $sgpr4_sgpr5
+    %4:sgpr(s32) = G_ICMP intpred(eq), %0, %1
+    %5:sgpr(p999) = G_SELECT %4, %2, %3
     S_ENDPGM 0, implicit %5
 
 ...
