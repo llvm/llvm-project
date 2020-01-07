@@ -2005,22 +2005,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     }
   }
 
-  // Attempt to deserialize the compiler flags from the AST.
-  if (exe_module_sp) {
-    llvm::SmallString<0> error;
-    llvm::raw_svector_ostream errs(error);
-    if (DeserializeAllCompilerFlags(*swift_ast_sp, *exe_module_sp,
-                                    m_description, errs,
-                                    got_serialized_options)) {
-      if (Process *process = target.GetProcessSP().get())
-        process->PrintWarningCantLoadSwiftModule(*exe_module_sp, error.c_str());
-      LOG_PRINTF(
-          LIBLLDB_LOG_TYPES,
-          "Attempt to load compiler options from serialized AST failed: %s",
-          error.c_str());
-    }
-  }
-
   // Now if the user fully specified the triple, let that override the one
   // we got from executable's options:
   if (target.GetArchitecture().IsFullySpecifiedTriple()) {
