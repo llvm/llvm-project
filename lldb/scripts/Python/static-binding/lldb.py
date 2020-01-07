@@ -261,8 +261,9 @@ eDescriptionLevelInitial = _lldb.eDescriptionLevelInitial
 kNumDescriptionLevels = _lldb.kNumDescriptionLevels
 eScriptLanguageNone = _lldb.eScriptLanguageNone
 eScriptLanguagePython = _lldb.eScriptLanguagePython
-eScriptLanguageDefault = _lldb.eScriptLanguageDefault
+eScriptLanguageLua = _lldb.eScriptLanguageLua
 eScriptLanguageUnknown = _lldb.eScriptLanguageUnknown
+eScriptLanguageDefault = _lldb.eScriptLanguageDefault
 eRegisterKindEHFrame = _lldb.eRegisterKindEHFrame
 eRegisterKindDWARF = _lldb.eRegisterKindDWARF
 eRegisterKindGeneric = _lldb.eRegisterKindGeneric
@@ -606,6 +607,7 @@ eSectionTypeDWARFDebugInfoDwo = _lldb.eSectionTypeDWARFDebugInfoDwo
 eSectionTypeDWARFDebugStrDwo = _lldb.eSectionTypeDWARFDebugStrDwo
 eSectionTypeDWARFDebugStrOffsetsDwo = _lldb.eSectionTypeDWARFDebugStrOffsetsDwo
 eSectionTypeDWARFDebugTypesDwo = _lldb.eSectionTypeDWARFDebugTypesDwo
+eSectionTypeDWARFDebugRngListsDwo = _lldb.eSectionTypeDWARFDebugRngListsDwo
 eEmulateInstructionOptionNone = _lldb.eEmulateInstructionOptionNone
 eEmulateInstructionOptionAutoAdvancePC = _lldb.eEmulateInstructionOptionAutoAdvancePC
 eEmulateInstructionOptionIgnoreConditions = _lldb.eEmulateInstructionOptionIgnoreConditions
@@ -14537,11 +14539,6 @@ class SBValue(_object):
     def GetObjectDescription(self):
         """GetObjectDescription(SBValue self) -> char const *"""
         return _lldb.SBValue_GetObjectDescription(self)
-
-
-    def GetTypeValidatorResult(self):
-        """GetTypeValidatorResult(SBValue self) -> char const *"""
-        return _lldb.SBValue_GetTypeValidatorResult(self)
 
 
     def GetDynamicValue(self, use_dynamic):
