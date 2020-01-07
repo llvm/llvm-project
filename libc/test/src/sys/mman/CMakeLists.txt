@@ -1,5 +1,4 @@
-add_custom_target(libc_sys_mman_unittests)
-add_dependencies(check_libc libc_sys_mman_unittests)
+add_libc_testsuite(libc_sys_mman_unittests)
 
 add_libc_unittest(
   mmap_test

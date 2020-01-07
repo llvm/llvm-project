@@ -1,4 +1,3 @@
-add_custom_target(libc_linux_tests)
-add_dependencies(check_libc libc_linux_tests)
+add_libc_testsuite(libc_linux_tests)
 
-add_subdirectory(x86_64)
+add_subdirectory(${LIBC_TARGET_MACHINE})
