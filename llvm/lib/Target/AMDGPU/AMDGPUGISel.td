@@ -207,3 +207,6 @@ def gi_as_i32timm : GICustomOperandRenderer<"renderTruncImm32">,
 
 def gi_NegateImm : GICustomOperandRenderer<"renderNegateImm">,
   GISDNodeXFormEquiv<NegateImm>;
+
+def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastImm">,
+  GISDNodeXFormEquiv<bitcast_fpimm_to_i32>;

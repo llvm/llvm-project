@@ -2103,6 +2103,17 @@ void AMDGPUInstructionSelector::renderNegateImm(MachineInstrBuilder &MIB,
   MIB.addImm(-MI.getOperand(1).getCImm()->getSExtValue());
 }
 
+void AMDGPUInstructionSelector::renderBitcastImm(MachineInstrBuilder &MIB,
+                                                 const MachineInstr &MI) const {
+  const MachineOperand &Op = MI.getOperand(1);
+  if (MI.getOpcode() == TargetOpcode::G_FCONSTANT)
+    MIB.addImm(Op.getFPImm()->getValueAPF().bitcastToAPInt().getZExtValue());
+  else {
+    assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && "Expected G_CONSTANT");
+    MIB.addImm(Op.getCImm()->getSExtValue());
+  }
+}
+
 bool AMDGPUInstructionSelector::isInlineImmediate16(int64_t Imm) const {
   return AMDGPU::isInlinableLiteral16(Imm, STI.hasInv2PiInlineImm());
 }
