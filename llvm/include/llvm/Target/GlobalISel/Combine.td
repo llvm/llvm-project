@@ -129,4 +129,12 @@ def elide_br_by_inverting_cond : GICombineRule<
          [{ return Helper.matchElideBrByInvertingCond(*${root}); }]),
   (apply [{ Helper.applyElideBrByInvertingCond(*${root}); }])>;
 
-def all_combines : GICombineGroup<[trivial_combines, combines_for_extload, combine_indexed_load_store]>;
+def ptr_add_immed_matchdata : GIDefMatchData<"PtrAddChain">;
+def ptr_add_immed_chain : GICombineRule<
+  (defs root:$d, ptr_add_immed_matchdata:$matchinfo),
+  (match (wip_match_opcode G_PTR_ADD):$d,
+         [{ return Helper.matchPtrAddImmedChain(*${d}, ${matchinfo}); }]),
+  (apply [{ Helper.applyPtrAddImmedChain(*${d}, ${matchinfo}); }])>;
+
+def all_combines : GICombineGroup<[trivial_combines, ptr_add_immed_chain,
+    combines_for_extload, combine_indexed_load_store]>;
