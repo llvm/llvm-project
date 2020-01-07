@@ -365,7 +365,7 @@ namespace deduction_after_explicit_pack {
   int test(ExtraArgs..., unsigned vla_size, const char *input);
   int n = test(0, "");
 
-  template <typename... T> void i(T..., int, T..., ...); // expected-note 5{{deduced conflicting}}
+  template <typename... T> void i(T..., int, T..., ...); // expected-note 5{{deduced packs of different lengths}}
   void j() {
     i(0);
     i(0, 1); // expected-error {{no match}}
@@ -381,7 +381,7 @@ namespace deduction_after_explicit_pack {
   // parameter against the first argument, then passing the first argument
   // through the first parameter.
   template<typename... T> struct X { X(int); operator int(); };
-  template<typename... T> void p(T..., X<T...>, ...); // expected-note {{deduced conflicting}}
+  template<typename... T> void p(T..., X<T...>, ...); // expected-note {{deduced packs of different lengths for parameter 'T' (<> vs. <int>)}}
   void q() { p(X<int>(0), 0); } // expected-error {{no match}}
 
   struct A {
