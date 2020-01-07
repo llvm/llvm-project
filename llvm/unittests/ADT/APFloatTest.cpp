@@ -547,6 +547,14 @@ TEST(APFloatTest, FMA) {
     f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
     EXPECT_EQ(-8.85242279E-41f, f1.convertToFloat());
   }
+
+  // Test using only a single instance of APFloat.
+  {
+    APFloat F(1.5);
+
+    F.fusedMultiplyAdd(F, F, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(3.75, F.convertToDouble());
+  }
 }
 
 TEST(APFloatTest, MinNum) {
