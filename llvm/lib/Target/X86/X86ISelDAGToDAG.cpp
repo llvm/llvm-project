@@ -5146,6 +5146,17 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       MachineSDNode *NewNode;
       SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
       if (tryFoldLoad(Node, N0.getNode(), Reg, Tmp0, Tmp1, Tmp2, Tmp3, Tmp4)) {
+        if (auto *LoadN = dyn_cast<LoadSDNode>(N0.getOperand(0).getNode())) {
+          if (!LoadN->isSimple()) {
+            unsigned NumVolBits = LoadN->getValueType(0).getSizeInBits();
+            if (MOpc == X86::TEST8mi && NumVolBits != 8)
+              break;
+            else if (MOpc == X86::TEST16mi && NumVolBits != 16)
+              break;
+            else if (MOpc == X86::TEST32mi && NumVolBits != 32)
+              break;
+          }
+        }
         SDValue Ops[] = { Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, Imm,
                           Reg.getOperand(0) };
         NewNode = CurDAG->getMachineNode(MOpc, dl, MVT::i32, MVT::Other, Ops);

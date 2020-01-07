@@ -520,9 +520,9 @@ static LogicalResult extractStrides(AffineExpr e,
   llvm_unreachable("unexpected binary operation");
 }
 
-static LogicalResult getStridesAndOffset(MemRefType t,
-                                         SmallVectorImpl<AffineExpr> &strides,
-                                         AffineExpr &offset) {
+LogicalResult mlir::getStridesAndOffset(MemRefType t,
+                                        SmallVectorImpl<AffineExpr> &strides,
+                                        AffineExpr &offset) {
   auto affineMaps = t.getAffineMaps();
   // For now strides are only computed on a single affine map with a single
   // result (i.e. the closed subset of linearization maps that are compatible
@@ -699,6 +699,38 @@ AffineMap mlir::makeStridedLinearLayoutMap(ArrayRef<int64_t> strides,
   return AffineMap::get(strides.size(), nSymbols, expr);
 }
 
+/// Return a version of `t` with identity layout if it can be determined
+/// statically that the layout is the canonical contiguous strided layout.
+/// Otherwise pass `t`'s layout into `simplifyAffineMap` and return a copy of
+/// `t` with simplifed layout.
+/// If `t` has multiple layout maps or a multi-result layout, just return `t`.
+MemRefType mlir::canonicalizeStridedLayout(MemRefType t) {
+  auto affineMaps = t.getAffineMaps();
+  // Already in canonical form.
+  if (affineMaps.empty())
+    return t;
+
+  // Can't reduce to canonical identity form, return in canonical form.
+  if (affineMaps.size() > 1 || affineMaps[0].getNumResults() > 1)
+    return t;
+
+  // If the canonical strided layout for the sizes of `t` is equal to the
+  // simplified layout of `t` we can just return an empty layout. Otherwise,
+  // just simplify the existing layout.
+  AffineExpr expr =
+      makeCanonicalStridedLayoutExpr(t.getShape(), t.getContext());
+  auto m = affineMaps[0];
+  auto simplifiedLayoutExpr =
+      simplifyAffineExpr(m.getResult(0), m.getNumDims(), m.getNumSymbols());
+  if (expr != simplifiedLayoutExpr)
+    return MemRefType::get(t.getShape(), t.getElementType(),
+                           {AffineMap::get(m.getNumDims(), m.getNumSymbols(),
+                                           {simplifiedLayoutExpr})});
+
+  return MemRefType::get(t.getShape(), t.getElementType(), {});
+}
+
+/// Return true if the layout for `t` is compatible with strided semantics.
 bool mlir::isStrided(MemRefType t) {
   int64_t offset;
   SmallVector<int64_t, 4> stridesAndOffset;

@@ -11,6 +11,7 @@ directories::
         - lib
         - loader
         - src
+        - test
         + utils
             - build_scripts
             - testing
@@ -68,6 +69,15 @@ further organized as follows:
    corresponding to the public ``math.h`` header file is named ``math``. The
    implementation standard document explains more about the *header*
    directories.
+
+The ``test`` directory
+----------------------
+
+This directory contains tests for the various components of llvm-libc. The
+directory structure within this directory mirrors the directory structure of the
+toplevel ``libc`` directory itself. A test for, say the ``mmap`` function, lives
+in the directory ``test/src/sys/mman/`` as implementation of ``mmap`` lives in
+``src/sys/mman``.
 
 The ``www`` directory
 ---------------------

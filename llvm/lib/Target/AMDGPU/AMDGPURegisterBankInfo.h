@@ -40,10 +40,12 @@ protected:
 #include "AMDGPUGenRegisterBank.inc"
 };
 class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
+public:
   const GCNSubtarget &Subtarget;
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
 
+private:
   bool collectWaterfallOperands(
     SmallSet<Register, 4> &SGPROperandRegs,
     MachineInstr &MI,
@@ -73,6 +75,8 @@ class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
   applyMappingImage(MachineInstr &MI,
                     const AMDGPURegisterBankInfo::OperandsMapper &OpdMapper,
                     MachineRegisterInfo &MRI, int RSrcIdx) const;
+
+  void lowerScalarMinMax(MachineIRBuilder &B, MachineInstr &MI) const;
 
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg) const;

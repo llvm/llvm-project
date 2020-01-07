@@ -10,6 +10,7 @@
 #include "CodeComplete.h"
 #include "Features.inc"
 #include "Path.h"
+#include "PathMapping.h"
 #include "Protocol.h"
 #include "Shutdown.h"
 #include "Trace.h"
@@ -350,6 +351,18 @@ opt<bool> EnableTestScheme{
     Hidden,
 };
 
+opt<std::string> PathMappingsArg{
+    "path-mappings",
+    cat(Protocol),
+    desc(
+        "Translates between client paths (as seen by a remote editor) and "
+        "server paths (where clangd sees files on disk). "
+        "Comma separated list of '<client_path>=<server_path>' pairs, the "
+        "first entry matching a given path is used. "
+        "e.g. /home/project/incl=/opt/include,/home/project=/workarea/project"),
+    init(""),
+};
+
 opt<Path> InputMirrorFile{
     "input-mirror-file",
     cat(Protocol),
@@ -654,7 +667,15 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
         InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,
         PrettyPrint, InputStyle);
   }
-
+  if (!PathMappingsArg.empty()) {
+    auto Mappings = parsePathMappings(PathMappingsArg);
+    if (!Mappings) {
+      elog("Invalid -path-mappings: {0}", Mappings.takeError());
+      return 1;
+    }
+    TransportLayer = createPathMappingTransport(std::move(TransportLayer),
+                                                std::move(*Mappings));
+  }
   // Create an empty clang-tidy option.
   std::mutex ClangTidyOptMu;
   std::unique_ptr<tidy::ClangTidyOptionsProvider>

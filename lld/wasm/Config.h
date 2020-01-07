@@ -72,7 +72,7 @@ struct Configuration {
   bool isPic;
 
   // The table offset at which to place function addresses.  We reserve zero
-  // for the null function pointer.  This gets set to 1 for exectuables and 0
+  // for the null function pointer.  This gets set to 1 for executables and 0
   // for shared libraries (since they always added to a dynamic offset at
   // runtime).
   uint32_t tableBase = 0;

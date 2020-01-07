@@ -257,7 +257,7 @@ void CodeObjectDisassembler::printFunctionCode(const MCDisassembler &InstDisasm,
                                   Address,
                                   DebugFlag ? dbgs() : nulls(),
                                   CS)) {
-      InstPrinter->printInst(&Inst, IS, "", InstDisasm.getSubtargetInfo());
+      InstPrinter->printInst(&Inst, Address, "", InstDisasm.getSubtargetInfo(), IS);
     } else {
       IS << "\t// unrecognized instruction ";
       if (EatenBytesNum == 0)

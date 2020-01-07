@@ -12,7 +12,8 @@ body: |
     ; CHECK-LABEL: name: usubo_s32_ss
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK: [[USUBO:%[0-9]+]]:sgpr(s32), [[USUBO1:%[0-9]+]]:scc(s1) = G_USUBO [[COPY]], [[COPY1]]
+    ; CHECK: [[USUBO:%[0-9]+]]:sgpr(s32), [[USUBO1:%[0-9]+]]:sgpr(s32) = G_USUBO [[COPY]], [[COPY1]]
+    ; CHECK: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[USUBO1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32), %3:_(s1) = G_USUBO %0, %1

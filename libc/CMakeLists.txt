@@ -22,5 +22,10 @@ include(LLVMLibCRules)
 add_subdirectory(src)
 add_subdirectory(config)
 add_subdirectory(include)
-add_subdirectory(lib)
 add_subdirectory(utils)
+
+# The lib and test directories are added at the very end as tests
+# and libraries potentially draw from the components present in all
+# of the other directories.
+add_subdirectory(lib)
+add_subdirectory(test)

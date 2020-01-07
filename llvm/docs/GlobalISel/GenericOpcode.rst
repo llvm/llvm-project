@@ -143,7 +143,7 @@ Convert an integer to a pointer.
 G_PTRTOINT
 ^^^^^^^^^^
 
-Convert an pointer to an integer.
+Convert a pointer to an integer.
 
 .. code-block:: none
 

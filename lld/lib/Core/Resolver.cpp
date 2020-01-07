@@ -435,7 +435,7 @@ bool Resolver::checkUndefines() {
   return true;
 }
 
-// remove from _atoms all coaleseced away atoms
+// Remove from _atoms all coalesced away atoms.
 void Resolver::removeCoalescedAwayAtoms() {
   DEBUG_WITH_TYPE("resolver",
                   llvm::dbgs() << "******** Removing coalesced away atoms:\n");

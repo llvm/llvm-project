@@ -253,11 +253,10 @@ define <2 x i32> @not_add_vec(<2 x i32> %x) {
 
 define i1 @not_select_cmp_cmp(i32 %x, i32 %y, float %z, float %w, i1 %cond) {
 ; CHECK-LABEL: @not_select_cmp_cmp(
-; CHECK-NEXT:    [[CMPT:%.*]] = icmp sle i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMPF:%.*]] = fcmp ugt float [[Z:%.*]], [[W:%.*]]
+; CHECK-NEXT:    [[CMPT:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMPF:%.*]] = fcmp ole float [[Z:%.*]], [[W:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], i1 [[CMPT]], i1 [[CMPF]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[SEL]], true
-; CHECK-NEXT:    ret i1 [[NOT]]
+; CHECK-NEXT:    ret i1 [[SEL]]
 ;
   %cmpt = icmp sle i32 %x, %y
   %cmpf = fcmp ugt float %z, %w
@@ -267,6 +266,8 @@ define i1 @not_select_cmp_cmp(i32 %x, i32 %y, float %z, float %w, i1 %cond) {
 }
 
 declare void @use1(i1)
+
+; TODO: Missed canonicalization - hoist 'not'?
 
 define i1 @not_select_cmp_cmp_extra_use1(i32 %x, i32 %y, float %z, float %w, i1 %cond) {
 ; CHECK-LABEL: @not_select_cmp_cmp_extra_use1(
@@ -285,6 +286,8 @@ define i1 @not_select_cmp_cmp_extra_use1(i32 %x, i32 %y, float %z, float %w, i1 
   ret i1 %not
 }
 
+; TODO: Missed canonicalization - hoist 'not'?
+
 define i1 @not_select_cmp_cmp_extra_use2(i32 %x, i32 %y, float %z, float %w, i1 %cond) {
 ; CHECK-LABEL: @not_select_cmp_cmp_extra_use2(
 ; CHECK-NEXT:    [[CMPT:%.*]] = icmp sle i32 [[X:%.*]], [[Y:%.*]]
@@ -301,6 +304,8 @@ define i1 @not_select_cmp_cmp_extra_use2(i32 %x, i32 %y, float %z, float %w, i1 
   %not = xor i1 %sel, true
   ret i1 %not
 }
+
+; Negative test - extra uses would require more instructions.
 
 define i1 @not_select_cmp_cmp_extra_use3(i32 %x, i32 %y, float %z, float %w, i1 %cond) {
 ; CHECK-LABEL: @not_select_cmp_cmp_extra_use3(
@@ -321,6 +326,8 @@ define i1 @not_select_cmp_cmp_extra_use3(i32 %x, i32 %y, float %z, float %w, i1 
   ret i1 %not
 }
 
+; Negative test - extra uses would require more instructions.
+
 define i1 @not_select_cmp_cmp_extra_use4(i32 %x, i32 %y, float %z, float %w, i1 %cond) {
 ; CHECK-LABEL: @not_select_cmp_cmp_extra_use4(
 ; CHECK-NEXT:    [[CMPT:%.*]] = icmp sle i32 [[X:%.*]], [[Y:%.*]]
@@ -338,6 +345,8 @@ define i1 @not_select_cmp_cmp_extra_use4(i32 %x, i32 %y, float %z, float %w, i1 
   ret i1 %not
 }
 
+; TODO: Missed canonicalization - hoist 'not'?
+
 define i1 @not_select_cmpt(double %x, double %y, i1 %z, i1 %cond) {
 ; CHECK-LABEL: @not_select_cmpt(
 ; CHECK-NEXT:    [[CMPT:%.*]] = fcmp oeq double [[X:%.*]], [[Y:%.*]]
@@ -350,6 +359,8 @@ define i1 @not_select_cmpt(double %x, double %y, i1 %z, i1 %cond) {
   %not = xor i1 %sel, true
   ret i1 %not
 }
+
+; TODO: Missed canonicalization - hoist 'not'?
 
 define i1 @not_select_cmpf(i1 %x, i32 %z, i32 %w, i1 %cond) {
 ; CHECK-LABEL: @not_select_cmpf(

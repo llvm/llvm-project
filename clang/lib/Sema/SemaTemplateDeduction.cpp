@@ -860,34 +860,31 @@ public:
   /// Finish template argument deduction for a set of argument packs,
   /// producing the argument packs and checking for consistency with prior
   /// deductions.
-  Sema::TemplateDeductionResult
-  finish(bool TreatNoDeductionsAsNonDeduced = true) {
+  Sema::TemplateDeductionResult finish() {
     // Build argument packs for each of the parameter packs expanded by this
     // pack expansion.
     for (auto &Pack : Packs) {
       // Put back the old value for this pack.
       Deduced[Pack.Index] = Pack.Saved;
 
-      // If we are deducing the size of this pack even if we didn't deduce any
-      // values for it, then make sure we build a pack of the right size.
-      // FIXME: Should we always deduce the size, even if the pack appears in
-      // a non-deduced context?
-      if (!TreatNoDeductionsAsNonDeduced)
-        Pack.New.resize(PackElements);
+      // Always make sure the size of this pack is correct, even if we didn't
+      // deduce any values for it.
+      //
+      // FIXME: This isn't required by the normative wording, but substitution
+      // and post-substitution checking will always fail if the arity of any
+      // pack is not equal to the number of elements we processed. (Either that
+      // or something else has gone *very* wrong.) We're permitted to skip any
+      // hard errors from those follow-on steps by the intent (but not the
+      // wording) of C++ [temp.inst]p8:
+      //
+      //   If the function selected by overload resolution can be determined
+      //   without instantiating a class template definition, it is unspecified
+      //   whether that instantiation actually takes place
+      Pack.New.resize(PackElements);
 
       // Build or find a new value for this pack.
       DeducedTemplateArgument NewPack;
-      if (PackElements && Pack.New.empty()) {
-        if (Pack.DeferredDeduction.isNull()) {
-          // We were not able to deduce anything for this parameter pack
-          // (because it only appeared in non-deduced contexts), so just
-          // restore the saved argument pack.
-          continue;
-        }
-
-        NewPack = Pack.DeferredDeduction;
-        Pack.DeferredDeduction = TemplateArgument();
-      } else if (Pack.New.empty()) {
+      if (Pack.New.empty()) {
         // If we deduced an empty argument pack, create it now.
         NewPack = DeducedTemplateArgument(TemplateArgument::getEmptyPack());
       } else {
@@ -2636,8 +2633,8 @@ static Sema::TemplateDeductionResult ConvertDeducedTemplateArguments(
     //    be deduced to an empty sequence of template arguments.
     // FIXME: Where did the word "trailing" come from?
     if (Deduced[I].isNull() && Param->isTemplateParameterPack()) {
-      if (auto Result = PackDeductionScope(S, TemplateParams, Deduced, Info, I)
-                            .finish(/*TreatNoDeductionsAsNonDeduced*/false))
+      if (auto Result =
+              PackDeductionScope(S, TemplateParams, Deduced, Info, I).finish())
         return Result;
     }
 

@@ -786,7 +786,7 @@ static const char* __itt_get_env_var(const char* name)
         }
         else
         {
-            /* If environment variable is empty, GetEnvirornmentVariables()
+            /* If environment variable is empty, GetEnvironmentVariables()
              * returns zero (number of characters (not including terminating null),
              * and GetLastError() returns ERROR_SUCCESS. */
             DWORD err = GetLastError();

@@ -192,7 +192,7 @@ void TimelineView::printAverageWaitTimes(raw_ostream &OS) const {
   for (const MCInst &Inst : Source) {
     printWaitTimeEntry(FOS, WaitTime[IID], IID, Executions);
     // Append the instruction info at the end of the line.
-    MCIP.printInst(&Inst, InstrStream, "", STI);
+    MCIP.printInst(&Inst, 0, "", STI, InstrStream);
     InstrStream.flush();
 
     // Consume any tabs or spaces at the beginning of the string.
@@ -307,7 +307,7 @@ void TimelineView::printTimeline(raw_ostream &OS) const {
       unsigned SourceIndex = IID % Source.size();
       printTimelineViewEntry(FOS, Entry, Iteration, SourceIndex);
       // Append the instruction info at the end of the line.
-      MCIP.printInst(&Inst, InstrStream, "", STI);
+      MCIP.printInst(&Inst, 0, "", STI, InstrStream);
       InstrStream.flush();
 
       // Consume any tabs or spaces at the beginning of the string.

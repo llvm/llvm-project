@@ -141,7 +141,7 @@ Full list of functions
 ======================
 This leads to the generation of 376 atomic functions, as follows.
 
-Functons for integers
+Functions for integers
 ---------------------
 There are versions here for integers of size 1,2,4 and 8 bytes both signed and
 unsigned (where that matters).

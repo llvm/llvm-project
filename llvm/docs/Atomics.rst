@@ -292,7 +292,7 @@ Notes for frontends
 Notes for optimizers
   Optimizers not aware of atomics can treat this like a nothrow call.  It is
   also possible to move loads from after a Release store or read-modify-write
-  operation to before it, and move non-Release stores from after an Release
+  operation to before it, and move non-Release stores from after a Release
   operation to before it.
 
 Notes for code generation

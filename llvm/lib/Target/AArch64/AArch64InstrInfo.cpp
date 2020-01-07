@@ -2188,10 +2188,17 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, unsigned &Scale,
     MaxOffset = 4095;
     break;
   case AArch64::ADDG:
-  case AArch64::TAGPstack:
     Scale = 16;
     Width = 0;
     MinOffset = 0;
+    MaxOffset = 63;
+    break;
+  case AArch64::TAGPstack:
+    Scale = 16;
+    Width = 0;
+    // TAGP with a negative offset turns into SUBP, which has a maximum offset
+    // of 63 (not 64!).
+    MinOffset = -63;
     MaxOffset = 63;
     break;
   case AArch64::LDG:

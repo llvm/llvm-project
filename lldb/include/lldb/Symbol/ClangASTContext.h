@@ -56,7 +56,7 @@ public:
   static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
 
   // Constructors and Destructors
-  explicit ClangASTContext(llvm::StringRef triple = "");
+  explicit ClangASTContext(llvm::Triple triple = llvm::Triple());
   explicit ClangASTContext(ArchSpec arch);
 
   /// Constructs a ClangASTContext that uses an existing ASTContext internally.

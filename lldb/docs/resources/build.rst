@@ -29,8 +29,39 @@ The following requirements are shared on all platforms.
 
 * `CMake <https://cmake.org>`_
 * `Ninja <https://ninja-build.org>`_ (strongly recommended)
+
+If you want to run the test suite, you'll need to build LLDB with Python
+scripting support.
+
 * `Python <http://www.python.org/>`_
 * `SWIG <http://swig.org/>`_
+
+Optional Dependencies
+*********************
+
+Although the following dependencies are optional, they have a big impact on
+LLDB's functionality. It is strongly encouraged to build LLDB with these
+dependencies enabled.
+
+By default they are auto-detected: if CMake can find the dependency it will be
+used. It is possible to override this behavior by setting the corresponding
+CMake flag to ``On`` or ``Off`` to force the dependency to be enabled or
+disabled. When a dependency is set to ``On`` and can't be found it will cause a
+CMake configuration error.
+
++-------------------+------------------------------------------------------+--------------------------+
+| Feature           | Description                                          | CMake Flag               |
++===================+======================================================+==========================+
+| Editline          | Generic line editing, history, Emacs and Vi bindings | ``LLDB_ENABLE_LIBEDIT``  |
++-------------------+------------------------------------------------------+--------------------------+
+| Curses            | Text user interface                                  | ``LLDB_ENABLE_CURSES``   |
++-------------------+------------------------------------------------------+--------------------------+
+| LZMA              | Lossless data compression                            | ``LLDB_ENABLE_LZMA``     |
++-------------------+------------------------------------------------------+--------------------------+
+| Python            | Python scripting                                     | ``LLDB_ENABLE_PYTHON``   |
++-------------------+------------------------------------------------------+--------------------------+
+| Lua               | Lua scripting                                        | ``LLDB_ENABLE_LUA``      |
++-------------------+------------------------------------------------------+--------------------------+
 
 Depending on your platform and package manager, one might run any of the
 commands below.
@@ -74,11 +105,6 @@ Any command prompt from which you build LLDB should have a valid Visual Studio
 environment setup. This means you should run ``vcvarsall.bat`` or open an
 appropriate Visual Studio Command Prompt corresponding to the version you wish
 to use.
-
-Linux
-*****
-
-* `libedit <http://www.thrysoee.dk/editline>`_
 
 macOS
 *****

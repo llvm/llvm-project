@@ -992,7 +992,7 @@ IEEEFloat::integerPart IEEEFloat::subtractSignificand(const IEEEFloat &rhs,
    on to the full-precision result of the multiplication.  Returns the
    lost fraction.  */
 lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs,
-                                            const IEEEFloat *addend) {
+                                            IEEEFloat addend) {
   unsigned int omsb;        // One, not zero, based MSB.
   unsigned int partsCount, newPartsCount, precision;
   integerPart *lhsSignificand;
@@ -1036,7 +1036,7 @@ lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs,
   // toward left by two bits, and adjust exponent accordingly.
   exponent += 2;
 
-  if (addend && addend->isNonZero()) {
+  if (addend.isNonZero()) {
     // The intermediate result of the multiplication has "2 * precision"
     // signicant bit; adjust the addend to be consistent with mul result.
     //
@@ -1065,7 +1065,10 @@ lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs,
       significand.parts = fullSignificand;
     semantics = &extendedSemantics;
 
-    IEEEFloat extendedAddend(*addend);
+    // Make a copy so we can convert it to the extended semantics.
+    // Note that we cannot convert the addend directly, as the extendedSemantics
+    // is a local variable (which we take a reference to).
+    IEEEFloat extendedAddend(addend);
     status = extendedAddend.convert(extendedSemantics, rmTowardZero, &ignored);
     assert(status == opOK);
     (void)status;
@@ -1118,6 +1121,10 @@ lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs,
     delete [] fullSignificand;
 
   return lost_fraction;
+}
+
+lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs) {
+  return multiplySignificand(rhs, IEEEFloat(*semantics));
 }
 
 /* Multiply the significands of LHS and RHS to DST.  */
@@ -1725,7 +1732,7 @@ IEEEFloat::opStatus IEEEFloat::multiply(const IEEEFloat &rhs,
   fs = multiplySpecials(rhs);
 
   if (isFiniteNonZero()) {
-    lostFraction lost_fraction = multiplySignificand(rhs, nullptr);
+    lostFraction lost_fraction = multiplySignificand(rhs);
     fs = normalize(rounding_mode, lost_fraction);
     if (lost_fraction != lfExactlyZero)
       fs = (opStatus) (fs | opInexact);
@@ -1826,7 +1833,7 @@ IEEEFloat::opStatus IEEEFloat::fusedMultiplyAdd(const IEEEFloat &multiplicand,
       addend.isFinite()) {
     lostFraction lost_fraction;
 
-    lost_fraction = multiplySignificand(multiplicand, &addend);
+    lost_fraction = multiplySignificand(multiplicand, addend);
     fs = normalize(rounding_mode, lost_fraction);
     if (lost_fraction != lfExactlyZero)
       fs = (opStatus) (fs | opInexact);
@@ -2449,7 +2456,7 @@ IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
 
     if (exp >= 0) {
       /* multiplySignificand leaves the precision-th bit set to 1.  */
-      calcLostFraction = decSig.multiplySignificand(pow5, nullptr);
+      calcLostFraction = decSig.multiplySignificand(pow5);
       powHUerr = powStatus != opOK;
     } else {
       calcLostFraction = decSig.divideSignificand(pow5);

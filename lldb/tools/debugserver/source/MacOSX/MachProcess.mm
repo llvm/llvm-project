@@ -1413,29 +1413,29 @@ bool MachProcess::Interrupt() {
 bool MachProcess::Signal(int signal, const struct timespec *timeout_abstime) {
   DNBLogThreadedIf(LOG_PROCESS,
                    "MachProcess::Signal (signal = %d, timeout = %p)", signal,
-                   reinterpret_cast<const void *>(timeout_abstime));
+                   static_cast<const void *>(timeout_abstime));
   nub_state_t state = GetState();
   if (::kill(ProcessID(), signal) == 0) {
     // If we were running and we have a timeout, wait for the signal to stop
     if (IsRunning(state) && timeout_abstime) {
-      DNBLogThreadedIf(LOG_PROCESS, "MachProcess::Signal (signal = %d, timeout "
-                                    "= %p) waiting for signal to stop "
-                                    "process...",
-                       signal, reinterpret_cast<const void *>(timeout_abstime));
+      DNBLogThreadedIf(LOG_PROCESS,
+                       "MachProcess::Signal (signal = %d, timeout "
+                       "= %p) waiting for signal to stop "
+                       "process...",
+                       signal, static_cast<const void *>(timeout_abstime));
       m_private_events.WaitForSetEvents(eEventProcessStoppedStateChanged,
                                         timeout_abstime);
       state = GetState();
       DNBLogThreadedIf(
           LOG_PROCESS,
           "MachProcess::Signal (signal = %d, timeout = %p) state = %s", signal,
-          reinterpret_cast<const void *>(timeout_abstime),
-          DNBStateAsString(state));
+          static_cast<const void *>(timeout_abstime), DNBStateAsString(state));
       return !IsRunning(state);
     }
     DNBLogThreadedIf(
         LOG_PROCESS,
         "MachProcess::Signal (signal = %d, timeout = %p) not waiting...",
-        signal, reinterpret_cast<const void *>(timeout_abstime));
+        signal, static_cast<const void *>(timeout_abstime));
     return true;
   }
   DNBError err(errno, DNBError::POSIX);
@@ -1739,10 +1739,10 @@ DNBBreakpoint *MachProcess::CreateBreakpoint(nub_addr_t addr, nub_size_t length,
     bp = m_breakpoints.Add(addr, length, hardware);
 
   if (EnableBreakpoint(addr)) {
-    DNBLogThreadedIf(LOG_BREAKPOINTS, "MachProcess::CreateBreakpoint ( addr = "
-                                      "0x%8.8llx, length = %llu) => %p",
-                     (uint64_t)addr, (uint64_t)length,
-                     reinterpret_cast<void *>(bp));
+    DNBLogThreadedIf(LOG_BREAKPOINTS,
+                     "MachProcess::CreateBreakpoint ( addr = "
+                     "0x%8.8llx, length = %llu) => %p",
+                     (uint64_t)addr, (uint64_t)length, static_cast<void *>(bp));
     return bp;
   } else if (bp->Release() == 0) {
     m_breakpoints.Remove(addr);
@@ -1771,10 +1771,10 @@ DNBBreakpoint *MachProcess::CreateWatchpoint(nub_addr_t addr, nub_size_t length,
   wp->SetIsWatchpoint(watch_flags);
 
   if (EnableWatchpoint(addr)) {
-    DNBLogThreadedIf(LOG_WATCHPOINTS, "MachProcess::CreateWatchpoint ( addr = "
-                                      "0x%8.8llx, length = %llu) => %p",
-                     (uint64_t)addr, (uint64_t)length,
-                     reinterpret_cast<void *>(wp));
+    DNBLogThreadedIf(LOG_WATCHPOINTS,
+                     "MachProcess::CreateWatchpoint ( addr = "
+                     "0x%8.8llx, length = %llu) => %p",
+                     (uint64_t)addr, (uint64_t)length, static_cast<void *>(wp));
     return wp;
   } else {
     DNBLogThreadedIf(LOG_WATCHPOINTS, "MachProcess::CreateWatchpoint ( addr = "
@@ -2303,7 +2303,7 @@ void MachProcess::AppendSTDOUT(char *s, size_t len) {
 
 size_t MachProcess::GetAvailableSTDOUT(char *buf, size_t buf_size) {
   DNBLogThreadedIf(LOG_PROCESS, "MachProcess::%s (&%p[%llu]) ...", __FUNCTION__,
-                   reinterpret_cast<void *>(buf), (uint64_t)buf_size);
+                   static_cast<void *>(buf), (uint64_t)buf_size);
   PTHREAD_MUTEX_LOCKER(locker, m_stdio_mutex);
   size_t bytes_available = m_stdout_data.size();
   if (bytes_available > 0) {
@@ -2463,7 +2463,7 @@ void MachProcess::SignalAsyncProfileData(const char *info) {
 
 size_t MachProcess::GetAsyncProfileData(char *buf, size_t buf_size) {
   DNBLogThreadedIf(LOG_PROCESS, "MachProcess::%s (&%p[%llu]) ...", __FUNCTION__,
-                   reinterpret_cast<void *>(buf), (uint64_t)buf_size);
+                   static_cast<void *>(buf), (uint64_t)buf_size);
   PTHREAD_MUTEX_LOCKER(locker, m_profile_data_mutex);
   if (m_profile_data.empty())
     return 0;
@@ -2995,8 +2995,8 @@ pid_t MachProcess::LaunchForDebug(
   DNBLogThreadedIf(LOG_PROCESS,
                    "%s( path = '%s', argv = %p, envp = %p, "
                    "launch_flavor = %u, disable_aslr = %d )",
-                   __FUNCTION__, path, reinterpret_cast<const void *>(argv),
-                   reinterpret_cast<const void *>(envp), launch_flavor,
+                   __FUNCTION__, path, static_cast<const void *>(argv),
+                   static_cast<const void *>(envp), launch_flavor,
                    disable_aslr);
 
   // Fork a child process for debugging
@@ -3138,11 +3138,12 @@ pid_t MachProcess::PosixSpawnChildForPTraceDebugging(
     MachProcess *process, int disable_aslr, DNBError &err) {
   posix_spawnattr_t attr;
   short flags;
-  DNBLogThreadedIf(LOG_PROCESS, "%s ( path='%s', argv=%p, envp=%p, "
-                                "working_dir=%s, stdin=%s, stdout=%s "
-                                "stderr=%s, no-stdio=%i)",
-                   __FUNCTION__, path, reinterpret_cast<const void *>(argv),
-                   reinterpret_cast<const void *>(envp), working_directory,
+  DNBLogThreadedIf(LOG_PROCESS,
+                   "%s ( path='%s', argv=%p, envp=%p, "
+                   "working_dir=%s, stdin=%s, stdout=%s "
+                   "stderr=%s, no-stdio=%i)",
+                   __FUNCTION__, path, static_cast<const void *>(argv),
+                   static_cast<const void *>(envp), working_directory,
                    stdin_path, stdout_path, stderr_path, no_stdio);
 
   err.SetError(::posix_spawnattr_init(&attr), DNBError::POSIX);

@@ -124,8 +124,8 @@ body: |
     BLR8 implicit $lr8, implicit $rm
 ...
 ---
-name: testFoldRLWINMoToZero
-#CHECK : name : testFoldRLWINMoToZero
+name: testFoldRLWINM_recToZero
+#CHECK : name : testFoldRLWINM_recToZero
 tracksRegLiveness: true
 body: |
   bb.0.entry:
@@ -134,8 +134,8 @@ body: |
     %1:gprc = COPY %0.sub_32:g8rc
     %2:gprc = RLWINM %1:gprc, 27, 5, 10
     ; CHECK: %2:gprc = RLWINM %1, 27, 5, 10
-    %3:gprc = RLWINMo %2:gprc, 8, 5, 10, implicit-def $cr0
-    ; CHECK: %3:gprc = ANDIo %2, 0, implicit-def $cr0
+    %3:gprc = RLWINM_rec %2:gprc, 8, 5, 10, implicit-def $cr0
+    ; CHECK: %3:gprc = ANDI_rec %2, 0, implicit-def $cr0
     BLR8 implicit $lr8, implicit $rm
 ...
 ---

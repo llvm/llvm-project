@@ -1013,7 +1013,7 @@ static bool AddPosixSpawnFileAction(void *_file_actions, const FileAction *info,
     return false;
 
   posix_spawn_file_actions_t *file_actions =
-      reinterpret_cast<posix_spawn_file_actions_t *>(_file_actions);
+      static_cast<posix_spawn_file_actions_t *>(_file_actions);
 
   switch (info->GetAction()) {
   case FileAction::eFileActionNone:
@@ -1447,7 +1447,7 @@ llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
             "(callback, pid=%i, monitor_signals=%i) "
             "source = %p\n",
             static_cast<int>(pid), monitor_signals,
-            reinterpret_cast<void *>(source));
+            static_cast<void *>(source));
 
   if (source) {
     Host::MonitorChildProcessCallback callback_copy = callback;

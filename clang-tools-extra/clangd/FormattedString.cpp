@@ -149,6 +149,21 @@ private:
   std::string Contents;
   std::string Language;
 };
+
+// Inserts two spaces after each `\n` to indent each line. First line is not
+// indented.
+std::string indentLines(llvm::StringRef Input) {
+  assert(!Input.endswith("\n") && "Input should've been trimmed.");
+  std::string IndentedR;
+  // We'll add 2 spaces after each new line.
+  IndentedR.reserve(Input.size() + Input.count('\n') * 2);
+  for (char C : Input) {
+    IndentedR += C;
+    if (C == '\n')
+      IndentedR.append("  ");
+  }
+  return IndentedR;
+}
 } // namespace
 
 std::string Block::asMarkdown() const {
@@ -193,6 +208,24 @@ void Paragraph::renderPlainText(llvm::raw_ostream &OS) const {
   OS << '\n';
 }
 
+void BulletList::renderMarkdown(llvm::raw_ostream &OS) const {
+  for (auto &D : Items) {
+    // Instead of doing this we might prefer passing Indent to children to get
+    // rid of the copies, if it turns out to be a bottleneck.
+    OS << "- " << indentLines(D.asMarkdown()) << '\n';
+  }
+  // We need a new line after list to terminate it in markdown.
+  OS << '\n';
+}
+
+void BulletList::renderPlainText(llvm::raw_ostream &OS) const {
+  for (auto &D : Items) {
+    // Instead of doing this we might prefer passing Indent to children to get
+    // rid of the copies, if it turns out to be a bottleneck.
+    OS << "- " << indentLines(D.asPlainText()) << '\n';
+  }
+}
+
 Paragraph &Paragraph::appendText(std::string Text) {
   Text = canonicalizeSpaces(std::move(Text));
   if (Text.empty())
@@ -215,6 +248,11 @@ Paragraph &Paragraph::appendCode(std::string Code) {
   return *this;
 }
 
+class Document &BulletList::addItem() {
+  Items.emplace_back();
+  return Items.back();
+}
+
 Paragraph &Document::addParagraph() {
   Children.push_back(std::make_unique<Paragraph>());
   return *static_cast<Paragraph *>(Children.back().get());
@@ -233,6 +271,11 @@ std::string Document::asMarkdown() const {
 
 std::string Document::asPlainText() const {
   return renderBlocks(Children, &Block::renderPlainText);
+}
+
+BulletList &Document::addBulletList() {
+  Children.emplace_back(std::make_unique<BulletList>());
+  return *static_cast<BulletList *>(Children.back().get());
 }
 } // namespace markup
 } // namespace clangd

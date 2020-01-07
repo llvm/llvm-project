@@ -104,7 +104,7 @@ protected:
 
   /// The memory for Reference objects is always managed by the owning File
   /// object.  Therefore, no one but the owning File object should call
-  /// delete on an Reference.  In fact, some File objects may bulk allocate
+  /// delete on a Reference.  In fact, some File objects may bulk allocate
   /// an array of References, so they cannot be individually deleted by anyone.
   virtual ~Reference() = default;
 

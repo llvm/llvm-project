@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass si-memory-legalizer  %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -run-pass=si-memory-legalizer  %s -o - | FileCheck %s
 
 --- |
   declare i32 @llvm.amdgcn.workitem.id.x() #0
@@ -33,13 +33,8 @@
 
   declare void @llvm.amdgcn.end.cf(i64)
 
-  ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #3
-
-  attributes #0 = { nounwind readnone "target-cpu"="tahiti" }
-  attributes #1 = { nounwind "target-cpu"="tahiti" }
-  attributes #2 = { readnone }
-  attributes #3 = { nounwind }
+  attributes #0 = { nounwind readnone }
+  attributes #1 = { nounwind "target-cpu"="gfx803" }
 
 ...
 ---

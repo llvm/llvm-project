@@ -40,7 +40,7 @@ Features
 ORC provides the following features:
 
 - *JIT-linking* links relocatable object files (COFF, ELF, MachO) [1]_ into a
-  target process an runtime. The target process may be the same process that
+  target process at runtime. The target process may be the same process that
   contains the JIT session object and jit-linker, or may be another process
   (even one running on a different machine or architecture) that communicates
   with the JIT via RPC.
@@ -97,7 +97,7 @@ JIT API.
 
 LLJIT and LLLazyJIT instances can be created using their respective builder
 classes: LLJITBuilder and LLazyJITBuilder. For example, assuming you have a
-module ``M`` loaded on an ThreadSafeContext ``Ctx``:
+module ``M`` loaded on a ThreadSafeContext ``Ctx``:
 
 .. code-block:: c++
 

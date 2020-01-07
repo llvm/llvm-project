@@ -8072,8 +8072,11 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     } else
       assert(Max == 0 && "Max must be zero");
   } else if (IsOpenCLKernel || IsHIPKernel) {
-    // By default, restrict the maximum size to 256.
-    F->addFnAttr("amdgpu-flat-work-group-size", "1,256");
+    // By default, restrict the maximum size to a value specified by
+    // --gpu-max-threads-per-block=n or its default value.
+    std::string AttrVal =
+        std::string("1,") + llvm::utostr(M.getLangOpts().GPUMaxThreadsPerBlock);
+    F->addFnAttr("amdgpu-flat-work-group-size", AttrVal);
   }
 
   if (const auto *Attr = FD->getAttr<AMDGPUWavesPerEUAttr>()) {

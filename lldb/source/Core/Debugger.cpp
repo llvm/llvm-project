@@ -1456,7 +1456,7 @@ void Debugger::DefaultEventHandler() {
               done = true;
             } else if (event_type &
                        CommandInterpreter::eBroadcastBitAsynchronousErrorData) {
-              const char *data = reinterpret_cast<const char *>(
+              const char *data = static_cast<const char *>(
                   EventDataBytes::GetBytesFromEvent(event_sp.get()));
               if (data && data[0]) {
                 StreamSP error_sp(GetAsyncErrorStream());
@@ -1467,7 +1467,7 @@ void Debugger::DefaultEventHandler() {
               }
             } else if (event_type & CommandInterpreter::
                                         eBroadcastBitAsynchronousOutputData) {
-              const char *data = reinterpret_cast<const char *>(
+              const char *data = static_cast<const char *>(
                   EventDataBytes::GetBytesFromEvent(event_sp.get()));
               if (data && data[0]) {
                 StreamSP output_sp(GetAsyncOutputStream());

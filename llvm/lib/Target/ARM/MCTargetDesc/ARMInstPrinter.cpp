@@ -88,8 +88,9 @@ void ARMInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   OS << markup("<reg:") << getRegisterName(RegNo, DefaultAltIdx) << markup(">");
 }
 
-void ARMInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
-                               StringRef Annot, const MCSubtargetInfo &STI) {
+void ARMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
+                               StringRef Annot, const MCSubtargetInfo &STI,
+                               raw_ostream &O) {
   unsigned Opcode = MI->getOpcode();
 
   switch (Opcode) {
@@ -275,7 +276,7 @@ void ARMInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
       // Copy the rest operands into NewMI.
       for (unsigned i = isStore ? 3 : 2; i < MI->getNumOperands(); ++i)
         NewMI.addOperand(MI->getOperand(i));
-      printInstruction(&NewMI, STI, O);
+      printInstruction(&NewMI, Address, STI, O);
       return;
     }
     break;
@@ -288,7 +289,7 @@ void ARMInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
     switch (MI->getOperand(0).getImm()) {
     default:
       if (!printAliasInstr(MI, STI, O))
-        printInstruction(MI, STI, O);
+        printInstruction(MI, Address, STI, O);
       break;
     case 0:
       O << "\tssbb";
@@ -302,7 +303,7 @@ void ARMInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
   }
 
   if (!printAliasInstr(MI, STI, O))
-    printInstruction(MI, STI, O);
+    printInstruction(MI, Address, STI, O);
 
   printAnnotation(O, Annot);
 }
