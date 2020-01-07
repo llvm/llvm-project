@@ -1708,7 +1708,7 @@ tables.
 
 Additional information can be added to the maps. To avoid conflicts,
 any key names should be prefixed by "*vendor-name*." where
-``vendor-name`` can be the the name of the vendor and specific vendor
+``vendor-name`` can be the name of the vendor and specific vendor
 tool that generates the information. The prefix is abbreviated to
 simply "." when it appears within a map that has been added by the
 same *vendor-name*.

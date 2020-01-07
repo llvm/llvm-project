@@ -10308,7 +10308,7 @@ This instruction requires several arguments:
    #. If the musttail call appears in a function with the ``"thunk"`` attribute
       and the caller and callee both have varargs, than any unprototyped
       arguments in register or memory are forwarded to the callee. Similarly,
-      the return value of the callee is returned the the caller's caller, even
+      the return value of the callee is returned to the caller's caller, even
       if a void return type is in use.
 
    Both markers imply that the callee does not access allocas from the caller.
