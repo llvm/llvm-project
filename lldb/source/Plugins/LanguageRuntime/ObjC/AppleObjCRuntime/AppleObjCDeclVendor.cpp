@@ -146,9 +146,7 @@ AppleObjCDeclVendor::AppleObjCDeclVendor(ObjCLanguageRuntime &runtime)
       m_ast_ctx(runtime.GetProcess()
                     ->GetTarget()
                     .GetArchitecture()
-                    .GetTriple()
-                    .getTriple()
-                    .c_str()),
+                    .GetTriple()),
       m_type_realizer_sp(m_runtime.GetEncodingToType()) {
   m_external_source = new AppleObjCExternalASTSource(*this);
   llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> external_source_owning_ptr(
