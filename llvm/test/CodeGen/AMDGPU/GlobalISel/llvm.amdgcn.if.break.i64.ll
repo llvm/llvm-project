@@ -9,6 +9,7 @@ define amdgpu_kernel void @test_wave64(i32 %arg0, [8 x i32], i64 %saved) {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_eq_u32 s2, 0
 ; GCN-NEXT:    s_cselect_b32 s2, 1, 0
+; GCN-NEXT:    s_and_b32 s2, 1, s2
 ; GCN-NEXT:    v_cmp_ne_u32_e64 s[2:3], 0, s2
 ; GCN-NEXT:    s_or_b64 s[0:1], s[2:3], s[0:1]
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0

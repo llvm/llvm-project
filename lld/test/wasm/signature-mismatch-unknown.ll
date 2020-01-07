@@ -13,7 +13,7 @@
 
 target triple = "wasm32-unknown-unknown"
 
-; Function declartion with incorrect signature.
+; Function declaration with incorrect signature.
 declare dso_local void @ret32()
 
 ; Simply taking the address of the function should *not* generate the

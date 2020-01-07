@@ -93,7 +93,7 @@ if ( $^O =~ m/cygwin/i ) {
     # is really requested.
     $values{ fqdn } =
         sub {
-            my $fqdn = Net::Domain::hostfqdn(); # "fqdn" stands for "fully qualified doamain name".
+            my $fqdn = Net::Domain::hostfqdn(); # "fqdn" stands for "fully qualified domain name".
             # On some systems POSIX::uname() and Net::Domain::hostfqdn() reports different names.
             # Let us issue a warning if they significantly different. Names are insignificantly
             # different if POSIX::uname() matches the beginning of Net::Domain::hostfqdn().

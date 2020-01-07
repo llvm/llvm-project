@@ -17,6 +17,7 @@ class FoundationDisassembleTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIfAsan
     def test_foundation_disasm(self):
         """Do 'disassemble -n func' on each and every 'Code' symbol entry from the Foundation.framework."""
         self.build()
@@ -62,6 +63,7 @@ class FoundationDisassembleTestCase(TestBase):
                 self.runCmd('image lookup -s "%s"' % func)
                 self.runCmd('disassemble -n "%s"' % func)
 
+    @skipIfAsan
     def test_simple_disasm(self):
         """Test the lldb 'disassemble' command"""
         self.build()

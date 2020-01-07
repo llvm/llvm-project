@@ -14,7 +14,7 @@
 # I386-NEXT:  Data:                              2's complement, little endian
 # I386-NEXT:  Version:                           1 (current)
 # I386-NEXT:  OS/ABI:                            UNIX - System V
-# I386-NEXT:  ABI Version:                       0x0
+# I386-NEXT:  ABI Version:                       0
 # I386-NEXT:  Type:                              REL (Relocatable file)
 # I386-NEXT:  Machine:                           Intel 80386
 # I386-NEXT:  Version:                           0x1
@@ -57,7 +57,7 @@ ProgramHeaders:
 # X86-64-NEXT:  Data:                              2's complement, little endian
 # X86-64-NEXT:  Version:                           1 (current)
 # X86-64-NEXT:  OS/ABI:                            UNIX - System V
-# X86-64-NEXT:  ABI Version:                       0x0
+# X86-64-NEXT:  ABI Version:                       0
 # X86-64-NEXT:  Type:                              REL (Relocatable file)
 # X86-64-NEXT:  Machine:                           Advanced Micro Devices X86-64
 # X86-64-NEXT:  Version:                           0x1
@@ -101,7 +101,7 @@ ProgramHeaders:
 # MIPSEL-NEXT:  Data:                              2's complement, little endian
 # MIPSEL-NEXT:  Version:                           1 (current)
 # MIPSEL-NEXT:  OS/ABI:                            UNIX - System V
-# MIPSEL-NEXT:  ABI Version:                       0x0
+# MIPSEL-NEXT:  ABI Version:                       0
 # MIPSEL-NEXT:  Type:                              REL (Relocatable file)
 # MIPSEL-NEXT:  Machine:                           MIPS R3000
 # MIPSEL-NEXT:  Version:                           0x1

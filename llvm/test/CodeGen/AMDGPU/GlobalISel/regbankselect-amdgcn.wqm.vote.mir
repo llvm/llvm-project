@@ -12,8 +12,9 @@ body: |
     ; CHECK-LABEL: name: wqm_vote_scc
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; CHECK: [[COPY2:%[0-9]+]]:vcc(s1) = COPY [[ICMP]](s1)
+    ; CHECK: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; CHECK: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; CHECK: [[COPY2:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; CHECK: [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.wqm.vote), [[COPY2]](s1)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1

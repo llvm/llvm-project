@@ -499,9 +499,9 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
   Opts.NoInlineDefine = !Opt;
 }
 
-ClangASTContext::ClangASTContext(llvm::StringRef target_triple) {
-  if (!target_triple.empty())
-    SetTargetTriple(target_triple);
+ClangASTContext::ClangASTContext(llvm::Triple target_triple) {
+  if (!target_triple.str().empty())
+    SetTargetTriple(target_triple.str());
   // The caller didn't pass an ASTContext so create a new one for this
   // ClangASTContext.
   CreateASTContext();

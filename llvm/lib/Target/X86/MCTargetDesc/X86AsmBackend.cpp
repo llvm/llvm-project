@@ -69,21 +69,12 @@ static unsigned getFixupKindSize(unsigned Kind) {
 }
 
 namespace {
+/// A wrapper for holding a mask of the values from X86::AlignBranchBoundaryKind
 class X86AlignBranchKind {
 private:
   uint8_t AlignBranchKind = 0;
 
 public:
-  enum Flag : uint8_t {
-    AlignBranchNone = 0,
-    AlignBranchFused = 1U << 0,
-    AlignBranchJcc = 1U << 1,
-    AlignBranchJmp = 1U << 2,
-    AlignBranchCall = 1U << 3,
-    AlignBranchRet = 1U << 4,
-    AlignBranchIndirect = 1U << 5
-  };
-
   void operator=(const std::string &Val) {
     if (Val.empty())
       return;
@@ -91,17 +82,17 @@ public:
     StringRef(Val).split(BranchTypes, '+', -1, false);
     for (auto BranchType : BranchTypes) {
       if (BranchType == "fused")
-        addKind(AlignBranchFused);
+        addKind(X86::AlignBranchFused);
       else if (BranchType == "jcc")
-        addKind(AlignBranchJcc);
+        addKind(X86::AlignBranchJcc);
       else if (BranchType == "jmp")
-        addKind(AlignBranchJmp);
+        addKind(X86::AlignBranchJmp);
       else if (BranchType == "call")
-        addKind(AlignBranchCall);
+        addKind(X86::AlignBranchCall);
       else if (BranchType == "ret")
-        addKind(AlignBranchRet);
+        addKind(X86::AlignBranchRet);
       else if (BranchType == "indirect")
-        addKind(AlignBranchIndirect);
+        addKind(X86::AlignBranchIndirect);
       else {
         report_fatal_error(
             "'-x86-align-branch 'The branches's type is combination of jcc, "
@@ -112,7 +103,7 @@ public:
   }
 
   operator uint8_t() const { return AlignBranchKind; }
-  void addKind(Flag Value) { AlignBranchKind |= Value; }
+  void addKind(X86::AlignBranchBoundaryKind Value) { AlignBranchKind |= Value; }
 };
 
 X86AlignBranchKind X86AlignBranchKindLoc;
@@ -421,7 +412,7 @@ static bool hasVariantSymbol(const MCInst &MI) {
 
 bool X86AsmBackend::needAlign(MCObjectStreamer &OS) const {
   if (AlignBoundary == Align::None() ||
-      AlignBranchType == X86AlignBranchKind::AlignBranchNone)
+      AlignBranchType == X86::AlignBranchNone)
     return false;
 
   MCAssembler &Assembler = OS.getAssembler();
@@ -447,15 +438,15 @@ bool X86AsmBackend::needAlignInst(const MCInst &Inst) const {
 
   const MCInstrDesc &InstDesc = MCII->get(Inst.getOpcode());
   return (InstDesc.isConditionalBranch() &&
-          (AlignBranchType & X86AlignBranchKind::AlignBranchJcc)) ||
+          (AlignBranchType & X86::AlignBranchJcc)) ||
          (InstDesc.isUnconditionalBranch() &&
-          (AlignBranchType & X86AlignBranchKind::AlignBranchJmp)) ||
+          (AlignBranchType & X86::AlignBranchJmp)) ||
          (InstDesc.isCall() &&
-          (AlignBranchType & X86AlignBranchKind::AlignBranchCall)) ||
+          (AlignBranchType & X86::AlignBranchCall)) ||
          (InstDesc.isReturn() &&
-          (AlignBranchType & X86AlignBranchKind::AlignBranchRet)) ||
+          (AlignBranchType & X86::AlignBranchRet)) ||
          (InstDesc.isIndirectBranch() &&
-          (AlignBranchType & X86AlignBranchKind::AlignBranchIndirect));
+          (AlignBranchType & X86::AlignBranchIndirect));
 }
 
 static bool canReuseBoundaryAlignFragment(const MCBoundaryAlignFragment &F) {
@@ -480,7 +471,7 @@ void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
     return;
 
   MCFragment *CF = OS.getCurrentFragment();
-  bool NeedAlignFused = AlignBranchType & X86AlignBranchKind::AlignBranchFused;
+  bool NeedAlignFused = AlignBranchType & X86::AlignBranchFused;
   if (NeedAlignFused && isMacroFused(PrevInst, Inst) && CF) {
     // Macro fusion actually happens and there is no other fragment inserted
     // after the previous instruction. NOP can be emitted in PF to align fused

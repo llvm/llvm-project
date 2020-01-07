@@ -26,8 +26,7 @@ public:
   SubsystemRAII<FileSystem, HostInfo> subsystems;
 
   void SetUp() override {
-    std::string triple = HostInfo::GetTargetTriple();
-    m_ast.reset(new ClangASTContext(triple.c_str()));
+    m_ast.reset(new ClangASTContext(HostInfo::GetTargetTriple()));
   }
 
   void TearDown() override { m_ast.reset(); }

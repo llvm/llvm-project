@@ -10829,8 +10829,7 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         ExprLoc = VLENExpr->getExprLoc();
       }
       OMPDeclareSimdDeclAttr::BranchStateTy State = Attr->getBranchState();
-      if (CGM.getTriple().getArch() == llvm::Triple::x86 ||
-          CGM.getTriple().getArch() == llvm::Triple::x86_64) {
+      if (CGM.getTriple().isX86()) {
         emitX86DeclareSimdFunction(FD, Fn, VLENVal, ParamAttrs, State);
       } else if (CGM.getTriple().getArch() == llvm::Triple::aarch64) {
         unsigned VLEN = VLENVal.getExtValue();
@@ -11447,20 +11446,33 @@ CGOpenMPRuntime::LastprivateConditionalRAII::LastprivateConditionalRAII(
   OS << "$pl_cond_" << ID.getDevice() << "_" << ID.getFile() << "_"
      << PLoc.getLine() << "_" << PLoc.getColumn() << "$iv";
   Data.IVName = OS.str();
-
-  // Global loop counter. Required to handle inner parallel-for regions.
-  // global_iv = &iv;
-  QualType PtrIVTy = CGM.getContext().getPointerType(IVLVal.getType());
-  Address GlobIVAddr = CGM.getOpenMPRuntime().getAddrOfArtificialThreadPrivate(
-      CGF, PtrIVTy, Data.IVName);
-  LValue GlobIVLVal = CGF.MakeAddrLValue(GlobIVAddr, PtrIVTy);
-  CGF.EmitStoreOfScalar(IVLVal.getPointer(CGF), GlobIVLVal);
 }
 
 CGOpenMPRuntime::LastprivateConditionalRAII::~LastprivateConditionalRAII() {
   if (!NeedToPush)
     return;
   CGM.getOpenMPRuntime().LastprivateConditionalStack.pop_back();
+}
+
+void CGOpenMPRuntime::initLastprivateConditionalCounter(
+    CodeGenFunction &CGF, const OMPExecutableDirective &S) {
+  if (CGM.getLangOpts().OpenMPSimd ||
+      !llvm::any_of(S.getClausesOfKind<OMPLastprivateClause>(),
+                    [](const OMPLastprivateClause *C) {
+                      return C->getKind() == OMPC_LASTPRIVATE_conditional;
+                    }))
+    return;
+  const CGOpenMPRuntime::LastprivateConditionalData &Data =
+      LastprivateConditionalStack.back();
+  if (Data.UseOriginalIV)
+    return;
+  // Global loop counter. Required to handle inner parallel-for regions.
+  // global_iv = iv;
+  Address GlobIVAddr = CGM.getOpenMPRuntime().getAddrOfArtificialThreadPrivate(
+      CGF, Data.IVLVal.getType(), Data.IVName);
+  LValue GlobIVLVal = CGF.MakeAddrLValue(GlobIVAddr, Data.IVLVal.getType());
+  llvm::Value *IVVal = CGF.EmitLoadOfScalar(Data.IVLVal, S.getBeginLoc());
+  CGF.EmitStoreOfScalar(IVVal, GlobIVLVal);
 }
 
 namespace {
@@ -11576,10 +11588,9 @@ void CGOpenMPRuntime::checkAndEmitLastprivateConditional(CodeGenFunction &CGF,
   // Global loop counter. Required to handle inner parallel-for regions.
   // global_iv
   if (!UseOriginalIV) {
-    QualType PtrIVTy = CGM.getContext().getPointerType(IVLVal.getType());
-    Address IVAddr = getAddrOfArtificialThreadPrivate(CGF, PtrIVTy, IVName);
-    IVLVal =
-        CGF.EmitLoadOfPointerLValue(IVAddr, PtrIVTy->castAs<PointerType>());
+    Address IVAddr =
+        getAddrOfArtificialThreadPrivate(CGF, IVLVal.getType(), IVName);
+    IVLVal = CGF.MakeAddrLValue(IVAddr, IVLVal.getType());
   }
   llvm::Value *IVVal = CGF.EmitLoadOfScalar(IVLVal, FoundE->getExprLoc());
 

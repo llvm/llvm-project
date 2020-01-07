@@ -305,3 +305,10 @@ int main(int argc, char* argv[]) {
 fail:;
 }
 
+void f_label(int b) {
+  if (b)
+    return;
+    a:
+  return;
+  goto a;
+}

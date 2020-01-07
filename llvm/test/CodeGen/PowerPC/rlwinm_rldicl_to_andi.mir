@@ -120,9 +120,9 @@ body:             |
     %0:g8rc = COPY $x3
     %2:gprc_and_gprc_nor0 = COPY %1.sub_32
     %3:gprc = LI -11
-    %4:gprc_and_gprc_nor0 = RLWINMo %3, 2, 20, 31, implicit-def $cr0
+    %4:gprc_and_gprc_nor0 = RLWINM_rec %3, 2, 20, 31, implicit-def $cr0
     ; CHECK: LI 4055
-    ; CHECK: ANDIo %3, 4055
+    ; CHECK: ANDI_rec %3, 4055
     ; CHECK-LATE-NOT: andi.
     ; CHECK-LATE: rlwinm.
     %5:crrc = COPY killed $cr0
@@ -180,9 +180,9 @@ body:             |
     %0:g8rc = COPY $x3
     %2:gprc_and_gprc_nor0 = COPY %1.sub_32
     %3:gprc_and_gprc_nor0 = LI 1
-    %4:gprc = RLWINMo %3, 21, 20, 31, implicit-def $cr0
+    %4:gprc = RLWINM_rec %3, 21, 20, 31, implicit-def $cr0
     ; CHECK: LI 1
-    ; CHECK: ANDIo %3, 0
+    ; CHECK: ANDI_rec %3, 0
     ; CHECK-LATE: li [[IMM:[0-9]+]], 1
     ; CHECK-LATE: andi. {{[0-9]+}}, [[IMM]], 0
     %5:crrc = COPY killed $cr0
@@ -240,9 +240,9 @@ body:             |
     %0:g8rc = COPY $x3
     %2:gprc_and_gprc_nor0 = COPY %1.sub_32
     %3:gprc_and_gprc_nor0 = LI -11
-    %4:gprc = RLWINMo %3, 2, 20, 31, implicit-def $cr0
+    %4:gprc = RLWINM_rec %3, 2, 20, 31, implicit-def $cr0
     ; CHECK: LI -11
-    ; CHECK: ANDIo %3, 65525
+    ; CHECK: ANDI_rec %3, 65525
     ; CHECK-LATE-NOT: andi.
     ; CHECK-LATE: rlwinm.
     %5:crrc = COPY killed $cr0
@@ -295,9 +295,9 @@ body:             |
   
     %1:g8rc_and_g8rc_nox0 = COPY $x4
     %0:g8rc = LI8 -11
-    %2:g8rc_and_g8rc_nox0  = RLDICLo %0, 2, 49, implicit-def $cr0
+    %2:g8rc_and_g8rc_nox0  = RLDICL_rec %0, 2, 49, implicit-def $cr0
     ; CHECK: LI8 32727
-    ; CHECK: ANDI8o %0, 32727
+    ; CHECK: ANDI8_rec %0, 32727
     ; CHECK-LATE-NOT: andi.
     ; CHECK-LATE: rldicl.
     %3:crrc = COPY killed $cr0
@@ -349,9 +349,9 @@ body:             |
   
     %1:g8rc_and_g8rc_nox0 = COPY $x4
     %0:g8rc_and_g8rc_nox0 = LI8 1
-    %2:g8rc = RLDICLo %0, 32, 33, implicit-def $cr0
+    %2:g8rc = RLDICL_rec %0, 32, 33, implicit-def $cr0
     ; CHECK: LI8 1
-    ; CHECK: ANDI8o %0, 0
+    ; CHECK: ANDI8_rec %0, 0
     ; CHECK-LATE: li [[IMM:[0-9]+]], 1
     ; CHECK-LATE: andi. {{[0-9]+}}, [[IMM]], 0
     %3:crrc = COPY killed $cr0
@@ -403,9 +403,9 @@ body:             |
   
     %1:g8rc_and_g8rc_nox0 = COPY $x4
     %0:g8rc_and_g8rc_nox0 = LI8 -11
-    %2:g8rc = RLDICLo %0, 2, 49, implicit-def $cr0
+    %2:g8rc = RLDICL_rec %0, 2, 49, implicit-def $cr0
     ; CHECK: LI8 -11
-    ; CHECK: ANDI8o %0, 65525
+    ; CHECK: ANDI8_rec %0, 65525
     ; CHECK-LATE-NOT: andi.
     ; CHECK-LATE: rldicl.
     %3:crrc = COPY killed $cr0

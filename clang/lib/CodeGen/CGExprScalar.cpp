@@ -2356,10 +2356,29 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
   llvm_unreachable("Unknown SignedOverflowBehaviorTy");
 }
 
+namespace {
+/// Handles check and update for lastprivate conditional variables.
+class OMPLastprivateConditionalUpdateRAII {
+private:
+  CodeGenFunction &CGF;
+  const UnaryOperator *E;
+
+public:
+  OMPLastprivateConditionalUpdateRAII(CodeGenFunction &CGF,
+                                      const UnaryOperator *E)
+      : CGF(CGF), E(E) {}
+  ~OMPLastprivateConditionalUpdateRAII() {
+    if (CGF.getLangOpts().OpenMP)
+      CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(
+          CGF, E->getSubExpr());
+  }
+};
+} // namespace
+
 llvm::Value *
 ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                            bool isInc, bool isPre) {
-
+  OMPLastprivateConditionalUpdateRAII OMPRegion(CGF, E);
   QualType type = E->getSubExpr()->getType();
   llvm::PHINode *atomicPHI = nullptr;
   llvm::Value *value;

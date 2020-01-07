@@ -64,8 +64,9 @@ void PPCInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   OS << RegName;
 }
 
-void PPCInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
-                               StringRef Annot, const MCSubtargetInfo &STI) {
+void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
+                               StringRef Annot, const MCSubtargetInfo &STI,
+                               raw_ostream &O) {
   // Customize printing of the addis instruction on AIX. When an operand is a
   // symbol reference, the instruction syntax is changed to look like a load
   // operation, i.e:
@@ -193,10 +194,9 @@ void PPCInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
   }
 
   if (!printAliasInstr(MI, O))
-    printInstruction(MI, O);
+    printInstruction(MI, Address, O);
   printAnnotation(O, Annot);
 }
-
 
 void PPCInstPrinter::printPredicateOperand(const MCInst *MI, unsigned OpNo,
                                            raw_ostream &O,

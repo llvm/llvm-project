@@ -1716,6 +1716,11 @@ public:
   /// current context.
   bool isNontemporalDecl(const ValueDecl *VD) const;
 
+  /// Initializes global counter for lastprivate conditional.
+  virtual void
+  initLastprivateConditionalCounter(CodeGenFunction &CGF,
+                                    const OMPExecutableDirective &S);
+
   /// Checks if the provided \p LVal is lastprivate conditional and emits the
   /// code to update the value of the original variable.
   /// \code

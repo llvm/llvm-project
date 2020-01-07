@@ -186,6 +186,71 @@ foo)pt";
   EXPECT_EQ(D.asPlainText(), ExpectedPlainText);
 }
 
+TEST(BulletList, Render) {
+  BulletList L;
+  // Flat list
+  L.addItem().addParagraph().appendText("foo");
+  EXPECT_EQ(L.asMarkdown(), "- foo");
+  EXPECT_EQ(L.asPlainText(), "- foo");
+
+  L.addItem().addParagraph().appendText("bar");
+  EXPECT_EQ(L.asMarkdown(), R"md(- foo
+- bar)md");
+  EXPECT_EQ(L.asPlainText(), R"pt(- foo
+- bar)pt");
+
+  // Nested list, with a single item.
+  Document &D = L.addItem();
+  // First item with foo\nbaz
+  D.addParagraph().appendText("foo");
+  D.addParagraph().appendText("baz");
+
+  // Nest one level.
+  Document &Inner = D.addBulletList().addItem();
+  Inner.addParagraph().appendText("foo");
+
+  // Nest one more level.
+  BulletList &InnerList = Inner.addBulletList();
+  // Single item, baz\nbaz
+  Document &DeepDoc = InnerList.addItem();
+  DeepDoc.addParagraph().appendText("baz");
+  DeepDoc.addParagraph().appendText("baz");
+  EXPECT_EQ(L.asMarkdown(), R"md(- foo
+- bar
+- foo
+  baz
+  - foo
+    - baz
+      baz)md");
+  EXPECT_EQ(L.asPlainText(), R"pt(- foo
+- bar
+- foo
+  baz
+  - foo
+    - baz
+      baz)pt");
+
+  // Termination
+  Inner.addParagraph().appendText("after");
+  EXPECT_EQ(L.asMarkdown(), R"md(- foo
+- bar
+- foo
+  baz
+  - foo
+    - baz
+      baz
+    
+    after)md");
+  EXPECT_EQ(L.asPlainText(), R"pt(- foo
+- bar
+- foo
+  baz
+  - foo
+    - baz
+      baz
+    after)pt");
+}
+
 } // namespace
 } // namespace markup
 } // namespace clangd

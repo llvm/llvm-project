@@ -35,8 +35,8 @@ body:             |
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = COPY $sgpr2
     %3:sgpr(s32) = G_CONSTANT i32 0
-    %4:scc(s1) = G_ICMP intpred(eq), %2(s32), %3
-    G_BRCOND %4(s1), %bb.1
+    %4:sgpr(s32) = G_ICMP intpred(eq), %2(s32), %3
+    G_BRCOND %4, %bb.1
     G_BR %bb.2
 
   bb.1:
@@ -85,8 +85,8 @@ body:             |
     %1:vgpr(s32) = COPY $vgpr1
     %2:sgpr(s32) = COPY $sgpr2
     %3:sgpr(s32) = G_CONSTANT i32 0
-    %4:scc(s1) = G_ICMP intpred(eq), %2(s32), %3
-    G_BRCOND %4(s1), %bb.1
+    %4:sgpr(s32) = G_ICMP intpred(eq), %2(s32), %3
+    G_BRCOND %4, %bb.1
     G_BR %bb.2
 
   bb.1:
@@ -134,8 +134,8 @@ body:             |
     %1:vgpr(s32) = COPY $vgpr0
     %2:sgpr(s32) = COPY $sgpr2
     %3:sgpr(s32) = G_CONSTANT i32 0
-    %4:scc(s1) = G_ICMP intpred(eq), %2(s32), %3
-    G_BRCOND %4(s1), %bb.1
+    %4:sgpr(s32) = G_ICMP intpred(eq), %2(s32), %3
+    G_BRCOND %4, %bb.1
     G_BR %bb.2
 
   bb.1:
@@ -184,8 +184,8 @@ body:             |
     %1:sgpr(s32) = COPY $sgpr0
     %2:sgpr(s32) = COPY $sgpr1
     %3:sgpr(s32) = G_CONSTANT i32 0
-    %4:scc(s1) = G_ICMP intpred(eq), %2(s32), %3
-    G_BRCOND %4(s1), %bb.1
+    %4:sgpr(s32) = G_ICMP intpred(eq), %2(s32), %3
+    G_BRCOND %4, %bb.1
     G_BR %bb.2
 
   bb.1:
@@ -233,8 +233,8 @@ body:             |
     %1:sgpr(s64) = COPY $sgpr2_sgpr3
     %2:sgpr(s32) = COPY $sgpr4
     %3:sgpr(s32) = G_CONSTANT i32 0
-    %4:scc(s1) = G_ICMP intpred(eq), %2(s32), %3
-    G_BRCOND %4(s1), %bb.1
+    %4:sgpr(s32) = G_ICMP intpred(eq), %2(s32), %3
+    G_BRCOND %4, %bb.1
     G_BR %bb.2
 
   bb.1:
@@ -282,8 +282,8 @@ body:             |
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:sgpr(s32) = COPY $sgpr2
     %3:sgpr(s32) = G_CONSTANT i32 0
-    %4:scc(s1) = G_ICMP intpred(eq), %2(s32), %3
-    G_BRCOND %4(s1), %bb.1
+    %4:sgpr(s32) = G_ICMP intpred(eq), %2(s32), %3
+    G_BRCOND %4, %bb.1
     G_BR %bb.2
 
   bb.1:
@@ -333,8 +333,8 @@ body:             |
     %2:sgpr(s32) = COPY $sgpr2
     %3:sgpr(s32) = G_CONSTANT i32 0
     %4:vcc(s1) = G_ICMP intpred(eq), %0, %3
-    %5:scc(s1) = G_ICMP intpred(eq), %2(s32), %3
-    G_BRCOND %5(s1), %bb.1
+    %5:sgpr(s32) = G_ICMP intpred(eq), %2(s32), %3
+    G_BRCOND %5, %bb.1
     G_BR %bb.2
 
   bb.1:
@@ -381,8 +381,8 @@ body:             |
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = COPY $sgpr2
     %3:sgpr(s32) = G_CONSTANT i32 0
-    %4:scc(s1) = G_ICMP intpred(eq), %2(s32), %3
-    G_BRCOND %4(s1), %bb.1
+    %4:sgpr(s32) = G_ICMP intpred(eq), %2(s32), %3
+    G_BRCOND %4, %bb.1
     G_BR %bb.2
 
   bb.1:
@@ -431,8 +431,8 @@ body:             |
     %1:vgpr(s32) = COPY $vgpr1
     %2:sgpr(s32) = COPY $sgpr2
     %3:sgpr(s32) = G_CONSTANT i32 0
-    %4:scc(s1) = G_ICMP intpred(eq), %2(s32), %3
-    G_BRCOND %4(s1), %bb.1
+    %4:sgpr(s32) = G_ICMP intpred(eq), %2(s32), %3
+    G_BRCOND %4, %bb.1
     G_BR %bb.2
 
   bb.1:

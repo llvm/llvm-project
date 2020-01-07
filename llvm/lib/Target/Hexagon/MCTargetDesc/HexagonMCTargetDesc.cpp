@@ -137,14 +137,15 @@ public:
                            MCInstPrinter &IP)
       : HexagonTargetStreamer(S) {}
 
-  void prettyPrintAsm(MCInstPrinter &InstPrinter, raw_ostream &OS,
-                      const MCInst &Inst, const MCSubtargetInfo &STI) override {
+  void prettyPrintAsm(MCInstPrinter &InstPrinter, uint64_t Address,
+                      const MCInst &Inst, const MCSubtargetInfo &STI,
+                      raw_ostream &OS) override {
     assert(HexagonMCInstrInfo::isBundle(Inst));
     assert(HexagonMCInstrInfo::bundleSize(Inst) <= HEXAGON_PACKET_SIZE);
     std::string Buffer;
     {
       raw_string_ostream TempStream(Buffer);
-      InstPrinter.printInst(&Inst, TempStream, "", STI);
+      InstPrinter.printInst(&Inst, Address, "", STI, TempStream);
     }
     StringRef Contents(Buffer);
     auto PacketBundle = Contents.rsplit('\n');

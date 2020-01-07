@@ -363,8 +363,8 @@ EXTERN int omp_test_lock(omp_lock_t *lock) {
   return rc;
 }
 
-// for xlf Fotran
-// Fotran, the return is LOGICAL type
+// for xlf Fortran
+// Fortran, the return is LOGICAL type
 
 #define FLOGICAL long
 EXTERN FLOGICAL __xlf_omp_is_initial_device_i8() {

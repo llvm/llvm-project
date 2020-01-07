@@ -26,9 +26,7 @@ AppleObjCTypeEncodingParser::AppleObjCTypeEncodingParser(
     m_scratch_ast_ctx_up.reset(new ClangASTContext(runtime.GetProcess()
                                                        ->GetTarget()
                                                        .GetArchitecture()
-                                                       .GetTriple()
-                                                       .str()
-                                                       .c_str()));
+                                                       .GetTriple()));
 }
 
 std::string AppleObjCTypeEncodingParser::ReadStructName(StringLexer &type) {

@@ -84,7 +84,7 @@ EXTERN int32_t __kmpc_omp_task_with_deps(kmp_Ident *loc, uint32_t global_tid,
         P64(newKmpTaskDescr));
   ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc),
           "Runtime must be initialized.");
-  // 1. get explict task descr from kmp task descr
+  // 1. get explicit task descr from kmp task descr
   omptarget_nvptx_ExplicitTaskDescr *newExplicitTaskDescr =
       (omptarget_nvptx_ExplicitTaskDescr *)SUB_BYTES(
           newKmpTaskDescr, sizeof(omptarget_nvptx_TaskDescr));
@@ -123,7 +123,7 @@ EXTERN void __kmpc_omp_task_begin_if0(kmp_Ident *loc, uint32_t global_tid,
         (unsigned long long)newKmpTaskDescr);
   ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc),
           "Runtime must be initialized.");
-  // 1. get explict task descr from kmp task descr
+  // 1. get explicit task descr from kmp task descr
   omptarget_nvptx_ExplicitTaskDescr *newExplicitTaskDescr =
       (omptarget_nvptx_ExplicitTaskDescr *)SUB_BYTES(
           newKmpTaskDescr, sizeof(omptarget_nvptx_TaskDescr));
@@ -149,7 +149,7 @@ EXTERN void __kmpc_omp_task_complete_if0(kmp_Ident *loc, uint32_t global_tid,
         (unsigned long long)newKmpTaskDescr);
   ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc),
           "Runtime must be initialized.");
-  // 1. get explict task descr from kmp task descr
+  // 1. get explicit task descr from kmp task descr
   omptarget_nvptx_ExplicitTaskDescr *newExplicitTaskDescr =
       (omptarget_nvptx_ExplicitTaskDescr *)SUB_BYTES(
           newKmpTaskDescr, sizeof(omptarget_nvptx_TaskDescr));

@@ -4185,6 +4185,13 @@ PowerPC:
 - ``X``: Prints 'x' if the memory operand is an indexed form. (NOTE: LLVM does
   not support indexed form, so this will currently always print nothing)
 
+RISC-V:
+
+- ``i``: Print the letter 'i' if the operand is not a register, otherwise print
+  nothing. Used to print 'addi' vs 'add' instructions, etc.
+- ``z``: Print the register ``zero`` if an immediate zero, otherwise print
+  normally.
+
 Sparc:
 
 - ``r``: No effect.

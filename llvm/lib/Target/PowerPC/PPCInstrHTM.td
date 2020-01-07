@@ -36,7 +36,7 @@ def TEND : XForm_htm1 <31, 686,
 
 def TABORT : XForm_base_r3xo <31, 910,
                               (outs), (ins gprc:$A), "tabort. $A", IIC_SprMTSPR,
-                              []>, isDOT {
+                              []>, isRecordForm {
   let RST = 0;
   let B = 0;
 }
@@ -44,38 +44,38 @@ def TABORT : XForm_base_r3xo <31, 910,
 def TABORTWC : XForm_base_r3xo <31, 782,
                                 (outs), (ins u5imm:$RTS, gprc:$A, gprc:$B),
                                 "tabortwc. $RTS, $A, $B", IIC_SprMTSPR, []>,
-                                isDOT;
+                                isRecordForm;
 
 def TABORTWCI : XForm_base_r3xo <31, 846,
                                  (outs), (ins u5imm:$RTS, gprc:$A, u5imm:$B),
                                  "tabortwci. $RTS, $A, $B", IIC_SprMTSPR, []>,
-                                 isDOT;
+                                 isRecordForm;
 
 def TABORTDC : XForm_base_r3xo <31, 814,
                                 (outs), (ins u5imm:$RTS, gprc:$A, gprc:$B),
                                 "tabortdc. $RTS, $A, $B", IIC_SprMTSPR, []>,
-                                isDOT;
+                                isRecordForm;
 
 def TABORTDCI : XForm_base_r3xo <31, 878,
                                  (outs), (ins u5imm:$RTS, gprc:$A, u5imm:$B),
                                  "tabortdci. $RTS, $A, $B", IIC_SprMTSPR, []>,
-                                 isDOT;
+                                 isRecordForm;
 
 def TSR : XForm_htm2 <31, 750,
                       (outs), (ins u1imm:$L), "tsr. $L", IIC_SprMTSPR, []>,
-                      isDOT;
+                      isRecordForm;
 
 def TRECLAIM : XForm_base_r3xo <31, 942,
                                 (outs), (ins gprc:$A), "treclaim. $A",
                                 IIC_SprMTSPR, []>,
-                                isDOT {
+                                isRecordForm {
   let RST = 0;
   let B = 0;
 }
 
 def TRECHKPT : XForm_base_r3xo <31, 1006,
                                 (outs), (ins), "trechkpt.", IIC_SprMTSPR, []>,
-                                isDOT {
+                                isRecordForm {
   let RST = 0;
   let A = 0;
   let B = 0;

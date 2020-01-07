@@ -3169,7 +3169,7 @@ static void __kmp_free_task_deque(kmp_thread_data_t *thread_data) {
 // __kmp_realloc_task_threads_data:
 // Allocates a threads_data array for a task team, either by allocating an
 // initial array or enlarging an existing array.  Only the first thread to get
-// the lock allocs or enlarges the array and re-initializes the array eleemnts.
+// the lock allocs or enlarges the array and re-initializes the array elements.
 // That thread returns "TRUE", the rest return "FALSE".
 // Assumes that the new array size is given by task_team -> tt.tt_nproc.
 // The current size is given by task_team -> tt.tt_max_threads.
@@ -4144,7 +4144,8 @@ void __kmp_taskloop_linear(ident_t *loc, int gtid, kmp_task_t *task,
     } else {
       next_task_bounds.set_ub(upper);
     }
-    if (ptask_dup != NULL) // set lastprivate flag, construct fistprivates, etc.
+    if (ptask_dup != NULL) // set lastprivate flag, construct firstprivates,
+                           // etc.
       ptask_dup(next_task, task, lastpriv);
     KA_TRACE(40,
              ("__kmp_taskloop_linear: T#%d; task #%llu: task %p: lower %lld, "
@@ -4313,7 +4314,7 @@ void __kmp_taskloop_recur(ident_t *loc, int gtid, kmp_task_t *task,
   next_task = __kmp_task_dup_alloc(thread, task); // duplicate the task
   // adjust lower bound (upper bound is not changed) for the 2nd half
   *(kmp_uint64 *)((char *)next_task + lower_offset) = lb1;
-  if (ptask_dup != NULL) // construct fistprivates, etc.
+  if (ptask_dup != NULL) // construct firstprivates, etc.
     ptask_dup(next_task, task, 0);
   *ub = ub0; // adjust upper bound for the 1st half
 

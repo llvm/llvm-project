@@ -661,6 +661,7 @@ public:
 
   /// The instruction is unsupported.
   LegalizeRuleSet &unsupported() {
+    markAllIdxsAsCovered();
     return actionIf(LegalizeAction::Unsupported, always);
   }
   LegalizeRuleSet &unsupportedIf(LegalityPredicate Predicate) {

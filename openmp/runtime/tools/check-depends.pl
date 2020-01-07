@@ -406,11 +406,11 @@ B<check-depends.pl> I<OPTIONS>... I<library>
 
 C<check-depends.pl> finds direct dependencies for a specified library. List of actual dependencies
 is sorted alphabetically and printed. If list of expected dependencies is specified, the scripts
-checks the library has only allowed dependencies. In case of not expected depndencies the script
+checks the library has only allowed dependencies. In case of not expected dependencies. the script
 issues error message and exits with non-zero code.
 
-Linux* OS and OS X*: The script finds dependencies only for dymamic libraries. Windows* OS: The script
-finds dependencies for either static or dymamic libraries.
+Linux* OS and OS X*: The script finds dependencies only for dynamic libraries. Windows* OS: The script
+finds dependencies for either static or dynamic libraries.
 
 The script uses external tools. On Linux* OS, it runs F<readelf>, on OS X* -- F<otool> (or F<otool64>),
 on Windows* OS -- F<link>.

@@ -631,6 +631,13 @@ public:
                               std::string ProfileFile,
                               std::string ProfileRemappingFile);
 
+
+  /// Returns PIC. External libraries can use this to register pass
+  /// instrumentation callbacks.
+  PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
+    return PIC;
+  }
+
 private:
   static Optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);

@@ -1775,14 +1775,6 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
         &AMDGPU::SReg_32_XM0_XEXECRegClass : &AMDGPU::SReg_64_XEXECRegClass;
     case AMDGPU::SGPRRegBankID:
       return &AMDGPU::SReg_32RegClass;
-    case AMDGPU::SCCRegBankID:
-      // This needs to return an allocatable class, so don't bother returning
-      // the dummy SCC class.
-      //
-      // FIXME: This is a grotesque hack. We use SGPR_32 as an indication this
-      // was not an VCC bank value since we use the larger class SReg_32 for
-      // other values. These should all use SReg_32.
-      return &AMDGPU::SGPR_32RegClass;
     default:
       llvm_unreachable("unknown register bank");
     }

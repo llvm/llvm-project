@@ -875,7 +875,7 @@ Make a directory.
 This function makes a directory. If necessary, more than one level can be created.
 If directory exists, warning issues (the script behavior depends on value of
 C<-warning_level> option). If directory creation fails or C<$dir> exists but it is not a
-directory, error isssues.
+directory, error issues.
 
 Options:
 
@@ -1834,7 +1834,7 @@ Examples:
     execute( [ qw( cvs -n -q update . ) ], -stdout => \@output, -stderr => undef );
         # Execute specified command,  output is saved in @output
         # variable, stderr stream is redirected to null device
-        # (/dev/null in Linux* OS an nul in Windows* OS).
+        # (/dev/null in Linux* OS and nul in Windows* OS).
 
 =cut
 

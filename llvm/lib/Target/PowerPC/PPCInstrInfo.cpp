@@ -371,7 +371,7 @@ MachineInstr *PPCInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   MachineFunction &MF = *MI.getParent()->getParent();
 
   // Normal instructions can be commuted the obvious way.
-  if (MI.getOpcode() != PPC::RLWIMI && MI.getOpcode() != PPC::RLWIMIo)
+  if (MI.getOpcode() != PPC::RLWIMI && MI.getOpcode() != PPC::RLWIMI_rec)
     return TargetInstrInfo::commuteInstructionImpl(MI, NewMI, OpIdx1, OpIdx2);
   // Note that RLWIMI can be commuted as a 32-bit instruction, but not as a
   // 64-bit instruction (so we don't handle PPC::RLWIMI8 here), because
@@ -391,7 +391,7 @@ MachineInstr *PPCInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
 
   // Swap op1/op2
   assert(((OpIdx1 == 1 && OpIdx2 == 2) || (OpIdx1 == 2 && OpIdx2 == 1)) &&
-         "Only the operands 1 and 2 can be swapped in RLSIMI/RLWIMIo.");
+         "Only the operands 1 and 2 can be swapped in RLSIMI/RLWIMI_rec.");
   Register Reg0 = MI.getOperand(0).getReg();
   Register Reg1 = MI.getOperand(1).getReg();
   Register Reg2 = MI.getOperand(2).getReg();
@@ -1836,8 +1836,8 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
 
   int NewOpC = -1;
   int MIOpC = MI->getOpcode();
-  if (MIOpC == PPC::ANDIo || MIOpC == PPC::ANDI8o ||
-      MIOpC == PPC::ANDISo || MIOpC == PPC::ANDIS8o)
+  if (MIOpC == PPC::ANDI_rec || MIOpC == PPC::ANDI8_rec ||
+      MIOpC == PPC::ANDIS_rec || MIOpC == PPC::ANDIS8_rec)
     NewOpC = MIOpC;
   else {
     NewOpC = PPC::getRecordFormOpcode(MIOpC);
@@ -1943,9 +1943,9 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
         Mask = ((1LLU << (32 - MB)) - 1) & ~((1LLU << (31 - ME)) - 1);
         // The mask value needs to shift right 16 if we're emitting andis.
         Mask >>= MBInLoHWord ? 0 : 16;
-        NewOpC = MIOpC == PPC::RLWINM ?
-          (MBInLoHWord ? PPC::ANDIo : PPC::ANDISo) :
-          (MBInLoHWord ? PPC::ANDI8o :PPC::ANDIS8o);
+        NewOpC = MIOpC == PPC::RLWINM
+                     ? (MBInLoHWord ? PPC::ANDI_rec : PPC::ANDIS_rec)
+                     : (MBInLoHWord ? PPC::ANDI8_rec : PPC::ANDIS8_rec);
       } else if (MRI->use_empty(GPRRes) && (ME == 31) &&
                  (ME - MB + 1 == SH) && (MB >= 16)) {
         // If we are rotating by the exact number of bits as are in the mask
@@ -1953,7 +1953,7 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
         // that's just an andis. (as long as the GPR result has no uses).
         Mask = ((1LLU << 32) - 1) & ~((1LLU << (32 - SH)) - 1);
         Mask >>= 16;
-        NewOpC = MIOpC == PPC::RLWINM ? PPC::ANDISo :PPC::ANDIS8o;
+        NewOpC = MIOpC == PPC::RLWINM ? PPC::ANDIS_rec : PPC::ANDIS8_rec;
       }
       // If we've set the mask, we can transform.
       if (Mask != ~0LLU) {
@@ -1966,7 +1966,7 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
       int64_t MB = MI->getOperand(3).getImm();
       if (MB >= 48) {
         uint64_t Mask = (1LLU << (63 - MB + 1)) - 1;
-        NewOpC = PPC::ANDI8o;
+        NewOpC = PPC::ANDI8_rec;
         MI->RemoveOperand(3);
         MI->getOperand(2).setImm(Mask);
         NumRcRotatesConvertedToRcAnd++;
@@ -2306,7 +2306,7 @@ void PPCInstrInfo::replaceInstrWithLI(MachineInstr &MI,
 
   // Replace the instruction.
   if (LII.SetCR) {
-    MI.setDesc(get(LII.Is64Bit ? PPC::ANDI8o : PPC::ANDIo));
+    MI.setDesc(get(LII.Is64Bit ? PPC::ANDI8_rec : PPC::ANDI_rec));
     // Set the immediate.
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
         .addImm(LII.Imm).addReg(PPC::CR0, RegState::ImplicitDefine);
@@ -2370,15 +2370,13 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
     ImmInstrInfo III;
     unsigned Opc = MI.getOpcode();
     bool ConvertibleImmForm =
-      Opc == PPC::CMPWI || Opc == PPC::CMPLWI ||
-      Opc == PPC::CMPDI || Opc == PPC::CMPLDI ||
-      Opc == PPC::ADDI || Opc == PPC::ADDI8 ||
-      Opc == PPC::ORI || Opc == PPC::ORI8 ||
-      Opc == PPC::XORI || Opc == PPC::XORI8 ||
-      Opc == PPC::RLDICL || Opc == PPC::RLDICLo ||
-      Opc == PPC::RLDICL_32 || Opc == PPC::RLDICL_32_64 ||
-      Opc == PPC::RLWINM || Opc == PPC::RLWINMo ||
-      Opc == PPC::RLWINM8 || Opc == PPC::RLWINM8o;
+        Opc == PPC::CMPWI || Opc == PPC::CMPLWI || Opc == PPC::CMPDI ||
+        Opc == PPC::CMPLDI || Opc == PPC::ADDI || Opc == PPC::ADDI8 ||
+        Opc == PPC::ORI || Opc == PPC::ORI8 || Opc == PPC::XORI ||
+        Opc == PPC::XORI8 || Opc == PPC::RLDICL || Opc == PPC::RLDICL_rec ||
+        Opc == PPC::RLDICL_32 || Opc == PPC::RLDICL_32_64 ||
+        Opc == PPC::RLWINM || Opc == PPC::RLWINM_rec || Opc == PPC::RLWINM8 ||
+        Opc == PPC::RLWINM8_rec;
     bool IsVFReg = (MI.getNumOperands() && MI.getOperand(0).isReg())
                        ? isVFRegister(MI.getOperand(0).getReg())
                        : false;
@@ -2879,34 +2877,34 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
     return false;
   }
   case PPC::RLDICL:
-  case PPC::RLDICLo:
+  case PPC::RLDICL_rec:
   case PPC::RLDICL_32:
   case PPC::RLDICL_32_64: {
     // Use APInt's rotate function.
     int64_t SH = MI.getOperand(2).getImm();
     int64_t MB = MI.getOperand(3).getImm();
-    APInt InVal((Opc == PPC::RLDICL || Opc == PPC::RLDICLo) ?
-                64 : 32, SExtImm, true);
+    APInt InVal((Opc == PPC::RLDICL || Opc == PPC::RLDICL_rec) ? 64 : 32,
+                SExtImm, true);
     InVal = InVal.rotl(SH);
     uint64_t Mask = (1LLU << (63 - MB + 1)) - 1;
     InVal &= Mask;
     // Can't replace negative values with an LI as that will sign-extend
     // and not clear the left bits. If we're setting the CR bit, we will use
-    // ANDIo which won't sign extend, so that's safe.
+    // ANDI_rec which won't sign extend, so that's safe.
     if (isUInt<15>(InVal.getSExtValue()) ||
-        (Opc == PPC::RLDICLo && isUInt<16>(InVal.getSExtValue()))) {
+        (Opc == PPC::RLDICL_rec && isUInt<16>(InVal.getSExtValue()))) {
       ReplaceWithLI = true;
       Is64BitLI = Opc != PPC::RLDICL_32;
       NewImm = InVal.getSExtValue();
-      SetCR = Opc == PPC::RLDICLo;
+      SetCR = Opc == PPC::RLDICL_rec;
       break;
     }
     return false;
   }
   case PPC::RLWINM:
   case PPC::RLWINM8:
-  case PPC::RLWINMo:
-  case PPC::RLWINM8o: {
+  case PPC::RLWINM_rec:
+  case PPC::RLWINM8_rec: {
     int64_t SH = MI.getOperand(2).getImm();
     int64_t MB = MI.getOperand(3).getImm();
     int64_t ME = MI.getOperand(4).getImm();
@@ -2917,15 +2915,15 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
     InVal &= Mask;
     // Can't replace negative values with an LI as that will sign-extend
     // and not clear the left bits. If we're setting the CR bit, we will use
-    // ANDIo which won't sign extend, so that's safe.
+    // ANDI_rec which won't sign extend, so that's safe.
     bool ValueFits = isUInt<15>(InVal.getSExtValue());
-    ValueFits |= ((Opc == PPC::RLWINMo || Opc == PPC::RLWINM8o) &&
+    ValueFits |= ((Opc == PPC::RLWINM_rec || Opc == PPC::RLWINM8_rec) &&
                   isUInt<16>(InVal.getSExtValue()));
     if (ValueFits) {
       ReplaceWithLI = true;
-      Is64BitLI = Opc == PPC::RLWINM8 || Opc == PPC::RLWINM8o;
+      Is64BitLI = Opc == PPC::RLWINM8 || Opc == PPC::RLWINM8_rec;
       NewImm = InVal.getSExtValue();
-      SetCR = Opc == PPC::RLWINMo || Opc == PPC::RLWINM8o;
+      SetCR = Opc == PPC::RLWINM_rec || Opc == PPC::RLWINM8_rec;
       break;
     }
     return false;
@@ -2987,7 +2985,7 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
     LII.Is64Bit = Is64BitLI;
     LII.SetCR = SetCR;
     // If we're setting the CR, the original load-immediate must be kept (as an
-    // operand to ANDIo/ANDI8o).
+    // operand to ANDI_rec/ANDI8_rec).
     if (KilledDef && SetCR)
       *KilledDef = nullptr;
     replaceInstrWithLI(MI, LII);
@@ -3038,13 +3036,13 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
     III.IsSummingOperands = true;
     III.ImmOpcode = Opc == PPC::ADDC ? PPC::ADDIC : PPC::ADDIC8;
     break;
-  case PPC::ADDCo:
+  case PPC::ADDC_rec:
     III.SignedImm = true;
     III.ZeroIsSpecialOrig = 0;
     III.ZeroIsSpecialNew = 0;
     III.IsCommutative = true;
     III.IsSummingOperands = true;
-    III.ImmOpcode = PPC::ADDICo;
+    III.ImmOpcode = PPC::ADDIC_rec;
     break;
   case PPC::SUBFC:
   case PPC::SUBFC8:
@@ -3070,8 +3068,8 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
     III.IsCommutative = false;
     III.ImmOpcode = Opc == PPC::CMPLW ? PPC::CMPLWI : PPC::CMPLDI;
     break;
-  case PPC::ANDo:
-  case PPC::AND8o:
+  case PPC::AND_rec:
+  case PPC::AND8_rec:
   case PPC::OR:
   case PPC::OR8:
   case PPC::XOR:
@@ -3082,8 +3080,12 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
     III.IsCommutative = true;
     switch(Opc) {
     default: llvm_unreachable("Unknown opcode");
-    case PPC::ANDo: III.ImmOpcode = PPC::ANDIo; break;
-    case PPC::AND8o: III.ImmOpcode = PPC::ANDI8o; break;
+    case PPC::AND_rec:
+      III.ImmOpcode = PPC::ANDI_rec;
+      break;
+    case PPC::AND8_rec:
+      III.ImmOpcode = PPC::ANDI8_rec;
+      break;
     case PPC::OR: III.ImmOpcode = PPC::ORI; break;
     case PPC::OR8: III.ImmOpcode = PPC::ORI8; break;
     case PPC::XOR: III.ImmOpcode = PPC::XORI; break;
@@ -3092,18 +3094,18 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
     break;
   case PPC::RLWNM:
   case PPC::RLWNM8:
-  case PPC::RLWNMo:
-  case PPC::RLWNM8o:
+  case PPC::RLWNM_rec:
+  case PPC::RLWNM8_rec:
   case PPC::SLW:
   case PPC::SLW8:
-  case PPC::SLWo:
-  case PPC::SLW8o:
+  case PPC::SLW_rec:
+  case PPC::SLW8_rec:
   case PPC::SRW:
   case PPC::SRW8:
-  case PPC::SRWo:
-  case PPC::SRW8o:
+  case PPC::SRW_rec:
+  case PPC::SRW8_rec:
   case PPC::SRAW:
-  case PPC::SRAWo:
+  case PPC::SRAW_rec:
     III.SignedImm = false;
     III.ZeroIsSpecialOrig = 0;
     III.ZeroIsSpecialNew = 0;
@@ -3113,8 +3115,8 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
     // This does not apply to shift right algebraic because a value
     // out of range will produce a -1/0.
     III.ImmWidth = 16;
-    if (Opc == PPC::RLWNM || Opc == PPC::RLWNM8 ||
-        Opc == PPC::RLWNMo || Opc == PPC::RLWNM8o)
+    if (Opc == PPC::RLWNM || Opc == PPC::RLWNM8 || Opc == PPC::RLWNM_rec ||
+        Opc == PPC::RLWNM8_rec)
       III.TruncateImmTo = 5;
     else
       III.TruncateImmTo = 6;
@@ -3122,38 +3124,50 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
     default: llvm_unreachable("Unknown opcode");
     case PPC::RLWNM: III.ImmOpcode = PPC::RLWINM; break;
     case PPC::RLWNM8: III.ImmOpcode = PPC::RLWINM8; break;
-    case PPC::RLWNMo: III.ImmOpcode = PPC::RLWINMo; break;
-    case PPC::RLWNM8o: III.ImmOpcode = PPC::RLWINM8o; break;
+    case PPC::RLWNM_rec:
+      III.ImmOpcode = PPC::RLWINM_rec;
+      break;
+    case PPC::RLWNM8_rec:
+      III.ImmOpcode = PPC::RLWINM8_rec;
+      break;
     case PPC::SLW: III.ImmOpcode = PPC::RLWINM; break;
     case PPC::SLW8: III.ImmOpcode = PPC::RLWINM8; break;
-    case PPC::SLWo: III.ImmOpcode = PPC::RLWINMo; break;
-    case PPC::SLW8o: III.ImmOpcode = PPC::RLWINM8o; break;
+    case PPC::SLW_rec:
+      III.ImmOpcode = PPC::RLWINM_rec;
+      break;
+    case PPC::SLW8_rec:
+      III.ImmOpcode = PPC::RLWINM8_rec;
+      break;
     case PPC::SRW: III.ImmOpcode = PPC::RLWINM; break;
     case PPC::SRW8: III.ImmOpcode = PPC::RLWINM8; break;
-    case PPC::SRWo: III.ImmOpcode = PPC::RLWINMo; break;
-    case PPC::SRW8o: III.ImmOpcode = PPC::RLWINM8o; break;
+    case PPC::SRW_rec:
+      III.ImmOpcode = PPC::RLWINM_rec;
+      break;
+    case PPC::SRW8_rec:
+      III.ImmOpcode = PPC::RLWINM8_rec;
+      break;
     case PPC::SRAW:
       III.ImmWidth = 5;
       III.TruncateImmTo = 0;
       III.ImmOpcode = PPC::SRAWI;
       break;
-    case PPC::SRAWo:
+    case PPC::SRAW_rec:
       III.ImmWidth = 5;
       III.TruncateImmTo = 0;
-      III.ImmOpcode = PPC::SRAWIo;
+      III.ImmOpcode = PPC::SRAWI_rec;
       break;
     }
     break;
   case PPC::RLDCL:
-  case PPC::RLDCLo:
+  case PPC::RLDCL_rec:
   case PPC::RLDCR:
-  case PPC::RLDCRo:
+  case PPC::RLDCR_rec:
   case PPC::SLD:
-  case PPC::SLDo:
+  case PPC::SLD_rec:
   case PPC::SRD:
-  case PPC::SRDo:
+  case PPC::SRD_rec:
   case PPC::SRAD:
-  case PPC::SRADo:
+  case PPC::SRAD_rec:
     III.SignedImm = false;
     III.ZeroIsSpecialOrig = 0;
     III.ZeroIsSpecialNew = 0;
@@ -3163,30 +3177,38 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
     // This does not apply to shift right algebraic because a value
     // out of range will produce a -1/0.
     III.ImmWidth = 16;
-    if (Opc == PPC::RLDCL || Opc == PPC::RLDCLo ||
-        Opc == PPC::RLDCR || Opc == PPC::RLDCRo)
+    if (Opc == PPC::RLDCL || Opc == PPC::RLDCL_rec || Opc == PPC::RLDCR ||
+        Opc == PPC::RLDCR_rec)
       III.TruncateImmTo = 6;
     else
       III.TruncateImmTo = 7;
     switch(Opc) {
     default: llvm_unreachable("Unknown opcode");
     case PPC::RLDCL: III.ImmOpcode = PPC::RLDICL; break;
-    case PPC::RLDCLo: III.ImmOpcode = PPC::RLDICLo; break;
+    case PPC::RLDCL_rec:
+      III.ImmOpcode = PPC::RLDICL_rec;
+      break;
     case PPC::RLDCR: III.ImmOpcode = PPC::RLDICR; break;
-    case PPC::RLDCRo: III.ImmOpcode = PPC::RLDICRo; break;
+    case PPC::RLDCR_rec:
+      III.ImmOpcode = PPC::RLDICR_rec;
+      break;
     case PPC::SLD: III.ImmOpcode = PPC::RLDICR; break;
-    case PPC::SLDo: III.ImmOpcode = PPC::RLDICRo; break;
+    case PPC::SLD_rec:
+      III.ImmOpcode = PPC::RLDICR_rec;
+      break;
     case PPC::SRD: III.ImmOpcode = PPC::RLDICL; break;
-    case PPC::SRDo: III.ImmOpcode = PPC::RLDICLo; break;
+    case PPC::SRD_rec:
+      III.ImmOpcode = PPC::RLDICL_rec;
+      break;
     case PPC::SRAD:
       III.ImmWidth = 6;
       III.TruncateImmTo = 0;
       III.ImmOpcode = PPC::SRADI;
        break;
-    case PPC::SRADo:
+    case PPC::SRAD_rec:
       III.ImmWidth = 6;
       III.TruncateImmTo = 0;
-      III.ImmOpcode = PPC::SRADIo;
+      III.ImmOpcode = PPC::SRADI_rec;
       break;
     }
     break;
@@ -3757,16 +3779,16 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
     ForwardKilledOperandReg = MI.getOperand(ConstantOpNo).getReg();
 
   unsigned Opc = MI.getOpcode();
-  bool SpecialShift32 = Opc == PPC::SLW || Opc == PPC::SLWo ||
-                        Opc == PPC::SRW || Opc == PPC::SRWo ||
-                        Opc == PPC::SLW8 || Opc == PPC::SLW8o ||
-                        Opc == PPC::SRW8 || Opc == PPC::SRW8o;
-  bool SpecialShift64 =
-    Opc == PPC::SLD || Opc == PPC::SLDo || Opc == PPC::SRD || Opc == PPC::SRDo;
-  bool SetCR = Opc == PPC::SLWo || Opc == PPC::SRWo ||
-    Opc == PPC::SLDo || Opc == PPC::SRDo;
-  bool RightShift =
-    Opc == PPC::SRW || Opc == PPC::SRWo || Opc == PPC::SRD || Opc == PPC::SRDo;
+  bool SpecialShift32 = Opc == PPC::SLW || Opc == PPC::SLW_rec ||
+                        Opc == PPC::SRW || Opc == PPC::SRW_rec ||
+                        Opc == PPC::SLW8 || Opc == PPC::SLW8_rec ||
+                        Opc == PPC::SRW8 || Opc == PPC::SRW8_rec;
+  bool SpecialShift64 = Opc == PPC::SLD || Opc == PPC::SLD_rec ||
+                        Opc == PPC::SRD || Opc == PPC::SRD_rec;
+  bool SetCR = Opc == PPC::SLW_rec || Opc == PPC::SRW_rec ||
+               Opc == PPC::SLD_rec || Opc == PPC::SRD_rec;
+  bool RightShift = Opc == PPC::SRW || Opc == PPC::SRW_rec || Opc == PPC::SRD ||
+                    Opc == PPC::SRD_rec;
 
   MI.setDesc(get(III.ImmOpcode));
   if (ConstantOpNo == III.OpNoForForwarding) {
@@ -3870,27 +3892,21 @@ int PPCInstrInfo::getRecordFormOpcode(unsigned Opcode) {
 // i.e. 0 to 31-th bits are same as 32-th bit.
 static bool isSignExtendingOp(const MachineInstr &MI) {
   int Opcode = MI.getOpcode();
-  if (Opcode == PPC::LI     || Opcode == PPC::LI8     ||
-      Opcode == PPC::LIS    || Opcode == PPC::LIS8    ||
-      Opcode == PPC::SRAW   || Opcode == PPC::SRAWo   ||
-      Opcode == PPC::SRAWI  || Opcode == PPC::SRAWIo  ||
-      Opcode == PPC::LWA    || Opcode == PPC::LWAX    ||
-      Opcode == PPC::LWA_32 || Opcode == PPC::LWAX_32 ||
-      Opcode == PPC::LHA    || Opcode == PPC::LHAX    ||
-      Opcode == PPC::LHA8   || Opcode == PPC::LHAX8   ||
-      Opcode == PPC::LBZ    || Opcode == PPC::LBZX    ||
-      Opcode == PPC::LBZ8   || Opcode == PPC::LBZX8   ||
-      Opcode == PPC::LBZU   || Opcode == PPC::LBZUX   ||
-      Opcode == PPC::LBZU8  || Opcode == PPC::LBZUX8  ||
-      Opcode == PPC::LHZ    || Opcode == PPC::LHZX    ||
-      Opcode == PPC::LHZ8   || Opcode == PPC::LHZX8   ||
-      Opcode == PPC::LHZU   || Opcode == PPC::LHZUX   ||
-      Opcode == PPC::LHZU8  || Opcode == PPC::LHZUX8  ||
-      Opcode == PPC::EXTSB  || Opcode == PPC::EXTSBo  ||
-      Opcode == PPC::EXTSH  || Opcode == PPC::EXTSHo  ||
-      Opcode == PPC::EXTSB8 || Opcode == PPC::EXTSH8  ||
-      Opcode == PPC::EXTSW  || Opcode == PPC::EXTSWo  ||
-      Opcode == PPC::SETB   || Opcode == PPC::SETB8   ||
+  if (Opcode == PPC::LI || Opcode == PPC::LI8 || Opcode == PPC::LIS ||
+      Opcode == PPC::LIS8 || Opcode == PPC::SRAW || Opcode == PPC::SRAW_rec ||
+      Opcode == PPC::SRAWI || Opcode == PPC::SRAWI_rec || Opcode == PPC::LWA ||
+      Opcode == PPC::LWAX || Opcode == PPC::LWA_32 || Opcode == PPC::LWAX_32 ||
+      Opcode == PPC::LHA || Opcode == PPC::LHAX || Opcode == PPC::LHA8 ||
+      Opcode == PPC::LHAX8 || Opcode == PPC::LBZ || Opcode == PPC::LBZX ||
+      Opcode == PPC::LBZ8 || Opcode == PPC::LBZX8 || Opcode == PPC::LBZU ||
+      Opcode == PPC::LBZUX || Opcode == PPC::LBZU8 || Opcode == PPC::LBZUX8 ||
+      Opcode == PPC::LHZ || Opcode == PPC::LHZX || Opcode == PPC::LHZ8 ||
+      Opcode == PPC::LHZX8 || Opcode == PPC::LHZU || Opcode == PPC::LHZUX ||
+      Opcode == PPC::LHZU8 || Opcode == PPC::LHZUX8 || Opcode == PPC::EXTSB ||
+      Opcode == PPC::EXTSB_rec || Opcode == PPC::EXTSH ||
+      Opcode == PPC::EXTSH_rec || Opcode == PPC::EXTSB8 ||
+      Opcode == PPC::EXTSH8 || Opcode == PPC::EXTSW ||
+      Opcode == PPC::EXTSW_rec || Opcode == PPC::SETB || Opcode == PPC::SETB8 ||
       Opcode == PPC::EXTSH8_32_64 || Opcode == PPC::EXTSW_32_64 ||
       Opcode == PPC::EXTSB8_32_64)
     return true;
@@ -3898,8 +3914,8 @@ static bool isSignExtendingOp(const MachineInstr &MI) {
   if (Opcode == PPC::RLDICL && MI.getOperand(3).getImm() >= 33)
     return true;
 
-  if ((Opcode == PPC::RLWINM || Opcode == PPC::RLWINMo ||
-       Opcode == PPC::RLWNM  || Opcode == PPC::RLWNMo) &&
+  if ((Opcode == PPC::RLWINM || Opcode == PPC::RLWINM_rec ||
+       Opcode == PPC::RLWNM || Opcode == PPC::RLWNM_rec) &&
       MI.getOperand(3).getImm() > 0 &&
       MI.getOperand(3).getImm() <= MI.getOperand(4).getImm())
     return true;
@@ -3922,52 +3938,46 @@ static bool isZeroExtendingOp(const MachineInstr &MI) {
 
   // We have some variations of rotate-and-mask instructions
   // that clear higher 32-bits.
-  if ((Opcode == PPC::RLDICL || Opcode == PPC::RLDICLo ||
-       Opcode == PPC::RLDCL  || Opcode == PPC::RLDCLo  ||
+  if ((Opcode == PPC::RLDICL || Opcode == PPC::RLDICL_rec ||
+       Opcode == PPC::RLDCL || Opcode == PPC::RLDCL_rec ||
        Opcode == PPC::RLDICL_32_64) &&
       MI.getOperand(3).getImm() >= 32)
     return true;
 
-  if ((Opcode == PPC::RLDIC || Opcode == PPC::RLDICo) &&
+  if ((Opcode == PPC::RLDIC || Opcode == PPC::RLDIC_rec) &&
       MI.getOperand(3).getImm() >= 32 &&
       MI.getOperand(3).getImm() <= 63 - MI.getOperand(2).getImm())
     return true;
 
-  if ((Opcode == PPC::RLWINM  || Opcode == PPC::RLWINMo ||
-       Opcode == PPC::RLWNM   || Opcode == PPC::RLWNMo  ||
+  if ((Opcode == PPC::RLWINM || Opcode == PPC::RLWINM_rec ||
+       Opcode == PPC::RLWNM || Opcode == PPC::RLWNM_rec ||
        Opcode == PPC::RLWINM8 || Opcode == PPC::RLWNM8) &&
       MI.getOperand(3).getImm() <= MI.getOperand(4).getImm())
     return true;
 
   // There are other instructions that clear higher 32-bits.
-  if (Opcode == PPC::CNTLZW  || Opcode == PPC::CNTLZWo ||
-      Opcode == PPC::CNTTZW  || Opcode == PPC::CNTTZWo ||
+  if (Opcode == PPC::CNTLZW || Opcode == PPC::CNTLZW_rec ||
+      Opcode == PPC::CNTTZW || Opcode == PPC::CNTTZW_rec ||
       Opcode == PPC::CNTLZW8 || Opcode == PPC::CNTTZW8 ||
-      Opcode == PPC::CNTLZD  || Opcode == PPC::CNTLZDo ||
-      Opcode == PPC::CNTTZD  || Opcode == PPC::CNTTZDo ||
-      Opcode == PPC::POPCNTD || Opcode == PPC::POPCNTW ||
-      Opcode == PPC::SLW     || Opcode == PPC::SLWo    ||
-      Opcode == PPC::SRW     || Opcode == PPC::SRWo    ||
-      Opcode == PPC::SLW8    || Opcode == PPC::SRW8    ||
-      Opcode == PPC::SLWI    || Opcode == PPC::SLWIo   ||
-      Opcode == PPC::SRWI    || Opcode == PPC::SRWIo   ||
-      Opcode == PPC::LWZ     || Opcode == PPC::LWZX    ||
-      Opcode == PPC::LWZU    || Opcode == PPC::LWZUX   ||
-      Opcode == PPC::LWBRX   || Opcode == PPC::LHBRX   ||
-      Opcode == PPC::LHZ     || Opcode == PPC::LHZX    ||
-      Opcode == PPC::LHZU    || Opcode == PPC::LHZUX   ||
-      Opcode == PPC::LBZ     || Opcode == PPC::LBZX    ||
-      Opcode == PPC::LBZU    || Opcode == PPC::LBZUX   ||
-      Opcode == PPC::LWZ8    || Opcode == PPC::LWZX8   ||
-      Opcode == PPC::LWZU8   || Opcode == PPC::LWZUX8  ||
-      Opcode == PPC::LWBRX8  || Opcode == PPC::LHBRX8  ||
-      Opcode == PPC::LHZ8    || Opcode == PPC::LHZX8   ||
-      Opcode == PPC::LHZU8   || Opcode == PPC::LHZUX8  ||
-      Opcode == PPC::LBZ8    || Opcode == PPC::LBZX8   ||
-      Opcode == PPC::LBZU8   || Opcode == PPC::LBZUX8  ||
-      Opcode == PPC::ANDIo   || Opcode == PPC::ANDISo  ||
-      Opcode == PPC::ROTRWI  || Opcode == PPC::ROTRWIo ||
-      Opcode == PPC::EXTLWI  || Opcode == PPC::EXTLWIo ||
+      Opcode == PPC::CNTLZD || Opcode == PPC::CNTLZD_rec ||
+      Opcode == PPC::CNTTZD || Opcode == PPC::CNTTZD_rec ||
+      Opcode == PPC::POPCNTD || Opcode == PPC::POPCNTW || Opcode == PPC::SLW ||
+      Opcode == PPC::SLW_rec || Opcode == PPC::SRW || Opcode == PPC::SRW_rec ||
+      Opcode == PPC::SLW8 || Opcode == PPC::SRW8 || Opcode == PPC::SLWI ||
+      Opcode == PPC::SLWI_rec || Opcode == PPC::SRWI ||
+      Opcode == PPC::SRWI_rec || Opcode == PPC::LWZ || Opcode == PPC::LWZX ||
+      Opcode == PPC::LWZU || Opcode == PPC::LWZUX || Opcode == PPC::LWBRX ||
+      Opcode == PPC::LHBRX || Opcode == PPC::LHZ || Opcode == PPC::LHZX ||
+      Opcode == PPC::LHZU || Opcode == PPC::LHZUX || Opcode == PPC::LBZ ||
+      Opcode == PPC::LBZX || Opcode == PPC::LBZU || Opcode == PPC::LBZUX ||
+      Opcode == PPC::LWZ8 || Opcode == PPC::LWZX8 || Opcode == PPC::LWZU8 ||
+      Opcode == PPC::LWZUX8 || Opcode == PPC::LWBRX8 || Opcode == PPC::LHBRX8 ||
+      Opcode == PPC::LHZ8 || Opcode == PPC::LHZX8 || Opcode == PPC::LHZU8 ||
+      Opcode == PPC::LHZUX8 || Opcode == PPC::LBZ8 || Opcode == PPC::LBZX8 ||
+      Opcode == PPC::LBZU8 || Opcode == PPC::LBZUX8 ||
+      Opcode == PPC::ANDI_rec || Opcode == PPC::ANDIS_rec ||
+      Opcode == PPC::ROTRWI || Opcode == PPC::ROTRWI_rec ||
+      Opcode == PPC::EXTLWI || Opcode == PPC::EXTLWI_rec ||
       Opcode == PPC::MFVSRWZ)
     return true;
 
@@ -4061,14 +4071,14 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
     return false;
   }
 
-  case PPC::ANDIo:
-  case PPC::ANDISo:
+  case PPC::ANDI_rec:
+  case PPC::ANDIS_rec:
   case PPC::ORI:
   case PPC::ORIS:
   case PPC::XORI:
   case PPC::XORIS:
-  case PPC::ANDI8o:
-  case PPC::ANDIS8o:
+  case PPC::ANDI8_rec:
+  case PPC::ANDIS8_rec:
   case PPC::ORI8:
   case PPC::ORIS8:
   case PPC::XORI8:

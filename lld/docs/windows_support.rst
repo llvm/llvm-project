@@ -28,7 +28,7 @@ Development status
 
 Driver
   :good:`Mostly done`. Some exotic command line options that are not usually
-  used for application develompent, such as ``/DRIVER``, are not supported.
+  used for application development, such as ``/DRIVER``, are not supported.
 
 Linking against DLL
   :good:`Done`. LLD can read import libraries needed to link against DLL. Both

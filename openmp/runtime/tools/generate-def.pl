@@ -94,7 +94,7 @@ sub parse_input($\%) {
 
     if ( @dirs ) {
         my $dir = pop( @dirs );
-        $error->( "Unterminated %if direcive.", $dir->{ n }, $dir->{ line } );
+        $error->( "Unterminated %if directive.", $dir->{ n }, $dir->{ line } );
     }; # while
 
     return %entries;

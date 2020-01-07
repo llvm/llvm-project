@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/strcpy/strcpy.h"
+#include "src/string/strcpy.h"
 
 #include "src/__support/common.h"
 

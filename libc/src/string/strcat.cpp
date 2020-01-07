@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/strcat/strcat.h"
+#include "src/string/strcat.h"
 
 #include "src/__support/common.h"
-#include "src/string/strcpy/strcpy.h"
+#include "src/string/strcpy.h"
 
 namespace __llvm_libc {
 
