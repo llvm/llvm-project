@@ -776,8 +776,8 @@ multiclass SHA256MaPattern <Instruction BFI_INT, Instruction XOR, RegisterClass 
 
 // Bitfield extract patterns
 
-def IMMZeroBasedBitfieldMask : PatLeaf <(imm), [{
-  return isMask_32(N->getZExtValue());
+def IMMZeroBasedBitfieldMask : ImmLeaf <i32, [{
+  return isMask_32(Imm);
 }]>;
 
 def IMMPopCount : SDNodeXForm<imm, [{
