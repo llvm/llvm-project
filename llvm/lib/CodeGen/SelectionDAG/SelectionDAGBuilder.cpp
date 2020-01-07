@@ -2847,7 +2847,6 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
   assert(isa<InlineAsm>(I.getCalledValue()) &&
          "Only know how to handle inlineasm callbr");
   visitInlineAsm(&I);
-  CopyToExportRegsIfNeeded(&I);
 
   // Retrieve successors.
   MachineBasicBlock *Return = FuncInfo.MBBMap[I.getDefaultDest()];
@@ -2857,7 +2856,6 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
   for (unsigned i = 0, e = I.getNumIndirectDests(); i < e; ++i) {
     MachineBasicBlock *Target = FuncInfo.MBBMap[I.getIndirectDest(i)];
     addSuccessorWithProb(CallBrMBB, Target);
-    Target->setIsInlineAsmBrIndirectPad();
   }
   CallBrMBB->normalizeSuccProbs();
 

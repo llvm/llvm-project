@@ -633,30 +633,17 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   }
 
   // Count the number of landing pad successors.
-  SmallPtrSet<const MachineBasicBlock*, 4> LandingPadSuccs;
-  for (const auto *succ : MBB->successors()) {
-    if (succ->isEHPad())
-      LandingPadSuccs.insert(succ);
-    if (!FunctionBlocks.count(succ))
+  SmallPtrSet<MachineBasicBlock*, 4> LandingPadSuccs;
+  for (MachineBasicBlock::const_succ_iterator I = MBB->succ_begin(),
+       E = MBB->succ_end(); I != E; ++I) {
+    if ((*I)->isEHPad())
+      LandingPadSuccs.insert(*I);
+    if (!FunctionBlocks.count(*I))
       report("MBB has successor that isn't part of the function.", MBB);
-    if (!MBBInfoMap[succ].Preds.count(MBB)) {
+    if (!MBBInfoMap[*I].Preds.count(MBB)) {
       report("Inconsistent CFG", MBB);
       errs() << "MBB is not in the predecessor list of the successor "
-             << printMBBReference(*succ) << ".\n";
-    }
-  }
-
-  // Count the number of INLINEASM_BR indirect pad successors.
-  SmallPtrSet<const MachineBasicBlock*, 4> IndirectPadSuccs;
-  for (const auto *succ : MBB->successors()) {
-    if (succ->isInlineAsmBrIndirectPad())
-      IndirectPadSuccs.insert(succ);
-    if (!FunctionBlocks.count(succ))
-      report("MBB has successor that isn't part of the function.", MBB);
-    if (!MBBInfoMap[succ].Preds.count(MBB)) {
-      report("Inconsistent CFG", MBB);
-      errs() << "MBB is not in the predecessor list of the successor "
-             << printMBBReference(*succ) << ".\n";
+             << printMBBReference(*(*I)) << ".\n";
     }
   }
 
@@ -697,13 +684,11 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
         // It's possible that the block legitimately ends with a noreturn
         // call or an unreachable, in which case it won't actually fall
         // out the bottom of the function.
-      } else if (MBB->succ_size() == LandingPadSuccs.size() ||
-                 MBB->succ_size() == IndirectPadSuccs.size()) {
+      } else if (MBB->succ_size() == LandingPadSuccs.size()) {
         // It's possible that the block legitimately ends with a noreturn
         // call or an unreachable, in which case it won't actually fall
         // out of the block.
-      } else if (MBB->succ_size() != 1 + LandingPadSuccs.size() &&
-                 MBB->succ_size() != 1 + IndirectPadSuccs.size()) {
+      } else if (MBB->succ_size() != 1+LandingPadSuccs.size()) {
         report("MBB exits via unconditional fall-through but doesn't have "
                "exactly one CFG successor!", MBB);
       } else if (!MBB->isSuccessor(&*MBBI)) {
@@ -725,10 +710,7 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
       // landingpad, accept it as valid control flow.
       if (MBB->succ_size() != 1+LandingPadSuccs.size() &&
           (MBB->succ_size() != 1 || LandingPadSuccs.size() != 1 ||
-           *MBB->succ_begin() != *LandingPadSuccs.begin()) &&
-          MBB->succ_size() != 1 + IndirectPadSuccs.size() &&
-          (MBB->succ_size() != 1 || IndirectPadSuccs.size() != 1 ||
-           *MBB->succ_begin() != *IndirectPadSuccs.begin())) {
+           *MBB->succ_begin() != *LandingPadSuccs.begin())) {
         report("MBB exits via unconditional branch but doesn't have "
                "exactly one CFG successor!", MBB);
       } else if (!MBB->isSuccessor(TBB)) {
@@ -858,14 +840,8 @@ void MachineVerifier::visitMachineBundleBefore(const MachineInstr *MI) {
     if (!FirstTerminator)
       FirstTerminator = MI;
   } else if (FirstTerminator && !MI->isDebugEntryValue()) {
-    // An "INLINEASM_BR" will fallthrough to the successor block executing any
-    // "COPY" instructions that exist so that they can be assigned in the
-    // fallthrough block..
-    if (FirstTerminator->getOpcode() != TargetOpcode::INLINEASM_BR ||
-        MI->getOpcode() != TargetOpcode::COPY) {
-      report("Non-terminator instruction after the first terminator", MI);
-      errs() << "First terminator was:\t" << *FirstTerminator;
-    }
+    report("Non-terminator instruction after the first terminator", MI);
+    errs() << "First terminator was:\t" << *FirstTerminator;
   }
 }
 
