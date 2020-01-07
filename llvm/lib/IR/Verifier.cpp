@@ -2501,8 +2501,6 @@ void Verifier::visitIndirectBrInst(IndirectBrInst &BI) {
 void Verifier::visitCallBrInst(CallBrInst &CBI) {
   Assert(CBI.isInlineAsm(), "Callbr is currently only used for asm-goto!",
          &CBI);
-  Assert(CBI.getType()->isVoidTy(), "Callbr return value is not supported!",
-         &CBI);
   for (unsigned i = 0, e = CBI.getNumSuccessors(); i != e; ++i)
     Assert(CBI.getSuccessor(i)->getType()->isLabelTy(),
            "Callbr successors must all have pointer type!", &CBI);

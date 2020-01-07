@@ -1109,6 +1109,17 @@ bool MachineBasicBlock::canSplitCriticalEdge(
   if (Succ->isEHPad())
     return false;
 
+  // Splitting the critical edge to a callbr's indirect block isn't advised.
+  // Don't do it in this generic function.
+  if (Succ->hasAddressTaken())
+    if (auto *cbr = dyn_cast<CallBrInst>(getBasicBlock()->getTerminator()))
+      if (auto *bb = Succ->getBasicBlock())
+        if (cbr->getDefaultDest() != bb)
+          if (llvm::any_of(cbr->getIndirectDests(), [&](const BasicBlock *succ){
+                  return succ == bb;
+              }))
+            return false;
+
   const MachineFunction *MF = getParent();
 
   // Performance might be harmed on HW that implements branching using exec mask

@@ -129,6 +129,9 @@ private:
   /// Indicate that this basic block is the entry block of a cleanup funclet.
   bool IsCleanupFuncletEntry = false;
 
+  /// Indicate that this basic block is the indirect dest of an INLINEASM_BR.
+  bool IsInlineAsmBrIndirectPad = false;
+
   /// since getSymbol is a relatively heavy-weight operation, the symbol
   /// is only computed once and is cached.
   mutable MCSymbol *CachedMCSymbol = nullptr;
@@ -407,6 +410,12 @@ public:
 
   /// Indicates if this is the entry block of a cleanup funclet.
   void setIsCleanupFuncletEntry(bool V = true) { IsCleanupFuncletEntry = V; }
+
+  /// Returns true if this is the indirect dest of an INLINEASM_BR.
+  bool isInlineAsmBrIndirectPad() const { return IsInlineAsmBrIndirectPad; }
+
+  /// Indicates if this is the indirect dest of an INLINEASM_BR.
+  void setIsInlineAsmBrIndirectPad(bool V = true) { IsInlineAsmBrIndirectPad = V; }
 
   /// Returns true if it is legal to hoist instructions into this block.
   bool isLegalToHoistInto() const;
