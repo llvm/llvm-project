@@ -30,7 +30,7 @@ TEST(FormatManagerTests, CompatibleLangs) {
   EXPECT_EQ(FormatManager::GetCandidateLanguages(eLanguageTypeC_plus_plus_14),
             candidates);
 
-  candidates = {eLanguageTypeObjC};
+  candidates = {eLanguageTypeObjC, eLanguageTypeSwift};
   EXPECT_EQ(FormatManager::GetCandidateLanguages(eLanguageTypeObjC),
             candidates);
 }
