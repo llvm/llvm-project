@@ -127,8 +127,6 @@ class ObjCNewSyntaxTestCase(TestBase):
     @skipUnlessDarwin
     @skipIf(macos_version=["<", "10.12"])
     @expectedFailureAll(archs=["i[3-6]86"])
-    @expectedFailureAll(debug_info="gmodules",
-                        bugnumber="rdar://problem/32777981")
     def test_dictionary_literal(self):
         self.runToBreakpoint()
 
