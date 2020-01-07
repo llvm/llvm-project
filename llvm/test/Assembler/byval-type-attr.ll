@@ -29,3 +29,15 @@ fail:
 declare void @baz(%named_type* byval(%named_type))
 
 declare i32 @__gxx_personality_v0(...)
+
+%0 = type opaque
+
+; CHECK: define void @anon({ %0* }* byval({ %0* }) %arg)
+; CHECK:   call void @anon_callee({ %0* }* byval({ %0* }) %arg)
+define void @anon({ %0* }* byval({ %0* }) %arg) {
+  call void @anon_callee({ %0* }* byval({ %0* }) %arg)
+  ret void
+}
+
+; CHECK: declare void @anon_callee({ %0* }* byval({ %0* }))
+declare void @anon_callee({ %0* }* byval({ %0* }))
