@@ -51,15 +51,15 @@ define i32 @foo(i32 %n) local_unnamed_addr #0 "stack-probe-size"="32768" nounwin
 ; CHECK-P9-LE-NEXT:    stdu r1, -48(r1)
 ; CHECK-P9-LE-NEXT:    rldic r3, r3, 2, 30
 ; CHECK-P9-LE-NEXT:    addi r3, r3, 15
+; CHECK-P9-LE-NEXT:    li r6, -32768
+; CHECK-P9-LE-NEXT:    mr r31, r1
+; CHECK-P9-LE-NEXT:    addi r4, r31, 48
 ; CHECK-P9-LE-NEXT:    rldicl r3, r3, 60, 4
 ; CHECK-P9-LE-NEXT:    rldicl r3, r3, 4, 29
 ; CHECK-P9-LE-NEXT:    neg r5, r3
-; CHECK-P9-LE-NEXT:    li r6, -32768
 ; CHECK-P9-LE-NEXT:    divd r7, r5, r6
-; CHECK-P9-LE-NEXT:    mulld r6, r7, r6
-; CHECK-P9-LE-NEXT:    mr r31, r1
-; CHECK-P9-LE-NEXT:    addi r4, r31, 48
 ; CHECK-P9-LE-NEXT:    add r3, r1, r5
+; CHECK-P9-LE-NEXT:    mulld r6, r7, r6
 ; CHECK-P9-LE-NEXT:    sub r5, r5, r6
 ; CHECK-P9-LE-NEXT:    stdux r4, r1, r5
 ; CHECK-P9-LE-NEXT:    cmpd r1, r3
@@ -69,8 +69,8 @@ define i32 @foo(i32 %n) local_unnamed_addr #0 "stack-probe-size"="32768" nounwin
 ; CHECK-P9-LE-NEXT:    cmpd r1, r3
 ; CHECK-P9-LE-NEXT:    bne cr0, .LBB0_1
 ; CHECK-P9-LE-NEXT:  .LBB0_2:
-; CHECK-P9-LE-NEXT:    addi r3, r1, 32
 ; CHECK-P9-LE-NEXT:    li r4, 1
+; CHECK-P9-LE-NEXT:    addi r3, r1, 32
 ; CHECK-P9-LE-NEXT:    stw r4, 4792(r3)
 ; CHECK-P9-LE-NEXT:    lwz r3, 0(r3)
 ; CHECK-P9-LE-NEXT:    ld r1, 0(r1)
@@ -190,15 +190,15 @@ define i32 @bar(i32 %n) local_unnamed_addr #0 nounwind {
 ; CHECK-P9-LE-NEXT:    stdu r1, -48(r1)
 ; CHECK-P9-LE-NEXT:    rldic r4, r3, 2, 30
 ; CHECK-P9-LE-NEXT:    addi r4, r4, 15
+; CHECK-P9-LE-NEXT:    li r7, -4096
+; CHECK-P9-LE-NEXT:    mr r31, r1
+; CHECK-P9-LE-NEXT:    addi r5, r31, 48
 ; CHECK-P9-LE-NEXT:    rldicl r4, r4, 60, 4
 ; CHECK-P9-LE-NEXT:    rldicl r4, r4, 4, 29
 ; CHECK-P9-LE-NEXT:    neg r6, r4
-; CHECK-P9-LE-NEXT:    li r7, -4096
 ; CHECK-P9-LE-NEXT:    divd r8, r6, r7
-; CHECK-P9-LE-NEXT:    mulld r7, r8, r7
-; CHECK-P9-LE-NEXT:    mr r31, r1
-; CHECK-P9-LE-NEXT:    addi r5, r31, 48
 ; CHECK-P9-LE-NEXT:    add r4, r1, r6
+; CHECK-P9-LE-NEXT:    mulld r7, r8, r7
 ; CHECK-P9-LE-NEXT:    sub r6, r6, r7
 ; CHECK-P9-LE-NEXT:    stdux r5, r1, r6
 ; CHECK-P9-LE-NEXT:    cmpd r1, r4
@@ -208,10 +208,10 @@ define i32 @bar(i32 %n) local_unnamed_addr #0 nounwind {
 ; CHECK-P9-LE-NEXT:    cmpd r1, r4
 ; CHECK-P9-LE-NEXT:    bne cr0, .LBB1_1
 ; CHECK-P9-LE-NEXT:  .LBB1_2:
-; CHECK-P9-LE-NEXT:    addi r4, r1, 32
 ; CHECK-P9-LE-NEXT:    extswsli r3, r3, 2
-; CHECK-P9-LE-NEXT:    add r3, r4, r3
 ; CHECK-P9-LE-NEXT:    li r5, 1
+; CHECK-P9-LE-NEXT:    addi r4, r1, 32
+; CHECK-P9-LE-NEXT:    add r3, r4, r3
 ; CHECK-P9-LE-NEXT:    stw r5, 4096(r3)
 ; CHECK-P9-LE-NEXT:    lwz r3, 0(r4)
 ; CHECK-P9-LE-NEXT:    ld r1, 0(r1)
@@ -334,16 +334,16 @@ define i32 @f(i32 %n) local_unnamed_addr #0 "stack-probe-size"="65536" nounwind 
 ; CHECK-P9-LE-NEXT:    stdu r1, -48(r1)
 ; CHECK-P9-LE-NEXT:    rldic r3, r3, 2, 30
 ; CHECK-P9-LE-NEXT:    addi r3, r3, 15
-; CHECK-P9-LE-NEXT:    rldicl r3, r3, 60, 4
-; CHECK-P9-LE-NEXT:    rldicl r3, r3, 4, 29
 ; CHECK-P9-LE-NEXT:    lis r5, -1
 ; CHECK-P9-LE-NEXT:    ori r5, r5, 0
-; CHECK-P9-LE-NEXT:    neg r6, r3
-; CHECK-P9-LE-NEXT:    divd r7, r6, r5
-; CHECK-P9-LE-NEXT:    mulld r7, r7, r5
 ; CHECK-P9-LE-NEXT:    mr r31, r1
 ; CHECK-P9-LE-NEXT:    addi r4, r31, 48
+; CHECK-P9-LE-NEXT:    rldicl r3, r3, 60, 4
+; CHECK-P9-LE-NEXT:    rldicl r3, r3, 4, 29
+; CHECK-P9-LE-NEXT:    neg r6, r3
+; CHECK-P9-LE-NEXT:    divd r7, r6, r5
 ; CHECK-P9-LE-NEXT:    add r3, r1, r6
+; CHECK-P9-LE-NEXT:    mulld r7, r7, r5
 ; CHECK-P9-LE-NEXT:    sub r6, r6, r7
 ; CHECK-P9-LE-NEXT:    stdux r4, r1, r6
 ; CHECK-P9-LE-NEXT:    cmpd r1, r3
@@ -353,8 +353,8 @@ define i32 @f(i32 %n) local_unnamed_addr #0 "stack-probe-size"="65536" nounwind 
 ; CHECK-P9-LE-NEXT:    cmpd r1, r3
 ; CHECK-P9-LE-NEXT:    bne cr0, .LBB2_1
 ; CHECK-P9-LE-NEXT:  .LBB2_2:
-; CHECK-P9-LE-NEXT:    addi r3, r1, 32
 ; CHECK-P9-LE-NEXT:    li r4, 1
+; CHECK-P9-LE-NEXT:    addi r3, r1, 32
 ; CHECK-P9-LE-NEXT:    stw r4, 4792(r3)
 ; CHECK-P9-LE-NEXT:    lwz r3, 0(r3)
 ; CHECK-P9-LE-NEXT:    ld r1, 0(r1)

@@ -3,7 +3,8 @@
 define dso_local void @test(i32* %Arr, i32 signext %Len) {
 ; CHECK-LABEL: test:
 ; CHECK:         lxvx [[REG:vs[0-9]+]], r{{[0-9]+}}, r{{[0-9]+}}
-; CHECK-NEXT:    xxbrw vs{{[0-9]+}}, [[REG]]
+; CHECK-NOT:     [[REG]]
+; CHECK:         xxbrw vs{{[0-9]+}}, [[REG]]
 entry:
   %cmp1 = icmp slt i32 0, %Len
   br i1 %cmp1, label %for.body.lr.ph, label %for.cond.cleanup
