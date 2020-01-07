@@ -528,8 +528,23 @@ Error DWARFDebugLine::LineTable::parse(
   if (PrologueErr)
     return PrologueErr;
 
-  const uint64_t EndOffset =
-      DebugLineOffset + Prologue.TotalLength + Prologue.sizeofTotalLength();
+  uint64_t ProgramLength = Prologue.TotalLength + Prologue.sizeofTotalLength();
+  if (!DebugLineData.isValidOffsetForDataOfSize(DebugLineOffset,
+                                                ProgramLength)) {
+    assert(DebugLineData.size() > DebugLineOffset &&
+           "prologue parsing should handle invalid offset");
+    uint64_t BytesRemaining = DebugLineData.size() - DebugLineOffset;
+    RecoverableErrorCallback(
+        createStringError(errc::invalid_argument,
+                          "line table program with offset 0x%8.8" PRIx64
+                          " has length 0x%8.8" PRIx64 " but only 0x%8.8" PRIx64
+                          " bytes are available",
+                          DebugLineOffset, ProgramLength, BytesRemaining));
+    // Continue by capping the length at the number of remaining bytes.
+    ProgramLength = BytesRemaining;
+  }
+
+  const uint64_t EndOffset = DebugLineOffset + ProgramLength;
 
   // See if we should tell the data extractor the address size.
   if (DebugLineData.getAddressSize() == 0)
