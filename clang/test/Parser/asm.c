@@ -20,6 +20,10 @@ void f2() {
   asm _Atomic (""); // expected-warning {{ignored _Atomic qualifier on asm}}
 }
 
+void a() __asm__(""); // expected-error {{cannot use an empty string literal in 'asm'}}
+void a() {
+  __asm__(""); // ok
+}
 
 // rdar://5952468
 __asm ; // expected-error {{expected '(' after 'asm'}}

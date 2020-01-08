@@ -3932,6 +3932,17 @@ def : InstAlias<"vmovd\t{$src, $dst|$dst, $src}",
 def : InstAlias<"vmovd\t{$src, $dst|$dst, $src}",
                 (VMOVPQIto64Zrr GR64:$dst, VR128X:$src), 0>;
 
+// Conversions between masks and scalar fp.
+def : Pat<(v32i1 (bitconvert FR32X:$src)),
+          (KMOVDkr (VMOVSS2DIZrr FR32X:$src))>;
+def : Pat<(f32 (bitconvert VK32:$src)),
+          (VMOVDI2SSZrr (KMOVDrk VK32:$src))>;
+
+def : Pat<(v64i1 (bitconvert FR64X:$src)),
+          (KMOVQkr (VMOVSDto64Zrr FR64X:$src))>;
+def : Pat<(f64 (bitconvert VK64:$src)),
+          (VMOV64toSDZrr (KMOVQrk VK64:$src))>;
+
 //===----------------------------------------------------------------------===//
 // AVX-512  MOVSS, MOVSD
 //===----------------------------------------------------------------------===//

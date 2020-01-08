@@ -53,6 +53,7 @@ FunctionPass *createThumb2SizeReductionPass(
 InstructionSelector *
 createARMInstructionSelector(const ARMBaseTargetMachine &TM, const ARMSubtarget &STI,
                              const ARMRegisterBankInfo &RBI);
+Pass *createMVEGatherScatterLoweringPass();
 
 void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                   ARMAsmPrinter &AP);
@@ -67,6 +68,7 @@ void initializeThumb2ITBlockPass(PassRegistry &);
 void initializeMVEVPTBlockPass(PassRegistry &);
 void initializeARMLowOverheadLoopsPass(PassRegistry &);
 void initializeMVETailPredicationPass(PassRegistry &);
+void initializeMVEGatherScatterLoweringPass(PassRegistry &);
 
 } // end namespace llvm
 

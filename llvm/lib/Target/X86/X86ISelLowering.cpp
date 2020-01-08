@@ -1116,6 +1116,17 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // i8 vectors are custom because the source register and source
     // source memory operand types are not the same width.
     setOperationAction(ISD::INSERT_VECTOR_ELT,  MVT::v16i8, Custom);
+
+    if (Subtarget.is64Bit() && !Subtarget.hasAVX512()) {
+      // We need to scalarize v4i64->v432 uint_to_fp using cvtsi2ss, but we can
+      // do the pre and post work in the vector domain.
+      setOperationAction(ISD::UINT_TO_FP,        MVT::v4i64, Custom);
+      setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v4i64, Custom);
+      // We need to mark SINT_TO_FP as Custom even though we want to expand it
+      // so that DAG combine doesn't try to turn it into uint_to_fp.
+      setOperationAction(ISD::SINT_TO_FP,        MVT::v4i64, Custom);
+      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v4i64, Custom);
+    }
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasXOP()) {
@@ -1175,15 +1186,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v8i32, Legal);
     setOperationAction(ISD::STRICT_SINT_TO_FP,  MVT::v8i32, Legal);
-
-    if (Subtarget.is64Bit() && !Subtarget.hasAVX512()) {
-      // We need to mark SINT_TO_FP as Custom even though we want to expand it
-      // so that DAG combine doesn't try to turn it into uint_to_fp.
-      setOperationAction(ISD::SINT_TO_FP,        MVT::v4i64, Custom);
-      setOperationAction(ISD::STRICT_SINT_TO_FP, MVT::v4i64, Custom);
-      setOperationAction(ISD::UINT_TO_FP,        MVT::v4i64, Custom);
-      setOperationAction(ISD::STRICT_UINT_TO_FP, MVT::v4i64, Custom);
-    }
 
     setOperationAction(ISD::STRICT_FP_ROUND,    MVT::v4f32, Legal);
     setOperationAction(ISD::STRICT_FADD,        MVT::v8f32, Legal);

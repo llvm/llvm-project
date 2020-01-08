@@ -821,6 +821,51 @@ TEST(TargetParserTest, testAArch64CPU) {
       "cyclone", "armv8-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRYPTO | AArch64::AEK_FP | AArch64::AEK_SIMD, "8-A"));
   EXPECT_TRUE(testAArch64CPU(
+      "apple-a7", "armv8-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRYPTO | AArch64::AEK_FP | AArch64::AEK_SIMD, "8-A"));
+  EXPECT_TRUE(testAArch64CPU(
+      "apple-a8", "armv8-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRYPTO | AArch64::AEK_FP | AArch64::AEK_SIMD, "8-A"));
+  EXPECT_TRUE(testAArch64CPU(
+      "apple-a9", "armv8-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRYPTO | AArch64::AEK_FP | AArch64::AEK_SIMD, "8-A"));
+  EXPECT_TRUE(testAArch64CPU("apple-a10", "armv8-a", "crypto-neon-fp-armv8",
+                             AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
+                                 AArch64::AEK_FP | AArch64::AEK_RDM |
+                                 AArch64::AEK_SIMD,
+                             "8-A"));
+  EXPECT_TRUE(testAArch64CPU("apple-a11", "armv8.2-a", "crypto-neon-fp-armv8",
+                             AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
+                                 AArch64::AEK_FP | AArch64::AEK_LSE |
+                                 AArch64::AEK_RAS | AArch64::AEK_RDM |
+                                 AArch64::AEK_SIMD,
+                             "8.2-A"));
+  EXPECT_TRUE(testAArch64CPU(
+      "apple-a12", "armv8.3-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
+          AArch64::AEK_SIMD | AArch64::AEK_LSE | AArch64::AEK_RAS |
+          AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_FP16,
+      "8.3-A"));
+  EXPECT_TRUE(testAArch64CPU(
+      "apple-a13", "armv8.4-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
+          AArch64::AEK_SIMD | AArch64::AEK_LSE | AArch64::AEK_RAS |
+          AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+          AArch64::AEK_FP16 | AArch64::AEK_FP16FML,
+      "8.4-A"));
+  EXPECT_TRUE(testAArch64CPU(
+      "apple-s4", "armv8.3-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
+          AArch64::AEK_SIMD | AArch64::AEK_LSE | AArch64::AEK_RAS |
+          AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_FP16,
+      "8.3-A"));
+  EXPECT_TRUE(testAArch64CPU(
+      "apple-s5", "armv8.3-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
+          AArch64::AEK_SIMD | AArch64::AEK_LSE | AArch64::AEK_RAS |
+          AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_FP16,
+      "8.3-A"));
+  EXPECT_TRUE(testAArch64CPU(
       "exynos-m3", "armv8-a", "crypto-neon-fp-armv8",
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
       AArch64::AEK_SIMD, "8-A"));
@@ -891,7 +936,7 @@ TEST(TargetParserTest, testAArch64CPU) {
       "8.2-A"));
 }
 
-static constexpr unsigned NumAArch64CPUArchs = 26;
+static constexpr unsigned NumAArch64CPUArchs = 35;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;

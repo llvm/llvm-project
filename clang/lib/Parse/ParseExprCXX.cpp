@@ -2017,7 +2017,7 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
   // simple-asm-expr[opt]
   if (Tok.is(tok::kw_asm)) {
     SourceLocation Loc;
-    ExprResult AsmLabel(ParseSimpleAsm(&Loc));
+    ExprResult AsmLabel(ParseSimpleAsm(/*ForAsmLabel*/ true, &Loc));
     if (AsmLabel.isInvalid()) {
       SkipUntil(tok::semi, StopAtSemi);
       return Sema::ConditionError();

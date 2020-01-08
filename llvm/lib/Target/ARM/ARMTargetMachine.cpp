@@ -98,6 +98,7 @@ extern "C" void LLVMInitializeARMTarget() {
   initializeMVEVPTBlockPass(Registry);
   initializeMVETailPredicationPass(Registry);
   initializeARMLowOverheadLoopsPass(Registry);
+  initializeMVEGatherScatterLoweringPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -403,6 +404,8 @@ void ARMPassConfig::addIRPasses() {
           const auto &ST = this->TM->getSubtarget<ARMSubtarget>(F);
           return ST.hasAnyDataBarrier() && !ST.isThumb1Only();
         }));
+
+  addPass(createMVEGatherScatterLoweringPass());
 
   TargetPassConfig::addIRPasses();
 

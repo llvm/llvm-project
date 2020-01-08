@@ -944,6 +944,24 @@ defm int_arm_mve_vshll_imm: MVEPredicatedM<[llvm_anyvector_ty],
    [llvm_anyvector_ty, llvm_i32_ty /*shiftcount*/, llvm_i32_ty /*unsigned*/,
                        llvm_i32_ty /*top-half*/]>;
 
+defm int_arm_mve_vsli: MVEPredicated<
+   [llvm_anyvector_ty], [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty]>;
+defm int_arm_mve_vsri: MVEPredicated<
+   [llvm_anyvector_ty], [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty]>;
+
+defm int_arm_mve_vshrn: MVEPredicated<
+   [llvm_anyvector_ty], [LLVMMatchType<0>, llvm_anyvector_ty,
+    llvm_i32_ty /*shiftcount*/, llvm_i32_ty /*saturate*/, llvm_i32_ty /*round*/,
+    llvm_i32_ty /*unsigned-out*/, llvm_i32_ty /*unsigned-in*/,
+    llvm_i32_ty /*top-half*/]>;
+
+defm int_arm_mve_vshl_scalar: MVEPredicated<
+   [llvm_anyvector_ty], [LLVMMatchType<0>, llvm_i32_ty /*shiftcount*/,
+    llvm_i32_ty /*saturate*/, llvm_i32_ty /*round*/, llvm_i32_ty /*unsigned*/]>;
+defm int_arm_mve_vshl_vector: MVEPredicatedM<
+   [llvm_anyvector_ty], [LLVMMatchType<0>, llvm_anyvector_ty /*shiftcounts*/,
+    llvm_i32_ty /*saturate*/, llvm_i32_ty /*round*/, llvm_i32_ty /*unsigned*/]>;
+
 // MVE scalar shifts.
 class ARM_MVE_qrshift_single<list<LLVMType> value,
                              list<LLVMType> saturate = []> :

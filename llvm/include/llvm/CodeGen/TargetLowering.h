@@ -935,6 +935,8 @@ public:
     case ISD::SMULFIXSAT:
     case ISD::UMULFIX:
     case ISD::UMULFIXSAT:
+    case ISD::SDIVFIX:
+    case ISD::UDIVFIX:
       Supported = isSupportedFixedPointOperation(Op, VT, Scale);
       break;
     }
@@ -4183,6 +4185,14 @@ public:
   /// Method for building the DAG expansion of ISD::[U|S]MULFIX[SAT]. This
   /// method accepts integers as its arguments.
   SDValue expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Method for building the DAG expansion of ISD::[US]DIVFIX. This
+  /// method accepts integers as its arguments.
+  /// Note: This method may fail if the division could not be performed
+  /// within the type. Clients must retry with a wider type if this happens.
+  SDValue expandFixedPointDiv(unsigned Opcode, const SDLoc &dl,
+                              SDValue LHS, SDValue RHS,
+                              unsigned Scale, SelectionDAG &DAG) const;
 
   /// Method for building the DAG expansion of ISD::U(ADD|SUB)O. Expansion
   /// always suceeds and populates the Result and Overflow arguments.

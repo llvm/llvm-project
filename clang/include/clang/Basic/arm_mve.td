@@ -651,6 +651,76 @@ multiclass vshll_imm<int top> {
 defm vshllbq : vshll_imm<0>;
 defm vshlltq : vshll_imm<1>;
 
+multiclass DyadicImmShift<Type outtype, Immediate imm, string intname = NAME,
+                          dag extraargs = (?)> {
+  foreach intparams = [!if(!eq(!cast<string>(outtype), !cast<string>(Vector)),
+                           [Vector], [outtype, Vector])] in {
+    def q_n: Intrinsic<
+        outtype, (args outtype:$a, Vector:$b, imm:$sh),
+        !con((IRInt<intname, intparams> $a, $b, $sh), extraargs)>;
+
+    def q_m_n: Intrinsic<
+        outtype, (args outtype:$a, Vector:$b, imm:$sh, Predicate:$pred),
+        !con((IRInt<intname # "_predicated", intparams # [Predicate]>
+                 $a, $b, $sh), extraargs, (? $pred))>;
+  }
+}
+
+multiclass VSHRN<Type outtype, Immediate imm, dag extraargs> {
+  defm b: DyadicImmShift<outtype, imm, "vshrn", !con(extraargs, (? 0))>;
+  defm t: DyadicImmShift<outtype, imm, "vshrn", !con(extraargs, (? 1))>;
+}
+
+let params = [s16, s32, u16, u32], pnt = PNT_NType in {
+  foreach U = [(unsignedflag Scalar)] in {
+    defm vshrn   : VSHRN<HalfVector, imm_1toHalfN, (? 0,0,U,U)>;
+    defm vqshrn  : VSHRN<HalfVector, imm_1toHalfN, (? 1,0,U,U)>;
+    defm vrshrn  : VSHRN<HalfVector, imm_1toHalfN, (? 0,1,U,U)>;
+    defm vqrshrn : VSHRN<HalfVector, imm_1toHalfN, (? 1,1,U,U)>;
+  }
+}
+let params = [s16, s32], pnt = PNT_NType in {
+  defm vqshrun  : VSHRN<UHalfVector, imm_1toHalfN, (? 1,0,1,0)>;
+  defm vqrshrun : VSHRN<UHalfVector, imm_1toHalfN, (? 1,0,1,0)>;
+}
+let params = T.Int, pnt = PNT_NType in {
+  defm vsli : DyadicImmShift<Vector, imm_1toN>;
+  defm vsri : DyadicImmShift<Vector, imm_1toN>;
+}
+
+multiclass VSHL_non_imm<string scalarSuffix, int q, int r,
+                        PolymorphicNameType pnt_scalar_unpred = PNT_Type> {
+  let pnt = pnt_scalar_unpred in {
+    def scalarSuffix: Intrinsic<
+      Vector, (args Vector:$in, s32:$sh),
+      (IRInt<"vshl_scalar", [Vector]> $in, $sh,
+           q, r, (unsignedflag Scalar))>;
+  }
+  def "_m" # scalarSuffix: Intrinsic<
+    Vector, (args Vector:$in, s32:$sh, Predicate:$pred),
+    (IRInt<"vshl_scalar_predicated", [Vector, Predicate]> $in, $sh,
+         q, r, (unsignedflag Scalar), $pred)>;
+
+  def "": Intrinsic<
+    Vector, (args Vector:$in, SVector:$sh),
+    (IRInt<"vshl_vector", [Vector, SVector]> $in, $sh,
+         q, r, (unsignedflag Scalar))>;
+  defm "": IntrinsicMX<
+    Vector, (args Vector:$in, SVector:$sh, Predicate:$pred),
+    (IRInt<"vshl_vector_predicated", [Vector, SVector, Predicate]> $in, $sh,
+         q, r, (unsignedflag Scalar), $pred, $inactive),
+    // The saturating shift intrinsics don't have an x variant, so we
+    // set wantXVariant to 1 iff q == 0
+    !eq(q, 0)>;
+}
+
+let params = T.Int in {
+  defm vshlq   : VSHL_non_imm<"_r", 0, 0>;
+  defm vqshlq  : VSHL_non_imm<"_r", 1, 0>;
+  defm vrshlq  : VSHL_non_imm<"_n", 0, 1, PNT_NType>;
+  defm vqrshlq : VSHL_non_imm<"_n", 1, 1, PNT_NType>;
+}
+
 // Base class for the scalar shift intrinsics.
 class ScalarShift<Type argtype, dag shiftCountArg, dag shiftCodeGen>:
   Intrinsic<argtype, !con((args argtype:$value), shiftCountArg), shiftCodeGen> {

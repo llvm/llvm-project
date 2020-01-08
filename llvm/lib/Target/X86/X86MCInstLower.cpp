@@ -1142,9 +1142,34 @@ static void EmitNops(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
   }
 }
 
+/// A RAII helper which defines a region of instructions which can't have
+/// padding added between them for correctness.
+struct NoAutoPaddingScope {
+  MCStreamer &OS;
+  const bool OldAllowAutoPadding;
+  NoAutoPaddingScope(MCStreamer &OS)
+    : OS(OS), OldAllowAutoPadding(OS.getAllowAutoPadding()) {
+    changeAndComment(false);
+  }
+  ~NoAutoPaddingScope() {
+    changeAndComment(OldAllowAutoPadding);
+  }
+  void changeAndComment(bool b) {
+    if (b == OS.getAllowAutoPadding())
+      return;
+    OS.setAllowAutoPadding(b);
+    if (b)
+      OS.emitRawComment("autopadding");
+    else
+      OS.emitRawComment("noautopadding");
+  }
+};
+
 void X86AsmPrinter::LowerSTATEPOINT(const MachineInstr &MI,
                                     X86MCInstLower &MCIL) {
   assert(Subtarget->is64Bit() && "Statepoint currently only supports X86-64");
+
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
 
   StatepointOpers SOpers(&MI);
   if (unsigned PatchBytes = SOpers.getNumPatchBytes()) {
@@ -1207,6 +1232,8 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
   // FAULTING_LOAD_OP <def>, <faltinf type>, <MBB handler>,
   //                  <opcode>, <operands>
 
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
+
   Register DefRegister = FaultingMI.getOperand(0).getReg();
   FaultMaps::FaultKind FK =
       static_cast<FaultMaps::FaultKind>(FaultingMI.getOperand(1).getImm());
@@ -1253,6 +1280,8 @@ void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
 void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
                                       X86MCInstLower &MCIL) {
   // PATCHABLE_OP minsize, opcode, operands
+
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
 
   unsigned MinSize = MI.getOperand(0).getImm();
   unsigned Opcode = MI.getOperand(1).getImm();
@@ -1308,6 +1337,8 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
   assert(Subtarget->is64Bit() && "Patchpoint currently only supports X86-64");
 
   SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
+
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
 
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
@@ -1367,6 +1398,8 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
                                               X86MCInstLower &MCIL) {
   assert(Subtarget->is64Bit() && "XRay custom events only supports X86-64");
+
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
 
   // We want to emit the following pattern, which follows the x86 calling
   // convention to prepare for the trampoline call to be patched in.
@@ -1461,6 +1494,8 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
 void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
                                                     X86MCInstLower &MCIL) {
   assert(Subtarget->is64Bit() && "XRay typed events only supports X86-64");
+
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
 
   // We want to emit the following pattern, which follows the x86 calling
   // convention to prepare for the trampoline call to be patched in.
@@ -1559,6 +1594,9 @@ void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
 
 void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
                                                   X86MCInstLower &MCIL) {
+
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
+
   // We want to emit the following pattern:
   //
   //   .p2align 1, ...
@@ -1586,6 +1624,8 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
 
 void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
                                        X86MCInstLower &MCIL) {
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
+
   // Since PATCHABLE_RET takes the opcode of the return statement as an
   // argument, we use that to emit the correct form of the RET that we want.
   // i.e. when we see this:
@@ -1616,6 +1656,8 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
 
 void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
                                              X86MCInstLower &MCIL) {
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
+
   // Like PATCHABLE_RET, we have the actual instruction in the operands to this
   // instruction so we lower that particular instruction and its operands.
   // Unlike PATCHABLE_RET though, we put the sled before the JMP, much like how

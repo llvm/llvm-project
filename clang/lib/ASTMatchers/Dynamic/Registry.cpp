@@ -41,7 +41,8 @@ namespace {
 
 using internal::MatcherDescriptor;
 
-using ConstructorMap = llvm::StringMap<std::unique_ptr<const MatcherDescriptor>>;
+using ConstructorMap =
+    llvm::StringMap<std::unique_ptr<const MatcherDescriptor>>;
 
 class RegistryMaps {
 public:

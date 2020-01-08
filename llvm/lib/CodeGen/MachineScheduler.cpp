@@ -2088,13 +2088,8 @@ getOtherResourceCount(unsigned &OtherCritIdx) {
   return OtherCritCount;
 }
 
-template void SchedBoundary::releaseNode<true>(SUnit *SU, unsigned ReadyCycle,
-                                               unsigned Idx);
-template void SchedBoundary::releaseNode<false>(SUnit *SU, unsigned ReadyCycle,
-                                                unsigned Idx);
-
-template <bool InPQueue>
-void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle, unsigned Idx) {
+void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle, bool InPQueue,
+                                unsigned Idx) {
   assert(SU->getInstr() && "Scheduled SUnit must have instr");
 
 #ifndef NDEBUG
@@ -2373,7 +2368,7 @@ void SchedBoundary::releasePending() {
     if (Available.size() >= ReadyListLimit)
       break;
 
-    releaseNode<true>(SU, ReadyCycle, I);
+    releaseNode(SU, ReadyCycle, true, I);
     if (E != Pending.size()) {
       --I;
       --E;

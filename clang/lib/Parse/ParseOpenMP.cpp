@@ -343,9 +343,8 @@ Parser::ParseOpenMPDeclareReductionDirective(AccessSpecifier AS) {
                                     Scope::OpenMPDirectiveScope);
     // Parse <combiner> expression.
     Actions.ActOnOpenMPDeclareReductionCombinerStart(getCurScope(), D);
-    ExprResult CombinerResult =
-        Actions.ActOnFinishFullExpr(ParseAssignmentExpression().get(),
-                                    D->getLocation(), /*DiscardedValue*/ false);
+    ExprResult CombinerResult = Actions.ActOnFinishFullExpr(
+        ParseExpression().get(), D->getLocation(), /*DiscardedValue*/ false);
     Actions.ActOnOpenMPDeclareReductionCombinerEnd(D, CombinerResult.get());
 
     if (CombinerResult.isInvalid() && Tok.isNot(tok::r_paren) &&
