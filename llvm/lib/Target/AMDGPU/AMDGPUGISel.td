@@ -209,6 +209,9 @@ foreach Ty = [i64, p0, p1, p4] in {
 def gi_as_i32timm : GICustomOperandRenderer<"renderTruncImm32">,
   GISDNodeXFormEquiv<as_i32timm>;
 
+def gi_as_i16timm : GICustomOperandRenderer<"renderTruncTImm">,
+  GISDNodeXFormEquiv<as_i16timm>;
+
 def gi_NegateImm : GICustomOperandRenderer<"renderNegateImm">,
   GISDNodeXFormEquiv<NegateImm>;
 

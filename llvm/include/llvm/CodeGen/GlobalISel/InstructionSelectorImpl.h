@@ -947,8 +947,27 @@ bool InstructionSelector::executeMatchTable(
                       dbgs() << CurrentIdx << ": GIR_CustomRenderer(OutMIs["
                              << InsnID << "], MIs[" << OldInsnID << "], "
                              << RendererFnID << ")\n");
+      (ISel.*ISelInfo.CustomRenderers[RendererFnID])(
+        OutMIs[InsnID], *State.MIs[OldInsnID],
+        -1); // Not a source operand of the old instruction.
+      break;
+    }
+    case GIR_CustomOperandRenderer: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t OldInsnID = MatchTable[CurrentIdx++];
+      int64_t OpIdx = MatchTable[CurrentIdx++];
+      int64_t RendererFnID = MatchTable[CurrentIdx++];
+      assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
+
+      DEBUG_WITH_TYPE(
+        TgtInstructionSelector::getName(),
+        dbgs() << CurrentIdx << ": GIR_CustomOperandRenderer(OutMIs["
+               << InsnID << "], MIs[" << OldInsnID << "]->getOperand("
+               << OpIdx << "), "
+        << RendererFnID << ")\n");
       (ISel.*ISelInfo.CustomRenderers[RendererFnID])(OutMIs[InsnID],
-                                                     *State.MIs[OldInsnID]);
+                                                     *State.MIs[OldInsnID],
+                                                     OpIdx);
       break;
     }
     case GIR_ConstrainOperandRC: {
