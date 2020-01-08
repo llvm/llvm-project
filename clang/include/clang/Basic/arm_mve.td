@@ -651,6 +651,43 @@ multiclass vshll_imm<int top> {
 defm vshllbq : vshll_imm<0>;
 defm vshlltq : vshll_imm<1>;
 
+multiclass DyadicImmShift<Type outtype, Immediate imm, string intname = NAME,
+                          dag extraargs = (?)> {
+  foreach intparams = [!if(!eq(!cast<string>(outtype), !cast<string>(Vector)),
+                           [Vector], [outtype, Vector])] in {
+    def q_n: Intrinsic<
+        outtype, (args outtype:$a, Vector:$b, imm:$sh),
+        !con((IRInt<intname, intparams> $a, $b, $sh), extraargs)>;
+
+    def q_m_n: Intrinsic<
+        outtype, (args outtype:$a, Vector:$b, imm:$sh, Predicate:$pred),
+        !con((IRInt<intname # "_predicated", intparams # [Predicate]>
+                 $a, $b, $sh), extraargs, (? $pred))>;
+  }
+}
+
+multiclass VSHRN<Type outtype, Immediate imm, dag extraargs> {
+  defm b: DyadicImmShift<outtype, imm, "vshrn", !con(extraargs, (? 0))>;
+  defm t: DyadicImmShift<outtype, imm, "vshrn", !con(extraargs, (? 1))>;
+}
+
+let params = [s16, s32, u16, u32], pnt = PNT_NType in {
+  foreach U = [(unsignedflag Scalar)] in {
+    defm vshrn   : VSHRN<HalfVector, imm_1toHalfN, (? 0,0,U,U)>;
+    defm vqshrn  : VSHRN<HalfVector, imm_1toHalfN, (? 1,0,U,U)>;
+    defm vrshrn  : VSHRN<HalfVector, imm_1toHalfN, (? 0,1,U,U)>;
+    defm vqrshrn : VSHRN<HalfVector, imm_1toHalfN, (? 1,1,U,U)>;
+  }
+}
+let params = [s16, s32], pnt = PNT_NType in {
+  defm vqshrun  : VSHRN<UHalfVector, imm_1toHalfN, (? 1,0,1,0)>;
+  defm vqrshrun : VSHRN<UHalfVector, imm_1toHalfN, (? 1,0,1,0)>;
+}
+let params = T.Int, pnt = PNT_NType in {
+  defm vsli : DyadicImmShift<Vector, imm_1toN>;
+  defm vsri : DyadicImmShift<Vector, imm_1toN>;
+}
+
 // Base class for the scalar shift intrinsics.
 class ScalarShift<Type argtype, dag shiftCountArg, dag shiftCodeGen>:
   Intrinsic<argtype, !con((args argtype:$value), shiftCountArg), shiftCodeGen> {
