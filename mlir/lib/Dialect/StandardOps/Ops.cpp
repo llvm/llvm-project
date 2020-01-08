@@ -2527,11 +2527,31 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
   }
 };
 
+struct ViewOpMemrefCastFolder : public OpRewritePattern<ViewOp> {
+  using OpRewritePattern<ViewOp>::OpRewritePattern;
+
+  PatternMatchResult matchAndRewrite(ViewOp viewOp,
+                                     PatternRewriter &rewriter) const override {
+    Value memrefOperand = viewOp.getOperand(0);
+    MemRefCastOp memrefCastOp =
+        dyn_cast_or_null<MemRefCastOp>(memrefOperand.getDefiningOp());
+    if (!memrefCastOp)
+      return matchFailure();
+    Value allocOperand = memrefCastOp.getOperand();
+    AllocOp allocOp = dyn_cast_or_null<AllocOp>(allocOperand.getDefiningOp());
+    if (!allocOp)
+      return matchFailure();
+    rewriter.replaceOpWithNewOp<ViewOp>(memrefOperand, viewOp, viewOp.getType(),
+                                        allocOperand, viewOp.operands());
+    return matchSuccess();
+  }
+};
+
 } // end anonymous namespace
 
 void ViewOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
                                          MLIRContext *context) {
-  results.insert<ViewOpShapeFolder>(context);
+  results.insert<ViewOpShapeFolder, ViewOpMemrefCastFolder>(context);
 }
 
 //===----------------------------------------------------------------------===//
