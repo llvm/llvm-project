@@ -100,6 +100,7 @@ def : GINodeEquiv<G_CTTZ_ZERO_UNDEF, cttz_zero_undef>;
 def : GINodeEquiv<G_CTPOP, ctpop>;
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 def : GINodeEquiv<G_CONCAT_VECTORS, concat_vectors>;
+def : GINodeEquiv<G_BUILD_VECTOR, build_vector>;
 def : GINodeEquiv<G_FCEIL, fceil>;
 def : GINodeEquiv<G_FCOS, fcos>;
 def : GINodeEquiv<G_FSIN, fsin>;
@@ -119,6 +120,7 @@ def : GINodeEquiv<G_FMINNUM, fminnum>;
 def : GINodeEquiv<G_FMAXNUM, fmaxnum>;
 def : GINodeEquiv<G_FMINNUM_IEEE, fminnum_ieee>;
 def : GINodeEquiv<G_FMAXNUM_IEEE, fmaxnum_ieee>;
+def : GINodeEquiv<G_READCYCLECOUNTER, readcyclecounter>;
 
 // Broadly speaking G_LOAD is equivalent to ISD::LOAD but there are some
 // complications that tablegen must take care of. For example, Predicates such

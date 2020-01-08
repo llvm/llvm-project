@@ -86,15 +86,12 @@ llvm::DenseSet<const Decl *> locateDeclAt(ParsedAST &AST,
     return {};
 
   llvm::DenseSet<const Decl *> Result;
-  for (const auto *D :
+  for (const NamedDecl *D :
        targetDecl(SelectedNode->ASTNode,
                   DeclRelation::Alias | DeclRelation::TemplatePattern)) {
-    const auto *ND = llvm::dyn_cast<NamedDecl>(D);
-    if (!ND)
-      continue;
     // Get to CXXRecordDecl from constructor or destructor.
-    ND = tooling::getCanonicalSymbolDeclaration(ND);
-    Result.insert(ND);
+    D = tooling::getCanonicalSymbolDeclaration(D);
+    Result.insert(D);
   }
   return Result;
 }
@@ -670,7 +667,7 @@ size_t renameRangeAdjustmentCost(ArrayRef<Range> Indexed, ArrayRef<Range> Lexed,
         Indexed[I].start.character - Lexed[MappedIndex[I]].start.character;
     int Line = Indexed[I].start.line;
     if (Line != LastLine)
-      LastDColumn = 0; // colmun offsets don't carry cross lines.
+      LastDColumn = 0; // column offsets don't carry cross lines.
     Cost += abs(DLine - LastDLine) + abs(DColumn - LastDColumn);
     std::tie(LastLine, LastDLine, LastDColumn) = std::tie(Line, DLine, DColumn);
   }

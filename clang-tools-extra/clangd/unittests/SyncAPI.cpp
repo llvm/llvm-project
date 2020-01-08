@@ -56,7 +56,7 @@ template <typename T> struct CaptureProxy {
 private:
   llvm::Optional<T> *Target;
   // Using shared_ptr to workaround compilation errors with MSVC.
-  // MSVC only allows default-construcitble and copyable objects as future<>
+  // MSVC only allows default-constructible and copyable objects as future<>
   // arguments.
   std::promise<std::shared_ptr<T>> Promise;
   std::future<std::shared_ptr<T>> Future;

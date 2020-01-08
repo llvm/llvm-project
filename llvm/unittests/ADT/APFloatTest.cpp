@@ -10,8 +10,8 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <cmath>
 #include <ostream>
@@ -20,9 +20,17 @@
 
 using namespace llvm;
 
-static double convertToDoubleFromString(const char *Str) {
+static std::string convertToErrorFromString(StringRef Str) {
   llvm::APFloat F(0.0);
-  F.convertFromString(Str, llvm::APFloat::rmNearestTiesToEven);
+  auto ErrOrStatus =
+      F.convertFromString(Str, llvm::APFloat::rmNearestTiesToEven);
+  EXPECT_TRUE(!ErrOrStatus);
+  return toString(ErrOrStatus.takeError());
+}
+
+static double convertToDoubleFromString(StringRef Str) {
+  llvm::APFloat F(0.0);
+  EXPECT_FALSE(!F.convertFromString(Str, llvm::APFloat::rmNearestTiesToEven));
   return F.convertToDouble();
 }
 
@@ -539,6 +547,14 @@ TEST(APFloatTest, FMA) {
     f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
     EXPECT_EQ(-8.85242279E-41f, f1.convertToFloat());
   }
+
+  // Test using only a single instance of APFloat.
+  {
+    APFloat F(1.5);
+
+    F.fusedMultiplyAdd(F, F, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(3.75, F.convertToDouble());
+  }
 }
 
 TEST(APFloatTest, MinNum) {
@@ -658,26 +674,12 @@ TEST(APFloatTest, Zero) {
 TEST(APFloatTest, DecimalStringsWithoutNullTerminators) {
   // Make sure that we can parse strings without null terminators.
   // rdar://14323230.
-  APFloat Val(APFloat::IEEEdouble());
-  Val.convertFromString(StringRef("0.00", 3),
-                        llvm::APFloat::rmNearestTiesToEven);
-  EXPECT_EQ(Val.convertToDouble(), 0.0);
-  Val.convertFromString(StringRef("0.01", 3),
-                        llvm::APFloat::rmNearestTiesToEven);
-  EXPECT_EQ(Val.convertToDouble(), 0.0);
-  Val.convertFromString(StringRef("0.09", 3),
-                        llvm::APFloat::rmNearestTiesToEven);
-  EXPECT_EQ(Val.convertToDouble(), 0.0);
-  Val.convertFromString(StringRef("0.095", 4),
-                        llvm::APFloat::rmNearestTiesToEven);
-  EXPECT_EQ(Val.convertToDouble(), 0.09);
-  Val.convertFromString(StringRef("0.00e+3", 7),
-                        llvm::APFloat::rmNearestTiesToEven);
-  EXPECT_EQ(Val.convertToDouble(), 0.00);
-  Val.convertFromString(StringRef("0e+3", 4),
-                        llvm::APFloat::rmNearestTiesToEven);
-  EXPECT_EQ(Val.convertToDouble(), 0.00);
-
+  EXPECT_EQ(convertToDoubleFromString(StringRef("0.00", 3)), 0.0);
+  EXPECT_EQ(convertToDoubleFromString(StringRef("0.01", 3)), 0.0);
+  EXPECT_EQ(convertToDoubleFromString(StringRef("0.09", 3)), 0.0);
+  EXPECT_EQ(convertToDoubleFromString(StringRef("0.095", 4)), 0.09);
+  EXPECT_EQ(convertToDoubleFromString(StringRef("0.00e+3", 7)), 0.00);
+  EXPECT_EQ(convertToDoubleFromString(StringRef("0e+3", 4)), 0.00);
 }
 
 TEST(APFloatTest, fromZeroDecimalString) {
@@ -1156,172 +1158,172 @@ TEST(APFloatTest, SemanticsDeath) {
   EXPECT_DEATH(APFloat(APFloat::IEEEsingle(), 0).convertToDouble(), "Float semantics are not IEEEdouble");
   EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), 0).convertToFloat(),  "Float semantics are not IEEEsingle");
 }
-
-TEST(APFloatTest, StringDecimalDeath) {
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  ""), "Invalid string length");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+"), "String has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-"), "String has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("\0", 1)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1\0", 2)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1" "\0" "2", 3)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1" "\0" "2e1", 5)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1e\0", 3)), "Invalid character in exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1e1\0", 4)), "Invalid character in exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("1e1" "\0" "2", 5)), "Invalid character in exponent");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "1.0f"), "Invalid character in significand");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), ".."), "String contains multiple dots");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "..0"), "String contains multiple dots");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "1.0.0"), "String contains multiple dots");
-}
-
-TEST(APFloatTest, StringDecimalSignificandDeath) {
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "."), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+."), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-."), "Significand has no digits");
-
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "e"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+e"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-e"), "Significand has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "e1"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+e1"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-e1"), "Significand has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  ".e1"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+.e1"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-.e1"), "Significand has no digits");
-
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  ".e"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+.e"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-.e"), "Significand has no digits");
-}
-
-TEST(APFloatTest, StringHexadecimalDeath) {
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x"), "Invalid string");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x"), "Invalid string");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x"), "Invalid string");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x0"), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x0"), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x0"), "Hex strings require an exponent");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x0."), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x0."), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x0."), "Hex strings require an exponent");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x.0"), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x.0"), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x.0"), "Hex strings require an exponent");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x0.0"), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x0.0"), "Hex strings require an exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x0.0"), "Hex strings require an exponent");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x\0", 3)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1\0", 4)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1" "\0" "2", 5)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1" "\0" "2p1", 7)), "Invalid character in significand");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1p\0", 5)), "Invalid character in exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1p1\0", 6)), "Invalid character in exponent");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), StringRef("0x1p1" "\0" "2", 7)), "Invalid character in exponent");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "0x1p0f"), "Invalid character in exponent");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "0x..p1"), "String contains multiple dots");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "0x..0p1"), "String contains multiple dots");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "0x1.0.0p1"), "String contains multiple dots");
-}
-
-TEST(APFloatTest, StringHexadecimalSignificandDeath) {
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x."), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x."), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x."), "Significand has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0xp"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0xp"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0xp"), "Significand has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0xp+"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0xp+"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0xp+"), "Significand has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0xp-"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0xp-"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0xp-"), "Significand has no digits");
-
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x.p"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x.p"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x.p"), "Significand has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x.p+"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x.p+"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x.p+"), "Significand has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x.p-"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x.p-"), "Significand has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x.p-"), "Significand has no digits");
-}
-
-TEST(APFloatTest, StringHexadecimalExponentDeath) {
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1p"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1p+"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1p-"), "Exponent has no digits");
-
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1.p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1.p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1.p"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1.p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1.p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1.p+"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1.p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1.p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1.p-"), "Exponent has no digits");
-
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x.1p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x.1p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x.1p"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x.1p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x.1p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x.1p+"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x.1p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x.1p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x.1p-"), "Exponent has no digits");
-
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1.1p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1.1p"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1.1p"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1.1p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1.1p+"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1.1p+"), "Exponent has no digits");
-
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(),  "0x1.1p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "+0x1.1p-"), "Exponent has no digits");
-  EXPECT_DEATH(APFloat(APFloat::IEEEdouble(), "-0x1.1p-"), "Exponent has no digits");
-}
 #endif
 #endif
+
+TEST(APFloatTest, StringDecimalError) {
+  EXPECT_EQ("Invalid string length", convertToErrorFromString(""));
+  EXPECT_EQ("String has no digits", convertToErrorFromString("+"));
+  EXPECT_EQ("String has no digits", convertToErrorFromString("-"));
+
+  EXPECT_EQ("Invalid character in significand", convertToErrorFromString(StringRef("\0", 1)));
+  EXPECT_EQ("Invalid character in significand", convertToErrorFromString(StringRef("1\0", 2)));
+  EXPECT_EQ("Invalid character in significand", convertToErrorFromString(StringRef("1" "\0" "2", 3)));
+  EXPECT_EQ("Invalid character in significand", convertToErrorFromString(StringRef("1" "\0" "2e1", 5)));
+  EXPECT_EQ("Invalid character in exponent", convertToErrorFromString(StringRef("1e\0", 3)));
+  EXPECT_EQ("Invalid character in exponent", convertToErrorFromString(StringRef("1e1\0", 4)));
+  EXPECT_EQ("Invalid character in exponent", convertToErrorFromString(StringRef("1e1" "\0" "2", 5)));
+
+  EXPECT_EQ("Invalid character in significand", convertToErrorFromString("1.0f"));
+
+  EXPECT_EQ("String contains multiple dots", convertToErrorFromString(".."));
+  EXPECT_EQ("String contains multiple dots", convertToErrorFromString("..0"));
+  EXPECT_EQ("String contains multiple dots", convertToErrorFromString("1.0.0"));
+}
+
+TEST(APFloatTest, StringDecimalSignificandError) {
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString( "."));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("+."));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("-."));
+
+
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString( "e"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("+e"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("-e"));
+
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString( "e1"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("+e1"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("-e1"));
+
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString( ".e1"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("+.e1"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("-.e1"));
+
+
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString( ".e"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("+.e"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("-.e"));
+}
+
+TEST(APFloatTest, StringHexadecimalError) {
+  EXPECT_EQ("Invalid string", convertToErrorFromString( "0x"));
+  EXPECT_EQ("Invalid string", convertToErrorFromString("+0x"));
+  EXPECT_EQ("Invalid string", convertToErrorFromString("-0x"));
+
+  EXPECT_EQ("Hex strings require an exponent", convertToErrorFromString( "0x0"));
+  EXPECT_EQ("Hex strings require an exponent", convertToErrorFromString("+0x0"));
+  EXPECT_EQ("Hex strings require an exponent", convertToErrorFromString("-0x0"));
+
+  EXPECT_EQ("Hex strings require an exponent", convertToErrorFromString( "0x0."));
+  EXPECT_EQ("Hex strings require an exponent", convertToErrorFromString("+0x0."));
+  EXPECT_EQ("Hex strings require an exponent", convertToErrorFromString("-0x0."));
+
+  EXPECT_EQ("Hex strings require an exponent", convertToErrorFromString( "0x.0"));
+  EXPECT_EQ("Hex strings require an exponent", convertToErrorFromString("+0x.0"));
+  EXPECT_EQ("Hex strings require an exponent", convertToErrorFromString("-0x.0"));
+
+  EXPECT_EQ("Hex strings require an exponent", convertToErrorFromString( "0x0.0"));
+  EXPECT_EQ("Hex strings require an exponent", convertToErrorFromString("+0x0.0"));
+  EXPECT_EQ("Hex strings require an exponent", convertToErrorFromString("-0x0.0"));
+
+  EXPECT_EQ("Invalid character in significand", convertToErrorFromString(StringRef("0x\0", 3)));
+  EXPECT_EQ("Invalid character in significand", convertToErrorFromString(StringRef("0x1\0", 4)));
+  EXPECT_EQ("Invalid character in significand", convertToErrorFromString(StringRef("0x1" "\0" "2", 5)));
+  EXPECT_EQ("Invalid character in significand", convertToErrorFromString(StringRef("0x1" "\0" "2p1", 7)));
+  EXPECT_EQ("Invalid character in exponent", convertToErrorFromString(StringRef("0x1p\0", 5)));
+  EXPECT_EQ("Invalid character in exponent", convertToErrorFromString(StringRef("0x1p1\0", 6)));
+  EXPECT_EQ("Invalid character in exponent", convertToErrorFromString(StringRef("0x1p1" "\0" "2", 7)));
+
+  EXPECT_EQ("Invalid character in exponent", convertToErrorFromString("0x1p0f"));
+
+  EXPECT_EQ("String contains multiple dots", convertToErrorFromString("0x..p1"));
+  EXPECT_EQ("String contains multiple dots", convertToErrorFromString("0x..0p1"));
+  EXPECT_EQ("String contains multiple dots", convertToErrorFromString("0x1.0.0p1"));
+}
+
+TEST(APFloatTest, StringHexadecimalSignificandError) {
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString( "0x."));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("+0x."));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("-0x."));
+
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString( "0xp"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("+0xp"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("-0xp"));
+
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString( "0xp+"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("+0xp+"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("-0xp+"));
+
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString( "0xp-"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("+0xp-"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("-0xp-"));
+
+
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString( "0x.p"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("+0x.p"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("-0x.p"));
+
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString( "0x.p+"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("+0x.p+"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("-0x.p+"));
+
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString( "0x.p-"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("+0x.p-"));
+  EXPECT_EQ("Significand has no digits", convertToErrorFromString("-0x.p-"));
+}
+
+TEST(APFloatTest, StringHexadecimalExponentError) {
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString( "0x1p"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("+0x1p"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("-0x1p"));
+
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString( "0x1p+"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("+0x1p+"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("-0x1p+"));
+
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString( "0x1p-"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("+0x1p-"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("-0x1p-"));
+
+
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString( "0x1.p"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("+0x1.p"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("-0x1.p"));
+
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString( "0x1.p+"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("+0x1.p+"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("-0x1.p+"));
+
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString( "0x1.p-"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("+0x1.p-"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("-0x1.p-"));
+
+
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString( "0x.1p"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("+0x.1p"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("-0x.1p"));
+
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString( "0x.1p+"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("+0x.1p+"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("-0x.1p+"));
+
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString( "0x.1p-"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("+0x.1p-"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("-0x.1p-"));
+
+
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString( "0x1.1p"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("+0x1.1p"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("-0x1.1p"));
+
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString( "0x1.1p+"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("+0x1.1p+"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("-0x1.1p+"));
+
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString( "0x1.1p-"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("+0x1.1p-"));
+  EXPECT_EQ("Exponent has no digits", convertToErrorFromString("-0x1.1p-"));
+}
 
 TEST(APFloatTest, exactInverse) {
   APFloat inv(0.0f);

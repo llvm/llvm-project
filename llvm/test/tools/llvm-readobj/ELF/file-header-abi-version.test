@@ -14,13 +14,13 @@
 # RUN: llvm-readelf --file-headers %t.abiver.max | FileCheck %s --match-full-lines --check-prefix=ABIVER-MAX-GNU
 
 # ABIVER-ZERO-LLVM: ABIVersion: 0
-# ABIVER-ZERO-GNU:  ABI Version: 0x0
+# ABIVER-ZERO-GNU:  ABI Version: 0
 
 # ABIVER-ANY-LLVM: ABIVersion: 52
-# ABIVER-ANY-GNU:  ABI Version: 0x34
+# ABIVER-ANY-GNU:  ABI Version: 52
 
 # ABIVER-MAX-LLVM: ABIVersion: 255
-# ABIVER-MAX-GNU:  ABI Version: 0xFF
+# ABIVER-MAX-GNU:  ABI Version: 255
 
 --- !ELF
 FileHeader:

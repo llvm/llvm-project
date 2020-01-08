@@ -12,6 +12,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/edit_distance.h"
+#include "llvm/Support/Error.h"
 #include <bitset>
 
 using namespace llvm;
@@ -587,8 +588,13 @@ bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {
 
 bool StringRef::getAsDouble(double &Result, bool AllowInexact) const {
   APFloat F(0.0);
-  APFloat::opStatus Status =
-      F.convertFromString(*this, APFloat::rmNearestTiesToEven);
+  auto ErrOrStatus = F.convertFromString(*this, APFloat::rmNearestTiesToEven);
+  if (!ErrOrStatus) {
+    assert(false && "Invalid floating point representation");
+    return true;
+  }
+
+  APFloat::opStatus Status = *ErrOrStatus;
   if (Status != APFloat::opOK) {
     if (!AllowInexact || !(Status & APFloat::opInexact))
       return true;

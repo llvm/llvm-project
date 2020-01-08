@@ -7,23 +7,23 @@ define void @vld3_v2i32(<6 x i32> *%src, <2 x i32> *%dst) {
 ; CHECK-LABEL: vld3_v2i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    ldrd r2, r3, [r0, #16]
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vmov.32 q2[0], r2
-; CHECK-NEXT:    vmov.f64 d0, d2
+; CHECK-NEXT:    vmov.f64 d2, d0
 ; CHECK-NEXT:    vmov.32 q2[2], r3
-; CHECK-NEXT:    vmov.f32 s12, s5
+; CHECK-NEXT:    vmov.32 r0, q0[2]
+; CHECK-NEXT:    vmov.f32 s12, s1
+; CHECK-NEXT:    vmov.f32 s6, s3
 ; CHECK-NEXT:    vmov.f32 s14, s8
-; CHECK-NEXT:    vmov.f32 s2, s7
-; CHECK-NEXT:    vmov.f32 s8, s6
-; CHECK-NEXT:    vmov r3, s12
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    vmov r0, s2
-; CHECK-NEXT:    add r0, r2
-; CHECK-NEXT:    vmov r2, s10
-; CHECK-NEXT:    add r0, r2
-; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    vmov r2, s12
+; CHECK-NEXT:    vmov r12, s6
+; CHECK-NEXT:    vdup.32 q1, r0
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    add r0, r12
+; CHECK-NEXT:    add r0, r3
+; CHECK-NEXT:    vmov r3, s0
 ; CHECK-NEXT:    add r2, r3
-; CHECK-NEXT:    vmov r3, s8
+; CHECK-NEXT:    vmov r3, s4
 ; CHECK-NEXT:    add r2, r3
 ; CHECK-NEXT:    strd r2, r0, [r1]
 ; CHECK-NEXT:    bx lr
@@ -258,27 +258,27 @@ define void @vld3_v2i16(<6 x i16> *%src, <2 x i16> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .pad #8
 ; CHECK-NEXT:    sub sp, #8
+; CHECK-NEXT:    vldrh.u32 q0, [r0]
 ; CHECK-NEXT:    ldr r2, [r0, #8]
-; CHECK-NEXT:    vldrh.u32 q1, [r0]
 ; CHECK-NEXT:    mov r3, sp
 ; CHECK-NEXT:    str r2, [sp]
-; CHECK-NEXT:    vldrh.u32 q2, [r3]
-; CHECK-NEXT:    vmov.f64 d0, d2
-; CHECK-NEXT:    vmov.f32 s12, s5
-; CHECK-NEXT:    vmov.f32 s2, s7
-; CHECK-NEXT:    vmov.f32 s14, s8
-; CHECK-NEXT:    vmov.f32 s4, s6
-; CHECK-NEXT:    vmov.f32 s6, s9
-; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vmov.f64 d2, d0
+; CHECK-NEXT:    vmov.f32 s6, s3
+; CHECK-NEXT:    vmov.f32 s8, s1
+; CHECK-NEXT:    vmov.f64 d6, d1
+; CHECK-NEXT:    vmov r0, s6
+; CHECK-NEXT:    vldrh.u32 q1, [r3]
+; CHECK-NEXT:    vmov.f32 s10, s4
+; CHECK-NEXT:    vmov.f32 s14, s5
+; CHECK-NEXT:    vmov r2, s10
+; CHECK-NEXT:    add r0, r2
 ; CHECK-NEXT:    vmov r2, s14
 ; CHECK-NEXT:    add r0, r2
-; CHECK-NEXT:    vmov r2, s6
-; CHECK-NEXT:    add r0, r2
 ; CHECK-NEXT:    strh r0, [r1, #2]
-; CHECK-NEXT:    vmov r0, s0
-; CHECK-NEXT:    vmov r2, s12
+; CHECK-NEXT:    vmov r0, s8
+; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    add r0, r2
-; CHECK-NEXT:    vmov r2, s4
+; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    add r0, r2
 ; CHECK-NEXT:    strh r0, [r1]
 ; CHECK-NEXT:    add sp, #8

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Parallel implemention in the GPU. Here is the pattern:
+// Parallel implementation in the GPU. Here is the pattern:
 //
 //    while (not finished) {
 //

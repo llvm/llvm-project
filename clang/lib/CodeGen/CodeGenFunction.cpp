@@ -2378,10 +2378,7 @@ static void CreateMultiVersionResolverReturn(CodeGenModule &CGM,
 
 void CodeGenFunction::EmitMultiVersionResolver(
     llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
-  assert((getContext().getTargetInfo().getTriple().getArch() ==
-              llvm::Triple::x86 ||
-          getContext().getTargetInfo().getTriple().getArch() ==
-              llvm::Triple::x86_64) &&
+  assert(getContext().getTargetInfo().getTriple().isX86() &&
          "Only implemented for x86 targets");
 
   bool SupportsIFunc = getContext().getTargetInfo().supportsIFunc();

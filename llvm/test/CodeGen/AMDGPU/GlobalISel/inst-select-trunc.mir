@@ -371,3 +371,19 @@ body: |
     %1:vgpr(s256) = G_TRUNC %0
     S_ENDPGM 0, implicit %1
 ...
+
+---
+
+name: trunc_sgpr_s32_to_s1_use
+legalized:       true
+regBankSelected: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+    %0:sgpr(s32) =COPY $sgpr0
+    %1:sgpr(s32) =COPY $sgpr1
+    %2:sgpr(s1) = G_TRUNC %0
+    %3:sgpr(s32) = G_SELECT %2, %0, %1
+    S_ENDPGM 0, implicit %3
+...

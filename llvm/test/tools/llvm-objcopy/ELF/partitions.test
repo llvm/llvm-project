@@ -17,7 +17,7 @@ MAIN-NEXT:   Class:                             ELF64
 MAIN-NEXT:   Data:                              2's complement, little endian
 MAIN-NEXT:   Version:                           1 (current)
 MAIN-NEXT:   OS/ABI:                            UNIX - System V
-MAIN-NEXT:   ABI Version:                       0x0
+MAIN-NEXT:   ABI Version:                       0
 MAIN-NEXT:   Type:                              EXEC (Executable file)
 MAIN-NEXT:   Machine:                           Advanced Micro Devices X86-64
 MAIN-NEXT:   Version:                           0x1
@@ -76,7 +76,7 @@ PART1-NEXT:   Class:                             ELF64
 PART1-NEXT:   Data:                              2's complement, little endian
 PART1-NEXT:   Version:                           1 (current)
 PART1-NEXT:   OS/ABI:                            UNIX - System V
-PART1-NEXT:   ABI Version:                       0x0
+PART1-NEXT:   ABI Version:                       0
 PART1-NEXT:   Type:                              DYN (Shared object file)
 PART1-NEXT:   Machine:                           Advanced Micro Devices X86-64
 PART1-NEXT:   Version:                           0x1
@@ -131,7 +131,7 @@ PART2-NEXT:   Class:                             ELF64
 PART2-NEXT:   Data:                              2's complement, little endian
 PART2-NEXT:   Version:                           1 (current)
 PART2-NEXT:   OS/ABI:                            UNIX - System V
-PART2-NEXT:   ABI Version:                       0x0
+PART2-NEXT:   ABI Version:                       0
 PART2-NEXT:   Type:                              DYN (Shared object file)
 PART2-NEXT:   Machine:                           Advanced Micro Devices X86-64
 PART2-NEXT:   Version:                           0x1

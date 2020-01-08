@@ -248,7 +248,7 @@ public:
   /// installed dynamic library.
   uint32_t compatibilityVersion() const { return _compatibilityVersion; }
 
-  /// The dylib's current version, in the the raw uint32 format.
+  /// The dylib's current version, in the raw uint32 format.
   ///
   /// When building a dynamic library, this is the current version that gets
   /// embedded into the result. Other Mach-O binaries that link against

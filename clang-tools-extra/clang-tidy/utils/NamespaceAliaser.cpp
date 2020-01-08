@@ -38,7 +38,7 @@ NamespaceAliaser::createAlias(ASTContext &Context, const Stmt &Statement,
     return None;
 
   // FIXME: Doesn't consider the order of declarations.
-  // If we accidentially pick an alias defined later in the function,
+  // If we accidentally pick an alias defined later in the function,
   // the output won't compile.
   // FIXME: Also doesn't consider file or class-scope aliases.
 

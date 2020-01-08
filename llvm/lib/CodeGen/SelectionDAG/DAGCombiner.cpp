@@ -7733,8 +7733,9 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
     if (VT.isVector())
       ExtVT = EVT::getVectorVT(*DAG.getContext(),
                                ExtVT, VT.getVectorNumElements());
-    if ((!LegalOperations ||
-         TLI.isOperationLegal(ISD::SIGN_EXTEND_INREG, ExtVT)))
+    if (!LegalOperations ||
+        TLI.getOperationAction(ISD::SIGN_EXTEND_INREG, ExtVT) ==
+        TargetLowering::Legal)
       return DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(N), VT,
                          N0.getOperand(0), DAG.getValueType(ExtVT));
   }
@@ -19285,6 +19286,30 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       return V;
   }
 
+  // A shuffle of a concat of the same narrow vector can be reduced to use
+  // only low-half elements of a concat with undef:
+  // shuf (concat X, X), undef, Mask --> shuf (concat X, undef), undef, Mask'
+  if (N0.getOpcode() == ISD::CONCAT_VECTORS && N1.isUndef() &&
+      N0.getNumOperands() == 2 &&
+      N0.getOperand(0) == N0.getOperand(1)) {
+    int HalfNumElts = (int)NumElts / 2;
+    SmallVector<int, 8> NewMask;
+    for (unsigned i = 0; i != NumElts; ++i) {
+      int Idx = SVN->getMaskElt(i);
+      if (Idx >= HalfNumElts) {
+        assert(Idx < (int)NumElts && "Shuffle mask chooses undef op");
+        Idx -= HalfNumElts;
+      }
+      NewMask.push_back(Idx);
+    }
+    if (TLI.isShuffleMaskLegal(NewMask, VT)) {
+      SDValue UndefVec = DAG.getUNDEF(N0.getOperand(0).getValueType());
+      SDValue NewCat = DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT,
+                                   N0.getOperand(0), UndefVec);
+      return DAG.getVectorShuffle(VT, SDLoc(N), NewCat, N1, NewMask);
+    }
+  }
+
   // Attempt to combine a shuffle of 2 inputs of 'scalar sources' -
   // BUILD_VECTOR or SCALAR_TO_VECTOR into a single BUILD_VECTOR.
   if (Level < AfterLegalizeDAG && TLI.isTypeLegal(VT))
@@ -19769,8 +19794,10 @@ SDValue DAGCombiner::XformToShuffleWithZero(SDNode *N) {
       int EltIdx = i / Split;
       int SubIdx = i % Split;
       SDValue Elt = RHS.getOperand(EltIdx);
+      // X & undef --> 0 (not undef). So this lane must be converted to choose
+      // from the zero constant vector (same as if the element had all 0-bits).
       if (Elt.isUndef()) {
-        Indices.push_back(-1);
+        Indices.push_back(i + NumSubElts);
         continue;
       }
 
@@ -19783,14 +19810,10 @@ SDValue DAGCombiner::XformToShuffleWithZero(SDNode *N) {
         return SDValue();
 
       // Extract the sub element from the constant bit mask.
-      if (DAG.getDataLayout().isBigEndian()) {
-        Bits.lshrInPlace((Split - SubIdx - 1) * NumSubBits);
-      } else {
-        Bits.lshrInPlace(SubIdx * NumSubBits);
-      }
-
-      if (Split > 1)
-        Bits = Bits.trunc(NumSubBits);
+      if (DAG.getDataLayout().isBigEndian())
+        Bits = Bits.extractBits(NumSubBits, (Split - SubIdx - 1) * NumSubBits);
+      else
+        Bits = Bits.extractBits(NumSubBits, SubIdx * NumSubBits);
 
       if (Bits.isAllOnesValue())
         Indices.push_back(i);

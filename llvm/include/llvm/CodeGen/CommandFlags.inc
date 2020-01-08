@@ -372,46 +372,52 @@ LLVM_ATTRIBUTE_UNUSED static std::vector<std::string> getFeatureList() {
   return Features.getFeatures();
 }
 
+/// Set function attributes of function \p F based on CPU, Features, and command
+/// line flags.
+LLVM_ATTRIBUTE_UNUSED static void
+setFunctionAttributes(StringRef CPU, StringRef Features, Function &F) {
+  auto &Ctx = F.getContext();
+  AttributeList Attrs = F.getAttributes();
+  AttrBuilder NewAttrs;
+
+  if (!CPU.empty() && !F.hasFnAttribute("target-cpu"))
+    NewAttrs.addAttribute("target-cpu", CPU);
+  if (!Features.empty())
+    NewAttrs.addAttribute("target-features", Features);
+  if (FramePointerUsage.getNumOccurrences() > 0) {
+    if (FramePointerUsage == llvm::FramePointer::All)
+      NewAttrs.addAttribute("frame-pointer", "all");
+    else if (FramePointerUsage == llvm::FramePointer::NonLeaf)
+      NewAttrs.addAttribute("frame-pointer", "non-leaf");
+    else if (FramePointerUsage == llvm::FramePointer::None)
+      NewAttrs.addAttribute("frame-pointer", "none");
+  }
+  if (DisableTailCalls.getNumOccurrences() > 0)
+    NewAttrs.addAttribute("disable-tail-calls",
+                          toStringRef(DisableTailCalls));
+  if (StackRealign)
+    NewAttrs.addAttribute("stackrealign");
+
+  if (TrapFuncName.getNumOccurrences() > 0)
+    for (auto &B : F)
+      for (auto &I : B)
+        if (auto *Call = dyn_cast<CallInst>(&I))
+          if (const auto *F = Call->getCalledFunction())
+            if (F->getIntrinsicID() == Intrinsic::debugtrap ||
+                F->getIntrinsicID() == Intrinsic::trap)
+              Call->addAttribute(
+                llvm::AttributeList::FunctionIndex,
+                Attribute::get(Ctx, "trap-func-name", TrapFuncName));
+
+  // Let NewAttrs override Attrs.
+  F.setAttributes(
+    Attrs.addAttributes(Ctx, AttributeList::FunctionIndex, NewAttrs));
+}
+
 /// Set function attributes of functions in Module M based on CPU,
 /// Features, and command line flags.
 LLVM_ATTRIBUTE_UNUSED static void
 setFunctionAttributes(StringRef CPU, StringRef Features, Module &M) {
-  for (auto &F : M) {
-    auto &Ctx = F.getContext();
-    AttributeList Attrs = F.getAttributes();
-    AttrBuilder NewAttrs;
-
-    if (!CPU.empty())
-      NewAttrs.addAttribute("target-cpu", CPU);
-    if (!Features.empty())
-      NewAttrs.addAttribute("target-features", Features);
-    if (FramePointerUsage.getNumOccurrences() > 0) {
-      if (FramePointerUsage == llvm::FramePointer::All)
-        NewAttrs.addAttribute("frame-pointer", "all");
-      else if (FramePointerUsage == llvm::FramePointer::NonLeaf)
-        NewAttrs.addAttribute("frame-pointer", "non-leaf");
-      else if (FramePointerUsage == llvm::FramePointer::None)
-        NewAttrs.addAttribute("frame-pointer", "none");
-    }
-    if (DisableTailCalls.getNumOccurrences() > 0)
-      NewAttrs.addAttribute("disable-tail-calls",
-                            toStringRef(DisableTailCalls));
-    if (StackRealign)
-      NewAttrs.addAttribute("stackrealign");
-
-    if (TrapFuncName.getNumOccurrences() > 0)
-      for (auto &B : F)
-        for (auto &I : B)
-          if (auto *Call = dyn_cast<CallInst>(&I))
-            if (const auto *F = Call->getCalledFunction())
-              if (F->getIntrinsicID() == Intrinsic::debugtrap ||
-                  F->getIntrinsicID() == Intrinsic::trap)
-                Call->addAttribute(
-                    llvm::AttributeList::FunctionIndex,
-                    Attribute::get(Ctx, "trap-func-name", TrapFuncName));
-
-    // Let NewAttrs override Attrs.
-    F.setAttributes(
-        Attrs.addAttributes(Ctx, AttributeList::FunctionIndex, NewAttrs));
-  }
+  for (Function &F : M)
+    setFunctionAttributes(CPU, Features, F);
 }

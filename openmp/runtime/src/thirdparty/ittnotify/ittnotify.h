@@ -1448,7 +1448,7 @@ ITT_STUBV(ITTAPI, void, heap_allocate_end, (__itt_heap_function h, void** addr, 
 /** @endcond */
 
 /**
- * @brief Record an free begin occurrence.
+ * @brief Record a free begin occurrence.
  */
 void ITTAPI __itt_heap_free_begin(__itt_heap_function h, void* addr);
 
@@ -1468,7 +1468,7 @@ ITT_STUBV(ITTAPI, void, heap_free_begin, (__itt_heap_function h, void* addr))
 /** @endcond */
 
 /**
- * @brief Record an free end occurrence.
+ * @brief Record a free end occurrence.
  */
 void ITTAPI __itt_heap_free_end(__itt_heap_function h, void* addr);
 
@@ -1488,7 +1488,7 @@ ITT_STUBV(ITTAPI, void, heap_free_end, (__itt_heap_function h, void* addr))
 /** @endcond */
 
 /**
- * @brief Record an reallocation begin occurrence.
+ * @brief Record a reallocation begin occurrence.
  */
 void ITTAPI __itt_heap_reallocate_begin(__itt_heap_function h, void* addr, size_t new_size, int initialized);
 
@@ -1508,7 +1508,7 @@ ITT_STUBV(ITTAPI, void, heap_reallocate_begin, (__itt_heap_function h, void* add
 /** @endcond */
 
 /**
- * @brief Record an reallocation end occurrence.
+ * @brief Record a reallocation end occurrence.
  */
 void ITTAPI __itt_heap_reallocate_end(__itt_heap_function h, void* addr, void** new_addr, size_t new_size, int initialized);
 
@@ -2644,7 +2644,7 @@ ITT_STUB(ITTAPI, __itt_clock_domain*, clock_domain_create, (__itt_get_clock_info
 
 /**
  * @ingroup clockdomains
- * @brief Recalculate clock domains frequences and clock base timestamps.
+ * @brief Recalculate clock domains frequencies and clock base timestamps.
  */
 void ITTAPI __itt_clock_domain_reset(void);
 
@@ -3957,7 +3957,7 @@ ITT_STUB(ITTAPI, __itt_caller, stack_caller_create, (void))
 /** @endcond */
 
 /**
- * @brief Destroy the inforamtion about stitch point identified by the pointer previously returned by __itt_stack_caller_create()
+ * @brief Destroy the information about stitch point identified by the pointer previously returned by __itt_stack_caller_create()
  */
 void ITTAPI __itt_stack_caller_destroy(__itt_caller id);
 

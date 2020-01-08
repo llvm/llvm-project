@@ -1295,7 +1295,7 @@ val const_shufflevector : llvalue -> llvalue -> llvalue -> llvalue
 val const_extractvalue : llvalue -> int array -> llvalue
 
 (** [const_insertvalue agg val idxs] inserts the value [val] in the specified
-    indexs [idxs] in the aggegate [agg]. Each [idxs] must be less than the size
+    indexs [idxs] in the aggregate [agg]. Each [idxs] must be less than the size
     of the aggregate. See the method [llvm::ConstantExpr::getInsertValue]. *)
 val const_insertvalue : llvalue -> llvalue -> int array -> llvalue
 

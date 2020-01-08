@@ -116,7 +116,7 @@ RelExpr X86::getRelExpr(RelType type, const Symbol &s,
     // address at runtime (which means code is position-independent but
     // compilers need to emit extra code for each GOT access.) This decision
     // is made at compile-time. In the latter case, compilers emit code to
-    // load an GOT address to a register, which is usually %ebx.
+    // load a GOT address to a register, which is usually %ebx.
     //
     // So, there are two ways to refer to symbol foo's GOT entry: foo@GOT or
     // foo@GOT(%ebx).

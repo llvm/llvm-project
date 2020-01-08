@@ -45,7 +45,7 @@ void SlicingCheck::registerMatchers(MatchFinder *Finder) {
   const auto IsWithinDerivedCtor =
       hasParent(cxxConstructorDecl(ofClass(equalsBoundNode("DerivedDecl"))));
 
-  // Assignement slicing: "a = b;" and "a = std::move(b);" variants.
+  // Assignment slicing: "a = b;" and "a = std::move(b);" variants.
   const auto SlicesObjectInAssignment =
       callExpr(callee(cxxMethodDecl(anyOf(isCopyAssignmentOperator(),
                                           isMoveAssignmentOperator()),

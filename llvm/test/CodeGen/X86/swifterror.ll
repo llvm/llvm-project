@@ -533,7 +533,7 @@ define swiftcc void @swifterror_reg_clobber(%swift_error** nocapture %err) {
 }
 
 ; CHECK-APPLE-LABEL: params_in_reg
-; Save callee save registers to store clobbered arugments.
+; Save callee save registers to store clobbered arguments.
 ; CHECK-APPLE:  pushq   %rbp
 ; CHECK-APPLE:  pushq   %r15
 ; CHECK-APPLE:  pushq   %r14

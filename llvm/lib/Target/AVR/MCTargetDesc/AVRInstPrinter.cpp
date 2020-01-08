@@ -32,8 +32,9 @@ namespace llvm {
 #define PRINT_ALIAS_INSTR
 #include "AVRGenAsmWriter.inc"
 
-void AVRInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
-                               StringRef Annot, const MCSubtargetInfo &STI) {
+void AVRInstPrinter::printInst(const MCInst *MI, uint64_t Address,
+                               StringRef Annot, const MCSubtargetInfo &STI,
+                               raw_ostream &O) {
   unsigned Opcode = MI->getOpcode();
 
   // First handle load and store instructions with postinc or predec
@@ -78,7 +79,7 @@ void AVRInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
     break;
   default:
     if (!printAliasInstr(MI, O))
-      printInstruction(MI, O);
+      printInstruction(MI, Address, O);
 
     printAnnotation(O, Annot);
     break;

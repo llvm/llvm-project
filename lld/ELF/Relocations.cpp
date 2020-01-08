@@ -1619,7 +1619,7 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> outputSections) {
         // those inserted in previous passes. Extract the Thunks created this
         // pass and order them in ascending outSecOff.
         std::vector<ThunkSection *> newThunks;
-        for (const std::pair<ThunkSection *, uint32_t> ts : isd->thunkSections)
+        for (std::pair<ThunkSection *, uint32_t> ts : isd->thunkSections)
           if (ts.second == pass)
             newThunks.push_back(ts.first);
         llvm::stable_sort(newThunks,

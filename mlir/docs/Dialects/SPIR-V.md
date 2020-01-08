@@ -840,7 +840,87 @@ Similarly, a few transformations are performed during deserialization:
 
 ## Conversions
 
-(TODO: expand this section)
+One of the main features of MLIR is the ability to progressively lower from
+dialects that capture programmer abstraction into dialects that are closer to a
+machine representation, like SPIR-V dialect. This progressive lowering through
+multiple dialects is enabled through the use of the
+[DialectConversion][MlirDialectConversion] framework in MLIR. To simplify
+targeting SPIR-V dialect using the Dialect Conversion framework, two utility
+classes are provided.
+
+(**Note** : While SPIR-V has some [validation rules][SpirvShaderValidation],
+additional rules are imposed by [Vulkan execution environment][VulkanSpirv]. The
+lowering described below implements both these requirements.)
+
+
+### SPIRVTypeConverter
+
+The `mlir::spirv::SPIRVTypeConverter` derives from
+`mlir::TypeConverter` and provides type conversion for standard
+types to SPIR-V types:
+
+*   [Standard Integer][MlirIntegerType] -> Standard Integer
+*   [Standard Float][MlirFloatType] -> Standard Float
+*   [Vector Type][MlirVectorType] -> Vector Type
+*   [Memref Type][MlirMemrefType] with static shape and stride -> `spv.array`
+    with number of elements obtained from the layout specification of the
+    `memref`, and same element type.
+
+(TODO: Generate the conversion matrix from comments automatically)
+
+[Index Type][MlirIndexType] need special handling since they are not directly
+supported in SPIR-V. Currently the `index` type is converted to `i32`.
+
+(TODO: Allow for configuring the integer width to use for `index` types in the
+SPIR-V dialect)
+
+### SPIRVOpLowering
+
+`mlir::spirv::SPIRVOpLowering` is a base class that can be used to define the
+patterns used for implementing the lowering. For now this only provides derived
+classes access to an instance of `mlir::spirv::SPIRVTypeLowering` class.
+
+### Utility functions for lowering
+
+#### Setting shader interface
+
+The method `mlir::spirv::setABIAttrs` allows setting the [shader interface
+attributes](#shader-interface-abi) for a function that is to be an entry
+point function within the `spv.module` on lowering. A later pass
+`mlir::spirv::LowerABIAttributesPass` uses this information to lower the entry
+point function and its ABI consistent with the Vulkan validation
+rules. Specifically,
+
+*   Creates `spv.globalVariable`s for the arguments, and replaces all uses of
+    the argument with this variable. The SSA value used for replacement is
+    obtained using the `spv._address_of` operation.
+*   Adds the `spv.EntryPoint` and `spv.ExecutionMode` operations into the
+    `spv.module` for the entry function.
+
+#### Setting layout for shader interface variables
+
+SPIR-V validation rules for shaders require composite objects to be explicitly
+laid out. If a `spv.globalVariable` is not explicitly laid out, the utility
+method `mlir::spirv::decorateType` implements a layout consistent with
+the [Vulkan shader requirements][VulkanShaderInterface].
+
+#### Creating builtin variables
+
+In SPIR-V dialect, builtins are represented using `spv.globalVariable`s, with
+`spv._address_of` used to get a handle to the builtin as an SSA value.  The
+method `mlir::spirv::getBuiltinVariableValue` creates a `spv.globalVariable` for
+the builtin in the current `spv.module` if it does not exist already, and
+returns an SSA value generated from an `spv._address_of` operation.
+
+### Current conversions to SPIR-V
+
+Using the above infrastructure, conversion are implemented from
+
+*   [Standard Dialect][MlirStandardDialect] : Only arithmetic and logical
+    operations conversions are implemented.
+*   [GPU Dialect][MlirGpuDialect] : A module with the attribute
+    `gpu.kernel_module` is converted to a `spv.module`. A function within this
+    module with the attribute `gpu.kernel` is lowered as an entry function.
 
 ## Code organization
 
@@ -1046,22 +1126,47 @@ custom types.
 
 ### Add a new conversion
 
-(TODO: add details for this section)
+To add conversion for a type update the `mlir::spirv::SPIRVTypeConverter` to
+return the converted type (must be a valid SPIR-V type). See [Type
+Conversion][MlirDialectConversionTypeConversion] for more details.
+
+To lower an operation into SPIR-V dialect, implement a [conversion
+pattern][MlirDialectConversionRewritePattern]. If the conversion requires type
+conversion as well, the pattern must inherit from the
+`mlir::spirv::SPIRVOpLowering` class to get access to
+`mlir::spirv::SPIRVTypeConverter`.  If the operation has a region, [signature
+conversion][MlirDialectConversionSignatureConversion] might be needed as well.
+
+**Note**: The current validation rules of `spv.module` require that all
+operations contained within its region are valid operations in the SPIR-V
+dialect.
 
 [Spirv]: https://www.khronos.org/registry/spir-v/
 [SpirvSpec]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html
 [SpirvLogicalLayout]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_a_id_logicallayout_a_logical_layout_of_a_module
 [SpirvGrammar]: https://raw.githubusercontent.com/KhronosGroup/SPIRV-Headers/master/include/spirv/unified1/spirv.core.grammar.json
+[SpirvShaderValidation]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#_a_id_shadervalidation_a_validation_rules_for_shader_a_href_capability_capabilities_a
 [GlslStd450]: https://www.khronos.org/registry/spir-v/specs/1.0/GLSL.std.450.html
 [ArrayType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#OpTypeArray
 [ImageType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#OpTypeImage
 [PointerType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#OpTypePointer
 [RuntimeArrayType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#OpTypeRuntimeArray
+[MlirDialectConversion]: ../DialectConversion.md
 [StructType]: https://www.khronos.org/registry/spir-v/specs/unified1/SPIRV.html#Structure
 [SpirvTools]: https://github.com/KhronosGroup/SPIRV-Tools
-[Rationale]: https://mlir.llvm.org/docs/Rationale/#block-arguments-vs-phi-nodes
-[ODS]: https://mlir.llvm.org/docs/OpDefinitions/
+[Rationale]: ../Rationale/#block-arguments-vs-phi-nodes
+[ODS]: ../OpDefinitions/
 [GreedyPatternRewriter]: https://github.com/llvm/llvm-project/blob/master/mlir/lib/Transforms/Utils/GreedyPatternRewriteDriver.cpp
+[MlirDialectConversionTypeConversion]: ../DialectConversion.md#type-converter
+[MlirDialectConversionRewritePattern]: ../DialectConversion.md#conversion-patterns
+[MlirDialectConversionSignatureConversion]: ../DialectConversion.md#region-signature-conversion
+[MlirIntegerType]: ../LangRef.md#integer-type
+[MlirFloatType]: ../LangRef.md#floating-point-types
+[MlirVectorType]: ../LangRef.md#vector-type
+[MlirMemrefType]: ../LangRef.md#memref-type
+[MlirIndexType]: ../LangRef.md#index-type
+[MlirGpuDialect]: ../Dialects/GPU.md
+[MlirStandardDialect]: ../Dialects/Standard.md
 [MlirSpirvHeaders]: https://github.com/llvm/llvm-project/tree/master/mlir/include/mlir/Dialect/SPIRV
 [MlirSpirvLibs]: https://github.com/llvm/llvm-project/tree/master/mlir/lib/Dialect/SPIRV
 [MlirSpirvTests]: https://github.com/llvm/llvm-project/tree/master/mlir/test/Dialect/SPIRV
@@ -1082,5 +1187,7 @@ custom types.
 [GitHubDialectTracking]: https://github.com/tensorflow/mlir/issues/302
 [GitHubLoweringTracking]: https://github.com/tensorflow/mlir/issues/303
 [GenSpirvUtilsPy]: https://github.com/llvm/llvm-project/blob/master/mlir/utils/spirv/gen_spirv_dialect.py
-[LlvmMlirSpirvDoc]: https://mlir.llvm.org/docs/Dialects/SPIRVOps/
-[CustomTypeAttrTutorial]: https://mlir.llvm.org/docs/DefiningAttributesAndTypes/
+[LlvmMlirSpirvDoc]: ../Dialects/SPIRVOps/
+[CustomTypeAttrTutorial]: ../DefiningAttributesAndTypes/
+[VulkanSpirv]: https://renderdoc.org/vkspec_chunked/chap40.html#spirvenv
+[VulkanShaderInterface]: https://renderdoc.org/vkspec_chunked/chap14.html#interfaces-resources

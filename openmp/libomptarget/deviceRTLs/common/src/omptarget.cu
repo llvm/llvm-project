@@ -143,7 +143,7 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
         (int)newTaskDescr->ThreadId(), (int)ThreadLimit);
 
   if (RequiresDataSharing && GetLaneId() == 0) {
-    // Warp master innitializes data sharing environment.
+    // Warp master initializes data sharing environment.
     unsigned WID = threadId / WARPSIZE;
     __kmpc_data_sharing_slot *RootS = currTeamDescr.RootS(
         WID, WID == WARPSIZE - 1);

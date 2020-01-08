@@ -178,7 +178,7 @@ struct DOTGraphTraits<ScopDetectionWrapperPass *>
 
     RegionInfo *RI = R->getRegionInfo();
 
-    for (const auto &BB : R->blocks())
+    for (BasicBlock *BB : R->blocks())
       if (RI->getRegionFor(BB) == R)
         O.indent(2 * (depth + 1))
             << "Node"

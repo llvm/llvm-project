@@ -43,460 +43,475 @@ namespace llvm {
     // that come before it. For example, ADD or MUL should be placed before
     // the ISD::FIRST_TARGET_MEMORY_OPCODE while a LOAD or STORE should come
     // after it.
-    enum NodeType : unsigned {
-      // Start the numbering where the builtin ops and target ops leave off.
-      FIRST_NUMBER = ISD::BUILTIN_OP_END,
-
-      /// FSEL - Traditional three-operand fsel node.
-      ///
-      FSEL,
-
-      /// XSMAXCDP, XSMINCDP - C-type min/max instructions.
-      XSMAXCDP, XSMINCDP,
-
-      /// FCFID - The FCFID instruction, taking an f64 operand and producing
-      /// and f64 value containing the FP representation of the integer that
-      /// was temporarily in the f64 operand.
-      FCFID,
-
-      /// Newer FCFID[US] integer-to-floating-point conversion instructions for
-      /// unsigned integers and single-precision outputs.
-      FCFIDU, FCFIDS, FCFIDUS,
-
-      /// FCTI[D,W]Z - The FCTIDZ and FCTIWZ instructions, taking an f32 or f64
-      /// operand, producing an f64 value containing the integer representation
-      /// of that FP value.
-      FCTIDZ, FCTIWZ,
-
-      /// Newer FCTI[D,W]UZ floating-point-to-integer conversion instructions for
-      /// unsigned integers with round toward zero.
-      FCTIDUZ, FCTIWUZ,
-
-      /// Floating-point-to-interger conversion instructions
-      FP_TO_UINT_IN_VSR, FP_TO_SINT_IN_VSR,
-
-      /// VEXTS, ByteWidth - takes an input in VSFRC and produces an output in
-      /// VSFRC that is sign-extended from ByteWidth to a 64-byte integer.
-      VEXTS,
-
-      /// SExtVElems, takes an input vector of a smaller type and sign
-      /// extends to an output vector of a larger type.
-      SExtVElems,
-
-      /// Reciprocal estimate instructions (unary FP ops).
-      FRE, FRSQRTE,
-
-      // VMADDFP, VNMSUBFP - The VMADDFP and VNMSUBFP instructions, taking
-      // three v4f32 operands and producing a v4f32 result.
-      VMADDFP, VNMSUBFP,
-
-      /// VPERM - The PPC VPERM Instruction.
-      ///
-      VPERM,
-
-      /// XXSPLT - The PPC VSX splat instructions
-      ///
-      XXSPLT,
-
-      /// VECINSERT - The PPC vector insert instruction
-      ///
-      VECINSERT,
-
-      /// VECSHL - The PPC vector shift left instruction
-      ///
-      VECSHL,
-
-      /// XXPERMDI - The PPC XXPERMDI instruction
-      ///
-      XXPERMDI,
-
-      /// The CMPB instruction (takes two operands of i32 or i64).
-      CMPB,
-
-      /// Hi/Lo - These represent the high and low 16-bit parts of a global
-      /// address respectively.  These nodes have two operands, the first of
-      /// which must be a TargetGlobalAddress, and the second of which must be a
-      /// Constant.  Selected naively, these turn into 'lis G+C' and 'li G+C',
-      /// though these are usually folded into other nodes.
-      Hi, Lo,
-
-      /// The following two target-specific nodes are used for calls through
-      /// function pointers in the 64-bit SVR4 ABI.
-
-      /// OPRC, CHAIN = DYNALLOC(CHAIN, NEGSIZE, FRAME_INDEX)
-      /// This instruction is lowered in PPCRegisterInfo::eliminateFrameIndex to
-      /// compute an allocation on the stack.
-      DYNALLOC,
-
-      /// This instruction is lowered in PPCRegisterInfo::eliminateFrameIndex to
-      /// compute an offset from native SP to the address  of the most recent
-      /// dynamic alloca.
-      DYNAREAOFFSET,
-
-      /// GlobalBaseReg - On Darwin, this node represents the result of the mflr
-      /// at function entry, used for PIC code.
-      GlobalBaseReg,
-
-      /// These nodes represent PPC shifts.
-      ///
-      /// For scalar types, only the last `n + 1` bits of the shift amounts
-      /// are used, where n is log2(sizeof(element) * 8). See sld/slw, etc.
-      /// for exact behaviors.
-      ///
-      /// For vector types, only the last n bits are used. See vsld.
-      SRL, SRA, SHL,
-
-      /// EXTSWSLI = The PPC extswsli instruction, which does an extend-sign
-      /// word and shift left immediate.
-      EXTSWSLI,
-
-      /// The combination of sra[wd]i and addze used to implemented signed
-      /// integer division by a power of 2. The first operand is the dividend,
-      /// and the second is the constant shift amount (representing the
-      /// divisor).
-      SRA_ADDZE,
-
-      /// CALL - A direct function call.
-      /// CALL_NOP is a call with the special NOP which follows 64-bit
-      /// SVR4 calls and 32-bit/64-bit AIX calls.
-      CALL, CALL_NOP,
-
-      /// CHAIN,FLAG = MTCTR(VAL, CHAIN[, INFLAG]) - Directly corresponds to a
-      /// MTCTR instruction.
-      MTCTR,
-
-      /// CHAIN,FLAG = BCTRL(CHAIN, INFLAG) - Directly corresponds to a
-      /// BCTRL instruction.
-      BCTRL,
-
-      /// CHAIN,FLAG = BCTRL(CHAIN, ADDR, INFLAG) - The combination of a bctrl
-      /// instruction and the TOC reload required on 64-bit ELF, 32-bit AIX
-      /// and 64-bit AIX.
-      BCTRL_LOAD_TOC,
-
-      /// Return with a flag operand, matched by 'blr'
-      RET_FLAG,
-
-      /// R32 = MFOCRF(CRREG, INFLAG) - Represents the MFOCRF instruction.
-      /// This copies the bits corresponding to the specified CRREG into the
-      /// resultant GPR.  Bits corresponding to other CR regs are undefined.
-      MFOCRF,
-
-      /// Direct move from a VSX register to a GPR
-      MFVSR,
-
-      /// Direct move from a GPR to a VSX register (algebraic)
-      MTVSRA,
-
-      /// Direct move from a GPR to a VSX register (zero)
-      MTVSRZ,
-
-      /// Direct move of 2 consecutive GPR to a VSX register.
-      BUILD_FP128,
-
-      /// BUILD_SPE64 and EXTRACT_SPE are analogous to BUILD_PAIR and
-      /// EXTRACT_ELEMENT but take f64 arguments instead of i64, as i64 is
-      /// unsupported for this target.
-      /// Merge 2 GPRs to a single SPE register.
-      BUILD_SPE64,
-
-      /// Extract SPE register component, second argument is high or low.
-      EXTRACT_SPE,
-
-      /// Extract a subvector from signed integer vector and convert to FP.
-      /// It is primarily used to convert a (widened) illegal integer vector
-      /// type to a legal floating point vector type.
-      /// For example v2i32 -> widened to v4i32 -> v2f64
-      SINT_VEC_TO_FP,
-
-      /// Extract a subvector from unsigned integer vector and convert to FP.
-      /// As with SINT_VEC_TO_FP, used for converting illegal types.
-      UINT_VEC_TO_FP,
-
-      // FIXME: Remove these once the ANDI glue bug is fixed:
-      /// i1 = ANDIo_1_[EQ|GT]_BIT(i32 or i64 x) - Represents the result of the
-      /// eq or gt bit of CR0 after executing andi. x, 1. This is used to
-      /// implement truncation of i32 or i64 to i1.
-      ANDIo_1_EQ_BIT, ANDIo_1_GT_BIT,
-
-      // READ_TIME_BASE - A read of the 64-bit time-base register on a 32-bit
-      // target (returns (Lo, Hi)). It takes a chain operand.
-      READ_TIME_BASE,
-
-      // EH_SJLJ_SETJMP - SjLj exception handling setjmp.
-      EH_SJLJ_SETJMP,
-
-      // EH_SJLJ_LONGJMP - SjLj exception handling longjmp.
-      EH_SJLJ_LONGJMP,
-
-      /// RESVEC = VCMP(LHS, RHS, OPC) - Represents one of the altivec VCMP*
-      /// instructions.  For lack of better number, we use the opcode number
-      /// encoding for the OPC field to identify the compare.  For example, 838
-      /// is VCMPGTSH.
-      VCMP,
-
-      /// RESVEC, OUTFLAG = VCMPo(LHS, RHS, OPC) - Represents one of the
-      /// altivec VCMP*o instructions.  For lack of better number, we use the
-      /// opcode number encoding for the OPC field to identify the compare.  For
-      /// example, 838 is VCMPGTSH.
-      VCMPo,
-
-      /// CHAIN = COND_BRANCH CHAIN, CRRC, OPC, DESTBB [, INFLAG] - This
-      /// corresponds to the COND_BRANCH pseudo instruction.  CRRC is the
-      /// condition register to branch on, OPC is the branch opcode to use (e.g.
-      /// PPC::BLE), DESTBB is the destination block to branch to, and INFLAG is
-      /// an optional input flag argument.
-      COND_BRANCH,
-
-      /// CHAIN = BDNZ CHAIN, DESTBB - These are used to create counter-based
-      /// loops.
-      BDNZ, BDZ,
-
-      /// F8RC = FADDRTZ F8RC, F8RC - This is an FADD done with rounding
-      /// towards zero.  Used only as part of the long double-to-int
-      /// conversion sequence.
-      FADDRTZ,
-
-      /// F8RC = MFFS - This moves the FPSCR (not modeled) into the register.
-      MFFS,
-
-      /// TC_RETURN - A tail call return.
-      ///   operand #0 chain
-      ///   operand #1 callee (register or absolute)
-      ///   operand #2 stack adjustment
-      ///   operand #3 optional in flag
-      TC_RETURN,
-
-      /// ch, gl = CR6[UN]SET ch, inglue - Toggle CR bit 6 for SVR4 vararg calls
-      CR6SET,
-      CR6UNSET,
-
-      /// GPRC = address of _GLOBAL_OFFSET_TABLE_. Used by initial-exec TLS
-      /// for non-position independent code on PPC32.
-      PPC32_GOT,
-
-      /// GPRC = address of _GLOBAL_OFFSET_TABLE_. Used by general dynamic and
-      /// local dynamic TLS and position indendepent code on PPC32.
-      PPC32_PICGOT,
-
-      /// G8RC = ADDIS_GOT_TPREL_HA %x2, Symbol - Used by the initial-exec
-      /// TLS model, produces an ADDIS8 instruction that adds the GOT
-      /// base to sym\@got\@tprel\@ha.
-      ADDIS_GOT_TPREL_HA,
-
-      /// G8RC = LD_GOT_TPREL_L Symbol, G8RReg - Used by the initial-exec
-      /// TLS model, produces a LD instruction with base register G8RReg
-      /// and offset sym\@got\@tprel\@l.  This completes the addition that
-      /// finds the offset of "sym" relative to the thread pointer.
-      LD_GOT_TPREL_L,
-
-      /// G8RC = ADD_TLS G8RReg, Symbol - Used by the initial-exec TLS
-      /// model, produces an ADD instruction that adds the contents of
-      /// G8RReg to the thread pointer.  Symbol contains a relocation
-      /// sym\@tls which is to be replaced by the thread pointer and
-      /// identifies to the linker that the instruction is part of a
-      /// TLS sequence.
-      ADD_TLS,
-
-      /// G8RC = ADDIS_TLSGD_HA %x2, Symbol - For the general-dynamic TLS
-      /// model, produces an ADDIS8 instruction that adds the GOT base
-      /// register to sym\@got\@tlsgd\@ha.
-      ADDIS_TLSGD_HA,
-
-      /// %x3 = ADDI_TLSGD_L G8RReg, Symbol - For the general-dynamic TLS
-      /// model, produces an ADDI8 instruction that adds G8RReg to
-      /// sym\@got\@tlsgd\@l and stores the result in X3.  Hidden by
-      /// ADDIS_TLSGD_L_ADDR until after register assignment.
-      ADDI_TLSGD_L,
-
-      /// %x3 = GET_TLS_ADDR %x3, Symbol - For the general-dynamic TLS
-      /// model, produces a call to __tls_get_addr(sym\@tlsgd).  Hidden by
-      /// ADDIS_TLSGD_L_ADDR until after register assignment.
-      GET_TLS_ADDR,
-
-      /// G8RC = ADDI_TLSGD_L_ADDR G8RReg, Symbol, Symbol - Op that
-      /// combines ADDI_TLSGD_L and GET_TLS_ADDR until expansion following
-      /// register assignment.
-      ADDI_TLSGD_L_ADDR,
-
-      /// G8RC = ADDIS_TLSLD_HA %x2, Symbol - For the local-dynamic TLS
-      /// model, produces an ADDIS8 instruction that adds the GOT base
-      /// register to sym\@got\@tlsld\@ha.
-      ADDIS_TLSLD_HA,
-
-      /// %x3 = ADDI_TLSLD_L G8RReg, Symbol - For the local-dynamic TLS
-      /// model, produces an ADDI8 instruction that adds G8RReg to
-      /// sym\@got\@tlsld\@l and stores the result in X3.  Hidden by
-      /// ADDIS_TLSLD_L_ADDR until after register assignment.
-      ADDI_TLSLD_L,
-
-      /// %x3 = GET_TLSLD_ADDR %x3, Symbol - For the local-dynamic TLS
-      /// model, produces a call to __tls_get_addr(sym\@tlsld).  Hidden by
-      /// ADDIS_TLSLD_L_ADDR until after register assignment.
-      GET_TLSLD_ADDR,
-
-      /// G8RC = ADDI_TLSLD_L_ADDR G8RReg, Symbol, Symbol - Op that
-      /// combines ADDI_TLSLD_L and GET_TLSLD_ADDR until expansion
-      /// following register assignment.
-      ADDI_TLSLD_L_ADDR,
-
-      /// G8RC = ADDIS_DTPREL_HA %x3, Symbol - For the local-dynamic TLS
-      /// model, produces an ADDIS8 instruction that adds X3 to
-      /// sym\@dtprel\@ha.
-      ADDIS_DTPREL_HA,
-
-      /// G8RC = ADDI_DTPREL_L G8RReg, Symbol - For the local-dynamic TLS
-      /// model, produces an ADDI8 instruction that adds G8RReg to
-      /// sym\@got\@dtprel\@l.
-      ADDI_DTPREL_L,
-
-      /// VRRC = VADD_SPLAT Elt, EltSize - Temporary node to be expanded
-      /// during instruction selection to optimize a BUILD_VECTOR into
-      /// operations on splats.  This is necessary to avoid losing these
-      /// optimizations due to constant folding.
-      VADD_SPLAT,
-
-      /// CHAIN = SC CHAIN, Imm128 - System call.  The 7-bit unsigned
-      /// operand identifies the operating system entry point.
-      SC,
-
-      /// CHAIN = CLRBHRB CHAIN - Clear branch history rolling buffer.
-      CLRBHRB,
-
-      /// GPRC, CHAIN = MFBHRBE CHAIN, Entry, Dummy - Move from branch
-      /// history rolling buffer entry.
-      MFBHRBE,
-
-      /// CHAIN = RFEBB CHAIN, State - Return from event-based branch.
-      RFEBB,
-
-      /// VSRC, CHAIN = XXSWAPD CHAIN, VSRC - Occurs only for little
-      /// endian.  Maps to an xxswapd instruction that corrects an lxvd2x
-      /// or stxvd2x instruction.  The chain is necessary because the
-      /// sequence replaces a load and needs to provide the same number
-      /// of outputs.
-      XXSWAPD,
-
-      /// An SDNode for swaps that are not associated with any loads/stores
-      /// and thereby have no chain.
-      SWAP_NO_CHAIN,
-      
-      /// An SDNode for Power9 vector absolute value difference.
-      /// operand #0 vector
-      /// operand #1 vector
-      /// operand #2 constant i32 0 or 1, to indicate whether needs to patch
-      /// the most significant bit for signed i32
-      ///
-      /// Power9 VABSD* instructions are designed to support unsigned integer
-      /// vectors (byte/halfword/word), if we want to make use of them for signed
-      /// integer vectors, we have to flip their sign bits first. To flip sign bit
-      /// for byte/halfword integer vector would become inefficient, but for word
-      /// integer vector, we can leverage XVNEGSP to make it efficiently. eg:
-      /// abs(sub(a,b)) => VABSDUW(a+0x80000000, b+0x80000000) 
-      ///               => VABSDUW((XVNEGSP a), (XVNEGSP b))
-      VABSD,
-
-      /// QVFPERM = This corresponds to the QPX qvfperm instruction.
-      QVFPERM,
-
-      /// QVGPCI = This corresponds to the QPX qvgpci instruction.
-      QVGPCI,
-
-      /// QVALIGNI = This corresponds to the QPX qvaligni instruction.
-      QVALIGNI,
-
-      /// QVESPLATI = This corresponds to the QPX qvesplati instruction.
-      QVESPLATI,
-
-      /// QBFLT = Access the underlying QPX floating-point boolean
-      /// representation.
-      QBFLT,
-
-      /// FP_EXTEND_HALF(VECTOR, IDX) - Custom extend upper (IDX=0) half or
-      /// lower (IDX=1) half of v4f32 to v2f64.
-      FP_EXTEND_HALF,
-
-      /// CHAIN = STBRX CHAIN, GPRC, Ptr, Type - This is a
-      /// byte-swapping store instruction.  It byte-swaps the low "Type" bits of
-      /// the GPRC input, then stores it through Ptr.  Type can be either i16 or
-      /// i32.
-      STBRX = ISD::FIRST_TARGET_MEMORY_OPCODE,
-
-      /// GPRC, CHAIN = LBRX CHAIN, Ptr, Type - This is a
-      /// byte-swapping load instruction.  It loads "Type" bits, byte swaps it,
-      /// then puts it in the bottom bits of the GPRC.  TYPE can be either i16
-      /// or i32.
-      LBRX,
-
-      /// STFIWX - The STFIWX instruction.  The first operand is an input token
-      /// chain, then an f64 value to store, then an address to store it to.
-      STFIWX,
-
-      /// GPRC, CHAIN = LFIWAX CHAIN, Ptr - This is a floating-point
-      /// load which sign-extends from a 32-bit integer value into the
-      /// destination 64-bit register.
-      LFIWAX,
-
-      /// GPRC, CHAIN = LFIWZX CHAIN, Ptr - This is a floating-point
-      /// load which zero-extends from a 32-bit integer value into the
-      /// destination 64-bit register.
-      LFIWZX,
-
-      /// GPRC, CHAIN = LXSIZX, CHAIN, Ptr, ByteWidth - This is a load of an
-      /// integer smaller than 64 bits into a VSR. The integer is zero-extended.
-      /// This can be used for converting loaded integers to floating point.
-      LXSIZX,
-
-      /// STXSIX - The STXSI[bh]X instruction. The first operand is an input
-      /// chain, then an f64 value to store, then an address to store it to,
-      /// followed by a byte-width for the store.
-      STXSIX,
-
-      /// VSRC, CHAIN = LXVD2X_LE CHAIN, Ptr - Occurs only for little endian.
-      /// Maps directly to an lxvd2x instruction that will be followed by
-      /// an xxswapd.
-      LXVD2X,
-
-      /// VSRC, CHAIN = LOAD_VEC_BE CHAIN, Ptr - Occurs only for little endian.
-      /// Maps directly to one of lxvd2x/lxvw4x/lxvh8x/lxvb16x depending on
-      /// the vector type to load vector in big-endian element order.
-      LOAD_VEC_BE,
-
-      /// VSRC, CHAIN = LD_VSX_LH CHAIN, Ptr - This is a floating-point load of a
-      /// v2f32 value into the lower half of a VSR register.
-      LD_VSX_LH,
-
-      /// VSRC, CHAIN = LD_SPLAT, CHAIN, Ptr - a splatting load memory
-      /// instructions such as LXVDSX, LXVWSX.
-      LD_SPLAT,
-
-      /// CHAIN = STXVD2X CHAIN, VSRC, Ptr - Occurs only for little endian.
-      /// Maps directly to an stxvd2x instruction that will be preceded by
-      /// an xxswapd.
-      STXVD2X,
-
-      /// CHAIN = STORE_VEC_BE CHAIN, VSRC, Ptr - Occurs only for little endian.
-      /// Maps directly to one of stxvd2x/stxvw4x/stxvh8x/stxvb16x depending on
-      /// the vector type to store vector in big-endian element order.
-      STORE_VEC_BE,
-
-      /// Store scalar integers from VSR.
-      ST_VSR_SCAL_INT,
-
-      /// QBRC, CHAIN = QVLFSb CHAIN, Ptr
-      /// The 4xf32 load used for v4i1 constants.
-      QVLFSb,
-
-      /// ATOMIC_CMP_SWAP - the exact same as the target-independent nodes
-      /// except they ensure that the compare input is zero-extended for
-      /// sub-word versions because the atomic loads zero-extend.
-      ATOMIC_CMP_SWAP_8, ATOMIC_CMP_SWAP_16,
-
-      /// GPRC = TOC_ENTRY GA, TOC
-      /// Loads the entry for GA from the TOC, where the TOC base is given by
-      /// the last operand.
-      TOC_ENTRY
-    };
+  enum NodeType : unsigned {
+    // Start the numbering where the builtin ops and target ops leave off.
+    FIRST_NUMBER = ISD::BUILTIN_OP_END,
+
+    /// FSEL - Traditional three-operand fsel node.
+    ///
+    FSEL,
+
+    /// XSMAXCDP, XSMINCDP - C-type min/max instructions.
+    XSMAXCDP,
+    XSMINCDP,
+
+    /// FCFID - The FCFID instruction, taking an f64 operand and producing
+    /// and f64 value containing the FP representation of the integer that
+    /// was temporarily in the f64 operand.
+    FCFID,
+
+    /// Newer FCFID[US] integer-to-floating-point conversion instructions for
+    /// unsigned integers and single-precision outputs.
+    FCFIDU,
+    FCFIDS,
+    FCFIDUS,
+
+    /// FCTI[D,W]Z - The FCTIDZ and FCTIWZ instructions, taking an f32 or f64
+    /// operand, producing an f64 value containing the integer representation
+    /// of that FP value.
+    FCTIDZ,
+    FCTIWZ,
+
+    /// Newer FCTI[D,W]UZ floating-point-to-integer conversion instructions for
+    /// unsigned integers with round toward zero.
+    FCTIDUZ,
+    FCTIWUZ,
+
+    /// Floating-point-to-interger conversion instructions
+    FP_TO_UINT_IN_VSR,
+    FP_TO_SINT_IN_VSR,
+
+    /// VEXTS, ByteWidth - takes an input in VSFRC and produces an output in
+    /// VSFRC that is sign-extended from ByteWidth to a 64-byte integer.
+    VEXTS,
+
+    /// SExtVElems, takes an input vector of a smaller type and sign
+    /// extends to an output vector of a larger type.
+    SExtVElems,
+
+    /// Reciprocal estimate instructions (unary FP ops).
+    FRE,
+    FRSQRTE,
+
+    // VMADDFP, VNMSUBFP - The VMADDFP and VNMSUBFP instructions, taking
+    // three v4f32 operands and producing a v4f32 result.
+    VMADDFP,
+    VNMSUBFP,
+
+    /// VPERM - The PPC VPERM Instruction.
+    ///
+    VPERM,
+
+    /// XXSPLT - The PPC VSX splat instructions
+    ///
+    XXSPLT,
+
+    /// VECINSERT - The PPC vector insert instruction
+    ///
+    VECINSERT,
+
+    /// VECSHL - The PPC vector shift left instruction
+    ///
+    VECSHL,
+
+    /// XXPERMDI - The PPC XXPERMDI instruction
+    ///
+    XXPERMDI,
+
+    /// The CMPB instruction (takes two operands of i32 or i64).
+    CMPB,
+
+    /// Hi/Lo - These represent the high and low 16-bit parts of a global
+    /// address respectively.  These nodes have two operands, the first of
+    /// which must be a TargetGlobalAddress, and the second of which must be a
+    /// Constant.  Selected naively, these turn into 'lis G+C' and 'li G+C',
+    /// though these are usually folded into other nodes.
+    Hi,
+    Lo,
+
+    /// The following two target-specific nodes are used for calls through
+    /// function pointers in the 64-bit SVR4 ABI.
+
+    /// OPRC, CHAIN = DYNALLOC(CHAIN, NEGSIZE, FRAME_INDEX)
+    /// This instruction is lowered in PPCRegisterInfo::eliminateFrameIndex to
+    /// compute an allocation on the stack.
+    DYNALLOC,
+
+    /// This instruction is lowered in PPCRegisterInfo::eliminateFrameIndex to
+    /// compute an offset from native SP to the address  of the most recent
+    /// dynamic alloca.
+    DYNAREAOFFSET,
+
+    /// GlobalBaseReg - On Darwin, this node represents the result of the mflr
+    /// at function entry, used for PIC code.
+    GlobalBaseReg,
+
+    /// These nodes represent PPC shifts.
+    ///
+    /// For scalar types, only the last `n + 1` bits of the shift amounts
+    /// are used, where n is log2(sizeof(element) * 8). See sld/slw, etc.
+    /// for exact behaviors.
+    ///
+    /// For vector types, only the last n bits are used. See vsld.
+    SRL,
+    SRA,
+    SHL,
+
+    /// EXTSWSLI = The PPC extswsli instruction, which does an extend-sign
+    /// word and shift left immediate.
+    EXTSWSLI,
+
+    /// The combination of sra[wd]i and addze used to implemented signed
+    /// integer division by a power of 2. The first operand is the dividend,
+    /// and the second is the constant shift amount (representing the
+    /// divisor).
+    SRA_ADDZE,
+
+    /// CALL - A direct function call.
+    /// CALL_NOP is a call with the special NOP which follows 64-bit
+    /// SVR4 calls and 32-bit/64-bit AIX calls.
+    CALL,
+    CALL_NOP,
+
+    /// CHAIN,FLAG = MTCTR(VAL, CHAIN[, INFLAG]) - Directly corresponds to a
+    /// MTCTR instruction.
+    MTCTR,
+
+    /// CHAIN,FLAG = BCTRL(CHAIN, INFLAG) - Directly corresponds to a
+    /// BCTRL instruction.
+    BCTRL,
+
+    /// CHAIN,FLAG = BCTRL(CHAIN, ADDR, INFLAG) - The combination of a bctrl
+    /// instruction and the TOC reload required on 64-bit ELF, 32-bit AIX
+    /// and 64-bit AIX.
+    BCTRL_LOAD_TOC,
+
+    /// Return with a flag operand, matched by 'blr'
+    RET_FLAG,
+
+    /// R32 = MFOCRF(CRREG, INFLAG) - Represents the MFOCRF instruction.
+    /// This copies the bits corresponding to the specified CRREG into the
+    /// resultant GPR.  Bits corresponding to other CR regs are undefined.
+    MFOCRF,
+
+    /// Direct move from a VSX register to a GPR
+    MFVSR,
+
+    /// Direct move from a GPR to a VSX register (algebraic)
+    MTVSRA,
+
+    /// Direct move from a GPR to a VSX register (zero)
+    MTVSRZ,
+
+    /// Direct move of 2 consecutive GPR to a VSX register.
+    BUILD_FP128,
+
+    /// BUILD_SPE64 and EXTRACT_SPE are analogous to BUILD_PAIR and
+    /// EXTRACT_ELEMENT but take f64 arguments instead of i64, as i64 is
+    /// unsupported for this target.
+    /// Merge 2 GPRs to a single SPE register.
+    BUILD_SPE64,
+
+    /// Extract SPE register component, second argument is high or low.
+    EXTRACT_SPE,
+
+    /// Extract a subvector from signed integer vector and convert to FP.
+    /// It is primarily used to convert a (widened) illegal integer vector
+    /// type to a legal floating point vector type.
+    /// For example v2i32 -> widened to v4i32 -> v2f64
+    SINT_VEC_TO_FP,
+
+    /// Extract a subvector from unsigned integer vector and convert to FP.
+    /// As with SINT_VEC_TO_FP, used for converting illegal types.
+    UINT_VEC_TO_FP,
+
+    // FIXME: Remove these once the ANDI glue bug is fixed:
+    /// i1 = ANDI_rec_1_[EQ|GT]_BIT(i32 or i64 x) - Represents the result of the
+    /// eq or gt bit of CR0 after executing andi. x, 1. This is used to
+    /// implement truncation of i32 or i64 to i1.
+    ANDI_rec_1_EQ_BIT,
+    ANDI_rec_1_GT_BIT,
+
+    // READ_TIME_BASE - A read of the 64-bit time-base register on a 32-bit
+    // target (returns (Lo, Hi)). It takes a chain operand.
+    READ_TIME_BASE,
+
+    // EH_SJLJ_SETJMP - SjLj exception handling setjmp.
+    EH_SJLJ_SETJMP,
+
+    // EH_SJLJ_LONGJMP - SjLj exception handling longjmp.
+    EH_SJLJ_LONGJMP,
+
+    /// RESVEC = VCMP(LHS, RHS, OPC) - Represents one of the altivec VCMP*
+    /// instructions.  For lack of better number, we use the opcode number
+    /// encoding for the OPC field to identify the compare.  For example, 838
+    /// is VCMPGTSH.
+    VCMP,
+
+    /// RESVEC, OUTFLAG = VCMPo(LHS, RHS, OPC) - Represents one of the
+    /// altivec VCMP*o instructions.  For lack of better number, we use the
+    /// opcode number encoding for the OPC field to identify the compare.  For
+    /// example, 838 is VCMPGTSH.
+    VCMPo,
+
+    /// CHAIN = COND_BRANCH CHAIN, CRRC, OPC, DESTBB [, INFLAG] - This
+    /// corresponds to the COND_BRANCH pseudo instruction.  CRRC is the
+    /// condition register to branch on, OPC is the branch opcode to use (e.g.
+    /// PPC::BLE), DESTBB is the destination block to branch to, and INFLAG is
+    /// an optional input flag argument.
+    COND_BRANCH,
+
+    /// CHAIN = BDNZ CHAIN, DESTBB - These are used to create counter-based
+    /// loops.
+    BDNZ,
+    BDZ,
+
+    /// F8RC = FADDRTZ F8RC, F8RC - This is an FADD done with rounding
+    /// towards zero.  Used only as part of the long double-to-int
+    /// conversion sequence.
+    FADDRTZ,
+
+    /// F8RC = MFFS - This moves the FPSCR (not modeled) into the register.
+    MFFS,
+
+    /// TC_RETURN - A tail call return.
+    ///   operand #0 chain
+    ///   operand #1 callee (register or absolute)
+    ///   operand #2 stack adjustment
+    ///   operand #3 optional in flag
+    TC_RETURN,
+
+    /// ch, gl = CR6[UN]SET ch, inglue - Toggle CR bit 6 for SVR4 vararg calls
+    CR6SET,
+    CR6UNSET,
+
+    /// GPRC = address of _GLOBAL_OFFSET_TABLE_. Used by initial-exec TLS
+    /// for non-position independent code on PPC32.
+    PPC32_GOT,
+
+    /// GPRC = address of _GLOBAL_OFFSET_TABLE_. Used by general dynamic and
+    /// local dynamic TLS and position indendepent code on PPC32.
+    PPC32_PICGOT,
+
+    /// G8RC = ADDIS_GOT_TPREL_HA %x2, Symbol - Used by the initial-exec
+    /// TLS model, produces an ADDIS8 instruction that adds the GOT
+    /// base to sym\@got\@tprel\@ha.
+    ADDIS_GOT_TPREL_HA,
+
+    /// G8RC = LD_GOT_TPREL_L Symbol, G8RReg - Used by the initial-exec
+    /// TLS model, produces a LD instruction with base register G8RReg
+    /// and offset sym\@got\@tprel\@l.  This completes the addition that
+    /// finds the offset of "sym" relative to the thread pointer.
+    LD_GOT_TPREL_L,
+
+    /// G8RC = ADD_TLS G8RReg, Symbol - Used by the initial-exec TLS
+    /// model, produces an ADD instruction that adds the contents of
+    /// G8RReg to the thread pointer.  Symbol contains a relocation
+    /// sym\@tls which is to be replaced by the thread pointer and
+    /// identifies to the linker that the instruction is part of a
+    /// TLS sequence.
+    ADD_TLS,
+
+    /// G8RC = ADDIS_TLSGD_HA %x2, Symbol - For the general-dynamic TLS
+    /// model, produces an ADDIS8 instruction that adds the GOT base
+    /// register to sym\@got\@tlsgd\@ha.
+    ADDIS_TLSGD_HA,
+
+    /// %x3 = ADDI_TLSGD_L G8RReg, Symbol - For the general-dynamic TLS
+    /// model, produces an ADDI8 instruction that adds G8RReg to
+    /// sym\@got\@tlsgd\@l and stores the result in X3.  Hidden by
+    /// ADDIS_TLSGD_L_ADDR until after register assignment.
+    ADDI_TLSGD_L,
+
+    /// %x3 = GET_TLS_ADDR %x3, Symbol - For the general-dynamic TLS
+    /// model, produces a call to __tls_get_addr(sym\@tlsgd).  Hidden by
+    /// ADDIS_TLSGD_L_ADDR until after register assignment.
+    GET_TLS_ADDR,
+
+    /// G8RC = ADDI_TLSGD_L_ADDR G8RReg, Symbol, Symbol - Op that
+    /// combines ADDI_TLSGD_L and GET_TLS_ADDR until expansion following
+    /// register assignment.
+    ADDI_TLSGD_L_ADDR,
+
+    /// G8RC = ADDIS_TLSLD_HA %x2, Symbol - For the local-dynamic TLS
+    /// model, produces an ADDIS8 instruction that adds the GOT base
+    /// register to sym\@got\@tlsld\@ha.
+    ADDIS_TLSLD_HA,
+
+    /// %x3 = ADDI_TLSLD_L G8RReg, Symbol - For the local-dynamic TLS
+    /// model, produces an ADDI8 instruction that adds G8RReg to
+    /// sym\@got\@tlsld\@l and stores the result in X3.  Hidden by
+    /// ADDIS_TLSLD_L_ADDR until after register assignment.
+    ADDI_TLSLD_L,
+
+    /// %x3 = GET_TLSLD_ADDR %x3, Symbol - For the local-dynamic TLS
+    /// model, produces a call to __tls_get_addr(sym\@tlsld).  Hidden by
+    /// ADDIS_TLSLD_L_ADDR until after register assignment.
+    GET_TLSLD_ADDR,
+
+    /// G8RC = ADDI_TLSLD_L_ADDR G8RReg, Symbol, Symbol - Op that
+    /// combines ADDI_TLSLD_L and GET_TLSLD_ADDR until expansion
+    /// following register assignment.
+    ADDI_TLSLD_L_ADDR,
+
+    /// G8RC = ADDIS_DTPREL_HA %x3, Symbol - For the local-dynamic TLS
+    /// model, produces an ADDIS8 instruction that adds X3 to
+    /// sym\@dtprel\@ha.
+    ADDIS_DTPREL_HA,
+
+    /// G8RC = ADDI_DTPREL_L G8RReg, Symbol - For the local-dynamic TLS
+    /// model, produces an ADDI8 instruction that adds G8RReg to
+    /// sym\@got\@dtprel\@l.
+    ADDI_DTPREL_L,
+
+    /// VRRC = VADD_SPLAT Elt, EltSize - Temporary node to be expanded
+    /// during instruction selection to optimize a BUILD_VECTOR into
+    /// operations on splats.  This is necessary to avoid losing these
+    /// optimizations due to constant folding.
+    VADD_SPLAT,
+
+    /// CHAIN = SC CHAIN, Imm128 - System call.  The 7-bit unsigned
+    /// operand identifies the operating system entry point.
+    SC,
+
+    /// CHAIN = CLRBHRB CHAIN - Clear branch history rolling buffer.
+    CLRBHRB,
+
+    /// GPRC, CHAIN = MFBHRBE CHAIN, Entry, Dummy - Move from branch
+    /// history rolling buffer entry.
+    MFBHRBE,
+
+    /// CHAIN = RFEBB CHAIN, State - Return from event-based branch.
+    RFEBB,
+
+    /// VSRC, CHAIN = XXSWAPD CHAIN, VSRC - Occurs only for little
+    /// endian.  Maps to an xxswapd instruction that corrects an lxvd2x
+    /// or stxvd2x instruction.  The chain is necessary because the
+    /// sequence replaces a load and needs to provide the same number
+    /// of outputs.
+    XXSWAPD,
+
+    /// An SDNode for swaps that are not associated with any loads/stores
+    /// and thereby have no chain.
+    SWAP_NO_CHAIN,
+
+    /// An SDNode for Power9 vector absolute value difference.
+    /// operand #0 vector
+    /// operand #1 vector
+    /// operand #2 constant i32 0 or 1, to indicate whether needs to patch
+    /// the most significant bit for signed i32
+    ///
+    /// Power9 VABSD* instructions are designed to support unsigned integer
+    /// vectors (byte/halfword/word), if we want to make use of them for signed
+    /// integer vectors, we have to flip their sign bits first. To flip sign bit
+    /// for byte/halfword integer vector would become inefficient, but for word
+    /// integer vector, we can leverage XVNEGSP to make it efficiently. eg:
+    /// abs(sub(a,b)) => VABSDUW(a+0x80000000, b+0x80000000)
+    ///               => VABSDUW((XVNEGSP a), (XVNEGSP b))
+    VABSD,
+
+    /// QVFPERM = This corresponds to the QPX qvfperm instruction.
+    QVFPERM,
+
+    /// QVGPCI = This corresponds to the QPX qvgpci instruction.
+    QVGPCI,
+
+    /// QVALIGNI = This corresponds to the QPX qvaligni instruction.
+    QVALIGNI,
+
+    /// QVESPLATI = This corresponds to the QPX qvesplati instruction.
+    QVESPLATI,
+
+    /// QBFLT = Access the underlying QPX floating-point boolean
+    /// representation.
+    QBFLT,
+
+    /// FP_EXTEND_HALF(VECTOR, IDX) - Custom extend upper (IDX=0) half or
+    /// lower (IDX=1) half of v4f32 to v2f64.
+    FP_EXTEND_HALF,
+
+    /// CHAIN = STBRX CHAIN, GPRC, Ptr, Type - This is a
+    /// byte-swapping store instruction.  It byte-swaps the low "Type" bits of
+    /// the GPRC input, then stores it through Ptr.  Type can be either i16 or
+    /// i32.
+    STBRX = ISD::FIRST_TARGET_MEMORY_OPCODE,
+
+    /// GPRC, CHAIN = LBRX CHAIN, Ptr, Type - This is a
+    /// byte-swapping load instruction.  It loads "Type" bits, byte swaps it,
+    /// then puts it in the bottom bits of the GPRC.  TYPE can be either i16
+    /// or i32.
+    LBRX,
+
+    /// STFIWX - The STFIWX instruction.  The first operand is an input token
+    /// chain, then an f64 value to store, then an address to store it to.
+    STFIWX,
+
+    /// GPRC, CHAIN = LFIWAX CHAIN, Ptr - This is a floating-point
+    /// load which sign-extends from a 32-bit integer value into the
+    /// destination 64-bit register.
+    LFIWAX,
+
+    /// GPRC, CHAIN = LFIWZX CHAIN, Ptr - This is a floating-point
+    /// load which zero-extends from a 32-bit integer value into the
+    /// destination 64-bit register.
+    LFIWZX,
+
+    /// GPRC, CHAIN = LXSIZX, CHAIN, Ptr, ByteWidth - This is a load of an
+    /// integer smaller than 64 bits into a VSR. The integer is zero-extended.
+    /// This can be used for converting loaded integers to floating point.
+    LXSIZX,
+
+    /// STXSIX - The STXSI[bh]X instruction. The first operand is an input
+    /// chain, then an f64 value to store, then an address to store it to,
+    /// followed by a byte-width for the store.
+    STXSIX,
+
+    /// VSRC, CHAIN = LXVD2X_LE CHAIN, Ptr - Occurs only for little endian.
+    /// Maps directly to an lxvd2x instruction that will be followed by
+    /// an xxswapd.
+    LXVD2X,
+
+    /// VSRC, CHAIN = LOAD_VEC_BE CHAIN, Ptr - Occurs only for little endian.
+    /// Maps directly to one of lxvd2x/lxvw4x/lxvh8x/lxvb16x depending on
+    /// the vector type to load vector in big-endian element order.
+    LOAD_VEC_BE,
+
+    /// VSRC, CHAIN = LD_VSX_LH CHAIN, Ptr - This is a floating-point load of a
+    /// v2f32 value into the lower half of a VSR register.
+    LD_VSX_LH,
+
+    /// VSRC, CHAIN = LD_SPLAT, CHAIN, Ptr - a splatting load memory
+    /// instructions such as LXVDSX, LXVWSX.
+    LD_SPLAT,
+
+    /// CHAIN = STXVD2X CHAIN, VSRC, Ptr - Occurs only for little endian.
+    /// Maps directly to an stxvd2x instruction that will be preceded by
+    /// an xxswapd.
+    STXVD2X,
+
+    /// CHAIN = STORE_VEC_BE CHAIN, VSRC, Ptr - Occurs only for little endian.
+    /// Maps directly to one of stxvd2x/stxvw4x/stxvh8x/stxvb16x depending on
+    /// the vector type to store vector in big-endian element order.
+    STORE_VEC_BE,
+
+    /// Store scalar integers from VSR.
+    ST_VSR_SCAL_INT,
+
+    /// QBRC, CHAIN = QVLFSb CHAIN, Ptr
+    /// The 4xf32 load used for v4i1 constants.
+    QVLFSb,
+
+    /// ATOMIC_CMP_SWAP - the exact same as the target-independent nodes
+    /// except they ensure that the compare input is zero-extended for
+    /// sub-word versions because the atomic loads zero-extend.
+    ATOMIC_CMP_SWAP_8,
+    ATOMIC_CMP_SWAP_16,
+
+    /// GPRC = TOC_ENTRY GA, TOC
+    /// Loads the entry for GA from the TOC, where the TOC base is given by
+    /// the last operand.
+    TOC_ENTRY
+  };
 
   } // end namespace PPCISD
 

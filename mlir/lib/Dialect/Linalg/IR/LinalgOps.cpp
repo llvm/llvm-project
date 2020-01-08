@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a the Linalg operations.
+// This file implements the Linalg operations.
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,6 +23,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/StandardTypes.h"
+#include "mlir/Support/Functional.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/STLExtras.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -330,6 +331,206 @@ static ParseResult parseRangeOp(OpAsmParser &parser, OperationState &result) {
                  parser.parseColonType(type) ||
                  parser.resolveOperands(rangeInfo, indexTy, result.operands) ||
                  parser.addTypeToList(type, result.types));
+}
+
+//===----------------------------------------------------------------------===//
+// ReshapeOp
+//===----------------------------------------------------------------------===//
+
+/// Return true if the reassociation specification is valid, false otherwise.
+/// When false, the `invalidIndex` integer pointer is optionally filled with the
+/// index of the offending reassociation map.
+static bool isReassociationValid(ArrayRef<AffineMap> reassociation,
+                                 int *invalidIndex = nullptr) {
+  if (reassociation.empty())
+    return true;
+  unsigned nDims = reassociation[0].getNumDims();
+  unsigned nextExpectedDim = 0;
+  for (auto it : llvm::enumerate(reassociation)) {
+    auto m = it.value();
+    if (m.getNumDims() != nDims || m.getNumSymbols() != 0) {
+      if (invalidIndex)
+        *invalidIndex = it.index();
+      return false;
+    }
+    for (auto e : m.getResults()) {
+      auto d = e.dyn_cast<AffineDimExpr>();
+      if (!d || d.getPosition() != nextExpectedDim++) {
+        if (invalidIndex)
+          *invalidIndex = it.index();
+        return false;
+      }
+    }
+  }
+  if (nextExpectedDim != nDims) {
+    if (invalidIndex)
+      *invalidIndex = reassociation.size() - 1;
+    return false;
+  }
+  return true;
+}
+
+/// Detect whether memref dims [dim, dim + extent) can be reshaped without
+/// copies.
+static bool isReshapableDimBand(unsigned dim, unsigned extent,
+                                ArrayRef<int64_t> sizes,
+                                ArrayRef<AffineExpr> strides) {
+  assert(sizes.size() == strides.size() && "mismatched ranks");
+  // off by 1 indexing to avoid out of bounds
+  //                       V
+  for (auto idx = dim, e = dim + extent; idx + 1 < e; ++idx) {
+    // Only bands of static shapes are reshapable. This is due to the fact that
+    // there is no relation between dynamic sizes and dynamic strides: we do not
+    // have enough information to know whether a "-1" size corresponds to the
+    // proper symbol in the AffineExpr of a stride.
+    if (ShapedType::isDynamic(sizes[dim + 1]))
+      return false;
+    // TODO(ntv) Refine this by passing the proper nDims and nSymbols so we can
+    // simplify on the fly and catch more reshapable cases.
+    if (strides[idx] != strides[idx + 1] * sizes[idx + 1])
+      return false;
+  }
+  return true;
+}
+
+/// Compute the MemRefType obtained by applying the `reassociation` (which is
+/// expected to be valid) to `type`.
+/// If `type` is Contiguous MemRefType, this always produce a contiguous
+/// MemRefType.
+static MemRefType
+computeReshapeCollapsedType(MemRefType type,
+                            ArrayRef<AffineMap> reassociation) {
+  auto sizes = type.getShape();
+  AffineExpr offset;
+  SmallVector<AffineExpr, 4> strides;
+  auto status = getStridesAndOffset(type, strides, offset);
+  (void)status;
+  assert(succeeded(status) && "expected strided memref");
+
+  SmallVector<int64_t, 4> newSizes;
+  newSizes.reserve(reassociation.size());
+  SmallVector<AffineExpr, 4> newStrides;
+  newStrides.reserve(reassociation.size());
+
+  // Use the fact that reassociation is valid to simplify the logic: only use
+  // each map's rank.
+  assert(isReassociationValid(reassociation) && "invalid reassociation");
+  unsigned currentDim = 0;
+  for (AffineMap m : reassociation) {
+    unsigned dim = m.getNumResults();
+    int64_t size = 1;
+    AffineExpr stride = strides[currentDim + dim - 1];
+    if (!isReshapableDimBand(currentDim, dim, sizes, strides)) {
+      size = ShapedType::kDynamicSize;
+      stride = AffineExpr();
+    } else {
+      for (unsigned d = 0; d < dim; ++d)
+        size *= sizes[currentDim + d];
+    }
+    newSizes.push_back(size);
+    newStrides.push_back(stride);
+    currentDim += dim;
+  }
+
+  // Early-exit: if `type` is contiguous, the result must be contiguous.
+  if (canonicalizeStridedLayout(type).getAffineMaps().empty())
+    return MemRefType::get(newSizes, type.getElementType(), {});
+
+  // Convert back to int64_t because we don't have enough information to create
+  // new strided layouts from AffineExpr only. This corresponds to a case where
+  // copies may be necessary.
+  int64_t intOffset = ShapedType::kDynamicStrideOrOffset;
+  if (auto o = offset.dyn_cast<AffineConstantExpr>())
+    intOffset = o.getValue();
+  SmallVector<int64_t, 4> intStrides;
+  intStrides.reserve(strides.size());
+  for (auto stride : newStrides) {
+    if (auto cst = stride.dyn_cast_or_null<AffineConstantExpr>())
+      intStrides.push_back(cst.getValue());
+    else
+      intStrides.push_back(ShapedType::kDynamicStrideOrOffset);
+  }
+  auto layout =
+      makeStridedLinearLayoutMap(intStrides, intOffset, type.getContext());
+  return canonicalizeStridedLayout(
+      MemRefType::get(newSizes, type.getElementType(), {layout}));
+}
+
+/// Helper functions assert Attribute of the proper type in attr and returns the
+/// corresponding vector.
+/// TODO(rridle,ntv) this should be evolved into a generic
+/// `getRangeOfType<AffineMap>(ArrayAttr attrs)` that does not copy.
+static SmallVector<AffineMap, 4> getAffineMaps(ArrayAttr attrs) {
+  return functional::map(
+      [](Attribute a) { return a.cast<AffineMapAttr>().getValue(); }, attrs);
+}
+
+void mlir::linalg::ReshapeOp::build(Builder *b, OperationState &result,
+                                    Value view, ArrayAttr reassociation,
+                                    ArrayRef<NamedAttribute> attrs) {
+  auto maps = getAffineMaps(reassociation);
+  auto memRefType = view.getType().cast<MemRefType>();
+  auto resultType = computeReshapeCollapsedType(memRefType, maps);
+  build(b, result, resultType, view, attrs);
+  result.addAttribute(ReshapeOp::getReassociationAttrName(), reassociation);
+}
+
+static void print(OpAsmPrinter &p, ReshapeOp op) {
+  p << op.getOperationName() << " " << op.view() << " " << op.reassociation();
+  p.printOptionalAttrDict(op.getAttrs(),
+                          {ReshapeOp::getReassociationAttrName()});
+  p << " : " << op.getViewType() << " into " << op.getResult().getType();
+}
+
+static ParseResult parseReshapeOp(OpAsmParser &parser, OperationState &result) {
+  OpAsmParser::OperandType view;
+  ArrayAttr reassociation;
+  MemRefType type, resultType;
+  return failure(parser.parseOperand(view) ||
+                 parser.parseAttribute(reassociation,
+                                       ReshapeOp::getReassociationAttrName(),
+                                       result.attributes) ||
+                 parser.parseOptionalAttrDict(result.attributes) ||
+                 parser.parseColonType(type) ||
+                 parser.parseKeywordType("into", resultType) ||
+                 parser.resolveOperand(view, type, result.operands) ||
+                 parser.addTypeToList(resultType, result.types));
+}
+
+static LogicalResult verify(ReshapeOp op) {
+  MemRefType expandedType = op.getViewType();
+  MemRefType collapsedType = op.getResult().getType().cast<MemRefType>();
+  unsigned expandedRank = expandedType.getRank();
+  unsigned collapsedRank = collapsedType.getRank();
+  bool isCollapse = expandedRank > collapsedRank;
+  if (!isCollapse) {
+    std::swap(expandedRank, collapsedRank);
+    std::swap(expandedType, collapsedType);
+  }
+  if (expandedRank == 0 || collapsedRank == 0)
+    return op.emitOpError("expected non-zero memref ranks");
+  if (expandedRank == collapsedRank)
+    return op.emitOpError("expected to collapse or expand dims");
+
+  if (collapsedRank != op.reassociation().size())
+    return op.emitOpError("expected rank of the collapsed view(")
+           << collapsedRank << ") to be the number of reassociation maps("
+           << op.reassociation().size() << ")";
+  auto maps = getAffineMaps(op.reassociation());
+  for (auto it : llvm::enumerate(maps))
+    if (it.value().getNumDims() != expandedRank)
+      return op.emitOpError("expected reassociation map #")
+             << it.index() << " of same rank as expanded memref("
+             << expandedRank << "), but got " << it.value().getNumDims();
+  int invalidIdx = 0;
+  if (!isReassociationValid(maps, &invalidIdx))
+    return op.emitOpError("expected reassociation map #")
+           << invalidIdx << " to be valid and contiguous";
+  MemRefType expectedType = computeReshapeCollapsedType(expandedType, maps);
+  if (collapsedType != expectedType)
+    return op.emitOpError("expected collapsed type to be ")
+           << expectedType << ", but got " << collapsedType;
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

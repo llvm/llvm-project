@@ -33,11 +33,11 @@ public:
   static void Initialize();
   static void Terminate();
 
-  /// Gets the host target triple as a const string.
+  /// Gets the host target triple.
   ///
   /// \return
-  ///     A const string object containing the host target triple.
-  static llvm::StringRef GetTargetTriple();
+  ///     The host target triple.
+  static llvm::Triple GetTargetTriple();
 
   enum ArchitectureKind {
     eArchKindDefault, // The overall default architecture that applications will

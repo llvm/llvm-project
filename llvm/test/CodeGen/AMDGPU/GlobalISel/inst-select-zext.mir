@@ -3,50 +3,6 @@
 
 ---
 
-name: zext_scc_s1_to_sgpr_s32
-legalized:       true
-regBankSelected: true
-body: |
-  bb.0:
-    liveins: $sgpr0
-
-    ; GCN-LABEL: name: zext_scc_s1_to_sgpr_s32
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: S_CMP_EQ_U32 [[COPY]], [[COPY]], implicit-def $scc
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GCN: $scc = COPY [[COPY1]]
-    ; GCN: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 0, 1, implicit $scc
-    ; GCN: $sgpr0 = COPY [[S_CSELECT_B32_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:scc(s1) = G_ICMP intpred(eq), %0, %0
-    %2:sgpr(s32) = G_ZEXT %1
-    $sgpr0 = COPY %2
-...
-
----
-
-name: zext_scc_s1_to_sgpr_s64
-legalized:       true
-regBankSelected: true
-body: |
-  bb.0:
-    liveins: $sgpr0
-
-    ; GCN-LABEL: name: zext_scc_s1_to_sgpr_s64
-    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GCN: S_CMP_EQ_U32 [[COPY]], [[COPY]], implicit-def $scc
-    ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY $scc
-    ; GCN: $scc = COPY [[COPY1]]
-    ; GCN: [[S_CSELECT_B64_:%[0-9]+]]:sreg_64_xexec = S_CSELECT_B64 0, 1, implicit $scc
-    ; GCN: $sgpr0_sgpr1 = COPY [[S_CSELECT_B64_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:scc(s1) = G_ICMP intpred(eq), %0, %0
-    %2:sgpr(s64) = G_ZEXT %1
-    $sgpr0_sgpr1 = COPY %2
-...
-
----
-
 name: zext_sgpr_s1_to_sgpr_s32
 legalized:       true
 regBankSelected: true
@@ -147,25 +103,20 @@ body: |
 
 ...
 
----
+# ---
 
-name: zext_vcc_s1_to_vgpr_s32
-legalized:       true
-regBankSelected: true
-body: |
-  bb.0:
-    liveins: $vgpr0
+# name: zext_vcc_s1_to_vgpr_s32
+# legalized:       true
+# regBankSelected: true
+# body: |
+#   bb.0:
+#     liveins: $vgpr0
 
-    ; GCN-LABEL: name: zext_vcc_s1_to_vgpr_s32
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GCN: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[COPY]], [[COPY]], implicit $exec
-    ; GCN: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, [[V_CMP_EQ_U32_e64_]], implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_CNDMASK_B32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vcc(s1) = G_ICMP intpred(eq), %0, %0
-    %2:vgpr(s32) = G_ZEXT %1
-    $vgpr0 = COPY %2
-...
+#     %0:vgpr(s32) = COPY $vgpr0
+#     %1:vcc(s1) = G_ICMP intpred(eq), %0, %0
+#     %2:vgpr(s32) = G_ZEXT %1
+#     $vgpr0 = COPY %2
+# ...
 
 ---
 
@@ -224,4 +175,23 @@ body: |
     %2:vgpr(s32) = G_ZEXT %1
     $vgpr0 = COPY %2
 
+...
+
+---
+
+name: zext_sgpr_reg_class_s1_to_sgpr_s32
+legalized:       true
+regBankSelected: true
+body: |
+  bb.0:
+    liveins: $sgpr0
+
+    ; GCN-LABEL: name: zext_sgpr_reg_class_s1_to_sgpr_s32
+    ; GCN: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; GCN: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY]], 1, implicit-def $scc
+    ; GCN: $sgpr0 = COPY [[S_AND_B32_]]
+    %0:sgpr(s32) = COPY $sgpr0
+    %1:sreg_32(s1) = G_TRUNC %0
+    %2:sgpr(s32) = G_ZEXT %1
+    $sgpr0 = COPY %2
 ...

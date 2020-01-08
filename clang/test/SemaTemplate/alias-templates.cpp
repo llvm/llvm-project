@@ -77,14 +77,12 @@ namespace PR11848 {
     return i + f1<Ts...>(is...);
   }
 
-  // FIXME: This note is technically correct, but could be better. We
-  // should really say that we couldn't infer template argument 'Ts'.
   template<typename ...Ts>
-  void f2(U<Ts> ...is) { } // expected-note {{requires 0 arguments, but 1 was provided}}
+  void f2(U<Ts> ...is) { } // expected-note {{deduced incomplete pack <(no value)> for template parameter 'Ts'}}
 
   template<typename...> struct type_tuple {};
   template<typename ...Ts>
-  void f3(type_tuple<Ts...>, U<Ts> ...is) {} // expected-note {{requires 4 arguments, but 3 were provided}}
+  void f3(type_tuple<Ts...>, U<Ts> ...is) {} // expected-note {{deduced packs of different lengths for parameter 'Ts' (<void, void, void> vs. <(no value), (no value)>)}}
 
   void g() {
     f1(U<void>()); // expected-error {{no match}}

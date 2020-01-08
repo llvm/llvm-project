@@ -74,7 +74,7 @@ Scalar::Scalar() : m_type(e_void), m_float(static_cast<float>(0)) {}
 bool Scalar::GetData(DataExtractor &data, size_t limit_byte_size) const {
   size_t byte_size = GetByteSize();
   if (byte_size > 0) {
-    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(GetBytes());
+    const uint8_t *bytes = static_cast<const uint8_t *>(GetBytes());
 
     if (limit_byte_size < byte_size) {
       if (endian::InlHostByteOrder() == eByteOrderLittle) {
@@ -132,7 +132,7 @@ const void *Scalar::GetBytes() const {
       swapped_words[1] = apint_words[0];
       apint_words = swapped_words;
     }
-    return reinterpret_cast<const void *>(apint_words);
+    return static_cast<const void *>(apint_words);
   case e_sint256:
   case e_uint256:
     apint_words = m_integer.getRawData();
@@ -143,7 +143,7 @@ const void *Scalar::GetBytes() const {
       swapped_words[3] = apint_words[0];
       apint_words = swapped_words;
     }
-    return reinterpret_cast<const void *>(apint_words);
+    return static_cast<const void *>(apint_words);
   case e_sint512:
   case e_uint512:
     apint_words = m_integer.getRawData();
@@ -158,13 +158,13 @@ const void *Scalar::GetBytes() const {
       swapped_words[7] = apint_words[0];
       apint_words = swapped_words;
     }
-    return reinterpret_cast<const void *>(apint_words);
+    return static_cast<const void *>(apint_words);
   case e_float:
     flt_val = m_float.convertToFloat();
-    return reinterpret_cast<const void *>(&flt_val);
+    return static_cast<const void *>(&flt_val);
   case e_double:
     dbl_val = m_float.convertToDouble();
-    return reinterpret_cast<const void *>(&dbl_val);
+    return static_cast<const void *>(&dbl_val);
   case e_long_double:
     llvm::APInt ldbl_val = m_float.bitcastToAPInt();
     apint_words = ldbl_val.getRawData();
@@ -176,7 +176,7 @@ const void *Scalar::GetBytes() const {
       swapped_words[1] = apint_words[0];
       apint_words = swapped_words;
     }
-    return reinterpret_cast<const void *>(apint_words);
+    return static_cast<const void *>(apint_words);
   }
   return nullptr;
 }

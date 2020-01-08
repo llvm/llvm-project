@@ -8,12 +8,12 @@
 
 int temp; // expected-note {{'temp' declared here}}
 
-class vec {                                                             // expected-note {{definition of 'vec' is not complete until the closing '}'}}
+class vec {
 private:
   int p;                                                                // expected-note {{declared private here}}
 public:
   int len;
-#pragma omp declare mapper(id: vec v) map(v.len)                        // expected-error {{member access into incomplete type 'vec'}}
+#pragma omp declare mapper(id: vec v) map(v.len)
   double *data;
 };
 

@@ -34,31 +34,64 @@ body:             |
 
 ---
 
-name: legal_brcond_scc
+name: legal_brcond_sgpr_s1
 
 body: |
-  ; WAVE64-LABEL: name: legal_brcond_scc
+  ; WAVE64-LABEL: name: legal_brcond_sgpr_s1
   ; WAVE64: bb.0:
   ; WAVE64:   successors: %bb.1(0x80000000)
-  ; WAVE64:   [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-  ; WAVE64:   [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-  ; WAVE64:   [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+  ; WAVE64:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; WAVE64:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; WAVE64:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
   ; WAVE64:   G_BRCOND [[ICMP]](s1), %bb.1
   ; WAVE64: bb.1:
-  ; WAVE32-LABEL: name: legal_brcond_scc
+  ; WAVE32-LABEL: name: legal_brcond_sgpr_s1
   ; WAVE32: bb.0:
   ; WAVE32:   successors: %bb.1(0x80000000)
-  ; WAVE32:   [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-  ; WAVE32:   [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-  ; WAVE32:   [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+  ; WAVE32:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; WAVE32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; WAVE32:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
   ; WAVE32:   G_BRCOND [[ICMP]](s1), %bb.1
   ; WAVE32: bb.1:
   bb.0:
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s32) = COPY $sgpr1
-    %2:scc(s1) = G_ICMP intpred(eq), %0, %1
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:_(s1) = G_ICMP intpred(eq), %0, %1
+    G_BRCOND %2, %bb.1
+
+  bb.1:
+
+...
+
+---
+
+name: legal_brcond_sgpr_s32
+
+body: |
+  ; WAVE64-LABEL: name: legal_brcond_sgpr_s32
+  ; WAVE64: bb.0:
+  ; WAVE64:   successors: %bb.1(0x80000000)
+  ; WAVE64:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; WAVE64:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; WAVE64:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+  ; WAVE64:   G_BRCOND [[ICMP]](s32), %bb.1
+  ; WAVE64: bb.1:
+  ; WAVE32-LABEL: name: legal_brcond_sgpr_s32
+  ; WAVE32: bb.0:
+  ; WAVE32:   successors: %bb.1(0x80000000)
+  ; WAVE32:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; WAVE32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; WAVE32:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+  ; WAVE32:   G_BRCOND [[ICMP]](s32), %bb.1
+  ; WAVE32: bb.1:
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:_(s32) = G_ICMP intpred(eq), %0, %1
     G_BRCOND %2, %bb.1
 
   bb.1:

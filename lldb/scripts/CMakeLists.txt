@@ -16,20 +16,9 @@ if(LLDB_BUILD_FRAMEWORK)
 endif()
 
 if(${LLDB_USE_STATIC_BINDINGS})
-  set(PREPARE_BINDINGS_ARGS
-    --use-static-binding)
+  set(PREPARE_BINDINGS_ARGS "--use-static-binding")
 else()
-  find_package(SWIG)
-  if(${SWIG_FOUND})
-    set(SWIG_MIN_VERSION "2.0.0")
-    if (${SWIG_VERSION} VERSION_LESS ${SWIG_MIN_VERSION})
-      message(FATAL_ERROR "LLDB requires swig ${SWIG_MIN_VERSION}, your version is ${SWIG_VERSION}.")
-    endif()
-    set(PREPARE_BINDINGS_ARGS
-      "--swig-executable=${SWIG_EXECUTABLE}")
-  else()
-    message(FATAL_ERROR "LLDB requires swig ${SWIG_MIN_VERSION}. To use the static bindings instead use -DLLDB_USE_STATIC_BINDINGS=ON")
-  endif()
+  set(PREPARE_BINDINGS_ARGS "--swig-executable=${SWIG_EXECUTABLE}")
 endif()
 
 if(APPLE)
@@ -48,7 +37,6 @@ set(SWIG_COMMON_FLAGS
   ${DARWIN_EXTRAS}
   -outdir ${CMAKE_CURRENT_BINARY_DIR}
 )
-
 
 if (LLDB_ENABLE_PYTHON)
   add_custom_command(

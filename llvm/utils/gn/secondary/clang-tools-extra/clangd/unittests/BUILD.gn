@@ -61,6 +61,7 @@ unittest("ClangdTests") {
     "IndexTests.cpp",
     "JSONTransportTests.cpp",
     "ParsedASTTests.cpp",
+    "PathMappingTests.cpp",
     "PrintASTTests.cpp",
     "QualityTests.cpp",
     "RIFFTests.cpp",

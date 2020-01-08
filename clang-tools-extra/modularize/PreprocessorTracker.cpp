@@ -54,7 +54,7 @@
 // To check for '#include' directives nested inside 'Extern "C/C++" {}'
 // or 'namespace {}' blocks, we keep track of the '#include' directives
 // while running the preprocessor, and later during a walk of the AST
-// we call a function to check for any '#include' directies inside
+// we call a function to check for any '#include' directives inside
 // an 'Extern "C/C++" {}' or 'namespace {}' block, given its source
 // range.
 //
@@ -1271,7 +1271,7 @@ private:
 
 // PreprocessorTracker functions.
 
-// PreprocessorTracker desctructor.
+// PreprocessorTracker destructor.
 PreprocessorTracker::~PreprocessorTracker() {}
 
 // Create instance of PreprocessorTracker.

@@ -2327,4 +2327,14 @@ define void @test_var_annotation(i8*, i8*, i8*, i32) {
   ret void
 }
 
+declare i64 @llvm.readcyclecounter()
+define i64 @test_readcyclecounter() {
+  ; CHECK-LABEL: name:            test_readcyclecounter
+  ; CHECK: [[RES:%[0-9]+]]:_(s64) = G_READCYCLECOUNTER{{$}}
+  ; CHECK-NEXT: $x0 = COPY [[RES]]
+  ; CHECK-NEXT: RET_ReallyLR implicit $x0
+  %res = call i64 @llvm.readcyclecounter()
+  ret i64 %res
+}
+
 !0 = !{ i64 0, i64 2 }

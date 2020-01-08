@@ -1256,6 +1256,8 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FSQRT;
     case Intrinsic::trunc:
       return TargetOpcode::G_INTRINSIC_TRUNC;
+    case Intrinsic::readcyclecounter:
+      return TargetOpcode::G_READCYCLECOUNTER;
   }
   return Intrinsic::not_intrinsic;
 }

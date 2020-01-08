@@ -78,10 +78,6 @@ private:
   /// Whether this section has had instructions emitted into it.
   bool HasInstructions : 1;
 
-  /// Whether this section has had data emitted into it.
-  /// Right now this is only used by the ARM backend.
-  bool HasData : 1;
-
   bool IsRegistered : 1;
 
   MCDummyFragment DummyFragment;
@@ -150,9 +146,6 @@ public:
   bool hasInstructions() const { return HasInstructions; }
   void setHasInstructions(bool Value) { HasInstructions = Value; }
 
-  bool hasData() const { return HasData; }
-  void setHasData(bool Value) { HasData = Value; }
-
   bool isRegistered() const { return IsRegistered; }
   void setIsRegistered(bool Value) { IsRegistered = Value; }
 
@@ -174,12 +167,6 @@ public:
 
   iterator end() { return Fragments.end(); }
   const_iterator end() const { return Fragments.end(); }
-
-  reverse_iterator rbegin() { return Fragments.rbegin(); }
-  const_reverse_iterator rbegin() const { return Fragments.rbegin(); }
-
-  reverse_iterator rend() { return Fragments.rend(); }
-  const_reverse_iterator rend() const  { return Fragments.rend(); }
 
   MCSection::iterator getSubsectionInsertionPoint(unsigned Subsection);
 

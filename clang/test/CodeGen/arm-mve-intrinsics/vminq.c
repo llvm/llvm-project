@@ -53,7 +53,7 @@ uint32x4_t test_vminq_u32(uint32x4_t a, uint32x4_t b)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.arm.mve.min.predicated.v16i8.v16i1(<16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i1> [[TMP1]], <16 x i8> [[INACTIVE:%.*]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.arm.mve.min.predicated.v16i8.v16i1(<16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], i32 0, <16 x i1> [[TMP1]], <16 x i8> [[INACTIVE:%.*]])
 // CHECK-NEXT:    ret <16 x i8> [[TMP2]]
 //
 int8x16_t test_vminq_m_s8(int8x16_t inactive, int8x16_t a, int8x16_t b, mve_pred16_t p)
@@ -69,7 +69,7 @@ int8x16_t test_vminq_m_s8(int8x16_t inactive, int8x16_t a, int8x16_t b, mve_pred
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.arm.mve.min.predicated.v8i16.v8i1(<8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x i1> [[TMP1]], <8 x i16> [[INACTIVE:%.*]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.arm.mve.min.predicated.v8i16.v8i1(<8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], i32 1, <8 x i1> [[TMP1]], <8 x i16> [[INACTIVE:%.*]])
 // CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 //
 uint16x8_t test_vminq_m_u16(uint16x8_t inactive, uint16x8_t a, uint16x8_t b, mve_pred16_t p)
@@ -85,7 +85,7 @@ uint16x8_t test_vminq_m_u16(uint16x8_t inactive, uint16x8_t a, uint16x8_t b, mve
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.arm.mve.min.predicated.v4i32.v4i1(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i1> [[TMP1]], <4 x i32> [[INACTIVE:%.*]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.arm.mve.min.predicated.v4i32.v4i1(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 0, <4 x i1> [[TMP1]], <4 x i32> [[INACTIVE:%.*]])
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 int32x4_t test_vminq_m_s32(int32x4_t inactive, int32x4_t a, int32x4_t b, mve_pred16_t p)
@@ -101,7 +101,7 @@ int32x4_t test_vminq_m_s32(int32x4_t inactive, int32x4_t a, int32x4_t b, mve_pre
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.arm.mve.min.predicated.v16i8.v16i1(<16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], <16 x i1> [[TMP1]], <16 x i8> undef)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <16 x i8> @llvm.arm.mve.min.predicated.v16i8.v16i1(<16 x i8> [[A:%.*]], <16 x i8> [[B:%.*]], i32 1, <16 x i1> [[TMP1]], <16 x i8> undef)
 // CHECK-NEXT:    ret <16 x i8> [[TMP2]]
 //
 uint8x16_t test_vminq_x_u8(uint8x16_t a, uint8x16_t b, mve_pred16_t p)
@@ -117,7 +117,7 @@ uint8x16_t test_vminq_x_u8(uint8x16_t a, uint8x16_t b, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.arm.mve.min.predicated.v8i16.v8i1(<8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], <8 x i1> [[TMP1]], <8 x i16> undef)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x i16> @llvm.arm.mve.min.predicated.v8i16.v8i1(<8 x i16> [[A:%.*]], <8 x i16> [[B:%.*]], i32 0, <8 x i1> [[TMP1]], <8 x i16> undef)
 // CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 //
 int16x8_t test_vminq_x_s16(int16x8_t a, int16x8_t b, mve_pred16_t p)
@@ -125,7 +125,7 @@ int16x8_t test_vminq_x_s16(int16x8_t a, int16x8_t b, mve_pred16_t p)
 #ifdef POLYMORPHIC
     return vminq_x(a, b, p);
 #else /* POLYMORPHIC */
-    return vminq_x_u16(a, b, p);
+    return vminq_x_s16(a, b, p);
 #endif /* POLYMORPHIC */
 }
 
@@ -133,7 +133,7 @@ int16x8_t test_vminq_x_s16(int16x8_t a, int16x8_t b, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.arm.mve.min.predicated.v4i32.v4i1(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i1> [[TMP1]], <4 x i32> undef)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x i32> @llvm.arm.mve.min.predicated.v4i32.v4i1(<4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], i32 1, <4 x i1> [[TMP1]], <4 x i32> undef)
 // CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 //
 uint32x4_t test_vminq_x_s32(uint32x4_t a, uint32x4_t b, mve_pred16_t p)

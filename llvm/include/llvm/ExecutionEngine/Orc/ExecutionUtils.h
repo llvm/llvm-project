@@ -304,7 +304,7 @@ public:
   Load(ObjectLayer &L, const char *FileName);
 
   /// Try to create a StaticLibrarySearchGenerator from the given memory buffer.
-  /// Thhis call will succeed if the buffer contains a valid archive, otherwise
+  /// This call will succeed if the buffer contains a valid archive, otherwise
   /// it will return an error.
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer);

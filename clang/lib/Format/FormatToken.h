@@ -407,7 +407,7 @@ struct FormatToken {
   bool isMemberAccess() const {
     return isOneOf(tok::arrow, tok::period, tok::arrowstar) &&
            !isOneOf(TT_DesignatedInitializerPeriod, TT_TrailingReturnArrow,
-                    TT_LambdaArrow);
+                    TT_LambdaArrow, TT_LeadingJavaAnnotation);
   }
 
   bool isUnaryOperator() const {

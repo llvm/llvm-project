@@ -63,8 +63,9 @@ bool RISCVInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
   return false;
 }
 
-void RISCVInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
-                                 StringRef Annot, const MCSubtargetInfo &STI) {
+void RISCVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
+                                 StringRef Annot, const MCSubtargetInfo &STI,
+                                 raw_ostream &O) {
   bool Res = false;
   const MCInst *NewMI = MI;
   MCInst UncompressedMI;
@@ -73,7 +74,7 @@ void RISCVInstPrinter::printInst(const MCInst *MI, raw_ostream &O,
   if (Res)
     NewMI = const_cast<MCInst *>(&UncompressedMI);
   if (NoAliases || !printAliasInstr(NewMI, STI, O))
-    printInstruction(NewMI, STI, O);
+    printInstruction(NewMI, Address, STI, O);
   printAnnotation(O, Annot);
 }
 

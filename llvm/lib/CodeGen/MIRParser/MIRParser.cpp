@@ -64,9 +64,12 @@ class MIRParserImpl {
   /// parts.
   bool NoMIRDocuments = false;
 
+  std::function<void(Function &)> ProcessIRFunction;
+
 public:
-  MIRParserImpl(std::unique_ptr<MemoryBuffer> Contents,
-                StringRef Filename, LLVMContext &Context);
+  MIRParserImpl(std::unique_ptr<MemoryBuffer> Contents, StringRef Filename,
+                LLVMContext &Context,
+                std::function<void(Function &)> ProcessIRFunction);
 
   void reportDiagnostic(const SMDiagnostic &Diag);
 
@@ -91,6 +94,9 @@ public:
   ///
   /// Return null if an error occurred.
   std::unique_ptr<Module> parseIRModule();
+
+  /// Create an empty function with the given name.
+  Function *createDummyFunction(StringRef Name, Module &M);
 
   bool parseMachineFunctions(Module &M, MachineModuleInfo &MMI);
 
@@ -163,13 +169,13 @@ static void handleYAMLDiag(const SMDiagnostic &Diag, void *Context) {
 }
 
 MIRParserImpl::MIRParserImpl(std::unique_ptr<MemoryBuffer> Contents,
-                             StringRef Filename, LLVMContext &Context)
+                             StringRef Filename, LLVMContext &Context,
+                             std::function<void(Function &)> Callback)
     : SM(),
-      In(SM.getMemoryBuffer(
-            SM.AddNewSourceBuffer(std::move(Contents), SMLoc()))->getBuffer(),
-            nullptr, handleYAMLDiag, this),
-      Filename(Filename),
-      Context(Context) {
+      In(SM.getMemoryBuffer(SM.AddNewSourceBuffer(std::move(Contents), SMLoc()))
+             ->getBuffer(),
+         nullptr, handleYAMLDiag, this),
+      Filename(Filename), Context(Context), ProcessIRFunction(Callback) {
   In.setContext(&In);
 }
 
@@ -256,14 +262,17 @@ bool MIRParserImpl::parseMachineFunctions(Module &M, MachineModuleInfo &MMI) {
   return false;
 }
 
-/// Create an empty function with the given name.
-static Function *createDummyFunction(StringRef Name, Module &M) {
+Function *MIRParserImpl::createDummyFunction(StringRef Name, Module &M) {
   auto &Context = M.getContext();
   Function *F =
       Function::Create(FunctionType::get(Type::getVoidTy(Context), false),
                        Function::ExternalLinkage, Name, M);
   BasicBlock *BB = BasicBlock::Create(Context, "entry", F);
   new UnreachableInst(Context, BB);
+
+  if (ProcessIRFunction)
+    ProcessIRFunction(*F);
+
   return F;
 }
 
@@ -925,21 +934,23 @@ bool MIRParser::parseMachineFunctions(Module &M, MachineModuleInfo &MMI) {
   return Impl->parseMachineFunctions(M, MMI);
 }
 
-std::unique_ptr<MIRParser> llvm::createMIRParserFromFile(StringRef Filename,
-                                                         SMDiagnostic &Error,
-                                                         LLVMContext &Context) {
+std::unique_ptr<MIRParser> llvm::createMIRParserFromFile(
+    StringRef Filename, SMDiagnostic &Error, LLVMContext &Context,
+    std::function<void(Function &)> ProcessIRFunction) {
   auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename);
   if (std::error_code EC = FileOrErr.getError()) {
     Error = SMDiagnostic(Filename, SourceMgr::DK_Error,
                          "Could not open input file: " + EC.message());
     return nullptr;
   }
-  return createMIRParser(std::move(FileOrErr.get()), Context);
+  return createMIRParser(std::move(FileOrErr.get()), Context,
+                         ProcessIRFunction);
 }
 
 std::unique_ptr<MIRParser>
 llvm::createMIRParser(std::unique_ptr<MemoryBuffer> Contents,
-                      LLVMContext &Context) {
+                      LLVMContext &Context,
+                      std::function<void(Function &)> ProcessIRFunction) {
   auto Filename = Contents->getBufferIdentifier();
   if (Context.shouldDiscardValueNames()) {
     Context.diagnose(DiagnosticInfoMIRParser(
@@ -949,6 +960,6 @@ llvm::createMIRParser(std::unique_ptr<MemoryBuffer> Contents,
             "Can't read MIR with a Context that discards named Values")));
     return nullptr;
   }
-  return std::make_unique<MIRParser>(
-      std::make_unique<MIRParserImpl>(std::move(Contents), Filename, Context));
+  return std::make_unique<MIRParser>(std::make_unique<MIRParserImpl>(
+      std::move(Contents), Filename, Context, ProcessIRFunction));
 }

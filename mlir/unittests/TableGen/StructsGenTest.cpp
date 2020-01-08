@@ -27,12 +27,12 @@ static test::TestStruct getTestStruct(mlir::MLIRContext *context) {
   auto integerType = mlir::IntegerType::get(32, context);
   auto integerAttr = mlir::IntegerAttr::get(integerType, 127);
 
-  auto floatType = mlir::FloatType::getF16(context);
+  auto floatType = mlir::FloatType::getF32(context);
   auto floatAttr = mlir::FloatAttr::get(floatType, 0.25);
 
   auto elementsType = mlir::RankedTensorType::get({2, 3}, integerType);
   auto elementsAttr =
-      mlir::DenseElementsAttr::get(elementsType, {1, 2, 3, 4, 5, 6});
+      mlir::DenseIntElementsAttr::get(elementsType, {1, 2, 3, 4, 5, 6});
 
   return test::TestStruct::get(integerAttr, floatAttr, elementsAttr, context);
 }
@@ -82,6 +82,31 @@ TEST(StructsGenTest, ClassofBadNameFalse) {
   // Add a copy of the first attribute with the wrong Identifier.
   auto wrongId = mlir::Identifier::get("wrong", &context);
   auto wrongAttr = mlir::NamedAttribute(wrongId, expectedValues[0].second);
+  newValues.push_back(wrongAttr);
+
+  auto badDictionary = mlir::DictionaryAttr::get(newValues, &context);
+  ASSERT_FALSE(test::TestStruct::classof(badDictionary));
+}
+
+// Validates that test::TestStruct::classof fails when a NamedAttribute has an
+// incorrect type.
+TEST(StructsGenTest, ClassofBadTypeFalse) {
+  mlir::MLIRContext context;
+  mlir::DictionaryAttr structAttr = getTestStruct(&context);
+  auto expectedValues = structAttr.getValue();
+  ASSERT_EQ(expectedValues.size(), 3u);
+
+  // Create a copy of all but the last NamedAttributes.
+  llvm::SmallVector<mlir::NamedAttribute, 4> newValues(
+      expectedValues.begin(), expectedValues.end() - 1);
+
+  // Add a copy of the last attribute with the wrong type.
+  auto i64Type = mlir::IntegerType::get(64, &context);
+  auto elementsType = mlir::RankedTensorType::get({3}, i64Type);
+  auto elementsAttr =
+      mlir::DenseIntElementsAttr::get(elementsType, ArrayRef<int64_t>{1, 2, 3});
+  mlir::Identifier id = expectedValues.back().first;
+  auto wrongAttr = mlir::NamedAttribute(id, elementsAttr);
   newValues.push_back(wrongAttr);
 
   auto badDictionary = mlir::DictionaryAttr::get(newValues, &context);

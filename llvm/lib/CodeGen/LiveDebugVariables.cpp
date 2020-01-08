@@ -506,7 +506,7 @@ static void printExtendedName(raw_ostream &OS, const DINode *Node,
                               const DILocation *DL) {
   const LLVMContext &Ctx = Node->getContext();
   StringRef Res;
-  unsigned Line;
+  unsigned Line = 0;
   if (const auto *V = dyn_cast<const DILocalVariable>(Node)) {
     Res = V->getName();
     Line = V->getLine();

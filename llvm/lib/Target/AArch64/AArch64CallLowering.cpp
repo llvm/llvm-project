@@ -1000,7 +1000,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
         0));
 
   // Finally we can copy the returned value back into its virtual-register. In
-  // symmetry with the arugments, the physical register must be an
+  // symmetry with the arguments, the physical register must be an
   // implicit-define of the call instruction.
   if (!Info.OrigRet.Ty->isVoidTy()) {
     CCAssignFn *RetAssignFn = TLI.CCAssignFnForReturn(Info.CallConv);

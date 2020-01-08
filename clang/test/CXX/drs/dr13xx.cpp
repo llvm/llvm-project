@@ -348,9 +348,9 @@ namespace dr1388 { // dr1388: 4
   // we know exactly how many arguments correspond to it.
   template<typename T, typename U> struct pair {};
   template<typename ...T> struct tuple { typedef char type; }; // expected-error 0-2{{C++11}}
-  template<typename ...T, typename ...U> void f_pair_1(pair<T, U>..., int); // expected-error 0-2{{C++11}} expected-note {{different lengths (2 vs. 0)}}
+  template<typename ...T, typename ...U> void f_pair_1(pair<T, U>..., int); // expected-error 0-2{{C++11}} expected-note {{[with T = <int, long>]: deduced incomplete pack <(no value), (no value)> for template parameter 'U'}}
   template<typename ...T, typename U> void f_pair_2(pair<T, char>..., U); // expected-error 0-2{{C++11}}
-  template<typename ...T, typename ...U> void f_pair_3(pair<T, U>..., tuple<U...>); // expected-error 0-2{{C++11}} expected-note {{different lengths (2 vs. 1)}}
+  template<typename ...T, typename ...U> void f_pair_3(pair<T, U>..., tuple<U...>); // expected-error 0-2{{C++11}} expected-note {{deduced packs of different lengths for parameter 'U' (<(no value), (no value)> vs. <char>)}}
   template<typename ...T> void f_pair_4(pair<T, char>..., T...); // expected-error 0-2{{C++11}} expected-note {{<int, long> vs. <int, long, const char *>}}
   void g(pair<int, char> a, pair<long, char> b, tuple<char, char> c) {
     f_pair_1<int, long>(a, b, 0); // expected-error {{no match}}

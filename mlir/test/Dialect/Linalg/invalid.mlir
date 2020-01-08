@@ -482,3 +482,49 @@ func @generic_fun_result_0_element_type(%arg0: memref<?xf32>) {
 
 // expected-error @+1 {{expected valid keyword}}
 !invalid_type = type !linalg<"?">
+
+// -----
+
+func @reshape(%arg0: memref<f32>) {
+  // expected-error @+1 {{expected non-zero memref ranks}}
+  %0 = linalg.reshape %arg0 [()->(0)] : memref<f32> into memref<f32>
+}
+
+// -----
+
+func @reshape(%arg0: memref<?xf32>) {
+  // expected-error @+1 {{expected to collapse or expand dims}}
+  %0 = linalg.reshape %arg0 [(i)->(i)] : memref<?xf32> into memref<?xf32>
+}
+
+// -----
+
+func @reshape(%arg0: memref<?x?x?xf32>) {
+  // expected-error @+1 {{expected rank of the collapsed view(2) to be the number of reassociation maps(1)}}
+  %0 = linalg.reshape %arg0 [(i, j, k) -> (i, j)] :
+    memref<?x?x?xf32> into memref<?x?xf32, offset: 0, strides: [?, 1]>
+}
+
+// -----
+
+func @reshape(%arg0: memref<?x?x?xf32>) {
+  // expected-error @+1 {{expected reassociation map #0 of same rank as expanded memref(3), but got 1}}
+  %0 = linalg.reshape %arg0 [(i) -> (i), (i, j, k) -> (k)] :
+    memref<?x?x?xf32> into memref<?x?xf32, offset: 0, strides: [?, 1]>
+}
+
+// -----
+
+func @reshape(%arg0: memref<?x?x?xf32>) {
+  // expected-error @+1 {{expected reassociation map #1 to be valid and contiguous}}
+  %0 = linalg.reshape %arg0 [(i, j, k) -> (i, j), (i, j, k) -> (k, j)] :
+    memref<?x?x?xf32> into memref<?x?xf32, offset: 0, strides: [?, 1]>
+}
+
+// -----
+
+func @reshape(%arg0: memref<?x?x?xf32>) {
+  // expected-error @+1 {{expected collapsed type to be 'memref<?x?xf32>', but got 'memref<?x?xf32, (d0, d1)[s0] -> (d0 * s0 + d1)>'}}
+  %0 = linalg.reshape %arg0 [(i, j, k) -> (i, j), (i, j, k) -> (k)] :
+    memref<?x?x?xf32> into memref<?x?xf32, (d0, d1)[s0] -> (d0 * s0 + d1)>
+}

@@ -335,6 +335,14 @@ TEST_F(FormatTestJava, Annotations) {
   verifyFormat("@Annotation(\"Some\"\n"
                "    + \" text\")\n"
                "List<Integer> list;");
+
+  verifyFormat(
+    "@Test\n"
+    "@Feature({\"Android-TabSwitcher\"})\n"
+    "@CommandLineFlags.Add({ChromeSwitches.DISABLE_FIRST_RUN_EXPERIENCE})\n"
+    "@Features.EnableFeatures({FEATURE})\n"
+    "public void test(@Foo.bar(\"baz\") @Quux.Qoob int theFirstParaaaaam,\n"
+    "    @Foo.bar(\"baz\") @Quux.Qoob int theSecondParaaaaaaaaaaaaaaaam) {}");
 }
 
 TEST_F(FormatTestJava, Generics) {

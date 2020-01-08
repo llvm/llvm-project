@@ -40,6 +40,10 @@ public:
                                     const APInt &DemandedElts,
                                     unsigned Depth = 0);
 
+  unsigned computeNumSignBits(Register R, const APInt &DemandedElts,
+                              unsigned Depth = 0);
+  unsigned computeNumSignBits(Register R, unsigned Depth = 0);
+
   // KnownBitsAPI
   KnownBits getKnownBits(Register R);
   // Calls getKnownBits for first operand def of MI.

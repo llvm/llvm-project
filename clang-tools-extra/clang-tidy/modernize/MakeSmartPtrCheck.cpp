@@ -376,7 +376,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
         //   struct S { S(std::initializer_list<int>); };
         //   struct S2 { S2(S, int); };
         //   smart_ptr<S>(new S{1, 2, 3});  // C++11 direct list-initialization
-        //   smart_ptr<S>(new S{});  // use initializer-list consturctor
+        //   smart_ptr<S>(new S{});  // use initializer-list constructor
         //   smart_ptr<S2>()new S2{ {1,2}, 3 }; // have a list-initialized arg
         // The above cases have to be replaced with:
         //   std::make_smart_ptr<S>(std::initializer_list<int>({1, 2, 3}));

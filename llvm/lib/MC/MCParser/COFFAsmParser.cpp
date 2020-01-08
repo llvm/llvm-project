@@ -144,7 +144,7 @@ public:
   COFFAsmParser() = default;
 };
 
-} // end annonomous namespace.
+} // end anonymous namespace.
 
 static SectionKind computeSectionKind(unsigned Flags) {
   if (Flags & COFF::IMAGE_SCN_MEM_EXECUTE)

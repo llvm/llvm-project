@@ -82,15 +82,18 @@ bool RegisterBankInfo::verify(const TargetRegisterInfo &TRI) const {
 const RegisterBank *
 RegisterBankInfo::getRegBank(Register Reg, const MachineRegisterInfo &MRI,
                              const TargetRegisterInfo &TRI) const {
-  if (Register::isPhysicalRegister(Reg))
-    return &getRegBankFromRegClass(getMinimalPhysRegClass(Reg, TRI));
+  if (Register::isPhysicalRegister(Reg)) {
+    // FIXME: This was probably a copy to a virtual register that does have a
+    // type we could use.
+    return &getRegBankFromRegClass(getMinimalPhysRegClass(Reg, TRI), LLT());
+  }
 
   assert(Reg && "NoRegister does not have a register bank");
   const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
   if (auto *RB = RegClassOrBank.dyn_cast<const RegisterBank *>())
     return RB;
   if (auto *RC = RegClassOrBank.dyn_cast<const TargetRegisterClass *>())
-    return &getRegBankFromRegClass(*RC);
+    return &getRegBankFromRegClass(*RC, MRI.getType(Reg));
   return nullptr;
 }
 
@@ -108,15 +111,18 @@ RegisterBankInfo::getMinimalPhysRegClass(Register Reg,
 
 const RegisterBank *RegisterBankInfo::getRegBankFromConstraints(
     const MachineInstr &MI, unsigned OpIdx, const TargetInstrInfo &TII,
-    const TargetRegisterInfo &TRI) const {
+    const MachineRegisterInfo &MRI) const {
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+
   // The mapping of the registers may be available via the
   // register class constraints.
-  const TargetRegisterClass *RC = MI.getRegClassConstraint(OpIdx, &TII, &TRI);
+  const TargetRegisterClass *RC = MI.getRegClassConstraint(OpIdx, &TII, TRI);
 
   if (!RC)
     return nullptr;
 
-  const RegisterBank &RegBank = getRegBankFromRegClass(*RC);
+  Register Reg = MI.getOperand(OpIdx).getReg();
+  const RegisterBank &RegBank = getRegBankFromRegClass(*RC, MRI.getType(Reg));
   // Sanity check that the target properly implemented getRegBankFromRegClass.
   assert(RegBank.covers(*RC) &&
          "The mapping of the register bank does not make sense");
@@ -195,7 +201,7 @@ RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
     if (!CurRegBank) {
       // If this is a target specific instruction, we can deduce
       // the register bank from the encoding constraints.
-      CurRegBank = getRegBankFromConstraints(MI, OpIdx, TII, TRI);
+      CurRegBank = getRegBankFromConstraints(MI, OpIdx, TII, MRI);
       if (!CurRegBank) {
         // All our attempts failed, give up.
         CompleteMapping = false;

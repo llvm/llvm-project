@@ -20,7 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
@@ -208,6 +208,10 @@ namespace llvm {
 
 /* A bunch of private, handy routines.  */
 
+static inline Error createError(const Twine &Err) {
+  return make_error<StringError>(Err, inconvertibleErrorCode());
+}
+
 static inline unsigned int
 partCountForBits(unsigned int bits)
 {
@@ -226,9 +230,8 @@ decDigitValue(unsigned int c)
 
    If the exponent overflows, returns a large exponent with the
    appropriate sign.  */
-static int
-readExponent(StringRef::iterator begin, StringRef::iterator end)
-{
+static Expected<int> readExponent(StringRef::iterator begin,
+                                  StringRef::iterator end) {
   bool isNegative;
   unsigned int absExponent;
   const unsigned int overlargeExponent = 24000;  /* FIXME.  */
@@ -242,28 +245,27 @@ readExponent(StringRef::iterator begin, StringRef::iterator end)
   isNegative = (*p == '-');
   if (*p == '-' || *p == '+') {
     p++;
-    assert(p != end && "Exponent has no digits");
+    if (p == end)
+      return createError("Exponent has no digits");
   }
 
   absExponent = decDigitValue(*p++);
-  assert(absExponent < 10U && "Invalid character in exponent");
+  if (absExponent >= 10U)
+    return createError("Invalid character in exponent");
 
   for (; p != end; ++p) {
     unsigned int value;
 
     value = decDigitValue(*p);
-    assert(value < 10U && "Invalid character in exponent");
+    if (value >= 10U)
+      return createError("Invalid character in exponent");
 
-    value += absExponent * 10;
+    absExponent = absExponent * 10U + value;
     if (absExponent >= overlargeExponent) {
       absExponent = overlargeExponent;
-      p = end;  /* outwit assert below */
       break;
     }
-    absExponent = value;
   }
-
-  assert(p == end && "Invalid exponent in exponent");
 
   if (isNegative)
     return -(int) absExponent;
@@ -273,20 +275,21 @@ readExponent(StringRef::iterator begin, StringRef::iterator end)
 
 /* This is ugly and needs cleaning up, but I don't immediately see
    how whilst remaining safe.  */
-static int
-totalExponent(StringRef::iterator p, StringRef::iterator end,
-              int exponentAdjustment)
-{
+static Expected<int> totalExponent(StringRef::iterator p,
+                                   StringRef::iterator end,
+                                   int exponentAdjustment) {
   int unsignedExponent;
   bool negative, overflow;
   int exponent = 0;
 
-  assert(p != end && "Exponent has no digits");
+  if (p == end)
+    return createError("Exponent has no digits");
 
   negative = *p == '-';
   if (*p == '-' || *p == '+') {
     p++;
-    assert(p != end && "Exponent has no digits");
+    if (p == end)
+      return createError("Exponent has no digits");
   }
 
   unsignedExponent = 0;
@@ -295,7 +298,8 @@ totalExponent(StringRef::iterator p, StringRef::iterator end,
     unsigned int value;
 
     value = decDigitValue(*p);
-    assert(value < 10U && "Invalid character in exponent");
+    if (value >= 10U)
+      return createError("Invalid character in exponent");
 
     unsignedExponent = unsignedExponent * 10 + value;
     if (unsignedExponent > 32767) {
@@ -322,10 +326,9 @@ totalExponent(StringRef::iterator p, StringRef::iterator end,
   return exponent;
 }
 
-static StringRef::iterator
+static Expected<StringRef::iterator>
 skipLeadingZeroesAndAnyDot(StringRef::iterator begin, StringRef::iterator end,
-                           StringRef::iterator *dot)
-{
+                           StringRef::iterator *dot) {
   StringRef::iterator p = begin;
   *dot = end;
   while (p != end && *p == '0')
@@ -334,7 +337,8 @@ skipLeadingZeroesAndAnyDot(StringRef::iterator begin, StringRef::iterator end,
   if (p != end && *p == '.') {
     *dot = p++;
 
-    assert(end - begin != 1 && "Significand has no digits");
+    if (end - begin == 1)
+      return createError("Significand has no digits");
 
     while (p != end && *p == '0')
       p++;
@@ -363,12 +367,14 @@ struct decimalInfo {
   int normalizedExponent;
 };
 
-static void
-interpretDecimal(StringRef::iterator begin, StringRef::iterator end,
-                 decimalInfo *D)
-{
+static Error interpretDecimal(StringRef::iterator begin,
+                              StringRef::iterator end, decimalInfo *D) {
   StringRef::iterator dot = end;
-  StringRef::iterator p = skipLeadingZeroesAndAnyDot (begin, end, &dot);
+
+  auto PtrOrErr = skipLeadingZeroesAndAnyDot(begin, end, &dot);
+  if (!PtrOrErr)
+    return PtrOrErr.takeError();
+  StringRef::iterator p = *PtrOrErr;
 
   D->firstSigDigit = p;
   D->exponent = 0;
@@ -376,7 +382,8 @@ interpretDecimal(StringRef::iterator begin, StringRef::iterator end,
 
   for (; p != end; ++p) {
     if (*p == '.') {
-      assert(dot == end && "String contains multiple dots");
+      if (dot != end)
+        return createError("String contains multiple dots");
       dot = p++;
       if (p == end)
         break;
@@ -386,12 +393,18 @@ interpretDecimal(StringRef::iterator begin, StringRef::iterator end,
   }
 
   if (p != end) {
-    assert((*p == 'e' || *p == 'E') && "Invalid character in significand");
-    assert(p != begin && "Significand has no digits");
-    assert((dot == end || p - begin != 1) && "Significand has no digits");
+    if (*p != 'e' && *p != 'E')
+      return createError("Invalid character in significand");
+    if (p == begin)
+      return createError("Significand has no digits");
+    if (dot != end && p - begin == 1)
+      return createError("Significand has no digits");
 
     /* p points to the first non-digit in the string */
-    D->exponent = readExponent(p + 1, end);
+    auto ExpOrErr = readExponent(p + 1, end);
+    if (!ExpOrErr)
+      return ExpOrErr.takeError();
+    D->exponent = *ExpOrErr;
 
     /* Implied decimal point?  */
     if (dot == end)
@@ -417,15 +430,15 @@ interpretDecimal(StringRef::iterator begin, StringRef::iterator end,
   }
 
   D->lastSigDigit = p;
+  return Error::success();
 }
 
 /* Return the trailing fraction of a hexadecimal number.
    DIGITVALUE is the first hex digit of the fraction, P points to
    the next digit.  */
-static lostFraction
+static Expected<lostFraction>
 trailingHexadecimalFraction(StringRef::iterator p, StringRef::iterator end,
-                            unsigned int digitValue)
-{
+                            unsigned int digitValue) {
   unsigned int hexDigit;
 
   /* If the first trailing digit isn't 0 or 8 we can work out the
@@ -439,7 +452,8 @@ trailingHexadecimalFraction(StringRef::iterator p, StringRef::iterator end,
   while (p != end && (*p == '0' || *p == '.'))
     p++;
 
-  assert(p != end && "Invalid trailing hexadecimal fraction!");
+  if (p == end)
+    return createError("Invalid trailing hexadecimal fraction!");
 
   hexDigit = hexDigitValue(*p);
 
@@ -978,7 +992,7 @@ IEEEFloat::integerPart IEEEFloat::subtractSignificand(const IEEEFloat &rhs,
    on to the full-precision result of the multiplication.  Returns the
    lost fraction.  */
 lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs,
-                                            const IEEEFloat *addend) {
+                                            IEEEFloat addend) {
   unsigned int omsb;        // One, not zero, based MSB.
   unsigned int partsCount, newPartsCount, precision;
   integerPart *lhsSignificand;
@@ -1022,7 +1036,7 @@ lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs,
   // toward left by two bits, and adjust exponent accordingly.
   exponent += 2;
 
-  if (addend && addend->isNonZero()) {
+  if (addend.isNonZero()) {
     // The intermediate result of the multiplication has "2 * precision"
     // signicant bit; adjust the addend to be consistent with mul result.
     //
@@ -1051,7 +1065,10 @@ lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs,
       significand.parts = fullSignificand;
     semantics = &extendedSemantics;
 
-    IEEEFloat extendedAddend(*addend);
+    // Make a copy so we can convert it to the extended semantics.
+    // Note that we cannot convert the addend directly, as the extendedSemantics
+    // is a local variable (which we take a reference to).
+    IEEEFloat extendedAddend(addend);
     status = extendedAddend.convert(extendedSemantics, rmTowardZero, &ignored);
     assert(status == opOK);
     (void)status;
@@ -1104,6 +1121,10 @@ lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs,
     delete [] fullSignificand;
 
   return lost_fraction;
+}
+
+lostFraction IEEEFloat::multiplySignificand(const IEEEFloat &rhs) {
+  return multiplySignificand(rhs, IEEEFloat(*semantics));
 }
 
 /* Multiply the significands of LHS and RHS to DST.  */
@@ -1711,7 +1732,7 @@ IEEEFloat::opStatus IEEEFloat::multiply(const IEEEFloat &rhs,
   fs = multiplySpecials(rhs);
 
   if (isFiniteNonZero()) {
-    lostFraction lost_fraction = multiplySignificand(rhs, nullptr);
+    lostFraction lost_fraction = multiplySignificand(rhs);
     fs = normalize(rounding_mode, lost_fraction);
     if (lost_fraction != lfExactlyZero)
       fs = (opStatus) (fs | opInexact);
@@ -1812,7 +1833,7 @@ IEEEFloat::opStatus IEEEFloat::fusedMultiplyAdd(const IEEEFloat &multiplicand,
       addend.isFinite()) {
     lostFraction lost_fraction;
 
-    lost_fraction = multiplySignificand(multiplicand, &addend);
+    lost_fraction = multiplySignificand(multiplicand, addend);
     fs = normalize(rounding_mode, lost_fraction);
     if (lost_fraction != lfExactlyZero)
       fs = (opStatus) (fs | opInexact);
@@ -2299,7 +2320,7 @@ IEEEFloat::convertFromZeroExtendedInteger(const integerPart *parts,
   return convertFromUnsignedParts(api.getRawData(), partCount, rounding_mode);
 }
 
-IEEEFloat::opStatus
+Expected<IEEEFloat::opStatus>
 IEEEFloat::convertFromHexadecimalString(StringRef s,
                                         roundingMode rounding_mode) {
   lostFraction lost_fraction = lfExactlyZero;
@@ -2317,14 +2338,18 @@ IEEEFloat::convertFromHexadecimalString(StringRef s,
   StringRef::iterator begin = s.begin();
   StringRef::iterator end = s.end();
   StringRef::iterator dot;
-  StringRef::iterator p = skipLeadingZeroesAndAnyDot(begin, end, &dot);
+  auto PtrOrErr = skipLeadingZeroesAndAnyDot(begin, end, &dot);
+  if (!PtrOrErr)
+    return PtrOrErr.takeError();
+  StringRef::iterator p = *PtrOrErr;
   StringRef::iterator firstSignificantDigit = p;
 
   while (p != end) {
     integerPart hex_value;
 
     if (*p == '.') {
-      assert(dot == end && "String contains multiple dots");
+      if (dot != end)
+        return createError("String contains multiple dots");
       dot = p++;
       continue;
     }
@@ -2341,16 +2366,23 @@ IEEEFloat::convertFromHexadecimalString(StringRef s,
       hex_value <<= bitPos % integerPartWidth;
       significand[bitPos / integerPartWidth] |= hex_value;
     } else if (!computedTrailingFraction) {
-      lost_fraction = trailingHexadecimalFraction(p, end, hex_value);
+      auto FractOrErr = trailingHexadecimalFraction(p, end, hex_value);
+      if (!FractOrErr)
+        return FractOrErr.takeError();
+      lost_fraction = *FractOrErr;
       computedTrailingFraction = true;
     }
   }
 
   /* Hex floats require an exponent but not a hexadecimal point.  */
-  assert(p != end && "Hex strings require an exponent");
-  assert((*p == 'p' || *p == 'P') && "Invalid character in significand");
-  assert(p != begin && "Significand has no digits");
-  assert((dot == end || p - begin != 1) && "Significand has no digits");
+  if (p == end)
+    return createError("Hex strings require an exponent");
+  if (*p != 'p' && *p != 'P')
+    return createError("Invalid character in significand");
+  if (p == begin)
+    return createError("Significand has no digits");
+  if (dot != end && p - begin == 1)
+    return createError("Significand has no digits");
 
   /* Ignore the exponent if we are zero.  */
   if (p != firstSignificantDigit) {
@@ -2373,7 +2405,10 @@ IEEEFloat::convertFromHexadecimalString(StringRef s,
     expAdjustment -= partsCount * integerPartWidth;
 
     /* Adjust for the given exponent.  */
-    exponent = totalExponent(p + 1, end, expAdjustment);
+    auto ExpOrErr = totalExponent(p + 1, end, expAdjustment);
+    if (!ExpOrErr)
+      return ExpOrErr.takeError();
+    exponent = *ExpOrErr;
   }
 
   return normalize(rounding_mode, lost_fraction);
@@ -2421,7 +2456,7 @@ IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
 
     if (exp >= 0) {
       /* multiplySignificand leaves the precision-th bit set to 1.  */
-      calcLostFraction = decSig.multiplySignificand(pow5, nullptr);
+      calcLostFraction = decSig.multiplySignificand(pow5);
       powHUerr = powStatus != opOK;
     } else {
       calcLostFraction = decSig.divideSignificand(pow5);
@@ -2464,14 +2499,15 @@ IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
   }
 }
 
-IEEEFloat::opStatus
+Expected<IEEEFloat::opStatus>
 IEEEFloat::convertFromDecimalString(StringRef str, roundingMode rounding_mode) {
   decimalInfo D;
   opStatus fs;
 
   /* Scan the text.  */
   StringRef::iterator p = str.begin();
-  interpretDecimal(p, str.end(), &D);
+  if (Error Err = interpretDecimal(p, str.end(), &D))
+    return std::move(Err);
 
   /* Handle the quick cases.  First the case of no significant digits,
      i.e. zero, and then exponents that are obviously too large or too
@@ -2554,7 +2590,10 @@ IEEEFloat::convertFromDecimalString(StringRef str, roundingMode rounding_mode) {
           }
         }
         decValue = decDigitValue(*p++);
-        assert(decValue < 10U && "Invalid character in significand");
+        if (decValue >= 10U) {
+          delete[] decSignificand;
+          return createError("Invalid character in significand");
+        }
         multiplier *= 10;
         val = val * 10 + decValue;
         /* The maximum number that can be multiplied by ten with any
@@ -2605,9 +2644,10 @@ bool IEEEFloat::convertFromStringSpecials(StringRef str) {
   return false;
 }
 
-IEEEFloat::opStatus IEEEFloat::convertFromString(StringRef str,
-                                                 roundingMode rounding_mode) {
-  assert(!str.empty() && "Invalid string length");
+Expected<IEEEFloat::opStatus>
+IEEEFloat::convertFromString(StringRef str, roundingMode rounding_mode) {
+  if (str.empty())
+    return createError("Invalid string length");
 
   // Handle special cases.
   if (convertFromStringSpecials(str))
@@ -2620,11 +2660,13 @@ IEEEFloat::opStatus IEEEFloat::convertFromString(StringRef str,
   if (*p == '-' || *p == '+') {
     p++;
     slen--;
-    assert(slen && "String has no digits");
+    if (!slen)
+      return createError("String has no digits");
   }
 
   if (slen >= 2 && p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) {
-    assert(slen - 2 && "Invalid string");
+    if (slen == 2)
+      return createError("Invalid string");
     return convertFromHexadecimalString(StringRef(p + 2, slen - 2),
                                         rounding_mode);
   }
@@ -4312,8 +4354,8 @@ APInt DoubleAPFloat::bitcastToAPInt() const {
   return APInt(128, 2, Data);
 }
 
-APFloat::opStatus DoubleAPFloat::convertFromString(StringRef S,
-                                                   roundingMode RM) {
+Expected<APFloat::opStatus> DoubleAPFloat::convertFromString(StringRef S,
+                                                             roundingMode RM) {
   assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
   APFloat Tmp(semPPCDoubleDoubleLegacy);
   auto Ret = Tmp.convertFromString(S, RM);
@@ -4460,7 +4502,8 @@ APFloat::Storage::Storage(IEEEFloat F, const fltSemantics &Semantics) {
   llvm_unreachable("Unexpected semantics");
 }
 
-APFloat::opStatus APFloat::convertFromString(StringRef Str, roundingMode RM) {
+Expected<APFloat::opStatus> APFloat::convertFromString(StringRef Str,
+                                                       roundingMode RM) {
   APFLOAT_DISPATCH_ON_SEMANTICS(convertFromString(Str, RM));
 }
 
@@ -4474,7 +4517,10 @@ hash_code hash_value(const APFloat &Arg) {
 
 APFloat::APFloat(const fltSemantics &Semantics, StringRef S)
     : APFloat(Semantics) {
-  convertFromString(S, rmNearestTiesToEven);
+  auto StatusOrErr = convertFromString(S, rmNearestTiesToEven);
+  if (!StatusOrErr) {
+    assert(false && "Invalid floating point representation");
+  }
 }
 
 APFloat::opStatus APFloat::convert(const fltSemantics &ToSemantics,

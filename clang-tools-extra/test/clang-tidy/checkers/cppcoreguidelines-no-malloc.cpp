@@ -37,6 +37,6 @@ void arbitrary_call() {
   // we dont want every function to raise the warning even if malloc is in the name
   malloced_array(); // OK(2)
 
-  // completly unrelated function call to malloc
+  // completely unrelated function call to malloc
   newed_array(); // OK(3)
 }

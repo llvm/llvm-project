@@ -244,7 +244,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     S32, S64, S16, V2S16
   };
 
-  setAction({G_BRCOND, S1}, Legal);
+  setAction({G_BRCOND, S1}, Legal); // VCC branches
+  setAction({G_BRCOND, S32}, Legal); // SCC branches
 
   // TODO: All multiples of 32, vectors of pointers, all v2s16 pairs, more
   // elements for v3s16
@@ -272,6 +273,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
   }
 
+  // FIXME: Not really legal. Placeholder for custom lowering.
+  getActionDefinitionsBuilder({G_SDIV, G_UDIV, G_SREM, G_UREM})
+    .legalFor({S32, S64})
+    .clampScalar(0, S32, S64)
+    .widenScalarToNextPow2(0, 32)
+    .scalarize(0);
+
   getActionDefinitionsBuilder({G_UMULH, G_SMULH})
     .legalFor({S32})
     .clampScalar(0, S32, S32)
@@ -289,7 +297,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder({G_UADDO, G_USUBO,
                                G_UADDE, G_SADDE, G_USUBE, G_SSUBE})
-    .legalFor({{S32, S1}})
+    .legalFor({{S32, S1}, {S32, S32}})
     .clampScalar(0, S32, S32)
     .scalarize(0); // TODO: Implement.
 
@@ -464,8 +472,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        .scalarize(0);
 
   getActionDefinitionsBuilder(G_INTRINSIC_ROUND)
-    .legalFor({S32, S64})
-    .scalarize(0);
+    .scalarize(0)
+    .lower();
 
   if (ST.has16BitInsts()) {
     getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FCEIL, G_FRINT})
@@ -498,9 +506,20 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   auto &CmpBuilder =
     getActionDefinitionsBuilder(G_ICMP)
+    // The compare output type differs based on the register bank of the output,
+    // so make both s1 and s32 legal.
+    //
+    // Scalar compares producing output in scc will be promoted to s32, as that
+    // is the allocatable register type that will be needed for the copy from
+    // scc. This will be promoted during RegBankSelect, and we assume something
+    // before that won't try to use s32 result types.
+    //
+    // Vector compares producing an output in vcc/SGPR will use s1 in VCC reg
+    // bank.
     .legalForCartesianProduct(
       {S1}, {S32, S64, GlobalPtr, LocalPtr, ConstantPtr, PrivatePtr, FlatPtr})
-    .legalFor({{S1, S32}, {S1, S64}});
+    .legalForCartesianProduct(
+      {S32}, {S32, S64, GlobalPtr, LocalPtr, ConstantPtr, PrivatePtr, FlatPtr});
   if (ST.has16BitInsts()) {
     CmpBuilder.legalFor({{S1, S16}});
   }
@@ -509,7 +528,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .widenScalarToNextPow2(1)
     .clampScalar(1, S32, S64)
     .scalarize(0)
-    .legalIf(all(typeIs(0, S1), isPointer(1)));
+    .legalIf(all(typeInSet(0, {S1, S32}), isPointer(1)));
 
   getActionDefinitionsBuilder(G_FCMP)
     .legalForCartesianProduct({S1}, ST.has16BitInsts() ? FPTypes16 : FPTypesBase)
@@ -646,6 +665,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     // Split vector extloads.
     unsigned MemSize = Query.MMODescrs[0].SizeInBits;
+    unsigned Align = Query.MMODescrs[0].AlignInBits;
+
+    if (MemSize < DstTy.getSizeInBits())
+      MemSize = std::max(MemSize, Align);
+
     if (DstTy.isVector() && DstTy.getSizeInBits() > MemSize)
       return true;
 
@@ -660,7 +684,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     if (NumRegs == 3 && !ST.hasDwordx3LoadStores())
       return true;
 
-    unsigned Align = Query.MMODescrs[0].AlignInBits;
     if (Align < MemSize) {
       const SITargetLowering *TLI = ST.getTargetLowering();
       return !TLI->allowsMisalignedMemoryAccessesImpl(MemSize, AS, Align / 8);
@@ -802,13 +825,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           unsigned MemSize = Query.MMODescrs[0].SizeInBits;
           unsigned Align = Query.MMODescrs[0].AlignInBits;
 
-          // No extending vector loads.
-          if (Size > MemSize && Ty0.isVector())
-            return false;
-
           // FIXME: Widening store from alignment not valid.
           if (MemSize < Size)
             MemSize = std::max(MemSize, Align);
+
+          // No extending vector loads.
+          if (Size > MemSize && Ty0.isVector())
+            return false;
 
           switch (MemSize) {
           case 8:
@@ -877,10 +900,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .lower();
 
   // TODO: Pointer types, any 32-bit or 64-bit vector
+
+  // Condition should be s32 for scalar, s1 for vector.
   getActionDefinitionsBuilder(G_SELECT)
     .legalForCartesianProduct({S32, S64, S16, V2S32, V2S16, V4S16,
           GlobalPtr, LocalPtr, FlatPtr, PrivatePtr,
-          LLT::vector(2, LocalPtr), LLT::vector(2, PrivatePtr)}, {S1})
+          LLT::vector(2, LocalPtr), LLT::vector(2, PrivatePtr)}, {S1, S32})
     .clampScalar(0, S16, S64)
     .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
     .fewerElementsIf(numElementsNotEven(0), scalarize(0))
@@ -890,7 +915,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampMaxNumElements(0, PrivatePtr, 2)
     .scalarize(0)
     .widenScalarToNextPow2(0)
-    .legalIf(all(isPointer(0), typeIs(1, S1)));
+    .legalIf(all(isPointer(0), typeInSet(1, {S1, S32})));
 
   // TODO: Only the low 4/5/6 bits of the shift amount are observed, so we can
   // be more flexible with the shift amount type.
@@ -1089,6 +1114,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
+
+  getActionDefinitionsBuilder(G_READCYCLECOUNTER)
+    .legalFor({S64});
+
+  getActionDefinitionsBuilder({G_VASTART, G_VAARG, G_BRJT, G_JUMP_TABLE,
+        G_DYN_STACKALLOC, G_INDEXED_LOAD, G_INDEXED_SEXTLOAD,
+        G_INDEXED_ZEXTLOAD, G_INDEXED_STORE})
+    .unsupported();
 
   computeTables();
   verify(*ST.getInstrInfo());

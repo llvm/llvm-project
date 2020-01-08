@@ -304,8 +304,8 @@ void test_const_pointers_abiguous() {
   // CHECK-FIXES: const_ambiguous_function((int*)nullptr);
 }
 
-// Test where the implicit cast to null is surrounded by another implict cast
-// with possible explict casts in-between.
+// Test where the implicit cast to null is surrounded by another implicit cast
+// with possible explicit casts in-between.
 void test_const_pointers() {
   const int *const_p1 = 0;
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: use nullptr

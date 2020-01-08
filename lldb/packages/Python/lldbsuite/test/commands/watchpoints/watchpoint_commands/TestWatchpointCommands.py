@@ -105,24 +105,9 @@ class WatchpointCommandsTestCase(TestBase):
     @expectedFailureAll(archs=['s390x'])
     def test_rw_watchpoint_delete(self):
         """Test delete watchpoint and expect not to stop for watchpoint."""
-        self.build(dictionary=self.d)
-        self.setTearDownCleanup(dictionary=self.d)
-
-        exe = self.getBuildArtifact(self.exe_name)
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
-
-        # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
-        lldbutil.run_break_set_by_file_and_line(
-            self, None, self.line, num_expected_locations=1)
-
-        # Run the program.
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # We should be stopped again due to the breakpoint.
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.build()
+        lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec(self.source),
+                                        self.line)
 
         # Now let's set a read_write-type watchpoint for 'global'.
         # There should be two watchpoint hits (see main.c).
@@ -145,8 +130,28 @@ class WatchpointCommandsTestCase(TestBase):
         # Restore the original setting of auto-confirm.
         self.runCmd("settings clear auto-confirm")
 
-        # Use the '-v' option to do verbose listing of the watchpoint.
-        self.runCmd("watchpoint list -v")
+        target = self.dbg.GetSelectedTarget()
+        self.assertTrue(target and not target.GetNumWatchpoints())
+
+        # Now let's set a read_write-type watchpoint for 'global'.
+        # There should be two watchpoint hits (see main.c).
+        self.expect(
+            "watchpoint set variable -w read_write global",
+            WATCHPOINT_CREATED,
+            substrs=[
+                'Watchpoint created',
+                'size = 4',
+                'type = rw',
+                '%s:%d' %
+                (self.source,
+                 self.decl)])
+
+
+        # Delete the watchpoint immediately using the force option.
+        self.expect("watchpoint delete --force",
+                    substrs=['All watchpoints removed.'])
+
+        self.assertTrue(target and not target.GetNumWatchpoints())
 
         self.runCmd("process continue")
 

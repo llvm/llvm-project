@@ -110,7 +110,7 @@ buffer as only argument."
   nil)
 
 (defun clang-include-fixer--make-process (callback args)
-  "Start a new clang-incude-fixer process using `make-process'.
+  "Start a new clang-include-fixer process using `make-process'.
 CALLBACK is called after the process finishes successfully; it is
 called with a single argument, the buffer where standard output
 has been inserted.  ARGS is a list of additional command line
@@ -129,7 +129,7 @@ arguments.  Return the new process object."
                   :stderr stderr)))
 
 (defun clang-include-fixer--start-process (callback args)
-  "Start a new clang-incude-fixer process using `start-file-process'.
+  "Start a new clang-include-fixer process using `start-file-process'.
 CALLBACK is called after the process finishes successfully; it is
 called with a single argument, the buffer where standard output
 has been inserted.  ARGS is a list of additional command line

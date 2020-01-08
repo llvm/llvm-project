@@ -168,7 +168,7 @@ void TimeSubtractionCheck::check(const MatchFinder::MatchResult &Result) {
         !InsideMacroDefinition(Result, MaybeCallArg->getSourceRange())) {
       // Handle the case where the matched expression is inside a call which
       // converts it from the inverse to a Duration.  In this case, we replace
-      // the outer with just the subtraction expresison, which gives the right
+      // the outer with just the subtraction expression, which gives the right
       // type and scale, taking care again about parenthesis.
       bool NeedParens = parensRequired(Result, MaybeCallArg);
 
