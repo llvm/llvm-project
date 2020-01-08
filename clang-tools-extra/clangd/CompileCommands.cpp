@@ -155,7 +155,9 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd) const {
   if (ResourceDir && !Has("-resource-dir"))
     Cmd.push_back(("-resource-dir=" + *ResourceDir));
 
-  if (Sysroot && !Has("-isysroot")) {
+  // Don't set `-isysroot` if it is already set or if `--sysroot` is set.
+  // `--sysroot` is a superset of the `-isysroot` argument.
+  if (Sysroot && !Has("-isysroot") && !Has("--sysroot")) {
     Cmd.push_back("-isysroot");
     Cmd.push_back(*Sysroot);
   }
