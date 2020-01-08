@@ -22,6 +22,8 @@ constexpr int NumOfCoverageCategories = 12;
 struct PerFunctionStats {
   /// Number of inlined instances of this function.
   unsigned NumFnInlined = 0;
+  /// Number of out-of-line instances of this function.
+  unsigned NumFnOutOfLine = 0;
   /// Number of inlined instances that have abstract origins.
   unsigned NumAbstractOrigins = 0;
   /// Number of variables and parameters with location across all inlined
@@ -33,9 +35,6 @@ struct PerFunctionStats {
   StringSet<> VarsInFunction;
   /// Compile units also cover a PC range, but have this flag set to false.
   bool IsFunction = false;
-  /// Verify function definition has PC addresses (for detecting when
-  /// a function has been inlined everywhere).
-  bool HasPCAddresses = false;
   /// Function has source location information.
   bool HasSourceLocation = false;
   /// Number of function parameters.
@@ -399,16 +398,16 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
       if (Die.find(dwarf::DW_AT_inline))
         return;
       std::string FnID = constructDieID(Die);
-      // We've seen an (inlined) instance of this function.
+      // We've seen an instance of this function.
       auto &FnStats = FnStatMap[FnID];
       FnStats.IsFunction = true;
       if (IsInlinedFunction) {
         FnStats.NumFnInlined++;
         if (Die.findRecursively(dwarf::DW_AT_abstract_origin))
           FnStats.NumAbstractOrigins++;
+      } else {
+        FnStats.NumFnOutOfLine++;
       }
-      if (BytesInThisScope && !IsInlinedFunction)
-        FnStats.HasPCAddresses = true;
       if (Die.findRecursively(dwarf::DW_AT_decl_file) &&
           Die.findRecursively(dwarf::DW_AT_decl_line))
         FnStats.HasSourceLocation = true;
@@ -521,9 +520,10 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   unsigned VarWithLoc = 0;
   for (auto &Entry : Statistics) {
     PerFunctionStats &Stats = Entry.getValue();
-    unsigned TotalVars = Stats.VarsInFunction.size() * Stats.NumFnInlined;
-    // Count variables in concrete out-of-line functions and in global scope.
-    if (Stats.HasPCAddresses || !Stats.IsFunction)
+    unsigned TotalVars = Stats.VarsInFunction.size() *
+                         (Stats.NumFnInlined + Stats.NumFnOutOfLine);
+    // Count variables in global scope.
+    if (!Stats.IsFunction)
       TotalVars += Stats.VarsInFunction.size();
     unsigned Constants = Stats.ConstantMembers;
     VarParamWithLoc += Stats.TotalVarWithLoc + Constants;
