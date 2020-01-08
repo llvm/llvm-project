@@ -1548,6 +1548,13 @@ def int_aarch64_sve_ptrue : AdvSIMD_SVE_PTRUE_Intrinsic;
 
 def int_aarch64_sve_and_z   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_bic_z   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_brka    : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_brka_z  : AdvSIMD_Pred1VectorArg_Intrinsic;
+def int_aarch64_sve_brkb    : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_brkb_z  : AdvSIMD_Pred1VectorArg_Intrinsic;
+def int_aarch64_sve_brkn_z  : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_brkpa_z : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_brkpb_z : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_eor_z   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_nand_z  : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_nor_z   : AdvSIMD_Pred2VectorArg_Intrinsic;
