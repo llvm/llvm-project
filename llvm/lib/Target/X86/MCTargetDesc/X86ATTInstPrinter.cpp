@@ -38,8 +38,9 @@ void X86ATTInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
   OS << markup("<reg:") << '%' << getRegisterName(RegNo) << markup(">");
 }
 
-void X86ATTInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
-                                  StringRef Annot, const MCSubtargetInfo &STI) {
+void X86ATTInstPrinter::printInst(const MCInst *MI, uint64_t Address,
+                                  StringRef Annot, const MCSubtargetInfo &STI,
+                                  raw_ostream &OS) {
   // If verbose assembly is enabled, we can print some informative comments.
   if (CommentStream)
     HasCustomInstComment = EmitAnyX86InstComments(MI, *CommentStream, MII);
@@ -69,7 +70,7 @@ void X86ATTInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
   // Try to print any aliases first.
   else if (!printAliasInstr(MI, OS) &&
            !printVecCompareInstr(MI, OS))
-    printInstruction(MI, OS);
+    printInstruction(MI, Address, OS);
 
   // Next always print the annotation.
   printAnnotation(OS, Annot);

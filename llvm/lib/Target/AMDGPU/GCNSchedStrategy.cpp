@@ -16,6 +16,7 @@
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -389,8 +390,16 @@ void GCNScheduleDAGMILive::schedule() {
   }
 
   if (WavesAfter >= MinOccupancy) {
-    Pressure[RegionIdx] = PressureAfter;
-    return;
+    unsigned TotalVGPRs = AMDGPU::IsaInfo::getAddressableNumVGPRs(&ST);
+    unsigned TotalSGPRs = AMDGPU::IsaInfo::getAddressableNumSGPRs(&ST);
+    if (WavesAfter > MFI.getMinWavesPerEU() ||
+        PressureAfter.less(ST, PressureBefore) ||
+        (TotalVGPRs >= PressureAfter.getVGPRNum() &&
+         TotalSGPRs >= PressureAfter.getSGPRNum())) {
+      Pressure[RegionIdx] = PressureAfter;
+      return;
+    }
+    LLVM_DEBUG(dbgs() << "New pressure will result in more spilling.\n");
   }
 
   LLVM_DEBUG(dbgs() << "Attempting to revert scheduling.\n");

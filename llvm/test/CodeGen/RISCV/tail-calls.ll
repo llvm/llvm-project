@@ -158,6 +158,16 @@ entry:
   ret void
 }
 
+; Do not tail call optimize if disabled.
+define i32 @disable_tail_calls(i32 %i) nounwind "disable-tail-calls"="true" {
+; CHECK-LABEL: disable_tail_calls:
+; CHECK-NOT: tail callee_nostruct
+; CHECK: call callee_tail
+entry:
+  %rv = tail call i32 @callee_tail(i32 %i)
+  ret i32 %rv
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}

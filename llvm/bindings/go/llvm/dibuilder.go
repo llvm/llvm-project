@@ -586,6 +586,11 @@ func (v Value) SetSubprogram(sp Metadata) {
 	C.LLVMSetSubprogram(v.C, sp.C)
 }
 
+func (v Value) Subprogram() (md Metadata) {
+	md.C = C.LLVMGetSubprogram(v.C)
+	return
+}
+
 func boolToCInt(v bool) C.int {
 	if v {
 		return 1

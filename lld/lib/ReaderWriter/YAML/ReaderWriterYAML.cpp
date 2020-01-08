@@ -121,7 +121,7 @@ public:
       StringRef newName = copyString(buffer.str());
       _refNames[&atom] = newName;
       DEBUG_WITH_TYPE("WriterYAML",
-                      llvm::dbgs() << "name collsion: creating ref-name: '"
+                      llvm::dbgs() << "name collision: creating ref-name: '"
                                    << newName << "' ("
                                    << (const void *)newName.data()
                                    << ", " << newName.size() << ")\n");
@@ -135,7 +135,7 @@ public:
         StringRef newName2 = copyString(buffer2.str());
         _refNames[prevAtom] = newName2;
         DEBUG_WITH_TYPE("WriterYAML",
-                        llvm::dbgs() << "name collsion: creating ref-name: '"
+                        llvm::dbgs() << "name collision: creating ref-name: '"
                                      << newName2 << "' ("
                                      << (const void *)newName2.data() << ", "
                                      << newName2.size() << ")\n");

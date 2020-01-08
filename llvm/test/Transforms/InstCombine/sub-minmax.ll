@@ -4,10 +4,9 @@
 define i32 @max_na_b_minux_na(i32 %A, i32 %B) {
 ; CHECK-LABEL: @max_na_b_minux_na(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[L0:%.*]] = icmp ult i32 [[NOT]], [[B:%.*]]
-; CHECK-NEXT:    [[L1:%.*]] = select i1 [[L0]], i32 [[NOT]], i32 [[B]]
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[L1]], [[NOT]]
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[NOT]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %not = xor i32 %A, -1
   %l0 = icmp ult i32 %not, %B
@@ -19,10 +18,8 @@ define i32 @max_na_b_minux_na(i32 %A, i32 %B) {
 define i32 @na_minus_max_na_b(i32 %A, i32 %B) {
 ; CHECK-LABEL: @na_minus_max_na_b(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[L0:%.*]] = icmp ult i32 [[NOT]], [[B:%.*]]
-; CHECK-NEXT:    [[L1:%.*]] = select i1 [[L0]], i32 [[NOT]], i32 [[B]]
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[NOT]], [[L1]]
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[NOT]], i32 [[B:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %not = xor i32 %A, -1
   %l0 = icmp ult i32 %not, %B
@@ -34,10 +31,9 @@ define i32 @na_minus_max_na_b(i32 %A, i32 %B) {
 define i32 @max_b_na_minus_na(i32 %A, i32 %B) {
 ; CHECK-LABEL: @max_b_na_minus_na(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[L0:%.*]] = icmp ugt i32 [[NOT]], [[B:%.*]]
-; CHECK-NEXT:    [[L1:%.*]] = select i1 [[L0]], i32 [[B]], i32 [[NOT]]
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[L1]], [[NOT]]
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[NOT]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %not = xor i32 %A, -1
   %l0 = icmp ugt i32 %not, %B
@@ -49,10 +45,8 @@ define i32 @max_b_na_minus_na(i32 %A, i32 %B) {
 define i32 @na_minus_max_b_na(i32 %A, i32 %B) {
 ; CHECK-LABEL: @na_minus_max_b_na(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[L0:%.*]] = icmp ugt i32 [[NOT]], [[B:%.*]]
-; CHECK-NEXT:    [[L1:%.*]] = select i1 [[L0]], i32 [[B]], i32 [[NOT]]
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[NOT]], [[L1]]
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[NOT]], i32 [[B:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %not = xor i32 %A, -1
   %l0 = icmp ugt i32 %not, %B
@@ -64,10 +58,9 @@ define i32 @na_minus_max_b_na(i32 %A, i32 %B) {
 
 define i32 @max_na_bi_minux_na(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @max_na_bi_minux_na(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A:%.*]], [[BI:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[BI]], i32 [[A]]
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[A]], [[TMP2]]
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[BI:%.*]], i32 [[A:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %B =  xor i32 %Bi, -1
   %not = xor i32 %A, -1
@@ -79,10 +72,8 @@ define i32 @max_na_bi_minux_na(i32 %A, i32 %Bi) {
 
 define i32 @na_minus_max_na_bi(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @na_minus_max_na_bi(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A:%.*]], [[BI:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[BI]], i32 [[A]]
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP2]], [[A]]
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[BI:%.*]], i32 [[A:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %B =  xor i32 %Bi, -1
   %not = xor i32 %A, -1
@@ -94,10 +85,9 @@ define i32 @na_minus_max_na_bi(i32 %A, i32 %Bi) {
 
 define i32 @max_bi_na_minus_na(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @max_bi_na_minus_na(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A:%.*]], [[BI:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[BI]], i32 [[A]]
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[A]], [[TMP2]]
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[BI:%.*]], i32 [[A:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP1]]
+; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   %B =  xor i32 %Bi, -1
   %not = xor i32 %A, -1
@@ -109,10 +99,8 @@ define i32 @max_bi_na_minus_na(i32 %A, i32 %Bi) {
 
 define i32 @na_minus_max_bi_na(i32 %A, i32 %Bi) {
 ; CHECK-LABEL: @na_minus_max_bi_na(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A:%.*]], [[BI:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[BI]], i32 [[A]]
-; CHECK-NEXT:    [[X:%.*]] = sub i32 [[TMP2]], [[A]]
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[BI:%.*]], i32 [[A:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %B =  xor i32 %Bi, -1
   %not = xor i32 %A, -1

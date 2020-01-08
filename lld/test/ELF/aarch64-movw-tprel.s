@@ -4,7 +4,7 @@
 # RUN: llvm-objdump --no-show-raw-insn -d %t | FileCheck %s
 # RUN: llvm-readobj --symbols %t | FileCheck --check-prefix=CHECK-SYM %s
 
-## Test the the local exec relocations that map to:
+## Test the local exec relocations that map to:
 ## R_AARCH64_TLSLE_MOVW_TPREL_G2
 ## R_AARCH64_TLSLE_MOVW_TPREL_G1
 ## R_AARCH64_TLSLE_MOVW_TPREL_G1_NC

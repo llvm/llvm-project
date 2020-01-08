@@ -48,7 +48,7 @@ struct HostInfoBaseFields {
   }
 
   llvm::once_flag m_host_triple_once;
-  std::string m_host_triple;
+  llvm::Triple m_host_triple;
 
   llvm::once_flag m_host_arch_once;
   ArchSpec m_host_arch_32;
@@ -82,10 +82,10 @@ void HostInfoBase::Terminate() {
   g_fields = nullptr;
 }
 
-llvm::StringRef HostInfoBase::GetTargetTriple() {
+llvm::Triple HostInfoBase::GetTargetTriple() {
   llvm::call_once(g_fields->m_host_triple_once, []() {
     g_fields->m_host_triple =
-        HostInfo::GetArchitecture().GetTriple().getTriple();
+        HostInfo::GetArchitecture().GetTriple();
   });
   return g_fields->m_host_triple;
 }

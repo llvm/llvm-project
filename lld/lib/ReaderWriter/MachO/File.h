@@ -135,7 +135,7 @@ public:
     _undefAtoms[name] = atom;
   }
 
-  /// Search this file for an the atom from 'section' that covers
+  /// Search this file for the atom from 'section' that covers
   /// 'offsetInSect'.  Returns nullptr is no atom found.
   MachODefinedAtom *findAtomCoveringAddress(const Section &section,
                                             uint64_t offsetInSect,

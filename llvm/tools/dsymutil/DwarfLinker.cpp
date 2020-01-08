@@ -188,6 +188,30 @@ static bool isTypeTag(uint16_t Tag) {
   return false;
 }
 
+static Error remarksErrorHandler(const DebugMapObject &DMO, DwarfLinker &Linker,
+                                 std::unique_ptr<FileError> FE) {
+  bool IsArchive = DMO.getObjectFilename().endswith(")");
+  // Don't report errors for missing remark files from static
+  // archives.
+  if (!IsArchive)
+    return Error(std::move(FE));
+
+  std::string Message = FE->message();
+  Error E = FE->takeError();
+  Error NewE = handleErrors(std::move(E), [&](std::unique_ptr<ECError> EC) {
+    if (EC->convertToErrorCode() != std::errc::no_such_file_or_directory)
+      return Error(std::move(EC));
+
+    Linker.reportWarning(Message, DMO);
+    return Error(Error::success());
+  });
+
+  if (!NewE)
+    return Error::success();
+
+  return createFileError(FE->getFileName(), std::move(NewE));
+}
+
 bool DwarfLinker::DIECloner::getDIENames(const DWARFDie &Die,
                                          AttributesInfo &Info,
                                          OffsetsStringPool &StringPool,
@@ -2946,9 +2970,15 @@ bool DwarfLinker::link(const DebugMap &Map) {
   auto RemarkLinkLambda = [&](size_t i) {
     // Link remarks from one object file.
     auto &LinkContext = ObjectContexts[i];
-    if (const object::ObjectFile *Obj = LinkContext.ObjectFile)
-      if (Error E = RL.link(*Obj))
-        return E;
+    if (const object::ObjectFile *Obj = LinkContext.ObjectFile) {
+      Error E = RL.link(*Obj);
+      if (Error NewE = handleErrors(
+              std::move(E), [&](std::unique_ptr<FileError> EC) -> Error {
+                return remarksErrorHandler(LinkContext.DMO, *this,
+                                           std::move(EC));
+              }))
+        return NewE;
+    }
     return Error(Error::success());
   };
 

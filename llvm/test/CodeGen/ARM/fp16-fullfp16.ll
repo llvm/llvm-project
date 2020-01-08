@@ -571,7 +571,7 @@ define void @test_fmuladd(half* %p, half* %q, half* %r) {
 ; CHECK:         vldr.16 s0, [r1]
 ; CHECK-NEXT:    vldr.16 s2, [r0]
 ; CHECK-NEXT:    vldr.16 s4, [r2]
-; CHECK-NEXT:    vmla.f16 s4, s2, s0
+; CHECK-NEXT:    vfma.f16 s4, s2, s0
 ; CHECK-NEXT:    vstr.16 s4, [r0]
 ; CHECK-NEXT:    bx lr
   %a = load half, half* %p, align 2

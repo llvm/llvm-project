@@ -6703,7 +6703,7 @@ static void applyMnemonicAliases(StringRef &Mnemonic,
 // omitted. We don't have a way to do that in tablegen, so fix it up here.
 //
 // We have to be careful to not emit an invalid Rt2 here, because the rest of
-// the assmebly parser could then generate confusing diagnostics refering to
+// the assembly parser could then generate confusing diagnostics refering to
 // it. If we do find anything that prevents us from doing the transformation we
 // bail out, and let the assembly parser report an error on the instruction as
 // it is written.

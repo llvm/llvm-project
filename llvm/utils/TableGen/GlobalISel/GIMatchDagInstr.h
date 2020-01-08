@@ -74,6 +74,7 @@ public:
 
   const GIMatchDagOperandList &getOperandInfo() const { return OperandInfo; }
   StringRef getName() const { return Name; }
+  StringRef getUserAssignedName() const { return UserAssignedName; }
   void assignNameToOperand(unsigned Idx, StringRef Name) {
     assert(UserAssignedNamesForOperands[Idx].empty() && "Cannot assign twice");
     UserAssignedNamesForOperands[Idx] = Name;

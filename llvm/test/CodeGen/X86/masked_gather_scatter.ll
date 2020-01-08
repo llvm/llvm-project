@@ -458,7 +458,7 @@ define <16 x i32> @test8(<16 x i32*> %ptr.random, <16 x i32> %ind, i16 %mask) {
 %struct.RT = type { i8, [10 x [20 x i32]], i8 }
 %struct.ST = type { i32, double, %struct.RT }
 
-; Masked gather for agregate types
+; Masked gather for aggregate types
 ; Test9 and Test10 should give the same result (scalar and vector indices in GEP)
 
 

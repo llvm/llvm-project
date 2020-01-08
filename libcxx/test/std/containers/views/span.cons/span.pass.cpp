@@ -63,14 +63,7 @@ void checkCV()
         assert(s1.size() + s2.size() + s3.size() + s4.size() == 0);
     }
 
-//  dynamic -> static
-    {
-        std::span<const          int, 0> s1{  sp};  // a span<const          int> pointing at int.
-        std::span<      volatile int, 0> s2{  sp};  // a span<      volatile int> pointing at int.
-        std::span<const volatile int, 0> s3{  sp};  // a span<const volatile int> pointing at int.
-        std::span<const volatile int, 0> s4{ vsp};  // a span<const volatile int> pointing at volatile int.
-        assert(s1.size() + s2.size() + s3.size() + s4.size() == 0);
-    }
+//  dynamic -> static (not allowed)
 }
 
 
@@ -78,12 +71,11 @@ template <typename T>
 constexpr bool testConstexprSpan()
 {
     std::span<T>    s0{};
-    std::span<T, 0> s1(s0); // dynamic -> static
+    std::span<T, 0> s1{};
     std::span<T>    s2(s1); // static -> dynamic
     ASSERT_NOEXCEPT(std::span<T>   {s0});
     ASSERT_NOEXCEPT(std::span<T, 0>{s1});
     ASSERT_NOEXCEPT(std::span<T>   {s1});
-    ASSERT_NOEXCEPT(std::span<T, 0>{s0});
 
     return
         s1.data() == nullptr && s1.size() == 0
@@ -95,29 +87,16 @@ template <typename T>
 void testRuntimeSpan()
 {
     std::span<T>    s0{};
-    std::span<T, 0> s1(s0); // dynamic -> static
+    std::span<T, 0> s1{};
     std::span<T>    s2(s1); // static -> dynamic
     ASSERT_NOEXCEPT(std::span<T>   {s0});
     ASSERT_NOEXCEPT(std::span<T, 0>{s1});
     ASSERT_NOEXCEPT(std::span<T>   {s1});
-    ASSERT_NOEXCEPT(std::span<T, 0>{s0});
 
     assert(s1.data() == nullptr && s1.size() == 0);
     assert(s2.data() == nullptr && s2.size() == 0);
 }
 
-
-template <typename Dest, typename Src>
-bool testConversionSpan()
-{
-    static_assert(std::is_convertible_v<Src(*)[], Dest(*)[]>, "Bad input types to 'testConversionSpan");
-    std::span<Src>    s0d{};
-    std::span<Src>    s0s{};
-    std::span<Dest, 0> s1(s0d); // dynamic -> static
-    std::span<Dest>    s2(s0s); // static -> dynamic
-        s1.data() == nullptr && s1.size() == 0
-    &&  s2.data() == nullptr && s2.size() == 0;
-}
 
 struct A{};
 
@@ -133,9 +112,6 @@ int main(int, char**)
     testRuntimeSpan<double>();
     testRuntimeSpan<std::string>();
     testRuntimeSpan<A>();
-
-//  TODO: Add some conversion tests here that aren't "X --> const X"
-//  assert((testConversionSpan<unsigned char, char>()));
 
     checkCV();
 

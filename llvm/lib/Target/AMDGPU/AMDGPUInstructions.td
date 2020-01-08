@@ -158,20 +158,30 @@ def brtarget   : Operand<OtherVT>;
 class HasOneUseUnaryOp<SDPatternOperator op> : PatFrag<
   (ops node:$src0),
   (op $src0),
-  [{ return N->hasOneUse(); }]
->;
+  [{ return N->hasOneUse(); }]> {
+
+  let GISelPredicateCode = [{
+    return MRI.hasOneNonDBGUse(MI.getOperand(0).getReg());
+  }];
+}
 
 class HasOneUseBinOp<SDPatternOperator op> : PatFrag<
   (ops node:$src0, node:$src1),
   (op $src0, $src1),
-  [{ return N->hasOneUse(); }]
->;
+  [{ return N->hasOneUse(); }]> {
+  let GISelPredicateCode = [{
+    return MRI.hasOneNonDBGUse(MI.getOperand(0).getReg());
+  }];
+}
 
 class HasOneUseTernaryOp<SDPatternOperator op> : PatFrag<
   (ops node:$src0, node:$src1, node:$src2),
   (op $src0, $src1, $src2),
-  [{ return N->hasOneUse(); }]
->;
+  [{ return N->hasOneUse(); }]> {
+  let GISelPredicateCode = [{
+    return MRI.hasOneNonDBGUse(MI.getOperand(0).getReg());
+  }];
+}
 
 let Properties = [SDNPCommutative, SDNPAssociative] in {
 def smax_oneuse : HasOneUseBinOp<smax>;
@@ -684,12 +694,12 @@ multiclass BFIPatterns <Instruction BFI_INT,
   def : AMDGPUPat <
     (or (and i64:$y, i64:$x), (and i64:$z, (not i64:$x))),
     (REG_SEQUENCE RC64,
-      (BFI_INT (i32 (EXTRACT_SUBREG $x, sub0)),
-               (i32 (EXTRACT_SUBREG $y, sub0)),
-               (i32 (EXTRACT_SUBREG $z, sub0))), sub0,
-      (BFI_INT (i32 (EXTRACT_SUBREG $x, sub1)),
-               (i32 (EXTRACT_SUBREG $y, sub1)),
-               (i32 (EXTRACT_SUBREG $z, sub1))), sub1)
+      (BFI_INT (i32 (EXTRACT_SUBREG RC64:$x, sub0)),
+               (i32 (EXTRACT_SUBREG RC64:$y, sub0)),
+               (i32 (EXTRACT_SUBREG RC64:$z, sub0))), sub0,
+      (BFI_INT (i32 (EXTRACT_SUBREG RC64:$x, sub1)),
+               (i32 (EXTRACT_SUBREG RC64:$y, sub1)),
+               (i32 (EXTRACT_SUBREG RC64:$z, sub1))), sub1)
   >;
 
   // SHA-256 Ch function
@@ -703,12 +713,12 @@ multiclass BFIPatterns <Instruction BFI_INT,
   def : AMDGPUPat <
     (xor i64:$z, (and i64:$x, (xor i64:$y, i64:$z))),
     (REG_SEQUENCE RC64,
-      (BFI_INT (i32 (EXTRACT_SUBREG $x, sub0)),
-               (i32 (EXTRACT_SUBREG $y, sub0)),
-               (i32 (EXTRACT_SUBREG $z, sub0))), sub0,
-      (BFI_INT (i32 (EXTRACT_SUBREG $x, sub1)),
-               (i32 (EXTRACT_SUBREG $y, sub1)),
-               (i32 (EXTRACT_SUBREG $z, sub1))), sub1)
+      (BFI_INT (i32 (EXTRACT_SUBREG RC64:$x, sub0)),
+               (i32 (EXTRACT_SUBREG RC64:$y, sub0)),
+               (i32 (EXTRACT_SUBREG RC64:$z, sub0))), sub0,
+      (BFI_INT (i32 (EXTRACT_SUBREG RC64:$x, sub1)),
+               (i32 (EXTRACT_SUBREG RC64:$y, sub1)),
+               (i32 (EXTRACT_SUBREG RC64:$z, sub1))), sub1)
   >;
 
   def : AMDGPUPat <
@@ -719,7 +729,7 @@ multiclass BFIPatterns <Instruction BFI_INT,
   def : AMDGPUPat <
     (f32 (fcopysign f32:$src0, f64:$src1)),
     (BFI_INT (LoadImm32 (i32 0x7fffffff)), $src0,
-             (i32 (EXTRACT_SUBREG $src1, sub1)))
+             (i32 (EXTRACT_SUBREG RC64:$src1, sub1)))
   >;
 
   def : AMDGPUPat <
@@ -727,8 +737,8 @@ multiclass BFIPatterns <Instruction BFI_INT,
     (REG_SEQUENCE RC64,
       (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,
       (BFI_INT (LoadImm32 (i32 0x7fffffff)),
-               (i32 (EXTRACT_SUBREG $src0, sub1)),
-               (i32 (EXTRACT_SUBREG $src1, sub1))), sub1)
+               (i32 (EXTRACT_SUBREG RC64:$src0, sub1)),
+               (i32 (EXTRACT_SUBREG RC64:$src1, sub1))), sub1)
   >;
 
   def : AMDGPUPat <
@@ -736,7 +746,7 @@ multiclass BFIPatterns <Instruction BFI_INT,
     (REG_SEQUENCE RC64,
       (i32 (EXTRACT_SUBREG $src0, sub0)), sub0,
       (BFI_INT (LoadImm32 (i32 0x7fffffff)),
-               (i32 (EXTRACT_SUBREG $src0, sub1)),
+               (i32 (EXTRACT_SUBREG RC64:$src0, sub1)),
                $src1), sub1)
   >;
 }
@@ -753,21 +763,21 @@ multiclass SHA256MaPattern <Instruction BFI_INT, Instruction XOR, RegisterClass 
   def : AMDGPUPat <
     (or (and i64:$x, i64:$z), (and i64:$y, (or i64:$x, i64:$z))),
     (REG_SEQUENCE RC64,
-      (BFI_INT (XOR (i32 (EXTRACT_SUBREG $x, sub0)),
-                    (i32 (EXTRACT_SUBREG $y, sub0))),
-               (i32 (EXTRACT_SUBREG $z, sub0)),
-               (i32 (EXTRACT_SUBREG $y, sub0))), sub0,
-      (BFI_INT (XOR (i32 (EXTRACT_SUBREG $x, sub1)),
-                    (i32 (EXTRACT_SUBREG $y, sub1))),
-               (i32 (EXTRACT_SUBREG $z, sub1)),
-               (i32 (EXTRACT_SUBREG $y, sub1))), sub1)
+      (BFI_INT (XOR (i32 (EXTRACT_SUBREG RC64:$x, sub0)),
+                    (i32 (EXTRACT_SUBREG RC64:$y, sub0))),
+               (i32 (EXTRACT_SUBREG RC64:$z, sub0)),
+               (i32 (EXTRACT_SUBREG RC64:$y, sub0))), sub0,
+      (BFI_INT (XOR (i32 (EXTRACT_SUBREG RC64:$x, sub1)),
+                    (i32 (EXTRACT_SUBREG RC64:$y, sub1))),
+               (i32 (EXTRACT_SUBREG RC64:$z, sub1)),
+               (i32 (EXTRACT_SUBREG RC64:$y, sub1))), sub1)
   >;
 }
 
 // Bitfield extract patterns
 
-def IMMZeroBasedBitfieldMask : PatLeaf <(imm), [{
-  return isMask_32(N->getZExtValue());
+def IMMZeroBasedBitfieldMask : ImmLeaf <i32, [{
+  return isMask_32(Imm);
 }]>;
 
 def IMMPopCount : SDNodeXForm<imm, [{

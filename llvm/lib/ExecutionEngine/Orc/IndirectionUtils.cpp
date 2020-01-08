@@ -202,7 +202,7 @@ createLocalIndirectStubsManagerBuilder(const Triple &T) {
           return std::make_unique<
                       orc::LocalIndirectStubsManager<orc::OrcMips64>>();
       };
-      
+
     case Triple::x86_64:
       if (T.getOS() == Triple::OSType::Win32) {
         return [](){

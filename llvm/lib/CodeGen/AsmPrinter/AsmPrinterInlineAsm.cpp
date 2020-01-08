@@ -456,26 +456,23 @@ static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
 
           // FIXME: Shouldn't arch-independent output template handling go into
           // PrintAsmOperand?
-          if (Modifier[0] == 'l') { // Labels are target independent.
-            if (MI->getOperand(OpNo).isBlockAddress()) {
-              const BlockAddress *BA = MI->getOperand(OpNo).getBlockAddress();
-              MCSymbol *Sym = AP->GetBlockAddressSymbol(BA);
-              Sym->print(OS, AP->MAI);
-              MMI->getContext().registerInlineAsmLabel(Sym);
-            } else if (MI->getOperand(OpNo).isMBB()) {
-              const MCSymbol *Sym = MI->getOperand(OpNo).getMBB()->getSymbol();
-              Sym->print(OS, AP->MAI);
-            } else {
-              Error = true;
-            }
+          // Labels are target independent.
+          if (MI->getOperand(OpNo).isBlockAddress()) {
+            const BlockAddress *BA = MI->getOperand(OpNo).getBlockAddress();
+            MCSymbol *Sym = AP->GetBlockAddressSymbol(BA);
+            Sym->print(OS, AP->MAI);
+            MMI->getContext().registerInlineAsmLabel(Sym);
+          } else if (MI->getOperand(OpNo).isMBB()) {
+            const MCSymbol *Sym = MI->getOperand(OpNo).getMBB()->getSymbol();
+            Sym->print(OS, AP->MAI);
+          } else if (Modifier[0] == 'l') {
+            Error = true;
+          } else if (InlineAsm::isMemKind(OpFlags)) {
+            Error = AP->PrintAsmMemoryOperand(
+                MI, OpNo, Modifier[0] ? Modifier : nullptr, OS);
           } else {
-            if (InlineAsm::isMemKind(OpFlags)) {
-              Error = AP->PrintAsmMemoryOperand(
-                  MI, OpNo, Modifier[0] ? Modifier : nullptr, OS);
-            } else {
-              Error = AP->PrintAsmOperand(MI, OpNo,
-                                          Modifier[0] ? Modifier : nullptr, OS);
-            }
+            Error = AP->PrintAsmOperand(MI, OpNo,
+                                        Modifier[0] ? Modifier : nullptr, OS);
           }
         }
         if (Error) {

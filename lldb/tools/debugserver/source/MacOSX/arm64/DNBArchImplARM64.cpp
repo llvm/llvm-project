@@ -689,27 +689,35 @@ uint32_t DNBArchMachARM64::EnableHardwareWatchpoint(nub_addr_t addr,
   if (size > 8)
     return INVALID_NUB_HW_INDEX;
 
-  // arm64 watchpoints really have an 8-byte alignment requirement.  You can put
-  // a watchpoint on a 4-byte
-  // offset address but you can only watch 4 bytes with that watchpoint.
-
-  // arm64 watchpoints on an 8-byte (double word) aligned addr can watch any
-  // bytes in that
-  // 8-byte long region of memory.  They can watch the 1st byte, the 2nd byte,
-  // 3rd byte, etc, or any
-  // combination therein by setting the bits in the BAS [12:5] (Byte Address
-  // Select) field of
-  // the DBGWCRn_EL1 reg for the watchpoint.
-
-  // If the MASK [28:24] bits in the DBGWCRn_EL1 allow a single watchpoint to
-  // monitor a larger region
-  // of memory (16 bytes, 32 bytes, or 2GB) but the Byte Address Select bitfield
-  // then selects a larger
-  // range of bytes, instead of individual bytes.  See the ARMv8 Debug
-  // Architecture manual for details.
-  // This implementation does not currently use the MASK bits; the largest
-  // single region watched by a single
-  // watchpoint right now is 8-bytes.
+  // Aarch64 watchpoints are in one of two forms: (1) 1-8 bytes, aligned to
+  // an 8 byte address, or (2) a power-of-two size region of memory; minimum
+  // 8 bytes, maximum 2GB; the starting address must be aligned to that power
+  // of two.
+  // 
+  // For (1), 1-8 byte watchpoints, using the Byte Address Selector field in
+  // DBGWCR<n>.BAS.  Any of the bytes may be watched, but if multiple bytes
+  // are watched, the bytes selected must be contiguous.  The start address
+  // watched must be doubleword (8-byte) aligned; if the start address is
+  // word (4-byte) aligned, only 4 bytes can be watched.
+  // 
+  // For (2), the MASK field in DBGWCR<n>.MASK is used.
+  // 
+  // See the ARM ARM, section "Watchpoint exceptions", and more specifically,
+  // "Watchpoint data address comparisons".
+  //
+  // debugserver today only supports (1) - the Byte Address Selector 1-8 byte
+  // watchpoints that are 8-byte aligned.  To support larger watchpoints,
+  // debugserver would need to interpret the mach exception when the watched
+  // region was hit, see if the address accessed lies within the subset
+  // of the power-of-two region that lldb asked us to watch (v. ARM ARM,
+  // "Determining the memory location that caused a Watchpoint exception"),
+  // and silently resume the inferior (disable watchpoint, stepi, re-enable
+  // watchpoint) if the address lies outside the region that lldb asked us
+  // to watch.  
+  //
+  // Alternatively, lldb would need to be prepared for a larger region 
+  // being watched than it requested, and silently resume the inferior if
+  // the accessed address is outside the region lldb wants to watch.
 
   nub_addr_t aligned_wp_address = addr & ~0x7;
   uint32_t addr_dword_offset = addr & 0x7;

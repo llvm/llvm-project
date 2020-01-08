@@ -197,7 +197,8 @@ void test() {
 #pragma omp declare simd linear(ref(b))
 // expected-error@+1 {{expected one of 'ref', val' or 'uval' modifiers}} expected-warning@+1 {{extra tokens at the end of '#pragma omp declare simd' are ignored}}
 #pragma omp declare simd linear(uref(b)) allocate(b)
-void bar(int a, int *b);
+#pragma omp declare simd linear(ref(c))
+void bar(int a, int *b, float &c);
 
 template <class T>
 struct St {

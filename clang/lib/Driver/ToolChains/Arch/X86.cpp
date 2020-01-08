@@ -63,8 +63,7 @@ const char *x86::getX86TargetCPU(const ArgList &Args,
 
   // Select the default CPU if none was given (or detection failed).
 
-  if (Triple.getArch() != llvm::Triple::x86_64 &&
-      Triple.getArch() != llvm::Triple::x86)
+  if (!Triple.isX86())
     return nullptr; // This routine is only handling x86 targets.
 
   bool Is64Bit = Triple.getArch() == llvm::Triple::x86_64;

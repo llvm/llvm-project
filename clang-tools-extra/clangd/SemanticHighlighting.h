@@ -83,7 +83,7 @@ std::vector<SemanticHighlightingInformation>
 toSemanticHighlightingInformation(llvm::ArrayRef<LineHighlightings> Tokens);
 
 /// Return a line-by-line diff between two highlightings.
-///  - if the tokens on a line are the same in both hightlightings, this line is
+///  - if the tokens on a line are the same in both highlightings, this line is
 ///  omitted.
 ///  - if a line exists in New but not in Old, the tokens on this line are
 ///  emitted.

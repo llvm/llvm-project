@@ -86,12 +86,12 @@ public:
   ///
   Record *getAsmParser() const;
 
-  /// getAsmParserVariant - Return the AssmblyParserVariant definition for
+  /// getAsmParserVariant - Return the AssemblyParserVariant definition for
   /// this target.
   ///
   Record *getAsmParserVariant(unsigned i) const;
 
-  /// getAsmParserVariantCount - Return the AssmblyParserVariant definition
+  /// getAsmParserVariantCount - Return the AssemblyParserVariant definition
   /// available for this target.
   ///
   unsigned getAsmParserVariantCount() const;

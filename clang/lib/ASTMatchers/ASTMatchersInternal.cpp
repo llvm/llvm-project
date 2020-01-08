@@ -112,6 +112,11 @@ public:
     return Result;
   }
 
+  llvm::Optional<ast_type_traits::TraversalKind>
+  TraversalKind() const override {
+    return InnerMatcher->TraversalKind();
+  }
+
 private:
   const std::string ID;
   const IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher;

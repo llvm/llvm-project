@@ -64,6 +64,29 @@ define void @f3(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
   %sqrt1 = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f1,
                         metadata !"round.dynamic",
+                        metadata !"fpexcept.maytrap") #0
+  %sqrt2 = call float @llvm.experimental.constrained.sqrt.f32(
+                        float %f2,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.maytrap") #0
+
+  store float %sqrt1, float *%ptr1
+  store float %sqrt2, float *%ptr2
+
+  ret void
+}
+
+define void @f4(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+; CHECK-LABEL: f4:
+; CHECK: sqebr
+; CHECK: ste
+; CHECK: sqebr
+; CHECK: ste
+; CHECK: br %r14
+
+  %sqrt1 = call float @llvm.experimental.constrained.sqrt.f32(
+                        float %f1,
+                        metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
   %sqrt2 = call float @llvm.experimental.constrained.sqrt.f32(
                         float %f2,
@@ -78,11 +101,11 @@ define void @f3(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
 
 
 ; We can move a non-strict FP operation or a fpexcept.ignore
-; operation even across a volatile store, but not a fpexcept.strict
-; operation.
+; operation even across a volatile store, but not a fpexcept.maytrap
+; or fpexcept.strict operation.
 
-define void @f4(float %f1, float %f2, float *%ptr1, float *%ptr2) {
-; CHECK-LABEL: f4:
+define void @f5(float %f1, float %f2, float *%ptr1, float *%ptr2) {
+; CHECK-LABEL: f5:
 ; CHECK: sqebr
 ; CHECK: ste
 ; CHECK: sqebr
@@ -98,8 +121,8 @@ define void @f4(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   ret void
 }
 
-define void @f5(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
-; CHECK-LABEL: f5:
+define void @f6(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+; CHECK-LABEL: f6:
 ; CHECK: sqebr
 ; CHECK: ste
 ; CHECK: sqebr
@@ -121,8 +144,31 @@ define void @f5(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
   ret void
 }
 
-define void @f6(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
-; CHECK-LABEL: f6:
+define void @f7(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+; CHECK-LABEL: f7:
+; CHECK: sqebr
+; CHECK: sqebr
+; CHECK: ste
+; CHECK: ste
+; CHECK: br %r14
+
+  %sqrt1 = call float @llvm.experimental.constrained.sqrt.f32(
+                        float %f1,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.maytrap") #0
+  %sqrt2 = call float @llvm.experimental.constrained.sqrt.f32(
+                        float %f2,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.maytrap") #0
+
+  store volatile float %sqrt1, float *%ptr1
+  store volatile float %sqrt2, float *%ptr2
+
+  ret void
+}
+
+define void @f8(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+; CHECK-LABEL: f8:
 ; CHECK: sqebr
 ; CHECK: sqebr
 ; CHECK: ste
@@ -147,8 +193,8 @@ define void @f6(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
 
 ; No variant of FP operations can be scheduled across a SPFC.
 
-define void @f7(float %f1, float %f2, float *%ptr1, float *%ptr2) {
-; CHECK-LABEL: f7:
+define void @f9(float %f1, float %f2, float *%ptr1, float *%ptr2) {
+; CHECK-LABEL: f9:
 ; CHECK: sqebr
 ; CHECK: sqebr
 ; CHECK: ste
@@ -166,8 +212,8 @@ define void @f7(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   ret void
 }
 
-define void @f8(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
-; CHECK-LABEL: f8:
+define void @f10(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+; CHECK-LABEL: f10:
 ; CHECK: sqebr
 ; CHECK: sqebr
 ; CHECK: ste
@@ -191,8 +237,33 @@ define void @f8(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
   ret void
 }
 
-define void @f9(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
-; CHECK-LABEL: f9:
+define void @f11(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+; CHECK-LABEL: f11:
+; CHECK: sqebr
+; CHECK: sqebr
+; CHECK: ste
+; CHECK: ste
+; CHECK: br %r14
+
+  %sqrt1 = call float @llvm.experimental.constrained.sqrt.f32(
+                        float %f1,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.maytrap") #0
+  %sqrt2 = call float @llvm.experimental.constrained.sqrt.f32(
+                        float %f2,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.maytrap") #0
+
+  call void @llvm.s390.sfpc(i32 0) #0
+
+  store float %sqrt1, float *%ptr1
+  store float %sqrt2, float *%ptr2
+
+  ret void
+}
+
+define void @f12(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+; CHECK-LABEL: f12:
 ; CHECK: sqebr
 ; CHECK: sqebr
 ; CHECK: ste

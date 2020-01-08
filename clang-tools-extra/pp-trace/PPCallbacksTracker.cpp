@@ -221,7 +221,7 @@ void PPCallbacksTracker::PragmaMessage(SourceLocation Loc,
   appendArgument("Str", Str);
 }
 
-// Callback invoked when a #pragma gcc dianostic push directive
+// Callback invoked when a #pragma gcc diagnostic push directive
 // is read.
 void PPCallbacksTracker::PragmaDiagnosticPush(SourceLocation Loc,
                                               llvm::StringRef Namespace) {
@@ -230,7 +230,7 @@ void PPCallbacksTracker::PragmaDiagnosticPush(SourceLocation Loc,
   appendArgument("Namespace", Namespace);
 }
 
-// Callback invoked when a #pragma gcc dianostic pop directive
+// Callback invoked when a #pragma gcc diagnostic pop directive
 // is read.
 void PPCallbacksTracker::PragmaDiagnosticPop(SourceLocation Loc,
                                              llvm::StringRef Namespace) {
@@ -239,7 +239,7 @@ void PPCallbacksTracker::PragmaDiagnosticPop(SourceLocation Loc,
   appendArgument("Namespace", Namespace);
 }
 
-// Callback invoked when a #pragma gcc dianostic directive is read.
+// Callback invoked when a #pragma gcc diagnostic directive is read.
 void PPCallbacksTracker::PragmaDiagnostic(SourceLocation Loc,
                                           llvm::StringRef Namespace,
                                           diag::Severity Mapping,

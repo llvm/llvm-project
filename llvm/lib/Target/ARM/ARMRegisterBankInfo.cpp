@@ -172,8 +172,9 @@ ARMRegisterBankInfo::ARMRegisterBankInfo(const TargetRegisterInfo &TRI)
 #endif
 }
 
-const RegisterBank &ARMRegisterBankInfo::getRegBankFromRegClass(
-    const TargetRegisterClass &RC) const {
+const RegisterBank &
+ARMRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
+                                            LLT) const {
   using namespace ARM;
 
   switch (RC.getID()) {

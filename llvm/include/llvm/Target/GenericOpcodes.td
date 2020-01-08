@@ -758,6 +758,12 @@ def G_INTRINSIC_ROUND : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_READCYCLECOUNTER : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = 1;
+}
+
 //------------------------------------------------------------------------------
 // Memory ops
 //------------------------------------------------------------------------------

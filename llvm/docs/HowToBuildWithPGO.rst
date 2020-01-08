@@ -18,7 +18,7 @@ Using the script
 
 We have a script at ``utils/collect_and_build_with_pgo.py``. This script is
 tested on a few Linux flavors, and requires a checkout of LLVM, Clang, and
-compiler-rt. Despite the the name, it performs four clean builds of Clang, so it
+compiler-rt. Despite the name, it performs four clean builds of Clang, so it
 can take a while to run to completion. Please see the script's ``--help`` for
 more information on how to run it, and the different options available to you.
 If you want to get the most out of PGO for a particular use-case (e.g. compiling

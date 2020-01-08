@@ -94,7 +94,7 @@ export function activate(context: vscode.ExtensionContext) {
             { scheme: 'file', language: 'objective-cpp'}
         ],
         synchronize: !syncFileEvents ? undefined : {
-        // FIXME: send sync file events when clangd provides implemenatations.
+        // FIXME: send sync file events when clangd provides implementations.
         },
         initializationOptions: { clangdFileStatus: true },
         // Do not switch to output window when clangd returns output

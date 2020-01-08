@@ -351,7 +351,10 @@ body:             |
     ; FP32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
     ; FP32: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[FPTOSI1]], [[C1]]
     ; FP32: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(ult), [[COPY]](s32), [[C]]
-    ; FP32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s32), [[FPTOSI]], [[XOR]]
+    ; FP32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FCMP]](s32)
+    ; FP32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
+    ; FP32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[FPTOSI]], [[XOR]]
     ; FP32: $v0 = COPY [[SELECT]](s32)
     ; FP32: RetRA implicit $v0
     ; FP64-LABEL: name: f32tou32
@@ -364,7 +367,10 @@ body:             |
     ; FP64: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
     ; FP64: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[FPTOSI1]], [[C1]]
     ; FP64: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(ult), [[COPY]](s32), [[C]]
-    ; FP64: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s32), [[FPTOSI]], [[XOR]]
+    ; FP64: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FCMP]](s32)
+    ; FP64: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
+    ; FP64: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[FPTOSI]], [[XOR]]
     ; FP64: $v0 = COPY [[SELECT]](s32)
     ; FP64: RetRA implicit $v0
     %0:_(s32) = COPY $f12
@@ -391,11 +397,14 @@ body:             |
     ; FP32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
     ; FP32: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[FPTOSI1]], [[C1]]
     ; FP32: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(ult), [[COPY]](s32), [[C]]
-    ; FP32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s32), [[FPTOSI]], [[XOR]]
-    ; FP32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FCMP]](s32)
     ; FP32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
-    ; FP32: $v0 = COPY [[AND]](s32)
+    ; FP32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[FPTOSI]], [[XOR]]
+    ; FP32: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; FP32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP32: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
+    ; FP32: $v0 = COPY [[AND1]](s32)
     ; FP32: RetRA implicit $v0
     ; FP64-LABEL: name: f32tou16
     ; FP64: liveins: $f12
@@ -407,11 +416,14 @@ body:             |
     ; FP64: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
     ; FP64: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[FPTOSI1]], [[C1]]
     ; FP64: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(ult), [[COPY]](s32), [[C]]
-    ; FP64: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s32), [[FPTOSI]], [[XOR]]
-    ; FP64: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP64: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FCMP]](s32)
     ; FP64: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
-    ; FP64: $v0 = COPY [[AND]](s32)
+    ; FP64: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[FPTOSI]], [[XOR]]
+    ; FP64: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; FP64: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP64: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
+    ; FP64: $v0 = COPY [[AND1]](s32)
     ; FP64: RetRA implicit $v0
     %0:_(s32) = COPY $f12
     %1:_(s16) = G_FPTOUI %0(s32)
@@ -438,11 +450,14 @@ body:             |
     ; FP32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
     ; FP32: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[FPTOSI1]], [[C1]]
     ; FP32: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(ult), [[COPY]](s32), [[C]]
-    ; FP32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s32), [[FPTOSI]], [[XOR]]
-    ; FP32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FCMP]](s32)
     ; FP32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
-    ; FP32: $v0 = COPY [[AND]](s32)
+    ; FP32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[FPTOSI]], [[XOR]]
+    ; FP32: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; FP32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP32: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
+    ; FP32: $v0 = COPY [[AND1]](s32)
     ; FP32: RetRA implicit $v0
     ; FP64-LABEL: name: f32tou8
     ; FP64: liveins: $f12
@@ -454,11 +469,14 @@ body:             |
     ; FP64: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
     ; FP64: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[FPTOSI1]], [[C1]]
     ; FP64: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(ult), [[COPY]](s32), [[C]]
-    ; FP64: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s32), [[FPTOSI]], [[XOR]]
-    ; FP64: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP64: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FCMP]](s32)
     ; FP64: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
-    ; FP64: $v0 = COPY [[AND]](s32)
+    ; FP64: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[FPTOSI]], [[XOR]]
+    ; FP64: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; FP64: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP64: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
+    ; FP64: $v0 = COPY [[AND1]](s32)
     ; FP64: RetRA implicit $v0
     %0:_(s32) = COPY $f12
     %1:_(s8) = G_FPTOUI %0(s32)
@@ -525,7 +543,10 @@ body:             |
     ; FP32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
     ; FP32: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[FPTOSI1]], [[C1]]
     ; FP32: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(ult), [[COPY]](s64), [[C]]
-    ; FP32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s32), [[FPTOSI]], [[XOR]]
+    ; FP32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FCMP]](s32)
+    ; FP32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
+    ; FP32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[FPTOSI]], [[XOR]]
     ; FP32: $v0 = COPY [[SELECT]](s32)
     ; FP32: RetRA implicit $v0
     ; FP64-LABEL: name: f64tou32
@@ -538,7 +559,10 @@ body:             |
     ; FP64: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
     ; FP64: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[FPTOSI1]], [[C1]]
     ; FP64: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(ult), [[COPY]](s64), [[C]]
-    ; FP64: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s32), [[FPTOSI]], [[XOR]]
+    ; FP64: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FCMP]](s32)
+    ; FP64: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
+    ; FP64: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[FPTOSI]], [[XOR]]
     ; FP64: $v0 = COPY [[SELECT]](s32)
     ; FP64: RetRA implicit $v0
     %0:_(s64) = COPY $d6
@@ -565,11 +589,14 @@ body:             |
     ; FP32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
     ; FP32: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[FPTOSI1]], [[C1]]
     ; FP32: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(ult), [[COPY]](s64), [[C]]
-    ; FP32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s32), [[FPTOSI]], [[XOR]]
-    ; FP32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FCMP]](s32)
     ; FP32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
-    ; FP32: $v0 = COPY [[AND]](s32)
+    ; FP32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[FPTOSI]], [[XOR]]
+    ; FP32: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; FP32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP32: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
+    ; FP32: $v0 = COPY [[AND1]](s32)
     ; FP32: RetRA implicit $v0
     ; FP64-LABEL: name: f64tou16
     ; FP64: liveins: $d6
@@ -581,11 +608,14 @@ body:             |
     ; FP64: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
     ; FP64: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[FPTOSI1]], [[C1]]
     ; FP64: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(ult), [[COPY]](s64), [[C]]
-    ; FP64: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s32), [[FPTOSI]], [[XOR]]
-    ; FP64: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP64: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FCMP]](s32)
     ; FP64: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
-    ; FP64: $v0 = COPY [[AND]](s32)
+    ; FP64: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[FPTOSI]], [[XOR]]
+    ; FP64: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; FP64: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP64: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
+    ; FP64: $v0 = COPY [[AND1]](s32)
     ; FP64: RetRA implicit $v0
     %0:_(s64) = COPY $d6
     %1:_(s16) = G_FPTOUI %0(s64)
@@ -612,11 +642,14 @@ body:             |
     ; FP32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
     ; FP32: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[FPTOSI1]], [[C1]]
     ; FP32: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(ult), [[COPY]](s64), [[C]]
-    ; FP32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s32), [[FPTOSI]], [[XOR]]
-    ; FP32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; FP32: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FCMP]](s32)
     ; FP32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
-    ; FP32: $v0 = COPY [[AND]](s32)
+    ; FP32: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[FPTOSI]], [[XOR]]
+    ; FP32: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; FP32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP32: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
+    ; FP32: $v0 = COPY [[AND1]](s32)
     ; FP32: RetRA implicit $v0
     ; FP64-LABEL: name: f64tou8
     ; FP64: liveins: $d6
@@ -628,11 +661,14 @@ body:             |
     ; FP64: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
     ; FP64: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[FPTOSI1]], [[C1]]
     ; FP64: [[FCMP:%[0-9]+]]:_(s32) = G_FCMP floatpred(ult), [[COPY]](s64), [[C]]
-    ; FP64: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s32), [[FPTOSI]], [[XOR]]
-    ; FP64: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP64: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; FP64: [[COPY1:%[0-9]+]]:_(s32) = COPY [[FCMP]](s32)
     ; FP64: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C2]]
-    ; FP64: $v0 = COPY [[AND]](s32)
+    ; FP64: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[FPTOSI]], [[XOR]]
+    ; FP64: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; FP64: [[COPY2:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
+    ; FP64: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C3]]
+    ; FP64: $v0 = COPY [[AND1]](s32)
     ; FP64: RetRA implicit $v0
     %0:_(s64) = COPY $d6
     %1:_(s8) = G_FPTOUI %0(s64)

@@ -67,5 +67,15 @@ func @f(%0: index) {
 // CHECK: MemRefType memref<3x4x5xf32, (d0, d1, d2) -> (d0 ceildiv 4 + d1 + d2)> cannot be converted to strided form
   %103 = alloc() : memref<3x4x5xf32, (i, j, k)->(i mod 4 + j + k)>
 // CHECK: MemRefType memref<3x4x5xf32, (d0, d1, d2) -> (d0 mod 4 + d1 + d2)> cannot be converted to strided form
+
+  %200 = alloc()[%0, %0, %0] : memref<3x4x5xf32, (i, j, k)[M, N, K]->(M * i + N * i + N * j + K * k - (M + N - 20)* i)>
+  // CHECK: MemRefType offset: 0 strides: 20, ?, ?
+  %201 = alloc()[%0, %0, %0] : memref<3x4x5xf32, (i, j, k)[M, N, K]->(M * i + N * i + N * K * j + K * K * k - (M + N - 20) * (i + 1))>
+  // CHECK: MemRefType offset: ? strides: 20, ?, ?
+  %202 = alloc()[%0, %0, %0] : memref<3x4x5xf32, (i, j, k)[M, N, K]->(M * (i + 1) + j + k - M)>
+  // CHECK: MemRefType offset: 0 strides: ?, 1, 1
+  %203 = alloc()[%0, %0, %0] : memref<3x4x5xf32, (i, j, k)[M, N, K]->(M + M * (i + N * (j + K * k)))>
+  // CHECK: MemRefType offset: ? strides: ?, ?, ?
+
   return
 }

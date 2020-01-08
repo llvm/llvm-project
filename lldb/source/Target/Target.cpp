@@ -4334,14 +4334,14 @@ void TargetProperties::SetRequireHardwareBreakpoints(bool b) {
 void TargetProperties::Arg0ValueChangedCallback(void *target_property_ptr,
                                                 OptionValue *) {
   TargetProperties *this_ =
-      reinterpret_cast<TargetProperties *>(target_property_ptr);
+      static_cast<TargetProperties *>(target_property_ptr);
   this_->m_launch_info.SetArg0(this_->GetArg0());
 }
 
 void TargetProperties::RunArgsValueChangedCallback(void *target_property_ptr,
                                                    OptionValue *) {
   TargetProperties *this_ =
-      reinterpret_cast<TargetProperties *>(target_property_ptr);
+      static_cast<TargetProperties *>(target_property_ptr);
   Args args;
   if (this_->GetRunArguments(args))
     this_->m_launch_info.GetArguments() = args;
@@ -4350,14 +4350,14 @@ void TargetProperties::RunArgsValueChangedCallback(void *target_property_ptr,
 void TargetProperties::EnvVarsValueChangedCallback(void *target_property_ptr,
                                                    OptionValue *) {
   TargetProperties *this_ =
-      reinterpret_cast<TargetProperties *>(target_property_ptr);
+      static_cast<TargetProperties *>(target_property_ptr);
   this_->m_launch_info.GetEnvironment() = this_->GetEnvironment();
 }
 
 void TargetProperties::InputPathValueChangedCallback(void *target_property_ptr,
                                                      OptionValue *) {
   TargetProperties *this_ =
-      reinterpret_cast<TargetProperties *>(target_property_ptr);
+      static_cast<TargetProperties *>(target_property_ptr);
   this_->m_launch_info.AppendOpenFileAction(
       STDIN_FILENO, this_->GetStandardInputPath(), true, false);
 }
@@ -4365,7 +4365,7 @@ void TargetProperties::InputPathValueChangedCallback(void *target_property_ptr,
 void TargetProperties::OutputPathValueChangedCallback(void *target_property_ptr,
                                                       OptionValue *) {
   TargetProperties *this_ =
-      reinterpret_cast<TargetProperties *>(target_property_ptr);
+      static_cast<TargetProperties *>(target_property_ptr);
   this_->m_launch_info.AppendOpenFileAction(
       STDOUT_FILENO, this_->GetStandardOutputPath(), false, true);
 }
@@ -4373,7 +4373,7 @@ void TargetProperties::OutputPathValueChangedCallback(void *target_property_ptr,
 void TargetProperties::ErrorPathValueChangedCallback(void *target_property_ptr,
                                                      OptionValue *) {
   TargetProperties *this_ =
-      reinterpret_cast<TargetProperties *>(target_property_ptr);
+      static_cast<TargetProperties *>(target_property_ptr);
   this_->m_launch_info.AppendOpenFileAction(
       STDERR_FILENO, this_->GetStandardErrorPath(), false, true);
 }
@@ -4381,7 +4381,7 @@ void TargetProperties::ErrorPathValueChangedCallback(void *target_property_ptr,
 void TargetProperties::DetachOnErrorValueChangedCallback(
     void *target_property_ptr, OptionValue *) {
   TargetProperties *this_ =
-      reinterpret_cast<TargetProperties *>(target_property_ptr);
+      static_cast<TargetProperties *>(target_property_ptr);
   if (this_->GetDetachOnError())
     this_->m_launch_info.GetFlags().Set(lldb::eLaunchFlagDetachOnError);
   else
@@ -4391,7 +4391,7 @@ void TargetProperties::DetachOnErrorValueChangedCallback(
 void TargetProperties::DisableASLRValueChangedCallback(
     void *target_property_ptr, OptionValue *) {
   TargetProperties *this_ =
-      reinterpret_cast<TargetProperties *>(target_property_ptr);
+      static_cast<TargetProperties *>(target_property_ptr);
   if (this_->GetDisableASLR())
     this_->m_launch_info.GetFlags().Set(lldb::eLaunchFlagDisableASLR);
   else
@@ -4401,7 +4401,7 @@ void TargetProperties::DisableASLRValueChangedCallback(
 void TargetProperties::DisableSTDIOValueChangedCallback(
     void *target_property_ptr, OptionValue *) {
   TargetProperties *this_ =
-      reinterpret_cast<TargetProperties *>(target_property_ptr);
+      static_cast<TargetProperties *>(target_property_ptr);
   if (this_->GetDisableSTDIO())
     this_->m_launch_info.GetFlags().Set(lldb::eLaunchFlagDisableSTDIO);
   else

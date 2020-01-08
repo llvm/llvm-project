@@ -52,14 +52,25 @@ public:
 class GIMatchDag {
 public:
   using InstrNodesVec = std::vector<std::unique_ptr<GIMatchDagInstr>>;
+  using instr_node_iterator = raw_pointer_iterator<InstrNodesVec::iterator>;
+  using const_instr_node_iterator =
+      raw_pointer_iterator<InstrNodesVec::const_iterator>;
+
   using EdgesVec = std::vector<std::unique_ptr<GIMatchDagEdge>>;
   using edge_iterator = raw_pointer_iterator<EdgesVec::iterator>;
   using const_edge_iterator = raw_pointer_iterator<EdgesVec::const_iterator>;
 
   using PredicateNodesVec = std::vector<std::unique_ptr<GIMatchDagPredicate>>;
+  using predicate_iterator = raw_pointer_iterator<PredicateNodesVec::iterator>;
+  using const_predicate_iterator =
+      raw_pointer_iterator<PredicateNodesVec::const_iterator>;
 
   using PredicateDependencyEdgesVec =
       std::vector<std::unique_ptr<GIMatchDagPredicateDependencyEdge>>;
+  using predicate_edge_iterator =
+      raw_pointer_iterator<PredicateDependencyEdgesVec::iterator>;
+  using const_predicate_edge_iterator =
+      raw_pointer_iterator<PredicateDependencyEdgesVec::const_iterator>;
 
 protected:
   GIMatchDagContext &Ctx;
@@ -68,6 +79,9 @@ protected:
   EdgesVec Edges;
   PredicateDependencyEdgesVec PredicateDependencies;
   std::vector<GIMatchDagInstr *> MatchRoots;
+  // FIXME: This is a temporary measure while we still accept arbitrary code
+  //        blocks to fix up the matcher while it's being developed.
+  bool HasPostMatchPredicate = false;
 
 public:
   GIMatchDag(GIMatchDagContext &Ctx)
@@ -101,6 +115,71 @@ public:
     return make_range(MatchRoots.begin(), MatchRoots.end());
   }
 
+  instr_node_iterator instr_nodes_begin() {
+    return raw_pointer_iterator<InstrNodesVec::iterator>(InstrNodes.begin());
+  }
+  instr_node_iterator instr_nodes_end() {
+    return raw_pointer_iterator<InstrNodesVec::iterator>(InstrNodes.end());
+  }
+  const_instr_node_iterator instr_nodes_begin() const {
+    return raw_pointer_iterator<InstrNodesVec::const_iterator>(
+        InstrNodes.begin());
+  }
+  const_instr_node_iterator instr_nodes_end() const {
+    return raw_pointer_iterator<InstrNodesVec::const_iterator>(
+        InstrNodes.end());
+  }
+  iterator_range<instr_node_iterator> instr_nodes() {
+    return make_range(instr_nodes_begin(), instr_nodes_end());
+  }
+  iterator_range<const_instr_node_iterator> instr_nodes() const {
+    return make_range(instr_nodes_begin(), instr_nodes_end());
+  }
+  predicate_edge_iterator predicate_edges_begin() {
+    return raw_pointer_iterator<PredicateDependencyEdgesVec::iterator>(
+        PredicateDependencies.begin());
+  }
+  predicate_edge_iterator predicate_edges_end() {
+    return raw_pointer_iterator<PredicateDependencyEdgesVec::iterator>(
+        PredicateDependencies.end());
+  }
+  const_predicate_edge_iterator predicate_edges_begin() const {
+    return raw_pointer_iterator<PredicateDependencyEdgesVec::const_iterator>(
+        PredicateDependencies.begin());
+  }
+  const_predicate_edge_iterator predicate_edges_end() const {
+    return raw_pointer_iterator<PredicateDependencyEdgesVec::const_iterator>(
+        PredicateDependencies.end());
+  }
+  iterator_range<predicate_edge_iterator> predicate_edges() {
+    return make_range(predicate_edges_begin(), predicate_edges_end());
+  }
+  iterator_range<const_predicate_edge_iterator> predicate_edges() const {
+    return make_range(predicate_edges_begin(), predicate_edges_end());
+  }
+  predicate_iterator predicates_begin() {
+    return raw_pointer_iterator<PredicateNodesVec::iterator>(
+        PredicateNodes.begin());
+  }
+  predicate_iterator predicates_end() {
+    return raw_pointer_iterator<PredicateNodesVec::iterator>(
+        PredicateNodes.end());
+  }
+  const_predicate_iterator predicates_begin() const {
+    return raw_pointer_iterator<PredicateNodesVec::const_iterator>(
+        PredicateNodes.begin());
+  }
+  const_predicate_iterator predicates_end() const {
+    return raw_pointer_iterator<PredicateNodesVec::const_iterator>(
+        PredicateNodes.end());
+  }
+  iterator_range<predicate_iterator> predicates() {
+    return make_range(predicates_begin(), predicates_end());
+  }
+  iterator_range<const_predicate_iterator> predicates() const {
+    return make_range(predicates_begin(), predicates_end());
+  }
+
   template <class... Args> GIMatchDagInstr *addInstrNode(Args &&... args) {
     auto Obj =
         std::make_unique<GIMatchDagInstr>(*this, std::forward<Args>(args)...);
@@ -132,6 +211,19 @@ public:
     PredicateDependencies.push_back(std::move(Obj));
     return ObjRaw;
   }
+
+  size_t getInstrNodeIdx(instr_node_iterator I) {
+    return std::distance(instr_nodes_begin(), I);
+  }
+  size_t getInstrNodeIdx(const_instr_node_iterator I) const {
+    return std::distance(instr_nodes_begin(), I);
+  }
+  size_t getNumInstrNodes() const { return InstrNodes.size(); }
+  size_t getNumEdges() const { return Edges.size(); }
+  size_t getNumPredicates() const { return PredicateNodes.size(); }
+
+  void setHasPostMatchPredicate(bool V) { HasPostMatchPredicate = V; }
+  bool hasPostMatchPredicate() const { return HasPostMatchPredicate; }
 
   void addMatchRoot(GIMatchDagInstr *N) { MatchRoots.push_back(N); }
 

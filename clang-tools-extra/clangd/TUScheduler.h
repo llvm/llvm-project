@@ -39,7 +39,7 @@ struct InputsAndAST {
 struct InputsAndPreamble {
   llvm::StringRef Contents;
   const tooling::CompileCommand &Command;
-  // This can be nullptr if no preamble is availble.
+  // This can be nullptr if no preamble is available.
   const PreambleData *Preamble;
 };
 

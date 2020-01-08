@@ -63,7 +63,7 @@ void ForwardDeclarationNamespaceCheck::check(
     const auto *Decl = Result.Nodes.getNodeAs<FriendDecl>("friend_decl");
     assert(Decl && "Decl is neither record_decl nor friend decl!");
 
-    // Classes used in friend delarations are not marked referenced in AST,
+    // Classes used in friend declarations are not marked referenced in AST,
     // so we need to check classes used in friend declarations manually to
     // reduce the rate of false positive.
     // For example, in

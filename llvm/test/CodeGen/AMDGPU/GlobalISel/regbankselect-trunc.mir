@@ -52,7 +52,7 @@ body: |
     liveins: $vgpr0_vgpr1
     ; CHECK-LABEL: name: trunc_i64_to_i1_v
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s64)
+    ; CHECK: [[TRUNC:%[0-9]+]]:vcc(s1) = G_TRUNC [[COPY]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s1) = G_TRUNC %0
 ...
@@ -80,7 +80,7 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: trunc_i32_to_i1_v
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[TRUNC:%[0-9]+]]:vcc(s1) = G_TRUNC [[COPY]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s1) = G_TRUNC %0
 ...

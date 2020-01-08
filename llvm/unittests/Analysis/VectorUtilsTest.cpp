@@ -433,7 +433,7 @@ TEST_F(VFShapeAPITest, Parameters_ValidOpenMPLinear) {
 
 TEST_F(VFShapeAPITest, Parameters_Invalid) {
 #ifndef NDEBUG
-  // Wrong order is checked by an asseretion: make sure that the
+  // Wrong order is checked by an assertion: make sure that the
   // assertion is not removed.
   EXPECT_DEATH(validParams({{1, VFParamKind::Vector}}),
                "Broken parameter list.");

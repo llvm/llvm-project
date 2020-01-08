@@ -85,6 +85,11 @@ class SOP1_32 <string opName, list<dag> pattern=[], bit tied_in = 0> : SOP1_Pseu
   let Constraints = !if(tied_in, "$sdst = $sdst_in", "");
 }
 
+// Only register input allowed.
+class SOP1_32R <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
+  opName, (outs SReg_32:$sdst), (ins SReg_32:$src0),
+  "$sdst, $src0", pattern>;
+
 // 32-bit input, no output.
 class SOP1_0_32 <string opName, list<dag> pattern = []> : SOP1_Pseudo <
   opName, (outs), (ins SSrc_b32:$src0),
@@ -100,6 +105,12 @@ class SOP1_0_32R <string opName, list<dag> pattern = []> : SOP1_Pseudo <
 
 class SOP1_64 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
   opName, (outs SReg_64:$sdst), (ins SSrc_b64:$src0),
+  "$sdst, $src0", pattern
+>;
+
+// Only register input allowed.
+class SOP1_64R <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
+  opName, (outs SReg_64:$sdst), (ins SReg_64:$src0),
   "$sdst, $src0", pattern
 >;
 
@@ -159,14 +170,14 @@ let Defs = [SCC] in {
 let WaveSizePredicate = isWave32 in {
 def : GCNPat <
   (int_amdgcn_wqm_vote i1:$src0),
-  (S_WQM_B32 $src0)
+  (S_WQM_B32 SSrc_b32:$src0)
 >;
 }
 
 let WaveSizePredicate = isWave64 in {
 def : GCNPat <
   (int_amdgcn_wqm_vote i1:$src0),
-  (S_WQM_B64 $src0)
+  (S_WQM_B64 SSrc_b64:$src0)
 >;
 }
 
@@ -254,8 +265,8 @@ def S_QUADMASK_B32 : SOP1_32 <"s_quadmask_b32">;
 def S_QUADMASK_B64 : SOP1_64 <"s_quadmask_b64">;
 
 let Uses = [M0] in {
-def S_MOVRELS_B32 : SOP1_32 <"s_movrels_b32">;
-def S_MOVRELS_B64 : SOP1_64 <"s_movrels_b64">;
+def S_MOVRELS_B32 : SOP1_32R <"s_movrels_b32">;
+def S_MOVRELS_B64 : SOP1_64R <"s_movrels_b64">;
 def S_MOVRELD_B32 : SOP1_32 <"s_movreld_b32">;
 def S_MOVRELD_B64 : SOP1_64 <"s_movreld_b64">;
 } // End Uses = [M0]
@@ -1202,7 +1213,7 @@ def : GCNPat <
 
 def : GCNPat <
   (i32 (smax i32:$x, (i32 (ineg i32:$x)))),
-  (S_ABS_I32 $x)
+  (S_ABS_I32 SReg_32:$x)
 >;
 
 def : GCNPat <

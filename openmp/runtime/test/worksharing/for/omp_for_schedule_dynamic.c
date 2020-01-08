@@ -1,7 +1,7 @@
 // RUN: %libomp-compile-and-run
 /*
  * Test for dynamic scheduling with chunk size
- * Method: caculate how many times the iteration space is dispatched
+ * Method: calculate how many times the iteration space is dispatched
  *     and judge if each dispatch has the requested chunk size
  *     unless it is the last one.
  * It is possible for two adjacent chunks are assigned to the same thread

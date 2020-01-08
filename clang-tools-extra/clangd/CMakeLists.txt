@@ -62,6 +62,7 @@ add_clang_library(clangDaemon
   IncludeFixer.cpp
   JSONTransport.cpp
   Logger.cpp
+  PathMapping.cpp
   Protocol.cpp
   Quality.cpp
   ParsedAST.cpp

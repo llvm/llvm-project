@@ -13,15 +13,19 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
     ; FAST: [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; FAST: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ICMP]](s1), [[COPY2]], [[COPY3]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+    ; FAST: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT]](s32), [[COPY2]], [[COPY3]]
     ; GREEDY-LABEL: name: select_s32_scc_ss
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
     ; GREEDY: [[COPY3:%[0-9]+]]:sgpr(s32) = COPY $sgpr3
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; GREEDY: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ICMP]](s1), [[COPY2]], [[COPY3]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+    ; GREEDY: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT]](s32), [[COPY2]], [[COPY3]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = COPY $sgpr2
@@ -41,17 +45,21 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; FAST: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[COPY4]], [[COPY3]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+    ; FAST: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[COPY5]], [[COPY3]]
     ; GREEDY-LABEL: name: select_s32_scc_sv
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; GREEDY: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[COPY4]], [[COPY3]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+    ; GREEDY: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[COPY5]], [[COPY3]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = COPY $sgpr2
@@ -72,17 +80,21 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; FAST: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[COPY3]], [[COPY4]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+    ; FAST: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[COPY3]], [[COPY5]]
     ; GREEDY-LABEL: name: select_s32_scc_vs
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; GREEDY: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[COPY3]], [[COPY4]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+    ; GREEDY: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[COPY3]], [[COPY5]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = COPY $sgpr2
@@ -102,15 +114,19 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[COPY2]], [[COPY3]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[COPY2]], [[COPY3]]
     ; GREEDY-LABEL: name: select_s32_scc_vv
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[COPY2]], [[COPY3]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[COPY2]], [[COPY3]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = COPY $vgpr0
@@ -250,15 +266,19 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
     ; FAST: [[COPY3:%[0-9]+]]:sgpr(s64) = COPY $sgpr4_sgpr5
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; FAST: [[SELECT:%[0-9]+]]:sgpr(s64) = G_SELECT [[ICMP]](s1), [[COPY2]], [[COPY3]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+    ; FAST: [[SELECT:%[0-9]+]]:sgpr(s64) = G_SELECT [[ZEXT]](s32), [[COPY2]], [[COPY3]]
     ; GREEDY-LABEL: name: select_s64_sss
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
     ; GREEDY: [[COPY3:%[0-9]+]]:sgpr(s64) = COPY $sgpr4_sgpr5
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; GREEDY: [[SELECT:%[0-9]+]]:sgpr(s64) = G_SELECT [[ICMP]](s1), [[COPY2]], [[COPY3]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+    ; GREEDY: [[SELECT:%[0-9]+]]:sgpr(s64) = G_SELECT [[ZEXT]](s32), [[COPY2]], [[COPY3]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s64) = COPY $sgpr2_sgpr3
@@ -278,22 +298,26 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](s64)
     ; FAST: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](s64)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; FAST: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     ; GREEDY-LABEL: name: select_s64_ssv
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; GREEDY: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](s64)
     ; GREEDY: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](s64)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; GREEDY: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
@@ -315,22 +339,26 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](s64)
     ; FAST: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](s64)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; FAST: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     ; GREEDY-LABEL: name: select_s64_svs
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(s64) = COPY $sgpr2_sgpr3
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; GREEDY: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](s64)
     ; GREEDY: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](s64)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; GREEDY: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
@@ -351,22 +379,26 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](s64)
     ; FAST: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](s64)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; FAST: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     ; GREEDY-LABEL: name: select_s64_svv
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; GREEDY: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](s64)
     ; GREEDY: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](s64)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; GREEDY: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
@@ -531,15 +563,19 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(<2 x s32>) = COPY $sgpr2_sgpr3
     ; FAST: [[COPY3:%[0-9]+]]:sgpr(<2 x s32>) = COPY $sgpr4_sgpr5
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; FAST: [[SELECT:%[0-9]+]]:sgpr(<2 x s32>) = G_SELECT [[ICMP]](s1), [[COPY2]], [[COPY3]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+    ; FAST: [[SELECT:%[0-9]+]]:sgpr(<2 x s32>) = G_SELECT [[ZEXT]](s32), [[COPY2]], [[COPY3]]
     ; GREEDY-LABEL: name: select_v2s32_scc_ss
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(<2 x s32>) = COPY $sgpr2_sgpr3
     ; GREEDY: [[COPY3:%[0-9]+]]:sgpr(<2 x s32>) = COPY $sgpr4_sgpr5
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; GREEDY: [[SELECT:%[0-9]+]]:sgpr(<2 x s32>) = G_SELECT [[ICMP]](s1), [[COPY2]], [[COPY3]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+    ; GREEDY: [[SELECT:%[0-9]+]]:sgpr(<2 x s32>) = G_SELECT [[ZEXT]](s32), [[COPY2]], [[COPY3]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(<2 x s32>) = COPY $sgpr2_sgpr3
@@ -559,22 +595,26 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(<2 x s32>) = COPY $sgpr2_sgpr3
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](<2 x s32>)
     ; FAST: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](<2 x s32>)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; FAST: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32)
     ; GREEDY-LABEL: name: select_v2s32_scc_sv
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(<2 x s32>) = COPY $sgpr2_sgpr3
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; GREEDY: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](<2 x s32>)
     ; GREEDY: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](<2 x s32>)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; GREEDY: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
@@ -596,22 +636,26 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(<2 x s32>) = COPY $sgpr2_sgpr3
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](<2 x s32>)
     ; FAST: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](<2 x s32>)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; FAST: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32)
     ; GREEDY-LABEL: name: select_v2s32_scc_vs
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(<2 x s32>) = COPY $sgpr2_sgpr3
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; GREEDY: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](<2 x s32>)
     ; GREEDY: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](<2 x s32>)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; GREEDY: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
@@ -632,22 +676,26 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(<2 x s32>) = COPY $vgpr2_vgpr3
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](<2 x s32>)
     ; FAST: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](<2 x s32>)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; FAST: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32)
     ; GREEDY-LABEL: name: select_v2s32_scc_vv
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(<2 x s32>) = COPY $vgpr2_vgpr3
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; GREEDY: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](<2 x s32>)
     ; GREEDY: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](<2 x s32>)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; GREEDY: [[BUILD_VECTOR:%[0-9]+]]:vgpr(<2 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
@@ -812,15 +860,19 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(<4 x s16>) = COPY $sgpr2_sgpr3
     ; FAST: [[COPY3:%[0-9]+]]:sgpr(<4 x s16>) = COPY $sgpr4_sgpr5
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; FAST: [[SELECT:%[0-9]+]]:sgpr(<4 x s16>) = G_SELECT [[ICMP]](s1), [[COPY2]], [[COPY3]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+    ; FAST: [[SELECT:%[0-9]+]]:sgpr(<4 x s16>) = G_SELECT [[ZEXT]](s32), [[COPY2]], [[COPY3]]
     ; GREEDY-LABEL: name: select_v4s16_scc_ss
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(<4 x s16>) = COPY $sgpr2_sgpr3
     ; GREEDY: [[COPY3:%[0-9]+]]:sgpr(<4 x s16>) = COPY $sgpr4_sgpr5
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; GREEDY: [[SELECT:%[0-9]+]]:sgpr(<4 x s16>) = G_SELECT [[ICMP]](s1), [[COPY2]], [[COPY3]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+    ; GREEDY: [[SELECT:%[0-9]+]]:sgpr(<4 x s16>) = G_SELECT [[ZEXT]](s32), [[COPY2]], [[COPY3]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(<4 x s16>) = COPY $sgpr2_sgpr3
@@ -840,22 +892,26 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(<4 x s16>) = COPY $sgpr2_sgpr3
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(<4 x s16>) = COPY $vgpr0_vgpr1
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST: [[UV:%[0-9]+]]:vgpr(<2 x s16>), [[UV1:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY2]](<4 x s16>)
     ; FAST: [[UV2:%[0-9]+]]:vgpr(<2 x s16>), [[UV3:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY3]](<4 x s16>)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; FAST: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s16>) = G_CONCAT_VECTORS [[SELECT]](<2 x s16>), [[SELECT1]](<2 x s16>)
     ; GREEDY-LABEL: name: select_v4s16_scc_sv
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(<4 x s16>) = COPY $sgpr2_sgpr3
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(<4 x s16>) = COPY $vgpr0_vgpr1
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; GREEDY: [[UV:%[0-9]+]]:vgpr(<2 x s16>), [[UV1:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY2]](<4 x s16>)
     ; GREEDY: [[UV2:%[0-9]+]]:vgpr(<2 x s16>), [[UV3:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY3]](<4 x s16>)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; GREEDY: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s16>) = G_CONCAT_VECTORS [[SELECT]](<2 x s16>), [[SELECT1]](<2 x s16>)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
@@ -877,22 +933,26 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(<4 x s16>) = COPY $sgpr2_sgpr3
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(<4 x s16>) = COPY $vgpr0_vgpr1
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST: [[UV:%[0-9]+]]:vgpr(<2 x s16>), [[UV1:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY3]](<4 x s16>)
     ; FAST: [[UV2:%[0-9]+]]:vgpr(<2 x s16>), [[UV3:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY2]](<4 x s16>)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; FAST: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s16>) = G_CONCAT_VECTORS [[SELECT]](<2 x s16>), [[SELECT1]](<2 x s16>)
     ; GREEDY-LABEL: name: select_v4s16_scc_vs
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(<4 x s16>) = COPY $sgpr2_sgpr3
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(<4 x s16>) = COPY $vgpr0_vgpr1
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; GREEDY: [[UV:%[0-9]+]]:vgpr(<2 x s16>), [[UV1:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY3]](<4 x s16>)
     ; GREEDY: [[UV2:%[0-9]+]]:vgpr(<2 x s16>), [[UV3:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY2]](<4 x s16>)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; GREEDY: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s16>) = G_CONCAT_VECTORS [[SELECT]](<2 x s16>), [[SELECT1]](<2 x s16>)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
@@ -913,22 +973,26 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:vgpr(<4 x s16>) = COPY $vgpr0_vgpr1
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(<4 x s16>) = COPY $vgpr2_vgpr3
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST: [[UV:%[0-9]+]]:vgpr(<2 x s16>), [[UV1:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY2]](<4 x s16>)
     ; FAST: [[UV2:%[0-9]+]]:vgpr(<2 x s16>), [[UV3:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY3]](<4 x s16>)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; FAST: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s16>) = G_CONCAT_VECTORS [[SELECT]](<2 x s16>), [[SELECT1]](<2 x s16>)
     ; GREEDY-LABEL: name: select_v4s16_scc_vv
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:vgpr(<4 x s16>) = COPY $vgpr0_vgpr1
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(<4 x s16>) = COPY $vgpr2_vgpr3
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; GREEDY: [[UV:%[0-9]+]]:vgpr(<2 x s16>), [[UV1:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY2]](<4 x s16>)
     ; GREEDY: [[UV2:%[0-9]+]]:vgpr(<2 x s16>), [[UV3:%[0-9]+]]:vgpr(<2 x s16>) = G_UNMERGE_VALUES [[COPY3]](<4 x s16>)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(<2 x s16>) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; GREEDY: [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s16>) = G_CONCAT_VECTORS [[SELECT]](<2 x s16>), [[SELECT1]](<2 x s16>)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
@@ -1094,21 +1158,57 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(p1) = COPY $sgpr2_sgpr3
     ; FAST: [[COPY3:%[0-9]+]]:sgpr(p1) = COPY $sgpr4_sgpr5
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; FAST: [[SELECT:%[0-9]+]]:sgpr(p1) = G_SELECT [[ICMP]](s1), [[COPY2]], [[COPY3]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+    ; FAST: [[SELECT:%[0-9]+]]:sgpr(p1) = G_SELECT [[ZEXT]](s32), [[COPY2]], [[COPY3]]
     ; GREEDY-LABEL: name: select_p1_scc_ss
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(p1) = COPY $sgpr2_sgpr3
     ; GREEDY: [[COPY3:%[0-9]+]]:sgpr(p1) = COPY $sgpr4_sgpr5
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-    ; GREEDY: [[SELECT:%[0-9]+]]:sgpr(p1) = G_SELECT [[ICMP]](s1), [[COPY2]], [[COPY3]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+    ; GREEDY: [[SELECT:%[0-9]+]]:sgpr(p1) = G_SELECT [[ZEXT]](s32), [[COPY2]], [[COPY3]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(p1) = COPY $sgpr2_sgpr3
     %3:_(p1) = COPY $sgpr4_sgpr5
     %4:_(s1) = G_ICMP intpred(ne), %0, %1
     %5:_(p1) = G_SELECT %4, %2, %3
+...
+
+---
+name: select_p999_scc_ss
+legalized: true
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $sgpr2_sgpr3, $sgpr4_sgpr5
+    ; FAST-LABEL: name: select_p999_scc_ss
+    ; FAST: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; FAST: [[COPY2:%[0-9]+]]:sgpr(p999) = COPY $sgpr2_sgpr3
+    ; FAST: [[COPY3:%[0-9]+]]:sgpr(p999) = COPY $sgpr4_sgpr5
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+    ; FAST: [[SELECT:%[0-9]+]]:sgpr(p999) = G_SELECT [[ZEXT]](s32), [[COPY2]], [[COPY3]]
+    ; GREEDY-LABEL: name: select_p999_scc_ss
+    ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(p999) = COPY $sgpr2_sgpr3
+    ; GREEDY: [[COPY3:%[0-9]+]]:sgpr(p999) = COPY $sgpr4_sgpr5
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+    ; GREEDY: [[SELECT:%[0-9]+]]:sgpr(p999) = G_SELECT [[ZEXT]](s32), [[COPY2]], [[COPY3]]
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:_(p999) = COPY $sgpr2_sgpr3
+    %3:_(p999) = COPY $sgpr4_sgpr5
+    %4:_(s1) = G_ICMP intpred(ne), %0, %1
+    %5:_(p999) = G_SELECT %4, %2, %3
 ...
 
 ---
@@ -1122,22 +1222,26 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(p1) = COPY $sgpr2_sgpr3
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](p1)
     ; FAST: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](p1)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; FAST: [[MV:%[0-9]+]]:vgpr(p1) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     ; GREEDY-LABEL: name: select_p1_scc_sv
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(p1) = COPY $sgpr2_sgpr3
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; GREEDY: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](p1)
     ; GREEDY: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](p1)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; GREEDY: [[MV:%[0-9]+]]:vgpr(p1) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
@@ -1159,22 +1263,26 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(p1) = COPY $sgpr2_sgpr3
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](p1)
     ; FAST: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](p1)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; FAST: [[MV:%[0-9]+]]:vgpr(p1) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     ; GREEDY-LABEL: name: select_p1_scc_vs
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(p1) = COPY $sgpr2_sgpr3
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; GREEDY: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](p1)
     ; GREEDY: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](p1)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; GREEDY: [[MV:%[0-9]+]]:vgpr(p1) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
@@ -1195,22 +1303,26 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
     ; FAST: [[COPY3:%[0-9]+]]:vgpr(p1) = COPY $vgpr2_vgpr3
-    ; FAST: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; FAST: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](p1)
     ; FAST: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](p1)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; FAST: [[MV:%[0-9]+]]:vgpr(p1) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     ; GREEDY-LABEL: name: select_p1_scc_vv
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
     ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(p1) = COPY $vgpr2_vgpr3
-    ; GREEDY: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[ICMP:%[0-9]+]]:sgpr(s32) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[ICMP]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
     ; GREEDY: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](p1)
     ; GREEDY: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](p1)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV]], [[UV2]]
+    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY4]](s1), [[UV1]], [[UV3]]
     ; GREEDY: [[MV:%[0-9]+]]:vgpr(p1) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
@@ -1365,6 +1477,42 @@ body: |
 ...
 
 ---
+name: select_p999_vcc_vv
+legalized: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
+    ; FAST-LABEL: name: select_p999_vcc_vv
+    ; FAST: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; FAST: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+    ; FAST: [[COPY2:%[0-9]+]]:vgpr(p999) = COPY $vgpr2_vgpr3
+    ; FAST: [[COPY3:%[0-9]+]]:vgpr(p999) = COPY $vgpr4_vgpr5
+    ; FAST: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; FAST: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](p999)
+    ; FAST: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](p999)
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
+    ; FAST: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; FAST: [[MV:%[0-9]+]]:vgpr(p999) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
+    ; GREEDY-LABEL: name: select_p999_vcc_vv
+    ; GREEDY: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; GREEDY: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+    ; GREEDY: [[COPY2:%[0-9]+]]:vgpr(p999) = COPY $vgpr2_vgpr3
+    ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(p999) = COPY $vgpr4_vgpr5
+    ; GREEDY: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
+    ; GREEDY: [[UV:%[0-9]+]]:vgpr(s32), [[UV1:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY2]](p999)
+    ; GREEDY: [[UV2:%[0-9]+]]:vgpr(s32), [[UV3:%[0-9]+]]:vgpr(s32) = G_UNMERGE_VALUES [[COPY3]](p999)
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
+    ; GREEDY: [[SELECT1:%[0-9]+]]:vgpr(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; GREEDY: [[MV:%[0-9]+]]:vgpr(p999) = G_MERGE_VALUES [[SELECT]](s32), [[SELECT1]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(p999) = COPY $vgpr2_vgpr3
+    %3:_(p999) = COPY $vgpr4_vgpr5
+    %4:_(s1) = G_ICMP intpred(ne), %0, %1
+    %5:_(p999) = G_SELECT %4, %2, %3
+...
+
+---
 name: select_s32_vgpr_vv
 legalized: true
 body: |
@@ -1374,16 +1522,14 @@ body: |
     ; FAST: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; FAST: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
     ; FAST: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
-    ; FAST: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; FAST: [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY1]], [[COPY2]]
+    ; FAST: [[TRUNC:%[0-9]+]]:vcc(s1) = G_TRUNC [[COPY]](s32)
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[TRUNC]](s1), [[COPY1]], [[COPY2]]
     ; GREEDY-LABEL: name: select_s32_vgpr_vv
     ; GREEDY: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
-    ; GREEDY: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; GREEDY: [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY1]], [[COPY2]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:vcc(s1) = G_TRUNC [[COPY]](s32)
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[TRUNC]](s1), [[COPY1]], [[COPY2]]
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(s32) = COPY $vgpr2
@@ -1401,20 +1547,18 @@ body: |
     ; FAST: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; FAST: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; FAST: [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-    ; FAST: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; FAST: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
-    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY5]]
+    ; FAST: [[TRUNC:%[0-9]+]]:vcc(s1) = G_TRUNC [[COPY]](s32)
+    ; FAST: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; FAST: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
+    ; FAST: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[TRUNC]](s1), [[COPY3]], [[COPY4]]
     ; GREEDY-LABEL: name: select_s32_vgpr_ss
     ; GREEDY: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; GREEDY: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; GREEDY: [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-    ; GREEDY: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; GREEDY: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY5]]
+    ; GREEDY: [[TRUNC:%[0-9]+]]:vcc(s1) = G_TRUNC [[COPY]](s32)
+    ; GREEDY: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; GREEDY: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
+    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[TRUNC]](s1), [[COPY3]], [[COPY4]]
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $sgpr0
     %2:_(s32) = COPY $sgpr1
@@ -1519,17 +1663,15 @@ body: |
     ; FAST: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; FAST: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
     ; FAST: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; FAST: [[COPY3:%[0-9]+]]:scc(s1) = COPY [[TRUNC]](s1)
-    ; FAST: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY1]], [[COPY2]]
+    ; FAST: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+    ; FAST: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT]](s32), [[COPY1]], [[COPY2]]
     ; GREEDY-LABEL: name: select_s32_sgpr_ss
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; GREEDY: [[COPY2:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
     ; GREEDY: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; GREEDY: [[COPY3:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-    ; GREEDY: [[COPY4:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; GREEDY: [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[COPY2]](s32)
-    ; GREEDY: [[SELECT:%[0-9]+]]:vgpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[COPY5]]
+    ; GREEDY: [[ZEXT:%[0-9]+]]:sgpr(s32) = G_ZEXT [[TRUNC]](s1)
+    ; GREEDY: [[SELECT:%[0-9]+]]:sgpr(s32) = G_SELECT [[ZEXT]](s32), [[COPY1]], [[COPY2]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = COPY $sgpr2

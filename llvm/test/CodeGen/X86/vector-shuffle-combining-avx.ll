@@ -417,3 +417,60 @@ entry:
   store <8 x float> %1, <8 x float>* undef, align 16
   unreachable
 }
+
+define <4 x i64> @concat_self_v4i64(<2 x i64> %x) {
+; AVX1-LABEL: concat_self_v4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[0,0,3,3]
+; AVX1-NEXT:    ret{{[l|q]}}
+;
+; AVX2-LABEL: concat_self_v4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,1]
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: concat_self_v4i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,1,1]
+; AVX512-NEXT:    ret{{[l|q]}}
+  %cat = shufflevector <2 x i64> %x, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %s = shufflevector <4 x i64> %cat, <4 x i64> undef, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x i64> %s
+}
+
+define <8 x i32> @concat_self_v8i32(<4 x i32> %x) {
+; AVX1-LABEL: concat_self_v8i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[3,2,1,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[0,2,1,3]
+; AVX1-NEXT:    vpaddd %xmm0, %xmm2, %xmm2
+; AVX1-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    ret{{[l|q]}}
+;
+; AVX2-LABEL: concat_self_v8i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm1
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [3,2,1,0,0,2,1,3]
+; AVX2-NEXT:    vpermd %ymm0, %ymm2, %ymm0
+; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: concat_self_v8i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm1
+; AVX512-NEXT:    vmovdqa {{.*#+}} ymm2 = [3,2,1,0,0,2,1,3]
+; AVX512-NEXT:    vpermd %ymm0, %ymm2, %ymm0
+; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    ret{{[l|q]}}
+  %cat = shufflevector <4 x i32> %x, <4 x i32> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  %s = shufflevector <8 x i32> %cat, <8 x i32> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 0, i32 2, i32 1, i32 3>
+  %a = add <8 x i32> %s, %cat
+  ret <8 x i32> %a
+}

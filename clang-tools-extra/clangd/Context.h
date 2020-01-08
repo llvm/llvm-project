@@ -83,7 +83,7 @@ private:
 public:
   /// Same as Context::empty(), please use Context::empty() instead.
   /// Constructor is defined to workaround a bug in MSVC's version of STL.
-  /// (arguments of std::future<> must be default-construcitble in MSVC).
+  /// (arguments of std::future<> must be default-constructible in MSVC).
   Context() = default;
 
   /// Copy operations for this class are deleted, use an explicit clone() method

@@ -57,7 +57,7 @@ protected:
   ~_rstream() { delete[] buf; }
 };
 
-// A stream encapuslating the content of a file or the content of a string,
+// A stream encapsulating the content of a file or the content of a string,
 // overriding the >> operator to read various integer types in binary form,
 // as well as a symbol table entry.
 class rstream : public _rstream {

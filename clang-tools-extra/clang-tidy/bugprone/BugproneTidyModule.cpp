@@ -36,6 +36,7 @@
 #include "NotNullTerminatedResultCheck.h"
 #include "ParentVirtualCallCheck.h"
 #include "PosixReturnCheck.h"
+#include "SignedCharMisuseCheck.h"
 #include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
 #include "StringConstructorCheck.h"
@@ -119,6 +120,8 @@ public:
         "bugprone-parent-virtual-call");
     CheckFactories.registerCheck<PosixReturnCheck>(
         "bugprone-posix-return");
+    CheckFactories.registerCheck<SignedCharMisuseCheck>(
+        "bugprone-signed-char-misuse");
     CheckFactories.registerCheck<SizeofContainerCheck>(
         "bugprone-sizeof-container");
     CheckFactories.registerCheck<SizeofExpressionCheck>(

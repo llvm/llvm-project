@@ -45,9 +45,9 @@ int main(int, char**)
 {
 
 //  static size
-    static_assert(testConstexprSpan<0>(std::span<const int, 4>(iArr1, 1), iArr1 + 0), "");
-    static_assert(testConstexprSpan<1>(std::span<const int, 4>(iArr1, 2), iArr1 + 1), "");
-    static_assert(testConstexprSpan<2>(std::span<const int, 4>(iArr1, 3), iArr1 + 2), "");
+    static_assert(testConstexprSpan<0>(std::span<const int, 4>(iArr1, 4), iArr1 + 0), "");
+    static_assert(testConstexprSpan<1>(std::span<const int, 4>(iArr1, 4), iArr1 + 1), "");
+    static_assert(testConstexprSpan<2>(std::span<const int, 4>(iArr1, 4), iArr1 + 2), "");
     static_assert(testConstexprSpan<3>(std::span<const int, 4>(iArr1, 4), iArr1 + 3), "");
 
     static_assert(testConstexprSpan<0>(std::span<const int, 1>(iArr1 + 1, 1), iArr1 + 1), "");
@@ -57,13 +57,13 @@ int main(int, char**)
 
 //  static size
     testRuntimeSpan<0>(std::span<int, 4>(iArr2, 4), iArr2);
-    testRuntimeSpan<1>(std::span<int, 4>(iArr2, 1), iArr2 + 1);
-    testRuntimeSpan<2>(std::span<int, 4>(iArr2, 2), iArr2 + 2);
-    testRuntimeSpan<3>(std::span<int, 4>(iArr2, 3), iArr2 + 3);
+    testRuntimeSpan<1>(std::span<int, 4>(iArr2, 4), iArr2 + 1);
+    testRuntimeSpan<2>(std::span<int, 4>(iArr2, 4), iArr2 + 2);
+    testRuntimeSpan<3>(std::span<int, 4>(iArr2, 4), iArr2 + 3);
 
-    testRuntimeSpan<0>(std::span<int, 4>(iArr2 + 1, 1), iArr2 + 1);
-    testRuntimeSpan<1>(std::span<int, 4>(iArr2 + 2, 2), iArr2 + 3);
-    testRuntimeSpan<2>(std::span<int, 4>(iArr2 + 3, 3), iArr2 + 5);
+    testRuntimeSpan<0>(std::span<int, 1>(iArr2 + 1, 1), iArr2 + 1);
+    testRuntimeSpan<1>(std::span<int, 2>(iArr2 + 2, 2), iArr2 + 3);
+    testRuntimeSpan<2>(std::span<int, 3>(iArr2 + 3, 3), iArr2 + 5);
     testRuntimeSpan<3>(std::span<int, 4>(iArr2 + 4, 4), iArr2 + 7);
 
 

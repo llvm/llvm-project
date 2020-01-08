@@ -57,7 +57,7 @@
 ;;    if (a[i] > a[t])
 ;;      t = i;
 ;;  }
-;;  return a[t];
+;;  return t;
 ;;}
 ;;
 ;;
@@ -177,30 +177,24 @@ for.body.preheader:                               ; preds = %entry
   %wide.trip.count = zext i32 %n to i64
   br label %for.body
 
-for.cond.cleanup.loopexit:                        ; preds = %for.body
-  %phitmp = sext i32 %i.0.t.0 to i64
-  br label %for.cond.cleanup
-
-for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
-  %t.0.lcssa = phi i64 [ 0, %entry ], [ %phitmp, %for.cond.cleanup.loopexit ]
-  %arrayidx5 = getelementptr inbounds i32, i32* %a, i64 %t.0.lcssa
-  %0 = load i32, i32* %arrayidx5, align 4
-  ret i32 %0
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  %t.0.lcssa = phi i32 [ 0, %entry ], [ %i.0.t.0, %for.body ]
+  ret i32 %t.0.lcssa
 
 for.body:                                         ; preds = %for.body.preheader, %for.body
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 1, %for.body.preheader ]
   %t.015 = phi i32 [ %i.0.t.0, %for.body ], [ 0, %for.body.preheader ]
   %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx, align 4
+  %0 = load i32, i32* %arrayidx, align 4
   %idxprom1 = sext i32 %t.015 to i64
   %arrayidx2 = getelementptr inbounds i32, i32* %a, i64 %idxprom1
-  %2 = load i32, i32* %arrayidx2, align 4
-  %cmp3 = icmp sgt i32 %1, %2
-  %3 = trunc i64 %indvars.iv to i32
-  %i.0.t.0 = select i1 %cmp3, i32 %3, i32 %t.015
+  %1 = load i32, i32* %arrayidx2, align 4
+  %cmp3 = icmp sgt i32 %0, %1
+  %2 = trunc i64 %indvars.iv to i32
+  %i.0.t.0 = select i1 %cmp3, i32 %2, i32 %t.015
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
-  br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
 ; CHECK-LABEL: MaxValue

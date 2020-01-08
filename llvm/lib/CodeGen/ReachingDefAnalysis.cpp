@@ -133,8 +133,6 @@ void ReachingDefAnalysis::processBasicBlock(
 }
 
 bool ReachingDefAnalysis::runOnMachineFunction(MachineFunction &mf) {
-  if (skipFunction(mf.getFunction()))
-    return false;
   MF = &mf;
   TRI = MF->getSubtarget().getRegisterInfo();
 

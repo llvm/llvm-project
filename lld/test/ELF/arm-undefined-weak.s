@@ -1,11 +1,13 @@
 // REQUIRES: arm
-// RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
-// RUN: ld.lld %t -o %t2
-// RUN: llvm-objdump -triple=armv7a-none-linux-gnueabi -d %t2 | FileCheck %s
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
+// RUN: ld.lld --image-base=0x10000000 %t -o %t2
+// RUN: llvm-objdump -triple=armv7a-none-linux-gnueabi --no-show-raw-insn -d %t2 | FileCheck %s
 
 // Check that the ARM ABI rules for undefined weak symbols are applied.
 // Branch instructions are resolved to the next instruction. Undefined
 // Symbols in relative are resolved to the place so S - P + A = A.
+// We place the image-base at 0x10000000 to test that a range extensions thunk
+// is not generated.
 
  .syntax unified
 
@@ -29,11 +31,10 @@ _start:
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
-// CHECK:         110b4: {{.*}} b       #-4 <_start+0x4>
-// CHECK-NEXT:    110b8: {{.*}} bl      #-4 <_start+0x8>
-// blx is transformed into bl so we don't change state
-// CHECK-NEXT:    110bc: {{.*}} bl      #-4 <_start+0xc>
-// CHECK-NEXT:    110c0: {{.*}} movt    r0, #0
-// CHECK-NEXT:    110c4: {{.*}} movw    r0, #0
-// CHECK:         110c8: {{.*}} .word   0x00000000
-
+// CHECK-NEXT: 100010b4 _start:
+// CHECK-NEXT: 100010b4: b       #-4
+// CHECK-NEXT: 100010b8: bl      #-4
+// CHECK-NEXT: 100010bc: bl      #-4
+// CHECK-NEXT: 100010c0: movt    r0, #0
+// CHECK-NEXT: 100010c4: movw    r0, #0
+// CHECK:      100010c8: 00 00 00 00     .word   0x00000000

@@ -2214,7 +2214,7 @@ int __kmp_get_load_balance(int max) {
 int __kmp_get_load_balance(int max) {
   static int permanent_error = 0;
   static int glb_running_threads = 0; // Saved count of the running threads for
-  // the thread balance algortihm
+  // the thread balance algorithm
   static double glb_call_time = 0; /* Thread balance algorithm call time */
 
   int running_threads = 0; // Number of running threads in the system.
@@ -2322,7 +2322,7 @@ int __kmp_get_load_balance(int max) {
           if (proc_entry->d_type == DT_DIR && isdigit(task_entry->d_name[0])) {
             ++total_threads;
 
-            // Consruct complete stat file path. Easiest way would be:
+            // Construct complete stat file path. Easiest way would be:
             //  __kmp_str_buf_print( & stat_path, "%s/%s/stat", task_path.str,
             //  task_entry->d_name );
             // but seriae of __kmp_str_buf_cat works a bit faster.

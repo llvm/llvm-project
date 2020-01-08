@@ -141,7 +141,7 @@ Full list of functions
 ======================
 This leads to the generation of 376 atomic functions, as follows.
 
-Functons for integers
+Functions for integers
 ---------------------
 There are versions here for integers of size 1,2,4 and 8 bytes both signed and
 unsigned (where that matters).
@@ -483,8 +483,8 @@ Functions for Complex types
 ---------------------------
 Functions for complex types whose component floating point variables are of size
 4,8,10 or 16 bytes. The names here are based on the size of the component float,
-*not* the size of the complex type. So `__kmpc_atomc_cmplx8_add` is an operation
-on a `complex<double>` or `complex(kind=8)`, *not* `complex<float>`.
+*not* the size of the complex type. So `__kmpc_atomic_cmplx8_add` is an
+operation on a `complex<double>` or `complex(kind=8)`, *not* `complex<float>`.
 
 @code
     __kmpc_atomic_cmplx4_add

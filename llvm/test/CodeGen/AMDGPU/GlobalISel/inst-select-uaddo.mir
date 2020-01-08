@@ -17,7 +17,7 @@ body: |
     ; GFX6: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX6: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX6: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GFX6: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $scc
+    ; GFX6: [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
     ; GFX6: $scc = COPY [[COPY2]]
     ; GFX6: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY]], [[COPY1]], implicit $scc
     ; GFX6: S_ENDPGM 0, implicit [[S_ADD_U32_]], implicit [[S_CSELECT_B32_]]
@@ -25,7 +25,7 @@ body: |
     ; GFX8: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX8: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX8: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GFX8: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $scc
+    ; GFX8: [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
     ; GFX8: $scc = COPY [[COPY2]]
     ; GFX8: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY]], [[COPY1]], implicit $scc
     ; GFX8: S_ENDPGM 0, implicit [[S_ADD_U32_]], implicit [[S_CSELECT_B32_]]
@@ -33,7 +33,7 @@ body: |
     ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX9: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GFX9: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $scc
+    ; GFX9: [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
     ; GFX9: $scc = COPY [[COPY2]]
     ; GFX9: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY]], [[COPY1]], implicit $scc
     ; GFX9: S_ENDPGM 0, implicit [[S_ADD_U32_]], implicit [[S_CSELECT_B32_]]
@@ -42,13 +42,13 @@ body: |
     ; GFX10: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX10: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; GFX10: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]], [[COPY1]], implicit-def $scc
-    ; GFX10: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $scc
+    ; GFX10: [[COPY2:%[0-9]+]]:sreg_32 = COPY $scc
     ; GFX10: $scc = COPY [[COPY2]]
     ; GFX10: [[S_CSELECT_B32_:%[0-9]+]]:sreg_32 = S_CSELECT_B32 [[COPY]], [[COPY1]], implicit $scc
     ; GFX10: S_ENDPGM 0, implicit [[S_ADD_U32_]], implicit [[S_CSELECT_B32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
-    %2:sgpr(s32), %3:scc(s1) = G_UADDO %0, %1
+    %2:sgpr(s32), %3:sgpr(s32) = G_UADDO %0, %1
     %4:sgpr(s32) = G_SELECT %3, %0, %1
     S_ENDPGM 0, implicit %2, implicit %4
 ...

@@ -1510,7 +1510,7 @@ private:
   }
 
   // Merges Sema and Index results where possible, to form CompletionCandidates.
-  // \p Identifiers is raw idenfiers that can also be completion candidates.
+  // \p Identifiers is raw identifiers that can also be completion candidates.
   // Identifiers are not merged with results from index or sema.
   // Groups overloads if desired, to form CompletionCandidate::Bundles. The
   // bundles are scored and top results are returned, best to worst.

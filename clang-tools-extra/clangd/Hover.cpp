@@ -295,7 +295,7 @@ llvm::Optional<std::string> printExprValue(const Expr *E,
 llvm::Optional<std::string> printExprValue(const SelectionTree::Node *N,
                                            const ASTContext &Ctx) {
   for (; N; N = N->Parent) {
-    // Try to evaluate the first evaluable enclosing expression.
+    // Try to evaluate the first evaluatable enclosing expression.
     if (const Expr *E = N->ASTNode.get<Expr>()) {
       if (auto Val = printExprValue(E, Ctx))
         return Val;

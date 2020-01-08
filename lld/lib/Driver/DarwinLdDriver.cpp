@@ -788,7 +788,7 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx) {
         break;
       case llvm::MachO::MH_EXECUTE:
         // dynamic executables default to generating a version load command,
-        // while static exectuables only generate it if required.
+        // while static executables only generate it if required.
         if (isStaticExecutable) {
           if (flagOn)
             ctx.setGenerateVersionLoadCommand(true);
@@ -836,7 +836,7 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx) {
         break;
       case llvm::MachO::MH_EXECUTE:
         // dynamic executables default to generating a version load command,
-        // while static exectuables only generate it if required.
+        // while static executables only generate it if required.
         if (isStaticExecutable) {
           if (flagOn)
             ctx.setGenerateFunctionStartsLoadCommand(true);
@@ -885,7 +885,7 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx) {
         break;
       case llvm::MachO::MH_EXECUTE:
         // dynamic executables default to generating a version load command,
-        // while static exectuables only generate it if required.
+        // while static executables only generate it if required.
         if (isStaticExecutable) {
           if (flagOn)
             ctx.setGenerateDataInCodeLoadCommand(true);
@@ -926,7 +926,7 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx) {
     ctx.setSdkVersion(sdkVersion);
   } else if (ctx.generateVersionLoadCommand()) {
     // If we don't have an sdk version, but were going to emit a load command
-    // with min_version, then we need to give an warning as we have no sdk
+    // with min_version, then we need to give a warning as we have no sdk
     // version to put in that command.
     // FIXME: We need to decide whether to make this an error.
     warn("-sdk_version is required when emitting min version load command.  "

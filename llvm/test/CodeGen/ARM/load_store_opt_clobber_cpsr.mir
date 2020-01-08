@@ -30,4 +30,4 @@ body: |
     renamable $r1 = tLDRi renamable $r4, 1, 14, $noreg :: (load 4)
   bb.2:
     liveins: $r4
-    TRAP
+    tTRAP

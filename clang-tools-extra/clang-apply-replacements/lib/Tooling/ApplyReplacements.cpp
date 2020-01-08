@@ -207,7 +207,7 @@ bool mergeAndDeduplicate(const TUReplacements &TUs, const TUDiagnostics &TUDs,
         // FIXME: This will report conflicts by pair using a file+offset format
         // which is not so much human readable.
         // A first improvement could be to translate offset to line+col. For
-        // this and without loosing error message some modifications arround
+        // this and without loosing error message some modifications around
         // `tooling::ReplacementError` are need (access to
         // `getReplacementErrString`).
         // A better strategy could be to add a pretty printer methods for

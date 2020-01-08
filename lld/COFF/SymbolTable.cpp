@@ -591,7 +591,10 @@ Symbol *SymbolTable::addAbsolute(StringRef n, COFFSymbolRef sym) {
   s->isUsedInRegularObj = true;
   if (wasInserted || isa<Undefined>(s) || s->isLazy())
     replaceSymbol<DefinedAbsolute>(s, n, sym);
-  else if (!isa<DefinedCOFF>(s))
+  else if (auto *da = dyn_cast<DefinedAbsolute>(s)) {
+    if (!da->isEqual(sym))
+      reportDuplicate(s, nullptr);
+  } else if (!isa<DefinedCOFF>(s))
     reportDuplicate(s, nullptr);
   return s;
 }
@@ -603,7 +606,10 @@ Symbol *SymbolTable::addAbsolute(StringRef n, uint64_t va) {
   s->isUsedInRegularObj = true;
   if (wasInserted || isa<Undefined>(s) || s->isLazy())
     replaceSymbol<DefinedAbsolute>(s, n, va);
-  else if (!isa<DefinedCOFF>(s))
+  else if (auto *da = dyn_cast<DefinedAbsolute>(s)) {
+    if (!da->isEqual(va))
+      reportDuplicate(s, nullptr);
+  } else if (!isa<DefinedCOFF>(s))
     reportDuplicate(s, nullptr);
   return s;
 }

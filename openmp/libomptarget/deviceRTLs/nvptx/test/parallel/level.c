@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
       check2[id] += omp_get_ancestor_thread_num(0) + 5 * omp_get_team_size(0);
       // Expected to return the current thread num.
       check2[id] += (omp_get_ancestor_thread_num(1) - id);
-      // Exepcted to return the current number of threads.
+      // Expected to return the current number of threads.
       check2[id] += 3 * omp_get_team_size(1);
       // Expected to return -1, see above.
       check2[id] += omp_get_ancestor_thread_num(2) + omp_get_team_size(2);
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
         int check4Inc = omp_get_ancestor_thread_num(0) + 5 * omp_get_team_size(0);
         // Expected to return the parent thread num.
         check4Inc += (omp_get_ancestor_thread_num(1) - id);
-        // Exepcted to return the number of threads in the active parallel region.
+        // Expected to return the number of threads in the active parallel region.
         check4Inc += 3 * omp_get_team_size(1);
         // Exptected to return 0 and 1.
         check4Inc += omp_get_ancestor_thread_num(2) + 3 * omp_get_team_size(2);
