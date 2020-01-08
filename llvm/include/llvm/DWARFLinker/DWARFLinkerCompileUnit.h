@@ -1,4 +1,4 @@
-//===- tools/dsymutil/CompileUnit.h - Dwarf debug info linker ---*- C++ -*-===//
+//===- DWARFLinkerCompileUnit.h ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_DSYMUTIL_COMPILEUNIT_H
-#define LLVM_TOOLS_DSYMUTIL_COMPILEUNIT_H
+#ifndef LLVM_DWARFLINKER_DWARFLINKERCOMPILEUNIT_H
+#define LLVM_DWARFLINKER_DWARFLINKERCOMPILEUNIT_H
 
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "llvm/Support/DataExtractor.h"
 
 namespace llvm {
-namespace dsymutil {
 
 class DeclContext;
 
@@ -46,7 +46,7 @@ struct PatchLocation {
 };
 
 /// Stores all information relating to a compile unit, be it in its original
-/// instance in the object file to its brand new cloned and linked DIE tree.
+/// instance in the object file to its brand new cloned and generated DIE tree.
 class CompileUnit {
 public:
   /// Information gathered about a DIE in the object file.
@@ -325,7 +325,6 @@ private:
   std::string ClangModuleName;
 };
 
-} // end namespace dsymutil
 } // end namespace llvm
 
-#endif // LLVM_TOOLS_DSYMUTIL_COMPILEUNIT_H
+#endif // LLVM_DWARFLINKER_DWARFLINKERCOMPILEUNIT_H
