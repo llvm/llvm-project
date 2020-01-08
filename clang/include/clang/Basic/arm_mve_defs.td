@@ -190,7 +190,10 @@ def CTO_Pred: ComplexTypeOp;
 class CTO_Tuple<int n_>: ComplexTypeOp { int n = n_; }
 class CTO_Pointer<bit const_>: ComplexTypeOp { bit const = const_; }
 def CTO_CopyKind: ComplexTypeOp;
-def CTO_DoubleSize: ComplexTypeOp;
+class CTO_ScaleSize<int num_, int denom_>: ComplexTypeOp {
+  int num = num_;
+  int denom = denom_;
+}
 
 // -----------------------------------------------------------------------------
 // Instances of Type intended to be used directly in the specification of an
@@ -268,7 +271,8 @@ class CopyKind<Type s, Type k>: ComplexType<(CTO_CopyKind s, k)>;
 // DoubleSize<k> expects k to be a scalar type. It returns a scalar type
 // whose kind (signed, unsigned or float) matches that of k, and whose size
 // is double that of k, if possible.
-class DoubleSize<Type k>: ComplexType<(CTO_DoubleSize k)>;
+class DoubleSize<Type k> : ComplexType<(CTO_ScaleSize<2, 1> k)>;
+class HalfSize<Type k>   : ComplexType<(CTO_ScaleSize<1, 2> k)>;
 
 // Unsigned<t> expects t to be a scalar type, and expands to the unsigned
 // integer scalar of the same size. So it returns u16 if you give it s16 or
@@ -280,9 +284,12 @@ class Unsigned<Type t>: ComplexType<(CTO_CopyKind t, u32)>;
 def UScalar: Unsigned<Scalar>;
 def UVector: VecOf<UScalar>;
 
-// DblVector expands to a vector of scalars of size twice the size of
-// Scalar.
+// DblVector expands to a vector of scalars of size twice the size of Scalar.
+// HalfVector, similarly, expands to a vector of half-sized scalars. And
+// UHalfVector is a vector of half-sized _unsigned integers_.
 def DblVector: VecOf<DoubleSize<Scalar>>;
+def HalfVector: VecOf<HalfSize<Scalar>>;
+def UHalfVector: VecOf<Unsigned<HalfSize<Scalar>>>;
 
 // Expands to the 32-bit integer of the same signedness as Scalar.
 def Scalar32: CopyKind<u32, Scalar>;
@@ -305,7 +312,10 @@ class IB_ConstRange<int lo_, int hi_> : ImmediateBounds {
 }
 def IB_UEltValue : ImmediateBounds;
 def IB_LaneIndex : ImmediateBounds;
-class IB_EltBit<int base_> : ImmediateBounds { int base = base_; }
+class IB_EltBit<int base_, Type type_ = Scalar> : ImmediateBounds {
+  int base = base_;
+  Type type = type_;
+}
 
 // -----------------------------------------------------------------------------
 // End-user definitions for immediate arguments.
@@ -327,8 +337,12 @@ def imm_simd_vmvn : Immediate<u32, IB_UEltValue> {
 //
 // imm_0toNm1 is the same but with the range offset by 1, i.e. 0 to N-1
 // inclusive.
+//
+// imm_1toHalfN is like imm_1toN, but applied to a half-width type.
+// (So if Scalar is s16, for example, it'll give you the range 1 to 8.)
 def imm_1toN : Immediate<sint, IB_EltBit<1>>;
 def imm_0toNm1 : Immediate<sint, IB_EltBit<0>>;
+def imm_1toHalfN : Immediate<sint, IB_EltBit<1, HalfSize<Scalar>>>;
 
 // imm_lane has to be the index of a vector lane in the main vector type, i.e
 // it can range from 0 to (128 / size of scalar)-1 inclusive. (e.g. vgetq_lane)
