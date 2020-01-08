@@ -309,13 +309,6 @@ public:
                                              RegScavenger *RS = nullptr) const {
   }
 
-  /// processFunctionBeforeFrameIndicesReplaced - This method is called
-  /// immediately before MO_FrameIndex operands are eliminated, but after the
-  /// frame is finalized. This method is optional.
-  virtual void
-  processFunctionBeforeFrameIndicesReplaced(MachineFunction &MF,
-                                            RegScavenger *RS = nullptr) const {}
-
   virtual unsigned getWinEHParentFrameOffset(const MachineFunction &MF) const {
     report_fatal_error("WinEH not implemented for this target");
   }

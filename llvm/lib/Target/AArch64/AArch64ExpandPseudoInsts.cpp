@@ -349,30 +349,14 @@ bool AArch64ExpandPseudo::expandSetTagLoop(
     MachineBasicBlock::iterator &NextMBBI) {
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
-  Register SizeReg = MI.getOperand(0).getReg();
-  Register AddressReg = MI.getOperand(1).getReg();
+  Register SizeReg = MI.getOperand(2).getReg();
+  Register AddressReg = MI.getOperand(3).getReg();
 
   MachineFunction *MF = MBB.getParent();
 
   bool ZeroData = MI.getOpcode() == AArch64::STZGloop;
-  const unsigned OpCode1 =
-      ZeroData ? AArch64::STZGPostIndex : AArch64::STGPostIndex;
-  const unsigned OpCode2 =
+  const unsigned OpCode =
       ZeroData ? AArch64::STZ2GPostIndex : AArch64::ST2GPostIndex;
-
-  unsigned Size = MI.getOperand(2).getImm();
-  assert(Size > 0 && Size % 16 == 0);
-  if (Size % (16 * 2) != 0) {
-    BuildMI(MBB, MBBI, DL, TII->get(OpCode1), AddressReg)
-        .addReg(AddressReg)
-        .addReg(AddressReg)
-        .addImm(1);
-    Size -= 16;
-  }
-  MachineBasicBlock::iterator I =
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVi64imm), SizeReg)
-          .addImm(Size);
-  expandMOVImm(MBB, I, 64);
 
   auto LoopBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
   auto DoneBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
@@ -380,7 +364,7 @@ bool AArch64ExpandPseudo::expandSetTagLoop(
   MF->insert(++MBB.getIterator(), LoopBB);
   MF->insert(++LoopBB->getIterator(), DoneBB);
 
-  BuildMI(LoopBB, DL, TII->get(OpCode2))
+  BuildMI(LoopBB, DL, TII->get(OpCode))
       .addDef(AddressReg)
       .addReg(AddressReg)
       .addReg(AddressReg)
