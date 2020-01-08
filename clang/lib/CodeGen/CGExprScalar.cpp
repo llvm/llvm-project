@@ -129,11 +129,10 @@ struct BinOpInfo {
     return true;
   }
 
-  /// Check if either operand is a fixed point type or integer type, with at
-  /// least one being a fixed point type. In any case, this
-  /// operation did not follow usual arithmetic conversion and both operands may
-  /// not be the same.
-  bool isFixedPointBinOp() const {
+  /// Check if at least one operand is a fixed point type. In such cases, this
+  /// operation did not follow usual arithmetic conversion and both operands
+  /// might not be of the same type.
+  bool isFixedPointOp() const {
     // We cannot simply check the result type since comparison operations return
     // an int.
     if (const auto *BinOp = dyn_cast<BinaryOperator>(E)) {
@@ -141,6 +140,8 @@ struct BinOpInfo {
       QualType RHSType = BinOp->getRHS()->getType();
       return LHSType->isFixedPointType() || RHSType->isFixedPointType();
     }
+    if (const auto *UnOp = dyn_cast<UnaryOperator>(E))
+      return UnOp->getSubExpr()->getType()->isFixedPointType();
     return false;
   }
 };
@@ -746,7 +747,7 @@ public:
       Value *V = Builder.CreateFMul(Ops.LHS, Ops.RHS, "mul");
       return propagateFMFlags(V, Ops);
     }
-    if (Ops.isFixedPointBinOp())
+    if (Ops.isFixedPointOp())
       return EmitFixedPointBinOp(Ops);
     return Builder.CreateMul(Ops.LHS, Ops.RHS, "mul");
   }
@@ -2620,6 +2621,36 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       }
     }
 
+  // Fixed-point types.
+  } else if (type->isFixedPointType()) {
+    // Fixed-point types are tricky. In some cases, it isn't possible to
+    // represent a 1 or a -1 in the type at all. Piggyback off of
+    // EmitFixedPointBinOp to avoid having to reimplement saturation.
+    BinOpInfo Info;
+    Info.E = E;
+    Info.Ty = E->getType();
+    Info.Opcode = isInc ? BO_Add : BO_Sub;
+    Info.LHS = value;
+    Info.RHS = llvm::ConstantInt::get(value->getType(), 1, false);
+    // If the type is signed, it's better to represent this as +(-1) or -(-1),
+    // since -1 is guaranteed to be representable.
+    if (type->isSignedFixedPointType()) {
+      Info.Opcode = isInc ? BO_Sub : BO_Add;
+      Info.RHS = Builder.CreateNeg(Info.RHS);
+    }
+    // Now, convert from our invented integer literal to the type of the unary
+    // op. This will upscale and saturate if necessary. This value can become
+    // undef in some cases.
+    FixedPointSemantics SrcSema =
+        FixedPointSemantics::GetIntegerSemantics(value->getType()
+                                                      ->getScalarSizeInBits(),
+                                                 /*IsSigned=*/true);
+    FixedPointSemantics DstSema =
+        CGF.getContext().getFixedPointSemantics(Info.Ty);
+    Info.RHS = EmitFixedPointConversion(Info.RHS, SrcSema, DstSema,
+                                        E->getExprLoc());
+    value = EmitFixedPointBinOp(Info);
+
   // Objective-C pointer types.
   } else {
     const ObjCObjectPointerType *OPT = type->castAs<ObjCObjectPointerType>();
@@ -3123,7 +3154,7 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
     }
     return Val;
   }
-  else if (Ops.isFixedPointBinOp())
+  else if (Ops.isFixedPointOp())
     return EmitFixedPointBinOp(Ops);
   else if (Ops.Ty->hasUnsignedIntegerRepresentation())
     return Builder.CreateUDiv(Ops.LHS, Ops.RHS, "div");
@@ -3487,7 +3518,7 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
     return propagateFMFlags(V, op);
   }
 
-  if (op.isFixedPointBinOp())
+  if (op.isFixedPointOp())
     return EmitFixedPointBinOp(op);
 
   return Builder.CreateAdd(op.LHS, op.RHS, "add");
@@ -3499,14 +3530,19 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
   using llvm::APSInt;
   using llvm::ConstantInt;
 
-  const auto *BinOp = cast<BinaryOperator>(op.E);
-
-  // The result is a fixed point type and at least one of the operands is fixed
-  // point while the other is either fixed point or an int. This resulting type
-  // should be determined by Sema::handleFixedPointConversions().
+  // This is either a binary operation where at least one of the operands is
+  // a fixed-point type, or a unary operation where the operand is a fixed-point
+  // type. The result type of a binary operation is determined by
+  // Sema::handleFixedPointConversions().
   QualType ResultTy = op.Ty;
-  QualType LHSTy = BinOp->getLHS()->getType();
-  QualType RHSTy = BinOp->getRHS()->getType();
+  QualType LHSTy, RHSTy;
+  if (const auto *BinOp = dyn_cast<BinaryOperator>(op.E)) {
+    LHSTy = BinOp->getLHS()->getType();
+    RHSTy = BinOp->getRHS()->getType();
+  } else if (const auto *UnOp = dyn_cast<UnaryOperator>(op.E)) {
+    LHSTy = UnOp->getSubExpr()->getType();
+    RHSTy = UnOp->getSubExpr()->getType();
+  }
   ASTContext &Ctx = CGF.getContext();
   Value *LHS = op.LHS;
   Value *RHS = op.RHS;
@@ -3518,13 +3554,13 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
 
   // Convert the operands to the full precision type.
   Value *FullLHS = EmitFixedPointConversion(LHS, LHSFixedSema, CommonFixedSema,
-                                            BinOp->getExprLoc());
+                                            op.E->getExprLoc());
   Value *FullRHS = EmitFixedPointConversion(RHS, RHSFixedSema, CommonFixedSema,
-                                            BinOp->getExprLoc());
+                                            op.E->getExprLoc());
 
   // Perform the actual addition.
   Value *Result;
-  switch (BinOp->getOpcode()) {
+  switch (op.Opcode) {
   case BO_Add: {
     if (ResultFixedSema.isSaturated()) {
       llvm::Intrinsic::ID IID = ResultFixedSema.isSigned()
@@ -3621,7 +3657,7 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
 
   // Convert to the result type.
   return EmitFixedPointConversion(Result, CommonFixedSema, ResultFixedSema,
-                                  BinOp->getExprLoc());
+                                  op.E->getExprLoc());
 }
 
 Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
@@ -3655,7 +3691,7 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
       return propagateFMFlags(V, op);
     }
 
-    if (op.isFixedPointBinOp())
+    if (op.isFixedPointOp())
       return EmitFixedPointBinOp(op);
 
     return Builder.CreateSub(op.LHS, op.RHS, "sub");
@@ -3958,7 +3994,7 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
                                   E->getExprLoc());
     }
 
-    if (BOInfo.isFixedPointBinOp()) {
+    if (BOInfo.isFixedPointOp()) {
       Result = EmitFixedPointBinOp(BOInfo);
     } else if (LHS->getType()->isFPOrFPVectorTy()) {
       if (!IsSignaling)
