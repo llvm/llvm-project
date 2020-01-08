@@ -61,7 +61,7 @@ public:
   ///               certain characteristics of the ASTContext and its types
   ///               (e.g., whether certain primitive types exist or what their
   ///               signedness is).
-  explicit ClangASTContext(llvm::Triple triple = llvm::Triple());
+  explicit ClangASTContext(llvm::Triple triple);
 
   /// Constructs a ClangASTContext that uses an existing ASTContext internally.
   /// Useful when having an existing ASTContext created by Clang.
