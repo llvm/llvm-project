@@ -9,7 +9,6 @@
 %module lldb
 
 %include "./headers.swig"
-%include "./extensions.swig"
 
 %{
 using namespace lldb_private;

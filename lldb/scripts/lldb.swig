@@ -95,7 +95,6 @@ def lldb_iter(obj, getsize, getelem):
 
 %include "./Python/python-typemaps.swig"
 %include "./headers.swig"
-%include "./extensions.swig"
 
 %{
 #include "../source/Plugins/ScriptInterpreter/Python/PythonDataObjects.h"

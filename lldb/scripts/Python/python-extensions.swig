@@ -502,6 +502,18 @@
 }
 
 %extend lldb::SBTarget {
+        %nothreadallow;
+        PyObject *lldb::SBTarget::__str__ (){
+                lldb::SBStream description;
+                $self->GetDescription (description, lldb::eDescriptionLevelBrief);
+                const char *desc = description.GetData();
+                size_t desc_len = description.GetSize();
+                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
+                    --desc_len;
+                return PythonString(llvm::StringRef(desc, desc_len)).release();
+        }
+        %clearnothreadallow;
+
     %pythoncode %{
         def __eq__(self, rhs):
             if not isinstance(rhs, type(self)):
