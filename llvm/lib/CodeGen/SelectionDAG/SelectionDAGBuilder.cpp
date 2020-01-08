@@ -5441,6 +5441,60 @@ static SDValue ExpandPowI(const SDLoc &DL, SDValue LHS, SDValue RHS,
   return DAG.getNode(ISD::FPOWI, DL, LHS.getValueType(), LHS, RHS);
 }
 
+static SDValue expandDivFix(unsigned Opcode, const SDLoc &DL,
+                            SDValue LHS, SDValue RHS, SDValue Scale,
+                            SelectionDAG &DAG, const TargetLowering &TLI) {
+  EVT VT = LHS.getValueType();
+  bool Signed = Opcode == ISD::SDIVFIX;
+  LLVMContext &Ctx = *DAG.getContext();
+
+  // If the type is legal but the operation isn't, this node might survive all
+  // the way to operation legalization. If we end up there and we do not have
+  // the ability to widen the type (if VT*2 is not legal), we cannot expand the
+  // node.
+
+  // Coax the legalizer into expanding the node during type legalization instead
+  // by bumping the size by one bit. This will force it to Promote, enabling the
+  // early expansion and avoiding the need to expand later.
+
+  // We don't have to do this if Scale is 0; that can always be expanded.
+
+  // FIXME: We wouldn't have to do this (or any of the early
+  // expansion/promotion) if it was possible to expand a libcall of an
+  // illegal type during operation legalization. But it's not, so things
+  // get a bit hacky.
+  unsigned ScaleInt = cast<ConstantSDNode>(Scale)->getZExtValue();
+  if (ScaleInt > 0 &&
+      (TLI.isTypeLegal(VT) ||
+       (VT.isVector() && TLI.isTypeLegal(VT.getVectorElementType())))) {
+    TargetLowering::LegalizeAction Action = TLI.getFixedPointOperationAction(
+        Opcode, VT, ScaleInt);
+    if (Action != TargetLowering::Legal && Action != TargetLowering::Custom) {
+      EVT PromVT;
+      if (VT.isScalarInteger())
+        PromVT = EVT::getIntegerVT(Ctx, VT.getSizeInBits() + 1);
+      else if (VT.isVector()) {
+        PromVT = VT.getVectorElementType();
+        PromVT = EVT::getIntegerVT(Ctx, PromVT.getSizeInBits() + 1);
+        PromVT = EVT::getVectorVT(Ctx, PromVT, VT.getVectorElementCount());
+      } else
+        llvm_unreachable("Wrong VT for DIVFIX?");
+      if (Signed) {
+        LHS = DAG.getSExtOrTrunc(LHS, DL, PromVT);
+        RHS = DAG.getSExtOrTrunc(RHS, DL, PromVT);
+      } else {
+        LHS = DAG.getZExtOrTrunc(LHS, DL, PromVT);
+        RHS = DAG.getZExtOrTrunc(RHS, DL, PromVT);
+      }
+      // TODO: Saturation.
+      SDValue Res = DAG.getNode(Opcode, DL, PromVT, LHS, RHS, Scale);
+      return DAG.getZExtOrTrunc(Res, DL, VT);
+    }
+  }
+
+  return DAG.getNode(Opcode, DL, VT, LHS, RHS, Scale);
+}
+
 // getUnderlyingArgRegs - Find underlying registers used for a truncated,
 // bitcasted, or split argument. Returns a list of <Register, size in bits>
 static void
@@ -5705,6 +5759,14 @@ static unsigned FixedPointIntrinsicToOpcode(unsigned Intrinsic) {
     return ISD::SMULFIX;
   case Intrinsic::umul_fix:
     return ISD::UMULFIX;
+  case Intrinsic::smul_fix_sat:
+    return ISD::SMULFIXSAT;
+  case Intrinsic::umul_fix_sat:
+    return ISD::UMULFIXSAT;
+  case Intrinsic::sdiv_fix:
+    return ISD::SDIVFIX;
+  case Intrinsic::udiv_fix:
+    return ISD::UDIVFIX;
   default:
     llvm_unreachable("Unhandled fixed point intrinsic");
   }
@@ -6360,7 +6422,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::smul_fix:
-  case Intrinsic::umul_fix: {
+  case Intrinsic::umul_fix:
+  case Intrinsic::smul_fix_sat:
+  case Intrinsic::umul_fix_sat: {
     SDValue Op1 = getValue(I.getArgOperand(0));
     SDValue Op2 = getValue(I.getArgOperand(1));
     SDValue Op3 = getValue(I.getArgOperand(2));
@@ -6368,20 +6432,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              Op1.getValueType(), Op1, Op2, Op3));
     return;
   }
-  case Intrinsic::smul_fix_sat: {
+  case Intrinsic::sdiv_fix:
+  case Intrinsic::udiv_fix: {
     SDValue Op1 = getValue(I.getArgOperand(0));
     SDValue Op2 = getValue(I.getArgOperand(1));
     SDValue Op3 = getValue(I.getArgOperand(2));
-    setValue(&I, DAG.getNode(ISD::SMULFIXSAT, sdl, Op1.getValueType(), Op1, Op2,
-                             Op3));
-    return;
-  }
-  case Intrinsic::umul_fix_sat: {
-    SDValue Op1 = getValue(I.getArgOperand(0));
-    SDValue Op2 = getValue(I.getArgOperand(1));
-    SDValue Op3 = getValue(I.getArgOperand(2));
-    setValue(&I, DAG.getNode(ISD::UMULFIXSAT, sdl, Op1.getValueType(), Op1, Op2,
-                             Op3));
+    setValue(&I, expandDivFix(FixedPointIntrinsicToOpcode(Intrinsic), sdl,
+                              Op1, Op2, Op3, DAG, TLI));
     return;
   }
   case Intrinsic::stacksave: {
