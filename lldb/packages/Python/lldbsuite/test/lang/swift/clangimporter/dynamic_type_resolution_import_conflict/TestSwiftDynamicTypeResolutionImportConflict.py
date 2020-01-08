@@ -60,13 +60,11 @@ class TestSwiftDynamicTypeResolutionImportConflict(TestBase):
         self.expect("bt", substrs=['Dylib.swift'])
         self.expect("fr v -d no-dynamic-values -- input",
                     substrs=['(Dylib.LibraryProtocol) input'])
-        self.expect("fr v -d run-target -- input",
-                    substrs=['(a.FromMainModule) input'])
-        self.expect("expr -d run-target -- input",
-                    substrs=['(a.FromMainModule) $R0'])
 
-if __name__ == '__main__':
-    import atexit
-    lldb.SBDebugger.Initialize()
-    atexit.register(lldb.SBDebugger.Terminate)
-    unittest2.main()
+        # Because we are now in a per-module scratch context, we don't
+        # expect dynamic type resolution to find a type defined inside
+        # the other dylib.
+        self.expect("fr v -d run-target -- input",
+                    substrs=['(Dylib.LibraryProtocol) input'])
+        self.expect("expr -d run-target -- input",
+                    substrs=['(Dylib.LibraryProtocol)'])
