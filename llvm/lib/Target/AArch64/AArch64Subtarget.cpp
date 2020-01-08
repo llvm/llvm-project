@@ -88,8 +88,6 @@ void AArch64Subtarget::initializeProperties() {
   case CortexA76:
     PrefFunctionLogAlignment = 4;
     break;
-  case Vortex:
-  case Lightning:
   case AppleA7:
   case AppleA10:
   case AppleA11:
