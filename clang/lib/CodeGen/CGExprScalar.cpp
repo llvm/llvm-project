@@ -3537,8 +3537,16 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
   QualType ResultTy = op.Ty;
   QualType LHSTy, RHSTy;
   if (const auto *BinOp = dyn_cast<BinaryOperator>(op.E)) {
-    LHSTy = BinOp->getLHS()->getType();
     RHSTy = BinOp->getRHS()->getType();
+    if (const auto *CAO = dyn_cast<CompoundAssignOperator>(BinOp)) {
+      // For compound assignment, the effective type of the LHS at this point
+      // is the computation LHS type, not the actual LHS type, and the final
+      // result type is not the type of the expression but rather the
+      // computation result type.
+      LHSTy = CAO->getComputationLHSType();
+      ResultTy = CAO->getComputationResultType();
+    } else
+      LHSTy = BinOp->getLHS()->getType();
   } else if (const auto *UnOp = dyn_cast<UnaryOperator>(op.E)) {
     LHSTy = UnOp->getSubExpr()->getType();
     RHSTy = UnOp->getSubExpr()->getType();
@@ -3558,9 +3566,10 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
   Value *FullRHS = EmitFixedPointConversion(RHS, RHSFixedSema, CommonFixedSema,
                                             op.E->getExprLoc());
 
-  // Perform the actual addition.
+  // Perform the actual operation.
   Value *Result;
   switch (op.Opcode) {
+  case BO_AddAssign:
   case BO_Add: {
     if (ResultFixedSema.isSaturated()) {
       llvm::Intrinsic::ID IID = ResultFixedSema.isSigned()
@@ -3572,6 +3581,7 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
     }
     break;
   }
+  case BO_SubAssign:
   case BO_Sub: {
     if (ResultFixedSema.isSaturated()) {
       llvm::Intrinsic::ID IID = ResultFixedSema.isSigned()
@@ -3583,6 +3593,7 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
     }
     break;
   }
+  case BO_MulAssign:
   case BO_Mul: {
     llvm::Intrinsic::ID IID;
     if (ResultFixedSema.isSaturated())
@@ -3597,6 +3608,7 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
         {FullLHS, FullRHS, Builder.getInt32(CommonFixedSema.getScale())});
     break;
   }
+  case BO_DivAssign:
   case BO_Div: {
     llvm::Intrinsic::ID IID;
     if (ResultFixedSema.isSaturated())
@@ -3633,10 +3645,6 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
   case BO_Cmp:
   case BO_LAnd:
   case BO_LOr:
-  case BO_MulAssign:
-  case BO_DivAssign:
-  case BO_AddAssign:
-  case BO_SubAssign:
   case BO_ShlAssign:
   case BO_ShrAssign:
     llvm_unreachable("Found unimplemented fixed point binary operation");
