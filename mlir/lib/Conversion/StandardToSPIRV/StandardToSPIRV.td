@@ -20,6 +20,10 @@ class BinaryOpPattern<Type type, Op src, Op tgt> :
       Pat<(src SPV_ScalarOrVectorOf<type>:$l, SPV_ScalarOrVectorOf<type>:$r),
           (tgt $l, $r)>;
 
+class UnaryOpPattern<Type type, Op src, Op tgt> :
+      Pat<(src type:$input),
+          (tgt $input)>;
+
 def : BinaryOpPattern<SPV_Bool, AndOp, SPV_LogicalAndOp>;
 def : BinaryOpPattern<SPV_Bool, OrOp, SPV_LogicalOrOp>;
 def : BinaryOpPattern<SPV_Float, AddFOp, SPV_FAddOp>;
@@ -27,6 +31,10 @@ def : BinaryOpPattern<SPV_Float, DivFOp, SPV_FDivOp>;
 def : BinaryOpPattern<SPV_Float, MulFOp, SPV_FMulOp>;
 def : BinaryOpPattern<SPV_Float, RemFOp, SPV_FRemOp>;
 def : BinaryOpPattern<SPV_Float, SubFOp, SPV_FSubOp>;
+
+def : UnaryOpPattern<SPV_Integer, SIToFPOp, SPV_ConvertSToFOp>;
+def : UnaryOpPattern<SPV_Float, FPExtOp, SPV_FConvertOp>;
+def : UnaryOpPattern<SPV_Float, FPTruncOp, SPV_FConvertOp>;
 
 // Constant Op
 // TODO(ravishankarm): Handle lowering other constant types.
