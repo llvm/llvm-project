@@ -563,7 +563,7 @@ files.
 
 =item B<--os=>I<str>
 
-Specify OS name the message formats to be converted for. If not specified expolicitly, value of
+Specify OS name the message formats to be converted for. If not specified explicitly, value of
 LIBOMP_OS environment variable is used. If LIBOMP_OS is not defined, host OS is detected.
 
 Depending on OS, B<message-converter.pl> converts message formats to GNU style or MS style.
@@ -659,7 +659,7 @@ Enum file is a C include file, containing definitions of message identifiers, e.
         kmp_i18n_str_NotANumber,
         ...
 
-        // Set #3, fotrmats.
+        // Set #3, formats.
         ...
 
         kmp_i18n_xxx_lastest
@@ -709,7 +709,7 @@ Here is the example of Linux* OS message file:
     2 "Japan"
     3 "1041"
     4 "2"
-    5 "Based on Enlish message catalog revision 20090806"
+    5 "Based on English message catalog revision 20090806"
     ...
 
 Example of Windows* OS message file:

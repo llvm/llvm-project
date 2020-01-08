@@ -646,22 +646,22 @@ def : Pat <
 
 def : Pat <
   (int_amdgcn_kill i1:$src),
-  (SI_KILL_I1_PSEUDO $src, 0)
+  (SI_KILL_I1_PSEUDO SCSrc_i1:$src, 0)
 >;
 
 def : Pat <
   (int_amdgcn_kill (i1 (not i1:$src))),
-  (SI_KILL_I1_PSEUDO $src, -1)
+  (SI_KILL_I1_PSEUDO SCSrc_i1:$src, -1)
 >;
 
 def : Pat <
   (AMDGPUkill i32:$src),
-  (SI_KILL_F32_COND_IMM_PSEUDO $src, 0, 3) // 3 means SETOGE
+  (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, 0, 3) // 3 means SETOGE
 >;
 
 def : Pat <
-  (int_amdgcn_kill (i1 (setcc f32:$src, InlineFPImm<f32>:$imm, cond:$cond))),
-  (SI_KILL_F32_COND_IMM_PSEUDO $src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
+  (int_amdgcn_kill (i1 (setcc f32:$src, InlineImmFP32:$imm, cond:$cond))),
+  (SI_KILL_F32_COND_IMM_PSEUDO VSrc_b32:$src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
 >;
 
   // TODO: we could add more variants for other types of conditionals
@@ -1324,8 +1324,8 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (i64 InlineImm<i64>:$imm),
-  (S_MOV_B64 InlineImm<i64>:$imm)
+  (i64 InlineImm64:$imm),
+  (S_MOV_B64 InlineImm64:$imm)
 >;
 
 // XXX - Should this use a s_cmp to set SCC?
@@ -1346,14 +1346,15 @@ def : GCNPat <
 }
 
 def : GCNPat <
-  (f64 InlineFPImm<f64>:$imm),
-  (S_MOV_B64 (f64 (bitcast_fpimm_to_i64 InlineFPImm<f64>:$imm)))
+  (f64 InlineImmFP64:$imm),
+  (S_MOV_B64 (f64 (bitcast_fpimm_to_i64 InlineImmFP64:$imm)))
 >;
 
 /********** ================== **********/
 /********** Intrinsic Patterns **********/
 /********** ================== **********/
 
+// FIXME: Should use _e64 and select source modifiers.
 def : POW_Common <V_LOG_F32_e32, V_EXP_F32_e32, V_MUL_LEGACY_F32_e32>;
 
 def : GCNPat <
@@ -1793,54 +1794,59 @@ def : ExpPattern<AMDGPUexport_done, i32, EXP_DONE>;
 // COPY is workaround tablegen bug from multiple outputs
 // from S_LSHL_B32's multiple outputs from implicit scc def.
 def : GCNPat <
-  (v2i16 (build_vector (i16 0), i16:$src1)),
-  (v2i16 (COPY (S_LSHL_B32 i16:$src1, (i16 16))))
+  (v2i16 (build_vector (i16 0), (i16 SReg_32:$src1))),
+  (S_LSHL_B32 SReg_32:$src1, (i16 16))
 >;
 
 def : GCNPat <
-  (v2i16 (build_vector i16:$src0, (i16 undef))),
-  (v2i16 (COPY $src0))
+  (v2i16 (build_vector (i16 SReg_32:$src0), (i16 undef))),
+  (COPY_TO_REGCLASS SReg_32:$src0, SReg_32)
+>;
+
+def : GCNPat <
+  (v2i16 (build_vector (i16 VGPR_32:$src0), (i16 undef))),
+  (COPY_TO_REGCLASS VGPR_32:$src0, VGPR_32)
 >;
 
 def : GCNPat <
   (v2f16 (build_vector f16:$src0, (f16 undef))),
-  (v2f16 (COPY $src0))
+  (COPY $src0)
 >;
 
 def : GCNPat <
-  (v2i16 (build_vector (i16 undef), i16:$src1)),
-  (v2i16 (COPY (S_LSHL_B32 $src1, (i32 16))))
+  (v2i16 (build_vector (i16 undef), (i16 SReg_32:$src1))),
+  (S_LSHL_B32 SReg_32:$src1, (i32 16))
 >;
 
 def : GCNPat <
-  (v2f16 (build_vector (f16 undef), f16:$src1)),
-  (v2f16 (COPY (S_LSHL_B32 $src1, (i32 16))))
+  (v2f16 (build_vector (f16 undef), (f16 SReg_32:$src1))),
+  (S_LSHL_B32 SReg_32:$src1, (i32 16))
 >;
 
 let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <
-  (v2i16 (build_vector i16:$src0, i16:$src1)),
-  (v2i16 (S_PACK_LL_B32_B16 $src0, $src1))
+  (v2i16 (build_vector (i16 SReg_32:$src0), (i16 SReg_32:$src1))),
+  (S_PACK_LL_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
 
 // With multiple uses of the shift, this will duplicate the shift and
 // increase register pressure.
 def : GCNPat <
-  (v2i16 (build_vector i16:$src0, (i16 (trunc (srl_oneuse i32:$src1, (i32 16)))))),
-  (v2i16 (S_PACK_LH_B32_B16 i16:$src0, i32:$src1))
+  (v2i16 (build_vector (i16 SReg_32:$src0), (i16 (trunc (srl_oneuse SReg_32:$src1, (i32 16)))))),
+  (v2i16 (S_PACK_LH_B32_B16 SReg_32:$src0, SReg_32:$src1))
 >;
 
 
 def : GCNPat <
-  (v2i16 (build_vector (i16 (trunc (srl_oneuse i32:$src0, (i32 16)))),
-                       (i16 (trunc (srl_oneuse i32:$src1, (i32 16)))))),
-  (v2i16 (S_PACK_HH_B32_B16 $src0, $src1))
+  (v2i16 (build_vector (i16 (trunc (srl_oneuse SReg_32:$src0, (i32 16)))),
+                       (i16 (trunc (srl_oneuse SReg_32:$src1, (i32 16)))))),
+  (S_PACK_HH_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
 
 // TODO: Should source modifiers be matched to v_pack_b32_f16?
 def : GCNPat <
-  (v2f16 (build_vector f16:$src0, f16:$src1)),
-  (v2f16 (S_PACK_LL_B32_B16 $src0, $src1))
+  (v2f16 (build_vector (f16 SReg_32:$src0), (f16 SReg_32:$src1))),
+  (S_PACK_LL_B32_B16 SReg_32:$src0, SReg_32:$src1)
 >;
 
 } // End SubtargetPredicate = HasVOP3PInsts
@@ -1932,7 +1938,7 @@ def : GCNPat<
 // the ignored src1.
 def : GCNPat<
   (int_amdgcn_readfirstlane (i32 imm:$src)),
-  (S_MOV_B32 $src)
+  (S_MOV_B32 SReg_32:$src)
 >;
 
 multiclass BFMPatterns <ValueType vt, InstSI BFM, InstSI MOV> {

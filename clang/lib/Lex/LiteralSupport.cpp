@@ -1051,7 +1051,13 @@ NumericLiteralParser::GetFloatValue(llvm::APFloat &Result) {
     Str = Buffer;
   }
 
-  return Result.convertFromString(Str, APFloat::rmNearestTiesToEven);
+  auto StatusOrErr =
+      Result.convertFromString(Str, APFloat::rmNearestTiesToEven);
+  if (!StatusOrErr) {
+    assert(false && "Invalid floating point representation");
+    return APFloat::opInvalidOp;
+  }
+  return *StatusOrErr;
 }
 
 static inline bool IsExponentPart(char c) {

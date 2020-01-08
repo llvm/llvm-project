@@ -194,7 +194,7 @@ define float @fmuladd_f(float %a, float %b, float %c) {
 ; CHECK-LABEL: fmuladd_f:
 ; SOFT: bl __aeabi_fmul
 ; SOFT: bl __aeabi_fadd
-; VMLA: vmla.f32
+; VMLA: vfma.f32
 ; NO-VMLA: vmul.f32
 ; NO-VMLA: vadd.f32
   %1 = call float @llvm.fmuladd.f32(float %a, float %b, float %c)

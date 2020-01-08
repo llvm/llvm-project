@@ -270,8 +270,8 @@ Status PipePosix::ReadWithTimeout(void *buf, size_t size,
   while (error.Success()) {
     error = select_helper.Select();
     if (error.Success()) {
-      auto result = ::read(fd, reinterpret_cast<char *>(buf) + bytes_read,
-                           size - bytes_read);
+      auto result =
+          ::read(fd, static_cast<char *>(buf) + bytes_read, size - bytes_read);
       if (result != -1) {
         bytes_read += result;
         if (bytes_read == size || result == 0)
@@ -301,9 +301,8 @@ Status PipePosix::Write(const void *buf, size_t size, size_t &bytes_written) {
   while (error.Success()) {
     error = select_helper.Select();
     if (error.Success()) {
-      auto result =
-          ::write(fd, reinterpret_cast<const char *>(buf) + bytes_written,
-                  size - bytes_written);
+      auto result = ::write(fd, static_cast<const char *>(buf) + bytes_written,
+                            size - bytes_written);
       if (result != -1) {
         bytes_written += result;
         if (bytes_written == size)

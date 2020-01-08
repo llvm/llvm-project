@@ -1,5 +1,5 @@
 ; RUN: llc -mcpu=generic -mtriple=i386-apple-darwin -tailcallopt -enable-misched=false < %s | FileCheck %s
-; Check that lowered argumens do not overwrite the return address before it is moved.
+; Check that lowered arguments do not overwrite the return address before it is moved.
 ; Bug 6225
 ;
 ; If a call is a fastcc tail call and tail call optimization is enabled, the

@@ -149,7 +149,7 @@ ompt_label_##id:
   print_possible_return_addresses(get_ompt_label_address(id))
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
-// On X86 the NOP instruction is 1 byte long. In addition, the comiler inserts
+// On X86 the NOP instruction is 1 byte long. In addition, the compiler inserts
 // a MOV instruction for non-void runtime functions which is 3 bytes long.
 #define print_possible_return_addresses(addr) \
   printf("%" PRIu64 ": current_address=%p or %p for non-void functions\n", \

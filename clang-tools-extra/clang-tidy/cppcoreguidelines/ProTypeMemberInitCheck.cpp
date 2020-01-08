@@ -31,7 +31,7 @@ AST_MATCHER(CXXRecordDecl, hasDefaultConstructor) {
 }
 
 // Iterate over all the fields in a record type, both direct and indirect (e.g.
-// if the record contains an anonmyous struct).
+// if the record contains an anonymous struct).
 template <typename T, typename Func>
 void forEachField(const RecordDecl &Record, const T &Fields, Func &&Fn) {
   for (const FieldDecl *F : Fields) {
@@ -424,7 +424,7 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   }
 
   // Collect all fields in order, both direct fields and indirect fields from
-  // anonmyous record types.
+  // anonymous record types.
   SmallVector<const FieldDecl *, 16> OrderedFields;
   forEachField(ClassDecl, ClassDecl.fields(),
                [&](const FieldDecl *F) { OrderedFields.push_back(F); });

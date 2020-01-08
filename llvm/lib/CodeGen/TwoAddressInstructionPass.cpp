@@ -1287,7 +1287,7 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
   bool Commuted = tryInstructionCommute(&MI, DstIdx, SrcIdx, regBKilled, Dist);
 
   // If the instruction is convertible to 3 Addr, instead
-  // of returning try 3 Addr transformation aggresively and
+  // of returning try 3 Addr transformation aggressively and
   // use this variable to check later. Because it might be better.
   // For example, we can just use `leal (%rsi,%rdi), %eax` and `ret`
   // instead of the following code.

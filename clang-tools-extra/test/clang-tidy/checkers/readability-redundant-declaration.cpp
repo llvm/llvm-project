@@ -10,7 +10,7 @@
 // RUN:             [{key: readability-redundant-declaration.IgnoreMacros, \
 // RUN:               value: 0}]}" -- -fms-compatibility -DEXTERNINLINE
 //
-// With -fno-ms-compatiblity, DEXTERNINLINE causes additional output.
+// With -fno-ms-compatibility, DEXTERNINLINE causes additional output.
 // (The leading ',' means "default checks in addition to NOMSCOMPAT checks.)
 // RUN: %check_clang_tidy -check-suffix=,NOMSCOMPAT \
 // RUN:   %s readability-redundant-declaration %t -- \

@@ -129,9 +129,8 @@ DataExtractor::DataExtractor()
 DataExtractor::DataExtractor(const void *data, offset_t length,
                              ByteOrder endian, uint32_t addr_size,
                              uint32_t target_byte_size /*=1*/)
-    : m_start(const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(data))),
-      m_end(const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(data)) +
-            length),
+    : m_start(const_cast<uint8_t *>(static_cast<const uint8_t *>(data))),
+      m_end(const_cast<uint8_t *>(static_cast<const uint8_t *>(data)) + length),
       m_byte_order(endian), m_addr_size(addr_size), m_data_sp(),
       m_target_byte_size(target_byte_size) {
   assert(addr_size == 4 || addr_size == 8);
@@ -232,7 +231,7 @@ lldb::offset_t DataExtractor::SetData(const void *bytes, offset_t length,
     m_start = nullptr;
     m_end = nullptr;
   } else {
-    m_start = const_cast<uint8_t *>(reinterpret_cast<const uint8_t *>(bytes));
+    m_start = const_cast<uint8_t *>(static_cast<const uint8_t *>(bytes));
     m_end = m_start + length;
   }
   return GetByteSize();

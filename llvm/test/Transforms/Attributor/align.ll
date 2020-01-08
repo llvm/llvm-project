@@ -398,5 +398,15 @@ define void @test12-6(i32* align 4 %p) {
   ret void
 }
 
+; Don't crash on ptr2int/int2ptr uses.
+define i64 @ptr2int(i32* %p) {
+  %p2i = ptrtoint i32* %p to i64
+  ret i64 %p2i
+}
+define i64* @int2ptr(i64 %i) {
+  %i2p = inttoptr i64 %i to i64*
+  ret i64* %i2p
+}
+
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { uwtable noinline }

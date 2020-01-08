@@ -1028,12 +1028,8 @@ static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
   }
 
   // Emit function to add the generated matchers to the pattern list.
-  os << "void\n";
-  os << "#if !defined(_MSC_VER) || defined(__clang__)\n";
-  os << "__attribute__((unused))\n";
-  os << "#endif\n";
-  os << "populateWithGenerated(MLIRContext *context, "
-     << "OwningRewritePatternList *patterns) {\n";
+  os << "void LLVM_ATTRIBUTE_UNUSED populateWithGenerated(MLIRContext "
+        "*context, OwningRewritePatternList *patterns) {\n";
   for (const auto &name : rewriterNames) {
     os << "  patterns->insert<" << name << ">(context);\n";
   }

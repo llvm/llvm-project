@@ -380,7 +380,7 @@ bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) co
     // This is eiher:
     // 1) A fixed frame index object which we know are aligned so
     // as long as we have a valid DForm/DSForm/DQForm (non XForm) we don't
-    // need to consider the alignement here.
+    // need to consider the alignment here.
     // 2) A not fixed object but in that case we now know that the min required
     // alignment is no more than 1 based on the previous check.
     if (InstrInfo->isXFormMemOp(Opcode))

@@ -24,7 +24,7 @@ void StreamString::Flush() {
 }
 
 size_t StreamString::WriteImpl(const void *s, size_t length) {
-  m_packet.append(reinterpret_cast<const char *>(s), length);
+  m_packet.append(static_cast<const char *>(s), length);
   return length;
 }
 

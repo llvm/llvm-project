@@ -51,6 +51,33 @@ spv.module "Logical" "GLSL450" {
     %0 = spv.ULessThanEqual %arg0, %arg1 : vector<4xi32>
     spv.Return
   }
+  func @cmpf(%arg0 : f32, %arg1 : f32) {
+    // CHECK: spv.FOrdEqual
+    %1 = spv.FOrdEqual %arg0, %arg1 : f32
+    // CHECK: spv.FOrdGreaterThan
+    %2 = spv.FOrdGreaterThan %arg0, %arg1 : f32
+    // CHECK: spv.FOrdGreaterThanEqual
+    %3 = spv.FOrdGreaterThanEqual %arg0, %arg1 : f32
+    // CHECK: spv.FOrdLessThan
+    %4 = spv.FOrdLessThan %arg0, %arg1 : f32
+    // CHECK: spv.FOrdLessThanEqual
+    %5 = spv.FOrdLessThanEqual %arg0, %arg1 : f32
+    // CHECK: spv.FOrdNotEqual
+    %6 = spv.FOrdNotEqual %arg0, %arg1 : f32
+    // CHECK: spv.FUnordEqual
+    %7 = spv.FUnordEqual %arg0, %arg1 : f32
+    // CHECK: spv.FUnordGreaterThan
+    %8 = spv.FUnordGreaterThan %arg0, %arg1 : f32
+    // CHECK: spv.FUnordGreaterThanEqual
+    %9 = spv.FUnordGreaterThanEqual %arg0, %arg1 : f32
+    // CHECK: spv.FUnordLessThan
+    %10 = spv.FUnordLessThan %arg0, %arg1 : f32
+    // CHECK: spv.FUnordLessThanEqual
+    %11 = spv.FUnordLessThanEqual %arg0, %arg1 : f32
+    // CHECK: spv.FUnordNotEqual
+    %12 = spv.FUnordNotEqual %arg0, %arg1 : f32
+    spv.Return
+  }
 }
 
 // -----

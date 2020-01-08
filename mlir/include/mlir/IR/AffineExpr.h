@@ -87,6 +87,7 @@ public:
 
   template <typename U> bool isa() const;
   template <typename U> U dyn_cast() const;
+  template <typename U> U dyn_cast_or_null() const;
   template <typename U> U cast() const;
 
   MLIRContext *getContext() const;
@@ -226,24 +227,22 @@ AffineExpr toAffineExpr(ArrayRef<int64_t> eq, unsigned numDims,
 raw_ostream &operator<<(raw_ostream &os, AffineExpr &expr);
 
 template <typename U> bool AffineExpr::isa() const {
-  if (std::is_same<U, AffineBinaryOpExpr>::value) {
+  if (std::is_same<U, AffineBinaryOpExpr>::value)
     return getKind() <= AffineExprKind::LAST_AFFINE_BINARY_OP;
-  }
-  if (std::is_same<U, AffineDimExpr>::value) {
+  if (std::is_same<U, AffineDimExpr>::value)
     return getKind() == AffineExprKind::DimId;
-  }
-  if (std::is_same<U, AffineSymbolExpr>::value) {
+  if (std::is_same<U, AffineSymbolExpr>::value)
     return getKind() == AffineExprKind::SymbolId;
-  }
-  if (std::is_same<U, AffineConstantExpr>::value) {
+  if (std::is_same<U, AffineConstantExpr>::value)
     return getKind() == AffineExprKind::Constant;
-  }
 }
 template <typename U> U AffineExpr::dyn_cast() const {
-  if (isa<U>()) {
+  if (isa<U>())
     return U(expr);
-  }
   return U(nullptr);
+}
+template <typename U> U AffineExpr::dyn_cast_or_null() const {
+  return (!*this || !isa<U>()) ? U(nullptr) : U(expr);
 }
 template <typename U> U AffineExpr::cast() const {
   assert(isa<U>());

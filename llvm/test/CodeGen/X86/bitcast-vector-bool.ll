@@ -429,48 +429,11 @@ define i16 @bitcast_v32i8_to_v2i16(<32 x i8> %a0) nounwind {
 define i4 @bitcast_v8i64_to_v2i4(<8 x i64> %a0) nounwind {
 ; SSE2-SSSE3-LABEL: bitcast_v8i64_to_v2i4:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [2147483648,2147483648]
-; SSE2-SSSE3-NEXT:    pxor %xmm4, %xmm3
-; SSE2-SSSE3-NEXT:    movdqa %xmm4, %xmm5
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm3, %xmm5
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm4, %xmm3
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm3
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
-; SSE2-SSSE3-NEXT:    por %xmm3, %xmm5
-; SSE2-SSSE3-NEXT:    pxor %xmm4, %xmm2
-; SSE2-SSSE3-NEXT:    movdqa %xmm4, %xmm3
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm2, %xmm3
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm6 = xmm3[0,0,2,2]
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm4, %xmm2
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm7 = xmm2[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm6, %xmm7
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,1,3,3]
-; SSE2-SSSE3-NEXT:    por %xmm7, %xmm2
-; SSE2-SSSE3-NEXT:    packssdw %xmm5, %xmm2
-; SSE2-SSSE3-NEXT:    pxor %xmm4, %xmm1
-; SSE2-SSSE3-NEXT:    movdqa %xmm4, %xmm3
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm3
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[0,0,2,2]
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm4, %xmm1
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm1
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; SSE2-SSSE3-NEXT:    por %xmm1, %xmm3
-; SSE2-SSSE3-NEXT:    pxor %xmm4, %xmm0
-; SSE2-SSSE3-NEXT:    movdqa %xmm4, %xmm1
-; SSE2-SSSE3-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[0,0,2,2]
-; SSE2-SSSE3-NEXT:    pcmpeqd %xmm4, %xmm0
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-SSSE3-NEXT:    pand %xmm5, %xmm0
-; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE2-SSSE3-NEXT:    por %xmm0, %xmm1
-; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm1
-; SSE2-SSSE3-NEXT:    packssdw %xmm2, %xmm1
-; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm1
-; SSE2-SSSE3-NEXT:    pmovmskb %xmm1, %eax
+; SSE2-SSSE3-NEXT:    packssdw %xmm3, %xmm2
+; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
+; SSE2-SSSE3-NEXT:    packssdw %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    packsswb %xmm0, %xmm0
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
 ; SSE2-SSSE3-NEXT:    movzbl %al, %ecx
 ; SSE2-SSSE3-NEXT:    shrl $4, %ecx
 ; SSE2-SSSE3-NEXT:    movq %rcx, %xmm0

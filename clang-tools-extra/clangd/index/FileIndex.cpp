@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FileIndex.h"
+#include "CollectMacros.h"
 #include "Logger.h"
 #include "ParsedAST.h"
 #include "SymbolCollector.h"
@@ -32,6 +33,7 @@ namespace clangd {
 
 static SlabTuple indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
                               llvm::ArrayRef<Decl *> DeclsToIndex,
+                              const MainFileMacros *MacroRefsToIndex,
                               const CanonicalIncludes &Includes,
                               bool IsIndexMainAST) {
   SymbolCollector::Options CollectorOpts;
@@ -59,6 +61,8 @@ static SlabTuple indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
 
   SymbolCollector Collector(std::move(CollectorOpts));
   Collector.setPreprocessor(PP);
+  if (MacroRefsToIndex)
+    Collector.handleMacros(*MacroRefsToIndex);
   index::indexTopLevelDecls(AST, *PP, DeclsToIndex, Collector, IndexOpts);
 
   const auto &SM = AST.getSourceManager();
@@ -68,6 +72,7 @@ static SlabTuple indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
   auto Syms = Collector.takeSymbols();
   auto Refs = Collector.takeRefs();
   auto Relations = Collector.takeRelations();
+
   vlog("index AST for {0} (main={1}): \n"
        "  symbol slab: {2} symbols, {3} bytes\n"
        "  ref slab: {4} symbols, {5} refs, {6} bytes\n"
@@ -80,7 +85,8 @@ static SlabTuple indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
 
 SlabTuple indexMainDecls(ParsedAST &AST) {
   return indexSymbols(AST.getASTContext(), AST.getPreprocessorPtr(),
-                      AST.getLocalTopLevelDecls(), AST.getCanonicalIncludes(),
+                      AST.getLocalTopLevelDecls(), &AST.getMacros(),
+                      AST.getCanonicalIncludes(),
                       /*IsIndexMainAST=*/true);
 }
 
@@ -89,7 +95,8 @@ SlabTuple indexHeaderSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
   std::vector<Decl *> DeclsToIndex(
       AST.getTranslationUnitDecl()->decls().begin(),
       AST.getTranslationUnitDecl()->decls().end());
-  return indexSymbols(AST, std::move(PP), DeclsToIndex, Includes,
+  return indexSymbols(AST, std::move(PP), DeclsToIndex,
+                      /*MainFileMacros=*/nullptr, Includes,
                       /*IsIndexMainAST=*/false);
 }
 

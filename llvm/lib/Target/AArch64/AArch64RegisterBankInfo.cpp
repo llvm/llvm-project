@@ -222,8 +222,9 @@ unsigned AArch64RegisterBankInfo::copyCost(const RegisterBank &A,
   return RegisterBankInfo::copyCost(A, B, Size);
 }
 
-const RegisterBank &AArch64RegisterBankInfo::getRegBankFromRegClass(
-    const TargetRegisterClass &RC) const {
+const RegisterBank &
+AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
+                                                LLT) const {
   switch (RC.getID()) {
   case AArch64::FPR8RegClassID:
   case AArch64::FPR16RegClassID:

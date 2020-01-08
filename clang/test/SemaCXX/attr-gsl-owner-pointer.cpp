@@ -31,9 +31,11 @@ class [[gsl::Owner(int)]] [[gsl::Pointer(int)]] BothOwnerPointer{};
 // CHECK: OwnerAttr {{.*}} int
 
 class [[gsl::Owner(void)]] OwnerVoidDerefType{};
-// expected-error@-1 {{'void' is an invalid argument to attribute 'Owner'}}
+// CHECK: CXXRecordDecl {{.*}} OwnerVoidDerefType
+// CHECK: OwnerAttr {{.*}} void
 class [[gsl::Pointer(void)]] PointerVoidDerefType{};
-// expected-error@-1 {{'void' is an invalid argument to attribute 'Pointer'}}
+// CHECK: CXXRecordDecl {{.*}} PointerVoidDerefType
+// CHECK: PointerAttr {{.*}} void
 
 class [[gsl::Pointer(int)]] AddConflictLater{};
 // CHECK: CXXRecordDecl {{.*}} AddConflictLater

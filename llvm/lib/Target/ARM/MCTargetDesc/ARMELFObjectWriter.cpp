@@ -255,8 +255,11 @@ void ARMELFObjectWriter::addTargetSectionFlags(MCContext &Ctx,
   // execute-only section in the object.
   MCSectionELF *TextSection =
       static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
-  if (Sec.getKind().isExecuteOnly() && !TextSection->hasInstructions() &&
-      !TextSection->hasData()) {
+  if (Sec.getKind().isExecuteOnly() && !TextSection->hasInstructions()) {
+    for (auto &F : TextSection->getFragmentList())
+      if (auto *DF = dyn_cast<MCDataFragment>(&F))
+        if (!DF->getContents().empty())
+          return;
     TextSection->setFlags(TextSection->getFlags() | ELF::SHF_ARM_PURECODE);
   }
 }

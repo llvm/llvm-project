@@ -203,7 +203,7 @@ enum {
   KMP_IDENT_WORK_LOOP = 0x200,
   /*! To mark a sections directive in OMPT callbacks */
   KMP_IDENT_WORK_SECTIONS = 0x400,
-  /*! To mark a distirbute construct in OMPT callbacks */
+  /*! To mark a distribute construct in OMPT callbacks */
   KMP_IDENT_WORK_DISTRIBUTE = 0x800,
   /*! Atomic hint; bottom four bits as omp_sync_hint_t. Top four reserved and
       not currently used. If one day we need more bits, then we can use
@@ -868,7 +868,7 @@ extern int __kmp_hws_abs_flag; // absolute or per-item number requested
 /* OpenMP 5.0 Memory Management support */
 
 #ifndef __OMP_H
-// Duplicate type definitios from omp.h
+// Duplicate type definitions from omp.h
 typedef uintptr_t omp_uintptr_t;
 
 typedef enum {
@@ -929,7 +929,7 @@ extern omp_allocator_handle_t const omp_thread_mem_alloc;
 extern omp_allocator_handle_t const kmp_max_mem_alloc;
 extern omp_allocator_handle_t __kmp_def_allocator;
 
-// end of duplicate type definitios from omp.h
+// end of duplicate type definitions from omp.h
 #endif
 
 extern int __kmp_memkind_available;
@@ -1389,7 +1389,7 @@ The type for a microtask which gets passed to @ref __kmpc_fork_call().
 The arguments to the outlined function are
 @param global_tid the global thread identity of the thread executing the
 function.
-@param bound_tid  the local identitiy of the thread executing the function
+@param bound_tid  the local identity of the thread executing the function
 @param ... pointers to shared variables accessed by the function.
 */
 typedef void (*kmpc_micro)(kmp_int32 *global_tid, kmp_int32 *bound_tid, ...);
@@ -2253,7 +2253,7 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned started : 1; /* 1==started, 0==not started     */
   unsigned executing : 1; /* 1==executing, 0==not executing */
   unsigned complete : 1; /* 1==complete, 0==not complete   */
-  unsigned freed : 1; /* 1==freed, 0==allocateed        */
+  unsigned freed : 1; /* 1==freed, 0==allocated        */
   unsigned native : 1; /* 1==gcc-compiled task, 0==intel */
   unsigned reserved31 : 7; /* reserved for library use */
 
@@ -2654,7 +2654,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   int t_level; // nested parallel level
 
   KMP_ALIGN_CACHE int t_max_argc;
-  int t_max_nproc; // max threads this team can handle (dynamicly expandable)
+  int t_max_nproc; // max threads this team can handle (dynamically expandable)
   int t_serialized; // levels deep of serialized teams
   dispatch_shared_info_t *t_disp_buffer; // buffers for dispatch system
   int t_id; // team's id, assigned by debugger.

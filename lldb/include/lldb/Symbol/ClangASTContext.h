@@ -55,9 +55,13 @@ public:
   bool isA(const void *ClassID) const override { return ClassID == &ID; }
   static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
 
-  // Constructors and Destructors
-  explicit ClangASTContext(llvm::StringRef triple = "");
-  explicit ClangASTContext(ArchSpec arch);
+  /// Constructs a ClangASTContext with an ASTContext using the given triple.
+  ///
+  /// \param triple The llvm::Triple used for the ASTContext. The triple defines
+  ///               certain characteristics of the ASTContext and its types
+  ///               (e.g., whether certain primitive types exist or what their
+  ///               signedness is).
+  explicit ClangASTContext(llvm::Triple triple = llvm::Triple());
 
   /// Constructs a ClangASTContext that uses an existing ASTContext internally.
   /// Useful when having an existing ASTContext created by Clang.
@@ -969,7 +973,7 @@ private:
 
 class ClangASTContextForExpressions : public ClangASTContext {
 public:
-  ClangASTContextForExpressions(Target &target, ArchSpec arch);
+  ClangASTContextForExpressions(Target &target, llvm::Triple triple);
 
   ~ClangASTContextForExpressions() override = default;
 

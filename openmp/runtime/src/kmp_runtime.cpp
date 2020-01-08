@@ -3927,8 +3927,8 @@ static int __kmp_reset_root(int gtid, kmp_root_t *root) {
   }
   __kmp_reap_thread(root->r.r_uber_thread, 1);
 
-  // We canot put root thread to __kmp_thread_pool, so we have to reap it istead
-  // of freeing.
+  // We canot put root thread to __kmp_thread_pool, so we have to reap it
+  // instead of freeing.
   root->r.r_uber_thread = NULL;
   /* mark root as no longer in use */
   root->r.r_begin = FALSE;
@@ -7152,7 +7152,7 @@ int __kmp_invoke_teams_master(int gtid) {
 
 /* this sets the requested number of threads for the next parallel region
    encountered by this team. since this should be enclosed in the forkjoin
-   critical section it should avoid race conditions with assymmetrical nested
+   critical section it should avoid race conditions with asymmetrical nested
    parallelism */
 
 void __kmp_push_num_threads(ident_t *id, int gtid, int num_threads) {

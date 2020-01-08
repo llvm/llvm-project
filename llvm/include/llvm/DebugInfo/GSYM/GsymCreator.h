@@ -82,15 +82,15 @@ class FileWriter;
 /// The resulting GSYM size is smaller and causes fewer pages to be touched
 /// during address lookups when the address table is smaller. The size of the
 /// address offsets in the address table is specified in the header in
-/// Header.AddrOffSize. The first offset in the address table is alinged to
-/// Header.AddrOffSize alignement to ensure efficient access when loaded into
+/// Header.AddrOffSize. The first offset in the address table is aligned to
+/// Header.AddrOffSize alignment to ensure efficient access when loaded into
 /// memory.
 ///
 /// FUNCTION INFO OFFSETS TABLE
 ///
 /// The function info offsets table immediately follows the address table and
 /// consists of Header.NumAddresses 32 bit file offsets: one for each address
-/// in the address table. This data is algined to a 4 byte boundary. The
+/// in the address table. This data is aligned to a 4 byte boundary. The
 /// offsets in this table are the relative offsets from the start offset of the
 /// GSYM header and point to the function info data for each address in the
 /// address table. Keeping this data separate from the address table helps to

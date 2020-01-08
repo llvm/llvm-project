@@ -737,13 +737,26 @@ def i64imm_32bit : ImmLeaf<i64, [{
   return (Imm & 0xffffffffULL) == static_cast<uint64_t>(Imm);
 }]>;
 
-class InlineImm <ValueType vt> : PatLeaf <(vt imm), [{
-  return isInlineImmediate(N);
+def InlineImm16 : ImmLeaf<i16, [{
+  return isInlineImmediate16(Imm);
 }]>;
 
-class InlineFPImm <ValueType vt> : PatLeaf <(vt fpimm), [{
-  return isInlineImmediate(N);
+def InlineImm32 : ImmLeaf<i32, [{
+  return isInlineImmediate32(Imm);
 }]>;
+
+def InlineImm64 : ImmLeaf<i64, [{
+  return isInlineImmediate64(Imm);
+}]>;
+
+def InlineImmFP32 : FPImmLeaf<f32, [{
+  return isInlineImmediate(Imm);
+}]>;
+
+def InlineImmFP64 : FPImmLeaf<f64, [{
+  return isInlineImmediate(Imm);
+}]>;
+
 
 class VGPRImm <dag frag> : PatLeaf<frag, [{
   return isVGPRImm(N);
@@ -762,8 +775,8 @@ def NegSubInlineConst16 : ImmLeaf<i16, [{
   return Imm < -16 && Imm >= -64;
 }], NegateImm>;
 
-def ShiftAmt32Imm : PatLeaf <(imm), [{
-  return N->getZExtValue() < 32;
+def ShiftAmt32Imm : ImmLeaf <i32, [{
+  return Imm < 32;
 }]>;
 
 def getNegV2I16Imm : SDNodeXForm<build_vector, [{
@@ -995,6 +1008,12 @@ class NamedOperandBit<string Name, AsmOperandClass MatchClass> : Operand<i1> {
   let ParserMatchClass = MatchClass;
 }
 
+class NamedOperandBit_0<string Name, AsmOperandClass MatchClass> :
+  OperandWithDefaultOps<i1, (ops (i1 0))> {
+  let PrintMethod = "print"#Name;
+  let ParserMatchClass = MatchClass;
+}
+
 class NamedOperandU8<string Name, AsmOperandClass MatchClass> : Operand<i8> {
   let PrintMethod = "print"#Name;
   let ParserMatchClass = MatchClass;
@@ -1006,6 +1025,12 @@ class NamedOperandU16<string Name, AsmOperandClass MatchClass> : Operand<i16> {
 }
 
 class NamedOperandU32<string Name, AsmOperandClass MatchClass> : Operand<i32> {
+  let PrintMethod = "print"#Name;
+  let ParserMatchClass = MatchClass;
+}
+
+class NamedOperandU32_0<string Name, AsmOperandClass MatchClass> :
+  OperandWithDefaultOps<i32, (ops (i32 0))> {
   let PrintMethod = "print"#Name;
   let ParserMatchClass = MatchClass;
 }
@@ -1030,7 +1055,13 @@ def offset1 : NamedOperandU8<"Offset1", NamedMatchClass<"Offset1">>;
 def gds : NamedOperandBit<"GDS", NamedMatchClass<"GDS">>;
 
 def omod : NamedOperandU32<"OModSI", NamedMatchClass<"OModSI">>;
+def omod0 : NamedOperandU32_0<"OModSI", NamedMatchClass<"OModSI">>;
+
+// We need to make the cases with a default of 0 distinct from no
+// default to help deal with some cases where the operand appears
+// before a mandatory operand.
 def clampmod : NamedOperandBit<"ClampSI", NamedMatchClass<"ClampSI">>;
+def clampmod0 : NamedOperandBit_0<"ClampSI", NamedMatchClass<"ClampSI">>;
 def highmod : NamedOperandBit<"High", NamedMatchClass<"High">>;
 
 def DLC : NamedOperandBit<"DLC", NamedMatchClass<"DLC">>;
@@ -1244,7 +1275,6 @@ def MOVRELOffset : ComplexPattern<i32, 2, "SelectMOVRELOffset">;
 
 def VOP3Mods0 : ComplexPattern<untyped, 4, "SelectVOP3Mods0">;
 def VOP3Mods0Clamp : ComplexPattern<untyped, 3, "SelectVOP3Mods0Clamp">;
-def VOP3Mods0Clamp0OMod : ComplexPattern<untyped, 4, "SelectVOP3Mods0Clamp0OMod">;
 def VOP3Mods  : ComplexPattern<untyped, 2, "SelectVOP3Mods">;
 def VOP3NoMods : ComplexPattern<untyped, 1, "SelectVOP3NoMods">;
 // VOP3Mods, but the input source is known to never be NaN.
@@ -1586,11 +1616,11 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
       !if (!eq(HasModifiers, 1),
         // VOP1 with modifiers
         (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
-             clampmod:$clamp, omod:$omod)
+             clampmod0:$clamp, omod0:$omod)
       /* else */,
         // VOP1 without modifiers
         !if (!eq(HasIntClamp, 1),
-          (ins Src0RC:$src0, clampmod:$clamp),
+          (ins Src0RC:$src0, clampmod0:$clamp),
           (ins Src0RC:$src0))
       /* endif */ ),
     !if (!eq(NumSrcArgs, 2),
@@ -1599,14 +1629,14 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
         !if( !eq(HasOMod, 1),
           (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                Src1Mod:$src1_modifiers, Src1RC:$src1,
-               clampmod:$clamp, omod:$omod),
+               clampmod0:$clamp, omod0:$omod),
            (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                Src1Mod:$src1_modifiers, Src1RC:$src1,
-               clampmod:$clamp))
+               clampmod0:$clamp))
       /* else */,
         // VOP2 without modifiers
         !if (!eq(HasIntClamp, 1),
-          (ins Src0RC:$src0, Src1RC:$src1, clampmod:$clamp),
+          (ins Src0RC:$src0, Src1RC:$src1, clampmod0:$clamp),
           (ins Src0RC:$src0, Src1RC:$src1))
 
       /* endif */ )
@@ -1618,12 +1648,12 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
             (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                  Src1Mod:$src1_modifiers, Src1RC:$src1,
                  Src2Mod:$src2_modifiers, Src2RC:$src2,
-                 clampmod:$clamp, omod:$omod),
+                 clampmod0:$clamp, omod0:$omod),
             !if (!eq(HasIntClamp, 1),
               (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                    Src1Mod:$src1_modifiers, Src1RC:$src1,
                    Src2Mod:$src2_modifiers, Src2RC:$src2,
-                   clampmod:$clamp),
+                   clampmod0:$clamp),
               (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                    Src1Mod:$src1_modifiers, Src1RC:$src1,
                    Src2Mod:$src2_modifiers, Src2RC:$src2))),
@@ -1631,18 +1661,18 @@ class getIns64 <RegisterOperand Src0RC, RegisterOperand Src1RC,
           !if (!eq(HasOMod, 1),
             (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                  Src1Mod:$src1_modifiers, Src1RC:$src1,
-                 Src2RC:$src2, clampmod:$clamp, omod:$omod),
+                 Src2RC:$src2, clampmod0:$clamp, omod0:$omod),
             !if (!eq(HasIntClamp, 1),
               (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                    Src1Mod:$src1_modifiers, Src1RC:$src1,
-                   Src2RC:$src2, clampmod:$clamp),
+                   Src2RC:$src2, clampmod0:$clamp),
               (ins Src0Mod:$src0_modifiers, Src0RC:$src0,
                    Src1Mod:$src1_modifiers, Src1RC:$src1,
                    Src2RC:$src2))))
       /* else */,
         // VOP3 without modifiers
         !if (!eq(HasIntClamp, 1),
-          (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2, clampmod:$clamp),
+          (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2, clampmod0:$clamp),
           (ins Src0RC:$src0, Src1RC:$src1, Src2RC:$src2))
       /* endif */ ))));
 }

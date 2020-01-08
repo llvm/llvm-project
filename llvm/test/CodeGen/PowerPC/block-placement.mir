@@ -149,7 +149,7 @@ body:             |
     successors: %bb.4(0x04000000), %bb.10(0x7c000000)
     liveins: $r8, $x3, $x4, $x5, $x6, $x7
   
-    dead renamable $r8 = ANDIo killed renamable $r8, 65535, implicit-def $cr0
+    dead renamable $r8 = ANDI_rec killed renamable $r8, 65535, implicit-def $cr0
     BCC 68, killed renamable $cr0, %bb.10
   
   bb.4:

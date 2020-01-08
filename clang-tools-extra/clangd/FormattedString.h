@@ -62,6 +62,19 @@ private:
   std::vector<Chunk> Chunks;
 };
 
+/// Represents a sequence of one or more documents. Knows how to print them in a
+/// list like format, e.g. by prepending with "- " and indentation.
+class BulletList : public Block {
+public:
+  void renderMarkdown(llvm::raw_ostream &OS) const override;
+  void renderPlainText(llvm::raw_ostream &OS) const override;
+
+  class Document &addItem();
+
+private:
+  std::vector<class Document> Items;
+};
+
 /// A format-agnostic representation for structured text. Allows rendering into
 /// markdown and plaintext.
 class Document {
@@ -74,13 +87,16 @@ public:
   /// text representation, the code block will be surrounded by newlines.
   void addCodeBlock(std::string Code, std::string Language = "cpp");
 
+  BulletList &addBulletList();
+
+  /// Doesn't contain any trailing newlines.
   std::string asMarkdown() const;
+  /// Doesn't contain any trailing newlines.
   std::string asPlainText() const;
 
 private:
   std::vector<std::unique_ptr<Block>> Children;
 };
-
 } // namespace markup
 } // namespace clangd
 } // namespace clang

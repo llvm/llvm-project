@@ -17,6 +17,7 @@ namespace edsc {
 namespace intrinsics {
 
 using linalg_fill = OperationBuilder<linalg::FillOp>;
+using linalg_reshape = OperationBuilder<linalg::ReshapeOp>;
 using linalg_yield = OperationBuilder<linalg::YieldOp>;
 
 } // namespace intrinsics

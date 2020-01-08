@@ -977,9 +977,10 @@ void MCStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
 }
 
 void MCTargetStreamer::prettyPrintAsm(MCInstPrinter &InstPrinter,
-                                      raw_ostream &OS, const MCInst &Inst,
-                                      const MCSubtargetInfo &STI) {
-  InstPrinter.printInst(&Inst, OS, "", STI);
+                                      uint64_t Address, const MCInst &Inst,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &OS) {
+  InstPrinter.printInst(&Inst, Address, "", STI, OS);
 }
 
 void MCStreamer::visitUsedSymbol(const MCSymbol &Sym) {

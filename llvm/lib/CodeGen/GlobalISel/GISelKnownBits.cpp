@@ -373,6 +373,76 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
                     << Known.One.toString(16, false) << "\n");
 }
 
+unsigned GISelKnownBits::computeNumSignBits(Register R,
+                                            const APInt &DemandedElts,
+                                            unsigned Depth) {
+  MachineInstr &MI = *MRI.getVRegDef(R);
+  unsigned Opcode = MI.getOpcode();
+
+  if (Opcode == TargetOpcode::G_CONSTANT)
+    return MI.getOperand(1).getCImm()->getValue().getNumSignBits();
+
+  if (Depth == getMaxDepth())
+    return 1;
+
+  if (!DemandedElts)
+    return 1; // No demanded elts, better to assume we don't know anything.
+
+  LLT DstTy = MRI.getType(R);
+
+  // Handle the case where this is called on a register that does not have a
+  // type constraint. This is unlikely to occur except by looking through copies
+  // but it is possible for the initial register being queried to be in this
+  // state.
+  if (!DstTy.isValid())
+    return 1;
+
+  switch (Opcode) {
+  case TargetOpcode::COPY: {
+    MachineOperand &Src = MI.getOperand(1);
+    if (Src.getReg().isVirtual() && Src.getSubReg() == 0 &&
+        MRI.getType(Src.getReg()).isValid()) {
+      // Don't increment Depth for this one since we didn't do any work.
+      return computeNumSignBits(Src.getReg(), DemandedElts, Depth);
+    }
+
+    return 1;
+  }
+  case TargetOpcode::G_SEXT: {
+    Register Src = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(Src);
+    unsigned Tmp = DstTy.getScalarSizeInBits() - SrcTy.getScalarSizeInBits();
+    return computeNumSignBits(Src, DemandedElts, Depth + 1) + Tmp;
+  }
+  case TargetOpcode::G_TRUNC: {
+    Register Src = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(Src);
+
+    // Check if the sign bits of source go down as far as the truncated value.
+    unsigned DstTyBits = DstTy.getScalarSizeInBits();
+    unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
+    unsigned NumSrcSignBits = computeNumSignBits(Src, DemandedElts, Depth + 1);
+    if (NumSrcSignBits > (NumSrcBits - DstTyBits))
+      return NumSrcSignBits - (NumSrcBits - DstTyBits);
+    break;
+  }
+  default:
+    break;
+  }
+
+  // TODO: Handle target instructions
+  // TODO: Fall back to known bits
+  return 1;
+}
+
+unsigned GISelKnownBits::computeNumSignBits(Register R, unsigned Depth) {
+  LLT Ty = MRI.getType(R);
+  APInt DemandedElts = Ty.isVector()
+                           ? APInt::getAllOnesValue(Ty.getNumElements())
+                           : APInt(1, 1);
+  return computeNumSignBits(R, DemandedElts, Depth);
+}
+
 void GISelKnownBitsAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);

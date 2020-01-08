@@ -1034,8 +1034,8 @@ void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
   llvm::raw_string_ostream comments_stream(comments_string);
 
   m_instr_printer_up->setCommentStream(comments_stream);
-  m_instr_printer_up->printInst(&mc_inst, inst_stream, llvm::StringRef(),
-                                *m_subtarget_info_up);
+  m_instr_printer_up->printInst(&mc_inst, 0, llvm::StringRef(),
+                                *m_subtarget_info_up, inst_stream);
   m_instr_printer_up->setCommentStream(llvm::nulls());
   comments_stream.flush();
 

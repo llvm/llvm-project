@@ -94,6 +94,12 @@ Improvements to clang-tidy
   Without the null terminator it can result in undefined behaviour when the
   string is read.
 
+- New :doc:`bugprone-signed-char-misuse
+  <clang-tidy/checks/bugprone-signed-char-misuse>` check.
+
+  Finds ``signed char`` -> integer conversions which might indicate a programming
+  error.
+
 - New :doc:`cert-mem57-cpp
   <clang-tidy/checks/cert-mem57-cpp>` check.
 
@@ -159,6 +165,10 @@ Improvements to clang-tidy
 
   Finds types that could be made trivially-destructible by removing out-of-line
   defaulted destructor declarations.
+
+- The :doc:`modernize-use-using
+  <clang-tidy/checks/modernize-use-using>` check now converts typedefs containing
+  struct definitions and multiple comma-separated types.
 
 - Improved :doc:`bugprone-posix-return
   <clang-tidy/checks/bugprone-posix-return>` check.

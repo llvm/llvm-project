@@ -451,7 +451,7 @@ void initialization(int T, Base b) {
   // CHECK-FIXES: FI = std::make_unique<int[]>(5);
 
   // The check doesn't give warnings and fixes for cases where the original new
-  // expresion doesn't do any initialization.
+  // expression doesn't do any initialization.
   FI.reset(new int[5]);
   FI.reset(new int[Num]);
   FI.reset(new int[Num2]);

@@ -110,8 +110,8 @@ struct CommonFixture {
     checkError(ArrayRef<StringRef>{ExpectedMsg}, std::move(Err));
   }
 
-  void checkGetOrParseLineTableEmitsError(StringRef ExpectedMsg,
-                                          uint64_t Offset = 0) {
+  void checkGetOrParseLineTableEmitsFatalError(StringRef ExpectedMsg,
+                                               uint64_t Offset = 0) {
     auto ExpectedLineTable = Line.getOrParseLineTable(
         LineData, Offset, *Context, nullptr, RecordRecoverable);
     EXPECT_FALSE(ExpectedLineTable);
@@ -120,8 +120,8 @@ struct CommonFixture {
     checkError(ExpectedMsg, ExpectedLineTable.takeError());
   }
 
-  void checkGetOrParseLineTableEmitsError(ArrayRef<StringRef> ExpectedMsgs,
-                                          uint64_t Offset = 0) {
+  void checkGetOrParseLineTableEmitsFatalError(ArrayRef<StringRef> ExpectedMsgs,
+                                               uint64_t Offset = 0) {
     auto ExpectedLineTable = Line.getOrParseLineTable(
         LineData, Offset, *Context, nullptr, RecordRecoverable);
     EXPECT_FALSE(ExpectedLineTable);
@@ -207,13 +207,13 @@ TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffset) {
     return;
   generate();
 
-  checkGetOrParseLineTableEmitsError(
+  checkGetOrParseLineTableEmitsFatalError(
       "offset 0x00000000 is not a valid debug line section offset", 0);
   // Repeat to show that an error is reported each time.
-  checkGetOrParseLineTableEmitsError(
+  checkGetOrParseLineTableEmitsFatalError(
       "offset 0x00000000 is not a valid debug line section offset", 0);
   // Show that an error is reported for later offsets too.
-  checkGetOrParseLineTableEmitsError(
+  checkGetOrParseLineTableEmitsFatalError(
       "offset 0x00000001 is not a valid debug line section offset", 1);
 }
 
@@ -226,7 +226,7 @@ TEST_F(DebugLineBasicFixture, GetOrParseLineTableAtInvalidOffsetAfterData) {
 
   generate();
 
-  checkGetOrParseLineTableEmitsError(
+  checkGetOrParseLineTableEmitsFatalError(
       "offset 0x00000001 is not a valid debug line section offset", 1);
 }
 
@@ -305,7 +305,7 @@ TEST_F(DebugLineBasicFixture, ErrorForReservedLength) {
 
   generate();
 
-  checkGetOrParseLineTableEmitsError(
+  checkGetOrParseLineTableEmitsFatalError(
       "parsing line table prologue at offset 0x00000000 unsupported reserved "
       "unit length found of value 0xfffffff0");
 }
@@ -320,9 +320,10 @@ TEST_F(DebugLineBasicFixture, ErrorForLowVersion) {
 
   generate();
 
-  checkGetOrParseLineTableEmitsError("parsing line table prologue at offset "
-                                     "0x00000000 found unsupported version "
-                                     "0x01");
+  checkGetOrParseLineTableEmitsFatalError(
+      "parsing line table prologue at offset "
+      "0x00000000 found unsupported version "
+      "0x01");
 }
 
 TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
@@ -353,7 +354,7 @@ TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
 
   generate();
 
-  checkGetOrParseLineTableEmitsError(
+  checkGetOrParseLineTableEmitsFatalError(
       {"parsing line table prologue at 0x00000000 found an invalid directory "
        "or file table description at 0x00000014",
        "failed to parse entry content descriptions because no path was found"});
@@ -375,7 +376,7 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooLargePrologueLength) {
 
   uint64_t ExpectedEnd =
       Prologue.TotalLength + 1 + Prologue.sizeofTotalLength();
-  checkGetOrParseLineTableEmitsError(
+  checkGetOrParseLineTableEmitsFatalError(
       (Twine("parsing line table prologue at 0x00000000 should have ended at "
              "0x000000") +
        Twine::utohexstr(ExpectedEnd) + " but it ended at 0x000000" +
@@ -406,7 +407,7 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooShortPrologueLength) {
       Prologue.TotalLength - 1 + Prologue.sizeofTotalLength();
   if (Version < 5)
     --ExpectedEnd;
-  checkGetOrParseLineTableEmitsError(
+  checkGetOrParseLineTableEmitsFatalError(
       (Twine("parsing line table prologue at 0x00000000 should have ended at "
              "0x000000") +
        Twine::utohexstr(ExpectedEnd) + " but it ended at 0x000000" +
@@ -432,8 +433,38 @@ TEST_F(DebugLineBasicFixture, ErrorForInvalidExtendedOpcodeLength) {
 
   generate();
 
-  checkGetOrParseLineTableEmitsError("unexpected line op length at offset "
-                                     "0x00000030 expected 0x02 found 0x01");
+  checkGetOrParseLineTableEmitsFatalError(
+      "unexpected line op length at offset "
+      "0x00000030 expected 0x02 found 0x01");
+}
+
+TEST_F(DebugLineBasicFixture, ErrorForUnitLengthTooLarge) {
+  if (!setupGenerator())
+    return;
+
+  LineTable &Padding = Gen->addLineTable();
+  // Add some padding to show that a non-zero offset is handled correctly.
+  Padding.setCustomPrologue({{0, LineTable::Byte}});
+  LineTable &LT = Gen->addLineTable();
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  LT.addStandardOpcode(DW_LNS_const_add_pc, {});
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+  DWARFDebugLine::Prologue Prologue = LT.createBasicPrologue();
+  // Set the total length to 1 higher than the actual length. The program body
+  // has size 5.
+  Prologue.TotalLength += 6;
+  LT.setPrologue(Prologue);
+
+  generate();
+
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 1, *Context,
+                                                    nullptr, RecordRecoverable);
+  checkError("line table program with offset 0x00000001 has length 0x00000034 "
+             "but only 0x00000033 bytes are available",
+             std::move(Recoverable));
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  EXPECT_EQ((*ExpectedLineTable)->Rows.size(), 2u);
+  EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
 }
 
 TEST_F(DebugLineBasicFixture, ErrorForMismatchedAddressSize) {
@@ -449,7 +480,7 @@ TEST_F(DebugLineBasicFixture, ErrorForMismatchedAddressSize) {
 
   generate();
 
-  checkGetOrParseLineTableEmitsError(
+  checkGetOrParseLineTableEmitsFatalError(
       "mismatching address size at offset 0x00000030 expected 0x08 found 0x04");
 }
 

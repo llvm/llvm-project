@@ -176,7 +176,7 @@ TEST_F(TUSchedulerTests, MissingFiles) {
 TEST_F(TUSchedulerTests, WantDiagnostics) {
   std::atomic<int> CallbackCount(0);
   {
-    // To avoid a racy test, don't allow tasks to actualy run on the worker
+    // To avoid a racy test, don't allow tasks to actually run on the worker
     // thread until we've scheduled them all.
     Notification Ready;
     TUScheduler S(

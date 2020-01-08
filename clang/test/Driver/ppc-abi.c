@@ -24,16 +24,24 @@
 // RUN: %clang -target powerpc64le-unknown-linux-gnu %s -### -o %t.o 2>&1 \
 // RUN:   -mabi=altivec | FileCheck -check-prefix=CHECK-ELFv2 %s
 
-// CHECK-ELFv1: "-mrelocation-model" "pic" "-pic-level" "2"
+// RUN: %clang -target powerpc64-unknown-freebsd11 %s -### 2>&1 | FileCheck --check-prefix=CHECK-ELFv1 %s
+// RUN: %clang -target powerpc64-unknown-freebsd12 %s -### 2>&1 | FileCheck --check-prefix=CHECK-ELFv1 %s
+// RUN: %clang -target powerpc64-unknown-freebsd13 %s -### 2>&1 | FileCheck --check-prefix=CHECK-ELFv2-BE %s
+// RUN: %clang -target powerpc64-unknown-freebsd14 %s -### 2>&1 | FileCheck --check-prefix=CHECK-ELFv2-BE %s
+// RUN: %clang -target powerpc64-linux-musl %s -### 2>&1 | FileCheck --check-prefix=CHECK-ELFv2-BE-PIE %s
+
+// CHECK-ELFv1: "-mrelocation-model" "static"
 // CHECK-ELFv1: "-target-abi" "elfv1"
 // CHECK-ELFv1-LE: "-mrelocation-model" "static"
 // CHECK-ELFv1-LE: "-target-abi" "elfv1"
-// CHECK-ELFv1-QPX: "-mrelocation-model" "pic" "-pic-level" "2"
+// CHECK-ELFv1-QPX: "-mrelocation-model" "static"
 // CHECK-ELFv1-QPX: "-target-abi" "elfv1-qpx"
 // CHECK-ELFv2: "-mrelocation-model" "static"
 // CHECK-ELFv2: "-target-abi" "elfv2"
-// CHECK-ELFv2-BE: "-mrelocation-model" "pic" "-pic-level" "2"
+// CHECK-ELFv2-BE: "-mrelocation-model" "static"
 // CHECK-ELFv2-BE: "-target-abi" "elfv2"
+// CHECK-ELFv2-BE-PIE: "-mrelocation-model" "pic" "-pic-level" "2" "-pic-is-pie"
+// CHECK-ELFv2-BE-PIE: "-target-abi" "elfv2"
 
 // RUN: %clang -fPIC -target powerpc64-unknown-linux-gnu %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-ELFv1-PIC %s

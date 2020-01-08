@@ -31,6 +31,15 @@ spv.module "Logical" "GLSL450" {
     %0 = spv.Not %arg : i32
     spv.ReturnValue %0 : i32
   }
+  func @bitwise_scalar(%arg0 : i32, %arg1 : i32) {
+    // CHECK: spv.BitwiseAnd
+    %0 = spv.BitwiseAnd %arg0, %arg1 : i32
+    // CHECK: spv.BitwiseOr
+    %1 = spv.BitwiseOr %arg0, %arg1 : i32
+    // CHECK: spv.BitwiseXor
+    %2 = spv.BitwiseXor %arg0, %arg1 : i32
+    spv.Return
+  }
   func @shift_left_logical(%arg0: i32, %arg1 : i16) -> i32 {
     // CHECK: {{%.*}} = spv.ShiftLeftLogical {{%.*}}, {{%.*}} : i32, i16
     %0 = spv.ShiftLeftLogical %arg0, %arg1: i32, i16

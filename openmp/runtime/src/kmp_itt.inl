@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 // Inline function definitions. This file should be included into kmp_itt.h file
-// for production build (to let compliler inline functions) or into kmp_itt.c
+// for production build (to let compiler inline functions) or into kmp_itt.c
 // file for debug build (to reduce the number of files to recompile and save
 // build time).
 
@@ -474,7 +474,7 @@ LINKAGE void __kmp_itt_region_joined(int gtid) {
    ITT need an address (void *) to be specified as a sync object. OpenMP RTL
    does not have barrier object or barrier data structure. Barrier is just a
    counter in team and thread structures. We could use an address of team
-   structure as an barrier sync object, but ITT wants different objects for
+   structure as a barrier sync object, but ITT wants different objects for
    different barriers (even whithin the same team). So let us use team address
    as barrier sync object for the first barrier, then increase it by one for the
    next barrier, and so on (but wrap it not to use addresses outside of team
@@ -502,10 +502,10 @@ void *__kmp_itt_barrier_object(int gtid, int bt, int set_name,
     // Now form the barrier id. Encode barrier type (bt) in barrier id too, so
     // barriers of different types do not have the same ids.
     KMP_BUILD_ASSERT(sizeof(kmp_team_t) >= bs_last_barrier);
-    // This conditon is a must (we would have zero divide otherwise).
+    // This condition is a must (we would have zero divide otherwise).
     KMP_BUILD_ASSERT(sizeof(kmp_team_t) >= 2 * bs_last_barrier);
     // More strong condition: make sure we have room at least for for two
-    // differtent ids (for each barrier type).
+    // different ids (for each barrier type).
     object = reinterpret_cast<void *>(
         kmp_uintptr_t(team) +
         counter % (sizeof(kmp_team_t) / bs_last_barrier) * bs_last_barrier +

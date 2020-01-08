@@ -95,6 +95,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUCodeGenPrepare.cpp",
     "AMDGPUFixFunctionBitcasts.cpp",
     "AMDGPUFrameLowering.cpp",
+    "AMDGPUGlobalISelUtils.cpp",
     "AMDGPUHSAMetadataStreamer.cpp",
     "AMDGPUISelDAGToDAG.cpp",
     "AMDGPUISelLowering.cpp",

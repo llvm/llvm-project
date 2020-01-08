@@ -212,7 +212,7 @@ private:
   bool UseDirBasedCDB;                     // FIXME: make this a capability.
   llvm::Optional<Path> CompileCommandsDir; // FIXME: merge with capability?
   std::unique_ptr<GlobalCompilationDatabase> BaseCDB;
-  // CDB is BaseCDB plus any comands overridden via LSP extensions.
+  // CDB is BaseCDB plus any commands overridden via LSP extensions.
   llvm::Optional<OverlayCDB> CDB;
   ClangdServer::Options ClangdServerOpts;
   llvm::Optional<OffsetEncoding> NegotiatedOffsetEncoding;

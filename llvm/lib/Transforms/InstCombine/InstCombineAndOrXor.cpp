@@ -3279,6 +3279,23 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
             NotLHS, NotRHS);
       }
     }
+
+    // Pull 'not' into operands of select if both operands are one-use compares.
+    // Inverting the predicates eliminates the 'not' operation.
+    // Example:
+    //     not (select ?, (cmp TPred, ?, ?), (cmp FPred, ?, ?) -->
+    //     select ?, (cmp InvTPred, ?, ?), (cmp InvFPred, ?, ?)
+    // TODO: Canonicalize by hoisting 'not' into an arm of the select if only
+    //       1 select operand is a cmp?
+    if (auto *Sel = dyn_cast<SelectInst>(Op0)) {
+      auto *CmpT = dyn_cast<CmpInst>(Sel->getTrueValue());
+      auto *CmpF = dyn_cast<CmpInst>(Sel->getFalseValue());
+      if (CmpT && CmpF && CmpT->hasOneUse() && CmpF->hasOneUse()) {
+        CmpT->setPredicate(CmpT->getInversePredicate());
+        CmpF->setPredicate(CmpF->getInversePredicate());
+        return replaceInstUsesWith(I, Sel);
+      }
+    }
   }
 
   if (Instruction *NewXor = sinkNotIntoXor(I, Builder))

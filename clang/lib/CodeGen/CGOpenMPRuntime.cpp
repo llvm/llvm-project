@@ -9659,9 +9659,9 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
   }
 
   const ValueDecl *VD = cast<ValueDecl>(GD.getDecl());
-  StringRef Name = CGM.getMangledName(GD);
   // Try to detect target regions in the function.
   if (const auto *FD = dyn_cast<FunctionDecl>(VD)) {
+    StringRef Name = CGM.getMangledName(GD);
     scanForTargetRegionsFunctions(FD->getBody(), Name);
     Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
         OMPDeclareTargetDeclAttr::getDeviceType(FD);
@@ -9672,7 +9672,7 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
 
   // Do not to emit function if it is not marked as declare target.
   return !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD) &&
-         AlreadyEmittedTargetFunctions.count(Name) == 0;
+         AlreadyEmittedTargetDecls.count(VD) == 0;
 }
 
 bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
@@ -9903,20 +9903,20 @@ bool CGOpenMPRuntime::markAsGlobalTarget(GlobalDecl GD) {
   if (!CGM.getLangOpts().OpenMPIsDevice || !ShouldMarkAsGlobal)
     return true;
 
-  StringRef Name = CGM.getMangledName(GD);
   const auto *D = cast<FunctionDecl>(GD.getDecl());
   // Do not to emit function if it is marked as declare target as it was already
   // emitted.
   if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(D)) {
-    if (D->hasBody() && AlreadyEmittedTargetFunctions.count(Name) == 0) {
-      if (auto *F = dyn_cast_or_null<llvm::Function>(CGM.GetGlobalValue(Name)))
+    if (D->hasBody() && AlreadyEmittedTargetDecls.count(D) == 0) {
+      if (auto *F = dyn_cast_or_null<llvm::Function>(
+              CGM.GetGlobalValue(CGM.getMangledName(GD))))
         return !F->isDeclaration();
       return false;
     }
     return true;
   }
 
-  return !AlreadyEmittedTargetFunctions.insert(Name).second;
+  return !AlreadyEmittedTargetDecls.insert(D).second;
 }
 
 llvm::Function *CGOpenMPRuntime::emitRequiresDirectiveRegFun() {
@@ -10829,8 +10829,7 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         ExprLoc = VLENExpr->getExprLoc();
       }
       OMPDeclareSimdDeclAttr::BranchStateTy State = Attr->getBranchState();
-      if (CGM.getTriple().getArch() == llvm::Triple::x86 ||
-          CGM.getTriple().getArch() == llvm::Triple::x86_64) {
+      if (CGM.getTriple().isX86()) {
         emitX86DeclareSimdFunction(FD, Fn, VLENVal, ParamAttrs, State);
       } else if (CGM.getTriple().getArch() == llvm::Triple::aarch64) {
         unsigned VLEN = VLENVal.getExtValue();
@@ -11447,20 +11446,33 @@ CGOpenMPRuntime::LastprivateConditionalRAII::LastprivateConditionalRAII(
   OS << "$pl_cond_" << ID.getDevice() << "_" << ID.getFile() << "_"
      << PLoc.getLine() << "_" << PLoc.getColumn() << "$iv";
   Data.IVName = OS.str();
-
-  // Global loop counter. Required to handle inner parallel-for regions.
-  // global_iv = &iv;
-  QualType PtrIVTy = CGM.getContext().getPointerType(IVLVal.getType());
-  Address GlobIVAddr = CGM.getOpenMPRuntime().getAddrOfArtificialThreadPrivate(
-      CGF, PtrIVTy, Data.IVName);
-  LValue GlobIVLVal = CGF.MakeAddrLValue(GlobIVAddr, PtrIVTy);
-  CGF.EmitStoreOfScalar(IVLVal.getPointer(CGF), GlobIVLVal);
 }
 
 CGOpenMPRuntime::LastprivateConditionalRAII::~LastprivateConditionalRAII() {
   if (!NeedToPush)
     return;
   CGM.getOpenMPRuntime().LastprivateConditionalStack.pop_back();
+}
+
+void CGOpenMPRuntime::initLastprivateConditionalCounter(
+    CodeGenFunction &CGF, const OMPExecutableDirective &S) {
+  if (CGM.getLangOpts().OpenMPSimd ||
+      !llvm::any_of(S.getClausesOfKind<OMPLastprivateClause>(),
+                    [](const OMPLastprivateClause *C) {
+                      return C->getKind() == OMPC_LASTPRIVATE_conditional;
+                    }))
+    return;
+  const CGOpenMPRuntime::LastprivateConditionalData &Data =
+      LastprivateConditionalStack.back();
+  if (Data.UseOriginalIV)
+    return;
+  // Global loop counter. Required to handle inner parallel-for regions.
+  // global_iv = iv;
+  Address GlobIVAddr = CGM.getOpenMPRuntime().getAddrOfArtificialThreadPrivate(
+      CGF, Data.IVLVal.getType(), Data.IVName);
+  LValue GlobIVLVal = CGF.MakeAddrLValue(GlobIVAddr, Data.IVLVal.getType());
+  llvm::Value *IVVal = CGF.EmitLoadOfScalar(Data.IVLVal, S.getBeginLoc());
+  CGF.EmitStoreOfScalar(IVVal, GlobIVLVal);
 }
 
 namespace {
@@ -11576,10 +11588,9 @@ void CGOpenMPRuntime::checkAndEmitLastprivateConditional(CodeGenFunction &CGF,
   // Global loop counter. Required to handle inner parallel-for regions.
   // global_iv
   if (!UseOriginalIV) {
-    QualType PtrIVTy = CGM.getContext().getPointerType(IVLVal.getType());
-    Address IVAddr = getAddrOfArtificialThreadPrivate(CGF, PtrIVTy, IVName);
-    IVLVal =
-        CGF.EmitLoadOfPointerLValue(IVAddr, PtrIVTy->castAs<PointerType>());
+    Address IVAddr =
+        getAddrOfArtificialThreadPrivate(CGF, IVLVal.getType(), IVName);
+    IVLVal = CGF.MakeAddrLValue(IVAddr, IVLVal.getType());
   }
   llvm::Value *IVVal = CGF.EmitLoadOfScalar(IVLVal, FoundE->getExprLoc());
 

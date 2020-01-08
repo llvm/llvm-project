@@ -1336,14 +1336,45 @@ void Parser::ParseOMPEndDeclareTargetDirective(OpenMPDirectiveKind DKind,
 ///         annot_pragma_openmp_end
 ///
 Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
-    AccessSpecifier &AS, ParsedAttributesWithRange &Attrs,
+    AccessSpecifier &AS, ParsedAttributesWithRange &Attrs, bool Delayed,
     DeclSpec::TST TagType, Decl *Tag) {
   assert(Tok.is(tok::annot_pragma_openmp) && "Not an OpenMP directive!");
   ParsingOpenMPDirectiveRAII DirScope(*this);
   ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
-  SourceLocation Loc = ConsumeAnnotationToken();
-  OpenMPDirectiveKind DKind = parseOpenMPDirectiveKind(*this);
+  SourceLocation Loc;
+  OpenMPDirectiveKind DKind;
+  if (Delayed) {
+    TentativeParsingAction TPA(*this);
+    Loc = ConsumeAnnotationToken();
+    DKind = parseOpenMPDirectiveKind(*this);
+    if (DKind == OMPD_declare_reduction || DKind == OMPD_declare_mapper) {
+      // Need to delay parsing until completion of the parent class.
+      TPA.Revert();
+      CachedTokens Toks;
+      unsigned Cnt = 1;
+      Toks.push_back(Tok);
+      while (Cnt && Tok.isNot(tok::eof)) {
+        (void)ConsumeAnyToken();
+        if (Tok.is(tok::annot_pragma_openmp))
+          ++Cnt;
+        else if (Tok.is(tok::annot_pragma_openmp_end))
+          --Cnt;
+        Toks.push_back(Tok);
+      }
+      // Skip last annot_pragma_openmp_end.
+      if (Cnt == 0)
+        (void)ConsumeAnyToken();
+      auto *LP = new LateParsedPragma(this, AS);
+      LP->takeToks(Toks);
+      getCurrentClass().LateParsedDeclarations.push_back(LP);
+      return nullptr;
+    }
+    TPA.Commit();
+  } else {
+    Loc = ConsumeAnnotationToken();
+    DKind = parseOpenMPDirectiveKind(*this);
+  }
 
   switch (DKind) {
   case OMPD_threadprivate: {
@@ -1495,7 +1526,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
 
     DeclGroupPtrTy Ptr;
     if (Tok.is(tok::annot_pragma_openmp)) {
-      Ptr = ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs, TagType, Tag);
+      Ptr = ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs, Delayed,
+                                                       TagType, Tag);
     } else if (Tok.isNot(tok::r_brace) && !isEofOrEom()) {
       // Here we expect to see some function declaration.
       if (AS == AS_none) {

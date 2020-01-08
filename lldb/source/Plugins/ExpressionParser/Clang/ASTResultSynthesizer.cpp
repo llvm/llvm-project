@@ -388,8 +388,7 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
   // replace the old statement with the new one
   //
 
-  *last_stmt_ptr =
-      reinterpret_cast<Stmt *>(result_initialization_stmt_result.get());
+  *last_stmt_ptr = static_cast<Stmt *>(result_initialization_stmt_result.get());
 
   return true;
 }

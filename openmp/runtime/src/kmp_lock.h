@@ -462,7 +462,7 @@ struct kmp_base_drdpa_lock {
   // written by the acquiring thread) than it does in the simple ticket locks
   // (where it is written by the releasing thread).
   //
-  // Since now_serving is only read an written in the critical section,
+  // Since now_serving is only read and written in the critical section,
   // it is non-volatile, but it needs to exist on a separate cache line,
   // as it is invalidated at every lock acquire.
   //

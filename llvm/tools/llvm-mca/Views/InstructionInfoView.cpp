@@ -95,7 +95,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
       FOS.flush();
     }
 
-    MCIP.printInst(&Inst, InstrStream, "", STI);
+    MCIP.printInst(&Inst, 0, "", STI, InstrStream);
     InstrStream.flush();
 
     // Consume any tabs or spaces at the beginning of the string.

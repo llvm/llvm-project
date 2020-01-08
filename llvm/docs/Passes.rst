@@ -329,7 +329,7 @@ table.
 
 The ``RegionInfo`` pass detects single entry single exit regions in a function,
 where a region is defined as any subgraph that is connected to the remaining
-graph at only two spots.  Furthermore, an hierarchical region tree is built.
+graph at only two spots.  Furthermore, a hierarchical region tree is built.
 
 ``-scalar-evolution``: Scalar Evolution Analysis
 ------------------------------------------------

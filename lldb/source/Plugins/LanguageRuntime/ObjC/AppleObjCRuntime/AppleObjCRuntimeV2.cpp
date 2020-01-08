@@ -2695,7 +2695,7 @@ class ObjCExceptionRecognizedStackFrame : public RecognizedStackFrame {
     exception = ValueObjectRecognizerSynthesizedValue::Create(
         *exception, eValueTypeVariableArgument);
     exception = exception->GetDynamicValue(eDynamicDontRunTarget);
-      
+
     m_arguments = ValueObjectListSP(new ValueObjectList());
     m_arguments->Append(exception);
   }

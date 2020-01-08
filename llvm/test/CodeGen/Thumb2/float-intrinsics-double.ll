@@ -201,7 +201,7 @@ define double @fmuladd_d(double %a, double %b, double %c) {
 ; SOFT: bl __aeabi_dadd
 ; VFP4: vmul.f64
 ; VFP4: vadd.f64
-; FP-ARMv8: vmla.f64
+; FP-ARMv8: vfma.f64
   %1 = call double @llvm.fmuladd.f64(double %a, double %b, double %c)
   ret double %1
 }

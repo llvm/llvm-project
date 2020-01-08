@@ -481,7 +481,7 @@ def QQQQ : RegisterClass<"AArch64", [untyped], 128, (add QSeqQuads)> {
 
 
 // Vector operand versions of the FP registers. Alternate name printing and
-// assmebler matching.
+// assembler matching.
 def VectorReg64AsmOperand : AsmOperandClass {
   let Name = "VectorReg64";
   let PredicateMethod = "isNeonVectorReg";

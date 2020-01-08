@@ -344,7 +344,7 @@ define amdgpu_kernel void @v_test_sub_v2i16_inline_lo_zero_hi(<2 x i16> addrspac
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
-; VI-NEXT:    v_add_u16_e32 v0, 0xffffffe0, v0
+; VI-NEXT:    v_subrev_u16_e32 v0, 32, v0
 ; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm

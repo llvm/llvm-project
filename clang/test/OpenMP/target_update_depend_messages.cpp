@@ -15,7 +15,6 @@ class vector {
   public:
     int operator[](int index) { return 0; }
 };
-
 template <class T, class S, class R>
 int tmain(T argc, S **argv, R *env[]) {
   vector vec;
@@ -52,7 +51,7 @@ int tmain(T argc, S **argv, R *env[]) {
   #pragma omp target update to(z) depend(in : argv[argc: // expected-error {{expected expression}} expected-error {{expected ']'}} expected-error {{expected ')'}} expected-note {{to match this '['}} expected-note {{to match this '('}}
   #pragma omp target update to(z) depend(in : argv[argc:argc] // expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp target update to(z) depend(in : argv[0:-1]) // expected-error {{section length is evaluated to a negative value -1}}
-  #pragma omp target update to(z) depend(in : argv[-1:0])
+  #pragma omp target update to(z) depend(in : argv[-1:0]) // expected-error {{zero-length array section is not allowed in 'depend' clause}}
   #pragma omp target update to(z) depend(in : argv[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   #pragma omp target update to(z) depend(in : argv[3:4:1]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
   #pragma omp target update to(z) depend(in:a[0:1]) // expected-error {{subscripted value is not an array or pointer}}
@@ -64,7 +63,6 @@ int tmain(T argc, S **argv, R *env[]) {
 
   return 0;
 }
-
 int main(int argc, char **argv, char *env[]) {
   vector vec;
   typedef float V __attribute__((vector_size(16)));
@@ -100,7 +98,7 @@ int main(int argc, char **argv, char *env[]) {
   #pragma omp target update to(z) depend(in : argv[argc: // expected-error {{expected expression}} expected-error {{expected ']'}} expected-error {{expected ')'}} expected-note {{to match this '['}} expected-note {{to match this '('}}
   #pragma omp target update to(z) depend(in : argv[argc:argc] // expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp target update to(z) depend(in : argv[0:-1]) // expected-error {{section length is evaluated to a negative value -1}}
-  #pragma omp target update to(z) depend(in : argv[-1:0])
+  #pragma omp target update to(z) depend(in : argv[-1:0]) // expected-error {{zero-length array section is not allowed in 'depend' clause}}
   #pragma omp target update to(z) depend(in : argv[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   #pragma omp target update to(z) depend(in : argv[3:4:1]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
   #pragma omp target update to(z) depend(in:a[0:1]) // expected-error {{subscripted value is not an array or pointer}}
@@ -109,6 +107,5 @@ int main(int argc, char **argv, char *env[]) {
   #pragma omp target update to(z) depend(in:env[0:][:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is an array of unknown bound}}
   #pragma omp target update to(z) depend(in : argv[ : argc][1 : argc - 1])
   #pragma omp target update to(z) depend(in : arr[0])
-
   return tmain(argc, argv, env); // expected-note {{in instantiation of function template specialization 'tmain<int, char, char>' requested here}}
 }

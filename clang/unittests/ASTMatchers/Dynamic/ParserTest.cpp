@@ -437,9 +437,9 @@ decl()))matcher";
 )matcher";
     M = Parser::parseMatcherExpression(Code, nullptr, nullptr, &Error);
     EXPECT_FALSE(M.hasValue());
-    EXPECT_EQ(R"error(1:1: Error parsing argument 1 for matcher varDecl.
-2:3: Matcher not found: doesNotExist)error",
-              Error.toStringFull());
+    StringRef Expected = R"error(1:1: Error parsing argument 1 for matcher varDecl.
+2:3: Matcher not found: doesNotExist)error";
+    EXPECT_EQ(Expected, Error.toStringFull());
   }
 }
 

@@ -499,16 +499,9 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
   Opts.NoInlineDefine = !Opt;
 }
 
-ClangASTContext::ClangASTContext(llvm::StringRef target_triple) {
-  if (!target_triple.empty())
-    SetTargetTriple(target_triple);
-  // The caller didn't pass an ASTContext so create a new one for this
-  // ClangASTContext.
-  CreateASTContext();
-}
-
-ClangASTContext::ClangASTContext(ArchSpec arch) {
-  SetTargetTriple(arch.GetTriple().str());
+ClangASTContext::ClangASTContext(llvm::Triple target_triple) {
+  if (!target_triple.str().empty())
+    SetTargetTriple(target_triple.str());
   // The caller didn't pass an ASTContext so create a new one for this
   // ClangASTContext.
   CreateASTContext();
@@ -548,29 +541,25 @@ lldb::TypeSystemSP ClangASTContext::CreateInstance(lldb::LanguageType language,
   if (!arch.IsValid())
     return lldb::TypeSystemSP();
 
-  ArchSpec fixed_arch = arch;
+  llvm::Triple triple = arch.GetTriple();
   // LLVM wants this to be set to iOS or MacOSX; if we're working on
   // a bare-boards type image, change the triple for llvm's benefit.
-  if (fixed_arch.GetTriple().getVendor() == llvm::Triple::Apple &&
-      fixed_arch.GetTriple().getOS() == llvm::Triple::UnknownOS) {
-    if (fixed_arch.GetTriple().getArch() == llvm::Triple::arm ||
-        fixed_arch.GetTriple().getArch() == llvm::Triple::aarch64 ||
-        fixed_arch.GetTriple().getArch() == llvm::Triple::aarch64_32 ||
-        fixed_arch.GetTriple().getArch() == llvm::Triple::thumb) {
-      fixed_arch.GetTriple().setOS(llvm::Triple::IOS);
+  if (triple.getVendor() == llvm::Triple::Apple &&
+      triple.getOS() == llvm::Triple::UnknownOS) {
+    if (triple.getArch() == llvm::Triple::arm ||
+        triple.getArch() == llvm::Triple::aarch64 ||
+        triple.getArch() == llvm::Triple::aarch64_32 ||
+        triple.getArch() == llvm::Triple::thumb) {
+      triple.setOS(llvm::Triple::IOS);
     } else {
-      fixed_arch.GetTriple().setOS(llvm::Triple::MacOSX);
+      triple.setOS(llvm::Triple::MacOSX);
     }
   }
 
-  if (module) {
-    std::shared_ptr<ClangASTContext> ast_sp(new ClangASTContext(fixed_arch));
-    return ast_sp;
-  } else if (target && target->IsValid()) {
-    std::shared_ptr<ClangASTContextForExpressions> ast_sp(
-        new ClangASTContextForExpressions(*target, fixed_arch));
-    return ast_sp;
-  }
+  if (module)
+    return std::make_shared<ClangASTContext>(triple);
+  else if (target && target->IsValid())
+    return std::make_shared<ClangASTContextForExpressions>(*target, triple);
   return lldb::TypeSystemSP();
 }
 
@@ -9255,9 +9244,9 @@ ClangASTContext::DeclContextGetClangASTContext(const CompilerDeclContext &dc) {
   return nullptr;
 }
 
-ClangASTContextForExpressions::ClangASTContextForExpressions(Target &target,
-                                                             ArchSpec arch)
-    : ClangASTContext(arch), m_target_wp(target.shared_from_this()),
+ClangASTContextForExpressions::ClangASTContextForExpressions(
+    Target &target, llvm::Triple triple)
+    : ClangASTContext(triple), m_target_wp(target.shared_from_this()),
       m_persistent_variables(new ClangPersistentVariables) {
   m_scratch_ast_source_up.reset(new ClangASTSource(
       target.shared_from_this(), target.GetClangASTImporter()));

@@ -51,16 +51,8 @@ add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" Li
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
 add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
 add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" Lua LUA_FOUND)
+add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonInterpAndLibs PYTHONINTERPANDLIBS_FOUND)
 
-set(default_enable_python ON)
-
-if(CMAKE_SYSTEM_NAME MATCHES "Android")
-  set(default_enable_python OFF)
-elseif(IOS)
-  set(default_enable_python OFF)
-endif()
-
-option(LLDB_ENABLE_PYTHON "Enable Python scripting integration." ${default_enable_python})
 option(LLDB_RELOCATABLE_PYTHON "Use the PYTHONHOME environment variable to locate Python." OFF)
 option(LLDB_USE_SYSTEM_SIX "Use six.py shipped with system and do not install a copy of it" OFF)
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
@@ -142,46 +134,11 @@ if (LLDB_ENABLE_LIBEDIT)
 endif()
 
 if (LLDB_ENABLE_PYTHON)
-  if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
-    find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
-    if(Python3_VERSION VERSION_LESS 3.5)
-      message(SEND_ERROR "Python 3.5 or newer is required (found: ${Python3_VERSION}")
-    endif()
-    set(PYTHON_LIBRARIES ${Python3_LIBRARIES})
-    include_directories(${Python3_INCLUDE_DIRS})
-
-    if (NOT LLDB_RELOCATABLE_PYTHON)
-      get_filename_component(PYTHON_HOME "${Python3_EXECUTABLE}" DIRECTORY)
-      file(TO_CMAKE_PATH "${PYTHON_HOME}" LLDB_PYTHON_HOME)
-    endif()
-  else()
-    find_package(PythonInterp REQUIRED)
-    find_package(PythonLibs REQUIRED)
-
-    if (NOT CMAKE_CROSSCOMPILING)
-      string(REPLACE "." ";" pythonlibs_version_list ${PYTHONLIBS_VERSION_STRING})
-      list(GET pythonlibs_version_list 0 pythonlibs_major)
-      list(GET pythonlibs_version_list 1 pythonlibs_minor)
-
-      # Ignore the patch version. Some versions of macOS report a different patch
-      # version for the system provided interpreter and libraries.
-      if (NOT PYTHON_VERSION_MAJOR VERSION_EQUAL pythonlibs_major OR
-          NOT PYTHON_VERSION_MINOR VERSION_EQUAL pythonlibs_minor)
-        message(FATAL_ERROR "Found incompatible Python interpreter (${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR})"
-                            " and Python libraries (${pythonlibs_major}.${pythonlibs_minor})")
-      endif()
-    endif()
-
-    if (PYTHON_INCLUDE_DIR)
-      include_directories(${PYTHON_INCLUDE_DIR})
-    endif()
+  include_directories(${PYTHON_INCLUDE_DIRS})
+  if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows" AND NOT LLDB_RELOCATABLE_PYTHON)
+    get_filename_component(PYTHON_HOME "${PYTHON_EXECUTABLE}" DIRECTORY)
+    file(TO_CMAKE_PATH "${PYTHON_HOME}" LLDB_PYTHON_HOME)
   endif()
-endif()
-
-if (NOT LLDB_ENABLE_PYTHON)
-  unset(PYTHON_INCLUDE_DIR)
-  unset(PYTHON_LIBRARIES)
-  unset(PYTHON_EXECUTABLE)
 endif()
 
 if (LLVM_EXTERNAL_CLANG_SOURCE_DIR)

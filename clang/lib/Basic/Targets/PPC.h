@@ -390,7 +390,7 @@ public:
       ABI = "elfv2";
     } else {
       resetDataLayout("E-m:e-i64:64-n32:64");
-      ABI = Triple.getEnvironment() == llvm::Triple::ELFv2 ? "elfv2" : "elfv1";
+      ABI = "elfv1";
     }
 
     if (Triple.getOS() == llvm::Triple::AIX)

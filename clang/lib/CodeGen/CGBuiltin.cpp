@@ -821,8 +821,7 @@ static llvm::Value *EmitBitTestIntrinsic(CodeGenFunction &CGF,
 
   // X86 has special BT, BTC, BTR, and BTS instructions that handle the array
   // indexing operation internally. Use them if possible.
-  llvm::Triple::ArchType Arch = CGF.getTarget().getTriple().getArch();
-  if (Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64)
+  if (CGF.getTarget().getTriple().isX86())
     return EmitX86BitTestIntrinsic(CGF, BT, E, BitBase, BitPos);
 
   // Otherwise, use generic code to load one byte and test the bit. Use all but

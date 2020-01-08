@@ -75,15 +75,19 @@ class DeclRelationSet;
 ///                  /         \
 ///          RecordDecl S    TypeAliasDecl T
 ///
+/// Note that this function only returns NamedDecls. Generally other decls
+/// don't have references in this sense, just the node itself.
+/// If callers want to support such decls, they should cast the node directly.
+///
 /// FIXME: some AST nodes cannot be DynTypedNodes, these cannot be specified.
-llvm::SmallVector<const Decl *, 1>
+llvm::SmallVector<const NamedDecl *, 1>
 targetDecl(const ast_type_traits::DynTypedNode &, DeclRelationSet Mask);
 
 /// Similar to targetDecl(), however instead of applying a filter, all possible
 /// decls are returned along with their DeclRelationSets.
 /// This is suitable for indexing, where everything is recorded and filtering
 /// is applied later.
-llvm::SmallVector<std::pair<const Decl *, DeclRelationSet>, 1>
+llvm::SmallVector<std::pair<const NamedDecl *, DeclRelationSet>, 1>
 allTargetDecls(const ast_type_traits::DynTypedNode &);
 
 enum class DeclRelation : unsigned {

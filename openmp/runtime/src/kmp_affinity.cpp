@@ -1124,7 +1124,7 @@ static int __kmp_affinity_create_apicid_map(AddrUnsPair **address2os,
     // - Older OSes are usually found on machines with older chips, which do not
     //   support HT.
     // - The performance penalty for mistakenly identifying a machine as HT when
-    //   it isn't (which results in blocktime being incorrecly set to 0) is
+    //   it isn't (which results in blocktime being incorrectly set to 0) is
     //   greater than the penalty when for mistakenly identifying a machine as
     //   being 1 thread/core when it is really HT enabled (which results in
     //   blocktime being incorrectly set to a positive value).
@@ -2076,7 +2076,7 @@ static int __kmp_affinity_create_cpuinfo_map(AddrUnsPair **address2os,
     return -1;
   }
 
-  // Set the file pointer back to the begginning, so that we can scan the file
+  // Set the file pointer back to the beginning, so that we can scan the file
   // again, this time performing a full parse of the data. Allocate a vector of
   // ProcCpuInfo object, where we will place the data. Adding an extra element
   // at the end allows us to remove a lot of extra checks for termination
@@ -2461,7 +2461,7 @@ restart_radix_check:
             threadInfo[i][threadIdIndex] = threadIdCt++;
           }
 
-          // Aparrently the thread id field was specified for some entries and
+          // Apparently the thread id field was specified for some entries and
           // not others. Start the thread id counter off at the next higher
           // thread id.
           else if (threadIdCt <= threadInfo[i][threadIdIndex]) {
@@ -4194,7 +4194,7 @@ static void __kmp_aux_affinity_initialize(void) {
   if (__kmp_affinity_top_method == affinity_top_method_all) {
     // In the default code path, errors are not fatal - we just try using
     // another method. We only emit a warning message if affinity is on, or the
-    // verbose flag is set, an the nowarnings flag was not set.
+    // verbose flag is set, and the nowarnings flag was not set.
     const char *file_name = NULL;
     int line = 0;
 #if KMP_USE_HWLOC

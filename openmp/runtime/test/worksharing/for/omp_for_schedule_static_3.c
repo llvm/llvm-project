@@ -147,7 +147,7 @@ int test_omp_for_schedule_static_3()
   }
 
   /* Now we check if several loop regions in one parallel region have the
-   * same logical assignement of chunks to threads. We use the nowait
+   * same logical assignment of chunks to threads. We use the nowait
    * clause to increase the probability to get an error. */
 
   /* First we allocate some more memmory */

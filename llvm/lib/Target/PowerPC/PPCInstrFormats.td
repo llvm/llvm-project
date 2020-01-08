@@ -262,8 +262,8 @@ class DForm_2<bits<6> opcode, dag OOL, dag IOL, string asmstr,
               InstrItinClass itin, list<dag> pattern>
   : DForm_base<opcode, OOL, IOL, asmstr, itin, pattern> {
 
-  // Even though ADDICo does not really have an RC bit, provide
-  // the declaration of one here so that isDOT has something to set.
+  // Even though ADDIC_rec does not really have an RC bit, provide
+  // the declaration of one here so that isRecordForm has something to set.
   bit RC = 0;
 }
 
@@ -428,7 +428,7 @@ class XForm_base_r3xo<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asms
 
   let Pattern = pattern;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
 
   let Inst{6-10}  = RST;
   let Inst{11-15} = A;
@@ -463,7 +463,7 @@ class XForm_base_r3xo_swapped
   bits<5> RST;
   bits<5> B;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
 
   let Inst{6-10}  = RST;
   let Inst{11-15} = A;
@@ -744,7 +744,7 @@ class XForm_42<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
   : XForm_base_r3xo<opcode, xo, OOL, IOL, asmstr, itin, pattern> {
   let Pattern = pattern;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
 
   let Inst{6-10}  = RST;
   let Inst{11-20} = 0;
@@ -757,7 +757,7 @@ class XForm_43<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
   let Pattern = pattern;
   bits<5> FM;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
 
   let Inst{6-10}  = FM;
   let Inst{11-20} = 0;
@@ -902,7 +902,7 @@ class XForm_htm2<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
   : I<opcode, OOL, IOL, asmstr, itin> {
   bit L;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
 
   let Inst{7-9}   = 0;
   let Inst{10}    = L;
@@ -1265,7 +1265,7 @@ class XX3Form_Rc<bits<6> opcode, bits<7> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
 
   let Inst{6-10}  = XT{4-0};
   let Inst{11-15} = XA{4-0};
@@ -1651,7 +1651,7 @@ class XFLForm<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
   bits<8> FM;
   bits<5> rT;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
   let Pattern = pattern;
 
   let Inst{6} = 0;
@@ -1670,7 +1670,7 @@ class XFLForm_1<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
   bit W;
   bits<5> FRB;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
   let Pattern = pattern;
 
   let Inst{6}     = L;
@@ -1689,7 +1689,7 @@ class XSForm_1<bits<6> opcode, bits<9> xo, dag OOL, dag IOL, string asmstr,
   bits<5> RS;
   bits<6> SH;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
   let Pattern = pattern;
 
   let Inst{6-10}  = RS;
@@ -1710,7 +1710,7 @@ class XOForm_1<bits<6> opcode, bits<9> xo, bit oe, dag OOL, dag IOL, string asms
 
   let Pattern = pattern;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
 
   let Inst{6-10}  = RT;
   let Inst{11-15} = RA;
@@ -1737,7 +1737,7 @@ class AForm_1<bits<6> opcode, bits<5> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
 
   let Inst{6-10}  = FRT;
   let Inst{11-15} = FRA;
@@ -1797,7 +1797,7 @@ class MForm_1<bits<6> opcode, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
 
   let Inst{6-10}  = RS;
   let Inst{11-15} = RA;
@@ -1823,7 +1823,7 @@ class MDForm_1<bits<6> opcode, bits<3> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
 
   let Inst{6-10}  = RS;
   let Inst{11-15} = RA;
@@ -1844,7 +1844,7 @@ class MDSForm_1<bits<6> opcode, bits<4> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
 
   let Inst{6-10}  = RS;
   let Inst{11-15} = RA;
@@ -2106,7 +2106,7 @@ class Z23Form_1<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
 
   let Inst{6-10}  = FRT;
   let Inst{11-15} = FRA;
@@ -2130,7 +2130,7 @@ class Z23Form_3<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
 
   let Inst{6-10}  = FRT;
   let Inst{11-22} = idx;
@@ -2148,7 +2148,7 @@ class Z23Form_8<bits<6> opcode, bits<8> xo, dag OOL, dag IOL, string asmstr,
 
   let Pattern = pattern;
 
-  bit RC = 0;    // set by isDOT
+  bit RC = 0;    // set by isRecordForm
 
   let Inst{6-10}  = VRT;
   let Inst{11-14} = 0;

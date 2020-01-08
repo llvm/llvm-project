@@ -25,7 +25,7 @@
 # RUN: ld.lld -shared -o %t5 --script %t5.script %t1.o
 # RUN: llvm-readobj %t5 > /dev/null
 
-## Test assertions inside of output section decriptions.
+## Test assertions inside of output section descriptions.
 # RUN: echo "SECTIONS { .foo : { *(.foo) ASSERT(SIZEOF(.foo) == 8, \"true\"); } }" > %t6.script
 # RUN: ld.lld -shared -o %t6 --script %t6.script %t1.o
 # RUN: llvm-readobj %t6 > /dev/null

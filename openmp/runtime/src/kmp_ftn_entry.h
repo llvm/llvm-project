@@ -956,7 +956,7 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)(void) {
 }
 
 // This function always returns true when called on host device.
-// Compilier/libomptarget should handle when it is called inside target region.
+// Compiler/libomptarget should handle when it is called inside target region.
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_IS_INITIAL_DEVICE)(void) KMP_WEAK_ATTRIBUTE;
 int FTN_STDCALL KMP_EXPAND_NAME(FTN_IS_INITIAL_DEVICE)(void) {
   return 1; // This is the host

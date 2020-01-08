@@ -1034,7 +1034,7 @@ static void __kmp_parse_nested_num_threads(const char *var, const char *env,
     }
     // The next character is ','
     if (*next == ',') {
-      // ',' is the fisrt character
+      // ',' is the first character
       if (total == 0 || prev_comma) {
         total++;
       }
@@ -4205,7 +4205,7 @@ static void __kmp_stg_parse_spin_backoff_params(const char *name,
     }
     // The next character is ','
     if (*next == ',') {
-      // ',' is the fisrt character
+      // ',' is the first character
       if (total == 0 || prev_comma) {
         total++;
       }
@@ -4304,7 +4304,7 @@ static void __kmp_stg_parse_adaptive_lock_props(const char *name,
     }
     // The next character is ','
     if (*next == ',') {
-      // ',' is the fisrt character
+      // ',' is the first character
       if (total == 0 || prev_comma) {
         total++;
       }

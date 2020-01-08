@@ -59,3 +59,14 @@ define i64 @global_i64() {
 ; CHECK: movk x[[ADDR_REG]], #:abs_g3:var64
 ; CHECK: ldr x0, [x[[ADDR_REG]]]
 }
+
+define <2 x i64> @constpool() {
+; CHECK-LABEL: constpool:
+  ret <2 x i64> <i64 123456789, i64 987654321100>
+
+; CHECK: movz x[[ADDR_REG:[0-9]+]], #:abs_g0_nc:[[CPADDR:.LCPI[0-9]+_[0-9]+]]
+; CHECK: movk x[[ADDR_REG]], #:abs_g1_nc:[[CPADDR]]
+; CHECK: movk x[[ADDR_REG]], #:abs_g2_nc:[[CPADDR]]
+; CHECK: movk x[[ADDR_REG]], #:abs_g3:[[CPADDR]]
+; CHECK: ldr q0, [x[[ADDR_REG]]]
+}

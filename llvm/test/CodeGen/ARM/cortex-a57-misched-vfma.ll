@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-a57 -enable-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null -fp-contract=fast | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FAST
 ; Check latencies of vmul/vfma accumulate chains.
 
-define float @Test1(float %f1, float %f2, float %f3, float %f4, float %f5, float %f6) {
+define arm_aapcs_vfpcc float @Test1(float %f1, float %f2, float %f3, float %f4, float %f5, float %f6) {
 ; CHECK:       ********** MI Scheduling **********
 ; CHECK:       Test1:%bb.0
 
@@ -42,7 +42,7 @@ define float @Test1(float %f1, float %f2, float %f3, float %f4, float %f5, float
 }
 
 ; ASIMD form
-define <2 x float> @Test2(<2 x float> %f1, <2 x float> %f2, <2 x float> %f3, <2 x float> %f4, <2 x float> %f5, <2 x float> %f6) {
+define arm_aapcs_vfpcc <2 x float> @Test2(<2 x float> %f1, <2 x float> %f2, <2 x float> %f3, <2 x float> %f4, <2 x float> %f5, <2 x float> %f6) {
 ; CHECK:       ********** MI Scheduling **********
 ; CHECK:       Test2:%bb.0
 
@@ -80,7 +80,7 @@ define <2 x float> @Test2(<2 x float> %f1, <2 x float> %f2, <2 x float> %f3, <2 
   ret <2 x float> %add2
 }
 
-define float @Test3(float %f1, float %f2, float %f3, float %f4, float %f5, float %f6) {
+define arm_aapcs_vfpcc float @Test3(float %f1, float %f2, float %f3, float %f4, float %f5, float %f6) {
 ; CHECK:       ********** MI Scheduling **********
 ; CHECK:       Test3:%bb.0
 
@@ -93,12 +93,12 @@ define float @Test3(float %f1, float %f2, float %f3, float %f4, float %f5, float
 ; CHECK-SAME:  Latency=0
 
 ; CHECK-DEFAULT: VMLSS
-; CHECK-FAST:    VFMSS
-; > VMLSS common latency = 9
+; CHECK-FAST:    VFNMSS
+; > VFNMSS common latency = 9
 ; CHECK:       Latency            : 9
 ; CHECK:       Successors:
 ; CHECK:       Data
-; > VMLSS read-advanced latency to the next VMLSS = 4
+; > VFNMSS read-advanced latency to the next VMLSS = 4
 ; CHECK-SAME:  Latency=4
 
 ; CHECK-DEFAULT: VMLSS
@@ -119,7 +119,7 @@ define float @Test3(float %f1, float %f2, float %f3, float %f4, float %f5, float
 }
 
 ; ASIMD form
-define <2 x float> @Test4(<2 x float> %f1, <2 x float> %f2, <2 x float> %f3, <2 x float> %f4, <2 x float> %f5, <2 x float> %f6) {
+define arm_aapcs_vfpcc <2 x float> @Test4(<2 x float> %f1, <2 x float> %f2, <2 x float> %f3, <2 x float> %f4, <2 x float> %f5, <2 x float> %f6) {
 ; CHECK:       ********** MI Scheduling **********
 ; CHECK:       Test4:%bb.0
 
@@ -157,7 +157,7 @@ define <2 x float> @Test4(<2 x float> %f1, <2 x float> %f2, <2 x float> %f3, <2 
   ret <2 x float> %sub2
 }
 
-define float @Test5(float %f1, float %f2, float %f3) {
+define arm_aapcs_vfpcc float @Test5(float %f1, float %f2, float %f3) {
 ; CHECK:       ********** MI Scheduling **********
 ; CHECK:       Test5:%bb.0
 
@@ -176,7 +176,7 @@ define float @Test5(float %f1, float %f2, float %f3) {
 }
 
 
-define float @Test6(float %f1, float %f2, float %f3) {
+define arm_aapcs_vfpcc float @Test6(float %f1, float %f2, float %f3) {
 ; CHECK:       ********** MI Scheduling **********
 ; CHECK:       Test6:%bb.0
 

@@ -270,7 +270,7 @@ TEST_F(ExtractVariableTest, Test) {
         a = [[a + 1]];
       // lambda
       auto lamb = [&[[a]], &[[b]]](int r = [[1]]) {return 1;}
-      // assigment
+      // assignment
       xyz([[a = 5]]);
       xyz([[a *= 5]]);
       // Variable DeclRefExpr

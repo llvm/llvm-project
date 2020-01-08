@@ -178,14 +178,6 @@ private:
     llvm_unreachable("Constructor throws?");
   }
 
-  MCSection *getSectionPtr() const {
-    if (MCFragment *F = getFragment()) {
-      assert(F != AbsolutePseudoFragment);
-      return F->getParent();
-    }
-    return nullptr;
-  }
-
   /// Get a reference to the name field.  Requires that we have a name
   const StringMapEntry<bool> *&getNameEntryPtr() {
     assert(FragmentAndHasName.getInt() && "Name is required");
@@ -267,7 +259,7 @@ public:
   /// Get the section associated with a defined, non-absolute symbol.
   MCSection &getSection() const {
     assert(isInSection() && "Invalid accessor!");
-    return *getSectionPtr();
+    return *getFragment()->getParent();
   }
 
   /// Mark the symbol as defined in the fragment \p F.

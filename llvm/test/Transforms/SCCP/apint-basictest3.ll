@@ -1,5 +1,5 @@
 ; This is a basic sanity check for constant propagation.  It tests the basic
-; arithmatic operations.
+; arithmetic operations.
 
 
 ; RUN: opt < %s -sccp -S | not grep mul

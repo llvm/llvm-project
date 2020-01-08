@@ -908,17 +908,29 @@ scanPHIsAndUpdateValueMap(Instruction *Prev, BasicBlock *NewBlock,
 // values and select the correct case successor when possible.
 static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
   DenseMap<Value *, Value *> ResolvedValues;
+  BasicBlock *UnconditionalSucc = nullptr;
 
   Instruction *I = InitialInst;
   while (I->isTerminator()) {
     if (isa<ReturnInst>(I)) {
-      if (I != InitialInst)
+      if (I != InitialInst) {
+        // If InitialInst is an unconditional branch,
+        // remove PHI values that come from basic block of InitialInst
+        if (UnconditionalSucc)
+          for (PHINode &PN : UnconditionalSucc->phis()) {
+            int idx = PN.getBasicBlockIndex(InitialInst->getParent());
+            if (idx != -1)
+              PN.removeIncomingValue(idx);
+          }
         ReplaceInstWithInst(InitialInst, I->clone());
+      }
       return true;
     }
     if (auto *BR = dyn_cast<BranchInst>(I)) {
       if (BR->isUnconditional()) {
         BasicBlock *BB = BR->getSuccessor(0);
+        if (I == InitialInst)
+          UnconditionalSucc = BB;
         scanPHIsAndUpdateValueMap(I, BB, ResolvedValues);
         I = BB->getFirstNonPHIOrDbgOrLifetime();
         continue;
