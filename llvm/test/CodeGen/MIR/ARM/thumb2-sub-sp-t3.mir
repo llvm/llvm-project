@@ -1,7 +1,7 @@
 --- |
   ; RUN: llc --run-pass=prologepilog -o - %s | FileCheck %s
   ; CHECK: frame-setup CFI_INSTRUCTION def_cfa_register $r7
-  ; CHECK-NEXT: $sp = frame-setup t2SUBri12 killed $sp, 4008, 14, $noreg
+  ; CHECK-NEXT: $sp = frame-setup t2SUBspImm12 killed $sp, 4008, 14, $noreg
 
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv7-none-none-eabi"
