@@ -42,11 +42,16 @@ RUN: llvm-addr2line -pai -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileChec
 RUN: llvm-addr2line -pfi -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2LP,A2LP_F,A2LP_FI %s
 RUN: llvm-addr2line -pafi -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2LP,A2LP_AF,A2LP_FI %s
 
-#CHECK: some text
-#CHECK: 0x40054d
-#CHECK: main
-#CHECK: {{[/\]+}}tmp{{[/\]+}}x.c:14:0
-#CHECK: some text2
+# CHECK: some text
+# CHECK-NEXT: 0x40054d
+# CHECK-NEXT: inctwo
+# CHECK-NEXT: {{[/\]+}}tmp{{[/\]+}}x.c:3:3
+# CHECK-NEXT: inc
+# CHECK-NEXT: {{[/\]+}}tmp{{[/\]+}}x.c:7:0
+# CHECK-NEXT: main
+# CHECK-NEXT: {{[/\]+}}tmp{{[/\]+}}x.c:14:0
+# CHECK-EMPTY:
+# CHECK-NEXT: some text2
 #
 #PRETTY: some text
 #PRETTY: {{[0x]+}}40054d: inctwo at {{[/\]+}}tmp{{[/\]+}}x.c:3:3
