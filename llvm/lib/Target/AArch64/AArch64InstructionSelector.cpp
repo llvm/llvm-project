@@ -3703,15 +3703,44 @@ bool AArch64InstructionSelector::tryOptVectorDup(MachineInstr &I) const {
   // We're done, now find out what kind of splat we need.
   LLT VecTy = MRI.getType(I.getOperand(0).getReg());
   LLT EltTy = VecTy.getElementType();
-  if (VecTy.getSizeInBits() != 128 || EltTy.getSizeInBits() < 32) {
-    LLVM_DEBUG(dbgs() << "Could not optimize splat pattern < 128b yet");
+  if (EltTy.getSizeInBits() < 32) {
+    LLVM_DEBUG(dbgs() << "Could not optimize splat pattern < 32b elts yet");
     return false;
   }
   bool IsFP = ScalarRB->getID() == AArch64::FPRRegBankID;
-  static const unsigned OpcTable[2][2] = {
-      {AArch64::DUPv4i32gpr, AArch64::DUPv2i64gpr},
-      {AArch64::DUPv4i32lane, AArch64::DUPv2i64lane}};
-  unsigned Opc = OpcTable[IsFP][EltTy.getSizeInBits() == 64];
+  unsigned Opc = 0;
+  if (IsFP) {
+    switch (EltTy.getSizeInBits()) {
+    case 32:
+      if (VecTy.getNumElements() == 2) {
+        Opc = AArch64::DUPv2i32lane;
+      } else {
+        Opc = AArch64::DUPv4i32lane;
+        assert(VecTy.getNumElements() == 4);
+      }
+      break;
+    case 64:
+      assert(VecTy.getNumElements() == 2 && "Unexpected num elts");
+      Opc = AArch64::DUPv2i64lane;
+      break;
+    }
+  } else {
+    switch (EltTy.getSizeInBits()) {
+    case 32:
+      if (VecTy.getNumElements() == 2) {
+        Opc = AArch64::DUPv2i32gpr;
+      } else {
+        Opc = AArch64::DUPv4i32gpr;
+        assert(VecTy.getNumElements() == 4);
+      }
+      break;
+    case 64:
+      assert(VecTy.getNumElements() == 2 && "Unexpected num elts");
+      Opc = AArch64::DUPv2i64gpr;
+      break;
+    }
+  }
+  assert(Opc && "Did not compute an opcode for a dup");
 
   // For FP splats, we need to widen the scalar reg via undef too.
   if (IsFP) {
