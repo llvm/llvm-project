@@ -17,15 +17,3 @@ int *test(void) {
 // DARWIN: @"\01bar" = internal global i32 0
 // DARWIN: @"\01foo" = common global i32 0
 // DARWIN: declare i8* @"\01alias"(i32)
-
-// PR7887
-int pr7887_1 asm("");
-extern int pr7887_2 asm("");
-int pr7887_3 () asm("");
-
-int pt7887_4 () {
-  static int y asm("");
-  y = pr7887_3();
-  pr7887_2 = 1;
-  return pr7887_1;
-}

@@ -803,7 +803,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     SourceLocation StartLoc = Tok.getLocation();
     SourceLocation EndLoc;
 
-    ExprResult Result(ParseSimpleAsm(&EndLoc));
+    ExprResult Result(ParseSimpleAsm(/*ForAsmLabel*/ false, &EndLoc));
 
     // Check if GNU-style InlineAsm is disabled.
     // Empty asm string is allowed because it will not introduce
@@ -1467,11 +1467,14 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
 
 /// ParseAsmStringLiteral - This is just a normal string-literal, but is not
 /// allowed to be a wide string, and is not subject to character translation.
+/// Unlike GCC, we also diagnose an empty string literal when parsing for an
+/// asm label as opposed to an asm statement, because such a construct does not
+/// behave well.
 ///
 /// [GNU] asm-string-literal:
 ///         string-literal
 ///
-ExprResult Parser::ParseAsmStringLiteral() {
+ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
   if (!isTokenStringLiteral()) {
     Diag(Tok, diag::err_expected_string_literal)
       << /*Source='in...'*/0 << "'asm'";
@@ -1487,6 +1490,11 @@ ExprResult Parser::ParseAsmStringLiteral() {
         << SL->getSourceRange();
       return ExprError();
     }
+    if (ForAsmLabel && SL->getString().empty()) {
+      Diag(Tok, diag::err_asm_operand_wide_string_literal)
+          << 2 /* an empty */ << SL->getSourceRange();
+      return ExprError();
+    }
   }
   return AsmString;
 }
@@ -1496,7 +1504,7 @@ ExprResult Parser::ParseAsmStringLiteral() {
 /// [GNU] simple-asm-expr:
 ///         'asm' '(' asm-string-literal ')'
 ///
-ExprResult Parser::ParseSimpleAsm(SourceLocation *EndLoc) {
+ExprResult Parser::ParseSimpleAsm(bool ForAsmLabel, SourceLocation *EndLoc) {
   assert(Tok.is(tok::kw_asm) && "Not an asm!");
   SourceLocation Loc = ConsumeToken();
 
@@ -1516,7 +1524,7 @@ ExprResult Parser::ParseSimpleAsm(SourceLocation *EndLoc) {
     return ExprError();
   }
 
-  ExprResult Result(ParseAsmStringLiteral());
+  ExprResult Result(ParseAsmStringLiteral(ForAsmLabel));
 
   if (!Result.isInvalid()) {
     // Close the paren and get the location of the end bracket
