@@ -56,7 +56,7 @@ MATCHER_P(WithTemplateArgs, ArgName, "") {
       LangOptions LO;
       PrintingPolicy Policy(LO);
       Policy.adjustForCPlusPlus();
-      for (const auto Arg : Args->asArray()) {
+      for (const auto &Arg : Args->asArray()) {
         if (SpecializationArgs.size() > 0)
           SpecializationArgs += ",";
         SpecializationArgs += Arg.getAsType().getAsString(Policy);

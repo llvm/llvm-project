@@ -346,6 +346,29 @@ bool SymbolCollector::handleDeclOccurrence(
   return true;
 }
 
+void SymbolCollector::handleMacros(const MainFileMacros &MacroRefsToIndex) {
+  assert(PP.get());
+  const auto &SM = PP->getSourceManager();
+  const auto *MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());
+  assert(MainFileEntry);
+
+  const auto MainFileURI = toURI(SM, MainFileEntry->getName(), Opts);
+  // Add macro references.
+  for (const auto &IDToRefs : MacroRefsToIndex.MacroRefs) {
+    for (const auto &Range : IDToRefs.second) {
+      Ref R;
+      R.Location.Start.setLine(Range.start.line);
+      R.Location.Start.setColumn(Range.start.character);
+      R.Location.End.setLine(Range.end.line);
+      R.Location.End.setColumn(Range.end.character);
+      R.Location.FileURI = MainFileURI.c_str();
+      // FIXME: Add correct RefKind information to MainFileMacros.
+      R.Kind = RefKind::Reference;
+      Refs.insert(IDToRefs.first, R);
+    }
+  }
+}
+
 bool SymbolCollector::handleMacroOccurrence(const IdentifierInfo *Name,
                                             const MacroInfo *MI,
                                             index::SymbolRoleSet Roles,

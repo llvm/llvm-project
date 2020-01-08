@@ -2503,15 +2503,25 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG,
 
 SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
                                                SelectionDAG &DAG) const {
-  assert(Op.getOperand(0).getValueType() == MVT::i64 &&
-         "operation should be legal");
-
   // TODO: Factor out code common with LowerSINT_TO_FP.
-
   EVT DestVT = Op.getValueType();
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+
+  if (SrcVT == MVT::i16) {
+    if (DestVT == MVT::f16)
+      return Op;
+    SDLoc DL(Op);
+
+    // Promote src to i32
+    SDValue Ext = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, Src);
+    return DAG.getNode(ISD::UINT_TO_FP, DL, DestVT, Ext);
+  }
+
+  assert(SrcVT == MVT::i64 && "operation should be legal");
+
   if (Subtarget->has16BitInsts() && DestVT == MVT::f16) {
     SDLoc DL(Op);
-    SDValue Src = Op.getOperand(0);
 
     SDValue IntToFp32 = DAG.getNode(Op.getOpcode(), DL, MVT::f32, Src);
     SDValue FPRoundFlag = DAG.getIntPtrConstant(0, SDLoc(Op));
@@ -2530,12 +2540,25 @@ SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
 
 SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
                                               SelectionDAG &DAG) const {
-  assert(Op.getOperand(0).getValueType() == MVT::i64 &&
-         "operation should be legal");
+  EVT DestVT = Op.getValueType();
+
+  SDValue Src = Op.getOperand(0);
+  EVT SrcVT = Src.getValueType();
+
+  if (SrcVT == MVT::i16) {
+    if (DestVT == MVT::f16)
+      return Op;
+
+    SDLoc DL(Op);
+    // Promote src to i32
+    SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i32, Src);
+    return DAG.getNode(ISD::SINT_TO_FP, DL, DestVT, Ext);
+  }
+
+  assert(SrcVT == MVT::i64 && "operation should be legal");
 
   // TODO: Factor out code common with LowerUINT_TO_FP.
 
-  EVT DestVT = Op.getValueType();
   if (Subtarget->has16BitInsts() && DestVT == MVT::f16) {
     SDLoc DL(Op);
     SDValue Src = Op.getOperand(0);

@@ -371,3 +371,8 @@ function(add_libc_unittest target_name)
     )
   endif()
 endfunction(add_libc_unittest)
+
+function(add_libc_testsuite suite_name)
+  add_custom_target(${suite_name})
+  add_dependencies(check-libc ${suite_name})
+endfunction(add_libc_testsuite)

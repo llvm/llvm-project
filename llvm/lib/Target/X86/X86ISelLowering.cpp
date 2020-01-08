@@ -20755,7 +20755,7 @@ static std::pair<SDValue, SDValue> EmitCmp(SDValue Op0, SDValue Op1,
                                            const X86Subtarget &Subtarget,
                                            SDValue Chain, bool IsSignaling) {
   if (isNullConstant(Op1))
-    return std::make_pair(EmitTest(Op0, X86CC, dl, DAG, Subtarget), SDValue());
+    return std::make_pair(EmitTest(Op0, X86CC, dl, DAG, Subtarget), Chain);
 
   EVT CmpVT = Op0.getValueType();
 
@@ -21584,6 +21584,30 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     if (Opc == X86ISD::PCMPGT && !Subtarget.hasSSE42()) {
       assert(Subtarget.hasSSE2() && "Don't know how to lower!");
 
+      // Special case for sign bit test. We can use a v4i32 PCMPGT and shuffle
+      // the odd elements over the even elements.
+      if (!FlipSigns && !Invert && ISD::isBuildVectorAllZeros(Op0.getNode())) {
+        Op0 = DAG.getConstant(0, dl, MVT::v4i32);
+        Op1 = DAG.getBitcast(MVT::v4i32, Op1);
+
+        SDValue GT = DAG.getNode(X86ISD::PCMPGT, dl, MVT::v4i32, Op0, Op1);
+        static const int MaskHi[] = { 1, 1, 3, 3 };
+        SDValue Result = DAG.getVectorShuffle(MVT::v4i32, dl, GT, GT, MaskHi);
+
+        return DAG.getBitcast(VT, Result);
+      }
+
+      if (!FlipSigns && !Invert && ISD::isBuildVectorAllOnes(Op1.getNode())) {
+        Op0 = DAG.getBitcast(MVT::v4i32, Op0);
+        Op1 = DAG.getConstant(-1, dl, MVT::v4i32);
+
+        SDValue GT = DAG.getNode(X86ISD::PCMPGT, dl, MVT::v4i32, Op0, Op1);
+        static const int MaskHi[] = { 1, 1, 3, 3 };
+        SDValue Result = DAG.getVectorShuffle(MVT::v4i32, dl, GT, GT, MaskHi);
+
+        return DAG.getBitcast(VT, Result);
+      }
+
       // Since SSE has no unsigned integer comparisons, we need to flip the sign
       // bits of the inputs before performing those operations. The lower
       // compare is always unsigned.
@@ -21818,15 +21842,15 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   // Handle f128 first, since one possible outcome is a normal integer
   // comparison which gets handled by emitFlagsForSetcc.
   if (Op0.getValueType() == MVT::f128) {
-    // FIXME: We may need a strict version of softenSetCCOperands before
-    // supporting f128.
-    assert(!IsStrict && "Unhandled strict operation!");
-    softenSetCCOperands(DAG, MVT::f128, Op0, Op1, CC, dl, Op0, Op1);
+    softenSetCCOperands(DAG, MVT::f128, Op0, Op1, CC, dl, Op0, Op1, Chain,
+                        Op.getOpcode() == ISD::STRICT_FSETCCS);
 
     // If softenSetCCOperands returned a scalar, use it.
     if (!Op1.getNode()) {
       assert(Op0.getValueType() == Op.getValueType() &&
              "Unexpected setcc expansion!");
+      if (IsStrict)
+        return DAG.getMergeValues({Op0, Chain}, dl);
       return Op0;
     }
   }
@@ -29086,9 +29110,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
     if (SrcVT == MVT::v2i64 && !IsSigned && Subtarget.is64Bit() &&
-        Subtarget.hasAVX() && !Subtarget.hasAVX512()) {
-      // TODO Any SSE41+ subtarget should work here but BLENDV codegen ends up
-      // a lot worse than it should be.
+        Subtarget.hasSSE41() && !Subtarget.hasAVX512()) {
       SDValue Zero = DAG.getConstant(0, dl, SrcVT);
       SDValue One  = DAG.getConstant(1, dl, SrcVT);
       SDValue Sign = DAG.getNode(ISD::OR, dl, SrcVT,
@@ -40801,8 +40823,8 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
   default: return SDValue();
   case MVT::v16i8:
   case MVT::v8i16:
-  case MVT::v4i32: if (!Subtarget.hasSSE2()) return SDValue(); break;
-  case MVT::v2i64: if (!Subtarget.hasSSE42()) return SDValue(); break;
+  case MVT::v4i32:
+  case MVT::v2i64: if (!Subtarget.hasSSE2()) return SDValue(); break;
   case MVT::v32i8:
   case MVT::v16i16:
   case MVT::v8i32:
@@ -40826,7 +40848,7 @@ static SDValue foldVectorXorShiftIntoCmp(SDNode *N, SelectionDAG &DAG,
 
   // Create a greater-than comparison against -1. We don't use the more obvious
   // greater-than-or-equal-to-zero because SSE/AVX don't have that instruction.
-  return DAG.getNode(X86ISD::PCMPGT, SDLoc(N), VT, Shift.getOperand(0), Ones);
+  return DAG.getSetCC(SDLoc(N), VT, Shift.getOperand(0), Ones, ISD::SETGT);
 }
 
 /// Detect patterns of truncation with unsigned saturation:

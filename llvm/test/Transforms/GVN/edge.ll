@@ -93,6 +93,40 @@ return:
 ; CHECK: %div = fdiv double %x, 2.0
 }
 
+define double @fcmp_one_possibly_nan(double %x, double %y) {
+entry:
+  %cmp = fcmp one double %y, 2.0
+  br i1 %cmp, label %return, label %else
+
+else:
+  %div = fdiv double %x, %y
+  br label %return
+
+return:
+  %retval = phi double [ %div, %else ], [ %x, %entry ]
+  ret double %retval
+
+; CHECK-LABEL: define double @fcmp_one_possibly_nan(
+; CHECK: %div = fdiv double %x, %y
+}
+
+define double @fcmp_one_not_zero_or_nan(double %x, double %y) {
+entry:
+  %cmp = fcmp nnan one double %y, 2.0
+  br i1 %cmp, label %return, label %else
+
+else:
+  %div = fdiv double %x, %y
+  br label %return
+
+return:
+  %retval = phi double [ %div, %else ], [ %x, %entry ]
+  ret double %retval
+
+; CHECK-LABEL: define double @fcmp_one_not_zero_or_nan(
+; CHECK: %div = fdiv double %x, 2.0
+}
+
 ; PR22376 - We can't propagate zero constants because -0.0 
 ; compares equal to 0.0. If %y is -0.0 in this test case,
 ; we would produce the wrong sign on the infinity return value.
@@ -167,4 +201,39 @@ return:
 
 ; CHECK-LABEL: define double @fcmp_une_maybe_zero(
 ; CHECK: %div = fdiv double %x, %z
+}
+
+
+define double @fcmp_ueq_possibly_nan(double %x, double %y) {
+entry:
+  %cmp = fcmp ueq double %y, 2.0
+  br i1 %cmp, label %do_div, label %return
+
+do_div:
+  %div = fdiv double %x, %y
+  br label %return
+
+return:
+  %retval = phi double [ %div, %do_div ], [ %x, %entry ]
+  ret double %retval
+
+; CHECK-LABEL: define double @fcmp_ueq_possibly_nan(
+; CHECK: %div = fdiv double %x, %y
+}
+
+define double @fcmp_ueq_not_zero_or_nan(double %x, double %y) {
+entry:
+  %cmp = fcmp nnan ueq double %y, 2.0
+  br i1 %cmp, label %do_div, label %return
+
+do_div:
+  %div = fdiv double %x, %y
+  br label %return
+
+return:
+  %retval = phi double [ %div, %do_div ], [ %x, %entry ]
+  ret double %retval
+
+; CHECK-LABEL: define double @fcmp_ueq_not_zero_or_nan(
+; CHECK: %div = fdiv double %x, 2.0
 }

@@ -22,6 +22,10 @@ namespace modernize {
 class UseUsingCheck : public ClangTidyCheck {
 
   const bool IgnoreMacros;
+  SourceLocation LastReplacementEnd;
+  SourceRange LastCxxDeclRange;
+  std::string FirstTypedefType;
+  std::string FirstTypedefName;
 
 public:
   UseUsingCheck(StringRef Name, ClangTidyContext *Context);

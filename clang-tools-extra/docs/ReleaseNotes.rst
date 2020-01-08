@@ -166,6 +166,10 @@ Improvements to clang-tidy
   Finds types that could be made trivially-destructible by removing out-of-line
   defaulted destructor declarations.
 
+- The :doc:`modernize-use-using
+  <clang-tidy/checks/modernize-use-using>` check now converts typedefs containing
+  struct definitions and multiple comma-separated types.
+
 - Improved :doc:`bugprone-posix-return
   <clang-tidy/checks/bugprone-posix-return>` check.
 

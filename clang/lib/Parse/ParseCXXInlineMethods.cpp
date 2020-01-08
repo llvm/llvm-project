@@ -223,6 +223,7 @@ Parser::LateParsedDeclaration::~LateParsedDeclaration() {}
 void Parser::LateParsedDeclaration::ParseLexedMethodDeclarations() {}
 void Parser::LateParsedDeclaration::ParseLexedMemberInitializers() {}
 void Parser::LateParsedDeclaration::ParseLexedMethodDefs() {}
+void Parser::LateParsedDeclaration::ParseLexedPragmas() {}
 
 Parser::LateParsedClass::LateParsedClass(Parser *P, ParsingClass *C)
   : Self(P), Class(C) {}
@@ -243,6 +244,10 @@ void Parser::LateParsedClass::ParseLexedMethodDefs() {
   Self->ParseLexedMethodDefs(*Class);
 }
 
+void Parser::LateParsedClass::ParseLexedPragmas() {
+  Self->ParseLexedPragmas(*Class);
+}
+
 void Parser::LateParsedMethodDeclaration::ParseLexedMethodDeclarations() {
   Self->ParseLexedMethodDeclaration(*this);
 }
@@ -253,6 +258,10 @@ void Parser::LexedMethod::ParseLexedMethodDefs() {
 
 void Parser::LateParsedMemberInitializer::ParseLexedMemberInitializers() {
   Self->ParseLexedMemberInitializer(*this);
+}
+
+void Parser::LateParsedPragma::ParseLexedPragmas() {
+  Self->ParseLexedPragma(*this);
 }
 
 /// ParseLexedMethodDeclarations - We finished parsing the member
@@ -649,6 +658,43 @@ void Parser::ParseLexedMemberInitializer(LateParsedMemberInitializer &MI) {
   // Make sure this is *our* artificial EOF token.
   if (Tok.getEofData() == MI.Field)
     ConsumeAnyToken();
+}
+
+void Parser::ParseLexedPragmas(ParsingClass &Class) {
+  bool HasTemplateScope = !Class.TopLevelClass && Class.TemplateScope;
+  ParseScope ClassTemplateScope(this, Scope::TemplateParamScope,
+                                HasTemplateScope);
+  TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+  if (HasTemplateScope) {
+    Actions.ActOnReenterTemplateScope(getCurScope(), Class.TagOrTemplate);
+    ++CurTemplateDepthTracker;
+  }
+  bool HasClassScope = !Class.TopLevelClass;
+  ParseScope ClassScope(this, Scope::ClassScope | Scope::DeclScope,
+                        HasClassScope);
+
+  for (LateParsedDeclaration *LPD : Class.LateParsedDeclarations)
+    LPD->ParseLexedPragmas();
+}
+
+void Parser::ParseLexedPragma(LateParsedPragma &LP) {
+  PP.EnterToken(Tok, /*IsReinject=*/true);
+  PP.EnterTokenStream(LP.toks(), /*DisableMacroExpansion=*/true,
+                      /*IsReinject=*/true);
+
+  // Consume the previously pushed token.
+  ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
+  assert(Tok.isAnnotation() && "Expected annotation token.");
+  switch (Tok.getKind()) {
+  case tok::annot_pragma_openmp: {
+    AccessSpecifier AS = LP.getAccessSpecifier();
+    ParsedAttributesWithRange Attrs(AttrFactory);
+    (void)ParseOpenMPDeclarativeDirectiveWithExtDecl(AS, Attrs);
+    break;
+  }
+  default:
+    llvm_unreachable("Unexpected token.");
+  }
 }
 
 /// ConsumeAndStoreUntil - Consume and store the token at the passed token

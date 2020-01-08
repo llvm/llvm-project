@@ -43,6 +43,11 @@ struct IndexedLoadStoreMatchInfo {
   bool IsPre;
 };
 
+struct PtrAddChain {
+  int64_t Imm;
+  Register Base;
+};
+
 class CombinerHelper {
 protected:
   MachineIRBuilder &Builder;
@@ -169,6 +174,9 @@ public:
   ///     [...]
   ///     $whatever = COPY $addr
   bool tryCombineMemCpyFamily(MachineInstr &MI, unsigned MaxLen = 0);
+
+  bool matchPtrAddImmedChain(MachineInstr &MI, PtrAddChain &MatchInfo);
+  bool applyPtrAddImmedChain(MachineInstr &MI, PtrAddChain &MatchInfo);
 
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.

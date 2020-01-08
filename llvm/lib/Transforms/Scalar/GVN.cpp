@@ -1389,6 +1389,59 @@ bool GVN::processNonLocalLoad(LoadInst *LI) {
   return PerformLoadPRE(LI, ValuesPerBlock, UnavailableBlocks);
 }
 
+static bool impliesEquivalanceIfTrue(CmpInst* Cmp) {
+  if (Cmp->getPredicate() == CmpInst::Predicate::ICMP_EQ)
+    return true;
+
+  // Floating point comparisons can be equal, but not equivalent.  Cases:
+  // NaNs for unordered operators
+  // +0.0 vs 0.0 for all operators
+  if (Cmp->getPredicate() == CmpInst::Predicate::FCMP_OEQ ||
+      (Cmp->getPredicate() == CmpInst::Predicate::FCMP_UEQ &&
+       Cmp->getFastMathFlags().noNaNs())) {
+      Value *LHS = Cmp->getOperand(0);
+      Value *RHS = Cmp->getOperand(1);
+      // If we can prove either side non-zero, then equality must imply
+      // equivalence.
+      // FIXME: We should do this optimization if 'no signed zeros' is
+      // applicable via an instruction-level fast-math-flag or some other
+      // indicator that relaxed FP semantics are being used.
+      if (isa<ConstantFP>(LHS) && !cast<ConstantFP>(LHS)->isZero())
+        return true;
+      if (isa<ConstantFP>(RHS) && !cast<ConstantFP>(RHS)->isZero())
+        return true;;
+      // TODO: Handle vector floating point constants
+  }
+  return false;
+}
+
+static bool impliesEquivalanceIfFalse(CmpInst* Cmp) {
+  if (Cmp->getPredicate() == CmpInst::Predicate::ICMP_NE)
+    return true;
+
+  // Floating point comparisons can be equal, but not equivelent.  Cases:
+  // NaNs for unordered operators
+  // +0.0 vs 0.0 for all operators
+  if ((Cmp->getPredicate() == CmpInst::Predicate::FCMP_ONE &&
+       Cmp->getFastMathFlags().noNaNs()) ||
+      Cmp->getPredicate() == CmpInst::Predicate::FCMP_UNE) {
+      Value *LHS = Cmp->getOperand(0);
+      Value *RHS = Cmp->getOperand(1);
+      // If we can prove either side non-zero, then equality must imply
+      // equivalence. 
+      // FIXME: We should do this optimization if 'no signed zeros' is
+      // applicable via an instruction-level fast-math-flag or some other
+      // indicator that relaxed FP semantics are being used.
+      if (isa<ConstantFP>(LHS) && !cast<ConstantFP>(LHS)->isZero())
+        return true;
+      if (isa<ConstantFP>(RHS) && !cast<ConstantFP>(RHS)->isZero())
+        return true;;
+      // TODO: Handle vector floating point constants
+  }
+  return false;
+}
+
+
 static bool hasUsersIn(Value *V, BasicBlock *BB) {
   for (User *U : V->users())
     if (isa<Instruction>(U) &&
@@ -1453,10 +1506,7 @@ bool GVN::processAssumeIntrinsic(IntrinsicInst *IntrinsicI) {
   // call void @llvm.assume(i1 %cmp)
   // ret float %load ; will change it to ret float %0
   if (auto *CmpI = dyn_cast<CmpInst>(V)) {
-    if (CmpI->getPredicate() == CmpInst::Predicate::ICMP_EQ ||
-        CmpI->getPredicate() == CmpInst::Predicate::FCMP_OEQ ||
-        (CmpI->getPredicate() == CmpInst::Predicate::FCMP_UEQ &&
-         CmpI->getFastMathFlags().noNaNs())) {
+    if (impliesEquivalanceIfTrue(CmpI)) {
       Value *CmpLHS = CmpI->getOperand(0);
       Value *CmpRHS = CmpI->getOperand(1);
       // Heuristically pick the better replacement -- the choice of heuristic
@@ -1481,12 +1531,6 @@ bool GVN::processAssumeIntrinsic(IntrinsicInst *IntrinsicI) {
       // Handle degenerate case where we either haven't pruned a dead path or a
       // removed a trivial assume yet.
       if (isa<Constant>(CmpLHS) && isa<Constant>(CmpRHS))
-        return Changed;
-
-      // +0.0 and -0.0 compare equal, but do not imply equivalence.  Unless we
-      // can prove equivalence, bail.
-      if (CmpRHS->getType()->isFloatTy() &&
-          (!isa<ConstantFP>(CmpRHS) || cast<ConstantFP>(CmpRHS)->isZero()))
         return Changed;
 
       LLVM_DEBUG(dbgs() << "Replacing dominated uses of "
@@ -1877,26 +1921,11 @@ bool GVN::propagateEquality(Value *LHS, Value *RHS, const BasicBlockEdge &Root,
       Value *Op0 = Cmp->getOperand(0), *Op1 = Cmp->getOperand(1);
 
       // If "A == B" is known true, or "A != B" is known false, then replace
-      // A with B everywhere in the scope.
-      if ((isKnownTrue && Cmp->getPredicate() == CmpInst::ICMP_EQ) ||
-          (isKnownFalse && Cmp->getPredicate() == CmpInst::ICMP_NE))
+      // A with B everywhere in the scope.  For floating point operations, we
+      // have to be careful since equality does not always imply equivalance.  
+      if ((isKnownTrue && impliesEquivalanceIfTrue(Cmp)) ||
+          (isKnownFalse && impliesEquivalanceIfFalse(Cmp)))
         Worklist.push_back(std::make_pair(Op0, Op1));
-
-      // Handle the floating point versions of equality comparisons too.
-      if ((isKnownTrue && Cmp->getPredicate() == CmpInst::FCMP_OEQ) ||
-          (isKnownFalse && Cmp->getPredicate() == CmpInst::FCMP_UNE)) {
-
-        // Floating point -0.0 and 0.0 compare equal, so we can only
-        // propagate values if we know that we have a constant and that
-        // its value is non-zero.
-
-        // FIXME: We should do this optimization if 'no signed zeros' is
-        // applicable via an instruction-level fast-math-flag or some other
-        // indicator that relaxed FP semantics are being used.
-
-        if (isa<ConstantFP>(Op1) && !cast<ConstantFP>(Op1)->isZero())
-          Worklist.push_back(std::make_pair(Op0, Op1));
-      }
 
       // If "A >= B" is known true, replace "A < B" with false everywhere.
       CmpInst::Predicate NotPred = Cmp->getInversePredicate();

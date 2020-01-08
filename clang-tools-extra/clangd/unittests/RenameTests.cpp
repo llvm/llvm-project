@@ -404,7 +404,7 @@ TEST(RenameTest, WithinFileRename) {
         template <> struct Bar<[[Foo]]> {};
       )cpp",
   };
-  for (const auto T : Tests) {
+  for (llvm::StringRef T : Tests) {
     Annotations Code(T);
     auto TU = TestTU::withCode(Code.code());
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");

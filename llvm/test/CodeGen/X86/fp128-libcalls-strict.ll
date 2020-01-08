@@ -1128,7 +1128,99 @@ entry:
   ret i64 %round
 }
 
-attributes #0 = { strictfp }
+define i64 @cmp(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
+; CHECK-LABEL: cmp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movq %rsi, %r14
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    callq __eqtf2
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    cmovneq %r14, %rbx
+; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    retq
+;
+; X86-LABEL: cmp:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __eqtf2
+; X86-NEXT:    addl $32, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmovel %eax, %ecx
+; X86-NEXT:    movl (%ecx), %eax
+; X86-NEXT:    movl 4(%ecx), %edx
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
+  %cond = call i1 @llvm.experimental.constrained.fcmp.f128(
+                                               fp128 %x, fp128 %y,
+                                               metadata !"oeq",
+                                               metadata !"fpexcept.strict") #0
+  %res = select i1 %cond, i64 %a, i64 %b
+  ret i64 %res
+}
+
+define i64 @cmps(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
+; CHECK-LABEL: cmps:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    movq %rsi, %r14
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    callq __eqtf2
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    cmovneq %r14, %rbx
+; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    addq $8, %rsp
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    retq
+;
+; X86-LABEL: cmps:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $12, %esp
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll __eqtf2
+; X86-NEXT:    addl $32, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    cmovel %eax, %ecx
+; X86-NEXT:    movl (%ecx), %eax
+; X86-NEXT:    movl 4(%ecx), %edx
+; X86-NEXT:    addl $12, %esp
+; X86-NEXT:    retl
+  %cond = call i1 @llvm.experimental.constrained.fcmps.f128(
+                                               fp128 %x, fp128 %y,
+                                               metadata !"oeq",
+                                               metadata !"fpexcept.strict") #0
+  %res = select i1 %cond, i64 %a, i64 %b
+  ret i64 %res
+}
+
+attributes #0 = { nounwind strictfp }
 
 declare fp128 @llvm.experimental.constrained.fadd.f128(fp128, fp128, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.fsub.f128(fp128, fp128, metadata, metadata)
@@ -1158,3 +1250,5 @@ declare i32 @llvm.experimental.constrained.lrint.i32.f128(fp128, metadata, metad
 declare i64 @llvm.experimental.constrained.llrint.i64.f128(fp128, metadata, metadata)
 declare i32 @llvm.experimental.constrained.lround.i32.f128(fp128, metadata)
 declare i64 @llvm.experimental.constrained.llround.i64.f128(fp128, metadata)
+declare i1 @llvm.experimental.constrained.fcmp.f128(fp128, fp128, metadata, metadata)
+declare i1 @llvm.experimental.constrained.fcmps.f128(fp128, fp128, metadata, metadata)
