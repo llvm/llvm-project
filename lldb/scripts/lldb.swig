@@ -93,6 +93,7 @@ def lldb_iter(obj, getsize, getelem):
         yield elem(i)
 %}
 
+%include <std_string.i>
 %include "./Python/python-typemaps.swig"
 %include "./headers.swig"
 
