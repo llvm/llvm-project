@@ -5283,7 +5283,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
   OS << Target.getName() << "InstructionSelector::CustomRendererFn\n"
      << Target.getName() << "InstructionSelector::CustomRenderers[] = {\n"
-     << "  nullptr, // GICP_Invalid\n";
+     << "  nullptr, // GICR_Invalid\n";
   for (const auto &Record : CustomRendererFns)
     OS << "  &" << Target.getName()
        << "InstructionSelector::" << Record->getValueAsString("RendererFn")
