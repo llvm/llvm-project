@@ -155,6 +155,7 @@ public:
     AlignBranchType = X86AlignBranchKindLoc;
   }
 
+  bool allowAutoPadding() const override;
   void alignBranchesBegin(MCObjectStreamer &OS, const MCInst &Inst) override;
   void alignBranchesEnd(MCObjectStreamer &OS, const MCInst &Inst) override;
 
@@ -410,10 +411,15 @@ static bool hasVariantSymbol(const MCInst &MI) {
   return false;
 }
 
+bool X86AsmBackend::allowAutoPadding() const {
+  return (AlignBoundary != Align::None() &&
+          AlignBranchType != X86::AlignBranchNone);
+}
+
 bool X86AsmBackend::needAlign(MCObjectStreamer &OS) const {
-  if (AlignBoundary == Align::None() ||
-      AlignBranchType == X86::AlignBranchNone)
+  if (!OS.getAllowAutoPadding())
     return false;
+  assert(allowAutoPadding() && "incorrect initialization!");
 
   MCAssembler &Assembler = OS.getAssembler();
   MCSection *Sec = OS.getCurrentSectionOnly();
