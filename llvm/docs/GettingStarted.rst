@@ -494,8 +494,8 @@ Once a patch is reviewed, you should rebase it, re-test locally, and commit the
 changes to LLVM's master branch. This is done using `git push` if you have the
 required access rights. See `committing a change
 <Phabricator.html#committing-a-change>`_ for Phabricator based commits or
-`Developer Policy <DeveloperPolicy.html#obtaining-commit-access>`_ for commit
-access.
+`obtaining commit access <DeveloperPolicy.html#obtaining-commit-access>`_
+for commit access.
 
 LLVM currently has a linear-history policy, which means that merge commits are
 not allowed. The `llvm-project` repo on github is configured to reject pushes
