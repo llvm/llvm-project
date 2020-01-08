@@ -582,43 +582,6 @@ def ProcAppleA7 : SubtargetFeature<"apple-a7", "ARMProcFamily", "AppleA7",
                                    FeatureZCZeroingFPWorkaround
                                    ]>;
 
-def ProcVortex : SubtargetFeature<"vortex", "ARMProcFamily", "Vortex",
-                                   "Vortex", [
-                                   FeatureAlternateSExtLoadCVTF32Pattern,
-                                   FeatureArithmeticBccFusion,
-                                   FeatureArithmeticCbzFusion,
-                                   FeatureCrypto,
-                                   FeatureDisableLatencySchedHeuristic,
-                                   FeatureFullFP16,
-                                   FeatureFuseAES,
-                                   FeatureFuseCryptoEOR,
-                                   FeatureNEON,
-                                   FeaturePerfMon,
-                                   FeatureZCRegMove,
-                                   FeatureZCZeroing,
-                                   HasV8_3aOps
-                                   ]>;
-
-def ProcLightning : SubtargetFeature<"lightning", "ARMProcFamily", "Lightning",
-                                     "Lightning", [
-                                     FeatureAlternateSExtLoadCVTF32Pattern,
-                                     FeatureArithmeticBccFusion,
-                                     FeatureArithmeticCbzFusion,
-                                     FeatureCrypto,
-                                     FeatureDisableLatencySchedHeuristic,
-                                     FeatureFP16FML,
-                                     FeatureFullFP16,
-                                     FeatureFuseAES,
-                                     FeatureFuseCryptoEOR,
-                                     FeatureNEON,
-                                     FeaturePerfMon,
-                                     FeatureSHA3,
-                                     FeatureSM4,
-                                     FeatureZCRegMove,
-                                     FeatureZCZeroing,
-                                     HasV8_4aOps
-                                     ]>;
-
 def ProcAppleA10 : SubtargetFeature<"apple-a10", "ARMProcFamily", "AppleA10",
                                     "Apple A10", [
                                     FeatureAlternateSExtLoadCVTF32Pattern,
@@ -918,10 +881,10 @@ def : ProcessorModel<"thunderx2t99", ThunderX2T99Model, [ProcThunderX2T99]>;
 // FIXME: HiSilicon TSV110 is currently modeled as a Cortex-A57.
 def : ProcessorModel<"tsv110", CortexA57Model, [ProcTSV110]>;
 
-// Support cyclone as an alias for apple-a7 so we can still LTO old bitcode.
+// Support some CPU codenames as aliases for apple-aN so we can still LTO old bitcode.
 def : ProcessorModel<"cyclone", CycloneModel, [ProcAppleA7]>;
-def : ProcessorModel<"vortex", CycloneModel, [ProcVortex]>;
-def : ProcessorModel<"lightning", CycloneModel, [ProcLightning]>;
+def : ProcessorModel<"vortex", CycloneModel, [ProcAppleA12]>;
+def : ProcessorModel<"lightning", CycloneModel, [ProcAppleA13]>;
 
 // iPhone and iPad CPUs
 def : ProcessorModel<"apple-a7", CycloneModel, [ProcAppleA7]>;
