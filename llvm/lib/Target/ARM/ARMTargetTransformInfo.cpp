@@ -22,6 +22,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Casting.h"
@@ -45,6 +46,8 @@ static cl::opt<bool> DisableLowOverheadLoops(
   cl::desc("Disable the generation of low-overhead loops"));
 
 extern cl::opt<bool> DisableTailPredication;
+
+extern cl::opt<bool> EnableMaskedGatherScatters;
 
 bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
                                      const Function *Callee) const {
@@ -512,6 +515,27 @@ bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, MaybeAlign Alignment) {
   return (EltWidth == 32 && (!Alignment || Alignment >= 4)) ||
          (EltWidth == 16 && (!Alignment || Alignment >= 2)) ||
          (EltWidth == 8);
+}
+
+bool ARMTTIImpl::isLegalMaskedGather(Type *Ty, MaybeAlign Alignment) {
+  if (!EnableMaskedGatherScatters || !ST->hasMVEIntegerOps())
+    return false;
+
+  // This method is called in 2 places:
+  //  - from the vectorizer with a scalar type, in which case we need to get
+  //  this as good as we can with the limited info we have (and rely on the cost
+  //  model for the rest).
+  //  - from the masked intrinsic lowering pass with the actual vector type.
+  // For MVE, we have a custom lowering pass that will already have custom
+  // legalised any gathers that we can to MVE intrinsics, and want to expand all
+  // the rest. The pass runs before the masked intrinsic lowering pass, so if we
+  // are here, we know we want to expand.
+  if (isa<VectorType>(Ty))
+    return false;
+
+  unsigned EltWidth = Ty->getScalarSizeInBits();
+  return ((EltWidth == 32 && (!Alignment || Alignment >= 4)) ||
+          (EltWidth == 16 && (!Alignment || Alignment >= 2)) || EltWidth == 8);
 }
 
 int ARMTTIImpl::getMemcpyCost(const Instruction *I) {

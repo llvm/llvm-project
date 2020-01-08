@@ -7,6 +7,7 @@
 ; CHECK-NEXT:    FunctionPass Manager
 ; CHECK-NEXT:      Expand Atomic instructions
 ; CHECK-NEXT:      Simplify the CFG
+; CHECK-NEXT:      MVE gather/scatter lowering
 ; CHECK-NEXT:      Dominator Tree Construction
 ; CHECK-NEXT:      Basic Alias Analysis (stateless AA impl)
 ; CHECK-NEXT:      Module Verifier
