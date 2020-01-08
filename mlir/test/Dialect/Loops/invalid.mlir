@@ -113,3 +113,184 @@ func @loop_if_illegal_block_argument(%arg0: i1) {
   return
 }
 
+// -----
+
+func @parallel_arguments_different_tuple_size(
+    %arg0: index, %arg1: index, %arg2: index) {
+  // expected-error@+1 {{custom op 'loop.parallel' expected 1 operands}}
+  loop.parallel (%i0) = (%arg0) to (%arg1, %arg2) step () {
+  }
+  return
+}
+
+// -----
+
+func @parallel_body_arguments_wrong_type(
+    %arg0: index, %arg1: index, %arg2: index) {
+  // expected-error@+1 {{'loop.parallel' op expects arguments for the induction variable to be of index type}}
+  "loop.parallel"(%arg0, %arg1, %arg2) ({
+    ^bb0(%i0: f32):
+      "loop.terminator"() : () -> ()
+  }): (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func @parallel_body_wrong_number_of_arguments(
+    %arg0: index, %arg1: index, %arg2: index) {
+  // expected-error@+1 {{'loop.parallel' op expects the same number of induction variables as bound and step values}}
+  "loop.parallel"(%arg0, %arg1, %arg2) ({
+    ^bb0(%i0: index, %i1: index):
+      "loop.terminator"() : () -> ()
+  }): (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func @parallel_no_tuple_elements() {
+  // expected-error@+1 {{'loop.parallel' op needs at least one tuple element for lowerBound, upperBound and step}}
+  loop.parallel () = () to () step () {
+  }
+  return
+}
+
+// -----
+
+func @parallel_step_not_positive(
+    %arg0: index, %arg1: index, %arg2: index, %arg3: index) {
+  // expected-error@+3 {{constant step operand must be positive}}
+  %c0 = constant 1 : index
+  %c1 = constant 0 : index
+  loop.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3) step (%c0, %c1) {
+  }
+  return
+}
+
+// -----
+
+func @parallel_fewer_results_than_reduces(
+    %arg0 : index, %arg1: index, %arg2: index) {
+  // expected-error@+1 {{expects number of results to be the same as number of reductions}}
+  loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
+    %c0 = constant 1.0 : f32
+    loop.reduce(%c0) {
+      ^bb0(%lhs: f32, %rhs: f32):
+        loop.reduce.return %lhs : f32
+    } : f32
+  }
+  return
+}
+
+// -----
+
+func @parallel_more_results_than_reduces(
+    %arg0 : index, %arg1 : index, %arg2 : index) {
+  // expected-error@+1 {{expects number of results to be the same as number of reductions}}
+  %res = loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
+  } : f32
+
+  return
+}
+
+// -----
+
+func @parallel_different_types_of_results_and_reduces(
+    %arg0 : index, %arg1: index, %arg2: index) {
+  %res = loop.parallel (%i0) = (%arg0) to (%arg1) step (%arg2) {
+    // expected-error@+1 {{expects type of reduce to be the same as result type: 'f32'}}
+    loop.reduce(%arg0) {
+      ^bb0(%lhs: index, %rhs: index):
+        loop.reduce.return %lhs : index
+    } : index
+  } : f32
+  return
+}
+
+// -----
+
+func @top_level_reduce(%arg0 : f32) {
+  // expected-error@+1 {{expects parent op 'loop.parallel'}}
+  loop.reduce(%arg0) {
+    ^bb0(%lhs : f32, %rhs : f32):
+      loop.reduce.return %lhs : f32
+  } : f32
+  return
+}
+
+// -----
+
+func @reduce_empty_block(%arg0 : index, %arg1 : f32) {
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) {
+    // expected-error@+1 {{the block inside reduce should not be empty}}
+    loop.reduce(%arg1) {
+      ^bb0(%lhs : f32, %rhs : f32):
+    } : f32
+  } : f32
+  return
+}
+
+// -----
+
+func @reduce_too_many_args(%arg0 : index, %arg1 : f32) {
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) {
+    // expected-error@+1 {{expects two arguments to reduce block of type 'f32'}}
+    loop.reduce(%arg1) {
+      ^bb0(%lhs : f32, %rhs : f32, %other : f32):
+        loop.reduce.return %lhs : f32
+    } : f32
+  } : f32
+  return
+}
+
+// -----
+
+func @reduce_wrong_args(%arg0 : index, %arg1 : f32) {
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) {
+    // expected-error@+1 {{expects two arguments to reduce block of type 'f32'}}
+    loop.reduce(%arg1) {
+      ^bb0(%lhs : f32, %rhs : i32):
+        loop.reduce.return %lhs : f32
+    } : f32
+  } : f32
+  return
+}
+
+
+// -----
+
+func @reduce_wrong_terminator(%arg0 : index, %arg1 : f32) {
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) {
+    // expected-error@+1 {{the block inside reduce should be terminated with a 'loop.reduce.return' op}}
+    loop.reduce(%arg1) {
+      ^bb0(%lhs : f32, %rhs : f32):
+        "loop.terminator"(): () -> ()
+    } : f32
+  } : f32
+  return
+}
+
+// -----
+
+func @reduceReturn_wrong_type(%arg0 : index, %arg1: f32) {
+  %res = loop.parallel (%i0) = (%arg0) to (%arg0) step (%arg0) {
+    loop.reduce(%arg1) {
+      ^bb0(%lhs : f32, %rhs : f32):
+        %c0 = constant 1 : index
+        // expected-error@+1 {{needs to have type 'f32' (the type of the enclosing ReduceOp)}}
+        loop.reduce.return %c0 : index
+    } : f32
+  } : f32
+  return
+}
+
+// -----
+
+func @reduceReturn_not_inside_reduce(%arg0 : f32) {
+  "foo.region"() ({
+    // expected-error@+1 {{expects parent op 'loop.reduce'}}
+    loop.reduce.return %arg0 : f32
+  }): () -> ()
+  return
+}
