@@ -1879,7 +1879,7 @@ public:
 
           Host::SystemLog(Host::eSystemLogError,
                           "error: unable to find section %d for a symbol in %s, corrupt file?\n",
-                          n_sect, 
+                          n_sect,
                           filename);
         }
       }
@@ -4421,6 +4421,7 @@ size_t ObjectFileMachO::ParseSymtab() {
 
         if (symbol_name && symbol_name[0] == '_') {
           symbol_name_is_mangled = symbol_name[1] == '_';
+          symbol_name_is_mangled |= symbol_name[1] == '$';
           symbol_name++; // Skip the leading underscore
         }
 
