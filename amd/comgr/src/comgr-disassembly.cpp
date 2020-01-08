@@ -144,7 +144,7 @@ amd_comgr_status_t DisassemblyInfo::disassembleInstruction(uint64_t Address,
 
   std::string InstStr;
   raw_string_ostream InstStream(InstStr);
-  IP->printInst(&Inst, InstStream, AnnotationsStream.str(), *STI);
+  IP->printInst(&Inst, Address, AnnotationsStream.str(), *STI, InstStream);
 
   PrintInstruction(InstStream.str().c_str(), UserData);
 

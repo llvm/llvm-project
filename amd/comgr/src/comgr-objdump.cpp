@@ -560,7 +560,7 @@ public:
       dumpBytes(Bytes, OS);
     }
     if (MI)
-      IP.printInst(MI, OS, "", STI);
+      IP.printInst(MI, Address.Address, "", STI, OS);
     else
       OS << " <unknown>";
   }
@@ -593,7 +593,7 @@ public:
     std::string Buffer;
     {
       raw_string_ostream TempStream(Buffer);
-      IP.printInst(MI, TempStream, "", STI);
+      IP.printInst(MI, Address.Address, "", STI, TempStream);
     }
     StringRef Contents(Buffer);
     // Split off bundle attributes
@@ -645,7 +645,7 @@ public:
     SmallString<40> InstStr;
     raw_svector_ostream IS(InstStr);
 
-    IP.printInst(MI, IS, "", STI);
+    IP.printInst(MI, Address.Address, "", STI, IS);
 
     OS << left_justify(IS.str(), 60)
        << format("// %012" PRIX64 ": ", Address.Address);
@@ -677,7 +677,7 @@ public:
       dumpBytes(Bytes, OS);
     }
     if (MI)
-      IP.printInst(MI, OS, "", STI);
+      IP.printInst(MI, Address.Address, "", STI, OS);
     else
       OS << " <unknown>";
   }
