@@ -642,10 +642,15 @@ bool InstructionSelector::executeMatchTable(
                              << "), Value=" << Value << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
-      if (!MO.isCImm() || !MO.getCImm()->equalsInt(Value)) {
-        if (handleReject() == RejectAndGiveUp)
-          return false;
-      }
+      if (MO.isImm() && MO.getImm() == Value)
+        break;
+
+      if (MO.isCImm() && MO.getCImm()->equalsInt(Value))
+        break;
+
+      if (handleReject() == RejectAndGiveUp)
+        return false;
+
       break;
     }
 

@@ -3314,8 +3314,8 @@ private:
                                            unsigned &TempOpIdx) const;
   Error importChildMatcher(RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
                            const TreePatternNode *SrcChild,
-                           bool OperandIsAPointer, unsigned OpIdx,
-                           unsigned &TempOpIdx);
+                           bool OperandIsAPointer, bool OperandIsImmArg,
+                           unsigned OpIdx, unsigned &TempOpIdx);
 
   Expected<BuildMIAction &> createAndImportInstructionRenderer(
       RuleMatcher &M, InstructionMatcher &InsnMatcher,
@@ -3755,9 +3755,19 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     for (unsigned i = 0; i != NumChildren; ++i) {
       TreePatternNode *SrcChild = Src->getChild(i);
 
+      // We need to determine the meaning of a literal integer based on the
+      // context. If this is a field required to be an immediate (such as an
+      // immarg intrinsic argument), the required predicates are different than
+      // a constant which may be materialized in a register. If we have an
+      // argument that is required to be an immediate, we should not emit an LLT
+      // type check, and should not be looking for a G_CONSTANT defined
+      // register.
+      bool OperandIsImmArg = SrcGIOrNull->isOperandImmArg(i);
+
       // SelectionDAG allows pointers to be represented with iN since it doesn't
       // distinguish between pointers and integers but they are different types in GlobalISel.
       // Coerce integers to pointers to address space 0 if the context indicates a pointer.
+      //
       bool OperandIsAPointer = SrcGIOrNull->isOperandAPointer(i);
 
       if (IsIntrinsic) {
@@ -3770,16 +3780,17 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
           continue;
         }
 
-        // We have to check intrinsics for llvm_anyptr_ty parameters.
+        // We have to check intrinsics for llvm_anyptr_ty and immarg parameters.
         //
         // Note that we have to look at the i-1th parameter, because we don't
         // have the intrinsic ID in the intrinsic's parameter list.
         OperandIsAPointer |= II->isParamAPointer(i - 1);
+        OperandIsImmArg |= II->isParamImmArg(i - 1);
       }
 
       if (auto Error =
               importChildMatcher(Rule, InsnMatcher, SrcChild, OperandIsAPointer,
-                                 OpIdx++, TempOpIdx))
+                                 OperandIsImmArg, OpIdx++, TempOpIdx))
         return std::move(Error);
     }
   }
@@ -3817,12 +3828,10 @@ static StringRef getSrcChildName(const TreePatternNode *SrcChild,
   return SrcChildName;
 }
 
-Error GlobalISelEmitter::importChildMatcher(RuleMatcher &Rule,
-                                            InstructionMatcher &InsnMatcher,
-                                            const TreePatternNode *SrcChild,
-                                            bool OperandIsAPointer,
-                                            unsigned OpIdx,
-                                            unsigned &TempOpIdx) {
+Error GlobalISelEmitter::importChildMatcher(
+    RuleMatcher &Rule, InstructionMatcher &InsnMatcher,
+    const TreePatternNode *SrcChild, bool OperandIsAPointer,
+    bool OperandIsImmArg, unsigned OpIdx, unsigned &TempOpIdx) {
 
   Record *PhysReg = nullptr;
   StringRef SrcChildName = getSrcChildName(SrcChild, PhysReg);
@@ -3852,10 +3861,14 @@ Error GlobalISelEmitter::importChildMatcher(RuleMatcher &Rule,
     }
   }
 
-  if (auto Error =
-          OM.addTypeCheckPredicate(ChildTypes.front(), OperandIsAPointer))
-    return failedImport(toString(std::move(Error)) + " for Src operand (" +
-                        to_string(*SrcChild) + ")");
+  // Immediate arguments have no meaningful type to check as they don't have
+  // registers.
+  if (!OperandIsImmArg) {
+    if (auto Error =
+            OM.addTypeCheckPredicate(ChildTypes.front(), OperandIsAPointer))
+      return failedImport(toString(std::move(Error)) + " for Src operand (" +
+                          to_string(*SrcChild) + ")");
+  }
 
   // Check for nested instructions.
   if (!SrcChild->isLeaf()) {
@@ -3906,7 +3919,13 @@ Error GlobalISelEmitter::importChildMatcher(RuleMatcher &Rule,
 
   // Check for constant immediates.
   if (auto *ChildInt = dyn_cast<IntInit>(SrcChild->getLeafValue())) {
-    OM.addPredicate<ConstantIntOperandMatcher>(ChildInt->getValue());
+    if (OperandIsImmArg) {
+      // Checks for argument directly in operand list
+      OM.addPredicate<LiteralIntOperandMatcher>(ChildInt->getValue());
+    } else {
+      // Checks for materialized constant
+      OM.addPredicate<ConstantIntOperandMatcher>(ChildInt->getValue());
+    }
     return Error::success();
   }
 

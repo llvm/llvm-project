@@ -817,3 +817,9 @@ bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
   MVT ParamType = MVT(IS.ParamVTs[ParamIdx]);
   return ParamType == MVT::iPTR || ParamType == MVT::iPTRAny;
 }
+
+bool CodeGenIntrinsic::isParamImmArg(unsigned ParamIdx) const {
+  std::pair<unsigned, ArgAttribute> Val = {ParamIdx, ImmArg};
+  return std::binary_search(ArgumentAttributes.begin(),
+                            ArgumentAttributes.end(), Val);
+}
