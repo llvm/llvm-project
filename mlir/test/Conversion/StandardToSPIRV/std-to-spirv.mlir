@@ -143,6 +143,39 @@ func @shift_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
 }
 
 //===----------------------------------------------------------------------===//
+// std.cmpf
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @cmpf
+func @cmpf(%arg0 : f32, %arg1 : f32) {
+  // CHECK: spv.FOrdEqual
+  %1 = cmpf "oeq", %arg0, %arg1 : f32
+  // CHECK: spv.FOrdGreaterThan
+  %2 = cmpf "ogt", %arg0, %arg1 : f32
+  // CHECK: spv.FOrdGreaterThanEqual
+  %3 = cmpf "oge", %arg0, %arg1 : f32
+  // CHECK: spv.FOrdLessThan
+  %4 = cmpf "olt", %arg0, %arg1 : f32
+  // CHECK: spv.FOrdLessThanEqual
+  %5 = cmpf "ole", %arg0, %arg1 : f32
+  // CHECK: spv.FOrdNotEqual
+  %6 = cmpf "one", %arg0, %arg1 : f32
+  // CHECK: spv.FUnordEqual
+  %7 = cmpf "ueq", %arg0, %arg1 : f32
+  // CHECK: spv.FUnordGreaterThan
+  %8 = cmpf "ugt", %arg0, %arg1 : f32
+  // CHECK: spv.FUnordGreaterThanEqual
+  %9 = cmpf "uge", %arg0, %arg1 : f32
+  // CHECK: spv.FUnordLessThan
+  %10 = cmpf "ult", %arg0, %arg1 : f32
+  // CHECK: FUnordLessThanEqual
+  %11 = cmpf "ule", %arg0, %arg1 : f32
+  // CHECK: spv.FUnordNotEqual
+  %12 = cmpf "une", %arg0, %arg1 : f32
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // std.cmpi
 //===----------------------------------------------------------------------===//
 
@@ -160,6 +193,14 @@ func @cmpi(%arg0 : i32, %arg1 : i32) {
   %4 = cmpi "sgt", %arg0, %arg1 : i32
   // CHECK: spv.SGreaterThanEqual
   %5 = cmpi "sge", %arg0, %arg1 : i32
+  // CHECK: spv.ULessThan
+  %6 = cmpi "ult", %arg0, %arg1 : i32
+  // CHECK: spv.ULessThanEqual
+  %7 = cmpi "ule", %arg0, %arg1 : i32
+  // CHECK: spv.UGreaterThan
+  %8 = cmpi "ugt", %arg0, %arg1 : i32
+  // CHECK: spv.UGreaterThanEqual
+  %9 = cmpi "uge", %arg0, %arg1 : i32
   return
 }
 
