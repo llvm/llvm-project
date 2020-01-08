@@ -165,7 +165,9 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
   case ISD::UMULFIXSAT:
-    R = ScalarizeVecRes_MULFIX(N);
+  case ISD::SDIVFIX:
+  case ISD::UDIVFIX:
+    R = ScalarizeVecRes_FIX(N);
     break;
   }
 
@@ -189,7 +191,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_TernaryOp(SDNode *N) {
                      Op0.getValueType(), Op0, Op1, Op2);
 }
 
-SDValue DAGTypeLegalizer::ScalarizeVecRes_MULFIX(SDNode *N) {
+SDValue DAGTypeLegalizer::ScalarizeVecRes_FIX(SDNode *N) {
   SDValue Op0 = GetScalarizedVector(N->getOperand(0));
   SDValue Op1 = GetScalarizedVector(N->getOperand(1));
   SDValue Op2 = N->getOperand(2);
@@ -958,7 +960,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::SMULFIXSAT:
   case ISD::UMULFIX:
   case ISD::UMULFIXSAT:
-    SplitVecRes_MULFIX(N, Lo, Hi);
+  case ISD::SDIVFIX:
+  case ISD::UDIVFIX:
+    SplitVecRes_FIX(N, Lo, Hi);
     break;
   }
 
@@ -997,7 +1001,7 @@ void DAGTypeLegalizer::SplitVecRes_TernaryOp(SDNode *N, SDValue &Lo,
                    Op0Hi, Op1Hi, Op2Hi);
 }
 
-void DAGTypeLegalizer::SplitVecRes_MULFIX(SDNode *N, SDValue &Lo, SDValue &Hi) {
+void DAGTypeLegalizer::SplitVecRes_FIX(SDNode *N, SDValue &Lo, SDValue &Hi) {
   SDValue LHSLo, LHSHi;
   GetSplitVector(N->getOperand(0), LHSLo, LHSHi);
   SDValue RHSLo, RHSHi;
