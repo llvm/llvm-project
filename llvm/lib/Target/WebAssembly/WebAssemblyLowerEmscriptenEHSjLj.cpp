@@ -453,7 +453,7 @@ Function *WebAssemblyLowerEmscriptenEHSjLj::getInvokeWrapper(CallOrInvoke *CI) {
     CalleeFTy = F->getFunctionType();
   else {
     auto *CalleeTy = cast<PointerType>(Callee->getType())->getElementType();
-    CalleeFTy = dyn_cast<FunctionType>(CalleeTy);
+    CalleeFTy = cast<FunctionType>(CalleeTy);
   }
 
   std::string Sig = getSignature(CalleeFTy);
