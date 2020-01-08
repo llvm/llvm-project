@@ -1,5 +1,5 @@
 LEVEL = ../../../make
 
-C_SOURCES := main.c bootstrap.c
+C_SOURCES := main.c
 
 include $(LEVEL)/Makefile.dpu.rules

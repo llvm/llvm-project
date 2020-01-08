@@ -1,6 +1,3 @@
-#define TASKLETS_INITIALIZER TASKLET(main, 1024)
-#include <rt.h>
-
 #include <mram.h>
 #include <stdint.h>
 

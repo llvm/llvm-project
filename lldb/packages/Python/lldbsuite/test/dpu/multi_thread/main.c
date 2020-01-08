@@ -1,8 +1,3 @@
-#define NB_THREAD 16
-
-#define TASKLETS_INITIALIZER TASKLETS(NB_THREAD, main, 1024)
-#include <rt.h>
-
 #include <defs.h>
 
 __attribute__((noinline)) int f_rec(int loop, int it, int val){
@@ -11,7 +6,7 @@ __attribute__((noinline)) int f_rec(int loop, int it, int val){
         for (unsigned int i = 0; i < loop; i++) {
                 val = (val << it) + it;
         }
-        it = (it + NB_THREAD - 1) % NB_THREAD;
+        it = (it + NR_TASKLETS - 1) % NR_TASKLETS;
         return f_rec(loop - 1, it, val); // Step location 2
 }
 

@@ -35,7 +35,7 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
 
 OBJECTS =
 EXE = a.out
-LDFLAGS =
+LDFLAGS ?=
 CFLAGS ?= -g -O0
 
 HOST_OBJECT =

@@ -30,9 +30,11 @@ __attribute__((noinline)) int fct1(int val) {
   return val3;
 }
 
-__attribute__((noinline)) int main(int argc, char const *argv[]) {
-  argc++; // Breakpoint location 1
-  int ret = fct1(argc); // Breakpoint location 2
+static volatile int arg;
+
+__attribute__((noinline)) int main() {
+  arg++;               // Breakpoint location 1
+  int ret = fct1(arg); // Breakpoint location 2
 
   return ret;
 }

@@ -59,15 +59,12 @@ class BasicCommandsTestCase(TestBase):
         frame0 = thread.GetFrameAtIndex(0)
         self.assertTrue(frame0.GetLineEntry().GetLine()
                         == self.main_first_line)
-        self.assertTrue(frame0.FindVariable('argc').GetValueAsUnsigned() == 0)
-        argv = frame0.FindVariable('argv').GetValueAsUnsigned()
+        self.assertTrue(frame0.FindVariable('arg').GetValueAsUnsigned() == 0)
 
         process.Continue()
         frame0 = thread.GetFrameAtIndex(0)
         self.assertTrue(frame0.GetLineEntry().GetLine() == self.fct1_call_line)
-        self.assertTrue(frame0.FindVariable('argc').GetValueAsUnsigned() == 1)
-        self.assertTrue(frame0.FindVariable('argv').GetValueAsUnsigned()
-                        == argv)
+        self.assertTrue(frame0.FindVariable('arg').GetValueAsUnsigned() == 1)
 
         # step-inst
         while not re.search("->.*: call", frame0.Disassemble()):
@@ -75,9 +72,7 @@ class BasicCommandsTestCase(TestBase):
             frame0 = thread.GetFrameAtIndex(0)
         self.assertTrue(thread.GetNumFrames() == 2)
         self.assertTrue(frame0.GetFunction().GetName() == "main")
-        self.assertTrue(frame0.FindVariable('argc').GetValueAsUnsigned() == 1)
-        self.assertTrue(frame0.FindVariable('argv').GetValueAsUnsigned()
-                        == argv)
+        self.assertTrue(frame0.FindVariable('arg').GetValueAsUnsigned() == 1)
 
         # step-inst
         thread.StepInstruction(False)
@@ -88,10 +83,8 @@ class BasicCommandsTestCase(TestBase):
                         .GetValueAsUnsigned() == 1)
         self.assertTrue(thread.GetFrameAtIndex(1).GetFunction().GetName()
                         == "main")
-        self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('argc')
+        self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('arg')
                         .GetValueAsUnsigned() == 1)
-        self.assertTrue(thread.GetFrameAtIndex(1).FindVariable('argv')
-                        .GetValueAsUnsigned() == argv)
 
         # step-over
         frame0 = thread.GetFrameAtIndex(0)
