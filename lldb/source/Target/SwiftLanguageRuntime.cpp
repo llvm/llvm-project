@@ -250,7 +250,6 @@ FindSymbolForSwiftObject(Process &process, RuntimeKind runtime_kind,
         "Couldn't find the %s runtime library in loaded images.\n",
         (runtime_kind == RuntimeKind::Swift) ? "Swift" : "Objective-C");
   }
-  lldbassert(found_module && "couldn't find runtime library in loaded images");
   return {};
 }
 
