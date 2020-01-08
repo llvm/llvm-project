@@ -363,6 +363,10 @@ public:
     /// matches, but doesn't stop at the first match.
     VO_EachOf,
 
+    /// Matches any node but executes all inner matchers to find result
+    /// bindings.
+    VO_Optionally,
+
     /// Matches nodes that do not match the provided matcher.
     ///
     /// Uses the variadic matcher interface, but fails if

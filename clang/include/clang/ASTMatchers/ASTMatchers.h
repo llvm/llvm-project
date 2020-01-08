@@ -2540,6 +2540,36 @@ extern const internal::VariadicOperatorMatcherFunc<
     2, std::numeric_limits<unsigned>::max()>
     allOf;
 
+/// Matches any node regardless of the submatchers.
+///
+/// However, \c optionally will generate a result binding for each matching
+/// submatcher.
+///
+/// Useful when additional information which may or may not present about a
+/// main matching node is desired.
+///
+/// For example, in:
+/// \code
+///   class Foo {
+///     int bar;
+///   }
+/// \endcode
+/// The matcher:
+/// \code
+///   cxxRecordDecl(
+///     optionally(has(
+///       fieldDecl(hasName("bar")).bind("var")
+///   ))).bind("record")
+/// \endcode
+/// will produce a result binding for both "record" and "var".
+/// The matcher will produce a "record" binding for even if there is no data
+/// member named "bar" in that class.
+///
+/// Usable as: Any Matcher
+extern const internal::VariadicOperatorMatcherFunc<
+    1, std::numeric_limits<unsigned>::max()>
+    optionally;
+
 /// Matches sizeof (C99), alignof (C++11) and vec_step (OpenCL)
 ///
 /// Given
