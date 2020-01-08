@@ -23,18 +23,21 @@ public:
     BuiltCFG,
   };
 
-  BuildResult(Status S, std::unique_ptr<CFG> Cfg = nullptr,
+  BuildResult(Status S, const FunctionDecl *Func = nullptr,
+              std::unique_ptr<CFG> Cfg = nullptr,
               std::unique_ptr<ASTUnit> AST = nullptr)
-      : S(S), Cfg(std::move(Cfg)), AST(std::move(AST)) {}
+      : S(S), Cfg(std::move(Cfg)), AST(std::move(AST)), Func(Func) {}
 
   Status getStatus() const { return S; }
   CFG *getCFG() const { return Cfg.get(); }
   ASTUnit *getAST() const { return AST.get(); }
+  const FunctionDecl *getFunc() const { return Func; }
 
 private:
   Status S;
   std::unique_ptr<CFG> Cfg;
   std::unique_ptr<ASTUnit> AST;
+  const FunctionDecl *Func;
 };
 
 class CFGCallback : public ast_matchers::MatchFinder::MatchCallback {
@@ -54,7 +57,8 @@ public:
     Options.AddImplicitDtors = true;
     if (std::unique_ptr<CFG> Cfg =
             CFG::buildCFG(nullptr, Body, Result.Context, Options))
-      TheBuildResult = {BuildResult::BuiltCFG, std::move(Cfg), std::move(AST)};
+      TheBuildResult = {BuildResult::BuiltCFG, Func, std::move(Cfg),
+                        std::move(AST)};
   }
 };
 
