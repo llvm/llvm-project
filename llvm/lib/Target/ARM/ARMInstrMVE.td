@@ -2727,13 +2727,32 @@ class MVE_shift_by_vec<string iname, string suffix, bit U,
   let validForTailPredication = 1;
 }
 
+multiclass MVE_shift_by_vec_p<string iname, MVEVectorVTInfo VTI, bit q, bit r> {
+  def "" : MVE_shift_by_vec<iname, VTI.Suffix, VTI.Unsigned, VTI.Size, q, r>;
+
+  def : Pat<(VTI.Vec (int_arm_mve_vshl_vector
+                         (VTI.Vec MQPR:$in), (VTI.Vec MQPR:$sh),
+                         (i32 q), (i32 r), (i32 VTI.Unsigned))),
+            (VTI.Vec (!cast<Instruction>(NAME)
+                         (VTI.Vec MQPR:$in), (VTI.Vec MQPR:$sh)))>;
+
+  def : Pat<(VTI.Vec (int_arm_mve_vshl_vector_predicated
+                         (VTI.Vec MQPR:$in), (VTI.Vec MQPR:$sh),
+                         (i32 q), (i32 r), (i32 VTI.Unsigned),
+                         (VTI.Pred VCCR:$mask), (VTI.Vec MQPR:$inactive))),
+            (VTI.Vec (!cast<Instruction>(NAME)
+                         (VTI.Vec MQPR:$in), (VTI.Vec MQPR:$sh),
+                         ARMVCCThen, (VTI.Pred VCCR:$mask),
+                         (VTI.Vec MQPR:$inactive)))>;
+}
+
 multiclass mve_shift_by_vec_multi<string iname, bit bit_4, bit bit_8> {
-  def s8  : MVE_shift_by_vec<iname, "s8", 0b0, 0b00, bit_4, bit_8>;
-  def s16 : MVE_shift_by_vec<iname, "s16", 0b0, 0b01, bit_4, bit_8>;
-  def s32 : MVE_shift_by_vec<iname, "s32", 0b0, 0b10, bit_4, bit_8>;
-  def u8  : MVE_shift_by_vec<iname, "u8", 0b1, 0b00, bit_4, bit_8>;
-  def u16 : MVE_shift_by_vec<iname, "u16", 0b1, 0b01, bit_4, bit_8>;
-  def u32 : MVE_shift_by_vec<iname, "u32", 0b1, 0b10, bit_4, bit_8>;
+  defm s8  : MVE_shift_by_vec_p<iname, MVE_v16s8, bit_4, bit_8>;
+  defm s16 : MVE_shift_by_vec_p<iname, MVE_v8s16, bit_4, bit_8>;
+  defm s32 : MVE_shift_by_vec_p<iname, MVE_v4s32, bit_4, bit_8>;
+  defm u8  : MVE_shift_by_vec_p<iname, MVE_v16u8, bit_4, bit_8>;
+  defm u16 : MVE_shift_by_vec_p<iname, MVE_v8u16, bit_4, bit_8>;
+  defm u32 : MVE_shift_by_vec_p<iname, MVE_v4u32, bit_4, bit_8>;
 }
 
 defm MVE_VSHL_by_vec   : mve_shift_by_vec_multi<"vshl",   0b0, 0b0>;
@@ -4542,13 +4561,31 @@ class MVE_VxSHL_qr<string iname, string suffix, bit U, bits<2> size,
   let validForTailPredication = 1;
 }
 
+multiclass MVE_VxSHL_qr_p<string iname, MVEVectorVTInfo VTI, bit q, bit r> {
+  def "" : MVE_VxSHL_qr<iname, VTI.Suffix, VTI.Unsigned, VTI.Size, q, r>;
+
+  def : Pat<(VTI.Vec (int_arm_mve_vshl_scalar
+                         (VTI.Vec MQPR:$in), (i32 rGPR:$sh),
+                         (i32 q), (i32 r), (i32 VTI.Unsigned))),
+            (VTI.Vec (!cast<Instruction>(NAME)
+                         (VTI.Vec MQPR:$in), (i32 rGPR:$sh)))>;
+
+  def : Pat<(VTI.Vec (int_arm_mve_vshl_scalar_predicated
+                         (VTI.Vec MQPR:$in), (i32 rGPR:$sh),
+                         (i32 q), (i32 r), (i32 VTI.Unsigned),
+                         (VTI.Pred VCCR:$mask))),
+            (VTI.Vec (!cast<Instruction>(NAME)
+                         (VTI.Vec MQPR:$in), (i32 rGPR:$sh),
+                         ARMVCCThen, (VTI.Pred VCCR:$mask)))>;
+}
+
 multiclass MVE_VxSHL_qr_types<string iname, bit bit_7, bit bit_17> {
-  def s8  : MVE_VxSHL_qr<iname, "s8", 0b0, 0b00, bit_7, bit_17>;
-  def s16 : MVE_VxSHL_qr<iname, "s16", 0b0, 0b01, bit_7, bit_17>;
-  def s32 : MVE_VxSHL_qr<iname, "s32", 0b0, 0b10, bit_7, bit_17>;
-  def u8  : MVE_VxSHL_qr<iname, "u8", 0b1, 0b00, bit_7, bit_17>;
-  def u16 : MVE_VxSHL_qr<iname, "u16", 0b1, 0b01, bit_7, bit_17>;
-  def u32 : MVE_VxSHL_qr<iname, "u32", 0b1, 0b10, bit_7, bit_17>;
+  defm s8  : MVE_VxSHL_qr_p<iname, MVE_v16s8, bit_7, bit_17>;
+  defm s16 : MVE_VxSHL_qr_p<iname, MVE_v8s16, bit_7, bit_17>;
+  defm s32 : MVE_VxSHL_qr_p<iname, MVE_v4s32, bit_7, bit_17>;
+  defm u8  : MVE_VxSHL_qr_p<iname, MVE_v16u8, bit_7, bit_17>;
+  defm u16 : MVE_VxSHL_qr_p<iname, MVE_v8u16, bit_7, bit_17>;
+  defm u32 : MVE_VxSHL_qr_p<iname, MVE_v4u32, bit_7, bit_17>;
 }
 
 defm MVE_VSHL_qr   : MVE_VxSHL_qr_types<"vshl",   0b0, 0b0>;

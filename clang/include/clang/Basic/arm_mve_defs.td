@@ -276,13 +276,16 @@ class HalfSize<Type k>   : ComplexType<(CTO_ScaleSize<1, 2> k)>;
 
 // Unsigned<t> expects t to be a scalar type, and expands to the unsigned
 // integer scalar of the same size. So it returns u16 if you give it s16 or
-// f16 (or u16 itself).
+// f16 (or u16 itself). Similarly, Signed<t> makes the type signed.
 class Unsigned<Type t>: ComplexType<(CTO_CopyKind t, u32)>;
+class Signed<Type t>: ComplexType<(CTO_CopyKind t, s32)>;
 
 // UScalar and UVector expand to the unsigned-integer versions of
-// Scalar and Vector.
+// Scalar and Vector. SScalar and SVector are signed-integer versions.
 def UScalar: Unsigned<Scalar>;
 def UVector: VecOf<UScalar>;
+def SScalar: Signed<Scalar>;
+def SVector: VecOf<SScalar>;
 
 // DblVector expands to a vector of scalars of size twice the size of Scalar.
 // HalfVector, similarly, expands to a vector of half-sized scalars. And
