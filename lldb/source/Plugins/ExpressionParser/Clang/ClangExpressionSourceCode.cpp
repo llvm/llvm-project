@@ -315,12 +315,10 @@ bool ClangExpressionSourceCode::GetText(
       }
     }
 
-    if (ClangModulesDeclVendor *decl_vendor =
-            target->GetClangModulesDeclVendor()) {
-      ClangPersistentVariables *persistent_vars =
-          llvm::cast<ClangPersistentVariables>(
-              target->GetPersistentExpressionStateForLanguage(
-                  lldb::eLanguageTypeC));
+    ClangModulesDeclVendor *decl_vendor = target->GetClangModulesDeclVendor();
+    auto *persistent_vars = llvm::cast<ClangPersistentVariables>(
+        target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC));
+    if (decl_vendor && persistent_vars) {
       const ClangModulesDeclVendor::ModuleVector &hand_imported_modules =
           persistent_vars->GetHandLoadedClangModules();
       ClangModulesDeclVendor::ModuleVector modules_for_macros;
