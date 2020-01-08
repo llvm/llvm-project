@@ -411,7 +411,7 @@ void GIMatchTreeOpcodePartitioner::repartition(
 
     // If the opcode is available to test then any opcode predicates will have
     // been enabled too.
-    for (const auto &PIdx : Leaf.value().TestablePredicates.set_bits()) {
+    for (unsigned PIdx : Leaf.value().TestablePredicates.set_bits()) {
       const auto &P = Leaf.value().getPredicate(PIdx);
       SmallVector<const CodeGenInstruction *, 1> OpcodesForThisPredicate;
       if (const auto *OpcodeP = dyn_cast<const GIMatchDagOpcodePredicate>(P)) {
@@ -662,7 +662,7 @@ void GIMatchTreeVRegDefPartitioner::repartition(
     // If this node has an use -> def edge from this operand then this
     // instruction must be in partition 1 (isVRegDef()).
     bool WantsEdge = false;
-    for (const auto &EIdx : Leaf.value().TraversableEdges.set_bits()) {
+    for (unsigned EIdx : Leaf.value().TraversableEdges.set_bits()) {
       const auto &E = Leaf.value().getEdge(EIdx);
       if (E->getFromMI() != InstrInfo->getInstrNode() ||
           E->getFromMO()->getIdx() != OpIdx || E->isDefToUse())
@@ -725,14 +725,14 @@ void GIMatchTreeVRegDefPartitioner::applyForPartition(
   NewInstrID = SubBuilder.allocInstrID();
 
   GIMatchTreeBuilder::LeafVec &NewLeaves = SubBuilder.getPossibleLeaves();
-  for (const auto &I : zip(NewLeaves, TraversedEdgesByNewLeaves)) {
+  for (const auto I : zip(NewLeaves, TraversedEdgesByNewLeaves)) {
     auto &Leaf = std::get<0>(I);
     auto &TraversedEdgesForLeaf = std::get<1>(I);
     GIMatchTreeInstrInfo *InstrInfo = Leaf.getInstrInfo(InstrID);
     // Skip any leaves that don't care about this instruction.
     if (!InstrInfo)
       continue;
-    for (const auto &EIdx : TraversedEdgesForLeaf.set_bits()) {
+    for (unsigned EIdx : TraversedEdgesForLeaf.set_bits()) {
       const GIMatchDagEdge *E = Leaf.getEdge(EIdx);
       Leaf.declareInstr(E->getToMI(), NewInstrID);
     }
