@@ -11,7 +11,9 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "GIMatchDag.h"
+
 namespace llvm {
+class CodeExpansions;
 class CodeGenInstruction;
 class GIMatchDagOperandList;
 class GIMatchDagContext;
@@ -26,6 +28,7 @@ class GIMatchDagPredicate {
 public:
   enum GIMatchDagPredicateKind {
     GIMatchDagPredicateKind_Opcode,
+    GIMatchDagPredicateKind_OneOfOpcodes,
     GIMatchDagPredicateKind_SameMO,
   };
 
@@ -55,6 +58,16 @@ public:
   StringRef getName() const { return Name; }
   const GIMatchDagOperandList &getOperandInfo() const { return OperandInfo; }
 
+  // Generate C++ code to check this predicate. If a partitioner has already
+  // tested this predicate then this function won't be called. If this function
+  // is called, it must emit code and return true to indicate that it did so. If
+  // it ever returns false, then the caller will abort due to an untested
+  // predicate.
+  virtual bool generateCheckCode(raw_ostream &OS, StringRef Indent,
+                                 const CodeExpansions &Expansions) const {
+    return false;
+  }
+
   virtual void print(raw_ostream &OS) const;
   virtual void printDescription(raw_ostream &OS) const;
 
@@ -75,6 +88,29 @@ public:
   }
 
   const CodeGenInstruction *getInstr() const { return &Instr; }
+
+  void printDescription(raw_ostream &OS) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  virtual LLVM_DUMP_METHOD void dump() const override { print(errs()); }
+#endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+};
+
+class GIMatchDagOneOfOpcodesPredicate : public GIMatchDagPredicate {
+  SmallVector<const CodeGenInstruction *, 4> Instrs;
+
+public:
+  GIMatchDagOneOfOpcodesPredicate(GIMatchDagContext &Ctx, StringRef Name);
+
+  void addOpcode(const CodeGenInstruction *Instr) { Instrs.push_back(Instr); }
+
+  static bool classof(const GIMatchDagPredicate *P) {
+    return P->getKind() == GIMatchDagPredicateKind_OneOfOpcodes;
+  }
+
+  const SmallVectorImpl<const CodeGenInstruction *> &getInstrs() const {
+    return Instrs;
+  }
 
   void printDescription(raw_ostream &OS) const override;
 

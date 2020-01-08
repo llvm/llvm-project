@@ -86,3 +86,28 @@ function(target_enable_c99 _target)
     endforeach()
   endif()
 endfunction()
+
+# Recursive helper for setup_source_group. Traverse the file system and add
+# source files matching the glob_expr to the prefix, recursing into
+# subdirectories as they are encountered
+function(setup_polly_source_groups_helper pwd prefix glob_expr)
+  file(GLOB children RELATIVE ${pwd} ${pwd}/*)
+  foreach(child ${children})
+    if (IS_DIRECTORY ${pwd}/${child})
+      setup_polly_source_groups_helper(${pwd}/${child}
+        "${prefix}\\${child}" ${glob_expr})
+    endif()
+  endforeach()
+
+  file(GLOB to_add ${pwd}/${glob_expr})
+  source_group(${prefix} FILES ${to_add})
+endfunction(setup_polly_source_groups_helper)
+
+# Set up source groups in order to nicely organize source files in IDEs
+macro(setup_polly_source_groups src_root hdr_root)
+  # FIXME: The helper can be eliminated if the CMake version is increased
+  # to 3.8 or higher. If this is done, the TREE version of source_group can
+  # be used
+  setup_polly_source_groups_helper(${src_root} "Source Files" "*.cpp")
+  setup_polly_source_groups_helper(${hdr_root} "Header Files" "*.h")
+endmacro(setup_polly_source_groups)

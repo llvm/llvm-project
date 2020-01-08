@@ -1900,7 +1900,8 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   // Select the ABI to use.
   const char *ABIName = nullptr;
-  if (getToolChain().getTriple().isOSLinux())
+  const llvm::Triple &T = getToolChain().getTriple();
+  if (T.isOSBinFormatELF()) {
     switch (getToolChain().getArch()) {
     case llvm::Triple::ppc64: {
       // When targeting a processor that supports QPX, or if QPX is
@@ -1915,7 +1916,10 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
         break;
       }
 
-      ABIName = "elfv1";
+      if (T.isMusl() || (T.isOSFreeBSD() && T.getOSMajorVersion() >= 13))
+        ABIName = "elfv2";
+      else
+        ABIName = "elfv1";
       break;
     }
     case llvm::Triple::ppc64le:
@@ -1924,6 +1928,7 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
     default:
       break;
     }
+  }
 
   bool IEEELongDouble = false;
   for (const Arg *A : Args.filtered(options::OPT_mabi_EQ)) {

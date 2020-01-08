@@ -380,7 +380,7 @@ setFunctionAttributes(StringRef CPU, StringRef Features, Function &F) {
   AttributeList Attrs = F.getAttributes();
   AttrBuilder NewAttrs;
 
-  if (!CPU.empty())
+  if (!CPU.empty() && !F.hasFnAttribute("target-cpu"))
     NewAttrs.addAttribute("target-cpu", CPU);
   if (!Features.empty())
     NewAttrs.addAttribute("target-features", Features);

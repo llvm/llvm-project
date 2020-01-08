@@ -345,6 +345,40 @@ TEST(FileIndexTest, Refs) {
                              FileURI("unittest:///test2.cc"))}));
 }
 
+TEST(FileIndexTest, MacroRefs) {
+  Annotations HeaderCode(R"cpp(
+    #define $def1[[HEADER_MACRO]](X) (X+1)
+  )cpp");
+  Annotations MainCode(R"cpp(
+  #define $def2[[MAINFILE_MACRO]](X) (X+1)
+  void f() {
+    int a = $ref1[[HEADER_MACRO]](2);
+    int b = $ref2[[MAINFILE_MACRO]](1);
+  }
+  )cpp");
+
+  FileIndex Index;
+  // Add test.cc
+  TestTU Test;
+  Test.HeaderCode = HeaderCode.code();
+  Test.Code = MainCode.code();
+  Test.Filename = "test.cc";
+  auto AST = Test.build();
+  Index.updateMain(Test.Filename, AST);
+
+  auto HeaderMacro = findSymbol(Test.headerSymbols(), "HEADER_MACRO");
+  EXPECT_THAT(getRefs(Index, HeaderMacro.ID),
+              RefsAre({AllOf(RefRange(MainCode.range("ref1")),
+                             FileURI("unittest:///test.cc"))}));
+
+  auto MainFileMacro = findSymbol(Test.headerSymbols(), "MAINFILE_MACRO");
+  EXPECT_THAT(getRefs(Index, MainFileMacro.ID),
+              RefsAre({AllOf(RefRange(MainCode.range("def2")),
+                             FileURI("unittest:///test.cc")),
+                       AllOf(RefRange(MainCode.range("ref2")),
+                             FileURI("unittest:///test.cc"))}));
+}
+
 TEST(FileIndexTest, CollectMacros) {
   FileIndex M;
   update(M, "f", "#define CLANGD 1");

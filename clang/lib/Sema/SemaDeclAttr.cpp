@@ -2913,7 +2913,7 @@ static void handleVecTypeHint(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (!ParmType->isExtVectorType() && !ParmType->isFloatingType() &&
       (ParmType->isBooleanType() ||
        !ParmType->isIntegralType(S.getASTContext()))) {
-    S.Diag(AL.getLoc(), diag::err_attribute_invalid_argument) << 3 << AL;
+    S.Diag(AL.getLoc(), diag::err_attribute_invalid_argument) << 2 << AL;
     return;
   }
 
@@ -4454,12 +4454,10 @@ static void handleLifetimeCategoryAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     ParmType = S.GetTypeFromParser(AL.getTypeArg(), &DerefTypeLoc);
 
     unsigned SelectIdx = ~0U;
-    if (ParmType->isVoidType())
+    if (ParmType->isReferenceType())
       SelectIdx = 0;
-    else if (ParmType->isReferenceType())
-      SelectIdx = 1;
     else if (ParmType->isArrayType())
-      SelectIdx = 2;
+      SelectIdx = 1;
 
     if (SelectIdx != ~0U) {
       S.Diag(AL.getLoc(), diag::err_attribute_invalid_argument)

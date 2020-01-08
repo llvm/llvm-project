@@ -606,6 +606,9 @@ def fno_hip_new_launch_api : Flag<["-"], "fno-hip-new-launch-api">;
 def fgpu_allow_device_init : Flag<["-"], "fgpu-allow-device-init">,
   Flags<[CC1Option]>, HelpText<"Allow device side init function in HIP">;
 def fno_gpu_allow_device_init : Flag<["-"], "fno-gpu-allow-device-init">;
+def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
+  Flags<[CC1Option]>,
+  HelpText<"Default max threads per block for kernel launch bounds for HIP">;
 def libomptarget_nvptx_path_EQ : Joined<["--"], "libomptarget-nvptx-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-nvptx libraries">;
 def dD : Flag<["-"], "dD">, Group<d_Group>, Flags<[CC1Option]>,
@@ -2859,7 +2862,7 @@ def _CLASSPATH : Separate<["--"], "CLASSPATH">, Alias<fclasspath_EQ>;
 def _all_warnings : Flag<["--"], "all-warnings">, Alias<Wall>;
 def _analyzer_no_default_checks : Flag<["--"], "analyzer-no-default-checks">, Flags<[DriverOption]>;
 def _analyzer_output : JoinedOrSeparate<["--"], "analyzer-output">, Flags<[DriverOption]>,
-  HelpText<"Static analyzer report output format (html|plist|plist-multi-file|plist-html|text).">;
+  HelpText<"Static analyzer report output format (html|plist|plist-multi-file|plist-html|sarif|text).">;
 def _analyze : Flag<["--"], "analyze">, Flags<[DriverOption, CoreOption]>,
   HelpText<"Run the static analyzer">;
 def _assemble : Flag<["--"], "assemble">, Alias<S>;

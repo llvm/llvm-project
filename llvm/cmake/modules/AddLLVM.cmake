@@ -883,7 +883,7 @@ endfunction(add_llvm_pass_plugin)
 # Also correctly set lib dependencies between plugins and tools.
 function(process_llvm_pass_plugins)
   get_property(LLVM_EXTENSIONS GLOBAL PROPERTY LLVM_COMPILE_EXTENSIONS)
-  file(WRITE "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "//extension handlers\n")
+  file(WRITE "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "//extension handlers\n")
   foreach(llvm_extension ${LLVM_EXTENSIONS})
     string(TOLOWER ${llvm_extension} llvm_extension_lower)
 
@@ -893,23 +893,25 @@ function(process_llvm_pass_plugins)
     string(CONCAT llvm_extension_project ${llvm_extension_upper_first} ${llvm_extension_lower_tail})
 
     if(LLVM_${llvm_extension_upper}_LINK_INTO_TOOLS)
-        file(APPEND "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "HANDLE_EXTENSION(${llvm_extension_project})\n")
+      file(APPEND "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "HANDLE_EXTENSION(${llvm_extension_project})\n")
 
-        get_property(llvm_plugin_targets GLOBAL PROPERTY LLVM_PLUGIN_TARGETS)
-        foreach(llvm_plugin_target ${llvm_plugin_targets})
-          set_property(TARGET ${llvm_plugin_target} APPEND PROPERTY LINK_LIBRARIES ${llvm_extension})
-          set_property(TARGET ${llvm_plugin_target} APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${llvm_extension})
-        endforeach()
+      get_property(llvm_plugin_targets GLOBAL PROPERTY LLVM_PLUGIN_TARGETS)
+      foreach(llvm_plugin_target ${llvm_plugin_targets})
+        set_property(TARGET ${llvm_plugin_target} APPEND PROPERTY LINK_LIBRARIES ${llvm_extension})
+        set_property(TARGET ${llvm_plugin_target} APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${llvm_extension})
+      endforeach()
     else()
       add_llvm_library(${llvm_extension_lower} MODULE obj.${llvm_extension_lower})
     endif()
 
   endforeach()
-  file(APPEND "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "#undef HANDLE_EXTENSION\n")
+  file(APPEND "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "#undef HANDLE_EXTENSION\n")
 
   # only replace if there's an actual change
-  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def")
-  file(REMOVE "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp")
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp"
+    "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def")
+  file(REMOVE "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp")
 endfunction()
 
 function(export_executable_symbols target)

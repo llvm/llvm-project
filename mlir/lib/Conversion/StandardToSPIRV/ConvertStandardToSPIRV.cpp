@@ -39,6 +39,16 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Convert floating-point comparison operations to SPIR-V dialect.
+class CmpFOpConversion final : public SPIRVOpLowering<CmpFOp> {
+public:
+  using SPIRVOpLowering<CmpFOp>::SPIRVOpLowering;
+
+  PatternMatchResult
+  matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 /// Convert compare operation to SPIR-V dialect.
 class CmpIOpConversion final : public SPIRVOpLowering<CmpIOp> {
 public:
@@ -196,6 +206,46 @@ PatternMatchResult ConstantIndexOpConversion::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// CmpFOp
+//===----------------------------------------------------------------------===//
+
+PatternMatchResult
+CmpFOpConversion::matchAndRewrite(CmpFOp cmpFOp, ArrayRef<Value> operands,
+                                  ConversionPatternRewriter &rewriter) const {
+  CmpFOpOperandAdaptor cmpFOpOperands(operands);
+
+  switch (cmpFOp.getPredicate()) {
+#define DISPATCH(cmpPredicate, spirvOp)                                        \
+  case cmpPredicate:                                                           \
+    rewriter.replaceOpWithNewOp<spirvOp>(                                      \
+        cmpFOp, cmpFOp.getResult()->getType(), cmpFOpOperands.lhs(),           \
+        cmpFOpOperands.rhs());                                                 \
+    return matchSuccess();
+
+    // Ordered.
+    DISPATCH(CmpFPredicate::OEQ, spirv::FOrdEqualOp);
+    DISPATCH(CmpFPredicate::OGT, spirv::FOrdGreaterThanOp);
+    DISPATCH(CmpFPredicate::OGE, spirv::FOrdGreaterThanEqualOp);
+    DISPATCH(CmpFPredicate::OLT, spirv::FOrdLessThanOp);
+    DISPATCH(CmpFPredicate::OLE, spirv::FOrdLessThanEqualOp);
+    DISPATCH(CmpFPredicate::ONE, spirv::FOrdNotEqualOp);
+    // Unordered.
+    DISPATCH(CmpFPredicate::UEQ, spirv::FUnordEqualOp);
+    DISPATCH(CmpFPredicate::UGT, spirv::FUnordGreaterThanOp);
+    DISPATCH(CmpFPredicate::UGE, spirv::FUnordGreaterThanEqualOp);
+    DISPATCH(CmpFPredicate::ULT, spirv::FUnordLessThanOp);
+    DISPATCH(CmpFPredicate::ULE, spirv::FUnordLessThanEqualOp);
+    DISPATCH(CmpFPredicate::UNE, spirv::FUnordNotEqualOp);
+
+#undef DISPATCH
+
+  default:
+    break;
+  }
+  return matchFailure();
+}
+
+//===----------------------------------------------------------------------===//
 // CmpIOp
 //===----------------------------------------------------------------------===//
 
@@ -218,11 +268,12 @@ CmpIOpConversion::matchAndRewrite(CmpIOp cmpIOp, ArrayRef<Value> operands,
     DISPATCH(CmpIPredicate::sle, spirv::SLessThanEqualOp);
     DISPATCH(CmpIPredicate::sgt, spirv::SGreaterThanOp);
     DISPATCH(CmpIPredicate::sge, spirv::SGreaterThanEqualOp);
+    DISPATCH(CmpIPredicate::ult, spirv::ULessThanOp);
+    DISPATCH(CmpIPredicate::ule, spirv::ULessThanEqualOp);
+    DISPATCH(CmpIPredicate::ugt, spirv::UGreaterThanOp);
+    DISPATCH(CmpIPredicate::uge, spirv::UGreaterThanEqualOp);
 
 #undef DISPATCH
-
-  default:
-    break;
   }
   return matchFailure();
 }
@@ -302,7 +353,7 @@ void populateStandardToSPIRVPatterns(MLIRContext *context,
                                      OwningRewritePatternList &patterns) {
   // Add patterns that lower operations into SPIR-V dialect.
   populateWithGenerated(context, &patterns);
-  patterns.insert<ConstantIndexOpConversion, CmpIOpConversion,
+  patterns.insert<ConstantIndexOpConversion, CmpFOpConversion, CmpIOpConversion,
                   IntegerOpConversion<AddIOp, spirv::IAddOp>,
                   IntegerOpConversion<MulIOp, spirv::IMulOp>,
                   IntegerOpConversion<SignedDivIOp, spirv::SDivOp>,

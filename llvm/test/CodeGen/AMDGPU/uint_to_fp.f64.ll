@@ -104,7 +104,7 @@ define amdgpu_kernel void @uint_to_fp_i1_to_f64_load(double addrspace(1)* %out, 
 ; SI: v_cvt_f64_u32_e32 v{{\[[0-9]+:[0-9]+\]}}, [[ZEXT]]
 
 ; VI: s_and_b32 [[ZEXT:s[0-9]+]], [[VAL]], 0xff{{$}}
-; VI: v_cvt_f64_i32_e32 v{{\[[0-9]+:[0-9]+\]}}, [[ZEXT]]
+; VI: v_cvt_f64_u32_e32 v{{\[[0-9]+:[0-9]+\]}}, [[ZEXT]]
 define amdgpu_kernel void @s_uint_to_fp_i8_to_f64(double addrspace(1)* %out, i8 %in) {
   %fp = uitofp i8 %in to double
   store double %fp, double addrspace(1)* %out
@@ -118,7 +118,7 @@ define amdgpu_kernel void @s_uint_to_fp_i8_to_f64(double addrspace(1)* %out, i8 
 
 ; VI: v_mov_b32_e32 v{{[0-9]+}}
 ; VI: v_and_b32_sdwa
-; VI: v_cvt_f64_i32_e32 v{{\[[0-9]+:[0-9]+\]}},
+; VI: v_cvt_f64_u32_e32 v{{\[[0-9]+:[0-9]+\]}},
 define double @v_uint_to_fp_i8_to_f64(i8 %in) {
   %fp = uitofp i8 %in to double
   ret double %fp

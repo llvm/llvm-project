@@ -4,8 +4,11 @@
 # FIXME: This overrides attributes that already are present. It should probably
 # only touch functions without an existing attribute.
 
-# MCPU: attributes #0 = { "target-cpu"="hawaii" }
-# MCPU-NOT: attributes #1
+# MCPU:  @with_cpu_attr() #0 {
+# MCPU: @no_cpu_attr() #1 {
+
+# MCPU: attributes #0 = { "target-cpu"="fiji" }
+# MCPU: attributes #1 = { "target-cpu"="hawaii" }
 
 # MATTR:  attributes #0 = { "target-cpu"="fiji" "target-features"="+unaligned-buffer-access" }
 # MATTR: attributes #1 = { "target-features"="+unaligned-buffer-access" }

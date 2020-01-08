@@ -492,8 +492,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::FP_TO_SINT, MVT::i16, Promote);
     setOperationAction(ISD::FP_TO_UINT, MVT::i16, Promote);
-    setOperationAction(ISD::SINT_TO_FP, MVT::i16, Promote);
-    setOperationAction(ISD::UINT_TO_FP, MVT::i16, Promote);
 
     // F16 - Constant Actions.
     setOperationAction(ISD::ConstantFP, MVT::f16, Legal);
@@ -508,6 +506,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_ROUND, MVT::f16, Custom);
     setOperationAction(ISD::FCOS, MVT::f16, Promote);
     setOperationAction(ISD::FSIN, MVT::f16, Promote);
+
+    setOperationAction(ISD::SINT_TO_FP, MVT::i16, Custom);
+    setOperationAction(ISD::UINT_TO_FP, MVT::i16, Custom);
+
     setOperationAction(ISD::FP_TO_SINT, MVT::f16, Promote);
     setOperationAction(ISD::FP_TO_UINT, MVT::f16, Promote);
     setOperationAction(ISD::SINT_TO_FP, MVT::f16, Promote);

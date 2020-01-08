@@ -139,7 +139,11 @@ bool RISCVMCExpr::evaluatePCRelLo(MCValue &Res, const MCAsmLayout *Layout,
       findAssociatedFragment()->getParent())
     return false;
 
-  uint64_t AUIPCOffset = AUIPCSymbol->getOffset();
+  // We must use TargetFixup rather than AUIPCSymbol here. They will almost
+  // always have the same offset, except for the case when AUIPCSymbol is at
+  // the end of a fragment and the fixup comes from offset 0 in the next
+  // fragment.
+  uint64_t AUIPCOffset = TargetFixup->getOffset();
 
   Res = MCValue::get(Target.getSymA(), nullptr,
                      Target.getConstant() + (Fixup->getOffset() - AUIPCOffset));
