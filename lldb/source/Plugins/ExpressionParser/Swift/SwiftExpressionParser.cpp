@@ -1225,6 +1225,45 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   const auto implicit_import_kind =
       swift::SourceFile::ImplicitModuleImportKind::Stdlib;
 
+  swift::SourceFileKind source_file_kind = swift::SourceFileKind::Library;
+
+  if (playground || repl) {
+    source_file_kind = swift::SourceFileKind::Main;
+  }
+
+  swift::SourceFile *source_file = new (*ast_context) swift::SourceFile(
+      module, source_file_kind, buffer_id, implicit_import_kind,
+      /*Keep tokens*/ false);
+  module.addFile(*source_file);
+
+
+  // The Swift stdlib needs to be imported before the
+  // SwiftLanguageRuntime can be used.
+  Status auto_import_error;
+  if (!SwiftASTContext::PerformAutoImport(*swift_ast_context, sc,
+                                          stack_frame_wp, source_file,
+                                          auto_import_error))
+    return make_error<ModuleImportError>(llvm::Twine("in auto-import:\n") +
+                                         auto_import_error.AsCString());
+
+  // Swift Modules that rely on shared libraries (not frameworks)
+  // don't record the link information in the swiftmodule file, so we
+  // can't really make them work without outside information.
+  // However, in the REPL you can added -L & -l options to the initial
+  // compiler startup, and we should dlopen anything that's been
+  // stuffed on there and hope it will be useful later on.
+  if (repl) {
+    lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
+
+    if (this_frame_sp) {
+      lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
+      if (process_sp) {
+        Status error;
+        swift_ast_context->LoadExtraDylibs(*process_sp.get(), error);
+      }
+    }
+  }
+
   auto &invocation = swift_ast_context->GetCompilerInvocation();
   invocation.getFrontendOptions().ModuleName = expr_name_buf;
   invocation.getIRGenOptions().ModuleName = expr_name_buf;
@@ -1242,18 +1281,7 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
 
   invocation.getLangOptions().UseDarwinPreStableABIBit =
       should_use_prestable_abi();
-
-  swift::SourceFileKind source_file_kind = swift::SourceFileKind::Library;
-
-  if (playground || repl) {
-    source_file_kind = swift::SourceFileKind::Main;
-  }
-
-  swift::SourceFile *source_file = new (*ast_context) swift::SourceFile(
-      module, source_file_kind, buffer_id, implicit_import_kind,
-      /*Keep tokens*/ false);
-  module.addFile(*source_file);
-
+  
   bool done = false;
 
   LLDBNameLookup *external_lookup;
@@ -1294,31 +1322,6 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
 
     if (!playground) {
       code_manipulator->RewriteResult();
-    }
-  }
-
-  Status auto_import_error;
-  if (!SwiftASTContext::PerformAutoImport(*swift_ast_context, sc,
-                                          stack_frame_wp, source_file,
-                                          auto_import_error))
-    return make_error<ModuleImportError>(llvm::Twine("in auto-import:\n") +
-                                         auto_import_error.AsCString());
-
-  // Swift Modules that rely on shared libraries (not frameworks)
-  // don't record the link information in the swiftmodule file, so we
-  // can't really make them work without outside information.
-  // However, in the REPL you can added -L & -l options to the initial
-  // compiler startup, and we should dlopen anything that's been
-  // stuffed on there and hope it will be useful later on.
-  if (repl) {
-    lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
-
-    if (this_frame_sp) {
-      lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
-      if (process_sp) {
-        Status error;
-        swift_ast_context->LoadExtraDylibs(*process_sp.get(), error);
-      }
     }
   }
 

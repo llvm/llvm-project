@@ -3290,7 +3290,8 @@ public:
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\")", name.str().c_str());
 
     // We will not find any Swift types in the Clang compile units.
-    if (SwiftLanguageRuntime::IsSwiftMangledName(name))
+    ConstString name_cs(name);
+    if (SwiftLanguageRuntime::IsSwiftMangledName(name_cs.GetCString()))
       return;
 
     auto clang_importer = m_swift_ast_ctx.GetClangImporter();
@@ -3299,7 +3300,6 @@ public:
 
     // Find the type in the debug info.
     TypeMap clang_types;
-    ConstString name_cs(name);
     ConstString module_cs(inModule);
 
     llvm::SmallVector<CompilerContext, 3> decl_context;
@@ -4085,20 +4085,6 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
     all_dlopen_errors.PutCString(
         "Can't load Swift libraries without a language runtime.");
     return false;
-  }
-
-  if (ConstString::Equals(runtime->GetStandardLibraryBaseName(),
-                          ConstString(library_name))) {
-    // Never dlopen the standard library. Some binaries statically
-    // link to the Swift standard library and dlopening it here will
-    // cause ObjC runtime conflicts.  If you want to run Swift
-    // expressions you have to arrange to load the Swift standard
-    // library by hand before doing so.
-    LOG_PRINTF(LIBLLDB_LOG_TYPES,
-               "Skipping swift standard library \"%s\" - we don't hand load "
-               "that one.",
-               runtime->GetStandardLibraryBaseName().AsCString());
-    return true;
   }
 
   PlatformSP platform_sp(process.GetTarget().GetPlatform());

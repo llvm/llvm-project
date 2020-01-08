@@ -463,10 +463,10 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
       }
       uint64_t offset = m_key_stride_padded;
       if (llvm::isa<::swift::TupleType>(swift_type)) {
-        auto &remote_ast = runtime->GetRemoteASTContext(*scratch_ctx);
-        ::swift::remote::RemoteAddress optmeta(nullptr);
-        ::swift::remoteAST::Result<uint64_t> result =
-            remote_ast.getOffsetOfMember(swift_type, optmeta, "1");
+        Status error;
+        llvm::Optional<uint64_t> result = runtime->GetMemberVariableOffset(
+            {swift_ast, swift_type}, nativeStorage_sp.get(), ConstString("1"),
+            &error);
         if (result)
           m_key_stride_padded = result.getValue();
       }
