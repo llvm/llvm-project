@@ -10,6 +10,7 @@
 #define LLVM_CLANG_DRIVER_DARWIN_SDK_INFO_H
 
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -20,12 +21,26 @@ namespace driver {
 /// The information about the darwin SDK that was used during this compilation.
 class DarwinSDKInfo {
 public:
+  /// Represents the mapping between macOS and IosMac versions.
+  class IOSMacVersionMapping {
+  public:
+    VersionTuple getiOSMacVersionForMacOSVersion();
+
+    llvm::StringMap<VersionTuple> MacOS2iOSMacMapping;
+    llvm::StringMap<VersionTuple> IosMac2macOSMapping;
+  };
+
   DarwinSDKInfo(llvm::VersionTuple Version) : Version(Version) {}
 
   const llvm::VersionTuple &getVersion() const { return Version; }
 
+  IOSMacVersionMapping &getVersionMap() { return VersionMap; }
+
+  const IOSMacVersionMapping &getVersionMap() const { return VersionMap; }
+
 private:
   llvm::VersionTuple Version;
+  IOSMacVersionMapping VersionMap;
 };
 
 /// Parse the SDK information from the SDKSettings.json file.

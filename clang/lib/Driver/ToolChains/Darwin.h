@@ -288,13 +288,16 @@ public:
   enum DarwinEnvironmentKind {
     NativeEnvironment,
     Simulator,
+    MacABI,
   };
 
   mutable DarwinPlatformKind TargetPlatform;
   mutable DarwinEnvironmentKind TargetEnvironment;
 
-  /// The OS version we are targeting.
+  /// The native OS version we are targeting.
   mutable VersionTuple TargetVersion;
+  /// The OS version we are targeting as specified in the triple.
+  mutable VersionTuple OSTargetVersion;
 
   /// The information about the darwin SDK that was used.
   mutable Optional<DarwinSDKInfo> SDKInfo;
@@ -340,12 +343,14 @@ protected:
   // FIXME: Eliminate these ...Target functions and derive separate tool chains
   // for these targets and put version in constructor.
   void setTarget(DarwinPlatformKind Platform, DarwinEnvironmentKind Environment,
-                 unsigned Major, unsigned Minor, unsigned Micro) const {
+                 unsigned Major, unsigned Minor, unsigned Micro,
+                 VersionTuple NativeTargetVersion) const {
     // FIXME: For now, allow reinitialization as long as values don't
     // change. This will go away when we move away from argument translation.
     if (TargetInitialized && TargetPlatform == Platform &&
         TargetEnvironment == Environment &&
-        TargetVersion == VersionTuple(Major, Minor, Micro))
+        (Environment == MacABI ? OSTargetVersion : TargetVersion) ==
+            VersionTuple(Major, Minor, Micro))
       return;
 
     assert(!TargetInitialized && "Target already initialized!");
@@ -355,6 +360,11 @@ protected:
     TargetVersion = VersionTuple(Major, Minor, Micro);
     if (Environment == Simulator)
       const_cast<Darwin *>(this)->setTripleEnvironment(llvm::Triple::Simulator);
+    else if (Environment == MacABI) {
+      const_cast<Darwin *>(this)->setTripleEnvironment(llvm::Triple::MacABI);
+      TargetVersion = NativeTargetVersion;
+      OSTargetVersion = VersionTuple(Major, Minor, Micro);
+    }
   }
 
   bool isTargetIPhoneOS() const {
@@ -404,16 +414,23 @@ protected:
     return TargetPlatform == WatchOS;
   }
 
-  bool isTargetMacOS() const {
+  bool isTargetMacABI() const {
     assert(TargetInitialized && "Target not initialized!");
-    return TargetPlatform == MacOS;
+    return TargetPlatform == IPhoneOS && TargetEnvironment == MacABI;
+  }
+
+  bool isTargetMacOSBased() const {
+    assert(TargetInitialized && "Target not initialized!");
+    return TargetPlatform == MacOS || isTargetMacABI();
   }
 
   bool isTargetInitialized() const { return TargetInitialized; }
 
-  VersionTuple getTargetVersion() const {
+  /// The version of the OS that's used by the OS specified in the target
+  /// triple.
+  VersionTuple getOSTargetVersion() const {
     assert(TargetInitialized && "Target not initialized!");
-    return TargetVersion;
+    return isTargetMacABI() ? OSTargetVersion : TargetVersion;
   }
 
   bool isIPhoneOSVersionLT(unsigned V0, unsigned V1 = 0,
@@ -423,7 +440,7 @@ protected:
   }
 
   bool isMacosxVersionLT(unsigned V0, unsigned V1 = 0, unsigned V2 = 0) const {
-    assert(isTargetMacOS() && "Unexpected call for non OS X target!");
+    assert(isTargetMacOSBased() && "Unexpected call for non OS X target!");
     return TargetVersion < VersionTuple(V0, V1, V2);
   }
 
@@ -466,7 +483,7 @@ public:
     // This is only used with the non-fragile ABI and non-legacy dispatch.
 
     // Mixed dispatch is used everywhere except OS X before 10.6.
-    return !(isTargetMacOS() && isMacosxVersionLT(10, 6));
+    return !(isTargetMacOSBased() && isMacosxVersionLT(10, 6));
   }
 
   unsigned GetDefaultStackProtectorLevel(bool KernelOrKext) const override {
@@ -474,9 +491,9 @@ public:
     // and for everything in 10.6 and beyond
     if (isTargetIOSBased() || isTargetWatchOSBased())
       return 1;
-    else if (isTargetMacOS() && !isMacosxVersionLT(10, 6))
+    else if (isTargetMacOSBased() && !isMacosxVersionLT(10, 6))
       return 1;
-    else if (isTargetMacOS() && !isMacosxVersionLT(10, 5) && !KernelOrKext)
+    else if (isTargetMacOSBased() && !isMacosxVersionLT(10, 5) && !KernelOrKext)
       return 1;
 
     return 0;
