@@ -26,6 +26,14 @@ class UnaryOpPattern<Type type, Op src, Op tgt> :
 
 def : BinaryOpPattern<SPV_Bool, AndOp, SPV_LogicalAndOp>;
 def : BinaryOpPattern<SPV_Bool, OrOp, SPV_LogicalOrOp>;
+def : BinaryOpPattern<SPV_Integer, AndOp, SPV_BitwiseAndOp>;
+def : BinaryOpPattern<SPV_Integer, OrOp, SPV_BitwiseOrOp>;
+def : BinaryOpPattern<SPV_Integer, ShiftLeftOp, SPV_ShiftLeftLogicalOp>;
+def : BinaryOpPattern<SPV_Integer, SignedShiftRightOp,
+                      SPV_ShiftRightArithmeticOp>;
+def : BinaryOpPattern<SPV_Integer, UnsignedShiftRightOp,
+                      SPV_ShiftRightLogicalOp>;
+def : BinaryOpPattern<SPV_Integer, XOrOp, SPV_BitwiseXorOp>;
 def : BinaryOpPattern<SPV_Float, AddFOp, SPV_FAddOp>;
 def : BinaryOpPattern<SPV_Float, DivFOp, SPV_FDivOp>;
 def : BinaryOpPattern<SPV_Float, MulFOp, SPV_FMulOp>;

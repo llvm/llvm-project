@@ -95,6 +95,54 @@ func @div_rem(%arg0 : i32, %arg1 : i32) {
 }
 
 //===----------------------------------------------------------------------===//
+// std bit ops
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @bitwise_scalar
+func @bitwise_scalar(%arg0 : i32, %arg1 : i32) {
+  // CHECK: spv.BitwiseAnd
+  %0 = and %arg0, %arg1 : i32
+  // CHECK: spv.BitwiseOr
+  %1 = or %arg0, %arg1 : i32
+  // CHECK: spv.BitwiseXor
+  %2 = xor %arg0, %arg1 : i32
+  return
+}
+
+// CHECK-LABEL: @bitwise_vector
+func @bitwise_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
+  // CHECK: spv.BitwiseAnd
+  %0 = and %arg0, %arg1 : vector<4xi32>
+  // CHECK: spv.BitwiseOr
+  %1 = or %arg0, %arg1 : vector<4xi32>
+  // CHECK: spv.BitwiseXor
+  %2 = xor %arg0, %arg1 : vector<4xi32>
+  return
+}
+
+// CHECK-LABEL: @shift_scalar
+func @shift_scalar(%arg0 : i32, %arg1 : i32) {
+  // CHECK: spv.ShiftLeftLogical
+  %0 = shift_left %arg0, %arg1 : i32
+  // CHECK: spv.ShiftRightArithmetic
+  %1 = shift_right_signed %arg0, %arg1 : i32
+  // CHECK: spv.ShiftRightLogical
+  %2 = shift_right_unsigned %arg0, %arg1 : i32
+  return
+}
+
+// CHECK-LABEL: @shift_vector
+func @shift_vector(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
+  // CHECK: spv.ShiftLeftLogical
+  %0 = shift_left %arg0, %arg1 : vector<4xi32>
+  // CHECK: spv.ShiftRightArithmetic
+  %1 = shift_right_signed %arg0, %arg1 : vector<4xi32>
+  // CHECK: spv.ShiftRightLogical
+  %2 = shift_right_unsigned %arg0, %arg1 : vector<4xi32>
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // std.cmpi
 //===----------------------------------------------------------------------===//
 
@@ -153,24 +201,6 @@ func @logical_vector(%arg0 : vector<4xi1>, %arg1 : vector<4xi1>) {
   %0 = and %arg0, %arg1 : vector<4xi1>
   // CHECK: spv.LogicalOr
   %1 = or %arg0, %arg1 : vector<4xi1>
-  return
-}
-
-// CHECK-LABEL: @logical_scalar_fail
-func @logical_scalar_fail(%arg0 : i32, %arg1 : i32) {
-  // CHECK-NOT: spv.LogicalAnd
-  %0 = and %arg0, %arg1 : i32
-  // CHECK-NOT: spv.LogicalOr
-  %1 = or %arg0, %arg1 : i32
-  return
-}
-
-// CHECK-LABEL: @logical_vector_fail
-func @logical_vector_fail(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) {
-  // CHECK-NOT: spv.LogicalAnd
-  %0 = and %arg0, %arg1 : vector<4xi32>
-  // CHECK-NOT: spv.LogicalOr
-  %1 = or %arg0, %arg1 : vector<4xi32>
   return
 }
 
