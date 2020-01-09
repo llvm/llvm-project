@@ -59,7 +59,7 @@ define amdgpu_kernel void @max_10_vgprs(i32 addrspace(1)* %p) #0 {
 ; GCN-LABEL: {{^}}max_10_vgprs_used_9a:
 ; GFX908-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; GFX908-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
-; GFX908:     v_accvgpr_write_b32 a9, v{{[0-9]}}
+; GFX908-DAG: v_accvgpr_write_b32 a9, v{{[0-9]}}
 ; GFX908:     buffer_store_dword v{{[0-9]}},
 ; GFX908-NOT: buffer_
 ; GFX908:     v_accvgpr_read_b32 v{{[0-9]}}, a9
