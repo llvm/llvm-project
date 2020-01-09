@@ -2464,11 +2464,12 @@ void DwarfLinkerForBinary::DIECloner::cloneAllCompileUnits(
   if (!Linker.Streamer)
     return;
 
+  uint64_t OutputDebugInfoSize = Linker.Streamer->getDebugInfoSectionSize();
   for (auto &CurrentUnit : CompileUnits) {
     auto InputDIE = CurrentUnit->getOrigUnit().getUnitDIE();
-    CurrentUnit->setStartOffset(Linker.OutputDebugInfoSize);
+    CurrentUnit->setStartOffset(OutputDebugInfoSize);
     if (!InputDIE) {
-      Linker.OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset();
+      OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset();
       continue;
     }
     if (CurrentUnit->getInfo(0).Keep) {
@@ -2480,7 +2481,7 @@ void DwarfLinkerForBinary::DIECloner::cloneAllCompileUnits(
                CurrentUnit->getOutputUnitDIE());
     }
 
-    Linker.OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset();
+    OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset();
 
     if (Linker.Options.NoOutput)
       continue;
@@ -2522,8 +2523,12 @@ void DwarfLinkerForBinary::DIECloner::cloneAllCompileUnits(
     if (!CurrentUnit->getOutputUnitDIE())
       continue;
 
+    assert(Linker.Streamer->getDebugInfoSectionSize() ==
+           CurrentUnit->getStartOffset());
     Linker.Streamer->emitCompileUnitHeader(*CurrentUnit);
     Linker.Streamer->emitDIE(*CurrentUnit->getOutputUnitDIE());
+    assert(Linker.Streamer->getDebugInfoSectionSize() ==
+           CurrentUnit->computeNextUnitOffset());
   }
 }
 
@@ -2593,13 +2598,7 @@ bool DwarfLinkerForBinary::emitPaperTrailWarnings(
     Size += getULEB128Size(Abbrev.getNumber());
   }
   CUDie->setSize(Size);
-  auto &Asm = Streamer->getAsmPrinter();
-  Asm.emitInt32(11 + CUDie->getSize() - 4);
-  Asm.emitInt16(2);
-  Asm.emitInt32(0);
-  Asm.emitInt8(Map.getTriple().isArch64Bit() ? 8 : 4);
-  Streamer->emitDIE(*CUDie);
-  OutputDebugInfoSize += 11 /* Header */ + Size;
+  Streamer->emitPaperTrailWarningsDie(Map.getTriple(), *CUDie);
 
   return true;
 }
@@ -2680,7 +2679,6 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
     return false;
 
   // Size of the DIEs (and headers) generated for the linked output.
-  OutputDebugInfoSize = 0;
   // A unique ID that identifies each compile unit.
   unsigned UnitID = 0;
   DebugMap ModuleMap(Map.getTriple(), Map.getBinaryPath());
@@ -2819,7 +2817,8 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
   // is already emitted, without being affected by canonical die offsets set
   // later. This prevents undeterminism when analyze and clone execute
   // concurrently, as clone set the canonical DIE offset and analyze reads it.
-  const uint64_t ModulesEndOffset = OutputDebugInfoSize;
+  const uint64_t ModulesEndOffset =
+      Options.NoOutput ? 0 : Streamer->getDebugInfoSectionSize();
 
   // These variables manage the list of processed object files.
   // The mutex and condition variable are to ensure that this is thread safe.
