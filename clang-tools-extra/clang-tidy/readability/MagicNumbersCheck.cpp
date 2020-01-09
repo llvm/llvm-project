@@ -86,15 +86,17 @@ MagicNumbersCheck::MagicNumbersCheck(StringRef Name, ClangTidyContext *Context)
     IgnoredDoublePointValues.reserve(IgnoredFloatingPointValuesInput.size());
     for (const auto &InputValue : IgnoredFloatingPointValuesInput) {
       llvm::APFloat FloatValue(llvm::APFloat::IEEEsingle());
-      if (!FloatValue.convertFromString(InputValue, DefaultRoundingMode)) {
-        assert(false && "Invalid floating point representation");
-      }
+      auto StatusOrErr =
+          FloatValue.convertFromString(InputValue, DefaultRoundingMode);
+      assert(StatusOrErr && "Invalid floating point representation");
+      consumeError(StatusOrErr.takeError());
       IgnoredFloatingPointValues.push_back(FloatValue.convertToFloat());
 
       llvm::APFloat DoubleValue(llvm::APFloat::IEEEdouble());
-      if (!DoubleValue.convertFromString(InputValue, DefaultRoundingMode)) {
-        assert(false && "Invalid floating point representation");
-      }
+      StatusOrErr =
+          DoubleValue.convertFromString(InputValue, DefaultRoundingMode);
+      assert(StatusOrErr && "Invalid floating point representation");
+      consumeError(StatusOrErr.takeError());
       IgnoredDoublePointValues.push_back(DoubleValue.convertToDouble());
     }
     llvm::sort(IgnoredFloatingPointValues.begin(),

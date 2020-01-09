@@ -1,4 +1,4 @@
-file(GLOB SWIG_INTERFACES interface/*.i)
+file(GLOB SWIG_INTERFACES interfaces/*.i)
 file(GLOB_RECURSE SWIG_SOURCES *.swig)
 file(GLOB SWIG_HEADERS
   ${LLDB_SOURCE_DIR}/include/lldb/API/*.h
@@ -46,7 +46,7 @@ if (LLDB_ENABLE_PYTHON)
         -python
         -threads
         -o ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapPython.cpp
-        ${LLDB_SOURCE_DIR}/scripts/lldb.swig
+        ${LLDB_SOURCE_DIR}/bindings/python.swig
     VERBATIM
     COMMENT "Builds LLDB Python wrapper")
 
@@ -67,7 +67,7 @@ if (LLDB_ENABLE_LUA)
         -lua
         -w503
         -o ${CMAKE_CURRENT_BINARY_DIR}/LLDBWrapLua.cpp
-        ${LLDB_SOURCE_DIR}/scripts/lldb_lua.swig
+        ${LLDB_SOURCE_DIR}/bindings/lua.swig
     VERBATIM
     COMMENT "Builds LLDB Lua wrapper")
 

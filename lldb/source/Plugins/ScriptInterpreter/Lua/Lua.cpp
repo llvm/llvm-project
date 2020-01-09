@@ -10,9 +10,9 @@
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb_private;
+using namespace lldb;
 
 llvm::Error Lua::Run(llvm::StringRef buffer) {
-  std::lock_guard<std::mutex> lock(m_mutex);
   int error =
       luaL_loadbuffer(m_lua_state, buffer.data(), buffer.size(), "buffer") ||
       lua_pcall(m_lua_state, 0, 0, 0);

@@ -724,9 +724,10 @@ TEST_FUNC(indirect_access) {
   // clang-format on
 
   // clang-format off
-  // CHECK-LABEL: func @indirect_access(
-  // CHECK:  [[B:%.*]] = affine.load
-  // CHECK:  [[D:%.*]] = affine.load
+  // CHECK-LABEL: func @indirect_access
+  // CHECK-SAME: (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: memref<?xf32>, %[[ARG2:.*]]: memref<?xf32>, %[[ARG3:.*]]: memref<?xf32>)
+  // CHECK-DAG:  [[B:%.*]] = affine.load %[[ARG1]]
+  // CHECK-DAG:  [[D:%.*]] = affine.load %[[ARG3]]
   // CHECK:  load %{{.*}}{{\[}}[[B]]{{\]}}
   // CHECK:  store %{{.*}}, %{{.*}}{{\[}}[[D]]{{\]}}
   // clang-format on

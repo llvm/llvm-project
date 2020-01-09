@@ -85,9 +85,6 @@ public:
   std::chrono::seconds GetUtilityExpressionTimeout() const;
 
 protected:
-  static void OptionValueChangedCallback(void *baton,
-                                         OptionValue *option_value);
-
   Process *m_process; // Can be nullptr for global ProcessProperties
 };
 

@@ -30,6 +30,10 @@ def gi_vop3mods :
     GIComplexOperandMatcher<s32, "selectVOP3Mods">,
     GIComplexPatternEquiv<VOP3Mods>;
 
+def gi_vop3mods_nnan :
+    GIComplexOperandMatcher<s32, "selectVOP3Mods_nnan">,
+    GIComplexPatternEquiv<VOP3Mods_nnan>;
+
 def gi_vop3omods :
     GIComplexOperandMatcher<s32, "selectVOP3OMods">,
     GIComplexPatternEquiv<VOP3OMods>;
@@ -204,3 +208,12 @@ foreach Ty = [i64, p0, p1, p4] in {
 
 def gi_as_i32timm : GICustomOperandRenderer<"renderTruncImm32">,
   GISDNodeXFormEquiv<as_i32timm>;
+
+def gi_NegateImm : GICustomOperandRenderer<"renderNegateImm">,
+  GISDNodeXFormEquiv<NegateImm>;
+
+def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastImm">,
+  GISDNodeXFormEquiv<bitcast_fpimm_to_i32>;
+
+def gi_IMMPopCount : GICustomOperandRenderer<"renderPopcntImm">,
+  GISDNodeXFormEquiv<IMMPopCount>;

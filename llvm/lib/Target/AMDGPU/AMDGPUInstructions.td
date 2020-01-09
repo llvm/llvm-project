@@ -336,15 +336,10 @@ class Aligned<int Bytes> {
   int MinAlignment = Bytes;
 }
 
-class LoadFrag <SDPatternOperator op> : PatFrag<(ops node:$ptr), (op node:$ptr)>;
-
-class StoreFrag<SDPatternOperator op> : PatFrag <
-  (ops node:$value, node:$ptr), (op node:$value, node:$ptr)
->;
-
 class StoreHi16<SDPatternOperator op> : PatFrag <
-  (ops node:$value, node:$ptr), (op (srl node:$value, (i32 16)), node:$ptr)
->;
+  (ops node:$value, node:$ptr), (op (srl node:$value, (i32 16)), node:$ptr)> {
+  let IsStore = 1;
+}
 
 def LoadAddress_constant : AddressSpaceList<[  AddrSpaces.Constant ]>;
 def LoadAddress_global : AddressSpaceList<[  AddrSpaces.Global, AddrSpaces.Constant ]>;
@@ -364,48 +359,6 @@ def StoreAddress_local : AddressSpaceList<[ AddrSpaces.Local ]>;
 def LoadAddress_region : AddressSpaceList<[ AddrSpaces.Region ]>;
 def StoreAddress_region : AddressSpaceList<[ AddrSpaces.Region ]>;
 
-
-
-class GlobalLoadAddress : CodePatPred<[{
-  auto AS = cast<MemSDNode>(N)->getAddressSpace();
-  return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::CONSTANT_ADDRESS;
-}]>;
-
-class FlatLoadAddress : CodePatPred<[{
-  const auto AS = cast<MemSDNode>(N)->getAddressSpace();
-  return AS == AMDGPUAS::FLAT_ADDRESS ||
-         AS == AMDGPUAS::GLOBAL_ADDRESS ||
-         AS == AMDGPUAS::CONSTANT_ADDRESS;
-}]>;
-
-class GlobalAddress : CodePatPred<[{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
-}]>;
-
-class PrivateAddress : CodePatPred<[{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS;
-}]>;
-
-class LocalAddress : CodePatPred<[{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
-}]>;
-
-class RegionAddress : CodePatPred<[{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::REGION_ADDRESS;
-}]>;
-
-class FlatStoreAddress : CodePatPred<[{
-  const auto AS = cast<MemSDNode>(N)->getAddressSpace();
-  return AS == AMDGPUAS::FLAT_ADDRESS ||
-         AS == AMDGPUAS::GLOBAL_ADDRESS;
-}]>;
-
-// TODO: Remove these when stores to new PatFrag format.
-class PrivateStore <SDPatternOperator op> : StoreFrag <op>, PrivateAddress;
-class LocalStore <SDPatternOperator op> : StoreFrag <op>, LocalAddress;
-class RegionStore <SDPatternOperator op> : StoreFrag <op>, RegionAddress;
-class GlobalStore <SDPatternOperator op> : StoreFrag<op>, GlobalAddress;
-class FlatStore <SDPatternOperator op> : StoreFrag <op>, FlatStoreAddress;
 
 
 foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
@@ -485,6 +438,10 @@ def truncstorei16_#as : PatFrag<(ops node:$val, node:$ptr),
   let MemoryVT = i16;
 }
 
+def store_hi16_#as : StoreHi16 <truncstorei16>;
+def truncstorei8_hi16_#as : StoreHi16<truncstorei8>;
+def truncstorei16_hi16_#as : StoreHi16<truncstorei16>;
+
 defm atomic_store_#as : binary_atomic_op<atomic_store>;
 
 } // End let AddressSpaces = ...
@@ -521,18 +478,6 @@ defm atomic_load_fadd : ret_noret_binary_atomic_op<atomic_load_fadd, 0>;
 defm AMDGPUatomic_cmp_swap : ret_noret_binary_atomic_op<AMDGPUatomic_cmp_swap>;
 
 
-def store_hi16_private : StoreHi16 <truncstorei16>, PrivateAddress;
-def truncstorei8_hi16_private : StoreHi16<truncstorei8>, PrivateAddress;
-
-def store_atomic_global : GlobalStore<atomic_store>;
-def truncstorei8_hi16_global : StoreHi16 <truncstorei8>, GlobalAddress;
-def truncstorei16_hi16_global : StoreHi16 <truncstorei16>, GlobalAddress;
-
-def store_local_hi16 : StoreHi16 <truncstorei16>, LocalAddress;
-def truncstorei8_local_hi16 : StoreHi16<truncstorei8>, LocalAddress;
-def atomic_store_local : LocalStore <atomic_store>;
-
-
 def load_align8_local : PatFrag <(ops node:$ptr), (load_local node:$ptr)> {
   let IsLoad = 1;
   let IsNonExtLoad = 1;
@@ -557,30 +502,6 @@ def store_align16_local: PatFrag<(ops node:$val, node:$ptr),
   let IsTruncStore = 0;
 }
 
-
-def atomic_store_flat  : FlatStore <atomic_store>;
-def truncstorei8_hi16_flat  : StoreHi16<truncstorei8>, FlatStoreAddress;
-def truncstorei16_hi16_flat : StoreHi16<truncstorei16>, FlatStoreAddress;
-
-
-class local_binary_atomic_op<SDNode atomic_op> :
-  PatFrag<(ops node:$ptr, node:$value),
-    (atomic_op node:$ptr, node:$value), [{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
-}]>;
-
-class region_binary_atomic_op<SDNode atomic_op> :
-  PatFrag<(ops node:$ptr, node:$value),
-    (atomic_op node:$ptr, node:$value), [{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::REGION_ADDRESS;
-}]>;
-
-
-def mskor_global : PatFrag<(ops node:$val, node:$ptr),
-                            (AMDGPUstore_mskor node:$val, node:$ptr), [{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
-}]>;
-
 let AddressSpaces = StoreAddress_local.AddrSpaces in {
 defm atomic_cmp_swap_local : ternary_atomic_op<atomic_cmp_swap>;
 defm atomic_cmp_swap_local_m0 : ternary_atomic_op<atomic_cmp_swap_glue>;
@@ -590,17 +511,6 @@ let AddressSpaces = StoreAddress_region.AddrSpaces in {
 defm atomic_cmp_swap_region : ternary_atomic_op<atomic_cmp_swap>;
 defm atomic_cmp_swap_region_m0 : ternary_atomic_op<atomic_cmp_swap_glue>;
 }
-
-// Legacy.
-def atomic_cmp_swap_global_noret : PatFrag<
-  (ops node:$ptr, node:$cmp, node:$value),
-  (atomic_cmp_swap node:$ptr, node:$cmp, node:$value),
-  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS && (SDValue(N, 0).use_empty());}]>;
-
-def atomic_cmp_swap_global_ret : PatFrag<
-  (ops node:$ptr, node:$cmp, node:$value),
-  (atomic_cmp_swap node:$ptr, node:$cmp, node:$value),
-  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS && (!SDValue(N, 0).use_empty());}]>;
 
 //===----------------------------------------------------------------------===//
 // Misc Pattern Fragments
@@ -826,30 +736,6 @@ class ROTRPattern <Instruction BIT_ALIGN> : AMDGPUPat <
   (rotr i32:$src0, i32:$src1),
   (BIT_ALIGN $src0, $src0, $src1)
 >;
-
-multiclass IntMed3Pat<Instruction med3Inst,
-                 SDPatternOperator min,
-                 SDPatternOperator max,
-                 SDPatternOperator min_oneuse,
-                 SDPatternOperator max_oneuse,
-                 ValueType vt = i32> {
-
-  // This matches 16 permutations of
-  // min(max(a, b), max(min(a, b), c))
-  def : AMDGPUPat <
-  (min (max_oneuse vt:$src0, vt:$src1),
-       (max_oneuse (min_oneuse vt:$src0, vt:$src1), vt:$src2)),
-  (med3Inst vt:$src0, vt:$src1, vt:$src2)
->;
-
-  // This matches 16 permutations of
-  // max(min(x, y), min(max(x, y), z))
-  def : AMDGPUPat <
-  (max (min_oneuse vt:$src0, vt:$src1),
-       (min_oneuse (max_oneuse vt:$src0, vt:$src1), vt:$src2)),
-  (med3Inst $src0, $src1, $src2)
->;
-}
 
 // Special conversion patterns
 

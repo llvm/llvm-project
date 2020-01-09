@@ -427,51 +427,76 @@ tryToUnrollAndJamLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   return UnrollResult;
 }
 
+static bool tryToUnrollAndJamLoop(Function &F, DominatorTree &DT, LoopInfo &LI,
+                                  ScalarEvolution &SE,
+                                  const TargetTransformInfo &TTI,
+                                  AssumptionCache &AC, DependenceInfo &DI,
+                                  OptimizationRemarkEmitter &ORE,
+                                  int OptLevel) {
+  bool DidSomething = false;
+
+  // The loop unroll and jam pass requires loops to be in simplified form, and also needs LCSSA.
+  // Since simplification may add new inner loops, it has to run before the
+  // legality and profitability checks. This means running the loop unroll and jam pass
+  // will simplify all loops, regardless of whether anything end up being
+  // unroll and jammed.
+  for (auto &L : LI) {
+    DidSomething |=
+        simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, false /* PreserveLCSSA */);
+    DidSomething |= formLCSSARecursively(*L, DT, &LI, &SE);
+  }
+
+  SmallPriorityWorklist<Loop *, 4> Worklist;
+  internal::appendLoopsToWorklist(reverse(LI), Worklist);
+  while (!Worklist.empty()) {
+    Loop *L = Worklist.pop_back_val();
+    formLCSSA(*L, DT, &LI, &SE);
+    LoopUnrollResult Result =
+        tryToUnrollAndJamLoop(L, DT, &LI, SE, TTI, AC, DI, ORE, OptLevel);
+    if (Result != LoopUnrollResult::Unmodified)
+      DidSomething = true;
+  }
+
+  return DidSomething;
+}
+
 namespace {
 
-class LoopUnrollAndJam : public LoopPass {
+class LoopUnrollAndJam : public FunctionPass {
 public:
   static char ID; // Pass ID, replacement for typeid
   unsigned OptLevel;
 
-  LoopUnrollAndJam(int OptLevel = 2) : LoopPass(ID), OptLevel(OptLevel) {
+  LoopUnrollAndJam(int OptLevel = 2) : FunctionPass(ID), OptLevel(OptLevel) {
     initializeLoopUnrollAndJamPass(*PassRegistry::getPassRegistry());
   }
 
-  bool runOnLoop(Loop *L, LPPassManager &LPM) override {
-    if (skipLoop(L))
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
       return false;
 
-    Function &F = *L->getHeader()->getParent();
-
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
     ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
     const TargetTransformInfo &TTI =
         getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     auto &DI = getAnalysis<DependenceAnalysisWrapperPass>().getDI();
-    // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
-    // pass.  Function analyses need to be preserved across loop transformations
-    // but ORE cannot be preserved (see comment before the pass definition).
-    OptimizationRemarkEmitter ORE(&F);
+    auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
-    LoopUnrollResult Result =
-        tryToUnrollAndJamLoop(L, DT, LI, SE, TTI, AC, DI, ORE, OptLevel);
-
-    if (Result == LoopUnrollResult::FullyUnrolled)
-      LPM.markLoopAsDeleted(*L);
-
-    return Result != LoopUnrollResult::Unmodified;
+    return tryToUnrollAndJamLoop(F, DT, LI, SE, TTI, AC, DI, ORE, OptLevel);
   }
 
   /// This transformation requires natural loop information & requires that
   /// loop preheaders be inserted into the CFG...
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+    AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DependenceAnalysisWrapperPass>();
-    getLoopAnalysisUsage(AU);
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
   }
 };
 
@@ -481,10 +506,13 @@ char LoopUnrollAndJam::ID = 0;
 
 INITIALIZE_PASS_BEGIN(LoopUnrollAndJam, "loop-unroll-and-jam",
                       "Unroll and Jam loops", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(LoopPass)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DependenceAnalysisWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(LoopUnrollAndJam, "loop-unroll-and-jam",
                     "Unroll and Jam loops", false, false)
 
@@ -492,26 +520,18 @@ Pass *llvm::createLoopUnrollAndJamPass(int OptLevel) {
   return new LoopUnrollAndJam(OptLevel);
 }
 
-PreservedAnalyses LoopUnrollAndJamPass::run(Loop &L, LoopAnalysisManager &AM,
-                                            LoopStandardAnalysisResults &AR,
-                                            LPMUpdater &) {
-  const auto &FAM =
-      AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR).getManager();
-  Function *F = L.getHeader()->getParent();
+PreservedAnalyses LoopUnrollAndJamPass::run(Function &F,
+                                            FunctionAnalysisManager &AM) {
+  ScalarEvolution &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+  LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
+  TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
+  AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
+  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  DependenceInfo &DI = AM.getResult<DependenceAnalysis>(F);
+  OptimizationRemarkEmitter &ORE =
+      AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  auto *ORE = FAM.getCachedResult<OptimizationRemarkEmitterAnalysis>(*F);
-  // FIXME: This should probably be optional rather than required.
-  if (!ORE)
-    report_fatal_error(
-        "LoopUnrollAndJamPass: OptimizationRemarkEmitterAnalysis not cached at "
-        "a higher level");
-
-  DependenceInfo DI(F, &AR.AA, &AR.SE, &AR.LI);
-
-  LoopUnrollResult Result = tryToUnrollAndJamLoop(
-      &L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, DI, *ORE, OptLevel);
-
-  if (Result == LoopUnrollResult::Unmodified)
+  if (!tryToUnrollAndJamLoop(F, DT, LI, SE, TTI, AC, DI, ORE, OptLevel))
     return PreservedAnalyses::all();
 
   return getLoopPassPreservedAnalyses();

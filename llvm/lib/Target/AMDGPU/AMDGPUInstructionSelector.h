@@ -132,6 +132,8 @@ private:
   selectVOP3OMods(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3Mods_nnan(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3OpSelMods0(MachineOperand &Root) const;
@@ -168,6 +170,15 @@ private:
 
   void renderTruncImm32(MachineInstrBuilder &MIB,
                         const MachineInstr &MI) const;
+
+  void renderNegateImm(MachineInstrBuilder &MIB,
+                       const MachineInstr &MI) const;
+
+  void renderBitcastImm(MachineInstrBuilder &MIB,
+                        const MachineInstr &MI) const;
+
+  void renderPopcntImm(MachineInstrBuilder &MIB,
+                       const MachineInstr &MI) const;
 
   bool isInlineImmediate16(int64_t Imm) const;
   bool isInlineImmediate32(int64_t Imm) const;

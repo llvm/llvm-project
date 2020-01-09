@@ -54,29 +54,6 @@ ReadAddressFromDebugAddrSection(const DWARFUnit *dwarf_cu,
   return LLDB_INVALID_ADDRESS;
 }
 
-/// Return the location list parser for the given format.
-static std::unique_ptr<llvm::DWARFLocationTable>
-GetLocationTable(DWARFExpression::LocationListFormat format, const DataExtractor &data) {
-  llvm::DWARFDataExtractor llvm_data(
-      toStringRef(data.GetData()),
-      data.GetByteOrder() == lldb::eByteOrderLittle, data.GetAddressByteSize());
-
-  switch (format) {
-  case DWARFExpression::NonLocationList:
-    return nullptr;
-  // DWARF<=4 .debug_loc
-  case DWARFExpression::RegularLocationList:
-    return std::make_unique<llvm::DWARFDebugLoc>(llvm_data);
-  // Non-standard DWARF 4 extension (fission) .debug_loc.dwo
-  case DWARFExpression::SplitDwarfLocationList:
-  // DWARF 5 .debug_loclists(.dwo)
-  case DWARFExpression::LocLists:
-    return std::make_unique<llvm::DWARFDebugLoclists>(
-        llvm_data, format == DWARFExpression::LocLists ? 5 : 4);
-  }
-  llvm_unreachable("Invalid LocationListFormat!");
-}
-
 // DWARFExpression constructor
 DWARFExpression::DWARFExpression()
     : m_module_wp(), m_data(), m_dwarf_cu(nullptr),
@@ -157,10 +134,8 @@ void DWARFExpression::GetDescription(Stream *s, lldb::DescriptionLevel level,
   if (IsLocationList()) {
     // We have a location list
     lldb::offset_t offset = 0;
-    std::unique_ptr<llvm::DWARFLocationTable> loctable_up = GetLocationTable(
-        m_dwarf_cu->GetSymbolFileDWARF().GetLocationListFormat(), m_data);
-    if (!loctable_up)
-      return;
+    std::unique_ptr<llvm::DWARFLocationTable> loctable_up =
+        m_dwarf_cu->GetLocationTable(m_data);
 
     llvm::MCRegisterInfo *MRI = abi ? &abi->GetMCRegisterInfo() : nullptr;
 
@@ -2812,10 +2787,8 @@ DWARFExpression::GetLocationExpression(addr_t load_function_start,
                                        addr_t addr) const {
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS);
 
-  std::unique_ptr<llvm::DWARFLocationTable> loctable_up = GetLocationTable(
-      m_dwarf_cu->GetSymbolFileDWARF().GetLocationListFormat(), m_data);
-  if (!loctable_up)
-    return llvm::None;
+  std::unique_ptr<llvm::DWARFLocationTable> loctable_up =
+      m_dwarf_cu->GetLocationTable(m_data);
   llvm::Optional<DataExtractor> result;
   uint64_t offset = 0;
   auto lookup_addr =

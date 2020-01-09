@@ -22,6 +22,8 @@
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -328,14 +330,22 @@ CodeAction toCodeAction(const Fix &F, const URIForFile &File) {
 void toLSPDiags(
     const Diag &D, const URIForFile &File, const ClangdDiagnosticOptions &Opts,
     llvm::function_ref<void(clangd::Diagnostic, llvm::ArrayRef<Fix>)> OutFn) {
-  auto FillBasicFields = [](const DiagBase &D) -> clangd::Diagnostic {
-    clangd::Diagnostic Res;
-    Res.range = D.Range;
-    Res.severity = getSeverity(D.Severity);
-    return Res;
-  };
+  clangd::Diagnostic Main;
+  Main.severity = getSeverity(D.Severity);
 
-  clangd::Diagnostic Main = FillBasicFields(D);
+  // Main diagnostic should always refer to a range inside main file. If a
+  // diagnostic made it so for, it means either itself or one of its notes is
+  // inside main file.
+  if (D.InsideMainFile) {
+    Main.range = D.Range;
+  } else {
+    auto It =
+        llvm::find_if(D.Notes, [](const Note &N) { return N.InsideMainFile; });
+    assert(It != D.Notes.end() &&
+           "neither the main diagnostic nor notes are inside main file");
+    Main.range = It->Range;
+  }
+
   Main.code = D.Name;
   switch (D.Source) {
   case Diag::Clang:
@@ -379,7 +389,9 @@ void toLSPDiags(
     for (auto &Note : D.Notes) {
       if (!Note.InsideMainFile)
         continue;
-      clangd::Diagnostic Res = FillBasicFields(Note);
+      clangd::Diagnostic Res;
+      Res.severity = getSeverity(Note.Severity);
+      Res.range = Note.Range;
       Res.message = noteMessage(D, Note, Opts);
       OutFn(std::move(Res), llvm::ArrayRef<Fix>());
     }

@@ -6,59 +6,63 @@ define void @transpose_multiply(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, <9 x
 ; CHECK-LABEL: @transpose_multiply(
 ; CHECK-NEXT:  entry:
 
-; Load input matrixes %A and %B.
+; Load columns of input matrixes %A and %B.
 
-; CHECK-NEXT:    [[A:%.*]] = load <9 x double>, <9 x double>* [[A_PTR:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = load <9 x double>, <9 x double>* [[B_PTR:%.*]]
-
-; Extract columns from loaded value %A.
-
-; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <9 x double> [[A]], <9 x double> undef, <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <9 x double> [[A]], <9 x double> undef, <3 x i32> <i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <9 x double> [[A]], <9 x double> undef, <3 x i32> <i32 6, i32 7, i32 8>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <9 x double>* [[A_PTR:%.*]] to double*
+; CHECK-NEXT:    [[COL_CAST:%.*]] = bitcast double* [[TMP0]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST]], align 8
+; CHECK-NEXT:    [[COL_GEP:%.*]] = getelementptr double, double* [[TMP0]], i32 3
+; CHECK-NEXT:    [[COL_CAST1:%.*]] = bitcast double* [[COL_GEP]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST1]], align 8
+; CHECK-NEXT:    [[COL_GEP3:%.*]] = getelementptr double, double* [[TMP0]], i32 6
+; CHECK-NEXT:    [[COL_CAST4:%.*]] = bitcast double* [[COL_GEP3]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST4]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <9 x double>* [[B_PTR:%.*]] to double*
+; CHECK-NEXT:    [[COL_CAST6:%.*]] = bitcast double* [[TMP1]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST6]], align 8
+; CHECK-NEXT:    [[COL_GEP8:%.*]] = getelementptr double, double* [[TMP1]], i32 3
+; CHECK-NEXT:    [[COL_CAST9:%.*]] = bitcast double* [[COL_GEP8]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD10:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST9]], align 8
+; CHECK-NEXT:    [[COL_GEP11:%.*]] = getelementptr double, double* [[TMP1]], i32 6
+; CHECK-NEXT:    [[COL_CAST12:%.*]] = bitcast double* [[COL_GEP11]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST12]], align 8
 
 ; Transpose %A.
 
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x double> [[SPLIT]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x double> [[COL_LOAD]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x double> undef, double [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x double> [[SPLIT1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x double> [[COL_LOAD2]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x double> [[TMP1]], double [[TMP2]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <3 x double> [[SPLIT2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <3 x double> [[COL_LOAD5]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <3 x double> [[TMP3]], double [[TMP4]], i64 2
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <3 x double> [[SPLIT]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <3 x double> [[COL_LOAD]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <3 x double> undef, double [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <3 x double> [[SPLIT1]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <3 x double> [[COL_LOAD2]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <3 x double> [[TMP7]], double [[TMP8]], i64 1
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <3 x double> [[SPLIT2]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <3 x double> [[COL_LOAD5]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <3 x double> [[TMP9]], double [[TMP10]], i64 2
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <3 x double> [[SPLIT]], i64 2
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <3 x double> [[COL_LOAD]], i64 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <3 x double> undef, double [[TMP12]], i64 0
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <3 x double> [[SPLIT1]], i64 2
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <3 x double> [[COL_LOAD2]], i64 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <3 x double> [[TMP13]], double [[TMP14]], i64 1
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <3 x double> [[SPLIT2]], i64 2
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <3 x double> [[COL_LOAD5]], i64 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <3 x double> [[TMP15]], double [[TMP16]], i64 2
-
-; Extract columns from %B.
-
-; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <9 x double> [[B]], <9 x double> undef, <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK-NEXT:    [[SPLIT4:%.*]] = shufflevector <9 x double> [[B]], <9 x double> undef, <3 x i32> <i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[SPLIT5:%.*]] = shufflevector <9 x double> [[B]], <9 x double> undef, <3 x i32> <i32 6, i32 7, i32 8>
 
 ; Lower multiply(transpose(%A), %B)
 
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x double> undef, double [[TMP18]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP19:%.*]] = fmul <1 x double> [[BLOCK]], [[SPLAT_SPLAT]]
 ; CHECK-NEXT:    [[BLOCK6:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 1
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT7:%.*]] = insertelement <1 x double> undef, double [[TMP20]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT8:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT7]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP21:%.*]] = fmul <1 x double> [[BLOCK6]], [[SPLAT_SPLAT8]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = fadd <1 x double> [[TMP19]], [[TMP21]]
 ; CHECK-NEXT:    [[BLOCK9:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 2
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT10:%.*]] = insertelement <1 x double> undef, double [[TMP23]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT11:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT10]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP24:%.*]] = fmul <1 x double> [[BLOCK9]], [[SPLAT_SPLAT11]]
@@ -66,18 +70,18 @@ define void @transpose_multiply(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, <9 x
 ; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <1 x double> [[TMP25]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <3 x double> undef, <3 x double> [[TMP26]], <3 x i32> <i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    [[BLOCK12:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 0
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT13:%.*]] = insertelement <1 x double> undef, double [[TMP28]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT14:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT13]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP29:%.*]] = fmul <1 x double> [[BLOCK12]], [[SPLAT_SPLAT14]]
 ; CHECK-NEXT:    [[BLOCK15:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 1
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT16:%.*]] = insertelement <1 x double> undef, double [[TMP30]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT17:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT16]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP31:%.*]] = fmul <1 x double> [[BLOCK15]], [[SPLAT_SPLAT17]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = fadd <1 x double> [[TMP29]], [[TMP31]]
 ; CHECK-NEXT:    [[BLOCK18:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 2
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT19:%.*]] = insertelement <1 x double> undef, double [[TMP33]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT20:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT19]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP34:%.*]] = fmul <1 x double> [[BLOCK18]], [[SPLAT_SPLAT20]]
@@ -85,18 +89,18 @@ define void @transpose_multiply(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, <9 x
 ; CHECK-NEXT:    [[TMP36:%.*]] = shufflevector <1 x double> [[TMP35]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP37:%.*]] = shufflevector <3 x double> [[TMP27]], <3 x double> [[TMP36]], <3 x i32> <i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[BLOCK21:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 0
+; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT22:%.*]] = insertelement <1 x double> undef, double [[TMP38]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT23:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT22]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP39:%.*]] = fmul <1 x double> [[BLOCK21]], [[SPLAT_SPLAT23]]
 ; CHECK-NEXT:    [[BLOCK24:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP40:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 1
+; CHECK-NEXT:    [[TMP40:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT25:%.*]] = insertelement <1 x double> undef, double [[TMP40]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT26:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT25]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP41:%.*]] = fmul <1 x double> [[BLOCK24]], [[SPLAT_SPLAT26]]
 ; CHECK-NEXT:    [[TMP42:%.*]] = fadd <1 x double> [[TMP39]], [[TMP41]]
 ; CHECK-NEXT:    [[BLOCK27:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 2
+; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT28:%.*]] = insertelement <1 x double> undef, double [[TMP43]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT29:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT28]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP44:%.*]] = fmul <1 x double> [[BLOCK27]], [[SPLAT_SPLAT29]]
@@ -104,18 +108,18 @@ define void @transpose_multiply(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, <9 x
 ; CHECK-NEXT:    [[TMP46:%.*]] = shufflevector <1 x double> [[TMP45]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP47:%.*]] = shufflevector <3 x double> [[TMP37]], <3 x double> [[TMP46]], <3 x i32> <i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    [[BLOCK30:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 0
+; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT31:%.*]] = insertelement <1 x double> undef, double [[TMP48]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT32:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT31]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP49:%.*]] = fmul <1 x double> [[BLOCK30]], [[SPLAT_SPLAT32]]
 ; CHECK-NEXT:    [[BLOCK33:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP50:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 1
+; CHECK-NEXT:    [[TMP50:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT34:%.*]] = insertelement <1 x double> undef, double [[TMP50]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT35:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT34]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP51:%.*]] = fmul <1 x double> [[BLOCK33]], [[SPLAT_SPLAT35]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = fadd <1 x double> [[TMP49]], [[TMP51]]
 ; CHECK-NEXT:    [[BLOCK36:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 2
+; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT37:%.*]] = insertelement <1 x double> undef, double [[TMP53]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT38:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT37]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP54:%.*]] = fmul <1 x double> [[BLOCK36]], [[SPLAT_SPLAT38]]
@@ -123,18 +127,18 @@ define void @transpose_multiply(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, <9 x
 ; CHECK-NEXT:    [[TMP56:%.*]] = shufflevector <1 x double> [[TMP55]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP57:%.*]] = shufflevector <3 x double> undef, <3 x double> [[TMP56]], <3 x i32> <i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    [[BLOCK39:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP58:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 0
+; CHECK-NEXT:    [[TMP58:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT40:%.*]] = insertelement <1 x double> undef, double [[TMP58]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT41:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT40]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP59:%.*]] = fmul <1 x double> [[BLOCK39]], [[SPLAT_SPLAT41]]
 ; CHECK-NEXT:    [[BLOCK42:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP60:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 1
+; CHECK-NEXT:    [[TMP60:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT43:%.*]] = insertelement <1 x double> undef, double [[TMP60]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT44:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT43]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP61:%.*]] = fmul <1 x double> [[BLOCK42]], [[SPLAT_SPLAT44]]
 ; CHECK-NEXT:    [[TMP62:%.*]] = fadd <1 x double> [[TMP59]], [[TMP61]]
 ; CHECK-NEXT:    [[BLOCK45:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP63:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 2
+; CHECK-NEXT:    [[TMP63:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT46:%.*]] = insertelement <1 x double> undef, double [[TMP63]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT47:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT46]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP64:%.*]] = fmul <1 x double> [[BLOCK45]], [[SPLAT_SPLAT47]]
@@ -142,18 +146,18 @@ define void @transpose_multiply(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, <9 x
 ; CHECK-NEXT:    [[TMP66:%.*]] = shufflevector <1 x double> [[TMP65]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP67:%.*]] = shufflevector <3 x double> [[TMP57]], <3 x double> [[TMP66]], <3 x i32> <i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[BLOCK48:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP68:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 0
+; CHECK-NEXT:    [[TMP68:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT49:%.*]] = insertelement <1 x double> undef, double [[TMP68]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT50:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT49]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP69:%.*]] = fmul <1 x double> [[BLOCK48]], [[SPLAT_SPLAT50]]
 ; CHECK-NEXT:    [[BLOCK51:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP70:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 1
+; CHECK-NEXT:    [[TMP70:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT52:%.*]] = insertelement <1 x double> undef, double [[TMP70]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT53:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT52]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP71:%.*]] = fmul <1 x double> [[BLOCK51]], [[SPLAT_SPLAT53]]
 ; CHECK-NEXT:    [[TMP72:%.*]] = fadd <1 x double> [[TMP69]], [[TMP71]]
 ; CHECK-NEXT:    [[BLOCK54:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP73:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 2
+; CHECK-NEXT:    [[TMP73:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT55:%.*]] = insertelement <1 x double> undef, double [[TMP73]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT56:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT55]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP74:%.*]] = fmul <1 x double> [[BLOCK54]], [[SPLAT_SPLAT56]]
@@ -161,18 +165,18 @@ define void @transpose_multiply(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, <9 x
 ; CHECK-NEXT:    [[TMP76:%.*]] = shufflevector <1 x double> [[TMP75]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP77:%.*]] = shufflevector <3 x double> [[TMP67]], <3 x double> [[TMP76]], <3 x i32> <i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    [[BLOCK57:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP78:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 0
+; CHECK-NEXT:    [[TMP78:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT58:%.*]] = insertelement <1 x double> undef, double [[TMP78]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT59:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT58]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP79:%.*]] = fmul <1 x double> [[BLOCK57]], [[SPLAT_SPLAT59]]
 ; CHECK-NEXT:    [[BLOCK60:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP80:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 1
+; CHECK-NEXT:    [[TMP80:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT61:%.*]] = insertelement <1 x double> undef, double [[TMP80]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT62:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT61]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP81:%.*]] = fmul <1 x double> [[BLOCK60]], [[SPLAT_SPLAT62]]
 ; CHECK-NEXT:    [[TMP82:%.*]] = fadd <1 x double> [[TMP79]], [[TMP81]]
 ; CHECK-NEXT:    [[BLOCK63:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP83:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 2
+; CHECK-NEXT:    [[TMP83:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT64:%.*]] = insertelement <1 x double> undef, double [[TMP83]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT65:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT64]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP84:%.*]] = fmul <1 x double> [[BLOCK63]], [[SPLAT_SPLAT65]]
@@ -180,18 +184,18 @@ define void @transpose_multiply(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, <9 x
 ; CHECK-NEXT:    [[TMP86:%.*]] = shufflevector <1 x double> [[TMP85]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP87:%.*]] = shufflevector <3 x double> undef, <3 x double> [[TMP86]], <3 x i32> <i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    [[BLOCK66:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP88:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 0
+; CHECK-NEXT:    [[TMP88:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT67:%.*]] = insertelement <1 x double> undef, double [[TMP88]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT68:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT67]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP89:%.*]] = fmul <1 x double> [[BLOCK66]], [[SPLAT_SPLAT68]]
 ; CHECK-NEXT:    [[BLOCK69:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP90:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 1
+; CHECK-NEXT:    [[TMP90:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT70:%.*]] = insertelement <1 x double> undef, double [[TMP90]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT71:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT70]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP91:%.*]] = fmul <1 x double> [[BLOCK69]], [[SPLAT_SPLAT71]]
 ; CHECK-NEXT:    [[TMP92:%.*]] = fadd <1 x double> [[TMP89]], [[TMP91]]
 ; CHECK-NEXT:    [[BLOCK72:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP93:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 2
+; CHECK-NEXT:    [[TMP93:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT73:%.*]] = insertelement <1 x double> undef, double [[TMP93]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT74:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT73]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP94:%.*]] = fmul <1 x double> [[BLOCK72]], [[SPLAT_SPLAT74]]
@@ -199,18 +203,18 @@ define void @transpose_multiply(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, <9 x
 ; CHECK-NEXT:    [[TMP96:%.*]] = shufflevector <1 x double> [[TMP95]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP97:%.*]] = shufflevector <3 x double> [[TMP87]], <3 x double> [[TMP96]], <3 x i32> <i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[BLOCK75:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP98:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 0
+; CHECK-NEXT:    [[TMP98:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT76:%.*]] = insertelement <1 x double> undef, double [[TMP98]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT77:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT76]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP99:%.*]] = fmul <1 x double> [[BLOCK75]], [[SPLAT_SPLAT77]]
 ; CHECK-NEXT:    [[BLOCK78:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP100:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 1
+; CHECK-NEXT:    [[TMP100:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT79:%.*]] = insertelement <1 x double> undef, double [[TMP100]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT80:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT79]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP101:%.*]] = fmul <1 x double> [[BLOCK78]], [[SPLAT_SPLAT80]]
 ; CHECK-NEXT:    [[TMP102:%.*]] = fadd <1 x double> [[TMP99]], [[TMP101]]
 ; CHECK-NEXT:    [[BLOCK81:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP103:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 2
+; CHECK-NEXT:    [[TMP103:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT82:%.*]] = insertelement <1 x double> undef, double [[TMP103]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT83:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT82]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP104:%.*]] = fmul <1 x double> [[BLOCK81]], [[SPLAT_SPLAT83]]
@@ -248,59 +252,61 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 ; CHECK-LABEL: @transpose_multiply_add(
 ; CHECK-NEXT:  entry:
 
-; Load input matrixes %A and %B.
-
-; CHECK-NEXT:    [[A:%.*]] = load <9 x double>, <9 x double>* [[A_PTR:%.*]]
-; CHECK-NEXT:    [[B:%.*]] = load <9 x double>, <9 x double>* [[B_PTR:%.*]]
-
-; Extract columns from loaded value %A.
-
-; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <9 x double> [[A]], <9 x double> undef, <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <9 x double> [[A]], <9 x double> undef, <3 x i32> <i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <9 x double> [[A]], <9 x double> undef, <3 x i32> <i32 6, i32 7, i32 8>
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <9 x double>* [[A_PTR:%.*]] to double*
+; CHECK-NEXT:    [[COL_CAST:%.*]] = bitcast double* [[TMP0]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST]], align 8
+; CHECK-NEXT:    [[COL_GEP:%.*]] = getelementptr double, double* [[TMP0]], i32 3
+; CHECK-NEXT:    [[COL_CAST1:%.*]] = bitcast double* [[COL_GEP]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST1]], align 8
+; CHECK-NEXT:    [[COL_GEP3:%.*]] = getelementptr double, double* [[TMP0]], i32 6
+; CHECK-NEXT:    [[COL_CAST4:%.*]] = bitcast double* [[COL_GEP3]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST4]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <9 x double>* [[B_PTR:%.*]] to double*
+; CHECK-NEXT:    [[COL_CAST6:%.*]] = bitcast double* [[TMP1]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST6]], align 8
+; CHECK-NEXT:    [[COL_GEP8:%.*]] = getelementptr double, double* [[TMP1]], i32 3
+; CHECK-NEXT:    [[COL_CAST9:%.*]] = bitcast double* [[COL_GEP8]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD10:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST9]], align 8
+; CHECK-NEXT:    [[COL_GEP11:%.*]] = getelementptr double, double* [[TMP1]], i32 6
+; CHECK-NEXT:    [[COL_CAST12:%.*]] = bitcast double* [[COL_GEP11]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD13:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST12]], align 8
 
 ; Transpose %A.
 
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x double> [[SPLIT]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x double> [[COL_LOAD]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x double> undef, double [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x double> [[SPLIT1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x double> [[COL_LOAD2]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x double> [[TMP1]], double [[TMP2]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <3 x double> [[SPLIT2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <3 x double> [[COL_LOAD5]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <3 x double> [[TMP3]], double [[TMP4]], i64 2
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <3 x double> [[SPLIT]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <3 x double> [[COL_LOAD]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <3 x double> undef, double [[TMP6]], i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <3 x double> [[SPLIT1]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <3 x double> [[COL_LOAD2]], i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <3 x double> [[TMP7]], double [[TMP8]], i64 1
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <3 x double> [[SPLIT2]], i64 1
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <3 x double> [[COL_LOAD5]], i64 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <3 x double> [[TMP9]], double [[TMP10]], i64 2
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <3 x double> [[SPLIT]], i64 2
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <3 x double> [[COL_LOAD]], i64 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <3 x double> undef, double [[TMP12]], i64 0
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <3 x double> [[SPLIT1]], i64 2
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <3 x double> [[COL_LOAD2]], i64 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <3 x double> [[TMP13]], double [[TMP14]], i64 1
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <3 x double> [[SPLIT2]], i64 2
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <3 x double> [[COL_LOAD5]], i64 2
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <3 x double> [[TMP15]], double [[TMP16]], i64 2
-
-; Extract columns from %B.
-
-; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <9 x double> [[B]], <9 x double> undef, <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK-NEXT:    [[SPLIT4:%.*]] = shufflevector <9 x double> [[B]], <9 x double> undef, <3 x i32> <i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[SPLIT5:%.*]] = shufflevector <9 x double> [[B]], <9 x double> undef, <3 x i32> <i32 6, i32 7, i32 8>
 
 ; Lower multiply(transpose(%A), %B)
 
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT:%.*]] = insertelement <1 x double> undef, double [[TMP18]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP19:%.*]] = fmul <1 x double> [[BLOCK]], [[SPLAT_SPLAT]]
 ; CHECK-NEXT:    [[BLOCK6:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 1
+; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT7:%.*]] = insertelement <1 x double> undef, double [[TMP20]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT8:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT7]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP21:%.*]] = fmul <1 x double> [[BLOCK6]], [[SPLAT_SPLAT8]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = fadd <1 x double> [[TMP19]], [[TMP21]]
 ; CHECK-NEXT:    [[BLOCK9:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 2
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT10:%.*]] = insertelement <1 x double> undef, double [[TMP23]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT11:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT10]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP24:%.*]] = fmul <1 x double> [[BLOCK9]], [[SPLAT_SPLAT11]]
@@ -308,18 +314,18 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 ; CHECK-NEXT:    [[TMP26:%.*]] = shufflevector <1 x double> [[TMP25]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <3 x double> undef, <3 x double> [[TMP26]], <3 x i32> <i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    [[BLOCK12:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 0
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT13:%.*]] = insertelement <1 x double> undef, double [[TMP28]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT14:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT13]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP29:%.*]] = fmul <1 x double> [[BLOCK12]], [[SPLAT_SPLAT14]]
 ; CHECK-NEXT:    [[BLOCK15:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 1
+; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT16:%.*]] = insertelement <1 x double> undef, double [[TMP30]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT17:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT16]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP31:%.*]] = fmul <1 x double> [[BLOCK15]], [[SPLAT_SPLAT17]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = fadd <1 x double> [[TMP29]], [[TMP31]]
 ; CHECK-NEXT:    [[BLOCK18:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 2
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT19:%.*]] = insertelement <1 x double> undef, double [[TMP33]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT20:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT19]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP34:%.*]] = fmul <1 x double> [[BLOCK18]], [[SPLAT_SPLAT20]]
@@ -327,18 +333,18 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 ; CHECK-NEXT:    [[TMP36:%.*]] = shufflevector <1 x double> [[TMP35]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP37:%.*]] = shufflevector <3 x double> [[TMP27]], <3 x double> [[TMP36]], <3 x i32> <i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[BLOCK21:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 0
+; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT22:%.*]] = insertelement <1 x double> undef, double [[TMP38]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT23:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT22]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP39:%.*]] = fmul <1 x double> [[BLOCK21]], [[SPLAT_SPLAT23]]
 ; CHECK-NEXT:    [[BLOCK24:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP40:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 1
+; CHECK-NEXT:    [[TMP40:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT25:%.*]] = insertelement <1 x double> undef, double [[TMP40]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT26:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT25]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP41:%.*]] = fmul <1 x double> [[BLOCK24]], [[SPLAT_SPLAT26]]
 ; CHECK-NEXT:    [[TMP42:%.*]] = fadd <1 x double> [[TMP39]], [[TMP41]]
 ; CHECK-NEXT:    [[BLOCK27:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <3 x double> [[SPLIT3]], i64 2
+; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <3 x double> [[COL_LOAD7]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT28:%.*]] = insertelement <1 x double> undef, double [[TMP43]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT29:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT28]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP44:%.*]] = fmul <1 x double> [[BLOCK27]], [[SPLAT_SPLAT29]]
@@ -346,18 +352,18 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 ; CHECK-NEXT:    [[TMP46:%.*]] = shufflevector <1 x double> [[TMP45]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP47:%.*]] = shufflevector <3 x double> [[TMP37]], <3 x double> [[TMP46]], <3 x i32> <i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    [[BLOCK30:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 0
+; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT31:%.*]] = insertelement <1 x double> undef, double [[TMP48]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT32:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT31]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP49:%.*]] = fmul <1 x double> [[BLOCK30]], [[SPLAT_SPLAT32]]
 ; CHECK-NEXT:    [[BLOCK33:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP50:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 1
+; CHECK-NEXT:    [[TMP50:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT34:%.*]] = insertelement <1 x double> undef, double [[TMP50]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT35:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT34]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP51:%.*]] = fmul <1 x double> [[BLOCK33]], [[SPLAT_SPLAT35]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = fadd <1 x double> [[TMP49]], [[TMP51]]
 ; CHECK-NEXT:    [[BLOCK36:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 2
+; CHECK-NEXT:    [[TMP53:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT37:%.*]] = insertelement <1 x double> undef, double [[TMP53]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT38:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT37]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP54:%.*]] = fmul <1 x double> [[BLOCK36]], [[SPLAT_SPLAT38]]
@@ -365,18 +371,18 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 ; CHECK-NEXT:    [[TMP56:%.*]] = shufflevector <1 x double> [[TMP55]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP57:%.*]] = shufflevector <3 x double> undef, <3 x double> [[TMP56]], <3 x i32> <i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    [[BLOCK39:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP58:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 0
+; CHECK-NEXT:    [[TMP58:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT40:%.*]] = insertelement <1 x double> undef, double [[TMP58]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT41:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT40]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP59:%.*]] = fmul <1 x double> [[BLOCK39]], [[SPLAT_SPLAT41]]
 ; CHECK-NEXT:    [[BLOCK42:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP60:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 1
+; CHECK-NEXT:    [[TMP60:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT43:%.*]] = insertelement <1 x double> undef, double [[TMP60]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT44:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT43]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP61:%.*]] = fmul <1 x double> [[BLOCK42]], [[SPLAT_SPLAT44]]
 ; CHECK-NEXT:    [[TMP62:%.*]] = fadd <1 x double> [[TMP59]], [[TMP61]]
 ; CHECK-NEXT:    [[BLOCK45:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP63:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 2
+; CHECK-NEXT:    [[TMP63:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT46:%.*]] = insertelement <1 x double> undef, double [[TMP63]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT47:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT46]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP64:%.*]] = fmul <1 x double> [[BLOCK45]], [[SPLAT_SPLAT47]]
@@ -384,18 +390,18 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 ; CHECK-NEXT:    [[TMP66:%.*]] = shufflevector <1 x double> [[TMP65]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP67:%.*]] = shufflevector <3 x double> [[TMP57]], <3 x double> [[TMP66]], <3 x i32> <i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[BLOCK48:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP68:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 0
+; CHECK-NEXT:    [[TMP68:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT49:%.*]] = insertelement <1 x double> undef, double [[TMP68]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT50:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT49]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP69:%.*]] = fmul <1 x double> [[BLOCK48]], [[SPLAT_SPLAT50]]
 ; CHECK-NEXT:    [[BLOCK51:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP70:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 1
+; CHECK-NEXT:    [[TMP70:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT52:%.*]] = insertelement <1 x double> undef, double [[TMP70]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT53:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT52]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP71:%.*]] = fmul <1 x double> [[BLOCK51]], [[SPLAT_SPLAT53]]
 ; CHECK-NEXT:    [[TMP72:%.*]] = fadd <1 x double> [[TMP69]], [[TMP71]]
 ; CHECK-NEXT:    [[BLOCK54:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP73:%.*]] = extractelement <3 x double> [[SPLIT4]], i64 2
+; CHECK-NEXT:    [[TMP73:%.*]] = extractelement <3 x double> [[COL_LOAD10]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT55:%.*]] = insertelement <1 x double> undef, double [[TMP73]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT56:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT55]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP74:%.*]] = fmul <1 x double> [[BLOCK54]], [[SPLAT_SPLAT56]]
@@ -403,18 +409,18 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 ; CHECK-NEXT:    [[TMP76:%.*]] = shufflevector <1 x double> [[TMP75]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP77:%.*]] = shufflevector <3 x double> [[TMP67]], <3 x double> [[TMP76]], <3 x i32> <i32 0, i32 1, i32 3>
 ; CHECK-NEXT:    [[BLOCK57:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP78:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 0
+; CHECK-NEXT:    [[TMP78:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT58:%.*]] = insertelement <1 x double> undef, double [[TMP78]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT59:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT58]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP79:%.*]] = fmul <1 x double> [[BLOCK57]], [[SPLAT_SPLAT59]]
 ; CHECK-NEXT:    [[BLOCK60:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP80:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 1
+; CHECK-NEXT:    [[TMP80:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT61:%.*]] = insertelement <1 x double> undef, double [[TMP80]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT62:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT61]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP81:%.*]] = fmul <1 x double> [[BLOCK60]], [[SPLAT_SPLAT62]]
 ; CHECK-NEXT:    [[TMP82:%.*]] = fadd <1 x double> [[TMP79]], [[TMP81]]
 ; CHECK-NEXT:    [[BLOCK63:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP83:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 2
+; CHECK-NEXT:    [[TMP83:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT64:%.*]] = insertelement <1 x double> undef, double [[TMP83]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT65:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT64]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP84:%.*]] = fmul <1 x double> [[BLOCK63]], [[SPLAT_SPLAT65]]
@@ -422,18 +428,18 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 ; CHECK-NEXT:    [[TMP86:%.*]] = shufflevector <1 x double> [[TMP85]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP87:%.*]] = shufflevector <3 x double> undef, <3 x double> [[TMP86]], <3 x i32> <i32 3, i32 1, i32 2>
 ; CHECK-NEXT:    [[BLOCK66:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP88:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 0
+; CHECK-NEXT:    [[TMP88:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT67:%.*]] = insertelement <1 x double> undef, double [[TMP88]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT68:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT67]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP89:%.*]] = fmul <1 x double> [[BLOCK66]], [[SPLAT_SPLAT68]]
 ; CHECK-NEXT:    [[BLOCK69:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP90:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 1
+; CHECK-NEXT:    [[TMP90:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT70:%.*]] = insertelement <1 x double> undef, double [[TMP90]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT71:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT70]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP91:%.*]] = fmul <1 x double> [[BLOCK69]], [[SPLAT_SPLAT71]]
 ; CHECK-NEXT:    [[TMP92:%.*]] = fadd <1 x double> [[TMP89]], [[TMP91]]
 ; CHECK-NEXT:    [[BLOCK72:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> <i32 1>
-; CHECK-NEXT:    [[TMP93:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 2
+; CHECK-NEXT:    [[TMP93:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT73:%.*]] = insertelement <1 x double> undef, double [[TMP93]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT74:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT73]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP94:%.*]] = fmul <1 x double> [[BLOCK72]], [[SPLAT_SPLAT74]]
@@ -441,18 +447,18 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 ; CHECK-NEXT:    [[TMP96:%.*]] = shufflevector <1 x double> [[TMP95]], <1 x double> undef, <3 x i32> <i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP97:%.*]] = shufflevector <3 x double> [[TMP87]], <3 x double> [[TMP96]], <3 x i32> <i32 0, i32 3, i32 2>
 ; CHECK-NEXT:    [[BLOCK75:%.*]] = shufflevector <3 x double> [[TMP5]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP98:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 0
+; CHECK-NEXT:    [[TMP98:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT76:%.*]] = insertelement <1 x double> undef, double [[TMP98]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT77:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT76]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP99:%.*]] = fmul <1 x double> [[BLOCK75]], [[SPLAT_SPLAT77]]
 ; CHECK-NEXT:    [[BLOCK78:%.*]] = shufflevector <3 x double> [[TMP11]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP100:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 1
+; CHECK-NEXT:    [[TMP100:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 1
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT79:%.*]] = insertelement <1 x double> undef, double [[TMP100]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT80:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT79]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP101:%.*]] = fmul <1 x double> [[BLOCK78]], [[SPLAT_SPLAT80]]
 ; CHECK-NEXT:    [[TMP102:%.*]] = fadd <1 x double> [[TMP99]], [[TMP101]]
 ; CHECK-NEXT:    [[BLOCK81:%.*]] = shufflevector <3 x double> [[TMP17]], <3 x double> undef, <1 x i32> <i32 2>
-; CHECK-NEXT:    [[TMP103:%.*]] = extractelement <3 x double> [[SPLIT5]], i64 2
+; CHECK-NEXT:    [[TMP103:%.*]] = extractelement <3 x double> [[COL_LOAD13]], i64 2
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT82:%.*]] = insertelement <1 x double> undef, double [[TMP103]], i32 0
 ; CHECK-NEXT:    [[SPLAT_SPLAT83:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT82]], <1 x double> undef, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP104:%.*]] = fmul <1 x double> [[BLOCK81]], [[SPLAT_SPLAT83]]
@@ -465,19 +471,21 @@ define void @transpose_multiply_add(<9 x double>* %A.Ptr, <9 x double>* %B.Ptr, 
 
 ; Load %C.
 
-; CHECK-NEXT:    [[C:%.*]] = load <9 x double>, <9 x double>* [[C_PTR:%.*]]
-
-; Extract columns from %C.
-
-; CHECK-NEXT:    [[SPLIT84:%.*]] = shufflevector <9 x double> [[C]], <9 x double> undef, <3 x i32> <i32 0, i32 1, i32 2>
-; CHECK-NEXT:    [[SPLIT85:%.*]] = shufflevector <9 x double> [[C]], <9 x double> undef, <3 x i32> <i32 3, i32 4, i32 5>
-; CHECK-NEXT:    [[SPLIT86:%.*]] = shufflevector <9 x double> [[C]], <9 x double> undef, <3 x i32> <i32 6, i32 7, i32 8>
+; CHECK-NEXT:    [[TMP110:%.*]] = bitcast <9 x double>* [[C_PTR:%.*]] to double*
+; CHECK-NEXT:    [[COL_CAST92:%.*]] = bitcast double* [[TMP110]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD93:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST92]], align 8
+; CHECK-NEXT:    [[COL_GEP94:%.*]] = getelementptr double, double* [[TMP110]], i32 3
+; CHECK-NEXT:    [[COL_CAST95:%.*]] = bitcast double* [[COL_GEP94]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD96:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST95]], align 8
+; CHECK-NEXT:    [[COL_GEP97:%.*]] = getelementptr double, double* [[TMP110]], i32 6
+; CHECK-NEXT:    [[COL_CAST98:%.*]] = bitcast double* [[COL_GEP97]] to <3 x double>*
+; CHECK-NEXT:    [[COL_LOAD99:%.*]] = load <3 x double>, <3 x double>* [[COL_CAST98]], align 8
 
 ; Add column vectors.
 
-; CHECK-NEXT:    [[TMP108:%.*]] = fadd <3 x double> [[SPLIT84]], [[TMP47]]
-; CHECK-NEXT:    [[TMP109:%.*]] = fadd <3 x double> [[SPLIT85]], [[TMP77]]
-; CHECK-NEXT:    [[TMP110:%.*]] = fadd <3 x double> [[SPLIT86]], [[TMP107]]
+; CHECK-NEXT:    [[TMP108:%.*]] = fadd <3 x double> [[COL_LOAD93]], [[TMP47]]
+; CHECK-NEXT:    [[TMP109:%.*]] = fadd <3 x double> [[COL_LOAD96]], [[TMP77]]
+; CHECK-NEXT:    [[TMP110:%.*]] = fadd <3 x double> [[COL_LOAD99]], [[TMP107]]
 
 ; Store result columns.
 

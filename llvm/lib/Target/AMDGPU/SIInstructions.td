@@ -1930,8 +1930,21 @@ def : GCNPat <
 // TODO: Also do for 64-bit.
 def : GCNPat<
   (add i32:$src0, (i32 NegSubInlineConst32:$src1)),
-  (S_SUB_I32 $src0, NegSubInlineConst32:$src1)
+  (S_SUB_I32 SReg_32:$src0, NegSubInlineConst32:$src1)
 >;
+
+def : GCNPat<
+  (add i32:$src0, (i32 NegSubInlineConst32:$src1)),
+  (V_SUB_U32_e64 VS_32:$src0, NegSubInlineConst32:$src1)> {
+  let SubtargetPredicate = HasAddNoCarryInsts;
+}
+
+def : GCNPat<
+  (add i32:$src0, (i32 NegSubInlineConst32:$src1)),
+  (V_SUB_I32_e64 VS_32:$src0, NegSubInlineConst32:$src1)> {
+  let SubtargetPredicate = NotHasAddNoCarryInsts;
+}
+
 
 // Avoid pointlessly materializing a constant in VGPR.
 // FIXME: Should also do this for readlane, but tablegen crashes on
@@ -1958,6 +1971,29 @@ defm : BFMPatterns <i32, S_BFM_B32, S_MOV_B32>;
 
 defm : BFEPattern <V_BFE_U32, V_BFE_I32, S_MOV_B32>;
 defm : SHA256MaPattern <V_BFI_B32, V_XOR_B32_e64, SReg_64>;
+
+multiclass IntMed3Pat<Instruction med3Inst,
+                 SDPatternOperator min,
+                 SDPatternOperator max,
+                 SDPatternOperator min_oneuse,
+                 SDPatternOperator max_oneuse> {
+
+  // This matches 16 permutations of
+  // min(max(a, b), max(min(a, b), c))
+  def : AMDGPUPat <
+  (min (max_oneuse i32:$src0, i32:$src1),
+       (max_oneuse (min_oneuse i32:$src0, i32:$src1), i32:$src2)),
+  (med3Inst VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2)
+>;
+
+  // This matches 16 permutations of
+  // max(min(x, y), min(max(x, y), z))
+  def : AMDGPUPat <
+  (max (min_oneuse i32:$src0, i32:$src1),
+       (min_oneuse (max_oneuse i32:$src0, i32:$src1), i32:$src2)),
+  (med3Inst VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2)
+>;
+}
 
 defm : IntMed3Pat<V_MED3_I32, smin, smax, smin_oneuse, smax_oneuse>;
 defm : IntMed3Pat<V_MED3_U32, umin, umax, umin_oneuse, umax_oneuse>;
@@ -1989,22 +2025,21 @@ multiclass Int16Med3Pat<Instruction med3Inst,
                    SDPatternOperator min,
                    SDPatternOperator max,
                    SDPatternOperator max_oneuse,
-                   SDPatternOperator min_oneuse,
-                   ValueType vt = i16> {
+                   SDPatternOperator min_oneuse> {
   // This matches 16 permutations of
   // max(min(x, y), min(max(x, y), z))
   def : GCNPat <
-  (max (min_oneuse vt:$src0, vt:$src1),
-       (min_oneuse (max_oneuse vt:$src0, vt:$src1), vt:$src2)),
-  (med3Inst SRCMODS.NONE, $src0, SRCMODS.NONE, $src1, SRCMODS.NONE, $src2, DSTCLAMP.NONE)
+  (max (min_oneuse i16:$src0, i16:$src1),
+       (min_oneuse (max_oneuse i16:$src0, i16:$src1), i16:$src2)),
+  (med3Inst SRCMODS.NONE, VSrc_b16:$src0, SRCMODS.NONE, VSrc_b16:$src1, SRCMODS.NONE, VSrc_b16:$src2, DSTCLAMP.NONE)
 >;
 
   // This matches 16 permutations of
   // min(max(a, b), max(min(a, b), c))
   def : GCNPat <
-  (min (max_oneuse vt:$src0, vt:$src1),
-      (max_oneuse (min_oneuse vt:$src0, vt:$src1), vt:$src2)),
-  (med3Inst SRCMODS.NONE, $src0, SRCMODS.NONE, $src1, SRCMODS.NONE, $src2, DSTCLAMP.NONE)
+  (min (max_oneuse i16:$src0, i16:$src1),
+      (max_oneuse (min_oneuse i16:$src0, i16:$src1), i16:$src2)),
+  (med3Inst SRCMODS.NONE, VSrc_b16:$src0, SRCMODS.NONE, VSrc_b16:$src1, SRCMODS.NONE, VSrc_b16:$src2, DSTCLAMP.NONE)
 >;
 }
 

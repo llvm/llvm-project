@@ -740,6 +740,11 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
       Proto.clear();
     }
     Out << Proto;
+
+    if (Expr *TrailingRequiresClause = D->getTrailingRequiresClause()) {
+      Out << " requires ";
+      TrailingRequiresClause->printPretty(Out, nullptr, SubPolicy, Indentation);
+    }
   } else {
     Ty.print(Out, Policy, Proto);
   }

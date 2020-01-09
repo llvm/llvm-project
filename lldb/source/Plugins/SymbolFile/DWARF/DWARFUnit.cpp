@@ -32,9 +32,9 @@ extern int g_verbose;
 DWARFUnit::DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                      const DWARFUnitHeader &header,
                      const DWARFAbbreviationDeclarationSet &abbrevs,
-                     DIERef::Section section)
+                     DIERef::Section section, bool is_dwo)
     : UserID(uid), m_dwarf(dwarf), m_header(header), m_abbrevs(&abbrevs),
-      m_cancel_scopes(false), m_section(section) {}
+      m_cancel_scopes(false), m_section(section), m_is_dwo(is_dwo) {}
 
 DWARFUnit::~DWARFUnit() = default;
 
@@ -336,6 +336,9 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
     }
   }
 
+  if (m_is_dwo)
+    return;
+
   std::unique_ptr<SymbolFileDWARFDwo> dwo_symbol_file =
       m_dwarf.GetDwoSymbolFileForCompileUnit(*this, cu_die);
   if (!dwo_symbol_file)
@@ -457,6 +460,22 @@ void DWARFUnit::SetLoclistsBase(dw_addr_t loclists_base) {
         "Failed to extract location list table at offset 0x%" PRIx64 ": %s",
         loclists_base, toString(std::move(E)).c_str());
   }
+}
+
+std::unique_ptr<llvm::DWARFLocationTable>
+DWARFUnit::GetLocationTable(const DataExtractor &data) const {
+  llvm::DWARFDataExtractor llvm_data(
+      toStringRef(data.GetData()),
+      data.GetByteOrder() == lldb::eByteOrderLittle, data.GetAddressByteSize());
+
+  if (m_is_dwo || GetVersion() >= 5)
+    return std::make_unique<llvm::DWARFDebugLoclists>(llvm_data, GetVersion());
+  return std::make_unique<llvm::DWARFDebugLoc>(llvm_data);
+}
+
+const DWARFDataExtractor &DWARFUnit::GetLocationData() const {
+  return GetVersion() >= 5 ? GetSymbolFileDWARF().get_debug_loclists_data()
+                           : GetSymbolFileDWARF().get_debug_loc_data();
 }
 
 void DWARFUnit::SetRangesBase(dw_addr_t ranges_base) {
@@ -872,11 +891,12 @@ DWARFUnit::extract(SymbolFileDWARF &dwarf, user_id_t uid,
     return llvm::make_error<llvm::object::GenericBinaryError>(
         "No abbrev exists at the specified offset.");
 
+  bool is_dwo = dwarf.GetDWARFContext().isDwo();
   if (expected_header->IsTypeUnit())
-    return DWARFUnitSP(
-        new DWARFTypeUnit(dwarf, uid, *expected_header, *abbrevs, section));
-  return DWARFUnitSP(
-      new DWARFCompileUnit(dwarf, uid, *expected_header, *abbrevs, section));
+    return DWARFUnitSP(new DWARFTypeUnit(dwarf, uid, *expected_header, *abbrevs,
+                                         section, is_dwo));
+  return DWARFUnitSP(new DWARFCompileUnit(dwarf, uid, *expected_header,
+                                          *abbrevs, section, is_dwo));
 }
 
 const lldb_private::DWARFDataExtractor &DWARFUnit::GetData() const {

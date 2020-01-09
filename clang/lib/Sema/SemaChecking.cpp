@@ -340,7 +340,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BI__builtin___strncat_chk:
   case Builtin::BI__builtin___strncpy_chk:
   case Builtin::BI__builtin___stpncpy_chk:
-  case Builtin::BI__builtin___memccpy_chk: {
+  case Builtin::BI__builtin___memccpy_chk:
+  case Builtin::BI__builtin___mempcpy_chk: {
     DiagID = diag::warn_builtin_chk_overflow;
     IsChkVariant = true;
     SizeIndex = TheCall->getNumArgs() - 2;
@@ -379,7 +380,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BImemmove:
   case Builtin::BI__builtin_memmove:
   case Builtin::BImemset:
-  case Builtin::BI__builtin_memset: {
+  case Builtin::BI__builtin_memset:
+  case Builtin::BImempcpy:
+  case Builtin::BI__builtin_mempcpy: {
     DiagID = diag::warn_fortify_source_overflow;
     SizeIndex = TheCall->getNumArgs() - 1;
     ObjectIndex = 0;

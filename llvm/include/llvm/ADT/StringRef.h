@@ -566,7 +566,8 @@ namespace llvm {
     ///
     /// If \p AllowInexact is false, the function will fail if the string
     /// cannot be represented exactly.  Otherwise, the function only fails
-    /// in case of an overflow or underflow.
+    /// in case of an overflow or underflow, or an invalid floating point
+    /// representation.
     bool getAsDouble(double &Result, bool AllowInexact = true) const;
 
     /// @}

@@ -41,8 +41,6 @@ private:
   SectionData m_data_debug_str_offsets;
   SectionData m_data_debug_types;
 
-  bool isDwo() { return m_dwo_section_list != nullptr; }
-
   const DWARFDataExtractor &
   LoadOrGetSection(lldb::SectionType main_section_type,
                    llvm::Optional<lldb::SectionType> dwo_section_type,
@@ -66,6 +64,8 @@ public:
   const DWARFDataExtractor &getOrLoadStrData();
   const DWARFDataExtractor &getOrLoadStrOffsetsData();
   const DWARFDataExtractor &getOrLoadDebugTypesData();
+
+  bool isDwo() { return m_dwo_section_list != nullptr; }
 
   llvm::DWARFContext &GetAsLLVM();
 };

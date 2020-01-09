@@ -82,8 +82,6 @@ typedef bool (*BreakpointHitCallback)(void *baton,
 typedef bool (*WatchpointHitCallback)(void *baton,
                                       StoppointCallbackContext *context,
                                       lldb::user_id_t watch_id);
-typedef void (*OptionValueChangedCallback)(void *baton,
-                                           OptionValue *option_value);
 typedef bool (*ThreadPlanShouldStopHereCallback)(
     ThreadPlan *current_plan, Flags &flags, lldb::FrameComparison operation,
     Status &status, void *baton);

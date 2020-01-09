@@ -21,7 +21,6 @@
 
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Core/dwarf.h"
-#include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/DebugMacros.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -236,8 +235,6 @@ public:
 
   DWARFDebugRanges *GetDebugRanges();
 
-  const lldb_private::DWARFDataExtractor &DebugLocData();
-
   static bool SupportedVersion(uint16_t version);
 
   DWARFDIE
@@ -259,9 +256,6 @@ public:
   static DWARFDIE GetParentSymbolContextDIE(const DWARFDIE &die);
 
   virtual lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit &dwarf_cu);
-
-  virtual lldb_private::DWARFExpression::LocationListFormat
-  GetLocationListFormat() const;
 
   lldb::ModuleSP GetExternalModule(lldb_private::ConstString name);
 
@@ -287,7 +281,7 @@ public:
 
   lldb::user_id_t GetUID(DIERef ref);
 
-  virtual std::unique_ptr<SymbolFileDWARFDwo>
+  std::unique_ptr<SymbolFileDWARFDwo>
   GetDwoSymbolFileForCompileUnit(DWARFUnit &dwarf_cu,
                                  const DWARFDebugInfoEntry &cu_die);
 
