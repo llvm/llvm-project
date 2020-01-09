@@ -79,11 +79,11 @@ namespace non_template
     return 0.0;
   }
 
-  void bar() requires (sizeof(long) >= 8) { }
+  void bar() requires (sizeof(char[8]) >= 8) { }
   // expected-note@-1 {{candidate function}}
   // expected-note@-2 {{similar constraint expressions not considered equivalent}}
 
-  void bar() requires (sizeof(long) >= 8 && sizeof(int) <= 30) { }
+  void bar() requires (sizeof(char[8]) >= 8 && sizeof(int) <= 30) { }
   // expected-note@-1 {{candidate function}}
   // expected-note@-2 {{similar constraint expression here}}
 
@@ -111,4 +111,3 @@ namespace non_template
   static_assert(goo(1) == 1);
   static_assert(doo(2) == 1); // expected-error {{call to 'doo' is ambiguous}}
 }
-
