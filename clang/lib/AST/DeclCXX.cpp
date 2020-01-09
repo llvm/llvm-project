@@ -484,7 +484,7 @@ unsigned CXXRecordDecl::getODRHash() const {
     return DefinitionData->ODRHash;
 
   // Only calculate hash on first call of getODRHash per record.
-  ODRHash Hash;
+  class ODRHash Hash;
   Hash.AddCXXRecordDecl(getDefinition());
   DefinitionData->HasODRHash = true;
   DefinitionData->ODRHash = Hash.CalculateHash();

@@ -483,6 +483,9 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
   Record.push_back(D->hasNonTrivialToPrimitiveCopyCUnion());
   Record.push_back(D->isParamDestroyedInCallee());
   Record.push_back(D->getArgPassingRestrictions());
+  // Only compute this for C/Objective-C, in C++ this is computed as part
+  // of CXXRecordDecl.
+  Record.push_back(Writer.getLangOpts().CPlusPlus ? 0UL : D->getODRHash());
 
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
       !D->hasAttrs() &&
@@ -2048,6 +2051,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));
   // getArgPassingRestrictions
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 2));
+  // ODRHash
+  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32));
 
   // DC
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LexicalOffset
