@@ -350,6 +350,7 @@ public:
 
   DISALLOW_COPY_AND_ASSIGN(SwiftLanguageRuntime);
 
+  static AppleObjCRuntimeV2 *GetObjCRuntime(lldb_private::Process &process);
 protected:
   bool GetTargetOfPartialApply(SymbolContext &curr_sc, ConstString &apply_name,
                                SymbolContext &sc);
