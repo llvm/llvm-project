@@ -150,10 +150,6 @@ bool TargetInfo::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   return true;
 }
 
-void TargetInfo::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
-  writeGotPlt(buf, s);
-}
-
 RelExpr TargetInfo::adjustRelaxExpr(RelType type, const uint8_t *data,
                                     RelExpr expr) const {
   return expr;
