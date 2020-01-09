@@ -4378,7 +4378,7 @@ below. The explicit attribute annotation indicates that the third parameter
 (`start_routine`) is called zero or more times by the `pthread_create` function,
 and that the fourth parameter (`arg`) is passed along. Note that the callback
 behavior of `pthread_create` is automatically recognized by Clang. In addition,
-the declarations of `__kmpc_fork_teams` and `__kmpc_fork_call`, generated for 
+the declarations of `__kmpc_fork_teams` and `__kmpc_fork_call`, generated for
 `#pragma omp target teams` and `#pragma omp parallel`, respectively, are also
 automatically recognized as broker functions. Further functions might be added
 in the future.
