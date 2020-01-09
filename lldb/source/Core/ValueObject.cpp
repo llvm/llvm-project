@@ -358,23 +358,25 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
   }
 
   // then try the runtime
-  std::vector<CompilerDecl> compiler_decls;
-  auto *objc_language_runtime = ObjCLanguageRuntime::Get(*process_sp);
-  if (auto runtime_vendor = objc_language_runtime->GetDeclVendor()) {
-    if (runtime_vendor->FindDecls(class_name, false, UINT32_MAX,
-                                  compiler_decls) > 0 &&
-        compiler_decls.size() > 0) {
-      auto *ctx = llvm::dyn_cast<ClangASTContext>(compiler_decls[0].GetTypeSystem());
-      if (ctx) {
-        CompilerType runtime_type =
-            ctx->GetTypeForDecl(compiler_decls[0].GetOpaqueDecl());
-        m_override_type =
-          is_pointer_type ? runtime_type.GetPointerType() : runtime_type;
+  if (auto *objc_language_runtime = ObjCLanguageRuntime::Get(*process_sp)) {
+    if (auto runtime_vendor = objc_language_runtime->GetDeclVendor()) {
+      std::vector<CompilerDecl> compiler_decls;
+      if (runtime_vendor->FindDecls(class_name, false, UINT32_MAX,
+                                    compiler_decls) > 0 &&
+          compiler_decls.size() > 0) {
+        auto *ctx =
+            llvm::dyn_cast<ClangASTContext>(compiler_decls[0].GetTypeSystem());
+        if (ctx) {
+          CompilerType runtime_type =
+              ctx->GetTypeForDecl(compiler_decls[0].GetOpaqueDecl());
+          m_override_type =
+              is_pointer_type ? runtime_type.GetPointerType() : runtime_type;
+        }
       }
-    }
 
-    if (m_override_type.IsValid())
-      return m_override_type;
+      if (m_override_type.IsValid())
+        return m_override_type;
+    }
   }
   return compiler_type;
 }
