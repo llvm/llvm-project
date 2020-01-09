@@ -52,7 +52,7 @@
 # is requested, even if that particular part of the line information is not currently required.
 # Also show that the warnings are only printed once.
 # CHECK:      warning: parsing line table prologue at 0x00000000 should have ended at 0x00000038 but it ended at 0x00000037
-# CHECK-NEXT: warning: last sequence in debug line table is not terminated!
+# CHECK-NEXT: warning: last sequence in debug line table at offset 0x0000005b is not terminated
 # CHECK:      error: undefined symbol: zed6a
 # CHECK-NEXT: >>> referenced by {{.*}}tmp4.o:(.text+0x0)
 # CHECK:      error: undefined symbol: zed6b

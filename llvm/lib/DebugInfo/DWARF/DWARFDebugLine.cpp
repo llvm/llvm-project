@@ -883,9 +883,11 @@ Error DWARFDebugLine::LineTable::parse(
   }
 
   if (!State.Sequence.Empty)
-    RecoverableErrorCallback(
-        createStringError(errc::illegal_byte_sequence,
-                    "last sequence in debug line table is not terminated!"));
+    RecoverableErrorCallback(createStringError(
+        errc::illegal_byte_sequence,
+        "last sequence in debug line table at offset 0x%8.8" PRIx64
+        " is not terminated",
+        DebugLineOffset));
 
   // Sort all sequences so that address lookup will work faster.
   if (!Sequences.empty()) {
