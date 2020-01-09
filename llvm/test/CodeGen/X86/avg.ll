@@ -462,14 +462,12 @@ define void @avg_v48i8(<48 x i8>* %a, <48 x i8>* %b) nounwind {
 ; AVX512BW-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BW-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX512BW-NEXT:    vmovdqa 32(%rdi), %xmm2
-; AVX512BW-NEXT:    vpavgb 16(%rsi), %xmm1, %xmm1
+; AVX512BW-NEXT:    vpavgb 32(%rsi), %xmm2, %xmm2
 ; AVX512BW-NEXT:    vpavgb (%rsi), %xmm0, %xmm0
-; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512BW-NEXT:    vpavgb 32(%rsi), %xmm2, %xmm1
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm1
-; AVX512BW-NEXT:    vmovdqu %ymm0, (%rax)
-; AVX512BW-NEXT:    vextracti32x4 $2, %zmm1, (%rax)
-; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    vpavgb 16(%rsi), %xmm1, %xmm1
+; AVX512BW-NEXT:    vmovdqu %xmm1, (%rax)
+; AVX512BW-NEXT:    vmovdqu %xmm0, (%rax)
+; AVX512BW-NEXT:    vmovdqu %xmm2, (%rax)
 ; AVX512BW-NEXT:    retq
   %1 = load <48 x i8>, <48 x i8>* %a
   %2 = load <48 x i8>, <48 x i8>* %b
