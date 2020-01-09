@@ -171,12 +171,16 @@ struct PerFunctionMIParsingState {
   DenseMap<unsigned, unsigned> ConstantPoolSlots;
   DenseMap<unsigned, unsigned> JumpTableSlots;
 
+  /// Maps from slot numbers to function's unnamed values.
+  DenseMap<unsigned, const Value *> Slots2Values;
+
   PerFunctionMIParsingState(MachineFunction &MF, SourceMgr &SM,
                             const SlotMapping &IRSlots,
                             PerTargetMIParsingState &Target);
 
   VRegInfo &getVRegInfo(unsigned Num);
   VRegInfo &getVRegInfoNamed(StringRef RegName);
+  const Value *getIRValue(unsigned Slot);
 };
 
 /// Parse the machine basic block definitions, and skip the machine
