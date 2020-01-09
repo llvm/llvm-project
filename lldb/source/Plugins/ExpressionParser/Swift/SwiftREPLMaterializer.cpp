@@ -122,6 +122,7 @@ public:
     if (!persistent_state) {
       err.SetErrorString("Couldn't dematerialize a result variable: language "
                          "doesn't have persistent state");
+      return;
     }
 
     auto prefix = persistent_state->GetPersistentVariablePrefix();

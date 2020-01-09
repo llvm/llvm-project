@@ -3355,11 +3355,6 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
 
   auto *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
   if (ast_context && !ast_context->HasFatalErrors()) {
-    SwiftPersistentExpressionState *persistent_state =
-        llvm::cast<SwiftPersistentExpressionState>(
-            target.GetPersistentExpressionStateForLanguage(
-                lldb::eLanguageTypeSwift));
-
     std::string module_name = "$__lldb_module_for_";
     module_name.append(&name.GetCString()[1]);
     SourceModule module_info;
@@ -3380,6 +3375,13 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
                          module_decl);
       var_decl->setInterfaceType(GetSwiftType(ast_context->GetErrorType()));
       var_decl->setDebuggerVar(true);
+
+      SwiftPersistentExpressionState *persistent_state =
+          llvm::cast<SwiftPersistentExpressionState>(
+              target.GetPersistentExpressionStateForLanguage(
+                  lldb::eLanguageTypeSwift));
+      if (!persistent_state)
+        return;
 
       persistent_state->RegisterSwiftPersistentDecl(var_decl);
 
