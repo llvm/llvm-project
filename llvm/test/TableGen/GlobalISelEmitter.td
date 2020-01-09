@@ -217,7 +217,6 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK: bool MyTargetInstructionSelector::selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
 // CHECK-NEXT: MachineFunction &MF = *I.getParent()->getParent();
 // CHECK-NEXT: MachineRegisterInfo &MRI = MF.getRegInfo();
-// CHECK:      AvailableFunctionFeatures = computeAvailableFunctionFeatures(&STI, &MF);
 // CHECK-NEXT: const PredicateBitset AvailableFeatures = getAvailableFeatures();
 // CHECK-NEXT: NewMIVector OutMIs;
 // CHECK-NEXT: State.MIs.clear();

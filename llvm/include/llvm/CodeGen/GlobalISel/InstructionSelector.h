@@ -390,6 +390,10 @@ public:
   GISelKnownBits *KnownBits = nullptr;
   MachineFunction *MF = nullptr;
 
+  virtual void setupGeneratedPerFunctionState(MachineFunction &MF) {
+    llvm_unreachable("TableGen should have emitted implementation");
+  }
+
   /// Setup per-MF selector state.
   virtual void setupMF(MachineFunction &mf,
                        GISelKnownBits &KB,
@@ -397,6 +401,7 @@ public:
     CoverageInfo = &covinfo;
     KnownBits = &KB;
     MF = &mf;
+    setupGeneratedPerFunctionState(mf);
   }
 
 protected:
