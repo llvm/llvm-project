@@ -3130,7 +3130,9 @@ bool AsmParser::parseRealValue(const fltSemantics &Semantics, APInt &Res) {
       Value = APFloat::getNaN(Semantics, false, ~0);
     else
       return TokError("invalid floating point literal");
-  } else if (!Value.convertFromString(IDVal, APFloat::rmNearestTiesToEven))
+  } else if (errorToBool(
+                 Value.convertFromString(IDVal, APFloat::rmNearestTiesToEven)
+                     .takeError()))
     return TokError("invalid floating point literal");
   if (IsNeg)
     Value.changeSign();
