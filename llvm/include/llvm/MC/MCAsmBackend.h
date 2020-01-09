@@ -46,6 +46,10 @@ public:
 
   const support::endianness Endian;
 
+  /// Return true if this target might automatically pad instructions and thus
+  /// need to emit padding enable/disable directives around sensative code.
+  virtual bool allowAutoPadding() const { return false; }
+
   /// Give the target a chance to manipulate state related to instruction
   /// alignment (e.g. padding for optimization) before and after actually
   /// emitting the instruction.
