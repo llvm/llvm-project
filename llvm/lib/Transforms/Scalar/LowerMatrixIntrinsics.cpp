@@ -10,9 +10,6 @@
 //
 // TODO:
 //  * Implement multiply & add fusion
-//  * Implement shape propagation
-//  * Implement optimizations to reduce or eliminateshufflevector uses by using
-//    shape information.
 //  * Add remark, summarizing the available matrix optimization opportunities.
 //
 //===----------------------------------------------------------------------===//
@@ -321,32 +318,12 @@ public:
   }
 
   /// Propagate the shape information of instructions to their users.
-  void propagateShapeForward() {
-    // The work list contains instructions for which we can compute the shape,
-    // either based on the information provided by matrix intrinsics or known
-    // shapes of operands.
-    SmallVector<Instruction *, 8> WorkList;
-
-    // Initialize the work list with ops carrying shape information. Initially
-    // only the shape of matrix intrinsics is known.
-    for (BasicBlock &BB : Func)
-      for (Instruction &Inst : BB) {
-        IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst);
-        if (!II)
-          continue;
-
-        switch (II->getIntrinsicID()) {
-        case Intrinsic::matrix_multiply:
-        case Intrinsic::matrix_transpose:
-        case Intrinsic::matrix_columnwise_load:
-        case Intrinsic::matrix_columnwise_store:
-          WorkList.push_back(&Inst);
-          break;
-        default:
-          break;
-        }
-      }
-
+  /// The work list contains instructions for which we can compute the shape,
+  /// either based on the information provided by matrix intrinsics or known
+  /// shapes of operands.
+  SmallVector<Instruction *, 32>
+  propagateShapeForward(SmallVectorImpl<Instruction *> &WorkList) {
+    SmallVector<Instruction *, 32> NewWorkList;
     // Pop an element for which we guaranteed to have at least one of the
     // operand shapes.  Add the shape for this and then add users to the work
     // list.
@@ -395,20 +372,29 @@ public:
         }
       }
 
-      if (Propagate)
+      if (Propagate) {
+        NewWorkList.push_back(Inst);
         for (auto *User : Inst->users())
           if (ShapeMap.count(User) == 0)
             WorkList.push_back(cast<Instruction>(User));
+      }
     }
+
+    return NewWorkList;
   }
 
   /// Propagate the shape to operands of instructions with shape information.
-  void propagateShapeBackward() {
-    SmallVector<Value *, 8> WorkList;
-    // Worklist contains instruction for which we already know the shape.
-    for (auto &V : ShapeMap)
-      WorkList.push_back(V.first);
+  /// \p Worklist contains the instruction for which we already know the shape.
+  SmallVector<Instruction *, 32>
+  propagateShapeBackward(SmallVectorImpl<Instruction *> &WorkList) {
+    SmallVector<Instruction *, 32> NewWorkList;
 
+    auto pushInstruction = [](Value *V,
+                              SmallVectorImpl<Instruction *> &WorkList) {
+      Instruction *I = dyn_cast<Instruction>(V);
+      if (I)
+        WorkList.push_back(I);
+    };
     // Pop an element with known shape.  Traverse the operands, if their shape
     // derives from the result shape and is unknown, add it and add them to the
     // worklist.
@@ -417,6 +403,7 @@ public:
       Value *V = WorkList.back();
       WorkList.pop_back();
 
+      size_t BeforeProcessingV = WorkList.size();
       if (!isa<Instruction>(V))
         continue;
 
@@ -429,21 +416,21 @@ public:
                        m_Value(MatrixA), m_Value(MatrixB), m_Value(M),
                        m_Value(N), m_Value(K)))) {
         if (setShapeInfo(MatrixA, {M, N}))
-          WorkList.push_back(MatrixA);
+          pushInstruction(MatrixA, WorkList);
 
         if (setShapeInfo(MatrixB, {N, K}))
-          WorkList.push_back(MatrixB);
+          pushInstruction(MatrixB, WorkList);
 
       } else if (match(V, m_Intrinsic<Intrinsic::matrix_transpose>(
                               m_Value(MatrixA), m_Value(M), m_Value(N)))) {
         // Flip dimensions.
         if (setShapeInfo(MatrixA, {M, N}))
-          WorkList.push_back(MatrixA);
+          pushInstruction(MatrixA, WorkList);
       } else if (match(V, m_Intrinsic<Intrinsic::matrix_columnwise_store>(
                               m_Value(MatrixA), m_Value(), m_Value(),
                               m_Value(M), m_Value(N)))) {
         if (setShapeInfo(MatrixA, {M, N})) {
-          WorkList.push_back(MatrixA);
+          pushInstruction(MatrixA, WorkList);
         }
       } else if (isa<LoadInst>(V) ||
                  match(V, m_Intrinsic<Intrinsic::matrix_columnwise_load>())) {
@@ -456,16 +443,48 @@ public:
         ShapeInfo Shape = ShapeMap[V];
         for (Use &U : cast<Instruction>(V)->operands()) {
           if (setShapeInfo(U.get(), Shape))
-            WorkList.push_back(U.get());
+            pushInstruction(U.get(), WorkList);
         }
       }
+      // After we discovered new shape info for new instructions in the
+      // worklist, we use their users as seeds for the next round of forward
+      // propagation.
+      for (size_t I = BeforeProcessingV; I != WorkList.size(); I++)
+        for (User *U : WorkList[I]->users())
+          if (isa<Instruction>(U) && V != U)
+            NewWorkList.push_back(cast<Instruction>(U));
     }
+    return NewWorkList;
   }
 
   bool Visit() {
     if (EnableShapePropagation) {
-      propagateShapeForward();
-      propagateShapeBackward();
+      SmallVector<Instruction *, 32> WorkList;
+
+      // Initially only the shape of matrix intrinsics is known.
+      // Initialize the work list with ops carrying shape information.
+      for (BasicBlock &BB : Func)
+        for (Instruction &Inst : BB) {
+          IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst);
+          if (!II)
+            continue;
+
+          switch (II->getIntrinsicID()) {
+          case Intrinsic::matrix_multiply:
+          case Intrinsic::matrix_transpose:
+          case Intrinsic::matrix_columnwise_load:
+          case Intrinsic::matrix_columnwise_store:
+            WorkList.push_back(&Inst);
+            break;
+          default:
+            break;
+          }
+        }
+      // Propagate shapes until nothing changes any longer.
+      while (!WorkList.empty()) {
+        WorkList = propagateShapeForward(WorkList);
+        WorkList = propagateShapeBackward(WorkList);
+      }
     }
 
     ReversePostOrderTraversal<Function *> RPOT(&Func);
