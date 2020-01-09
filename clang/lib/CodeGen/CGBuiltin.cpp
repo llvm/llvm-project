@@ -3490,6 +3490,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return EmitBuiltinNewDeleteCall(
         E->getCallee()->getType()->castAs<FunctionProtoType>(), E, true);
 
+  case Builtin::BI__builtin_is_aligned:
+    return EmitBuiltinIsAligned(E);
+  case Builtin::BI__builtin_align_up:
+    return EmitBuiltinAlignTo(E, true);
+  case Builtin::BI__builtin_align_down:
+    return EmitBuiltinAlignTo(E, false);
+
   case Builtin::BI__noop:
     // __noop always evaluates to an integer literal zero.
     return RValue::get(ConstantInt::get(IntTy, 0));
@@ -14251,6 +14258,94 @@ CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E) {
   default:
     return nullptr;
   }
+}
+
+struct BuiltinAlignArgs {
+  llvm::Value *Src = nullptr;
+  llvm::Type *SrcType = nullptr;
+  llvm::Value *Alignment = nullptr;
+  llvm::Value *Mask = nullptr;
+  llvm::IntegerType *IntType = nullptr;
+
+  BuiltinAlignArgs(const CallExpr *E, CodeGenFunction &CGF) {
+    QualType AstType = E->getArg(0)->getType();
+    if (AstType->isArrayType())
+      Src = CGF.EmitArrayToPointerDecay(E->getArg(0)).getPointer();
+    else
+      Src = CGF.EmitScalarExpr(E->getArg(0));
+    SrcType = Src->getType();
+    if (SrcType->isPointerTy()) {
+      IntType = IntegerType::get(
+          CGF.getLLVMContext(),
+          CGF.CGM.getDataLayout().getIndexTypeSizeInBits(SrcType));
+    } else {
+      assert(SrcType->isIntegerTy());
+      IntType = cast<llvm::IntegerType>(SrcType);
+    }
+    Alignment = CGF.EmitScalarExpr(E->getArg(1));
+    Alignment = CGF.Builder.CreateZExtOrTrunc(Alignment, IntType, "alignment");
+    auto *One = llvm::ConstantInt::get(IntType, 1);
+    Mask = CGF.Builder.CreateSub(Alignment, One, "mask");
+  }
+};
+
+/// Generate (x & (y-1)) == 0.
+RValue CodeGenFunction::EmitBuiltinIsAligned(const CallExpr *E) {
+  BuiltinAlignArgs Args(E, *this);
+  llvm::Value *SrcAddress = Args.Src;
+  if (Args.SrcType->isPointerTy())
+    SrcAddress =
+        Builder.CreateBitOrPointerCast(Args.Src, Args.IntType, "src_addr");
+  return RValue::get(Builder.CreateICmpEQ(
+      Builder.CreateAnd(SrcAddress, Args.Mask, "set_bits"),
+      llvm::Constant::getNullValue(Args.IntType), "is_aligned"));
+}
+
+/// Generate (x & ~(y-1)) to align down or ((x+(y-1)) & ~(y-1)) to align up.
+/// Note: For pointer types we can avoid ptrtoint/inttoptr pairs by using the
+/// llvm.ptrmask instrinsic (with a GEP before in the align_up case).
+/// TODO: actually use ptrmask once most optimization passes know about it.
+RValue CodeGenFunction::EmitBuiltinAlignTo(const CallExpr *E, bool AlignUp) {
+  BuiltinAlignArgs Args(E, *this);
+  llvm::Value *SrcAddr = Args.Src;
+  if (Args.Src->getType()->isPointerTy())
+    SrcAddr = Builder.CreatePtrToInt(Args.Src, Args.IntType, "intptr");
+  llvm::Value *SrcForMask = SrcAddr;
+  if (AlignUp) {
+    // When aligning up we have to first add the mask to ensure we go over the
+    // next alignment value and then align down to the next valid multiple.
+    // By adding the mask, we ensure that align_up on an already aligned
+    // value will not change the value.
+    SrcForMask = Builder.CreateAdd(SrcForMask, Args.Mask, "over_boundary");
+  }
+  // Invert the mask to only clear the lower bits.
+  llvm::Value *InvertedMask = Builder.CreateNot(Args.Mask, "inverted_mask");
+  llvm::Value *Result =
+      Builder.CreateAnd(SrcForMask, InvertedMask, "aligned_result");
+  if (Args.Src->getType()->isPointerTy()) {
+    /// TODO: Use ptrmask instead of ptrtoint+gep once it is optimized well.
+    // Result = Builder.CreateIntrinsic(
+    //  Intrinsic::ptrmask, {Args.SrcType, SrcForMask->getType(), Args.IntType},
+    //  {SrcForMask, NegatedMask}, nullptr, "aligned_result");
+    Result->setName("aligned_intptr");
+    llvm::Value *Difference = Builder.CreateSub(Result, SrcAddr, "diff");
+    // The result must point to the same underlying allocation. This means we
+    // can use an inbounds GEP to enable better optimization.
+    Value *Base = EmitCastToVoidPtr(Args.Src);
+    if (getLangOpts().isSignedOverflowDefined())
+      Result = Builder.CreateGEP(Base, Difference, "aligned_result");
+    else
+      Result = EmitCheckedInBoundsGEP(Base, Difference,
+                                      /*SignedIndices=*/true,
+                                      /*isSubtraction=*/!AlignUp,
+                                      E->getExprLoc(), "aligned_result");
+    Result = Builder.CreatePointerCast(Result, Args.SrcType);
+    // Emit an alignment assumption to ensure that the new alignment is
+    // propagated to loads/stores, etc.
+    EmitAlignmentAssumption(Result, E, E->getExprLoc(), Args.Alignment);
+  }
+  assert(Result->getType() == Args.SrcType);
+  return RValue::get(Result);
 }
 
 Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,

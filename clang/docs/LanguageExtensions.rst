@@ -2509,6 +2509,79 @@ the invocation point is the same as the location of the builtin.
 When the invocation point of ``__builtin_FUNCTION`` is not a function scope the
 empty string is returned.
 
+Alignment builtins
+------------------
+Clang provides builtins to support checking and adjusting alignment of
+pointers and integers.
+These builtins can be used to avoid relying on implementation-defined behavior
+of arithmetic on integers derived from pointers.
+Additionally, these builtins retain type information and, unlike bitwise
+arithmentic, they can perform semantic checking on the alignment value.
+
+**Syntax**:
+
+.. code-block:: c
+
+  Type __builtin_align_up(Type value, size_t alignment);
+  Type __builtin_align_down(Type value, size_t alignment);
+  bool __builtin_is_aligned(Type value, size_t alignment);
+
+
+**Example of use**:
+
+.. code-block:: c++
+
+  char* global_alloc_buffer;
+  void* my_aligned_allocator(size_t alloc_size, size_t alignment) {
+    char* result = __builtin_align_up(global_alloc_buffer, alignment);
+    // result now contains the value of global_alloc_buffer rounded up to the
+    // next multiple of alignment.
+    global_alloc_buffer = result + alloc_size;
+    return result;
+  }
+
+  void* get_start_of_page(void* ptr) {
+    return __builtin_align_down(ptr, PAGE_SIZE);
+  }
+
+  void example(char* buffer) {
+     if (__builtin_is_aligned(buffer, 64)) {
+       do_fast_aligned_copy(buffer);
+     } else {
+       do_unaligned_copy(buffer);
+     }
+  }
+
+  // In addition to pointers, the builtins can also be used on integer types
+  // and are evaluatable inside constant expressions.
+  static_assert(__builtin_align_up(123, 64) == 128, "");
+  static_assert(__builtin_align_down(123u, 64) == 64u, "");
+  static_assert(!__builtin_is_aligned(123, 64), "");
+
+
+**Description**:
+
+The builtins ``__builtin_align_up``, ``__builtin_align_down``, return their
+first argument aligned up/down to the next multiple of the second argument.
+If the value is already sufficiently aligned, it is returned unchanged.
+The builtin ``__builtin_is_aligned`` returns whether the first argument is
+aligned to a multiple of the second argument.
+All of these builtins expect the alignment to be expressed as a number of bytes.
+
+These builtins can be used for all integer types as well as (non-function)
+pointer types. For pointer types, these builtins operate in terms of the integer
+address of the pointer and return a new pointer of the same type (including
+qualifiers such as ``const``) with an adjusted address.
+When aligning pointers up or down, the resulting value must be within the same
+underlying allocation or one past the end (see C17 6.5.6p8, C++ [expr.add]).
+This means that arbitrary integer values stored in pointer-type variables must
+not be passed to these builtins. For those use cases, the builtins can still be
+used, but the operation must be performed on the pointer cast to ``uintptr_t``.
+
+If Clang can determine that the alignment is not a power of two at compile time,
+it will result in a compilation failure. If the alignment argument is not a
+power of two at run time, the behavior of these builtins is undefined.
+
 Non-standard C++11 Attributes
 =============================
 
