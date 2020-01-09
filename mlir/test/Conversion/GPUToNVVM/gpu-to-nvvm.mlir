@@ -112,6 +112,51 @@ module attributes {gpu.kernel_module} {
 // -----
 
 module attributes {gpu.kernel_module} {
+  // CHECK: llvm.func @__nv_fabsf(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__nv_fabs(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_fabs
+  func @gpu_fabs(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.absf %arg_f32 : f32
+    // CHECK: llvm.call @__nv_fabsf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.absf %arg_f64 : f64
+    // CHECK: llvm.call @__nv_fabs(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
+}
+
+// -----
+
+module attributes {gpu.kernel_module} {
+  // CHECK: llvm.func @__nv_ceilf(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__nv_ceil(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_ceil
+  func @gpu_ceil(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.ceilf %arg_f32 : f32
+    // CHECK: llvm.call @__nv_ceilf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.ceilf %arg_f64 : f64
+    // CHECK: llvm.call @__nv_ceil(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
+}
+
+// -----
+
+module attributes {gpu.kernel_module} {
+  // CHECK: llvm.func @__nv_cosf(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @__nv_cos(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_cos
+  func @gpu_cos(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.cos %arg_f32 : f32
+    // CHECK: llvm.call @__nv_cosf(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.cos %arg_f64 : f64
+    // CHECK: llvm.call @__nv_cos(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
+}
+
+// -----
+
+module attributes {gpu.kernel_module} {
   // CHECK: llvm.func @__nv_expf(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @__nv_exp(!llvm.double) -> !llvm.double
   // CHECK-LABEL: func @gpu_exp

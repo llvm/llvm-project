@@ -712,7 +712,8 @@ public:
     populateGpuToNVVMConversionPatterns(converter, patterns);
     ConversionTarget target(getContext());
     target.addIllegalDialect<gpu::GPUDialect>();
-    target.addIllegalOp<LLVM::ExpOp>();
+    target.addIllegalOp<LLVM::FAbsOp, LLVM::FCeilOp, LLVM::CosOp,
+                        LLVM::ExpOP>();
     target.addIllegalOp<FuncOp>();
     target.addLegalDialect<LLVM::LLVMDialect>();
     target.addLegalDialect<NVVM::NVVMDialect>();
@@ -739,6 +740,12 @@ void mlir::populateGpuToNVVMConversionPatterns(
                                           NVVM::GridDimYOp, NVVM::GridDimZOp>,
               GPUAllReduceOpLowering, GPUShuffleOpLowering, GPUFuncOpLowering,
               GPUReturnOpLowering>(converter);
+  patterns.insert<OpToFuncCallLowering<AbsFOp>>(converter, "__nv_fabsf",
+                                               "__nv_fabs");
+  patterns.insert<OpToFuncCallLowering<CeilFOp>>(converter, "__nv_ceilf",
+                                               "__nv_ceil");
+  patterns.insert<OpToFuncCallLowering<CosOp>>(converter, "__nv_cosf",
+                                               "__nv_cos");
   patterns.insert<OpToFuncCallLowering<ExpOp>>(converter, "__nv_expf",
                                                "__nv_exp");
 }
