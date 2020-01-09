@@ -145,7 +145,7 @@ void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   const FileEntry *ModuleMap = Instance.getPreprocessor()
                                    .getHeaderSearchInfo()
                                    .getModuleMap()
-                                   .getContainingModuleMapFile(M);
+                                   .getModuleMapFileForUniquing(M);
 
   MD.ClangModuleMapFile = ModuleMap ? ModuleMap->getName() : "";
   MD.ModuleName = M->getFullModuleName();
