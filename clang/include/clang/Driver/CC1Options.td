@@ -13,6 +13,18 @@
 let Flags = [CC1Option, NoDriverOption] in {
 
 //===----------------------------------------------------------------------===//
+// Option Options
+//===----------------------------------------------------------------------===//
+
+def remove_preceeding_explicit_module_build_incompatible_options :
+  Flag<["-"], "remove-preceeding-explicit-module-build-incompatible-options">,
+  HelpText<"Removes any arguments before this one that would be incompatible "
+           "with explicitly building a module. This includes things like -o "
+           "and input files. This option can be used to append arguments to "
+           "convert a build of a translation unit with implicit modules "
+           "into an explicit build of a specific module.">;
+
+//===----------------------------------------------------------------------===//
 // Target Options
 //===----------------------------------------------------------------------===//
 
