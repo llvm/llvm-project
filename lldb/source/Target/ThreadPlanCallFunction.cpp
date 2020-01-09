@@ -497,6 +497,8 @@ bool ThreadPlanCallFunction::BreakpointsExplainStop() {
         PersistentExpressionState *persistent_state =
             GetTarget().GetPersistentExpressionStateForLanguage(
                 eLanguageTypeSwift);
+        if (!persistent_state)
+          return false;
         const bool is_error = true;
         auto prefix = persistent_state->GetPersistentVariablePrefix(is_error);
         ConstString persistent_variable_name(
