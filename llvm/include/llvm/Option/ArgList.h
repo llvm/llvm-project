@@ -228,6 +228,18 @@ public:
 
   /// eraseArg - Remove any option matching \p Id.
   void eraseArg(OptSpecifier Id);
+  
+  /// eraseArgIf - Remove every `const Arg *A` for which P(A) is true.
+  template <typename Pred>
+  void eraseArgIf(Pred P) {
+    for (Arg *const &A : Args) {
+      if (P(A)) {
+        Arg **ArgsBegin = Args.data();
+        ArgsBegin[&A - ArgsBegin] = nullptr;
+        // Don't update OptRanges as it's not required and would be slow to do.
+      }
+    }
+  }
 
   /// @}
   /// @name Arg Access

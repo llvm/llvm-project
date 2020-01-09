@@ -3616,6 +3616,28 @@ static void ParseTargetArgs(TargetOptions &Opts, ArgList &Args,
   }
 }
 
+static void removeExplicitModuleBuildIncompatibleOptions(InputArgList &Args) {
+  auto REMBIO = llvm::find_if(Args, [](const Arg *A){
+    return A->getOption().getID() ==
+        OPT_remove_preceeding_explicit_module_build_incompatible_options;
+  });
+  if (REMBIO == Args.end())
+    return;
+  
+  llvm::SmallPtrSet<const Arg *, 32> BeforeREMBIO;
+  for (auto I = Args.begin(); I != REMBIO; ++I)
+    BeforeREMBIO.insert(*I);
+
+  Args.eraseArgIf([&](const Arg *A) {
+    if (!BeforeREMBIO.count(A))
+      return false;
+    const Option &O = A->getOption();
+    return O.matches(OPT_INPUT) ||
+           O.matches(OPT_Action_Group) ||
+           O.matches(OPT__output);
+  });
+}
+
 bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                                         ArrayRef<const char *> CommandLineArgs,
                                         DiagnosticsEngine &Diags) {
@@ -3627,6 +3649,9 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   unsigned MissingArgIndex, MissingArgCount;
   InputArgList Args = Opts.ParseArgs(CommandLineArgs, MissingArgIndex,
                                      MissingArgCount, IncludedFlagsBitmask);
+  
+  removeExplicitModuleBuildIncompatibleOptions(Args);
+  
   LangOptions &LangOpts = *Res.getLangOpts();
 
   // Check for missing argument error.
