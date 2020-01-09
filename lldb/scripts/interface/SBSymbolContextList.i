@@ -60,6 +60,8 @@ public:
     void
     Clear();
 
+    STRING_EXTENSION(SBSymbolContextList)
+
 #ifdef SWIGPYTHON
     %pythoncode %{
         def __iter__(self):

@@ -43,6 +43,7 @@ public:
     GetDescription (lldb::SBStream &description,
                     lldb::DescriptionLevel description_level);
 
+    STRING_EXTENSION_LEVEL(SBTypeEnumMember, lldb::eDescriptionLevelBrief)
 #ifdef SWIGPYTHON
     %pythoncode %{
         name = property(GetName, None, doc='''A read only property that returns the name for this enum member as a string.''')

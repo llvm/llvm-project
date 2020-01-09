@@ -90,6 +90,7 @@ public:
     static lldb::SBWatchpoint
     GetWatchpointFromEvent (const lldb::SBEvent& event);
 
+    STRING_EXTENSION_LEVEL(SBWatchpoint, lldb::eDescriptionLevelVerbose)
 };
 
 } // namespace lldb

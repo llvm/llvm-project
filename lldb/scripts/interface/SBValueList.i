@@ -101,6 +101,29 @@ public:
     lldb::SBValue
     GetFirstValueByName (const char* name) const;
 
+    %extend {
+       %nothreadallow;
+       std::string lldb::SBValueList::__str__ (){
+           lldb::SBStream description;
+           const size_t n = $self->GetSize();
+           if (n)
+           {
+               for (size_t i=0; i<n; ++i)
+                   $self->GetValueAtIndex(i).GetDescription(description);
+           }
+           else
+           {
+               description.Printf("<empty> lldb.SBValueList()");
+           }
+           const char *desc = description.GetData();
+           size_t desc_len = description.GetSize();
+           if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
+               --desc_len;
+           return std::string(desc, desc_len);
+       }
+       %clearnothreadallow;
+    }
+
 #ifdef SWIGPYTHON
     %pythoncode %{
         def __iter__(self):
