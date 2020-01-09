@@ -2454,29 +2454,44 @@ bool AMDGPULegalizerInfo::legalizeRawBufferLoad(MachineInstr &MI,
   unsigned ImmOffset;
   unsigned TotalOffset;
 
+  LLT Ty = MRI.getType(Dst);
+  LLT EltTy = Ty.getScalarType();
+  const bool IsD16 = IsFormat && (EltTy.getSizeInBits() == 16);
+  const bool Unpacked = ST.hasUnpackedD16VMem();
+
   std::tie(VOffset, ImmOffset, TotalOffset) = splitBufferOffsets(B, VOffset);
   if (TotalOffset != 0)
     MMO = B.getMF().getMachineMemOperand(MMO, TotalOffset, MemSize);
 
   unsigned Opc;
-  switch (MemSize) {
-  case 1:
-    if (IsFormat)
-      return false;
-    Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE;
-    break;
-  case 2:
-    if (IsFormat)
-      return false;
-    Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT;
-    break;
-  default:
-    Opc = IsFormat ? -1/*TODO*/ : AMDGPU::G_AMDGPU_BUFFER_LOAD;
-    break;
+  if (IsFormat) {
+    Opc = IsD16 ? AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16 :
+                  AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT;
+  } else {
+    switch (MemSize) {
+    case 1:
+      Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE;
+      break;
+    case 2:
+      Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT;
+      break;
+    default:
+      Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD;
+      break;
+    }
   }
 
-  Register LoadDstReg = MemSize >= 4 ? Dst :
-    B.getMRI()->createGenericVirtualRegister(S32);
+  Register LoadDstReg;
+
+  bool IsExtLoad = (!IsD16 && MemSize < 4) || (IsD16 && !Ty.isVector());
+  LLT UnpackedTy = Ty.changeElementSize(32);
+
+  if (IsExtLoad)
+    LoadDstReg = B.getMRI()->createGenericVirtualRegister(S32);
+  else if (Unpacked && IsD16 && Ty.isVector())
+    LoadDstReg = B.getMRI()->createGenericVirtualRegister(UnpackedTy);
+  else
+    LoadDstReg = Dst;
 
   Register VIndex = B.buildConstant(S32, 0).getReg(0);
 
@@ -2492,9 +2507,20 @@ bool AMDGPULegalizerInfo::legalizeRawBufferLoad(MachineInstr &MI,
     .addMemOperand(MMO);
 
   if (LoadDstReg != Dst) {
-    // Widen result for extending loads was widened.
     B.setInsertPt(B.getMBB(), ++B.getInsertPt());
-    B.buildTrunc(Dst, LoadDstReg);
+
+    // Widen result for extending loads was widened.
+    if (IsExtLoad)
+      B.buildTrunc(Dst, LoadDstReg);
+    else {
+      // Repack to original 16-bit vector result
+      // FIXME: G_TRUNC should work, but legalization currently fails
+      auto Unmerge = B.buildUnmerge(S32, LoadDstReg);
+      SmallVector<Register, 4> Repack;
+      for (unsigned I = 0, N = Unmerge->getNumOperands() - 1; I != N; ++I)
+        Repack.push_back(B.buildTrunc(EltTy, Unmerge.getReg(I)).getReg(0));
+      B.buildMerge(Dst, Repack);
+    }
   }
 
   MI.eraseFromParent();
@@ -2637,6 +2663,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     return legalizeRawBufferStore(MI, MRI, B, true);
   case Intrinsic::amdgcn_raw_buffer_load:
     return legalizeRawBufferLoad(MI, MRI, B, false);
+  case Intrinsic::amdgcn_raw_buffer_load_format:
+    return legalizeRawBufferLoad(MI, MRI, B, true);
   case Intrinsic::amdgcn_atomic_inc:
     return legalizeAtomicIncDec(MI, B, true);
   case Intrinsic::amdgcn_atomic_dec:
