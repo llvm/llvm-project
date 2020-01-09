@@ -299,7 +299,7 @@ void Symtab::InitNameIndexes() {
         if (type == eSymbolTypeCode || type == eSymbolTypeResolver) {
           if (mangled.DemangleWithRichManglingInfo(rmc, lldb_skip_name))
             RegisterMangledNameEntry(value, class_contexts, backlog, rmc);
-	  else if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetStringRef())) {
+	  else if (SwiftLanguageRuntime::IsSwiftMangledName(name.AsCString())) {
             lldb_private::ConstString basename;
             bool is_method = false;
             ConstString mangled_name = mangled.GetMangledName();

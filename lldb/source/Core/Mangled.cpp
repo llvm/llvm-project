@@ -38,11 +38,11 @@
 #include <string.h>
 using namespace lldb_private;
 
-static inline bool cstring_is_mangled(llvm::StringRef s) {
-  return Mangled::GetManglingScheme(s) != Mangled::eManglingSchemeNone
-    // BEGIN SWIFT
-    || SwiftLanguageRuntime::IsSwiftMangledName(s);
-    // END SWIFT
+static inline bool cstring_is_mangled(ConstString s) {
+  return Mangled::GetManglingScheme(s.GetStringRef()) != Mangled::eManglingSchemeNone
+         // BEGIN SWIFT
+         || SwiftLanguageRuntime::IsSwiftMangledName(s.GetCString());
+         // END SWIFT
 }
 
 static ConstString 
@@ -90,8 +90,7 @@ get_demangled_name_without_arguments(ConstString mangled,
       }
     }
     // BEGIN SWIFT
-    else if (SwiftLanguageRuntime::IsSwiftMangledName(
-                 demangled.GetStringRef())) {
+    else if (SwiftLanguageRuntime::IsSwiftMangledName(demangled.AsCString())) {
       lldb_private::ConstString basename;
       bool is_method = false;
       if (SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled(
@@ -211,7 +210,7 @@ void Mangled::SetValue(ConstString s, bool mangled) {
 
 void Mangled::SetValue(ConstString name) {
   if (name) {
-    if (cstring_is_mangled(name.GetStringRef())) {
+    if (cstring_is_mangled(name)) {
       m_demangled.Clear();
       m_mangled = name;
     } else {
