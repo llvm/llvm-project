@@ -14,18 +14,12 @@ if (ROCM_CCACHE_BUILD)
   endif() # if (CCACHE_PROGRAM)
 endif() # if (ROCM_CCACHE_BUILD)
 
-project(amd_comgr)
-
-set(PROJECT_VERSION_MAJOR "1")
-set(PROJECT_VERSION_MINOR "6")
-set(PROJECT_VERSION_PATCH "0")
-set(PROJECT_VERSION
-  "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
+project(amd_comgr VERSION "1.6.0" LANGUAGES C CXX)
 
 find_package(ROCM PATHS "/opt/rocm")
 if (ROCM_FOUND)
   include(ROCMSetupVersion)
-  rocm_setup_version(VERSION "${PROJECT_VERSION}")
+  rocm_setup_version(VERSION "${amd_comgr_VERSION}")
 endif()
 
 find_package(Clang REQUIRED CONFIG)
@@ -63,6 +57,7 @@ message("-----------Clang_DIR: ${Clang_DIR}")
 message("--CLANG_INCLUDE_DIRS: ${CLANG_INCLUDE_DIRS}")
 message("----LLD_INCLUDE_DIRS: ${LLD_INCLUDE_DIRS}")
 message("---AMDDeviceLibs_DIR: ${AMDDeviceLibs_DIR}")
+message("------------ROCM_DIR: ${ROCM_DIR}")
 message("")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
@@ -115,6 +110,10 @@ endif()
 # the shared header.
 list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS AMD_EXPORT)
 
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/amd_comgr.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h @ONLY)
+
 file(GLOB SOURCES "src/*.cpp")
 if (NOT AMDDeviceLibs_FOUND)
   file(GLOB DEVICE_LIBS_SRC "src/comgr-device-libs.cpp")
@@ -132,16 +131,21 @@ endif()
 set_target_properties(amd_comgr PROPERTIES
   CXX_STANDARD 14
   CXX_STANDARD_REQUIRED Yes
-  CXX_EXTENSIONS No
-  SOVERSION "${PROJECT_VERSION_MAJOR}"
-  VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}")
+  CXX_EXTENSIONS No)
+if (ROCM_FOUND)
+  rocm_set_soversion(amd_comgr "${amd_comgr_VERSION_MAJOR}.${amd_comgr_VERSION_MINOR}")
+else()
+  set_target_properties(amd_comgr PROPERTIES
+    SOVERSION "${amd_comgr_VERSION_MAJOR}"
+    VERSION "${amd_comgr_VERSION_MAJOR}.${amd_comgr_VERSION_MINOR}.${amd_comgr_VERSION_PATCH}")
+endif()
 target_compile_options(amd_comgr
   PRIVATE "${AMD_COMGR_PRIVATE_COMPILE_OPTIONS}")
 target_compile_definitions(amd_comgr
   PRIVATE "${AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS}")
 target_include_directories(amd_comgr
   PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
 set(AMD_COMGR_CONFIG_NAME amd_comgr-config.cmake)
@@ -161,7 +165,7 @@ configure_file("cmake/${AMD_COMGR_CONFIG_NAME}.in"
   "${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_CONFIG_NAME}"
   @ONLY)
 write_basic_package_version_file("${AMD_COMGR_VERSION_PATH}"
-  VERSION "${PROJECT_VERSION}"
+  VERSION "${amd_comgr_VERSION}"
   COMPATIBILITY SameMajorVersion)
 
 install(TARGETS amd_comgr
@@ -169,7 +173,7 @@ install(TARGETS amd_comgr
   DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 install(FILES
-  "include/amd_comgr.h"
+  "${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
 install(FILES
@@ -236,10 +240,10 @@ add_subdirectory(test)
 set(CPACK_PACKAGE_NAME comgr)
 set(CPACK_PACKAGE_VENDOR "AMD")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to provide support functions")
-set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
-set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
-set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
-set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
+set(CPACK_PACKAGE_VERSION "${amd_comgr_VERSION}")
+set(CPACK_PACKAGE_VERSION_MAJOR "${amd_comgr_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${amd_comgr_VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${amd_comgr_VERSION_PATCH}")
 set(CPACK_PACKAGE_CONTACT "Advanced Micro Devices Inc.")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
