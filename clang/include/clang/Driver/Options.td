@@ -1548,7 +1548,7 @@ def fno_merge_all_constants : Flag<["-"], "fno-merge-all-constants">, Group<f_Gr
 def fno_modules : Flag <["-"], "fno-modules">, Group<f_Group>,
   Flags<[DriverOption]>;
 def fno_implicit_module_maps : Flag <["-"], "fno-implicit-module-maps">, Group<f_Group>,
-  Flags<[DriverOption]>;
+  Flags<[DriverOption, CC1Option]>;
 def fno_module_maps : Flag <["-"], "fno-module-maps">, Alias<fno_implicit_module_maps>;
 def fno_modules_decluse : Flag <["-"], "fno-modules-decluse">, Group<f_Group>,
   Flags<[DriverOption]>;
