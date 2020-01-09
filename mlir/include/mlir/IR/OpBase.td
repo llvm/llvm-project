@@ -1539,7 +1539,7 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   // following signatures:
   //
   // ```c++
-  // static void build(Builder *, OperationState &tblgen_state,
+  // static void build(Builder *, OperationState &odsState,
   //                   Type <result0-name>, Type <result1-name>, ...,
   //                   Value <arg0-name>, Value <arg1-name>, ...,
   //                   Attribute <attr0-name>, Attribute <attr1-name>, ...);
@@ -1547,7 +1547,7 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   // * where the attributes follow the same declaration order as in the op.
   //
   // ```c++
-  // static void build(Builder *, OperationState &tblgen_state,
+  // static void build(Builder *, OperationState &odsState,
   //                   ArrayRef<Type> resultTypes,
   //                   ArrayRef<Value> operands,
   //                   ArrayRef<NamedAttribute> attributes);
