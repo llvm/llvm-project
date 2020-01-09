@@ -71,10 +71,6 @@ public:
   /// variable/label?   Only valid when parsing MS-style inline assembly.
   virtual bool needAddressOf() const { return false; }
 
-  /// isCallOperand - Is this an operand of an inline-assembly call instruction?
-  /// Only valid when parsing MS-style inline assembly.
-  virtual bool isCallOperand() const { return false; }
-
   /// isOffsetOfLocal - Do we need to emit code to get the offset of the local
   /// variable, rather than its value?   Only valid when parsing MS-style inline
   /// assembly.
