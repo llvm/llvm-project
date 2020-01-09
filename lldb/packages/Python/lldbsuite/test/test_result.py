@@ -106,9 +106,8 @@ class LLDBTestResult(unittest2.TextTestResult):
     def _getFileBasedCategories(test):
         """
         Returns the list of categories to which this test case belongs by
-        looking for a ".categories" file. We start at the folder the test is in
-        an traverse the hierarchy upwards - we guarantee a .categories to exist
-        at the top level directory so we do not end up looping endlessly.
+        collecting values of ".categories" files. We start at the folder the test is in
+        and traverse the hierarchy upwards until the test-suite root directory.
         """
         import inspect
         import os.path
@@ -120,20 +119,22 @@ class LLDBTestResult(unittest2.TextTestResult):
             start_path = inspect.getfile(test.__class__)
 
         folder = os.path.dirname(start_path)
-        while folder != '/':
+
+        from lldbsuite import lldb_test_root as test_root
+        if test_root != os.path.commonprefix([folder, test_root]):
+            raise Exception("The test file %s is outside the test root directory" % start_path)
+
+        categories = set()
+        while not os.path.samefile(folder, test_root):
             categories_file_name = os.path.join(folder, ".categories")
             if os.path.exists(categories_file_name):
                 categories_file = open(categories_file_name, 'r')
-                categories = categories_file.readline()
+                categories_str = categories_file.readline().strip()
                 categories_file.close()
-                categories = str.replace(categories, '\n', '')
-                categories = str.replace(categories, '\r', '')
-                return categories.split(',')
-            else:
-                folder = os.path.dirname(folder)
-                continue
-        raise Exception("Did not find a .categories file, starting at: %s" % start_path)
+                categories.update(categories_str.split(','))
+            folder = os.path.dirname(folder)
 
+        return list(categories)
 
     def getCategoriesForTest(self, test):
         """
