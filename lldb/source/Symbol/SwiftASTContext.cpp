@@ -6195,7 +6195,7 @@ SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
     swift::CanType swift_bound_type(GetCanonicalSwiftType(bound_type));
     if (swift_bound_type->hasTypeParameter()) {
       LOG_PRINTF(LIBLLDB_LOG_TYPES, "GetBitSize: Can't bind type: %s",
-                 type.GetTypeName().AsCString());
+                 bound_type.GetTypeName().AsCString());
       return {};
     }
 
