@@ -6189,6 +6189,16 @@ SwiftASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
     exe_scope->CalculateExecutionContext(exe_ctx);
     auto swift_scratch_ctx_lock = SwiftASTContextLock(&exe_ctx);
     CompilerType bound_type = BindAllArchetypes({this, type}, exe_scope);
+
+    // Check that the type has been bound successfully -- and if not,
+    // log the event and bail out to avoid an infinite loop.
+    swift::CanType swift_bound_type(GetCanonicalSwiftType(bound_type));
+    if (swift_bound_type->hasTypeParameter()) {
+      LOG_PRINTF(LIBLLDB_LOG_TYPES, "GetBitSize: Can't bind type: %s",
+                 type.GetTypeName().AsCString());
+      return {};
+    }
+
     // Note thay the bound type may be in a different AST context.
     return bound_type.GetBitSize(exe_scope);
   }
