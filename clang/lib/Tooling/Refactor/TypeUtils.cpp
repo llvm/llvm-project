@@ -133,7 +133,7 @@ static QualType canonicalizeStdOperatorReturnType(const Expr *E, QualType T) {
   } else
     return T;
   for (unsigned I = 0, E = OCE->getNumArgs(); I < E; ++I) {
-    const Expr *Arg = OCE->getArgs()[I];
+    const Expr *Arg = OCE->getArgs()[I]->IgnoreImpCasts();
     QualType T = Arg->getType();
     if (const auto *ET = dyn_cast<ElaboratedType>(T))
       T = ET->desugar();
