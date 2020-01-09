@@ -53,6 +53,8 @@ namespace lldb {
         bool
         operator != (const lldb::SBDeclaration &rhs) const;
 
+        STRING_EXTENSION(SBDeclaration)
+
 #ifdef SWIGPYTHON
         %pythoncode %{
             file = property(GetFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this line entry.''')
