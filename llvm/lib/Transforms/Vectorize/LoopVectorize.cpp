@@ -7502,30 +7502,43 @@ void VPWidenMemoryInstructionRecipe::execute(VPTransformState &State) {
   State.ILV->vectorizeMemoryInstruction(&Instr, &MaskValues);
 }
 
-static ScalarEpilogueLowering
-getScalarEpilogueLowering(Function *F, Loop *L, LoopVectorizeHints &Hints,
-                          ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
-                          TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
-                          AssumptionCache *AC, LoopInfo *LI,
-                          ScalarEvolution *SE, DominatorTree *DT,
-                          const LoopAccessInfo *LAI) {
-  ScalarEpilogueLowering SEL = CM_ScalarEpilogueAllowed;
+// Determine how to lower the scalar epilogue, which depends on 1) optimising
+// for minimum code-size, 2) predicate compiler options, 3) loop hints forcing
+// predication, and 4) a TTI hook that analyses whether the loop is suitable
+// for predication.
+static ScalarEpilogueLowering getScalarEpilogueLowering(
+    Function *F, Loop *L, LoopVectorizeHints &Hints, ProfileSummaryInfo *PSI,
+    BlockFrequencyInfo *BFI, TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
+    AssumptionCache *AC, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
+    LoopVectorizationLegality &LVL) {
+  bool OptSize =
+      F->hasOptSize() || llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI,
+                                                     PGSOQueryType::IRPass);
+  // 1) OptSize takes precedence over all other options, i.e. if this is set,
+  // don't look at hints or options, and don't request a scalar epilogue.
+  if (OptSize && Hints.getForce() != LoopVectorizeHints::FK_Enabled)
+    return CM_ScalarEpilogueNotAllowedOptSize;
+
   bool PredicateOptDisabled = PreferPredicateOverEpilog.getNumOccurrences() &&
                               !PreferPredicateOverEpilog;
 
-  if (Hints.getForce() != LoopVectorizeHints::FK_Enabled &&
-      (F->hasOptSize() ||
-       llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI,
-                                   PGSOQueryType::IRPass)))
-    SEL = CM_ScalarEpilogueNotAllowedOptSize;
-  else if (PreferPredicateOverEpilog ||
-           Hints.getPredicate() == LoopVectorizeHints::FK_Enabled ||
-           (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT, LAI) &&
-            Hints.getPredicate() != LoopVectorizeHints::FK_Disabled &&
-            !PredicateOptDisabled))
-    SEL = CM_ScalarEpilogueNotNeededUsePredicate;
+  // 2) Next, if disabling predication is requested on the command line, honour
+  // this and request a scalar epilogue. Also do this if we don't have a
+  // primary induction variable, which is required for predication.
+  if (PredicateOptDisabled || !LVL.getPrimaryInduction())
+    return CM_ScalarEpilogueAllowed;
 
-  return SEL;
+  // 3) and 4) look if enabling predication is requested on the command line,
+  // with a loop hint, or if the TTI hook indicates this is profitable, request
+  // predication .
+  if (PreferPredicateOverEpilog ||
+      Hints.getPredicate() == LoopVectorizeHints::FK_Enabled ||
+      (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT,
+                                        LVL.getLAI()) &&
+       Hints.getPredicate() != LoopVectorizeHints::FK_Disabled))
+    return CM_ScalarEpilogueNotNeededUsePredicate;
+
+  return CM_ScalarEpilogueAllowed;
 }
 
 // Process the loop in the VPlan-native vectorization path. This path builds
@@ -7543,9 +7556,8 @@ static bool processLoopInVPlanNativePath(
   Function *F = L->getHeader()->getParent();
   InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL->getLAI());
 
-  ScalarEpilogueLowering SEL =
-    getScalarEpilogueLowering(F, L, Hints, PSI, BFI, TTI, TLI, AC, LI,
-                              PSE.getSE(), DT, LVL->getLAI());
+  ScalarEpilogueLowering SEL = getScalarEpilogueLowering(
+      F, L, Hints, PSI, BFI, TTI, TLI, AC, LI, PSE.getSE(), DT, *LVL);
 
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, LVL, *TTI, TLI, DB, AC, ORE, F,
                                 &Hints, IAI);
@@ -7637,9 +7649,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Check the function attributes and profiles to find out if this function
   // should be optimized for size.
-  ScalarEpilogueLowering SEL =
-    getScalarEpilogueLowering(F, L, Hints, PSI, BFI, TTI, TLI, AC, LI,
-                              PSE.getSE(), DT, LVL.getLAI());
+  ScalarEpilogueLowering SEL = getScalarEpilogueLowering(
+      F, L, Hints, PSI, BFI, TTI, TLI, AC, LI, PSE.getSE(), DT, LVL);
 
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
   // here. They may require CFG and instruction level transformations before
