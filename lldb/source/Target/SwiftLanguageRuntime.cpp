@@ -89,7 +89,6 @@ using namespace lldb_private;
 
 char SwiftLanguageRuntime::ID = 0;
 
-static constexpr std::chrono::seconds g_po_function_timeout(15);
 static const char *g_dollar_tau_underscore = u8"$\u03C4_";
 extern "C" unsigned long long _swift_classIsSwiftMask = 0;
 
@@ -1161,7 +1160,7 @@ static bool GetObjectDescription_ResultVariable(Process &process, Stream &str,
   eval_options.SetLanguage(lldb::eLanguageTypeSwift);
   eval_options.SetResultIsInternal(true);
   eval_options.SetGenerateDebugInfo(true);
-  eval_options.SetTimeout(g_po_function_timeout);
+  eval_options.SetTimeout(process.GetUtilityExpressionTimeout());
   auto eval_result = process.GetTarget().EvaluateExpression(
       expr_string.GetData(),
       process.GetThreadList().GetSelectedThread()->GetSelectedFrame().get(),
@@ -1266,7 +1265,7 @@ static bool GetObjectDescription_ObjectReference(Process &process, Stream &str,
   eval_options.SetLanguage(lldb::eLanguageTypeSwift);
   eval_options.SetResultIsInternal(true);
   eval_options.SetGenerateDebugInfo(true);
-  eval_options.SetTimeout(g_po_function_timeout);
+  eval_options.SetTimeout(process.GetUtilityExpressionTimeout());
   auto eval_result = process.GetTarget().EvaluateExpression(
       expr_string.GetData(),
       process.GetThreadList().GetSelectedThread()->GetSelectedFrame().get(),
@@ -1430,7 +1429,7 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntimeImpl *runtime,
   eval_options.SetLanguage(lldb::eLanguageTypeSwift);
   eval_options.SetResultIsInternal(true);
   eval_options.SetGenerateDebugInfo(true);
-  eval_options.SetTimeout(g_po_function_timeout);
+  eval_options.SetTimeout(process.GetUtilityExpressionTimeout());
   auto eval_result = process.GetTarget().EvaluateExpression(
       expr_string.GetData(),
       process.GetThreadList().GetSelectedThread()->GetSelectedFrame().get(),
