@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-misleading-indentation %t
+// RUN: %check_clang_tidy %s readability-misleading-indentation %t -- -- -fno-delayed-template-parsing
 
 void foo1();
 void foo2();
@@ -166,6 +166,17 @@ void mustFailNonTemplate() {
     else
   foo2();
   // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: different indentation for 'if' and corresponding 'else' [readability-misleading-indentation]
+}
+
+template<bool b>
+void mustFailNoInsta() {
+  if constexpr (b) {
+    foo1();
+  }
+    else {
+      foo2();
+      // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: different indentation for 'if' and corresponding 'else' [readability-misleading-indentation]
+  }
 }
 
 template<bool b>
