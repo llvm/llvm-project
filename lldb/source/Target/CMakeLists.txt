@@ -38,6 +38,8 @@ add_lldb_library(lldbTarget
   StopInfo.cpp
   StructuredDataPlugin.cpp
   SwiftLanguageRuntime.cpp
+  SwiftLanguageRuntimeDynamicTypeResolution.cpp
+  SwiftLanguageRuntimeNames.cpp
   SystemRuntime.cpp
   Target.cpp
   TargetList.cpp
