@@ -30,9 +30,9 @@ if (LLDB_ENABLE_PYTHON)
     # Because we don't build liblldb, epydoc will complain that the import of
     # _lldb.so failed, but that doesn't prevent it from generating the docs.
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lldb)
-    get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
+    get_target_property(lldb_bindings_dir swig_wrapper BINARY_DIR)
     add_custom_target(lldb-python-doc-package
-      COMMAND "${CMAKE_COMMAND}" -E copy "${lldb_scripts_dir}/lldb.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/__init__.py"
+      COMMAND "${CMAKE_COMMAND}" -E copy "${lldb_bindings_dir}/lldb.py" "${CMAKE_CURRENT_BINARY_DIR}/lldb/__init__.py"
       COMMENT "Copying lldb.py to pretend package.")
     add_dependencies(lldb-python-doc-package swig_wrapper)
 

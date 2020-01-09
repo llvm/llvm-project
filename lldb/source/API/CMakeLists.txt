@@ -5,13 +5,13 @@ endif()
 get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 
 if(LLDB_ENABLE_PYTHON)
-  get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
-  set(lldb_python_wrapper ${lldb_scripts_dir}/LLDBWrapPython.cpp)
+  get_target_property(lldb_bindings_dir swig_wrapper BINARY_DIR)
+  set(lldb_python_wrapper ${lldb_bindings_dir}/LLDBWrapPython.cpp)
 endif()
 
 if(LLDB_ENABLE_LUA)
-  get_target_property(lldb_scripts_dir swig_wrapper_lua BINARY_DIR)
-  set(lldb_lua_wrapper ${lldb_scripts_dir}/LLDBWrapLua.cpp)
+  get_target_property(lldb_bindings_dir swig_wrapper_lua BINARY_DIR)
+  set(lldb_lua_wrapper ${lldb_bindings_dir}/LLDBWrapLua.cpp)
 endif()
 
 if(LLDB_BUILD_FRAMEWORK)
