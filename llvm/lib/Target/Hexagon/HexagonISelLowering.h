@@ -445,7 +445,7 @@ namespace HexagonISD {
     SDValue LowerHvxInsertElement(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxExtractSubvector(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxInsertSubvector(SDValue Op, SelectionDAG &DAG) const;
-
+    SDValue LowerHvxBitcast(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxAnyExt(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxSignExt(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerHvxZeroExt(SDValue Op, SelectionDAG &DAG) const;
