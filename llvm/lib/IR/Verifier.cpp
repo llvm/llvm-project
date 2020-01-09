@@ -4779,7 +4779,7 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
 
   case Intrinsic::experimental_constrained_fcmp:
   case Intrinsic::experimental_constrained_fcmps: {
-    auto Pred = dyn_cast<ConstrainedFPCmpIntrinsic>(&FPI)->getPredicate();
+    auto Pred = cast<ConstrainedFPCmpIntrinsic>(&FPI)->getPredicate();
     Assert(CmpInst::isFPPredicate(Pred),
            "invalid predicate for constrained FP comparison intrinsic", &FPI);
     break;
