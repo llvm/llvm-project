@@ -86,7 +86,7 @@ static CFStringRef CopyBundleIDForPath(const char *app_bundle_path,
 #if defined(WITH_BKS) || defined(WITH_FBS)
 #import <Foundation/Foundation.h>
 static const int OPEN_APPLICATION_TIMEOUT_ERROR = 111;
-typedef void (*SetErrorFunction)(NSInteger, DNBError &);
+typedef void (*SetErrorFunction)(NSInteger, std::string, DNBError &);
 typedef bool (*CallOpenApplicationFunction)(NSString *bundleIDNSStr,
                                             NSDictionary *options,
                                             DNBError &error, pid_t *return_pid);
@@ -122,6 +122,7 @@ static bool CallBoardSystemServiceOpenApplication(NSString *bundleIDNSStr,
   mach_port_t client_port = [system_service createClientPort];
   __block dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
   __block ErrorFlavor open_app_error = no_error_enum_value;
+  __block std::string open_app_error_string;
   bool wants_pid = (return_pid != NULL);
   __block pid_t pid_in_block;
 
@@ -159,6 +160,9 @@ static bool CallBoardSystemServiceOpenApplication(NSString *bundleIDNSStr,
              } else {
                const char *error_str =
                    [(NSString *)[bks_error localizedDescription] UTF8String];
+               if (error_str) {
+                 open_app_error_string = error_str;
+               }
                DNBLogThreadedIf(LOG_PROCESS, "In completion handler for send "
                                              "event, got error \"%s\"(%ld).",
                                 error_str ? error_str : "<unknown error>",
@@ -190,7 +194,7 @@ static bool CallBoardSystemServiceOpenApplication(NSString *bundleIDNSStr,
     error.SetError(OPEN_APPLICATION_TIMEOUT_ERROR, DNBError::Generic);
     error.SetErrorString("timed out trying to launch app");
   } else if (open_app_error != no_error_enum_value) {
-    error_function(open_app_error, error);
+    error_function(open_app_error, open_app_error_string, error);
     DNBLogError("unable to launch the application with CFBundleIdentifier '%s' "
                 "bks_error = %u",
                 cstr, open_app_error);
@@ -245,19 +249,19 @@ static bool IsBKSProcess(nub_process_t pid) {
   return app_state != BKSApplicationStateUnknown;
 }
 
-static void SetBKSError(NSInteger error_code, DNBError &error) {
+static void SetBKSError(NSInteger error_code, 
+                        std::string error_description, 
+                        DNBError &error) {
   error.SetError(error_code, DNBError::BackBoard);
   NSString *err_nsstr = ::BKSOpenApplicationErrorCodeToString(
       (BKSOpenApplicationErrorCode)error_code);
-  const char *err_str = NULL;
-  if (err_nsstr == NULL)
-    err_str = "unknown BKS error";
-  else {
+  std::string err_str = "unknown BKS error";
+  if (error_description.empty() == false) {
+    err_str = error_description;
+  } else if (err_nsstr != nullptr) {
     err_str = [err_nsstr UTF8String];
-    if (err_str == NULL)
-      err_str = "unknown BKS error";
   }
-  error.SetErrorString(err_str);
+  error.SetErrorString(err_str.c_str());
 }
 
 static bool BKSAddEventDataToOptions(NSMutableDictionary *options,
@@ -355,19 +359,19 @@ static bool IsFBSProcess(nub_process_t pid) {
 }
 #endif
 
-static void SetFBSError(NSInteger error_code, DNBError &error) {
+static void SetFBSError(NSInteger error_code, 
+                        std::string error_description, 
+                        DNBError &error) {
   error.SetError((DNBError::ValueType)error_code, DNBError::FrontBoard);
   NSString *err_nsstr = ::FBSOpenApplicationErrorCodeToString(
       (FBSOpenApplicationErrorCode)error_code);
-  const char *err_str = NULL;
-  if (err_nsstr == NULL)
-    err_str = "unknown FBS error";
-  else {
+  std::string err_str = "unknown FBS error";
+  if (error_description.empty() == false) {
+    err_str = error_description;
+  } else if (err_nsstr != nullptr) {
     err_str = [err_nsstr UTF8String];
-    if (err_str == NULL)
-      err_str = "unknown FBS error";
   }
-  error.SetErrorString(err_str);
+  error.SetErrorString(err_str.c_str());
 }
 
 static bool FBSAddEventDataToOptions(NSMutableDictionary *options,
@@ -2754,7 +2758,8 @@ const void *MachProcess::PrepareForAttach(const char *path,
           "debugserver timed out waiting for openApplication to complete.");
       attach_err.SetError(OPEN_APPLICATION_TIMEOUT_ERROR, DNBError::Generic);
     } else if (attach_error_code != FBSOpenApplicationErrorCodeNone) {
-      SetFBSError(attach_error_code, attach_err);
+      std::string empty_str;
+      SetFBSError(attach_error_code, empty_str, attach_err);
       DNBLogError("unable to launch the application with CFBundleIdentifier "
                   "'%s' bks_error = %ld",
                   bundleIDStr.c_str(), (NSInteger)attach_error_code);
@@ -2831,7 +2836,8 @@ const void *MachProcess::PrepareForAttach(const char *path,
           "debugserver timed out waiting for openApplication to complete.");
       attach_err.SetError(OPEN_APPLICATION_TIMEOUT_ERROR, DNBError::Generic);
     } else if (attach_error_code != BKSOpenApplicationErrorCodeNone) {
-      SetBKSError(attach_error_code, attach_err);
+      std::string empty_str;
+      SetBKSError(attach_error_code, empty_str, attach_err);
       DNBLogError("unable to launch the application with CFBundleIdentifier "
                   "'%s' bks_error = %ld",
                   bundleIDStr.c_str(), attach_error_code);
