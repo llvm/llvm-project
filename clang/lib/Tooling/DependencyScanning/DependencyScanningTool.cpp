@@ -128,6 +128,11 @@ DependencyScanningTool::getFullDependencies(
         if (MD.ImportedByMainFile)
           FD.ClangModuleDeps.push_back({MD.ModuleName, ContextHash});
       }
+      
+      FD.AdditionalNonPathCommandLine = {
+        "-fno-implicit-modules",
+        "-fno-implicit-module-maps",
+      };
 
       FullDependenciesResult FDR;
 
