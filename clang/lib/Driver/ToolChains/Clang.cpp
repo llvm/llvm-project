@@ -2015,8 +2015,59 @@ void Clang::AddSystemZTargetArgs(const ArgList &Args,
     CmdArgs.push_back("-mpacked-stack");
 }
 
+static void addX86AlignBranchArgs(const Driver &D, const ArgList &Args,
+                                  ArgStringList &CmdArgs) {
+  if (Args.hasArg(options::OPT_mbranches_within_32B_boundaries)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-x86-branches-within-32B-boundaries");
+  }
+  if (const Arg *A = Args.getLastArg(options::OPT_malign_branch_boundary_EQ)) {
+    StringRef Value = A->getValue();
+    unsigned Boundary;
+    if (Value.getAsInteger(10, Boundary) || Boundary < 16 ||
+        !llvm::isPowerOf2_64(Boundary)) {
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << Value << A->getOption().getName();
+    } else {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back(
+          Args.MakeArgString("-x86-align-branch-boundary=" + Twine(Boundary)));
+    }
+  }
+  if (const Arg *A = Args.getLastArg(options::OPT_malign_branch_EQ)) {
+    std::string AlignBranch;
+    for (StringRef T : A->getValues()) {
+      if (T != "fused" && T != "jcc" && T != "jmp" && T != "call" &&
+          T != "ret" && T != "indirect")
+        D.Diag(diag::err_drv_invalid_malign_branch_EQ)
+            << T << "fused, jcc, jmp, call, ret, indirect";
+      if (!AlignBranch.empty())
+        AlignBranch += '+';
+      AlignBranch += T;
+    }
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Args.MakeArgString("-x86-align-branch=" + AlignBranch));
+  }
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_malign_branch_prefix_size_EQ)) {
+    StringRef Value = A->getValue();
+    unsigned PrefixSize;
+    if (Value.getAsInteger(10, PrefixSize) || PrefixSize > 5) {
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << Value << A->getOption().getName();
+    } else {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back(Args.MakeArgString("-x86-align-branch-prefix-size=" +
+                                           Twine(PrefixSize)));
+    }
+  }
+}
+
 void Clang::AddX86TargetArgs(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
+  const Driver &D = getToolChain().getDriver();
+  addX86AlignBranchArgs(D, Args, CmdArgs);
+
   if (!Args.hasFlag(options::OPT_mred_zone, options::OPT_mno_red_zone, true) ||
       Args.hasArg(options::OPT_mkernel) ||
       Args.hasArg(options::OPT_fapple_kext))
@@ -2046,10 +2097,10 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
       CmdArgs.push_back("-mllvm");
       CmdArgs.push_back(Args.MakeArgString("-x86-asm-syntax=" + Value));
     } else {
-      getToolChain().getDriver().Diag(diag::err_drv_unsupported_option_argument)
+      D.Diag(diag::err_drv_unsupported_option_argument)
           << A->getOption().getName() << Value;
     }
-  } else if (getToolChain().getDriver().IsCLMode()) {
+  } else if (D.IsCLMode()) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-x86-asm-syntax=intel");
   }
@@ -6480,6 +6531,8 @@ void ClangAs::AddMIPSTargetArgs(const ArgList &Args,
 
 void ClangAs::AddX86TargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
+  addX86AlignBranchArgs(getToolChain().getDriver(), Args, CmdArgs);
+
   if (Arg *A = Args.getLastArg(options::OPT_masm_EQ)) {
     StringRef Value = A->getValue();
     if (Value == "intel" || Value == "att") {
