@@ -11,8 +11,6 @@
 
 #include "tsd.h"
 
-#include <pthread.h>
-
 namespace scudo {
 
 enum class ThreadState : u8 {
@@ -62,6 +60,7 @@ template <class Allocator> struct TSDRegistryExT {
   // To disable the exclusive TSD registry, we effectively lock the fallback TSD
   // and force all threads to attempt to use it instead of their local one.
   void disable() {
+    Mutex.lock();
     FallbackTSD->lock();
     atomic_store(&Disabled, 1U, memory_order_release);
   }
@@ -69,6 +68,7 @@ template <class Allocator> struct TSDRegistryExT {
   void enable() {
     atomic_store(&Disabled, 0U, memory_order_release);
     FallbackTSD->unlock();
+    Mutex.unlock();
   }
 
 private:
@@ -90,6 +90,7 @@ private:
         pthread_setspecific(PThreadKey, reinterpret_cast<void *>(Instance)), 0);
     ThreadTSD.initLinkerInitialized(Instance);
     State = ThreadState::Initialized;
+    Instance->callPostInitCallback();
   }
 
   pthread_key_t PThreadKey;
