@@ -8,7 +8,7 @@ if(LUA_LIBRARIES AND LUA_INCLUDE_DIR AND SWIG_EXECUTABLE)
   set(LUAANDSWIG_FOUND TRUE)
 else()
   find_package(SWIG 2.0 QUIET)
-  if (SWIG_FOUND)
+  if (SWIG_FOUND OR LLDB_USE_STATIC_BINDINGS)
     find_package(Lua QUIET)
     if(LUA_FOUND AND SWIG_FOUND)
       mark_as_advanced(
