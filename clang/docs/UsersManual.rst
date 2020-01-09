@@ -324,9 +324,10 @@ output format of the diagnostics that it generates.
 
 .. _opt_fsave-optimization-record:
 
-.. option:: -fsave-optimization-record[=<format>]
+.. option:: -f[no-]save-optimization-record[=<format>]
 
-   Write optimization remarks to a separate file.
+   Enable optimization remarks during compilation and write them to a separate
+   file.
 
    This option, which defaults to off, controls whether Clang writes
    optimization reports to a separate file. By recording diagnostics in a file,
@@ -345,20 +346,64 @@ output format of the diagnostics that it generates.
       ``-fsave-optimization-record=bitstream``: A binary format based on LLVM
       Bitstream.
 
+   The output file is controlled by :ref:`-foptimization-record-file <opt_foptimization-record-file>`.
+
+   In the absence of an explicit output file, the file is chosen using the
+   following scheme:
+
+   ``<base>.opt.<format>``
+
+   where ``<base>`` is based on the output file of the compilation (whether
+   it's explicitly specified through `-o` or not) when used with `-c` or `-S`.
+   For example:
+
+   * ``clang -fsave-optimization-record -c in.c -o out.o`` will generate
+     ``out.opt.yaml``
+
+   * ``clang -fsave-optimization-record -c in.c `` will generate
+     ``in.opt.yaml``
+
+   When targeting (Thin)LTO, the base is derived from the output filename, and
+   the extension is not dropped.
+
+   When targeting ThinLTO, the following scheme is used:
+
+   ``<base>.opt.<format>.thin.<num>.<format>``
+
+   Darwin-only: when used for generating a linked binary from a source file
+   (through an intermediate object file), the driver will invoke `cc1` to
+   generate a temporary object file. The temporary remark file will be emitted
+   next to the object file, which will then be picked up by `dsymutil` and
+   emitted in the .dSYM bundle. This is available for all formats except YAML.
+
+   For example:
+
+   ``clang -fsave-optimization-record=bitstream in.c -o out`` will generate
+
+   * ``/var/folders/43/9y164hh52tv_2nrdxrj31nyw0000gn/T/a-9be59b.o``
+
+   * ``/var/folders/43/9y164hh52tv_2nrdxrj31nyw0000gn/T/a-9be59b.opt.bitstream``
+
+   * ``out``
+
+   * ``out.dSYM/Contents/Resources/Remarks/out``
+
+   Darwin-only: compiling for multiple architectures will use the following
+   scheme:
+
+   ``<base>-<arch>.opt.<format>``
+
+   Note that this is incompatible with passing the
+   :ref:`-foptimization-record-file <opt_foptimization-record-file>` option.
+
 .. _opt_foptimization-record-file:
 
 **-foptimization-record-file**
-   Control the file to which optimization reports are written.
+   Control the file to which optimization reports are written. This implies
+   :ref:`-fsave-optimization-record <opt_fsave-optimization-record>`.
 
-   When optimization reports are being output (see
-   :ref:`-fsave-optimization-record <opt_fsave-optimization-record>`), this
-   option controls the file to which those reports are written.
-
-   If this option is not used, optimization records are output to a file named
-   after the primary file being compiled. If that's "foo.c", for example,
-   optimization records are output to "foo.opt.yaml". If a specific
-   serialization format is specified, the file will be named
-   "foo.opt.<format>".
+    On Darwin platforms, this is incompatible with passing multiple
+    ``-arch <arch>`` options.
 
 .. _opt_foptimization-record-passes:
 

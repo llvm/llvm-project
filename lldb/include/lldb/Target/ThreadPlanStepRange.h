@@ -76,6 +76,12 @@ protected:
   lldb::BreakpointSP m_next_branch_bp_sp;
   bool m_use_fast_step;
   bool m_given_ranges_only;
+  bool m_found_calls = false; // When we set the next branch breakpoint for
+                              // step over, we now extend them past call insns
+                              // that directly return.  But if we do that we
+                              // need to run all threads, or we might cause
+                              // deadlocks.  This tells us whether we found
+                              // any calls in setting the next branch breakpoint.
 
 private:
   std::vector<lldb::DisassemblerSP> m_instruction_ranges;

@@ -85,6 +85,7 @@ public:
       FunctionName,
       FunctionNameWithArgs,
       FunctionNameNoArgs,
+      FunctionMangledName,
       FunctionAddrOffset,
       FunctionAddrOffsetConcrete,
       FunctionLineOffset,

@@ -1146,10 +1146,11 @@ bool RegisterContextDarwin_arm::ReadRegister(const RegisterInfo *reg_info,
   case gpr_sp:
   case gpr_lr:
   case gpr_pc:
-  case gpr_cpsr:
     value.SetUInt32(gpr.r[reg - gpr_r0]);
     break;
-
+  case gpr_cpsr:
+    value.SetUInt32(gpr.cpsr);
+    break;
   case fpu_s0:
   case fpu_s1:
   case fpu_s2:
