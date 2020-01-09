@@ -140,6 +140,8 @@ public:
     lldb::SBLineEntry
     GetLineEntry ();
 
+    STRING_EXTENSION(SBAddress)
+
 #ifdef SWIGPYTHON
     %pythoncode %{
         def __get_load_addr_property__ (self):

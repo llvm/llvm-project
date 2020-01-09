@@ -114,6 +114,8 @@ public:
     bool
     operator != (const lldb::SBSection &rhs);
 
+    STRING_EXTENSION(SBSection)
+
 #ifdef SWIGPYTHON
     %pythoncode %{
         def __iter__(self):

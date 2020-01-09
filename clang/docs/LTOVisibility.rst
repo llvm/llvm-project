@@ -83,7 +83,7 @@ cases involving two linkage units, ``main`` and ``dso.so``.
     |  |  };                                                 |  |  |  struct E : D {                                    |
     |  |  struct [[clang::lto_visibility_public]] D {        |  |  |    virtual void g() { ... }                        |
     |  |    virtual void g() = 0;                            |  |  |  };                                                |
-    |  |  };                                                 |  |  |  __attribute__(visibility("default"))) D *mkE() {  |
+    |  |  };                                                 |  |  |  __attribute__((visibility("default"))) D *mkE() { |
     |  |                                                     |  |  |    return new E;                                   |
     |  +-----------------------------------------------------+  |  |  }                                                 |
     |                                                           |  |                                                    |

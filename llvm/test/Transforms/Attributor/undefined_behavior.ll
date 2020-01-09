@@ -16,6 +16,16 @@ define void @load_wholly_unreachable() {
   ret void
 }
 
+define void @loads_wholly_unreachable() {
+; ATTRIBUTOR-LABEL: @loads_wholly_unreachable(
+; ATTRIBUTOR-NEXT:    unreachable
+;
+  %a = load i32, i32* null
+  %b = load i32, i32* null
+  ret void
+}
+
+
 define void @load_single_bb_unreachable(i1 %cond) {
 ; ATTRIBUTOR-LABEL: @load_single_bb_unreachable(
 ; ATTRIBUTOR-NEXT:    br i1 [[COND:%.*]], label [[T:%.*]], label [[E:%.*]]

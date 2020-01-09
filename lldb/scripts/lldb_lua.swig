@@ -8,6 +8,8 @@
 
 %module lldb
 
+%include <std_string.i>
+%include "./macros.swig"
 %include "./headers.swig"
 
 %{

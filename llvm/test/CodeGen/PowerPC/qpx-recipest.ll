@@ -229,8 +229,8 @@ define <4 x double> @foo2_fmf(<4 x double> %a, <4 x double> %b) nounwind {
 ; CHECK-NEXT:    qvfre 3, 2
 ; CHECK-NEXT:    addi 3, 3, .LCPI8_0@toc@l
 ; CHECK-NEXT:    qvlfdx 0, 0, 3
-; CHECK-NEXT:    qvfnmsub 0, 2, 3, 0
-; CHECK-NEXT:    qvfmadd 0, 3, 0, 3
+; CHECK-NEXT:    qvfmadd 0, 2, 3, 0
+; CHECK-NEXT:    qvfnmsub 0, 3, 0, 3
 ; CHECK-NEXT:    qvfmul 3, 1, 0
 ; CHECK-NEXT:    qvfnmsub 1, 2, 3, 1
 ; CHECK-NEXT:    qvfmadd 1, 0, 1, 3

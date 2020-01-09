@@ -277,6 +277,96 @@ cleanup:
   ret i32 0
 }
 
+; UTC_ARGS: --turn on
+
+; TEST 5.4 unounwind invoke instruction replaced by a call and a branch instruction put after it.
+define i32 @invoke_nounwind_phi(i32 %a) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: define {{[^@]+}}@invoke_nounwind_phi
+; CHECK-SAME: (i32 [[A:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+; CHECK:       cond.true:
+; CHECK-NEXT:    call void @normal_call()
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo_nounwind()
+; CHECK-NEXT:    br label [[CONTINUE:%.*]]
+; CHECK:       cond.false:
+; CHECK-NEXT:    call void @normal_call()
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @bar()
+; CHECK-NEXT:    br label [[CONTINUE]]
+; CHECK:       continue:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 0, [[COND_TRUE]] ], [ 1, [[COND_FALSE]] ]
+; CHECK-NEXT:    ret i32 [[P]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  %cmp = icmp eq i32 %a, 0
+  br i1 %cmp, label %cond.true, label %cond.false
+
+cond.true:                                        ; preds = %entry
+  call void @normal_call()
+  %call = invoke i32 @foo_nounwind() to label %continue
+  unwind label %cleanup
+
+cond.false:                                       ; preds = %entry
+  call void @normal_call()
+  %call1 = call i32 @bar()
+  br label %continue
+
+continue:
+  %p = phi i32 [ 0, %cond.true ], [ 1, %cond.false ]
+  ret i32 %p
+
+cleanup:
+  %res = landingpad { i8*, i32 } catch i8* null
+  ret i32 0
+}
+
+; TEST 5.5 unounwind invoke instruction replaced by a call and a branch instruction put after it.
+define i32 @invoke_nounwind_phi_dom(i32 %a) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; CHECK-LABEL: define {{[^@]+}}@invoke_nounwind_phi_dom
+; CHECK-SAME: (i32 [[A:%.*]]) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*)
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
+; CHECK:       cond.true:
+; CHECK-NEXT:    call void @normal_call()
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @foo_nounwind()
+; CHECK-NEXT:    br label [[CONTINUE:%.*]]
+; CHECK:       cond.false:
+; CHECK-NEXT:    call void @normal_call()
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @bar()
+; CHECK-NEXT:    br label [[CONTINUE]]
+; CHECK:       continue:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[CALL]], [[COND_TRUE]] ], [ [[CALL1]], [[COND_FALSE]] ]
+; CHECK-NEXT:    ret i32 [[P]]
+; CHECK:       cleanup:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  %cmp = icmp eq i32 %a, 0
+  br i1 %cmp, label %cond.true, label %cond.false
+
+cond.true:                                        ; preds = %entry
+  call void @normal_call()
+  %call = invoke i32 @foo_nounwind() to label %continue
+  unwind label %cleanup
+
+cond.false:                                       ; preds = %entry
+  call void @normal_call()
+  %call1 = call i32 @bar()
+  br label %continue
+
+continue:
+  %p = phi i32 [ %call, %cond.true ], [ %call1, %cond.false ]
+  ret i32 %p
+
+cleanup:
+  %res = landingpad { i8*, i32 } catch i8* null
+  ret i32 0
+}
+
 ; UTC_ARGS: --turn off
 
 ; TEST 6: Undefined behvior, taken from LangRef.
@@ -707,7 +797,6 @@ define internal void @dead_e2() { ret void }
 ; CHECK-NEXT: define internal void @non_dead_d15()
 ; CHECK-NOT: define internal void @dead_e
 
-
 declare void @blowup() noreturn
 define void @live_with_dead_entry() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK:      define void @live_with_dead_entry(
@@ -735,19 +824,19 @@ define void @live_with_dead_entry_lp() personality i8* bitcast (i32 (...)* @__gx
 ; CHECK:      define void @live_with_dead_entry_lp(
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT:   invoke void @blowup()
-; CHECK-NEXT:           to label %live_with_dead_entry.dead unwind label %lp1
-; CHECK:      lp1:                                              ; preds = %entry
+; CHECK-NEXT:    to label %[[LIVE_WITH_DEAD_ENTRY_DEAD1:.*]] unwind label %[[LP1:.*]]
+; CHECK:      [[LP1]]:                                              ; preds = %entry
 ; CHECK-NEXT:   %lp = landingpad { i8*, i32 }
 ; CHECK-NEXT:           catch i8* null
 ; CHECK-NEXT:   invoke void @blowup()
-; CHECK-NEXT:           to label %live_with_dead_entry.dead1 unwind label %lp2
-; CHECK:      lp2:                                              ; preds = %lp1
+; CHECK-NEXT:    to label %[[LIVE_WITH_DEAD_ENTRY_DEAD2:.*]] unwind label %[[LP2:.*]]
+; CHECK:      [[LP2]]:                                              ; preds = %lp1
 ; CHECK-NEXT:   %0 = landingpad { i8*, i32 }
 ; CHECK-NEXT:           catch i8* null
 ; CHECK-NEXT:   br label %live_with_dead_entry
-; CHECK:      live_with_dead_entry.dead:
+; CHECK:      [[LIVE_WITH_DEAD_ENTRY_DEAD1]]:
 ; CHECK-NEXT:   unreachable
-; CHECK:      live_with_dead_entry.dead1:
+; CHECK:      [[LIVE_WITH_DEAD_ENTRY_DEAD2]]:
 ; CHECK-NEXT:   unreachable
 ; CHECK:      live_with_dead_entry:                             ; preds = %lp2
 ; CHECK-NEXT:   ret void

@@ -897,6 +897,8 @@ bool PPCMIPeephole::simplifyCode(void) {
           bool Is64Bit = (MI.getOpcode() == PPC::RLWINM8 ||
                           MI.getOpcode() == PPC::RLWINM8_rec);
 
+          Simplified = true;
+
           LLVM_DEBUG(dbgs() << "Replace Instr: ");
           LLVM_DEBUG(MI.dump());
 
@@ -913,9 +915,14 @@ bool PPCMIPeephole::simplifyCode(void) {
             MI.RemoveOperand(3);
             MI.getOperand(2).setImm(0);
             MI.setDesc(TII->get(Is64Bit ? PPC::ANDI8_rec : PPC::ANDI_rec));
+            MI.getOperand(1).setReg(SrcMI->getOperand(1).getReg());
+            if (SrcMI->getOperand(1).isKill()) {
+              MI.getOperand(1).setIsKill(true);
+              SrcMI->getOperand(1).setIsKill(false);
+            } else
+              // About to replace MI.getOperand(1), clear its kill flag.
+              MI.getOperand(1).setIsKill(false);
           }
-          Simplified = true;
-          NumRotatesCollapsed++;
 
           LLVM_DEBUG(dbgs() << "With: ");
           LLVM_DEBUG(MI.dump());
@@ -925,16 +932,7 @@ bool PPCMIPeephole::simplifyCode(void) {
           // than NewME. Otherwise we get a 64 bit value after folding, but MI
           // return a 32 bit value.
 
-          // If FoldingReg has only one use and it it not RLWINM_rec and
-          // RLWINM8_rec, safe to delete its def SrcMI. Otherwise keep it.
-          if (MRI->hasOneNonDBGUse(FoldingReg) &&
-              (SrcMI->getOpcode() == PPC::RLWINM ||
-               SrcMI->getOpcode() == PPC::RLWINM8)) {
-            ToErase = SrcMI;
-            LLVM_DEBUG(dbgs() << "Delete dead instruction: ");
-            LLVM_DEBUG(SrcMI->dump());
-          }
-
+          Simplified = true;
           LLVM_DEBUG(dbgs() << "Converting Instr: ");
           LLVM_DEBUG(MI.dump());
 
@@ -953,11 +951,19 @@ bool PPCMIPeephole::simplifyCode(void) {
             // About to replace MI.getOperand(1), clear its kill flag.
             MI.getOperand(1).setIsKill(false);
 
-          Simplified = true;
-          NumRotatesCollapsed++;
-
           LLVM_DEBUG(dbgs() << "To: ");
           LLVM_DEBUG(MI.dump());
+        }
+        if (Simplified) {
+          // If FoldingReg has no non-debug use and it has no implicit def (it
+          // is not RLWINMO or RLWINM8o), it's safe to delete its def SrcMI.
+          // Otherwise keep it.
+          ++NumRotatesCollapsed;
+          if (MRI->use_nodbg_empty(FoldingReg) && !SrcMI->hasImplicitDef()) {
+            ToErase = SrcMI;
+            LLVM_DEBUG(dbgs() << "Delete dead instruction: ");
+            LLVM_DEBUG(SrcMI->dump());
+          }
         }
         break;
       }

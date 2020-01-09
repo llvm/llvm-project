@@ -118,7 +118,7 @@ body: |
     %0:g8rc = COPY $x3
     %1:gprc = COPY %0.sub_32:g8rc
     %2:gprc = RLWINM %1:gprc, 27, 5, 10
-    ; CHECK: %2:gprc = RLWINM %1, 27, 5, 10
+    ; CHECK-NOT: RLWINM %1,
     %3:gprc = RLWINM %2:gprc, 8, 5, 10
     ; CHECK: %3:gprc = LI 0
     BLR8 implicit $lr8, implicit $rm
@@ -133,9 +133,24 @@ body: |
     %0:g8rc = COPY $x3
     %1:gprc = COPY %0.sub_32:g8rc
     %2:gprc = RLWINM %1:gprc, 27, 5, 10
-    ; CHECK: %2:gprc = RLWINM %1, 27, 5, 10
+    ; CHECK-NOT: RLWINM %1,
     %3:gprc = RLWINM_rec %2:gprc, 8, 5, 10, implicit-def $cr0
-    ; CHECK: %3:gprc = ANDI_rec %2, 0, implicit-def $cr0
+    ; CHECK: %3:gprc = ANDI_rec %1, 0, implicit-def $cr0
+    BLR8 implicit $lr8, implicit $rm
+...
+---
+name: testFoldRLWINMoToZeroSrcCanNotBeDeleted
+#CHECK : name : testFoldRLWINMoToZeroSrcCanNotBeDeleted
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $x3
+    %0:g8rc = COPY $x3
+    %1:gprc = COPY %0.sub_32:g8rc
+    %2:gprc = RLWINM_rec %1:gprc, 27, 5, 10, implicit-def $cr0
+    ; CHECK: %2:gprc = RLWINM_rec %1, 27, 5, 10, implicit-def $cr0
+    %3:gprc = RLWINM_rec %2:gprc, 8, 5, 10, implicit-def $cr0
+    ; CHECK: %3:gprc = ANDI_rec %1, 0, implicit-def $cr0
     BLR8 implicit $lr8, implicit $rm
 ...
 ---

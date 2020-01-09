@@ -8,7 +8,6 @@
 
 namespace lldb {
 
-
 %feature("docstring",
 "Represents the target program running under the debugger.
 
@@ -967,6 +966,8 @@ public:
 
     lldb::SBValue
     EvaluateExpression (const char *expr, const lldb::SBExpressionOptions &options);
+
+    STRING_EXTENSION_LEVEL(SBTarget, lldb::eDescriptionLevelBrief)
 
 #ifdef SWIGPYTHON
     %pythoncode %{

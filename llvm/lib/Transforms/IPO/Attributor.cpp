@@ -31,6 +31,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -2824,90 +2825,12 @@ struct AAIsDeadFunction : public AAIsDead {
       bool MayReturn = !NoReturnAA.isAssumedNoReturn();
       if (MayReturn && (!Invoke2CallAllowed || !isa<InvokeInst>(CB)))
         continue;
-      Instruction *I = const_cast<Instruction *>(DeadEndI);
-      BasicBlock *BB = I->getParent();
-      Instruction *SplitPos = I->getNextNode();
-      // TODO: mark stuff before unreachable instructions as dead.
 
-      if (auto *II = dyn_cast<InvokeInst>(I)) {
-        // If we keep the invoke the split position is at the beginning of the
-        // normal desitination block (it invokes a noreturn function after all).
-        BasicBlock *NormalDestBB = II->getNormalDest();
-        SplitPos = &NormalDestBB->front();
-
-        /// Invoke is replaced with a call and unreachable is placed after it if
-        /// the callee is nounwind and noreturn. Otherwise, we keep the invoke
-        /// and only place an unreachable in the normal successor.
-        if (Invoke2CallAllowed) {
-          if (II->getCalledFunction()) {
-            const IRPosition &IPos = IRPosition::callsite_function(*II);
-            const auto &AANoUnw = A.getAAFor<AANoUnwind>(*this, IPos);
-            if (AANoUnw.isAssumedNoUnwind()) {
-              LLVM_DEBUG(dbgs()
-                         << "[AAIsDead] Replace invoke with call inst\n");
-              CallInst *CI = createCallMatchingInvoke(II);
-              CI->insertBefore(II);
-              CI->takeName(II);
-              replaceAllInstructionUsesWith(*II, *CI);
-
-              // If this is a nounwind + mayreturn invoke we only remove the
-              // unwind edge. This is done by moving the invoke into a new and
-              // dead block and connecting the normal destination of the invoke
-              // with a branch that follows the call replacement we created
-              // above.
-              if (MayReturn) {
-                BasicBlock *NewDeadBB =
-                    SplitBlock(BB, II, nullptr, nullptr, nullptr, ".i2c");
-                assert(isa<BranchInst>(BB->getTerminator()) &&
-                       BB->getTerminator()->getNumSuccessors() == 1 &&
-                       BB->getTerminator()->getSuccessor(0) == NewDeadBB);
-                new UnreachableInst(I->getContext(), NewDeadBB);
-                BB->getTerminator()->setOperand(0, NormalDestBB);
-                A.deleteAfterManifest(*II);
-                continue;
-              }
-
-              // We do not need an invoke (II) but instead want a call followed
-              // by an unreachable. However, we do not remove II as other
-              // abstract attributes might have it cached as part of their
-              // results. Given that we modify the CFG anyway, we simply keep II
-              // around but in a new dead block. To avoid II being live through
-              // a different edge we have to ensure the block we place it in is
-              // only reached from the current block of II and then not reached
-              // at all when we insert the unreachable.
-              SplitBlockPredecessors(NormalDestBB, {BB}, ".i2c");
-              SplitPos = CI->getNextNode();
-            }
-          }
-        }
-
-        if (SplitPos == &NormalDestBB->front()) {
-          // If this is an invoke of a noreturn function the edge to the normal
-          // destination block is dead but not necessarily the block itself.
-          // TODO: We need to move to an edge based system during deduction and
-          //       also manifest.
-          assert(!NormalDestBB->isLandingPad() &&
-                 "Expected the normal destination not to be a landingpad!");
-          if (NormalDestBB->getUniquePredecessor() == BB) {
-            assumeLive(A, *NormalDestBB);
-          } else {
-            BasicBlock *SplitBB =
-                SplitBlockPredecessors(NormalDestBB, {BB}, ".dead");
-            // The split block is live even if it contains only an unreachable
-            // instruction at the end.
-            assumeLive(A, *SplitBB);
-            SplitPos = SplitBB->getTerminator();
-            HasChanged = ChangeStatus::CHANGED;
-          }
-        }
-      }
-
-      if (isa_and_nonnull<UnreachableInst>(SplitPos))
-        continue;
-
-      BB = SplitPos->getParent();
-      SplitBlock(BB, SplitPos);
-      A.changeToUnreachableAfterManifest(BB->getTerminator());
+      if (auto *II = dyn_cast<InvokeInst>(DeadEndI))
+        A.registerInvokeWithDeadSuccessor(const_cast<InvokeInst &>(*II));
+      else
+        A.changeToUnreachableAfterManifest(
+            const_cast<Instruction *>(DeadEndI->getNextNode()));
       HasChanged = ChangeStatus::CHANGED;
     }
 
@@ -5668,8 +5591,35 @@ ChangeStatus Attributor::run(Module &M) {
         }
       }
     }
-    for (Instruction *I : ToBeChangedToUnreachableInsts)
-      changeToUnreachable(I, /* UseLLVMTrap */ false);
+    for (auto &V : InvokeWithDeadSuccessor)
+      if (InvokeInst *II = dyn_cast_or_null<InvokeInst>(V)) {
+        bool UnwindBBIsDead = II->hasFnAttr(Attribute::NoUnwind);
+        bool NormalBBIsDead = II->hasFnAttr(Attribute::NoReturn);
+        bool Invoke2CallAllowed =
+            !AAIsDeadFunction::mayCatchAsynchronousExceptions(
+                *II->getFunction());
+        assert((UnwindBBIsDead || NormalBBIsDead) &&
+               "Invoke does not have dead successors!");
+        BasicBlock *BB = II->getParent();
+        BasicBlock *NormalDestBB = II->getNormalDest();
+        if (UnwindBBIsDead) {
+          Instruction *NormalNextIP = &NormalDestBB->front();
+          if (Invoke2CallAllowed) {
+            changeToCall(II);
+            NormalNextIP = BB->getTerminator();
+          }
+          if (NormalBBIsDead)
+            ToBeChangedToUnreachableInsts.insert(NormalNextIP);
+        } else {
+          assert(NormalBBIsDead && "Broken invariant!");
+          if (!NormalDestBB->getUniquePredecessor())
+            NormalDestBB = SplitBlockPredecessors(NormalDestBB, {BB}, ".dead");
+          ToBeChangedToUnreachableInsts.insert(&NormalDestBB->front());
+        }
+      }
+    for (auto &V : ToBeChangedToUnreachableInsts)
+      if (Instruction *I = dyn_cast_or_null<Instruction>(V))
+        changeToUnreachable(I, /* UseLLVMTrap */ false);
     for (Instruction *I : TerminatorsToFold)
       ConstantFoldTerminator(I->getParent());
 
@@ -6336,7 +6286,9 @@ static bool runAttributorOnModule(Module &M, AnalysisGetter &AG) {
     A.identifyDefaultAbstractAttributes(F);
   }
 
-  return A.run(M) == ChangeStatus::CHANGED;
+  bool Changed = A.run(M) == ChangeStatus::CHANGED;
+  assert(!verifyModule(M, &errs()) && "Module verification failed!");
+  return Changed;
 }
 
 PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {
