@@ -2173,10 +2173,10 @@ class PODSmallVector {
   static_assert(std::is_pod<T>::value,
                 "T is required to be a plain old data type");
 
-  T* First;
-  T* Last;
-  T* Cap;
-  T Inline[N];
+  T* First = nullptr;
+  T* Last = nullptr;
+  T* Cap = nullptr;
+  T Inline[N] = {0};
 
   bool isInline() const { return First == Inline; }
 
