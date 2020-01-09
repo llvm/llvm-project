@@ -125,13 +125,19 @@ SDValue AArch64SelectionDAGInfo::EmitTargetCodeForSetTag(
     return EmitUnrolledSetTag(DAG, dl, Chain, Addr, ObjSize, BaseMemOperand,
                               ZeroData);
 
-  const EVT ResTys[] = {MVT::i64, MVT::i64, MVT::Other};
-
-  if (Addr.getOpcode() == ISD::FrameIndex) {
-    int FI = cast<FrameIndexSDNode>(Addr)->getIndex();
-    Addr = DAG.getTargetFrameIndex(FI, MVT::i64);
+  if (ObjSize % 32 != 0) {
+    SDNode *St1 = DAG.getMachineNode(
+        ZeroData ? AArch64::STZGPostIndex : AArch64::STGPostIndex, dl,
+        {MVT::i64, MVT::Other},
+        {Addr, Addr, DAG.getTargetConstant(1, dl, MVT::i64), Chain});
+    DAG.setNodeMemRefs(cast<MachineSDNode>(St1), {BaseMemOperand});
+    ObjSize -= 16;
+    Addr = SDValue(St1, 0);
+    Chain = SDValue(St1, 1);
   }
-  SDValue Ops[] = {DAG.getTargetConstant(ObjSize, dl, MVT::i64), Addr, Chain};
+
+  const EVT ResTys[] = {MVT::i64, MVT::i64, MVT::Other};
+  SDValue Ops[] = {DAG.getConstant(ObjSize, dl, MVT::i64), Addr, Chain};
   SDNode *St = DAG.getMachineNode(
       ZeroData ? AArch64::STZGloop : AArch64::STGloop, dl, ResTys, Ops);
 
