@@ -709,6 +709,7 @@ void MIPrinter::print(const MachineInstr &MI) {
   const auto *TRI = SubTarget.getRegisterInfo();
   assert(TRI && "Expected target register info");
   const auto *TII = SubTarget.getInstrInfo();
+  const auto *MIRF = MF->getTarget().getMIRFormatter();
   assert(TII && "Expected target instruction info");
   if (MI.isCFIInstruction())
     assert(MI.getNumOperands() == 1 && "Expected 1 operand in CFI instruction");
@@ -807,7 +808,7 @@ void MIPrinter::print(const MachineInstr &MI) {
     for (const auto *Op : MI.memoperands()) {
       if (NeedComma)
         OS << ", ";
-      Op->print(OS, MST, SSNs, Context, &MFI, TII);
+      Op->print(OS, MST, SSNs, Context, &MFI, TII, MIRF);
       NeedComma = true;
     }
   }
@@ -856,7 +857,7 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
     if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())
       TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);
     const TargetIntrinsicInfo *TII = MI.getMF()->getTarget().getIntrinsicInfo();
-    Op.print(OS, MST, TypeToPrint, PrintDef, /*IsStandalone=*/false,
+    Op.print(OS, MST, TypeToPrint, OpIdx, PrintDef, /*IsStandalone=*/false,
              ShouldPrintRegisterTies, TiedOperandIdx, TRI, TII);
     break;
   }
@@ -872,6 +873,28 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
     break;
   }
   }
+}
+
+void MIRFormatter::printIRValue(raw_ostream &OS, const Value &V,
+                                ModuleSlotTracker &MST) {
+  if (isa<GlobalValue>(V)) {
+    V.printAsOperand(OS, /*PrintType=*/false, MST);
+    return;
+  }
+  if (isa<Constant>(V)) {
+    // Machine memory operands can load/store to/from constant value pointers.
+    OS << '`';
+    V.printAsOperand(OS, /*PrintType=*/true, MST);
+    OS << '`';
+    return;
+  }
+  OS << "%ir.";
+  if (V.hasName()) {
+    printLLVMNameWithoutPrefix(OS, V.getName());
+    return;
+  }
+  int Slot = MST.getCurrentFunction() ? MST.getLocalSlot(&V) : -1;
+  MachineOperand::printIRSlotNumber(OS, Slot);
 }
 
 void llvm::printMIR(raw_ostream &OS, const Module &M) {
