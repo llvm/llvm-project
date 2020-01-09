@@ -1,12 +1,41 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1
 // RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 // RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors 2>&1 | FileCheck %s
 
-#if __cplusplus <= 201103L
-// expected-no-diagnostics
+namespace dr2352 { // dr2352: 10
+  int **p;
+  const int *const *const &f1() { return p; }
+  int *const *const &f2() { return p; }
+  int **const &f3() { return p; }
+
+  const int **const &f4() { return p; } // expected-error {{reference to type 'const int **const' could not bind to an lvalue of type 'int **'}}
+  const int *const *&f5() { return p; } // expected-error {{binding reference of type 'const int *const *' to value of type 'int **' not permitted due to incompatible qualifiers}}
+
+  // FIXME: We permit this as a speculative defect resolution, allowing
+  // qualification conversions when forming a glvalue conditional expression.
+  const int * const * const q = 0;
+  __typeof(&(true ? p : q)) x = &(true ? p : q);
+
+  // FIXME: Should we compute the composite pointer type here and produce an
+  // lvalue of type 'const int *const * const'?
+  const int * const * r;
+  void *y = &(true ? p : r); // expected-error {{rvalue of type 'const int *const *'}}
+
+  // FIXME: We order these as a speculative defect resolution.
+  void f(const int * const * const &r);
+#if __cplusplus >= 201103L
+  constexpr
 #endif
+  int *const *const &f(int * const * const &r) { return r; }
+
+  // No temporary is created here.
+  int *const *const &check_f = f(p);
+#if __cplusplus >= 201103L
+  static_assert(&p == &check_f, "");
+#endif
+}
 
 namespace dr2353 { // dr2353: 9
   struct X {
