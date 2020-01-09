@@ -169,17 +169,6 @@ void mustFailNonTemplate() {
 }
 
 template<bool b>
-void mustFailNoInsta() {
-  if constexpr (b) {
-    foo1();
-  }
-    else {
-      foo2();
-      // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: different indentation for 'if' and corresponding 'else' [readability-misleading-indentation]
-  }
-}
-
-template<bool b>
 void mustPassNoInsta() {
   if constexpr (b) {
     foo1();
