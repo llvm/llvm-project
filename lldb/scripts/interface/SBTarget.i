@@ -967,21 +967,7 @@ public:
     lldb::SBValue
     EvaluateExpression (const char *expr, const lldb::SBExpressionOptions &options);
 
-  %extend {
-    %nothreadallow;
-    std::string lldb::SBTarget::__str__(){
-      lldb::SBStream stream;
-      $self->GetDescription (stream, lldb::eDescriptionLevelBrief);
-
-      const char *desc = stream.GetData();
-      size_t desc_len = stream.GetSize();
-      if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-        --desc_len;
-
-      return std::string(desc, desc_len);
-    }
-    %clearnothreadallow;
-  }
+    STRING_EXTENSION_LEVEL(SBTarget, lldb::eDescriptionLevelBrief)
 
 #ifdef SWIGPYTHON
     %pythoncode %{

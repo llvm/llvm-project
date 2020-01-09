@@ -100,6 +100,8 @@ public:
                    bool locals,
                    bool statics);
 
+    STRING_EXTENSION(SBBlock)
+
 #ifdef SWIGPYTHON
     %pythoncode %{
         def get_range_at_index(self, idx):

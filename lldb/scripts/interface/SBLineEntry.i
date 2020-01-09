@@ -84,6 +84,8 @@ public:
     bool
     operator != (const lldb::SBLineEntry &rhs) const;
 
+    STRING_EXTENSION(SBLineEntry)
+
 #ifdef SWIGPYTHON
     %pythoncode %{
         file = property(GetFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this line entry.''')
