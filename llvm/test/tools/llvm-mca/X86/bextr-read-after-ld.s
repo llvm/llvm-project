@@ -5,6 +5,7 @@
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=bdver2 -iterations=1 -timeline -resource-pressure=false < %s | FileCheck %s -check-prefix=ALL -check-prefix=BDVER2
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=1 -timeline -resource-pressure=false < %s | FileCheck %s -check-prefix=ALL -check-prefix=BTVER2
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver1 -iterations=1 -timeline -resource-pressure=false < %s | FileCheck %s -check-prefix=ALL -check-prefix=ZNVER1
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver2 -iterations=1 -timeline -resource-pressure=false < %s | FileCheck %s -check-prefix=ALL -check-prefix=ZNVER2
 
 add     %edi, %esi
 bextrl	%esi, (%rdi), %eax
@@ -29,6 +30,9 @@ bextrl	%esi, (%rdi), %eax
 
 # ZNVER1-NEXT:  Total Cycles:      8
 # ZNVER1-NEXT:  Total uOps:        3
+
+# ZNVER2-NEXT:  Total Cycles:      8
+# ZNVER2-NEXT:  Total uOps:        3
 
 # BDVER2:       Dispatch Width:    4
 # BDVER2-NEXT:  uOps Per Cycle:    0.33

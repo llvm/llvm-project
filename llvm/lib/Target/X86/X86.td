@@ -501,6 +501,7 @@ include "X86SchedHaswell.td"
 include "X86SchedBroadwell.td"
 include "X86ScheduleSLM.td"
 include "X86ScheduleZnver1.td"
+include "X86ScheduleZnver2.td"
 include "X86ScheduleBdVer2.td"
 include "X86ScheduleBtVer2.td"
 include "X86SchedSkylakeClient.td"
@@ -1204,7 +1205,7 @@ def : Proc<"bdver3", ProcessorFeatures.BdVer3Features>;
 def : Proc<"bdver4", ProcessorFeatures.BdVer4Features>;
 
 def : ProcessorModel<"znver1", Znver1Model, ProcessorFeatures.ZNFeatures>;
-def : ProcessorModel<"znver2", Znver1Model, ProcessorFeatures.ZN2Features>;
+def : ProcessorModel<"znver2", Znver2Model, ProcessorFeatures.ZN2Features>;
 
 def : Proc<"geode",           [FeatureX87, FeatureSlowUAMem16, FeatureCMPXCHG8B,
                                Feature3DNowA, FeatureInsertVZEROUPPER]>;
