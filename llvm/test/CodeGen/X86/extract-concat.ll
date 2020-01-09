@@ -147,3 +147,25 @@ define <16 x i64> @load_catcat(<4 x i64>* %p) {
   %r = shufflevector <16 x i64> %cat2, <16 x i64> undef, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
   ret  <16 x i64> %r
 }
+
+; Use weird types to make sure we do not miscompile a case where
+; the source ops are not an even multiple size of the result.
+
+define <4 x i32> @cat_ext_straddle(<6 x i32>* %px, <6 x i32>* %py) {
+; SSE42-LABEL: cat_ext_straddle:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movaps 16(%rdi), %xmm0
+; SSE42-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: cat_ext_straddle:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps 16(%rdi), %xmm0
+; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; AVX-NEXT:    retq
+  %x = load <6 x i32>, <6 x i32>* %px
+  %y = load <6 x i32>, <6 x i32>* %py
+  %cat = shufflevector <6 x i32> %x, <6 x i32> %y, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
+  %ext = shufflevector <12 x i32> %cat, <12 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  ret <4 x i32> %ext
+}
