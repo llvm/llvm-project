@@ -7,6 +7,7 @@
 ;
 ; struct S {
 ;   static const int constant = 24;
+;   int (*fn)(int);
 ; } s;
 ;
 ; int __attribute__((always_inline)) square(int i) { return i * i; }
@@ -15,7 +16,13 @@
 ;   return squared*i;
 ; }
 
-; GlobalConst,Global,s,s.constant,square::i,cube::i,cube::squared
+; Following variables/arguments/members should be counted:
+;     - GlobalConst,
+;     - Global,
+;     - s, s.constant ('fn' and its arguments should be skipped),
+;     - square::i,
+;     - cube::i, cube::squared
+
 ; CHECK: "unique source variables":7
 ; +1 extra inline i.
 ; CHECK: "source variables":8
@@ -36,7 +43,7 @@ source_filename = "/tmp/quality.cpp"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 
-%struct.S = type { i8 }
+%struct.S = type { i8 (i32)* }
 
 @GlobalConst = global i32 42, align 4, !dbg !0
 @Global = global i32 0, align 4, !dbg !6
@@ -103,7 +110,7 @@ attributes #2 = { noinline nounwind optnone ssp uwtable }
 !9 = !DIGlobalVariableExpression(var: !10, expr: !DIExpression())
 !10 = distinct !DIGlobalVariable(name: "s", scope: !2, file: !3, line: 6, type: !11, isLocal: false, isDefinition: true)
 !11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "S", file: !3, line: 4, size: 8, elements: !12, identifier: "_ZTS1S")
-!12 = !{!13}
+!12 = !{!13, !45}
 !13 = !DIDerivedType(tag: DW_TAG_member, name: "constant", scope: !11, file: !3, line: 5, baseType: !14, flags: DIFlagStaticMember, extraData: i32 24)
 !14 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !8)
 !15 = !{i32 2, !"Dwarf Version", i32 4}
@@ -136,3 +143,6 @@ attributes #2 = { noinline nounwind optnone ssp uwtable }
 !42 = !DILocation(line: 11, column: 18, scope: !30)
 !43 = !DILocation(line: 11, column: 17, scope: !30)
 !44 = !DILocation(line: 11, column: 3, scope: !30)
+!45 = !DIDerivedType(tag: DW_TAG_member, name: "fn", scope: !11, file: !3, line: 5, baseType: !46, size: 64)
+!46 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !47, size: 64)
+!47 = !DISubroutineType(types: !22)

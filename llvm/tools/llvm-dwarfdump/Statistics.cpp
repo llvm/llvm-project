@@ -353,8 +353,12 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
                                   StringMap<PerFunctionStats> &FnStatMap,
                                   GlobalStats &GlobalStats,
                                   LocationStats &LocStats) {
-  // Handle any kind of lexical scope.
   const dwarf::Tag Tag = Die.getTag();
+  // Skip function types.
+  if (Tag == dwarf::DW_TAG_subroutine_type)
+    return;
+
+  // Handle any kind of lexical scope.
   const bool IsFunction = Tag == dwarf::DW_TAG_subprogram;
   const bool IsBlock = Tag == dwarf::DW_TAG_lexical_block;
   const bool IsInlinedFunction = Tag == dwarf::DW_TAG_inlined_subroutine;
