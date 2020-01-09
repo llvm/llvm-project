@@ -194,8 +194,8 @@ define <4 x float> @hoo_safe(<4 x float> %a, <4 x float> %b) nounwind {
 define double @foo2_fmf(double %a, double %b) nounwind {
 ; CHECK: @foo2_fmf
 ; CHECK-DAG: fre
-; CHECK-DAG: fnmsub
-; CHECK: fmadd
+; CHECK-DAG: fmadd
+; CHECK: fnmsub
 ; CHECK-NEXT: fmul
 ; CHECK-NEXT: fnmsub
 ; CHECK-NEXT: fmadd

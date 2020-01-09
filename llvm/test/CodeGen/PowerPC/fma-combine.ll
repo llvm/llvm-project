@@ -8,14 +8,12 @@
 define double @fma_combine1(double %a, double %b, double %c) {
 ; CHECK-FAST-LABEL: fma_combine1:
 ; CHECK-FAST:       # %bb.0: # %entry
-; CHECK-FAST-NEXT:    xsnegdp 0, 3
-; CHECK-FAST-NEXT:    xsmsubadp 1, 0, 2
+; CHECK-FAST-NEXT:    xsnmaddadp 1, 3, 2
 ; CHECK-FAST-NEXT:    blr
 ;
 ; CHECK-FAST-NOVSX-LABEL: fma_combine1:
 ; CHECK-FAST-NOVSX:       # %bb.0: # %entry
-; CHECK-FAST-NOVSX-NEXT:    fneg 0, 3
-; CHECK-FAST-NOVSX-NEXT:    fmsub 1, 0, 2, 1
+; CHECK-FAST-NOVSX-NEXT:    fnmadd 1, 3, 2, 1
 ; CHECK-FAST-NOVSX-NEXT:    blr
 ;
 ; CHECK-LABEL: fma_combine1:
@@ -34,14 +32,12 @@ entry:
 define double @fma_combine2(double %a, double %b, double %c) {
 ; CHECK-FAST-LABEL: fma_combine2:
 ; CHECK-FAST:       # %bb.0: # %entry
-; CHECK-FAST-NEXT:    xsnegdp 0, 3
-; CHECK-FAST-NEXT:    xsmsubadp 1, 2, 0
+; CHECK-FAST-NEXT:    xsnmaddadp 1, 2, 3
 ; CHECK-FAST-NEXT:    blr
 ;
 ; CHECK-FAST-NOVSX-LABEL: fma_combine2:
 ; CHECK-FAST-NOVSX:       # %bb.0: # %entry
-; CHECK-FAST-NOVSX-NEXT:    fneg 0, 3
-; CHECK-FAST-NOVSX-NEXT:    fmsub 1, 2, 0, 1
+; CHECK-FAST-NOVSX-NEXT:    fnmadd 1, 2, 3, 1
 ; CHECK-FAST-NOVSX-NEXT:    blr
 ;
 ; CHECK-LABEL: fma_combine2:
@@ -62,25 +58,25 @@ entry:
 define double @fma_combine_two_uses(double %a, double %b, double %c) {
 ; CHECK-FAST-LABEL: fma_combine_two_uses:
 ; CHECK-FAST:       # %bb.0: # %entry
-; CHECK-FAST-NEXT:    xsnegdp 0, 3
+; CHECK-FAST-NEXT:    xsnegdp 0, 1
 ; CHECK-FAST-NEXT:    addis 3, 2, v@toc@ha
 ; CHECK-FAST-NEXT:    addis 4, 2, z@toc@ha
-; CHECK-FAST-NEXT:    xsnegdp 3, 1
-; CHECK-FAST-NEXT:    xsmsubadp 1, 0, 2
-; CHECK-FAST-NEXT:    stfd 0, z@toc@l(4)
-; CHECK-FAST-NEXT:    stfd 3, v@toc@l(3)
+; CHECK-FAST-NEXT:    xsnmaddadp 1, 3, 2
+; CHECK-FAST-NEXT:    xsnegdp 2, 3
+; CHECK-FAST-NEXT:    stfd 0, v@toc@l(3)
+; CHECK-FAST-NEXT:    stfd 2, z@toc@l(4)
 ; CHECK-FAST-NEXT:    blr
 ;
 ; CHECK-FAST-NOVSX-LABEL: fma_combine_two_uses:
 ; CHECK-FAST-NOVSX:       # %bb.0: # %entry
-; CHECK-FAST-NOVSX-NEXT:    fneg 3, 3
+; CHECK-FAST-NOVSX-NEXT:    fnmadd 0, 3, 2, 1
+; CHECK-FAST-NOVSX-NEXT:    fneg 2, 1
 ; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, v@toc@ha
 ; CHECK-FAST-NOVSX-NEXT:    addis 4, 2, z@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    fmsub 0, 3, 2, 1
-; CHECK-FAST-NOVSX-NEXT:    fneg 2, 1
-; CHECK-FAST-NOVSX-NEXT:    stfd 3, z@toc@l(4)
+; CHECK-FAST-NOVSX-NEXT:    fneg 3, 3
 ; CHECK-FAST-NOVSX-NEXT:    fmr 1, 0
 ; CHECK-FAST-NOVSX-NEXT:    stfd 2, v@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    stfd 3, z@toc@l(4)
 ; CHECK-FAST-NOVSX-NEXT:    blr
 ;
 ; CHECK-LABEL: fma_combine_two_uses:
@@ -108,19 +104,17 @@ entry:
 define double @fma_combine_one_use(double %a, double %b, double %c) {
 ; CHECK-FAST-LABEL: fma_combine_one_use:
 ; CHECK-FAST:       # %bb.0: # %entry
-; CHECK-FAST-NEXT:    xsnegdp 0, 3
+; CHECK-FAST-NEXT:    xsnegdp 0, 1
 ; CHECK-FAST-NEXT:    addis 3, 2, v@toc@ha
-; CHECK-FAST-NEXT:    xsnegdp 3, 1
-; CHECK-FAST-NEXT:    xsmsubadp 1, 0, 2
-; CHECK-FAST-NEXT:    stfd 3, v@toc@l(3)
+; CHECK-FAST-NEXT:    xsnmaddadp 1, 3, 2
+; CHECK-FAST-NEXT:    stfd 0, v@toc@l(3)
 ; CHECK-FAST-NEXT:    blr
 ;
 ; CHECK-FAST-NOVSX-LABEL: fma_combine_one_use:
 ; CHECK-FAST-NOVSX:       # %bb.0: # %entry
-; CHECK-FAST-NOVSX-NEXT:    fneg 0, 3
-; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, v@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    fmsub 0, 0, 2, 1
+; CHECK-FAST-NOVSX-NEXT:    fnmadd 0, 3, 2, 1
 ; CHECK-FAST-NOVSX-NEXT:    fneg 2, 1
+; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, v@toc@ha
 ; CHECK-FAST-NOVSX-NEXT:    fmr 1, 0
 ; CHECK-FAST-NOVSX-NEXT:    stfd 2, v@toc@l(3)
 ; CHECK-FAST-NOVSX-NEXT:    blr

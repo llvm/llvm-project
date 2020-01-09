@@ -12639,6 +12639,15 @@ SDValue DAGCombiner::visitFMA(SDNode *N) {
     }
   }
 
+  // fold ((fma (fneg X), Y, (fneg Z)) -> fneg (fma X, Y, Z))
+  // fold ((fma X, (fneg Y), (fneg Z)) -> fneg (fma X, Y, Z))
+  if (!TLI.isFNegFree(VT) &&
+      TLI.isNegatibleForFree(SDValue(N, 0), DAG, LegalOperations,
+                             ForCodeSize) == 2)
+    return DAG.getNode(ISD::FNEG, DL, VT,
+                       TLI.getNegatedExpression(SDValue(N, 0), DAG,
+                                                LegalOperations, ForCodeSize),
+                       Flags);
   return SDValue();
 }
 
