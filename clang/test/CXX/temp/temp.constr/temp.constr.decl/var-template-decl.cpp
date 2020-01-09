@@ -3,11 +3,11 @@
 namespace nodiag {
 
 struct B {
-    template <typename T> requires bool(T())
+    template <typename T> requires (bool(T()))
     static int A;
 };
 
-template <typename U> requires bool(U())
+template <typename U> requires (bool(U()))
 int B::A = int(U());
 
 } // end namespace nodiag
@@ -15,11 +15,11 @@ int B::A = int(U());
 namespace diag {
 
 struct B {
-    template <typename T> requires bool(T()) // expected-note{{previous template declaration is here}}
+    template <typename T> requires (bool(T())) // expected-note{{previous template declaration is here}}
     static int A;
 };
 
-template <typename U> requires !bool(U())  // expected-error{{requires clause differs in template redeclaration}}
+template <typename U> requires (!bool(U()))  // expected-error{{requires clause differs in template redeclaration}}
 int B::A = int(U());
 
 } // end namespace diag
