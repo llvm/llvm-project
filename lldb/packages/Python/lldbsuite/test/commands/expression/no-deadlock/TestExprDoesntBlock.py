@@ -16,9 +16,6 @@ class ExprDoesntDeadlockTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr17946')
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="Windows doesn't have pthreads, test needs to be ported")
     @add_test_categories(["basic_process"])
     def test_with_run_command(self):
         """Test that expr will time out and allow other threads to run if it blocks."""
@@ -32,7 +29,7 @@ class ExprDoesntDeadlockTestCase(TestBase):
         # Now create a breakpoint at source line before call_me_to_get_lock
         # gets called.
 
-        main_file_spec = lldb.SBFileSpec("locking.c")
+        main_file_spec = lldb.SBFileSpec("locking.cpp")
         breakpoint = target.BreakpointCreateBySourceRegex(
             'Break here', main_file_spec)
         if self.TraceOn():
@@ -55,6 +52,6 @@ class ExprDoesntDeadlockTestCase(TestBase):
 
         frame0 = thread.GetFrameAtIndex(0)
 
-        var = frame0.EvaluateExpression("call_me_to_get_lock()")
+        var = frame0.EvaluateExpression("call_me_to_get_lock(get_int())")
         self.assertTrue(var.IsValid())
-        self.assertTrue(var.GetValueAsSigned(0) == 567)
+        self.assertEqual(var.GetValueAsSigned(0), 567)

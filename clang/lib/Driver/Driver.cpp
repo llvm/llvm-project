@@ -1951,8 +1951,9 @@ void Driver::BuildUniversalActions(Compilation &C, const ToolChain &TC,
 
     // Handle debug info queries.
     Arg *A = Args.getLastArg(options::OPT_g_Group);
-    if (A && !A->getOption().matches(options::OPT_g0) &&
-        !A->getOption().matches(options::OPT_gstabs) &&
+    bool enablesDebugInfo = A && !A->getOption().matches(options::OPT_g0) &&
+                            !A->getOption().matches(options::OPT_gstabs);
+    if ((enablesDebugInfo || willEmitRemarks(Args)) &&
         ContainsCompileOrAssembleAction(Actions.back())) {
 
       // Add a 'dsymutil' step if necessary, when debug info is enabled and we
@@ -4834,4 +4835,27 @@ Driver::getIncludeExcludeOptionFlagMasks(bool IsClCompatMode) const {
 
 bool clang::driver::isOptimizationLevelFast(const ArgList &Args) {
   return Args.hasFlag(options::OPT_Ofast, options::OPT_O_Group, false);
+}
+
+bool clang::driver::willEmitRemarks(const ArgList &Args) {
+  // -fsave-optimization-record enables it.
+  if (Args.hasFlag(options::OPT_fsave_optimization_record,
+                   options::OPT_fno_save_optimization_record, false))
+    return true;
+
+  // -fsave-optimization-record=<format> enables it as well.
+  if (Args.hasFlag(options::OPT_fsave_optimization_record_EQ,
+                   options::OPT_fno_save_optimization_record, false))
+    return true;
+
+  // -foptimization-record-file alone enables it too.
+  if (Args.hasFlag(options::OPT_foptimization_record_file_EQ,
+                   options::OPT_fno_save_optimization_record, false))
+    return true;
+
+  // -foptimization-record-passes alone enables it too.
+  if (Args.hasFlag(options::OPT_foptimization_record_passes_EQ,
+                   options::OPT_fno_save_optimization_record, false))
+    return true;
+  return false;
 }

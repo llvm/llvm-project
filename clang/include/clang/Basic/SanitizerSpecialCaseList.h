@@ -17,6 +17,7 @@
 #include "clang/Basic/Sanitizers.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <memory>
 
 namespace clang {
@@ -24,10 +25,12 @@ namespace clang {
 class SanitizerSpecialCaseList : public llvm::SpecialCaseList {
 public:
   static std::unique_ptr<SanitizerSpecialCaseList>
-  create(const std::vector<std::string> &Paths, std::string &Error);
+  create(const std::vector<std::string> &Paths, llvm::vfs::FileSystem &VFS,
+         std::string &Error);
 
   static std::unique_ptr<SanitizerSpecialCaseList>
-  createOrDie(const std::vector<std::string> &Paths);
+  createOrDie(const std::vector<std::string> &Paths,
+              llvm::vfs::FileSystem &VFS);
 
   // Query blacklisted entries if any bit in Mask matches the entry's section.
   bool inSection(SanitizerMask Mask, StringRef Prefix, StringRef Query,

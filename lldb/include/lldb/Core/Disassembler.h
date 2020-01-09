@@ -287,6 +287,10 @@ public:
   ///     a function call (a branch that calls and returns to the next
   ///     instruction). If false, find the instruction index of any 
   ///     branch in the list.
+  ///     
+  /// @param[out] found_calls
+  ///     If non-null, this will be set to true if any calls were found in 
+  ///     extending the range.
   ///    
   /// @return
   ///     The instruction index of the first branch that is at or past
@@ -295,7 +299,8 @@ public:
   //------------------------------------------------------------------
   uint32_t GetIndexOfNextBranchInstruction(uint32_t start,
                                            Target &target,
-                                           bool ignore_calls) const;
+                                           bool ignore_calls,
+                                           bool *found_calls) const;
 
   uint32_t GetIndexOfInstructionAtLoadAddress(lldb::addr_t load_addr,
                                               Target &target);

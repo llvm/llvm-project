@@ -95,11 +95,11 @@ SpecialCaseList::createOrDie(const std::vector<std::string> &Paths) {
 }
 
 bool SpecialCaseList::createInternal(const std::vector<std::string> &Paths,
-                                     std::string &Error) {
+                                     std::string &Error, vfs::FileSystem &VFS) {
   StringMap<size_t> Sections;
   for (const auto &Path : Paths) {
     ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-        MemoryBuffer::getFile(Path);
+        VFS.getBufferForFile(Path);
     if (std::error_code EC = FileOrErr.getError()) {
       Error = (Twine("can't open file '") + Path + "': " + EC.message()).str();
       return false;
