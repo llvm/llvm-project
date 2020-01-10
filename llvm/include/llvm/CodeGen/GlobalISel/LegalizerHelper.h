@@ -240,6 +240,7 @@ public:
   LegalizeResult lowerSADDO_SSUBO(MachineInstr &MI);
   LegalizeResult lowerBswap(MachineInstr &MI);
   LegalizeResult lowerBitreverse(MachineInstr &MI);
+  LegalizeResult lowerReadRegister(MachineInstr &MI);
 
 private:
   MachineRegisterInfo &MRI;

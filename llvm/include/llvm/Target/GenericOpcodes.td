@@ -1012,6 +1012,26 @@ def G_BRJT : GenericInstruction {
   let isTerminator = 1;
 }
 
+def G_READ_REGISTER : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$register);
+  let hasSideEffects = 1;
+
+  // Assume convergent. It's probably not worth the effort of somehow
+  // modeling convergent and nonconvergent register accesses.
+  let isConvergent = 1;
+}
+
+def G_WRITE_REGISTER : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$register, type0:$value);
+  let hasSideEffects = 1;
+
+  // Assume convergent. It's probably not worth the effort of somehow
+  // modeling convergent and nonconvergent register accesses.
+  let isConvergent = 1;
+}
+
 //------------------------------------------------------------------------------
 // Vector ops
 //------------------------------------------------------------------------------
