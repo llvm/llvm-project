@@ -415,18 +415,14 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     // Update Chain.
     Chain = Call.second;
   } else {
-    SDValue Tmp = DAG.getNode(
-        ISD::SETCC, dl,
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT),
-        NewLHS, NewRHS, DAG.getCondCode(CCCode));
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT);
+    SDValue Tmp = DAG.getSetCC(dl, SetCCVT, NewLHS, NewRHS, CCCode);
     auto Call2 = makeLibCall(DAG, LC2, RetVT, Ops, CallOptions, dl, Chain);
     CCCode = getCmpLibcallCC(LC2);
     if (ShouldInvertCC)
       CCCode = getSetCCInverse(CCCode, RetVT);
-    NewLHS = DAG.getNode(
-        ISD::SETCC, dl,
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT),
-        Call2.first, NewRHS, DAG.getCondCode(CCCode));
+    NewLHS = DAG.getSetCC(dl, SetCCVT, Call2.first, NewRHS, CCCode);
     if (Chain)
       Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Call.second,
                           Call2.second);
