@@ -1,0 +1,83 @@
+//===-- llvm/CodeGen/MIRFormatter.h -----------------------------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains the declaration of the MIRFormatter class.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_CODEGEN_MIRFORMATTER_H
+#define LLVM_CODEGEN_MIRFORMATTER_H
+
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/PseudoSourceValue.h"
+
+namespace llvm {
+
+struct PerFunctionMIParsingState;
+struct SlotMapping;
+
+/// MIRFormater - Interface to format MIR operand based on target
+class MIRFormatter {
+public:
+  typedef function_ref<bool(StringRef::iterator Loc, const Twine &)>
+      ErrorCallbackType;
+
+  MIRFormatter() {}
+  virtual ~MIRFormatter() = default;
+
+  /// Implement target specific printing for machine operand immediate value, so
+  /// that we can have more meaningful mnemonic than a 64-bit integer. Passing
+  /// None to OpIdx means the index is unknown.
+  virtual void printImm(raw_ostream &OS, const MachineInstr &MI,
+                        Optional<unsigned> OpIdx, int64_t Imm) const {
+    OS << Imm;
+  }
+
+  /// Implement target specific parsing of immediate mnemonics. The mnemonic is
+  /// dot seperated strings.
+  virtual bool parseImmMnemonic(const unsigned OpCode, const unsigned OpIdx,
+                                StringRef Src, int64_t &Imm,
+                                ErrorCallbackType ErrorCallback) const {
+    llvm_unreachable("target did not implement parsing MIR immediate mnemonic");
+  }
+
+  /// Implement target specific printing of target custom pseudo source value.
+  /// Default implementation is not necessarily the correct MIR serialization
+  /// format.
+  virtual void
+  printCustomPseudoSourceValue(raw_ostream &OS, ModuleSlotTracker &MST,
+                               const PseudoSourceValue &PSV) const {
+    PSV.printCustom(OS);
+  }
+
+  /// Implement target specific parsing of target custom pseudo source value.
+  virtual bool parseCustomPseudoSourceValue(
+      StringRef Src, MachineFunction &MF, PerFunctionMIParsingState &PFS,
+      const PseudoSourceValue *&PSV, ErrorCallbackType ErrorCallback) const {
+    llvm_unreachable(
+        "target did not implement parsing MIR custom pseudo source value");
+  }
+
+  /// Helper functions to print IR value as MIR serialization format which will
+  /// be useful for target specific printer, e.g. for printing IR value in
+  /// custom pseudo source value.
+  static void printIRValue(raw_ostream &OS, const Value &V,
+                           ModuleSlotTracker &MST);
+
+  /// Helper functions to parse IR value from MIR serialization format which
+  /// will be useful for target specific parser, e.g. for parsing IR value for
+  /// custom pseudo source value.
+  static bool parseIRValue(StringRef Src, MachineFunction &MF,
+                           PerFunctionMIParsingState &PFS, const Value *&V,
+                           ErrorCallbackType ErrorCallback);
+};
+
+} // end namespace llvm
+
+#endif
