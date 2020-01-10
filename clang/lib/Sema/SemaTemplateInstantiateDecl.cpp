@@ -655,11 +655,10 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
       LateAttrs->push_back(LateInstantiatedAttribute(TmplAttr, Saved, New));
     } else {
       // Allow 'this' within late-parsed attributes.
-      NamedDecl *ND = dyn_cast<NamedDecl>(New);
-      CXXRecordDecl *ThisContext =
-          dyn_cast_or_null<CXXRecordDecl>(ND->getDeclContext());
+      auto *ND = cast<NamedDecl>(New);
+      auto *ThisContext = dyn_cast_or_null<CXXRecordDecl>(ND->getDeclContext());
       CXXThisScopeRAII ThisScope(*this, ThisContext, Qualifiers(),
-                                 ND && ND->isCXXInstanceMember());
+                                 ND->isCXXInstanceMember());
 
       Attr *NewAttr = sema::instantiateTemplateAttribute(TmplAttr, Context,
                                                          *this, TemplateArgs);
