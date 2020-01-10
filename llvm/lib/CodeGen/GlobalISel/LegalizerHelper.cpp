@@ -659,38 +659,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   }
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
-  case TargetOpcode::G_ANYEXT: {
-    if (TypeIdx != 0)
-      return UnableToLegalize;
-
-    Register SrcReg = MI.getOperand(1).getReg();
-    LLT SrcTy = MRI.getType(SrcReg);
-    uint64_t SizeOp1 = SrcTy.getSizeInBits();
-    if (SizeOp0 % SizeOp1 != 0)
-      return UnableToLegalize;
-
-    Register PadReg;
-    if (MI.getOpcode() == TargetOpcode::G_ZEXT)
-      PadReg = MIRBuilder.buildConstant(SrcTy, 0).getReg(0);
-    else if (MI.getOpcode() == TargetOpcode::G_ANYEXT)
-      PadReg = MIRBuilder.buildUndef(SrcTy).getReg(0);
-    else {
-      // Shift the sign bit of the low register through the high register.
-      auto ShiftAmt =
-        MIRBuilder.buildConstant(LLT::scalar(64), SrcTy.getSizeInBits() - 1);
-      PadReg = MIRBuilder.buildAShr(SrcTy, SrcReg, ShiftAmt).getReg(0);
-    }
-
-    // Generate a merge where the bottom bits are taken from the source, and
-    // zero/impdef/sign bit everything else.
-    unsigned NumParts = SizeOp0 / SizeOp1;
-    SmallVector<Register, 4> Srcs = {SrcReg};
-    for (unsigned Part = 1; Part < NumParts; ++Part)
-      Srcs.push_back(PadReg);
-    MIRBuilder.buildMerge(MI.getOperand(0), Srcs);
-    MI.eraseFromParent();
-    return Legalized;
-  }
+  case TargetOpcode::G_ANYEXT:
+    return narrowScalarExt(MI, TypeIdx, NarrowTy);
   case TargetOpcode::G_TRUNC: {
     if (TypeIdx != 1)
       return UnableToLegalize;
@@ -3676,6 +3646,45 @@ LegalizerHelper::narrowScalarBasic(MachineInstr &MI, unsigned TypeIdx,
   insertParts(DstReg, DstTy, NarrowTy, DstRegs,
               LeftoverTy, DstLeftoverRegs);
 
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::narrowScalarExt(MachineInstr &MI, unsigned TypeIdx,
+                                 LLT NarrowTy) {
+  if (TypeIdx != 0)
+    return UnableToLegalize;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  LLT SrcTy = MRI.getType(SrcReg);
+  unsigned DstSize = DstTy.getSizeInBits();
+  unsigned SrcSize = SrcTy.getSizeInBits();
+
+  if (DstSize % SrcSize != 0)
+    return UnableToLegalize;
+
+  Register PadReg;
+  if (MI.getOpcode() == TargetOpcode::G_ZEXT)
+    PadReg = MIRBuilder.buildConstant(SrcTy, 0).getReg(0);
+  else if (MI.getOpcode() == TargetOpcode::G_ANYEXT)
+    PadReg = MIRBuilder.buildUndef(SrcTy).getReg(0);
+  else {
+    // Shift the sign bit of the low register through the high register.
+    auto ShiftAmt =
+      MIRBuilder.buildConstant(LLT::scalar(64), SrcSize - 1);
+    PadReg = MIRBuilder.buildAShr(SrcTy, SrcReg, ShiftAmt).getReg(0);
+  }
+
+  // Generate a merge where the bottom bits are taken from the source, and
+  // zero/impdef/sign bit everything else.
+  unsigned NumParts = DstSize / SrcSize;
+  SmallVector<Register, 4> Srcs = {SrcReg};
+  for (unsigned Part = 1; Part < NumParts; ++Part)
+    Srcs.push_back(PadReg);
+  MIRBuilder.buildMerge(DstReg, Srcs);
   MI.eraseFromParent();
   return Legalized;
 }
