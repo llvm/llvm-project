@@ -12,8 +12,6 @@ define internal i32 @foo(i32 %X) {
 define void @bar() {
 ; CHECK-LABEL: define {{[^@]+}}@bar()
 ; CHECK-NEXT:    unreachable
-; CHECK:       .split:
-; CHECK-NEXT:    unreachable
 ;
   call i32 @foo( i32 17 )         ; <i32>:1 [#uses=0]
   ret void

@@ -17,8 +17,6 @@ define void @run() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @CaptureAStruct(%struct.Foo* nofree nonnull readonly align 8 dereferenceable(16) @a)
 ; CHECK-NEXT:    unreachable
-; CHECK:       entry.split:
-; CHECK-NEXT:    unreachable
 ;
 entry:
   tail call i8 @UseLongDoubleUnsafely(%union.u* byval align 16 bitcast (%struct.s* @b to %union.u*))

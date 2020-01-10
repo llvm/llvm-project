@@ -100,9 +100,9 @@ define dso_local i32 @"?catchoverflow@@YAHXZ_may_throw"()  personality i8* bitca
 entry:
   %retval = alloca i32, align 4
   %__exception_code = alloca i32, align 4
-; CHECK: invoke void @"?overflow@@YAXXZ_may_throw"() 
+; CHECK: invoke void @"?overflow@@YAXXZ_may_throw"()
 ; CHECK:          to label %invoke.cont unwind label %catch.dispatch
-  invoke void @"?overflow@@YAXXZ_may_throw"() 
+  invoke void @"?overflow@@YAXXZ_may_throw"()
           to label %invoke.cont unwind label %catch.dispatch
 
 invoke.cont:                                      ; preds = %entry

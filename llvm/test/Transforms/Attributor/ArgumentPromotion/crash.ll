@@ -11,10 +11,6 @@ define void @zot() personality i32 (...)* @wibble {
 ; ATTRIBUTOR-NEXT:  bb:
 ; ATTRIBUTOR-NEXT:    call void @hoge()
 ; ATTRIBUTOR-NEXT:    unreachable
-; ATTRIBUTOR:       bb.split:
-; ATTRIBUTOR-NEXT:    unreachable
-; ATTRIBUTOR:       bb1.i2c:
-; ATTRIBUTOR-NEXT:    unreachable
 ; ATTRIBUTOR:       bb1:
 ; ATTRIBUTOR-NEXT:    unreachable
 ; ATTRIBUTOR:       bb2:
@@ -47,8 +43,6 @@ define internal void @hoge() {
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@hoge()
 ; ATTRIBUTOR-NEXT:  bb:
 ; ATTRIBUTOR-NEXT:    unreachable
-; ATTRIBUTOR:       bb.split:
-; ATTRIBUTOR-NEXT:    unreachable
 ;
 bb:
   %tmp = call fastcc i8* @spam(i1 (i8*)* @eggs)
@@ -76,8 +70,6 @@ define i32 @test_inf_promote_caller(i32 %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@test_inf_promote_caller
 ; CHECK-SAME: (i32 [[ARG:%.*]])
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    unreachable
-; CHECK:       bb.split:
 ; CHECK-NEXT:    unreachable
 ;
 bb:
