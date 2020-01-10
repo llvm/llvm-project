@@ -752,8 +752,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "nsw ";
   if (MI.getFlag(MachineInstr::IsExact))
     OS << "exact ";
-  if (MI.getFlag(MachineInstr::FPExcept))
-    OS << "fpexcept ";
+  if (MI.getFlag(MachineInstr::NoFPExcept))
+    OS << "nofpexcept ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)
