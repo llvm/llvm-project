@@ -214,6 +214,8 @@ class LoopVectorizationPlanner {
     VPCallbackILV(InnerLoopVectorizer &ILV) : ILV(ILV) {}
 
     Value *getOrCreateVectorValues(Value *V, unsigned Part) override;
+    Value *getOrCreateScalarValue(Value *V,
+                                  const VPIteration &Instance) override;
   };
 
   /// A builder used to construct the current plan.
