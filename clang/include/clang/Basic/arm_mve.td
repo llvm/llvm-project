@@ -684,7 +684,7 @@ let params = [s16, s32], pnt = PNT_NType in {
   defm vqrshrun : VSHRN<UHalfVector, imm_1toHalfN, (? 1,0,1,0)>;
 }
 let params = T.Int, pnt = PNT_NType in {
-  defm vsli : DyadicImmShift<Vector, imm_1toN>;
+  defm vsli : DyadicImmShift<Vector, imm_0toNm1>;
   defm vsri : DyadicImmShift<Vector, imm_1toN>;
 }
 
