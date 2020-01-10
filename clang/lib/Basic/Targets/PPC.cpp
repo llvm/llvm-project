@@ -316,8 +316,7 @@ bool PPCTargetInfo::initFeatureMap(
                         .Case("pwr8", true)
                         .Default(false);
 
-  Features["spe"] = getTriple().getSubArch() == llvm::Triple::PPCSubArch_spe ||
-                    llvm::StringSwitch<bool>(CPU)
+  Features["spe"] = llvm::StringSwitch<bool>(CPU)
                         .Case("8548", true)
                         .Case("e500", true)
                         .Default(false);
