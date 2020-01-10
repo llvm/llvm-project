@@ -1031,6 +1031,10 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
       // direct-declarator '[' constant-expression[opt] ']'
       // direct-abstract-declarator[opt] '[' constant-expression[opt] ']'
       TPR = TryParseBracketDeclarator();
+    } else if (Tok.is(tok::kw_requires)) {
+      // declarator requires-clause
+      // A requires clause indicates a function declaration.
+      TPR = TPResult::True;
     } else {
       break;
     }
@@ -2014,7 +2018,6 @@ Parser::TryParseParameterDeclarationClause(bool *InvalidAsDeclaration,
 ///   'throw' '(' type-id-list[opt] ')'
 ///
 Parser::TPResult Parser::TryParseFunctionDeclarator() {
-
   // The '(' is already parsed.
 
   TPResult TPR = TryParseParameterDeclarationClause();
