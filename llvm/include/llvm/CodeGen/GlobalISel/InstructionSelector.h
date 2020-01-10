@@ -313,6 +313,14 @@ enum {
   /// - RendererFnID - Custom renderer function to call
   GIR_CustomRenderer,
 
+  /// Render operands to the specified instruction using a custom function,
+  /// reading from a specific operand.
+  /// - InsnID - Instruction ID to modify
+  /// - OldInsnID - Instruction ID to get the matched operand from
+  /// - OpIdx - Operand index in OldInsnID the render function should read from..
+  /// - RendererFnID - Custom renderer function to call
+  GIR_CustomOperandRenderer,
+
   /// Render a G_CONSTANT operator as a sign-extended immediate.
   /// - NewInsnID - Instruction ID to modify
   /// - OldInsnID - Instruction ID to copy from

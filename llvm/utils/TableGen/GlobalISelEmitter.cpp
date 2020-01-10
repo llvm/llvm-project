@@ -2318,7 +2318,8 @@ public:
     OR_Register,
     OR_TempRegister,
     OR_ComplexPattern,
-    OR_Custom
+    OR_Custom,
+    OR_CustomOperand
   };
 
 protected:
@@ -2722,6 +2723,38 @@ public:
           << MatchTable::Comment("Renderer")
           << MatchTable::NamedValue(
                  "GICR_" + Renderer.getValueAsString("RendererFn").str())
+          << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
+  }
+};
+
+class CustomOperandRenderer : public OperandRenderer {
+protected:
+  unsigned InsnID;
+  const Record &Renderer;
+  /// The name of the operand.
+  const std::string SymbolicName;
+
+public:
+  CustomOperandRenderer(unsigned InsnID, const Record &Renderer,
+                        StringRef SymbolicName)
+      : OperandRenderer(OR_CustomOperand), InsnID(InsnID), Renderer(Renderer),
+        SymbolicName(SymbolicName) {}
+
+  static bool classof(const OperandRenderer *R) {
+    return R->getKind() == OR_CustomOperand;
+  }
+
+  void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
+    const OperandMatcher &OpdMatcher = Rule.getOperandMatcher(SymbolicName);
+    Table << MatchTable::Opcode("GIR_CustomOperandRenderer")
+          << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
+          << MatchTable::Comment("OldInsnID")
+          << MatchTable::IntValue(OpdMatcher.getInsnVarID())
+          << MatchTable::Comment("OpIdx")
+          << MatchTable::IntValue(OpdMatcher.getOpIdx())
+          << MatchTable::Comment("OperandRenderer")
+          << MatchTable::NamedValue(
+            "GICR_" + Renderer.getValueAsString("RendererFn").str())
           << MatchTable::Comment(SymbolicName) << MatchTable::LineBreak;
   }
 };
@@ -3939,12 +3972,22 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
   }
 
   if (!DstChild->isLeaf()) {
-
     if (DstChild->getOperator()->isSubClassOf("SDNodeXForm")) {
       auto Child = DstChild->getChild(0);
       auto I = SDNodeXFormEquivs.find(DstChild->getOperator());
       if (I != SDNodeXFormEquivs.end()) {
-        DstMIBuilder.addRenderer<CustomRenderer>(*I->second, Child->getName());
+        Record *XFormOpc = DstChild->getOperator()->getValueAsDef("Opcode");
+        if (XFormOpc->getName() == "timm") {
+          // If this is a TargetConstant, there won't be a corresponding
+          // instruction to transform. Instead, this will refer directly to an
+          // operand in an instruction's operand list.
+          DstMIBuilder.addRenderer<CustomOperandRenderer>(*I->second,
+                                                          Child->getName());
+        } else {
+          DstMIBuilder.addRenderer<CustomRenderer>(*I->second,
+                                                   Child->getName());
+        }
+
         return InsertPt;
       }
       return failedImport("SDNodeXForm " + Child->getName() +
@@ -5112,7 +5155,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
 
      << "  typedef void(" << Target.getName()
      << "InstructionSelector::*CustomRendererFn)(MachineInstrBuilder &, const "
-        "MachineInstr&) "
+        "MachineInstr&, int) "
         "const;\n"
      << "  const ISelInfoTy<PredicateBitset, ComplexMatcherMemFn, "
         "CustomRendererFn> "
