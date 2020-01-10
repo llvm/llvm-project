@@ -1086,7 +1086,7 @@ uint16x8_t test_vqrshrntq_m_n_u32(uint16x8_t a, uint32x4_t b, mve_pred16_t p)
 
 // CHECK-LABEL: @test_vqrshrunbq_n_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i8> @llvm.arm.mve.vshrn.v16i8.v8i16(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 7, i32 1, i32 0, i32 1, i32 0, i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i8> @llvm.arm.mve.vshrn.v16i8.v8i16(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 7, i32 1, i32 1, i32 1, i32 0, i32 0)
 // CHECK-NEXT:    ret <16 x i8> [[TMP0]]
 //
 uint8x16_t test_vqrshrunbq_n_s16(uint8x16_t a, int16x8_t b)
@@ -1100,7 +1100,7 @@ uint8x16_t test_vqrshrunbq_n_s16(uint8x16_t a, int16x8_t b)
 
 // CHECK-LABEL: @test_vqrshrunbq_n_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 1, i32 1, i32 0, i32 1, i32 0, i32 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 1, i32 1, i32 1, i32 1, i32 0, i32 0)
 // CHECK-NEXT:    ret <8 x i16> [[TMP0]]
 //
 uint16x8_t test_vqrshrunbq_n_s32(uint16x8_t a, int32x4_t b)
@@ -1114,7 +1114,7 @@ uint16x8_t test_vqrshrunbq_n_s32(uint16x8_t a, int32x4_t b)
 
 // CHECK-LABEL: @test_vqrshruntq_n_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i8> @llvm.arm.mve.vshrn.v16i8.v8i16(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 1, i32 1, i32 0, i32 1, i32 0, i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <16 x i8> @llvm.arm.mve.vshrn.v16i8.v8i16(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 1, i32 1, i32 1, i32 1, i32 0, i32 1)
 // CHECK-NEXT:    ret <16 x i8> [[TMP0]]
 //
 uint8x16_t test_vqrshruntq_n_s16(uint8x16_t a, int16x8_t b)
@@ -1128,7 +1128,7 @@ uint8x16_t test_vqrshruntq_n_s16(uint8x16_t a, int16x8_t b)
 
 // CHECK-LABEL: @test_vqrshruntq_n_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 3, i32 1, i32 0, i32 1, i32 0, i32 1)
+// CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.arm.mve.vshrn.v8i16.v4i32(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 3, i32 1, i32 1, i32 1, i32 0, i32 1)
 // CHECK-NEXT:    ret <8 x i16> [[TMP0]]
 //
 uint16x8_t test_vqrshruntq_n_s32(uint16x8_t a, int32x4_t b)
@@ -1144,7 +1144,7 @@ uint16x8_t test_vqrshruntq_n_s32(uint16x8_t a, int32x4_t b)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.mve.vshrn.predicated.v16i8.v8i16.v8i1(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 4, i32 1, i32 0, i32 1, i32 0, i32 0, <8 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.mve.vshrn.predicated.v16i8.v8i16.v8i1(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 4, i32 1, i32 1, i32 1, i32 0, i32 0, <8 x i1> [[TMP1]])
 // CHECK-NEXT:    ret <16 x i8> [[TMP2]]
 //
 uint8x16_t test_vqrshrunbq_m_n_s16(uint8x16_t a, int16x8_t b, mve_pred16_t p)
@@ -1160,7 +1160,7 @@ uint8x16_t test_vqrshrunbq_m_n_s16(uint8x16_t a, int16x8_t b, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vshrn.predicated.v8i16.v4i32.v4i1(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 10, i32 1, i32 0, i32 1, i32 0, i32 0, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vshrn.predicated.v8i16.v4i32.v4i1(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 10, i32 1, i32 1, i32 1, i32 0, i32 0, <4 x i1> [[TMP1]])
 // CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 //
 uint16x8_t test_vqrshrunbq_m_n_s32(uint16x8_t a, int32x4_t b, mve_pred16_t p)
@@ -1176,7 +1176,7 @@ uint16x8_t test_vqrshrunbq_m_n_s32(uint16x8_t a, int32x4_t b, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i1> @llvm.arm.mve.pred.i2v.v8i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.mve.vshrn.predicated.v16i8.v8i16.v8i1(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 3, i32 1, i32 0, i32 1, i32 0, i32 1, <8 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.arm.mve.vshrn.predicated.v16i8.v8i16.v8i1(<16 x i8> [[A:%.*]], <8 x i16> [[B:%.*]], i32 3, i32 1, i32 1, i32 1, i32 0, i32 1, <8 x i1> [[TMP1]])
 // CHECK-NEXT:    ret <16 x i8> [[TMP2]]
 //
 uint8x16_t test_vqrshruntq_m_n_s16(uint8x16_t a, int16x8_t b, mve_pred16_t p)
@@ -1192,7 +1192,7 @@ uint8x16_t test_vqrshruntq_m_n_s16(uint8x16_t a, int16x8_t b, mve_pred16_t p)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[P:%.*]] to i32
 // CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 [[TMP0]])
-// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vshrn.predicated.v8i16.v4i32.v4i1(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 13, i32 1, i32 0, i32 1, i32 0, i32 1, <4 x i1> [[TMP1]])
+// CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.arm.mve.vshrn.predicated.v8i16.v4i32.v4i1(<8 x i16> [[A:%.*]], <4 x i32> [[B:%.*]], i32 13, i32 1, i32 1, i32 1, i32 0, i32 1, <4 x i1> [[TMP1]])
 // CHECK-NEXT:    ret <8 x i16> [[TMP2]]
 //
 uint16x8_t test_vqrshruntq_m_n_s32(uint16x8_t a, int32x4_t b, mve_pred16_t p)
