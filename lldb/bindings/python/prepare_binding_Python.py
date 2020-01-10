@@ -153,7 +153,7 @@ def get_interface_files(options):
     the public API language binding.
     """
     interface_file_paths = []
-    interface_dir = os.path.join(options.src_root, "scripts", "interface")
+    interface_dir = os.path.join(options.src_root, "bindings", "interface")
 
     for filepath in [f for f in os.listdir(interface_dir)
                      if os.path.splitext(f)[1] == ".i"]:
@@ -262,14 +262,14 @@ def static_binding_paths(options):
     """Returns the full VCS path to the Python .cpp and .py static bindings."""
     lldb_wrap_python_src_path = os.path.join(
         options.src_root,
-        "scripts",
-        "Python",
+        "bindings",
+        "python",
         options.static_binding_dir,
         "LLDBWrapPython.cpp")
     lldb_py_src_path = os.path.join(
         options.src_root,
-        "scripts",
-        "Python",
+        "bindings",
+        "python",
         options.static_binding_dir,
         "lldb.py")
     return (lldb_wrap_python_src_path, lldb_py_src_path)
@@ -419,16 +419,16 @@ def main(options):
 
     # Setup paths used during swig invocation.
     settings.input_file = os.path.normcase(
-        os.path.join(options.src_root, "scripts", "lldb.swig"))
-    scripts_python_dir = os.path.dirname(os.path.realpath(__file__))
+        os.path.join(options.src_root, "bindings", "lldb.swig"))
+    bindings_python_dir = os.path.dirname(os.path.realpath(__file__))
     settings.extensions_file = os.path.normcase(
-        os.path.join(scripts_python_dir, "python-extensions.swig"))
+        os.path.join(bindings_python_dir, "python-extensions.swig"))
     settings.wrapper_file = os.path.normcase(
-        os.path.join(scripts_python_dir, "python-wrapper.swig"))
+        os.path.join(bindings_python_dir, "python-wrapper.swig"))
     settings.typemaps_file = os.path.normcase(
-        os.path.join(scripts_python_dir, "python-typemaps.swig"))
+        os.path.join(bindings_python_dir, "python-typemaps.swig"))
     settings.safecast_file = os.path.normcase(
-        os.path.join(scripts_python_dir, "python-swigsafecast.swig"))
+        os.path.join(bindings_python_dir, "python-swigsafecast.swig"))
 
     settings.header_files = get_header_files(options)
     settings.interface_files = get_interface_files(options)
