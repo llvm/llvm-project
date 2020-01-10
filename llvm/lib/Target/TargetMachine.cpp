@@ -12,6 +12,7 @@
 
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -37,7 +38,9 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
     : TheTarget(T), DL(DataLayoutString), TargetTriple(TT), TargetCPU(CPU),
       TargetFS(FS), AsmInfo(nullptr), MRI(nullptr), MII(nullptr), STI(nullptr),
       RequireStructuredCFG(false), O0WantsFastISel(false),
-      DefaultOptions(Options), Options(Options) {}
+      DefaultOptions(Options), Options(Options) {
+  MIRF = std::make_unique<MIRFormatter>();
+}
 
 TargetMachine::~TargetMachine() = default;
 
