@@ -1437,6 +1437,12 @@ static void runThinLTOBackend(ModuleSummaryIndex *CombinedIndex, Module *M,
   Conf.OptLevel = CGOpts.OptimizationLevel;
   initTargetOptions(Conf.Options, CGOpts, TOpts, LOpts, HeaderOpts);
   Conf.SampleProfile = std::move(SampleProfile);
+  Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
+  // For historical reasons, loop interleaving is set to mirror setting for loop
+  // unrolling.
+  Conf.PTO.LoopInterleaving = CGOpts.UnrollLoops;
+  Conf.PTO.LoopVectorization = CGOpts.VectorizeLoop;
+  Conf.PTO.SLPVectorization = CGOpts.VectorizeSLP;
 
   // Context sensitive profile.
   if (CGOpts.hasProfileCSIRInstr()) {
