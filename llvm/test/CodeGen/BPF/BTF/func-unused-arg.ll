@@ -31,7 +31,7 @@ define dso_local i32 @f1(i32) local_unnamed_addr #0 !dbg !7 {
 ; CHECK-NEXT:        .long   5
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   8                       # BTF_KIND_FUNC(id = 3)
-; CHECK-NEXT:        .long   201326592               # 0xc000000
+; CHECK-NEXT:        .long   201326593               # 0xc000001
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .byte   0                       # string offset=0
 ; CHECK-NEXT:        .ascii  "int"                   # string offset=1

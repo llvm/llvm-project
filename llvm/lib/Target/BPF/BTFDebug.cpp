@@ -308,10 +308,11 @@ void BTFTypeFuncProto::emitType(MCStreamer &OS) {
   }
 }
 
-BTFTypeFunc::BTFTypeFunc(StringRef FuncName, uint32_t ProtoTypeId)
+BTFTypeFunc::BTFTypeFunc(StringRef FuncName, uint32_t ProtoTypeId,
+    uint32_t Scope)
     : Name(FuncName) {
   Kind = BTF::BTF_KIND_FUNC;
-  BTFType.Info = Kind << 24;
+  BTFType.Info = (Kind << 24) | Scope;
   BTFType.Type = ProtoTypeId;
 }
 
@@ -897,8 +898,9 @@ void BTFDebug::beginFunctionImpl(const MachineFunction *MF) {
   visitSubroutineType(SP->getType(), true, FuncArgNames, ProtoTypeId);
 
   // Construct subprogram func type
+  uint8_t Scope = SP->isLocalToUnit() ? BTF::FUNC_STATIC : BTF::FUNC_GLOBAL;
   auto FuncTypeEntry =
-      std::make_unique<BTFTypeFunc>(SP->getName(), ProtoTypeId);
+      std::make_unique<BTFTypeFunc>(SP->getName(), ProtoTypeId, Scope);
   uint32_t FuncTypeId = addType(std::move(FuncTypeEntry));
 
   for (const auto &TypeEntry : TypeEntries)
@@ -1012,6 +1014,12 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
              MI->getOpcode() == BPF::CORE_SHIFT) {
     // relocation insn is a load, store or shift insn.
     processReloc(MI->getOperand(3));
+  } else if (MI->getOpcode() == BPF::JAL) {
+    // check extern function references
+    const MachineOperand &MO = MI->getOperand(0);
+    if (MO.isGlobal()) {
+      processFuncPrototypes(dyn_cast<Function>(MO.getGlobal()));
+    }
   }
 
   // Skip this instruction if no DebugLoc or the DebugLoc
@@ -1162,32 +1170,27 @@ bool BTFDebug::InstLower(const MachineInstr *MI, MCInst &OutMI) {
   return false;
 }
 
-void BTFDebug::processFuncPrototypes() {
-  const Module *M = MMI->getModule();
-  for (const Function &F : M->functions()) {
-    const DISubprogram *SP = F.getSubprogram();
-    if (!SP || SP->isDefinition())
-      continue;
+void BTFDebug::processFuncPrototypes(const Function *F) {
+  if (!F)
+    return;
 
-    uint32_t ProtoTypeId;
-    const std::unordered_map<uint32_t, StringRef> FuncArgNames;
-    visitSubroutineType(SP->getType(), false, FuncArgNames, ProtoTypeId);
+  const DISubprogram *SP = F->getSubprogram();
+  if (!SP || SP->isDefinition())
+    return;
 
-    auto VarEntry =
-        std::make_unique<BTFKindVar>(SP->getName(), ProtoTypeId,
-                                     BTF::VAR_GLOBAL_EXTERNAL);
-    uint32_t VarId = addType(std::move(VarEntry));
+  // Do not emit again if already emitted.
+  if (ProtoFunctions.find(F) != ProtoFunctions.end())
+    return;
+  ProtoFunctions.insert(F);
 
-    StringRef SecName = F.getSection();
-    if (SecName.empty())
-      SecName = ".extern";
+  uint32_t ProtoTypeId;
+  const std::unordered_map<uint32_t, StringRef> FuncArgNames;
+  visitSubroutineType(SP->getType(), false, FuncArgNames, ProtoTypeId);
 
-    if (DataSecEntries.find(SecName) == DataSecEntries.end()) {
-      DataSecEntries[SecName] = std::make_unique<BTFKindDataSec>(Asm, SecName);
-    }
-
-    DataSecEntries[SecName]->addVar(VarId, Asm->getSymbol(&F), 8);
-  }
+  uint8_t Scope = BTF::FUNC_EXTERN;
+  auto FuncTypeEntry =
+      std::make_unique<BTFTypeFunc>(SP->getName(), ProtoTypeId, Scope);
+  addType(std::move(FuncTypeEntry));
 }
 
 void BTFDebug::endModule() {
@@ -1199,8 +1202,6 @@ void BTFDebug::endModule() {
 
   // Collect global types/variables except MapDef globals.
   processGlobals(false);
-
-  processFuncPrototypes();
 
   for (auto &DataSec : DataSecEntries)
     addType(std::move(DataSec.second));
