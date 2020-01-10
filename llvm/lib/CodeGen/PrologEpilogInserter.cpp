@@ -259,10 +259,6 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
   for (auto &I : EntryDbgValues)
     I.first->insert(I.first->begin(), I.second.begin(), I.second.end());
 
-  // Allow the target machine to make final modifications to the function
-  // before the frame layout is finalized.
-  TFI->processFunctionBeforeFrameIndicesReplaced(MF, RS);
-
   // Replace all MO_FrameIndex operands with physical register references
   // and actual offsets.
   //
