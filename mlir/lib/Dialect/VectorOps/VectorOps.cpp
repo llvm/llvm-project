@@ -1650,7 +1650,6 @@ static ParseResult parseTupleGetOp(OpAsmParser &parser,
   StringRef indexAttrName = TupleGetOp::getIndexAttrName();
   Type indexType = parser.getBuilder().getIndexType();
   TupleType tupleType;
-  VectorType resultVectorType;
   if (parser.parseOperand(operandInfo) || parser.parseComma() ||
       parser.parseAttribute(indexAttr, indexType, indexAttrName,
                             result.attributes) ||
