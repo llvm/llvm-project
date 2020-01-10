@@ -8,7 +8,7 @@
 
 # CHECK:  bb.1.vector.body:
 # CHECK:    renamable $r3, dead $cpsr = tSUBi8 killed renamable $r3, 4, 14, $noreg
-# CHECK:    $lr = MVE_LETP renamable $lr, %bb.1
+# CHECK:    $lr = MVE_LETP killed renamable $lr, %bb.1
 
 --- |
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
