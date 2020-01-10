@@ -14971,7 +14971,7 @@ static SDValue lowerShuffleAsLanePermuteAndShuffle(
   if (!Subtarget.hasAVX2()) {
     bool LaneCrossing[2] = {false, false};
     for (int i = 0; i < Size; ++i)
-      if (Mask[i] >= 0 && (Mask[i] % Size) / LaneSize != i / LaneSize)
+      if (Mask[i] >= 0 && ((Mask[i] % Size) / LaneSize) != (i / LaneSize))
         LaneCrossing[(Mask[i] % Size) / LaneSize] = true;
     if (!LaneCrossing[0] || !LaneCrossing[1])
       return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG);
@@ -14979,7 +14979,7 @@ static SDValue lowerShuffleAsLanePermuteAndShuffle(
     bool LaneUsed[2] = {false, false};
     for (int i = 0; i < Size; ++i)
       if (Mask[i] >= 0)
-        LaneUsed[(Mask[i] / LaneSize)] = true;
+        LaneUsed[(Mask[i] % Size) / LaneSize] = true;
     if (!LaneUsed[0] || !LaneUsed[1])
       return splitAndLowerShuffle(DL, VT, V1, V2, Mask, DAG);
   }
