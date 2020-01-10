@@ -13,6 +13,7 @@
 #include "FindTarget.h"
 #include "FormattedString.h"
 #include "Logger.h"
+#include "ParsedAST.h"
 #include "Selection.h"
 #include "SourceCode.h"
 #include "index/SymbolCollector.h"
@@ -21,13 +22,19 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
 #include "clang/Index/IndexSymbol.h"
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 
@@ -410,6 +417,45 @@ HoverInfo getHoverContents(const DefinedMacro &Macro, ParsedAST &AST) {
   }
   return HI;
 }
+
+bool isLiteral(const Expr *E) {
+  // Unfortunately there's no common base Literal classes inherits from
+  // (apart from Expr), therefore this is a nasty blacklist.
+  return llvm::isa<CharacterLiteral>(E) || llvm::isa<CompoundLiteralExpr>(E) ||
+         llvm::isa<CXXBoolLiteralExpr>(E) ||
+         llvm::isa<CXXNullPtrLiteralExpr>(E) ||
+         llvm::isa<FixedPointLiteral>(E) || llvm::isa<FloatingLiteral>(E) ||
+         llvm::isa<ImaginaryLiteral>(E) || llvm::isa<IntegerLiteral>(E) ||
+         llvm::isa<StringLiteral>(E) || llvm::isa<UserDefinedLiteral>(E);
+}
+
+llvm::StringLiteral getNameForExpr(const Expr *E) {
+  // FIXME: Come up with names for `special` expressions.
+  return "expression";
+}
+
+// Generates hover info for evaluatable expressions.
+// FIXME: Support hover for literals (esp user-defined)
+llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST) {
+  // There's not much value in hovering over "42" and getting a hover card
+  // saying "42 is an int", similar for other literals.
+  if (isLiteral(E))
+    return llvm::None;
+
+  HoverInfo HI;
+  // For expressions we currently print the type and the value, iff it is
+  // evaluatable.
+  if (auto Val = printExprValue(E, AST.getASTContext())) {
+    auto Policy =
+        printingPolicyForDecls(AST.getASTContext().getPrintingPolicy());
+    Policy.SuppressTagKeyword = true;
+    HI.Type = E->getType().getAsString(Policy);
+    HI.Value = *Val;
+    HI.Name = getNameForExpr(E);
+    return HI;
+  }
+  return llvm::None;
+}
 } // namespace
 
 llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
@@ -439,11 +485,11 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
         // Look for a close enclosing expression to show the value of.
         if (!HI->Value)
           HI->Value = printExprValue(N, AST.getASTContext());
+      } else if (const Expr *E = N->ASTNode.get<Expr>()) {
+        HI = getHoverContents(E, AST);
       }
       // FIXME: support hovers for other nodes?
-      //  - certain expressions (sizeof etc)
       //  - built-in types
-      //  - literals (esp user-defined)
     }
   }
 
@@ -469,6 +515,8 @@ markup::Document HoverInfo::present() const {
   // class `X`
   //
   // function `foo` → `int`
+  //
+  // expression : `int`
   // Note that we are making use of a level-3 heading because VSCode renders
   // level 1 and 2 headers in a huge font, see
   // https://github.com/microsoft/vscode/issues/88417 for details.
