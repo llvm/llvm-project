@@ -52,3 +52,45 @@ TEST(RangeDataVector, FindEntryThatContains_Overlap) {
   // TODO: This should probably return the range (0, 40) as well.
   EXPECT_THAT(Map.FindEntryThatContains(35), nullptr);
 }
+
+TEST(RangeDataVector, CustomSort) {
+  // First the default ascending order sorting of the data field.
+  auto Map = RangeDataVectorT();
+  Map.Append(EntryT(0, 10, 50));
+  Map.Append(EntryT(0, 10, 52));
+  Map.Append(EntryT(0, 10, 53));
+  Map.Append(EntryT(0, 10, 51));
+  Map.Sort();
+
+  EXPECT_THAT(Map.GetSize(), 4);
+  EXPECT_THAT(Map.GetEntryRef(0).data, 50);
+  EXPECT_THAT(Map.GetEntryRef(1).data, 51);
+  EXPECT_THAT(Map.GetEntryRef(2).data, 52);
+  EXPECT_THAT(Map.GetEntryRef(3).data, 53);
+
+  // And then a custom descending order sorting of the data field.
+  class CtorParam {};
+  class CustomSort {
+  public:
+    CustomSort(CtorParam) {}
+    bool operator()(const uint32_t a_data, const uint32_t b_data) {
+      return a_data > b_data;
+    }
+  };
+  using RangeDataVectorCustomSortT =
+      RangeDataVector<uint32_t, uint32_t, uint32_t, 0, CustomSort>;
+  using EntryT = RangeDataVectorT::Entry;
+
+  auto MapC = RangeDataVectorCustomSortT(CtorParam());
+  MapC.Append(EntryT(0, 10, 50));
+  MapC.Append(EntryT(0, 10, 52));
+  MapC.Append(EntryT(0, 10, 53));
+  MapC.Append(EntryT(0, 10, 51));
+  MapC.Sort();
+
+  EXPECT_THAT(MapC.GetSize(), 4);
+  EXPECT_THAT(MapC.GetEntryRef(0).data, 53);
+  EXPECT_THAT(MapC.GetEntryRef(1).data, 52);
+  EXPECT_THAT(MapC.GetEntryRef(2).data, 51);
+  EXPECT_THAT(MapC.GetEntryRef(3).data, 50);
+}
