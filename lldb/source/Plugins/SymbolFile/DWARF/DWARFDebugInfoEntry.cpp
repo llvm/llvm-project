@@ -344,7 +344,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
               *frame_base = DWARFExpression(
                   module, DataExtractor(data, block_offset, block_length), cu);
             } else {
-              DataExtractor data = dwarf.DebugLocData();
+              DataExtractor data = cu->GetLocationData();
               const dw_offset_t offset = form_value.Unsigned();
               if (data.ValidOffset(offset)) {
                 data = DataExtractor(data, offset, data.GetByteSize() - offset);
@@ -478,8 +478,6 @@ void DWARFDebugInfoEntry::DumpAttribute(
 
   s.PutCString("( ");
 
-  SymbolFileDWARF &dwarf = cu->GetSymbolFileDWARF();
-
   // Check to see if we have any special attribute formatters
   switch (attr) {
   case DW_AT_stmt_list:
@@ -509,7 +507,7 @@ void DWARFDebugInfoEntry::DumpAttribute(
       // We have a location list offset as the value that is the offset into
       // the .debug_loc section that describes the value over it's lifetime
       uint64_t debug_loc_offset = form_value.Unsigned();
-      DWARFExpression::PrintDWARFLocationList(s, cu, dwarf.DebugLocData(),
+      DWARFExpression::PrintDWARFLocationList(s, cu, cu->GetLocationData(),
                                               debug_loc_offset);
     }
   } break;

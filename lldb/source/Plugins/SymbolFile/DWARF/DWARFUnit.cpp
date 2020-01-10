@@ -462,6 +462,22 @@ void DWARFUnit::SetLoclistsBase(dw_addr_t loclists_base) {
   }
 }
 
+std::unique_ptr<llvm::DWARFLocationTable>
+DWARFUnit::GetLocationTable(const DataExtractor &data) const {
+  llvm::DWARFDataExtractor llvm_data(
+      toStringRef(data.GetData()),
+      data.GetByteOrder() == lldb::eByteOrderLittle, data.GetAddressByteSize());
+
+  if (m_is_dwo || GetVersion() >= 5)
+    return std::make_unique<llvm::DWARFDebugLoclists>(llvm_data, GetVersion());
+  return std::make_unique<llvm::DWARFDebugLoc>(llvm_data);
+}
+
+const DWARFDataExtractor &DWARFUnit::GetLocationData() const {
+  return GetVersion() >= 5 ? GetSymbolFileDWARF().get_debug_loclists_data()
+                           : GetSymbolFileDWARF().get_debug_loc_data();
+}
+
 void DWARFUnit::SetRangesBase(dw_addr_t ranges_base) {
   m_ranges_base = ranges_base;
 
