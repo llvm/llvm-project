@@ -1014,6 +1014,29 @@ TEST(IgnoreDiags, FromNonWrittenInclude) {
   EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre());
 }
 
+TEST(ToLSPDiag, RangeIsInMain) {
+  ClangdDiagnosticOptions Opts;
+  clangd::Diag D;
+  D.Range = {pos(1, 2), pos(3, 4)};
+  D.Notes.emplace_back();
+  Note &N = D.Notes.back();
+  N.Range = {pos(2, 3), pos(3, 4)};
+
+  D.InsideMainFile = true;
+  N.InsideMainFile = false;
+  toLSPDiags(D, {}, Opts,
+             [&](clangd::Diagnostic LSPDiag, ArrayRef<clangd::Fix>) {
+               EXPECT_EQ(LSPDiag.range, D.Range);
+             });
+
+  D.InsideMainFile = false;
+  N.InsideMainFile = true;
+  toLSPDiags(D, {}, Opts,
+             [&](clangd::Diagnostic LSPDiag, ArrayRef<clangd::Fix>) {
+               EXPECT_EQ(LSPDiag.range, N.Range);
+             });
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
