@@ -198,8 +198,7 @@ public:
                                                ConstString name);
 
   void SetValueChangedCallback(uint32_t property_idx,
-                               OptionValueChangedCallback callback,
-                               void *baton);
+                               std::function<void()> callback);
 
 protected:
   Property *ProtectedGetPropertyAtIndex(uint32_t idx) {
