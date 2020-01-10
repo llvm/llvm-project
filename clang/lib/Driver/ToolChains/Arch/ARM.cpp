@@ -63,12 +63,13 @@ static void getARMHWDivFeatures(const Driver &D, const Arg *A,
 }
 
 // Handle -mfpu=.
-static void getARMFPUFeatures(const Driver &D, const Arg *A,
+unsigned getARMFPUFeatures(const Driver &D, const Arg *A,
                               const ArgList &Args, StringRef FPU,
                               std::vector<StringRef> &Features) {
   unsigned FPUID = llvm::ARM::parseFPU(FPU);
   if (!llvm::ARM::getFPUFeatures(FPUID, Features))
     D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
+  return FPUID;
 }
 
 // Decode ARM features from string like +[no]featureA+[no]featureB+...
@@ -388,18 +389,20 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
     checkARMCPUName(D, CPUArg, Args, CPUName, ArchName,
                     ExtensionFeatures, Triple);
   // Honor -mfpu=. ClangAs gives preference to -Wa,-mfpu=.
+  unsigned FPUID = llvm::ARM::FK_INVALID;
   const Arg *FPUArg = Args.getLastArg(options::OPT_mfpu_EQ);
   if (WaFPU) {
     if (FPUArg)
       D.Diag(clang::diag::warn_drv_unused_argument)
           << FPUArg->getAsString(Args);
-    getARMFPUFeatures(D, WaFPU, Args, StringRef(WaFPU->getValue()).substr(6),
-                      Features);
+    (void)getARMFPUFeatures(D, WaFPU, Args, StringRef(WaFPU->getValue()).substr(6),
+                            Features);
   } else if (FPUArg) {
-    getARMFPUFeatures(D, FPUArg, Args, FPUArg->getValue(), Features);
+    FPUID = getARMFPUFeatures(D, FPUArg, Args, FPUArg->getValue(), Features);
   } else if (Triple.isAndroid() && getARMSubArchVersionNumber(Triple) >= 7) {
     const char *AndroidFPU = "neon";
-    if (!llvm::ARM::getFPUFeatures(llvm::ARM::parseFPU(AndroidFPU), Features))
+    FPUID = llvm::ARM::parseFPU(AndroidFPU);
+    if (!llvm::ARM::getFPUFeatures(FPUID, Features))
       D.Diag(clang::diag::err_drv_clang_unsupported)
           << std::string("-mfpu=") + AndroidFPU;
   }
@@ -454,21 +457,21 @@ fp16_fml_fallthrough:
   if (ABI == arm::FloatABI::Soft) {
     llvm::ARM::getFPUFeatures(llvm::ARM::FK_NONE, Features);
 
-    // Disable all features relating to hardware FP.
-    // FIXME: Disabling fpregs should be enough all by itself, since all
-    //        the other FP features are dependent on it. However
-    //        there is currently no easy way to test this in clang, so for
-    //        now just be explicit and disable all known dependent features
-    //        as well.
-    for (std::string Feature : {
-            "vfp2", "vfp2sp",
-            "vfp3", "vfp3sp", "vfp3d16", "vfp3d16sp",
-            "vfp4", "vfp4sp", "vfp4d16", "vfp4d16sp",
-            "fp-armv8", "fp-armv8sp", "fp-armv8d16", "fp-armv8d16sp",
-            "fullfp16", "neon", "crypto", "dotprod", "fp16fml",
-            "mve", "mve.fp",
-            "fp64", "d32", "fpregs"})
-      Features.push_back(Args.MakeArgString("-" + Feature));
+    // Disable all features relating to hardware FP, not already disabled by the
+    // above call.
+    Features.insert(Features.end(), {"-neon", "-crypto", "-dotprod", "-fp16fml",
+                                     "-mve", "-mve.fp", "-fpregs"});
+  } else if (FPUID == llvm::ARM::FK_NONE) {
+    // -mfpu=none is *very* similar to -mfloat-abi=soft, only that it should not
+    // disable MVE-I.
+    Features.insert(Features.end(),
+                    {"-neon", "-crypto", "-dotprod", "-fp16fml", "-mve.fp"});
+    // Even though we remove MVE-FP, we still need to check if it was originally
+    // present among the requested extensions, because it implies MVE-I, which
+    // should not be disabled by -mfpu-none.
+    if (!llvm::is_contained(Features, "+mve") &&
+        !llvm::is_contained(Features, "+mve.fp"))
+      Features.emplace_back("-fpregs");
   }
 
   // En/disable crc code generation.
