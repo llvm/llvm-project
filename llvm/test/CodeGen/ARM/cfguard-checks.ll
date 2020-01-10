@@ -7,26 +7,27 @@
 declare i32 @target_func()
 
 
-; Test that Control Flow Guard checks are not added to functions with nocf_checks attribute.
-define i32 @func_nocf_checks() #0 {
+; Test that Control Flow Guard checks are not added on calls with the "guard_nocf" attribute.
+define i32 @func_guard_nocf() #0 {
 entry:
   %func_ptr = alloca i32 ()*, align 8
   store i32 ()* @target_func, i32 ()** %func_ptr, align 8
   %0 = load i32 ()*, i32 ()** %func_ptr, align 8
-  %1 = call arm_aapcs_vfpcc i32 %0()
+  %1 = call arm_aapcs_vfpcc i32 %0() #1
   ret i32 %1
 
-  ; CHECK-LABEL: func_nocf_checks
+  ; CHECK-LABEL: func_guard_nocf
   ; CHECK:       movw r0, :lower16:target_func
 	; CHECK:       movt r0, :upper16:target_func
   ; CHECK-NOT:   __guard_check_icall_fptr
 	; CHECK:       blx r0
 }
-attributes #0 = { nocf_check "target-cpu"="cortex-a9" "target-features"="+armv7-a,+dsp,+fp16,+neon,+strict-align,+thumb-mode,+vfp3"}
+attributes #0 = { "target-cpu"="cortex-a9" "target-features"="+armv7-a,+dsp,+fp16,+neon,+strict-align,+thumb-mode,+vfp3"}
+attributes #1 = { "guard_nocf" }
 
 
 ; Test that Control Flow Guard checks are added even at -O0.
-define i32 @func_optnone_cf() #1 {
+define i32 @func_optnone_cf() #2 {
 entry:
   %func_ptr = alloca i32 ()*, align 8
   store i32 ()* @target_func, i32 ()** %func_ptr, align 8
@@ -47,11 +48,11 @@ entry:
 	; CHECK:       blx r1
 	; CHECK-NEXT:  blx r4
 }
-attributes #1 = { noinline optnone "target-cpu"="cortex-a9" "target-features"="+armv7-a,+dsp,+fp16,+neon,+strict-align,+thumb-mode,+vfp3"}
+attributes #2 = { noinline optnone "target-cpu"="cortex-a9" "target-features"="+armv7-a,+dsp,+fp16,+neon,+strict-align,+thumb-mode,+vfp3"}
 
 
 ; Test that Control Flow Guard checks are correctly added in optimized code (common case).
-define i32 @func_cf() #2 {
+define i32 @func_cf() #0 {
 entry:
   %func_ptr = alloca i32 ()*, align 8
   store i32 ()* @target_func, i32 ()** %func_ptr, align 8
@@ -70,11 +71,10 @@ entry:
 	; CHECK:       blx r1
 	; CHECK-NEXT:  blx r4
 }
-attributes #2 = { "target-cpu"="cortex-a9" "target-features"="+armv7-a,+dsp,+fp16,+neon,+strict-align,+thumb-mode,+vfp3"}
 
 
 ; Test that Control Flow Guard checks are correctly added on invoke instructions.
-define i32 @func_cf_invoke() #2 personality i8* bitcast (void ()* @h to i8*) {
+define i32 @func_cf_invoke() #0 personality i8* bitcast (void ()* @h to i8*) {
 entry:
   %0 = alloca i32, align 4
   %func_ptr = alloca i32 ()*, align 8
@@ -112,7 +112,7 @@ declare void @h()
 %struct._SETJMP_FLOAT128 = type { [2 x i64] }
 @buf1 = internal global [16 x %struct._SETJMP_FLOAT128] zeroinitializer, align 16
 
-define i32 @func_cf_setjmp() #2 {
+define i32 @func_cf_setjmp() #0 {
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   store i32 0, i32* %1, align 4
