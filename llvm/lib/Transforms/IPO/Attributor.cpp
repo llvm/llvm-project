@@ -5668,8 +5668,9 @@ ChangeStatus Attributor::run(Module &M) {
         }
       }
     }
-    for (Instruction *I : ToBeChangedToUnreachableInsts)
-      changeToUnreachable(I, /* UseLLVMTrap */ false);
+    for (auto &V : ToBeChangedToUnreachableInsts)
+      if (Instruction *I = dyn_cast_or_null<Instruction>(V))
+        changeToUnreachable(I, /* UseLLVMTrap */ false);
     for (Instruction *I : TerminatorsToFold)
       ConstantFoldTerminator(I->getParent());
 

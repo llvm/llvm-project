@@ -1174,7 +1174,7 @@ private:
   DenseMap<Use *, Value *> ToBeChangedUses;
 
   /// Instructions we replace with `unreachable` insts after manifest is done.
-  SmallPtrSet<Instruction *, 8> ToBeChangedToUnreachableInsts;
+  SmallDenseSet<WeakVH, 16> ToBeChangedToUnreachableInsts;
 
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///
