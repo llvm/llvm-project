@@ -501,6 +501,13 @@ define i64* @int2ptr(i64 %i) {
   ret i64* %i2p
 }
 
+; Use the store alignment only for the pointer operand.
+define void @aligned_store(i8* %Value, i8** %Ptr) {
+; ATTRIBUTOR: define void @aligned_store(i8* nofree writeonly %Value, i8** nocapture nofree nonnull writeonly align 32 dereferenceable(8) %Ptr)
+  store i8* %Value, i8** %Ptr, align 32
+  ret void
+}
+
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { uwtable noinline }
 attributes #2 = { "null-pointer-is-valid"="true" }
