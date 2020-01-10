@@ -1371,7 +1371,7 @@ static bool IsVoidStarType(QualType Ty) {
     Ty = TD->getDecl()->getUnderlyingType();
 
   // Is the type void*?
-  const PointerType* PT = Ty->getAs<PointerType>();
+  const PointerType* PT = Ty->castAs<PointerType>();
   if (PT->getPointeeType().getUnqualifiedType()->isVoidType())
     return true;
   return IsVoidStarType(PT->getPointeeType());
