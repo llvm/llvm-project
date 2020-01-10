@@ -10,7 +10,7 @@ else()
   find_package(SWIG 2.0 QUIET)
   if (SWIG_FOUND OR LLDB_USE_STATIC_BINDINGS)
     if (LLDB_USE_STATIC_BINDINGS)
-      set(SWIG_EXECUTABLE "NOTFOUND")
+      set(SWIG_EXECUTABLE "/not/found")
     endif()
     if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
       # Use PYTHON_HOME as a hint to find Python 3.
