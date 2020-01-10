@@ -1138,6 +1138,7 @@ class MVE_VMINMAX<string iname, string suffix, bit U, bits<2> size,
   let Inst{8} = 0b0;
   let Inst{6} = 0b1;
   let Inst{4} = bit_4;
+  let validForTailPredication = 1;
 }
 
 multiclass MVE_VMINMAX_m<string iname, bit bit_4, MVEVectorVTInfo VTI,
@@ -2298,6 +2299,7 @@ class MVE_VMINMAXA<string iname, string suffix, bits<2> size,
   let Inst{4} = 0b0;
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = 0b1;
+  let validForTailPredication = 1;
 }
 
 def MVE_VMAXAs8  : MVE_VMINMAXA<"vmaxa", "s8",  0b00, 0b0>;
