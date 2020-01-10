@@ -1476,6 +1476,11 @@ BUILTIN(__builtin_char_memchr, "c*cC*iz", "n")
 BUILTIN(__builtin_dump_struct, "ivC*v*", "tn")
 BUILTIN(__builtin_preserve_access_index, "v.", "t")
 
+// Alignment builtins (uses custom parsing to support pointers and integers)
+BUILTIN(__builtin_is_aligned, "bvC*z", "nct")
+BUILTIN(__builtin_align_up, "v*vC*z", "nct")
+BUILTIN(__builtin_align_down, "v*vC*z", "nct")
+
 // Safestack builtins
 BUILTIN(__builtin___get_unsafe_stack_start, "v*", "Fn")
 BUILTIN(__builtin___get_unsafe_stack_bottom, "v*", "Fn")
