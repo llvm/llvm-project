@@ -111,6 +111,8 @@ public:
     bool
     operator != (const lldb::SBFunction &rhs) const;
 
+    STRING_EXTENSION(SBFunction)
+
 #ifdef SWIGPYTHON
     %pythoncode %{
         def get_instructions_from_current_target (self):

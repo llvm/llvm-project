@@ -249,6 +249,8 @@ public:
     bool
     IsHardware ();
 
+    STRING_EXTENSION(SBBreakpoint)
+
 #ifdef SWIGPYTHON
     %pythoncode %{
 

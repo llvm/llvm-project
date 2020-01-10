@@ -74,6 +74,8 @@ public:
     bool
     TestEmulation (lldb::SBStream &output_stream, const char *test_file);
 
+    STRING_EXTENSION(SBInstruction)
+
 #ifdef SWIGPYTHON
     %pythoncode %{
         def __mnemonic_property__ (self):

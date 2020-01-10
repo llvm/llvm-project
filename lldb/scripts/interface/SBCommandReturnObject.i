@@ -96,6 +96,8 @@ public:
     void SetImmediateOutputFile(lldb::FileSP BORROWED);
     void SetImmediateErrorFile(lldb::FileSP BORROWED);
 
+    STRING_EXTENSION(SBCommandReturnObject)
+
     %extend {
         // transfer_ownership does nothing, and is here for compatibility with
         // old scripts.  Ownership is tracked by reference count in the ordinary way.
