@@ -358,6 +358,17 @@ public:
         // TypeLoc never has a deduced type. https://llvm.org/PR42914
         Outer.add(DT->getDeducedType(), Flags | Rel::Underlying);
       }
+      void VisitDeducedTemplateSpecializationType(
+          const DeducedTemplateSpecializationType *DTST) {
+        // FIXME: This is a workaround for https://llvm.org/PR42914,
+        // which is causing DTST->getDeducedType() to be empty. We
+        // fall back to the template pattern and miss the instantiation
+        // even when it's known in principle. Once that bug is fixed,
+        // this method can be removed (the existing handling in
+        // VisitDeducedType() is sufficient).
+        if (auto *TD = DTST->getTemplateName().getAsTemplateDecl())
+          Outer.add(TD->getTemplatedDecl(), Flags | Rel::TemplatePattern);
+      }
       void VisitTypedefType(const TypedefType *TT) {
         Outer.add(TT->getDecl(), Flags);
       }
