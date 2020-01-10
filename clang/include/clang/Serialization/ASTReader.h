@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_SERIALIZATION_ASTREADER_H
 #define LLVM_CLANG_SERIALIZATION_ASTREADER_H
 
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -1087,6 +1088,8 @@ private:
 
   using DataPointers =
       std::pair<CXXRecordDecl *, struct CXXRecordDecl::DefinitionData *>;
+  using IDDataPointers = std::pair<ObjCInterfaceDecl *,
+                                   struct ObjCInterfaceDecl::DefinitionData *>;
 
   /// Record definitions in which we found an ODR violation.
   llvm::SmallDenseMap<CXXRecordDecl *, llvm::SmallVector<DataPointers, 2>, 2>
@@ -1103,6 +1106,11 @@ private:
   /// C/ObjC definitions in which the structural equivalence check fails
   llvm::SmallDenseMap<RecordDecl *, llvm::SmallVector<RecordDecl *, 2>, 2>
       PendingRecordOdrMergeFailures;
+
+  /// ObjCInterfaceDecl in which we found an ODR violation.
+  llvm::SmallDenseMap<ObjCInterfaceDecl *, llvm::SmallVector<IDDataPointers, 2>,
+                      2>
+      PendingObjCInterfaceOdrMergeFailures;
 
   /// DeclContexts in which we have diagnosed an ODR violation.
   llvm::SmallPtrSet<DeclContext*, 2> DiagnosedOdrMergeFailures;

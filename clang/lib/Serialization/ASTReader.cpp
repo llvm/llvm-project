@@ -9270,7 +9270,8 @@ void ASTReader::diagnoseOdrViolations() {
   if (PendingOdrMergeFailures.empty() && PendingOdrMergeChecks.empty() &&
       PendingFunctionOdrMergeFailures.empty() &&
       PendingEnumOdrMergeFailures.empty() &&
-      PendingRecordOdrMergeFailures.empty())
+      PendingRecordOdrMergeFailures.empty() &&
+      PendingObjCInterfaceOdrMergeFailures.empty())
     return;
 
   // Trigger the import of the full definition of each class that had any
@@ -9299,6 +9300,16 @@ void ASTReader::diagnoseOdrViolations() {
     Merge.first->decls_begin();
     for (auto &D : Merge.second)
       D->decls_begin();
+  }
+
+  // Trigger the import of the full interface definition.
+  auto ObjCInterfaceOdrMergeFailures =
+      std::move(PendingObjCInterfaceOdrMergeFailures);
+  PendingObjCInterfaceOdrMergeFailures.clear();
+  for (auto &Merge : ObjCInterfaceOdrMergeFailures) {
+    Merge.first->decls_begin();
+    for (auto &InterfacePair : Merge.second)
+      InterfacePair.first->decls_begin();
   }
 
   // Trigger the import of functions.
@@ -9413,7 +9424,8 @@ void ASTReader::diagnoseOdrViolations() {
   }
 
   if (OdrMergeFailures.empty() && FunctionOdrMergeFailures.empty() &&
-      EnumOdrMergeFailures.empty() && RecordOdrMergeFailures.empty())
+      EnumOdrMergeFailures.empty() && RecordOdrMergeFailures.empty() &&
+      ObjCInterfaceOdrMergeFailures.empty())
     return;
 
   // Ensure we don't accidentally recursively enter deserialization while
@@ -11191,6 +11203,172 @@ void ASTReader::diagnoseOdrViolations() {
       Diag(FirstDecl->getLocation(),
            diag::err_module_odr_violation_mismatch_decl_unknown)
           << FirstRecord << FirstModule.empty() << FirstModule << FirstDiffType
+          << FirstDecl->getSourceRange();
+      Diag(SecondDecl->getLocation(),
+           diag::note_module_odr_violation_mismatch_decl_unknown)
+          << SecondModule << FirstDiffType << SecondDecl->getSourceRange();
+      Diagnosed = true;
+    }
+  }
+
+  for (auto &Merge : ObjCInterfaceOdrMergeFailures) {
+    // If we've already pointed out a specific problem with this interface,
+    // don't bother issuing a general "something's different" diagnostic.
+    if (!DiagnosedOdrMergeFailures.insert(Merge.first).second)
+      continue;
+
+    bool Diagnosed = false;
+    ObjCInterfaceDecl *FirstID = Merge.first;
+    std::string FirstModule = getOwningModuleNameForDiagnostic(FirstID);
+    for (auto &InterfacePair : Merge.second) {
+      ObjCInterfaceDecl *SecondID = InterfacePair.first;
+      // Multiple different declarations got merged together; tell the user
+      // where they came from.
+      if (FirstID == SecondID)
+        continue;
+
+      std::string SecondModule = getOwningModuleNameForDiagnostic(SecondID);
+
+      auto *FirstDD = &FirstID->data();
+      auto *SecondDD = InterfacePair.second;
+      assert(FirstDD && SecondDD && "Definitions without DefinitionData");
+      // Diagnostics from ObjCInterfaces DefinitionData are emitted here.
+      // FIXME: as part of definition data handling, add support for checking
+      // matching protocols, ivars and categories
+      if (FirstDD != SecondDD) {
+        // Keep this in sync with
+        // err_module_odr_violation_obj_interface_definition_data and
+        // note_module_odr_violation_obj_interface_definition_data.
+        enum ODRDefinitionDataDifference {
+          SuperClassType,
+          ReferencedProtocols
+        };
+        auto ODRDiagBaseError = [FirstID, &FirstModule,
+                                 this](SourceLocation Loc, SourceRange Range,
+                                       ODRDefinitionDataDifference DiffType) {
+          using namespace diag;
+          return Diag(Loc,
+                      err_module_odr_violation_obj_interface_definition_data)
+                 << FirstID << FirstModule.empty() << FirstModule << Range
+                 << DiffType;
+        };
+        auto ODRDiagBaseNote = [&SecondModule,
+                                this](SourceLocation Loc, SourceRange Range,
+                                      ODRDefinitionDataDifference DiffType) {
+          using namespace diag;
+          return Diag(Loc,
+                      note_module_odr_violation_obj_interface_definition_data)
+                 << SecondModule << Range << DiffType;
+        };
+
+        // Check for matching super class.
+        auto GetSuperClassSourceRange = [](TypeSourceInfo *SuperInfo,
+                                           ObjCInterfaceDecl *ID) {
+          if (!SuperInfo)
+            return ID->getSourceRange();
+          TypeLoc Loc = SuperInfo->getTypeLoc();
+          return SourceRange(Loc.getBeginLoc(), Loc.getEndLoc());
+        };
+
+        ObjCInterfaceDecl *FirstSuperClass = FirstID->getSuperClass();
+        ObjCInterfaceDecl *SecondSuperClass = nullptr;
+        auto *FirstSuperInfo = FirstID->getSuperClassTInfo();
+        auto *SecondSuperInfo = SecondDD->SuperClassTInfo;
+        if (SecondSuperInfo)
+          SecondSuperClass = SecondSuperInfo->getType()
+                                 ->castAs<ObjCObjectType>()
+                                 ->getInterface();
+
+        if ((FirstSuperClass && SecondSuperClass &&
+             FirstSuperClass->getODRHash() != SecondSuperClass->getODRHash()) ||
+            (FirstSuperClass && !SecondSuperClass) ||
+            (!FirstSuperClass && SecondSuperClass)) {
+          QualType FirstType;
+          if (FirstSuperInfo)
+            FirstType = FirstSuperInfo->getType();
+
+          ODRDiagBaseError(FirstID->getLocation(),
+                           GetSuperClassSourceRange(FirstSuperInfo, FirstID),
+                           SuperClassType)
+              << (bool)FirstSuperInfo << FirstType;
+
+          QualType SecondType;
+          if (SecondSuperInfo)
+            SecondType = SecondSuperInfo->getType();
+
+          ODRDiagBaseNote(SecondID->getLocation(),
+                          GetSuperClassSourceRange(SecondSuperInfo, SecondID),
+                          SuperClassType)
+              << (bool)SecondSuperInfo << SecondType;
+          Diagnosed = true;
+          break;
+        }
+
+        // Check both interfaces reference the same number of protocols.
+        // FIXME: add support for checking the actual protocols once support
+        // for ODR hash in protocols land.
+        auto GetProtoListSourceRange = [](ObjCInterfaceDecl *ID,
+                                          const ObjCProtocolList &PL) {
+          if (!PL.size())
+            return ID->getSourceRange();
+          return SourceRange(*PL.loc_begin(), *std::prev(PL.loc_end()));
+        };
+        auto &FirstProtos = FirstID->getReferencedProtocols();
+        auto &SecondProtos = SecondDD->ReferencedProtocols;
+        if (FirstProtos.size() != SecondProtos.size()) {
+          ODRDiagBaseError(FirstID->getLocation(),
+                           GetProtoListSourceRange(FirstID, FirstProtos),
+                           ReferencedProtocols)
+              << FirstProtos.size();
+          ODRDiagBaseNote(SecondID->getLocation(),
+                          GetProtoListSourceRange(SecondID, SecondProtos),
+                          ReferencedProtocols)
+              << SecondProtos.size();
+          Diagnosed = true;
+          break;
+        }
+      }
+
+      // FIXME: Improve PopulateHashes above and only have one version.
+      auto PopulateHashes = [&ComputeSubDeclODRHash](DeclHashes &Hashes,
+                                                     ObjCInterfaceDecl *ID,
+                                                     const DeclContext *DC) {
+        for (auto *D : ID->decls()) {
+          if (!ODRHash::isWhitelistedDecl(D, DC))
+            continue;
+          Hashes.emplace_back(D, ComputeSubDeclODRHash(D));
+        }
+      };
+
+      DeclHashes FirstHashes;
+      DeclHashes SecondHashes;
+      PopulateHashes(FirstHashes, FirstID, FirstID);
+      PopulateHashes(SecondHashes, SecondID, SecondID);
+
+      auto DR = FindTypeDiffs(FirstHashes, SecondHashes);
+      ODRMismatchDecl FirstDiffType = DR.FirstDiffType;
+      ODRMismatchDecl SecondDiffType = DR.SecondDiffType;
+      Decl *FirstDecl = DR.FirstDecl;
+      Decl *SecondDecl = DR.SecondDecl;
+
+      if (FirstDiffType == Other || SecondDiffType == Other) {
+        DiagnoseODRUnexpected(DR, FirstID, FirstModule, SecondID, SecondModule);
+        Diagnosed = true;
+        break;
+      }
+
+      if (FirstDiffType != SecondDiffType) {
+        DiagnoseODRMismatch(DR, FirstID, FirstModule, SecondID, SecondModule);
+        Diagnosed = true;
+        break;
+      }
+
+      if (Diagnosed)
+        continue;
+
+      Diag(FirstDecl->getLocation(),
+           diag::err_module_odr_violation_mismatch_decl_unknown)
+          << FirstID << FirstModule.empty() << FirstModule << FirstDiffType
           << FirstDecl->getSourceRange();
       Diag(SecondDecl->getLocation(),
            diag::note_module_odr_violation_mismatch_decl_unknown)

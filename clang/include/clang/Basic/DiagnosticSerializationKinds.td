@@ -153,6 +153,21 @@ def note_module_odr_violation_definition_data : Note <
   "%ordinal2 base class %3 with "
   "%select{public|protected|private|no}4 access specifier}1">;
 
+def err_module_odr_violation_obj_interface_definition_data : Error <
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "%select{no super class|super class with type %5}4|"
+  "%4 referenced %plural{1:protocol|:protocols}4|"
+  "}3">;
+
+def note_module_odr_violation_obj_interface_definition_data : Note <
+  "but in '%0' found "
+  "%select{"
+  "%select{no super class|super class with type %3}2|"
+  "%2 referenced %plural{1:protocol|:protocols}2|"
+  "}1">;
+
 def err_module_odr_violation_template_parameter : Error <
   "%q0 has different definitions in different modules; first difference is "
   "%select{definition in module '%2'|defined here}1 found "
