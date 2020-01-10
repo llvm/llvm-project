@@ -2106,21 +2106,28 @@ AMDGPUInstructionSelector::selectDS1Addr1Offset(MachineOperand &Root) const {
 }
 
 void AMDGPUInstructionSelector::renderTruncImm32(MachineInstrBuilder &MIB,
-                                                 const MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && "Expected G_CONSTANT");
+                                                 const MachineInstr &MI,
+                                                 int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
   Optional<int64_t> CstVal = getConstantVRegVal(MI.getOperand(0).getReg(), *MRI);
   assert(CstVal && "Expected constant value");
   MIB.addImm(CstVal.getValue());
 }
 
 void AMDGPUInstructionSelector::renderNegateImm(MachineInstrBuilder &MIB,
-                                                const MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && "Expected G_CONSTANT");
+                                                const MachineInstr &MI,
+                                                int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
   MIB.addImm(-MI.getOperand(1).getCImm()->getSExtValue());
 }
 
 void AMDGPUInstructionSelector::renderBitcastImm(MachineInstrBuilder &MIB,
-                                                 const MachineInstr &MI) const {
+                                                 const MachineInstr &MI,
+                                                 int OpIdx) const {
+  assert(OpIdx == -1);
+
   const MachineOperand &Op = MI.getOperand(1);
   if (MI.getOpcode() == TargetOpcode::G_FCONSTANT)
     MIB.addImm(Op.getFPImm()->getValueAPF().bitcastToAPInt().getZExtValue());
@@ -2131,9 +2138,19 @@ void AMDGPUInstructionSelector::renderBitcastImm(MachineInstrBuilder &MIB,
 }
 
 void AMDGPUInstructionSelector::renderPopcntImm(MachineInstrBuilder &MIB,
-                                                const MachineInstr &MI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && "Expected G_CONSTANT");
+                                                const MachineInstr &MI,
+                                                int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
   MIB.addImm(MI.getOperand(1).getCImm()->getValue().countPopulation());
+}
+
+/// This only really exists to satisfy DAG type checking machinery, so is a
+/// no-op here.
+void AMDGPUInstructionSelector::renderTruncTImm(MachineInstrBuilder &MIB,
+                                                const MachineInstr &MI,
+                                                int OpIdx) const {
+  MIB.addImm(MI.getOperand(OpIdx).getImm());
 }
 
 bool AMDGPUInstructionSelector::isInlineImmediate16(int64_t Imm) const {

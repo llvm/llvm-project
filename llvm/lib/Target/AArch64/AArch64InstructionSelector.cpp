@@ -260,9 +260,12 @@ private:
                                              MachineIRBuilder &MIB) const;
   ComplexRendererFns selectArithExtendedRegister(MachineOperand &Root) const;
 
-  void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI) const;
-  void renderLogicalImm32(MachineInstrBuilder &MIB, const MachineInstr &I) const;
-  void renderLogicalImm64(MachineInstrBuilder &MIB, const MachineInstr &I) const;
+  void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                      int OpIdx = -1) const;
+  void renderLogicalImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
+                          int OpIdx = -1) const;
+  void renderLogicalImm64(MachineInstrBuilder &MIB, const MachineInstr &I,
+                          int OpIdx = -1) const;
 
   // Materialize a GlobalValue or BlockAddress using a movz+movk sequence.
   void materializeLargeCMVal(MachineInstr &I, const Value *V,
@@ -4851,25 +4854,29 @@ AArch64InstructionSelector::selectArithExtendedRegister(
 }
 
 void AArch64InstructionSelector::renderTruncImm(MachineInstrBuilder &MIB,
-                                                const MachineInstr &MI) const {
+                                                const MachineInstr &MI,
+                                                int OpIdx) const {
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
-  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && "Expected G_CONSTANT");
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
   Optional<int64_t> CstVal = getConstantVRegVal(MI.getOperand(0).getReg(), MRI);
   assert(CstVal && "Expected constant value");
   MIB.addImm(CstVal.getValue());
 }
 
 void AArch64InstructionSelector::renderLogicalImm32(
-    MachineInstrBuilder &MIB, const MachineInstr &I) const {
-  assert(I.getOpcode() == TargetOpcode::G_CONSTANT && "Expected G_CONSTANT");
+  MachineInstrBuilder &MIB, const MachineInstr &I, int OpIdx) const {
+  assert(I.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
   uint64_t CstVal = I.getOperand(1).getCImm()->getZExtValue();
   uint64_t Enc = AArch64_AM::encodeLogicalImmediate(CstVal, 32);
   MIB.addImm(Enc);
 }
 
 void AArch64InstructionSelector::renderLogicalImm64(
-    MachineInstrBuilder &MIB, const MachineInstr &I) const {
-  assert(I.getOpcode() == TargetOpcode::G_CONSTANT && "Expected G_CONSTANT");
+  MachineInstrBuilder &MIB, const MachineInstr &I, int OpIdx) const {
+  assert(I.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
   uint64_t CstVal = I.getOperand(1).getCImm()->getZExtValue();
   uint64_t Enc = AArch64_AM::encodeLogicalImmediate(CstVal, 64);
   MIB.addImm(Enc);
