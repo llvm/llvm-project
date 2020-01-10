@@ -33,6 +33,8 @@ use_categories = False
 skip_categories = ["darwin-log", "frame-diagnose"]
 if platform.system() == 'Linux':
     skip_categories.append('watchpoints')
+# Categories we expect to fail
+xfail_categories = []
 # use this to track per-category failures
 failures_per_category = {}
 
