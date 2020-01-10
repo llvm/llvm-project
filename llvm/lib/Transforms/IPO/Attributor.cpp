@@ -1772,6 +1772,8 @@ struct AANoFreeFloating : AANoFreeImpl {
         Follow = true;
         return true;
       }
+      if (isa<ReturnInst>(UserI))
+        return true;
 
       // Unknown user.
       return false;
