@@ -59,11 +59,11 @@ WebAssembly-specific options:
 
 .. option:: --compress-relocations
 
-  Relocation targets in the code section 5-bytes wide in order to potentially
-  occomate the largest LEB128 value.  This option will cause the linker to
-  shirnk the code section to remove any padding from the final output.  However
-  because it effects code offset, this option is not compatible with outputing
-  debug information.
+  Relocation targets in the code section are 5-bytes wide in order to
+  potentially accommodate the largest LEB128 value.  This option will cause the
+  linker to shrink the code section to remove any padding from the final
+  output.  However because it affects code offset, this option is not
+  compatible with outputting debug information.
 
 .. option:: --allow-undefined
 
