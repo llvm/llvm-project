@@ -872,6 +872,39 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
     }
   }
 
+  // Check which ASTContext this declaration originally came from.
+  DeclOrigin origin = m_master.GetDeclOrigin(From);
+  // If it originally came from the target ASTContext then we can just
+  // pretend that the original is the one we imported. This can happen for
+  // example when inspecting a persistent declaration from the scratch
+  // ASTContext (which will provide the declaration when parsing the
+  // expression and then we later try to copy the declaration back to the
+  // scratch ASTContext to store the result).
+  // Without this check we would ask the ASTImporter to import a declaration
+  // into the same ASTContext where it came from (which doesn't make a lot of
+  // sense).
+  if (origin.Valid() && origin.ctx == &getToContext()) {
+      RegisterImportedDecl(From, origin.decl);
+      return origin.decl;
+  }
+
+  // This declaration came originally from another ASTContext. Instead of
+  // copying our potentially incomplete 'From' Decl we instead go to the
+  // original ASTContext and copy the original to the target. This is not
+  // only faster than first completing our current decl and then copying it
+  // to the target, but it also prevents that indirectly copying the same
+  // declaration to the same target requires the ASTImporter to merge all
+  // the different decls that appear to come from different ASTContexts (even
+  // though all these different source ASTContexts just got a copy from
+  // one source AST).
+  if (origin.Valid()) {
+    auto R = m_master.CopyDecl(&getToContext(), origin.decl);
+    if (R) {
+      RegisterImportedDecl(From, R);
+      return R;
+    }
+  }
+
   return ASTImporter::ImportImpl(From);
 }
 
