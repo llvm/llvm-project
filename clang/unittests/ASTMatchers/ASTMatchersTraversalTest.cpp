@@ -1639,9 +1639,12 @@ void foo()
   EXPECT_TRUE(matches(VarDeclCode, varDecl(traverse(ast_type_traits::TK_AsIs,
                                                     has(implicitCastExpr())))));
 
-  EXPECT_TRUE(notMatches(
+  EXPECT_TRUE(matches(
       VarDeclCode,
-      varDecl(has(traverse(ast_type_traits::TK_AsIs, floatLiteral())))));
+      traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+        // The has() below strips away the ImplicitCastExpr before the
+        // traverse(AsIs) gets to process it.
+        varDecl(has(traverse(ast_type_traits::TK_AsIs, floatLiteral()))))));
 
   EXPECT_TRUE(matches(
       VarDeclCode,
