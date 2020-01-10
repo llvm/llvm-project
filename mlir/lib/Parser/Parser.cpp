@@ -1101,7 +1101,7 @@ Type Parser::parseMemRefType() {
     return nullptr;
 
   // Check that memref is formed from allowed types.
-  if (!elementType.isIntOrFloat() && !elementType.isa<VectorType>() &&
+  if (!elementType.isSignlessIntOrFloat() && !elementType.isa<VectorType>() &&
       !elementType.isa<ComplexType>())
     return emitError(typeLoc, "invalid memref element type"), nullptr;
 
@@ -1217,8 +1217,13 @@ Type Parser::parseNonFunctionType() {
       return nullptr;
     }
 
+    IntegerType::SignednessSemantics signSemantics = IntegerType::Signless;
+    if (Optional<bool> signedness = getToken().getIntTypeSignedness())
+      signSemantics = *signedness ? IntegerType::Signed : IntegerType::Unsigned;
+
+    auto loc = getEncodedSourceLocation(getToken().getLoc());
     consumeToken(Token::inttype);
-    return IntegerType::get(width.getValue(), builder.getContext());
+    return IntegerType::getChecked(width.getValue(), signSemantics, loc);
   }
 
   // float-type
@@ -1789,9 +1794,15 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
     return apVal ? FloatAttr::get(floatType, *apVal) : Attribute();
   }
 
-  if (!type.isIntOrIndex())
+  if (!type.isa<IntegerType>() && !type.isa<IndexType>())
     return emitError(loc, "integer literal not valid for specified type"),
            nullptr;
+
+  if (isNegative && type.isUnsignedInteger()) {
+    emitError(loc,
+              "negative integer literal not valid for unsigned integer type");
+    return nullptr;
+  }
 
   // Parse the integer literal.
   int width = type.isIndex() ? 64 : type.getIntOrFloatBitWidth();
@@ -1989,13 +2000,22 @@ DenseElementsAttr TensorLiteralParser::getIntAttr(llvm::SMLoc loc,
                                                   IntegerType eltTy) {
   std::vector<APInt> intElements;
   intElements.reserve(storage.size());
+  auto isUintType = type.getElementType().isUnsignedInteger();
   for (const auto &signAndToken : storage) {
     bool isNegative = signAndToken.first;
     const Token &token = signAndToken.second;
+    auto tokenLoc = token.getLoc();
+
+    if (isNegative && isUintType) {
+      p.emitError(tokenLoc)
+          << "expected unsigned integer elements, but parsed negative value";
+      return nullptr;
+    }
 
     // Check to see if floating point values were parsed.
     if (token.is(Token::floatliteral)) {
-      p.emitError() << "expected integer elements, but parsed floating-point";
+      p.emitError(tokenLoc)
+          << "expected integer elements, but parsed floating-point";
       return nullptr;
     }
 
@@ -2003,7 +2023,8 @@ DenseElementsAttr TensorLiteralParser::getIntAttr(llvm::SMLoc loc,
            "unexpected token type");
     if (token.isAny(Token::kw_true, Token::kw_false)) {
       if (!eltTy.isInteger(1))
-        p.emitError() << "expected i1 type for 'true' or 'false' values";
+        p.emitError(tokenLoc)
+            << "expected i1 type for 'true' or 'false' values";
       APInt apInt(eltTy.getWidth(), token.is(Token::kw_true),
                   /*isSigned=*/false);
       intElements.push_back(apInt);
@@ -2014,13 +2035,13 @@ DenseElementsAttr TensorLiteralParser::getIntAttr(llvm::SMLoc loc,
     auto val = token.getUInt64IntegerValue();
     if (!val.hasValue() || (isNegative ? (int64_t)-val.getValue() >= 0
                                        : (int64_t)val.getValue() < 0)) {
-      p.emitError(token.getLoc(),
-                  "integer constant out of range for attribute");
+      p.emitError(tokenLoc, "integer constant out of range for attribute");
       return nullptr;
     }
     APInt apInt(eltTy.getWidth(), val.getValue(), isNegative);
     if (apInt != val.getValue())
-      return (p.emitError("integer constant out of range for type"), nullptr);
+      return (p.emitError(tokenLoc, "integer constant out of range for type"),
+              nullptr);
     intElements.push_back(isNegative ? -apInt : apInt);
   }
 
@@ -2085,7 +2106,7 @@ DenseElementsAttr TensorLiteralParser::getFloatAttr(llvm::SMLoc loc,
 DenseElementsAttr TensorLiteralParser::getHexAttr(llvm::SMLoc loc,
                                                   ShapedType type) {
   Type elementType = type.getElementType();
-  if (!elementType.isIntOrFloat()) {
+  if (!elementType.isa<FloatType>() && !elementType.isa<IntegerType>()) {
     p.emitError(loc) << "expected floating-point or integer element type, got "
                      << elementType;
     return nullptr;

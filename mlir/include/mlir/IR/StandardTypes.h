@@ -84,23 +84,56 @@ class IntegerType
 public:
   using Base::Base;
 
+  /// Signedness semantics.
+  enum SignednessSemantics {
+    Signless, /// No signedness semantics
+    Signed,   /// Signed integer
+    Unsigned, /// Unsigned integer
+  };
+
   /// Get or create a new IntegerType of the given width within the context.
-  /// Assume the width is within the allowed range and assert on failures.
-  /// Use getChecked to handle failures gracefully.
+  /// The created IntegerType is signless (i.e., no signedness semantics).
+  /// Assume the width is within the allowed range and assert on failures. Use
+  /// getChecked to handle failures gracefully.
   static IntegerType get(unsigned width, MLIRContext *context);
 
+  /// Get or create a new IntegerType of the given width within the context.
+  /// The created IntegerType has signedness semantics as indicated via
+  /// `signedness`. Assume the width is within the allowed range and assert on
+  /// failures. Use getChecked to handle failures gracefully.
+  static IntegerType get(unsigned width, SignednessSemantics signedness,
+                         MLIRContext *context);
+
   /// Get or create a new IntegerType of the given width within the context,
-  /// defined at the given, potentially unknown, location.  If the width is
+  /// defined at the given, potentially unknown, location.  The created
+  /// IntegerType is signless (i.e., no signedness semantics). If the width is
   /// outside the allowed range, emit errors and return a null type.
-  static IntegerType getChecked(unsigned width, MLIRContext *context,
+  static IntegerType getChecked(unsigned width, Location location);
+
+  /// Get or create a new IntegerType of the given width within the context,
+  /// defined at the given, potentially unknown, location. The created
+  /// IntegerType has signedness semantics as indicated via `signedness`. If the
+  /// width is outside the allowed range, emit errors and return a null type.
+  static IntegerType getChecked(unsigned width, SignednessSemantics signedness,
                                 Location location);
 
   /// Verify the construction of an integer type.
-  static LogicalResult verifyConstructionInvariants(Location loc,
-                                                    unsigned width);
+  static LogicalResult
+  verifyConstructionInvariants(Location loc, unsigned width,
+                               SignednessSemantics signedness);
 
   /// Return the bitwidth of this integer type.
   unsigned getWidth() const;
+
+  /// Return the signedness semantics of this integer type.
+  SignednessSemantics getSignedness() const;
+
+  /// Return true if this is a singless integer type.
+  bool isSignless() const { return getSignedness() == Signless; }
+  /// Return true if this is a signed integer type.
+  bool isSigned() const { return getSignedness() == Signed; }
+  /// Return true if this is an unsigned integer type.
+  bool isUnsigned() const { return getSignedness() == Unsigned; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool kindof(unsigned kind) { return kind == StandardTypes::Integer; }
@@ -274,7 +307,9 @@ public:
 
   /// Returns true of the given type can be used as an element of a vector type.
   /// In particular, vectors can consist of integer or float primitives.
-  static bool isValidElementType(Type t) { return t.isIntOrFloat(); }
+  static bool isValidElementType(Type t) {
+    return t.isa<IntegerType>() || t.isa<FloatType>();
+  }
 
   ArrayRef<int64_t> getShape() const;
 
@@ -293,7 +328,7 @@ public:
     // Note: Non standard/builtin types are allowed to exist within tensor
     // types. Dialects are expected to verify that tensor types have a valid
     // element type within that dialect.
-    return type.isIntOrFloat() || type.isa<ComplexType>() ||
+    return type.isSignlessIntOrFloat() || type.isa<ComplexType>() ||
            type.isa<VectorType>() || type.isa<OpaqueType>() ||
            (type.getKind() > Type::Kind::LAST_STANDARD_TYPE);
   }

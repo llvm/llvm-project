@@ -36,8 +36,8 @@ RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
 
   Block &block = region.front();
   if (block.getNumArguments() != 2 ||
-      !block.getArgument(0).getType().isIntOrFloat() ||
-      !block.getArgument(1).getType().isIntOrFloat())
+      !block.getArgument(0).getType().isSignlessIntOrFloat() ||
+      !block.getArgument(1).getType().isSignlessIntOrFloat())
     return llvm::None;
 
   auto &ops = block.getOperations();
@@ -97,7 +97,7 @@ mlir::linalg::getAssumedNonViewOperands(LinalgOp linalgOp) {
     res.push_back(op->getOperand(numViews + i));
     auto t = res.back().getType();
     (void)t;
-    assert((t.isIntOrIndexOrFloat() || t.isa<VectorType>()) &&
+    assert((t.isSignlessIntOrIndexOrFloat() || t.isa<VectorType>()) &&
            "expected scalar or vector type");
   }
   return res;

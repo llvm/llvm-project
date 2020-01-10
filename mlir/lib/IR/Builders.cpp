@@ -59,6 +59,11 @@ IntegerType Builder::getIntegerType(unsigned width) {
   return IntegerType::get(width, context);
 }
 
+IntegerType Builder::getIntegerType(unsigned width, bool isSigned) {
+  return IntegerType::get(
+      width, isSigned ? IntegerType::Signed : IntegerType::Unsigned, context);
+}
+
 FunctionType Builder::getFunctionType(ArrayRef<Type> inputs,
                                       ArrayRef<Type> results) {
   return FunctionType::get(inputs, results, context);
@@ -104,6 +109,16 @@ IntegerAttr Builder::getI32IntegerAttr(int32_t value) {
   return IntegerAttr::get(getIntegerType(32), APInt(32, value));
 }
 
+IntegerAttr Builder::getSI32IntegerAttr(int32_t value) {
+  return IntegerAttr::get(getIntegerType(32, /*isSigned=*/true),
+                          APInt(32, value, /*isSigned=*/true));
+}
+
+IntegerAttr Builder::getUI32IntegerAttr(uint32_t value) {
+  return IntegerAttr::get(getIntegerType(32, /*isSigned=*/false),
+                          APInt(32, value, /*isSigned=*/false));
+}
+
 IntegerAttr Builder::getI16IntegerAttr(int16_t value) {
   return IntegerAttr::get(getIntegerType(16), APInt(16, value));
 }
@@ -115,7 +130,8 @@ IntegerAttr Builder::getI8IntegerAttr(int8_t value) {
 IntegerAttr Builder::getIntegerAttr(Type type, int64_t value) {
   if (type.isIndex())
     return IntegerAttr::get(type, APInt(64, value));
-  return IntegerAttr::get(type, APInt(type.getIntOrFloatBitWidth(), value));
+  return IntegerAttr::get(
+      type, APInt(type.getIntOrFloatBitWidth(), value, type.isSignedInteger()));
 }
 
 IntegerAttr Builder::getIntegerAttr(Type type, const APInt &value) {

@@ -244,13 +244,22 @@ introduced.
 The bit width is not defined for dialect-specific types at MLIR level. Dialects
 are free to define their own quantities for type sizes.
 
-### Signless types
+### Integer signedness semantics
 
 Integers in the builtin MLIR type system have a bitwidth (note that the `index`
-type has a symbolic width equal to the machine word size), but they do not have
-an intrinsic sign. This means that the "standard ops" operation set has things
-like `addi` and `muli` which do two's complement arithmetic, but some other
-operations get a sign, e.g. `divis` vs `diviu`.
+type has a symbolic width equal to the machine word size), and they *may*
+additionally have signedness semantics. The purpose is to satisfy the needs of
+different dialects, which can model different levels of abstractions. Certain
+abstraction, especially closer to source language, might want to differentiate
+signedness with integer types; while others, especially closer to machine
+instruction, might want signless integers. Instead of forcing each abstraction
+to adopt the same integer modelling or develop its own one in house, Integer
+types provides this as an option to help code reuse and consistency.
+
+For the standard dialect, the choice is to have signless integer types. An
+integer value does not have an intrinsic sign, and it's up to the specific op
+for interpretation. For example, ops like `addi` and `muli` do two's complement
+arithmetic, but some other operations get a sign, e.g. `divis` vs `diviu`.
 
 LLVM uses the [same design](http://llvm.org/docs/LangRef.html#integer-type),
 which was introduced in a revamp rolled out

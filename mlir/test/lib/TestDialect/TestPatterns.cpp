@@ -235,7 +235,7 @@ struct TestChangeProducerTypeI32ToF32 : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     // If the type is I32, change the type to F32.
-    if (!Type(*op->result_type_begin()).isInteger(32))
+    if (!Type(*op->result_type_begin()).isSignlessInteger(32))
       return matchFailure();
     rewriter.replaceOpWithNewOp<TestTypeProducerOp>(op, rewriter.getF32Type());
     return matchSuccess();
@@ -309,11 +309,11 @@ struct TestTypeConverter : public TypeConverter {
 
   static LogicalResult convertType(Type t, SmallVectorImpl<Type> &results) {
     // Drop I16 types.
-    if (t.isInteger(16))
+    if (t.isSignlessInteger(16))
       return success();
 
     // Convert I64 to F64.
-    if (t.isInteger(64)) {
+    if (t.isSignlessInteger(64)) {
       results.push_back(FloatType::getF64(t.getContext()));
       return success();
     }
