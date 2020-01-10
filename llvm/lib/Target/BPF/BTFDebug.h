@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
+#include <set>
 #include <unordered_map>
 #include "BTF.h"
 
@@ -151,7 +152,7 @@ class BTFTypeFunc : public BTFTypeBase {
   StringRef Name;
 
 public:
-  BTFTypeFunc(StringRef FuncName, uint32_t ProtoTypeId);
+  BTFTypeFunc(StringRef FuncName, uint32_t ProtoTypeId, uint32_t Scope);
   uint32_t getSize() { return BTFTypeBase::getSize(); }
   void completeType(BTFDebug &BDebug);
   void emitType(MCStreamer &OS);
@@ -251,6 +252,7 @@ class BTFDebug : public DebugHandlerBase {
   std::map<std::string, uint32_t> PatchImms;
   std::map<StringRef, std::pair<bool, std::vector<BTFTypeDerived *>>>
       FixupDerivedTypes;
+  std::set<const Function *>ProtoFunctions;
 
   /// Add types to TypeEntries.
   /// @{
@@ -294,7 +296,7 @@ class BTFDebug : public DebugHandlerBase {
   void processGlobals(bool ProcessingMapDef);
 
   /// Generate types for function prototypes.
-  void processFuncPrototypes();
+  void processFuncPrototypes(const Function *);
 
   /// Generate one field relocation record.
   void generateFieldReloc(const MCSymbol *ORSym, DIType *RootTy,
