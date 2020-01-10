@@ -504,7 +504,8 @@ TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
 
   auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
                                                     nullptr, RecordRecoverable);
-  checkError("last sequence in debug line table is not terminated!",
+  checkError("last sequence in debug line table at offset 0x00000000 is not "
+             "terminated",
              std::move(Recoverable));
   ASSERT_TRUE(ExpectedLineTable.operator bool());
   EXPECT_EQ((*ExpectedLineTable)->Rows.size(), 6u);
@@ -661,7 +662,8 @@ TEST_F(DebugLineBasicFixture, ParserReportsNonPrologueProblemsWhenParsing) {
   Parser.parseNext(RecordRecoverable, RecordUnrecoverable);
 
   EXPECT_TRUE(Parser.done());
-  checkError("last sequence in debug line table is not terminated!",
+  checkError("last sequence in debug line table at offset 0x00000031 is not "
+             "terminated",
              std::move(Recoverable));
   EXPECT_FALSE(Unrecoverable);
 }
