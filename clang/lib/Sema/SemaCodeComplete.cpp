@@ -2312,6 +2312,13 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
         Builder.AddChunk(CodeCompletionString::CK_SemiColon);
         Results.AddResult(Result(Builder.TakeString()));
       }
+      // For pointers, suggest 'return nullptr' in C++.
+      if (SemaRef.getLangOpts().CPlusPlus11 &&
+          (ReturnType->isPointerType() || ReturnType->isMemberPointerType())) {
+        Builder.AddTypedTextChunk("return nullptr");
+        Builder.AddChunk(CodeCompletionString::CK_SemiColon);
+        Results.AddResult(Result(Builder.TakeString()));
+      }
     }
 
     // goto identifier ;
