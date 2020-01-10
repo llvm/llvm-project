@@ -246,8 +246,6 @@ ExprResult Parser::ParseConstraintExpression() {
 
 /// \brief Parse a constraint-logical-and-expression.
 ///
-/// \param RightMostExpr If provided, will receive the right-most atomic
-///                      constraint that was parsed.
 /// \verbatim
 ///       C++2a[temp.constr.decl]p1
 ///       constraint-logical-and-expression:
