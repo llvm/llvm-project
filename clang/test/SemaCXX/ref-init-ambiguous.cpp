@@ -25,4 +25,26 @@ const E2 & re(C c) {
     return c; // expected-error {{reference initialization of type 'const E2 &' with initializer of type 'C' is ambiguous}}
 }
 
+namespace CWG2352 {
+  void f(const int * const &) = delete;
+  void f(int *);
 
+  void g(int * &);
+  void g(const int *) = delete;
+
+  void h1(int *const * const &);
+  void h1(const int *const *) = delete;
+  void h2(const int *const * const &) = delete;
+  void h2(int *const *);
+
+  void test() {
+    int *x;
+    // Under CWG2352, this became ambiguous. We order by qualification
+    // conversion even when comparing a reference binding to a
+    // non-reference-binding.
+    f(x);
+    g(x);
+    h1(&x);
+    h2(&x);
+  }
+}

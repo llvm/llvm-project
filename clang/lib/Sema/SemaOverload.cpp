@@ -3169,6 +3169,70 @@ static bool isNonTrivialObjCLifetimeConversion(Qualifiers FromQuals,
   return true;
 }
 
+/// Perform a single iteration of the loop for checking if a qualification
+/// conversion is valid.
+///
+/// Specifically, check whether any change between the qualifiers of \p
+/// FromType and \p ToType is permissible, given knowledge about whether every
+/// outer layer is const-qualified.
+static bool isQualificationConversionStep(QualType FromType, QualType ToType,
+                                          bool CStyle,
+                                          bool &PreviousToQualsIncludeConst,
+                                          bool &ObjCLifetimeConversion) {
+  Qualifiers FromQuals = FromType.getQualifiers();
+  Qualifiers ToQuals = ToType.getQualifiers();
+
+  // Ignore __unaligned qualifier if this type is void.
+  if (ToType.getUnqualifiedType()->isVoidType())
+    FromQuals.removeUnaligned();
+
+  // Objective-C ARC:
+  //   Check Objective-C lifetime conversions.
+  if (FromQuals.getObjCLifetime() != ToQuals.getObjCLifetime()) {
+    if (ToQuals.compatiblyIncludesObjCLifetime(FromQuals)) {
+      if (isNonTrivialObjCLifetimeConversion(FromQuals, ToQuals))
+        ObjCLifetimeConversion = true;
+      FromQuals.removeObjCLifetime();
+      ToQuals.removeObjCLifetime();
+    } else {
+      // Qualification conversions cannot cast between different
+      // Objective-C lifetime qualifiers.
+      return false;
+    }
+  }
+
+  // Allow addition/removal of GC attributes but not changing GC attributes.
+  if (FromQuals.getObjCGCAttr() != ToQuals.getObjCGCAttr() &&
+      (!FromQuals.hasObjCGCAttr() || !ToQuals.hasObjCGCAttr())) {
+    FromQuals.removeObjCGCAttr();
+    ToQuals.removeObjCGCAttr();
+  }
+
+  //   -- for every j > 0, if const is in cv 1,j then const is in cv
+  //      2,j, and similarly for volatile.
+  if (!CStyle && !ToQuals.compatiblyIncludes(FromQuals))
+    return false;
+
+  // For a C-style cast, just require the address spaces to overlap.
+  // FIXME: Does "superset" also imply the representation of a pointer is the
+  // same? We're assuming that it does here and in compatiblyIncludes.
+  if (CStyle && !ToQuals.isAddressSpaceSupersetOf(FromQuals) &&
+      !FromQuals.isAddressSpaceSupersetOf(ToQuals))
+    return false;
+
+  //   -- if the cv 1,j and cv 2,j are different, then const is in
+  //      every cv for 0 < k < j.
+  if (!CStyle && FromQuals.getCVRQualifiers() != ToQuals.getCVRQualifiers() &&
+      !PreviousToQualsIncludeConst)
+    return false;
+
+  // Keep track of whether all prior cv-qualifiers in the "to" type
+  // include const.
+  PreviousToQualsIncludeConst =
+      PreviousToQualsIncludeConst && ToQuals.hasConst();
+  return true;
+}
+
 /// IsQualificationConversion - Determines whether the conversion from
 /// an rvalue of type FromType to ToType is a qualification conversion
 /// (C++ 4.4).
@@ -3194,73 +3258,16 @@ Sema::IsQualificationConversion(QualType FromType, QualType ToType,
   bool PreviousToQualsIncludeConst = true;
   bool UnwrappedAnyPointer = false;
   while (Context.UnwrapSimilarTypes(FromType, ToType)) {
-    // Within each iteration of the loop, we check the qualifiers to
-    // determine if this still looks like a qualification
-    // conversion. Then, if all is well, we unwrap one more level of
-    // pointers or pointers-to-members and do it all again
-    // until there are no more pointers or pointers-to-members left to
-    // unwrap.
+    if (!isQualificationConversionStep(FromType, ToType, CStyle,
+                                       PreviousToQualsIncludeConst,
+                                       ObjCLifetimeConversion))
+      return false;
     UnwrappedAnyPointer = true;
-
-    Qualifiers FromQuals = FromType.getQualifiers();
-    Qualifiers ToQuals = ToType.getQualifiers();
-
-    // Ignore __unaligned qualifier if this type is void.
-    if (ToType.getUnqualifiedType()->isVoidType())
-      FromQuals.removeUnaligned();
-
-    // Objective-C ARC:
-    //   Check Objective-C lifetime conversions.
-    if (FromQuals.getObjCLifetime() != ToQuals.getObjCLifetime() &&
-        UnwrappedAnyPointer) {
-      if (ToQuals.compatiblyIncludesObjCLifetime(FromQuals)) {
-        if (isNonTrivialObjCLifetimeConversion(FromQuals, ToQuals))
-          ObjCLifetimeConversion = true;
-        FromQuals.removeObjCLifetime();
-        ToQuals.removeObjCLifetime();
-      } else {
-        // Qualification conversions cannot cast between different
-        // Objective-C lifetime qualifiers.
-        return false;
-      }
-    }
-
-    // Allow addition/removal of GC attributes but not changing GC attributes.
-    if (FromQuals.getObjCGCAttr() != ToQuals.getObjCGCAttr() &&
-        (!FromQuals.hasObjCGCAttr() || !ToQuals.hasObjCGCAttr())) {
-      FromQuals.removeObjCGCAttr();
-      ToQuals.removeObjCGCAttr();
-    }
-
-    //   -- for every j > 0, if const is in cv 1,j then const is in cv
-    //      2,j, and similarly for volatile.
-    if (!CStyle && !ToQuals.compatiblyIncludes(FromQuals))
-      return false;
-
-    //   -- if the cv 1,j and cv 2,j are different, then const is in
-    //      every cv for 0 < k < j.
-    if (!CStyle && FromQuals.getCVRQualifiers() != ToQuals.getCVRQualifiers()
-        && !PreviousToQualsIncludeConst)
-      return false;
-
-    // Keep track of whether all prior cv-qualifiers in the "to" type
-    // include const.
-    PreviousToQualsIncludeConst
-      = PreviousToQualsIncludeConst && ToQuals.hasConst();
-  }
-
-  // Allows address space promotion by language rules implemented in
-  // Type::Qualifiers::isAddressSpaceSupersetOf.
-  Qualifiers FromQuals = FromType.getQualifiers();
-  Qualifiers ToQuals = ToType.getQualifiers();
-  if (!ToQuals.isAddressSpaceSupersetOf(FromQuals) &&
-      !FromQuals.isAddressSpaceSupersetOf(ToQuals)) {
-    return false;
   }
 
   // We are left with FromType and ToType being the pointee types
   // after unwrapping the original FromType and ToType the same number
-  // of types. If we unwrapped any pointers, and if FromType and
+  // of times. If we unwrapped any pointers, and if FromType and
   // ToType have the same unqualified type (since we checked
   // qualifiers above), then this is a qualification conversion.
   return UnwrappedAnyPointer && Context.hasSameUnqualifiedType(FromType,ToType);
@@ -3982,6 +3989,14 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
     }
   }
 
+  if (SCS1.ReferenceBinding && SCS2.ReferenceBinding) {
+    // Check for a better reference binding based on the kind of bindings.
+    if (isBetterReferenceBindingKind(SCS1, SCS2))
+      return ImplicitConversionSequence::Better;
+    else if (isBetterReferenceBindingKind(SCS2, SCS1))
+      return ImplicitConversionSequence::Worse;
+  }
+
   // Compare based on qualification conversions (C++ 13.3.3.2p3,
   // bullet 3).
   if (ImplicitConversionSequence::CompareKind QualCK
@@ -3989,12 +4004,6 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
     return QualCK;
 
   if (SCS1.ReferenceBinding && SCS2.ReferenceBinding) {
-    // Check for a better reference binding based on the kind of bindings.
-    if (isBetterReferenceBindingKind(SCS1, SCS2))
-      return ImplicitConversionSequence::Better;
-    else if (isBetterReferenceBindingKind(SCS2, SCS1))
-      return ImplicitConversionSequence::Worse;
-
     // C++ [over.ics.rank]p3b4:
     //   -- S1 and S2 are reference bindings (8.5.3), and the types to
     //      which the references refer are the same type except for
@@ -4026,7 +4035,7 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
         T2 = S.Context.getQualifiedType(UnqualT2, T2Quals);
       if (T2.isMoreQualifiedThan(T1))
         return ImplicitConversionSequence::Better;
-      else if (T1.isMoreQualifiedThan(T2))
+      if (T1.isMoreQualifiedThan(T2))
         return ImplicitConversionSequence::Worse;
     }
   }
@@ -4100,21 +4109,15 @@ CompareQualificationConversions(Sema &S,
   QualType T2 = SCS2.getToType(2);
   T1 = S.Context.getCanonicalType(T1);
   T2 = S.Context.getCanonicalType(T2);
+  assert(!T1->isReferenceType() && !T2->isReferenceType());
   Qualifiers T1Quals, T2Quals;
   QualType UnqualT1 = S.Context.getUnqualifiedArrayType(T1, T1Quals);
   QualType UnqualT2 = S.Context.getUnqualifiedArrayType(T2, T2Quals);
 
-  // If the types are the same, we won't learn anything by unwrapped
+  // If the types are the same, we won't learn anything by unwrapping
   // them.
   if (UnqualT1 == UnqualT2)
     return ImplicitConversionSequence::Indistinguishable;
-
-  // If the type is an array type, promote the element qualifiers to the type
-  // for comparison.
-  if (isa<ArrayType>(T1) && T1Quals)
-    T1 = S.Context.getQualifiedType(UnqualT1, T1Quals);
-  if (isa<ArrayType>(T2) && T2Quals)
-    T2 = S.Context.getQualifiedType(UnqualT2, T2Quals);
 
   ImplicitConversionSequence::CompareKind Result
     = ImplicitConversionSequence::Indistinguishable;
@@ -4413,10 +4416,19 @@ static bool isTypeValid(QualType T) {
   return true;
 }
 
+static QualType withoutUnaligned(ASTContext &Ctx, QualType T) {
+  if (!T.getQualifiers().hasUnaligned())
+    return T;
+
+  Qualifiers Q;
+  T = Ctx.getUnqualifiedArrayType(T, Q);
+  Q.removeUnaligned();
+  return Ctx.getQualifiedType(T, Q);
+}
+
 /// CompareReferenceRelationship - Compare the two types T1 and T2 to
-/// determine whether they are reference-related,
-/// reference-compatible, reference-compatible with added
-/// qualification, or incompatible, for use in C++ initialization by
+/// determine whether they are reference-compatible,
+/// reference-related, or incompatible, for use in C++ initialization by
 /// reference (C++ [dcl.ref.init]p4). Neither type can be a reference
 /// type, and the first type (T1) is the pointee type of the reference
 /// type being initialized.
@@ -4438,10 +4450,17 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
   ReferenceConversions &Conv = ConvOut ? *ConvOut : ConvTmp;
   Conv = ReferenceConversions();
 
-  // C++ [dcl.init.ref]p4:
+  // C++2a [dcl.init.ref]p4:
   //   Given types "cv1 T1" and "cv2 T2," "cv1 T1" is
-  //   reference-related to "cv2 T2" if T1 is the same type as T2, or
+  //   reference-related to "cv2 T2" if T1 is similar to T2, or
   //   T1 is a base class of T2.
+  //   "cv1 T1" is reference-compatible with "cv2 T2" if
+  //   a prvalue of type "pointer to cv2 T2" can be converted to the type
+  //   "pointer to cv1 T1" via a standard conversion sequence.
+
+  // Check for standard conversions we can apply to pointers: derived-to-base
+  // conversions, ObjC pointer conversions, and function pointer conversions.
+  // (Qualification conversions are checked last.)
   QualType ConvertedT2;
   if (UnqualT1 == UnqualT2) {
     // Nothing to do.
@@ -4455,59 +4474,56 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
     Conv |= ReferenceConversions::ObjC;
   else if (UnqualT2->isFunctionType() &&
            IsFunctionConversion(UnqualT2, UnqualT1, ConvertedT2)) {
-    // C++1z [dcl.init.ref]p4:
-    //   cv1 T1" is reference-compatible with "cv2 T2" if [...] T2 is "noexcept
-    //   function" and T1 is "function"
-    //
-    // We extend this to also apply to 'noreturn', so allow any function
-    // conversion between function types.
     Conv |= ReferenceConversions::Function;
+    // No need to check qualifiers; function types don't have them.
     return Ref_Compatible;
-  } else
-    return Ref_Incompatible;
-
-  // At this point, we know that T1 and T2 are reference-related (at
-  // least).
-
-  // If the type is an array type, promote the element qualifiers to the type
-  // for comparison.
-  if (isa<ArrayType>(T1) && T1Quals)
-    T1 = Context.getQualifiedType(UnqualT1, T1Quals);
-  if (isa<ArrayType>(T2) && T2Quals)
-    T2 = Context.getQualifiedType(UnqualT2, T2Quals);
-
-  // C++ [dcl.init.ref]p4:
-  //   "cv1 T1" is reference-compatible with "cv2 T2" if T1 is
-  //   reference-related to T2 and cv1 is the same cv-qualification
-  //   as, or greater cv-qualification than, cv2. For purposes of
-  //   overload resolution, cases for which cv1 is greater
-  //   cv-qualification than cv2 are identified as
-  //   reference-compatible with added qualification (see 13.3.3.2).
-  //
-  // Note that we also require equivalence of Objective-C GC and address-space
-  // qualifiers when performing these computations, so that e.g., an int in
-  // address space 1 is not reference-compatible with an int in address
-  // space 2.
-  if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime() &&
-      T1Quals.compatiblyIncludesObjCLifetime(T2Quals)) {
-    if (isNonTrivialObjCLifetimeConversion(T2Quals, T1Quals))
-      Conv |= ReferenceConversions::ObjCLifetime;
-
-    T1Quals.removeObjCLifetime();
-    T2Quals.removeObjCLifetime();
   }
+  bool ConvertedReferent = Conv != 0;
 
-  // MS compiler ignores __unaligned qualifier for references; do the same.
-  T1Quals.removeUnaligned();
-  T2Quals.removeUnaligned();
+  // We can have a qualification conversion. Compute whether the types are
+  // similar at the same time.
+  bool PreviousToQualsIncludeConst = true;
+  bool TopLevel = true;
+  do {
+    if (T1 == T2)
+      break;
 
-  if (T1Quals != T2Quals)
+    // We will need a qualification conversion.
     Conv |= ReferenceConversions::Qualification;
 
-  if (T1Quals.compatiblyIncludes(T2Quals))
-    return Ref_Compatible;
-  else
-    return Ref_Related;
+    // Track whether we performed a qualification conversion anywhere other
+    // than the top level. This matters for ranking reference bindings in
+    // overload resolution.
+    if (!TopLevel)
+      Conv |= ReferenceConversions::NestedQualification;
+
+    // MS compiler ignores __unaligned qualifier for references; do the same.
+    T1 = withoutUnaligned(Context, T1);
+    T2 = withoutUnaligned(Context, T2);
+
+    // If we find a qualifier mismatch, the types are not reference-compatible,
+    // but are still be reference-related if they're similar.
+    bool ObjCLifetimeConversion = false;
+    if (!isQualificationConversionStep(T2, T1, /*CStyle=*/false,
+                                       PreviousToQualsIncludeConst,
+                                       ObjCLifetimeConversion))
+      return (ConvertedReferent || Context.hasSimilarType(T1, T2))
+                 ? Ref_Related
+                 : Ref_Incompatible;
+
+    // FIXME: Should we track this for any level other than the first?
+    if (ObjCLifetimeConversion)
+      Conv |= ReferenceConversions::ObjCLifetime;
+
+    TopLevel = false;
+  } while (Context.UnwrapSimilarTypes(T1, T2));
+
+  // At this point, if the types are reference-related, we must either have the
+  // same inner type (ignoring qualifiers), or must have already worked out how
+  // to convert the referent.
+  return (ConvertedReferent || Context.hasSameUnqualifiedType(T1, T2))
+             ? Ref_Compatible
+             : Ref_Incompatible;
 }
 
 /// Look for a user-defined conversion to a value reference-compatible
@@ -4665,12 +4681,20 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
   auto SetAsReferenceBinding = [&](bool BindsDirectly) {
     ICS.setStandard();
     ICS.Standard.First = ICK_Identity;
+    // FIXME: A reference binding can be a function conversion too. We should
+    // consider that when ordering reference-to-function bindings.
     ICS.Standard.Second = (RefConv & Sema::ReferenceConversions::DerivedToBase)
                               ? ICK_Derived_To_Base
                               : (RefConv & Sema::ReferenceConversions::ObjC)
                                     ? ICK_Compatible_Conversion
                                     : ICK_Identity;
-    ICS.Standard.Third = ICK_Identity;
+    // FIXME: As a speculative fix to a defect introduced by CWG2352, we rank
+    // a reference binding that performs a non-top-level qualification
+    // conversion as a qualification conversion, not as an identity conversion.
+    ICS.Standard.Third = (RefConv &
+                              Sema::ReferenceConversions::NestedQualification)
+                             ? ICK_Qualification
+                             : ICK_Identity;
     ICS.Standard.FromTypePtr = T2.getAsOpaquePtr();
     ICS.Standard.setToType(0, T2);
     ICS.Standard.setToType(1, T1);
