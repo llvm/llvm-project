@@ -15,6 +15,8 @@
 
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver1 -iterations=1 -timeline -instruction-info=false -resource-pressure=false < %s | FileCheck %s -check-prefix=ALL -check-prefix=ZNVER1
 
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver2 -iterations=1 -timeline -instruction-info=false -resource-pressure=false < %s | FileCheck %s -check-prefix=ALL -check-prefix=ZNVER2
+
 vaddps %xmm0, %xmm0, %xmm1
 vblendvps %xmm1, (%rdi), %xmm2, %xmm3
 
@@ -44,6 +46,9 @@ vblendvps %xmm1, (%rdi), %xmm2, %xmm3
 
 # ZNVER1-NEXT:  Total Cycles:      11
 # ZNVER1-NEXT:  Total uOps:        2
+
+# ZNVER2-NEXT:  Total Cycles:      11
+# ZNVER2-NEXT:  Total uOps:        2
 
 # BDVER2:       Dispatch Width:    4
 # BDVER2-NEXT:  uOps Per Cycle:    0.20
@@ -85,6 +90,11 @@ vblendvps %xmm1, (%rdi), %xmm2, %xmm3
 # ZNVER1-NEXT:  IPC:               0.18
 # ZNVER1-NEXT:  Block RThroughput: 1.0
 
+# ZNVER2:       Dispatch Width:    4
+# ZNVER2-NEXT:  uOps Per Cycle:    0.18
+# ZNVER2-NEXT:  IPC:               0.18
+# ZNVER2-NEXT:  Block RThroughput: 1.0
+
 # BDVER2:       Timeline view:
 # BDVER2-NEXT:  Index     0123456789
 
@@ -115,6 +125,10 @@ vblendvps %xmm1, (%rdi), %xmm2, %xmm3
 # ZNVER1-NEXT:                      0
 # ZNVER1-NEXT:  Index     0123456789
 
+# ZNVER2:       Timeline view:
+# ZNVER2-NEXT:                      0
+# ZNVER2-NEXT:  Index     0123456789
+
 # BDVER2:       [0,0]     DeeeeeER .   vaddps	%xmm0, %xmm0, %xmm1
 # BDVER2-NEXT:  [0,1]     DeeeeeeeER   vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
 
@@ -138,6 +152,9 @@ vblendvps %xmm1, (%rdi), %xmm2, %xmm3
 
 # ZNVER1:       [0,0]     DeeeER    .   vaddps	%xmm0, %xmm0, %xmm1
 # ZNVER1-NEXT:  [0,1]     DeeeeeeeeER   vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
+
+# ZNVER2:       [0,0]     DeeeER    .   vaddps	%xmm0, %xmm0, %xmm1
+# ZNVER2-NEXT:  [0,1]     DeeeeeeeeER   vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
 
 # ALL:          Average Wait times (based on the timeline view):
 # ALL-NEXT:     [0]: Executions
@@ -171,3 +188,6 @@ vblendvps %xmm1, (%rdi), %xmm2, %xmm3
 
 # ZNVER1-NEXT:  1.     1     1.0    0.0    0.0       vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
 # ZNVER1-NEXT:         1     1.0    0.5    0.0       <total>
+
+# ZNVER2-NEXT:  1.     1     1.0    0.0    0.0       vblendvps	%xmm1, (%rdi), %xmm2, %xmm3
+# ZNVER2-NEXT:         1     1.0    0.5    0.0       <total>

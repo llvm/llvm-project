@@ -3,6 +3,7 @@
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=bdver2 -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefix=ALL --check-prefix=BDVER2 %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=btver2 -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefix=ALL --check-prefix=BTVER2 %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=znver1 -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefix=ALL --check-prefix=ZNVER1 %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=znver2 -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefix=ALL --check-prefix=ZNVER2 %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=sandybridge -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefix=ALL --check-prefix=SANDYBRIDGE %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=ivybridge -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefix=ALL --check-prefix=IVYBRIDGE %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=haswell -resource-pressure=false -instruction-info=false < %s | FileCheck --check-prefix=ALL --check-prefix=HASWELL %s
@@ -78,3 +79,8 @@ add %edi, %eax
 # ZNVER1-NEXT:      uOps Per Cycle:    0.97
 # ZNVER1-NEXT:      IPC:               0.97
 # ZNVER1-NEXT:      Block RThroughput: 0.3
+
+# ZNVER2:           Dispatch Width:    4
+# ZNVER2-NEXT:      uOps Per Cycle:    0.97
+# ZNVER2-NEXT:      IPC:               0.97
+# ZNVER2-NEXT:      Block RThroughput: 0.3
