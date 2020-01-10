@@ -1437,6 +1437,39 @@ AMDGPURegisterBankInfo::selectStoreIntrinsic(MachineIRBuilder &B,
   return MIB;
 }
 
+bool AMDGPURegisterBankInfo::buildVCopy(MachineIRBuilder &B, Register DstReg,
+                                        Register SrcReg) const {
+  MachineRegisterInfo &MRI = *B.getMRI();
+  LLT SrcTy = MRI.getType(SrcReg);
+  if (SrcTy.getSizeInBits() == 32) {
+    // Use a v_mov_b32 here to make the exec dependency explicit.
+    B.buildInstr(AMDGPU::V_MOV_B32_e32)
+      .addDef(DstReg)
+      .addUse(SrcReg);
+    return constrainGenericRegister(DstReg, AMDGPU::VGPR_32RegClass, MRI) &&
+           constrainGenericRegister(SrcReg, AMDGPU::SReg_32RegClass, MRI);
+  }
+
+  Register TmpReg0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  Register TmpReg1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+
+  B.buildInstr(AMDGPU::V_MOV_B32_e32)
+    .addDef(TmpReg0)
+    .addUse(SrcReg, 0, AMDGPU::sub0);
+  B.buildInstr(AMDGPU::V_MOV_B32_e32)
+    .addDef(TmpReg1)
+    .addUse(SrcReg, 0, AMDGPU::sub1);
+  B.buildInstr(AMDGPU::REG_SEQUENCE)
+    .addDef(DstReg)
+    .addUse(TmpReg0)
+    .addImm(AMDGPU::sub0)
+    .addUse(TmpReg1)
+    .addImm(AMDGPU::sub1);
+
+  return constrainGenericRegister(SrcReg, AMDGPU::SReg_64RegClass, MRI) &&
+         constrainGenericRegister(DstReg, AMDGPU::VReg_64RegClass, MRI);
+}
+
 void AMDGPURegisterBankInfo::applyMappingImpl(
     const OperandsMapper &OpdMapper) const {
   MachineInstr &MI = OpdMapper.getMI();
@@ -1906,17 +1939,43 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     assert(OpdMapper.getVRegs(1).empty() && OpdMapper.getVRegs(2).empty());
 
-    if (DstRegs.empty()) {
-      applyDefaultMapping(OpdMapper);
-      executeInWaterfallLoop(MI, MRI, { 2 });
-      return;
-    }
+    LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+    MachineIRBuilder B(MI);
+
+    const ValueMapping &DstMapping
+      = OpdMapper.getInstrMapping().getOperandMapping(0);
+    const RegisterBank *DstBank = DstMapping.BreakDown[0].RegBank;
+    const RegisterBank *SrcBank =
+      OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
 
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
     Register IdxReg = MI.getOperand(2).getReg();
-    LLT DstTy = MRI.getType(DstReg);
-    (void)DstTy;
+
+    // If this is a VGPR result only because the index was a VGPR result, the
+    // actual indexing will be done on the SGPR source vector, which will
+    // produce a scalar result. We need to copy to the VGPR result inside the
+    // waterfall loop.
+    const bool NeedCopyToVGPR = DstBank == &AMDGPU::VGPRRegBank &&
+                                SrcBank == &AMDGPU::SGPRRegBank;
+    if (DstRegs.empty()) {
+      applyDefaultMapping(OpdMapper);
+
+      executeInWaterfallLoop(MI, MRI, { 2 });
+
+      if (NeedCopyToVGPR) {
+        // We don't want a phi for this temporary reg.
+        Register TmpReg = MRI.createGenericVirtualRegister(DstTy);
+        MRI.setRegBank(TmpReg, AMDGPU::SGPRRegBank);
+        MI.getOperand(0).setReg(TmpReg);
+        B.setInsertPt(*MI.getParent(), ++MI.getIterator());
+
+        // Use a v_mov_b32 here to make the exec dependency explicit.
+        buildVCopy(B, DstReg, TmpReg);
+      }
+
+      return;
+    }
 
     assert(DstTy.getSizeInBits() == 64);
 
@@ -1924,7 +1983,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     const LLT S32 = LLT::scalar(32);
     LLT Vec32 = LLT::vector(2 * SrcTy.getNumElements(), 32);
 
-    MachineIRBuilder B(MI);
     auto CastSrc = B.buildBitcast(Vec32, SrcReg);
     auto One = B.buildConstant(S32, 1);
 
@@ -1937,16 +1995,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     // Compute 32-bit element indices, (2 * OrigIdx, 2 * OrigIdx + 1).
     auto IdxLo = B.buildShl(S32, IdxReg, One);
     auto IdxHi = B.buildAdd(S32, IdxLo, One);
-    B.buildExtractVectorElement(DstRegs[0], CastSrc, IdxLo);
-    B.buildExtractVectorElement(DstRegs[1], CastSrc, IdxHi);
 
-    const ValueMapping &DstMapping
-      = OpdMapper.getInstrMapping().getOperandMapping(0);
+    auto Extract0 = B.buildExtractVectorElement(DstRegs[0], CastSrc, IdxLo);
+    auto Extract1 = B.buildExtractVectorElement(DstRegs[1], CastSrc, IdxHi);
 
-    // FIXME: Should be getting from mapping or not?
-    const RegisterBank *SrcBank =
-      OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
-    MRI.setRegBank(DstReg, *DstMapping.BreakDown[0].RegBank);
+    MRI.setRegBank(DstReg, *DstBank);
     MRI.setRegBank(CastSrc.getReg(0), *SrcBank);
     MRI.setRegBank(One.getReg(0), AMDGPU::SGPRRegBank);
     MRI.setRegBank(IdxLo.getReg(0), AMDGPU::SGPRRegBank);
@@ -1964,6 +2017,23 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     MI.eraseFromParent();
     executeInWaterfallLoop(B, make_range(Span.begin(), Span.end()),
                            OpsToWaterfall, MRI);
+
+    if (NeedCopyToVGPR) {
+      MachineBasicBlock *LoopBB = Extract1->getParent();
+      Register TmpReg0 = MRI.createGenericVirtualRegister(S32);
+      Register TmpReg1 = MRI.createGenericVirtualRegister(S32);
+      MRI.setRegBank(TmpReg0, AMDGPU::SGPRRegBank);
+      MRI.setRegBank(TmpReg1, AMDGPU::SGPRRegBank);
+
+      Extract0->getOperand(0).setReg(TmpReg0);
+      Extract1->getOperand(0).setReg(TmpReg1);
+
+      B.setInsertPt(*LoopBB, ++Extract1->getIterator());
+
+      buildVCopy(B, DstRegs[0], TmpReg0);
+      buildVCopy(B, DstRegs[1], TmpReg1);
+    }
+
     return;
   }
   case AMDGPU::G_INSERT_VECTOR_ELT: {
