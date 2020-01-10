@@ -446,7 +446,7 @@ class Foo {})cpp";
        [](HoverInfo &HI) {
          HI.Name = "x";
          HI.NamespaceScope = "";
-         HI.Definition = "enum Color x = GREEN";
+         HI.Definition = "Color x = GREEN";
          HI.Kind = index::SymbolKind::Variable;
          HI.Type = "enum Color";
          HI.Value = "GREEN (1)"; // Symbolic when hovering on an expression.
@@ -1427,7 +1427,7 @@ TEST(Hover, All) {
             HI.NamespaceScope = "";
             HI.LocalScope = "test::";
             HI.Type = "struct Test &&";
-            HI.Definition = "struct Test &&test = {}";
+            HI.Definition = "Test &&test = {}";
             HI.Value = "{}";
           }},
       {
@@ -1475,6 +1475,31 @@ TEST(Hover, All) {
             HI.Parameters.emplace();
             HI.ReturnType = "int";
             HI.Type = "int ()";
+          }},
+      {
+          R"cpp(// type of nested templates.
+          template <class T> struct cls {};
+          cls<cls<cls<int>>> [[fo^o]];
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Definition = "cls<cls<cls<int>>> foo";
+            HI.Kind = index::SymbolKind::Variable;
+            HI.NamespaceScope = "";
+            HI.Name = "foo";
+            HI.Type = "cls<cls<cls<int> > >";
+            HI.Value = "{}";
+          }},
+      {
+          R"cpp(// type of nested templates.
+          template <class T> struct cls {};
+          [[cl^s]]<cls<cls<int>>> foo;
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Definition = "template <> struct cls<cls<cls<int>>> {}";
+            HI.Kind = index::SymbolKind::Struct;
+            HI.NamespaceScope = "";
+            HI.Name = "cls<cls<cls<int> > >";
+            HI.Documentation = "type of nested templates.";
           }},
   };
 
