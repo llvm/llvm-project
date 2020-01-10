@@ -14,7 +14,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -459,6 +458,28 @@ static void printIRBlockReference(raw_ostream &OS, const BasicBlock &BB,
     OS << "<unknown>";
 }
 
+static void printIRValueReference(raw_ostream &OS, const Value &V,
+                                  ModuleSlotTracker &MST) {
+  if (isa<GlobalValue>(V)) {
+    V.printAsOperand(OS, /*PrintType=*/false, MST);
+    return;
+  }
+  if (isa<Constant>(V)) {
+    // Machine memory operands can load/store to/from constant value pointers.
+    OS << '`';
+    V.printAsOperand(OS, /*PrintType=*/true, MST);
+    OS << '`';
+    return;
+  }
+  OS << "%ir.";
+  if (V.hasName()) {
+    printLLVMNameWithoutPrefix(OS, V.getName());
+    return;
+  }
+  int Slot = MST.getCurrentFunction() ? MST.getLocalSlot(&V) : -1;
+  MachineOperand::printIRSlotNumber(OS, Slot);
+}
+
 static void printSyncScope(raw_ostream &OS, const LLVMContext &Context,
                            SyncScope::ID SSID,
                            SmallVectorImpl<StringRef> &SSNs) {
@@ -713,15 +734,14 @@ void MachineOperand::print(raw_ostream &OS, LLT TypeToPrint,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
   tryToGetTargetInfo(*this, TRI, IntrinsicInfo);
   ModuleSlotTracker DummyMST(nullptr);
-  print(OS, DummyMST, TypeToPrint, None, /*PrintDef=*/false,
-        /*IsStandalone=*/true,
+  print(OS, DummyMST, TypeToPrint, /*PrintDef=*/false, /*IsStandalone=*/true,
         /*ShouldPrintRegisterTies=*/true,
         /*TiedOperandIdx=*/0, TRI, IntrinsicInfo);
 }
 
 void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
-                           LLT TypeToPrint, Optional<unsigned> OpIdx, bool PrintDef,
-                           bool IsStandalone, bool ShouldPrintRegisterTies,
+                           LLT TypeToPrint, bool PrintDef, bool IsStandalone,
+                           bool ShouldPrintRegisterTies,
                            unsigned TiedOperandIdx,
                            const TargetRegisterInfo *TRI,
                            const TargetIntrinsicInfo *IntrinsicInfo) const {
@@ -782,16 +802,9 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << '(' << TypeToPrint << ')';
     break;
   }
-  case MachineOperand::MO_Immediate: {
-    const MIRFormatter *Formatter = nullptr;
-    if (const MachineFunction *MF = getMFIfAvailable(*this))
-      Formatter = MF->getTarget().getMIRFormatter();
-    if (Formatter)
-      Formatter->printImm(OS, *getParent(), OpIdx, getImm());
-    else
-      OS << getImm();
+  case MachineOperand::MO_Immediate:
+    OS << getImm();
     break;
-  }
   case MachineOperand::MO_CImmediate:
     getCImm()->printAsOperand(OS, /*PrintType=*/true, MST);
     break;
@@ -1057,8 +1070,7 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
                               SmallVectorImpl<StringRef> &SSNs,
                               const LLVMContext &Context,
                               const MachineFrameInfo *MFI,
-                              const TargetInstrInfo *TII,
-                              const MIRFormatter* MIRF) const {
+                              const TargetInstrInfo *TII) const {
   OS << '(';
   if (isVolatile())
     OS << "volatile ";
@@ -1099,7 +1111,7 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
   if (const Value *Val = getValue()) {
     OS << ((isLoad() && isStore()) ? " on " : isLoad() ? " from " : " into ");
-    MIRFormatter::printIRValue(OS, *Val, MST);
+    printIRValueReference(OS, *Val, MST);
   } else if (const PseudoSourceValue *PVal = getPseudoValue()) {
     OS << ((isLoad() && isStore()) ? " on " : isLoad() ? " from " : " into ");
     assert(PVal && "Expected a pseudo source value");
@@ -1132,19 +1144,14 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       printLLVMNameWithoutPrefix(
           OS, cast<ExternalSymbolPseudoSourceValue>(PVal)->getSymbol());
       break;
-    default: {
+    default:
       // FIXME: This is not necessarily the correct MIR serialization format for
       // a custom pseudo source value, but at least it allows
       // -print-machineinstrs to work on a target with custom pseudo source
       // values.
-      OS << "custom \"";
-      if (MIRF)
-        MIRF->printCustomPseudoSourceValue(OS, MST, *PVal);
-      else
-        PVal->printCustom(OS);
-      OS << '\"';
+      OS << "custom ";
+      PVal->printCustom(OS);
       break;
-    }
     }
   }
   MachineOperand::printOperandOffset(OS, getOffset());

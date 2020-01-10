@@ -28,7 +28,6 @@
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBankInfo.h"
-#include "llvm/CodeGen/MIRFormatter.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -344,37 +343,6 @@ VRegInfo &PerFunctionMIParsingState::getVRegInfoNamed(StringRef RegName) {
   return *I.first->second;
 }
 
-static void mapValueToSlot(const Value *V, ModuleSlotTracker &MST,
-                           DenseMap<unsigned, const Value *> &Slots2Values) {
-  int Slot = MST.getLocalSlot(V);
-  if (Slot == -1)
-    return;
-  Slots2Values.insert(std::make_pair(unsigned(Slot), V));
-}
-
-/// Creates the mapping from slot numbers to function's unnamed IR values.
-static void initSlots2Values(const Function &F,
-                             DenseMap<unsigned, const Value *> &Slots2Values) {
-  ModuleSlotTracker MST(F.getParent(), /*ShouldInitializeAllMetadata=*/false);
-  MST.incorporateFunction(F);
-  for (const auto &Arg : F.args())
-    mapValueToSlot(&Arg, MST, Slots2Values);
-  for (const auto &BB : F) {
-    mapValueToSlot(&BB, MST, Slots2Values);
-    for (const auto &I : BB)
-      mapValueToSlot(&I, MST, Slots2Values);
-  }
-}
-
-const Value* PerFunctionMIParsingState::getIRValue(unsigned Slot) {
-  if (Slots2Values.empty())
-    initSlots2Values(MF.getFunction(), Slots2Values);
-  auto ValueInfo = Slots2Values.find(Slot);
-  if (ValueInfo == Slots2Values.end())
-    return nullptr;
-  return ValueInfo->second;
-}
-
 namespace {
 
 /// A wrapper struct around the 'MachineOperand' struct that includes a source
@@ -402,6 +370,8 @@ class MIParser {
   PerFunctionMIParsingState &PFS;
   /// Maps from slot numbers to function's unnamed basic blocks.
   DenseMap<unsigned, const BasicBlock *> Slots2BasicBlocks;
+  /// Maps from slot numbers to function's unnamed values.
+  DenseMap<unsigned, const Value *> Slots2Values;
 
 public:
   MIParser(PerFunctionMIParsingState &PFS, SMDiagnostic &Error,
@@ -485,12 +455,9 @@ public:
   bool parseTargetIndexOperand(MachineOperand &Dest);
   bool parseCustomRegisterMaskOperand(MachineOperand &Dest);
   bool parseLiveoutRegisterMaskOperand(MachineOperand &Dest);
-  bool parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
-                           MachineOperand &Dest,
+  bool parseMachineOperand(MachineOperand &Dest,
                            Optional<unsigned> &TiedDefIdx);
-  bool parseMachineOperandAndTargetFlags(const unsigned OpCode,
-                                         const unsigned OpIdx,
-                                         MachineOperand &Dest,
+  bool parseMachineOperandAndTargetFlags(MachineOperand &Dest,
                                          Optional<unsigned> &TiedDefIdx);
   bool parseOffset(int64_t &Offset);
   bool parseAlignment(unsigned &Alignment);
@@ -505,9 +472,6 @@ public:
   bool parseMachineMemoryOperand(MachineMemOperand *&Dest);
   bool parsePreOrPostInstrSymbol(MCSymbol *&Symbol);
   bool parseHeapAllocMarker(MDNode *&Node);
-
-  bool parseTargetImmMnemonic(const unsigned OpCode, const unsigned OpIdx,
-                              MachineOperand &Dest, const MIRFormatter &MF);
 
 private:
   /// Convert the integer literal in the current token into an unsigned integer.
@@ -586,9 +550,6 @@ bool MIParser::error(StringRef::iterator Loc, const Twine &Msg) {
                        Source, None, None);
   return true;
 }
-
-typedef function_ref<bool(StringRef::iterator Loc, const Twine &)>
-    ErrorCallbackType;
 
 static const char *toString(MIToken::TokenKind TokenKind) {
   switch (TokenKind) {
@@ -951,7 +912,7 @@ bool MIParser::parse(MachineInstr *&MI) {
          Token.isNot(MIToken::coloncolon) && Token.isNot(MIToken::lbrace)) {
     auto Loc = Token.location();
     Optional<unsigned> TiedDefIdx;
-    if (parseMachineOperandAndTargetFlags(OpCode, Operands.size(), MO, TiedDefIdx))
+    if (parseMachineOperandAndTargetFlags(MO, TiedDefIdx))
       return true;
     if (OpCode == TargetOpcode::DBG_VALUE && MO.isReg())
       MO.setIsDebug();
@@ -1532,59 +1493,15 @@ bool MIParser::parseImmediateOperand(MachineOperand &Dest) {
   return false;
 }
 
-bool MIParser::parseTargetImmMnemonic(const unsigned OpCode,
-                                      const unsigned OpIdx,
-                                      MachineOperand &Dest,
-                                      const MIRFormatter &MF) {
-  assert(Token.is(MIToken::dot));
-  auto Loc = Token.location(); // record start position
-  size_t Len = 1;              // for "."
-  lex();
-
-  // Handle the case that mnemonic starts with number.
-  if (Token.is(MIToken::IntegerLiteral)) {
-    Len += Token.range().size();
-    lex();
-  }
-
-  StringRef Src;
-  if (Token.is(MIToken::comma))
-    Src = StringRef(Loc, Len);
-  else {
-    assert(Token.is(MIToken::Identifier));
-    Src = StringRef(Loc, Len + Token.stringValue().size());
-  }
-  int64_t Val;
-  if (MF.parseImmMnemonic(OpCode, OpIdx, Src, Val,
-                          [this](StringRef::iterator Loc, const Twine &Msg)
-                              -> bool { return error(Loc, Msg); }))
-    return true;
-
-  Dest = MachineOperand::CreateImm(Val);
-  if (!Token.is(MIToken::comma))
-    lex();
-  return false;
-}
-
-static bool parseIRConstant(StringRef::iterator Loc, StringRef StringValue,
-                            PerFunctionMIParsingState &PFS, const Constant *&C,
-                            ErrorCallbackType ErrCB) {
-  auto Source = StringValue.str(); // The source has to be null terminated.
-  SMDiagnostic Err;
-  C = parseConstantValue(Source, Err, *PFS.MF.getFunction().getParent(),
-                         &PFS.IRSlots);
-  if (!C)
-    return ErrCB(Loc + Err.getColumnNo(), Err.getMessage());
-  return false;
-}
-
 bool MIParser::parseIRConstant(StringRef::iterator Loc, StringRef StringValue,
                                const Constant *&C) {
-  return ::parseIRConstant(
-      Loc, StringValue, PFS, C,
-      [this](StringRef::iterator Loc, const Twine &Msg) -> bool {
-        return error(Loc, Msg);
-      });
+  auto Source = StringValue.str(); // The source has to be null terminated.
+  SMDiagnostic Err;
+  C = parseConstantValue(Source, Err, *MF.getFunction().getParent(),
+                         &PFS.IRSlots);
+  if (!C)
+    return error(Loc + Err.getColumnNo(), Err.getMessage());
+  return false;
 }
 
 bool MIParser::parseIRConstant(StringRef::iterator Loc, const Constant *&C) {
@@ -1719,50 +1636,25 @@ bool MIParser::parseFPImmediateOperand(MachineOperand &Dest) {
   return false;
 }
 
-static bool getHexUint(const MIToken &Token, APInt &Result) {
-  assert(Token.is(MIToken::HexLiteral));
-  StringRef S = Token.range();
-  assert(S[0] == '0' && tolower(S[1]) == 'x');
-  // This could be a floating point literal with a special prefix.
-  if (!isxdigit(S[2]))
-    return true;
-  StringRef V = S.substr(2);
-  APInt A(V.size()*4, V, 16);
-
-  // If A is 0, then A.getActiveBits() is 0. This isn't a valid bitwidth. Make
-  // sure it isn't the case before constructing result.
-  unsigned NumBits = (A == 0) ? 32 : A.getActiveBits();
-  Result = APInt(NumBits, ArrayRef<uint64_t>(A.getRawData(), A.getNumWords()));
-  return false;
-}
-
-bool getUnsigned(const MIToken &Token, unsigned &Result,
-                 ErrorCallbackType ErrCB) {
+bool MIParser::getUnsigned(unsigned &Result) {
   if (Token.hasIntegerValue()) {
     const uint64_t Limit = uint64_t(std::numeric_limits<unsigned>::max()) + 1;
     uint64_t Val64 = Token.integerValue().getLimitedValue(Limit);
     if (Val64 == Limit)
-      return ErrCB(Token.location(), "expected 32-bit integer (too large)");
+      return error("expected 32-bit integer (too large)");
     Result = Val64;
     return false;
   }
   if (Token.is(MIToken::HexLiteral)) {
     APInt A;
-    if (getHexUint(Token, A))
+    if (getHexUint(A))
       return true;
     if (A.getBitWidth() > 32)
-      return ErrCB(Token.location(), "expected 32-bit integer (too large)");
+      return error("expected 32-bit integer (too large)");
     Result = A.getZExtValue();
     return false;
   }
   return true;
-}
-
-bool MIParser::getUnsigned(unsigned &Result) {
-  return ::getUnsigned(
-      Token, Result, [this](StringRef::iterator Loc, const Twine &Msg) -> bool {
-        return error(Loc, Msg);
-      });
 }
 
 bool MIParser::parseMBBReference(MachineBasicBlock *&MBB) {
@@ -1844,25 +1736,23 @@ bool MIParser::parseFixedStackObjectOperand(MachineOperand &Dest) {
   return false;
 }
 
-static bool parseGlobalValue(const MIToken &Token,
-                             PerFunctionMIParsingState &PFS, GlobalValue *&GV,
-                             ErrorCallbackType ErrCB) {
+bool MIParser::parseGlobalValue(GlobalValue *&GV) {
   switch (Token.kind()) {
   case MIToken::NamedGlobalValue: {
-    const Module *M = PFS.MF.getFunction().getParent();
+    const Module *M = MF.getFunction().getParent();
     GV = M->getNamedValue(Token.stringValue());
     if (!GV)
-      return ErrCB(Token.location(), Twine("use of undefined global value '") +
-                                         Token.range() + "'");
+      return error(Twine("use of undefined global value '") + Token.range() +
+                   "'");
     break;
   }
   case MIToken::GlobalValue: {
     unsigned GVIdx;
-    if (getUnsigned(Token, GVIdx, ErrCB))
+    if (getUnsigned(GVIdx))
       return true;
     if (GVIdx >= PFS.IRSlots.GlobalValues.size())
-      return ErrCB(Token.location(), Twine("use of undefined global value '@") +
-                                         Twine(GVIdx) + "'");
+      return error(Twine("use of undefined global value '@") + Twine(GVIdx) +
+                   "'");
     GV = PFS.IRSlots.GlobalValues[GVIdx];
     break;
   }
@@ -1870,14 +1760,6 @@ static bool parseGlobalValue(const MIToken &Token,
     llvm_unreachable("The current token should be a global value");
   }
   return false;
-}
-
-bool MIParser::parseGlobalValue(GlobalValue *&GV) {
-  return ::parseGlobalValue(
-      Token, PFS, GV,
-      [this](StringRef::iterator Loc, const Twine &Msg) -> bool {
-        return error(Loc, Msg);
-      });
 }
 
 bool MIParser::parseGlobalAddressOperand(MachineOperand &Dest) {
@@ -2528,8 +2410,7 @@ bool MIParser::parseLiveoutRegisterMaskOperand(MachineOperand &Dest) {
   return false;
 }
 
-bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
-                                   MachineOperand &Dest,
+bool MIParser::parseMachineOperand(MachineOperand &Dest,
                                    Optional<unsigned> &TiedDefIdx) {
   switch (Token.kind()) {
   case MIToken::kw_implicit:
@@ -2618,12 +2499,6 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
       return parseCustomRegisterMaskOperand(Dest);
     } else
       return parseTypedImmediateOperand(Dest);
-  case MIToken::dot: {
-    if (const auto *Formatter = MF.getTarget().getMIRFormatter()) {
-      return parseTargetImmMnemonic(OpCode, OpIdx, Dest, *Formatter);
-    }
-    LLVM_FALLTHROUGH;
-  }
   default:
     // FIXME: Parse the MCSymbol machine operand.
     return error("expected a machine operand");
@@ -2632,8 +2507,7 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
 }
 
 bool MIParser::parseMachineOperandAndTargetFlags(
-    const unsigned OpCode, const unsigned OpIdx, MachineOperand &Dest,
-    Optional<unsigned> &TiedDefIdx) {
+    MachineOperand &Dest, Optional<unsigned> &TiedDefIdx) {
   unsigned TF = 0;
   bool HasTargetFlags = false;
   if (Token.is(MIToken::kw_target_flags)) {
@@ -2665,7 +2539,7 @@ bool MIParser::parseMachineOperandAndTargetFlags(
       return true;
   }
   auto Loc = Token.location();
-  if (parseMachineOperand(OpCode, OpIdx, Dest, TiedDefIdx))
+  if (parseMachineOperand(Dest, TiedDefIdx))
     return true;
   if (!HasTargetFlags)
     return false;
@@ -2726,31 +2600,30 @@ bool MIParser::parseOperandsOffset(MachineOperand &Op) {
   return false;
 }
 
-static bool parseIRValue(const MIToken &Token, PerFunctionMIParsingState &PFS,
-                         const Value *&V, ErrorCallbackType ErrCB) {
+bool MIParser::parseIRValue(const Value *&V) {
   switch (Token.kind()) {
   case MIToken::NamedIRValue: {
-    V = PFS.MF.getFunction().getValueSymbolTable()->lookup(Token.stringValue());
+    V = MF.getFunction().getValueSymbolTable()->lookup(Token.stringValue());
     break;
   }
   case MIToken::IRValue: {
     unsigned SlotNumber = 0;
-    if (getUnsigned(Token, SlotNumber, ErrCB))
+    if (getUnsigned(SlotNumber))
       return true;
-    V = PFS.getIRValue(SlotNumber);
+    V = getIRValue(SlotNumber);
     break;
   }
   case MIToken::NamedGlobalValue:
   case MIToken::GlobalValue: {
     GlobalValue *GV = nullptr;
-    if (parseGlobalValue(Token, PFS, GV, ErrCB))
+    if (parseGlobalValue(GV))
       return true;
     V = GV;
     break;
   }
   case MIToken::QuotedIRValue: {
     const Constant *C = nullptr;
-    if (parseIRConstant(Token.location(), Token.stringValue(), PFS, C, ErrCB))
+    if (parseIRConstant(Token.location(), Token.stringValue(), C))
       return true;
     V = C;
     break;
@@ -2759,15 +2632,8 @@ static bool parseIRValue(const MIToken &Token, PerFunctionMIParsingState &PFS,
     llvm_unreachable("The current token should be an IR block reference");
   }
   if (!V)
-    return ErrCB(Token.location(), Twine("use of undefined IR value '") + Token.range() + "'");
+    return error(Twine("use of undefined IR value '") + Token.range() + "'");
   return false;
-}
-
-bool MIParser::parseIRValue(const Value *&V) {
-  return ::parseIRValue(
-      Token, PFS, V, [this](StringRef::iterator Loc, const Twine &Msg) -> bool {
-        return error(Loc, Msg);
-      });
 }
 
 bool MIParser::getUint64(uint64_t &Result) {
@@ -2790,7 +2656,20 @@ bool MIParser::getUint64(uint64_t &Result) {
 }
 
 bool MIParser::getHexUint(APInt &Result) {
-  return ::getHexUint(Token, Result);
+  assert(Token.is(MIToken::HexLiteral));
+  StringRef S = Token.range();
+  assert(S[0] == '0' && tolower(S[1]) == 'x');
+  // This could be a floating point literal with a special prefix.
+  if (!isxdigit(S[2]))
+    return true;
+  StringRef V = S.substr(2);
+  APInt A(V.size()*4, V, 16);
+
+  // If A is 0, then A.getActiveBits() is 0. This isn't a valid bitwidth. Make
+  // sure it isn't the case before constructing result.
+  unsigned NumBits = (A == 0) ? 32 : A.getActiveBits();
+  Result = APInt(NumBits, ArrayRef<uint64_t>(A.getRawData(), A.getNumWords()));
+  return false;
 }
 
 bool MIParser::parseMemoryOperandFlag(MachineMemOperand::Flags &Flags) {
@@ -2877,19 +2756,6 @@ bool MIParser::parseMemoryPseudoSourceValue(const PseudoSourceValue *&PSV) {
           "expected a global value or an external symbol after 'call-entry'");
     }
     break;
-  case MIToken::kw_custom: {
-    lex();
-    if (const auto *Formatter = MF.getTarget().getMIRFormatter()) {
-      if (Formatter->parseCustomPseudoSourceValue(
-              Token.stringValue(), MF, PFS, PSV,
-              [this](StringRef::iterator Loc, const Twine &Msg) -> bool {
-                return error(Loc, Msg);
-              }))
-        return true;
-    } else
-      return error("unable to parse target custom pseudo source value");
-    break;
-  }
   default:
     llvm_unreachable("The current token should be pseudo source value");
   }
@@ -2901,7 +2767,7 @@ bool MIParser::parseMachinePointerInfo(MachinePointerInfo &Dest) {
   if (Token.is(MIToken::kw_constant_pool) || Token.is(MIToken::kw_stack) ||
       Token.is(MIToken::kw_got) || Token.is(MIToken::kw_jump_table) ||
       Token.is(MIToken::FixedStackObject) || Token.is(MIToken::StackObject) ||
-      Token.is(MIToken::kw_call_entry) || Token.is(MIToken::kw_custom)) {
+      Token.is(MIToken::kw_call_entry)) {
     const PseudoSourceValue *PSV = nullptr;
     if (parseMemoryPseudoSourceValue(PSV))
       return true;
@@ -3152,8 +3018,35 @@ const BasicBlock *MIParser::getIRBlock(unsigned Slot, const Function &F) {
   return getIRBlockFromSlot(Slot, CustomSlots2BasicBlocks);
 }
 
+static void mapValueToSlot(const Value *V, ModuleSlotTracker &MST,
+                           DenseMap<unsigned, const Value *> &Slots2Values) {
+  int Slot = MST.getLocalSlot(V);
+  if (Slot == -1)
+    return;
+  Slots2Values.insert(std::make_pair(unsigned(Slot), V));
+}
+
+/// Creates the mapping from slot numbers to function's unnamed IR values.
+static void initSlots2Values(const Function &F,
+                             DenseMap<unsigned, const Value *> &Slots2Values) {
+  ModuleSlotTracker MST(F.getParent(), /*ShouldInitializeAllMetadata=*/false);
+  MST.incorporateFunction(F);
+  for (const auto &Arg : F.args())
+    mapValueToSlot(&Arg, MST, Slots2Values);
+  for (const auto &BB : F) {
+    mapValueToSlot(&BB, MST, Slots2Values);
+    for (const auto &I : BB)
+      mapValueToSlot(&I, MST, Slots2Values);
+  }
+}
+
 const Value *MIParser::getIRValue(unsigned Slot) {
-  return PFS.getIRValue(Slot);
+  if (Slots2Values.empty())
+    initSlots2Values(MF.getFunction(), Slots2Values);
+  auto ValueInfo = Slots2Values.find(Slot);
+  if (ValueInfo == Slots2Values.end())
+    return nullptr;
+  return ValueInfo->second;
 }
 
 MCSymbol *MIParser::getOrCreateMCSymbol(StringRef Name) {
@@ -3217,16 +3110,4 @@ bool llvm::parseStackObjectReference(PerFunctionMIParsingState &PFS,
 bool llvm::parseMDNode(PerFunctionMIParsingState &PFS,
                        MDNode *&Node, StringRef Src, SMDiagnostic &Error) {
   return MIParser(PFS, Error, Src).parseStandaloneMDNode(Node);
-}
-
-bool MIRFormatter::parseIRValue(StringRef Src, MachineFunction &MF,
-                                PerFunctionMIParsingState &PFS, const Value *&V,
-                                ErrorCallbackType ErrorCallback) {
-  MIToken Token;
-  Src = lexMIToken(Src, Token, [&](StringRef::iterator Loc, const Twine &Msg) {
-    ErrorCallback(Loc, Msg);
-  });
-  V = nullptr;
-
-  return ::parseIRValue(Token, PFS, V, ErrorCallback);
 }
