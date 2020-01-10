@@ -479,6 +479,8 @@ public:
     lldb::SBTypeSynthetic
     GetSyntheticForType (lldb::SBTypeNameSpecifier);
 
+    STRING_EXTENSION(SBDebugger)
+
     %feature("docstring",
 "Launch a command interpreter session. Commands are read from standard input or
 from the input handle specified for the debugger object. Output/errors are

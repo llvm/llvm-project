@@ -91,6 +91,7 @@ public:
     bool
     GetDescription (lldb::SBStream &description);
 
+    STRING_EXTENSION(SBModuleSpec)
 };
 
 
@@ -127,6 +128,7 @@ public:
     bool
     GetDescription (lldb::SBStream &description);
 
+    STRING_EXTENSION(SBModuleSpecList)
 };
 
 } // namespace lldb

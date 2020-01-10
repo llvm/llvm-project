@@ -1,42 +1,4 @@
-%extend lldb::SBAddress {
-        %nothreadallow;
-        PyObject *lldb::SBAddress::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-}
-%extend lldb::SBBlock {
-        %nothreadallow;
-        PyObject *lldb::SBBlock::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-}
 %extend lldb::SBBreakpoint {
-        %nothreadallow;
-        PyObject *lldb::SBBreakpoint::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-
     %pythoncode %{
         def __eq__(self, rhs):
             if not isinstance(rhs, type(self)):
@@ -50,34 +12,6 @@
 
             return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
     %}
-
-}
-%extend lldb::SBBreakpointLocation {
-        %nothreadallow;
-        PyObject *lldb::SBBreakpointLocation::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description, lldb::eDescriptionLevelFull);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-}
-
-%extend lldb::SBBreakpointName {
-        %nothreadallow;
-        PyObject *lldb::SBBreakpointName::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
 }
 
 %extend lldb::SBBroadcaster {
@@ -97,18 +31,6 @@
 }
 
 %extend lldb::SBCommandReturnObject {
-        %nothreadallow;
-        PyObject *lldb::SBCommandReturnObject::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-
         /* the write() and flush() calls are not part of the SB API proper, and are solely for Python usage
         they are meant to make an SBCommandReturnObject into a file-like object so that instructions of the sort
         print >>sb_command_return_object, "something"
@@ -122,18 +44,8 @@
         void lldb::SBCommandReturnObject::flush ()
         {}
 }
+
 %extend lldb::SBCompileUnit {
-        %nothreadallow;
-        PyObject *lldb::SBCompileUnit::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
     %pythoncode %{
         def __eq__(self, rhs):
             if not isinstance(rhs, type(self)):
@@ -148,45 +60,8 @@
             return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
     %}
 }
-%extend lldb::SBData {
-        %nothreadallow;
-        PyObject *lldb::SBData::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-}
-%extend lldb::SBDebugger {
-        %nothreadallow;
-        PyObject *lldb::SBDebugger::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-}
+
 %extend lldb::SBDeclaration {
-        %nothreadallow;
-        PyObject *lldb::SBDeclaration::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-
     %pythoncode %{
         def __eq__(self, rhs):
             if not isinstance(rhs, type(self)):
@@ -200,60 +75,9 @@
 
             return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
     %}
+}
 
-}
-%extend lldb::SBError {
-        %nothreadallow;
-        PyObject *lldb::SBError::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-}
-%extend lldb::SBFileSpec {
-        %nothreadallow;
-        PyObject *lldb::SBFileSpec::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-}
-%extend lldb::SBFrame {
-        %nothreadallow;
-        PyObject *lldb::SBFrame::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-}
 %extend lldb::SBFunction {
-        %nothreadallow;
-        PyObject *lldb::SBFunction::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-
     %pythoncode %{
         def __eq__(self, rhs):
             if not isinstance(rhs, type(self)):
@@ -267,47 +91,9 @@
 
             return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
     %}
+}
 
-}
-%extend lldb::SBInstruction {
-        %nothreadallow;
-        PyObject *lldb::SBInstruction::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-}
-%extend lldb::SBInstructionList {
-        %nothreadallow;
-        PyObject *lldb::SBInstructionList::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-}
 %extend lldb::SBLineEntry {
-        %nothreadallow;
-        PyObject *lldb::SBLineEntry::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-
     %pythoncode %{
         def __eq__(self, rhs):
             if not isinstance(rhs, type(self)):
@@ -321,35 +107,9 @@
 
             return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
     %}
-}
-
-%extend lldb::SBMemoryRegionInfo {
-        %nothreadallow;
-        PyObject *lldb::SBMemoryRegionInfo::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
 }
 
 %extend lldb::SBModule {
-        %nothreadallow;
-        PyObject *lldb::SBModule::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-
     %pythoncode %{
         def __eq__(self, rhs):
             if not isinstance(rhs, type(self)):
@@ -363,34 +123,6 @@
 
             return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
     %}
-}
-
-%extend lldb::SBModuleSpec {
-        %nothreadallow;
-        PyObject *lldb::SBModuleSpec::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
-}
-
-%extend lldb::SBModuleSpecList {
-        %nothreadallow;
-        PyObject *lldb::SBModuleSpecList::__str__ (){
-                lldb::SBStream description;
-                $self->GetDescription (description);
-                const char *desc = description.GetData();
-                size_t desc_len = description.GetSize();
-                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
-                    --desc_len;
-                return PythonString(llvm::StringRef(desc, desc_len)).release();
-        }
-        %clearnothreadallow;
 }
 
 %extend lldb::SBProcess {

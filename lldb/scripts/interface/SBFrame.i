@@ -288,6 +288,8 @@ public:
     bool
     GetDescription (lldb::SBStream &description);
 
+    STRING_EXTENSION(SBFrame)
+
 #ifdef SWIGPYTHON
     %pythoncode %{
         def get_all_variables(self):
