@@ -5,7 +5,6 @@ Clang-Tidy Checks
 
 .. csv-table::
    :header: "Name", "Offers fixes"
-   :widths: 50, 20
 
    `abseil-duration-addition <abseil-duration-addition.html>`_, "Yes"
    `abseil-duration-comparison <abseil-duration-comparison.html>`_, "Yes"
@@ -287,7 +286,6 @@ Clang-Tidy Checks
 
 .. csv-table:: Aliases..
    :header: "Name", "Redirect", "Offers fixes"
-   :widths: 50, 50, 10
 
    `cert-dcl03-c <cert-dcl03-c.html>`_, `misc-static-assert <misc-static-assert.html>`_, "Yes"
    `cert-dcl16-c <cert-dcl16-c.html>`_, `readability-uppercase-literal-suffix <readability-uppercase-literal-suffix.html>`_, "Yes"
