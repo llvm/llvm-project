@@ -413,11 +413,12 @@ UserExpression::Execute(DiagnosticManager &diagnostic_manager,
   if (options.GetResultIsInternal() && result_var && target) {
     if (m_language == lldb::eLanguageTypeSwift) {
       if (auto *exe_scope = exe_ctx.GetBestExecutionContextScope())
-        target->GetSwiftPersistentExpressionState(*exe_scope)
-          ->RemovePersistentVariable(result_var);
-    } else
-      target->GetPersistentExpressionStateForLanguage(m_language)
-          ->RemovePersistentVariable(result_var);
+        if (auto *persistent_state =
+                target->GetSwiftPersistentExpressionState(*exe_scope))
+          persistent_state->RemovePersistentVariable(result_var);
+    } else if (auto *persistent_state =
+                   target->GetPersistentExpressionStateForLanguage(m_language))
+      persistent_state->RemovePersistentVariable(result_var);
   }
   return expr_result;
 }

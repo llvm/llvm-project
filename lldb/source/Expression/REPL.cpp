@@ -296,6 +296,8 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
 
       PersistentExpressionState *persistent_state =
           m_target.GetPersistentExpressionStateForLanguage(GetLanguage());
+      if (!persistent_state)
+        return;
 
       if (!persistent_state)
       {
