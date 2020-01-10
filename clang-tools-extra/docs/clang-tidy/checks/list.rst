@@ -7,6 +7,8 @@ Clang-Tidy Checks
    :glob:
    :hidden:
 
+   *
+
 .. csv-table::
    :header: "Name", "Offers fixes"
 
