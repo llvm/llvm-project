@@ -128,23 +128,28 @@ bool canonicalizePacketImpl(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
   bool CheckOk = Check ? Check->check(false) : true;
   if (!CheckOk)
     return false;
+
+  MCInst OrigMCB = MCB;
+
   // Examine the packet and convert pairs of instructions to compound
   // instructions when possible.
   if (!HexagonDisableCompound)
     HexagonMCInstrInfo::tryCompound(MCII, STI, Context, MCB);
   HexagonMCShuffle(Context, false, MCII, STI, MCB);
 
+  const SmallVector<DuplexCandidate, 8> possibleDuplexes =
+      (STI.getFeatureBits()[Hexagon::FeatureDuplex])
+          ? HexagonMCInstrInfo::getDuplexPossibilties(MCII, STI, MCB)
+          : SmallVector<DuplexCandidate, 8>();
+
   // Examine the packet and convert pairs of instructions to duplex
   // instructions when possible.
-  if (STI.getFeatureBits() [Hexagon::FeatureDuplex]) {
-    SmallVector<DuplexCandidate, 8> possibleDuplexes;
-    possibleDuplexes =
-        HexagonMCInstrInfo::getDuplexPossibilties(MCII, STI, MCB);
-    HexagonMCShuffle(Context, MCII, STI, MCB, possibleDuplexes);
-  }
+  HexagonMCShuffle(Context, MCII, STI, MCB, possibleDuplexes);
+
   // Examines packet and pad the packet, if needed, when an
   // end-loop is in the bundle.
   HexagonMCInstrInfo::padEndloop(MCB, Context);
+
   // If compounding and duplexing didn't reduce the size below
   // 4 or less we have a packet that is too big.
   if (HexagonMCInstrInfo::bundleSize(MCB) > HEXAGON_PACKET_SIZE) {
@@ -156,7 +161,9 @@ bool canonicalizePacketImpl(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
   CheckOk = Check ? Check->check(true) : true;
   if (!CheckOk)
     return false;
+
   HexagonMCShuffle(Context, true, MCII, STI, MCB);
+
   return true;
 }
 } // namespace
