@@ -222,6 +222,9 @@ void mempcpy2 () {
   char dst[1];
 
   mempcpy(dst, src, 4); // expected-warning{{Memory copy function overflows destination buffer}}
+#ifndef VARIANT
+// expected-warning@-2{{'mempcpy' will always overflow; destination buffer has size 1, but size argument is 4}}
+#endif
 }
 
 void mempcpy3 () {
@@ -243,6 +246,9 @@ void mempcpy5() {
   char dst[3];
 
   mempcpy(dst+2, src+2, 2); // expected-warning{{Memory copy function overflows destination buffer}}
+#ifndef VARIANT
+// expected-warning@-2{{'mempcpy' will always overflow; destination buffer has size 1, but size argument is 2}}
+#endif
 }
 
 void mempcpy6() {
