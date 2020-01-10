@@ -206,20 +206,6 @@ the following:
   ninja check-$whatever # Rerun the appropriate tests if needed.
   git llvm push
 
-Subversion and Arcanist (deprecated)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-To download a change from Phabricator and commit it with subversion, you should
-first make sure you have a clean working directory. Then run the following
-(where ``<Revision>`` is the Phabricator review number):
-
-::
-
-  arc patch D<Revision>
-  arc commit --revision D<Revision>
-
-The first command will take the latest version of the reviewed patch and apply
-it to the working copy. The second command will commit this revision to trunk.
 
 Abandoning a change
 -------------------
