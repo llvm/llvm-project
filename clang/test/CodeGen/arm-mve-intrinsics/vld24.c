@@ -98,3 +98,45 @@ void test_vst2q_f16(float16_t *addr, float16x8x2_t value)
     vst2q_f16(addr, value);
 #endif /* POLYMORPHIC */
 }
+
+// CHECK-LABEL: @load_into_variable(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = call { <8 x i16>, <8 x i16> } @llvm.arm.mve.vld2q.v8i16.p0i16(i16* [[ADDR:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <8 x i16>, <8 x i16> } [[TMP0]], 0
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [[STRUCT_UINT16X8X2_T:%.*]] undef, <8 x i16> [[TMP1]], 0, 0
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <8 x i16>, <8 x i16> } [[TMP0]], 1
+// CHECK-NEXT:    [[TMP4:%.*]] = insertvalue [[STRUCT_UINT16X8X2_T]] [[TMP2]], <8 x i16> [[TMP3]], 0, 1
+// CHECK-NEXT:    store <8 x i16> [[TMP1]], <8 x i16>* [[VALUES:%.*]], align 8
+// CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds <8 x i16>, <8 x i16>* [[VALUES]], i32 1
+// CHECK-NEXT:    store <8 x i16> [[TMP3]], <8 x i16>* [[ARRAYIDX4]], align 8
+// CHECK-NEXT:    ret void
+//
+void load_into_variable(const uint16_t *addr, uint16x8_t *values)
+{
+    uint16x8x2_t v;
+#ifdef POLYMORPHIC
+    v = vld2q(addr);
+#else /* POLYMORPHIC */
+    v = vld2q_u16(addr);
+#endif /* POLYMORPHIC */
+    values[0] = v.val[0];
+    values[1] = v.val[1];
+}
+
+// CHECK-LABEL: @extract_one_vector(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0i32(i32* [[ADDR:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[TMP0]], 0
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [[STRUCT_INT32X4X2_T:%.*]] undef, <4 x i32> [[TMP1]], 0, 0
+// CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[TMP0]], 1
+// CHECK-NEXT:    [[TMP4:%.*]] = insertvalue [[STRUCT_INT32X4X2_T]] [[TMP2]], <4 x i32> [[TMP3]], 0, 1
+// CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+//
+int32x4_t extract_one_vector(const int32_t *addr)
+{
+#ifdef POLYMORPHIC
+    return vld2q(addr).val[0];
+#else /* POLYMORPHIC */
+    return vld2q_s32(addr).val[0];
+#endif /* POLYMORPHIC */
+}
