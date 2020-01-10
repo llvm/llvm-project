@@ -116,7 +116,7 @@ def lldb_iter(obj, getsize, getelem):
 %include "./headers.swig"
 
 %{
-#include "../source/Plugins/ScriptInterpreter/python/PythonDataObjects.h"
+#include "../source/Plugins/ScriptInterpreter/Python/PythonDataObjects.h"
 #include "../bindings/python/python-swigsafecast.swig"
 using namespace lldb_private;
 using namespace lldb_private::python;
