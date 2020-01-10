@@ -1116,6 +1116,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
 
+  getActionDefinitionsBuilder({G_READ_REGISTER, G_WRITE_REGISTER}).lower();
+
   getActionDefinitionsBuilder(G_READCYCLECOUNTER)
     .legalFor({S64});
 
