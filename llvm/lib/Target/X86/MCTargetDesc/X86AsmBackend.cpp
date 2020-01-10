@@ -29,8 +29,8 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -79,17 +79,19 @@ cl::opt<unsigned> X86AlignBranchBoundary(
     cl::desc(
         "Control how the assembler should align branches with NOP. If the "
         "boundary's size is not 0, it should be a power of 2 and no less "
-        "than 32. Branches will be aligned within the boundary of specified "
-        "size. -x86-align-branch-boundary=0 doesn't align branches."));
+        "than 32. Branches will be aligned to prevent from being across or "
+        "against the boundary of specified size. The default value 0 does not "
+        "align branches."));
 
 cl::opt<X86AlignBranchKind, true, cl::parser<std::string>> X86AlignBranch(
     "x86-align-branch",
     cl::desc("Specify types of branches to align (plus separated list of "
-             "types). The branches's type is combination of jcc, fused, "
+             "types). The branches's types are combination of jcc, fused, "
              "jmp, call, ret, indirect."),
-    cl::value_desc("jcc(conditional jump), fused(fused conditional jump), "
-                   "jmp(unconditional jump); call(call); ret(ret), "
-                   "indirect(indirect jump)."),
+    cl::value_desc("jcc indicates conditional jumps, fused indicates fused "
+                   "conditional jumps, jmp indicates unconditional jumps, call "
+                   "indicates direct and indirect calls, ret indicates rets, "
+                   "indirect indicates indirect jumps."),
     cl::location(X86AlignBranchKindLoc));
 
 static unsigned getFixupKindSize(unsigned Kind) {
@@ -428,8 +430,7 @@ bool X86AsmBackend::needAlign(MCObjectStreamer &OS) const {
     return false;
 
   // Branches only need to be aligned in 32-bit or 64-bit mode.
-  if (!(STI.getFeatureBits()[X86::Mode64Bit] ||
-        STI.getFeatureBits()[X86::Mode32Bit]))
+  if (!(STI.hasFeature(X86::Mode64Bit) || STI.hasFeature(X86::Mode32Bit)))
     return false;
 
   return true;
