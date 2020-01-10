@@ -5,11 +5,11 @@
 #
 # RUN: cat %s | %lldb --script-language lua 2>&1 | FileCheck %s
 script
-print(string.format("lldb.debugger is valid: %s", lldb.debugger:IsValid()))
-print(string.format("lldb.target is valid: %s", lldb.target:IsValid()))
-print(string.format("lldb.process is valid: %s", lldb.process:IsValid()))
-print(string.format("lldb.thread is valid: %s", lldb.thread:IsValid()))
-print(string.format("lldb.frame is valid: %s", lldb.frame:IsValid()))
+print("lldb.debugger is valid: ", tostring(lldb.debugger:IsValid()))
+print("lldb.target is valid: ", tostring(lldb.target:IsValid()))
+print("lldb.process is valid: ", tostring(lldb.process:IsValid()))
+print("lldb.thread is valid: ", tostring(lldb.thread:IsValid()))
+print("lldb.frame is valid: ", tostring(lldb.frame:IsValid()))
 # CHECK: debugger is valid: true
 # CHECK: target is valid: false
 # CHECK: process is valid: false
