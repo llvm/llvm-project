@@ -516,11 +516,26 @@ static void packSplitRegsToOrigType(MachineIRBuilder &B,
     return;
   }
 
+  MachineRegisterInfo &MRI = *B.getMRI();
+
   assert(LLTy.isVector() && !PartLLT.isVector());
 
   LLT DstEltTy = LLTy.getElementType();
+
+  // Pointer information was discarded. We'll need to coerce some register types
+  // to avoid violating type constraints.
+  LLT RealDstEltTy = MRI.getType(OrigRegs[0]).getElementType();
+
+  assert(DstEltTy.getSizeInBits() == RealDstEltTy.getSizeInBits());
+
   if (DstEltTy == PartLLT) {
     // Vector was trivially scalarized.
+
+    if (RealDstEltTy.isPointer()) {
+      for (Register Reg : Regs)
+        MRI.setType(Reg, RealDstEltTy);
+    }
+
     B.buildBuildVector(OrigRegs[0], Regs);
   } else if (DstEltTy.getSizeInBits() > PartLLT.getSizeInBits()) {
     // Deal with vector with 64-bit elements decomposed to 32-bit
@@ -531,8 +546,9 @@ static void packSplitRegsToOrigType(MachineIRBuilder &B,
     assert(DstEltTy.getSizeInBits() % PartLLT.getSizeInBits() == 0);
 
     for (int I = 0, NumElts = LLTy.getNumElements(); I != NumElts; ++I)  {
-      auto Merge = B.buildMerge(DstEltTy,
-                                         Regs.take_front(PartsPerElt));
+      auto Merge = B.buildMerge(RealDstEltTy, Regs.take_front(PartsPerElt));
+      // Fix the type in case this is really a vector of pointers.
+      MRI.setType(Merge.getReg(0), RealDstEltTy);
       EltMerges.push_back(Merge.getReg(0));
       Regs = Regs.drop_front(PartsPerElt);
     }
