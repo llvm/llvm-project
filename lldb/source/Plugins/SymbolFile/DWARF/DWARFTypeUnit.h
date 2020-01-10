@@ -28,8 +28,8 @@ private:
   DWARFTypeUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
                 const DWARFUnitHeader &header,
                 const DWARFAbbreviationDeclarationSet &abbrevs,
-                DIERef::Section section)
-      : DWARFUnit(dwarf, uid, header, abbrevs, section) {}
+                DIERef::Section section, bool is_dwo)
+      : DWARFUnit(dwarf, uid, header, abbrevs, section, is_dwo) {}
 
   friend class DWARFUnit;
 };
