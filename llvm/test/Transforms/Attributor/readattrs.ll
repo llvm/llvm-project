@@ -195,3 +195,15 @@ define void @testbyval(i8* %read_only) {
   ret void
 }
 ;}
+
+declare i8* @maybe_returned_ptr(i8* readonly %ptr) readonly nounwind
+declare i8 @maybe_returned_val(i8* %ptr) readonly nounwind
+declare void @val_use(i8 %ptr) readonly nounwind
+
+define void @ptr_uses(i8* %ptr) {
+; ATTRIBUTOR: define void @ptr_uses(i8* nocapture readonly %ptr)
+  %call_ptr = call i8* @maybe_returned_ptr(i8* %ptr)
+  %call_val = call i8 @maybe_returned_val(i8* %call_ptr)
+  call void @val_use(i8 %call_val)
+  ret void
+}
