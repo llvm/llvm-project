@@ -34,23 +34,20 @@ static cl::opt<bool>
     AccountKeepGoing("keep-going", cl::desc("Keep going on errors encountered"),
                      cl::sub(Account), cl::init(false));
 static cl::alias AccountKeepGoing2("k", cl::aliasopt(AccountKeepGoing),
-                                   cl::desc("Alias for -keep_going"),
-                                   cl::sub(Account));
+                                   cl::desc("Alias for -keep_going"));
 static cl::opt<bool> AccountDeduceSiblingCalls(
     "deduce-sibling-calls",
     cl::desc("Deduce sibling calls when unrolling function call stacks"),
     cl::sub(Account), cl::init(false));
 static cl::alias
     AccountDeduceSiblingCalls2("d", cl::aliasopt(AccountDeduceSiblingCalls),
-                               cl::desc("Alias for -deduce_sibling_calls"),
-                               cl::sub(Account));
+                               cl::desc("Alias for -deduce_sibling_calls"));
 static cl::opt<std::string>
     AccountOutput("output", cl::value_desc("output file"), cl::init("-"),
                   cl::desc("output file; use '-' for stdout"),
                   cl::sub(Account));
 static cl::alias AccountOutput2("o", cl::aliasopt(AccountOutput),
-                                cl::desc("Alias for -output"),
-                                cl::sub(Account));
+                                cl::desc("Alias for -output"));
 enum class AccountOutputFormats { TEXT, CSV };
 static cl::opt<AccountOutputFormats>
     AccountOutputFormat("format", cl::desc("output format"),
@@ -60,8 +57,7 @@ static cl::opt<AccountOutputFormats>
                                               "report stats in csv")),
                         cl::sub(Account));
 static cl::alias AccountOutputFormat2("f", cl::desc("Alias of -format"),
-                                      cl::aliasopt(AccountOutputFormat),
-                                      cl::sub(Account));
+                                      cl::aliasopt(AccountOutputFormat));
 
 enum class SortField {
   FUNCID,
@@ -88,8 +84,7 @@ static cl::opt<SortField> AccountSortOutput(
                clEnumValN(SortField::SUM, "sum", "sum of call durations"),
                clEnumValN(SortField::FUNC, "func", "function names")));
 static cl::alias AccountSortOutput2("s", cl::aliasopt(AccountSortOutput),
-                                    cl::desc("Alias for -sort"),
-                                    cl::sub(Account));
+                                    cl::desc("Alias for -sort"));
 
 enum class SortDirection {
   ASCENDING,
@@ -101,14 +96,13 @@ static cl::opt<SortDirection> AccountSortOrder(
                clEnumValN(SortDirection::DESCENDING, "dsc", "descending")),
     cl::sub(Account));
 static cl::alias AccountSortOrder2("r", cl::aliasopt(AccountSortOrder),
-                                   cl::desc("Alias for -sortorder"),
-                                   cl::sub(Account));
+                                   cl::desc("Alias for -sortorder"));
 
 static cl::opt<int> AccountTop("top", cl::desc("only show the top N results"),
                                cl::value_desc("N"), cl::sub(Account),
                                cl::init(-1));
 static cl::alias AccountTop2("p", cl::desc("Alias for -top"),
-                             cl::aliasopt(AccountTop), cl::sub(Account));
+                             cl::aliasopt(AccountTop));
 
 static cl::opt<std::string>
     AccountInstrMap("instr_map",
@@ -117,8 +111,7 @@ static cl::opt<std::string>
                     cl::value_desc("binary with xray_instr_map"),
                     cl::sub(Account), cl::init(""));
 static cl::alias AccountInstrMap2("m", cl::aliasopt(AccountInstrMap),
-                                  cl::desc("Alias for -instr_map"),
-                                  cl::sub(Account));
+                                  cl::desc("Alias for -instr_map"));
 
 namespace {
 
