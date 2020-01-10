@@ -9,7 +9,7 @@ target_compile_definitions(cblas PRIVATE cblas_EXPORTS)
 
 add_llvm_library(cblas_interface SHARED cblas_interface.cpp)
 target_link_libraries(cblas_interface PRIVATE cblas)
+target_compile_definitions(cblas_interface PRIVATE cblas_interface_EXPORTS)
 
 add_llvm_library(mlir_runner_utils SHARED mlir_runner_utils.cpp)
 target_compile_definitions(mlir_runner_utils PRIVATE mlir_runner_utils_EXPORTS)
-
