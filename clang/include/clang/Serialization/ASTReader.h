@@ -1100,6 +1100,10 @@ private:
   llvm::SmallDenseMap<EnumDecl *, llvm::SmallVector<EnumDecl *, 2>, 2>
       PendingEnumOdrMergeFailures;
 
+  /// C/ObjC definitions in which the structural equivalence check fails
+  llvm::SmallDenseMap<RecordDecl *, llvm::SmallVector<RecordDecl *, 2>, 2>
+      PendingRecordOdrMergeFailures;
+
   /// DeclContexts in which we have diagnosed an ODR violation.
   llvm::SmallPtrSet<DeclContext*, 2> DiagnosedOdrMergeFailures;
 

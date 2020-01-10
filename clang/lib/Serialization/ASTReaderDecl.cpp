@@ -723,8 +723,11 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitTagDecl(TagDecl *TD) {
     llvm_unreachable("unexpected tag info kind");
   }
 
-  if (!isa<CXXRecordDecl>(TD))
-    mergeRedeclarable(TD, Redecl);
+  if (isa<CXXRecordDecl>(TD))
+    return Redecl;
+
+  // Handle merging in C and Objective-C
+  mergeRedeclarable(TD, Redecl);
   return Redecl;
 }
 
@@ -794,6 +797,22 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
   RD->setHasNonTrivialToPrimitiveCopyCUnion(Record.readInt());
   RD->setParamDestroyedInCallee(Record.readInt());
   RD->setArgPassingRestrictions((RecordDecl::ArgPassingKind)Record.readInt());
+  RD->setHasODRHash(true);
+  RD->ODRHash = Record.readInt();
+
+  // C++ applies ODR checking in VisitCXXRecordDecl instead. Note that
+  // structural equivalence is the usual way to check for ODR-like semantics
+  // in ObjC/C, but using ODRHash is prefered if possible because of better
+  // performance.
+  if (!Reader.getContext().getLangOpts().CPlusPlus) {
+    RecordDecl *Canon = static_cast<RecordDecl *>(RD->getCanonicalDecl());
+    if (RD == Canon || Canon->getODRHash() == RD->getODRHash())
+      return Redecl;
+    Reader.PendingRecordOdrMergeFailures[Canon].push_back(RD);
+    // Track that we merged the definitions.
+    Reader.MergedDeclContexts.insert(std::make_pair(RD, Canon));
+  }
+
   return Redecl;
 }
 
@@ -2563,7 +2582,7 @@ static bool allowODRLikeMergeInC(NamedDecl *ND) {
   if (!ND)
     return false;
   // TODO: implement merge for other necessary decls.
-  if (isa<EnumConstantDecl>(ND))
+  if (isa<EnumConstantDecl>(ND) || isa<FieldDecl>(ND))
     return true;
   return false;
 }
@@ -3200,6 +3219,10 @@ DeclContext *ASTDeclReader::getPrimaryContextForMerging(ASTReader &Reader,
   if (auto *ED = dyn_cast<EnumDecl>(DC))
     return ED->getASTContext().getLangOpts().CPlusPlus? ED->getDefinition()
                                                       : nullptr;
+
+  if (auto *RD = dyn_cast<RecordDecl>(DC))
+    if (!RD->getASTContext().getLangOpts().CPlusPlus)
+      return RD->getCanonicalDecl()->getDefinition();
 
   // We can see the TU here only if we have no Sema object. In that case,
   // there's no TU scope to look in, so using the DC alone is sufficient.

@@ -464,6 +464,21 @@ void ODRHash::AddSubDecl(const Decl *D) {
   ODRDeclVisitor(ID, *this).Visit(D);
 }
 
+void ODRHash::AddRecordDecl(const RecordDecl *Record) {
+  AddDecl(Record);
+
+  // Filter out sub-Decls which will not be processed in order to get an
+  // accurate count of Decl's.
+  llvm::SmallVector<const Decl *, 16> Decls;
+  for (Decl *SubDecl : Record->decls())
+    if (isWhitelistedDecl(SubDecl, Record))
+      Decls.push_back(SubDecl);
+
+  ID.AddInteger(Decls.size());
+  for (auto SubDecl : Decls)
+    AddSubDecl(SubDecl);
+}
+
 void ODRHash::AddCXXRecordDecl(const CXXRecordDecl *Record) {
   assert(Record && Record->hasDefinition() &&
          "Expected non-null record to be a definition.");
