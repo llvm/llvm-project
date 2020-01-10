@@ -174,8 +174,6 @@ bool ARM::getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features) {
     // under FPURestriction::None, which is the only FPURestriction in
     // which they would be valid (since FPURestriction::SP doesn't
     // exist).
-
-    {"+fpregs", "-fpregs", FPUVersion::VFPV2, FPURestriction::SP_D16},
     {"+vfp2", "-vfp2", FPUVersion::VFPV2, FPURestriction::D16},
     {"+vfp2sp", "-vfp2sp", FPUVersion::VFPV2, FPURestriction::SP_D16},
     {"+vfp3", "-vfp3", FPUVersion::VFPV3, FPURestriction::None},

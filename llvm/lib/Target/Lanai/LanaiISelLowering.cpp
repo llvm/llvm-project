@@ -213,7 +213,7 @@ SDValue LanaiTargetLowering::LowerOperation(SDValue Op,
 //===----------------------------------------------------------------------===//
 
 Register LanaiTargetLowering::getRegisterByName(
-  const char *RegName, EVT /*VT*/,
+  const char *RegName, LLT /*VT*/,
   const MachineFunction & /*MF*/) const {
   // Only unallocatable registers should be matched here.
   Register Reg = StringSwitch<unsigned>(RegName)

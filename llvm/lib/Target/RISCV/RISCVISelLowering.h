@@ -151,7 +151,7 @@ public:
   /// method is necessary to lower the llvm.read_register.* and
   /// llvm.write_register.* intrinsics. Allocatable registers must be reserved
   /// with the clang -ffixed-xX flag for access to be allowed.
-  Register getRegisterByName(const char *RegName, EVT VT,
+  Register getRegisterByName(const char *RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
 private:

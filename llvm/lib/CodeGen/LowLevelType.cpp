@@ -24,14 +24,37 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
     if (NumElements == 1)
       return ScalarTy;
     return LLT::vector(NumElements, ScalarTy);
-  } else if (auto PTy = dyn_cast<PointerType>(&Ty)) {
-    return LLT::pointer(PTy->getAddressSpace(), DL.getTypeSizeInBits(&Ty));
-  } else if (Ty.isSized()) {
+  }
+
+  if (auto PTy = dyn_cast<PointerType>(&Ty)) {
+    unsigned AddrSpace = PTy->getAddressSpace();
+    return LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
+  }
+
+  if (Ty.isSized()) {
     // Aggregates are no different from real scalars as far as GlobalISel is
     // concerned.
     auto SizeInBits = DL.getTypeSizeInBits(&Ty);
     assert(SizeInBits != 0 && "invalid zero-sized type");
     return LLT::scalar(SizeInBits);
   }
+
   return LLT();
+}
+
+MVT llvm::getMVTForLLT(LLT Ty) {
+  if (!Ty.isVector())
+    return MVT::getIntegerVT(Ty.getSizeInBits());
+
+  return MVT::getVectorVT(
+      MVT::getIntegerVT(Ty.getElementType().getSizeInBits()),
+      Ty.getNumElements());
+}
+
+LLT llvm::getLLTForMVT(MVT Ty) {
+  if (!Ty.isVector())
+    return LLT::scalar(Ty.getSizeInBits());
+
+  return LLT::vector(Ty.getVectorNumElements(),
+                     Ty.getVectorElementType().getSizeInBits());
 }

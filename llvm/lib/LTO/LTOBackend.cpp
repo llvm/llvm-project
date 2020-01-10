@@ -172,7 +172,7 @@ static void runNewPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI;
   SI.registerCallbacks(PIC);
-  PassBuilder PB(TM, PipelineTuningOptions(),PGOOpt, &PIC);
+  PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
   AAManager AA;
 
   // Parse a custom AA pipeline if asked to.

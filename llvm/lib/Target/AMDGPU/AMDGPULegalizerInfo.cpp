@@ -928,7 +928,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     } else
       Shifts.legalFor({{S16, S32}, {S16, S16}});
 
-    Shifts.clampScalar(1, S16, S32);
+    // TODO: Support 16-bit shift amounts
+    Shifts.clampScalar(1, S32, S32);
     Shifts.clampScalar(0, S16, S64);
     Shifts.widenScalarToNextPow2(0, 16);
   } else {
@@ -1114,6 +1115,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
+
+  getActionDefinitionsBuilder({G_READ_REGISTER, G_WRITE_REGISTER}).lower();
 
   getActionDefinitionsBuilder(G_READCYCLECOUNTER)
     .legalFor({S64});

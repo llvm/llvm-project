@@ -1137,7 +1137,8 @@ Sema::CheckOverload(Scope *S, FunctionDecl *New, const LookupResult &Old,
 }
 
 bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
-                      bool UseMemberUsingDeclRules, bool ConsiderCudaAttrs) {
+                      bool UseMemberUsingDeclRules, bool ConsiderCudaAttrs,
+                      bool ConsiderRequiresClauses) {
   // C++ [basic.start.main]p2: This function shall not be overloaded.
   if (New->isMain())
     return false;
@@ -1273,22 +1274,37 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
   if (getLangOpts().CUDA && ConsiderCudaAttrs) {
     // Don't allow overloading of destructors.  (In theory we could, but it
     // would be a giant change to clang.)
-    if (isa<CXXDestructorDecl>(New))
-      return false;
+    if (!isa<CXXDestructorDecl>(New)) {
+      CUDAFunctionTarget NewTarget = IdentifyCUDATarget(New),
+                         OldTarget = IdentifyCUDATarget(Old);
+      if (NewTarget != CFT_InvalidTarget) {
+        assert((OldTarget != CFT_InvalidTarget) &&
+               "Unexpected invalid target.");
 
-    CUDAFunctionTarget NewTarget = IdentifyCUDATarget(New),
-                       OldTarget = IdentifyCUDATarget(Old);
-    if (NewTarget == CFT_InvalidTarget)
-      return false;
-
-    assert((OldTarget != CFT_InvalidTarget) && "Unexpected invalid target.");
-
-    // Allow overloading of functions with same signature and different CUDA
-    // target attributes.
-    return NewTarget != OldTarget;
+        // Allow overloading of functions with same signature and different CUDA
+        // target attributes.
+        if (NewTarget != OldTarget)
+          return true;
+      }
+    }
   }
 
-  // TODO: Concepts: Check function trailing requires clauses here.
+  if (ConsiderRequiresClauses) {
+    Expr *NewRC = New->getTrailingRequiresClause(),
+         *OldRC = Old->getTrailingRequiresClause();
+    if ((NewRC != nullptr) != (OldRC != nullptr))
+      // RC are most certainly different - these are overloads.
+      return true;
+
+    if (NewRC) {
+      llvm::FoldingSetNodeID NewID, OldID;
+      NewRC->Profile(NewID, Context, /*Canonical=*/true);
+      OldRC->Profile(OldID, Context, /*Canonical=*/true);
+      if (NewID != OldID)
+        // RCs are not equivalent - these are overloads.
+        return true;
+    }
+  }
 
   // The signatures match; this is not an overload.
   return false;
@@ -3153,6 +3169,70 @@ static bool isNonTrivialObjCLifetimeConversion(Qualifiers FromQuals,
   return true;
 }
 
+/// Perform a single iteration of the loop for checking if a qualification
+/// conversion is valid.
+///
+/// Specifically, check whether any change between the qualifiers of \p
+/// FromType and \p ToType is permissible, given knowledge about whether every
+/// outer layer is const-qualified.
+static bool isQualificationConversionStep(QualType FromType, QualType ToType,
+                                          bool CStyle,
+                                          bool &PreviousToQualsIncludeConst,
+                                          bool &ObjCLifetimeConversion) {
+  Qualifiers FromQuals = FromType.getQualifiers();
+  Qualifiers ToQuals = ToType.getQualifiers();
+
+  // Ignore __unaligned qualifier if this type is void.
+  if (ToType.getUnqualifiedType()->isVoidType())
+    FromQuals.removeUnaligned();
+
+  // Objective-C ARC:
+  //   Check Objective-C lifetime conversions.
+  if (FromQuals.getObjCLifetime() != ToQuals.getObjCLifetime()) {
+    if (ToQuals.compatiblyIncludesObjCLifetime(FromQuals)) {
+      if (isNonTrivialObjCLifetimeConversion(FromQuals, ToQuals))
+        ObjCLifetimeConversion = true;
+      FromQuals.removeObjCLifetime();
+      ToQuals.removeObjCLifetime();
+    } else {
+      // Qualification conversions cannot cast between different
+      // Objective-C lifetime qualifiers.
+      return false;
+    }
+  }
+
+  // Allow addition/removal of GC attributes but not changing GC attributes.
+  if (FromQuals.getObjCGCAttr() != ToQuals.getObjCGCAttr() &&
+      (!FromQuals.hasObjCGCAttr() || !ToQuals.hasObjCGCAttr())) {
+    FromQuals.removeObjCGCAttr();
+    ToQuals.removeObjCGCAttr();
+  }
+
+  //   -- for every j > 0, if const is in cv 1,j then const is in cv
+  //      2,j, and similarly for volatile.
+  if (!CStyle && !ToQuals.compatiblyIncludes(FromQuals))
+    return false;
+
+  // For a C-style cast, just require the address spaces to overlap.
+  // FIXME: Does "superset" also imply the representation of a pointer is the
+  // same? We're assuming that it does here and in compatiblyIncludes.
+  if (CStyle && !ToQuals.isAddressSpaceSupersetOf(FromQuals) &&
+      !FromQuals.isAddressSpaceSupersetOf(ToQuals))
+    return false;
+
+  //   -- if the cv 1,j and cv 2,j are different, then const is in
+  //      every cv for 0 < k < j.
+  if (!CStyle && FromQuals.getCVRQualifiers() != ToQuals.getCVRQualifiers() &&
+      !PreviousToQualsIncludeConst)
+    return false;
+
+  // Keep track of whether all prior cv-qualifiers in the "to" type
+  // include const.
+  PreviousToQualsIncludeConst =
+      PreviousToQualsIncludeConst && ToQuals.hasConst();
+  return true;
+}
+
 /// IsQualificationConversion - Determines whether the conversion from
 /// an rvalue of type FromType to ToType is a qualification conversion
 /// (C++ 4.4).
@@ -3178,73 +3258,16 @@ Sema::IsQualificationConversion(QualType FromType, QualType ToType,
   bool PreviousToQualsIncludeConst = true;
   bool UnwrappedAnyPointer = false;
   while (Context.UnwrapSimilarTypes(FromType, ToType)) {
-    // Within each iteration of the loop, we check the qualifiers to
-    // determine if this still looks like a qualification
-    // conversion. Then, if all is well, we unwrap one more level of
-    // pointers or pointers-to-members and do it all again
-    // until there are no more pointers or pointers-to-members left to
-    // unwrap.
+    if (!isQualificationConversionStep(FromType, ToType, CStyle,
+                                       PreviousToQualsIncludeConst,
+                                       ObjCLifetimeConversion))
+      return false;
     UnwrappedAnyPointer = true;
-
-    Qualifiers FromQuals = FromType.getQualifiers();
-    Qualifiers ToQuals = ToType.getQualifiers();
-
-    // Ignore __unaligned qualifier if this type is void.
-    if (ToType.getUnqualifiedType()->isVoidType())
-      FromQuals.removeUnaligned();
-
-    // Objective-C ARC:
-    //   Check Objective-C lifetime conversions.
-    if (FromQuals.getObjCLifetime() != ToQuals.getObjCLifetime() &&
-        UnwrappedAnyPointer) {
-      if (ToQuals.compatiblyIncludesObjCLifetime(FromQuals)) {
-        if (isNonTrivialObjCLifetimeConversion(FromQuals, ToQuals))
-          ObjCLifetimeConversion = true;
-        FromQuals.removeObjCLifetime();
-        ToQuals.removeObjCLifetime();
-      } else {
-        // Qualification conversions cannot cast between different
-        // Objective-C lifetime qualifiers.
-        return false;
-      }
-    }
-
-    // Allow addition/removal of GC attributes but not changing GC attributes.
-    if (FromQuals.getObjCGCAttr() != ToQuals.getObjCGCAttr() &&
-        (!FromQuals.hasObjCGCAttr() || !ToQuals.hasObjCGCAttr())) {
-      FromQuals.removeObjCGCAttr();
-      ToQuals.removeObjCGCAttr();
-    }
-
-    //   -- for every j > 0, if const is in cv 1,j then const is in cv
-    //      2,j, and similarly for volatile.
-    if (!CStyle && !ToQuals.compatiblyIncludes(FromQuals))
-      return false;
-
-    //   -- if the cv 1,j and cv 2,j are different, then const is in
-    //      every cv for 0 < k < j.
-    if (!CStyle && FromQuals.getCVRQualifiers() != ToQuals.getCVRQualifiers()
-        && !PreviousToQualsIncludeConst)
-      return false;
-
-    // Keep track of whether all prior cv-qualifiers in the "to" type
-    // include const.
-    PreviousToQualsIncludeConst
-      = PreviousToQualsIncludeConst && ToQuals.hasConst();
-  }
-
-  // Allows address space promotion by language rules implemented in
-  // Type::Qualifiers::isAddressSpaceSupersetOf.
-  Qualifiers FromQuals = FromType.getQualifiers();
-  Qualifiers ToQuals = ToType.getQualifiers();
-  if (!ToQuals.isAddressSpaceSupersetOf(FromQuals) &&
-      !FromQuals.isAddressSpaceSupersetOf(ToQuals)) {
-    return false;
   }
 
   // We are left with FromType and ToType being the pointee types
   // after unwrapping the original FromType and ToType the same number
-  // of types. If we unwrapped any pointers, and if FromType and
+  // of times. If we unwrapped any pointers, and if FromType and
   // ToType have the same unqualified type (since we checked
   // qualifiers above), then this is a qualification conversion.
   return UnwrappedAnyPointer && Context.hasSameUnqualifiedType(FromType,ToType);
@@ -3304,8 +3327,7 @@ IsInitializerListConstructorConversion(Sema &S, Expr *From, QualType ToType,
       continue;
 
     bool Usable = !Info.Constructor->isInvalidDecl() &&
-                  S.isInitListConstructor(Info.Constructor) &&
-                  (AllowExplicit || !Info.Constructor->isExplicit());
+                  S.isInitListConstructor(Info.Constructor);
     if (Usable) {
       // If the first argument is (a reference to) the target type,
       // suppress conversions.
@@ -3427,11 +3449,9 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
           continue;
 
         bool Usable = !Info.Constructor->isInvalidDecl();
-        if (ListInitializing)
-          Usable = Usable && (AllowExplicit || !Info.Constructor->isExplicit());
-        else
-          Usable = Usable &&
-                   Info.Constructor->isConvertingConstructor(AllowExplicit);
+        if (!ListInitializing)
+          Usable = Usable && Info.Constructor->isConvertingConstructor(
+                                 /*AllowExplicit*/ true);
         if (Usable) {
           bool SuppressUserConversions = !ConstructorsOnly;
           if (SuppressUserConversions && ListInitializing) {
@@ -3485,16 +3505,14 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
         else
           Conv = cast<CXXConversionDecl>(D);
 
-        if (AllowExplicit || !Conv->isExplicit()) {
-          if (ConvTemplate)
-            S.AddTemplateConversionCandidate(
-                ConvTemplate, FoundDecl, ActingContext, From, ToType,
-                CandidateSet, AllowObjCConversionOnExplicit, AllowExplicit);
-          else
-            S.AddConversionCandidate(
-                Conv, FoundDecl, ActingContext, From, ToType, CandidateSet,
-                AllowObjCConversionOnExplicit, AllowExplicit);
-        }
+        if (ConvTemplate)
+          S.AddTemplateConversionCandidate(
+              ConvTemplate, FoundDecl, ActingContext, From, ToType,
+              CandidateSet, AllowObjCConversionOnExplicit, AllowExplicit);
+        else
+          S.AddConversionCandidate(
+              Conv, FoundDecl, ActingContext, From, ToType, CandidateSet,
+              AllowObjCConversionOnExplicit, AllowExplicit);
       }
     }
   }
@@ -3971,6 +3989,14 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
     }
   }
 
+  if (SCS1.ReferenceBinding && SCS2.ReferenceBinding) {
+    // Check for a better reference binding based on the kind of bindings.
+    if (isBetterReferenceBindingKind(SCS1, SCS2))
+      return ImplicitConversionSequence::Better;
+    else if (isBetterReferenceBindingKind(SCS2, SCS1))
+      return ImplicitConversionSequence::Worse;
+  }
+
   // Compare based on qualification conversions (C++ 13.3.3.2p3,
   // bullet 3).
   if (ImplicitConversionSequence::CompareKind QualCK
@@ -3978,12 +4004,6 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
     return QualCK;
 
   if (SCS1.ReferenceBinding && SCS2.ReferenceBinding) {
-    // Check for a better reference binding based on the kind of bindings.
-    if (isBetterReferenceBindingKind(SCS1, SCS2))
-      return ImplicitConversionSequence::Better;
-    else if (isBetterReferenceBindingKind(SCS2, SCS1))
-      return ImplicitConversionSequence::Worse;
-
     // C++ [over.ics.rank]p3b4:
     //   -- S1 and S2 are reference bindings (8.5.3), and the types to
     //      which the references refer are the same type except for
@@ -4015,7 +4035,7 @@ CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
         T2 = S.Context.getQualifiedType(UnqualT2, T2Quals);
       if (T2.isMoreQualifiedThan(T1))
         return ImplicitConversionSequence::Better;
-      else if (T1.isMoreQualifiedThan(T2))
+      if (T1.isMoreQualifiedThan(T2))
         return ImplicitConversionSequence::Worse;
     }
   }
@@ -4089,21 +4109,15 @@ CompareQualificationConversions(Sema &S,
   QualType T2 = SCS2.getToType(2);
   T1 = S.Context.getCanonicalType(T1);
   T2 = S.Context.getCanonicalType(T2);
+  assert(!T1->isReferenceType() && !T2->isReferenceType());
   Qualifiers T1Quals, T2Quals;
   QualType UnqualT1 = S.Context.getUnqualifiedArrayType(T1, T1Quals);
   QualType UnqualT2 = S.Context.getUnqualifiedArrayType(T2, T2Quals);
 
-  // If the types are the same, we won't learn anything by unwrapped
+  // If the types are the same, we won't learn anything by unwrapping
   // them.
   if (UnqualT1 == UnqualT2)
     return ImplicitConversionSequence::Indistinguishable;
-
-  // If the type is an array type, promote the element qualifiers to the type
-  // for comparison.
-  if (isa<ArrayType>(T1) && T1Quals)
-    T1 = S.Context.getQualifiedType(UnqualT1, T1Quals);
-  if (isa<ArrayType>(T2) && T2Quals)
-    T2 = S.Context.getQualifiedType(UnqualT2, T2Quals);
 
   ImplicitConversionSequence::CompareKind Result
     = ImplicitConversionSequence::Indistinguishable;
@@ -4402,10 +4416,19 @@ static bool isTypeValid(QualType T) {
   return true;
 }
 
+static QualType withoutUnaligned(ASTContext &Ctx, QualType T) {
+  if (!T.getQualifiers().hasUnaligned())
+    return T;
+
+  Qualifiers Q;
+  T = Ctx.getUnqualifiedArrayType(T, Q);
+  Q.removeUnaligned();
+  return Ctx.getQualifiedType(T, Q);
+}
+
 /// CompareReferenceRelationship - Compare the two types T1 and T2 to
-/// determine whether they are reference-related,
-/// reference-compatible, reference-compatible with added
-/// qualification, or incompatible, for use in C++ initialization by
+/// determine whether they are reference-compatible,
+/// reference-related, or incompatible, for use in C++ initialization by
 /// reference (C++ [dcl.ref.init]p4). Neither type can be a reference
 /// type, and the first type (T1) is the pointee type of the reference
 /// type being initialized.
@@ -4427,10 +4450,17 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
   ReferenceConversions &Conv = ConvOut ? *ConvOut : ConvTmp;
   Conv = ReferenceConversions();
 
-  // C++ [dcl.init.ref]p4:
+  // C++2a [dcl.init.ref]p4:
   //   Given types "cv1 T1" and "cv2 T2," "cv1 T1" is
-  //   reference-related to "cv2 T2" if T1 is the same type as T2, or
+  //   reference-related to "cv2 T2" if T1 is similar to T2, or
   //   T1 is a base class of T2.
+  //   "cv1 T1" is reference-compatible with "cv2 T2" if
+  //   a prvalue of type "pointer to cv2 T2" can be converted to the type
+  //   "pointer to cv1 T1" via a standard conversion sequence.
+
+  // Check for standard conversions we can apply to pointers: derived-to-base
+  // conversions, ObjC pointer conversions, and function pointer conversions.
+  // (Qualification conversions are checked last.)
   QualType ConvertedT2;
   if (UnqualT1 == UnqualT2) {
     // Nothing to do.
@@ -4444,59 +4474,56 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
     Conv |= ReferenceConversions::ObjC;
   else if (UnqualT2->isFunctionType() &&
            IsFunctionConversion(UnqualT2, UnqualT1, ConvertedT2)) {
-    // C++1z [dcl.init.ref]p4:
-    //   cv1 T1" is reference-compatible with "cv2 T2" if [...] T2 is "noexcept
-    //   function" and T1 is "function"
-    //
-    // We extend this to also apply to 'noreturn', so allow any function
-    // conversion between function types.
     Conv |= ReferenceConversions::Function;
+    // No need to check qualifiers; function types don't have them.
     return Ref_Compatible;
-  } else
-    return Ref_Incompatible;
-
-  // At this point, we know that T1 and T2 are reference-related (at
-  // least).
-
-  // If the type is an array type, promote the element qualifiers to the type
-  // for comparison.
-  if (isa<ArrayType>(T1) && T1Quals)
-    T1 = Context.getQualifiedType(UnqualT1, T1Quals);
-  if (isa<ArrayType>(T2) && T2Quals)
-    T2 = Context.getQualifiedType(UnqualT2, T2Quals);
-
-  // C++ [dcl.init.ref]p4:
-  //   "cv1 T1" is reference-compatible with "cv2 T2" if T1 is
-  //   reference-related to T2 and cv1 is the same cv-qualification
-  //   as, or greater cv-qualification than, cv2. For purposes of
-  //   overload resolution, cases for which cv1 is greater
-  //   cv-qualification than cv2 are identified as
-  //   reference-compatible with added qualification (see 13.3.3.2).
-  //
-  // Note that we also require equivalence of Objective-C GC and address-space
-  // qualifiers when performing these computations, so that e.g., an int in
-  // address space 1 is not reference-compatible with an int in address
-  // space 2.
-  if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime() &&
-      T1Quals.compatiblyIncludesObjCLifetime(T2Quals)) {
-    if (isNonTrivialObjCLifetimeConversion(T2Quals, T1Quals))
-      Conv |= ReferenceConversions::ObjCLifetime;
-
-    T1Quals.removeObjCLifetime();
-    T2Quals.removeObjCLifetime();
   }
+  bool ConvertedReferent = Conv != 0;
 
-  // MS compiler ignores __unaligned qualifier for references; do the same.
-  T1Quals.removeUnaligned();
-  T2Quals.removeUnaligned();
+  // We can have a qualification conversion. Compute whether the types are
+  // similar at the same time.
+  bool PreviousToQualsIncludeConst = true;
+  bool TopLevel = true;
+  do {
+    if (T1 == T2)
+      break;
 
-  if (T1Quals != T2Quals)
+    // We will need a qualification conversion.
     Conv |= ReferenceConversions::Qualification;
 
-  if (T1Quals.compatiblyIncludes(T2Quals))
-    return Ref_Compatible;
-  else
-    return Ref_Related;
+    // Track whether we performed a qualification conversion anywhere other
+    // than the top level. This matters for ranking reference bindings in
+    // overload resolution.
+    if (!TopLevel)
+      Conv |= ReferenceConversions::NestedQualification;
+
+    // MS compiler ignores __unaligned qualifier for references; do the same.
+    T1 = withoutUnaligned(Context, T1);
+    T2 = withoutUnaligned(Context, T2);
+
+    // If we find a qualifier mismatch, the types are not reference-compatible,
+    // but are still be reference-related if they're similar.
+    bool ObjCLifetimeConversion = false;
+    if (!isQualificationConversionStep(T2, T1, /*CStyle=*/false,
+                                       PreviousToQualsIncludeConst,
+                                       ObjCLifetimeConversion))
+      return (ConvertedReferent || Context.hasSimilarType(T1, T2))
+                 ? Ref_Related
+                 : Ref_Incompatible;
+
+    // FIXME: Should we track this for any level other than the first?
+    if (ObjCLifetimeConversion)
+      Conv |= ReferenceConversions::ObjCLifetime;
+
+    TopLevel = false;
+  } while (Context.UnwrapSimilarTypes(T1, T2));
+
+  // At this point, if the types are reference-related, we must either have the
+  // same inner type (ignoring qualifiers), or must have already worked out how
+  // to convert the referent.
+  return (ConvertedReferent || Context.hasSameUnqualifiedType(T1, T2))
+             ? Ref_Compatible
+             : Ref_Incompatible;
 }
 
 /// Look for a user-defined conversion to a value reference-compatible
@@ -4526,11 +4553,6 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
       Conv = cast<CXXConversionDecl>(ConvTemplate->getTemplatedDecl());
     else
       Conv = cast<CXXConversionDecl>(D);
-
-    // If this is an explicit conversion, and we're not allowed to consider
-    // explicit conversions, skip it.
-    if (!AllowExplicit && Conv->isExplicit())
-      continue;
 
     if (AllowRvalues) {
       // If we are initializing an rvalue reference, don't permit conversion
@@ -4659,12 +4681,20 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
   auto SetAsReferenceBinding = [&](bool BindsDirectly) {
     ICS.setStandard();
     ICS.Standard.First = ICK_Identity;
+    // FIXME: A reference binding can be a function conversion too. We should
+    // consider that when ordering reference-to-function bindings.
     ICS.Standard.Second = (RefConv & Sema::ReferenceConversions::DerivedToBase)
                               ? ICK_Derived_To_Base
                               : (RefConv & Sema::ReferenceConversions::ObjC)
                                     ? ICK_Compatible_Conversion
                                     : ICK_Identity;
-    ICS.Standard.Third = ICK_Identity;
+    // FIXME: As a speculative fix to a defect introduced by CWG2352, we rank
+    // a reference binding that performs a non-top-level qualification
+    // conversion as a qualification conversion, not as an identity conversion.
+    ICS.Standard.Third = (RefConv &
+                              Sema::ReferenceConversions::NestedQualification)
+                             ? ICK_Qualification
+                             : ICK_Identity;
     ICS.Standard.FromTypePtr = T2.getAsOpaquePtr();
     ICS.Standard.setToType(0, T2);
     ICS.Standard.setToType(1, T1);
@@ -6167,6 +6197,15 @@ void Sema::AddOverloadCandidate(
   Candidate.IgnoreObjectArgument = false;
   Candidate.ExplicitCallArguments = Args.size();
 
+  // Explicit functions are not actually candidates at all if we're not
+  // allowing them in this context, but keep them around so we can point
+  // to them in diagnostics.
+  if (!AllowExplicit && ExplicitSpecifier::getFromDecl(Function).isExplicit()) {
+    Candidate.Viable = false;
+    Candidate.FailureKind = ovl_fail_explicit;
+    return;
+  }
+
   if (Function->isMultiVersion() && Function->hasAttr<TargetAttr>() &&
       !Function->getAttr<TargetAttr>()->isDefaultVersion()) {
     Candidate.Viable = false;
@@ -6258,6 +6297,16 @@ void Sema::AddOverloadCandidate(
         return;
       }
 
+  if (Expr *RequiresClause = Function->getTrailingRequiresClause()) {
+    ConstraintSatisfaction Satisfaction;
+    if (CheckConstraintSatisfaction(RequiresClause, Satisfaction) ||
+        !Satisfaction.IsSatisfied) {
+      Candidate.Viable = false;
+      Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
+      return;
+    }
+  }
+
   // Determine the implicit conversion sequences for each of the
   // arguments.
   for (unsigned ArgIdx = 0; ArgIdx < Args.size(); ++ArgIdx) {
@@ -6287,15 +6336,6 @@ void Sema::AddOverloadCandidate(
       // argument for which there is no corresponding parameter is
       // considered to ""match the ellipsis" (C+ 13.3.3.1.3).
       Candidate.Conversions[ConvIdx].setEllipsis();
-    }
-  }
-
-  if (!AllowExplicit) {
-    ExplicitSpecifier ES = ExplicitSpecifier::getFromDecl(Function);
-    if (ES.getKind() != ExplicitSpecKind::ResolvedFalse) {
-      Candidate.Viable = false;
-      Candidate.FailureKind = ovl_fail_explicit_resolved;
-      return;
     }
   }
 
@@ -6774,6 +6814,16 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
         return;
       }
 
+  if (Expr *RequiresClause = Method->getTrailingRequiresClause()) {
+    ConstraintSatisfaction Satisfaction;
+    if (CheckConstraintSatisfaction(RequiresClause, Satisfaction) ||
+        !Satisfaction.IsSatisfied) {
+      Candidate.Viable = false;
+      Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
+      return;
+    }
+  }
+
   // Determine the implicit conversion sequences for each of the
   // arguments.
   for (unsigned ArgIdx = 0; ArgIdx < Args.size(); ++ArgIdx) {
@@ -6887,6 +6937,12 @@ void Sema::AddMethodTemplateCandidate(
                      Conversions, PO);
 }
 
+/// Determine whether a given function template has a simple explicit specifier
+/// or a non-value-dependent explicit-specification that evaluates to true.
+static bool isNonDependentlyExplicit(FunctionTemplateDecl *FTD) {
+  return ExplicitSpecifier::getFromDecl(FTD->getTemplatedDecl()).isExplicit();
+}
+
 /// Add a C++ function template specialization as a candidate
 /// in the candidate set, using template argument deduction to produce
 /// an appropriate function template specialization.
@@ -6898,6 +6954,18 @@ void Sema::AddTemplateOverloadCandidate(
     OverloadCandidateParamOrder PO) {
   if (!CandidateSet.isNewCandidate(FunctionTemplate, PO))
     return;
+
+  // If the function template has a non-dependent explicit specification,
+  // exclude it now if appropriate; we are not permitted to perform deduction
+  // and substitution in this case.
+  if (!AllowExplicit && isNonDependentlyExplicit(FunctionTemplate)) {
+    OverloadCandidate &Candidate = CandidateSet.addCandidate();
+    Candidate.FoundDecl = FoundDecl;
+    Candidate.Function = FunctionTemplate->getTemplatedDecl();
+    Candidate.Viable = false;
+    Candidate.FailureKind = ovl_fail_explicit;
+    return;
+  }
 
   // C++ [over.match.funcs]p7:
   //   In each case where a candidate is a function template, candidate
@@ -7086,6 +7154,9 @@ void Sema::AddConversionCandidate(
   // Per C++ [over.match.conv]p1, [over.match.ref]p1, an explicit conversion
   // operator is only a candidate if its return type is the target type or
   // can be converted to the target type with a qualification conversion.
+  //
+  // FIXME: Include such functions in the candidate list and explain why we
+  // can't select them.
   if (Conversion->isExplicit() &&
       !isAllowableExplicitConversion(*this, ConvType, ToType,
                                      AllowObjCConversionOnExplicit))
@@ -7106,6 +7177,15 @@ void Sema::AddConversionCandidate(
   Candidate.FinalConversion.setAllToTypes(ToType);
   Candidate.Viable = true;
   Candidate.ExplicitCallArguments = 1;
+
+  // Explicit functions are not actually candidates at all if we're not
+  // allowing them in this context, but keep them around so we can point
+  // to them in diagnostics.
+  if (!AllowExplicit && Conversion->isExplicit()) {
+    Candidate.Viable = false;
+    Candidate.FailureKind = ovl_fail_explicit;
+    return;
+  }
 
   // C++ [over.match.funcs]p4:
   //   For conversion functions, the function is considered to be a member of
@@ -7128,6 +7208,17 @@ void Sema::AddConversionCandidate(
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_bad_conversion;
     return;
+  }
+
+  Expr *RequiresClause = Conversion->getTrailingRequiresClause();
+  if (RequiresClause) {
+    ConstraintSatisfaction Satisfaction;
+    if (CheckConstraintSatisfaction(RequiresClause, Satisfaction) ||
+        !Satisfaction.IsSatisfied) {
+      Candidate.Viable = false;
+      Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
+      return;
+    }
   }
 
   // We won't go through a user-defined type conversion function to convert a
@@ -7220,13 +7311,6 @@ void Sema::AddConversionCandidate(
            "Can only end up with a standard conversion sequence or failure");
   }
 
-  if (!AllowExplicit && Conversion->getExplicitSpecifier().getKind() !=
-                            ExplicitSpecKind::ResolvedFalse) {
-    Candidate.Viable = false;
-    Candidate.FailureKind = ovl_fail_explicit_resolved;
-    return;
-  }
-
   if (EnableIfAttr *FailedAttr = CheckEnableIf(Conversion, None)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_enable_if;
@@ -7256,6 +7340,18 @@ void Sema::AddTemplateConversionCandidate(
 
   if (!CandidateSet.isNewCandidate(FunctionTemplate))
     return;
+
+  // If the function template has a non-dependent explicit specification,
+  // exclude it now if appropriate; we are not permitted to perform deduction
+  // and substitution in this case.
+  if (!AllowExplicit && isNonDependentlyExplicit(FunctionTemplate)) {
+    OverloadCandidate &Candidate = CandidateSet.addCandidate();
+    Candidate.FoundDecl = FoundDecl;
+    Candidate.Function = FunctionTemplate->getTemplatedDecl();
+    Candidate.Viable = false;
+    Candidate.FailureKind = ovl_fail_explicit;
+    return;
+  }
 
   TemplateDeductionInfo Info(CandidateSet.getLocation());
   CXXConversionDecl *Specialization = nullptr;
@@ -9461,6 +9557,35 @@ bool clang::isBetterOverloadCandidate(
       return BetterTemplate == Cand1.Function->getPrimaryTemplate();
   }
 
+  //   -— F1 and F2 are non-template functions with the same
+  //      parameter-type-lists, and F1 is more constrained than F2 [...],
+  if (Cand1.Function && Cand2.Function && !Cand1IsSpecialization &&
+      !Cand2IsSpecialization && Cand1.Function->hasPrototype() &&
+      Cand2.Function->hasPrototype()) {
+    auto *PT1 = cast<FunctionProtoType>(Cand1.Function->getFunctionType());
+    auto *PT2 = cast<FunctionProtoType>(Cand2.Function->getFunctionType());
+    if (PT1->getNumParams() == PT2->getNumParams() &&
+        PT1->isVariadic() == PT2->isVariadic() &&
+        S.FunctionParamTypesAreEqual(PT1, PT2)) {
+      Expr *RC1 = Cand1.Function->getTrailingRequiresClause();
+      Expr *RC2 = Cand2.Function->getTrailingRequiresClause();
+      if (RC1 && RC2) {
+        bool AtLeastAsConstrained1, AtLeastAsConstrained2;
+        if (S.IsAtLeastAsConstrained(Cand1.Function, {RC1}, Cand2.Function,
+                                     {RC2}, AtLeastAsConstrained1))
+          return false;
+        if (!AtLeastAsConstrained1)
+          return false;
+        if (S.IsAtLeastAsConstrained(Cand2.Function, {RC2}, Cand1.Function,
+                                     {RC1}, AtLeastAsConstrained2))
+          return false;
+        if (!AtLeastAsConstrained2)
+          return true;
+      } else if (RC1 || RC2)
+        return RC1 != nullptr;
+    }
+  }
+
   //   -- F1 is a constructor for a class D, F2 is a constructor for a base
   //      class B of D, and for all arguments the corresponding parameters of
   //      F1 and F2 have the same type.
@@ -9829,6 +9954,24 @@ static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
     return false;
   }
 
+  if (const Expr *RC = FD->getTrailingRequiresClause()) {
+    ConstraintSatisfaction Satisfaction;
+    if (S.CheckConstraintSatisfaction(RC, Satisfaction))
+      return false;
+    if (!Satisfaction.IsSatisfied) {
+      if (Complain) {
+        if (InOverloadResolution)
+          S.Diag(FD->getBeginLoc(),
+                 diag::note_ovl_candidate_unsatisfied_constraints);
+        else
+          S.Diag(Loc, diag::err_addrof_function_constraints_not_satisfied)
+              << FD;
+        S.DiagnoseUnsatisfiedConstraint(Satisfaction);
+      }
+      return false;
+    }
+  }
+
   auto I = llvm::find_if(FD->parameters(), [](const ParmVarDecl *P) {
     return P->hasAttr<PassObjectSizeAttr>();
   });
@@ -9884,6 +10027,55 @@ void Sema::NoteOverloadCandidate(NamedDecl *Found, FunctionDecl *Fn,
   HandleFunctionTypeMismatch(PD, Fn->getType(), DestType);
   Diag(Fn->getLocation(), PD);
   MaybeEmitInheritedConstructorNote(*this, Found);
+}
+
+static void
+MaybeDiagnoseAmbiguousConstraints(Sema &S, ArrayRef<OverloadCandidate> Cands) {
+  // Perhaps the ambiguity was caused by two atomic constraints that are
+  // 'identical' but not equivalent:
+  //
+  // void foo() requires (sizeof(T) > 4) { } // #1
+  // void foo() requires (sizeof(T) > 4) && T::value { } // #2
+  //
+  // The 'sizeof(T) > 4' constraints are seemingly equivalent and should cause
+  // #2 to subsume #1, but these constraint are not considered equivalent
+  // according to the subsumption rules because they are not the same
+  // source-level construct. This behavior is quite confusing and we should try
+  // to help the user figure out what happened.
+
+  SmallVector<const Expr *, 3> FirstAC, SecondAC;
+  FunctionDecl *FirstCand = nullptr, *SecondCand = nullptr;
+  for (auto I = Cands.begin(), E = Cands.end(); I != E; ++I) {
+    if (!I->Function)
+      continue;
+    SmallVector<const Expr *, 3> AC;
+    if (auto *Template = I->Function->getPrimaryTemplate())
+      Template->getAssociatedConstraints(AC);
+    else
+      I->Function->getAssociatedConstraints(AC);
+    if (AC.empty())
+      continue;
+    if (FirstCand == nullptr) {
+      FirstCand = I->Function;
+      FirstAC = AC;
+    } else if (SecondCand == nullptr) {
+      SecondCand = I->Function;
+      SecondAC = AC;
+    } else {
+      // We have more than one pair of constrained functions - this check is
+      // expensive and we'd rather not try to diagnose it.
+      return;
+    }
+  }
+  if (!SecondCand)
+    return;
+  // The diagnostic can only happen if there are associated constraints on
+  // both sides (there needs to be some identical atomic constraint).
+  if (S.MaybeEmitAmbiguousAtomicConstraintsDiagnostic(FirstCand, FirstAC,
+                                                      SecondCand, SecondAC))
+    // Just show the user one diagnostic, they'll probably figure it out
+    // from here.
+    return;
 }
 
 // Notes the location of all overload candidates designated through
@@ -10621,30 +10813,36 @@ static void DiagnoseFailedEnableIfAttr(Sema &S, OverloadCandidate *Cand) {
 }
 
 static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
-  ExplicitSpecifier ES;
-  const char *DeclName;
+  ExplicitSpecifier ES = ExplicitSpecifier::getFromDecl(Cand->Function);
+  assert(ES.isExplicit() && "not an explicit candidate");
+
+  unsigned Kind;
   switch (Cand->Function->getDeclKind()) {
   case Decl::Kind::CXXConstructor:
-    ES = cast<CXXConstructorDecl>(Cand->Function)->getExplicitSpecifier();
-    DeclName = "constructor";
+    Kind = 0;
     break;
   case Decl::Kind::CXXConversion:
-    ES = cast<CXXConversionDecl>(Cand->Function)->getExplicitSpecifier();
-    DeclName = "conversion operator";
+    Kind = 1;
     break;
   case Decl::Kind::CXXDeductionGuide:
-    ES = cast<CXXDeductionGuideDecl>(Cand->Function)->getExplicitSpecifier();
-    DeclName = "deductiong guide";
+    Kind = Cand->Function->isImplicit() ? 0 : 2;
     break;
   default:
     llvm_unreachable("invalid Decl");
   }
-  assert(ES.getExpr() && "null expression should be handled before");
-  S.Diag(Cand->Function->getLocation(),
-         diag::note_ovl_candidate_explicit_forbidden)
-      << DeclName;
-  S.Diag(ES.getExpr()->getBeginLoc(),
-         diag::note_explicit_bool_resolved_to_true);
+
+  // Note the location of the first (in-class) declaration; a redeclaration
+  // (particularly an out-of-class definition) will typically lack the
+  // 'explicit' specifier.
+  // FIXME: This is probably a good thing to do for all 'candidate' notes.
+  FunctionDecl *First = Cand->Function->getFirstDecl();
+  if (FunctionDecl *Pattern = First->getTemplateInstantiationPattern())
+    First = Pattern->getFirstDecl();
+
+  S.Diag(First->getLocation(),
+         diag::note_ovl_candidate_explicit)
+      << Kind << (ES.getExpr() ? 1 : 0)
+      << (ES.getExpr() ? ES.getExpr()->getSourceRange() : SourceRange());
 }
 
 static void DiagnoseOpenCLExtensionDisabled(Sema &S, OverloadCandidate *Cand) {
@@ -10745,7 +10943,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   case ovl_fail_enable_if:
     return DiagnoseFailedEnableIfAttr(S, Cand);
 
-  case ovl_fail_explicit_resolved:
+  case ovl_fail_explicit:
     return DiagnoseFailedExplicitSpec(S, Cand);
 
   case ovl_fail_ext_disabled:
@@ -10771,6 +10969,23 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   case ovl_non_default_multiversion_function:
     // Do nothing, these should simply be ignored.
     break;
+
+  case ovl_fail_constraints_not_satisfied: {
+    std::string FnDesc;
+    std::pair<OverloadCandidateKind, OverloadCandidateSelect> FnKindPair =
+        ClassifyOverloadCandidate(S, Cand->FoundDecl, Fn,
+                                  Cand->getRewriteKind(), FnDesc);
+
+    S.Diag(Fn->getLocation(),
+           diag::note_ovl_candidate_constraints_not_satisfied)
+        << (unsigned)FnKindPair.first << (unsigned)ocs_non_template
+        << FnDesc /* Ignored */;
+    ConstraintSatisfaction Satisfaction;
+    if (S.CheckConstraintSatisfaction(Fn->getTrailingRequiresClause(),
+                                      Satisfaction))
+      break;
+    S.DiagnoseUnsatisfiedConstraint(Satisfaction);
+  }
   }
 }
 
@@ -10893,6 +11108,23 @@ struct CompareOverloadCandidatesForDisplay {
       OverloadCandidateSet::CandidateSetKind CSK)
       : S(S), NumArgs(NArgs), CSK(CSK) {}
 
+  OverloadFailureKind EffectiveFailureKind(const OverloadCandidate *C) const {
+    // If there are too many or too few arguments, that's the high-order bit we
+    // want to sort by, even if the immediate failure kind was something else.
+    if (C->FailureKind == ovl_fail_too_many_arguments ||
+        C->FailureKind == ovl_fail_too_few_arguments)
+      return static_cast<OverloadFailureKind>(C->FailureKind);
+
+    if (C->Function) {
+      if (NumArgs > C->Function->getNumParams() && !C->Function->isVariadic())
+        return ovl_fail_too_many_arguments;
+      if (NumArgs < C->Function->getMinRequiredArguments())
+        return ovl_fail_too_few_arguments;
+    }
+
+    return static_cast<OverloadFailureKind>(C->FailureKind);
+  }
+
   bool operator()(const OverloadCandidate *L,
                   const OverloadCandidate *R) {
     // Fast-path this check.
@@ -10916,34 +11148,37 @@ struct CompareOverloadCandidatesForDisplay {
 
     // Criteria by which we can sort non-viable candidates:
     if (!L->Viable) {
+      OverloadFailureKind LFailureKind = EffectiveFailureKind(L);
+      OverloadFailureKind RFailureKind = EffectiveFailureKind(R);
+
       // 1. Arity mismatches come after other candidates.
-      if (L->FailureKind == ovl_fail_too_many_arguments ||
-          L->FailureKind == ovl_fail_too_few_arguments) {
-        if (R->FailureKind == ovl_fail_too_many_arguments ||
-            R->FailureKind == ovl_fail_too_few_arguments) {
+      if (LFailureKind == ovl_fail_too_many_arguments ||
+          LFailureKind == ovl_fail_too_few_arguments) {
+        if (RFailureKind == ovl_fail_too_many_arguments ||
+            RFailureKind == ovl_fail_too_few_arguments) {
           int LDist = std::abs((int)L->getNumParams() - (int)NumArgs);
           int RDist = std::abs((int)R->getNumParams() - (int)NumArgs);
           if (LDist == RDist) {
-            if (L->FailureKind == R->FailureKind)
+            if (LFailureKind == RFailureKind)
               // Sort non-surrogates before surrogates.
               return !L->IsSurrogate && R->IsSurrogate;
             // Sort candidates requiring fewer parameters than there were
             // arguments given after candidates requiring more parameters
             // than there were arguments given.
-            return L->FailureKind == ovl_fail_too_many_arguments;
+            return LFailureKind == ovl_fail_too_many_arguments;
           }
           return LDist < RDist;
         }
         return false;
       }
-      if (R->FailureKind == ovl_fail_too_many_arguments ||
-          R->FailureKind == ovl_fail_too_few_arguments)
+      if (RFailureKind == ovl_fail_too_many_arguments ||
+          RFailureKind == ovl_fail_too_few_arguments)
         return true;
 
       // 2. Bad conversions come first and are ordered by the number
       // of bad conversions and quality of good conversions.
-      if (L->FailureKind == ovl_fail_bad_conversion) {
-        if (R->FailureKind != ovl_fail_bad_conversion)
+      if (LFailureKind == ovl_fail_bad_conversion) {
+        if (RFailureKind != ovl_fail_bad_conversion)
           return true;
 
         // The conversion that can be fixed with a smaller number of changes,
@@ -10981,17 +11216,17 @@ struct CompareOverloadCandidatesForDisplay {
         if (leftBetter > 0) return true;
         if (leftBetter < 0) return false;
 
-      } else if (R->FailureKind == ovl_fail_bad_conversion)
+      } else if (RFailureKind == ovl_fail_bad_conversion)
         return false;
 
-      if (L->FailureKind == ovl_fail_bad_deduction) {
-        if (R->FailureKind != ovl_fail_bad_deduction)
+      if (LFailureKind == ovl_fail_bad_deduction) {
+        if (RFailureKind != ovl_fail_bad_deduction)
           return true;
 
         if (L->DeductionFailure.Result != R->DeductionFailure.Result)
           return RankDeductionFailure(L->DeductionFailure)
                < RankDeductionFailure(R->DeductionFailure);
-      } else if (R->FailureKind == ovl_fail_bad_deduction)
+      } else if (RFailureKind == ovl_fail_bad_deduction)
         return false;
 
       // TODO: others?
@@ -11020,7 +11255,8 @@ CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
   assert(!Cand->Viable);
 
   // Don't do anything on failures other than bad conversion.
-  if (Cand->FailureKind != ovl_fail_bad_conversion) return;
+  if (Cand->FailureKind != ovl_fail_bad_conversion)
+    return;
 
   // We only want the FixIts if all the arguments can be corrected.
   bool Unfixable = false;
@@ -11156,6 +11392,9 @@ void OverloadCandidateSet::NoteCandidates(PartialDiagnosticAt PD,
   S.Diag(PD.first, PD.second);
 
   NoteCandidates(S, Args, Cands, Opc, OpLoc);
+
+  if (OCD == OCD_AmbiguousCandidates)
+    MaybeDiagnoseAmbiguousConstraints(S, {begin(), end()});
 }
 
 void OverloadCandidateSet::NoteCandidates(Sema &S, ArrayRef<Expr *> Args,
@@ -11804,15 +12043,33 @@ Sema::ResolveAddressOfOverloadedFunction(Expr *AddressOfExpr,
 /// resolve that function to a single function that can have its address taken.
 /// This will modify `Pair` iff it returns non-null.
 ///
-/// This routine can only realistically succeed if all but one candidates in the
-/// overload set for SrcExpr cannot have their addresses taken.
+/// This routine can only succeed if from all of the candidates in the overload
+/// set for SrcExpr that can have their addresses taken, there is one candidate
+/// that is more constrained than the rest.
 FunctionDecl *
-Sema::resolveAddressOfOnlyViableOverloadCandidate(Expr *E,
-                                                  DeclAccessPair &Pair) {
+Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
   OverloadExpr::FindResult R = OverloadExpr::find(E);
   OverloadExpr *Ovl = R.Expression;
+  bool IsResultAmbiguous = false;
   FunctionDecl *Result = nullptr;
   DeclAccessPair DAP;
+  SmallVector<FunctionDecl *, 2> AmbiguousDecls;
+
+  auto CheckMoreConstrained =
+      [&] (FunctionDecl *FD1, FunctionDecl *FD2) -> Optional<bool> {
+        SmallVector<const Expr *, 1> AC1, AC2;
+        FD1->getAssociatedConstraints(AC1);
+        FD2->getAssociatedConstraints(AC2);
+        bool AtLeastAsConstrained1, AtLeastAsConstrained2;
+        if (IsAtLeastAsConstrained(FD1, AC1, FD2, AC2, AtLeastAsConstrained1))
+          return None;
+        if (IsAtLeastAsConstrained(FD2, AC2, FD1, AC1, AtLeastAsConstrained2))
+          return None;
+        if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
+          return None;
+        return AtLeastAsConstrained1;
+      };
+
   // Don't use the AddressOfResolver because we're specifically looking for
   // cases where we have one overload candidate that lacks
   // enable_if/pass_object_size/...
@@ -11824,32 +12081,54 @@ Sema::resolveAddressOfOnlyViableOverloadCandidate(Expr *E,
     if (!checkAddressOfFunctionIsAvailable(FD))
       continue;
 
-    // We have more than one result; quit.
-    if (Result)
-      return nullptr;
+    // We have more than one result - see if it is more constrained than the
+    // previous one.
+    if (Result) {
+      Optional<bool> MoreConstrainedThanPrevious = CheckMoreConstrained(FD,
+                                                                        Result);
+      if (!MoreConstrainedThanPrevious) {
+        IsResultAmbiguous = true;
+        AmbiguousDecls.push_back(FD);
+        continue;
+      }
+      if (!*MoreConstrainedThanPrevious)
+        continue;
+      // FD is more constrained - replace Result with it.
+    }
+    IsResultAmbiguous = false;
     DAP = I.getPair();
     Result = FD;
   }
 
-  if (Result)
+  if (IsResultAmbiguous)
+    return nullptr;
+
+  if (Result) {
+    SmallVector<const Expr *, 1> ResultAC;
+    // We skipped over some ambiguous declarations which might be ambiguous with
+    // the selected result.
+    for (FunctionDecl *Skipped : AmbiguousDecls)
+      if (!CheckMoreConstrained(Skipped, Result).hasValue())
+        return nullptr;
     Pair = DAP;
+  }
   return Result;
 }
 
 /// Given an overloaded function, tries to turn it into a non-overloaded
-/// function reference using resolveAddressOfOnlyViableOverloadCandidate. This
+/// function reference using resolveAddressOfSingleOverloadCandidate. This
 /// will perform access checks, diagnose the use of the resultant decl, and, if
 /// requested, potentially perform a function-to-pointer decay.
 ///
-/// Returns false if resolveAddressOfOnlyViableOverloadCandidate fails.
+/// Returns false if resolveAddressOfSingleOverloadCandidate fails.
 /// Otherwise, returns true. This may emit diagnostics and return true.
-bool Sema::resolveAndFixAddressOfOnlyViableOverloadCandidate(
+bool Sema::resolveAndFixAddressOfSingleOverloadCandidate(
     ExprResult &SrcExpr, bool DoFunctionPointerConverion) {
   Expr *E = SrcExpr.get();
   assert(E->getType() == Context.OverloadTy && "SrcExpr must be an overload");
 
   DeclAccessPair DAP;
-  FunctionDecl *Found = resolveAddressOfOnlyViableOverloadCandidate(E, DAP);
+  FunctionDecl *Found = resolveAddressOfSingleOverloadCandidate(E, DAP);
   if (!Found || Found->isCPUDispatchMultiVersion() ||
       Found->isCPUSpecificMultiVersion())
     return false;

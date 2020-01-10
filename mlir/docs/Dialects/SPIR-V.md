@@ -44,7 +44,7 @@ the SPIR-V specification. Those abstractions are easily outside the domain of
 SPIR-V and should be modeled with other proper dialects so they can be shared
 among various compilation paths. Because of the dual purpose of SPIR-V, SPIR-V
 dialect staying at the same semantic level as the SPIR-V specification also
-means we can still have straightforward serailization and deserailization for
+means we can still have straightforward serialization and deserialization for
 the majority of functionalities.
 
 To summarize, the SPIR-V dialect follows the following design principles:

@@ -7,6 +7,7 @@
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=bdver2 -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefix=ALL -check-prefix=BDVER2
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=btver2 -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefix=ALL -check-prefix=BTVER2
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver1 -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefix=ALL -check-prefix=ZNVER1
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver2 -iterations=1 -resource-pressure=false -instruction-info=false -timeline < %s | FileCheck %s -check-prefix=ALL -check-prefix=ZNVER2
 
 vdivps  %xmm0, %xmm1, %xmm1
 vaddps  (%rax), %xmm1, %xmm1
@@ -37,6 +38,9 @@ vaddps  (%rax), %xmm1, %xmm1
 
 # ZNVER1-NEXT:    Total Cycles:      20
 # ZNVER1-NEXT:    Total uOps:        2
+
+# ZNVER2-NEXT:    Total Cycles:      21
+# ZNVER2-NEXT:    Total uOps:        2
 
 # BARCELONA:      Dispatch Width:    4
 # BARCELONA-NEXT: uOps Per Cycle:    0.15
@@ -78,6 +82,11 @@ vaddps  (%rax), %xmm1, %xmm1
 # ZNVER1-NEXT:    IPC:               0.10
 # ZNVER1-NEXT:    Block RThroughput: 1.0
 
+# ZNVER2:         Dispatch Width:    4
+# ZNVER2-NEXT:    uOps Per Cycle:    0.10
+# ZNVER2-NEXT:    IPC:               0.10
+# ZNVER2-NEXT:    Block RThroughput: 1.0
+
 # ALL:            Timeline view:
 
 # BARCELONA-NEXT:                     0123456789
@@ -104,6 +113,9 @@ vaddps  (%rax), %xmm1, %xmm1
 # ZNVER1-NEXT:                        0123456789
 # ZNVER1-NEXT:    Index     0123456789
 
+# ZNVER2-NEXT:                        0123456789
+# ZNVER2-NEXT:    Index     0123456789
+
 # BARCELONA:      [0,0]     DeeeeeeeeeeeeeeER  .   vdivps	%xmm0, %xmm1, %xmm1
 # BARCELONA-NEXT: [0,1]     D========eeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
@@ -127,6 +139,9 @@ vaddps  (%rax), %xmm1, %xmm1
 
 # ZNVER1:         [0,0]     DeeeeeeeeeeeeeeeER .   vdivps	%xmm0, %xmm1, %xmm1
 # ZNVER1-NEXT:    [0,1]     D=======eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
+
+# ZNVER2:         [0,0]     DeeeeeeeeeeeeeeeER .   vdivps	%xmm0, %xmm1, %xmm1
+# ZNVER2-NEXT:    [0,1]     D========eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # ALL:            Average Wait times (based on the timeline view):
 # ALL-NEXT:       [0]: Executions
@@ -160,3 +175,6 @@ vaddps  (%rax), %xmm1, %xmm1
 
 # ZNVER1-NEXT:    1.     1     8.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
 # ZNVER1-NEXT:           1     4.5    0.5    0.0       <total>
+
+# ZNVER2-NEXT:    1.     1     9.0    0.0    0.0       vaddps	(%rax), %xmm1, %xmm1
+# ZNVER2-NEXT:           1     5.0    0.5    0.0       <total>

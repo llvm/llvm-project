@@ -20,11 +20,11 @@
 #else
 /* We are using this library */
 #define MLIR_RUNNER_UTILS_EXPORT __declspec(dllimport)
-#endif
-#endif
+#endif // mlir_runner_utils_EXPORTS
+#endif // MLIR_RUNNER_UTILS_EXPORT
 #else
 #define MLIR_RUNNER_UTILS_EXPORT
-#endif
+#endif // _WIN32
 
 template <typename T, int N> struct StridedMemRefType;
 template <typename StreamType, typename T, int N>

@@ -1933,7 +1933,8 @@ def err_lvalue_reference_bind_to_unrelated : Error<
   "cannot bind to a value of unrelated type}1,2">;
 def err_reference_bind_drops_quals : Error<
   "binding reference %diff{of type $ to value of type $|to value}0,1 "
-  "%select{drops %3 qualifier%plural{1:|2:|4:|:s}4|changes address space}2">;
+  "%select{drops %3 qualifier%plural{1:|2:|4:|:s}4|changes address space|"
+  "not permitted due to incompatible qualifiers}2">;
 def err_reference_bind_failed : Error<
   "reference %diff{to %select{type|incomplete type}1 $ could not bind to an "
   "%select{rvalue|lvalue}2 of type $|could not bind to %select{rvalue|lvalue}2 of "
@@ -2596,6 +2597,18 @@ def note_single_arg_concept_specialization_constraint_evaluated_to_false : Note<
   "%select{and |because }0%1 does not satisfy %2">;
 def note_atomic_constraint_evaluated_to_false_elaborated : Note<
   "%select{and |because }0'%1' (%2 %3 %4) evaluated to false">;
+def err_constrained_virtual_method : Error<
+  "virtual function cannot have a requires clause">;
+def err_trailing_requires_clause_on_deduction_guide : Error<
+  "deduction guide cannot have a requires clause">;
+def err_reference_to_function_with_unsatisfied_constraints : Error<
+  "invalid reference to function %0: constraints not satisfied">;
+def note_ambiguous_atomic_constraints : Note<
+  "similar constraint expressions not considered equivalent; constraint "
+  "expressions cannot be considered equivalent unless they originate from the "
+  "same concept">;
+def note_ambiguous_atomic_constraints_similar_expression : Note<
+  "similar constraint expression here">;
 
 def err_template_different_requires_clause : Error<
   "requires clause differs in template redeclaration">;
@@ -2910,6 +2923,9 @@ def err_alignment_not_power_of_two : Error<
 def err_alignment_dependent_typedef_name : Error<
   "requested alignment is dependent but declaration is not dependent">;
 
+def warn_alignment_builtin_useless : Warning<
+  "%select{aligning a value|the result of checking whether a value is aligned}0"
+  " to 1 byte is %select{a no-op|always true}0">, InGroup<TautologicalCompare>;
 def err_attribute_aligned_too_great : Error<
   "requested alignment must be %0 bytes or smaller">;
 def warn_assume_aligned_too_great
@@ -3856,10 +3872,9 @@ def note_ovl_candidate : Note<
     "| has different qualifiers (expected %5 but found %6)"
     "| has different exception specification}4">;
 
-def note_ovl_candidate_explicit_forbidden : Note<
-    "candidate %0 ignored: cannot be explicit">;
-def note_explicit_bool_resolved_to_true : Note<
-    "explicit(bool) specifier resolved to true">;
+def note_ovl_candidate_explicit : Note<
+    "explicit %select{constructor|conversion function|deduction guide}0 "
+    "is not a candidate%select{| (explicit specifier evaluates to true)}1">;
 def note_ovl_candidate_inherited_constructor : Note<
     "constructor from base class %0 inherited here">;
 def note_ovl_candidate_inherited_constructor_slice : Note<
@@ -3920,6 +3935,9 @@ def note_ovl_candidate_disabled_by_extension : Note<
 def err_addrof_function_disabled_by_enable_if_attr : Error<
     "cannot take address of function %0 because it has one or more "
     "non-tautological enable_if conditions">;
+def err_addrof_function_constraints_not_satisfied : Error<
+    "cannot take address of function %0 because its constraints are not "
+    "satisfied">;
 def note_addrof_ovl_candidate_disabled_by_enable_if_attr : Note<
     "candidate function made ineligible by enable_if">;
 def note_ovl_candidate_deduced_mismatch : Note<
@@ -4033,6 +4051,9 @@ def note_ovl_candidate_bad_target : Note<
     "call to "
     "%select{__device__|__global__|__host__|__host__ __device__|invalid}3 function from"
     " %select{__device__|__global__|__host__|__host__ __device__|invalid}4 function">;
+def note_ovl_candidate_constraints_not_satisfied : Note<
+    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: constraints "
+    "not satisfied">;
 def note_implicit_member_target_infer_collision : Note<
     "implicit %sub{select_special_member_kind}0 inferred target collision: call to both "
     "%select{__device__|__global__|__host__|__host__ __device__}1 and "

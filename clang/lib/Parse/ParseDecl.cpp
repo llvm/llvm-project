@@ -2014,6 +2014,9 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     return nullptr;
   }
 
+  if (Tok.is(tok::kw_requires))
+    ParseTrailingRequiresClause(D);
+
   // Save late-parsed attributes for now; they need to be parsed in the
   // appropriate function scope after the function Decl has been constructed.
   // These will be parsed in ParseFunctionDefinition or ParseLexedAttrList.
@@ -2165,6 +2168,12 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
 
     ParseDeclarator(D);
     if (!D.isInvalidType()) {
+      // C++2a [dcl.decl]p1
+      //    init-declarator:
+      //	      declarator initializer[opt]
+      //        declarator requires-clause
+      if (Tok.is(tok::kw_requires))
+        ParseTrailingRequiresClause(D);
       Decl *ThisDecl = ParseDeclarationAfterDeclarator(D);
       D.complete(ThisDecl);
       if (ThisDecl)
@@ -2197,7 +2206,7 @@ bool Parser::ParseAsmAttributesAfterDeclarator(Declarator &D) {
   // If a simple-asm-expr is present, parse it.
   if (Tok.is(tok::kw_asm)) {
     SourceLocation Loc;
-    ExprResult AsmLabel(ParseSimpleAsm(&Loc));
+    ExprResult AsmLabel(ParseSimpleAsm(/*ForAsmLabel*/ true, &Loc));
     if (AsmLabel.isInvalid()) {
       SkipUntil(tok::semi, StopBeforeMatch);
       return true;
@@ -6032,6 +6041,22 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       PrototypeScope.Exit();
     } else if (Tok.is(tok::l_square)) {
       ParseBracketDeclarator(D);
+    } else if (Tok.is(tok::kw_requires) && D.hasGroupingParens()) {
+      // This declarator is declaring a function, but the requires clause is
+      // in the wrong place:
+      //   void (f() requires true);
+      // instead of
+      //   void f() requires true;
+      // or
+      //   void (f()) requires true;
+      Diag(Tok, diag::err_requires_clause_inside_parens);
+      ConsumeToken();
+      ExprResult TrailingRequiresClause = Actions.CorrectDelayedTyposInExpr(
+         ParseConstraintLogicalOrExpression(/*IsTrailingRequiresClause=*/true));
+      if (TrailingRequiresClause.isUsable() && D.isFunctionDeclarator() &&
+          !D.hasTrailingRequiresClause())
+        // We're already ill-formed if we got here but we'll accept it anyway.
+        D.setTrailingRequiresClause(TrailingRequiresClause.get());
     } else {
       break;
     }
@@ -6212,6 +6237,47 @@ void Parser::ParseParenDeclarator(Declarator &D) {
   PrototypeScope.Exit();
 }
 
+void Parser::InitCXXThisScopeForDeclaratorIfRelevant(
+    const Declarator &D, const DeclSpec &DS,
+    llvm::Optional<Sema::CXXThisScopeRAII> &ThisScope) {
+  // C++11 [expr.prim.general]p3:
+  //   If a declaration declares a member function or member function
+  //   template of a class X, the expression this is a prvalue of type
+  //   "pointer to cv-qualifier-seq X" between the optional cv-qualifer-seq
+  //   and the end of the function-definition, member-declarator, or
+  //   declarator.
+  // FIXME: currently, "static" case isn't handled correctly.
+  bool IsCXX11MemberFunction = getLangOpts().CPlusPlus11 &&
+        D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_typedef &&
+        (D.getContext() == DeclaratorContext::MemberContext
+         ? !D.getDeclSpec().isFriendSpecified()
+         : D.getContext() == DeclaratorContext::FileContext &&
+           D.getCXXScopeSpec().isValid() &&
+           Actions.CurContext->isRecord());
+  if (!IsCXX11MemberFunction)
+    return;
+
+  Qualifiers Q = Qualifiers::fromCVRUMask(DS.getTypeQualifiers());
+  if (D.getDeclSpec().hasConstexprSpecifier() && !getLangOpts().CPlusPlus14)
+    Q.addConst();
+  // FIXME: Collect C++ address spaces.
+  // If there are multiple different address spaces, the source is invalid.
+  // Carry on using the first addr space for the qualifiers of 'this'.
+  // The diagnostic will be given later while creating the function
+  // prototype for the method.
+  if (getLangOpts().OpenCLCPlusPlus) {
+    for (ParsedAttr &attr : DS.getAttributes()) {
+      LangAS ASIdx = attr.asOpenCLLangAS();
+      if (ASIdx != LangAS::Default) {
+        Q.addAddressSpace(ASIdx);
+        break;
+      }
+    }
+  }
+  ThisScope.emplace(Actions, dyn_cast<CXXRecordDecl>(Actions.CurContext), Q,
+                    IsCXX11MemberFunction);
+}
+
 /// ParseFunctionDeclarator - We are after the identifier and have parsed the
 /// declarator D up to a paren, which indicates that we are parsing function
 /// arguments.
@@ -6225,7 +6291,8 @@ void Parser::ParseParenDeclarator(Declarator &D) {
 ///
 /// For C++, after the parameter-list, it also parses the cv-qualifier-seq[opt],
 /// (C++11) ref-qualifier[opt], exception-specification[opt],
-/// (C++11) attribute-specifier-seq[opt], and (C++11) trailing-return-type[opt].
+/// (C++11) attribute-specifier-seq[opt], (C++11) trailing-return-type[opt] and
+/// (C++2a) the trailing requires-clause.
 ///
 /// [C++11] exception-specification:
 ///           dynamic-exception-specification
@@ -6320,43 +6387,8 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
       if (ParseRefQualifier(RefQualifierIsLValueRef, RefQualifierLoc))
         EndLoc = RefQualifierLoc;
 
-      // C++11 [expr.prim.general]p3:
-      //   If a declaration declares a member function or member function
-      //   template of a class X, the expression this is a prvalue of type
-      //   "pointer to cv-qualifier-seq X" between the optional cv-qualifer-seq
-      //   and the end of the function-definition, member-declarator, or
-      //   declarator.
-      // FIXME: currently, "static" case isn't handled correctly.
-      bool IsCXX11MemberFunction =
-        getLangOpts().CPlusPlus11 &&
-        D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_typedef &&
-        (D.getContext() == DeclaratorContext::MemberContext
-         ? !D.getDeclSpec().isFriendSpecified()
-         : D.getContext() == DeclaratorContext::FileContext &&
-           D.getCXXScopeSpec().isValid() &&
-           Actions.CurContext->isRecord());
-
-      Qualifiers Q = Qualifiers::fromCVRUMask(DS.getTypeQualifiers());
-      if (D.getDeclSpec().hasConstexprSpecifier() && !getLangOpts().CPlusPlus14)
-        Q.addConst();
-      // FIXME: Collect C++ address spaces.
-      // If there are multiple different address spaces, the source is invalid.
-      // Carry on using the first addr space for the qualifiers of 'this'.
-      // The diagnostic will be given later while creating the function
-      // prototype for the method.
-      if (getLangOpts().OpenCLCPlusPlus) {
-        for (ParsedAttr &attr : DS.getAttributes()) {
-          LangAS ASIdx = attr.asOpenCLLangAS();
-          if (ASIdx != LangAS::Default) {
-            Q.addAddressSpace(ASIdx);
-            break;
-          }
-        }
-      }
-
-      Sema::CXXThisScopeRAII ThisScope(
-          Actions, dyn_cast<CXXRecordDecl>(Actions.CurContext), Q,
-          IsCXX11MemberFunction);
+      llvm::Optional<Sema::CXXThisScopeRAII> ThisScope;
+      InitCXXThisScopeForDeclaratorIfRelevant(D, DS, ThisScope);
 
       // Parse exception-specification[opt].
       bool Delayed = D.isFirstDeclarationOfMember() &&
@@ -6623,6 +6655,17 @@ void Parser::ParseParameterDeclarationClause(
 
     // Parse GNU attributes, if present.
     MaybeParseGNUAttributes(ParmDeclarator);
+
+    if (Tok.is(tok::kw_requires)) {
+      // User tried to define a requires clause in a parameter declaration,
+      // which is surely not a function declaration.
+      // void f(int (*g)(int, int) requires true);
+      Diag(Tok,
+           diag::err_requires_clause_on_declarator_not_declaring_a_function);
+      ConsumeToken();
+      Actions.CorrectDelayedTyposInExpr(
+         ParseConstraintLogicalOrExpression(/*IsTrailingRequiresClause=*/true));
+    }
 
     // Remember this parsed parameter in ParamInfo.
     IdentifierInfo *ParmII = ParmDeclarator.getIdentifier();

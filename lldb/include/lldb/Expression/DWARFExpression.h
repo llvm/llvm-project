@@ -34,15 +34,6 @@ namespace lldb_private {
 /// location expression or a location list and interprets it.
 class DWARFExpression {
 public:
-  enum LocationListFormat : uint8_t {
-    NonLocationList,     // Not a location list
-    RegularLocationList, // Location list format used in non-split dwarf files
-    SplitDwarfLocationList, // Location list format used in pre-DWARF v5 split
-                            // dwarf files (.debug_loc.dwo)
-    LocLists,               // Location list format used in DWARF v5
-                            // (.debug_loclists/.debug_loclists.dwo).
-  };
-
   DWARFExpression();
 
   /// Constructor

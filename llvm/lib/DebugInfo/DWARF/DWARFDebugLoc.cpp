@@ -79,9 +79,9 @@ DWARFLocationInterpreter::Interpret(const DWARFLocationEntry &E) {
   }
   case dwarf::DW_LLE_offset_pair: {
     if (!Base) {
-      return createStringError(
-          inconvertibleErrorCode(),
-          "Unable to resolve DW_LLE_offset_pair: base address unknown");
+      return createStringError(inconvertibleErrorCode(),
+                               "Unable to resolve location list offset pair: "
+                               "Base address not defined");
     }
     DWARFAddressRange Range{Base->Address + E.Value0, Base->Address + E.Value1,
                             Base->SectionIndex};

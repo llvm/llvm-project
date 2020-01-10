@@ -171,6 +171,25 @@ template <> struct simplify_type<const WeakVH> {
   static SimpleType getSimplifiedValue(const WeakVH &WVH) { return WVH; }
 };
 
+// Specialize DenseMapInfo to allow WeakVH to participate in DenseMap.
+template <> struct DenseMapInfo<WeakVH> {
+  static inline WeakVH getEmptyKey() {
+    return WeakVH(DenseMapInfo<Value *>::getEmptyKey());
+  }
+
+  static inline WeakVH getTombstoneKey() {
+    return WeakVH(DenseMapInfo<Value *>::getTombstoneKey());
+  }
+
+  static unsigned getHashValue(const WeakVH &Val) {
+    return DenseMapInfo<Value *>::getHashValue(Val);
+  }
+
+  static bool isEqual(const WeakVH &LHS, const WeakVH &RHS) {
+    return DenseMapInfo<Value *>::isEqual(LHS, RHS);
+  }
+};
+
 /// Value handle that is nullable, but tries to track the Value.
 ///
 /// This is a value handle that tries hard to point to a Value, even across

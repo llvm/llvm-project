@@ -732,10 +732,9 @@ class Sema;
     /// attribute disabled it.
     ovl_fail_enable_if,
 
-    /// This candidate constructor or conversion fonction
-    /// is used implicitly but the explicit(bool) specifier
-    /// was resolved to true
-    ovl_fail_explicit_resolved,
+    /// This candidate constructor or conversion function is explicit but
+    /// the context doesn't permit explicit functions.
+    ovl_fail_explicit,
 
     /// This candidate was not viable because its address could not be taken.
     ovl_fail_addr_not_available,
@@ -754,7 +753,11 @@ class Sema;
     /// This constructor/conversion candidate fail due to an address space
     /// mismatch between the object being constructed and the overload
     /// candidate.
-    ovl_fail_object_addrspace_mismatch
+    ovl_fail_object_addrspace_mismatch,
+
+    /// This candidate was not viable because its associated constraints were
+    /// not satisfied.
+    ovl_fail_constraints_not_satisfied,
   };
 
   /// A list of implicit conversion sequences for the arguments of an

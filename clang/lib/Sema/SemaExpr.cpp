@@ -326,6 +326,30 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
 
   diagnoseUseOfInternalDeclInInlineFunction(*this, D, Loc);
 
+  // [expr.prim.id]p4
+  //   A program that refers explicitly or implicitly to a function with a
+  //   trailing requires-clause whose constraint-expression is not satisfied,
+  //   other than to declare it, is ill-formed. [...]
+  //
+  // See if this is a function with constraints that need to be satisfied.
+  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+    if (Expr *RC = FD->getTrailingRequiresClause()) {
+      ConstraintSatisfaction Satisfaction;
+      bool Failed = CheckConstraintSatisfaction(RC, Satisfaction);
+      if (Failed)
+        // A diagnostic will have already been generated (non-constant
+        // constraint expression, for example)
+        return true;
+      if (!Satisfaction.IsSatisfied) {
+        Diag(Loc,
+             diag::err_reference_to_function_with_unsatisfied_constraints)
+            << D;
+        DiagnoseUnsatisfiedConstraint(Satisfaction);
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 
@@ -17975,7 +17999,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     // No guarantees that ResolveAndFixSingleFunctionTemplateSpecialization
     // leaves Result unchanged on failure.
     Result = E;
-    if (resolveAndFixAddressOfOnlyViableOverloadCandidate(Result))
+    if (resolveAndFixAddressOfSingleOverloadCandidate(Result))
       return Result;
 
     // If that failed, try to recover with a call.
@@ -18111,4 +18135,9 @@ ExprResult Sema::ActOnObjCAvailabilityCheckExpr(
 
   return new (Context)
       ObjCAvailabilityCheckExpr(Version, AtLoc, RParen, Context.BoolTy);
+}
+
+bool Sema::IsDependentFunctionNameExpr(Expr *E) {
+  assert(E->isTypeDependent());
+  return isa<UnresolvedLookupExpr>(E);
 }

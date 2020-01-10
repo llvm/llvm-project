@@ -439,29 +439,10 @@ private:
   ///                          // (function or global)
   ///   char      *name;       // Name of the function or global.
   ///   size_t     size;       // Size of the entry info (0 if it a function).
+  ///   int32_t flags;
+  ///   int32_t reserved;
   /// };
   QualType TgtOffloadEntryQTy;
-  /// struct __tgt_device_image{
-  /// void   *ImageStart;       // Pointer to the target code start.
-  /// void   *ImageEnd;         // Pointer to the target code end.
-  /// // We also add the host entries to the device image, as it may be useful
-  /// // for the target runtime to have access to that information.
-  /// __tgt_offload_entry  *EntriesBegin;   // Begin of the table with all
-  ///                                       // the entries.
-  /// __tgt_offload_entry  *EntriesEnd;     // End of the table with all the
-  ///                                       // entries (non inclusive).
-  /// };
-  QualType TgtDeviceImageQTy;
-  /// struct __tgt_bin_desc{
-  ///   int32_t              NumDevices;      // Number of devices supported.
-  ///   __tgt_device_image   *DeviceImages;   // Arrays of device images
-  ///                                         // (one per device).
-  ///   __tgt_offload_entry  *EntriesBegin;   // Begin of the table with all the
-  ///                                         // entries.
-  ///   __tgt_offload_entry  *EntriesEnd;     // End of the table with all the
-  ///                                         // entries (non inclusive).
-  /// };
-  QualType TgtBinaryDescriptorQTy;
   /// Entity that registers the offloading constants that were emitted so
   /// far.
   class OffloadEntriesInfoManagerTy {
@@ -716,12 +697,6 @@ private:
 
   /// Returns __tgt_offload_entry type.
   QualType getTgtOffloadEntryQTy();
-
-  /// Returns __tgt_device_image type.
-  QualType getTgtDeviceImageQTy();
-
-  /// Returns __tgt_bin_desc type.
-  QualType getTgtBinaryDescriptorQTy();
 
   /// Start scanning from statement \a S and and emit all target regions
   /// found along the way.

@@ -384,6 +384,9 @@ public:
       for (const auto *Parameter : D->parameters())
         Visit(Parameter);
 
+    if (const Expr *TRC = D->getTrailingRequiresClause())
+      Visit(TRC);
+
     if (const auto *C = dyn_cast<CXXConstructorDecl>(D))
       for (const auto *I : C->inits())
         Visit(I);

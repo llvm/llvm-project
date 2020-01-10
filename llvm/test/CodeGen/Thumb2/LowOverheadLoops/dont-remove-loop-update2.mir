@@ -62,7 +62,7 @@
   declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>) #3
   declare void @llvm.stackprotector(i8*, i8**) #5
 
-  attributes #0 = { nofree norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+armv8.1-m.main,+fp-armv8d16sp,+fp16,+fpregs,+fullfp16,+hwdiv,+lob,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2sp,+vfp3d16sp,+vfp4d16sp" "unsafe-fp-math"="true" "use-soft-float"="false" }
+  attributes #0 = { nofree norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+armv8.1-m.main,+fp-armv8d16sp,+fp16,+fullfp16,+hwdiv,+lob,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2sp,+vfp3d16sp,+vfp4d16sp" "unsafe-fp-math"="true" "use-soft-float"="false" }
   attributes #1 = { noduplicate nounwind }
   attributes #2 = { nounwind readnone }
   attributes #3 = { argmemonly nounwind willreturn }

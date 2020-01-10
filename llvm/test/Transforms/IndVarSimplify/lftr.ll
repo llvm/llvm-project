@@ -153,6 +153,34 @@ loopexit:
   ret i32 %i
 }
 
+define i32 @quadratic_sgt_loopdec() {
+; CHECK-LABEL: @quadratic_sgt_loopdec(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 10, [[ENTRY:%.*]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_NEXT]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[I]], i32 1)
+; CHECK-NEXT:    store i32 [[I]], i32* @A
+; CHECK-NEXT:    [[I2:%.*]] = mul i32 [[I]], [[I]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp sgt i32 [[I2]], 0
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LOOPEXIT:%.*]]
+; CHECK:       loopexit:
+; CHECK-NEXT:    ret i32 0
+
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 10, %entry ], [ %i.next, %loop ]
+  %i.next = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %i, i32 1)
+  store i32 %i, i32* @A
+  %i2 = mul i32 %i, %i
+  %c = icmp sgt i32 %i2, 0
+  br i1 %c, label %loop, label %loopexit
+
+loopexit:
+  ret i32 %i
+}
 
 @data = common global [240 x i8] zeroinitializer, align 16
 
@@ -629,4 +657,5 @@ exit:
 }
 
 
+declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
 

@@ -2,9 +2,9 @@
 
 namespace nodiag {
 
-template <typename T> requires bool(T())
+template <typename T> requires (bool(T()))
 struct A;
-template <typename U> requires bool(U())
+template <typename U> requires (bool(U()))
 struct A;
 
 } // end namespace nodiag
@@ -21,7 +21,7 @@ struct B;
 
 template <typename T> requires true // expected-note{{previous template declaration is here}}
 struct C;
-template <typename T> requires !0 // expected-error{{requires clause differs in template redeclaration}}
+template <typename T> requires (!0) // expected-error{{requires clause differs in template redeclaration}}
 struct C;
 
 } // end namespace diag
@@ -29,15 +29,15 @@ struct C;
 namespace nodiag {
 
 struct AA {
-  template <typename T> requires someFunc(T())
+  template <typename T> requires (someFunc(T()))
   struct A;
 };
 
-template <typename U> requires someFunc(U())
+template <typename U> requires (someFunc(U()))
 struct AA::A { };
 
 struct AAF {
-  template <typename T> requires someFunc(T())
+  template <typename T> requires (someFunc(T()))
   friend struct AA::A;
 };
 

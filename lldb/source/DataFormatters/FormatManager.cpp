@@ -230,11 +230,33 @@ void FormatManager::GetPossibleMatches(
     if (non_ptr_type.IsTypedefType()) {
       CompilerType deffed_pointed_type =
           non_ptr_type.GetTypedefedType().GetPointerType();
+      const bool stripped_typedef = true;
       GetPossibleMatches(
           valobj, deffed_pointed_type,
           reason | lldb_private::eFormatterChoiceCriterionNavigatedTypedefs,
           use_dynamic, entries, did_strip_ptr, did_strip_ref,
-          true); // this is not exactly the usual meaning of stripping typedefs
+          stripped_typedef); // this is not exactly the usual meaning of
+                             // stripping typedefs
+    }
+  }
+
+  // For arrays with typedef-ed elements, we add a candidate with the typedef
+  // stripped.
+  uint64_t array_size;
+  if (compiler_type.IsArrayType(nullptr, &array_size, nullptr)) {
+    CompilerType element_type = compiler_type.GetArrayElementType();
+    if (element_type.IsTypedefType()) {
+      // Get the stripped element type and compute the stripped array type
+      // from it.
+      CompilerType deffed_array_type =
+          element_type.GetTypedefedType().GetArrayType(array_size);
+      const bool stripped_typedef = true;
+      GetPossibleMatches(
+          valobj, deffed_array_type,
+          reason | lldb_private::eFormatterChoiceCriterionNavigatedTypedefs,
+          use_dynamic, entries, did_strip_ptr, did_strip_ref,
+          stripped_typedef); // this is not exactly the usual meaning of
+                             // stripping typedefs
     }
   }
 

@@ -295,9 +295,23 @@ class VTX_READ <string name, dag outs, list<dag> pattern>
   let VTXInst = 1;
 }
 
-// FIXME: Deprecated.
-class LocalLoad <SDPatternOperator op> : LoadFrag <op>, LocalAddress;
+// Legacy.
+def atomic_cmp_swap_global_noret : PatFrag<
+  (ops node:$ptr, node:$cmp, node:$value),
+  (atomic_cmp_swap node:$ptr, node:$cmp, node:$value),
+  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS && (SDValue(N, 0).use_empty());}]>;
 
+def atomic_cmp_swap_global_ret : PatFrag<
+  (ops node:$ptr, node:$cmp, node:$value),
+  (atomic_cmp_swap node:$ptr, node:$cmp, node:$value),
+  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS && (!SDValue(N, 0).use_empty());}]>;
+
+def mskor_global : PatFrag<(ops node:$val, node:$ptr),
+                            (AMDGPUstore_mskor node:$val, node:$ptr), [{
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
+}]>;
+
+// FIXME: These are deprecated
 class AZExtLoadBase <SDPatternOperator ld_node>: PatFrag<(ops node:$ptr),
                                               (ld_node node:$ptr), [{
   LoadSDNode *L = cast<LoadSDNode>(N);
@@ -319,9 +333,10 @@ def az_extloadi32 : PatFrag<(ops node:$ptr), (az_extload node:$ptr), [{
   return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i32;
 }]>;
 
-// FIXME: These are deprecated
-def az_extloadi8_local : LocalLoad <az_extloadi8>;
-def az_extloadi16_local : LocalLoad <az_extloadi16>;
+let AddressSpaces = LoadAddress_local.AddrSpaces in {
+def az_extloadi8_local : PatFrag<(ops node:$ptr), (az_extloadi8 node:$ptr)>;
+def az_extloadi16_local : PatFrag<(ops node:$ptr), (az_extloadi16 node:$ptr)>;
+}
 
 class LoadParamFrag <PatFrag load_type> : PatFrag <
   (ops node:$ptr), (load_type node:$ptr),

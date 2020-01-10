@@ -3924,7 +3924,7 @@ CompilerType
 ClangASTContext::GetArrayElementType(lldb::opaque_compiler_type_t type,
                                      uint64_t *stride) {
   if (type) {
-    clang::QualType qual_type(GetCanonicalQualType(type));
+    clang::QualType qual_type(GetQualType(type));
 
     const clang::Type *array_eletype =
         qual_type.getTypePtr()->getArrayElementTypeNoTypeQual();
@@ -3932,8 +3932,7 @@ ClangASTContext::GetArrayElementType(lldb::opaque_compiler_type_t type,
     if (!array_eletype)
       return CompilerType();
 
-    CompilerType element_type =
-        GetType(array_eletype->getCanonicalTypeUnqualified());
+    CompilerType element_type = GetType(clang::QualType(array_eletype, 0));
 
     // TODO: the real stride will be >= this value.. find the real one!
     if (stride)

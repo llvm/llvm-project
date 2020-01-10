@@ -84,4 +84,4 @@ exit:
   ret void
 }
 
-attributes #0 = { nounwind "min-legal-vector-width"="0" "target-cpu"="generic" "target-features"="+armv8.1-m.main,+fp-armv8d16sp,+fp16,+fpregs,+fullfp16,+hwdiv,+lob,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2sp,+vfp3d16sp,+vfp4d16sp" "use-soft-float"="false" }
+attributes #0 = { nounwind "min-legal-vector-width"="0" "target-cpu"="generic" "target-features"="+armv8.1-m.main,+fp-armv8d16sp,+fp16,+fullfp16,+hwdiv,+lob,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2sp,+vfp3d16sp,+vfp4d16sp" "use-soft-float"="false" }

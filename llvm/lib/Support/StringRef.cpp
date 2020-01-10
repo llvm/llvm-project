@@ -588,13 +588,11 @@ bool StringRef::getAsInteger(unsigned Radix, APInt &Result) const {
 
 bool StringRef::getAsDouble(double &Result, bool AllowInexact) const {
   APFloat F(0.0);
-  auto ErrOrStatus = F.convertFromString(*this, APFloat::rmNearestTiesToEven);
-  if (!ErrOrStatus) {
-    assert(false && "Invalid floating point representation");
+  auto StatusOrErr = F.convertFromString(*this, APFloat::rmNearestTiesToEven);
+  if (errorToBool(StatusOrErr.takeError()))
     return true;
-  }
 
-  APFloat::opStatus Status = *ErrOrStatus;
+  APFloat::opStatus Status = *StatusOrErr;
   if (Status != APFloat::opOK) {
     if (!AllowInexact || !(Status & APFloat::opInexact))
       return true;

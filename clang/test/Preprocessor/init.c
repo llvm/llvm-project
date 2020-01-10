@@ -6551,10 +6551,11 @@
 // PPC32-LINUX-NOT: _CALL_LINUX
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-unknown-linux-gnu -target-feature +spe < /dev/null | FileCheck -match-full-lines -check-prefix PPC32-SPE %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpcspe-unknown-linux-gnu < /dev/null | FileCheck -match-full-lines -check-prefix PPC32-SPE %s
 //
 // PPC32-SPE:#define __NO_FPRS__ 1
 // PPC32-SPE:#define __SPE__ 1
-// 
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc-unknown-linux-gnu -target-cpu 8548 < /dev/null | FileCheck -match-full-lines -check-prefix PPC8548 %s
 //
 // PPC8548:#define __NO_FPRS__ 1

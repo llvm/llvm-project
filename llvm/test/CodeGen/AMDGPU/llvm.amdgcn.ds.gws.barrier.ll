@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,GFX10 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,GFX10 %s
 
 ; Make sure the op is emitted bundled with a waitcnt with and without the retry loop, and the bundle is not removed by ExpandPostRAPseudos.
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -stop-after=postrapseudos -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=MIR %s
@@ -27,7 +27,7 @@
 
 ; MIR-LABEL: name: gws_barrier_offset0{{$}}
 ; MIR: BUNDLE implicit{{( killed)?( renamable)?}} $vgpr0, implicit $m0, implicit $exec {
-; MIR-NEXT: DS_GWS_BARRIER renamable $vgpr0, 0, -1, implicit $m0, implicit $exec :: (load 4 from custom GWSResource)
+; MIR-NEXT: DS_GWS_BARRIER renamable $vgpr0, 0, -1, implicit $m0, implicit $exec :: (load 4 from custom "GWSResource")
 ; MIR-NEXT: S_WAITCNT 0
 ; MIR-NEXT: }
 define amdgpu_kernel void @gws_barrier_offset0(i32 %val) #0 {

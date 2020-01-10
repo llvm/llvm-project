@@ -947,9 +947,7 @@ public:
     return HasVGPRIndexMode;
   }
 
-  bool useVGPRIndexMode(bool UserEnable) const {
-    return !hasMovrel() || (UserEnable && hasVGPRIndexMode());
-  }
+  bool useVGPRIndexMode() const;
 
   bool hasScalarCompareEq64() const {
     return getGeneration() >= VOLCANIC_ISLANDS;

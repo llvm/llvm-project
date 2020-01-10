@@ -215,6 +215,25 @@ public:
   static bool kindof(unsigned kind) {
     return kind == StandardAttributes::Array;
   }
+
+private:
+  /// Class for underlying value iterator support.
+  template <typename AttrTy>
+  class attr_value_iterator final
+      : public llvm::mapped_iterator<iterator, AttrTy (*)(Attribute)> {
+  public:
+    explicit attr_value_iterator(iterator it)
+        : llvm::mapped_iterator<iterator, AttrTy (*)(Attribute)>(
+              it, [](Attribute attr) { return attr.cast<AttrTy>(); }) {}
+    AttrTy operator*() { return (*this->I).template cast<AttrTy>(); }
+  };
+
+public:
+  template <typename AttrTy>
+  llvm::iterator_range<attr_value_iterator<AttrTy>> getAsRange() {
+    return llvm::make_range(attr_value_iterator<AttrTy>(begin()),
+                            attr_value_iterator<AttrTy>(end()));
+  }
 };
 
 //===----------------------------------------------------------------------===//

@@ -295,8 +295,7 @@ define <2 x i32> @test_vrev64D32(<2 x i32>* %A) nounwind {
 ; FALLBACK-NEXT:    ldr d0, [x0]
 ; FALLBACK-NEXT:    adrp x8, .LCPI13_0
 ; FALLBACK-NEXT:    ldr d1, [x8, :lo12:.LCPI13_0]
-; FALLBACK-NEXT:    mov.s v2[1], w8
-; FALLBACK-NEXT:    mov.d v0[1], v2[0]
+; FALLBACK-NEXT:    mov.d v0[1], v0[0]
 ; FALLBACK-NEXT:    tbl.16b v0, { v0 }, v1
 ; FALLBACK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; FALLBACK-NEXT:    ret
@@ -317,8 +316,7 @@ define <2 x float> @test_vrev64Df(<2 x float>* %A) nounwind {
 ; FALLBACK-NEXT:    ldr d0, [x0]
 ; FALLBACK-NEXT:    adrp x8, .LCPI14_0
 ; FALLBACK-NEXT:    ldr d1, [x8, :lo12:.LCPI14_0]
-; FALLBACK-NEXT:    mov.s v2[1], w8
-; FALLBACK-NEXT:    mov.d v0[1], v2[0]
+; FALLBACK-NEXT:    mov.d v0[1], v0[0]
 ; FALLBACK-NEXT:    tbl.16b v0, { v0 }, v1
 ; FALLBACK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; FALLBACK-NEXT:    ret

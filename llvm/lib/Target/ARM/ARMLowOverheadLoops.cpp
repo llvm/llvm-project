@@ -19,6 +19,22 @@
 /// which determines whether we can generated the tail-predicated low-overhead
 /// loop form.
 ///
+/// Assumptions and Dependencies:
+/// Low-overhead loops are constructed and executed using a setup instruction:
+/// DLS, WLS, DLSTP or WLSTP and an instruction that loops back: LE or LETP.
+/// WLS(TP) and LE(TP) are branching instructions with a (large) limited range
+/// but fixed polarity: WLS can only branch forwards and LE can only branch
+/// backwards. These restrictions mean that this pass is dependent upon block
+/// layout and block sizes, which is why it's the last pass to run. The same is
+/// true for ConstantIslands, but this pass does not increase the size of the
+/// basic blocks, nor does it change the CFG. Instructions are mainly removed
+/// during the transform and pseudo instructions are replaced by real ones. In
+/// some cases, when we have to revert to a 'normal' loop, we have to introduce
+/// multiple instructions for a single pseudo (see RevertWhile and
+/// RevertLoopEnd). To handle this situation, t2WhileLoopStart and t2LoopEnd
+/// are defined to be as large as this maximum sequence of replacement
+/// instructions.
+///
 //===----------------------------------------------------------------------===//
 
 #include "ARM.h"

@@ -597,13 +597,6 @@ void SymbolFileDWARF::LoadSectionData(lldb::SectionType sect_type,
   m_objfile_sp->ReadSectionData(section_sp.get(), data);
 }
 
-const DWARFDataExtractor &SymbolFileDWARF::DebugLocData() {
-  const DWARFDataExtractor &debugLocData = get_debug_loc_data();
-  if (debugLocData.GetByteSize() > 0)
-    return debugLocData;
-  return get_debug_loclists_data();
-}
-
 const DWARFDataExtractor &SymbolFileDWARF::get_debug_loc_data() {
   return GetCachedSectionData(eSectionTypeDWARFDebugLoc, m_data_debug_loc);
 }
@@ -700,7 +693,8 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
     } else {
       ModuleSP module_sp(m_objfile_sp->GetModule());
       if (module_sp) {
-        const DWARFDIE cu_die = dwarf_cu.DIE();
+        const DWARFBaseDIE cu_die =
+            dwarf_cu.GetNonSkeletonUnit().GetUnitDIEOnly();
         if (cu_die) {
           FileSpec cu_file_spec(cu_die.GetName(), dwarf_cu.GetPathStyle());
           if (cu_file_spec) {
@@ -718,7 +712,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
           LanguageType cu_language = DWARFUnit::LanguageTypeFromDWARF(
               cu_die.GetAttributeValueAsUnsigned(DW_AT_language, 0));
 
-          bool is_optimized = dwarf_cu.GetIsOptimized();
+          bool is_optimized = dwarf_cu.GetNonSkeletonUnit().GetIsOptimized();
           BuildCuTranslationTable();
           cu_sp = std::make_shared<CompileUnit>(
               module_sp, &dwarf_cu, cu_file_spec,
@@ -3361,7 +3355,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                   module, DataExtractor(data, block_offset, block_length),
                   die.GetCU());
             } else {
-              DataExtractor data = DebugLocData();
+              DataExtractor data = die.GetCU()->GetLocationData();
               dw_offset_t offset = form_value.Unsigned();
               if (form_value.Form() == DW_FORM_loclistx)
                 offset = die.GetCU()->GetLoclistOffset(offset).getValueOr(-1);
@@ -3976,13 +3970,6 @@ SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
     }
   }
   return m_debug_map_symfile;
-}
-
-DWARFExpression::LocationListFormat
-SymbolFileDWARF::GetLocationListFormat() const {
-  if (m_data_debug_loclists.m_data.GetByteSize() > 0)
-    return DWARFExpression::LocLists;
-  return DWARFExpression::RegularLocationList;
 }
 
 SymbolFileDWARFDwp *SymbolFileDWARF::GetDwpSymbolFile() {

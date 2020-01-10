@@ -87,8 +87,7 @@ public:
 
   // Note: GCC recognizes the following additional cpus:
   //  401, 403, 405, 405fp, 440fp, 464, 464fp, 476, 476fp, 505, 740, 801,
-  //  821, 823, 8540, 8548, e300c2, e300c3, e500mc64, e6500, 860, cell,
-  //  titan, rs64.
+  //  821, 823, 8540, e300c2, e300c3, e500mc64, e6500, 860, cell, titan, rs64.
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 

@@ -732,6 +732,11 @@ inline uint64_t divideCeil(uint64_t Numerator, uint64_t Denominator) {
   return alignTo(Numerator, Denominator) / Denominator;
 }
 
+/// Returns the integer nearest(Numerator / Denominator).
+inline uint64_t divideNearest(uint64_t Numerator, uint64_t Denominator) {
+  return (Numerator + (Denominator / 2)) / Denominator;
+}
+
 /// Returns the largest uint64_t less than or equal to \p Value and is
 /// \p Skew mod \p Align. \p Align must be non-zero
 inline uint64_t alignDown(uint64_t Value, uint64_t Align, uint64_t Skew = 0) {

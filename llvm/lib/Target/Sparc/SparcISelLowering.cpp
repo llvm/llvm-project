@@ -1016,7 +1016,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
 
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
-Register SparcTargetLowering::getRegisterByName(const char* RegName, EVT VT,
+Register SparcTargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                                 const MachineFunction &MF) const {
   Register Reg = StringSwitch<unsigned>(RegName)
     .Case("i0", SP::I0).Case("i1", SP::I1).Case("i2", SP::I2).Case("i3", SP::I3)

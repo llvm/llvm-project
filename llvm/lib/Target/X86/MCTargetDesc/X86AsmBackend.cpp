@@ -29,44 +29,10 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-
-static unsigned getFixupKindSize(unsigned Kind) {
-  switch (Kind) {
-  default:
-    llvm_unreachable("invalid fixup kind!");
-  case FK_NONE:
-    return 0;
-  case FK_PCRel_1:
-  case FK_SecRel_1:
-  case FK_Data_1:
-    return 1;
-  case FK_PCRel_2:
-  case FK_SecRel_2:
-  case FK_Data_2:
-    return 2;
-  case FK_PCRel_4:
-  case X86::reloc_riprel_4byte:
-  case X86::reloc_riprel_4byte_relax:
-  case X86::reloc_riprel_4byte_relax_rex:
-  case X86::reloc_riprel_4byte_movq_load:
-  case X86::reloc_signed_4byte:
-  case X86::reloc_signed_4byte_relax:
-  case X86::reloc_global_offset_table:
-  case X86::reloc_branch_4byte_pcrel:
-  case FK_SecRel_4:
-  case FK_Data_4:
-    return 4;
-  case FK_PCRel_8:
-  case FK_SecRel_8:
-  case FK_Data_8:
-  case X86::reloc_global_offset_table8:
-    return 8;
-  }
-}
 
 namespace {
 /// A wrapper for holding a mask of the values from X86::AlignBranchBoundaryKind
@@ -113,18 +79,54 @@ cl::opt<unsigned> X86AlignBranchBoundary(
     cl::desc(
         "Control how the assembler should align branches with NOP. If the "
         "boundary's size is not 0, it should be a power of 2 and no less "
-        "than 32. Branches will be aligned within the boundary of specified "
-        "size. -x86-align-branch-boundary=0 doesn't align branches."));
+        "than 32. Branches will be aligned to prevent from being across or "
+        "against the boundary of specified size. The default value 0 does not "
+        "align branches."));
 
 cl::opt<X86AlignBranchKind, true, cl::parser<std::string>> X86AlignBranch(
     "x86-align-branch",
     cl::desc("Specify types of branches to align (plus separated list of "
-             "types). The branches's type is combination of jcc, fused, "
+             "types). The branches's types are combination of jcc, fused, "
              "jmp, call, ret, indirect."),
-    cl::value_desc("jcc(conditional jump), fused(fused conditional jump), "
-                   "jmp(unconditional jump); call(call); ret(ret), "
-                   "indirect(indirect jump)."),
+    cl::value_desc("jcc indicates conditional jumps, fused indicates fused "
+                   "conditional jumps, jmp indicates unconditional jumps, call "
+                   "indicates direct and indirect calls, ret indicates rets, "
+                   "indirect indicates indirect jumps."),
     cl::location(X86AlignBranchKindLoc));
+
+static unsigned getFixupKindSize(unsigned Kind) {
+  switch (Kind) {
+  default:
+    llvm_unreachable("invalid fixup kind!");
+  case FK_NONE:
+    return 0;
+  case FK_PCRel_1:
+  case FK_SecRel_1:
+  case FK_Data_1:
+    return 1;
+  case FK_PCRel_2:
+  case FK_SecRel_2:
+  case FK_Data_2:
+    return 2;
+  case FK_PCRel_4:
+  case X86::reloc_riprel_4byte:
+  case X86::reloc_riprel_4byte_relax:
+  case X86::reloc_riprel_4byte_relax_rex:
+  case X86::reloc_riprel_4byte_movq_load:
+  case X86::reloc_signed_4byte:
+  case X86::reloc_signed_4byte_relax:
+  case X86::reloc_global_offset_table:
+  case X86::reloc_branch_4byte_pcrel:
+  case FK_SecRel_4:
+  case FK_Data_4:
+    return 4;
+  case FK_PCRel_8:
+  case FK_SecRel_8:
+  case FK_Data_8:
+  case X86::reloc_global_offset_table8:
+    return 8;
+  }
+}
 
 class X86ELFObjectWriter : public MCELFObjectTargetWriter {
 public:
@@ -155,6 +157,7 @@ public:
     AlignBranchType = X86AlignBranchKindLoc;
   }
 
+  bool allowAutoPadding() const override;
   void alignBranchesBegin(MCObjectStreamer &OS, const MCInst &Inst) override;
   void alignBranchesEnd(MCObjectStreamer &OS, const MCInst &Inst) override;
 
@@ -410,10 +413,15 @@ static bool hasVariantSymbol(const MCInst &MI) {
   return false;
 }
 
+bool X86AsmBackend::allowAutoPadding() const {
+  return (AlignBoundary != Align::None() &&
+          AlignBranchType != X86::AlignBranchNone);
+}
+
 bool X86AsmBackend::needAlign(MCObjectStreamer &OS) const {
-  if (AlignBoundary == Align::None() ||
-      AlignBranchType == X86::AlignBranchNone)
+  if (!OS.getAllowAutoPadding())
     return false;
+  assert(allowAutoPadding() && "incorrect initialization!");
 
   MCAssembler &Assembler = OS.getAssembler();
   MCSection *Sec = OS.getCurrentSectionOnly();
@@ -422,8 +430,7 @@ bool X86AsmBackend::needAlign(MCObjectStreamer &OS) const {
     return false;
 
   // Branches only need to be aligned in 32-bit or 64-bit mode.
-  if (!(STI.getFeatureBits()[X86::Mode64Bit] ||
-        STI.getFeatureBits()[X86::Mode32Bit]))
+  if (!(STI.hasFeature(X86::Mode64Bit) || STI.hasFeature(X86::Mode32Bit)))
     return false;
 
   return true;

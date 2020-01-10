@@ -117,6 +117,10 @@ def GPU_GPUFuncOp : GPU_Op<"func", [FunctionLike, IsolatedFromAbove, Symbol]> {
   ];
 
   let extraClassDeclaration = [{
+    /// Adds a workgroup attribution of the MemRef type with the given shape and
+    /// element type.
+    Value addWorkgroupAttribution(ArrayRef<int64_t> shape, Type elementType);
+
     /// Returns `true` if the GPU function defined by this Op is a kernel, i.e.
     /// it is intended to be launched from host.
     bool isKernel() {
