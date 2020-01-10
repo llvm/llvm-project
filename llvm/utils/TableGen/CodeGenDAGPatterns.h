@@ -1195,12 +1195,6 @@ public:
     return F->second;
   }
 
-  typedef std::map<Record*, NodeXForm, LessRecordByID>::const_iterator
-          nx_iterator;
-  nx_iterator nx_begin() const { return SDNodeXForms.begin(); }
-  nx_iterator nx_end() const { return SDNodeXForms.end(); }
-
-
   const ComplexPattern &getComplexPattern(Record *R) const {
     auto F = ComplexPatterns.find(R);
     assert(F != ComplexPatterns.end() && "Unknown addressing mode!");
