@@ -3320,8 +3320,7 @@ IsInitializerListConstructorConversion(Sema &S, Expr *From, QualType ToType,
       continue;
 
     bool Usable = !Info.Constructor->isInvalidDecl() &&
-                  S.isInitListConstructor(Info.Constructor) &&
-                  (AllowExplicit || !Info.Constructor->isExplicit());
+                  S.isInitListConstructor(Info.Constructor);
     if (Usable) {
       // If the first argument is (a reference to) the target type,
       // suppress conversions.
@@ -3443,11 +3442,9 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
           continue;
 
         bool Usable = !Info.Constructor->isInvalidDecl();
-        if (ListInitializing)
-          Usable = Usable && (AllowExplicit || !Info.Constructor->isExplicit());
-        else
-          Usable = Usable &&
-                   Info.Constructor->isConvertingConstructor(AllowExplicit);
+        if (!ListInitializing)
+          Usable = Usable && Info.Constructor->isConvertingConstructor(
+                                 /*AllowExplicit*/ true);
         if (Usable) {
           bool SuppressUserConversions = !ConstructorsOnly;
           if (SuppressUserConversions && ListInitializing) {
@@ -3501,16 +3498,14 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
         else
           Conv = cast<CXXConversionDecl>(D);
 
-        if (AllowExplicit || !Conv->isExplicit()) {
-          if (ConvTemplate)
-            S.AddTemplateConversionCandidate(
-                ConvTemplate, FoundDecl, ActingContext, From, ToType,
-                CandidateSet, AllowObjCConversionOnExplicit, AllowExplicit);
-          else
-            S.AddConversionCandidate(
-                Conv, FoundDecl, ActingContext, From, ToType, CandidateSet,
-                AllowObjCConversionOnExplicit, AllowExplicit);
-        }
+        if (ConvTemplate)
+          S.AddTemplateConversionCandidate(
+              ConvTemplate, FoundDecl, ActingContext, From, ToType,
+              CandidateSet, AllowObjCConversionOnExplicit, AllowExplicit);
+        else
+          S.AddConversionCandidate(
+              Conv, FoundDecl, ActingContext, From, ToType, CandidateSet,
+              AllowObjCConversionOnExplicit, AllowExplicit);
       }
     }
   }
@@ -4542,11 +4537,6 @@ FindConversionForRefInit(Sema &S, ImplicitConversionSequence &ICS,
       Conv = cast<CXXConversionDecl>(ConvTemplate->getTemplatedDecl());
     else
       Conv = cast<CXXConversionDecl>(D);
-
-    // If this is an explicit conversion, and we're not allowed to consider
-    // explicit conversions, skip it.
-    if (!AllowExplicit && Conv->isExplicit())
-      continue;
 
     if (AllowRvalues) {
       // If we are initializing an rvalue reference, don't permit conversion
@@ -6183,6 +6173,15 @@ void Sema::AddOverloadCandidate(
   Candidate.IgnoreObjectArgument = false;
   Candidate.ExplicitCallArguments = Args.size();
 
+  // Explicit functions are not actually candidates at all if we're not
+  // allowing them in this context, but keep them around so we can point
+  // to them in diagnostics.
+  if (!AllowExplicit && ExplicitSpecifier::getFromDecl(Function).isExplicit()) {
+    Candidate.Viable = false;
+    Candidate.FailureKind = ovl_fail_explicit;
+    return;
+  }
+
   if (Function->isMultiVersion() && Function->hasAttr<TargetAttr>() &&
       !Function->getAttr<TargetAttr>()->isDefaultVersion()) {
     Candidate.Viable = false;
@@ -6313,15 +6312,6 @@ void Sema::AddOverloadCandidate(
       // argument for which there is no corresponding parameter is
       // considered to ""match the ellipsis" (C+ 13.3.3.1.3).
       Candidate.Conversions[ConvIdx].setEllipsis();
-    }
-  }
-
-  if (!AllowExplicit) {
-    ExplicitSpecifier ES = ExplicitSpecifier::getFromDecl(Function);
-    if (ES.getKind() != ExplicitSpecKind::ResolvedFalse) {
-      Candidate.Viable = false;
-      Candidate.FailureKind = ovl_fail_explicit_resolved;
-      return;
     }
   }
 
@@ -6923,6 +6913,12 @@ void Sema::AddMethodTemplateCandidate(
                      Conversions, PO);
 }
 
+/// Determine whether a given function template has a simple explicit specifier
+/// or a non-value-dependent explicit-specification that evaluates to true.
+static bool isNonDependentlyExplicit(FunctionTemplateDecl *FTD) {
+  return ExplicitSpecifier::getFromDecl(FTD->getTemplatedDecl()).isExplicit();
+}
+
 /// Add a C++ function template specialization as a candidate
 /// in the candidate set, using template argument deduction to produce
 /// an appropriate function template specialization.
@@ -6934,6 +6930,18 @@ void Sema::AddTemplateOverloadCandidate(
     OverloadCandidateParamOrder PO) {
   if (!CandidateSet.isNewCandidate(FunctionTemplate, PO))
     return;
+
+  // If the function template has a non-dependent explicit specification,
+  // exclude it now if appropriate; we are not permitted to perform deduction
+  // and substitution in this case.
+  if (!AllowExplicit && isNonDependentlyExplicit(FunctionTemplate)) {
+    OverloadCandidate &Candidate = CandidateSet.addCandidate();
+    Candidate.FoundDecl = FoundDecl;
+    Candidate.Function = FunctionTemplate->getTemplatedDecl();
+    Candidate.Viable = false;
+    Candidate.FailureKind = ovl_fail_explicit;
+    return;
+  }
 
   // C++ [over.match.funcs]p7:
   //   In each case where a candidate is a function template, candidate
@@ -7122,6 +7130,9 @@ void Sema::AddConversionCandidate(
   // Per C++ [over.match.conv]p1, [over.match.ref]p1, an explicit conversion
   // operator is only a candidate if its return type is the target type or
   // can be converted to the target type with a qualification conversion.
+  //
+  // FIXME: Include such functions in the candidate list and explain why we
+  // can't select them.
   if (Conversion->isExplicit() &&
       !isAllowableExplicitConversion(*this, ConvType, ToType,
                                      AllowObjCConversionOnExplicit))
@@ -7142,6 +7153,15 @@ void Sema::AddConversionCandidate(
   Candidate.FinalConversion.setAllToTypes(ToType);
   Candidate.Viable = true;
   Candidate.ExplicitCallArguments = 1;
+
+  // Explicit functions are not actually candidates at all if we're not
+  // allowing them in this context, but keep them around so we can point
+  // to them in diagnostics.
+  if (!AllowExplicit && Conversion->isExplicit()) {
+    Candidate.Viable = false;
+    Candidate.FailureKind = ovl_fail_explicit;
+    return;
+  }
 
   // C++ [over.match.funcs]p4:
   //   For conversion functions, the function is considered to be a member of
@@ -7267,13 +7287,6 @@ void Sema::AddConversionCandidate(
            "Can only end up with a standard conversion sequence or failure");
   }
 
-  if (!AllowExplicit && Conversion->getExplicitSpecifier().getKind() !=
-                            ExplicitSpecKind::ResolvedFalse) {
-    Candidate.Viable = false;
-    Candidate.FailureKind = ovl_fail_explicit_resolved;
-    return;
-  }
-
   if (EnableIfAttr *FailedAttr = CheckEnableIf(Conversion, None)) {
     Candidate.Viable = false;
     Candidate.FailureKind = ovl_fail_enable_if;
@@ -7303,6 +7316,18 @@ void Sema::AddTemplateConversionCandidate(
 
   if (!CandidateSet.isNewCandidate(FunctionTemplate))
     return;
+
+  // If the function template has a non-dependent explicit specification,
+  // exclude it now if appropriate; we are not permitted to perform deduction
+  // and substitution in this case.
+  if (!AllowExplicit && isNonDependentlyExplicit(FunctionTemplate)) {
+    OverloadCandidate &Candidate = CandidateSet.addCandidate();
+    Candidate.FoundDecl = FoundDecl;
+    Candidate.Function = FunctionTemplate->getTemplatedDecl();
+    Candidate.Viable = false;
+    Candidate.FailureKind = ovl_fail_explicit;
+    return;
+  }
 
   TemplateDeductionInfo Info(CandidateSet.getLocation());
   CXXConversionDecl *Specialization = nullptr;
@@ -10764,30 +10789,36 @@ static void DiagnoseFailedEnableIfAttr(Sema &S, OverloadCandidate *Cand) {
 }
 
 static void DiagnoseFailedExplicitSpec(Sema &S, OverloadCandidate *Cand) {
-  ExplicitSpecifier ES;
-  const char *DeclName;
+  ExplicitSpecifier ES = ExplicitSpecifier::getFromDecl(Cand->Function);
+  assert(ES.isExplicit() && "not an explicit candidate");
+
+  unsigned Kind;
   switch (Cand->Function->getDeclKind()) {
   case Decl::Kind::CXXConstructor:
-    ES = cast<CXXConstructorDecl>(Cand->Function)->getExplicitSpecifier();
-    DeclName = "constructor";
+    Kind = 0;
     break;
   case Decl::Kind::CXXConversion:
-    ES = cast<CXXConversionDecl>(Cand->Function)->getExplicitSpecifier();
-    DeclName = "conversion operator";
+    Kind = 1;
     break;
   case Decl::Kind::CXXDeductionGuide:
-    ES = cast<CXXDeductionGuideDecl>(Cand->Function)->getExplicitSpecifier();
-    DeclName = "deductiong guide";
+    Kind = Cand->Function->isImplicit() ? 0 : 2;
     break;
   default:
     llvm_unreachable("invalid Decl");
   }
-  assert(ES.getExpr() && "null expression should be handled before");
-  S.Diag(Cand->Function->getLocation(),
-         diag::note_ovl_candidate_explicit_forbidden)
-      << DeclName;
-  S.Diag(ES.getExpr()->getBeginLoc(),
-         diag::note_explicit_bool_resolved_to_true);
+
+  // Note the location of the first (in-class) declaration; a redeclaration
+  // (particularly an out-of-class definition) will typically lack the
+  // 'explicit' specifier.
+  // FIXME: This is probably a good thing to do for all 'candidate' notes.
+  FunctionDecl *First = Cand->Function->getFirstDecl();
+  if (FunctionDecl *Pattern = First->getTemplateInstantiationPattern())
+    First = Pattern->getFirstDecl();
+
+  S.Diag(First->getLocation(),
+         diag::note_ovl_candidate_explicit)
+      << Kind << (ES.getExpr() ? 1 : 0)
+      << (ES.getExpr() ? ES.getExpr()->getSourceRange() : SourceRange());
 }
 
 static void DiagnoseOpenCLExtensionDisabled(Sema &S, OverloadCandidate *Cand) {
@@ -10888,7 +10919,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   case ovl_fail_enable_if:
     return DiagnoseFailedEnableIfAttr(S, Cand);
 
-  case ovl_fail_explicit_resolved:
+  case ovl_fail_explicit:
     return DiagnoseFailedExplicitSpec(S, Cand);
 
   case ovl_fail_ext_disabled:
@@ -11053,6 +11084,23 @@ struct CompareOverloadCandidatesForDisplay {
       OverloadCandidateSet::CandidateSetKind CSK)
       : S(S), NumArgs(NArgs), CSK(CSK) {}
 
+  OverloadFailureKind EffectiveFailureKind(const OverloadCandidate *C) const {
+    // If there are too many or too few arguments, that's the high-order bit we
+    // want to sort by, even if the immediate failure kind was something else.
+    if (C->FailureKind == ovl_fail_too_many_arguments ||
+        C->FailureKind == ovl_fail_too_few_arguments)
+      return static_cast<OverloadFailureKind>(C->FailureKind);
+
+    if (C->Function) {
+      if (NumArgs > C->Function->getNumParams() && !C->Function->isVariadic())
+        return ovl_fail_too_many_arguments;
+      if (NumArgs < C->Function->getMinRequiredArguments())
+        return ovl_fail_too_few_arguments;
+    }
+
+    return static_cast<OverloadFailureKind>(C->FailureKind);
+  }
+
   bool operator()(const OverloadCandidate *L,
                   const OverloadCandidate *R) {
     // Fast-path this check.
@@ -11076,34 +11124,37 @@ struct CompareOverloadCandidatesForDisplay {
 
     // Criteria by which we can sort non-viable candidates:
     if (!L->Viable) {
+      OverloadFailureKind LFailureKind = EffectiveFailureKind(L);
+      OverloadFailureKind RFailureKind = EffectiveFailureKind(R);
+
       // 1. Arity mismatches come after other candidates.
-      if (L->FailureKind == ovl_fail_too_many_arguments ||
-          L->FailureKind == ovl_fail_too_few_arguments) {
-        if (R->FailureKind == ovl_fail_too_many_arguments ||
-            R->FailureKind == ovl_fail_too_few_arguments) {
+      if (LFailureKind == ovl_fail_too_many_arguments ||
+          LFailureKind == ovl_fail_too_few_arguments) {
+        if (RFailureKind == ovl_fail_too_many_arguments ||
+            RFailureKind == ovl_fail_too_few_arguments) {
           int LDist = std::abs((int)L->getNumParams() - (int)NumArgs);
           int RDist = std::abs((int)R->getNumParams() - (int)NumArgs);
           if (LDist == RDist) {
-            if (L->FailureKind == R->FailureKind)
+            if (LFailureKind == RFailureKind)
               // Sort non-surrogates before surrogates.
               return !L->IsSurrogate && R->IsSurrogate;
             // Sort candidates requiring fewer parameters than there were
             // arguments given after candidates requiring more parameters
             // than there were arguments given.
-            return L->FailureKind == ovl_fail_too_many_arguments;
+            return LFailureKind == ovl_fail_too_many_arguments;
           }
           return LDist < RDist;
         }
         return false;
       }
-      if (R->FailureKind == ovl_fail_too_many_arguments ||
-          R->FailureKind == ovl_fail_too_few_arguments)
+      if (RFailureKind == ovl_fail_too_many_arguments ||
+          RFailureKind == ovl_fail_too_few_arguments)
         return true;
 
       // 2. Bad conversions come first and are ordered by the number
       // of bad conversions and quality of good conversions.
-      if (L->FailureKind == ovl_fail_bad_conversion) {
-        if (R->FailureKind != ovl_fail_bad_conversion)
+      if (LFailureKind == ovl_fail_bad_conversion) {
+        if (RFailureKind != ovl_fail_bad_conversion)
           return true;
 
         // The conversion that can be fixed with a smaller number of changes,
@@ -11141,17 +11192,17 @@ struct CompareOverloadCandidatesForDisplay {
         if (leftBetter > 0) return true;
         if (leftBetter < 0) return false;
 
-      } else if (R->FailureKind == ovl_fail_bad_conversion)
+      } else if (RFailureKind == ovl_fail_bad_conversion)
         return false;
 
-      if (L->FailureKind == ovl_fail_bad_deduction) {
-        if (R->FailureKind != ovl_fail_bad_deduction)
+      if (LFailureKind == ovl_fail_bad_deduction) {
+        if (RFailureKind != ovl_fail_bad_deduction)
           return true;
 
         if (L->DeductionFailure.Result != R->DeductionFailure.Result)
           return RankDeductionFailure(L->DeductionFailure)
                < RankDeductionFailure(R->DeductionFailure);
-      } else if (R->FailureKind == ovl_fail_bad_deduction)
+      } else if (RFailureKind == ovl_fail_bad_deduction)
         return false;
 
       // TODO: others?
@@ -11180,7 +11231,8 @@ CompleteNonViableCandidate(Sema &S, OverloadCandidate *Cand,
   assert(!Cand->Viable);
 
   // Don't do anything on failures other than bad conversion.
-  if (Cand->FailureKind != ovl_fail_bad_conversion) return;
+  if (Cand->FailureKind != ovl_fail_bad_conversion)
+    return;
 
   // We only want the FixIts if all the arguments can be corrected.
   bool Unfixable = false;

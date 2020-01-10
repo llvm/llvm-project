@@ -55,8 +55,8 @@ template<int a>
   // expected-note@-1 {{candidate constructor}} expected-note@-1 {{candidate constructor}}
   // expected-note@-2 {{candidate constructor}} expected-note@-2 {{candidate constructor}}
   explicit(a == 0)
-C(int),
-C(double);
+C(int), // expected-note 2{{not a candidate}}
+C(double); // expected-note 2{{not a candidate}}
 };
 
 C<0> c0 = 0.0; // expected-error {{no viable conversion}}
@@ -105,7 +105,7 @@ template<bool b>
   struct A {
     // expected-note@-1+ {{candidate constructor}}
     // expected-note@-2+ {{candidate function}}
-    explicit(b) A(int, int = 0);
+    explicit(b) A(int, int = 0); // expected-note {{not a candidate}}
   // expected-note@-1+ {{explicit constructor declared here}}
 };
 
@@ -154,10 +154,9 @@ struct A {
   // expected-note@-2 {{candidate constructor}} expected-note@-2 {{candidate constructor}}
   template<typename T2>
   explicit(a ^ is_same<T1, T2>::value)
-  // expected-note@-1+ {{explicit(bool) specifier resolved to true}}
   A(T2) {}
   // expected-note@-1+ {{explicit constructor declared here}}
-  // expected-note@-2+ {{candidate constructor ignored}}
+  // expected-note@-2+ {{not a candidate}}
 };
 
 A<true, int> a0 = 0.0; // expected-error {{no viable conversion}}
@@ -196,17 +195,15 @@ struct A {
   // expected-note@-1+ {{candidate constructor}}
   template<typename T>
   explicit(enable_ifv<is_same<int, T>::value, a>::value)
-  //expected-note@-1 {{explicit(bool) specifier resolved to true}}
   A(T) {}
   // expected-note@-1+ {{substitution failure}}
-  // expected-note@-2 {{candidate constructor ignored}}
+  // expected-note@-2 {{not a candidate}}
   // expected-note@-3 {{explicit constructor declared here}}
   template<typename T, bool c = true>
   explicit(enable_ifv<is_same<bool, T>::value, a>::value)
-  //expected-note@-1 {{explicit(bool) specifier resolved to true}}
   A(T) {}
   // expected-note@-1+ {{substitution failure}}
-  // expected-note@-2 {{candidate constructor ignored}}
+  // expected-note@-2 {{not a candidate}}
   // expected-note@-3 {{explicit constructor declared here}}
 };
 
@@ -236,7 +233,7 @@ namespace conversion {
 
 template<bool a>
 struct A {
-  explicit(a) operator int ();
+  explicit(a) operator int (); // expected-note+ {{not a candidate}}
 };
 
 template<bool a>
@@ -293,10 +290,9 @@ template<bool a>
 struct A {
   template<typename T2>
   explicit(enable_ifv<is_same<B, T2>::value, a>::value)
-  // expected-note@-1+ {{explicit(bool) specifier resolved to true}}
   operator T2() { return T2(); };
   // expected-note@-1+ {{substitution failure}}
-  // expected-note@-2+ {{candidate conversion}}
+  // expected-note@-2+ {{not a candidate}}
 };
 
 A<false> A_false;
@@ -348,9 +344,8 @@ struct A {
   // expected-note@-2+ {{candidate function}}
   template<typename ... Ts>
   explicit((is_same<T, Ts>::value && ...))
-  // expected-note@-1 {{explicit(bool) specifier resolved to true}}
   A(Ts...);
-  // expected-note@-1 {{candidate constructor}}
+  // expected-note@-1 {{not a candidate}}
   // expected-note@-2 {{explicit constructor}}
 };
 
@@ -517,8 +512,8 @@ class Y { }; // expected-note+ {{candidate constructor (the implicit}}
 template<bool b>
 struct Z {
   explicit(b) operator X() const;
-  explicit(b) operator Y() const;
-  explicit(b) operator int() const;
+  explicit(b) operator Y() const; // expected-note 2{{not a candidate}}
+  explicit(b) operator int() const; // expected-note {{not a candidate}}
 };
 
 void testExplicit()
@@ -559,9 +554,7 @@ template<typename T1>
 struct C {
   template<typename T>
   explicit(!is_same<T1, T>::value)
-  // expected-note@-1+ {{explicit(bool) specifier resolved to true}}
-  operator T();
-  // expected-note@-1+ {{candidate conversion operator ignored}}
+  operator T(); // expected-note+ {{explicit conversion function is not a candidate}}
 };
 
 using Bool = C<bool>;
@@ -684,10 +677,9 @@ template<typename T1 = int, typename T2 = int>
 struct A {
   // expected-note@-1+ {{candidate template ignored}}
   explicit(!is_same<T1, T2>::value)
-  // expected-note@-1+ {{explicit(bool) specifier resolved to true}}
   A(T1 = 0, T2 = 0) {}
-  // expected-note@-1 {{explicit constructor}}
-  // expected-note@-2+ {{candidate deductiong guide ignored}}
+  // expected-note@-1 {{explicit constructor declared here}}
+  // expected-note@-2 2{{explicit constructor is not a candidate}}
 };
 
 A a0 = 0;
@@ -723,13 +715,12 @@ using size_t = decltype(sizeof(0));
 
 struct Str {// expected-note+ {{candidate constructor}}
   template <size_t N>
-  explicit(N > 7)// expected-note {{resolved to true}}
-  Str(char const (&str)[N]);
+  explicit(N > 7)
+  Str(char const (&str)[N]); // expected-note {{explicit constructor is not a candidate}}
 };
 
 template <size_t N>
 Str::Str(char const(&str)[N]) { }
-// expected-note@-1 {{candidate constructor}}
 
 Str a = "short";
 Str b = "not so short";// expected-error {{no viable conversion}}

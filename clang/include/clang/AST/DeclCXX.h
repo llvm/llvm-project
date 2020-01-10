@@ -1783,7 +1783,7 @@ public:
 };
 
 /// Store information needed for an explicit specifier.
-/// used by CXXDeductionGuideDecl, CXXConstructorDecl and CXXConversionDecl.
+/// Used by CXXDeductionGuideDecl, CXXConstructorDecl and CXXConversionDecl.
 class ExplicitSpecifier {
   llvm::PointerIntPair<Expr *, 2, ExplicitSpecKind> ExplicitSpec{
       nullptr, ExplicitSpecKind::ResolvedFalse};
@@ -1796,20 +1796,22 @@ public:
   const Expr *getExpr() const { return ExplicitSpec.getPointer(); }
   Expr *getExpr() { return ExplicitSpec.getPointer(); }
 
-  /// Return true if the ExplicitSpecifier isn't defaulted.
+  /// Determine if the declaration had an explicit specifier of any kind.
   bool isSpecified() const {
     return ExplicitSpec.getInt() != ExplicitSpecKind::ResolvedFalse ||
            ExplicitSpec.getPointer();
   }
 
-  /// Check for Equivalence of explicit specifiers.
-  /// Return True if the explicit specifier are equivalent false otherwise.
+  /// Check for equivalence of explicit specifiers.
+  /// \return true if the explicit specifier are equivalent, false otherwise.
   bool isEquivalent(const ExplicitSpecifier Other) const;
-  /// Return true if the explicit specifier is already resolved to be explicit.
+  /// Determine whether this specifier is known to correspond to an explicit
+  /// declaration. Returns false if the specifier is absent or has an
+  /// expression that is value-dependent or evaluates to false.
   bool isExplicit() const {
     return ExplicitSpec.getInt() == ExplicitSpecKind::ResolvedTrue;
   }
-  /// Return true if the ExplicitSpecifier isn't valid.
+  /// Determine if the explicit specifier is invalid.
   /// This state occurs after a substitution failures.
   bool isInvalid() const {
     return ExplicitSpec.getInt() == ExplicitSpecKind::Unresolved &&
@@ -1817,9 +1819,7 @@ public:
   }
   void setKind(ExplicitSpecKind Kind) { ExplicitSpec.setInt(Kind); }
   void setExpr(Expr *E) { ExplicitSpec.setPointer(E); }
-  // getFromDecl - retrieve the explicit specifier in the given declaration.
-  // if the given declaration has no explicit. the returned explicit specifier
-  // is defaulted. .isSpecified() will be false.
+  // Retrieve the explicit specifier in the given declaration, if any.
   static ExplicitSpecifier getFromDecl(FunctionDecl *Function);
   static const ExplicitSpecifier getFromDecl(const FunctionDecl *Function) {
     return getFromDecl(const_cast<FunctionDecl *>(Function));
