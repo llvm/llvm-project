@@ -125,7 +125,7 @@
 # DEBUG-NEXT: .. type index coverage check SKIPPED: user-defined predicate detected
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: user-defined predicate detected
 
-# DEBUG-NEXT: G_READCYCLECOUNTER (opcode 61): 1 type index, 0 imm indices
+# DEBUG-NEXT: G_READCYCLECOUNTER (opcode {{[0-9]+}}): 1 type index, 0 imm indices
 # DEBUG-NEXT: .. type index coverage check SKIPPED: no rules defined
 # DEBUG-NEXT: .. imm index coverage check SKIPPED: no rules defined
 
