@@ -77,10 +77,6 @@ public:
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                              RegScavenger *RS) const override;
 
-  void
-  processFunctionBeforeFrameIndicesReplaced(MachineFunction &MF,
-                                            RegScavenger *RS) const override;
-
   unsigned getWinEHParentFrameOffset(const MachineFunction &MF) const override;
 
   unsigned getWinEHFuncletFrameSize(const MachineFunction &MF) const;
@@ -112,9 +108,6 @@ private:
                                       int &MinCSFrameIndex,
                                       int &MaxCSFrameIndex) const;
   bool shouldAuthenticateLR(const MachineFunction &MF) const;
-
-  bool shouldCombineCSRLocalStackBumpInEpilogue(MachineBasicBlock &MBB,
-                                                unsigned StackBumpBytes) const;
 };
 
 } // End llvm namespace
