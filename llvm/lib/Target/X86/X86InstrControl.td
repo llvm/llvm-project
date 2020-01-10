@@ -220,12 +220,12 @@ let isCall = 1 in
   // registers are added manually.
   let Uses = [ESP, SSP] in {
     def CALLpcrel32 : Ii32PCRel<0xE8, RawFrm,
-                           (outs), (ins i32imm_pcrel:$dst),
+                           (outs), (ins i32imm_brtarget:$dst),
                            "call{l}\t$dst", []>, OpSize32,
                       Requires<[Not64BitMode]>, Sched<[WriteJump]>;
     let hasSideEffects = 0 in
       def CALLpcrel16 : Ii16PCRel<0xE8, RawFrm,
-                             (outs), (ins i16imm_pcrel:$dst),
+                             (outs), (ins i16imm_brtarget:$dst),
                              "call{w}\t$dst", []>, OpSize16,
                         Sched<[WriteJump]>;
     def CALL16r     : I<0xFF, MRM2r, (outs), (ins GR16:$dst),
@@ -285,7 +285,7 @@ let isCall = 1 in
 // Tail call stuff.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     isCodeGenOnly = 1, Uses = [ESP, SSP] in {
-  def TCRETURNdi : PseudoI<(outs), (ins i32imm_pcrel:$dst, i32imm:$offset),
+  def TCRETURNdi : PseudoI<(outs), (ins i32imm_brtarget:$dst, i32imm:$offset),
                            []>, Sched<[WriteJump]>, NotMemoryFoldable;
   def TCRETURNri : PseudoI<(outs), (ins ptr_rc_tailcall:$dst, i32imm:$offset),
                            []>, Sched<[WriteJump]>, NotMemoryFoldable;
@@ -293,7 +293,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
   def TCRETURNmi : PseudoI<(outs), (ins i32mem_TC:$dst, i32imm:$offset),
                            []>, Sched<[WriteJumpLd]>;
 
-  def TAILJMPd : PseudoI<(outs), (ins i32imm_pcrel:$dst),
+  def TAILJMPd : PseudoI<(outs), (ins i32imm_brtarget:$dst),
                          []>, Sched<[WriteJump]>;
 
   def TAILJMPr : PseudoI<(outs), (ins ptr_rc_tailcall:$dst),
@@ -309,10 +309,11 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBranch = 1,
     isCodeGenOnly = 1, SchedRW = [WriteJump] in
   let Uses = [ESP, EFLAGS, SSP] in {
   def TCRETURNdicc : PseudoI<(outs),
-                     (ins i32imm_pcrel:$dst, i32imm:$offset, i32imm:$cond), []>;
+                     (ins i32imm_brtarget:$dst, i32imm:$offset, i32imm:$cond),
+                     []>;
 
   // This gets substituted to a conditional jump instruction in MC lowering.
-  def TAILJMPd_CC : PseudoI<(outs), (ins i32imm_pcrel:$dst, i32imm:$cond), []>;
+  def TAILJMPd_CC : PseudoI<(outs), (ins i32imm_brtarget:$dst, i32imm:$cond), []>;
 }
 
 
@@ -328,7 +329,7 @@ let isCall = 1, Uses = [RSP, SSP], SchedRW = [WriteJump] in {
   // that the offset between an arbitrary immediate and the call will fit in
   // the 32-bit pcrel field that we have.
   def CALL64pcrel32 : Ii32PCRel<0xE8, RawFrm,
-                        (outs), (ins i64i32imm_pcrel:$dst),
+                        (outs), (ins i64i32imm_brtarget:$dst),
                         "call{q}\t$dst", []>, OpSize32,
                       Requires<[In64BitMode]>;
   def CALL64r       : I<0xFF, MRM2r, (outs), (ins GR64:$dst),
@@ -357,7 +358,7 @@ let isCall = 1, Uses = [RSP, SSP], SchedRW = [WriteJump] in {
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     isCodeGenOnly = 1, Uses = [RSP, SSP] in {
   def TCRETURNdi64   : PseudoI<(outs),
-                               (ins i64i32imm_pcrel:$dst, i32imm:$offset),
+                               (ins i64i32imm_brtarget:$dst, i32imm:$offset),
                                []>, Sched<[WriteJump]>;
   def TCRETURNri64   : PseudoI<(outs),
                                (ins ptr_rc_tailcall:$dst, i32imm:$offset),
@@ -367,7 +368,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
                                (ins i64mem_TC:$dst, i32imm:$offset),
                                []>, Sched<[WriteJumpLd]>, NotMemoryFoldable;
 
-  def TAILJMPd64 : PseudoI<(outs), (ins i64i32imm_pcrel:$dst),
+  def TAILJMPd64 : PseudoI<(outs), (ins i64i32imm_brtarget:$dst),
                            []>, Sched<[WriteJump]>;
 
   def TAILJMPr64 : PseudoI<(outs), (ins ptr_rc_tailcall:$dst),
@@ -415,10 +416,10 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBranch = 1,
     isCodeGenOnly = 1, SchedRW = [WriteJump] in
   let Uses = [RSP, EFLAGS, SSP] in {
   def TCRETURNdi64cc : PseudoI<(outs),
-                           (ins i64i32imm_pcrel:$dst, i32imm:$offset,
+                           (ins i64i32imm_brtarget:$dst, i32imm:$offset,
                             i32imm:$cond), []>;
 
   // This gets substituted to a conditional jump instruction in MC lowering.
   def TAILJMPd64_CC : PseudoI<(outs),
-                              (ins i64i32imm_pcrel:$dst, i32imm:$cond), []>;
+                              (ins i64i32imm_brtarget:$dst, i32imm:$cond), []>;
 }
