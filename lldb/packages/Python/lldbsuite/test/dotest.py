@@ -318,17 +318,17 @@ def parseOptionsAndInitTestdirs():
     else:
         configuration.arch = platform_machine
 
-    if args.categoriesList:
-        configuration.categoriesList = set(
+    if args.categories_list:
+        configuration.categories_list = set(
             test_categories.validate(
-                args.categoriesList, False))
-        configuration.useCategories = True
+                args.categories_list, False))
+        configuration.use_categories = True
     else:
-        configuration.categoriesList = []
+        configuration.categories_list = []
 
-    if args.skipCategories:
-        configuration.skipCategories += test_categories.validate(
-            args.skipCategories, False)
+    if args.skip_categories:
+        configuration.skip_categories += test_categories.validate(
+            args.skip_categories, False)
 
     if args.E:
         os.environ['CFLAGS_EXTRAS'] = args.E
@@ -352,7 +352,7 @@ def parseOptionsAndInitTestdirs():
         configuration.filters.extend(args.f)
 
     if args.framework:
-        configuration.lldbFrameworkPath = args.framework
+        configuration.lldb_framework_path = args.framework
 
     if args.executable:
         # lldb executable is passed explicitly
@@ -565,21 +565,21 @@ def setupSysPath():
         if not configuration.shouldSkipBecauseOfCategories(["lldb-vscode"]):
             print(
                 "The 'lldb-vscode' executable cannot be located.  The lldb-vscode tests can not be run as a result.")
-            configuration.skipCategories.append("lldb-vscode")
+            configuration.skip_categories.append("lldb-vscode")
 
     lldbPythonDir = None  # The directory that contains 'lldb/__init__.py'
-    if not configuration.lldbFrameworkPath and os.path.exists(os.path.join(lldbLibDir, "LLDB.framework")):
-        configuration.lldbFrameworkPath = os.path.join(lldbLibDir, "LLDB.framework")
-    if configuration.lldbFrameworkPath:
-        lldbtest_config.lldbFrameworkPath = configuration.lldbFrameworkPath
+    if not configuration.lldb_framework_path and os.path.exists(os.path.join(lldbLibDir, "LLDB.framework")):
+        configuration.lldb_framework_path = os.path.join(lldbLibDir, "LLDB.framework")
+    if configuration.lldb_framework_path:
+        lldbtest_config.lldb_framework_path = configuration.lldb_framework_path
         candidatePath = os.path.join(
-            configuration.lldbFrameworkPath, 'Resources', 'Python')
+            configuration.lldb_framework_path, 'Resources', 'Python')
         if os.path.isfile(os.path.join(candidatePath, 'lldb/__init__.py')):
             lldbPythonDir = candidatePath
         if not lldbPythonDir:
             print(
                 'Resources/Python/lldb/__init__.py was not found in ' +
-                configuration.lldbFrameworkPath)
+                configuration.lldb_framework_path)
             sys.exit(-1)
     else:
         # If our lldb supports the -P option, use it to find the python path:
@@ -867,10 +867,10 @@ def checkLibcxxSupport():
     result, reason = canRunLibcxxTests()
     if result:
         return # libc++ supported
-    if "libc++" in configuration.categoriesList:
+    if "libc++" in configuration.categories_list:
         return # libc++ category explicitly requested, let it run.
     print("Libc++ tests will not be run because: " + reason)
-    configuration.skipCategories.append("libc++")
+    configuration.skip_categories.append("libc++")
 
 def canRunLibstdcxxTests():
     from lldbsuite.test import lldbplatformutil
@@ -886,10 +886,10 @@ def checkLibstdcxxSupport():
     result, reason = canRunLibstdcxxTests()
     if result:
         return # libstdcxx supported
-    if "libstdcxx" in configuration.categoriesList:
+    if "libstdcxx" in configuration.categories_list:
         return # libstdcxx category explicitly requested, let it run.
     print("libstdcxx tests will not be run because: " + reason)
-    configuration.skipCategories.append("libstdcxx")
+    configuration.skip_categories.append("libstdcxx")
 
 def canRunWatchpointTests():
     from lldbsuite.test import lldbplatformutil
@@ -912,10 +912,10 @@ def checkWatchpointSupport():
     result, reason = canRunWatchpointTests()
     if result:
         return # watchpoints supported
-    if "watchpoint" in configuration.categoriesList:
+    if "watchpoint" in configuration.categories_list:
         return # watchpoint category explicitly requested, let it run.
     print("watchpoint tests will not be run because: " + reason)
-    configuration.skipCategories.append("watchpoint")
+    configuration.skip_categories.append("watchpoint")
 
 def checkDebugInfoSupport():
     import lldb
@@ -924,11 +924,11 @@ def checkDebugInfoSupport():
     compiler = configuration.compiler
     skipped = []
     for cat in test_categories.debug_info_categories:
-        if cat in configuration.categoriesList:
+        if cat in configuration.categories_list:
             continue # Category explicitly requested, let it run.
         if test_categories.is_supported_on_platform(cat, platform, compiler):
             continue
-        configuration.skipCategories.append(cat)
+        configuration.skip_categories.append(cat)
         skipped.append(cat)
     if skipped:
         print("Skipping following debug info categories:", skipped)
@@ -1125,13 +1125,13 @@ def run_suite():
             " can be found in directory '%s'\n" %
             configuration.sdir_name)
 
-    if configuration.useCategories and len(
-            configuration.failuresPerCategory) > 0:
+    if configuration.use_categories and len(
+            configuration.failures_per_category) > 0:
         sys.stderr.write("Failures per category:\n")
-        for category in configuration.failuresPerCategory:
+        for category in configuration.failures_per_category:
             sys.stderr.write(
                 "%s - %d\n" %
-                (category, configuration.failuresPerCategory[category]))
+                (category, configuration.failures_per_category[category]))
 
     # Exiting.
     exitTestSuite(configuration.failed)

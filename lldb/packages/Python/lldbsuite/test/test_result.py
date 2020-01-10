@@ -258,14 +258,14 @@ class LLDBTestResult(unittest2.TextTestResult):
         self.stream.write(
             "FAIL: LLDB (%s) :: %s\n" %
             (self._config_string(test), str(test)))
-        if configuration.useCategories:
+        if configuration.use_categories:
             test_categories = self.getCategoriesForTest(test)
             for category in test_categories:
-                if category in configuration.failuresPerCategory:
-                    configuration.failuresPerCategory[
-                        category] = configuration.failuresPerCategory[category] + 1
+                if category in configuration.failures_per_category:
+                    configuration.failures_per_category[
+                        category] = configuration.failures_per_category[category] + 1
                 else:
-                    configuration.failuresPerCategory[category] = 1
+                    configuration.failures_per_category[category] = 1
         if self.results_formatter:
             self.results_formatter.handle_event(
                 EventBuilder.event_for_failure(test, err))
