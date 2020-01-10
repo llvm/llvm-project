@@ -15,17 +15,14 @@ import os
 import platform
 import sys
 
-# LLDB modules:
-import use_lldb_suite
 
-
-def prepare_binding_for_language(scripts_dir, script_lang, options):
+def prepare_binding_for_language(bindings_dir, script_lang, options):
     """Prepares the binding for a specific language.
 
-    @param scripts_dir the full path to the scripts source directory.
+    @param bindings_dir the full path to the bindings source directory.
     @param script_lang the name of the script language.  Should be a child
-    directory within the scripts dir, and should contain a
-    prepare_scripts_{script_lang}.py script file in it.
+    directory within the bindings dir, and should contain a
+    prepare_bindings_{script_lang}.py script file in it.
     @param options the dictionary of parsed command line options.
 
     There is no return value.  If it returns, the process succeeded; otherwise,
@@ -33,7 +30,7 @@ def prepare_binding_for_language(scripts_dir, script_lang, options):
     """
     # Ensure the language-specific prepare module exists.
     script_name = "prepare_binding_{}.py".format(script_lang)
-    lang_path = os.path.join(scripts_dir, script_lang)
+    lang_path = os.path.join(bindings_dir, script_lang)
     script_path = os.path.join(lang_path, script_name)
     if not os.path.exists(script_path):
         logging.error(
@@ -63,18 +60,18 @@ def prepare_all_bindings(options):
     @return the exit value for the program. 0 is success, all othes
     indicate some kind of failure.
     """
-    # Check for the existence of the SWIG scripts folder
-    scripts_dir = os.path.join(options.src_root, "scripts")
-    if not os.path.exists(scripts_dir):
-        logging.error("failed to find scripts dir: '%s'", scripts_dir)
+    # Check for the existence of the SWIG bindings folder
+    bindings_dir = os.path.join(options.src_root, "bindings")
+    if not os.path.exists(bindings_dir):
+        logging.error("failed to find bindings dir: '%s'", bindings_dir)
         sys.exit(-8)
 
-    child_dirs = ["Python"]
+    child_dirs = ["python"]
 
     # Iterate script directory find any script language directories
     for script_lang in child_dirs:
         logging.info("executing language script for: '%s'", script_lang)
-        prepare_binding_for_language(scripts_dir, script_lang, options)
+        prepare_binding_for_language(bindings_dir, script_lang, options)
 
 
 def process_args(args):
@@ -273,7 +270,7 @@ def main(args):
 
     # Check if the swig file exists.
     swig_path = os.path.normcase(
-        os.path.join(options.src_root, "scripts", "lldb.swig"))
+        os.path.join(options.src_root, "bindings", "python.swig"))
     if not os.path.isfile(swig_path):
         logging.error("swig file not found at '%s'", swig_path)
         sys.exit(-3)
