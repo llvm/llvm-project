@@ -131,7 +131,7 @@ body:             |
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0.bb:
   ; CHECK:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
-  ; CHECK:   liveins: $r0, $r2, $r1, $r3, $lr
+  ; CHECK:   liveins: $r0, $r1, $r2, $r3, $lr
   ; CHECK:   frame-setup tPUSH 14, $noreg, $r7, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
@@ -142,14 +142,14 @@ body:             |
   ; CHECK:   tCBZ $r2, %bb.3
   ; CHECK: bb.1.bb3:
   ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   liveins: $r0, $r2, $r1, $r3
+  ; CHECK:   liveins: $r0, $r1, $r2, $r3
   ; CHECK:   $vpr = VMSR_P0 killed $r3, 14, $noreg
   ; CHECK:   VSTR_P0_off killed renamable $vpr, $sp, 0, 14, $noreg :: (store 4 into %stack.0)
   ; CHECK:   $r3 = tMOVr $r0, 14, $noreg
-  ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r2
+  ; CHECK:   $lr = MVE_DLSTP_32 renamable $r2
   ; CHECK: bb.2.bb9:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
-  ; CHECK:   liveins: $lr, $r3, $r1, $r0
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
   ; CHECK:   renamable $vpr = VLDR_P0_off $sp, 0, 14, $noreg :: (load 4 from %stack.0)
   ; CHECK:   MVE_VPST 4, implicit $vpr
   ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv24, align 4, !tbaa !3)
@@ -158,7 +158,7 @@ body:             |
   ; CHECK:   MVE_VPST 8, implicit $vpr
   ; CHECK:   MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr :: (store 16 into %ir.lsr.iv1, align 4, !tbaa !3)
   ; CHECK:   $r0 = tMOVr $r3, 14, $noreg
-  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
+  ; CHECK:   $lr = MVE_LETP renamable $lr, %bb.2
   ; CHECK: bb.3.bb27:
   ; CHECK:   $sp = tADDspi $sp, 1, 14, $noreg
   ; CHECK:   tPOP_RET 14, $noreg, def $r7, def $pc
