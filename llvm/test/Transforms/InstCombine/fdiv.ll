@@ -192,12 +192,12 @@ define float @div_with_div_denominator_extra_use(float %x, float %y, float %z) {
 define float @div_with_div_denominator_with_one_as_numerator_extra_use(float %x, float %y, float %z) {
 ; CHECK-LABEL: @div_with_div_denominator_with_one_as_numerator_extra_use(
 ; CHECK-NEXT:    [[DIV1:%.*]] = fdiv float 1.000000e+00, [[Y:%.*]]
-; CHECK-NEXT:    [[DIV2:%.*]] = fdiv fast float [[Z:%.*]], [[DIV1]]
+; CHECK-NEXT:    [[DIV2:%.*]] = fdiv reassoc arcp float [[Z:%.*]], [[DIV1]]
 ; CHECK-NEXT:    call void @use_f32(float [[DIV1]])
 ; CHECK-NEXT:    ret float [[DIV2]]
 ;
   %div1 = fdiv float 1.0, %y
-  %div2 = fdiv fast float %z, %div1
+  %div2 = fdiv reassoc arcp float %z, %div1
   call void @use_f32(float %div1)
   ret float %div2
 }
