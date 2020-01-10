@@ -93,6 +93,9 @@ static lto::Config createConfig() {
   c.MAttrs = getMAttrs();
   c.CGOptLevel = args::getCGOptLevel(config->ltoo);
 
+  c.PTO.LoopVectorization = c.OptLevel > 1;
+  c.PTO.SLPVectorization = c.OptLevel > 1;
+
   // Set up a custom pipeline if we've been asked to.
   c.OptPipeline = config->ltoNewPmPasses;
   c.AAPipeline = config->ltoAAPipeline;

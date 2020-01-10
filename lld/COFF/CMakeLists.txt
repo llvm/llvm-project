@@ -37,6 +37,7 @@ add_lld_library(lldCOFF
   MC
   Object
   Option
+  Passes
   Support
   WindowsManifest
 
