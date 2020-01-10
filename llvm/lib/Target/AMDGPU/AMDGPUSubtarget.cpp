@@ -716,6 +716,31 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   return MaxNumVGPRs;
 }
 
+void GCNSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
+                                         SDep &Dep) const {
+  if (Dep.getKind() != SDep::Kind::Data || !Dep.getReg() ||
+      !Src->isInstr() || !Dst->isInstr())
+    return;
+
+  MachineInstr *SrcI = Src->getInstr();
+  MachineInstr *DstI = Dst->getInstr();
+
+  if (SrcI->isBundle()) {
+    const SIRegisterInfo *TRI = getRegisterInfo();
+    auto Reg = Dep.getReg();
+    MachineBasicBlock::const_instr_iterator I(SrcI->getIterator());
+    MachineBasicBlock::const_instr_iterator E(SrcI->getParent()->instr_end());
+    for (++I; I != E && I->isBundledWithPred(); ++I) {
+      if (!I->modifiesRegister(Reg, TRI))
+        continue;
+      Dep.setLatency(InstrInfo.getInstrLatency(getInstrItineraryData(), *I));
+      break;
+    }
+  } else if (DstI->isBundle()) {
+    Dep.setLatency(InstrInfo.getInstrLatency(getInstrItineraryData(), *SrcI));
+  }
+}
+
 namespace {
 struct MemOpClusterMutation : ScheduleDAGMutation {
   const SIInstrInfo *TII;
@@ -760,45 +785,6 @@ struct MemOpClusterMutation : ScheduleDAGMutation {
       }
 
       SUa = &SU;
-    }
-  }
-};
-
-struct FixBundleLatencyMutation : ScheduleDAGMutation {
-  const SIInstrInfo *TII;
-
-  const TargetSchedModel *TSchedModel;
-
-  FixBundleLatencyMutation(const SIInstrInfo *tii) : TII(tii) {}
-
-  unsigned computeLatency(const MachineInstr &MI, unsigned Reg) const {
-    const SIRegisterInfo &TRI = TII->getRegisterInfo();
-    MachineBasicBlock::const_instr_iterator I(MI.getIterator());
-    MachineBasicBlock::const_instr_iterator E(MI.getParent()->instr_end());
-    unsigned Lat = 0;
-    for (++I; I != E && I->isBundledWithPred(); ++I) {
-      if (!I->modifiesRegister(Reg, &TRI))
-        continue;
-      Lat = TSchedModel->computeInstrLatency(&*I);
-      break;
-    }
-    return Lat;
-  }
-
-  void apply(ScheduleDAGInstrs *DAGInstrs) override {
-    ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
-    TSchedModel = DAGInstrs->getSchedModel();
-    if (!TSchedModel || DAG->SUnits.empty())
-      return;
-
-    for (SUnit &SU : DAG->SUnits) {
-      if (!SU.isInstr() || !SU.getInstr()->isBundle())
-        continue;
-      for (SDep &Dep : SU.Succs) {
-        if (Dep.getKind() == SDep::Kind::Data && Dep.getReg())
-          if (unsigned Lat = computeLatency(*SU.getInstr(), Dep.getReg()))
-            Dep.setLatency(Lat);
-      }
     }
   }
 };
@@ -929,7 +915,6 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
 
 void GCNSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
-  Mutations.push_back(std::make_unique<FixBundleLatencyMutation>(&InstrInfo));
   Mutations.push_back(std::make_unique<MemOpClusterMutation>(&InstrInfo));
   Mutations.push_back(std::make_unique<FillMFMAShadowMutation>(&InstrInfo));
 }
