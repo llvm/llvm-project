@@ -1042,6 +1042,10 @@ public:
                                       int FrameIndex,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
+
+  unsigned getInstrLatency(const InstrItineraryData *ItinData,
+                           const MachineInstr &MI,
+                           unsigned *PredCost) const override;
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class

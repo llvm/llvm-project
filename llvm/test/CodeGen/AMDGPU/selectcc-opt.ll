@@ -69,7 +69,7 @@ entry:
 
 ; FUNC-LABEL: {{^}}selectcc_bool:
 ; SI: v_cmp_ne_u32
-; SI-NEXT: v_cndmask_b32_e64
+; SI: v_cndmask_b32_e64
 ; SI-NOT: cmp
 ; SI-NOT: cndmask
 define amdgpu_kernel void @selectcc_bool(i32 addrspace(1)* %out, i32 %a, i32 %b) nounwind {

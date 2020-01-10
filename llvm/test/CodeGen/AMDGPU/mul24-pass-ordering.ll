@@ -199,10 +199,10 @@ define void @slsr1_1(i32 %b.arg, i32 %s.arg) #0 {
 ; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s34 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v34, off, s[0:3], s34 ; 4-byte Folded Spill
 ; GFX9-NEXT:    v_writelane_b32 v35, s36, 0
-; GFX9-NEXT:    v_writelane_b32 v35, s37, 1
 ; GFX9-NEXT:    s_getpc_b64 s[4:5]
 ; GFX9-NEXT:    s_add_u32 s4, s4, foo@gotpcrel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s5, s5, foo@gotpcrel32@hi+4
+; GFX9-NEXT:    v_writelane_b32 v35, s37, 1
 ; GFX9-NEXT:    s_load_dwordx2 s[36:37], s[4:5], 0x0
 ; GFX9-NEXT:    v_mov_b32_e32 v32, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v33, v0
