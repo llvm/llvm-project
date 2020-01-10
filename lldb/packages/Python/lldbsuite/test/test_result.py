@@ -164,6 +164,10 @@ class LLDBTestResult(unittest2.TextTestResult):
                     return True
         return False
 
+    def checkCategoryExclusion(self, exclusion_list, test):
+        return not set(exclusion_list).isdisjoint(
+            self.getCategoriesForTest(test))
+
     def startTest(self, test):
         if configuration.shouldSkipBecauseOfCategories(
                 self.getCategoriesForTest(test)):
@@ -182,8 +186,10 @@ class LLDBTestResult(unittest2.TextTestResult):
                 EventBuilder.event_for_start(test))
 
     def addSuccess(self, test):
-        if self.checkExclusion(
-                configuration.xfail_tests, test.id()):
+        if (self.checkExclusion(
+                configuration.xfail_tests, test.id()) or
+            self.checkCategoryExclusion(
+                configuration.xfail_categories, test)):
             self.addUnexpectedSuccess(test, None)
             return
 
@@ -245,8 +251,10 @@ class LLDBTestResult(unittest2.TextTestResult):
                     test, err))
 
     def addFailure(self, test, err):
-        if self.checkExclusion(
-                configuration.xfail_tests, test.id()):
+        if (self.checkExclusion(
+                configuration.xfail_tests, test.id()) or
+            self.checkCategoryExclusion(
+                configuration.xfail_categories, test)):
             self.addExpectedFailure(test, err, None)
             return
 

@@ -30,6 +30,8 @@ categories_list = None
 use_categories = False
 # Categories we want to skip
 skip_categories = ["darwin-log"]
+# Categories we expect to fail
+xfail_categories = []
 # use this to track per-category failures
 failures_per_category = {}
 
