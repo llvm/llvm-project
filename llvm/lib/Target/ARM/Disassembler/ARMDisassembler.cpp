@@ -204,9 +204,6 @@ static DecodeStatus DecoderGPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
-static DecodeStatus DecodeGPRspRegisterClass(MCInst &Inst, unsigned RegNo,
-                                             uint64_t Address,
-                                             const void *Decoder);
 static DecodeStatus DecodeHPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeSPRRegisterClass(MCInst &Inst, unsigned RegNo,
@@ -569,9 +566,6 @@ static DecodeStatus DecodeMVEVPNOT(MCInst &Inst, unsigned Insn,
 static DecodeStatus DecodeMVEOverlappingLongShift(MCInst &Inst, unsigned Insn,
                                                   uint64_t Address,
                                                   const void *Decoder);
-static DecodeStatus DecodeT2AddSubSPImm(MCInst &Inst, unsigned Insn,
-                                        uint64_t Address, const void *Decoder);
-
 #include "ARMGenDisassemblerTables.inc"
 
 static MCDisassembler *createARMDisassembler(const Target &T,
@@ -1235,17 +1229,6 @@ static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, unsigned RegNo,
   unsigned RegisterPair = GPRPairDecoderTable[RegNo/2];
   Inst.addOperand(MCOperand::createReg(RegisterPair));
   return S;
-}
-
-static DecodeStatus DecodeGPRspRegisterClass(MCInst &Inst, unsigned RegNo,
-                                             uint64_t Address,
-                                             const void *Decoder) {
-  if (RegNo != 13)
-    return MCDisassembler::Fail;
-
-  unsigned Register = GPRDecoderTable[RegNo];
-  Inst.addOperand(MCOperand::createReg(Register));
-  return MCDisassembler::Success;
 }
 
 static DecodeStatus DecodetcGPRRegisterClass(MCInst &Inst, unsigned RegNo,
@@ -5605,25 +5588,14 @@ static DecodeStatus DecodeT2Adr(MCInst &Inst, uint32_t Insn,
   unsigned sign1 = fieldFromInstruction(Insn, 21, 1);
   unsigned sign2 = fieldFromInstruction(Insn, 23, 1);
   if (sign1 != sign2) return MCDisassembler::Fail;
-  const unsigned Rd = fieldFromInstruction(Insn, 8, 4);
-  assert(Inst.getNumOperands() == 0 && "We should receive an empty Inst");
-  DecodeStatus S = DecoderGPRRegisterClass(Inst, Rd, Address, Decoder);
 
   unsigned Val = fieldFromInstruction(Insn, 0, 8);
   Val |= fieldFromInstruction(Insn, 12, 3) << 8;
   Val |= fieldFromInstruction(Insn, 26, 1) << 11;
-  // If sign, then it is decreasing the address.
-  if (sign1) {
-    // Following ARMv7 Architecture Manual, when the offset
-    // is zero, it is decoded as a subw, not as a adr.w
-    if (!Val) {
-      Inst.setOpcode(ARM::t2SUBri12);
-      Inst.addOperand(MCOperand::createReg(ARM::PC));
-    } else
-      Val = -Val;
-  }
-  Inst.addOperand(MCOperand::createImm(Val));
-  return S;
+  Val |= sign1 << 12;
+  Inst.addOperand(MCOperand::createImm(SignExtend32<13>(Val)));
+
+  return MCDisassembler::Success;
 }
 
 static DecodeStatus DecodeT2ShifterImmOperand(MCInst &Inst, uint32_t Val,
@@ -6622,41 +6594,4 @@ static DecodeStatus DecodeMVEVPNOT(MCInst &Inst, unsigned Insn, uint64_t Address
   Inst.addOperand(MCOperand::createReg(ARM::VPR));
   Inst.addOperand(MCOperand::createReg(ARM::VPR));
   return S;
-}
-
-static DecodeStatus DecodeT2AddSubSPImm(MCInst &Inst, unsigned Insn,
-                                        uint64_t Address, const void *Decoder) {
-  const unsigned Rd = fieldFromInstruction(Insn, 8, 4);
-  const unsigned Rn = fieldFromInstruction(Insn, 16, 4);
-  const unsigned Imm12 = fieldFromInstruction(Insn, 26, 1) << 11 |
-                         fieldFromInstruction(Insn, 12, 3) << 8 |
-                         fieldFromInstruction(Insn, 0, 8);
-  const unsigned TypeT3 = fieldFromInstruction(Insn, 25, 1);
-  unsigned sign1 = fieldFromInstruction(Insn, 21, 1);
-  unsigned sign2 = fieldFromInstruction(Insn, 23, 1);
-  unsigned S = fieldFromInstruction(Insn, 20, 1);
-  if (sign1 != sign2)
-    return MCDisassembler::Fail;
-
-  // T3 does a zext of imm12, where T2 does a ThumbExpandImm (T2SOImm)
-  DecodeStatus DS = MCDisassembler::Success;
-  if ((!Check(DS,
-              DecodeGPRspRegisterClass(Inst, Rd, Address, Decoder))) || // dst
-      (!Check(DS, DecodeGPRspRegisterClass(Inst, Rn, Address, Decoder))))
-    return MCDisassembler::Fail;
-  if (TypeT3) {
-    Inst.setOpcode(sign1 ? ARM::t2SUBspImm12 : ARM::t2ADDspImm12);
-    S = 0;
-    Inst.addOperand(MCOperand::createImm(Imm12)); // zext imm12
-  } else {
-    Inst.setOpcode(sign1 ? ARM::t2SUBspImm : ARM::t2ADDspImm);
-    if (!Check(DS, DecodeT2SOImm(Inst, Imm12, Address, Decoder))) // imm12
-      return MCDisassembler::Fail;
-  }
-  if (!Check(DS, DecodeCCOutOperand(Inst, S, Address, Decoder))) // cc_out
-    return MCDisassembler::Fail;
-
-  Inst.addOperand(MCOperand::createReg(0)); // pred
-
-  return DS;
 }

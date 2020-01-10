@@ -599,36 +599,17 @@ struct RangeData : public Range<B, S> {
   RangeData(B base, S size) : Range<B, S>(base, size), data() {}
 
   RangeData(B base, S size, DataType d) : Range<B, S>(base, size), data(d) {}
-
-  bool operator<(const RangeData &rhs) const {
-    if (this->base == rhs.base) {
-      if (this->size == rhs.size)
-        return this->data < rhs.data;
-      else
-        return this->size < rhs.size;
-    }
-    return this->base < rhs.base;
-  }
-
-  bool operator==(const RangeData &rhs) const {
-    return this->GetRangeBase() == rhs.GetRangeBase() &&
-           this->GetByteSize() == rhs.GetByteSize() && this->data == rhs.data;
-  }
-
-  bool operator!=(const RangeData &rhs) const {
-    return this->GetRangeBase() != rhs.GetRangeBase() ||
-           this->GetByteSize() != rhs.GetByteSize() || this->data != rhs.data;
-  }
 };
 
-template <typename B, typename S, typename T, unsigned N = 0>
+template <typename B, typename S, typename T, unsigned N = 0,
+          class Compare = std::less<T>>
 class RangeDataVector {
 public:
   typedef lldb_private::Range<B, S> Range;
   typedef RangeData<B, S, T> Entry;
   typedef llvm::SmallVector<Entry, N> Collection;
 
-  RangeDataVector() = default;
+  RangeDataVector(Compare compare = Compare()) : m_compare(compare) {}
 
   ~RangeDataVector() = default;
 
@@ -636,7 +617,14 @@ public:
 
   void Sort() {
     if (m_entries.size() > 1)
-      std::stable_sort(m_entries.begin(), m_entries.end());
+      std::stable_sort(m_entries.begin(), m_entries.end(),
+                       [&compare = m_compare](const Entry &a, const Entry &b) {
+                         if (a.base != b.base)
+                           return a.base < b.base;
+                         if (a.size != b.size)
+                           return a.size < b.size;
+                         return compare(a.data, b.data);
+                       });
   }
 
 #ifdef ASSERT_RANGEMAP_ARE_SORTED
@@ -817,6 +805,7 @@ public:
 
 protected:
   Collection m_entries;
+  Compare m_compare;
 };
 
 // A simple range  with data class where you get to define the type of

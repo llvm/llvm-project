@@ -75,14 +75,20 @@ def create_parser():
         '--category',
         metavar='category',
         action='append',
-        dest='categoriesList',
+        dest='categories_list',
         help=textwrap.dedent('''Specify categories of test cases of interest. Can be specified more than once.'''))
     group.add_argument(
         '--skip-category',
         metavar='category',
         action='append',
-        dest='skipCategories',
+        dest='skip_categories',
         help=textwrap.dedent('''Specify categories of test cases to skip. Takes precedence over -G. Can be specified more than once.'''))
+    group.add_argument(
+        '--xfail-category',
+        metavar='category',
+        action='append',
+        dest='xfail_categories',
+        help=textwrap.dedent('''Specify categories of test cases that are expected to fail. Can be specified more than once.'''))
 
     # Configuration options
     group = parser.add_argument_group('Configuration options')

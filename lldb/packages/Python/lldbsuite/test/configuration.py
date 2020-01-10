@@ -25,16 +25,18 @@ import lldbsuite
 suite = unittest2.TestSuite()
 
 # The list of categories we said we care about
-categoriesList = None
+categories_list = None
 # set to true if we are going to use categories for cherry-picking test cases
-useCategories = False
+use_categories = False
 # Categories we want to skip
-skipCategories = ["darwin-log"]
+skip_categories = ["darwin-log"]
+# Categories we expect to fail
+xfail_categories = []
 # use this to track per-category failures
-failuresPerCategory = {}
+failures_per_category = {}
 
 # The path to LLDB.framework is optional.
-lldbFrameworkPath = None
+lldb_framework_path = None
 
 # Test suite repeat count.  Can be overwritten with '-# count'.
 count = 1
@@ -131,12 +133,12 @@ rerun_all_issues = False
 all_tests = set()
 
 def shouldSkipBecauseOfCategories(test_categories):
-    if useCategories:
+    if use_categories:
         if len(test_categories) == 0 or len(
-                categoriesList & set(test_categories)) == 0:
+                categories_list & set(test_categories)) == 0:
             return True
 
-    for category in skipCategories:
+    for category in skip_categories:
         if category in test_categories:
             return True
 

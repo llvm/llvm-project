@@ -825,8 +825,8 @@ class Base(unittest2.TestCase):
         self.darwinWithFramework = self.platformIsDarwin()
         if sys.platform.startswith("darwin"):
             # Handle the framework environment variable if it is set
-            if hasattr(lldbtest_config, 'lldbFrameworkPath'):
-                framework_path = lldbtest_config.lldbFrameworkPath
+            if hasattr(lldbtest_config, 'lldb_framework_path'):
+                framework_path = lldbtest_config.lldb_framework_path
                 # Framework dir should be the directory containing the framework
                 self.framework_dir = framework_path[:framework_path.rfind('LLDB.framework')]
             # If a framework dir was not specified assume the Xcode build

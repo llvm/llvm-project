@@ -447,8 +447,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                {S96, S32},
                // FIXME: Hack
                {S64, LLT::scalar(33)},
-               {S32, S8}, {S128, S32}, {S128, S64}, {S32, LLT::scalar(24)}})
-    .scalarize(0);
+               {S32, S8}, {S32, LLT::scalar(24)}})
+    .scalarize(0)
+    .clampScalar(0, S32, S64);
 
   // TODO: Split s1->s64 during regbankselect for VALU.
   auto &IToFP = getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
