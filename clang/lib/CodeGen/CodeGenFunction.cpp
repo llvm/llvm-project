@@ -799,8 +799,8 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
           FD->getBody()->getStmtClass() == Stmt::CoroutineBodyStmtClass)
         SanOpts.Mask &= ~SanitizerKind::Null;
 
-  // Apply xray attributes to the function (as a string, for now)
   if (D) {
+    // Apply xray attributes to the function (as a string, for now)
     if (const auto *XRayAttr = D->getAttr<XRayInstrumentAttr>()) {
       if (CGM.getCodeGenOpts().XRayInstrumentationBundle.has(
               XRayInstrKind::Function)) {
@@ -818,6 +818,12 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         Fn->addFnAttr(
             "xray-instruction-threshold",
             llvm::itostr(CGM.getCodeGenOpts().XRayInstructionThreshold));
+    }
+
+    if (const auto *Attr = D->getAttr<PatchableFunctionEntryAttr>()) {
+      // Attr->getStart is currently ignored.
+      Fn->addFnAttr("patchable-function-entry",
+                    std::to_string(Attr->getCount()));
     }
   }
 
