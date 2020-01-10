@@ -22,7 +22,6 @@ namespace llvm {
 
 class MachineFrameInfo;
 class MachineMemOperand;
-class MIRFormatter;
 class raw_ostream;
 class TargetInstrInfo;
 
@@ -53,7 +52,6 @@ private:
                                        const PseudoSourceValue* PSV);
 
   friend class MachineMemOperand; // For printCustom().
-  friend class MIRFormatter;      // For printCustom().
 
   /// Implement printing for PseudoSourceValue. This is called from
   /// Value::print or Value's operator<<.
