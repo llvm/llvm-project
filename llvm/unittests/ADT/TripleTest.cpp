@@ -319,6 +319,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::AMDPAL, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("ve-unknown-linux");
+  EXPECT_EQ(Triple::ve, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
   T = Triple("riscv32-unknown-unknown");
   EXPECT_EQ(Triple::riscv32, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -722,6 +728,8 @@ TEST(TripleTest, Normalization) {
             Triple::normalize("i686-linux")); // i686-pc-linux-gnu
   EXPECT_EQ("arm-none-unknown-eabi",
             Triple::normalize("arm-none-eabi")); // arm-none-eabi
+  EXPECT_EQ("ve-unknown-linux",
+            Triple::normalize("ve-linux")); // ve-linux
   EXPECT_EQ("wasm32-unknown-wasi",
             Triple::normalize("wasm32-wasi")); // wasm32-unknown-wasi
   EXPECT_EQ("wasm64-unknown-wasi",

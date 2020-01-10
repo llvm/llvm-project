@@ -150,6 +150,10 @@ N: Dylan McKay
 E: me@dylanmckay.io
 D: AVR Backend
 
+N: Simon Moll
+E: simon.moll@emea.nec.com
+D: VE Backend
+
 N: Tim Northover
 E: t.p.northover@gmail.com
 D: AArch64 backend, misc ARM backend
