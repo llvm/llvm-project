@@ -168,7 +168,7 @@ body:             |
     liveins: $r0, $r1, $r2, $r3
 
     %0(p0) = G_FRAME_INDEX %fixed-stack.2
-    ; CHECK: [[FI32VREG:%[0-9]+]]:gprnopc = t2ADDri %fixed-stack.[[FI32]], 0, 14, $noreg, $noreg
+    ; CHECK: [[FI32VREG:%[0-9]+]]:rgpr = t2ADDri %fixed-stack.[[FI32]], 0, 14, $noreg, $noreg
 
     %1(s32) = G_LOAD %0(p0) :: (load 4)
     ; CHECK: [[LD32VREG:%[0-9]+]]:gpr = t2LDRi12 [[FI32VREG]], 0, 14, $noreg
@@ -177,7 +177,7 @@ body:             |
     ; CHECK: $r0 = COPY [[LD32VREG]]
 
     %2(p0) = G_FRAME_INDEX %fixed-stack.0
-    ; CHECK: [[FI1VREG:%[0-9]+]]:gprnopc = t2ADDri %fixed-stack.[[FI1]], 0, 14, $noreg, $noreg
+    ; CHECK: [[FI1VREG:%[0-9]+]]:rgpr = t2ADDri %fixed-stack.[[FI1]], 0, 14, $noreg, $noreg
 
     %3(s1) = G_LOAD %2(p0) :: (load 1)
     ; CHECK: [[LD1VREG:%[0-9]+]]:gprnopc = t2LDRBi12 [[FI1VREG]], 0, 14, $noreg

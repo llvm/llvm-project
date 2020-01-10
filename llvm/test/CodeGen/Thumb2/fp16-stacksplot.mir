@@ -27,7 +27,7 @@ body: |
     ; CHECK: frame-setup CFI_INSTRUCTION offset $r6, -28
     ; CHECK: frame-setup CFI_INSTRUCTION offset $r5, -32
     ; CHECK: frame-setup CFI_INSTRUCTION offset $r4, -36
-    ; CHECK: $sp = frame-setup t2SUBri killed $sp, 1208, 14, $noreg, $noreg
+    ; CHECK: $sp = frame-setup t2SUBspImm killed $sp, 1208, 14, $noreg, $noreg
     ; CHECK: frame-setup CFI_INSTRUCTION def_cfa_offset 1244
     ; CHECK: $r0 = IMPLICIT_DEF
     ; CHECK: $r1 = IMPLICIT_DEF

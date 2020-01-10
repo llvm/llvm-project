@@ -696,18 +696,23 @@ MachineInstr *ARMLoadStoreOpt::CreateLoadStoreMulti(
         return nullptr;
     }
 
-    int BaseOpc =
-      isThumb2 ? ARM::t2ADDri :
-      (isThumb1 && Base == ARM::SP) ? ARM::tADDrSPi :
-      (isThumb1 && Offset < 8) ? ARM::tADDi3 :
-      isThumb1 ? ARM::tADDi8  : ARM::ADDri;
+    int BaseOpc = isThumb2 ? (BaseKill && Base == ARM::SP ? ARM::t2ADDspImm
+                                                          : ARM::t2ADDri)
+                           : (isThumb1 && Base == ARM::SP)
+                                 ? ARM::tADDrSPi
+                                 : (isThumb1 && Offset < 8)
+                                       ? ARM::tADDi3
+                                       : isThumb1 ? ARM::tADDi8 : ARM::ADDri;
 
     if (Offset < 0) {
-      Offset = - Offset;
-      BaseOpc =
-        isThumb2 ? ARM::t2SUBri :
-        (isThumb1 && Offset < 8 && Base != ARM::SP) ? ARM::tSUBi3 :
-        isThumb1 ? ARM::tSUBi8  : ARM::SUBri;
+      // FIXME: There are no Thumb1 load/store instructions with negative
+      // offsets. So the Base != ARM::SP might be unnecessary.
+      Offset = -Offset;
+      BaseOpc = isThumb2 ? (BaseKill && Base == ARM::SP ? ARM::t2SUBspImm
+                                                        : ARM::t2SUBri)
+                         : (isThumb1 && Offset < 8 && Base != ARM::SP)
+                               ? ARM::tSUBi3
+                               : isThumb1 ? ARM::tSUBi8 : ARM::SUBri;
     }
 
     if (!TL->isLegalAddImmediate(Offset))
@@ -1186,8 +1191,10 @@ static int isIncrementOrDecrement(const MachineInstr &MI, unsigned Reg,
   case ARM::tADDi8:  Scale =  4; CheckCPSRDef = true; break;
   case ARM::tSUBi8:  Scale = -4; CheckCPSRDef = true; break;
   case ARM::t2SUBri:
+  case ARM::t2SUBspImm:
   case ARM::SUBri:   Scale = -1; CheckCPSRDef = true; break;
   case ARM::t2ADDri:
+  case ARM::t2ADDspImm:
   case ARM::ADDri:   Scale =  1; CheckCPSRDef = true; break;
   case ARM::tADDspi: Scale =  4; CheckCPSRDef = false; break;
   case ARM::tSUBspi: Scale = -4; CheckCPSRDef = false; break;
