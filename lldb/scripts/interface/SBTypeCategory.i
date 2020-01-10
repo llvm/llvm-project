@@ -124,6 +124,8 @@ namespace lldb {
         bool
         DeleteTypeSynthetic (lldb::SBTypeNameSpecifier);
 
+        STRING_EXTENSION_LEVEL(SBTypeCategory, lldb::eDescriptionLevelBrief)
+
 #ifdef SWIGPYTHON
         %pythoncode %{
 

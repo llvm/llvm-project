@@ -53,6 +53,8 @@ namespace lldb {
         bool
         operator != (lldb::SBTypeNameSpecifier &rhs);
 
+        STRING_EXTENSION_LEVEL(SBTypeNameSpecifier, lldb::eDescriptionLevelBrief)
+
 #ifdef SWIGPYTHON
         %pythoncode %{
             name = property(GetName)

@@ -43,6 +43,8 @@ public:
     uint32_t
     GetBitfieldSizeInBits();
 
+    STRING_EXTENSION_LEVEL(SBTypeMember, lldb::eDescriptionLevelBrief)
+
 #ifdef SWIGPYTHON
     %pythoncode %{
         name = property(GetName, None, doc='''A read only property that returns the name for this member as a string.''')
@@ -100,6 +102,7 @@ public:
     GetDescription (lldb::SBStream &description,
                     lldb::DescriptionLevel description_level);
 
+    STRING_EXTENSION_LEVEL(SBTypeMemberFunction, lldb::eDescriptionLevelBrief)
 protected:
     lldb::TypeMemberFunctionImplSP m_opaque_sp;
 };
@@ -313,6 +316,8 @@ public:
     bool operator==(lldb::SBType &rhs);
 
     bool operator!=(lldb::SBType &rhs);
+
+    STRING_EXTENSION_LEVEL(SBType, lldb::eDescriptionLevelBrief)
 
 #ifdef SWIGPYTHON
     %pythoncode %{

@@ -81,6 +81,7 @@ public:
     bool
     GetDescription (lldb::SBStream &description);
 
+    STRING_EXTENSION(SBSymbolContext)
 
 #ifdef SWIGPYTHON
     %pythoncode %{

@@ -61,6 +61,8 @@ namespace lldb {
         bool
         operator != (lldb::SBTypeFormat &rhs);
 
+        STRING_EXTENSION_LEVEL(SBTypeFormat, lldb::eDescriptionLevelBrief)
+
 #ifdef SWIGPYTHON
         %pythoncode %{
             format = property(GetFormat, SetFormat)

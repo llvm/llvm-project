@@ -425,6 +425,8 @@ public:
     bool
     SafeToCallFunctions ();
 
+    STRING_EXTENSION(SBThread)
+
 #ifdef SWIGPYTHON
     %pythoncode %{
         def __iter__(self):

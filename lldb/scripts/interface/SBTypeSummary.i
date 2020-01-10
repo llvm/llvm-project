@@ -101,6 +101,8 @@ namespace lldb {
         bool
         operator != (lldb::SBTypeSummary &rhs);
 
+        STRING_EXTENSION_LEVEL(SBTypeSummary, lldb::eDescriptionLevelBrief)
+
 #ifdef SWIGPYTHON
         %pythoncode %{
             options = property(GetOptions, SetOptions)

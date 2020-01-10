@@ -440,6 +440,8 @@ public:
                        const SBExpressionOptions &options,
                        const char *name) const;
 
+    STRING_EXTENSION(SBValue)
+
 #ifdef SWIGPYTHON
     %pythoncode %{
         def __get_dynamic__ (self):
