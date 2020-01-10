@@ -70,7 +70,7 @@ public:
   using ImplType = llvm::PointerIntPair<void *, 2, Kind, ImplTypeTraits>;
 
 public:
-  Value(std::nullptr_t) : ownerAndKind() {}
+  constexpr Value(std::nullptr_t) : ownerAndKind() {}
   Value(ImplType ownerAndKind = {}) : ownerAndKind(ownerAndKind) {}
   Value(const Value &) = default;
   Value &operator=(const Value &) = default;

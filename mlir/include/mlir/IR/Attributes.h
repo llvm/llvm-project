@@ -69,7 +69,7 @@ public:
   using ImplType = AttributeStorage;
   using ValueType = void;
 
-  Attribute() : impl(nullptr) {}
+  constexpr Attribute() : impl(nullptr) {}
   /* implicit */ Attribute(const ImplType *impl)
       : impl(const_cast<ImplType *>(impl)) {}
 
