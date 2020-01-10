@@ -1558,10 +1558,10 @@ LogicalResult Deserializer::processSelectionMerge(ArrayRef<uint32_t> operands) {
   if (operands.size() < 2) {
     return emitError(
         unknownLoc,
-        "OpLoopMerge must specify merge target and selection control");
+        "OpSelectionMerge must specify merge target and selection control");
   }
 
-  if (static_cast<uint32_t>(spirv::LoopControl::None) != operands[1]) {
+  if (static_cast<uint32_t>(spirv::SelectionControl::None) != operands[1]) {
     return emitError(unknownLoc,
                      "unimplmented OpSelectionMerge selection control: ")
            << operands[2];

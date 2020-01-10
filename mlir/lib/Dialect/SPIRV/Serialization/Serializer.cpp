@@ -1448,13 +1448,13 @@ LogicalResult Serializer::processSelectionOp(spirv::SelectionOp selectionOp) {
   auto mergeID = getBlockID(mergeBlock);
 
   // Emit the selection header block, which dominates all other blocks, first.
-  // We need to emit an OpSelectionMerge instruction before the loop header
+  // We need to emit an OpSelectionMerge instruction before the selection header
   // block's terminator.
   auto emitSelectionMerge = [&]() {
-    // TODO(antiagainst): properly support loop control here
+    // TODO(antiagainst): properly support selection control here
     encodeInstructionInto(
         functionBody, spirv::Opcode::OpSelectionMerge,
-        {mergeID, static_cast<uint32_t>(spirv::LoopControl::None)});
+        {mergeID, static_cast<uint32_t>(spirv::SelectionControl::None)});
   };
   // For structured selection, we cannot have blocks in the selection construct
   // branching to the selection header block. Entering the selection (and
