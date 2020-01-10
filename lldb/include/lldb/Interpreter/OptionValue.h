@@ -58,8 +58,7 @@ public:
     eDumpGroupExport = (eDumpOptionCommand | eDumpOptionName | eDumpOptionValue)
   };
 
-  OptionValue()
-      : m_callback(nullptr), m_baton(nullptr), m_value_was_set(false) {}
+  OptionValue() : m_value_was_set(false) {}
 
   virtual ~OptionValue() = default;
 
@@ -304,22 +303,19 @@ public:
     m_parent_wp = parent_sp;
   }
 
-  void SetValueChangedCallback(OptionValueChangedCallback callback,
-                               void *baton) {
-    assert(m_callback == nullptr);
-    m_callback = callback;
-    m_baton = baton;
+  void SetValueChangedCallback(std::function<void()> callback) {
+    assert(!m_callback);
+    m_callback = std::move(callback);
   }
 
   void NotifyValueChanged() {
     if (m_callback)
-      m_callback(m_baton, this);
+      m_callback();
   }
 
 protected:
   lldb::OptionValueWP m_parent_wp;
-  OptionValueChangedCallback m_callback;
-  void *m_baton;
+  std::function<void()> m_callback;
   bool m_value_was_set; // This can be used to see if a value has been set
                         // by a call to SetValueFromCString(). It is often
                         // handy to know if an option value was set from the

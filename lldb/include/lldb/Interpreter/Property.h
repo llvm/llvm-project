@@ -64,8 +64,7 @@ public:
                        uint32_t output_width,
                        bool display_qualified_name) const;
 
-  void SetValueChangedCallback(OptionValueChangedCallback callback,
-                               void *baton);
+  void SetValueChangedCallback(std::function<void()> callback);
 
 protected:
   ConstString m_name;
