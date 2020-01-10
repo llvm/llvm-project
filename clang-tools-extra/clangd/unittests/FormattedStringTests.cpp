@@ -121,7 +121,7 @@ TEST(Document, Separators) {
   D.addCodeBlock("test");
   D.addParagraph().appendText("bar");
 
-  const char ExpectedMarkdown[] = R"md(foo
+  const char ExpectedMarkdown[] = R"md(foo  
 ```cpp
 test
 ```
@@ -141,7 +141,7 @@ TEST(Document, Spacer) {
   D.addParagraph().appendText("foo");
   D.addSpacer();
   D.addParagraph().appendText("bar");
-  EXPECT_EQ(D.asMarkdown(), "foo\n\nbar");
+  EXPECT_EQ(D.asMarkdown(), "foo  \n\nbar");
   EXPECT_EQ(D.asPlainText(), "foo\n\nbar");
 }
 
@@ -217,10 +217,10 @@ TEST(BulletList, Render) {
   DeepDoc.addParagraph().appendText("baz");
   EXPECT_EQ(L.asMarkdown(), R"md(- foo
 - bar
-- foo
-  baz
-  - foo
-    - baz
+- foo  
+  baz  
+  - foo  
+    - baz  
       baz)md");
   EXPECT_EQ(L.asPlainText(), R"pt(- foo
 - bar
@@ -234,10 +234,10 @@ TEST(BulletList, Render) {
   Inner.addParagraph().appendText("after");
   EXPECT_EQ(L.asMarkdown(), R"md(- foo
 - bar
-- foo
-  baz
-  - foo
-    - baz
+- foo  
+  baz  
+  - foo  
+    - baz  
       baz
     
     after)md");

@@ -1683,6 +1683,34 @@ TEST_F(ScalarEvolutionsTest, SCEVExpanderShlNSW) {
                "} ");
 }
 
+TEST_F(ScalarEvolutionsTest, SCEVLoopDecIntrinsic) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "define void @foo(i32 %N) { "
+      "entry: "
+      "  %cmp3 = icmp sgt i32 %N, 0 "
+      "  br i1 %cmp3, label %for.body, label %for.cond.cleanup "
+      "for.cond.cleanup: "
+      "  ret void "
+      "for.body: "
+      "  %i.04 = phi i32 [ %inc, %for.body ], [ 100, %entry ] "
+      "  %inc = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %i.04, i32 1) "
+      "  %exitcond = icmp ne i32 %inc, 0 "
+      "  br i1 %exitcond, label %for.cond.cleanup, label %for.body "
+      "} "
+      "declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) ",
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [&](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *ScevInc = SE.getSCEV(getInstructionByName(F, "inc"));
+    EXPECT_TRUE(isa<SCEVAddRecExpr>(ScevInc));
+  });
+}
+
 TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
   LLVMContext C;
   SMDiagnostic Err;

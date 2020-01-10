@@ -447,8 +447,11 @@ void ASTResultSynthesizer::RecordPersistentDecl(NamedDecl *D) {
 }
 
 void ASTResultSynthesizer::CommitPersistentDecls() {
-  PersistentExpressionState *state =
+  auto *state =
       m_target.GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC);
+  if (!state)
+    return;
+
   auto *persistent_vars = llvm::cast<ClangPersistentVariables>(state);
   ClangASTContext *scratch_ctx = ClangASTContext::GetScratch(m_target);
 

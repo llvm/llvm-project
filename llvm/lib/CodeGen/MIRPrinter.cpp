@@ -709,7 +709,6 @@ void MIPrinter::print(const MachineInstr &MI) {
   const auto *TRI = SubTarget.getRegisterInfo();
   assert(TRI && "Expected target register info");
   const auto *TII = SubTarget.getInstrInfo();
-  const auto *MIRF = MF->getTarget().getMIRFormatter();
   assert(TII && "Expected target instruction info");
   if (MI.isCFIInstruction())
     assert(MI.getNumOperands() == 1 && "Expected 1 operand in CFI instruction");
@@ -753,8 +752,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "nsw ";
   if (MI.getFlag(MachineInstr::IsExact))
     OS << "exact ";
-  if (MI.getFlag(MachineInstr::FPExcept))
-    OS << "fpexcept ";
+  if (MI.getFlag(MachineInstr::NoFPExcept))
+    OS << "nofpexcept ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)
@@ -808,7 +807,7 @@ void MIPrinter::print(const MachineInstr &MI) {
     for (const auto *Op : MI.memoperands()) {
       if (NeedComma)
         OS << ", ";
-      Op->print(OS, MST, SSNs, Context, &MFI, TII, MIRF);
+      Op->print(OS, MST, SSNs, Context, &MFI, TII);
       NeedComma = true;
     }
   }

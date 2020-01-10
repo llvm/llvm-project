@@ -4507,6 +4507,17 @@ static Optional<BinaryOp> MatchBinaryOp(Value *V, DominatorTree &DT) {
   if (!Op)
     return None;
 
+  // Recognise intrinsic loop.decrement.reg, and as this has exactly the same
+  // semantics as a Sub, return a binary sub expression.
+  if (auto *II = dyn_cast<IntrinsicInst>(V)) {
+    switch (II->getIntrinsicID()) {
+    case Intrinsic::loop_decrement_reg:
+      return BinaryOp(Instruction::Sub, II->getOperand(0), II->getOperand(1));
+    default:
+      return None;
+    }
+  }
+
   // Implementation detail: all the cleverness here should happen without
   // creating new SCEV expressions -- our caller knowns tricks to avoid creating
   // SCEV expressions when possible, and we should not break that.

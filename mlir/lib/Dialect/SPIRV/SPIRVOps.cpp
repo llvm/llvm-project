@@ -1470,7 +1470,6 @@ spirv::ConstantOp spirv::ConstantOp::getZero(Type type, Location loc,
                                              OpBuilder *builder) {
   if (auto intType = type.dyn_cast<IntegerType>()) {
     unsigned width = intType.getWidth();
-    Attribute val;
     if (width == 1)
       return builder->create<spirv::ConstantOp>(loc, type,
                                                 builder->getBoolAttr(false));

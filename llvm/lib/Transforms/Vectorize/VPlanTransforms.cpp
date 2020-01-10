@@ -56,7 +56,9 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
       VPRecipeBase *NewRecipe = nullptr;
       // Create VPWidenMemoryInstructionRecipe for loads and stores.
       if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
-        NewRecipe = new VPWidenMemoryInstructionRecipe(*Inst, nullptr /*Mask*/);
+        NewRecipe = new VPWidenMemoryInstructionRecipe(
+            *Inst, Plan->getOrAddVPValue(getLoadStorePointerOperand(Inst)),
+            nullptr /*Mask*/);
       else if (PHINode *Phi = dyn_cast<PHINode>(Inst)) {
         InductionDescriptor II = Inductions->lookup(Phi);
         if (II.getKind() == InductionDescriptor::IK_IntInduction ||

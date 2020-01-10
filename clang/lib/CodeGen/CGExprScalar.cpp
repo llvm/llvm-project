@@ -798,17 +798,17 @@ public:
   // Comparisons.
   Value *EmitCompare(const BinaryOperator *E, llvm::CmpInst::Predicate UICmpOpc,
                      llvm::CmpInst::Predicate SICmpOpc,
-                     llvm::CmpInst::Predicate FCmpOpc);
-#define VISITCOMP(CODE, UI, SI, FP) \
+                     llvm::CmpInst::Predicate FCmpOpc, bool IsSignaling);
+#define VISITCOMP(CODE, UI, SI, FP, SIG) \
     Value *VisitBin##CODE(const BinaryOperator *E) { \
       return EmitCompare(E, llvm::ICmpInst::UI, llvm::ICmpInst::SI, \
-                         llvm::FCmpInst::FP); }
-  VISITCOMP(LT, ICMP_ULT, ICMP_SLT, FCMP_OLT)
-  VISITCOMP(GT, ICMP_UGT, ICMP_SGT, FCMP_OGT)
-  VISITCOMP(LE, ICMP_ULE, ICMP_SLE, FCMP_OLE)
-  VISITCOMP(GE, ICMP_UGE, ICMP_SGE, FCMP_OGE)
-  VISITCOMP(EQ, ICMP_EQ , ICMP_EQ , FCMP_OEQ)
-  VISITCOMP(NE, ICMP_NE , ICMP_NE , FCMP_UNE)
+                         llvm::FCmpInst::FP, SIG); }
+  VISITCOMP(LT, ICMP_ULT, ICMP_SLT, FCMP_OLT, true)
+  VISITCOMP(GT, ICMP_UGT, ICMP_SGT, FCMP_OGT, true)
+  VISITCOMP(LE, ICMP_ULE, ICMP_SLE, FCMP_OLE, true)
+  VISITCOMP(GE, ICMP_UGE, ICMP_SGE, FCMP_OGE, true)
+  VISITCOMP(EQ, ICMP_EQ , ICMP_EQ , FCMP_OEQ, false)
+  VISITCOMP(NE, ICMP_NE , ICMP_NE , FCMP_UNE, false)
 #undef VISITCOMP
 
   Value *VisitBinAssign     (const BinaryOperator *E);
@@ -3804,7 +3804,8 @@ static llvm::Intrinsic::ID GetIntrinsic(IntrinsicType IT,
 Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
                                       llvm::CmpInst::Predicate UICmpOpc,
                                       llvm::CmpInst::Predicate SICmpOpc,
-                                      llvm::CmpInst::Predicate FCmpOpc) {
+                                      llvm::CmpInst::Predicate FCmpOpc,
+                                      bool IsSignaling) {
   TestAndClearIgnoreResultAssign();
   Value *Result;
   QualType LHSTy = E->getLHS()->getType();
@@ -3900,7 +3901,10 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
     if (BOInfo.isFixedPointBinOp()) {
       Result = EmitFixedPointBinOp(BOInfo);
     } else if (LHS->getType()->isFPOrFPVectorTy()) {
-      Result = Builder.CreateFCmp(FCmpOpc, LHS, RHS, "cmp");
+      if (!IsSignaling)
+        Result = Builder.CreateFCmp(FCmpOpc, LHS, RHS, "cmp");
+      else
+        Result = Builder.CreateFCmpS(FCmpOpc, LHS, RHS, "cmp");
     } else if (LHSTy->hasSignedIntegerRepresentation()) {
       Result = Builder.CreateICmp(SICmpOpc, LHS, RHS, "cmp");
     } else {
@@ -3957,6 +3961,8 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
 
     Value *ResultR, *ResultI;
     if (CETy->isRealFloatingType()) {
+      // As complex comparisons can only be equality comparisons, they
+      // are never signaling comparisons.
       ResultR = Builder.CreateFCmp(FCmpOpc, LHS.first, RHS.first, "cmp.r");
       ResultI = Builder.CreateFCmp(FCmpOpc, LHS.second, RHS.second, "cmp.i");
     } else {

@@ -40,7 +40,7 @@ entry:
 ; CHECK-NEXT:        .long   16
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   18                      # BTF_KIND_FUNC(id = 5)
-; CHECK-NEXT:        .long   201326592               # 0xc000000
+; CHECK-NEXT:        .long   201326593               # 0xc000001
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .byte   0                       # string offset=0
 ; CHECK-NEXT:        .ascii  "__int"                 # string offset=1

@@ -480,8 +480,7 @@ static void printMemOperand(raw_ostream &OS, const MachineMemOperand &MMO,
   if (MF)
     MST.incorporateFunction(MF->getFunction());
   SmallVector<StringRef, 0> SSNs;
-  MMO.print(OS, MST, SSNs, Ctx, MFI, TII,
-            MF ? MF->getTarget().getMIRFormatter() : nullptr);
+  MMO.print(OS, MST, SSNs, Ctx, MFI, TII);
 }
 
 static void printMemOperand(raw_ostream &OS, const MachineMemOperand &MMO,

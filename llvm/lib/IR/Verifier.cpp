@@ -1851,6 +1851,18 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     if (FP != "all" && FP != "non-leaf" && FP != "none")
       CheckFailed("invalid value for 'frame-pointer' attribute: " + FP, V);
   }
+
+  if (Attrs.hasFnAttribute("patchable-function-entry")) {
+    StringRef S0 = Attrs
+                       .getAttribute(AttributeList::FunctionIndex,
+                                     "patchable-function-entry")
+                       .getValueAsString();
+    StringRef S = S0;
+    unsigned N;
+    if (S.getAsInteger(10, N))
+      CheckFailed(
+          "\"patchable-function-entry\" takes an unsigned integer: " + S0, V);
+  }
 }
 
 void Verifier::verifyFunctionMetadata(
