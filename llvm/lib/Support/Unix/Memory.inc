@@ -42,9 +42,7 @@ extern "C" void sys_icache_invalidate(const void *Addr, size_t len);
 extern "C" void __clear_cache(void *, void*);
 #endif
 
-namespace {
-
-int getPosixProtectionFlags(unsigned Flags) {
+static int getPosixProtectionFlags(unsigned Flags) {
   switch (Flags & llvm::sys::Memory::MF_RWE_MASK) {
   case llvm::sys::Memory::MF_READ:
     return PROT_READ;
@@ -75,8 +73,6 @@ int getPosixProtectionFlags(unsigned Flags) {
   // Provide a default return value as required by some compilers.
   return PROT_NONE;
 }
-
-} // anonymous namespace
 
 namespace llvm {
 namespace sys {
