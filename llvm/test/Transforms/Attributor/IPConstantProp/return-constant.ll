@@ -8,8 +8,6 @@ define i1 @invokecaller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK-SAME: (i1 [[C:%.*]]) #0 personality i32 (...)* @__gxx_personality_v0
 ; CHECK-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]])
 ; CHECK-NEXT:    br label [[OK:%.*]]
-; CHECK:       .i2c:
-; CHECK-NEXT:    unreachable
 ; CHECK:       OK:
 ; CHECK-NEXT:    [[Y:%.*]] = icmp ne i32 52, 0
 ; CHECK-NEXT:    ret i1 [[Y]]
