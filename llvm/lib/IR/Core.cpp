@@ -147,9 +147,9 @@ LLVMAttributeRef LLVMCreateEnumAttribute(LLVMContextRef C, unsigned KindID,
     // After r362128, byval attributes need to have a type attribute. Provide a
     // NULL one until a proper API is added for this.
     return wrap(Attribute::getWithByValType(Ctx, NULL));
-  } else {
-    return wrap(Attribute::get(Ctx, AttrKind, Val));
   }
+
+  return wrap(Attribute::get(Ctx, AttrKind, Val));
 }
 
 unsigned LLVMGetEnumAttributeKind(LLVMAttributeRef A) {
