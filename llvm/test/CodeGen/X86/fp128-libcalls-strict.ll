@@ -1314,15 +1314,15 @@ define i64 @cmp_one_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movq %rsi, %r14
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    callq __gttf2
+; CHECK-NEXT:    callq __eqtf2
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    setg %bpl
+; CHECK-NEXT:    setne %bpl
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; CHECK-NEXT:    callq __lttf2
+; CHECK-NEXT:    callq __unordtf2
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    sets %al
-; CHECK-NEXT:    orb %bpl, %al
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    testb %bpl, %al
 ; CHECK-NEXT:    cmoveq %r14, %rbx
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    addq $32, %rsp
@@ -1350,10 +1350,10 @@ define i64 @cmp_one_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __gttf2
+; X86-NEXT:    calll __eqtf2
 ; X86-NEXT:    addl $32, %esp
 ; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    setg %bl
+; X86-NEXT:    setne %bl
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
@@ -1362,11 +1362,11 @@ define i64 @cmp_one_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    pushl {{[0-9]+}}(%esp)
-; X86-NEXT:    calll __lttf2
+; X86-NEXT:    calll __unordtf2
 ; X86-NEXT:    addl $32, %esp
 ; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    sets %al
-; X86-NEXT:    orb %bl, %al
+; X86-NEXT:    sete %al
+; X86-NEXT:    testb %bl, %al
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmovnel %eax, %ecx

@@ -355,14 +355,9 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
           (VT == MVT::f128) ? RTLIB::O_F128 : RTLIB::O_PPCF128;
     break;
   case ISD::SETONE:
-    // SETONE = SETOLT | SETOGT
-    LC1 = (VT == MVT::f32) ? RTLIB::OLT_F32 :
-          (VT == MVT::f64) ? RTLIB::OLT_F64 :
-          (VT == MVT::f128) ? RTLIB::OLT_F128 : RTLIB::OLT_PPCF128;
-    LC2 = (VT == MVT::f32) ? RTLIB::OGT_F32 :
-          (VT == MVT::f64) ? RTLIB::OGT_F64 :
-          (VT == MVT::f128) ? RTLIB::OGT_F128 : RTLIB::OGT_PPCF128;
-    break;
+    // SETONE = O && UNE
+    ShouldInvertCC = true;
+    LLVM_FALLTHROUGH;
   case ISD::SETUEQ:
     LC1 = (VT == MVT::f32) ? RTLIB::UO_F32 :
           (VT == MVT::f64) ? RTLIB::UO_F64 :
@@ -425,14 +420,18 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT),
         NewLHS, NewRHS, DAG.getCondCode(CCCode));
     auto Call2 = makeLibCall(DAG, LC2, RetVT, Ops, CallOptions, dl, Chain);
+    CCCode = getCmpLibcallCC(LC2);
+    if (ShouldInvertCC)
+      CCCode = getSetCCInverse(CCCode, RetVT);
     NewLHS = DAG.getNode(
         ISD::SETCC, dl,
         getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), RetVT),
-        Call2.first, NewRHS, DAG.getCondCode(getCmpLibcallCC(LC2)));
+        Call2.first, NewRHS, DAG.getCondCode(CCCode));
     if (Chain)
       Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Call.second,
                           Call2.second);
-    NewLHS = DAG.getNode(ISD::OR, dl, Tmp.getValueType(), Tmp, NewLHS);
+    NewLHS = DAG.getNode(ShouldInvertCC ? ISD::AND : ISD::OR, dl,
+                         Tmp.getValueType(), Tmp, NewLHS);
     NewRHS = SDValue();
   }
 }
