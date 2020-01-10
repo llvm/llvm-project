@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/sys/mman/mmap.h"
+#include "include/sys/syscall.h" // For syscall numbers.
 #include "src/__support/common.h"
 #include "src/errno/llvmlibc_errno.h"
-
 #include "src/unistd/syscall.h" // For internal syscall function.
-
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace __llvm_libc {
 
