@@ -84,4 +84,4 @@ while.end:                                        ; preds = %while.body, %entry
   ret void
 }
 
-attributes #0 = { "target-features"="+armv8.1-m.main,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fpregs,+fullfp16,+hwdiv,+lob,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp,-crypto,-d32,-fp-armv8,-fp-armv8sp,-neon,-vfp3,-vfp3sp,-vfp4,-vfp4sp" }
+attributes #0 = { "target-features"="+armv8.1-m.main,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fullfp16,+hwdiv,+lob,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp,-crypto,-d32,-fp-armv8,-fp-armv8sp,-neon,-vfp3,-vfp3sp,-vfp4,-vfp4sp" }
