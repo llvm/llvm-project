@@ -503,15 +503,15 @@ TEST_F(TargetDeclTest, ObjC) {
   EXPECT_DECLS("ObjCPropertyRefExpr", "- (void)setX:(int)x");
 
   Code = R"cpp(
-    @interface Foo {}
-    @property int x;
+    @interface I {}
+    @property(retain) I* x;
+    @property(retain) I* y;
     @end
-    void test(Foo *f) {
-      [[f.x]] = 42;
+    void test(I *f) {
+      [[f.x]].y = 0;
     }
   )cpp";
-  EXPECT_DECLS("ObjCPropertyRefExpr",
-               "@property(atomic, assign, unsafe_unretained, readwrite) int x");
+  EXPECT_DECLS("OpaqueValueExpr", "@property(atomic, retain, readwrite) I *x");
 
   Code = R"cpp(
     @protocol Foo
