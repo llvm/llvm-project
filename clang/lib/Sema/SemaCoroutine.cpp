@@ -1228,7 +1228,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     return false;
 
   if (RequiresNoThrowAlloc) {
-    const auto *FT = OperatorNew->getType()->getAs<FunctionProtoType>();
+    const auto *FT = OperatorNew->getType()->castAs<FunctionProtoType>();
     if (!FT->isNothrow(/*ResultIfDependent*/ false)) {
       S.Diag(OperatorNew->getLocation(),
              diag::err_coroutine_promise_new_requires_nothrow)
@@ -1281,7 +1281,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
   // Check if we need to pass the size.
   const auto *OpDeleteType =
-      OpDeleteQualType.getTypePtr()->getAs<FunctionProtoType>();
+      OpDeleteQualType.getTypePtr()->castAs<FunctionProtoType>();
   if (OpDeleteType->getNumParams() > 1)
     DeleteArgs.push_back(FrameSize);
 
