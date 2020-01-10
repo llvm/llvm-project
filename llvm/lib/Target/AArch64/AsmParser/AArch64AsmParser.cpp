@@ -1227,7 +1227,7 @@ public:
       APFloat RealVal(APFloat::IEEEdouble());
       auto StatusOrErr =
           RealVal.convertFromString(Desc->Repr, APFloat::rmTowardZero);
-      if (!StatusOrErr || *StatusOrErr != APFloat::opOK)
+      if (errorToBool(StatusOrErr.takeError()) || *StatusOrErr != APFloat::opOK)
         llvm_unreachable("FP immediate is not exact");
 
       if (getFPImm().bitwiseIsEqual(RealVal))
@@ -2584,7 +2584,7 @@ AArch64AsmParser::tryParseFPImm(OperandVector &Operands) {
     APFloat RealVal(APFloat::IEEEdouble());
     auto StatusOrErr =
         RealVal.convertFromString(Tok.getString(), APFloat::rmTowardZero);
-    if (!StatusOrErr) {
+    if (errorToBool(StatusOrErr.takeError())) {
       TokError("invalid floating point representation");
       return MatchOperand_ParseFail;
     }
