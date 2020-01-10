@@ -1941,6 +1941,39 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   }
 }
 
+static void getUnmergePieces(SmallVectorImpl<Register> &Pieces,
+                             MachineIRBuilder &B, Register Src, LLT Ty) {
+  auto Unmerge = B.buildUnmerge(Ty, Src);
+  for (int I = 0, E = Unmerge->getNumOperands() - 1; I != E; ++I)
+    Pieces.push_back(Unmerge.getReg(I));
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerBitcast(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+
+  if (SrcTy.isVector() && !DstTy.isVector()) {
+    SmallVector<Register, 8> SrcRegs;
+    getUnmergePieces(SrcRegs, MIRBuilder, Src, SrcTy.getElementType());
+    MIRBuilder.buildMerge(Dst, SrcRegs);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  if (DstTy.isVector() && !SrcTy.isVector()) {
+    SmallVector<Register, 8> SrcRegs;
+    getUnmergePieces(SrcRegs, MIRBuilder, Src, DstTy.getElementType());
+    MIRBuilder.buildMerge(Dst, SrcRegs);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  return UnableToLegalize;
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   using namespace TargetOpcode;
@@ -1949,6 +1982,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   switch(MI.getOpcode()) {
   default:
     return UnableToLegalize;
+  case TargetOpcode::G_BITCAST:
+    return lowerBitcast(MI);
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_UREM: {
     Register QuotReg = MRI.createGenericVirtualRegister(Ty);
