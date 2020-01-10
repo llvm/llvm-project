@@ -2388,6 +2388,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
   // gather/scatter. Otherwise Decision should have been to Scalarize.
   assert((ConsecutiveStride || CreateGatherScatter) &&
          "The instruction should be scalarized");
+  (void)ConsecutiveStride;
 
   VectorParts BlockInMaskParts(UF);
   bool isMaskRequired = BlockInMask;
