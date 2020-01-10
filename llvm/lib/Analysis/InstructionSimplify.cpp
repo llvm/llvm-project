@@ -3996,6 +3996,15 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
       return FalseVal;
   }
 
+  // select i1 Cond, i1 true, i1 false --> i1 Cond
+  assert(Cond->getType()->isIntOrIntVectorTy(1) &&
+         "Select must have bool or bool vector condition");
+  assert(TrueVal->getType() == FalseVal->getType() &&
+         "Select must have same types for true/false ops");
+  if (Cond->getType() == TrueVal->getType() &&
+      match(TrueVal, m_One()) && match(FalseVal, m_ZeroInt()))
+    return Cond;
+
   // select ?, X, X -> X
   if (TrueVal == FalseVal)
     return TrueVal;
