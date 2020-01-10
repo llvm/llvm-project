@@ -417,6 +417,8 @@ public:
     lldb::SBProcessInfo
     GetProcessInfo();
 
+    STRING_EXTENSION(SBProcess)
+
 #ifdef SWIGPYTHON
     %pythoncode %{
         def __get_is_alive__(self):
