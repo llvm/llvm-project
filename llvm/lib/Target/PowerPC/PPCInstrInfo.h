@@ -346,8 +346,6 @@ public:
   bool DefinesPredicate(MachineInstr &MI,
                         std::vector<MachineOperand> &Pred) const override;
 
-  bool isPredicable(const MachineInstr &MI) const override;
-
   // Comparison optimization.
 
   bool analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,

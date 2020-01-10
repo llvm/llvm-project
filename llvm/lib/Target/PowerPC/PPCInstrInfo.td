@@ -1390,12 +1390,13 @@ def RESTORE_CRBIT : PPCEmitTimePseudo<(outs crbitrc:$cond), (ins memri:$F),
 }
 
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7 in {
-  let isReturn = 1, Uses = [LR, RM] in
+  let isPredicable = 1, isReturn = 1, Uses = [LR, RM] in
     def BLR : XLForm_2_ext<19, 16, 20, 0, 0, (outs), (ins), "blr", IIC_BrB,
                            [(retflag)]>, Requires<[In32BitMode]>;
   let isBranch = 1, isIndirectBranch = 1, Uses = [CTR] in {
-    def BCTR : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
-                            []>;
+    let isPredicable = 1 in
+      def BCTR : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
+                              []>;
 
     let isCodeGenOnly = 1 in {
       def BCCCTR : XLForm_2_br<19, 528, 0, (outs), (ins pred:$cond),
@@ -1428,9 +1429,10 @@ let Defs = [LR] in
 
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1, PPC970_Unit = 7 in {
   let isBarrier = 1 in {
-  def B   : IForm<18, 0, 0, (outs), (ins directbrtarget:$dst),
-                  "b $dst", IIC_BrB,
-                  [(br bb:$dst)]>;
+    let isPredicable = 1 in
+      def B : IForm<18, 0, 0, (outs), (ins directbrtarget:$dst),
+                    "b $dst", IIC_BrB,
+                    [(br bb:$dst)]>;
   def BA  : IForm<18, 1, 0, (outs), (ins absdirectbrtarget:$dst),
                   "ba $dst", IIC_BrB, []>;
   }
@@ -1551,9 +1553,10 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR] in {
     }
   }
   let Uses = [CTR, RM] in {
-    def BCTRL : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
-                             "bctrl", IIC_BrB, [(PPCbctrl)]>,
-                Requires<[In32BitMode]>;
+    let isPredicable = 1 in
+      def BCTRL : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
+                              "bctrl", IIC_BrB, [(PPCbctrl)]>,
+                  Requires<[In32BitMode]>;
 
     let isCodeGenOnly = 1 in {
       def BCCCTRL : XLForm_2_br<19, 528, 1, (outs), (ins pred:$cond),

@@ -71,13 +71,14 @@ def SRL64 : SDNodeXForm<imm, [{
 
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7 in {
-  let isReturn = 1, Uses = [LR8, RM] in
+  let isReturn = 1, isPredicable = 1, Uses = [LR8, RM] in
     def BLR8 : XLForm_2_ext<19, 16, 20, 0, 0, (outs), (ins), "blr", IIC_BrB,
                             [(retflag)]>, Requires<[In64BitMode]>;
   let isBranch = 1, isIndirectBranch = 1, Uses = [CTR8] in {
-    def BCTR8 : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
-                             []>,
-        Requires<[In64BitMode]>;
+    let isPredicable = 1 in
+      def BCTR8 : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
+                               []>,
+          Requires<[In64BitMode]>;
     def BCCCTR8 : XLForm_2_br<19, 528, 0, (outs), (ins pred:$cond),
                               "b${cond:cc}ctr${cond:pm} ${cond:reg}", IIC_BrB,
                               []>,
@@ -141,9 +142,10 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR8] in {
                              [(PPCcall_nop (i64 imm:$func))]>;
   }
   let Uses = [CTR8, RM] in {
-    def BCTRL8 : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
-                              "bctrl", IIC_BrB, [(PPCbctrl)]>,
-                 Requires<[In64BitMode]>;
+    let isPredicable = 1 in
+      def BCTRL8 : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
+                                "bctrl", IIC_BrB, [(PPCbctrl)]>,
+                   Requires<[In64BitMode]>;
 
     let isCodeGenOnly = 1 in {
       def BCCCTRL8 : XLForm_2_br<19, 528, 1, (outs), (ins pred:$cond),
