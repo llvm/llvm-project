@@ -58,9 +58,8 @@ define void @lsr_order_mul24_1(i32 %arg, i32 %arg1, i32 %arg2, float addrspace(3
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v5
 ; GFX9-NEXT:    v_cmp_lt_u32_e64 s[4:5], v0, v1
 ; GFX9-NEXT:    s_and_saveexec_b64 s[10:11], s[4:5]
-; GFX9-NEXT:    ; mask branch BB1_4
 ; GFX9-NEXT:    s_cbranch_execz BB1_4
-; GFX9-NEXT:  BB1_1: ; %bb19
+; GFX9-NEXT:  ; %bb.1: ; %bb19
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v7, v6
 ; GFX9-NEXT:    v_and_b32_e32 v5, 0xffffff, v6
 ; GFX9-NEXT:    v_add_u32_e32 v6, v4, v0

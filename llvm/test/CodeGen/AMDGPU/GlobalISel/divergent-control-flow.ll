@@ -10,9 +10,8 @@ define i32 @divergent_if_swap_brtarget_order0(i32 %value) {
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; CHECK-NEXT:    ; mask branch BB0_2
 ; CHECK-NEXT:    s_cbranch_execz BB0_2
-; CHECK-NEXT:  BB0_1: ; %if.true
+; CHECK-NEXT:  ; %bb.1: ; %if.true
 ; CHECK-NEXT:    global_load_dword v0, v[0:1], off
 ; CHECK-NEXT:  BB0_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
@@ -38,12 +37,10 @@ define i32 @divergent_if_swap_brtarget_order1(i32 %value) {
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; CHECK-NEXT:    ; mask branch BB1_2
-; CHECK-NEXT:  BB1_1: ; %endif
-; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-; CHECK-NEXT:  BB1_2: ; %if.true
+; CHECK-NEXT:    s_cbranch_execnz BB1_2
+; CHECK-NEXT:  ; %bb.1: ; %if.true
 ; CHECK-NEXT:    global_load_dword v0, v[0:1], off
+; CHECK-NEXT:  BB1_2: ; %endif
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
