@@ -211,7 +211,7 @@ namespace smart_ptr {
   // expected-note@-2 {{candidate constructor (the implicit move constructor) not}}
 #endif
 
-    explicit X(Y);
+    explicit X(Y); // expected-note {{not a candidate}}
   };
 
   Y make_Y();

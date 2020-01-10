@@ -11,7 +11,7 @@ struct ConvToInt {
 };
 
 struct ExplicitConvToBool {
-  explicit operator bool();
+  explicit operator bool(); // expected-note {{explicit}}
 #if __cplusplus <= 199711L // C++03 or earlier modes
   // expected-warning@-2{{explicit conversion functions are a C++11 extension}}
 #endif
@@ -45,7 +45,7 @@ void test_conv_to_bool(ConvToBool ctb, ConvToInt cti, ExplicitConvToBool ecb) {
 void accepts_bool(bool) { } // expected-note{{candidate function}}
 
 struct ExplicitConvToRef {
-  explicit operator int&();
+  explicit operator int&(); // expected-note {{explicit}}
 #if (__cplusplus <= 199711L) // C++03 or earlier modes
   // expected-warning@-2{{explicit conversion functions are a C++11 extension}}
 #endif
@@ -58,14 +58,14 @@ void test_explicit_bool(ExplicitConvToBool ecb) {
 }
 
 void test_explicit_conv_to_ref(ExplicitConvToRef ecr) {
-  int& i1 = ecr; // expected-error{{non-const lvalue reference to type 'int' cannot bind to a value of unrelated type 'ExplicitConvToRef'}}
+  int& i1 = ecr; // expected-error{{no viable conversion from 'ExplicitConvToRef' to 'int'}}
   int& i2(ecr); // okay
 }
 
 struct A { };
 struct B { };
 struct C {
-  explicit operator A&(); 
+  explicit operator A&();  // expected-note {{explicit}}
 #if __cplusplus <= 199711L // C++03 or earlier modes
 // expected-warning@-2{{explicit conversion functions are a C++11 extension}}
 #endif

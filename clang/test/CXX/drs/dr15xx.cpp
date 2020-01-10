@@ -142,7 +142,7 @@ struct Z0 { // expected-note 0+ {{candidate}}
 };
 struct Z { // expected-note 0+ {{candidate}}
   explicit Z(); // expected-note 0+ {{here}}
-  explicit Z(int);
+  explicit Z(int); // expected-note {{not a candidate}}
   explicit Z(int, int); // expected-note 0+ {{here}}
 };
 template <class T> int Eat(T); // expected-note 0+ {{candidate}}
