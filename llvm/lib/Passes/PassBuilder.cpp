@@ -970,8 +970,7 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // across the loop nests.
   // We do UnrollAndJam in a separate LPM to ensure it happens before unroll
   if (EnableUnrollAndJam && PTO.LoopUnrolling) {
-    OptimizePM.addPass(
-        createFunctionToLoopPassAdaptor(LoopUnrollAndJamPass(Level)));
+    OptimizePM.addPass(LoopUnrollAndJamPass(Level));
   }
   OptimizePM.addPass(LoopUnrollPass(
       LoopUnrollOptions(Level, /*OnlyWhenForced=*/!PTO.LoopUnrolling,
