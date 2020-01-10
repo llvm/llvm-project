@@ -437,6 +437,18 @@ static Symbol *handleUndefined(StringRef name) {
   return sym;
 }
 
+static void handleLibcall(StringRef name) {
+  Symbol *sym = symtab->find(name);
+  if (!sym)
+    return;
+
+  if (auto *lazySym = dyn_cast<LazySymbol>(sym)) {
+    MemoryBufferRef mb = lazySym->getMemberBuffer();
+    if (isBitcode(mb))
+      lazySym->fetch();
+  }
+}
+
 static UndefinedGlobal *
 createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
   auto *sym = cast<UndefinedGlobal>(symtab->addUndefinedGlobal(
@@ -741,6 +753,21 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
 
   // Create wrapped symbols for -wrap option.
   std::vector<WrappedSymbol> wrapped = addWrappedSymbols(args);
+
+  // If any of our inputs are bitcode files, the LTO code generator may create
+  // references to certain library functions that might not be explicit in the
+  // bitcode file's symbol table. If any of those library functions are defined
+  // in a bitcode file in an archive member, we need to arrange to use LTO to
+  // compile those archive members by adding them to the link beforehand.
+  //
+  // We only need to add libcall symbols to the link before LTO if the symbol's
+  // definition is in bitcode. Any other required libcall symbols will be added
+  // to the link after LTO when we add the LTO object file to the link.
+  if (!symtab->bitcodeFiles.empty())
+    for (auto *s : lto::LTO::getRuntimeLibcallSymbols())
+      handleLibcall(s);
+  if (errorCount())
+    return;
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
