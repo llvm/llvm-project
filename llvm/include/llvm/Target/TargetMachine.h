@@ -33,7 +33,6 @@ class MCInstrInfo;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class MCSymbol;
-class MIRFormatter;
 class raw_pwrite_stream;
 class PassManagerBuilder;
 struct PerFunctionMIParsingState;
@@ -95,7 +94,6 @@ protected: // Can only create subclasses.
   std::unique_ptr<const MCRegisterInfo> MRI;
   std::unique_ptr<const MCInstrInfo> MII;
   std::unique_ptr<const MCSubtargetInfo> STI;
-  std::unique_ptr<const MIRFormatter> MIRF;
 
   unsigned RequireStructuredCFG : 1;
   unsigned O0WantsFastISel : 1;
@@ -198,10 +196,6 @@ public:
   virtual const TargetIntrinsicInfo *getIntrinsicInfo() const {
     return nullptr;
   }
-
-  /// Return MIR formatter to format/parse MIR operands.  Target can override
-  /// this virtual function and return target specific MIR formatter.
-  virtual const MIRFormatter *getMIRFormatter() const { return MIRF.get(); }
 
   bool requiresStructuredCFG() const { return RequireStructuredCFG; }
   void setRequiresStructuredCFG(bool Value) { RequireStructuredCFG = Value; }

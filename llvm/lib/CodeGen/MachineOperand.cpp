@@ -784,8 +784,11 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   case MachineOperand::MO_Immediate: {
     const MIRFormatter *Formatter = nullptr;
-    if (const MachineFunction *MF = getMFIfAvailable(*this))
-      Formatter = MF->getTarget().getMIRFormatter();
+    if (const MachineFunction *MF = getMFIfAvailable(*this)) {
+      const auto *TII = MF->getSubtarget().getInstrInfo();
+      assert(TII && "expected instruction info");
+      Formatter = TII->getMIRFormatter();
+    }
     if (Formatter)
       Formatter->printImm(OS, *getParent(), OpIdx, getImm());
     else
@@ -1057,8 +1060,7 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
                               SmallVectorImpl<StringRef> &SSNs,
                               const LLVMContext &Context,
                               const MachineFrameInfo *MFI,
-                              const TargetInstrInfo *TII,
-                              const MIRFormatter* MIRF) const {
+                              const TargetInstrInfo *TII) const {
   OS << '(';
   if (isVolatile())
     OS << "volatile ";
@@ -1133,15 +1135,13 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
           OS, cast<ExternalSymbolPseudoSourceValue>(PVal)->getSymbol());
       break;
     default: {
+      const MIRFormatter *Formatter = TII->getMIRFormatter();
       // FIXME: This is not necessarily the correct MIR serialization format for
       // a custom pseudo source value, but at least it allows
       // -print-machineinstrs to work on a target with custom pseudo source
       // values.
       OS << "custom \"";
-      if (MIRF)
-        MIRF->printCustomPseudoSourceValue(OS, MST, *PVal);
-      else
-        PVal->printCustom(OS);
+      Formatter->printCustomPseudoSourceValue(OS, MST, *PVal);
       OS << '\"';
       break;
     }
