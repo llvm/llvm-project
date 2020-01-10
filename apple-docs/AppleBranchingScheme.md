@@ -40,7 +40,7 @@ minimize this difference, and do almost all development upstream.
   (see also <http://llvm.org/docs/Contributing.html>).
 - `apple/stable/*`: These branches are periodic stabilization branches, where
   fixes are cherry-picked from LLVM.  At time of writing:
-    - [apple/stable/20191106](https://github.com/apple/llvm-project/tree/apple/stable/20191106)
+    - [apple/stable/20200108](https://github.com/apple/llvm-project/tree/apple/stable/20200108)
       is the most recent stabilization branch.
     - [apple/stable/20190619](https://github.com/apple/llvm-project/tree/apple/stable/20190619)
       is the current stabilization branch for
