@@ -1,8 +1,16 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -stop-after=machine-cp -verify-machineinstrs < %s | \
 ; RUN: FileCheck --check-prefixes=CHECK,32BIT %s
 
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
+; RUN:  -mtriple powerpc-ibm-aix-xcoff < %s | \
+; RUN: FileCheck --check-prefixes=CHECKASM,ASM32PWR4 %s
+
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -stop-after=machine-cp -verify-machineinstrs < %s | \
 ; RUN: FileCheck --check-prefixes=CHECK,64BIT %s
+
+; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
+; RUN:  -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN: FileCheck --check-prefixes=CHECKASM,ASM64PWR4 %s
 
 define void @call_test_chars() {
 entry:
@@ -148,7 +156,6 @@ entry:
   call void @test_i1(i1 1)
   ret void
 }
-
 ; CHECK-LABEL: name: call_test_i1
 
 ; 32BIT: ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
@@ -250,7 +257,6 @@ entry:
   call i64 @test_i64(i64 1, i64 2, i64 3, i64 4)
   ret void
 }
-
 
 ; CHECK-LABEL: name: call_test_i64
 
@@ -612,3 +618,263 @@ entry:
 ; 64BIT:        body:             |
 ; 64BIT-NEXT:    bb.0.entry:
 ; 64BIT-NEXT:     liveins: $x3, $x4, $x5, $x6, $x7
+
+define void @call_test_vararg() {
+entry:
+  %0 = load float, float* @f1, align 4
+  %conv = fpext float %0 to double
+  %1 = load double, double* @d1, align 8
+  call void (i32, ...) @test_vararg(i32 42, double %conv, double %1)
+  ret void
+}
+
+declare void @test_vararg(i32, ...)
+
+; CHECK-LABEL:     name: call_test_vararg
+
+; 32BIT:      renamable $r[[REG:[0-9]+]] = LWZtoc @f1, $r2 :: (load 4 from got)
+; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r[[REG]] :: (dereferenceable load 4 from @f1)
+; 32BIT-NEXT: renamable $r[[REG:[0-9]+]] = LWZtoc @d1, $r2 :: (load 4 from got)
+; 32BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store 8 into %stack.[[SLOT1]])
+; 32BIT-NEXT: renamable $f2 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load 8 from @d1)
+; 32BIT-NEXT: renamable $r4 = LWZ 0, %stack.[[SLOT1]] :: (load 4 from %stack.[[SLOT1]], align 8)
+; 32BIT-NEXT: renamable $r5 = LWZ 4, %stack.[[SLOT1]] :: (load 4 from %stack.[[SLOT1]] + 4)
+; 32BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store 8 into %stack.[[SLOT2]])
+; 32BIT-NEXT: renamable $r6 = LWZ 0, %stack.[[SLOT2]] :: (load 4 from %stack.[[SLOT2]], align 8)
+; 32BIT-NEXT: renamable $r7 = LWZ 4, %stack.[[SLOT2]] :: (load 4 from %stack.[[SLOT2]] + 4)
+; 32BIT-NEXT: ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
+; 32BIT-NEXT: $r3 = LI 42
+; 32BIT-NEXT: BL_NOP <mcsymbol .test_vararg>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $f1, implicit $r4, implicit $r5, implicit $f2, implicit $r6, implicit $r7, implicit $r2, implicit-def $r1
+; 32BIT-NEXT: ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
+
+; CHECKASM-LABEL: .call_test_vararg:
+
+; ASM32PWR4:      stwu 1, -80(1)
+; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], LC1(2)
+; ASM32PWR4-NEXT: lfs 1, 0([[REG]])
+; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], LC2(2)
+; ASM32PWR4-NEXT: stfd 1, 64(1)
+; ASM32PWR4-NEXT: lfd 2, 0([[REG]])
+; ASM32PWR4-NEXT: li 3, 42
+; ASM32PWR4-NEXT: stfd 2, 72(1)
+; ASM32PWR4-DAG:  lwz 4, 64(1)
+; ASM32PWR4-DAG:  lwz 5, 68(1)
+; ASM32PWR4-DAG:  lwz 6, 72(1)
+; ASM32PWR4-DAG:  lwz 7, 76(1)
+; ASM32PWR4-NEXT: bl .test_vararg
+; ASM32PWR4-NEXT: nop
+
+; 64BIT:      renamable $x[[REG:[0-9]+]] = LDtoc @f1, $x2 :: (load 8 from got)
+; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x[[REG]] :: (dereferenceable load 4 from @f1)
+; 64BIT-NEXT: renamable $x[[REG:[0-9]+]] = LDtoc @d1, $x2 :: (load 8 from got)
+; 64BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store 8 into %stack.[[SLOT1]])
+; 64BIT-NEXT: renamable $f2 = LFD 0, killed renamable $x[[REG]] :: (dereferenceable load 8 from @d1)
+; 64BIT-NEXT: renamable $x4 = LD 0, %stack.[[SLOT1]] :: (load 8 from %stack.[[SLOT1]])
+; 64BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store 8 into %stack.[[SLOT2]])
+; 64BIT-NEXT: renamable $x5 = LD 0, %stack.[[SLOT2]] :: (load 8 from %stack.[[SLOT2]])
+; 64BIT-NEXT: ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
+; 64BIT-NEXT: $x3 = LI8 42
+; 64BIT-NEXT: BL8_NOP <mcsymbol .test_vararg>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $f1, implicit $x4, implicit $f2, implicit $x5, implicit $x2, implicit-def $r1
+; 64BIT-NEXT: ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
+
+; ASM64PWR4:      stdu 1, -128(1)
+; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], LC1(2)
+; ASM64PWR4-NEXT: lfs 1, 0([[REG]])
+; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], LC2(2)
+; ASM64PWR4-NEXT: stfd 1, 112(1)
+; ASM64PWR4-NEXT: lfd 2, 0([[REG]])
+; ASM64PWR4-NEXT: li 3, 42
+; ASM64PWR4-NEXT: stfd 2, 120(1)
+; ASM64PWR4-NEXT: ld 4, 112(1)
+; ASM64PWR4-NEXT: ld 5, 120(1)
+; ASM64PWR4-NEXT: bl .test_vararg
+; ASM64PWR4-NEXT: nop
+
+define void @call_test_vararg2() {
+entry:
+  %0 = load float, float* @f1, align 4
+  %conv = fpext float %0 to double
+  %1 = load double, double* @d1, align 8
+  call void (i32, ...) @test_vararg(i32 42, double %conv, i32 42, double %1)
+  ret void
+}
+
+; CHECK-LABEL:     name: call_test_vararg2
+
+; 32BIT:      renamable $r[[REG:[0-9]+]] = LWZtoc @f1, $r2 :: (load 4 from got)
+; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r[[REG]] :: (dereferenceable load 4 from @f1)
+; 32BIT-NEXT: renamable $r[[REG:[0-9]+]] = LWZtoc @d1, $r2 :: (load 4 from got)
+; 32BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store 8 into %stack.[[SLOT1]])
+; 32BIT-NEXT: renamable $f2 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load 8 from @d1)
+; 32BIT-NEXT: renamable $r4 = LWZ 0, %stack.[[SLOT1]] :: (load 4 from %stack.[[SLOT1]], align 8)
+; 32BIT-NEXT: renamable $r5 = LWZ 4, %stack.[[SLOT1]] :: (load 4 from %stack.[[SLOT1]] + 4)
+; 32BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store 8 into %stack.[[SLOT2]])
+; 32BIT-NEXT: renamable $r7 = LWZ 0, %stack.[[SLOT2]] :: (load 4 from %stack.[[SLOT2]], align 8)
+; 32BIT-NEXT: renamable $r8 = LWZ 4, %stack.[[SLOT2]] :: (load 4 from %stack.[[SLOT2]] + 4)
+; 32BIT-NEXT: ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
+; 32BIT-NEXT: $r3 = LI 42
+; 32BIT-NEXT: $r6 = LI 42
+; 32BIT-NEXT: BL_NOP <mcsymbol .test_vararg>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $f1, implicit $r4, implicit $r5, implicit killed $r6, implicit $f2, implicit $r7, implicit $r8, implicit $r2, implicit-def $r1
+; 32BIT-NEXT: ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
+
+; ASM32PWR4:      stwu 1, -80(1)
+; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], LC1(2)
+; ASM32PWR4-NEXT: li 6, 42
+; ASM32PWR4-NEXT: lfs 1, 0([[REG]])
+; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], LC2(2)
+; ASM32PWR4-NEXT: stfd 1, 64(1)
+; ASM32PWR4-NEXT: lfd 2, 0([[REG]])
+; ASM32PWR4-NEXT: li 3, 42
+; ASM32PWR4-NEXT: stfd 2, 72(1)
+; ASM32PWR4-DAG: lwz 4, 64(1)
+; ASM32PWR4-DAG: lwz 5, 68(1)
+; ASM32PWR4-DAG: lwz 7, 72(1)
+; ASM32PWR4-DAG: lwz 8, 76(1)
+; ASM32PWR4-NEXT: bl .test_vararg
+; ASM32PWR4-NEXT: nop
+
+; 64BIT:      renamable $x[[REG:[0-9]+]] = LDtoc @f1, $x2 :: (load 8 from got)
+; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x[[REG]] :: (dereferenceable load 4 from @f1)
+; 64BIT-NEXT: renamable $x[[REG:[0-9]+]] = LDtoc @d1, $x2 :: (load 8 from got)
+; 64BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store 8 into %stack.[[SLOT1]])
+; 64BIT-NEXT: renamable $f2 = LFD 0, killed renamable $x[[REG]] :: (dereferenceable load 8 from @d1)
+; 64BIT-NEXT: renamable $x4 = LD 0, %stack.[[SLOT1]] :: (load 8 from %stack.[[SLOT1]])
+; 64BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store 8 into %stack.[[SLOT2]])
+; 64BIT-NEXT: renamable $x6 = LD 0, %stack.[[SLOT2]] :: (load 8 from %stack.[[SLOT2]])
+; 64BIT-NEXT: ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
+; 64BIT-NEXT: $x3 = LI8 42
+; 64BIT-NEXT: $x5 = LI8 42
+; 64BIT-NEXT: BL8_NOP <mcsymbol .test_vararg>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $f1, implicit $x4, implicit killed $x5, implicit $f2, implicit $x6, implicit $x2, implicit-def $r1
+; 64BIT-NEXT: ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
+
+; ASM64PWR4:      stdu 1, -128(1)
+; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], LC1(2)
+; ASM64PWR4-NEXT: li 5, 42
+; ASM64PWR4-NEXT: lfs 1, 0([[REG]])
+; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], LC2(2)
+; ASM64PWR4-NEXT: stfd 1, 112(1)
+; ASM64PWR4-NEXT: lfd 2, 0([[REG]])
+; ASM64PWR4-NEXT: li 3, 42
+; ASM64PWR4-NEXT: stfd 2, 120(1)
+; ASM64PWR4-NEXT: ld 4, 112(1)
+; ASM64PWR4-NEXT: ld 6, 120(1)
+; ASM64PWR4-NEXT: bl .test_vararg
+; ASM64PWR4-NEXT: nop
+
+define void @call_test_vararg3() {
+entry:
+  %0 = load float, float* @f1, align 4
+  %conv = fpext float %0 to double
+  %1 = load double, double* @d1, align 8
+  call void (i32, ...) @test_vararg(i32 42, double %conv, i64 42, double %1)
+  ret void
+}
+
+; CHECK-LABEL:     name: call_test_vararg3
+
+; 32BIT:      renamable $r[[REG:[0-9]+]] = LWZtoc @f1, $r2 :: (load 4 from got)
+; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r[[REG]] :: (dereferenceable load 4 from @f1)
+; 32BIT-NEXT: renamable $r[[REG:[0-9]+]] = LWZtoc @d1, $r2 :: (load 4 from got)
+; 32BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store 8 into %stack.[[SLOT1]])
+; 32BIT-NEXT: renamable $f2 = LFD 0, killed renamable $r[[REG]] :: (dereferenceable load 8 from @d1)
+; 32BIT-NEXT: renamable $r4 = LWZ 0, %stack.[[SLOT1]] :: (load 4 from %stack.[[SLOT1]], align 8)
+; 32BIT-NEXT: renamable $r5 = LWZ 4, %stack.[[SLOT1]] :: (load 4 from %stack.[[SLOT1]] + 4)
+; 32BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store 8 into %stack.[[SLOT2]])
+; 32BIT-NEXT: renamable $r8 = LWZ 0, %stack.[[SLOT2]] :: (load 4 from %stack.[[SLOT2]], align 8)
+; 32BIT-NEXT: renamable $r9 = LWZ 4, %stack.[[SLOT2]] :: (load 4 from %stack.[[SLOT2]] + 4)
+; 32BIT-NEXT: ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
+; 32BIT-NEXT: $r3 = LI 42
+; 32BIT-NEXT: $r6 = LI 0
+; 32BIT-NEXT: $r7 = LI 42
+; 32BIT-NEXT: BL_NOP <mcsymbol .test_vararg>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $f1, implicit $r4, implicit $r5, implicit killed $r6, implicit killed $r7, implicit $f2, implicit $r8, implicit $r9, implicit $r2, implicit-def $r1
+; 32BIT-NEXT: ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
+
+; ASM32PWR4:      stwu 1, -80(1)
+; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], LC1(2)
+; ASM32PWR4-DAG:  li 6, 0
+; ASM32PWR4-DAG:  li 7, 42
+; ASM32PWR4-NEXT: lfs 1, 0([[REG]])
+; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], LC2(2)
+; ASM32PWR4-NEXT: stfd 1, 64(1)
+; ASM32PWR4-NEXT: lfd 2, 0([[REG]])
+; ASM32PWR4-NEXT: li 3, 42
+; ASM32PWR4-NEXT: stfd 2, 72(1)
+; ASM32PWR4-DAG:  lwz 4, 64(1)
+; ASM32PWR4-DAG:  lwz 5, 68(1)
+; ASM32PWR4-DAG:  lwz 8, 72(1)
+; ASM32PWR4-DAG:  lwz 9, 76(1)
+; ASM32PWR4-NEXT: bl .test_vararg
+; ASM32PWR4-NEXT: nop
+
+; 64BIT:      renamable $x[[REG:[0-9]+]] = LDtoc @f1, $x2 :: (load 8 from got)
+; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x[[REG]] :: (dereferenceable load 4 from @f1)
+; 64BIT-NEXT: renamable $x[[REG:[0-9]+]] = LDtoc @d1, $x2 :: (load 8 from got)
+; 64BIT-NEXT: STFD renamable $f1, 0, %stack.[[SLOT1:[0-9]+]] :: (store 8 into %stack.[[SLOT1]])
+; 64BIT-NEXT: renamable $f2 = LFD 0, killed renamable $x[[REG]] :: (dereferenceable load 8 from @d1)
+; 64BIT-NEXT: renamable $x4 = LD 0, %stack.[[SLOT1]] :: (load 8 from %stack.[[SLOT1]])
+; 64BIT-NEXT: STFD renamable $f2, 0, %stack.[[SLOT2:[0-9]+]] :: (store 8 into %stack.[[SLOT2]])
+; 64BIT-NEXT: renamable $x6 = LD 0, %stack.[[SLOT2]] :: (load 8 from %stack.[[SLOT2]])
+; 64BIT-NEXT: ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
+; 64BIT-NEXT: $x3 = LI8 42
+; 64BIT-NEXT: $x5 = LI8 42
+; 64BIT-NEXT: BL8_NOP <mcsymbol .test_vararg>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $f1, implicit $x4, implicit killed $x5, implicit $f2, implicit $x6, implicit $x2, implicit-def $r1
+; 64BIT-NEXT: ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
+
+; ASM64PWR4:      stdu 1, -128(1)
+; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], LC1(2)
+; ASM64PWR4-NEXT: li 5, 42
+; ASM64PWR4-NEXT: lfs 1, 0([[REG]])
+; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], LC2(2)
+; ASM64PWR4-NEXT: stfd 1, 112(1)
+; ASM64PWR4-NEXT: lfd 2, 0([[REG]])
+; ASM64PWR4-NEXT: li 3, 42
+; ASM64PWR4-NEXT: stfd 2, 120(1)
+; ASM64PWR4-DAG: ld 4, 112(1)
+; ASM64PWR4-DAG: ld 6, 120(1)
+; ASM64PWR4-NEXT: bl .test_vararg
+; ASM64PWR4-NEXT: nop
+
+define void @call_test_vararg4() {
+entry:
+  %0 = load float, float* @f1, align 4
+  call void (i32, ...) @test_vararg(i32 42, float %0)
+  ret void
+}
+
+; CHECK-LABEL:     name: call_test_vararg4
+
+; 32BIT:      renamable $r[[REG:[0-9]+]] = LWZtoc @f1, $r2 :: (load 4 from got)
+; 32BIT-NEXT: renamable $f1 = LFS 0, killed renamable $r[[REG]] :: (dereferenceable load 4 from @f1)
+; 32BIT-NEXT: STFS renamable $f1, 0, %stack.[[SLOT:[0-9]+]] :: (store 4 into %stack.[[SLOT]])
+; 32BIT-NEXT: renamable $r4 = LWZ 0, %stack.[[SLOT]] :: (load 4 from %stack.[[SLOT]])
+; 32BIT-NEXT: ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
+; 32BIT-NEXT: $r3 = LI 42
+; 32BIT-NEXT: BL_NOP <mcsymbol .test_vararg>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $f1, implicit $r4, implicit $r2, implicit-def $r1
+; 32BIT-NEXT: ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
+
+; ASM32PWR4:      stwu 1, -64(1)
+; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], LC1(2)
+; ASM32PWR4-NEXT: lfs 1, 0([[REG]])
+; ASM32PWR4-NEXT: li 3, 42
+; ASM32PWR4-NEXT: stfs 1, 60(1)
+; ASM32PWR4-NEXT: lwz 4, 60(1)
+; ASM32PWR4-NEXT: bl .test_vararg
+; ASM32PWR4-NEXT: nop
+
+; 64BIT:      renamable $x[[REG:[0-9]+]] = LDtoc @f1, $x2 :: (load 8 from got)
+; 64BIT-NEXT: renamable $f1 = LFS 0, killed renamable $x[[REG]] :: (dereferenceable load 4 from @f1)
+; 64BIT-NEXT: STFS renamable $f1, 0, %stack.[[SLOT:[0-9]+]] :: (store 4 into %stack.[[SLOT]])
+; 64BIT-NEXT: renamable $x4 = LWZ8 0, %stack.[[SLOT]] :: (load 4 from %stack.[[SLOT]])
+; 64BIT-NEXT: ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
+; 64BIT-NEXT: $x3 = LI8 42
+; 64BIT-NEXT: BL8_NOP <mcsymbol .test_vararg>, csr_aix64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $f1, implicit $x4, implicit $x2, implicit-def $r1
+; 64BIT-NEXT: ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
+
+; ASM64PWR4:      stdu 1, -128(1)
+; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], LC1(2)
+; ASM64PWR4-NEXT: lfs 1, 0([[REG]])
+; ASM64PWR4-NEXT: li 3, 42
+; ASM64PWR4-NEXT: stfs 1, 124(1)
+; ASM64PWR4-NEXT: lwz 4, 124(1)
+; ASM64PWR4-NEXT: bl .test_vararg
+; ASM64PWR4-NEXT: nop
