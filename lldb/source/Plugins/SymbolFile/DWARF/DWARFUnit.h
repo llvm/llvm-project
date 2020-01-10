@@ -247,7 +247,7 @@ protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,
             const DWARFAbbreviationDeclarationSet &abbrevs,
-            DIERef::Section section);
+            DIERef::Section section, bool is_dwo);
 
   llvm::Error ExtractHeader(SymbolFileDWARF &dwarf,
                             const lldb_private::DWARFDataExtractor &data,
@@ -314,6 +314,7 @@ protected:
   llvm::Optional<llvm::DWARFListTableHeader> m_loclist_table_header;
 
   const DIERef::Section m_section;
+  bool m_is_dwo;
 
 private:
   void ParseProducerInfo();
