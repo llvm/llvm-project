@@ -882,38 +882,36 @@ TEST(ExprMutationAnalyzerTest, CastToConstRef) {
 }
 
 TEST(ExprMutationAnalyzerTest, CommaExprWithAnAssigment) {
-  const auto AST =
-      buildASTFromCodeWithArgs("void f() { int x; int y; (x, y) = 5; }",
-                               {"-Wno-unused-value"});
+  const auto AST = buildASTFromCodeWithArgs(
+      "void f() { int x; int y; (x, y) = 5; }", {"-Wno-unused-value"});
   const auto Results =
       match(withEnclosingCompound(declRefTo("y")), AST->getASTContext());
   EXPECT_TRUE(isMutated(Results, AST.get()));
 }
 
 TEST(ExprMutationAnalyzerTest, CommaExprWithDecOp) {
-  const auto AST =
-      buildASTFromCodeWithArgs("void f() { int x; int y; (x, y)++; }",
-                               {"-Wno-unused-value"});
+  const auto AST = buildASTFromCodeWithArgs(
+      "void f() { int x; int y; (x, y)++; }", {"-Wno-unused-value"});
   const auto Results =
       match(withEnclosingCompound(declRefTo("y")), AST->getASTContext());
   EXPECT_TRUE(isMutated(Results, AST.get()));
 }
 
 TEST(ExprMutationAnalyzerTest, CommaExprWithNonConstMemberCall) {
-  const auto AST =
-      buildASTFromCodeWithArgs("class A { public: int mem; void f() { mem ++; } };"
-                               "void fn() { A o1, o2; (o1, o2).f(); }",
-                               {"-Wno-unused-value"});
+  const auto AST = buildASTFromCodeWithArgs(
+      "class A { public: int mem; void f() { mem ++; } };"
+      "void fn() { A o1, o2; (o1, o2).f(); }",
+      {"-Wno-unused-value"});
   const auto Results =
       match(withEnclosingCompound(declRefTo("o2")), AST->getASTContext());
   EXPECT_TRUE(isMutated(Results, AST.get()));
 }
 
 TEST(ExprMutationAnalyzerTest, CommaExprWithConstMemberCall) {
-  const auto AST =
-      buildASTFromCodeWithArgs("class A { public: int mem; void f() const  { } };"
-                               "void fn() { A o1, o2; (o1, o2).f(); }",
-                               {"-Wno-unused-value"});
+  const auto AST = buildASTFromCodeWithArgs(
+      "class A { public: int mem; void f() const  { } };"
+      "void fn() { A o1, o2; (o1, o2).f(); }",
+      {"-Wno-unused-value"});
   const auto Results =
       match(withEnclosingCompound(declRefTo("o2")), AST->getASTContext());
   EXPECT_FALSE(isMutated(Results, AST.get()));
@@ -957,11 +955,10 @@ TEST(ExprMutationAnalyzerTest, CommaExprParmRef) {
 }
 
 TEST(ExprMutationAnalyzerTest, CommaExprWithAmpersandOp) {
-  const auto AST =
-      buildASTFromCodeWithArgs("class A { public: int mem;};"
-                               "void fn () { A o1, o2;"
-                               "void *addr = &(o2, o1); } ",
-                               {"-Wno-unused-value"});
+  const auto AST = buildASTFromCodeWithArgs("class A { public: int mem;};"
+                                            "void fn () { A o1, o2;"
+                                            "void *addr = &(o2, o1); } ",
+                                            {"-Wno-unused-value"});
   const auto Results =
       match(withEnclosingCompound(declRefTo("o1")), AST->getASTContext());
   EXPECT_TRUE(isMutated(Results, AST.get()));
@@ -976,9 +973,8 @@ TEST(ExprMutationAnalyzerTest, CommaExprAsReturnAsValue) {
 }
 
 TEST(ExprMutationAnalyzerTest, CommaEpxrAsReturnAsNonConstRef) {
-  const auto AST =
-      buildASTFromCodeWithArgs("int& f() { int x, y; return (y, x); }",
-                               {"-Wno-unused-value"});
+  const auto AST = buildASTFromCodeWithArgs(
+      "int& f() { int x, y; return (y, x); }", {"-Wno-unused-value"});
   const auto Results =
       match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
   EXPECT_TRUE(isMutated(Results, AST.get()));
@@ -995,13 +991,12 @@ TEST(ExprMutationAnalyzerTest, CommaExprAsArrayToPointerDecay) {
 }
 
 TEST(ExprMutationAnalyzerTest, CommaExprAsUniquePtr) {
-  const std::string UniquePtrDef =
-      "template <class T> struct UniquePtr {"
-      "  UniquePtr();"
-      "  UniquePtr(const UniquePtr&) = delete;"
-      "  T& operator*() const;"
-      "  T* operator->() const;"
-      "};";
+  const std::string UniquePtrDef = "template <class T> struct UniquePtr {"
+                                   "  UniquePtr();"
+                                   "  UniquePtr(const UniquePtr&) = delete;"
+                                   "  T& operator*() const;"
+                                   "  T* operator->() const;"
+                                   "};";
   const auto AST = buildASTFromCodeWithArgs(
       UniquePtrDef + "template <class T> void f() "
                      "{ UniquePtr<T> x; UniquePtr<T> y;"

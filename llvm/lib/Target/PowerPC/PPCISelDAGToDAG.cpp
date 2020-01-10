@@ -1400,11 +1400,14 @@ class BitPermutationSelector {
       for (unsigned i = 0; i < NumValidBits; ++i)
         Bits[i] = (*LHSBits)[i];
 
-      // These bits are known to be zero.
+      // These bits are known to be zero but the AssertZext may be from a value
+      // that already has some constant zero bits (i.e. from a masking and).
       for (unsigned i = NumValidBits; i < NumBits; ++i)
-        Bits[i] = ValueBit((*LHSBits)[i].getValue(),
-                           (*LHSBits)[i].getValueBitIndex(),
-                           ValueBit::VariableKnownToBeZero);
+        Bits[i] = (*LHSBits)[i].hasValue()
+                      ? ValueBit((*LHSBits)[i].getValue(),
+                                 (*LHSBits)[i].getValueBitIndex(),
+                                 ValueBit::VariableKnownToBeZero)
+                      : ValueBit(ValueBit::ConstZero);
 
       return std::make_pair(Interesting, &Bits);
     }

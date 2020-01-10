@@ -158,7 +158,7 @@
 # ALL-NEXT: warning: parsing line table prologue at 0x00000081 should have ended at 0x000000b9 but it ended at 0x000000ba
 # ALL-NEXT: warning: parsing line table prologue at 0x000000c9 should have ended at 0x00000104 but it ended at 0x00000103
 # OTHER-NEXT: warning: unexpected line op length at offset 0x00000158 expected 0x02 found 0x01
-# OTHER-NEXT: warning: last sequence in debug line table is not terminated!
+# OTHER-NEXT: warning: last sequence in debug line table at offset 0x00000167 is not terminated
 # ALL-NEXT: warning: parsing line table prologue at 0x000001ad should have ended at 0x000001c8 but it ended at 0x000001df
 # ALL-NEXT: warning: parsing line table prologue at 0x000001ed should have ended at 0x00000218 but it ended at 0x0000021f
 # ALL-NEXT: warning: parsing line table prologue at 0x0000022d should have ended at 0x0000024f but it ended at 0x0000025f
