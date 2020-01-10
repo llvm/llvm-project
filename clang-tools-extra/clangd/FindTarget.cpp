@@ -334,6 +334,12 @@ public:
       void VisitObjCProtocolExpr(const ObjCProtocolExpr *OPE) {
         Outer.add(OPE->getProtocol(), Flags);
       }
+      void VisitOpaqueValueExpr(const OpaqueValueExpr *OVE) {
+        Outer.add(OVE->getSourceExpr(), Flags);
+      }
+      void VisitPseudoObjectExpr(const PseudoObjectExpr *POE) {
+        Outer.add(POE->getSyntacticForm(), Flags);
+      }
     };
     Visitor(*this, Flags).Visit(S);
   }
