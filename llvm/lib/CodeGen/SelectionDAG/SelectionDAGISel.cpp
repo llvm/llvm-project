@@ -2251,8 +2251,11 @@ void SelectionDAGISel::Select_READ_REGISTER(SDNode *Op) {
   SDLoc dl(Op);
   MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(Op->getOperand(1));
   const MDString *RegStr = dyn_cast<MDString>(MD->getMD()->getOperand(0));
+
+  EVT VT = Op->getValueType(0);
+  LLT Ty = VT.isSimple() ? getLLTForMVT(VT.getSimpleVT()) : LLT();
   Register Reg =
-      TLI->getRegisterByName(RegStr->getString().data(), Op->getValueType(0),
+      TLI->getRegisterByName(RegStr->getString().data(), Ty,
                              CurDAG->getMachineFunction());
   SDValue New = CurDAG->getCopyFromReg(
                         Op->getOperand(0), dl, Reg, Op->getValueType(0));
@@ -2265,8 +2268,11 @@ void SelectionDAGISel::Select_WRITE_REGISTER(SDNode *Op) {
   SDLoc dl(Op);
   MDNodeSDNode *MD = dyn_cast<MDNodeSDNode>(Op->getOperand(1));
   const MDString *RegStr = dyn_cast<MDString>(MD->getMD()->getOperand(0));
-  Register Reg = TLI->getRegisterByName(RegStr->getString().data(),
-                                        Op->getOperand(2).getValueType(),
+
+  EVT VT = Op->getOperand(2).getValueType();
+  LLT Ty = VT.isSimple() ? getLLTForMVT(VT.getSimpleVT()) : LLT();
+
+  Register Reg = TLI->getRegisterByName(RegStr->getString().data(), Ty,
                                         CurDAG->getMachineFunction());
   SDValue New = CurDAG->getCopyToReg(
                         Op->getOperand(0), dl, Reg, Op->getOperand(2));
