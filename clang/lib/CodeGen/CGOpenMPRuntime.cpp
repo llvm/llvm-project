@@ -11190,6 +11190,7 @@ bool checkContext<OMP_CTX_SET_device, OMP_CTX_kind, CodeGenModule &>(
     case llvm::Triple::wasm64:
     case llvm::Triple::renderscript32:
     case llvm::Triple::renderscript64:
+    case llvm::Triple::ve:
       return false;
     }
   }
