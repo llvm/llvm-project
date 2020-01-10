@@ -45,19 +45,28 @@ entry:
 define <8 x double> @load_fadd_transpose(<8 x double>* %A.Ptr, <8 x double> %b) {
 ; CHECK-LABEL: @load_fadd_transpose(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = load <8 x double>, <8 x double>* [[A_PTR:%.*]]
-; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <8 x double> [[A]], <8 x double> undef, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <8 x double> [[A]], <8 x double> undef, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[SPLIT2:%.*]] = shufflevector <8 x double> [[A]], <8 x double> undef, <2 x i32> <i32 4, i32 5>
-; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <8 x double> [[A]], <8 x double> undef, <2 x i32> <i32 6, i32 7>
+
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x double>* [[A_PTR:%.*]] to double*
+; CHECK-NEXT:    [[COL_CAST:%.*]] = bitcast double* [[TMP0]] to <2 x double>*
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, <2 x double>* [[COL_CAST]], align 8
+; CHECK-NEXT:    [[COL_GEP:%.*]] = getelementptr double, double* [[TMP0]], i32 2
+; CHECK-NEXT:    [[COL_CAST1:%.*]] = bitcast double* [[COL_GEP]] to <2 x double>*
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, <2 x double>* [[COL_CAST1]], align 8
+; CHECK-NEXT:    [[COL_GEP3:%.*]] = getelementptr double, double* [[TMP0]], i32 4
+; CHECK-NEXT:    [[COL_CAST4:%.*]] = bitcast double* [[COL_GEP3]] to <2 x double>*
+; CHECK-NEXT:    [[COL_LOAD5:%.*]] = load <2 x double>, <2 x double>* [[COL_CAST4]], align 8
+; CHECK-NEXT:    [[COL_GEP6:%.*]] = getelementptr double, double* [[TMP0]], i32 6
+; CHECK-NEXT:    [[COL_CAST7:%.*]] = bitcast double* [[COL_GEP6]] to <2 x double>*
+; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <2 x double>, <2 x double>* [[COL_CAST7]], align 8
 ; CHECK-NEXT:    [[SPLIT4:%.*]] = shufflevector <8 x double> [[B:%.*]], <8 x double> undef, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[SPLIT5:%.*]] = shufflevector <8 x double> [[B]], <8 x double> undef, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    [[SPLIT6:%.*]] = shufflevector <8 x double> [[B]], <8 x double> undef, <2 x i32> <i32 4, i32 5>
 ; CHECK-NEXT:    [[SPLIT7:%.*]] = shufflevector <8 x double> [[B]], <8 x double> undef, <2 x i32> <i32 6, i32 7>
-; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> [[SPLIT]], [[SPLIT4]]
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[SPLIT1]], [[SPLIT5]]
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[SPLIT2]], [[SPLIT6]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[SPLIT3]], [[SPLIT7]]
+
+; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> [[COL_LOAD]], [[SPLIT4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[COL_LOAD2]], [[SPLIT5]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[COL_LOAD5]], [[SPLIT6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[COL_LOAD8]], [[SPLIT7]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> undef, double [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
