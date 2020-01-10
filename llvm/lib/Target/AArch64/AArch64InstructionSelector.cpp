@@ -206,12 +206,27 @@ private:
   ComplexRendererFns
   selectAddrModeShiftedExtendXReg(MachineOperand &Root,
                                   unsigned SizeInBytes) const;
+
+  /// Returns a \p ComplexRendererFns which contains a base, offset, and whether
+  /// or not a shift + extend should be folded into an addressing mode. Returns
+  /// None when this is not profitable or possible.
+  ComplexRendererFns
+  selectExtendedSHL(MachineOperand &Root, MachineOperand &Base,
+                    MachineOperand &Offset, unsigned SizeInBytes,
+                    bool WantsExt) const;
   ComplexRendererFns selectAddrModeRegisterOffset(MachineOperand &Root) const;
   ComplexRendererFns selectAddrModeXRO(MachineOperand &Root,
                                        unsigned SizeInBytes) const;
   template <int Width>
   ComplexRendererFns selectAddrModeXRO(MachineOperand &Root) const {
     return selectAddrModeXRO(Root, Width / 8);
+  }
+
+  ComplexRendererFns selectAddrModeWRO(MachineOperand &Root,
+                                       unsigned SizeInBytes) const;
+  template <int Width>
+  ComplexRendererFns selectAddrModeWRO(MachineOperand &Root) const {
+    return selectAddrModeWRO(Root, Width / 8);
   }
 
   ComplexRendererFns selectShiftedRegister(MachineOperand &Root) const;
@@ -227,6 +242,15 @@ private:
     // functionally the same.
     return selectShiftedRegister(Root);
   }
+
+  /// Given an extend instruction, determine the correct shift-extend type for
+  /// that instruction.
+  ///
+  /// If the instruction is going to be used in a load or store, pass
+  /// \p IsLoadStore = true.
+  AArch64_AM::ShiftExtendType
+  getExtendTypeForInst(MachineInstr &MI, MachineRegisterInfo &MRI,
+                       bool IsLoadStore = false) const;
 
   /// Instructions that accept extend modifiers like UXTW expect the register
   /// being extended to be a GPR32. Narrow ExtReg to a 32-bit register using a
@@ -4234,45 +4258,15 @@ bool AArch64InstructionSelector::isWorthFoldingIntoExtendedReg(
                 [](MachineInstr &Use) { return Use.mayLoadOrStore(); });
 }
 
-/// This is used for computing addresses like this:
-///
-/// ldr x1, [x2, x3, lsl #3]
-///
-/// Where x2 is the base register, and x3 is an offset register. The shift-left
-/// is a constant value specific to this load instruction. That is, we'll never
-/// see anything other than a 3 here (which corresponds to the size of the
-/// element being loaded.)
 InstructionSelector::ComplexRendererFns
-AArch64InstructionSelector::selectAddrModeShiftedExtendXReg(
-    MachineOperand &Root, unsigned SizeInBytes) const {
-  if (!Root.isReg())
-    return None;
+AArch64InstructionSelector::selectExtendedSHL(
+    MachineOperand &Root, MachineOperand &Base, MachineOperand &Offset,
+    unsigned SizeInBytes, bool WantsExt) const {
+  assert(Base.isReg() && "Expected base to be a register operand");
+  assert(Offset.isReg() && "Expected offset to be a register operand");
+
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
-
-  // Make sure that the memory op is a valid size.
-  int64_t LegalShiftVal = Log2_32(SizeInBytes);
-  if (LegalShiftVal == 0)
-    return None;
-
-  // We want to find something like this:
-  //
-  // val = G_CONSTANT LegalShiftVal
-  // shift = G_SHL off_reg val
-  // ptr = G_PTR_ADD base_reg shift
-  // x = G_LOAD ptr
-  //
-  // And fold it into this addressing mode:
-  //
-  // ldr x, [base_reg, off_reg, lsl #LegalShiftVal]
-
-  // Check if we can find the G_PTR_ADD.
-  MachineInstr *Gep = getOpcodeDef(TargetOpcode::G_PTR_ADD, Root.getReg(), MRI);
-  if (!Gep || !isWorthFoldingIntoExtendedReg(*Gep, MRI))
-    return None;
-
-  // Now, try to match an opcode which will match our specific offset.
-  // We want a G_SHL or a G_MUL.
-  MachineInstr *OffsetInst = getDefIgnoringCopies(Gep->getOperand(2).getReg(), MRI);
+  MachineInstr *OffsetInst = MRI.getVRegDef(Offset.getReg());
   if (!OffsetInst)
     return None;
 
@@ -4280,6 +4274,10 @@ AArch64InstructionSelector::selectAddrModeShiftedExtendXReg(
   if (OffsetOpc != TargetOpcode::G_SHL && OffsetOpc != TargetOpcode::G_MUL)
     return None;
 
+  // Make sure that the memory op is a valid size.
+  int64_t LegalShiftVal = Log2_32(SizeInBytes);
+  if (LegalShiftVal == 0)
+    return None;
   if (!isWorthFoldingIntoExtendedReg(*OffsetInst, MRI))
     return None;
 
@@ -4324,18 +4322,73 @@ AArch64InstructionSelector::selectAddrModeShiftedExtendXReg(
   if (ImmVal != LegalShiftVal)
     return None;
 
+  unsigned SignExtend = 0;
+  if (WantsExt) {
+    // Check if the offset is defined by an extend.
+    MachineInstr *ExtInst = getDefIgnoringCopies(OffsetReg, MRI);
+    auto Ext = getExtendTypeForInst(*ExtInst, MRI, true);
+    if (Ext == AArch64_AM::InvalidShiftExtend)
+      return None;
+
+    SignExtend = Ext == AArch64_AM::SXTW;
+
+    // Need a 32-bit wide register here.
+    MachineIRBuilder MIB(*MRI.getVRegDef(Root.getReg()));
+    OffsetReg = ExtInst->getOperand(1).getReg();
+    OffsetReg = narrowExtendRegIfNeeded(OffsetReg, MIB);
+  }
+
   // We can use the LHS of the GEP as the base, and the LHS of the shift as an
   // offset. Signify that we are shifting by setting the shift flag to 1.
-  return {{[=](MachineInstrBuilder &MIB) {
-             MIB.addUse(Gep->getOperand(1).getReg());
-           },
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(Base.getReg()); },
            [=](MachineInstrBuilder &MIB) { MIB.addUse(OffsetReg); },
            [=](MachineInstrBuilder &MIB) {
              // Need to add both immediates here to make sure that they are both
              // added to the instruction.
-             MIB.addImm(0);
+             MIB.addImm(SignExtend);
              MIB.addImm(1);
            }}};
+}
+
+/// This is used for computing addresses like this:
+///
+/// ldr x1, [x2, x3, lsl #3]
+///
+/// Where x2 is the base register, and x3 is an offset register. The shift-left
+/// is a constant value specific to this load instruction. That is, we'll never
+/// see anything other than a 3 here (which corresponds to the size of the
+/// element being loaded.)
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectAddrModeShiftedExtendXReg(
+    MachineOperand &Root, unsigned SizeInBytes) const {
+  if (!Root.isReg())
+    return None;
+  MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
+
+  // We want to find something like this:
+  //
+  // val = G_CONSTANT LegalShiftVal
+  // shift = G_SHL off_reg val
+  // ptr = G_PTR_ADD base_reg shift
+  // x = G_LOAD ptr
+  //
+  // And fold it into this addressing mode:
+  //
+  // ldr x, [base_reg, off_reg, lsl #LegalShiftVal]
+
+  // Check if we can find the G_PTR_ADD.
+  MachineInstr *PtrAdd =
+      getOpcodeDef(TargetOpcode::G_PTR_ADD, Root.getReg(), MRI);
+  if (!PtrAdd || !isWorthFoldingIntoExtendedReg(*PtrAdd, MRI))
+    return None;
+
+  // Now, try to match an opcode which will match our specific offset.
+  // We want a G_SHL or a G_MUL.
+  MachineInstr *OffsetInst =
+      getDefIgnoringCopies(PtrAdd->getOperand(2).getReg(), MRI);
+  return selectExtendedSHL(Root, PtrAdd->getOperand(1),
+                           OffsetInst->getOperand(0), SizeInBytes,
+                           /*WantsExt=*/false);
 }
 
 /// This is used for computing addresses like this:
@@ -4397,6 +4450,74 @@ AArch64InstructionSelector::selectAddrModeXRO(MachineOperand &Root,
   // If that doesn't work, see if it's possible to fold in registers from
   // a GEP.
   return selectAddrModeRegisterOffset(Root);
+}
+
+/// This is used for computing addresses like this:
+///
+/// ldr x0, [xBase, wOffset, sxtw #LegalShiftVal]
+///
+/// Where we have a 64-bit base register, a 32-bit offset register, and an
+/// extend (which may or may not be signed).
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectAddrModeWRO(MachineOperand &Root,
+                                              unsigned SizeInBytes) const {
+  MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
+
+  MachineInstr *PtrAdd =
+      getOpcodeDef(TargetOpcode::G_PTR_ADD, Root.getReg(), MRI);
+  if (!PtrAdd || !isWorthFoldingIntoExtendedReg(*PtrAdd, MRI))
+    return None;
+
+  MachineOperand &LHS = PtrAdd->getOperand(1);
+  MachineOperand &RHS = PtrAdd->getOperand(2);
+  MachineInstr *OffsetInst = getDefIgnoringCopies(RHS.getReg(), MRI);
+
+  // The first case is the same as selectAddrModeXRO, except we need an extend.
+  // In this case, we try to find a shift and extend, and fold them into the
+  // addressing mode.
+  //
+  // E.g.
+  //
+  // off_reg = G_Z/S/ANYEXT ext_reg
+  // val = G_CONSTANT LegalShiftVal
+  // shift = G_SHL off_reg val
+  // ptr = G_PTR_ADD base_reg shift
+  // x = G_LOAD ptr
+  //
+  // In this case we can get a load like this:
+  //
+  // ldr x0, [base_reg, ext_reg, sxtw #LegalShiftVal]
+  auto ExtendedShl = selectExtendedSHL(Root, LHS, OffsetInst->getOperand(0),
+                                       SizeInBytes, /*WantsExt=*/true);
+  if (ExtendedShl)
+    return ExtendedShl;
+
+  // There was no shift. We can try and fold a G_Z/S/ANYEXT in alone though.
+  //
+  // e.g.
+  // ldr something, [base_reg, ext_reg, sxtw]
+  if (!isWorthFoldingIntoExtendedReg(*OffsetInst, MRI))
+    return None;
+
+  // Check if this is an extend. We'll get an extend type if it is.
+  AArch64_AM::ShiftExtendType Ext =
+      getExtendTypeForInst(*OffsetInst, MRI, /*IsLoadStore=*/true);
+  if (Ext == AArch64_AM::InvalidShiftExtend)
+    return None;
+
+  // Need a 32-bit wide register.
+  MachineIRBuilder MIB(*PtrAdd);
+  Register ExtReg =
+      narrowExtendRegIfNeeded(OffsetInst->getOperand(1).getReg(), MIB);
+  unsigned SignExtend = Ext == AArch64_AM::SXTW;
+
+  // Base is LHS, offset is ExtReg.
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(LHS.getReg()); },
+           [=](MachineInstrBuilder &MIB) { MIB.addUse(ExtReg); },
+           [=](MachineInstrBuilder &MIB) {
+             MIB.addImm(SignExtend);
+             MIB.addImm(0);
+           }}};
 }
 
 /// Select a "register plus unscaled signed 9-bit immediate" address.  This
@@ -4561,9 +4682,8 @@ AArch64InstructionSelector::selectShiftedRegister(MachineOperand &Root) const {
            [=](MachineInstrBuilder &MIB) { MIB.addImm(ShiftVal); }}};
 }
 
-/// Get the correct ShiftExtendType for an extend instruction.
-static AArch64_AM::ShiftExtendType
-getExtendTypeForInst(MachineInstr &MI, MachineRegisterInfo &MRI) {
+AArch64_AM::ShiftExtendType AArch64InstructionSelector::getExtendTypeForInst(
+    MachineInstr &MI, MachineRegisterInfo &MRI, bool IsLoadStore) const {
   unsigned Opc = MI.getOpcode();
 
   // Handle explicit extend instructions first.
@@ -4610,9 +4730,9 @@ getExtendTypeForInst(MachineInstr &MI, MachineRegisterInfo &MRI) {
   default:
     return AArch64_AM::InvalidShiftExtend;
   case 0xFF:
-    return AArch64_AM::UXTB;
+    return !IsLoadStore ? AArch64_AM::UXTB : AArch64_AM::InvalidShiftExtend;
   case 0xFFFF:
-    return AArch64_AM::UXTH;
+    return !IsLoadStore ? AArch64_AM::UXTH : AArch64_AM::InvalidShiftExtend;
   case 0xFFFFFFFF:
     return AArch64_AM::UXTW;
   }
