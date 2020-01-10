@@ -206,6 +206,12 @@ the following:
   ninja check-$whatever # Rerun the appropriate tests if needed.
   git llvm push
 
+Or
+
+::
+
+  arc land D<Revision>
+
 
 Abandoning a change
 -------------------
