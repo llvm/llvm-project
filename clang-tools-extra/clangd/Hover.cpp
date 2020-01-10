@@ -16,13 +16,13 @@
 #include "Selection.h"
 #include "SourceCode.h"
 #include "index/SymbolCollector.h"
-
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/Type.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -101,6 +101,7 @@ std::string printDefinition(const Decl *D) {
       printingPolicyForDecls(D->getASTContext().getPrintingPolicy());
   Policy.IncludeTagDefinition = false;
   Policy.SuppressTemplateArgsInCXXConstructors = true;
+  Policy.SuppressTagKeyword = true;
   D->print(OS, Policy);
   OS.flush();
   return Definition;
@@ -233,9 +234,7 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
     HI.Parameters->emplace_back();
     auto &P = HI.Parameters->back();
     if (!PVD->getType().isNull()) {
-      P.Type.emplace();
-      llvm::raw_string_ostream OS(*P.Type);
-      PVD->getType().print(OS, Policy);
+      P.Type = PVD->getType().getAsString(Policy);
     } else {
       std::string Param;
       llvm::raw_string_ostream OS(Param);
@@ -344,13 +343,10 @@ HoverInfo getHoverContents(const NamedDecl *D, const SymbolIndex *Index) {
   }
 
   // Fill in types and params.
-  if (const FunctionDecl *FD = getUnderlyingFunction(D)) {
+  if (const FunctionDecl *FD = getUnderlyingFunction(D))
     fillFunctionTypeAndParams(HI, D, FD, Policy);
-  } else if (const auto *VD = dyn_cast<ValueDecl>(D)) {
-    HI.Type.emplace();
-    llvm::raw_string_ostream OS(*HI.Type);
-    VD->getType().print(OS, Policy);
-  }
+  else if (const auto *VD = dyn_cast<ValueDecl>(D))
+    HI.Type = VD->getType().getAsString(Policy);
 
   // Fill in value with evaluated initializer if possible.
   if (const auto *Var = dyn_cast<VarDecl>(D)) {
@@ -380,9 +376,9 @@ HoverInfo getHoverContents(QualType T, ASTContext &ASTCtx,
     enhanceFromIndex(HI, *CommentD, Index);
   } else {
     // Builtin types
-    llvm::raw_string_ostream OS(HI.Name);
-    PrintingPolicy Policy = printingPolicyForDecls(ASTCtx.getPrintingPolicy());
-    T.print(OS, Policy);
+    auto Policy = printingPolicyForDecls(ASTCtx.getPrintingPolicy());
+    Policy.SuppressTagKeyword = true;
+    HI.Name = T.getAsString(Policy);
   }
   return HI;
 }
