@@ -5157,8 +5157,15 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
                });
 
   SubtargetFeatureInfo::emitComputeAvailableFeatures(
-      Target.getName(), "InstructionSelector", "computeAvailableModuleFeatures",
+    Target.getName(), "InstructionSelector", "computeAvailableModuleFeatures",
       ModuleFeatures, OS);
+
+
+  OS << "void " << Target.getName() << "InstructionSelector"
+    "::setupGeneratedPerFunctionState(MachineFunction &MF) {\n"
+    "  AvailableFunctionFeatures = computeAvailableFunctionFeatures("
+    "(const " << Target.getName() << "Subtarget*)&MF.getSubtarget(), &MF);\n"
+    "}\n";
 
   if (Target.getName() == "X86" || Target.getName() == "AArch64") {
     // TODO: Implement PGSO.
@@ -5311,10 +5318,6 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
         "&CoverageInfo) const {\n"
      << "  MachineFunction &MF = *I.getParent()->getParent();\n"
      << "  MachineRegisterInfo &MRI = MF.getRegInfo();\n"
-     << "  // FIXME: This should be computed on a per-function basis rather "
-        "than per-insn.\n"
-     << "  AvailableFunctionFeatures = computeAvailableFunctionFeatures(&STI, "
-        "&MF);\n"
      << "  const PredicateBitset AvailableFeatures = getAvailableFeatures();\n"
      << "  NewMIVector OutMIs;\n"
      << "  State.MIs.clear();\n"
@@ -5350,6 +5353,7 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
      << "computeAvailableFunctionFeatures(const " << Target.getName()
      << "Subtarget *Subtarget,\n"
      << "                                 const MachineFunction *MF) const;\n"
+     << "void setupGeneratedPerFunctionState(MachineFunction &MF) override;\n"
      << "#endif // ifdef GET_GLOBALISEL_PREDICATES_DECL\n";
 
   OS << "#ifdef GET_GLOBALISEL_PREDICATES_INIT\n"
