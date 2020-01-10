@@ -4689,7 +4689,7 @@ MipsTargetLowering::emitPseudoD_SELECT(MachineInstr &MI,
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
 Register
-MipsTargetLowering::getRegisterByName(const char *RegName, EVT VT,
+MipsTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                       const MachineFunction &MF) const {
   // Named registers is expected to be fairly rare. For now, just support $28
   // since the linux kernel uses it.

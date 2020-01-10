@@ -2990,7 +2990,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                          IsThisReturn ? OutVals[0] : SDValue());
 }
 
-Register SITargetLowering::getRegisterByName(const char* RegName, EVT VT,
+Register SITargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                              const MachineFunction &MF) const {
   Register Reg = StringSwitch<Register>(RegName)
     .Case("m0", AMDGPU::M0)

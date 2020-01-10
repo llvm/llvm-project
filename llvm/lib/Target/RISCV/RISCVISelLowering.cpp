@@ -2893,7 +2893,7 @@ bool RISCVTargetLowering::shouldExtendTypeInLibCall(EVT Type) const {
 #include "RISCVGenAsmMatcher.inc"
 
 Register
-RISCVTargetLowering::getRegisterByName(const char *RegName, EVT VT,
+RISCVTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                        const MachineFunction &MF) const {
   Register Reg = MatchRegisterAltName(RegName);
   if (Reg == RISCV::NoRegister)
