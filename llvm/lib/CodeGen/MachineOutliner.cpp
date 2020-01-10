@@ -311,8 +311,6 @@ private:
 
   /// Set the suffix indices of the leaves to the start indices of their
   /// respective suffixes.
-  ///
-  /// \param[in] CurrNode The node currently being visited.
   void setSuffixIndices() {
     // List of nodes we need to visit along with the current length of the
     // string.
