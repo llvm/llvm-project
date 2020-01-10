@@ -12924,7 +12924,16 @@ bool FixedPointExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
   case BO_Add: {
     bool AddOverflow, ConversionOverflow;
     APFixedPoint Result = LHSFX.add(RHSFX, &AddOverflow)
-                              .convert(ResultFXSema, &ConversionOverflow);
+                               .convert(ResultFXSema, &ConversionOverflow);
+    if ((AddOverflow || ConversionOverflow) &&
+        !HandleOverflow(Info, E, Result, E->getType()))
+      return false;
+    return Success(Result, E);
+  }
+  case BO_Sub: {
+    bool AddOverflow, ConversionOverflow;
+    APFixedPoint Result = LHSFX.sub(RHSFX, &AddOverflow)
+                               .convert(ResultFXSema, &ConversionOverflow);
     if ((AddOverflow || ConversionOverflow) &&
         !HandleOverflow(Info, E, Result, E->getType()))
       return false;

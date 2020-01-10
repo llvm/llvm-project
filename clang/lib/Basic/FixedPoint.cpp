@@ -173,6 +173,30 @@ APFixedPoint APFixedPoint::add(const APFixedPoint &Other,
   return APFixedPoint(Result, CommonFXSema);
 }
 
+APFixedPoint APFixedPoint::sub(const APFixedPoint &Other,
+                               bool *Overflow) const {
+  auto CommonFXSema = Sema.getCommonSemantics(Other.getSemantics());
+  APFixedPoint ConvertedThis = convert(CommonFXSema);
+  APFixedPoint ConvertedOther = Other.convert(CommonFXSema);
+  llvm::APSInt ThisVal = ConvertedThis.getValue();
+  llvm::APSInt OtherVal = ConvertedOther.getValue();
+  bool Overflowed = false;
+
+  llvm::APSInt Result;
+  if (CommonFXSema.isSaturated()) {
+    Result = CommonFXSema.isSigned() ? ThisVal.ssub_sat(OtherVal)
+                                     : ThisVal.usub_sat(OtherVal);
+  } else {
+    Result = ThisVal.isSigned() ? ThisVal.ssub_ov(OtherVal, Overflowed)
+                                : ThisVal.usub_ov(OtherVal, Overflowed);
+  }
+
+  if (Overflow)
+    *Overflow = Overflowed;
+
+  return APFixedPoint(Result, CommonFXSema);
+}
+
 void APFixedPoint::toString(llvm::SmallVectorImpl<char> &Str) const {
   llvm::APSInt Val = getValue();
   unsigned Scale = getScale();
