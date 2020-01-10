@@ -1092,7 +1092,7 @@ static bool AvailabilityAttrsMatch(Attr *At1, Attr *At2) {
   const AvailabilityAttr *AA1 = dyn_cast<AvailabilityAttr>(At1);
   if (!AA1)
     return true;
-  const AvailabilityAttr *AA2 = dyn_cast<AvailabilityAttr>(At2);
+  const AvailabilityAttr *AA2 = cast<AvailabilityAttr>(At2);
 
   VersionTuple Introduced1 = AA1->getIntroduced();
   VersionTuple Deprecated1 = AA1->getDeprecated();
