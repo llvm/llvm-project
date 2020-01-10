@@ -35,3 +35,20 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
   }
   return LLT();
 }
+
+MVT llvm::getMVTForLLT(LLT Ty) {
+  if (!Ty.isVector())
+    return MVT::getIntegerVT(Ty.getSizeInBits());
+
+  return MVT::getVectorVT(
+      MVT::getIntegerVT(Ty.getElementType().getSizeInBits()),
+      Ty.getNumElements());
+}
+
+LLT llvm::getLLTForMVT(MVT Ty) {
+  if (!Ty.isVector())
+    return LLT::scalar(Ty.getSizeInBits());
+
+  return LLT::vector(Ty.getVectorNumElements(),
+                     Ty.getVectorElementType().getSizeInBits());
+}

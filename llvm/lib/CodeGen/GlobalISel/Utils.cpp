@@ -431,20 +431,3 @@ Optional<APInt> llvm::ConstantFoldExtOp(unsigned Opcode, const unsigned Op1,
 void llvm::getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU) {
   AU.addPreserved<StackProtector>();
 }
-
-MVT llvm::getMVTForLLT(LLT Ty) {
-  if (!Ty.isVector())
-    return MVT::getIntegerVT(Ty.getSizeInBits());
-
-  return MVT::getVectorVT(
-      MVT::getIntegerVT(Ty.getElementType().getSizeInBits()),
-      Ty.getNumElements());
-}
-
-LLT llvm::getLLTForMVT(MVT Ty) {
-  if (!Ty.isVector())
-    return LLT::scalar(Ty.getSizeInBits());
-
-  return LLT::vector(Ty.getVectorNumElements(),
-                     Ty.getVectorElementType().getSizeInBits());
-}
