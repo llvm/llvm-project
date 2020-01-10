@@ -18,6 +18,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetOptions.h"
 
@@ -127,6 +128,9 @@ struct Config {
   /// used for testing and for running the LTO pipeline outside of the linker
   /// with llvm-lto2.
   std::unique_ptr<raw_ostream> ResolutionFile;
+
+  /// Tunable parameters for passes in the default pipelines.
+  PipelineTuningOptions PTO;
 
   /// The following callbacks deal with tasks, which normally represent the
   /// entire optimization and code generation pipeline for what will become a

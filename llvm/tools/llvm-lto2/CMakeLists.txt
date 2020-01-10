@@ -9,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
   LTO
   MC
   Object
+  Passes
   Support
   Target
   )

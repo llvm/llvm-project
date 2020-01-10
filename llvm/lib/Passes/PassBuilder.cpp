@@ -1902,6 +1902,12 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
       return Error::success();
     }
 
+    // This is consistent with old pass manager invoked via opt, but
+    // inconsistent with clang. Clang doesn't enable loop vectorization
+    // but does enable slp vectorization at Oz.
+    PTO.LoopVectorization = L > O1 && L < Oz;
+    PTO.SLPVectorization = L > O1 && L < Oz;
+
     if (Matches[1] == "default") {
       MPM.addPass(buildPerModuleDefaultPipeline(L, DebugLogging));
     } else if (Matches[1] == "thinlto-pre-link") {
