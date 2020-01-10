@@ -210,7 +210,7 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-NEXT: };
 // CHECK-NEXT: MyTargetInstructionSelector::CustomRendererFn
 // CHECK-NEXT: MyTargetInstructionSelector::CustomRenderers[] = {
-// CHECK-NEXT:   nullptr, // GICP_Invalid
+// CHECK-NEXT:   nullptr, // GICR_Invalid
 // CHECK-NEXT:   &MyTargetInstructionSelector::renderImm8, // gi_cimm8
 // CHECK-NEXT: };
 
