@@ -423,3 +423,64 @@ func @vector_print_vector(%arg0: vector<2x2xf32>) {
 //       CHECK:    llvm.call @print_close() : () -> ()
 //       CHECK:    llvm.call @print_close() : () -> ()
 //       CHECK:    llvm.call @print_newline() : () -> ()
+
+
+func @strided_slice(%arg0: vector<4xf32>, %arg1: vector<4x8xf32>, %arg2: vector<4x8x16xf32>) {
+// CHECK-LABEL: llvm.func @strided_slice(
+  
+  %0 = vector.strided_slice %arg0 {offsets = [2], sizes = [2], strides = [1]} : vector<4xf32> to vector<2xf32>
+//       CHECK:    llvm.mlir.constant(0.000000e+00 : f32) : !llvm.float
+//       CHECK:    llvm.mlir.constant(dense<0.000000e+00> : vector<2xf32>) : !llvm<"<2 x float>">
+//       CHECK:    llvm.mlir.constant(2 : index) : !llvm.i64
+//       CHECK:    llvm.extractelement %{{.*}}[%{{.*}} : !llvm.i64] : !llvm<"<4 x float>">
+//       CHECK:    llvm.mlir.constant(0 : index) : !llvm.i64
+//       CHECK:    llvm.insertelement %{{.*}}, %{{.*}}[%{{.*}} : !llvm.i64] : !llvm<"<2 x float>">
+//       CHECK:    llvm.mlir.constant(3 : index) : !llvm.i64
+//       CHECK:    llvm.extractelement %{{.*}}[%{{.*}} : !llvm.i64] : !llvm<"<4 x float>">
+//       CHECK:    llvm.mlir.constant(1 : index) : !llvm.i64
+//       CHECK:    llvm.insertelement %{{.*}}, %{{.*}}[%{{.*}} : !llvm.i64] : !llvm<"<2 x float>">
+
+  %1 = vector.strided_slice %arg1 {offsets = [2], sizes = [2], strides = [1]} : vector<4x8xf32> to vector<2x8xf32>
+//       CHECK:    llvm.mlir.constant(0.000000e+00 : f32) : !llvm.float
+//       CHECK:    llvm.mlir.constant(dense<0.000000e+00> : vector<2x8xf32>) : !llvm<"[2 x <8 x float>]">
+//       CHECK:    llvm.extractvalue %{{.*}}[2] : !llvm<"[4 x <8 x float>]">
+//       CHECK:    llvm.insertvalue %{{.*}}, %{{.*}}[0] : !llvm<"[2 x <8 x float>]">
+//       CHECK:    llvm.extractvalue %{{.*}}[3] : !llvm<"[4 x <8 x float>]">
+//       CHECK:    llvm.insertvalue %{{.*}}, %{{.*}}[1] : !llvm<"[2 x <8 x float>]">
+
+  %2 = vector.strided_slice %arg1 {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x8xf32> to vector<2x2xf32>
+//       CHECK:    llvm.mlir.constant(0.000000e+00 : f32) : !llvm.float
+//       CHECK:    llvm.mlir.constant(dense<0.000000e+00> : vector<2x2xf32>) : !llvm<"[2 x <2 x float>]">
+//
+// Subvector vector<8xf32> @2
+//       CHECK:    llvm.extractvalue {{.*}}[2] : !llvm<"[4 x <8 x float>]">
+//       CHECK:    llvm.mlir.constant(0.000000e+00 : f32) : !llvm.float
+//       CHECK:    llvm.mlir.constant(dense<0.000000e+00> : vector<2xf32>) : !llvm<"<2 x float>">
+//       CHECK:    llvm.mlir.constant(2 : index) : !llvm.i64
+//       CHECK:    llvm.extractelement {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<8 x float>">
+//       CHECK:    llvm.mlir.constant(0 : index) : !llvm.i64
+//       CHECK:    llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<2 x float>">
+//       CHECK:    llvm.mlir.constant(3 : index) : !llvm.i64
+//       CHECK:    llvm.extractelement {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<8 x float>">
+//       CHECK:    llvm.mlir.constant(1 : index) : !llvm.i64
+//       CHECK:    llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<2 x float>">
+//       CHECK:    llvm.insertvalue {{.*}}, {{.*}}[0] : !llvm<"[2 x <2 x float>]">
+//
+// Subvector vector<8xf32> @3
+//       CHECK:    llvm.extractvalue {{.*}}[3] : !llvm<"[4 x <8 x float>]">
+//       CHECK:    llvm.mlir.constant(0.000000e+00 : f32) : !llvm.float
+//       CHECK:    llvm.mlir.constant(dense<0.000000e+00> : vector<2xf32>) : !llvm<"<2 x float>">
+//       CHECK:    llvm.mlir.constant(2 : index) : !llvm.i64
+//       CHECK:    llvm.extractelement {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<8 x float>">
+//       CHECK:    llvm.mlir.constant(0 : index) : !llvm.i64
+//       CHECK:    llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<2 x float>">
+//       CHECK:    llvm.mlir.constant(3 : index) : !llvm.i64
+//       CHECK:    llvm.extractelement {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<8 x float>">
+//       CHECK:    llvm.mlir.constant(1 : index) : !llvm.i64
+//       CHECK:    llvm.insertelement {{.*}}, {{.*}}[{{.*}} : !llvm.i64] : !llvm<"<2 x float>">
+//       CHECK:    llvm.insertvalue {{.*}}, {{.*}}[1] : !llvm<"[2 x <2 x float>]">
+
+  return
+}
+
+
