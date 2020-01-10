@@ -284,9 +284,6 @@ struct X86Operand final : public MCParsedAsmOperand {
 
   bool needAddressOf() const override { return AddressOf; }
 
-  bool isCallOperand() const override { return CallOperand; }
-  void setCallOperand(bool IsCallOperand) { CallOperand = IsCallOperand; }
-
   bool isMem() const override { return Kind == Memory; }
   bool isMemUnsized() const {
     return Kind == Memory && Mem.Size == 0;

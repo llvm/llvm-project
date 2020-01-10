@@ -600,7 +600,7 @@ namespace dr151 { // dr151: yes
 namespace dr152 { // dr152: yes
   struct A {
     A(); // expected-note 0-2{{not viable}}
-    explicit A(const A&);
+    explicit A(const A&); // expected-note 1-2{{not a candidate}}
   };
   A a1 = A();
 #if __cplusplus <= 201402L

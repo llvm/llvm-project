@@ -116,6 +116,7 @@ private:
   bool selectG_BRCOND(MachineInstr &I) const;
   bool selectG_FRAME_INDEX(MachineInstr &I) const;
   bool selectG_PTR_MASK(MachineInstr &I) const;
+  bool selectG_EXTRACT_VECTOR_ELT(MachineInstr &I) const;
 
   std::pair<Register, unsigned>
   selectVOP3ModsImpl(Register Src) const;
@@ -168,17 +169,20 @@ private:
   InstructionSelector::ComplexRendererFns
   selectDS1Addr1Offset(MachineOperand &Root) const;
 
-  void renderTruncImm32(MachineInstrBuilder &MIB,
-                        const MachineInstr &MI) const;
+  void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx = -1) const;
 
-  void renderNegateImm(MachineInstrBuilder &MIB,
-                       const MachineInstr &MI) const;
+  void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                       int OpIdx) const;
 
-  void renderBitcastImm(MachineInstrBuilder &MIB,
-                        const MachineInstr &MI) const;
+  void renderNegateImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                       int OpIdx) const;
 
-  void renderPopcntImm(MachineInstrBuilder &MIB,
-                       const MachineInstr &MI) const;
+  void renderBitcastImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
+
+  void renderPopcntImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                       int OpIdx) const;
 
   bool isInlineImmediate16(int64_t Imm) const;
   bool isInlineImmediate32(int64_t Imm) const;

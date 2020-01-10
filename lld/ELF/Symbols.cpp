@@ -277,8 +277,10 @@ bool Symbol::includeInDynsym() const {
     return false;
   if (computeBinding() == STB_LOCAL)
     return false;
+  if (!isDefined() && !isCommon())
+    return true;
 
-  return isUndefined() || isShared() || exportDynamic || inDynamicList;
+  return exportDynamic || inDynamicList;
 }
 
 // Print out a log message for --trace-symbol.

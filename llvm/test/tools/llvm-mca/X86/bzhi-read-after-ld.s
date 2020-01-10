@@ -3,6 +3,7 @@
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=broadwell -iterations=1 -timeline -resource-pressure=false < %s | FileCheck %s -check-prefix=ALL -check-prefix=BDWELL
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=skylake -iterations=1 -timeline -resource-pressure=false < %s | FileCheck %s -check-prefix=ALL -check-prefix=SKYLAKE
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver1 -iterations=1 -timeline -resource-pressure=false < %s | FileCheck %s -check-prefix=ALL -check-prefix=ZNVER1
+# RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=znver2 -iterations=1 -timeline -resource-pressure=false < %s | FileCheck %s -check-prefix=ALL -check-prefix=ZNVER2
 
 add     %edi, %esi
 bzhil	%esi, (%rdi), %eax
@@ -14,6 +15,7 @@ bzhil	%esi, (%rdi), %eax
 # HASWELL-NEXT: Total Cycles:      9
 # SKYLAKE-NEXT: Total Cycles:      9
 # ZNVER1-NEXT:  Total Cycles:      8
+# ZNVER2-NEXT:  Total Cycles:      8
 
 # ALL-NEXT:     Total uOps:        3
 

@@ -860,6 +860,9 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.CGOptLevel = getCGOptLevel();
   Conf.DisableVerify = options::DisableVerify;
   Conf.OptLevel = options::OptLevel;
+  Conf.PTO.LoopVectorization = options::OptLevel > 1;
+  Conf.PTO.SLPVectorization = options::OptLevel > 1;
+
   if (options::Parallelism)
     Backend = createInProcessThinBackend(options::Parallelism);
   if (options::thinlto_index_only) {

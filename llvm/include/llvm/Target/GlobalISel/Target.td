@@ -55,6 +55,12 @@ class GIComplexOperandMatcher<LLT type, string matcherfn> {
 class GICustomOperandRenderer<string rendererfn> {
   // The function renders the operand(s) of the matched instruction to
   // the specified instruction. It should be of the form:
-  //   void render(MachineInstrBuilder &MIB, const MachineInstr &MI)
+  //   void render(MachineInstrBuilder &MIB, const MachineInstr &MI,
+  //               int OpIdx = -1)
+  //
+  // If OpIdx is specified (i.e. not invalid/negative), this
+  // references the source operand MI.getOperand(OpIdx). Otherwise,
+  // this is the value defined by MI. This is to support the case
+  // where there is no corresponding instruction to match.
   string RendererFn = rendererfn;
 }

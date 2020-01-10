@@ -404,7 +404,7 @@ define amdgpu_kernel void @v_test_umin_ult_i32_multi_use(i32 addrspace(1)* %out0
 ; FUNC-LABEL: @v_test_umin_ult_i16_multi_use
 ; GCN-NOT: v_min
 ; GCN: v_cmp_lt_u32
-; GCN-NEXT: v_cndmask_b32
+; GCN: v_cndmask_b32
 ; GCN-NOT: v_min
 ; GCN: s_endpgm
 

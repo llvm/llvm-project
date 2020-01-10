@@ -330,7 +330,7 @@ public:
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
-  Register getRegisterByName(const char* RegName, EVT VT,
+  Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
   MachineBasicBlock *splitKillBlock(MachineInstr &MI,

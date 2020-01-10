@@ -5667,7 +5667,7 @@ SDValue AArch64TargetLowering::LowerSPONENTRY(SDValue Op,
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
 Register AArch64TargetLowering::
-getRegisterByName(const char* RegName, EVT VT, const MachineFunction &MF) const {
+getRegisterByName(const char* RegName, LLT VT, const MachineFunction &MF) const {
   Register Reg = MatchRegisterName(RegName);
   if (AArch64::X1 <= Reg && Reg <= AArch64::X28) {
     const MCRegisterInfo *MRI = Subtarget->getRegisterInfo();

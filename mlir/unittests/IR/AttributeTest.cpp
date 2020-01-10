@@ -135,4 +135,14 @@ TEST(DenseSplatTest, FloatAttrSplat) {
 
   testSplat(floatTy, value);
 }
+
+TEST(DenseSplatTest, BF16Splat) {
+  MLIRContext context;
+  FloatType floatTy = FloatType::getBF16(&context);
+  // Note: We currently use double to represent bfloat16.
+  double value = 10.0;
+
+  testSplat(floatTy, value);
+}
+
 } // end namespace

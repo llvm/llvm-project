@@ -761,7 +761,7 @@ private:
   unsigned combineRepeatedFPDivisors() const override;
 
   ConstraintType getConstraintType(StringRef Constraint) const override;
-  Register getRegisterByName(const char* RegName, EVT VT,
+  Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
   /// Examine constraint string and operand type and determine a weight value.

@@ -486,14 +486,21 @@ namespace dr433 { // dr433: yes
   S<int> s;
 }
 
-namespace dr434 { // dr434: yes
+namespace dr434 { // dr434: sup 2352
   void f() {
     const int ci = 0;
     int *pi = 0;
-    const int *&rpci = pi; // expected-error {{cannot bind}}
+    const int *&rpci = pi; // expected-error {{incompatible qualifiers}}
+    const int * const &rcpci = pi; // OK
     rpci = &ci;
     *pi = 1;
   }
+
+#if __cplusplus >= 201103L
+  int *pi = 0;
+  const int * const &rcpci = pi;
+  static_assert(&rcpci == &pi, "");
+#endif
 }
 
 // dr435: na

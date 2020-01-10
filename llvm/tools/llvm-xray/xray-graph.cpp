@@ -30,14 +30,13 @@ static cl::opt<bool>
     GraphKeepGoing("keep-going", cl::desc("Keep going on errors encountered"),
                    cl::sub(GraphC), cl::init(false));
 static cl::alias GraphKeepGoing2("k", cl::aliasopt(GraphKeepGoing),
-                                 cl::desc("Alias for -keep-going"),
-                                 cl::sub(GraphC));
+                                 cl::desc("Alias for -keep-going"));
 
 static cl::opt<std::string>
     GraphOutput("output", cl::value_desc("Output file"), cl::init("-"),
                 cl::desc("output file; use '-' for stdout"), cl::sub(GraphC));
 static cl::alias GraphOutput2("o", cl::aliasopt(GraphOutput),
-                              cl::desc("Alias for -output"), cl::sub(GraphC));
+                              cl::desc("Alias for -output"));
 
 static cl::opt<std::string>
     GraphInstrMap("instr_map",
@@ -46,8 +45,7 @@ static cl::opt<std::string>
                   cl::value_desc("binary with xray_instr_map"), cl::sub(GraphC),
                   cl::init(""));
 static cl::alias GraphInstrMap2("m", cl::aliasopt(GraphInstrMap),
-                                cl::desc("alias for -instr_map"),
-                                cl::sub(GraphC));
+                                cl::desc("alias for -instr_map"));
 
 static cl::opt<bool> GraphDeduceSiblingCalls(
     "deduce-sibling-calls",
@@ -55,8 +53,7 @@ static cl::opt<bool> GraphDeduceSiblingCalls(
     cl::sub(GraphC), cl::init(false));
 static cl::alias
     GraphDeduceSiblingCalls2("d", cl::aliasopt(GraphDeduceSiblingCalls),
-                             cl::desc("Alias for -deduce-sibling-calls"),
-                             cl::sub(GraphC));
+                             cl::desc("Alias for -deduce-sibling-calls"));
 
 static cl::opt<GraphRenderer::StatType>
     GraphEdgeLabel("edge-label",
@@ -80,8 +77,7 @@ static cl::opt<GraphRenderer::StatType>
                               clEnumValN(GraphRenderer::StatType::SUM, "sum",
                                          "sum of call durations")));
 static cl::alias GraphEdgeLabel2("e", cl::aliasopt(GraphEdgeLabel),
-                                 cl::desc("Alias for -edge-label"),
-                                 cl::sub(GraphC));
+                                 cl::desc("Alias for -edge-label"));
 
 static cl::opt<GraphRenderer::StatType> GraphVertexLabel(
     "vertex-label",
@@ -105,8 +101,7 @@ static cl::opt<GraphRenderer::StatType> GraphVertexLabel(
                clEnumValN(GraphRenderer::StatType::SUM, "sum",
                           "sum of call durations")));
 static cl::alias GraphVertexLabel2("v", cl::aliasopt(GraphVertexLabel),
-                                   cl::desc("Alias for -edge-label"),
-                                   cl::sub(GraphC));
+                                   cl::desc("Alias for -edge-label"));
 
 static cl::opt<GraphRenderer::StatType> GraphEdgeColorType(
     "color-edges",
@@ -130,8 +125,7 @@ static cl::opt<GraphRenderer::StatType> GraphEdgeColorType(
                clEnumValN(GraphRenderer::StatType::SUM, "sum",
                           "sum of call durations")));
 static cl::alias GraphEdgeColorType2("c", cl::aliasopt(GraphEdgeColorType),
-                                     cl::desc("Alias for -color-edges"),
-                                     cl::sub(GraphC));
+                                     cl::desc("Alias for -color-edges"));
 
 static cl::opt<GraphRenderer::StatType> GraphVertexColorType(
     "color-vertices",
@@ -155,8 +149,7 @@ static cl::opt<GraphRenderer::StatType> GraphVertexColorType(
                clEnumValN(GraphRenderer::StatType::SUM, "sum",
                           "sum of call durations")));
 static cl::alias GraphVertexColorType2("b", cl::aliasopt(GraphVertexColorType),
-                                       cl::desc("Alias for -edge-label"),
-                                       cl::sub(GraphC));
+                                       cl::desc("Alias for -edge-label"));
 
 template <class T> T diff(T L, T R) { return std::max(L, R) - std::min(L, R); }
 

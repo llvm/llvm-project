@@ -37,7 +37,12 @@ enum OperandConstraint {
 /// These are flags set on operands, but should be considered
 /// private, all access should go through the MCOperandInfo accessors.
 /// See the accessors for a description of what these are.
-enum OperandFlags { LookupPtrRegClass = 0, Predicate, OptionalDef };
+enum OperandFlags {
+  LookupPtrRegClass = 0,
+  Predicate,
+  OptionalDef,
+  BranchTarget
+};
 
 /// Operands are tagged with one of the values of this enum.
 enum OperandType {
@@ -97,6 +102,9 @@ public:
 
   /// Set if this operand is a optional def.
   bool isOptionalDef() const { return Flags & (1 << MCOI::OptionalDef); }
+
+  /// Set if this operand is a branch target.
+  bool isBranchTarget() const { return Flags & (1 << MCOI::BranchTarget); }
 
   bool isGenericType() const {
     return OperandType >= MCOI::OPERAND_FIRST_GENERIC &&

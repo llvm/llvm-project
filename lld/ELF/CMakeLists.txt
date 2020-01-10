@@ -57,6 +57,7 @@ add_lld_library(lldELF
   MC
   Object
   Option
+  Passes
   Support
 
   LINK_LIBS

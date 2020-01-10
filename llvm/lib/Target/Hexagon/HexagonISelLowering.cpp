@@ -237,7 +237,7 @@ bool HexagonTargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
 }
 
 Register HexagonTargetLowering::getRegisterByName(
-      const char* RegName, EVT VT, const MachineFunction &) const {
+      const char* RegName, LLT VT, const MachineFunction &) const {
   // Just support r19, the linux kernel uses it.
   Register Reg = StringSwitch<Register>(RegName)
                      .Case("r0", Hexagon::R0)

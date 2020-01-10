@@ -45,6 +45,11 @@ static cl::opt<bool> DisablePowerSched(
   cl::desc("Disable scheduling to minimize mAI power bursts"),
   cl::init(false));
 
+static cl::opt<bool> EnableVGPRIndexMode(
+  "amdgpu-vgpr-index-mode",
+  cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
+  cl::init(false));
+
 GCNSubtarget::~GCNSubtarget() = default;
 
 R600Subtarget &
@@ -561,6 +566,10 @@ bool GCNSubtarget::hasMadF16() const {
   return InstrInfo.pseudoToMCOpcode(AMDGPU::V_MAD_F16) != -1;
 }
 
+bool GCNSubtarget::useVGPRIndexMode() const {
+  return !hasMovrel() || (EnableVGPRIndexMode && hasVGPRIndexMode());
+}
+
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
   if (getGeneration() >= AMDGPUSubtarget::GFX10)
     return getMaxWavesPerEU();
@@ -755,6 +764,45 @@ struct MemOpClusterMutation : ScheduleDAGMutation {
   }
 };
 
+struct FixBundleLatencyMutation : ScheduleDAGMutation {
+  const SIInstrInfo *TII;
+
+  const TargetSchedModel *TSchedModel;
+
+  FixBundleLatencyMutation(const SIInstrInfo *tii) : TII(tii) {}
+
+  unsigned computeLatency(const MachineInstr &MI, unsigned Reg) const {
+    const SIRegisterInfo &TRI = TII->getRegisterInfo();
+    MachineBasicBlock::const_instr_iterator I(MI.getIterator());
+    MachineBasicBlock::const_instr_iterator E(MI.getParent()->instr_end());
+    unsigned Lat = 0;
+    for (++I; I != E && I->isBundledWithPred(); ++I) {
+      if (!I->modifiesRegister(Reg, &TRI))
+        continue;
+      Lat = TSchedModel->computeInstrLatency(&*I);
+      break;
+    }
+    return Lat;
+  }
+
+  void apply(ScheduleDAGInstrs *DAGInstrs) override {
+    ScheduleDAGMI *DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
+    TSchedModel = DAGInstrs->getSchedModel();
+    if (!TSchedModel || DAG->SUnits.empty())
+      return;
+
+    for (SUnit &SU : DAG->SUnits) {
+      if (!SU.isInstr() || !SU.getInstr()->isBundle())
+        continue;
+      for (SDep &Dep : SU.Succs) {
+        if (Dep.getKind() == SDep::Kind::Data && Dep.getReg())
+          if (unsigned Lat = computeLatency(*SU.getInstr(), Dep.getReg()))
+            Dep.setLatency(Lat);
+      }
+    }
+  }
+};
+
 struct FillMFMAShadowMutation : ScheduleDAGMutation {
   const SIInstrInfo *TII;
 
@@ -881,6 +929,7 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
 
 void GCNSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
+  Mutations.push_back(std::make_unique<FixBundleLatencyMutation>(&InstrInfo));
   Mutations.push_back(std::make_unique<MemOpClusterMutation>(&InstrInfo));
   Mutations.push_back(std::make_unique<FillMFMAShadowMutation>(&InstrInfo));
 }

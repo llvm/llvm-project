@@ -315,6 +315,20 @@ TEST_F(TargetDeclTest, ClassTemplate) {
   EXPECT_DECLS("TemplateSpecializationTypeLoc",
                {"template<> class Foo<int *>", Rel::TemplateInstantiation},
                {"template <typename T> class Foo<T *>", Rel::TemplatePattern});
+
+  Code = R"cpp(
+    // Class template argument deduction
+    template <typename T>
+    struct Test {
+      Test(T);
+    };
+    void foo() {
+      [[Test]] a(5);
+    }
+  )cpp";
+  Flags.push_back("-std=c++17");
+  EXPECT_DECLS("DeducedTemplateSpecializationTypeLoc",
+               {"struct Test", Rel::TemplatePattern});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {
@@ -549,6 +563,7 @@ protected:
     // FIXME: Auto-completion in a template requires disabling delayed template
     // parsing.
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+    TU.ExtraArgs.push_back("-std=c++17");
 
     auto AST = TU.build();
 
@@ -937,7 +952,20 @@ TEST_F(FindExplicitReferencesTest, All) {
                 };
             )cpp",
            "0: targets = {size}, decl\n"
-           "1: targets = {E}\n"}};
+           "1: targets = {E}\n"},
+       // Class template argument deduction
+       {
+           R"cpp(
+                template <typename T>
+                struct Test {
+                Test(T);
+              };
+              void foo() {
+                $0^Test $1^a(5);
+              }
+            )cpp",
+           "0: targets = {Test}\n"
+           "1: targets = {a}, decl\n"}};
 
   for (const auto &C : Cases) {
     llvm::StringRef ExpectedCode = C.first;

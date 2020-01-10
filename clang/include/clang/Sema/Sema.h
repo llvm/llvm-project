@@ -10745,10 +10745,11 @@ public:
     /// whether T1 is reference-compatible with T2.
     enum ReferenceConversions {
       Qualification = 0x1,
-      Function = 0x2,
-      DerivedToBase = 0x4,
-      ObjC = 0x8,
-      ObjCLifetime = 0x10,
+      NestedQualification = 0x2,
+      Function = 0x4,
+      DerivedToBase = 0x8,
+      ObjC = 0x10,
+      ObjCLifetime = 0x20,
 
       LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/ObjCLifetime)
     };

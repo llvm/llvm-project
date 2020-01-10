@@ -18,11 +18,11 @@
 #else
 /* We are using this library */
 #define MLIR_CBLAS_EXPORT __declspec(dllimport)
-#endif
-#endif
+#endif // cblas_EXPORTS
+#endif // MLIR_CBLAS_EXPORT
 #else
 #define MLIR_CBLAS_EXPORT
-#endif
+#endif // _WIN32
 
 /// This reproduces a minimal subset of cblas to allow integration testing
 /// without explicitly requiring a dependence on an external library.
