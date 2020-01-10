@@ -1807,6 +1807,14 @@ public:
   virtual Optional<ParamLoadedValue> describeLoadedValue(const MachineInstr &MI,
                                                          Register Reg) const;
 
+  /// Return MIR formatter to format/parse MIR operands.  Target can override
+  /// this virtual function and return target specific MIR formatter.
+  virtual const MIRFormatter *getMIRFormatter() const {
+    if (!Formatter.get())
+      Formatter = std::make_unique<MIRFormatter>();
+    return Formatter.get();
+  }
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;

@@ -2619,7 +2619,8 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
     } else
       return parseTypedImmediateOperand(Dest);
   case MIToken::dot: {
-    if (const auto *Formatter = MF.getTarget().getMIRFormatter()) {
+    const auto *TII = MF.getSubtarget().getInstrInfo();
+    if (const auto *Formatter = TII->getMIRFormatter()) {
       return parseTargetImmMnemonic(OpCode, OpIdx, Dest, *Formatter);
     }
     LLVM_FALLTHROUGH;
@@ -2879,7 +2880,8 @@ bool MIParser::parseMemoryPseudoSourceValue(const PseudoSourceValue *&PSV) {
     break;
   case MIToken::kw_custom: {
     lex();
-    if (const auto *Formatter = MF.getTarget().getMIRFormatter()) {
+    const auto *TII = MF.getSubtarget().getInstrInfo();
+    if (const auto *Formatter = TII->getMIRFormatter()) {
       if (Formatter->parseCustomPseudoSourceValue(
               Token.stringValue(), MF, PFS, PSV,
               [this](StringRef::iterator Loc, const Twine &Msg) -> bool {

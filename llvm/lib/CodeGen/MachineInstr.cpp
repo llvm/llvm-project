@@ -89,15 +89,13 @@ static void tryToGetTargetInfo(const MachineInstr &MI,
                                const TargetRegisterInfo *&TRI,
                                const MachineRegisterInfo *&MRI,
                                const TargetIntrinsicInfo *&IntrinsicInfo,
-                               const TargetInstrInfo *&TII,
-                               const MIRFormatter *&MIRF) {
+                               const TargetInstrInfo *&TII) {
 
   if (const MachineFunction *MF = getMFIfAvailable(MI)) {
     TRI = MF->getSubtarget().getRegisterInfo();
     MRI = &MF->getRegInfo();
     IntrinsicInfo = MF->getTarget().getIntrinsicInfo();
     TII = MF->getSubtarget().getInstrInfo();
-    MIRF = MF->getTarget().getMIRFormatter();
   }
 }
 
@@ -1479,8 +1477,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   const TargetRegisterInfo *TRI = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
   const TargetIntrinsicInfo *IntrinsicInfo = nullptr;
-  const MIRFormatter *MIRF = nullptr;
-  tryToGetTargetInfo(*this, TRI, MRI, IntrinsicInfo, TII, MIRF);
+  tryToGetTargetInfo(*this, TRI, MRI, IntrinsicInfo, TII);
 
   if (isCFIInstruction())
     assert(getNumOperands() == 1 && "Expected 1 operand in CFI instruction");
@@ -1740,7 +1737,7 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     for (const MachineMemOperand *Op : memoperands()) {
       if (NeedComma)
         OS << ", ";
-      Op->print(OS, MST, SSNs, *Context, MFI, TII, MIRF);
+      Op->print(OS, MST, SSNs, *Context, MFI, TII);
       NeedComma = true;
     }
   }
