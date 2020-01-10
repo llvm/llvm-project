@@ -1606,6 +1606,95 @@ TEST(Hover, DocsFromMostSpecial) {
     }
   }
 }
+TEST(Hover, Present) {
+  struct {
+    const std::function<void(HoverInfo &)> Builder;
+    llvm::StringRef ExpectedRender;
+  } Cases[] = {
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Unknown;
+            HI.Name = "X";
+          },
+          R"(<unknown> X)",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::NamespaceAlias;
+            HI.Name = "foo";
+          },
+          R"(namespace-alias foo)",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Class;
+            HI.TemplateParameters = {
+                {std::string("typename"), std::string("T"), llvm::None},
+                {std::string("typename"), std::string("C"),
+                 std::string("bool")},
+            };
+            HI.Documentation = "documentation";
+            HI.Definition =
+                "template <typename T, typename C = bool> class Foo {}";
+            HI.Name = "foo";
+            HI.NamespaceScope.emplace();
+          },
+          R"(class foo
+documentation
+
+template <typename T, typename C = bool> class Foo {})",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Function;
+            HI.Name = "foo";
+            HI.Type = "type";
+            HI.ReturnType = "ret_type";
+            HI.Parameters.emplace();
+            HoverInfo::Param P;
+            HI.Parameters->push_back(P);
+            P.Type = "type";
+            HI.Parameters->push_back(P);
+            P.Name = "foo";
+            HI.Parameters->push_back(P);
+            P.Default = "default";
+            HI.Parameters->push_back(P);
+            HI.NamespaceScope = "ns::";
+            HI.Definition = "ret_type foo(params) {}";
+          },
+          R"(function foo → ret_type
+- 
+- type
+- type foo
+- type foo = default
+
+// In namespace ns
+ret_type foo(params) {})",
+      },
+      {
+          [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Variable;
+            HI.LocalScope = "test::bar::";
+            HI.Value = "value";
+            HI.Name = "foo";
+            HI.Type = "type";
+            HI.Definition = "def";
+          },
+          R"(variable foo : type
+Value = value
+
+// In test::bar
+def)",
+      },
+  };
+
+  for (const auto &C : Cases) {
+    HoverInfo HI;
+    C.Builder(HI);
+    EXPECT_EQ(HI.present().asPlainText(), C.ExpectedRender);
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
