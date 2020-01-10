@@ -9,6 +9,7 @@
 %module lldb
 
 %include <std_string.i>
+%include "./lua/lua-typemaps.swig"
 %include "./macros.swig"
 %include "./headers.swig"
 
