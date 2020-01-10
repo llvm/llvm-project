@@ -393,6 +393,11 @@ SVal StoreManager::attemptDownCast(SVal Base, QualType TargetType,
   return UnknownVal();
 }
 
+static bool hasSameUnqualifiedPointeeType(QualType ty1, QualType ty2) {
+  return ty1->getPointeeType().getCanonicalType().getTypePtr() ==
+         ty2->getPointeeType().getCanonicalType().getTypePtr();
+}
+
 /// CastRetrievedVal - Used by subclasses of StoreManager to implement
 ///  implicit casts that arise from loads from regions that are reinterpreted
 ///  as another region.
@@ -421,10 +426,11 @@ SVal StoreManager::CastRetrievedVal(SVal V, const TypedValueRegion *R,
   // FIXME: We really need a single good function to perform casts for us
   // correctly every time we need it.
   if (castTy->isPointerType() && !castTy->isVoidPointerType())
-    if (const auto *SR = dyn_cast_or_null<SymbolicRegion>(V.getAsRegion()))
-      if (SR->getSymbol()->getType().getCanonicalType() !=
-          castTy.getCanonicalType())
-        return loc::MemRegionVal(castRegion(SR, castTy));
+    if (const auto *SR = dyn_cast_or_null<SymbolicRegion>(V.getAsRegion())) {
+      QualType sr = SR->getSymbol()->getType();
+      if (!hasSameUnqualifiedPointeeType(sr, castTy))
+          return loc::MemRegionVal(castRegion(SR, castTy));
+    }
 
   return svalBuilder.dispatchCast(V, castTy);
 }

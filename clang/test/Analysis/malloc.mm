@@ -1,4 +1,8 @@
-// RUN: %clang_analyze_cc1 -std=c++14 -analyzer-checker=core,unix.Malloc -analyzer-store=region -verify -fblocks %s
+// RUN: %clang_analyze_cc1 -std=c++14 \
+// RUN:     -analyzer-checker=core,unix.Malloc,cplusplus.NewDelete \
+// RUN:     -analyzer-checker=unix.MismatchedDeallocator \
+// RUN:     -verify -fblocks %s
+
 #import "Inputs/system-header-simulator-objc.h"
 #import "Inputs/system-header-simulator-for-malloc.h"
 
@@ -59,6 +63,23 @@ void testNSDataFreeWhenDoneNO2(NSUInteger dataLength) {
 void testNSStringFreeWhenDoneNO(NSUInteger dataLength) {
   unsigned char *data = (unsigned char *)malloc(42);
   NSString *nsstr = [[NSString alloc] initWithBytesNoCopy:data length:dataLength encoding:NSUTF8StringEncoding freeWhenDone:0]; // expected-warning{{leak}}
+}
+
+void testNSStringFreeWhenDoneNewDelete(NSUInteger dataLength) {
+  unsigned char *data = new unsigned char(42);
+  NSData *nsdata = [[NSData alloc] initWithBytesNoCopy:data
+                                   length:dataLength freeWhenDone:1];
+  // expected-warning@-2{{-initWithBytesNoCopy:length:freeWhenDone: cannot take ownership of memory allocated by 'new'}}
+}
+
+void testNSStringFreeWhenDoneNewDelete2(NSUInteger dataLength) {
+  unsigned char *data = new unsigned char(42);
+  NSData *nsdata = [[NSData alloc] initWithBytesNoCopy:data
+                                                length:dataLength
+                                           deallocator:^(void *bytes,
+                                                         NSUInteger length) {
+                                             delete (unsigned char *)bytes;
+                                           }]; // no-warning
 }
 
 void testNSStringFreeWhenDoneNO2(NSUInteger dataLength) {

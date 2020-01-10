@@ -429,11 +429,6 @@ protected:
 
   AppleObjCRuntimeV2 *GetObjCRuntime();
 
-  void SetupSwiftError();
-  void SetupExclusivity();
-  void SetupReflection();
-  void SetupABIBit();
-
   const CompilerType &GetBoxMetadataType();
 
   std::shared_ptr<swift::remote::MemoryReader> GetMemoryReader();
@@ -446,8 +441,6 @@ protected:
   /// are missing, we shouldn't keep trying.
   llvm::StringSet<> m_library_negative_cache;
   std::mutex m_negative_cache_mutex;
-
-  llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
 
   std::shared_ptr<swift::remote::MemoryReader> m_memory_reader_sp;
 
@@ -468,6 +461,43 @@ protected:
 
   CompilerType m_box_metadata_type;
 
+private:
+  using NativeReflectionContext = swift::reflection::ReflectionContext<
+      swift::External<swift::RuntimeTarget<sizeof(uintptr_t)>>>;
+
+  /// There is a global variable \p _swift_classIsSwiftMask that is
+  /// used to communicate with the Swift language runtime. It needs to
+  /// be initialized by us, but could in theory also be written to by
+  /// the runtime.
+  ///
+  /// This function is called by SetupReflection() and IsABIStable().
+  void SetupABIBit();
+
+  /// Don't call these directly.
+  /// \{
+  void SetupExclusivity();
+  void SetupReflection();
+  void SetupSwiftError();
+  /// \}
+
+  /// Whether \p SetupABIBit() has been run.
+  bool m_initialized_swift_classIsSwiftMask = false;
+  /// Whether \p SetupExclusivity() has been run.
+  bool m_initialized_dynamic_exclusivity_flag_addr = false;
+  /// Whether \p SetupReflection() has been run.
+  bool m_initialized_reflection_ctx = false;
+  /// Whether \p SetupSwiftError() has been run.
+  bool m_initialized_swift_native_error_isa = false;
+
+  /// Lazily initialize and return \p m_dynamic_exclusivity_flag_addr.
+  llvm::Optional<lldb::addr_t> GetDynamicExclusivityFlagAddr();
+
+  /// Lazily initialize the reflection context. Return \p nullptr on failure.
+  NativeReflectionContext *GetReflectionContext();
+
+  /// Lazily initialize and return \p m_SwiftNativeNSErrorISA.
+  llvm::Optional<lldb::addr_t> GetSwiftNativeNSErrorISA();
+
   /// These members are used to track and toggle the state of the "dynamic
   /// exclusivity enforcement flag" in the swift runtime. This flag is set to
   /// true when an LLDB expression starts running, and reset to its original
@@ -476,15 +506,27 @@ protected:
   /// \{
   std::mutex m_active_user_expr_mutex;
   uint32_t m_active_user_expr_count = 0;
-  llvm::Optional<lldb::addr_t> m_dynamic_exclusivity_flag_addr =
-    llvm::Optional<lldb::addr_t>();
+
   bool m_original_dynamic_exclusivity_flag_state = false;
+  llvm::Optional<lldb::addr_t> m_dynamic_exclusivity_flag_addr;
   /// \}
 
-private:
-  using NativeReflectionContext = swift::reflection::ReflectionContext<
-      swift::External<swift::RuntimeTarget<sizeof(uintptr_t)>>>;
-  std::unique_ptr<NativeReflectionContext> reflection_ctx;
+  /// Reflection context.
+  /// \{
+  std::unique_ptr<NativeReflectionContext> m_reflection_ctx;
+
+  /// Record modules added through ModulesDidLoad, which are to be
+  /// added to the reflection context once it's being initialized.
+  ModuleList m_modules_to_add;
+  std::recursive_mutex m_add_module_mutex;
+
+  /// Add the image to the reflection context.
+  /// \return true on success.
+  bool AddModuleToReflectionContext(const lldb::ModuleSP &module_sp);
+  /// \}
+
+  /// Swift native NSError isa.
+  llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
 
   DISALLOW_COPY_AND_ASSIGN(SwiftLanguageRuntime);
 };

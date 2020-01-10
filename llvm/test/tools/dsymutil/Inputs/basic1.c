@@ -26,6 +26,10 @@
       done
       clang basic1.macho.remarks.x86_64.o basic2.macho.remarks.x86_64.o basic3.macho.remarks.x86_64.o -o basic.macho.remarks.x86_64 -Wl,-dead_strip
 
+    Remarks archive compilation (after remarks compilation):
+    ar -q libbasic.a basic1.macho.x86_64.o basic2.macho.x86_64.o basic3.macho.x86_64.o
+    clang -lbasic -L. -o basic.macho.remarks.archive.x86_64 -Wl,-dead_strip
+
 */
 
 int foo(int);

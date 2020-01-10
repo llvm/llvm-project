@@ -172,15 +172,35 @@ __attribute__((objc_root_class))
 @interface Foo ()
 @property(nonatomic, readwrite) int getDirect_setDynamic;
 @property(nonatomic, readwrite, direct) int getDynamic_setDirect;
+- (int)directMethodInExtension __attribute__((objc_direct));
+@end
+
+@interface Foo (Cat)
+- (int)directMethodInCategory __attribute__((objc_direct));
 @end
 
 __attribute__((objc_direct_members))
 @implementation Foo
+// CHECK-LABEL: define hidden i32 @"\01-[Foo directMethodInExtension]"(
+- (int)directMethodInExtension {
+  return 42;
+}
 // CHECK-LABEL: define hidden i32 @"\01-[Foo getDirect_setDynamic]"(
 // CHECK-LABEL: define internal void @"\01-[Foo setGetDirect_setDynamic:]"(
 // CHECK-LABEL: define internal i32 @"\01-[Foo getDynamic_setDirect]"(
 // CHECK-LABEL: define hidden void @"\01-[Foo setGetDynamic_setDirect:]"(
 // CHECK-LABEL: define internal void @"\01-[Foo .cxx_destruct]"(
+@end
+
+@implementation Foo (Cat)
+// CHECK-LABEL: define hidden i32 @"\01-[Foo directMethodInCategory]"(
+- (int)directMethodInCategory {
+  return 42;
+}
+// CHECK-LABEL: define hidden i32 @"\01-[Foo directMethodInCategoryNoDecl]"(
+- (int)directMethodInCategoryNoDecl __attribute__((objc_direct)) {
+  return 42;
+}
 @end
 
 int useRoot(Root *r) {
@@ -195,8 +215,14 @@ int useFoo(Foo *f) {
   // CHECK-LABEL: define i32 @useFoo
   // CHECK: call void bitcast {{.*}} @"\01-[Foo setGetDynamic_setDirect:]"
   // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo getDirect_setDynamic]"
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo directMethodInExtension]"
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo directMethodInCategory]"
+  // CHECK: %{{[^ ]*}} = call i32 bitcast {{.*}} @"\01-[Foo directMethodInCategoryNoDecl]"
   [f setGetDynamic_setDirect:1];
-  return [f getDirect_setDynamic];
+  return [f getDirect_setDynamic] +
+         [f directMethodInExtension] +
+         [f directMethodInCategory] +
+         [f directMethodInCategoryNoDecl];
 }
 
 __attribute__((objc_root_class))

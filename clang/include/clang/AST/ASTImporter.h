@@ -61,6 +61,10 @@ class TypeSourceInfo;
 
     ImportError() : Error(Unknown) { }
     ImportError(const ImportError &Other) : Error(Other.Error) { }
+    ImportError &operator=(const ImportError &Other) {
+      Error = Other.Error;
+      return *this;
+    }
     ImportError(ErrorKind Error) : Error(Error) { }
 
     std::string toString() const;

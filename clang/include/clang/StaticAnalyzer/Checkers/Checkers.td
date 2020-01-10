@@ -773,6 +773,11 @@ def DeprecatedOrUnsafeBufferHandling :
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
+def decodeValueOfObjCType : Checker<"decodeValueOfObjCType">,
+  HelpText<"Warn on uses of the '-decodeValueOfObjCType:at:' method">,
+  Dependencies<[SecuritySyntaxChecker]>,
+  Documentation<HasDocumentation>;
+
 } // end "security.insecureAPI"
 
 let ParentPackage = Security in {

@@ -1652,7 +1652,34 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
   Error ChildErrors = Error::success();
   for (auto *From : FromDC->decls()) {
     ExpectedDecl ImportedOrErr = import(From);
-    if (!ImportedOrErr) {
+
+    // If we are in the process of ImportDefinition(...) for a RecordDecl we
+    // want to make sure that we are also completing each FieldDecl. There
+    // are currently cases where this does not happen and this is correctness
+    // fix since operations such as code generation will expect this to be so.
+    if (ImportedOrErr) {
+      FieldDecl *FieldFrom = dyn_cast_or_null<FieldDecl>(From);
+      Decl *ImportedDecl = (Decl*)*ImportedOrErr;
+      FieldDecl *FieldTo = dyn_cast_or_null<FieldDecl>(ImportedDecl);
+      if (FieldFrom && FieldTo) {
+        const RecordType *RecordFrom = FieldFrom->getType()->getAs<RecordType>();
+        const RecordType *RecordTo = FieldTo->getType()->getAs<RecordType>();
+        if (RecordFrom && RecordTo) {
+          RecordDecl *FromRecordDecl = RecordFrom->getDecl();
+          RecordDecl *ToRecordDecl = RecordTo->getDecl();
+
+          if (FromRecordDecl->isCompleteDefinition() &&
+              !ToRecordDecl->isCompleteDefinition()) {
+            Error Err = ImportDefinition(FromRecordDecl, ToRecordDecl);
+
+            if (Err && AccumulateChildErrors)
+              ChildErrors =  joinErrors(std::move(ChildErrors), std::move(Err));
+            else
+              consumeError(std::move(Err));
+          }
+        }
+      }
+    } else {
       if (AccumulateChildErrors)
         ChildErrors =
             joinErrors(std::move(ChildErrors), ImportedOrErr.takeError());
@@ -4024,6 +4051,14 @@ ExpectedDecl ASTNodeImporter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
 
   ToMethod->setLexicalDeclContext(LexicalDC);
   LexicalDC->addDeclInternal(ToMethod);
+
+  // Implicit params are declared when Sema encounters the definition but this
+  // never happens when the method is imported. Manually declare the implicit
+  // params now that the MethodDecl knows its class interface.
+  if (D->getSelfDecl())
+    ToMethod->createImplicitParams(Importer.getToContext(),
+                                   ToMethod->getClassInterface());
+
   return ToMethod;
 }
 
