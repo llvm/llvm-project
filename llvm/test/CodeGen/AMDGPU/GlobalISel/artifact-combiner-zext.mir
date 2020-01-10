@@ -88,3 +88,28 @@ body: |
     %2:_(<3 x s32>) = G_ZEXT %1
     $vgpr0_vgpr1_vgpr2 = COPY %2
 ...
+
+# Test for "Too many bits for uint64_t" assertion when combining
+# zexts with wide sources.
+---
+name: test_zext_128_trunc_s128_merge
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_zext_128_trunc_s128_merge
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
+    ; CHECK: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C1]]
+    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[AND]](s64), [[AND1]](s64)
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = COPY $vgpr0_vgpr1
+    %2:_(s128) = G_MERGE_VALUES %0, %1
+    %3:_(s96) = G_TRUNC %2
+    %4:_(s128) = G_ZEXT %3
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %4
+...
