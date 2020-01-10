@@ -214,3 +214,6 @@ def gi_NegateImm : GICustomOperandRenderer<"renderNegateImm">,
 
 def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastImm">,
   GISDNodeXFormEquiv<bitcast_fpimm_to_i32>;
+
+def gi_IMMPopCount : GICustomOperandRenderer<"renderPopcntImm">,
+  GISDNodeXFormEquiv<IMMPopCount>;

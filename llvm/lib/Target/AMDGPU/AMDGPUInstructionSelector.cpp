@@ -2128,6 +2128,12 @@ void AMDGPUInstructionSelector::renderBitcastImm(MachineInstrBuilder &MIB,
   }
 }
 
+void AMDGPUInstructionSelector::renderPopcntImm(MachineInstrBuilder &MIB,
+                                                const MachineInstr &MI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && "Expected G_CONSTANT");
+  MIB.addImm(MI.getOperand(1).getCImm()->getValue().countPopulation());
+}
+
 bool AMDGPUInstructionSelector::isInlineImmediate16(int64_t Imm) const {
   return AMDGPU::isInlinableLiteral16(Imm, STI.hasInv2PiInlineImm());
 }
