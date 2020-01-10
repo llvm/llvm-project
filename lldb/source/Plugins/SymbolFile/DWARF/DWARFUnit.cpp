@@ -790,7 +790,8 @@ void DWARFUnit::ComputeAbsolutePath() {
     m_file_spec->MakeAbsolute(GetCompilationDirectory());
 }
 
-SymbolFileDWARFDwo *DWARFUnit::GetDwoSymbolFile() const {
+SymbolFileDWARFDwo *DWARFUnit::GetDwoSymbolFile() {
+  ExtractUnitDIEIfNeeded();
   return m_dwo_symbol_file.get();
 }
 
