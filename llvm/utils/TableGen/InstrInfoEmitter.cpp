@@ -164,6 +164,11 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
       if (Op.Rec->isSubClassOf("OptionalDefOperand"))
         Res += "|(1<<MCOI::OptionalDef)";
 
+      // Branch target operands.  Check to see if the original unexpanded
+      // operand was of type BranchTargetOperand.
+      if (Op.Rec->isSubClassOf("BranchTargetOperand"))
+        Res += "|(1<<MCOI::BranchTarget)";
+
       // Fill in operand type.
       Res += ", ";
       assert(!Op.OperandType.empty() && "Invalid operand type.");
