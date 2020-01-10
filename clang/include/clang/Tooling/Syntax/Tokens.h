@@ -240,9 +240,9 @@ public:
   /// Lexed tokens of a file before preprocessing. E.g. for the following input
   ///     #define DECL(name) int name = 10
   ///     DECL(a);
-  /// spelledTokens() returns {"#", "define", "DECL", "(", "name", ")", "eof"}.
-  /// FIXME: we do not yet store tokens of directives, like #include, #define,
-  ///        #pragma, etc.
+  /// spelledTokens() returns
+  ///    {"#", "define", "DECL", "(", "name", ")", "int", "name", "=", "10",
+  ///     "DECL", "(", "a", ")", ";"}
   llvm::ArrayRef<syntax::Token> spelledTokens(FileID FID) const;
 
   /// Get all tokens that expand a macro in \p FID. For the following input
