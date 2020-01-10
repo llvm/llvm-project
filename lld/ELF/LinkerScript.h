@@ -164,7 +164,7 @@ struct InputSectionDescription : BaseCommand {
     return c->kind == InputSectionKind;
   }
 
-  StringMatcher filePat;
+  SingleStringMatcher filePat;
 
   // Input sections that matches at least one of SectionPatterns
   // will be associated with this InputSectionDescription.
