@@ -508,9 +508,9 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
           (!Subtarget->isPPC64() && MI->getOperand(1).getReg() == PPC::R3)) &&
          "GETtls[ld]ADDR[32] must read GPR3");
 
-  if (!Subtarget->isPPC64() && !Subtarget->isDarwin() &&
-      isPositionIndependent())
+  if (Subtarget->is32BitELFABI() && isPositionIndependent())
     Kind = MCSymbolRefExpr::VK_PLT;
+
   const MCExpr *TlsRef =
     MCSymbolRefExpr::create(TlsGetAddr, Kind, OutContext);
 
