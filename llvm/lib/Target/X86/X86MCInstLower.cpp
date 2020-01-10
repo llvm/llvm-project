@@ -1035,9 +1035,11 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
 /// bytes.  Return the size of nop emitted.
 static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
                         const MCSubtargetInfo &STI) {
-  // This works only for 64bit. For 32bit we have to do additional checking if
-  // the CPU supports multi-byte nops.
-  assert(Is64Bit && "EmitNops only supports X86-64");
+  if (!Is64Bit) {
+    // TODO Do additional checking if the CPU supports multi-byte nops.
+    OS.EmitInstruction(MCInstBuilder(X86::NOOP), STI);
+    return 1;
+  }
 
   unsigned NopSize;
   unsigned Opc, BaseReg, ScaleVal, IndexReg, Displacement, SegmentReg;
@@ -1597,6 +1599,16 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
 
   NoAutoPaddingScope NoPadScope(*OutStreamer);
 
+  const Function &F = MF->getFunction();
+  if (F.hasFnAttribute("patchable-function-entry")) {
+    unsigned Num;
+    if (F.getFnAttribute("patchable-function-entry")
+            .getValueAsString()
+            .getAsInteger(10, Num))
+      return;
+    EmitNops(*OutStreamer, Num, Subtarget->is64Bit(), getSubtargetInfo());
+    return;
+  }
   // We want to emit the following pattern:
   //
   //   .p2align 1, ...
