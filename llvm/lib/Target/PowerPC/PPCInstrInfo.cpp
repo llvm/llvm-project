@@ -1587,22 +1587,6 @@ bool PPCInstrInfo::DefinesPredicate(MachineInstr &MI,
   return Found;
 }
 
-bool PPCInstrInfo::isPredicable(const MachineInstr &MI) const {
-  unsigned OpC = MI.getOpcode();
-  switch (OpC) {
-  default:
-    return false;
-  case PPC::B:
-  case PPC::BLR:
-  case PPC::BLR8:
-  case PPC::BCTR:
-  case PPC::BCTR8:
-  case PPC::BCTRL:
-  case PPC::BCTRL8:
-    return true;
-  }
-}
-
 bool PPCInstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
                                   unsigned &SrcReg2, int &Mask,
                                   int &Value) const {
