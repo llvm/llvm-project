@@ -446,12 +446,12 @@ enum SIBBase {
 };
 
 /// Possible displacement types for effective-address computations.
-typedef enum {
+enum EADisplacement {
   EA_DISP_NONE,
   EA_DISP_8,
   EA_DISP_16,
   EA_DISP_32
-} EADisplacement;
+};
 
 /// All possible values of the reg field in the ModR/M byte.
 enum Reg {
@@ -529,8 +529,6 @@ struct InstructionSpecifier {
 
 /// The x86 internal instruction, which is produced by the decoder.
 struct InternalInstruction {
-  // Reader interface (C)
-  byteReader_t reader;
   // Opaque value passed to the reader
   const void* readerArg;
   // The address of the next byte to read via the reader
@@ -661,7 +659,6 @@ struct InternalInstruction {
 /// a buffer provided by the consumer.
 /// \param insn      The buffer to store the instruction in.  Allocated by the
 ///                  consumer.
-/// \param reader    The byteReader_t for the bytes to be read.
 /// \param readerArg An argument to pass to the reader for storing context
 ///                  specific to the consumer.  May be NULL.
 /// \param logger    The dlog_t to be used in printing status messages from the
@@ -673,7 +670,6 @@ struct InternalInstruction {
 /// \param mode      The mode (16-bit, 32-bit, 64-bit) to decode in.
 /// \return          Nonzero if there was an error during decode, 0 otherwise.
 int decodeInstruction(InternalInstruction *insn,
-                      byteReader_t reader,
                       const void *readerArg,
                       dlog_t logger,
                       void *loggerArg,
