@@ -20,6 +20,10 @@ struct Container {
 
 struct Foo {};
 struct Bar {
+  // Small trivially copyable types do not show a warning when copied in a
+  // range-based for loop. This size ensures the object is not considered
+  // small.
+  char s[128];
   Bar(Foo);
   Bar(int);
   operator int();
