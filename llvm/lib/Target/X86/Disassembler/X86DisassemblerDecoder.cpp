@@ -15,6 +15,8 @@
 #include "X86DisassemblerDecoder.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <cstdarg> /* for va_*()       */
 #include <cstdio>  /* for vsnprintf()  */
@@ -22,6 +24,8 @@
 #include <cstring> /* for memset()     */
 
 using namespace llvm::X86Disassembler;
+
+#define DEBUG_TYPE "x86-disassembler"
 
 /// Specifies whether a ModR/M byte is needed and (if so) which
 /// instruction each possible value of the ModR/M byte corresponds to.  Once
@@ -231,17 +235,14 @@ static bool consume(InternalInstruction *insn, T &ptr) {
 static void dbgprintf(struct InternalInstruction* insn,
                       const char* format,
                       ...) {
-  char buffer[256];
-  va_list ap;
-
-  if (!insn->dlog)
-    return;
-
-  va_start(ap, format);
-  (void)vsnprintf(buffer, sizeof(buffer), format, ap);
-  va_end(ap);
-
-  insn->dlog(insn->dlogArg, buffer);
+  LLVM_DEBUG({
+    char buffer[256];
+    va_list ap;
+    va_start(ap, format);
+    (void)vsnprintf(buffer, sizeof(buffer), format, ap);
+    va_end(ap);
+    llvm::errs() << buffer;
+  });
 }
 
 static bool isREX(struct InternalInstruction *insn, uint8_t prefix) {
@@ -1815,10 +1816,6 @@ static int readOperands(struct InternalInstruction* insn) {
  * @param reader    - The function to be used to read the instruction's bytes.
  * @param readerArg - A generic argument to be passed to the reader to store
  *                    any internal state.
- * @param logger    - If non-NULL, the function to be used to write log messages
- *                    and warnings.
- * @param loggerArg - A generic argument to be passed to the logger to store
- *                    any internal state.
  * @param startLoc  - The address (in the reader's address space) of the first
  *                    byte in the instruction.
  * @param mode      - The mode (real mode, IA-32e, or IA-32e in 64-bit mode) to
@@ -1828,15 +1825,12 @@ static int readOperands(struct InternalInstruction* insn) {
  */
 int llvm::X86Disassembler::decodeInstruction(struct InternalInstruction *insn,
                                              const void *readerArg,
-                                             dlog_t logger, void *loggerArg,
                                              const void *miiArg,
                                              uint64_t startLoc,
                                              DisassemblerMode mode) {
   memset(insn, 0, sizeof(struct InternalInstruction));
 
   insn->readerArg = readerArg;
-  insn->dlog = logger;
-  insn->dlogArg = loggerArg;
   insn->startLocation = startLoc;
   insn->readerCursor = startLoc;
   insn->mode = mode;

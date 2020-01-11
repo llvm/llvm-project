@@ -169,27 +169,6 @@ X86GenericDisassembler::X86GenericDisassembler(
   llvm_unreachable("Invalid CPU mode");
 }
 
-/// A callback function that wraps the readByte method from Region.
-///
-/// @param Arg      - The generic callback parameter.  In this case, this should
-///                   be a pointer to a Region.
-/// @param Byte     - A pointer to the byte to be read.
-/// @param Address  - The address to be read.
-
-/// logger - a callback function that wraps the operator<< method from
-///   raw_ostream.
-///
-/// @param arg      - The generic callback parameter.  This should be a pointe
-///                   to a raw_ostream.
-/// @param log      - A string to be logged.  logger() adds a newline.
-static void logger(void* arg, const char* log) {
-  if (!arg)
-    return;
-
-  raw_ostream &vStream = *(static_cast<raw_ostream*>(arg));
-  vStream << log << "\n";
-}
-
 //
 // Public interface for the disassembler
 //
@@ -201,14 +180,10 @@ MCDisassembler::DecodeStatus X86GenericDisassembler::getInstruction(
 
   InternalInstruction InternalInstr;
 
-  dlog_t LoggerFn = logger;
-  if (&VStream == &nulls())
-    LoggerFn = nullptr; // Disable logging completely if it's going to nulls().
-
   std::pair<ArrayRef<uint8_t>, uint64_t> R(Bytes, Address);
 
-  int Ret = decodeInstruction(&InternalInstr, &R, LoggerFn, (void *)&VStream,
-                              (const void *)MII.get(), Address, fMode);
+  int Ret = decodeInstruction(&InternalInstr, &R, (const void *)MII.get(),
+                              Address, fMode);
 
   if (Ret) {
     Size = InternalInstr.readerCursor - Address;
