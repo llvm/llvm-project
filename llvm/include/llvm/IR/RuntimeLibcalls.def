@@ -386,10 +386,6 @@ HANDLE_LIBCALL(UO_F32, "__unordsf2")
 HANDLE_LIBCALL(UO_F64, "__unorddf2")
 HANDLE_LIBCALL(UO_F128, "__unordtf2")
 HANDLE_LIBCALL(UO_PPCF128, "__gcc_qunord")
-HANDLE_LIBCALL(O_F32, "__unordsf2")
-HANDLE_LIBCALL(O_F64, "__unorddf2")
-HANDLE_LIBCALL(O_F128, "__unordtf2")
-HANDLE_LIBCALL(O_PPCF128, "__gcc_qunord")
 
 // Memory
 HANDLE_LIBCALL(MEMCPY, "memcpy")

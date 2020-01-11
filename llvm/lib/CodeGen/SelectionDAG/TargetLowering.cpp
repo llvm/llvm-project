@@ -344,15 +344,13 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
           (VT == MVT::f64) ? RTLIB::OGT_F64 :
           (VT == MVT::f128) ? RTLIB::OGT_F128 : RTLIB::OGT_PPCF128;
     break;
+  case ISD::SETO:
+    ShouldInvertCC = true;
+    LLVM_FALLTHROUGH;
   case ISD::SETUO:
     LC1 = (VT == MVT::f32) ? RTLIB::UO_F32 :
           (VT == MVT::f64) ? RTLIB::UO_F64 :
           (VT == MVT::f128) ? RTLIB::UO_F128 : RTLIB::UO_PPCF128;
-    break;
-  case ISD::SETO:
-    LC1 = (VT == MVT::f32) ? RTLIB::O_F32 :
-          (VT == MVT::f64) ? RTLIB::O_F64 :
-          (VT == MVT::f128) ? RTLIB::O_F128 : RTLIB::O_PPCF128;
     break;
   case ISD::SETONE:
     // SETONE = O && UNE
