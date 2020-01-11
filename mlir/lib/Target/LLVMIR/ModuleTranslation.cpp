@@ -240,7 +240,7 @@ LogicalResult ModuleTranslation::convertBlock(Block &bb, bool ignoreArguments) {
     unsigned numPredecessors =
         std::distance(predecessors.begin(), predecessors.end());
     for (auto arg : bb.getArguments()) {
-      auto wrappedType = arg->getType().dyn_cast<LLVM::LLVMType>();
+      auto wrappedType = arg.getType().dyn_cast<LLVM::LLVMType>();
       if (!wrappedType)
         return emitError(bb.front().getLoc(),
                          "block argument does not have an LLVM type");
@@ -416,7 +416,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     if (auto attr = func.getArgAttrOfType<BoolAttr>(argIdx, "llvm.noalias")) {
       // NB: Attribute already verified to be boolean, so check if we can indeed
       // attach the attribute to this argument, based on its type.
-      auto argTy = mlirArg->getType().dyn_cast<LLVM::LLVMType>();
+      auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMType>();
       if (!argTy.getUnderlyingType()->isPointerTy())
         return func.emitError(
             "llvm.noalias attribute attached to LLVM non-pointer argument");

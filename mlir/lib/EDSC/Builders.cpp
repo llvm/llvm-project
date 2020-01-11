@@ -69,7 +69,7 @@ mlir::edsc::ValueHandle::ValueHandle(index_t cst) {
   auto &b = ScopedContext::getBuilder();
   auto loc = ScopedContext::getLocation();
   v = b.create<ConstantIndexOp>(loc, cst.v).getResult();
-  t = v->getType();
+  t = v.getType();
 }
 
 ValueHandle &mlir::edsc::ValueHandle::operator=(const ValueHandle &other) {
@@ -139,8 +139,8 @@ static Optional<ValueHandle> emitStaticFor(ArrayRef<ValueHandle> lbs,
   if (lbs.size() != 1 || ubs.size() != 1)
     return Optional<ValueHandle>();
 
-  auto *lbDef = lbs.front().getValue()->getDefiningOp();
-  auto *ubDef = ubs.front().getValue()->getDefiningOp();
+  auto *lbDef = lbs.front().getValue().getDefiningOp();
+  auto *ubDef = ubs.front().getValue().getDefiningOp();
   if (!lbDef || !ubDef)
     return Optional<ValueHandle>();
 
@@ -305,7 +305,7 @@ categorizeValueByAffineType(MLIRContext *context, Value val, unsigned &numDims,
                             unsigned &numSymbols) {
   AffineExpr d;
   Value resultVal = nullptr;
-  if (auto constant = dyn_cast_or_null<ConstantIndexOp>(val->getDefiningOp())) {
+  if (auto constant = dyn_cast_or_null<ConstantIndexOp>(val.getDefiningOp())) {
     d = getAffineConstantExpr(constant.getValue(), context);
   } else if (isValidSymbol(val) && !isValidDim(val)) {
     d = getAffineSymbolExpr(numSymbols++, context);
@@ -344,8 +344,8 @@ template <typename IOp, typename FOp>
 static ValueHandle createBinaryHandle(
     ValueHandle lhs, ValueHandle rhs,
     function_ref<AffineExpr(AffineExpr, AffineExpr)> affCombiner) {
-  auto thisType = lhs.getValue()->getType();
-  auto thatType = rhs.getValue()->getType();
+  auto thisType = lhs.getValue().getType();
+  auto thatType = rhs.getValue().getType();
   assert(thisType == thatType && "cannot mix types in operators");
   (void)thisType;
   (void)thatType;

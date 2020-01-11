@@ -120,7 +120,7 @@ template <> LogicalResult verifyBlockArgs(GenericOp op, Block &block) {
 
   for (unsigned i = 0; i < nViews; ++i) {
     auto viewType = op.getShapedType(i);
-    if (viewType.getElementType() != block.getArgument(i)->getType())
+    if (viewType.getElementType() != block.getArgument(i).getType())
       return op.emitOpError("expected block argument ")
              << i << " of the same type as elemental type of "
              << ((i < nInputViews) ? "input " : "output ")
@@ -139,7 +139,7 @@ template <> LogicalResult verifyBlockArgs(IndexedGenericOp op, Block &block) {
         "number of loops");
 
   for (unsigned i = 0; i < nLoops; ++i) {
-    if (!block.getArgument(i)->getType().isIndex())
+    if (!block.getArgument(i).getType().isIndex())
       return op.emitOpError("expected block argument ")
              << i << " to be of IndexType";
   }
@@ -148,7 +148,7 @@ template <> LogicalResult verifyBlockArgs(IndexedGenericOp op, Block &block) {
     unsigned memrefArgIndex = i + nLoops;
     auto viewType = op.getShapedType(i);
     if (viewType.getElementType() !=
-        block.getArgument(memrefArgIndex)->getType())
+        block.getArgument(memrefArgIndex).getType())
       return op.emitOpError("expected block argument ")
              << memrefArgIndex << " of the same type as elemental type of "
              << ((i < nInputViews) ? "input " : "output ")
@@ -314,10 +314,10 @@ static LogicalResult verify(IndexedGenericOp op) { return verifyGenericOp(op); }
 //===----------------------------------------------------------------------===//
 
 static void print(OpAsmPrinter &p, RangeOp op) {
-  p << op.getOperationName() << " " << *op.min() << ":" << *op.max() << ":"
-    << *op.step();
+  p << op.getOperationName() << " " << op.min() << ":" << op.max() << ":"
+    << op.step();
   p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.getResult()->getType();
+  p << " : " << op.getResult().getType();
 }
 
 static ParseResult parseRangeOp(OpAsmParser &parser, OperationState &result) {
@@ -541,7 +541,7 @@ void mlir::linalg::SliceOp::build(Builder *b, OperationState &result,
   result.addOperands(base);
   result.addOperands(indexings);
 
-  auto memRefType = base->getType().cast<MemRefType>();
+  auto memRefType = base.getType().cast<MemRefType>();
   int64_t offset;
   SmallVector<int64_t, 4> strides;
   auto res = getStridesAndOffset(memRefType, strides, offset);
@@ -560,7 +560,7 @@ void mlir::linalg::SliceOp::build(Builder *b, OperationState &result,
 
 static void print(OpAsmPrinter &p, SliceOp op) {
   auto indexings = op.indexings();
-  p << SliceOp::getOperationName() << " " << *op.view() << "[" << indexings
+  p << SliceOp::getOperationName() << " " << op.view() << "[" << indexings
     << "] ";
   p.printOptionalAttrDict(op.getAttrs());
   p << " : " << op.getBaseViewType();
@@ -599,7 +599,7 @@ static LogicalResult verify(SliceOp op) {
            << rank << " indexings, got " << llvm::size(op.indexings());
   unsigned index = 0;
   for (auto indexing : op.indexings()) {
-    if (indexing->getType().isa<IndexType>())
+    if (indexing.getType().isa<IndexType>())
       --rank;
     ++index;
   }
@@ -618,7 +618,7 @@ void mlir::linalg::TransposeOp::build(Builder *b, OperationState &result,
   auto permutationMap = permutation.getValue();
   assert(permutationMap);
 
-  auto memRefType = view->getType().cast<MemRefType>();
+  auto memRefType = view.getType().cast<MemRefType>();
   auto rank = memRefType.getRank();
   auto originalSizes = memRefType.getShape();
   // Compute permuted sizes.
@@ -644,10 +644,10 @@ void mlir::linalg::TransposeOp::build(Builder *b, OperationState &result,
 }
 
 static void print(OpAsmPrinter &p, TransposeOp op) {
-  p << op.getOperationName() << " " << *op.view() << " " << op.permutation();
+  p << op.getOperationName() << " " << op.view() << " " << op.permutation();
   p.printOptionalAttrDict(op.getAttrs(),
                           {TransposeOp::getPermutationAttrName()});
-  p << " : " << op.view()->getType();
+  p << " : " << op.view().getType();
 }
 
 static ParseResult parseTransposeOp(OpAsmParser &parser,
@@ -698,9 +698,9 @@ LogicalResult verifyYield(YieldOp op, GenericOpType genericOp) {
 
   for (unsigned i = 0; i != nOutputViews; ++i) {
     auto elementType = genericOp.getOutputShapedType(i).getElementType();
-    if (op.getOperand(i)->getType() != elementType)
+    if (op.getOperand(i).getType() != elementType)
       return op.emitOpError("type of return operand ")
-             << i << " (" << op.getOperand(i)->getType()
+             << i << " (" << op.getOperand(i).getType()
              << ") doesn't match view element type (" << elementType << ")";
   }
   return success();
@@ -765,7 +765,7 @@ static ParseResult parseLinalgStructuredOp(OpAsmParser &parser,
 
 static LogicalResult verify(FillOp op) {
   auto viewType = op.getOutputShapedType(0);
-  auto fillType = op.value()->getType();
+  auto fillType = op.value().getType();
   if (viewType.getElementType() != fillType)
     return op.emitOpError("expects fill type to match view elemental type");
   return success();
@@ -816,9 +816,9 @@ verifyStrideOrDilation(ConvOp op, ArrayRef<Attribute> attrs, bool isStride) {
 }
 
 static LogicalResult verify(ConvOp op) {
-  auto oType = op.output()->getType().cast<MemRefType>();
-  auto fType = op.filter()->getType().cast<MemRefType>();
-  auto iType = op.input()->getType().cast<MemRefType>();
+  auto oType = op.output().getType().cast<MemRefType>();
+  auto fType = op.filter().getType().cast<MemRefType>();
+  auto iType = op.input().getType().cast<MemRefType>();
   if (oType.getElementType() != iType.getElementType() ||
       oType.getElementType() != fType.getElementType())
     return op.emitOpError("expects memref elemental types to match");

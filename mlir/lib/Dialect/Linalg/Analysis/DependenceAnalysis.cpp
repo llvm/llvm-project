@@ -48,30 +48,30 @@ Value Aliases::find(Value v) {
 
   auto it = aliases.find(v);
   if (it != aliases.end()) {
-    assert(it->getSecond()->getType().isa<MemRefType>() && "Memref expected");
+    assert(it->getSecond().getType().isa<MemRefType>() && "Memref expected");
     return it->getSecond();
   }
 
   while (true) {
     if (v.isa<BlockArgument>())
       return v;
-    if (auto alloc = dyn_cast_or_null<AllocOp>(v->getDefiningOp())) {
+    if (auto alloc = dyn_cast_or_null<AllocOp>(v.getDefiningOp())) {
       if (isStrided(alloc.getType()))
         return alloc.getResult();
     }
-    if (auto slice = dyn_cast_or_null<SliceOp>(v->getDefiningOp())) {
+    if (auto slice = dyn_cast_or_null<SliceOp>(v.getDefiningOp())) {
       auto it = aliases.insert(std::make_pair(v, find(slice.view())));
       return it.first->second;
     }
-    if (auto view = dyn_cast_or_null<ViewOp>(v->getDefiningOp())) {
+    if (auto view = dyn_cast_or_null<ViewOp>(v.getDefiningOp())) {
       auto it = aliases.insert(std::make_pair(v, view.source()));
       return it.first->second;
     }
-    if (auto view = dyn_cast_or_null<SubViewOp>(v->getDefiningOp())) {
+    if (auto view = dyn_cast_or_null<SubViewOp>(v.getDefiningOp())) {
       v = view.source();
       continue;
     }
-    llvm::errs() << "View alias analysis reduces to: " << *v << "\n";
+    llvm::errs() << "View alias analysis reduces to: " << v << "\n";
     llvm_unreachable("unsupported view alias case");
   }
 }
@@ -224,7 +224,7 @@ LinalgDependenceGraph::findOperationsWithCoveringDependences(
       auto *op = dependence.dependentOpView.op;
       LLVM_DEBUG(dbgs() << "\n***Found covering dependence of type "
                         << toStringRef(dt) << ": " << *src << " -> " << *op
-                        << " on " << *dependence.indexingView);
+                        << " on " << dependence.indexingView);
       res.push_back(op);
     }
   }

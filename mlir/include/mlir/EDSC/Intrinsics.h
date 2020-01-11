@@ -36,7 +36,7 @@ struct IndexHandle : public ValueHandle {
       : ValueHandle(ScopedContext::getBuilder().getIndexType()) {}
   explicit IndexHandle(index_t v) : ValueHandle(v) {}
   explicit IndexHandle(Value v) : ValueHandle(v) {
-    assert(v->getType() == ScopedContext::getBuilder().getIndexType() &&
+    assert(v.getType() == ScopedContext::getBuilder().getIndexType() &&
            "Expected index type");
   }
   explicit IndexHandle(ValueHandle v) : ValueHandle(v) {

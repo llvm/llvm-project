@@ -69,23 +69,22 @@ void ForOp::build(Builder *builder, OperationState &result, Value lb, Value ub,
 }
 
 LogicalResult verify(ForOp op) {
-  if (auto cst = dyn_cast_or_null<ConstantIndexOp>(op.step()->getDefiningOp()))
+  if (auto cst = dyn_cast_or_null<ConstantIndexOp>(op.step().getDefiningOp()))
     if (cst.getValue() <= 0)
       return op.emitOpError("constant step operand must be positive");
 
   // Check that the body defines as single block argument for the induction
   // variable.
   auto *body = op.getBody();
-  if (body->getNumArguments() != 1 ||
-      !body->getArgument(0)->getType().isIndex())
+  if (body->getNumArguments() != 1 || !body->getArgument(0).getType().isIndex())
     return op.emitOpError("expected body to have a single index argument for "
                           "the induction variable");
   return success();
 }
 
 static void print(OpAsmPrinter &p, ForOp op) {
-  p << op.getOperationName() << " " << *op.getInductionVar() << " = "
-    << *op.lowerBound() << " to " << *op.upperBound() << " step " << *op.step();
+  p << op.getOperationName() << " " << op.getInductionVar() << " = "
+    << op.lowerBound() << " to " << op.upperBound() << " step " << op.step();
   p.printRegion(op.region(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
@@ -126,11 +125,11 @@ static ParseResult parseForOp(OpAsmParser &parser, OperationState &result) {
 Region &ForOp::getLoopBody() { return region(); }
 
 bool ForOp::isDefinedOutsideOfLoop(Value value) {
-  return !region().isAncestor(value->getParentRegion());
+  return !region().isAncestor(value.getParentRegion());
 }
 
 LogicalResult ForOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
-  for (auto *op : ops)
+  for (auto op : ops)
     op->moveBefore(this->getOperation());
   return success();
 }
@@ -139,8 +138,8 @@ ForOp mlir::loop::getForInductionVarOwner(Value val) {
   auto ivArg = val.dyn_cast<BlockArgument>();
   if (!ivArg)
     return ForOp();
-  assert(ivArg->getOwner() && "unlinked block argument");
-  auto *containingInst = ivArg->getOwner()->getParentOp();
+  assert(ivArg.getOwner() && "unlinked block argument");
+  auto *containingInst = ivArg.getOwner()->getParentOp();
   return dyn_cast_or_null<ForOp>(containingInst);
 }
 
@@ -205,7 +204,7 @@ static ParseResult parseIfOp(OpAsmParser &parser, OperationState &result) {
 }
 
 static void print(OpAsmPrinter &p, IfOp op) {
-  p << IfOp::getOperationName() << " " << *op.condition();
+  p << IfOp::getOperationName() << " " << op.condition();
   p.printRegion(op.thenRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);

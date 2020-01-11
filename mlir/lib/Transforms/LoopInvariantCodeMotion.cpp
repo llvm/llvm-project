@@ -84,7 +84,7 @@ static LogicalResult moveLoopInvariantCode(LoopLikeOpInterface looplike,
 
   // Helper to check whether an operation is loop invariant wrt. SSA properties.
   auto isDefinedOutsideOfBody = [&](Value value) {
-    auto definingOp = value->getDefiningOp();
+    auto definingOp = value.getDefiningOp();
     return (definingOp && !!willBeMovedSet.count(definingOp)) ||
            looplike.isDefinedOutsideOfLoop(value);
   };

@@ -91,7 +91,7 @@ void Block::dropAllReferences() {
 
 void Block::dropAllDefinedValueUses() {
   for (auto arg : getArguments())
-    arg->dropAllUses();
+    arg.dropAllUses();
   for (auto &op : *this)
     op.dropAllDefinedValueUses();
   dropAllUses();
