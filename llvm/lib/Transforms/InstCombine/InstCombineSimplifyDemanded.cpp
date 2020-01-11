@@ -88,6 +88,8 @@ bool InstCombiner::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                                           Depth, I);
   if (!NewVal) return false;
   U = NewVal;
+  // Add the simplified instruction back to the worklist.
+  Worklist.addValue(U.get());
   return true;
 }
 
