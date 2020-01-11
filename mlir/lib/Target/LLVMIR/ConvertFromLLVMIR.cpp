@@ -564,7 +564,7 @@ LogicalResult Importer::processFunction(llvm::Function *f) {
     assert(instMap.count(llvmAndUnknown.first));
     Value newValue = instMap[llvmAndUnknown.first];
     Value oldValue = llvmAndUnknown.second->getResult(0);
-    oldValue->replaceAllUsesWith(newValue);
+    oldValue.replaceAllUsesWith(newValue);
     llvmAndUnknown.second->erase();
   }
   return success();

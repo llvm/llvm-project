@@ -236,7 +236,7 @@ def CopyOp : LinalgStructured_Op<"copy", [NInputs<1>, NOutputs<1>]> {
     ArrayAttr indexing_maps();
 
     ArrayAttr iterator_types() {
-      unsigned nPar = input()->getType().cast<ShapedType>().getRank();
+      unsigned nPar = input().getType().cast<ShapedType>().getRank();
       MLIRContext *ctx = getContext();
       SmallVector<Attribute, 8> iters(
         nPar, StringAttr::get(getParallelIteratorTypeName(), ctx));
@@ -253,7 +253,7 @@ def FillOp : LinalgStructured_Op<"fill", [NInputs<0>, NOutputs<1>]> {
     ArrayAttr indexing_maps();
 
     ArrayAttr iterator_types() {
-      unsigned nPar = input()->getType().cast<ShapedType>().getRank();
+      unsigned nPar = input().getType().cast<ShapedType>().getRank();
       MLIRContext *ctx = getContext();
       SmallVector<Attribute, 8> iters(
         nPar, StringAttr::get(getParallelIteratorTypeName(), ctx));

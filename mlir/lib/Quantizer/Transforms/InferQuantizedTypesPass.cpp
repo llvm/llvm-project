@@ -184,8 +184,8 @@ void InferQuantizedTypesPass::transformOperandType(CAGOperandAnchor *anchor,
   // bulk in the IR.
   Value newTypedInputValue = inputValue;
   auto inputDcastOp =
-      dyn_cast_or_null<DequantizeCastOp>(inputValue->getDefiningOp());
-  if (inputDcastOp && inputDcastOp.arg()->getType() == newType) {
+      dyn_cast_or_null<DequantizeCastOp>(inputValue.getDefiningOp());
+  if (inputDcastOp && inputDcastOp.arg().getType() == newType) {
     // Can just use the dcast's input value.
     newTypedInputValue = inputDcastOp.arg();
     removeValuesIfDead.push_back(inputDcastOp);
@@ -220,8 +220,8 @@ void InferQuantizedTypesPass::transformOperandType(CAGOperandAnchor *anchor,
   }
 
   for (Value removeValueIfDead : removeValuesIfDead) {
-    if (removeValueIfDead->use_empty()) {
-      removeValueIfDead->getDefiningOp()->erase();
+    if (removeValueIfDead.use_empty()) {
+      removeValueIfDead.getDefiningOp()->erase();
     }
   }
 }
@@ -229,14 +229,14 @@ void InferQuantizedTypesPass::transformOperandType(CAGOperandAnchor *anchor,
 void InferQuantizedTypesPass::transformResultType(CAGResultAnchor *anchor,
                                                   Type newType) {
   Value origResultValue = anchor->getValue();
-  Operation *op = origResultValue->getDefiningOp();
+  Operation *op = origResultValue.getDefiningOp();
   OpBuilder b(op->getBlock(), ++Block::iterator(op));
 
   Value replacedResultValue = nullptr;
   Value newResultValue = nullptr;
   switch (anchor->getTypeTransformRule()) {
   case CAGAnchorNode::TypeTransformRule::Direct:
-    origResultValue->setType(newType);
+    origResultValue.setType(newType);
     replacedResultValue = newResultValue = b.create<DequantizeCastOp>(
         op->getLoc(), anchor->getOriginalType(), origResultValue);
     break;
@@ -245,7 +245,7 @@ void InferQuantizedTypesPass::transformResultType(CAGResultAnchor *anchor,
     Type storageType = QuantizedType::castToStorageType(newType);
     if (failed(validateTypeConversion(storageType, newType, op)))
       return;
-    origResultValue->setType(storageType);
+    origResultValue.setType(storageType);
     replacedResultValue =
         b.create<StorageCastOp>(op->getLoc(), newType, origResultValue);
     newResultValue = b.create<DequantizeCastOp>(
@@ -271,9 +271,9 @@ void InferQuantizedTypesPass::transformResultType(CAGResultAnchor *anchor,
     //                      newResultValue -> [original uses]
     // Note that replaceResultValue may equal newResultValue or there may
     // be operands between the two.
-    origResultValue->replaceAllUsesWith(newResultValue);
-    replacedResultValue->getDefiningOp()->replaceUsesOfWith(newResultValue,
-                                                            origResultValue);
+    origResultValue.replaceAllUsesWith(newResultValue);
+    replacedResultValue.getDefiningOp()->replaceUsesOfWith(newResultValue,
+                                                           origResultValue);
   }
 }
 

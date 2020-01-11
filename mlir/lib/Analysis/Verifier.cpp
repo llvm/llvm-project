@@ -130,7 +130,7 @@ LogicalResult OperationVerifier::verifyRegion(Region &region) {
 
 LogicalResult OperationVerifier::verifyBlock(Block &block) {
   for (auto arg : block.getArguments())
-    if (arg->getOwner() != &block)
+    if (arg.getOwner() != &block)
       return emitError(block, "block argument not owned by block");
 
   // Verify that this block has a terminator.
@@ -241,7 +241,7 @@ LogicalResult OperationVerifier::verifyDominance(Operation &op) {
 
     auto diag = op.emitError("operand #")
                 << operandNo << " does not dominate this use";
-    if (auto *useOp = operand->getDefiningOp())
+    if (auto *useOp = operand.getDefiningOp())
       diag.attachNote(useOp->getLoc()) << "operand defined here";
     return failure();
   }

@@ -67,7 +67,7 @@ void vector::ContractionOp::build(Builder *builder, OperationState &result,
                                   ArrayAttr indexingMaps,
                                   ArrayAttr iteratorTypes) {
   result.addOperands({lhs, rhs, acc});
-  result.addTypes(acc->getType());
+  result.addTypes(acc.getType());
   result.addAttribute(getIndexingMapsAttrName(), indexingMaps);
   result.addAttribute(getIteratorTypesAttrName(), iteratorTypes);
 }
@@ -125,13 +125,13 @@ static void print(OpAsmPrinter &p, ContractionOp op) {
       attrs.push_back(attr);
 
   auto dictAttr = DictionaryAttr::get(attrs, op.getContext());
-  p << op.getOperationName() << " " << dictAttr << " " << *op.lhs() << ", ";
-  p << *op.rhs() << ", " << *op.acc();
+  p << op.getOperationName() << " " << dictAttr << " " << op.lhs() << ", ";
+  p << op.rhs() << ", " << op.acc();
   if (op.masks().size() == 2)
     p << ", " << op.masks();
 
   p.printOptionalAttrDict(op.getAttrs(), attrNames);
-  p << " : " << op.lhs()->getType() << ", " << op.rhs()->getType() << " into "
+  p << " : " << op.lhs().getType() << ", " << op.rhs().getType() << " into "
     << op.getResultType();
 }
 
@@ -211,7 +211,7 @@ static LogicalResult verify(ContractionOp op) {
     if (map.getNumDims() != numIterators)
       return op.emitOpError("expected indexing map ")
              << index << " to have " << numIterators << " number of inputs";
-    auto operandType = op.getOperand(index)->getType().cast<VectorType>();
+    auto operandType = op.getOperand(index).getType().cast<VectorType>();
     unsigned rank = operandType.getShape().size();
     if (map.getNumResults() != rank)
       return op.emitOpError("expected indexing map ")
@@ -351,10 +351,10 @@ SmallVector<AffineMap, 4> ContractionOp::getIndexingMaps() {
 //===----------------------------------------------------------------------===//
 
 static void print(OpAsmPrinter &p, vector::ExtractElementOp op) {
-  p << op.getOperationName() << " " << *op.vector() << "[" << *op.position()
-    << " : " << op.position()->getType() << "]";
+  p << op.getOperationName() << " " << op.vector() << "[" << op.position()
+    << " : " << op.position().getType() << "]";
   p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.vector()->getType();
+  p << " : " << op.vector().getType();
 }
 
 static ParseResult parseExtractElementOp(OpAsmParser &parser,
@@ -398,15 +398,15 @@ void vector::ExtractOp::build(Builder *builder, OperationState &result,
                               Value source, ArrayRef<int64_t> position) {
   result.addOperands(source);
   auto positionAttr = getVectorSubscriptAttr(*builder, position);
-  result.addTypes(inferExtractOpResultType(source->getType().cast<VectorType>(),
+  result.addTypes(inferExtractOpResultType(source.getType().cast<VectorType>(),
                                            positionAttr));
   result.addAttribute(getPositionAttrName(), positionAttr);
 }
 
 static void print(OpAsmPrinter &p, vector::ExtractOp op) {
-  p << op.getOperationName() << " " << *op.vector() << op.position();
+  p << op.getOperationName() << " " << op.vector() << op.position();
   p.printOptionalAttrDict(op.getAttrs(), {"position"});
-  p << " : " << op.vector()->getType();
+  p << " : " << op.vector().getType();
 }
 
 static ParseResult parseExtractOp(OpAsmParser &parser, OperationState &result) {
@@ -495,13 +495,13 @@ static ParseResult parseExtractSlicesOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, ExtractSlicesOp op) {
-  p << op.getOperationName() << ' ' << *op.vector() << ", ";
+  p << op.getOperationName() << ' ' << op.vector() << ", ";
   p << op.sizes() << ", " << op.strides();
   p.printOptionalAttrDict(
       op.getAttrs(),
       /*elidedAttrs=*/{ExtractSlicesOp::getSizesAttrName(),
                        ExtractSlicesOp::getStridesAttrName()});
-  p << " : " << op.vector()->getType();
+  p << " : " << op.vector().getType();
   p << " into " << op.getResultTupleType();
 }
 
@@ -594,7 +594,7 @@ void ExtractSlicesOp::getStrides(SmallVectorImpl<int64_t> &results) {
 //===----------------------------------------------------------------------===//
 
 static void print(OpAsmPrinter &p, BroadcastOp op) {
-  p << op.getOperationName() << " " << *op.source() << " : "
+  p << op.getOperationName() << " " << op.source() << " : "
     << op.getSourceType() << " to " << op.getVectorType();
 }
 
@@ -642,15 +642,15 @@ void ShuffleOp::build(Builder *builder, OperationState &result, Value v1,
                       Value v2, ArrayRef<int64_t> mask) {
   result.addOperands({v1, v2});
   auto maskAttr = getVectorSubscriptAttr(*builder, mask);
-  result.addTypes(v1->getType());
+  result.addTypes(v1.getType());
   result.addAttribute(getMaskAttrName(), maskAttr);
 }
 
 static void print(OpAsmPrinter &p, ShuffleOp op) {
-  p << op.getOperationName() << " " << *op.v1() << ", " << *op.v2() << " "
+  p << op.getOperationName() << " " << op.v1() << ", " << op.v2() << " "
     << op.mask();
   p.printOptionalAttrDict(op.getAttrs(), {ShuffleOp::getMaskAttrName()});
-  p << " : " << op.v1()->getType() << ", " << op.v2()->getType();
+  p << " : " << op.v1().getType() << ", " << op.v2().getType();
 }
 
 static LogicalResult verify(ShuffleOp op) {
@@ -725,10 +725,10 @@ static ParseResult parseShuffleOp(OpAsmParser &parser, OperationState &result) {
 //===----------------------------------------------------------------------===//
 
 static void print(OpAsmPrinter &p, InsertElementOp op) {
-  p << op.getOperationName() << " " << *op.source() << ", " << *op.dest() << "["
-    << *op.position() << " : " << op.position()->getType() << "]";
+  p << op.getOperationName() << " " << op.source() << ", " << op.dest() << "["
+    << op.position() << " : " << op.position().getType() << "]";
   p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.dest()->getType();
+  p << " : " << op.dest().getType();
 }
 
 static ParseResult parseInsertElementOp(OpAsmParser &parser,
@@ -766,12 +766,12 @@ void InsertOp::build(Builder *builder, OperationState &result, Value source,
                      Value dest, ArrayRef<int64_t> position) {
   result.addOperands({source, dest});
   auto positionAttr = getVectorSubscriptAttr(*builder, position);
-  result.addTypes(dest->getType());
+  result.addTypes(dest.getType());
   result.addAttribute(getPositionAttrName(), positionAttr);
 }
 
 static void print(OpAsmPrinter &p, InsertOp op) {
-  p << op.getOperationName() << " " << *op.source() << ", " << *op.dest()
+  p << op.getOperationName() << " " << op.source() << ", " << op.dest()
     << op.position();
   p.printOptionalAttrDict(op.getAttrs(), {InsertOp::getPositionAttrName()});
   p << " : " << op.getSourceType() << " into " << op.getDestVectorType();
@@ -851,13 +851,13 @@ static ParseResult parseInsertSlicesOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, InsertSlicesOp op) {
-  p << op.getOperationName() << ' ' << *op.vectors() << ", ";
+  p << op.getOperationName() << ' ' << op.vectors() << ", ";
   p << op.sizes() << ", " << op.strides();
   p.printOptionalAttrDict(
       op.getAttrs(),
       /*elidedAttrs=*/{InsertSlicesOp::getSizesAttrName(),
                        InsertSlicesOp::getStridesAttrName()});
-  p << " : " << op.vectors()->getType();
+  p << " : " << op.vectors().getType();
   p << " into " << op.getResultVectorType();
 }
 
@@ -890,14 +890,13 @@ void InsertStridedSliceOp::build(Builder *builder, OperationState &result,
   result.addOperands({source, dest});
   auto offsetsAttr = getVectorSubscriptAttr(*builder, offsets);
   auto stridesAttr = getVectorSubscriptAttr(*builder, strides);
-  result.addTypes(dest->getType());
+  result.addTypes(dest.getType());
   result.addAttribute(getOffsetsAttrName(), offsetsAttr);
   result.addAttribute(getStridesAttrName(), stridesAttr);
 }
 
 static void print(OpAsmPrinter &p, InsertStridedSliceOp op) {
-  p << op.getOperationName() << " " << *op.source() << ", " << *op.dest()
-    << " ";
+  p << op.getOperationName() << " " << op.source() << ", " << op.dest() << " ";
   p.printOptionalAttrDict(op.getAttrs());
   p << " : " << op.getSourceVectorType() << " into " << op.getDestVectorType();
 }
@@ -1049,10 +1048,10 @@ static LogicalResult verify(InsertStridedSliceOp op) {
 //===----------------------------------------------------------------------===//
 
 static void print(OpAsmPrinter &p, OuterProductOp op) {
-  p << op.getOperationName() << " " << *op.lhs() << ", " << *op.rhs();
+  p << op.getOperationName() << " " << op.lhs() << ", " << op.rhs();
   if (!op.acc().empty())
     p << ", " << op.acc();
-  p << " : " << op.lhs()->getType() << ", " << op.rhs()->getType();
+  p << " : " << op.lhs().getType() << ", " << op.rhs().getType();
 }
 
 static ParseResult parseOuterProductOp(OpAsmParser &parser,
@@ -1103,7 +1102,7 @@ static LogicalResult verify(OuterProductOp op) {
 //===----------------------------------------------------------------------===//
 
 static void print(OpAsmPrinter &p, ReshapeOp op) {
-  p << op.getOperationName() << " " << *op.vector() << ", [" << op.input_shape()
+  p << op.getOperationName() << " " << op.vector() << ", [" << op.input_shape()
     << "], [" << op.output_shape() << "], " << op.fixed_vector_sizes();
   SmallVector<StringRef, 2> elidedAttrs = {
       ReshapeOp::getOperandSegmentSizeAttr(),
@@ -1193,18 +1192,18 @@ static LogicalResult verify(ReshapeOp op) {
   // If all shape operands are produced by constant ops, verify that product
   // of dimensions for input/output shape match.
   auto isDefByConstant = [](Value operand) {
-    return isa_and_nonnull<ConstantIndexOp>(operand->getDefiningOp());
+    return isa_and_nonnull<ConstantIndexOp>(operand.getDefiningOp());
   };
   if (llvm::all_of(op.input_shape(), isDefByConstant) &&
       llvm::all_of(op.output_shape(), isDefByConstant)) {
     int64_t numInputElements = 1;
     for (auto operand : op.input_shape())
       numInputElements *=
-          cast<ConstantIndexOp>(operand->getDefiningOp()).getValue();
+          cast<ConstantIndexOp>(operand.getDefiningOp()).getValue();
     int64_t numOutputElements = 1;
     for (auto operand : op.output_shape())
       numOutputElements *=
-          cast<ConstantIndexOp>(operand->getDefiningOp()).getValue();
+          cast<ConstantIndexOp>(operand.getDefiningOp()).getValue();
     if (numInputElements != numOutputElements)
       return op.emitError("product of input and output shape sizes must match");
   }
@@ -1245,7 +1244,7 @@ void StridedSliceOp::build(Builder *builder, OperationState &result,
   auto sizesAttr = getVectorSubscriptAttr(*builder, sizes);
   auto stridesAttr = getVectorSubscriptAttr(*builder, strides);
   result.addTypes(
-      inferStridedSliceOpResultType(source->getType().cast<VectorType>(),
+      inferStridedSliceOpResultType(source.getType().cast<VectorType>(),
                                     offsetsAttr, sizesAttr, stridesAttr));
   result.addAttribute(getOffsetsAttrName(), offsetsAttr);
   result.addAttribute(getSizesAttrName(), sizesAttr);
@@ -1253,9 +1252,9 @@ void StridedSliceOp::build(Builder *builder, OperationState &result,
 }
 
 static void print(OpAsmPrinter &p, StridedSliceOp op) {
-  p << op.getOperationName() << " " << *op.vector();
+  p << op.getOperationName() << " " << op.vector();
   p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.vector()->getType() << " to " << op.getResult()->getType();
+  p << " : " << op.vector().getType() << " to " << op.getResult().getType();
 }
 
 static ParseResult parseStridedSliceOp(OpAsmParser &parser,
@@ -1305,7 +1304,7 @@ static LogicalResult verify(StridedSliceOp op) {
 
   auto resultType = inferStridedSliceOpResultType(
       op.getVectorType(), op.offsets(), op.sizes(), op.strides());
-  if (op.getResult()->getType() != resultType) {
+  if (op.getResult().getType() != resultType) {
     op.emitOpError("expected result type to be ") << resultType;
     return failure();
   }
@@ -1328,7 +1327,7 @@ public:
   PatternMatchResult matchAndRewrite(StridedSliceOp stridedSliceOp,
                                      PatternRewriter &rewriter) const override {
     // Return if 'stridedSliceOp' operand is not defined by a ConstantMaskOp.
-    auto defOp = stridedSliceOp.vector()->getDefiningOp();
+    auto defOp = stridedSliceOp.vector().getDefiningOp();
     auto constantMaskOp = dyn_cast_or_null<ConstantMaskOp>(defOp);
     if (!constantMaskOp)
       return matchFailure();
@@ -1365,7 +1364,7 @@ public:
 
     // Replace 'stridedSliceOp' with ConstantMaskOp with sliced mask region.
     rewriter.replaceOpWithNewOp<ConstantMaskOp>(
-        stridedSliceOp, stridedSliceOp.getResult()->getType(),
+        stridedSliceOp, stridedSliceOp.getResult().getType(),
         vector::getVectorSubscriptAttr(rewriter, sliceMaskDimSizes));
     return matchSuccess();
   }
@@ -1503,7 +1502,7 @@ static LogicalResult verify(TransferReadOp op) {
   // Consistency of elemental types in memref and vector.
   MemRefType memrefType = op.getMemRefType();
   VectorType vectorType = op.getVectorType();
-  auto paddingType = op.padding()->getType();
+  auto paddingType = op.padding().getType();
   auto permutationMap = op.permutation_map();
   auto memrefElementType = memrefType.getElementType();
 
@@ -1540,8 +1539,8 @@ static LogicalResult verify(TransferReadOp op) {
 // TransferWriteOp
 //===----------------------------------------------------------------------===//
 static void print(OpAsmPrinter &p, TransferWriteOp op) {
-  p << op.getOperationName() << " " << *op.vector() << ", " << *op.memref()
-    << "[" << op.indices() << "]";
+  p << op.getOperationName() << " " << op.vector() << ", " << op.memref() << "["
+    << op.indices() << "]";
   p.printOptionalAttrDict(op.getAttrs());
   p << " : " << op.getVectorType() << ", " << op.getMemRefType();
 }
@@ -1596,12 +1595,12 @@ static MemRefType inferVectorTypeCastResultType(MemRefType t) {
 void TypeCastOp::build(Builder *builder, OperationState &result, Value source) {
   result.addOperands(source);
   result.addTypes(
-      inferVectorTypeCastResultType(source->getType().cast<MemRefType>()));
+      inferVectorTypeCastResultType(source.getType().cast<MemRefType>()));
 }
 
 static void print(OpAsmPrinter &p, TypeCastOp op) {
-  auto type = op.getOperand()->getType().cast<MemRefType>();
-  p << op.getOperationName() << ' ' << *op.memref() << " : " << type << " to "
+  auto type = op.getOperand().getType().cast<MemRefType>();
+  p << op.getOperationName() << ' ' << op.memref() << " : " << type << " to "
     << inferVectorTypeCastResultType(type);
 }
 
@@ -1665,14 +1664,14 @@ static ParseResult parseTupleGetOp(OpAsmParser &parser,
 }
 
 static void print(OpAsmPrinter &p, TupleGetOp op) {
-  p << op.getOperationName() << ' ' << *op.getOperand() << ", " << op.index();
+  p << op.getOperationName() << ' ' << op.getOperand() << ", " << op.index();
   p.printOptionalAttrDict(op.getAttrs(),
                           /*elidedAttrs=*/{TupleGetOp::getIndexAttrName()});
-  p << " : " << op.getOperand()->getType();
+  p << " : " << op.getOperand().getType();
 }
 
 static LogicalResult verify(TupleGetOp op) {
-  auto tupleType = op.getOperand()->getType().cast<TupleType>();
+  auto tupleType = op.getOperand().getType().cast<TupleType>();
   if (op.getIndex() < 0 ||
       op.getIndex() >= static_cast<int64_t>(tupleType.size()))
     return op.emitOpError("tuple get index out of range");
@@ -1696,12 +1695,12 @@ ParseResult parseConstantMaskOp(OpAsmParser &parser, OperationState &result) {
 
 static void print(OpAsmPrinter &p, ConstantMaskOp op) {
   p << op.getOperationName() << ' ' << op.mask_dim_sizes() << " : "
-    << op.getResult()->getType();
+    << op.getResult().getType();
 }
 
 static LogicalResult verify(ConstantMaskOp &op) {
   // Verify that array attr size matches the rank of the vector result.
-  auto resultType = op.getResult()->getType().cast<VectorType>();
+  auto resultType = op.getResult().getType().cast<VectorType>();
   if (static_cast<int64_t>(op.mask_dim_sizes().size()) != resultType.getRank())
     return op.emitOpError(
         "must specify array attr of size equal vector result rank");
@@ -1749,7 +1748,7 @@ static void print(OpAsmPrinter &p, CreateMaskOp op) {
 static LogicalResult verify(CreateMaskOp op) {
   // Verify that an operand was specified for each result vector each dimension.
   if (op.getNumOperands() !=
-      op.getResult()->getType().cast<VectorType>().getRank())
+      op.getResult().getType().cast<VectorType>().getRank())
     return op.emitOpError(
         "must specify an operand for each result vector dimension");
   return success();
@@ -1768,7 +1767,7 @@ ParseResult parsePrintOp(OpAsmParser &parser, OperationState &result) {
 }
 
 static void print(OpAsmPrinter &p, PrintOp op) {
-  p << op.getOperationName() << ' ' << *op.source() << " : "
+  p << op.getOperationName() << ' ' << op.source() << " : "
     << op.getPrintType();
 }
 
@@ -1783,19 +1782,19 @@ public:
                                      PatternRewriter &rewriter) const override {
     // Return if any of 'createMaskOp' operands are not defined by a constant.
     auto is_not_def_by_constant = [](Value operand) {
-      return !isa_and_nonnull<ConstantIndexOp>(operand->getDefiningOp());
+      return !isa_and_nonnull<ConstantIndexOp>(operand.getDefiningOp());
     };
     if (llvm::any_of(createMaskOp.operands(), is_not_def_by_constant))
       return matchFailure();
     // Gather constant mask dimension sizes.
     SmallVector<int64_t, 4> maskDimSizes;
     for (auto operand : createMaskOp.operands()) {
-      auto defOp = operand->getDefiningOp();
+      auto defOp = operand.getDefiningOp();
       maskDimSizes.push_back(cast<ConstantIndexOp>(defOp).getValue());
     }
     // Replace 'createMaskOp' with ConstantMaskOp.
     rewriter.replaceOpWithNewOp<ConstantMaskOp>(
-        createMaskOp, createMaskOp.getResult()->getType(),
+        createMaskOp, createMaskOp.getResult().getType(),
         vector::getVectorSubscriptAttr(rewriter, maskDimSizes));
     return matchSuccess();
   }

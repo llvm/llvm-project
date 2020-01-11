@@ -198,7 +198,7 @@ bool mlir::matcher::operatesOnSuperVectorsOf(Operation &op,
     }
     return false;
   } else if (op.getNumResults() == 1) {
-    if (auto v = op.getResult(0)->getType().dyn_cast<VectorType>()) {
+    if (auto v = op.getResult(0).getType().dyn_cast<VectorType>()) {
       superVectorType = v;
     } else {
       // Not a vector type.

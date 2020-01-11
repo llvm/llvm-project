@@ -86,7 +86,7 @@ struct constant_int_op_binder {
     Attribute attr;
     if (!constant_op_binder<Attribute>(&attr).match(op))
       return false;
-    auto type = op->getResult(0)->getType();
+    auto type = op->getResult(0).getType();
 
     if (type.isIntOrIndex()) {
       return attr_value_binder<IntegerAttr>(bind_value).match(attr);
@@ -145,7 +145,7 @@ typename std::enable_if_t<is_detected<detail::has_operation_or_value_matcher_t,
                                       MatcherClass, Operation *>::value,
                           bool>
 matchOperandOrValueAtIndex(Operation *op, unsigned idx, MatcherClass &matcher) {
-  if (auto defOp = op->getOperand(idx)->getDefiningOp())
+  if (auto defOp = op->getOperand(idx).getDefiningOp())
     return matcher.match(defOp);
   return false;
 }
@@ -228,7 +228,7 @@ inline detail::constant_int_not_value_matcher<0> m_NonZero() {
 template <typename Pattern>
 inline bool matchPattern(Value value, const Pattern &pattern) {
   // TODO: handle other cases
-  if (auto *op = value->getDefiningOp())
+  if (auto *op = value.getDefiningOp())
     return const_cast<Pattern &>(pattern).match(op);
   return false;
 }
