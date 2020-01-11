@@ -179,15 +179,18 @@ static bool hasAnalyzableMemoryWrite(Instruction *I,
   }
   if (auto CS = CallSite(I)) {
     if (Function *F = CS.getCalledFunction()) {
-      StringRef FnName = F->getName();
-      if (TLI.has(LibFunc_strcpy) && FnName == TLI.getName(LibFunc_strcpy))
-        return true;
-      if (TLI.has(LibFunc_strncpy) && FnName == TLI.getName(LibFunc_strncpy))
-        return true;
-      if (TLI.has(LibFunc_strcat) && FnName == TLI.getName(LibFunc_strcat))
-        return true;
-      if (TLI.has(LibFunc_strncat) && FnName == TLI.getName(LibFunc_strncat))
-        return true;
+      LibFunc LF;
+      if (TLI.getLibFunc(*F, LF) && TLI.has(LF)) {
+        switch (LF) {
+        case LibFunc_strcpy:
+        case LibFunc_strncpy:
+        case LibFunc_strcat:
+        case LibFunc_strncat:
+          return true;
+        default:
+          return false;
+        }
+      }
     }
   }
   return false;

@@ -54,8 +54,7 @@ void ConstantOp::build(mlir::Builder *builder, mlir::OperationState &state,
 static mlir::LogicalResult verify(ConstantOp op) {
   // If the return type of the constant is not an unranked tensor, the shape
   // must match the shape of the attribute holding the data.
-  auto resultType =
-      op.getResult()->getType().dyn_cast<mlir::RankedTensorType>();
+  auto resultType = op.getResult().getType().dyn_cast<mlir::RankedTensorType>();
   if (!resultType)
     return success();
 
@@ -158,7 +157,7 @@ void TransposeOp::build(mlir::Builder *builder, mlir::OperationState &state,
 }
 
 static mlir::LogicalResult verify(TransposeOp op) {
-  auto inputType = op.getOperand()->getType().dyn_cast<RankedTensorType>();
+  auto inputType = op.getOperand().getType().dyn_cast<RankedTensorType>();
   auto resultType = op.getType().dyn_cast<RankedTensorType>();
   if (!inputType || !resultType)
     return mlir::success();

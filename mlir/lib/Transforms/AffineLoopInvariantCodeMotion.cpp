@@ -91,7 +91,7 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
       Value memref = isa<AffineLoadOp>(op)
                          ? cast<AffineLoadOp>(op).getMemRef()
                          : cast<AffineStoreOp>(op).getMemRef();
-      for (auto *user : memref->getUsers()) {
+      for (auto *user : memref.getUsers()) {
         // If this memref has a user that is a DMA, give up because these
         // operations write to this memref.
         if (isa<AffineDmaStartOp>(op) || isa<AffineDmaWaitOp>(op)) {
@@ -122,10 +122,10 @@ bool isOpLoopInvariant(Operation &op, Value indVar,
       return false;
     }
     for (unsigned int i = 0; i < op.getNumOperands(); ++i) {
-      auto *operandSrc = op.getOperand(i)->getDefiningOp();
+      auto *operandSrc = op.getOperand(i).getDefiningOp();
 
       LLVM_DEBUG(
-          op.getOperand(i)->print(llvm::dbgs() << "\nIterating on operand\n"));
+          op.getOperand(i).print(llvm::dbgs() << "\nIterating on operand\n"));
 
       // If the loop IV is the operand, this op isn't loop invariant.
       if (indVar == op.getOperand(i)) {

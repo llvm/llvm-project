@@ -405,7 +405,7 @@ void AliasState::visitOperation(Operation *op) {
   for (auto &region : op->getRegions())
     for (auto &block : region)
       for (auto arg : block.getArguments())
-        visitType(arg->getType());
+        visitType(arg.getType());
 
   // Visit each of the attributes.
   for (auto elt : op->getAttrs())
@@ -615,7 +615,7 @@ void SSANameState::numberValuesInBlock(
     DialectInterfaceCollection<OpAsmDialectInterface> &interfaces) {
   auto setArgNameFn = [&](Value arg, StringRef name) {
     assert(!valueIDs.count(arg) && "arg numbered multiple times");
-    assert(arg.cast<BlockArgument>()->getOwner() == &block &&
+    assert(arg.cast<BlockArgument>().getOwner() == &block &&
            "arg not defined in 'block'");
     setValueName(arg, name);
   };
@@ -659,11 +659,11 @@ void SSANameState::numberValuesInOp(
   SmallVector<int, 2> resultGroups(/*Size=*/1, /*Value=*/0);
   auto setResultNameFn = [&](Value result, StringRef name) {
     assert(!valueIDs.count(result) && "result numbered multiple times");
-    assert(result->getDefiningOp() == &op && "result not defined by 'op'");
+    assert(result.getDefiningOp() == &op && "result not defined by 'op'");
     setValueName(result, name);
 
     // Record the result number for groups not anchored at 0.
-    if (int resultNo = result.cast<OpResult>()->getResultNumber())
+    if (int resultNo = result.cast<OpResult>().getResultNumber())
       resultGroups.push_back(resultNo);
   };
   if (OpAsmOpInterface asmInterface = dyn_cast<OpAsmOpInterface>(&op))
@@ -684,10 +684,10 @@ void SSANameState::numberValuesInOp(
 
 void SSANameState::getResultIDAndNumber(OpResult result, Value &lookupValue,
                                         Optional<int> &lookupResultNo) const {
-  Operation *owner = result->getOwner();
+  Operation *owner = result.getOwner();
   if (owner->getNumResults() == 1)
     return;
-  int resultNo = result->getResultNumber();
+  int resultNo = result.getResultNumber();
 
   // If this operation has multiple result groups, we will need to find the
   // one corresponding to this result.
@@ -2009,7 +2009,7 @@ void OperationPrinter::print(Block *block, bool printBlockArgs,
       interleaveComma(block->getArguments(), [&](BlockArgument arg) {
         printValueID(arg);
         os << ": ";
-        printType(arg->getType());
+        printType(arg.getType());
       });
       os << ')';
     }
@@ -2068,7 +2068,7 @@ void OperationPrinter::printSuccessorAndUseList(Operation *term,
                   [this](Value operand) { printValueID(operand); });
   os << " : ";
   interleaveComma(succOperands,
-                  [this](Value operand) { printType(operand->getType()); });
+                  [this](Value operand) { printType(operand.getType()); });
   os << ')';
 }
 

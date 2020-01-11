@@ -69,7 +69,7 @@ public:
 
   /// Return true if operation A dominates operation B.
   bool dominates(Value a, Operation *b) {
-    return (Operation *)a->getDefiningOp() == b || properlyDominates(a, b);
+    return (Operation *)a.getDefiningOp() == b || properlyDominates(a, b);
   }
 
   /// Return true if the specified block A dominates block B.

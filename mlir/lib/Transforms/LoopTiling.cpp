@@ -241,7 +241,7 @@ LogicalResult mlir::tileCodeGen(MutableArrayRef<AffineForOp> band,
   constructTiledIndexSetHyperRect(origLoops, newLoops, tileSizes);
   // In this case, the point loop IVs just replace the original ones.
   for (unsigned i = 0; i < width; i++) {
-    origLoopIVs[i]->replaceAllUsesWith(newLoops[i + width].getInductionVar());
+    origLoopIVs[i].replaceAllUsesWith(newLoops[i + width].getInductionVar());
   }
 
   // Erase the old loop nest.

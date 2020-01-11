@@ -36,8 +36,8 @@ QuantizationDialect::QuantizationDialect(MLIRContext *context)
 OpFoldResult StorageCastOp::fold(ArrayRef<Attribute> operands) {
   /// Matches x -> [scast -> scast] -> y, replacing the second scast with the
   /// value of x if the casts invert each other.
-  auto srcScastOp = dyn_cast_or_null<StorageCastOp>(arg()->getDefiningOp());
-  if (!srcScastOp || srcScastOp.arg()->getType() != getType())
+  auto srcScastOp = dyn_cast_or_null<StorageCastOp>(arg().getDefiningOp());
+  if (!srcScastOp || srcScastOp.arg().getType() != getType())
     return OpFoldResult();
   return srcScastOp.arg();
 }

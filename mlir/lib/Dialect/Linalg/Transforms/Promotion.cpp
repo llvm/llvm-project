@@ -47,10 +47,10 @@ static llvm::cl::opt<bool> clPromoteDynamic(
     llvm::cl::cat(clOptionsCategory), llvm::cl::init(false));
 
 static Value allocBuffer(Type elementType, Value size, bool dynamicBuffers) {
-  auto *ctx = size->getContext();
+  auto *ctx = size.getContext();
   auto width = llvm::divideCeil(elementType.getIntOrFloatBitWidth(), 8);
   if (!dynamicBuffers)
-    if (auto cst = dyn_cast_or_null<ConstantIndexOp>(size->getDefiningOp()))
+    if (auto cst = dyn_cast_or_null<ConstantIndexOp>(size.getDefiningOp()))
       return alloc(
           MemRefType::get(width * cst.getValue(), IntegerType::get(8, ctx)));
   Value mul = muli(constant_index(width), size);
@@ -116,7 +116,7 @@ mlir::linalg::promoteSubViews(OpBuilder &b, Location loc,
   res.reserve(subViews.size());
   DenseMap<Value, PromotionInfo> promotionInfoMap;
   for (auto v : subViews) {
-    SubViewOp subView = cast<SubViewOp>(v->getDefiningOp());
+    SubViewOp subView = cast<SubViewOp>(v.getDefiningOp());
     auto viewType = subView.getType();
     // TODO(ntv): support more cases than just float.
     if (!viewType.getElementType().isa<FloatType>())
@@ -128,7 +128,7 @@ mlir::linalg::promoteSubViews(OpBuilder &b, Location loc,
   }
 
   for (auto v : subViews) {
-    SubViewOp subView = cast<SubViewOp>(v->getDefiningOp());
+    SubViewOp subView = cast<SubViewOp>(v.getDefiningOp());
     auto info = promotionInfoMap.find(v);
     if (info == promotionInfoMap.end())
       continue;
@@ -146,7 +146,7 @@ mlir::linalg::promoteSubViews(OpBuilder &b, Location loc,
     auto info = promotionInfoMap.find(v);
     if (info == promotionInfoMap.end())
       continue;
-    copy(cast<SubViewOp>(v->getDefiningOp()), info->second.partialLocalView);
+    copy(cast<SubViewOp>(v.getDefiningOp()), info->second.partialLocalView);
   }
   return res;
 }
@@ -208,7 +208,7 @@ static void promoteSubViews(FuncOp f, bool dynamicBuffers) {
     SetVector<Value> subViews;
     OpBuilder b(op);
     for (auto it : op.getInputsAndOutputs())
-      if (auto sv = dyn_cast_or_null<SubViewOp>(it->getDefiningOp()))
+      if (auto sv = dyn_cast_or_null<SubViewOp>(it.getDefiningOp()))
         subViews.insert(sv);
     if (!subViews.empty()) {
       promoteSubViewOperands(b, op, subViews, dynamicBuffers, &folder);

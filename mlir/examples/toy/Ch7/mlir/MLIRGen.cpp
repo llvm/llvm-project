@@ -585,11 +585,11 @@ private:
       mlir::Type type = getType(varType, vardecl.loc());
       if (!type)
         return nullptr;
-      if (type != value->getType()) {
+      if (type != value.getType()) {
         emitError(loc(vardecl.loc()))
             << "struct type of initializer is different than the variable "
                "declaration. Got "
-            << value->getType() << ", but expected " << type;
+            << value.getType() << ", but expected " << type;
         return nullptr;
       }
 

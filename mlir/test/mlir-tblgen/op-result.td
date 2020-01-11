@@ -26,7 +26,7 @@ def OpB : NS_Op<"same_input_output_type_op", [SameOperandsAndResultType]> {
 // CHECK: void OpB::build(Builder *tblgen_builder, OperationState &tblgen_state, Type y, Value x)
 // CHECK:   tblgen_state.addTypes(y);
 // CHECK: void OpB::build(Builder *tblgen_builder, OperationState &tblgen_state, Value x)
-// CHECK:   tblgen_state.addTypes({x->getType()});
+// CHECK:   tblgen_state.addTypes({x.getType()});
 
 def OpC : NS_Op<"three_normal_result_op", []> {
   let results = (outs I32:$x, /*unnamed*/I32, I32:$z);
@@ -106,4 +106,4 @@ def OpK : NS_Op<"only_input_is_variadic_with_same_value_type_op", [SameOperandsA
 }
 
 // CHECK-LABEL: OpK::build(Builder *tblgen_builder, OperationState &tblgen_state, ValueRange input)
-// CHECK: tblgen_state.addTypes({input.front()->getType()});
+// CHECK: tblgen_state.addTypes({input.front().getType()});

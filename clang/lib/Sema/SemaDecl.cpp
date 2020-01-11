@@ -13936,8 +13936,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
             LSI->ReturnType.isNull() ? Context.VoidTy : LSI->ReturnType;
 
         // Update the return type to the deduced type.
-        const FunctionProtoType *Proto =
-            FD->getType()->getAs<FunctionProtoType>();
+        const auto *Proto = FD->getType()->castAs<FunctionProtoType>();
         FD->setType(Context.getFunctionType(RetType, Proto->getParamTypes(),
                                             Proto->getExtProtoInfo()));
       }

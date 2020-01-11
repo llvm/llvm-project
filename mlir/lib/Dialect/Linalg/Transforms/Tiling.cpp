@@ -45,8 +45,8 @@ static llvm::cl::list<unsigned>
                 llvm::cl::cat(clOptionsCategory));
 
 static bool isZero(Value v) {
-  return isa_and_nonnull<ConstantIndexOp>(v->getDefiningOp()) &&
-         cast<ConstantIndexOp>(v->getDefiningOp()).getValue() == 0;
+  return isa_and_nonnull<ConstantIndexOp>(v.getDefiningOp()) &&
+         cast<ConstantIndexOp>(v.getDefiningOp()).getValue() == 0;
 }
 
 using LoopIndexToRangeIndexMap = DenseMap<int, int>;
@@ -201,8 +201,8 @@ void transformIndexedGenericOpIndices(
     // variable and replace all uses of the previous value.
     Value newIndex = b.create<AddIOp>(indexedGenericOp.getLoc(), oldIndex,
                                       pivs[rangeIndex->second]->getValue());
-    for (auto &use : oldIndex->getUses()) {
-      if (use.getOwner() == newIndex->getDefiningOp())
+    for (auto &use : oldIndex.getUses()) {
+      if (use.getOwner() == newIndex.getDefiningOp())
         continue;
       use.set(newIndex);
     }
@@ -258,7 +258,7 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
   for (unsigned viewIndex = 0; viewIndex < linalgOp.getNumInputsAndOutputs();
        ++viewIndex) {
     Value view = *(viewIteratorBegin + viewIndex);
-    unsigned rank = view->getType().cast<MemRefType>().getRank();
+    unsigned rank = view.getType().cast<MemRefType>().getRank();
     auto map = loopToOperandRangesMaps(linalgOp)[viewIndex];
     // If the view is not tiled, we can use it as is.
     if (!isTiled(map, tileSizes)) {
@@ -299,8 +299,8 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
   // defined.
   if (folder)
     for (auto v : llvm::concat<Value>(lbs, subViewSizes))
-      if (v->use_empty())
-        v->getDefiningOp()->erase();
+      if (v.use_empty())
+        v.getDefiningOp()->erase();
 
   return res;
 }

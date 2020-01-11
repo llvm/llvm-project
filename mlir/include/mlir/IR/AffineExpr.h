@@ -67,15 +67,9 @@ class AffineExpr {
 public:
   using ImplType = detail::AffineExprStorage;
 
-  AffineExpr() : expr(nullptr) {}
+  constexpr AffineExpr() : expr(nullptr) {}
   /* implicit */ AffineExpr(const ImplType *expr)
       : expr(const_cast<ImplType *>(expr)) {}
-
-  AffineExpr(const AffineExpr &other) : expr(other.expr) {}
-  AffineExpr &operator=(AffineExpr other) {
-    expr = other.expr;
-    return *this;
-  }
 
   bool operator==(AffineExpr other) const { return expr == other.expr; }
   bool operator!=(AffineExpr other) const { return !(*this == other); }
