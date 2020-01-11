@@ -127,12 +127,6 @@ class VectorLegalizer {
   /// the remaining lanes, finally bitcasting to the proper type.
   SDValue ExpandZERO_EXTEND_VECTOR_INREG(SDNode *Node);
 
-  /// Implement expand-based legalization of ABS vector operations.
-  /// If following expanding is legal/custom then do it:
-  /// (ABS x) --> (XOR (ADD x, (SRA x, sizeof(x)-1)), (SRA x, sizeof(x)-1))
-  /// else unroll the operation.
-  SDValue ExpandABS(SDNode *Node);
-
   /// Expand bswap of vectors into a shuffle if legal.
   SDValue ExpandBSWAP(SDNode *Node);
 
@@ -143,19 +137,11 @@ class VectorLegalizer {
   std::pair<SDValue, SDValue> ExpandLoad(SDNode *N);
   SDValue ExpandStore(SDNode *N);
   SDValue ExpandFNEG(SDNode *Node);
-  SDValue ExpandFSUB(SDNode *Node);
-  SDValue ExpandBITREVERSE(SDNode *Node);
-  SDValue ExpandCTPOP(SDNode *Node);
-  SDValue ExpandCTLZ(SDNode *Node);
-  SDValue ExpandCTTZ(SDNode *Node);
-  SDValue ExpandFunnelShift(SDNode *Node);
-  SDValue ExpandROT(SDNode *Node);
-  SDValue ExpandFMINNUM_FMAXNUM(SDNode *Node);
+  void ExpandFSUB(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+  void ExpandBITREVERSE(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   void ExpandUADDSUBO(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   void ExpandSADDSUBO(SDNode *Node, SmallVectorImpl<SDValue> &Results);
   void ExpandMULO(SDNode *Node, SmallVectorImpl<SDValue> &Results);
-  SDValue ExpandAddSubSat(SDNode *Node);
-  SDValue ExpandFixedPointMul(SDNode *Node);
   SDValue ExpandFixedPointDiv(SDNode *Node);
   SDValue ExpandStrictFPOp(SDNode *Node);
   void ExpandStrictFPOp(SDNode *Node, SmallVectorImpl<SDValue> &Results);
@@ -846,6 +832,7 @@ SDValue VectorLegalizer::ExpandStore(SDNode *N) {
 }
 
 void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
+  SDValue Tmp;
   switch (Node->getOpcode()) {
   case ISD::SIGN_EXTEND_INREG:
     Results.push_back(ExpandSEXTINREG(Node));
@@ -878,42 +865,61 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     Results.push_back(ExpandFNEG(Node));
     return;
   case ISD::FSUB:
-    if (SDValue Tmp = ExpandFSUB(Node))
-      Results.push_back(Tmp);
+    ExpandFSUB(Node, Results);
     return;
   case ISD::SETCC:
     Results.push_back(UnrollVSETCC(Node));
     return;
   case ISD::ABS:
-    Results.push_back(ExpandABS(Node));
-    return;
-  case ISD::BITREVERSE:
-    if (SDValue Tmp = ExpandBITREVERSE(Node))
+    if (TLI.expandABS(Node, Tmp, DAG)) {
       Results.push_back(Tmp);
+      return;
+    }
+    break;
+  case ISD::BITREVERSE:
+    ExpandBITREVERSE(Node, Results);
     return;
   case ISD::CTPOP:
-    Results.push_back(ExpandCTPOP(Node));
-    return;
+    if (TLI.expandCTPOP(Node, Tmp, DAG)) {
+      Results.push_back(Tmp);
+      return;
+    }
+    break;
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
-    Results.push_back(ExpandCTLZ(Node));
-    return;
+    if (TLI.expandCTLZ(Node, Tmp, DAG)) {
+      Results.push_back(Tmp);
+      return;
+    }
+    break;
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
-    Results.push_back(ExpandCTTZ(Node));
-    return;
+    if (TLI.expandCTTZ(Node, Tmp, DAG)) {
+      Results.push_back(Tmp);
+      return;
+    }
+    break;
   case ISD::FSHL:
   case ISD::FSHR:
-    Results.push_back(ExpandFunnelShift(Node));
-    return;
+    if (TLI.expandFunnelShift(Node, Tmp, DAG)) {
+      Results.push_back(Tmp);
+      return;
+    }
+    break;
   case ISD::ROTL:
   case ISD::ROTR:
-    Results.push_back(ExpandROT(Node));
-    return;
+    if (TLI.expandROT(Node, Tmp, DAG)) {
+      Results.push_back(Tmp);
+      return;
+    }
+    break;
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
-    Results.push_back(ExpandFMINNUM_FMAXNUM(Node));
-    return;
+    if (SDValue Expanded = TLI.expandFMINNUM_FMAXNUM(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::UADDO:
   case ISD::USUBO:
     ExpandUADDSUBO(Node, Results);
@@ -930,20 +936,25 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::SSUBSAT:
   case ISD::UADDSAT:
   case ISD::SADDSAT:
-    Results.push_back(ExpandAddSubSat(Node));
-    return;
+    if (SDValue Expanded = TLI.expandAddSubSat(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::SMULFIX:
   case ISD::UMULFIX:
-    Results.push_back(ExpandFixedPointMul(Node));
-    return;
+    if (SDValue Expanded = TLI.expandFixedPointMul(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::SMULFIXSAT:
   case ISD::UMULFIXSAT:
     // FIXME: We do not expand SMULFIXSAT/UMULFIXSAT here yet, not sure exactly
     // why. Maybe it results in worse codegen compared to the unroll for some
     // targets? This should probably be investigated. And if we still prefer to
     // unroll an explanation could be helpful.
-    Results.push_back(DAG.UnrollVectorOp(Node));
-    return;
+    break;
   case ISD::SDIVFIX:
   case ISD::UDIVFIX:
     Results.push_back(ExpandFixedPointDiv(Node));
@@ -968,10 +979,9 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECREDUCE_FMIN:
     Results.push_back(TLI.expandVecReduce(Node, DAG));
     return;
-  default:
-    Results.push_back(DAG.UnrollVectorOp(Node));
-    return;
   }
+
+  Results.push_back(DAG.UnrollVectorOp(Node));
 }
 
 SDValue VectorLegalizer::ExpandSELECT(SDNode *Node) {
@@ -1175,12 +1185,16 @@ SDValue VectorLegalizer::ExpandBSWAP(SDNode *Node) {
   return DAG.getNode(ISD::BITCAST, DL, VT, Op);
 }
 
-SDValue VectorLegalizer::ExpandBITREVERSE(SDNode *Node) {
+void VectorLegalizer::ExpandBITREVERSE(SDNode *Node,
+                                       SmallVectorImpl<SDValue> &Results) {
   EVT VT = Node->getValueType(0);
 
   // If we have the scalar operation, it's probably cheaper to unroll it.
-  if (TLI.isOperationLegalOrCustom(ISD::BITREVERSE, VT.getScalarType()))
-    return DAG.UnrollVectorOp(Node);
+  if (TLI.isOperationLegalOrCustom(ISD::BITREVERSE, VT.getScalarType())) {
+    SDValue Tmp = DAG.UnrollVectorOp(Node);
+    Results.push_back(Tmp);
+    return;
+  }
 
   // If the vector element width is a whole number of bytes, test if its legal
   // to BSWAP shuffle the bytes and then perform the BITREVERSE on the byte
@@ -1202,20 +1216,24 @@ SDValue VectorLegalizer::ExpandBITREVERSE(SDNode *Node) {
       Op = DAG.getVectorShuffle(ByteVT, DL, Op, DAG.getUNDEF(ByteVT),
                                 BSWAPMask);
       Op = DAG.getNode(ISD::BITREVERSE, DL, ByteVT, Op);
-      return DAG.getNode(ISD::BITCAST, DL, VT, Op);
+      Op = DAG.getNode(ISD::BITCAST, DL, VT, Op);
+      Results.push_back(Op);
+      return;
     }
   }
 
   // If we have the appropriate vector bit operations, it is better to use them
   // than unrolling and expanding each component.
-  if (!TLI.isOperationLegalOrCustom(ISD::SHL, VT) ||
-      !TLI.isOperationLegalOrCustom(ISD::SRL, VT) ||
-      !TLI.isOperationLegalOrCustomOrPromote(ISD::AND, VT) ||
-      !TLI.isOperationLegalOrCustomOrPromote(ISD::OR, VT))
-    return DAG.UnrollVectorOp(Node);
+  if (TLI.isOperationLegalOrCustom(ISD::SHL, VT) &&
+      TLI.isOperationLegalOrCustom(ISD::SRL, VT) &&
+      TLI.isOperationLegalOrCustomOrPromote(ISD::AND, VT) &&
+      TLI.isOperationLegalOrCustomOrPromote(ISD::OR, VT))
+    // Let LegalizeDAG handle this later.
+    return;
 
-  // Let LegalizeDAG handle this later.
-  return SDValue();
+  // Otherwise unroll.
+  SDValue Tmp = DAG.UnrollVectorOp(Node);
+  Results.push_back(Tmp);
 }
 
 SDValue VectorLegalizer::ExpandVSELECT(SDNode *Node) {
@@ -1263,16 +1281,6 @@ SDValue VectorLegalizer::ExpandVSELECT(SDNode *Node) {
   Op2 = DAG.getNode(ISD::AND, DL, VT, Op2, NotMask);
   SDValue Val = DAG.getNode(ISD::OR, DL, VT, Op1, Op2);
   return DAG.getNode(ISD::BITCAST, DL, Node->getValueType(0), Val);
-}
-
-SDValue VectorLegalizer::ExpandABS(SDNode *Node) {
-  // Attempt to expand using TargetLowering.
-  SDValue Result;
-  if (TLI.expandABS(Node, Result, DAG))
-    return Result;
-
-  // Otherwise go ahead and unroll.
-  return DAG.UnrollVectorOp(Node);
 }
 
 void VectorLegalizer::ExpandFP_TO_UINT(SDNode *Node,
@@ -1394,62 +1402,18 @@ SDValue VectorLegalizer::ExpandFNEG(SDNode *Node) {
   return DAG.UnrollVectorOp(Node);
 }
 
-SDValue VectorLegalizer::ExpandFSUB(SDNode *Node) {
+void VectorLegalizer::ExpandFSUB(SDNode *Node,
+                                 SmallVectorImpl<SDValue> &Results) {
   // For floating-point values, (a-b) is the same as a+(-b). If FNEG is legal,
   // we can defer this to operation legalization where it will be lowered as
   // a+(-b).
   EVT VT = Node->getValueType(0);
   if (TLI.isOperationLegalOrCustom(ISD::FNEG, VT) &&
       TLI.isOperationLegalOrCustom(ISD::FADD, VT))
-    return SDValue(); // Defer to LegalizeDAG
+    return; // Defer to LegalizeDAG
 
-  return DAG.UnrollVectorOp(Node);
-}
-
-SDValue VectorLegalizer::ExpandCTPOP(SDNode *Node) {
-  SDValue Result;
-  if (TLI.expandCTPOP(Node, Result, DAG))
-    return Result;
-
-  return DAG.UnrollVectorOp(Node);
-}
-
-SDValue VectorLegalizer::ExpandCTLZ(SDNode *Node) {
-  SDValue Result;
-  if (TLI.expandCTLZ(Node, Result, DAG))
-    return Result;
-
-  return DAG.UnrollVectorOp(Node);
-}
-
-SDValue VectorLegalizer::ExpandCTTZ(SDNode *Node) {
-  SDValue Result;
-  if (TLI.expandCTTZ(Node, Result, DAG))
-    return Result;
-
-  return DAG.UnrollVectorOp(Node);
-}
-
-SDValue VectorLegalizer::ExpandFunnelShift(SDNode *Node) {
-  SDValue Result;
-  if (TLI.expandFunnelShift(Node, Result, DAG))
-    return Result;
-
-  return DAG.UnrollVectorOp(Node);
-}
-
-SDValue VectorLegalizer::ExpandROT(SDNode *Node) {
-  SDValue Result;
-  if (TLI.expandROT(Node, Result, DAG))
-    return Result;
-
-  return DAG.UnrollVectorOp(Node);
-}
-
-SDValue VectorLegalizer::ExpandFMINNUM_FMAXNUM(SDNode *Node) {
-  if (SDValue Expanded = TLI.expandFMINNUM_FMAXNUM(Node, DAG))
-    return Expanded;
-  return DAG.UnrollVectorOp(Node);
+  SDValue Tmp = DAG.UnrollVectorOp(Node);
+  Results.push_back(Tmp);
 }
 
 void VectorLegalizer::ExpandUADDSUBO(SDNode *Node,
@@ -1476,18 +1440,6 @@ void VectorLegalizer::ExpandMULO(SDNode *Node,
 
   Results.push_back(Result);
   Results.push_back(Overflow);
-}
-
-SDValue VectorLegalizer::ExpandAddSubSat(SDNode *Node) {
-  if (SDValue Expanded = TLI.expandAddSubSat(Node, DAG))
-    return Expanded;
-  return DAG.UnrollVectorOp(Node);
-}
-
-SDValue VectorLegalizer::ExpandFixedPointMul(SDNode *Node) {
-  if (SDValue Expanded = TLI.expandFixedPointMul(Node, DAG))
-    return Expanded;
-  return DAG.UnrollVectorOp(Node);
 }
 
 SDValue VectorLegalizer::ExpandFixedPointDiv(SDNode *Node) {
