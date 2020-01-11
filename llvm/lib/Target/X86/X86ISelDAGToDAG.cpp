@@ -816,6 +816,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     }
 
     switch (N->getOpcode()) {
+    case ISD::FP_ROUND:
+    case ISD::STRICT_FP_ROUND:
     case ISD::FP_TO_SINT:
     case ISD::FP_TO_UINT:
     case ISD::STRICT_FP_TO_SINT:
@@ -828,6 +830,8 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       unsigned NewOpc;
       switch (N->getOpcode()) {
       default: llvm_unreachable("Unexpected opcode!");
+      case ISD::FP_ROUND:          NewOpc = X86ISD::VFPROUND;        break;
+      case ISD::STRICT_FP_ROUND:   NewOpc = X86ISD::STRICT_VFPROUND; break;
       case ISD::STRICT_FP_TO_SINT: NewOpc = X86ISD::STRICT_CVTTP2SI; break;
       case ISD::FP_TO_SINT:        NewOpc = X86ISD::CVTTP2SI;        break;
       case ISD::STRICT_FP_TO_UINT: NewOpc = X86ISD::STRICT_CVTTP2UI; break;

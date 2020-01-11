@@ -7667,67 +7667,7 @@ defm VCVTPD2PS : avx512_cvtpd2ps<0x5A, "vcvtpd2ps", SchedWriteCvtPD2PS>,
 defm VCVTPS2PD : avx512_cvtps2pd<0x5A, "vcvtps2pd", SchedWriteCvtPS2PD>,
                                   PS, EVEX_CD8<32, CD8VH>;
 
-let Predicates = [HasAVX512] in {
-  def : Pat<(v8f32 (any_fpround (v8f64 VR512:$src))),
-            (VCVTPD2PSZrr VR512:$src)>;
-  def : Pat<(vselect VK8WM:$mask, (v8f32 (any_fpround (v8f64 VR512:$src))),
-                     VR256X:$src0),
-            (VCVTPD2PSZrrk VR256X:$src0, VK8WM:$mask, VR512:$src)>;
-  def : Pat<(vselect VK8WM:$mask, (v8f32 (any_fpround (v8f64 VR512:$src))),
-                     v8f32x_info.ImmAllZerosV),
-            (VCVTPD2PSZrrkz VK8WM:$mask, VR512:$src)>;
-
-  def : Pat<(v8f32 (any_fpround (loadv8f64 addr:$src))),
-            (VCVTPD2PSZrm addr:$src)>;
-  def : Pat<(vselect VK8WM:$mask, (v8f32 (any_fpround (loadv8f64 addr:$src))),
-                     VR256X:$src0),
-            (VCVTPD2PSZrmk VR256X:$src0, VK8WM:$mask, addr:$src)>;
-  def : Pat<(vselect VK8WM:$mask, (v8f32 (any_fpround (loadv8f64 addr:$src))),
-                     v8f32x_info.ImmAllZerosV),
-            (VCVTPD2PSZrmkz VK8WM:$mask, addr:$src)>;
-
-  def : Pat<(v8f32 (any_fpround (v8f64 (X86VBroadcastld64 addr:$src)))),
-            (VCVTPD2PSZrmb addr:$src)>;
-  def : Pat<(vselect VK8WM:$mask,
-                     (any_fpround (v8f64 (X86VBroadcastld64 addr:$src))),
-                     (v8f32 VR256X:$src0)),
-            (VCVTPD2PSZrmbk VR256X:$src0, VK8WM:$mask, addr:$src)>;
-  def : Pat<(vselect VK8WM:$mask,
-                     (any_fpround (v8f64 (X86VBroadcastld64 addr:$src))),
-                     v8f32x_info.ImmAllZerosV),
-            (VCVTPD2PSZrmbkz VK8WM:$mask, addr:$src)>;
-}
-
 let Predicates = [HasVLX] in {
-  def : Pat<(v4f32 (any_fpround (v4f64 VR256X:$src))),
-            (VCVTPD2PSZ256rr VR256X:$src)>;
-  def : Pat<(vselect VK4WM:$mask, (v4f32 (any_fpround (v4f64 VR256X:$src))),
-                     VR128X:$src0),
-            (VCVTPD2PSZ256rrk VR128X:$src0, VK4WM:$mask, VR256X:$src)>;
-  def : Pat<(vselect VK4WM:$mask, (v4f32 (any_fpround (v4f64 VR256X:$src))),
-                     v4f32x_info.ImmAllZerosV),
-            (VCVTPD2PSZ256rrkz VK4WM:$mask, VR256X:$src)>;
-
-  def : Pat<(v4f32 (any_fpround (loadv4f64 addr:$src))),
-            (VCVTPD2PSZ256rm addr:$src)>;
-  def : Pat<(vselect VK4WM:$mask, (v4f32 (any_fpround (loadv4f64 addr:$src))),
-                     VR128X:$src0),
-            (VCVTPD2PSZ256rmk VR128X:$src0, VK4WM:$mask, addr:$src)>;
-  def : Pat<(vselect VK4WM:$mask, (v4f32 (any_fpround (loadv4f64 addr:$src))),
-                     v4f32x_info.ImmAllZerosV),
-            (VCVTPD2PSZ256rmkz VK4WM:$mask, addr:$src)>;
-
-  def : Pat<(v4f32 (any_fpround (v4f64 (X86VBroadcastld64 addr:$src)))),
-            (VCVTPD2PSZ256rmb addr:$src)>;
-  def : Pat<(vselect VK4WM:$mask,
-                     (v4f32 (any_fpround (v4f64 (X86VBroadcastld64 addr:$src)))),
-                     VR128X:$src0),
-            (VCVTPD2PSZ256rmbk VR128X:$src0, VK4WM:$mask, addr:$src)>;
-  def : Pat<(vselect VK4WM:$mask,
-                     (v4f32 (any_fpround (v4f64 (X86VBroadcastld64 addr:$src)))),
-                     v4f32x_info.ImmAllZerosV),
-            (VCVTPD2PSZ256rmbkz VK4WM:$mask, addr:$src)>;
-
   // Special patterns to allow use of X86vmfpround for masking. Instruction
   // patterns have been disabled with null_frag.
   def : Pat<(X86any_vfpround (v2f64 VR128X:$src)),
