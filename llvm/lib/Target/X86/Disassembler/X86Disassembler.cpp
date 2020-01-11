@@ -140,7 +140,6 @@ public:
 public:
   DecodeStatus getInstruction(MCInst &instr, uint64_t &size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &vStream,
                               raw_ostream &cStream) const override;
 
 private:
@@ -175,7 +174,7 @@ X86GenericDisassembler::X86GenericDisassembler(
 
 MCDisassembler::DecodeStatus X86GenericDisassembler::getInstruction(
     MCInst &Instr, uint64_t &Size, ArrayRef<uint8_t> Bytes, uint64_t Address,
-    raw_ostream &VStream, raw_ostream &CStream) const {
+    raw_ostream &CStream) const {
   CommentStream = &CStream;
 
   InternalInstruction InternalInstr;
