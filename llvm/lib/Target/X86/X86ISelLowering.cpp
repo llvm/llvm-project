@@ -14887,6 +14887,37 @@ static SDValue lowerShuffleAsSplitOrBlend(const SDLoc &DL, MVT VT, SDValue V1,
                                               DAG);
 }
 
+// Lower as SHUFPD(VPERM2F128(V1, V2), VPERM2F128(V1, V2)).
+// TODO: Extend to support v8f32 (+ 512-bit shuffles).
+static SDValue lowerShuffleAsLanePermuteAndSHUFP(const SDLoc &DL, MVT VT,
+                                                 SDValue V1, SDValue V2,
+                                                 ArrayRef<int> Mask,
+                                                 SelectionDAG &DAG) {
+  assert(VT == MVT::v4f64 && "Only for v4f64 shuffles");
+
+  int LHSMask[4] = {-1, -1, -1, -1};
+  int RHSMask[4] = {-1, -1, -1, -1};
+  unsigned SHUFPMask = 0;
+
+  // As SHUFPD uses a single LHS/RHS element per lane, we can always
+  // perform the shuffle once the lanes have been shuffled in place.
+  for (int i = 0; i != 4; ++i) {
+    int M = Mask[i];
+    if (M < 0)
+      continue;
+    int LaneBase = i & ~1;
+    auto &LaneMask = (i & 1) ? RHSMask : LHSMask;
+    LaneMask[LaneBase + 0] = (M & ~1);
+    LaneMask[LaneBase + 1] = (M & ~1) + 1;
+    SHUFPMask |= (M & 1) << i;
+  }
+
+  SDValue LHS = DAG.getVectorShuffle(VT, DL, V1, V2, LHSMask);
+  SDValue RHS = DAG.getVectorShuffle(VT, DL, V1, V2, RHSMask);
+  return DAG.getNode(X86ISD::SHUFP, DL, VT, LHS, RHS,
+                     DAG.getTargetConstant(SHUFPMask, DL, MVT::i8));
+}
+
 /// Lower a vector shuffle crossing multiple 128-bit lanes as
 /// a lane permutation followed by a per-lane permutation.
 ///
@@ -14964,6 +14995,15 @@ static SDValue lowerShuffleAsLanePermuteAndShuffle(
   assert(VT.is256BitVector() && "Only for 256-bit vector shuffles!");
   int Size = Mask.size();
   int LaneSize = Size / 2;
+
+  // Fold to SHUFPD(VPERM2F128(V1, V2), VPERM2F128(V1, V2)).
+  // Only do this if the elements aren't all from the lower lane,
+  // otherwise we're (probably) better off doing a split.
+  if (VT == MVT::v4f64 &&
+      !all_of(Mask, [LaneSize](int M) { return M < LaneSize; }))
+    if (SDValue V =
+            lowerShuffleAsLanePermuteAndSHUFP(DL, VT, V1, V2, Mask, DAG))
+      return V;
 
   // If there are only inputs from one 128-bit lane, splitting will in fact be
   // less expensive. The flags track whether the given lane contains an element
