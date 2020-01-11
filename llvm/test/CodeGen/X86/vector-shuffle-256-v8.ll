@@ -1151,15 +1151,15 @@ define <8 x float> @shuffle_v8f32_084c195d(<8 x float> %a, <8 x float> %b) {
   ret <8 x float> %shuffle
 }
 
-define <8 x float> @shuffle_v8f32_01452367d(<8 x float> %a) {
-; AVX1-LABEL: shuffle_v8f32_01452367d:
+define <8 x float> @shuffle_v8f32_01452367(<8 x float> %a) {
+; AVX1-LABEL: shuffle_v8f32_01452367:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm0[2,3,2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[3],ymm1[3]
 ; AVX1-NEXT:    retq
 ;
-; AVX2OR512VL-LABEL: shuffle_v8f32_01452367d:
+; AVX2OR512VL-LABEL: shuffle_v8f32_01452367:
 ; AVX2OR512VL:       # %bb.0:
 ; AVX2OR512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2OR512VL-NEXT:    retq
