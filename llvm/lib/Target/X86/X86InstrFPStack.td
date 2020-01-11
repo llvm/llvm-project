@@ -777,7 +777,10 @@ def FXRSTOR64 : RI<0xAE, MRM1m, (outs), (ins opaquemem:$src),
 
 // Required for RET of f32 / f64 / f80 values.
 def : Pat<(X86fldf32 addr:$src), (LD_Fp32m addr:$src)>;
+def : Pat<(X86fldf32 addr:$src), (LD_Fp32m64 addr:$src)>;
 def : Pat<(X86fldf64 addr:$src), (LD_Fp64m addr:$src)>;
+def : Pat<(X86fldf32 addr:$src), (LD_Fp32m80 addr:$src)>;
+def : Pat<(X86fldf64 addr:$src), (LD_Fp64m80 addr:$src)>;
 def : Pat<(X86fldf80 addr:$src), (LD_Fp80m addr:$src)>;
 
 // Required for CALL which return f32 / f64 / f80 values.
