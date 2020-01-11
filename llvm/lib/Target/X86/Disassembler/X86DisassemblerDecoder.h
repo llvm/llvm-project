@@ -534,11 +534,6 @@ struct InternalInstruction {
   // The address of the next byte to read via the reader
   uint64_t readerCursor;
 
-  // Logger interface (C)
-  dlog_t dlog;
-  // Opaque value passed to the logger
-  void* dlogArg;
-
   // General instruction information
 
   // The mode to disassemble for (64-bit, protected, real)
@@ -661,18 +656,12 @@ struct InternalInstruction {
 ///                  consumer.
 /// \param readerArg An argument to pass to the reader for storing context
 ///                  specific to the consumer.  May be NULL.
-/// \param logger    The dlog_t to be used in printing status messages from the
-///                  disassembler.  May be NULL.
-/// \param loggerArg An argument to pass to the logger for storing context
-///                  specific to the logger.  May be NULL.
 /// \param startLoc  The address (in the reader's address space) of the first
 ///                  byte in the instruction.
 /// \param mode      The mode (16-bit, 32-bit, 64-bit) to decode in.
 /// \return          Nonzero if there was an error during decode, 0 otherwise.
 int decodeInstruction(InternalInstruction *insn,
                       const void *readerArg,
-                      dlog_t logger,
-                      void *loggerArg,
                       const void *miiArg,
                       uint64_t startLoc,
                       DisassemblerMode mode);
