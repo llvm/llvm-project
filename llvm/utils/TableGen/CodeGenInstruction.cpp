@@ -396,6 +396,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   hasNoSchedulingInfo = R->getValueAsBit("hasNoSchedulingInfo");
   FastISelShouldIgnore = R->getValueAsBit("FastISelShouldIgnore");
   variadicOpsAreDefs = R->getValueAsBit("variadicOpsAreDefs");
+  isAuthenticated = R->getValueAsBit("isAuthenticated");
 
   bool Unset;
   mayLoad      = R->getValueAsBitOrUnset("mayLoad", Unset);
