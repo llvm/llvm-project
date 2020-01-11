@@ -854,12 +854,6 @@ int runOrcLazyJIT(const char *ProgName) {
     ExitOnErr(J->addObjectFile(std::move(Obj)));
   }
 
-  // Generate a argument string.
-  std::vector<std::string> Args;
-  Args.push_back(InputFile);
-  for (auto &Arg : InputArgv)
-    Args.push_back(Arg);
-
   // Run any static constructors.
   ExitOnErr(J->runConstructors());
 
@@ -878,8 +872,8 @@ int runOrcLazyJIT(const char *ProgName) {
 
   typedef int (*MainFnPtr)(int, char *[]);
   auto Result = orc::runAsMain(
-      jitTargetAddressToFunction<MainFnPtr>(MainSym.getAddress()), Args,
-      StringRef("lli"));
+      jitTargetAddressToFunction<MainFnPtr>(MainSym.getAddress()), InputArgv,
+      StringRef(InputFile));
 
   // Wait for -entry-point threads.
   for (auto &AltEntryThread : AltEntryThreads)
