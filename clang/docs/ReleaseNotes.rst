@@ -64,6 +64,10 @@ Improvements to Clang's diagnostics
 - -Wbitwise-conditional-parentheses will warn on operator precedence issues
   when mixing bitwise-and (&) and bitwise-or (|) operator with the
   conditional operator (?:).
+- -Wrange-loop-analysis got several improvements. It no longer warns about a
+  copy being made when the result is bound to an rvalue reference. It no longer
+  warns when an object of a small, trivially copyable type is copied. The
+  warning now offers fixits. It is now part of -Wall.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
