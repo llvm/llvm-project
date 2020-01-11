@@ -14,11 +14,13 @@
 #include "mlir/Support/STLExtras.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
+#include "mlir/TableGen/ODSDialectHook.h"
 #include "mlir/TableGen/OpClass.h"
 #include "mlir/TableGen/OpInterfaces.h"
 #include "mlir/TableGen/OpTrait.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -26,9 +28,34 @@
 
 #define DEBUG_TYPE "mlir-tblgen-opdefgen"
 
-using namespace llvm;
 using namespace mlir;
 using namespace mlir::tblgen;
+
+using llvm::CodeInit;
+using llvm::DefInit;
+using llvm::formatv;
+using llvm::Init;
+using llvm::ListInit;
+using llvm::Record;
+using llvm::RecordKeeper;
+using llvm::StringInit;
+
+//===----------------------------------------------------------------------===//
+// Dialect hook registration
+//===----------------------------------------------------------------------===//
+
+static llvm::ManagedStatic<llvm::StringMap<DialectEmitFunction>> dialectHooks;
+
+ODSDialectHookRegistration::ODSDialectHookRegistration(
+    StringRef dialectName, DialectEmitFunction emitFn) {
+  bool inserted = dialectHooks->try_emplace(dialectName, emitFn).second;
+  assert(inserted && "Multiple ODS hooks for the same dialect!");
+  (void)inserted;
+}
+
+//===----------------------------------------------------------------------===//
+// Static string definitions
+//===----------------------------------------------------------------------===//
 
 static const char *const tblgenNamePrefix = "tblgen_";
 static const char *const generatedArgName = "tblgen_arg";
@@ -279,6 +306,7 @@ OpEmitter::OpEmitter(const Operator &op)
   verifyCtx.withOp("(*this->getOperation())");
 
   genTraits();
+
   // Generate C++ code for various op methods. The order here determines the
   // methods in the generated file.
   genOpAsmInterface();
@@ -294,6 +322,13 @@ OpEmitter::OpEmitter(const Operator &op)
   genCanonicalizerDecls();
   genFolderDecls();
   genOpInterfaceMethods();
+
+  // If a dialect hook is registered for this op's dialect, emit dialect
+  // specific content.
+  auto dialectHookIt = dialectHooks->find(op.getDialectName());
+  if (dialectHookIt != dialectHooks->end()) {
+    dialectHookIt->second(op, opClass);
+  }
 }
 
 void OpEmitter::emitDecl(const Operator &op, raw_ostream &os) {
