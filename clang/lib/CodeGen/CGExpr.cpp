@@ -1893,8 +1893,7 @@ RValue CodeGenFunction::EmitLoadOfExtVectorElementLValue(LValue LV) {
 /// Generates lvalue for partial ext_vector access.
 Address CodeGenFunction::EmitExtVectorElementLValue(LValue LV) {
   Address VectorAddress = LV.getExtVectorAddress();
-  const VectorType *ExprVT = LV.getType()->getAs<VectorType>();
-  QualType EQT = ExprVT->getElementType();
+  QualType EQT = LV.getType()->castAs<VectorType>()->getElementType();
   llvm::Type *VectorElementTy = CGM.getTypes().ConvertType(EQT);
 
   Address CastToPointerElement =
@@ -3887,7 +3886,7 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     LValueBaseInfo BaseInfo;
     TBAAAccessInfo TBAAInfo;
     Address Ptr = EmitPointerWithAlignment(E->getBase(), &BaseInfo, &TBAAInfo);
-    const PointerType *PT = E->getBase()->getType()->getAs<PointerType>();
+    const auto *PT = E->getBase()->getType()->castAs<PointerType>();
     Base = MakeAddrLValue(Ptr, PT->getPointeeType(), BaseInfo, TBAAInfo);
     Base.getQuals().removeObjCGCAttr();
   } else if (E->getBase()->isGLValue()) {
@@ -4454,8 +4453,8 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
 
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase: {
-    const RecordType *DerivedClassTy =
-      E->getSubExpr()->getType()->getAs<RecordType>();
+    const auto *DerivedClassTy =
+        E->getSubExpr()->getType()->castAs<RecordType>();
     auto *DerivedClassDecl = cast<CXXRecordDecl>(DerivedClassTy->getDecl());
 
     LValue LV = EmitLValue(E->getSubExpr());
@@ -4475,7 +4474,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_ToUnion:
     return EmitAggExprToLValue(E);
   case CK_BaseToDerived: {
-    const RecordType *DerivedClassTy = E->getType()->getAs<RecordType>();
+    const auto *DerivedClassTy = E->getType()->castAs<RecordType>();
     auto *DerivedClassDecl = cast<CXXRecordDecl>(DerivedClassTy->getDecl());
 
     LValue LV = EmitLValue(E->getSubExpr());
@@ -5192,9 +5191,7 @@ EmitPointerToDataMemberBinaryExpr(const BinaryOperator *E) {
   }
 
   llvm::Value *OffsetV = EmitScalarExpr(E->getRHS());
-
-  const MemberPointerType *MPT
-    = E->getRHS()->getType()->getAs<MemberPointerType>();
+  const auto *MPT = E->getRHS()->getType()->castAs<MemberPointerType>();
 
   LValueBaseInfo BaseInfo;
   TBAAAccessInfo TBAAInfo;

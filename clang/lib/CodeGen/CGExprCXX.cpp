@@ -129,7 +129,7 @@ RValue CodeGenFunction::EmitCXXPseudoDestructorExpr(
     // If this is s.x, emit s as an lvalue. If it is s->x, emit s as a scalar.
     if (E->isArrow()) {
       BaseValue = EmitPointerWithAlignment(BaseExpr);
-      const PointerType *PTy = BaseExpr->getType()->getAs<PointerType>();
+      const auto *PTy = BaseExpr->getType()->castAs<PointerType>();
       BaseQuals = PTy->getPointeeType().getQualifiers();
     } else {
       LValue BaseLV = EmitLValue(BaseExpr);
@@ -1427,8 +1427,7 @@ namespace {
     }
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
-      const FunctionProtoType *FPT =
-          OperatorDelete->getType()->getAs<FunctionProtoType>();
+      const auto *FPT = OperatorDelete->getType()->castAs<FunctionProtoType>();
       CallArgList DeleteArgs;
 
       // The first argument is always a void* (or C* for a destroying operator
@@ -1770,9 +1769,7 @@ void CodeGenFunction::EmitDeleteCall(const FunctionDecl *DeleteFD,
   assert((!NumElements && CookieSize.isZero()) ||
          DeleteFD->getOverloadedOperator() == OO_Array_Delete);
 
-  const FunctionProtoType *DeleteFTy =
-    DeleteFD->getType()->getAs<FunctionProtoType>();
-
+  const auto *DeleteFTy = DeleteFD->getType()->castAs<FunctionProtoType>();
   CallArgList DeleteArgs;
 
   auto Params = getUsualDeleteParams(DeleteFD);
