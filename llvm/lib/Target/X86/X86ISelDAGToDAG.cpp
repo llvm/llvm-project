@@ -1058,12 +1058,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       // Here we could have an FP stack truncation or an FPStack <-> SSE convert.
       // FPStack has extload and truncstore.  SSE can fold direct loads into other
       // operations.  Based on this, decide what we want to do.
-      MVT MemVT;
-      if (N->getOpcode() == ISD::FP_ROUND)
-        MemVT = DstVT;  // FP_ROUND must use DstVT, we can't do a 'trunc load'.
-      else
-        MemVT = SrcIsSSE ? SrcVT : DstVT;
-
+      MVT MemVT = (N->getOpcode() == ISD::FP_ROUND) ? DstVT : SrcVT;
       SDValue MemTmp = CurDAG->CreateStackTemporary(MemVT);
       SDLoc dl(N);
 
@@ -1116,12 +1111,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       // Here we could have an FP stack truncation or an FPStack <-> SSE convert.
       // FPStack has extload and truncstore.  SSE can fold direct loads into other
       // operations.  Based on this, decide what we want to do.
-      MVT MemVT;
-      if (N->getOpcode() == ISD::STRICT_FP_ROUND)
-        MemVT = DstVT;  // FP_ROUND must use DstVT, we can't do a 'trunc load'.
-      else
-        MemVT = SrcIsSSE ? SrcVT : DstVT;
-
+      MVT MemVT = (N->getOpcode() == ISD::STRICT_FP_ROUND) ? DstVT : SrcVT;
       SDValue MemTmp = CurDAG->CreateStackTemporary(MemVT);
       SDLoc dl(N);
 
