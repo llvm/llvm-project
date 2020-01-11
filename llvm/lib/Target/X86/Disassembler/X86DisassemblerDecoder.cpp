@@ -290,43 +290,6 @@ static bool isREX(struct InternalInstruction *insn, uint8_t prefix) {
 }
 
 /*
- * setPrefixPresent - Marks that a particular prefix is present as mandatory
- *
- * @param insn      - The instruction to be marked as having the prefix.
- * @param prefix    - The prefix that is present.
- */
-static void setPrefixPresent(struct InternalInstruction *insn, uint8_t prefix) {
-  uint8_t nextByte;
-  switch (prefix) {
-  case 0xf0:
-    insn->hasLockPrefix = true;
-    break;
-  case 0xf2:
-  case 0xf3:
-    if (lookAtByte(insn, &nextByte))
-      break;
-    // TODO:
-    //  1. There could be several 0x66
-    //  2. if (nextByte == 0x66) and nextNextByte != 0x0f then
-    //      it's not mandatory prefix
-    //  3. if (nextByte >= 0x40 && nextByte <= 0x4f) it's REX and we need
-    //     0x0f exactly after it to be mandatory prefix
-    if (isREX(insn, nextByte) || nextByte == 0x0f || nextByte == 0x66)
-      // The last of 0xf2 /0xf3 is mandatory prefix
-      insn->mandatoryPrefix = prefix;
-    insn->repeatPrefix = prefix;
-    break;
-  case 0x66:
-    if (lookAtByte(insn, &nextByte))
-      break;
-    // 0x66 can't overwrite existing mandatory prefix and should be ignored
-    if (!insn->mandatoryPrefix && (nextByte == 0x0f || isREX(insn, nextByte)))
-      insn->mandatoryPrefix = prefix;
-    break;
-  }
-}
-
-/*
  * readPrefixes - Consumes all of an instruction's prefix bytes, and marks the
  *   instruction as having them.  Also sets the instruction's default operand,
  *   address, and other relevant data sizes to report operands correctly.
@@ -393,10 +356,25 @@ static int readPrefixes(struct InternalInstruction* insn) {
 
     switch (byte) {
     case 0xf0:  /* LOCK */
-    case 0xf2:  /* REPNE/REPNZ */
-    case 0xf3:  /* REP or REPE/REPZ */
-      setPrefixPresent(insn, byte);
+      insn->hasLockPrefix = true;
       break;
+    case 0xf2:  /* REPNE/REPNZ */
+    case 0xf3:  /* REP or REPE/REPZ */ {
+      uint8_t nextByte;
+      if (lookAtByte(insn, &nextByte))
+        break;
+      // TODO:
+      //  1. There could be several 0x66
+      //  2. if (nextByte == 0x66) and nextNextByte != 0x0f then
+      //      it's not mandatory prefix
+      //  3. if (nextByte >= 0x40 && nextByte <= 0x4f) it's REX and we need
+      //     0x0f exactly after it to be mandatory prefix
+      if (isREX(insn, nextByte) || nextByte == 0x0f || nextByte == 0x66)
+        // The last of 0xf2 /0xf3 is mandatory prefix
+        insn->mandatoryPrefix = byte;
+      insn->repeatPrefix = byte;
+      break;
+    }
     case 0x2e:  /* CS segment override -OR- Branch not taken */
     case 0x36:  /* SS segment override -OR- Branch taken */
     case 0x3e:  /* DS segment override */
@@ -426,15 +404,19 @@ static int readPrefixes(struct InternalInstruction* insn) {
         debug("Unhandled override");
         return -1;
       }
-      setPrefixPresent(insn, byte);
       break;
-    case 0x66:  /* Operand-size override */
+    case 0x66:  /* Operand-size override */ {
+      uint8_t nextByte;
       insn->hasOpSize = true;
-      setPrefixPresent(insn, byte);
+      if (lookAtByte(insn, &nextByte))
+        break;
+      // 0x66 can't overwrite existing mandatory prefix and should be ignored
+      if (!insn->mandatoryPrefix && (nextByte == 0x0f || isREX(insn, nextByte)))
+        insn->mandatoryPrefix = byte;
       break;
+    }
     case 0x67:  /* Address-size override */
       insn->hasAdSize = true;
-      setPrefixPresent(insn, byte);
       break;
     default:    /* Not a prefix byte */
       isPrefix = false;
