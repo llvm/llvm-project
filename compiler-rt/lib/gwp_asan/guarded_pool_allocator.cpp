@@ -58,7 +58,9 @@ void defaultPrintStackTrace(uintptr_t *Trace, size_t TraceLength,
 
 // Gets the singleton implementation of this class. Thread-compatible until
 // init() is called, thread-safe afterwards.
-GuardedPoolAllocator *getSingleton() { return SingletonPtr; }
+GuardedPoolAllocator *GuardedPoolAllocator::getSingleton() {
+  return SingletonPtr;
+}
 
 void GuardedPoolAllocator::AllocationMetadata::RecordAllocation(
     uintptr_t AllocAddr, size_t AllocSize, options::Backtrace_t Backtrace) {
@@ -156,9 +158,9 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
   // Multiply the sample rate by 2 to give a good, fast approximation for (1 /
   // SampleRate) chance of sampling.
   if (Opts.SampleRate != 1)
-    AdjustedSampleRate = static_cast<uint32_t>(Opts.SampleRate) * 2;
+    AdjustedSampleRatePlusOne = static_cast<uint32_t>(Opts.SampleRate) * 2 + 1;
   else
-    AdjustedSampleRate = 1;
+    AdjustedSampleRatePlusOne = 2;
 
   GuardedPagePool = reinterpret_cast<uintptr_t>(GuardedPoolMemory);
   GuardedPagePoolEnd =
@@ -169,6 +171,31 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
   // race to members if received during init().
   if (Opts.InstallSignalHandlers)
     installSignalHandlers();
+
+  if (Opts.InstallForkHandlers)
+    installAtFork();
+}
+
+void GuardedPoolAllocator::disable() { PoolMutex.lock(); }
+
+void GuardedPoolAllocator::enable() { PoolMutex.unlock(); }
+
+void GuardedPoolAllocator::uninitTestOnly() {
+  if (GuardedPagePool) {
+    unmapMemory(reinterpret_cast<void *>(GuardedPagePool),
+                GuardedPagePoolEnd - GuardedPagePool);
+    GuardedPagePool = 0;
+    GuardedPagePoolEnd = 0;
+  }
+  if (Metadata) {
+    unmapMemory(Metadata, MaxSimultaneousAllocations * sizeof(*Metadata));
+    Metadata = nullptr;
+  }
+  if (FreeSlots) {
+    unmapMemory(FreeSlots, MaxSimultaneousAllocations * sizeof(*FreeSlots));
+    FreeSlots = nullptr;
+  }
+  uninstallSignalHandlers();
 }
 
 void *GuardedPoolAllocator::allocate(size_t Size) {

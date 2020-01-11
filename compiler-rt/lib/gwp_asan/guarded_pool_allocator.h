@@ -98,14 +98,22 @@ public:
   // pool using the provided options. See options.inc for runtime configuration
   // options.
   void init(const options::Options &Opts);
+  void uninitTestOnly();
+
+  void disable();
+  void enable();
 
   // Return whether the allocation should be randomly chosen for sampling.
   GWP_ASAN_ALWAYS_INLINE bool shouldSample() {
     // NextSampleCounter == 0 means we "should regenerate the counter".
     //                   == 1 means we "should sample this allocation".
+    // AdjustedSampleRatePlusOne is designed to intentionally underflow. This
+    // class must be valid when zero-initialised, and we wish to sample as
+    // infrequently as possible when this is the case, hence we underflow to
+    // UINT32_MAX.
     if (GWP_ASAN_UNLIKELY(ThreadLocals.NextSampleCounter == 0))
       ThreadLocals.NextSampleCounter =
-          (getRandomUnsigned32() % AdjustedSampleRate) + 1;
+          (getRandomUnsigned32() % (AdjustedSampleRatePlusOne - 1)) + 1;
 
     return GWP_ASAN_UNLIKELY(--ThreadLocals.NextSampleCounter == 0);
   }
@@ -114,7 +122,7 @@ public:
   // is owned by this pool.
   GWP_ASAN_ALWAYS_INLINE bool pointerIsMine(const void *Ptr) const {
     uintptr_t P = reinterpret_cast<uintptr_t>(Ptr);
-    return GuardedPagePool <= P && P < GuardedPagePoolEnd;
+    return P < GuardedPagePoolEnd && GuardedPagePool <= P;
   }
 
   // Allocate memory in a guarded slot, and return a pointer to the new
@@ -156,6 +164,7 @@ private:
   // mappings, call mapMemory() followed by markReadWrite() on the returned
   // pointer.
   void *mapMemory(size_t Size) const;
+  void unmapMemory(void *Addr, size_t Size) const;
   void markReadWrite(void *Ptr, size_t Size) const;
   void markInaccessible(void *Ptr, size_t Size) const;
 
@@ -169,6 +178,7 @@ private:
   // signal(), we have to use platform-specific signal handlers to obtain the
   // address that caused the SIGSEGV exception.
   static void installSignalHandlers();
+  static void uninstallSignalHandlers();
 
   // Returns the index of the slot that this pointer resides in. If the pointer
   // is not owned by this pool, the result is undefined.
@@ -210,6 +220,11 @@ private:
 
   void reportErrorInternal(uintptr_t AccessPtr, Error E);
 
+  static GuardedPoolAllocator *getSingleton();
+
+  // Install a pthread_atfork handler.
+  void installAtFork();
+
   // Cached page size for this system in bytes.
   size_t PageSize = 0;
 
@@ -223,7 +238,7 @@ private:
   size_t NumSampledAllocations = 0;
   // Pointer to the pool of guarded slots. Note that this points to the start of
   // the pool (which is a guard page), not a pointer to the first guarded page.
-  uintptr_t GuardedPagePool = UINTPTR_MAX;
+  uintptr_t GuardedPagePool = 0;
   uintptr_t GuardedPagePoolEnd = 0;
   // Pointer to the allocation metadata (allocation/deallocation stack traces),
   // if any.
@@ -250,7 +265,7 @@ private:
   // where we would calculate modulo zero. This value is set UINT32_MAX, as when
   // GWP-ASan is disabled, we wish to never spend wasted cycles recalculating
   // the sample rate.
-  uint32_t AdjustedSampleRate = UINT32_MAX;
+  uint32_t AdjustedSampleRatePlusOne = 0;
 
   // Pack the thread local variables into a struct to ensure that they're in
   // the same cache line for performance reasons. These are the most touched
