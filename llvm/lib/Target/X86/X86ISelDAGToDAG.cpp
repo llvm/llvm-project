@@ -1128,10 +1128,40 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       // FIXME: optimize the case where the src/dest is a load or store?
 
       //Since the operation is StrictFP, use the preexisting chain.
-      SDValue Store = CurDAG->getTruncStore(N->getOperand(0), dl, N->getOperand(1),
-                                MemTmp, MachinePointerInfo(), MemVT);
-      SDValue Result = CurDAG->getExtLoad(ISD::EXTLOAD, dl, DstVT, Store, MemTmp,
-                                          MachinePointerInfo(), MemVT);
+      SDValue Store, Result;
+      if (!SrcIsSSE) {
+        SDVTList VTs = CurDAG->getVTList(MVT::Other);
+        SDValue Ops[] = {N->getOperand(0), N->getOperand(1), MemTmp};
+        Store = CurDAG->getMemIntrinsicNode(X86ISD::FST, dl, VTs, Ops, MemVT,
+                                            MachinePointerInfo(), 0,
+                                            MachineMemOperand::MOStore);
+        if (N->getFlags().hasNoFPExcept()) {
+          SDNodeFlags Flags = Store->getFlags();
+          Flags.setNoFPExcept(true);
+          Store->setFlags(Flags);
+        }
+      } else {
+        assert(SrcVT == MemVT && "Unexpected VT!");
+        Store = CurDAG->getStore(N->getOperand(0), dl, N->getOperand(1), MemTmp,
+                                 MachinePointerInfo());
+      }
+
+      if (!DstIsSSE) {
+        SDVTList VTs = CurDAG->getVTList(DstVT, MVT::Other);
+        SDValue Ops[] = {Store, MemTmp};
+        Result = CurDAG->getMemIntrinsicNode(X86ISD::FLD, dl, VTs, Ops, MemVT,
+                                             MachinePointerInfo(), 0,
+                                             MachineMemOperand::MOLoad);
+        if (N->getFlags().hasNoFPExcept()) {
+          SDNodeFlags Flags = Result->getFlags();
+          Flags.setNoFPExcept(true);
+          Result->setFlags(Flags);
+        }
+      } else {
+        assert(DstVT == MemVT && "Unexpected VT!");
+        Result =
+            CurDAG->getLoad(DstVT, dl, Store, MemTmp, MachinePointerInfo());
+      }
 
       // We're about to replace all uses of the FP_ROUND/FP_EXTEND with the
       // extload we created.  This will cause general havok on the dag because
