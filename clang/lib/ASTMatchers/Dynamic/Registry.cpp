@@ -105,6 +105,7 @@ RegistryMaps::RegistryMaps() {
   // equalsNode
 
   REGISTER_OVERLOADED_2(callee);
+  REGISTER_OVERLOADED_2(hasAnyCapture);
   REGISTER_OVERLOADED_2(hasPrefix);
   REGISTER_OVERLOADED_2(hasType);
   REGISTER_OVERLOADED_2(ignoringParens);

@@ -530,6 +530,7 @@ class Instruction : InstructionEncoding {
   bit hasCtrlDep   = 0;     // Does this instruction r/w ctrl-flow chains?
   bit isNotDuplicable = 0;  // Is it unsafe to duplicate this instruction?
   bit isConvergent = 0;     // Is this instruction convergent?
+  bit isAuthenticated = 0;  // Does this instruction authenticate a pointer?
   bit isAsCheapAsAMove = 0; // As cheap (or cheaper) than a move instruction.
   bit hasExtraSrcRegAllocReq = 0; // Sources have special regalloc requirement?
   bit hasExtraDefRegAllocReq = 0; // Defs have special regalloc requirement?

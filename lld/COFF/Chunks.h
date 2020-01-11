@@ -510,7 +510,7 @@ public:
 
 class RangeExtensionThunkARM64 : public NonSectionChunk {
 public:
-  explicit RangeExtensionThunkARM64(Defined *t) : target(t) {}
+  explicit RangeExtensionThunkARM64(Defined *t) : target(t) { setAlignment(4); }
   size_t getSize() const override;
   void writeTo(uint8_t *buf) const override;
 

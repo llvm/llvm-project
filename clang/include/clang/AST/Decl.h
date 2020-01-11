@@ -1519,8 +1519,8 @@ public:
   /// need not have a usable destructor at all.
   bool isNoDestroy(const ASTContext &) const;
 
-  /// Do we need to emit an exit-time destructor for this variable, and if so,
-  /// what kind?
+  /// Would the destruction of this variable have any effect, and if so, what
+  /// kind?
   QualType::DestructionKind needsDestruction(const ASTContext &Ctx) const;
 
   // Implement isa/cast/dyncast/etc.

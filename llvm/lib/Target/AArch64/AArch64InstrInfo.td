@@ -819,20 +819,26 @@ let Predicates = [HasComplxNum, HasNEON] in {
 let Uses = [LR], Defs = [LR] in {
   def PACIAZ   : SystemNoOperands<0b000, "paciaz">;
   def PACIBZ   : SystemNoOperands<0b010, "pacibz">;
-  def AUTIAZ   : SystemNoOperands<0b100, "autiaz">;
-  def AUTIBZ   : SystemNoOperands<0b110, "autibz">;
+  let isAuthenticated = 1 in {
+    def AUTIAZ   : SystemNoOperands<0b100, "autiaz">;
+    def AUTIBZ   : SystemNoOperands<0b110, "autibz">;
+  }
 }
 let Uses = [LR, SP], Defs = [LR] in {
   def PACIASP  : SystemNoOperands<0b001, "paciasp">;
   def PACIBSP  : SystemNoOperands<0b011, "pacibsp">;
-  def AUTIASP  : SystemNoOperands<0b101, "autiasp">;
-  def AUTIBSP  : SystemNoOperands<0b111, "autibsp">;
+  let isAuthenticated = 1 in {
+    def AUTIASP  : SystemNoOperands<0b101, "autiasp">;
+    def AUTIBSP  : SystemNoOperands<0b111, "autibsp">;
+  }
 }
 let Uses = [X16, X17], Defs = [X17], CRm = 0b0001 in {
   def PACIA1716  : SystemNoOperands<0b000, "pacia1716">;
   def PACIB1716  : SystemNoOperands<0b010, "pacib1716">;
-  def AUTIA1716  : SystemNoOperands<0b100, "autia1716">;
-  def AUTIB1716  : SystemNoOperands<0b110, "autib1716">;
+  let isAuthenticated = 1 in {
+    def AUTIA1716  : SystemNoOperands<0b100, "autia1716">;
+    def AUTIB1716  : SystemNoOperands<0b110, "autib1716">;
+  }
 }
 
 let Uses = [LR], Defs = [LR], CRm = 0b0000 in {
