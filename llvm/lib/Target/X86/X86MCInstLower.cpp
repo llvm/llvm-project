@@ -1031,6 +1031,20 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   }
 }
 
+/// Return the longest nop which can be efficiently decoded for the given
+/// target cpu.  15-bytes is the longest single NOP instruction, but some
+/// platforms can't decode the longest forms efficiently.
+static unsigned MaxLongNopLength(const MCSubtargetInfo &STI) {
+  uint64_t MaxNopLength = 10;
+  if (STI.getFeatureBits()[X86::ProcIntelSLM])
+    MaxNopLength = 7;
+  else if (STI.getFeatureBits()[X86::FeatureFast15ByteNOP])
+    MaxNopLength = 15;
+  else if (STI.getFeatureBits()[X86::FeatureFast11ByteNOP])
+    MaxNopLength = 11;
+  return MaxNopLength;
+}
+
 /// Emit the largest nop instruction smaller than or equal to \p NumBytes
 /// bytes.  Return the size of nop emitted.
 static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
@@ -1040,6 +1054,9 @@ static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
     OS.EmitInstruction(MCInstBuilder(X86::NOOP), STI);
     return 1;
   }
+
+  // Cap a single nop emission at the profitable value for the target
+  NumBytes = std::min(NumBytes, MaxLongNopLength(STI));
 
   unsigned NopSize;
   unsigned Opc, BaseReg, ScaleVal, IndexReg, Displacement, SegmentReg;
