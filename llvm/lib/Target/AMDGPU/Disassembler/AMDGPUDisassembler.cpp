@@ -268,7 +268,6 @@ static bool isValidDPP8(const MCInst &MI) {
 DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                 ArrayRef<uint8_t> Bytes_,
                                                 uint64_t Address,
-                                                raw_ostream &WS,
                                                 raw_ostream &CS) const {
   CommentStream = &CS;
   bool IsSDWA = false;

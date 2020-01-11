@@ -34,7 +34,6 @@ public:
 
   DecodeStatus getInstruction(MCInst &instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 };
 
@@ -449,7 +448,6 @@ static DecodeStatus decodeBDVAddr64Disp12Operand(MCInst &Inst, uint64_t Field,
 DecodeStatus SystemZDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
-                                                 raw_ostream &OS,
                                                  raw_ostream &CS) const {
   // Get the first two bytes of the instruction.
   Size = 0;
