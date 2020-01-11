@@ -88,7 +88,7 @@ class VectorLegalizer {
   bool LowerOperationWrapper(SDNode *N, SmallVectorImpl<SDValue> &Results);
 
   /// Implements unrolling a VSETCC.
-  SDValue UnrollVSETCC(SDValue Op);
+  SDValue UnrollVSETCC(SDNode *Node);
 
   /// Implement expand-based legalization of vector operations.
   ///
@@ -98,69 +98,69 @@ class VectorLegalizer {
 
   /// Implements expansion for FP_TO_UINT; falls back to UnrollVectorOp if
   /// FP_TO_SINT isn't legal.
-  void ExpandFP_TO_UINT(SDValue Op, SmallVectorImpl<SDValue> &Results);
+  void ExpandFP_TO_UINT(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
   /// Implements expansion for UINT_TO_FLOAT; falls back to UnrollVectorOp if
   /// SINT_TO_FLOAT and SHR on vectors isn't legal.
-  void ExpandUINT_TO_FLOAT(SDValue Op, SmallVectorImpl<SDValue> &Results);
+  void ExpandUINT_TO_FLOAT(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
   /// Implement expansion for SIGN_EXTEND_INREG using SRL and SRA.
-  SDValue ExpandSEXTINREG(SDValue Op);
+  SDValue ExpandSEXTINREG(SDNode *Node);
 
   /// Implement expansion for ANY_EXTEND_VECTOR_INREG.
   ///
   /// Shuffles the low lanes of the operand into place and bitcasts to the proper
   /// type. The contents of the bits in the extended part of each element are
   /// undef.
-  SDValue ExpandANY_EXTEND_VECTOR_INREG(SDValue Op);
+  SDValue ExpandANY_EXTEND_VECTOR_INREG(SDNode *Node);
 
   /// Implement expansion for SIGN_EXTEND_VECTOR_INREG.
   ///
   /// Shuffles the low lanes of the operand into place, bitcasts to the proper
   /// type, then shifts left and arithmetic shifts right to introduce a sign
   /// extension.
-  SDValue ExpandSIGN_EXTEND_VECTOR_INREG(SDValue Op);
+  SDValue ExpandSIGN_EXTEND_VECTOR_INREG(SDNode *Node);
 
   /// Implement expansion for ZERO_EXTEND_VECTOR_INREG.
   ///
   /// Shuffles the low lanes of the operand into place and blends zeros into
   /// the remaining lanes, finally bitcasting to the proper type.
-  SDValue ExpandZERO_EXTEND_VECTOR_INREG(SDValue Op);
+  SDValue ExpandZERO_EXTEND_VECTOR_INREG(SDNode *Node);
 
   /// Implement expand-based legalization of ABS vector operations.
   /// If following expanding is legal/custom then do it:
   /// (ABS x) --> (XOR (ADD x, (SRA x, sizeof(x)-1)), (SRA x, sizeof(x)-1))
   /// else unroll the operation.
-  SDValue ExpandABS(SDValue Op);
+  SDValue ExpandABS(SDNode *Node);
 
   /// Expand bswap of vectors into a shuffle if legal.
-  SDValue ExpandBSWAP(SDValue Op);
+  SDValue ExpandBSWAP(SDNode *Node);
 
   /// Implement vselect in terms of XOR, AND, OR when blend is not
   /// supported by the target.
-  SDValue ExpandVSELECT(SDValue Op);
-  SDValue ExpandSELECT(SDValue Op);
+  SDValue ExpandVSELECT(SDNode *Node);
+  SDValue ExpandSELECT(SDNode *Node);
   std::pair<SDValue, SDValue> ExpandLoad(SDNode *N);
   SDValue ExpandStore(SDNode *N);
-  SDValue ExpandFNEG(SDValue Op);
-  SDValue ExpandFSUB(SDValue Op);
-  SDValue ExpandBITREVERSE(SDValue Op);
-  SDValue ExpandCTPOP(SDValue Op);
-  SDValue ExpandCTLZ(SDValue Op);
-  SDValue ExpandCTTZ(SDValue Op);
-  SDValue ExpandFunnelShift(SDValue Op);
-  SDValue ExpandROT(SDValue Op);
-  SDValue ExpandFMINNUM_FMAXNUM(SDValue Op);
-  void ExpandUADDSUBO(SDValue Op, SmallVectorImpl<SDValue> &Results);
-  void ExpandSADDSUBO(SDValue Op, SmallVectorImpl<SDValue> &Results);
-  void ExpandMULO(SDValue Op, SmallVectorImpl<SDValue> &Results);
-  SDValue ExpandAddSubSat(SDValue Op);
-  SDValue ExpandFixedPointMul(SDValue Op);
-  SDValue ExpandFixedPointDiv(SDValue Op);
-  SDValue ExpandStrictFPOp(SDValue Op);
-  void ExpandStrictFPOp(SDValue Op, SmallVectorImpl<SDValue> &Results);
+  SDValue ExpandFNEG(SDNode *Node);
+  SDValue ExpandFSUB(SDNode *Node);
+  SDValue ExpandBITREVERSE(SDNode *Node);
+  SDValue ExpandCTPOP(SDNode *Node);
+  SDValue ExpandCTLZ(SDNode *Node);
+  SDValue ExpandCTTZ(SDNode *Node);
+  SDValue ExpandFunnelShift(SDNode *Node);
+  SDValue ExpandROT(SDNode *Node);
+  SDValue ExpandFMINNUM_FMAXNUM(SDNode *Node);
+  void ExpandUADDSUBO(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+  void ExpandSADDSUBO(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+  void ExpandMULO(SDNode *Node, SmallVectorImpl<SDValue> &Results);
+  SDValue ExpandAddSubSat(SDNode *Node);
+  SDValue ExpandFixedPointMul(SDNode *Node);
+  SDValue ExpandFixedPointDiv(SDNode *Node);
+  SDValue ExpandStrictFPOp(SDNode *Node);
+  void ExpandStrictFPOp(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
-  void UnrollStrictFPOp(SDValue Op, SmallVectorImpl<SDValue> &Results);
+  void UnrollStrictFPOp(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
   /// Implements vector promotion.
   ///
@@ -171,13 +171,13 @@ class VectorLegalizer {
   /// Implements [SU]INT_TO_FP vector promotion.
   ///
   /// This is a [zs]ext of the input operand to a larger integer type.
-  void PromoteINT_TO_FP(SDValue Op, SmallVectorImpl<SDValue> &Results);
+  void PromoteINT_TO_FP(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
   /// Implements FP_TO_[SU]INT vector promotion of the result type.
   ///
   /// It is promoted to a larger integer type.  The result is then
   /// truncated back to the original type.
-  void PromoteFP_TO_INT(SDValue Op, SmallVectorImpl<SDValue> &Results);
+  void PromoteFP_TO_INT(SDNode *Node, SmallVectorImpl<SDValue> &Results);
 
 public:
   VectorLegalizer(SelectionDAG& dag) :
@@ -560,24 +560,22 @@ bool VectorLegalizer::LowerOperationWrapper(SDNode *Node,
 }
 
 void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
-  SDValue Op(Node, 0); // FIXME: Use Node throughout.
-
   // For a few operations there is a specific concept for promotion based on
   // the operand's type.
-  switch (Op.getOpcode()) {
+  switch (Node->getOpcode()) {
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
   case ISD::STRICT_SINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
     // "Promote" the operation by extending the operand.
-    PromoteINT_TO_FP(Op, Results);
+    PromoteINT_TO_FP(Node, Results);
     return;
   case ISD::FP_TO_UINT:
   case ISD::FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
   case ISD::STRICT_FP_TO_SINT:
     // Promote the operation by extending the operand.
-    PromoteFP_TO_INT(Op, Results);
+    PromoteFP_TO_INT(Node, Results);
     return;
   case ISD::FP_ROUND:
   case ISD::FP_EXTEND:
@@ -591,73 +589,74 @@ void VectorLegalizer::Promote(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   //    same overall length. For example, x86 promotes ISD::AND v2i32 to v1i64.
   // 2) Extending a vector of floats to a vector of the same number of larger
   //    floats. For example, AArch64 promotes ISD::FADD on v4f16 to v4f32.
-  MVT VT = Op.getSimpleValueType();
-  assert(Op.getNode()->getNumValues() == 1 &&
+  assert(Node->getNumValues() == 1 &&
          "Can't promote a vector with multiple results!");
-  MVT NVT = TLI.getTypeToPromoteTo(Op.getOpcode(), VT);
-  SDLoc dl(Op);
-  SmallVector<SDValue, 4> Operands(Op.getNumOperands());
+  MVT VT = Node->getSimpleValueType(0);
+  MVT NVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VT);
+  SDLoc dl(Node);
+  SmallVector<SDValue, 4> Operands(Node->getNumOperands());
 
-  for (unsigned j = 0; j != Op.getNumOperands(); ++j) {
-    if (Op.getOperand(j).getValueType().isVector())
-      if (Op.getOperand(j)
+  for (unsigned j = 0; j != Node->getNumOperands(); ++j) {
+    if (Node->getOperand(j).getValueType().isVector())
+      if (Node->getOperand(j)
               .getValueType()
               .getVectorElementType()
               .isFloatingPoint() &&
           NVT.isVector() && NVT.getVectorElementType().isFloatingPoint())
-        Operands[j] = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Op.getOperand(j));
+        Operands[j] = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(j));
       else
-        Operands[j] = DAG.getNode(ISD::BITCAST, dl, NVT, Op.getOperand(j));
+        Operands[j] = DAG.getNode(ISD::BITCAST, dl, NVT, Node->getOperand(j));
     else
-      Operands[j] = Op.getOperand(j);
+      Operands[j] = Node->getOperand(j);
   }
 
-  Op = DAG.getNode(Op.getOpcode(), dl, NVT, Operands, Op.getNode()->getFlags());
+  SDValue Res =
+      DAG.getNode(Node->getOpcode(), dl, NVT, Operands, Node->getFlags());
 
-  SDValue Res;
   if ((VT.isFloatingPoint() && NVT.isFloatingPoint()) ||
       (VT.isVector() && VT.getVectorElementType().isFloatingPoint() &&
        NVT.isVector() && NVT.getVectorElementType().isFloatingPoint()))
-    Res = DAG.getNode(ISD::FP_ROUND, dl, VT, Op, DAG.getIntPtrConstant(0, dl));
+    Res = DAG.getNode(ISD::FP_ROUND, dl, VT, Res, DAG.getIntPtrConstant(0, dl));
   else
-    Res = DAG.getNode(ISD::BITCAST, dl, VT, Op);
+    Res = DAG.getNode(ISD::BITCAST, dl, VT, Res);
 
   Results.push_back(Res);
 }
 
-void VectorLegalizer::PromoteINT_TO_FP(SDValue Op,
+void VectorLegalizer::PromoteINT_TO_FP(SDNode *Node,
                                        SmallVectorImpl<SDValue> &Results) {
   // INT_TO_FP operations may require the input operand be promoted even
   // when the type is otherwise legal.
-  bool IsStrict = Op->isStrictFPOpcode();
-  MVT VT = Op.getOperand(IsStrict ? 1 : 0).getSimpleValueType();
-  MVT NVT = TLI.getTypeToPromoteTo(Op.getOpcode(), VT);
+  bool IsStrict = Node->isStrictFPOpcode();
+  MVT VT = Node->getOperand(IsStrict ? 1 : 0).getSimpleValueType();
+  MVT NVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VT);
   assert(NVT.getVectorNumElements() == VT.getVectorNumElements() &&
          "Vectors have different number of elements!");
 
-  SDLoc dl(Op);
-  SmallVector<SDValue, 4> Operands(Op.getNumOperands());
+  SDLoc dl(Node);
+  SmallVector<SDValue, 4> Operands(Node->getNumOperands());
 
-  unsigned Opc = (Op.getOpcode() == ISD::UINT_TO_FP ||
-                  Op.getOpcode() == ISD::STRICT_UINT_TO_FP)
+  unsigned Opc = (Node->getOpcode() == ISD::UINT_TO_FP ||
+                  Node->getOpcode() == ISD::STRICT_UINT_TO_FP)
                      ? ISD::ZERO_EXTEND
                      : ISD::SIGN_EXTEND;
-  for (unsigned j = 0; j != Op.getNumOperands(); ++j) {
-    if (Op.getOperand(j).getValueType().isVector())
-      Operands[j] = DAG.getNode(Opc, dl, NVT, Op.getOperand(j));
+  for (unsigned j = 0; j != Node->getNumOperands(); ++j) {
+    if (Node->getOperand(j).getValueType().isVector())
+      Operands[j] = DAG.getNode(Opc, dl, NVT, Node->getOperand(j));
     else
-      Operands[j] = Op.getOperand(j);
+      Operands[j] = Node->getOperand(j);
   }
 
   if (IsStrict) {
-    SDValue Res = DAG.getNode(Op.getOpcode(), dl,
-                              {Op.getValueType(), MVT::Other}, Operands);
+    SDValue Res = DAG.getNode(Node->getOpcode(), dl,
+                              {Node->getValueType(0), MVT::Other}, Operands);
     Results.push_back(Res);
     Results.push_back(Res.getValue(1));
     return;
   }
 
-  SDValue Res = DAG.getNode(Op.getOpcode(), dl, Op.getValueType(), Operands);
+  SDValue Res =
+      DAG.getNode(Node->getOpcode(), dl, Node->getValueType(0), Operands);
   Results.push_back(Res);
 }
 
@@ -665,15 +664,15 @@ void VectorLegalizer::PromoteINT_TO_FP(SDValue Op,
 // elements and then truncate the result.  This is different from the default
 // PromoteVector which uses bitcast to promote thus assumning that the
 // promoted vector type has the same overall size.
-void VectorLegalizer::PromoteFP_TO_INT(SDValue Op,
+void VectorLegalizer::PromoteFP_TO_INT(SDNode *Node,
                                        SmallVectorImpl<SDValue> &Results) {
-  MVT VT = Op.getSimpleValueType();
-  MVT NVT = TLI.getTypeToPromoteTo(Op.getOpcode(), VT);
-  bool IsStrict = Op->isStrictFPOpcode();
+  MVT VT = Node->getSimpleValueType(0);
+  MVT NVT = TLI.getTypeToPromoteTo(Node->getOpcode(), VT);
+  bool IsStrict = Node->isStrictFPOpcode();
   assert(NVT.getVectorNumElements() == VT.getVectorNumElements() &&
          "Vectors have different number of elements!");
 
-  unsigned NewOpc = Op->getOpcode();
+  unsigned NewOpc = Node->getOpcode();
   // Change FP_TO_UINT to FP_TO_SINT if possible.
   // TODO: Should we only do this if FP_TO_UINT itself isn't legal?
   if (NewOpc == ISD::FP_TO_UINT &&
@@ -684,20 +683,20 @@ void VectorLegalizer::PromoteFP_TO_INT(SDValue Op,
       TLI.isOperationLegalOrCustom(ISD::STRICT_FP_TO_SINT, NVT))
     NewOpc = ISD::STRICT_FP_TO_SINT;
 
-  SDLoc dl(Op);
+  SDLoc dl(Node);
   SDValue Promoted, Chain;
   if (IsStrict) {
     Promoted = DAG.getNode(NewOpc, dl, {NVT, MVT::Other},
-                           {Op.getOperand(0), Op.getOperand(1)});
+                           {Node->getOperand(0), Node->getOperand(1)});
     Chain = Promoted.getValue(1);
   } else
-    Promoted = DAG.getNode(NewOpc, dl, NVT, Op.getOperand(0));
+    Promoted = DAG.getNode(NewOpc, dl, NVT, Node->getOperand(0));
 
   // Assert that the converted value fits in the original type.  If it doesn't
   // (eg: because the value being converted is too big), then the result of the
   // original operation was undefined anyway, so the assert is still correct.
-  if (Op->getOpcode() == ISD::FP_TO_UINT ||
-      Op->getOpcode() == ISD::STRICT_FP_TO_UINT)
+  if (Node->getOpcode() == ISD::FP_TO_UINT ||
+      Node->getOpcode() == ISD::STRICT_FP_TO_UINT)
     NewOpc = ISD::AssertZext;
   else
     NewOpc = ISD::AssertSext;
@@ -847,97 +846,95 @@ SDValue VectorLegalizer::ExpandStore(SDNode *N) {
 }
 
 void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
-  SDValue Op(Node, 0); // FIXME: Just pass Node to all the expanders.
-
-  switch (Op->getOpcode()) {
+  switch (Node->getOpcode()) {
   case ISD::SIGN_EXTEND_INREG:
-    Results.push_back(ExpandSEXTINREG(Op));
+    Results.push_back(ExpandSEXTINREG(Node));
     return;
   case ISD::ANY_EXTEND_VECTOR_INREG:
-    Results.push_back(ExpandANY_EXTEND_VECTOR_INREG(Op));
+    Results.push_back(ExpandANY_EXTEND_VECTOR_INREG(Node));
     return;
   case ISD::SIGN_EXTEND_VECTOR_INREG:
-    Results.push_back(ExpandSIGN_EXTEND_VECTOR_INREG(Op));
+    Results.push_back(ExpandSIGN_EXTEND_VECTOR_INREG(Node));
     return;
   case ISD::ZERO_EXTEND_VECTOR_INREG:
-    Results.push_back(ExpandZERO_EXTEND_VECTOR_INREG(Op));
+    Results.push_back(ExpandZERO_EXTEND_VECTOR_INREG(Node));
     return;
   case ISD::BSWAP:
-    Results.push_back(ExpandBSWAP(Op));
+    Results.push_back(ExpandBSWAP(Node));
     return;
   case ISD::VSELECT:
-    Results.push_back(ExpandVSELECT(Op));
+    Results.push_back(ExpandVSELECT(Node));
     return;
   case ISD::SELECT:
-    Results.push_back(ExpandSELECT(Op));
+    Results.push_back(ExpandSELECT(Node));
     return;
   case ISD::FP_TO_UINT:
-    ExpandFP_TO_UINT(Op, Results);
+    ExpandFP_TO_UINT(Node, Results);
     return;
   case ISD::UINT_TO_FP:
-    ExpandUINT_TO_FLOAT(Op, Results);
+    ExpandUINT_TO_FLOAT(Node, Results);
     return;
   case ISD::FNEG:
-    Results.push_back(ExpandFNEG(Op));
+    Results.push_back(ExpandFNEG(Node));
     return;
   case ISD::FSUB:
-    if (SDValue Tmp = ExpandFSUB(Op))
+    if (SDValue Tmp = ExpandFSUB(Node))
       Results.push_back(Tmp);
     return;
   case ISD::SETCC:
-    Results.push_back(UnrollVSETCC(Op));
+    Results.push_back(UnrollVSETCC(Node));
     return;
   case ISD::ABS:
-    Results.push_back(ExpandABS(Op));
+    Results.push_back(ExpandABS(Node));
     return;
   case ISD::BITREVERSE:
-    if (SDValue Tmp = ExpandBITREVERSE(Op))
+    if (SDValue Tmp = ExpandBITREVERSE(Node))
       Results.push_back(Tmp);
     return;
   case ISD::CTPOP:
-    Results.push_back(ExpandCTPOP(Op));
+    Results.push_back(ExpandCTPOP(Node));
     return;
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
-    Results.push_back(ExpandCTLZ(Op));
+    Results.push_back(ExpandCTLZ(Node));
     return;
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
-    Results.push_back(ExpandCTTZ(Op));
+    Results.push_back(ExpandCTTZ(Node));
     return;
   case ISD::FSHL:
   case ISD::FSHR:
-    Results.push_back(ExpandFunnelShift(Op));
+    Results.push_back(ExpandFunnelShift(Node));
     return;
   case ISD::ROTL:
   case ISD::ROTR:
-    Results.push_back(ExpandROT(Op));
+    Results.push_back(ExpandROT(Node));
     return;
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
-    Results.push_back(ExpandFMINNUM_FMAXNUM(Op));
+    Results.push_back(ExpandFMINNUM_FMAXNUM(Node));
     return;
   case ISD::UADDO:
   case ISD::USUBO:
-    ExpandUADDSUBO(Op, Results);
+    ExpandUADDSUBO(Node, Results);
     return;
   case ISD::SADDO:
   case ISD::SSUBO:
-    ExpandSADDSUBO(Op, Results);
+    ExpandSADDSUBO(Node, Results);
     return;
   case ISD::UMULO:
   case ISD::SMULO:
-    ExpandMULO(Op, Results);
+    ExpandMULO(Node, Results);
     return;
   case ISD::USUBSAT:
   case ISD::SSUBSAT:
   case ISD::UADDSAT:
   case ISD::SADDSAT:
-    Results.push_back(ExpandAddSubSat(Op));
+    Results.push_back(ExpandAddSubSat(Node));
     return;
   case ISD::SMULFIX:
   case ISD::UMULFIX:
-    Results.push_back(ExpandFixedPointMul(Op));
+    Results.push_back(ExpandFixedPointMul(Node));
     return;
   case ISD::SMULFIXSAT:
   case ISD::UMULFIXSAT:
@@ -945,16 +942,16 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     // why. Maybe it results in worse codegen compared to the unroll for some
     // targets? This should probably be investigated. And if we still prefer to
     // unroll an explanation could be helpful.
-    Results.push_back(DAG.UnrollVectorOp(Op.getNode()));
+    Results.push_back(DAG.UnrollVectorOp(Node));
     return;
   case ISD::SDIVFIX:
   case ISD::UDIVFIX:
-    Results.push_back(ExpandFixedPointDiv(Op));
+    Results.push_back(ExpandFixedPointDiv(Node));
     return;
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
   case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
-    ExpandStrictFPOp(Op, Results);
+    ExpandStrictFPOp(Node, Results);
     return;
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_MUL:
@@ -969,24 +966,24 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   case ISD::VECREDUCE_FMUL:
   case ISD::VECREDUCE_FMAX:
   case ISD::VECREDUCE_FMIN:
-    Results.push_back(TLI.expandVecReduce(Op.getNode(), DAG));
+    Results.push_back(TLI.expandVecReduce(Node, DAG));
     return;
   default:
-    Results.push_back(DAG.UnrollVectorOp(Op.getNode()));
+    Results.push_back(DAG.UnrollVectorOp(Node));
     return;
   }
 }
 
-SDValue VectorLegalizer::ExpandSELECT(SDValue Op) {
+SDValue VectorLegalizer::ExpandSELECT(SDNode *Node) {
   // Lower a select instruction where the condition is a scalar and the
   // operands are vectors. Lower this select to VSELECT and implement it
   // using XOR AND OR. The selector bit is broadcasted.
-  EVT VT = Op.getValueType();
-  SDLoc DL(Op);
+  EVT VT = Node->getValueType(0);
+  SDLoc DL(Node);
 
-  SDValue Mask = Op.getOperand(0);
-  SDValue Op1 = Op.getOperand(1);
-  SDValue Op2 = Op.getOperand(2);
+  SDValue Mask = Node->getOperand(0);
+  SDValue Op1 = Node->getOperand(1);
+  SDValue Op2 = Node->getOperand(2);
 
   assert(VT.isVector() && !Mask.getValueType().isVector()
          && Op1.getValueType() == Op2.getValueType() && "Invalid type");
@@ -1000,7 +997,7 @@ SDValue VectorLegalizer::ExpandSELECT(SDValue Op) {
       TLI.getOperationAction(ISD::XOR, VT) == TargetLowering::Expand ||
       TLI.getOperationAction(ISD::OR,  VT) == TargetLowering::Expand ||
       TLI.getOperationAction(ISD::BUILD_VECTOR,  VT) == TargetLowering::Expand)
-    return DAG.UnrollVectorOp(Op.getNode());
+    return DAG.UnrollVectorOp(Node);
 
   // Generate a mask operand.
   EVT MaskTy = VT.changeVectorElementTypeToInteger();
@@ -1029,36 +1026,35 @@ SDValue VectorLegalizer::ExpandSELECT(SDValue Op) {
   Op1 = DAG.getNode(ISD::AND, DL, MaskTy, Op1, Mask);
   Op2 = DAG.getNode(ISD::AND, DL, MaskTy, Op2, NotMask);
   SDValue Val = DAG.getNode(ISD::OR, DL, MaskTy, Op1, Op2);
-  return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Val);
+  return DAG.getNode(ISD::BITCAST, DL, Node->getValueType(0), Val);
 }
 
-SDValue VectorLegalizer::ExpandSEXTINREG(SDValue Op) {
-  EVT VT = Op.getValueType();
+SDValue VectorLegalizer::ExpandSEXTINREG(SDNode *Node) {
+  EVT VT = Node->getValueType(0);
 
   // Make sure that the SRA and SHL instructions are available.
   if (TLI.getOperationAction(ISD::SRA, VT) == TargetLowering::Expand ||
       TLI.getOperationAction(ISD::SHL, VT) == TargetLowering::Expand)
-    return DAG.UnrollVectorOp(Op.getNode());
+    return DAG.UnrollVectorOp(Node);
 
-  SDLoc DL(Op);
-  EVT OrigTy = cast<VTSDNode>(Op->getOperand(1))->getVT();
+  SDLoc DL(Node);
+  EVT OrigTy = cast<VTSDNode>(Node->getOperand(1))->getVT();
 
   unsigned BW = VT.getScalarSizeInBits();
   unsigned OrigBW = OrigTy.getScalarSizeInBits();
   SDValue ShiftSz = DAG.getConstant(BW - OrigBW, DL, VT);
 
-  Op = Op.getOperand(0);
-  Op =   DAG.getNode(ISD::SHL, DL, VT, Op, ShiftSz);
+  SDValue Op = DAG.getNode(ISD::SHL, DL, VT, Node->getOperand(0), ShiftSz);
   return DAG.getNode(ISD::SRA, DL, VT, Op, ShiftSz);
 }
 
 // Generically expand a vector anyext in register to a shuffle of the relevant
 // lanes into the appropriate locations, with other lanes left undef.
-SDValue VectorLegalizer::ExpandANY_EXTEND_VECTOR_INREG(SDValue Op) {
-  SDLoc DL(Op);
-  EVT VT = Op.getValueType();
+SDValue VectorLegalizer::ExpandANY_EXTEND_VECTOR_INREG(SDNode *Node) {
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
   int NumElements = VT.getVectorNumElements();
-  SDValue Src = Op.getOperand(0);
+  SDValue Src = Node->getOperand(0);
   EVT SrcVT = Src.getValueType();
   int NumSrcElements = SrcVT.getVectorNumElements();
 
@@ -1090,15 +1086,15 @@ SDValue VectorLegalizer::ExpandANY_EXTEND_VECTOR_INREG(SDValue Op) {
       DAG.getVectorShuffle(SrcVT, DL, Src, DAG.getUNDEF(SrcVT), ShuffleMask));
 }
 
-SDValue VectorLegalizer::ExpandSIGN_EXTEND_VECTOR_INREG(SDValue Op) {
-  SDLoc DL(Op);
-  EVT VT = Op.getValueType();
-  SDValue Src = Op.getOperand(0);
+SDValue VectorLegalizer::ExpandSIGN_EXTEND_VECTOR_INREG(SDNode *Node) {
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+  SDValue Src = Node->getOperand(0);
   EVT SrcVT = Src.getValueType();
 
   // First build an any-extend node which can be legalized above when we
   // recurse through it.
-  Op = DAG.getNode(ISD::ANY_EXTEND_VECTOR_INREG, DL, VT, Src);
+  SDValue Op = DAG.getNode(ISD::ANY_EXTEND_VECTOR_INREG, DL, VT, Src);
 
   // Now we need sign extend. Do this by shifting the elements. Even if these
   // aren't legal operations, they have a better chance of being legalized
@@ -1114,11 +1110,11 @@ SDValue VectorLegalizer::ExpandSIGN_EXTEND_VECTOR_INREG(SDValue Op) {
 // Generically expand a vector zext in register to a shuffle of the relevant
 // lanes into the appropriate locations, a blend of zero into the high bits,
 // and a bitcast to the wider element type.
-SDValue VectorLegalizer::ExpandZERO_EXTEND_VECTOR_INREG(SDValue Op) {
-  SDLoc DL(Op);
-  EVT VT = Op.getValueType();
+SDValue VectorLegalizer::ExpandZERO_EXTEND_VECTOR_INREG(SDNode *Node) {
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
   int NumElements = VT.getVectorNumElements();
-  SDValue Src = Op.getOperand(0);
+  SDValue Src = Node->getOperand(0);
   EVT SrcVT = Src.getValueType();
   int NumSrcElements = SrcVT.getVectorNumElements();
 
@@ -1161,8 +1157,8 @@ static void createBSWAPShuffleMask(EVT VT, SmallVectorImpl<int> &ShuffleMask) {
       ShuffleMask.push_back((I * ScalarSizeInBytes) + J);
 }
 
-SDValue VectorLegalizer::ExpandBSWAP(SDValue Op) {
-  EVT VT = Op.getValueType();
+SDValue VectorLegalizer::ExpandBSWAP(SDNode *Node) {
+  EVT VT = Node->getValueType(0);
 
   // Generate a byte wise shuffle mask for the BSWAP.
   SmallVector<int, 16> ShuffleMask;
@@ -1171,20 +1167,20 @@ SDValue VectorLegalizer::ExpandBSWAP(SDValue Op) {
 
   // Only emit a shuffle if the mask is legal.
   if (!TLI.isShuffleMaskLegal(ShuffleMask, ByteVT))
-    return DAG.UnrollVectorOp(Op.getNode());
+    return DAG.UnrollVectorOp(Node);
 
-  SDLoc DL(Op);
-  Op = DAG.getNode(ISD::BITCAST, DL, ByteVT, Op.getOperand(0));
+  SDLoc DL(Node);
+  SDValue Op = DAG.getNode(ISD::BITCAST, DL, ByteVT, Node->getOperand(0));
   Op = DAG.getVectorShuffle(ByteVT, DL, Op, DAG.getUNDEF(ByteVT), ShuffleMask);
   return DAG.getNode(ISD::BITCAST, DL, VT, Op);
 }
 
-SDValue VectorLegalizer::ExpandBITREVERSE(SDValue Op) {
-  EVT VT = Op.getValueType();
+SDValue VectorLegalizer::ExpandBITREVERSE(SDNode *Node) {
+  EVT VT = Node->getValueType(0);
 
   // If we have the scalar operation, it's probably cheaper to unroll it.
   if (TLI.isOperationLegalOrCustom(ISD::BITREVERSE, VT.getScalarType()))
-    return DAG.UnrollVectorOp(Op.getNode());
+    return DAG.UnrollVectorOp(Node);
 
   // If the vector element width is a whole number of bytes, test if its legal
   // to BSWAP shuffle the bytes and then perform the BITREVERSE on the byte
@@ -1201,8 +1197,8 @@ SDValue VectorLegalizer::ExpandBITREVERSE(SDValue Op) {
           TLI.isOperationLegalOrCustom(ISD::SRL, ByteVT) &&
           TLI.isOperationLegalOrCustomOrPromote(ISD::AND, ByteVT) &&
           TLI.isOperationLegalOrCustomOrPromote(ISD::OR, ByteVT)))) {
-      SDLoc DL(Op);
-      Op = DAG.getNode(ISD::BITCAST, DL, ByteVT, Op.getOperand(0));
+      SDLoc DL(Node);
+      SDValue Op = DAG.getNode(ISD::BITCAST, DL, ByteVT, Node->getOperand(0));
       Op = DAG.getVectorShuffle(ByteVT, DL, Op, DAG.getUNDEF(ByteVT),
                                 BSWAPMask);
       Op = DAG.getNode(ISD::BITREVERSE, DL, ByteVT, Op);
@@ -1216,20 +1212,20 @@ SDValue VectorLegalizer::ExpandBITREVERSE(SDValue Op) {
       !TLI.isOperationLegalOrCustom(ISD::SRL, VT) ||
       !TLI.isOperationLegalOrCustomOrPromote(ISD::AND, VT) ||
       !TLI.isOperationLegalOrCustomOrPromote(ISD::OR, VT))
-    return DAG.UnrollVectorOp(Op.getNode());
+    return DAG.UnrollVectorOp(Node);
 
   // Let LegalizeDAG handle this later.
   return SDValue();
 }
 
-SDValue VectorLegalizer::ExpandVSELECT(SDValue Op) {
+SDValue VectorLegalizer::ExpandVSELECT(SDNode *Node) {
   // Implement VSELECT in terms of XOR, AND, OR
   // on platforms which do not support blend natively.
-  SDLoc DL(Op);
+  SDLoc DL(Node);
 
-  SDValue Mask = Op.getOperand(0);
-  SDValue Op1 = Op.getOperand(1);
-  SDValue Op2 = Op.getOperand(2);
+  SDValue Mask = Node->getOperand(0);
+  SDValue Op1 = Node->getOperand(1);
+  SDValue Op2 = Node->getOperand(2);
 
   EVT VT = Mask.getValueType();
 
@@ -1245,13 +1241,13 @@ SDValue VectorLegalizer::ExpandVSELECT(SDValue Op) {
       TLI.getOperationAction(ISD::OR, VT) == TargetLowering::Expand ||
       TLI.getBooleanContents(Op1.getValueType()) !=
           TargetLowering::ZeroOrNegativeOneBooleanContent)
-    return DAG.UnrollVectorOp(Op.getNode());
+    return DAG.UnrollVectorOp(Node);
 
   // If the mask and the type are different sizes, unroll the vector op. This
   // can occur when getSetCCResultType returns something that is different in
   // size from the operand types. For example, v4i8 = select v4i32, v4i8, v4i8.
   if (VT.getSizeInBits() != Op1.getValueSizeInBits())
-    return DAG.UnrollVectorOp(Op.getNode());
+    return DAG.UnrollVectorOp(Node);
 
   // Bitcast the operands to be the same type as the mask.
   // This is needed when we select between FP types because
@@ -1266,51 +1262,51 @@ SDValue VectorLegalizer::ExpandVSELECT(SDValue Op) {
   Op1 = DAG.getNode(ISD::AND, DL, VT, Op1, Mask);
   Op2 = DAG.getNode(ISD::AND, DL, VT, Op2, NotMask);
   SDValue Val = DAG.getNode(ISD::OR, DL, VT, Op1, Op2);
-  return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Val);
+  return DAG.getNode(ISD::BITCAST, DL, Node->getValueType(0), Val);
 }
 
-SDValue VectorLegalizer::ExpandABS(SDValue Op) {
+SDValue VectorLegalizer::ExpandABS(SDNode *Node) {
   // Attempt to expand using TargetLowering.
   SDValue Result;
-  if (TLI.expandABS(Op.getNode(), Result, DAG))
+  if (TLI.expandABS(Node, Result, DAG))
     return Result;
 
   // Otherwise go ahead and unroll.
-  return DAG.UnrollVectorOp(Op.getNode());
+  return DAG.UnrollVectorOp(Node);
 }
 
-void VectorLegalizer::ExpandFP_TO_UINT(SDValue Op,
+void VectorLegalizer::ExpandFP_TO_UINT(SDNode *Node,
                                        SmallVectorImpl<SDValue> &Results) {
   // Attempt to expand using TargetLowering.
   SDValue Result, Chain;
-  if (TLI.expandFP_TO_UINT(Op.getNode(), Result, Chain, DAG)) {
+  if (TLI.expandFP_TO_UINT(Node, Result, Chain, DAG)) {
     Results.push_back(Result);
-    if (Op->isStrictFPOpcode())
+    if (Node->isStrictFPOpcode())
       Results.push_back(Chain);
     return;
   }
 
   // Otherwise go ahead and unroll.
-  if (Op->isStrictFPOpcode()) {
-    UnrollStrictFPOp(Op, Results);
+  if (Node->isStrictFPOpcode()) {
+    UnrollStrictFPOp(Node, Results);
     return;
   }
 
-  Results.push_back(DAG.UnrollVectorOp(Op.getNode()));
+  Results.push_back(DAG.UnrollVectorOp(Node));
 }
 
-void VectorLegalizer::ExpandUINT_TO_FLOAT(SDValue Op,
+void VectorLegalizer::ExpandUINT_TO_FLOAT(SDNode *Node,
                                           SmallVectorImpl<SDValue> &Results) {
-  bool IsStrict = Op.getNode()->isStrictFPOpcode();
+  bool IsStrict = Node->isStrictFPOpcode();
   unsigned OpNo = IsStrict ? 1 : 0;
-  SDValue Src = Op.getOperand(OpNo);
+  SDValue Src = Node->getOperand(OpNo);
   EVT VT = Src.getValueType();
-  SDLoc DL(Op);
+  SDLoc DL(Node);
 
   // Attempt to expand using TargetLowering.
   SDValue Result;
   SDValue Chain;
-  if (TLI.expandUINT_TO_FP(Op.getNode(), Result, Chain, DAG)) {
+  if (TLI.expandUINT_TO_FP(Node, Result, Chain, DAG)) {
     Results.push_back(Result);
     if (IsStrict)
       Results.push_back(Chain);
@@ -1324,11 +1320,11 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDValue Op,
                         TargetLowering::Expand)) ||
       TLI.getOperationAction(ISD::SRL, VT) == TargetLowering::Expand) {
     if (IsStrict) {
-      UnrollStrictFPOp(Op, Results);
+      UnrollStrictFPOp(Node, Results);
       return;
     }
 
-    Results.push_back(DAG.UnrollVectorOp(Op.getNode()));
+    Results.push_back(DAG.UnrollVectorOp(Node));
     return;
   }
 
@@ -1345,7 +1341,8 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDValue Op,
   SDValue HalfWordMask = DAG.getConstant(HWMask, DL, VT);
 
   // Two to the power of half-word-size.
-  SDValue TWOHW = DAG.getConstantFP(1ULL << (BW / 2), DL, Op.getValueType());
+  SDValue TWOHW =
+      DAG.getConstantFP(1ULL << (BW / 2), DL, Node->getValueType(0));
 
   // Clear upper part of LO, lower HI
   SDValue HI = DAG.getNode(ISD::SRL, DL, VT, Src, HalfWord);
@@ -1355,18 +1352,18 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDValue Op,
     // Convert hi and lo to floats
     // Convert the hi part back to the upper values
     // TODO: Can any fast-math-flags be set on these nodes?
-    SDValue fHI =
-        DAG.getNode(ISD::STRICT_SINT_TO_FP, DL, {Op.getValueType(), MVT::Other},
-                    {Op.getOperand(0), HI});
-    fHI = DAG.getNode(ISD::STRICT_FMUL, DL, {Op.getValueType(), MVT::Other},
+    SDValue fHI = DAG.getNode(ISD::STRICT_SINT_TO_FP, DL,
+                              {Node->getValueType(0), MVT::Other},
+                              {Node->getOperand(0), HI});
+    fHI = DAG.getNode(ISD::STRICT_FMUL, DL, {Node->getValueType(0), MVT::Other},
                       {SDValue(fHI.getNode(), 1), fHI, TWOHW});
-    SDValue fLO =
-        DAG.getNode(ISD::STRICT_SINT_TO_FP, DL, {Op.getValueType(), MVT::Other},
-                    {SDValue(fHI.getNode(), 1), LO});
+    SDValue fLO = DAG.getNode(ISD::STRICT_SINT_TO_FP, DL,
+                              {Node->getValueType(0), MVT::Other},
+                              {SDValue(fHI.getNode(), 1), LO});
 
     // Add the two halves
     SDValue Result =
-        DAG.getNode(ISD::STRICT_FADD, DL, {Op.getValueType(), MVT::Other},
+        DAG.getNode(ISD::STRICT_FADD, DL, {Node->getValueType(0), MVT::Other},
                     {SDValue(fLO.getNode(), 1), fHI, fLO});
 
     Results.push_back(Result);
@@ -1377,160 +1374,161 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDValue Op,
   // Convert hi and lo to floats
   // Convert the hi part back to the upper values
   // TODO: Can any fast-math-flags be set on these nodes?
-  SDValue fHI = DAG.getNode(ISD::SINT_TO_FP, DL, Op.getValueType(), HI);
-          fHI = DAG.getNode(ISD::FMUL, DL, Op.getValueType(), fHI, TWOHW);
-  SDValue fLO = DAG.getNode(ISD::SINT_TO_FP, DL, Op.getValueType(), LO);
+  SDValue fHI = DAG.getNode(ISD::SINT_TO_FP, DL, Node->getValueType(0), HI);
+  fHI = DAG.getNode(ISD::FMUL, DL, Node->getValueType(0), fHI, TWOHW);
+  SDValue fLO = DAG.getNode(ISD::SINT_TO_FP, DL, Node->getValueType(0), LO);
 
   // Add the two halves
-  Results.push_back(DAG.getNode(ISD::FADD, DL, Op.getValueType(), fHI, fLO));
+  Results.push_back(
+      DAG.getNode(ISD::FADD, DL, Node->getValueType(0), fHI, fLO));
 }
 
-SDValue VectorLegalizer::ExpandFNEG(SDValue Op) {
-  if (TLI.isOperationLegalOrCustom(ISD::FSUB, Op.getValueType())) {
-    SDLoc DL(Op);
-    SDValue Zero = DAG.getConstantFP(-0.0, DL, Op.getValueType());
+SDValue VectorLegalizer::ExpandFNEG(SDNode *Node) {
+  if (TLI.isOperationLegalOrCustom(ISD::FSUB, Node->getValueType(0))) {
+    SDLoc DL(Node);
+    SDValue Zero = DAG.getConstantFP(-0.0, DL, Node->getValueType(0));
     // TODO: If FNEG had fast-math-flags, they'd get propagated to this FSUB.
-    return DAG.getNode(ISD::FSUB, DL, Op.getValueType(),
-                       Zero, Op.getOperand(0));
+    return DAG.getNode(ISD::FSUB, DL, Node->getValueType(0), Zero,
+                       Node->getOperand(0));
   }
-  return DAG.UnrollVectorOp(Op.getNode());
+  return DAG.UnrollVectorOp(Node);
 }
 
-SDValue VectorLegalizer::ExpandFSUB(SDValue Op) {
+SDValue VectorLegalizer::ExpandFSUB(SDNode *Node) {
   // For floating-point values, (a-b) is the same as a+(-b). If FNEG is legal,
   // we can defer this to operation legalization where it will be lowered as
   // a+(-b).
-  EVT VT = Op.getValueType();
+  EVT VT = Node->getValueType(0);
   if (TLI.isOperationLegalOrCustom(ISD::FNEG, VT) &&
       TLI.isOperationLegalOrCustom(ISD::FADD, VT))
     return SDValue(); // Defer to LegalizeDAG
 
-  return DAG.UnrollVectorOp(Op.getNode());
+  return DAG.UnrollVectorOp(Node);
 }
 
-SDValue VectorLegalizer::ExpandCTPOP(SDValue Op) {
+SDValue VectorLegalizer::ExpandCTPOP(SDNode *Node) {
   SDValue Result;
-  if (TLI.expandCTPOP(Op.getNode(), Result, DAG))
+  if (TLI.expandCTPOP(Node, Result, DAG))
     return Result;
 
-  return DAG.UnrollVectorOp(Op.getNode());
+  return DAG.UnrollVectorOp(Node);
 }
 
-SDValue VectorLegalizer::ExpandCTLZ(SDValue Op) {
+SDValue VectorLegalizer::ExpandCTLZ(SDNode *Node) {
   SDValue Result;
-  if (TLI.expandCTLZ(Op.getNode(), Result, DAG))
+  if (TLI.expandCTLZ(Node, Result, DAG))
     return Result;
 
-  return DAG.UnrollVectorOp(Op.getNode());
+  return DAG.UnrollVectorOp(Node);
 }
 
-SDValue VectorLegalizer::ExpandCTTZ(SDValue Op) {
+SDValue VectorLegalizer::ExpandCTTZ(SDNode *Node) {
   SDValue Result;
-  if (TLI.expandCTTZ(Op.getNode(), Result, DAG))
+  if (TLI.expandCTTZ(Node, Result, DAG))
     return Result;
 
-  return DAG.UnrollVectorOp(Op.getNode());
+  return DAG.UnrollVectorOp(Node);
 }
 
-SDValue VectorLegalizer::ExpandFunnelShift(SDValue Op) {
+SDValue VectorLegalizer::ExpandFunnelShift(SDNode *Node) {
   SDValue Result;
-  if (TLI.expandFunnelShift(Op.getNode(), Result, DAG))
+  if (TLI.expandFunnelShift(Node, Result, DAG))
     return Result;
 
-  return DAG.UnrollVectorOp(Op.getNode());
+  return DAG.UnrollVectorOp(Node);
 }
 
-SDValue VectorLegalizer::ExpandROT(SDValue Op) {
+SDValue VectorLegalizer::ExpandROT(SDNode *Node) {
   SDValue Result;
-  if (TLI.expandROT(Op.getNode(), Result, DAG))
+  if (TLI.expandROT(Node, Result, DAG))
     return Result;
 
-  return DAG.UnrollVectorOp(Op.getNode());
+  return DAG.UnrollVectorOp(Node);
 }
 
-SDValue VectorLegalizer::ExpandFMINNUM_FMAXNUM(SDValue Op) {
-  if (SDValue Expanded = TLI.expandFMINNUM_FMAXNUM(Op.getNode(), DAG))
+SDValue VectorLegalizer::ExpandFMINNUM_FMAXNUM(SDNode *Node) {
+  if (SDValue Expanded = TLI.expandFMINNUM_FMAXNUM(Node, DAG))
     return Expanded;
-  return DAG.UnrollVectorOp(Op.getNode());
+  return DAG.UnrollVectorOp(Node);
 }
 
-void VectorLegalizer::ExpandUADDSUBO(SDValue Op,
+void VectorLegalizer::ExpandUADDSUBO(SDNode *Node,
                                      SmallVectorImpl<SDValue> &Results) {
   SDValue Result, Overflow;
-  TLI.expandUADDSUBO(Op.getNode(), Result, Overflow, DAG);
+  TLI.expandUADDSUBO(Node, Result, Overflow, DAG);
   Results.push_back(Result);
   Results.push_back(Overflow);
 }
 
-void VectorLegalizer::ExpandSADDSUBO(SDValue Op,
+void VectorLegalizer::ExpandSADDSUBO(SDNode *Node,
                                      SmallVectorImpl<SDValue> &Results) {
   SDValue Result, Overflow;
-  TLI.expandSADDSUBO(Op.getNode(), Result, Overflow, DAG);
+  TLI.expandSADDSUBO(Node, Result, Overflow, DAG);
   Results.push_back(Result);
   Results.push_back(Overflow);
 }
 
-void VectorLegalizer::ExpandMULO(SDValue Op,
+void VectorLegalizer::ExpandMULO(SDNode *Node,
                                  SmallVectorImpl<SDValue> &Results) {
   SDValue Result, Overflow;
-  if (!TLI.expandMULO(Op.getNode(), Result, Overflow, DAG))
-    std::tie(Result, Overflow) = DAG.UnrollVectorOverflowOp(Op.getNode());
+  if (!TLI.expandMULO(Node, Result, Overflow, DAG))
+    std::tie(Result, Overflow) = DAG.UnrollVectorOverflowOp(Node);
 
   Results.push_back(Result);
   Results.push_back(Overflow);
 }
 
-SDValue VectorLegalizer::ExpandAddSubSat(SDValue Op) {
-  if (SDValue Expanded = TLI.expandAddSubSat(Op.getNode(), DAG))
+SDValue VectorLegalizer::ExpandAddSubSat(SDNode *Node) {
+  if (SDValue Expanded = TLI.expandAddSubSat(Node, DAG))
     return Expanded;
-  return DAG.UnrollVectorOp(Op.getNode());
+  return DAG.UnrollVectorOp(Node);
 }
 
-SDValue VectorLegalizer::ExpandFixedPointMul(SDValue Op) {
-  if (SDValue Expanded = TLI.expandFixedPointMul(Op.getNode(), DAG))
+SDValue VectorLegalizer::ExpandFixedPointMul(SDNode *Node) {
+  if (SDValue Expanded = TLI.expandFixedPointMul(Node, DAG))
     return Expanded;
-  return DAG.UnrollVectorOp(Op.getNode());
+  return DAG.UnrollVectorOp(Node);
 }
 
-SDValue VectorLegalizer::ExpandFixedPointDiv(SDValue Op) {
-  SDNode *N = Op.getNode();
+SDValue VectorLegalizer::ExpandFixedPointDiv(SDNode *Node) {
+  SDNode *N = Node;
   if (SDValue Expanded = TLI.expandFixedPointDiv(N->getOpcode(), SDLoc(N),
           N->getOperand(0), N->getOperand(1), N->getConstantOperandVal(2), DAG))
     return Expanded;
   return DAG.UnrollVectorOp(N);
 }
 
-void VectorLegalizer::ExpandStrictFPOp(SDValue Op,
+void VectorLegalizer::ExpandStrictFPOp(SDNode *Node,
                                        SmallVectorImpl<SDValue> &Results) {
-  if (Op.getOpcode() == ISD::STRICT_UINT_TO_FP) {
-    ExpandUINT_TO_FLOAT(Op, Results);
+  if (Node->getOpcode() == ISD::STRICT_UINT_TO_FP) {
+    ExpandUINT_TO_FLOAT(Node, Results);
     return;
   }
-  if (Op.getOpcode() == ISD::STRICT_FP_TO_UINT) {
-    ExpandFP_TO_UINT(Op, Results);
+  if (Node->getOpcode() == ISD::STRICT_FP_TO_UINT) {
+    ExpandFP_TO_UINT(Node, Results);
     return;
   }
 
-  UnrollStrictFPOp(Op, Results);
+  UnrollStrictFPOp(Node, Results);
 }
 
-void VectorLegalizer::UnrollStrictFPOp(SDValue Op,
+void VectorLegalizer::UnrollStrictFPOp(SDNode *Node,
                                        SmallVectorImpl<SDValue> &Results) {
-  EVT VT = Op.getValue(0).getValueType();
+  EVT VT = Node->getValueType(0);
   EVT EltVT = VT.getVectorElementType();
   unsigned NumElems = VT.getVectorNumElements();
-  unsigned NumOpers = Op.getNumOperands();
+  unsigned NumOpers = Node->getNumOperands();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   EVT TmpEltVT = EltVT;
-  if (Op->getOpcode() == ISD::STRICT_FSETCC ||
-      Op->getOpcode() == ISD::STRICT_FSETCCS)
+  if (Node->getOpcode() == ISD::STRICT_FSETCC ||
+      Node->getOpcode() == ISD::STRICT_FSETCCS)
     TmpEltVT = TLI.getSetCCResultType(DAG.getDataLayout(),
                                       *DAG.getContext(), TmpEltVT);
 
   EVT ValueVTs[] = {TmpEltVT, MVT::Other};
-  SDValue Chain = Op.getOperand(0);
-  SDLoc dl(Op);
+  SDValue Chain = Node->getOperand(0);
+  SDLoc dl(Node);
 
   SmallVector<SDValue, 32> OpValues;
   SmallVector<SDValue, 32> OpChains;
@@ -1544,7 +1542,7 @@ void VectorLegalizer::UnrollStrictFPOp(SDValue Op,
 
     // Now process the remaining operands.
     for (unsigned j = 1; j < NumOpers; ++j) {
-      SDValue Oper = Op.getOperand(j);
+      SDValue Oper = Node->getOperand(j);
       EVT OperVT = Oper.getValueType();
 
       if (OperVT.isVector())
@@ -1554,12 +1552,12 @@ void VectorLegalizer::UnrollStrictFPOp(SDValue Op,
       Opers.push_back(Oper);
     }
 
-    SDValue ScalarOp = DAG.getNode(Op->getOpcode(), dl, ValueVTs, Opers);
+    SDValue ScalarOp = DAG.getNode(Node->getOpcode(), dl, ValueVTs, Opers);
     SDValue ScalarResult = ScalarOp.getValue(0);
     SDValue ScalarChain = ScalarOp.getValue(1);
 
-    if (Op->getOpcode() == ISD::STRICT_FSETCC ||
-        Op->getOpcode() == ISD::STRICT_FSETCCS)
+    if (Node->getOpcode() == ISD::STRICT_FSETCC ||
+        Node->getOpcode() == ISD::STRICT_FSETCCS)
       ScalarResult = DAG.getSelect(dl, EltVT, ScalarResult,
                            DAG.getConstant(APInt::getAllOnesValue
                                            (EltVT.getSizeInBits()), dl, EltVT),
@@ -1576,13 +1574,15 @@ void VectorLegalizer::UnrollStrictFPOp(SDValue Op,
   Results.push_back(NewChain);
 }
 
-SDValue VectorLegalizer::UnrollVSETCC(SDValue Op) {
-  EVT VT = Op.getValueType();
+SDValue VectorLegalizer::UnrollVSETCC(SDNode *Node) {
+  EVT VT = Node->getValueType(0);
   unsigned NumElems = VT.getVectorNumElements();
   EVT EltVT = VT.getVectorElementType();
-  SDValue LHS = Op.getOperand(0), RHS = Op.getOperand(1), CC = Op.getOperand(2);
+  SDValue LHS = Node->getOperand(0);
+  SDValue RHS = Node->getOperand(1);
+  SDValue CC = Node->getOperand(2);
   EVT TmpEltVT = LHS.getValueType().getVectorElementType();
-  SDLoc dl(Op);
+  SDLoc dl(Node);
   SmallVector<SDValue, 8> Ops(NumElems);
   for (unsigned i = 0; i < NumElems; ++i) {
     SDValue LHSElem = DAG.getNode(
