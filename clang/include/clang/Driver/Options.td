@@ -737,6 +737,9 @@ def fno_auto_profile_accurate : Flag<["-"], "fno-auto-profile-accurate">,
 def fdebug_compilation_dir : Separate<["-"], "fdebug-compilation-dir">,
     Group<f_Group>, Flags<[CC1Option, CC1AsOption, CoreOption]>,
     HelpText<"The compilation directory to embed in the debug info.">;
+def fdebug_compilation_dir_EQ : Joined<["-"], "fdebug-compilation-dir=">,
+    Group<f_Group>, Flags<[CC1Option, CC1AsOption, CoreOption]>,
+    Alias<fdebug_compilation_dir>;
 def fdebug_info_for_profiling : Flag<["-"], "fdebug-info-for-profiling">,
     Group<f_Group>, Flags<[CC1Option]>,
     HelpText<"Emit extra debug info to make sample profile more accurate.">;

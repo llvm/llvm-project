@@ -2397,6 +2397,12 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       } else if (Value == "-fdebug-compilation-dir") {
         CmdArgs.push_back("-fdebug-compilation-dir");
         TakeNextArg = true;
+      } else if (Value.consume_front("-fdebug-compilation-dir=")) {
+        // The flag is a -Wa / -Xassembler argument and Options doesn't
+        // parse the argument, so this isn't automatically aliased to
+        // -fdebug-compilation-dir (without '=') here.
+        CmdArgs.push_back("-fdebug-compilation-dir");
+        CmdArgs.push_back(Value.data());
       } else {
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getOption().getName() << Value;
