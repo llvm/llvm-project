@@ -52,7 +52,9 @@
 // PIC: "-mrelocation-model" "pic"
 
 // RUN: %clang -### -target x86_64--- -c -integrated-as %s -Wa,-fdebug-compilation-dir,. 2>&1 | FileCheck --check-prefix=WA_DEBUGDIR %s
+// RUN: %clang -### -target x86_64--- -c -integrated-as %s -Wa,-fdebug-compilation-dir=. 2>&1 | FileCheck --check-prefix=WA_DEBUGDIR %s
 // WA_DEBUGDIR: "-fdebug-compilation-dir" "."
 
 // RUN: %clang -### -target x86_64--- -c -integrated-as %s -Xassembler -fdebug-compilation-dir -Xassembler . 2>&1 | FileCheck --check-prefix=XA_DEBUGDIR %s
+// RUN: %clang -### -target x86_64--- -c -integrated-as %s -Xassembler -fdebug-compilation-dir=. 2>&1 | FileCheck --check-prefix=XA_DEBUGDIR %s
 // XA_DEBUGDIR: "-fdebug-compilation-dir" "."
