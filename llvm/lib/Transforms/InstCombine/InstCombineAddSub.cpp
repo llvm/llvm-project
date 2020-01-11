@@ -1585,7 +1585,7 @@ Instruction *InstCombiner::visitFAdd(BinaryOperator &I) {
 ///  &A[10] - &A[0]: we should compile this to "10".  LHS/RHS are the pointer
 /// operands to the ptrtoint instructions for the LHS/RHS of the subtract.
 Value *InstCombiner::OptimizePointerDifference(Value *LHS, Value *RHS,
-                                               Type *Ty) {
+                                               Type *Ty, bool IsNUW) {
   // If LHS is a gep based on RHS or RHS is a gep based on LHS, we can optimize
   // this.
   bool Swapped = false;
@@ -1652,6 +1652,15 @@ Value *InstCombiner::OptimizePointerDifference(Value *LHS, Value *RHS,
 
   // Emit the offset of the GEP and an intptr_t.
   Value *Result = EmitGEPOffset(GEP1);
+
+  // If this is a single inbounds GEP and the original sub was nuw,
+  // then the final multiplication is also nuw. We match an extra add zero
+  // here, because that's what EmitGEPOffset() generates.
+  Instruction *I;
+  if (IsNUW && !GEP2 && !Swapped && GEP1->isInBounds() &&
+      match(Result, m_Add(m_Instruction(I), m_Zero())) &&
+      I->getOpcode() == Instruction::Mul)
+    I->setHasNoUnsignedWrap();
 
   // If we had a constant expression GEP on the other side offsetting the
   // pointer, subtract it from the offset we have.
@@ -2051,13 +2060,15 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
   Value *LHSOp, *RHSOp;
   if (match(Op0, m_PtrToInt(m_Value(LHSOp))) &&
       match(Op1, m_PtrToInt(m_Value(RHSOp))))
-    if (Value *Res = OptimizePointerDifference(LHSOp, RHSOp, I.getType()))
+    if (Value *Res = OptimizePointerDifference(LHSOp, RHSOp, I.getType(),
+                                               I.hasNoUnsignedWrap()))
       return replaceInstUsesWith(I, Res);
 
   // trunc(p)-trunc(q) -> trunc(p-q)
   if (match(Op0, m_Trunc(m_PtrToInt(m_Value(LHSOp)))) &&
       match(Op1, m_Trunc(m_PtrToInt(m_Value(RHSOp)))))
-    if (Value *Res = OptimizePointerDifference(LHSOp, RHSOp, I.getType()))
+    if (Value *Res = OptimizePointerDifference(LHSOp, RHSOp, I.getType(),
+                                               /* IsNUW */ false))
       return replaceInstUsesWith(I, Res);
 
   // Canonicalize a shifty way to code absolute value to the common pattern.
