@@ -167,61 +167,15 @@ public:
 
   Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
-    const static MCFixupKindInfo Infos[X86::NumTargetFixupKinds] = {
-        {"reloc_riprel_4byte", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-        {"reloc_riprel_4byte_movq_load", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-        {"reloc_riprel_4byte_relax", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-        {"reloc_riprel_4byte_relax_rex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-        {"reloc_signed_4byte", 0, 32, 0},
-        {"reloc_signed_4byte_relax", 0, 32, 0},
-        {"reloc_global_offset_table", 0, 32, 0},
-        {"reloc_global_offset_table8", 0, 64, 0},
-        {"reloc_branch_4byte_pcrel", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-    };
-
-    if (Kind < FirstTargetFixupKind)
-      return MCAsmBackend::getFixupKindInfo(Kind);
-
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
-           "Invalid kind!");
-    assert(Infos[Kind - FirstTargetFixupKind].Name && "Empty fixup name!");
-    return Infos[Kind - FirstTargetFixupKind];
-  }
-
+  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+  
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target) override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override {
-    unsigned Size = getFixupKindSize(Fixup.getKind());
-
-    assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
-
-    int64_t SignedValue = static_cast<int64_t>(Value);
-    if ((Target.isAbsolute() || IsResolved) &&
-        getFixupKindInfo(Fixup.getKind()).Flags &
-            MCFixupKindInfo::FKF_IsPCRel) {
-      // check that PC relative fixup fits into the fixup size.
-      if (Size > 0 && !isIntN(Size * 8, SignedValue))
-        Asm.getContext().reportError(
-            Fixup.getLoc(), "value of " + Twine(SignedValue) +
-                                " is too large for field of " + Twine(Size) +
-                                ((Size == 1) ? " byte." : " bytes."));
-    } else {
-      // Check that uppper bits are either all zeros or all ones.
-      // Specifically ignore overflow/underflow as long as the leakage is
-      // limited to the lower bits. This is to remain compatible with
-      // other assemblers.
-      assert((Size == 0 || isIntN(Size * 8 + 1, SignedValue)) &&
-             "Value does not fit in the Fixup field");
-    }
-
-    for (unsigned i = 0; i != Size; ++i)
-      Data[Fixup.getOffset() + i] = uint8_t(Value >> (i * 8));
-  }
+                  const MCSubtargetInfo *STI) const override;
 
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
@@ -548,10 +502,64 @@ Optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
   return MCAsmBackend::getFixupKind(Name);
 }
 
+const MCFixupKindInfo &X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  const static MCFixupKindInfo Infos[X86::NumTargetFixupKinds] = {
+      {"reloc_riprel_4byte", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_riprel_4byte_movq_load", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_riprel_4byte_relax", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_riprel_4byte_relax_rex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_signed_4byte", 0, 32, 0},
+      {"reloc_signed_4byte_relax", 0, 32, 0},
+      {"reloc_global_offset_table", 0, 32, 0},
+      {"reloc_global_offset_table8", 0, 64, 0},
+      {"reloc_branch_4byte_pcrel", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+  };
+
+  if (Kind < FirstTargetFixupKind)
+    return MCAsmBackend::getFixupKindInfo(Kind);
+
+  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+         "Invalid kind!");
+  assert(Infos[Kind - FirstTargetFixupKind].Name && "Empty fixup name!");
+  return Infos[Kind - FirstTargetFixupKind];
+}
+
 bool X86AsmBackend::shouldForceRelocation(const MCAssembler &,
                                           const MCFixup &Fixup,
                                           const MCValue &) {
   return Fixup.getKind() == FK_NONE;
+}
+
+void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                               const MCValue &Target,
+                               MutableArrayRef<char> Data,
+                               uint64_t Value, bool IsResolved,
+                               const MCSubtargetInfo *STI) const {
+  unsigned Size = getFixupKindSize(Fixup.getKind());
+
+  assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
+
+  int64_t SignedValue = static_cast<int64_t>(Value);
+  if ((Target.isAbsolute() || IsResolved) &&
+      getFixupKindInfo(Fixup.getKind()).Flags &
+      MCFixupKindInfo::FKF_IsPCRel) {
+    // check that PC relative fixup fits into the fixup size.
+    if (Size > 0 && !isIntN(Size * 8, SignedValue))
+      Asm.getContext().reportError(
+                                   Fixup.getLoc(), "value of " + Twine(SignedValue) +
+                                   " is too large for field of " + Twine(Size) +
+                                   ((Size == 1) ? " byte." : " bytes."));
+  } else {
+    // Check that uppper bits are either all zeros or all ones.
+    // Specifically ignore overflow/underflow as long as the leakage is
+    // limited to the lower bits. This is to remain compatible with
+    // other assemblers.
+    assert((Size == 0 || isIntN(Size * 8 + 1, SignedValue)) &&
+           "Value does not fit in the Fixup field");
+  }
+
+  for (unsigned i = 0; i != Size; ++i)
+    Data[Fixup.getOffset() + i] = uint8_t(Value >> (i * 8));
 }
 
 bool X86AsmBackend::mayNeedRelaxation(const MCInst &Inst,
