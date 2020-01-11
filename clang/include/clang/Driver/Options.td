@@ -546,7 +546,7 @@ def cxx_isystem : JoinedOrSeparate<["-"], "cxx-isystem">, Group<clang_i_Group>,
   MetaVarName<"<directory>">;
 def c : Flag<["-"], "c">, Flags<[DriverOption]>, Group<Action_Group>,
   HelpText<"Only run preprocess, compile, and assemble steps">;
-def fconvergent_functions : Joined<["-"], "fconvergent-functions">, Group<f_Group>, Flags<[CC1Option]>,
+def fconvergent_functions : Flag<["-"], "fconvergent-functions">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Assume functions may be convergent">;
 
 def cuda_device_only : Flag<["--"], "cuda-device-only">,
@@ -1344,7 +1344,7 @@ def fms_extensions : Flag<["-"], "fms-extensions">, Group<f_Group>, Flags<[CC1Op
   HelpText<"Accept some non-standard constructs supported by the Microsoft compiler">;
 def fms_compatibility : Flag<["-"], "fms-compatibility">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
   HelpText<"Enable full Microsoft Visual C++ compatibility">;
-def fms_volatile : Joined<["-"], "fms-volatile">, Group<f_Group>, Flags<[CC1Option]>;
+def fms_volatile : Flag<["-"], "fms-volatile">, Group<f_Group>, Flags<[CC1Option]>;
 def fmsc_version : Joined<["-"], "fmsc-version=">, Group<f_Group>, Flags<[DriverOption, CoreOption]>,
   HelpText<"Microsoft compiler version number to report in _MSC_VER (0 = don't define it (default))">;
 def fms_compatibility_version
