@@ -42,7 +42,6 @@ public:
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 };
 
@@ -297,7 +296,6 @@ static DecodeStatus DecodeMoveHRegInstruction(MCInst &Inst, uint64_t Insn,
 DecodeStatus ARCDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address,
-                                             raw_ostream &vStream,
                                              raw_ostream &cStream) const {
   MCDisassembler::DecodeStatus Result;
   if (Bytes.size() < 2) {
