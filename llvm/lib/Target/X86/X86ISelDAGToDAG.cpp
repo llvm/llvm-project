@@ -843,12 +843,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
             CurDAG->getNode(NewOpc, SDLoc(N), N->getValueType(0),
                             N->getOperand(0));
       --I;
-      if (N->isStrictFPOpcode()) {
-        SDValue From[] = {SDValue(N, 0), SDValue(N, 1)};
-        SDValue To[] = {Res.getValue(0), Res.getValue(1)};
-        CurDAG->ReplaceAllUsesOfValuesWith(From, To, 2);
-      } else
-        CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
+      CurDAG->ReplaceAllUsesWith(N, Res.getNode());
       ++I;
       CurDAG->DeleteNode(N);
       continue;
@@ -935,12 +930,7 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
                               N->getOperand(0),
                               CurDAG->getTargetConstant(Imm, dl, MVT::i8));
       --I;
-      if (IsStrict) {
-        SDValue From[] = {SDValue(N, 0), SDValue(N, 1)};
-        SDValue To[] = {Res.getValue(0), Res.getValue(1)};
-        CurDAG->ReplaceAllUsesOfValuesWith(From, To, 2);
-      } else
-        CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
+      CurDAG->ReplaceAllUsesWith(N, Res.getNode());
       ++I;
       CurDAG->DeleteNode(N);
       continue;
