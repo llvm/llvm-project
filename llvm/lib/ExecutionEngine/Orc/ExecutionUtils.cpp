@@ -42,7 +42,7 @@ int runAsMain(int (*Main)(int, char *[]), ArrayRef<std::string> Args,
   }
   ArgV.push_back(nullptr);
 
-  return Main(Args.size(), ArgV.data());
+  return Main(Args.size() + !!ProgramName, ArgV.data());
 }
 
 CtorDtorIterator::CtorDtorIterator(const GlobalVariable *GV, bool End)
