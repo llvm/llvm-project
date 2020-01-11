@@ -253,7 +253,7 @@ Value GpuLaunchFuncToCudaCallsPass::setupParamsArray(gpu::LaunchFuncOp launchOp,
                                               arraySize, /*alignment=*/0);
   for (unsigned idx = 0; idx < numKernelOperands; ++idx) {
     auto operand = launchOp.getKernelOperand(idx);
-    auto llvmType = operand->getType().cast<LLVM::LLVMType>();
+    auto llvmType = operand.getType().cast<LLVM::LLVMType>();
     Value memLocation = builder.create<LLVM::AllocaOp>(
         loc, llvmType.getPointerTo(), one, /*alignment=*/1);
     builder.create<LLVM::StoreOp>(loc, operand, memLocation);

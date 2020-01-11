@@ -53,11 +53,11 @@ struct UniformBinaryOpInfo {
   UniformBinaryOpInfo(Operation *op, Value lhs, Value rhs,
                       Optional<APFloat> clampMin, Optional<APFloat> clampMax)
       : op(op), lhs(lhs), rhs(rhs), clampMin(clampMin), clampMax(clampMax),
-        lhsType(getUniformElementType(lhs->getType())),
-        rhsType(getUniformElementType(rhs->getType())),
+        lhsType(getUniformElementType(lhs.getType())),
+        rhsType(getUniformElementType(rhs.getType())),
         resultType(getUniformElementType(*op->result_type_begin())),
-        lhsStorageType(quant::QuantizedType::castToStorageType(lhs->getType())),
-        rhsStorageType(quant::QuantizedType::castToStorageType(rhs->getType())),
+        lhsStorageType(quant::QuantizedType::castToStorageType(lhs.getType())),
+        rhsStorageType(quant::QuantizedType::castToStorageType(rhs.getType())),
         resultStorageType(
             quant::QuantizedType::castToStorageType(*op->result_type_begin())) {
   }

@@ -694,7 +694,7 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
   }
 
   // Result types
-  SmallVector<std::string, 2> resultTypes(numResults, "operands[0]->getType()");
+  SmallVector<std::string, 2> resultTypes(numResults, "operands[0].getType()");
   body << "  " << builderOpState << ".addTypes({"
        << llvm::join(resultTypes, ", ") << "});\n\n";
 }
@@ -733,7 +733,7 @@ void OpEmitter::genUseOperandAsResultTypeSeparateParamBuilder() {
   // Push all result types to the operation state
   const char *index = op.getOperand(0).isVariadic() ? ".front()" : "";
   std::string resultType =
-      formatv("{0}{1}->getType()", getArgumentName(op, 0), index).str();
+      formatv("{0}{1}.getType()", getArgumentName(op, 0), index).str();
   m.body() << "  " << builderOpState << ".addTypes({" << resultType;
   for (int i = 1; i != numResults; ++i)
     m.body() << ", " << resultType;
@@ -1119,8 +1119,8 @@ void OpEmitter::genVerifier() {
     if (value.isVariadic())
       break;
     if (!value.name.empty())
-      verifyCtx.addSubst(
-          value.name, formatv("(*this->getOperation()->getOperand({0}))", i));
+      verifyCtx.addSubst(value.name,
+                         formatv("this->getOperation()->getOperand({0})", i));
   }
   for (int i = 0, e = op.getNumResults(); i < e; ++i) {
     auto &value = op.getResult(i);
@@ -1130,7 +1130,7 @@ void OpEmitter::genVerifier() {
       break;
     if (!value.name.empty())
       verifyCtx.addSubst(value.name,
-                         formatv("(*this->getOperation()->getResult({0}))", i));
+                         formatv("this->getOperation()->getResult({0})", i));
   }
 
   // Verify the attributes have the correct type.
@@ -1237,10 +1237,10 @@ void OpEmitter::genOperandResultVerifier(OpMethodBody &body,
     body << "      (void)v;\n"
          << "      if (!("
          << tgfmt(constraint.getConditionTemplate(),
-                  &fctx.withSelf("v->getType()"))
+                  &fctx.withSelf("v.getType()"))
          << ")) {\n"
          << formatv("        return emitOpError(\"{0} #\") << index "
-                    "<< \" must be {1}, but got \" << v->getType();\n",
+                    "<< \" must be {1}, but got \" << v.getType();\n",
                     valueKind, constraint.getDescription())
          << "      }\n" // if
          << "      ++index;\n"

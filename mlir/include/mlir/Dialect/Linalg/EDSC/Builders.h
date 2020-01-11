@@ -56,7 +56,7 @@ struct StructuredIndexed {
 private:
   StructuredIndexed(Value v, ArrayRef<AffineExpr> indexings)
       : value(v), exprs(indexings.begin(), indexings.end()) {
-    assert(v->getType().isa<MemRefType>() && "MemRefType expected");
+    assert(v.getType().isa<MemRefType>() && "MemRefType expected");
   }
   StructuredIndexed(ValueHandle v, ArrayRef<AffineExpr> indexings)
       : StructuredIndexed(v.getValue(), indexings) {}

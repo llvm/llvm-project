@@ -66,7 +66,7 @@ void AddDefaultStatsPass::runWithConfig(SolverContext &solverContext,
 
   // Insert stats for each argument.
   for (auto arg : func.getArguments()) {
-    if (!config.isHandledType(arg->getType()))
+    if (!config.isHandledType(arg.getType()))
       continue;
     OpBuilder b(func.getBody());
     APFloat minValue(-1.0f);
@@ -75,7 +75,7 @@ void AddDefaultStatsPass::runWithConfig(SolverContext &solverContext,
         RankedTensorType::get({2}, b.getF32Type()), {minValue, maxValue});
     auto statsOp = b.create<StatisticsOp>(func.getLoc(), arg, layerStats,
                                           nullptr, nullptr);
-    arg->replaceAllUsesWith(statsOp);
+    arg.replaceAllUsesWith(statsOp);
 
     // StatsOp contained a use to 'arg' so make sure to reset it after replacing
     // all of the uses of 'arg'.
@@ -90,7 +90,7 @@ void AddDefaultStatsPass::runWithConfig(SolverContext &solverContext,
     assert(op->getNumResults() == 1);
 
     auto originalResult = op->getResult(0);
-    if (!config.isHandledType(originalResult->getType()))
+    if (!config.isHandledType(originalResult.getType()))
       return;
 
     OpBuilder b(op->getBlock(), ++op->getIterator());
@@ -101,7 +101,7 @@ void AddDefaultStatsPass::runWithConfig(SolverContext &solverContext,
         RankedTensorType::get({2}, b.getF32Type()), {minValue, maxValue});
     auto statsOp = b.create<StatisticsOp>(op->getLoc(), op->getResult(0),
                                           layerStats, nullptr, nullptr);
-    originalResult->replaceAllUsesWith(statsOp);
+    originalResult.replaceAllUsesWith(statsOp);
 
     // StatsOp contained a use to 'op' so make sure to reset it after replacing
     // all of the uses of 'op'.

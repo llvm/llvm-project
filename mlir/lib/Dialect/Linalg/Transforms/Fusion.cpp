@@ -133,8 +133,7 @@ static ViewDimension getViewDefiningLoopRange(LinalgOp op, unsigned loopDepth) {
       if (loopDepth == en2.value().cast<AffineDimExpr>().getPosition()) {
         LLVM_DEBUG(dbgs() << "getViewDefiningLoopRange loopDepth: " << loopDepth
                           << "\n");
-        LLVM_DEBUG(dbgs() << "getViewDefiningLoopRange view: " << *view
-                          << "\n");
+        LLVM_DEBUG(dbgs() << "getViewDefiningLoopRange view: " << view << "\n");
         return ViewDimension{view, static_cast<unsigned>(en2.index())};
       }
     }
@@ -146,9 +145,9 @@ static LinalgOp fuse(Value producedView, LinalgOp producer, LinalgOp consumer,
                      unsigned consumerIdx, unsigned producerIdx,
                      OperationFolder *folder) {
   auto subView = dyn_cast_or_null<SubViewOp>(
-      consumer.getInput(consumerIdx)->getDefiningOp());
-  auto slice = dyn_cast_or_null<SliceOp>(
-      consumer.getInput(consumerIdx)->getDefiningOp());
+      consumer.getInput(consumerIdx).getDefiningOp());
+  auto slice =
+      dyn_cast_or_null<SliceOp>(consumer.getInput(consumerIdx).getDefiningOp());
   assert(subView || slice);
   (void)subView;
   (void)slice;
@@ -272,13 +271,13 @@ Optional<FusionInfo> mlir::linalg::fuseProducerOf(
     auto producerIdx = producer.getIndexOfOutput(producedView).getValue();
     // `consumerIdx` and `producerIdx` exist by construction.
     LLVM_DEBUG(dbgs() << "\nRAW producer: " << *producer.getOperation()
-                      << " view: " << *producedView
+                      << " view: " << producedView
                       << " output index: " << producerIdx);
 
     // Must be a subview or a slice to guarantee there are loops we can fuse
     // into.
-    auto subView = dyn_cast_or_null<SubViewOp>(consumedView->getDefiningOp());
-    auto slice = dyn_cast_or_null<SliceOp>(consumedView->getDefiningOp());
+    auto subView = dyn_cast_or_null<SubViewOp>(consumedView.getDefiningOp());
+    auto slice = dyn_cast_or_null<SliceOp>(consumedView.getDefiningOp());
     if (!subView && !slice) {
       LLVM_DEBUG(dbgs() << "\nNot fusable (not a subview or slice)");
       continue;

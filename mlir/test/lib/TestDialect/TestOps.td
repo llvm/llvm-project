@@ -651,7 +651,7 @@ def OpSymbolBindingD : TEST_Op<"symbol_binding_d", []> {
   let arguments = (ins I32:$input1, I32:$input2, I64Attr:$attr);
   let results = (outs I32);
 }
-def HasOneUse: Constraint<CPred<"$0->hasOneUse()">, "has one use">;
+def HasOneUse: Constraint<CPred<"$0.hasOneUse()">, "has one use">;
 def : Pattern<
     // Bind to source pattern op operand/attribute/result
     (OpSymbolBindingA:$res_a $operand, $attr), [

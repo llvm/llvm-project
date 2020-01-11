@@ -550,7 +550,7 @@ struct MultiResultTraitBase : public TraitBase<ConcreteType, TraitType> {
   }
 
   /// Return the type of the `i`-th result.
-  Type getType(unsigned i) { return getResult(i)->getType(); }
+  Type getType(unsigned i) { return getResult(i).getType(); }
 
   /// Result iterator access.
   result_iterator result_begin() {
@@ -578,13 +578,13 @@ template <typename ConcreteType>
 class OneResult : public TraitBase<ConcreteType, OneResult> {
 public:
   Value getResult() { return this->getOperation()->getResult(0); }
-  Type getType() { return getResult()->getType(); }
+  Type getType() { return getResult().getType(); }
 
   /// Replace all uses of 'this' value with the new value, updating anything in
   /// the IR that uses 'this' to use the other value instead.  When this returns
   /// there are zero uses of 'this'.
   void replaceAllUsesWith(Value newValue) {
-    getResult()->replaceAllUsesWith(newValue);
+    getResult().replaceAllUsesWith(newValue);
   }
 
   /// Replace all uses of 'this' value with the result of 'op'.

@@ -70,11 +70,11 @@ void Value::setType(Type newType) {
 /// defines it.
 Operation *Value::getDefiningOp() const {
   if (auto result = dyn_cast<OpResult>())
-    return result->getOwner();
+    return result.getOwner();
   return nullptr;
 }
 
-Location Value::getLoc() {
+Location Value::getLoc() const {
   if (auto *op = getDefiningOp())
     return op->getLoc();
   return UnknownLoc::get(getContext());
@@ -84,7 +84,7 @@ Location Value::getLoc() {
 Region *Value::getParentRegion() {
   if (auto *op = getDefiningOp())
     return op->getParentRegion();
-  return cast<BlockArgument>()->getOwner()->getParent();
+  return cast<BlockArgument>().getOwner()->getParent();
 }
 
 //===----------------------------------------------------------------------===//

@@ -211,7 +211,7 @@ LogicalResult mlir::loopUnrollJamByFactor(AffineForOp forOp,
 
       // If the induction variable is used, create a remapping to the value for
       // this unrolled instance.
-      if (!forOpIV->use_empty()) {
+      if (!forOpIV.use_empty()) {
         // iv' = iv + i, i = 1 to unrollJamFactor-1.
         auto d0 = builder.getAffineDimExpr(0);
         auto bumpMap = AffineMap::get(1, 0, {d0 + i * step});

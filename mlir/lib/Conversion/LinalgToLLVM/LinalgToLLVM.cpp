@@ -152,7 +152,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     auto rangeOp = cast<RangeOp>(op);
     auto rangeDescriptorTy =
-        convertLinalgType(rangeOp.getResult()->getType(), lowering);
+        convertLinalgType(rangeOp.getResult().getType(), lowering);
 
     edsc::ScopedContext context(rewriter, op->getLoc());
 
@@ -251,7 +251,7 @@ public:
     for (int i = 0, e = memRefType.getRank(); i < e; ++i) {
       Value indexing = adaptor.indexings()[i];
       Value min = indexing;
-      if (sliceOp.indexing(i)->getType().isa<RangeType>())
+      if (sliceOp.indexing(i).getType().isa<RangeType>())
         min = extractvalue(int64Ty, indexing, pos(0));
       baseOffset = add(baseOffset, mul(min, strides[i]));
     }
@@ -274,7 +274,7 @@ public:
     int numNewDims = 0;
     for (auto en : llvm::enumerate(sliceOp.indexings())) {
       Value indexing = en.value();
-      if (indexing->getType().isa<RangeType>()) {
+      if (indexing.getType().isa<RangeType>()) {
         int rank = en.index();
         Value rangeDescriptor = adaptor.indexings()[rank];
         Value min = extractvalue(int64Ty, rangeDescriptor, pos(0));
