@@ -260,7 +260,90 @@ TemplateArgument
             19u);
 }
 
-TEST(Traverse, IgnoreUnlessSpelledInSource) {
+TEST(Traverse, IgnoreUnlessSpelledInSourceStructs) {
+  auto AST = buildASTFromCode(R"cpp(
+
+struct MyStruct {
+  MyStruct();
+  MyStruct(int i) {
+    MyStruct();
+  }
+  ~MyStruct();
+};
+
+)cpp");
+
+  auto BN = ast_matchers::match(
+      cxxConstructorDecl(hasName("MyStruct"),
+                         hasParameter(0, parmVarDecl(hasType(isInteger()))))
+          .bind("ctor"),
+      AST->getASTContext());
+  EXPECT_EQ(BN.size(), 1u);
+
+  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                          BN[0].getNodeAs<Decl>("ctor")),
+            R"cpp(
+CXXConstructorDecl 'MyStruct'
+|-ParmVarDecl 'i'
+`-CompoundStmt
+  `-CXXTemporaryObjectExpr
+)cpp");
+
+  EXPECT_EQ(
+      dumpASTString(ast_type_traits::TK_AsIs, BN[0].getNodeAs<Decl>("ctor")),
+      R"cpp(
+CXXConstructorDecl 'MyStruct'
+|-ParmVarDecl 'i'
+`-CompoundStmt
+  `-ExprWithCleanups
+    `-CXXBindTemporaryExpr
+      `-CXXTemporaryObjectExpr
+)cpp");
+}
+
+TEST(Traverse, IgnoreUnlessSpelledInSourceReturnStruct) {
+
+  auto AST = buildASTFromCode(R"cpp(
+struct Retval {
+  Retval() {}
+  ~Retval() {}
+};
+
+Retval someFun();
+
+void foo()
+{
+    someFun();
+}
+)cpp");
+
+  auto BN = ast_matchers::match(functionDecl(hasName("foo")).bind("fn"),
+                                AST->getASTContext());
+  EXPECT_EQ(BN.size(), 1u);
+
+  EXPECT_EQ(dumpASTString(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                          BN[0].getNodeAs<Decl>("fn")),
+            R"cpp(
+FunctionDecl 'foo'
+`-CompoundStmt
+  `-CallExpr
+    `-DeclRefExpr 'someFun'
+)cpp");
+
+  EXPECT_EQ(
+      dumpASTString(ast_type_traits::TK_AsIs, BN[0].getNodeAs<Decl>("fn")),
+      R"cpp(
+FunctionDecl 'foo'
+`-CompoundStmt
+  `-ExprWithCleanups
+    `-CXXBindTemporaryExpr
+      `-CallExpr
+        `-ImplicitCastExpr
+          `-DeclRefExpr 'someFun'
+)cpp");
+}
+
+TEST(Traverse, IgnoreUnlessSpelledInSourceReturns) {
 
   auto AST = buildASTFromCode(R"cpp(
 
