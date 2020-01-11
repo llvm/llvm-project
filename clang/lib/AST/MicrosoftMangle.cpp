@@ -710,7 +710,7 @@ void MicrosoftCXXNameMangler::mangleVirtualMemPtrThunk(
   Out << "$B";
   mangleNumber(OffsetInVFTable);
   Out << 'A';
-  mangleCallingConvention(MD->getType()->getAs<FunctionProtoType>());
+  mangleCallingConvention(MD->getType()->castAs<FunctionProtoType>());
 }
 
 void MicrosoftCXXNameMangler::mangleName(const NamedDecl *ND) {
