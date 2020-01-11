@@ -5263,34 +5263,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     if (foldLoadStoreIntoMemOperand(Node))
       return;
     break;
-  case ISD::FCEIL:
-  case ISD::FFLOOR:
-  case ISD::FTRUNC:
-  case ISD::FNEARBYINT:
-  case ISD::FRINT: {
-    // Replace fp rounding with their X86 specific equivalent so we don't
-    // need 2 sets of patterns.
-    // FIXME: This can only happen when the nodes started as STRICT_* and have
-    // been mutated into their non-STRICT equivalents. Eventually this
-    // mutation will be removed and we should switch the STRICT_ nodes to a
-    // strict version of RNDSCALE in PreProcessISelDAG.
-    unsigned Imm;
-    switch (Node->getOpcode()) {
-    default: llvm_unreachable("Unexpected opcode!");
-    case ISD::FCEIL:      Imm = 0xA; break;
-    case ISD::FFLOOR:     Imm = 0x9; break;
-    case ISD::FTRUNC:     Imm = 0xB; break;
-    case ISD::FNEARBYINT: Imm = 0xC; break;
-    case ISD::FRINT:      Imm = 0x4; break;
-    }
-    SDLoc dl(Node);
-    SDValue Res = CurDAG->getNode(X86ISD::VRNDSCALE, dl, Node->getValueType(0),
-                                  Node->getOperand(0),
-                                  CurDAG->getTargetConstant(Imm, dl, MVT::i8));
-    ReplaceNode(Node, Res.getNode());
-    SelectCode(Res.getNode());
-    return;
-  }
   }
 
   SelectCode(Node);
