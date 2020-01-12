@@ -2042,3 +2042,22 @@ TargetLoweringBase::getStoreMemOperandFlags(const StoreInst &SI,
   Flags |= getTargetMMOFlags(SI);
   return Flags;
 }
+
+MachineMemOperand::Flags
+TargetLoweringBase::getAtomicMemOperandFlags(const Instruction &AI,
+                                             const DataLayout &DL) const {
+  auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+
+  if (const AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(&AI)) {
+    if (RMW->isVolatile())
+      Flags |= MachineMemOperand::MOVolatile;
+  } else if (const AtomicCmpXchgInst *CmpX = dyn_cast<AtomicCmpXchgInst>(&AI)) {
+    if (CmpX->isVolatile())
+      Flags |= MachineMemOperand::MOVolatile;
+  } else
+    llvm_unreachable("not an atomic instruction");
+
+  // FIXME: Not preserving dereferenceable
+  Flags |= getTargetMMOFlags(AI);
+  return Flags;
+}

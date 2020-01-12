@@ -295,6 +295,8 @@ public:
                                                   const DataLayout &DL) const;
   MachineMemOperand::Flags getStoreMemOperandFlags(const StoreInst &SI,
                                                    const DataLayout &DL) const;
+  MachineMemOperand::Flags getAtomicMemOperandFlags(const Instruction &AI,
+                                                    const DataLayout &DL) const;
 
   virtual bool isSelectSupported(SelectSupportKind /*kind*/) const {
     return true;
