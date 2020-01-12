@@ -237,7 +237,10 @@ public:
   }
 
   void AddToLibraryNegativeCache(llvm::StringRef library_name) {}
-  bool IsInLibraryNegativeCache(llvm::StringRef library_name) {}
+
+  bool IsInLibraryNegativeCache(llvm::StringRef library_name) {
+    return false;
+  }
 
   void ReleaseAssociatedRemoteASTContext(swift::ASTContext *ctx) {}
 
