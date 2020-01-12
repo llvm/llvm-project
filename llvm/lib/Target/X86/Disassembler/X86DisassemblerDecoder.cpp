@@ -18,11 +18,13 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cassert>
 #include <cstdarg> /* for va_*()       */
 #include <cstdio>  /* for vsnprintf()  */
 #include <cstdlib> /* for exit()       */
 #include <cstring> /* for memset()     */
 
+using namespace llvm;
 using namespace llvm::X86Disassembler;
 
 #define DEBUG_TYPE "x86-disassembler"
@@ -196,12 +198,11 @@ static const struct InstructionSpecifier *specifierForUID(InstrUID uid) {
 }
 
 static bool peek(struct InternalInstruction *insn, uint8_t &byte) {
-  auto *r = static_cast<const std::pair<llvm::ArrayRef<uint8_t>, uint64_t> *>(
-      insn->readerArg);
-  uint64_t offset = insn->readerCursor - r->second;
-  if (offset >= r->first.size())
+  auto r = insn->bytes;
+  uint64_t offset = insn->readerCursor - insn->startLocation;
+  if (offset >= r.size())
     return true;
-  byte = r->first[offset];
+  byte = r[offset];
   return false;
 }
 
@@ -211,14 +212,13 @@ static void unconsumeByte(struct InternalInstruction* insn) {
 
 template <typename T>
 static bool consume(InternalInstruction *insn, T &ptr) {
-  auto *r = static_cast<const std::pair<llvm::ArrayRef<uint8_t>, uint64_t> *>(
-      insn->readerArg);
-  uint64_t offset = insn->readerCursor - r->second;
-  if (offset + sizeof(T) > r->first.size())
+  auto r = insn->bytes;
+  uint64_t offset = insn->readerCursor - insn->startLocation;
+  if (offset + sizeof(T) > r.size())
     return true;
   T ret = 0;
   for (unsigned i = 0; i < sizeof(T); ++i)
-    ret |= (uint64_t)r->first[offset + i] << (i * 8);
+    ret |= (uint64_t)r[offset + i] << (i * 8);
   ptr = ret;
   insn->readerCursor += sizeof(T);
   return false;
@@ -774,7 +774,7 @@ static bool is64Bit(const char *name) {
  * @return      - 0 if the ModR/M could be read when needed or was not needed;
  *                nonzero otherwise.
  */
-static int getID(struct InternalInstruction* insn, const void *miiArg) {
+static int getID(struct InternalInstruction* insn, const MCInstrInfo *miiArg) {
   uint16_t attrMask;
   uint16_t instructionID;
 
@@ -1553,15 +1553,9 @@ static int readImmediate(struct InternalInstruction* insn, uint8_t size) {
 
   dbgprintf(insn, "readImmediate()");
 
-  if (insn->numImmediatesConsumed == 2) {
-    debug("Already consumed two immediates");
-    return -1;
-  }
+  assert(insn->numImmediatesConsumed < 2 && "Already consumed two immediates");
 
-  if (size == 0)
-    size = insn->immediateSize;
-  else
-    insn->immediateSize = size;
+  insn->immediateSize = size;
   insn->immediateOffset = insn->readerCursor - insn->startLocation;
 
   switch (size) {
@@ -1585,6 +1579,8 @@ static int readImmediate(struct InternalInstruction* insn, uint8_t size) {
       return -1;
     insn->immediates[insn->numImmediatesConsumed] = imm64;
     break;
+  default:
+    llvm_unreachable("invalid size");
   }
 
   insn->numImmediatesConsumed++;
@@ -1811,36 +1807,13 @@ static int readOperands(struct InternalInstruction* insn) {
  * decodeInstruction - Reads and interprets a full instruction provided by the
  *   user.
  *
- * @param insn      - A pointer to the instruction to be populated.  Must be
- *                    pre-allocated.
- * @param reader    - The function to be used to read the instruction's bytes.
- * @param readerArg - A generic argument to be passed to the reader to store
- *                    any internal state.
- * @param startLoc  - The address (in the reader's address space) of the first
- *                    byte in the instruction.
- * @param mode      - The mode (real mode, IA-32e, or IA-32e in 64-bit mode) to
- *                    decode the instruction in.
  * @return          - 0 if the instruction's memory could be read; nonzero if
  *                    not.
  */
 int llvm::X86Disassembler::decodeInstruction(struct InternalInstruction *insn,
-                                             const void *readerArg,
-                                             const void *miiArg,
-                                             uint64_t startLoc,
-                                             DisassemblerMode mode) {
-  memset(insn, 0, sizeof(struct InternalInstruction));
-
-  insn->readerArg = readerArg;
-  insn->startLocation = startLoc;
-  insn->readerCursor = startLoc;
-  insn->mode = mode;
-  insn->numImmediatesConsumed = 0;
-
-  if (readPrefixes(insn)       ||
-      readOpcode(insn)         ||
-      getID(insn, miiArg)      ||
-      insn->instructionID == 0 ||
-      readOperands(insn))
+                                             const MCInstrInfo *mii) {
+  if (readPrefixes(insn) || readOpcode(insn) || getID(insn, mii) ||
+      insn->instructionID == 0 || readOperands(insn))
     return -1;
 
   insn->operands = x86OperandSets[insn->spec->operands];
@@ -1848,7 +1821,7 @@ int llvm::X86Disassembler::decodeInstruction(struct InternalInstruction *insn,
   insn->length = insn->readerCursor - insn->startLocation;
 
   dbgprintf(insn, "Read from 0x%llx to 0x%llx: length %zu",
-            startLoc, insn->readerCursor, insn->length);
+            insn->startLocation, insn->readerCursor, insn->length);
 
   if (insn->length > 15)
     dbgprintf(insn, "Instruction exceeds 15-byte limit");
