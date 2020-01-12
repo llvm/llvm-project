@@ -4143,11 +4143,11 @@ struct AAValueSimplifyImpl : AAValueSimplify {
                              Optional<Value *> &AccumulatedSimplifiedValue) {
     // FIXME: Add a typecast support.
 
-    auto &ValueSimpifyAA = A.getAAFor<AAValueSimplify>(
+    auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
         QueryingAA, IRPosition::value(QueryingValue));
 
     Optional<Value *> QueryingValueSimplified =
-        ValueSimpifyAA.getAssumedSimplifiedValue(A);
+        ValueSimplifyAA.getAssumedSimplifiedValue(A);
 
     if (!QueryingValueSimplified.hasValue())
       return true;
