@@ -246,7 +246,14 @@ release of Clang. Users of the build system should adjust accordingly.
 AST Matchers
 ------------
 
-- ...
+- Traversal in AST Matchers was simplified to use the
+  ``TK_IgnoreUnlessSpelledInSource`` mode by default, instead of ``TK_AsIs``.
+  This means that many uses of the ``ignoringImplicit()`` and similar matchers
+  is no longer necessary.  Clients of AST Matchers which wish to match on
+  implicit AST nodes can wrap their matcher in ``traverse(TK_AsIs, ...)`` or
+  use ``TraversalKindScope`` if appropriate.  The ``clang-query`` tool also
+  uses ``IgnoreUnlessSpelledInSource`` by default.  The mode can be changed
+  using ``set traversal AsIs`` in the ``clang-query`` environment.
 
 clang-format
 ------------
