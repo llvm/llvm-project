@@ -151,7 +151,8 @@ static LegalityPredicate isRegisterType(unsigned TypeIdx) {
 
 static LegalityPredicate elementTypeIs(unsigned TypeIdx, LLT Type) {
   return [=](const LegalityQuery &Query) {
-    return Query.Types[TypeIdx].getElementType() == Type;
+    const LLT QueryTy = Query.Types[TypeIdx];
+    return QueryTy.isVector() && QueryTy.getElementType() == Type;
   };
 }
 
@@ -1127,7 +1128,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   // TODO: Make legal for s32, s64. s64 case needs break down in regbankselect.
-  getActionDefinitionsBuilder(G_SEXT_INREG)
+  auto &SextInReg = getActionDefinitionsBuilder(G_SEXT_INREG);
+  if (ST.hasVOP3PInsts()) {
+    SextInReg.lowerFor({{S32}, {S64}, {S16}, {V2S16}})
+      // Prefer to reduce vector widths for 16-bit vectors before lowering, to
+      // get more vector shift opportunities, since we'll get those when
+      // expanded.
+      .fewerElementsIf(elementTypeIs(0, S16), changeTo(0, V2S16));
+  } else if (ST.has16BitInsts()) {
+    SextInReg.lowerFor({{S32}, {S64}, {S16}});
+  } else {
+    // Prefer to promote to s32 before lowering if we don't have 16-bit
+    // shifts. This avoid a lot of intermediate truncate and extend operations.
+    SextInReg.lowerFor({{S32}, {S64}});
+  }
+
+  SextInReg
+    .scalarize(0)
     .clampScalar(0, MinLegalScalarShiftTy, S64)
     .lower();
 

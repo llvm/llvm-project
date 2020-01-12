@@ -179,9 +179,19 @@ private:
   /// \p NarrowTy is the desired result merge source type. If the source value
   /// needs to be widened to evenly cover \p DstReg, inserts high bits
   /// corresponding to the extension opcode \p PadStrategy.
-  void buildLCMMerge(Register DstReg, LLT NarrowTy, LLT GCDTy,
-                     SmallVectorImpl<Register> &VRegs,
-                     unsigned PadStrategy = TargetOpcode::G_ANYEXT);
+  ///
+  /// \p VRegs will be cleared, and the the result \p NarrowTy register pieces
+  /// will replace it. Returns The complete LCMTy that \p VRegs will cover when
+  /// merged.
+  LLT buildLCMMergePieces(LLT DstTy, LLT NarrowTy, LLT GCDTy,
+                          SmallVectorImpl<Register> &VRegs,
+                          unsigned PadStrategy = TargetOpcode::G_ANYEXT);
+
+  /// Merge the values in \p RemergeRegs to an \p LCMTy typed value. Extract the
+  /// low bits into \p DstReg. This is intended to use the outputs from
+  /// buildLCMMergePieces after processing.
+  void buildWidenedRemergeToDst(Register DstReg, LLT LCMTy,
+                                ArrayRef<Register> RemergeRegs);
 
   /// Perform generic multiplication of values held in multiple registers.
   /// Generated instructions use only types NarrowTy and i1.
@@ -229,6 +239,9 @@ public:
 
   LegalizeResult
   reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
+
+  LegalizeResult fewerElementsVectorSextInReg(MachineInstr &MI, unsigned TypeIdx,
+                                              LLT NarrowTy);
 
   LegalizeResult narrowScalarShiftByConstant(MachineInstr &MI, const APInt &Amt,
                                              LLT HalfTy, LLT ShiftAmtTy);
