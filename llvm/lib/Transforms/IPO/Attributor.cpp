@@ -7705,10 +7705,12 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
     A.identifyDefaultAbstractAttributes(*F);
   }
 
-  bool Changed = A.run() == ChangeStatus::CHANGED;
+  ChangeStatus Changed = A.run();
   assert(!verifyModule(*Functions.front()->getParent(), &errs()) &&
          "Module verification failed!");
-  return Changed;
+  LLVM_DEBUG(dbgs() << "[Attributor] Done with " << Functions.size()
+                    << " functions, result: " << Changed << ".\n");
+  return Changed == ChangeStatus::CHANGED;
 }
 
 PreservedAnalyses AttributorPass::run(Module &M, ModuleAnalysisManager &AM) {
