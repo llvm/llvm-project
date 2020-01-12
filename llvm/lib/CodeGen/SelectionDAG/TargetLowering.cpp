@@ -6134,11 +6134,13 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
   SDValue Cst = DAG.getConstantFP(APF, dl, SrcVT);
   SDValue Sel;
 
-  if (Node->isStrictFPOpcode())
+  if (Node->isStrictFPOpcode()) {
     Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT,
                        Node->getOperand(0), /*IsSignaling*/ true);
-  else
+    Chain = Sel.getValue(1);
+  } else {
     Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT);
+  }
 
   bool Strict = Node->isStrictFPOpcode() ||
                 shouldUseStrictFP_TO_INT(SrcVT, DstVT, /*IsSigned*/ false);
@@ -6161,7 +6163,7 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
     SDValue SInt;
     if (Node->isStrictFPOpcode()) {
       SDValue Val = DAG.getNode(ISD::STRICT_FSUB, dl, { SrcVT, MVT::Other }, 
-                                { Node->getOperand(0), Src, FltOfs });
+                                { Chain, Src, FltOfs });
       SInt = DAG.getNode(ISD::STRICT_FP_TO_SINT, dl, { DstVT, MVT::Other }, 
                          { Val.getValue(1), Val });
       Chain = SInt.getValue(1);
