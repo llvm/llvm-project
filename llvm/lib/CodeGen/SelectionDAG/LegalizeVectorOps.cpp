@@ -332,6 +332,13 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   switch (Op.getOpcode()) {
   default:
     return TranslateLegalizeResults(Op, Node);
+  case ISD::MERGE_VALUES:
+    Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
+    // This operation lies about being legal: when it claims to be legal,
+    // it should actually be expanded.
+    if (Action == TargetLowering::Legal)
+      Action = TargetLowering::Expand;
+    break;
 #define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
   case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
@@ -834,6 +841,10 @@ SDValue VectorLegalizer::ExpandStore(SDNode *N) {
 void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
   SDValue Tmp;
   switch (Node->getOpcode()) {
+  case ISD::MERGE_VALUES:
+    for (unsigned i = 0, e = Node->getNumValues(); i != e; ++i)
+      Results.push_back(Node->getOperand(i));
+    return;
   case ISD::SIGN_EXTEND_INREG:
     Results.push_back(ExpandSEXTINREG(Node));
     return;
