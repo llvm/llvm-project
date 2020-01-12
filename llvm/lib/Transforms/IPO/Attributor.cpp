@@ -1192,8 +1192,9 @@ ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
   auto ReplaceCallSiteUsersWith = [&A](CallBase &CB, Constant &C) {
     if (CB.getNumUses() == 0 || CB.isMustTailCall())
       return ChangeStatus::UNCHANGED;
-    A.replaceAllUsesWith(CB, C);
-    return ChangeStatus::CHANGED;
+    if (A.changeValueAfterManifest(CB, C))
+      return ChangeStatus::CHANGED;
+    return ChangeStatus::UNCHANGED;
   };
 
   // If the assumed unique return value is an argument, annotate it.
@@ -4443,8 +4444,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       if (!V.user_empty() && &V != C && V.getType() == C->getType()) {
         LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *C
                           << " :: " << *this << "\n");
-        A.changeValueAfterManifest(V, *C);
-        Changed = ChangeStatus::CHANGED;
+        if (A.changeValueAfterManifest(V, *C))
+          Changed = ChangeStatus::CHANGED;
       }
     }
 
@@ -4696,7 +4697,7 @@ struct AAHeapToStackImpl : public AAHeapToStack {
         AI = new BitCastInst(AI, MallocCall->getType(), "malloc_bc",
                              AI->getNextNode());
 
-      A.replaceAllUsesWith(*MallocCall, *AI);
+      A.changeValueAfterManifest(*MallocCall, *AI);
 
       if (auto *II = dyn_cast<InvokeInst>(MallocCall)) {
         auto *NBB = II->getNormalDest();

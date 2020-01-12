@@ -44,7 +44,6 @@ F:              ; preds = %0
 define i1 @caller(i1 %C) {
 ; CHECK-LABEL: define {{[^@]+}}@caller
 ; CHECK-SAME: (i1 [[C:%.*]])
-; CHECK-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]])
 ; CHECK-NEXT:    ret i1 true
 ;
   %X = call i32 @foo( i1 %C )             ; <i32> [#uses=1]
