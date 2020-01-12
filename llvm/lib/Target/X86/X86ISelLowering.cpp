@@ -22133,9 +22133,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
-  if (Cond.getOpcode() == ISD::SETCC ||
-      Cond.getOpcode() == ISD::STRICT_FSETCC ||
-      Cond.getOpcode() == ISD::STRICT_FSETCCS) {
+  if (Cond.getOpcode() == ISD::SETCC) {
     if (SDValue NewCond = LowerSETCC(Cond, DAG)) {
       Cond = NewCond;
       // If the condition was updated, it's possible that the operands of the
