@@ -246,8 +246,8 @@ return:                                           ; preds = %cond.end, %if.then3
 ;   return *a ? a : rt0(a);
 ; }
 ;
-; BOTH:      Function Attrs: nofree noinline norecurse noreturn nosync nounwind readonly uwtable
-; BOTH-NEXT: define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @rt0(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) %a)
+; BOTH:      Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable willreturn
+; BOTH-NEXT: define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @rt0(i32* nocapture nofree nonnull readnone align 4 dereferenceable(4) %a)
 define i32* @rt0(i32* %a) #0 {
 entry:
   %v = load i32, i32* %a, align 4
@@ -263,8 +263,8 @@ entry:
 ;   return *a ? undef : rt1(a);
 ; }
 ;
-; BOTH: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readonly uwtable
-; BOTH-NEXT:    define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @rt1(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) %a)
+; BOTH:         Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable willreturn
+; BOTH-NEXT:    define noalias nonnull align 536870912 dereferenceable(4294967295) i32* @rt1(i32* nocapture nofree nonnull readnone align 4 dereferenceable(4) %a)
 define i32* @rt1(i32* %a) #0 {
 entry:
   %v = load i32, i32* %a, align 4
