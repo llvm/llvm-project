@@ -3474,7 +3474,7 @@ struct AAAlignImpl : AAAlign {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    ChangeStatus LoadStoreChanged = ChangeStatus::UNCHANGED;
 
     // Check for users that allow alignment annotations.
     Value &AnchorVal = getIRPosition().getAnchorValue();
@@ -3485,7 +3485,7 @@ struct AAAlignImpl : AAAlign {
             STATS_DECLTRACK(AAAlign, Store,
                             "Number of times alignment added to a store");
             SI->setAlignment(Align(getAssumedAlign()));
-            Changed = ChangeStatus::CHANGED;
+            LoadStoreChanged = ChangeStatus::CHANGED;
           }
       } else if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
         if (LI->getPointerOperand() == &AnchorVal)
@@ -3493,12 +3493,18 @@ struct AAAlignImpl : AAAlign {
             LI->setAlignment(Align(getAssumedAlign()));
             STATS_DECLTRACK(AAAlign, Load,
                             "Number of times alignment added to a load");
-            Changed = ChangeStatus::CHANGED;
+            LoadStoreChanged = ChangeStatus::CHANGED;
           }
       }
     }
 
-    return AAAlign::manifest(A) | Changed;
+    ChangeStatus Changed = AAAlign::manifest(A);
+
+    MaybeAlign InheritAlign =
+        getAssociatedValue().getPointerAlignment(A.getDataLayout());
+    if (InheritAlign.valueOrOne() >= getAssumedAlign())
+      return LoadStoreChanged;
+    return Changed | LoadStoreChanged;
   }
 
   // TODO: Provide a helper to determine the implied ABI alignment and check in
@@ -3602,7 +3608,12 @@ struct AAAlignCallSiteArgument final : AAAlignFloating {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    return AAAlignImpl::manifest(A);
+    ChangeStatus Changed = AAAlignImpl::manifest(A);
+    MaybeAlign InheritAlign =
+        getAssociatedValue().getPointerAlignment(A.getDataLayout());
+    if (InheritAlign.valueOrOne() >= getAssumedAlign())
+      Changed = ChangeStatus::UNCHANGED;
+    return Changed;
   }
 
   /// See AbstractAttribute::updateImpl(Attributor &A).
