@@ -28,6 +28,7 @@ add_llvm_library(LLVMScalarOpts
   LoopDeletion.cpp
   LoopDataPrefetch.cpp
   LoopDistribute.cpp
+  LoopFuse.cpp
   LoopIdiomRecognize.cpp
   LoopInstSimplify.cpp
   LoopInterchange.cpp

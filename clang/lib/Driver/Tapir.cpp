@@ -27,8 +27,7 @@ TapirTargetID clang::parseTapirTarget(const ArgList &Args) {
   // Use Cilk if -ftapir is not specified but either -fcilkplus or -fdetach is
   // specified.
   if (!Args.hasArg(options::OPT_ftapir_EQ)) {
-    if (Args.hasArg(options::OPT_fcilkplus) ||
-        Args.hasArg(options::OPT_foutline_tapir_early))
+    if (Args.hasArg(options::OPT_fcilkplus))
       return TapirTargetID::Cilk;
     return TapirTargetID::None;
   }

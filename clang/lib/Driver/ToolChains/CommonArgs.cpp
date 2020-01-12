@@ -803,7 +803,7 @@ bool tools::addCSIRuntime(const ToolChain &TC, const ArgList &Args,
   if (!Args.hasArg(options::OPT_fcsi_EQ) && !Args.hasArg(options::OPT_fcsi))
     return false;
 
-  CmdArgs.push_back(TC.getCompilerRTArgString(Args, "csi", false));
+  CmdArgs.push_back(TC.getCompilerRTArgString(Args, "csi"));
   return true;
 }
 
@@ -811,7 +811,7 @@ bool tools::addCilktoolRuntime(const ToolChain &TC, const ArgList &Args,
                                ArgStringList &CmdArgs) {
   if (Arg *A = Args.getLastArg(options::OPT_fcilktool_EQ)) {
     StringRef Val = A->getValue();
-    CmdArgs.push_back(TC.getCompilerRTArgString(Args, Val, false));
+    CmdArgs.push_back(TC.getCompilerRTArgString(Args, Val));
     return true;
   }
   return false;

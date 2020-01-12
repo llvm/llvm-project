@@ -16,6 +16,8 @@ namespace llvm {
 
 class Function;
 
+extern cl::opt<bool> EnableTapirLoopStripmine;
+
 /// Loop stripmining pass.  It is a function pass to have access to function and
 /// module analyses.
 class LoopStripMinePass : public PassInfoMixin<LoopStripMinePass> {

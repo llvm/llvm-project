@@ -261,7 +261,7 @@ return:                                           ; preds = %cond.end, %if.then3
 ;
 ; FIXME: no-return missing
 ; FNATTR:  define i32* @rt0(i32* readonly %a)
-; BOTH: Function Attrs: nofree noinline nosync nounwind readonly uwtable
+; BOTH: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
 ; BOTH-NEXT:    define i32* @rt0(i32* readonly returned %a)
 define i32* @rt0(i32* %a) #0 {
 entry:
@@ -280,7 +280,7 @@ entry:
 ;
 ; FIXME: no-return missing
 ; FNATTR:  define noalias i32* @rt1(i32* nocapture readonly %a)
-; BOTH: Function Attrs: nofree noinline nosync nounwind readonly uwtable
+; BOTH: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
 ; BOTH-NEXT:    define noalias i32* @rt1(i32* nocapture readonly %a)
 define i32* @rt1(i32* %a) #0 {
 entry:
@@ -746,6 +746,6 @@ attributes #0 = { noinline nounwind uwtable }
 ; BOTH-NOT: attributes #
 ; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline norecurse nosync nounwind readnone uwtable willreturn }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline nosync nounwind readnone uwtable }
-; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline nosync nounwind readonly uwtable }
+; BOTH-DAG: attributes #{{[0-9]*}} = { argmemonly nofree noinline nosync nounwind readonly uwtable }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { noinline nounwind uwtable }
 ; BOTH-NOT: attributes #

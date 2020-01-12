@@ -2777,6 +2777,11 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
       DAG.setRoot(DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops));
       break;
     }
+    case Intrinsic::detached_rethrow:
+      // Treat detached_rethrow intrinsics like resumes.
+      llvm_unreachable("SelectionDAGBuilder shouldn't visit detached_rethrow "
+                       "instructions!");
+      break;
     }
   } else if (I.countOperandBundlesOfType(LLVMContext::OB_deopt)) {
     // Currently we do not lower any intrinsic calls with deopt operand bundles.
@@ -6883,7 +6888,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // Lower the starting point of a sync region to a no-op.
   case Intrinsic::syncregion_start:
     // Lower the starting point of a Tapir sync region to a no-op.
-    return nullptr;
+    return;
   }
 }
 

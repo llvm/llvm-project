@@ -569,8 +569,8 @@ struct AddressSanitizer {
   AddressSanitizer(Module &M, GlobalsMetadata &GlobalsMD, TaskInfo &TI,
                    bool CompileKernel = false, bool Recover = false,
                    bool UseAfterScope = false)
-      : UseAfterScope(UseAfterScope || ClUseAfterScope), GlobalsMD(GlobalsMD),
-        TI(TI) {
+      : UseAfterScope(UseAfterScope || ClUseAfterScope), TI(TI),
+        GlobalsMD(GlobalsMD) {
     this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
     this->CompileKernel =
         ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan : CompileKernel;

@@ -151,8 +151,7 @@ bool llvm::MoveStaticAllocasInBlock(
   // Move any dbg.declares describing the allocas into the entry basic block.
   DIBuilder DIB(*F->getParent());
   for (auto &AI : StaticAllocas)
-    replaceDbgDeclareForAlloca(AI, AI, DIB, DIExpression::NoDeref, 0,
-                               DIExpression::NoDeref);
+    replaceDbgDeclareForAlloca(AI, AI, DIB, DIExpression::ApplyOffset, 0);
 
   // Move any syncregion_start's into the entry basic block.
   for (BasicBlock::iterator I = Block->begin(),
@@ -1125,8 +1124,13 @@ void llvm::TapirLoopHints::writeHintsToMetadata(ArrayRef<Hint> HintTypes) {
   if (HintTypes.size() == 0)
     return;
 
-  // Reserve the first element to LoopID (see below).
-  SmallVector<Metadata *, 4> MDs(1);
+  LLVMContext &Context = TheLoop->getHeader()->getContext();
+  SmallVector<Metadata *, 4> MDs;
+
+  // Reserve first location for self reference to the LoopID metadata node.
+  TempMDTuple TempNode = MDNode::getTemporary(Context, None);
+  MDs.push_back(TempNode.get());
+
   // If the loop already has metadata, then ignore the existing operands.
   MDNode *LoopID = TheLoop->getLoopID();
   if (LoopID) {
@@ -1143,7 +1147,6 @@ void llvm::TapirLoopHints::writeHintsToMetadata(ArrayRef<Hint> HintTypes) {
     MDs.push_back(createHintMetadata(Twine(Prefix(), H.Name).str(), H.Value));
 
   // Replace current metadata node with new one.
-  LLVMContext &Context = TheLoop->getHeader()->getContext();
   MDNode *NewLoopID = MDNode::get(Context, MDs);
   // Set operand 0 to refer to the loop id itself.
   NewLoopID->replaceOperandWith(0, NewLoopID);
@@ -1157,11 +1160,20 @@ void llvm::TapirLoopHints::writeHintsToClonedMetadata(ArrayRef<Hint> HintTypes,
   if (HintTypes.size() == 0)
     return;
 
-  // Reserve the first element to LoopID (see below).
-  SmallVector<Metadata *, 4> MDs(1);
+  LLVMContext &Context =
+    cast<BasicBlock>(VMap[TheLoop->getHeader()])->getContext();
+  SmallVector<Metadata *, 4> MDs;
+
+  // Reserve first location for self reference to the LoopID metadata node.
+  TempMDTuple TempNode = MDNode::getTemporary(Context, None);
+  MDs.push_back(TempNode.get());
+
   // If the loop already has metadata, then ignore the existing operands.
-  MDNode *LoopID = TheLoop->getLoopID();
-  if (LoopID) {
+  MDNode *OrigLoopID = TheLoop->getLoopID();
+  if (!OrigLoopID)
+    return;
+
+  if (MDNode *LoopID = dyn_cast_or_null<MDNode>(VMap.MD()[OrigLoopID])) {
     for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
       MDNode *Node = cast<MDNode>(LoopID->getOperand(i));
       // If node in update list, ignore old value.
@@ -1175,8 +1187,6 @@ void llvm::TapirLoopHints::writeHintsToClonedMetadata(ArrayRef<Hint> HintTypes,
     MDs.push_back(createHintMetadata(Twine(Prefix(), H.Name).str(), H.Value));
 
   // Replace current metadata node with new one.
-  LLVMContext &Context =
-    cast<BasicBlock>(VMap[TheLoop->getHeader()])->getContext();
   MDNode *NewLoopID = MDNode::get(Context, MDs);
   // Set operand 0 to refer to the loop id itself.
   NewLoopID->replaceOperandWith(0, NewLoopID);
@@ -1191,8 +1201,13 @@ void llvm::TapirLoopHints::writeHintsToClonedMetadata(ArrayRef<Hint> HintTypes,
 void llvm::TapirLoopHints::clearHintsMetadata() {
   Hint Hints[] = {Hint("spawn.strategy", ST_SEQ, HK_STRATEGY),
                   Hint("grainsize", 0, HK_GRAINSIZE)};
-  // Reserve the first element to LoopID (see below).
-  SmallVector<Metadata *, 4> MDs(1);
+  LLVMContext &Context = TheLoop->getHeader()->getContext();
+  SmallVector<Metadata *, 4> MDs;
+
+  // Reserve first location for self reference to the LoopID metadata node.
+  TempMDTuple TempNode = MDNode::getTemporary(Context, None);
+  MDs.push_back(TempNode.get());
+
   // If the loop already has metadata, then ignore the existing operands.
   MDNode *LoopID = TheLoop->getLoopID();
   if (LoopID) {
@@ -1205,7 +1220,6 @@ void llvm::TapirLoopHints::clearHintsMetadata() {
   }
 
   // Replace current metadata node with new one.
-  LLVMContext &Context = TheLoop->getHeader()->getContext();
   MDNode *NewLoopID = MDNode::get(Context, MDs);
   // Set operand 0 to refer to the loop id itself.
   NewLoopID->replaceOperandWith(0, NewLoopID);

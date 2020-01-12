@@ -60,28 +60,29 @@ class CilkABI : public TapirTarget {
     };
 
   // Opaque Cilk RTS functions
-  Function *CilkRTSInit = nullptr;
-  Function *CilkRTSLeaveFrame = nullptr;
-  Function *CilkRTSRethrow = nullptr;
-  Function *CilkRTSSync = nullptr;
-  Function *CilkRTSGetNworkers = nullptr;
-  Function *CilkRTSGetTLSWorker = nullptr;
-  Function *CilkRTSGetTLSWorkerFast = nullptr;
-  Function *CilkRTSBindThread1 = nullptr;
+  FunctionCallee CilkRTSInit = nullptr;
+  FunctionCallee CilkRTSLeaveFrame = nullptr;
+  FunctionCallee CilkRTSRethrow = nullptr;
+  FunctionCallee CilkRTSSync = nullptr;
+  FunctionCallee CilkRTSGetNworkers = nullptr;
+  FunctionCallee CilkRTSGetTLSWorker = nullptr;
+  FunctionCallee CilkRTSGetTLSWorkerFast = nullptr;
+  FunctionCallee CilkRTSBindThread1 = nullptr;
 
-  // Accessors for Cilk RTS functions
-  Function *Get__cilkrts_init();
+  // Accessors for opaque Cilk RTS functions
+  FunctionCallee Get__cilkrts_init();
+  FunctionCallee Get__cilkrts_leave_frame();
+  FunctionCallee Get__cilkrts_rethrow();
+  FunctionCallee Get__cilkrts_sync();
+  FunctionCallee Get__cilkrts_get_nworkers();
+  FunctionCallee Get__cilkrts_get_tls_worker();
+  FunctionCallee Get__cilkrts_get_tls_worker_fast();
+  FunctionCallee Get__cilkrts_bind_thread_1();
+  // Accessors for compiler-generated Cilk RTS functions
   Function *Get__cilkrts_enter_frame_1();
   Function *Get__cilkrts_enter_frame_fast_1();
-  Function *Get__cilkrts_leave_frame();
-  Function *Get__cilkrts_rethrow();
-  Function *Get__cilkrts_sync();
   Function *Get__cilkrts_detach();
   Function *Get__cilkrts_pop_frame();
-  Function *Get__cilkrts_get_nworkers();
-  Function *Get__cilkrts_get_tls_worker();
-  Function *Get__cilkrts_get_tls_worker_fast();
-  Function *Get__cilkrts_bind_thread_1();
 
   // Helper functions for implementing the Cilk ABI protocol
   Function *GetCilkSyncFn(bool instrument = false);
@@ -123,12 +124,12 @@ public:
 /// to be processed using a call to a runtime method __cilkrts_cilk_for_32 or
 /// __cilkrts_cilk_for_64.
 class RuntimeCilkFor : public LoopOutlineProcessor {
-  Function *CilkRTSCilkFor32 = nullptr;
-  Function *CilkRTSCilkFor64 = nullptr;
+  FunctionCallee CilkRTSCilkFor32 = nullptr;
+  FunctionCallee CilkRTSCilkFor64 = nullptr;
   Type *GrainsizeType = nullptr;
 
-  Function *Get__cilkrts_cilk_for_32();
-  Function *Get__cilkrts_cilk_for_64();
+  FunctionCallee Get__cilkrts_cilk_for_32();
+  FunctionCallee Get__cilkrts_cilk_for_64();
 public:
   RuntimeCilkFor(Module &M) : LoopOutlineProcessor(M) {
     GrainsizeType = Type::getInt32Ty(M.getContext());

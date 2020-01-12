@@ -368,7 +368,7 @@ static void recordContinuationSpindles(TaskInfo *TI) {
 void TaskInfo::analyze(Function &F, DominatorTree &DomTree) {
   // We first compute defining blocks and IDFs based on the detach and sync
   // instructions.
-  DenseMap<const BasicBlock *, unsigned int> BBNumbers;
+  DenseMap<const BasicBlock *, unsigned> BBNumbers;
   unsigned NextBBNum = 0;
   int64_t BBCount = 0, SpindleCount = 0, TaskCount = 0;
   SmallPtrSet<BasicBlock *, 32> DefiningBlocks;
@@ -437,10 +437,10 @@ void TaskInfo::analyze(Function &F, DominatorTree &DomTree) {
   SmallVector<BasicBlock *, 32> IDFBlocks;
   IDFs.calculate(IDFBlocks);
 
-  std::sort(IDFBlocks.begin(), IDFBlocks.end(),
-            [&BBNumbers](const BasicBlock *A, const BasicBlock *B) {
-              return BBNumbers.lookup(A) < BBNumbers.lookup(B);
-            });
+  llvm::sort(IDFBlocks.begin(), IDFBlocks.end(),
+             [&BBNumbers](const BasicBlock *A, const BasicBlock *B) {
+               return BBNumbers.find(A)->second < BBNumbers.find(B)->second;
+             });
 
   // Create spindles for all IDFBlocks.
   for (BasicBlock *B : IDFBlocks)

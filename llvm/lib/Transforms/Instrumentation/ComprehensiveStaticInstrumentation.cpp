@@ -539,17 +539,18 @@ void CSIImpl::initializeLoopHooks() {
   Type *LoopPropertyTy = CsiLoopProperty::getType(C);
   Type *LoopExitPropertyTy = CsiLoopExitProperty::getType(C);
 
-  CsiBeforeLoop = checkCsiInterfaceFunction(M.getOrInsertFunction(
-      "__csi_before_loop", IRB.getVoidTy(), IDType, IRB.getInt64Ty(),
-      LoopPropertyTy));
-  CsiAfterLoop = checkCsiInterfaceFunction(M.getOrInsertFunction(
-      "__csi_after_loop", IRB.getVoidTy(), IDType, LoopPropertyTy));
+  CsiBeforeLoop = M.getOrInsertFunction("__csi_before_loop", IRB.getVoidTy(),
+                                        IDType, IRB.getInt64Ty(),
+                                        LoopPropertyTy);
+  CsiAfterLoop = M.getOrInsertFunction("__csi_after_loop", IRB.getVoidTy(),
+                                       IDType, LoopPropertyTy);
 
-  CsiLoopBodyEntry = checkCsiInterfaceFunction(M.getOrInsertFunction(
-      "__csi_loopbody_entry", IRB.getVoidTy(), IDType, LoopPropertyTy));
-  CsiLoopBodyExit = checkCsiInterfaceFunction(M.getOrInsertFunction(
-      "__csi_loopbody_exit", IRB.getVoidTy(), IDType, IDType,
-      LoopExitPropertyTy));
+  CsiLoopBodyEntry = M.getOrInsertFunction("__csi_loopbody_entry",
+                                           IRB.getVoidTy(), IDType,
+                                           LoopPropertyTy);
+  CsiLoopBodyExit = M.getOrInsertFunction("__csi_loopbody_exit",
+                                          IRB.getVoidTy(), IDType, IDType,
+                                          LoopExitPropertyTy);
 }
 
 // Call-site hook initialization
@@ -573,11 +574,11 @@ void CSIImpl::initializeAllocaHooks() {
   Type *AddrType = IRB.getInt8PtrTy();
   Type *PropType = CsiAllocaProperty::getType(C);
 
-  CsiBeforeAlloca = checkCsiInterfaceFunction(M.getOrInsertFunction(
-      "__csi_before_alloca", IRB.getVoidTy(), IDType, IntptrTy, PropType));
-  CsiAfterAlloca = checkCsiInterfaceFunction(
-      M.getOrInsertFunction("__csi_after_alloca", IRB.getVoidTy(), IDType,
-                            AddrType, IntptrTy, PropType));
+  CsiBeforeAlloca = M.getOrInsertFunction("__csi_before_alloca",
+                                          IRB.getVoidTy(), IDType, IntptrTy,
+                                          PropType);
+  CsiAfterAlloca = M.getOrInsertFunction("__csi_after_alloca", IRB.getVoidTy(),
+                                         IDType, AddrType, IntptrTy, PropType);
 }
 
 // Non-local-variable allocation/free hook initialization
@@ -591,22 +592,22 @@ void CSIImpl::initializeAllocFnHooks() {
   Type *AllocFnPropType = CsiAllocFnProperty::getType(C);
   Type *FreePropType = CsiFreeProperty::getType(C);
 
-  CsiBeforeAllocFn = checkCsiInterfaceFunction(M.getOrInsertFunction(
-      "__csi_before_allocfn", RetType, IDType, LargeNumBytesType,
-      LargeNumBytesType, LargeNumBytesType, AddrType, AllocFnPropType));
-  CsiAfterAllocFn = checkCsiInterfaceFunction(
-      M.getOrInsertFunction("__csi_after_allocfn", RetType, IDType,
-                            /* new ptr */ AddrType,
-                            /* size */ LargeNumBytesType,
-                            /* num elements */ LargeNumBytesType,
-                            /* alignment */ LargeNumBytesType,
-                            /* old ptr */ AddrType,
-                            /* property */ AllocFnPropType));
+  CsiBeforeAllocFn = M.getOrInsertFunction("__csi_before_allocfn", RetType,
+                                           IDType, LargeNumBytesType,
+                                           LargeNumBytesType, LargeNumBytesType,
+                                           AddrType, AllocFnPropType);
+  CsiAfterAllocFn = M.getOrInsertFunction("__csi_after_allocfn", RetType,
+                                          IDType, /* new ptr */ AddrType,
+                                          /* size */ LargeNumBytesType,
+                                          /* num elements */ LargeNumBytesType,
+                                          /* alignment */ LargeNumBytesType,
+                                          /* old ptr */ AddrType,
+                                          /* property */ AllocFnPropType);
 
-  CsiBeforeFree = checkCsiInterfaceFunction(M.getOrInsertFunction(
-      "__csi_before_free", RetType, IDType, AddrType, FreePropType));
-  CsiAfterFree = checkCsiInterfaceFunction(M.getOrInsertFunction(
-      "__csi_after_free", RetType, IDType, AddrType, FreePropType));
+  CsiBeforeFree = M.getOrInsertFunction("__csi_before_free", RetType, IDType,
+                                        AddrType, FreePropType);
+  CsiAfterFree = M.getOrInsertFunction("__csi_after_free", RetType, IDType,
+                                       AddrType, FreePropType);
 }
 
 // Load and store hook initialization
@@ -659,29 +660,27 @@ void CSIImpl::initializeTapirHooks() {
   Type *TaskPropertyTy = CsiTaskProperty::getType(C);
   Type *TaskExitPropertyTy = CsiTaskExitProperty::getType(C);
 
-  CsiDetach = checkCsiInterfaceFunction(M.getOrInsertFunction(
-      "__csi_detach", RetType,
-      /* detach_id */ IDType, IntegerType::getInt32Ty(C)->getPointerTo()));
-  CsiTaskEntry =
-      checkCsiInterfaceFunction(M.getOrInsertFunction("__csi_task", RetType,
-                                                      /* task_id */ IDType,
-                                                      /* detach_id */ IDType,
-                                                      TaskPropertyTy));
-  CsiTaskExit = checkCsiInterfaceFunction(
-      M.getOrInsertFunction("__csi_task_exit", RetType,
-                            /* task_exit_id */ IDType,
-                            /* task_id */ IDType,
-                            /* detach_id */ IDType, TaskExitPropertyTy));
-  CsiDetachContinue = checkCsiInterfaceFunction(
-      M.getOrInsertFunction("__csi_detach_continue", RetType,
-                            /* detach_continue_id */ IDType,
-                            /* detach_id */ IDType));
-  CsiBeforeSync = checkCsiInterfaceFunction(
-      M.getOrInsertFunction("__csi_before_sync", RetType, IDType,
-                            IntegerType::getInt32Ty(C)->getPointerTo()));
-  CsiAfterSync = checkCsiInterfaceFunction(
-      M.getOrInsertFunction("__csi_after_sync", RetType, IDType,
-                            IntegerType::getInt32Ty(C)->getPointerTo()));
+  CsiDetach = M.getOrInsertFunction("__csi_detach", RetType,
+                                    /* detach_id */ IDType,
+                                    IntegerType::getInt32Ty(C)->getPointerTo());
+  CsiTaskEntry = M.getOrInsertFunction("__csi_task", RetType,
+                                       /* task_id */ IDType,
+                                       /* detach_id */ IDType,
+                                       TaskPropertyTy);
+  CsiTaskExit = M.getOrInsertFunction("__csi_task_exit", RetType,
+                                      /* task_exit_id */ IDType,
+                                      /* task_id */ IDType,
+                                      /* detach_id */ IDType,
+                                      TaskExitPropertyTy);
+  CsiDetachContinue = M.getOrInsertFunction("__csi_detach_continue", RetType,
+                                            /* detach_continue_id */ IDType,
+                                            /* detach_id */ IDType);
+  CsiBeforeSync = M.getOrInsertFunction(
+      "__csi_before_sync", RetType, IDType,
+      IntegerType::getInt32Ty(C)->getPointerTo());
+  CsiAfterSync = M.getOrInsertFunction(
+      "__csi_after_sync", RetType, IDType,
+      IntegerType::getInt32Ty(C)->getPointerTo());
 }
 
 // Prepare any calls in the CFG for instrumentation, e.g., by making sure any
@@ -802,8 +801,9 @@ int CSIImpl::getNumBytesAccessed(Value *Addr, const DataLayout &DL) {
   return TypeSize / 8;
 }
 
-void CSIImpl::addLoadStoreInstrumentation(Instruction *I, Function *BeforeFn,
-                                          Function *AfterFn, Value *CsiId,
+void CSIImpl::addLoadStoreInstrumentation(Instruction *I,
+                                          FunctionCallee BeforeFn,
+                                          FunctionCallee AfterFn, Value *CsiId,
                                           Type *AddrType, Value *Addr,
                                           int NumBytes,
                                           CsiLoadStoreProperty &Prop) {
@@ -1081,12 +1081,11 @@ void CSIImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
 }
 
 void CSIImpl::interposeCall(Instruction *I) {
+  CallBase *CB = dyn_cast<CallBase>(I);
+  if (!CB)
+    return;
 
-  Function *Called = nullptr;
-  if (CallInst *CI = dyn_cast<CallInst>(I))
-    Called = CI->getCalledFunction();
-  else if (InvokeInst *II = dyn_cast<InvokeInst>(I))
-    Called = II->getCalledFunction();
+  Function *Called = CB->getCalledFunction();
 
   // Should we interpose this call?
   if (Called && Called->getName().size() > 0) {
@@ -1096,11 +1095,7 @@ void CSIImpl::interposeCall(Instruction *I) {
     if (shouldInterpose) {
       Function *interpositionFunction = getInterpositionFunction(Called);
       assert(interpositionFunction != nullptr);
-      if (CallInst *CI = dyn_cast<CallInst>(I)) {
-        CI->setCalledFunction(interpositionFunction);
-      } else if (InvokeInst *II = dyn_cast<InvokeInst>(I)) {
-        II->setCalledFunction(interpositionFunction);
-      }
+      CB->setCalledFunction(interpositionFunction);
     }
   }
 }
@@ -1523,7 +1518,7 @@ void CSIImpl::instrumentFree(Instruction *I) {
   insertHookCall(&*Iter, CsiAfterFree, {FreeId, Addr, Prop.getValue(IRB)});
 }
 
-CallInst *CSIImpl::insertHookCall(Instruction *I, Function *HookFunction,
+CallInst *CSIImpl::insertHookCall(Instruction *I, FunctionCallee HookFunction,
                                   ArrayRef<Value *> HookArgs) {
   IRBuilder<> IRB(I);
   CallInst *Call = IRB.CreateCall(HookFunction, HookArgs);
@@ -1532,11 +1527,12 @@ CallInst *CSIImpl::insertHookCall(Instruction *I, Function *HookFunction,
 }
 
 bool CSIImpl::updateArgPHIs(BasicBlock *Succ, BasicBlock *BB,
-                            Function *HookFunction, ArrayRef<Value *> HookArgs,
+                            FunctionCallee HookFunction,
+                            ArrayRef<Value *> HookArgs,
                             ArrayRef<Value *> DefaultArgs) {
   // If we've already created a PHI node in this block for the hook arguments,
   // just add the incoming arguments to the PHIs.
-  auto Key = std::make_pair(Succ, HookFunction);
+  auto Key = std::make_pair(Succ, cast<Function>(HookFunction.getCallee()));
   if (ArgPHIs.count(Key)) {
     unsigned HookArgNum = 0;
     for (PHINode *ArgPHI : ArgPHIs[Key]) {
@@ -1565,7 +1561,7 @@ bool CSIImpl::updateArgPHIs(BasicBlock *Succ, BasicBlock *BB,
 }
 
 CallInst *CSIImpl::insertHookCallInSuccessorBB(BasicBlock *Succ, BasicBlock *BB,
-                                               Function *HookFunction,
+                                               FunctionCallee HookFunction,
                                                ArrayRef<Value *> HookArgs,
                                                ArrayRef<Value *> DefaultArgs) {
   assert(HookFunction && "No hook function given.");
@@ -1581,7 +1577,7 @@ CallInst *CSIImpl::insertHookCallInSuccessorBB(BasicBlock *Succ, BasicBlock *BB,
   if (updateArgPHIs(Succ, BB, HookFunction, HookArgs, DefaultArgs))
     return nullptr;
 
-  auto Key = std::make_pair(Succ, HookFunction);
+  auto Key = std::make_pair(Succ, cast<Function>(HookFunction.getCallee()));
   SmallVector<Value *, 2> SuccessorHookArgs;
   for (PHINode *ArgPHI : ArgPHIs[Key])
     SuccessorHookArgs.push_back(ArgPHI);
@@ -1595,7 +1591,7 @@ CallInst *CSIImpl::insertHookCallInSuccessorBB(BasicBlock *Succ, BasicBlock *BB,
 }
 
 void CSIImpl::insertHookCallAtSharedEHSpindleExits(
-    Spindle *SharedEHSpindle, Task *T, Function *HookFunction,
+    Spindle *SharedEHSpindle, Task *T, FunctionCallee HookFunction,
     FrontEndDataTable &FED, ArrayRef<Value *> HookArgs,
     ArrayRef<Value *> DefaultArgs) {
   // Get the set of shared EH spindles to examine.  Store them in post order, so
@@ -1627,7 +1623,8 @@ void CSIImpl::insertHookCallAtSharedEHSpindleExits(
         Spindle *SPred = InEdge.first;
         BasicBlock *Pred = InEdge.second;
         if (Visited.count(SPred)) {
-          auto Key = std::make_pair(SPred->getEntry(), HookFunction);
+          auto Key = std::make_pair(SPred->getEntry(),
+                                    cast<Function>(HookFunction.getCallee()));
           SmallVector<Value *, 4> NewHookArgs(
               ArgPHIs[Key].begin(), ArgPHIs[Key].end());
           NoNewPHINode &=
@@ -1644,7 +1641,8 @@ void CSIImpl::insertHookCallAtSharedEHSpindleExits(
     // Detached-rethrow exits can appear in strange places within a task-exiting
     // spindle.  Hence we loop over all blocks in the spindle to find detached
     // rethrows.
-    auto Key = std::make_pair(S->getEntry(), HookFunction);
+    auto Key = std::make_pair(S->getEntry(),
+                              cast<Function>(HookFunction.getCallee()));
     for (BasicBlock *B : S->blocks()) {
       if (isDetachedRethrow(B->getTerminator())) {
         IRBuilder<> IRB(B->getTerminator());
@@ -1759,8 +1757,10 @@ void CSIImpl::initializeCsi() {
 
   FunctionType *FnType =
       FunctionType::get(Type::getVoidTy(M.getContext()), {}, false);
-  InitCallsiteToFunction = M.getOrInsertFunction(CsiInitCallsiteToFunctionName,
-                                                 FnType);
+  InitCallsiteToFunction = cast<Function>(M.getOrInsertFunction(
+                                              CsiInitCallsiteToFunctionName,
+                                              FnType)
+                                          .getCallee());
   assert(InitCallsiteToFunction);
 
   InitCallsiteToFunction->setLinkage(GlobalValue::InternalLinkage);
@@ -1874,7 +1874,6 @@ CallInst *CSIImpl::createRTUnitInitCall(IRBuilder<> &IRB) {
   FunctionType *InitFunctionTy =
       FunctionType::get(IRB.getVoidTy(), InitArgTypes, false);
   RTUnitInit = M.getOrInsertFunction(CsiRtUnitInitName, InitFunctionTy);
-  assert(RTUnitInit);
 
   ArrayType *UnitFedTableArrayType =
       ArrayType::get(UnitFedTableType, UnitFedTables.size());
@@ -1903,24 +1902,19 @@ CallInst *CSIImpl::createRTUnitInitCall(IRBuilder<> &IRB) {
 }
 
 void CSIImpl::finalizeCsi() {
-  LLVMContext &C = M.getContext();
-
-  // Add CSI global constructor, which calls unit init.
-  Function *Ctor = (Function *)M.getOrInsertFunction(
-      CsiRtUnitCtorName, FunctionType::get(Type::getVoidTy(C), false));
-
-  if (!Options.jitMode) {
-    Ctor->setLinkage(llvm::GlobalValue::LinkageTypes::InternalLinkage);
-  }
-
-  BasicBlock *CtorBB = BasicBlock::Create(C, "", Ctor);
-  IRBuilder<> IRB(ReturnInst::Create(C, CtorBB));
-
   // Insert __csi_func_id_<f> weak symbols for all defined functions and
   // generate the runtime code that stores to all of them.
   generateInitCallsiteToFunction();
 
+  Function *Ctor = Function::Create(
+      FunctionType::get(Type::getVoidTy(M.getContext()), false),
+      // Options.jitMode ? GlobalValue::ExternalLinkage :
+      GlobalValue::InternalLinkage, CsiRtUnitCtorName, &M);
+  BasicBlock *CtorBB = BasicBlock::Create(M.getContext(), "", Ctor);
+  IRBuilder<> IRB(ReturnInst::Create(M.getContext(), CtorBB));
   CallInst *Call = createRTUnitInitCall(IRB);
+  // TODO: Add version-check to the cunstructor?  See
+  // ModuleUtils::createSanitizerCtorAndInitFunctions for example.
 
   // Add the constructor to the global list if we're doing AOT compilation.
   // In JIT mode, we rely on the JIT compiler to call the constructor as
@@ -1929,7 +1923,8 @@ void CSIImpl::finalizeCsi() {
     appendToGlobalCtors(M, Ctor, CsiUnitCtorPriority);
 
     CallGraphNode *CNCtor = CG->getOrInsertFunction(Ctor);
-    CallGraphNode *CNFunc = CG->getOrInsertFunction(RTUnitInit);
+    CallGraphNode *CNFunc = CG->getOrInsertFunction(
+        cast<Function>(RTUnitInit.getCallee()));
     CNCtor->addCalledFunction(Call, CNFunc);
   }
 }
@@ -2179,7 +2174,8 @@ void CSIImpl::instrumentFunction(Function &F) {
   LoopInfo &LI = GetLoopInfo(F);
   if (Options.InstrumentLoops)
     for (Loop *L : LI)
-      simplifyLoop(L, DT, &LI, nullptr, nullptr, /* PreserveLCSSA */false);
+      simplifyLoop(L, DT, &LI, nullptr, nullptr, nullptr,
+                   /* PreserveLCSSA */false);
 
   SmallVector<std::pair<Instruction *, CsiLoadStoreProperty>, 8>
       LoadAndStoreProperties;
@@ -2377,16 +2373,13 @@ llvm::CSIImpl::keepTrackOfSpawns(Function &F,
   return TrackVars;
 }
 
-Function *llvm::CSIImpl::getInterpositionFunction(Function *F) {
-  if (InterpositionFunctions.find(F) != InterpositionFunctions.end()) {
+Function *CSIImpl::getInterpositionFunction(Function *F) {
+  if (InterpositionFunctions.find(F) != InterpositionFunctions.end())
     return InterpositionFunctions.lookup(F);
-  }
 
-  std::string InterposedName =
-      (std::string) "__csi_interpose_" + F->getName().str();
-
-  Function *InterpositionFunction =
-      (Function *)M.getOrInsertFunction(InterposedName, F->getFunctionType());
+  std::string InterposedName = "__csi_interpose_" + F->getName().str();
+  Function *InterpositionFunction = cast<Function>(
+      M.getOrInsertFunction(InterposedName, F->getFunctionType()).getCallee());
 
   InterpositionFunctions.insert({F, InterpositionFunction});
 

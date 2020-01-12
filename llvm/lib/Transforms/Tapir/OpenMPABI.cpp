@@ -102,8 +102,8 @@ PointerType *getKmpc_MicroPointerTy(LLVMContext &Context) {
   return PointerType::getUnqual(getOrCreateKmpc_MicroTy(Context));
 }
 
-Constant *createRuntimeFunction(OpenMPRuntimeFunction Function,
-                                                 Module *M) {
+FunctionCallee createRuntimeFunction(OpenMPRuntimeFunction Function,
+                                     Module *M) {
   auto *VoidTy = Type::getVoidTy(M->getContext());
   auto *VoidPtrTy = Type::getInt8PtrTy(M->getContext());
   auto *Int32Ty = Type::getInt32Ty(M->getContext());
@@ -112,7 +112,7 @@ Constant *createRuntimeFunction(OpenMPRuntimeFunction Function,
   // as i64 on my machine.
   auto *SizeTy = Type::getInt64Ty(M->getContext());
   auto *IdentTyPtrTy = getIdentTyPointerTy();
-  Constant *RTLFn = nullptr;
+  FunctionCallee RTLFn = nullptr;
 
   switch (Function) {
   case OMPRTL__kmpc_fork_call: {
@@ -202,19 +202,16 @@ Constant *createRuntimeFunction(OpenMPRuntimeFunction Function,
   return RTLFn;
 }
 
-CallInst *emitRuntimeCall(Value *Callee, ArrayRef<Value *> Args,
-                                           const Twine &Name,
-                                           BasicBlock *Parent) {
-  IRBuilder<> Builder(Parent);
-  CallInst *call = Builder.CreateCall(Callee, Args, None, Name);
-  return call;
+CallInst *emitRuntimeCall(FunctionCallee Callee, ArrayRef<Value *> Args,
+                          const Twine &Name, IRBuilder<> &IRBuilder) {
+  CallInst *Call = IRBuilder.CreateCall(Callee, Args, None, Name);
+  return Call;
 }
 
-CallInst *emitRuntimeCall(Value *Callee, ArrayRef<Value *> Args,
-                                           const Twine &Name,
-                                           IRBuilder<> &IRBuilder) {
-  CallInst *call = IRBuilder.CreateCall(Callee, Args, None, Name);
-  return call;
+CallInst *emitRuntimeCall(FunctionCallee Callee, ArrayRef<Value *> Args,
+                          const Twine &Name, BasicBlock *Parent) {
+  IRBuilder<> Builder(Parent);
+  return emitRuntimeCall(Callee, Args, Name, Builder);
 }
 
 Value *getThreadID(Function *F, IRBuilder<> &IRBuilder) {
@@ -668,8 +665,8 @@ void OpenMPABI::postProcessFunction(Function &F,
   auto *VoidTy = Type::getVoidTy(Context);
     auto *OMPRegionFnTy = FunctionType::get(VoidTy, FnParams, false);
     auto Name = RegionFn->getName() + ".OMP";
-    Function *OMPRegionFn = dyn_cast<Function>(
-        F.getParent()->getOrInsertFunction(Name.str(), OMPRegionFnTy));
+    Function *OMPRegionFn = cast<Function>(
+        M.getOrInsertFunction(Name.str(), OMPRegionFnTy).getCallee());
 
     // If this is an outermost region, skip the first 2 arguments (global_tid and
     // bound_tid) ...

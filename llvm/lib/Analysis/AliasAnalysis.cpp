@@ -165,7 +165,7 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2,
     return ModRefInfo::ModRef;
   } else if (auto D = dyn_cast<DetachInst>(I)) {
     ModRefInfo Result = ModRefInfo::NoModRef;
-    SmallPtrSet<BasicBlock *, 32> Visited;
+    SmallPtrSet<const BasicBlock *, 32> Visited;
     SmallVector<BasicBlock *, 32> WorkList;
     WorkList.push_back(D->getDetached());
     while (!WorkList.empty()) {
@@ -178,6 +178,9 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2,
         assert(!(D == &DI) &&
                "Detached CFG reaches its own Detach instruction.");
 
+        if (&DI == Call2)
+          return ModRefInfo::NoModRef;
+
         // No need to recursively check nested syncs or detaches, as nested
         // tasks are wholly contained in the detached sub-CFG we're iterating
         // through.
@@ -186,10 +189,8 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2,
 
         if (isa<LoadInst>(DI) || isa<StoreInst>(DI) ||
             isa<AtomicCmpXchgInst>(DI) || isa<AtomicRMWInst>(DI) ||
-            DI.isFenceLike() || ImmutableCallSite(&DI))
-          Result = unionModRef(Result, getModRefInfo(&DI, Call2));
-        if (&DI == Call2)
-          return ModRefInfo::NoModRef;
+            DI.isFenceLike() || isa<CallBase>(DI))
+          Result = unionModRef(Result, getModRefInfo(&DI, Call2, AAQI));
       }
 
       // Add successors
@@ -447,7 +448,6 @@ FunctionModRefBehavior AAResults::getModRefBehavior(const Function *F) {
 
   return Result;
 }
-
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, AliasResult AR) {
   switch (AR) {
@@ -746,6 +746,13 @@ ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
 
 ModRefInfo AAResults::getModRefInfo(const DetachInst *D,
                                     const MemoryLocation &Loc) {
+  AAQueryInfo AAQIP;
+  return getModRefInfo(D, Loc, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(const DetachInst *D,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI) {
   ModRefInfo Result = ModRefInfo::NoModRef;
   SmallPtrSet<const BasicBlock *, 32> Visited;
   SmallVector<const BasicBlock *, 32> WorkList;
@@ -765,7 +772,7 @@ ModRefInfo AAResults::getModRefInfo(const DetachInst *D,
       if (isa<SyncInst>(I) || isa<DetachInst>(I))
         continue;
 
-      Result = unionModRef(Result, getModRefInfo(&I, Loc));
+      Result = unionModRef(Result, getModRefInfo(&I, Loc, AAQI));
 
       // Early-exit the moment we reach the top of the lattice.
       if (isModAndRefSet(Result))
@@ -786,6 +793,13 @@ ModRefInfo AAResults::getModRefInfo(const DetachInst *D,
 
 ModRefInfo AAResults::getModRefInfo(const SyncInst *S,
                                     const MemoryLocation &Loc) {
+  AAQueryInfo AAQIP;
+  return getModRefInfo(S, Loc, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(const SyncInst *S,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI) {
   // If no memory location pointer is given, treat the sync like a fence.
   if (!Loc.Ptr)
     return ModRefInfo::ModRef;
@@ -800,7 +814,7 @@ ModRefInfo AAResults::getModRefInfo(const SyncInst *S,
       continue;
 
     if (const DetachInst *D = dyn_cast<DetachInst>(BB->getTerminator())) {
-      Result = unionModRef(Result, getModRefInfo(D, Loc));
+      Result = unionModRef(Result, getModRefInfo(D, Loc, AAQI));
 
       // Early-exit the moment we reach the top of the lattice.
       if (isModAndRefSet(Result))

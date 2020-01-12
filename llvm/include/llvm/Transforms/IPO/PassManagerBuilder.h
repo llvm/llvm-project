@@ -121,7 +121,6 @@ public:
     /// EP_TapirLoopEnd - This extension point allows adding passes just before
     /// Tapir loops are processed by lowering, but before additional lowering.
     EP_TapirLoopEnd,
-  };
 
     /// EP_FullLinkTimeOptimizationEarly - This extensions point allow adding
     /// passes that

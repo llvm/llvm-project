@@ -141,12 +141,6 @@ void LLVMAddEarlyCSEPass(LLVMPassManagerRef PM);
 /** See llvm::createEarlyCSEPass function */
 void LLVMAddEarlyCSEMemSSAPass(LLVMPassManagerRef PM);
 
-/** See llvm::createEarlyCSEPass function */
-void LLVMAddEarlyCSERhinoPass(LLVMPassManagerRef PM);
-
-/** See llvm::createEarlyCSEPass function */
-void LLVMAddEarlyCSEMemSSARhinoPass(LLVMPassManagerRef PM);
-
 /** See llvm::createLowerExpectIntrinsicPass function */
 void LLVMAddLowerExpectIntrinsicPass(LLVMPassManagerRef PM);
 

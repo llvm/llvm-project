@@ -303,7 +303,9 @@ void CodeGenFunction::EmitCilkSyncStmt(const CilkSyncStmt &S) {
 }
 
 static const Stmt *IgnoreImplicitAndCleanups(const Stmt *S) {
-  const Stmt *Current = S->IgnoreImplicit();
+  const Stmt *Current = S;
+  if (auto *E = dyn_cast_or_null<Expr>(S))
+    Current = E->IgnoreImplicit();
   const Stmt *Lasts = nullptr;
   while (Current != Lasts) {
     Lasts = Current;

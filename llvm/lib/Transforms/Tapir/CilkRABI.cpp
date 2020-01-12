@@ -101,7 +101,7 @@ CilkRABI::CilkRABI(Module &M) : TapirTarget(M) {
 
 // Accessors for opaque Cilk RTS functions
 
-Function *CilkRABI::Get__cilkrts_get_nworkers() {
+FunctionCallee CilkRABI::Get__cilkrts_get_nworkers() {
   if (CilkRTSGetNworkers)
     return CilkRTSGetNworkers;
 
@@ -114,57 +114,56 @@ Function *CilkRABI::Get__cilkrts_get_nworkers() {
   AL = AL.addAttribute(C, AttributeList::FunctionIndex,
                        Attribute::NoUnwind);
   FunctionType *FTy = FunctionType::get(Type::getInt32Ty(C), {}, false);
-  CilkRTSGetNworkers = cast<Function>(
-      M.getOrInsertFunction("__cilkrts_get_nworkers", FTy, AL));
+  CilkRTSGetNworkers = M.getOrInsertFunction("__cilkrts_get_nworkers", FTy, AL);
   return CilkRTSGetNworkers;
 }
 
-Function *CilkRABI::Get__cilkrts_leave_frame() {
+FunctionCallee CilkRABI::Get__cilkrts_leave_frame() {
   if (CilkRTSLeaveFrame)
     return CilkRTSLeaveFrame;
 
   LLVMContext &C = M.getContext();
   Type *VoidTy = Type::getVoidTy(C);
   PointerType *StackFramePtrTy = PointerType::getUnqual(StackFrameTy);
-  CilkRTSLeaveFrame = cast<Function>(
-      M.getOrInsertFunction("__cilkrts_leave_frame", VoidTy, StackFramePtrTy));
+  CilkRTSLeaveFrame = M.getOrInsertFunction("__cilkrts_leave_frame", VoidTy,
+                                            StackFramePtrTy);
 
   return CilkRTSLeaveFrame;
 }
 
-// Function *CilkRABI::Get__cilkrts_rethrow() {
+// FunctionCallee CilkRABI::Get__cilkrts_rethrow() {
 //   if (CilkRTSRethrow)
 //     return CilkRTSRethrow;
 
 //   LLVMContext &C = M.getContext();
 //   Type *VoidTy = Type::getVoidTy(C);
 //   PointerType *StackFramePtrTy = PointerType::getUnqual(StackFrameTy);
-//   CilkRTSRethrow = cast<Function>(
-//       M.getOrInsertFunction("__cilkrts_rethrow", VoidTy, StackFramePtrTy));
+//   CilkRTSRethrow = M.getOrInsertFunction("__cilkrts_rethrow", VoidTy,
+//                                          StackFramePtrTy);
 
 //   return CilkRTSRethrow;
 // }
 
-Function *CilkRABI::Get__cilkrts_sync() {
+FunctionCallee CilkRABI::Get__cilkrts_sync() {
   if (CilkRTSSync)
     return CilkRTSSync;
 
   LLVMContext &C = M.getContext();
   Type *VoidTy = Type::getVoidTy(C);
   PointerType *StackFramePtrTy = PointerType::getUnqual(StackFrameTy);
-  CilkRTSSync = cast<Function>(
-      M.getOrInsertFunction("__cilkrts_sync", VoidTy, StackFramePtrTy));
+  CilkRTSSync = M.getOrInsertFunction("__cilkrts_sync", VoidTy,
+                                      StackFramePtrTy);
 
   return CilkRTSSync;
 }
 
-Function *CilkRABI::Get__cilkrts_get_tls_worker() {
+FunctionCallee CilkRABI::Get__cilkrts_get_tls_worker() {
   if (CilkRTSGetTLSWorker)
     return CilkRTSGetTLSWorker;
 
   PointerType *WorkerPtrTy = PointerType::getUnqual(WorkerTy);
-  CilkRTSGetTLSWorker = cast<Function>(
-      M.getOrInsertFunction("__cilkrts_get_tls_worker", WorkerPtrTy));
+  CilkRTSGetTLSWorker = M.getOrInsertFunction("__cilkrts_get_tls_worker",
+                                              WorkerPtrTy);
 
   return CilkRTSGetTLSWorker;
 }
@@ -231,7 +230,7 @@ static bool GetOrCreateFunction(Module &M, const StringRef FnName,
     return true;
 
   // Otherwise we have to create it.
-  Fn = cast<Function>(M.getOrInsertFunction(FnName, FTy));
+  Fn = cast<Function>(M.getOrInsertFunction(FnName, FTy).getCallee());
 
   // Let the caller know that the function is incomplete and the body still
   // needs to be added.

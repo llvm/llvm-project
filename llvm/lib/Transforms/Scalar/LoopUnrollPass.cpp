@@ -1407,6 +1407,13 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
   }
 
+  if (Changed)
+    // Update TaskInfo manually using the updated DT.
+    //
+    // FIXME: Recalculating TaskInfo for the whole function is wasteful.
+    // Optimize this routine in the future.
+    TI.recalculate(*DT.getRoot()->getParent(), DT);
+
   SmallVector<Loop *, 8> Worklist = appendLoopsToWorklist(LI);
 
   while (!Worklist.empty()) {

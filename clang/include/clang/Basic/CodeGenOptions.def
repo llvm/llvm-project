@@ -316,12 +316,6 @@ ENUM_CODEGENOPT(VecLib, VectorLibrary, 2, NoLibrary)
 /// Tapir target runtime library to use.
 ENUM_CODEGENOPT(TapirTarget, TapirTargetID, 8, TapirTargetID::Last_TapirTargetID)
 
-/// Perform early outlining of Tapir constructs.
-CODEGENOPT(TapirEarlyOutline, 1, 0)
-
-/// Enable Rhino optimizations of Tapir constructs.
-CODEGENOPT(TapirRhino, 1, 0)
-
 /// The default TLS model to use.
 ENUM_CODEGENOPT(DefaultTLSModel, TLSModel, 2, GeneralDynamicTLSModel)
 

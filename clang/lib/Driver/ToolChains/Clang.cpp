@@ -4513,12 +4513,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Forward flags for Cilk.
   Args.AddLastArg(CmdArgs, options::OPT_fcilkplus);
-  Args.AddLastArg(CmdArgs, options::OPT_foutline_tapir_early);
   Args.AddLastArg(CmdArgs, options::OPT_ftapir_EQ);
-  Args.AddLastArg(CmdArgs, options::OPT_frhino);
   if (Args.hasArg(options::OPT_fcilkplus) ||
-      Args.hasArg(options::OPT_ftapir_EQ) ||
-      Args.hasArg(options::OPT_foutline_tapir_early))
+      Args.hasArg(options::OPT_ftapir_EQ))
     if (getToolChain().getTriple().getOS() != llvm::Triple::Linux &&
         getToolChain().getTriple().getOS() != llvm::Triple::UnknownOS &&
         !getToolChain().getTriple().isMacOSX())

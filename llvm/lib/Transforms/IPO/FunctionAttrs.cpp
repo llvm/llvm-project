@@ -418,11 +418,11 @@ static FunctionAccessKind checkFunctionAccess(Function &F, bool ThisBody,
         if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
           continue;
 
-        SmallVector<Value *, 8> Objects;
+        SmallVector<const Value *, 8> Objects;
         const DataLayout DL = F.getParent()->getDataLayout();
         GetUnderlyingObjects(const_cast<Value *>(Loc.Ptr), Objects, DL,
                              nullptr, 0);
-        for (Value *Obj : Objects) {
+        for (const Value *Obj : Objects) {
           if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Obj))
             if (!GV->isConstant())
               AccessKind = FunctionAccessKind(AccessKind | FAK_NonArgMem);
@@ -459,11 +459,11 @@ static FunctionAccessKind checkFunctionAccess(Function &F, bool ThisBody,
       if (FAK_NonArgMem & AccessKind)
         continue;
 
-      SmallVector<Value *, 8> Objects;
+      SmallVector<const Value *, 8> Objects;
       const DataLayout DL = F.getParent()->getDataLayout();
       GetUnderlyingObjects(const_cast<Value *>(Loc->Ptr), Objects, DL,
                            nullptr, 0);
-      for (Value *Obj : Objects) {
+      for (const Value *Obj : Objects) {
         if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Obj))
           if (!GV->isConstant())
             AccessKind = FunctionAccessKind(AccessKind | FAK_NonArgMem);

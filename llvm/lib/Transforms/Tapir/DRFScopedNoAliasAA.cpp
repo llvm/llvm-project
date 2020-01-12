@@ -160,11 +160,11 @@ bool DRFScopedNoAliasImpl::populateTaskScopeNoAliasInBlock(
     // Objects list.
     bool UsesObjectOutsideTask = false;
     for (const Value *V : PtrArgs) {
-      SmallVector<Value *, 4> Objects;
+      SmallVector<const Value *, 4> Objects;
       const DataLayout &DL = F.getParent()->getDataLayout();
       GetUnderlyingObjects(const_cast<Value*>(V), Objects, DL, LI);
 
-      for (Value *O : Objects) {
+      for (const Value *O : Objects) {
         LLVM_DEBUG(dbgs() << "Checking object " << *O << "\n");
         // Check if this value is a constant that cannot be derived from any
         // pointer value (we need to exclude constant expressions, for example,
@@ -176,7 +176,7 @@ bool DRFScopedNoAliasImpl::populateTaskScopeNoAliasInBlock(
           continue;
 
         // Check if this object was created in this task.
-        if (Instruction *OI = dyn_cast<Instruction>(O))
+        if (const Instruction *OI = dyn_cast<Instruction>(O))
           if (TI.getTaskFor(OI->getParent()) == T)
             continue;
 

@@ -741,6 +741,10 @@ private:
                            AAQueryInfo &AAQI);
   ModRefInfo getModRefInfo(const CatchReturnInst *I, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI);
+  ModRefInfo getModRefInfo(const DetachInst *D, const MemoryLocation &Loc,
+                           AAQueryInfo &AAQI);
+  ModRefInfo getModRefInfo(const SyncInst *S, const MemoryLocation &Loc,
+                           AAQueryInfo &AAQI);
   ModRefInfo getModRefInfo(const Instruction *I,
                            const Optional<MemoryLocation> &OptLoc,
                            AAQueryInfo &AAQIP) {

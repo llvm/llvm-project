@@ -1319,7 +1319,9 @@ static void addRawAttributeValue(AttrBuilder &B, uint64_t Val) {
         I == Attribute::DereferenceableOrNull ||
         I == Attribute::ArgMemOnly ||
         I == Attribute::AllocSize ||
-        I == Attribute::NoSync)
+        I == Attribute::NoSync ||
+        I == Attribute::SanitizeCilk ||
+        I == Attribute::Stealable)
       continue;
     if (uint64_t A = (Val & getRawAttributeMask(I))) {
       if (I == Attribute::Alignment)

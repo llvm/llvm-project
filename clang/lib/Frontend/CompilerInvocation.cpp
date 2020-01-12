@@ -128,9 +128,6 @@ static unsigned getOptimizationLevel(ArgList &Args, InputKind IK,
   if (IK.getLanguage() == InputKind::OpenCL && !Args.hasArg(OPT_cl_opt_disable))
     DefaultOpt = llvm::CodeGenOpt::Default;
 
-  if (Args.hasArg(OPT_frhino))
-    DefaultOpt = 2;
-
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O0))
       return llvm::CodeGenOpt::None;
@@ -751,10 +748,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       Diags.Report(diag::err_drv_invalid_value) << A->getAsString(Args)
                                                 << A->getValue();
   Opts.setTapirTarget(TapirTarget);
-  // Early outlining of Tapir
-  Opts.TapirEarlyOutline = Args.hasArg(OPT_foutline_tapir_early);
-  // Rhino optimizations of Tapir control-flow construct.
-  Opts.TapirRhino = Args.hasArg(OPT_frhino);
 
   if (Arg *A = Args.getLastArg(OPT_debug_info_kind_EQ)) {
     unsigned Val =

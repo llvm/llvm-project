@@ -163,7 +163,7 @@ CilkABI::CilkABI(Module &M) : TapirTarget(M) {
 }
 
 // Accessors for opaque Cilk RTS functions
-Function *CilkABI::Get__cilkrts_get_nworkers() {
+FunctionCallee CilkABI::Get__cilkrts_get_nworkers() {
   if (CilkRTSGetNworkers)
     return CilkRTSGetNworkers;
 
@@ -176,96 +176,94 @@ Function *CilkABI::Get__cilkrts_get_nworkers() {
   AL = AL.addAttribute(C, AttributeList::FunctionIndex,
                        Attribute::NoUnwind);
   FunctionType *FTy = FunctionType::get(Type::getInt32Ty(C), {}, false);
-  CilkRTSGetNworkers = cast<Function>(
-      M.getOrInsertFunction("__cilkrts_get_nworkers", FTy, AL));
+  CilkRTSGetNworkers = M.getOrInsertFunction("__cilkrts_get_nworkers", FTy, AL);
   return CilkRTSGetNworkers;
 }
 
-Function *CilkABI::Get__cilkrts_init() {
+FunctionCallee CilkABI::Get__cilkrts_init() {
   if (CilkRTSInit)
     return CilkRTSInit;
 
   LLVMContext &C = M.getContext();
   Type *VoidTy = Type::getVoidTy(C);
-  CilkRTSInit = cast<Function>(
-      M.getOrInsertFunction("__cilkrts_init", VoidTy));
+  CilkRTSInit = M.getOrInsertFunction("__cilkrts_init", VoidTy);
 
   return CilkRTSInit;
 }
 
-Function *CilkABI::Get__cilkrts_leave_frame() {
+FunctionCallee CilkABI::Get__cilkrts_leave_frame() {
   if (CilkRTSLeaveFrame)
     return CilkRTSLeaveFrame;
 
   LLVMContext &C = M.getContext();
   Type *VoidTy = Type::getVoidTy(C);
   PointerType *StackFramePtrTy = PointerType::getUnqual(StackFrameTy);
-  CilkRTSLeaveFrame = cast<Function>(
-      M.getOrInsertFunction("__cilkrts_leave_frame", VoidTy, StackFramePtrTy));
+  CilkRTSLeaveFrame = M.getOrInsertFunction("__cilkrts_leave_frame", VoidTy,
+                                            StackFramePtrTy);
 
   return CilkRTSLeaveFrame;
 }
 
-Function *CilkABI::Get__cilkrts_rethrow() {
+FunctionCallee CilkABI::Get__cilkrts_rethrow() {
   if (CilkRTSRethrow)
     return CilkRTSRethrow;
 
   LLVMContext &C = M.getContext();
   Type *VoidTy = Type::getVoidTy(C);
   PointerType *StackFramePtrTy = PointerType::getUnqual(StackFrameTy);
-  CilkRTSRethrow = cast<Function>(
-      M.getOrInsertFunction("__cilkrts_rethrow", VoidTy, StackFramePtrTy));
+  CilkRTSRethrow = M.getOrInsertFunction("__cilkrts_rethrow", VoidTy,
+                                         StackFramePtrTy);
 
   return CilkRTSRethrow;
 }
 
-Function *CilkABI::Get__cilkrts_sync() {
+FunctionCallee CilkABI::Get__cilkrts_sync() {
   if (CilkRTSSync)
     return CilkRTSSync;
 
   LLVMContext &C = M.getContext();
   Type *VoidTy = Type::getVoidTy(C);
   PointerType *StackFramePtrTy = PointerType::getUnqual(StackFrameTy);
-  CilkRTSSync = cast<Function>(
-      M.getOrInsertFunction("__cilkrts_sync", VoidTy, StackFramePtrTy));
+  CilkRTSSync = M.getOrInsertFunction("__cilkrts_sync", VoidTy,
+                                      StackFramePtrTy);
 
   return CilkRTSSync;
 }
 
-Function *CilkABI::Get__cilkrts_get_tls_worker() {
+FunctionCallee CilkABI::Get__cilkrts_get_tls_worker() {
   if (CilkRTSGetTLSWorker)
     return CilkRTSGetTLSWorker;
 
   PointerType *WorkerPtrTy = PointerType::getUnqual(WorkerTy);
-  CilkRTSGetTLSWorker = cast<Function>(
-      M.getOrInsertFunction("__cilkrts_get_tls_worker", WorkerPtrTy));
+  CilkRTSGetTLSWorker = M.getOrInsertFunction("__cilkrts_get_tls_worker",
+                                              WorkerPtrTy);
 
   return CilkRTSGetTLSWorker;
 }
 
-Function *CilkABI::Get__cilkrts_get_tls_worker_fast() {
+FunctionCallee CilkABI::Get__cilkrts_get_tls_worker_fast() {
   if (CilkRTSGetTLSWorkerFast)
     return CilkRTSGetTLSWorkerFast;
 
   PointerType *WorkerPtrTy = PointerType::getUnqual(WorkerTy);
-  CilkRTSGetTLSWorkerFast = cast<Function>(
-      M.getOrInsertFunction("__cilkrts_get_tls_worker_fast", WorkerPtrTy));
+  CilkRTSGetTLSWorkerFast = M.getOrInsertFunction(
+      "__cilkrts_get_tls_worker_fast", WorkerPtrTy);
 
   return CilkRTSGetTLSWorkerFast;
 }
 
-Function *CilkABI::Get__cilkrts_bind_thread_1() {
+FunctionCallee CilkABI::Get__cilkrts_bind_thread_1() {
   if (CilkRTSBindThread1)
     return CilkRTSBindThread1;
 
   PointerType *WorkerPtrTy = PointerType::getUnqual(WorkerTy);
-  CilkRTSBindThread1 = cast<Function>(
-      M.getOrInsertFunction("__cilkrts_bind_thread_1", WorkerPtrTy));
+  CilkRTSBindThread1 = M.getOrInsertFunction("__cilkrts_bind_thread_1",
+                                             WorkerPtrTy);
 
   return CilkRTSBindThread1;
 }
 
-Function *RuntimeCilkFor::Get__cilkrts_cilk_for_32() {
+FunctionCallee RuntimeCilkFor::Get__cilkrts_cilk_for_32() {
   if (CilkRTSCilkFor32)
     return CilkRTSCilkFor32;
 
@@ -280,13 +278,12 @@ Function *RuntimeCilkFor::Get__cilkrts_cilk_for_32() {
     FunctionType::get(VoidTy,
                       {PointerType::getUnqual(BodyTy), VoidPtrTy, CountTy,
                        Type::getInt32Ty(C)}, false);
-  CilkRTSCilkFor32 = cast<Function>(
-      M.getOrInsertFunction("__cilkrts_cilk_for_32", FTy));
+  CilkRTSCilkFor32 = M.getOrInsertFunction("__cilkrts_cilk_for_32", FTy);
 
   return CilkRTSCilkFor32;
 }
 
-Function *RuntimeCilkFor::Get__cilkrts_cilk_for_64() {
+FunctionCallee RuntimeCilkFor::Get__cilkrts_cilk_for_64() {
   if (CilkRTSCilkFor64)
     return CilkRTSCilkFor64;
 
@@ -301,8 +298,7 @@ Function *RuntimeCilkFor::Get__cilkrts_cilk_for_64() {
     FunctionType::get(VoidTy,
                       {PointerType::getUnqual(BodyTy), VoidPtrTy, CountTy,
                        Type::getInt32Ty(C)}, false);
-  CilkRTSCilkFor64 = cast<Function>(
-      M.getOrInsertFunction("__cilkrts_cilk_for_64", FTy));
+  CilkRTSCilkFor64 = M.getOrInsertFunction("__cilkrts_cilk_for_64", FTy);
 
   return CilkRTSCilkFor64;
 }
@@ -369,7 +365,7 @@ static bool GetOrCreateFunction(Module &M, const StringRef FnName,
     return true;
 
   // Otherwise we have to create it.
-  Fn = cast<Function>(M.getOrInsertFunction(FnName, FTy));
+  Fn = cast<Function>(M.getOrInsertFunction(FnName, FTy).getCallee());
 
   // Let the caller know that the function is incomplete and the body still
   // needs to be added.
@@ -1846,7 +1842,7 @@ void RuntimeCilkFor::processOutlinedLoopCall(TapirLoopInfo &TL,
   Value *GrainsizeVal = ReplCall->getArgOperand(IVArgIndex + 2);
 
   // Get the correct CilkForABI call.
-  Function *CilkForABI;
+  FunctionCallee CilkForABI;
   if (PrimaryIVTy->isIntegerTy(32))
     CilkForABI = CILKRTS_FUNC(cilk_for_32);
   else if (PrimaryIVTy->isIntegerTy(64))

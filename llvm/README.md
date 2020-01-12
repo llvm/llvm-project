@@ -7,8 +7,7 @@ Tapir compiler IR extensions for fork-join parallelism.
 
 Tapir/LLVM is under active development.  This directory contains
 prototype implementations of compiler technologies that take advantage
-of the Tapir compiler IR.  These prototype technologies include the
-Rhino extensions to Tapir (unpublished).
+of the Tapir compiler IR.
 
 Tapir/LLVM is open source software.  You may freely distribute it
 under the terms of the license agreement found in LICENSE.txt.

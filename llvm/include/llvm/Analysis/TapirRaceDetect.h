@@ -193,7 +193,7 @@ public:
   using PtrChecksTy =
     DenseMap<Loop *, std::unique_ptr<RuntimePointerChecking>>;
   using AccessToUnderlyingObjMap =
-    DenseMap<MemAccessInfo, SmallPtrSet<Value *, 1>>;
+    DenseMap<MemAccessInfo, SmallPtrSet<const Value *, 1>>;
 
   using FilterTy = const SmallPtrSetImpl<const Value *>;
 
@@ -252,8 +252,9 @@ public:
     return RT;
   }
 
-  void getObjectsFor(Instruction *I, SmallPtrSetImpl<Value *> &Objects);
-  void getObjectsFor(MemAccessInfo Access, SmallPtrSetImpl<Value *> &Objects);
+  void getObjectsFor(Instruction *I, SmallPtrSetImpl<const Value *> &Objects);
+  void getObjectsFor(MemAccessInfo Access,
+                     SmallPtrSetImpl<const Value *> &Objects);
 
   void print(raw_ostream &) const;
 

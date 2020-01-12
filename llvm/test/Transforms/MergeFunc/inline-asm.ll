@@ -1,14 +1,16 @@
-; RUN: opt -mergefunc -S < %s | FileCheck %s
+; RUN: opt -mergefunc -S < %s | FileCheck %s --check-prefix=CHECK1
+; RUN: opt -mergefunc -S < %s | FileCheck %s --check-prefix=CHECK2
+; RUN: opt -mergefunc -S < %s | FileCheck %s --check-prefix=CHECK3
 
-; CHECK-LABEL: @int_ptr_arg_different
-; CHECK-NEXT: call void asm
+; CHECK1-LABEL: @int_ptr_arg_different
+; CHECK1-NEXT: call void asm
 
-; CHECK-LABEL: @int_ptr_null
-; CHECK-NEXT: tail call void @float_ptr_null()
+; CHECK2-LABEL: @int_ptr_null
+; CHECK2-NEXT: tail call void @float_ptr_null()
 
-; CHECK-LABEL: @int_ptr_arg_same
-; CHECK-NEXT: %2 = bitcast i32* %0 to float*
-; CHECK-NEXT: tail call void @float_ptr_arg_same(float* %2)
+; CHECK3-LABEL: @int_ptr_arg_same
+; CHECK3-NEXT: %2 = bitcast i32* %0 to float*
+; CHECK3-NEXT: tail call void @float_ptr_arg_same(float* %2)
 
 ; Used to satisfy minimum size limit
 declare void @stuff()

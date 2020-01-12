@@ -52,22 +52,24 @@ class CilkRABI : public TapirTarget {
     };
 
   // Opaque Cilk RTS functions
-  Function *CilkRTSLeaveFrame = nullptr;
-  // Function *CilkRTSRethrow = nullptr;
-  Function *CilkRTSSync = nullptr;
-  Function *CilkRTSGetNworkers = nullptr;
-  Function *CilkRTSGetTLSWorker = nullptr;
+  FunctionCallee CilkRTSLeaveFrame = nullptr;
+  // FunctionCallee CilkRTSRethrow = nullptr;
+  FunctionCallee CilkRTSSync = nullptr;
+  FunctionCallee CilkRTSGetNworkers = nullptr;
+  FunctionCallee CilkRTSGetTLSWorker = nullptr;
 
-  // Accessors for Cilk RTS functions
+  // Accessors for opaque Cilk RTS functions
+  FunctionCallee Get__cilkrts_leave_frame();
+  // FunctionCallee Get__cilkrts_rethrow();
+  FunctionCallee Get__cilkrts_sync();
+  FunctionCallee Get__cilkrts_get_nworkers();
+  FunctionCallee Get__cilkrts_get_tls_worker();
+
+  // Accessors for generated Cilk RTS functions
   Function *Get__cilkrts_enter_frame();
   Function *Get__cilkrts_enter_frame_fast();
-  Function *Get__cilkrts_leave_frame();
-  // Function *Get__cilkrts_rethrow();
-  Function *Get__cilkrts_sync();
   Function *Get__cilkrts_detach();
   Function *Get__cilkrts_pop_frame();
-  Function *Get__cilkrts_get_nworkers();
-  Function *Get__cilkrts_get_tls_worker();
 
   // Helper functions for implementing the Cilk ABI protocol
   Function *GetCilkSyncFn();

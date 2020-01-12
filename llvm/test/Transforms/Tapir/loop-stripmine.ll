@@ -45,7 +45,7 @@ sync.continue:                                    ; preds = %pfor.cond.cleanup
 
 ; CHECK-LABEL: define dso_local void @daxpy(
 ; CHECK: pfor.detach.preheader:
-; CHECK:  %[[STRPLOOPITER:.+]] = add i64 %[[TRIPCOUNT:.+]], -1
+; CHECK:  %[[STRPLOOPITER:.+]] = add nsw i64 %[[TRIPCOUNT:.+]], -1
 ; CHECK:  %[[XTRAITER:.+]] = and i64 %[[TRIPCOUNT]], 2047
 ; CHECK:  %[[ICMP:.+]] = icmp ult i64 %[[STRPLOOPITER]], 2047
 ; CHECK:  br i1 %[[ICMP]], label %[[EPILCHECK:.+]], label %[[STRPLOOPPH:.+]], !dbg !8
@@ -174,7 +174,7 @@ sync.continue:                                    ; preds = %pfor.cond.cleanup
 
 ; CHECK-LABEL: define dso_local void @daxpy2(
 ; CHECK: pfor.detach.preheader:
-; CHECK:  %[[STRPLOOPITER:.+]] = add i64 %[[TRIPCOUNT:.+]], -1
+; CHECK:  %[[STRPLOOPITER:.+]] = add nsw i64 %[[TRIPCOUNT:.+]], -1
 ; CHECK:  %[[XTRAITER:.+]] = and i64 %[[TRIPCOUNT]], 15
 ; CHECK:  %[[ICMP:.+]] = icmp ult i64 %[[STRPLOOPITER]], 15
 ; CHECK:  br i1 %[[ICMP]], label %[[EPILCHECK:.+]], label %[[STRPLOOPPH:.+]], !dbg !26
@@ -347,7 +347,7 @@ declare dso_local i32 @foo(double*, i32) local_unnamed_addr #5
 ; CHECK: alloca [7 x double]
 
 ; CHECK: pfor.detach.preheader:
-; CHECK:  %[[STRPLOOPITER:.+]] = add i64 %[[TRIPCOUNT:.+]], -1
+; CHECK:  %[[STRPLOOPITER:.+]] = add nsw i64 %[[TRIPCOUNT:.+]], -1
 ; CHECK:  %[[XTRAITER:.+]] = and i64 %[[TRIPCOUNT]], 31
 ; CHECK:  %[[ICMP:.+]] = icmp ult i64 %[[STRPLOOPITER]], 31
 ; CHECK:  br i1 %[[ICMP]], label %[[EPILCHECK:.+]], label %[[STRPLOOPPH:.+]], !dbg !53

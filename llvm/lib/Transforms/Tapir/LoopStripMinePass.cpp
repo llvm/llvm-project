@@ -41,6 +41,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loop-stripmine"
 
+cl::opt<bool> llvm::EnableTapirLoopStripmine(
+    "stripmine-loops", cl::init(true), cl::Hidden,
+    cl::desc("Run the Tapir Loop stripmining pass"));
+
 static cl::opt<bool> AllowParallelEpilog(
   "allow-parallel-epilog", cl::Hidden, cl::init(true),
   cl::desc("Allow stripmined Tapir loops to execute their epilogs in parallel."));
@@ -70,8 +74,8 @@ createMissedAnalysis(StringRef RemarkName, const Loop *TheLoop,
       DL = I->getDebugLoc();
   }
 
-  OptimizationRemarkAnalysis R("loop-stripmine", RemarkName, DL, CodeRegion);
-  R << "Tapir loop not transformed: ";
+  OptimizationRemarkAnalysis R(DEBUG_TYPE, RemarkName, DL, CodeRegion);
+  R << "loop not stripmined: ";
   return R;
 }
 
@@ -99,25 +103,6 @@ static int64_t ApproximateLoopCost(
   return LoopCost.Work;
 }
 
-// Returns the loop hint metadata node with the given name (for example,
-// "tapir.loop.stripmine.count").  If no such metadata node exists, then nullptr
-// is returned.
-static MDNode *GetStripMineMetadataForLoop(const Loop *L, StringRef Name) {
-  if (MDNode *LoopID = L->getLoopID())
-    return GetStripMineMetadata(LoopID, Name);
-  return nullptr;
-}
-
-// Returns true if the loop has an stripmine(disable) pragma.
-static bool HasStripMineDisablePragma(const Loop *L) {
-  return GetStripMineMetadataForLoop(L, "tapir.loop.stripmine.disable");
-}
-
-// Returns true if the loop has an stripmine(enable) pragma.
-static bool HasStripMineEnablePragma(const Loop *L) {
-  return GetStripMineMetadataForLoop(L, "tapir.loop.stripmine.enable");
-}
-
 static bool tryToStripMineLoop(
     Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     const TargetTransformInfo &TTI, AssumptionCache &AC, TaskInfo *TI,
@@ -128,7 +113,7 @@ static bool tryToStripMineLoop(
     return false;
   TapirLoopHints Hints(L);
 
-  if (HasStripMineDisablePragma(L))
+  if (TM_Disable == hasLoopStripmineTransformation(L))
     return false;
 
   LLVM_DEBUG(dbgs() << "Loop Strip Mine: F["
@@ -137,10 +122,12 @@ static bool tryToStripMineLoop(
 
   if (!L->isLoopSimplifyForm()) {
     LLVM_DEBUG(
-        dbgs() << "  Not stripmining loop which is not in loop-simplify form.\n");
+        dbgs() << "  Not stripmining loop which is not in loop-simplify "
+                  "form.\n");
     return false;
   }
-  bool StripMiningRequested = HasStripMineEnablePragma(L);
+  bool StripMiningRequested =
+      (hasLoopStripmineTransformation(L) == TM_ForcedByUser);
   TargetTransformInfo::StripMiningPreferences SMP =
     gatherStripMiningPreferences(L, SE, TTI, ProvidedCount);
 
@@ -163,11 +150,8 @@ static bool tryToStripMineLoop(
   // it.
   if (!explicitCount && UnknownSize) {
     LLVM_DEBUG(dbgs() << "  Not stripmining loop with unknown size.\n");
-    if (StripMiningRequested)
-      ORE.emit(DiagnosticInfoOptimizationFailure(
-                   DEBUG_TYPE, "UnknownSize",
-                   L->getStartLoc(), L->getHeader())
-               << "Cannot stripmine loop with unknown size.");
+    ORE.emit(createMissedAnalysis("UnknownSize", L)
+             << "Cannot stripmine loop with unknown size.");
     return false;
   }
 
@@ -179,7 +163,7 @@ static bool tryToStripMineLoop(
     if (Hints.getGrainsize() == 1)
       return false;
     ORE.emit([&]() {
-               return OptimizationRemark("loop-stripmine", "HugeLoop",
+               return OptimizationRemark(DEBUG_TYPE, "HugeLoop",
                                          L->getStartLoc(), L->getHeader())
                  << "using grainsize 1 for huge loop";
              });
@@ -194,7 +178,7 @@ static bool tryToStripMineLoop(
     if (Hints.getGrainsize() == 1)
       return false;
     ORE.emit([&]() {
-               return OptimizationRemark("loop-stripmine", "RecursiveCalls",
+               return OptimizationRemark(DEBUG_TYPE, "RecursiveCalls",
                                          L->getStartLoc(), L->getHeader())
                  << "using grainsize 1 for loop with recursive calls";
              });
@@ -207,11 +191,8 @@ static bool tryToStripMineLoop(
   if (NotDuplicatable) {
     LLVM_DEBUG(dbgs() << "  Not stripmining loop which contains "
                       << "non-duplicatable instructions.\n");
-    if (explicitCount || StripMiningRequested)
-      ORE.emit(DiagnosticInfoOptimizationFailure(
-                   DEBUG_TYPE, "NotDuplicatable",
-                   L->getStartLoc(), L->getHeader())
-               << "Cannot stripmine loop with non-duplicatable instructions.");
+    ORE.emit(createMissedAnalysis("NotDuplicatable", L)
+             << "Cannot stripmine loop with non-duplicatable instructions.");
     return false;
   }
 
@@ -220,11 +201,8 @@ static bool tryToStripMineLoop(
   // control-flow dependency to the convergent operation.
   if (Convergent) {
     LLVM_DEBUG(dbgs() << "  Skipping loop with convergent operations.\n");
-    if (explicitCount || StripMiningRequested)
-      ORE.emit(DiagnosticInfoOptimizationFailure(
-                   DEBUG_TYPE, "Convergent",
-                   L->getStartLoc(), L->getHeader())
-               << "Cannot stripmine loop with convergent instructions.");
+    ORE.emit(createMissedAnalysis("Convergent", L)
+             << "Cannot stripmine loop with convergent instructions.");
     return false;
   }
 
@@ -244,7 +222,7 @@ static bool tryToStripMineLoop(
     if (Hints.getGrainsize() == 1)
       return false;
     ORE.emit([&]() {
-               return OptimizationRemark("loop-stripmine", "LargeLoop",
+               return OptimizationRemark(DEBUG_TYPE, "LargeLoop",
                                          L->getStartLoc(), L->getHeader())
                  << "using grainsize 1 for large loop";
              });
@@ -427,7 +405,8 @@ PreservedAnalyses LoopStripMinePass::run(Function &F,
   // stripminer will simplify all loops, regardless of whether anything end up
   // being stripmined.
   for (auto &L : LI) {
-    Changed |= simplifyLoop(L, &DT, &LI, &SE, &AC, false /* PreserveLCSSA */);
+    Changed |= simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr,
+                            /* PreserveLCSSA */ false);
     Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
   }
 

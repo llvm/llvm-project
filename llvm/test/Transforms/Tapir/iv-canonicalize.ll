@@ -52,12 +52,12 @@ loop.cond:                                        ; preds = %loop, %L12
   br i1 %5, label %L27.loopexit, label %L12, !llvm.loop !84
 
 ; IV: {{^loop.cond}}
-; IV: %indvar.next = add i64 %indvar, 1
+; IV: %indvar.next = add nuw i64 %indvar, 1
 ; IV: br i1 %exitcond, label %L27.loopexit, label %L12
 
 ; IC: {{^loop.cond}}
-; IC: %indvar.next = add i64 %indvar, 1
-; IC: %exitcond = icmp eq i64 %indvar, %0
+; IC: %indvar.next = add nuw i64 %indvar, 1
+; IC: %exitcond = icmp eq i64 %indvar.next, %0
 ; IC: br i1 %exitcond, label %L27.loopexit, label %L12
 
 L27.loopexit:                                     ; preds = %loop.cond

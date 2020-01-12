@@ -541,8 +541,8 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       //
       bool FreeInLoop = false;
       if (isNotUsedOrFreeInLoop(I, CurLoop, SafetyInfo, TTI, FreeInLoop) &&
-          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, MSSAU, true, &Flags,
-                             TI, ORE) &&
+          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, MSSAU, true, TI,
+                             &Flags, ORE) &&
           !I.mayHaveSideEffects()) {
         if (sink(I, LI, DT, CurLoop, SafetyInfo, MSSAU, ORE)) {
           if (!FreeInLoop) {
@@ -850,8 +850,8 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       // and we have accurately duplicated the control flow from the loop header
       // to that block.
       if (CurLoop->hasLoopInvariantOperands(&I) &&
-          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, MSSAU, true, &Flags,
-                             TI, ORE) &&
+          canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, MSSAU, true, TI,
+                             &Flags, ORE) &&
           isSafeToExecuteUnconditionally(
               I, DT, CurLoop, SafetyInfo, TI, ORE,
               CurLoop->getLoopPreheader()->getTerminator())) {
@@ -1080,8 +1080,8 @@ bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
 bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
                               Loop *CurLoop, AliasSetTracker *CurAST,
                               MemorySSAUpdater *MSSAU,
-                              bool TargetExecutesOncePerLoop,
-                              SinkAndHoistLICMFlags *Flags, TaskInfo *TI,
+                              bool TargetExecutesOncePerLoop, TaskInfo *TI,
+                              SinkAndHoistLICMFlags *Flags,
                               OptimizationRemarkEmitter *ORE) {
   // If we don't understand the instruction, bail early.
   if (!isHoistableAndSinkableInst(I))
@@ -2222,10 +2222,8 @@ LoopInvariantCodeMotion::collectAliasInfoForLoopWithMSSA(
 
 /// Simple analysis hook. Clone alias set info.
 ///
-template <bool Rhino>
-void LegacyLICMCommonPass<Rhino>::cloneBasicBlockAnalysis(BasicBlock *From,
-                                                          BasicBlock *To,
-                                                          Loop *L) {
+void LegacyLICMPass::cloneBasicBlockAnalysis(BasicBlock *From, BasicBlock *To,
+                                             Loop *L) {
   auto ASTIt = LICM.getLoopToAliasSetMap().find(L);
   if (ASTIt == LICM.getLoopToAliasSetMap().end())
     return;
@@ -2235,8 +2233,7 @@ void LegacyLICMCommonPass<Rhino>::cloneBasicBlockAnalysis(BasicBlock *From,
 
 /// Simple Analysis hook. Delete value V from alias set
 ///
-template <bool Rhino>
-void LegacyLICMCommonPass<Rhino>::deleteAnalysisValue(Value *V, Loop *L) {
+void LegacyLICMPass::deleteAnalysisValue(Value *V, Loop *L) {
   auto ASTIt = LICM.getLoopToAliasSetMap().find(L);
   if (ASTIt == LICM.getLoopToAliasSetMap().end())
     return;
@@ -2246,8 +2243,7 @@ void LegacyLICMCommonPass<Rhino>::deleteAnalysisValue(Value *V, Loop *L) {
 
 /// Simple Analysis hook. Delete value L from alias set map.
 ///
-template <bool Rhino>
-void LegacyLICMCommonPass<Rhino>::deleteAnalysisLoop(Loop *L) {
+void LegacyLICMPass::deleteAnalysisLoop(Loop *L) {
   if (!LICM.getLoopToAliasSetMap().count(L))
     return;
 

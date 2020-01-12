@@ -657,15 +657,12 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
 
   PMBuilder.OptLevel = CodeGenOpts.OptimizationLevel;
 
-  if (CodeGenOpts.TapirEarlyOutline) PMBuilder.DisableTapirOpts = true;
-  if (CodeGenOpts.TapirRhino) PMBuilder.Rhino = true;
   if (TLII->hasTapirTarget())
     PMBuilder.TapirTarget = TLII->getTapirTarget();
 
   PMBuilder.SizeLevel = CodeGenOpts.OptimizeSize;
   PMBuilder.SLPVectorize = CodeGenOpts.VectorizeSLP;
   PMBuilder.LoopVectorize = CodeGenOpts.VectorizeLoop;
-
   PMBuilder.LoopStripmine = CodeGenOpts.StripmineLoop;
 
   PMBuilder.DisableUnrollLoops = !CodeGenOpts.UnrollLoops;
@@ -1199,6 +1196,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
   PTO.LoopInterleaving = CodeGenOpts.UnrollLoops;
   PTO.LoopVectorization = CodeGenOpts.VectorizeLoop;
   PTO.SLPVectorization = CodeGenOpts.VectorizeSLP;
+  PTO.LoopStripmine = CodeGenOpts.StripmineLoop;
 
   PassBuilder PB(TM.get(), PTO, PGOOpt);
 
@@ -1425,6 +1423,7 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       } else {
         MPM = PB.buildPerModuleDefaultPipeline(Level,
                                                CodeGenOpts.DebugPassManager,
+                                               /* LTOPreLink */ false,
                                                TLII->hasTapirTarget());
       }
     }

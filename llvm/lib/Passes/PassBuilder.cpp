@@ -217,10 +217,6 @@ static cl::opt<bool> EnableSyntheticCounts(
     cl::desc("Run synthetic function entry count generation "
              "pass"));
 
-static cl::opt<bool> EnableTapirLoopStripmine(
-    "enable-npm-tapir-loop-stripmine", cl::init(true), cl::Hidden,
-    cl::desc("Enable the Tapir loop-stripmining pass (default = on)"));
-
 static cl::opt<bool> EnableDRFAA(
     "enable-npm-drf-aa", cl::init(false), cl::Hidden,
     cl::desc("Enable AA based on the data-race-free assumption (default = off)"));
@@ -238,6 +234,7 @@ PipelineTuningOptions::PipelineTuningOptions() {
   LoopInterleaving = EnableLoopInterleaving;
   LoopVectorization = EnableLoopVectorization;
   SLPVectorization = RunSLPVectorization;
+  LoopStripmine = EnableTapirLoopStripmine;
   LoopUnrolling = true;
   ForgetAllSCEVInLoopUnroll = ForgetSCEVInLoopUnroll;
   LicmMssaOptCap = SetLicmMssaOptCap;
@@ -884,7 +881,7 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // function passes.
 
   // Stripmine Tapir loops, if pass is enabled.
-  if (EnableTapirLoopStripmine) {
+  if (PTO.LoopStripmine && Level != O1 && !isOptimizingForSize(Level)) {
     OptimizePM.addPass(LoopStripMinePass());
     // Cleanup tasks after stripmining loops.
     OptimizePM.addPass(TaskSimplifyPass());
@@ -894,7 +891,7 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
     LPM.addPass(IndVarSimplifyPass());
     OptimizePM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM),
                                                        DebugLogging));
-    OptimizePM.addPass(EarlyCSEPass(EnableEarlyCSEMemSSA));
+    OptimizePM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
     OptimizePM.addPass(JumpThreadingPass());
     OptimizePM.addPass(CorrelatedValuePropagationPass());
     OptimizePM.addPass(InstCombinePass());
@@ -1080,7 +1077,6 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   assert(Level != O0 && "Must request optimizations for the default pipeline!");
 
   ModulePassManager MPM(DebugLogging);
-  bool RerunAfterTapirLowering = false;
   bool TapirHasBeenLowered = !LowerTapir;
 
   if (EnableDRFAA)
@@ -1096,21 +1092,17 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   if (PGOOpt && PGOOpt->SamplePGOSupport)
     MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
 
-  do {
-    RerunAfterTapirLowering = !TapirHasBeenLowered && LowerTapir;
+  // Add the core simplification pipeline.
+  MPM.addPass(buildModuleSimplificationPipeline(Level, ThinLTOPhase::None,
+                                                DebugLogging));
 
   // Now add the optimization pipeline.
   MPM.addPass(buildModuleOptimizationPipeline(Level, DebugLogging, LTOPreLink));
 
-    if (!TapirHasBeenLowered) {
-      MPM.addPass(buildTapirLoweringPipeline(Level, ThinLTOPhase::None,
-                                             DebugLogging));
-
-      TapirHasBeenLowered = true;
-      // HACK to disable rerunning after Tapir lowering.
-      RerunAfterTapirLowering = false;
-    }
-  } while (RerunAfterTapirLowering);
+  // Lower Tapir if necessary
+  if (!TapirHasBeenLowered)
+    MPM.addPass(buildTapirLoweringPipeline(Level, ThinLTOPhase::None,
+                                           DebugLogging));
 
   return MPM;
 }
@@ -1158,7 +1150,6 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     OptimizationLevel Level, bool DebugLogging,
     const ModuleSummaryIndex *ImportSummary, bool LowerTapir) {
   ModulePassManager MPM(DebugLogging);
-  bool RerunAfterTapirLowering = false;
   bool TapirHasBeenLowered = !LowerTapir;
 
   if (ImportSummary) {
@@ -1187,23 +1178,17 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
 
-  do {
-    RerunAfterTapirLowering = !TapirHasBeenLowered && LowerTapir;
-
   // Add the core simplification pipeline.
   MPM.addPass(buildModuleSimplificationPipeline(Level, ThinLTOPhase::PostLink,
                                                 DebugLogging));
 
-    // Now add the optimization pipeline.
-    MPM.addPass(buildModuleOptimizationPipeline(Level, DebugLogging));
+  // Now add the optimization pipeline.
+  MPM.addPass(buildModuleOptimizationPipeline(Level, DebugLogging));
 
-    if (!TapirHasBeenLowered) {
-      MPM.addPass(buildTapirLoweringPipeline(Level, ThinLTOPhase::PostLink,
-                                             DebugLogging));
-
-      TapirHasBeenLowered = true;
-    }
-  } while (RerunAfterTapirLowering);
+  // Lower Tapir if necessary
+  if (!TapirHasBeenLowered)
+    MPM.addPass(buildTapirLoweringPipeline(Level, ThinLTOPhase::PostLink,
+                                           DebugLogging));
 
   return MPM;
 }
@@ -1222,7 +1207,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
                                      ModuleSummaryIndex *ExportSummary,
                                      bool LowerTapir) {
   ModulePassManager MPM(DebugLogging);
-  bool RerunAfterTapirLowering = false;
   bool TapirHasBeenLowered = !LowerTapir;
 
   if (Level == O0) {
@@ -1274,9 +1258,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
     // they may target at run-time. This should follow IPSCCP.
     MPM.addPass(CalledValuePropagationPass());
   }
-
-  do {
-    RerunAfterTapirLowering = !TapirHasBeenLowered && LowerTapir;
 
   // Now deduce any function attributes based in the current code.
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
@@ -1442,13 +1423,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
   // Now that we have optimized the program, discard unreachable functions.
   MPM.addPass(GlobalDCEPass());
 
-    if (!TapirHasBeenLowered) {
-      MPM.addPass(buildTapirLoweringPipeline(Level, ThinLTOPhase::None,
-                                             DebugLogging));
-
-      TapirHasBeenLowered = true;
-    }
-  } while (RerunAfterTapirLowering);
+  // Lower Tapir if necessary
+  if (!TapirHasBeenLowered)
+    MPM.addPass(buildTapirLoweringPipeline(Level, ThinLTOPhase::None,
+                                           DebugLogging));
 
   // FIXME: Maybe enable MergeFuncs conditionally after it's ported.
   return MPM;

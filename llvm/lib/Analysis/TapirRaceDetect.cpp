@@ -590,12 +590,12 @@ void AccessPtrAnalysis::addAccess(Instruction *I) {
       MemAccessInfo Access(Acc.getPtr(), Acc.isMod());
       // DepCands.insert(Access);
 
-      SmallVector<Value *, 1> Objects;
+      SmallVector<const Value *, 1> Objects;
       LLVM_DEBUG(dbgs() << "Getting underlying objects for " << *Acc.getPtr()
                  << "\n");
       GetUnderlyingObjects(const_cast<Value *>(Acc.getPtr()), Objects, DL, &LI,
                            0);
-      for (Value *Obj : Objects) {
+      for (const Value *Obj : Objects) {
         LLVM_DEBUG(dbgs() << "  Considering object: " << *Obj << "\n");
         // nullptr never alias, don't join sets for pointer that have "null" in
         // their UnderlyingObjects list.
@@ -735,10 +735,10 @@ bool AccessPtrAnalysis::checkDependence(std::unique_ptr<Dependence> D,
   // TODO: Use lifetime_begin intrinsics to further refine checks.
   const Loop *CommonObjLoop = CommonLoop;
   unsigned MinObjDepth = CommonLoop->getLoopDepth();
-  SmallPtrSet<Value *, 1> BaseObjs;
+  SmallPtrSet<const Value *, 1> BaseObjs;
   MemAccessInfo MA1(GA1.getPtr(), GA1.isMod());
   MemAccessInfo MA2(GA2.getPtr(), GA2.isMod());
-  for (Value *Obj : AccessToObjs[MA1]) {
+  for (const Value *Obj : AccessToObjs[MA1]) {
     if (AccessToObjs[MA2].count(Obj))
       BaseObjs.insert(Obj);
     else {
@@ -746,7 +746,7 @@ bool AccessPtrAnalysis::checkDependence(std::unique_ptr<Dependence> D,
       break;
     }
   }
-  for (Value *Obj : AccessToObjs[MA2]) {
+  for (const Value *Obj : AccessToObjs[MA2]) {
     if (AccessToObjs[MA1].count(Obj))
       BaseObjs.insert(Obj);
     else {
@@ -759,7 +759,7 @@ bool AccessPtrAnalysis::checkDependence(std::unique_ptr<Dependence> D,
     MinObjDepth = 0;
 
   if (MinObjDepth != 0) {
-    for (Value *Obj : BaseObjs) {
+    for (const Value *Obj : BaseObjs) {
       // If there are no more levels of common loop to check, return.
       if (!CommonObjLoop)
         break;
@@ -779,7 +779,7 @@ bool AccessPtrAnalysis::checkDependence(std::unique_ptr<Dependence> D,
 
       // This optimization of bounding the loop nest to check only applies if
       // the underlying objects perform an allocation.
-      Instruction *ObjI = dyn_cast<Instruction>(Obj);
+      const Instruction *ObjI = dyn_cast<Instruction>(Obj);
       if (!isa<AllocaInst>(ObjI) && !isa<CallBase>(ObjI)) {
         CommonObjLoop = nullptr;
         break;
@@ -787,7 +787,7 @@ bool AccessPtrAnalysis::checkDependence(std::unique_ptr<Dependence> D,
       if (isa<AllocaInst>(ObjI))
         // Update the common loop for the underlying objects.
         CommonObjLoop = getCommonLoop(CommonObjLoop, ObjI->getParent(), LI);
-      else if (CallBase *CB = dyn_cast<CallBase>(ObjI)) {
+      else if (const CallBase *CB = dyn_cast<CallBase>(ObjI)) {
         if (!CB->returnDoesNotAlias()) {
           CommonObjLoop = nullptr;
           break;
@@ -1158,7 +1158,7 @@ void AccessPtrAnalysis::recordLocalRace(const GeneralAccess &GA,
   if (!GA.getPtr())
     return;
 
-  for (Value *Obj : AccessToObjs[MemAccessInfo(GA.getPtr(), GA.isMod())]) {
+  for (const Value *Obj : AccessToObjs[MemAccessInfo(GA.getPtr(), GA.isMod())]) {
     if (GA.isMod())
       setObjectMRForRace(ObjectMRForRace, Obj, ModRefInfo::Ref);
     setObjectMRForRace(ObjectMRForRace, Obj, ModRefInfo::Mod);
@@ -1271,12 +1271,12 @@ void AccessPtrAnalysis::checkForRacesHelper(
       if (GA.getPtr()) {
         LLVM_DEBUG({
             dbgs() << "GA Underlying objects:\n";
-            for (Value *Obj : AccessToObjs[MemAccessInfo(GA.getPtr(),
-                                                         GA.isMod())])
+            for (const Value *Obj : AccessToObjs[MemAccessInfo(GA.getPtr(),
+                                                               GA.isMod())])
               dbgs() << "    " << *Obj << "\n";
           });
-        for (Value *Obj : AccessToObjs[MemAccessInfo(GA.getPtr(),
-                                                     GA.isMod())]) {
+        for (const Value *Obj : AccessToObjs[MemAccessInfo(GA.getPtr(),
+                                                           GA.isMod())]) {
           if (isa<AllocaInst>(Obj))
             // Races on alloca'd objects are checked locally.
             continue;
@@ -1417,7 +1417,7 @@ public:
   using MemAccessInfo = PointerIntPair<Value *, 1, bool>;
   using MemAccessInfoList = SmallVector<MemAccessInfo, 8>;
   using DepCandidates = EquivalenceClasses<MemAccessInfo>;
-  using UnderlyingObjToAccessMap = DenseMap<Value *, MemAccessInfo>;
+  using UnderlyingObjToAccessMap = DenseMap<const Value *, MemAccessInfo>;
 
   RTPtrCheckAnalysis(Loop *L, RuntimePointerChecking &RtCheck,
                      AliasAnalysis *AA, ScalarEvolution &SE)
@@ -1638,7 +1638,7 @@ void RTPtrCheckAnalysis::processAccesses(
           if (IsWrite)
             SetHasWrite = true;
 
-          for (Value *Obj : AccessToObjs[
+          for (const Value *Obj : AccessToObjs[
                    AccessPtrAnalysis::MemAccessInfo(Ptr, IsWrite)]) {
             UnderlyingObjToAccessMap::iterator Prev =
               ObjToLastAccess.find(Obj);
@@ -2008,7 +2008,7 @@ RaceInfo::RaceInfo(Function *F, DominatorTree &DT, LoopInfo &LI, TaskInfo &TI,
 }
 
 void RaceInfo::getObjectsFor(Instruction *I,
-                             SmallPtrSetImpl<Value *> &Objects) {
+                             SmallPtrSetImpl<const Value *> &Objects) {
   SmallVector<GeneralAccess, 1> GA;
   GetGeneralAccesses(I, GA, DI.getAA(), TLI);
   for (GeneralAccess Acc : GA) {
@@ -2021,8 +2021,8 @@ void RaceInfo::getObjectsFor(Instruction *I,
 }
 
 void RaceInfo::getObjectsFor(MemAccessInfo Access,
-                             SmallPtrSetImpl<Value *> &Objects) {
-  for (Value *Obj : AccessToObjs[Access])
+                             SmallPtrSetImpl<const Value *> &Objects) {
+  for (const Value *Obj : AccessToObjs[Access])
     Objects.insert(Obj);
 }
 

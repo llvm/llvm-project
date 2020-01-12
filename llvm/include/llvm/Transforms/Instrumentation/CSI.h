@@ -1072,8 +1072,8 @@ protected:
 
   /// Insert calls to the instrumentation hooks.
   /// @{
-  void addLoadStoreInstrumentation(Instruction *I, Function *BeforeFn,
-                                   Function *AfterFn, Value *CsiId,
+  void addLoadStoreInstrumentation(Instruction *I, FunctionCallee BeforeFn,
+                                   FunctionCallee AfterFn, Value *CsiId,
                                    Type *AddrType, Value *Addr, int NumBytes,
                                    CsiLoadStoreProperty &Prop);
   void instrumentLoadOrStore(Instruction *I, CsiLoadStoreProperty &Prop,
@@ -1108,17 +1108,17 @@ protected:
   Function *getInterpositionFunction(Function *F);
 
   /// Insert a call to the given hook function before the given instruction.
-  CallInst* insertHookCall(Instruction *I, Function *HookFunction,
-                      ArrayRef<Value *> HookArgs);
-  bool updateArgPHIs(BasicBlock *Succ, BasicBlock *BB, Function *HookFunction,
-                     ArrayRef<Value *> HookArgs,
+  CallInst* insertHookCall(Instruction *I, FunctionCallee HookFunction,
+                           ArrayRef<Value *> HookArgs);
+  bool updateArgPHIs(BasicBlock *Succ, BasicBlock *BB,
+                     FunctionCallee HookFunction, ArrayRef<Value *> HookArgs,
                      ArrayRef<Value *> DefaultHookArgs);
   CallInst *insertHookCallInSuccessorBB(BasicBlock *Succ, BasicBlock *BB,
-                                   Function *HookFunction,
+                                   FunctionCallee HookFunction,
                                    ArrayRef<Value *> HookArgs,
                                    ArrayRef<Value *> DefaultHookArgs);
   void insertHookCallAtSharedEHSpindleExits(Spindle *SharedEHSpindle, Task *T,
-                                            Function *HookFunction,
+                                            FunctionCallee HookFunction,
                                             FrontEndDataTable &FED,
                                             ArrayRef<Value *> HookArgs,
                                             ArrayRef<Value *> DefaultArgs);
@@ -1392,26 +1392,26 @@ protected:
   SmallVector<Constant *, 1> UnitSizeTables;
 
   // Instrumentation hooks
-  Function *CsiFuncEntry = nullptr, *CsiFuncExit = nullptr;
-  Function *CsiBBEntry = nullptr, *CsiBBExit = nullptr;
-  Function *CsiBeforeCallsite = nullptr, *CsiAfterCallsite = nullptr;
-  Function *CsiBeforeLoop = nullptr, *CsiAfterLoop = nullptr;
-  Function *CsiLoopBodyEntry = nullptr, *CsiLoopBodyExit = nullptr;
-  Function *CsiBeforeRead = nullptr, *CsiAfterRead = nullptr;
-  Function *CsiBeforeWrite = nullptr, *CsiAfterWrite = nullptr;
-  Function *CsiBeforeAlloca = nullptr, *CsiAfterAlloca = nullptr;
-  Function *CsiDetach = nullptr, *CsiDetachContinue = nullptr;
-  Function *CsiTaskEntry = nullptr, *CsiTaskExit = nullptr;
-  Function *CsiBeforeSync = nullptr, *CsiAfterSync = nullptr;
-  Function *CsiBeforeAllocFn = nullptr, *CsiAfterAllocFn = nullptr;
-  Function *CsiBeforeFree = nullptr, *CsiAfterFree = nullptr;
+  FunctionCallee CsiFuncEntry = nullptr, CsiFuncExit = nullptr;
+  FunctionCallee CsiBBEntry = nullptr, CsiBBExit = nullptr;
+  FunctionCallee CsiBeforeCallsite = nullptr, CsiAfterCallsite = nullptr;
+  FunctionCallee CsiBeforeLoop = nullptr, CsiAfterLoop = nullptr;
+  FunctionCallee CsiLoopBodyEntry = nullptr, CsiLoopBodyExit = nullptr;
+  FunctionCallee CsiBeforeRead = nullptr, CsiAfterRead = nullptr;
+  FunctionCallee CsiBeforeWrite = nullptr, CsiAfterWrite = nullptr;
+  FunctionCallee CsiBeforeAlloca = nullptr, CsiAfterAlloca = nullptr;
+  FunctionCallee CsiDetach = nullptr, CsiDetachContinue = nullptr;
+  FunctionCallee CsiTaskEntry = nullptr, CsiTaskExit = nullptr;
+  FunctionCallee CsiBeforeSync = nullptr, CsiAfterSync = nullptr;
+  FunctionCallee CsiBeforeAllocFn = nullptr, CsiAfterAllocFn = nullptr;
+  FunctionCallee CsiBeforeFree = nullptr, CsiAfterFree = nullptr;
 
-  Function *MemmoveFn = nullptr, *MemcpyFn = nullptr, *MemsetFn = nullptr;
+  FunctionCallee MemmoveFn = nullptr, MemcpyFn = nullptr, MemsetFn = nullptr;
   Function *InitCallsiteToFunction = nullptr;
   // GlobalVariable *DisableInstrGV;
 
   // Runtime unit initialization
-  Function *RTUnitInit = nullptr;
+  FunctionCallee RTUnitInit = nullptr;
 
   Type *IntptrTy;
   DenseMap<StringRef, uint64_t> FuncOffsetMap;

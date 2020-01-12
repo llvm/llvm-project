@@ -2801,11 +2801,8 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   assert(ExitBlock && "Must have an exit block");
 
   BasicBlock *SyncSplit = nullptr;
-  if (isa<SyncInst>(VectorPH->getTerminator())) {
-    SyncSplit = VectorPH->splitBasicBlockWithTerminator("vector.sync_split");
-    DT->splitBlock(SyncSplit);
-    VectorPH = SyncSplit;
-  }
+  if (isa<SyncInst>(VectorPH->getTerminator()))
+    VectorPH = SplitEdge(VectorPH, OldBasicBlock, DT, LI);
 
   // Some loops have a single integer induction variable, while other loops
   // don't. One example is c++ iterators that often have multiple pointer

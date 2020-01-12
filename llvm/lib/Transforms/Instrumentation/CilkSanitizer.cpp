@@ -233,8 +233,8 @@ struct CilkSanitizerImpl : public CSIImpl {
                                bool CheckArgs = true);
     Value *getNoAliasSuppressionValue(Instruction *I, IRBuilder<> &IRB,
                                       unsigned OperandNum, MemoryLocation Loc,
-                                      const RaceInfo::RaceData &RD, Value *Obj,
-                                      Value *SupprVal);
+                                      const RaceInfo::RaceData &RD,
+                                      const Value *Obj, Value *SupprVal);
     Value *getSuppressionCheck(Instruction *I, IRBuilder<> &IRB,
                                unsigned OperandNum = static_cast<unsigned>(-1));
     Value *readSuppressionVal(Value *V, IRBuilder<> &IRB);
@@ -360,31 +360,31 @@ private:
   function_ref<RaceInfo &(Function &)> GetRaceInfo;
 
   // Instrumentation hooks
-  Function *CsanFuncEntry = nullptr;
-  Function *CsanFuncExit = nullptr;
-  Function *CsanRead = nullptr;
-  Function *CsanWrite = nullptr;
-  Function *CsanLargeRead = nullptr;
-  Function *CsanLargeWrite = nullptr;
-  Function *CsanBeforeCallsite = nullptr;
-  Function *CsanAfterCallsite = nullptr;
-  Function *CsanDetach = nullptr;
-  Function *CsanDetachContinue = nullptr;
-  Function *CsanTaskEntry = nullptr;
-  Function *CsanTaskExit = nullptr;
-  Function *CsanSync = nullptr;
-  Function *CsanBeforeLoop = nullptr;
-  Function *CsanAfterLoop = nullptr;
-  Function *CsanAfterAllocFn = nullptr;
-  Function *CsanAfterFree = nullptr;
+  FunctionCallee CsanFuncEntry = nullptr;
+  FunctionCallee CsanFuncExit = nullptr;
+  FunctionCallee CsanRead = nullptr;
+  FunctionCallee CsanWrite = nullptr;
+  FunctionCallee CsanLargeRead = nullptr;
+  FunctionCallee CsanLargeWrite = nullptr;
+  FunctionCallee CsanBeforeCallsite = nullptr;
+  FunctionCallee CsanAfterCallsite = nullptr;
+  FunctionCallee CsanDetach = nullptr;
+  FunctionCallee CsanDetachContinue = nullptr;
+  FunctionCallee CsanTaskEntry = nullptr;
+  FunctionCallee CsanTaskExit = nullptr;
+  FunctionCallee CsanSync = nullptr;
+  FunctionCallee CsanBeforeLoop = nullptr;
+  FunctionCallee CsanAfterLoop = nullptr;
+  FunctionCallee CsanAfterAllocFn = nullptr;
+  FunctionCallee CsanAfterFree = nullptr;
 
   // Hooks for suppressing instrumentation, e.g., around callsites that cannot
   // expose a race.
-  Function *CsanDisableChecking = nullptr;
-  Function *CsanEnableChecking = nullptr;
+  FunctionCallee CsanDisableChecking = nullptr;
+  FunctionCallee CsanEnableChecking = nullptr;
 
-  Function *GetSuppressionFlag = nullptr;
-  Function *SetSuppressionFlag = nullptr;
+  FunctionCallee GetSuppressionFlag = nullptr;
+  FunctionCallee SetSuppressionFlag = nullptr;
 
   // CilkSanitizer custom forensic tables
   ObjectTable LoadObj, StoreObj, AllocaObj, AllocFnObj;
@@ -423,7 +423,7 @@ struct CilkSanitizerLegacyPass : public ModulePass {
   bool JitMode = false;
   bool CallsMayThrow = true;
 };
-} // namespace
+} // end anonymous namespace
 
 char CilkSanitizerLegacyPass::ID = 0;
 
@@ -716,147 +716,219 @@ void CilkSanitizerImpl::initializeCsanHooks() {
   Type *LargeNumBytesType = IntptrTy;
   Type *IDType = IRB.getInt64Ty();
 
-  CsanFuncEntry = M.getOrInsertFunction("__csan_func_entry", RetType,
-                                        /* func_id */ IDType,
-                                        /* frame_ptr */ AddrType,
-                                        /* stack_ptr */ AddrType,
-                                        FuncPropertyTy);
-  CsanFuncEntry->addParamAttr(1, Attribute::NoCapture);
-  CsanFuncEntry->addParamAttr(1, Attribute::ReadNone);
-  CsanFuncEntry->addParamAttr(2, Attribute::NoCapture);
-  CsanFuncEntry->addParamAttr(2, Attribute::ReadNone);
-  CsanFuncEntry->addFnAttr(Attribute::InaccessibleMemOnly);
-  CsanFuncExit = M.getOrInsertFunction("__csan_func_exit", RetType,
-                                       /* func_exit_id */ IDType,
-                                       /* func_id */ IDType,
-                                       FuncExitPropertyTy);
-  CsanFuncExit->addFnAttr(Attribute::InaccessibleMemOnly);
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    FnAttrs = FnAttrs.addParamAttribute(C, 1, Attribute::NoCapture);
+    FnAttrs = FnAttrs.addParamAttribute(C, 1, Attribute::ReadNone);
+    FnAttrs = FnAttrs.addParamAttribute(C, 2, Attribute::NoCapture);
+    FnAttrs = FnAttrs.addParamAttribute(C, 2, Attribute::ReadNone);
+    CsanFuncEntry = M.getOrInsertFunction("__csan_func_entry", FnAttrs, RetType,
+                                          /* func_id */ IDType,
+                                          /* frame_ptr */ AddrType,
+                                          /* stack_ptr */ AddrType,
+                                          FuncPropertyTy);
+  }
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    CsanFuncExit = M.getOrInsertFunction("__csan_func_exit", FnAttrs, RetType,
+                                         /* func_exit_id */ IDType,
+                                         /* func_id */ IDType,
+                                         FuncExitPropertyTy);
+  }
 
-  CsanRead = M.getOrInsertFunction("__csan_load", RetType, IDType,
-                                   AddrType, NumBytesType, LoadPropertyTy);
-  CsanRead->addParamAttr(1, Attribute::NoCapture);
-  CsanRead->addParamAttr(1, Attribute::ReadNone);
-  CsanRead->addFnAttr(Attribute::InaccessibleMemOnly);
-  CsanWrite = M.getOrInsertFunction("__csan_store", RetType, IDType,
-                                    AddrType, NumBytesType, StorePropertyTy);
-  CsanWrite->addParamAttr(1, Attribute::NoCapture);
-  CsanWrite->addParamAttr(1, Attribute::ReadNone);
-  CsanWrite->addFnAttr(Attribute::InaccessibleMemOnly);
-  CsanLargeRead = M.getOrInsertFunction("__csan_large_load", RetType, IDType,
-                                        AddrType, LargeNumBytesType,
-                                        LoadPropertyTy);
-  CsanLargeRead->addParamAttr(1, Attribute::NoCapture);
-  CsanLargeRead->addParamAttr(1, Attribute::ReadNone);
-  CsanLargeRead->addFnAttr(Attribute::InaccessibleMemOnly);
-  CsanLargeWrite = M.getOrInsertFunction("__csan_large_store", RetType, IDType,
-                                         AddrType, LargeNumBytesType,
-                                         StorePropertyTy);
-  CsanLargeWrite->addParamAttr(1, Attribute::NoCapture);
-  CsanLargeWrite->addParamAttr(1, Attribute::ReadNone);
-  CsanLargeWrite->addFnAttr(Attribute::InaccessibleMemOnly);
-  // CsanWrite = M.getOrInsertFunction("__csan_atomic_exchange", RetType,
-  //                                   IDType, AddrType, NumBytesType,
-  //                                   StorePropertyTy);
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    FnAttrs = FnAttrs.addParamAttribute(C, 1, Attribute::NoCapture);
+    FnAttrs = FnAttrs.addParamAttribute(C, 1, Attribute::ReadNone);
+    CsanRead = M.getOrInsertFunction("__csan_load", FnAttrs, RetType, IDType,
+                                     AddrType, NumBytesType, LoadPropertyTy);
+  }
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    FnAttrs = FnAttrs.addParamAttribute(C, 1, Attribute::NoCapture);
+    FnAttrs = FnAttrs.addParamAttribute(C, 1, Attribute::ReadNone);
+    CsanWrite = M.getOrInsertFunction("__csan_store", FnAttrs, RetType, IDType,
+                                      AddrType, NumBytesType, StorePropertyTy);
+  }
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    FnAttrs = FnAttrs.addParamAttribute(C, 1, Attribute::NoCapture);
+    FnAttrs = FnAttrs.addParamAttribute(C, 1, Attribute::ReadNone);
+    CsanLargeRead = M.getOrInsertFunction("__csan_large_load", FnAttrs, RetType,
+                                          IDType, AddrType, LargeNumBytesType,
+                                          LoadPropertyTy);
+  }
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    FnAttrs = FnAttrs.addParamAttribute(C, 1, Attribute::NoCapture);
+    FnAttrs = FnAttrs.addParamAttribute(C, 1, Attribute::ReadNone);
+    CsanLargeWrite = M.getOrInsertFunction("__csan_large_store", FnAttrs,
+                                           RetType, IDType, AddrType,
+                                           LargeNumBytesType, StorePropertyTy);
+  }
 
-  CsanBeforeCallsite = M.getOrInsertFunction("__csan_before_call",
-                                             IRB.getVoidTy(), IDType,
-                                             /*callee func_id*/ IDType,
-                                             IRB.getInt8Ty(), CallPropertyTy);
-  CsanBeforeCallsite->addFnAttr(Attribute::InaccessibleMemOnly);
-  CsanAfterCallsite = M.getOrInsertFunction("__csan_after_call",
-                                            IRB.getVoidTy(), IDType, IDType,
-                                            IRB.getInt8Ty(), CallPropertyTy);
-  CsanAfterCallsite->addFnAttr(Attribute::InaccessibleMemOnly);
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    CsanBeforeCallsite = M.getOrInsertFunction("__csan_before_call", FnAttrs,
+                                               IRB.getVoidTy(), IDType,
+                                               /*callee func_id*/ IDType,
+                                               IRB.getInt8Ty(), CallPropertyTy);
+  }
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    CsanAfterCallsite = M.getOrInsertFunction("__csan_after_call", FnAttrs,
+                                              IRB.getVoidTy(), IDType, IDType,
+                                              IRB.getInt8Ty(), CallPropertyTy);
+  }
 
-  CsanDetach = M.getOrInsertFunction("__csan_detach", RetType,
-                                     /* detach_id */ IDType,
-                                     /* sync_reg */ IRB.getInt8Ty());
-  CsanDetach->addFnAttr(Attribute::InaccessibleMemOnly);
-  CsanTaskEntry = M.getOrInsertFunction("__csan_task", RetType,
-                                        /* task_id */ IDType,
-                                        /* detach_id */ IDType,
-                                        /* frame_ptr */ AddrType,
-                                        /* stack_ptr */ AddrType,
-                                        TaskPropertyTy);
-  CsanTaskEntry->addParamAttr(2, Attribute::NoCapture);
-  CsanTaskEntry->addParamAttr(2, Attribute::ReadNone);
-  CsanTaskEntry->addParamAttr(3, Attribute::NoCapture);
-  CsanTaskEntry->addParamAttr(3, Attribute::ReadNone);
-  CsanTaskEntry->addFnAttr(Attribute::InaccessibleMemOnly);
-
-  CsanTaskExit = M.getOrInsertFunction("__csan_task_exit", RetType,
-                                       /* task_exit_id */ IDType,
-                                       /* task_id */ IDType,
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    CsanDetach = M.getOrInsertFunction("__csan_detach", FnAttrs, RetType,
                                        /* detach_id */ IDType,
-                                       /* sync_reg */ IRB.getInt8Ty(),
-                                       TaskExitPropertyTy);
-  CsanTaskExit->addFnAttr(Attribute::InaccessibleMemOnly);
-  CsanDetachContinue = M.getOrInsertFunction("__csan_detach_continue", RetType,
-                                             /* detach_continue_id */ IDType,
-                                             /* detach_id */ IDType);
-  CsanDetachContinue->addFnAttr(Attribute::InaccessibleMemOnly);
-  CsanSync = M.getOrInsertFunction("__csan_sync", RetType, IDType,
-                                   /* sync_reg */ IRB.getInt8Ty());
-  CsanSync->addFnAttr(Attribute::InaccessibleMemOnly);
+                                       /* sync_reg */ IRB.getInt8Ty());
+  }
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    FnAttrs = FnAttrs.addParamAttribute(C, 2, Attribute::NoCapture);
+    FnAttrs = FnAttrs.addParamAttribute(C, 2, Attribute::ReadNone);
+    FnAttrs = FnAttrs.addParamAttribute(C, 3, Attribute::NoCapture);
+    FnAttrs = FnAttrs.addParamAttribute(C, 3, Attribute::ReadNone);
+    CsanTaskEntry = M.getOrInsertFunction("__csan_task", FnAttrs, RetType,
+                                          /* task_id */ IDType,
+                                          /* detach_id */ IDType,
+                                          /* frame_ptr */ AddrType,
+                                          /* stack_ptr */ AddrType,
+                                          TaskPropertyTy);
+  }
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                         Attribute::InaccessibleMemOnly);
+    CsanTaskExit = M.getOrInsertFunction("__csan_task_exit", FnAttrs, RetType,
+                                         /* task_exit_id */ IDType,
+                                         /* task_id */ IDType,
+                                         /* detach_id */ IDType,
+                                         /* sync_reg */ IRB.getInt8Ty(),
+                                         TaskExitPropertyTy);
+  }
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    CsanDetachContinue = M.getOrInsertFunction("__csan_detach_continue",
+                                               FnAttrs, RetType,
+                                               /* detach_continue_id */ IDType,
+                                               /* detach_id */ IDType);
+  }
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    CsanSync = M.getOrInsertFunction("__csan_sync", FnAttrs, RetType, IDType,
+                                     /* sync_reg */ IRB.getInt8Ty());
+  }
 
-  // CsanBeforeAllocFn = M.getOrInsertFunction("__csan_before_allocfn", RetType,
-  //                                           IDType, LargeNumBytesType,
-  //                                           LargeNumBytesType,
-  //                                           LargeNumBytesType, AddrType);
-  CsanAfterAllocFn = M.getOrInsertFunction("__csan_after_allocfn", RetType,
-                                           IDType,
-                                           /* new ptr */ AddrType,
-                                           /* size */ LargeNumBytesType,
-                                           /* num elements */ LargeNumBytesType,
-                                           /* alignment */ LargeNumBytesType,
-                                           /* old ptr */ AddrType,
-                                           /* property */ AllocFnPropertyTy);
-  CsanAfterAllocFn->addParamAttr(1, Attribute::NoCapture);
-  CsanAfterAllocFn->addParamAttr(1, Attribute::ReadNone);
-  CsanAfterAllocFn->addParamAttr(5, Attribute::NoCapture);
-  CsanAfterAllocFn->addParamAttr(5, Attribute::ReadNone);
-  CsanAfterAllocFn->addFnAttr(Attribute::InaccessibleMemOnly);
-  // CsanBeforeFree = M.getOrInsertFunction("__csan_before_free", RetType, IDType,
-  //                                        AddrType);
-  CsanAfterFree = M.getOrInsertFunction("__csan_after_free", RetType, IDType,
-                                        AddrType,
-                                        /* property */ FreePropertyTy);
-  CsanAfterFree->addParamAttr(1, Attribute::NoCapture);
-  CsanAfterFree->addParamAttr(1, Attribute::ReadNone);
-  CsanAfterFree->addFnAttr(Attribute::InaccessibleMemOnly);
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    FnAttrs = FnAttrs.addParamAttribute(C, 1, Attribute::NoCapture);
+    FnAttrs = FnAttrs.addParamAttribute(C, 1, Attribute::ReadNone);
+    FnAttrs = FnAttrs.addParamAttribute(C, 5, Attribute::NoCapture);
+    FnAttrs = FnAttrs.addParamAttribute(C, 5, Attribute::ReadNone);
+    CsanAfterAllocFn = M.getOrInsertFunction(
+        "__csan_after_allocfn", FnAttrs, RetType, IDType,
+        /* new ptr */ AddrType, /* size */ LargeNumBytesType,
+        /* num elements */ LargeNumBytesType, /* alignment */ LargeNumBytesType,
+        /* old ptr */ AddrType, /* property */ AllocFnPropertyTy);
+  }
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    FnAttrs = FnAttrs.addParamAttribute(C, 1, Attribute::NoCapture);
+    FnAttrs = FnAttrs.addParamAttribute(C, 1, Attribute::ReadNone);
+    CsanAfterFree = M.getOrInsertFunction("__csan_after_free", FnAttrs, RetType,
+                                          IDType, AddrType,
+                                          /* property */ FreePropertyTy);
+  }
 
-  CsanDisableChecking = M.getOrInsertFunction("__cilksan_disable_checking",
-                                              RetType);
-  CsanDisableChecking->addFnAttr(Attribute::InaccessibleMemOnly);
-  CsanEnableChecking = M.getOrInsertFunction("__cilksan_enable_checking",
-                                             RetType);
-  CsanEnableChecking->addFnAttr(Attribute::InaccessibleMemOnly);
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    CsanDisableChecking = M.getOrInsertFunction("__cilksan_disable_checking",
+                                                FnAttrs, RetType);
+  }
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                         Attribute::InaccessibleMemOnly);
+    CsanEnableChecking = M.getOrInsertFunction("__cilksan_enable_checking",
+                                               FnAttrs, RetType);
+  }
 
   Type *SuppressionFlagTy = IRB.getInt64Ty();
-  GetSuppressionFlag = M.getOrInsertFunction(
-      "__csan_get_suppression_flag", RetType,
-      PointerType::get(SuppressionFlagTy, 0), IDType, IRB.getInt8Ty());
-  GetSuppressionFlag->addParamAttr(0, Attribute::NoCapture);
-  GetSuppressionFlag->addFnAttr(Attribute::InaccessibleMemOrArgMemOnly);
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOrArgMemOnly);
+    FnAttrs = FnAttrs.addParamAttribute(C, 0, Attribute::NoCapture);
+    GetSuppressionFlag = M.getOrInsertFunction(
+        "__csan_get_suppression_flag", FnAttrs, RetType,
+        PointerType::get(SuppressionFlagTy, 0), IDType, IRB.getInt8Ty());
+  }
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    SetSuppressionFlag = M.getOrInsertFunction("__csan_set_suppression_flag",
+                                               FnAttrs, RetType,
+                                               SuppressionFlagTy, IDType);
+  }
 
-  SetSuppressionFlag = M.getOrInsertFunction("__csan_set_suppression_flag",
-                                             RetType, SuppressionFlagTy,
-                                             IDType);
-  SetSuppressionFlag->addFnAttr(Attribute::InaccessibleMemOnly);
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    CsanBeforeLoop = M.getOrInsertFunction(
+        "__csan_before_loop", FnAttrs, IRB.getVoidTy(), IDType,
+        IRB.getInt64Ty(), LoopPropertyTy);
+  }
+  {
+    AttributeList FnAttrs;
+    FnAttrs = FnAttrs.addAttribute(C, AttributeList::FunctionIndex,
+                                   Attribute::InaccessibleMemOnly);
+    CsanAfterLoop = M.getOrInsertFunction("__csan_after_loop", FnAttrs,
+                                          IRB.getVoidTy(), IDType,
+                                          IRB.getInt8Ty(), LoopPropertyTy);
+  }
 
   // Cilksan-specific attributes on CSI hooks
-  CsanBeforeLoop = checkCsiInterfaceFunction(M.getOrInsertFunction(
-      "__csan_before_loop", IRB.getVoidTy(), IDType, IRB.getInt64Ty(),
-      LoopPropertyTy));
-  CsanBeforeLoop->addFnAttr(Attribute::InaccessibleMemOnly);
-  CsanAfterLoop = checkCsiInterfaceFunction(
-      M.getOrInsertFunction("__csan_after_loop", IRB.getVoidTy(), IDType,
-                            IRB.getInt8Ty(), LoopPropertyTy));
-  CsanAfterLoop->addFnAttr(Attribute::InaccessibleMemOnly);
-
-  CsiAfterAlloca->addParamAttr(1, Attribute::NoCapture);
-  CsiAfterAlloca->addParamAttr(1, Attribute::ReadNone);
-  CsiAfterAlloca->addFnAttr(Attribute::InaccessibleMemOnly);
+  Function *CsiAfterAllocaFn = cast<Function>(CsiAfterAlloca.getCallee());
+  CsiAfterAllocaFn->addParamAttr(1, Attribute::NoCapture);
+  CsiAfterAllocaFn->addParamAttr(1, Attribute::ReadNone);
+  CsiAfterAllocaFn->addFnAttr(Attribute::InaccessibleMemOnly);
 }
 
 static BasicBlock *SplitOffPreds(
@@ -1250,7 +1322,7 @@ bool CilkSanitizerImpl::simpleCallCannotRace(const Instruction &I) {
 Value *CilkSanitizerImpl::GetCalleeFuncID(const Function *Callee,
                                           IRBuilder<> &IRB) {
   if (!Callee)
-    // Unknown targets (i.e. indirect calls) are always unknown.
+    // Unknown targets (i.e., indirect calls) are always unknown.
     return IRB.getInt64(CsiCallsiteUnknownTargetId);
 
   std::string GVName =
@@ -1464,8 +1536,8 @@ static Value *getSuppressionIRValue(IRBuilder<> &IRB, unsigned SV) {
 }
 
 // Insert per-argument suppressions for this function
-void CilkSanitizerImpl::Instrumentor::InsertArgSuppressionFlags(
-    Function &F, Value *FuncId) {
+void CilkSanitizerImpl::Instrumentor::InsertArgSuppressionFlags(Function &F,
+                                                                Value *FuncId) {
   LLVM_DEBUG(dbgs() << "InsertArgSuppressionFlags: " << F.getName() << "\n");
   IRBuilder<> IRB(&*(++(cast<Instruction>(FuncId)->getIterator())));
   unsigned ArgIdx = 0;
@@ -1801,7 +1873,7 @@ static MemoryLocation getMemoryLocation(Instruction *I, unsigned OperandNum,
 
 Value *CilkSanitizerImpl::Instrumentor::getNoAliasSuppressionValue(
     Instruction *I, IRBuilder<> &IRB, unsigned OperandNum,
-    MemoryLocation Loc, const RaceInfo::RaceData &RD, Value *Obj,
+    MemoryLocation Loc, const RaceInfo::RaceData &RD, const Value *Obj,
     Value *ObjNoAliasFlag) {
   AliasAnalysis *AA = RI.getAA();
   for (const RaceInfo::RaceData &OtherRD : RI.getRaceData(I)) {
@@ -1823,9 +1895,9 @@ Value *CilkSanitizerImpl::Instrumentor::getNoAliasSuppressionValue(
     // this object.
 
     // Otherwise we check the underlying objects.
-    SmallPtrSet<Value *, 1> OtherObjects;
+    SmallPtrSet<const Value *, 1> OtherObjects;
     RI.getObjectsFor(OtherRD.Access, OtherObjects);
-    for (Value *OtherObj : OtherObjects) {
+    for (const Value *OtherObj : OtherObjects) {
       // If we find another instance of this object in another argument,
       // then we don't have "no alias".
       if (Obj == OtherObj) {
@@ -1900,7 +1972,7 @@ Value *CilkSanitizerImpl::Instrumentor::getSuppressionValue(
     if (OperandNum != RD.OperandNum)
       continue;
 
-    SmallPtrSet<Value *, 1> Objects;
+    SmallPtrSet<const Value *, 1> Objects;
     RI.getObjectsFor(RD.Access, Objects);
     // // Add objects to CilkSanImpl.ObjectMRForRace, to ensure ancillary
     // // instrumentation is added.
@@ -1909,7 +1981,7 @@ Value *CilkSanitizerImpl::Instrumentor::getSuppressionValue(
     //     CilkSanImpl.ObjectMRForRace[Obj] = ModRefInfo::ModRef;
 
     // Get suppressions from objects
-    for (Value *Obj : Objects) {
+    for (const Value *Obj : Objects) {
       // If we find an object with no suppression, give up.
       if (!LocalSuppressions.count(Obj)) {
         LLVM_DEBUG(dbgs() << "No local suppression found for obj " << *Obj
@@ -2017,9 +2089,9 @@ Value *CilkSanitizerImpl::Instrumentor::getSuppressionCheck(
     if (OperandNum != RD.OperandNum)
       continue;
 
-    SmallPtrSet<Value *, 1> Objects;
+    SmallPtrSet<const Value *, 1> Objects;
     RI.getObjectsFor(RD.Access, Objects);
-    for (Value *Obj : Objects) {
+    for (const Value *Obj : Objects) {
       // Ignore objects that are not involved in races.
       if (!RI.ObjectInvolvedInRace(Obj))
         continue;
@@ -2224,7 +2296,8 @@ bool CilkSanitizerImpl::instrumentFunctionUsingRI(Function &F) {
   LoopInfo &LI = GetLoopInfo(F);
   if (Options.InstrumentLoops)
     for (Loop *L : LI)
-      simplifyLoop(L, DT, &LI, nullptr, nullptr, /* PreserveLCSSA */false);
+      simplifyLoop(L, DT, &LI, nullptr, nullptr, nullptr,
+                   /* PreserveLCSSA */false);
 
   SmallVector<Instruction *, 8> AllLoadsAndStores;
   SmallVector<Instruction *, 8> LocalLoadsAndStores;

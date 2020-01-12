@@ -805,14 +805,14 @@ static bool foldReturnAndProcessPred(
       // Remove the sync.
       LLVM_DEBUG(dbgs() << "FOLDING: " << *BB
                  << "INTO SYNC PRED: " << *Pred);
-      ReturnInst *RI = FoldReturnIntoUncondBranch(Ret, BB, Pred);
+      ReturnInst *RI = FoldReturnIntoUncondBranch(Ret, BB, Pred, &DTU);
 
       // Cleanup: if all predecessors of BB have been eliminated by
       // FoldReturnIntoUncondBranch, delete it.  It is important to empty it,
       // because the ret instruction in there is still using a value which
       // eliminateRecursiveTailCall will attempt to remove.
       if (!BB->hasAddressTaken() && pred_begin(BB) == pred_end(BB))
-        BB->eraseFromParent();
+        DTU.deleteBB(BB);
 
       bool EliminatedTail =
         eliminateRecursiveTailCall(CI, RI, OldEntry, TailCallsAreMarkedTail,
@@ -827,7 +827,8 @@ static bool foldReturnAndProcessPred(
         // Insert syncs before relevant return blocks.
         for (BasicBlock *RetBlock : ReturnBlocksToSync) {
           BasicBlock *NewRetBlock = SplitBlock(RetBlock,
-                                               RetBlock->getTerminator());
+                                               RetBlock->getTerminator(),
+                                               &DTU.getDomTree());
           ReplaceInstWithInst(RetBlock->getTerminator(),
                               SyncInst::Create(NewRetBlock, SyncRegion));
         }
@@ -835,7 +836,7 @@ static bool foldReturnAndProcessPred(
       } else {
         // Restore the sync that was eliminated.
         BasicBlock *RetBlock = RI->getParent();
-        BasicBlock *NewRetBlock = SplitBlock(RetBlock, RI);
+        BasicBlock *NewRetBlock = SplitBlock(RetBlock, RI, &DTU.getDomTree());
         ReplaceInstWithInst(RetBlock->getTerminator(),
                             SyncInst::Create(NewRetBlock, SyncRegion));
       }

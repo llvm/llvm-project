@@ -1,4 +1,5 @@
-; RUN: opt -mergefunc -S < %s | FileCheck %s
+; RUN: opt -mergefunc -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK1
+; RUN: opt -mergefunc -S < %s | FileCheck %s --check-prefixes=CHECK,CHECK2
 
 define i8 @call_with_range() {
   bitcast i8 0 to i8 ; dummy to make the function large enough
@@ -64,8 +65,8 @@ lpad:
 }
 
 define i8 @invoke_with_same_range() personality i8* undef {
-; CHECK-LABEL: @invoke_with_same_range()
-; CHECK: tail call i8 @invoke_with_range()
+; CHECK1-LABEL: @invoke_with_same_range()
+; CHECK1: tail call i8 @invoke_with_range()
   %out = invoke i8 @dummy() to label %next unwind label %lpad, !range !0
 
 next:
@@ -77,8 +78,8 @@ lpad:
 }
 
 define i8 @call_with_same_range() {
-; CHECK-LABEL: @call_with_same_range
-; CHECK: tail call i8 @call_with_range
+; CHECK2-LABEL: @call_with_same_range
+; CHECK2: tail call i8 @call_with_range
   bitcast i8 0 to i8
   %out = call i8 @dummy(), !range !0
   ret i8 %out

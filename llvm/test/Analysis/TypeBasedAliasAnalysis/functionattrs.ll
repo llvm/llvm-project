@@ -77,8 +77,8 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1) nounwind
 ; CHECK: attributes #2 = { nounwind readonly }
 ; CHECK: attributes #3 = { nounwind }
 ; CHECK: attributes #4 = { nounwind readnone }
-; CHECK: attributes #5 = { argmemonly nofree norecurse nounwind }
-; CHECK: attributes #6 = { argmemonly nounwind }
+; CHECK: attributes #5 = { argmemonly nounwind }
+; CHECK: attributes #6 = { argmemonly nofree norecurse nounwind }
 
 ; Root note.
 !0 = !{ }

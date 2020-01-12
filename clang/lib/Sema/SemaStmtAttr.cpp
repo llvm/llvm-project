@@ -85,13 +85,12 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   StringRef PragmaName =
       llvm::StringSwitch<StringRef>(PragmaNameLoc->Ident->getName())
           .Cases("unroll", "nounroll", "unroll_and_jam", "nounroll_and_jam",
-                 PragmaNameLoc->Ident->getName())
-          .Cases("cilk", PragmaNameLoc->Ident->getName())
+                 "cilk", PragmaNameLoc->Ident->getName())
           .Default("clang loop");
 
   if ((PragmaName == "cilk") &&
       (St->getStmtClass() != Stmt::CilkForStmtClass)) {
-    S.Diag(St->getLocStart(), diag::err_pragma_cilk_precedes_noncilk)
+    S.Diag(St->getBeginLoc(), diag::err_pragma_cilk_precedes_noncilk)
       << "#pragma cilk";
     return nullptr;
   }

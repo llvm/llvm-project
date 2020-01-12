@@ -64,9 +64,9 @@ static bool notDifferentParent(const Value *O1, const Value *O2) {
 #endif
 
 AliasResult DRFAAResult::alias(const MemoryLocation &LocA,
-                               const MemoryLocation &LocB) {
+                               const MemoryLocation &LocB, AAQueryInfo &AAQI) {
   if (!EnableDRFAA)
-    return AAResultBase::alias(LocA, LocB);
+    return AAResultBase::alias(LocA, LocB, AAQI);
 
   LLVM_DEBUG(dbgs() << "DRFAA:\n\tLocA.Ptr = " << *LocA.Ptr
              << "\n\tLocB.Ptr = " << *LocB.Ptr << "\n");
@@ -77,13 +77,14 @@ AliasResult DRFAAResult::alias(const MemoryLocation &LocA,
     if (const Instruction *AddrB = dyn_cast<Instruction>(LocB.Ptr))
       if (TI.mayHappenInParallel(AddrA->getParent(), AddrB->getParent()))
         return NoAlias;
-  return AAResultBase::alias(LocA, LocB);
+  return AAResultBase::alias(LocA, LocB, AAQI);
 }
 
 ModRefInfo DRFAAResult::getModRefInfo(const CallBase *Call,
-                                      const MemoryLocation &Loc) {
+                                      const MemoryLocation &Loc,
+                                      AAQueryInfo &AAQI) {
   if (!EnableDRFAA)
-    return AAResultBase::getModRefInfo(Call, Loc);
+    return AAResultBase::getModRefInfo(Call, Loc, AAQI);
 
   LLVM_DEBUG(dbgs() << "DRFAA:getModRefInfo(Call, Loc)\n");
   assert(notDifferentParent(Call, Loc.Ptr) &&
@@ -93,20 +94,21 @@ ModRefInfo DRFAAResult::getModRefInfo(const CallBase *Call,
     if (TI.mayHappenInParallel(Call->getParent(), Addr->getParent()))
       return ModRefInfo::NoModRef;
 
-  return AAResultBase::getModRefInfo(Call, Loc);
+  return AAResultBase::getModRefInfo(Call, Loc, AAQI);
 }
 
 ModRefInfo DRFAAResult::getModRefInfo(const CallBase *Call1,
-                                      const CallBase *Call2) {
+                                      const CallBase *Call2,
+                                      AAQueryInfo &AAQI) {
   if (!EnableDRFAA)
-    return AAResultBase::getModRefInfo(Call1, Call2);
+    return AAResultBase::getModRefInfo(Call1, Call2, AAQI);
 
   LLVM_DEBUG(dbgs() << "DRFAA:getModRefInfo(Call1, Call2)\n");
 
   if (TI.mayHappenInParallel(Call1->getParent(), Call2->getParent()))
     return ModRefInfo::NoModRef;
 
-  return AAResultBase::getModRefInfo(Call1, Call2);
+  return AAResultBase::getModRefInfo(Call1, Call2, AAQI);
 }
 
 AnalysisKey DRFAA::Key;

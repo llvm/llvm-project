@@ -1383,10 +1383,6 @@ def ftapir_EQ : Joined<["-"], "ftapir=">, Group<f_Group>, Flags<[CC1Option]>,
   Values<"none,serial,cilk,openmp,cilkr">;
 def fcilkplus : Flag<["-"], "fcilkplus">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Enable Cilk Plus extensions">;
-def frhino : Flag <["-"], "frhino">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Enable Rhino optimizations to Tapir constructs">;
-def foutline_tapir_early : Flag <["-"], "foutline-tapir-early">, Group<f_Group>, Flags<[CC1Option]>,
-  HelpText<"Perform early outlining of Tapir constructs">;
 
 def fmudflapth : Flag<["-"], "fmudflapth">, Group<f_Group>;
 def fmudflap : Flag<["-"], "fmudflap">, Group<f_Group>;

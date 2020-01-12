@@ -1555,7 +1555,7 @@ void MemorySSA::buildMemorySSA(BatchAAResults &BAA) {
   SmallPtrSet<BasicBlock *, 16> Visited;
   renamePass(DT->getRootNode(), LiveOnEntryDef.get(), Visited);
 
-  ClobberWalkerBase<BatchAAResults> WalkerBase(this, &BAA, DT);
+  ClobberWalkerBase<BatchAAResults> WalkerBase(this, &BAA, DT, TI);
   CachingWalker<BatchAAResults> WalkerLocal(this, &WalkerBase);
   OptimizeUses(this, &WalkerLocal, &BAA, DT).optimizeUses();
 

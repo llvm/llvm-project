@@ -1189,6 +1189,7 @@ TaskOutlineMapTy LoopSpawningImpl::outlineAllTapirLoops() {
     {
       TapirLoopHints Hints(L);
       Hints.clearClonedLoopMetadata(VMap);
+      Hints.clearStrategy();
     }
 
     // Update subtask outline info to reflect the fact that their spawner was
@@ -1288,21 +1289,20 @@ PreservedAnalyses LoopSpawningPass::run(Module &M, ModuleAnalysisManager &AM) {
     ScalarEvolution &SE = GetSE(*F);
     SmallVector<Loop *, 8> LoopWorkList;
     for (Loop *L : LI) {
-      Changed |= simplifyLoop(L, &DT, &LI, &SE, &GetAC(*F),
-                              false /* PreserveLCSSA */);
+      Changed |= simplifyLoop(L, &DT, &LI, &SE, &GetAC(*F), nullptr,
+                              /* PreserveLCSSA */ false);
       LoopWorkList.push_back(L);
     }
     for (Loop *L : LoopWorkList)
       Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
   }
 
-  TapirTarget *Target = getTapirTargetFromID(M, TargetID);
+  std::unique_ptr<TapirTarget> Target(getTapirTargetFromID(M, TargetID));
   // Now process each loop.
   for (Function *F : WorkList)
     Changed |= LoopSpawningImpl(*F, GetDT(*F), GetLI(*F), GetTI(*F), GetSE(*F),
-                                GetAC(*F), GetTTI(*F), Target,
+                                GetAC(*F), GetTTI(*F), Target.get(),
                                 GetORE(*F)).run();
-  delete Target;
   if (Changed)
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();

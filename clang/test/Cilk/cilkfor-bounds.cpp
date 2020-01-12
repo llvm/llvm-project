@@ -48,7 +48,7 @@ void up(size_t start, size_t end) {
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ult i64 %[[CONDBEGIN]], %[[CONDEND]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -94,7 +94,7 @@ void up_leq(size_t start, size_t end) {
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ule i64 %[[CONDBEGIN]], %[[CONDEND]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD2:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -142,7 +142,7 @@ void up_flip(size_t start, size_t end) {
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ugt i64 %[[CONDEND]], %[[CONDBEGIN]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD3:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -188,7 +188,7 @@ void up_flip_geq(size_t start, size_t end) {
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[COND:.+]] = icmp uge i64 %[[CONDEND]], %[[CONDBEGIN]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD4:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -238,7 +238,7 @@ void up_stride(size_t start, size_t end, size_t stride) {
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ult i64 %[[CONDBEGIN]], %[[CONDEND]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD5:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -286,7 +286,7 @@ void up_stride_leq(size_t start, size_t end, size_t stride) {
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ule i64 %[[CONDBEGIN]], %[[CONDEND]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD6:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -336,7 +336,7 @@ void up_stride_flip(size_t start, size_t end, size_t stride) {
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ugt i64 %[[CONDEND]], %[[CONDBEGIN]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD7:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -384,7 +384,7 @@ void up_stride_flip_geq(size_t start, size_t end, size_t stride) {
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[COND:.+]] = icmp uge i64 %[[CONDEND]], %[[CONDBEGIN]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD8:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -432,7 +432,7 @@ void up_ne_stride(size_t start, size_t end, size_t stride) {
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ne i64 %[[CONDEND]], %[[CONDBEGIN]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD8:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -480,7 +480,7 @@ void up_ne_stride_flip(size_t start, size_t end, size_t stride) {
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ne i64 %[[CONDBEGIN]], %[[CONDEND]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD9:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -528,7 +528,7 @@ void down(size_t start, size_t end) {
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ugt i64 %[[CONDEND]], %[[CONDBEGIN]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD10:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -574,7 +574,7 @@ void down_geq(size_t start, size_t end) {
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[COND:.+]] = icmp uge i64 %[[CONDEND]], %[[CONDBEGIN]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD11:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -622,7 +622,7 @@ void down_flip(size_t start, size_t end) {
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ult i64 %[[CONDBEGIN]], %[[CONDEND]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD12:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -668,7 +668,7 @@ void down_flip_leq(size_t start, size_t end) {
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ule i64 %[[CONDBEGIN]], %[[CONDEND]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD13:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -718,7 +718,7 @@ void down_stride(size_t start, size_t end, size_t stride) {
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ugt i64 %[[CONDEND]], %[[CONDBEGIN]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD14:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -766,7 +766,7 @@ void down_stride_geq(size_t start, size_t end, size_t stride) {
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[COND:.+]] = icmp uge i64 %[[CONDEND]], %[[CONDBEGIN]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD15:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -816,7 +816,7 @@ void down_stride_flip(size_t start, size_t end, size_t stride) {
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ult i64 %[[CONDBEGIN]], %[[CONDEND]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD16:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -864,7 +864,7 @@ void down_stride_flip_leq(size_t start, size_t end, size_t stride) {
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ule i64 %[[CONDBEGIN]], %[[CONDEND]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD17:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -912,7 +912,7 @@ void down_ne_stride(size_t start, size_t end, size_t stride) {
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ne i64 %[[CONDEND]], %[[CONDBEGIN]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD18:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
@@ -960,7 +960,28 @@ void down_ne_stride_flip(size_t start, size_t end, size_t stride) {
 // CHECK-NEXT: %[[CONDBEGIN:.+]] = load i64, i64* %[[BEGIN]]
 // CHECK-NEXT: %[[CONDEND:.+]] = load i64, i64* %[[END]]
 // CHECK-NEXT: %[[COND:.+]] = icmp ne i64 %[[CONDBEGIN]], %[[CONDEND]]
-// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop
+// CHECK-NEXT: br i1 %[[COND]], label %{{.+}}, label %[[PFORCONDCLEANUP:.+]], !llvm.loop ![[LOOPMD19:.+]]
 
 // CHECK: [[PFORCONDCLEANUP]]:
 // CHECK-NEXT: sync within %[[SYNCREG]]
+
+// CHECK: ![[LOOPMD]] = distinct !{![[LOOPMD]], ![[SPAWNSTRATEGY:.+]]}
+// CHECK: ![[SPAWNSTRATEGY]] = !{!"tapir.loop.spawn.strategy", i32 1}
+// CHECK: ![[LOOPMD2]] = distinct !{![[LOOPMD2]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD3]] = distinct !{![[LOOPMD3]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD4]] = distinct !{![[LOOPMD4]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD5]] = distinct !{![[LOOPMD5]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD6]] = distinct !{![[LOOPMD6]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD7]] = distinct !{![[LOOPMD7]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD8]] = distinct !{![[LOOPMD8]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD9]] = distinct !{![[LOOPMD9]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD10]] = distinct !{![[LOOPMD10]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD11]] = distinct !{![[LOOPMD11]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD12]] = distinct !{![[LOOPMD12]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD13]] = distinct !{![[LOOPMD13]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD14]] = distinct !{![[LOOPMD14]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD15]] = distinct !{![[LOOPMD15]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD16]] = distinct !{![[LOOPMD16]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD17]] = distinct !{![[LOOPMD17]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD18]] = distinct !{![[LOOPMD18]], ![[SPAWNSTRATEGY]]}
+// CHECK: ![[LOOPMD19]] = distinct !{![[LOOPMD19]], ![[SPAWNSTRATEGY]]}
