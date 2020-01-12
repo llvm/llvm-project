@@ -177,33 +177,35 @@ MCDisassembler::DecodeStatus X86GenericDisassembler::getInstruction(
     raw_ostream &CStream) const {
   CommentStream = &CStream;
 
-  InternalInstruction InternalInstr;
+  InternalInstruction Insn;
+  memset(&Insn, 0, sizeof(InternalInstruction));
+  Insn.bytes = Bytes;
+  Insn.startLocation = Address;
+  Insn.readerCursor = Address;
+  Insn.mode = fMode;
 
-  std::pair<ArrayRef<uint8_t>, uint64_t> R(Bytes, Address);
-
-  int Ret = decodeInstruction(&InternalInstr, &R, (const void *)MII.get(),
-                              Address, fMode);
+  int Ret = decodeInstruction(&Insn, MII.get());
 
   if (Ret) {
-    Size = InternalInstr.readerCursor - Address;
+    Size = Insn.readerCursor - Address;
     return Fail;
   } else {
-    Size = InternalInstr.length;
-    bool Ret = translateInstruction(Instr, InternalInstr, this);
+    Size = Insn.length;
+    bool Ret = translateInstruction(Instr, Insn, this);
     if (!Ret) {
       unsigned Flags = X86::IP_NO_PREFIX;
-      if (InternalInstr.hasAdSize)
+      if (Insn.hasAdSize)
         Flags |= X86::IP_HAS_AD_SIZE;
-      if (!InternalInstr.mandatoryPrefix) {
-        if (InternalInstr.hasOpSize)
+      if (!Insn.mandatoryPrefix) {
+        if (Insn.hasOpSize)
           Flags |= X86::IP_HAS_OP_SIZE;
-        if (InternalInstr.repeatPrefix == 0xf2)
+        if (Insn.repeatPrefix == 0xf2)
           Flags |= X86::IP_HAS_REPEAT_NE;
-        else if (InternalInstr.repeatPrefix == 0xf3 &&
+        else if (Insn.repeatPrefix == 0xf3 &&
                  // It should not be 'pause' f3 90
-                 InternalInstr.opcode != 0x90)
+                 Insn.opcode != 0x90)
           Flags |= X86::IP_HAS_REPEAT;
-        if (InternalInstr.hasLockPrefix)
+        if (Insn.hasLockPrefix)
           Flags |= X86::IP_HAS_LOCK;
       }
       Instr.setFlags(Flags);
