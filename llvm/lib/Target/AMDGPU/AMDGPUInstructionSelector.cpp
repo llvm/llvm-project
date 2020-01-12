@@ -635,6 +635,51 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
   return true;
 }
 
+bool AMDGPUInstructionSelector::selectInterpP1F16(MachineInstr &MI) const {
+  if (STI.getLDSBankCount() != 16)
+    return selectImpl(MI, *CoverageInfo);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src0 = MI.getOperand(2).getReg();
+  Register M0Val = MI.getOperand(6).getReg();
+  if (!RBI.constrainGenericRegister(M0Val, AMDGPU::SReg_32RegClass, *MRI) ||
+      !RBI.constrainGenericRegister(Dst, AMDGPU::VGPR_32RegClass, *MRI) ||
+      !RBI.constrainGenericRegister(Src0, AMDGPU::VGPR_32RegClass, *MRI))
+    return false;
+
+  // This requires 2 instructions. It is possible to write a pattern to support
+  // this, but the generated isel emitter doesn't correctly deal with multiple
+  // output instructions using the same physical register input. The copy to m0
+  // is incorrectly placed before the second instruction.
+  //
+  // TODO: Match source modifiers.
+
+  Register InterpMov = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineBasicBlock *MBB = MI.getParent();
+
+  BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
+    .addReg(M0Val);
+  BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::V_INTERP_MOV_F32), InterpMov)
+    .addImm(2)
+    .addImm(MI.getOperand(4).getImm())  // $attr
+    .addImm(MI.getOperand(3).getImm()); // $attrchan
+
+  BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::V_INTERP_P1LV_F16), Dst)
+    .addImm(0)                          // $src0_modifiers
+    .addReg(Src0)                       // $src0
+    .addImm(MI.getOperand(4).getImm())  // $attr
+    .addImm(MI.getOperand(3).getImm())  // $attrchan
+    .addImm(0)                          // $src2_modifiers
+    .addReg(InterpMov)                  // $src2 - 2 f16 values selected by high
+    .addImm(MI.getOperand(5).getImm())  // $high
+    .addImm(0)                          // $clamp
+    .addImm(0);                         // $omod
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   unsigned IntrinsicID = I.getIntrinsicID();
   switch (IntrinsicID) {
@@ -659,6 +704,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
 
     return true;
   }
+  case Intrinsic::amdgcn_interp_p1_f16:
+    return selectInterpP1F16(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
