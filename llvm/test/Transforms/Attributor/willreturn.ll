@@ -117,12 +117,15 @@ define i32 @fact_loop(i32 %0) local_unnamed_addr #0 {
 ;     mutual_recursion1();
 ; }
 
-; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+declare void @sink() nounwind willreturn nosync nofree
+
+; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @mutual_recursion1(i1 %c)
 define void @mutual_recursion1(i1 %c) #0 {
   br i1 %c, label %rec, label %end
 rec:
+  call void @sink()
   call void @mutual_recursion2(i1 %c)
   br label %end
 end:
@@ -130,7 +133,7 @@ end:
 }
 
 
-; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+; ATTRIBUTOR: Function Attrs: nofree noinline nosync nounwind uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define void @mutual_recursion2(i1 %c)
 define void @mutual_recursion2(i1 %c) #0 {
