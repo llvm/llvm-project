@@ -45,7 +45,7 @@ if (LLDB_ENABLE_PYTHON)
     DEPENDS ${SWIG_SOURCES}
     DEPENDS ${SWIG_INTERFACES}
     DEPENDS ${SWIG_HEADERS}
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/prepare_binding_Python.py
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/python/prepare_binding_python.py
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/prepare_bindings.py
         ${framework_arg}
         --srcRoot=${LLDB_SOURCE_DIR}
