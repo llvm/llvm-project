@@ -1375,15 +1375,18 @@ void VectorLegalizer::ExpandUINT_TO_FLOAT(SDNode *Node,
                               {Node->getValueType(0), MVT::Other},
                               {Node->getOperand(0), HI});
     fHI = DAG.getNode(ISD::STRICT_FMUL, DL, {Node->getValueType(0), MVT::Other},
-                      {SDValue(fHI.getNode(), 1), fHI, TWOHW});
+                      {fHI.getValue(1), fHI, TWOHW});
     SDValue fLO = DAG.getNode(ISD::STRICT_SINT_TO_FP, DL,
                               {Node->getValueType(0), MVT::Other},
-                              {SDValue(fHI.getNode(), 1), LO});
+                              {Node->getOperand(0), LO});
+
+    SDValue TF = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, fHI.getValue(1),
+                             fLO.getValue(1));
 
     // Add the two halves
     SDValue Result =
         DAG.getNode(ISD::STRICT_FADD, DL, {Node->getValueType(0), MVT::Other},
-                    {SDValue(fLO.getNode(), 1), fHI, fLO});
+                    {TF, fHI, fLO});
 
     Results.push_back(Result);
     Results.push_back(Result.getValue(1));
