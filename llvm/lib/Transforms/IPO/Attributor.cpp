@@ -255,6 +255,28 @@ static void replaceAllInstructionUsesWith(Value &Old, Value &New) {
     U->set(&New);
 }
 
+static Optional<ConstantInt *>
+getAssumedConstant(Attributor &A, const Value &V, const AbstractAttribute &AA,
+                   bool &UsedAssumedInformation) {
+  const auto &ValueSimplifyAA = A.getAAFor<AAValueSimplify>(
+      AA, IRPosition::value(V), /* TrackDependence */ false);
+  Optional<Value *> SimplifiedV = ValueSimplifyAA.getAssumedSimplifiedValue(A);
+  bool IsKnown = ValueSimplifyAA.isKnown();
+  UsedAssumedInformation |= !IsKnown;
+  if (!SimplifiedV.hasValue()) {
+    A.recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
+    return llvm::None;
+  }
+  if (isa_and_nonnull<UndefValue>(SimplifiedV.getValue())) {
+    A.recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
+    return llvm::None;
+  }
+  ConstantInt *CI = dyn_cast_or_null<ConstantInt>(SimplifiedV.getValue());
+  if (CI)
+    A.recordDependence(ValueSimplifyAA, AA, DepClassTy::OPTIONAL);
+  return CI;
+}
+
 /// Recursively visit all values that might become \p IRP at some point. This
 /// will be done by looking through cast instructions, selects, phis, and calls
 /// with the "returned" attribute. Once we cannot look through the value any
@@ -2978,20 +3000,6 @@ identifyAliveSuccessors(Attributor &A, const InvokeInst &II,
     }
   }
   return UsedAssumedInformation;
-}
-
-static Optional<ConstantInt *>
-getAssumedConstant(Attributor &A, const Value &V, AbstractAttribute &AA,
-                   bool &UsedAssumedInformation) {
-  const auto &ValueSimplifyAA =
-      A.getAAFor<AAValueSimplify>(AA, IRPosition::value(V));
-  Optional<Value *> SimplifiedV = ValueSimplifyAA.getAssumedSimplifiedValue(A);
-  UsedAssumedInformation |= !ValueSimplifyAA.isKnown();
-  if (!SimplifiedV.hasValue())
-    return llvm::None;
-  if (isa_and_nonnull<UndefValue>(SimplifiedV.getValue()))
-    return llvm::None;
-  return dyn_cast_or_null<ConstantInt>(SimplifiedV.getValue());
 }
 
 static bool
