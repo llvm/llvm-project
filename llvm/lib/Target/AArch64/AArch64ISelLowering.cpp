@@ -9015,7 +9015,7 @@ AArch64TargetLowering::getNumInterleavedAccesses(VectorType *VecTy,
 }
 
 MachineMemOperand::Flags
-AArch64TargetLowering::getMMOFlags(const Instruction &I) const {
+AArch64TargetLowering::getTargetMMOFlags(const Instruction &I) const {
   if (Subtarget->getProcFamily() == AArch64Subtarget::Falkor &&
       I.getMetadata(FALKOR_STRIDED_ACCESS_MD) != nullptr)
     return MOStridedAccess;

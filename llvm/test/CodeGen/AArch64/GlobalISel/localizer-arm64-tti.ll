@@ -25,7 +25,7 @@ define i32 @foo() {
   ; CHECK:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 3
   ; CHECK:   [[GV2:%[0-9]+]]:gpr(p0) = G_GLOBAL_VALUE @var3
   ; CHECK:   [[C3:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
-  ; CHECK:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[GV]](p0) :: (load 4 from @var1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:gpr(s32) = G_LOAD [[GV]](p0) :: (dereferenceable load 4 from @var1)
   ; CHECK:   [[ICMP:%[0-9]+]]:gpr(s32) = G_ICMP intpred(ne), [[LOAD]](s32), [[C]]
   ; CHECK:   [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[ICMP]](s32)
   ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.3
