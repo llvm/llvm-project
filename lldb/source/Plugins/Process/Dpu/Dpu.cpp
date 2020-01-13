@@ -218,7 +218,8 @@ StateType Dpu::PollStatus(unsigned int *exit_status) {
   if (dpu_is_in_fault) {
     result_state = StateType::eStateStopped;
   } else if (!dpu_is_running) {
-    result_state = StateType::eStateExited;
+    result_state = m_context->DpuIsRunning() ? StateType::eStateStopped
+                                             : StateType::eStateExited;
   } else {
     return StateType::eStateRunning;
   }
@@ -384,7 +385,7 @@ StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
 
   if (ret != DPU_API_SUCCESS)
     return StateType::eStateCrashed;
-  if (m_context->Get()->nr_of_running_threads == 0) {
+  if (!m_context->DpuIsRunning()) {
     *exit_status = m_context->GetExitStatus();
     return StateType::eStateExited;
   }
@@ -680,7 +681,12 @@ lldb::StateType Dpu::GetThreadState(uint32_t thread_index,
     description = "stopped";
     stop_reason = eStopReasonTrace;
   }
-  return eStateStopped;
+
+  if (!m_context->ScheduledThread(thread_index)) {
+    return eStateSuspended;
+  } else {
+    return eStateStopped;
+  }
 }
 
 unsigned int Dpu::GetSliceID() { return dpu_get_slice_id(m_dpu); }

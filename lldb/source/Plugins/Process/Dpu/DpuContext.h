@@ -58,9 +58,13 @@ public:
   bool ScheduledThread(uint32_t thread);
   bool ContextReadyForResumeOrStep();
 
+  bool DpuIsRunning();
+
 private:
   bool AddThreadInScheduling(unsigned int thread);
   void ResetScheduling();
+  void ResetLastResumeThreads();
+  void UpdateRunningThreads();
 
   dpu_t *m_dpu;
   struct _dpu_context_t *m_context;

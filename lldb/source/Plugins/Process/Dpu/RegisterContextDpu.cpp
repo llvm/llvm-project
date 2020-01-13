@@ -101,10 +101,13 @@ Status RegisterContextDpu::ReadRegister(const RegisterInfo *info,
 
   const uint32_t reg = info->kinds[lldb::eRegisterKindLLDB];
 
-  if (reg == pc_dpu)
-    value.SetUInt32(*m_context_pc * 8 /*sizeof(iram_instruction_t)*/ +
-                    k_dpu_iram_base);
-  else if (reg == zf_dpu)
+  if (reg == pc_dpu) {
+    uint32_t pc =
+        *m_context_pc * 8 /*sizeof(iram_instruction_t)*/ + k_dpu_iram_base;
+    if (m_thread.GetState() == eStateSuspended)
+      pc++;
+    value.SetUInt32(pc);
+  } else if (reg == zf_dpu)
     value.SetUInt32(*m_context_zf ? 1 : 0);
   else if (reg == cf_dpu)
     value.SetUInt32(*m_context_cf ? 1 : 0);

@@ -66,6 +66,17 @@ void DpuContext::UpdateContext(struct _dpu_context_t *new_context) {
   m_context = new_context;
 }
 
+void DpuContext::UpdateRunningThreads() {
+  for (unsigned int each_thread = 0; each_thread < nr_threads; each_thread++) {
+    if ((m_context->scheduling[each_thread] == 0xff) !=
+        (last_resume_threads[each_thread] == 0xff)) {
+      fprintf(stderr, "%s: %u changed state (%u)\n", __func__, each_thread,
+              m_context->scheduling[each_thread]);
+      running_threads[each_thread] = m_context->scheduling[each_thread];
+    }
+  }
+}
+
 bool DpuContext::StopThreads() {
   ResetScheduling();
 
@@ -79,18 +90,14 @@ bool DpuContext::StopThreads() {
     return false;
   ret = dpu_extract_context_for_dpu(m_dpu, m_context);
 
-  for (unsigned int each_thread = 0; each_thread < nr_threads; each_thread++) {
-    if ((m_context->scheduling[each_thread] == 0xff) !=
-        (last_resume_threads[each_thread] == 0xff)) {
-      running_threads[each_thread] = m_context->scheduling[each_thread];
-    }
-  }
+  UpdateRunningThreads();
 
   return ret == DPU_API_SUCCESS;
 }
 
 bool DpuContext::ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list) {
   ResetScheduling();
+  ResetLastResumeThreads();
 
   if (resume_list == NULL) {
     for (unsigned int each_thread = 0; each_thread < nr_threads;
@@ -107,19 +114,24 @@ bool DpuContext::ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list) {
     }
   }
 
-  memcpy(last_resume_threads, m_context->scheduling,
-         nr_threads * sizeof(uint8_t));
-
   return dpu_finalize_fault_process_for_dpu(m_dpu, m_context) ==
          DPU_API_SUCCESS;
 }
 
 dpu_api_status_t DpuContext::StepThread(uint32_t thread_index) {
+  ResetScheduling();
+  ResetLastResumeThreads();
+  AddThreadInScheduling(thread_index);
+
   dpu_api_status_t ret =
       dpu_execute_thread_step_in_fault_for_dpu(m_dpu, thread_index, m_context);
   if (ret != DPU_API_SUCCESS)
     return ret;
-  return dpu_extract_context_for_dpu(m_dpu, m_context);
+  ret = dpu_extract_context_for_dpu(m_dpu, m_context);
+
+  UpdateRunningThreads();
+
+  return ret;
 }
 
 unsigned int DpuContext::GetExitStatus() {
@@ -148,6 +160,7 @@ bool DpuContext::AddThreadInScheduling(unsigned int thread) {
   if (m_context->nr_of_running_threads >= nr_threads)
     return false;
 
+  last_resume_threads[thread] = m_context->nr_of_running_threads;
   m_context->scheduling[thread] = m_context->nr_of_running_threads;
   m_context->nr_of_running_threads++;
   return true;
@@ -158,4 +171,18 @@ void DpuContext::ResetScheduling() {
   for (dpu_thread_t each_thread = 0; each_thread < nr_threads; ++each_thread) {
     m_context->scheduling[each_thread] = 0xff;
   }
+}
+
+void DpuContext::ResetLastResumeThreads() {
+  for (dpu_thread_t each_thread = 0; each_thread < nr_threads; ++each_thread) {
+    last_resume_threads[each_thread] = 0xff;
+  }
+}
+
+bool DpuContext::DpuIsRunning() {
+  for (unsigned int each_thread = 0; each_thread < nr_threads; each_thread++) {
+    if (running_threads[each_thread] != 0xff)
+      return true;
+  }
+  return false;
 }
