@@ -37,6 +37,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 #include <list>
 #include <map>
 #include <string>
@@ -3705,8 +3706,11 @@ CodeCompleteConsumer::OverloadCandidate::CreateSignatureString(
         Result.addBriefComment(RC->getBriefText(S.getASTContext()));
     }
     AddResultTypeChunk(S.Context, Policy, FDecl, QualType(), Result);
-    Result.AddTextChunk(
-        Result.getAllocator().CopyString(FDecl->getNameAsString()));
+
+    std::string Name;
+    llvm::raw_string_ostream OS(Name);
+    FDecl->getDeclName().print(OS, Policy);
+    Result.AddTextChunk(Result.getAllocator().CopyString(OS.str()));
   } else {
     Result.AddResultTypeChunk(Result.getAllocator().CopyString(
         Proto->getReturnType().getAsString(Policy)));
