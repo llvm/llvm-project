@@ -263,12 +263,14 @@ entry:
 
 
 ; GCN-NOT: s_add_u32 s32, s32, 0x800
-; GCN-DAG: s_add_u32 s32, s33, 0xc00{{$}}
 
 ; GCN: buffer_load_dword [[LOAD0:v[0-9]+]], off, s[0:3], s33 offset:8
 ; GCN: buffer_load_dword [[LOAD1:v[0-9]+]], off, s[0:3], s33 offset:12
 ; GCN: buffer_load_dword [[LOAD2:v[0-9]+]], off, s[0:3], s33 offset:16
 ; GCN: buffer_load_dword [[LOAD3:v[0-9]+]], off, s[0:3], s33 offset:20
+
+; GCN-NOT: s_add_u32 s32, s32, 0x800
+; GCN-DAG: s_add_u32 s32, s33, 0xc00{{$}}
 
 ; GCN: buffer_store_dword [[LOAD3]], off, s[0:3], s32 offset:12
 ; GCN: buffer_store_dword [[LOAD2]], off, s[0:3], s32 offset:8

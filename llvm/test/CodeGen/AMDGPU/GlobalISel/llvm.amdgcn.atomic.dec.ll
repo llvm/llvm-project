@@ -374,10 +374,10 @@ define amdgpu_kernel void @global_atomic_dec_ret_i32_offset_addr64(i32 addrspace
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, 20, v1
 ; CI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v2, vcc
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, s0, v4
-; CI-NEXT:    v_mov_b32_e32 v5, s1
 ; CI-NEXT:    v_mov_b32_e32 v4, 42
-; CI-NEXT:    v_addc_u32_e32 v3, vcc, v5, v3, vcc
 ; CI-NEXT:    flat_atomic_dec v0, v[0:1], v4 glc
+; CI-NEXT:    v_mov_b32_e32 v5, s1
+; CI-NEXT:    v_addc_u32_e32 v3, vcc, v5, v3, vcc
 ; CI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CI-NEXT:    flat_store_dword v[2:3], v0
 ; CI-NEXT:    s_endpgm
@@ -399,10 +399,10 @@ define amdgpu_kernel void @global_atomic_dec_ret_i32_offset_addr64(i32 addrspace
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 20, v1
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v2, vcc
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, s0, v4
-; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v4, 42
-; VI-NEXT:    v_addc_u32_e32 v3, vcc, v5, v3, vcc
 ; VI-NEXT:    flat_atomic_dec v0, v[0:1], v4 glc
+; VI-NEXT:    v_mov_b32_e32 v5, s1
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, v5, v3, vcc
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    flat_store_dword v[2:3], v0
 ; VI-NEXT:    s_endpgm
@@ -695,10 +695,10 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i32_offset_addr64(i32* %out, i32*
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, 20, v1
 ; CI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v2, vcc
 ; CI-NEXT:    v_add_i32_e32 v2, vcc, s0, v4
-; CI-NEXT:    v_mov_b32_e32 v5, s1
 ; CI-NEXT:    v_mov_b32_e32 v4, 42
-; CI-NEXT:    v_addc_u32_e32 v3, vcc, v5, v3, vcc
 ; CI-NEXT:    flat_atomic_dec v0, v[0:1], v4 glc
+; CI-NEXT:    v_mov_b32_e32 v5, s1
+; CI-NEXT:    v_addc_u32_e32 v3, vcc, v5, v3, vcc
 ; CI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CI-NEXT:    flat_store_dword v[2:3], v0
 ; CI-NEXT:    s_endpgm
@@ -720,10 +720,10 @@ define amdgpu_kernel void @flat_atomic_dec_ret_i32_offset_addr64(i32* %out, i32*
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 20, v1
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v2, vcc
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, s0, v4
-; VI-NEXT:    v_mov_b32_e32 v5, s1
 ; VI-NEXT:    v_mov_b32_e32 v4, 42
-; VI-NEXT:    v_addc_u32_e32 v3, vcc, v5, v3, vcc
 ; VI-NEXT:    flat_atomic_dec v0, v[0:1], v4 glc
+; VI-NEXT:    v_mov_b32_e32 v5, s1
+; VI-NEXT:    v_addc_u32_e32 v3, vcc, v5, v3, vcc
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    flat_store_dword v[2:3], v0
 ; VI-NEXT:    s_endpgm

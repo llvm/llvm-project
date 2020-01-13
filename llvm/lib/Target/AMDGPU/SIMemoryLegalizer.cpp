@@ -1289,6 +1289,21 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
 
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {
+
+      if (MI->getOpcode() == TargetOpcode::BUNDLE && MI->mayLoadOrStore()) {
+        MachineBasicBlock::instr_iterator II(MI->getIterator());
+        for (MachineBasicBlock::instr_iterator I = ++II, E = MBB.instr_end();
+             I != E && I->isBundledWithPred(); ++I) {
+          I->unbundleFromPred();
+          for (MachineOperand &MO : I->operands())
+            if (MO.isReg())
+              MO.setIsInternalRead(false);
+        }
+
+        MI->eraseFromParent();
+        MI = II->getIterator();
+      }
+
       if (!(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic))
         continue;
 
