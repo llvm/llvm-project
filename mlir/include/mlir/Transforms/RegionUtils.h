@@ -22,7 +22,7 @@ namespace mlir {
 template <typename Range>
 bool areValuesDefinedAbove(Range values, Region &limit) {
   for (Value v : values)
-    if (!v->getParentRegion()->isProperAncestor(&limit))
+    if (!v.getParentRegion()->isProperAncestor(&limit))
       return false;
   return true;
 }

@@ -672,9 +672,18 @@ const CXXRecordDecl *findRecordTypeAt(ParsedAST &AST, Position Pos) {
   const SourceManager &SM = AST.getSourceManager();
   SourceLocation SourceLocationBeg = SM.getMacroArgExpandedLocation(
       getBeginningOfIdentifier(Pos, SM, AST.getLangOpts()));
-  DeclRelationSet Relations =
-      DeclRelation::TemplatePattern | DeclRelation::Underlying;
-  auto Decls = getDeclAtPosition(AST, SourceLocationBeg, Relations);
+  unsigned Offset =
+      AST.getSourceManager().getDecomposedSpellingLoc(SourceLocationBeg).second;
+  SelectionTree Selection(AST.getASTContext(), AST.getTokens(), Offset);
+  const SelectionTree::Node *N = Selection.commonAncestor();
+  if (!N)
+    return nullptr;
+
+  // Note: explicitReferenceTargets() will search for both template
+  // instantiations and template patterns, and prefer the former if available
+  // (generally, one will be available for non-dependent specializations of a
+  // class template).
+  auto Decls = explicitReferenceTargets(N->ASTNode, DeclRelation::Underlying);
   if (Decls.empty())
     return nullptr;
 
@@ -699,6 +708,13 @@ const CXXRecordDecl *findRecordTypeAt(ParsedAST &AST, Position Pos) {
 
 std::vector<const CXXRecordDecl *> typeParents(const CXXRecordDecl *CXXRD) {
   std::vector<const CXXRecordDecl *> Result;
+
+  // If this is an invalid instantiation, instantiation of the bases
+  // may not have succeeded, so fall back to the template pattern.
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CXXRD)) {
+    if (CTSD->isInvalidDecl())
+      CXXRD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
+  }
 
   for (auto Base : CXXRD->bases()) {
     const CXXRecordDecl *ParentDecl = nullptr;
@@ -754,6 +770,11 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
     Result->children.emplace();
 
     if (Index) {
+      // The index does not store relationships between implicit
+      // specializations, so if we have one, use the template pattern instead.
+      if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(CXXRD))
+        CXXRD = CTSD->getTemplateInstantiationPattern();
+
       if (Optional<SymbolID> ID = getSymbolID(CXXRD))
         fillSubTypes(*ID, *Result->children, Index, ResolveLevels, TUPath);
     }

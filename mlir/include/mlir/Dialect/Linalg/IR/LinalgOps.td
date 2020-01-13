@@ -165,7 +165,7 @@ def Linalg_SliceOp : Linalg_Op<"slice", [NoSideEffect]>,
     Type getElementType() { return getShapedType().getElementType(); }
     ShapedType getShapedType() { return getType().cast<ShapedType>(); }
     unsigned getBaseViewRank() { return getBaseViewType().getRank(); }
-    ShapedType getBaseViewType() { return view()->getType().cast<ShapedType>();}
+    ShapedType getBaseViewType() { return view().getType().cast<ShapedType>();}
 
     // Get the underlying indexing at a given rank.
     Value indexing(unsigned rank) { return *(indexings().begin() + rank); }
@@ -174,7 +174,7 @@ def Linalg_SliceOp : Linalg_Op<"slice", [NoSideEffect]>,
     SmallVector<Value, 8> getRanges() {
       SmallVector<Value, 8> res;
       for (auto operand : indexings())
-        if (!operand->getType().isa<IndexType>())
+        if (!operand.getType().isa<IndexType>())
           res.push_back(operand);
       return res;
     }
@@ -211,7 +211,7 @@ def Linalg_TransposeOp : Linalg_Op<"transpose", [NoSideEffect]>,
 
   let extraClassDeclaration = [{
     static StringRef getPermutationAttrName() { return "permutation"; }
-    ShapedType getShapedType() { return view()->getType().cast<ShapedType>(); }
+    ShapedType getShapedType() { return view().getType().cast<ShapedType>(); }
   }];
 }
 

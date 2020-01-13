@@ -1558,10 +1558,10 @@ LogicalResult Deserializer::processSelectionMerge(ArrayRef<uint32_t> operands) {
   if (operands.size() < 2) {
     return emitError(
         unknownLoc,
-        "OpLoopMerge must specify merge target and selection control");
+        "OpSelectionMerge must specify merge target and selection control");
   }
 
-  if (static_cast<uint32_t>(spirv::LoopControl::None) != operands[1]) {
+  if (static_cast<uint32_t>(spirv::SelectionControl::None) != operands[1]) {
     return emitError(unknownLoc,
                      "unimplmented OpSelectionMerge selection control: ")
            << operands[2];
@@ -1775,7 +1775,7 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
                             << " from block " << block << "\n");
     if (!isFnEntryBlock(block)) {
       for (BlockArgument blockArg : block->getArguments()) {
-        auto newArg = newBlock->addArgument(blockArg->getType());
+        auto newArg = newBlock->addArgument(blockArg.getType());
         mapper.map(blockArg, newArg);
         LLVM_DEBUG(llvm::dbgs() << "[cf] remapped block argument " << blockArg
                                 << " to " << newArg << '\n');
@@ -1816,7 +1816,7 @@ LogicalResult ControlFlowStructurizer::structurizeImpl() {
     // make sure the old merge block has the same block argument list.
     assert(mergeBlock->args_empty() && "OpPhi in loop merge block unsupported");
     for (BlockArgument blockArg : headerBlock->getArguments()) {
-      mergeBlock->addArgument(blockArg->getType());
+      mergeBlock->addArgument(blockArg.getType());
     }
 
     // If the loop header block has block arguments, make sure the spv.branch op
@@ -2200,7 +2200,7 @@ LogicalResult Deserializer::processBitcast(ArrayRef<uint32_t> words) {
                      "spirv::BitcastOp, only ")
            << wordIndex << " of " << words.size() << " processed";
   }
-  if (resultTypes[0] == operands[0]->getType() &&
+  if (resultTypes[0] == operands[0].getType() &&
       resultTypes[0].isa<IntegerType>()) {
     // TODO(b/130356985): This check is added to ignore error in Op verification
     // due to both signed and unsigned integers mapping to the same

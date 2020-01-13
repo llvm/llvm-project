@@ -270,8 +270,8 @@ static BaseOffset
 ComputeReturnAdjustmentBaseOffset(ASTContext &Context,
                                   const CXXMethodDecl *DerivedMD,
                                   const CXXMethodDecl *BaseMD) {
-  const FunctionType *BaseFT = BaseMD->getType()->getAs<FunctionType>();
-  const FunctionType *DerivedFT = DerivedMD->getType()->getAs<FunctionType>();
+  const auto *BaseFT = BaseMD->getType()->castAs<FunctionType>();
+  const auto *DerivedFT = DerivedMD->getType()->castAs<FunctionType>();
 
   // Canonicalize the return types.
   CanQualType CanDerivedReturnType =

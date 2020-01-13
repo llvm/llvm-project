@@ -16,11 +16,11 @@
 include "mlir/IR/OpBase.td"
 
 class HasShape<list<int> shape> :
-  CPred<"$0->getType().cast<ShapedType>().hasStaticShape({" #
+  CPred<"$0.getType().cast<ShapedType>().hasStaticShape({" #
     StrJoinInt<shape>.result # "})">;
 
 class UnrollVectorOp<list<int> factors> : NativeCodeCall<
-  "unrollSingleResultOpMatchingType($_builder, $0->getDefiningOp(), " #
+  "unrollSingleResultOpMatchingType($_builder, $0.getDefiningOp(), " #
     "{" # StrJoinInt<factors>.result # "})">;
 
 #endif // VECTOR_TRANSFORM_PATTERNS

@@ -303,7 +303,7 @@ public:
   /// Value. An eager Value represents both the declaration and the definition
   /// (in the PL sense) of a placeholder for an mlir::Value that has already
   /// been constructed in the past and that is captured "now" in the program.
-  explicit ValueHandle(Value v) : t(v->getType()), v(v) {}
+  explicit ValueHandle(Value v) : t(v.getType()), v(v) {}
 
   /// Builds a ConstantIndexOp of value `cst`. The constant is created at the
   /// current insertion point.
@@ -365,7 +365,7 @@ public:
   Operation *getOperation() const {
     if (!v)
       return nullptr;
-    return v->getDefiningOp();
+    return v.getDefiningOp();
   }
 
 protected:

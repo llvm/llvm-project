@@ -22,6 +22,11 @@ config.dotest_path = "@LLDB_SOURCE_DIR@/test/API/dotest.py"
 config.dotest_args_str = "@LLDB_DOTEST_ARGS@"
 config.lldb_enable_python = @LLDB_ENABLE_PYTHON@
 config.dotest_lit_args_str = None
+config.lldb_executable = '@LLDB_TEST_EXECUTABLE@'
+config.test_arch = '@LLDB_TEST_ARCH@'
+config.test_compiler = '@LLDB_TEST_COMPILER@'
+config.dsymutil = '@LLDB_TEST_DSYMUTIL@'
+config.filecheck = '@LLDB_TEST_FILECHECK@'
 # The API tests use their own module caches.
 config.lldb_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_LLDB@", "lldb-api")
 config.clang_module_cache = os.path.join("@LLDB_TEST_MODULE_CACHE_CLANG@", "lldb-api")

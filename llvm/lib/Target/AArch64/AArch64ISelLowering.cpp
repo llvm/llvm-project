@@ -13102,7 +13102,7 @@ bool AArch64TargetLowering::
 bool AArch64TargetLowering::shouldExpandShift(SelectionDAG &DAG,
                                               SDNode *N) const {
   if (DAG.getMachineFunction().getFunction().hasMinSize() &&
-      !Subtarget->isTargetWindows())
+      !Subtarget->isTargetWindows() && !Subtarget->isTargetDarwin())
     return false;
   return true;
 }

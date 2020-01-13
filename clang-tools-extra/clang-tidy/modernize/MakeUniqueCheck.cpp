@@ -41,6 +41,8 @@ bool MakeUniqueCheck::isLanguageVersionSupported(
   return RequireCPlusPlus14 ? LangOpts.CPlusPlus14 : LangOpts.CPlusPlus11;
 }
 
+// FixItHint is done by MakeSmartPtrCheck
+
 } // namespace modernize
 } // namespace tidy
 } // namespace clang

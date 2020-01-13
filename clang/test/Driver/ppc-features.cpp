@@ -168,8 +168,11 @@
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -mno-invariant-function-descriptors -minvariant-function-descriptors -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-INVFUNCDESC %s
 // CHECK-INVFUNCDESC: "-target-feature" "+invariant-function-descriptors"
 
-// RUN: %clang -target powerpc-unknown-linux-gnu %s -mno-spe -mspe -### -o %t.o 2>&1 | FileCheck -check-prefix=CHECK-SPE %s
+// RUN: %clang -target powerpc %s -mno-spe -mspe -c -### 2>&1 | FileCheck -check-prefix=CHECK-SPE %s
+// RUN: %clang -target powerpcspe %s -c -### 2>&1 | FileCheck -check-prefix=CHECK-SPE %s
+// RUN: %clang -target powerpcspe %s -mno-spe -c -### 2>&1 | FileCheck -check-prefix=CHECK-NOSPE %s
 // CHECK-SPE: "-target-feature" "+spe"
+// CHECK-NOSPE: "-target-feature" "-spe"
 
 // Assembler features
 // RUN: %clang -target powerpc64-unknown-linux-gnu %s -### -o %t.o -no-integrated-as 2>&1 | FileCheck -check-prefix=CHECK_BE_AS_ARGS %s

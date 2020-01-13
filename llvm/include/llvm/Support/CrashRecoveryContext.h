@@ -100,6 +100,14 @@ public:
   /// Explicitly trigger a crash recovery in the current process, and
   /// return failure from RunSafely(). This function does not return.
   void HandleCrash();
+
+  /// In case of a crash, this is the crash identifier.
+  int RetCode = 0;
+
+  /// Selects whether handling of failures should be done in the same way as
+  /// for regular crashes. When this is active, a crash would print the
+  /// callstack, clean-up any temporary files and create a coredump/minidump.
+  bool DumpStackAndCleanupOnFailure = false;
 };
 
 /// Abstract base class of cleanup handlers.

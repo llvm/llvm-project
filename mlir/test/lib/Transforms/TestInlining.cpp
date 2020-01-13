@@ -37,7 +37,7 @@ struct Inliner : public FunctionPass<Inliner> {
     // Try to inline each of the call operations.
     for (auto caller : callers) {
       auto callee = dyn_cast_or_null<FunctionalRegionOp>(
-          caller.getCallee()->getDefiningOp());
+          caller.getCallee().getDefiningOp());
       if (!callee)
         continue;
 
@@ -47,7 +47,7 @@ struct Inliner : public FunctionPass<Inliner> {
               interface, &callee.body(), caller,
               llvm::to_vector<8>(caller.getArgOperands()),
               SmallVector<Value, 8>(caller.getResults()), caller.getLoc(),
-              /*shouldCloneInlinedRegion=*/!callee.getResult()->hasOneUse())))
+              /*shouldCloneInlinedRegion=*/!callee.getResult().hasOneUse())))
         continue;
 
       // If the inlining was successful then erase the call and callee if

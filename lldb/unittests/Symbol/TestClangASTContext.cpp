@@ -498,6 +498,7 @@ TEST_F(TestClangASTContext, TestFunctionTemplateInRecordConstruction) {
   // Tests creating a function template inside a record.
 
   CompilerType int_type = m_ast->GetBasicType(lldb::eBasicTypeInt);
+  clang::TranslationUnitDecl *TU = m_ast->GetTranslationUnitDecl();
 
   // Create a record we can put the function template int.
   CompilerType record_type =
@@ -507,8 +508,11 @@ TEST_F(TestClangASTContext, TestFunctionTemplateInRecordConstruction) {
   // Prepare the declarations/types we need for the template.
   CompilerType clang_type =
       m_ast->CreateFunctionType(int_type, nullptr, 0U, false, 0U);
+  // We create the FunctionDecl for the template in the TU DeclContext because:
+  // 1. FunctionDecls can't be in a Record (only CXXMethodDecls can).
+  // 2. It is mirroring the behavior of DWARFASTParserClang::ParseSubroutine.
   FunctionDecl *func =
-      m_ast->CreateFunctionDeclaration(record, "foo", clang_type, 0, false);
+      m_ast->CreateFunctionDeclaration(TU, "foo", clang_type, 0, false);
   ClangASTContext::TemplateParameterInfos empty_params;
 
   // Create the actual function template.

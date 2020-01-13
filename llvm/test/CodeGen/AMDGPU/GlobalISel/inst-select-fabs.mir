@@ -201,7 +201,7 @@ body: |
     ; GCN-LABEL: name: fabs_s64_ss
     ; GCN: liveins: $sgpr0_sgpr1
     ; GCN: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; GCN: [[FABS:%[0-9]+]]:sreg_64_xexec(s64) = G_FABS [[COPY]]
+    ; GCN: [[FABS:%[0-9]+]]:sreg_64(s64) = G_FABS [[COPY]]
     ; GCN: $sgpr0_sgpr1 = COPY [[FABS]](s64)
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_FABS %0

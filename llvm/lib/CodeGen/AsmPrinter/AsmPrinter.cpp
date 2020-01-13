@@ -1222,6 +1222,8 @@ void AsmPrinter::EmitFunctionBody() {
   // Emit section containing stack size metadata.
   emitStackSizeSection(*MF);
 
+  emitPatchableFunctionEntries();
+
   if (isVerbose())
     OutStreamer->GetCommentOS() << "-- End function\n";
 
@@ -1660,6 +1662,7 @@ MCSymbol *AsmPrinter::getCurExceptionSym() {
 
 void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   this->MF = &MF;
+  const Function &F = MF.getFunction();
 
   // Get the function symbol.
   if (MAI->needsFunctionDescriptors()) {
@@ -1672,7 +1675,6 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
     CurrentFnSym =
         OutContext.getOrCreateSymbol("." + CurrentFnDescSym->getName());
 
-    const Function &F = MF.getFunction();
     MCSectionXCOFF *FnEntryPointSec =
         cast<MCSectionXCOFF>(getObjFileLowering().SectionForGlobal(&F, TM));
     // Set the containing csect.
@@ -1685,7 +1687,8 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   CurrentFnBegin = nullptr;
   CurExceptionSym = nullptr;
   bool NeedsLocalForSize = MAI->needsLocalForSize();
-  if (needFuncLabelsForEHOrDebugInfo(MF, MMI) || NeedsLocalForSize ||
+  if (F.hasFnAttribute("patchable-function-entry") ||
+      needFuncLabelsForEHOrDebugInfo(MF, MMI) || NeedsLocalForSize ||
       MF.getTarget().Options.EmitStackSizeSection) {
     CurrentFnBegin = createTempSymbol("func_begin");
     if (NeedsLocalForSize)
@@ -3192,6 +3195,41 @@ void AsmPrinter::recordSled(MCSymbol *Sled, const MachineInstr &MI,
     Kind = SledKind::LOG_ARGS_ENTER;
   Sleds.emplace_back(XRayFunctionEntry{Sled, CurrentFnSym, Kind,
                                        AlwaysInstrument, &F, Version});
+}
+
+void AsmPrinter::emitPatchableFunctionEntries() {
+  const Function &F = MF->getFunction();
+  if (!F.hasFnAttribute("patchable-function-entry"))
+    return;
+  const unsigned PointerSize = getPointerSize();
+  if (TM.getTargetTriple().isOSBinFormatELF()) {
+    auto Flags = ELF::SHF_WRITE | ELF::SHF_ALLOC;
+
+    // As of binutils 2.33, GNU as does not support section flag "o" or linkage
+    // field "unique". Use SHF_LINK_ORDER if we are using the integrated
+    // assembler.
+    if (MAI->useIntegratedAssembler()) {
+      Flags |= ELF::SHF_LINK_ORDER;
+      std::string GroupName;
+      if (F.hasComdat()) {
+        Flags |= ELF::SHF_GROUP;
+        GroupName = F.getComdat()->getName();
+      }
+      MCSection *Section = getObjFileLowering().SectionForGlobal(&F, TM);
+      unsigned UniqueID =
+          PatchableFunctionEntryID
+              .try_emplace(Section, PatchableFunctionEntryID.size())
+              .first->second;
+      OutStreamer->SwitchSection(OutContext.getELFSection(
+          "__patchable_function_entries", ELF::SHT_PROGBITS, Flags, 0,
+          GroupName, UniqueID, cast<MCSymbolELF>(CurrentFnSym)));
+    } else {
+      OutStreamer->SwitchSection(OutContext.getELFSection(
+          "__patchable_function_entries", ELF::SHT_PROGBITS, Flags));
+    }
+    EmitAlignment(Align(PointerSize));
+    OutStreamer->EmitSymbolValue(CurrentFnBegin, PointerSize);
+  }
 }
 
 uint16_t AsmPrinter::getDwarfVersion() const {

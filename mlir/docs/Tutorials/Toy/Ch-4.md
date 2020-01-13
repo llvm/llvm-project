@@ -82,7 +82,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
     // Replace the values directly with the return operands.
     assert(returnOp.getNumOperands() == valuesToRepl.size());
     for (const auto &it : llvm::enumerate(returnOp.getOperands()))
-      valuesToRepl[it.index()]->replaceAllUsesWith(it.value());
+      valuesToRepl[it.index()].replaceAllUsesWith(it.value());
   }
 };
 ```
@@ -310,7 +310,7 @@ inferred as the shape of the inputs.
 ```c++
 /// Infer the output shape of the MulOp, this is required by the shape inference
 /// interface.
-void MulOp::inferShapes() { getResult()->setType(getOperand(0)->getType()); }
+void MulOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
 ```
 
 At this point, each of the necessary Toy operations provide a mechanism by which

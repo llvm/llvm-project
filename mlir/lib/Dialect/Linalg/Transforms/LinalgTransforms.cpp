@@ -166,7 +166,7 @@ mlir::linalg::vectorizeGenericLinalgOpPrecondition(Operation *op) {
 
   // TODO(ntv): non-identity layout.
   auto isStaticMemRefWithIdentityLayout = [](Value v) {
-    auto m = v->getType().dyn_cast<MemRefType>();
+    auto m = v.getType().dyn_cast<MemRefType>();
     if (!m || !m.hasStaticShape() || !m.getAffineMaps().empty())
       return false;
     return true;
@@ -281,7 +281,7 @@ mlir::linalg::promoteSubviewsLinalgOp(PatternRewriter &rewriter,
   LinalgOp linOp = cast<LinalgOp>(op);
   SetVector<Value> subViews;
   for (auto it : linOp.getInputsAndOutputs())
-    if (auto sv = dyn_cast_or_null<SubViewOp>(it->getDefiningOp()))
+    if (auto sv = dyn_cast_or_null<SubViewOp>(it.getDefiningOp()))
       subViews.insert(sv);
   if (!subViews.empty()) {
     promoteSubViewOperands(rewriter, linOp, subViews);

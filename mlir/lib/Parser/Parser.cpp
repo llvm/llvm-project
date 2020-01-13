@@ -3256,8 +3256,8 @@ OperationParser::~OperationParser() {
   for (auto &fwd : forwardRefPlaceholders) {
     // Drop all uses of undefined forward declared reference and destroy
     // defining operation.
-    fwd.first->dropAllUses();
-    fwd.first->getDefiningOp()->destroy();
+    fwd.first.dropAllUses();
+    fwd.first.getDefiningOp()->destroy();
   }
 }
 
@@ -3351,8 +3351,8 @@ ParseResult OperationParser::addDefinition(SSAUseInfo useInfo, Value value) {
     // If it was a forward reference, update everything that used it to use
     // the actual definition instead, delete the forward ref, and remove it
     // from our set of forward references we track.
-    existing->replaceAllUsesWith(value);
-    existing->getDefiningOp()->destroy();
+    existing.replaceAllUsesWith(value);
+    existing.getDefiningOp()->destroy();
     forwardRefPlaceholders.erase(existing);
   }
 
@@ -3412,13 +3412,13 @@ Value OperationParser::resolveSSAUse(SSAUseInfo useInfo, Type type) {
   if (useInfo.number < entries.size() && entries[useInfo.number].first) {
     auto result = entries[useInfo.number].first;
     // Check that the type matches the other uses.
-    if (result->getType() == type)
+    if (result.getType() == type)
       return result;
 
     emitError(useInfo.loc, "use of value '")
         .append(useInfo.name,
                 "' expects different type than prior uses: ", type, " vs ",
-                result->getType())
+                result.getType())
         .attachNote(getEncodedSourceLocation(entries[useInfo.number].second))
         .append("prior use here");
     return nullptr;
@@ -4545,7 +4545,7 @@ ParseResult OperationParser::parseOptionalBlockArgList(
 
           // Finally, make sure the existing argument has the correct type.
           auto arg = owner->getArgument(nextArgument++);
-          if (arg->getType() != type)
+          if (arg.getType() != type)
             return emitError("argument and block argument type mismatch");
           return addDefinition(useInfo, arg);
         });

@@ -45,11 +45,9 @@ class WebAssemblyDisassembler final : public MCDisassembler {
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
                               raw_ostream &CStream) const override;
   DecodeStatus onSymbolStart(StringRef Name, uint64_t &Size,
                              ArrayRef<uint8_t> Bytes, uint64_t Address,
-                             raw_ostream &VStream,
                              raw_ostream &CStream) const override;
 
 public:
@@ -123,7 +121,7 @@ bool parseImmediate(MCInst &MI, uint64_t &Size, ArrayRef<uint8_t> Bytes) {
 
 MCDisassembler::DecodeStatus WebAssemblyDisassembler::onSymbolStart(
     StringRef Name, uint64_t &Size, ArrayRef<uint8_t> Bytes, uint64_t Address,
-    raw_ostream &VStream, raw_ostream &CStream) const {
+    raw_ostream &CStream) const {
   Size = 0;
   if (Address == 0) {
     // Start of a code section: we're parsing only the function count.
@@ -158,7 +156,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::onSymbolStart(
 
 MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     MCInst &MI, uint64_t &Size, ArrayRef<uint8_t> Bytes, uint64_t /*Address*/,
-    raw_ostream & /*OS*/, raw_ostream &CS) const {
+    raw_ostream &CS) const {
   CommentStream = &CS;
   Size = 0;
   int Opc = nextByte(Bytes, Size);

@@ -53,7 +53,7 @@ public:
 
   DecodeStatus getInstruction(MCInst &MI, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &WS, raw_ostream &CS) const override;
+                              raw_ostream &CS) const override;
 
   const char* getRegClassName(unsigned RegClassID) const;
 

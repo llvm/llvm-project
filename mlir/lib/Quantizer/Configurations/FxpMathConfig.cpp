@@ -106,7 +106,7 @@ struct FxpMathTargetConfigImpl : public FxpMathTargetConfig {
 
   void handleValueIdentity(Operation *op, CAGSlice &cag) const {
     assert(op->getNumResults() == 1);
-    if (!isHandledType(op->getResult(0)->getType()))
+    if (!isHandledType(op->getResult(0).getType()))
       return;
 
     auto resultNode = cag.getResultAnchor(op, 0);
@@ -114,7 +114,7 @@ struct FxpMathTargetConfigImpl : public FxpMathTargetConfig {
         CAGAnchorNode::TypeTransformRule::DirectStorage);
 
     for (unsigned opIdx = 0, e = op->getNumOperands(); opIdx < e; ++opIdx) {
-      if (!isHandledType(op->getOperand(opIdx)->getType()))
+      if (!isHandledType(op->getOperand(opIdx).getType()))
         continue;
       auto operandNode = cag.getOperandAnchor(op, opIdx);
       operandNode->setTypeTransformRule(
@@ -124,7 +124,7 @@ struct FxpMathTargetConfigImpl : public FxpMathTargetConfig {
   }
 
   void handleConstant(Operation *op, CAGSlice &cag) const {
-    if (!isHandledType(op->getResult(0)->getType()))
+    if (!isHandledType(op->getResult(0).getType()))
       return;
 
     auto resultNode = cag.getResultAnchor(op, 0);
@@ -146,7 +146,7 @@ struct FxpMathTargetConfigImpl : public FxpMathTargetConfig {
   }
 
   void handleTerminal(Operation *op, CAGSlice &cag) const {
-    if (!isHandledType(op->getOperand(0)->getType()))
+    if (!isHandledType(op->getOperand(0).getType()))
       return;
     auto operandNode = cag.getOperandAnchor(op, 0);
     operandNode->setTypeTransformRule(
@@ -154,7 +154,7 @@ struct FxpMathTargetConfigImpl : public FxpMathTargetConfig {
   }
 
   void handleStats(Operation *op, CAGSlice &cag) const {
-    if (!isHandledType(op->getResult(0)->getType()))
+    if (!isHandledType(op->getResult(0).getType()))
       return;
 
     auto argNode = cag.getOperandAnchor(op, 0);
@@ -172,7 +172,7 @@ struct FxpMathTargetConfigImpl : public FxpMathTargetConfig {
   }
 
   void handleAdd(Operation *op, CAGSlice &cag) const {
-    if (!isHandledType(op->getResult(0)->getType()))
+    if (!isHandledType(op->getResult(0).getType()))
       return;
 
     auto lhs = cag.getOperandAnchor(op, 0);
@@ -197,7 +197,7 @@ struct FxpMathTargetConfigImpl : public FxpMathTargetConfig {
   }
 
   void handleMul(Operation *op, CAGSlice &cag) const {
-    if (!isHandledType(op->getResult(0)->getType()))
+    if (!isHandledType(op->getResult(0).getType()))
       return;
 
     auto lhs = cag.getOperandAnchor(op, 0);
@@ -213,7 +213,7 @@ struct FxpMathTargetConfigImpl : public FxpMathTargetConfig {
   }
 
   void handleMatMul(Operation *op, CAGSlice &cag) const {
-    if (!isHandledType(op->getResult(0)->getType()))
+    if (!isHandledType(op->getResult(0).getType()))
       return;
 
     auto lhs = cag.getOperandAnchor(op, 0);
@@ -229,7 +229,7 @@ struct FxpMathTargetConfigImpl : public FxpMathTargetConfig {
   }
 
   void handleMatMulBias(Operation *op, CAGSlice &cag) const {
-    if (!isHandledType(op->getResult(0)->getType()))
+    if (!isHandledType(op->getResult(0).getType()))
       return;
 
     auto lhs = cag.getOperandAnchor(op, 0);

@@ -54,7 +54,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
     // Replace the values directly with the return operands.
     assert(returnOp.getNumOperands() == valuesToRepl.size());
     for (const auto &it : llvm::enumerate(returnOp.getOperands()))
-      valuesToRepl[it.index()]->replaceAllUsesWith(it.value());
+      valuesToRepl[it.index()].replaceAllUsesWith(it.value());
   }
 
   /// Attempts to materialize a conversion for a type mismatch between a call
@@ -171,16 +171,16 @@ static mlir::LogicalResult verifyConstantForType(mlir::Type type,
 /// Verifier for the constant operation. This corresponds to the `::verify(...)`
 /// in the op definition.
 static mlir::LogicalResult verify(ConstantOp op) {
-  return verifyConstantForType(op.getResult()->getType(), op.value(), op);
+  return verifyConstantForType(op.getResult().getType(), op.value(), op);
 }
 
 static mlir::LogicalResult verify(StructConstantOp op) {
-  return verifyConstantForType(op.getResult()->getType(), op.value(), op);
+  return verifyConstantForType(op.getResult().getType(), op.value(), op);
 }
 
 /// Infer the output shape of the ConstantOp, this is required by the shape
 /// inference interface.
-void ConstantOp::inferShapes() { getResult()->setType(value().getType()); }
+void ConstantOp::inferShapes() { getResult().setType(value().getType()); }
 
 //===----------------------------------------------------------------------===//
 // AddOp
@@ -193,14 +193,14 @@ void AddOp::build(mlir::Builder *builder, mlir::OperationState &state,
 
 /// Infer the output shape of the AddOp, this is required by the shape inference
 /// interface.
-void AddOp::inferShapes() { getResult()->setType(getOperand(0)->getType()); }
+void AddOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
 
 //===----------------------------------------------------------------------===//
 // CastOp
 
 /// Infer the output shape of the CastOp, this is required by the shape
 /// inference interface.
-void CastOp::inferShapes() { getResult()->setType(getOperand()->getType()); }
+void CastOp::inferShapes() { getResult().setType(getOperand().getType()); }
 
 //===----------------------------------------------------------------------===//
 // GenericCallOp
@@ -234,7 +234,7 @@ void MulOp::build(mlir::Builder *builder, mlir::OperationState &state,
 
 /// Infer the output shape of the MulOp, this is required by the shape inference
 /// interface.
-void MulOp::inferShapes() { getResult()->setType(getOperand(0)->getType()); }
+void MulOp::inferShapes() { getResult().setType(getOperand(0).getType()); }
 
 //===----------------------------------------------------------------------===//
 // ReturnOp
@@ -280,7 +280,7 @@ static mlir::LogicalResult verify(ReturnOp op) {
 void StructAccessOp::build(mlir::Builder *b, mlir::OperationState &state,
                            mlir::Value input, size_t index) {
   // Extract the result type from the input type.
-  StructType structTy = input->getType().cast<StructType>();
+  StructType structTy = input.getType().cast<StructType>();
   assert(index < structTy.getNumElementTypes());
   mlir::Type resultType = structTy.getElementTypes()[index];
 
@@ -289,12 +289,12 @@ void StructAccessOp::build(mlir::Builder *b, mlir::OperationState &state,
 }
 
 static mlir::LogicalResult verify(StructAccessOp op) {
-  StructType structTy = op.input()->getType().cast<StructType>();
+  StructType structTy = op.input().getType().cast<StructType>();
   size_t index = op.index().getZExtValue();
   if (index >= structTy.getNumElementTypes())
     return op.emitOpError()
            << "index should be within the range of the input struct type";
-  mlir::Type resultType = op.getResult()->getType();
+  mlir::Type resultType = op.getResult().getType();
   if (resultType != structTy.getElementTypes()[index])
     return op.emitOpError() << "must have the same result type as the struct "
                                "element referred to by the index";
@@ -311,13 +311,13 @@ void TransposeOp::build(mlir::Builder *builder, mlir::OperationState &state,
 }
 
 void TransposeOp::inferShapes() {
-  auto arrayTy = getOperand()->getType().cast<RankedTensorType>();
+  auto arrayTy = getOperand().getType().cast<RankedTensorType>();
   SmallVector<int64_t, 2> dims(llvm::reverse(arrayTy.getShape()));
-  getResult()->setType(RankedTensorType::get(dims, arrayTy.getElementType()));
+  getResult().setType(RankedTensorType::get(dims, arrayTy.getElementType()));
 }
 
 static mlir::LogicalResult verify(TransposeOp op) {
-  auto inputType = op.getOperand()->getType().dyn_cast<RankedTensorType>();
+  auto inputType = op.getOperand().getType().dyn_cast<RankedTensorType>();
   auto resultType = op.getType().dyn_cast<RankedTensorType>();
   if (!inputType || !resultType)
     return mlir::success();

@@ -454,6 +454,26 @@ TEST(Matcher, HasReceiver) {
       objcMessageExpr(hasReceiver(declRefExpr(to(varDecl(hasName("x"))))))));
 }
 
+TEST(Matcher, HasAnyCapture) {
+  auto HasCaptureX = lambdaExpr(hasAnyCapture(varDecl(hasName("x"))));
+  EXPECT_TRUE(matches("void f() { int x = 3; [x](){}; }", HasCaptureX));
+  EXPECT_TRUE(matches("void f() { int x = 3; [&x](){}; }", HasCaptureX));
+  EXPECT_TRUE(notMatches("void f() { [](){}; }", HasCaptureX));
+  EXPECT_TRUE(notMatches("void f() { int z = 3; [&z](){}; }", HasCaptureX));
+  EXPECT_TRUE(
+      notMatches("struct a { void f() { [this](){}; }; };", HasCaptureX));
+}
+
+TEST(Matcher, CapturesThis) {
+  auto HasCaptureThis = lambdaExpr(hasAnyCapture(cxxThisExpr()));
+  EXPECT_TRUE(
+      matches("struct a { void f() { [this](){}; }; };", HasCaptureThis));
+  EXPECT_TRUE(notMatches("void f() { [](){}; }", HasCaptureThis));
+  EXPECT_TRUE(notMatches("void f() { int x = 3; [x](){}; }", HasCaptureThis));
+  EXPECT_TRUE(notMatches("void f() { int x = 3; [&x](){}; }", HasCaptureThis));
+  EXPECT_TRUE(notMatches("void f() { int z = 3; [&z](){}; }", HasCaptureThis));
+}
+
 TEST(Matcher, isClassMessage) {
   EXPECT_TRUE(matchesObjC(
       "@interface NSString +(NSString *) stringWithFormat; @end "
@@ -1639,9 +1659,12 @@ void foo()
   EXPECT_TRUE(matches(VarDeclCode, varDecl(traverse(ast_type_traits::TK_AsIs,
                                                     has(implicitCastExpr())))));
 
-  EXPECT_TRUE(notMatches(
+  EXPECT_TRUE(matches(
       VarDeclCode,
-      varDecl(has(traverse(ast_type_traits::TK_AsIs, floatLiteral())))));
+      traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+        // The has() below strips away the ImplicitCastExpr before the
+        // traverse(AsIs) gets to process it.
+        varDecl(has(traverse(ast_type_traits::TK_AsIs, floatLiteral()))))));
 
   EXPECT_TRUE(matches(
       VarDeclCode,
