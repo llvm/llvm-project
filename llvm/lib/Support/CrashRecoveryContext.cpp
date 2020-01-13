@@ -266,7 +266,8 @@ static LONG CALLBACK ExceptionHandler(PEXCEPTION_POINTERS ExceptionInfo)
 
   // Handle the crash
   const_cast<CrashRecoveryContextImpl *>(CRCI)->HandleCrash(
-      (int)ExceptionInfo->ExceptionRecord->ExceptionCode, ExceptionInfo);
+      (int)ExceptionInfo->ExceptionRecord->ExceptionCode,
+      reinterpret_cast<uintptr_t>(ExceptionInfo));
 
   // Note that we don't actually get here because HandleCrash calls
   // longjmp, which means the HandleCrash function never returns.
