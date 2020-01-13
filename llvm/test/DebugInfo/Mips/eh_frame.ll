@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips -relocation-model=static -O3 -filetype=obj -o - %s | \
-; RUN:     llvm-readelf -r | FileCheck %s --check-prefix=CHECK-READELF
+; RUN:     llvm-readelf -r | FileCheck %s --check-prefixes=CHECK-READELF,CHECK-READELF-STATIC
 ; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips -relocation-model=pic -O3 -filetype=obj -o - %s | \
-; RUN:     llvm-readelf -r | FileCheck %s --check-prefix=CHECK-READELF
+; RUN:     llvm-readelf -r | FileCheck %s --check-prefixes=CHECK-READELF,CHECK-READELF-PIC
 ; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips -relocation-model=static -O3 -filetype=obj -o - %s | \
 ; RUN:     llvm-objdump -s -j .gcc_except_table - | FileCheck %s --check-prefix=CHECK-EXCEPT-TABLE-STATIC
 ; RUN: llc -mtriple mips-unknown-linux-gnu -mattr=+micromips -relocation-model=pic -O3 -filetype=obj -o - %s | \
@@ -9,7 +9,8 @@
 
 ; CHECK-READELF: .rel.eh_frame
 ; CHECK-READELF: DW.ref.__gxx_personality_v0
-; CHECK-READELF-NEXT: .text
+; CHECK-READELF-STATIC-NEXT: R_MIPS_32 00000000 .text
+; CHECK-READELF-PIC-NEXT: R_MIPS_PC32
 ; CHECK-READELF-NEXT: .gcc_except_table
 
 ; CHECK-EXCEPT-TABLE-STATIC: 0000 ff9b1501 0c011500 00150e23 01231e00  ...........#.#..
