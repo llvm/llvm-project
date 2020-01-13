@@ -342,8 +342,7 @@ LogicalResult OpBuilder::tryFold(Operation *op,
   };
 
   // If this operation is already a constant, there is nothing to do.
-  Attribute unused;
-  if (matchPattern(op, m_Constant(&unused)))
+  if (matchPattern(op, m_Constant()))
     return cleanupFailure();
 
   // Check to see if any operands to the operation is constant and whether
