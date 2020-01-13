@@ -25,18 +25,18 @@ covered.
 OPTIONS
 -------
 
-.. option:: -only-variables
+.. option:: --only-variables
 
-            Calculate the location statistics only for local variables.
+            calculate the location statistics only for local variables
 
-.. option:: -only-formal-parameters
+.. option:: --only-formal-parameters
 
-            Calculate the location statistics only for formal parameters.
+            calculate the location statistics only for formal parameters
 
-.. option:: -ignore-debug-entry-values
+.. option:: --ignore-debug-entry-values
 
-            Ignore the location statistics on locations containing the
-            debug entry values DWARF operation.
+            ignore the location statistics on locations containing the
+            debug entry values DWARF operation
 
 EXIT STATUS
 -----------
