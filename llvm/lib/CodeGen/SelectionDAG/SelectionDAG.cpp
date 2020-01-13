@@ -2411,9 +2411,10 @@ SDValue SelectionDAG::getSplatValue(SDValue V) {
 
 /// If a SHL/SRA/SRL node has a constant or splat constant shift amount that
 /// is less than the element bit-width of the shift node, return it.
-static const APInt *getValidShiftAmountConstant(SDValue V) {
+static const APInt *getValidShiftAmountConstant(SDValue V,
+                                                const APInt &DemandedElts) {
   unsigned BitWidth = V.getScalarValueSizeInBits();
-  if (ConstantSDNode *SA = isConstOrConstSplat(V.getOperand(1))) {
+  if (ConstantSDNode *SA = isConstOrConstSplat(V.getOperand(1), DemandedElts)) {
     // Shifting more than the bitwidth is not valid.
     const APInt &ShAmt = SA->getAPIntValue();
     if (ShAmt.ult(BitWidth))
@@ -2424,13 +2425,16 @@ static const APInt *getValidShiftAmountConstant(SDValue V) {
 
 /// If a SHL/SRA/SRL node has constant vector shift amounts that are all less
 /// than the element bit-width of the shift node, return the minimum value.
-static const APInt *getValidMinimumShiftAmountConstant(SDValue V) {
+static const APInt *
+getValidMinimumShiftAmountConstant(SDValue V, const APInt &DemandedElts) {
   unsigned BitWidth = V.getScalarValueSizeInBits();
   auto *BV = dyn_cast<BuildVectorSDNode>(V.getOperand(1));
   if (!BV)
     return nullptr;
   const APInt *MinShAmt = nullptr;
   for (unsigned i = 0, e = BV->getNumOperands(); i != e; ++i) {
+    if (!DemandedElts[i])
+      continue;
     auto *SA = dyn_cast<ConstantSDNode>(BV->getOperand(i));
     if (!SA)
       return nullptr;
@@ -2827,14 +2831,15 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::SHL:
-    if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
+    if (const APInt *ShAmt = getValidShiftAmountConstant(Op, DemandedElts)) {
       Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
       unsigned Shift = ShAmt->getZExtValue();
       Known.Zero <<= Shift;
       Known.One <<= Shift;
       // Low bits are known zero.
       Known.Zero.setLowBits(Shift);
-    } else if (const APInt *ShMinAmt = getValidMinimumShiftAmountConstant(Op)) {
+    } else if (const APInt *ShMinAmt =
+                   getValidMinimumShiftAmountConstant(Op, DemandedElts)) {
       // Minimum shift low bits are known zero.
       Known.Zero.setLowBits(ShMinAmt->getZExtValue());
     } else {
@@ -2846,14 +2851,15 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     }
     break;
   case ISD::SRL:
-    if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
+    if (const APInt *ShAmt = getValidShiftAmountConstant(Op, DemandedElts)) {
       Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
       unsigned Shift = ShAmt->getZExtValue();
       Known.Zero.lshrInPlace(Shift);
       Known.One.lshrInPlace(Shift);
       // High bits are known zero.
       Known.Zero.setHighBits(Shift);
-    } else if (const APInt *ShMinAmt = getValidMinimumShiftAmountConstant(Op)) {
+    } else if (const APInt *ShMinAmt =
+                   getValidMinimumShiftAmountConstant(Op, DemandedElts)) {
       // Minimum shift high bits are known zero.
       Known.Zero.setHighBits(ShMinAmt->getZExtValue());
     } else {
@@ -2864,7 +2870,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     }
     break;
   case ISD::SRA:
-    if (const APInt *ShAmt = getValidShiftAmountConstant(Op)) {
+    if (const APInt *ShAmt = getValidShiftAmountConstant(Op, DemandedElts)) {
       Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
       unsigned Shift = ShAmt->getZExtValue();
       // Sign extend known zero/one bit (else is unknown).
