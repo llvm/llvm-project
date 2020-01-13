@@ -203,6 +203,8 @@ static bool isREX(struct InternalInstruction *insn, uint8_t prefix) {
 // Consumes all of an instruction's prefix bytes, and marks the
 // instruction as having them.  Also sets the instruction's default operand,
 // address, and other relevant data sizes to report operands correctly.
+//
+// insn must not be empty.
 static int readPrefixes(struct InternalInstruction *insn) {
   bool isPrefix = true;
   uint8_t byte = 0;
@@ -1707,7 +1709,7 @@ MCDisassembler::DecodeStatus X86GenericDisassembler::getInstruction(
   Insn.readerCursor = Address;
   Insn.mode = fMode;
 
-  if (readPrefixes(&Insn) || readOpcode(&Insn) ||
+  if (Bytes.empty() || readPrefixes(&Insn) || readOpcode(&Insn) ||
       getInstructionID(&Insn, MII.get()) || Insn.instructionID == 0 ||
       readOperands(&Insn)) {
     Size = Insn.readerCursor - Address;
