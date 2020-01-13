@@ -3608,10 +3608,10 @@ ASTContext::getDependentVectorType(QualType VecType, Expr *SizeExpr,
       (void)CanonCheck;
       DependentVectorTypes.InsertNode(New, InsertPos);
     } else {
-      QualType Canon = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
-                                                      SourceLocation());
+      QualType CanonExtTy = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
+                                                           SourceLocation());
       New = new (*this, TypeAlignment) DependentVectorType(
-          *this, VecType, Canon, SizeExpr, AttrLoc, VecKind);
+          *this, VecType, CanonExtTy, SizeExpr, AttrLoc, VecKind);
     }
   }
 
@@ -3681,10 +3681,10 @@ ASTContext::getDependentSizedExtVectorType(QualType vecType,
       (void)CanonCheck;
       DependentSizedExtVectorTypes.InsertNode(New, InsertPos);
     } else {
-      QualType Canon = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
-                                                      SourceLocation());
-      New = new (*this, TypeAlignment)
-        DependentSizedExtVectorType(*this, vecType, Canon, SizeExpr, AttrLoc);
+      QualType CanonExtTy = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
+                                                           SourceLocation());
+      New = new (*this, TypeAlignment) DependentSizedExtVectorType(
+          *this, vecType, CanonExtTy, SizeExpr, AttrLoc);
     }
   }
 
@@ -6875,21 +6875,19 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
       S += ObjCEncodingForEnumType(this, cast<EnumType>(CT));
     return;
 
-  case Type::Complex: {
-    const auto *CT = T->castAs<ComplexType>();
+  case Type::Complex:
     S += 'j';
-    getObjCEncodingForTypeImpl(CT->getElementType(), S, ObjCEncOptions(),
+    getObjCEncodingForTypeImpl(T->castAs<ComplexType>()->getElementType(), S,
+                               ObjCEncOptions(),
                                /*Field=*/nullptr);
     return;
-  }
 
-  case Type::Atomic: {
-    const auto *AT = T->castAs<AtomicType>();
+  case Type::Atomic:
     S += 'A';
-    getObjCEncodingForTypeImpl(AT->getValueType(), S, ObjCEncOptions(),
+    getObjCEncodingForTypeImpl(T->castAs<AtomicType>()->getValueType(), S,
+                               ObjCEncOptions(),
                                /*Field=*/nullptr);
     return;
-  }
 
   // encoding for pointer or reference types.
   case Type::Pointer:
