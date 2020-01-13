@@ -65,7 +65,7 @@
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Finished {{.*}}Function pass manager run.
-; CHECK-O123-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor<{{.*}}PassManager<LazyCallGraph::SCC
+; CHECK-O123-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor<{{.*}}PassManager<{{.*}}LazyCallGraph::SCC
 ; CHECK-O123-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O123-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O123-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy on (foo)
