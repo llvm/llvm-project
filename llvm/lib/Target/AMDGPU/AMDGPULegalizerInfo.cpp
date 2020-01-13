@@ -2438,7 +2438,8 @@ bool AMDGPULegalizerInfo::legalizeRawBufferStore(MachineInstr &MI,
 bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
                                              MachineRegisterInfo &MRI,
                                              MachineIRBuilder &B,
-                                             bool IsFormat) const {
+                                             bool IsFormat,
+                                             bool IsTyped) const {
   B.setInstr(MI);
 
   // FIXME: Verifier should enforce 1 MMO for these intrinsics.
@@ -2449,8 +2450,11 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   Register Dst = MI.getOperand(0).getReg();
   Register RSrc = MI.getOperand(2).getReg();
 
+  // The typed intrinsics add an immediate after the registers.
+  const unsigned NumVIndexOps = IsTyped ? 8 : 7;
+
   // The struct intrinsic variants add one additional operand over raw.
-  const bool HasVIndex = MI.getNumOperands() == 7;
+  const bool HasVIndex = MI.getNumOperands() == NumVIndexOps;
   Register VIndex;
   int OpOffset = 0;
   if (HasVIndex) {
@@ -2460,6 +2464,13 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
 
   Register VOffset = MI.getOperand(3 + OpOffset).getReg();
   Register SOffset = MI.getOperand(4 + OpOffset).getReg();
+
+  unsigned Format = 0;
+  if (IsTyped) {
+    Format = MI.getOperand(5 + OpOffset).getImm();
+    ++OpOffset;
+  }
+
   unsigned AuxiliaryData = MI.getOperand(5 + OpOffset).getImm();
   unsigned ImmOffset;
   unsigned TotalOffset;
@@ -2474,7 +2485,11 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     MMO = B.getMF().getMachineMemOperand(MMO, TotalOffset, MemSize);
 
   unsigned Opc;
-  if (IsFormat) {
+
+  if (IsTyped) {
+    Opc = IsD16 ? AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT_D16 :
+                  AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT;
+  } else if (IsFormat) {
     Opc = IsD16 ? AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16 :
                   AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT;
   } else {
@@ -2506,16 +2521,20 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   if (!VIndex)
     VIndex = B.buildConstant(S32, 0).getReg(0);
 
-  B.buildInstr(Opc)
+  auto MIB = B.buildInstr(Opc)
     .addDef(LoadDstReg)         // vdata
     .addUse(RSrc)               // rsrc
     .addUse(VIndex)             // vindex
     .addUse(VOffset)            // voffset
     .addUse(SOffset)            // soffset
-    .addImm(ImmOffset)          // offset(imm)
-    .addImm(AuxiliaryData)      // cachepolicy, swizzled buffer(imm)
-    .addImm(HasVIndex ? -1 : 0) // idxen(imm)
-    .addMemOperand(MMO);
+    .addImm(ImmOffset);         // offset(imm)
+
+  if (IsTyped)
+    MIB.addImm(Format);
+
+  MIB.addImm(AuxiliaryData)      // cachepolicy, swizzled buffer(imm)
+     .addImm(HasVIndex ? -1 : 0) // idxen(imm)
+     .addMemOperand(MMO);
 
   if (LoadDstReg != Dst) {
     B.setInsertPt(B.getMBB(), ++B.getInsertPt());
@@ -2674,10 +2693,12 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     return legalizeRawBufferStore(MI, MRI, B, true);
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_struct_buffer_load:
-    return legalizeBufferLoad(MI, MRI, B, false);
+    return legalizeBufferLoad(MI, MRI, B, false, false);
   case Intrinsic::amdgcn_raw_buffer_load_format:
   case Intrinsic::amdgcn_struct_buffer_load_format:
-    return legalizeBufferLoad(MI, MRI, B, true);
+    return legalizeBufferLoad(MI, MRI, B, true, false);
+  case Intrinsic::amdgcn_raw_tbuffer_load:
+    return legalizeBufferLoad(MI, MRI, B, true, true);
   case Intrinsic::amdgcn_atomic_inc:
     return legalizeAtomicIncDec(MI, B, true);
   case Intrinsic::amdgcn_atomic_dec:

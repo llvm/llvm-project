@@ -2885,21 +2885,9 @@ void AMDGPUInstructionSelector::renderPopcntImm(MachineInstrBuilder &MIB,
 
 /// This only really exists to satisfy DAG type checking machinery, so is a
 /// no-op here.
-void AMDGPUInstructionSelector::renderTruncTImm32(MachineInstrBuilder &MIB,
-                                                  const MachineInstr &MI,
-                                                  int OpIdx) const {
-  MIB.addImm(MI.getOperand(OpIdx).getImm());
-}
-
-void AMDGPUInstructionSelector::renderTruncTImm16(MachineInstrBuilder &MIB,
-                                                  const MachineInstr &MI,
-                                                  int OpIdx) const {
-  MIB.addImm(MI.getOperand(OpIdx).getImm());
-}
-
-void AMDGPUInstructionSelector::renderTruncTImm1(MachineInstrBuilder &MIB,
-                                                 const MachineInstr &MI,
-                                                 int OpIdx) const {
+void AMDGPUInstructionSelector::renderTruncTImm(MachineInstrBuilder &MIB,
+                                                const MachineInstr &MI,
+                                                int OpIdx) const {
   MIB.addImm(MI.getOperand(OpIdx).getImm());
 }
 
