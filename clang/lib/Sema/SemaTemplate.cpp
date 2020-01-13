@@ -3750,6 +3750,11 @@ static void checkMoreSpecializedThanPrimary(Sema &S, PartialSpecDecl *Partial) {
   }
 
   S.Diag(Template->getLocation(), diag::note_template_decl_here);
+  SmallVector<const Expr *, 3> PartialAC, TemplateAC;
+  Template->getAssociatedConstraints(TemplateAC);
+  Partial->getAssociatedConstraints(PartialAC);
+  S.MaybeEmitAmbiguousAtomicConstraintsDiagnostic(Partial, PartialAC, Template,
+                                                  TemplateAC);
 }
 
 static void

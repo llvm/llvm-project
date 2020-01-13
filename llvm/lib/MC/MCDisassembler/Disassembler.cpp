@@ -263,8 +263,7 @@ size_t LLVMDisasmInstruction(LLVMDisasmContextRef DCR, uint8_t *Bytes,
   MCDisassembler::DecodeStatus S;
   SmallVector<char, 64> InsnStr;
   raw_svector_ostream Annotations(InsnStr);
-  S = DisAsm->getInstruction(Inst, Size, Data, PC,
-                             /*REMOVE*/ nulls(), Annotations);
+  S = DisAsm->getInstruction(Inst, Size, Data, PC, Annotations);
   switch (S) {
   case MCDisassembler::Fail:
   case MCDisassembler::SoftFail:
@@ -277,7 +276,8 @@ size_t LLVMDisasmInstruction(LLVMDisasmContextRef DCR, uint8_t *Bytes,
     SmallVector<char, 64> InsnStr;
     raw_svector_ostream OS(InsnStr);
     formatted_raw_ostream FormattedOS(OS);
-    IP->printInst(&Inst, FormattedOS, AnnotationsStr, *DC->getSubtargetInfo());
+    IP->printInst(&Inst, PC, AnnotationsStr, *DC->getSubtargetInfo(),
+                  FormattedOS);
 
     if (DC->getOptions() & LLVMDisassembler_Option_PrintLatency)
       emitLatency(DC, Inst);

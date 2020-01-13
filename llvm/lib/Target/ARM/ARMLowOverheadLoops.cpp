@@ -19,6 +19,22 @@
 /// which determines whether we can generated the tail-predicated low-overhead
 /// loop form.
 ///
+/// Assumptions and Dependencies:
+/// Low-overhead loops are constructed and executed using a setup instruction:
+/// DLS, WLS, DLSTP or WLSTP and an instruction that loops back: LE or LETP.
+/// WLS(TP) and LE(TP) are branching instructions with a (large) limited range
+/// but fixed polarity: WLS can only branch forwards and LE can only branch
+/// backwards. These restrictions mean that this pass is dependent upon block
+/// layout and block sizes, which is why it's the last pass to run. The same is
+/// true for ConstantIslands, but this pass does not increase the size of the
+/// basic blocks, nor does it change the CFG. Instructions are mainly removed
+/// during the transform and pseudo instructions are replaced by real ones. In
+/// some cases, when we have to revert to a 'normal' loop, we have to introduce
+/// multiple instructions for a single pseudo (see RevertWhile and
+/// RevertLoopEnd). To handle this situation, t2WhileLoopStart and t2LoopEnd
+/// are defined to be as large as this maximum sequence of replacement
+/// instructions.
+///
 //===----------------------------------------------------------------------===//
 
 #include "ARM.h"
@@ -322,8 +338,8 @@ static bool IsSafeToMove(MachineInstr *From, MachineInstr *To, ReachingDefAnalys
 }
 
 bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt,
-		                            ReachingDefAnalysis *RDA,
-		                            MachineLoopInfo *MLI) {
+    ReachingDefAnalysis *RDA, MachineLoopInfo *MLI) {
+  assert(VCTP && "VCTP instruction expected but is not set");
   // All predication within the loop should be based on vctp. If the block
   // isn't predicated on entry, check whether the vctp is within the block
   // and that all other instructions are then predicated on it.
@@ -455,7 +471,9 @@ void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils,
     LLVM_DEBUG(dbgs() << "ARM Loops: Start insertion point: " << *InsertPt);
 
   if (!IsTailPredicationLegal()) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: Tail-predication is not valid.\n");
+    LLVM_DEBUG(if (!VCTP)
+                 dbgs() << "ARM Loops: Didn't find a VCTP instruction.\n";
+               dbgs() << "ARM Loops: Tail-predication is not valid.\n");
     return;
   }
 
@@ -640,8 +658,10 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
   }
 
   LLVM_DEBUG(LoLoop.dump());
-  if (!LoLoop.FoundAllComponents())
+  if (!LoLoop.FoundAllComponents()) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Didn't find loop start, update, end\n");
     return false;
+  }
 
   LoLoop.CheckLegality(BBUtils.get(), RDA, MLI);
   Expand(LoLoop);
@@ -801,17 +821,19 @@ void ARMLowOverheadLoops::RemoveLoopUpdate(LowOverheadLoop &LoLoop) {
   LLVM_DEBUG(dbgs() << "ARM Loops: Trying to remove loop update stmt\n");
 
   if (LoLoop.ML->getNumBlocks() != 1) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: single block loop expected\n");
+    LLVM_DEBUG(dbgs() << "ARM Loops: Single block loop expected\n");
     return;
   }
 
-  LLVM_DEBUG(dbgs() << "ARM Loops: Analyzing MO: ";
+  LLVM_DEBUG(dbgs() << "ARM Loops: Analyzing elemcount in operand: ";
              LoLoop.VCTP->getOperand(1).dump());
 
   // Find the definition we are interested in removing, if there is one.
   MachineInstr *Def = RDA->getReachingMIDef(LastInstrInBlock, ElemCount);
-  if (!Def)
+  if (!Def) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Can't find a def, nothing to do.\n");
     return;
+  }
 
   // Bail if we define CPSR and it is not dead
   if (!Def->registerDefIsDead(ARM::CPSR, TRI)) {
@@ -842,7 +864,11 @@ void ARMLowOverheadLoops::RemoveLoopUpdate(LowOverheadLoop &LoLoop) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Removing loop update instruction: ";
                Def->dump());
     Def->eraseFromParent();
+    return;
   }
+
+  LLVM_DEBUG(dbgs() << "ARM Loops: Can't remove loop update, it's used by:\n";
+             for (auto U : Uses) U->dump());
 }
 
 void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {

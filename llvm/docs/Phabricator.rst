@@ -26,7 +26,7 @@ Make *sure* that the email address registered with Phabricator is subscribed
 to the relevant -commits mailing list. If you are not subscribed to the commit
 list, all mail sent by Phabricator on your behalf will be held for moderation.
 
-Note that if you use your Subversion user name as Phabricator user name,
+Note that if you use your git user name as Phabricator user name,
 Phabricator will automatically connect your submits to your Phabricator user in
 the `Code Repository Browser`_.
 
@@ -48,9 +48,9 @@ Requesting a review via the web interface
 The tool to create and review patches in Phabricator is called
 *Differential*.
 
-Note that you can upload patches created through various diff tools,
-including git and svn. To make reviews easier, please always include
-**as much context as possible** with your diff! Don't worry, Phabricator
+Note that you can upload patches created through git.
+To make reviews easier, please always include **as much context as
+possible** with your diff! Don't worry, Phabricator
 will automatically send a diff with a smaller context in the review
 email, but having the full file in the web interface will help the
 reviewer understand your code.
@@ -60,7 +60,6 @@ to upload your patch):
 
 * ``git show HEAD -U999999 > mypatch.patch``
 * ``git format-patch -U999999 @{u}``
-* ``svn diff --diff-cmd=diff -x -U999999``
 
 Before uploading your patch, please make sure it is formatted properly, as
 described in :ref:`How to Submit a Patch <format patches>`.
@@ -107,7 +106,7 @@ Finding potential reviewers
 
 Here are a couple of ways to pick the initial reviewer(s):
 
-* Use ``svn blame`` and the commit log to find names of people who have
+* Use ``git blame`` and the commit log to find names of people who have
   recently modified the same area of code that you are modifying.
 * Look in CODE_OWNERS.TXT to see who might be responsible for that area.
 * If you've discussed the change on a dev list, the people who participated
@@ -176,7 +175,7 @@ guide <commit_from_git>`.
 Note that if you commit the change without using Arcanist and forget to add the
 ``Differential Revision`` line to your commit message then it is recommended
 that you close the review manually. In the web UI, under "Leap Into Action" put
-the SVN revision number in the Comment, set the Action to "Close Revision" and
+the git revision number in the Comment, set the Action to "Close Revision" and
 click Submit.  Note the review must have been Accepted first.
 
 
@@ -206,20 +205,12 @@ the following:
   ninja check-$whatever # Rerun the appropriate tests if needed.
   git llvm push
 
-Subversion and Arcanist (deprecated)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-To download a change from Phabricator and commit it with subversion, you should
-first make sure you have a clean working directory. Then run the following
-(where ``<Revision>`` is the Phabricator review number):
+Or
 
 ::
 
-  arc patch D<Revision>
-  arc commit --revision D<Revision>
+  arc land D<Revision>
 
-The first command will take the latest version of the reviewed patch and apply
-it to the working copy. The second command will commit this revision to trunk.
 
 Abandoning a change
 -------------------

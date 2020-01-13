@@ -1020,7 +1020,7 @@ uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
 
   uint64_t new_inst_size;
   status = m_disasm_up->getInstruction(mc_inst, new_inst_size, data, pc,
-                                       llvm::nulls(), llvm::nulls());
+                                       llvm::nulls());
   if (status == llvm::MCDisassembler::Success)
     return new_inst_size;
   else
@@ -1034,8 +1034,8 @@ void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
   llvm::raw_string_ostream comments_stream(comments_string);
 
   m_instr_printer_up->setCommentStream(comments_stream);
-  m_instr_printer_up->printInst(&mc_inst, inst_stream, llvm::StringRef(),
-                                *m_subtarget_info_up);
+  m_instr_printer_up->printInst(&mc_inst, 0, llvm::StringRef(),
+                                *m_subtarget_info_up, inst_stream);
   m_instr_printer_up->setCommentStream(llvm::nulls());
   comments_stream.flush();
 

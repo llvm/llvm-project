@@ -752,8 +752,8 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "nsw ";
   if (MI.getFlag(MachineInstr::IsExact))
     OS << "exact ";
-  if (MI.getFlag(MachineInstr::FPExcept))
-    OS << "fpexcept ";
+  if (MI.getFlag(MachineInstr::NoFPExcept))
+    OS << "nofpexcept ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)
@@ -856,7 +856,7 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
     if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())
       TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);
     const TargetIntrinsicInfo *TII = MI.getMF()->getTarget().getIntrinsicInfo();
-    Op.print(OS, MST, TypeToPrint, PrintDef, /*IsStandalone=*/false,
+    Op.print(OS, MST, TypeToPrint, OpIdx, PrintDef, /*IsStandalone=*/false,
              ShouldPrintRegisterTies, TiedOperandIdx, TRI, TII);
     break;
   }
@@ -872,6 +872,28 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
     break;
   }
   }
+}
+
+void MIRFormatter::printIRValue(raw_ostream &OS, const Value &V,
+                                ModuleSlotTracker &MST) {
+  if (isa<GlobalValue>(V)) {
+    V.printAsOperand(OS, /*PrintType=*/false, MST);
+    return;
+  }
+  if (isa<Constant>(V)) {
+    // Machine memory operands can load/store to/from constant value pointers.
+    OS << '`';
+    V.printAsOperand(OS, /*PrintType=*/true, MST);
+    OS << '`';
+    return;
+  }
+  OS << "%ir.";
+  if (V.hasName()) {
+    printLLVMNameWithoutPrefix(OS, V.getName());
+    return;
+  }
+  int Slot = MST.getCurrentFunction() ? MST.getLocalSlot(&V) : -1;
+  MachineOperand::printIRSlotNumber(OS, Slot);
 }
 
 void llvm::printMIR(raw_ostream &OS, const Module &M) {

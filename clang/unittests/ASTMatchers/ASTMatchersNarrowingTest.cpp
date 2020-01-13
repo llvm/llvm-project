@@ -1866,6 +1866,27 @@ TEST(EachOf, BehavesLikeAnyOfUnlessBothMatch) {
                       has(fieldDecl(hasName("b")).bind("v"))))));
 }
 
+TEST(Optionally, SubmatchersDoNotMatch) {
+  EXPECT_TRUE(matchAndVerifyResultFalse(
+      "class A { int a; int b; };",
+      recordDecl(optionally(has(fieldDecl(hasName("c")).bind("v")),
+                            has(fieldDecl(hasName("d")).bind("v")))),
+      std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v")));
+}
+
+TEST(Optionally, SubmatchersMatch) {
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "class A { int a; int c; };",
+      recordDecl(optionally(has(fieldDecl(hasName("a")).bind("v")),
+                            has(fieldDecl(hasName("b")).bind("v")))),
+      std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v", 1)));
+  EXPECT_TRUE(matchAndVerifyResultTrue(
+      "class A { int c; int b; };",
+      recordDecl(optionally(has(fieldDecl(hasName("c")).bind("v")),
+                            has(fieldDecl(hasName("b")).bind("v")))),
+      std::make_unique<VerifyIdIsBoundTo<FieldDecl>>("v", 2)));
+}
+
 TEST(IsTemplateInstantiation, MatchesImplicitClassTemplateInstantiation) {
   // Make sure that we can both match the class by name (::X) and by the type
   // the template was instantiated with (via a field).

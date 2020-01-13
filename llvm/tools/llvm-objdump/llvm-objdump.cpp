@@ -708,7 +708,7 @@ public:
     OS.indent(Column < TabStop - 1 ? TabStop - 1 - Column : 7 - Column % 8);
 
     if (MI)
-      IP.printInst(MI, OS, "", STI);
+      IP.printInst(MI, Address.Address, "", STI, OS);
     else
       OS << "\t<unknown>";
   }
@@ -744,7 +744,7 @@ public:
     std::string Buffer;
     {
       raw_string_ostream TempStream(Buffer);
-      IP.printInst(MI, TempStream, "", STI);
+      IP.printInst(MI, Address.Address, "", STI, TempStream);
     }
     StringRef Contents(Buffer);
     // Split off bundle attributes
@@ -811,7 +811,7 @@ public:
       SmallString<40> InstStr;
       raw_svector_ostream IS(InstStr);
 
-      IP.printInst(MI, IS, "", STI);
+      IP.printInst(MI, Address.Address, "", STI, IS);
 
       OS << left_justify(IS.str(), 60);
     } else {
@@ -865,7 +865,7 @@ public:
       dumpBytes(Bytes, OS);
     }
     if (MI)
-      IP.printInst(MI, OS, "", STI);
+      IP.printInst(MI, Address.Address, "", STI, OS);
     else
       OS << "\t<unknown>";
   }
@@ -1353,16 +1353,10 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         continue;
       }
 
-#ifndef NDEBUG
-      raw_ostream &DebugOut = DebugFlag ? dbgs() : nulls();
-#else
-      raw_ostream &DebugOut = nulls();
-#endif
-
       // Some targets (like WebAssembly) have a special prelude at the start
       // of each symbol.
       DisAsm->onSymbolStart(SymbolName, Size, Bytes.slice(Start, End - Start),
-                            SectionAddr + Start, DebugOut, CommentStream);
+                            SectionAddr + Start, CommentStream);
       Start += Size;
 
       Index = Start;
@@ -1426,8 +1420,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         // provided
         MCInst Inst;
         bool Disassembled = DisAsm->getInstruction(
-            Inst, Size, Bytes.slice(Index), SectionAddr + Index, DebugOut,
-            CommentStream);
+            Inst, Size, Bytes.slice(Index), SectionAddr + Index, CommentStream);
         if (Size == 0)
           Size = 1;
 

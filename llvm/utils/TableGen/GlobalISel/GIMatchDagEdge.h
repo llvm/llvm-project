@@ -54,6 +54,9 @@ public:
   /// Flip the direction of the edge.
   void reverse();
 
+  /// Does this edge run from a def to (one of many) uses?
+  bool isDefToUse() const;
+
   LLVM_DUMP_METHOD void print(raw_ostream &OS) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

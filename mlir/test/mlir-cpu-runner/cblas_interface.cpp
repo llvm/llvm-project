@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/cblas_interface.h"
 #include "include/cblas.h"
 #include <assert.h>
 #include <iostream>

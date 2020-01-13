@@ -315,6 +315,20 @@ TEST_F(TargetDeclTest, ClassTemplate) {
   EXPECT_DECLS("TemplateSpecializationTypeLoc",
                {"template<> class Foo<int *>", Rel::TemplateInstantiation},
                {"template <typename T> class Foo<T *>", Rel::TemplatePattern});
+
+  Code = R"cpp(
+    // Class template argument deduction
+    template <typename T>
+    struct Test {
+      Test(T);
+    };
+    void foo() {
+      [[Test]] a(5);
+    }
+  )cpp";
+  Flags.push_back("-std=c++17");
+  EXPECT_DECLS("DeducedTemplateSpecializationTypeLoc",
+               {"struct Test", Rel::TemplatePattern});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {
@@ -489,15 +503,15 @@ TEST_F(TargetDeclTest, ObjC) {
   EXPECT_DECLS("ObjCPropertyRefExpr", "- (void)setX:(int)x");
 
   Code = R"cpp(
-    @interface Foo {}
-    @property int x;
+    @interface I {}
+    @property(retain) I* x;
+    @property(retain) I* y;
     @end
-    void test(Foo *f) {
-      [[f.x]] = 42;
+    void test(I *f) {
+      [[f.x]].y = 0;
     }
   )cpp";
-  EXPECT_DECLS("ObjCPropertyRefExpr",
-               "@property(atomic, assign, unsafe_unretained, readwrite) int x");
+  EXPECT_DECLS("OpaqueValueExpr", "@property(atomic, retain, readwrite) I *x");
 
   Code = R"cpp(
     @protocol Foo
@@ -549,8 +563,13 @@ protected:
     // FIXME: Auto-completion in a template requires disabling delayed template
     // parsing.
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+    TU.ExtraArgs.push_back("-std=c++17");
 
     auto AST = TU.build();
+    for (auto &D : AST.getDiagnostics()) {
+      if (D.Severity > DiagnosticsEngine::Warning)
+        ADD_FAILURE() << D << Code;
+    }
 
     auto *TestDecl = &findDecl(AST, "foo");
     if (auto *T = llvm::dyn_cast<FunctionTemplateDecl>(TestDecl))
@@ -703,7 +722,7 @@ TEST_F(FindExplicitReferencesTest, All) {
         "3: targets = {vb}, decl\n"},
        // MemberExpr should know their using declaration.
        {R"cpp(
-            struct X { void func(int); }
+            struct X { void func(int); };
             struct Y : X {
               using X::func;
             };
@@ -809,7 +828,7 @@ TEST_F(FindExplicitReferencesTest, All) {
             void foo() {
               $0^TT<int> $1^x;
               $2^foo<$3^TT>();
-              $4^foo<$5^vector>()
+              $4^foo<$5^vector>();
               $6^foo<$7^TP...>();
             }
         )cpp",
@@ -909,7 +928,7 @@ TEST_F(FindExplicitReferencesTest, All) {
        // Namespace aliases should be handled properly.
        {
            R"cpp(
-                namespace ns { struct Type {} }
+                namespace ns { struct Type {}; }
                 namespace alias = ns;
                 namespace rec_alias = alias;
 
@@ -937,7 +956,20 @@ TEST_F(FindExplicitReferencesTest, All) {
                 };
             )cpp",
            "0: targets = {size}, decl\n"
-           "1: targets = {E}\n"}};
+           "1: targets = {E}\n"},
+       // Class template argument deduction
+       {
+           R"cpp(
+                template <typename T>
+                struct Test {
+                Test(T);
+              };
+              void foo() {
+                $0^Test $1^a(5);
+              }
+            )cpp",
+           "0: targets = {Test}\n"
+           "1: targets = {a}, decl\n"}};
 
   for (const auto &C : Cases) {
     llvm::StringRef ExpectedCode = C.first;

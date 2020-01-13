@@ -1598,10 +1598,8 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 
 /// Callback from DAG postProcessing to create cluster edges for loads.
 void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAG) {
-  // Map DAG NodeNum to store chain ID.
-  DenseMap<unsigned, unsigned> StoreChainIDs;
-  // Map each store chain to a set of dependent MemOps.
-  SmallVector<SmallVector<SUnit*,4>, 32> StoreChainDependents;
+  // Map DAG NodeNum to a set of dependent MemOps in store chain.
+  DenseMap<unsigned, SmallVector<SUnit *, 4>> StoreChains;
   for (SUnit &SU : DAG->SUnits) {
     if ((IsLoad && !SU.getInstr()->mayLoad()) ||
         (!IsLoad && !SU.getInstr()->mayStore()))
@@ -1614,19 +1612,14 @@ void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAG) {
         break;
       }
     }
-    // Check if this chain-like pred has been seen
-    // before. ChainPredID==MaxNodeID at the top of the schedule.
-    unsigned NumChains = StoreChainDependents.size();
-    std::pair<DenseMap<unsigned, unsigned>::iterator, bool> Result =
-      StoreChainIDs.insert(std::make_pair(ChainPredID, NumChains));
-    if (Result.second)
-      StoreChainDependents.resize(NumChains + 1);
-    StoreChainDependents[Result.first->second].push_back(&SU);
+    // Insert the SU to corresponding store chain.
+    auto &Chain = StoreChains.FindAndConstruct(ChainPredID).second;
+    Chain.push_back(&SU);
   }
 
   // Iterate over the store chains.
-  for (auto &SCD : StoreChainDependents)
-    clusterNeighboringMemOps(SCD, DAG);
+  for (auto &SCD : StoreChains)
+    clusterNeighboringMemOps(SCD.second, DAG);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2088,13 +2081,8 @@ getOtherResourceCount(unsigned &OtherCritIdx) {
   return OtherCritCount;
 }
 
-template void SchedBoundary::releaseNode<true>(SUnit *SU, unsigned ReadyCycle,
-                                               unsigned Idx);
-template void SchedBoundary::releaseNode<false>(SUnit *SU, unsigned ReadyCycle,
-                                                unsigned Idx);
-
-template <bool InPQueue>
-void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle, unsigned Idx) {
+void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle, bool InPQueue,
+                                unsigned Idx) {
   assert(SU->getInstr() && "Scheduled SUnit must have instr");
 
 #ifndef NDEBUG
@@ -2373,7 +2361,7 @@ void SchedBoundary::releasePending() {
     if (Available.size() >= ReadyListLimit)
       break;
 
-    releaseNode<true>(SU, ReadyCycle, I);
+    releaseNode(SU, ReadyCycle, true, I);
     if (E != Pending.size()) {
       --I;
       --E;

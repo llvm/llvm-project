@@ -65,7 +65,7 @@ namespace test3 {
 namespace explicit_ctor {
   struct A {};
   struct B { // expected-note 2{{candidate}}
-    explicit B(const A&);
+    explicit B(const A&); // expected-note {{explicit constructor is not a candidate}}
   };
   A a;
   const B &b(a); // expected-error {{no viable conversion}}

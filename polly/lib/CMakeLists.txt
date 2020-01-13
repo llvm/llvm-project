@@ -24,6 +24,7 @@ endif ()
 # Use an object-library to add the same files to multiple libs without requiring
 # the sources them to be recompiled for each of them.
 add_llvm_pass_plugin(Polly
+  NO_MODULE
   Analysis/DependenceInfo.cpp
   Analysis/PolyhedralInfo.cpp
   Analysis/ScopDetection.cpp
@@ -72,6 +73,17 @@ add_llvm_pass_plugin(Polly
   )
 set_target_properties(obj.Polly PROPERTIES FOLDER "Polly")
 set_target_properties(Polly PROPERTIES FOLDER "Polly")
+
+if (MSVC_IDE OR XCODE)
+  # Configure source groups for Polly source files. By default, in the IDE there
+  # will be a source and include folder. In the source folder will be all the
+  # source files in a flat list, and in the include folder will be all the
+  # headers in a flat list. Sets the CMake source_group for each folder such
+  # the organization of the sources and headers in the IDE matches how it is
+  # laid out on disk
+  setup_polly_source_groups(${CMAKE_CURRENT_LIST_DIR}
+    ${CMAKE_CURRENT_LIST_DIR}/../include/polly)
+endif()
 
 # Create the library that can be linked into LLVM's tools and Polly's unittests.
 # It depends on all library it needs, such that with

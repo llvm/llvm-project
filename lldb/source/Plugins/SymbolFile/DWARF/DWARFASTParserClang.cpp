@@ -2298,54 +2298,6 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
   return enumerators_added;
 }
 
-#if defined(LLDB_CONFIGURATION_DEBUG) || defined(LLDB_CONFIGURATION_RELEASE)
-
-class DIEStack {
-public:
-  void Push(const DWARFDIE &die) { m_dies.push_back(die); }
-
-  void LogDIEs(Log *log) {
-    StreamString log_strm;
-    const size_t n = m_dies.size();
-    log_strm.Printf("DIEStack[%" PRIu64 "]:\n", (uint64_t)n);
-    for (size_t i = 0; i < n; i++) {
-      std::string qualified_name;
-      const DWARFDIE &die = m_dies[i];
-      die.GetQualifiedName(qualified_name);
-      log_strm.Printf("[%" PRIu64 "] 0x%8.8x: %s name='%s'\n", (uint64_t)i,
-                      die.GetOffset(), die.GetTagAsCString(),
-                      qualified_name.c_str());
-    }
-    log->PutCString(log_strm.GetData());
-  }
-  void Pop() { m_dies.pop_back(); }
-
-  class ScopedPopper {
-  public:
-    ScopedPopper(DIEStack &die_stack)
-        : m_die_stack(die_stack), m_valid(false) {}
-
-    void Push(const DWARFDIE &die) {
-      m_valid = true;
-      m_die_stack.Push(die);
-    }
-
-    ~ScopedPopper() {
-      if (m_valid)
-        m_die_stack.Pop();
-    }
-
-  protected:
-    DIEStack &m_die_stack;
-    bool m_valid;
-  };
-
-protected:
-  typedef std::vector<DWARFDIE> Stack;
-  Stack m_dies;
-};
-#endif
-
 Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
                                                       const DWARFDIE &die) {
   DWARFRangeList func_ranges;

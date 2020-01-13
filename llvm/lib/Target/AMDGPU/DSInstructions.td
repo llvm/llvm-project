@@ -619,7 +619,7 @@ def DS_ADD_SRC2_F32 : DS_1A<"ds_add_src2_f32">;
 
 def : GCNPat <
   (int_amdgcn_ds_swizzle i32:$src, timm:$offset16),
-  (DS_SWIZZLE_B32 $src, (as_i16imm $offset16), (i1 0))
+  (DS_SWIZZLE_B32 VGPR_32:$src, (as_i16timm $offset16), (i1 0))
 >;
 
 class DSReadPat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
@@ -733,8 +733,8 @@ defm : DSAtomicWritePat_mc <DS_WRITE_B32, i32, "atomic_store_local_32">;
 defm : DSAtomicWritePat_mc <DS_WRITE_B64, i64, "atomic_store_local_64">;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
-def : DSWritePat <DS_WRITE_B16_D16_HI, i32, store_local_hi16>;
-def : DSWritePat <DS_WRITE_B8_D16_HI, i32, truncstorei8_local_hi16>;
+def : DSWritePat <DS_WRITE_B16_D16_HI, i32, store_hi16_local>;
+def : DSWritePat <DS_WRITE_B8_D16_HI, i32, truncstorei8_hi16_local>;
 }
 
 

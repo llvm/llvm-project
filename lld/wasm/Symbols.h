@@ -148,8 +148,8 @@ public:
   // are unreferenced except by other bitcode objects.
   bool isUsedInRegularObj : 1;
 
-  // True if ths symbol is explicity marked for export (i.e. via the -e/--export
-  // command line flag)
+  // True if ths symbol is explicitly marked for export (i.e. via the
+  // -e/--export command line flag)
   bool forceExport : 1;
 
   // False if LTO shouldn't inline whatever this symbol points to. If a symbol
@@ -410,6 +410,7 @@ public:
 
   static bool classof(const Symbol *s) { return s->kind() == LazyKind; }
   void fetch();
+  MemoryBufferRef getMemberBuffer();
 
   // Lazy symbols can have a signature because they can replace an
   // UndefinedFunction which which case we need to be able to preserve the

@@ -121,7 +121,7 @@ TEST(Document, Separators) {
   D.addCodeBlock("test");
   D.addParagraph().appendText("bar");
 
-  const char ExpectedMarkdown[] = R"md(foo
+  const char ExpectedMarkdown[] = R"md(foo  
 ```cpp
 test
 ```
@@ -141,7 +141,7 @@ TEST(Document, Spacer) {
   D.addParagraph().appendText("foo");
   D.addSpacer();
   D.addParagraph().appendText("bar");
-  EXPECT_EQ(D.asMarkdown(), "foo\n\nbar");
+  EXPECT_EQ(D.asMarkdown(), "foo  \n\nbar");
   EXPECT_EQ(D.asPlainText(), "foo\n\nbar");
 }
 
@@ -184,6 +184,75 @@ foo
 
 foo)pt";
   EXPECT_EQ(D.asPlainText(), ExpectedPlainText);
+}
+
+TEST(BulletList, Render) {
+  BulletList L;
+  // Flat list
+  L.addItem().addParagraph().appendText("foo");
+  EXPECT_EQ(L.asMarkdown(), "- foo");
+  EXPECT_EQ(L.asPlainText(), "- foo");
+
+  L.addItem().addParagraph().appendText("bar");
+  llvm::StringRef Expected = R"md(- foo
+- bar)md";
+  EXPECT_EQ(L.asMarkdown(), Expected);
+  EXPECT_EQ(L.asPlainText(), Expected);
+
+  // Nested list, with a single item.
+  Document &D = L.addItem();
+  // First item with foo\nbaz
+  D.addParagraph().appendText("foo");
+  D.addParagraph().appendText("baz");
+
+  // Nest one level.
+  Document &Inner = D.addBulletList().addItem();
+  Inner.addParagraph().appendText("foo");
+
+  // Nest one more level.
+  BulletList &InnerList = Inner.addBulletList();
+  // Single item, baz\nbaz
+  Document &DeepDoc = InnerList.addItem();
+  DeepDoc.addParagraph().appendText("baz");
+  DeepDoc.addParagraph().appendText("baz");
+  StringRef ExpectedMarkdown = R"md(- foo
+- bar
+- foo  
+  baz  
+  - foo  
+    - baz  
+      baz)md";
+  EXPECT_EQ(L.asMarkdown(), ExpectedMarkdown);
+  StringRef ExpectedPlainText = R"pt(- foo
+- bar
+- foo
+  baz
+  - foo
+    - baz
+      baz)pt";
+  EXPECT_EQ(L.asPlainText(), ExpectedPlainText);
+
+  // Termination
+  Inner.addParagraph().appendText("after");
+  ExpectedMarkdown = R"md(- foo
+- bar
+- foo  
+  baz  
+  - foo  
+    - baz  
+      baz
+    
+    after)md";
+  EXPECT_EQ(L.asMarkdown(), ExpectedMarkdown);
+  ExpectedPlainText = R"pt(- foo
+- bar
+- foo
+  baz
+  - foo
+    - baz
+      baz
+    after)pt";
+  EXPECT_EQ(L.asPlainText(), ExpectedPlainText);
 }
 
 } // namespace

@@ -1267,7 +1267,7 @@ void TrieNode::addSymbol(const Export& entry,
       edge._child->addSymbol(entry, allocator, allNodes);
       return;
     }
-    // See if string has commmon prefix with existing edge.
+    // See if string has common prefix with existing edge.
     for (int n=edgeStr.size()-1; n > 0; --n) {
       if (partialStr.substr(0, n).equals(edgeStr.substr(0, n))) {
         // Splice in new node:  was A -> C,  now A -> B -> C
@@ -1351,7 +1351,7 @@ bool TrieNode::updateOffset(uint32_t& offset) {
     nodeSize += llvm::getULEB128Size(nodeSize);
   }
   // Compute size of all child edges.
-  ++nodeSize; // Byte for number of chidren.
+  ++nodeSize; // Byte for number of children.
   for (TrieEdge &edge : _children) {
     nodeSize += edge._subString.size() + 1 // String length.
               + llvm::getULEB128Size(edge._child->_trieOffset); // Offset len.

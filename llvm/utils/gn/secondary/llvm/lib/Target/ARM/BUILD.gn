@@ -95,6 +95,7 @@ static_library("LLVMARMCodeGen") {
     "ARMTargetObjectFile.cpp",
     "ARMTargetTransformInfo.cpp",
     "MLxExpansionPass.cpp",
+    "MVEGatherScatterLowering.cpp",
     "MVETailPredication.cpp",
     "MVEVPTBlockPass.cpp",
     "Thumb1FrameLowering.cpp",

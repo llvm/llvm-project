@@ -5,13 +5,13 @@ endif()
 get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 
 if(LLDB_ENABLE_PYTHON)
-  get_target_property(lldb_scripts_dir swig_wrapper BINARY_DIR)
-  set(lldb_python_wrapper ${lldb_scripts_dir}/LLDBWrapPython.cpp)
+  get_target_property(lldb_bindings_dir swig_wrapper BINARY_DIR)
+  set(lldb_python_wrapper ${lldb_bindings_dir}/LLDBWrapPython.cpp)
 endif()
 
 if(LLDB_ENABLE_LUA)
-  get_target_property(lldb_scripts_dir swig_wrapper_lua BINARY_DIR)
-  set(lldb_lua_wrapper ${lldb_scripts_dir}/LLDBWrapLua.cpp)
+  get_target_property(lldb_bindings_dir swig_wrapper_lua BINARY_DIR)
+  set(lldb_lua_wrapper ${lldb_bindings_dir}/LLDBWrapLua.cpp)
 endif()
 
 if(LLDB_BUILD_FRAMEWORK)
@@ -110,6 +110,14 @@ add_lldb_library(liblldb SHARED ${option_framework}
 
   ${option_install_prefix}
 )
+
+# lib/pythonX.Y/dist-packages/lldb/_lldb.so is a symlink to lib/liblldb.so,
+# which depends on lib/libLLVM*.so (BUILD_SHARED_LIBS) or lib/libLLVM-10git.so
+# (LLVM_LINK_LLVM_DYLIB). Add an additional rpath $ORIGIN/../../../../lib so
+# that _lldb.so can be loaded from Python.
+if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX AND NOT APPLE)
+  set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "\$ORIGIN/../../../../lib${LLVM_LIBDIR_SUFFIX}")
+endif()
 
 if (MSVC)
   set_source_files_properties(SBReproducer.cpp PROPERTIES COMPILE_FLAGS /bigobj)

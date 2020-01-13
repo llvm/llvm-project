@@ -278,6 +278,7 @@ template <typename T> class ArrayRef;
     bool hasChain : 1;
     bool hasChain_Inferred : 1;
     bool variadicOpsAreDefs : 1;
+    bool isAuthenticated : 1;
 
     std::string DeprecatedReason;
     bool HasComplexDeprecationPredicate;
@@ -309,7 +310,17 @@ template <typename T> class ArrayRef;
     // This can be used on intructions that use typeN or ptypeN to identify
     // operands that should be considered as pointers even though SelectionDAG
     // didn't make a distinction between integer and pointers.
-    bool isOperandAPointer(unsigned i) const;
+    bool isOperandAPointer(unsigned i) const {
+      return isOperandImpl(i, "IsPointer");
+    }
+
+    /// Check if the operand is required to be an immediate.
+    bool isOperandImmArg(unsigned i) const {
+      return isOperandImpl(i, "IsImmediate");
+    }
+
+  private:
+    bool isOperandImpl(unsigned i, StringRef PropertyName) const;
   };
 
 

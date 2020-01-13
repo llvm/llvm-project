@@ -810,27 +810,22 @@ define <2 x i32> @saddo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) noun
 ; SSE-NEXT:    movdqa %xmm0, %xmm3
 ; SSE-NEXT:    pxor %xmm2, %xmm3
 ; SSE-NEXT:    paddq %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm0, (%rdi)
-; SSE-NEXT:    pxor %xmm2, %xmm0
+; SSE-NEXT:    pxor %xmm0, %xmm2
 ; SSE-NEXT:    movdqa %xmm3, %xmm4
-; SSE-NEXT:    pcmpgtd %xmm0, %xmm4
+; SSE-NEXT:    pcmpgtd %xmm2, %xmm4
 ; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE-NEXT:    pand %xmm5, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm3, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; SSE-NEXT:    pand %xmm5, %xmm2
 ; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
-; SSE-NEXT:    por %xmm0, %xmm3
-; SSE-NEXT:    pxor %xmm2, %xmm1
-; SSE-NEXT:    movdqa %xmm2, %xmm0
-; SSE-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[0,0,2,2]
-; SSE-NEXT:    pcmpeqd %xmm2, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE-NEXT:    pand %xmm4, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE-NEXT:    por %xmm1, %xmm0
-; SSE-NEXT:    pxor %xmm3, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE-NEXT:    por %xmm2, %xmm3
+; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    pcmpgtd %xmm1, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
+; SSE-NEXT:    pxor %xmm3, %xmm1
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE-NEXT:    movdqa %xmm0, (%rdi)
+; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: saddo_v2i64:

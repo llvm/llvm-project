@@ -27,7 +27,13 @@ public:
       : IOHandlerEditline(debugger, IOHandler::Type::LuaInterpreter, "lua",
                           ">>> ", "..> ", true, debugger.GetUseColor(), 0,
                           *this, nullptr),
-        m_script_interpreter(script_interpreter) {}
+        m_script_interpreter(script_interpreter) {
+    llvm::cantFail(m_script_interpreter.EnterSession(debugger.GetID()));
+  }
+
+  ~IOHandlerLuaInterpreter() {
+    llvm::cantFail(m_script_interpreter.LeaveSession());
+  }
 
   void IOHandlerInputComplete(IOHandler &io_handler,
                               std::string &data) override {
@@ -77,6 +83,18 @@ void ScriptInterpreterLua::ExecuteInterpreterLoop() {
   debugger.PushIOHandler(io_handler_sp);
 }
 
+bool ScriptInterpreterLua::LoadScriptingModule(
+    const char *filename, bool init_session, lldb_private::Status &error,
+    StructuredData::ObjectSP *module_sp) {
+
+  if (llvm::Error e = m_lua->LoadModule(filename)) {
+    error.SetErrorStringWithFormatv("lua failed to import '{0}': {1}\n",
+                                    filename, llvm::toString(std::move(e)));
+    return false;
+  }
+  return true;
+}
+
 void ScriptInterpreterLua::Initialize() {
   static llvm::once_flag g_once_flag;
 
@@ -88,6 +106,33 @@ void ScriptInterpreterLua::Initialize() {
 }
 
 void ScriptInterpreterLua::Terminate() {}
+
+llvm::Error ScriptInterpreterLua::EnterSession(user_id_t debugger_id) {
+  if (m_session_is_active)
+    return llvm::Error::success();
+
+  const char *fmt_str =
+      "lldb.debugger = lldb.SBDebugger.FindDebuggerWithID({0}); "
+      "lldb.target = lldb.debugger:GetSelectedTarget(); "
+      "lldb.process = lldb.target:GetProcess(); "
+      "lldb.thread = lldb.process:GetSelectedThread(); "
+      "lldb.frame = lldb.thread:GetSelectedFrame()";
+  return m_lua->Run(llvm::formatv(fmt_str, debugger_id).str());
+}
+
+llvm::Error ScriptInterpreterLua::LeaveSession() {
+  if (!m_session_is_active)
+    return llvm::Error::success();
+
+  m_session_is_active = false;
+
+  llvm::StringRef str = "lldb.debugger = nil; "
+                        "lldb.target = nil; "
+                        "lldb.process = nil; "
+                        "lldb.thread = nil; "
+                        "lldb.frame = nil";
+  return m_lua->Run(str);
+}
 
 lldb::ScriptInterpreterSP
 ScriptInterpreterLua::CreateInstance(Debugger &debugger) {

@@ -71,13 +71,14 @@ def SRL64 : SDNodeXForm<imm, [{
 
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7 in {
-  let isReturn = 1, Uses = [LR8, RM] in
+  let isReturn = 1, isPredicable = 1, Uses = [LR8, RM] in
     def BLR8 : XLForm_2_ext<19, 16, 20, 0, 0, (outs), (ins), "blr", IIC_BrB,
                             [(retflag)]>, Requires<[In64BitMode]>;
   let isBranch = 1, isIndirectBranch = 1, Uses = [CTR8] in {
-    def BCTR8 : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
-                             []>,
-        Requires<[In64BitMode]>;
+    let isPredicable = 1 in
+      def BCTR8 : XLForm_2_ext<19, 528, 20, 0, 0, (outs), (ins), "bctr", IIC_BrB,
+                               []>,
+          Requires<[In64BitMode]>;
     def BCCCTR8 : XLForm_2_br<19, 528, 0, (outs), (ins pred:$cond),
                               "b${cond:cc}ctr${cond:pm} ${cond:reg}", IIC_BrB,
                               []>,
@@ -141,9 +142,10 @@ let isCall = 1, PPC970_Unit = 7, Defs = [LR8] in {
                              [(PPCcall_nop (i64 imm:$func))]>;
   }
   let Uses = [CTR8, RM] in {
-    def BCTRL8 : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
-                              "bctrl", IIC_BrB, [(PPCbctrl)]>,
-                 Requires<[In64BitMode]>;
+    let isPredicable = 1 in
+      def BCTRL8 : XLForm_2_ext<19, 528, 20, 0, 1, (outs), (ins),
+                                "bctrl", IIC_BrB, [(PPCbctrl)]>,
+                   Requires<[In64BitMode]>;
 
     let isCodeGenOnly = 1 in {
       def BCCCTRL8 : XLForm_2_br<19, 528, 1, (outs), (ins pred:$cond),
@@ -253,7 +255,7 @@ def LDARX : XForm_1_memOp<31,  84, (outs g8rc:$rD), (ins memrr:$ptr),
 // Instruction to support lock versions of atomics
 // (EH=1 - see Power ISA 2.07 Book II 4.4.2)
 def LDARXL : XForm_1<31,  84, (outs g8rc:$rD), (ins memrr:$ptr),
-                     "ldarx $rD, $ptr, 1", IIC_LdStLDARX, []>, isDOT;
+                     "ldarx $rD, $ptr, 1", IIC_LdStLDARX, []>, isRecordForm;
 
 let hasExtraDefRegAllocReq = 1 in
 def LDAT : X_RD5_RS5_IM5<31, 614, (outs g8rc:$rD), (ins g8rc:$rA, u5imm:$FC),
@@ -263,7 +265,7 @@ def LDAT : X_RD5_RS5_IM5<31, 614, (outs g8rc:$rD), (ins g8rc:$rA, u5imm:$FC),
 
 let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
 def STDCX : XForm_1_memOp<31, 214, (outs), (ins g8rc:$rS, memrr:$dst),
-                          "stdcx. $rS, $dst", IIC_LdStSTDCX, []>, isDOT;
+                          "stdcx. $rS, $dst", IIC_LdStSTDCX, []>, isRecordForm;
 
 let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
 def STDAT : X_RD5_RS5_IM5<31, 742, (outs), (ins g8rc:$rS, g8rc:$rA, u5imm:$FC),
@@ -476,14 +478,14 @@ defm XOR8 : XForm_6r<31, 316, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
 
 // Logical ops with immediate.
 let Defs = [CR0] in {
-def ANDI8o  : DForm_4<28, (outs g8rc:$dst), (ins g8rc:$src1, u16imm64:$src2),
+def ANDI8_rec  : DForm_4<28, (outs g8rc:$dst), (ins g8rc:$src1, u16imm64:$src2),
                       "andi. $dst, $src1, $src2", IIC_IntGeneral,
                       [(set i64:$dst, (and i64:$src1, immZExt16:$src2))]>,
-                      isDOT;
-def ANDIS8o : DForm_4<29, (outs g8rc:$dst), (ins g8rc:$src1, u16imm64:$src2),
+                      isRecordForm;
+def ANDIS8_rec : DForm_4<29, (outs g8rc:$dst), (ins g8rc:$src1, u16imm64:$src2),
                      "andis. $dst, $src1, $src2", IIC_IntGeneral,
                     [(set i64:$dst, (and i64:$src1, imm16ShiftedZExt:$src2))]>,
-                     isDOT;
+                     isRecordForm;
 }
 def ORI8    : DForm_4<24, (outs g8rc:$dst), (ins g8rc:$src1, u16imm64:$src2),
                       "ori $dst, $src1, $src2", IIC_IntSimple,
@@ -1461,7 +1463,7 @@ class X_L1_RA5_RB5<bits<6> opcode, bits<10> xo, string opc, RegisterOperand ty,
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 def CP_COPY8   : X_L1_RA5_RB5<31, 774, "copy"  , g8rc, IIC_LdStCOPY, []>;
 def CP_PASTE8  : X_L1_RA5_RB5<31, 902, "paste" , g8rc, IIC_LdStPASTE, []>;
-def CP_PASTE8o : X_L1_RA5_RB5<31, 902, "paste.", g8rc, IIC_LdStPASTE, []>,isDOT;
+def CP_PASTE8_rec : X_L1_RA5_RB5<31, 902, "paste.", g8rc, IIC_LdStPASTE, []>,isRecordForm;
 }
 
 // SLB Invalidate Entry Global

@@ -38,6 +38,7 @@ class MachineInstr;
 class MachineIRBuilder;
 class MachineOperand;
 class MachineRegisterInfo;
+class RegisterBank;
 class SIInstrInfo;
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
@@ -69,6 +70,10 @@ private:
   bool isInstrUniform(const MachineInstr &MI) const;
   bool isVCC(Register Reg, const MachineRegisterInfo &MRI) const;
 
+  const RegisterBank *getArtifactRegBank(
+    Register Reg, const MachineRegisterInfo &MRI,
+    const TargetRegisterInfo &TRI) const;
+
   /// tblgen-erated 'select' implementation.
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
 
@@ -82,7 +87,7 @@ private:
   bool selectG_CONSTANT(MachineInstr &I) const;
   bool selectG_AND_OR_XOR(MachineInstr &I) const;
   bool selectG_ADD_SUB(MachineInstr &I) const;
-  bool selectG_UADDO_USUBO(MachineInstr &I) const;
+  bool selectG_UADDO_USUBO_UADDE_USUBE(MachineInstr &I) const;
   bool selectG_EXTRACT(MachineInstr &I) const;
   bool selectG_MERGE_VALUES(MachineInstr &I) const;
   bool selectG_UNMERGE_VALUES(MachineInstr &I) const;
@@ -111,6 +116,7 @@ private:
   bool selectG_BRCOND(MachineInstr &I) const;
   bool selectG_FRAME_INDEX(MachineInstr &I) const;
   bool selectG_PTR_MASK(MachineInstr &I) const;
+  bool selectG_EXTRACT_VECTOR_ELT(MachineInstr &I) const;
 
   std::pair<Register, unsigned>
   selectVOP3ModsImpl(Register Src) const;
@@ -124,11 +130,11 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods0(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
-  selectVOP3Mods0Clamp0OMod(MachineOperand &Root) const;
-  InstructionSelector::ComplexRendererFns
   selectVOP3OMods(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3Mods_nnan(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3OpSelMods0(MachineOperand &Root) const;
@@ -163,8 +169,25 @@ private:
   InstructionSelector::ComplexRendererFns
   selectDS1Addr1Offset(MachineOperand &Root) const;
 
-  void renderTruncImm32(MachineInstrBuilder &MIB,
-                        const MachineInstr &MI) const;
+  void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx = -1) const;
+
+  void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                       int OpIdx) const;
+
+  void renderNegateImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                       int OpIdx) const;
+
+  void renderBitcastImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
+
+  void renderPopcntImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                       int OpIdx) const;
+
+  bool isInlineImmediate16(int64_t Imm) const;
+  bool isInlineImmediate32(int64_t Imm) const;
+  bool isInlineImmediate64(int64_t Imm) const;
+  bool isInlineImmediate(const APFloat &Imm) const;
 
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;

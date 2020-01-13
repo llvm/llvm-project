@@ -418,6 +418,9 @@ protected:
         PB(nullptr, PipelineTuningOptions(), None, &CallbacksHandle.Callbacks),
         PM(true), LAM(true), FAM(true), CGAM(true), AM(true) {
 
+    EXPECT_TRUE(&CallbacksHandle.Callbacks ==
+                PB.getPassInstrumentationCallbacks());
+
     /// Register a callback for analysis registration.
     ///
     /// The callback is a function taking a reference to an AnalyisManager

@@ -2005,11 +2005,11 @@ void AVRTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
   return TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
 }
 
-Register AVRTargetLowering::getRegisterByName(const char *RegName, EVT VT,
+Register AVRTargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                               const MachineFunction &MF) const {
   Register Reg;
 
-  if (VT == MVT::i8) {
+  if (VT == LLT::scalar(8)) {
     Reg = StringSwitch<unsigned>(RegName)
       .Case("r0", AVR::R0).Case("r1", AVR::R1).Case("r2", AVR::R2)
       .Case("r3", AVR::R3).Case("r4", AVR::R4).Case("r5", AVR::R5)

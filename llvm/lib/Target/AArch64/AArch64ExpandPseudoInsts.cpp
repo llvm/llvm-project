@@ -696,10 +696,12 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return true;
    }
    case AArch64::TAGPstack: {
-     BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADDG))
+     int64_t Offset = MI.getOperand(2).getImm();
+     BuildMI(MBB, MBBI, MI.getDebugLoc(),
+             TII->get(Offset >= 0 ? AArch64::ADDG : AArch64::SUBG))
          .add(MI.getOperand(0))
          .add(MI.getOperand(1))
-         .add(MI.getOperand(2))
+         .addImm(std::abs(Offset))
          .add(MI.getOperand(4));
      MI.eraseFromParent();
      return true;

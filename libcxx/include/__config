@@ -897,6 +897,10 @@ typedef unsigned int   char32_t;
 #define _LIBCPP_EXTERN_TEMPLATE2(...) extern template __VA_ARGS__;
 #endif
 
+#ifndef _LIBCPP_EXTERN_TEMPLATE_DEFINE
+#define _LIBCPP_EXTERN_TEMPLATE_DEFINE(...) template __VA_ARGS__;
+#endif
+
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(_LIBCPP_MSVCRT_LIKE) || \
     defined(__sun__) || defined(__NetBSD__) || defined(__CloudABI__)
 #define _LIBCPP_LOCALE__L_EXTENSIONS 1
@@ -1300,7 +1304,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_FALLTHROUGH() [[fallthrough]]
 #elif __has_cpp_attribute(clang::fallthrough)
 #  define _LIBCPP_FALLTHROUGH() [[clang::fallthrough]]
-#elif __has_attribute(fallthough) || _GNUC_VER >= 700
+#elif __has_attribute(fallthrough) || _GNUC_VER >= 700
 #  define _LIBCPP_FALLTHROUGH() __attribute__((__fallthrough__))
 #else
 #  define _LIBCPP_FALLTHROUGH() ((void)0)

@@ -5,6 +5,7 @@ add_llvm_library(MLIRLinalgToLLVM
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/LinalgToLLVM
 )
 set(LIBS
+  MLIRLinalg
   MLIRLLVMIR
   MLIRTransforms
   LLVMCore

@@ -1,17 +1,13 @@
-add_llvm_pass_plugin(Bye
-    Bye.cpp
-    DEPENDS
-    intrinsics_gen
-    )
-if (LLVM_LINK_LLVM_DYLIB)
-  target_link_libraries(Bye PUBLIC LLVM)
-else()
-  target_link_libraries(Bye
-    PUBLIC
-    LLVMSupport
-    LLVMCore
-    LLVMipo
-    LLVMPasses
-    )
+if(LLVM_BYE_LINK_INTO_TOOLS)
+  message(WARNING "Setting LLVM_BYE_LINK_INTO_TOOLS=ON only makes sense for testing purpose")
 endif()
 
+add_llvm_pass_plugin(Bye
+  Bye.cpp
+  DEPENDS
+  intrinsics_gen
+  BUILDTREE_ONLY
+ )
+
+install(TARGETS ${name} RUNTIME DESTINATION examples)
+set_target_properties(${name} PROPERTIES FOLDER "Examples")

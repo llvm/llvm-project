@@ -710,7 +710,7 @@ void MicrosoftCXXNameMangler::mangleVirtualMemPtrThunk(
   Out << "$B";
   mangleNumber(OffsetInVFTable);
   Out << 'A';
-  mangleCallingConvention(MD->getType()->getAs<FunctionProtoType>());
+  mangleCallingConvention(MD->getType()->castAs<FunctionProtoType>());
 }
 
 void MicrosoftCXXNameMangler::mangleName(const NamedDecl *ND) {
@@ -2701,9 +2701,7 @@ void MicrosoftCXXNameMangler::mangleType(const VectorType *T, Qualifiers Quals,
   // doesn't match the Intel types uses a custom mangling below.
   size_t OutSizeBefore = Out.tell();
   if (!isa<ExtVectorType>(T)) {
-    llvm::Triple::ArchType AT =
-        getASTContext().getTargetInfo().getTriple().getArch();
-    if (AT == llvm::Triple::x86 || AT == llvm::Triple::x86_64) {
+    if (getASTContext().getTargetInfo().getTriple().isX86()) {
       if (Width == 64 && ET->getKind() == BuiltinType::LongLong) {
         mangleArtificialTagType(TTK_Union, "__m64");
       } else if (Width >= 128) {

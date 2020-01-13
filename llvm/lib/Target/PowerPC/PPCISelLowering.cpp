@@ -1394,8 +1394,10 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::MTVSRZ:          return "PPCISD::MTVSRZ";
   case PPCISD::SINT_VEC_TO_FP:  return "PPCISD::SINT_VEC_TO_FP";
   case PPCISD::UINT_VEC_TO_FP:  return "PPCISD::UINT_VEC_TO_FP";
-  case PPCISD::ANDIo_1_EQ_BIT:  return "PPCISD::ANDIo_1_EQ_BIT";
-  case PPCISD::ANDIo_1_GT_BIT:  return "PPCISD::ANDIo_1_GT_BIT";
+  case PPCISD::ANDI_rec_1_EQ_BIT:
+    return "PPCISD::ANDI_rec_1_EQ_BIT";
+  case PPCISD::ANDI_rec_1_GT_BIT:
+    return "PPCISD::ANDI_rec_1_GT_BIT";
   case PPCISD::VCMP:            return "PPCISD::VCMP";
   case PPCISD::VCMPo:           return "PPCISD::VCMPo";
   case PPCISD::LBRX:            return "PPCISD::LBRX";
@@ -6829,6 +6831,9 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   if (ArgFlags.isNest())
     report_fatal_error("Nest arguments are unimplemented.");
 
+  if (ValVT.isVector() || LocVT.isVector())
+    report_fatal_error("Vector arguments are unimplemented on AIX.");
+
   const PPCSubtarget &Subtarget = static_cast<const PPCSubtarget &>(
       State.getMachineFunction().getSubtarget());
   const bool IsPPC64 = Subtarget.isPPC64();
@@ -6873,18 +6878,33 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
     // This includes f64 in 64-bit mode for ABI compatibility.
     State.AllocateStack(IsPPC64 ? 8 : StoreSize, 4);
     if (unsigned Reg = State.AllocateReg(FPR))
-      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, MVT::f64, LocInfo));
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     else
       report_fatal_error("Handling of placing parameters on the stack is "
                          "unimplemented!");
 
-    // f32 reserves 1 GPR in both PPC32 and PPC64.
-    // f64 reserves 2 GPRs in PPC32 and 1 GPR in PPC64.
-    for (unsigned i = 0; i < StoreSize; i += PtrByteSize)
-      State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32);
+    // AIX requires that GPRs are reserved for float arguments.
+    // Successfully reserved GPRs are only initialized for vararg calls.
+    MVT RegVT = IsPPC64 ? MVT::i64 : MVT::i32;
+    for (unsigned I = 0; I < StoreSize; I += PtrByteSize) {
+      if (unsigned Reg = State.AllocateReg(IsPPC64 ? GPR_64 : GPR_32)) {
+        if (State.isVarArg()) {
+          // Custom handling is required for:
+          //   f64 in PPC32 needs to be split into 2 GPRs.
+          //   f32 in PPC64 needs to occupy only lower 32 bits of 64-bit GPR.
+          State.addLoc(
+              CCValAssign::getCustomReg(ValNo, ValVT, Reg, RegVT, LocInfo));
+        }
+      } else if (State.isVarArg()) {
+        report_fatal_error("Handling of placing parameters on the stack is "
+                           "unimplemented!");
+      }
+    }
+
     return false;
   }
   }
+  return true;
 }
 
 static const TargetRegisterClass *getRegClassForSVT(MVT::SimpleValueType SVT,
@@ -7011,7 +7031,7 @@ SDValue PPCTargetLowering::LowerCall_AIX(
           CallConv == CallingConv::Cold ||
           CallConv == CallingConv::Fast) && "Unexpected calling convention!");
 
-  if (isVarArg || isPatchPoint)
+  if (isPatchPoint)
     report_fatal_error("This call type is unimplemented on AIX.");
 
   const PPCSubtarget& Subtarget =
@@ -7030,7 +7050,8 @@ SDValue PPCTargetLowering::LowerCall_AIX(
   //   [SP][CR][LR][2 x reserved][TOC].
   // The LSA is 24 bytes (6x4) in PPC32 and 48 bytes (6x8) in PPC64.
   const unsigned LinkageSize = Subtarget.getFrameLowering()->getLinkageSize();
-  const unsigned PtrByteSize = Subtarget.isPPC64() ? 8 : 4;
+  const bool IsPPC64 = Subtarget.isPPC64();
+  const unsigned PtrByteSize = IsPPC64 ? 8 : 4;
   CCInfo.AllocateStack(LinkageSize, PtrByteSize);
   CCInfo.AnalyzeCallOperands(Outs, CC_AIX);
 
@@ -7050,26 +7071,70 @@ SDValue PPCTargetLowering::LowerCall_AIX(
 
   SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
 
-  for (CCValAssign &VA : ArgLocs) {
-    SDValue Arg = OutVals[VA.getValNo()];
-
-    switch (VA.getLocInfo()) {
-    default: report_fatal_error("Unexpected argument extension type.");
-    case CCValAssign::Full: break;
-    case CCValAssign::ZExt:
-      Arg = DAG.getNode(ISD::ZERO_EXTEND, dl, VA.getLocVT(), Arg);
-      break;
-    case CCValAssign::SExt:
-      Arg = DAG.getNode(ISD::SIGN_EXTEND, dl, VA.getLocVT(), Arg);
-      break;
-    }
-
-    if (VA.isRegLoc())
-      RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
+  for (unsigned I = 0, E = ArgLocs.size(); I != E;) {
+    CCValAssign &VA = ArgLocs[I++];
 
     if (VA.isMemLoc())
       report_fatal_error("Handling of placing parameters on the stack is "
                          "unimplemented!");
+    if (!VA.isRegLoc())
+      report_fatal_error(
+          "Unexpected non-register location for function call argument.");
+
+    SDValue Arg = OutVals[VA.getValNo()];
+
+    if (!VA.needsCustom()) {
+      switch (VA.getLocInfo()) {
+      default:
+        report_fatal_error("Unexpected argument extension type.");
+      case CCValAssign::Full:
+        break;
+      case CCValAssign::ZExt:
+        Arg = DAG.getNode(ISD::ZERO_EXTEND, dl, VA.getLocVT(), Arg);
+        break;
+      case CCValAssign::SExt:
+        Arg = DAG.getNode(ISD::SIGN_EXTEND, dl, VA.getLocVT(), Arg);
+        break;
+      }
+      RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
+
+      continue;
+    }
+
+    // Custom handling is used for GPR initializations for vararg float
+    // arguments.
+    assert(isVarArg && VA.getValVT().isFloatingPoint() &&
+           VA.getLocVT().isInteger() &&
+           "Unexpected custom register handling for calling convention.");
+
+    SDValue ArgAsInt =
+        DAG.getBitcast(MVT::getIntegerVT(VA.getValVT().getSizeInBits()), Arg);
+
+    if (Arg.getValueType().getStoreSize() == VA.getLocVT().getStoreSize())
+      // f32 in 32-bit GPR
+      // f64 in 64-bit GPR
+      RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgAsInt));
+    else if (Arg.getValueType().getSizeInBits() < VA.getLocVT().getSizeInBits())
+      // f32 in 64-bit GPR.
+      RegsToPass.push_back(std::make_pair(
+          VA.getLocReg(), DAG.getZExtOrTrunc(ArgAsInt, dl, VA.getLocVT())));
+    else {
+      // f64 in two 32-bit GPRs
+      // The 2 GPRs are marked custom and expected to be adjacent in ArgLocs.
+      assert(Arg.getValueType() == MVT::f64 && isVarArg && !IsPPC64 &&
+             "Unexpected custom register for argument!");
+      CCValAssign &GPR1 = VA;
+      SDValue MSWAsI64 = DAG.getNode(ISD::SRL, dl, MVT::i64, ArgAsInt,
+                                     DAG.getConstant(32, dl, MVT::i8));
+      RegsToPass.push_back(std::make_pair(
+          GPR1.getLocReg(), DAG.getZExtOrTrunc(MSWAsI64, dl, MVT::i32)));
+      assert(I != E && "A second custom GPR is expected!");
+      CCValAssign &GPR2 = ArgLocs[I++];
+      assert(GPR2.isRegLoc() && GPR2.getValNo() == GPR1.getValNo() &&
+             GPR2.needsCustom() && "A second custom GPR is expected!");
+      RegsToPass.push_back(std::make_pair(
+          GPR2.getLocReg(), DAG.getZExtOrTrunc(ArgAsInt, dl, MVT::i32)));
+    }
   }
 
   // For indirect calls, we need to save the TOC base to the stack for
@@ -7393,8 +7458,7 @@ SDValue PPCTargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
          "Custom lowering only for i1 results");
 
   SDLoc DL(Op);
-  return DAG.getNode(PPCISD::ANDIo_1_GT_BIT, DL, MVT::i1,
-                     Op.getOperand(0));
+  return DAG.getNode(PPCISD::ANDI_rec_1_GT_BIT, DL, MVT::i1, Op.getOperand(0));
 }
 
 SDValue PPCTargetLowering::LowerTRUNCATEVector(SDValue Op,
@@ -11663,20 +11727,20 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     // Restore FPSCR value.
     BuildMI(*BB, MI, dl, TII->get(PPC::MTFSFb)).addImm(1).addReg(MFFSReg);
-  } else if (MI.getOpcode() == PPC::ANDIo_1_EQ_BIT ||
-             MI.getOpcode() == PPC::ANDIo_1_GT_BIT ||
-             MI.getOpcode() == PPC::ANDIo_1_EQ_BIT8 ||
-             MI.getOpcode() == PPC::ANDIo_1_GT_BIT8) {
-    unsigned Opcode = (MI.getOpcode() == PPC::ANDIo_1_EQ_BIT8 ||
-                       MI.getOpcode() == PPC::ANDIo_1_GT_BIT8)
-                          ? PPC::ANDI8o
-                          : PPC::ANDIo;
-    bool IsEQ = (MI.getOpcode() == PPC::ANDIo_1_EQ_BIT ||
-                 MI.getOpcode() == PPC::ANDIo_1_EQ_BIT8);
+  } else if (MI.getOpcode() == PPC::ANDI_rec_1_EQ_BIT ||
+             MI.getOpcode() == PPC::ANDI_rec_1_GT_BIT ||
+             MI.getOpcode() == PPC::ANDI_rec_1_EQ_BIT8 ||
+             MI.getOpcode() == PPC::ANDI_rec_1_GT_BIT8) {
+    unsigned Opcode = (MI.getOpcode() == PPC::ANDI_rec_1_EQ_BIT8 ||
+                       MI.getOpcode() == PPC::ANDI_rec_1_GT_BIT8)
+                          ? PPC::ANDI8_rec
+                          : PPC::ANDI_rec;
+    bool IsEQ = (MI.getOpcode() == PPC::ANDI_rec_1_EQ_BIT ||
+                 MI.getOpcode() == PPC::ANDI_rec_1_EQ_BIT8);
 
     MachineRegisterInfo &RegInfo = F->getRegInfo();
     Register Dest = RegInfo.createVirtualRegister(
-        Opcode == PPC::ANDIo ? &PPC::GPRCRegClass : &PPC::G8RCRegClass);
+        Opcode == PPC::ANDI_rec ? &PPC::GPRCRegClass : &PPC::G8RCRegClass);
 
     DebugLoc Dl = MI.getDebugLoc();
     BuildMI(*BB, MI, Dl, TII->get(Opcode), Dest)
@@ -14791,16 +14855,15 @@ SDValue PPCTargetLowering::LowerFRAMEADDR(SDValue Op,
 
 // FIXME? Maybe this could be a TableGen attribute on some registers and
 // this table could be generated automatically from RegInfo.
-Register PPCTargetLowering::getRegisterByName(const char* RegName, EVT VT,
+Register PPCTargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                               const MachineFunction &MF) const {
   bool isPPC64 = Subtarget.isPPC64();
   bool IsDarwinABI = Subtarget.isDarwinABI();
 
-  if ((isPPC64 && VT != MVT::i64 && VT != MVT::i32) ||
-      (!isPPC64 && VT != MVT::i32))
+  bool is64Bit = isPPC64 && VT == LLT::scalar(64);
+  if (!is64Bit && VT != LLT::scalar(32))
     report_fatal_error("Invalid register global variable type");
 
-  bool is64Bit = isPPC64 && VT == MVT::i64;
   Register Reg = StringSwitch<Register>(RegName)
                    .Case("r1", is64Bit ? PPC::X1 : PPC::R1)
                    .Case("r2", (IsDarwinABI || isPPC64) ? Register() : PPC::R2)

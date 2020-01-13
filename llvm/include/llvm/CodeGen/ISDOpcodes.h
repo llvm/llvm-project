@@ -285,6 +285,12 @@ namespace ISD {
     /// bits of the first 2 operands.
     SMULFIXSAT, UMULFIXSAT,
 
+    /// RESULT = [US]DIVFIX(LHS, RHS, SCALE) - Perform fixed point division on
+    /// 2 integers with the same width and scale. SCALE represents the scale
+    /// of both operands as fixed point numbers. This SCALE parameter must be a
+    /// constant integer.
+    SDIVFIX, UDIVFIX,
+
     /// Simple binary floating point operators.
     FADD, FSUB, FMUL, FDIV, FREM,
 

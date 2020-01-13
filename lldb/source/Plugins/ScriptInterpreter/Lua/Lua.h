@@ -9,6 +9,7 @@
 #ifndef liblldb_Lua_h_
 #define liblldb_Lua_h_
 
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
@@ -36,9 +37,9 @@ public:
   }
 
   llvm::Error Run(llvm::StringRef buffer);
+  llvm::Error LoadModule(llvm::StringRef filename);
 
 private:
-  std::mutex m_mutex;
   lua_State *m_lua_state;
 };
 

@@ -3130,7 +3130,9 @@ bool AsmParser::parseRealValue(const fltSemantics &Semantics, APInt &Res) {
       Value = APFloat::getNaN(Semantics, false, ~0);
     else
       return TokError("invalid floating point literal");
-  } else if (!Value.convertFromString(IDVal, APFloat::rmNearestTiesToEven))
+  } else if (errorToBool(
+                 Value.convertFromString(IDVal, APFloat::rmNearestTiesToEven)
+                     .takeError()))
     return TokError("invalid floating point literal");
   if (IsNeg)
     Value.changeSign();
@@ -5843,7 +5845,7 @@ bool AsmParser::parseMSInlineAsm(
         InputDecls.push_back(OpDecl);
         InputDeclsAddressOf.push_back(Operand.needAddressOf());
         InputConstraints.push_back(Constraint.str());
-        if (Operand.isCallOperand())
+        if (Desc.OpInfo[i - 1].isBranchTarget())
           AsmStrRewrites.emplace_back(AOK_CallInput, Start, SymName.size());
         else
           AsmStrRewrites.emplace_back(AOK_Input, Start, SymName.size());

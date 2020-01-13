@@ -1483,6 +1483,7 @@ class RCPCLoad<bits<2> sz, string asm, RegisterClass RC>
 class AuthBase<bits<1> M, dag oops, dag iops, string asm, string operands,
                list<dag> pattern>
   : I<oops, iops, asm, operands, "", pattern>, Sched<[]> {
+  let isAuthenticated = 1;
   let Inst{31-25} = 0b1101011;
   let Inst{20-11} = 0b1111100001;
   let Inst{10} = M;
@@ -1522,6 +1523,7 @@ class BaseAuthLoad<bit M, bit W, dag oops, dag iops, string asm,
   bits<10> offset;
   bits<5> Rn;
   bits<5> Rt;
+  let isAuthenticated = 1;
   let Inst{31-24} = 0b11111000;
   let Inst{23} = M;
   let Inst{22} = offset{9};
@@ -3130,6 +3132,22 @@ def ro_Windexed16 : ComplexPattern<i64, 4, "SelectAddrModeWRO<16>", []>;
 def ro_Windexed32 : ComplexPattern<i64, 4, "SelectAddrModeWRO<32>", []>;
 def ro_Windexed64 : ComplexPattern<i64, 4, "SelectAddrModeWRO<64>", []>;
 def ro_Windexed128 : ComplexPattern<i64, 4, "SelectAddrModeWRO<128>", []>;
+
+def gi_ro_Windexed8 :
+    GIComplexOperandMatcher<s64, "selectAddrModeWRO<8>">,
+    GIComplexPatternEquiv<ro_Windexed8>;
+def gi_ro_Windexed16 :
+    GIComplexOperandMatcher<s64, "selectAddrModeWRO<16>">,
+    GIComplexPatternEquiv<ro_Windexed16>;
+def gi_ro_Windexed32 :
+    GIComplexOperandMatcher<s64, "selectAddrModeWRO<32>">,
+    GIComplexPatternEquiv<ro_Windexed32>;
+def gi_ro_Windexed64 :
+    GIComplexOperandMatcher<s64, "selectAddrModeWRO<64>">,
+    GIComplexPatternEquiv<ro_Windexed64>;
+def gi_ro_Windexed128 :
+    GIComplexOperandMatcher<s64, "selectAddrModeWRO<128>">,
+    GIComplexPatternEquiv<ro_Windexed128>;
 
 class MemExtendOperand<string Reg, int Width> : AsmOperandClass {
   let Name = "Mem" # Reg # "Extend" # Width;

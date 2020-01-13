@@ -725,11 +725,6 @@ Status NativeRegisterContextNetBSD_x86_64::ReadAllRegisterValues(
   ::memcpy(dst, &m_gpr_x86_64, GetRegisterInfoInterface().GetGPRSize());
   dst += GetRegisterInfoInterface().GetGPRSize();
 
-  RegisterValue value((uint64_t)-1);
-  const RegisterInfo *reg_info =
-      GetRegisterInfoInterface().GetDynamicRegisterInfo("orig_eax");
-  if (reg_info == nullptr)
-    reg_info = GetRegisterInfoInterface().GetDynamicRegisterInfo("orig_rax");
   return error;
 }
 

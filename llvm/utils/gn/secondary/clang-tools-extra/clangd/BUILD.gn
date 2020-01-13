@@ -81,6 +81,7 @@ static_library("clangd") {
     "JSONTransport.cpp",
     "Logger.cpp",
     "ParsedAST.cpp",
+    "PathMapping.cpp",
     "Preamble.cpp",
     "Protocol.cpp",
     "Quality.cpp",

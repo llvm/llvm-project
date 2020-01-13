@@ -1101,6 +1101,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       parseXRayInstrumentationBundle("-fxray-instrumentation-bundle=", A, Args,
                                      Diags, Opts.XRayInstrumentationBundle);
 
+  Opts.PatchableFunctionEntryCount =
+      getLastArgIntValue(Args, OPT_fpatchable_function_entry_EQ, 0, Diags);
   Opts.InstrumentForProfiling = Args.hasArg(OPT_pg);
   Opts.CallFEntry = Args.hasArg(OPT_mfentry);
   Opts.MNopMCount = Args.hasArg(OPT_mnop_mcount);
@@ -1265,6 +1267,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
       Opts.setDefaultTLSModel(static_cast<CodeGenOptions::TLSModel>(Model));
     }
   }
+
+  Opts.TLSSize = getLastArgIntValue(Args, OPT_mtls_size_EQ, 0, Diags);
 
   if (Arg *A = Args.getLastArg(OPT_fdenormal_fp_math_EQ)) {
     StringRef Val = A->getValue();
@@ -2559,6 +2563,12 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
           << Args.getLastArg(OPT_fgpu_allow_device_init)->getAsString(Args);
   }
   Opts.HIPUseNewLaunchAPI = Args.hasArg(OPT_fhip_new_launch_api);
+  if (Opts.HIP)
+    Opts.GPUMaxThreadsPerBlock = getLastArgIntValue(
+        Args, OPT_gpu_max_threads_per_block_EQ, Opts.GPUMaxThreadsPerBlock);
+  else if (Args.hasArg(OPT_gpu_max_threads_per_block_EQ))
+    Diags.Report(diag::warn_ignored_hip_only_option)
+        << Args.getLastArg(OPT_gpu_max_threads_per_block_EQ)->getAsString(Args);
 
   if (Opts.ObjC) {
     if (Arg *arg = Args.getLastArg(OPT_fobjc_runtime_EQ)) {
@@ -2983,7 +2993,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                      Arch != llvm::Triple::x86;
     emitError |= (DefaultCC == LangOptions::DCC_VectorCall ||
                   DefaultCC == LangOptions::DCC_RegCall) &&
-                 !(Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64);
+                 !T.isX86();
     if (emitError)
       Diags.Report(diag::err_drv_argument_not_allowed_with)
           << A->getSpelling() << T.getTriple();

@@ -51,7 +51,7 @@ define dso_local i64 @foo() local_unnamed_addr #0 !dbg !27 {
 ; CHECK-NEXT:        .long   8
 ; CHECK-NEXT:        .long   16777280                # 0x1000040
 ; CHECK-NEXT:        .long   10                      # BTF_KIND_FUNC(id = 3)
-; CHECK-NEXT:        .long   201326592               # 0xc000000
+; CHECK-NEXT:        .long   201326593               # 0xc000001
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_VOLATILE(id = 4)
 ; CHECK-NEXT:        .long   150994944               # 0x9000000

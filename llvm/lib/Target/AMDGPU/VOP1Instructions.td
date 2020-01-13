@@ -156,7 +156,7 @@ def V_READFIRSTLANE_B32 :
   InstSI <(outs SReg_32:$vdst),
     (ins VRegOrLds_32:$src0),
     "v_readfirstlane_b32 $vdst, $src0",
-    [(set i32:$vdst, (int_amdgcn_readfirstlane i32:$src0))]>,
+    [(set i32:$vdst, (int_amdgcn_readfirstlane (i32 VRegOrLds_32:$src0)))]>,
   Enc32 {
 
   let isCodeGenOnly = 0;

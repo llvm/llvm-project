@@ -8,7 +8,6 @@ CHECK-NEXT:    -Wcomment
 CHECK-NEXT:    -Wdelete-non-virtual-dtor
 CHECK-NEXT:      -Wdelete-non-abstract-non-virtual-dtor
 CHECK-NEXT:      -Wdelete-abstract-non-virtual-dtor
-CHECK-NEXT:    -Wfor-loop-analysis
 CHECK-NEXT:    -Wformat
 CHECK-NEXT:      -Wformat-extra-args
 CHECK-NEXT:      -Wformat-zero-length
@@ -21,6 +20,9 @@ CHECK-NEXT:      -Wimplicit-function-declaration
 CHECK-NEXT:      -Wimplicit-int
 CHECK-NEXT:    -Winfinite-recursion
 CHECK-NEXT:    -Wint-in-bool-context
+CHECK-NEXT:    -Wloop-analysis
+CHECK-NEXT:      -Wfor-loop-analysis
+CHECK-NEXT:      -Wrange-loop-analysis
 CHECK-NEXT:    -Wmismatched-tags
 CHECK-NEXT:    -Wmissing-braces
 CHECK-NEXT:    -Wmove

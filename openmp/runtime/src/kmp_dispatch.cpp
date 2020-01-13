@@ -1533,7 +1533,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
       if ((T)remaining <
           pr->u.p.parm2) { // compare with K*nproc*(chunk+1), K=2 by default
         // use dynamic-style shcedule
-        // atomically inrement iterations, get old value
+        // atomically increment iterations, get old value
         init = test_then_add<ST>(RCAST(volatile ST *, &sh->u.s.iteration),
                                  (ST)chunkspec);
         remaining = trip - init;
@@ -1602,7 +1602,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
       // compare with K*nproc*(chunk+1), K=2 by default
       if ((T)remaining < pr->u.p.parm2) {
         // use dynamic-style shcedule
-        // atomically inrement iterations, get old value
+        // atomically increment iterations, get old value
         init = test_then_add<ST>(RCAST(volatile ST *, &sh->u.s.iteration),
                                  (ST)chunk);
         remaining = trip - init;
@@ -1893,7 +1893,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
   typedef typename traits_t<T>::signed_t ST;
   // This is potentially slightly misleading, schedule(runtime) will appear here
   // even if the actual runtme schedule is static. (Which points out a
-  // disadavantage of schedule(runtime): even when static scheduling is used it
+  // disadvantage of schedule(runtime): even when static scheduling is used it
   // costs more than a compile time choice to use static scheduling would.)
   KMP_TIME_PARTITIONED_BLOCK(OMP_loop_dynamic_scheduling);
 

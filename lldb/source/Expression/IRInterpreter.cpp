@@ -490,10 +490,8 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   bool saw_function_with_body = false;
-
-  for (Module::iterator fi = module.begin(), fe = module.end(); fi != fe;
-       ++fi) {
-    if (fi->begin() != fi->end()) {
+  for (Function &f : module) {
+    if (f.begin() != f.end()) {
       if (saw_function_with_body) {
         LLDB_LOGF(log, "More than one function in the module has a body");
         error.SetErrorToGenericError();
@@ -504,13 +502,11 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
     }
   }
 
-  for (Function::iterator bbi = function.begin(), bbe = function.end();
-       bbi != bbe; ++bbi) {
-    for (BasicBlock::iterator ii = bbi->begin(), ie = bbi->end(); ii != ie;
-         ++ii) {
-      switch (ii->getOpcode()) {
+  for (BasicBlock &bb : function) {
+    for (Instruction &ii : bb) {
+      switch (ii.getOpcode()) {
       default: {
-        LLDB_LOGF(log, "Unsupported instruction: %s", PrintValue(&*ii).c_str());
+        LLDB_LOGF(log, "Unsupported instruction: %s", PrintValue(&ii).c_str());
         error.SetErrorToGenericError();
         error.SetErrorString(unsupported_opcode_error);
         return false;
@@ -522,7 +518,7 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
       case Instruction::PHI:
         break;
       case Instruction::Call: {
-        CallInst *call_inst = dyn_cast<CallInst>(ii);
+        CallInst *call_inst = dyn_cast<CallInst>(&ii);
 
         if (!call_inst) {
           error.SetErrorToGenericError();
@@ -532,7 +528,7 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
 
         if (!CanIgnoreCall(call_inst) && !support_function_calls) {
           LLDB_LOGF(log, "Unsupported instruction: %s",
-                    PrintValue(&*ii).c_str());
+                    PrintValue(&ii).c_str());
           error.SetErrorToGenericError();
           error.SetErrorString(unsupported_opcode_error);
           return false;
@@ -541,7 +537,7 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
       case Instruction::GetElementPtr:
         break;
       case Instruction::ICmp: {
-        ICmpInst *icmp_inst = dyn_cast<ICmpInst>(ii);
+        ICmpInst *icmp_inst = dyn_cast<ICmpInst>(&ii);
 
         if (!icmp_inst) {
           error.SetErrorToGenericError();
@@ -552,7 +548,7 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
         switch (icmp_inst->getPredicate()) {
         default: {
           LLDB_LOGF(log, "Unsupported ICmp predicate: %s",
-                    PrintValue(&*ii).c_str());
+                    PrintValue(&ii).c_str());
 
           error.SetErrorToGenericError();
           error.SetErrorString(unsupported_opcode_error);
@@ -594,8 +590,8 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
         break;
       }
 
-      for (int oi = 0, oe = ii->getNumOperands(); oi != oe; ++oi) {
-        Value *operand = ii->getOperand(oi);
+      for (unsigned oi = 0, oe = ii.getNumOperands(); oi != oe; ++oi) {
+        Value *operand = ii.getOperand(oi);
         Type *operand_type = operand->getType();
 
         switch (operand_type->getTypeID()) {

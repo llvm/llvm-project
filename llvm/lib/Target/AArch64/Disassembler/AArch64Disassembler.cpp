@@ -251,7 +251,6 @@ static MCDisassembler *createAArch64Disassembler(const Target &T,
 DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
                                                  uint64_t Address,
-                                                 raw_ostream &OS,
                                                  raw_ostream &CS) const {
   CommentStream = &CS;
 

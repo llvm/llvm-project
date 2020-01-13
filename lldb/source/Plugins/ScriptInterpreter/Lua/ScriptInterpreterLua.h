@@ -25,6 +25,11 @@ public:
 
   void ExecuteInterpreterLoop() override;
 
+  virtual bool
+  LoadScriptingModule(const char *filename, bool init_session,
+                      lldb_private::Status &error,
+                      StructuredData::ObjectSP *module_sp = nullptr) override;
+
   // Static Functions
   static void Initialize();
 
@@ -43,8 +48,12 @@ public:
 
   Lua &GetLua();
 
+  llvm::Error EnterSession(lldb::user_id_t debugger_id);
+  llvm::Error LeaveSession();
+
 private:
   std::unique_ptr<Lua> m_lua;
+  bool m_session_is_active = false;
 };
 
 } // namespace lldb_private

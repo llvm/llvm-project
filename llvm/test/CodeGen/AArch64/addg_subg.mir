@@ -1,0 +1,37 @@
+# RUN: llc -mtriple=aarch64 -run-pass=prologepilog,aarch64-expand-pseudo %s -o - | FileCheck %s
+
+# CHECK: renamable $x8 = IRG $sp, $xzr
+
+# CHECK: renamable $x0 = ADDG $x8, 0, 0
+# CHECK: renamable $x0 = ADDG $x8, 5, 0
+# CHECK: renamable $x0 = ADDG $x8, 63, 0
+# CHECK: $[[R:x[0-9]+]] = ADDXri $x8, 16, 0
+# CHECK: renamable $x0 = ADDG killed $[[R]], 63, 0
+
+# CHECK: renamable $x0 = SUBG $x8, 5, 0
+# CHECK: renamable $x0 = SUBG $x8, 63, 0
+# CHECK: $[[R:x[0-9]+]] = SUBXri $x8, 16, 0
+# CHECK: renamable $x0 = SUBG killed $[[R]], 63, 0
+
+---
+name: subg
+stack:
+  - { id: 0, type: default, offset: 0, size: 16, alignment: 16,
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
+      local-offset: -16, debug-info-variable: '', debug-info-expression: '',
+      debug-info-location: '' }
+body:             |
+  bb.0.entry:
+    renamable $x8 = IRGstack $sp, $xzr
+
+    renamable $x0 = TAGPstack %stack.0, 0, killed renamable $x8, 0
+    renamable $x0 = TAGPstack %stack.0, 5, killed renamable $x8, 0
+    renamable $x0 = TAGPstack %stack.0, 63, killed renamable $x8, 0
+    renamable $x0 = TAGPstack %stack.0, 64, killed renamable $x8, 0
+
+    renamable $x0 = TAGPstack %stack.0, -5, killed renamable $x8, 0
+    renamable $x0 = TAGPstack %stack.0, -63, killed renamable $x8, 0
+    renamable $x0 = TAGPstack %stack.0, -64, killed renamable $x8, 0
+    RET_ReallyLR
+
+...

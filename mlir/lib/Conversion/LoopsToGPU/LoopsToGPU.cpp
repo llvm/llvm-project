@@ -215,7 +215,7 @@ struct LoopToGpuConverter {
 
 // Return true if the value is obviously a constant "one".
 static bool isConstantOne(Value value) {
-  if (auto def = dyn_cast_or_null<ConstantIndexOp>(value->getDefiningOp()))
+  if (auto def = dyn_cast_or_null<ConstantIndexOp>(value.getDefiningOp()))
     return def.getValue() == 1;
   return false;
 }
@@ -457,7 +457,7 @@ void LoopToGpuConverter::createLaunch(OpTy rootForOp, OpTy innermostForOp,
 
     Value ivReplacement =
         builder.create<AddIOp>(rootForOp.getLoc(), *lbArgumentIt, id);
-    en.value()->replaceAllUsesWith(ivReplacement);
+    en.value().replaceAllUsesWith(ivReplacement);
     replaceAllUsesInRegionWith(steps[en.index()], *stepArgumentIt,
                                launchOp.body());
     std::advance(lbArgumentIt, 1);

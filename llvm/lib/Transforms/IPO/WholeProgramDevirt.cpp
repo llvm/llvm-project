@@ -1253,8 +1253,7 @@ std::string DevirtModule::getGlobalName(VTableSlot Slot,
 
 bool DevirtModule::shouldExportConstantsAsAbsoluteSymbols() {
   Triple T(M.getTargetTriple());
-  return (T.getArch() == Triple::x86 || T.getArch() == Triple::x86_64) &&
-         T.getObjectFormat() == Triple::ELF;
+  return T.isX86() && T.getObjectFormat() == Triple::ELF;
 }
 
 void DevirtModule::exportGlobal(VTableSlot Slot, ArrayRef<uint64_t> Args,

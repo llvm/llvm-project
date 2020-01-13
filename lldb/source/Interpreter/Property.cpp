@@ -292,8 +292,7 @@ void Property::DumpDescription(CommandInterpreter &interpreter, Stream &strm,
   }
 }
 
-void Property::SetValueChangedCallback(OptionValueChangedCallback callback,
-                                       void *baton) {
+void Property::SetValueChangedCallback(std::function<void()> callback) {
   if (m_value_sp)
-    m_value_sp->SetValueChangedCallback(callback, baton);
+    m_value_sp->SetValueChangedCallback(std::move(callback));
 }

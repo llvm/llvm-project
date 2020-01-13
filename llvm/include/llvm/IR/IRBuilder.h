@@ -1195,6 +1195,18 @@ private:
     return MetadataAsValue::get(Context, ExceptMDS);
   }
 
+  Value *getConstrainedFPPredicate(CmpInst::Predicate Predicate) {
+    assert(CmpInst::isFPPredicate(Predicate) &&
+           Predicate != CmpInst::FCMP_FALSE &&
+           Predicate != CmpInst::FCMP_TRUE &&
+           "Invalid constrained FP comparison predicate!");
+
+    StringRef PredicateStr = CmpInst::getPredicateName(Predicate);
+    auto *PredicateMDS = MDString::get(Context, PredicateStr);
+
+    return MetadataAsValue::get(Context, PredicateMDS);
+  }
+
 public:
   Value *CreateAdd(Value *LHS, Value *RHS, const Twine &Name = "",
                    bool HasNUW = false, bool HasNSW = false) {
@@ -2351,10 +2363,39 @@ public:
 
   Value *CreateFCmp(CmpInst::Predicate P, Value *LHS, Value *RHS,
                     const Twine &Name = "", MDNode *FPMathTag = nullptr) {
+    if (IsFPConstrained)
+      return CreateConstrainedFPCmp(Intrinsic::experimental_constrained_fcmp,
+                                    P, LHS, RHS, Name);
+
     if (auto *LC = dyn_cast<Constant>(LHS))
       if (auto *RC = dyn_cast<Constant>(RHS))
         return Insert(Folder.CreateFCmp(P, LC, RC), Name);
     return Insert(setFPAttrs(new FCmpInst(P, LHS, RHS), FPMathTag, FMF), Name);
+  }
+
+  Value *CreateFCmpS(CmpInst::Predicate P, Value *LHS, Value *RHS,
+                     const Twine &Name = "", MDNode *FPMathTag = nullptr) {
+    if (IsFPConstrained)
+      return CreateConstrainedFPCmp(Intrinsic::experimental_constrained_fcmps,
+                                    P, LHS, RHS, Name);
+
+    if (auto *LC = dyn_cast<Constant>(LHS))
+      if (auto *RC = dyn_cast<Constant>(RHS))
+        return Insert(Folder.CreateFCmp(P, LC, RC), Name);
+    return Insert(setFPAttrs(new FCmpInst(P, LHS, RHS), FPMathTag, FMF), Name);
+  }
+
+  CallInst *CreateConstrainedFPCmp(
+      Intrinsic::ID ID, CmpInst::Predicate P, Value *L, Value *R,
+      const Twine &Name = "",
+      Optional<fp::ExceptionBehavior> Except = None) {
+    Value *PredicateV = getConstrainedFPPredicate(P);
+    Value *ExceptV = getConstrainedFPExcept(Except);
+
+    CallInst *C = CreateIntrinsic(ID, {L->getType()},
+                                  {L, R, PredicateV, ExceptV}, nullptr, Name);
+    setConstrainedFPCallAttr(C);
+    return C;
   }
 
   //===--------------------------------------------------------------------===//

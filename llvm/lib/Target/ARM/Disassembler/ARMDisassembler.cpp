@@ -137,18 +137,15 @@ public:
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 
 private:
   DecodeStatus getARMInstruction(MCInst &Instr, uint64_t &Size,
                                  ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                 raw_ostream &VStream,
                                  raw_ostream &CStream) const;
 
   DecodeStatus getThumbInstruction(MCInst &Instr, uint64_t &Size,
                                    ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                   raw_ostream &VStream,
                                    raw_ostream &CStream) const;
 
   mutable ITStatus ITBlock;
@@ -576,8 +573,7 @@ static MCDisassembler *createARMDisassembler(const Target &T,
 
 // Post-decoding checks
 static DecodeStatus checkDecodedInstruction(MCInst &MI, uint64_t &Size,
-                                            uint64_t Address, raw_ostream &OS,
-                                            raw_ostream &CS,
+                                            uint64_t Address, raw_ostream &CS,
                                             uint32_t Insn,
                                             DecodeStatus Result) {
   switch (MI.getOpcode()) {
@@ -609,17 +605,16 @@ static DecodeStatus checkDecodedInstruction(MCInst &MI, uint64_t &Size,
 
 DecodeStatus ARMDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
-                                             uint64_t Address, raw_ostream &OS,
+                                             uint64_t Address,
                                              raw_ostream &CS) const {
   if (STI.getFeatureBits()[ARM::ModeThumb])
-    return getThumbInstruction(MI, Size, Bytes, Address, OS, CS);
-  return getARMInstruction(MI, Size, Bytes, Address, OS, CS);
+    return getThumbInstruction(MI, Size, Bytes, Address, CS);
+  return getARMInstruction(MI, Size, Bytes, Address, CS);
 }
 
 DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
                                                 ArrayRef<uint8_t> Bytes,
                                                 uint64_t Address,
-                                                raw_ostream &OS,
                                                 raw_ostream &CS) const {
   CommentStream = &CS;
 
@@ -642,7 +637,7 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
       decodeInstruction(DecoderTableARM32, MI, Insn, Address, this, STI);
   if (Result != MCDisassembler::Fail) {
     Size = 4;
-    return checkDecodedInstruction(MI, Size, Address, OS, CS, Insn, Result);
+    return checkDecodedInstruction(MI, Size, Address, CS, Insn, Result);
   }
 
   struct DecodeTable {
@@ -673,7 +668,7 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
       decodeInstruction(DecoderTableCoProc32, MI, Insn, Address, this, STI);
   if (Result != MCDisassembler::Fail) {
     Size = 4;
-    return checkDecodedInstruction(MI, Size, Address, OS, CS, Insn, Result);
+    return checkDecodedInstruction(MI, Size, Address, CS, Insn, Result);
   }
 
   Size = 4;
@@ -906,7 +901,6 @@ void ARMDisassembler::UpdateThumbVFPPredicate(
 DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
                                                   ArrayRef<uint8_t> Bytes,
                                                   uint64_t Address,
-                                                  raw_ostream &OS,
                                                   raw_ostream &CS) const {
   CommentStream = &CS;
 
@@ -1010,7 +1004,7 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
   if (Result != MCDisassembler::Fail) {
     Size = 4;
     Check(Result, AddThumbPredicate(MI));
-    return checkDecodedInstruction(MI, Size, Address, OS, CS, Insn32, Result);
+    return checkDecodedInstruction(MI, Size, Address, CS, Insn32, Result);
   }
 
   if (fieldFromInstruction(Insn32, 28, 4) == 0xE) {

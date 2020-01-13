@@ -733,10 +733,6 @@ enum OpenMPRTLFunction {
   OMPRTL__tgt_target_teams_nowait,
   // Call to void __tgt_register_requires(int64_t flags);
   OMPRTL__tgt_register_requires,
-  // Call to void __tgt_register_lib(__tgt_bin_desc *desc);
-  OMPRTL__tgt_register_lib,
-  // Call to void __tgt_unregister_lib(__tgt_bin_desc *desc);
-  OMPRTL__tgt_unregister_lib,
   // Call to void __tgt_target_data_begin(int64_t device_id, int32_t arg_num,
   // void** args_base, void **args, int64_t *arg_sizes, int64_t *arg_types);
   OMPRTL__tgt_target_data_begin,
@@ -2476,26 +2472,6 @@ llvm::FunctionCallee CGOpenMPRuntime::createRuntimeFunction(unsigned Function) {
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg*/ false);
     RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_register_requires");
-    break;
-  }
-  case OMPRTL__tgt_register_lib: {
-    // Build void __tgt_register_lib(__tgt_bin_desc *desc);
-    QualType ParamTy =
-        CGM.getContext().getPointerType(getTgtBinaryDescriptorQTy());
-    llvm::Type *TypeParams[] = {CGM.getTypes().ConvertTypeForMem(ParamTy)};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_register_lib");
-    break;
-  }
-  case OMPRTL__tgt_unregister_lib: {
-    // Build void __tgt_unregister_lib(__tgt_bin_desc *desc);
-    QualType ParamTy =
-        CGM.getContext().getPointerType(getTgtBinaryDescriptorQTy());
-    llvm::Type *TypeParams[] = {CGM.getTypes().ConvertTypeForMem(ParamTy)};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg*/ false);
-    RTLFn = CGM.CreateRuntimeFunction(FnTy, "__tgt_unregister_lib");
     break;
   }
   case OMPRTL__tgt_target_data_begin: {
@@ -4376,57 +4352,6 @@ QualType CGOpenMPRuntime::getTgtOffloadEntryQTy() {
     TgtOffloadEntryQTy = C.getRecordType(RD);
   }
   return TgtOffloadEntryQTy;
-}
-
-QualType CGOpenMPRuntime::getTgtDeviceImageQTy() {
-  // These are the types we need to build:
-  // struct __tgt_device_image{
-  // void   *ImageStart;       // Pointer to the target code start.
-  // void   *ImageEnd;         // Pointer to the target code end.
-  // // We also add the host entries to the device image, as it may be useful
-  // // for the target runtime to have access to that information.
-  // __tgt_offload_entry  *EntriesBegin;   // Begin of the table with all
-  //                                       // the entries.
-  // __tgt_offload_entry  *EntriesEnd;     // End of the table with all the
-  //                                       // entries (non inclusive).
-  // };
-  if (TgtDeviceImageQTy.isNull()) {
-    ASTContext &C = CGM.getContext();
-    RecordDecl *RD = C.buildImplicitRecord("__tgt_device_image");
-    RD->startDefinition();
-    addFieldToRecordDecl(C, RD, C.VoidPtrTy);
-    addFieldToRecordDecl(C, RD, C.VoidPtrTy);
-    addFieldToRecordDecl(C, RD, C.getPointerType(getTgtOffloadEntryQTy()));
-    addFieldToRecordDecl(C, RD, C.getPointerType(getTgtOffloadEntryQTy()));
-    RD->completeDefinition();
-    TgtDeviceImageQTy = C.getRecordType(RD);
-  }
-  return TgtDeviceImageQTy;
-}
-
-QualType CGOpenMPRuntime::getTgtBinaryDescriptorQTy() {
-  // struct __tgt_bin_desc{
-  //   int32_t              NumDevices;      // Number of devices supported.
-  //   __tgt_device_image   *DeviceImages;   // Arrays of device images
-  //                                         // (one per device).
-  //   __tgt_offload_entry  *EntriesBegin;   // Begin of the table with all the
-  //                                         // entries.
-  //   __tgt_offload_entry  *EntriesEnd;     // End of the table with all the
-  //                                         // entries (non inclusive).
-  // };
-  if (TgtBinaryDescriptorQTy.isNull()) {
-    ASTContext &C = CGM.getContext();
-    RecordDecl *RD = C.buildImplicitRecord("__tgt_bin_desc");
-    RD->startDefinition();
-    addFieldToRecordDecl(
-        C, RD, C.getIntTypeForBitwidth(/*DestWidth=*/32, /*Signed=*/true));
-    addFieldToRecordDecl(C, RD, C.getPointerType(getTgtDeviceImageQTy()));
-    addFieldToRecordDecl(C, RD, C.getPointerType(getTgtOffloadEntryQTy()));
-    addFieldToRecordDecl(C, RD, C.getPointerType(getTgtOffloadEntryQTy()));
-    RD->completeDefinition();
-    TgtBinaryDescriptorQTy = C.getRecordType(RD);
-  }
-  return TgtBinaryDescriptorQTy;
 }
 
 namespace {
@@ -9659,9 +9584,9 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
   }
 
   const ValueDecl *VD = cast<ValueDecl>(GD.getDecl());
-  StringRef Name = CGM.getMangledName(GD);
   // Try to detect target regions in the function.
   if (const auto *FD = dyn_cast<FunctionDecl>(VD)) {
+    StringRef Name = CGM.getMangledName(GD);
     scanForTargetRegionsFunctions(FD->getBody(), Name);
     Optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
         OMPDeclareTargetDeclAttr::getDeviceType(FD);
@@ -9672,7 +9597,7 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
 
   // Do not to emit function if it is not marked as declare target.
   return !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD) &&
-         AlreadyEmittedTargetFunctions.count(Name) == 0;
+         AlreadyEmittedTargetDecls.count(VD) == 0;
 }
 
 bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
@@ -9903,20 +9828,20 @@ bool CGOpenMPRuntime::markAsGlobalTarget(GlobalDecl GD) {
   if (!CGM.getLangOpts().OpenMPIsDevice || !ShouldMarkAsGlobal)
     return true;
 
-  StringRef Name = CGM.getMangledName(GD);
   const auto *D = cast<FunctionDecl>(GD.getDecl());
   // Do not to emit function if it is marked as declare target as it was already
   // emitted.
   if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(D)) {
-    if (D->hasBody() && AlreadyEmittedTargetFunctions.count(Name) == 0) {
-      if (auto *F = dyn_cast_or_null<llvm::Function>(CGM.GetGlobalValue(Name)))
+    if (D->hasBody() && AlreadyEmittedTargetDecls.count(D) == 0) {
+      if (auto *F = dyn_cast_or_null<llvm::Function>(
+              CGM.GetGlobalValue(CGM.getMangledName(GD))))
         return !F->isDeclaration();
       return false;
     }
     return true;
   }
 
-  return !AlreadyEmittedTargetFunctions.insert(Name).second;
+  return !AlreadyEmittedTargetDecls.insert(D).second;
 }
 
 llvm::Function *CGOpenMPRuntime::emitRequiresDirectiveRegFun() {
@@ -10829,8 +10754,7 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         ExprLoc = VLENExpr->getExprLoc();
       }
       OMPDeclareSimdDeclAttr::BranchStateTy State = Attr->getBranchState();
-      if (CGM.getTriple().getArch() == llvm::Triple::x86 ||
-          CGM.getTriple().getArch() == llvm::Triple::x86_64) {
+      if (CGM.getTriple().isX86()) {
         emitX86DeclareSimdFunction(FD, Fn, VLENVal, ParamAttrs, State);
       } else if (CGM.getTriple().getArch() == llvm::Triple::aarch64) {
         unsigned VLEN = VLENVal.getExtValue();
@@ -11191,6 +11115,7 @@ bool checkContext<OMP_CTX_SET_device, OMP_CTX_kind, CodeGenModule &>(
     case llvm::Triple::wasm64:
     case llvm::Triple::renderscript32:
     case llvm::Triple::renderscript64:
+    case llvm::Triple::ve:
       return false;
     }
   }
@@ -11447,20 +11372,33 @@ CGOpenMPRuntime::LastprivateConditionalRAII::LastprivateConditionalRAII(
   OS << "$pl_cond_" << ID.getDevice() << "_" << ID.getFile() << "_"
      << PLoc.getLine() << "_" << PLoc.getColumn() << "$iv";
   Data.IVName = OS.str();
-
-  // Global loop counter. Required to handle inner parallel-for regions.
-  // global_iv = &iv;
-  QualType PtrIVTy = CGM.getContext().getPointerType(IVLVal.getType());
-  Address GlobIVAddr = CGM.getOpenMPRuntime().getAddrOfArtificialThreadPrivate(
-      CGF, PtrIVTy, Data.IVName);
-  LValue GlobIVLVal = CGF.MakeAddrLValue(GlobIVAddr, PtrIVTy);
-  CGF.EmitStoreOfScalar(IVLVal.getPointer(CGF), GlobIVLVal);
 }
 
 CGOpenMPRuntime::LastprivateConditionalRAII::~LastprivateConditionalRAII() {
   if (!NeedToPush)
     return;
   CGM.getOpenMPRuntime().LastprivateConditionalStack.pop_back();
+}
+
+void CGOpenMPRuntime::initLastprivateConditionalCounter(
+    CodeGenFunction &CGF, const OMPExecutableDirective &S) {
+  if (CGM.getLangOpts().OpenMPSimd ||
+      !llvm::any_of(S.getClausesOfKind<OMPLastprivateClause>(),
+                    [](const OMPLastprivateClause *C) {
+                      return C->getKind() == OMPC_LASTPRIVATE_conditional;
+                    }))
+    return;
+  const CGOpenMPRuntime::LastprivateConditionalData &Data =
+      LastprivateConditionalStack.back();
+  if (Data.UseOriginalIV)
+    return;
+  // Global loop counter. Required to handle inner parallel-for regions.
+  // global_iv = iv;
+  Address GlobIVAddr = CGM.getOpenMPRuntime().getAddrOfArtificialThreadPrivate(
+      CGF, Data.IVLVal.getType(), Data.IVName);
+  LValue GlobIVLVal = CGF.MakeAddrLValue(GlobIVAddr, Data.IVLVal.getType());
+  llvm::Value *IVVal = CGF.EmitLoadOfScalar(Data.IVLVal, S.getBeginLoc());
+  CGF.EmitStoreOfScalar(IVVal, GlobIVLVal);
 }
 
 namespace {
@@ -11576,10 +11514,9 @@ void CGOpenMPRuntime::checkAndEmitLastprivateConditional(CodeGenFunction &CGF,
   // Global loop counter. Required to handle inner parallel-for regions.
   // global_iv
   if (!UseOriginalIV) {
-    QualType PtrIVTy = CGM.getContext().getPointerType(IVLVal.getType());
-    Address IVAddr = getAddrOfArtificialThreadPrivate(CGF, PtrIVTy, IVName);
-    IVLVal =
-        CGF.EmitLoadOfPointerLValue(IVAddr, PtrIVTy->castAs<PointerType>());
+    Address IVAddr =
+        getAddrOfArtificialThreadPrivate(CGF, IVLVal.getType(), IVName);
+    IVLVal = CGF.MakeAddrLValue(IVAddr, IVLVal.getType());
   }
   llvm::Value *IVVal = CGF.EmitLoadOfScalar(IVLVal, FoundE->getExprLoc());
 

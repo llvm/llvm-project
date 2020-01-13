@@ -231,6 +231,9 @@ namespace llvm {
     /// noreturn calls, even if TrapUnreachable is true.
     unsigned NoTrapAfterNoreturn : 1;
 
+    /// Bit size of immediate TLS offsets (0 == use the default).
+    unsigned TLSSize : 8;
+
     /// EmulatedTLS - This flag enables emulated TLS model, using emutls
     /// function in the runtime library..
     unsigned EmulatedTLS : 1;

@@ -22,7 +22,7 @@
 
 from __future__ import print_function
 
-args = (8168 - 160) / 8 + (5 - 1)
+args = int((8168 - 160) / 8 + (5 - 1))
 
 print('declare i64 *@foo(i64 *%s)' % (', i64' * args))
 print('declare void @bar(i64 *)')

@@ -170,11 +170,10 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-dynamic-linker");
       CmdArgs.push_back("/libexec/ld-elf.so.1");
     }
-    if (ToolChain.getTriple().getOSMajorVersion() >= 9) {
-      if (Arch == llvm::Triple::arm || Arch == llvm::Triple::sparc ||
-          Arch == llvm::Triple::x86 || Arch == llvm::Triple::x86_64) {
+    const llvm::Triple &T = ToolChain.getTriple();
+    if (T.getOSMajorVersion() >= 9) {
+      if (Arch == llvm::Triple::arm || Arch == llvm::Triple::sparc || T.isX86())
         CmdArgs.push_back("--hash-style=both");
-      }
     }
     CmdArgs.push_back("--enable-new-dtags");
   }

@@ -438,6 +438,35 @@ TEST_F(DebugLineBasicFixture, ErrorForInvalidExtendedOpcodeLength) {
       "0x00000030 expected 0x02 found 0x01");
 }
 
+TEST_F(DebugLineBasicFixture, ErrorForUnitLengthTooLarge) {
+  if (!setupGenerator())
+    return;
+
+  LineTable &Padding = Gen->addLineTable();
+  // Add some padding to show that a non-zero offset is handled correctly.
+  Padding.setCustomPrologue({{0, LineTable::Byte}});
+  LineTable &LT = Gen->addLineTable();
+  LT.addStandardOpcode(DW_LNS_copy, {});
+  LT.addStandardOpcode(DW_LNS_const_add_pc, {});
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+  DWARFDebugLine::Prologue Prologue = LT.createBasicPrologue();
+  // Set the total length to 1 higher than the actual length. The program body
+  // has size 5.
+  Prologue.TotalLength += 6;
+  LT.setPrologue(Prologue);
+
+  generate();
+
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 1, *Context,
+                                                    nullptr, RecordRecoverable);
+  checkError("line table program with offset 0x00000001 has length 0x00000034 "
+             "but only 0x00000033 bytes are available",
+             std::move(Recoverable));
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  EXPECT_EQ((*ExpectedLineTable)->Rows.size(), 2u);
+  EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
+}
+
 TEST_F(DebugLineBasicFixture, ErrorForMismatchedAddressSize) {
   if (!setupGenerator())
     return;
@@ -475,7 +504,8 @@ TEST_F(DebugLineBasicFixture, CallbackUsedForUnterminatedSequence) {
 
   auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
                                                     nullptr, RecordRecoverable);
-  checkError("last sequence in debug line table is not terminated!",
+  checkError("last sequence in debug line table at offset 0x00000000 is not "
+             "terminated",
              std::move(Recoverable));
   ASSERT_TRUE(ExpectedLineTable.operator bool());
   EXPECT_EQ((*ExpectedLineTable)->Rows.size(), 6u);
@@ -632,7 +662,8 @@ TEST_F(DebugLineBasicFixture, ParserReportsNonPrologueProblemsWhenParsing) {
   Parser.parseNext(RecordRecoverable, RecordUnrecoverable);
 
   EXPECT_TRUE(Parser.done());
-  checkError("last sequence in debug line table is not terminated!",
+  checkError("last sequence in debug line table at offset 0x00000031 is not "
+             "terminated",
              std::move(Recoverable));
   EXPECT_FALSE(Unrecoverable);
 }

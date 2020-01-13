@@ -76,16 +76,6 @@ InlineFunctionInfo::InlineFunctionInfo(ConstString name,
 
 InlineFunctionInfo::~InlineFunctionInfo() {}
 
-int InlineFunctionInfo::Compare(const InlineFunctionInfo &a,
-                                const InlineFunctionInfo &b) {
-
-  int result = FunctionInfo::Compare(a, b);
-  if (result)
-    return result;
-  // only compare the mangled names if both have them
-  return Mangled::Compare(a.m_mangled, a.m_mangled);
-}
-
 void InlineFunctionInfo::Dump(Stream *s, bool show_fullpaths) const {
   FunctionInfo::Dump(s, show_fullpaths);
   if (m_mangled)

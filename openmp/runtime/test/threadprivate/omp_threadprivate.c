@@ -62,7 +62,7 @@ int test_omp_threadprivate()
     my_random = rand(); /* random number generator is
                  called inside serial region*/
 
-    /* the first parallel region is used to initialiye myvalue
+    /* the first parallel region is used to initialize myvalue
        and the array with my_random+rank */
     #pragma omp parallel
     {

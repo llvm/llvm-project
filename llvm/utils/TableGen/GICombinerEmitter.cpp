@@ -24,6 +24,7 @@
 #include "GlobalISel/CodeExpander.h"
 #include "GlobalISel/CodeExpansions.h"
 #include "GlobalISel/GIMatchDag.h"
+#include "GlobalISel/GIMatchTree.h"
 #include <cstdint>
 
 using namespace llvm;
@@ -47,6 +48,10 @@ static cl::opt<bool> StopAfterParse(
     "gicombiner-stop-after-parse",
     cl::desc("Stop processing after parsing rules and dump state"),
     cl::cat(GICombinerEmitterCat));
+static cl::opt<bool> StopAfterBuild(
+    "gicombiner-stop-after-build",
+    cl::desc("Stop processing after building the match tree"),
+    cl::cat(GICombinerEmitterCat));
 
 namespace {
 typedef uint64_t RuleID;
@@ -60,6 +65,22 @@ StringRef insertStrTab(StringRef S) {
   if (S.empty())
     return S;
   return StrTab.insert(S).first->first();
+}
+
+class format_partition_name {
+  const GIMatchTree &Tree;
+  unsigned Idx;
+
+public:
+  format_partition_name(const GIMatchTree &Tree, unsigned Idx)
+      : Tree(Tree), Idx(Idx) {}
+  void print(raw_ostream &OS) const {
+    Tree.getPartitioner()->emitPartitionName(OS, Idx);
+  }
+};
+raw_ostream &operator<<(raw_ostream &OS, const format_partition_name &Fmt) {
+  Fmt.print(OS);
+  return OS;
 }
 
 /// Declares data that is passed from the match stage to the apply stage.
@@ -162,6 +183,8 @@ protected:
                                const Init &Arg,
                                StringMap<std::vector<VarInfo>> &NamedEdgeDefs,
                                StringMap<std::vector<VarInfo>> &NamedEdgeUses);
+  bool parseWipMatchOpcodeMatcher(const CodeGenTarget &Target,
+                                  StringInit *ArgName, const Init &Arg);
 
 public:
   CombineRule(const CodeGenTarget &Target, GIMatchDagContext &Ctx, RuleID ID,
@@ -272,6 +295,20 @@ static Record *getDefOfSubClass(const Init &N, StringRef Cls) {
   if (const DefInit *OpI = dyn_cast<DefInit>(&N))
     if (OpI->getDef()->isSubClassOf(Cls))
       return OpI->getDef();
+  return nullptr;
+}
+
+/// A convenience function to check that an Init refers to a dag whose operator
+/// is a specific def and coerce it to a dag if it is. This is primarily useful
+/// for testing for subclasses of GIMatchKind and similar in DagInit's since
+/// DagInit's support any type inside them.
+static const DagInit *getDagWithSpecificOperator(const Init &N,
+                                                 StringRef Name) {
+  if (const DagInit *I = dyn_cast<DagInit>(&N))
+    if (I->getNumArgs() > 0)
+      if (const DefInit *OpI = dyn_cast<DefInit>(I->getOperator()))
+        if (OpI->getDef()->getName() == Name)
+          return I;
   return nullptr;
 }
 
@@ -412,6 +449,44 @@ bool CombineRule::parseInstructionMatcher(
   return false;
 }
 
+// Parse the wip_match_opcode placeholder that's temporarily present in lieu of
+// implementing macros or choices between two matchers.
+bool CombineRule::parseWipMatchOpcodeMatcher(const CodeGenTarget &Target,
+                                             StringInit *ArgName,
+                                             const Init &Arg) {
+  if (const DagInit *Matcher =
+          getDagWithSpecificOperator(Arg, "wip_match_opcode")) {
+    StringRef Name = ArgName ? ArgName->getValue() : "";
+
+    GIMatchDagInstr *N =
+        MatchDag.addInstrNode(makeDebugName(*this, Name), insertStrTab(Name),
+                              MatchDag.getContext().makeEmptyOperandList());
+
+    if (find_if(Roots, [&](const RootInfo &X) {
+          return ArgName && X.getPatternSymbol() == ArgName->getValue();
+        }) != Roots.end()) {
+      N->setMatchRoot();
+    }
+
+    const auto &P = MatchDag.addPredicateNode<GIMatchDagOneOfOpcodesPredicate>(
+        makeNameForAnonPredicate(*this));
+    MatchDag.addPredicateDependency(N, nullptr, P, &P->getOperandInfo()["mi"]);
+    // Each argument is an opcode that will pass this predicate. Add them all to
+    // the predicate implementation
+    for (const auto &Arg : Matcher->getArgs()) {
+      Record *OpcodeDef = getDefOfSubClass(*Arg, "Instruction");
+      if (OpcodeDef) {
+        P->addOpcode(&Target.getInstruction(OpcodeDef));
+        continue;
+      }
+      PrintError(TheDef.getLoc(),
+                 "Arguments to wip_match_opcode must be instructions");
+      return false;
+    }
+    return true;
+  }
+  return false;
+}
 bool CombineRule::parseMatcher(const CodeGenTarget &Target) {
   NamedRegionTimer T("parseMatcher", "Time spent parsing the matcher",
                      "Rule Parsing", "Time spent on rule parsing", TimeRegions);
@@ -437,12 +512,17 @@ bool CombineRule::parseMatcher(const CodeGenTarget &Target) {
                                 NamedEdgeUses))
       continue;
 
+    if (parseWipMatchOpcodeMatcher(Target, Matchers->getArgName(I),
+                                   *Matchers->getArg(I)))
+      continue;
+
 
     // Parse arbitrary C++ code we have in lieu of supporting MIR matching
     if (const CodeInit *CodeI = dyn_cast<CodeInit>(Matchers->getArg(I))) {
       assert(!MatchingFixupCode &&
              "Only one block of arbitrary code is currently permitted");
       MatchingFixupCode = CodeI;
+      MatchDag.setHasPostMatchPredicate(true);
       continue;
     }
 
@@ -537,7 +617,9 @@ public:
   /// Emit the name matcher (guarded by #ifndef NDEBUG) used to disable rules in
   /// response to the generated cl::opt.
   void emitNameMatcher(raw_ostream &OS) const;
-  void generateCodeForRule(raw_ostream &OS, const CombineRule *Rule,
+
+  void generateDeclarationsCodeForTree(raw_ostream &OS, const GIMatchTree &Tree) const;
+  void generateCodeForTree(raw_ostream &OS, const GIMatchTree &Tree,
                            StringRef Indent) const;
 };
 
@@ -592,6 +674,25 @@ GICombinerEmitter::makeCombineRule(const Record &TheDef) {
   if (StopAfterParse)
     return Rule;
 
+  // For now, don't support traversing from def to use. We'll come back to
+  // this later once we have the algorithm changes to support it.
+  bool EmittedDefToUseError = false;
+  for (const auto &E : Rule->getMatchDag().edges()) {
+    if (E->isDefToUse()) {
+      if (!EmittedDefToUseError) {
+        PrintError(
+            TheDef.getLoc(),
+            "Generated state machine cannot lookup uses from a def (yet)");
+        EmittedDefToUseError = true;
+      }
+      PrintNote("Node " + to_string(*E->getFromMI()));
+      PrintNote("Node " + to_string(*E->getToMI()));
+      PrintNote("Edge " + to_string(*E));
+    }
+  }
+  if (EmittedDefToUseError)
+    return nullptr;
+
   // For now, don't support multi-root rules. We'll come back to this later
   // once we have the algorithm changes to support it.
   if (Rule->getNumRoots() > 1) {
@@ -619,18 +720,40 @@ void GICombinerEmitter::gatherRules(
   }
 }
 
-void GICombinerEmitter::generateCodeForRule(raw_ostream &OS,
-                                            const CombineRule *Rule,
+void GICombinerEmitter::generateCodeForTree(raw_ostream &OS,
+                                            const GIMatchTree &Tree,
                                             StringRef Indent) const {
-  {
+  if (Tree.getPartitioner() != nullptr) {
+    Tree.getPartitioner()->generatePartitionSelectorCode(OS, Indent);
+    for (const auto &EnumChildren : enumerate(Tree.children())) {
+      OS << Indent << "if (Partition == " << EnumChildren.index() << " /* "
+         << format_partition_name(Tree, EnumChildren.index()) << " */) {\n";
+      generateCodeForTree(OS, EnumChildren.value(), (Indent + "  ").str());
+      OS << Indent << "}\n";
+    }
+    return;
+  }
+
+  bool AnyFullyTested = false;
+  for (const auto &Leaf : Tree.possible_leaves()) {
+    OS << Indent << "// Leaf name: " << Leaf.getName() << "\n";
+
+    const CombineRule *Rule = Leaf.getTargetData<CombineRule>();
     const Record &RuleDef = Rule->getDef();
 
     OS << Indent << "// Rule: " << RuleDef.getName() << "\n"
        << Indent << "if (!isRuleDisabled(" << Rule->getID() << ")) {\n";
 
     CodeExpansions Expansions;
-    for (const RootInfo &Root : Rule->roots()) {
-      Expansions.declare(Root.getPatternSymbol(), "MI");
+    for (const auto &VarBinding : Leaf.var_bindings()) {
+      if (VarBinding.isInstr())
+        Expansions.declare(VarBinding.getName(),
+                           "MIs[" + to_string(VarBinding.getInstrID()) + "]");
+      else
+        Expansions.declare(VarBinding.getName(),
+                           "MIs[" + to_string(VarBinding.getInstrID()) +
+                               "]->getOperand(" +
+                               to_string(VarBinding.getOpIdx()) + ")");
     }
     Rule->declareExpansions(Expansions);
 
@@ -642,6 +765,29 @@ void GICombinerEmitter::generateCodeForRule(raw_ostream &OS,
     }
 
     OS << Indent << "  if (1\n";
+
+    // Attempt to emit code for any untested predicates left over. Note that
+    // isFullyTested() will remain false even if we succeed here and therefore
+    // combine rule elision will not be performed. This is because we do not
+    // know if there's any connection between the predicates for each leaf and
+    // therefore can't tell if one makes another unreachable. Ideally, the
+    // partitioner(s) would be sufficiently complete to prevent us from having
+    // untested predicates left over.
+    for (const GIMatchDagPredicate *Predicate : Leaf.untested_predicates()) {
+      if (Predicate->generateCheckCode(OS, (Indent + "      ").str(),
+                                       Expansions))
+        continue;
+      PrintError(RuleDef.getLoc(),
+                 "Unable to test predicate used in rule");
+      PrintNote(SMLoc(),
+                "This indicates an incomplete implementation in tablegen");
+      Predicate->print(errs());
+      errs() << "\n";
+      OS << Indent
+         << "llvm_unreachable(\"TableGen did not emit complete code for this "
+            "path\");\n";
+      break;
+    }
 
     if (Rule->getMatchingFixupCode() &&
         !Rule->getMatchingFixupCode()->getValue().empty()) {
@@ -674,7 +820,24 @@ void GICombinerEmitter::generateCodeForRule(raw_ostream &OS,
     }
 
     OS << Indent << "}\n";
+
+    assert(Leaf.isFullyTraversed());
+
+    // If we didn't have any predicates left over and we're not using the
+    // trap-door we have to support arbitrary C++ code while we're migrating to
+    // the declarative style then we know that subsequent leaves are
+    // unreachable.
+    if (Leaf.isFullyTested() &&
+        (!Rule->getMatchingFixupCode() ||
+         Rule->getMatchingFixupCode()->getValue().empty())) {
+      AnyFullyTested = true;
+      OS << Indent
+         << "llvm_unreachable(\"Combine rule elision was incorrect\");\n"
+         << Indent << "return false;\n";
+    }
   }
+  if (!AnyFullyTested)
+    OS << Indent << "return false;\n";
 }
 
 void GICombinerEmitter::run(raw_ostream &OS) {
@@ -687,6 +850,33 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   }
   if (ErrorsPrinted)
     PrintFatalError(Combiner->getLoc(), "Failed to parse one or more rules");
+  LLVM_DEBUG(dbgs() << "Optimizing tree for " << Rules.size() << " rules\n");
+  std::unique_ptr<GIMatchTree> Tree;
+  {
+    NamedRegionTimer T("Optimize", "Time spent optimizing the combiner",
+                       "Code Generation", "Time spent generating code",
+                       TimeRegions);
+
+    GIMatchTreeBuilder TreeBuilder(0);
+    for (const auto &Rule : Rules) {
+      bool HadARoot = false;
+      for (const auto &Root : enumerate(Rule->getMatchDag().roots())) {
+        TreeBuilder.addLeaf(Rule->getName(), Root.index(), Rule->getMatchDag(),
+                            Rule.get());
+        HadARoot = true;
+      }
+      if (!HadARoot)
+        PrintFatalError(Rule->getDef().getLoc(), "All rules must have a root");
+    }
+
+    Tree = TreeBuilder.run();
+  }
+  if (StopAfterBuild) {
+    Tree->writeDOTGraph(outs());
+    PrintNote(Combiner->getLoc(),
+              "Terminating due to -gicombiner-stop-after-build");
+    return;
+  }
 
   NamedRegionTimer T("Emit", "Time spent emitting the combiner",
                      "Code Generation", "Time spent generating code",
@@ -772,6 +962,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
      << "  MachineBasicBlock *MBB = MI.getParent();\n"
      << "  MachineFunction *MF = MBB->getParent();\n"
      << "  MachineRegisterInfo &MRI = MF->getRegInfo();\n"
+     << "  SmallVector<MachineInstr *, 8> MIs = { &MI };\n\n"
      << "  (void)MBB; (void)MF; (void)MRI;\n\n";
 
   OS << "  // Match data\n";
@@ -780,8 +971,8 @@ void GICombinerEmitter::run(raw_ostream &OS) {
       OS << "  " << I.getType() << " " << I.getVariableName() << ";\n";
   OS << "\n";
 
-  for (const auto &Rule : Rules)
-    generateCodeForRule(OS, Rule.get(), "  ");
+  OS << "  int Partition = -1;\n";
+  generateCodeForTree(OS, *Tree, "  ");
   OS << "\n  return false;\n"
      << "}\n"
      << "#endif // ifdef " << Name.upper() << "_GENCOMBINERHELPER_CPP\n";

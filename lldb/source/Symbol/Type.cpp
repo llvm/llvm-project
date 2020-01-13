@@ -656,17 +656,6 @@ CompilerType Type::GetForwardCompilerType() {
   return m_compiler_type;
 }
 
-int Type::Compare(const Type &a, const Type &b) {
-  // Just compare the UID values for now...
-  lldb::user_id_t a_uid = a.GetID();
-  lldb::user_id_t b_uid = b.GetID();
-  if (a_uid < b_uid)
-    return -1;
-  if (a_uid > b_uid)
-    return 1;
-  return 0;
-}
-
 ConstString Type::GetQualifiedName() {
   return GetForwardCompilerType().GetConstTypeName();
 }

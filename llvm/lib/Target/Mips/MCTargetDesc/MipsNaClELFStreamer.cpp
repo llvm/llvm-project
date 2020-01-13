@@ -154,8 +154,8 @@ public:
     }
 
     // Sandbox loads, stores and SP changes.
-    unsigned AddrIdx;
-    bool IsStore;
+    unsigned AddrIdx = 0;
+    bool IsStore = false;
     bool IsMemAccess = isBasePlusOffsetMemoryAccess(Inst.getOpcode(), &AddrIdx,
                                                     &IsStore);
     bool IsSPFirstOperand = isStackPointerFirstOperand(Inst);

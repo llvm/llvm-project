@@ -51,6 +51,31 @@ body:             |
 
 ...
 ---
+name:            splat_2xi32
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $w0
+
+    ; CHECK-LABEL: name: splat_2xi32
+    ; CHECK: liveins: $w0
+    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK: [[DUPv2i32gpr:%[0-9]+]]:fpr64 = DUPv2i32gpr [[COPY]]
+    ; CHECK: $d0 = COPY [[DUPv2i32gpr]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:gpr(s32) = COPY $w0
+    %2:fpr(<2 x s32>) = G_IMPLICIT_DEF
+    %3:gpr(s32) = G_CONSTANT i32 0
+    %1:fpr(<2 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s32)
+    %4:fpr(<2 x s32>) = G_SHUFFLE_VECTOR %1(<2 x s32>), %2, shufflemask(0, 0)
+    $d0 = COPY %4(<2 x s32>)
+    RET_ReallyLR implicit $d0
+
+...
+---
 name:            splat_4xf32
 alignment:       4
 legalized:       true
@@ -102,6 +127,33 @@ body:             |
     %4:fpr(<2 x s64>) = G_SHUFFLE_VECTOR %1(<2 x s64>), %2, shufflemask(0, 0)
     $q0 = COPY %4(<2 x s64>)
     RET_ReallyLR implicit $q0
+
+...
+---
+name:            splat_2xf32
+alignment:       4
+legalized:       true
+regBankSelected: true
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $s0
+
+    ; CHECK-LABEL: name: splat_2xf32
+    ; CHECK: liveins: $s0
+    ; CHECK: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
+    ; CHECK: [[DEF:%[0-9]+]]:fpr128 = IMPLICIT_DEF
+    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.ssub
+    ; CHECK: [[DUPv2i32lane:%[0-9]+]]:fpr64 = DUPv2i32lane [[INSERT_SUBREG]], 0
+    ; CHECK: $d0 = COPY [[DUPv2i32lane]]
+    ; CHECK: RET_ReallyLR implicit $d0
+    %0:fpr(s32) = COPY $s0
+    %2:fpr(<2 x s32>) = G_IMPLICIT_DEF
+    %3:gpr(s32) = G_CONSTANT i32 0
+    %1:fpr(<2 x s32>) = G_INSERT_VECTOR_ELT %2, %0(s32), %3(s32)
+    %4:fpr(<2 x s32>) = G_SHUFFLE_VECTOR %1(<2 x s32>), %2, shufflemask(0, 0)
+    $d0 = COPY %4(<2 x s32>)
+    RET_ReallyLR implicit $d0
 
 ...
 ---

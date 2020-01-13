@@ -20,6 +20,7 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -438,29 +439,10 @@ private:
   ///                          // (function or global)
   ///   char      *name;       // Name of the function or global.
   ///   size_t     size;       // Size of the entry info (0 if it a function).
+  ///   int32_t flags;
+  ///   int32_t reserved;
   /// };
   QualType TgtOffloadEntryQTy;
-  /// struct __tgt_device_image{
-  /// void   *ImageStart;       // Pointer to the target code start.
-  /// void   *ImageEnd;         // Pointer to the target code end.
-  /// // We also add the host entries to the device image, as it may be useful
-  /// // for the target runtime to have access to that information.
-  /// __tgt_offload_entry  *EntriesBegin;   // Begin of the table with all
-  ///                                       // the entries.
-  /// __tgt_offload_entry  *EntriesEnd;     // End of the table with all the
-  ///                                       // entries (non inclusive).
-  /// };
-  QualType TgtDeviceImageQTy;
-  /// struct __tgt_bin_desc{
-  ///   int32_t              NumDevices;      // Number of devices supported.
-  ///   __tgt_device_image   *DeviceImages;   // Arrays of device images
-  ///                                         // (one per device).
-  ///   __tgt_offload_entry  *EntriesBegin;   // Begin of the table with all the
-  ///                                         // entries.
-  ///   __tgt_offload_entry  *EntriesEnd;     // End of the table with all the
-  ///                                         // entries (non inclusive).
-  /// };
-  QualType TgtBinaryDescriptorQTy;
   /// Entity that registers the offloading constants that were emitted so
   /// far.
   class OffloadEntriesInfoManagerTy {
@@ -672,8 +654,8 @@ private:
   OffloadEntriesInfoManagerTy OffloadEntriesInfoManager;
 
   bool ShouldMarkAsGlobal = true;
-  /// List of the emitted functions.
-  llvm::StringSet<> AlreadyEmittedTargetFunctions;
+  /// List of the emitted declarations.
+  llvm::DenseSet<CanonicalDeclPtr<const Decl>> AlreadyEmittedTargetDecls;
   /// List of the global variables with their addresses that should not be
   /// emitted for the target.
   llvm::StringMap<llvm::WeakTrackingVH> EmittedNonTargetVariables;
@@ -715,12 +697,6 @@ private:
 
   /// Returns __tgt_offload_entry type.
   QualType getTgtOffloadEntryQTy();
-
-  /// Returns __tgt_device_image type.
-  QualType getTgtDeviceImageQTy();
-
-  /// Returns __tgt_bin_desc type.
-  QualType getTgtBinaryDescriptorQTy();
 
   /// Start scanning from statement \a S and and emit all target regions
   /// found along the way.
@@ -1715,6 +1691,11 @@ public:
   /// Checks if the \p VD variable is marked as nontemporal declaration in
   /// current context.
   bool isNontemporalDecl(const ValueDecl *VD) const;
+
+  /// Initializes global counter for lastprivate conditional.
+  virtual void
+  initLastprivateConditionalCounter(CodeGenFunction &CGF,
+                                    const OMPExecutableDirective &S);
 
   /// Checks if the provided \p LVal is lastprivate conditional and emits the
   /// code to update the value of the original variable.

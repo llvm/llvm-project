@@ -88,7 +88,7 @@ Operation *mlir::edsc::makeGenericLinalgOp(
   for (auto it : llvm::enumerate(values))
     blockTypes.push_back((it.index() < nViews)
                              ? getElementTypeOrSelf(it.value())
-                             : it.value()->getType());
+                             : it.value().getType());
 
   assert(op->getRegions().front().empty());
   op->getRegions().front().push_front(new Block);

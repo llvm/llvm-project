@@ -29,61 +29,18 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
-static unsigned getFixupKindSize(unsigned Kind) {
-  switch (Kind) {
-  default:
-    llvm_unreachable("invalid fixup kind!");
-  case FK_NONE:
-    return 0;
-  case FK_PCRel_1:
-  case FK_SecRel_1:
-  case FK_Data_1:
-    return 1;
-  case FK_PCRel_2:
-  case FK_SecRel_2:
-  case FK_Data_2:
-    return 2;
-  case FK_PCRel_4:
-  case X86::reloc_riprel_4byte:
-  case X86::reloc_riprel_4byte_relax:
-  case X86::reloc_riprel_4byte_relax_rex:
-  case X86::reloc_riprel_4byte_movq_load:
-  case X86::reloc_signed_4byte:
-  case X86::reloc_signed_4byte_relax:
-  case X86::reloc_global_offset_table:
-  case X86::reloc_branch_4byte_pcrel:
-  case FK_SecRel_4:
-  case FK_Data_4:
-    return 4;
-  case FK_PCRel_8:
-  case FK_SecRel_8:
-  case FK_Data_8:
-  case X86::reloc_global_offset_table8:
-    return 8;
-  }
-}
-
 namespace {
+/// A wrapper for holding a mask of the values from X86::AlignBranchBoundaryKind
 class X86AlignBranchKind {
 private:
   uint8_t AlignBranchKind = 0;
 
 public:
-  enum Flag : uint8_t {
-    AlignBranchNone = 0,
-    AlignBranchFused = 1U << 0,
-    AlignBranchJcc = 1U << 1,
-    AlignBranchJmp = 1U << 2,
-    AlignBranchCall = 1U << 3,
-    AlignBranchRet = 1U << 4,
-    AlignBranchIndirect = 1U << 5
-  };
-
   void operator=(const std::string &Val) {
     if (Val.empty())
       return;
@@ -91,17 +48,17 @@ public:
     StringRef(Val).split(BranchTypes, '+', -1, false);
     for (auto BranchType : BranchTypes) {
       if (BranchType == "fused")
-        addKind(AlignBranchFused);
+        addKind(X86::AlignBranchFused);
       else if (BranchType == "jcc")
-        addKind(AlignBranchJcc);
+        addKind(X86::AlignBranchJcc);
       else if (BranchType == "jmp")
-        addKind(AlignBranchJmp);
+        addKind(X86::AlignBranchJmp);
       else if (BranchType == "call")
-        addKind(AlignBranchCall);
+        addKind(X86::AlignBranchCall);
       else if (BranchType == "ret")
-        addKind(AlignBranchRet);
+        addKind(X86::AlignBranchRet);
       else if (BranchType == "indirect")
-        addKind(AlignBranchIndirect);
+        addKind(X86::AlignBranchIndirect);
       else {
         report_fatal_error(
             "'-x86-align-branch 'The branches's type is combination of jcc, "
@@ -112,7 +69,7 @@ public:
   }
 
   operator uint8_t() const { return AlignBranchKind; }
-  void addKind(Flag Value) { AlignBranchKind |= Value; }
+  void addKind(X86::AlignBranchBoundaryKind Value) { AlignBranchKind |= Value; }
 };
 
 X86AlignBranchKind X86AlignBranchKindLoc;
@@ -122,17 +79,19 @@ cl::opt<unsigned> X86AlignBranchBoundary(
     cl::desc(
         "Control how the assembler should align branches with NOP. If the "
         "boundary's size is not 0, it should be a power of 2 and no less "
-        "than 32. Branches will be aligned within the boundary of specified "
-        "size. -x86-align-branch-boundary=0 doesn't align branches."));
+        "than 32. Branches will be aligned to prevent from being across or "
+        "against the boundary of specified size. The default value 0 does not "
+        "align branches."));
 
 cl::opt<X86AlignBranchKind, true, cl::parser<std::string>> X86AlignBranch(
     "x86-align-branch",
     cl::desc("Specify types of branches to align (plus separated list of "
-             "types). The branches's type is combination of jcc, fused, "
+             "types). The branches's types are combination of jcc, fused, "
              "jmp, call, ret, indirect."),
-    cl::value_desc("jcc(conditional jump), fused(fused conditional jump), "
-                   "jmp(unconditional jump); call(call); ret(ret), "
-                   "indirect(indirect jump)."),
+    cl::value_desc("jcc indicates conditional jumps, fused indicates fused "
+                   "conditional jumps, jmp indicates unconditional jumps, call "
+                   "indicates direct and indirect calls, ret indicates rets, "
+                   "indirect indicates indirect jumps."),
     cl::location(X86AlignBranchKindLoc));
 
 class X86ELFObjectWriter : public MCELFObjectTargetWriter {
@@ -164,6 +123,7 @@ public:
     AlignBranchType = X86AlignBranchKindLoc;
   }
 
+  bool allowAutoPadding() const override;
   void alignBranchesBegin(MCObjectStreamer &OS, const MCInst &Inst) override;
   void alignBranchesEnd(MCObjectStreamer &OS, const MCInst &Inst) override;
 
@@ -173,61 +133,15 @@ public:
 
   Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
-  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
-    const static MCFixupKindInfo Infos[X86::NumTargetFixupKinds] = {
-        {"reloc_riprel_4byte", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-        {"reloc_riprel_4byte_movq_load", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-        {"reloc_riprel_4byte_relax", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-        {"reloc_riprel_4byte_relax_rex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-        {"reloc_signed_4byte", 0, 32, 0},
-        {"reloc_signed_4byte_relax", 0, 32, 0},
-        {"reloc_global_offset_table", 0, 32, 0},
-        {"reloc_global_offset_table8", 0, 64, 0},
-        {"reloc_branch_4byte_pcrel", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
-    };
-
-    if (Kind < FirstTargetFixupKind)
-      return MCAsmBackend::getFixupKindInfo(Kind);
-
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
-           "Invalid kind!");
-    assert(Infos[Kind - FirstTargetFixupKind].Name && "Empty fixup name!");
-    return Infos[Kind - FirstTargetFixupKind];
-  }
-
+  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
+  
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
                              const MCValue &Target) override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override {
-    unsigned Size = getFixupKindSize(Fixup.getKind());
-
-    assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
-
-    int64_t SignedValue = static_cast<int64_t>(Value);
-    if ((Target.isAbsolute() || IsResolved) &&
-        getFixupKindInfo(Fixup.getKind()).Flags &
-            MCFixupKindInfo::FKF_IsPCRel) {
-      // check that PC relative fixup fits into the fixup size.
-      if (Size > 0 && !isIntN(Size * 8, SignedValue))
-        Asm.getContext().reportError(
-            Fixup.getLoc(), "value of " + Twine(SignedValue) +
-                                " is too large for field of " + Twine(Size) +
-                                ((Size == 1) ? " byte." : " bytes."));
-    } else {
-      // Check that uppper bits are either all zeros or all ones.
-      // Specifically ignore overflow/underflow as long as the leakage is
-      // limited to the lower bits. This is to remain compatible with
-      // other assemblers.
-      assert((Size == 0 || isIntN(Size * 8 + 1, SignedValue)) &&
-             "Value does not fit in the Fixup field");
-    }
-
-    for (unsigned i = 0; i != Size; ++i)
-      Data[Fixup.getOffset() + i] = uint8_t(Value >> (i * 8));
-  }
+                  const MCSubtargetInfo *STI) const override;
 
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
@@ -419,10 +333,15 @@ static bool hasVariantSymbol(const MCInst &MI) {
   return false;
 }
 
+bool X86AsmBackend::allowAutoPadding() const {
+  return (AlignBoundary != Align::None() &&
+          AlignBranchType != X86::AlignBranchNone);
+}
+
 bool X86AsmBackend::needAlign(MCObjectStreamer &OS) const {
-  if (AlignBoundary == Align::None() ||
-      AlignBranchType == X86AlignBranchKind::AlignBranchNone)
+  if (!OS.getAllowAutoPadding())
     return false;
+  assert(allowAutoPadding() && "incorrect initialization!");
 
   MCAssembler &Assembler = OS.getAssembler();
   MCSection *Sec = OS.getCurrentSectionOnly();
@@ -431,8 +350,7 @@ bool X86AsmBackend::needAlign(MCObjectStreamer &OS) const {
     return false;
 
   // Branches only need to be aligned in 32-bit or 64-bit mode.
-  if (!(STI.getFeatureBits()[X86::Mode64Bit] ||
-        STI.getFeatureBits()[X86::Mode32Bit]))
+  if (!(STI.hasFeature(X86::Mode64Bit) || STI.hasFeature(X86::Mode32Bit)))
     return false;
 
   return true;
@@ -447,15 +365,15 @@ bool X86AsmBackend::needAlignInst(const MCInst &Inst) const {
 
   const MCInstrDesc &InstDesc = MCII->get(Inst.getOpcode());
   return (InstDesc.isConditionalBranch() &&
-          (AlignBranchType & X86AlignBranchKind::AlignBranchJcc)) ||
+          (AlignBranchType & X86::AlignBranchJcc)) ||
          (InstDesc.isUnconditionalBranch() &&
-          (AlignBranchType & X86AlignBranchKind::AlignBranchJmp)) ||
+          (AlignBranchType & X86::AlignBranchJmp)) ||
          (InstDesc.isCall() &&
-          (AlignBranchType & X86AlignBranchKind::AlignBranchCall)) ||
+          (AlignBranchType & X86::AlignBranchCall)) ||
          (InstDesc.isReturn() &&
-          (AlignBranchType & X86AlignBranchKind::AlignBranchRet)) ||
+          (AlignBranchType & X86::AlignBranchRet)) ||
          (InstDesc.isIndirectBranch() &&
-          (AlignBranchType & X86AlignBranchKind::AlignBranchIndirect));
+          (AlignBranchType & X86::AlignBranchIndirect));
 }
 
 static bool canReuseBoundaryAlignFragment(const MCBoundaryAlignFragment &F) {
@@ -480,7 +398,7 @@ void X86AsmBackend::alignBranchesBegin(MCObjectStreamer &OS,
     return;
 
   MCFragment *CF = OS.getCurrentFragment();
-  bool NeedAlignFused = AlignBranchType & X86AlignBranchKind::AlignBranchFused;
+  bool NeedAlignFused = AlignBranchType & X86::AlignBranchFused;
   if (NeedAlignFused && isMacroFused(PrevInst, Inst) && CF) {
     // Macro fusion actually happens and there is no other fragment inserted
     // after the previous instruction. NOP can be emitted in PF to align fused
@@ -550,10 +468,98 @@ Optional<MCFixupKind> X86AsmBackend::getFixupKind(StringRef Name) const {
   return MCAsmBackend::getFixupKind(Name);
 }
 
+const MCFixupKindInfo &X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  const static MCFixupKindInfo Infos[X86::NumTargetFixupKinds] = {
+      {"reloc_riprel_4byte", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_riprel_4byte_movq_load", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_riprel_4byte_relax", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_riprel_4byte_relax_rex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+      {"reloc_signed_4byte", 0, 32, 0},
+      {"reloc_signed_4byte_relax", 0, 32, 0},
+      {"reloc_global_offset_table", 0, 32, 0},
+      {"reloc_global_offset_table8", 0, 64, 0},
+      {"reloc_branch_4byte_pcrel", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
+  };
+
+  if (Kind < FirstTargetFixupKind)
+    return MCAsmBackend::getFixupKindInfo(Kind);
+
+  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+         "Invalid kind!");
+  assert(Infos[Kind - FirstTargetFixupKind].Name && "Empty fixup name!");
+  return Infos[Kind - FirstTargetFixupKind];
+}
+
 bool X86AsmBackend::shouldForceRelocation(const MCAssembler &,
                                           const MCFixup &Fixup,
                                           const MCValue &) {
   return Fixup.getKind() == FK_NONE;
+}
+
+static unsigned getFixupKindSize(unsigned Kind) {
+  switch (Kind) {
+  default:
+    llvm_unreachable("invalid fixup kind!");
+  case FK_NONE:
+    return 0;
+  case FK_PCRel_1:
+  case FK_SecRel_1:
+  case FK_Data_1:
+    return 1;
+  case FK_PCRel_2:
+  case FK_SecRel_2:
+  case FK_Data_2:
+    return 2;
+  case FK_PCRel_4:
+  case X86::reloc_riprel_4byte:
+  case X86::reloc_riprel_4byte_relax:
+  case X86::reloc_riprel_4byte_relax_rex:
+  case X86::reloc_riprel_4byte_movq_load:
+  case X86::reloc_signed_4byte:
+  case X86::reloc_signed_4byte_relax:
+  case X86::reloc_global_offset_table:
+  case X86::reloc_branch_4byte_pcrel:
+  case FK_SecRel_4:
+  case FK_Data_4:
+    return 4;
+  case FK_PCRel_8:
+  case FK_SecRel_8:
+  case FK_Data_8:
+  case X86::reloc_global_offset_table8:
+    return 8;
+  }
+}
+
+void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                               const MCValue &Target,
+                               MutableArrayRef<char> Data,
+                               uint64_t Value, bool IsResolved,
+                               const MCSubtargetInfo *STI) const {
+  unsigned Size = getFixupKindSize(Fixup.getKind());
+
+  assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
+
+  int64_t SignedValue = static_cast<int64_t>(Value);
+  if ((Target.isAbsolute() || IsResolved) &&
+      getFixupKindInfo(Fixup.getKind()).Flags &
+      MCFixupKindInfo::FKF_IsPCRel) {
+    // check that PC relative fixup fits into the fixup size.
+    if (Size > 0 && !isIntN(Size * 8, SignedValue))
+      Asm.getContext().reportError(
+                                   Fixup.getLoc(), "value of " + Twine(SignedValue) +
+                                   " is too large for field of " + Twine(Size) +
+                                   ((Size == 1) ? " byte." : " bytes."));
+  } else {
+    // Check that uppper bits are either all zeros or all ones.
+    // Specifically ignore overflow/underflow as long as the leakage is
+    // limited to the lower bits. This is to remain compatible with
+    // other assemblers.
+    assert((Size == 0 || isIntN(Size * 8 + 1, SignedValue)) &&
+           "Value does not fit in the Fixup field");
+  }
+
+  for (unsigned i = 0; i != Size; ++i)
+    Data[Fixup.getOffset() + i] = uint8_t(Value >> (i * 8));
 }
 
 bool X86AsmBackend::mayNeedRelaxation(const MCInst &Inst,

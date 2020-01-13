@@ -714,19 +714,19 @@ Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
   // To estimate the number of times the loop body was executed, we want to
   // know the number of times the backedge was taken, vs. the number of times
   // we exited the loop.
-  uint64_t TrueVal, FalseVal;
-  if (!LatchBR->extractProfMetadata(TrueVal, FalseVal))
+  uint64_t BackedgeTakenWeight, LatchExitWeight;
+  if (!LatchBR->extractProfMetadata(BackedgeTakenWeight, LatchExitWeight))
     return None;
 
-  if (!TrueVal || !FalseVal)
+  if (LatchBR->getSuccessor(0) != L->getHeader())
+    std::swap(BackedgeTakenWeight, LatchExitWeight);
+
+  if (!BackedgeTakenWeight || !LatchExitWeight)
     return 0;
 
   // Divide the count of the backedge by the count of the edge exiting the loop,
   // rounding to nearest.
-  if (LatchBR->getSuccessor(0) == L->getHeader())
-    return (TrueVal + (FalseVal / 2)) / FalseVal;
-  else
-    return (FalseVal + (TrueVal / 2)) / TrueVal;
+  return llvm::divideNearest(BackedgeTakenWeight, LatchExitWeight);
 }
 
 bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,

@@ -953,7 +953,7 @@
 !dec$ if defined(__APPLE__)
 
 !***
-!*** The Mac entry points are in lowercase, with an both an underscore
+!*** The Mac entry points are in lowercase, with both an underscore
 !*** appended and an underscore prepended.
 !***
 

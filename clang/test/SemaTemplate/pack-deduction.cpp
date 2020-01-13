@@ -5,8 +5,8 @@ template<typename ...T> struct X {};
 template<typename T, typename U> struct P {};
 
 namespace Nested {
-  template<typename ...T> int f1(X<T, T...>... a); // expected-note +{{conflicting types for parameter 'T'}}
-  template<typename ...T> int f2(P<X<T...>, T> ...a); // expected-note +{{conflicting types for parameter 'T'}}
+  template<typename ...T> int f1(X<T, T...>... a); // expected-note +{{packs of different lengths for parameter 'T'}}
+  template<typename ...T> int f2(P<X<T...>, T> ...a); // expected-note +{{packs of different lengths for parameter 'T'}}
 
   int a1 = f1(X<int, int, double>(), X<double, int, double>());
   int a2 = f1(X<int, int>());

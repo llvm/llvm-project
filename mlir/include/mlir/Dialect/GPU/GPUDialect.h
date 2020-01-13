@@ -53,6 +53,11 @@ public:
   /// 'gpu.kernel' attribute.
   static bool isKernel(Operation *op);
 
+  /// Returns the number of workgroup (thread, block) dimensions supported in
+  /// the GPU dialect.
+  // TODO(zinenko,herhut): consider generalizing this.
+  static unsigned getNumWorkgroupDimensions() { return 3; }
+
   /// Returns the numeric value used to identify the workgroup memory address
   /// space.
   static unsigned getWorkgroupAddressSpace() { return 3; }

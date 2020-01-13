@@ -178,8 +178,9 @@ define void @double_(double* nocapture %A, i32 %n) nounwind uwtable ssp {
 ;CHECK-PWR8-NEXT: LV(REG): RegisterClass: PPC::VSXRC, 1 registers
 
 ;CHECK-PWR9: LV(REG): VF = 1
-;CHECK-PWR9: LV(REG): Found max usage: 1 item
-;CHECK-PWR9-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 7 registers
+;CHECK-PWR9: LV(REG): Found max usage: 2 item
+;CHECK-PWR9-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 2 registers
+;CHECK-PWR9-NEXT: LV(REG): RegisterClass: PPC::VSXRC, 5 registers
 ;CHECK-PWR9: LV(REG): Found invariant usage: 1 item
 ;CHECK-PWR9-NEXT: LV(REG): RegisterClass: PPC::GPRRC, 1 registers
 
@@ -222,8 +223,9 @@ define void @double_(double* nocapture %A, i32 %n) nounwind uwtable ssp {
 define ppc_fp128 @fp128_(ppc_fp128* nocapture %n, ppc_fp128 %d) nounwind readonly {
 ;CHECK-LABEL: fp128_
 ;CHECK: LV(REG): VF = 1
-;CHECK: LV(REG): Found max usage: 1 item
-;CHECK: LV(REG): RegisterClass: PPC::GPRRC, 3 registers
+;CHECK: LV(REG): Found max usage: 2 item
+;CHECK: LV(REG): RegisterClass: PPC::GPRRC, 2 registers
+;CHECK: LV(REG): RegisterClass: PPC::VRRC, 2 registers
 entry:
   br label %for.body
 
@@ -245,8 +247,9 @@ for.end:                                          ; preds = %for.body
 define void @fp16_(half* nocapture readonly %pIn, half* nocapture %pOut, i32 %numRows, i32 %numCols, i32 %scale.coerce) #0 {
 ;CHECK-LABEL: fp16_
 ;CHECK: LV(REG): VF = 1
-;CHECK: LV(REG): Found max usage: 1 item
-;CHECK: LV(REG): RegisterClass: PPC::GPRRC, 5 registers
+;CHECK: LV(REG): Found max usage: 2 item
+;CHECK: LV(REG): RegisterClass: PPC::GPRRC, 4 registers
+;CHECK: LV(REG): RegisterClass: PPC::VSXRC, 2 registers
 entry:
   %tmp.0.extract.trunc = trunc i32 %scale.coerce to i16
   %0 = bitcast i16 %tmp.0.extract.trunc to half

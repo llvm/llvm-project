@@ -163,7 +163,7 @@ void ResourcePressureView::printResourcePressurePerInst(raw_ostream &OS) const {
       printResourcePressure(FOS, Usage / Executions, (J + 1) * 7);
     }
 
-    MCIP.printInst(&MCI, InstrStream, "", STI);
+    MCIP.printInst(&MCI, 0, "", STI, InstrStream);
     InstrStream.flush();
     StringRef Str(Instruction);
 

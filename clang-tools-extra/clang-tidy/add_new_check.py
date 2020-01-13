@@ -294,37 +294,87 @@ void awesome_f2();
 def update_checks_list(clang_tidy_path):
   docs_dir = os.path.join(clang_tidy_path, '../docs/clang-tidy/checks')
   filename = os.path.normpath(os.path.join(docs_dir, 'list.rst'))
+  # Read the content of the current list.rst file
   with open(filename, 'r') as f:
     lines = f.readlines()
+  # Get all existing docs
   doc_files = list(filter(lambda s: s.endswith('.rst') and s != 'list.rst',
                      os.listdir(docs_dir)))
   doc_files.sort()
 
-  def format_link(doc_file):
+  def has_auto_fix(check_name):
+    dirname, _, check_name = check_name.partition("-")
+
+    checkerCode = os.path.join(dirname, get_camel_name(check_name)) + ".cpp"
+
+    if not os.path.isfile(checkerCode):
+      return ""
+
+    with open(checkerCode) as f:
+      code = f.read()
+      if 'FixItHint' in code or "ReplacementText" in code or "fixit" in code:
+        # Some simple heuristics to figure out if a checker has an autofix or not.
+        return ' "Yes"'
+    return ""
+
+  def process_doc(doc_file):
     check_name = doc_file.replace('.rst', '')
+
     with open(os.path.join(docs_dir, doc_file), 'r') as doc:
       content = doc.read()
       match = re.search('.*:orphan:.*', content)
+
       if match:
-        return ''
+        # Orphan page, don't list it.
+        return '', ''
 
       match = re.search('.*:http-equiv=refresh: \d+;URL=(.*).html.*',
                         content)
-      if match:
-        return '   %(check)s (redirects to %(target)s) <%(check)s>\n' % {
-            'check': check_name,
-            'target': match.group(1)
-        }
-      return '   %s\n' % check_name
+      # Is it a redirect?
+      return check_name, match
+
+  def format_link(doc_file):
+    check_name, match = process_doc(doc_file)
+    if not match and check_name:
+      return '   `%(check)s <%(check)s.html>`_,%(autofix)s\n' % {
+        'check': check_name,
+        'autofix': has_auto_fix(check_name)
+      }
+    else:
+      return ''
+
+  def format_link_alias(doc_file):
+    check_name, match = process_doc(doc_file)
+    if match and check_name:
+      if match.group(1) == 'https://clang.llvm.org/docs/analyzer/checkers':
+        title_redirect = 'Clang Static Analyzer'
+      else:
+        title_redirect = match.group(1)
+      # The checker is just a redirect.
+      return '   `%(check)s <%(check)s.html>`_, `%(title)s <%(target)s.html>`_,%(autofix)s\n' % {
+        'check': check_name,
+        'target': match.group(1),
+        'title': title_redirect,
+        'autofix': has_auto_fix(match.group(1))
+      }
+    return ''
 
   checks = map(format_link, doc_files)
+  checks_alias = map(format_link_alias, doc_files)
 
   print('Updating %s...' % filename)
   with open(filename, 'w') as f:
     for line in lines:
       f.write(line)
-      if line.startswith('.. toctree::'):
+      if line.strip() == ".. csv-table::":
+        # We dump the checkers
+        f.write('   :header: "Name", "Offers fixes"\n\n')
         f.writelines(checks)
+        # and the aliases
+        f.write('\n\n')
+        f.write('.. csv-table:: Aliases..\n')
+        f.write('   :header: "Name", "Redirect", "Offers fixes"\n\n')
+        f.writelines(checks_alias)
         break
 
 
@@ -343,6 +393,11 @@ def write_docs(module_path, module, check_name):
 FIXME: Describe what patterns does the check detect and why. Give examples.
 """ % {'check_name_dashes': check_name_dashes,
        'underline': '=' * len(check_name_dashes)})
+
+
+def get_camel_name(check_name):
+  return ''.join(map(lambda elem: elem.capitalize(),
+                     check_name.split('-'))) + 'Check'
 
 
 def main():
@@ -384,13 +439,11 @@ def main():
 
   module = args.module
   check_name = args.check
-
+  check_name_camel = get_camel_name(check_name)
   if check_name.startswith(module):
     print('Check name "%s" must not start with the module "%s". Exiting.' % (
         check_name, module))
     return
-  check_name_camel = ''.join(map(lambda elem: elem.capitalize(),
-                                 check_name.split('-'))) + 'Check'
   clang_tidy_path = os.path.dirname(sys.argv[0])
   module_path = os.path.join(clang_tidy_path, module)
 

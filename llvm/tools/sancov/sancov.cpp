@@ -758,7 +758,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
          Index += Size) {
       MCInst Inst;
       if (!DisAsm->getInstruction(Inst, Size, Bytes.slice(Index),
-                                  SectionAddr + Index, nulls(), nulls())) {
+                                  SectionAddr + Index, nulls())) {
         if (Size == 0)
           Size = 1;
         continue;

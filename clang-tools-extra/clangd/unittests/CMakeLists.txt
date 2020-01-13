@@ -55,6 +55,7 @@ add_unittest(ClangdUnitTests ClangdTests
   IndexTests.cpp
   JSONTransportTests.cpp
   ParsedASTTests.cpp
+  PathMappingTests.cpp
   PrintASTTests.cpp
   QualityTests.cpp
   RenameTests.cpp

@@ -152,6 +152,13 @@ module LLVM_DebugInfo_CodeView {
   textual header "DebugInfo/CodeView/CodeViewSymbols.def"
 }
 
+module LLVM_DWARFLinker {
+  requires cplusplus
+
+  umbrella "DWARFLinker"
+  module * { export * }
+}
+
 module LLVM_ExecutionEngine {
   requires cplusplus
 

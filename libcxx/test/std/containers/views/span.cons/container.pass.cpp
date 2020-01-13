@@ -39,6 +39,10 @@ struct IsAContainer {
     constexpr size_t size() const {return 1;}
     constexpr       T *data() {return &v_;}
     constexpr const T *data() const {return &v_;}
+    constexpr       T *begin() {return &v_;}
+    constexpr const T *begin() const {return &v_;}
+    constexpr       T *end() {return &v_ + 1;}
+    constexpr const T *end() const {return &v_ + 1;}
 
     constexpr T const *getV() const {return &v_;} // for checking
     T v_;

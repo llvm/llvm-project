@@ -20,7 +20,7 @@
 def AtomicMemOpOperand : AsmOperandClass {
   let Name = "AtomicMemOpOperand";
   let RenderMethod = "addRegOperands";
-  let PredicateMethod = "isReg";
+  let PredicateMethod = "isGPR";
   let ParserMethod = "parseAtomicMemOp";
 }
 

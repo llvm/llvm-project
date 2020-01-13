@@ -7,7 +7,7 @@ struct A {
 };
 
 struct B { // expected-note+ {{candidate}}
-  explicit B(int);
+  explicit B(int); // expected-note {{not a candidate}}
 };
 
 B::B(int) { } // expected-note+ {{here}}
@@ -78,8 +78,8 @@ namespace Conversion {
 
     struct Z {
       explicit operator X() const;
-      explicit operator Y() const;
-      explicit operator int() const;
+      explicit operator Y() const; // expected-note 2{{not a candidate}}
+      explicit operator int() const; // expected-note {{not a candidate}}
     };
     
     Z z;
@@ -118,7 +118,7 @@ namespace Conversion {
     };
 
     struct NotBool {
-      explicit operator bool(); // expected-note {{conversion to integral type 'bool'}}
+      explicit operator bool(); // expected-note {{conversion to integral type 'bool'}} expected-note 4{{explicit conversion function is not a candidate}}
     };
     Bool    b;
     NotBool n;

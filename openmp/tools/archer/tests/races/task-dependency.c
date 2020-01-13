@@ -1,5 +1,5 @@
 /*
- * task-deoendency.c -- Archer testcase
+ * task-dependency.c -- Archer testcase
  */
 
 //===----------------------------------------------------------------------===//

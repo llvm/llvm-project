@@ -77,7 +77,7 @@ struct KernelTy {
       : Func(_Func), ExecutionMode(_ExecutionMode) {}
 };
 
-/// Device envrionment data
+/// Device environment data
 /// Manually sync with the deviceRTL side for now, move to a dedicated header file later.
 struct omptarget_device_environmentTy {
   int32_t debug_level;
@@ -451,7 +451,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
       // memory is activated via the requires directive, the variable
       // can be used directly from the host in both cases.
       // TODO: when variables types other than to or link are added,
-      // the below condition should be changed to explicitely
+      // the below condition should be changed to explicitly
       // check for to and link variables types:
       //  (DeviceInfo.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY &&
       //   (e->flags & OMP_DECLARE_TARGET_LINK ||
@@ -565,7 +565,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
       DP("Sending global device environment data %zu bytes\n", (size_t)cusize);
     } else {
       DP("Finding global device environment '%s' - symbol missing.\n", device_env_Name);
-      DP("Continue, considering this is a device RTL which does not accept envrionment setting.\n");
+      DP("Continue, considering this is a device RTL which does not accept environment setting.\n");
     }
   }
 

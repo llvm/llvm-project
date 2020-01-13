@@ -99,7 +99,7 @@ protected:
   // before the root is changed.
   void notifyRootReplaced(Operation *op) override {
     for (auto result : op->getResults())
-      for (auto *user : result->getUsers())
+      for (auto *user : result.getUsers())
         addToWorklist(user);
   }
 
@@ -115,9 +115,9 @@ private:
       // TODO(riverriddle) This is based on the fact that zero use operations
       // may be deleted, and that single use values often have more
       // canonicalization opportunities.
-      if (!operand->use_empty() && !operand->hasOneUse())
+      if (!operand.use_empty() && !operand.hasOneUse())
         continue;
-      if (auto *defInst = operand->getDefiningOp())
+      if (auto *defInst = operand.getDefiningOp())
         addToWorklist(defInst);
     }
   }
@@ -181,7 +181,7 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions,
         // Add all the users of the result to the worklist so we make sure
         // to revisit them.
         for (auto result : op->getResults())
-          for (auto *operand : result->getUsers())
+          for (auto *operand : result.getUsers())
             addToWorklist(operand);
 
         notifyOperationRemoved(op);

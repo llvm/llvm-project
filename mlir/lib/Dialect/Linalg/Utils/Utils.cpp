@@ -35,9 +35,9 @@ using namespace mlir::loop;
 mlir::edsc::LoopRangeBuilder::LoopRangeBuilder(ValueHandle *iv,
                                                ValueHandle range) {
   assert(range.getType() && "expected !linalg.range type");
-  assert(range.getValue()->getDefiningOp() &&
+  assert(range.getValue().getDefiningOp() &&
          "need operations to extract range parts");
-  auto rangeOp = cast<RangeOp>(range.getValue()->getDefiningOp());
+  auto rangeOp = cast<RangeOp>(range.getValue().getDefiningOp());
   auto lb = rangeOp.min();
   auto ub = rangeOp.max();
   auto step = rangeOp.step();
@@ -114,7 +114,7 @@ GenericLoopNestRangeBuilder<
   SmallVector<ValueHandle, 4> lbs;
   SmallVector<ValueHandle, 4> ubs;
   SmallVector<int64_t, 4> steps;
-  for (const Value range : ranges) {
+  for (Value range : ranges) {
     assert(range.getType() && "expected linalg.range type");
     assert(range.getDefiningOp() && "need operations to extract range parts");
     RangeOp rangeOp = cast<RangeOp>(range.getDefiningOp());
@@ -168,7 +168,7 @@ mlir::linalg::getAssumedNonViewOperands(LinalgOp linalgOp) {
   res.reserve(nOperands);
   for (unsigned i = 0; i < nOperands; ++i) {
     res.push_back(op->getOperand(numViews + i));
-    auto t = res.back()->getType();
+    auto t = res.back().getType();
     (void)t;
     assert((t.isIntOrIndexOrFloat() || t.isa<VectorType>()) &&
            "expected scalar or vector type");

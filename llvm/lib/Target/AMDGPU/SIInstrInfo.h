@@ -692,6 +692,10 @@ public:
 
   bool isInlineConstant(const APInt &Imm) const;
 
+  bool isInlineConstant(const APFloat &Imm) const {
+    return isInlineConstant(Imm.bitcastToAPInt());
+  }
+
   bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const;
 
   bool isInlineConstant(const MachineOperand &MO,
@@ -1038,6 +1042,10 @@ public:
                                       int FrameIndex,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
+
+  unsigned getInstrLatency(const InstrItineraryData *ItinData,
+                           const MachineInstr &MI,
+                           unsigned *PredCost = nullptr) const override;
 };
 
 /// \brief Returns true if a reg:subreg pair P has a TRC class

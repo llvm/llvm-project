@@ -214,7 +214,7 @@ namespace {
 /// imported while completing the original Decls).
 class CompleteTagDeclsScope : public ClangASTImporter::NewDeclListener {
   ClangASTImporter::ImporterDelegateSP m_delegate;
-  llvm::SmallPtrSet<NamedDecl *, 32> m_decls_to_complete;
+  llvm::SmallVector<NamedDecl *, 32> m_decls_to_complete;
   llvm::SmallPtrSet<NamedDecl *, 32> m_decls_already_completed;
   clang::ASTContext *m_dst_ctx;
   clang::ASTContext *m_src_ctx;
@@ -239,10 +239,8 @@ public:
 
     // Complete all decls we collected until now.
     while (!m_decls_to_complete.empty()) {
-      NamedDecl *decl = *m_decls_to_complete.begin();
-
+      NamedDecl *decl = m_decls_to_complete.pop_back_val();
       m_decls_already_completed.insert(decl);
-      m_decls_to_complete.erase(decl);
 
       // We should only complete decls coming from the source context.
       assert(to_context_md->m_origins[decl].ctx == m_src_ctx);
@@ -287,7 +285,7 @@ public:
     // Check if we already completed this type.
     if (m_decls_already_completed.count(to_named_decl) != 0)
       return;
-    m_decls_to_complete.insert(to_named_decl);
+    m_decls_to_complete.push_back(to_named_decl);
   }
 };
 } // namespace
@@ -869,6 +867,39 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
       // the debug info.
       m_decls_to_ignore.insert(*D);
       return *D;
+    }
+  }
+
+  // Check which ASTContext this declaration originally came from.
+  DeclOrigin origin = m_master.GetDeclOrigin(From);
+  // If it originally came from the target ASTContext then we can just
+  // pretend that the original is the one we imported. This can happen for
+  // example when inspecting a persistent declaration from the scratch
+  // ASTContext (which will provide the declaration when parsing the
+  // expression and then we later try to copy the declaration back to the
+  // scratch ASTContext to store the result).
+  // Without this check we would ask the ASTImporter to import a declaration
+  // into the same ASTContext where it came from (which doesn't make a lot of
+  // sense).
+  if (origin.Valid() && origin.ctx == &getToContext()) {
+      RegisterImportedDecl(From, origin.decl);
+      return origin.decl;
+  }
+
+  // This declaration came originally from another ASTContext. Instead of
+  // copying our potentially incomplete 'From' Decl we instead go to the
+  // original ASTContext and copy the original to the target. This is not
+  // only faster than first completing our current decl and then copying it
+  // to the target, but it also prevents that indirectly copying the same
+  // declaration to the same target requires the ASTImporter to merge all
+  // the different decls that appear to come from different ASTContexts (even
+  // though all these different source ASTContexts just got a copy from
+  // one source AST).
+  if (origin.Valid()) {
+    auto R = m_master.CopyDecl(&getToContext(), origin.decl);
+    if (R) {
+      RegisterImportedDecl(From, R);
+      return R;
     }
   }
 

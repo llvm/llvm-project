@@ -28,6 +28,7 @@
 #include "OutputSections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
+#include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
 
@@ -91,15 +92,20 @@ TargetInfo *getTarget() {
 }
 
 template <class ELFT> static ErrorPlace getErrPlace(const uint8_t *loc) {
-  if (!Out::bufferStart)
-    return {};
-
+  assert(loc != nullptr);
   for (InputSectionBase *d : inputSections) {
     auto *isec = cast<InputSection>(d);
     if (!isec->getParent())
       continue;
 
-    uint8_t *isecLoc = Out::bufferStart + isec->getParent()->offset + isec->outSecOff;
+    const uint8_t *isecLoc =
+        Out::bufferStart
+            ? (Out::bufferStart + isec->getParent()->offset + isec->outSecOff)
+            : isec->data().data();
+    if (isecLoc == nullptr) {
+      assert(isa<SyntheticSection>(isec) && "No data but not synthetic?");
+      continue;
+    }
     if (isecLoc <= loc && loc < isecLoc + isec->getSize())
       return {isec, isec->template getLocation<ELFT>(loc - isecLoc) + ": "};
   }
@@ -142,10 +148,6 @@ bool TargetInfo::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
 
 bool TargetInfo::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   return true;
-}
-
-void TargetInfo::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
-  writeGotPlt(buf, s);
 }
 
 RelExpr TargetInfo::adjustRelaxExpr(RelType type, const uint8_t *data,

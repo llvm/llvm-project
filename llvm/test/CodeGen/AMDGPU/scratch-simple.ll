@@ -22,9 +22,9 @@
 ; GFX9-DAG: s_mov_b32 s7, 0xe00000
 ; GFX10_W32-DAG: s_mov_b32 s7, 0x31c16000
 ; GFX10_W64-DAG: s_mov_b32 s7, 0x31e16000
-; GCN-NOT: s_mov_b32 s0
 ; GCN-DAG: v_lshlrev_b32_e32 [[BYTES:v[0-9]+]], 2, v0
 ; GCN-DAG: v_and_b32_e32 [[CLAMP_IDX:v[0-9]+]], 0x1fc, [[BYTES]]
+; GCN-NOT: s_mov_b32 s0
 
 ; GCN-DAG: v_or_b32_e32 [[LO_OFF:v[0-9]+]], 0x200, [[CLAMP_IDX]]
 ; GCN-DAG: v_or_b32_e32 [[HI_OFF:v[0-9]+]], 0x400, [[CLAMP_IDX]]

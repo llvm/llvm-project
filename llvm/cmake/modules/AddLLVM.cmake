@@ -642,7 +642,7 @@ function(llvm_add_library name)
 endfunction()
 
 function(add_llvm_install_targets target)
-  cmake_parse_arguments(ARG "" "COMPONENT;PREFIX" "DEPENDS" ${ARGN})
+  cmake_parse_arguments(ARG "" "COMPONENT;PREFIX;SYMLINK" "DEPENDS" ${ARGN})
   if(ARG_COMPONENT)
     set(component_option -DCMAKE_INSTALL_COMPONENT="${ARG_COMPONENT}")
   endif()
@@ -678,6 +678,11 @@ function(add_llvm_install_targets target)
   if(target_dependencies)
     add_dependencies(${target} ${target_dependencies})
     add_dependencies(${target}-stripped ${target_dependencies})
+  endif()
+
+  if(ARG_SYMLINK)
+    add_dependencies(${target} install-${ARG_SYMLINK})
+    add_dependencies(${target}-stripped install-${ARG_SYMLINK}-stripped)
   endif()
 endfunction()
 
@@ -842,32 +847,40 @@ macro(add_llvm_executable name)
   llvm_codesign(${name} ENTITLEMENTS ${ARG_ENTITLEMENTS} BUNDLE_PATH ${ARG_BUNDLE_PATH})
 endmacro(add_llvm_executable name)
 
-# add_llvm_pass_plugin(name)
+# add_llvm_pass_plugin(name [NO_MODULE] ...)
 #   Add ${name} as an llvm plugin.
 #   If option LLVM_${name_upper}_LINK_INTO_TOOLS is set to ON, the plugin is registered statically.
 #   Otherwise a pluggable shared library is registered.
+#
+#   If NO_MODULE is specified, when option LLVM_${name_upper}_LINK_INTO_TOOLS is set to OFF,
+#   only an object library is built, and no module is built. This is specific to the Polly use case.
 function(add_llvm_pass_plugin name)
+  cmake_parse_arguments(ARG
+    "NO_MODULE" "" ""
+    ${ARGN})
 
   string(TOUPPER ${name} name_upper)
 
   option(LLVM_${name_upper}_LINK_INTO_TOOLS "Statically link ${name} into tools (if available)" OFF)
 
-  # process_llvm_pass_plugins takes care of the actual linking, just create an
-  # object library as of now
-  add_llvm_library(${name} OBJECT ${ARGN})
-
   if(LLVM_${name_upper}_LINK_INTO_TOOLS)
-      target_compile_definitions(${name} PRIVATE LLVM_${name_upper}_LINK_INTO_TOOLS)
-      set_property(TARGET ${name} APPEND PROPERTY COMPILE_DEFINITIONS LLVM_LINK_INTO_TOOLS)
-      if (TARGET intrinsics_gen)
-        add_dependencies(obj.${name} intrinsics_gen)
-      endif()
-  endif()
-
-  message(STATUS "Registering ${name} as a pass plugin (static build: ${LLVM_${name_upper}_LINK_INTO_TOOLS})")
-  if(LLVM_${name_upper}_LINK_INTO_TOOLS)
+    list(REMOVE_ITEM ARG_UNPARSED_ARGUMENTS BUILDTREE_ONLY)
+    # process_llvm_pass_plugins takes care of the actual linking, just create an
+    # object library as of now
+    add_llvm_library(${name} OBJECT ${ARG_UNPARSED_ARGUMENTS})
+    target_compile_definitions(${name} PRIVATE LLVM_${name_upper}_LINK_INTO_TOOLS)
+    set_property(TARGET ${name} APPEND PROPERTY COMPILE_DEFINITIONS LLVM_LINK_INTO_TOOLS)
+    if (TARGET intrinsics_gen)
+      add_dependencies(obj.${name} intrinsics_gen)
+    endif()
+    message(STATUS "Registering ${name} as a pass plugin (static build: ${LLVM_${name_upper}_LINK_INTO_TOOLS})")
     set_property(GLOBAL APPEND PROPERTY LLVM_COMPILE_EXTENSIONS ${name})
+  elseif(NOT ARG_NO_MODULE)
+    add_llvm_library(${name} MODULE ${ARG_UNPARSED_ARGUMENTS})
+  else()
+    add_llvm_library(${name} OBJECT ${ARG_UNPARSED_ARGUMENTS})
   endif()
+
 endfunction(add_llvm_pass_plugin)
 
 # Generate X Macro file for extension handling. It provides a
@@ -878,7 +891,7 @@ endfunction(add_llvm_pass_plugin)
 # Also correctly set lib dependencies between plugins and tools.
 function(process_llvm_pass_plugins)
   get_property(LLVM_EXTENSIONS GLOBAL PROPERTY LLVM_COMPILE_EXTENSIONS)
-  file(WRITE "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "//extension handlers\n")
+  file(WRITE "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "//extension handlers\n")
   foreach(llvm_extension ${LLVM_EXTENSIONS})
     string(TOLOWER ${llvm_extension} llvm_extension_lower)
 
@@ -888,23 +901,25 @@ function(process_llvm_pass_plugins)
     string(CONCAT llvm_extension_project ${llvm_extension_upper_first} ${llvm_extension_lower_tail})
 
     if(LLVM_${llvm_extension_upper}_LINK_INTO_TOOLS)
-        file(APPEND "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "HANDLE_EXTENSION(${llvm_extension_project})\n")
+      file(APPEND "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "HANDLE_EXTENSION(${llvm_extension_project})\n")
 
-        get_property(llvm_plugin_targets GLOBAL PROPERTY LLVM_PLUGIN_TARGETS)
-        foreach(llvm_plugin_target ${llvm_plugin_targets})
-          set_property(TARGET ${llvm_plugin_target} APPEND PROPERTY LINK_LIBRARIES ${llvm_extension})
-          set_property(TARGET ${llvm_plugin_target} APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${llvm_extension})
-        endforeach()
+      get_property(llvm_plugin_targets GLOBAL PROPERTY LLVM_PLUGIN_TARGETS)
+      foreach(llvm_plugin_target ${llvm_plugin_targets})
+        set_property(TARGET ${llvm_plugin_target} APPEND PROPERTY LINK_LIBRARIES ${llvm_extension})
+        set_property(TARGET ${llvm_plugin_target} APPEND PROPERTY INTERFACE_LINK_LIBRARIES ${llvm_extension})
+      endforeach()
     else()
       add_llvm_library(${llvm_extension_lower} MODULE obj.${llvm_extension_lower})
     endif()
 
   endforeach()
-  file(APPEND "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "#undef HANDLE_EXTENSION\n")
+  file(APPEND "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "#undef HANDLE_EXTENSION\n")
 
   # only replace if there's an actual change
-  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp" "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def")
-  file(REMOVE "${CMAKE_BINARY_DIR}/include/llvm/Support/Extension.def.tmp")
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp"
+    "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def")
+  file(REMOVE "${LLVM_BINARY_DIR}/include/llvm/Support/Extension.def.tmp")
 endfunction()
 
 function(export_executable_symbols target)
@@ -1627,8 +1642,9 @@ function(llvm_install_library_symlink name dest type)
 
   if (NOT LLVM_ENABLE_IDE AND NOT ARG_ALWAYS_GENERATE)
     add_llvm_install_targets(install-${name}
-                             DEPENDS ${name} ${dest} install-${dest}
-                             COMPONENT ${name})
+                             DEPENDS ${name} ${dest}
+                             COMPONENT ${name}
+                             SYMLINK ${dest})
   endif()
 endfunction()
 
@@ -1660,8 +1676,9 @@ function(llvm_install_symlink name dest)
 
   if (NOT LLVM_ENABLE_IDE AND NOT ARG_ALWAYS_GENERATE)
     add_llvm_install_targets(install-${name}
-                             DEPENDS ${name} ${dest} install-${dest}
-                             COMPONENT ${name})
+                             DEPENDS ${name} ${dest}
+                             COMPONENT ${name}
+                             SYMLINK ${dest})
   endif()
 endfunction()
 

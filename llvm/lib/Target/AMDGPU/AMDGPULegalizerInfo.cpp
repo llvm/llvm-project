@@ -244,7 +244,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     S32, S64, S16, V2S16
   };
 
-  setAction({G_BRCOND, S1}, Legal);
+  setAction({G_BRCOND, S1}, Legal); // VCC branches
+  setAction({G_BRCOND, S32}, Legal); // SCC branches
 
   // TODO: All multiples of 32, vectors of pointers, all v2s16 pairs, more
   // elements for v3s16
@@ -296,7 +297,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder({G_UADDO, G_USUBO,
                                G_UADDE, G_SADDE, G_USUBE, G_SSUBE})
-    .legalFor({{S32, S1}})
+    .legalFor({{S32, S1}, {S32, S32}})
     .clampScalar(0, S32, S32)
     .scalarize(0); // TODO: Implement.
 
@@ -446,8 +447,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                {S96, S32},
                // FIXME: Hack
                {S64, LLT::scalar(33)},
-               {S32, S8}, {S128, S32}, {S128, S64}, {S32, LLT::scalar(24)}})
-    .scalarize(0);
+               {S32, S8}, {S32, LLT::scalar(24)}})
+    .scalarize(0)
+    .clampScalar(0, S32, S64);
 
   // TODO: Split s1->s64 during regbankselect for VALU.
   auto &IToFP = getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
@@ -471,8 +473,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        .scalarize(0);
 
   getActionDefinitionsBuilder(G_INTRINSIC_ROUND)
-    .legalFor({S32, S64})
-    .scalarize(0);
+    .scalarize(0)
+    .lower();
 
   if (ST.has16BitInsts()) {
     getActionDefinitionsBuilder({G_INTRINSIC_TRUNC, G_FCEIL, G_FRINT})
@@ -505,9 +507,20 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   auto &CmpBuilder =
     getActionDefinitionsBuilder(G_ICMP)
+    // The compare output type differs based on the register bank of the output,
+    // so make both s1 and s32 legal.
+    //
+    // Scalar compares producing output in scc will be promoted to s32, as that
+    // is the allocatable register type that will be needed for the copy from
+    // scc. This will be promoted during RegBankSelect, and we assume something
+    // before that won't try to use s32 result types.
+    //
+    // Vector compares producing an output in vcc/SGPR will use s1 in VCC reg
+    // bank.
     .legalForCartesianProduct(
       {S1}, {S32, S64, GlobalPtr, LocalPtr, ConstantPtr, PrivatePtr, FlatPtr})
-    .legalFor({{S1, S32}, {S1, S64}});
+    .legalForCartesianProduct(
+      {S32}, {S32, S64, GlobalPtr, LocalPtr, ConstantPtr, PrivatePtr, FlatPtr});
   if (ST.has16BitInsts()) {
     CmpBuilder.legalFor({{S1, S16}});
   }
@@ -516,7 +529,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .widenScalarToNextPow2(1)
     .clampScalar(1, S32, S64)
     .scalarize(0)
-    .legalIf(all(typeIs(0, S1), isPointer(1)));
+    .legalIf(all(typeInSet(0, {S1, S32}), isPointer(1)));
 
   getActionDefinitionsBuilder(G_FCMP)
     .legalForCartesianProduct({S1}, ST.has16BitInsts() ? FPTypes16 : FPTypesBase)
@@ -888,10 +901,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .lower();
 
   // TODO: Pointer types, any 32-bit or 64-bit vector
+
+  // Condition should be s32 for scalar, s1 for vector.
   getActionDefinitionsBuilder(G_SELECT)
     .legalForCartesianProduct({S32, S64, S16, V2S32, V2S16, V4S16,
           GlobalPtr, LocalPtr, FlatPtr, PrivatePtr,
-          LLT::vector(2, LocalPtr), LLT::vector(2, PrivatePtr)}, {S1})
+          LLT::vector(2, LocalPtr), LLT::vector(2, PrivatePtr)}, {S1, S32})
     .clampScalar(0, S16, S64)
     .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
     .fewerElementsIf(numElementsNotEven(0), scalarize(0))
@@ -901,7 +916,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampMaxNumElements(0, PrivatePtr, 2)
     .scalarize(0)
     .widenScalarToNextPow2(0)
-    .legalIf(all(isPointer(0), typeIs(1, S1)));
+    .legalIf(all(isPointer(0), typeInSet(1, {S1, S32})));
 
   // TODO: Only the low 4/5/6 bits of the shift amount are observed, so we can
   // be more flexible with the shift amount type.
@@ -914,7 +929,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     } else
       Shifts.legalFor({{S16, S32}, {S16, S16}});
 
-    Shifts.clampScalar(1, S16, S32);
+    // TODO: Support 16-bit shift amounts
+    Shifts.clampScalar(1, S32, S32);
     Shifts.clampScalar(0, S16, S64);
     Shifts.widenScalarToNextPow2(0, 16);
   } else {
@@ -1100,6 +1116,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   getActionDefinitionsBuilder(G_SEXT_INREG).lower();
+
+  getActionDefinitionsBuilder({G_READ_REGISTER, G_WRITE_REGISTER}).lower();
+
+  getActionDefinitionsBuilder(G_READCYCLECOUNTER)
+    .legalFor({S64});
+
+  getActionDefinitionsBuilder({G_VASTART, G_VAARG, G_BRJT, G_JUMP_TABLE,
+        G_DYN_STACKALLOC, G_INDEXED_LOAD, G_INDEXED_SEXTLOAD,
+        G_INDEXED_ZEXTLOAD, G_INDEXED_STORE})
+    .unsupported();
 
   computeTables();
   verify(*ST.getInstrInfo());

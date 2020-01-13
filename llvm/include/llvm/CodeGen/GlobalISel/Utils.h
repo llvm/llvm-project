@@ -168,10 +168,5 @@ inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
   return isKnownNeverNaN(Val, MRI, true);
 }
 
-/// Get a rough equivalent of an MVT for a given LLT.
-MVT getMVTForLLT(LLT Ty);
-/// Get a rough equivalent of an LLT for a given MVT.
-LLT getLLTForMVT(MVT Ty);
-
 } // End namespace llvm.
 #endif

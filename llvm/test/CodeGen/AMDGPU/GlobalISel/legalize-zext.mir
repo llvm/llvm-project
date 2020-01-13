@@ -53,6 +53,24 @@ body: |
 ...
 
 ---
+name: test_zext_s24_to_s32
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_zext_s24_to_s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16777215
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; CHECK: $vgpr0 = COPY [[AND]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s24) = G_TRUNC %0
+    %2:_(s32) = G_ZEXT %1
+    $vgpr0 = COPY %2
+...
+
+---
 name: test_zext_i1_to_s32
 body: |
   bb.0:
@@ -219,4 +237,235 @@ body: |
     %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(<4 x s64>) = G_ZEXT %0
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %1
+...
+
+---
+name: test_zext_s8_to_s16
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_zext_s8_to_s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C]]
+    ; CHECK: S_ENDPGM 0, implicit [[AND]](s16)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s8) = G_TRUNC %0
+    %2:_(s16) = G_ZEXT %1
+    S_ENDPGM 0, implicit %2
+...
+
+---
+name: test_zext_s8_to_s24
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_zext_s8_to_s24
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[C]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[COPY2]]
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s24) = G_TRUNC [[AND]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[TRUNC]](s24)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s8) = G_TRUNC %0
+    %2:_(s24) = G_ZEXT %1
+    S_ENDPGM 0, implicit %2
+...
+
+
+---
+name: test_zext_s7_to_s32
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_zext_s7_to_s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 127
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; CHECK: S_ENDPGM 0, implicit [[AND]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s7) = G_TRUNC %0
+    %2:_(s32) = G_ZEXT %1
+    S_ENDPGM 0, implicit %2
+...
+
+---
+name: test_zext_s8_to_s32
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_zext_s8_to_s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+    ; CHECK: S_ENDPGM 0, implicit [[AND]](s32)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s8) = G_TRUNC %0
+    %2:_(s32) = G_ZEXT %1
+    S_ENDPGM 0, implicit %2
+...
+
+---
+name: test_zext_s32_to_s128
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_zext_s32_to_s128
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[MV]](s128)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s128) = G_ZEXT %0
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name: test_zext_s32_to_s256
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_zext_s32_to_s256
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[COPY]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[MV]](s256)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s256) = G_ZEXT %0
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name: test_zext_s32_to_s512
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_zext_s32_to_s512
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[MV:%[0-9]+]]:_(s512) = G_MERGE_VALUES [[COPY]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[MV]](s512)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s512) = G_ZEXT %0
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name: test_zext_s32_to_s1024
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_zext_s32_to_s1024
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[MV:%[0-9]+]]:_(s1024) = G_MERGE_VALUES [[COPY]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+    ; CHECK: S_ENDPGM 0, implicit [[MV]](s1024)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s1024) = G_ZEXT %0
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name: test_zext_s64_to_s128
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_zext_s64_to_s128
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s64), [[C]](s64)
+    ; CHECK: S_ENDPGM 0, implicit [[MV]](s128)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s128) = G_ZEXT %0
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name: test_zext_s64_to_s256
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_zext_s64_to_s256
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[COPY]](s64), [[C]](s64), [[C]](s64), [[C]](s64)
+    ; CHECK: S_ENDPGM 0, implicit [[MV]](s256)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s256) = G_ZEXT %0
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name: test_zext_s64_to_s512
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_zext_s64_to_s512
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: [[MV:%[0-9]+]]:_(s512) = G_MERGE_VALUES [[COPY]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64)
+    ; CHECK: S_ENDPGM 0, implicit [[MV]](s512)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s512) = G_ZEXT %0
+    S_ENDPGM 0, implicit %1
+...
+
+---
+name: test_zext_s64_to_s1024
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CHECK-LABEL: name: test_zext_s64_to_s1024
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: [[MV:%[0-9]+]]:_(s1024) = G_MERGE_VALUES [[COPY]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64)
+    ; CHECK: S_ENDPGM 0, implicit [[MV]](s1024)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s1024) = G_ZEXT %0
+    S_ENDPGM 0, implicit %1
+...
+
+# ---
+# name: test_zext_s96_to_s128
+# body: |
+#   bb.0:
+#     liveins: $vgpr0_vgpr1_vgpr2
+
+#     %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+#     %1:_(s128) = G_ZEXT %0
+#     S_ENDPGM 0, implicit %1
+# ...
+
+---
+name: test_zext_s128_to_s256
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_zext_s128_to_s256
+    ; CHECK: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[C]](s64), [[C]](s64)
+    ; CHECK: [[MV1:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[COPY]](s128), [[MV]](s128)
+    ; CHECK: S_ENDPGM 0, implicit [[MV1]](s256)
+    %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(s256) = G_ZEXT %0
+    S_ENDPGM 0, implicit %1
 ...

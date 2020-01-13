@@ -4185,6 +4185,13 @@ PowerPC:
 - ``X``: Prints 'x' if the memory operand is an indexed form. (NOTE: LLVM does
   not support indexed form, so this will currently always print nothing)
 
+RISC-V:
+
+- ``i``: Print the letter 'i' if the operand is not a register, otherwise print
+  nothing. Used to print 'addi' vs 'add' instructions, etc.
+- ``z``: Print the register ``zero`` if an immediate zero, otherwise print
+  normally.
+
 Sparc:
 
 - ``r``: No effect.
@@ -10301,7 +10308,7 @@ This instruction requires several arguments:
    #. If the musttail call appears in a function with the ``"thunk"`` attribute
       and the caller and callee both have varargs, than any unprototyped
       arguments in register or memory are forwarded to the callee. Similarly,
-      the return value of the callee is returned the the caller's caller, even
+      the return value of the callee is returned to the caller's caller, even
       if a void return type is in use.
 
    Both markers imply that the callee does not access allocas from the caller.
@@ -13668,16 +13675,17 @@ Fixed Point Arithmetic Intrinsics
 
 A fixed point number represents a real data type for a number that has a fixed
 number of digits after a radix point (equivalent to the decimal point '.').
-The number of digits after the radix point is referred as the ``scale``. These
+The number of digits after the radix point is referred as the `scale`. These
 are useful for representing fractional values to a specific precision. The
 following intrinsics perform fixed point arithmetic operations on 2 operands
 of the same scale, specified as the third argument.
 
-The `llvm.*mul.fix` family of intrinsic functions represents a multiplication
+The ``llvm.*mul.fix`` family of intrinsic functions represents a multiplication
 of fixed point numbers through scaled integers. Therefore, fixed point
-multplication can be represented as
+multiplication can be represented as
 
-::
+.. code-block:: llvm
+
         %result = call i4 @llvm.smul.fix.i4(i4 %a, i4 %b, i32 %scale)
 
         ; Expands to
@@ -13686,6 +13694,22 @@ multplication can be represented as
         %mul = mul nsw nuw i8 %a, %b
         %scale2 = trunc i32 %scale to i8
         %r = ashr i8 %mul, i8 %scale2  ; this is for a target rounding down towards negative infinity
+        %result = trunc i8 %r to i4
+
+The ``llvm.*div.fix`` family of intrinsic functions represents a division of
+fixed point numbers through scaled integers. Fixed point division can be
+represented as:
+
+.. code-block:: llvm
+
+        %result call i4 @llvm.sdiv.fix.i4(i4 %a, i4 %b, i32 %scale)
+
+        ; Expands to
+        %a2 = sext i4 %a to i8
+        %b2 = sext i4 %b to i8
+        %scale2 = trunc i32 %scale to i8
+        %a3 = shl i8 %a2, %scale2
+        %r = sdiv i8 %a3, %b2 ; this is for a target rounding towards zero
         %result = trunc i8 %r to i4
 
 For each of these functions, if the result cannot be represented exactly with
@@ -13954,6 +13978,126 @@ Examples
       ; Scale can affect the saturation result
       %res = call i4 @llvm.umul.fix.sat.i4(i4 2, i4 4, i32 0)  ; %res = 7 (2 x 4 -> clamped to 7)
       %res = call i4 @llvm.umul.fix.sat.i4(i4 2, i4 4, i32 1)  ; %res = 4 (1 x 2 = 2)
+
+
+'``llvm.sdiv.fix.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.sdiv.fix``
+on any integer bit width or vectors of integers.
+
+::
+
+      declare i16 @llvm.sdiv.fix.i16(i16 %a, i16 %b, i32 %scale)
+      declare i32 @llvm.sdiv.fix.i32(i32 %a, i32 %b, i32 %scale)
+      declare i64 @llvm.sdiv.fix.i64(i64 %a, i64 %b, i32 %scale)
+      declare <4 x i32> @llvm.sdiv.fix.v4i32(<4 x i32> %a, <4 x i32> %b, i32 %scale)
+
+Overview
+"""""""""
+
+The '``llvm.sdiv.fix``' family of intrinsic functions perform signed
+fixed point division on 2 arguments of the same scale.
+
+Arguments
+""""""""""
+
+The arguments (%a and %b) and the result may be of integer types of any bit
+width, but they must have the same bit width. The arguments may also work with
+int vectors of the same length and int size. ``%a`` and ``%b`` are the two
+values that will undergo signed fixed point division. The argument
+``%scale`` represents the scale of both operands, and must be a constant
+integer.
+
+Semantics:
+""""""""""
+
+This operation performs fixed point division on the 2 arguments of a
+specified scale. The result will also be returned in the same scale specified
+in the third argument.
+
+If the result value cannot be precisely represented in the given scale, the
+value is rounded up or down to the closest representable value. The rounding
+direction is unspecified.
+
+It is undefined behavior if the result value does not fit within the range of
+the fixed point type, or if the second argument is zero.
+
+
+Examples
+"""""""""
+
+.. code-block:: llvm
+
+      %res = call i4 @llvm.sdiv.fix.i4(i4 6, i4 2, i32 0)  ; %res = 3 (6 / 2 = 3)
+      %res = call i4 @llvm.sdiv.fix.i4(i4 6, i4 4, i32 1)  ; %res = 3 (3 / 2 = 1.5)
+      %res = call i4 @llvm.sdiv.fix.i4(i4 3, i4 -2, i32 1) ; %res = -3 (1.5 / -1 = -1.5)
+
+      ; The result in the following could be rounded up to 1 or down to 0.5
+      %res = call i4 @llvm.sdiv.fix.i4(i4 3, i4 4, i32 1)  ; %res = 2 (or 1) (1.5 / 2 = 0.75)
+
+
+'``llvm.udiv.fix.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.udiv.fix``
+on any integer bit width or vectors of integers.
+
+::
+
+      declare i16 @llvm.udiv.fix.i16(i16 %a, i16 %b, i32 %scale)
+      declare i32 @llvm.udiv.fix.i32(i32 %a, i32 %b, i32 %scale)
+      declare i64 @llvm.udiv.fix.i64(i64 %a, i64 %b, i32 %scale)
+      declare <4 x i32> @llvm.udiv.fix.v4i32(<4 x i32> %a, <4 x i32> %b, i32 %scale)
+
+Overview
+"""""""""
+
+The '``llvm.udiv.fix``' family of intrinsic functions perform unsigned
+fixed point division on 2 arguments of the same scale.
+
+Arguments
+""""""""""
+
+The arguments (%a and %b) and the result may be of integer types of any bit
+width, but they must have the same bit width. The arguments may also work with
+int vectors of the same length and int size. ``%a`` and ``%b`` are the two
+values that will undergo unsigned fixed point division. The argument
+``%scale`` represents the scale of both operands, and must be a constant
+integer.
+
+Semantics:
+""""""""""
+
+This operation performs fixed point division on the 2 arguments of a
+specified scale. The result will also be returned in the same scale specified
+in the third argument.
+
+If the result value cannot be precisely represented in the given scale, the
+value is rounded up or down to the closest representable value. The rounding
+direction is unspecified.
+
+It is undefined behavior if the result value does not fit within the range of
+the fixed point type, or if the second argument is zero.
+
+
+Examples
+"""""""""
+
+.. code-block:: llvm
+
+      %res = call i4 @llvm.udiv.fix.i4(i4 6, i4 2, i32 0)  ; %res = 3 (6 / 2 = 3)
+      %res = call i4 @llvm.udiv.fix.i4(i4 6, i4 4, i32 1)  ; %res = 3 (3 / 2 = 1.5)
+      %res = call i4 @llvm.udiv.fix.i4(i4 1, i4 -8, i32 4) ; %res = 2 (0.0625 / 0.5 = 0.125)
+
+      ; The result in the following could be rounded up to 1 or down to 0.5
+      %res = call i4 @llvm.udiv.fix.i4(i4 3, i4 4, i32 1)  ; %res = 2 (or 1) (1.5 / 2 = 0.75)
 
 
 Specialised Arithmetic Intrinsics

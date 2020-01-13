@@ -1900,7 +1900,8 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
                              ArgStringList &CmdArgs) const {
   // Select the ABI to use.
   const char *ABIName = nullptr;
-  if (getToolChain().getTriple().isOSLinux())
+  const llvm::Triple &T = getToolChain().getTriple();
+  if (T.isOSBinFormatELF()) {
     switch (getToolChain().getArch()) {
     case llvm::Triple::ppc64: {
       // When targeting a processor that supports QPX, or if QPX is
@@ -1915,7 +1916,10 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
         break;
       }
 
-      ABIName = "elfv1";
+      if (T.isMusl() || (T.isOSFreeBSD() && T.getOSMajorVersion() >= 13))
+        ABIName = "elfv2";
+      else
+        ABIName = "elfv1";
       break;
     }
     case llvm::Triple::ppc64le:
@@ -1924,6 +1928,7 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
     default:
       break;
     }
+  }
 
   bool IEEELongDouble = false;
   for (const Arg *A : Args.filtered(options::OPT_mabi_EQ)) {
@@ -2392,6 +2397,12 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       } else if (Value == "-fdebug-compilation-dir") {
         CmdArgs.push_back("-fdebug-compilation-dir");
         TakeNextArg = true;
+      } else if (Value.consume_front("-fdebug-compilation-dir=")) {
+        // The flag is a -Wa / -Xassembler argument and Options doesn't
+        // parse the argument, so this isn't automatically aliased to
+        // -fdebug-compilation-dir (without '=') here.
+        CmdArgs.push_back("-fdebug-compilation-dir");
+        CmdArgs.push_back(Value.data());
       } else {
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getOption().getName() << Value;
@@ -4433,8 +4444,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs);
 
   if (Arg *A = Args.getLastArg(options::OPT_LongDouble_Group)) {
-    if (TC.getArch() == llvm::Triple::x86 ||
-        TC.getArch() == llvm::Triple::x86_64)
+    if (TC.getTriple().isX86())
       A->render(Args, CmdArgs);
     else if ((TC.getArch() == llvm::Triple::ppc || TC.getTriple().isPPC64()) &&
              (A->getOption().getID() != options::OPT_mlong_double_80))
@@ -4519,6 +4529,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
     CmdArgs.push_back("-mcode-model");
     CmdArgs.push_back(A->getValue());
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mtls_size_EQ)) {
+    StringRef Value = A->getValue();
+    unsigned TLSSize = 0;
+    Value.getAsInteger(10, TLSSize);
+    if (!Triple.isAArch64() || !Triple.isOSBinFormatELF())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getOption().getName() << TripleStr;
+    if (TLSSize != 12 && TLSSize != 24 && TLSSize != 32 && TLSSize != 48)
+      D.Diag(diag::err_drv_invalid_int_value)
+          << A->getOption().getName() << Value;
+    Args.AddLastArg(CmdArgs, options::OPT_mtls_size_EQ);
   }
 
   // Add the target cpu
@@ -4998,13 +5021,30 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   const XRayArgs &XRay = TC.getXRayArgs();
   XRay.addArgs(TC, Args, CmdArgs, InputType);
 
+  if (Arg *A = Args.getLastArg(options::OPT_fpatchable_function_entry_EQ)) {
+    StringRef S0 = A->getValue(), S = S0;
+    unsigned Size, Start = 0;
+    if (!Triple.isAArch64() && Triple.getArch() != llvm::Triple::x86 &&
+        Triple.getArch() != llvm::Triple::x86_64)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << TripleStr;
+    else if (S.consumeInteger(10, Size) ||
+             (!S.empty() && (!S.consume_front(",") ||
+                             S.consumeInteger(10, Start) || !S.empty())))
+      D.Diag(diag::err_drv_invalid_argument_to_option)
+          << S0 << A->getOption().getName();
+    else if (Start)
+      D.Diag(diag::err_drv_unsupported_fpatchable_function_entry_argument);
+    else
+      CmdArgs.push_back(Args.MakeArgString(A->getSpelling() + Twine(Size)));
+  }
+
   if (TC.SupportsProfiling()) {
     Args.AddLastArg(CmdArgs, options::OPT_pg);
 
     llvm::Triple::ArchType Arch = TC.getArch();
     if (Arg *A = Args.getLastArg(options::OPT_mfentry)) {
-      if (Arch == llvm::Triple::systemz || Arch == llvm::Triple::x86 ||
-          Arch == llvm::Triple::x86_64)
+      if (Arch == llvm::Triple::systemz || TC.getTriple().isX86())
         A->render(Args, CmdArgs);
       else
         D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -6273,8 +6313,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
   }
 
   unsigned VolatileOptionID;
-  if (getToolChain().getArch() == llvm::Triple::x86_64 ||
-      getToolChain().getArch() == llvm::Triple::x86)
+  if (getToolChain().getTriple().isX86())
     VolatileOptionID = options::OPT__SLASH_volatile_ms;
   else
     VolatileOptionID = options::OPT__SLASH_volatile_iso;

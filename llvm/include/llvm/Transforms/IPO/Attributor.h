@@ -865,6 +865,13 @@ struct Attributor {
     ToBeChangedToUnreachableInsts.insert(I);
   }
 
+  /// Record that \p II has at least one dead successor block. This information
+  /// is used, e.g., to replace \p II with a call, after information was
+  /// manifested.
+  void registerInvokeWithDeadSuccessor(InvokeInst &II) {
+    InvokeWithDeadSuccessor.push_back(&II);
+  }
+
   /// Record that \p I is deleted after information was manifested. This also
   /// triggers deletion of trivially dead istructions.
   void deleteAfterManifest(Instruction &I) { ToBeDeletedInsts.insert(&I); }
@@ -1174,7 +1181,10 @@ private:
   DenseMap<Use *, Value *> ToBeChangedUses;
 
   /// Instructions we replace with `unreachable` insts after manifest is done.
-  SmallPtrSet<Instruction *, 8> ToBeChangedToUnreachableInsts;
+  SmallDenseSet<WeakVH, 16> ToBeChangedToUnreachableInsts;
+
+  /// Invoke instructions with at least a single dead successor block.
+  SmallVector<WeakVH, 16> InvokeWithDeadSuccessor;
 
   /// Functions, blocks, and instructions we delete after manifest is done.
   ///

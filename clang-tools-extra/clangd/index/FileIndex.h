@@ -140,7 +140,7 @@ using SlabTuple = std::tuple<SymbolSlab, RefSlab, RelationSlab>;
 /// Exposed to assist in unit tests.
 SlabTuple indexMainDecls(ParsedAST &AST);
 
-/// Idex declarations from \p AST and macros from \p PP that are declared in
+/// Index declarations from \p AST and macros from \p PP that are declared in
 /// included headers.
 SlabTuple indexHeaderSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
                              const CanonicalIncludes &Includes);

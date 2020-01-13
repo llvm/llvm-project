@@ -110,8 +110,7 @@ resolveSourceIndices(Location loc, PatternRewriter &rewriter,
 PatternMatchResult
 LoadOpOfSubViewFolder::matchAndRewrite(LoadOp loadOp,
                                        PatternRewriter &rewriter) const {
-  auto subViewOp =
-      dyn_cast_or_null<SubViewOp>(loadOp.memref()->getDefiningOp());
+  auto subViewOp = dyn_cast_or_null<SubViewOp>(loadOp.memref().getDefiningOp());
   if (!subViewOp) {
     return matchFailure();
   }
@@ -133,7 +132,7 @@ PatternMatchResult
 StoreOpOfSubViewFolder::matchAndRewrite(StoreOp storeOp,
                                         PatternRewriter &rewriter) const {
   auto subViewOp =
-      dyn_cast_or_null<SubViewOp>(storeOp.memref()->getDefiningOp());
+      dyn_cast_or_null<SubViewOp>(storeOp.memref().getDefiningOp());
   if (!subViewOp) {
     return matchFailure();
   }

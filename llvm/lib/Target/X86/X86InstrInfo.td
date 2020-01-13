@@ -454,18 +454,6 @@ def i64mem_TC : Operand<i64> {
   let OperandType = "OPERAND_MEMORY";
 }
 
-let OperandType = "OPERAND_PCREL",
-    ParserMatchClass = X86AbsMemAsmOperand,
-    PrintMethod = "printPCRelImm" in {
-def i32imm_pcrel : Operand<i32>;
-def i16imm_pcrel : Operand<i16>;
-
-// Branch targets have OtherVT type and print as pc-relative values.
-def brtarget : Operand<OtherVT>;
-def brtarget8 : Operand<OtherVT>;
-
-}
-
 // Special parser to detect 16-bit mode to select 16-bit displacement.
 def X86AbsMem16AsmOperand : AsmOperandClass {
   let Name = "AbsMem16";
@@ -473,14 +461,26 @@ def X86AbsMem16AsmOperand : AsmOperandClass {
   let SuperClasses = [X86AbsMemAsmOperand];
 }
 
-// Branch targets have OtherVT type and print as pc-relative values.
-let OperandType = "OPERAND_PCREL",
-    PrintMethod = "printPCRelImm" in {
-let ParserMatchClass = X86AbsMem16AsmOperand in
-  def brtarget16 : Operand<OtherVT>;
-let ParserMatchClass = X86AbsMemAsmOperand in
-  def brtarget32 : Operand<OtherVT>;
+// Branch targets print as pc-relative values.
+class BranchTargetOperand<ValueType ty> : Operand<ty> {
+  let OperandType = "OPERAND_PCREL";
+  let PrintMethod = "printPCRelImm";
+  let ParserMatchClass = X86AbsMemAsmOperand;
 }
+
+def i32imm_brtarget : BranchTargetOperand<i32>;
+def i16imm_brtarget : BranchTargetOperand<i16>;
+
+// 64-bits but only 32 bits are significant, and those bits are treated as being
+// pc relative.
+def i64i32imm_brtarget : BranchTargetOperand<i64>;
+
+def brtarget : BranchTargetOperand<OtherVT>;
+def brtarget8 : BranchTargetOperand<OtherVT>;
+def brtarget16 : BranchTargetOperand<OtherVT> {
+  let ParserMatchClass = X86AbsMem16AsmOperand;
+}
+def brtarget32 : BranchTargetOperand<OtherVT>;
 
 let RenderMethod = "addSrcIdxOperands" in {
   def X86SrcIdx8Operand : AsmOperandClass {
@@ -754,14 +754,6 @@ def i64u8imm : Operand<i64> {
   let PrintMethod = "printU8Imm";
   let ParserMatchClass = ImmUnsignedi8AsmOperand;
   let OperandType = "OPERAND_IMMEDIATE";
-}
-
-// 64-bits but only 32 bits are significant, and those bits are treated as being
-// pc relative.
-def i64i32imm_pcrel : Operand<i64> {
-  let PrintMethod = "printPCRelImm";
-  let ParserMatchClass = X86AbsMemAsmOperand;
-  let OperandType = "OPERAND_PCREL";
 }
 
 def lea64_32mem : Operand<i32> {
@@ -2851,7 +2843,7 @@ let SchedRW = [WriteStore], Defs = [EFLAGS] in {
 //===----------------------------------------------------------------------===//
 // CLZERO Instruction
 //
-let SchedRW = [WriteSystem] in {
+let SchedRW = [WriteLoad] in {
   let Uses = [EAX] in
   def CLZERO32r : I<0x01, MRM_FC, (outs), (ins), "clzero", []>,
                   TB, Requires<[HasCLZERO, Not64BitMode]>;

@@ -83,7 +83,7 @@ public:
   }
   /// Return the `i`-th input buffer type.
   ShapedType getInputShapedType(unsigned i) {
-    return getInput(i)->getType().template cast<ShapedType>();
+    return getInput(i).getType().template cast<ShapedType>();
   }
   /// Return the range over inputs.
   Operation::operand_range getInputs() {
@@ -104,7 +104,7 @@ public:
   }
   /// Return the `i`-th output buffer type.
   ShapedType getOutputShapedType(unsigned i) {
-    return getOutput(i)->getType().template cast<ShapedType>();
+    return getOutput(i).getType().template cast<ShapedType>();
   }
   /// Query whether the op has only MemRef input and outputs.
   bool hasBufferSemantics() {

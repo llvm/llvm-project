@@ -201,7 +201,7 @@ public:
   lldb_private::FileSpec GetFile(size_t file_idx);
   lldb_private::FileSpec::Style GetPathStyle();
 
-  SymbolFileDWARFDwo *GetDwoSymbolFile() const;
+  SymbolFileDWARFDwo *GetDwoSymbolFile();
 
   die_iterator_range dies() {
     ExtractDIEsIfNeeded();
@@ -243,11 +243,18 @@ public:
     return *Offset + m_loclists_base;
   }
 
+  /// Return the location table for parsing the given location list data. The
+  /// format is chosen according to the unit type. Never returns null.
+  std::unique_ptr<llvm::DWARFLocationTable>
+  GetLocationTable(const lldb_private::DataExtractor &data) const;
+
+  const lldb_private::DWARFDataExtractor &GetLocationData() const;
+
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,
             const DWARFAbbreviationDeclarationSet &abbrevs,
-            DIERef::Section section);
+            DIERef::Section section, bool is_dwo);
 
   llvm::Error ExtractHeader(SymbolFileDWARF &dwarf,
                             const lldb_private::DWARFDataExtractor &data,
@@ -314,6 +321,7 @@ protected:
   llvm::Optional<llvm::DWARFListTableHeader> m_loclist_table_header;
 
   const DIERef::Section m_section;
+  bool m_is_dwo;
 
 private:
   void ParseProducerInfo();

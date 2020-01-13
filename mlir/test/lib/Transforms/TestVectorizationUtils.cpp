@@ -116,7 +116,7 @@ void VectorizerTestPass::testVectorShapeRatio(llvm::raw_ostream &outs) {
     // As a consequence we write only Ops with a single return type for the
     // purpose of this test. If we need to test more intricate behavior in the
     // future we can always extend.
-    auto superVectorType = opInst->getResult(0)->getType().cast<VectorType>();
+    auto superVectorType = opInst->getResult(0).getType().cast<VectorType>();
     auto ratio = shapeRatio(superVectorType, subVectorType);
     if (!ratio.hasValue()) {
       opInst->emitRemark("NOT MATCHED");

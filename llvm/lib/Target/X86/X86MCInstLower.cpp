@@ -569,6 +569,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     if (OutMI.getOperand(OutMI.getNumOperands() - 1).getImm() == 0) {
       unsigned NewOpc;
       switch (OutMI.getOpcode()) {
+      default: llvm_unreachable("Invalid opcode");
       case X86::VPCMPBZ128rmi:   NewOpc = X86::VPCMPEQBZ128rm;   break;
       case X86::VPCMPBZ128rmik:  NewOpc = X86::VPCMPEQBZ128rmk;  break;
       case X86::VPCMPBZ128rri:   NewOpc = X86::VPCMPEQBZ128rr;   break;
@@ -640,6 +641,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     if (OutMI.getOperand(OutMI.getNumOperands() - 1).getImm() == 6) {
       unsigned NewOpc;
       switch (OutMI.getOpcode()) {
+      default: llvm_unreachable("Invalid opcode");
       case X86::VPCMPBZ128rmi:   NewOpc = X86::VPCMPGTBZ128rm;   break;
       case X86::VPCMPBZ128rmik:  NewOpc = X86::VPCMPGTBZ128rmk;  break;
       case X86::VPCMPBZ128rri:   NewOpc = X86::VPCMPGTBZ128rr;   break;
@@ -1029,13 +1031,32 @@ void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
   }
 }
 
+/// Return the longest nop which can be efficiently decoded for the given
+/// target cpu.  15-bytes is the longest single NOP instruction, but some
+/// platforms can't decode the longest forms efficiently.
+static unsigned MaxLongNopLength(const MCSubtargetInfo &STI) {
+  uint64_t MaxNopLength = 10;
+  if (STI.getFeatureBits()[X86::ProcIntelSLM])
+    MaxNopLength = 7;
+  else if (STI.getFeatureBits()[X86::FeatureFast15ByteNOP])
+    MaxNopLength = 15;
+  else if (STI.getFeatureBits()[X86::FeatureFast11ByteNOP])
+    MaxNopLength = 11;
+  return MaxNopLength;
+}
+
 /// Emit the largest nop instruction smaller than or equal to \p NumBytes
 /// bytes.  Return the size of nop emitted.
 static unsigned EmitNop(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
                         const MCSubtargetInfo &STI) {
-  // This works only for 64bit. For 32bit we have to do additional checking if
-  // the CPU supports multi-byte nops.
-  assert(Is64Bit && "EmitNops only supports X86-64");
+  if (!Is64Bit) {
+    // TODO Do additional checking if the CPU supports multi-byte nops.
+    OS.EmitInstruction(MCInstBuilder(X86::NOOP), STI);
+    return 1;
+  }
+
+  // Cap a single nop emission at the profitable value for the target
+  NumBytes = std::min(NumBytes, MaxLongNopLength(STI));
 
   unsigned NopSize;
   unsigned Opc, BaseReg, ScaleVal, IndexReg, Displacement, SegmentReg;
@@ -1140,9 +1161,34 @@ static void EmitNops(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
   }
 }
 
+/// A RAII helper which defines a region of instructions which can't have
+/// padding added between them for correctness.
+struct NoAutoPaddingScope {
+  MCStreamer &OS;
+  const bool OldAllowAutoPadding;
+  NoAutoPaddingScope(MCStreamer &OS)
+    : OS(OS), OldAllowAutoPadding(OS.getAllowAutoPadding()) {
+    changeAndComment(false);
+  }
+  ~NoAutoPaddingScope() {
+    changeAndComment(OldAllowAutoPadding);
+  }
+  void changeAndComment(bool b) {
+    if (b == OS.getAllowAutoPadding())
+      return;
+    OS.setAllowAutoPadding(b);
+    if (b)
+      OS.emitRawComment("autopadding");
+    else
+      OS.emitRawComment("noautopadding");
+  }
+};
+
 void X86AsmPrinter::LowerSTATEPOINT(const MachineInstr &MI,
                                     X86MCInstLower &MCIL) {
   assert(Subtarget->is64Bit() && "Statepoint currently only supports X86-64");
+
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
 
   StatepointOpers SOpers(&MI);
   if (unsigned PatchBytes = SOpers.getNumPatchBytes()) {
@@ -1205,6 +1251,8 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
   // FAULTING_LOAD_OP <def>, <faltinf type>, <MBB handler>,
   //                  <opcode>, <operands>
 
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
+
   Register DefRegister = FaultingMI.getOperand(0).getReg();
   FaultMaps::FaultKind FK =
       static_cast<FaultMaps::FaultKind>(FaultingMI.getOperand(1).getImm());
@@ -1251,6 +1299,8 @@ void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
 void X86AsmPrinter::LowerPATCHABLE_OP(const MachineInstr &MI,
                                       X86MCInstLower &MCIL) {
   // PATCHABLE_OP minsize, opcode, operands
+
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
 
   unsigned MinSize = MI.getOperand(0).getImm();
   unsigned Opcode = MI.getOperand(1).getImm();
@@ -1306,6 +1356,8 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
   assert(Subtarget->is64Bit() && "Patchpoint currently only supports X86-64");
 
   SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
+
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
 
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
@@ -1365,6 +1417,8 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
 void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
                                               X86MCInstLower &MCIL) {
   assert(Subtarget->is64Bit() && "XRay custom events only supports X86-64");
+
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
 
   // We want to emit the following pattern, which follows the x86 calling
   // convention to prepare for the trampoline call to be patched in.
@@ -1459,6 +1513,8 @@ void X86AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
 void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
                                                     X86MCInstLower &MCIL) {
   assert(Subtarget->is64Bit() && "XRay typed events only supports X86-64");
+
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
 
   // We want to emit the following pattern, which follows the x86 calling
   // convention to prepare for the trampoline call to be patched in.
@@ -1557,6 +1613,19 @@ void X86AsmPrinter::LowerPATCHABLE_TYPED_EVENT_CALL(const MachineInstr &MI,
 
 void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
                                                   X86MCInstLower &MCIL) {
+
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
+
+  const Function &F = MF->getFunction();
+  if (F.hasFnAttribute("patchable-function-entry")) {
+    unsigned Num;
+    if (F.getFnAttribute("patchable-function-entry")
+            .getValueAsString()
+            .getAsInteger(10, Num))
+      return;
+    EmitNops(*OutStreamer, Num, Subtarget->is64Bit(), getSubtargetInfo());
+    return;
+  }
   // We want to emit the following pattern:
   //
   //   .p2align 1, ...
@@ -1584,6 +1653,8 @@ void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
 
 void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
                                        X86MCInstLower &MCIL) {
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
+
   // Since PATCHABLE_RET takes the opcode of the return statement as an
   // argument, we use that to emit the correct form of the RET that we want.
   // i.e. when we see this:
@@ -1614,6 +1685,8 @@ void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
 
 void X86AsmPrinter::LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI,
                                              X86MCInstLower &MCIL) {
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
+
   // Like PATCHABLE_RET, we have the actual instruction in the operands to this
   // instruction so we lower that particular instruction and its operands.
   // Unlike PATCHABLE_RET though, we put the sled before the JMP, much like how

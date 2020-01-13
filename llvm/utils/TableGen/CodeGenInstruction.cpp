@@ -396,6 +396,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   hasNoSchedulingInfo = R->getValueAsBit("hasNoSchedulingInfo");
   FastISelShouldIgnore = R->getValueAsBit("FastISelShouldIgnore");
   variadicOpsAreDefs = R->getValueAsBit("variadicOpsAreDefs");
+  isAuthenticated = R->getValueAsBit("isAuthenticated");
 
   bool Unset;
   mayLoad      = R->getValueAsBitOrUnset("mayLoad", Unset);
@@ -504,16 +505,18 @@ FlattenAsmStringVariants(StringRef Cur, unsigned Variant) {
   return Res;
 }
 
-bool CodeGenInstruction::isOperandAPointer(unsigned i) const {
-  if (DagInit *ConstraintList = TheDef->getValueAsDag("InOperandList")) {
-    if (i < ConstraintList->getNumArgs()) {
-      if (DefInit *Constraint = dyn_cast<DefInit>(ConstraintList->getArg(i))) {
-        return Constraint->getDef()->isSubClassOf("TypedOperand") &&
-               Constraint->getDef()->getValueAsBit("IsPointer");
-      }
-    }
-  }
-  return false;
+bool CodeGenInstruction::isOperandImpl(unsigned i,
+                                       StringRef PropertyName) const {
+  DagInit *ConstraintList = TheDef->getValueAsDag("InOperandList");
+  if (!ConstraintList || i >= ConstraintList->getNumArgs())
+    return false;
+
+  DefInit *Constraint = dyn_cast<DefInit>(ConstraintList->getArg(i));
+  if (!Constraint)
+    return false;
+
+  return Constraint->getDef()->isSubClassOf("TypedOperand") &&
+         Constraint->getDef()->getValueAsBit(PropertyName);
 }
 
 //===----------------------------------------------------------------------===//

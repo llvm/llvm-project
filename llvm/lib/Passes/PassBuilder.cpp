@@ -970,8 +970,7 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // across the loop nests.
   // We do UnrollAndJam in a separate LPM to ensure it happens before unroll
   if (EnableUnrollAndJam && PTO.LoopUnrolling) {
-    OptimizePM.addPass(
-        createFunctionToLoopPassAdaptor(LoopUnrollAndJamPass(Level)));
+    OptimizePM.addPass(LoopUnrollAndJamPass(Level));
   }
   OptimizePM.addPass(LoopUnrollPass(
       LoopUnrollOptions(Level, /*OnlyWhenForced=*/!PTO.LoopUnrolling,
@@ -1902,6 +1901,12 @@ Error PassBuilder::parseModulePass(ModulePassManager &MPM,
       // Do nothing else at all!
       return Error::success();
     }
+
+    // This is consistent with old pass manager invoked via opt, but
+    // inconsistent with clang. Clang doesn't enable loop vectorization
+    // but does enable slp vectorization at Oz.
+    PTO.LoopVectorization = L > O1 && L < Oz;
+    PTO.SLPVectorization = L > O1 && L < Oz;
 
     if (Matches[1] == "default") {
       MPM.addPass(buildPerModuleDefaultPipeline(L, DebugLogging));

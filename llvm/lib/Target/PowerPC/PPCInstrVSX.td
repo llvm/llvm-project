@@ -120,11 +120,11 @@ multiclass XX3Form_Rcr<bits<6> opcode, bits<7> xo, string asmbase,
                        !strconcat(asmbase, !strconcat(" ", asmstr)), itin,
                        [(set OutTy:$XT, (Int InTy:$XA, InTy:$XB))]>;
     let Defs = [CR6] in
-    def o    : XX3Form_Rc<opcode, xo, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
+    def _rec    : XX3Form_Rc<opcode, xo, (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB),
                        !strconcat(asmbase, !strconcat(". ", asmstr)), itin,
                        [(set InTy:$XT,
                                 (InTy (PPCvcmp_o InTy:$XA, InTy:$XB, xo)))]>,
-                       isDOT;
+                       isRecordForm;
   }
 }
 
@@ -1961,7 +1961,7 @@ def VectorExtractions {
       - The order of elements after the move to GPR is reversed, so we invert
         the bits of the index prior to truncating to the range 0-7
   */
-  dag BE_VBYTE_PERM_VEC = (v16i8 (LVSL ZERO8, (ANDI8o $Idx, 8)));
+  dag BE_VBYTE_PERM_VEC = (v16i8 (LVSL ZERO8, (ANDI8_rec $Idx, 8)));
   dag BE_VBYTE_PERMUTE = (v16i8 (VPERM $S, $S, BE_VBYTE_PERM_VEC));
   dag BE_MV_VBYTE = (MFVSRD
                       (EXTRACT_SUBREG
@@ -1980,7 +1980,7 @@ def VectorExtractions {
         the bits of the index prior to truncating to the range 0-3
   */
   dag BE_VHALF_PERM_VEC = (v16i8 (LVSL ZERO8,
-                                       (RLDICR (ANDI8o $Idx, 4), 1, 62)));
+                                       (RLDICR (ANDI8_rec $Idx, 4), 1, 62)));
   dag BE_VHALF_PERMUTE = (v16i8 (VPERM $S, $S, BE_VHALF_PERM_VEC));
   dag BE_MV_VHALF = (MFVSRD
                       (EXTRACT_SUBREG
@@ -1998,7 +1998,7 @@ def VectorExtractions {
         the bits of the index prior to truncating to the range 0-1
   */
   dag BE_VWORD_PERM_VEC = (v16i8 (LVSL ZERO8,
-                                       (RLDICR (ANDI8o $Idx, 2), 2, 61)));
+                                       (RLDICR (ANDI8_rec $Idx, 2), 2, 61)));
   dag BE_VWORD_PERMUTE = (v16i8 (VPERM $S, $S, BE_VWORD_PERM_VEC));
   dag BE_MV_VWORD = (MFVSRD
                       (EXTRACT_SUBREG
@@ -2014,7 +2014,7 @@ def VectorExtractions {
       element indices.
   */
   dag BE_VDWORD_PERM_VEC = (v16i8 (LVSL ZERO8,
-                                        (RLDICR (ANDI8o $Idx, 1), 3, 60)));
+                                        (RLDICR (ANDI8_rec $Idx, 1), 3, 60)));
   dag BE_VDWORD_PERMUTE = (v16i8 (VPERM $S, $S, BE_VDWORD_PERM_VEC));
   dag BE_VARIABLE_DWORD =
         (MFVSRD (EXTRACT_SUBREG
@@ -2588,7 +2588,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   // [PO VRT XO VRB XO RO], Round to Odd version of [PO VRT XO VRB XO /]
   class X_VT5_XO5_VB5_Ro<bits<6> opcode, bits<5> xo2, bits<10> xo, string opc,
                          list<dag> pattern>
-    : X_VT5_XO5_VB5<opcode, xo2, xo, opc, pattern>, isDOT;
+    : X_VT5_XO5_VB5<opcode, xo2, xo, opc, pattern>, isRecordForm;
 
   // [PO VRT XO VRB XO /], but the VRB is only used the left 64 bits (or less),
   // So we use different operand class for VRB
@@ -2606,7 +2606,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   // [PO VRT XO VRB XO RO], Round to Odd version of [PO VRT XO VRB XO /]
   class X_VT5_XO5_VB5_VSFR_Ro<bits<6> opcode, bits<5> xo2, bits<10> xo, string opc,
                          list<dag> pattern>
-    : X_VT5_XO5_VB5_VSFR<opcode, xo2, xo, opc, pattern>, isDOT;
+    : X_VT5_XO5_VB5_VSFR<opcode, xo2, xo, opc, pattern>, isRecordForm;
 
   // [PO T XO B XO BX /]
   class XX2_RT5_XO5_XB6<bits<6> opcode, bits<5> xo2, bits<9> xo, string opc,
@@ -2636,7 +2636,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   // [PO VRT VRA VRB XO RO], Round to Odd version of [PO VRT VRA VRB XO /]
   class X_VT5_VA5_VB5_Ro<bits<6> opcode, bits<10> xo, string opc,
                          list<dag> pattern>
-    : X_VT5_VA5_VB5<opcode, xo, opc, pattern>, isDOT;
+    : X_VT5_VA5_VB5<opcode, xo, opc, pattern>, isRecordForm;
 
   // [PO VRT VRA VRB XO /]
   class X_VT5_VA5_VB5_FMA<bits<6> opcode, bits<10> xo, string opc,
@@ -2648,7 +2648,7 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
   // [PO VRT VRA VRB XO RO], Round to Odd version of [PO VRT VRA VRB XO /]
   class X_VT5_VA5_VB5_FMA_Ro<bits<6> opcode, bits<10> xo, string opc,
                           list<dag> pattern>
-    : X_VT5_VA5_VB5_FMA<opcode, xo, opc, pattern>, isDOT;
+    : X_VT5_VA5_VB5_FMA<opcode, xo, opc, pattern>, isRecordForm;
 
   //===--------------------------------------------------------------------===//
   // Quad-Precision Scalar Move Instructions:

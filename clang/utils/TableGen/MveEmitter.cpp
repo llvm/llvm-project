@@ -861,6 +861,13 @@ public:
   }
   bool hasCode() const { return Code != nullptr; }
 
+  static std::string signedHexLiteral(const llvm::APInt &iOrig) {
+    llvm::APInt i = iOrig.trunc(64);
+    SmallString<40> s;
+    i.toString(s, 16, true, true);
+    return s.str();
+  }
+
   std::string genSema() const {
     std::vector<std::string> SemaChecks;
 
@@ -895,8 +902,8 @@ public:
         SemaChecks.push_back("SemaBuiltinConstantArg(TheCall, " + Index + ")");
       else
         SemaChecks.push_back("SemaBuiltinConstantArgRange(TheCall, " + Index +
-                             ", 0x" + lo.toString(16, true) + ", 0x" +
-                             hi.toString(16, true) + ")");
+                             ", " + signedHexLiteral(lo) + ", " +
+                             signedHexLiteral(hi) + ")");
 
       if (!IA.ExtraCheckType.empty()) {
         std::string Suffix;
@@ -1092,14 +1099,16 @@ const Type *MveEmitter::getType(DagInit *D, const Type *Param) {
     PrintFatalError("Cannot find a type to satisfy CopyKind");
   }
 
-  if (Op->getName() == "CTO_DoubleSize") {
+  if (Op->isSubClassOf("CTO_ScaleSize")) {
     const ScalarType *STKind = cast<ScalarType>(getType(D->getArg(0), Param));
+    int Num = Op->getValueAsInt("num"), Denom = Op->getValueAsInt("denom");
+    unsigned DesiredSize = STKind->sizeInBits() * Num / Denom;
     for (const auto &kv : ScalarTypes) {
       const ScalarType *RT = kv.second.get();
-      if (RT->kind() == STKind->kind() && RT->sizeInBits() == 2*STKind->sizeInBits())
+      if (RT->kind() == STKind->kind() && RT->sizeInBits() == DesiredSize)
         return RT;
     }
-    PrintFatalError("Cannot find a type to satisfy DoubleSize");
+    PrintFatalError("Cannot find a type to satisfy ScaleSize");
   }
 
   PrintFatalError("Bad operator in type dag expression");
@@ -1331,7 +1340,8 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
         } else if (Bounds->isSubClassOf("IB_EltBit")) {
           IA.boundsType = ImmediateArg::BoundsType::ExplicitRange;
           IA.i1 = Bounds->getValueAsInt("base");
-          IA.i2 = IA.i1 + Param->sizeInBits() - 1;
+          const Type *T = ME.getType(Bounds->getValueAsDef("type"), Param);
+          IA.i2 = IA.i1 + T->sizeInBits() - 1;
         } else {
           PrintFatalError("unrecognised ImmediateBounds subclass");
         }

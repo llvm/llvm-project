@@ -395,6 +395,12 @@ static int compileModule(char **argv, LLVMContext &Context) {
   std::unique_ptr<Module> M;
   std::unique_ptr<MIRParser> MIR;
   Triple TheTriple;
+  std::string CPUStr = getCPUStr(), FeaturesStr = getFeaturesStr();
+
+  // Set attributes on functions as loaded from MIR from command line arguments.
+  auto setMIRFunctionAttributes = [&CPUStr, &FeaturesStr](Function &F) {
+    setFunctionAttributes(CPUStr, FeaturesStr, F);
+  };
 
   bool SkipModule = MCPU == "help" ||
                     (!MAttrs.empty() && MAttrs.front() == "help");
@@ -403,7 +409,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
   if (!SkipModule) {
     if (InputLanguage == "mir" ||
         (InputLanguage == "" && StringRef(InputFilename).endswith(".mir"))) {
-      MIR = createMIRParserFromFile(InputFilename, Err, Context);
+      MIR = createMIRParserFromFile(InputFilename, Err, Context,
+                                    setMIRFunctionAttributes);
       if (MIR)
         M = MIR->parseIRModule();
     } else
@@ -432,8 +439,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
     WithColor::error(errs(), argv[0]) << Error;
     return 1;
   }
-
-  std::string CPUStr = getCPUStr(), FeaturesStr = getFeaturesStr();
 
   CodeGenOpt::Level OLvl = CodeGenOpt::Default;
   switch (OptLevel) {

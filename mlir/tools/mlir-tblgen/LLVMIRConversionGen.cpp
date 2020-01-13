@@ -133,7 +133,7 @@ static bool emitOneBuilder(const Record &record, raw_ostream &os) {
     } else if (isResultName(op, name)) {
       bs << formatv("valueMapping[op.{0}()]", name);
     } else if (name == "_resultType") {
-      bs << "op.getResult()->getType().cast<LLVM::LLVMType>()."
+      bs << "op.getResult().getType().cast<LLVM::LLVMType>()."
             "getUnderlyingType()";
     } else if (name == "_hasResult") {
       bs << "opInst.getNumResults() == 1";

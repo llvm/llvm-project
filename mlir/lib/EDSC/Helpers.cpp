@@ -14,7 +14,7 @@ using namespace mlir;
 using namespace mlir::edsc;
 
 static SmallVector<ValueHandle, 8> getMemRefSizes(Value memRef) {
-  MemRefType memRefType = memRef->getType().cast<MemRefType>();
+  MemRefType memRefType = memRef.getType().cast<MemRefType>();
   assert(isStrided(memRefType) && "Expected strided MemRef type");
 
   SmallVector<ValueHandle, 8> res;
@@ -31,7 +31,7 @@ static SmallVector<ValueHandle, 8> getMemRefSizes(Value memRef) {
 }
 
 mlir::edsc::MemRefView::MemRefView(Value v) : base(v) {
-  assert(v->getType().isa<MemRefType>() && "MemRefType expected");
+  assert(v.getType().isa<MemRefType>() && "MemRefType expected");
 
   auto memrefSizeValues = getMemRefSizes(v);
   for (auto &size : memrefSizeValues) {
@@ -42,7 +42,7 @@ mlir::edsc::MemRefView::MemRefView(Value v) : base(v) {
 }
 
 mlir::edsc::VectorView::VectorView(Value v) : base(v) {
-  auto vectorType = v->getType().cast<VectorType>();
+  auto vectorType = v.getType().cast<VectorType>();
 
   for (auto s : vectorType.getShape()) {
     lbs.push_back(static_cast<index_t>(0));

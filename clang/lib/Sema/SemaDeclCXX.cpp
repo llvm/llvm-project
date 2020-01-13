@@ -3868,6 +3868,26 @@ void Sema::ActOnStartCXXInClassMemberInitializer() {
   PushFunctionScope();
 }
 
+void Sema::ActOnStartTrailingRequiresClause(Scope *S, Declarator &D) {
+  if (!D.isFunctionDeclarator())
+    return;
+  auto &FTI = D.getFunctionTypeInfo();
+  if (!FTI.Params)
+    return;
+  for (auto &Param : ArrayRef<DeclaratorChunk::ParamInfo>(FTI.Params,
+                                                          FTI.NumParams)) {
+    auto *ParamDecl = cast<NamedDecl>(Param.Param);
+    if (ParamDecl->getDeclName())
+      PushOnScopeChains(ParamDecl, S, /*AddToContext=*/false);
+  }
+}
+
+ExprResult Sema::ActOnFinishTrailingRequiresClause(ExprResult ConstraintExpr) {
+  if (ConstraintExpr.isInvalid())
+    return ExprError();
+  return CorrectDelayedTyposInExpr(ConstraintExpr);
+}
+
 /// This is invoked after parsing an in-class initializer for a
 /// non-static C++ class member, and after instantiating an in-class initializer
 /// in a class template. Such actions are deferred until the class is complete.
@@ -12702,7 +12722,8 @@ Sema::findInheritingConstructor(SourceLocation Loc,
       BaseCtor->getExplicitSpecifier(), /*isInline=*/true,
       /*isImplicitlyDeclared=*/true,
       Constexpr ? BaseCtor->getConstexprKind() : CSK_unspecified,
-      InheritedConstructor(Shadow, BaseCtor));
+      InheritedConstructor(Shadow, BaseCtor),
+      BaseCtor->getTrailingRequiresClause());
   if (Shadow->isInvalidDecl())
     DerivedCtor->setInvalidDecl();
 
@@ -17091,6 +17112,11 @@ bool Sema::checkThisInStaticMemberFunctionType(CXXMethodDecl *Method) {
   // Check the exception specification.
   if (checkThisInStaticMemberFunctionExceptionSpec(Method))
     return true;
+
+  // Check the trailing requires clause
+  if (Expr *E = Method->getTrailingRequiresClause())
+    if (!Finder.TraverseStmt(E))
+      return true;
 
   return checkThisInStaticMemberFunctionAttributes(Method);
 }

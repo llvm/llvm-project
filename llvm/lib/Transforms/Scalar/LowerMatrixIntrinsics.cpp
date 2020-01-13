@@ -10,9 +10,6 @@
 //
 // TODO:
 //  * Implement multiply & add fusion
-//  * Implement shape propagation
-//  * Implement optimizations to reduce or eliminateshufflevector uses by using
-//    shape information.
 //  * Add remark, summarizing the available matrix optimization opportunities.
 //
 //===----------------------------------------------------------------------===//
@@ -95,20 +92,20 @@ Value *computeColumnAddr(Value *BasePtr, Value *Col, Value *Stride,
   unsigned AS = cast<PointerType>(BasePtr->getType())->getAddressSpace();
 
   // Compute the start of the column with index Col as Col * Stride.
-  Value *ColumnStart = Builder.CreateMul(Col, Stride);
+  Value *ColumnStart = Builder.CreateMul(Col, Stride, "col.start");
 
   // Get pointer to the start of the selected column. Skip GEP creation,
   // if we select column 0.
   if (isa<ConstantInt>(ColumnStart) && cast<ConstantInt>(ColumnStart)->isZero())
     ColumnStart = BasePtr;
   else
-    ColumnStart = Builder.CreateGEP(EltType, BasePtr, ColumnStart);
+    ColumnStart = Builder.CreateGEP(EltType, BasePtr, ColumnStart, "col.gep");
 
   // Cast elementwise column start pointer to a pointer to a column
   // (EltType x NumRows)*.
   Type *ColumnType = VectorType::get(EltType, NumRows);
   Type *ColumnPtrType = PointerType::get(ColumnType, AS);
-  return Builder.CreatePointerCast(ColumnStart, ColumnPtrType);
+  return Builder.CreatePointerCast(ColumnStart, ColumnPtrType, "col.cast");
 }
 
 /// LowerMatrixIntrinsics contains the methods used to lower matrix intrinsics.
@@ -317,36 +314,16 @@ public:
       default:
         return false;
       }
-    return isUniformShape(V) || isa<StoreInst>(V);
+    return isUniformShape(V) || isa<StoreInst>(V) || isa<LoadInst>(V);
   }
 
   /// Propagate the shape information of instructions to their users.
-  void propagateShapeForward() {
-    // The work list contains instructions for which we can compute the shape,
-    // either based on the information provided by matrix intrinsics or known
-    // shapes of operands.
-    SmallVector<Instruction *, 8> WorkList;
-
-    // Initialize the work list with ops carrying shape information. Initially
-    // only the shape of matrix intrinsics is known.
-    for (BasicBlock &BB : Func)
-      for (Instruction &Inst : BB) {
-        IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst);
-        if (!II)
-          continue;
-
-        switch (II->getIntrinsicID()) {
-        case Intrinsic::matrix_multiply:
-        case Intrinsic::matrix_transpose:
-        case Intrinsic::matrix_columnwise_load:
-        case Intrinsic::matrix_columnwise_store:
-          WorkList.push_back(&Inst);
-          break;
-        default:
-          break;
-        }
-      }
-
+  /// The work list contains instructions for which we can compute the shape,
+  /// either based on the information provided by matrix intrinsics or known
+  /// shapes of operands.
+  SmallVector<Instruction *, 32>
+  propagateShapeForward(SmallVectorImpl<Instruction *> &WorkList) {
+    SmallVector<Instruction *, 32> NewWorkList;
     // Pop an element for which we guaranteed to have at least one of the
     // operand shapes.  Add the shape for this and then add users to the work
     // list.
@@ -395,16 +372,120 @@ public:
         }
       }
 
-      if (Propagate)
+      if (Propagate) {
+        NewWorkList.push_back(Inst);
         for (auto *User : Inst->users())
           if (ShapeMap.count(User) == 0)
             WorkList.push_back(cast<Instruction>(User));
+      }
     }
+
+    return NewWorkList;
+  }
+
+  /// Propagate the shape to operands of instructions with shape information.
+  /// \p Worklist contains the instruction for which we already know the shape.
+  SmallVector<Instruction *, 32>
+  propagateShapeBackward(SmallVectorImpl<Instruction *> &WorkList) {
+    SmallVector<Instruction *, 32> NewWorkList;
+
+    auto pushInstruction = [](Value *V,
+                              SmallVectorImpl<Instruction *> &WorkList) {
+      Instruction *I = dyn_cast<Instruction>(V);
+      if (I)
+        WorkList.push_back(I);
+    };
+    // Pop an element with known shape.  Traverse the operands, if their shape
+    // derives from the result shape and is unknown, add it and add them to the
+    // worklist.
+    LLVM_DEBUG(dbgs() << "Backward-propagate shapes:\n");
+    while (!WorkList.empty()) {
+      Value *V = WorkList.back();
+      WorkList.pop_back();
+
+      size_t BeforeProcessingV = WorkList.size();
+      if (!isa<Instruction>(V))
+        continue;
+
+      Value *MatrixA;
+      Value *MatrixB;
+      Value *M;
+      Value *N;
+      Value *K;
+      if (match(V, m_Intrinsic<Intrinsic::matrix_multiply>(
+                       m_Value(MatrixA), m_Value(MatrixB), m_Value(M),
+                       m_Value(N), m_Value(K)))) {
+        if (setShapeInfo(MatrixA, {M, N}))
+          pushInstruction(MatrixA, WorkList);
+
+        if (setShapeInfo(MatrixB, {N, K}))
+          pushInstruction(MatrixB, WorkList);
+
+      } else if (match(V, m_Intrinsic<Intrinsic::matrix_transpose>(
+                              m_Value(MatrixA), m_Value(M), m_Value(N)))) {
+        // Flip dimensions.
+        if (setShapeInfo(MatrixA, {M, N}))
+          pushInstruction(MatrixA, WorkList);
+      } else if (match(V, m_Intrinsic<Intrinsic::matrix_columnwise_store>(
+                              m_Value(MatrixA), m_Value(), m_Value(),
+                              m_Value(M), m_Value(N)))) {
+        if (setShapeInfo(MatrixA, {M, N})) {
+          pushInstruction(MatrixA, WorkList);
+        }
+      } else if (isa<LoadInst>(V) ||
+                 match(V, m_Intrinsic<Intrinsic::matrix_columnwise_load>())) {
+        // Nothing to do, no matrix input.
+      } else if (isa<StoreInst>(V)) {
+        // Nothing to do.  We forward-propagated to this so we would just
+        // backward propagate to an instruction with an already known shape.
+      } else if (isUniformShape(V)) {
+        // Propagate to all operands.
+        ShapeInfo Shape = ShapeMap[V];
+        for (Use &U : cast<Instruction>(V)->operands()) {
+          if (setShapeInfo(U.get(), Shape))
+            pushInstruction(U.get(), WorkList);
+        }
+      }
+      // After we discovered new shape info for new instructions in the
+      // worklist, we use their users as seeds for the next round of forward
+      // propagation.
+      for (size_t I = BeforeProcessingV; I != WorkList.size(); I++)
+        for (User *U : WorkList[I]->users())
+          if (isa<Instruction>(U) && V != U)
+            NewWorkList.push_back(cast<Instruction>(U));
+    }
+    return NewWorkList;
   }
 
   bool Visit() {
-    if (EnableShapePropagation)
-      propagateShapeForward();
+    if (EnableShapePropagation) {
+      SmallVector<Instruction *, 32> WorkList;
+
+      // Initially only the shape of matrix intrinsics is known.
+      // Initialize the work list with ops carrying shape information.
+      for (BasicBlock &BB : Func)
+        for (Instruction &Inst : BB) {
+          IntrinsicInst *II = dyn_cast<IntrinsicInst>(&Inst);
+          if (!II)
+            continue;
+
+          switch (II->getIntrinsicID()) {
+          case Intrinsic::matrix_multiply:
+          case Intrinsic::matrix_transpose:
+          case Intrinsic::matrix_columnwise_load:
+          case Intrinsic::matrix_columnwise_store:
+            WorkList.push_back(&Inst);
+            break;
+          default:
+            break;
+          }
+        }
+      // Propagate shapes until nothing changes any longer.
+      while (!WorkList.empty()) {
+        WorkList = propagateShapeForward(WorkList);
+        WorkList = propagateShapeBackward(WorkList);
+      }
+    }
 
     ReversePostOrderTraversal<Function *> RPOT(&Func);
     bool Changed = false;
@@ -419,6 +500,8 @@ public:
         Value *Op2;
         if (auto *BinOp = dyn_cast<BinaryOperator>(&Inst))
           Changed |= VisitBinaryOperator(BinOp);
+        if (match(&Inst, m_Load(m_Value(Op1))))
+          Changed |= VisitLoad(&Inst, Op1, Builder);
         else if (match(&Inst, m_Store(m_Value(Op1), m_Value(Op2))))
           Changed |= VisitStore(&Inst, Op1, Op2, Builder);
       }
@@ -433,7 +516,7 @@ public:
   LoadInst *createColumnLoad(Value *ColumnPtr, Type *EltType,
                              IRBuilder<> Builder) {
     unsigned Align = DL.getABITypeAlignment(EltType);
-    return Builder.CreateAlignedLoad(ColumnPtr, Align);
+    return Builder.CreateAlignedLoad(ColumnPtr, Align, "col.load");
   }
 
   StoreInst *createColumnStore(Value *ColumnValue, Value *ColumnPtr,
@@ -474,17 +557,11 @@ public:
     return true;
   }
 
-  /// Lowers llvm.matrix.columnwise.load.
-  ///
-  /// The intrinsic loads a matrix from memory using a stride between columns.
-  void LowerColumnwiseLoad(CallInst *Inst) {
+  void LowerLoad(Instruction *Inst, Value *Ptr, Value *Stride,
+                 ShapeInfo Shape) {
     IRBuilder<> Builder(Inst);
-    Value *Ptr = Inst->getArgOperand(0);
-    Value *Stride = Inst->getArgOperand(1);
     auto VType = cast<VectorType>(Inst->getType());
     Value *EltPtr = createElementPtr(Ptr, VType->getElementType(), Builder);
-    ShapeInfo Shape(Inst->getArgOperand(2), Inst->getArgOperand(3));
-
     ColumnMatrixTy Result;
     // Distance between start of one column and the start of the next
     for (unsigned C = 0, E = Shape.NumColumns; C < E; ++C) {
@@ -496,6 +573,16 @@ public:
     }
 
     finalizeLowering(Inst, Result, Builder);
+  }
+
+  /// Lowers llvm.matrix.columnwise.load.
+  ///
+  /// The intrinsic loads a matrix from memory using a stride between columns.
+  void LowerColumnwiseLoad(CallInst *Inst) {
+    Value *Ptr = Inst->getArgOperand(0);
+    Value *Stride = Inst->getArgOperand(1);
+    LowerLoad(Inst, Ptr, Stride,
+              {Inst->getArgOperand(2), Inst->getArgOperand(3)});
   }
 
   void LowerStore(Instruction *Inst, Value *Matrix, Value *Ptr, Value *Stride,
@@ -691,6 +778,16 @@ public:
     }
 
     finalizeLowering(Inst, Result, Builder);
+  }
+
+  /// Lower load instructions, if shape information is available.
+  bool VisitLoad(Instruction *Inst, Value *Ptr, IRBuilder<> &Builder) {
+    auto I = ShapeMap.find(Inst);
+    if (I == ShapeMap.end())
+      return false;
+
+    LowerLoad(Inst, Ptr, Builder.getInt32(I->second.NumRows), I->second);
+    return true;
   }
 
   bool VisitStore(Instruction *Inst, Value *StoredVal, Value *Ptr,

@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "Lua.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Utility/FileSpec.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb_private;
+using namespace lldb;
 
 llvm::Error Lua::Run(llvm::StringRef buffer) {
-  std::lock_guard<std::mutex> lock(m_mutex);
   int error =
       luaL_loadbuffer(m_lua_state, buffer.data(), buffer.size(), "buffer") ||
       lua_pcall(m_lua_state, 0, 0, 0);
@@ -25,4 +27,33 @@ llvm::Error Lua::Run(llvm::StringRef buffer) {
   // Pop error message from the stack.
   lua_pop(m_lua_state, 1);
   return e;
+}
+
+llvm::Error Lua::LoadModule(llvm::StringRef filename) {
+  FileSpec file(filename);
+  if (!FileSystem::Instance().Exists(file)) {
+    return llvm::make_error<llvm::StringError>("invalid path",
+                                               llvm::inconvertibleErrorCode());
+  }
+
+  ConstString module_extension = file.GetFileNameExtension();
+  if (module_extension != ".lua") {
+    return llvm::make_error<llvm::StringError>("invalid extension",
+                                               llvm::inconvertibleErrorCode());
+  }
+
+  int error = luaL_loadfile(m_lua_state, filename.data()) ||
+              lua_pcall(m_lua_state, 0, 1, 0);
+  if (error) {
+    llvm::Error e = llvm::make_error<llvm::StringError>(
+        llvm::formatv("{0}\n", lua_tostring(m_lua_state, -1)),
+        llvm::inconvertibleErrorCode());
+    // Pop error message from the stack.
+    lua_pop(m_lua_state, 1);
+    return e;
+  }
+
+  ConstString module_name = file.GetFileNameStrippingExtension();
+  lua_setglobal(m_lua_state, module_name.GetCString());
+  return llvm::Error::success();
 }

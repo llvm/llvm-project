@@ -125,11 +125,12 @@ typedef llvm::OnDiskIterableChainedHashTable<IdentifierIndexReaderTrait>
 
 }
 
-GlobalModuleIndex::GlobalModuleIndex(std::unique_ptr<llvm::MemoryBuffer> Buffer,
-                                     llvm::BitstreamCursor Cursor)
-    : Buffer(std::move(Buffer)), IdentifierIndex(), NumIdentifierLookups(),
+GlobalModuleIndex::GlobalModuleIndex(
+    std::unique_ptr<llvm::MemoryBuffer> IndexBuffer,
+    llvm::BitstreamCursor Cursor)
+    : Buffer(std::move(IndexBuffer)), IdentifierIndex(), NumIdentifierLookups(),
       NumIdentifierLookupHits() {
-  auto Fail = [&Buffer](llvm::Error &&Err) {
+  auto Fail = [&](llvm::Error &&Err) {
     report_fatal_error("Module index '" + Buffer->getBufferIdentifier() +
                        "' failed: " + toString(std::move(Err)));
   };

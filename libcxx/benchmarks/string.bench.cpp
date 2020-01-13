@@ -124,6 +124,20 @@ TEST_ALWAYS_INLINE const char* getHugeString(DiffType D) {
   }
 }
 
+TEST_ALWAYS_INLINE const char* getString(Length L,
+                                         DiffType D = DiffType::Control) {
+  switch (L) {
+  case Length::Empty:
+    return "";
+  case Length::Small:
+    return getSmallString(D);
+  case Length::Large:
+    return getLargeString(D);
+  case Length::Huge:
+    return getHugeString(D);
+  }
+}
+
 TEST_ALWAYS_INLINE std::string makeString(Length L,
                                           DiffType D = DiffType::Control,
                                           Opacity O = Opacity::Transparent) {
@@ -218,6 +232,112 @@ struct StringMove {
   }
 
   static std::string name() { return "BM_StringMove" + Length::name(); }
+};
+
+template <class Length, class Opaque>
+struct StringResizeDefaultInit {
+  static void run(benchmark::State& state) {
+    constexpr bool opaque = Opaque{} == Opacity::Opaque;
+    constexpr int kNumStrings = 4 << 10;
+    size_t length = makeString(Length()).size();
+    std::string strings[kNumStrings];
+    while (state.KeepRunningBatch(kNumStrings)) {
+      state.PauseTiming();
+      for (int i = 0; i < kNumStrings; ++i) {
+        std::string().swap(strings[i]);
+      }
+      benchmark::DoNotOptimize(strings);
+      state.ResumeTiming();
+      for (int i = 0; i < kNumStrings; ++i) {
+        strings[i].__resize_default_init(maybeOpaque(length, opaque));
+      }
+    }
+  }
+
+  static std::string name() {
+    return "BM_StringResizeDefaultInit" + Length::name() + Opaque::name();
+  }
+};
+
+template <class Length, class Opaque>
+struct StringAssignStr {
+  static void run(benchmark::State& state) {
+    constexpr bool opaque = Opaque{} == Opacity::Opaque;
+    constexpr int kNumStrings = 4 << 10;
+    std::string src = makeString(Length());
+    std::string strings[kNumStrings];
+    while (state.KeepRunningBatch(kNumStrings)) {
+      state.PauseTiming();
+      for (int i = 0; i < kNumStrings; ++i) {
+        std::string().swap(strings[i]);
+      }
+      benchmark::DoNotOptimize(strings);
+      state.ResumeTiming();
+      for (int i = 0; i < kNumStrings; ++i) {
+        strings[i] = *maybeOpaque(&src, opaque);
+      }
+    }
+  }
+
+  static std::string name() {
+    return "BM_StringAssignStr" + Length::name() + Opaque::name();
+  }
+};
+
+template <class Length, class Opaque>
+struct StringAssignAsciiz {
+  static void run(benchmark::State& state) {
+    constexpr bool opaque = Opaque{} == Opacity::Opaque;
+    constexpr int kNumStrings = 4 << 10;
+    std::string strings[kNumStrings];
+    while (state.KeepRunningBatch(kNumStrings)) {
+      state.PauseTiming();
+      for (int i = 0; i < kNumStrings; ++i) {
+        std::string().swap(strings[i]);
+      }
+      benchmark::DoNotOptimize(strings);
+      state.ResumeTiming();
+      for (int i = 0; i < kNumStrings; ++i) {
+        strings[i] = maybeOpaque(getString(Length()), opaque);
+      }
+    }
+  }
+
+  static std::string name() {
+    return "BM_StringAssignAsciiz" + Length::name() + Opaque::name();
+  }
+};
+
+template <class Opaque>
+struct StringAssignAsciizMix {
+  static void run(benchmark::State& state) {
+    constexpr auto O = Opaque{};
+    constexpr auto D = DiffType::Control;
+    constexpr int kNumStrings = 4 << 10;
+    std::string strings[kNumStrings];
+    while (state.KeepRunningBatch(kNumStrings)) {
+      state.PauseTiming();
+      for (int i = 0; i < kNumStrings; ++i) {
+        std::string().swap(strings[i]);
+      }
+      benchmark::DoNotOptimize(strings);
+      state.ResumeTiming();
+      for (int i = 0; i < kNumStrings - 7; i += 8) {
+        strings[i + 0] = maybeOpaque(getSmallString(D), O == Opacity::Opaque);
+        strings[i + 1] = maybeOpaque(getSmallString(D), O == Opacity::Opaque);
+        strings[i + 2] = maybeOpaque(getLargeString(D), O == Opacity::Opaque);
+        strings[i + 3] = maybeOpaque(getSmallString(D), O == Opacity::Opaque);
+        strings[i + 4] = maybeOpaque(getSmallString(D), O == Opacity::Opaque);
+        strings[i + 5] = maybeOpaque(getSmallString(D), O == Opacity::Opaque);
+        strings[i + 6] = maybeOpaque(getLargeString(D), O == Opacity::Opaque);
+        strings[i + 7] = maybeOpaque(getSmallString(D), O == Opacity::Opaque);
+      }
+    }
+  }
+
+  static std::string name() {
+    return "BM_StringAssignAsciizMix" + Opaque::name();
+  }
 };
 
 enum class Relation { Eq, Less, Compare };
@@ -426,9 +546,16 @@ int main(int argc, char** argv) {
 
   makeCartesianProductBenchmark<StringConstructDestroyCStr, AllLengths,
                                 AllOpacity>();
+
+  makeCartesianProductBenchmark<StringAssignStr, AllLengths, AllOpacity>();
+  makeCartesianProductBenchmark<StringAssignAsciiz, AllLengths, AllOpacity>();
+  makeCartesianProductBenchmark<StringAssignAsciizMix, AllOpacity>();
+
   makeCartesianProductBenchmark<StringCopy, AllLengths>();
   makeCartesianProductBenchmark<StringMove, AllLengths>();
   makeCartesianProductBenchmark<StringDestroy, AllLengths>();
+  makeCartesianProductBenchmark<StringResizeDefaultInit, AllLengths,
+                                AllOpacity>();
   makeCartesianProductBenchmark<StringRelational, AllRelations, AllLengths,
                                 AllLengths, AllDiffTypes>();
   makeCartesianProductBenchmark<StringRelationalLiteral, AllRelations,

@@ -3988,6 +3988,18 @@ If a function has neither of these attributes, they become subject to the XRay h
   }];
 }
 
+def PatchableFunctionEntryDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+``__attribute__((patchable_function_entry(N,M)))`` is used to generate M NOPs
+before the function entry and N-M NOPs after the function entry. This attribute
+takes precedence over the command line option ``-fpatchable-function-entry=N,M``.
+``M`` defaults to 0 if omitted.
+
+Currently, only M=0 is supported.
+}];
+}
+
 def TransparentUnionDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
@@ -4378,7 +4390,7 @@ below. The explicit attribute annotation indicates that the third parameter
 (`start_routine`) is called zero or more times by the `pthread_create` function,
 and that the fourth parameter (`arg`) is passed along. Note that the callback
 behavior of `pthread_create` is automatically recognized by Clang. In addition,
-the declarations of `__kmpc_fork_teams` and `__kmpc_fork_call`, generated for 
+the declarations of `__kmpc_fork_teams` and `__kmpc_fork_call`, generated for
 `#pragma omp target teams` and `#pragma omp parallel`, respectively, are also
 automatically recognized as broker functions. Further functions might be added
 in the future.
@@ -4558,6 +4570,26 @@ This attribute does not affect optimizations in any way, unlike GCC's
 }];
 }
 
+def CFGuardDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+Code can indicate CFG checks are not wanted with the ``__declspec(guard(nocf))``
+attribute. This directs the compiler to not insert any CFG checks for the entire
+function. This approach is typically used only sparingly in specific situations 
+where the programmer has manually inserted "CFG-equivalent" protection. The 
+programmer knows that they are calling through some read-only function table 
+whose address is obtained through read-only memory references and for which the 
+index is masked to the function table limit. This approach may also be applied 
+to small wrapper functions that are not inlined and that do nothing more than 
+make a call through a function pointer. Since incorrect usage of this directive 
+can compromise the security of CFG, the programmer must be very careful using 
+the directive. Typically, this usage is limited to very small functions that 
+only call one function.
+
+`Control Flow Guard documentation <https://docs.microsoft.com/en-us/windows/win32/secbp/pe-metadata>`
+}];
+}
+
 def HIPPinnedShadowDocs : Documentation {
   let Category = DocCatType;
   let Content = [{
@@ -4590,7 +4622,7 @@ object of type ``T``:
 
 The argument ``T`` is optional and is ignored.
 This attribute may be used by analysis tools and has no effect on code
-generation.
+generation. A ``void`` argument means that the class can own any type.
 
 See Pointer_ for an example.
 }];
@@ -4616,7 +4648,7 @@ like pointers to an object of type ``T``:
 
 The argument ``T`` is optional and is ignored.
 This attribute may be used by analysis tools and has no effect on code
-generation.
+generation. A ``void`` argument means that the pointer can point to any type.
 
 Example:
 When constructing an instance of a class annotated like this (a Pointer) from

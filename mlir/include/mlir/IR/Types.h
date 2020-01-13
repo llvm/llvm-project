@@ -108,7 +108,7 @@ public:
 
   using ImplType = TypeStorage;
 
-  Type() : impl(nullptr) {}
+  constexpr Type() : impl(nullptr) {}
   /* implicit */ Type(const ImplType *impl)
       : impl(const_cast<ImplType *>(impl)) {}
 

@@ -459,6 +459,32 @@ TEST_FUNC(insertion_in_block) {
   f.erase();
 }
 
+TEST_FUNC(zero_and_sign_extendi_op_i1_to_i8) {
+  using namespace edsc;
+  using namespace edsc::intrinsics;
+  using namespace edsc::op;
+  auto i1Type = IntegerType::get(1, &globalContext());
+  auto i8Type = IntegerType::get(8, &globalContext());
+  auto memrefType = MemRefType::get({}, i1Type, {}, 0);
+  auto f = makeFunction("zero_and_sign_extendi_op", {}, {memrefType, memrefType});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  IndexedValue A(f.getArgument(0));
+  IndexedValue B(f.getArgument(1));
+  // clang-format off
+  edsc::intrinsics::zero_extendi(*A, i8Type);
+  edsc::intrinsics::sign_extendi(*B, i8Type);
+  // CHECK-LABEL: @zero_and_sign_extendi_op
+  //      CHECK:     %[[SRC1:.*]] = affine.load
+  //      CHECK:     zexti %[[SRC1]] : i1 to i8
+  //      CHECK:     %[[SRC2:.*]] = affine.load
+  //      CHECK:     sexti %[[SRC2]] : i1 to i8
+  // clang-format on
+  f.print(llvm::outs());
+  f.erase();
+}
+
 TEST_FUNC(select_op_i32) {
   using namespace edsc;
   using namespace edsc::intrinsics;
@@ -724,9 +750,10 @@ TEST_FUNC(indirect_access) {
   // clang-format on
 
   // clang-format off
-  // CHECK-LABEL: func @indirect_access(
-  // CHECK:  [[B:%.*]] = affine.load
-  // CHECK:  [[D:%.*]] = affine.load
+  // CHECK-LABEL: func @indirect_access
+  // CHECK-SAME: (%[[ARG0:.*]]: memref<?xf32>, %[[ARG1:.*]]: memref<?xf32>, %[[ARG2:.*]]: memref<?xf32>, %[[ARG3:.*]]: memref<?xf32>)
+  // CHECK-DAG:  [[B:%.*]] = affine.load %[[ARG1]]
+  // CHECK-DAG:  [[D:%.*]] = affine.load %[[ARG3]]
   // CHECK:  load %{{.*}}{{\[}}[[B]]{{\]}}
   // CHECK:  store %{{.*}}, %{{.*}}{{\[}}[[D]]{{\]}}
   // clang-format on

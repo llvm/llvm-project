@@ -45,6 +45,11 @@ static cl::opt<bool> DisablePowerSched(
   cl::desc("Disable scheduling to minimize mAI power bursts"),
   cl::init(false));
 
+static cl::opt<bool> EnableVGPRIndexMode(
+  "amdgpu-vgpr-index-mode",
+  cl::desc("Use GPR indexing mode instead of movrel for vector indexing"),
+  cl::init(false));
+
 GCNSubtarget::~GCNSubtarget() = default;
 
 R600Subtarget &
@@ -561,6 +566,10 @@ bool GCNSubtarget::hasMadF16() const {
   return InstrInfo.pseudoToMCOpcode(AMDGPU::V_MAD_F16) != -1;
 }
 
+bool GCNSubtarget::useVGPRIndexMode() const {
+  return !hasMovrel() || (EnableVGPRIndexMode && hasVGPRIndexMode());
+}
+
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
   if (getGeneration() >= AMDGPUSubtarget::GFX10)
     return getMaxWavesPerEU();
@@ -705,6 +714,31 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   }
 
   return MaxNumVGPRs;
+}
+
+void GCNSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
+                                         SDep &Dep) const {
+  if (Dep.getKind() != SDep::Kind::Data || !Dep.getReg() ||
+      !Src->isInstr() || !Dst->isInstr())
+    return;
+
+  MachineInstr *SrcI = Src->getInstr();
+  MachineInstr *DstI = Dst->getInstr();
+
+  if (SrcI->isBundle()) {
+    const SIRegisterInfo *TRI = getRegisterInfo();
+    auto Reg = Dep.getReg();
+    MachineBasicBlock::const_instr_iterator I(SrcI->getIterator());
+    MachineBasicBlock::const_instr_iterator E(SrcI->getParent()->instr_end());
+    for (++I; I != E && I->isBundledWithPred(); ++I) {
+      if (!I->modifiesRegister(Reg, TRI))
+        continue;
+      Dep.setLatency(InstrInfo.getInstrLatency(getInstrItineraryData(), *I));
+      break;
+    }
+  } else if (DstI->isBundle()) {
+    Dep.setLatency(InstrInfo.getInstrLatency(getInstrItineraryData(), *SrcI));
+  }
 }
 
 namespace {

@@ -22,15 +22,18 @@ using namespace llvm;
 
 static std::string convertToErrorFromString(StringRef Str) {
   llvm::APFloat F(0.0);
-  auto ErrOrStatus =
+  auto StatusOrErr =
       F.convertFromString(Str, llvm::APFloat::rmNearestTiesToEven);
-  EXPECT_TRUE(!ErrOrStatus);
-  return toString(ErrOrStatus.takeError());
+  EXPECT_TRUE(!StatusOrErr);
+  return toString(StatusOrErr.takeError());
 }
 
 static double convertToDoubleFromString(StringRef Str) {
   llvm::APFloat F(0.0);
-  EXPECT_FALSE(!F.convertFromString(Str, llvm::APFloat::rmNearestTiesToEven));
+  auto StatusOrErr =
+      F.convertFromString(Str, llvm::APFloat::rmNearestTiesToEven);
+  EXPECT_FALSE(!StatusOrErr);
+  consumeError(StatusOrErr.takeError());
   return F.convertToDouble();
 }
 
@@ -546,6 +549,14 @@ TEST(APFloatTest, FMA) {
     APFloat f3(8.85242279E-41f);
     f1.fusedMultiplyAdd(f2, f3, APFloat::rmNearestTiesToEven);
     EXPECT_EQ(-8.85242279E-41f, f1.convertToFloat());
+  }
+
+  // Test using only a single instance of APFloat.
+  {
+    APFloat F(1.5);
+
+    F.fusedMultiplyAdd(F, F, APFloat::rmNearestTiesToEven);
+    EXPECT_EQ(3.75, F.convertToDouble());
   }
 }
 

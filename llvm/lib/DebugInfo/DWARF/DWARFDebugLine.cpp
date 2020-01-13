@@ -190,7 +190,6 @@ parseV2DirFileTables(const DWARFDataExtractor &DebugLineData,
 // the end of the prologue.
 static llvm::Expected<ContentDescriptors>
 parseV5EntryFormat(const DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
-                   uint64_t EndPrologueOffset,
                    DWARFDebugLine::ContentTypeTracker *ContentTypes) {
   ContentDescriptors Descriptors;
   int FormatCount = DebugLineData.getU8(OffsetPtr);
@@ -216,15 +215,14 @@ parseV5EntryFormat(const DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
 
 static Error
 parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
-                     uint64_t *OffsetPtr, uint64_t EndPrologueOffset,
-                     const dwarf::FormParams &FormParams,
+                     uint64_t *OffsetPtr, const dwarf::FormParams &FormParams,
                      const DWARFContext &Ctx, const DWARFUnit *U,
                      DWARFDebugLine::ContentTypeTracker &ContentTypes,
                      std::vector<DWARFFormValue> &IncludeDirectories,
                      std::vector<DWARFDebugLine::FileNameEntry> &FileNames) {
   // Get the directory entry description.
   llvm::Expected<ContentDescriptors> DirDescriptors =
-      parseV5EntryFormat(DebugLineData, OffsetPtr, EndPrologueOffset, nullptr);
+      parseV5EntryFormat(DebugLineData, OffsetPtr, nullptr);
   if (!DirDescriptors)
     return DirDescriptors.takeError();
 
@@ -251,8 +249,8 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
   }
 
   // Get the file entry description.
-  llvm::Expected<ContentDescriptors> FileDescriptors = parseV5EntryFormat(
-      DebugLineData, OffsetPtr, EndPrologueOffset, &ContentTypes);
+  llvm::Expected<ContentDescriptors> FileDescriptors =
+      parseV5EntryFormat(DebugLineData, OffsetPtr, &ContentTypes);
   if (!FileDescriptors)
     return FileDescriptors.takeError();
 
@@ -349,9 +347,9 @@ Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
   }
 
   if (getVersion() >= 5) {
-    if (Error e = parseV5DirFileTables(
-            DebugLineData, OffsetPtr, EndPrologueOffset, FormParams, Ctx, U,
-            ContentTypes, IncludeDirectories, FileNames)) {
+    if (Error E =
+            parseV5DirFileTables(DebugLineData, OffsetPtr, FormParams, Ctx, U,
+                                 ContentTypes, IncludeDirectories, FileNames)) {
       return joinErrors(
           createStringError(
               errc::invalid_argument,
@@ -359,7 +357,7 @@ Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
               " found an invalid directory or file table description at"
               " 0x%8.8" PRIx64,
               PrologueOffset, *OffsetPtr),
-          std::move(e));
+          std::move(E));
     }
   } else
     parseV2DirFileTables(DebugLineData, OffsetPtr, EndPrologueOffset,
@@ -528,8 +526,23 @@ Error DWARFDebugLine::LineTable::parse(
   if (PrologueErr)
     return PrologueErr;
 
-  const uint64_t EndOffset =
-      DebugLineOffset + Prologue.TotalLength + Prologue.sizeofTotalLength();
+  uint64_t ProgramLength = Prologue.TotalLength + Prologue.sizeofTotalLength();
+  if (!DebugLineData.isValidOffsetForDataOfSize(DebugLineOffset,
+                                                ProgramLength)) {
+    assert(DebugLineData.size() > DebugLineOffset &&
+           "prologue parsing should handle invalid offset");
+    uint64_t BytesRemaining = DebugLineData.size() - DebugLineOffset;
+    RecoverableErrorCallback(
+        createStringError(errc::invalid_argument,
+                          "line table program with offset 0x%8.8" PRIx64
+                          " has length 0x%8.8" PRIx64 " but only 0x%8.8" PRIx64
+                          " bytes are available",
+                          DebugLineOffset, ProgramLength, BytesRemaining));
+    // Continue by capping the length at the number of remaining bytes.
+    ProgramLength = BytesRemaining;
+  }
+
+  const uint64_t EndOffset = DebugLineOffset + ProgramLength;
 
   // See if we should tell the data extractor the address size.
   if (DebugLineData.getAddressSize() == 0)
@@ -868,9 +881,11 @@ Error DWARFDebugLine::LineTable::parse(
   }
 
   if (!State.Sequence.Empty)
-    RecoverableErrorCallback(
-        createStringError(errc::illegal_byte_sequence,
-                    "last sequence in debug line table is not terminated!"));
+    RecoverableErrorCallback(createStringError(
+        errc::illegal_byte_sequence,
+        "last sequence in debug line table at offset 0x%8.8" PRIx64
+        " is not terminated",
+        DebugLineOffset));
 
   // Sort all sequences so that address lookup will work faster.
   if (!Sequences.empty()) {

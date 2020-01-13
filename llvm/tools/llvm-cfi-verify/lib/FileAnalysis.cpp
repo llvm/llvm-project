@@ -364,7 +364,7 @@ uint64_t FileAnalysis::indirectCFOperandClobber(const GraphResult &Graph) const 
 
 void FileAnalysis::printInstruction(const Instr &InstrMeta,
                                     raw_ostream &OS) const {
-  Printer->printInst(&InstrMeta.Instruction, OS, "", *SubtargetInfo.get());
+  Printer->printInst(&InstrMeta.Instruction, 0, "", *SubtargetInfo.get(), OS);
 }
 
 Error FileAnalysis::initialiseDisassemblyMembers() {
@@ -478,7 +478,7 @@ void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
   for (uint64_t Byte = 0; Byte < SectionBytes.size();) {
     bool ValidInstruction =
         Disassembler->getInstruction(Instruction, InstructionSize,
-                                     SectionBytes.drop_front(Byte), 0, nulls(),
+                                     SectionBytes.drop_front(Byte), 0,
                                      outs()) == MCDisassembler::Success;
 
     Byte += InstructionSize;

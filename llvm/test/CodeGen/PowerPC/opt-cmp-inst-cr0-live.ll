@@ -11,7 +11,7 @@ define signext i32 @fn1(i32 %baz) {
 ; CHECK: CMPLDI
 ; CHECK: BCC
 
-; CHECK: ANDI8o {{[^,]+}}, 65520, implicit-def $cr0
+; CHECK: ANDI8_rec {{[^,]+}}, 65520, implicit-def $cr0
 ; CHECK: COPY killed $cr0
 ; CHECK: BCC
   %5 = icmp eq i64 %4, 0
@@ -26,7 +26,7 @@ bar:
 
 ; CHECK-LABEL: fn2
 define signext i32 @fn2(i64 %a, i64 %b) {
-; CHECK: OR8o {{[^, ]+}}, {{[^, ]+}}, implicit-def $cr0
+; CHECK: OR8_rec {{[^, ]+}}, {{[^, ]+}}, implicit-def $cr0
 ; CHECK: [[CREG:[^, ]+]]:crrc = COPY killed $cr
 ; CHECK: BCC 12, killed [[CREG]]
   %1 = or i64 %b, %a
@@ -42,7 +42,7 @@ bar:
 
 ; CHECK-LABEL: fn3
 define signext i32 @fn3(i32 %a) {
-; CHECK: ANDIo killed {{[%0-9]+}}{{[^,]*}}, 10, implicit-def $cr0
+; CHECK: ANDI_rec killed {{[%0-9]+}}{{[^,]*}}, 10, implicit-def $cr0
 ; CHECK: [[CREG:[^, ]+]]:crrc = COPY $cr0
 ; CHECK: BCC 76, killed [[CREG]]
   %1 = and i32 %a, 10
@@ -61,7 +61,7 @@ bar:
 
 ; CHECK-LABEL: fn4
 define i64 @fn4(i64 %a, i64 %b) {
-; CHECK: ADD8o
+; CHECK: ADD8_rec
 ; CHECK-NOT: CMP
 ; CHECK: BCC 71
 
@@ -81,11 +81,11 @@ if.end:
 declare void @exit(i32 signext)
 
 ; Since %v1 and %v2 are zero-extended 32-bit values, %1 is also zero-extended.
-; In this case, we want to use ORo instead of OR + CMPLWI.
+; In this case, we want to use OR_rec instead of OR + CMPLWI.
 
 ; CHECK-LABEL: fn5
 define zeroext i32 @fn5(i32* %p1, i32* %p2) {
-; CHECK: ORo
+; CHECK: OR_rec
 ; CHECK-NOT: CMP
 ; CHECK: BCC
   %v1 = load i32, i32* %p1
@@ -107,11 +107,11 @@ bar:
 ; CHECK-LABEL: fn6
 define i8* @fn6(i8* readonly %p) {
 ; CHECK: LBZU
-; CHECK: EXTSBo
+; CHECK: EXTSB_rec
 ; CHECK-NOT: CMP
 ; CHECK: BCC
 ; CHECK: LBZU
-; CHECK: EXTSBo
+; CHECK: EXTSB_rec
 ; CHECK-NOT: CMP
 ; CHECK: BCC
 

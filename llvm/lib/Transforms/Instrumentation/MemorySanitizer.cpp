@@ -1128,8 +1128,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                   OriginAlignment);
     } else {
       Value *ConvertedShadow = convertToShadowTyNoVec(Shadow, IRB);
-      Constant *ConstantShadow = dyn_cast_or_null<Constant>(ConvertedShadow);
-      if (ConstantShadow) {
+      if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
         if (ClCheckConstantShadow && !ConstantShadow->isZeroValue())
           paintOrigin(IRB, updateOrigin(Origin, IRB), OriginPtr, StoreSize,
                       OriginAlignment);
@@ -1210,8 +1209,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *ConvertedShadow = convertToShadowTyNoVec(Shadow, IRB);
     LLVM_DEBUG(dbgs() << "  SHAD1 : " << *ConvertedShadow << "\n");
 
-    Constant *ConstantShadow = dyn_cast_or_null<Constant>(ConvertedShadow);
-    if (ConstantShadow) {
+    if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
       if (ClCheckConstantShadow && !ConstantShadow->isZeroValue()) {
         insertWarningFn(IRB, Origin);
       }
@@ -1780,7 +1778,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(I.getNextNode());
     Type *ShadowTy = getShadowTy(&I);
     Value *Addr = I.getPointerOperand();
-    Value *ShadowPtr, *OriginPtr;
+    Value *ShadowPtr = nullptr, *OriginPtr = nullptr;
     const Align Alignment = assumeAligned(I.getAlignment());
     if (PropagateShadow) {
       std::tie(ShadowPtr, OriginPtr) =
@@ -2476,7 +2474,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Addr = I.getArgOperand(0);
 
     Type *ShadowTy = getShadowTy(&I);
-    Value *ShadowPtr, *OriginPtr;
+    Value *ShadowPtr = nullptr, *OriginPtr = nullptr;
     if (PropagateShadow) {
       // We don't know the pointer alignment (could be unaligned SSE load!).
       // Have to assume to worst case.

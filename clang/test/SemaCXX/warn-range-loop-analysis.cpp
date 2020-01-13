@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wall -Wno-unused -verify %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wloop-analysis -verify %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wrange-loop-analysis -verify %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++11 -Wloop-analysis -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
@@ -19,6 +20,10 @@ struct Container {
 
 struct Foo {};
 struct Bar {
+  // Small trivially copyable types do not show a warning when copied in a
+  // range-based for loop. This size ensures the object is not considered
+  // small.
+  char s[128];
   Bar(Foo);
   Bar(int);
   operator int();

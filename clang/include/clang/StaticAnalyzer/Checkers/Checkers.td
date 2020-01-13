@@ -615,6 +615,12 @@ def MismatchedIteratorChecker : Checker<"MismatchedIterator">,
   Dependencies<[IteratorModeling]>,
   Documentation<HasAlphaDocumentation>;
 
+def PlacementNewChecker : Checker<"PlacementNew">,
+  HelpText<"Check if default placement new is provided with pointers to "
+           "sufficient storage capacity">,
+  Dependencies<[NewDeleteChecker]>,
+  Documentation<HasDocumentation>;
+
 } // end: "alpha.cplusplus"
 
 

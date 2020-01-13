@@ -588,12 +588,22 @@ static void resetFilenameToDefault(void) {
   lprofCurFilename.PNS = PNS_default;
 }
 
-static int containsMergeSpecifier(const char *FilenamePat, int I) {
-  return (FilenamePat[I] == 'm' ||
-          (FilenamePat[I] >= '1' && FilenamePat[I] <= '9' &&
-           /* If FilenamePat[I] is not '\0', the next byte is guaranteed
-            * to be in-bound as the string is null terminated. */
-           FilenamePat[I + 1] == 'm'));
+static unsigned getMergePoolSize(const char *FilenamePat, int *I) {
+  unsigned J = 0, Num = 0;
+  for (;; ++J) {
+    char C = FilenamePat[*I + J];
+    if (C == 'm') {
+      *I += J;
+      return Num ? Num : 1;
+    }
+    if (C < '0' || C > '9')
+      break;
+    Num = Num * 10 + C - '0';
+
+    /* If FilenamePat[*I+J] is between '0' and '9', the next byte is guaranteed
+     * to be in-bound as the string is null terminated. */
+  }
+  return 0;
 }
 
 /* Parses the pattern string \p FilenamePat and stores the result to
@@ -650,19 +660,17 @@ static int parseFilenamePattern(const char *FilenamePat,
 
         __llvm_profile_enable_continuous_mode();
         I++; /* advance to 'c' */
-      } else if (containsMergeSpecifier(FilenamePat, I)) {
+      } else {
+        unsigned MergePoolSize = getMergePoolSize(FilenamePat, &I);
+        if (!MergePoolSize)
+          continue;
         if (MergingEnabled) {
           PROF_WARN("%%m specifier can only be specified once in %s.\n",
                     FilenamePat);
           return -1;
         }
         MergingEnabled = 1;
-        if (FilenamePat[I] == 'm')
-          lprofCurFilename.MergePoolSize = 1;
-        else {
-          lprofCurFilename.MergePoolSize = FilenamePat[I] - '0';
-          I++; /* advance to 'm' */
-        }
+        lprofCurFilename.MergePoolSize = MergePoolSize;
       }
     }
 
@@ -712,7 +720,7 @@ static void parseAndSetFilename(const char *FilenamePat,
 
 /* Return buffer length that is required to store the current profile
  * filename with PID and hostname substitutions. */
-/* The length to hold uint64_t followed by 2 digit pool id including '_' */
+/* The length to hold uint64_t followed by 3 digits pool id including '_' */
 #define SIGLEN 24
 static int getCurFilenameLength() {
   int Len;
@@ -766,18 +774,18 @@ static const char *getCurFilename(char *FilenameBuf, int ForceUseBuf) {
       } else if (FilenamePat[I] == 'h') {
         memcpy(FilenameBuf + J, lprofCurFilename.Hostname, HostNameLength);
         J += HostNameLength;
-      } else if (containsMergeSpecifier(FilenamePat, I)) {
-        char LoadModuleSignature[SIGLEN];
+      } else {
+        if (!getMergePoolSize(FilenamePat, &I))
+          continue;
+        char LoadModuleSignature[SIGLEN + 1];
         int S;
         int ProfilePoolId = getpid() % lprofCurFilename.MergePoolSize;
-        S = snprintf(LoadModuleSignature, SIGLEN, "%" PRIu64 "_%d",
+        S = snprintf(LoadModuleSignature, SIGLEN + 1, "%" PRIu64 "_%d",
                      lprofGetLoadModuleSignature(), ProfilePoolId);
         if (S == -1 || S > SIGLEN)
           S = SIGLEN;
         memcpy(FilenameBuf + J, LoadModuleSignature, S);
         J += S;
-        if (FilenamePat[I] != 'm')
-          I++;
       }
       /* Drop any unknown substitutions. */
     } else

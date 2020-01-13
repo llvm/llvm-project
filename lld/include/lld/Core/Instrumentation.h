@@ -58,7 +58,7 @@ public:
 /// Each thread has its own task stack and tasks nest recursively on that stack.
 /// A task cannot transfer threads.
 ///
-/// SBRM is used to ensure task starts and ends are ballanced. The lifetime of
+/// SBRM is used to ensure task starts and ends are balanced. The lifetime of
 /// a task is either the lifetime of this object, or until end is called.
 class ScopedTask {
   __itt_domain *_domain;

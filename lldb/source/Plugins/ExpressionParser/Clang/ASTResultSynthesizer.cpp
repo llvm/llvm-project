@@ -388,8 +388,7 @@ bool ASTResultSynthesizer::SynthesizeBodyResult(CompoundStmt *Body,
   // replace the old statement with the new one
   //
 
-  *last_stmt_ptr =
-      reinterpret_cast<Stmt *>(result_initialization_stmt_result.get());
+  *last_stmt_ptr = static_cast<Stmt *>(result_initialization_stmt_result.get());
 
   return true;
 }
@@ -448,8 +447,11 @@ void ASTResultSynthesizer::RecordPersistentDecl(NamedDecl *D) {
 }
 
 void ASTResultSynthesizer::CommitPersistentDecls() {
-  PersistentExpressionState *state =
+  auto *state =
       m_target.GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeC);
+  if (!state)
+    return;
+
   auto *persistent_vars = llvm::cast<ClangPersistentVariables>(state);
   ClangASTContext *scratch_ctx = ClangASTContext::GetScratch(m_target);
 

@@ -282,6 +282,7 @@ bool HexagonEarlyIfConversion::matchFlowPattern(MachineBasicBlock *B,
   // can fall through into the other, in other words, it will be executed
   // in both cases. We only want to predicate the block that is executed
   // conditionally.
+  assert(TB && FB && "Failed to find triangle control flow blocks");
   unsigned TNP = TB->pred_size(), FNP = FB->pred_size();
   unsigned TNS = TB->succ_size(), FNS = FB->succ_size();
 

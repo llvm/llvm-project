@@ -96,7 +96,8 @@ public:
     wasm64,         // WebAssembly with 64-bit pointers
     renderscript32, // 32-bit RenderScript
     renderscript64, // 64-bit RenderScript
-    LastArchType = renderscript64
+    ve,             // NEC SX-Aurora Vector Engine
+    LastArchType = ve
   };
   enum SubArchType {
     NoSubArch,
@@ -129,7 +130,9 @@ public:
     KalimbaSubArch_v4,
     KalimbaSubArch_v5,
 
-    MipsSubArch_r6
+    MipsSubArch_r6,
+
+    PPCSubArch_spe
   };
   enum VendorType {
     UnknownVendor,
@@ -204,8 +207,6 @@ public:
     CODE16,
     EABI,
     EABIHF,
-    ELFv1,
-    ELFv2,
     Android,
     Musl,
     MuslEABI,
@@ -729,6 +730,16 @@ public:
   /// Tests whether the target is RISC-V (32- and 64-bit).
   bool isRISCV() const {
     return getArch() == Triple::riscv32 || getArch() == Triple::riscv64;
+  }
+
+  /// Tests whether the target is x86 (32- or 64-bit).
+  bool isX86() const {
+    return getArch() == Triple::x86 || getArch() == Triple::x86_64;
+  }
+
+  /// Tests whether the target is VE
+  bool isVE() const {
+    return getArch() == Triple::ve;
   }
 
   /// Tests whether the target supports comdat

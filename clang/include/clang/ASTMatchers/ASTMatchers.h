@@ -55,6 +55,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/LambdaCapture.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/OperationKinds.h"
@@ -2540,6 +2541,36 @@ extern const internal::VariadicOperatorMatcherFunc<
     2, std::numeric_limits<unsigned>::max()>
     allOf;
 
+/// Matches any node regardless of the submatchers.
+///
+/// However, \c optionally will generate a result binding for each matching
+/// submatcher.
+///
+/// Useful when additional information which may or may not present about a
+/// main matching node is desired.
+///
+/// For example, in:
+/// \code
+///   class Foo {
+///     int bar;
+///   }
+/// \endcode
+/// The matcher:
+/// \code
+///   cxxRecordDecl(
+///     optionally(has(
+///       fieldDecl(hasName("bar")).bind("var")
+///   ))).bind("record")
+/// \endcode
+/// will produce a result binding for both "record" and "var".
+/// The matcher will produce a "record" binding for even if there is no data
+/// member named "bar" in that class.
+///
+/// Usable as: Any Matcher
+extern const internal::VariadicOperatorMatcherFunc<
+    1, std::numeric_limits<unsigned>::max()>
+    optionally;
+
 /// Matches sizeof (C99), alignof (C++11) and vec_step (OpenCL)
 ///
 /// Given
@@ -4012,6 +4043,50 @@ AST_POLYMORPHIC_MATCHER_P(hasAnyArgument,
     }
   }
   return false;
+}
+
+/// Matches any capture of a lambda expression.
+///
+/// Given
+/// \code
+///   void foo() {
+///     int x;
+///     auto f = [x](){};
+///   }
+/// \endcode
+/// lambdaExpr(hasAnyCapture(anything()))
+///   matches [x](){};
+AST_MATCHER_P_OVERLOAD(LambdaExpr, hasAnyCapture, internal::Matcher<VarDecl>,
+                       InnerMatcher, 0) {
+  for (const LambdaCapture &Capture : Node.captures()) {
+    if (Capture.capturesVariable()) {
+      BoundNodesTreeBuilder Result(*Builder);
+      if (InnerMatcher.matches(*Capture.getCapturedVar(), Finder, &Result)) {
+        *Builder = std::move(Result);
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/// Matches any capture of 'this' in a lambda expression.
+///
+/// Given
+/// \code
+///   struct foo {
+///     void bar() {
+///       auto f = [this](){};
+///     }
+///   }
+/// \endcode
+/// lambdaExpr(hasAnyCapture(cxxThisExpr()))
+///   matches [this](){};
+AST_MATCHER_P_OVERLOAD(LambdaExpr, hasAnyCapture,
+                       internal::Matcher<CXXThisExpr>, InnerMatcher, 1) {
+  return llvm::any_of(Node.captures(), [](const LambdaCapture &LC) {
+    return LC.capturesThis();
+  });
 }
 
 /// Matches a constructor call expression which uses list initialization.
