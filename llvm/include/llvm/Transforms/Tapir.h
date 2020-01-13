@@ -29,44 +29,9 @@ Pass *createLoopSpawningTIPass();
 
 //===----------------------------------------------------------------------===//
 //
-// SmallBlock - Do SmallBlock Pass
-//
-FunctionPass *createSmallBlockPass();
-
-//===----------------------------------------------------------------------===//
-//
-// SyncElimination - TODO
-//
-FunctionPass *createSyncEliminationPass();
-
-//===----------------------------------------------------------------------===//
-//
-// RedundantSpawn - Do RedundantSpawn Pass
-//
-FunctionPass *createRedundantSpawnPass();
-
-//===----------------------------------------------------------------------===//
-//
-// SpawnRestructure - Do SpawnRestructure Pass
-//
-FunctionPass *createSpawnRestructurePass();
-
-//===----------------------------------------------------------------------===//
-//
-// SpawnUnswitch - Do SpawnUnswitch Pass
-//
-FunctionPass *createSpawnUnswitchPass();
-
-//===----------------------------------------------------------------------===//
-//
 // LowerTapirToTarget - Lower Tapir constructs to a specified parallel runtime.
 //
 ModulePass *createLowerTapirToTargetPass();
-
-//===----------------------------------------------------------------------===//
-//
-//
-FunctionPass *createAnalyzeTapirPass();
 
 //===----------------------------------------------------------------------===//
 //

@@ -1,4 +1,5 @@
-; RUN: opt < %s -analyzetapir -S 2>&1 | FileCheck %s
+; RUN: opt < %s -task-simplify -S -o - 2>&1 | FileCheck %s
+; RUN: opt < %s -passes="task-simplify" -S -o - 2>&1 | FileCheck %s
 
 ; ModuleID = 'spawn-pfor.c'
 source_filename = "spawn-pfor.c"
@@ -55,8 +56,16 @@ sync.continue10:                                  ; preds = %sync.continue
   ret void
 }
 
-; CHECK: entry found 2 sync regions
-; CHECK: 1 discriminating sync
+; CHECK: entry:
+; CHECK-NEXT: %syncreg = tail call token @llvm.syncregion.start
+; CHECK-NEXT: %syncreg3 = tail call token @llvm.syncregion.start
+
+; CHECK: pfor.cond.cleanup:
+; CHECK-NEXT: sync within %syncreg3,
+
+; CHECK: sync.continue:
+; CHECK-NEXT: tail call void @bar
+; CHECK-NEXT: sync within %syncreg,
 
 ; Function Attrs: argmemonly nounwind
 declare token @llvm.syncregion.start() #1

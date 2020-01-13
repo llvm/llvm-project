@@ -23,6 +23,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/WorkSpanAnalysis.h"
 #include "llvm/Transforms/Tapir/LoopStripMine.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/TapirUtils.h"
 
 using namespace llvm;
@@ -32,22 +33,6 @@ using namespace llvm;
 static cl::opt<bool> SerializeUnprofitableLoops(
   "serialize-unprofitable-loops", cl::Hidden, cl::init(true),
   cl::desc("Serialize any Tapir tasks found to be unprofitable."));
-
-// TODO: Remove this duplicated code from LoopStripMinePass.
-
-// Returns the loop hint metadata node with the given name (for example,
-// "tapir.loop.stripmine.count").  If no such metadata node exists, then nullptr
-// is returned.
-static MDNode *GetStripMineMetadataForLoop(const Loop *L, StringRef Name) {
-  if (MDNode *LoopID = L->getLoopID())
-    return GetStripMineMetadata(LoopID, Name);
-  return nullptr;
-}
-
-// Returns true if the loop has an stripmine(disable) pragma.
-static bool HasStripMineDisablePragma(const Loop *L) {
-  return GetStripMineMetadataForLoop(L, "tapir.loop.stripmine.disable");
-}
 
 static bool trySerializeSmallLoop(
     Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
@@ -62,7 +47,7 @@ static bool trySerializeSmallLoop(
     return Changed;
 
   // Skip any loop for which stripmining is explicitly disabled.
-  if (HasStripMineDisablePragma(L))
+  if (TM_Disable == hasLoopStripmineTransformation(L))
     return Changed;
 
   TapirLoopHints Hints(L);

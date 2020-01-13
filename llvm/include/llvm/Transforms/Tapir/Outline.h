@@ -29,14 +29,6 @@ namespace llvm {
 
 using ValueSet = SetVector<Value *>;
 
-/// Find the inputs and outputs for a function outlined from the gives set of
-/// basic blocks.
-void findInputsOutputs(
-    const SmallPtrSetImpl<BasicBlock *> &Blocks,
-    ValueSet &Inputs, ValueSet &Outputs,
-    const SmallPtrSetImpl<BasicBlock *> *ExitBlocks = nullptr,
-    DominatorTree *DT = nullptr);
-
 /// Clone Blocks into NewFunc, transforming the old arguments into references to
 /// VMap values.
 ///

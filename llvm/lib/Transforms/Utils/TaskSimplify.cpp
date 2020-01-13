@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/Utils/TaskSimplify.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/IR/Instructions.h"
@@ -26,6 +27,10 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "task-simplify"
+
+// Statistics
+STATISTIC(NumUniqueSyncRegs, "Number of unique sync regions found.");
+STATISTIC(NumDiscriminatingSyncs, "Number of discriminating syncs found.");
 
 static bool syncMatchesReachingTask(const Value *SyncSR,
                                     SmallPtrSetImpl<const Task *> &MPTasks) {
@@ -91,6 +96,7 @@ static bool removeRedundantSyncRegions(MaybeParallelTasks &MPTasks, Task *T) {
       FirstSyncRegion = cast<Instruction>(
           SubT->getDetach()->getSyncRegion());
   }
+  NumUniqueSyncRegs += UniqueSyncRegs.size();
   // Skip this task if there's only one unique sync region.
   if (UniqueSyncRegs.size() < 2)
     return false;
@@ -112,6 +118,8 @@ static bool removeRedundantSyncRegions(MaybeParallelTasks &MPTasks, Task *T) {
     for (Spindle::SpindleEdge &Edge : S->out_edges())
       if (const SyncInst *Y = dyn_cast<SyncInst>(Edge.second->getTerminator()))
         if (syncIsDiscriminating(Y->getSyncRegion(), LocalTaskList)) {
+          ++NumDiscriminatingSyncs;
+          LLVM_DEBUG(dbgs() << "Found discriminating sync " << *Y << "\n");
           NonRedundantSyncRegs.insert(Y->getSyncRegion());
           for (const Task *MPTask : LocalTaskList)
             NonRedundantSyncRegs.insert(MPTask->getDetach()->getSyncRegion());

@@ -18,16 +18,16 @@
 #include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "drf-aa-result"
 
-// A handy option for disabling this flavor of DRFAA functionality.
-static cl::opt<bool> EnableDRFAA("enable-drf-aa-result",
-                                 cl::init(true), cl::Hidden);
+cl::opt<bool> llvm::EnableDRFAA(
+    "enable-drf-aa", cl::init(false), cl::Hidden,
+    cl::desc("Enable AA based on the data-race-free assumption "
+             "(default = off)"));
 
 bool DRFAAResult::invalidate(Function &Fn, const PreservedAnalyses &PA,
                              FunctionAnalysisManager::Invalidator &Inv) {

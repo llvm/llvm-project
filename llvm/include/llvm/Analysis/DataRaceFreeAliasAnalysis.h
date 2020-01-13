@@ -17,11 +17,14 @@
 
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
 
 class TaskInfo;
 class MemoryLocation;
+
+extern cl::opt<bool> EnableDRFAA;
 
 /// A simple alias analysis implementation that implements the assumption that
 /// the Tapir program is data-race free.  This analysis uses TaskInfo to

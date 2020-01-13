@@ -468,13 +468,6 @@ Instruction *replaceLoopWithCallToOutline(
     TapirLoopInfo *TL, TaskOutlineInfo &Out,
     SmallVectorImpl<Value *> &OutlineInputs);
 
-//----------------------------------------------------------------------------//
-// Old lowering utils
-
-Function *extractDetachBodyToFunction(DetachInst &Detach,
-                                      DominatorTree &DT, AssumptionCache &AC,
-                                      Instruction **CallSite = nullptr);
-
 }  // end namepsace llvm
 
 #endif

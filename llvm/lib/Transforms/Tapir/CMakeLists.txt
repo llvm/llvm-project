@@ -1,5 +1,4 @@
 add_llvm_library(LLVMTapirOpts
-  AnalyzeTapir.cpp
   CilkABI.cpp
   CilkRABI.cpp
   DRFScopedNoAliasAA.cpp
@@ -9,12 +8,7 @@ add_llvm_library(LLVMTapirOpts
   LoweringUtils.cpp
   OpenMPABI.cpp
   Outline.cpp
-  RedundantSpawn.cpp
   SerializeSmallTasks.cpp
-  SmallBlock.cpp
-  SpawnRestructure.cpp
-  SpawnUnswitch.cpp
-  SyncElimination.cpp
   Tapir.cpp
   TapirToTarget.cpp
   TapirLoopInfo.cpp
