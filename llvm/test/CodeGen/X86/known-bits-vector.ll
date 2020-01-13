@@ -671,10 +671,7 @@ define <2 x double> @knownbits_lshr_subvector_uitofp(<4 x i32> %x)  {
 ; X32-NEXT:    vpsrld $2, %xmm0, %xmm1
 ; X32-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5,6,7]
-; X32-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
-; X32-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
+; X32-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_lshr_subvector_uitofp:
@@ -682,10 +679,7 @@ define <2 x double> @knownbits_lshr_subvector_uitofp(<4 x i32> %x)  {
 ; X64-NEXT:    vpsrld $2, %xmm0, %xmm1
 ; X64-NEXT:    vpsrld $1, %xmm0, %xmm0
 ; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5,6,7]
-; X64-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
-; X64-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = lshr <4 x i32> %x, <i32 1, i32 2, i32 0, i32 0>
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <2 x i32> <i32 0, i32 1>

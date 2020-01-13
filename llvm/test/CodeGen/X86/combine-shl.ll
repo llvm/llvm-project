@@ -891,7 +891,7 @@ define <4 x i32> @combine_vec_add_shuffle_shl(<4 x i32> %a0)  {
 ; AVX-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,1,0]
 ; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [3,3,3,3]
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = shl <4 x i32> %a0, <i32 2, i32 3, i32 0, i32 1>
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
