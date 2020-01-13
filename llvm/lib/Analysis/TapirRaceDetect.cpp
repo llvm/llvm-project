@@ -135,6 +135,20 @@ TapirRaceDetectPrinterPass::run(Function &F, FunctionAnalysisManager &FAM) {
   return PreservedAnalyses::all();
 }
 
+bool RaceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
+                          FunctionAnalysisManager::Invalidator &Inv) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG have been preserved.
+  auto PAC = PA.getChecker<TapirRaceDetect>();
+  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>() ||
+           Inv.invalidate<DominatorTreeAnalysis>(F, PA) ||
+           Inv.invalidate<LoopAnalysis>(F, PA) ||
+           Inv.invalidate<TaskAnalysis>(F, PA) ||
+           Inv.invalidate<DependenceAnalysis>(F, PA) ||
+           Inv.invalidate<ScalarEvolutionAnalysis>(F, PA) ||
+           Inv.invalidate<TargetLibraryAnalysis>(F, PA));
+}
+
 // Copied from DataFlowSanitizer.cpp
 static StringRef GetGlobalTypeString(const GlobalValue &G) {
   // Types of GlobalVariables are always pointer types.

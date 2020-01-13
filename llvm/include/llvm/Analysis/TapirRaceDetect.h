@@ -255,6 +255,9 @@ public:
   void getObjectsFor(MemAccessInfo Access,
                      SmallPtrSetImpl<const Value *> &Objects);
 
+  bool invalidate(Function &F, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
+
   void print(raw_ostream &) const;
 
   AliasAnalysis *getAA() const { return DI.getAA(); }
