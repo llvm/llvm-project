@@ -4531,6 +4531,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_mtls_size_EQ)) {
+    StringRef Value = A->getValue();
+    unsigned TLSSize = 0;
+    Value.getAsInteger(10, TLSSize);
+    if (!Triple.isAArch64() || !Triple.isOSBinFormatELF())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getOption().getName() << TripleStr;
+    if (TLSSize != 12 && TLSSize != 24 && TLSSize != 32 && TLSSize != 48)
+      D.Diag(diag::err_drv_invalid_int_value)
+          << A->getOption().getName() << Value;
+    Args.AddLastArg(CmdArgs, options::OPT_mtls_size_EQ);
+  }
+
   // Add the target cpu
   std::string CPU = getCPUName(Args, Triple, /*FromAs*/ false);
   if (!CPU.empty()) {
