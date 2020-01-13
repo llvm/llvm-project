@@ -255,7 +255,6 @@ void CodeObjectDisassembler::printFunctionCode(const MCDisassembler &InstDisasm,
     if (InstDisasm.getInstruction(Inst, EatenBytesNum,
                                   Code,
                                   Address,
-                                  DebugFlag ? dbgs() : nulls(),
                                   CS)) {
       InstPrinter->printInst(&Inst, Address, "", InstDisasm.getSubtargetInfo(), IS);
     } else {

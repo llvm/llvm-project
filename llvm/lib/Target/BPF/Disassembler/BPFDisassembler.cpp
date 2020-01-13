@@ -67,7 +67,6 @@ public:
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
-                              raw_ostream &VStream,
                               raw_ostream &CStream) const override;
 
   uint8_t getInstClass(uint64_t Inst) const { return (Inst >> 56) & 0x7; };
@@ -162,7 +161,6 @@ static DecodeStatus readInstruction64(ArrayRef<uint8_t> Bytes, uint64_t Address,
 DecodeStatus BPFDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address,
-                                             raw_ostream &VStream,
                                              raw_ostream &CStream) const {
   bool IsLittleEndian = getContext().getAsmInfo()->isLittleEndian();
   uint64_t Insn, Hi;

@@ -965,8 +965,8 @@ bool EmulateInstructionMIPS64::EvaluateInstruction(uint32_t evaluate_options) {
   if (m_opcode.GetData(data)) {
     llvm::MCDisassembler::DecodeStatus decode_status;
     llvm::ArrayRef<uint8_t> raw_insn(data.GetDataStart(), data.GetByteSize());
-    decode_status = m_disasm->getInstruction(
-        mc_insn, insn_size, raw_insn, m_addr, llvm::nulls(), llvm::nulls());
+    decode_status = m_disasm->getInstruction(mc_insn, insn_size, raw_insn,
+                                             m_addr, llvm::nulls());
     if (decode_status != llvm::MCDisassembler::Success)
       return false;
   }
