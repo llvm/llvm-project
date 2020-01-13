@@ -33,6 +33,7 @@ public:
   std::string asMarkdown() const;
   std::string asPlainText() const;
 
+  virtual bool isRuler() const { return false; }
   virtual ~Block() = default;
 };
 
@@ -82,8 +83,8 @@ class Document {
 public:
   /// Adds a semantical block that will be separate from others.
   Paragraph &addParagraph();
-  /// Inserts a vertical space into the document.
-  void addSpacer();
+  /// Inserts a horizontal separator to the document.
+  void addRuler();
   /// Adds a block of code. This translates to a ``` block in markdown. In plain
   /// text representation, the code block will be surrounded by newlines.
   void addCodeBlock(std::string Code, std::string Language = "cpp");
