@@ -2463,6 +2463,31 @@ end:
   ret i64 99
 }
 
+; Test to not crash upon a 0:0 branch_weight metadata.
+define void @test_chr_24(i32* %i) !prof !14 {
+entry:
+  %0 = load i32, i32* %i
+  %1 = and i32 %0, 1
+  %2 = icmp eq i32 %1, 0
+  br i1 %2, label %bb1, label %bb0, !prof !17
+
+bb0:
+  call void @foo()
+  br label %bb1
+
+bb1:
+  %3 = and i32 %0, 2
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %bb3, label %bb2, !prof !17
+
+bb2:
+  call void @foo()
+  br label %bb3
+
+bb3:
+  ret void
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
@@ -2482,6 +2507,7 @@ end:
 !14 = !{!"function_entry_count", i64 100}
 !15 = !{!"branch_weights", i32 0, i32 1}
 !16 = !{!"branch_weights", i32 1, i32 1}
+!17 = !{!"branch_weights", i32 0, i32 0}
 ; CHECK: !15 = !{!"branch_weights", i32 1000, i32 0}
 ; CHECK: !16 = !{!"branch_weights", i32 0, i32 1}
 ; CHECK: !17 = !{!"branch_weights", i32 1, i32 1}

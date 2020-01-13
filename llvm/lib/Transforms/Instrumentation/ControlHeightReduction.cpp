@@ -625,6 +625,10 @@ static bool checkMDProf(MDNode *MD, BranchProbability &TrueProb,
   assert(SumWt >= TrueWt && SumWt >= FalseWt &&
          "Overflow calculating branch probabilities.");
 
+  // Guard against 0-to-0 branch weights to avoid a division-by-zero crash.
+  if (SumWt == 0)
+    return false;
+
   TrueProb = BranchProbability::getBranchProbability(TrueWt, SumWt);
   FalseProb = BranchProbability::getBranchProbability(FalseWt, SumWt);
   return true;
