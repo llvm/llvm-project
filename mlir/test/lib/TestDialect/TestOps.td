@@ -230,7 +230,7 @@ def SizedRegionOp : TEST_Op<"sized_region_op", []> {
 
 def ConversionCallOp : TEST_Op<"conversion_call_op",
     [CallOpInterface]> {
-  let arguments = (ins Variadic<AnyType>:$inputs, FlatSymbolRefAttr:$callee);
+  let arguments = (ins Variadic<AnyType>:$inputs, SymbolRefAttr:$callee);
   let results = (outs Variadic<AnyType>);
 
   let extraClassDeclaration = [{
@@ -239,7 +239,7 @@ def ConversionCallOp : TEST_Op<"conversion_call_op",
 
     /// Return the callee of this operation.
     CallInterfaceCallable getCallableForCallee() {
-      return getAttrOfType<FlatSymbolRefAttr>("callee");
+      return getAttrOfType<SymbolRefAttr>("callee");
     }
   }];
 }
@@ -250,11 +250,8 @@ def FunctionalRegionOp : TEST_Op<"functional_region_op",
   let results = (outs FunctionType);
 
   let extraClassDeclaration = [{
-    Region *getCallableRegion(CallInterfaceCallable) { return &body(); }
-    void getCallableRegions(SmallVectorImpl<Region *> &callables) {
-      callables.push_back(&body());
-    }
-    ArrayRef<Type> getCallableResults(Region *) {
+    Region *getCallableRegion() { return &body(); }
+    ArrayRef<Type> getCallableResults() {
       return getType().cast<FunctionType>().getResults();
     }
   }];

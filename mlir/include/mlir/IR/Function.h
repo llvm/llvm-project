@@ -122,26 +122,13 @@ public:
   // CallableOpInterface
   //===--------------------------------------------------------------------===//
 
-  /// Returns a region on the current operation that the given callable refers
-  /// to. This may return null in the case of an external callable object, e.g.
-  /// an external function.
-  Region *getCallableRegion(CallInterfaceCallable callable) {
-    assert(callable.get<SymbolRefAttr>().getLeafReference() == getName());
-    return isExternal() ? nullptr : &getBody();
-  }
+  /// Returns the region on the current operation that is callable. This may
+  /// return null in the case of an external callable object, e.g. an external
+  /// function.
+  Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
 
-  /// Returns all of the callable regions of this operation.
-  void getCallableRegions(SmallVectorImpl<Region *> &callables) {
-    if (!isExternal())
-      callables.push_back(&getBody());
-  }
-
-  /// Returns the results types that the given callable region produces when
-  /// executed.
-  ArrayRef<Type> getCallableResults(Region *region) {
-    assert(!isExternal() && region == &getBody() && "invalid callable");
-    return getType().getResults();
-  }
+  /// Returns the results types that the callable region produces when executed.
+  ArrayRef<Type> getCallableResults() { return getType().getResults(); }
 
 private:
   // This trait needs access to the hooks defined below.

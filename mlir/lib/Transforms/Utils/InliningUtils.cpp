@@ -284,7 +284,7 @@ LogicalResult mlir::inlineCall(InlinerInterface &interface,
   if (src->empty())
     return failure();
   auto *entryBlock = &src->front();
-  ArrayRef<Type> callableResultTypes = callable.getCallableResults(src);
+  ArrayRef<Type> callableResultTypes = callable.getCallableResults();
 
   // Make sure that the number of arguments and results matchup between the call
   // and the region.
