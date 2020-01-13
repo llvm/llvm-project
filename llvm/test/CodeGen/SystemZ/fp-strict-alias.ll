@@ -287,4 +287,56 @@ define void @f12(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
   ret void
 }
 
+; If the result of any FP operation is unused, it can be removed
+; -- except for fpexcept.strict operations.
+
+define void @f13(float %f1) {
+; CHECK-LABEL: f13:
+; CHECK-NOT: sqeb
+; CHECK: br %r14
+
+  %sqrt = call float @llvm.sqrt.f32(float %f1)
+
+  ret void
+}
+
+define void @f14(float %f1) {
+; CHECK-LABEL: f14:
+; CHECK-NOT: sqeb
+; CHECK: br %r14
+
+  %sqrt = call float @llvm.experimental.constrained.sqrt.f32(
+                        float %f1,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.ignore") #0
+
+  ret void
+}
+
+define void @f15(float %f1) {
+; CHECK-LABEL: f15:
+; CHECK-NOT: sqeb
+; CHECK: br %r14
+
+  %sqrt = call float @llvm.experimental.constrained.sqrt.f32(
+                        float %f1,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.maytrap") #0
+
+  ret void
+}
+
+define void @f16(float %f1) {
+; CHECK-LABEL: f16:
+; CHECK: sqebr
+; CHECK: br %r14
+
+  %sqrt = call float @llvm.experimental.constrained.sqrt.f32(
+                        float %f1,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+
+  ret void
+}
+
 attributes #0 = { strictfp }
