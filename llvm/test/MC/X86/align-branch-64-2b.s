@@ -11,7 +11,7 @@
 # CHECK-NEXT:       3c: ff d0                            callq    *%rax
 # CHECK-COUNT-3:      : 64 89 04 25 01 00 00 00          movl     %eax, %fs:1
 # CHECK:            56: 55                               pushq    %rbp
-# CHECK-NEXT:       57: e8 a4 ff ff ff                   callq    {{.*}}
+# CHECK-NEXT:       57: e8 00 00 00 00                   callq    {{.*}}
 # CHECK-COUNT-4:      : 64 89 04 25 01 00 00 00          movl     %eax, %fs:1
 # CHECK-COUNT-4:      : 90                               nop
 # CHECK:            80: ff 14 25 00 00 00 00             callq    *0
