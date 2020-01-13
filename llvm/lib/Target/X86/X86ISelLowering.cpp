@@ -14907,8 +14907,7 @@ static SDValue lowerShuffleAsLanePermuteAndSHUFP(const SDLoc &DL, MVT VT,
       continue;
     int LaneBase = i & ~1;
     auto &LaneMask = (i & 1) ? RHSMask : LHSMask;
-    LaneMask[LaneBase + 0] = (M & ~1);
-    LaneMask[LaneBase + 1] = (M & ~1) + 1;
+    LaneMask[LaneBase + (M & 1)] = M;
     SHUFPMask |= (M & 1) << i;
   }
 
