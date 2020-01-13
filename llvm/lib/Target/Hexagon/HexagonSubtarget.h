@@ -87,8 +87,14 @@ public:
   };
 
 private:
+  enum HexagonProcFamilyEnum { Others, TinyCore };
+
   std::string CPUString;
   Triple TargetTriple;
+
+  // The following objects can use the TargetTriple, so they must be
+  // declared after it.
+  HexagonProcFamilyEnum HexagonProcFamily = Others;
   HexagonInstrInfo InstrInfo;
   HexagonRegisterInfo RegInfo;
   HexagonTargetLowering TLInfo;
@@ -184,6 +190,9 @@ public:
   bool useSmallData() const { return UseSmallData; }
   bool useUnsafeMath() const { return UseUnsafeMath; }
   bool useZRegOps() const { return UseZRegOps; }
+
+  bool isTinyCore() const { return HexagonProcFamily == TinyCore; }
+  bool isTinyCoreWithDuplex() const { return isTinyCore() && EnableDuplex; }
 
   bool useHVXOps() const {
     return HexagonHVXVersion > Hexagon::ArchEnum::NoArch;

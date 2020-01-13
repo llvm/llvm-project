@@ -83,6 +83,7 @@ HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
       InstrInfo(initializeSubtargetDependencies(CPU, FS)),
       RegInfo(getHwMode()), TLInfo(TM, *this),
       InstrItins(getInstrItineraryForCPU(CPUString)) {
+  Hexagon_MC::addArchSubtarget(this, FS);
   // Beware of the default constructor of InstrItineraryData: it will
   // reset all members to 0.
   assert(InstrItins.Itineraries != nullptr && "InstrItins not initialized");
@@ -108,6 +109,13 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
 
   if (OverrideLongCalls.getPosition())
     UseLongCalls = OverrideLongCalls;
+
+  if (isTinyCore()) {
+    // Tiny core has a single thread, so back-to-back scheduling is enabled by
+    // default.
+    if (!EnableBSBSched.getPosition())
+      UseBSBScheduling = false;
+  }
 
   FeatureBitset Features = getFeatureBits();
   if (HexagonDisableDuplex)

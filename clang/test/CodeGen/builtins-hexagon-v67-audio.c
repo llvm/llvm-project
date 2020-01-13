@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple hexagon -target-cpu hexagonv67 -target-feature +audio -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple hexagon -target-cpu hexagonv67t -target-feature +audio -emit-llvm -o - %s | FileCheck %s
 
 // CHECK-LABEL: @test1
 // CHECK: call i64 @llvm.hexagon.M7.dcmpyrw(i64 %0, i64 %1)

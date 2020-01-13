@@ -26,10 +26,10 @@ static constexpr ArrayRef<unsigned> ArchValsNum(ArchValsNumArray);
 static constexpr StringLiteral ArchValsTextArray[] = { "v5", "v55", "v60", "v62", "v65", "v66", "v67" };
 static constexpr ArrayRef<StringLiteral> ArchValsText(ArchValsTextArray);
 
-static constexpr StringLiteral CpuValsTextArray[] = { "hexagonv5", "hexagonv55", "hexagonv60", "hexagonv62", "hexagonv65", "hexagonv66", "hexagonv67" };
+static constexpr StringLiteral CpuValsTextArray[] = { "hexagonv5", "hexagonv55", "hexagonv60", "hexagonv62", "hexagonv65", "hexagonv66", "hexagonv67", "hexagonv67t" };
 static constexpr ArrayRef<StringLiteral> CpuValsText(CpuValsTextArray);
 
-static constexpr StringLiteral CpuNickTextArray[] = { "v5", "v55", "v60", "v62", "v65", "v66", "v67" };
+static constexpr StringLiteral CpuNickTextArray[] = { "v5", "v55", "v60", "v62", "v65", "v66", "v67", "v67t" };
 static constexpr ArrayRef<StringLiteral> CpuNickText(CpuNickTextArray);
 
 static const std::map<std::string, ArchEnum> CpuTable{
@@ -41,6 +41,7 @@ static const std::map<std::string, ArchEnum> CpuTable{
     {"hexagonv65", Hexagon::ArchEnum::V65},
     {"hexagonv66", Hexagon::ArchEnum::V66},
     {"hexagonv67", Hexagon::ArchEnum::V67},
+    {"hexagonv67t", Hexagon::ArchEnum::V67},
 };
 } // namespace Hexagon
 } // namespace llvm;
