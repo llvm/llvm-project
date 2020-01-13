@@ -20,7 +20,8 @@ class LLDB_API SBReproducer {
 public:
   static const char *Capture();
   static const char *Capture(const char *path);
-  static const char *Replay(const char *path, bool skip_version_check = false);
+  static const char *Replay(const char *path);
+  static const char *Replay(const char *path, bool skip_version_check);
   static const char *GetPath();
   static bool Generate();
 };
