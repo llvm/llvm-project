@@ -25,6 +25,30 @@ define <2 x i1> @bool_true_or_false_vec_undef(<2 x i1> %cond) {
   ret <2 x i1> %s
 }
 
+define i32 @cond_is_false(i32 %A, i32 %B) {
+; CHECK-LABEL: @cond_is_false(
+; CHECK-NEXT:    ret i32 [[B:%.*]]
+;
+  %C = select i1 false, i32 %A, i32 %B
+  ret i32 %C
+}
+
+define i32 @cond_is_true(i32 %A, i32 %B) {
+; CHECK-LABEL: @cond_is_true(
+; CHECK-NEXT:    ret i32 [[A:%.*]]
+;
+  %C = select i1 true, i32 %A, i32 %B
+  ret i32 %C
+}
+
+define i32 @equal_arms(i1 %C, i32 %I) {
+; CHECK-LABEL: @equal_arms(
+; CHECK-NEXT:    ret i32 [[I:%.*]]
+;
+  %V = select i1 %C, i32 %I, i32 %I
+  ret i32 %V
+}
+
 define <2 x i8> @vsel_tvec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @vsel_tvec(
 ; CHECK-NEXT:    ret <2 x i8> [[X:%.*]]
