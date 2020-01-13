@@ -834,7 +834,6 @@ define <4 x i32> @combine_vec_shl_mul1(<4 x i32> %x) {
 }
 
 ; fold (add (shl x, c1), c2) -> (or (shl x, c1), c2)
-; TODO: Handle minimum shift value case
 define <4 x i32> @combine_vec_add_shl_nonsplat(<4 x i32> %a0)  {
 ; SSE2-LABEL: combine_vec_add_shl_nonsplat:
 ; SSE2:       # %bb.0:
@@ -846,7 +845,7 @@ define <4 x i32> @combine_vec_add_shl_nonsplat(<4 x i32> %a0)  {
 ; SSE2-NEXT:    pmuludq %xmm2, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    paddd {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    por {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: combine_vec_add_shl_nonsplat:
@@ -859,7 +858,7 @@ define <4 x i32> @combine_vec_add_shl_nonsplat(<4 x i32> %a0)  {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [3,3,3,3]
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = shl <4 x i32> %a0, <i32 2, i32 3, i32 4, i32 5>
   %2 = add <4 x i32> %1, <i32 3, i32 3, i32 3, i32 3>
