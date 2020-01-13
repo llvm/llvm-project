@@ -68,6 +68,8 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
       return MO.getImm();
     case MachineOperand::MO_TargetIndex:
       return MO.getOffset() | (MO.getTargetFlags() << 16);
+    case MachineOperand::MO_FrameIndex:
+      return llvm::hash_value(MO);
 
     // We could explicitly handle all the types of the MachineOperand,
     // here but we can just return a common number until we find a
@@ -77,7 +79,6 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
 
     // TODO: Handle the following Index/ID/Predicate cases. They can
     // be hashed on in a stable manner.
-    case MachineOperand::MO_FrameIndex:
     case MachineOperand::MO_ConstantPoolIndex:
     case MachineOperand::MO_JumpTableIndex:
     case MachineOperand::MO_CFIIndex:
