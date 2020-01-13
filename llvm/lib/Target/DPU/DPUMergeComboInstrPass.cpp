@@ -135,10 +135,20 @@ static int64_t translateToUnaryDPUAsmCondition(int64_t cond) {
   case ISD::SETUGE:
   case ISD::SETGE:
     return DPUAsmCondition::PositiveOrNull;
+  case ISD::SETOGT:
+  case ISD::SETGT:
+    return DPUAsmCondition::GreaterThanSigned;
+  case ISD::SETUGT:
+    return DPUAsmCondition::GreaterThanUnsigned;
   case ISD::SETOLT:
   case ISD::SETULT:
   case ISD::SETLT:
     return DPUAsmCondition::Negative;
+  case ISD::SETOLE:
+  case ISD::SETLE:
+    return DPUAsmCondition::LessOrEqualSigned;
+  case ISD::SETULE:
+    return DPUAsmCondition::LessOrEqualUnsigned;
   }
 }
 
