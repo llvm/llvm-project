@@ -97,12 +97,6 @@ void llvm::X86Disassembler::Debug(const char *file, unsigned line,
   dbgs() << file << ":" << line << ": " << s;
 }
 
-StringRef llvm::X86Disassembler::GetInstrName(unsigned Opcode,
-                                                const void *mii) {
-  const MCInstrInfo *MII = static_cast<const MCInstrInfo *>(mii);
-  return MII->getName(Opcode);
-}
-
 #define debug(s) LLVM_DEBUG(Debug(__FILE__, __LINE__, s));
 
 namespace llvm {
