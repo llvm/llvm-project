@@ -13,6 +13,7 @@ from lldbsuite.test.lldbutil import get_stopped_thread, state_type_to_str
 
 class SignalsAPITestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(['pyapi'])
     @skipIfWindows  # Windows doesn't have signals

@@ -12,9 +12,9 @@ from lldbsuite.test import lldbutil
 class DebuggerAPITestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(['pyapi'])
-    @no_debug_info_test
     def test_debugger_api_boundary_condition(self):
         """Exercise SBDebugger APIs with boundary conditions."""
         self.dbg.HandleCommand(None)
