@@ -1,14 +1,14 @@
 // RUN: mlir-opt %s -linalg-promote-subviews | FileCheck %s
 // RUN: mlir-opt %s -linalg-promote-subviews -test-linalg-promote-dynamic | FileCheck %s --check-prefix=DYNAMIC
 
-#map0 = (d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)
-#map1 = (d0) -> (d0 + 2)
-#map2 = (d0) -> (d0 + 4)
-#map3 = (d0) -> (d0 + 3)
+#map0 = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+#map1 = affine_map<(d0) -> (d0 + 2)>
+#map2 = affine_map<(d0) -> (d0 + 4)>
+#map3 = affine_map<(d0) -> (d0 + 3)>
 
-// CHECK-DAG: #[[strided2D:.*]] = (d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)
-// CHECK-DAG: #[[strided2DnoOffset:.*]] = (d0, d1)[s0] -> (d0 * s0 + d1)
-// CHECK-DAG: #[[strided2D_dynamic:.*]] = (d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)
+// CHECK-DAG: #[[strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+// CHECK-DAG: #[[strided2DnoOffset:.*]] = affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>
+// CHECK-DAG: #[[strided2D_dynamic:.*]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 
 module {
   func @matmul(%A: memref<?xi8>, %M: index, %N: index, %K: index) {

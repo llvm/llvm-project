@@ -1,10 +1,10 @@
 // RUN: mlir-opt %s -memref-dataflow-opt | FileCheck %s
 
-// CHECK-DAG: [[MAP0:#map[0-9]+]] = (d0, d1) -> (d1 + 1)
-// CHECK-DAG: [[MAP1:#map[0-9]+]] = (d0, d1) -> (d0)
-// CHECK-DAG: [[MAP2:#map[0-9]+]] = (d0, d1) -> (d1)
-// CHECK-DAG: [[MAP3:#map[0-9]+]] = (d0, d1) -> (d0 - 1)
-// CHECK-DAG: [[MAP4:#map[0-9]+]] = (d0) -> (d0 + 1)
+// CHECK-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> (d1 + 1)>
+// CHECK-DAG: [[MAP1:#map[0-9]+]] = affine_map<(d0, d1) -> (d0)>
+// CHECK-DAG: [[MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> (d1)>
+// CHECK-DAG: [[MAP3:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 - 1)>
+// CHECK-DAG: [[MAP4:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
 
 // CHECK-LABEL: func @simple_store_load() {
 func @simple_store_load() {
@@ -61,10 +61,10 @@ func @store_load_affine_apply() -> memref<10x10xf32> {
   %m = alloc() : memref<10x10xf32>
   affine.for %i0 = 0 to 10 {
     affine.for %i1 = 0 to 10 {
-      %t0 = affine.apply (d0, d1) -> (d1 + 1)(%i0, %i1)
-      %t1 = affine.apply (d0, d1) -> (d0)(%i0, %i1)
-      %idx0 = affine.apply (d0, d1) -> (d1) (%t0, %t1)
-      %idx1 = affine.apply (d0, d1) -> (d0 - 1) (%t0, %t1)
+      %t0 = affine.apply affine_map<(d0, d1) -> (d1 + 1)>(%i0, %i1)
+      %t1 = affine.apply affine_map<(d0, d1) -> (d0)>(%i0, %i1)
+      %idx0 = affine.apply affine_map<(d0, d1) -> (d1)> (%t0, %t1)
+      %idx1 = affine.apply affine_map<(d0, d1) -> (d0 - 1)> (%t0, %t1)
       affine.store %cf7, %m[%idx0, %idx1] : memref<10x10xf32>
       // CHECK-NOT: affine.load %{{[0-9]+}}
       %v0 = affine.load %m[%i0, %i1] : memref<10x10xf32>
@@ -228,7 +228,7 @@ func @store_load_store_nested_fwd(%N : index) -> f32 {
     affine.for %i1 = 0 to %N {
       %v0 = affine.load %m[%i0] : memref<10xf32>
       %v1 = addf %v0, %v0 : f32
-      %idx = affine.apply (d0) -> (d0 + 1) (%i0)
+      %idx = affine.apply affine_map<(d0) -> (d0 + 1)> (%i0)
       affine.store %cf9, %m[%idx] : memref<10xf32>
     }
   }
@@ -260,7 +260,7 @@ func @should_not_fwd(%A: memref<100xf32>, %M : index, %N : index) -> f32 {
 // Can store forward to A[%j, %i], but no forwarding to load on %A[%i, %j]
 // CHECK-LABEL: func @refs_not_known_to_be_equal
 func @refs_not_known_to_be_equal(%A : memref<100 x 100 x f32>, %M : index) {
-  %N = affine.apply (d0) -> (d0 + 1) (%M)
+  %N = affine.apply affine_map<(d0) -> (d0 + 1)> (%M)
   %cf1 = constant 1.0 : f32
   affine.for %i = 0 to 100 {
   // CHECK: affine.for %[[I:.*]] =

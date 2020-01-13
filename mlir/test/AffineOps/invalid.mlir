@@ -6,7 +6,7 @@ func @affine_apply_operand_non_index(%arg0 : i32) {
   // Custom parser automatically assigns all arguments the `index` so we must
   // use the generic syntax here to exercise the verifier.
   // expected-error@+1 {{operands must be of type 'index'}}
-  %0 = "affine.apply"(%arg0) {map = (d0) -> (d0)} : (i32) -> (index)
+  %0 = "affine.apply"(%arg0) {map = affine_map<(d0) -> (d0)>} : (i32) -> (index)
   return
 }
 
@@ -16,13 +16,13 @@ func @affine_apply_resul_non_index(%arg0 : index) {
   // Custom parser automatically assigns `index` as the result type so we must
   // use the generic syntax here to exercise the verifier.
   // expected-error@+1 {{result must be of type 'index'}}
-  %0 = "affine.apply"(%arg0) {map = (d0) -> (d0)} : (index) -> (i32)
+  %0 = "affine.apply"(%arg0) {map = affine_map<(d0) -> (d0)>} : (index) -> (i32)
   return
 }
 
 // -----
 
-#map = (d0)[s0] -> (d0 + s0)
+#map = affine_map<(d0)[s0] -> (d0 + s0)>
 
 func @affine_for_lower_bound_invalid_dim(%arg : index) {
   affine.for %n0 = 0 to 7 {
@@ -37,7 +37,7 @@ func @affine_for_lower_bound_invalid_dim(%arg : index) {
 
 // -----
 
-#map = (d0)[s0] -> (d0 + s0)
+#map = affine_map<(d0)[s0] -> (d0 + s0)>
 
 func @affine_for_upper_bound_invalid_dim(%arg : index) {
   affine.for %n0 = 0 to 7 {
@@ -65,7 +65,7 @@ func @affine_load_invalid_dim(%M : memref<10xi32>) {
 
 // -----
 
-#map0 = (d0)[s0] -> (d0 + s0)
+#map0 = affine_map<(d0)[s0] -> (d0 + s0)>
 
 func @affine_for_lower_bound_invalid_sym() {
   affine.for %i0 = 0 to 7 {
@@ -78,7 +78,7 @@ func @affine_for_lower_bound_invalid_sym() {
 
 // -----
 
-#map0 = (d0)[s0] -> (d0 + s0)
+#map0 = affine_map<(d0)[s0] -> (d0 + s0)>
 
 func @affine_for_upper_bound_invalid_sym() {
   affine.for %i0 = 0 to 7 {
@@ -91,7 +91,7 @@ func @affine_for_upper_bound_invalid_sym() {
 
 // -----
 
-#set0 = (i)[N] : (i >= 0, N - i >= 0)
+#set0 = affine_set<(i)[N] : (i >= 0, N - i >= 0)>
 
 func @affine_if_invalid_dim(%arg : index) {
   affine.for %n0 = 0 to 7 {
@@ -105,7 +105,7 @@ func @affine_if_invalid_dim(%arg : index) {
 
 // -----
 
-#set0 = (i)[N] : (i >= 0, N - i >= 0)
+#set0 = affine_set<(i)[N] : (i >= 0, N - i >= 0)>
 
 func @affine_if_invalid_sym() {
   affine.for %i0 = 0 to 7 {
@@ -117,7 +117,7 @@ func @affine_if_invalid_sym() {
 
 // -----
 
-#set0 = (i)[N] : (i >= 0, N - i >= 0)
+#set0 = affine_set<(i)[N] : (i >= 0, N - i >= 0)>
 
 func @affine_if_invalid_dimop_dim(%arg0: index, %arg1: index, %arg2: index, %arg3: index) {
   affine.for %n0 = 0 to 7 {
@@ -144,7 +144,7 @@ func @affine_store_missing_l_square(%C: memref<4096x4096xf32>) {
 // CHECK-LABEL: @affine_min
 func @affine_min(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+1 {{operand count and affine map dimension and symbol count must match}}
-  %0 = affine.min (d0) -> (d0) (%arg0, %arg1)
+  %0 = affine.min affine_map<(d0) -> (d0)> (%arg0, %arg1)
 
   return
 }
@@ -154,7 +154,7 @@ func @affine_min(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CHECK-LABEL: @affine_min
 func @affine_min(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+1 {{operand count and affine map dimension and symbol count must match}}
-  %0 = affine.min ()[s0] -> (s0) (%arg0, %arg1)
+  %0 = affine.min affine_map<()[s0] -> (s0)> (%arg0, %arg1)
 
   return
 }
@@ -164,7 +164,7 @@ func @affine_min(%arg0 : index, %arg1 : index, %arg2 : index) {
 // CHECK-LABEL: @affine_min
 func @affine_min(%arg0 : index, %arg1 : index, %arg2 : index) {
   // expected-error@+1 {{operand count and affine map dimension and symbol count must match}}
-  %0 = affine.min (d0) -> (d0) ()
+  %0 = affine.min affine_map<(d0) -> (d0)> ()
 
   return
 }
