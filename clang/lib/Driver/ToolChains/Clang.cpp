@@ -5979,6 +5979,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // fails, so that the main compilation's fallback to cl.exe runs.
     C.addCommand(std::make_unique<ForceSuccessCommand>(JA, *this, Exec,
                                                         CmdArgs, Inputs));
+  } else if (D.CC1Main && !D.CCGenDiagnostics) {
+    // Invoke the CC1 directly in this process
+    C.addCommand(
+        std::make_unique<CC1Command>(JA, *this, Exec, CmdArgs, Inputs));
   } else {
     C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
   }
