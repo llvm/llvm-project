@@ -864,6 +864,7 @@ void ARMLowOverheadLoops::RemoveLoopUpdate(LowOverheadLoop &LoLoop) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Removing loop update instruction: ";
                Def->dump());
     Def->eraseFromParent();
+    return;
   }
 
   LLVM_DEBUG(dbgs() << "ARM Loops: Can't remove loop update, it's used by:\n";
