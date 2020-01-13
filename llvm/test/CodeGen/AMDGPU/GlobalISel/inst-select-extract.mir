@@ -168,8 +168,8 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: extract_sgpr_s64_from_s128
     ; CHECK: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY [[DEF]].sub0_sub1
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64_xexec = COPY [[DEF]].sub2_sub3
+    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY [[DEF]].sub0_sub1
+    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY [[DEF]].sub2_sub3
     ; CHECK: S_ENDPGM 0, implicit [[COPY]], implicit [[COPY1]]
     %0:sgpr(s128) = G_IMPLICIT_DEF
     %1:sgpr(s64) = G_EXTRACT %0, 0
