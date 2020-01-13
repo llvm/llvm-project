@@ -118,7 +118,7 @@ body: |
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r6, -28
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r5, -32
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION offset $r4, -36
-    ; CHECK-NEXT: $sp = frame-setup t2SUBri12 killed $sp, 1220, 14, $noreg
+    ; CHECK-NEXT: $sp = frame-setup t2SUBspImm12 killed $sp, 1220, 14, $noreg
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION def_cfa_offset 1256
     ; CHECK-NEXT: $r0 = IMPLICIT_DEF
     ; CHECK-NEXT: $r1 = IMPLICIT_DEF
