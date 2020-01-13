@@ -1,18 +1,15 @@
         .text
-        .globl  bar
+
         .type   bar, @function
 bar:
-.LFB0:
         .cfi_startproc
         leal    (%edi, %edi), %eax
         ret
         .cfi_endproc
-.LFE0:
         .size   bar, .-bar
-        .globl  foo
+
         .type   foo, @function
 foo:
-.LFB1:
         nop # Make the FDE entry start one byte later than the actual function.
         .cfi_startproc
         .cfi_register %rip, %r13
@@ -20,12 +17,11 @@ foo:
         addl    $1, %eax
         jmp     *%r13 # Return
         .cfi_endproc
-.LFE1:
         .size   foo, .-foo
+
         .globl  main
         .type   main, @function
 main:
-.LFB2:
         .cfi_startproc
         pushq   %rbp
         .cfi_def_cfa_offset 16
@@ -44,5 +40,4 @@ main:
         .cfi_def_cfa 7, 8
         ret
         .cfi_endproc
-.LFE2:
         .size   main, .-main
