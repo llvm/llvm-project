@@ -566,6 +566,10 @@ protected:
     TU.ExtraArgs.push_back("-std=c++17");
 
     auto AST = TU.build();
+    for (auto &D : AST.getDiagnostics()) {
+      if (D.Severity > DiagnosticsEngine::Warning)
+        ADD_FAILURE() << D << Code;
+    }
 
     auto *TestDecl = &findDecl(AST, "foo");
     if (auto *T = llvm::dyn_cast<FunctionTemplateDecl>(TestDecl))
@@ -718,7 +722,7 @@ TEST_F(FindExplicitReferencesTest, All) {
         "3: targets = {vb}, decl\n"},
        // MemberExpr should know their using declaration.
        {R"cpp(
-            struct X { void func(int); }
+            struct X { void func(int); };
             struct Y : X {
               using X::func;
             };
@@ -824,7 +828,7 @@ TEST_F(FindExplicitReferencesTest, All) {
             void foo() {
               $0^TT<int> $1^x;
               $2^foo<$3^TT>();
-              $4^foo<$5^vector>()
+              $4^foo<$5^vector>();
               $6^foo<$7^TP...>();
             }
         )cpp",
@@ -924,7 +928,7 @@ TEST_F(FindExplicitReferencesTest, All) {
        // Namespace aliases should be handled properly.
        {
            R"cpp(
-                namespace ns { struct Type {} }
+                namespace ns { struct Type {}; }
                 namespace alias = ns;
                 namespace rec_alias = alias;
 
