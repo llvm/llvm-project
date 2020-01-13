@@ -128,7 +128,7 @@ Error Config::addSaveTemps(std::string OutputFileName,
 namespace {
 
 std::unique_ptr<TargetMachine>
-createTargetMachine(Config &Conf, const Target *TheTarget, Module &M) {
+createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   StringRef TheTriple = M.getTargetTriple();
   SubtargetFeatures Features;
   Features.getDefaultSubtargetFeatures(Triple(TheTriple));
@@ -153,7 +153,7 @@ createTargetMachine(Config &Conf, const Target *TheTarget, Module &M) {
       CodeModel, Conf.CGOptLevel));
 }
 
-static void runNewPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
+static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
                            unsigned OptLevel, bool IsThinLTO,
                            ModuleSummaryIndex *ExportSummary,
                            const ModuleSummaryIndex *ImportSummary) {
@@ -269,7 +269,7 @@ static void runNewPMCustomPasses(Module &Mod, TargetMachine *TM,
   MPM.run(Mod, MAM);
 }
 
-static void runOldPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
+static void runOldPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
                            bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
                            const ModuleSummaryIndex *ImportSummary) {
   legacy::PassManager passes;
@@ -300,7 +300,7 @@ static void runOldPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
   passes.run(Mod);
 }
 
-bool opt(Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
+bool opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
          bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
          const ModuleSummaryIndex *ImportSummary) {
   // FIXME: Plumb the combined index into the new pass manager.
@@ -319,7 +319,7 @@ static cl::opt<bool> EmbedBitcode(
     "lto-embed-bitcode", cl::init(false),
     cl::desc("Embed LLVM bitcode in object files produced by LTO"));
 
-static void EmitBitcodeSection(Module &M, Config &Conf) {
+static void EmitBitcodeSection(Module &M, const Config &Conf) {
   if (!EmbedBitcode)
     return;
   SmallVector<char, 0> Buffer;
@@ -332,7 +332,7 @@ static void EmitBitcodeSection(Module &M, Config &Conf) {
                              /*EmbedMarker*/ false, /*CmdArgs*/ nullptr);
 }
 
-void codegen(Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
+void codegen(const Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
              unsigned Task, Module &Mod) {
   if (Conf.PreCodeGenModuleHook && !Conf.PreCodeGenModuleHook(Task, Mod))
     return;
@@ -372,7 +372,7 @@ void codegen(Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
     DwoOut->keep();
 }
 
-void splitCodeGen(Config &C, TargetMachine *TM, AddStreamFn AddStream,
+void splitCodeGen(const Config &C, TargetMachine *TM, AddStreamFn AddStream,
                   unsigned ParallelCodeGenParallelismLevel,
                   std::unique_ptr<Module> Mod) {
   ThreadPool CodegenThreadPool(ParallelCodeGenParallelismLevel);
@@ -420,7 +420,7 @@ void splitCodeGen(Config &C, TargetMachine *TM, AddStreamFn AddStream,
   CodegenThreadPool.wait();
 }
 
-Expected<const Target *> initAndLookupTarget(Config &C, Module &Mod) {
+Expected<const Target *> initAndLookupTarget(const Config &C, Module &Mod) {
   if (!C.OverrideTriple.empty())
     Mod.setTargetTriple(C.OverrideTriple);
   else if (Mod.getTargetTriple().empty())
@@ -432,7 +432,6 @@ Expected<const Target *> initAndLookupTarget(Config &C, Module &Mod) {
     return make_error<StringError>(Msg, inconvertibleErrorCode());
   return T;
 }
-
 }
 
 static Error
@@ -446,7 +445,7 @@ finalizeOptimizationRemarks(std::unique_ptr<ToolOutputFile> DiagOutputFile) {
   return Error::success();
 }
 
-Error lto::backend(Config &C, AddStreamFn AddStream,
+Error lto::backend(const Config &C, AddStreamFn AddStream,
                    unsigned ParallelCodeGenParallelismLevel,
                    std::unique_ptr<Module> Mod,
                    ModuleSummaryIndex &CombinedIndex) {
@@ -500,7 +499,7 @@ static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
   }
 }
 
-Error lto::thinBackend(Config &Conf, unsigned Task, AddStreamFn AddStream,
+Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        Module &Mod, const ModuleSummaryIndex &CombinedIndex,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
