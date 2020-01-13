@@ -1699,6 +1699,7 @@ TEST(Hover, Present) {
             HI.NamespaceScope.emplace();
           },
           R"(class foo
+
 documentation
 
 template <typename T, typename C = bool> class Foo {})",
@@ -1722,6 +1723,7 @@ template <typename T, typename C = bool> class Foo {})",
             HI.Definition = "ret_type foo(params) {}";
           },
           R"(function foo → ret_type
+
 - 
 - type
 - type foo
@@ -1740,6 +1742,7 @@ ret_type foo(params) {})",
             HI.Definition = "def";
           },
           R"(variable foo : type
+
 Value = value
 
 // In test::bar
@@ -1765,6 +1768,30 @@ TEST(Hover, PresentHeadings) {
   EXPECT_EQ(HI.present().asMarkdown(), "### variable `foo` \\: `type`");
 }
 
+// This is a separate test as rulers behave differently in markdown vs
+// plaintext.
+TEST(Hover, PresentRulers) {
+  HoverInfo HI;
+  HI.Kind = index::SymbolKind::Variable;
+  HI.Name = "foo";
+  HI.Value = "val";
+  HI.Definition = "def";
+
+  EXPECT_EQ(HI.present().asMarkdown(), R"md(### variable `foo`  
+
+---
+Value \= `val`  
+
+---
+```cpp
+def
+```)md");
+  EXPECT_EQ(HI.present().asPlainText(), R"pt(variable foo
+
+Value = val
+
+def)pt");
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
