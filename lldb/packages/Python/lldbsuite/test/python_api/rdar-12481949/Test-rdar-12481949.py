@@ -13,6 +13,7 @@ class Radar12481949DataFormatterTestCase(TestBase):
 
     # test for rdar://problem/12481949
     mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
         # Call super's setUp().
