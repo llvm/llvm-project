@@ -1090,6 +1090,8 @@ void AMDGPURegisterBankInfo::constrainOpWithReadfirstlane(
     .addDef(SGPR)
     .addReg(Reg);
 
+  MRI.setType(SGPR, MRI.getType(Reg));
+
   const TargetRegisterClass *Constrained =
       constrainGenericRegister(Reg, AMDGPU::VGPR_32RegClass, MRI);
   (void)Constrained;
