@@ -86,7 +86,7 @@ static std::vector<MCInst> loadImmediate(unsigned Reg, bool IsGPR32,
           .addImm(LoBits));
     }
 
-    return std::move(Instructions);
+    return Instructions;
   }
 
   llvm_unreachable("Not implemented for values wider than 32 bits");
