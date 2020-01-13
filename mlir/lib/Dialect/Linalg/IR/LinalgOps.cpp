@@ -465,14 +465,52 @@ static SmallVector<AffineMap, 4> getAffineMaps(ArrayAttr attrs) {
       [](Attribute a) { return a.cast<AffineMapAttr>().getValue(); }, attrs);
 }
 
-void mlir::linalg::ReshapeOp::build(Builder *b, OperationState &result,
-                                    Value view, ArrayAttr reassociation,
-                                    ArrayRef<NamedAttribute> attrs) {
-  auto maps = getAffineMaps(reassociation);
+template <typename AffineExprTy>
+unsigned getMaxPosOfType(ArrayRef<ArrayRef<AffineExpr>> exprArrays) {
+  unsigned pos = 0;
+  for (auto exprs : exprArrays) {
+    for (auto expr : exprs) {
+      expr.walk([&pos](AffineExpr e) {
+        if (auto d = e.dyn_cast<AffineExprTy>())
+          pos = std::max(pos, d.getPosition());
+      });
+    }
+  }
+  return pos;
+}
+
+static SmallVector<AffineMap, 4>
+getSymbolLessAffineMaps(ArrayRef<ArrayRef<AffineExpr>> reassociation) {
+  unsigned maxDim = getMaxPosOfType<AffineDimExpr>(reassociation);
+  unsigned maxSym = getMaxPosOfType<AffineSymbolExpr>(reassociation);
+  assert(maxSym == 0 && "Expected symbol-less expressions");
+  SmallVector<AffineMap, 4> maps;
+  maps.reserve(reassociation.size());
+  for (auto exprs : reassociation)
+    maps.push_back(AffineMap::get(maxDim + 1, 0, exprs));
+  return maps;
+}
+
+void mlir::linalg::ReshapeOp::build(
+    Builder *b, OperationState &result, Value view,
+    ArrayRef<ArrayRef<AffineExpr>> reassociation,
+    ArrayRef<NamedAttribute> attrs) {
+  auto maps = getSymbolLessAffineMaps(reassociation);
   auto memRefType = view.getType().cast<MemRefType>();
   auto resultType = computeReshapeCollapsedType(memRefType, maps);
   build(b, result, resultType, view, attrs);
-  result.addAttribute(ReshapeOp::getReassociationAttrName(), reassociation);
+  result.addAttribute(ReshapeOp::getReassociationAttrName(),
+                      b->getAffineMapArrayAttr(maps));
+}
+
+void mlir::linalg::ReshapeOp::build(
+    Builder *b, OperationState &result, Type resultType, Value view,
+    ArrayRef<ArrayRef<AffineExpr>> reassociation,
+    ArrayRef<NamedAttribute> attrs) {
+  auto maps = getSymbolLessAffineMaps(reassociation);
+  build(b, result, resultType, view, attrs);
+  result.addAttribute(ReshapeOp::getReassociationAttrName(),
+                      b->getAffineMapArrayAttr(maps));
 }
 
 static void print(OpAsmPrinter &p, ReshapeOp op) {

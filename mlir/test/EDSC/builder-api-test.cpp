@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/AffineOps/AffineOps.h"
 #include "mlir/Dialect/Linalg/EDSC/Builders.h"
+#include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/StandardOps/Ops.h"
 #include "mlir/EDSC/Builders.h"
@@ -957,6 +958,32 @@ TEST_FUNC(linalg_dilated_conv_nhwc) {
       makeValueHandles(llvm::to_vector<3>(f.getArguments())),
       /*depth_multiplier=*/7,
       /*strides=*/{3, 4}, /*dilations=*/{5, 6});
+
+  f.print(llvm::outs());
+  f.erase();
+}
+
+// clang-format off
+// CHECK-LABEL: func @linalg_metadata_ops
+//       CHECK: linalg.reshape {{.*}} [(d0, d1, d2) -> (d0, d1), (d0, d1, d2) -> (d2)] : memref<4x8x16xf32> into memref<32x16xf32>
+//       CHECK: linalg.reshape {{.*}} [(d0, d1, d2) -> (d0, d1), (d0, d1, d2) -> (d2)] : memref<32x16xf32> into memref<4x8x16xf32>
+// clang-format on
+TEST_FUNC(linalg_metadata_ops) {
+  using namespace edsc;
+  using namespace edsc::intrinsics;
+
+  auto f32Type = FloatType::getF32(&globalContext());
+  auto memrefType = MemRefType::get({4, 8, 16}, f32Type, {}, 0);
+  auto f = makeFunction("linalg_metadata_ops", {}, {memrefType});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  AffineExpr i, j, k;
+  bindDims(&globalContext(), i, j, k);
+  ValueHandle v(f.getArgument(0));
+  auto reshaped = linalg_reshape(v, ArrayRef<ArrayRef<AffineExpr>>{{i, j}, k});
+  linalg_reshape(memrefType, reshaped,
+                 ArrayRef<ArrayRef<AffineExpr>>{{i, j}, k});
 
   f.print(llvm::outs());
   f.erase();
