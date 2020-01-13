@@ -1025,6 +1025,8 @@ void SelectionDAGBuilder::clear() {
   UnusedArgNodeMap.clear();
   PendingLoads.clear();
   PendingExports.clear();
+  PendingConstrainedFP.clear();
+  PendingConstrainedFPStrict.clear();
   CurInst = nullptr;
   HasTailCall = false;
   SDNodeOrder = LowestSDNodeOrder;
@@ -1035,7 +1037,7 @@ void SelectionDAGBuilder::clearDanglingDebugInfo() {
   DanglingDebugInfoMap.clear();
 }
 
-SDValue SelectionDAGBuilder::getRoot() {
+SDValue SelectionDAGBuilder::getMemoryRoot() {
   if (PendingLoads.empty())
     return DAG.getRoot();
 
@@ -1053,8 +1055,30 @@ SDValue SelectionDAGBuilder::getRoot() {
   return Root;
 }
 
+SDValue SelectionDAGBuilder::getRoot() {
+  // Chain up all pending constrained intrinsics together with all
+  // pending loads, by simply appending them to PendingLoads and
+  // then calling getMemoryRoot().
+  PendingLoads.reserve(PendingLoads.size() +
+                       PendingConstrainedFP.size() +
+                       PendingConstrainedFPStrict.size());
+  PendingLoads.append(PendingConstrainedFP.begin(),
+                      PendingConstrainedFP.end());
+  PendingLoads.append(PendingConstrainedFPStrict.begin(),
+                      PendingConstrainedFPStrict.end());
+  PendingConstrainedFP.clear();
+  PendingConstrainedFPStrict.clear();
+  return getMemoryRoot();
+}
+
 SDValue SelectionDAGBuilder::getControlRoot() {
   SDValue Root = DAG.getRoot();
+
+  // We need to emit pending fpexcept.strict constrained intrinsics,
+  // so append them to the PendingExports list.
+  PendingExports.append(PendingConstrainedFPStrict.begin(),
+                        PendingConstrainedFPStrict.end());
+  PendingConstrainedFPStrict.clear();
 
   if (PendingExports.empty())
     return Root;
@@ -4060,9 +4084,11 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
 
   SDValue Root;
   bool ConstantMemory = false;
-  if (isVolatile || NumValues > MaxParallelChains)
+  if (isVolatile)
     // Serialize volatile loads with other side effects.
     Root = getRoot();
+  else if (NumValues > MaxParallelChains)
+    Root = getMemoryRoot();
   else if (AA &&
            AA->pointsToConstantMemory(MemoryLocation(
                SV,
@@ -4237,7 +4263,7 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
   SDValue Src = getValue(SrcV);
   SDValue Ptr = getValue(PtrV);
 
-  SDValue Root = getRoot();
+  SDValue Root = I.isVolatile() ? getRoot() : getMemoryRoot();
   SmallVector<SDValue, 4> Chains(std::min(MaxParallelChains, NumValues));
   SDLoc dl = getCurSDLoc();
   unsigned Alignment = I.getAlignment();
@@ -4329,7 +4355,7 @@ void SelectionDAGBuilder::visitMaskedStore(const CallInst &I,
                           VT.getStoreSize().getKnownMinSize(),
                           Alignment, AAInfo);
   SDValue StoreNode =
-      DAG.getMaskedStore(getRoot(), sdl, Src0, Ptr, Offset, Mask, VT, MMO,
+      DAG.getMaskedStore(getMemoryRoot(), sdl, Src0, Ptr, Offset, Mask, VT, MMO,
                          ISD::UNINDEXED, false /* Truncating */, IsCompressing);
   DAG.setRoot(StoreNode);
   setValue(&I, StoreNode);
@@ -4463,7 +4489,7 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
     IndexType = ISD::SIGNED_SCALED;
     Scale = DAG.getTargetConstant(1, sdl, TLI.getPointerTy(DAG.getDataLayout()));
   }
-  SDValue Ops[] = { getRoot(), Src0, Mask, Base, Index, Scale };
+  SDValue Ops[] = { getMemoryRoot(), Src0, Mask, Base, Index, Scale };
   SDValue Scatter = DAG.getMaskedScatter(DAG.getVTList(MVT::Other), VT, sdl,
                                          Ops, MMO, IndexType);
   DAG.setRoot(Scatter);
@@ -5850,7 +5876,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
     // FIXME: Support passing different dest/src alignments to the memcpy DAG
     // node.
-    SDValue MC = DAG.getMemcpy(getRoot(), sdl, Op1, Op2, Op3, Align, isVol,
+    SDValue Root = isVol ? getRoot() : getMemoryRoot();
+    SDValue MC = DAG.getMemcpy(Root, sdl, Op1, Op2, Op3, Align, isVol,
                                false, isTC,
                                MachinePointerInfo(I.getArgOperand(0)),
                                MachinePointerInfo(I.getArgOperand(1)));
@@ -5866,7 +5893,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     unsigned Align = std::max<unsigned>(MSI.getDestAlignment(), 1);
     bool isVol = MSI.isVolatile();
     bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
-    SDValue MS = DAG.getMemset(getRoot(), sdl, Op1, Op2, Op3, Align, isVol,
+    SDValue Root = isVol ? getRoot() : getMemoryRoot();
+    SDValue MS = DAG.getMemset(Root, sdl, Op1, Op2, Op3, Align, isVol,
                                isTC, MachinePointerInfo(I.getArgOperand(0)));
     updateDAGForMaybeTailCall(MS);
     return;
@@ -5884,7 +5912,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     bool isTC = I.isTailCall() && isInTailCallPosition(&I, DAG.getTarget());
     // FIXME: Support passing different dest/src alignments to the memmove DAG
     // node.
-    SDValue MM = DAG.getMemmove(getRoot(), sdl, Op1, Op2, Op3, Align, isVol,
+    SDValue Root = isVol ? getRoot() : getMemoryRoot();
+    SDValue MM = DAG.getMemmove(Root, sdl, Op1, Op2, Op3, Align, isVol,
                                 isTC, MachinePointerInfo(I.getArgOperand(0)),
                                 MachinePointerInfo(I.getArgOperand(1)));
     updateDAGForMaybeTailCall(MM);
@@ -7039,9 +7068,29 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   SDValue Result = DAG.getNode(Opcode, sdl, VTs, Opers);
 
   assert(Result.getNode()->getNumValues() == 2);
-  // See above -- chain is handled like for loads here.
+
+  // Push node to the appropriate list so that future instructions can be
+  // chained up correctly.
   SDValue OutChain = Result.getValue(1);
-  PendingLoads.push_back(OutChain);
+  switch (FPI.getExceptionBehavior().getValue()) {
+  case fp::ExceptionBehavior::ebIgnore:
+    // The only reason why ebIgnore nodes still need to be chained is that
+    // they might depend on the current rounding mode, and therefore must
+    // not be moved across instruction that may change that mode.
+    LLVM_FALLTHROUGH;
+  case fp::ExceptionBehavior::ebMayTrap:
+    // These must not be moved across calls or instructions that may change
+    // floating-point exception masks.
+    PendingConstrainedFP.push_back(OutChain);
+    break;
+  case fp::ExceptionBehavior::ebStrict:
+    // These must not be moved across calls or instructions that may change
+    // floating-point exception masks or read floating-point exception flags.
+    // In addition, they cannot be optimized out even if unused.
+    PendingConstrainedFPStrict.push_back(OutChain);
+    break;
+  }
+
   SDValue FPResult = Result.getValue(0);
   setValue(&FPI, FPResult);
 }
@@ -7424,7 +7473,8 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   // In the mempcpy context we need to pass in a false value for isTailCall
   // because the return pointer needs to be adjusted by the size of
   // the copied memory.
-  SDValue MC = DAG.getMemcpy(getRoot(), sdl, Dst, Src, Size, Align, isVol,
+  SDValue Root = isVol ? getRoot() : getMemoryRoot();
+  SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, Align, isVol,
                              false, /*isTailCall=*/false,
                              MachinePointerInfo(I.getArgOperand(0)),
                              MachinePointerInfo(I.getArgOperand(1)));
