@@ -1088,6 +1088,115 @@ bool AMDGPUInstructionSelector::selectDSOrderedIntrinsic(
   return Ret;
 }
 
+static unsigned gwsIntrinToOpcode(unsigned IntrID) {
+  switch (IntrID) {
+  case Intrinsic::amdgcn_ds_gws_init:
+    return AMDGPU::DS_GWS_INIT;
+  case Intrinsic::amdgcn_ds_gws_barrier:
+    return AMDGPU::DS_GWS_BARRIER;
+  case Intrinsic::amdgcn_ds_gws_sema_v:
+    return AMDGPU::DS_GWS_SEMA_V;
+  case Intrinsic::amdgcn_ds_gws_sema_br:
+    return AMDGPU::DS_GWS_SEMA_BR;
+  case Intrinsic::amdgcn_ds_gws_sema_p:
+    return AMDGPU::DS_GWS_SEMA_P;
+  case Intrinsic::amdgcn_ds_gws_sema_release_all:
+    return AMDGPU::DS_GWS_SEMA_RELEASE_ALL;
+  default:
+    llvm_unreachable("not a gws intrinsic");
+  }
+}
+
+bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
+                                                     Intrinsic::ID IID) const {
+  if (IID == Intrinsic::amdgcn_ds_gws_sema_release_all &&
+      !STI.hasGWSSemaReleaseAll())
+    return false;
+
+  // intrinsic ID, vsrc, offset
+  const bool HasVSrc = MI.getNumOperands() == 3;
+  assert(HasVSrc || MI.getNumOperands() == 2);
+
+  Register BaseOffset = MI.getOperand(HasVSrc ? 2 : 1).getReg();
+  const RegisterBank *OffsetRB = RBI.getRegBank(BaseOffset, *MRI, TRI);
+  if (OffsetRB->getID() != AMDGPU::SGPRRegBankID)
+    return false;
+
+  MachineInstr *OffsetDef = getDefIgnoringCopies(BaseOffset, *MRI);
+  assert(OffsetDef);
+
+  unsigned ImmOffset;
+
+  MachineBasicBlock *MBB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  MachineInstr *Readfirstlane = nullptr;
+
+  // If we legalized the VGPR input, strip out the readfirstlane to analyze the
+  // incoming offset, in case there's an add of a constant. We'll have to put it
+  // back later.
+  if (OffsetDef->getOpcode() == AMDGPU::V_READFIRSTLANE_B32) {
+    Readfirstlane = OffsetDef;
+    BaseOffset = OffsetDef->getOperand(1).getReg();
+    OffsetDef = getDefIgnoringCopies(BaseOffset, *MRI);
+  }
+
+  if (OffsetDef->getOpcode() == AMDGPU::G_CONSTANT) {
+    // If we have a constant offset, try to use the 0 in m0 as the base.
+    // TODO: Look into changing the default m0 initialization value. If the
+    // default -1 only set the low 16-bits, we could leave it as-is and add 1 to
+    // the immediate offset.
+
+    ImmOffset = OffsetDef->getOperand(1).getCImm()->getZExtValue();
+    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+      .addImm(0);
+  } else {
+    std::tie(BaseOffset, ImmOffset, OffsetDef)
+      = AMDGPU::getBaseWithConstantOffset(*MRI, BaseOffset);
+
+    if (Readfirstlane) {
+      // We have the constant offset now, so put the readfirstlane back on the
+      // variable component.
+      if (!RBI.constrainGenericRegister(BaseOffset, AMDGPU::VGPR_32RegClass, *MRI))
+        return false;
+
+      Readfirstlane->getOperand(1).setReg(BaseOffset);
+      BaseOffset = Readfirstlane->getOperand(0).getReg();
+    } else {
+      if (!RBI.constrainGenericRegister(BaseOffset,
+                                        AMDGPU::SReg_32RegClass, *MRI))
+        return false;
+    }
+
+    Register M0Base = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_LSHL_B32), M0Base)
+      .addReg(BaseOffset)
+      .addImm(16);
+
+    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
+      .addReg(M0Base);
+  }
+
+  // The resource id offset is computed as (<isa opaque base> + M0[21:16] +
+  // offset field) % 64. Some versions of the programming guide omit the m0
+  // part, or claim it's from offset 0.
+  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(gwsIntrinToOpcode(IID)));
+
+  if (HasVSrc) {
+    Register VSrc = MI.getOperand(1).getReg();
+    MIB.addReg(VSrc);
+    if (!RBI.constrainGenericRegister(VSrc, AMDGPU::VGPR_32RegClass, *MRI))
+      return false;
+  }
+
+  MIB.addImm(ImmOffset)
+     .addImm(-1) // $gds
+     .cloneMemRefs(MI);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
@@ -1114,6 +1223,13 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap:
     return selectDSOrderedIntrinsic(I, IntrinsicID);
+  case Intrinsic::amdgcn_ds_gws_init:
+  case Intrinsic::amdgcn_ds_gws_barrier:
+  case Intrinsic::amdgcn_ds_gws_sema_v:
+  case Intrinsic::amdgcn_ds_gws_sema_br:
+  case Intrinsic::amdgcn_ds_gws_sema_p:
+  case Intrinsic::amdgcn_ds_gws_sema_release_all:
+    return selectDSGWSIntrinsic(I, IntrinsicID);
   default:
     return selectImpl(I, *CoverageInfo);
   }
