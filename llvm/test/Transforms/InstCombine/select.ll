@@ -5,39 +5,6 @@
 
 target datalayout = "e-p:64:64-p1:16:16-p2:32:32:32-p3:64:64:64"
 
-define i32 @test1(i32 %A, i32 %B) {
-; CHECK-LABEL: @test1(
-; CHECK-NEXT:    ret i32 [[B:%.*]]
-;
-  %C = select i1 false, i32 %A, i32 %B
-  ret i32 %C
-}
-
-define i32 @test2(i32 %A, i32 %B) {
-; CHECK-LABEL: @test2(
-; CHECK-NEXT:    ret i32 [[A:%.*]]
-;
-  %C = select i1 true, i32 %A, i32 %B
-  ret i32 %C
-}
-
-
-define i32 @test3(i1 %C, i32 %I) {
-; CHECK-LABEL: @test3(
-; CHECK-NEXT:    ret i32 [[I:%.*]]
-;
-  %V = select i1 %C, i32 %I, i32 %I
-  ret i32 %V
-}
-
-define i1 @test4(i1 %C) {
-; CHECK-LABEL: @test4(
-; CHECK-NEXT:    ret i1 [[C:%.*]]
-;
-  %V = select i1 %C, i1 true, i1 false
-  ret i1 %V
-}
-
 define i1 @test5(i1 %C) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
