@@ -47,10 +47,10 @@ define void @TestFPExtF32_F128() nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vf128+8
-; X86-NEXT:    movl %edx, vf128+12
-; X86-NEXT:    movl %eax, vf128
+; X86-NEXT:    movl %esi, vf128+12
+; X86-NEXT:    movl %edx, vf128+8
 ; X86-NEXT:    movl %ecx, vf128+4
+; X86-NEXT:    movl %eax, vf128
 ; X86-NEXT:    addl $24, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -94,10 +94,10 @@ define void @TestFPExtF64_F128() nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vf128+8
-; X86-NEXT:    movl %edx, vf128+12
-; X86-NEXT:    movl %eax, vf128
+; X86-NEXT:    movl %esi, vf128+12
+; X86-NEXT:    movl %edx, vf128+8
 ; X86-NEXT:    movl %ecx, vf128+4
+; X86-NEXT:    movl %eax, vf128
 ; X86-NEXT:    addl $40, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -143,10 +143,10 @@ define void @TestFPExtF80_F128() nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, vf128+8
-; X86-NEXT:    movl %edx, vf128+12
-; X86-NEXT:    movl %eax, vf128
+; X86-NEXT:    movl %esi, vf128+12
+; X86-NEXT:    movl %edx, vf128+8
 ; X86-NEXT:    movl %ecx, vf128+4
+; X86-NEXT:    movl %eax, vf128
 ; X86-NEXT:    addl $40, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -396,10 +396,10 @@ define i128 @fptosi_i128(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
@@ -535,10 +535,10 @@ define i128 @fptoui_i128(fp128 %x) nounwind strictfp {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl %edi, 12(%esi)
-; X86-NEXT:    movl %edx, 8(%esi)
-; X86-NEXT:    movl %ecx, 4(%esi)
+; X86-NEXT:    movl %edi, 8(%esi)
+; X86-NEXT:    movl %edx, 12(%esi)
 ; X86-NEXT:    movl %eax, (%esi)
+; X86-NEXT:    movl %ecx, 4(%esi)
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $20, %esp
 ; X86-NEXT:    popl %esi
