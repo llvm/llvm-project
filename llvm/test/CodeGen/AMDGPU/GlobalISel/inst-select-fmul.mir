@@ -18,9 +18,9 @@ body: |
     ; GCN: [[V_MUL_F32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $exec
     ; GCN: [[V_MUL_F32_e64_1:%[0-9]+]]:vgpr_32 = V_MUL_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $exec
     ; GCN: [[V_MUL_F32_e64_2:%[0-9]+]]:vgpr_32 = V_MUL_F32_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $exec
-    ; GCN: FLAT_STORE_DWORD [[COPY3]], [[V_MUL_F32_e64_]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN: FLAT_STORE_DWORD [[COPY3]], [[V_MUL_F32_e64_1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN: FLAT_STORE_DWORD [[COPY3]], [[V_MUL_F32_e64_2]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN: FLAT_STORE_DWORD [[COPY3]], [[V_MUL_F32_e64_]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GCN: FLAT_STORE_DWORD [[COPY3]], [[V_MUL_F32_e64_1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GCN: FLAT_STORE_DWORD [[COPY3]], [[V_MUL_F32_e64_2]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     %0:sgpr(s32) = COPY $sgpr0
     %1:vgpr(s32) = COPY $vgpr0
     %2:vgpr(s32) = COPY $vgpr1
@@ -50,7 +50,7 @@ body: |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; GCN-LABEL: name: fmul_f64
-    ; GCN: [[COPY:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; GCN: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GCN: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
     ; GCN: [[V_MUL_F64_:%[0-9]+]]:vreg_64 = V_MUL_F64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $exec
@@ -133,16 +133,16 @@ body: |
     ; GCN: [[V_MUL_F32_e64_7:%[0-9]+]]:vgpr_32 = V_MUL_F32_e64 0, [[COPY]], 3, [[COPY]], 0, 0, implicit $exec
     ; GCN: [[V_MUL_F32_e64_8:%[0-9]+]]:vgpr_32 = V_MUL_F32_e64 3, [[COPY]], 3, [[COPY]], 0, 0, implicit $exec
     ; GCN: [[V_MUL_F32_e64_9:%[0-9]+]]:vgpr_32 = V_MUL_F32_e64 3, [[COPY]], 1, [[COPY]], 0, 0, implicit $exec
-    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_2]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_3]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_4]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_5]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_6]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_7]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_8]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_9]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_1]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_2]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_3]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_4]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_5]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_6]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_7]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_8]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
+    ; GCN: FLAT_STORE_DWORD [[COPY1]], [[V_MUL_F32_e64_9]], 0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (store 4, addrspace 1)
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(p1) = COPY $vgpr2_vgpr3
