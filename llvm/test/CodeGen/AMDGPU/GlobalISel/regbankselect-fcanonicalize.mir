@@ -11,7 +11,8 @@ body: |
     liveins: $sgpr0_sgpr1
     ; CHECK-LABEL: name: fcanonicalize_s
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[FCANONICALIZE:%[0-9]+]]:vgpr(s32) = G_FCANONICALIZE [[COPY]]
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[FCANONICALIZE:%[0-9]+]]:vgpr(s32) = G_FCANONICALIZE [[COPY1]]
     ; CHECK: $vgpr0 = COPY [[FCANONICALIZE]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = G_FCANONICALIZE %0
