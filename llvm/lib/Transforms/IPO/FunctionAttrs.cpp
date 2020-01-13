@@ -366,18 +366,23 @@ static FunctionAccessKind checkFunctionAccess(Function &F, bool ThisBody,
     return AccessKind;
   }
 
+  DenseMap<const Value *, SmallVector<const Value *, 1>> ObjectMap;
+  const DataLayout DL = F.getParent()->getDataLayout();
+
   // Scan the function body for instructions that may read or write memory.
   FunctionAccessKind AccessKind = FAK_None;
   for (inst_iterator II = inst_begin(F), E = inst_end(F); II != E; ++II) {
     Instruction *I = &*II;
+
+    if (isa<DbgInfoIntrinsic>(I))
+      continue;
 
     if (!I->mayReadFromMemory() && !I->mayWriteToMemory())
       continue;
 
     // Some instructions can be ignored even if they read or write memory.
     // Detect these now, skipping to the next instruction if one is found.
-    // CallSite CS(cast<Value>(I));
-    if (CallBase *CS = dyn_cast<CallBase>(I)) {
+    if (const CallBase *CS = dyn_cast<CallBase>(I)) {
       FunctionModRefBehavior MRB = AAR.getModRefBehavior(CS);
       ModRefInfo MRI = createModRefInfo(MRB);
 
@@ -403,9 +408,7 @@ static FunctionAccessKind checkFunctionAccess(Function &F, bool ThisBody,
 
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
-      for (CallSite::arg_iterator CI = CS->arg_begin(), CE = CS->arg_end();
-           CI != CE; ++CI) {
-        Value *Arg = *CI;
+      for (const Value *Arg : CS->args()) {
         if (!Arg->getType()->isPtrOrPtrVectorTy())
           continue;
 
@@ -418,11 +421,10 @@ static FunctionAccessKind checkFunctionAccess(Function &F, bool ThisBody,
         if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
           continue;
 
-        SmallVector<const Value *, 8> Objects;
-        const DataLayout DL = F.getParent()->getDataLayout();
-        GetUnderlyingObjects(const_cast<Value *>(Loc.Ptr), Objects, DL,
-                             nullptr, 0);
-        for (const Value *Obj : Objects) {
+        if (!ObjectMap.count(Loc.Ptr))
+          GetUnderlyingObjects(const_cast<Value *>(Loc.Ptr),
+                               ObjectMap[Loc.Ptr], DL, nullptr, 0);
+        for (const Value *Obj : ObjectMap[Loc.Ptr]) {
           if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Obj))
             if (!GV->isConstant())
               AccessKind = FunctionAccessKind(AccessKind | FAK_NonArgMem);
@@ -459,11 +461,10 @@ static FunctionAccessKind checkFunctionAccess(Function &F, bool ThisBody,
       if (FAK_NonArgMem & AccessKind)
         continue;
 
-      SmallVector<const Value *, 8> Objects;
-      const DataLayout DL = F.getParent()->getDataLayout();
-      GetUnderlyingObjects(const_cast<Value *>(Loc->Ptr), Objects, DL,
-                           nullptr, 0);
-      for (const Value *Obj : Objects) {
+      if (!ObjectMap.count(Loc->Ptr))
+        GetUnderlyingObjects(const_cast<Value *>(Loc->Ptr),
+                             ObjectMap[Loc->Ptr], DL, nullptr, 0);
+      for (const Value *Obj : ObjectMap[Loc->Ptr]) {
         if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Obj))
           if (!GV->isConstant())
             AccessKind = FunctionAccessKind(AccessKind | FAK_NonArgMem);
