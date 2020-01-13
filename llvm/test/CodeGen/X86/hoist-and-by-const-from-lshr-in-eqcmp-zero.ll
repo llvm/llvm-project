@@ -762,7 +762,7 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ; X86-BMI1-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-BMI1-NEXT:    movl $1, %eax
 ; X86-BMI1-NEXT:    shrl %cl, %eax
-; X86-BMI1-NEXT:    testl $-1437226411, %eax # imm = 0xAA55AA55
+; X86-BMI1-NEXT:    testb %al, %al
 ; X86-BMI1-NEXT:    sete %al
 ; X86-BMI1-NEXT:    retl
 ;
@@ -771,7 +771,7 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ; X86-BMI2-NEXT:    movb {{[0-9]+}}(%esp), %al
 ; X86-BMI2-NEXT:    movl $1, %ecx
 ; X86-BMI2-NEXT:    shrxl %eax, %ecx, %eax
-; X86-BMI2-NEXT:    testl $-1437226411, %eax # imm = 0xAA55AA55
+; X86-BMI2-NEXT:    testb %al, %al
 ; X86-BMI2-NEXT:    sete %al
 ; X86-BMI2-NEXT:    retl
 ;
@@ -781,7 +781,7 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ; X64-BMI1-NEXT:    movl $1, %eax
 ; X64-BMI1-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-BMI1-NEXT:    shrl %cl, %eax
-; X64-BMI1-NEXT:    testl $-1437226411, %eax # imm = 0xAA55AA55
+; X64-BMI1-NEXT:    testb %al, %al
 ; X64-BMI1-NEXT:    sete %al
 ; X64-BMI1-NEXT:    retq
 ;
@@ -789,7 +789,7 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ; X64-BMI2:       # %bb.0:
 ; X64-BMI2-NEXT:    movl $1, %eax
 ; X64-BMI2-NEXT:    shrxl %edi, %eax, %eax
-; X64-BMI2-NEXT:    testl $-1437226411, %eax # imm = 0xAA55AA55
+; X64-BMI2-NEXT:    testb %al, %al
 ; X64-BMI2-NEXT:    sete %al
 ; X64-BMI2-NEXT:    retq
   %t0 = lshr i32 1, %y
@@ -803,24 +803,10 @@ define i1 @scalar_i32_x_is_const2_eq(i32 %y) nounwind {
 ;------------------------------------------------------------------------------;
 
 define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
-; X86-LABEL: negative_scalar_i8_bitsinmiddle_slt:
-; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movb $24, %al
-; X86-NEXT:    shrb %cl, %al
-; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    shrb $7, %al
-; X86-NEXT:    retl
-;
-; X64-LABEL: negative_scalar_i8_bitsinmiddle_slt:
-; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    movb $24, %al
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shrb %cl, %al
-; X64-NEXT:    andb %dil, %al
-; X64-NEXT:    shrb $7, %al
-; X64-NEXT:    retq
+; CHECK-LABEL: negative_scalar_i8_bitsinmiddle_slt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    ret{{[l|q]}}
   %t0 = lshr i8 24, %y
   %t1 = and i8 %t0, %x
   %res = icmp slt i8 %t1, 0
