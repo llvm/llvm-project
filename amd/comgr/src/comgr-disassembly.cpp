@@ -138,7 +138,7 @@ amd_comgr_status_t DisassemblyInfo::disassembleInstruction(uint64_t Address,
   MCInst Inst;
   std::string Annotations;
   raw_string_ostream AnnotationsStream(Annotations);
-  if (DisAsm->getInstruction(Inst, Size, Buffer, Address, nulls(),
+  if (DisAsm->getInstruction(Inst, Size, Buffer, Address,
                              AnnotationsStream) != MCDisassembler::Success)
     return AMD_COMGR_STATUS_ERROR;
 

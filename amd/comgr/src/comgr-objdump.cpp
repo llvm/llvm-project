@@ -1474,12 +1474,6 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
       // COMGR TBD: Get rid of ".text:"??
       OutS << '\n' << std::get<1>(Symbols[si]) << ":\n";
 
-#ifndef NDEBUG
-      raw_ostream &DebugOut = DebugFlag ? dbgs() : nulls();
-#else
-      raw_ostream &DebugOut = nulls();
-#endif
-
       for (Index = Start; Index < End; Index += Size) {
         MCInst Inst;
 
@@ -1601,8 +1595,7 @@ void llvm::DisassemHelper::DisassembleObject(const ObjectFile *Obj,
         // Disassemble a real instruction or a data when disassemble all is
         // provided
         bool Disassembled = DisAsm->getInstruction(
-            Inst, Size, Bytes.slice(Index), SectionAddr + Index, DebugOut,
-            CommentStream);
+            Inst, Size, Bytes.slice(Index), SectionAddr + Index, CommentStream);
         if (Size == 0)
           Size = 1;
 
