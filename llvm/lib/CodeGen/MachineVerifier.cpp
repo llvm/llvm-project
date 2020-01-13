@@ -1407,18 +1407,6 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    const Constant *Mask = MaskOp.getShuffleMask();
-    auto *MaskVT = dyn_cast<VectorType>(Mask->getType());
-    if (!MaskVT || !MaskVT->getElementType()->isIntegerTy(32)) {
-      report("Invalid shufflemask constant type", MI);
-      break;
-    }
-
-    if (!Mask->getAggregateElement(0u)) {
-      report("Invalid shufflemask constant type", MI);
-      break;
-    }
-
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT Src0Ty = MRI->getType(MI->getOperand(1).getReg());
     LLT Src1Ty = MRI->getType(MI->getOperand(2).getReg());
@@ -1434,8 +1422,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     int SrcNumElts = Src0Ty.isVector() ? Src0Ty.getNumElements() : 1;
     int DstNumElts = DstTy.isVector() ? DstTy.getNumElements() : 1;
 
-    SmallVector<int, 32> MaskIdxes;
-    ShuffleVectorInst::getShuffleMask(Mask, MaskIdxes);
+    ArrayRef<int> MaskIdxes = MaskOp.getShuffleMask();
 
     if (static_cast<int>(MaskIdxes.size()) != DstNumElts)
       report("Wrong result type for shufflemask", MI);
