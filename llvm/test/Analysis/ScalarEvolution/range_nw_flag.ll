@@ -2,7 +2,7 @@
 
 ; copied from flags-from-poison.ll
 ; CHECK-LABEL: @test-add-nuw
-; CHECK: -->  {(1 + %offset)<nuw>,+,1}<nuw><%loop> U: full-set S: full-set
+; CHECK: -->  {(1 + %offset)<nuw>,+,1}<nuw><%loop> U: [1,0) S: [1,0)
 define void @test-add-nuw(float* %input, i32 %offset, i32 %numIterations) {
 entry:
   br label %loop
@@ -20,7 +20,7 @@ exit:
 }
 
 ; CHECK-LABEL: @test-addrec-nuw
-; CHECK: -->  {(1 + (10 smax %offset))<nuw>,+,1}<nuw><%loop> U: full-set S: full-set 
+; CHECK: -->  {(1 + (10 smax %offset))<nuw>,+,1}<nuw><%loop> U: [11,0) S: [11,0)
 define void @test-addrec-nuw(float* %input, i32 %offset, i32 %numIterations) {
 entry:
   %cmp = icmp sgt i32 %offset, 10
