@@ -603,8 +603,7 @@ class TemplateDiff {
     unsigned ReadNode;
 
   public:
-    DiffTree() :
-        CurrentNode(0), NextFreeNode(1) {
+    DiffTree() : CurrentNode(0), NextFreeNode(1), ReadNode(0) {
       FlatTree.push_back(DiffNode());
     }
 
