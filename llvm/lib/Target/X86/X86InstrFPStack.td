@@ -29,7 +29,7 @@ def SDTX86CwdStore  : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 def X86fld          : SDNode<"X86ISD::FLD", SDTX86Fld,
                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def X86fst          : SDNode<"X86ISD::FST", SDTX86Fst,
-                             [SDNPHasChain, SDNPInGlue, SDNPMayStore,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPMayStore,
                               SDNPMemOperand]>;
 def X86fild         : SDNode<"X86ISD::FILD", SDTX86Fild,
                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
@@ -37,7 +37,7 @@ def X86fildflag     : SDNode<"X86ISD::FILD_FLAG", SDTX86Fild,
                              [SDNPHasChain, SDNPOutGlue, SDNPMayLoad,
                               SDNPMemOperand]>;
 def X86fist         : SDNode<"X86ISD::FIST", SDTX86Fist,
-                             [SDNPHasChain, SDNPInGlue, SDNPMayStore,
+                             [SDNPHasChain, SDNPOptInGlue, SDNPMayStore,
                               SDNPMemOperand]>;
 def X86fp_stsw      : SDNode<"X86ISD::FNSTSW16r", SDTX86Fnstsw>;
 def X86fp_to_mem : SDNode<"X86ISD::FP_TO_INT_IN_MEM", SDTX86Fst,
