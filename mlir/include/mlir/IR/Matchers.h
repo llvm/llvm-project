@@ -56,6 +56,8 @@ template <typename AttrT> struct constant_op_binder {
   /// Creates a matcher instance that binds the constant attribute value to
   /// bind_value if match succeeds.
   constant_op_binder(AttrT *bind_value) : bind_value(bind_value) {}
+  /// Creates a matcher instance that doesn't bind if match succeeds.
+  constant_op_binder() : bind_value(nullptr) {}
 
   bool match(Operation *op) {
     if (op->getNumOperands() > 0 || op->getNumResults() != 1)
@@ -66,8 +68,11 @@ template <typename AttrT> struct constant_op_binder {
     SmallVector<OpFoldResult, 1> foldedOp;
     if (succeeded(op->fold(/*operands=*/llvm::None, foldedOp))) {
       if (auto attr = foldedOp.front().dyn_cast<Attribute>()) {
-        if ((*bind_value = attr.dyn_cast<AttrT>()))
+        if (auto attrT = attr.dyn_cast<AttrT>()) {
+          if (bind_value)
+            *bind_value = attrT;
           return true;
+        }
       }
     }
     return false;
@@ -195,6 +200,11 @@ struct RecursivePatternMatcher {
 };
 
 } // end namespace detail
+
+/// Matches a constant foldable operation.
+inline detail::constant_op_binder<Attribute> m_Constant() {
+  return detail::constant_op_binder<Attribute>();
+}
 
 /// Matches a value from a constant foldable operation and writes the value to
 /// bind_value.
