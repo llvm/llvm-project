@@ -24,13 +24,25 @@ define amdgpu_kernel void @test_write_exec(i64 %val) #0 {
   ret void
 }
 
-; CHECK-LABEL: {{^}}test_write_flat_scratch:
+; CHECK-LABEL: {{^}}test_write_flat_scratch_0:
 ; CHECK: s_mov_b64 flat_scratch, 0
-; CHECK: s_mov_b64 flat_scratch, -1
-; CHECK: s_mov_b64 flat_scratch, s{{\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @test_write_flat_scratch(i64 %val) #0 {
+define amdgpu_kernel void @test_write_flat_scratch_0(i64 %val) #0 {
   call void @llvm.write_register.i64(metadata !2, i64 0)
+  call void @llvm.amdgcn.wave.barrier() #1
+  ret void
+}
+
+; CHECK-LABEL: {{^}}test_write_flat_scratch_neg1:
+; CHECK: s_mov_b64 flat_scratch, -1
+define amdgpu_kernel void @test_write_flat_scratch_neg1(i64 %val) #0 {
   call void @llvm.write_register.i64(metadata !2, i64 -1)
+  call void @llvm.amdgcn.wave.barrier() #1
+  ret void
+}
+
+; CHECK-LABEL: {{^}}test_write_flat_scratch_val:
+; CHECK: s_load_dwordx2 flat_scratch, s{{\[[0-9]+:[0-9]+\]}}
+define amdgpu_kernel void @test_write_flat_scratch_val(i64 %val) #0 {
   call void @llvm.write_register.i64(metadata !2, i64 %val)
   call void @llvm.amdgcn.wave.barrier() #1
   ret void
