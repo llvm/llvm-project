@@ -2435,10 +2435,10 @@ bool AMDGPULegalizerInfo::legalizeRawBufferStore(MachineInstr &MI,
   return Ty == S32;
 }
 
-bool AMDGPULegalizerInfo::legalizeRawBufferLoad(MachineInstr &MI,
-                                                MachineRegisterInfo &MRI,
-                                                MachineIRBuilder &B,
-                                                bool IsFormat) const {
+bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
+                                             MachineRegisterInfo &MRI,
+                                             MachineIRBuilder &B,
+                                             bool IsFormat) const {
   B.setInstr(MI);
 
   // FIXME: Verifier should enforce 1 MMO for these intrinsics.
@@ -2448,9 +2448,19 @@ bool AMDGPULegalizerInfo::legalizeRawBufferLoad(MachineInstr &MI,
 
   Register Dst = MI.getOperand(0).getReg();
   Register RSrc = MI.getOperand(2).getReg();
-  Register VOffset = MI.getOperand(3).getReg();
-  Register SOffset = MI.getOperand(4).getReg();
-  unsigned AuxiliaryData = MI.getOperand(5).getImm();
+
+  // The struct intrinsic variants add one additional operand over raw.
+  const bool HasVIndex = MI.getNumOperands() == 7;
+  Register VIndex;
+  int OpOffset = 0;
+  if (HasVIndex) {
+    VIndex = MI.getOperand(3).getReg();
+    OpOffset = 1;
+  }
+
+  Register VOffset = MI.getOperand(3 + OpOffset).getReg();
+  Register SOffset = MI.getOperand(4 + OpOffset).getReg();
+  unsigned AuxiliaryData = MI.getOperand(5 + OpOffset).getImm();
   unsigned ImmOffset;
   unsigned TotalOffset;
 
@@ -2493,17 +2503,18 @@ bool AMDGPULegalizerInfo::legalizeRawBufferLoad(MachineInstr &MI,
   else
     LoadDstReg = Dst;
 
-  Register VIndex = B.buildConstant(S32, 0).getReg(0);
+  if (!VIndex)
+    VIndex = B.buildConstant(S32, 0).getReg(0);
 
   B.buildInstr(Opc)
-    .addDef(LoadDstReg)    // vdata
-    .addUse(RSrc)          // rsrc
-    .addUse(VIndex)        // vindex
-    .addUse(VOffset)       // voffset
-    .addUse(SOffset)       // soffset
-    .addImm(ImmOffset)     // offset(imm)
-    .addImm(AuxiliaryData) // cachepolicy, swizzled buffer(imm)
-    .addImm(0)             // idxen(imm)
+    .addDef(LoadDstReg)         // vdata
+    .addUse(RSrc)               // rsrc
+    .addUse(VIndex)             // vindex
+    .addUse(VOffset)            // voffset
+    .addUse(SOffset)            // soffset
+    .addImm(ImmOffset)          // offset(imm)
+    .addImm(AuxiliaryData)      // cachepolicy, swizzled buffer(imm)
+    .addImm(HasVIndex ? -1 : 0) // idxen(imm)
     .addMemOperand(MMO);
 
   if (LoadDstReg != Dst) {
@@ -2662,9 +2673,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
   case Intrinsic::amdgcn_raw_buffer_store_format:
     return legalizeRawBufferStore(MI, MRI, B, true);
   case Intrinsic::amdgcn_raw_buffer_load:
-    return legalizeRawBufferLoad(MI, MRI, B, false);
+  case Intrinsic::amdgcn_struct_buffer_load:
+    return legalizeBufferLoad(MI, MRI, B, false);
   case Intrinsic::amdgcn_raw_buffer_load_format:
-    return legalizeRawBufferLoad(MI, MRI, B, true);
+    return legalizeBufferLoad(MI, MRI, B, true);
   case Intrinsic::amdgcn_atomic_inc:
     return legalizeAtomicIncDec(MI, B, true);
   case Intrinsic::amdgcn_atomic_dec:

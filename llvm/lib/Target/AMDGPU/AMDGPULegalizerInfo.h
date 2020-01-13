@@ -114,6 +114,9 @@ public:
                               MachineIRBuilder &B, bool IsFormat) const;
   bool legalizeRawBufferLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B, bool IsFormat) const;
+  bool legalizeBufferLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          MachineIRBuilder &B, bool IsFormat) const;
+
   bool legalizeAtomicIncDec(MachineInstr &MI,  MachineIRBuilder &B,
                             bool IsInc) const;
 
