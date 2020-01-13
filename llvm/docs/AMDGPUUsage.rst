@@ -1150,12 +1150,11 @@ location description (such as a vector register).
 If the source language is mapped onto the AMDGPU wavefronts in a SIMT manner the
 compiler can use the AMDGPU execution mask register to control which lanes are
 active. To describe the conceptual location of non-active lanes a DWARF
-expression is needed that can compute a per lane PC. For efficiency this is done
-for the wave as a whole. This expression benefits by having a the masked select
-composite location description operation. This requires an attribute for
-source location of each lane. The AMDGPU may update the execution mask for whole
-wave operations and so needs an attribute that computes the current active lane
-mask.
+expression is needed that can compute a per lane PC. For efficiency, this is
+done for the wave as a whole. This expression benefits by having a masked select
+composite location description operation. This requires an attribute for source
+location of each lane. The AMDGPU may update the execution mask for whole wave
+operations and so needs an attribute that computes the current active lane mask.
 
 AMDGPU needs to be able to describe addresses that are in different kinds of
 memory. Optimized code may need to describe a variable that resides in pieces
@@ -1196,7 +1195,7 @@ compose naturally. It allows objects to be located in any kind of memory address
 space, in registers, be implicit values, be undefined, or a composite of any of
 these.
 
-By extending DWARF carefully all existing DWARF expressions can retain their
+By extending DWARF carefully, all existing DWARF expressions can retain their
 current semantic meaning. DWARF has implicit conversions that convert from a
 value that is treated as an address in the default address space to a memory
 location description. This can be extended to allow a default address space
