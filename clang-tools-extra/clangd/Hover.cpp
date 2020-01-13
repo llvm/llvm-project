@@ -510,13 +510,14 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
 markup::Document HoverInfo::present() const {
   markup::Document Output;
   // Header contains a text of the form:
-  // variable `var` : `int`
+  // variable `var`
   //
   // class `X`
   //
-  // function `foo` → `int`
+  // function `foo`
   //
-  // expression : `int`
+  // expression
+  //
   // Note that we are making use of a level-3 heading because VSCode renders
   // level 1 and 2 headers in a huge font, see
   // https://github.com/microsoft/vscode/issues/88417 for details.
@@ -524,27 +525,30 @@ markup::Document HoverInfo::present() const {
   Header.appendText(index::getSymbolKindString(Kind));
   assert(!Name.empty() && "hover triggered on a nameless symbol");
   Header.appendCode(Name);
-  if (ReturnType) {
-    Header.appendText("→");
-    Header.appendCode(*ReturnType);
-  } else if (Type) {
-    Header.appendText(":");
-    Header.appendCode(*Type);
-  }
 
   // Put a linebreak after header to increase readability.
   Output.addRuler();
-  // For functions we display signature in a list form, e.g.:
-  // - `bool param1`
-  // - `int param2 = 5`
-  if (Parameters && !Parameters->empty()) {
-    markup::BulletList &L = Output.addBulletList();
-    for (const auto &Param : *Parameters) {
-      std::string Buffer;
-      llvm::raw_string_ostream OS(Buffer);
-      OS << Param;
-      L.addItem().addParagraph().appendCode(std::move(OS.str()));
+  // Print Types on their own lines to reduce chances of getting line-wrapped by
+  // editor, as they might be long.
+  if (ReturnType) {
+    // For functions we display signature in a list form, e.g.:
+    // 🡺 `x`
+    // Parameters:
+    // - `bool param1`
+    // - `int param2 = 5`
+    Output.addParagraph().appendText("🡺").appendCode(*ReturnType);
+    if (Parameters && !Parameters->empty()) {
+      Output.addParagraph().appendText("Parameters:");
+      markup::BulletList &L = Output.addBulletList();
+      for (const auto &Param : *Parameters) {
+        std::string Buffer;
+        llvm::raw_string_ostream OS(Buffer);
+        OS << Param;
+        L.addItem().addParagraph().appendCode(std::move(OS.str()));
+      }
     }
+  } else if (Type) {
+    Output.addParagraph().appendText("Type: ").appendCode(*Type);
   }
 
   if (Value) {
