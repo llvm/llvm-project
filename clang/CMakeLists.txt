@@ -237,6 +237,9 @@ set(ENABLE_X86_RELAX_RELOCATIONS OFF CACHE BOOL
 set(ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER FALSE CACHE BOOL
   "Enable the experimental new pass manager by default.")
 
+set(CLANG_SPAWN_CC1 OFF CACHE BOOL
+    "Whether clang should use a new process for the CC1 invocation")
+
 # TODO: verify the values against LangStandards.def?
 set(CLANG_DEFAULT_STD_C "" CACHE STRING
   "Default standard to use for C/ObjC code (IDENT from LangStandards.def, empty for platform default)")
