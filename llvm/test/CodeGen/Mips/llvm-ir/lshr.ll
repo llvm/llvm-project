@@ -94,68 +94,57 @@ entry:
 define zeroext i8 @lshr_i8(i8 zeroext %a, i8 zeroext %b) {
 ; MIPS2-LABEL: lshr_i8:
 ; MIPS2:       # %bb.0: # %entry
-; MIPS2-NEXT:    srlv $1, $4, $5
 ; MIPS2-NEXT:    jr $ra
-; MIPS2-NEXT:    andi $2, $1, 255
+; MIPS2-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS32-LABEL: lshr_i8:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    srlv $1, $4, $5
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    andi $2, $1, 255
+; MIPS32-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS32R2-LABEL: lshr_i8:
 ; MIPS32R2:       # %bb.0: # %entry
-; MIPS32R2-NEXT:    srlv $1, $4, $5
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    andi $2, $1, 255
+; MIPS32R2-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS32R6-LABEL: lshr_i8:
 ; MIPS32R6:       # %bb.0: # %entry
-; MIPS32R6-NEXT:    srlv $1, $4, $5
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    andi $2, $1, 255
+; MIPS32R6-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS3-LABEL: lshr_i8:
 ; MIPS3:       # %bb.0: # %entry
-; MIPS3-NEXT:    srlv $1, $4, $5
 ; MIPS3-NEXT:    jr $ra
-; MIPS3-NEXT:    andi $2, $1, 255
+; MIPS3-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS4-LABEL: lshr_i8:
 ; MIPS4:       # %bb.0: # %entry
-; MIPS4-NEXT:    srlv $1, $4, $5
 ; MIPS4-NEXT:    jr $ra
-; MIPS4-NEXT:    andi $2, $1, 255
+; MIPS4-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS64-LABEL: lshr_i8:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    srlv $1, $4, $5
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    andi $2, $1, 255
+; MIPS64-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS64R2-LABEL: lshr_i8:
 ; MIPS64R2:       # %bb.0: # %entry
-; MIPS64R2-NEXT:    srlv $1, $4, $5
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    andi $2, $1, 255
+; MIPS64R2-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS64R6-LABEL: lshr_i8:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    srlv $1, $4, $5
 ; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    andi $2, $1, 255
+; MIPS64R6-NEXT:    srlv $2, $4, $5
 ;
 ; MMR3-LABEL: lshr_i8:
 ; MMR3:       # %bb.0: # %entry
+; MMR3-NEXT:    jr $ra
 ; MMR3-NEXT:    srlv $2, $4, $5
-; MMR3-NEXT:    andi16 $2, $2, 255
-; MMR3-NEXT:    jrc $ra
 ;
 ; MMR6-LABEL: lshr_i8:
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    srlv $2, $4, $5
-; MMR6-NEXT:    andi16 $2, $2, 255
 ; MMR6-NEXT:    jrc $ra
 entry:
 
@@ -166,68 +155,57 @@ entry:
 define zeroext i16 @lshr_i16(i16 zeroext %a, i16 zeroext %b) {
 ; MIPS2-LABEL: lshr_i16:
 ; MIPS2:       # %bb.0: # %entry
-; MIPS2-NEXT:    srlv $1, $4, $5
 ; MIPS2-NEXT:    jr $ra
-; MIPS2-NEXT:    andi $2, $1, 65535
+; MIPS2-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS32-LABEL: lshr_i16:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    srlv $1, $4, $5
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    andi $2, $1, 65535
+; MIPS32-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS32R2-LABEL: lshr_i16:
 ; MIPS32R2:       # %bb.0: # %entry
-; MIPS32R2-NEXT:    srlv $1, $4, $5
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    andi $2, $1, 65535
+; MIPS32R2-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS32R6-LABEL: lshr_i16:
 ; MIPS32R6:       # %bb.0: # %entry
-; MIPS32R6-NEXT:    srlv $1, $4, $5
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    andi $2, $1, 65535
+; MIPS32R6-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS3-LABEL: lshr_i16:
 ; MIPS3:       # %bb.0: # %entry
-; MIPS3-NEXT:    srlv $1, $4, $5
 ; MIPS3-NEXT:    jr $ra
-; MIPS3-NEXT:    andi $2, $1, 65535
+; MIPS3-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS4-LABEL: lshr_i16:
 ; MIPS4:       # %bb.0: # %entry
-; MIPS4-NEXT:    srlv $1, $4, $5
 ; MIPS4-NEXT:    jr $ra
-; MIPS4-NEXT:    andi $2, $1, 65535
+; MIPS4-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS64-LABEL: lshr_i16:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    srlv $1, $4, $5
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    andi $2, $1, 65535
+; MIPS64-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS64R2-LABEL: lshr_i16:
 ; MIPS64R2:       # %bb.0: # %entry
-; MIPS64R2-NEXT:    srlv $1, $4, $5
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    andi $2, $1, 65535
+; MIPS64R2-NEXT:    srlv $2, $4, $5
 ;
 ; MIPS64R6-LABEL: lshr_i16:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    srlv $1, $4, $5
 ; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    andi $2, $1, 65535
+; MIPS64R6-NEXT:    srlv $2, $4, $5
 ;
 ; MMR3-LABEL: lshr_i16:
 ; MMR3:       # %bb.0: # %entry
+; MMR3-NEXT:    jr $ra
 ; MMR3-NEXT:    srlv $2, $4, $5
-; MMR3-NEXT:    andi16 $2, $2, 65535
-; MMR3-NEXT:    jrc $ra
 ;
 ; MMR6-LABEL: lshr_i16:
 ; MMR6:       # %bb.0: # %entry
 ; MMR6-NEXT:    srlv $2, $4, $5
-; MMR6-NEXT:    andi16 $2, $2, 65535
 ; MMR6-NEXT:    jrc $ra
 entry:
 
