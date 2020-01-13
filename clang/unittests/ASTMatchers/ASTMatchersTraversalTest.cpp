@@ -1684,8 +1684,7 @@ void foo()
       functionDecl(traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
                             hasAnyName("foo", "bar")))));
 
-  EXPECT_TRUE(
-      matches(R"cpp(
+  llvm::StringRef Code = R"cpp(
 void foo(int a)
 {
   int i = 3.0 + a;
@@ -1694,21 +1693,14 @@ void bar()
 {
   foo(7.0);
 }
-)cpp",
+)cpp";
+  EXPECT_TRUE(
+      matches(Code,
               callExpr(traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
                                 hasArgument(0, floatLiteral())))));
 
   EXPECT_TRUE(
-      matches(R"cpp(
-void foo(int a)
-{
-  int i = 3.0 + a;
-}
-void bar()
-{
-  foo(7.0);
-}
-)cpp",
+      matches(Code,
               callExpr(traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
                                 hasAnyArgument(floatLiteral())))));
 
@@ -1722,13 +1714,14 @@ void bar()
       functionDecl(hasName("foo"), traverse(ast_type_traits::TK_AsIs,
                                             hasDescendant(floatLiteral())))));
 
-  EXPECT_TRUE(
-      matches(R"cpp(
+  Code = R"cpp(
 void foo()
 {
   int i = (3);
 }
-)cpp",
+)cpp";
+  EXPECT_TRUE(
+      matches(Code,
               traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
                        varDecl(hasInitializer(integerLiteral(equals(3)))))));
 }
@@ -1744,13 +1737,14 @@ TEST(Traversal, traverseWithBinding) {
   // Some existing matcher code expects to take a matcher as a
   // template arg and bind to it.  Verify that that works.
 
-  EXPECT_TRUE(matcherTemplateWithBinding(
-      R"cpp(
+  llvm::StringRef Code = R"cpp(
 int foo()
 {
   return 42.0;
 }
-)cpp",
+)cpp";
+  EXPECT_TRUE(matcherTemplateWithBinding(
+      Code,
       traverse(ast_type_traits::TK_AsIs,
                returnStmt(has(implicitCastExpr(has(floatLiteral())))))));
 }
