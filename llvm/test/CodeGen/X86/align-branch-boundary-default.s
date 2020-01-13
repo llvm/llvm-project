@@ -1,4 +1,4 @@
-# RUN: llvm-mc -mcpu=skylake -filetype=obj < %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
+# RUN: llvm-mc -mtriple=x86_64-unknown-unknown -mcpu=skylake -filetype=obj < %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
 
 # The textual assembler *can't* default to autopadding as there's no syntax
 # to selectively disable it just yet.
