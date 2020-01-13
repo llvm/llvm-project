@@ -15,6 +15,7 @@
 #include "X86DisassemblerDecoder.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -61,18 +62,6 @@ struct ContextDecision {
 #endif
 
 /*
- * contextForAttrs - Client for the instruction context table.  Takes a set of
- *   attributes and returns the appropriate decode context.
- *
- * @param attrMask  - Attributes, from the enumeration attributeBits.
- * @return          - The InstructionContext to use when looking up an
- *                    an instruction with these attributes.
- */
-static InstructionContext contextForAttrs(uint16_t attrMask) {
-  return static_cast<InstructionContext>(CONTEXTS_SYM[attrMask]);
-}
-
-/*
  * modRMRequired - Reads the appropriate instruction table to determine whether
  *   the ModR/M byte is required to decode a particular instruction.
  *
@@ -86,7 +75,7 @@ static InstructionContext contextForAttrs(uint16_t attrMask) {
 static int modRMRequired(OpcodeType type,
                          InstructionContext insnContext,
                          uint16_t opcode) {
-  const struct ContextDecision* decision = nullptr;
+  const struct ContextDecision *decision;
 
   switch (type) {
   case ONEBYTE:
@@ -698,7 +687,7 @@ static int getIDWithAttrMask(uint16_t* instructionID,
                              uint16_t attrMask) {
   bool hasModRMExtension;
 
-  InstructionContext instructionClass = contextForAttrs(attrMask);
+  auto instructionClass = InstructionContext(CONTEXTS_SYM[attrMask]);
 
   hasModRMExtension = modRMRequired(insn->opcodeType,
                                     instructionClass,
@@ -774,7 +763,7 @@ static bool is64Bit(const char *name) {
  * @return      - 0 if the ModR/M could be read when needed or was not needed;
  *                nonzero otherwise.
  */
-static int getID(struct InternalInstruction* insn, const MCInstrInfo *miiArg) {
+static int getID(struct InternalInstruction* insn, const MCInstrInfo *mii) {
   uint16_t attrMask;
   uint16_t instructionID;
 
@@ -946,7 +935,7 @@ static int getID(struct InternalInstruction* insn, const MCInstrInfo *miiArg) {
         return 0;
       }
 
-      auto SpecName = GetInstrName(instructionIDWithREXW, miiArg);
+      auto SpecName = mii->getName(instructionIDWithREXW);
       // If not a 64-bit instruction. Switch the opcode.
       if (!is64Bit(SpecName.data())) {
         insn->instructionID = instructionIDWithREXW;
@@ -1018,8 +1007,8 @@ static int getID(struct InternalInstruction* insn, const MCInstrInfo *miiArg) {
       return 0;
     }
 
-    specName = GetInstrName(instructionID, miiArg);
-    specWithOpSizeName = GetInstrName(instructionIDWithOpsize, miiArg);
+    specName = mii->getName(instructionID);
+    specWithOpSizeName = mii->getName(instructionIDWithOpsize);
 
     if (is16BitEquivalent(specName.data(), specWithOpSizeName.data()) &&
         (insn->mode == MODE_16BIT) ^ insn->hasOpSize) {
