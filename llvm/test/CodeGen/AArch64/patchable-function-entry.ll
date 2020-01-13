@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=aarch64 -no-integrated-as %s -o - | FileCheck --check-prefix=NOLINK %s
 
 ; NOLINK-NOT: "awo"
+; NOLINK-NOT: ,unique,0
 
 define i32 @f0() "patchable-function-entry"="0" {
 ; CHECK-LABEL: f0:
