@@ -936,14 +936,14 @@ static bool readOpcode(struct InternalInstruction *insn) {
       LLVM_DEBUG(dbgs() << format("Found a three-byte escape prefix (0x%hhx)",
                                   current));
       if (consume(insn, current))
-        return -1;
+        return true;
 
       insn->opcodeType = THREEBYTE_38;
     } else if (current == 0x3a) {
       LLVM_DEBUG(dbgs() << format("Found a three-byte escape prefix (0x%hhx)",
                                   current));
       if (consume(insn, current))
-        return -1;
+        return true;
 
       insn->opcodeType = THREEBYTE_3A;
     } else if (current == 0x0f) {
