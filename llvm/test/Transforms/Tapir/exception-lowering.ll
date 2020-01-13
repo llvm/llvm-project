@@ -1,3 +1,4 @@
+; RUN: llc < %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=TAPIRCLEANUP
 ; RUN: opt < %s -tapir2target -tapir-target=cilk -debug-abi-calls -S | FileCheck %s
 ; RUN: opt < %s -passes=tapir2target -tapir-target=cilk -debug-abi-calls -S | FileCheck %s
 
@@ -154,6 +155,7 @@ lpad6:                                            ; preds = %entry, %lpad1
 eh.resume:                                        ; preds = %lpad6
   resume { i8*, i32 } %2
 }
+; TAPIRCLEANUP: CodeGen found Tapir instructions to serialize.
 
 ; Function Attrs: uwtable
 define void @_Z18spawn_throw_inlinei(i32 %n) local_unnamed_addr #5 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
@@ -246,6 +248,7 @@ lpad6:                                            ; preds = %entry, %lpad1.body
 eh.resume:                                        ; preds = %lpad6
   resume { i8*, i32 } %11
 }
+; TAPIRCLEANUP: CodeGen found Tapir instructions to serialize.
 
 ; Function Attrs: uwtable
 define void @_Z14spawn_tryblocki(i32 %n) local_unnamed_addr #5 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
@@ -427,7 +430,8 @@ terminate.lpad:                                   ; preds = %lpad30
   tail call void @__clang_call_terminate(i8* %23) #13
   unreachable
 }
-
+; TAPIRCLEANUP: CodeGen found Tapir instructions to serialize.
+; TAPIRCLEANUP: CodeGen found Tapir instructions to serialize.
 
 ; CHECK-DAG: define private fastcc void @_Z14spawn_tryblocki.outline_det.achd13.otd1(i32
 ; CHECK: %[[ARG:[a-zA-Z0-9._]+]])
