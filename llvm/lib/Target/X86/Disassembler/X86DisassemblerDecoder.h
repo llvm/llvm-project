@@ -593,11 +593,9 @@ struct InternalInstruction {
   uint8_t                       modRM;
 
   // The SIB byte, used for more complex 32- or 64-bit memory operands
-  bool                          consumedSIB;
   uint8_t                       sib;
 
   // The displacement, used for memory operands
-  bool                          consumedDisplacement;
   int32_t                       displacement;
 
   // Immediates.  There can be two in some cases
@@ -633,17 +631,6 @@ struct InternalInstruction {
 
   ArrayRef<OperandSpecifier> operands;
 };
-
-/// Decode one instruction and store the decoding results in
-/// a buffer provided by the consumer.
-/// \return          Nonzero if there was an error during decode, 0 otherwise.
-int decodeInstruction(InternalInstruction *insn, const MCInstrInfo *mii);
-
-/// Print a message to debugs()
-/// \param file The name of the file printing the debug message.
-/// \param line The line number that printed the debug message.
-/// \param s    The message to print.
-void Debug(const char *file, unsigned line, const char *s);
 
 } // namespace X86Disassembler
 } // namespace llvm
