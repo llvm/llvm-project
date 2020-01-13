@@ -527,6 +527,19 @@ private:
   // don't intersect the selection may be recursively skipped.
   bool canSafelySkipNode(const DynTypedNode &N) {
     SourceRange S = N.getSourceRange();
+    if (auto *TL = N.get<TypeLoc>()) {
+      // DeclTypeTypeLoc::getSourceRange() is incomplete, which would lead to
+      // failing
+      // to descend into the child expression.
+      // decltype(2+2);
+      // ~~~~~~~~~~~~~ <-- correct range
+      // ~~~~~~~~      <-- range reported by getSourceRange()
+      // ~~~~~~~~~~~~  <-- range with this hack(i.e, missing closing paren)
+      // FIXME: Alter DecltypeTypeLoc to contain parentheses locations and get
+      // rid of this patch.
+      if (auto DT = TL->getAs<DecltypeTypeLoc>())
+        S.setEnd(DT.getUnderlyingExpr()->getEndLoc());
+    }
     if (!SelChecker.mayHit(S)) {
       dlog("{1}skip: {0}", printNodeToString(N, PrintPolicy), indent());
       dlog("{1}skipped range = {0}", S.printToString(SM), indent(1));
