@@ -74,7 +74,7 @@
 ; CHECK-O: Running analysis: GlobalsAA
 ; CHECK-O: Running analysis: CallGraphAnalysis
 ; CHECK-O: Running pass: RequireAnalysisPass<{{.*}}ProfileSummaryAnalysis
-; CHECK-O: Running pass: ModuleToPostOrderCGSCCPassAdaptor<{{.*}}DevirtSCCRepeatedPass<{{.*}}PassManager<LazyCallGraph::SCC
+; CHECK-O: Running pass: ModuleToPostOrderCGSCCPassAdaptor<{{.*}}DevirtSCCRepeatedPass<{{.*}}PassManager<{{.*}}LazyCallGraph::SCC
 ; CHECK-O: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O: Running analysis: FunctionAnalysisManagerCGSCCProxy on (main)
