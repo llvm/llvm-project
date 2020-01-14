@@ -3269,7 +3269,7 @@ private:
   const RecordKeeper &RK;
   const CodeGenDAGPatterns CGP;
   const CodeGenTarget &Target;
-  CodeGenRegBank CGRegs;
+  CodeGenRegBank &CGRegs;
 
   /// Keep track of the equivalence between SDNodes and Instruction by mapping
   /// SDNodes to the GINodeEquiv mapping. We need to map to the GINodeEquiv to
@@ -3477,7 +3477,7 @@ GlobalISelEmitter::getEquivNode(Record &Equiv, const TreePatternNode *N) const {
 
 GlobalISelEmitter::GlobalISelEmitter(RecordKeeper &RK)
     : RK(RK), CGP(RK), Target(CGP.getTargetInfo()),
-      CGRegs(RK, Target.getHwModes()) {}
+      CGRegs(Target.getRegBank()) {}
 
 //===- Emitter ------------------------------------------------------------===//
 
