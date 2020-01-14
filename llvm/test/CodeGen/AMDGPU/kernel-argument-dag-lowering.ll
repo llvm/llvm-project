@@ -75,8 +75,8 @@ define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32,
 ; multiple.
 ; FUNC-LABEL: {{^}}packed_struct_argument_alignment:
 ; HSA-VI: kernarg_segment_byte_size = 28
-; HSA-VI: global_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:13
 ; HSA-VI: global_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:17
+; HSA-VI: global_load_dword v{{[0-9]+}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:13
 ; HSA-VI: s_load_dword s{{[0-9]+}}, s[4:5], 0x0
 ; HSA-VI: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s[4:5], 0x4
 define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, i8, <{i32, i64}> %arg1) {
