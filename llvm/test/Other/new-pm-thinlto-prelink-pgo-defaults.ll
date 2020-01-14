@@ -65,7 +65,7 @@
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Finished llvm::Function pass manager run.
-; CHECK-O123-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor<llvm::PassManager<LazyCallGraph::SCC, llvm::CGSCCAnalysisManager, llvm::LazyCallGraph &, llvm::CGSCCUpdateResult &> >
+; CHECK-O123-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor<llvm::PassManager<LazyCallGraph::SCC
 ; CHECK-O123-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O123-NEXT: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O123-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy on (foo)
@@ -78,14 +78,16 @@
 ; CHECK-O123-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: PGOInstrumentationUse
 ; CHECK-O-NEXT: Running analysis: ProfileSummaryAnalysis
-; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis on foo
-; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
+; These next two can appear in any order since they are accessed as parameters
+; on the same call to BlockFrequencyInfo::calculate.
+; CHECK-O-DAG: Running analysis: BranchProbabilityAnalysis on foo
+; CHECK-O-DAG: Running analysis: LoopAnalysis on foo
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
 ; CHECK-O-NEXT: Invalidating all non-preserved analyses for:
 ; CHECK-O-NEXT: Invalidating analysis: InnerAnalysisManagerProxy
 ; CHECK-O123-NEXT: Invalidating analysis: LazyCallGraphAnalysis on
 ; CHECK-O123-NEXT: Invalidating analysis: InnerAnalysisManagerProxy
-; CHECK-O-NEXT: Running pass: RequireAnalysisPass<llvm::ProfileSummaryAnalysis, llvm::Module, llvm::AnalysisManager<llvm::Module>> on
+; CHECK-O-NEXT: Running pass: RequireAnalysisPass<llvm::ProfileSummaryAnalysis
 ; CHECK-O-NEXT: Running pass: PGOIndirectCallPromotion on
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis on foo
@@ -127,8 +129,10 @@
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-O-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O-NEXT: Running analysis: BlockFrequencyAnalysis on foo
-; CHECK-O-NEXT: Running analysis: BranchProbabilityAnalysis on foo
-; CHECK-O-NEXT: Running analysis: LoopAnalysis on foo
+; These next two can appear in any order since they are accessed as parameters
+; on the same call to BlockFrequencyInfo::calculate.
+; CHECK-O-DAG: Running analysis: BranchProbabilityAnalysis on foo
+; CHECK-O-DAG: Running analysis: LoopAnalysis on foo
 ; CHECK-O1-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O2-NEXT: Running pass: LibCallsShrinkWrapPass
 ; CHECK-O3-NEXT: Running pass: LibCallsShrinkWrapPass
