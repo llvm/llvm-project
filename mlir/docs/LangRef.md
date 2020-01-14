@@ -852,20 +852,20 @@ Examples of memref static type
 
 ```mlir
 // Identity index/layout map
-#identity = (d0, d1) -> (d0, d1)
+#identity = affine_map<(d0, d1) -> (d0, d1)>
 
 // Column major layout.
-#col_major = (d0, d1, d2) -> (d2, d1, d0)
+#col_major = affine_map<(d0, d1, d2) -> (d2, d1, d0)>
 
 // A 2-d tiled layout with tiles of size 128 x 256.
-#tiled_2d_128x256 = (d0, d1) -> (d0 div 128, d1 div 256, d0 mod 128, d1 mod 256)
+#tiled_2d_128x256 = affine_map<(d0, d1) -> (d0 div 128, d1 div 256, d0 mod 128, d1 mod 256)>
 
 // A tiled data layout with non-constant tile sizes.
-#tiled_dynamic = (d0, d1)[s0, s1] -> (d0 floordiv s0, d1 floordiv s1,
-                              d0 mod s0, d1 mod s1)
+#tiled_dynamic = affine_map<(d0, d1)[s0, s1] -> (d0 floordiv s0, d1 floordiv s1,
+                             d0 mod s0, d1 mod s1)>
 
 // A layout that yields a padding on two at either end of the minor dimension.
-#padded = (d0, d1) -> (d0, (d1 + 2) floordiv 2, (d1 + 2) mod 2)
+#padded = affine_map<(d0, d1) -> (d0, (d1 + 2) floordiv 2, (d1 + 2) mod 2)>
 
 
 // The dimension list "16x32" defines the following 2D index space:
@@ -897,7 +897,7 @@ memref<16x32xf32, #identity, memspace0>
 %P = alloc() : memref<16x64xf32, #padded>
 
 // Affine map with symbol 's0' used as offset for the first dimension.
-#imapS = (d0, d1) [s0] -> (d0 + s0, d1)
+#imapS = affine_map<(d0, d1) [s0] -> (d0 + s0, d1)>
 // Allocate memref and bind the following symbols:
 // '%n' is bound to the dynamic second dimension of the memref type.
 // '%o' is bound to the symbol 's0' in the affine map of the memref type.
@@ -1188,10 +1188,10 @@ These aliases *must* be defined before their uses. Alias names may not contain a
 Example:
 
 ```mlir
-#map = (d0) -> (d0 + 10)
+#map = affine_map<(d0) -> (d0 + 10)>
 
 // Using the original attribute.
-%b = affine.apply (d0) -> (d0 + 10) (%a)
+%b = affine.apply affine_map<(d0) -> (d0 + 10)> (%a)
 
 // Using the attribute alias.
 %b = affine.apply #map(%a)
@@ -1262,7 +1262,7 @@ standard-attribute ::=   affine-map-attribute
 Syntax:
 
 ```
-affine-map-attribute ::= affine-map
+affine-map-attribute ::= `affine_map` `<` affine-map `>`
 ```
 
 An affine-map attribute is an attribute that represents a affine-map object.
@@ -1419,7 +1419,7 @@ is not specified, is a 64-bit integer.
 Syntax:
 
 ```
-integer-set-attribute ::= affine-map
+integer-set-attribute ::= `affine_set` `<` integer-set `>`
 ```
 
 An integer-set attribute is an attribute that represents an integer-set object.

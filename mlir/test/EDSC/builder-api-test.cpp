@@ -79,14 +79,14 @@ TEST_FUNC(builder_dynamic_for_func_args) {
 
   // clang-format off
   // CHECK-LABEL: func @builder_dynamic_for_func_args(%{{.*}}: index, %{{.*}}: index) {
-  //     CHECK:  affine.for %{{.*}} = (d0) -> (d0)(%{{.*}}) to (d0) -> (d0)(%{{.*}}) step 3 {
-  //     CHECK:  {{.*}} = affine.apply ()[s0] -> (s0 * 3)()[%{{.*}}]
-  //     CHECK:  {{.*}} = affine.apply ()[s0, s1] -> (s1 + s0 * 3)()[%{{.*}}, %{{.*}}]
-  //     CHECK:  {{.*}} = affine.apply ()[s0] -> (s0 + 3)()[%{{.*}}]
-  //     CHECK:  affine.for %{{.*}} = (d0) -> (d0)(%{{.*}}) to (d0) -> (d0)(%{{.*}}) step 2 {
-  //     CHECK:    {{.*}} = affine.apply (d0, d1) -> ((d0 + d1 * 3) floordiv 32)(%{{.*}}, %{{.*}})
-  //     CHECK:    {{.*}} = affine.apply (d0, d1) -> (((d0 + d1 * 3) floordiv 32) * 31)(%{{.*}}, %{{.*}})
-  //     CHECK:    {{.*}} = affine.apply (d0, d1) -> ((((d0 + d1 * 3) floordiv 32) * 31) ceildiv 32)(%{{.*}}, %{{.*}})
+  //     CHECK:  affine.for %{{.*}} = affine_map<(d0) -> (d0)>(%{{.*}}) to affine_map<(d0) -> (d0)>(%{{.*}}) step 3 {
+  //     CHECK:  {{.*}} = affine.apply affine_map<()[s0] -> (s0 * 3)>()[%{{.*}}]
+  //     CHECK:  {{.*}} = affine.apply affine_map<()[s0, s1] -> (s1 + s0 * 3)>()[%{{.*}}, %{{.*}}]
+  //     CHECK:  {{.*}} = affine.apply affine_map<()[s0] -> (s0 + 3)>()[%{{.*}}]
+  //     CHECK:  affine.for %{{.*}} = affine_map<(d0) -> (d0)>(%{{.*}}) to affine_map<(d0) -> (d0)>(%{{.*}}) step 2 {
+  //     CHECK:    {{.*}} = affine.apply affine_map<(d0, d1) -> ((d0 + d1 * 3) floordiv 32)>(%{{.*}}, %{{.*}})
+  //     CHECK:    {{.*}} = affine.apply affine_map<(d0, d1) -> (((d0 + d1 * 3) floordiv 32) * 31)>(%{{.*}}, %{{.*}})
+  //     CHECK:    {{.*}} = affine.apply affine_map<(d0, d1) -> ((((d0 + d1 * 3) floordiv 32) * 31) ceildiv 32)>(%{{.*}}, %{{.*}})
   // CHECK-DAG:    [[rf1:%[0-9]+]] = addf {{.*}}, {{.*}} : f32
   // CHECK-DAG:    [[rf2:%[0-9]+]] = divf [[rf1]], {{.*}} : f32
   // CHECK-DAG:    [[rf3:%[0-9]+]] = remf [[rf2]], {{.*}} : f32
@@ -118,9 +118,9 @@ TEST_FUNC(builder_dynamic_for) {
 
   // clang-format off
   // CHECK-LABEL: func @builder_dynamic_for(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
-  // CHECK-DAG:    [[r0:%[0-9]+]] = affine.apply ()[s0, s1] -> (s0 - s1)()[%{{.*}}, %{{.*}}]
-  // CHECK-DAG:    [[r1:%[0-9]+]] = affine.apply ()[s0, s1] -> (s0 + s1)()[%{{.*}}, %{{.*}}]
-  // CHECK-NEXT:   affine.for %{{.*}} = (d0) -> (d0)([[r0]]) to (d0) -> (d0)([[r1]]) step 2 {
+  // CHECK-DAG:    [[r0:%[0-9]+]] = affine.apply affine_map<()[s0, s1] -> (s0 - s1)>()[%{{.*}}, %{{.*}}]
+  // CHECK-DAG:    [[r1:%[0-9]+]] = affine.apply affine_map<()[s0, s1] -> (s0 + s1)>()[%{{.*}}, %{{.*}}]
+  // CHECK-NEXT:   affine.for %{{.*}} = affine_map<(d0) -> (d0)>([[r0]]) to affine_map<(d0) -> (d0)>([[r1]]) step 2 {
   // clang-format on
   f.print(llvm::outs());
   f.erase();
@@ -142,8 +142,8 @@ TEST_FUNC(builder_loop_for) {
 
   // clang-format off
   // CHECK-LABEL: func @builder_loop_for(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
-  // CHECK-DAG:    [[r0:%[0-9]+]] = affine.apply ()[s0, s1] -> (s0 - s1)()[%{{.*}}, %{{.*}}]
-  // CHECK-DAG:    [[r1:%[0-9]+]] = affine.apply ()[s0, s1] -> (s0 + s1)()[%{{.*}}, %{{.*}}]
+  // CHECK-DAG:    [[r0:%[0-9]+]] = affine.apply affine_map<()[s0, s1] -> (s0 - s1)>()[%{{.*}}, %{{.*}}]
+  // CHECK-DAG:    [[r1:%[0-9]+]] = affine.apply affine_map<()[s0, s1] -> (s0 + s1)>()[%{{.*}}, %{{.*}}]
   // CHECK-NEXT:   loop.for %{{.*}} = [[r0]] to [[r1]] step {{.*}} {
   // clang-format on
   f.print(llvm::outs());
@@ -167,7 +167,7 @@ TEST_FUNC(builder_max_min_for) {
 
   // clang-format off
   // CHECK-LABEL: func @builder_max_min_for(%{{.*}}: index, %{{.*}}: index, %{{.*}}: index, %{{.*}}: index) {
-  // CHECK:  affine.for %{{.*}} = max (d0, d1) -> (d0, d1)(%{{.*}}, %{{.*}}) to min (d0, d1) -> (d0, d1)(%{{.*}}, %{{.*}}) {
+  // CHECK:  affine.for %{{.*}} = max affine_map<(d0, d1) -> (d0, d1)>(%{{.*}}, %{{.*}}) to min affine_map<(d0, d1) -> (d0, d1)>(%{{.*}}, %{{.*}}) {
   // CHECK:  return
   // clang-format on
   f.print(llvm::outs());
@@ -373,16 +373,16 @@ TEST_FUNC(builder_helpers) {
   });
 
   // CHECK-LABEL: @builder_helpers
-  //      CHECK:   affine.for %{{.*}} = (d0) -> (d0)({{.*}}) to (d0) -> (d0)({{.*}}) {
-  // CHECK-NEXT:     affine.for %{{.*}} = (d0) -> (d0)({{.*}}) to (d0) -> (d0)({{.*}}) {
-  // CHECK-NEXT:       affine.for %{{.*}} = (d0) -> (d0)({{.*}}) to (d0) -> (d0)({{.*}}) {
+  //      CHECK:   affine.for %{{.*}} = affine_map<(d0) -> (d0)>({{.*}}) to affine_map<(d0) -> (d0)>({{.*}}) {
+  // CHECK-NEXT:     affine.for %{{.*}} = affine_map<(d0) -> (d0)>({{.*}}) to affine_map<(d0) -> (d0)>({{.*}}) {
+  // CHECK-NEXT:       affine.for %{{.*}} = affine_map<(d0) -> (d0)>({{.*}}) to affine_map<(d0) -> (d0)>({{.*}}) {
   //  CHECK-DAG:         [[a:%.*]] = affine.load %arg0[%{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?xf32>
   //  CHECK-DAG:         [[b:%.*]] = addf {{.*}}, [[a]] : f32
   //  CHECK-DAG:         [[c:%.*]] = affine.load %arg1[%{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?xf32>
   //  CHECK-DAG:         [[d:%.*]] = addf [[b]], [[c]] : f32
   // CHECK-NEXT:         affine.store [[d]], %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?xf32>
   // CHECK-NEXT:       }
-  // CHECK-NEXT:       affine.for %{{.*}} = (d0) -> (d0)(%{{.*}}) to (d0) -> (d0)(%{{.*}}) {
+  // CHECK-NEXT:       affine.for %{{.*}} = affine_map<(d0) -> (d0)>(%{{.*}}) to affine_map<(d0) -> (d0)>(%{{.*}}) {
   //  CHECK-DAG:         [[a:%.*]] = affine.load %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?xf32>
   //  CHECK-DAG:         [[b:%.*]] = affine.load %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?xf32>
   //  CHECK-DAG:         [[c:%.*]] = addf [[b]], [[a]] : f32
@@ -638,13 +638,13 @@ TEST_FUNC(tile_2d) {
   //       CHECK: %[[M:[0-9]+]] = dim %arg2, 0 : memref<?x?x?xf32>
   //  CHECK-NEXT: %[[N:[0-9]+]] = dim %arg2, 1 : memref<?x?x?xf32>
   //  CHECK-NEXT: %[[P:[0-9]+]] = dim %arg2, 2 : memref<?x?x?xf32>
-  //       CHECK:   affine.for %{{.*}} = (d0) -> (d0)(%[[ZERO]]) to (d0) -> (d0)(%[[M]]) step 512 {
-  //  CHECK-NEXT:     affine.for %{{.*}} = (d0) -> (d0)(%[[ZERO]]) to (d0) -> (d0)(%[[N]]) step 1024 {
-  //  CHECK-NEXT:       affine.for %{{.*}} = (d0) -> (d0)(%[[ZERO]]) to (d0) -> (d0)(%[[P]]) {
-  //  CHECK-NEXT:         affine.for %{{.*}} = max (d0) -> (0, d0)(%{{.*}}) to min (d0)[s0] -> (s0, d0 + 512)(%{{.*}})[%[[M]]] step 16 {
-  //  CHECK-NEXT:           affine.for %{{.*}} = max (d0) -> (0, d0)(%{{.*}}) to min (d0)[s0] -> (s0, d0 + 1024)(%{{.*}})[%[[N]]] step 32 {
-  //  CHECK-NEXT:             affine.for %{{.*}} = max (d0, d1) -> (0, d0, d1)(%{{.*}}, %{{.*}}) to min (d0, d1)[s0] -> (s0, d0 + 1024, d1 + 32)(%{{.*}}, %{{.*}})[%[[N]]] {
-  //  CHECK-NEXT:               affine.for %{{.*}} = max (d0, d1) -> (0, d0, d1)(%{{.*}}, %{{.*}}) to min (d0, d1)[s0] -> (s0, d0 + 512, d1 + 16)(%{{.*}}, %{{.*}})[%[[M]]] {
+  //       CHECK:   affine.for %{{.*}} = affine_map<(d0) -> (d0)>(%[[ZERO]]) to affine_map<(d0) -> (d0)>(%[[M]]) step 512 {
+  //  CHECK-NEXT:     affine.for %{{.*}} = affine_map<(d0) -> (d0)>(%[[ZERO]]) to affine_map<(d0) -> (d0)>(%[[N]]) step 1024 {
+  //  CHECK-NEXT:       affine.for %{{.*}} = affine_map<(d0) -> (d0)>(%[[ZERO]]) to affine_map<(d0) -> (d0)>(%[[P]]) {
+  //  CHECK-NEXT:         affine.for %{{.*}} = max affine_map<(d0) -> (0, d0)>(%{{.*}}) to min affine_map<(d0)[s0] -> (s0, d0 + 512)>(%{{.*}})[%[[M]]] step 16 {
+  //  CHECK-NEXT:           affine.for %{{.*}} = max affine_map<(d0) -> (0, d0)>(%{{.*}}) to min affine_map<(d0)[s0] -> (s0, d0 + 1024)>(%{{.*}})[%[[N]]] step 32 {
+  //  CHECK-NEXT:             affine.for %{{.*}} = max affine_map<(d0, d1) -> (0, d0, d1)>(%{{.*}}, %{{.*}}) to min affine_map<(d0, d1)[s0] -> (s0, d0 + 1024, d1 + 32)>(%{{.*}}, %{{.*}})[%[[N]]] {
+  //  CHECK-NEXT:               affine.for %{{.*}} = max affine_map<(d0, d1) -> (0, d0, d1)>(%{{.*}}, %{{.*}}) to min affine_map<(d0, d1)[s0] -> (s0, d0 + 512, d1 + 16)>(%{{.*}}, %{{.*}})[%[[M]]] {
   //  CHECK-NEXT:                 {{.*}} = affine.load {{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?xf32>
   //  CHECK-NEXT:                 {{.*}} = affine.load {{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?xf32>
   //  CHECK-NEXT:                 {{.*}} = addf {{.*}}, {{.*}} : f32
@@ -654,9 +654,9 @@ TEST_FUNC(tile_2d) {
   //  CHECK-NEXT:           }
   //  CHECK-NEXT:         }
   //  CHECK-NEXT:       }
-  //  CHECK-NEXT:       affine.for %{{.*}} = (d0) -> (d0)(%[[ZERO]]) to (d0) -> (d0)(%[[P]]) {
-  //  CHECK-NEXT:         affine.for %{{.*}} = max (d0) -> (0, d0)(%{{.*}}) to min (d0)[s0] -> (s0, d0 + 512)(%{{.*}})[%[[M]]] {
-  //  CHECK-NEXT:           affine.for %{{.*}} = max (d0) -> (0, d0)(%{{.*}}) to min (d0)[s0] -> (s0, d0 + 1024)(%{{.*}})[%[[N]]] {
+  //  CHECK-NEXT:       affine.for %{{.*}} = affine_map<(d0) -> (d0)>(%[[ZERO]]) to affine_map<(d0) -> (d0)>(%[[P]]) {
+  //  CHECK-NEXT:         affine.for %{{.*}} = max affine_map<(d0) -> (0, d0)>(%{{.*}}) to min affine_map<(d0)[s0] -> (s0, d0 + 512)>(%{{.*}})[%[[M]]] {
+  //  CHECK-NEXT:           affine.for %{{.*}} = max affine_map<(d0) -> (0, d0)>(%{{.*}}) to min affine_map<(d0)[s0] -> (s0, d0 + 1024)>(%{{.*}})[%[[N]]] {
   //  CHECK-NEXT:             {{.*}} = affine.load {{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?xf32>
   //  CHECK-NEXT:             {{.*}} = affine.load {{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] : memref<?x?x?xf32>
   //  CHECK-NEXT:             {{.*}}= addf {{.*}}, {{.*}} : f32
@@ -704,15 +704,15 @@ TEST_FUNC(vectorize_2d) {
   //  xCHECK-NEXT:   affine.for %{{.*}} = 0 to (d0) -> (d0)(%[[N]]) step 4 {
   //  xCHECK-NEXT:     affine.for %{{.*}} = 0 to (d0) -> (d0)(%[[P]]) step 4 {
   //  xCHECK-NEXT:       %[[vA:.*]] = "vector.transfer_read"(%{{.*}}, %{{.*}},
-%{{.*}}, %i2) {permutation_map = (d0, d1, d2) -> (d1, d2)} : (memref<?x?x?xf32>,
-index, index, index) -> vector<4x4xf32>
+%{{.*}}, %i2) {permutation_map = affine_map<(d0, d1, d2) -> (d1, d2)>} :
+(memref<?x?x?xf32>, index, index, index) -> vector<4x4xf32>
   //  xCHECK-NEXT:       %[[vB:.*]] =  "vector.transfer_read"(%{{.*}}, %{{.*}},
-%{{.*}}, %i2) {permutation_map = (d0, d1,  d2) -> (d1, d2)} :
+%{{.*}}, %i2) {permutation_map = affine_map<(d0, d1,  d2) -> (d1, d2)>} :
 (memref<?x?x?xf32>, index, index, index) -> vector<4x4xf32>
   //  xCHECK-NEXT:       %[[vRES:.*]] = addf %[[vB]], %[[vA]] : vector<4x4xf32>
   //  xCHECK-NEXT:       "vector.transfer_write"(%[[vRES:.*]], %{{.*}}, %{{.*}},
-%{{.*}}, %i2) {permutation_map = (d0, d1, d2) -> (d1, d2)} : (vector<4x4xf32>,
-memref<?x?x?xf32>, index, index, index) -> ()
+%{{.*}}, %i2) {permutation_map = affine_map<(d0, d1, d2) -> (d1, d2)>} :
+(vector<4x4xf32>, memref<?x?x?xf32>, index, index, index) -> ()
   // clang-format on
 
   mlir::PassManager pm;
@@ -795,10 +795,10 @@ TEST_FUNC(empty_map_load_store) {
 }
 
 // CHECK-LABEL: func @affine_if_op
-// CHECK:       affine.if ([[d0:.*]], [[d1:.*]]){{\[}}[[s0:.*]], [[s1:.*]]{{\]}}
+// CHECK:       affine.if affine_set<([[d0:.*]], [[d1:.*]]){{\[}}[[s0:.*]], [[s1:.*]]{{\]}}
 // CHECK-NOT:   else
-// CHECK:       affine.if ([[d0:.*]], [[d1:.*]]){{\[}}[[s0:.*]], [[s1:.*]]{{\]}}
-// CHECK-NEXT:  } else {
+// CHECK:       affine.if affine_set<([[d0:.*]], [[d1:.*]]){{\[}}[[s0:.*]], [[s1:.*]]{{\]}}
+// CHECK-NEXT: } else {
 TEST_FUNC(affine_if_op) {
   using namespace edsc;
   using namespace edsc::intrinsics;
@@ -832,18 +832,18 @@ TEST_FUNC(affine_if_op) {
 // clang-format off
 // CHECK-LABEL: func @linalg_pointwise
 //       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
-// CHECK-SAME: indexing_maps = [(d0, d1) -> (d0, d1), (d0, d1) -> (d0, d1), (d0, d1) -> (d0, d1)],
+// CHECK-SAME: indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
 // CHECK-SAME: iterator_types = ["parallel", "parallel"]}
 //       CHECK:       addf
 //       CHECK:     }: memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
 //       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
-// CHECK-SAME: indexing_maps = [(d0, d1) -> (d0, d1), (d0, d1) -> (d0, d1), (d0, d1) -> (d0, d1)],
+// CHECK-SAME: indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
 // CHECK-SAME: iterator_types = ["parallel", "parallel"]}
 //       CHECK:       cmpf "ogt"
 //       CHECK:       select
 //       CHECK:   }: memref<?x?xf32>, memref<?x?xf32>, memref<?x?xf32>
 //       CHECK:   linalg.generic {args_in = 1 : i64, args_out = 1 : i64,
-// CHECK-SAME:      indexing_maps = [(d0, d1) -> (d0, d1), (d0, d1) -> (d0, d1)],
+// CHECK-SAME:      indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
 // CHECK-SAME:      iterator_types = ["parallel", "parallel"]}
 //       CHECK:     tanh
 //       CHECK:   }: memref<?x?xf32>, memref<?x?xf32>
@@ -874,7 +874,7 @@ TEST_FUNC(linalg_pointwise_test) {
 // clang-format off
 // CHECK-LABEL: func @linalg_matmul
 //       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
-// CHECK-SAME: indexing_maps = [(d0, d1, d2) -> (d0, d2), (d0, d1, d2) -> (d2, d1), (d0, d1, d2) -> (d0, d1)],
+// CHECK-SAME: indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d2, d1)>, affine_map<(d0, d1, d2) -> (d0, d1)>],
 // CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction"]}
 ///      CHECK:   ^bb1(%[[a0:.*]]: f32, %[[a1:.*]]: f32, %[[a2:.*]]: f32):
 //       CHECK:     %[[a3:.*]] = mulf %[[a0]], %[[a1]] : f32
@@ -902,9 +902,9 @@ TEST_FUNC(linalg_matmul_test) {
 // clang-format off
 // CHECK-LABEL: func @linalg_conv_nhwc
 //       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
-// CHECK-SAME: indexing_maps = [(d0, d1, d2, d3, d4, d5, d6) -> (d0, d2 * 3 + d4 * 5, d3 * 4 + d5 * 6, d6),
-// CHECK-SAME: (d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d1),
-// CHECK-SAME: (d0, d1, d2, d3, d4, d5, d6) -> (d0, d2, d3, d1)],
+// CHECK-SAME: indexing_maps = [affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d2 * 3 + d4 * 5, d3 * 4 + d5 * 6, d6)>,
+// CHECK-SAME: affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d1)>,
+// CHECK-SAME: affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d2, d3, d1)>],
 // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction"]}
 ///      CHECK:   ^bb1(%[[a0:.*]]: f32, %[[a1:.*]]: f32, %[[a2:.*]]: f32):
 //       CHECK:     %[[a3:.*]] = mulf %[[a0]], %[[a1]] : f32
@@ -933,11 +933,11 @@ TEST_FUNC(linalg_conv_nhwc) {
 // clang-format off
 // CHECK-LABEL: func @linalg_dilated_conv_nhwc
 //       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
-// CHECK-SAME: indexing_maps = [(d0, d1, d2, d3, d4, d5, d6) -> (d0, d3 * 3 + d5 * 5, d4 * 4 + d6 * 6, d2),
-// CHECK-SAME: (d0, d1, d2, d3, d4, d5, d6) -> (d5, d6, d2, d1),
-// CHECK-SAME: (d0, d1, d2, d3, d4, d5, d6) -> (d0, d3, d4, d1 + d2 * 7)],
+// CHECK-SAME: indexing_maps = [affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d3 * 3 + d5 * 5, d4 * 4 + d6 * 6, d2)>,
+// CHECK-SAME: affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d5, d6, d2, d1)>,
+// CHECK-SAME: affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d3, d4, d1 + d2 * 7)>],
 // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]}
-///      CHECK:   ^bb1(%[[a0:.*]]: f32, %[[a1:.*]]: f32, %[[a2:.*]]: f32):
+//       CHECK:   ^bb1(%[[a0:.*]]: f32, %[[a1:.*]]: f32, %[[a2:.*]]: f32):
 //       CHECK:     %[[a3:.*]] = mulf %[[a0]], %[[a1]] : f32
 //       CHECK:     %[[a4:.*]] = addf %[[a2]], %[[a3]] : f32
 //       CHECK:     linalg.yield %[[a4]] : f32
@@ -965,8 +965,8 @@ TEST_FUNC(linalg_dilated_conv_nhwc) {
 
 // clang-format off
 // CHECK-LABEL: func @linalg_metadata_ops
-//       CHECK: linalg.reshape {{.*}} [(d0, d1, d2) -> (d0, d1), (d0, d1, d2) -> (d2)] : memref<4x8x16xf32> into memref<32x16xf32>
-//       CHECK: linalg.reshape {{.*}} [(d0, d1, d2) -> (d0, d1), (d0, d1, d2) -> (d2)] : memref<32x16xf32> into memref<4x8x16xf32>
+//       CHECK: linalg.reshape {{.*}} [affine_map<(d0, d1, d2) -> (d0, d1)>, affine_map<(d0, d1, d2) -> (d2)>] : memref<4x8x16xf32> into memref<32x16xf32>
+//       CHECK: linalg.reshape {{.*}} [affine_map<(d0, d1, d2) -> (d0, d1)>, affine_map<(d0, d1, d2) -> (d2)>] : memref<32x16xf32> into memref<4x8x16xf32>
 // clang-format on
 TEST_FUNC(linalg_metadata_ops) {
   using namespace edsc;

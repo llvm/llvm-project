@@ -108,8 +108,8 @@ func @composite_extract_invalid_index_type_2(%arg0 : !spv.array<4x!spv.array<4xf
 // -----
 
 func @composite_extract_invalid_index_identifier(%arg0 : !spv.array<4x!spv.array<4xf32>>) -> () {
-  // expected-error @+1 {{expected bare identifier}}
-  %0 = spv.CompositeExtract %arg0(1 : i32) : !spv.array<4x!spv.array<4xf32>>
+  // expected-error @+1 {{expected non-function type}}
+  %0 = spv.CompositeExtract %arg0 ]1 : i32) : !spv.array<4x!spv.array<4xf32>>
   return
 }
 

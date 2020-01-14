@@ -3,14 +3,14 @@
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
 // RUN: mlir-opt %s --convert-linalg-to-llvm -o=/dev/null 2>&1
 
-// CHECK-DAG: #[[strided1D:.*]] = (d0)[s0] -> (d0 + s0)
-// CHECK-DAG: #[[strided2D:.*]] = (d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)
-// CHECK-DAG: #[[strided3D:.*]] = (d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)
-// CHECK-DAG: #[[strided4D:.*]] = (d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3)
+// CHECK-DAG: #[[strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
+// CHECK-DAG: #[[strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+// CHECK-DAG: #[[strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
+// CHECK-DAG: #[[strided4D:.*]] = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3)>
 
-// CHECK-DAG: #[[Stride2Dilation1:.*]] = (d0, d1) -> (d0 * 2 + d1)
-// CHECK-DAG: #[[Stride2Dilation4:.*]] = (d0, d1) -> (d0 * 2 + d1 * 4)
-// CHECK-DAG: #[[Stride3Dilation5:.*]] = (d0, d1) -> (d0 * 3 + d1 * 5)
+// CHECK-DAG: #[[Stride2Dilation1:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1)>
+// CHECK-DAG: #[[Stride2Dilation4:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1 * 4)>
+// CHECK-DAG: #[[Stride3Dilation5:.*]] = affine_map<(d0, d1) -> (d0 * 3 + d1 * 5)>
 
 
 func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
@@ -146,8 +146,8 @@ func @copy_view0(%arg0: memref<f32>, %arg1: memref<f32>) {
 //       CHECK:   store %{{.*}}, %{{.*}}[] : memref<f32>
 
 func @copy_view3(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  linalg.copy(%arg0, %arg1) {inputPermutation = (i, j, k) -> (i, k, j),
-                             outputPermutation = (i, j, k) -> (k, j, i)} :
+  linalg.copy(%arg0, %arg1) {inputPermutation = affine_map<(i, j, k) -> (i, k, j)>,
+                             outputPermutation = affine_map<(i, j, k) -> (k, j, i)>} :
     memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
   return
 }
@@ -217,9 +217,9 @@ func @foo(%0: f32, %1: f32, %2: f32) -> (f32, f32) {
   return %f0, %f0 : f32, f32
 }
 #accesses = [
-  (i, j, k) -> (i, j),
-  (i, j, k) -> (i, j, k),
-  (i, j, k) -> (i, k, j)
+  affine_map<(i, j, k) -> (i, j)>,
+  affine_map<(i, j, k) -> (i, j, k)>,
+  affine_map<(i, j, k) -> (i, k, j)>
 ]
 #trait = {
   args_in = 1,

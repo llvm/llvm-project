@@ -1218,13 +1218,19 @@ void ModulePrinter::printAttribute(Attribute attr, bool mayElideType) {
     os << ']';
     break;
   case StandardAttributes::AffineMap:
+    os << "affine_map<";
     attr.cast<AffineMapAttr>().getValue().print(os);
+    os << '>';
 
     // AffineMap always elides the type.
     return;
   case StandardAttributes::IntegerSet:
+    os << "affine_set<";
     attr.cast<IntegerSetAttr>().getValue().print(os);
-    break;
+    os << '>';
+
+    // IntegerSet always elides the type.
+    return;
   case StandardAttributes::Type:
     printType(attr.cast<TypeAttr>().getValue());
     break;

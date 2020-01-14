@@ -334,8 +334,11 @@ public:
   // Affine Parsing
   //===--------------------------------------------------------------------===//
 
+  /// Parse a reference to either an affine map, or an integer set.
   ParseResult parseAffineMapOrIntegerSetReference(AffineMap &map,
                                                   IntegerSet &set);
+  ParseResult parseAffineMapReference(AffineMap &map);
+  ParseResult parseIntegerSetReference(IntegerSet &set);
 
   /// Parse an AffineMap where the dim and symbol identifiers are SSA ids.
   ParseResult
@@ -641,6 +644,16 @@ public:
   ParseResult parseAttribute(Attribute &result, Type type) override {
     result = parser.parseAttribute(type);
     return success(static_cast<bool>(result));
+  }
+
+  /// Parse an affine map instance into 'map'.
+  ParseResult parseAffineMap(AffineMap &map) override {
+    return parser.parseAffineMapReference(map);
+  }
+
+  /// Parse an integer set instance into 'set'.
+  ParseResult printIntegerSet(IntegerSet &set) override {
+    return parser.parseIntegerSetReference(set);
   }
 
   //===--------------------------------------------------------------------===//
@@ -1446,15 +1459,24 @@ static std::string extractSymbolReference(Token tok) {
 Attribute Parser::parseAttribute(Type type) {
   switch (getToken().getKind()) {
   // Parse an AffineMap or IntegerSet attribute.
-  case Token::l_paren: {
-    // Try to parse an affine map or an integer set reference.
+  case Token::kw_affine_map: {
+    consumeToken(Token::kw_affine_map);
+
     AffineMap map;
+    if (parseToken(Token::less, "expected '<' in affine map") ||
+        parseAffineMapReference(map) ||
+        parseToken(Token::greater, "expected '>' in affine map"))
+      return Attribute();
+    return AffineMapAttr::get(map);
+  }
+  case Token::kw_affine_set: {
+    consumeToken(Token::kw_affine_set);
+
     IntegerSet set;
-    if (parseAffineMapOrIntegerSetReference(map, set))
-      return nullptr;
-    if (map)
-      return AffineMapAttr::get(map);
-    assert(set);
+    if (parseToken(Token::less, "expected '<' in integer set") ||
+        parseIntegerSetReference(set) ||
+        parseToken(Token::greater, "expected '>' in integer set"))
+      return Attribute();
     return IntegerSetAttr::get(set);
   }
 
@@ -3034,6 +3056,24 @@ ParseResult Parser::parseAffineMapOrIntegerSetReference(AffineMap &map,
                                                         IntegerSet &set) {
   return AffineParser(state).parseAffineMapOrIntegerSetInline(map, set);
 }
+ParseResult Parser::parseAffineMapReference(AffineMap &map) {
+  llvm::SMLoc curLoc = getToken().getLoc();
+  IntegerSet set;
+  if (parseAffineMapOrIntegerSetReference(map, set))
+    return failure();
+  if (set)
+    return emitError(curLoc, "expected AffineMap, but got IntegerSet");
+  return success();
+}
+ParseResult Parser::parseIntegerSetReference(IntegerSet &set) {
+  llvm::SMLoc curLoc = getToken().getLoc();
+  AffineMap map;
+  if (parseAffineMapOrIntegerSetReference(map, set))
+    return failure();
+  if (map)
+    return emitError(curLoc, "expected IntegerSet, but got AffineMap");
+  return success();
+}
 
 /// Parse an AffineMap of SSA ids. The callback 'parseElement' is used to
 /// parse SSA value uses encountered while parsing affine expressions.
@@ -3954,6 +3994,16 @@ public:
     if (failed(parseOptionalKeyword("attributes")))
       return success();
     return parser.parseAttributeDict(result);
+  }
+
+  /// Parse an affine map instance into 'map'.
+  ParseResult parseAffineMap(AffineMap &map) override {
+    return parser.parseAffineMapReference(map);
+  }
+
+  /// Parse an integer set instance into 'set'.
+  ParseResult printIntegerSet(IntegerSet &set) override {
+    return parser.parseIntegerSetReference(set);
   }
 
   //===--------------------------------------------------------------------===//
