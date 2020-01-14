@@ -1443,14 +1443,13 @@ defm : BufferAtomicPatterns_NO_RTN<SIbuffer_atomic_pk_fadd, v2f16, "BUFFER_ATOMI
 
 def : GCNPat<
   (SIbuffer_atomic_cmpswap
-      i32:$data, i32:$cmp, v4i32:$rsrc, 0,
-      0, i32:$soffset, timm:$offset,
-      timm:$cachepolicy, 0),
+      i32:$data, i32:$cmp, v4i32:$rsrc, 0, 0, i32:$soffset,
+      timm:$offset, timm:$cachepolicy, 0),
   (EXTRACT_SUBREG
     (BUFFER_ATOMIC_CMPSWAP_OFFSET_RTN
-      (REG_SEQUENCE VReg_64, $data, sub0, $cmp, sub1),
-      $rsrc, $soffset, (as_i16imm $offset), (extract_slc $cachepolicy)),
-    sub0)
+      (REG_SEQUENCE VReg_64, VGPR_32:$data, sub0, VGPR_32:$cmp, sub1),
+        SReg_128:$rsrc, SCSrc_b32:$soffset, (as_i16timm $offset),
+        (extract_slc $cachepolicy)), sub0)
 >;
 
 def : GCNPat<
@@ -1460,8 +1459,8 @@ def : GCNPat<
       timm:$cachepolicy, timm),
   (EXTRACT_SUBREG
     (BUFFER_ATOMIC_CMPSWAP_IDXEN_RTN
-      (REG_SEQUENCE VReg_64, $data, sub0, $cmp, sub1),
-      $vindex, $rsrc, $soffset, (as_i16imm $offset), (extract_slc $cachepolicy)),
+      (REG_SEQUENCE VReg_64, VGPR_32:$data, sub0, VGPR_32:$cmp, sub1),
+      VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset, (as_i16timm $offset), (extract_slc $cachepolicy)),
     sub0)
 >;
 
@@ -1472,8 +1471,8 @@ def : GCNPat<
       timm:$cachepolicy, 0),
   (EXTRACT_SUBREG
     (BUFFER_ATOMIC_CMPSWAP_OFFEN_RTN
-      (REG_SEQUENCE VReg_64, $data, sub0, $cmp, sub1),
-      $voffset, $rsrc, $soffset, (as_i16imm $offset), (extract_slc $cachepolicy)),
+      (REG_SEQUENCE VReg_64, VGPR_32:$data, sub0, VGPR_32:$cmp, sub1),
+      VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset, (as_i16timm $offset), (extract_slc $cachepolicy)),
     sub0)
 >;
 
@@ -1484,9 +1483,9 @@ def : GCNPat<
       timm:$cachepolicy, timm),
   (EXTRACT_SUBREG
     (BUFFER_ATOMIC_CMPSWAP_BOTHEN_RTN
-      (REG_SEQUENCE VReg_64, $data, sub0, $cmp, sub1),
-      (REG_SEQUENCE VReg_64, $vindex, sub0, $voffset, sub1),
-      $rsrc, $soffset, (as_i16imm $offset), (extract_slc $cachepolicy)),
+      (REG_SEQUENCE VReg_64, VGPR_32:$data, sub0, VGPR_32:$cmp, sub1),
+      (REG_SEQUENCE VReg_64, VGPR_32:$vindex, sub0, VGPR_32:$voffset, sub1),
+      SReg_128:$rsrc, SCSrc_b32:$soffset, (as_i16timm $offset), (extract_slc $cachepolicy)),
     sub0)
 >;
 
