@@ -2398,7 +2398,6 @@ static void checkFoundationAPI(Sema &S, SourceLocation Loc,
     return;
   QualType Ret = ImpliedMethod->getReturnType();
   if (Ret->isRecordType() || Ret->isVectorType() || Ret->isExtVectorType()) {
-    QualType Ret = ImpliedMethod->getReturnType();
     S.Diag(Loc, diag::warn_objc_unsafe_perform_selector)
         << Method->getSelector()
         << (!Ret->isRecordType()
