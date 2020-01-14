@@ -50,16 +50,27 @@ public:
   // Symbol Utilities
   //===--------------------------------------------------------------------===//
 
+  /// Returns true if the given operation defines a symbol.
+  static bool isSymbol(Operation *op);
+
+  /// Returns the name of the given symbol operation.
+  static StringRef getSymbolName(Operation *symbol);
+  /// Sets the name of the given symbol operation.
+  static void setSymbolName(Operation *symbol, StringRef name);
+
   /// Returns the operation registered with the given symbol name with the
   /// regions of 'symbolTableOp'. 'symbolTableOp' is required to be an operation
   /// with the 'OpTrait::SymbolTable' trait.
   static Operation *lookupSymbolIn(Operation *op, StringRef symbol);
+  static Operation *lookupSymbolIn(Operation *op, SymbolRefAttr symbol);
 
   /// Returns the operation registered with the given symbol name within the
   /// closest parent operation of, or including, 'from' with the
   /// 'OpTrait::SymbolTable' trait. Returns nullptr if no valid symbol was
   /// found.
   static Operation *lookupNearestSymbolFrom(Operation *from, StringRef symbol);
+  static Operation *lookupNearestSymbolFrom(Operation *from,
+                                            SymbolRefAttr symbol);
 
   /// This class represents a specific symbol use.
   class SymbolUse {
@@ -110,6 +121,7 @@ public:
   /// symbol table, and not the op itself. This function returns None if there
   /// are any unknown operations that may potentially be symbol tables.
   static Optional<UseRange> getSymbolUses(StringRef symbol, Operation *from);
+  static Optional<UseRange> getSymbolUses(Operation *symbol, Operation *from);
 
   /// Return if the given symbol is known to have no uses that are nested
   /// within the given operation 'from'. This does not traverse into any nested
@@ -120,6 +132,7 @@ public:
   /// tables. This doesn't necessarily mean that there are no uses, we just
   /// can't conservatively prove it.
   static bool symbolKnownUseEmpty(StringRef symbol, Operation *from);
+  static bool symbolKnownUseEmpty(Operation *symbol, Operation *from);
 
   /// Attempt to replace all uses of the given symbol 'oldSymbol' with the
   /// provided symbol 'newSymbol' that are nested within the given operation
@@ -132,6 +145,9 @@ public:
   LLVM_NODISCARD static LogicalResult replaceAllSymbolUses(StringRef oldSymbol,
                                                            StringRef newSymbol,
                                                            Operation *from);
+  LLVM_NODISCARD static LogicalResult
+  replaceAllSymbolUses(Operation *oldSymbol, StringRef newSymbolName,
+                       Operation *from);
 
 private:
   Operation *symbolTableOp;
@@ -207,14 +223,14 @@ public:
   /// operation 'from'.
   /// Note: See mlir::SymbolTable::getSymbolUses for more details.
   Optional<::mlir::SymbolTable::UseRange> getSymbolUses(Operation *from) {
-    return ::mlir::SymbolTable::getSymbolUses(getName(), from);
+    return ::mlir::SymbolTable::getSymbolUses(this->getOperation(), from);
   }
 
   /// Return if the current symbol is known to have no uses that are nested
   /// within the given operation 'from'.
   /// Note: See mlir::SymbolTable::symbolKnownUseEmpty for more details.
   bool symbolKnownUseEmpty(Operation *from) {
-    return ::mlir::SymbolTable::symbolKnownUseEmpty(getName(), from);
+    return ::mlir::SymbolTable::symbolKnownUseEmpty(this->getOperation(), from);
   }
 
   /// Attempt to replace all uses of the current symbol with the provided symbol
@@ -222,8 +238,8 @@ public:
   /// Note: See mlir::SymbolTable::replaceAllSymbolUses for more details.
   LLVM_NODISCARD LogicalResult replaceAllSymbolUses(StringRef newSymbol,
                                                     Operation *from) {
-    return ::mlir::SymbolTable::replaceAllSymbolUses(getName(), newSymbol,
-                                                     from);
+    return ::mlir::SymbolTable::replaceAllSymbolUses(this->getOperation(),
+                                                     newSymbol, from);
   }
 };
 
