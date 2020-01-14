@@ -9394,6 +9394,7 @@ namespace {
     bool VisitUnaryImag(const UnaryOperator *E);
     // FIXME: Missing: unary -, unary ~, binary add/sub/mul/div,
     //                 binary comparisons, binary and/or/xor,
+    //                 conditional operator (for GNU conditional select),
     //                 shufflevector, ExtVectorElementExpr
   };
 } // end anonymous namespace
