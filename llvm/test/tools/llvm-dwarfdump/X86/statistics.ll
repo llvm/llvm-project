@@ -20,6 +20,8 @@
 ;   int squared = square(i);
 ;   return squared*i;
 ; }
+;
+; int boo(int, int) {}
 
 ; Following variables/arguments/members should be counted:
 ;     - GlobalConst,
@@ -27,16 +29,17 @@
 ;     - s, s.constant,
 ;     - square::i,
 ;     - cube::i, cube::squared
+;     - boo::1, boo::2
 ; Skipped entities:
 ;     - declaration of test::a,
 ;     - non-constant member S:fn,
 ;     - arguments of S:fn.
 
-; CHECK: "unique source variables":7
+; CHECK: "unique source variables":9
 ; +1 extra inline i.
-; CHECK: "source variables":8
+; CHECK: "source variables":10
 ; -1 square::i
-; CHECK: "variables with location":7
+; CHECK: "variables with location":9
 ; CHECK: "scope bytes total":[[BYTES:[0-9]+]]
 ; Because of the dbg.value in the middle of the function, the pc range coverage
 ; must be below 100%.
@@ -99,6 +102,18 @@ entry:
   ret i32 %mul, !dbg !44
 }
 
+; Function Attrs: noinline optnone uwtable
+define dso_local i32 @_Z3booii(i32 %0, i32 %1) !dbg !52 {
+entry:
+  %.addr = alloca i32, align 4
+  %.addr1 = alloca i32, align 4
+  store i32 %0, i32* %.addr, align 4
+  call void @llvm.dbg.declare(metadata i32* %.addr, metadata !55, metadata !DIExpression()), !dbg !56
+  store i32 %1, i32* %.addr1, align 4
+  call void @llvm.dbg.declare(metadata i32* %.addr1, metadata !57, metadata !DIExpression()), !dbg !58
+  ret i32 0, !dbg !58
+}
+
 attributes #0 = { alwaysinline nounwind ssp uwtable }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { noinline nounwind optnone ssp uwtable }
@@ -159,3 +174,10 @@ attributes #2 = { noinline nounwind optnone ssp uwtable }
 !49 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !2, entity: !50, file: !3, line: 2)
 !50 = !DIGlobalVariable(name: "a", linkageName: "_ZN4test1aE", scope: !51, file: !3, line: 2, type: !8, isLocal: false, isDefinition: false)
 !51 = !DINamespace(name: "test", scope: !2)
+!52 = distinct !DISubprogram(name: "boo", linkageName: "_Z3booii", scope: !3, file: !3, line: 10, type: !53, scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !2, retainedNodes: !4)
+!53 = !DISubroutineType(types: !54)
+!54 = !{!8, !8, !8}
+!55 = !DILocalVariable(arg: 1, scope: !52, file: !3, line: 10, type: !8)
+!56 = !DILocation(line: 10, column: 12, scope: !52)
+!57 = !DILocalVariable(arg: 2, scope: !52, file: !3, line: 10, type: !8)
+!58 = !DILocation(line: 10, column: 17, scope: !52)
