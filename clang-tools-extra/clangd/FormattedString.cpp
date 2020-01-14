@@ -164,6 +164,19 @@ std::string indentLines(llvm::StringRef Input) {
   }
   return IndentedR;
 }
+
+class Heading : public Paragraph {
+public:
+  Heading(size_t Level) : Level(Level) {}
+  void renderMarkdown(llvm::raw_ostream &OS) const override {
+    OS << std::string(Level, '#') << ' ';
+    Paragraph::renderMarkdown(OS);
+  }
+
+private:
+  size_t Level;
+};
+
 } // namespace
 
 std::string Block::asMarkdown() const {
@@ -277,6 +290,12 @@ std::string Document::asPlainText() const {
 BulletList &Document::addBulletList() {
   Children.emplace_back(std::make_unique<BulletList>());
   return *static_cast<BulletList *>(Children.back().get());
+}
+
+Paragraph &Document::addHeading(size_t Level) {
+  assert(Level > 0);
+  Children.emplace_back(std::make_unique<Heading>(Level));
+  return *static_cast<Paragraph *>(Children.back().get());
 }
 } // namespace markup
 } // namespace clangd

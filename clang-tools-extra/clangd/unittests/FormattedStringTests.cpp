@@ -145,6 +145,15 @@ TEST(Document, Spacer) {
   EXPECT_EQ(D.asPlainText(), "foo\n\nbar");
 }
 
+TEST(Document, Heading) {
+  Document D;
+  D.addHeading(1).appendText("foo");
+  D.addHeading(2).appendText("bar");
+  D.addParagraph().appendText("baz");
+  EXPECT_EQ(D.asMarkdown(), "# foo  \n## bar  \nbaz");
+  EXPECT_EQ(D.asPlainText(), "foo\nbar\nbaz");
+}
+
 TEST(CodeBlock, Render) {
   Document D;
   // Code blocks preserves any extra spaces.

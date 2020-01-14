@@ -14,6 +14,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FORMATTEDSTRING_H
 
 #include "llvm/Support/raw_ostream.h"
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <vector>
@@ -86,6 +87,9 @@ public:
   /// Adds a block of code. This translates to a ``` block in markdown. In plain
   /// text representation, the code block will be surrounded by newlines.
   void addCodeBlock(std::string Code, std::string Language = "cpp");
+  /// Heading is a special type of paragraph that will be prepended with \p
+  /// Level many '#'s in markdown.
+  Paragraph &addHeading(size_t Level);
 
   BulletList &addBulletList();
 
