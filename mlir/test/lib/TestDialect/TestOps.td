@@ -74,8 +74,14 @@ def MultiTensorRankOf : TEST_Op<"multi_tensor_rank_of"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Test Operands
+// Test Symbols
 //===----------------------------------------------------------------------===//
+
+def SymbolOp : TEST_Op<"symbol", [Symbol]> {
+  let summary =  "operation which defines a new symbol";
+  let arguments = (ins StrAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility);
+}
 
 def SymbolScopeOp : TEST_Op<"symbol_scope",
     [SymbolTable, SingleBlockImplicitTerminator<"TerminatorOp">]> {
