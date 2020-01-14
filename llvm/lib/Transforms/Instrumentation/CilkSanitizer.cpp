@@ -63,8 +63,6 @@ STATISTIC(NumOmittedReadsBeforeWrite,
 STATISTIC(NumOmittedReadsFromConstants,
           "Number of reads from constant data");
 STATISTIC(NumOmittedNonCaptured, "Number of accesses ignored due to capturing");
-STATISTIC(NumOmittedStaticNoRace,
-          "Number of accesses proven statically to not race");
 STATISTIC(NumInstrumentedMemIntrinsicReads,
           "Number of instrumented reads from memory intrinsics");
 STATISTIC(NumInstrumentedMemIntrinsicWrites,
@@ -1247,23 +1245,6 @@ bool CilkSanitizerImpl::LocalBaseObj(const Value *Addr, LoopInfo *LI,
   return true;
 }
 
-// /// Returns true if Addr can only refer to a locally allocated base object, that
-// /// is, an object created via an AllocaInst or an AllocationFn.
-// static bool LocalBaseObj(const CallBase *CS, const DataLayout &DL,
-//                          LoopInfo *LI, const TargetLibraryInfo *TLI) {
-//   // Check whether all pointer arguments point to local memory, and
-//   // ignore calls that only access local memory.
-//   for (auto CI = CS->arg_begin(), CE = CS->arg_end(); CI != CE; ++CI) {
-//     Value *Arg = *CI;
-//     if (!Arg->getType()->isPtrOrPtrVectorTy())
-//       continue;
-
-//     if (!LocalBaseObj(Arg, DL, LI, TLI))
-//       return false;
-//   }
-//   return true;
-// }
-
 // Examine the uses of a Instruction AI to determine if it is used in a subtask.
 // This method assumes that AI is an allocation instruction, i.e., either an
 // AllocaInst or an AllocationFn.
@@ -1384,23 +1365,6 @@ bool CilkSanitizerImpl::PossibleRaceByCapture(const Value *Addr,
 
   return false;
 }
-
-// /// Returns true if any address referenced by the callsite could race due to
-// /// pointer capture.
-// static bool PossibleRaceByCapture(const CallBase *CS, const DataLayout &DL,
-//                                   const TaskInfo &TI, LoopInfo *LI) {
-//   // Check whether all pointer arguments point to local memory, and
-//   // ignore calls that only access local memory.
-//   for (auto CI = CS->arg_begin(), CE = CS->arg_end(); CI != CE; ++CI) {
-//     Value *Arg = *CI;
-//     if (!Arg->getType()->isPtrOrPtrVectorTy())
-//       continue;
-
-//     if (PossibleRaceByCapture(Arg, DL, TI, LI))
-//       return true;
-//   }
-//   return false;
-// }
 
 bool CilkSanitizerImpl::unknownObjectUses(const Value *Addr, LoopInfo *LI,
                                           const TargetLibraryInfo *TLI) const {
@@ -2460,10 +2424,12 @@ bool CilkSanitizerImpl::instrumentFunctionUsingRI(Function &F) {
 
   if (Options.CallsMayThrow)
     setupCalls(F);
+
   setupBlocks(F);
 
   DominatorTree *DT = &GetDomTree(F);
   LoopInfo &LI = GetLoopInfo(F);
+
   if (Options.InstrumentLoops)
     for (Loop *L : LI)
       simplifyLoop(L, DT, &LI, nullptr, nullptr, nullptr,
