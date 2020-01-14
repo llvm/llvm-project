@@ -2929,7 +2929,7 @@ bool CilkSanitizerImpl::instrumentAnyMemIntrinAcc(Instruction *I,
       assert(LoadId == LoadObjId &&
              "Load received different ID's in FED and object tables.");
 
-      Value *CsiId = StoreFED.localToGlobalId(LoadId, IRB);
+      Value *CsiId = LoadFED.localToGlobalId(LoadId, IRB);
       Value *Args[] = {CsiId, IRB.CreatePointerCast(Addr, IRB.getInt8PtrTy()),
                        IRB.CreateIntCast(M->getLength(), IntptrTy, false),
                        Prop.getValue(IRB)};
@@ -3006,13 +3006,15 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, unsigned SyncRegNum,
                                          unsigned NumSyncRegs,
                                          DominatorTree *DT, TaskInfo &TI,
                                          LoopInfo &LI) {
+  BasicBlock *TaskEntryBlock = TI.getTaskFor(DI->getParent())->getEntry();
+  IRBuilder<> IDBuilder(&*TaskEntryBlock->getFirstInsertionPt());
   bool TapirLoopBody = spawnsTapirLoopBody(DI, LI, TI);
   // Instrument the detach instruction itself
   Value *DetachID;
   {
     IRBuilder<> IRB(DI);
     uint64_t LocalID = DetachFED.add(*DI);
-    DetachID = DetachFED.localToGlobalId(LocalID, IRB);
+    DetachID = DetachFED.localToGlobalId(LocalID, IDBuilder);
     Instruction *Call = IRB.CreateCall(CsanDetach, {DetachID,
                                                     IRB.getInt8(SyncRegNum)});
     IRB.SetInstDebugLocation(Call);
@@ -3031,7 +3033,7 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, unsigned SyncRegNum,
     // Instrument the entry point of the detached task.
     IRBuilder<> IRB(&*DetachedBlock->getFirstInsertionPt());
     uint64_t LocalID = TaskFED.add(*DetachedBlock);
-    Value *TaskID = TaskFED.localToGlobalId(LocalID, IRB);
+    Value *TaskID = TaskFED.localToGlobalId(LocalID, IDBuilder);
     CsiTaskProperty Prop;
     Prop.setIsTapirLoopBody(TapirLoopBody);
     Prop.setNumSyncReg(NumSyncRegs);
@@ -3052,7 +3054,7 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, unsigned SyncRegNum,
     for (BasicBlock *TaskExit : TaskExits) {
       IRBuilder<> IRB(TaskExit->getTerminator());
       uint64_t LocalID = TaskExitFED.add(*TaskExit->getTerminator());
-      Value *TaskExitID = TaskExitFED.localToGlobalId(LocalID, IRB);
+      Value *TaskExitID = TaskExitFED.localToGlobalId(LocalID, IDBuilder);
       CsiTaskExitProperty ExitProp;
       ExitProp.setIsTapirLoopBody(TapirLoopBody);
       Instruction *Call = IRB.CreateCall(
@@ -3065,7 +3067,7 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, unsigned SyncRegNum,
     for (BasicBlock *TaskExit : TaskResumes) {
       IRBuilder<> IRB(TaskExit->getTerminator());
       uint64_t LocalID = TaskExitFED.add(*TaskExit->getTerminator());
-      Value *TaskExitID = TaskExitFED.localToGlobalId(LocalID, IRB);
+      Value *TaskExitID = TaskExitFED.localToGlobalId(LocalID, IDBuilder);
       CsiTaskExitProperty ExitProp;
       ExitProp.setIsTapirLoopBody(TapirLoopBody);
       Instruction *Call = IRB.CreateCall(
@@ -3076,7 +3078,7 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, unsigned SyncRegNum,
     }
 
     Task *T = TI.getTaskFor(DetachedBlock);
-    Value *DefaultID = getDefaultID(IRB);
+    Value *DefaultID = getDefaultID(IDBuilder);
     for (Spindle *SharedEH : SharedEHExits) {
       CsiTaskExitProperty ExitProp;
       ExitProp.setIsTapirLoopBody(TapirLoopBody);
@@ -3098,7 +3100,7 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, unsigned SyncRegNum,
 
     IRBuilder<> IRB(&*ContinueBlock->getFirstInsertionPt());
     uint64_t LocalID = DetachContinueFED.add(*ContinueBlock);
-    Value *ContinueID = DetachContinueFED.localToGlobalId(LocalID, IRB);
+    Value *ContinueID = DetachContinueFED.localToGlobalId(LocalID, IDBuilder);
     Instruction *Call = IRB.CreateCall(CsanDetachContinue,
                                        {ContinueID, DetachID});
     IRB.SetInstDebugLocation(Call);
@@ -3106,10 +3108,9 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI, unsigned SyncRegNum,
   // Instrument the unwind of the detach, if it exists.
   if (DI->hasUnwindDest()) {
     BasicBlock *UnwindBlock = DI->getUnwindDest();
-    IRBuilder<> IRB(DI);
-    Value *DefaultID = getDefaultID(IRB);
+    Value *DefaultID = getDefaultID(IDBuilder);
     uint64_t LocalID = DetachContinueFED.add(*UnwindBlock);
-    Value *ContinueID = DetachContinueFED.localToGlobalId(LocalID, IRB);
+    Value *ContinueID = DetachContinueFED.localToGlobalId(LocalID, IDBuilder);
     insertHookCallInSuccessorBB(UnwindBlock, DI->getParent(),
                                 CsanDetachContinue, {ContinueID, DetachID},
                                 {DefaultID, DefaultID});

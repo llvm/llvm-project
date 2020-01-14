@@ -1168,13 +1168,15 @@ static void getTaskExits(DetachInst *DI,
 void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
                                LoopInfo &LI,
                                const DenseMap<Value *, Value *> &TrackVars) {
+  BasicBlock *TaskEntryBlock = TI.getTaskFor(DI->getParent())->getEntry();
+  IRBuilder<> IDBuilder(&*TaskEntryBlock->getFirstInsertionPt());
   bool TapirLoopBody = spawnsTapirLoopBody(DI, LI, TI);
   // Instrument the detach instruction itself
   Value *DetachID;
   {
     IRBuilder<> IRB(DI);
     uint64_t LocalID = DetachFED.add(*DI);
-    DetachID = DetachFED.localToGlobalId(LocalID, IRB);
+    DetachID = DetachFED.localToGlobalId(LocalID, IDBuilder);
     Value *TrackVar = TrackVars.lookup(DI->getSyncRegion());
     IRB.CreateStore(
         Constant::getIntegerValue(IntegerType::getInt32Ty(DI->getContext()),
@@ -1195,7 +1197,7 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
     // Instrument the entry point of the detached task.
     IRBuilder<> IRB(&*DetachedBlock->getFirstInsertionPt());
     uint64_t LocalID = TaskFED.add(*DetachedBlock);
-    Value *TaskID = TaskFED.localToGlobalId(LocalID, IRB);
+    Value *TaskID = TaskFED.localToGlobalId(LocalID, IDBuilder);
     CsiTaskProperty Prop;
     Prop.setIsTapirLoopBody(TapirLoopBody);
     Instruction *Call = IRB.CreateCall(CsiTaskEntry, {TaskID, DetachID,
@@ -1206,7 +1208,7 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
     for (BasicBlock *Exit : TaskExits) {
       IRBuilder<> IRB(Exit->getTerminator());
       uint64_t LocalID = TaskExitFED.add(*Exit->getTerminator());
-      Value *ExitID = TaskExitFED.localToGlobalId(LocalID, IRB);
+      Value *ExitID = TaskExitFED.localToGlobalId(LocalID, IDBuilder);
       CsiTaskExitProperty ExitProp;
       ExitProp.setIsTapirLoopBody(TapirLoopBody);
       insertHookCall(Exit->getTerminator(), CsiTaskExit,
@@ -1216,7 +1218,7 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
     for (BasicBlock *Exit : TaskResumes) {
       IRBuilder<> IRB(Exit->getTerminator());
       uint64_t LocalID = TaskExitFED.add(*Exit->getTerminator());
-      Value *ExitID = TaskExitFED.localToGlobalId(LocalID, IRB);
+      Value *ExitID = TaskExitFED.localToGlobalId(LocalID, IDBuilder);
       CsiTaskExitProperty ExitProp;
       ExitProp.setIsTapirLoopBody(TapirLoopBody);
       insertHookCall(Exit->getTerminator(), CsiTaskExit,
@@ -1224,7 +1226,7 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
     }
 
     Task *T = TI.getTaskFor(DetachedBlock);
-    Value *DefaultID = getDefaultID(IRB);
+    Value *DefaultID = getDefaultID(IDBuilder);
     for (Spindle *SharedEH : SharedEHExits) {
       CsiTaskExitProperty ExitProp;
       ExitProp.setIsTapirLoopBody(TapirLoopBody);
@@ -1245,7 +1247,7 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
 
     IRBuilder<> IRB(&*ContinueBlock->getFirstInsertionPt());
     uint64_t LocalID = DetachContinueFED.add(*ContinueBlock);
-    Value *ContinueID = DetachContinueFED.localToGlobalId(LocalID, IRB);
+    Value *ContinueID = DetachContinueFED.localToGlobalId(LocalID, IDBuilder);
     Instruction *Call =
         IRB.CreateCall(CsiDetachContinue, {ContinueID, DetachID});
     setInstrumentationDebugLoc(*ContinueBlock, Call);
@@ -1253,10 +1255,9 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI,
   // Instrument the unwind of the detach, if it exists.
   if (DI->hasUnwindDest()) {
     BasicBlock *UnwindBlock = DI->getUnwindDest();
-    IRBuilder<> IRB(DI);
-    Value *DefaultID = getDefaultID(IRB);
+    Value *DefaultID = getDefaultID(IDBuilder);
     uint64_t LocalID = DetachContinueFED.add(*UnwindBlock);
-    Value *ContinueID = DetachContinueFED.localToGlobalId(LocalID, IRB);
+    Value *ContinueID = DetachContinueFED.localToGlobalId(LocalID, IDBuilder);
     insertHookCallInSuccessorBB(UnwindBlock, DI->getParent(), CsiDetachContinue,
                                 {ContinueID, DetachID}, {DefaultID, DefaultID});
   }
