@@ -2654,6 +2654,114 @@ bool AMDGPULegalizerInfo::legalizeAtomicIncDec(MachineInstr &MI,
   return true;
 }
 
+static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
+  switch (IntrID) {
+  case Intrinsic::amdgcn_raw_buffer_atomic_swap:
+  case Intrinsic::amdgcn_struct_buffer_atomic_swap:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP;
+  case Intrinsic::amdgcn_raw_buffer_atomic_add:
+  case Intrinsic::amdgcn_struct_buffer_atomic_add:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD;
+  case Intrinsic::amdgcn_raw_buffer_atomic_sub:
+  case Intrinsic::amdgcn_struct_buffer_atomic_sub:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB;
+  case Intrinsic::amdgcn_raw_buffer_atomic_smin:
+  case Intrinsic::amdgcn_struct_buffer_atomic_smin:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN;
+  case Intrinsic::amdgcn_raw_buffer_atomic_umin:
+  case Intrinsic::amdgcn_struct_buffer_atomic_umin:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMIN;
+  case Intrinsic::amdgcn_raw_buffer_atomic_smax:
+  case Intrinsic::amdgcn_struct_buffer_atomic_smax:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMAX;
+  case Intrinsic::amdgcn_raw_buffer_atomic_umax:
+  case Intrinsic::amdgcn_struct_buffer_atomic_umax:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMAX;
+  case Intrinsic::amdgcn_raw_buffer_atomic_and:
+  case Intrinsic::amdgcn_struct_buffer_atomic_and:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_AND;
+  case Intrinsic::amdgcn_raw_buffer_atomic_or:
+  case Intrinsic::amdgcn_struct_buffer_atomic_or:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_OR;
+  case Intrinsic::amdgcn_raw_buffer_atomic_xor:
+  case Intrinsic::amdgcn_struct_buffer_atomic_xor:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_XOR;
+  case Intrinsic::amdgcn_raw_buffer_atomic_inc:
+  case Intrinsic::amdgcn_struct_buffer_atomic_inc:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC;
+  case Intrinsic::amdgcn_raw_buffer_atomic_dec:
+  case Intrinsic::amdgcn_struct_buffer_atomic_dec:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC;
+  default:
+    llvm_unreachable("unhandled atomic opcode");
+  }
+}
+
+bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
+                                               MachineIRBuilder &B,
+                                               Intrinsic::ID IID) const {
+  B.setInstr(MI);
+
+  const bool IsCmpSwap = IID == Intrinsic::amdgcn_raw_buffer_atomic_cmpswap ||
+                         IID == Intrinsic::amdgcn_struct_buffer_atomic_cmpswap;
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register VData = MI.getOperand(2).getReg();
+
+  Register CmpVal;
+  int OpOffset = 0;
+
+  if (IsCmpSwap) {
+    CmpVal = MI.getOperand(3 + OpOffset).getReg();
+    ++OpOffset;
+  }
+
+  Register RSrc = MI.getOperand(3 + OpOffset).getReg();
+  const unsigned NumVIndexOps = IsCmpSwap ? 9 : 8;
+
+  // The struct intrinsic variants add one additional operand over raw.
+  const bool HasVIndex = MI.getNumOperands() == NumVIndexOps;
+  Register VIndex;
+  if (HasVIndex) {
+    VIndex = MI.getOperand(4).getReg();
+    ++OpOffset;
+  }
+
+  Register VOffset = MI.getOperand(4 + OpOffset).getReg();
+  Register SOffset = MI.getOperand(5 + OpOffset).getReg();
+  unsigned AuxiliaryData = MI.getOperand(6 + OpOffset).getImm();
+
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+
+  unsigned ImmOffset;
+  unsigned TotalOffset;
+  std::tie(VOffset, ImmOffset, TotalOffset) = splitBufferOffsets(B, VOffset);
+  if (TotalOffset != 0)
+    MMO = B.getMF().getMachineMemOperand(MMO, TotalOffset, MMO->getSize());
+
+  if (!VIndex)
+    VIndex = B.buildConstant(LLT::scalar(32), 0).getReg(0);
+
+  auto MIB = B.buildInstr(getBufferAtomicPseudo(IID))
+    .addDef(Dst)
+    .addUse(VData); // vdata
+
+  if (IsCmpSwap)
+    MIB.addReg(CmpVal);
+
+  MIB.addUse(RSrc)               // rsrc
+     .addUse(VIndex)             // vindex
+     .addUse(VOffset)            // voffset
+     .addUse(SOffset)            // soffset
+     .addImm(ImmOffset)          // offset(imm)
+     .addImm(AuxiliaryData)      // cachepolicy, swizzled buffer(imm)
+     .addImm(HasVIndex ? -1 : 0) // idxen(imm)
+     .addMemOperand(MMO);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 // FIMXE: Needs observer like custom
 bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
@@ -2787,6 +2895,33 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
   case Intrinsic::amdgcn_raw_tbuffer_load:
   case Intrinsic::amdgcn_struct_tbuffer_load:
     return legalizeBufferLoad(MI, MRI, B, true, true);
+  case Intrinsic::amdgcn_raw_buffer_atomic_swap:
+  case Intrinsic::amdgcn_struct_buffer_atomic_swap:
+  case Intrinsic::amdgcn_raw_buffer_atomic_add:
+  case Intrinsic::amdgcn_struct_buffer_atomic_add:
+  case Intrinsic::amdgcn_raw_buffer_atomic_sub:
+  case Intrinsic::amdgcn_struct_buffer_atomic_sub:
+  case Intrinsic::amdgcn_raw_buffer_atomic_smin:
+  case Intrinsic::amdgcn_struct_buffer_atomic_smin:
+  case Intrinsic::amdgcn_raw_buffer_atomic_umin:
+  case Intrinsic::amdgcn_struct_buffer_atomic_umin:
+  case Intrinsic::amdgcn_raw_buffer_atomic_smax:
+  case Intrinsic::amdgcn_struct_buffer_atomic_smax:
+  case Intrinsic::amdgcn_raw_buffer_atomic_umax:
+  case Intrinsic::amdgcn_struct_buffer_atomic_umax:
+  case Intrinsic::amdgcn_raw_buffer_atomic_and:
+  case Intrinsic::amdgcn_struct_buffer_atomic_and:
+  case Intrinsic::amdgcn_raw_buffer_atomic_or:
+  case Intrinsic::amdgcn_struct_buffer_atomic_or:
+  case Intrinsic::amdgcn_raw_buffer_atomic_xor:
+  case Intrinsic::amdgcn_struct_buffer_atomic_xor:
+  case Intrinsic::amdgcn_raw_buffer_atomic_inc:
+  case Intrinsic::amdgcn_struct_buffer_atomic_inc:
+  case Intrinsic::amdgcn_raw_buffer_atomic_dec:
+  case Intrinsic::amdgcn_struct_buffer_atomic_dec:
+  case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
+  case Intrinsic::amdgcn_struct_buffer_atomic_cmpswap:
+    return legalizeBufferAtomic(MI, B, IntrID);
   case Intrinsic::amdgcn_atomic_inc:
     return legalizeAtomicIncDec(MI, B, true);
   case Intrinsic::amdgcn_atomic_dec:
