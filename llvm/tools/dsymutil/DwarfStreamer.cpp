@@ -123,6 +123,7 @@ bool DwarfStreamer::init(Triple TheTriple) {
   LocSectionSize = 0;
   LineSectionSize = 0;
   FrameSectionSize = 0;
+  DebugInfoSectionSize = 0;
 
   return true;
 }
@@ -169,6 +170,7 @@ void DwarfStreamer::emitCompileUnitHeader(CompileUnit &Unit) {
   // start of the section.
   Asm->emitInt32(0);
   Asm->emitInt8(Unit.getOrigUnit().getAddressByteSize());
+  DebugInfoSectionSize += 11;
 
   // Remember this CU.
   EmittedUnits.push_back({Unit.getUniqueID(), Unit.getLabelBegin()});
@@ -188,6 +190,45 @@ void DwarfStreamer::emitAbbrevs(
 void DwarfStreamer::emitDIE(DIE &Die) {
   MS->SwitchSection(MOFI->getDwarfInfoSection());
   Asm->emitDwarfDIE(Die);
+  DebugInfoSectionSize += Die.getSize();
+}
+
+/// Emit contents of section SecName From Obj.
+void DwarfStreamer::emitSectionContents(const object::ObjectFile &Obj,
+                                        StringRef SecName) {
+  MCSection *Section =
+      StringSwitch<MCSection *>(SecName)
+          .Case("debug_line", MC->getObjectFileInfo()->getDwarfLineSection())
+          .Case("debug_loc", MC->getObjectFileInfo()->getDwarfLocSection())
+          .Case("debug_ranges",
+                MC->getObjectFileInfo()->getDwarfRangesSection())
+          .Case("debug_frame", MC->getObjectFileInfo()->getDwarfFrameSection())
+          .Case("debug_aranges",
+                MC->getObjectFileInfo()->getDwarfARangesSection())
+          .Default(nullptr);
+
+  if (Section) {
+    MS->SwitchSection(Section);
+
+    if (auto Sec = getSectionByName(Obj, SecName)) {
+      if (Expected<StringRef> E = Sec->getContents())
+        MS->EmitBytes(*E);
+      else
+        consumeError(E.takeError());
+    }
+  }
+}
+
+/// Emit DIE containing warnings.
+void DwarfStreamer::emitPaperTrailWarningsDie(const Triple &Triple, DIE &Die) {
+  switchToDebugInfoSection(/* Version */ 2);
+  auto &Asm = getAsmPrinter();
+  Asm.emitInt32(11 + Die.getSize() - 4);
+  Asm.emitInt16(2);
+  Asm.emitInt32(0);
+  Asm.emitInt8(Triple.isArch64Bit() ? 8 : 4);
+  DebugInfoSectionSize += 11;
+  emitDIE(Die);
 }
 
 /// Emit the debug_str section stored in \p Pool.
@@ -680,33 +721,23 @@ void DwarfStreamer::translateLineTable(DataExtractor Data, uint64_t Offset) {
   Offset = UnitEnd;
 }
 
-static void emitSectionContents(const object::ObjectFile &Obj,
-                                StringRef SecName, MCStreamer *MS) {
-  if (auto Sec = getSectionByName(Obj, SecName)) {
-    if (Expected<StringRef> E = Sec->getContents())
-      MS->EmitBytes(*E);
-    else
-      consumeError(E.takeError());
-  }
-}
-
 void DwarfStreamer::copyInvariantDebugSection(const object::ObjectFile &Obj) {
   if (!Options.Translator) {
     MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLineSection());
-    emitSectionContents(Obj, "debug_line", MS);
+    emitSectionContents(Obj, "debug_line");
   }
 
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLocSection());
-  emitSectionContents(Obj, "debug_loc", MS);
+  emitSectionContents(Obj, "debug_loc");
 
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfRangesSection());
-  emitSectionContents(Obj, "debug_ranges", MS);
+  emitSectionContents(Obj, "debug_ranges");
 
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfFrameSection());
-  emitSectionContents(Obj, "debug_frame", MS);
+  emitSectionContents(Obj, "debug_frame");
 
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfARangesSection());
-  emitSectionContents(Obj, "debug_aranges", MS);
+  emitSectionContents(Obj, "debug_aranges");
 }
 
 /// Emit the pubnames or pubtypes section contribution for \p
