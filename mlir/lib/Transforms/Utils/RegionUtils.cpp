@@ -320,8 +320,6 @@ static LogicalResult deleteDeadness(MutableArrayRef<Region> regions,
 // This function returns success if any operations or arguments were deleted,
 // failure otherwise.
 static LogicalResult runRegionDCE(MutableArrayRef<Region> regions) {
-  assert(regions.size() == 1);
-
   LiveMap liveMap;
   do {
     liveMap.resetChanged();
