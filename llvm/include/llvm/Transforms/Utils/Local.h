@@ -407,6 +407,14 @@ bool removeUnreachableBlocks(Function &F, LazyValueInfo *LVI = nullptr,
                              DomTreeUpdater *DTU = nullptr,
                              MemorySSAUpdater *MSSAU = nullptr);
 
+/// Remove all detach-unwind blocks that do not catch exceptions from detached
+/// tasks.
+///
+/// Returns true if any basic block was removed.
+bool removeDeadDetachUnwinds(Function &F, LazyValueInfo *LVI = nullptr,
+                             DomTreeUpdater *DTU = nullptr,
+                             MemorySSAUpdater *MSSAU = nullptr);
+
 /// Combine the metadata of two instructions so that K can replace J. Some
 /// metadata kinds can only be kept if K does not move, meaning it dominated
 /// J in the original IR.
