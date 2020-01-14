@@ -137,7 +137,7 @@ static const Expr *ignoreUnaryPlus(const Expr *E) {
 static const Expr *getInitializer(const Expr *E) {
   auto *InitList = dyn_cast<InitListExpr>(E);
   if (InitList && InitList->getNumInits() == 1)
-    return InitList->getInit(0);
+    return InitList->getInit(0)->IgnoreParenImpCasts();
   return E;
 }
 
