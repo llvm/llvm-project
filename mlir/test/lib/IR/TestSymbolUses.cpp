@@ -48,7 +48,7 @@ struct SymbolUsesPass : public ModulePass<SymbolUsesPass> {
     assert(symbolUses.hasValue() && "expected no unknown operations");
     for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
       // Check that we can resolve back to our symbol.
-      if (Operation *op = SymbolTable::lookupNearestSymbolFrom(
+      if (SymbolTable::lookupNearestSymbolFrom(
               symbolUse.getUser()->getParentOp(), symbolUse.getSymbolRef())) {
         symbolUse.getUser()->emitRemark()
             << "found use of symbol : " << symbolUse.getSymbolRef() << " : "
