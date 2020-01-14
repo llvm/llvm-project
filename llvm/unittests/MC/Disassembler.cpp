@@ -38,6 +38,10 @@ TEST(Disassembler, X86Test) {
   unsigned NumBytes = sizeof(Bytes);
   unsigned PC = 0;
 
+  InstSize =
+      LLVMDisasmInstruction(DCR, BytesP, 0, PC, OutString, OutStringSize);
+  EXPECT_EQ(InstSize, 0U);
+
   InstSize = LLVMDisasmInstruction(DCR, BytesP, NumBytes, PC, OutString,
                                    OutStringSize);
   EXPECT_EQ(InstSize, 1U);
