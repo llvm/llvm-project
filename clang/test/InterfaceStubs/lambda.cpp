@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -emit-interface-stubs -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-interface-stubs -o - %s \
+// RUN:     | FileCheck %s
 
 // CHECK: --- !experimental-ifs-v1
 // CHECK-NEXT: IfsVersion: 1.0
