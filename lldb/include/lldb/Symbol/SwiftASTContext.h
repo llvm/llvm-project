@@ -733,9 +733,6 @@ public:
   static bool IsImportedType(const CompilerType &type,
                              CompilerType *original_type);
 
-  static bool IsImportedObjectiveCType(const CompilerType &type,
-                                       CompilerType *original_type);
-
   CompilerType GetReferentType(const CompilerType &compiler_type);
 
   lldb::TypeSP GetCachedType(ConstString mangled);
