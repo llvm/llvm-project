@@ -14,6 +14,7 @@
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
+#include "llvm/DWARFLinker/DWARFLinker.h"
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
@@ -41,7 +42,7 @@ namespace dsymutil {
 ///
 /// All interactions with the MC layer that is used to build the debug
 /// information binary representation are handled in this class.
-class DwarfStreamer {
+class DwarfStreamer : public DwarfEmitter {
 public:
   DwarfStreamer(raw_fd_ostream &OutFile, LinkOptions Options)
       : OutFile(OutFile), Options(std::move(Options)) {}
@@ -62,17 +63,24 @@ public:
   ///
   /// As a side effect, this also switches the current Dwarf version
   /// of the MC layer to the one of U.getOrigUnit().
-  void emitCompileUnitHeader(CompileUnit &Unit);
+  void emitCompileUnitHeader(CompileUnit &Unit) override;
 
   /// Recursively emit the DIE tree rooted at \p Die.
-  void emitDIE(DIE &Die);
+  void emitDIE(DIE &Die) override;
 
   /// Emit the abbreviation table \p Abbrevs to the debug_abbrev section.
   void emitAbbrevs(const std::vector<std::unique_ptr<DIEAbbrev>> &Abbrevs,
-                   unsigned DwarfVersion);
+                   unsigned DwarfVersion) override;
+
+  /// Emit DIE containing warnings.
+  void emitPaperTrailWarningsDie(const Triple &Triple, DIE &Die) override;
+
+  /// Emit contents of section SecName From Obj.
+  void emitSectionContents(const object::ObjectFile &Obj,
+                           StringRef SecName) override;
 
   /// Emit the string table described by \p Pool.
-  void emitStrings(const NonRelocatableStringpool &Pool);
+  void emitStrings(const NonRelocatableStringpool &Pool) override;
 
   /// Emit the swift_ast section stored in \p Buffer.
   void emitSwiftAST(StringRef Buffer);
@@ -83,66 +91,75 @@ public:
       int64_t UnitPcOffset, uint64_t OrigLowPc,
       const FunctionIntervals::const_iterator &FuncRange,
       const std::vector<DWARFDebugRangeList::RangeListEntry> &Entries,
-      unsigned AddressSize);
+      unsigned AddressSize) override;
 
   /// Emit debug_aranges entries for \p Unit and if \p DoRangesSection is true,
   /// also emit the debug_ranges entries for the DW_TAG_compile_unit's
   /// DW_AT_ranges attribute.
-  void emitUnitRangesEntries(CompileUnit &Unit, bool DoRangesSection);
+  void emitUnitRangesEntries(CompileUnit &Unit, bool DoRangesSection) override;
 
-  uint32_t getRangesSectionSize() const { return RangesSectionSize; }
+  uint64_t getRangesSectionSize() const override { return RangesSectionSize; }
 
   /// Emit the debug_loc contribution for \p Unit by copying the entries from
   /// \p Dwarf and offsetting them. Update the location attributes to point to
   /// the new entries.
   void emitLocationsForUnit(
       const CompileUnit &Unit, DWARFContext &Dwarf,
-      std::function<void(StringRef, SmallVectorImpl<uint8_t> &)> ProcessExpr);
+      std::function<void(StringRef, SmallVectorImpl<uint8_t> &)> ProcessExpr)
+      override;
 
   /// Emit the line table described in \p Rows into the debug_line section.
   void emitLineTableForUnit(MCDwarfLineTableParams Params,
                             StringRef PrologueBytes, unsigned MinInstLength,
                             std::vector<DWARFDebugLine::Row> &Rows,
-                            unsigned AdddressSize);
+                            unsigned AdddressSize) override;
 
   /// Copy the debug_line over to the updated binary while unobfuscating the
   /// file names and directories.
-  void translateLineTable(DataExtractor LineData, uint64_t Offset);
+  void translateLineTable(DataExtractor LineData, uint64_t Offset) override;
 
   /// Copy over the debug sections that are not modified when updating.
   void copyInvariantDebugSection(const object::ObjectFile &Obj);
 
-  uint64_t getLineSectionSize() const { return LineSectionSize; }
+  uint64_t getLineSectionSize() const override { return LineSectionSize; }
 
   /// Emit the .debug_pubnames contribution for \p Unit.
-  void emitPubNamesForUnit(const CompileUnit &Unit);
+  void emitPubNamesForUnit(const CompileUnit &Unit) override;
 
   /// Emit the .debug_pubtypes contribution for \p Unit.
-  void emitPubTypesForUnit(const CompileUnit &Unit);
+  void emitPubTypesForUnit(const CompileUnit &Unit) override;
 
   /// Emit a CIE.
-  void emitCIE(StringRef CIEBytes);
+  void emitCIE(StringRef CIEBytes) override;
 
   /// Emit an FDE with data \p Bytes.
   void emitFDE(uint32_t CIEOffset, uint32_t AddreSize, uint32_t Address,
-               StringRef Bytes);
+               StringRef Bytes) override;
 
   /// Emit DWARF debug names.
-  void emitDebugNames(AccelTable<DWARF5AccelTableStaticData> &Table);
+  void emitDebugNames(AccelTable<DWARF5AccelTableStaticData> &Table) override;
 
   /// Emit Apple namespaces accelerator table.
-  void emitAppleNamespaces(AccelTable<AppleAccelTableStaticOffsetData> &Table);
+  void emitAppleNamespaces(
+      AccelTable<AppleAccelTableStaticOffsetData> &Table) override;
 
   /// Emit Apple names accelerator table.
-  void emitAppleNames(AccelTable<AppleAccelTableStaticOffsetData> &Table);
+  void
+  emitAppleNames(AccelTable<AppleAccelTableStaticOffsetData> &Table) override;
 
   /// Emit Apple Objective-C accelerator table.
-  void emitAppleObjc(AccelTable<AppleAccelTableStaticOffsetData> &Table);
+  void
+  emitAppleObjc(AccelTable<AppleAccelTableStaticOffsetData> &Table) override;
 
   /// Emit Apple type accelerator table.
-  void emitAppleTypes(AccelTable<AppleAccelTableStaticTypeData> &Table);
+  void
+  emitAppleTypes(AccelTable<AppleAccelTableStaticTypeData> &Table) override;
 
-  uint32_t getFrameSectionSize() const { return FrameSectionSize; }
+  uint64_t getFrameSectionSize() const override { return FrameSectionSize; }
+
+  uint64_t getDebugInfoSectionSize() const override {
+    return DebugInfoSectionSize;
+  }
 
 private:
   /// \defgroup MCObjects MC layer objects constructed by the streamer
@@ -166,10 +183,11 @@ private:
 
   LinkOptions Options;
 
-  uint32_t RangesSectionSize;
-  uint32_t LocSectionSize;
-  uint64_t LineSectionSize;
-  uint32_t FrameSectionSize;
+  uint64_t RangesSectionSize = 0;
+  uint64_t LocSectionSize = 0;
+  uint64_t LineSectionSize = 0;
+  uint64_t FrameSectionSize = 0;
+  uint64_t DebugInfoSectionSize = 0;
 
   /// Keep track of emitted CUs and their Unique ID.
   struct EmittedUnit {
