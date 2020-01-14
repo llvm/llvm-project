@@ -914,6 +914,8 @@ static swift::ASTContext *SetupASTContext(
   if (repl || !playground)
     swift_ast_context->GetLanguageOptions().EnableThrowWithoutTry = true;
 
+  swift_ast_context->GetIRGenOptions().OutputKind =
+      swift::IRGenOutputKind::Module;
   swift_ast_context->GetIRGenOptions().OptMode =
       swift::OptimizationMode::NoOptimization;
   // Normally we'd like to verify, but unfortunately the verifier's
