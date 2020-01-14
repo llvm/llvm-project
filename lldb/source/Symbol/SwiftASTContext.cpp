@@ -8099,30 +8099,6 @@ bool SwiftASTContext::IsImportedType(const CompilerType &type,
   return success;
 }
 
-bool SwiftASTContext::IsImportedObjectiveCType(const CompilerType &type,
-                                               CompilerType *original_type) {
-  bool success = false;
-
-  if (llvm::dyn_cast_or_null<SwiftASTContext>(type.GetTypeSystem())) {
-    CompilerType local_original_type;
-
-    if (IsImportedType(type, &local_original_type)) {
-      if (local_original_type.IsValid()) {
-        ClangASTContext *clang_ast = llvm::dyn_cast_or_null<ClangASTContext>(
-            local_original_type.GetTypeSystem());
-        if (clang_ast &&
-            clang_ast->IsObjCObjectOrInterfaceType(local_original_type)) {
-          if (original_type)
-            *original_type = local_original_type;
-          success = true;
-        }
-      }
-    }
-  }
-
-  return success;
-}
-
 void SwiftASTContext::DumpSummary(void *type, ExecutionContext *exe_ctx,
                                   Stream *s,
                                   const lldb_private::DataExtractor &data,
