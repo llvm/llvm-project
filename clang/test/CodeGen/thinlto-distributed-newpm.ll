@@ -21,16 +21,16 @@
 ; CHECK-O: Running analysis: PassInstrumentationAnalysis
 ; CHECK-O: Starting llvm::Module pass manager run.
 ; CHECK-O: Running pass: WholeProgramDevirtPass
-; CHECK-O: Running analysis: InnerAnalysisManagerProxy<llvm::FunctionAnalysisManager, llvm::Module>
+; CHECK-O: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running pass: LowerTypeTestsPass
 ; CHECK-O: Invalidating all non-preserved analyses for:
-; CHECK-O: Invalidating analysis: InnerAnalysisManagerProxy<llvm::FunctionAnalysisManager, llvm::Module>
+; CHECK-O: Invalidating analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running pass: ForceFunctionAttrsPass
 ; CHECK-O: Running pass: PassManager<llvm::Module>
 ; CHECK-O: Starting llvm::Module pass manager run.
 ; CHECK-O: Running pass: PGOIndirectCallPromotion
 ; CHECK-O: Running analysis: ProfileSummaryAnalysis
-; CHECK-O: Running analysis: InnerAnalysisManagerProxy<llvm::FunctionAnalysisManager, llvm::Module>
+; CHECK-O: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running analysis: OptimizationRemarkEmitterAnalysis on main
 ; CHECK-O: Running analysis: PassInstrumentationAnalysis on main
 ; CHECK-O: Running pass: InferFunctionAttrsPass
@@ -50,9 +50,9 @@
 ; CHECK-O: Running pass: CalledValuePropagationPass
 ; CHECK-O: Running pass: GlobalOptPass
 ; CHECK-O: Invalidating all non-preserved analyses for:
-; CHECK-O: Invalidating analysis: InnerAnalysisManagerProxy<llvm::FunctionAnalysisManager, llvm::Module>
+; CHECK-O: Invalidating analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running pass: ModuleToFunctionPassAdaptor<llvm::PromotePass>
-; CHECK-O: Running analysis: InnerAnalysisManagerProxy<llvm::FunctionAnalysisManager, llvm::Module>
+; CHECK-O: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running analysis: DominatorTreeAnalysis on main
 ; CHECK-O: Running analysis: PassInstrumentationAnalysis on main
 ; CHECK-O: Running analysis: AssumptionAnalysis on main
@@ -66,7 +66,7 @@
 ; CHECK-O: Running analysis: BasicAA on main
 ; CHECK-O: Running analysis: ScopedNoAliasAA on main
 ; CHECK-O: Running analysis: TypeBasedAA on main
-; CHECK-O: Running analysis: OuterAnalysisManagerProxy<llvm::ModuleAnalysisManager, llvm::Function> on main
+; CHECK-O: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running analysis: TargetIRAnalysis on main
 ; CHECK-O: Finished llvm::Function pass manager run.
@@ -75,11 +75,11 @@
 ; CHECK-O: Running analysis: CallGraphAnalysis
 ; CHECK-O: Running pass: RequireAnalysisPass<llvm::ProfileSummaryAnalysis, llvm::Module, llvm::AnalysisManager<llvm::Module>>
 ; CHECK-O: Running pass: ModuleToPostOrderCGSCCPassAdaptor<llvm::DevirtSCCRepeatedPass<llvm::PassManager<LazyCallGraph::SCC, llvm::CGSCCAnalysisManager, llvm::LazyCallGraph &, llvm::CGSCCUpdateResult &> > >
-; CHECK-O: Running analysis: InnerAnalysisManagerProxy<llvm::CGSCCAnalysisManager, llvm::Module>
+; CHECK-O: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O: Running analysis: FunctionAnalysisManagerCGSCCProxy on (main)
 ; CHECK-O: Running analysis: PassInstrumentationAnalysis on (main)
-; CHECK-O: Running analysis: OuterAnalysisManagerProxy<llvm::ModuleAnalysisManager, LazyCallGraph::SCC, llvm::LazyCallGraph &> on (main)
+; CHECK-O: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O: Starting CGSCC pass manager run.
 ; CHECK-O: Running pass: InlinerPass on (main)
 ; CHECK-O: Running pass: PostOrderFunctionAttrsPass on (main)
@@ -104,7 +104,7 @@
 ; CHECK-O: Running analysis: BasicAA on main
 ; CHECK-O: Running analysis: ScopedNoAliasAA on main
 ; CHECK-O: Running analysis: TypeBasedAA on main
-; CHECK-O: Running analysis: OuterAnalysisManagerProxy<llvm::ModuleAnalysisManager, llvm::Function> on main
+; CHECK-O: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O: Running pass: SpeculativeExecutionPass on main
 ; CHECK-O: Running pass: JumpThreadingPass on main
 ; CHECK-O: Running analysis: LazyValueAnalysis on main
@@ -194,7 +194,7 @@
 ; CHECK-O: Running analysis: ScalarEvolutionAnalysis on main
 ; CHECK-O: Running analysis: AAManager on main
 ; CHECK-O: Running analysis: BasicAA on main
-; CHECK-O: Running analysis: InnerAnalysisManagerProxy<llvm::LoopAnalysisManager, llvm::Function> on main
+; CHECK-O: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running pass: LoopVectorizePass on main
 ; CHECK-O: Running analysis: BlockFrequencyAnalysis on main
 ; CHECK-O: Running analysis: BranchProbabilityAnalysis on main
