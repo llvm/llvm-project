@@ -70,11 +70,11 @@
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running analysis: TargetIRAnalysis on main
 ; CHECK-O: Finished llvm::Function pass manager run.
-; CHECK-O: Running pass: RequireAnalysisPass<llvm::GlobalsAA, llvm::Module, llvm::AnalysisManager<llvm::Module>>
+; CHECK-O: Running pass: RequireAnalysisPass<llvm::GlobalsAA
 ; CHECK-O: Running analysis: GlobalsAA
 ; CHECK-O: Running analysis: CallGraphAnalysis
-; CHECK-O: Running pass: RequireAnalysisPass<llvm::ProfileSummaryAnalysis, llvm::Module, llvm::AnalysisManager<llvm::Module>>
-; CHECK-O: Running pass: ModuleToPostOrderCGSCCPassAdaptor<llvm::DevirtSCCRepeatedPass<llvm::PassManager<LazyCallGraph::SCC, llvm::CGSCCAnalysisManager, llvm::LazyCallGraph &, llvm::CGSCCUpdateResult &> > >
+; CHECK-O: Running pass: RequireAnalysisPass<llvm::ProfileSummaryAnalysis
+; CHECK-O: Running pass: ModuleToPostOrderCGSCCPassAdaptor<llvm::DevirtSCCRepeatedPass<llvm::PassManager<LazyCallGraph::SCC
 ; CHECK-O: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-O: Running analysis: LazyCallGraphAnalysis
 ; CHECK-O: Running analysis: FunctionAnalysisManagerCGSCCProxy on (main)
@@ -117,8 +117,8 @@
 ; CHECK-O: Running pass: TailCallElimPass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running pass: ReassociatePass on main
-; CHECK-O: Running pass: RequireAnalysisPass<llvm::OptimizationRemarkEmitterAnalysis, llvm::Function, llvm::AnalysisManager<llvm::Function>> on main
-; CHECK-O: Running pass: FunctionToLoopPassAdaptor<llvm::PassManager<llvm::Loop, llvm::LoopAnalysisManager, llvm::LoopStandardAnalysisResults &, llvm::LPMUpdater &> > on main
+; CHECK-O: Running pass: RequireAnalysisPass<llvm::OptimizationRemarkEmitterAnalysis
+; CHECK-O: Running pass: FunctionToLoopPassAdaptor<llvm::PassManager<llvm::Loop
 ; CHECK-O: Starting llvm::Function pass manager run.
 ; CHECK-O: Running pass: LoopSimplifyPass on main
 ; CHECK-O: Running analysis: LoopAnalysis on main
@@ -126,7 +126,7 @@
 ; CHECK-O: Finished llvm::Function pass manager run.
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running pass: InstCombinePass on main
-; CHECK-O: Running pass: FunctionToLoopPassAdaptor<llvm::PassManager<llvm::Loop, llvm::LoopAnalysisManager, llvm::LoopStandardAnalysisResults &, llvm::LPMUpdater &> > on main
+; CHECK-O: Running pass: FunctionToLoopPassAdaptor<llvm::PassManager<llvm::Loop
 ; CHECK-O: Starting llvm::Function pass manager run.
 ; CHECK-O: Running pass: LoopSimplifyPass on main
 ; CHECK-O: Running pass: LCSSAPass on main
@@ -178,7 +178,7 @@
 ; CHECK-O: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-O: Running analysis: CallGraphAnalysis
-; CHECK-O: Running pass: RequireAnalysisPass<llvm::GlobalsAA, llvm::Module, llvm::AnalysisManager<llvm::Module>>
+; CHECK-O: Running pass: RequireAnalysisPass<llvm::GlobalsAA
 ; CHECK-O: Running analysis: GlobalsAA
 ; CHECK-O: Running pass: ModuleToFunctionPassAdaptor<llvm::PassManager<llvm::Function> >
 ; CHECK-O: Starting llvm::Function pass manager run.
@@ -208,7 +208,7 @@
 ; CHECK-O: Running pass: LoopUnrollPass on main
 ; CHECK-O: Running pass: WarnMissedTransformationsPass on main
 ; CHECK-O: Running pass: InstCombinePass on main
-; CHECK-O: Running pass: RequireAnalysisPass<llvm::OptimizationRemarkEmitterAnalysis, llvm::Function, llvm::AnalysisManager<llvm::Function>> on main
+; CHECK-O: Running pass: RequireAnalysisPass<llvm::OptimizationRemarkEmitterAnalysis
 ; CHECK-O: Running pass: FunctionToLoopPassAdaptor<llvm::LICMPass> on main
 ; CHECK-O: Starting llvm::Function pass manager run.
 ; CHECK-O: Running pass: LoopSimplifyPass on main
