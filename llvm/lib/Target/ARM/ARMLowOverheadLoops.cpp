@@ -138,28 +138,13 @@ namespace {
       MF = ML->getHeader()->getParent();
     }
 
-    bool RecordVPTBlocks(MachineInstr *MI);
-
     // If this is an MVE instruction, check that we know how to use tail
-    // predication with it.
+    // predication with it. Record VPT blocks and return whether the
+    // instruction is valid for tail predication.
+    bool ValidateMVEInst(MachineInstr *MI);
+
     void AnalyseMVEInst(MachineInstr *MI) {
-      if (CannotTailPredicate)
-        return;
-
-      if (!RecordVPTBlocks(MI)) {
-        CannotTailPredicate = true;
-        return;
-      }
-
-      const MCInstrDesc &MCID = MI->getDesc();
-      uint64_t Flags = MCID.TSFlags;
-      if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
-        return;
-
-      if ((Flags & ARMII::ValidForTailPredication) == 0) {
-        LLVM_DEBUG(dbgs() << "ARM Loops: Can't tail predicate: " << *MI);
-        CannotTailPredicate = true;
-      }
+      CannotTailPredicate = !ValidateMVEInst(MI);
     }
 
     bool IsTailPredicationLegal() const {
@@ -495,7 +480,7 @@ void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils,
              dbgs() << "ARM Loops: Couldn't validate tail predicate.\n");
 }
 
-bool LowOverheadLoop::RecordVPTBlocks(MachineInstr* MI) {
+bool LowOverheadLoop::ValidateMVEInst(MachineInstr* MI) {
   if (CannotTailPredicate)
     return false;
 
@@ -548,6 +533,18 @@ bool LowOverheadLoop::RecordVPTBlocks(MachineInstr* MI) {
   // conversion.
   if (IsDef && !IsUse && VCTP && !isVCTP(MI)) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Found disjoint vpr def: " << *MI);
+    return false;
+  }
+
+  uint64_t Flags = MCID.TSFlags;
+  if ((Flags & ARMII::DomainMask) != ARMII::DomainMVE)
+    return true;
+
+  // If we find an instruction that has been marked as not valid for tail
+  // predication, only allow the instruction if it's contained within a valid
+  // VPT block.
+  if ((Flags & ARMII::ValidForTailPredication) == 0 && !IsUse) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Can't tail predicate: " << *MI);
     return false;
   }
 
