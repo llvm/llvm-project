@@ -21,7 +21,7 @@ int &g() { return r; }
 // DARWIN: call cxx_fast_tlscc i32* @_ZTW1r()
 // CHECK: ret i32* %{{.*}}
 
-// LINUX: define weak_odr hidden i32* @_ZTW1r() [[ATTR0:#[0-9]+]] {
+// LINUX: define weak_odr hidden i32* @_ZTW1r() [[ATTR0:#[0-9]+]] comdat {
 // DARWIN: define cxx_fast_tlscc i32* @_ZTW1r() [[ATTR1:#[0-9]+]] {
 // LINUX: call void @_ZTH1r()
 // DARWIN: call cxx_fast_tlscc void @_ZTH1r()
