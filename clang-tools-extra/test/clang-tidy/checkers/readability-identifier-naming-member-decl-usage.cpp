@@ -2,7 +2,7 @@
 // RUN:   -config='{CheckOptions: [ \
 // RUN:     {key: readability-identifier-naming.MemberCase, value: CamelCase}, \
 // RUN:     {key: readability-identifier-naming.ParameterCase, value: CamelCase} \
-// RUN:  ]}'
+// RUN:  ]}' -- -fno-delayed-template-parsing
 
 int set_up(int);
 int clear(int);
