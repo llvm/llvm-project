@@ -2120,7 +2120,7 @@ void RaceInfo::analyzeFunction() {
   // TODO: Add global variables to APA.
 
   for (BasicBlock &BB : *F) {
-    for (Instruction &I : BB) {
+    for (Instruction &I : BB.instructionsWithoutDebug()) {
       if (I.mayReadFromMemory() || I.mayWriteToMemory()) {
         if (checkInstructionForRace(&I, TLI))
           APA.addAccess(&I);
