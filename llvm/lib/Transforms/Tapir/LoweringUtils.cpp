@@ -16,6 +16,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Transforms/Tapir/CilkABI.h"
 #include "llvm/Transforms/Tapir/CilkRABI.h"
 #include "llvm/Transforms/Tapir/OpenMPABI.h"
@@ -28,6 +29,9 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "tapirlowering"
+
+static const char TimerGroupName[] = DEBUG_TYPE;
+static const char TimerGroupDescription[] = "Tapir lowering";
 
 TapirTarget *llvm::getTapirTargetFromID(Module &M, TapirTargetID ID) {
   switch (ID) {
@@ -54,6 +58,9 @@ TapirTarget *llvm::getTapirTargetFromID(Module &M, TapirTargetID ID) {
 static void
 findTaskInputsOutputs(Task *T, ValueSet &Inputs, ValueSet &Outputs,
                       DominatorTree &DT) {
+  NamedRegionTimer NRT("findTaskInputsOutputs", "Find task inputs and outputs",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   // Get the sync region for this task's detach, so we can filter it out of
   // this inputs.
   const Value *SyncRegion = nullptr;
@@ -353,6 +360,8 @@ void llvm::getTaskBlocks(Task *T, std::vector<BasicBlock *> &TaskBlocks,
                          SmallPtrSetImpl<BasicBlock *> &ReattachBlocks,
                          SmallPtrSetImpl<BasicBlock *> &DetachedRethrowBlocks,
                          SmallPtrSetImpl<BasicBlock *> &SharedEHEntries) {
+  NamedRegionTimer NRT("getTaskBlocks", "Get task blocks", TimerGroupName,
+                       TimerGroupDescription, TimePassesIsEnabled);
   for (Spindle *S : depth_first<InTask<Spindle *>>(T->getEntrySpindle())) {
     // Record the entry blocks of any shared-EH spindles.
     if (S->isSharedEH())
@@ -401,14 +410,19 @@ Function *llvm::createHelperForTask(
   DetachInst *DI = T->getDetach();
 
   Twine NameSuffix = ".otd" + Twine(T->getTaskDepth());
-  Function *Helper =
+  Function *Helper;
+  {
+  NamedRegionTimer NRT("CreateHelper", "Create helper function",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
+  Helper =
     CreateHelper(Args, Outputs, TaskBlocks, T->getEntry(),
                  DI->getParent(), DI->getContinue(), VMap, DestM,
                  F.getSubprogram() != nullptr, Returns,
                  NameSuffix.str(), &ReattachBlocks,
                  &DetachedRethrowBlocks, &SharedEHEntries, nullptr, nullptr,
                  ReturnType, nullptr, nullptr, nullptr);
-
+  }
   assert(Returns.empty() && "Returns cloned when cloning detached CFG.");
 
   // Add alignment assumptions to arguments of helper, based on alignment of
@@ -418,6 +432,9 @@ Function *llvm::createHelperForTask(
   // Move allocas in the newly cloned detached CFG to the entry block of the
   // helper.
   {
+    NamedRegionTimer NRT("MoveAllocas", "Move allocas in cloned helper",
+                         TimerGroupName, TimerGroupDescription,
+                         TimePassesIsEnabled);
     // Collect the end instructions of the task.
     SmallVector<Instruction *, 4> TaskEnds;
     for (BasicBlock *EndBlock : ReattachBlocks)

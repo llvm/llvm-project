@@ -15,6 +15,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -24,6 +25,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "outlining"
 
+static const char TimerGroupName[] = DEBUG_TYPE;
+static const char TimerGroupDescription[] = "Tapir outlining";
 
 // Clone Blocks into NewFunc, transforming the old arguments into references to
 // VMap values.
@@ -48,10 +51,16 @@ void llvm::CloneIntoFunction(
   // When we remap instructions, we want to avoid duplicating inlined
   // DISubprograms, so record all subprograms we find as we duplicate
   // instructions and then freeze them in the MD map.
+  // We also record information about dbg.value and dbg.declare to avoid
+  // duplicating the types.
   DebugInfoFinder DIFinder;
 
   // Loop over all of the basic blocks in the function, cloning them as
   // appropriate.
+  {
+  NamedRegionTimer NRT("CloneBlocks", "Clone basic blocks",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   for (const BasicBlock *BB : Blocks) {
     // Record all exit block predecessors that are cloned.
     if (EHEntryPreds.count(BB))
@@ -80,10 +89,14 @@ void llvm::CloneIntoFunction(
     if (ReturnInst *RI = dyn_cast<ReturnInst>(CBB->getTerminator()))
       Returns.push_back(RI);
   }
+  } // end timed region
 
   // For each exit block, clean up its phi nodes to exclude predecessors that
   // were not cloned.  Also replace detached_rethrow invokes with resumes.
   if (SharedEHEntries) {
+    NamedRegionTimer NRT("FixupSharedEH", "Fixup shared EH blocks",
+                         TimerGroupName, TimerGroupDescription,
+                         TimePassesIsEnabled);
     for (BasicBlock *EHEntry : *SharedEHEntries) {
       // Get the predecessors of this exit block that were not cloned.
       SmallVector<BasicBlock *, 4> PredNotCloned;
@@ -104,6 +117,9 @@ void llvm::CloneIntoFunction(
     }
   }
   if (ReattachBlocks) {
+    NamedRegionTimer NRT("FixupReattach", "Fixup reattach blocks",
+                         TimerGroupName, TimerGroupDescription,
+                         TimePassesIsEnabled);
     for (BasicBlock *ReattachBlk : *ReattachBlocks) {
       BasicBlock *ClonedRB = cast<BasicBlock>(VMap[ReattachBlk]);
       // Don't get the remapped name of this successor yet.  Subsequent
@@ -114,6 +130,10 @@ void llvm::CloneIntoFunction(
     }
   }
   if (DetachedRethrowBlocks) {
+    NamedRegionTimer NRT("FixupDetachedRethrow",
+                         "Fixup detached-rethrow blocks",
+                         TimerGroupName, TimerGroupDescription,
+                         TimePassesIsEnabled);
     for (BasicBlock *DetRethrowBlk : *DetachedRethrowBlocks) {
       // Skip blocks that are not terminated by a detached-rethrow.
       if (!isDetachedRethrow(DetRethrowBlk->getTerminator()))
@@ -141,6 +161,10 @@ void llvm::CloneIntoFunction(
 
   // Loop over all of the instructions in the function, fixing up operand
   // references as we go.  This uses VMap to do all the hard work.
+  {
+  NamedRegionTimer NRT("RemapBlock", "Remap instructions in block",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   for (const BasicBlock *BB : Blocks) {
     BasicBlock *CBB = cast<BasicBlock>(VMap[BB]);
     // Loop over all instructions, fixing each one as we find it...
@@ -151,6 +175,7 @@ void llvm::CloneIntoFunction(
                        TypeMapper, Materializer);
     }
   }
+  } // end timed region
 }
 
 /// Create a helper function whose signature is based on Inputs and
@@ -238,6 +263,10 @@ Function *llvm::CreateHelper(
   AttributeList OldAttrs = OldFunc->getAttributes();
 
   // Clone any argument attributes
+  {
+  NamedRegionTimer NRT("CloneArgAttrs", "Clone argument attributes",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   for (Argument &OldArg : OldFunc->args()) {
     // Check if we're passing this argument to the helper.  We check Inputs here
     // instead of the VMap to avoid potentially populating the VMap with a null
@@ -249,6 +278,7 @@ Function *llvm::CreateHelper(
           .removeAttribute(NewFunc->getContext(), Attribute::Returned);
     }
   }
+  } // end timed region
 
   NewFunc->setAttributes(
       AttributeList::get(NewFunc->getContext(), OldAttrs.getFnAttributes(),
@@ -277,6 +307,10 @@ Function *llvm::CreateHelper(
       MD[SP].reset(SP);
   }
 
+  {
+  NamedRegionTimer NRT("MapMetadata", "Map function metadata",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
   OldFunc->getAllMetadata(MDs);
   for (auto MD : MDs) {
@@ -286,6 +320,7 @@ Function *llvm::CreateHelper(
                      ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
                      TypeMapper, Materializer));
   }
+  } // end timed region
 
   // We assume that the Helper reads and writes its arguments.  If the parent
   // function had stronger attributes on memory access -- specifically, if the
@@ -363,6 +398,9 @@ Function *llvm::CreateHelper(
 void llvm::AddAlignmentAssumptions(
     const Function *Caller, const ValueSet &Args, ValueToValueMapTy &VMap,
     const Instruction *CallSite, AssumptionCache *AC, DominatorTree *DT) {
+  NamedRegionTimer NRT("AddAlignmentAssumptions", "Add alignment assumptions",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   auto &DL = Caller->getParent()->getDataLayout();
   for (Value *ArgVal : Args) {
     // Ignore arguments to non-pointer types

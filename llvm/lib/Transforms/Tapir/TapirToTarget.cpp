@@ -19,6 +19,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Tapir.h"
 #include "llvm/Transforms/Tapir/LoweringUtils.h"
@@ -27,6 +28,9 @@
 #define DEBUG_TYPE "tapir2target"
 
 using namespace llvm;
+
+static const char TimerGroupName[] = DEBUG_TYPE;
+static const char TimerGroupDescription[] = "Tapir to Target";
 
 class TapirToTargetImpl {
 public:
@@ -68,6 +72,8 @@ private:
 };
 
 bool TapirToTargetImpl::unifyReturns(Function &F) {
+  NamedRegionTimer NRT("unifyReturns", "Unify returns", TimerGroupName,
+                       TimerGroupDescription, TimePassesIsEnabled);
   SmallVector<BasicBlock *, 4> ReturningBlocks;
   for (BasicBlock &BB : F)
     if (isa<ReturnInst>(BB.getTerminator()))
@@ -110,6 +116,8 @@ bool TapirToTargetImpl::unifyReturns(Function &F) {
 TaskOutlineMapTy
 TapirToTargetImpl::outlineAllTasks(Function &F, DominatorTree &DT,
                                    AssumptionCache &AC, TaskInfo &TI) {
+  NamedRegionTimer NRT("outlineAllTasks", "Outline all tasks", TimerGroupName,
+                       TimerGroupDescription, TimePassesIsEnabled);
   TaskOutlineMapTy TaskToOutline;
 
   // Determine the inputs for all tasks.
@@ -167,6 +175,9 @@ TapirToTargetImpl::outlineAllTasks(Function &F, DominatorTree &DT,
 
 /// Process the Tapir instructions in function \p F directly.
 bool TapirToTargetImpl::processSimpleABI(Function &F) {
+  NamedRegionTimer NRT("processSimpleABI", "Process simple ABI", TimerGroupName,
+                       TimerGroupDescription, TimePassesIsEnabled);
+
   // Get the simple Tapir instructions to process, including syncs and
   // loop-grainsize calls.
   SmallVector<SyncInst *, 8> Syncs;
@@ -224,6 +235,9 @@ bool TapirToTargetImpl::processSimpleABI(Function &F) {
 bool TapirToTargetImpl::processRootTask(
     Function &F, TaskOutlineMapTy &TaskToOutline, DominatorTree &DT,
     AssumptionCache &AC, TaskInfo &TI) {
+  NamedRegionTimer NRT("processRootTask", "Process root task",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   bool Changed = false;
   if (!TI.isSerial()) {
     Changed = true;
@@ -242,6 +256,9 @@ bool TapirToTargetImpl::processRootTask(
 bool TapirToTargetImpl::processOutlinedTask(
     Task *T, TaskOutlineMapTy &TaskToOutline, DominatorTree &DT,
     AssumptionCache &AC, TaskInfo &TI) {
+  NamedRegionTimer NRT("processOutlinedTask", "Process outlined task",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   Function &F = *TaskToOutline[T].Outline;
   Target->processOutlinedTask(F);
   if (!T->isSerial()) {
@@ -268,7 +285,12 @@ void TapirToTargetImpl::processFunction(
   TaskInfo &TI = GetTI(F);
   AssumptionCache &AC = GetAC(F);
 
+  {
+  NamedRegionTimer NRT("TargetPreProcess", "Target preprocessing",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   Target->preProcessFunction(F, TI);
+  } // end timed region
 
   // If we don't need to do outlining, then just handle the simple ABI.
   if (!Target->shouldDoOutlining(F)) {
@@ -293,9 +315,14 @@ void TapirToTargetImpl::processFunction(
       NewHelpers.push_back(TaskToOutline[T].Outline);
     }
   }
+  {
+  NamedRegionTimer NRT("TargetPostProcess", "Target postprocessing",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   Target->postProcessFunction(F);
   for (Function *H : NewHelpers)
     Target->postProcessHelper(*H);
+  } // end timed region
 
   if (verifyFunction(F, &errs()))
     llvm_unreachable("Tapir lowering produced bad IR!");
