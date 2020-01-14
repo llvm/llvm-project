@@ -157,6 +157,35 @@ static void collectLocStats(uint64_t BytesCovered, uint64_t BytesInScope,
   else if (IsLocalVar)
     VarLocStats[CoverageBucket]++;
 }
+/// Construct an identifier for a given DIE from its Prefix, Name, DeclFileName
+/// and DeclLine. The identifier aims to be unique for any unique entities,
+/// but keeping the same among different instances of the same entity.
+static std::string constructDieID(DWARFDie Die,
+                                  StringRef Prefix = StringRef()) {
+  std::string IDStr;
+  llvm::raw_string_ostream ID(IDStr);
+  ID << Prefix
+     << Die.getName(DINameKind::LinkageName);
+
+  // Prefix + Name is enough for local variables and parameters.
+  if (!Prefix.empty() && !Prefix.equals("g"))
+    return ID.str();
+
+  auto DeclFile = Die.findRecursively(dwarf::DW_AT_decl_file);
+  std::string File;
+  if (DeclFile) {
+    DWARFUnit *U = Die.getDwarfUnit();
+    if (const auto *LT = U->getContext().getLineTableForUnit(U))
+      if (LT->getFileNameByIndex(
+              dwarf::toUnsigned(DeclFile, 0), U->getCompilationDir(),
+              DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, File))
+        File = sys::path::filename(File);
+  }
+  ID << ":" << (File.empty() ? "/" : File);
+  ID << ":"
+     << dwarf::toUnsigned(Die.findRecursively(dwarf::DW_AT_decl_line), 0);
+  return ID.str();
+}
 
 /// Collect debug info quality metrics for one DIE.
 static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
@@ -270,10 +299,10 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   if (DWARFDie D =
           Die.getAttributeValueAsReferencedDie(dwarf::DW_AT_abstract_origin))
     Die = D;
-  // By using the variable name + the path through the lexical block tree, the
-  // keys are consistent across duplicate abstract origins in different CUs.
-  std::string VarName = StringRef(Die.getName(DINameKind::ShortName));
-  FnStats.VarsInFunction.insert(VarPrefix + VarName);
+
+  std::string VarID = constructDieID(Die, VarPrefix);
+  FnStats.VarsInFunction.insert(VarID);
+
   if (BytesInScope) {
     FnStats.TotalVarWithLoc += (unsigned)HasLoc;
     // Turns out we have a lot of ranges that extend past the lexical scope.
@@ -358,27 +387,25 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
 
     // Count the function.
     if (!IsBlock) {
-      StringRef Name = Die.getName(DINameKind::LinkageName);
-      if (Name.empty())
-        Name = Die.getName(DINameKind::ShortName);
-      FnPrefix = Name;
       // Skip over abstract origins.
       if (Die.find(dwarf::DW_AT_inline))
         return;
+      std::string FnID = constructDieID(Die);
       // We've seen an (inlined) instance of this function.
-      auto &FnStats = FnStatMap[Name];
+      auto &FnStats = FnStatMap[FnID];
+      FnStats.IsFunction = true;
       if (IsInlinedFunction) {
         FnStats.NumFnInlined++;
         if (Die.findRecursively(dwarf::DW_AT_abstract_origin))
           FnStats.NumAbstractOrigins++;
       }
-      FnStats.IsFunction = true;
       if (BytesInThisScope && !IsInlinedFunction)
         FnStats.HasPCAddresses = true;
-      std::string FnName = StringRef(Die.getName(DINameKind::ShortName));
       if (Die.findRecursively(dwarf::DW_AT_decl_file) &&
           Die.findRecursively(dwarf::DW_AT_decl_line))
         FnStats.HasSourceLocation = true;
+      // Update function prefix.
+      FnPrefix = FnID;
     }
 
     if (BytesInThisScope) {
