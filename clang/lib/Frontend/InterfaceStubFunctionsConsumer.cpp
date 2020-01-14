@@ -53,6 +53,10 @@ class InterfaceStubFunctionsConsumer : public ASTConsumer {
         return true;
 
       if (const VarDecl *VD = dyn_cast<VarDecl>(ND)) {
+        if (const auto *Parent = VD->getParentFunctionOrMethod())
+          if (isa<BlockDecl>(Parent) || isa<CXXMethodDecl>(Parent))
+            return true;
+
         if ((VD->getStorageClass() == StorageClass::SC_Extern) ||
             (VD->getStorageClass() == StorageClass::SC_Static &&
              VD->getParentFunctionOrMethod() == nullptr))
