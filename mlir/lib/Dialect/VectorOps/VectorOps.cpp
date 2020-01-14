@@ -537,7 +537,7 @@ isValidExtractOrInsertSlicesType(Operation *op, VectorType vectorType,
     sliceStrides[i] = sliceStrides[i + 1] * dimSliceCounts[i + 1];
 
   // Generate each slice shape based on 'sizes', 'strides' and 'vectorType',
-  // and varify that the same matches the corresponding tuple element 'i'.
+  // and verify that the same matches the corresponding tuple element 'i'.
   for (int64_t i = 0, e = tupleType.size(); i < e; ++i) {
     // De-linearize w.r.t. 'sliceStrides'.
     SmallVector<int64_t, 4> vectorOffsets(rank);
