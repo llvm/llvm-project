@@ -2449,6 +2449,32 @@ getValidMinimumShiftAmountConstant(SDValue V, const APInt &DemandedElts) {
   return MinShAmt;
 }
 
+/// If a SHL/SRA/SRL node has constant vector shift amounts that are all less
+/// than the element bit-width of the shift node, return the maximum value.
+static const APInt *
+getValidMaximumShiftAmountConstant(SDValue V, const APInt &DemandedElts) {
+  unsigned BitWidth = V.getScalarValueSizeInBits();
+  auto *BV = dyn_cast<BuildVectorSDNode>(V.getOperand(1));
+  if (!BV)
+    return nullptr;
+  const APInt *MaxShAmt = nullptr;
+  for (unsigned i = 0, e = BV->getNumOperands(); i != e; ++i) {
+    if (!DemandedElts[i])
+      continue;
+    auto *SA = dyn_cast<ConstantSDNode>(BV->getOperand(i));
+    if (!SA)
+      return nullptr;
+    // Shifting more than the bitwidth is not valid.
+    const APInt &ShAmt = SA->getAPIntValue();
+    if (ShAmt.uge(BitWidth))
+      return nullptr;
+    if (MaxShAmt && MaxShAmt->uge(ShAmt))
+      continue;
+    MaxShAmt = &ShAmt;
+  }
+  return MaxShAmt;
+}
+
 /// Determine which bits of Op are known to be either zero or one and return
 /// them in Known. For vectors, the known bits are those that are shared by
 /// every vector element.
@@ -3618,6 +3644,11 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::SHL:
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op, DemandedElts)) {
       // shl destroys sign bits, ensure it doesn't shift out all sign bits.
+      Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
+      if (ShAmt->ult(Tmp))
+        return Tmp - ShAmt->getZExtValue();
+    } else if (const APInt *ShAmt =
+                   getValidMaximumShiftAmountConstant(Op, DemandedElts)) {
       Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
       if (ShAmt->ult(Tmp))
         return Tmp - ShAmt->getZExtValue();

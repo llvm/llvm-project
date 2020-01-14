@@ -257,45 +257,30 @@ define <4 x double> @signbits_sext_shuffle_sitofp(<4 x i32> %a0, <4 x i64> %a1) 
 define <2 x double> @signbits_sext_shl_sitofp(<2 x i16> %a0) nounwind {
 ; X86-LABEL: signbits_sext_shl_sitofp:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $32, %esp
 ; X86-NEXT:    vpmovsxwq %xmm0, %xmm0
 ; X86-NEXT:    vpsllq $5, %xmm0, %xmm1
 ; X86-NEXT:    vpsllq $11, %xmm0, %xmm0
-; X86-NEXT:    vmovq %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
-; X86-NEXT:    vmovq %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    fildll {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
-; X86-NEXT:    fildll {{[0-9]+}}(%esp)
-; X86-NEXT:    fstpl (%esp)
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
-; X86-NEXT:    movl %ebp, %esp
-; X86-NEXT:    popl %ebp
+; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X86-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-AVX1-LABEL: signbits_sext_shl_sitofp:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vpmovsxwq %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpsllq $11, %xmm0, %xmm1
-; X64-AVX1-NEXT:    vpsllq $5, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpextrq $1, %xmm0, %rax
-; X64-AVX1-NEXT:    vcvtsi2sd %eax, %xmm2, %xmm0
-; X64-AVX1-NEXT:    vcvtdq2pd %xmm1, %xmm1
-; X64-AVX1-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64-AVX1-NEXT:    vpsllq $5, %xmm0, %xmm1
+; X64-AVX1-NEXT:    vpsllq $11, %xmm0, %xmm0
+; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; X64-AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X64-AVX1-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: signbits_sext_shl_sitofp:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vpmovsxwq %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpsllvq {{.*}}(%rip), %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpextrq $1, %xmm0, %rax
-; X64-AVX2-NEXT:    vcvtsi2sd %eax, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X64-AVX2-NEXT:    vcvtdq2pd %xmm0, %xmm0
-; X64-AVX2-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; X64-AVX2-NEXT:    retq
   %1 = sext <2 x i16> %a0 to <2 x i64>
   %2 = shl <2 x i64> %1, <i64 11, i64 5>
