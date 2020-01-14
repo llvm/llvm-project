@@ -768,13 +768,11 @@ public:
                                                  const CompilerType &var_type,
                                                  lldb::AccessType access);
 
-  clang::CXXMethodDecl *
-  AddMethodToCXXRecordType(lldb::opaque_compiler_type_t type, const char *name,
-                           const char *mangled_name,
-                           const CompilerType &method_type,
-                           lldb::AccessType access, bool is_virtual,
-                           bool is_static, bool is_inline, bool is_explicit,
-                           bool is_attr_used, bool is_artificial);
+  clang::CXXMethodDecl *AddMethodToCXXRecordType(
+      lldb::opaque_compiler_type_t type, llvm::StringRef name,
+      const char *mangled_name, const CompilerType &method_type,
+      lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
+      bool is_explicit, bool is_attr_used, bool is_artificial);
 
   void AddMethodOverridesForCXXRecordType(lldb::opaque_compiler_type_t type);
 
