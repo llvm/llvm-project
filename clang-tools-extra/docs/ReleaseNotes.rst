@@ -165,6 +165,12 @@ New checks
   Finds non-static member functions that can be made ``const``
   because the functions don't use ``this`` in a non-const way.
 
+- New :doc:`readability-qualified-auto
+  <clang-tidy/checks/readability-qualified-auto>` check.
+
+  Adds pointer and ``const`` qualifications to ``auto``-typed variables 
+  that are deduced to pointers and ``const`` pointers.
+
 - New :doc:`readability-redundant-access-specifiers
   <clang-tidy/checks/readability-redundant-access-specifiers>` check.
 
@@ -178,6 +184,11 @@ New aliases
   <clang-tidy/checks/cert-pos44-c>` to
   :doc:`bugprone-bad-signal-to-kill-thread
   <clang-tidy/checks/bugprone-bad-signal-to-kill-thread>` was added.
+
+- New alias :doc:`llvm-qualified-auto
+  <clang-tidy/checks/llvm-qualified-auto>` to
+  :doc:`readability-qualified-auto
+  <clang-tidy/checks/readability-qualified-auto>` was added.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

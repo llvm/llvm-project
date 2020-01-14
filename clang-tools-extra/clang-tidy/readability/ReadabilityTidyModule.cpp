@@ -28,6 +28,7 @@
 #include "MisplacedArrayIndexCheck.h"
 #include "NamedParameterCheck.h"
 #include "NonConstParameterCheck.h"
+#include "QualifiedAutoCheck.h"
 #include "RedundantAccessSpecifiersCheck.h"
 #include "RedundantControlFlowCheck.h"
 #include "RedundantDeclarationCheck.h"
@@ -86,6 +87,8 @@ public:
         "readability-misleading-indentation");
     CheckFactories.registerCheck<MisplacedArrayIndexCheck>(
         "readability-misplaced-array-index");
+    CheckFactories.registerCheck<QualifiedAutoCheck>(
+        "readability-qualified-auto");
     CheckFactories.registerCheck<RedundantAccessSpecifiersCheck>(
         "readability-redundant-access-specifiers");
     CheckFactories.registerCheck<RedundantFunctionPtrDereferenceCheck>(
