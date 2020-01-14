@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/Tapir/CilkABI.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -25,7 +26,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Transforms/Tapir/Outline.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
@@ -55,6 +56,9 @@ static cl::opt<bool> ArgStruct(
 static cl::opt<bool> UseRuntimeCilkFor(
     "cilk-use-runtime-cilkfor", cl::init(false), cl::Hidden,
     cl::desc("Insert a call into the Cilk runtime to handle cilk_for loops"));
+
+static const char TimerGroupName[] = DEBUG_TYPE;
+static const char TimerGroupDescription[] = "CilkABI";
 
 enum {
   __CILKRTS_ABI_VERSION = 1
@@ -1557,10 +1561,16 @@ void CilkABI::lowerSync(SyncInst &SI) {
 }
 
 void CilkABI::processOutlinedTask(Function &F) {
+  NamedRegionTimer NRT("processOutlinedTask", "Process outlined task",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   makeFunctionDetachable(F, false);
 }
 
 void CilkABI::processSpawner(Function &F) {
+  NamedRegionTimer NRT("processSpawner", "Process spawner",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   GetOrInitCilkStackFrame(F, /*Helper=*/false, false);
 
   // Mark this function as stealable.
@@ -1568,6 +1578,9 @@ void CilkABI::processSpawner(Function &F) {
 }
 
 void CilkABI::processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT) {
+  NamedRegionTimer NRT("processSubTaskCall", "Process subtask call",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   Instruction *ReplStart = TOI.ReplStart;
   Instruction *ReplCall = TOI.ReplCall;
   BasicBlock *UnwindDest = TOI.ReplUnwind;
@@ -1755,11 +1768,17 @@ void CilkABI::postProcessFunction(Function &F, bool OutliningTapirLoops) {
     // Don't do any preprocessing when outlining Tapir loops.
     return;
 
+  NamedRegionTimer NRT("postProcessFunction", "Post-process function",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   if (!DebugABICalls)
     inlineCilkFunctions(F);
 }
 
 void CilkABI::postProcessHelper(Function &F) {
+  NamedRegionTimer NRT("postProcessHelper", "Post-process helper",
+                       TimerGroupName, TimerGroupDescription,
+                       TimePassesIsEnabled);
   if (!DebugABICalls)
     inlineCilkFunctions(F);
 }
