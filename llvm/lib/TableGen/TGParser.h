@@ -56,6 +56,10 @@ namespace llvm {
 
   /// ForeachLoop - Record the iteration state associated with a for loop.
   /// This is used to instantiate items in the loop body.
+  ///
+  /// IterVar is allowed to be null, in which case no iteration variable is
+  /// defined in the loop at all. (This happens when a ForeachLoop is
+  /// constructed by desugaring an if statement.)
   struct ForeachLoop {
     SMLoc Loc;
     VarInit *IterVar;
@@ -220,6 +224,8 @@ private:  // Parser methods.
   bool ParseDefset();
   bool ParseDefvar();
   bool ParseForeach(MultiClass *CurMultiClass);
+  bool ParseIf(MultiClass *CurMultiClass);
+  bool ParseIfBody(MultiClass *CurMultiClass, StringRef Kind);
   bool ParseTopLevelLet(MultiClass *CurMultiClass);
   void ParseLetList(SmallVectorImpl<LetRecord> &Result);
 
