@@ -1021,8 +1021,9 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
     .addDef(ExecReg)
     .addReg(SaveExecReg);
 
-  // Restore the insert point before the original instruction.
-  B.setInsertPt(MBB, MBB.end());
+  // Set the insert point after the original instruction, so any new
+  // instructions will be in the remainder.
+  B.setInsertPt(*RemainderBB, RemainderBB->begin());
 
   return true;
 }
