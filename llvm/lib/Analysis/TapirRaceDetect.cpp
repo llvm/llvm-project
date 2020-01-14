@@ -58,7 +58,7 @@ static cl::opt<bool>
 
 static cl::opt<unsigned>
     MaxUsesToExploreCapture(
-        "max-uses-to-explore-capture", cl::init(20), cl::Hidden,
+        "max-uses-to-explore-capture", cl::init(unsigned(-1)), cl::Hidden,
         cl::desc("Maximum number of uses to explore for a capture query."));
 
 static cl::list<std::string> ClABIListFiles(
