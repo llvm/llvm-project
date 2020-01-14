@@ -1734,8 +1734,8 @@ static bool getHexUint(const MIToken &Token, APInt &Result) {
   return false;
 }
 
-bool getUnsigned(const MIToken &Token, unsigned &Result,
-                 ErrorCallbackType ErrCB) {
+static bool getUnsigned(const MIToken &Token, unsigned &Result,
+                        ErrorCallbackType ErrCB) {
   if (Token.hasIntegerValue()) {
     const uint64_t Limit = uint64_t(std::numeric_limits<unsigned>::max()) + 1;
     uint64_t Val64 = Token.integerValue().getLimitedValue(Limit);

@@ -918,9 +918,10 @@ static ParseResult parseInsertStridedSliceOp(OpAsmParser &parser,
 
 // TODO(ntv) Should be moved to Tablegen Confined attributes.
 template <typename OpType>
-LogicalResult isIntegerArrayAttrSmallerThanShape(OpType op, ArrayAttr arrayAttr,
-                                                 ArrayRef<int64_t> shape,
-                                                 StringRef attrName) {
+static LogicalResult isIntegerArrayAttrSmallerThanShape(OpType op,
+                                                        ArrayAttr arrayAttr,
+                                                        ArrayRef<int64_t> shape,
+                                                        StringRef attrName) {
   if (arrayAttr.size() > shape.size())
     return op.emitOpError("expected ")
            << attrName << " attribute of rank smaller than vector rank";
@@ -931,10 +932,10 @@ LogicalResult isIntegerArrayAttrSmallerThanShape(OpType op, ArrayAttr arrayAttr,
 // interval. If `halfOpen` is true then the admissible interval is [min, max).
 // Otherwise, the admissible interval is [min, max].
 template <typename OpType>
-LogicalResult isIntegerArrayAttrConfinedToRange(OpType op, ArrayAttr arrayAttr,
-                                                int64_t min, int64_t max,
-                                                StringRef attrName,
-                                                bool halfOpen = true) {
+static LogicalResult
+isIntegerArrayAttrConfinedToRange(OpType op, ArrayAttr arrayAttr, int64_t min,
+                                  int64_t max, StringRef attrName,
+                                  bool halfOpen = true) {
   for (auto attr : arrayAttr) {
     auto val = attr.cast<IntegerAttr>().getInt();
     auto upper = max;
@@ -951,7 +952,7 @@ LogicalResult isIntegerArrayAttrConfinedToRange(OpType op, ArrayAttr arrayAttr,
 // interval. If `halfOpen` is true then the admissible interval is [min, max).
 // Otherwise, the admissible interval is [min, max].
 template <typename OpType>
-LogicalResult
+static LogicalResult
 isIntegerArrayAttrConfinedToShape(OpType op, ArrayAttr arrayAttr,
                                   ArrayRef<int64_t> shape, StringRef attrName,
                                   bool halfOpen = true, int64_t min = 0) {
@@ -975,7 +976,7 @@ isIntegerArrayAttrConfinedToShape(OpType op, ArrayAttr arrayAttr,
 // interval. If `halfOpen` is true then the admissible interval is [min, max).
 // Otherwise, the admissible interval is [min, max].
 template <typename OpType>
-LogicalResult isSumOfIntegerArrayAttrConfinedToShape(
+static LogicalResult isSumOfIntegerArrayAttrConfinedToShape(
     OpType op, ArrayAttr arrayAttr1, ArrayAttr arrayAttr2,
     ArrayRef<int64_t> shape, StringRef attrName1, StringRef attrName2,
     bool halfOpen = true, int64_t min = 1) {
@@ -1470,7 +1471,8 @@ static void print(OpAsmPrinter &p, TransferReadOp op) {
   p << " : " << op.getMemRefType() << ", " << op.getVectorType();
 }
 
-ParseResult parseTransferReadOp(OpAsmParser &parser, OperationState &result) {
+static ParseResult parseTransferReadOp(OpAsmParser &parser,
+                                       OperationState &result) {
   llvm::SMLoc typesLoc;
   OpAsmParser::OperandType memrefInfo;
   SmallVector<OpAsmParser::OperandType, 8> indexInfo;
@@ -1545,7 +1547,8 @@ static void print(OpAsmPrinter &p, TransferWriteOp op) {
   p << " : " << op.getVectorType() << ", " << op.getMemRefType();
 }
 
-ParseResult parseTransferWriteOp(OpAsmParser &parser, OperationState &result) {
+static ParseResult parseTransferWriteOp(OpAsmParser &parser,
+                                        OperationState &result) {
   llvm::SMLoc typesLoc;
   OpAsmParser::OperandType storeValueInfo;
   OpAsmParser::OperandType memRefInfo;
@@ -1682,7 +1685,8 @@ static LogicalResult verify(TupleGetOp op) {
 // ConstantMaskOp
 //===----------------------------------------------------------------------===//
 
-ParseResult parseConstantMaskOp(OpAsmParser &parser, OperationState &result) {
+static ParseResult parseConstantMaskOp(OpAsmParser &parser,
+                                       OperationState &result) {
   Type resultType;
   ArrayAttr maskDimSizesAttr;
   StringRef attrName = ConstantMaskOp::getMaskDimSizesAttrName();
@@ -1729,7 +1733,8 @@ static LogicalResult verify(ConstantMaskOp &op) {
 // CreateMaskOp
 //===----------------------------------------------------------------------===//
 
-ParseResult parseCreateMaskOp(OpAsmParser &parser, OperationState &result) {
+static ParseResult parseCreateMaskOp(OpAsmParser &parser,
+                                     OperationState &result) {
   auto indexType = parser.getBuilder().getIndexType();
   Type resultType;
   SmallVector<OpAsmParser::OperandType, 4> operandInfo;
@@ -1758,7 +1763,7 @@ static LogicalResult verify(CreateMaskOp op) {
 // PrintOp
 //===----------------------------------------------------------------------===//
 
-ParseResult parsePrintOp(OpAsmParser &parser, OperationState &result) {
+static ParseResult parsePrintOp(OpAsmParser &parser, OperationState &result) {
   OpAsmParser::OperandType source;
   Type sourceType;
   return failure(parser.parseOperand(source) ||

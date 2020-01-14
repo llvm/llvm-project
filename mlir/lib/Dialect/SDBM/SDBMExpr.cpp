@@ -301,8 +301,9 @@ AffineExpr SDBMExpr::getAsAffineExpr() const {
 // expression is already a sum expression, update its constant and extract the
 // LHS if the constant becomes zero.  Otherwise, construct a sum expression.
 template <typename Result>
-Result addConstantAndSink(SDBMDirectExpr expr, int64_t constant, bool negated,
-                          function_ref<Result(SDBMDirectExpr)> builder) {
+static Result addConstantAndSink(SDBMDirectExpr expr, int64_t constant,
+                                 bool negated,
+                                 function_ref<Result(SDBMDirectExpr)> builder) {
   SDBMDialect *dialect = expr.getDialect();
   if (auto sumExpr = expr.dyn_cast<SDBMSumExpr>()) {
     if (negated)

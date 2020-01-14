@@ -37,6 +37,8 @@ using IndexedAffineValue = TemplatedIndexedValue<affine_load, affine_store>;
 using edsc::op::operator+;
 using edsc::op::operator==;
 
+namespace {
+
 static SmallVector<ValueHandle, 8>
 makeCanonicalAffineApplies(OpBuilder &b, Location loc, AffineMap map,
                            ArrayRef<Value> vals) {
@@ -379,7 +381,6 @@ public:
   }
 };
 
-namespace {
 // This struct is for factoring out the implementation and support template
 // instantiations in the following 2 cases:
 //   1. Appending to a list of patterns via RewritePatternList.
@@ -393,7 +394,6 @@ class LinalgOpToLoopsImpl {
 public:
   static LogicalResult doit(Operation *op, PatternRewriter &rewriter);
 };
-} // namespace
 
 template <typename LoopTy, typename IndexedValueTy, typename ConcreteOpTy>
 LogicalResult LinalgOpToLoopsImpl<LoopTy, IndexedValueTy, ConcreteOpTy>::doit(
@@ -537,6 +537,8 @@ void LowerLinalgToLoopsPass<LoopType, IndexedValueType>::runOnFunction() {
   // Just apply the patterns greedily.
   applyPatternsGreedily(this->getFunction(), patterns);
 }
+
+} // namespace
 
 /// Create a pass to convert Linalg operations to loop.for loops and
 /// std.load/std.store accesses.

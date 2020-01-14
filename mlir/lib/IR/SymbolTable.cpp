@@ -674,8 +674,8 @@ static Attribute rebuildAttrAfterRAUW(
 }
 
 /// Generates a new symbol reference attribute with a new leaf reference.
-SymbolRefAttr generateNewRefAttr(SymbolRefAttr oldAttr,
-                                 FlatSymbolRefAttr newLeafAttr) {
+static SymbolRefAttr generateNewRefAttr(SymbolRefAttr oldAttr,
+                                        FlatSymbolRefAttr newLeafAttr) {
   if (oldAttr.isa<FlatSymbolRefAttr>())
     return newLeafAttr;
   auto nestedRefs = llvm::to_vector<2>(oldAttr.getNestedReferences());

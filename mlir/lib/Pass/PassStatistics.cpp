@@ -135,7 +135,7 @@ static void printResultsAsPipeline(raw_ostream &os, OpPassManager &pm) {
     printPass(/*indent=*/0, &pass);
 }
 
-void printStatistics(OpPassManager &pm, PassDisplayMode displayMode) {
+static void printStatistics(OpPassManager &pm, PassDisplayMode displayMode) {
   auto os = llvm::CreateInfoOutputFile();
 
   // Print the stats header.

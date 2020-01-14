@@ -837,7 +837,7 @@ static bool isTargetDarwin(const MachineFunction &MF) {
 }
 
 // Convenience function to determine whether I is an SVE callee save.
-bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
+static bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   switch (I->getOpcode()) {
   default:
     return false;
