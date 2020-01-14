@@ -514,7 +514,7 @@ private:
         RetainedTypes, GlobalVariables, ImportedEntities, CU->getMacros(),
         CU->getDWOId(), CU->getSplitDebugInlining(),
         CU->getDebugInfoForProfiling(), CU->getNameTableKind(),
-        CU->getRangesBaseAddress());
+        CU->getRangesBaseAddress(), CU->getSysRoot());
   }
 
   DILocation *getReplacementMDLocation(DILocation *MLD) {
@@ -782,16 +782,17 @@ LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
     LLVMBool isOptimized, const char *Flags, size_t FlagsLen,
     unsigned RuntimeVer, const char *SplitName, size_t SplitNameLen,
     LLVMDWARFEmissionKind Kind, unsigned DWOId, LLVMBool SplitDebugInlining,
-    LLVMBool DebugInfoForProfiling) {
+    LLVMBool DebugInfoForProfiling, const char *SysRoot, size_t SysRootLen) {
   auto File = unwrapDI<DIFile>(FileRef);
 
   return wrap(unwrap(Builder)->createCompileUnit(
-                 map_from_llvmDWARFsourcelanguage(Lang), File,
-                 StringRef(Producer, ProducerLen), isOptimized,
-                 StringRef(Flags, FlagsLen), RuntimeVer,
-                 StringRef(SplitName, SplitNameLen),
-                 static_cast<DICompileUnit::DebugEmissionKind>(Kind), DWOId,
-                 SplitDebugInlining, DebugInfoForProfiling));
+      map_from_llvmDWARFsourcelanguage(Lang), File,
+      StringRef(Producer, ProducerLen), isOptimized, StringRef(Flags, FlagsLen),
+      RuntimeVer, StringRef(SplitName, SplitNameLen),
+      static_cast<DICompileUnit::DebugEmissionKind>(Kind), DWOId,
+      SplitDebugInlining, DebugInfoForProfiling,
+      DICompileUnit::DebugNameTableKind::Default, false,
+      StringRef(SysRoot, SysRootLen)));
 }
 
 LLVMMetadataRef
@@ -806,13 +807,11 @@ LLVMMetadataRef
 LLVMDIBuilderCreateModule(LLVMDIBuilderRef Builder, LLVMMetadataRef ParentScope,
                           const char *Name, size_t NameLen,
                           const char *ConfigMacros, size_t ConfigMacrosLen,
-                          const char *IncludePath, size_t IncludePathLen,
-                          const char *SysRoot, size_t SysRootLen) {
+                          const char *IncludePath, size_t IncludePathLen) {
   return wrap(unwrap(Builder)->createModule(
       unwrapDI<DIScope>(ParentScope), StringRef(Name, NameLen),
       StringRef(ConfigMacros, ConfigMacrosLen),
-      StringRef(IncludePath, IncludePathLen),
-      StringRef(SysRoot, SysRootLen)));
+      StringRef(IncludePath, IncludePathLen)));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateNameSpace(LLVMDIBuilderRef Builder,
