@@ -567,8 +567,7 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
   const CapturedDecl *CD = S.getCapturedDecl();
   // Build the argument list.
   bool NeedWrapperFunction =
-      getDebugInfo() &&
-      CGM.getCodeGenOpts().getDebugInfo() >= codegenoptions::LimitedDebugInfo;
+      getDebugInfo() && CGM.getCodeGenOpts().hasReducedDebugInfo();
   FunctionArgList Args;
   llvm::MapVector<const Decl *, std::pair<const VarDecl *, Address>> LocalAddrs;
   llvm::DenseMap<const Decl *, std::pair<const Expr *, llvm::Value *>> VLASizes;
