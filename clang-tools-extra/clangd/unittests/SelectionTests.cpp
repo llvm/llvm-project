@@ -323,6 +323,12 @@ TEST(SelectionTest, CommonAncestor) {
             Foo x = [[^12_ud]];
           )cpp",
           "UserDefinedLiteral"},
+      {
+          R"cpp(
+        int a;
+        decltype([[^a]] + a) b;
+        )cpp",
+          "DeclRefExpr"},
   };
   for (const Case &C : Cases) {
     Annotations Test(C.Code);
