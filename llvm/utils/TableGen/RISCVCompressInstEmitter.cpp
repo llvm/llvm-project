@@ -141,7 +141,7 @@ bool RISCVCompressInstEmitter::validateRegister(Record *Reg, Record *RegClass) {
   assert(Reg->isSubClassOf("Register") && "Reg record should be a Register\n");
   assert(RegClass->isSubClassOf("RegisterClass") && "RegClass record should be"
                                                     " a RegisterClass\n");
-  CodeGenRegisterClass RC = Target.getRegisterClass(RegClass);
+  const CodeGenRegisterClass &RC = Target.getRegisterClass(RegClass);
   const CodeGenRegister *R = Target.getRegisterByName(Reg->getName().lower());
   assert((R != nullptr) &&
          ("Register" + Reg->getName().str() + " not defined!!\n").c_str());
@@ -160,8 +160,8 @@ bool RISCVCompressInstEmitter::validateTypes(Record *DagOpType,
 
   if (DagOpType->isSubClassOf("RegisterClass") &&
       InstOpType->isSubClassOf("RegisterClass")) {
-    CodeGenRegisterClass RC = Target.getRegisterClass(InstOpType);
-    CodeGenRegisterClass SubRC = Target.getRegisterClass(DagOpType);
+    const CodeGenRegisterClass &RC = Target.getRegisterClass(InstOpType);
+    const CodeGenRegisterClass &SubRC = Target.getRegisterClass(DagOpType);
     return RC.hasSubClass(&SubRC);
   }
 
