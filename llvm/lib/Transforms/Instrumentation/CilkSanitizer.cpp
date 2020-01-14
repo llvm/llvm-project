@@ -1830,16 +1830,28 @@ bool CilkSanitizerImpl::Instrumentor::InstrumentAnyMemIntrinsics(
     if (!RI.mightRace(I))
       continue;
 
+    // Look over the race data to determine what memory intrinsics need to be
+    // instrumented and how.
+    SmallSet<std::pair<Instruction *, unsigned>, 2> ToInstrument;
+    SmallSet<std::pair<Instruction *, unsigned>, 2> MaybeDelay;
     for (const RaceInfo::RaceData &RD : RI.getRaceData(I)) {
       assert(RD.getPtr() && "No pointer for race with memory intrinsic.");
-      if (RaceInfo::isLocalRace(RD.Type) || RaceInfo::isOpaqueRace(RD.Type))
-        LocalResult |= CilkSanImpl.instrumentAnyMemIntrinAcc(I, RD.OperandNum);
-      else if (RaceInfo::isRaceViaAncestor(RD.Type)) {
-        // Delay handling this instruction.
-        DelayedMemIntrinsics.push_back(std::make_pair(I, RD.OperandNum));
+      if (RaceInfo::isLocalRace(RD.Type) || RaceInfo::isOpaqueRace(RD.Type)) {
+        ToInstrument.insert(std::make_pair(I, RD.OperandNum));
+        LocalResult |= true;
+      } else if (RaceInfo::isRaceViaAncestor(RD.Type)) {
+        // Possibly delay handling this instruction.
+        MaybeDelay.insert(std::make_pair(I, RD.OperandNum));
         LocalResult |= true;
       }
     }
+
+    // Do the instrumentation
+    for (const std::pair<Instruction *, unsigned> &MemIntrin : ToInstrument)
+      CilkSanImpl.instrumentAnyMemIntrinAcc(MemIntrin.first, MemIntrin.second);
+    for (const std::pair<Instruction *, unsigned> &MemIntrin : MaybeDelay)
+      if (!ToInstrument.count(MemIntrin))
+        DelayedMemIntrinsics.push_back(MemIntrin);
 
     // If any instrumentation was inserted, collect associated instructions to
     // instrument.
