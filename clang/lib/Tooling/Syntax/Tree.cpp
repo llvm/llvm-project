@@ -29,7 +29,7 @@ static void traverse(syntax::Node *N,
   traverse(static_cast<const syntax::Node *>(N), [&](const syntax::Node *N) {
     Visit(const_cast<syntax::Node *>(N));
   });
-};
+}
 } // namespace
 
 syntax::Arena::Arena(SourceManager &SourceMgr, const LangOptions &LangOpts,
