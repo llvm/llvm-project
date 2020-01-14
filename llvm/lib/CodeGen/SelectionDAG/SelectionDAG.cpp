@@ -356,10 +356,9 @@ ISD::CondCode ISD::getSetCCSwappedOperands(ISD::CondCode Operation) {
                        (OldG << 2));       // New L bit.
 }
 
-ISD::CondCode ISD::getSetCCInverse(ISD::CondCode Op, EVT Type) {
-  bool IsInteger = Type.isInteger();
+static ISD::CondCode getSetCCInverseImpl(ISD::CondCode Op, bool isIntegerLike) {
   unsigned Operation = Op;
-  if (IsInteger)
+  if (isIntegerLike)
     Operation ^= 7;   // Flip L, G, E bits, but not U.
   else
     Operation ^= 15;  // Flip all of the condition bits.
@@ -368,6 +367,15 @@ ISD::CondCode ISD::getSetCCInverse(ISD::CondCode Op, EVT Type) {
     Operation &= ~8;  // Don't let N and U bits get set.
 
   return ISD::CondCode(Operation);
+}
+
+ISD::CondCode ISD::getSetCCInverse(ISD::CondCode Op, EVT Type) {
+  return getSetCCInverseImpl(Op, Type.isInteger());
+}
+
+ISD::CondCode ISD::GlobalISel::getSetCCInverse(ISD::CondCode Op,
+                                               bool isIntegerLike) {
+  return getSetCCInverseImpl(Op, isIntegerLike);
 }
 
 /// For an integer comparison, return 1 if the comparison is a signed operation
