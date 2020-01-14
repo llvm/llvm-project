@@ -7773,70 +7773,65 @@ bool ClangASTContext::StartTagDeclarationDefinition(const CompilerType &type) {
 bool ClangASTContext::CompleteTagDeclarationDefinition(
     const CompilerType &type) {
   clang::QualType qual_type(ClangUtil::GetQualType(type));
-  if (!qual_type.isNull()) {
-    // Make sure we use the same methodology as
-    // ClangASTContext::StartTagDeclarationDefinition() as to how we start/end
-    // the definition. Previously we were calling
-    const clang::TagType *tag_type = qual_type->getAs<clang::TagType>();
-    if (tag_type) {
-      clang::TagDecl *tag_decl = tag_type->getDecl();
-      if (tag_decl) {
-        clang::CXXRecordDecl *cxx_record_decl =
-            llvm::dyn_cast_or_null<clang::CXXRecordDecl>(tag_decl);
+  if (qual_type.isNull())
+    return false;
 
-        if (cxx_record_decl) {
-          if (!cxx_record_decl->isCompleteDefinition())
-            cxx_record_decl->completeDefinition();
-          cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
-          cxx_record_decl->setHasExternalLexicalStorage(false);
-          cxx_record_decl->setHasExternalVisibleStorage(false);
-          return true;
-        }
-      }
-    }
+  // Make sure we use the same methodology as
+  // ClangASTContext::StartTagDeclarationDefinition() as to how we start/end
+  // the definition.
+  const clang::TagType *tag_type = qual_type->getAs<clang::TagType>();
+  if (tag_type) {
+    clang::TagDecl *tag_decl = tag_type->getDecl();
 
-    const clang::EnumType *enutype = qual_type->getAs<clang::EnumType>();
-
-    if (enutype) {
-      clang::EnumDecl *enum_decl = enutype->getDecl();
-
-      if (enum_decl) {
-        if (!enum_decl->isCompleteDefinition()) {
-          ClangASTContext *lldb_ast =
-              llvm::dyn_cast<ClangASTContext>(type.GetTypeSystem());
-          if (lldb_ast == nullptr)
-            return false;
-          clang::ASTContext &ast = lldb_ast->getASTContext();
-
-          /// TODO This really needs to be fixed.
-
-          QualType integer_type(enum_decl->getIntegerType());
-          if (!integer_type.isNull()) {
-            unsigned NumPositiveBits = 1;
-            unsigned NumNegativeBits = 0;
-
-            clang::QualType promotion_qual_type;
-            // If the enum integer type is less than an integer in bit width,
-            // then we must promote it to an integer size.
-            if (ast.getTypeSize(enum_decl->getIntegerType()) <
-                ast.getTypeSize(ast.IntTy)) {
-              if (enum_decl->getIntegerType()->isSignedIntegerType())
-                promotion_qual_type = ast.IntTy;
-              else
-                promotion_qual_type = ast.UnsignedIntTy;
-            } else
-              promotion_qual_type = enum_decl->getIntegerType();
-
-            enum_decl->completeDefinition(enum_decl->getIntegerType(),
-                                          promotion_qual_type, NumPositiveBits,
-                                          NumNegativeBits);
-          }
-        }
-        return true;
-      }
+    if (auto *cxx_record_decl = llvm::dyn_cast<CXXRecordDecl>(tag_decl)) {
+      if (!cxx_record_decl->isCompleteDefinition())
+        cxx_record_decl->completeDefinition();
+      cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
+      cxx_record_decl->setHasExternalLexicalStorage(false);
+      cxx_record_decl->setHasExternalVisibleStorage(false);
+      return true;
     }
   }
-  return false;
+
+  const clang::EnumType *enutype = qual_type->getAs<clang::EnumType>();
+
+  if (!enutype)
+    return false;
+  clang::EnumDecl *enum_decl = enutype->getDecl();
+
+  if (enum_decl->isCompleteDefinition())
+    return true;
+
+  ClangASTContext *lldb_ast =
+      llvm::dyn_cast<ClangASTContext>(type.GetTypeSystem());
+  if (lldb_ast == nullptr)
+    return false;
+  clang::ASTContext &ast = lldb_ast->getASTContext();
+
+  /// TODO This really needs to be fixed.
+
+  QualType integer_type(enum_decl->getIntegerType());
+  if (!integer_type.isNull()) {
+    unsigned NumPositiveBits = 1;
+    unsigned NumNegativeBits = 0;
+
+    clang::QualType promotion_qual_type;
+    // If the enum integer type is less than an integer in bit width,
+    // then we must promote it to an integer size.
+    if (ast.getTypeSize(enum_decl->getIntegerType()) <
+        ast.getTypeSize(ast.IntTy)) {
+      if (enum_decl->getIntegerType()->isSignedIntegerType())
+        promotion_qual_type = ast.IntTy;
+      else
+        promotion_qual_type = ast.UnsignedIntTy;
+    } else
+      promotion_qual_type = enum_decl->getIntegerType();
+
+    enum_decl->completeDefinition(enum_decl->getIntegerType(),
+                                  promotion_qual_type, NumPositiveBits,
+                                  NumNegativeBits);
+  }
+  return true;
 }
 
 clang::EnumConstantDecl *ClangASTContext::AddEnumerationValueToEnumerationType(
