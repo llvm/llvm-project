@@ -9459,7 +9459,7 @@ void ASTReader::diagnoseOdrViolations() {
   // Used with err_module_odr_violation_mismatch_decl and
   // note_module_odr_violation_mismatch_decl
   // This list should be the same Decl's as in ODRHash::isWhiteListedDecl
-  enum RecordDiffType {
+  enum ODRMismatchDecl {
     EndOfClass,
     PublicSpecifer,
     PrivateSpecifer,
@@ -9477,7 +9477,7 @@ void ASTReader::diagnoseOdrViolations() {
 
   // Used with err_module_odr_violation_mismatch_decl_diff and
   // note_module_odr_violation_mismatch_decl_diff
-  enum ODRDeclDifference {
+  enum ODRMismatchDeclDifference {
     StaticAssertCondition,
     StaticAssertMessage,
     StaticAssertOnlyMessage,
@@ -9530,13 +9530,13 @@ void ASTReader::diagnoseOdrViolations() {
   // in with operator<<
   auto ODRDiagDeclError = [this](NamedDecl *FirstRecord, StringRef FirstModule,
                                  SourceLocation Loc, SourceRange Range,
-                                 ODRDeclDifference DiffType) {
+                                 ODRMismatchDeclDifference DiffType) {
     return Diag(Loc, diag::err_module_odr_violation_mismatch_decl_diff)
            << FirstRecord << FirstModule.empty() << FirstModule << Range
            << DiffType;
   };
   auto ODRDiagDeclNote = [this](StringRef SecondModule, SourceLocation Loc,
-                                SourceRange Range, ODRDeclDifference DiffType) {
+                                SourceRange Range, ODRMismatchDeclDifference DiffType) {
     return Diag(Loc, diag::note_module_odr_violation_mismatch_decl_diff)
            << SecondModule << Range << DiffType;
   };
@@ -9803,7 +9803,7 @@ void ASTReader::diagnoseOdrViolations() {
 
   struct DiffResult {
     Decl *FirstDecl = nullptr, *SecondDecl = nullptr;
-    RecordDiffType FirstDiffType = Other, SecondDiffType = Other;
+    ODRMismatchDecl FirstDiffType = Other, SecondDiffType = Other;
   };
 
   // If there is a diagnoseable difference, FirstDiffType and
@@ -9835,6 +9835,9 @@ void ASTReader::diagnoseOdrViolations() {
     return DR;
   };
 
+  // Use this to diagnose that an unexpected Decl was encountered
+  // or no difference was detected. This causes a generic error
+  // message to be emitted.
   auto DiagnoseODRUnexpected = [this](DiffResult &DR, NamedDecl *FirstRecord,
                                       StringRef FirstModule,
                                       NamedDecl *SecondRecord,
@@ -9859,12 +9862,13 @@ void ASTReader::diagnoseOdrViolations() {
   };
 
   auto DiagnoseODRMismatch =
-      [this](DiffResult &DR, TagDecl *FirstRecord, StringRef FirstModule,
-             TagDecl *SecondRecord, StringRef SecondModule) {
+      [this](DiffResult &DR, NamedDecl *FirstRecord, StringRef FirstModule,
+             NamedDecl *SecondRecord, StringRef SecondModule) {
         SourceLocation FirstLoc;
         SourceRange FirstRange;
-        if (DR.FirstDiffType == EndOfClass) {
-          FirstLoc = FirstRecord->getBraceRange().getEnd();
+        auto *FirstTag = dyn_cast<TagDecl>(FirstRecord);
+        if (DR.FirstDiffType == EndOfClass && FirstTag) {
+          FirstLoc = FirstTag->getBraceRange().getEnd();
         } else {
           FirstLoc = DR.FirstDecl->getLocation();
           FirstRange = DR.FirstDecl->getSourceRange();
@@ -9875,8 +9879,9 @@ void ASTReader::diagnoseOdrViolations() {
 
         SourceLocation SecondLoc;
         SourceRange SecondRange;
-        if (DR.SecondDiffType == EndOfClass) {
-          SecondLoc = SecondRecord->getBraceRange().getEnd();
+        auto *SecondTag = dyn_cast<TagDecl>(SecondRecord);
+        if (DR.SecondDiffType == EndOfClass && SecondTag) {
+          SecondLoc = SecondTag->getBraceRange().getEnd();
         } else {
           SecondLoc = DR.SecondDecl->getLocation();
           SecondRange = DR.SecondDecl->getSourceRange();
@@ -10219,14 +10224,11 @@ void ASTReader::diagnoseOdrViolations() {
       PopulateHashes(SecondHashes, SecondRecord, DC);
 
       auto DR = FindTypeDiffs(FirstHashes, SecondHashes);
-      RecordDiffType FirstDiffType = DR.FirstDiffType;
-      RecordDiffType SecondDiffType = DR.SecondDiffType;
+      ODRMismatchDecl FirstDiffType = DR.FirstDiffType;
+      ODRMismatchDecl SecondDiffType = DR.SecondDiffType;
       Decl *FirstDecl = DR.FirstDecl;
       Decl *SecondDecl = DR.SecondDecl;
 
-      // Reaching this point means an unexpected Decl was encountered
-      // or no difference was detected.  This causes a generic error
-      // message to be emitted.
       if (FirstDiffType == Other || SecondDiffType == Other) {
         DiagnoseODRUnexpected(DR, FirstRecord, FirstModule, SecondRecord,
                               SecondModule);
@@ -11128,14 +11130,11 @@ void ASTReader::diagnoseOdrViolations() {
       PopulateHashes(SecondHashes, SecondRecord, DC);
 
       auto DR = FindTypeDiffs(FirstHashes, SecondHashes);
-      RecordDiffType FirstDiffType = DR.FirstDiffType;
-      RecordDiffType SecondDiffType = DR.SecondDiffType;
+      ODRMismatchDecl FirstDiffType = DR.FirstDiffType;
+      ODRMismatchDecl SecondDiffType = DR.SecondDiffType;
       Decl *FirstDecl = DR.FirstDecl;
       Decl *SecondDecl = DR.SecondDecl;
 
-      // Reaching this point means an unexpected Decl was encountered
-      // or no difference was detected.  This causes a generic error
-      // message to be emitted.
       if (FirstDiffType == Other || SecondDiffType == Other) {
         DiagnoseODRUnexpected(DR, FirstRecord, FirstModule, SecondRecord,
                               SecondModule);
