@@ -140,7 +140,8 @@ DICompileUnit *DIBuilder::createCompileUnit(
     StringRef Flags, unsigned RunTimeVer, StringRef SplitName,
     DICompileUnit::DebugEmissionKind Kind, uint64_t DWOId,
     bool SplitDebugInlining, bool DebugInfoForProfiling,
-    DICompileUnit::DebugNameTableKind NameTableKind, bool RangesBaseAddress) {
+    DICompileUnit::DebugNameTableKind NameTableKind, bool RangesBaseAddress,
+    StringRef SysRoot) {
 
   assert(((Lang <= dwarf::DW_LANG_Fortran08 && Lang >= dwarf::DW_LANG_C89) ||
           (Lang <= dwarf::DW_LANG_hi_user && Lang >= dwarf::DW_LANG_lo_user)) &&
@@ -151,7 +152,7 @@ DICompileUnit *DIBuilder::createCompileUnit(
       VMContext, Lang, File, Producer, isOptimized, Flags, RunTimeVer,
       SplitName, Kind, nullptr, nullptr, nullptr, nullptr, nullptr, DWOId,
       SplitDebugInlining, DebugInfoForProfiling, NameTableKind,
-      RangesBaseAddress);
+      RangesBaseAddress, SysRoot);
 
   // Create a named metadata so that it is easier to find cu in a module.
   NamedMDNode *NMD = M.getOrInsertNamedMetadata("llvm.dbg.cu");
@@ -829,10 +830,9 @@ DINamespace *DIBuilder::createNameSpace(DIScope *Scope, StringRef Name,
 
 DIModule *DIBuilder::createModule(DIScope *Scope, StringRef Name,
                                   StringRef ConfigurationMacros,
-                                  StringRef IncludePath,
-                                  StringRef SysRoot) {
- return DIModule::get(VMContext, getNonCompileUnitScope(Scope), Name,
-                      ConfigurationMacros, IncludePath, SysRoot);
+                                  StringRef IncludePath) {
+  return DIModule::get(VMContext, getNonCompileUnitScope(Scope), Name,
+                       ConfigurationMacros, IncludePath);
 }
 
 DILexicalBlockFile *DIBuilder::createLexicalBlockFile(DIScope *Scope,

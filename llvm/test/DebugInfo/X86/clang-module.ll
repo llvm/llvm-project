@@ -20,11 +20,11 @@ target triple = "x86_64-apple-macosx10.12.0"
 !llvm.module.flags = !{!15, !16}
 !llvm.linker.options = !{}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, file: !1, producer: "clang version 5.0.0 (trunk 308357) (llvm/trunk 308379)", emissionKind: FullDebug, imports: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_ObjC, file: !1, producer: "clang version 5.0.0 (trunk 308357) (llvm/trunk 308379)", emissionKind: FullDebug, imports: !3, sysroot: "/")
 !1 = !DIFile(filename: "modules.m", directory: "/")
 !3 = !{!4}
 !4 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !0, entity: !5, line: 122)
-!5 = !DIModule(scope: null, name: "Foo", includePath: ".", sysroot: "/")
+!5 = !DIModule(scope: null, name: "Foo", includePath: ".")
 !6 = distinct !DICompileUnit(language: DW_LANG_ObjC, file: !7, producer: "clang version 5.0.0 (trunk 308357) (llvm/trunk 308379)", isOptimized: true, runtimeVersion: 0, splitDebugFilename: "/Foo.pcm", emissionKind: FullDebug, dwoId: 1234)
 !7 = !DIFile(filename: "Foo", directory: ".")
 !15 = !{i32 2, !"Dwarf Version", i32 4}
