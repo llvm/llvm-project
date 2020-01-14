@@ -697,7 +697,7 @@ void CSIImpl::setupCalls(Function &F) {
 
 static BasicBlock *SplitOffPreds(BasicBlock *BB,
                                  SmallVectorImpl<BasicBlock *> &Preds,
-                                 DominatorTree *DT) {
+                                 DominatorTree *DT, LoopInfo *LI) {
   if (BB->isLandingPad()) {
     SmallVector<BasicBlock *, 2> NewBBs;
     SplitLandingPadPredecessors(BB, Preds, ".csi-split-lp", ".csi-split",
@@ -712,7 +712,7 @@ static BasicBlock *SplitOffPreds(BasicBlock *BB,
 // Setup each block such that all of its predecessors belong to the same CSI ID
 // space.
 static void setupBlock(BasicBlock *BB, const TargetLibraryInfo *TLI,
-                       DominatorTree *DT) {
+                       DominatorTree *DT, LoopInfo *LI) {
   if (BB->getUniquePredecessor())
     return;
 
@@ -750,23 +750,23 @@ static void setupBlock(BasicBlock *BB, const TargetLibraryInfo *TLI,
   BasicBlock *BBToSplit = BB;
   // Split off the predecessors of each type.
   if (!DetachPreds.empty() && NumPredTypes > 1) {
-    BBToSplit = SplitOffPreds(BBToSplit, DetachPreds, DT);
+    BBToSplit = SplitOffPreds(BBToSplit, DetachPreds, DT, LI);
     NumPredTypes--;
   }
   if (!DetRethrowPreds.empty() && NumPredTypes > 1) {
-    BBToSplit = SplitOffPreds(BBToSplit, DetRethrowPreds, DT);
+    BBToSplit = SplitOffPreds(BBToSplit, DetRethrowPreds, DT, LI);
     NumPredTypes--;
   }
   if (!SyncPreds.empty() && NumPredTypes > 1) {
-    BBToSplit = SplitOffPreds(BBToSplit, SyncPreds, DT);
+    BBToSplit = SplitOffPreds(BBToSplit, SyncPreds, DT, LI);
     NumPredTypes--;
   }
   if (!AllocFnPreds.empty() && NumPredTypes > 1) {
-    BBToSplit = SplitOffPreds(BBToSplit, AllocFnPreds, DT);
+    BBToSplit = SplitOffPreds(BBToSplit, AllocFnPreds, DT, LI);
     NumPredTypes--;
   }
   if (!InvokePreds.empty() && NumPredTypes > 1) {
-    BBToSplit = SplitOffPreds(BBToSplit, InvokePreds, DT);
+    BBToSplit = SplitOffPreds(BBToSplit, InvokePreds, DT, LI);
     NumPredTypes--;
   }
 }
@@ -774,7 +774,7 @@ static void setupBlock(BasicBlock *BB, const TargetLibraryInfo *TLI,
 // Setup all basic blocks such that each block's predecessors belong entirely to
 // one CSI ID space.
 void CSIImpl::setupBlocks(Function &F, const TargetLibraryInfo *TLI,
-                          DominatorTree *DT) {
+                          DominatorTree *DT, LoopInfo *LI) {
   SmallPtrSet<BasicBlock *, 8> BlocksToSetup;
   for (BasicBlock &BB : F) {
     if (BB.isLandingPad())
@@ -787,7 +787,7 @@ void CSIImpl::setupBlocks(Function &F, const TargetLibraryInfo *TLI,
   }
 
   for (BasicBlock *BB : BlocksToSetup)
-    setupBlock(BB, TLI, DT);
+    setupBlock(BB, TLI, DT, LI);
 }
 
 int CSIImpl::getNumBytesAccessed(Value *Addr, const DataLayout &DL) {
@@ -819,8 +819,8 @@ void CSIImpl::addLoadStoreInstrumentation(Instruction *I,
                   IRB.getInt32(NumBytes), PropVal});
 }
 
-void CSIImpl::instrumentLoadOrStore(Instruction *I, CsiLoadStoreProperty &Prop,
-                                    const DataLayout &DL) {
+void CSIImpl::instrumentLoadOrStore(Instruction *I,
+                                    CsiLoadStoreProperty &Prop) {
   IRBuilder<> IRB(I);
   bool IsWrite = isa<StoreInst>(I);
   Value *Addr = IsWrite ? cast<StoreInst>(I)->getPointerOperand()
@@ -844,7 +844,7 @@ void CSIImpl::instrumentLoadOrStore(Instruction *I, CsiLoadStoreProperty &Prop,
   }
 }
 
-void CSIImpl::instrumentAtomic(Instruction *I, const DataLayout &DL) {
+void CSIImpl::instrumentAtomic(Instruction *I) {
   // For now, print a message that this code contains atomics.
   dbgs()
       << "WARNING: Uninstrumented atomic operations in program-under-test!\n";
@@ -2092,7 +2092,7 @@ bool CSIImpl::isAtomic(Instruction *I) {
 void CSIImpl::computeLoadAndStoreProperties(
     SmallVectorImpl<std::pair<Instruction *, CsiLoadStoreProperty>>
         &LoadAndStoreProperties,
-    SmallVectorImpl<Instruction *> &BBLoadsAndStores, const DataLayout &DL) {
+    SmallVectorImpl<Instruction *> &BBLoadsAndStores) {
   SmallSet<Value *, 8> WriteTargets;
 
   for (SmallVectorImpl<Instruction *>::reverse_iterator
@@ -2224,13 +2224,12 @@ void CSIImpl::instrumentFunction(Function &F) {
 
         AllCalls.push_back(&I);
 
-        computeLoadAndStoreProperties(LoadAndStoreProperties, BBLoadsAndStores,
-                                      DL);
+        computeLoadAndStoreProperties(LoadAndStoreProperties, BBLoadsAndStores);
       } else if (isa<AllocaInst>(I)) {
         Allocas.push_back(&I);
       }
     }
-    computeLoadAndStoreProperties(LoadAndStoreProperties, BBLoadsAndStores, DL);
+    computeLoadAndStoreProperties(LoadAndStoreProperties, BBLoadsAndStores);
     BasicBlocks.push_back(&BB);
   }
 
@@ -2272,13 +2271,13 @@ void CSIImpl::instrumentFunction(Function &F) {
   if (Options.InstrumentMemoryAccesses)
     for (std::pair<Instruction *, CsiLoadStoreProperty> p :
          LoadAndStoreProperties)
-      instrumentLoadOrStore(p.first, p.second, DL);
+      instrumentLoadOrStore(p.first, p.second);
 
   // Instrument atomic memory accesses in any case (they can be used to
   // implement synchronization).
   if (Options.InstrumentAtomics)
     for (Instruction *I : AtomicAccesses)
-      instrumentAtomic(I, DL);
+      instrumentAtomic(I);
 
   if (Options.InstrumentMemIntrinsics)
     for (Instruction *I : MemIntrinsics)

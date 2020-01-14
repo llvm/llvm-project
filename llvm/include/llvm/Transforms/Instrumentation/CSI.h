@@ -1005,7 +1005,7 @@ public:
   /// Helper functions to deal with calls to functions that can throw.
   static void setupCalls(Function &F);
   static void setupBlocks(Function &F, const TargetLibraryInfo *TLI,
-                          DominatorTree *DT = nullptr);
+                          DominatorTree *DT = nullptr, LoopInfo *LI = nullptr);
 
   /// Helper function that identifies calls or invokes of placeholder functions,
   /// such as debug-info intrinsics or lifetime intrinsics.
@@ -1067,7 +1067,7 @@ protected:
   void computeLoadAndStoreProperties(
       SmallVectorImpl<std::pair<Instruction *, CsiLoadStoreProperty>>
           &LoadAndStoreProperties,
-      SmallVectorImpl<Instruction *> &BBLoadsAndStores, const DataLayout &DL);
+      SmallVectorImpl<Instruction *> &BBLoadsAndStores);
 
   /// Insert calls to the instrumentation hooks.
   /// @{
@@ -1075,9 +1075,8 @@ protected:
                                    FunctionCallee AfterFn, Value *CsiId,
                                    Type *AddrType, Value *Addr, int NumBytes,
                                    CsiLoadStoreProperty &Prop);
-  void instrumentLoadOrStore(Instruction *I, CsiLoadStoreProperty &Prop,
-                             const DataLayout &DL);
-  void instrumentAtomic(Instruction *I, const DataLayout &DL);
+  void instrumentLoadOrStore(Instruction *I, CsiLoadStoreProperty &Prop);
+  void instrumentAtomic(Instruction *I);
   bool instrumentMemIntrinsic(Instruction *I);
   void instrumentCallsite(Instruction *I, DominatorTree *DT);
   void instrumentBasicBlock(BasicBlock &BB);
