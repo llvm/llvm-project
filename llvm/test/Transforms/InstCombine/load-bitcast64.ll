@@ -8,7 +8,7 @@ define i64* @test1(i8* %x) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64**
-; CHECK-NEXT:    [[B1:%.*]] = load i64*, i64** [[TMP0]], align 8
+; CHECK-NEXT:    [[B1:%.*]] = load i64*, i64** [[TMP0]], align 4
 ; CHECK-NEXT:    ret i64* [[B1]]
 ;
 entry:
@@ -57,7 +57,7 @@ define i64 @test4(i8* %x) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
-; CHECK-NEXT:    [[B1:%.*]] = load i64, i64* [[TMP0]], align 4
+; CHECK-NEXT:    [[B1:%.*]] = load i64, i64* [[TMP0]], align 8
 ; CHECK-NEXT:    ret i64 [[B1]]
 ;
 entry:
@@ -88,7 +88,7 @@ define i64 @test6(i8* %x) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[X:%.*]] to i64*
-; CHECK-NEXT:    [[B1:%.*]] = load i64, i64* [[TMP0]], align 4
+; CHECK-NEXT:    [[B1:%.*]] = load i64, i64* [[TMP0]], align 8
 ; CHECK-NEXT:    ret i64 [[B1]]
 ;
 entry:

@@ -462,8 +462,15 @@ static LoadInst *combineLoadToNewType(InstCombiner &IC, LoadInst &LI, Type *NewT
         NewPtr->getType()->getPointerAddressSpace() == AS))
     NewPtr = IC.Builder.CreateBitCast(Ptr, NewTy->getPointerTo(AS));
 
+  unsigned Align = LI.getAlignment();
+  if (!Align)
+    // If old load did not have an explicit alignment specified,
+    // manually preserve the implied (ABI) alignment of the load.
+    // Else we may inadvertently incorrectly over-promise alignment.
+    Align = IC.getDataLayout().getABITypeAlignment(LI.getType());
+
   LoadInst *NewLoad = IC.Builder.CreateAlignedLoad(
-      NewTy, NewPtr, LI.getAlignment(), LI.isVolatile(), LI.getName() + Suffix);
+      NewTy, NewPtr, Align, LI.isVolatile(), LI.getName() + Suffix);
   NewLoad->setAtomic(LI.getOrdering(), LI.getSyncScopeID());
   copyMetadataForLoad(*NewLoad, LI);
   return NewLoad;
