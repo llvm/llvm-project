@@ -356,12 +356,63 @@ static void recordContinuationSpindles(TaskInfo *TI) {
               break;
             }
           }
-          assert(TaskIsPredecessor &&
-                 "Exceptional continuation is not a successor of the task.");
+          if (!TaskIsPredecessor)
+            // Report that an unusual exceptional continuation was found.  This
+            // can happen, for example, due to splitting of landing pads or when
+            // part of the CFG becomes disconnected due to functioning inlining.
+            dbgs() << "TaskInfo: Found exceptional continuation at "
+                   << Unwind->getName() << " with no predecessors in task\n";
         });
       T->setEHContinuationSpindle(UnwindSpindle, LPadVal);
     }
   }
+}
+
+static bool shouldCreateSpindleAtDetachUnwind(const BasicBlock *MaybeUnwind,
+                                              const TaskInfo &TI,
+                                              const DominatorTree &DT) {
+  // Check that MaybeUnwind is a detach-unwind block.
+  if (!MaybeUnwind->isLandingPad())
+    return false;
+  const BasicBlock *Pred = MaybeUnwind->getSinglePredecessor();
+  if (!Pred) {
+    unsigned NumReachablePredecessors = 0;
+    for (const BasicBlock *P : predecessors(MaybeUnwind)) {
+      if (DT.isReachableFromEntry(P)) {
+        ++NumReachablePredecessors;
+        Pred = P;
+      }
+    }
+    if (NumReachablePredecessors > 1)
+      return false;
+  }
+  if (!isa<DetachInst>(Pred->getTerminator()))
+    return false;
+
+  const BasicBlock *UnwindSpindleEntry = MaybeUnwind;
+  // First suppose that a more appropriate detach-unwind spindle entry exists
+  // later on the chain of unique successors of Unwind.  Traverse this chain of
+  // unique successors of Unwind until we find a spindle entry.
+  while (!TI.getSpindleFor(UnwindSpindleEntry)) {
+    if (isa<SyncInst>(UnwindSpindleEntry->getTerminator()))
+      // We found a sync instruction terminating a basic block along the chain
+      // of unique successors of Unwind.  Such a sync instruction should appear
+      // within a detach-unwind spindle.
+      return true;
+
+    const BasicBlock *Succ = UnwindSpindleEntry->getUniqueSuccessor();
+    if (!Succ)
+      // We discovered a basic block without a unique successor before we found
+      // an appropriate detach-unwind spindle entry.  Return true, so a new
+      // detach-unwind spindle entry will be created.
+      return true;
+    UnwindSpindleEntry = Succ;
+  }
+
+  // Check the type of spindle discovered, to make sure it's appropriate for a
+  // detach-unwind spindle.
+  const Spindle *S = TI.getSpindleFor(UnwindSpindleEntry);
+  return !S->isPhi();
 }
 
 void TaskInfo::analyze(Function &F, DominatorTree &DomTree) {
@@ -484,8 +535,14 @@ void TaskInfo::analyze(Function &F, DominatorTree &DomTree) {
     BasicBlock *BB = DomNode->getBlock();
     // If a basic block is not a spindle entry, mark it found and continue.
     if (!getSpindleFor(BB)) {
-      FoundBlocks.push_back(BB);
-      continue;
+      // Perform some rare, special-case handling of detach unwind blocks.
+      if (shouldCreateSpindleAtDetachUnwind(BB, *this, DomTree)) {
+        createSpindleWithEntry(BB, Spindle::SPType::Phi);
+        ++NumSpindles;
+      } else {
+        FoundBlocks.push_back(BB);
+        continue;
+      }
     }
     // This block is a spindle entry.
     Spindle *S = getSpindleFor(BB);
