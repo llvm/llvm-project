@@ -212,6 +212,8 @@ AssociateWithTask(TaskInfo *TI, Task *T,
     if (!Visited.insert(S).second) continue;
 
     // Add the spindle S to T.
+    LLVM_DEBUG(dbgs() << "Adding spindle@" << S->getEntry()->getName()
+                      << " to task@" << Entry->getEntry()->getName() << "\n");
     TI->addSpindleToTask(S, T);
 
     // Add the successor spindles of S that are associated with T to the
@@ -479,9 +481,14 @@ void TaskInfo::analyze(Function &F, DominatorTree &DomTree) {
     NumSpindlesInPF += SpindleCount;
     NumTasksInPF += TaskCount;
   }
+  LLVM_DEBUG({
+      dbgs() << "DefiningBlocks:\n";
+      for (BasicBlock *BB : DefiningBlocks)
+        dbgs() << "  " << BB->getName() << "\n";
+    });
 
-  // Compute IDFs to determine additional starting points of fibrils, e.g.,
-  // continuation points and other fibril PHI-nodes.
+  // Compute IDFs to determine additional starting points of spindles, e.g.,
+  // continuation points and other spindle PHI-nodes.
   ForwardIDFCalculator IDFs(DomTree);
   IDFs.setDefiningBlocks(DefiningBlocks);
   SmallVector<BasicBlock *, 32> IDFBlocks;
@@ -491,6 +498,11 @@ void TaskInfo::analyze(Function &F, DominatorTree &DomTree) {
              [&BBNumbers](const BasicBlock *A, const BasicBlock *B) {
                return BBNumbers.find(A)->second < BBNumbers.find(B)->second;
              });
+  LLVM_DEBUG({
+      dbgs() << "IDFBlocks:\n";
+      for (BasicBlock *BB : IDFBlocks)
+        dbgs() << "  " << BB->getName() << "\n";
+    });
 
   // Create spindles for all IDFBlocks.
   for (BasicBlock *B : IDFBlocks)
