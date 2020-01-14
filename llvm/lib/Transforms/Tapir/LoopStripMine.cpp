@@ -242,7 +242,7 @@ static Task *getTapirLoopForStripMining(const Loop *L, TaskInfo &TI,
                                         OptimizationRemarkEmitter *ORE) {
   LLVM_DEBUG(dbgs() << "Analyzing for stripmining: " << *L);
   // We only handle Tapir loops.
-  Task *T = getTaskIfTapirLoop(L, &TI);
+  Task *T = getTaskIfTapirLoopStructure(L, &TI);
   if (!T)
     return nullptr;
 

@@ -41,7 +41,7 @@ static bool trySerializeSmallLoop(
   for (Loop *SubL : *L)
     Changed |= trySerializeSmallLoop(SubL, DT, LI, SE, TTI, AC, TI, ORE, TLI);
 
-  Task *T = getTaskIfTapirLoop(L, TI);
+  Task *T = getTaskIfTapirLoopStructure(L, TI);
   if (!T)
     return Changed;
 
