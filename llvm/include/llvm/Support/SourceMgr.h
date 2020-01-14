@@ -61,10 +61,10 @@ private:
     /// into relatively small files (often smaller than 2^8 or 2^16 bytes),
     /// we select the offset vector element type dynamically based on the
     /// size of Buffer.
-    using VariableSizeOffsets = PointerUnion4<std::vector<uint8_t> *,
-                                              std::vector<uint16_t> *,
-                                              std::vector<uint32_t> *,
-                                              std::vector<uint64_t> *>;
+    using VariableSizeOffsets = PointerUnion<std::vector<uint8_t> *,
+                                             std::vector<uint16_t> *,
+                                             std::vector<uint32_t> *,
+                                             std::vector<uint64_t> *>;
 
     /// Vector of offsets into Buffer at which there are line-endings
     /// (lazily populated). Once populated, the '\n' that marks the end of

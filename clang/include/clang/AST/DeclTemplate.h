@@ -57,8 +57,8 @@ class VarTemplatePartialSpecializationDecl;
 
 /// Stores a template parameter of any kind.
 using TemplateParameter =
-    llvm::PointerUnion3<TemplateTypeParmDecl *, NonTypeTemplateParmDecl *,
-                        TemplateTemplateParmDecl *>;
+    llvm::PointerUnion<TemplateTypeParmDecl *, NonTypeTemplateParmDecl *,
+                       TemplateTemplateParmDecl *>;
 
 NamedDecl *getAsNamedDecl(TemplateParameter P);
 
@@ -309,7 +309,7 @@ class DefaultArgStorage {
   static_assert(sizeof(Chain) == sizeof(void *) * 2,
                 "non-pointer argument type?");
 
-  llvm::PointerUnion3<ArgType, ParmDecl*, Chain*> ValueOrInherited;
+  llvm::PointerUnion<ArgType, ParmDecl*, Chain*> ValueOrInherited;
 
   static ParmDecl *getParmOwningDefaultArg(ParmDecl *Parm) {
     const DefaultArgStorage &Storage = Parm->getDefaultArgStorage();

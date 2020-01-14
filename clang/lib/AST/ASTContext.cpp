@@ -924,15 +924,15 @@ class ASTContext::ParentMap {
   /// only storing a unique pointer to them.
   using ParentMapPointers = llvm::DenseMap<
       const void *,
-      llvm::PointerUnion4<const Decl *, const Stmt *,
-                          ast_type_traits::DynTypedNode *, ParentVector *>>;
+      llvm::PointerUnion<const Decl *, const Stmt *,
+                         ast_type_traits::DynTypedNode *, ParentVector *>>;
 
   /// Parent map for nodes without pointer identity. We store a full
   /// DynTypedNode for all keys.
   using ParentMapOtherNodes = llvm::DenseMap<
       ast_type_traits::DynTypedNode,
-      llvm::PointerUnion4<const Decl *, const Stmt *,
-                          ast_type_traits::DynTypedNode *, ParentVector *>>;
+      llvm::PointerUnion<const Decl *, const Stmt *,
+                         ast_type_traits::DynTypedNode *, ParentVector *>>;
 
   ParentMapPointers PointerParents;
   ParentMapOtherNodes OtherParents;

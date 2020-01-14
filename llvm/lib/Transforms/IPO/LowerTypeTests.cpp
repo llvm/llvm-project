@@ -1811,7 +1811,7 @@ bool LowerTypeTestsModule::lower() {
   // reference them. This is used to partition the set of type identifiers in
   // the module into disjoint sets.
   using GlobalClassesTy = EquivalenceClasses<
-      PointerUnion3<GlobalTypeMember *, Metadata *, ICallBranchFunnel *>>;
+      PointerUnion<GlobalTypeMember *, Metadata *, ICallBranchFunnel *>>;
   GlobalClassesTy GlobalClasses;
 
   // Verify the type metadata and build a few data structures to let us
