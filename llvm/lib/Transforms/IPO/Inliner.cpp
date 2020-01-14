@@ -667,13 +667,13 @@ InlinerPass::~InlinerPass() {
 PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                                    CGSCCAnalysisManager &AM, LazyCallGraph &CG,
                                    CGSCCUpdateResult &UR) {
-  const ModuleAnalysisManager &MAM =
-      AM.getResult<ModuleAnalysisManagerCGSCCProxy>(InitialC, CG).getManager();
+  const auto &MAMProxy =
+      AM.getResult<ModuleAnalysisManagerCGSCCProxy>(InitialC, CG);
   bool Changed = false;
 
   assert(InitialC.size() > 0 && "Cannot handle an empty SCC!");
   Module &M = *InitialC.begin()->getFunction().getParent();
-  ProfileSummaryInfo *PSI = MAM.getCachedResult<ProfileSummaryAnalysis>(M);
+  ProfileSummaryInfo *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(M);
 
   if (!ImportedFunctionsStats &&
       InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No) {
@@ -778,16 +778,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     }
 
     LLVM_DEBUG(dbgs() << "Inlining calls in: " << F.getName() << "\n");
-
-    // Get a FunctionAnalysisManager via a proxy for this particular node. We
-    // do this each time we visit a node as the SCC may have changed and as
-    // we're going to mutate this particular function we want to make sure the
-    // proxy is in place to forward any invalidation events. We can use the
-    // manager we get here for looking up results for functions other than this
-    // node however because those functions aren't going to be mutated by this
-    // pass.
-    FunctionAnalysisManager &FAM =
-        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(*C, CG).getManager();
 
     // Get the remarks emission analysis for the caller.
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
@@ -968,8 +958,13 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // essentially do all of the same things as a function pass and we can
     // re-use the exact same logic for updating the call graph to reflect the
     // change.
+
+    // Inside the update, we also update the FunctionAnalysisManager in the
+    // proxy for this particular SCC. We do this as the SCC may have changed and
+    // as we're going to mutate this particular function we want to make sure
+    // the proxy is in place to forward any invalidation events.
     LazyCallGraph::SCC *OldC = C;
-    C = &updateCGAndAnalysisManagerForFunctionPass(CG, *C, N, AM, UR);
+    C = &updateCGAndAnalysisManagerForFunctionPass(CG, *C, N, AM, UR, FAM);
     LLVM_DEBUG(dbgs() << "Updated inlining SCC: " << *C << "\n");
     RC = &C->getOuterRefSCC();
 
@@ -1015,8 +1010,6 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
     // Get the necessary information out of the call graph and nuke the
     // function there. Also, cclear out any cached analyses.
     auto &DeadC = *CG.lookupSCC(*CG.lookup(*DeadF));
-    FunctionAnalysisManager &FAM =
-        AM.getResult<FunctionAnalysisManagerCGSCCProxy>(DeadC, CG).getManager();
     FAM.clear(*DeadF, DeadF->getName());
     AM.clear(DeadC, DeadC.getName());
     auto &DeadRC = DeadC.getOuterRefSCC();

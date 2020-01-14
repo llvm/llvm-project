@@ -49,6 +49,7 @@ class CallGraphUpdater {
   LazyCallGraph::SCC *SCC = nullptr;
   CGSCCAnalysisManager *AM = nullptr;
   CGSCCUpdateResult *UR = nullptr;
+  FunctionAnalysisManager *FAM = nullptr;
   ///}
 
 public:
@@ -68,6 +69,8 @@ public:
     this->SCC = &SCC;
     this->AM = &AM;
     this->UR = &UR;
+    FAM =
+        &AM.getResult<FunctionAnalysisManagerCGSCCProxy>(SCC, LCG).getManager();
   }
   ///}
 

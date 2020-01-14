@@ -1409,10 +1409,9 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   if (auto *LAMProxy = AM.getCachedResult<LoopAnalysisManagerFunctionProxy>(F))
     LAM = &LAMProxy->getManager();
 
-  const ModuleAnalysisManager &MAM =
-      AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
+  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   ProfileSummaryInfo *PSI =
-      MAM.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+      MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   auto *BFI = (PSI && PSI->hasProfileSummary()) ?
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
 
