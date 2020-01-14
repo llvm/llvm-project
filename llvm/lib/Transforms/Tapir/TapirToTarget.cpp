@@ -302,9 +302,6 @@ void TapirToTargetImpl::processFunction(
   // Outline all tasks in a target-oblivious manner.
   TaskOutlineMapTy TaskToOutline = outlineAllTasks(F, DT, AC, TI);
 
-  if (verifyFunction(F, &errs()))
-    llvm_unreachable("Outlining tasks produced bad IR!");
-
   // Perform target-specific processing of this function and all newly created
   // helpers.
   for (Task *T : post_order(TI.getRootTask())) {
@@ -323,9 +320,12 @@ void TapirToTargetImpl::processFunction(
   for (Function *H : NewHelpers)
     Target->postProcessHelper(*H);
   } // end timed region
-
-  if (verifyFunction(F, &errs()))
+#ifndef NDEBUG
+  if (verifyModule(M, &errs())) {
+    LLVM_DEBUG(dbgs() << "Module after lowering:" << M);
     llvm_unreachable("Tapir lowering produced bad IR!");
+  }
+#endif
 
   return;
 }
