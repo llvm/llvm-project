@@ -3258,6 +3258,7 @@ defm inline_small_functions : BooleanFFlag<"inline-small-functions">,
 defm ipa_cp : BooleanFFlag<"ipa-cp">,
     Group<clang_ignored_gcc_optimization_f_Group>;
 defm ivopts : BooleanFFlag<"ivopts">, Group<clang_ignored_gcc_optimization_f_Group>;
+def : Flag<["-"], "fno-semantic-interposition">, Group<clang_ignored_f_Group>;
 defm non_call_exceptions : BooleanFFlag<"non-call-exceptions">, Group<clang_ignored_f_Group>;
 defm peel_loops : BooleanFFlag<"peel-loops">, Group<clang_ignored_gcc_optimization_f_Group>;
 defm permissive : BooleanFFlag<"permissive">, Group<clang_ignored_f_Group>;
