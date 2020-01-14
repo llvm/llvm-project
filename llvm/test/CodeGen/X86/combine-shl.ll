@@ -877,7 +877,7 @@ define <4 x i32> @combine_vec_add_shl_and_nonsplat(<4 x i32> %a0)  {
 ; SSE2-NEXT:    pmuludq %xmm2, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    paddd {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    por {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: combine_vec_add_shl_and_nonsplat:
@@ -894,7 +894,7 @@ define <4 x i32> @combine_vec_add_shl_and_nonsplat(<4 x i32> %a0)  {
 ; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
 ; AVX-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
-; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = and <4 x i32> %a0, <i32 4294901760, i32 4294901760, i32 4294901760, i32 4294901760>
   %2 = shl <4 x i32> %1, <i32 2, i32 3, i32 4, i32 5>

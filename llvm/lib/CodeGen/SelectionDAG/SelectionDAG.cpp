@@ -2865,24 +2865,25 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::SHL:
+    Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+
     if (const APInt *ShAmt = getValidShiftAmountConstant(Op, DemandedElts)) {
-      Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
       unsigned Shift = ShAmt->getZExtValue();
       Known.Zero <<= Shift;
       Known.One <<= Shift;
       // Low bits are known zero.
       Known.Zero.setLowBits(Shift);
-    } else if (const APInt *ShMinAmt =
-                   getValidMinimumShiftAmountConstant(Op, DemandedElts)) {
-      // Minimum shift low bits are known zero.
-      Known.Zero.setLowBits(ShMinAmt->getZExtValue());
-    } else {
-      // No matter the shift amount, the trailing zeros will stay zero.
-      Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-      Known.Zero =
-          APInt::getLowBitsSet(BitWidth, Known.countMinTrailingZeros());
-      Known.One.clearAllBits();
+      break;
     }
+
+    // No matter the shift amount, the trailing zeros will stay zero.
+    Known.Zero = APInt::getLowBitsSet(BitWidth, Known.countMinTrailingZeros());
+    Known.One.clearAllBits();
+
+    // Minimum shift low bits are known zero.
+    if (const APInt *ShMinAmt =
+            getValidMinimumShiftAmountConstant(Op, DemandedElts))
+      Known.Zero.setLowBits(ShMinAmt->getZExtValue());
     break;
   case ISD::SRL:
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
