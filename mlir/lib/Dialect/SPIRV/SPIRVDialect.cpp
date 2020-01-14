@@ -650,15 +650,26 @@ LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
   StringRef symbol = attribute.first.strref();
   Attribute attr = attribute.second;
 
-  if (symbol != spirv::getEntryPointABIAttrName())
+  // TODO(antiagainst): figure out a way to generate the description from the
+  // StructAttr definition.
+  if (symbol == spirv::getEntryPointABIAttrName()) {
+    if (!attr.isa<spirv::EntryPointABIAttr>())
+      return op->emitError("'")
+             << symbol
+             << "' attribute must be a dictionary attribute containing one "
+                "32-bit integer elements attribute: 'local_size'";
+  } else if (symbol == spirv::getTargetEnvAttrName()) {
+    if (!attr.isa<spirv::TargetEnvAttr>())
+      return op->emitError("'")
+             << symbol
+             << "' must be a dictionary attribute containing one 32-bit "
+                "integer attribute 'version', one string array attribute "
+                "'extensions', and one 32-bit integer array attribute "
+                "'capabilities'";
+  } else {
     return op->emitError("found unsupported '")
            << symbol << "' attribute on operation";
-
-  if (!spirv::EntryPointABIAttr::classof(attr))
-    return op->emitError("'")
-           << symbol
-           << "' attribute must be a dictionary attribute containing one "
-              "integer elements attribute: 'local_size'";
+  }
 
   return success();
 }
@@ -675,11 +686,11 @@ verifyRegionAttribute(Location loc, NamedAttribute attribute, bool forArg) {
            << symbol << "' attribute on region "
            << (forArg ? "argument" : "result");
 
-  if (!spirv::InterfaceVarABIAttr::classof(attr))
+  if (!attr.isa<spirv::InterfaceVarABIAttr>())
     return emitError(loc, "'")
            << symbol
            << "' attribute must be a dictionary attribute containing three "
-              "integer attributes: 'descriptor_set', 'binding', and "
+              "32-bit integer attributes: 'descriptor_set', 'binding', and "
               "'storage_class'";
 
   return success();

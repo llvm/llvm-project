@@ -15,6 +15,11 @@
 #include "mlir/Dialect/SPIRV/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Debug.h"
+
+#include <functional>
+
+#define DEBUG_TYPE "mlir-spirv-lowering"
 
 using namespace mlir;
 
@@ -214,3 +219,93 @@ mlir::spirv::setABIAttrs(FuncOp funcOp, spirv::EntryPointABIAttr entryPointInfo,
   funcOp.setAttr(spirv::getEntryPointABIAttrName(), entryPointInfo);
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// SPIR-V ConversionTarget
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<spirv::SPIRVConversionTarget>
+spirv::SPIRVConversionTarget::get(spirv::TargetEnvAttr targetEnv,
+                                  MLIRContext *context) {
+  std::unique_ptr<SPIRVConversionTarget> target(
+      // std::make_unique does not work here because the constructor is private.
+      new SPIRVConversionTarget(targetEnv, context));
+  SPIRVConversionTarget *targetPtr = target.get();
+  target->addDynamicallyLegalDialect<SPIRVDialect>(
+      Optional<ConversionTarget::DynamicLegalityCallbackFn>(
+          // We need to capture the raw pointer here because it is stable:
+          // target will be destroyed once this function is returned.
+          [targetPtr](Operation *op) { return targetPtr->isLegalOp(op); }));
+  return target;
+}
+
+spirv::SPIRVConversionTarget::SPIRVConversionTarget(
+    spirv::TargetEnvAttr targetEnv, MLIRContext *context)
+    : ConversionTarget(*context),
+      givenVersion(static_cast<spirv::Version>(targetEnv.version().getInt())) {
+  for (Attribute extAttr : targetEnv.extensions())
+    givenExtensions.insert(
+        *spirv::symbolizeExtension(extAttr.cast<StringAttr>().getValue()));
+
+  for (Attribute capAttr : targetEnv.capabilities())
+    givenCapabilities.insert(
+        static_cast<spirv::Capability>(capAttr.cast<IntegerAttr>().getInt()));
+}
+
+bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
+  // Make sure this op is available at the given version. Ops not implementing
+  // QueryMinVersionInterface/QueryMaxVersionInterface are available to all
+  // SPIR-V versions.
+  if (auto minVersion = dyn_cast<spirv::QueryMinVersionInterface>(op))
+    if (minVersion.getMinVersion() > givenVersion) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << op->getName() << " illegal: requiring min version "
+                 << spirv::stringifyVersion(minVersion.getMinVersion())
+                 << "\n");
+      return false;
+    }
+  if (auto maxVersion = dyn_cast<spirv::QueryMaxVersionInterface>(op))
+    if (maxVersion.getMaxVersion() < givenVersion) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << op->getName() << " illegal: requiring max version "
+                 << spirv::stringifyVersion(maxVersion.getMaxVersion())
+                 << "\n");
+      return false;
+    }
+
+  // Make sure this op's required extensions are allowed to use. For each op,
+  // we return a vector of vector for its extension requirements following
+  // ((Extension::A OR Extenion::B) AND (Extension::C OR Extension::D))
+  // convention. Ops not implementing QueryExtensionInterface do not require
+  // extensions to be available.
+  if (auto extensions = dyn_cast<spirv::QueryExtensionInterface>(op)) {
+    auto exts = extensions.getExtensions();
+    for (const auto &ors : exts)
+      if (llvm::all_of(ors, [this](spirv::Extension ext) {
+            return this->givenExtensions.count(ext) == 0;
+          })) {
+        LLVM_DEBUG(llvm::dbgs() << op->getName()
+                                << " illegal: missing required extension\n");
+        return false;
+      }
+  }
+
+  // Make sure this op's required extensions are allowed to use. For each op,
+  // we return a vector of vector for its capability requirements following
+  // ((Capability::A OR Extenion::B) AND (Capability::C OR Capability::D))
+  // convention. Ops not implementing QueryExtensionInterface do not require
+  // extensions to be available.
+  if (auto capabilities = dyn_cast<spirv::QueryCapabilityInterface>(op)) {
+    auto caps = capabilities.getCapabilities();
+    for (const auto &ors : caps)
+      if (llvm::all_of(ors, [this](spirv::Capability cap) {
+            return this->givenCapabilities.count(cap) == 0;
+          })) {
+        LLVM_DEBUG(llvm::dbgs() << op->getName()
+                                << " illegal: missing required capability\n");
+        return false;
+      }
+  }
+
+  return true;
+};
