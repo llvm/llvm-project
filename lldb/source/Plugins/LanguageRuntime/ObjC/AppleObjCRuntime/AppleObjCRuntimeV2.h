@@ -69,8 +69,6 @@ public:
 
   void UpdateISAToDescriptorMapIfNeeded() override;
 
-  ConstString GetActualTypeName(ObjCLanguageRuntime::ObjCISA isa) override;
-
   ClassDescriptorSP GetClassDescriptor(ValueObject &in_value) override;
 
   ClassDescriptorSP GetClassDescriptorFromISA(ObjCISA isa) override;
