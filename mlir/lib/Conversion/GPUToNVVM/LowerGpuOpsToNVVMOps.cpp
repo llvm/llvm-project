@@ -713,7 +713,7 @@ public:
     ConversionTarget target(getContext());
     target.addIllegalDialect<gpu::GPUDialect>();
     target.addIllegalOp<LLVM::FAbsOp, LLVM::FCeilOp, LLVM::CosOp,
-                        LLVM::ExpOP>();
+                        LLVM::ExpOp>();
     target.addIllegalOp<FuncOp>();
     target.addLegalDialect<LLVM::LLVMDialect>();
     target.addLegalDialect<NVVM::NVVMDialect>();
