@@ -192,6 +192,11 @@ static cl::opt<bool>
                        cl::Hidden, cl::ZeroOrMore,
                        cl::desc("Run Partial inlinining pass"));
 
+static cl::opt<int> PreInlineThreshold(
+    "npm-preinline-threshold", cl::Hidden, cl::init(75), cl::ZeroOrMore,
+    cl::desc("Control the amount of inlining in pre-instrumentation inliner "
+             "(default = 75)"));
+
 static cl::opt<bool>
     RunNewGVN("enable-npm-newgvn", cl::init(false),
               cl::Hidden, cl::ZeroOrMore,
@@ -575,8 +580,7 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
   if (!isOptimizingForSize(Level) && !IsCS) {
     InlineParams IP;
 
-    // In the old pass manager, this is a cl::opt. Should still this be one?
-    IP.DefaultThreshold = 75;
+    IP.DefaultThreshold = PreInlineThreshold;
 
     // FIXME: The hint threshold has the same value used by the regular inliner.
     // This should probably be lowered after performance testing.
