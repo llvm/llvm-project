@@ -79,6 +79,20 @@ static void warnAboutLeftoverTransformations(Loop *L,
            "requested transformation; the transformation might be disabled or "
            "specified as part of an unsupported transformation ordering");
   }
+
+  if (hasLoopStripmineTransformation(L) == TM_ForcedByUser) {
+    LLVM_DEBUG(dbgs() << "Leftover loop-stripmine transformation\n");
+    ORE->emit(
+        DiagnosticInfoOptimizationFailure(DEBUG_TYPE,
+                                          "FailedRequestedStripmining",
+                                          L->getStartLoc(), L->getHeader())
+        << "loop not stripmined: the optimizer was unable to perform the "
+           "requested transformation; the transformation might be disabled or "
+           "specified as part of an unsupported transformation ordering");
+  }
+
+  // This pass doesn't check whether LoopSpawning has been performed, because
+  // LoopSpawning runs as part of Tapir lowering, after this pass has run.
 }
 
 static void warnAboutLeftoverTransformations(Function *F, LoopInfo *LI,
