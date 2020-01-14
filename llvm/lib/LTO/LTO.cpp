@@ -467,7 +467,7 @@ BitcodeModule &InputFile::getSingleBitcodeModule() {
 }
 
 LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
-                                      Config &Conf)
+                                      const Config &Conf)
     : ParallelCodeGenParallelismLevel(ParallelCodeGenParallelismLevel),
       Ctx(Conf), CombinedModule(std::make_unique<Module>("ld-temp.o", Ctx)),
       Mover(std::make_unique<IRMover>(*CombinedModule)) {}
@@ -1029,12 +1029,12 @@ ArrayRef<const char*> LTO::getRuntimeLibcallSymbols() {
 /// This class defines the interface to the ThinLTO backend.
 class lto::ThinBackendProc {
 protected:
-  Config &Conf;
+  const Config &Conf;
   ModuleSummaryIndex &CombinedIndex;
   const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries;
 
 public:
-  ThinBackendProc(Config &Conf, ModuleSummaryIndex &CombinedIndex,
+  ThinBackendProc(const Config &Conf, ModuleSummaryIndex &CombinedIndex,
                   const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries)
       : Conf(Conf), CombinedIndex(CombinedIndex),
         ModuleToDefinedGVSummaries(ModuleToDefinedGVSummaries) {}
@@ -1062,7 +1062,7 @@ class InProcessThinBackend : public ThinBackendProc {
 
 public:
   InProcessThinBackend(
-      Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       unsigned ThinLTOParallelismLevel,
       const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       AddStreamFn AddStream, NativeObjectCache Cache)
@@ -1160,7 +1160,7 @@ public:
 } // end anonymous namespace
 
 ThinBackend lto::createInProcessThinBackend(unsigned ParallelismLevel) {
-  return [=](Config &Conf, ModuleSummaryIndex &CombinedIndex,
+  return [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
              const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
              AddStreamFn AddStream, NativeObjectCache Cache) {
     return std::make_unique<InProcessThinBackend>(
@@ -1198,7 +1198,7 @@ class WriteIndexesThinBackend : public ThinBackendProc {
 
 public:
   WriteIndexesThinBackend(
-      Config &Conf, ModuleSummaryIndex &CombinedIndex,
+      const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
       std::string OldPrefix, std::string NewPrefix, bool ShouldEmitImportsFiles,
       raw_fd_ostream *LinkedObjectsFile, lto::IndexWriteCallback OnWrite)
@@ -1250,7 +1250,7 @@ public:
 ThinBackend lto::createWriteIndexesThinBackend(
     std::string OldPrefix, std::string NewPrefix, bool ShouldEmitImportsFiles,
     raw_fd_ostream *LinkedObjectsFile, IndexWriteCallback OnWrite) {
-  return [=](Config &Conf, ModuleSummaryIndex &CombinedIndex,
+  return [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
              const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
              AddStreamFn AddStream, NativeObjectCache Cache) {
     return std::make_unique<WriteIndexesThinBackend>(
