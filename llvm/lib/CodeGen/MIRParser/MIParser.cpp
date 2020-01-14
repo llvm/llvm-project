@@ -545,8 +545,6 @@ private:
   const BasicBlock *getIRBlock(unsigned Slot);
   const BasicBlock *getIRBlock(unsigned Slot, const Function &F);
 
-  const Value *getIRValue(unsigned Slot);
-
   /// Get or create an MCSymbol for a given name.
   MCSymbol *getOrCreateMCSymbol(StringRef Name);
 
@@ -3137,10 +3135,6 @@ const BasicBlock *MIParser::getIRBlock(unsigned Slot, const Function &F) {
   DenseMap<unsigned, const BasicBlock *> CustomSlots2BasicBlocks;
   initSlots2BasicBlocks(F, CustomSlots2BasicBlocks);
   return getIRBlockFromSlot(Slot, CustomSlots2BasicBlocks);
-}
-
-const Value *MIParser::getIRValue(unsigned Slot) {
-  return PFS.getIRValue(Slot);
 }
 
 MCSymbol *MIParser::getOrCreateMCSymbol(StringRef Name) {
