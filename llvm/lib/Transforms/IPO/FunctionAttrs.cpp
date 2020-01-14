@@ -1331,58 +1331,61 @@ static bool addNonNullAttrs(const SCCNodeSet &SCCNodes) {
   return MadeChange;
 }
 
-namespace {
+// Note: AttributeInferer was moved to FunctionAttrs.h to make it accessible to
+// other passes.
 
-/// Collects a set of attribute inference requests and performs them all in one
-/// go on a single SCC Node. Inference involves scanning function bodies
-/// looking for instructions that violate attribute assumptions.
-/// As soon as all the bodies are fine we are free to set the attribute.
-/// Customization of inference for individual attributes is performed by
-/// providing a handful of predicates for each attribute.
-class AttributeInferer {
-public:
-  /// Describes a request for inference of a single attribute.
-  struct InferenceDescriptor {
+// namespace {
 
-    /// Returns true if this function does not have to be handled.
-    /// General intent for this predicate is to provide an optimization
-    /// for functions that do not need this attribute inference at all
-    /// (say, for functions that already have the attribute).
-    std::function<bool(const Function &)> SkipFunction;
+// /// Collects a set of attribute inference requests and performs them all in one
+// /// go on a single SCC Node. Inference involves scanning function bodies
+// /// looking for instructions that violate attribute assumptions.
+// /// As soon as all the bodies are fine we are free to set the attribute.
+// /// Customization of inference for individual attributes is performed by
+// /// providing a handful of predicates for each attribute.
+// class AttributeInferer {
+// public:
+//   /// Describes a request for inference of a single attribute.
+//   struct InferenceDescriptor {
 
-    /// Returns true if this instruction violates attribute assumptions.
-    std::function<bool(Instruction &)> InstrBreaksAttribute;
+//     /// Returns true if this function does not have to be handled.
+//     /// General intent for this predicate is to provide an optimization
+//     /// for functions that do not need this attribute inference at all
+//     /// (say, for functions that already have the attribute).
+//     std::function<bool(const Function &)> SkipFunction;
 
-    /// Sets the inferred attribute for this function.
-    std::function<void(Function &)> SetAttribute;
+//     /// Returns true if this instruction violates attribute assumptions.
+//     std::function<bool(Instruction &)> InstrBreaksAttribute;
 
-    /// Attribute we derive.
-    Attribute::AttrKind AKind;
+//     /// Sets the inferred attribute for this function.
+//     std::function<void(Function &)> SetAttribute;
 
-    /// If true, only "exact" definitions can be used to infer this attribute.
-    /// See GlobalValue::isDefinitionExact.
-    bool RequiresExactDefinition;
+//     /// Attribute we derive.
+//     Attribute::AttrKind AKind;
 
-    InferenceDescriptor(Attribute::AttrKind AK,
-                        std::function<bool(const Function &)> SkipFunc,
-                        std::function<bool(Instruction &)> InstrScan,
-                        std::function<void(Function &)> SetAttr,
-                        bool ReqExactDef)
-        : SkipFunction(SkipFunc), InstrBreaksAttribute(InstrScan),
-          SetAttribute(SetAttr), AKind(AK),
-          RequiresExactDefinition(ReqExactDef) {}
-  };
+//     /// If true, only "exact" definitions can be used to infer this attribute.
+//     /// See GlobalValue::isDefinitionExact.
+//     bool RequiresExactDefinition;
 
-private:
-  SmallVector<InferenceDescriptor, 4> InferenceDescriptors;
+//     InferenceDescriptor(Attribute::AttrKind AK,
+//                         std::function<bool(const Function &)> SkipFunc,
+//                         std::function<bool(Instruction &)> InstrScan,
+//                         std::function<void(Function &)> SetAttr,
+//                         bool ReqExactDef)
+//         : SkipFunction(SkipFunc), InstrBreaksAttribute(InstrScan),
+//           SetAttribute(SetAttr), AKind(AK),
+//           RequiresExactDefinition(ReqExactDef) {}
+//   };
 
-public:
-  void registerAttrInference(InferenceDescriptor AttrInference) {
-    InferenceDescriptors.push_back(AttrInference);
-  }
+// private:
+//   SmallVector<InferenceDescriptor, 4> InferenceDescriptors;
 
-  bool run(const SCCNodeSet &SCCNodes);
-};
+// public:
+//   void registerAttrInference(InferenceDescriptor AttrInference) {
+//     InferenceDescriptors.push_back(AttrInference);
+//   }
+
+//   bool run(const SCCNodeSet &SCCNodes);
+// };
 
 /// Perform all the requested attribute inference actions according to the
 /// attribute predicates stored before.
@@ -1455,7 +1458,7 @@ bool AttributeInferer::run(const SCCNodeSet &SCCNodes) {
   return Changed;
 }
 
-} // end anonymous namespace
+// } // end anonymous namespace
 
 /// Helper for non-Convergent inference predicate InstrBreaksAttribute.
 static bool InstrBreaksNonConvergent(Instruction &I,
