@@ -250,6 +250,8 @@ void LLVMDIBuilderFinalize(LLVMDIBuilderRef Builder);
  * \param SplitDebugInlining    Whether to emit inline debug info.
  * \param DebugInfoForProfiling Whether to emit extra debug info for
  *                              profile collection.
+ * \param SysRoot         The Clang system root (value of -isysroot).
+ * \param SysRootLen      The length of the C string passed to \c SysRoot.
  */
 LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
     LLVMDIBuilderRef Builder, LLVMDWARFSourceLanguage Lang,
@@ -257,7 +259,7 @@ LLVMMetadataRef LLVMDIBuilderCreateCompileUnit(
     LLVMBool isOptimized, const char *Flags, size_t FlagsLen,
     unsigned RuntimeVer, const char *SplitName, size_t SplitNameLen,
     LLVMDWARFEmissionKind Kind, unsigned DWOId, LLVMBool SplitDebugInlining,
-    LLVMBool DebugInfoForProfiling);
+    LLVMBool DebugInfoForProfiling, const char *SysRoot, size_t SysRootLen);
 
 /**
  * Create a file descriptor to hold debugging information for a file.
@@ -283,15 +285,12 @@ LLVMDIBuilderCreateFile(LLVMDIBuilderRef Builder, const char *Filename,
  * \param ConfigMacrosLen The length of the C string passed to \c ConfigMacros.
  * \param IncludePath     The path to the module map file.
  * \param IncludePathLen  The length of the C string passed to \c IncludePath.
- * \param SysRoot         The Clang system root (value of -isysroot).
- * \param SysRootLen      The length of the C string passed to \c SysRoot.
  */
 LLVMMetadataRef
 LLVMDIBuilderCreateModule(LLVMDIBuilderRef Builder, LLVMMetadataRef ParentScope,
                           const char *Name, size_t NameLen,
                           const char *ConfigMacros, size_t ConfigMacrosLen,
-                          const char *IncludePath, size_t IncludePathLen,
-                          const char *SysRoot, size_t SysRootLen);
+                          const char *IncludePath, size_t IncludePathLen);
 
 /**
  * Creates a new descriptor for a namespace with the specified parent scope.
