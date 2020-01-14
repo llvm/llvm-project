@@ -144,17 +144,9 @@ AMDGPURegisterBankInfo::AMDGPURegisterBankInfo(const GCNSubtarget &ST)
 
   AlreadyInit = true;
 
-  const RegisterBank &RBSGPR = getRegBank(AMDGPU::SGPRRegBankID);
-  (void)RBSGPR;
-  assert(&RBSGPR == &AMDGPU::SGPRRegBank);
-
-  const RegisterBank &RBVGPR = getRegBank(AMDGPU::VGPRRegBankID);
-  (void)RBVGPR;
-  assert(&RBVGPR == &AMDGPU::VGPRRegBank);
-
-  const RegisterBank &RBAGPR = getRegBank(AMDGPU::AGPRRegBankID);
-  (void)RBAGPR;
-  assert(&RBAGPR == &AMDGPU::AGPRRegBank);
+  assert(&getRegBank(AMDGPU::SGPRRegBankID) == &AMDGPU::SGPRRegBank &&
+         &getRegBank(AMDGPU::VGPRRegBankID) == &AMDGPU::VGPRRegBank &&
+         &getRegBank(AMDGPU::AGPRRegBankID) == &AMDGPU::AGPRRegBank);
 }
 
 static bool isVectorRegisterBank(const RegisterBank &Bank) {
