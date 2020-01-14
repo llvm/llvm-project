@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -test-vector-to-vector-conversion | FileCheck %s
 
-// CHECK-DAG: #[[MAP0:map[0-9]+]] = (d0, d1) -> (d0, d1)
+// CHECK-DAG: #[[MAP0:map[0-9]+]] = affine_map<(d0, d1) -> (d0, d1)>
 
 // CHECK-LABEL: func @add4x2
 //      CHECK: %[[ES1:.*]] = vector.extract_slices %{{.*}}, [2, 2], [1, 1] : vector<4x2xf32> into tuple<vector<2x2xf32>, vector<2x2xf32>>
@@ -65,9 +65,9 @@ func @add4x4(%0: vector<4x4xf32>, %1: vector<4x4xf32>) -> vector<4x4xf32> {
 }
 
 #contraction_accesses0 = [
-  (i, j, k) -> (i, k),
-  (i, j, k) -> (k, j),
-  (i, j, k) -> (i, j)
+  affine_map<(i, j, k) -> (i, k)>,
+  affine_map<(i, j, k) -> (k, j)>,
+  affine_map<(i, j, k) -> (i, j)>
 ]
 #contraction_trait0 = {
   indexing_maps = #contraction_accesses0,
@@ -159,9 +159,9 @@ func @contraction4x4_ijk(%arg0 : vector<4x6xf32>, %arg1 : vector<6x4xf32>,
 }
 
 #contraction_accesses1 = [
-  (i, k, j) -> (i, k),
-  (i, k, j) -> (k, j),
-  (i, k, j) -> (i, j)
+  affine_map<(i, k, j) -> (i, k)>,
+  affine_map<(i, k, j) -> (k, j)>,
+  affine_map<(i, k, j) -> (i, j)>
 ]
 #contraction_trait1 = {
   indexing_maps = #contraction_accesses1,
@@ -259,22 +259,22 @@ func @contraction4x4_ikj_xfer_read(%arg0 : memref<4x2xf32>,
   %cf0 = constant 0.0 : f32
 
   %0 = vector.transfer_read %arg0[%c0, %c0], %cf0
-    { permutation_map = (d0, d1) -> (d0, d1) }
+    { permutation_map = affine_map<(d0, d1) -> (d0, d1)> }
       : memref<4x2xf32>, vector<4x2xf32>
 
   %1 = vector.transfer_read %arg1[%c0, %c0], %cf0
-    { permutation_map = (d0, d1) -> (d0, d1) }
+    { permutation_map = affine_map<(d0, d1) -> (d0, d1)> }
     : memref<2x4xf32>, vector<2x4xf32>
 
   %2 = vector.transfer_read %arg2[%c0, %c0], %cf0
-    { permutation_map = (d0, d1) -> (d0, d1) }
+    { permutation_map = affine_map<(d0, d1) -> (d0, d1)> }
       : memref<4x4xf32>, vector<4x4xf32>
 
   %3 = vector.contract #contraction_trait1 %0, %1, %2
       : vector<4x2xf32>, vector<2x4xf32> into vector<4x4xf32>
 
   vector.transfer_write %3, %arg2[%c0, %c0]
-    {permutation_map = (d0, d1) -> (d0, d1)}
+    {permutation_map = affine_map<(d0, d1) -> (d0, d1)>}
       : vector<4x4xf32>, memref<4x4xf32>
   return
 }
@@ -294,10 +294,10 @@ func @vector_transfers(%arg0: index, %arg1: index) {
   %cst_1 = constant 2.000000e+00 : f32
   affine.for %arg2 = 0 to %arg0 step 4 {
     affine.for %arg3 = 0 to %arg1 step 4 {
-      %4 = vector.transfer_read %0[%arg2, %arg3], %cst  {permutation_map = (d0, d1) -> (d0, d1)} : memref<?x?xf32>, vector<4x4xf32>
-      %5 = vector.transfer_read %1[%arg2, %arg3], %cst  {permutation_map = (d0, d1) -> (d0, d1)} : memref<?x?xf32>, vector<4x4xf32>
+      %4 = vector.transfer_read %0[%arg2, %arg3], %cst  {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} : memref<?x?xf32>, vector<4x4xf32>
+      %5 = vector.transfer_read %1[%arg2, %arg3], %cst  {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} : memref<?x?xf32>, vector<4x4xf32>
       %6 = addf %4, %5 : vector<4x4xf32>
-      vector.transfer_write %6, %2[%arg2, %arg3] {permutation_map = (d0, d1) -> (d0, d1)} : vector<4x4xf32>, memref<?x?xf32>
+      vector.transfer_write %6, %2[%arg2, %arg3] {permutation_map = affine_map<(d0, d1) -> (d0, d1)>} : vector<4x4xf32>, memref<?x?xf32>
     }
   }
   return

@@ -102,8 +102,8 @@ func @transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
 //       CHECK:    llvm.insertvalue {{.*}}[3, 1] : !llvm<"{ float*, float*, i64, [3 x i64], [3 x i64] }">
 
 func @copy_transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %arg1: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
-  linalg.copy(%arg0, %arg1) {inputPermutation = (i, j, k) -> (i, k, j),
-                             outputPermutation = (i, j, k) -> (k, j, i)}
+  linalg.copy(%arg0, %arg1) {inputPermutation = affine_map<(i, j, k) -> (i, k, j)>,
+                             outputPermutation = affine_map<(i, j, k) -> (k, j, i)>}
     : memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>
   return
 }
@@ -133,9 +133,9 @@ func @copy_transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>, %a
 //         CHECK:   llvm.call @linalg_copy_viewsxsxsxf32_viewsxsxsxf32(%{{.*}}, %{{.*}}) : (!llvm<"{ float*, float*, i64, [3 x i64], [3 x i64] }*">, !llvm<"{ float*, float*, i64, [3 x i64], [3 x i64] }*">) -> ()
 
 #matmul_accesses = [
-  (m, n, k) -> (m, k),
-  (m, n, k) -> (k, n),
-  (m, n, k) -> (m, n)
+  affine_map<(m, n, k) -> (m, k)>,
+  affine_map<(m, n, k) -> (k, n)>,
+  affine_map<(m, n, k) -> (m, n)>
 ]
 #matmul_trait = {
   args_in = 2,
@@ -199,13 +199,13 @@ func @matmul_vec_indexed(%A: !matrix_type_A,
 
 func @reshape_static(%arg0: memref<3x4x5xf32>) {
   // Reshapes that expand and collapse back a contiguous tensor with some 1's.
-  %0 = linalg.reshape %arg0 [(i, j, k, l, m) -> (i, j),
-                             (i, j, k, l, m) -> (k),
-                             (i, j, k, l, m) -> (l, m)] :
+  %0 = linalg.reshape %arg0 [affine_map<(i, j, k, l, m) -> (i, j)>,
+                             affine_map<(i, j, k, l, m) -> (k)>,
+                             affine_map<(i, j, k, l, m) -> (l, m)>] :
     memref<3x4x5xf32> into memref<1x3x4x1x5xf32>
-  %r0 = linalg.reshape %0 [(i, j, k, l, m) -> (i, j),
-                           (i, j, k, l, m) -> (k),
-                           (i, j, k, l, m) -> (l, m)] :
+  %r0 = linalg.reshape %0 [affine_map<(i, j, k, l, m) -> (i, j)>,
+                           affine_map<(i, j, k, l, m) -> (k)>,
+                           affine_map<(i, j, k, l, m) -> (l, m)>] :
     memref<1x3x4x1x5xf32> into memref<3x4x5xf32>
   return
 }

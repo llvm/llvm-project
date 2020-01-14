@@ -3,10 +3,10 @@
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
 // RUN: mlir-opt %s --convert-linalg-to-llvm -o=/dev/null 2>&1
 
-// CHECK-DAG: #[[strided2D:.*]] = (d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)
-// CHECK-DAG: #[[strided3D:.*]] = (d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)
+// CHECK-DAG: #[[strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+// CHECK-DAG: #[[strided3D:.*]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>
 
-// CHECK-DAG: #[[stride2Dilation1:.*]] = (d0, d1) -> (d0 * 2 + d1)
+// CHECK-DAG: #[[stride2Dilation1:.*]] = affine_map<(d0, d1) -> (d0 * 2 + d1)>
 
 func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
   %c0 = constant 0 : index

@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -test-opaque-loc -mlir-print-debuginfo | FileCheck %s
 // This test verifies that debug opaque locations can be printed.
 
-#set0 = (d0) : (1 == 0)
+#set0 = affine_set<(d0) : (1 == 0)>
 
 // CHECK: MyLocation: 0: 'foo' op
 // CHECK: nullptr: 'foo' op

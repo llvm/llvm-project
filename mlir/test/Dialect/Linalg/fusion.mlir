@@ -1,13 +1,13 @@
 // RUN: mlir-opt %s -linalg-fusion | FileCheck %s
 
-#map0 = (d0) -> (d0 + 2)
-#map1 = (d0) -> (d0 + 4)
-#map2 = (d0) -> (d0 + 3)
-#map3 = (d0)[s0, s1] -> (d0 * s1 + s0)
-#map4 = (d0) -> (d0)
-#map5 = (d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)
-#map6 = (d0, d1) -> (d0, d1)
-// CHECK-DAG: #[[strided2D:.*]] = (d0, d1)[s0, s1] -> (d0 * s0 + d1 * s1)
+#map0 = affine_map<(d0) -> (d0 + 2)>
+#map1 = affine_map<(d0) -> (d0 + 4)>
+#map2 = affine_map<(d0) -> (d0 + 3)>
+#map3 = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+#map4 = affine_map<(d0) -> (d0)>
+#map5 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
+#map6 = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK-DAG: #[[strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s0 + d1 * s1)>
 
 func @f1(%A: memref<?x?xf32, offset: 0, strides: [?, 1]>, %B: memref<?x?xf32, offset: 0, strides: [?, 1]>, %C: memref<?x?xf32, offset: 0, strides: [?, 1]>, %D: memref<?x?xf32, offset: 0, strides: [?, 1]>, %E: memref<?x?xf32, offset: 0, strides: [?, 1]>) -> memref<?x?xf32, offset: 0, strides: [?, 1]> {
   %c0 = constant 0 : index
@@ -306,7 +306,7 @@ func @f8(%A: memref<?x?xf32, offset: 0, strides: [?, ?]>, %B: memref<?x?xf32, of
 //   CHECK:         linalg.matmul
 // CHECK-NOT:       linalg.matmul
 
-#id_2d = (i, j) -> (i, j)
+#id_2d = affine_map<(i, j) -> (i, j)>
 #pointwise_2d_trait = {
   args_in = 2,
   args_out = 1,

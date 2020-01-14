@@ -691,16 +691,18 @@ static void print(OpAsmPrinter &p, TransposeOp op) {
 static ParseResult parseTransposeOp(OpAsmParser &parser,
                                     OperationState &result) {
   OpAsmParser::OperandType view;
-  AffineMapAttr permutation;
+  AffineMap permutation;
   MemRefType type;
-  return failure(parser.parseOperand(view) ||
-                 parser.parseAttribute(permutation,
-                                       TransposeOp::getPermutationAttrName(),
-                                       result.attributes) ||
-                 parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(type) ||
-                 parser.resolveOperand(view, type, result.operands) ||
-                 parser.addTypeToList(type, result.types));
+  if (parser.parseOperand(view) || parser.parseAffineMap(permutation) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(type) ||
+      parser.resolveOperand(view, type, result.operands) ||
+      parser.addTypeToList(type, result.types))
+    return failure();
+
+  result.addAttribute(TransposeOp::getPermutationAttrName(),
+                      AffineMapAttr::get(permutation));
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
