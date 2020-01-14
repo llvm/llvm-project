@@ -1037,22 +1037,39 @@ void SelectionDAGBuilder::clearDanglingDebugInfo() {
   DanglingDebugInfoMap.clear();
 }
 
-SDValue SelectionDAGBuilder::getMemoryRoot() {
-  if (PendingLoads.empty())
-    return DAG.getRoot();
+// Update DAG root to include dependencies on Pending chains.
+SDValue SelectionDAGBuilder::updateRoot(SmallVectorImpl<SDValue> &Pending) {
+  SDValue Root = DAG.getRoot();
 
-  if (PendingLoads.size() == 1) {
-    SDValue Root = PendingLoads[0];
-    DAG.setRoot(Root);
-    PendingLoads.clear();
+  if (Pending.empty())
     return Root;
+
+  // Add current root to PendingChains, unless we already indirectly
+  // depend on it.
+  if (Root.getOpcode() != ISD::EntryToken) {
+    unsigned i = 0, e = Pending.size();
+    for (; i != e; ++i) {
+      assert(Pending[i].getNode()->getNumOperands() > 1);
+      if (Pending[i].getNode()->getOperand(0) == Root)
+        break;  // Don't add the root if we already indirectly depend on it.
+    }
+
+    if (i == e)
+      Pending.push_back(Root);
   }
 
-  // Otherwise, we have to make a token factor node.
-  SDValue Root = DAG.getTokenFactor(getCurSDLoc(), PendingLoads);
-  PendingLoads.clear();
+  if (Pending.size() == 1)
+    Root = Pending[0];
+  else
+    Root = DAG.getTokenFactor(getCurSDLoc(), Pending);
+
   DAG.setRoot(Root);
+  Pending.clear();
   return Root;
+}
+
+SDValue SelectionDAGBuilder::getMemoryRoot() {
+  return updateRoot(PendingLoads);
 }
 
 SDValue SelectionDAGBuilder::getRoot() {
@@ -1072,35 +1089,12 @@ SDValue SelectionDAGBuilder::getRoot() {
 }
 
 SDValue SelectionDAGBuilder::getControlRoot() {
-  SDValue Root = DAG.getRoot();
-
   // We need to emit pending fpexcept.strict constrained intrinsics,
   // so append them to the PendingExports list.
   PendingExports.append(PendingConstrainedFPStrict.begin(),
                         PendingConstrainedFPStrict.end());
   PendingConstrainedFPStrict.clear();
-
-  if (PendingExports.empty())
-    return Root;
-
-  // Turn all of the CopyToReg chains into one factored node.
-  if (Root.getOpcode() != ISD::EntryToken) {
-    unsigned i = 0, e = PendingExports.size();
-    for (; i != e; ++i) {
-      assert(PendingExports[i].getNode()->getNumOperands() > 1);
-      if (PendingExports[i].getNode()->getOperand(0) == Root)
-        break;  // Don't add the root if we already indirectly depend on it.
-    }
-
-    if (i == e)
-      PendingExports.push_back(Root);
-  }
-
-  Root = DAG.getNode(ISD::TokenFactor, getCurSDLoc(), MVT::Other,
-                     PendingExports);
-  PendingExports.clear();
-  DAG.setRoot(Root);
-  return Root;
+  return updateRoot(PendingExports);
 }
 
 void SelectionDAGBuilder::visit(const Instruction &I) {

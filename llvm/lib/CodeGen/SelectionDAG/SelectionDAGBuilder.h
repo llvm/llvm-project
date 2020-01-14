@@ -154,6 +154,9 @@ private:
   SmallVector<SDValue, 8> PendingConstrainedFP;
   SmallVector<SDValue, 8> PendingConstrainedFPStrict;
 
+  /// Update root to include all chains from the Pending list.
+  SDValue updateRoot(SmallVectorImpl<SDValue> &Pending);
+
   /// A unique monotonically increasing number used to order the SDNodes we
   /// create.
   unsigned SDNodeOrder;
