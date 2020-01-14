@@ -60,7 +60,7 @@ module attributes {gpu.container_module} {
     return
   }
 
-  module @kernels attributes {gpu.kernel_module} {
+  gpu.module @kernels {
     gpu.func @kernel_1(%arg0 : f32, %arg1 : memref<?xf32, 1>) attributes {gpu.kernel} {
       %tIdX = "gpu.thread_id"() {dimension = "x"} : () -> (index)
       %tIdY = "gpu.thread_id"() {dimension = "y"} : () -> (index)
