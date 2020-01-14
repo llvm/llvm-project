@@ -4202,10 +4202,7 @@ LegalizerHelper::lowerShuffleVector(MachineInstr &MI) {
   LLT DstTy = MRI.getType(DstReg);
   LLT IdxTy = LLT::scalar(32);
 
-  const Constant *ShufMask = MI.getOperand(3).getShuffleMask();
-
-  SmallVector<int, 32> Mask;
-  ShuffleVectorInst::getShuffleMask(ShufMask, Mask);
+  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
 
   if (DstTy.isScalar()) {
     if (Src0Ty.isVector())

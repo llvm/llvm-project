@@ -2421,23 +2421,13 @@ bool MIParser::parseShuffleMaskOperand(MachineOperand &Dest) {
   if (expectAndConsume(MIToken::lparen))
     return error("expected syntax shufflemask(<integer or undef>, ...)");
 
-  SmallVector<Constant *, 32> ShufMask;
-  LLVMContext &Ctx = MF.getFunction().getContext();
-  Type *I32Ty = Type::getInt32Ty(Ctx);
-
-  bool AllZero = true;
-  bool AllUndef = true;
-
+  SmallVector<int, 32> ShufMask;
   do {
     if (Token.is(MIToken::kw_undef)) {
-      ShufMask.push_back(UndefValue::get(I32Ty));
-      AllZero = false;
+      ShufMask.push_back(-1);
     } else if (Token.is(MIToken::IntegerLiteral)) {
-      AllUndef = false;
       const APSInt &Int = Token.integerValue();
-      if (!Int.isNullValue())
-        AllZero = false;
-      ShufMask.push_back(ConstantInt::get(I32Ty, Int.getExtValue()));
+      ShufMask.push_back(Int.getExtValue());
     } else
       return error("expected integer constant");
 
@@ -2447,13 +2437,8 @@ bool MIParser::parseShuffleMaskOperand(MachineOperand &Dest) {
   if (expectAndConsume(MIToken::rparen))
     return error("shufflemask should be terminated by ')'.");
 
-  if (AllZero || AllUndef) {
-    VectorType *VT = VectorType::get(I32Ty, ShufMask.size());
-    Constant *C = AllZero ? Constant::getNullValue(VT) : UndefValue::get(VT);
-    Dest = MachineOperand::CreateShuffleMask(C);
-  } else
-    Dest = MachineOperand::CreateShuffleMask(ConstantVector::get(ShufMask));
-
+  ArrayRef<int> MaskAlloc = MF.allocateShuffleMask(ShufMask);
+  Dest = MachineOperand::CreateShuffleMask(MaskAlloc);
   return false;
 }
 

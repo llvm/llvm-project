@@ -1933,11 +1933,14 @@ bool IRTranslator::translateExtractElement(const User &U,
 
 bool IRTranslator::translateShuffleVector(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
+  SmallVector<int, 8> Mask;
+  ShuffleVectorInst::getShuffleMask(cast<Constant>(U.getOperand(2)), Mask);
+  ArrayRef<int> MaskAlloc = MF->allocateShuffleMask(Mask);
   MIRBuilder.buildInstr(TargetOpcode::G_SHUFFLE_VECTOR)
       .addDef(getOrCreateVReg(U))
       .addUse(getOrCreateVReg(*U.getOperand(0)))
       .addUse(getOrCreateVReg(*U.getOperand(1)))
-      .addShuffleMask(cast<Constant>(U.getOperand(2)));
+      .addShuffleMask(MaskAlloc);
   return true;
 }
 
