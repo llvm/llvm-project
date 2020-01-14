@@ -1421,6 +1421,11 @@ protected:
 
   // Declarations of interposition functions.
   DenseMap<Function *, Function *> InterpositionFunctions;
+
+  // // Cached results of calls to GetUnderlyingObject.
+  // using UnderlyingObjMapTy = DenseMap<Value *, Value *>;
+  // mutable UnderlyingObjMapTy UnderlyingObject;
+  Value *lookupUnderlyingObject(Value *Addr) const;
 };
 
 } // end namespace llvm

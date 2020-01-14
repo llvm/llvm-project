@@ -2013,6 +2013,14 @@ void llvm::CSIImpl::loadConfiguration() {
   Config->SetConfigMode(ClConfigurationMode);
 }
 
+Value *CSIImpl::lookupUnderlyingObject(Value *Addr) const {
+  return GetUnderlyingObject(Addr, DL, 0);
+  // if (!UnderlyingObject.count(Addr))
+  //   UnderlyingObject[Addr] = GetUnderlyingObject(Addr, DL, 0);
+
+  // return UnderlyingObject[Addr];
+}
+
 bool CSIImpl::shouldNotInstrumentFunction(Function &F) {
   // Don't instrument standard library calls.
 #ifdef WIN32
@@ -2112,7 +2120,7 @@ void CSIImpl::computeLoadAndStoreProperties(
       Prop.setIsVtableAccess(isVtableAccess(Store));
       // Set constant-data-access property
       Prop.setIsConstant(addrPointsToConstantData(Addr));
-      Value *Obj = GetUnderlyingObject(Addr, DL);
+      Value *Obj = lookupUnderlyingObject(Addr);
       // Set is-on-stack property
       Prop.setIsOnStack(isa<AllocaInst>(Obj));
       // Set may-be-captured property
@@ -2130,7 +2138,7 @@ void CSIImpl::computeLoadAndStoreProperties(
       Prop.setIsVtableAccess(isVtableAccess(Load));
       // Set constant-data-access-property
       Prop.setIsConstant(addrPointsToConstantData(Addr));
-      Value *Obj = GetUnderlyingObject(Addr, DL);
+      Value *Obj = lookupUnderlyingObject(Addr);
       // Set is-on-stack property
       Prop.setIsOnStack(isa<AllocaInst>(Obj));
       // Set may-be-captured property

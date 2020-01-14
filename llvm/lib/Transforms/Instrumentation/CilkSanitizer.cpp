@@ -102,6 +102,12 @@ static cl::opt<bool>
         "cilksan-assume-lib-calls-dont-recur", cl::init(true), cl::Hidden,
         cl::desc("Assume that library calls do not recur."));
 
+static cl::opt<unsigned>
+    MaxUsesToExploreCapture(
+        "cilksan-max-uses-to-explore-capture", cl::init(unsigned(-1)),
+        cl::Hidden,
+        cl::desc("Maximum number of uses to explore for a capture query."));
+
 static cl::opt<bool>
     IgnoreSanitizeCilkAttr(
         "ignore-sanitize-cilk-attr", cl::init(false), cl::Hidden,
@@ -410,6 +416,53 @@ private:
   SmallPtrSet<const Function *, 8> LocalNoRecurseFunctions;
   bool FunctionIsNoRecurse(const Function &F) const {
     return (F.doesNotRecurse() || LocalNoRecurseFunctions.count(&F));
+  }
+
+  bool LocalBaseObj(const Value *Addr, LoopInfo *LI,
+                    const TargetLibraryInfo *TLI) const;
+  bool PossibleRaceByCapture(const Value *Addr, const TaskInfo &TI,
+                             LoopInfo *LI) const;
+  bool unknownObjectUses(const Value *Addr, LoopInfo *LI,
+                         const TargetLibraryInfo *TLI) const;
+
+  // Cached results of calls to GetUnderlyingObjects.
+  using BaseObjMapTy =
+      DenseMap<const Value *, SmallVector<const Value *, 1>>;
+  mutable BaseObjMapTy BaseObjects;
+  SmallVectorImpl<const Value *> &lookupBaseObjects(const Value *Addr,
+                                                    LoopInfo *LI) const {
+    if (!BaseObjects.count(Addr)) {
+      if (isa<GlobalValue>(Addr))
+        BaseObjects.lookup(Addr);
+      else
+        GetUnderlyingObjects(Addr, BaseObjects[Addr], DL, LI, 0);
+    }
+    return BaseObjects[Addr];
+  }
+
+  bool MightHaveDetachedUse(const Value *Addr, const TaskInfo &TI) const;
+  // // Cached results of calls to MightHaveDetachedUse.
+  // using DetachedUseMapTy = DenseMap<const Value *, bool>;
+  // mutable DetachedUseMapTy DetachedUseCache;
+  bool lookupMightHaveDetachedUse(const Value *Addr, const TaskInfo &TI) const {
+    return MightHaveDetachedUse(Addr, TI);
+    // if (!DetachedUseCache.count(Addr))
+    //   DetachedUseCache[Addr] = MightHaveDetachedUse(Addr, TI);
+    // return DetachedUseCache[Addr];
+  }
+
+  // Cached results of calls to PointerMayBeCaptured.
+  using MayBeCapturedMapTy = DenseMap<const Value *, bool>;
+  mutable MayBeCapturedMapTy MayBeCapturedCache;
+  bool lookupPointerMayBeCaptured(const Value *Ptr) const {
+    if (!MayBeCapturedCache.count(Ptr)) {
+      if (isa<GlobalValue>(Ptr))
+        MayBeCapturedCache.lookup(Ptr);
+      else
+        MayBeCapturedCache[Ptr] = PointerMayBeCaptured(Ptr, true, false,
+                                                       MaxUsesToExploreCapture);
+    }
+    return MayBeCapturedCache[Ptr];
   }
 };
 
@@ -1163,15 +1216,14 @@ static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
 
 /// Returns true if Addr can only refer to a locally allocated base object, that
 /// is, an object created via an AllocaInst or an AllocationFn.
-static bool LocalBaseObj(Value *Addr, const DataLayout &DL, LoopInfo *LI,
-                         const TargetLibraryInfo *TLI) {
+bool CilkSanitizerImpl::LocalBaseObj(const Value *Addr, LoopInfo *LI,
+                                     const TargetLibraryInfo *TLI) const {
   // If we don't have an address, give up.
   if (!Addr)
     return false;
 
   // Get the base objects that this address might refer to.
-  SmallVector<Value *, 1> BaseObjs;
-  GetUnderlyingObjects(Addr, BaseObjs, DL, LI, 0);
+  SmallVectorImpl<const Value *> &BaseObjs = lookupBaseObjects(Addr, LI);
 
   // If we could not determine the base objects, conservatively return false.
   if (BaseObjs.empty())
@@ -1215,7 +1267,8 @@ static bool LocalBaseObj(Value *Addr, const DataLayout &DL, LoopInfo *LI,
 // Examine the uses of a Instruction AI to determine if it is used in a subtask.
 // This method assumes that AI is an allocation instruction, i.e., either an
 // AllocaInst or an AllocationFn.
-static bool MightHaveDetachedUse(const Value *V, const TaskInfo &TI) {
+bool CilkSanitizerImpl::MightHaveDetachedUse(const Value *V,
+                                             const TaskInfo &TI) const {
   // Get the task for this allocation.
   const Task *AllocTask = nullptr;
   if (const Instruction *I = dyn_cast<Instruction>(V))
@@ -1278,15 +1331,15 @@ static bool MightHaveDetachedUse(const Value *V, const TaskInfo &TI) {
 }
 
 /// Returns true if accesses on Addr could race due to pointer capture.
-static bool PossibleRaceByCapture(Value *Addr, const DataLayout &DL,
-                                  const TaskInfo &TI, LoopInfo *LI) {
+bool CilkSanitizerImpl::PossibleRaceByCapture(const Value *Addr,
+                                              const TaskInfo &TI,
+                                              LoopInfo *LI) const {
   if (isa<GlobalValue>(Addr))
     // For this analysis, we consider all global values to be captured.
     return true;
 
   // Check for detached uses of the underlying base objects.
-  SmallVector<Value *, 1> BaseObjs;
-  GetUnderlyingObjects(Addr, BaseObjs, DL, LI, 0);
+  SmallVectorImpl<const Value *> &BaseObjs = lookupBaseObjects(Addr, LI);
 
   // If we could not determine the base objects, conservatively return true.
   if (BaseObjs.empty())
@@ -1320,12 +1373,13 @@ static bool PossibleRaceByCapture(Value *Addr, const DataLayout &DL,
     }
 
     // If the base object might have a detached use, return true.
-    if (MightHaveDetachedUse(BaseObj, TI))
+    if (lookupMightHaveDetachedUse(BaseObj, TI))
       return true;
   }
 
   // Perform normal pointer-capture analysis.
-  if (PointerMayBeCaptured(Addr, false, false))
+  // if (PointerMayBeCaptured(Addr, false, false))
+  if (lookupPointerMayBeCaptured(Addr))
     return true;
 
   return false;
@@ -1348,15 +1402,14 @@ static bool PossibleRaceByCapture(Value *Addr, const DataLayout &DL,
 //   return false;
 // }
 
-static bool unknownObjectUses(Value *Addr, const DataLayout &DL, LoopInfo *LI,
-                              const TargetLibraryInfo *TLI) {
+bool CilkSanitizerImpl::unknownObjectUses(const Value *Addr, LoopInfo *LI,
+                                          const TargetLibraryInfo *TLI) const {
   // Perform normal pointer-capture analysis.
-  if (PointerMayBeCaptured(Addr, true, false))
+  if (lookupPointerMayBeCaptured(Addr))
     return true;
 
   // Check for detached uses of the underlying base objects.
-  SmallVector<Value *, 1> BaseObjs;
-  GetUnderlyingObjects(Addr, BaseObjs, DL, LI, 0);
+  SmallVectorImpl<const Value *> &BaseObjs = lookupBaseObjects(Addr, LI);
 
   // If we could not determine the base objects, conservatively return true.
   if (BaseObjs.empty())
@@ -1400,8 +1453,8 @@ void CilkSanitizerImpl::chooseInstructionsToInstrument(
     Value *Addr = isa<StoreInst>(*I)
         ? cast<StoreInst>(I)->getPointerOperand()
         : cast<LoadInst>(I)->getPointerOperand();
-    if (LocalBaseObj(Addr, DL, &LI, TLI) &&
-        !PossibleRaceByCapture(Addr, DL, TI, &LI)) {
+    if (LocalBaseObj(Addr, &LI, TLI) &&
+        !PossibleRaceByCapture(Addr, TI, &LI)) {
       // The variable is addressable but not captured, so it cannot be
       // referenced from a different thread and participate in a data race
       // (see llvm/Analysis/CaptureTracking.h for details).
@@ -2306,7 +2359,7 @@ bool CilkSanitizerImpl::Instrumentor::InstrumentAncillaryInstructions(
   // race.
   for (Instruction *I : Allocas) {
     if (CilkSanImpl.ObjectMRForRace.count(I) ||
-        PointerMayBeCaptured(I, true, false)) {
+        CilkSanImpl.lookupPointerMayBeCaptured(I)) {
       CilkSanImpl.instrumentAlloca(I);
       getDetachesForInstruction(I);
       Result = true;
@@ -2314,7 +2367,7 @@ bool CilkSanitizerImpl::Instrumentor::InstrumentAncillaryInstructions(
   }
   for (Instruction *I : AllocationFnCalls) {
     if (CilkSanImpl.ObjectMRForRace.count(I) ||
-        PointerMayBeCaptured(I, true, false)) {
+        CilkSanImpl.lookupPointerMayBeCaptured(I)) {
       CilkSanImpl.instrumentAllocationFn(I, DT);
       getDetachesForInstruction(I);
       Result = true;
@@ -2333,7 +2386,8 @@ bool CilkSanitizerImpl::Instrumentor::InstrumentAncillaryInstructions(
         continue;
       }
     }
-    if (RI.ObjectInvolvedInRace(Ptr) || unknownObjectUses(Ptr, DL, &LI, TLI)) {
+    if (RI.ObjectInvolvedInRace(Ptr) ||
+        CilkSanImpl.unknownObjectUses(Ptr, &LI, TLI)) {
       CilkSanImpl.instrumentFree(I);
       getDetachesForInstruction(I);
       Result = true;
@@ -2616,7 +2670,7 @@ bool CilkSanitizerImpl::instrumentLoadOrStore(Instruction *I,
   if (IsWrite) {
     // Instrument store
     uint64_t LocalId = StoreFED.add(*I);
-    uint64_t StoreObjId = StoreObj.add(*I, GetUnderlyingObject(Addr, DL));
+    uint64_t StoreObjId = StoreObj.add(*I, lookupUnderlyingObject(Addr));
     assert(LocalId == StoreObjId &&
            "Store received different ID's in FED and object tables.");
     Value *CsiId = StoreFED.localToGlobalId(LocalId, IRB);
@@ -2630,7 +2684,7 @@ bool CilkSanitizerImpl::instrumentLoadOrStore(Instruction *I,
   } else {
     // Instrument load
     uint64_t LocalId = LoadFED.add(*I);
-    uint64_t LoadObjId = LoadObj.add(*I, GetUnderlyingObject(Addr, DL));
+    uint64_t LoadObjId = LoadObj.add(*I, lookupUnderlyingObject(Addr));
     assert(LocalId == LoadObjId &&
            "Load received different ID's in FED and object tables.");
     Value *CsiId = LoadFED.localToGlobalId(LocalId, IRB);
@@ -2664,7 +2718,7 @@ bool CilkSanitizerImpl::instrumentAtomic(Instruction *I, IRBuilder<> &IRB) {
   }
 
   uint64_t LocalId = StoreFED.add(*I);
-  uint64_t StoreObjId = StoreObj.add(*I, GetUnderlyingObject(Addr, DL));
+  uint64_t StoreObjId = StoreObj.add(*I, lookupUnderlyingObject(Addr));
   assert(LocalId == StoreObjId &&
          "Store received different ID's in FED and object tables.");
   Value *CsiId = StoreFED.localToGlobalId(LocalId, IRB);
@@ -2838,7 +2892,7 @@ bool CilkSanitizerImpl::instrumentAnyMemIntrinAcc(Instruction *I,
       uint64_t StoreId = StoreFED.add(*I);
 
       // TODO: Don't recalculate underlying objects
-      uint64_t StoreObjId = StoreObj.add(*I, GetUnderlyingObject(Addr, DL));
+      uint64_t StoreObjId = StoreObj.add(*I, lookupUnderlyingObject(Addr));
       assert(StoreId == StoreObjId &&
              "Store received different ID's in FED and object tables.");
 
@@ -2859,7 +2913,7 @@ bool CilkSanitizerImpl::instrumentAnyMemIntrinAcc(Instruction *I,
       uint64_t LoadId = LoadFED.add(*I);
 
       // TODO: Don't recalculate underlying objects
-      uint64_t LoadObjId = LoadObj.add(*I, GetUnderlyingObject(Addr, DL));
+      uint64_t LoadObjId = LoadObj.add(*I, lookupUnderlyingObject(Addr));
       assert(LoadId == LoadObjId &&
              "Load received different ID's in FED and object tables.");
 
@@ -2881,7 +2935,7 @@ bool CilkSanitizerImpl::instrumentAnyMemIntrinAcc(Instruction *I,
     uint64_t LocalId = StoreFED.add(*I);
 
     // TODO: Don't recalculate underlying objects
-    uint64_t StoreObjId = StoreObj.add(*I, GetUnderlyingObject(Addr, DL));
+    uint64_t StoreObjId = StoreObj.add(*I, lookupUnderlyingObject(Addr));
     assert(LocalId == StoreObjId &&
            "Store received different ID's in FED and object tables.");
 
