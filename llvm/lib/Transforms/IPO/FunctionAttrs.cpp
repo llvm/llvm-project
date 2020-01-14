@@ -1607,9 +1607,43 @@ static bool addNoRecurseAttrs(const SCCNodeSet &SCCNodes) {
     for (auto &I : BB.instructionsWithoutDebug())
       if (auto CS = CallSite(&I)) {
         Function *Callee = CS.getCalledFunction();
-        if (!Callee || Callee == F || !Callee->doesNotRecurse())
-          // Function calls a potentially recursive function.
-          return false;
+        if (!Callee || Callee == F || !Callee->doesNotRecurse()) {
+          if (Callee && Callee != F)
+            // Ignore certain intrinsics when inferring norecurse.
+            switch (Callee->getIntrinsicID()) {
+            default: return false;
+            case Intrinsic::annotation:
+            case Intrinsic::assume:
+            case Intrinsic::sideeffect:
+            case Intrinsic::invariant_start:
+            case Intrinsic::invariant_end:
+            case Intrinsic::launder_invariant_group:
+            case Intrinsic::strip_invariant_group:
+            case Intrinsic::is_constant:
+            case Intrinsic::lifetime_start:
+            case Intrinsic::lifetime_end:
+            case Intrinsic::objectsize:
+            case Intrinsic::ptr_annotation:
+            case Intrinsic::var_annotation:
+            case Intrinsic::experimental_gc_result:
+            case Intrinsic::experimental_gc_relocate:
+            case Intrinsic::coro_alloc:
+            case Intrinsic::coro_begin:
+            case Intrinsic::coro_free:
+            case Intrinsic::coro_end:
+            case Intrinsic::coro_frame:
+            case Intrinsic::coro_size:
+            case Intrinsic::coro_suspend:
+            case Intrinsic::coro_param:
+            case Intrinsic::coro_subfn_addr:
+            case Intrinsic::syncregion_start:
+            case Intrinsic::detached_rethrow:
+              continue;
+            }
+          else
+            // Function calls a potentially recursive function.
+            return false;
+        }
       }
 
   // Every call was to a non-recursive function other than this function, and
