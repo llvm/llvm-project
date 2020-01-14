@@ -123,6 +123,8 @@ private:
   friend class TreeBuilder;
   // MutationsImpl sets roles and CanModify flag.
   friend class MutationsImpl;
+  // FactoryImpl sets CanModify flag.
+  friend class FactoryImpl;
 
   Tree *Parent;
   Node *NextSibling;
