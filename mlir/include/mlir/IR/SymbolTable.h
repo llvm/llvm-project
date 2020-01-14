@@ -46,9 +46,30 @@ public:
   /// Returns the associated operation.
   Operation *getOp() const { return symbolTableOp; }
 
+  /// Return the name of the attribute used for symbol visibility.
+  static StringRef getVisibilityAttrName() { return "sym_visibility"; }
+
   //===--------------------------------------------------------------------===//
   // Symbol Utilities
   //===--------------------------------------------------------------------===//
+
+  /// An enumeration detailing the different visibility types that a symbol may
+  /// have.
+  enum class Visibility {
+    /// The symbol is public and may be referenced anywhere internal or external
+    /// to the visible references in the IR.
+    Public,
+
+    /// The symbol is private and may only be referenced by SymbolRefAttrs local
+    /// to the operations within the current symbol table.
+    Private,
+
+    /// The symbol is visible to the current IR, which may include operations in
+    /// symbol tables above the one that owns the current symbol. `Nested`
+    /// visibility allows for referencing a symbol outside of its current symbol
+    /// table, while retaining the ability to observe all uses.
+    Nested,
+  };
 
   /// Returns true if the given operation defines a symbol.
   static bool isSymbol(Operation *op);
@@ -57,6 +78,11 @@ public:
   static StringRef getSymbolName(Operation *symbol);
   /// Sets the name of the given symbol operation.
   static void setSymbolName(Operation *symbol, StringRef name);
+
+  /// Returns the visibility of the given symbol operation.
+  static Visibility getSymbolVisibility(Operation *symbol);
+  /// Sets the visibility of the given symbol operation.
+  static void setSymbolVisibility(Operation *symbol, Visibility vis);
 
   /// Returns the operation registered with the given symbol name with the
   /// regions of 'symbolTableOp'. 'symbolTableOp' is required to be an operation
@@ -200,6 +226,8 @@ public:
 template <typename ConcreteType>
 class Symbol : public TraitBase<ConcreteType, Symbol> {
 public:
+  using Visibility = mlir::SymbolTable::Visibility;
+
   static LogicalResult verifyTrait(Operation *op) {
     return impl::verifySymbol(op);
   }
@@ -217,6 +245,16 @@ public:
     this->getOperation()->setAttr(
         mlir::SymbolTable::getSymbolAttrName(),
         StringAttr::get(name, this->getOperation()->getContext()));
+  }
+
+  /// Returns the visibility of the current symbol.
+  Visibility getVisibility() {
+    return mlir::SymbolTable::getSymbolVisibility(this->getOperation());
+  }
+
+  /// Sets the visibility of the current symbol.
+  void setVisibility(Visibility vis) {
+    mlir::SymbolTable::setSymbolVisibility(this->getOperation(), vis);
   }
 
   /// Get all of the uses of the current symbol that are nested within the given
