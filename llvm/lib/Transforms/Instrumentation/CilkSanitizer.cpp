@@ -42,6 +42,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Instrumentation/CSI.h"
+#include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -405,6 +406,11 @@ private:
   DenseMap<const Value *, ModRefInfo> ObjectMRForRace;
 
   DenseMap<DetachInst *, SmallVector<SyncInst *, 2>> DetachToSync;
+
+  SmallPtrSet<const Function *, 8> LocalNoRecurseFunctions;
+  bool FunctionIsNoRecurse(const Function &F) const {
+    return (F.doesNotRecurse() || LocalNoRecurseFunctions.count(&F));
+  }
 };
 
 /// CilkSanitizer: instrument the code in module to find races.
@@ -577,6 +583,66 @@ Constant *ObjectTable::insertIntoModule(Module &M) const {
   return ConstantExpr::getGetElementPtr(GV->getValueType(), GV, GepArgs);
 }
 
+namespace {
+
+using SCCNodeSet = SmallSetVector<Function *, 8>;
+
+} // end anonymous namespace
+
+static bool InstrBreaksNoRecurse(Instruction &I, const SCCNodeSet &SCCNodes,
+                                 SmallPtrSetImpl<const Function *>
+                                 &LocalNoRecurFns) {
+  Function *F = *SCCNodes.begin();
+  if (F->doesNotRecurse())
+    return false;
+
+  if (auto CS = CallSite(&I)) {
+    if (isa<DbgInfoIntrinsic>(I))
+      return false;
+
+    if (isDetachedRethrow(&I))
+      return false;
+
+    const Function *Callee = CS.getCalledFunction();
+    if (!Callee || Callee == F || (!Callee->doesNotRecurse() &&
+                                   !LocalNoRecurFns.count(Callee))) {
+      if (Callee && Callee != F) {
+        switch (Callee->getIntrinsicID()) {
+        default: return true;
+        case Intrinsic::annotation:
+        case Intrinsic::assume:
+        case Intrinsic::sideeffect:
+        case Intrinsic::invariant_start:
+        case Intrinsic::invariant_end:
+        case Intrinsic::launder_invariant_group:
+        case Intrinsic::strip_invariant_group:
+        case Intrinsic::is_constant:
+        case Intrinsic::lifetime_start:
+        case Intrinsic::lifetime_end:
+        case Intrinsic::objectsize:
+        case Intrinsic::ptr_annotation:
+        case Intrinsic::var_annotation:
+        case Intrinsic::experimental_gc_result:
+        case Intrinsic::experimental_gc_relocate:
+        case Intrinsic::coro_alloc:
+        case Intrinsic::coro_begin:
+        case Intrinsic::coro_free:
+        case Intrinsic::coro_end:
+        case Intrinsic::coro_frame:
+        case Intrinsic::coro_size:
+        case Intrinsic::coro_suspend:
+        case Intrinsic::coro_param:
+        case Intrinsic::coro_subfn_addr:
+        case Intrinsic::syncregion_start:
+          return false;
+        }
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
 bool CilkSanitizerImpl::run() {
   // Initialize components of the CSI and Cilksan system.
   initializeCsi();
@@ -587,14 +653,53 @@ bool CilkSanitizerImpl::run() {
   // Evaluate the SCC's in the callgraph in post order to support
   // interprocedural analysis of potential races in the module.
   SmallVector<Function *, 16> InstrumentedFunctions;
+
+  // Fill SCCNodes with the elements of the SCC. Used for quickly looking up
+  // whether a given CallGraphNode is in this SCC. Also track whether there are
+  // any external or opt-none nodes that will prevent us from optimizing any
+  // part of the SCC.
   for (scc_iterator<CallGraph *> I = scc_begin(CG); !I.isAtEnd(); ++I) {
     const std::vector<CallGraphNode *> &SCC = *I;
-    assert(!SCC.empty() && "SCC with no functions!");
-    for (auto *CGN : SCC) {
-      if (Function *F = CGN->getFunction()) {
+    SCCNodeSet SCCNodes;
+    for (CallGraphNode *N : SCC) {
+      Function *F = N->getFunction();
+      if (F)
+        SCCNodes.insert(F);
+    }
+    // Infer our own version of the norecurse attribute.  The norecurse
+    // attribute requires an exact definition of the function, and therefore
+    // does not get inferred on functions with weak or linkonce linkage.
+    // However, CilkSanitizer only requires this attribute in propagating
+    // analysis information across function boundaries.  Any alternative
+    // implementation of said function can simply propagate such information
+    // differently.  So CilkSanitizer infers the norecurse attribute itself,
+    // without the requirement of an exact definition.
+    AttributeInferer AI;
+    AI.registerAttrInference(AttributeInferer::InferenceDescriptor{
+        Attribute::NoRecurse,
+            // Skip functions already marked norecurse.
+            [](const Function &F) { return F.doesNotRecurse(); },
+            // Instructions that break NoRecurse
+            [this, SCCNodes](Instruction &I) {
+              return InstrBreaksNoRecurse(I, SCCNodes, LocalNoRecurseFunctions);
+            },
+            [this](Function &F) {
+              LLVM_DEBUG(dbgs() << "Setting function " << F.getName()
+                                << " as locally norecurse.\n");
+              LocalNoRecurseFunctions.insert(&F);
+            },
+            /* RequiresExactDefinition = */ false});
+    // Derive any local function attributes we want.
+    AI.run(SCCNodes);
+  }
+
+  // Instrument functions.
+  for (scc_iterator<CallGraph *> I = scc_begin(CG); !I.isAtEnd(); ++I) {
+    const std::vector<CallGraphNode *> &SCC = *I;
+    for (CallGraphNode *N : SCC) {
+      if (Function *F = N->getFunction())
         if (instrumentFunctionUsingRI(*F))
           InstrumentedFunctions.push_back(F);
-      }
     }
   }
   // After all functions have been analyzed and instrumented, update their
@@ -1562,8 +1667,8 @@ void CilkSanitizerImpl::Instrumentor::InsertArgSuppressionFlags(Function &F,
       if (Arg.hasNoAliasAttr())
         LocalSV |= static_cast<unsigned>(SuppressionVal::NoAlias);
 
-      // if (!CilkSanImpl.FnDoesNotRecur(F) &&
-      if (!F.hasFnAttribute(Attribute::NoRecurse) &&
+      // if (!F.hasFnAttribute(Attribute::NoRecurse) &&
+      if (!CilkSanImpl.FunctionIsNoRecurse(F) &&
           RI.ObjectInvolvedInRace(&Arg)) {
         LLVM_DEBUG(dbgs() << "Setting local SV in may-recurse function " <<
                    F.getName() << " for arg " << Arg << "\n");
