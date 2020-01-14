@@ -154,6 +154,29 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2) {
   return getModRefInfo(I, Call2, AAQIP);
 }
 
+/// Returns true if the given instruction performs a detached rethrow, false
+/// otherwise.
+static bool isDetachedRethrow(const Instruction *I,
+                              const Value *SyncRegion = nullptr) {
+  if (const InvokeInst *II = dyn_cast<InvokeInst>(I))
+    if (const Function *Called = II->getCalledFunction())
+      if (Intrinsic::detached_rethrow == Called->getIntrinsicID())
+        if (!SyncRegion || (SyncRegion == II->getArgOperand(0)))
+          return true;
+  return false;
+}
+
+static bool taskTerminator(const Instruction *T, const Value *SyncRegion) {
+  if (const ReattachInst *RI = dyn_cast<ReattachInst>(T))
+    if (SyncRegion == RI->getSyncRegion())
+      return true;
+
+  if (isDetachedRethrow(T, SyncRegion))
+    return true;
+
+  return false;
+}
+
 ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2,
                                     AAQueryInfo &AAQI) {
   // We may have two calls.
@@ -173,7 +196,7 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2,
       if (!Visited.insert(BB).second)
         continue;
 
-      for (Instruction &DI : *BB) {
+      for (Instruction &DI : BB->instructionsWithoutDebug()) {
         // Fail fast if we encounter an invalid CFG.
         assert(!(D == &DI) &&
                "Detached CFG reaches its own Detach instruction.");
@@ -187,17 +210,17 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2,
         if (isa<SyncInst>(DI) || isa<DetachInst>(DI))
           continue;
 
-        if (isa<LoadInst>(DI) || isa<StoreInst>(DI) ||
+        if (isa<VAArgInst>(DI) || isa<LoadInst>(DI) || isa<StoreInst>(DI) ||
             isa<AtomicCmpXchgInst>(DI) || isa<AtomicRMWInst>(DI) ||
+            isa<CatchPadInst>(DI) || isa<CatchReturnInst>(DI) ||
             DI.isFenceLike() || isa<CallBase>(DI))
           Result = unionModRef(Result, getModRefInfo(&DI, Call2, AAQI));
       }
 
       // Add successors
       const Instruction *T = BB->getTerminator();
-      if (const ReattachInst *RI = dyn_cast<ReattachInst>(T))
-        if (D->getSyncRegion() == RI->getSyncRegion())
-          continue;
+      if (taskTerminator(T, D->getSyncRegion()))
+        continue;
       for (unsigned idx = 0, max = T->getNumSuccessors(); idx < max; ++idx)
         WorkList.push_back(T->getSuccessor(idx));
     }
@@ -492,10 +515,8 @@ FunctionModRefBehavior AAResults::getModRefBehavior(const DetachInst *D) {
 
     // Add successors
     const Instruction *T = BB->getTerminator();
-    if (const ReattachInst *RI = dyn_cast<ReattachInst>(T))
-      if (D->getSyncRegion() == RI->getSyncRegion())
-        continue;
-
+    if (taskTerminator(T, D->getSyncRegion()))
+      continue;
     for (unsigned idx = 0, max = T->getNumSuccessors(); idx < max; ++idx)
       WorkList.push_back(T->getSuccessor(idx));
   }
@@ -514,21 +535,21 @@ FunctionModRefBehavior AAResults::getModRefBehavior(const SyncInst *S) {
       continue;
 
     if (const DetachInst *D = dyn_cast<DetachInst>(BB->getTerminator()))
-      Result = FunctionModRefBehavior(Result | getModRefBehavior(D));
+      if (D->getSyncRegion() == S->getSyncRegion())
+        Result = FunctionModRefBehavior(Result | getModRefBehavior(D));
 
     // Early-exit the moment we reach the top of the lattice.
     if (Result == FMRB_UnknownModRefBehavior)
       return Result;
 
     // Add predecessors
-    for (const_pred_iterator PI = pred_begin(BB), E = pred_end(BB);
-	 PI != E; ++PI) {
-      const BasicBlock *Pred = *PI;
+    for (const BasicBlock *Pred : predecessors(BB)) {
       const Instruction *PT = Pred->getTerminator();
       // Ignore reattached predecessors and predecessors that end in syncs,
       // because this sync does not wait on those predecessors.
-      if (isa<ReattachInst>(PT) || isa<SyncInst>(PT))
-	continue;
+      if (isa<ReattachInst>(PT) || isa<SyncInst>(PT) || isDetachedRethrow(PT))
+        continue;
+
       // If this block is detached, ignore the predecessor that detaches it.
       if (const DetachInst *Det = dyn_cast<DetachInst>(PT))
         if (Det->getDetached() == BB)
@@ -762,7 +783,7 @@ ModRefInfo AAResults::getModRefInfo(const DetachInst *D,
     if (!Visited.insert(BB).second)
       continue;
 
-    for (const Instruction &I : *BB) {
+    for (const Instruction &I : BB->instructionsWithoutDebug()) {
       // Fail fast if we encounter an invalid CFG.
       assert(!(D == &I) &&
              "Invalid CFG found: Detached CFG reaches its own Detach.");
@@ -781,11 +802,10 @@ ModRefInfo AAResults::getModRefInfo(const DetachInst *D,
 
     // Add successors
     const Instruction *T = BB->getTerminator();
-    if (const ReattachInst *RI = dyn_cast<ReattachInst>(T))
-      if (D->getSyncRegion() == RI->getSyncRegion())
-        continue;
-    for (unsigned idx = 0, max = T->getNumSuccessors(); idx < max; ++idx)
-      WorkList.push_back(T->getSuccessor(idx));
+    if (taskTerminator(T, D->getSyncRegion()))
+      continue;
+    for (const BasicBlock *Successor : successors(BB))
+      WorkList.push_back(Successor);
   }
 
   return Result;
@@ -822,13 +842,11 @@ ModRefInfo AAResults::getModRefInfo(const SyncInst *S,
     }
 
     // Add predecessors
-    for (const_pred_iterator PI = pred_begin(BB), E = pred_end(BB);
-	 PI != E; ++PI) {
-      const BasicBlock *Pred = *PI;
+    for (const BasicBlock *Pred : predecessors(BB)) {
       const Instruction *PT = Pred->getTerminator();
       // Ignore reattached predecessors and predecessors that end in syncs,
       // because this sync does not wait on those predecessors.
-      if (isa<ReattachInst>(PT) || isa<SyncInst>(PT))
+      if (isa<ReattachInst>(PT) || isa<SyncInst>(PT) || isDetachedRethrow(PT))
 	continue;
       // If this block is detached, ignore the predecessor that detaches it.
       if (const DetachInst *Det = dyn_cast<DetachInst>(PT))
