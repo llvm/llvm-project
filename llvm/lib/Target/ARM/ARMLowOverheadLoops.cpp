@@ -485,6 +485,9 @@ void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils,
 }
 
 bool LowOverheadLoop::RecordVPTBlocks(MachineInstr* MI) {
+  if (CannotTailPredicate)
+    return false;
+
   // Only support a single vctp.
   if (isVCTP(MI) && VCTP)
     return false;
@@ -494,10 +497,20 @@ bool LowOverheadLoop::RecordVPTBlocks(MachineInstr* MI) {
     VPTBlocks.emplace_back(MI, CurrentPredicate);
     CurrentBlock = &VPTBlocks.back();
     return true;
-  }
-
-  if (isVCTP(MI))
+  } else if (isVCTP(MI))
     VCTP = MI;
+  else if (MI->getOpcode() == ARM::MVE_VPSEL ||
+           MI->getOpcode() == ARM::MVE_VPNOT)
+    return false;
+
+  // TODO: Allow VPSEL and VPNOT, we currently cannot because:
+  // 1) It will use the VPR as a predicate operand, but doesn't have to be
+  //    instead a VPT block, which means we can assert while building up
+  //    the VPT block because we don't find another VPST to being a new
+  //    one.
+  // 2) VPSEL still requires a VPR operand even after tail predicating,
+  //    which means we can't remove it unless there is another
+  //    instruction, such as vcmp, that can provide the VPR def.
 
   unsigned VPROpNum = MI->getNumOperands() - 1;
   bool IsUse = false;
