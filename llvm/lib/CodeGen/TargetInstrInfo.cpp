@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/ScoreboardHazardRecognizer.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -1015,9 +1016,8 @@ CreateTargetHazardRecognizer(const TargetSubtargetInfo *STI,
 }
 
 // Default implementation of CreateTargetMIHazardRecognizer.
-ScheduleHazardRecognizer *TargetInstrInfo::
-CreateTargetMIHazardRecognizer(const InstrItineraryData *II,
-                               const ScheduleDAG *DAG) const {
+ScheduleHazardRecognizer *TargetInstrInfo::CreateTargetMIHazardRecognizer(
+    const InstrItineraryData *II, const ScheduleDAGMI *DAG) const {
   return new ScoreboardHazardRecognizer(II, DAG, "machine-scheduler");
 }
 
