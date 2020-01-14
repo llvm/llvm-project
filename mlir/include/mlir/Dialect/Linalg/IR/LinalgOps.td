@@ -100,9 +100,17 @@ def Linalg_ReshapeOp : Linalg_Op<"reshape", [NoSideEffect]>,
     ```
   }];
 
-  let builders = [OpBuilder<
-    "Builder *b, OperationState &result, Value view, "
-    "ArrayAttr reassociation, ArrayRef<NamedAttribute> attrs = {}">];
+  let builders = [
+    // Builder for a contracting reshape whose result type is computed from
+    // `view` and `reassociation`.
+    OpBuilder<"Builder *b, OperationState &result, Value view, "
+    "ArrayRef<ArrayRef<AffineExpr>> reassociation, "
+    "ArrayRef<NamedAttribute> attrs = {}">,
+    // Builder for a reshape whose result type is passed explicitly. This may be
+    // either a contracting or expanding reshape.
+    OpBuilder<"Builder *b, OperationState &result, Type resultType, Value view,"
+    "ArrayRef<ArrayRef<AffineExpr>> reassociation, "
+    "ArrayRef<NamedAttribute> attrs = {}">];
 
   let extraClassDeclaration = [{
     static StringRef getReassociationAttrName() { return "reassociation"; }
