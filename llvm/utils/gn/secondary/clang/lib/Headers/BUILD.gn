@@ -31,15 +31,11 @@ copy("arm_headers") {
   ]
   sources = get_target_outputs(":arm_neon") + get_target_outputs(":arm_fp16") +
             get_target_outputs(":arm_mve")
-  outputs = [
-    "$clang_resource_dir/include/{{source_file_part}}",
-  ]
+  outputs = [ "$clang_resource_dir/include/{{source_file_part}}" ]
 }
 
 copy("Headers") {
-  deps = [
-    ":arm_headers",
-  ]
+  deps = [ ":arm_headers" ]
 
   # NOSORT
   # Tell `gn format` to not reorder the sources list: Its order matches CMake,
@@ -182,7 +178,5 @@ copy("Headers") {
     "openmp_wrappers/__clang_openmp_math.h",
     "openmp_wrappers/__clang_openmp_math_declares.h",
   ]
-  outputs = [
-    "$clang_resource_dir/include/{{source_target_relative}}",
-  ]
+  outputs = [ "$clang_resource_dir/include/{{source_target_relative}}" ]
 }

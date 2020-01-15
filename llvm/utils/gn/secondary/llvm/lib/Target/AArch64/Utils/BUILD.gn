@@ -9,9 +9,7 @@ tablegen("AArch64GenSystemOperands") {
 
 static_library("Utils") {
   output_name = "LLVMAArch64Utils"
-  public_deps = [
-    ":AArch64GenSystemOperands",
-  ]
+  public_deps = [ ":AArch64GenSystemOperands" ]
   deps = [
     "//llvm/lib/Support",
 

@@ -1,8 +1,6 @@
 static_library("TableGen") {
   output_name = "LLVMTableGen"
-  deps = [
-    "//llvm/lib/Support",
-  ]
+  deps = [ "//llvm/lib/Support" ]
   sources = [
     "Error.cpp",
     "JSONBackend.cpp",
