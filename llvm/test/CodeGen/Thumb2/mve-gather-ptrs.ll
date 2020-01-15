@@ -829,6 +829,19 @@ for.end:                                          ; preds = %vector.body, %entry
   ret void
 }
 
+define arm_aapcs_vfpcc <4 x i32> @qi4(<4 x i32*> %p) {
+; CHECK-LABEL: qi4:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q1, #0x10
+; CHECK-NEXT:    vadd.i32 q1, q0, q1
+; CHECK-NEXT:    vldrw.u32 q0, [q1]
+; CHECK-NEXT:    bx lr
+entry:
+  %g = getelementptr inbounds i32, <4 x i32*> %p, i32 4
+  %gather = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %g, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+  ret <4 x i32> %gather
+}
+
 declare <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*>, i32, <2 x i1>, <2 x i32>)
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*>, i32, <4 x i1>, <4 x i32>)
 declare <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*>, i32, <8 x i1>, <8 x i32>)
