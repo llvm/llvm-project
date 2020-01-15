@@ -15,6 +15,23 @@
 
 using namespace clang;
 
+namespace {
+static void traverse(const syntax::Node *N,
+                     llvm::function_ref<void(const syntax::Node *)> Visit) {
+  if (auto *T = dyn_cast<syntax::Tree>(N)) {
+    for (auto *C = T->firstChild(); C; C = C->nextSibling())
+      traverse(C, Visit);
+  }
+  Visit(N);
+}
+static void traverse(syntax::Node *N,
+                     llvm::function_ref<void(syntax::Node *)> Visit) {
+  traverse(static_cast<const syntax::Node *>(N), [&](const syntax::Node *N) {
+    Visit(const_cast<syntax::Node *>(N));
+  });
+};
+} // namespace
+
 syntax::Arena::Arena(SourceManager &SourceMgr, const LangOptions &LangOpts,
                      TokenBuffer Tokens)
     : SourceMgr(SourceMgr), LangOpts(LangOpts), Tokens(std::move(Tokens)) {}
@@ -80,6 +97,8 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
     N->Role = static_cast<unsigned>(NodeRole::Detached);
     N->Parent = nullptr;
     N->NextSibling = nullptr;
+    if (N->Original)
+      traverse(N, [&](Node *C) { C->Original = false; });
 
     N = Next;
   }
@@ -105,14 +124,6 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
 }
 
 namespace {
-static void traverse(const syntax::Node *N,
-                     llvm::function_ref<void(const syntax::Node *)> Visit) {
-  if (auto *T = dyn_cast<syntax::Tree>(N)) {
-    for (auto *C = T->firstChild(); C; C = C->nextSibling())
-      traverse(C, Visit);
-  }
-  Visit(N);
-}
 static void dumpTokens(llvm::raw_ostream &OS, ArrayRef<syntax::Token> Tokens,
                        const SourceManager &SM) {
   assert(!Tokens.empty());

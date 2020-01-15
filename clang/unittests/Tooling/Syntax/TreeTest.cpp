@@ -895,6 +895,9 @@ TEST_F(SyntaxTreeTest, Mutations) {
     auto *S = cast<syntax::Statement>(nodeByRange(Input.range(), TU));
     ASSERT_TRUE(S->canModify()) << "cannot remove a statement";
     syntax::removeStatement(*Arena, S);
+    EXPECT_TRUE(S->isDetached());
+    EXPECT_FALSE(S->isOriginal())
+        << "node removed from tree cannot be marked as original";
   };
 
   std::vector<std::pair<std::string /*Input*/, std::string /*Expected*/>>
