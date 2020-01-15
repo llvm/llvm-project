@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements the IR Dialect for the Toy language.
-// See g3doc/Tutorials/Toy/Ch-2.md for more information.
+// See docs/Tutorials/Toy/Ch-2.md for more information.
 //
 //===----------------------------------------------------------------------===//
 
