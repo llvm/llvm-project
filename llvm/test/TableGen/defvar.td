@@ -95,6 +95,8 @@ defvar firstStr = "now define this at the top level and still expect no error";
 // CHECK-NEXT: int var = 2;
 // CHECK: def shadowInner22 {
 // CHECK-NEXT: int var = 2;
+// CHECK: def shadowInnerIf1 {
+// CHECK-NEXT: int var = 3;
 // CHECK: def shadowOuterAbove1 {
 // CHECK-NEXT: int var = 1;
 // CHECK: def shadowOuterAbove2 {
@@ -102,6 +104,10 @@ defvar firstStr = "now define this at the top level and still expect no error";
 // CHECK: def shadowOuterBelowForeach1 {
 // CHECK-NEXT: int var = 1;
 // CHECK: def shadowOuterBelowForeach2 {
+// CHECK-NEXT: int var = 1;
+// CHECK: def shadowOuterBelowIf1 {
+// CHECK-NEXT: int var = 1;
+// CHECK: def shadowOuterBelowIf2 {
 // CHECK-NEXT: int var = 1;
 
 foreach first = [ 1, 2 ] in {
@@ -117,6 +123,15 @@ foreach first = [ 1, 2 ] in {
 
   // Now the outer variable is back in scope.
   def shadowOuterBelowForeach # first { int var = shadowedVariable; }
+
+  // An if statement also opens a new scope.
+  if !eq(first, 1) then {
+    defvar shadowedVariable = 3;
+    def shadowInnerIf # first { int var = shadowedVariable; }
+  }
+
+  // Now the outer variable is back in scope again.
+  def shadowOuterBelowIf # first { int var = shadowedVariable; }
 }
 
 // Test that a top-level let statement also makes a variable scope (on the
