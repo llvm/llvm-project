@@ -1759,7 +1759,7 @@ TEST(Hover, PresentRulers) {
   HI.Value = "val";
   HI.Definition = "def";
 
-  EXPECT_EQ(HI.present().asMarkdown(), R"md(### variable `foo`  
+  llvm::StringRef ExpectedMarkdown = R"md(### variable `foo`  
 
 ---
 Value \= `val`  
@@ -1767,12 +1767,15 @@ Value \= `val`
 ---
 ```cpp
 def
-```)md");
-  EXPECT_EQ(HI.present().asPlainText(), R"pt(variable foo
+```)md";
+  EXPECT_EQ(HI.present().asMarkdown(), ExpectedMarkdown);
+
+  llvm::StringRef ExpectedPlaintext = R"pt(variable foo
 
 Value = val
 
-def)pt");
+def)pt";
+  EXPECT_EQ(HI.present().asPlainText(), ExpectedPlaintext);
 }
 
 TEST(Hover, ExprTests) {
