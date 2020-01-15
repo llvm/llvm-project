@@ -669,13 +669,9 @@ define float @test19_reassoc(float %A, float %B) {
 
 ; With sub reassociation, constant folding can eliminate the uses of %a.
 define float @test20(float %a, float %b, float %c) nounwind  {
-; FIXME: Should be able to generate the below, which may expose more
-;        opportunites for FAdd reassociation.
-; %sum = fadd fast float %c, %b
-; %t7 = fsub fast float 0, %sum
 ; CHECK-LABEL: @test20(
-; CHECK-NEXT:    [[B_NEG:%.*]] = fsub fast float -0.000000e+00, [[B:%.*]]
-; CHECK-NEXT:    [[T7:%.*]] = fsub fast float [[B_NEG]], [[C:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast float [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[T7:%.*]] = fsub fast float -0.000000e+00, [[TMP1]]
 ; CHECK-NEXT:    ret float [[T7]]
 ;
   %t3 = fsub fast float %a, %b
