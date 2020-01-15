@@ -5712,7 +5712,6 @@ def MVE_VPSEL : MVE_p<(outs MQPR:$Qd), (ins MQPR:$Qn, MQPR:$Qm), NoItinerary,
   let Inst{4} = 0b0;
   let Inst{3-1} = Qm{2-0};
   let Inst{0} = 0b1;
-  let validForTailPredication = 1;
 }
 
 foreach suffix = ["s8", "s16", "s32", "u8", "u16", "u32",
