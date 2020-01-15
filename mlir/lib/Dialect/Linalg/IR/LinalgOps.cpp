@@ -109,7 +109,7 @@ static ParseResult parseGenericOp(OpAsmParser &parser, OperationState &result) {
 }
 
 template <typename GenericOpType>
-LogicalResult verifyBlockArgs(GenericOpType op, Block &block);
+static LogicalResult verifyBlockArgs(GenericOpType op, Block &block);
 
 template <> LogicalResult verifyBlockArgs(GenericOp op, Block &block) {
   auto nViews = op.getNumInputsAndOutputs();
@@ -158,7 +158,7 @@ template <> LogicalResult verifyBlockArgs(IndexedGenericOp op, Block &block) {
 }
 
 template <typename GenericOpType>
-LogicalResult verifyFuncArgs(GenericOpType op, FunctionType funType);
+static LogicalResult verifyFuncArgs(GenericOpType op, FunctionType funType);
 
 template <> LogicalResult verifyFuncArgs(GenericOp op, FunctionType funType) {
   auto nViews = op.getNumInputsAndOutputs();
@@ -228,7 +228,7 @@ LogicalResult verifyFuncArgs(IndexedGenericOp op, FunctionType funType) {
 }
 
 template <typename GenericOpType>
-LogicalResult verifyGenericOp(GenericOpType op) {
+static LogicalResult verifyGenericOp(GenericOpType op) {
   auto nInputViews = op.getNumInputs();
   auto nLoops = op.getNumLoops();
   auto nViews = op.getNumInputsAndOutputs();
@@ -729,7 +729,7 @@ static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
 }
 
 template <typename GenericOpType>
-LogicalResult verifyYield(YieldOp op, GenericOpType genericOp) {
+static LogicalResult verifyYield(YieldOp op, GenericOpType genericOp) {
   // The operand number and types must match the view element types.
   auto nOutputViews = genericOp.getNumOutputs();
   if (op.getNumOperands() != nOutputViews)

@@ -522,6 +522,7 @@ generateTransferOpSlices(VectorType vectorType, TupleType tupleType,
   }
 }
 
+namespace {
 // Splits vector TransferReadOp into smaller TransferReadOps based on slicing
 // scheme of its unique ExtractSlicesOp user.
 struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
@@ -656,6 +657,8 @@ struct TupleGetFolderOp : public OpRewritePattern<vector::TupleGetOp> {
     return matchSuccess();
   }
 };
+
+} // namespace
 
 // TODO(andydavis) Add pattern to rewrite ExtractSlices(ConstantMaskOp).
 // TODO(andydavis) Add this as DRR pattern.

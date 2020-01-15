@@ -122,7 +122,7 @@ static std::string makePackedFunctionName(StringRef name) {
 // For each function in the LLVM module, define an interface function that wraps
 // all the arguments of the original function and all its results into an i8**
 // pointer to provide a unified invocation interface.
-void packFunctionArguments(Module *module) {
+static void packFunctionArguments(Module *module) {
   auto &ctx = module->getContext();
   llvm::IRBuilder<> builder(ctx);
   DenseSet<llvm::Function *> interfaceFunctions;

@@ -258,7 +258,7 @@ iterator_range<Block::args_iterator> LaunchOp::getKernelArguments() {
   return llvm::drop_begin(args, LaunchOp::kNumConfigRegionAttributes);
 }
 
-LogicalResult verify(LaunchOp op) {
+static LogicalResult verify(LaunchOp op) {
   // Kernel launch takes kNumConfigOperands leading operands for grid/block
   // sizes and transforms them into kNumConfigRegionAttributes region arguments
   // for block/thread identifiers and grid/block sizes.
@@ -300,7 +300,7 @@ static void printSizeAssignment(OpAsmPrinter &p, KernelDim3 size,
   p << size.z << " = " << operands[2] << ')';
 }
 
-void printLaunchOp(OpAsmPrinter &p, LaunchOp op) {
+static void printLaunchOp(OpAsmPrinter &p, LaunchOp op) {
   ValueRange operands = op.getOperands();
 
   // Print the launch configuration.
@@ -370,7 +370,7 @@ parseSizeAssignment(OpAsmParser &parser,
 //                             (`args` ssa-reassignment `:` type-list)?
 //                             region attr-dict?
 // ssa-reassignment ::= `(` ssa-id `=` ssa-use (`,` ssa-id `=` ssa-use)* `)`
-ParseResult parseLaunchOp(OpAsmParser &parser, OperationState &result) {
+static ParseResult parseLaunchOp(OpAsmParser &parser, OperationState &result) {
   // Sizes of the grid and block.
   SmallVector<OpAsmParser::OperandType, LaunchOp::kNumConfigOperands> sizes(
       LaunchOp::kNumConfigOperands);
@@ -549,7 +549,7 @@ KernelDim3 LaunchFuncOp::getBlockSizeOperandValues() {
   return KernelDim3{getOperand(3), getOperand(4), getOperand(5)};
 }
 
-LogicalResult verify(LaunchFuncOp op) {
+static LogicalResult verify(LaunchFuncOp op) {
   auto module = op.getParentOfType<ModuleOp>();
   if (!module)
     return op.emitOpError("expected to belong to a module");
@@ -729,7 +729,7 @@ static void printAttributions(OpAsmPrinter &p, StringRef keyword,
 }
 
 /// Prints a GPU Func op.
-void printGPUFuncOp(OpAsmPrinter &p, GPUFuncOp op) {
+static void printGPUFuncOp(OpAsmPrinter &p, GPUFuncOp op) {
   p << GPUFuncOp::getOperationName() << ' ';
   p.printSymbolName(op.getName());
 

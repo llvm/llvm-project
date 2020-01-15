@@ -139,10 +139,11 @@ public:
 
 // TODO(ravishankarm) : This method assumes that the `origBaseType` is a
 // MemRefType with AffineMap that has static strides. Handle dynamic strides
-spirv::AccessChainOp getElementPtr(OpBuilder &builder,
-                                   SPIRVTypeConverter &typeConverter,
-                                   Location loc, MemRefType origBaseType,
-                                   Value basePtr, ArrayRef<Value> indices) {
+static spirv::AccessChainOp getElementPtr(OpBuilder &builder,
+                                          SPIRVTypeConverter &typeConverter,
+                                          Location loc, MemRefType origBaseType,
+                                          Value basePtr,
+                                          ArrayRef<Value> indices) {
   // Get base and offset of the MemRefType and verify they are static.
   int64_t offset;
   SmallVector<int64_t, 4> strides;
