@@ -48,7 +48,7 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
   SmallVector<Function *, 16> InlinedFunctions;
   for (Function &F : M)
     if (!F.isDeclaration() && F.hasFnAttribute(Attribute::AlwaysInline) &&
-        isInlineViable(F)) {
+        isInlineViable(F).isSuccess()) {
       Calls.clear();
 
       for (User *U : F.users())
@@ -60,7 +60,8 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
         // FIXME: We really shouldn't be able to fail to inline at this point!
         // We should do something to log or check the inline failures here.
         Changed |=
-            InlineFunction(CS, IFI, /*CalleeAAR=*/nullptr, InsertLifetime);
+            InlineFunction(CS, IFI, /*CalleeAAR=*/nullptr, InsertLifetime)
+                .isSuccess();
 
       // Remember to try and delete this function afterward. This both avoids
       // re-walking the rest of the module and avoids dealing with any iterator
@@ -167,8 +168,8 @@ InlineCost AlwaysInlinerLegacyPass::getInlineCost(CallSite CS) {
     return InlineCost::getNever("no alwaysinline attribute");
 
   auto IsViable = isInlineViable(*Callee);
-  if (!IsViable)
-    return InlineCost::getNever(IsViable.message);
+  if (!IsViable.isSuccess())
+    return InlineCost::getNever(IsViable.getFailureReason());
 
   return InlineCost::getAlways("always inliner");
 }
