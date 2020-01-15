@@ -17,7 +17,7 @@
 
 namespace lldb_private {
 
-class SwiftASTContext;
+class SwiftASTContextForExpressions;
 class ExecutionContext;
 class ExecutionContextRef;
 
@@ -92,16 +92,16 @@ struct ScopedSharedMutexReader {
 /// will only do this if no client holds on to a read lock on \b
 /// m_scratch_typesystem_lock.
 struct SwiftASTContextReader : ScopedSharedMutexReader {
-  SwiftASTContext *m_ptr = nullptr;
+  SwiftASTContextForExpressions *m_ptr = nullptr;
   SwiftASTContextReader() : ScopedSharedMutexReader(nullptr) {}
-  SwiftASTContextReader(SharedMutex &mutex, SwiftASTContext *ctx)
+  SwiftASTContextReader(SharedMutex &mutex, SwiftASTContextForExpressions *ctx)
       : ScopedSharedMutexReader(&mutex), m_ptr(ctx) {}
   SwiftASTContextReader(const SwiftASTContextReader &copy)
       : ScopedSharedMutexReader(copy.m_mutex), m_ptr(copy.m_ptr) {}
-  SwiftASTContext *get() { return m_ptr; }
+  SwiftASTContextForExpressions *get() { return m_ptr; }
   operator bool() const { return m_ptr; }
-  SwiftASTContext *operator->() { return m_ptr; }
-  SwiftASTContext &operator*() { return *m_ptr; }
+  SwiftASTContextForExpressions *operator->() { return m_ptr; }
+  SwiftASTContextForExpressions &operator*() { return *m_ptr; }
 };
 
 /// An RAII object that just acquires the reader lock.

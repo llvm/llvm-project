@@ -2417,14 +2417,15 @@ SwiftASTContextReader Target::GetScratchSwiftASTContext(
       lldb_module = sc.module_sp.get();
     }
 
-  auto get_or_create_fallback_context = [&]() -> SwiftASTContext * {
+  auto get_or_create_fallback_context = [&]() -> SwiftASTContextForExpressions * {
     if (!lldb_module || !m_use_scratch_typesystem_per_module)
       return nullptr;
 
     ModuleLanguage idx = {lldb_module, lldb::eLanguageTypeSwift};
     auto cached = m_scratch_typesystem_for_module.find(idx);
     if (cached != m_scratch_typesystem_for_module.end()) {
-      auto *cached_ast_ctx = llvm::cast<SwiftASTContext>(cached->second.get());
+      auto *cached_ast_ctx =
+          llvm::cast<SwiftASTContextForExpressions>(cached->second.get());
       if (cached_ast_ctx->HasFatalErrors() &&
           !m_cant_make_scratch_type_system.count(lldb::eLanguageTypeSwift)) {
         DisplayFallbackSwiftContextErrors(cached_ast_ctx);
@@ -2452,7 +2453,8 @@ SwiftASTContextReader Target::GetScratchSwiftASTContext(
     bool fallback = true;
     auto typesystem_sp = SwiftASTContext::CreateInstance(
         lldb::eLanguageTypeSwift, *lldb_module, this, fallback);
-    auto *swift_ast_ctx = llvm::cast<SwiftASTContext>(typesystem_sp.get());
+    auto *swift_ast_ctx =
+        llvm::cast<SwiftASTContextForExpressions>(typesystem_sp.get());
     m_scratch_typesystem_for_module.insert({idx, typesystem_sp});
     GetSwiftScratchContextLock().unlock();
     if (log)
@@ -2467,7 +2469,8 @@ SwiftASTContextReader Target::GetScratchSwiftASTContext(
     auto type_system_or_err =
         GetScratchTypeSystemForLanguage(eLanguageTypeSwift, create_on_demand);
     if (type_system_or_err)
-      swift_ast_ctx = llvm::cast_or_null<SwiftASTContext>(&*type_system_or_err);
+      swift_ast_ctx = llvm::cast_or_null<SwiftASTContextForExpressions>(
+          &*type_system_or_err);
     else
       llvm::consumeError(type_system_or_err.takeError());
   }
