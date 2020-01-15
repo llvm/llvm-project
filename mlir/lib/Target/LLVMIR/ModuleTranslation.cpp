@@ -49,7 +49,14 @@ llvm::Constant *ModuleTranslation::getLLVMConstant(llvm::Type *llvmType,
     auto *sequentialType = cast<llvm::SequentialType>(llvmType);
     auto elementType = sequentialType->getElementType();
     uint64_t numElements = sequentialType->getNumElements();
-    auto *child = getLLVMConstant(elementType, splatAttr.getSplatValue(), loc);
+    // Splat value is a scalar. Extract it only if the element type is not
+    // another sequence type. The recursion terminates because each step removes
+    // one outer sequential type.
+    llvm::Constant *child = getLLVMConstant(
+        elementType,
+        isa<llvm::SequentialType>(elementType) ? splatAttr
+                                               : splatAttr.getSplatValue(),
+        loc);
     if (llvmType->isVectorTy())
       return llvm::ConstantVector::getSplat(numElements, child);
     if (llvmType->isArrayTy()) {
