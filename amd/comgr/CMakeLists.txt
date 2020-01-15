@@ -64,7 +64,6 @@ else()
   endif()
 endif()
 
-
 message("")
 message("------------LLVM_DIR: ${LLVM_DIR}")
 message("---LLVM_INCLUDE_DIRS: ${LLVM_INCLUDE_DIRS}")
@@ -131,18 +130,11 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h @ONLY)
 
 file(GLOB SOURCES "src/*.cpp")
-if (NOT AMDDeviceLibs_FOUND)
-  file(GLOB DEVICE_LIBS_SRC "src/comgr-device-libs.cpp")
-  list(REMOVE_ITEM SOURCES ${DEVICE_LIBS_SRC})
-endif()
 add_library(amd_comgr SHARED ${SOURCES})
 
-if (AMDDeviceLibs_FOUND)
-  include(bc2h)
-  include(opencl_pch)
-  include(DeviceLibs)
-  list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS DEVICE_LIBS)
-endif()
+include(bc2h)
+include(opencl_pch)
+include(DeviceLibs)
 
 set_target_properties(amd_comgr PROPERTIES
   CXX_STANDARD 14

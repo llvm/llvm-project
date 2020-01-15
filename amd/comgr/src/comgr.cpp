@@ -35,9 +35,7 @@
 
 #include "comgr.h"
 #include "comgr-compiler.h"
-#ifdef DEVICE_LIBS
 #include "comgr-device-libs.h"
-#endif
 #include "comgr-disassembly.h"
 #include "comgr-env.h"
 #include "comgr-metadata.h"
@@ -166,7 +164,6 @@ static amd_comgr_status_t dispatchAddAction(amd_comgr_action_kind_t ActionKind,
                                             DataAction *ActionInfo,
                                             DataSet *InputSet,
                                             DataSet *ResultSet) {
-#ifdef DEVICE_LIBS
   for (DataObject *Data : InputSet->DataObjects) {
     Data->RefCount++;
     ResultSet->DataObjects.insert(Data);
@@ -179,9 +176,6 @@ static amd_comgr_status_t dispatchAddAction(amd_comgr_action_kind_t ActionKind,
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
-#else
-  return AMD_COMGR_STATUS_ERROR;
-#endif
 }
 
 static StringRef getActionKindName(amd_comgr_action_kind_t ActionKind) {
