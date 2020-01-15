@@ -7116,12 +7116,11 @@ clang::VarDecl *ClangASTContext::AddVariableToRecordType(
 }
 
 clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
-    lldb::opaque_compiler_type_t type, const char *name, const char *mangled_name,
-    const CompilerType &method_clang_type, lldb::AccessType access,
-    bool is_virtual, bool is_static, bool is_inline, bool is_explicit,
-    bool is_attr_used, bool is_artificial) {
-  if (!type || !method_clang_type.IsValid() || name == nullptr ||
-      name[0] == '\0')
+    lldb::opaque_compiler_type_t type, llvm::StringRef name,
+    const char *mangled_name, const CompilerType &method_clang_type,
+    lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
+    bool is_explicit, bool is_attr_used, bool is_artificial) {
+  if (!type || !method_clang_type.IsValid() || name.empty())
     return nullptr;
 
   clang::QualType record_qual_type(GetCanonicalQualType(type));
@@ -7162,7 +7161,7 @@ clang::CXXMethodDecl *ClangASTContext::AddMethodToCXXRecordType(
       nullptr /*expr*/, is_explicit
                             ? clang::ExplicitSpecKind::ResolvedTrue
                             : clang::ExplicitSpecKind::ResolvedFalse);
-  if (name[0] == '~') {
+  if (name.startswith("~")) {
     cxx_dtor_decl = clang::CXXDestructorDecl::Create(
         getASTContext(), cxx_record_decl, clang::SourceLocation(),
         clang::DeclarationNameInfo(
