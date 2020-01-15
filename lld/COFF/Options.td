@@ -64,6 +64,7 @@ def natvis : P<"natvis", "Path to natvis file to embed in the PDB">;
 def no_color_diagnostics: F<"no-color-diagnostics">,
     HelpText<"Do not use colors in diagnostics">;
 def pdb : P<"pdb", "PDB file path">;
+def pdbstripped : P<"pdbstripped", "Stripped PDB file path">;
 def pdbaltpath : P<"pdbaltpath", "PDB file path to embed in the image">;
 def section : P<"section", "Specify section attributes">;
 def stack   : P<"stack", "Size of the stack">;
