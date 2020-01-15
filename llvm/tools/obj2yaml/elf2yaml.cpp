@@ -27,6 +27,7 @@ class ELFDumper {
   typedef typename ELFT::Word Elf_Word;
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Rela Elf_Rela;
+  using Elf_Relr = typename ELFT::Relr;
   using Elf_Nhdr = typename ELFT::Nhdr;
   using Elf_Note = typename ELFT::Note;
 
@@ -66,6 +67,7 @@ class ELFDumper {
   dumpDependentLibrariesSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::DynamicSection *> dumpDynamicSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::RelocationSection *> dumpRelocSection(const Elf_Shdr *Shdr);
+  Expected<ELFYAML::RelrSection *> dumpRelrSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::RawContentSection *>
   dumpContentSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::SymtabShndxSection *>
@@ -246,6 +248,13 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     case ELF::SHT_REL:
     case ELF::SHT_RELA: {
       Expected<ELFYAML::RelocationSection *> SecOrErr = dumpRelocSection(&Sec);
+      if (!SecOrErr)
+        return SecOrErr.takeError();
+      Y->Chunks.emplace_back(*SecOrErr);
+      break;
+    }
+    case ELF::SHT_RELR: {
+      Expected<ELFYAML::RelrSection *> SecOrErr = dumpRelrSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
       Y->Chunks.emplace_back(*SecOrErr);
@@ -720,6 +729,30 @@ ELFDumper<ELFT>::dumpRelocSection(const Elf_Shdr *Shdr) {
     }
   }
 
+  return S.release();
+}
+
+template <class ELFT>
+Expected<ELFYAML::RelrSection *>
+ELFDumper<ELFT>::dumpRelrSection(const Elf_Shdr *Shdr) {
+  auto S = std::make_unique<ELFYAML::RelrSection>();
+  if (auto E = dumpCommonSection(Shdr, *S))
+    return std::move(E);
+
+  if (Expected<ArrayRef<Elf_Relr>> Relrs = Obj.relrs(Shdr)) {
+    S->Entries.emplace();
+    for (Elf_Relr Rel : *Relrs)
+      S->Entries->emplace_back(Rel);
+    return S.release();
+  } else {
+    // Ignore. We are going to dump the data as raw content below.
+    consumeError(Relrs.takeError());
+  }
+
+  Expected<ArrayRef<uint8_t>> ContentOrErr = Obj.getSectionContents(Shdr);
+  if (!ContentOrErr)
+    return ContentOrErr.takeError();
+  S->Content = *ContentOrErr;
   return S.release();
 }
 
