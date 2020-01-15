@@ -9,6 +9,7 @@
 # RELOC-NEXT:   0xA R_X86_64_PLT32 weak 0xFFFFFFFFFFFFFFFC
 # RELOC-NEXT:   0x19 R_X86_64_PLT32 global 0xFFFFFFFFFFFFFFFC
 # RELOC-NEXT:   0x1E R_X86_64_PLT32 weak 0xFFFFFFFFFFFFFFFC
+# RELOC-NEXT:   0x23 R_X86_64_PLT32 ifunc 0xFFFFFFFFFFFFFFFC
 # RELOC-NEXT: }
 
 # CHECK:      0: jmp
@@ -19,14 +20,17 @@
 # CHECK-NEXT: 13: callq
 # CHECK-NEXT: 18: callq
 # CHECK-NEXT: 1d: callq
-# CHECK-NEXT: 22: retq
+# CHECK-NEXT: 22: callq
+# CHECK-NEXT: 27: retq
 
 .globl global
 .weak weak
+.type ifunc,@gnu_indirect_function
 global:
 weak:
 local:
 .set var,global
+ifunc:
   jmp var
   jmp local
   jmp global
@@ -36,4 +40,6 @@ local:
   call local
   call global
   call weak
+
+  call ifunc
   ret
