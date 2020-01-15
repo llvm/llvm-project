@@ -3145,14 +3145,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       }
       unsigned Idx = Mask[i];
       if (Idx < NumElems)
-        Ops.push_back(DAG.getNode(
-            ISD::EXTRACT_VECTOR_ELT, dl, EltVT, Op0,
-            DAG.getConstant(Idx, dl, TLI.getVectorIdxTy(DAG.getDataLayout()))));
+        Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, Op0,
+                                  DAG.getVectorIdxConstant(Idx, dl)));
       else
-        Ops.push_back(DAG.getNode(
-            ISD::EXTRACT_VECTOR_ELT, dl, EltVT, Op1,
-            DAG.getConstant(Idx - NumElems, dl,
-                            TLI.getVectorIdxTy(DAG.getDataLayout()))));
+        Ops.push_back(
+            DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, Op1,
+                        DAG.getVectorIdxConstant(Idx - NumElems, dl)));
     }
 
     Tmp1 = DAG.getBuildVector(VT, dl, Ops);
@@ -3835,12 +3833,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
 
     SmallVector<SDValue, 8> Scalars;
     for (unsigned Idx = 0; Idx < NumElem; Idx++) {
-      SDValue Ex = DAG.getNode(
-          ISD::EXTRACT_VECTOR_ELT, dl, VT.getScalarType(), Node->getOperand(0),
-          DAG.getConstant(Idx, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
-      SDValue Sh = DAG.getNode(
-          ISD::EXTRACT_VECTOR_ELT, dl, VT.getScalarType(), Node->getOperand(1),
-          DAG.getConstant(Idx, dl, TLI.getVectorIdxTy(DAG.getDataLayout())));
+      SDValue Ex =
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT.getScalarType(),
+                      Node->getOperand(0), DAG.getVectorIdxConstant(Idx, dl));
+      SDValue Sh =
+          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT.getScalarType(),
+                      Node->getOperand(1), DAG.getVectorIdxConstant(Idx, dl));
       Scalars.push_back(DAG.getNode(Node->getOpcode(), dl,
                                     VT.getScalarType(), Ex, Sh));
     }
