@@ -9,8 +9,7 @@ define i1 @invokecaller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]])
 ; CHECK-NEXT:    br label [[OK:%.*]]
 ; CHECK:       OK:
-; CHECK-NEXT:    [[Y:%.*]] = icmp ne i32 52, 0
-; CHECK-NEXT:    ret i1 [[Y]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       FAIL:
 ; CHECK-NEXT:    unreachable
 ;
@@ -46,8 +45,7 @@ define i1 @caller(i1 %C) {
 ; CHECK-LABEL: define {{[^@]+}}@caller
 ; CHECK-SAME: (i1 [[C:%.*]])
 ; CHECK-NEXT:    [[X:%.*]] = call i32 @foo(i1 [[C]])
-; CHECK-NEXT:    [[Y:%.*]] = icmp ne i32 52, 0
-; CHECK-NEXT:    ret i1 [[Y]]
+; CHECK-NEXT:    ret i1 true
 ;
   %X = call i32 @foo( i1 %C )             ; <i32> [#uses=1]
   %Y = icmp ne i32 %X, 0          ; <i1> [#uses=1]
