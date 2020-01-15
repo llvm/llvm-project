@@ -11,6 +11,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
+#include <cassert>
 
 using namespace clang;
 
@@ -91,8 +92,10 @@ void syntax::Tree::replaceChildRangeLowLevel(Node *BeforeBegin, Node *End,
 
   if (New) {
     auto *Last = New;
-    while (auto *Next = Last->nextSibling())
-      Last = Next;
+    for (auto *N = New; N != nullptr; N = N->nextSibling()) {
+      Last = N;
+      N->Parent = this;
+    }
     Last->NextSibling = End;
   }
 
@@ -187,6 +190,31 @@ std::string syntax::Node::dumpTokens(const Arena &A) const {
     OS << " ";
   });
   return OS.str();
+}
+
+void syntax::Node::assertInvariants() const {
+#ifndef NDEBUG
+  if (isDetached())
+    assert(parent() == nullptr);
+  else
+    assert(parent() != nullptr);
+
+  auto *T = dyn_cast<Tree>(this);
+  if (!T)
+    return;
+  for (auto *C = T->firstChild(); C; C = C->nextSibling()) {
+    if (T->isOriginal())
+      assert(C->isOriginal());
+    assert(!C->isDetached());
+    assert(C->parent() == T);
+  }
+#endif
+}
+
+void syntax::Node::assertInvariantsRecursive() const {
+#ifndef NDEBUG
+  traverse(this, [&](const syntax::Node *N) { N->assertInvariants(); });
+#endif
 }
 
 syntax::Leaf *syntax::Tree::firstLeaf() {
