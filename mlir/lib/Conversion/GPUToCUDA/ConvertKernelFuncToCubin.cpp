@@ -46,18 +46,15 @@ static constexpr const char *kCubinAnnotation = "nvvm.cubin";
 /// IR and further to PTX. A user provided CubinGenerator compiles the PTX to
 /// GPU binary code, which is then attached as an attribute to the function. The
 /// function body is erased.
-class GpuKernelToCubinPass : public ModulePass<GpuKernelToCubinPass> {
+class GpuKernelToCubinPass
+    : public OperationPass<GpuKernelToCubinPass, gpu::GPUModuleOp> {
 public:
   GpuKernelToCubinPass(
       CubinGenerator cubinGenerator = compilePtxToCubinForTesting)
       : cubinGenerator(cubinGenerator) {}
 
-  void runOnModule() override {
-    ModuleOp module = getModule();
-    if (!module.getAttrOfType<UnitAttr>(
-            gpu::GPUDialect::getKernelModuleAttrName()) ||
-        !module.getName())
-      return;
+  void runOnOperation() override {
+    gpu::GPUModuleOp module = getOperation();
 
     // Make sure the NVPTX target is initialized.
     LLVMInitializeNVPTXTarget();
@@ -71,8 +68,8 @@ public:
 
     // Translate the module to CUBIN and attach the result as attribute to the
     // module.
-    if (auto cubinAttr = translateGpuModuleToCubinAnnotation(
-            *llvmModule, module.getLoc(), *module.getName()))
+    if (auto cubinAttr = translateGPUModuleToCubinAnnotation(
+            *llvmModule, module.getLoc(), module.getName()))
       module.setAttr(kCubinAnnotation, cubinAttr);
     else
       signalPassFailure();
@@ -92,7 +89,7 @@ private:
                                   StringRef name);
 
   /// Translates llvmModule to cubin and returns the result as attribute.
-  StringAttr translateGpuModuleToCubinAnnotation(llvm::Module &llvmModule,
+  StringAttr translateGPUModuleToCubinAnnotation(llvm::Module &llvmModule,
                                                  Location loc, StringRef name);
 
   CubinGenerator cubinGenerator;
@@ -149,7 +146,7 @@ OwnedCubin GpuKernelToCubinPass::convertModuleToCubin(llvm::Module &llvmModule,
   return cubinGenerator(ptx, loc, name);
 }
 
-StringAttr GpuKernelToCubinPass::translateGpuModuleToCubinAnnotation(
+StringAttr GpuKernelToCubinPass::translateGPUModuleToCubinAnnotation(
     llvm::Module &llvmModule, Location loc, StringRef name) {
   auto cubin = convertModuleToCubin(llvmModule, loc, name);
   if (!cubin)
@@ -157,7 +154,7 @@ StringAttr GpuKernelToCubinPass::translateGpuModuleToCubinAnnotation(
   return StringAttr::get({cubin->data(), cubin->size()}, loc->getContext());
 }
 
-std::unique_ptr<OpPassBase<ModuleOp>>
+std::unique_ptr<OpPassBase<gpu::GPUModuleOp>>
 mlir::createConvertGPUKernelToCubinPass(CubinGenerator cubinGenerator) {
   return std::make_unique<GpuKernelToCubinPass>(cubinGenerator);
 }

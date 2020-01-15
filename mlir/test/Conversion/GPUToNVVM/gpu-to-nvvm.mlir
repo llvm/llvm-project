@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -convert-gpu-to-nvvm -split-input-file | FileCheck %s
 
-module attributes {gpu.kernel_module} {
+gpu.module @test_module {
   // CHECK-LABEL: func @gpu_index_ops()
   func @gpu_index_ops()
       attributes { gpu.kernel } {
@@ -38,7 +38,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @test_module {
   // CHECK-LABEL: func @gpu_all_reduce_op()
   func @gpu_all_reduce_op()
       attributes { gpu.kernel } {
@@ -55,7 +55,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @test_module {
   // CHECK-LABEL: func @gpu_all_reduce_region()
   func @gpu_all_reduce_region()
       attributes { gpu.kernel } {
@@ -74,7 +74,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @test_module {
   // CHECK-LABEL: func @gpu_shuffle()
   func @gpu_shuffle()
       attributes { gpu.kernel } {
@@ -99,7 +99,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @test_module {
   // CHECK-LABEL: func @gpu_sync()
   func @gpu_sync()
       attributes { gpu.kernel } {
@@ -111,7 +111,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @test_module {
   // CHECK: llvm.func @__nv_fabsf(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @__nv_fabs(!llvm.double) -> !llvm.double
   // CHECK-LABEL: func @gpu_fabs
@@ -126,7 +126,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @test_module {
   // CHECK: llvm.func @__nv_ceilf(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @__nv_ceil(!llvm.double) -> !llvm.double
   // CHECK-LABEL: func @gpu_ceil
@@ -141,7 +141,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @test_module {
   // CHECK: llvm.func @__nv_cosf(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @__nv_cos(!llvm.double) -> !llvm.double
   // CHECK-LABEL: func @gpu_cos
@@ -156,7 +156,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @test_module {
   // CHECK: llvm.func @__nv_expf(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @__nv_exp(!llvm.double) -> !llvm.double
   // CHECK-LABEL: func @gpu_exp
@@ -174,7 +174,7 @@ module attributes {gpu.kernel_module} {
 // -----
 
 // Test that we handled properly operation with SymbolTable other than module op
-module attributes {gpu.kernel_module} {
+gpu.module @test_module {
   "test.symbol_scope"() ({
   // CHECK: test.symbol_scope
   // CHECK: llvm.func @__nv_expf(!llvm.float) -> !llvm.float
