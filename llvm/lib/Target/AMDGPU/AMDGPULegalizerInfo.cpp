@@ -2771,10 +2771,72 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeIntrinsic(
+bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
     MachineInstr &MI, MachineIRBuilder &B,
-    GISelChangeObserver &Observer) const {
+    GISelChangeObserver &Observer,
+    const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) const {
+  // We are only processing the operands of d16 image operations on subtargets
+  // that use the unpacked register layout.
+  if (!ST.hasUnpackedD16VMem())
+    return true;
+
+  const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
+    AMDGPU::getMIMGBaseOpcodeInfo(ImageDimIntr->BaseOpcode);
+
+  if (BaseOpcode->Atomic) // No d16 atomics
+    return true;
+
+  MachineRegisterInfo *MRI = B.getMRI();
+  const LLT S32 = LLT::scalar(32);
+  const LLT S16 = LLT::scalar(16);
+
+  if (BaseOpcode->Store) {
+    Register VData = MI.getOperand(1).getReg();
+    LLT Ty = MRI->getType(VData);
+    if (!Ty.isVector() || Ty.getElementType() != S16)
+      return true;
+
+    B.setInstr(MI);
+
+    Observer.changingInstr(MI);
+    MI.getOperand(1).setReg(handleD16VData(B, *MRI, VData));
+    Observer.changedInstr(MI);
+    return true;
+  }
+
+  // Must be an image load.
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT Ty = MRI->getType(DstReg);
+  if (!Ty.isVector() || Ty.getElementType() != S16)
+    return true;
+
+  B.setInsertPt(*MI.getParent(), ++MI.getIterator());
+
+  LLT WidenedTy = Ty.changeElementType(S32);
+  Register WideDstReg = MRI->createGenericVirtualRegister(WidenedTy);
+
+  Observer.changingInstr(MI);
+  MI.getOperand(0).setReg(WideDstReg);
+  Observer.changedInstr(MI);
+
+  // FIXME: Just vector trunc should be sufficent, but legalization currently
+  // broken.
+  auto Unmerge = B.buildUnmerge(S32, WideDstReg);
+
+  int NumOps = Unmerge->getNumOperands() - 1;
+  SmallVector<Register, 4> RemergeParts(NumOps);
+  for (int I = 0; I != NumOps; ++I)
+    RemergeParts[I] = B.buildTrunc(S16, Unmerge.getReg(I)).getReg(0);
+
+  B.buildBuildVector(DstReg, RemergeParts);
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
+                                            MachineIRBuilder &B,
+                                            GISelChangeObserver &Observer) const {
   MachineRegisterInfo &MRI = *B.getMRI();
+
   // Replace the use G_BRCOND with the exec manipulate and branch pseudos.
   auto IntrID = MI.getIntrinsicID();
   switch (IntrID) {
@@ -2935,8 +2997,12 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(
     return legalizeAtomicIncDec(MI, B, true);
   case Intrinsic::amdgcn_atomic_dec:
     return legalizeAtomicIncDec(MI, B, false);
-  default:
+  default: {
+    if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
+            AMDGPU::getImageDimIntrinsicInfo(IntrID))
+      return legalizeImageIntrinsic(MI, B, Observer, ImageDimIntr);
     return true;
+  }
   }
 
   return true;
