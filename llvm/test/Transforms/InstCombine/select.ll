@@ -1572,17 +1572,17 @@ define float @copysign3(float %x) {
   ret float %r
 }
 
-define float @copysign4(float %x) {
+define <2 x float> @copysign4(<2 x float> %x) {
 ; CHECK-LABEL: @copysign4(
-; CHECK-NEXT:    [[I:%.*]] = bitcast float [[X:%.*]] to i32
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[I]], 0
-; CHECK-NEXT:    [[R:%.*]] = select nnan arcp i1 [[ISNEG]], float -4.400000e+01, float 4.400000e+01
-; CHECK-NEXT:    ret float [[R]]
+; CHECK-NEXT:    [[I:%.*]] = bitcast <2 x float> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i32> [[I]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select nnan arcp <2 x i1> [[ISNEG]], <2 x float> <float 4.200000e+01, float undef>, <2 x float> <float -4.200000e+01, float -4.200000e+01>
+; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
-  %i = bitcast float %x to i32
-  %isneg = icmp ugt i32 %i, 2147483647
-  %r = select arcp nnan i1 %isneg, float -44.0, float 44.0
-  ret float %r
+  %i = bitcast <2 x float> %x to <2 x i32>
+  %isneg = icmp ugt <2 x i32> %i, <i32 2147483647, i32 2147483647>
+  %r = select arcp nnan <2 x i1> %isneg, <2 x float> <float 42.0, float undef>, <2 x float> <float -42.0, float -42.0>
+  ret <2 x float> %r
 }
 
 declare void @use1(i1)
