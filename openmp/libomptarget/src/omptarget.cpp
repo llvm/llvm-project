@@ -139,7 +139,7 @@ static int InitLibrary(DeviceTy& Device) {
             (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
             (uintptr_t)CurrHostEntry->addr + CurrHostEntry->size /*HstPtrEnd*/,
             (uintptr_t)CurrDeviceEntry->addr /*TgtPtrBegin*/,
-            INF_REF_CNT /*RefCount*/));
+            true /*IsRefCountINF*/));
       }
     }
     Device.DataMapMtx.unlock();
@@ -301,7 +301,7 @@ int target_data_begin(DeviceTy &Device, int32_t arg_num,
         } else if (arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) {
           // Copy data only if the "parent" struct has RefCount==1.
           int32_t parent_idx = member_of(arg_types[i]);
-          long parent_rc = Device.getMapEntryRefCnt(args[parent_idx]);
+          uint64_t parent_rc = Device.getMapEntryRefCnt(args[parent_idx]);
           assert(parent_rc > 0 && "parent struct not found");
           if (parent_rc == 1) {
             copy = true;
@@ -402,7 +402,7 @@ int target_data_end(DeviceTy &Device, int32_t arg_num, void **args_base,
               !(arg_types[i] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) {
             // Copy data only if the "parent" struct has RefCount==1.
             int32_t parent_idx = member_of(arg_types[i]);
-            long parent_rc = Device.getMapEntryRefCnt(args[parent_idx]);
+            uint64_t parent_rc = Device.getMapEntryRefCnt(args[parent_idx]);
             assert(parent_rc > 0 && "parent struct not found");
             if (parent_rc == 1) {
               CopyMember = true;
