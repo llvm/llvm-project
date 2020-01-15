@@ -2191,7 +2191,8 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
 
   if (language == eLanguageTypeSwift) {
     if (auto *swift_ast_ctx =
-            llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err)) {
+            llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
+                &*type_system_or_err)) {
       if (swift_ast_ctx->CheckProcessChanged() ||
           swift_ast_ctx->HasFatalErrors()) {
         // If it is safe to replace the scratch context, do so. If
@@ -2226,7 +2227,8 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
             return std::move(type_system_or_err.takeError());
 
           if (SwiftASTContext *new_swift_ast_ctx =
-                  llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err)) {
+                  llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
+                      &*type_system_or_err)) {
             if (new_swift_ast_ctx->HasFatalErrors()) {
               if (StreamSP error_stream_sp =
                       GetDebugger().GetAsyncErrorStream()) {
