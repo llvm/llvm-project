@@ -2125,8 +2125,8 @@ class CXXCtorInitializer final {
   /// Either the base class name/delegating constructor type (stored as
   /// a TypeSourceInfo*), an normal field (FieldDecl), or an anonymous field
   /// (IndirectFieldDecl*) being initialized.
-  llvm::PointerUnion3<TypeSourceInfo *, FieldDecl *, IndirectFieldDecl *>
-    Initializee;
+  llvm::PointerUnion<TypeSourceInfo *, FieldDecl *, IndirectFieldDecl *>
+      Initializee;
 
   /// The source location for the field name or, for a base initializer
   /// pack expansion, the location of the ellipsis.
