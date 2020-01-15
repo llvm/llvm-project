@@ -2,7 +2,7 @@
 
 module attributes {gpu.container_module} {
 
-  gpu.module @kernels {
+  module @kernels attributes {gpu.kernel_module} {
     // CHECK:       spv.module "Logical" "GLSL450" {
     // CHECK-LABEL: func @kernel_1
     // CHECK-SAME: {{%.*}}: f32 {spv.interface_var_abi = {binding = 0 : i32, descriptor_set = 0 : i32, storage_class = 12 : i32{{[}][}]}}
