@@ -26,7 +26,9 @@ clang::syntax::Leaf *syntax::createPunctuation(clang::syntax::Arena &A,
                     .second;
   assert(Tokens.size() == 1);
   assert(Tokens.front().kind() == K);
-  return new (A.allocator()) clang::syntax::Leaf(Tokens.begin());
+  auto *L = new (A.allocator()) clang::syntax::Leaf(Tokens.begin());
+  L->assertInvariants();
+  return L;
 }
 
 clang::syntax::EmptyStatement *
@@ -34,5 +36,6 @@ syntax::createEmptyStatement(clang::syntax::Arena &A) {
   auto *S = new (A.allocator()) clang::syntax::EmptyStatement;
   FactoryImpl::prependChildLowLevel(S, createPunctuation(A, clang::tok::semi),
                                     NodeRole::Unknown);
+  S->assertInvariants();
   return S;
 }
