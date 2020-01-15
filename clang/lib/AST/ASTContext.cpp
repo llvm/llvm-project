@@ -661,8 +661,9 @@ comments::FullComment *ASTContext::getCommentForDecl(
   return FC;
 }
 
-void
+void 
 ASTContext::CanonicalTemplateTemplateParm::Profile(llvm::FoldingSetNodeID &ID,
+                                                   const ASTContext &C,
                                                TemplateTemplateParmDecl *Parm) {
   ID.AddInteger(Parm->getDepth());
   ID.AddInteger(Parm->getPosition());
@@ -676,6 +677,16 @@ ASTContext::CanonicalTemplateTemplateParm::Profile(llvm::FoldingSetNodeID &ID,
     if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(*P)) {
       ID.AddInteger(0);
       ID.AddBoolean(TTP->isParameterPack());
+      const TypeConstraint *TC = TTP->getTypeConstraint();
+      ID.AddBoolean(TC != nullptr);
+      if (TC)
+        TC->getImmediatelyDeclaredConstraint()->Profile(ID, C,
+                                                        /*Canonical=*/true);
+      if (TTP->isExpandedParameterPack()) {
+        ID.AddBoolean(true);
+        ID.AddInteger(TTP->getNumExpansionParameters());
+      } else
+        ID.AddBoolean(false);
       continue;
     }
 
@@ -697,8 +708,12 @@ ASTContext::CanonicalTemplateTemplateParm::Profile(llvm::FoldingSetNodeID &ID,
 
     auto *TTP = cast<TemplateTemplateParmDecl>(*P);
     ID.AddInteger(2);
-    Profile(ID, TTP);
+    Profile(ID, C, TTP);
   }
+  Expr *RequiresClause = Parm->getTemplateParameters()->getRequiresClause();
+  ID.AddBoolean(RequiresClause != nullptr);
+  if (RequiresClause)
+    RequiresClause->Profile(ID, C, /*Canonical=*/true);
 }
 
 TemplateTemplateParmDecl *
@@ -706,7 +721,7 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
                                           TemplateTemplateParmDecl *TTP) const {
   // Check if we already have a canonical template template parameter.
   llvm::FoldingSetNodeID ID;
-  CanonicalTemplateTemplateParm::Profile(ID, TTP);
+  CanonicalTemplateTemplateParm::Profile(ID, *this, TTP);
   void *InsertPos = nullptr;
   CanonicalTemplateTemplateParm *Canonical
     = CanonTemplateTemplateParms.FindNodeOrInsertPos(ID, InsertPos);
@@ -720,15 +735,79 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
   for (TemplateParameterList::const_iterator P = Params->begin(),
                                           PEnd = Params->end();
        P != PEnd; ++P) {
-    if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(*P))
-      CanonParams.push_back(
-                  TemplateTypeParmDecl::Create(*this, getTranslationUnitDecl(),
-                                               SourceLocation(),
-                                               SourceLocation(),
-                                               TTP->getDepth(),
-                                               TTP->getIndex(), nullptr, false,
-                                               TTP->isParameterPack()));
-    else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(*P)) {
+    if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(*P)) {
+      TemplateTypeParmDecl *NewTTP = TemplateTypeParmDecl::Create(*this,
+          getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
+          TTP->getDepth(), TTP->getIndex(), nullptr, false,
+          TTP->isParameterPack(), TTP->hasTypeConstraint(),
+          TTP->isExpandedParameterPack() ?
+          llvm::Optional<unsigned>(TTP->getNumExpansionParameters()) : None);
+      if (const auto *TC = TTP->getTypeConstraint()) {
+        // This is a bit ugly - we need to form a new immediately-declared
+        // constraint that references the new parameter; this would ideally
+        // require semantic analysis (e.g. template<C T> struct S {}; - the
+        // converted arguments of C<T> could be an argument pack if C is
+        // declared as template<typename... T> concept C = ...).
+        // We don't have semantic analysis here so we dig deep into the
+        // ready-made constraint expr and change the thing manually.
+        Expr *IDC = TC->getImmediatelyDeclaredConstraint();
+        ConceptSpecializationExpr *CSE;
+        if (const auto *Fold = dyn_cast<CXXFoldExpr>(IDC))
+          CSE = cast<ConceptSpecializationExpr>(Fold->getLHS());
+        else
+          CSE = cast<ConceptSpecializationExpr>(IDC);
+        ArrayRef<TemplateArgument> OldConverted = CSE->getTemplateArguments();
+        SmallVector<TemplateArgument, 3> NewConverted;
+        NewConverted.reserve(OldConverted.size());
+
+        QualType ParamAsArgument(NewTTP->getTypeForDecl(), 0);
+        if (OldConverted.front().getKind() == TemplateArgument::Pack) {
+          // The case:
+          // template<typename... T> concept C = true;
+          // template<C<int> T> struct S; -> constraint is C<{T, int}>
+          NewConverted.push_back(ParamAsArgument);
+          for (auto &Arg : OldConverted.front().pack_elements().drop_front(1))
+            NewConverted.push_back(Arg);
+          TemplateArgument NewPack(NewConverted);
+
+          NewConverted.clear();
+          NewConverted.push_back(NewPack);
+          assert(OldConverted.size() == 1 &&
+                 "Template parameter pack should be the last parameter");
+        } else {
+          assert(OldConverted.front().getKind() == TemplateArgument::Type &&
+                 "Unexpected first argument kind for immediately-declared "
+                 "constraint");
+          NewConverted.push_back(ParamAsArgument);
+          for (auto &Arg : OldConverted.drop_front(1))
+            NewConverted.push_back(Arg);
+        }
+        Expr *NewIDC = ConceptSpecializationExpr::Create(*this,
+            NestedNameSpecifierLoc(), /*TemplateKWLoc=*/SourceLocation(),
+            CSE->getConceptNameInfo(), /*FoundDecl=*/CSE->getNamedConcept(),
+            CSE->getNamedConcept(),
+            // Actually canonicalizing a TemplateArgumentLoc is difficult so we
+            // simply omit the ArgsAsWritten
+            /*ArgsAsWritten=*/nullptr, NewConverted, nullptr);
+
+        if (auto *OrigFold = dyn_cast<CXXFoldExpr>(IDC))
+          NewIDC = new (*this) CXXFoldExpr(OrigFold->getType(),
+                                           SourceLocation(), NewIDC,
+                                           BinaryOperatorKind::BO_LAnd,
+                                           SourceLocation(), /*RHS=*/nullptr,
+                                           SourceLocation(),
+                                           /*NumExpansions=*/None);
+
+        NewTTP->setTypeConstraint(
+            NestedNameSpecifierLoc(),
+            DeclarationNameInfo(TC->getNamedConcept()->getDeclName(),
+                                SourceLocation()), /*FoundDecl=*/nullptr,
+            // Actually canonicalizing a TemplateArgumentLoc is difficult so we
+            // simply omit the ArgsAsWritten
+            CSE->getNamedConcept(), /*ArgsAsWritten=*/nullptr, NewIDC);
+      }
+      CanonParams.push_back(NewTTP);
+    } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(*P)) {
       QualType T = getCanonicalType(NTTP->getType());
       TypeSourceInfo *TInfo = getTrivialTypeSourceInfo(T);
       NonTypeTemplateParmDecl *Param;
@@ -767,9 +846,9 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
                                            cast<TemplateTemplateParmDecl>(*P)));
   }
 
-  assert(!TTP->getTemplateParameters()->getRequiresClause() &&
-         "Unexpected requires-clause on template template-parameter");
-  Expr *const CanonRequiresClause = nullptr;
+  Expr *CanonRequiresClause = nullptr;
+  if (Expr *RequiresClause = TTP->getTemplateParameters()->getRequiresClause())
+    CanonRequiresClause = RequiresClause;
 
   TemplateTemplateParmDecl *CanonTTP
     = TemplateTemplateParmDecl::Create(*this, getTranslationUnitDecl(),
@@ -865,7 +944,8 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
     : ConstantArrayTypes(this_()), FunctionProtoTypes(this_()),
       TemplateSpecializationTypes(this_()),
       DependentTemplateSpecializationTypes(this_()),
-      SubstTemplateTemplateParmPacks(this_()), SourceMgr(SM), LangOpts(LOpts),
+      SubstTemplateTemplateParmPacks(this_()),
+      CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
       SanitizerBL(new SanitizerBlacklist(LangOpts.SanitizerBlacklistFiles, SM)),
       XRayFilter(new XRayFunctionFilter(LangOpts.XRayAlwaysInstrumentFiles,
                                         LangOpts.XRayNeverInstrumentFiles,

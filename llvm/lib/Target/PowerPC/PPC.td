@@ -442,7 +442,7 @@ def : ProcessorModel<"g5", G5Model,
 def : ProcessorModel<"e500", PPCE500Model,
                   [DirectiveE500,
                    FeatureICBT, FeatureBookE,
-                   FeatureISEL, FeatureMFTB]>;
+                   FeatureISEL, FeatureMFTB, FeatureSPE]>;
 def : ProcessorModel<"e500mc", PPCE500mcModel,
                   [DirectiveE500mc,
                    FeatureSTFIWX, FeatureICBT, FeatureBookE,

@@ -2986,7 +2986,11 @@ static void AddTemplateParameterChunks(
     if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(*P)) {
       if (TTP->wasDeclaredWithTypename())
         PlaceholderStr = "typename";
-      else
+      else if (const auto *TC = TTP->getTypeConstraint()) {
+        llvm::raw_string_ostream OS(PlaceholderStr);
+        TC->print(OS, Policy);
+        OS.flush();
+      } else
         PlaceholderStr = "class";
 
       if (TTP->getIdentifier()) {

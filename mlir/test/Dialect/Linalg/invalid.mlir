@@ -68,7 +68,7 @@ func @generic_at_least_2_operands(%arg0: memref<f32>) {
 // -----
 
 func @generic_exactly_2_views(%arg0: memref<f32>) {
-  // expected-error @+1 {{op expected exactly 2 view operands}}
+  // expected-error @+1 {{op expected exactly 2 inputs (tensor or buffer) and output buffer operands}}
   linalg.generic {
     args_in = 1,
     args_out = 1,
@@ -81,7 +81,7 @@ func @generic_exactly_2_views(%arg0: memref<f32>) {
 // -----
 
 func @generic_undefined_fun(%arg0: memref<f32>) {
-  // expected-error @+1 {{op expected fun attribute to refer to a defined symbol}}
+  // expected-error @+1 {{op expected function attribute to refer to a defined symbol}}
   linalg.generic {
     args_in = 1,
     args_out = 1,
@@ -96,7 +96,7 @@ func @generic_undefined_fun(%arg0: memref<f32>) {
 func @foo() { return }
 
 func @generic_mismatched_num_arguments(%arg0: memref<f32>) {
-  // expected-error @+1 {{op expected fun arguments to match number of views}}
+  // expected-error @+1 {{op expected function arguments to match number of operands}}
   linalg.generic {
     args_in = 0,
     args_out = 1,
@@ -111,7 +111,7 @@ func @generic_mismatched_num_arguments(%arg0: memref<f32>) {
 func @foo(%0: i32) { return }
 
 func @generic_mismatched_num_returns(%arg0: memref<f32>) {
-  // expected-error @+1 {{op expected fun results to match number of output views}}
+  // expected-error @+1 {{op expected function results(0) to match number of outputs(1)}}
   linalg.generic {
     args_in = 0,
     args_out = 1,
@@ -119,6 +119,36 @@ func @generic_mismatched_num_returns(%arg0: memref<f32>) {
     indexing_maps =  [ affine_map<() -> (0)> ],
     iterator_types = []
   } %arg0: memref<f32>
+}
+
+// -----
+
+func @foo(%0: i32, %1: i32, %2: i32) { return }
+
+func @generic_mismatched_num_returns(%0: memref<i32>, %1: memref<f32>) {
+  // expected-error @+1 {{op expected function argument 2 of the same type as elemental type 'f32' of operand 2}}
+  linalg.generic {
+    args_in = 3,
+    args_out = 0,
+    fun = @foo,
+    indexing_maps =  [ affine_map<() -> (0)> ],
+    iterator_types = []
+  } %0, %1, %1: memref<i32>, memref<f32>, memref<f32>
+}
+
+// -----
+
+func @foo(%0: i32, %1: i32, %2: f32) -> i32 { return %1: i32}
+
+func @generic_mismatched_num_returns(%0: memref<i32>, %1: memref<f32>) {
+  // expected-error @+1 {{op expected function result 1 of the same type as elemental type 'f32' of output 1}}
+  linalg.generic {
+    args_in = 2,
+    args_out = 1,
+    fun = @foo,
+    indexing_maps =  [ affine_map<() -> (0)> ],
+    iterator_types = []
+  } %0, %0, %1: memref<i32>, memref<i32>, memref<f32>
 }
 
 // -----
@@ -189,7 +219,7 @@ func @foo(%0: i32) -> f32 {
 }
 
 func @generic_fun_arg_0_element_type(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
-  // expected-error @+1 {{op expected fun argument 0 of the same type as elemental type 'f32' of view 0}}
+  // expected-error @+1 {{op expected function argument 1 of the same type as elemental type 'f32' of operand 1}}
   linalg.generic {
     args_in = 0,
     args_out = 1,
@@ -207,7 +237,7 @@ func @foo(%0: f32) -> i4 {
 }
 
 func @generic_fun_result_0_element_type(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
-  // expected-error @+1 {{op expected fun result 0 of the same type as elemental type 'f32' of view 0}}
+  // expected-error @+1 {{op expected function result 1 of the same type as elemental type 'f32' of output 1}}
   linalg.generic {
     args_in = 0,
     args_out = 1,
@@ -257,7 +287,7 @@ func @generic_empty_region(%arg0: memref<f32>) {
 // -----
 
 func @generic_mismatched_num_arguments(%arg0: memref<f32>) {
-  // expected-error @+1 {{op expected number of block arguments to match number of views}}
+  // expected-error @+1 {{op expected number of block arguments to match number of operands}}
   linalg.generic {
     args_in = 0,
     args_out = 1,
@@ -271,7 +301,7 @@ func @generic_mismatched_num_arguments(%arg0: memref<f32>) {
 // -----
 
 func @generic_block_arg_type(%arg0: memref<f32>) {
-  // expected-error @+1 {{op expected block argument 0 of the same type as elemental type of output view: 'memref<f32>'}}
+  // expected-error @+1 {{op expected block argument 1 of the same type as elemental type of output operand: 'memref<f32>'}}
   linalg.generic {
     args_in = 0,
     args_out = 1,
@@ -285,7 +315,7 @@ func @generic_block_arg_type(%arg0: memref<f32>) {
 // -----
 
 func @indexed_generic_block_arg_count(%arg0: memref<f32>) {
-  // expected-error @+1 {{op expected number of block arguments to match number of views + number of loops}}
+  // expected-error @+1 {{op expected number of block arguments to match number of operands + number of loops}}
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
@@ -299,7 +329,7 @@ func @indexed_generic_block_arg_count(%arg0: memref<f32>) {
 // -----
 
 func @indexed_generic_block_induction_var_arg_type(%arg0: memref<f32>) {
-  // expected-error @+1 {{op expected block argument 0 to be of IndexType}}
+  // expected-error @+1 {{op expected block argument 1 to be an index}}
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
@@ -313,7 +343,7 @@ func @indexed_generic_block_induction_var_arg_type(%arg0: memref<f32>) {
 // -----
 
 func @indexed_generic_block_arg_type(%arg0: memref<f32>) {
-  // expected-error @+1 {{op expected block argument 1 of the same type as elemental type of output view: 'memref<f32>'}}
+  // expected-error @+1 {{op expected block argument 2 of the same type as elemental type of output operand: 'memref<f32>'}}
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
@@ -330,7 +360,7 @@ func @foo(%f: f32) -> (f32) {
   return %f : f32
 }
 func @indexed_generic_fun_arg_count(%arg0: memref<f32>) {
-  // expected-error @+1 {{op expected fun arguments to match number of views + number of loops}}
+  // expected-error @+1 {{op expected function arguments to match number of loops + number of operands}}
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
@@ -346,7 +376,7 @@ func @foo(%i: i32, %val: f32) -> (f32) {
   return %val : f32
 }
 func @indexed_generic_fun_induction_var_arg_type(%arg0: memref<f32>) {
-  // expected-error @+1 {{op expected fun argument 0 to be of IndexType}}
+  // expected-error @+1 {{op expected function argument 1 to be an index}}
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
@@ -362,7 +392,7 @@ func @foo(%i: index, %val: i1) -> (i1) {
   return %val : i1
 }
 func @indexed_generic_fun_arg_type(%arg0: memref<f32>) {
-  // expected-error @+1 {{op expected fun argument 1 of the same type as elemental type 'f32' of view 0}}
+  // expected-error @+1 {{op expected function argument 2 of the same type as elemental type 'f32' of input 1}}
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
@@ -378,7 +408,7 @@ func @foo(%i: index, %val: i1) -> (i1, i1) {
   return %val, %val : i1, i1
 }
 func @indexed_generic_fun_result_count(%arg0: memref<f32>) {
-  // expected-error @+1 {{op expected fun results to match number of output views}}
+  // expected-error @+1 {{op expected function results to match number of outputs}}
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
@@ -395,7 +425,7 @@ func @foo(%i: index, %val: i32) -> (f32) {
   return %val_float : f32
 }
 func @indexed_generic_fun_result_count(%arg0: memref<i32>) {
-  // expected-error @+1 {{op expected fun result 0 of the same type as elemental type 'i32' of view 0}}
+  // expected-error @+1 {{op expected function result 1 of the same type as elemental type 'i32' of output 1}}
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
@@ -408,7 +438,7 @@ func @indexed_generic_fun_result_count(%arg0: memref<i32>) {
 // -----
 
 func @generic_fun_result_0_element_type(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
-  // expected-error @+9 {{type of return operand 0 ('i1') doesn't match view element type ('f32')}}
+  // expected-error @+9 {{type of yield operand 1 ('i1') doesn't match the element type of the enclosing linalg.generic op ('f32')}}
   linalg.generic {
     args_in = 0,
     args_out = 1,
@@ -434,36 +464,6 @@ func @generic_result_tensor_type(%arg0: memref<?xf32, affine_map<(i)[off]->(off 
     ^bb(%i: f32):
       linalg.yield %i: f32
   }: memref<?xf32, affine_map<(i)[off]->(off + i)>> -> f32
-}
-
-// -----
-
-func @generic_result_tensor_count(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
-  // expected-error @+1 {{op expected #output tensor operands (0) to match #results (1)}}
-  %0 = linalg.generic {
-    args_in = 0,
-    args_out = 1,
-    indexing_maps = [ affine_map<(i) -> (i)> ],
-    iterator_types = ["parallel"]
-  } %arg0 {
-    ^bb(%i: f32):
-      linalg.yield %i: f32
-  }: memref<?xf32, affine_map<(i)[off]->(off + i)>> -> tensor<?xf32>
-}
-
-// -----
-
-func @generic_result_tensor_type(%arg0: tensor<?xf32>) {
-  // expected-error @+1 {{op result #0 must be 'tensor<?xf32>', but got 'tensor<?x?xf32>'}}
-  %0 = linalg.generic {
-    args_in = 0,
-    args_out = 1,
-    indexing_maps = [ affine_map<(i) -> (i)> ],
-    iterator_types = ["parallel"]
-  } %arg0 {
-    ^bb(%i: f32):
-      linalg.yield %i: f32
-  }: tensor<?xf32> -> tensor<?x?xf32>
 }
 
 // -----

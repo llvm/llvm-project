@@ -1765,9 +1765,9 @@ CUDAKernelCallExpr *CUDAKernelCallExpr::CreateEmpty(const ASTContext &Ctx,
   return new (Mem) CUDAKernelCallExpr(NumArgs, Empty);
 }
 
-ConceptSpecializationExpr::ConceptSpecializationExpr(ASTContext &C,
+ConceptSpecializationExpr::ConceptSpecializationExpr(const ASTContext &C,
     NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
-    SourceLocation ConceptNameLoc, NamedDecl *FoundDecl,
+    DeclarationNameInfo ConceptNameInfo, NamedDecl *FoundDecl,
     ConceptDecl *NamedConcept, const ASTTemplateArgumentListInfo *ArgsAsWritten,
     ArrayRef<TemplateArgument> ConvertedArgs,
     const ConstraintSatisfaction *Satisfaction)
@@ -1776,34 +1776,31 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(ASTContext &C,
            // All the flags below are set in setTemplateArguments.
            /*ValueDependent=*/!Satisfaction, /*InstantiationDependent=*/false,
            /*ContainsUnexpandedParameterPacks=*/false),
-      NestedNameSpec(NNS), TemplateKWLoc(TemplateKWLoc),
-      ConceptNameLoc(ConceptNameLoc), FoundDecl(FoundDecl),
-      NamedConcept(NamedConcept), NumTemplateArgs(ConvertedArgs.size()),
+      ConceptReference(NNS, TemplateKWLoc, ConceptNameInfo, FoundDecl,
+                       NamedConcept, ArgsAsWritten),
+      NumTemplateArgs(ConvertedArgs.size()),
       Satisfaction(Satisfaction ?
                    ASTConstraintSatisfaction::Create(C, *Satisfaction) :
                    nullptr) {
-  setTemplateArguments(ArgsAsWritten, ConvertedArgs);
+  setTemplateArguments(ConvertedArgs);
 }
 
 ConceptSpecializationExpr::ConceptSpecializationExpr(EmptyShell Empty,
     unsigned NumTemplateArgs)
-    : Expr(ConceptSpecializationExprClass, Empty),
+    : Expr(ConceptSpecializationExprClass, Empty), ConceptReference(),
       NumTemplateArgs(NumTemplateArgs) { }
 
 void ConceptSpecializationExpr::setTemplateArguments(
-    const ASTTemplateArgumentListInfo *ArgsAsWritten,
     ArrayRef<TemplateArgument> Converted) {
   assert(Converted.size() == NumTemplateArgs);
-  assert(!this->ArgsAsWritten && "setTemplateArguments can only be used once");
-  this->ArgsAsWritten = ArgsAsWritten;
   std::uninitialized_copy(Converted.begin(), Converted.end(),
                           getTrailingObjects<TemplateArgument>());
   bool IsInstantiationDependent = false;
   bool ContainsUnexpandedParameterPack = false;
-  for (const TemplateArgumentLoc& LocInfo : ArgsAsWritten->arguments()) {
-    if (LocInfo.getArgument().isInstantiationDependent())
+  for (const TemplateArgument& Arg : Converted) {
+    if (Arg.isInstantiationDependent())
       IsInstantiationDependent = true;
-    if (LocInfo.getArgument().containsUnexpandedParameterPack())
+    if (Arg.containsUnexpandedParameterPack())
       ContainsUnexpandedParameterPack = true;
     if (ContainsUnexpandedParameterPack && IsInstantiationDependent)
       break;
@@ -1821,9 +1818,10 @@ void ConceptSpecializationExpr::setTemplateArguments(
 }
 
 ConceptSpecializationExpr *
-ConceptSpecializationExpr::Create(ASTContext &C, NestedNameSpecifierLoc NNS,
+ConceptSpecializationExpr::Create(const ASTContext &C,
+                                  NestedNameSpecifierLoc NNS,
                                   SourceLocation TemplateKWLoc,
-                                  SourceLocation ConceptNameLoc,
+                                  DeclarationNameInfo ConceptNameInfo,
                                   NamedDecl *FoundDecl,
                                   ConceptDecl *NamedConcept,
                                const ASTTemplateArgumentListInfo *ArgsAsWritten,
@@ -1832,7 +1830,7 @@ ConceptSpecializationExpr::Create(ASTContext &C, NestedNameSpecifierLoc NNS,
   void *Buffer = C.Allocate(totalSizeToAlloc<TemplateArgument>(
                                 ConvertedArgs.size()));
   return new (Buffer) ConceptSpecializationExpr(C, NNS, TemplateKWLoc,
-                                                ConceptNameLoc, FoundDecl,
+                                                ConceptNameInfo, FoundDecl,
                                                 NamedConcept, ArgsAsWritten,
                                                 ConvertedArgs, Satisfaction);
 }

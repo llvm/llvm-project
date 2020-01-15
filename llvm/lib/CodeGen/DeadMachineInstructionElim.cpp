@@ -82,28 +82,15 @@ bool DeadMachineInstructionElim::isDead(const MachineInstr *MI) const {
         if (LivePhysRegs.test(Reg) || MRI->isReserved(Reg))
           return false;
       } else {
-        // *** WORKAROUND:
-        // Skip handling subregs as this pass assumes the function still in SSA
-        // form. Definition on subreg only happens after DeSSA. A better
-        // solution is to insert this pass before DeSSA or Phi-elimination,
-        // says after dead-lane detection. But, it breaks many test cases due
-        // to register assignment and needs much effort to improve them.
-        //
-        // BTW, the case triggering issue is as follows:
-        //
-        //    a: X:sub1 := ..
-        //    b: Y      := use(.., X, ..)
-        //    c: X:sub0 := ..
-        //       .. no use of neither X nor Y ..
-        //
-        // This pass won't remove instruction `c` as `X` still has use @ `b`.
-        // But, 'b' will be removed later. Once `b` is removed, `a` will be
-        // removed after that. As a result, the subreg def in `c` has no `X`
-        // full definition dominating it and triggers the failure of machine IR
-        // verification.
-        //
-        if (MO.getSubReg())
-          return false;
+        if (MO.isDead()) {
+#ifndef NDEBUG
+          // Sanity check on uses of this dead register. All of them should be
+          // 'undef'.
+          for (auto &U : MRI->use_nodbg_operands(Reg))
+            assert(U.isUndef() && "'Undef' use on a 'dead' register is found!");
+#endif
+          continue;
+        }
         for (const MachineInstr &Use : MRI->use_nodbg_instructions(Reg)) {
           if (&Use != MI)
             // This def has a non-debug use. Don't delete the instruction!

@@ -3016,7 +3016,8 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
                 SemaRef.Context, SemaRef.Context.getTranslationUnitDecl(),
                 /*KeyLoc*/ SourceLocation(), /*NameLoc*/ D.getBeginLoc(),
                 TemplateParameterDepth, AutoParameterPosition,
-                /*Identifier*/ nullptr, false, IsParameterPack);
+                /*Identifier*/ nullptr, false, IsParameterPack,
+                /*HasTypeConstraint=*/false);
         CorrespondingTemplateParam->setImplicit();
         LSI->TemplateParams.push_back(CorrespondingTemplateParam);
         // Replace the 'auto' in the function parameter with this invented

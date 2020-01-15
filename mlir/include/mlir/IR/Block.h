@@ -312,12 +312,14 @@ public:
   }
 
   void print(raw_ostream &os);
+  void print(raw_ostream &os, AsmState &state);
   void dump();
 
   /// Print out the name of the block without printing its body.
   /// NOTE: The printType argument is ignored.  We keep it for compatibility
   /// with LLVM dominator machinery that expects it to exist.
   void printAsOperand(raw_ostream &os, bool printType = true);
+  void printAsOperand(raw_ostream &os, AsmState &state);
 
 private:
   /// Pair of the parent object that owns this block and a bit that signifies if

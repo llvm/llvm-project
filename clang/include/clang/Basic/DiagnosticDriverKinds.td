@@ -250,6 +250,9 @@ def err_drv_unsupported_embed_bitcode
 def err_drv_bitcode_unsupported_on_toolchain : Error<
   "-fembed-bitcode is not supported on versions of iOS prior to 6.0">;
 
+def err_drv_invalid_malign_branch_EQ : Error<
+  "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
+
 def warn_O4_is_O3 : Warning<"-O4 is equivalent to -O3">, InGroup<Deprecated>;
 def warn_drv_optimization_value : Warning<"optimization level '%0' is not supported; using '%1%2' instead">,
   InGroup<InvalidCommandLineArgument>;

@@ -537,6 +537,10 @@ public:
   }
 
   void VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
+    if (const auto *TC = D->getTypeConstraint())
+      if (TC->hasExplicitTemplateArgs())
+        for (const auto &ArgLoc : TC->getTemplateArgsAsWritten()->arguments())
+          dumpTemplateArgumentLoc(ArgLoc);
     if (D->hasDefaultArgument())
       Visit(D->getDefaultArgument(), SourceRange(),
             D->getDefaultArgStorage().getInheritedFrom(),
@@ -544,6 +548,8 @@ public:
   }
 
   void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *D) {
+    if (const auto *TC = D->getPlaceholderTypeConstraint())
+      Visit(TC->getImmediatelyDeclaredConstraint());
     if (D->hasDefaultArgument())
       Visit(D->getDefaultArgument(), SourceRange(),
             D->getDefaultArgStorage().getInheritedFrom(),
