@@ -309,8 +309,7 @@ bool Dpu::PrepareStepOverPrintfBkp(
 
       if (stdout_file != NULL) {
         if (dpulog_read_and_display_contents_of(mram_buffer, mram_buffer_size,
-                                                stdout_file) !=
-            DPU_OK) {
+                                                stdout_file) != DPU_OK) {
           goto PrepareStepOverPrintfBkp_err;
         }
 
