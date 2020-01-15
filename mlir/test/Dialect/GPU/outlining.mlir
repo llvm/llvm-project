@@ -136,7 +136,7 @@ func @recursive_device_function() {
   gpu.return
 }
 
-// CHECK: gpu.module @function_call_kernel {
+// CHECK: module @function_call_kernel attributes {gpu.kernel_module} {
 // CHECK:   gpu.func @function_call_kernel()
 // CHECK:     call @device_function() : () -> ()
 // CHECK:     call @device_function() : () -> ()
