@@ -75,6 +75,9 @@ public:
     return *this;
   }
 
+  bool invalidate(Function &, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
+
   void releaseMemory();
 
   void print(raw_ostream &OS) const;
