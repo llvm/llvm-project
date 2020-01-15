@@ -5,6 +5,7 @@
 declare float @llvm.experimental.constrained.sqrt.f32(float, metadata, metadata)
 declare float @llvm.sqrt.f32(float)
 declare void @llvm.s390.sfpc(i32)
+declare void @bar()
 
 ; The basic assumption of all following tests is that on z13, we never
 ; want to see two square root instructions directly in a row, so the
@@ -300,7 +301,7 @@ define void @f13(float %f1) {
   ret void
 }
 
-define void @f14(float %f1) {
+define void @f14(float %f1) #0 {
 ; CHECK-LABEL: f14:
 ; CHECK-NOT: sqeb
 ; CHECK: br %r14
@@ -313,7 +314,7 @@ define void @f14(float %f1) {
   ret void
 }
 
-define void @f15(float %f1) {
+define void @f15(float %f1) #0 {
 ; CHECK-LABEL: f15:
 ; CHECK-NOT: sqeb
 ; CHECK: br %r14
@@ -326,7 +327,7 @@ define void @f15(float %f1) {
   ret void
 }
 
-define void @f16(float %f1) {
+define void @f16(float %f1) #0 {
 ; CHECK-LABEL: f16:
 ; CHECK: sqebr
 ; CHECK: br %r14
@@ -336,6 +337,63 @@ define void @f16(float %f1) {
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
 
+  ret void
+}
+
+
+; Verify that constrained intrinsics and memory operations get their
+; chains linked up properly.
+
+define void @f17(float %in, float* %out) #0 {
+; CHECK-LABEL: f17:
+; CHECK: sqebr
+; CHECK: ste
+; CHECK: jg bar
+  %sqrt = call float @llvm.sqrt.f32(float %in)
+  store float %sqrt, float* %out, align 4
+  tail call void @bar() #0
+  ret void
+}
+
+define void @f18(float %in, float* %out) #0 {
+; CHECK-LABEL: f18:
+; CHECK: sqebr
+; CHECK: ste
+; CHECK: jg bar
+  %sqrt = call float @llvm.experimental.constrained.sqrt.f32(
+                        float %in,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.ignore") #0
+  store float %sqrt, float* %out, align 4
+  tail call void @bar() #0
+  ret void
+}
+
+define void @f19(float %in, float* %out) #0 {
+; CHECK-LABEL: f19:
+; CHECK: sqebr
+; CHECK: ste
+; CHECK: jg bar
+  %sqrt = call float @llvm.experimental.constrained.sqrt.f32(
+                        float %in,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.maytrap") #0
+  store float %sqrt, float* %out, align 4
+  tail call void @bar() #0
+  ret void
+}
+
+define void @f20(float %in, float* %out) #0 {
+; CHECK-LABEL: f20:
+; CHECK: sqebr
+; CHECK: ste
+; CHECK: jg bar
+  %sqrt = call float @llvm.experimental.constrained.sqrt.f32(
+                        float %in,
+                        metadata !"round.dynamic",
+                        metadata !"fpexcept.strict") #0
+  store float %sqrt, float* %out, align 4
+  tail call void @bar() #0
   ret void
 }
 
