@@ -2442,15 +2442,20 @@ void HashTableSection::writeTo(uint8_t *buf) {
   }
 }
 
-// On PowerPC64 the lazy symbol resolvers go into the `global linkage table`
-// in the .glink section, rather then the typical .plt section.
 PltSection::PltSection()
     : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".plt"),
       headerSize(target->pltHeaderSize) {
+  // On PowerPC, this section contains lazy symbol resolvers.
   if (config->emachine == EM_PPC || config->emachine == EM_PPC64) {
     name = ".glink";
     alignment = 4;
   }
+
+  // On x86 when IBT is enabled, this section contains the second PLT (lazy
+  // symbol resolvers).
+  if ((config->emachine == EM_386 || config->emachine == EM_X86_64) &&
+      (config->andFeatures & GNU_PROPERTY_X86_FEATURE_1_IBT))
+    name = ".plt.sec";
 
   // The PLT needs to be writable on SPARC as the dynamic linker will
   // modify the instructions in the PLT entries.
@@ -2533,6 +2538,76 @@ void IpltSection::addSymbols() {
     target->addPltSymbols(*this, off);
     off += target->pltEntrySize;
   }
+}
+
+// This is an x86-only extra PLT section and used only when a security
+// enhancement feature called CET is enabled. In this comment, I'll explain what
+// the feature is and why we have two PLT sections if CET is enabled.
+//
+// So, what does CET do? CET introduces a new restriction to indirect jump
+// instructions. CET works this way. Assume that CET is enabled. Then, if you
+// execute an indirect jump instruction, the processor verifies that a special
+// "landing pad" instruction (which is actually a repurposed NOP instruction and
+// now called "endbr32" or "endbr64") is at the jump target. If the jump target
+// does not start with that instruction, the processor raises an exception
+// instead of continuing executing code.
+//
+// If CET is enabled, the compiler emits endbr to all locations where indirect
+// jumps may jump to.
+//
+// This mechanism makes it extremely hard to transfer the control to a middle of
+// a function that is not supporsed to be a indirect jump target, preventing
+// certain types of attacks such as ROP or JOP.
+//
+// Note that the processors in the market as of 2019 don't actually support the
+// feature. Only the spec is available at the moment.
+//
+// Now, I'll explain why we have this extra PLT section for CET.
+//
+// Since you can indirectly jump to a PLT entry, we have to make PLT entries
+// start with endbr. The problem is there's no extra space for endbr (which is 4
+// bytes long), as the PLT entry is only 16 bytes long and all bytes are already
+// used.
+//
+// In order to deal with the issue, we split a PLT entry into two PLT entries.
+// Remember that each PLT entry contains code to jump to an address read from
+// .got.plt AND code to resolve a dynamic symbol lazily. With the 2-PLT scheme,
+// the former code is written to .plt.sec, and the latter code is written to
+// .plt.
+//
+// Lazy symbol resolution in the 2-PLT scheme works in the usual way, except
+// that the regular .plt is now called .plt.sec and .plt is repurposed to
+// contain only code for lazy symbol resolution.
+//
+// In other words, this is how the 2-PLT scheme works. Application code is
+// supposed to jump to .plt.sec to call an external function. Each .plt.sec
+// entry contains code to read an address from a corresponding .got.plt entry
+// and jump to that address. Addresses in .got.plt initially point to .plt, so
+// when an application calls an external function for the first time, the
+// control is transferred to a function that resolves a symbol name from
+// external shared object files. That function then rewrites a .got.plt entry
+// with a resolved address, so that the subsequent function calls directly jump
+// to a desired location from .plt.sec.
+//
+// There is an open question as to whether the 2-PLT scheme was desirable or
+// not. We could have simply extended the PLT entry size to 32-bytes to
+// accommodate endbr, and that scheme would have been much simpler than the
+// 2-PLT scheme. One reason to split PLT was, by doing that, we could keep hot
+// code (.plt.sec) from cold code (.plt). But as far as I know no one proved
+// that the optimization actually makes a difference.
+//
+// That said, the 2-PLT scheme is a part of the ABI, debuggers and other tools
+// depend on it, so we implement the ABI.
+IBTPltSection::IBTPltSection()
+    : SyntheticSection(SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 16, ".plt") {}
+
+void IBTPltSection::writeTo(uint8_t *buf) {
+  target->writeIBTPlt(buf, in.plt->getNumEntries());
+}
+
+size_t IBTPltSection::getSize() const {
+  // 16 is the header size of .plt.
+  return 16 + in.plt->getNumEntries() * target->pltEntrySize;
 }
 
 // The string hash function for .gdb_index.
