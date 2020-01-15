@@ -62,4 +62,4 @@ class ForwardDeclarationTestCase(TestBase):
     def test_debug_names(self):
         """Test that we are able to find complete types when using DWARF v5
         accelerator tables"""
-        self.do_test(dict(CFLAGS_EXTRAS="-mllvm -accel-tables=Dwarf"))
+        self.do_test(dict(CFLAGS_EXTRAS="-gdwarf-5 -gpubnames"))

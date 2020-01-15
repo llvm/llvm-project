@@ -2,7 +2,7 @@
 
 // REQUIRES: lld
 
-// RUN: %clang %s -g -c -o %t.o --target=x86_64-pc-linux -mllvm -accel-tables=Dwarf -gpubnames
+// RUN: %clang %s -c -o %t.o --target=x86_64-pc-linux -gdwarf-5 -gpubnames
 // RUN: ld.lld %t.o -o %t
 // RUN: lldb-test symbols %t | FileCheck %s
 
