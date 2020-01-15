@@ -2226,7 +2226,7 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
           if (!type_system_or_err)
             return std::move(type_system_or_err.takeError());
 
-          if (SwiftASTContext *new_swift_ast_ctx =
+          if (auto *new_swift_ast_ctx =
                   llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
                       &*type_system_or_err)) {
             if (new_swift_ast_ctx->HasFatalErrors()) {
@@ -2449,7 +2449,9 @@ SwiftASTContextReader Target::GetScratchSwiftASTContext(
       return nullptr;
     }
 
-    if (auto *global_scratch_ctx = llvm::cast_or_null<SwiftASTContext>(&*type_system_or_err))
+    if (auto *global_scratch_ctx =
+            llvm::cast_or_null<SwiftASTContextForExpressions>(
+                &*type_system_or_err))
       DisplayFallbackSwiftContextErrors(global_scratch_ctx);
 
     bool fallback = true;
@@ -2512,7 +2514,8 @@ GetSwiftScratchContextMutex(const ExecutionContextRef *exe_ctx_ref) {
 SwiftASTContextLock::SwiftASTContextLock(const ExecutionContextRef *exe_ctx_ref)
     : ScopedSharedMutexReader(GetSwiftScratchContextMutex(exe_ctx_ref)) {}
 
-void Target::DisplayFallbackSwiftContextErrors(SwiftASTContext *swift_ast_ctx) {
+void Target::DisplayFallbackSwiftContextErrors(
+    SwiftASTContextForExpressions *swift_ast_ctx) {
   assert(m_use_scratch_typesystem_per_module);
   StreamSP errs = GetDebugger().GetAsyncErrorStream();
   if (!errs || m_did_display_scratch_fallback_warning ||

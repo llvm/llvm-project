@@ -550,10 +550,11 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
     }
 
     auto *target_swift_ast =
-        llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
+        llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
+            &*type_system_or_err);
     m_swift_ast = target_swift_ast;
   }
-  SwiftASTContext *swift_ast = m_swift_ast;
+  SwiftASTContextForExpressions *swift_ast = m_swift_ast;
 
   if (swift_ast) {
     swift::ASTContext *ast = swift_ast->GetASTContext();
