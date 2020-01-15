@@ -190,8 +190,8 @@ public:
 /// only be understood in the context of
 class TemplateName {
   using StorageType =
-      llvm::PointerUnion4<TemplateDecl *, UncommonTemplateNameStorage *,
-                          QualifiedTemplateName *, DependentTemplateName *>;
+      llvm::PointerUnion<TemplateDecl *, UncommonTemplateNameStorage *,
+                         QualifiedTemplateName *, DependentTemplateName *>;
 
   StorageType Storage;
 

@@ -6,7 +6,12 @@
 ## relocations to avoid generating binaries that crash when executed.
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t.o
-# RUN: ld.lld -shared %t.o -o %t.so 2>&1 | FileCheck %s -check-prefix WARNING-MESSAGE
+## Link in another object file with a .bss as a regression test:
+## Previously LLD asserted when skipping over .bss sections when determining the
+## location for a warning/error message. By adding another file with a .bss
+## section before the actual %t.o we can reproduce this case.
+# RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %S/Inputs/common.s -o %t-common.o
+# RUN: ld.lld -shared %t-common.o %t.o -o %t.so 2>&1 | FileCheck %s -check-prefix WARNING-MESSAGE
 # RUN: llvm-objdump --no-show-raw-insn --no-leading-addr -d %t.so | FileCheck %s
 
 .set	noreorder

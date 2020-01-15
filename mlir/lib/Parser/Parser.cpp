@@ -1709,8 +1709,14 @@ Attribute Parser::parseFloatAttr(Type type, bool isNegative) {
 /// Construct a float attribute bitwise equivalent to the integer literal.
 static FloatAttr buildHexadecimalFloatLiteral(Parser *p, FloatType type,
                                               uint64_t value) {
-  int width = type.getIntOrFloatBitWidth();
-  APInt apInt(width, value);
+  // FIXME: bfloat is currently stored as a double internally because it doesn't
+  // have valid APFloat semantics.
+  if (type.isF64() || type.isBF16()) {
+    APFloat apFloat(type.getFloatSemantics(), APInt(/*numBits=*/64, value));
+    return p->builder.getFloatAttr(type, apFloat);
+  }
+
+  APInt apInt(type.getWidth(), value);
   if (apInt != value) {
     p->emitError("hexadecimal float constant out of range for type");
     return nullptr;
@@ -1741,11 +1747,6 @@ Attribute Parser::parseDecOrHexAttr(Type type, bool isNegative) {
   }
 
   if (auto floatType = type.dyn_cast<FloatType>()) {
-    // TODO(zinenko): Update once hex format for bfloat16 is supported.
-    if (type.isBF16())
-      return emitError(loc,
-                       "hexadecimal float literal not supported for bfloat16"),
-             nullptr;
     if (isNegative)
       return emitError(
                  loc,

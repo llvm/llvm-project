@@ -73,6 +73,9 @@ def AArch64clastb_n   : SDNode<"AArch64ISD::CLASTB_N",   SDT_AArch64ReduceWithIn
 def SDT_AArch64Rev   : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
 def AArch64rev       : SDNode<"AArch64ISD::REV", SDT_AArch64Rev>;
 
+def SDT_AArch64PTest : SDTypeProfile<0, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
+def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
+
 let Predicates = [HasSVE] in {
 
   def RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr">;
@@ -135,7 +138,7 @@ let Predicates = [HasSVE] in {
   defm UMAX_ZI   : sve_int_arith_imm1_unsigned<0b01, "umax", umax>;
   defm UMIN_ZI   : sve_int_arith_imm1_unsigned<0b11, "umin", umin>;
 
-  defm MUL_ZI    : sve_int_arith_imm2<"mul">;
+  defm MUL_ZI    : sve_int_arith_imm2<"mul", mul>;
   defm MUL_ZPmZ   : sve_int_bin_pred_arit_2<0b000, "mul", int_aarch64_sve_mul>;
   defm SMULH_ZPmZ : sve_int_bin_pred_arit_2<0b010, "smulh", int_aarch64_sve_smulh>;
   defm UMULH_ZPmZ : sve_int_bin_pred_arit_2<0b011, "umulh", int_aarch64_sve_umulh>;
@@ -1085,6 +1088,15 @@ let Predicates = [HasSVE] in {
                   (FCMGT_PPzZZ_S PPR32:$Zd, PPR3bAny:$Pg, ZPR32:$Zn, ZPR32:$Zm), 0>;
   def : InstAlias<"fcmlt $Zd, $Pg/z, $Zm, $Zn",
                   (FCMGT_PPzZZ_D PPR64:$Zd, PPR3bAny:$Pg, ZPR64:$Zn, ZPR64:$Zm), 0>;
+
+  def : Pat<(AArch64ptest (nxv16i1 PPR:$pg), (nxv16i1 PPR:$src)),
+            (PTEST_PP PPR:$pg, PPR:$src)>;
+  def : Pat<(AArch64ptest (nxv8i1 PPR:$pg), (nxv8i1 PPR:$src)),
+            (PTEST_PP PPR:$pg, PPR:$src)>;
+  def : Pat<(AArch64ptest (nxv4i1 PPR:$pg), (nxv4i1 PPR:$src)),
+            (PTEST_PP PPR:$pg, PPR:$src)>;
+  def : Pat<(AArch64ptest (nxv2i1 PPR:$pg), (nxv2i1 PPR:$src)),
+            (PTEST_PP PPR:$pg, PPR:$src)>;
 
   def : Pat<(sext_inreg (nxv2i64 ZPR:$Zs), nxv2i32), (SXTW_ZPmZ_D (IMPLICIT_DEF), (PTRUE_D 31), ZPR:$Zs)>;
   def : Pat<(sext_inreg (nxv2i64 ZPR:$Zs), nxv2i16), (SXTH_ZPmZ_D (IMPLICIT_DEF), (PTRUE_D 31), ZPR:$Zs)>;

@@ -18,6 +18,7 @@
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {
+class AsmState;
 class BlockArgument;
 class Operation;
 class OpResult;
@@ -172,7 +173,11 @@ public:
   Kind getKind() const { return ownerAndKind.getInt(); }
 
   void print(raw_ostream &os);
+  void print(raw_ostream &os, AsmState &state);
   void dump();
+
+  /// Print this value as if it were an operand.
+  void printAsOperand(raw_ostream &os, AsmState &state);
 
   /// Methods for supporting PointerLikeTypeTraits.
   void *getAsOpaquePointer() const { return ownerAndKind.getOpaqueValue(); }

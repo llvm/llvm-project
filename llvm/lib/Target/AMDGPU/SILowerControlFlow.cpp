@@ -244,9 +244,9 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
     BuildMI(MBB, I, DL, TII->get(MovTermOpc), Exec)
     .addReg(Tmp, RegState::Kill);
 
-  // Insert a pseudo terminator to help keep the verifier happy. This will also
-  // be used later when inserting skips.
-  MachineInstr *NewBr = BuildMI(MBB, I, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
+  // Insert the S_CBRANCH_EXECZ instruction which will be optimized later
+  // during SIRemoveShortExecBranches.
+  MachineInstr *NewBr = BuildMI(MBB, I, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
                             .add(MI.getOperand(2));
 
   if (!LIS) {
@@ -323,8 +323,8 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
     .addReg(DstReg);
 
   MachineInstr *Branch =
-    BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
-    .addMBB(DestBB);
+      BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
+          .addMBB(DestBB);
 
   if (!LIS) {
     MI.eraseFromParent();

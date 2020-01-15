@@ -194,6 +194,18 @@ public:
     Parser.addAliasForDirective(".word", ".4byte");
     Parser.addAliasForDirective(".dword", ".8byte");
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+
+    if (Options.ABIName.back() == 'f' &&
+        !getSTI().getFeatureBits()[RISCV::FeatureStdExtF]) {
+      errs() << "Hard-float 'f' ABI can't be used for a target that "
+                "doesn't support the F instruction set extension (ignoring "
+                "target-abi)\n";
+    } else if (Options.ABIName.back() == 'd' &&
+               !getSTI().getFeatureBits()[RISCV::FeatureStdExtD]) {
+      errs() << "Hard-float 'd' ABI can't be used for a target that "
+                "doesn't support the D instruction set extension (ignoring "
+                "target-abi)\n";
+    }
   }
 };
 
@@ -1872,7 +1884,7 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   return false;
 }
 
-extern "C" void LLVMInitializeRISCVAsmParser() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVAsmParser() {
   RegisterMCAsmParser<RISCVAsmParser> X(getTheRISCV32Target());
   RegisterMCAsmParser<RISCVAsmParser> Y(getTheRISCV64Target());
 }

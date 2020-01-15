@@ -220,10 +220,9 @@ exit:
 ; CHECK: v_cmp_eq_u32_e32 vcc, 0, v0
 ; CHECK-NEXT: s_and_saveexec_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], vcc
 ; CHECK-NEXT: s_xor_b64 [[SAVEEXEC]], exec, [[SAVEEXEC]]
-; CHECK-NEXT: ; mask branch [[EXIT:BB[0-9]+_[0-9]+]]
-; CHECK-NEXT: s_cbranch_execz [[EXIT]]
+; CHECK-NEXT: s_cbranch_execz [[EXIT:BB[0-9]+_[0-9]+]]
 
-; CHECK: {{BB[0-9]+_[0-9]+}}: ; %bb.preheader
+; CHECK: ; %bb.{{[0-9]+}}: ; %bb.preheader
 ; CHECK: s_mov_b32
 
 ; CHECK: [[LOOP_BB:BB[0-9]+_[0-9]+]]:
@@ -357,20 +356,18 @@ bb7:                                              ; preds = %bb4
 ; CHECK: ; %bb.0:
 ; CHECK: s_and_saveexec_b64
 ; CHECK: s_xor_b64
-; CHECK-NEXT: mask branch [[BB4:BB[0-9]+_[0-9]+]]
 
 ; CHECK: v_cmpx_gt_f32_e32 vcc, 0,
-; CHECK: [[BB4]]:
+; CHECK: BB{{[0-9]+_[0-9]+}}:
 ; CHECK: s_or_b64 exec, exec
 ; CHECK: image_sample_c
 
 ; CHECK: v_cmp_neq_f32_e32 vcc, 0,
 ; CHECK: s_and_saveexec_b64 s{{\[[0-9]+:[0-9]+\]}}, vcc
-; CHECK: mask branch [[END:BB[0-9]+_[0-9]+]]
-; CHECK-NEXT: s_cbranch_execz [[END]]
+; CHECK-NEXT: s_cbranch_execz [[END:BB[0-9]+_[0-9]+]]
 ; CHECK-NOT: branch
 
-; CHECK: BB{{[0-9]+_[0-9]+}}: ; %bb8
+; CHECK: ; %bb.{{[0-9]+}}: ; %bb8
 ; CHECK: buffer_store_dword
 
 ; CHECK: [[END]]:

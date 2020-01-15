@@ -96,7 +96,7 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
   bool Modified = false;
   MachineBasicBlock::instr_iterator MBIter = Block.instr_begin();
   MachineBasicBlock::instr_iterator EndIter = Block.instr_end();
-  SmallVector<MachineInstr *, 4> RemovedVCMPs;
+  SmallSet<MachineInstr *, 4> RemovedVCMPs;
 
   while (MBIter != EndIter) {
     MachineInstr *MI = &*MBIter;
@@ -154,7 +154,7 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
       // and deleting all instructions in this list in one go after we have
       // created the VPT blocks. We do this in order not to invalidate the
       // ReachingDefAnalysis that is queried by 'findVCMPToFoldIntoVPST'.
-      RemovedVCMPs.push_back(VCMP);
+      RemovedVCMPs.insert(VCMP);
     } else {
       MIBuilder = BuildMI(Block, MI, dl, TII->get(ARM::MVE_VPST));
       MIBuilder.addImm(BlockMask);

@@ -86,6 +86,7 @@ namespace llvm {
 
     CodeGenSubRegIndex(Record *R, unsigned Enum);
     CodeGenSubRegIndex(StringRef N, StringRef Nspace, unsigned Enum);
+    CodeGenSubRegIndex(CodeGenSubRegIndex&) = delete;
 
     const std::string &getName() const { return Name; }
     const std::string &getNamespace() const { return Namespace; }
@@ -442,6 +443,7 @@ namespace llvm {
                          std::vector<unsigned> &RegUnits) const;
 
     CodeGenRegisterClass(CodeGenRegBank&, Record *R);
+    CodeGenRegisterClass(CodeGenRegisterClass&) = delete;
 
     // A key representing the parts of a register class used for forming
     // sub-classes.  Note the ordering provided by this key is not the same as
@@ -611,6 +613,7 @@ namespace llvm {
 
   public:
     CodeGenRegBank(RecordKeeper&, const CodeGenHwModes&);
+    CodeGenRegBank(CodeGenRegBank&) = delete;
 
     SetTheory &getSets() { return Sets; }
 

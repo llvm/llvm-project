@@ -4,8 +4,8 @@
 ; an unused stack slot, causing ScratchSize to be non-zero.
 
 ; GCN-LABEL: store_v3i32:
-; GCN:        ds_read_b64
 ; GCN:        ds_read_b32
+; GCN:        ds_read_b64
 ; GCN:        ds_write_b32
 ; GCN:        ds_write_b64
 ; GCN: ScratchSize: 0
@@ -17,8 +17,8 @@ define amdgpu_kernel void @store_v3i32(<3 x i32> addrspace(3)* %out, <3 x i32> %
 }
 
 ; GCN-LABEL: store_v5i32:
-; GCN:        ds_read2_b64
 ; GCN:        ds_read_b32
+; GCN:        ds_read2_b64
 ; GCN:        ds_write_b32
 ; GCN:        ds_write2_b64
 ; GCN: ScratchSize: 0

@@ -13,8 +13,8 @@
 #ifndef _OMPTARGET_DEVICE_H
 #define _OMPTARGET_DEVICE_H
 
+#include <cassert>
 #include <cstddef>
-#include <climits>
 #include <list>
 #include <map>
 #include <mutex>
@@ -25,9 +25,6 @@ struct RTLInfoTy;
 struct __tgt_bin_desc;
 struct __tgt_target_table;
 
-#define INF_REF_CNT (LONG_MAX>>1) // leave room for additions/subtractions
-#define CONSIDERED_INF(x) (x > (INF_REF_CNT>>1))
-
 /// Map between host data and target data.
 struct HostDataToTargetTy {
   uintptr_t HstPtrBase; // host info.
@@ -36,18 +33,48 @@ struct HostDataToTargetTy {
 
   uintptr_t TgtPtrBegin; // target info.
 
-  long RefCount;
+private:
+  uint64_t RefCount;
+  static const uint64_t INFRefCount = ~(uint64_t)0;
 
-  HostDataToTargetTy()
-      : HstPtrBase(0), HstPtrBegin(0), HstPtrEnd(0),
-        TgtPtrBegin(0), RefCount(0) {}
-  HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E, uintptr_t TB)
-      : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E),
-        TgtPtrBegin(TB), RefCount(1) {}
+public:
   HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E, uintptr_t TB,
-      long RF)
+      bool IsINF = false)
       : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E),
-        TgtPtrBegin(TB), RefCount(RF) {}
+        TgtPtrBegin(TB), RefCount(IsINF ? INFRefCount : 1) {}
+
+  uint64_t getRefCount() const {
+    return RefCount;
+  }
+
+  uint64_t resetRefCount() {
+    if (RefCount != INFRefCount)
+      RefCount = 1;
+
+    return RefCount;
+  }
+
+  uint64_t incRefCount() {
+    if (RefCount != INFRefCount) {
+      ++RefCount;
+      assert(RefCount < INFRefCount && "refcount overflow");
+    }
+
+    return RefCount;
+  }
+
+  uint64_t decRefCount() {
+    if (RefCount != INFRefCount) {
+      assert(RefCount > 0 && "refcount underflow");
+      --RefCount;
+    }
+
+    return RefCount;
+  }
+
+  bool isRefCountInf() const {
+    return RefCount == INFRefCount;
+  }
 };
 
 typedef std::list<HostDataToTargetTy> HostDataToTargetListTy;
@@ -129,7 +156,7 @@ struct DeviceTy {
     return *this;
   }
 
-  long getMapEntryRefCnt(void *HstPtrBegin);
+  uint64_t getMapEntryRefCnt(void *HstPtrBegin);
   LookupResult lookupMapping(void *HstPtrBegin, int64_t Size);
   void *getOrAllocTgtPtr(void *HstPtrBegin, void *HstPtrBase, int64_t Size,
       bool &IsNew, bool &IsHostPtr, bool IsImplicit, bool UpdateRefCount = true,

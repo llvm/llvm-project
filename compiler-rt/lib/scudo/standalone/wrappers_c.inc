@@ -17,6 +17,8 @@
 #define SCUDO_MALLOC_ALIGNMENT FIRST_32_SECOND_64(8U, 16U)
 #endif
 
+extern "C" {
+
 INTERFACE WEAK void *SCUDO_PREFIX(calloc)(size_t nmemb, size_t size) {
   scudo::uptr Product;
   if (UNLIKELY(scudo::checkForCallocOverflow(size, nmemb, &Product))) {
@@ -141,11 +143,16 @@ INTERFACE WEAK int SCUDO_PREFIX(malloc_iterate)(
   return 0;
 }
 
+INTERFACE WEAK void SCUDO_PREFIX(malloc_enable)() { SCUDO_ALLOCATOR.enable(); }
+
 INTERFACE WEAK void SCUDO_PREFIX(malloc_disable)() {
   SCUDO_ALLOCATOR.disable();
 }
 
-INTERFACE WEAK void SCUDO_PREFIX(malloc_enable)() { SCUDO_ALLOCATOR.enable(); }
+void SCUDO_PREFIX(malloc_postinit)() {
+  pthread_atfork(SCUDO_PREFIX(malloc_disable), SCUDO_PREFIX(malloc_enable),
+                 SCUDO_PREFIX(malloc_enable));
+}
 
 INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, UNUSED int value) {
   if (param == M_DECAY_TIME) {
@@ -176,3 +183,5 @@ INTERFACE WEAK int SCUDO_PREFIX(malloc_info)(UNUSED int options, FILE *stream) {
   fputs("</malloc>", stream);
   return 0;
 }
+
+} // extern "C"

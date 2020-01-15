@@ -57,6 +57,8 @@ public:
 
   /// Print the this module in the custom top-level form.
   void print(raw_ostream &os, OpPrintingFlags flags = llvm::None);
+  void print(raw_ostream &os, AsmState &state,
+             OpPrintingFlags flags = llvm::None);
   void dump();
 
   //===--------------------------------------------------------------------===//

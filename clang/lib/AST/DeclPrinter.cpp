@@ -1055,7 +1055,9 @@ void DeclPrinter::printTemplateParameters(const TemplateParameterList *Params,
 
     if (auto TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
 
-      if (TTP->wasDeclaredWithTypename())
+      if (const TypeConstraint *TC = TTP->getTypeConstraint())
+        TC->print(Out, Policy);
+      else if (TTP->wasDeclaredWithTypename())
         Out << "typename";
       else
         Out << "class";

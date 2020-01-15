@@ -2319,9 +2319,14 @@ Instruction *InstCombiner::optimizeBitCastFromPhi(CastInst &CI, PHINode *PN) {
       if (auto *C = dyn_cast<Constant>(V)) {
         NewV = ConstantExpr::getBitCast(C, DestTy);
       } else if (auto *LI = dyn_cast<LoadInst>(V)) {
-        Builder.SetInsertPoint(LI->getNextNode());
-        NewV = Builder.CreateBitCast(LI, DestTy);
-        Worklist.Add(LI);
+        // Explicitly perform load combine to make sure no opposing transform
+        // can remove the bitcast in the meantime and trigger an infinite loop.
+        Builder.SetInsertPoint(LI);
+        NewV = combineLoadToNewType(*LI, DestTy);
+        // Remove the old load and its use in the old phi, which itself becomes
+        // dead once the whole transform finishes.
+        replaceInstUsesWith(*LI, UndefValue::get(LI->getType()));
+        eraseInstFromFunction(*LI);
       } else if (auto *BCI = dyn_cast<BitCastInst>(V)) {
         NewV = BCI->getOperand(0);
       } else if (auto *PrevPN = dyn_cast<PHINode>(V)) {
@@ -2344,7 +2349,10 @@ Instruction *InstCombiner::optimizeBitCastFromPhi(CastInst &CI, PHINode *PN) {
   Instruction *RetVal = nullptr;
   for (auto *OldPN : OldPhiNodes) {
     PHINode *NewPN = NewPNodes[OldPN];
-    for (User *V : OldPN->users()) {
+    for (auto It = OldPN->user_begin(), End = OldPN->user_end(); It != End; ) {
+      User *V = *It;
+      // We may remove this user, advance to avoid iterator invalidation.
+      ++It;
       if (auto *SI = dyn_cast<StoreInst>(V)) {
         assert(SI->isSimple() && SI->getOperand(0) == OldPN);
         Builder.SetInsertPoint(SI);

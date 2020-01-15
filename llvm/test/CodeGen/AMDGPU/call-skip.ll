@@ -8,8 +8,7 @@ define hidden void @func() #1 {
 
 ; GCN-LABEL: {{^}}if_call:
 ; GCN: s_and_saveexec_b64
-; GCN-NEXT: ; mask branch [[END:BB[0-9]+_[0-9]+]]
-; GCN-NEXT: s_cbranch_execz [[END]]
+; GCN-NEXT: s_cbranch_execz [[END:BB[0-9]+_[0-9]+]]
 ; GCN: s_swappc_b64
 ; GCN: [[END]]:
 define void @if_call(i32 %flag) #0 {
@@ -26,8 +25,7 @@ end:
 
 ; GCN-LABEL: {{^}}if_asm:
 ; GCN: s_and_saveexec_b64
-; GCN-NEXT: ; mask branch [[END:BB[0-9]+_[0-9]+]]
-; GCN-NEXT: s_cbranch_execz [[END]]
+; GCN-NEXT: s_cbranch_execz [[END:BB[0-9]+_[0-9]+]]
 ; GCN: ; sample asm
 ; GCN: [[END]]:
 define void @if_asm(i32 %flag) #0 {
@@ -44,8 +42,7 @@ end:
 
 ; GCN-LABEL: {{^}}if_call_kernel:
 ; GCN: s_and_saveexec_b64
-; GCN-NEXT: ; mask branch [[END:BB[0-9]+_[0-9]+]]
-; GCN-NEXT: s_cbranch_execz [[END]]
+; GCN-NEXT: s_cbranch_execz BB3_2
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @if_call_kernel() #0 {
   %id = call i32 @llvm.amdgcn.workitem.id.x()

@@ -467,6 +467,9 @@ public:
   /// \return true if successful.
   bool replacePointer(Instruction &I, Value *V);
 
+  LoadInst *combineLoadToNewType(LoadInst &LI, Type *NewTy,
+                                 const Twine &Suffix = "");
+
 private:
   bool shouldChangeType(unsigned FromBitWidth, unsigned ToBitWidth) const;
   bool shouldChangeType(Type *From, Type *To) const;
