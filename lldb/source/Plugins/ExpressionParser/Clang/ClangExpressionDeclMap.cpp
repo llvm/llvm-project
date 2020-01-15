@@ -1254,9 +1254,9 @@ void ClangExpressionDeclMap::LookupFunction(NameSearchContext &context,
     // TODO Fix FindFunctions so that it doesn't return
     //   instance methods for eFunctionNameTypeBase.
 
-    target->GetImages().FindFunctions(name, eFunctionNameTypeFull,
-                                      include_symbols, include_inlines,
-                                      sc_list);
+    target->GetImages().FindFunctions(
+        name, eFunctionNameTypeFull | eFunctionNameTypeBase, include_symbols,
+        include_inlines, sc_list);
   }
 
   // If we found more than one function, see if we can use the frame's decl

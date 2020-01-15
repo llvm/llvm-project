@@ -3081,7 +3081,7 @@ Error ASTNodeImporter::ImportFunctionDeclBody(FunctionDecl *FromFD,
 
 // Returns true if the given D has a DeclContext up to the TranslationUnitDecl
 // which is equal to the given DC.
-bool isAncestorDeclContextOf(const DeclContext *DC, const Decl *D) {
+static bool isAncestorDeclContextOf(const DeclContext *DC, const Decl *D) {
   const DeclContext *DCi = D->getDeclContext();
   while (DCi != D->getTranslationUnitDecl()) {
     if (DCi == DC)

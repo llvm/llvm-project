@@ -130,12 +130,12 @@ let Predicates = [HasSVE] in {
   defm EOR_ZI : sve_int_log_imm<0b01, "eor", "eon", xor>;
   defm AND_ZI : sve_int_log_imm<0b10, "and", "bic", and>;
 
-  defm SMAX_ZI   : sve_int_arith_imm1<0b00, "smax", simm8>;
-  defm SMIN_ZI   : sve_int_arith_imm1<0b10, "smin", simm8>;
-  defm UMAX_ZI   : sve_int_arith_imm1<0b01, "umax", imm0_255>;
-  defm UMIN_ZI   : sve_int_arith_imm1<0b11, "umin", imm0_255>;
+  defm SMAX_ZI   : sve_int_arith_imm1<0b00, "smax", smax>;
+  defm SMIN_ZI   : sve_int_arith_imm1<0b10, "smin", smin>;
+  defm UMAX_ZI   : sve_int_arith_imm1_unsigned<0b01, "umax", umax>;
+  defm UMIN_ZI   : sve_int_arith_imm1_unsigned<0b11, "umin", umin>;
 
-  defm MUL_ZI    : sve_int_arith_imm2<"mul">;
+  defm MUL_ZI    : sve_int_arith_imm2<"mul", mul>;
   defm MUL_ZPmZ   : sve_int_bin_pred_arit_2<0b000, "mul", int_aarch64_sve_mul>;
   defm SMULH_ZPmZ : sve_int_bin_pred_arit_2<0b010, "smulh", int_aarch64_sve_smulh>;
   defm UMULH_ZPmZ : sve_int_bin_pred_arit_2<0b011, "umulh", int_aarch64_sve_umulh>;

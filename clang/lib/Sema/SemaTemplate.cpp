@@ -1894,7 +1894,7 @@ private:
     // Ask the template instantiator to do the heavy lifting for us, then adjust
     // the index of the parameter once it's done.
     auto *NewParam =
-        cast_or_null<TemplateParmDecl>(SemaRef.SubstDecl(OldParam, DC, Args));
+        cast<TemplateParmDecl>(SemaRef.SubstDecl(OldParam, DC, Args));
     assert(NewParam->getDepth() == 0 && "unexpected template param depth");
     NewParam->setPosition(NewParam->getPosition() + Depth1IndexAdjustment);
     return NewParam;
@@ -7386,7 +7386,8 @@ Sema::CheckTemplateDeclScope(Scope *S, TemplateParameterList *TemplateParams) {
   // C++ [temp]p4:
   //   A template [...] shall not have C linkage.
   DeclContext *Ctx = S->getEntity();
-  if (Ctx && Ctx->isExternCContext()) {
+  assert(Ctx && "Unknown context");
+  if (Ctx->isExternCContext()) {
     Diag(TemplateParams->getTemplateLoc(), diag::err_template_linkage)
         << TemplateParams->getSourceRange();
     if (const LinkageSpecDecl *LSD = Ctx->getExternCContext())

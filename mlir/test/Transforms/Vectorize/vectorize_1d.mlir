@@ -1,14 +1,14 @@
 // RUN: mlir-opt %s -affine-vectorize -virtual-vector-size 128 --test-fastest-varying=0 | FileCheck %s
 
 // Permutation maps used in vectorization.
-// CHECK: #[[map_proj_d0d1_0:map[0-9]+]] = (d0, d1) -> (0)
-// CHECK: #[[map_proj_d0d1_d1:map[0-9]+]] = (d0, d1) -> (d1)
+// CHECK: #[[map_proj_d0d1_0:map[0-9]+]] = affine_map<(d0, d1) -> (0)>
+// CHECK: #[[map_proj_d0d1_d1:map[0-9]+]] = affine_map<(d0, d1) -> (d1)>
 
-#map0 = (d0) -> (d0)
-#mapadd1 = (d0) -> (d0 + 1)
-#mapadd2 = (d0) -> (d0 + 2)
-#mapadd3 = (d0) -> (d0 + 3)
-#set0 = (i) : (i >= 0)
+#map0 = affine_map<(d0) -> (d0)>
+#mapadd1 = affine_map<(d0) -> (d0 + 1)>
+#mapadd2 = affine_map<(d0) -> (d0 + 2)>
+#mapadd3 = affine_map<(d0) -> (d0 + 3)>
+#set0 = affine_set<(i) : (i >= 0)>
 
 // Maps introduced to vectorize fastest varying memory index.
 // CHECK-LABEL: func @vec1d_1

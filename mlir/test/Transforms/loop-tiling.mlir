@@ -3,9 +3,9 @@
 
 // -----
 
-// CHECK-DAG: [[MAP0:#map[0-9]+]] = (d0) -> (d0 + 32)
-// CHECK-DAG: [[MAP1:#map[0-9]+]] = (d0) -> (d0 + 32, 50)
-// CHECK-DAG: [[IDENTITY:#map[0-9]+]] = (d0) -> (d0)
+// CHECK-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0 + 32)>
+// CHECK-DAG: [[MAP1:#map[0-9]+]] = affine_map<(d0) -> (d0 + 32, 50)>
+// CHECK-DAG: [[IDENTITY:#map[0-9]+]] = affine_map<(d0) -> (d0)>
 
 // CHECK-LABEL: func @loop_tiling()
 // CHECK-NEXT:   affine.for %{{.*}} = 0 to 256 step 32 {
@@ -55,18 +55,18 @@ func @loop_tiling() {
 
 // -----
 
-// CHECK-DAG: [[IDENTITY:#map[0-9]+]] = (d0) -> (d0)
-// CHECK-DAG: [[LB:#map[0-9]+]] = ()[s0] -> (0, s0)
-// CHECK-DAG: [[UB:#map[0-9]+]] = ()[s0, s1] -> (s0, 4096 floordiv s1)
-// CHECK-DAG: [[UB_INTRA_TILE:#map[0-9]+]] = (d0)[s0, s1] -> (d0 + 32, s0, 4096 floordiv s1)
+// CHECK-DAG: [[IDENTITY:#map[0-9]+]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: [[LB:#map[0-9]+]] = affine_map<()[s0] -> (0, s0)>
+// CHECK-DAG: [[UB:#map[0-9]+]] = affine_map<()[s0, s1] -> (s0, 4096 floordiv s1)>
+// CHECK-DAG: [[UB_INTRA_TILE:#map[0-9]+]] = affine_map<(d0)[s0, s1] -> (d0 + 32, s0, 4096 floordiv s1)>
 
-#lb = ()[s0] -> (0, s0)
-#ub = ()[s0, s1] -> (s0, 4096 floordiv s1)
+#lb = affine_map<()[s0] -> (0, s0)>
+#ub = affine_map<()[s0, s1] -> (s0, 4096 floordiv s1)>
 // CHECK-LABEL: func @loop_max_min_bound(%{{.*}}: memref<?xi32>, %{{.*}}: index, %{{.*}}: index) {
 func @loop_max_min_bound(%A : memref<? x i32>, %L : index, %U : index) {
   %M = dim %A, 0 : memref<? x i32>
   affine.for %iTT = max #lb()[%L] to min #ub()[%M, %U] {
-      %out = affine.apply (d0) -> (d0) (%iTT)
+      %out = affine.apply affine_map<(d0) -> (d0)> (%iTT)
   }
   return
 // CHECK:       affine.for %{{.*}} = max [[LB]]()[%{{.*}}] to min [[UB]]()[%{{.*}}, %{{.*}}] step 32 {
@@ -105,7 +105,7 @@ func @simple_matmul(%arg0: memref<256x256xvector<64xf32>>, %arg1: memref<256x256
 
 // -----
 
-// CHECK-DAG: [[UBMAP:#map[0-9]+]] = (d0)[s0] -> (d0 + 32, s0)
+// CHECK-DAG: [[UBMAP:#map[0-9]+]] = affine_map<(d0)[s0] -> (d0 + 32, s0)>
 
 func @tile_with_symbolic_loop_upper_bounds(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: memref<?x?xf32>) {
   %cst = constant 0.000000e+00 : f32
@@ -148,13 +148,13 @@ func @tile_with_symbolic_loop_upper_bounds(%arg0: memref<?x?xf32>, %arg1: memref
 
 // -----
 
-// CHECK-DAG: [[MAP0:#map[0-9]+]] = (d0) -> (d0)
-// CHECK-DAG: [[MAP1:#map[0-9]+]] = ()[s0, s1] -> (s0 + s1)
-// CHECK-DAG: [[UBMAP:#map[0-9]+]] = (d0)[s0, s1] -> (d0 + 32, s0 + s1)
+// CHECK-DAG: [[MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: [[MAP1:#map[0-9]+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+// CHECK-DAG: [[UBMAP:#map[0-9]+]] = affine_map<(d0)[s0, s1] -> (d0 + 32, s0 + s1)>
 
 func @tile_with_loop_upper_bounds_in_two_symbols(%arg0: memref<?xf32>, %limit: index) {
   %dim0 = dim %arg0, 0 : memref<?xf32>
-  affine.for %i0 = 0 to ()[s0, s1] -> (s0 + s1) ()[%dim0, %limit] {
+  affine.for %i0 = 0 to affine_map<()[s0, s1] -> (s0 + s1)> ()[%dim0, %limit] {
     %v0 = affine.load %arg0[%i0] : memref<?xf32>
   }
   return

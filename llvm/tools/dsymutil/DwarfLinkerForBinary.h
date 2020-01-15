@@ -499,7 +499,6 @@ private:
   BinaryHolder &BinHolder;
   LinkOptions Options;
   std::unique_ptr<DwarfStreamer> Streamer;
-  uint64_t OutputDebugInfoSize;
 
   unsigned MaxDwarfVersion = 0;
   unsigned MinDwarfVersion = std::numeric_limits<unsigned>::max();

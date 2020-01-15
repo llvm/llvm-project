@@ -391,9 +391,11 @@ bool TGParser::resolve(const ForeachLoop &Loop, SubstStack &Substs,
 
   bool Error = false;
   for (auto Elt : *LI) {
-    Substs.emplace_back(Loop.IterVar->getNameInit(), Elt);
+    if (Loop.IterVar)
+      Substs.emplace_back(Loop.IterVar->getNameInit(), Elt);
     Error = resolve(Loop.Entries, Substs, Final, Dest);
-    Substs.pop_back();
+    if (Loop.IterVar)
+      Substs.pop_back();
     if (Error)
       break;
   }
@@ -482,7 +484,7 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
 static bool isObjectStart(tgtok::TokKind K) {
   return K == tgtok::Class || K == tgtok::Def || K == tgtok::Defm ||
          K == tgtok::Let || K == tgtok::MultiClass || K == tgtok::Foreach ||
-         K == tgtok::Defset;
+         K == tgtok::Defset || K == tgtok::Defvar || K == tgtok::If;
 }
 
 /// ParseObjectName - If a valid object name is specified, return it. If no
@@ -869,11 +871,17 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
     }
   }
 
+  if (CurLocalScope)
+    if (Init *I = CurLocalScope->getVar(Name->getValue()))
+      return I;
+
   // If this is in a foreach loop, make sure it's not a loop iterator
   for (const auto &L : Loops) {
-    VarInit *IterVar = dyn_cast<VarInit>(L->IterVar);
-    if (IterVar && IterVar->getNameInit() == Name)
-      return IterVar;
+    if (L->IterVar) {
+      VarInit *IterVar = dyn_cast<VarInit>(L->IterVar);
+      if (IterVar && IterVar->getNameInit() == Name)
+        return IterVar;
+    }
   }
 
   if (Mode == ParseNameMode)
@@ -2595,7 +2603,11 @@ bool TGParser::ParseTemplateArgList(Record *CurRec) {
 ///
 ///   BodyItem ::= Declaration ';'
 ///   BodyItem ::= LET ID OptionalBitList '=' Value ';'
+///   BodyItem ::= Defvar
 bool TGParser::ParseBodyItem(Record *CurRec) {
+  if (Lex.getCode() == tgtok::Defvar)
+    return ParseDefvar();
+
   if (Lex.getCode() != tgtok::Let) {
     if (!ParseDeclaration(CurRec, false))
       return true;
@@ -2658,9 +2670,14 @@ bool TGParser::ParseBody(Record *CurRec) {
   // Eat the '{'.
   Lex.Lex();
 
+  // An object body introduces a new scope for local variables.
+  TGLocalVarScope *BodyScope = PushLocalScope();
+
   while (Lex.getCode() != tgtok::r_brace)
     if (ParseBodyItem(CurRec))
       return true;
+
+  PopLocalScope(BodyScope);
 
   // Eat the '}'.
   Lex.Lex();
@@ -2800,6 +2817,45 @@ bool TGParser::ParseDefset() {
   return false;
 }
 
+/// ParseDefvar - Parse a defvar statement.
+///
+///   Defvar ::= DEFVAR Id '=' Value ';'
+///
+bool TGParser::ParseDefvar() {
+  assert(Lex.getCode() == tgtok::Defvar);
+  Lex.Lex(); // Eat the 'defvar' token
+
+  if (Lex.getCode() != tgtok::Id)
+    return TokError("expected identifier");
+  StringInit *DeclName = StringInit::get(Lex.getCurStrVal());
+  if (CurLocalScope) {
+    if (CurLocalScope->varAlreadyDefined(DeclName->getValue()))
+      return TokError("local variable of this name already exists");
+  } else {
+    if (Records.getGlobal(DeclName->getValue()))
+      return TokError("def or global variable of this name already exists");
+  }
+
+  if (Lex.Lex() != tgtok::equal) // Eat the identifier
+    return TokError("expected '='");
+  Lex.Lex(); // Eat the '='
+
+  Init *Value = ParseValue(nullptr);
+  if (!Value)
+    return true;
+
+  if (Lex.getCode() != tgtok::semi)
+    return TokError("expected ';'");
+  Lex.Lex(); // Eat the ';'
+
+  if (CurLocalScope)
+    CurLocalScope->addVar(DeclName->getValue(), Value);
+  else
+    Records.addExtraGlobal(DeclName->getValue(), Value);
+
+  return false;
+}
+
 /// ParseForeach - Parse a for statement.  Return the record corresponding
 /// to it.  This returns true on error.
 ///
@@ -2825,6 +2881,9 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
   // Create a loop object and remember it.
   Loops.push_back(std::make_unique<ForeachLoop>(Loc, IterName, ListValue));
 
+  // A foreach loop introduces a new scope for local variables.
+  TGLocalVarScope *ForeachScope = PushLocalScope();
+
   if (Lex.getCode() != tgtok::l_brace) {
     // FOREACH Declaration IN Object
     if (ParseObject(CurMultiClass))
@@ -2845,11 +2904,122 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
     Lex.Lex();  // Eat the }
   }
 
+  PopLocalScope(ForeachScope);
+
   // Resolve the loop or store it for later resolution.
   std::unique_ptr<ForeachLoop> Loop = std::move(Loops.back());
   Loops.pop_back();
 
   return addEntry(std::move(Loop));
+}
+
+/// ParseIf - Parse an if statement.
+///
+///   If ::= IF Value THEN IfBody
+///   If ::= IF Value THEN IfBody ELSE IfBody
+///
+bool TGParser::ParseIf(MultiClass *CurMultiClass) {
+  SMLoc Loc = Lex.getLoc();
+  assert(Lex.getCode() == tgtok::If && "Unknown tok");
+  Lex.Lex(); // Eat the 'if' token.
+
+  // Make a temporary object to record items associated with the for
+  // loop.
+  Init *Condition = ParseValue(nullptr);
+  if (!Condition)
+    return true;
+
+  if (Lex.getCode() != tgtok::Then)
+    return TokError("Unknown tok");
+  Lex.Lex(); // Eat the 'then'
+
+  // We have to be able to save if statements to execute later, and they have
+  // to live on the same stack as foreach loops. The simplest implementation
+  // technique is to convert each 'then' or 'else' clause *into* a foreach
+  // loop, over a list of length 0 or 1 depending on the condition, and with no
+  // iteration variable being assigned.
+
+  ListInit *EmptyList = ListInit::get({}, BitRecTy::get());
+  ListInit *SingletonList = ListInit::get({BitInit::get(1)}, BitRecTy::get());
+  RecTy *BitListTy = ListRecTy::get(BitRecTy::get());
+
+  // The foreach containing the then-clause selects SingletonList if
+  // the condition is true.
+  Init *ThenClauseList =
+      TernOpInit::get(TernOpInit::IF, Condition, SingletonList, EmptyList,
+                      BitListTy)
+          ->Fold(nullptr);
+  Loops.push_back(std::make_unique<ForeachLoop>(Loc, nullptr, ThenClauseList));
+
+  if (ParseIfBody(CurMultiClass, "then"))
+    return true;
+
+  std::unique_ptr<ForeachLoop> Loop = std::move(Loops.back());
+  Loops.pop_back();
+
+  if (addEntry(std::move(Loop)))
+    return true;
+
+  // Now look for an optional else clause. The if-else syntax has the usual
+  // dangling-else ambiguity, and by greedily matching an else here if we can,
+  // we implement the usual resolution of pairing with the innermost unmatched
+  // if.
+  if (Lex.getCode() == tgtok::ElseKW) {
+    Lex.Lex(); // Eat the 'else'
+
+    // The foreach containing the else-clause uses the same pair of lists as
+    // above, but this time, selects SingletonList if the condition is *false*.
+    Init *ElseClauseList =
+        TernOpInit::get(TernOpInit::IF, Condition, EmptyList, SingletonList,
+                        BitListTy)
+            ->Fold(nullptr);
+    Loops.push_back(
+        std::make_unique<ForeachLoop>(Loc, nullptr, ElseClauseList));
+
+    if (ParseIfBody(CurMultiClass, "else"))
+      return true;
+
+    Loop = std::move(Loops.back());
+    Loops.pop_back();
+
+    if (addEntry(std::move(Loop)))
+      return true;
+  }
+
+  return false;
+}
+
+/// ParseIfBody - Parse the then-clause or else-clause of an if statement.
+///
+///   IfBody ::= Object
+///   IfBody ::= '{' ObjectList '}'
+///
+bool TGParser::ParseIfBody(MultiClass *CurMultiClass, StringRef Kind) {
+  TGLocalVarScope *BodyScope = PushLocalScope();
+
+  if (Lex.getCode() != tgtok::l_brace) {
+    // A single object.
+    if (ParseObject(CurMultiClass))
+      return true;
+  } else {
+    SMLoc BraceLoc = Lex.getLoc();
+    // A braced block.
+    Lex.Lex(); // eat the '{'.
+
+    // Parse the object list.
+    if (ParseObjectList(CurMultiClass))
+      return true;
+
+    if (Lex.getCode() != tgtok::r_brace) {
+      TokError("expected '}' at end of '" + Kind + "' clause");
+      return Error(BraceLoc, "to match this '{'");
+    }
+
+    Lex.Lex(); // Eat the }
+  }
+
+  PopLocalScope(BodyScope);
+  return false;
 }
 
 /// ParseClass - Parse a tblgen class definition.
@@ -2957,6 +3127,8 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
     return TokError("expected 'in' at end of top-level 'let'");
   Lex.Lex();
 
+  TGLocalVarScope *LetScope = PushLocalScope();
+
   // If this is a scalar let, just handle it now
   if (Lex.getCode() != tgtok::l_brace) {
     // LET LetList IN Object
@@ -2977,6 +3149,8 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
     }
     Lex.Lex();
   }
+
+  PopLocalScope(LetScope);
 
   // Outside this let scope, this let block is not active.
   LetStack.pop_back();
@@ -3051,21 +3225,28 @@ bool TGParser::ParseMultiClass() {
     if (Lex.Lex() == tgtok::r_brace)  // eat the '{'.
       return TokError("multiclass must contain at least one def");
 
+    // A multiclass body introduces a new scope for local variables.
+    TGLocalVarScope *MulticlassScope = PushLocalScope();
+
     while (Lex.getCode() != tgtok::r_brace) {
       switch (Lex.getCode()) {
       default:
-        return TokError("expected 'let', 'def', 'defm' or 'foreach' in "
-                        "multiclass body");
+        return TokError("expected 'let', 'def', 'defm', 'defvar', 'foreach' "
+                        "or 'if' in multiclass body");
       case tgtok::Let:
       case tgtok::Def:
       case tgtok::Defm:
+      case tgtok::Defvar:
       case tgtok::Foreach:
+      case tgtok::If:
         if (ParseObject(CurMultiClass))
           return true;
         break;
       }
     }
     Lex.Lex();  // eat the '}'.
+
+    PopLocalScope(MulticlassScope);
   }
 
   CurMultiClass = nullptr;
@@ -3207,19 +3388,24 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 ///   Object ::= DefMInst
 ///   Object ::= LETCommand '{' ObjectList '}'
 ///   Object ::= LETCommand Object
+///   Object ::= Defset
+///   Object ::= Defvar
 bool TGParser::ParseObject(MultiClass *MC) {
   switch (Lex.getCode()) {
   default:
-    return TokError("Expected class, def, defm, defset, multiclass, let or "
-                    "foreach");
+    return TokError("Expected class, def, defm, defset, multiclass, let, "
+                    "foreach or if");
   case tgtok::Let:   return ParseTopLevelLet(MC);
   case tgtok::Def:   return ParseDef(MC);
   case tgtok::Foreach:   return ParseForeach(MC);
+  case tgtok::If:    return ParseIf(MC);
   case tgtok::Defm:  return ParseDefm(MC);
   case tgtok::Defset:
     if (MC)
       return TokError("defset is not allowed inside multiclass");
     return ParseDefset();
+  case tgtok::Defvar:
+    return ParseDefvar();
   case tgtok::Class:
     if (MC)
       return TokError("class is not allowed inside multiclass");

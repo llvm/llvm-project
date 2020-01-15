@@ -1631,6 +1631,7 @@ TEST(Hover, DocsFromMostSpecial) {
     }
   }
 }
+
 TEST(Hover, Present) {
   struct {
     const std::function<void(HoverInfo &)> Builder;
@@ -1718,6 +1719,17 @@ def)",
     C.Builder(HI);
     EXPECT_EQ(HI.present().asPlainText(), C.ExpectedRender);
   }
+}
+
+// This is a separate test as headings don't create any differences in plaintext
+// mode.
+TEST(Hover, PresentHeadings) {
+  HoverInfo HI;
+  HI.Kind = index::SymbolKind::Variable;
+  HI.Name = "foo";
+  HI.Type = "type";
+
+  EXPECT_EQ(HI.present().asMarkdown(), "### variable `foo` \\: `type`");
 }
 
 } // namespace

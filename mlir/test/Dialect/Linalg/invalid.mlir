@@ -8,18 +8,18 @@ func @load_number_of_indices(%v : memref<f32>) {
 
 // -----
 
-func @slice_number_of_indexings(%arg0: memref<?x?xf32, (i, j)[off, M]->(off + M * i + j)>) {
+func @slice_number_of_indexings(%arg0: memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
   // expected-error @+2 {{expected 2 indexings, got 1}}
   %c0 = constant 0: index
-  %0 = linalg.slice %arg0[%c0] : memref<?x?xf32, (i, j)[off, M]->(off + M * i + j)>, index, memref<?x?xf32, (i, j)[off, M]->(off + M * i + j)>
+  %0 = linalg.slice %arg0[%c0] : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>, index, memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
 }
 
 // -----
 
-func @slice_rank_vs_range_indices(%arg0: memref<?x?xf32, (i, j)[off, M]->(off + M * i + j)>) {
+func @slice_rank_vs_range_indices(%arg0: memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
   // expected-error @+2 {{op expected rank of the view(1) to be the number of ranges(0)}}
   %c0 = constant 0: index
-  %0 = linalg.slice %arg0[%c0, %c0] : memref<?x?xf32, (i, j)[off, M]->(off + M * i + j)>, index, index, memref<?xf32, (i)[off]->(off + i)>
+  %0 = linalg.slice %arg0[%c0, %c0] : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>, index, index, memref<?xf32, affine_map<(i)[off]->(off + i)>>
 }
 
 // -----
@@ -33,23 +33,23 @@ func @store_number_of_indices(%v : memref<f32>) {
 
 // -----
 
-func @transpose_not_permutation(%v : memref<?x?xf32, (i, j)[off, M]->(off + M * i + j)>) {
+func @transpose_not_permutation(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
   // expected-error @+1 {{expected a permutation map}}
-  linalg.transpose %v (i, j) -> (i, i) : memref<?x?xf32, (i, j)[off, M]->(off + M * i + j)>
+  linalg.transpose %v (i, j) -> (i, i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
 }
 
 // -----
 
-func @transpose_bad_rank(%v : memref<?x?xf32, (i, j)[off, M]->(off + M * i + j)>) {
+func @transpose_bad_rank(%v : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>) {
   // expected-error @+1 {{expected a permutation map of same rank as the view}}
-  linalg.transpose %v (i) -> (i) : memref<?x?xf32, (i, j)[off, M]->(off + M * i + j)>
+  linalg.transpose %v (i) -> (i) : memref<?x?xf32, affine_map<(i, j)[off, M]->(off + M * i + j)>>
 }
 
 // -----
 
-func @yield_parent(%arg0: memref<?xf32, (i)[off]->(off + i)>) {
+func @yield_parent(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
   // expected-error @+1 {{op expected 'linalg.generic' or 'linalg.indexed_generic' parent op}}
-  linalg.yield %arg0: memref<?xf32, (i)[off]->(off + i)>
+  linalg.yield %arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>
 }
 
 // -----
@@ -60,7 +60,7 @@ func @generic_at_least_2_operands(%arg0: memref<f32>) {
     args_in = 1,
     args_out = 1,
     fun = @foo,
-    indexing_maps =  [ () -> (0) ],
+    indexing_maps =  [ affine_map<() -> (0)> ],
     iterator_types = []
   } %arg0: memref<f32>
 }
@@ -73,7 +73,7 @@ func @generic_exactly_2_views(%arg0: memref<f32>) {
     args_in = 1,
     args_out = 1,
     fun = @foo,
-    indexing_maps =  [ () -> (0) ],
+    indexing_maps =  [ affine_map<() -> (0)> ],
     iterator_types = []
   } %arg0, %arg0, %arg0: memref<f32>, memref<f32>, memref<f32>
 }
@@ -86,7 +86,7 @@ func @generic_undefined_fun(%arg0: memref<f32>) {
     args_in = 1,
     args_out = 1,
     fun = @foo,
-    indexing_maps =  [ () -> (0) ],
+    indexing_maps =  [ affine_map<() -> (0)> ],
     iterator_types = []
   } %arg0, %arg0: memref<f32>, memref<f32>
 }
@@ -101,7 +101,7 @@ func @generic_mismatched_num_arguments(%arg0: memref<f32>) {
     args_in = 0,
     args_out = 1,
     fun = @foo,
-    indexing_maps =  [ () -> (0) ],
+    indexing_maps =  [ affine_map<() -> (0)> ],
     iterator_types = []
   } %arg0: memref<f32>
 }
@@ -116,7 +116,7 @@ func @generic_mismatched_num_returns(%arg0: memref<f32>) {
     args_in = 0,
     args_out = 1,
     fun = @foo,
-    indexing_maps =  [ () -> (0) ],
+    indexing_maps =  [ affine_map<() -> (0)> ],
     iterator_types = []
   } %arg0: memref<f32>
 }
@@ -131,7 +131,7 @@ func @generic_symbol_in_map(%arg0: memref<i32>) {
     args_in = 0,
     args_out = 1,
     fun = @foo,
-    indexing_maps =  [ ()[N] -> (0) ],
+    indexing_maps =  [ affine_map<()[N] -> (0)> ],
     iterator_types = ["parallel"]
   } %arg0: memref<i32>
 }
@@ -146,7 +146,7 @@ func @generic_wrong_dim_in_map(%arg0: memref<i32>) {
     args_in = 0,
     args_out = 1,
     fun = @foo,
-    indexing_maps =  [ () -> (0) ],
+    indexing_maps =  [ affine_map<() -> (0)> ],
     iterator_types = ["parallel"]
   } %arg0: memref<i32>
 }
@@ -161,7 +161,7 @@ func @generic_zero_d_view(%arg0: memref<i32>) {
     args_in = 0,
     args_out = 1,
     fun = @foo,
-    indexing_maps =  [ () -> (1) ],
+    indexing_maps =  [ affine_map<() -> (1)> ],
     iterator_types = []
   } %arg0: memref<i32>
 }
@@ -170,15 +170,15 @@ func @generic_zero_d_view(%arg0: memref<i32>) {
 
 func @foo(%0: f32) -> f32 { return %0: f32 }
 
-func @generic_one_d_view(%arg0: memref<?xf32, (i)[off]->(off + i)>) {
-  // expected-error @+1 {{op expected indexing_map #0 results to match view rank: 'memref<?xf32, (d0)[s0] -> (d0 + s0)>'}}
+func @generic_one_d_view(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
+  // expected-error @+1 {{op expected indexing_map #0 results to match view rank: 'memref<?xf32, affine_map<(d0)[s0] -> (d0 + s0)>>'}}
   linalg.generic {
     args_in = 0,
     args_out = 1,
     fun = @foo,
-    indexing_maps =  [ () -> (0, 0) ],
+    indexing_maps =  [ affine_map<() -> (0, 0)> ],
     iterator_types = []
-  } %arg0: memref<?xf32, (i)[off]->(off + i)>
+  } %arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>
 }
 
 // -----
@@ -188,15 +188,15 @@ func @foo(%0: i32) -> f32 {
   return %1: f32
 }
 
-func @generic_fun_arg_0_element_type(%arg0: memref<?xf32, (i)[off]->(off + i)>) {
+func @generic_fun_arg_0_element_type(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
   // expected-error @+1 {{op expected fun argument 0 of the same type as elemental type 'f32' of view 0}}
   linalg.generic {
     args_in = 0,
     args_out = 1,
     fun = @foo,
-    indexing_maps =  [ () -> (0) ],
+    indexing_maps =  [ affine_map<() -> (0)> ],
     iterator_types = []
-  } %arg0: memref<?xf32, (i)[off]->(off + i)>
+  } %arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>
 }
 
 // -----
@@ -206,33 +206,33 @@ func @foo(%0: f32) -> i4 {
   return %1: i4
 }
 
-func @generic_fun_result_0_element_type(%arg0: memref<?xf32, (i)[off]->(off + i)>) {
+func @generic_fun_result_0_element_type(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
   // expected-error @+1 {{op expected fun result 0 of the same type as elemental type 'f32' of view 0}}
   linalg.generic {
     args_in = 0,
     args_out = 1,
     fun = @foo,
-    indexing_maps =  [ () -> (0) ],
+    indexing_maps =  [ affine_map<() -> (0)> ],
     iterator_types = []
-  } %arg0: memref<?xf32, (i)[off]->(off + i)>
+  } %arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>
 }
 
 // -----
 
 func @foo(%0: f32, %1: f32) -> f32 { return %1: f32 }
 
-func @generic_singular_maps(%arg0: memref<?xf32, (i)[off]->(off + i)>, %arg1: memref<?xf32, (i)[off]->(off + i)>) {
+func @generic_singular_maps(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>, %arg1: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
   // expected-error @+1 {{op expected the concatenation of maps in indexing_map to be invertible}}
   linalg.generic {
     args_in = 1,
     args_out = 1,
     fun = @foo,
     indexing_maps =  [
-      (i, j) -> (i + j) ,
-      (i, j) -> (i + j)
+      affine_map<(i, j) -> (i + j)>,
+      affine_map<(i, j) -> (i + j)>
     ],
     iterator_types = ["parallel","parallel"]
-  } %arg0, %arg1: memref<?xf32, (i)[off]->(off + i)>, memref<?xf32, (i)[off]->(off + i)>
+  } %arg0, %arg1: memref<?xf32, affine_map<(i)[off]->(off + i)>>, memref<?xf32, affine_map<(i)[off]->(off + i)>>
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -246,7 +246,7 @@ func @generic_empty_region(%arg0: memref<f32>) {
   linalg.generic {
     args_in = 1,
     args_out = 1,
-    indexing_maps =  [ () -> (0) ],
+    indexing_maps =  [ affine_map<() -> (0)> ],
     iterator_types = []
   } %arg0, %arg0 {
     ^bb1:
@@ -261,7 +261,7 @@ func @generic_mismatched_num_arguments(%arg0: memref<f32>) {
   linalg.generic {
     args_in = 0,
     args_out = 1,
-    indexing_maps =  [ () -> (0) ],
+    indexing_maps =  [ affine_map<() -> (0)> ],
     iterator_types = []
   } %arg0 {
     ^bb:
@@ -275,7 +275,7 @@ func @generic_block_arg_type(%arg0: memref<f32>) {
   linalg.generic {
     args_in = 0,
     args_out = 1,
-    indexing_maps =  [ () -> (0) ],
+    indexing_maps =  [ affine_map<() -> (0)> ],
     iterator_types = []
   } %arg0 {
     ^bb(%i: i1):
@@ -289,7 +289,7 @@ func @indexed_generic_block_arg_count(%arg0: memref<f32>) {
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
-    indexing_maps =  [ (d0) -> (d0) ],
+    indexing_maps =  [ affine_map<(d0) -> (d0)> ],
     iterator_types = ["parallel"]
   } %arg0 {
     ^bb(%f: f32):
@@ -303,7 +303,7 @@ func @indexed_generic_block_induction_var_arg_type(%arg0: memref<f32>) {
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
-    indexing_maps =  [ (d0) -> (d0) ],
+    indexing_maps =  [ affine_map<(d0) -> (d0)> ],
     iterator_types = ["parallel"]
   } %arg0 {
     ^bb(%i: f64, %f: f32):
@@ -317,7 +317,7 @@ func @indexed_generic_block_arg_type(%arg0: memref<f32>) {
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
-    indexing_maps =  [ (d0) -> (d0) ],
+    indexing_maps =  [ affine_map<(d0) -> (d0)> ],
     iterator_types = ["parallel"]
   } %arg0 {
     ^bb(%i: index, %f: i1):
@@ -334,7 +334,7 @@ func @indexed_generic_fun_arg_count(%arg0: memref<f32>) {
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
-    indexing_maps =  [ (d0) -> (d0) ],
+    indexing_maps =  [ affine_map<(d0) -> (d0)> ],
     iterator_types = ["parallel"],
     fun = @foo
   } %arg0:  memref<f32>
@@ -351,7 +351,7 @@ func @indexed_generic_fun_induction_var_arg_type(%arg0: memref<f32>) {
     args_in = 0,
     args_out = 1,
     iterator_types = ["parallel"],
-    indexing_maps = [ (i) -> (i) ],
+    indexing_maps = [ affine_map<(i) -> (i)> ],
     fun = @foo
   } %arg0 : memref<f32>
 }
@@ -366,7 +366,7 @@ func @indexed_generic_fun_arg_type(%arg0: memref<f32>) {
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
-    indexing_maps =  [ (d0) -> (d0) ],
+    indexing_maps =  [ affine_map<(d0) -> (d0)> ],
     iterator_types = ["parallel"],
     fun = @foo
   } %arg0: memref<f32>
@@ -382,7 +382,7 @@ func @indexed_generic_fun_result_count(%arg0: memref<f32>) {
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
-    indexing_maps =  [ (d0) -> (d0) ],
+    indexing_maps =  [ affine_map<(d0) -> (d0)> ],
     iterator_types = ["parallel"],
     fun = @foo
   } %arg0: memref<f32>
@@ -399,7 +399,7 @@ func @indexed_generic_fun_result_count(%arg0: memref<i32>) {
   linalg.indexed_generic {
     args_in = 0,
     args_out = 1,
-    indexing_maps =  [ (d0) -> (d0) ],
+    indexing_maps =  [ affine_map<(d0) -> (d0)> ],
     iterator_types = ["parallel"],
     fun = @foo
   } %arg0: memref<i32>
@@ -407,48 +407,48 @@ func @indexed_generic_fun_result_count(%arg0: memref<i32>) {
 
 // -----
 
-func @generic_fun_result_0_element_type(%arg0: memref<?xf32, (i)[off]->(off + i)>) {
+func @generic_fun_result_0_element_type(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
   // expected-error @+9 {{type of return operand 0 ('i1') doesn't match view element type ('f32')}}
   linalg.generic {
     args_in = 0,
     args_out = 1,
-    indexing_maps = [ (i) -> (i) ],
+    indexing_maps = [ affine_map<(i) -> (i)> ],
     iterator_types = ["parallel"]
   } %arg0 {
     ^bb(%i: f32):
       %0 = constant 0: i1
       linalg.yield %0: i1
-  }: memref<?xf32, (i)[off]->(off + i)>
+  }: memref<?xf32, affine_map<(i)[off]->(off + i)>>
 }
 
 // -----
 
-func @generic_result_tensor_type(%arg0: memref<?xf32, (i)[off]->(off + i)>) {
+func @generic_result_tensor_type(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
   // expected-error @+1 {{op result #0 must be ranked tensor of any type values, but got 'f32'}}
   %0 = linalg.generic {
     args_in = 0,
     args_out = 1,
-    indexing_maps = [ (i) -> (i) ],
+    indexing_maps = [ affine_map<(i) -> (i)> ],
     iterator_types = ["parallel"]
   } %arg0 {
     ^bb(%i: f32):
       linalg.yield %i: f32
-  }: memref<?xf32, (i)[off]->(off + i)> -> f32
+  }: memref<?xf32, affine_map<(i)[off]->(off + i)>> -> f32
 }
 
 // -----
 
-func @generic_result_tensor_count(%arg0: memref<?xf32, (i)[off]->(off + i)>) {
+func @generic_result_tensor_count(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
   // expected-error @+1 {{op expected #output tensor operands (0) to match #results (1)}}
   %0 = linalg.generic {
     args_in = 0,
     args_out = 1,
-    indexing_maps = [ (i) -> (i) ],
+    indexing_maps = [ affine_map<(i) -> (i)> ],
     iterator_types = ["parallel"]
   } %arg0 {
     ^bb(%i: f32):
       linalg.yield %i: f32
-  }: memref<?xf32, (i)[off]->(off + i)> -> tensor<?xf32>
+  }: memref<?xf32, affine_map<(i)[off]->(off + i)>> -> tensor<?xf32>
 }
 
 // -----
@@ -458,7 +458,7 @@ func @generic_result_tensor_type(%arg0: tensor<?xf32>) {
   %0 = linalg.generic {
     args_in = 0,
     args_out = 1,
-    indexing_maps = [ (i) -> (i) ],
+    indexing_maps = [ affine_map<(i) -> (i)> ],
     iterator_types = ["parallel"]
   } %arg0 {
     ^bb(%i: f32):
@@ -487,21 +487,21 @@ func @generic_fun_result_0_element_type(%arg0: memref<?xf32>) {
 
 func @reshape(%arg0: memref<f32>) {
   // expected-error @+1 {{expected non-zero memref ranks}}
-  %0 = linalg.reshape %arg0 [()->(0)] : memref<f32> into memref<f32>
+  %0 = linalg.reshape %arg0 [affine_map<()->(0)>] : memref<f32> into memref<f32>
 }
 
 // -----
 
 func @reshape(%arg0: memref<?xf32>) {
   // expected-error @+1 {{expected to collapse or expand dims}}
-  %0 = linalg.reshape %arg0 [(i)->(i)] : memref<?xf32> into memref<?xf32>
+  %0 = linalg.reshape %arg0 [affine_map<(i)->(i)>] : memref<?xf32> into memref<?xf32>
 }
 
 // -----
 
 func @reshape(%arg0: memref<?x?x?xf32>) {
   // expected-error @+1 {{expected rank of the collapsed view(2) to be the number of reassociation maps(1)}}
-  %0 = linalg.reshape %arg0 [(i, j, k) -> (i, j)] :
+  %0 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i, j)>] :
     memref<?x?x?xf32> into memref<?x?xf32, offset: 0, strides: [?, 1]>
 }
 
@@ -509,7 +509,7 @@ func @reshape(%arg0: memref<?x?x?xf32>) {
 
 func @reshape(%arg0: memref<?x?x?xf32>) {
   // expected-error @+1 {{expected reassociation map #0 of same rank as expanded memref(3), but got 1}}
-  %0 = linalg.reshape %arg0 [(i) -> (i), (i, j, k) -> (k)] :
+  %0 = linalg.reshape %arg0 [affine_map<(i) -> (i)>, affine_map<(i, j, k) -> (k)>] :
     memref<?x?x?xf32> into memref<?x?xf32, offset: 0, strides: [?, 1]>
 }
 
@@ -517,14 +517,14 @@ func @reshape(%arg0: memref<?x?x?xf32>) {
 
 func @reshape(%arg0: memref<?x?x?xf32>) {
   // expected-error @+1 {{expected reassociation map #1 to be valid and contiguous}}
-  %0 = linalg.reshape %arg0 [(i, j, k) -> (i, j), (i, j, k) -> (k, j)] :
+  %0 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i, j)>, affine_map<(i, j, k) -> (k, j)>] :
     memref<?x?x?xf32> into memref<?x?xf32, offset: 0, strides: [?, 1]>
 }
 
 // -----
 
 func @reshape(%arg0: memref<?x?x?xf32>) {
-  // expected-error @+1 {{expected collapsed type to be 'memref<?x?xf32>', but got 'memref<?x?xf32, (d0, d1)[s0] -> (d0 * s0 + d1)>'}}
-  %0 = linalg.reshape %arg0 [(i, j, k) -> (i, j), (i, j, k) -> (k)] :
-    memref<?x?x?xf32> into memref<?x?xf32, (d0, d1)[s0] -> (d0 * s0 + d1)>
+  // expected-error @+1 {{expected collapsed type to be 'memref<?x?xf32>', but got 'memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>>'}}
+  %0 = linalg.reshape %arg0 [affine_map<(i, j, k) -> (i, j)>, affine_map<(i, j, k) -> (k)>] :
+    memref<?x?x?xf32> into memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>>
 }

@@ -222,9 +222,6 @@ public:
 
   uint32_t GetPluginVersion() override;
 
-  const lldb_private::DWARFDataExtractor &get_debug_loc_data();
-  const lldb_private::DWARFDataExtractor &get_debug_loclists_data();
-
   DWARFDebugAbbrev *DebugAbbrev();
 
   const DWARFDebugAbbrev *DebugAbbrev() const;

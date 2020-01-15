@@ -488,7 +488,7 @@ tryEmitSpecializedAllocInit(CodeGenFunction &CGF, const ObjCMessageExpr *OME) {
     Receiver = CGF.EmitScalarExpr(SelfInClassMethod);
   } else {
     QualType ReceiverType = SubOME->getClassReceiver();
-    const ObjCObjectType *ObjTy = ReceiverType->getAs<ObjCObjectType>();
+    const ObjCObjectType *ObjTy = ReceiverType->castAs<ObjCObjectType>();
     const ObjCInterfaceDecl *ID = ObjTy->getInterface();
     assert(ID && "null interface should be impossible here");
     Receiver = CGF.CGM.getObjCRuntime().GetClass(CGF, ID);
@@ -555,9 +555,7 @@ RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
 
   case ObjCMessageExpr::Class: {
     ReceiverType = E->getClassReceiver();
-    const ObjCObjectType *ObjTy = ReceiverType->getAs<ObjCObjectType>();
-    assert(ObjTy && "Invalid Objective-C class message send");
-    OID = ObjTy->getInterface();
+    OID = ReceiverType->castAs<ObjCObjectType>()->getInterface();
     assert(OID && "Invalid Objective-C class message send");
     Receiver = Runtime.GetClass(*this, OID);
     isClassMessage = true;

@@ -346,8 +346,8 @@ static void checkOptions() {
       error("-execute-only and -no-rosegment cannot be used together");
   }
 
-  if (config->zRetpolineplt && config->requireCET)
-    error("--require-cet may not be used with -z retpolineplt");
+  if (config->zRetpolineplt && config->zForceIbt)
+    error("-z force-ibt may not be used with -z retpolineplt");
 
   if (config->emachine != EM_AARCH64) {
     if (config->pacPlt)
@@ -409,18 +409,18 @@ static GnuStackKind getZGnuStack(opt::InputArgList &args) {
 
 static bool isKnownZFlag(StringRef s) {
   return s == "combreloc" || s == "copyreloc" || s == "defs" ||
-         s == "execstack" || s == "force-bti" || s == "global" ||
-         s == "hazardplt" || s == "ifunc-noplt" || s == "initfirst" ||
-         s == "interpose" || s == "keep-text-section-prefix" || s == "lazy" ||
-         s == "muldefs" || s == "separate-code" ||
-         s == "separate-loadable-segments" || s == "nocombreloc" ||
-         s == "nocopyreloc" || s == "nodefaultlib" || s == "nodelete" ||
-         s == "nodlopen" || s == "noexecstack" || s == "nognustack" ||
-         s == "nokeep-text-section-prefix" || s == "norelro" ||
-         s == "noseparate-code" || s == "notext" || s == "now" ||
-         s == "origin" || s == "pac-plt" || s == "relro" ||
-         s == "retpolineplt" || s == "rodynamic" || s == "text" ||
-         s == "undefs" || s == "wxneeded" ||
+         s == "execstack" || s == "force-bti" || s == "force-ibt" ||
+         s == "global" || s == "hazardplt" || s == "ifunc-noplt" ||
+         s == "initfirst" || s == "interpose" ||
+         s == "keep-text-section-prefix" || s == "lazy" || s == "muldefs" ||
+         s == "separate-code" || s == "separate-loadable-segments" ||
+         s == "nocombreloc" || s == "nocopyreloc" || s == "nodefaultlib" ||
+         s == "nodelete" || s == "nodlopen" || s == "noexecstack" ||
+         s == "nognustack" || s == "nokeep-text-section-prefix" ||
+         s == "norelro" || s == "noseparate-code" || s == "notext" ||
+         s == "now" || s == "origin" || s == "pac-plt" || s == "relro" ||
+         s == "retpolineplt" || s == "rodynamic" || s == "shstk" ||
+         s == "text" || s == "undefs" || s == "wxneeded" ||
          s.startswith("common-page-size=") || s.startswith("max-page-size=") ||
          s.startswith("stack-size=");
 }
@@ -877,7 +877,6 @@ static void readConfigs(opt::InputArgList &args) {
   config->fixCortexA53Errata843419 = args.hasArg(OPT_fix_cortex_a53_843419);
   config->fixCortexA8 = args.hasArg(OPT_fix_cortex_a8);
   config->forceBTI = hasZOption(args, "force-bti");
-  config->requireCET = args.hasArg(OPT_require_cet);
   config->gcSections = args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);
   config->gnuUnique = args.hasFlag(OPT_gnu_unique, OPT_no_gnu_unique, true);
   config->gdbIndex = args.hasFlag(OPT_gdb_index, OPT_no_gdb_index, false);
@@ -966,6 +965,7 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_warn_symbol_ordering, OPT_no_warn_symbol_ordering, true);
   config->zCombreloc = getZFlag(args, "combreloc", "nocombreloc", true);
   config->zCopyreloc = getZFlag(args, "copyreloc", "nocopyreloc", true);
+  config->zForceIbt = hasZOption(args, "force-ibt");
   config->zGlobal = hasZOption(args, "global");
   config->zGnustack = getZGnuStack(args);
   config->zHazardplt = hasZOption(args, "hazardplt");
@@ -983,6 +983,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->zRetpolineplt = hasZOption(args, "retpolineplt");
   config->zRodynamic = hasZOption(args, "rodynamic");
   config->zSeparate = getZSeparate(args);
+  config->zShstk = hasZOption(args, "shstk");
   config->zStackSize = args::getZOptionValue(args, OPT_z, "stack-size", 0);
   config->zText = getZFlag(args, "text", "notext", true);
   config->zWxneeded = hasZOption(args, "wxneeded");
@@ -1374,7 +1375,7 @@ static void excludeLibs(opt::InputArgList &args) {
     if (!file->archiveName.empty())
       if (all || libs.count(path::filename(file->archiveName)))
         for (Symbol *sym : file->getSymbols())
-          if (!sym->isLocal() && sym->file == file)
+          if (!sym->isUndefined() && !sym->isLocal() && sym->file == file)
             sym->versionId = VER_NDX_LOCAL;
   };
 
@@ -1687,12 +1688,8 @@ static void wrapSymbols(ArrayRef<WrappedSymbol> wrapped) {
 // with CET. We enable the feature only when all object files are compatible
 // with CET.
 //
-// This function returns the merged feature flags. If 0, we cannot enable CET.
 // This is also the case with AARCH64's BTI and PAC which use the similar
 // GNU_PROPERTY_AARCH64_FEATURE_1_AND mechanism.
-//
-// Note that the CET-aware PLT is not implemented yet. We do error
-// check only.
 template <class ELFT> static uint32_t getAndFeatures() {
   if (config->emachine != EM_386 && config->emachine != EM_X86_64 &&
       config->emachine != EM_AARCH64)
@@ -1704,8 +1701,12 @@ template <class ELFT> static uint32_t getAndFeatures() {
     if (config->forceBTI && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
       warn(toString(f) + ": -z force-bti: file does not have BTI property");
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-    } else if (!features && config->requireCET)
-      error(toString(f) + ": --require-cet: file is not compatible with CET");
+    } else if (config->zForceIbt &&
+               !(features & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
+      warn(toString(f) + ": -z force-ibt: file does not have "
+                         "GNU_PROPERTY_X86_FEATURE_1_IBT property");
+      features |= GNU_PROPERTY_X86_FEATURE_1_IBT;
+    }
     ret &= features;
   }
 
@@ -1713,6 +1714,9 @@ template <class ELFT> static uint32_t getAndFeatures() {
   // this does not require support in the object for correctness.
   if (config->pacPlt)
     ret |= GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
+  // Force enable Shadow Stack.
+  if (config->zShstk)
+    ret |= GNU_PROPERTY_X86_FEATURE_1_SHSTK;
 
   return ret;
 }

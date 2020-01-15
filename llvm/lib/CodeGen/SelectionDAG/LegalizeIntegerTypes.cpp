@@ -3759,9 +3759,11 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::SELECT_CC:         Res = ExpandIntOp_SELECT_CC(N); break;
   case ISD::SETCC:             Res = ExpandIntOp_SETCC(N); break;
   case ISD::SETCCCARRY:        Res = ExpandIntOp_SETCCCARRY(N); break;
+  case ISD::STRICT_SINT_TO_FP:
   case ISD::SINT_TO_FP:        Res = ExpandIntOp_SINT_TO_FP(N); break;
   case ISD::STORE:   Res = ExpandIntOp_STORE(cast<StoreSDNode>(N), OpNo); break;
   case ISD::TRUNCATE:          Res = ExpandIntOp_TRUNCATE(N); break;
+  case ISD::STRICT_UINT_TO_FP:
   case ISD::UINT_TO_FP:        Res = ExpandIntOp_UINT_TO_FP(N); break;
 
   case ISD::SHL:
@@ -4028,14 +4030,24 @@ SDValue DAGTypeLegalizer::ExpandIntOp_RETURNADDR(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::ExpandIntOp_SINT_TO_FP(SDNode *N) {
-  SDValue Op = N->getOperand(0);
+  bool IsStrict = N->isStrictFPOpcode();
+  SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
+  SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT DstVT = N->getValueType(0);
   RTLIB::Libcall LC = RTLIB::getSINTTOFP(Op.getValueType(), DstVT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL &&
          "Don't know how to expand this SINT_TO_FP!");
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setSExt(true);
-  return TLI.makeLibCall(DAG, LC, DstVT, Op, CallOptions, SDLoc(N)).first;
+  std::pair<SDValue, SDValue> Tmp =
+      TLI.makeLibCall(DAG, LC, DstVT, Op, CallOptions, SDLoc(N), Chain);
+
+  if (!IsStrict)
+    return Tmp.first;
+
+  ReplaceValueWith(SDValue(N, 1), Tmp.second);
+  ReplaceValueWith(SDValue(N, 0), Tmp.first);
+  return SDValue();
 }
 
 SDValue DAGTypeLegalizer::ExpandIntOp_STORE(StoreSDNode *N, unsigned OpNo) {
@@ -4138,80 +4150,24 @@ SDValue DAGTypeLegalizer::ExpandIntOp_TRUNCATE(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::ExpandIntOp_UINT_TO_FP(SDNode *N) {
-  SDValue Op = N->getOperand(0);
-  EVT SrcVT = Op.getValueType();
+  bool IsStrict = N->isStrictFPOpcode();
+  SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
+  SDValue Op = N->getOperand(IsStrict ? 1 : 0);
   EVT DstVT = N->getValueType(0);
-  SDLoc dl(N);
-
-  // The following optimization is valid only if every value in SrcVT (when
-  // treated as signed) is representable in DstVT.  Check that the mantissa
-  // size of DstVT is >= than the number of bits in SrcVT -1.
-  const fltSemantics &sem = DAG.EVTToAPFloatSemantics(DstVT);
-  if (APFloat::semanticsPrecision(sem) >= SrcVT.getSizeInBits()-1 &&
-      TLI.getOperationAction(ISD::SINT_TO_FP, SrcVT) == TargetLowering::Custom){
-    // Do a signed conversion then adjust the result.
-    SDValue SignedConv = DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Op);
-    SignedConv = TLI.LowerOperation(SignedConv, DAG);
-
-    // The result of the signed conversion needs adjusting if the 'sign bit' of
-    // the incoming integer was set.  To handle this, we dynamically test to see
-    // if it is set, and, if so, add a fudge factor.
-
-    const uint64_t F32TwoE32  = 0x4F800000ULL;
-    const uint64_t F32TwoE64  = 0x5F800000ULL;
-    const uint64_t F32TwoE128 = 0x7F800000ULL;
-
-    APInt FF(32, 0);
-    if (SrcVT == MVT::i32)
-      FF = APInt(32, F32TwoE32);
-    else if (SrcVT == MVT::i64)
-      FF = APInt(32, F32TwoE64);
-    else if (SrcVT == MVT::i128)
-      FF = APInt(32, F32TwoE128);
-    else
-      llvm_unreachable("Unsupported UINT_TO_FP!");
-
-    // Check whether the sign bit is set.
-    SDValue Lo, Hi;
-    GetExpandedInteger(Op, Lo, Hi);
-    SDValue SignSet = DAG.getSetCC(dl,
-                                   getSetCCResultType(Hi.getValueType()),
-                                   Hi,
-                                   DAG.getConstant(0, dl, Hi.getValueType()),
-                                   ISD::SETLT);
-
-    // Build a 64 bit pair (0, FF) in the constant pool, with FF in the lo bits.
-    SDValue FudgePtr =
-        DAG.getConstantPool(ConstantInt::get(*DAG.getContext(), FF.zext(64)),
-                            TLI.getPointerTy(DAG.getDataLayout()));
-
-    // Get a pointer to FF if the sign bit was set, or to 0 otherwise.
-    SDValue Zero = DAG.getIntPtrConstant(0, dl);
-    SDValue Four = DAG.getIntPtrConstant(4, dl);
-    if (DAG.getDataLayout().isBigEndian())
-      std::swap(Zero, Four);
-    SDValue Offset = DAG.getSelect(dl, Zero.getValueType(), SignSet,
-                                   Zero, Four);
-    unsigned Alignment = cast<ConstantPoolSDNode>(FudgePtr)->getAlignment();
-    FudgePtr = DAG.getMemBasePlusOffset(FudgePtr, Offset, dl);
-    Alignment = std::min(Alignment, 4u);
-
-    // Load the value out, extending it from f32 to the destination float type.
-    // FIXME: Avoid the extend by constructing the right constant pool?
-    SDValue Fudge = DAG.getExtLoad(
-        ISD::EXTLOAD, dl, DstVT, DAG.getEntryNode(), FudgePtr,
-        MachinePointerInfo::getConstantPool(DAG.getMachineFunction()), MVT::f32,
-        Alignment);
-    return DAG.getNode(ISD::FADD, dl, DstVT, SignedConv, Fudge);
-  }
-
-  // Otherwise, use a libcall.
-  RTLIB::Libcall LC = RTLIB::getUINTTOFP(SrcVT, DstVT);
+  RTLIB::Libcall LC = RTLIB::getUINTTOFP(Op.getValueType(), DstVT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL &&
          "Don't know how to expand this UINT_TO_FP!");
   TargetLowering::MakeLibCallOptions CallOptions;
   CallOptions.setSExt(true);
-  return TLI.makeLibCall(DAG, LC, DstVT, Op, CallOptions, dl).first;
+  std::pair<SDValue, SDValue> Tmp =
+      TLI.makeLibCall(DAG, LC, DstVT, Op, CallOptions, SDLoc(N), Chain);
+
+  if (!IsStrict)
+    return Tmp.first;
+
+  ReplaceValueWith(SDValue(N, 1), Tmp.second);
+  ReplaceValueWith(SDValue(N, 0), Tmp.first);
+  return SDValue();
 }
 
 SDValue DAGTypeLegalizer::ExpandIntOp_ATOMIC_STORE(SDNode *N) {

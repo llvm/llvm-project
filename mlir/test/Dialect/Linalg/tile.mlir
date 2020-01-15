@@ -3,29 +3,29 @@
 // RUN: mlir-opt %s -linalg-tile -linalg-tile-sizes=0,0,2 | FileCheck %s -check-prefix=TILE-002
 // RUN: mlir-opt %s -linalg-tile -linalg-tile-sizes=2,3,4 | FileCheck %s -check-prefix=TILE-234
 
-//   TILE-2-DAG: #[[strided1D:.*]] = (d0)[s0] -> (d0 + s0)
-//  TILE-02-DAG: #[[strided1D:.*]] = (d0)[s0] -> (d0 + s0)
-// TILE-002-DAG: #[[strided1D:.*]] = (d0)[s0] -> (d0 + s0)
-// TILE-234-DAG: #[[strided1D:.*]] = (d0)[s0] -> (d0 + s0)
+//   TILE-2-DAG: #[[strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
+//  TILE-02-DAG: #[[strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
+// TILE-002-DAG: #[[strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
+// TILE-234-DAG: #[[strided1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 
-//   TILE-2-DAG: #[[strided2D:.*]] = (d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)
-//  TILE-02-DAG: #[[strided2D:.*]] = (d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)
-// TILE-002-DAG: #[[strided2D:.*]] = (d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)
-// TILE-234-DAG: #[[strided2D:.*]] = (d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)
+//   TILE-2-DAG: #[[strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+//  TILE-02-DAG: #[[strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+// TILE-002-DAG: #[[strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
+// TILE-234-DAG: #[[strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 
-//   TILE-2-DAG: #[[strided1D_dynamic:.*]] = (d0)[s0, s1] -> (d0 * s1 + s0)
-//   TILE-02-DAG: #[[strided1D_dynamic:.*]] = (d0)[s0, s1] -> (d0 * s1 + s0)
-//   T_ILE-002-DAG: #[[strided1D_dynamic:.*]] = (d0)[s0, s1] -> (d0 * s1 + s0)
-//   TILE-234-DAG: #[[strided1D_dynamic:.*]] = (d0)[s0, s1] -> (d0 * s1 + s0)
+//   TILE-2-DAG: #[[strided1D_dynamic:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+//   TILE-02-DAG: #[[strided1D_dynamic:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+//   T_ILE-002-DAG: #[[strided1D_dynamic:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+//   TILE-234-DAG: #[[strided1D_dynamic:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
 
-//   TILE-2-DAG: #[[strided2D_dynamic:.*]] = (d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)
-//   TILE-02-DAG: #[[strided2D_dynamic:.*]] = (d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)
-//   TILE-002-DAG: #[[strided2D_dynamic:.*]] = (d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)
-//   TILE-234-DAG: #[[strided2D_dynamic:.*]] = (d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)
+//   TILE-2-DAG: #[[strided2D_dynamic:.*]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
+//   TILE-02-DAG: #[[strided2D_dynamic:.*]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
+//   TILE-002-DAG: #[[strided2D_dynamic:.*]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
+//   TILE-234-DAG: #[[strided2D_dynamic:.*]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 
-//   REACTIVATE_ME_TILE-2-DAG: #[[stride_99_1_layout_map:.*]] = (d0, d1)[s0] -> (d0 * 99 + s0 + d1)
-//  REACTIVATE_ME_TILE-02-DAG: #[[stride_99_1_layout_map:.*]] = (d0, d1)[s0] -> (d0 * 99 + s0 + d1)
-// REACTIVATE_ME_TILE-234-DAG: #[[stride_99_1_layout_map:.*]] = (d0, d1)[s0] -> (d0 * 99 + s0 + d1)
+//   REACTIVATE_ME_TILE-2-DAG: #[[stride_99_1_layout_map:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 99 + s0 + d1)>
+//  REACTIVATE_ME_TILE-02-DAG: #[[stride_99_1_layout_map:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 99 + s0 + d1)>
+// REACTIVATE_ME_TILE-234-DAG: #[[stride_99_1_layout_map:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 99 + s0 + d1)>
 
 func @matmul(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg2: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
   linalg.matmul(%arg0, %arg1, %arg2) : memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>, memref<?x?xf32, offset: ?, strides: [?, 1]>
@@ -211,7 +211,7 @@ func @fill(%arg0: memref<?x?xf32, offset: ?, strides: [?, 1]>, %arg1: f32) {
 //   TILE-234-NOT:   for
 //       TILE-234:       fill{{.*}} f32
 
-#id_2d = (i, j) -> (i, j)
+#id_2d = affine_map<(i, j) -> (i, j)>
 #pointwise_2d_trait = {
   args_in = 2,
   args_out = 1,

@@ -836,8 +836,12 @@ static bool isTargetDarwin(const MachineFunction &MF) {
   return MF.getSubtarget<AArch64Subtarget>().isTargetDarwin();
 }
 
+static bool isTargetWindows(const MachineFunction &MF) {
+  return MF.getSubtarget<AArch64Subtarget>().isTargetWindows();
+}
+
 // Convenience function to determine whether I is an SVE callee save.
-bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
+static bool IsSVECalleeSave(MachineBasicBlock::iterator I) {
   switch (I->getOpcode()) {
   default:
     return false;
@@ -1870,6 +1874,8 @@ static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
 
   // TODO: LR can be paired with any register.  We don't support this yet in
   // the MCLayer.  We need to add support for the save_lrpair unwind code.
+  if (Reg2 == AArch64::FP)
+    return true;
   if (!NeedsWinCFI)
     return false;
   if (Reg2 == Reg1 + 1)
@@ -1882,9 +1888,9 @@ static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,
 /// LR and FP need to be allocated together when the frame needs to save
 /// the frame-record. This means any other register pairing with LR is invalid.
 static bool invalidateRegisterPairing(unsigned Reg1, unsigned Reg2,
-                                      bool NeedsWinCFI, bool NeedsFrameRecord) {
-  if (NeedsWinCFI)
-    return invalidateWindowsRegisterPairing(Reg1, Reg2, true);
+                                      bool UsesWinAAPCS, bool NeedsWinCFI, bool NeedsFrameRecord) {
+  if (UsesWinAAPCS)
+    return invalidateWindowsRegisterPairing(Reg1, Reg2, NeedsWinCFI);
 
   // If we need to store the frame record, don't pair any register
   // with LR other than FP.
@@ -1934,6 +1940,7 @@ static void computeCalleeSaveRegisterPairs(
   if (CSI.empty())
     return;
 
+  bool IsWindows = isTargetWindows(MF);
   bool NeedsWinCFI = needsWinCFI(MF);
   AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1976,7 +1983,7 @@ static void computeCalleeSaveRegisterPairs(
       switch (RPI.Type) {
       case RegPairInfo::GPR:
         if (AArch64::GPR64RegClass.contains(NextReg) &&
-            !invalidateRegisterPairing(RPI.Reg1, NextReg, NeedsWinCFI,
+            !invalidateRegisterPairing(RPI.Reg1, NextReg, IsWindows, NeedsWinCFI,
                                        NeedsFrameRecord))
           RPI.Reg2 = NextReg;
         break;
@@ -2016,6 +2023,11 @@ static void computeCalleeSaveRegisterPairs(
 
     assert((!RPI.isPaired() || !NeedsFrameRecord || RPI.Reg2 != AArch64::FP ||
             RPI.Reg1 == AArch64::LR) &&
+           "FrameRecord must be allocated together with LR");
+
+    // Windows AAPCS has FP and LR reversed.
+    assert((!RPI.isPaired() || !NeedsFrameRecord || RPI.Reg1 != AArch64::FP ||
+            RPI.Reg2 == AArch64::LR) &&
            "FrameRecord must be allocated together with LR");
 
     // MachO's compact unwind format relies on all registers being stored in

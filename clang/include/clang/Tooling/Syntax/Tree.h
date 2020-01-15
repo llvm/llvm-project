@@ -110,6 +110,12 @@ public:
   /// Dumps the tokens forming this subtree.
   std::string dumpTokens(const Arena &A) const;
 
+  /// Asserts invariants on this node of the tree and its immediate children.
+  /// Will not recurse into the subtree. No-op if NDEBUG is set.
+  void assertInvariants() const;
+  /// Runs checkInvariants on all nodes in the subtree. No-op if NDEBUG is set.
+  void assertInvariantsRecursive() const;
+
 private:
   // Tree is allowed to change the Parent link and Role.
   friend class Tree;
@@ -117,6 +123,8 @@ private:
   friend class TreeBuilder;
   // MutationsImpl sets roles and CanModify flag.
   friend class MutationsImpl;
+  // FactoryImpl sets CanModify flag.
+  friend class FactoryImpl;
 
   Tree *Parent;
   Node *NextSibling;

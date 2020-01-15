@@ -4704,6 +4704,10 @@ static MachineInstr *FuseInst(MachineFunction &MF, unsigned Opcode,
 
   updateOperandRegConstraints(MF, *NewMI, TII);
 
+  // Copy the NoFPExcept flag from the instruction we're fusing.
+  if (MI.getFlag(MachineInstr::MIFlag::NoFPExcept))
+    NewMI->setFlag(MachineInstr::MIFlag::NoFPExcept);
+
   MachineBasicBlock *MBB = InsertPt->getParent();
   MBB->insert(InsertPt, NewMI);
 

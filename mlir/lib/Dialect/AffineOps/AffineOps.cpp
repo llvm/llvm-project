@@ -141,7 +141,8 @@ bool mlir::isValidDim(Value value) {
 /// Returns true if the 'index' dimension of the `memref` defined by
 /// `memrefDefOp` is a statically  shaped one or defined using a valid symbol.
 template <typename AnyMemRefDefOp>
-bool isMemRefSizeValidSymbol(AnyMemRefDefOp memrefDefOp, unsigned index) {
+static bool isMemRefSizeValidSymbol(AnyMemRefDefOp memrefDefOp,
+                                    unsigned index) {
   auto memRefType = memrefDefOp.getType();
   // Statically shaped.
   if (!ShapedType::isDynamic(memRefType.getDimSize(index)))
@@ -1620,7 +1621,8 @@ static LogicalResult verify(AffineIfOp op) {
   return success();
 }
 
-ParseResult parseAffineIfOp(OpAsmParser &parser, OperationState &result) {
+static ParseResult parseAffineIfOp(OpAsmParser &parser,
+                                   OperationState &result) {
   // Parse the condition attribute set.
   IntegerSetAttr conditionAttr;
   unsigned numDims;
@@ -1667,7 +1669,7 @@ ParseResult parseAffineIfOp(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-void print(OpAsmPrinter &p, AffineIfOp op) {
+static void print(OpAsmPrinter &p, AffineIfOp op) {
   auto conditionAttr =
       op.getAttrOfType<IntegerSetAttr>(op.getConditionAttrName());
   p << "affine.if " << conditionAttr;
@@ -2057,7 +2059,7 @@ static ParseResult parseAffinePrefetchOp(OpAsmParser &parser,
   return success();
 }
 
-void print(OpAsmPrinter &p, AffinePrefetchOp op) {
+static void print(OpAsmPrinter &p, AffinePrefetchOp op) {
   p << AffinePrefetchOp::getOperationName() << " " << op.memref() << '[';
   AffineMapAttr mapAttr = op.getAttrOfType<AffineMapAttr>(op.getMapAttrName());
   if (mapAttr) {
@@ -2074,7 +2076,7 @@ void print(OpAsmPrinter &p, AffinePrefetchOp op) {
   p << " : " << op.getMemRefType();
 }
 
-LogicalResult verify(AffinePrefetchOp op) {
+static LogicalResult verify(AffinePrefetchOp op) {
   auto mapAttr = op.getAttrOfType<AffineMapAttr>(op.getMapAttrName());
   if (mapAttr) {
     AffineMap map = mapAttr.getValue();

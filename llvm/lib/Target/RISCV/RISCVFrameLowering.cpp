@@ -107,8 +107,6 @@ static Register getSPReg(const RISCVSubtarget &STI) { return RISCV::X2; }
 
 void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {
-  assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
-
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
@@ -246,13 +244,27 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
 
 void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {
-  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
-  DebugLoc DL = MBBI->getDebugLoc();
   Register FPReg = getFPReg(STI);
   Register SPReg = getSPReg(STI);
+
+  // Get the insert location for the epilogue. If there were no terminators in
+  // the block, get the last instruction.
+  MachineBasicBlock::iterator MBBI = MBB.end();
+  DebugLoc DL;
+  if (!MBB.empty()) {
+    MBBI = MBB.getFirstTerminator();
+    if (MBBI == MBB.end())
+      MBBI = MBB.getLastNonDebugInstr();
+    DL = MBBI->getDebugLoc();
+
+    // If this is not a terminator, the actual insert location should be after the
+    // last instruction.
+    if (!MBBI->isTerminator())
+      MBBI = std::next(MBBI);
+  }
 
   // Skip to before the restores of callee-saved registers
   // FIXME: assumes exactly one instruction is used to restore each

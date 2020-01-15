@@ -2,7 +2,7 @@
 // RUN: mlir-opt %s -linalg-tile -linalg-tile-sizes=25,0 | FileCheck %s -check-prefix=TILE-25n0
 // RUN: mlir-opt %s -linalg-tile -linalg-tile-sizes=0,25 | FileCheck %s -check-prefix=TILE-0n25
 
-#id_1d = (i) -> (i)
+#id_1d = affine_map<(i) -> (i)>
 #pointwise_1d_trait = {
   args_in = 1,
   args_out = 1,
@@ -47,8 +47,8 @@ func @indexed_generic_vector(%operand: memref<50xf32>, %result: memref<50xf32>) 
   args_in = 1,
   args_out = 1,
   indexing_maps = [
-    (i, j) -> (j, i + j),
-    (i, j) -> (i, j)
+    affine_map<(i, j) -> (j, i + j)>,
+    affine_map<(i, j) -> (i, j)>
   ],
   iterator_types = ["parallel", "parallel"]
 }

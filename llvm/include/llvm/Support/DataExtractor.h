@@ -534,14 +534,14 @@ public:
   /// error state of the cursor. The only way both eof and error states can be
   /// true is if one attempts a read while the cursor is at the very end of the
   /// data buffer.
-  bool eof(const Cursor &C) const { return Data.size() == C.Offset; }
+  bool eof(const Cursor &C) const { return size() == C.Offset; }
 
   /// Test the validity of \a offset.
   ///
   /// @return
   ///     \b true if \a offset is a valid offset into the data in this
   ///     object, \b false otherwise.
-  bool isValidOffset(uint64_t offset) const { return Data.size() > offset; }
+  bool isValidOffset(uint64_t offset) const { return size() > offset; }
 
   /// Test the availability of \a length bytes of data from \a offset.
   ///
@@ -562,6 +562,9 @@ public:
   bool isValidOffsetForAddress(uint64_t offset) const {
     return isValidOffsetForDataOfSize(offset, AddressSize);
   }
+
+  /// Return the number of bytes in the underlying buffer.
+  size_t size() const { return Data.size(); }
 
 protected:
   // Make it possible for subclasses to access these fields without making them

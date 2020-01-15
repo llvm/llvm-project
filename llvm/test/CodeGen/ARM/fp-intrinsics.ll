@@ -488,6 +488,22 @@ define double @fpext_f32(float %x) #0 {
   ret double %val
 }
 
+; CHECK-LABEL: sitofp_f32_i32:
+; CHECK-NOSP: bl __aeabi_i2f
+; CHECK-SP: vcvt.f32.s32
+define float @sitofp_f32_i32(i32 %x) #0 {
+  %val = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %val
+}
+
+; CHECK-LABEL: sitofp_f64_i32:
+; CHECK-NODP: bl __aeabi_i2d
+; CHECK-DP: vcvt.f64.s32
+define double @sitofp_f64_i32(i32 %x) #0 {
+  %val = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret double %val
+}
+
 
 attributes #0 = { strictfp }
 
@@ -555,3 +571,5 @@ declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
 
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
+declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata)
+declare double @llvm.experimental.constrained.sitofp.f64.i32(i32, metadata, metadata)

@@ -35,13 +35,13 @@ namespace lto {
 
 /// Runs a regular LTO backend. The regular LTO backend can also act as the
 /// regular LTO phase of ThinLTO, which may need to access the combined index.
-Error backend(Config &C, AddStreamFn AddStream,
+Error backend(const Config &C, AddStreamFn AddStream,
               unsigned ParallelCodeGenParallelismLevel,
               std::unique_ptr<Module> M, ModuleSummaryIndex &CombinedIndex);
 
 /// Runs a ThinLTO backend.
-Error thinBackend(Config &C, unsigned Task, AddStreamFn AddStream, Module &M,
-                  const ModuleSummaryIndex &CombinedIndex,
+Error thinBackend(const Config &C, unsigned Task, AddStreamFn AddStream,
+                  Module &M, const ModuleSummaryIndex &CombinedIndex,
                   const FunctionImporter::ImportMapTy &ImportList,
                   const GVSummaryMapTy &DefinedGlobals,
                   MapVector<StringRef, BitcodeModule> &ModuleMap);

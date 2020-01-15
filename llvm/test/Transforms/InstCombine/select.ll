@@ -5,39 +5,6 @@
 
 target datalayout = "e-p:64:64-p1:16:16-p2:32:32:32-p3:64:64:64"
 
-define i32 @test1(i32 %A, i32 %B) {
-; CHECK-LABEL: @test1(
-; CHECK-NEXT:    ret i32 [[B:%.*]]
-;
-  %C = select i1 false, i32 %A, i32 %B
-  ret i32 %C
-}
-
-define i32 @test2(i32 %A, i32 %B) {
-; CHECK-LABEL: @test2(
-; CHECK-NEXT:    ret i32 [[A:%.*]]
-;
-  %C = select i1 true, i32 %A, i32 %B
-  ret i32 %C
-}
-
-
-define i32 @test3(i1 %C, i32 %I) {
-; CHECK-LABEL: @test3(
-; CHECK-NEXT:    ret i32 [[I:%.*]]
-;
-  %V = select i1 %C, i32 %I, i32 %I
-  ret i32 %V
-}
-
-define i1 @test4(i1 %C) {
-; CHECK-LABEL: @test4(
-; CHECK-NEXT:    ret i1 [[C:%.*]]
-;
-  %V = select i1 %C, i1 true, i1 false
-  ret i1 %V
-}
-
 define i1 @test5(i1 %C) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C:%.*]], true
@@ -1564,4 +1531,112 @@ define <2 x i32> @test_shl_zext_bool_vec(<2 x i1> %t) {
 ;
   %r = select <2 x i1> %t, <2 x i32> <i32 4, i32 8>, <2 x i32> zeroinitializer
   ret <2 x i32> %r
+}
+
+define float @copysign1(float %x) {
+; CHECK-LABEL: @copysign1(
+; CHECK-NEXT:    [[I:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i32 [[I]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISPOS]], float 1.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = bitcast float %x to i32
+  %ispos = icmp sgt i32 %i, -1
+  %r = select i1 %ispos, float 1.0, float -1.0
+  ret float %r
+}
+
+define <2 x float> @copysign2(<2 x float> %x) {
+; CHECK-LABEL: @copysign2(
+; CHECK-NEXT:    [[I:%.*]] = bitcast <2 x float> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i32> [[I]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select nsz <2 x i1> [[ISNEG]], <2 x float> <float 4.200000e+01, float 4.200000e+01>, <2 x float> <float -4.200000e+01, float -4.200000e+01>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %i = bitcast <2 x float> %x to <2 x i32>
+  %isneg = icmp slt <2 x i32> %i, zeroinitializer
+  %r = select nsz <2 x i1> %isneg, <2 x float> <float 42.0, float 42.0>, <2 x float> <float -42.0, float -42.0>
+  ret <2 x float> %r
+}
+
+define float @copysign3(float %x) {
+; CHECK-LABEL: @copysign3(
+; CHECK-NEXT:    [[I:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i32 [[I]], -1
+; CHECK-NEXT:    [[R:%.*]] = select fast i1 [[ISPOS]], float -4.300000e+01, float 4.300000e+01
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = bitcast float %x to i32
+  %ispos = icmp ult i32 %i, 2147483648
+  %r = select fast i1 %ispos, float -43.0, float 43.0
+  ret float %r
+}
+
+define <2 x float> @copysign4(<2 x float> %x) {
+; CHECK-LABEL: @copysign4(
+; CHECK-NEXT:    [[I:%.*]] = bitcast <2 x float> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i32> [[I]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select nnan arcp <2 x i1> [[ISNEG]], <2 x float> <float 4.200000e+01, float undef>, <2 x float> <float -4.200000e+01, float -4.200000e+01>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %i = bitcast <2 x float> %x to <2 x i32>
+  %isneg = icmp ugt <2 x i32> %i, <i32 2147483647, i32 2147483647>
+  %r = select arcp nnan <2 x i1> %isneg, <2 x float> <float 42.0, float undef>, <2 x float> <float -42.0, float -42.0>
+  ret <2 x float> %r
+}
+
+declare void @use1(i1)
+
+define float @copysign_extra_use(float %x) {
+; CHECK-LABEL: @copysign_extra_use(
+; CHECK-NEXT:    [[I:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[I]], 0
+; CHECK-NEXT:    call void @use1(i1 [[ISNEG]])
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], float -4.400000e+01, float 4.400000e+01
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = bitcast float %x to i32
+  %isneg = icmp ugt i32 %i, 2147483647
+  call void @use1(i1 %isneg)
+  %r = select i1 %isneg, float -44.0, float 44.0
+  ret float %r
+}
+
+define float @copysign_type_mismatch(double %x) {
+; CHECK-LABEL: @copysign_type_mismatch(
+; CHECK-NEXT:    [[I:%.*]] = bitcast double [[X:%.*]] to i64
+; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i64 [[I]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISPOS]], float 1.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = bitcast double %x to i64
+  %ispos = icmp sgt i64 %i, -1
+  %r = select i1 %ispos, float 1.0, float -1.0
+  ret float %r
+}
+
+define float @copysign_wrong_cmp(float %x) {
+; CHECK-LABEL: @copysign_wrong_cmp(
+; CHECK-NEXT:    [[I:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i32 [[I]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISPOS]], float 1.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = bitcast float %x to i32
+  %ispos = icmp sgt i32 %i, 0
+  %r = select i1 %ispos, float 1.0, float -1.0
+  ret float %r
+}
+
+define float @copysign_wrong_const(float %x) {
+; CHECK-LABEL: @copysign_wrong_const(
+; CHECK-NEXT:    [[I:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[ISPOS:%.*]] = icmp sgt i32 [[I]], -1
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISPOS]], float 2.000000e+00, float -1.000000e+00
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = bitcast float %x to i32
+  %ispos = icmp sgt i32 %i, -1
+  %r = select i1 %ispos, float 2.0, float -1.0
+  ret float %r
 }

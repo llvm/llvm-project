@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-print-callgraph 2>&1 | FileCheck %s --dump-input-on-failure
+// RUN: mlir-opt %s -test-print-callgraph -split-input-file 2>&1 | FileCheck %s --dump-input-on-failure
 
 // CHECK-LABEL: Testing : "simple"
 module attributes {test.name = "simple"} {
@@ -47,6 +47,25 @@ module attributes {test.name = "simple"} {
     }) : () -> (() -> ())
 
     call_indirect %fn() : () -> ()
+    return
+  }
+}
+
+// -----
+
+// CHECK-LABEL: Testing : "nested"
+module attributes {test.name = "nested"} {
+  module @nested_module {
+    // CHECK: Node{{.*}}func_a
+    func @func_a() {
+      return
+    }
+  }
+
+  // CHECK: Node{{.*}}func_b
+  // CHECK: Call-Edge{{.*}}func_a
+  func @func_b() {
+    "test.conversion_call_op"() { callee = @nested_module::@func_a } : () -> ()
     return
   }
 }

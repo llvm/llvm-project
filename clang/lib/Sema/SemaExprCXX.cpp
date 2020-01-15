@@ -5747,38 +5747,157 @@ static bool ConvertForConditional(Sema &Self, ExprResult &E, QualType T) {
   return false;
 }
 
+// Check the condition operand of ?: to see if it is valid for the GCC
+// extension.
+static bool isValidVectorForConditionalCondition(ASTContext &Ctx,
+                                                 QualType CondTy) {
+  if (!CondTy->isVectorType() || CondTy->isExtVectorType())
+    return false;
+  const QualType EltTy =
+      cast<VectorType>(CondTy.getCanonicalType())->getElementType();
+
+  assert(!EltTy->isBooleanType() && !EltTy->isEnumeralType() &&
+         "Vectors cant be boolean or enum types");
+  return EltTy->isIntegralType(Ctx);
+}
+
+QualType Sema::CheckGNUVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
+                                              ExprResult &RHS,
+                                              SourceLocation QuestionLoc) {
+  LHS = DefaultFunctionArrayLvalueConversion(LHS.get());
+  RHS = DefaultFunctionArrayLvalueConversion(RHS.get());
+
+  QualType CondType = Cond.get()->getType();
+  const auto *CondVT = CondType->getAs<VectorType>();
+  QualType CondElementTy = CondVT->getElementType();
+  unsigned CondElementCount = CondVT->getNumElements();
+  QualType LHSType = LHS.get()->getType();
+  const auto *LHSVT = LHSType->getAs<VectorType>();
+  QualType RHSType = RHS.get()->getType();
+  const auto *RHSVT = RHSType->getAs<VectorType>();
+
+  QualType ResultType;
+
+  // FIXME: In the future we should define what the Extvector conditional
+  // operator looks like.
+  if (LHSVT && isa<ExtVectorType>(LHSVT)) {
+    Diag(QuestionLoc, diag::err_conditional_vector_operand_type)
+        << /*isExtVector*/ true << LHSType;
+    return {};
+  }
+
+  if (RHSVT && isa<ExtVectorType>(RHSVT)) {
+    Diag(QuestionLoc, diag::err_conditional_vector_operand_type)
+        << /*isExtVector*/ true << RHSType;
+    return {};
+  }
+
+  if (LHSVT && RHSVT) {
+    // If both are vector types, they must be the same type.
+    if (!Context.hasSameType(LHSType, RHSType)) {
+      Diag(QuestionLoc, diag::err_conditional_vector_mismatched_vectors)
+          << LHSType << RHSType;
+      return {};
+    }
+    ResultType = LHSType;
+  } else if (LHSVT || RHSVT) {
+    ResultType = CheckVectorOperands(
+        LHS, RHS, QuestionLoc, /*isCompAssign*/ false, /*AllowBothBool*/ true,
+        /*AllowBoolConversions*/ false);
+    if (ResultType.isNull())
+      return {};
+  } else {
+    // Both are scalar.
+    QualType ResultElementTy;
+    LHSType = LHSType.getCanonicalType().getUnqualifiedType();
+    RHSType = RHSType.getCanonicalType().getUnqualifiedType();
+
+    if (Context.hasSameType(LHSType, RHSType))
+      ResultElementTy = LHSType;
+    else
+      ResultElementTy =
+          UsualArithmeticConversions(LHS, RHS, QuestionLoc, ACK_Conditional);
+
+    if (ResultElementTy->isEnumeralType()) {
+      Diag(QuestionLoc, diag::err_conditional_vector_operand_type)
+          << /*isExtVector*/ false << ResultElementTy;
+      return {};
+    }
+    ResultType = Context.getVectorType(
+        ResultElementTy, CondType->getAs<VectorType>()->getNumElements(),
+        VectorType::GenericVector);
+
+    LHS = ImpCastExprToType(LHS.get(), ResultType, CK_VectorSplat);
+    RHS = ImpCastExprToType(RHS.get(), ResultType, CK_VectorSplat);
+  }
+
+  assert(!ResultType.isNull() && ResultType->isVectorType() &&
+         "Result should have been a vector type");
+  QualType ResultElementTy = ResultType->getAs<VectorType>()->getElementType();
+  unsigned ResultElementCount =
+      ResultType->getAs<VectorType>()->getNumElements();
+
+  if (ResultElementCount != CondElementCount) {
+    Diag(QuestionLoc, diag::err_conditional_vector_size) << CondType
+                                                         << ResultType;
+    return {};
+  }
+
+  if (Context.getTypeSize(ResultElementTy) !=
+      Context.getTypeSize(CondElementTy)) {
+    Diag(QuestionLoc, diag::err_conditional_vector_element_size) << CondType
+                                                                 << ResultType;
+    return {};
+  }
+
+  return ResultType;
+}
+
 /// Check the operands of ?: under C++ semantics.
 ///
 /// See C++ [expr.cond]. Note that LHS is never null, even for the GNU x ?: y
 /// extension. In this case, LHS == Cond. (But they're not aliases.)
+///
+/// This function also implements GCC's vector extension for conditionals.
+///  GCC's vector extension permits the use of a?b:c where the type of
+///  a is that of a integer vector with the same number of elements and
+///  size as the vectors of b and c. If one of either b or c is a scalar
+///  it is implicitly converted to match the type of the vector.
+///  Otherwise the expression is ill-formed. If both b and c are scalars,
+///  then b and c are checked and converted to the type of a if possible.
+///  Unlike the OpenCL ?: operator, the expression is evaluated as
+///  (a[0] != 0 ? b[0] : c[0], .. , a[n] != 0 ? b[n] : c[n]).
 QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
                                            ExprResult &RHS, ExprValueKind &VK,
                                            ExprObjectKind &OK,
                                            SourceLocation QuestionLoc) {
-  // FIXME: Handle C99's complex types, vector types, block pointers and Obj-C++
-  // interface pointers.
-
-  // C++11 [expr.cond]p1
-  //   The first expression is contextually converted to bool.
-  //
-  // FIXME; GCC's vector extension permits the use of a?b:c where the type of
-  //        a is that of a integer vector with the same number of elements and
-  //        size as the vectors of b and c. If one of either b or c is a scalar
-  //        it is implicitly converted to match the type of the vector.
-  //        Otherwise the expression is ill-formed. If both b and c are scalars,
-  //        then b and c are checked and converted to the type of a if possible.
-  //        Unlike the OpenCL ?: operator, the expression is evaluated as
-  //        (a[0] != 0 ? b[0] : c[0], .. , a[n] != 0 ? b[n] : c[n]).
-  if (!Cond.get()->isTypeDependent()) {
-    ExprResult CondRes = CheckCXXBooleanCondition(Cond.get());
-    if (CondRes.isInvalid())
-      return QualType();
-    Cond = CondRes;
-  }
+  // FIXME: Handle C99's complex types, block pointers and Obj-C++ interface
+  // pointers.
 
   // Assume r-value.
   VK = VK_RValue;
   OK = OK_Ordinary;
+  bool IsVectorConditional =
+      isValidVectorForConditionalCondition(Context, Cond.get()->getType());
+
+  // C++11 [expr.cond]p1
+  //   The first expression is contextually converted to bool.
+  if (!Cond.get()->isTypeDependent()) {
+    ExprResult CondRes = IsVectorConditional
+                             ? DefaultFunctionArrayLvalueConversion(Cond.get())
+                             : CheckCXXBooleanCondition(Cond.get());
+    if (CondRes.isInvalid())
+      return QualType();
+    Cond = CondRes;
+  } else {
+    // To implement C++, the first expression typically doesn't alter the result
+    // type of the conditional, however the GCC compatible vector extension
+    // changes the result type to be that of the conditional. Since we cannot
+    // know if this is a vector extension here, delay the conversion of the
+    // LHS/RHS below until later.
+    return Context.DependentTy;
+  }
+
 
   // Either of the arguments dependent?
   if (LHS.get()->isTypeDependent() || RHS.get()->isTypeDependent())
@@ -5797,6 +5916,17 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     //      and value category of the other.
     bool LThrow = isa<CXXThrowExpr>(LHS.get()->IgnoreParenImpCasts());
     bool RThrow = isa<CXXThrowExpr>(RHS.get()->IgnoreParenImpCasts());
+
+    // Void expressions aren't legal in the vector-conditional expressions.
+    if (IsVectorConditional) {
+      SourceRange DiagLoc =
+          LVoid ? LHS.get()->getSourceRange() : RHS.get()->getSourceRange();
+      bool IsThrow = LVoid ? LThrow : RThrow;
+      Diag(DiagLoc.getBegin(), diag::err_conditional_vector_has_void)
+          << DiagLoc << IsThrow;
+      return QualType();
+    }
+
     if (LThrow != RThrow) {
       Expr *NonThrow = LThrow ? RHS.get() : LHS.get();
       VK = NonThrow->getValueKind();
@@ -5819,6 +5949,8 @@ QualType Sema::CXXCheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   }
 
   // Neither is void.
+  if (IsVectorConditional)
+    return CheckGNUVectorConditionalTypes(Cond, LHS, RHS, QuestionLoc);
 
   // C++11 [expr.cond]p3
   //   Otherwise, if the second and third operand have different types, and

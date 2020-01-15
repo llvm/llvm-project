@@ -40,8 +40,8 @@ define <4 x double> @constrained_vector_fadd_v4f64() #0 {
 ; CHECK: [[MOVAPDrm:%[0-9]+]]:vr128 = MOVAPDrm $rip, 1, $noreg, %const.0, $noreg :: (load 16 from constant-pool)
 ; CHECK: [[ADDPDrm:%[0-9]+]]:vr128 = ADDPDrm [[MOVAPDrm]], $rip, 1, $noreg, %const.1, $noreg, implicit $mxcsr :: (load 16 from constant-pool)
 ; CHECK: [[ADDPDrm1:%[0-9]+]]:vr128 = ADDPDrm [[MOVAPDrm]], $rip, 1, $noreg, %const.2, $noreg, implicit $mxcsr :: (load 16 from constant-pool)
-; CHECK: $xmm0 = COPY [[ADDPDrm]]
-; CHECK: $xmm1 = COPY [[ADDPDrm1]]
+; CHECK: $xmm0 = COPY [[ADDPDrm1]]
+; CHECK: $xmm1 = COPY [[ADDPDrm]]
 ; CHECK: RET 0, $xmm0, $xmm1
 entry:
   %add = call <4 x double> @llvm.experimental.constrained.fadd.v4f64(

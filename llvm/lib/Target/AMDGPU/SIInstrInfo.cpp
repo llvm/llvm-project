@@ -85,7 +85,9 @@ BranchOffsetBits("amdgpu-s-branch-bits", cl::ReallyHidden, cl::init(16),
 
 SIInstrInfo::SIInstrInfo(const GCNSubtarget &ST)
   : AMDGPUGenInstrInfo(AMDGPU::ADJCALLSTACKUP, AMDGPU::ADJCALLSTACKDOWN),
-    RI(ST), ST(ST) {}
+    RI(ST), ST(ST) {
+  SchedModel.init(&ST);
+}
 
 //===----------------------------------------------------------------------===//
 // TargetInstrInfo callbacks
@@ -6635,10 +6637,10 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
     unsigned Lat = 0, Count = 0;
     for (++I; I != E && I->isBundledWithPred(); ++I) {
       ++Count;
-      Lat = std::max(Lat, getInstrLatency(ItinData, *I, PredCost));
+      Lat = std::max(Lat, SchedModel.computeInstrLatency(&*I));
     }
     return Lat + Count - 1;
   }
 
-  return AMDGPUGenInstrInfo::getInstrLatency(ItinData, MI, PredCost);
+  return SchedModel.computeInstrLatency(&MI);
 }

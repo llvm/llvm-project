@@ -280,12 +280,17 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   // Are they fully identical?
   if (this == Y)
     return true;
-  // They may still be identical element-wise (if they have `undef`s).
-  auto *Cy = dyn_cast<Constant>(Y);
-  if (!Cy)
+
+  // The input value must be a vector constant with the same type.
+  Type *Ty = getType();
+  if (!isa<Constant>(Y) || !Ty->isVectorTy() || Ty != Y->getType())
     return false;
+
+  // They may still be identical element-wise (if they have `undef`s).
+  // FIXME: This crashes on FP vector constants.
   return match(ConstantExpr::getICmp(ICmpInst::Predicate::ICMP_EQ,
-                                     const_cast<Constant *>(this), Cy),
+                                     const_cast<Constant *>(this),
+                                     cast<Constant>(Y)),
                m_One());
 }
 

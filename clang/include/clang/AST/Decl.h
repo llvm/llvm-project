@@ -1859,10 +1859,10 @@ private:
   /// FunctionTemplateSpecializationInfo, which contains information about
   /// the template being specialized and the template arguments involved in
   /// that specialization.
-  llvm::PointerUnion4<FunctionTemplateDecl *,
-                      MemberSpecializationInfo *,
-                      FunctionTemplateSpecializationInfo *,
-                      DependentFunctionTemplateSpecializationInfo *>
+  llvm::PointerUnion<FunctionTemplateDecl *,
+                     MemberSpecializationInfo *,
+                     FunctionTemplateSpecializationInfo *,
+                     DependentFunctionTemplateSpecializationInfo *>
     TemplateOrSpecialization;
 
   /// Provides source/type location info for the declaration name embedded in

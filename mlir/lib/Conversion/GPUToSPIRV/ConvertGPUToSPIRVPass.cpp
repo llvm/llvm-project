@@ -60,15 +60,12 @@ void GPUToSPIRVPass::runOnModule() {
 
   SmallVector<Operation *, 1> kernelModules;
   OpBuilder builder(context);
-  module.walk([&builder, &kernelModules](ModuleOp moduleOp) {
-    if (moduleOp.getAttrOfType<UnitAttr>(
-            gpu::GPUDialect::getKernelModuleAttrName())) {
-      // For each kernel module (should be only 1 for now, but that is not a
-      // requirement here), clone the module for conversion because the
-      // gpu.launch function still needs the kernel module.
-      builder.setInsertionPoint(moduleOp.getOperation());
-      kernelModules.push_back(builder.clone(*moduleOp.getOperation()));
-    }
+  module.walk([&builder, &kernelModules](gpu::GPUModuleOp moduleOp) {
+    // For each kernel module (should be only 1 for now, but that is not a
+    // requirement here), clone the module for conversion because the
+    // gpu.launch function still needs the kernel module.
+    builder.setInsertionPoint(moduleOp.getOperation());
+    kernelModules.push_back(builder.clone(*moduleOp.getOperation()));
   });
 
   SPIRVTypeConverter typeConverter;

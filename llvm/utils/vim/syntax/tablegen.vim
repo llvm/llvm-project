@@ -14,7 +14,7 @@ syntax sync minlines=100
 
 syn case match
 
-syn keyword tgKeyword   def let in code dag field include defm foreach
+syn keyword tgKeyword   def let in code dag field include defm foreach defset defvar if then else
 syn keyword tgType      class int string list bit bits multiclass
 
 syn match   tgNumber    /\<\d\+\>/

@@ -465,27 +465,32 @@ The table below shows the support for each operation by vector extension.  A
 dash indicates that an operation is not accepted according to a corresponding
 specification.
 
-============================== ======= ======= ======= =======
-         Operator              OpenCL  AltiVec   GCC    NEON
-============================== ======= ======= ======= =======
-[]                               yes     yes     yes     --
-unary operators +, --            yes     yes     yes     --
-++, -- --                        yes     yes     yes     --
-+,--,*,/,%                       yes     yes     yes     --
-bitwise operators &,|,^,~        yes     yes     yes     --
->>,<<                            yes     yes     yes     --
-!, &&, ||                        yes     --      --      --
-==, !=, >, <, >=, <=             yes     yes     --      --
-=                                yes     yes     yes     yes
-:?                               yes     --      --      --
-sizeof                           yes     yes     yes     yes
-C-style cast                     yes     yes     yes     no
-reinterpret_cast                 yes     no      yes     no
-static_cast                      yes     no      yes     no
-const_cast                       no      no      no      no
-============================== ======= ======= ======= =======
+============================== ======= ======= ============= =======
+         Operator              OpenCL  AltiVec     GCC        NEON
+============================== ======= ======= ============= =======
+[]                               yes     yes       yes         --
+unary operators +, --            yes     yes       yes         --
+++, -- --                        yes     yes       yes         --
++,--,*,/,%                       yes     yes       yes         --
+bitwise operators &,|,^,~        yes     yes       yes         --
+>>,<<                            yes     yes       yes         --
+!, &&, ||                        yes     --        yes [#]_    --
+==, !=, >, <, >=, <=             yes     yes       yes         --
+=                                yes     yes       yes         yes
+:? [#]_                          yes     --        yes         --
+sizeof                           yes     yes       yes         yes
+C-style cast                     yes     yes       yes         no
+reinterpret_cast                 yes     no        yes         no
+static_cast                      yes     no        yes         no
+const_cast                       no      no        no          no
+============================== ======= ======= ============= =======
 
 See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convertvector`.
+
+.. [#] unary operator ! is not implemented, however && and || are.
+.. [#] While OpenCL and GCC vectors both implement the comparison operator(?:) as a
+  'select', they operate somewhat differently. OpenCL selects based on signedness of
+  the condition operands, but GCC vectors use normal bool conversions (that is, != 0).
 
 Half-Precision Floating Point
 =============================

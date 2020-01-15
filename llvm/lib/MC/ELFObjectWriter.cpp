@@ -1514,7 +1514,8 @@ bool ELFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   const auto &SymA = cast<MCSymbolELF>(SA);
   if (IsPCRel) {
     assert(!InSet);
-    if (SymA.getBinding() != ELF::STB_LOCAL)
+    if (SymA.getBinding() != ELF::STB_LOCAL ||
+        SymA.getType() == ELF::STT_GNU_IFUNC)
       return false;
   }
   return MCObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(Asm, SymA, FB,

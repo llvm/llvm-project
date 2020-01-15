@@ -1388,8 +1388,9 @@ static void getLowerAndUpperBoundIndices(const FlatAffineConstraints &cst,
 // Check if the pos^th identifier can be expressed as a floordiv of an affine
 // function of other identifiers (where the divisor is a positive constant).
 // For eg: 4q <= i + j <= 4q + 3   <=>   q = (i + j) floordiv 4.
-bool detectAsFloorDiv(const FlatAffineConstraints &cst, unsigned pos,
-                      SmallVectorImpl<AffineExpr> *memo, MLIRContext *context) {
+static bool detectAsFloorDiv(const FlatAffineConstraints &cst, unsigned pos,
+                             SmallVectorImpl<AffineExpr> *memo,
+                             MLIRContext *context) {
   assert(pos < cst.getNumIds() && "invalid position");
 
   SmallVector<unsigned, 4> lbIndices, ubIndices;
