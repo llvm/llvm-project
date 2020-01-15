@@ -122,14 +122,20 @@ class ThreadAPITestCase(TestBase):
         self.assertTrue(
             thread.IsValid(),
             "There should be a thread stopped due to breakpoint")
-        #self.runCmd("process status")
 
-        # Due to the typemap magic (see lldb.swig), we pass in an (int)length to GetStopDescription
-        # and expect to get a Python string as the return object!
-        # The 100 is just an arbitrary number specifying the buffer size.
-        stop_description = thread.GetStopDescription(100)
-        self.expect(stop_description, exe=False,
-                    startstr='breakpoint')
+        # Get the stop reason. GetStopDescription expects that we pass in the size of the description
+        # we expect plus an additional byte for the null terminator.
+
+        # Test with a buffer that is exactly as large as the expected stop reason.
+        self.assertEqual("breakpoint 1.1", thread.GetStopDescription(len('breakpoint 1.1') + 1))
+
+        # Test some smaller buffer sizes.
+        self.assertEqual("breakpoint", thread.GetStopDescription(len('breakpoint') + 1))
+        self.assertEqual("break", thread.GetStopDescription(len('break') + 1))
+        self.assertEqual("b", thread.GetStopDescription(len('b') + 1))
+
+        # Test that we can pass in a much larger size and still get the right output.
+        self.assertEqual("breakpoint 1.1", thread.GetStopDescription(len('breakpoint 1.1') + 100))
 
     def step_out_of_malloc_into_function_b(self, exe_name):
         """Test Python SBThread.StepOut() API to step out of a malloc call where the call site is at function b()."""

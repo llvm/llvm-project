@@ -815,38 +815,56 @@ let Predicates = [HasComplxNum, HasNEON] in {
 
 // v8.3a Pointer Authentication
 // These instructions inhabit part of the hint space and so can be used for
-// armv8 targets
+// armv8 targets. Keeping the old HINT mnemonic when compiling without PA is
+// important for compatibility with other assemblers (e.g. GAS) when building
+// software compatible with both CPUs that do or don't implement PA.
 let Uses = [LR], Defs = [LR] in {
-  def PACIAZ   : SystemNoOperands<0b000, "paciaz">;
-  def PACIBZ   : SystemNoOperands<0b010, "pacibz">;
+  def PACIAZ   : SystemNoOperands<0b000, "hint #24">;
+  def PACIBZ   : SystemNoOperands<0b010, "hint #26">;
   let isAuthenticated = 1 in {
-    def AUTIAZ   : SystemNoOperands<0b100, "autiaz">;
-    def AUTIBZ   : SystemNoOperands<0b110, "autibz">;
+    def AUTIAZ   : SystemNoOperands<0b100, "hint #28">;
+    def AUTIBZ   : SystemNoOperands<0b110, "hint #30">;
   }
 }
 let Uses = [LR, SP], Defs = [LR] in {
-  def PACIASP  : SystemNoOperands<0b001, "paciasp">;
-  def PACIBSP  : SystemNoOperands<0b011, "pacibsp">;
+  def PACIASP  : SystemNoOperands<0b001, "hint #25">;
+  def PACIBSP  : SystemNoOperands<0b011, "hint #27">;
   let isAuthenticated = 1 in {
-    def AUTIASP  : SystemNoOperands<0b101, "autiasp">;
-    def AUTIBSP  : SystemNoOperands<0b111, "autibsp">;
+    def AUTIASP  : SystemNoOperands<0b101, "hint #29">;
+    def AUTIBSP  : SystemNoOperands<0b111, "hint #31">;
   }
 }
 let Uses = [X16, X17], Defs = [X17], CRm = 0b0001 in {
-  def PACIA1716  : SystemNoOperands<0b000, "pacia1716">;
-  def PACIB1716  : SystemNoOperands<0b010, "pacib1716">;
+  def PACIA1716  : SystemNoOperands<0b000, "hint #8">;
+  def PACIB1716  : SystemNoOperands<0b010, "hint #10">;
   let isAuthenticated = 1 in {
-    def AUTIA1716  : SystemNoOperands<0b100, "autia1716">;
-    def AUTIB1716  : SystemNoOperands<0b110, "autib1716">;
+    def AUTIA1716  : SystemNoOperands<0b100, "hint #12">;
+    def AUTIB1716  : SystemNoOperands<0b110, "hint #14">;
   }
 }
 
 let Uses = [LR], Defs = [LR], CRm = 0b0000 in {
-  def XPACLRI   : SystemNoOperands<0b111, "xpaclri">;
+  def XPACLRI   : SystemNoOperands<0b111, "hint #7">;
 }
 
-// These pointer authentication isntructions require armv8.3a
+// These pointer authentication instructions require armv8.3a
 let Predicates = [HasPA] in {
+
+  // When compiling with PA, there is a better mnemonic for these instructions.
+  def : InstAlias<"paciaz", (PACIAZ), 1>;
+  def : InstAlias<"pacibz", (PACIBZ), 1>;
+  def : InstAlias<"autiaz", (AUTIAZ), 1>;
+  def : InstAlias<"autibz", (AUTIBZ), 1>;
+  def : InstAlias<"paciasp", (PACIASP), 1>;
+  def : InstAlias<"pacibsp", (PACIBSP), 1>;
+  def : InstAlias<"autiasp", (AUTIASP), 1>;
+  def : InstAlias<"autibsp", (AUTIBSP), 1>;
+  def : InstAlias<"pacia1716", (PACIA1716), 1>;
+  def : InstAlias<"pacib1716", (PACIB1716), 1>;
+  def : InstAlias<"autia1716", (AUTIA1716), 1>;
+  def : InstAlias<"autib1716", (AUTIB1716), 1>;
+  def : InstAlias<"xpaclri", (XPACLRI), 1>;
+
   multiclass SignAuth<bits<3> prefix, bits<3> prefix_z, string asm> {
     def IA   : SignAuthOneData<prefix, 0b00, !strconcat(asm, "ia")>;
     def IB   : SignAuthOneData<prefix, 0b01, !strconcat(asm, "ib")>;

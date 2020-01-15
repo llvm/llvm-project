@@ -1,15 +1,15 @@
 // RUN: mlir-opt %s -affine-loop-unroll-jam -unroll-jam-factor=2 | FileCheck %s
 // RUN: mlir-opt %s -affine-loop-unroll-jam -unroll-jam-factor=4 | FileCheck --check-prefix=UJAM-FOUR %s
 
-// CHECK-DAG: [[MAP_PLUS_1:#map[0-9]+]] = (d0) -> (d0 + 1)
-// CHECK-DAG: [[MAP_DIV_OFFSET:#map[0-9]+]] = ()[s0] -> (((s0 - 1) floordiv 2) * 2 + 1)
-// CHECK-DAG: [[MAP_MULTI_RES:#map[0-9]+]] = ()[s0, s1] -> ((s0 floordiv 2) * 2, (s1 floordiv 2) * 2, 1024)
-// CHECK-DAG: [[MAP_SYM_UB:#map[0-9]+]] = ()[s0, s1] -> (s0, s1, 1024)
+// CHECK-DAG: [[MAP_PLUS_1:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
+// CHECK-DAG: [[MAP_DIV_OFFSET:#map[0-9]+]] = affine_map<()[s0] -> (((s0 - 1) floordiv 2) * 2 + 1)>
+// CHECK-DAG: [[MAP_MULTI_RES:#map[0-9]+]] = affine_map<()[s0, s1] -> ((s0 floordiv 2) * 2, (s1 floordiv 2) * 2, 1024)>
+// CHECK-DAG: [[MAP_SYM_UB:#map[0-9]+]] = affine_map<()[s0, s1] -> (s0, s1, 1024)>
 
-// UJAM-FOUR-DAG: [[UBMAP:#map[0-9]+]] = ()[s0] -> (s0 + 8)
-// UJAM-FOUR-DAG: [[MAP_PLUS_1:#map[0-9]+]] = (d0) -> (d0 + 1)
-// UJAM-FOUR-DAG: [[MAP_PLUS_2:#map[0-9]+]] = (d0) -> (d0 + 2)
-// UJAM-FOUR-DAG: [[MAP_PLUS_3:#map[0-9]+]] = (d0) -> (d0 + 3)
+// UJAM-FOUR-DAG: [[UBMAP:#map[0-9]+]] = affine_map<()[s0] -> (s0 + 8)>
+// UJAM-FOUR-DAG: [[MAP_PLUS_1:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
+// UJAM-FOUR-DAG: [[MAP_PLUS_2:#map[0-9]+]] = affine_map<(d0) -> (d0 + 2)>
+// UJAM-FOUR-DAG: [[MAP_PLUS_3:#map[0-9]+]] = affine_map<(d0) -> (d0 + 3)>
 
 // CHECK-LABEL: func @unroll_jam_imperfect_nest() {
 func @unroll_jam_imperfect_nest() {
@@ -89,7 +89,7 @@ func @loop_nest_unknown_count_2(%N : index) {
   // UJAM-FOUR-NEXT: affine.for [[IV0]] = 1 to 100 {
   // UJAM-FOUR-NEXT:   "foo"([[RES]])
   // UJAM-FOUR-NEXT: }
-  affine.for %i = %N to ()[s0] -> (s0+9) ()[%N] {
+  affine.for %i = %N to affine_map<()[s0] -> (s0+9)> ()[%N] {
     affine.for %j = 1 to 100 {
       "foo"(%i) : (index) -> ()
     }
@@ -102,7 +102,7 @@ func @loop_nest_unknown_count_2(%N : index) {
 // CHECK-SAME: [[N:arg[0-9]+]]: index
 // CHECK-SAME: [[K:arg[0-9]+]]: index
 func @loop_nest_symbolic_and_min_upper_bound(%M : index, %N : index, %K : index) {
-  affine.for %i = 0 to min ()[s0, s1] -> (s0, s1, 1024)()[%M, %N] {
+  affine.for %i = 0 to min affine_map<()[s0, s1] -> (s0, s1, 1024)>()[%M, %N] {
     affine.for %j = 0 to %K {
       "foo"(%i, %j) : (index, index) -> ()
     }

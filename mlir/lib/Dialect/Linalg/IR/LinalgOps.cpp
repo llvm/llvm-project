@@ -109,7 +109,7 @@ static ParseResult parseGenericOp(OpAsmParser &parser, OperationState &result) {
 }
 
 template <typename GenericOpType>
-LogicalResult verifyBlockArgs(GenericOpType op, Block &block);
+static LogicalResult verifyBlockArgs(GenericOpType op, Block &block);
 
 template <> LogicalResult verifyBlockArgs(GenericOp op, Block &block) {
   auto nViews = op.getNumInputsAndOutputs();
@@ -158,7 +158,7 @@ template <> LogicalResult verifyBlockArgs(IndexedGenericOp op, Block &block) {
 }
 
 template <typename GenericOpType>
-LogicalResult verifyFuncArgs(GenericOpType op, FunctionType funType);
+static LogicalResult verifyFuncArgs(GenericOpType op, FunctionType funType);
 
 template <> LogicalResult verifyFuncArgs(GenericOp op, FunctionType funType) {
   auto nViews = op.getNumInputsAndOutputs();
@@ -228,7 +228,7 @@ LogicalResult verifyFuncArgs(IndexedGenericOp op, FunctionType funType) {
 }
 
 template <typename GenericOpType>
-LogicalResult verifyGenericOp(GenericOpType op) {
+static LogicalResult verifyGenericOp(GenericOpType op) {
   auto nInputViews = op.getNumInputs();
   auto nLoops = op.getNumLoops();
   auto nViews = op.getNumInputsAndOutputs();
@@ -465,14 +465,52 @@ static SmallVector<AffineMap, 4> getAffineMaps(ArrayAttr attrs) {
       [](Attribute a) { return a.cast<AffineMapAttr>().getValue(); }, attrs);
 }
 
-void mlir::linalg::ReshapeOp::build(Builder *b, OperationState &result,
-                                    Value view, ArrayAttr reassociation,
-                                    ArrayRef<NamedAttribute> attrs) {
-  auto maps = getAffineMaps(reassociation);
+template <typename AffineExprTy>
+unsigned getMaxPosOfType(ArrayRef<ArrayRef<AffineExpr>> exprArrays) {
+  unsigned pos = 0;
+  for (auto exprs : exprArrays) {
+    for (auto expr : exprs) {
+      expr.walk([&pos](AffineExpr e) {
+        if (auto d = e.dyn_cast<AffineExprTy>())
+          pos = std::max(pos, d.getPosition());
+      });
+    }
+  }
+  return pos;
+}
+
+static SmallVector<AffineMap, 4>
+getSymbolLessAffineMaps(ArrayRef<ArrayRef<AffineExpr>> reassociation) {
+  unsigned maxDim = getMaxPosOfType<AffineDimExpr>(reassociation);
+  assert(getMaxPosOfType<AffineSymbolExpr>(reassociation) == 0 &&
+         "Expected symbol-less expressions");
+  SmallVector<AffineMap, 4> maps;
+  maps.reserve(reassociation.size());
+  for (auto exprs : reassociation)
+    maps.push_back(AffineMap::get(maxDim + 1, 0, exprs));
+  return maps;
+}
+
+void mlir::linalg::ReshapeOp::build(
+    Builder *b, OperationState &result, Value view,
+    ArrayRef<ArrayRef<AffineExpr>> reassociation,
+    ArrayRef<NamedAttribute> attrs) {
+  auto maps = getSymbolLessAffineMaps(reassociation);
   auto memRefType = view.getType().cast<MemRefType>();
   auto resultType = computeReshapeCollapsedType(memRefType, maps);
   build(b, result, resultType, view, attrs);
-  result.addAttribute(ReshapeOp::getReassociationAttrName(), reassociation);
+  result.addAttribute(ReshapeOp::getReassociationAttrName(),
+                      b->getAffineMapArrayAttr(maps));
+}
+
+void mlir::linalg::ReshapeOp::build(
+    Builder *b, OperationState &result, Type resultType, Value view,
+    ArrayRef<ArrayRef<AffineExpr>> reassociation,
+    ArrayRef<NamedAttribute> attrs) {
+  auto maps = getSymbolLessAffineMaps(reassociation);
+  build(b, result, resultType, view, attrs);
+  result.addAttribute(ReshapeOp::getReassociationAttrName(),
+                      b->getAffineMapArrayAttr(maps));
 }
 
 static void print(OpAsmPrinter &p, ReshapeOp op) {
@@ -653,16 +691,18 @@ static void print(OpAsmPrinter &p, TransposeOp op) {
 static ParseResult parseTransposeOp(OpAsmParser &parser,
                                     OperationState &result) {
   OpAsmParser::OperandType view;
-  AffineMapAttr permutation;
+  AffineMap permutation;
   MemRefType type;
-  return failure(parser.parseOperand(view) ||
-                 parser.parseAttribute(permutation,
-                                       TransposeOp::getPermutationAttrName(),
-                                       result.attributes) ||
-                 parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(type) ||
-                 parser.resolveOperand(view, type, result.operands) ||
-                 parser.addTypeToList(type, result.types));
+  if (parser.parseOperand(view) || parser.parseAffineMap(permutation) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(type) ||
+      parser.resolveOperand(view, type, result.operands) ||
+      parser.addTypeToList(type, result.types))
+    return failure();
+
+  result.addAttribute(TransposeOp::getPermutationAttrName(),
+                      AffineMapAttr::get(permutation));
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -689,7 +729,7 @@ static ParseResult parseYieldOp(OpAsmParser &parser, OperationState &result) {
 }
 
 template <typename GenericOpType>
-LogicalResult verifyYield(YieldOp op, GenericOpType genericOp) {
+static LogicalResult verifyYield(YieldOp op, GenericOpType genericOp) {
   // The operand number and types must match the view element types.
   auto nOutputViews = genericOp.getNumOutputs();
   if (op.getNumOperands() != nOutputViews)

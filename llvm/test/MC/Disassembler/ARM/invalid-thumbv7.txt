@@ -425,3 +425,8 @@
 # CHECK-V7-NEXT: [0xa3,0xeb,0x02,0x0d]
 # CHECK-V7: warning: potentially undefined instruction encoding
 # CHECK-V7-NEXT: [0xa3,0xeb,0xc5,0x0d]
+# CHECK-V7-NEXT: ^
+[0x0f,0xf2,0x00,0x4d]
+# CHECK-V7-NEXT: warning: potentially undefined instruction encoding
+# CHECK-V7-NEXT: [0x0f,0xf2,0x00,0x4d]
+# CHECK-V7-NEXT: ^

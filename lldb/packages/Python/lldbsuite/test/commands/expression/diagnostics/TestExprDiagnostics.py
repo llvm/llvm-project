@@ -101,7 +101,6 @@ class ExprDiagnosticsTestCase(TestBase):
         self.runCmd("expr @import Foundation")
         value = frame.EvaluateExpression("NSLog(1);")
         self.assertFalse(value.GetError().Success())
-        print(value.GetError().GetCString())
         # LLDB should print the source line that defines NSLog. To not rely on any
         # header paths/line numbers or the actual formatting of the Foundation headers, only look
         # for a few tokens in the output.

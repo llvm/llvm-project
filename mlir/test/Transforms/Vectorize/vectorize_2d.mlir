@@ -2,14 +2,14 @@
 // RUN: mlir-opt %s -affine-vectorize -virtual-vector-size 32 -virtual-vector-size 256 --test-fastest-varying=1 --test-fastest-varying=0 | FileCheck %s
 
 // Permutation maps used in vectorization.
-// CHECK-DAG: #[[map_id1:map[0-9]+]] = (d0) -> (d0)
-// CHECK-DAG: #[[map_id2:map[0-9]+]] = (d0, d1) -> (d0, d1)
-// CHECK-DAG: #[[map_proj_d0d1_zerod1:map[0-9]+]] = (d0, d1) -> (0, d1)
-// CHECK-DAG: #[[map_proj_d0d1_d0zero:map[0-9]+]] = (d0, d1) -> (d0, 0)
-// VECT-DAG: #[[map_id1:map[0-9]+]] = (d0) -> (d0)
-// VECT-DAG: #[[map_id2:map[0-9]+]] = (d0, d1) -> (d0, d1)
-// VECT-DAG: #[[map_proj_d0d1_zerod1:map[0-9]+]] = (d0, d1) -> (0, d1)
-// VECT-DAG: #[[map_proj_d0d1_d0zero:map[0-9]+]] = (d0, d1) -> (d0, 0)
+// CHECK-DAG: #[[map_id1:map[0-9]+]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[map_id2:map[0-9]+]] = affine_map<(d0, d1) -> (d0, d1)>
+// CHECK-DAG: #[[map_proj_d0d1_zerod1:map[0-9]+]] = affine_map<(d0, d1) -> (0, d1)>
+// CHECK-DAG: #[[map_proj_d0d1_d0zero:map[0-9]+]] = affine_map<(d0, d1) -> (d0, 0)>
+// VECT-DAG: #[[map_id1:map[0-9]+]] = affine_map<(d0) -> (d0)>
+// VECT-DAG: #[[map_id2:map[0-9]+]] = affine_map<(d0, d1) -> (d0, d1)>
+// VECT-DAG: #[[map_proj_d0d1_zerod1:map[0-9]+]] = affine_map<(d0, d1) -> (0, d1)>
+// VECT-DAG: #[[map_proj_d0d1_d0zero:map[0-9]+]] = affine_map<(d0, d1) -> (d0, 0)>
 
 func @vec2d(%A : memref<?x?x?xf32>) {
    %M = dim %A, 0 : memref<?x?x?xf32>
@@ -111,8 +111,8 @@ func @vectorize_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: me
   // VECT-NEXT:   {{.*}} #[[map_id1]](%[[N]]) step 8 {
   //      VECT:     %[[VC0:.*]] = constant dense<0.000000e+00> : vector<4x8xf32>
   // VECT-NEXT:     vector.transfer_write %[[VC0]], %{{.*}}[%{{.*}}, %{{.*}}] {permutation_map = #[[map_id2]]} : vector<4x8xf32>, memref<?x?xf32>
-  affine.for %i0 = (d0) -> (d0)(%c0) to (d0) -> (d0)(%M) {
-    affine.for %i1 = (d0) -> (d0)(%c0) to (d0) -> (d0)(%N) {
+  affine.for %i0 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%M) {
+    affine.for %i1 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%N) {
       %cst = constant 0.000000e+00 : f32
       affine.store %cst, %arg2[%i0, %i1] : memref<?x?xf32>
     }
@@ -126,9 +126,9 @@ func @vectorize_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg2: me
   // VECT-NEXT:        %[[D:.*]] = vector.transfer_read %{{.*}}[%[[I2]], %[[I3]]], %{{.*}} {permutation_map = #[[map_id2]]} : memref<?x?xf32>, vector<4x8xf32>
   // VECT-NEXT:        %[[E:.*]] = addf %[[D]], %[[C]] : vector<4x8xf32>
   // VECT-NEXT:        vector.transfer_write %[[E]], %{{.*}}[%[[I2]], %[[I3]]] {permutation_map = #[[map_id2]]} : vector<4x8xf32>, memref<?x?xf32>
-  affine.for %i2 = (d0) -> (d0)(%c0) to (d0) -> (d0)(%M) {
-    affine.for %i3 = (d0) -> (d0)(%c0) to (d0) -> (d0)(%N) {
-      affine.for %i4 = (d0) -> (d0)(%c0) to (d0) -> (d0)(%K) {
+  affine.for %i2 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%M) {
+    affine.for %i3 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%N) {
+      affine.for %i4 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%K) {
         %6 = affine.load %arg1[%i4, %i3] : memref<?x?xf32>
         %7 = affine.load %arg0[%i2, %i4] : memref<?x?xf32>
         %8 = mulf %7, %6 : f32

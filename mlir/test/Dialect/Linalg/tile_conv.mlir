@@ -1,9 +1,9 @@
 // RUN: mlir-opt %s -linalg-tile -linalg-tile-sizes=2,3,0,0,4 | FileCheck %s -check-prefix=TILE-23004
 
-// TILE-23004-DAG: #[[D0x30pS0x10:.*]] = (d0) -> (d0 * 30)
-// TILE-23004-DAG: #[[S0x10p90:.*]] = ()[s0] -> (s0 * 10 + 90)
-// TILE-23004-DAG: #[[strided4D:.*]] = (d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3)
-// TILE-23004-DAG: #[[strided4D_dynamic:.*]] = (d0, d1, d2, d3)[s0, s1, s2, s3, s4] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3 * s4)
+// TILE-23004-DAG: #[[D0x30pS0x10:.*]] = affine_map<(d0) -> (d0 * 30)>
+// TILE-23004-DAG: #[[S0x10p90:.*]] = affine_map<()[s0] -> (s0 * 10 + 90)>
+// TILE-23004-DAG: #[[strided4D:.*]] = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3)>
+// TILE-23004-DAG: #[[strided4D_dynamic:.*]] = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3 * s4)>
 
 func @conv(%arg0: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, %arg1: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, %arg2: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>) {
   linalg.conv(%arg0, %arg1, %arg2) {dilations = [10, 20], strides = [30, 40]} : memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>

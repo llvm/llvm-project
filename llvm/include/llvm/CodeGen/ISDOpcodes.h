@@ -1105,6 +1105,16 @@ namespace ISD {
   /// SetCC operation.
   CondCode getSetCCInverse(CondCode Operation, EVT Type);
 
+  namespace GlobalISel {
+    /// Return the operation corresponding to !(X op Y), where 'op' is a valid
+    /// SetCC operation. The U bit of the condition code has different meanings
+    /// between floating point and integer comparisons and LLT's don't provide
+    /// this distinction. As such we need to be told whether the comparison is
+    /// floating point or integer-like. Pointers should use integer-like
+    /// comparisons.
+    CondCode getSetCCInverse(CondCode Operation, bool isIntegerLike);
+  } // end namespace GlobalISel
+
   /// Return the operation corresponding to (Y op X) when given the operation
   /// for (X op Y).
   CondCode getSetCCSwappedOperands(CondCode Operation);

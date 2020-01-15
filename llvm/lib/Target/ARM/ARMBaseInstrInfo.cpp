@@ -134,7 +134,7 @@ ScheduleHazardRecognizer *ARMBaseInstrInfo::
 CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
                                    const ScheduleDAG *DAG) const {
   if (Subtarget.isThumb2() || Subtarget.hasVFP2Base())
-    return (ScheduleHazardRecognizer *)new ARMHazardRecognizer(II, DAG);
+    return new ARMHazardRecognizer(II, DAG);
   return TargetInstrInfo::CreateTargetPostRAHazardRecognizer(II, DAG);
 }
 
@@ -3257,22 +3257,26 @@ bool ARMBaseInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       }
       break;
     case ARM::t2ADDrr:
-    case ARM::t2SUBrr:
+    case ARM::t2SUBrr: {
       if (UseOpc == ARM::t2SUBrr && Commute)
         return false;
 
       // ADD/SUB are special because they're essentially the same operation, so
       // we can handle a larger range of immediates.
+      const bool ToSP = DefMI.getOperand(0).getReg() == ARM::SP;
+      const unsigned t2ADD = ToSP ? ARM::t2ADDspImm : ARM::t2ADDri;
+      const unsigned t2SUB = ToSP ? ARM::t2SUBspImm : ARM::t2SUBri;
       if (ARM_AM::isT2SOImmTwoPartVal(ImmVal))
-        NewUseOpc = UseOpc == ARM::t2ADDrr ? ARM::t2ADDri : ARM::t2SUBri;
+        NewUseOpc = UseOpc == ARM::t2ADDrr ? t2ADD : t2SUB;
       else if (ARM_AM::isT2SOImmTwoPartVal(-ImmVal)) {
         ImmVal = -ImmVal;
-        NewUseOpc = UseOpc == ARM::t2ADDrr ? ARM::t2SUBri : ARM::t2ADDri;
+        NewUseOpc = UseOpc == ARM::t2ADDrr ? t2SUB : t2ADD;
       } else
         return false;
       SOImmValV1 = (uint32_t)ARM_AM::getT2SOImmTwoPartFirst(ImmVal);
       SOImmValV2 = (uint32_t)ARM_AM::getT2SOImmTwoPartSecond(ImmVal);
       break;
+    }
     case ARM::t2ORRrr:
     case ARM::t2EORrr:
       if (!ARM_AM::isT2SOImmTwoPartVal(ImmVal))
@@ -3292,7 +3296,8 @@ bool ARMBaseInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   unsigned OpIdx = Commute ? 2 : 1;
   Register Reg1 = UseMI.getOperand(OpIdx).getReg();
   bool isKill = UseMI.getOperand(OpIdx).isKill();
-  Register NewReg = MRI->createVirtualRegister(MRI->getRegClass(Reg));
+  const TargetRegisterClass *TRC = MRI->getRegClass(Reg);
+  Register NewReg = MRI->createVirtualRegister(TRC);
   BuildMI(*UseMI.getParent(), UseMI, UseMI.getDebugLoc(), get(NewUseOpc),
           NewReg)
       .addReg(Reg1, getKillRegState(isKill))
@@ -3304,6 +3309,18 @@ bool ARMBaseInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   UseMI.getOperand(1).setIsKill();
   UseMI.getOperand(2).ChangeToImmediate(SOImmValV2);
   DefMI.eraseFromParent();
+  // FIXME: t2ADDrr should be split, as different rulles apply when writing to SP.
+  // Just as t2ADDri, that was split to [t2ADDri, t2ADDspImm].
+  // Then the below code will not be needed, as the input/output register
+  // classes will be rgpr or gprSP.
+  // For now, we fix the UseMI operand explicitly here:
+  switch(NewUseOpc){
+    case ARM::t2ADDspImm:
+    case ARM::t2SUBspImm:
+    case ARM::t2ADDri:
+    case ARM::t2SUBri:
+      MRI->setRegClass(UseMI.getOperand(0).getReg(), TRC);
+  }
   return true;
 }
 

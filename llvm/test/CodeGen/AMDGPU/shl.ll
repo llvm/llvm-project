@@ -1184,25 +1184,20 @@ define amdgpu_kernel void @s_shl_inline_imm_1_i64(i64 addrspace(1)* %out, i64 ad
 ;
 ; EG-LABEL: s_shl_inline_imm_1_i64:
 ; EG:       ; %bb.0:
-; EG-NEXT:    ALU 13, @4, KC0[CB0:0-32], KC1[]
+; EG-NEXT:    ALU 8, @4, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
 ; EG-NEXT:    CF_END
 ; EG-NEXT:    PAD
 ; EG-NEXT:    ALU clause starting at 4:
-; EG-NEXT:     SUB_INT * T0.W, literal.x, KC0[2].W,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     LSHR T0.W, 1, PV.W,
-; EG-NEXT:     ADD_INT * T1.W, KC0[2].W, literal.x,
-; EG-NEXT:    -32(nan), 0(0.000000e+00)
-; EG-NEXT:     LSHL T0.Z, 1, PS,
-; EG-NEXT:     LSHR T0.W, PV.W, 1,
-; EG-NEXT:     SETGT_UINT * T1.W, KC0[2].W, literal.x,
-; EG-NEXT:    31(4.344025e-44), 0(0.000000e+00)
-; EG-NEXT:     CNDE_INT T0.Y, PS, PV.W, PV.Z,
-; EG-NEXT:     LSHL * T0.W, 1, KC0[2].W,
-; EG-NEXT:     CNDE_INT T0.X, T1.W, PV.W, 0.0,
+; EG-NEXT:     ADD_INT T0.Z, KC0[2].W, literal.x,
+; EG-NEXT:     SETGT_UINT T0.W, KC0[2].W, literal.y,
+; EG-NEXT:     LSHL * T1.W, 1, KC0[2].W,
+; EG-NEXT:    -32(nan), 31(4.344025e-44)
+; EG-NEXT:     CNDE_INT T0.X, PV.W, PS, 0.0,
+; EG-NEXT:     LSHL T1.W, 1, PV.Z,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:     CNDE_INT * T0.Y, T0.W, 0.0, PV.W,
   %shl = shl i64 1, %a
   store i64 %shl, i64 addrspace(1)* %out, align 8
   ret void

@@ -999,6 +999,9 @@ static void RenderDebugEnablingArgs(const ArgList &Args, ArgStringList &CmdArgs,
   case codegenoptions::DebugLineTablesOnly:
     CmdArgs.push_back("-debug-info-kind=line-tables-only");
     break;
+  case codegenoptions::DebugInfoConstructor:
+    CmdArgs.push_back("-debug-info-kind=constructor");
+    break;
   case codegenoptions::LimitedDebugInfo:
     CmdArgs.push_back("-debug-info-kind=limited");
     break;
@@ -4531,6 +4534,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_mtls_size_EQ)) {
+    StringRef Value = A->getValue();
+    unsigned TLSSize = 0;
+    Value.getAsInteger(10, TLSSize);
+    if (!Triple.isAArch64() || !Triple.isOSBinFormatELF())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getOption().getName() << TripleStr;
+    if (TLSSize != 12 && TLSSize != 24 && TLSSize != 32 && TLSSize != 48)
+      D.Diag(diag::err_drv_invalid_int_value)
+          << A->getOption().getName() << Value;
+    Args.AddLastArg(CmdArgs, options::OPT_mtls_size_EQ);
+  }
+
   // Add the target cpu
   std::string CPU = getCPUName(Args, Triple, /*FromAs*/ false);
   if (!CPU.empty()) {
@@ -5966,6 +5982,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // fails, so that the main compilation's fallback to cl.exe runs.
     C.addCommand(std::make_unique<ForceSuccessCommand>(JA, *this, Exec,
                                                         CmdArgs, Inputs));
+  } else if (D.CC1Main && !D.CCGenDiagnostics) {
+    // Invoke the CC1 directly in this process
+    C.addCommand(
+        std::make_unique<CC1Command>(JA, *this, Exec, CmdArgs, Inputs));
   } else {
     C.addCommand(std::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
   }

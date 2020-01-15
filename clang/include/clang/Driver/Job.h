@@ -119,7 +119,7 @@ public:
   /// \param NewEnvironment An array of environment variables.
   /// \remark If the environment remains unset, then the environment
   ///         from the parent process will be used.
-  void setEnvironment(llvm::ArrayRef<const char *> NewEnvironment);
+  virtual void setEnvironment(llvm::ArrayRef<const char *> NewEnvironment);
 
   const char *getExecutable() const { return Executable; }
 
@@ -130,6 +130,24 @@ public:
 
   /// Set whether to print the input filenames when executing.
   void setPrintInputFilenames(bool P) { PrintInputFilenames = P; }
+
+protected:
+  /// Optionally print the filenames to be compiled
+  void PrintFileNames() const;
+};
+
+/// Use the CC1 tool callback when available, to avoid creating a new process
+class CC1Command : public Command {
+public:
+  using Command::Command;
+
+  void Print(llvm::raw_ostream &OS, const char *Terminator, bool Quote,
+             CrashReportInfo *CrashInfo = nullptr) const override;
+
+  int Execute(ArrayRef<Optional<StringRef>> Redirects, std::string *ErrMsg,
+              bool *ExecutionFailed) const override;
+
+  void setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) override;
 };
 
 /// Like Command, but with a fallback which is executed in case

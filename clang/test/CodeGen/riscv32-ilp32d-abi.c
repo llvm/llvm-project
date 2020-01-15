@@ -280,3 +280,27 @@ void f_double_u_arg(union double_u a) {}
 union double_u f_ret_double_u() {
   return (union double_u){1.0};
 }
+
+// Test that we don't incorrectly think double+int/double+double structs will
+// be returned indirectly and thus have an off-by-one error for the number of
+// GPRs available (this is an edge case when structs > 2*XLEN are still
+// returned in registers). This includes complex doubles, which are treated as
+// double+double structs by the ABI.
+
+// CHECK: define { double, i32 } @f_ret_double_int32_s_double_int32_s_just_sufficient_gprs(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, double %0, i32 %1)
+struct double_int32_s f_ret_double_int32_s_double_int32_s_just_sufficient_gprs(
+    int a, int b, int c, int d, int e, int f, int g, struct double_int32_s h) {
+  return (struct double_int32_s){1.0, 2};
+}
+
+// CHECK: define { double, double } @f_ret_double_double_s_double_int32_s_just_sufficient_gprs(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, double %0, i32 %1)
+struct double_double_s f_ret_double_double_s_double_int32_s_just_sufficient_gprs(
+    int a, int b, int c, int d, int e, int f, int g, struct double_int32_s h) {
+  return (struct double_double_s){1.0, 2.0};
+}
+
+// CHECK: define { double, double } @f_ret_doublecomplex_double_int32_s_just_sufficient_gprs(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, double %0, i32 %1)
+double __complex__ f_ret_doublecomplex_double_int32_s_just_sufficient_gprs(
+    int a, int b, int c, int d, int e, int f, int g, struct double_int32_s h) {
+  return 1.0;
+}

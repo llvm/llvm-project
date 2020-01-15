@@ -299,7 +299,9 @@ TEST(ScudoWrappersCTest, MallocDisableDeadlock) {
       "");
 }
 
+// Fuchsia doesn't have fork or malloc_info.
 #if !SCUDO_FUCHSIA
+
 TEST(ScudoWrappersCTest, MallocInfo) {
   char Buffer[64];
   FILE *F = fmemopen(Buffer, sizeof(Buffer), "w+");
@@ -310,4 +312,79 @@ TEST(ScudoWrappersCTest, MallocInfo) {
   fclose(F);
   EXPECT_EQ(strncmp(Buffer, "<malloc version=\"scudo-", 23), 0);
 }
-#endif
+
+TEST(ScudoWrappersCTest, Fork) {
+  void *P;
+  pid_t Pid = fork();
+  EXPECT_GE(Pid, 0);
+  if (Pid == 0) {
+    P = malloc(Size);
+    EXPECT_NE(P, nullptr);
+    memset(P, 0x42, Size);
+    free(P);
+    _exit(0);
+  }
+  waitpid(Pid, nullptr, 0);
+  P = malloc(Size);
+  EXPECT_NE(P, nullptr);
+  memset(P, 0x42, Size);
+  free(P);
+
+  // fork should stall if the allocator has been disabled.
+  EXPECT_DEATH(
+      {
+        malloc_disable();
+        alarm(1);
+        Pid = fork();
+        EXPECT_GE(Pid, 0);
+      },
+      "");
+}
+
+static pthread_mutex_t Mutex;
+static pthread_cond_t Conditional = PTHREAD_COND_INITIALIZER;
+
+static void *enableMalloc(void *Unused) {
+  // Initialize the allocator for this thread.
+  void *P = malloc(Size);
+  EXPECT_NE(P, nullptr);
+  memset(P, 0x42, Size);
+  free(P);
+
+  // Signal the main thread we are ready.
+  pthread_mutex_lock(&Mutex);
+  pthread_cond_signal(&Conditional);
+  pthread_mutex_unlock(&Mutex);
+
+  // Wait for the malloc_disable & fork, then enable the allocator again.
+  sleep(1);
+  malloc_enable();
+
+  return nullptr;
+}
+
+TEST(ScudoWrappersCTest, DisableForkEnable) {
+  pthread_t ThreadId;
+  EXPECT_EQ(pthread_create(&ThreadId, nullptr, &enableMalloc, nullptr), 0);
+
+  // Wait for the thread to be warmed up.
+  pthread_mutex_lock(&Mutex);
+  pthread_cond_wait(&Conditional, &Mutex);
+  pthread_mutex_unlock(&Mutex);
+
+  // Disable the allocator and fork. fork should succeed after malloc_enable.
+  malloc_disable();
+  pid_t Pid = fork();
+  EXPECT_GE(Pid, 0);
+  if (Pid == 0) {
+    void *P = malloc(Size);
+    EXPECT_NE(P, nullptr);
+    memset(P, 0x42, Size);
+    free(P);
+    _exit(0);
+  }
+  waitpid(Pid, nullptr, 0);
+  EXPECT_EQ(pthread_join(ThreadId, 0), 0);
+}
+
+#endif // SCUDO_FUCHSIA

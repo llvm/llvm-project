@@ -1725,7 +1725,9 @@ private:
 
 public:
   /// Get the module owning an entity.
-  Module *getOwningModule(Decl *Entity) { return Entity->getOwningModule(); }
+  Module *getOwningModule(const Decl *Entity) {
+    return Entity->getOwningModule();
+  }
 
   /// Make a merged definition of an existing hidden definition \p ND
   /// visible at the specified location.
@@ -10681,6 +10683,9 @@ public:
   QualType CXXCheckConditionalOperands( // C++ 5.16
     ExprResult &cond, ExprResult &lhs, ExprResult &rhs,
     ExprValueKind &VK, ExprObjectKind &OK, SourceLocation questionLoc);
+  QualType CheckGNUVectorConditionalTypes(ExprResult &Cond, ExprResult &LHS,
+                                          ExprResult &RHS,
+                                          SourceLocation QuestionLoc);
   QualType FindCompositePointerType(SourceLocation Loc, Expr *&E1, Expr *&E2,
                                     bool ConvertArgs = true);
   QualType FindCompositePointerType(SourceLocation Loc,

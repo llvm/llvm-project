@@ -832,3 +832,106 @@ define <4 x i32> @combine_vec_shl_mul1(<4 x i32> %x) {
   %2 = shl <4 x i32> %1, <i32 1, i32 2, i32 3, i32 4>
   ret <4 x i32> %2
 }
+
+; fold (add (shl x, c1), c2) -> (or (shl x, c1), c2)
+define <4 x i32> @combine_vec_add_shl_nonsplat(<4 x i32> %a0)  {
+; SSE2-LABEL: combine_vec_add_shl_nonsplat:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [4,8,16,32]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm2, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    por {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: combine_vec_add_shl_nonsplat:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    por {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_add_shl_nonsplat:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [3,3,3,3]
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = shl <4 x i32> %a0, <i32 2, i32 3, i32 4, i32 5>
+  %2 = add <4 x i32> %1, <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x i32> %2
+}
+
+define <4 x i32> @combine_vec_add_shl_and_nonsplat(<4 x i32> %a0)  {
+; SSE2-LABEL: combine_vec_add_shl_and_nonsplat:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [4,8,16,32]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pmuludq %xmm2, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    por {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: combine_vec_add_shl_and_nonsplat:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pxor %xmm1, %xmm1
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
+; SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    por {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_add_shl_and_nonsplat:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
+; AVX-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = and <4 x i32> %a0, <i32 4294901760, i32 4294901760, i32 4294901760, i32 4294901760>
+  %2 = shl <4 x i32> %1, <i32 2, i32 3, i32 4, i32 5>
+  %3 = add <4 x i32> %2, <i32 15, i32 15, i32 15, i32 15>
+  ret <4 x i32> %3
+}
+
+define <4 x i32> @combine_vec_add_shuffle_shl(<4 x i32> %a0)  {
+; SSE2-LABEL: combine_vec_add_shuffle_shl:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    pslld $3, %xmm1
+; SSE2-NEXT:    pslld $2, %xmm0
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,3,0]
+; SSE2-NEXT:    por {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: combine_vec_add_shuffle_shl:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    pslld $3, %xmm1
+; SSE41-NEXT:    pslld $2, %xmm0
+; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5,6,7]
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,0]
+; SSE41-NEXT:    por {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: combine_vec_add_shuffle_shl:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsllvd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,1,0]
+; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [3,3,3,3]
+; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = shl <4 x i32> %a0, <i32 2, i32 3, i32 0, i32 1>
+  %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+  %3 = add <4 x i32> %2, <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x i32> %3
+}

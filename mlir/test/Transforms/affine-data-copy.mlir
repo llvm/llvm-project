@@ -7,13 +7,13 @@
 // footprint -- so that one could write a definite test case and not have to
 // update it each time something related to the cost functions change.
 
-#map0 = (d0) -> (d0)
-#map1 = (d0) -> (d0 + 128)
+#map0 = affine_map<(d0) -> (d0)>
+#map1 = affine_map<(d0) -> (d0 + 128)>
 
 // Map used to index the original memref while copying.
-// CHECK-DAG: [[MEM_IDX_MAP:map[0-9]+]] = (d0, d1) -> (d0 + d1)
+// CHECK-DAG: [[MEM_IDX_MAP:map[0-9]+]] = affine_map<(d0, d1) -> (d0 + d1)>
 // Map used to index the buffer while computing.
-// CHECK-DAG: [[BUF_IDX_MAP:map[0-9]+]] = (d0, d1, d2, d3) -> (-d0 + d2, -d1 + d3)
+// CHECK-DAG: [[BUF_IDX_MAP:map[0-9]+]] = affine_map<(d0, d1, d2, d3) -> (-d0 + d2, -d1 + d3)>
 
 // CHECK-LABEL: func @matmul
 func @matmul(%A: memref<4096x4096xf32>, %B: memref<4096x4096xf32>, %C: memref<4096x4096xf32>) -> memref<4096x4096xf32> {

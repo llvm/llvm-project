@@ -1133,7 +1133,9 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeDWARFDebugLine:
         case eSectionTypeDWARFDebugLineStr:
         case eSectionTypeDWARFDebugLoc:
+        case eSectionTypeDWARFDebugLocDwo:
         case eSectionTypeDWARFDebugLocLists:
+        case eSectionTypeDWARFDebugLocListsDwo:
         case eSectionTypeDWARFDebugMacInfo:
         case eSectionTypeDWARFDebugMacro:
         case eSectionTypeDWARFDebugNames:

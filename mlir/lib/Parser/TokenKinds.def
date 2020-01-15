@@ -82,6 +82,8 @@ TOK_OPERATOR(star,               "*")
 
 // NOTE: Please key these alphabetized to make it easier to find something in
 // this list and to cater to OCD.
+TOK_KEYWORD(affine_map)
+TOK_KEYWORD(affine_set)
 TOK_KEYWORD(attributes)
 TOK_KEYWORD(bf16)
 TOK_KEYWORD(ceildiv)

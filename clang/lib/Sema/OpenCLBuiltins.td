@@ -60,6 +60,7 @@ def FuncExtKhrLocalInt32ExtendedAtomics  : FunctionExtension<"cl_khr_local_int32
 def FuncExtKhrInt64BaseAtomics           : FunctionExtension<"cl_khr_int64_base_atomics">;
 def FuncExtKhrInt64ExtendedAtomics       : FunctionExtension<"cl_khr_int64_extended_atomics">;
 def FuncExtKhrMipmapImage                : FunctionExtension<"cl_khr_mipmap_image">;
+def FuncExtKhrGlMsaaSharing              : FunctionExtension<"cl_khr_gl_msaa_sharing">;
 
 // Multiple extensions
 def FuncExtKhrMipmapAndWrite3d           : FunctionExtension<"cl_khr_mipmap_image cl_khr_3d_image_writes">;
@@ -1310,5 +1311,41 @@ let Extension = FuncExtKhrMipmapImage in {
     foreach imgTy = [Image1d, Image2d, Image3d, Image1dArray, Image2dArray, Image2dDepth, Image2dArrayDepth] in {
       def : Builtin<"get_image_num_mip_levels", [Int, ImageType<imgTy, aQual>]>;
     }
+  }
+}
+
+
+//--------------------------------------------------------------------
+// OpenCL Extension v2.0 s18.3 - Creating OpenCL Memory Objects from OpenGL MSAA Textures
+let Extension = FuncExtKhrGlMsaaSharing in {
+  // --- Table 6.13.14.3 ---
+  foreach aQual = ["RO", "RW"] in {
+    foreach imgTy = [Image2dMsaa] in {
+      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
+      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
+      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
+    }
+    foreach imgTy = [Image2dArrayMsaa] in {
+      def : Builtin<"read_imagef", [VectorType<Float, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
+      def : Builtin<"read_imagei", [VectorType<Int, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
+      def : Builtin<"read_imageui", [VectorType<UInt, 4>, ImageType<imgTy, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
+    }
+    foreach name = ["read_imagef"] in {
+      def : Builtin<name, [Float, ImageType<Image2dMsaaDepth, aQual>, VectorType<Int, 2>, Int], Attr.Pure>;
+      def : Builtin<name, [Float, ImageType<Image2dArrayMsaaDepth, aQual>, VectorType<Int, 4>, Int], Attr.Pure>;
+    }
+  }
+
+  // --- Table 6.13.14.5 ---
+  foreach aQual = ["RO", "WO", "RW"] in {
+    foreach imgTy = [Image2dMsaa, Image2dArrayMsaa, Image2dMsaaDepth, Image2dArrayMsaaDepth] in {
+      foreach name = ["get_image_width", "get_image_height",
+                      "get_image_channel_data_type", "get_image_channel_order",
+                      "get_image_num_samples"] in {
+        def : Builtin<name, [Int, ImageType<imgTy, aQual>], Attr.Const>;
+      }
+      def : Builtin<"get_image_dim", [VectorType<Int, 2>, ImageType<imgTy, aQual>], Attr.Const>;
+    }
+    def : Builtin<"get_image_array_size", [Size, ImageType<Image2dArrayMsaaDepth, aQual>], Attr.Const>;
   }
 }

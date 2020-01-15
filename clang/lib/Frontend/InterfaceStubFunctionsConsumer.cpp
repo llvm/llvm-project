@@ -52,11 +52,16 @@ class InterfaceStubFunctionsConsumer : public ASTConsumer {
       if (!isVisible(ND))
         return true;
 
-      if (const VarDecl *VD = dyn_cast<VarDecl>(ND))
+      if (const VarDecl *VD = dyn_cast<VarDecl>(ND)) {
+        if (const auto *Parent = VD->getParentFunctionOrMethod())
+          if (isa<BlockDecl>(Parent) || isa<CXXMethodDecl>(Parent))
+            return true;
+
         if ((VD->getStorageClass() == StorageClass::SC_Extern) ||
             (VD->getStorageClass() == StorageClass::SC_Static &&
              VD->getParentFunctionOrMethod() == nullptr))
           return true;
+      }
 
       if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(ND)) {
         if (FD->isInlined() && !isa<CXXMethodDecl>(FD) &&

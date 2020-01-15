@@ -405,7 +405,6 @@ define <16 x i8> @test_divconstant_16i8(<16 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0]
 ; AVX512BW-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; AVX512BW-NEXT:    vpsrlvw %zmm1, %zmm2, %zmm1
-; AVX512BW-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpmullw {{.*}}(%rip), %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpsrlw $8, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpmovwb %zmm1, %ymm1
@@ -923,7 +922,6 @@ define <16 x i8> @test_remconstant_16i8(<16 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0]
 ; AVX512BW-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; AVX512BW-NEXT:    vpsrlvw %zmm1, %zmm2, %zmm1
-; AVX512BW-NEXT:    vpand {{.*}}(%rip), %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpmullw {{.*}}(%rip), %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpsrlw $8, %ymm1, %ymm1
 ; AVX512BW-NEXT:    vpmovwb %zmm1, %ymm1

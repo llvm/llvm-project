@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -O3 -mcpu=skylake -filetype=obj < %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O3 -mtriple=x86_64-unknown-unknown -mcpu=skylake -filetype=obj < %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
 
 ; TODO: At the moment, autopadding for SKX102 is not the default, but
 ; eventually we'd like ti to be for the integrated assembler (only).

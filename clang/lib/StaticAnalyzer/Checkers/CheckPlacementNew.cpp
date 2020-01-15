@@ -6,6 +6,7 @@
 using namespace clang;
 using namespace ento;
 
+namespace {
 class PlacementNewChecker : public Checker<check::PreStmt<CXXNewExpr>> {
 public:
   void checkPreStmt(const CXXNewExpr *NE, CheckerContext &C) const;
@@ -22,6 +23,7 @@ private:
   BugType BT{this, "Insufficient storage for placement new",
              categories::MemoryError};
 };
+} // namespace
 
 SVal PlacementNewChecker::getExtentSizeOfPlace(const Expr *Place,
                                                ProgramStateRef State,

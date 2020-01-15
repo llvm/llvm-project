@@ -3111,6 +3111,14 @@ void MipsTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
       StringRef Sym;
       if (const GlobalAddressSDNode *G =
               dyn_cast_or_null<const GlobalAddressSDNode>(TargetAddr)) {
+        // We must not emit the R_MIPS_JALR relocation against data symbols
+        // since this will cause run-time crashes if the linker replaces the
+        // call instruction with a relative branch to the data symbol.
+        if (!isa<Function>(G->getGlobal())) {
+          LLVM_DEBUG(dbgs() << "Not adding R_MIPS_JALR against data symbol "
+                            << G->getGlobal()->getName() << "\n");
+          return;
+        }
         Sym = G->getGlobal()->getName();
       }
       else if (const ExternalSymbolSDNode *ES =
@@ -3123,6 +3131,7 @@ void MipsTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 
       MachineFunction *MF = MI.getParent()->getParent();
       MCSymbol *S = MF->getContext().getOrCreateSymbol(Sym);
+      LLVM_DEBUG(dbgs() << "Adding R_MIPS_JALR against " << Sym << "\n");
       MI.addOperand(MachineOperand::CreateMCSymbol(S, MipsII::MO_JALR));
     }
   }

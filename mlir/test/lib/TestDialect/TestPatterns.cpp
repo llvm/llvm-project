@@ -21,7 +21,8 @@ static void createOpI(PatternRewriter &rewriter, Value input) {
   rewriter.create<OpI>(rewriter.getUnknownLoc(), input);
 }
 
-void handleNoResultOp(PatternRewriter &rewriter, OpSymbolBindingNoResult op) {
+static void handleNoResultOp(PatternRewriter &rewriter,
+                             OpSymbolBindingNoResult op) {
   // Turn the no result op to a one-result op.
   rewriter.create<OpSymbolBindingB>(op.getLoc(), op.operand().getType(),
                                     op.operand());
@@ -56,6 +57,7 @@ static mlir::PassRegistration<TestPatternDriver>
 // ReturnType Driver.
 //===----------------------------------------------------------------------===//
 
+namespace {
 struct ReturnTypeOpMatch : public RewritePattern {
   ReturnTypeOpMatch(MLIRContext *ctx)
       : RewritePattern(OpWithInferTypeInterfaceOp::getOperationName(), 1, ctx) {
@@ -94,7 +96,6 @@ struct ReturnTypeOpMatch : public RewritePattern {
   }
 };
 
-namespace {
 struct TestReturnTypeDriver : public FunctionPass<TestReturnTypeDriver> {
   void runOnFunction() override {
     mlir::OwningRewritePatternList patterns;

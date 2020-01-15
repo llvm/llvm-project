@@ -1018,16 +1018,14 @@ CreateTargetHazardRecognizer(const TargetSubtargetInfo *STI,
 ScheduleHazardRecognizer *TargetInstrInfo::
 CreateTargetMIHazardRecognizer(const InstrItineraryData *II,
                                const ScheduleDAG *DAG) const {
-  return (ScheduleHazardRecognizer *)
-    new ScoreboardHazardRecognizer(II, DAG, "machine-scheduler");
+  return new ScoreboardHazardRecognizer(II, DAG, "machine-scheduler");
 }
 
 // Default implementation of CreateTargetPostRAHazardRecognizer.
 ScheduleHazardRecognizer *TargetInstrInfo::
 CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
                                    const ScheduleDAG *DAG) const {
-  return (ScheduleHazardRecognizer *)
-    new ScoreboardHazardRecognizer(II, DAG, "post-RA-sched");
+  return new ScoreboardHazardRecognizer(II, DAG, "post-RA-sched");
 }
 
 //===----------------------------------------------------------------------===//
