@@ -730,14 +730,26 @@ void GCNSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
     auto Reg = Dep.getReg();
     MachineBasicBlock::const_instr_iterator I(SrcI->getIterator());
     MachineBasicBlock::const_instr_iterator E(SrcI->getParent()->instr_end());
+    unsigned Lat = 0;
     for (++I; I != E && I->isBundledWithPred(); ++I) {
-      if (!I->modifiesRegister(Reg, TRI))
-        continue;
-      Dep.setLatency(InstrInfo.getInstrLatency(getInstrItineraryData(), *I));
-      break;
+      if (I->modifiesRegister(Reg, TRI))
+        Lat = InstrInfo.getInstrLatency(getInstrItineraryData(), *I);
+      else if (Lat)
+        --Lat;
     }
+    Dep.setLatency(Lat);
   } else if (DstI->isBundle()) {
-    Dep.setLatency(InstrInfo.getInstrLatency(getInstrItineraryData(), *SrcI));
+    const SIRegisterInfo *TRI = getRegisterInfo();
+    auto Reg = Dep.getReg();
+    MachineBasicBlock::const_instr_iterator I(DstI->getIterator());
+    MachineBasicBlock::const_instr_iterator E(DstI->getParent()->instr_end());
+    unsigned Lat = InstrInfo.getInstrLatency(getInstrItineraryData(), *SrcI);
+    for (++I; I != E && I->isBundledWithPred() && Lat; ++I) {
+      if (I->readsRegister(Reg, TRI))
+        break;
+      --Lat;
+    }
+    Dep.setLatency(Lat);
   }
 }
 
