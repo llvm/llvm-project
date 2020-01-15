@@ -482,8 +482,8 @@ unsigned getMaxPosOfType(ArrayRef<ArrayRef<AffineExpr>> exprArrays) {
 static SmallVector<AffineMap, 4>
 getSymbolLessAffineMaps(ArrayRef<ArrayRef<AffineExpr>> reassociation) {
   unsigned maxDim = getMaxPosOfType<AffineDimExpr>(reassociation);
-  unsigned maxSym = getMaxPosOfType<AffineSymbolExpr>(reassociation);
-  assert(maxSym == 0 && "Expected symbol-less expressions");
+  assert(getMaxPosOfType<AffineSymbolExpr>(reassociation) == 0 &&
+         "Expected symbol-less expressions");
   SmallVector<AffineMap, 4> maps;
   maps.reserve(reassociation.size());
   for (auto exprs : reassociation)
