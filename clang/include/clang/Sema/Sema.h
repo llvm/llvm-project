@@ -5923,8 +5923,6 @@ public:
   ///
   /// \param OnlyNamespace If true, only considers namespaces in lookup.
   ///
-  /// \param SuppressDiagnostic If true, suppress diagnostic on error.
-  ///
   /// \returns true if an error occurred, false otherwise.
   bool ActOnCXXNestedNameSpecifier(Scope *S,
                                    NestedNameSpecInfo &IdInfo,
