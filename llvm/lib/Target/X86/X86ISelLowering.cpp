@@ -25817,6 +25817,20 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       return DAG.getNode(ISD::MERGE_VALUES, dl, Op->getVTList(), SetCC,
                          Operation.getValue(1));
     }
+    case Intrinsic::x86_mwaitx: {
+      // If the current function needs the base pointer, RBX,
+      // we shouldn't use mwaitx directly.
+      // Indeed the lowering of that instruction will clobber
+      // that register and since RBX will be a reserved register
+      // the register allocator will not make sure its value will
+      // be properly saved and restored around this live-range.
+      SDLoc dl(Op);
+      unsigned Opcode = X86ISD::MWAITX_DAG;
+      SDValue Chain = DAG.getNode(Opcode, dl, MVT::Other,
+                                  {Op->getOperand(0), Op->getOperand(2),
+                                   Op->getOperand(3), Op->getOperand(4)});
+      return Chain;
+    }
     }
     return SDValue();
   }
@@ -30538,6 +30552,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(LCMPXCHG16_DAG)
   NODE_NAME_CASE(LCMPXCHG8_SAVE_EBX_DAG)
   NODE_NAME_CASE(LCMPXCHG16_SAVE_RBX_DAG)
+  NODE_NAME_CASE(MWAITX_DAG)
   NODE_NAME_CASE(LADD)
   NODE_NAME_CASE(LSUB)
   NODE_NAME_CASE(LOR)
@@ -33495,6 +33510,48 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         MI.getOpcode() == X86::LCMPXCHG8B_SAVE_EBX ? X86::EBX : X86::RBX;
     if (!BB->isLiveIn(BasePtr))
       BB->addLiveIn(BasePtr);
+    return BB;
+  }
+  case X86::MWAITX: {
+    const X86RegisterInfo *TRI = Subtarget.getRegisterInfo();
+    Register BasePtr = TRI->getBaseRegister();
+    bool IsRBX = (BasePtr == X86::RBX || BasePtr == X86::EBX);
+    // If no need to save the base pointer, we generate MWAITXrrr,
+    // else we generate pseudo MWAITX_SAVE_RBX/EBX.
+    if (!IsRBX || !TRI->hasBasePointer(*MF)) {
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), X86::ECX)
+          .addReg(MI.getOperand(0).getReg());
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), X86::EAX)
+          .addReg(MI.getOperand(1).getReg());
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), X86::EBX)
+          .addReg(MI.getOperand(2).getReg());
+      BuildMI(*BB, MI, DL, TII->get(X86::MWAITXrrr));
+      MI.eraseFromParent();
+    } else {
+      if (!BB->isLiveIn(BasePtr)) {
+        BB->addLiveIn(BasePtr);
+      }
+      // Parameters can be copied into ECX and EAX but not EBX yet.
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), X86::ECX)
+          .addReg(MI.getOperand(0).getReg());
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), X86::EAX)
+          .addReg(MI.getOperand(1).getReg());
+      const TargetRegisterClass *RegClass =
+          BasePtr == X86::EBX ? &X86::GR32RegClass : &X86::GR64RegClass;
+      // Save RBX (or EBX) into a virtual register.
+      Register SaveRBX = MF->getRegInfo().createVirtualRegister(RegClass);
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), SaveRBX)
+          .addReg(BasePtr);
+      // Generate mwaitx pseudo.
+      unsigned Opcode =
+          BasePtr == X86::RBX ? X86::MWAITX_SAVE_RBX : X86::MWAITX_SAVE_EBX;
+      Register Dst = MF->getRegInfo().createVirtualRegister(RegClass);
+      BuildMI(*BB, MI, DL, TII->get(Opcode))
+          .addDef(Dst) // Destination tied in with SaveRBX.
+          .addReg(MI.getOperand(2).getReg()) // input value of EBX.
+          .addUse(SaveRBX);                  // Save of base pointer.
+      MI.eraseFromParent();
+    }
     return BB;
   }
   case TargetOpcode::PREALLOCATED_SETUP: {
