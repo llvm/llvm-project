@@ -585,11 +585,10 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     if (Name.startswith("aarch64.neon.addp")) {
       if (F->arg_size() != 2)
         break; // Invalid IR.
-      auto fArgs = F->getFunctionType()->params();
-      VectorType *ArgTy = dyn_cast<VectorType>(fArgs[0]);
-      if (ArgTy && ArgTy->getElementType()->isFloatingPointTy()) {
+      VectorType *Ty = dyn_cast<VectorType>(F->getReturnType());
+      if (Ty && Ty->getElementType()->isFloatingPointTy()) {
         NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::aarch64_neon_faddp, fArgs);
+                                          Intrinsic::aarch64_neon_faddp, Ty);
         return true;
       }
     }
