@@ -68,8 +68,7 @@ static ToolChain::RTTIMode CalculateRTTIMode(const ArgList &Args,
   }
 
   // -frtti is default, except for the PS4 CPU.
-  return (Triple.isPS4CPU() || Triple.isNVPTX()) ? ToolChain::RM_Disabled
-                                                 : ToolChain::RM_Enabled;
+  return (Triple.isPS4CPU()) ? ToolChain::RM_Disabled : ToolChain::RM_Enabled;
 }
 
 ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
