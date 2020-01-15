@@ -13,6 +13,18 @@
 # CHECK-LABEL: Name: .debug_types.dwo
 # CHECK-NEXT: Type: dwarf-types-dwo
 
+# CHECK-LABEL: Name: .debug_loc
+# CHECK-NEXT: Type: dwarf-loc
+
+# CHECK-LABEL: Name: .debug_loc.dwo
+# CHECK-NEXT: Type: dwarf-loc-dwo
+
+# CHECK-LABEL: Name: .debug_loclists
+# CHECK-NEXT: Type: dwarf-loclists
+
+# CHECK-LABEL: Name: .debug_loclists.dwo
+# CHECK-NEXT: Type: dwarf-loclists-dwo
+
 # CHECK-LABEL: Name: .debug_rnglists
 # CHECK-NEXT: Type: dwarf-rnglists
 
@@ -61,6 +73,22 @@ Sections:
     AddressAlign:    0x0000000000000001
     Content:         DEADBEEFBAADF00D
   - Name:            .debug_types.dwo
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_loc
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_loc.dwo
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_loclists
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    Content:         DEADBEEFBAADF00D
+  - Name:            .debug_loclists.dwo
     Type:            SHT_PROGBITS
     AddressAlign:    0x0000000000000001
     Content:         DEADBEEFBAADF00D

@@ -80,8 +80,12 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-line-str";
   case eSectionTypeDWARFDebugLoc:
     return "dwarf-loc";
+  case eSectionTypeDWARFDebugLocDwo:
+    return "dwarf-loc-dwo";
   case eSectionTypeDWARFDebugLocLists:
     return "dwarf-loclists";
+  case eSectionTypeDWARFDebugLocListsDwo:
+    return "dwarf-loclists-dwo";
   case eSectionTypeDWARFDebugMacInfo:
     return "dwarf-macinfo";
   case eSectionTypeDWARFDebugMacro:
