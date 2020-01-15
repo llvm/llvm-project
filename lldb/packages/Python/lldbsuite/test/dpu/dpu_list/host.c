@@ -3,7 +3,7 @@
 int main() {
   struct dpu_set_t set;
 
-  if (dpu_alloc(1, "backend=hw,cycleAccurate=true", &set) != DPU_API_SUCCESS) {
+  if (dpu_alloc(1, "backend=hw,cycleAccurate=true", &set) != DPU_OK) {
     DPU_ASSERT(dpu_alloc(1, "backend=simulator", &set));
   }
 

@@ -117,8 +117,8 @@ bool Dpu::LoadElf(const FileSpec &elf_file_path) {
   ModuleSP elf_mod(new Module(elf_file_path, k_dpu_arch));
 
   struct dpu_set_t set = dpu_set_from_dpu(m_dpu);
-  dpu_api_status_t status = dpu_load(set, elf_file_path.GetCString(), NULL);
-  if (status != DPU_API_SUCCESS)
+  dpu_result_t status = dpu_load(set, elf_file_path.GetCString(), NULL);
+  if (status != DPU_OK)
     return false;
 
   if (!SetPrintfSequenceAddrsFromRuntimeInfo())
@@ -151,12 +151,12 @@ bool Dpu::Boot() {
             sizeof(dpuinstruction_t));
 
   int res = dpu_custom_for_dpu(m_dpu, DPU_COMMAND_DPU_PREEXECUTION, NULL);
-  if (res != DPU_API_SUCCESS)
+  if (res != DPU_OK)
     return false;
 
   bool ignored;
   res = dpu_launch_thread_on_dpu(m_dpu, DPU_BOOT_THREAD, false, &ignored);
-  if (res != DPU_API_SUCCESS)
+  if (res != DPU_OK)
     return false;
 
   dpu_is_running = true;
@@ -245,10 +245,10 @@ bool Dpu::ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list,
   if (!m_context->ContextReadyForResumeOrStep())
     return false;
 
-  int ret = DPU_API_SUCCESS;
+  int ret = DPU_OK;
   if (registers_has_been_modified) {
     ret = dpu_restore_context_for_dpu(m_dpu, m_context->Get());
-    if (ret != DPU_API_SUCCESS)
+    if (ret != DPU_OK)
       return false;
     registers_has_been_modified = false;
   }
@@ -310,7 +310,7 @@ bool Dpu::PrepareStepOverPrintfBkp(
       if (stdout_file != NULL) {
         if (dpulog_read_and_display_contents_of(mram_buffer, mram_buffer_size,
                                                 stdout_file) !=
-            DPU_API_SUCCESS) {
+            DPU_OK) {
           goto PrepareStepOverPrintfBkp_err;
         }
 
@@ -343,10 +343,10 @@ StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
   if (!m_context->ScheduledThread(thread_index))
     return StateType::eStateStopped;
 
-  int ret = DPU_API_SUCCESS;
+  int ret = DPU_OK;
   if (registers_has_been_modified) {
     ret = dpu_restore_context_for_dpu(m_dpu, m_context->Get());
-    if (ret != DPU_API_SUCCESS)
+    if (ret != DPU_OK)
       return StateType::eStateCrashed;
     registers_has_been_modified = false;
   }
@@ -383,7 +383,7 @@ StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
       return StateType::eStateCrashed;
   }
 
-  if (ret != DPU_API_SUCCESS)
+  if (ret != DPU_OK)
     return StateType::eStateCrashed;
   if (!m_context->DpuIsRunning()) {
     *exit_status = m_context->GetExitStatus();
@@ -395,13 +395,13 @@ StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
 bool Dpu::WriteWRAM(uint32_t offset, const void *buf, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
 
-  dpu_api_status_t ret;
+  dpu_result_t ret;
   // fast path, everything is aligned
   if (((offset & dpuword_size_mod) == 0) && ((size & dpuword_size_mod) == 0)) {
     const dpuword_t *words = static_cast<const dpuword_t *>(buf);
     ret = dpu_copy_to_wram_for_dpu(m_dpu, offset / sizeof(dpuword_t), words,
                                    size / sizeof(dpuword_t));
-    return ret == DPU_API_SUCCESS;
+    return ret == DPU_OK;
   }
 
   // slow path
@@ -426,7 +426,7 @@ bool Dpu::WriteWRAM(uint32_t offset, const void *buf, size_t size) {
   ret =
       dpu_copy_from_wram_for_dpu(m_dpu, words, final_offset / sizeof(dpuword_t),
                                  final_size / sizeof(dpuword_t));
-  if (ret != DPU_API_SUCCESS) {
+  if (ret != DPU_OK) {
     delete[] words;
     return false;
   }
@@ -439,14 +439,14 @@ bool Dpu::WriteWRAM(uint32_t offset, const void *buf, size_t size) {
                                  final_size / sizeof(dpuword_t));
 
   delete[] words;
-  return ret == DPU_API_SUCCESS;
+  return ret == DPU_OK;
 }
 
 bool Dpu::ReadWRAM(uint32_t offset, void *buf, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   dpuword_t *words = static_cast<dpuword_t *>(buf);
 
-  dpu_api_status_t ret;
+  dpu_result_t ret;
   size_t final_size =
       size + sizeof(dpuword_t) - 1 + (offset & dpuword_size_mod);
 
@@ -470,20 +470,20 @@ bool Dpu::ReadWRAM(uint32_t offset, void *buf, size_t size) {
     ret = dpu_copy_from_wram_for_dpu(m_dpu, words, offset / sizeof(dpuword_t),
                                      size / sizeof(dpuword_t));
   }
-  return ret == DPU_API_SUCCESS;
+  return ret == DPU_OK;
 }
 
 bool Dpu::WriteIRAM(uint32_t offset, const void *buf, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
 
-  dpu_api_status_t ret;
+  dpu_result_t ret;
   // fast path, everything is aligned
   if (((offset & instruction_size_mod) == 0) &&
       ((size & instruction_size_mod) == 0)) {
     const dpuinstruction_t *instrs = static_cast<const dpuinstruction_t *>(buf);
     ret = dpu_copy_to_iram_for_dpu(m_dpu, offset / sizeof(dpuinstruction_t),
                                    instrs, size / sizeof(dpuinstruction_t));
-    return ret == DPU_API_SUCCESS;
+    return ret == DPU_OK;
   }
 
   // slow path
@@ -508,7 +508,7 @@ bool Dpu::WriteIRAM(uint32_t offset, const void *buf, size_t size) {
   ret = dpu_copy_from_iram_for_dpu(m_dpu, instrs,
                                    final_offset / sizeof(dpuinstruction_t),
                                    final_size / sizeof(dpuinstruction_t));
-  if (ret != DPU_API_SUCCESS) {
+  if (ret != DPU_OK) {
     delete[] instrs;
     return false;
   }
@@ -521,14 +521,14 @@ bool Dpu::WriteIRAM(uint32_t offset, const void *buf, size_t size) {
                                  instrs, final_size / sizeof(dpuinstruction_t));
 
   delete[] instrs;
-  return ret == DPU_API_SUCCESS;
+  return ret == DPU_OK;
 }
 
 bool Dpu::ReadIRAM(uint32_t offset, void *buf, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   dpuinstruction_t *instrs = static_cast<dpuinstruction_t *>(buf);
 
-  dpu_api_status_t ret;
+  dpu_result_t ret;
   size_t final_size =
       size + sizeof(dpuinstruction_t) - 1 + (offset & instruction_size_mod);
 
@@ -554,23 +554,23 @@ bool Dpu::ReadIRAM(uint32_t offset, void *buf, size_t size) {
                                      offset / sizeof(dpuinstruction_t),
                                      size / sizeof(dpuinstruction_t));
   }
-  return ret == DPU_API_SUCCESS;
+  return ret == DPU_OK;
 }
 
 bool Dpu::WriteMRAM(uint32_t offset, const void *buf, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   const uint8_t *bytes = static_cast<const uint8_t *>(buf);
 
-  dpu_api_status_t ret = dpu_copy_to_mram(m_dpu, offset, bytes, size, 0);
-  return ret == DPU_API_SUCCESS;
+  dpu_result_t ret = dpu_copy_to_mram(m_dpu, offset, bytes, size, 0);
+  return ret == DPU_OK;
 }
 
 bool Dpu::ReadMRAM(uint32_t offset, void *buf, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   uint8_t *bytes = static_cast<uint8_t *>(buf);
 
-  dpu_api_status_t ret = dpu_copy_from_mram(m_dpu, bytes, offset, size, 0);
-  return ret == DPU_API_SUCCESS;
+  dpu_result_t ret = dpu_copy_from_mram(m_dpu, bytes, offset, size, 0);
+  return ret == DPU_OK;
 }
 
 bool Dpu::AllocIRAMBuffer(uint8_t **iram, uint32_t *iram_size) {
@@ -596,24 +596,24 @@ bool Dpu::GenerateSaveCore(const char *exe_path, const char *core_file_path,
   uint8_t *wram = new uint8_t[wram_size];
   uint8_t *mram = new uint8_t[mram_size];
 
-  dpu_api_status_t status;
+  dpu_result_t status;
   if (wram != NULL && mram != NULL) {
     status = dpu_copy_from_wram_for_dpu(m_dpu, (dpuword_t *)wram, 0,
                                         nb_word_in_wram);
-    if (status != DPU_API_SUCCESS)
+    if (status != DPU_OK)
       goto dpu_generate_save_core_exit;
     status = dpu_copy_from_mram(m_dpu, mram, 0, mram_size, DPU_PRIMARY_MRAM);
-    if (status != DPU_API_SUCCESS)
+    if (status != DPU_OK)
       goto dpu_generate_save_core_exit;
 
     status =
         dpu_create_core_dump(rank, exe_path, core_file_path, m_context->Get(),
                              wram, mram, iram, wram_size, mram_size, iram_size);
-    if (status != DPU_API_SUCCESS)
+    if (status != DPU_OK)
       goto dpu_generate_save_core_exit;
 
   } else {
-    status = DPU_API_SYSTEM_ERROR;
+    status = DPU_ERR_SYSTEM;
   }
 
 dpu_generate_save_core_exit:
@@ -695,7 +695,7 @@ unsigned int Dpu::GetDpuID() { return dpu_get_member_id(m_dpu); }
 
 bool Dpu::SaveSliceContext(uint64_t structure_value, uint64_t slice_target,
                            dpu_bitfield_t host_mux_mram_state) {
-  bool success = dpu_save_slice_context_for_dpu(m_dpu) == DPU_API_SUCCESS;
+  bool success = dpu_save_slice_context_for_dpu(m_dpu) == DPU_OK;
   if (!success)
     return false;
 
@@ -705,7 +705,7 @@ bool Dpu::SaveSliceContext(uint64_t structure_value, uint64_t slice_target,
 }
 
 bool Dpu::RestoreSliceContext() {
-  return dpu_restore_slice_context_for_dpu(m_dpu) == DPU_API_SUCCESS;
+  return dpu_restore_slice_context_for_dpu(m_dpu) == DPU_OK;
 }
 
 void Dpu::SetAttachSession() { attach_session = true; }

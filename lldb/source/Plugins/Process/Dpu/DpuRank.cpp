@@ -47,7 +47,7 @@ bool DpuRank::Open(char *profile, FILE *stdout_file) {
   std::lock_guard<std::recursive_mutex> guard(m_lock);
 
   int ret = dpu_get_rank_of_type(profile, &m_rank);
-  if (ret != DPU_API_SUCCESS)
+  if (ret != DPU_OK)
     return false;
   m_desc = dpu_get_description(m_rank);
 
@@ -67,7 +67,7 @@ bool DpuRank::IsValid() { return m_rank ? true : false; }
 
 bool DpuRank::Reset() {
   std::lock_guard<std::recursive_mutex> guard(m_lock);
-  return dpu_reset_rank(m_rank) == DPU_API_SUCCESS;
+  return dpu_reset_rank(m_rank) == DPU_OK;
 }
 
 Dpu *DpuRank::GetDpuFromSliceIdAndDpuId(unsigned int slice_id,

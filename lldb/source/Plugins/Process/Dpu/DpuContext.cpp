@@ -82,15 +82,15 @@ bool DpuContext::StopThreads() {
   m_context->dma_fault = false;
   m_context->mem_fault = false;
 
-  int ret = DPU_API_SUCCESS;
+  int ret = DPU_OK;
   ret = dpu_initialize_fault_process_for_dpu(m_dpu, m_context);
-  if (ret != DPU_API_SUCCESS)
+  if (ret != DPU_OK)
     return false;
   ret = dpu_extract_context_for_dpu(m_dpu, m_context);
 
   UpdateRunningThreads();
 
-  return ret == DPU_API_SUCCESS;
+  return ret == DPU_OK;
 }
 
 bool DpuContext::ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list) {
@@ -113,17 +113,17 @@ bool DpuContext::ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list) {
   }
 
   return dpu_finalize_fault_process_for_dpu(m_dpu, m_context) ==
-         DPU_API_SUCCESS;
+         DPU_OK;
 }
 
-dpu_api_status_t DpuContext::StepThread(uint32_t thread_index) {
+dpu_result_t DpuContext::StepThread(uint32_t thread_index) {
   ResetScheduling();
   ResetLastResumeThreads();
   AddThreadInScheduling(thread_index);
 
-  dpu_api_status_t ret =
+  dpu_result_t ret =
       dpu_execute_thread_step_in_fault_for_dpu(m_dpu, thread_index, m_context);
-  if (ret != DPU_API_SUCCESS)
+  if (ret != DPU_OK)
     return ret;
   ret = dpu_extract_context_for_dpu(m_dpu, m_context);
 
