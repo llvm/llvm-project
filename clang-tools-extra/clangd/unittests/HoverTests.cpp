@@ -1514,26 +1514,6 @@ TEST(Hover, All) {
             HI.Name = "cls<cls<cls<int> > >";
             HI.Documentation = "type of nested templates.";
           }},
-      {
-          R"cpp(// sizeof expr
-          void foo() {
-            (void)[[size^of]](char);
-          })cpp",
-          [](HoverInfo &HI) {
-            HI.Name = "expression";
-            HI.Type = "unsigned long";
-            HI.Value = "1";
-          }},
-      {
-          R"cpp(// alignof expr
-          void foo() {
-            (void)[[align^of]](char);
-          })cpp",
-          [](HoverInfo &HI) {
-            HI.Name = "expression";
-            HI.Type = "unsigned long";
-            HI.Value = "1";
-          }},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.
@@ -1793,6 +1773,49 @@ def
 Value = val
 
 def)pt");
+}
+
+TEST(Hover, ExprTests) {
+  struct {
+    const char *const Code;
+    const std::function<void(HoverInfo &)> ExpectedBuilder;
+  } Cases[] = {
+      {
+          R"cpp(// sizeof expr
+          void foo() {
+            (void)[[size^of]](char);
+          })cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "expression";
+            HI.Type = "unsigned long";
+            HI.Value = "1";
+          }},
+      {
+          R"cpp(// alignof expr
+          void foo() {
+            (void)[[align^of]](char);
+          })cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "expression";
+            HI.Type = "unsigned long";
+            HI.Value = "1";
+          }},
+  };
+  for (const auto &C : Cases) {
+    Annotations T(C.Code);
+    TestTU TU = TestTU::withCode(T.code());
+    auto AST = TU.build();
+    for (const auto &D : AST.getDiagnostics())
+      ADD_FAILURE() << D;
+
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+    ASSERT_TRUE(H);
+    HoverInfo ExpectedHover;
+    C.ExpectedBuilder(ExpectedHover);
+    // We don't check for Type as it might differ on different platforms.
+    EXPECT_EQ(H->Name, ExpectedHover.Name);
+    EXPECT_EQ(H->Value, ExpectedHover.Value);
+  }
 }
 } // namespace
 } // namespace clangd
