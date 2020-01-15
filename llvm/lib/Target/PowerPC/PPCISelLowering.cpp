@@ -5117,6 +5117,15 @@ static unsigned getCallOpcode(bool isIndirectCall, bool isPatchPoint,
 
   return PPCISD::CALL;
 }
+
+static bool isValidAIXExternalSymSDNode(StringRef SymName) {
+  return StringSwitch<bool>(SymName)
+      .Cases("__divdi3", "__fixunsdfdi", "__floatundidf", "__floatundisf",
+             "__moddi3", "__udivdi3", "__umoddi3", true)
+      .Cases("ceil", "floor", "memcpy", "memmove", "memset", "round", true)
+      .Default(false);
+}
+
 static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
                                const SDLoc &dl, const PPCSubtarget &Subtarget) {
   if (!Subtarget.usesFunctionDescriptors() && !Subtarget.isELFv2ABI())
@@ -5141,41 +5150,72 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
       Subtarget.is32BitELFABI() && !isLocalCallee() &&
       Subtarget.getTargetMachine().getRelocationModel() == Reloc::PIC_;
 
+  // On AIX, direct function calls reference the symbol for the function's
+  // entry point, which is named by prepending a "." before the function's
+  // C-linkage name.
+  const auto getAIXFuncEntryPointSymbolSDNode =
+      [&](StringRef FuncName, bool IsDeclaration,
+          const XCOFF::StorageClass &SC) {
+        auto &Context = DAG.getMachineFunction().getMMI().getContext();
+
+        MCSymbolXCOFF *S = cast<MCSymbolXCOFF>(
+            Context.getOrCreateSymbol(Twine(".") + Twine(FuncName)));
+
+        if (IsDeclaration && !S->hasContainingCsect()) {
+          // On AIX, an undefined symbol needs to be associated with a
+          // MCSectionXCOFF to get the correct storage mapping class.
+          // In this case, XCOFF::XMC_PR.
+          MCSectionXCOFF *Sec = Context.getXCOFFSection(
+              S->getName(), XCOFF::XMC_PR, XCOFF::XTY_ER, SC,
+              SectionKind::getMetadata());
+          S->setContainingCsect(Sec);
+        }
+
+        MVT PtrVT =
+            DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+        return DAG.getMCSymbol(S, PtrVT);
+      };
+
   if (isFunctionGlobalAddress(Callee)) {
     const GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Callee);
+    const GlobalValue *GV = G->getGlobal();
+
     if (!Subtarget.isAIXABI())
-      return DAG.getTargetGlobalAddress(G->getGlobal(), dl,
-                                        Callee.getValueType(), 0,
+      return DAG.getTargetGlobalAddress(GV, dl, Callee.getValueType(), 0,
                                         UsePlt ? PPCII::MO_PLT : 0);
 
-    // On AIX, direct function calls reference the symbol for the function's
-    // entry point, which is named by prepending a "." before the function's
-    // C-linkage name.
-    auto &Context = DAG.getMachineFunction().getMMI().getContext();
-
-    const GlobalObject *GO = cast<GlobalObject>(G->getGlobal());
-    MCSymbolXCOFF *S = cast<MCSymbolXCOFF>(
-        Context.getOrCreateSymbol(Twine(".") + Twine(GO->getName())));
-
-    if (GO && GO->isDeclaration() && !S->hasContainingCsect()) {
-      // On AIX, an undefined symbol needs to be associated with a
-      // MCSectionXCOFF to get the correct storage mapping class.
-      // In this case, XCOFF::XMC_PR.
-      const XCOFF::StorageClass SC =
-          TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GO);
-      MCSectionXCOFF *Sec =
-          Context.getXCOFFSection(S->getName(), XCOFF::XMC_PR, XCOFF::XTY_ER,
-                                  SC, SectionKind::getMetadata());
-      S->setContainingCsect(Sec);
-    }
-
-    EVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
-    return DAG.getMCSymbol(S, PtrVT);
+    assert(!isa<GlobalIFunc>(GV) && "IFunc is not supported on AIX.");
+    const GlobalObject *GO = cast<GlobalObject>(GV);
+    const XCOFF::StorageClass SC =
+        TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GO);
+    return getAIXFuncEntryPointSymbolSDNode(GO->getName(), GO->isDeclaration(),
+                                            SC);
   }
 
-  if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee))
-    return DAG.getTargetExternalSymbol(S->getSymbol(), Callee.getValueType(),
-                                       UsePlt ? PPCII::MO_PLT : 0);
+  if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    const char *SymName = S->getSymbol();
+    if (!Subtarget.isAIXABI())
+      return DAG.getTargetExternalSymbol(SymName, Callee.getValueType(),
+                                         UsePlt ? PPCII::MO_PLT : 0);
+
+    // If there exists a user-declared function whose name is the same as the
+    // ExternalSymbol's, then we pick up the user-declared version.
+    const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
+    if (const Function *F =
+            dyn_cast_or_null<Function>(Mod->getNamedValue(SymName))) {
+      const XCOFF::StorageClass SC =
+          TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(F);
+      return getAIXFuncEntryPointSymbolSDNode(F->getName(), F->isDeclaration(),
+                                              SC);
+    }
+
+    // TODO: Remove this when the support for ExternalSymbolSDNode is complete.
+    if (isValidAIXExternalSymSDNode(SymName)) {
+      return getAIXFuncEntryPointSymbolSDNode(SymName, true, XCOFF::C_EXT);
+    }
+
+    report_fatal_error("Unexpected ExternalSymbolSDNode: " + Twine(SymName));
+  }
 
   // No transformation needed.
   assert(Callee.getNode() && "What no callee?");
