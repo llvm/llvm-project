@@ -229,7 +229,8 @@ public:
 
   /// DWARF v5 Name Index header.
   struct Header {
-    uint32_t UnitLength;
+    uint64_t UnitLength;
+    dwarf::DwarfFormat Format;
     uint16_t Version;
     uint32_t CompUnitCount;
     uint32_t LocalTypeUnitCount;
@@ -456,7 +457,10 @@ public:
 
     Error extract();
     uint64_t getUnitOffset() const { return Base; }
-    uint64_t getNextUnitOffset() const { return Base + 4 + Hdr.UnitLength; }
+    uint64_t getNextUnitOffset() const {
+      return Base + dwarf::getUnitLengthFieldByteSize(Hdr.Format) +
+             Hdr.UnitLength;
+    }
     void dump(ScopedPrinter &W) const;
 
     friend class DWARFDebugNames;
