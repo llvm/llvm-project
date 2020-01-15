@@ -2000,6 +2000,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setTargetDAGCombine(ISD::FSUB);
   setTargetDAGCombine(ISD::FNEG);
   setTargetDAGCombine(ISD::FMA);
+  setTargetDAGCombine(ISD::STRICT_FMA);
   setTargetDAGCombine(ISD::FMINNUM);
   setTargetDAGCombine(ISD::FMAXNUM);
   setTargetDAGCombine(ISD::SUB);
@@ -29850,8 +29851,11 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VPCOMU)
   NODE_NAME_CASE(VPERMIL2)
   NODE_NAME_CASE(FMSUB)
+  NODE_NAME_CASE(STRICT_FMSUB)
   NODE_NAME_CASE(FNMADD)
+  NODE_NAME_CASE(STRICT_FNMADD)
   NODE_NAME_CASE(FNMSUB)
+  NODE_NAME_CASE(STRICT_FNMSUB)
   NODE_NAME_CASE(FMADDSUB)
   NODE_NAME_CASE(FMSUBADD)
   NODE_NAME_CASE(FMADD_RND)
@@ -42715,37 +42719,46 @@ static unsigned negateFMAOpcode(unsigned Opcode, bool NegMul, bool NegAcc,
   if (NegMul) {
     switch (Opcode) {
     default: llvm_unreachable("Unexpected opcode");
-    case ISD::FMA:             Opcode = X86ISD::FNMADD;       break;
-    case X86ISD::FMADD_RND:    Opcode = X86ISD::FNMADD_RND;   break;
-    case X86ISD::FMSUB:        Opcode = X86ISD::FNMSUB;       break;
-    case X86ISD::FMSUB_RND:    Opcode = X86ISD::FNMSUB_RND;   break;
-    case X86ISD::FNMADD:       Opcode = ISD::FMA;             break;
-    case X86ISD::FNMADD_RND:   Opcode = X86ISD::FMADD_RND;    break;
-    case X86ISD::FNMSUB:       Opcode = X86ISD::FMSUB;        break;
-    case X86ISD::FNMSUB_RND:   Opcode = X86ISD::FMSUB_RND;    break;
+    case ISD::FMA:              Opcode = X86ISD::FNMADD;        break;
+    case ISD::STRICT_FMA:       Opcode = X86ISD::STRICT_FNMADD; break;
+    case X86ISD::FMADD_RND:     Opcode = X86ISD::FNMADD_RND;    break;
+    case X86ISD::FMSUB:         Opcode = X86ISD::FNMSUB;        break;
+    case X86ISD::STRICT_FMSUB:  Opcode = X86ISD::STRICT_FNMSUB; break;
+    case X86ISD::FMSUB_RND:     Opcode = X86ISD::FNMSUB_RND;    break;
+    case X86ISD::FNMADD:        Opcode = ISD::FMA;              break;
+    case X86ISD::STRICT_FNMADD: Opcode = ISD::STRICT_FMA;       break;
+    case X86ISD::FNMADD_RND:    Opcode = X86ISD::FMADD_RND;     break;
+    case X86ISD::FNMSUB:        Opcode = X86ISD::FMSUB;         break;
+    case X86ISD::STRICT_FNMSUB: Opcode = X86ISD::STRICT_FMSUB;  break;
+    case X86ISD::FNMSUB_RND:    Opcode = X86ISD::FMSUB_RND;     break;
     }
   }
 
   if (NegAcc) {
     switch (Opcode) {
     default: llvm_unreachable("Unexpected opcode");
-    case ISD::FMA:             Opcode = X86ISD::FMSUB;        break;
-    case X86ISD::FMADD_RND:    Opcode = X86ISD::FMSUB_RND;    break;
-    case X86ISD::FMSUB:        Opcode = ISD::FMA;             break;
-    case X86ISD::FMSUB_RND:    Opcode = X86ISD::FMADD_RND;    break;
-    case X86ISD::FNMADD:       Opcode = X86ISD::FNMSUB;       break;
-    case X86ISD::FNMADD_RND:   Opcode = X86ISD::FNMSUB_RND;   break;
-    case X86ISD::FNMSUB:       Opcode = X86ISD::FNMADD;       break;
-    case X86ISD::FNMSUB_RND:   Opcode = X86ISD::FNMADD_RND;   break;
-    case X86ISD::FMADDSUB:     Opcode = X86ISD::FMSUBADD;     break;
-    case X86ISD::FMADDSUB_RND: Opcode = X86ISD::FMSUBADD_RND; break;
-    case X86ISD::FMSUBADD:     Opcode = X86ISD::FMADDSUB;     break;
-    case X86ISD::FMSUBADD_RND: Opcode = X86ISD::FMADDSUB_RND; break;
+    case ISD::FMA:              Opcode = X86ISD::FMSUB;         break;
+    case ISD::STRICT_FMA:       Opcode = X86ISD::STRICT_FMSUB;  break;
+    case X86ISD::FMADD_RND:     Opcode = X86ISD::FMSUB_RND;     break;
+    case X86ISD::FMSUB:         Opcode = ISD::FMA;              break;
+    case X86ISD::STRICT_FMSUB:  Opcode = ISD::STRICT_FMA;       break;
+    case X86ISD::FMSUB_RND:     Opcode = X86ISD::FMADD_RND;     break;
+    case X86ISD::FNMADD:        Opcode = X86ISD::FNMSUB;        break;
+    case X86ISD::STRICT_FNMADD: Opcode = X86ISD::STRICT_FNMSUB; break;
+    case X86ISD::FNMADD_RND:    Opcode = X86ISD::FNMSUB_RND;    break;
+    case X86ISD::FNMSUB:        Opcode = X86ISD::FNMADD;        break;
+    case X86ISD::STRICT_FNMSUB: Opcode = X86ISD::STRICT_FNMADD; break;
+    case X86ISD::FNMSUB_RND:    Opcode = X86ISD::FNMADD_RND;    break;
+    case X86ISD::FMADDSUB:      Opcode = X86ISD::FMSUBADD;      break;
+    case X86ISD::FMADDSUB_RND:  Opcode = X86ISD::FMSUBADD_RND;  break;
+    case X86ISD::FMSUBADD:      Opcode = X86ISD::FMADDSUB;      break;
+    case X86ISD::FMSUBADD_RND:  Opcode = X86ISD::FMADDSUB_RND;  break;
     }
   }
 
   if (NegRes) {
     switch (Opcode) {
+    // For accuracy reason, we never combine fneg and fma under strict FP.
     default: llvm_unreachable("Unexpected opcode");
     case ISD::FMA:             Opcode = X86ISD::FNMSUB;       break;
     case X86ISD::FMADD_RND:    Opcode = X86ISD::FNMSUB_RND;   break;
@@ -43716,6 +43729,7 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
                           const X86Subtarget &Subtarget) {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
+  bool IsStrict = N->isStrictFPOpcode() || N->isTargetStrictFPOpcode();
 
   // Let legalize expand this if it isn't a legal type yet.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -43726,9 +43740,9 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
   if ((ScalarVT != MVT::f32 && ScalarVT != MVT::f64) || !Subtarget.hasAnyFMA())
     return SDValue();
 
-  SDValue A = N->getOperand(0);
-  SDValue B = N->getOperand(1);
-  SDValue C = N->getOperand(2);
+  SDValue A = N->getOperand(IsStrict ? 1 : 0);
+  SDValue B = N->getOperand(IsStrict ? 2 : 1);
+  SDValue C = N->getOperand(IsStrict ? 3 : 2);
 
   auto invertIfNegative = [&DAG, &TLI, &DCI](SDValue &V) {
     bool CodeSize = DAG.getMachineFunction().getFunction().hasOptSize();
@@ -43766,9 +43780,15 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
   unsigned NewOpcode =
       negateFMAOpcode(N->getOpcode(), NegA != NegB, NegC, false);
 
-  if (N->getNumOperands() == 4)
-    return DAG.getNode(NewOpcode, dl, VT, A, B, C, N->getOperand(3));
-  return DAG.getNode(NewOpcode, dl, VT, A, B, C);
+  if (IsStrict) {
+    assert(N->getNumOperands() == 4 && "Shouldn't be greater than 4");
+    return DAG.getNode(NewOpcode, dl, {VT, MVT::Other},
+                       {N->getOperand(0), A, B, C});
+  } else {
+    if (N->getNumOperands() == 4)
+      return DAG.getNode(NewOpcode, dl, VT, A, B, C, N->getOperand(3));
+    return DAG.getNode(NewOpcode, dl, VT, A, B, C);
+  }
 }
 
 // Combine FMADDSUB(A, B, FNEG(C)) -> FMSUBADD(A, B, C)
@@ -46269,12 +46289,16 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::VECTOR_SHUFFLE: return combineShuffle(N, DAG, DCI,Subtarget);
   case X86ISD::FMADD_RND:
   case X86ISD::FMSUB:
+  case X86ISD::STRICT_FMSUB:
   case X86ISD::FMSUB_RND:
   case X86ISD::FNMADD:
+  case X86ISD::STRICT_FNMADD:
   case X86ISD::FNMADD_RND:
   case X86ISD::FNMSUB:
+  case X86ISD::STRICT_FNMSUB:
   case X86ISD::FNMSUB_RND:
-  case ISD::FMA: return combineFMA(N, DAG, DCI, Subtarget);
+  case ISD::FMA:
+  case ISD::STRICT_FMA:     return combineFMA(N, DAG, DCI, Subtarget);
   case X86ISD::FMADDSUB_RND:
   case X86ISD::FMSUBADD_RND:
   case X86ISD::FMADDSUB:
