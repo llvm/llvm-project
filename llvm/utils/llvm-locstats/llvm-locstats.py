@@ -11,6 +11,7 @@ import os
 import sys
 from json import loads
 from math import ceil
+from collections import OrderedDict
 from subprocess import Popen, PIPE
 
 # Holds the debug location statistics.
@@ -26,14 +27,19 @@ class LocationStats:
     self.scope_bytes = variables_scope_bytes
     self.variables_coverage_map = variables_coverage_map
 
+  # Get the PC ranges coverage.
+  def get_pc_coverage(self):
+    pc_ranges_covered = int(ceil(self.scope_bytes_covered * 100.0) \
+                / self.scope_bytes)
+    return pc_ranges_covered
+
   # Pretty print the debug location buckets.
   def pretty_print(self):
     if self.scope_bytes == 0:
       print ('No scope bytes found.')
       return -1
 
-    pc_ranges_covered = int(ceil(self.scope_bytes_covered * 100.0) \
-                / self.scope_bytes)
+    pc_ranges_covered = self.get_pc_coverage()
     variables_coverage_per_map = {}
     for cov_bucket in coverage_buckets():
       variables_coverage_per_map[cov_bucket] = \
@@ -65,6 +71,39 @@ class LocationStats:
 
     return 0
 
+  # Draw a plot representing the location buckets.
+  def draw_plot(self):
+    try:
+      import matplotlib
+    except ImportError:
+      print('error: matplotlib not found.')
+      sys.exit(1)
+
+    from matplotlib import pyplot as plt
+
+    buckets = range(len(self.variables_coverage_map))
+    plt.figure(figsize=(12, 8))
+    plt.title('Debug Location Statistics', fontweight='bold')
+    plt.xlabel('location buckets')
+    plt.ylabel('number of variables in the location buckets')
+    plt.bar(buckets, self.variables_coverage_map.values(), align='center',
+            tick_label=self.variables_coverage_map.keys(),
+            label='variables of {}'.format(self.file_name))
+    plt.xticks(rotation=45, fontsize='x-small')
+    plt.yticks()
+
+    # Place the text box with the coverage info.
+    pc_ranges_covered = self.get_pc_coverage()
+    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+    plt.text(0.02, 0.90, 'PC ranges covered: {}%'.format(pc_ranges_covered),
+             transform=plt.gca().transAxes, fontsize=12,
+             verticalalignment='top', bbox=props)
+    plt.legend()
+    plt.grid(color='grey', which='major', axis='y', linestyle='-', linewidth=0.3)
+
+    plt.savefig('locstats.png')
+    print('The plot was saved within "locstats.png".')
+
 # Define the location buckets.
 def coverage_buckets():
   yield '0%'
@@ -83,7 +122,7 @@ def parse_locstats(opts, binary):
   variables_scope_bytes_covered = None
   variables_scope_bytes = None
   variables_scope_bytes_entry_values = None
-  variables_coverage_map = {}
+  variables_coverage_map = OrderedDict()
 
   # Get the directory of the LLVM tools.
   llvm_dwarfdump_cmd = os.path.join(os.path.dirname(__file__), \
@@ -191,6 +230,9 @@ def parse_program_args(parser):
             default=False,
             help='ignore the location statistics on locations with '
                  'entry values')
+  parser.add_argument('--draw-plot', action='store_true', default=False,
+            help='show histogram of location buckets generated (requires '
+                 'matplotlib)')
   parser.add_argument('file_name', type=str, help='file to process')
 
   return parser.parse_args()
@@ -218,9 +260,13 @@ def Main():
   binary = opts.file_name
   locstats = parse_locstats(opts, binary)
 
-  # Pretty print collected info.
-  if locstats.pretty_print() == -1:
-    sys.exit(0)
+  if opts.draw_plot:
+    # Draw a histogram representing the location buckets.
+    locstats.draw_plot()
+  else:
+    # Pretty print collected info on the standard output.
+    if locstats.pretty_print() == -1:
+      sys.exit(0)
 
 if __name__ == '__main__':
   Main()
