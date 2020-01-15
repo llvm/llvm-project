@@ -34,6 +34,9 @@ public:
     return Map[Index];
   }
 
+  void disable() {}
+  void enable() {}
+
 private:
   u8 *Map;
 };
@@ -81,6 +84,9 @@ public:
       return 0;
     return Level2Map[Index % Level2Size];
   }
+
+  void disable() { Mutex.lock(); }
+  void enable() { Mutex.unlock(); }
 
 private:
   u8 *get(uptr Index) const {
