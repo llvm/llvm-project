@@ -457,7 +457,7 @@ LinalgTilingPass::LinalgTilingPass(ArrayRef<int64_t> sizes) {
 }
 
 std::unique_ptr<OpPassBase<FuncOp>>
-mlir::linalg::createLinalgTilingPass(ArrayRef<int64_t> tileSizes) {
+mlir::createLinalgTilingPass(ArrayRef<int64_t> tileSizes) {
   return std::make_unique<LinalgTilingPass>(tileSizes);
 }
 
