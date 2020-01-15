@@ -38,40 +38,61 @@ OPTIONS
             ignore the location statistics on locations containing the
             debug entry values DWARF operation
 
+.. option:: --draw-plot
+
+            make histogram of location buckets generated (requires
+            matplotlib)
+
 EXIT STATUS
 -----------
 
 :program:`llvm-locstats` returns 0 if the input file were parsed
 successfully. Otherwise, it returns 1.
 
-OUTPUT EXAMPLE
+EXAMPLE 1
 --------------
+
+Pretty print the location coverage on the standard output.
 
 .. code-block:: none
 
-  =================================================
-            Debug Location Statistics
-  =================================================
-        cov%          samples       percentage(~)
-  -------------------------------------------------
-     0%                    1              16%
-     (0%,10%)              0               0%
-     [10%,20%)             0               0%
-     [20%,30%)             0               0%
-     [30%,40%)             0               0%
-     [40%,50%)             0               0%
-     [50%,60%)             1              16%
-     [60%,70%)             0               0%
-     [70%,80%)             0               0%
-     [80%,90%)             1              16%
-     [90%,100%)            0               0%
-     100%                  3              50%
-  =================================================
-  -the number of debug variables processed: 6
-  -PC ranges covered: 81%
-  -------------------------------------------------
-  -total availability: 83%
-  =================================================
+  llvm-locstats a.out
+
+    =================================================
+              Debug Location Statistics
+    =================================================
+          cov%          samples       percentage(~)
+    -------------------------------------------------
+       0%                    1              16%
+       (0%,10%)              0               0%
+       [10%,20%)             0               0%
+       [20%,30%)             0               0%
+       [30%,40%)             0               0%
+       [40%,50%)             0               0%
+       [50%,60%)             1              16%
+       [60%,70%)             0               0%
+       [70%,80%)             0               0%
+       [80%,90%)             1              16%
+       [90%,100%)            0               0%
+       100%                  3              50%
+    =================================================
+    -the number of debug variables processed: 6
+    -PC ranges covered: 81%
+    -------------------------------------------------
+    -total availability: 83%
+    =================================================
+
+EXAMPLE 2
+--------------
+
+Generate a plot as an image file.
+
+.. code-block:: none
+
+  llvm-locstats --draw-plot file1.out
+
+.. image:: locstats-draw-plot.png
+  :align: center
 
 SEE ALSO
 --------
