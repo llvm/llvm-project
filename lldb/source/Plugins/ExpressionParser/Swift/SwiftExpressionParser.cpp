@@ -848,9 +848,11 @@ static void ResolveSpecialNames(
 
 /// Initialize the SwiftASTContext and return the wrapped
 /// swift::ASTContext when successful.
-static swift::ASTContext *SetupASTContext(
-    SwiftASTContext *swift_ast_context, DiagnosticManager &diagnostic_manager,
-    std::function<bool()> disable_objc_runtime, bool repl, bool playground) {
+static swift::ASTContext *
+SetupASTContext(SwiftASTContextForExpressions *swift_ast_context,
+                DiagnosticManager &diagnostic_manager,
+                std::function<bool()> disable_objc_runtime, bool repl,
+                bool playground) {
   if (!swift_ast_context) {
     diagnostic_manager.PutString(
         eDiagnosticSeverityError,
@@ -1174,15 +1176,14 @@ struct ParsedExpression {
 
 /// Attempt to parse an expression and import all the Swift modules
 /// the expression and its context depend on.
-static llvm::Expected<ParsedExpression>
-ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
-               SwiftExpressionParser::SILVariableMap &variable_map,
-               unsigned &buffer_id, DiagnosticManager &diagnostic_manager,
-               SwiftExpressionParser &swift_expr_parser,
-               lldb::StackFrameWP &stack_frame_wp, SymbolContext &sc,
-               ExecutionContextScope &exe_scope,
-               const EvaluateExpressionOptions &options, bool repl,
-               bool playground) {
+static llvm::Expected<ParsedExpression> ParseAndImport(
+    SwiftASTContextForExpressions *swift_ast_context, Expression &expr,
+    SwiftExpressionParser::SILVariableMap &variable_map, unsigned &buffer_id,
+    DiagnosticManager &diagnostic_manager,
+    SwiftExpressionParser &swift_expr_parser,
+    lldb::StackFrameWP &stack_frame_wp, SymbolContext &sc,
+    ExecutionContextScope &exe_scope, const EvaluateExpressionOptions &options,
+    bool repl, bool playground) {
 
   auto should_disable_objc_runtime = [&]() {
     lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
