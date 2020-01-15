@@ -291,7 +291,7 @@ struct ExistingInt {
   int e1{};
   int e2 = 0;
   int e3 = {5};
-  int e4 = 5;
+  int e4{5};
   int e5 = -5;
   int e6 = +5;
 };
@@ -315,7 +315,7 @@ struct ExistingDouble {
   double e1{};
   double e2 = 0.0;
   double e3 = 5.0;
-  double e4 = -5.0;
+  double e4{-5.0};
   double e5 = +5.0;
 };
 
@@ -333,7 +333,7 @@ struct ExistingBool {
   // CHECK-FIXES: ExistingBool(long) : e1(true), e2(true) {}
   bool e1{};
   bool e2 = false;
-  bool e3 = true;
+  bool e3{true};
 };
 
 struct ExistingEnum {
@@ -365,7 +365,7 @@ struct ExistingPointer {
   // CHECK-FIXES: ExistingPointer(long) :  e4(&e2) {}
   int *e1{};
   int *e2 = 0;
-  int *e3 = nullptr;
+  int *e3{nullptr};
   int **e4 = &e1;
 };
 
