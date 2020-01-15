@@ -87,11 +87,11 @@
 ; CHECK-O: Clearing all analysis results for: main
 ; CHECK-O: Invalidating analysis: FunctionAnalysisManagerCGSCCProxy on (main)
 ; CHECK-O3: Running pass: ArgumentPromotionPass on (main)
-; CHECK-O2: Running pass: CGSCCToFunctionPassAdaptor<{{.*}}PassManager<{{.*}}Function> > on (main)
+; CHECK-O2: Running pass: CGSCCToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
 ; CHECK-O: Running analysis: FunctionAnalysisManagerCGSCCProxy on (main)
 ; CHECK-O3: Running analysis: TargetIRAnalysis on main
 ; CHECK-O: Running analysis: PassInstrumentationAnalysis on main
-; CHECK-O3: Running pass: CGSCCToFunctionPassAdaptor<{{.*}}PassManager<{{.*}}Function> > on (main)
+; CHECK-O3: Running pass: CGSCCToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: SROA on main
 ; These next two can appear in any order since they are accessed as parameters
