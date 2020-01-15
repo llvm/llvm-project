@@ -89,6 +89,7 @@ TableGen also has the following keywords::
    bit   bits      class   code         dag
    def   foreach   defm    field        in
    int   let       list    multiclass   string
+   if    then      else
 
 TableGen also has "bang operators" which have a
 wide variety of meanings:
@@ -125,7 +126,7 @@ TableGen's top-level production consists of "objects".
 .. productionlist::
    TableGenFile: `Object`*
    Object: `Class` | `Def` | `Defm` | `Defset` | `Defvar` | `Let` |
-           `MultiClass` | `Foreach`
+           `MultiClass` | `Foreach` | `If`
 
 ``class``\es
 ------------
@@ -465,6 +466,24 @@ iterated value.
 
 Note that the productions involving RangeList and RangePiece have precedence
 over the more generic value parsing based on the first token.
+
+``if``
+------
+
+.. productionlist::
+   If: "if" `Value` "then" `IfBody`
+     :| "if" `Value` "then" `IfBody` "else" `IfBody`
+   IfBody: "{" `Object`* "}" | `Object`
+
+The value expression after the ``if`` keyword is evaluated, and if it evaluates
+to true (in the same sense used by the ``!if`` operator), then the object
+definition(s) after the ``then`` keyword are executed. Otherwise, if there is
+an ``else`` keyword, the definition(s) after the ``else`` are executed instead.
+
+Because the braces around the ``then`` clause are optional, this grammar rule
+has the usual ambiguity about dangling ``else`` clauses, and it is resolved in
+the usual way: in a case like ``if v1 then if v2 then {...} else {...}``, the
+``else`` binds to the inner ``if`` rather than the outer one.
 
 Top-Level ``let``
 -----------------
