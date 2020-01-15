@@ -296,18 +296,49 @@ TBD: absolute symbols, aliases, off-the-shelf layers.
 Laziness
 ========
 
-Laziness in ORC is provided by a utility called "lazy-reexports". The aim of
-this utility is to re-use the synchronization provided by the symbol lookup
-mechanism to make it safe to lazily compile functions, even if calls to the
-stub occur simultaneously on multiple threads of JIT'd code. It does this by
-reducing lazy compilation to symbol lookup: The lazy stub performs a lookup of
-its underlying definition on first call, updating the function body pointer
-once the definition is available. If additional calls arrive on other threads
-while compilation is ongoing they will be safely blocked by the normal lookup
-synchronization guarantee (no result until the result is safe) and can also
-proceed as soon as compilation completes.
+Laziness in ORC is provided by a utility called "lazy reexports". A lazy
+reexport is similar to a regular reexport or alias: It provides a new name for
+an existing symbol. Unlike regular reexports however, lookups of lazy reexports
+do not trigger immediate materialization of the reexported symbol. Instead, they
+only trigger materialization of a function stub. This function stub is
+initialized to point at a *lazy call-through*, which provides reentry into the
+JIT. If the stub is called at runtime then the lazy call-through will look up
+the reexported symbol (triggering materialization for it if necessary), update
+the stub (to call directly to the reexported symbol on subsequent calls), and
+then return via the reexported symbol. By re-using the existing symbol lookup
+mechanism, lazy reexports inherit the same concurrency guarantees: calls to lazy
+reexports can be made from multiple threads concurrently, and the reexported
+symbol can be any state of compilation (uncompiled, already in the process of
+being compiled, or already compiled) and the call will succeed. This allows
+laziness to be safely mixed with features like remote compilation, concurrent
+compilation, concurrent JIT'd code, and speculative compilation.
 
-TBD: Usage example.
+There is one other key difference between regular reexports and lazy reexports
+that some clients must be aware of: The address of a lazy reexport will be
+*different* from the address of the reexported symbol (whereas a regular
+reexport is guaranteed to have the same address as the reexported symbol).
+Clients who care about pointer equality will generally want to use the address
+of the reexport as the canonical address of the reexported symbol. This will
+allow the address to be taken without forcing materialization of the reexport.
+
+Usage example:
+
+If JITDylib ``JD`` contains definitions for symbols ``foo_body`` and
+``bar_body``, we can create lazy entry points ``Foo`` and ``Bar`` in JITDylib
+``JD2`` by calling:
+
+.. code-block:: c++
+
+  auto ReexportFlags = JITSymbolFlags::Exported | JITSymbolFlags::Callable;
+  JD2.define(
+    lazyReexports(CallThroughMgr, StubsMgr, JD,
+                  SymbolAliasMap({
+                    { Mangle("foo"), { Mangle("foo_body"), ReexportedFlags } },
+                    { Mangle("bar"), { Mangle("bar_body"), ReexportedFlags } }
+                  }));
+
+A full example of how to use lazyReexports with the LLJIT class can be found at
+``llvm_project/llvm/examples/LLJITExamples/LLJITWithLazyReexports``.
 
 Supporting Custom Compilers
 ===========================
