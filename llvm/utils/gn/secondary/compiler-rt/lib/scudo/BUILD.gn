@@ -1,7 +1,7 @@
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
 supported_toolchains = []
-if (target_os == "linux" || target_os == "fuchsia")  {
+if (target_os == "linux" || target_os == "fuchsia") {
   supported_toolchains += [ "//llvm/utils/gn/build/toolchain:stage2_unix" ]
 }
 if (android_ndk_path != "") {
