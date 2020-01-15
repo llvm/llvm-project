@@ -1356,34 +1356,6 @@ static DebugLoc inlineDebugLoc(DebugLoc OrigDL, DILocation *InlinedAt,
                        IA);
 }
 
-/// Returns the LoopID for a loop which has has been cloned from another
-/// function for inlining with the new inlined-at start and end locs.
-static MDNode *inlineLoopID(const MDNode *OrigLoopId, DILocation *InlinedAt,
-                            LLVMContext &Ctx,
-                            DenseMap<const MDNode *, MDNode *> &IANodes) {
-  assert(OrigLoopId && OrigLoopId->getNumOperands() > 0 &&
-         "Loop ID needs at least one operand");
-  assert(OrigLoopId && OrigLoopId->getOperand(0).get() == OrigLoopId &&
-         "Loop ID should refer to itself");
-
-  // Save space for the self-referential LoopID.
-  SmallVector<Metadata *, 4> MDs = {nullptr};
-
-  for (unsigned i = 1; i < OrigLoopId->getNumOperands(); ++i) {
-    Metadata *MD = OrigLoopId->getOperand(i);
-    // Update the DILocations to encode the inlined-at metadata.
-    if (DILocation *DL = dyn_cast<DILocation>(MD))
-      MDs.push_back(inlineDebugLoc(DL, InlinedAt, Ctx, IANodes));
-    else
-      MDs.push_back(MD);
-  }
-
-  MDNode *NewLoopID = MDNode::getDistinct(Ctx, MDs);
-  // Insert the self-referential LoopID.
-  NewLoopID->replaceOperandWith(0, NewLoopID);
-  return NewLoopID;
-}
-
 /// Update inlined instructions' line numbers to
 /// to encode location where these instructions are inlined.
 static void fixupLineNumbers(Function *Fn, Function::iterator FI,
@@ -1415,11 +1387,11 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
          BI != BE; ++BI) {
       // Loop metadata needs to be updated so that the start and end locs
       // reference inlined-at locations.
-      if (MDNode *LoopID = BI->getMetadata(LLVMContext::MD_loop)) {
-        MDNode *NewLoopID =
-            inlineLoopID(LoopID, InlinedAtNode, BI->getContext(), IANodes);
-        BI->setMetadata(LLVMContext::MD_loop, NewLoopID);
-      }
+      auto updateLoopInfoLoc = [&Ctx, &InlinedAtNode, &IANodes](
+                                   const DILocation &Loc) -> DILocation * {
+        return inlineDebugLoc(&Loc, InlinedAtNode, Ctx, IANodes).get();
+      };
+      updateLoopMetadataDebugLocations(*BI, updateLoopInfoLoc);
 
       if (!NoInlineLineTables)
         if (DebugLoc DL = BI->getDebugLoc()) {
