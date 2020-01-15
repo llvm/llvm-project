@@ -7021,6 +7021,35 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     Opers.push_back(getValue(FPI.getArgOperand(1)));
   }
 
+  auto pushOutChain = [this](SDValue Result, fp::ExceptionBehavior EB) {
+    assert(Result.getNode()->getNumValues() == 2);
+
+    // Push node to the appropriate list so that future instructions can be
+    // chained up correctly.
+    SDValue OutChain = Result.getValue(1);
+    switch (EB) {
+    case fp::ExceptionBehavior::ebIgnore:
+      // The only reason why ebIgnore nodes still need to be chained is that
+      // they might depend on the current rounding mode, and therefore must
+      // not be moved across instruction that may change that mode.
+      LLVM_FALLTHROUGH;
+    case fp::ExceptionBehavior::ebMayTrap:
+      // These must not be moved across calls or instructions that may change
+      // floating-point exception masks.
+      PendingConstrainedFP.push_back(OutChain);
+      break;
+    case fp::ExceptionBehavior::ebStrict:
+      // These must not be moved across calls or instructions that may change
+      // floating-point exception masks or read floating-point exception flags.
+      // In addition, they cannot be optimized out even if unused.
+      PendingConstrainedFPStrict.push_back(OutChain);
+      break;
+    }
+  };
+
+  SDVTList VTs = DAG.getVTList(ValueVTs);
+  fp::ExceptionBehavior EB = FPI.getExceptionBehavior().getValue();
+
   unsigned Opcode;
   switch (FPI.getIntrinsicID()) {
   default: llvm_unreachable("Impossible intrinsic");  // Can't reach here.
@@ -7029,6 +7058,23 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     Opcode = ISD::STRICT_##DAGN;                                               \
     break;
 #include "llvm/IR/ConstrainedOps.def"
+  case Intrinsic::experimental_constrained_fmuladd: {
+    Opcode = ISD::STRICT_FMA;
+    // Break fmuladd into fmul and fadd.
+    if (TM.Options.AllowFPOpFusion == FPOpFusion::Strict ||
+        !TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(),
+                                        ValueVTs[0])) {
+      Opers.pop_back();
+      SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, sdl, VTs, Opers);
+      pushOutChain(Mul, EB);
+      Opcode = ISD::STRICT_FADD;
+      Opers.clear();
+      Opers.push_back(Mul.getValue(1));
+      Opers.push_back(Mul.getValue(0));
+      Opers.push_back(getValue(FPI.getArgOperand(2)));
+    }
+    break;
+  }
   }
 
   // A few strict DAG nodes carry additional operands that are not
@@ -7047,32 +7093,8 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
   }
   }
 
-  SDVTList VTs = DAG.getVTList(ValueVTs);
   SDValue Result = DAG.getNode(Opcode, sdl, VTs, Opers);
-
-  assert(Result.getNode()->getNumValues() == 2);
-
-  // Push node to the appropriate list so that future instructions can be
-  // chained up correctly.
-  SDValue OutChain = Result.getValue(1);
-  switch (FPI.getExceptionBehavior().getValue()) {
-  case fp::ExceptionBehavior::ebIgnore:
-    // The only reason why ebIgnore nodes still need to be chained is that
-    // they might depend on the current rounding mode, and therefore must
-    // not be moved across instruction that may change that mode.
-    LLVM_FALLTHROUGH;
-  case fp::ExceptionBehavior::ebMayTrap:
-    // These must not be moved across calls or instructions that may change
-    // floating-point exception masks.
-    PendingConstrainedFP.push_back(OutChain);
-    break;
-  case fp::ExceptionBehavior::ebStrict:
-    // These must not be moved across calls or instructions that may change
-    // floating-point exception masks or read floating-point exception flags.
-    // In addition, they cannot be optimized out even if unused.
-    PendingConstrainedFPStrict.push_back(OutChain);
-    break;
-  }
+  pushOutChain(Result, EB);
 
   SDValue FPResult = Result.getValue(0);
   setValue(&FPI, FPResult);
