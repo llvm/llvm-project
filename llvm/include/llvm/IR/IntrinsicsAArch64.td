@@ -1192,6 +1192,10 @@ def int_aarch64_sve_add   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_sub   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_subr  : AdvSIMD_Pred2VectorArg_Intrinsic;
 
+def int_aarch64_sve_pmul       : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_sqdmulh    : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_sqrdmulh   : AdvSIMD_2VectorArg_Intrinsic;
+
 def int_aarch64_sve_mul        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_smulh      : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_umulh      : AdvSIMD_Pred2VectorArg_Intrinsic;
