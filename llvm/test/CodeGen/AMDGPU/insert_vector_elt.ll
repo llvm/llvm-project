@@ -1688,7 +1688,6 @@ define amdgpu_kernel void @dynamic_insertelement_v8f64(<8 x double> addrspace(1)
 ; VI-NEXT:    v_mov_b32_e32 v13, s25
 ; VI-NEXT:    v_mov_b32_e32 v14, s26
 ; VI-NEXT:    v_mov_b32_e32 v15, s27
-; VI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], s7 offset:96
 ; VI-NEXT:    buffer_store_dwordx4 v[12:15], off, s[0:3], s7 offset:112
 ; VI-NEXT:    buffer_store_dwordx4 v[8:11], off, s[0:3], s7 offset:96
 ; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], s7 offset:80
