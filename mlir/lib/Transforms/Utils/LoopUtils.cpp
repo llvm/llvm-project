@@ -351,7 +351,7 @@ LogicalResult mlir::instBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
 // in the parent loop.  Collect at most `maxLoops` loops and append them to
 // `forOps`.
 template <typename T>
-void getPerfectlyNestedLoopsImpl(
+static void getPerfectlyNestedLoopsImpl(
     SmallVectorImpl<T> &forOps, T rootForOp,
     unsigned maxLoops = std::numeric_limits<unsigned>::max()) {
   for (unsigned i = 0; i < maxLoops; ++i) {

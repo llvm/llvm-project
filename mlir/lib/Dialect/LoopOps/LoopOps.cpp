@@ -68,7 +68,7 @@ void ForOp::build(Builder *builder, OperationState &result, Value lb, Value ub,
   bodyRegion->front().addArgument(builder->getIndexType());
 }
 
-LogicalResult verify(ForOp op) {
+static LogicalResult verify(ForOp op) {
   if (auto cst = dyn_cast_or_null<ConstantIndexOp>(op.step().getDefiningOp()))
     if (cst.getValue() <= 0)
       return op.emitOpError("constant step operand must be positive");

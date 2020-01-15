@@ -170,7 +170,7 @@ struct TileCheck : public AffineExprVisitor<TileCheck> {
 //
 // TODO(pifon, ntv): Investigate whether mixing implicit and explicit indices
 // does not lead to losing information.
-void transformIndexedGenericOpIndices(
+static void transformIndexedGenericOpIndices(
     OpBuilder &b, LinalgOp op, ArrayRef<ValueHandle *> pivs,
     const LoopIndexToRangeIndexMap &loopIndexToRangeIndex) {
   auto indexedGenericOp = dyn_cast<IndexedGenericOp>(op.getOperation());

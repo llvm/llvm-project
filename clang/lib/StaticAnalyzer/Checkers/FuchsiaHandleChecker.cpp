@@ -223,7 +223,8 @@ static const ExplodedNode *getAcquireSite(const ExplodedNode *N, SymbolRef Sym,
 
 /// Returns the symbols extracted from the argument or null if it cannot be
 /// found.
-SymbolRef getFuchsiaHandleSymbol(QualType QT, SVal Arg, ProgramStateRef State) {
+static SymbolRef getFuchsiaHandleSymbol(QualType QT, SVal Arg,
+                                        ProgramStateRef State) {
   int PtrToHandleLevel = 0;
   while (QT->isAnyPointerType() || QT->isReferenceType()) {
     ++PtrToHandleLevel;

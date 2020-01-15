@@ -21,6 +21,7 @@
 
 using namespace mlir;
 
+namespace {
 /// Builds and holds block information during the construction phase.
 struct BlockInfoBuilder {
   using ValueSetT = Liveness::ValueSetT;
@@ -107,6 +108,7 @@ struct BlockInfoBuilder {
   /// The set of all used values.
   ValueSetT useValues;
 };
+} // namespace
 
 /// Builds the internal liveness block mapping.
 static void buildBlockMapping(MutableArrayRef<Region> regions,

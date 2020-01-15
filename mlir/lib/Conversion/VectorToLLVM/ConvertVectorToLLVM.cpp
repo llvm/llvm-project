@@ -34,6 +34,8 @@
 using namespace mlir;
 using namespace mlir::vector;
 
+namespace {
+
 template <typename T>
 static LLVM::LLVMType getPtrToElementType(T containerType,
                                           LLVMTypeConverter &lowering) {
@@ -947,6 +949,8 @@ public:
     return matchSuccess();
   }
 };
+
+} // namespace
 
 /// Populate the given list with patterns that convert from Vector to LLVM.
 void mlir::populateVectorToLLVMConversionPatterns(
