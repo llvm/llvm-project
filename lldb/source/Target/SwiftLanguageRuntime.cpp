@@ -1178,8 +1178,8 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
     return;
   }
 
-  auto *ast_context =
-      llvm::dyn_cast_or_null<SwiftASTContext>(&*type_system_or_err);
+  auto *ast_context = llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
+      &*type_system_or_err);
   if (ast_context && !ast_context->HasFatalErrors()) {
     SwiftPersistentExpressionState *persistent_state =
         llvm::cast<SwiftPersistentExpressionState>(

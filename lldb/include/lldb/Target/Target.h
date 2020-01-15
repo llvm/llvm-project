@@ -1124,7 +1124,9 @@ public:
                             bool create_on_demand = true);
 
 private:
-  void DisplayFallbackSwiftContextErrors(SwiftASTContext *swift_ast_ctx);
+  void DisplayFallbackSwiftContextErrors(
+      SwiftASTContextForExpressions *swift_ast_ctx);
+
 public:
   
   // Install any files through the platform that need be to installed prior to

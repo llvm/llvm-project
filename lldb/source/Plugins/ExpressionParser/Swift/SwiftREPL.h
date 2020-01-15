@@ -77,7 +77,7 @@ public:
   }
 
 private:
-  SwiftASTContext *m_swift_ast = nullptr;
+  SwiftASTContextForExpressions *m_swift_ast = nullptr;
   bool m_completion_module_initialized = false;
 };
 }
