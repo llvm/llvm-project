@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple=riscv32 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -mtriple=riscv32 2>&1 | FileCheck %s
 
 define i32 @get_invalid_reg() nounwind {
 entry:

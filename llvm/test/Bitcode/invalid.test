@@ -1,6 +1,6 @@
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-empty.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-EMPTY %s
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-pr20485.bc 2>&1 | \
+RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-pr20485.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-ENCODING %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=BAD-ABBREV %s
@@ -71,14 +71,14 @@ RUN:   FileCheck --check-prefix=FP-SHIFT %s
 
 FP-SHIFT: Invalid record
 
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-vbr-size-too-big.bc 2>&1 | \
+RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-abbrev-vbr-size-too-big.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=HUGE-ABBREV-OP %s
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-fixed-size-too-big.bc 2>&1 | \
+RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-abbrev-fixed-size-too-big.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=HUGE-ABBREV-OP %s
 
 HUGE-ABBREV-OP: Fixed or VBR abbrev record with size > MaxChunkData
 
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-array-type.bc 2>&1 | \
+RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-array-type.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=ARRAY-TYPE %s
 
 ARRAY-TYPE: Array element type can't be an Array or a Blob
@@ -116,7 +116,7 @@ RUN:   FileCheck --check-prefix=INVALID-CAST %s
 
 INVALID-CAST: Invalid cast
 
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-array-op-not-2nd-to-last.bc 2>&1 | \
+RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-array-op-not-2nd-to-last.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=ARRAY-NOT-2LAST %s
 
 ARRAY-NOT-2LAST: Array op not second to last
@@ -176,7 +176,7 @@ RUN:   FileCheck --check-prefix=INVALID-GVCOMDAT-ID %s
 
 INVALID-GVCOMDAT-ID: Invalid global variable comdat ID
 
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-abbrev-no-operands.bc 2>&1 | \
+RUN: not --crash llvm-dis -disable-output %p/Inputs/invalid-abbrev-no-operands.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=ABBREV-NO-OPS %s
 
 ABBREV-NO-OPS: Abbrev record with no operands

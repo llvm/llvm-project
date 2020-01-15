@@ -1,5 +1,5 @@
-; RUN: not llc < %s -mtriple=armv8-eabi 2>&1 | FileCheck %s
-; RUN: not llc < %s -mtriple=thumbv8-eabi 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -mtriple=armv8-eabi 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -mtriple=thumbv8-eabi 2>&1 | FileCheck %s
 
 ; CHECK: LLVM ERROR: Cannot select: intrinsic %llvm.arm.stc2
 define void @stc2(i8* %i) nounwind {

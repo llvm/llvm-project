@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m4 --show-mc-encoding 2>&1 | FileCheck %s --check-prefix=MCORE
-; RUN: not llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m3 2>&1 | FileCheck %s --check-prefix=M3CORE
-; RUN: not llc < %s -mtriple=arm-none-eabi -mcpu=cortex-a8 2>&1 | FileCheck %s --check-prefix=ACORE
+; RUN: not --crash llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m3 2>&1 | FileCheck %s --check-prefix=M3CORE
+; RUN: not --crash llc < %s -mtriple=arm-none-eabi -mcpu=cortex-a8 2>&1 | FileCheck %s --check-prefix=ACORE
 
 ; ACORE: LLVM ERROR: Invalid register name "control".
 ; M3CORE: LLVM ERROR: Invalid register name "xpsr_nzcvqg".

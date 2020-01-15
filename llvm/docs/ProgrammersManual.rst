@@ -453,8 +453,8 @@ recovery.
    LLVM, there are places where this hasn't been practical to apply. In
    situations where you absolutely must emit a non-programmatic error and
    the ``Error`` model isn't workable you can call ``report_fatal_error``,
-   which will call installed error handlers, print a message, and exit the
-   program.
+   which will call installed error handlers, print a message, and abort the
+   program. The use of `report_fatal_error` in this case is discouraged.
 
 Recoverable errors are modeled using LLVM's ``Error`` scheme. This scheme
 represents errors using function return values, similar to classic C integer

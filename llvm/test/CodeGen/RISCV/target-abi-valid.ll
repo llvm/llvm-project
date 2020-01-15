@@ -34,7 +34,7 @@ define void @nothing() nounwind {
   ret void
 }
 
-; RUN: not llc -mtriple=riscv32 -target-abi ilp32e < %s 2>&1 \
+; RUN: not --crash llc -mtriple=riscv32 -target-abi ilp32e < %s 2>&1 \
 ; RUN:   | FileCheck -check-prefix=CHECK-UNIMP %s
 
 ; CHECK-UNIMP: LLVM ERROR: Don't know how to lower this ABI

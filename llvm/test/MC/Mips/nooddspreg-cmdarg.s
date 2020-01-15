@@ -5,10 +5,10 @@
 # RUN:   llvm-readobj --sections --section-data --section-relocations - | \
 # RUN:     FileCheck %s -check-prefix=CHECK-OBJ
 
-# RUN: not llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -mattr=+nooddspreg 2> %t0
+# RUN: not --crash llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -mattr=+nooddspreg 2> %t0
 # RUN: FileCheck %s -check-prefix=INVALID < %t0
 #
-# RUN: not llvm-mc %s -triple mips64-unknown-linux-gnu -mattr=+nooddspreg 2> %t0
+# RUN: not --crash llvm-mc %s -triple mips64-unknown-linux-gnu -mattr=+nooddspreg 2> %t0
 # RUN: FileCheck %s -check-prefix=INVALID < %t0
 #
 # CHECK-ASM-NOT: .module nooddspreg

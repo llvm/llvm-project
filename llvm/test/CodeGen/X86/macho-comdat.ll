@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple x86_64-apple-darwin < %s 2> %t
+; RUN: not --crash llc -mtriple x86_64-apple-darwin < %s 2> %t
 ; RUN: FileCheck < %t %s
 
 $f = comdat any
