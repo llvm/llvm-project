@@ -107,13 +107,9 @@ class Char1632TestCase(TestBase):
                 '"෴"'])
 
         # check that zero values are properly handles
-        self.expect('frame variable cs16_zero', substrs=["U+0000 u'\\0'"])
-        self.expect(
-            'frame variable cs32_zero',
-            substrs=["U+0x00000000 U'\\0'"])
-        self.expect('expression cs16_zero', substrs=["U+0000 u'\\0'"])
-        self.expect('expression cs32_zero', substrs=["U+0x00000000 U'\\0'"])
+        self.expect_expr('cs16_zero', result_summary="U+0000 u'\\0'")
+        self.expect_expr('cs32_zero', result_summary="U+0x00000000 U'\\0'")
 
         # Check that we can run expressions that return charN_t
-        self.expect("expression u'a'", substrs=['(char16_t) $', "61 u'a'"])
-        self.expect("expression U'a'", substrs=['(char32_t) $', "61 U'a'"])
+        self.expect_expr("u'a'", result_type="char16_t", result_summary="U+0061 u'a'")
+        self.expect_expr("U'a'", result_type="char32_t", result_summary="U+0x00000061 U'a'")

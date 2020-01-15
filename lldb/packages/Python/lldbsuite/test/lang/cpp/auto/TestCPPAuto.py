@@ -27,7 +27,7 @@ class CPPAutoTestCase(TestBase):
 
         self.runCmd("process launch", RUN_SUCCEEDED)
 
-        self.expect('expr auto f = 123456; f', substrs=['int', '123456'])
+        self.expect_expr('auto f = 123456; f', result_type='int', result_value='123456')
         self.expect(
             'expr struct Test { int x; int y; Test() : x(123), y(456) {} }; auto t = Test(); t',
             substrs=[
