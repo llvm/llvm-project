@@ -31,7 +31,7 @@ Target &llvm::getTheARM64_32Target() {
   return TheARM64_32Target;
 }
 
-extern "C" void LLVMInitializeAArch64TargetInfo() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64TargetInfo() {
   // Now register the "arm64" name for use with "-march". We don't want it to
   // take possession of the Triple::aarch64 tags though.
   TargetRegistry::RegisterTarget(getTheARM64Target(), "arm64",
