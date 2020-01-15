@@ -9377,11 +9377,21 @@ void RISCVABIInfo::computeInfo(CGFunctionInfo &FI) const {
     FI.getReturnInfo() = classifyReturnType(RetTy);
 
   // IsRetIndirect is true if classifyArgumentType indicated the value should
-  // be passed indirect or if the type size is greater than 2*xlen. e.g. fp128
-  // is passed direct in LLVM IR, relying on the backend lowering code to
-  // rewrite the argument list and pass indirectly on RV32.
-  bool IsRetIndirect = FI.getReturnInfo().getKind() == ABIArgInfo::Indirect ||
-                       getContext().getTypeSize(RetTy) > (2 * XLen);
+  // be passed indirect, or if the type size is a scalar greater than 2*XLen
+  // and not a complex type with elements <= FLen. e.g. fp128 is passed direct
+  // in LLVM IR, relying on the backend lowering code to rewrite the argument
+  // list and pass indirectly on RV32.
+  bool IsRetIndirect = FI.getReturnInfo().getKind() == ABIArgInfo::Indirect;
+  if (!IsRetIndirect && RetTy->isScalarType() &&
+      getContext().getTypeSize(RetTy) > (2 * XLen)) {
+    if (RetTy->isComplexType() && FLen) {
+      QualType EltTy = RetTy->getAs<ComplexType>()->getElementType();
+      IsRetIndirect = getContext().getTypeSize(EltTy) > FLen;
+    } else {
+      // This is a normal scalar > 2*XLen, such as fp128 on RV32.
+      IsRetIndirect = true;
+    }
+  }
 
   // We must track the number of GPRs used in order to conform to the RISC-V
   // ABI, as integer scalars passed in registers should have signext/zeroext
