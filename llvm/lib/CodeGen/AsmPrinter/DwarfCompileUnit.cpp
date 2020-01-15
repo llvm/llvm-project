@@ -934,6 +934,7 @@ DwarfCompileUnit::getDwarf5OrGNUAttr(dwarf::Attribute Attr) const {
   case dwarf::DW_AT_call_origin:
     return dwarf::DW_AT_abstract_origin;
   case dwarf::DW_AT_call_pc:
+  case dwarf::DW_AT_call_return_pc:
     return dwarf::DW_AT_low_pc;
   case dwarf::DW_AT_call_value:
     return dwarf::DW_AT_GNU_call_site_value;
@@ -982,12 +983,13 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
 
   // Attach the return PC to allow the debugger to disambiguate call paths
   // from one function to another.
-  if (DD->getDwarfVersion() == 4 && DD->tuneForGDB()) {
-    assert(PCAddr && "Missing PC information for a call");
-    addLabelAddress(CallSiteDIE, dwarf::DW_AT_low_pc, PCAddr);
-  } else if (!IsTail || DD->tuneForGDB()) {
+  //
+  // The return PC is only really needed when the call /isn't/ a tail call, but
+  // for some reason GDB always expects it.
+  if (!IsTail || DD->tuneForGDB()) {
     assert(PCAddr && "Missing return PC information for a call");
-    addLabelAddress(CallSiteDIE, dwarf::DW_AT_call_return_pc, PCAddr);
+    addLabelAddress(CallSiteDIE,
+                    getDwarf5OrGNUAttr(dwarf::DW_AT_call_return_pc), PCAddr);
   }
 
   return CallSiteDIE;
