@@ -36,6 +36,7 @@ public:
   void initCache(CacheT *Cache) { memset(Cache, 0, sizeof(*Cache)); }
   void commitBack(scudo::TSD<MockAllocator> *TSD) {}
   TSDRegistryT *getTSDRegistry() { return &TSDRegistry; }
+  void callPostInitCallback() {}
 
   bool isInitialized() { return Initialized; }
 
