@@ -77,7 +77,7 @@ class GlobalsAAResult::FunctionInfo {
     static inline AlignedMap *getFromVoidPointer(void *P) {
       return (AlignedMap *)P;
     }
-    enum { NumLowBitsAvailable = 3 };
+    static constexpr int NumLowBitsAvailable = 3;
     static_assert(alignof(AlignedMap) >= (1 << NumLowBitsAvailable),
                   "AlignedMap insufficiently aligned to have enough low bits.");
   };

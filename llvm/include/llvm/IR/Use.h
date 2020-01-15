@@ -69,7 +69,7 @@ public:
       return (User *)P;
     }
 
-    enum { NumLowBitsAvailable = 1 };
+    static constexpr int NumLowBitsAvailable = 1;
   };
 
   // A type for the word following an array of hung-off Uses in memory, which is
@@ -85,7 +85,7 @@ public:
       return (Use **)P;
     }
 
-    enum { NumLowBitsAvailable = 2 };
+    static constexpr int NumLowBitsAvailable = 2;
   };
 
 private:

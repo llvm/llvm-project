@@ -559,7 +559,7 @@ struct PointerLikeTypeTraits<clang::TemplateName> {
   }
 
   // No bits are available!
-  enum { NumLowBitsAvailable = 0 };
+  static constexpr int NumLowBitsAvailable = 0;
 };
 
 } // namespace llvm.

@@ -706,10 +706,8 @@ public:
   static inline mlir::OperationName getFromVoidPointer(void *P) {
     return mlir::OperationName::getFromOpaquePointer(P);
   }
-  enum {
-    NumLowBitsAvailable = PointerLikeTypeTraits<
-        mlir::OperationName::RepresentationUnion>::NumLowBitsAvailable
-  };
+  static constexpr int NumLowBitsAvailable = PointerLikeTypeTraits<
+      mlir::OperationName::RepresentationUnion>::NumLowBitsAvailable;
 };
 
 } // end namespace llvm

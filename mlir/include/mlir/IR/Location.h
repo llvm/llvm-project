@@ -321,10 +321,8 @@ public:
   static inline mlir::Location getFromVoidPointer(void *P) {
     return mlir::Location::getFromOpaquePointer(P);
   }
-  enum {
-    NumLowBitsAvailable =
-        PointerLikeTypeTraits<mlir::Attribute>::NumLowBitsAvailable
-  };
+  static constexpr int NumLowBitsAvailable =
+      PointerLikeTypeTraits<mlir::Attribute>::NumLowBitsAvailable;
 };
 
 } // namespace llvm

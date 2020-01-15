@@ -116,7 +116,7 @@ namespace llvm {
 
   template <class T>
   struct PointerLikeTypeTraits<clang::OpaquePtr<T>> {
-    enum { NumLowBitsAvailable = 0 };
+    static constexpr int NumLowBitsAvailable = 0;
 
     static inline void *getAsVoidPointer(clang::OpaquePtr<T> P) {
       // FIXME: Doesn't work? return P.getAs< void >();
