@@ -345,8 +345,8 @@ static LogicalResult verify(ReduceOp op) {
       llvm::any_of(block.getArguments(), [&](const BlockArgument &arg) {
         return arg.getType() != type;
       }))
-    return op.emitOpError() << "expects two arguments to reduce block of type "
-                            << type;
+    return op.emitOpError()
+           << "expects two arguments to reduce block of type " << type;
 
   // Check that the block is terminated by a ReduceReturnOp.
   if (!isa<ReduceReturnOp>(block.getTerminator()))
