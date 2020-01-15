@@ -12,16 +12,7 @@ namespace RISCVSysReg {
 namespace RISCVABI {
 ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
                      StringRef ABIName) {
-  auto TargetABI = StringSwitch<ABI>(ABIName)
-                       .Case("ilp32", ABI_ILP32)
-                       .Case("ilp32f", ABI_ILP32F)
-                       .Case("ilp32d", ABI_ILP32D)
-                       .Case("ilp32e", ABI_ILP32E)
-                       .Case("lp64", ABI_LP64)
-                       .Case("lp64f", ABI_LP64F)
-                       .Case("lp64d", ABI_LP64D)
-                       .Default(ABI_Unknown);
-
+  auto TargetABI = getTargetABI(ABIName);
   bool IsRV64 = TT.isArch64Bit();
   bool IsRV32E = FeatureBits[RISCV::FeatureRV32E];
 
@@ -56,6 +47,19 @@ ABI computeTargetABI(const Triple &TT, FeatureBitset FeatureBits,
   if (IsRV64)
     return ABI_LP64;
   return ABI_ILP32;
+}
+
+ABI getTargetABI(StringRef ABIName) {
+  auto TargetABI = StringSwitch<ABI>(ABIName)
+                       .Case("ilp32", ABI_ILP32)
+                       .Case("ilp32f", ABI_ILP32F)
+                       .Case("ilp32d", ABI_ILP32D)
+                       .Case("ilp32e", ABI_ILP32E)
+                       .Case("lp64", ABI_LP64)
+                       .Case("lp64f", ABI_LP64F)
+                       .Case("lp64d", ABI_LP64D)
+                       .Default(ABI_Unknown);
+  return TargetABI;
 }
 
 // To avoid the BP value clobbered by a function call, we need to choose a
