@@ -482,7 +482,7 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
 static bool isObjectStart(tgtok::TokKind K) {
   return K == tgtok::Class || K == tgtok::Def || K == tgtok::Defm ||
          K == tgtok::Let || K == tgtok::MultiClass || K == tgtok::Foreach ||
-         K == tgtok::Defset;
+         K == tgtok::Defset || K == tgtok::Defvar;
 }
 
 /// ParseObjectName - If a valid object name is specified, return it. If no
@@ -868,6 +868,10 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
       return VarInit::get(TemplateArgName, StringRecTy::get());
     }
   }
+
+  if (CurLocalScope)
+    if (Init *I = CurLocalScope->getVar(Name->getValue()))
+      return I;
 
   // If this is in a foreach loop, make sure it's not a loop iterator
   for (const auto &L : Loops) {
@@ -2595,7 +2599,11 @@ bool TGParser::ParseTemplateArgList(Record *CurRec) {
 ///
 ///   BodyItem ::= Declaration ';'
 ///   BodyItem ::= LET ID OptionalBitList '=' Value ';'
+///   BodyItem ::= Defvar
 bool TGParser::ParseBodyItem(Record *CurRec) {
+  if (Lex.getCode() == tgtok::Defvar)
+    return ParseDefvar();
+
   if (Lex.getCode() != tgtok::Let) {
     if (!ParseDeclaration(CurRec, false))
       return true;
@@ -2658,9 +2666,14 @@ bool TGParser::ParseBody(Record *CurRec) {
   // Eat the '{'.
   Lex.Lex();
 
+  // An object body introduces a new scope for local variables.
+  TGLocalVarScope *BodyScope = PushLocalScope();
+
   while (Lex.getCode() != tgtok::r_brace)
     if (ParseBodyItem(CurRec))
       return true;
+
+  PopLocalScope(BodyScope);
 
   // Eat the '}'.
   Lex.Lex();
@@ -2800,6 +2813,45 @@ bool TGParser::ParseDefset() {
   return false;
 }
 
+/// ParseDefvar - Parse a defvar statement.
+///
+///   Defvar ::= DEFVAR Id '=' Value ';'
+///
+bool TGParser::ParseDefvar() {
+  assert(Lex.getCode() == tgtok::Defvar);
+  Lex.Lex(); // Eat the 'defvar' token
+
+  if (Lex.getCode() != tgtok::Id)
+    return TokError("expected identifier");
+  StringInit *DeclName = StringInit::get(Lex.getCurStrVal());
+  if (CurLocalScope) {
+    if (CurLocalScope->varAlreadyDefined(DeclName->getValue()))
+      return TokError("local variable of this name already exists");
+  } else {
+    if (Records.getGlobal(DeclName->getValue()))
+      return TokError("def or global variable of this name already exists");
+  }
+
+  if (Lex.Lex() != tgtok::equal) // Eat the identifier
+    return TokError("expected '='");
+  Lex.Lex(); // Eat the '='
+
+  Init *Value = ParseValue(nullptr);
+  if (!Value)
+    return true;
+
+  if (Lex.getCode() != tgtok::semi)
+    return TokError("expected ';'");
+  Lex.Lex(); // Eat the ';'
+
+  if (CurLocalScope)
+    CurLocalScope->addVar(DeclName->getValue(), Value);
+  else
+    Records.addExtraGlobal(DeclName->getValue(), Value);
+
+  return false;
+}
+
 /// ParseForeach - Parse a for statement.  Return the record corresponding
 /// to it.  This returns true on error.
 ///
@@ -2825,6 +2877,9 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
   // Create a loop object and remember it.
   Loops.push_back(std::make_unique<ForeachLoop>(Loc, IterName, ListValue));
 
+  // A foreach loop introduces a new scope for local variables.
+  TGLocalVarScope *ForeachScope = PushLocalScope();
+
   if (Lex.getCode() != tgtok::l_brace) {
     // FOREACH Declaration IN Object
     if (ParseObject(CurMultiClass))
@@ -2844,6 +2899,8 @@ bool TGParser::ParseForeach(MultiClass *CurMultiClass) {
     }
     Lex.Lex();  // Eat the }
   }
+
+  PopLocalScope(ForeachScope);
 
   // Resolve the loop or store it for later resolution.
   std::unique_ptr<ForeachLoop> Loop = std::move(Loops.back());
@@ -2957,6 +3014,8 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
     return TokError("expected 'in' at end of top-level 'let'");
   Lex.Lex();
 
+  TGLocalVarScope *LetScope = PushLocalScope();
+
   // If this is a scalar let, just handle it now
   if (Lex.getCode() != tgtok::l_brace) {
     // LET LetList IN Object
@@ -2977,6 +3036,8 @@ bool TGParser::ParseTopLevelLet(MultiClass *CurMultiClass) {
     }
     Lex.Lex();
   }
+
+  PopLocalScope(LetScope);
 
   // Outside this let scope, this let block is not active.
   LetStack.pop_back();
@@ -3051,14 +3112,18 @@ bool TGParser::ParseMultiClass() {
     if (Lex.Lex() == tgtok::r_brace)  // eat the '{'.
       return TokError("multiclass must contain at least one def");
 
+    // A multiclass body introduces a new scope for local variables.
+    TGLocalVarScope *MulticlassScope = PushLocalScope();
+
     while (Lex.getCode() != tgtok::r_brace) {
       switch (Lex.getCode()) {
       default:
-        return TokError("expected 'let', 'def', 'defm' or 'foreach' in "
-                        "multiclass body");
+        return TokError("expected 'let', 'def', 'defm', 'defvar' or 'foreach' "
+                        "in multiclass body");
       case tgtok::Let:
       case tgtok::Def:
       case tgtok::Defm:
+      case tgtok::Defvar:
       case tgtok::Foreach:
         if (ParseObject(CurMultiClass))
           return true;
@@ -3066,6 +3131,8 @@ bool TGParser::ParseMultiClass() {
       }
     }
     Lex.Lex();  // eat the '}'.
+
+    PopLocalScope(MulticlassScope);
   }
 
   CurMultiClass = nullptr;
@@ -3207,6 +3274,8 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
 ///   Object ::= DefMInst
 ///   Object ::= LETCommand '{' ObjectList '}'
 ///   Object ::= LETCommand Object
+///   Object ::= Defset
+///   Object ::= Defvar
 bool TGParser::ParseObject(MultiClass *MC) {
   switch (Lex.getCode()) {
   default:
@@ -3220,6 +3289,8 @@ bool TGParser::ParseObject(MultiClass *MC) {
     if (MC)
       return TokError("defset is not allowed inside multiclass");
     return ParseDefset();
+  case tgtok::Defvar:
+    return ParseDefvar();
   case tgtok::Class:
     if (MC)
       return TokError("class is not allowed inside multiclass");

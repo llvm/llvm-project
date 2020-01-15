@@ -350,6 +350,7 @@ tgtok::TokKind TGLexer::LexIdentifier() {
     .Case("field", tgtok::Field)
     .Case("let", tgtok::Let)
     .Case("in", tgtok::In)
+    .Case("defvar", tgtok::Defvar)
     .Default(tgtok::Id);
 
   if (Kind == tgtok::Id)
