@@ -70,8 +70,6 @@ void DpuContext::UpdateRunningThreads() {
   for (unsigned int each_thread = 0; each_thread < nr_threads; each_thread++) {
     if ((m_context->scheduling[each_thread] == 0xff) !=
         (last_resume_threads[each_thread] == 0xff)) {
-      fprintf(stderr, "%s: %u changed state (%u)\n", __func__, each_thread,
-              m_context->scheduling[each_thread]);
       running_threads[each_thread] = m_context->scheduling[each_thread];
     }
   }
