@@ -193,6 +193,13 @@ const CallInst *BasicBlock::getTerminatingDeoptimizeCall() const {
   return nullptr;
 }
 
+const CallInst *BasicBlock::getPostdominatingDeoptimizeCall() const {
+  const BasicBlock* BB = this;
+  while (BB->getUniqueSuccessor())
+    BB = BB->getUniqueSuccessor();
+  return BB->getTerminatingDeoptimizeCall();
+}
+
 const Instruction* BasicBlock::getFirstNonPHI() const {
   for (const Instruction &I : *this)
     if (!isa<PHINode>(I))
