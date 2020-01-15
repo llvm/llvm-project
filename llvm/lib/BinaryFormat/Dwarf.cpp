@@ -757,3 +757,4 @@ constexpr char llvm::dwarf::EnumTraits<Attribute>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Form>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Index>::Type[];
 constexpr char llvm::dwarf::EnumTraits<Tag>::Type[];
+constexpr char llvm::dwarf::EnumTraits<LineNumberOps>::Type[];
