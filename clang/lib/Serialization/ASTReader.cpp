@@ -10094,14 +10094,22 @@ void ASTReader::diagnoseOdrViolations() {
         }
 
         if (IsFirstBitField && IsSecondBitField) {
-          ODRDiagError(FirstField->getLocation(), FirstField->getSourceRange(),
-                       FieldDifferentWidthBitField)
-              << FirstII << FirstField->getBitWidth()->getSourceRange();
-          ODRDiagNote(SecondField->getLocation(), SecondField->getSourceRange(),
-                      FieldDifferentWidthBitField)
-              << SecondII << SecondField->getBitWidth()->getSourceRange();
-          Diagnosed = true;
-          break;
+          unsigned FirstBitWidthHash =
+              ComputeODRHash(FirstField->getBitWidth());
+          unsigned SecondBitWidthHash =
+              ComputeODRHash(SecondField->getBitWidth());
+          if (FirstBitWidthHash != SecondBitWidthHash) {
+            ODRDiagError(FirstField->getLocation(),
+                         FirstField->getSourceRange(),
+                         FieldDifferentWidthBitField)
+                << FirstII << FirstField->getBitWidth()->getSourceRange();
+            ODRDiagNote(SecondField->getLocation(),
+                        SecondField->getSourceRange(),
+                        FieldDifferentWidthBitField)
+                << SecondII << SecondField->getBitWidth()->getSourceRange();
+            Diagnosed = true;
+            break;
+          }
         }
 
         const bool IsFirstMutable = FirstField->isMutable();
