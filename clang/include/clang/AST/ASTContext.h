@@ -283,12 +283,16 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
     TemplateTemplateParmDecl *getParam() const { return Parm; }
 
-    void Profile(llvm::FoldingSetNodeID &ID) { Profile(ID, Parm); }
+    void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &C) {
+      Profile(ID, C, Parm);
+    }
 
     static void Profile(llvm::FoldingSetNodeID &ID,
+                        const ASTContext &C,
                         TemplateTemplateParmDecl *Parm);
   };
-  mutable llvm::FoldingSet<CanonicalTemplateTemplateParm>
+  mutable llvm::ContextualFoldingSet<CanonicalTemplateTemplateParm,
+                                     const ASTContext&>
     CanonTemplateTemplateParms;
 
   TemplateTemplateParmDecl *

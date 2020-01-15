@@ -5121,6 +5121,13 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
     return !DisambiguatingWithExpression ||
            !isStartOfObjCClassMessageMissingOpenBracket();
 
+    // placeholder-type-specifier
+  case tok::annot_template_id: {
+    TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
+    return TemplateId->Kind == TNK_Concept_template &&
+        (NextToken().is(tok::kw_auto) || NextToken().is(tok::kw_decltype));
+  }
+
   case tok::kw___declspec:
   case tok::kw___cdecl:
   case tok::kw___stdcall:

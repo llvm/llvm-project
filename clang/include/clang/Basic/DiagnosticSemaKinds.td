@@ -2612,6 +2612,17 @@ def note_ambiguous_atomic_constraints_similar_expression : Note<
 
 def err_template_different_requires_clause : Error<
   "requires clause differs in template redeclaration">;
+def err_template_different_type_constraint : Error<
+  "type constraint differs in template redeclaration">;
+def err_template_template_parameter_not_at_least_as_constrained : Error<
+  "template template argument %0 is more constrained than template template "
+  "parameter %1">;
+
+def err_type_constraint_non_type_concept : Error<
+  "concept named in type constraint is not a type concept">;
+def err_type_constraint_missing_arguments : Error<
+  "%0 requires more than 1 template argument; provide the remaining arguments "
+  "explicitly to use it here">;
 
 // C++11 char16_t/char32_t
 def warn_cxx98_compat_unicode_type : Warning<
@@ -4819,8 +4830,8 @@ def err_unexpanded_parameter_pack : Error<
   "size|static assertion|fixed underlying type|enumerator value|"
   "using declaration|friend declaration|qualifier|initializer|default argument|"
   "non-type template parameter type|exception type|partial specialization|"
-  "__if_exists name|__if_not_exists name|lambda|block}0 contains"
-  "%plural{0: an|:}1 unexpanded parameter pack"
+  "__if_exists name|__if_not_exists name|lambda|block|type constraint}0 "
+  "contains%plural{0: an|:}1 unexpanded parameter pack"
   "%plural{0:|1: %2|2:s %2 and %3|:s %2, %3, ...}1">;
 
 def err_pack_expansion_without_parameter_packs : Error<

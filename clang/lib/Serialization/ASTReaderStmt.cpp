@@ -730,15 +730,13 @@ void ASTStmtReader::VisitConceptSpecializationExpr(
   unsigned NumTemplateArgs = Record.readInt();
   E->NestedNameSpec = Record.readNestedNameSpecifierLoc();
   E->TemplateKWLoc = Record.readSourceLocation();
-  E->ConceptNameLoc = Record.readSourceLocation();
-  E->FoundDecl = readDeclAs<NamedDecl>();
+  E->ConceptName = Record.readDeclarationNameInfo();
   E->NamedConcept = readDeclAs<ConceptDecl>();
-  const ASTTemplateArgumentListInfo *ArgsAsWritten =
-      Record.readASTTemplateArgumentListInfo();
+  E->ArgsAsWritten = Record.readASTTemplateArgumentListInfo();
   llvm::SmallVector<TemplateArgument, 4> Args;
   for (unsigned I = 0; I < NumTemplateArgs; ++I)
     Args.push_back(Record.readTemplateArgument());
-  E->setTemplateArguments(ArgsAsWritten, Args);
+  E->setTemplateArguments(Args);
   ConstraintSatisfaction Satisfaction;
   Satisfaction.IsSatisfied = Record.readInt();
   if (!Satisfaction.IsSatisfied) {

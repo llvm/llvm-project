@@ -142,11 +142,16 @@ void Parser::CheckForTemplateAndDigraph(Token &Next, ParsedType ObjectType,
 ///
 /// \param OnlyNamespace If true, only considers namespaces in lookup.
 ///
+///
 /// \returns true if there was an error parsing a scope specifier
-bool Parser::ParseOptionalCXXScopeSpecifier(
-    CXXScopeSpec &SS, ParsedType ObjectType, bool EnteringContext,
-    bool *MayBePseudoDestructor, bool IsTypename, IdentifierInfo **LastII,
-    bool OnlyNamespace, bool InUsingDeclaration) {
+bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
+                                            ParsedType ObjectType,
+                                            bool EnteringContext,
+                                            bool *MayBePseudoDestructor,
+                                            bool IsTypename,
+                                            IdentifierInfo **LastII,
+                                            bool OnlyNamespace,
+                                            bool InUsingDeclaration) {
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
 
@@ -476,6 +481,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     // nested-name-specifier:
     //   type-name '<'
     if (Next.is(tok::less)) {
+
       TemplateTy Template;
       UnqualifiedId TemplateName;
       TemplateName.setIdentifier(&II, Tok.getLocation());
@@ -500,7 +506,8 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
         // template-id to be translated into a type annotation,
         // because some clients (e.g., the parsing of class template
         // specializations) still want to see the original template-id
-        // token.
+        // token, and it might not be a type at all (e.g. a concept name in a
+        // type-constraint).
         ConsumeToken();
         if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
                                     TemplateName, false))
