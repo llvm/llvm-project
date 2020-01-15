@@ -154,7 +154,7 @@ public:
   lldb::VariableSP m_variable_sp;
 };
 
-static CompilerType ImportType(SwiftASTContext &target_context,
+static CompilerType ImportType(SwiftASTContextForExpressions &target_context,
                                CompilerType source_type) {
   SwiftASTContext *swift_ast_ctx =
       llvm::dyn_cast_or_null<SwiftASTContext>(source_type.GetTypeSystem());
@@ -489,7 +489,7 @@ public:
 
 static void
 AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
-                   SwiftASTContext &swift_ast_context,
+                   SwiftASTContextForExpressions &swift_ast_context,
                    SwiftASTManipulator &manipulator) {
   // First emit the typealias for "$__lldb_context".
   if (!block)
@@ -624,7 +624,8 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
 /// already shadowing inner declaration in \c processed_variables.
 static void AddVariableInfo(
     lldb::VariableSP variable_sp, lldb::StackFrameSP &stack_frame_sp,
-    SwiftASTContext &ast_context, SwiftLanguageRuntime *language_runtime,
+    SwiftASTContextForExpressions &ast_context,
+    SwiftLanguageRuntime *language_runtime,
     llvm::SmallDenseSet<const char *, 8> &processed_variables,
     llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables) {
   StringRef name = variable_sp->GetUnqualifiedName().GetStringRef();
@@ -719,7 +720,7 @@ static void AddVariableInfo(
 /// Create a \c VariableInfo record for each visible variable.
 static void RegisterAllVariables(
     SymbolContext &sc, lldb::StackFrameSP &stack_frame_sp,
-    SwiftASTContext &ast_context,
+    SwiftASTContextForExpressions &ast_context,
     llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables) {
   if (!sc.block && !sc.function)
     return;
@@ -785,7 +786,7 @@ static void RegisterAllVariables(
 
 static void ResolveSpecialNames(
     SymbolContext &sc, ExecutionContextScope &exe_scope,
-    SwiftASTContext &ast_context,
+    SwiftASTContextForExpressions &ast_context,
     llvm::SmallVectorImpl<swift::Identifier> &special_names,
     llvm::SmallVectorImpl<SwiftASTManipulator::VariableInfo> &local_variables) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
@@ -1515,7 +1516,8 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   // Allow variables to be re-used from previous REPL statements.
   if (m_sc.target_sp && (repl || !playground)) {
     Status error;
-    SwiftASTContext *scratch_ast_context = m_swift_ast_context->get();
+    SwiftASTContextForExpressions *scratch_ast_context =
+        m_swift_ast_context->get();
 
     if (scratch_ast_context) {
       auto *persistent_state =
