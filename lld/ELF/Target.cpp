@@ -95,7 +95,7 @@ template <class ELFT> static ErrorPlace getErrPlace(const uint8_t *loc) {
   assert(loc != nullptr);
   for (InputSectionBase *d : inputSections) {
     auto *isec = cast<InputSection>(d);
-    if (!isec->getParent())
+    if (!isec->getParent() || (isec->type & SHT_NOBITS))
       continue;
 
     const uint8_t *isecLoc =
