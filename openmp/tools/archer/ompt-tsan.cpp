@@ -162,6 +162,8 @@ int __attribute__((weak)) RunningOnValgrind() {
   runOnTsan = 0;
   return 0;
 }
+void __attribute__((weak)) __tsan_func_entry(const void *call_pc) {}
+void __attribute__((weak)) __tsan_func_exit(void) {}
 #endif
 }
 
@@ -188,6 +190,10 @@ int __attribute__((weak)) RunningOnValgrind() {
 #define TsanFreeMemory(addr, size)                                             \
   AnnotateNewMemory(__FILE__, __LINE__, addr, size)
 #endif
+
+// Function entry/exit
+#define TsanFuncEntry(pc) __tsan_func_entry(pc)
+#define TsanFuncExit() __tsan_func_exit()
 
 /// Required OMPT inquiry functions.
 static ompt_get_parallel_info_t ompt_get_parallel_info;
@@ -301,10 +307,13 @@ struct ParallelData {
   /// Two addresses for relationships with barriers.
   ompt_tsan_clockid Barrier[2];
 
+  const void *codePtr;
+
   void *GetParallelPtr() { return &(Barrier[1]); }
 
   void *GetBarrierPtr(unsigned Index) { return &(Barrier[Index]); }
 
+  ParallelData(const void *codeptr) : codePtr(codeptr) {}
   ~ParallelData() {
     TsanDeleteClock(&(Barrier[0]));
     TsanDeleteClock(&(Barrier[1]));
@@ -458,7 +467,7 @@ static void ompt_tsan_parallel_begin(ompt_data_t *parent_task_data,
                                      uint32_t requested_team_size,
                                      int flag,
                                      const void *codeptr_ra) {
-  ParallelData *Data = new ParallelData;
+  ParallelData *Data = new ParallelData(codeptr_ra);
   parallel_data->ptr = Data;
 
   TsanHappensBefore(Data->GetParallelPtr());
@@ -491,8 +500,12 @@ static void ompt_tsan_implicit_task(ompt_scope_endpoint_t endpoint,
                                     int type) {
   switch (endpoint) {
   case ompt_scope_begin:
+    if (type & ompt_task_initial) {
+      parallel_data->ptr = new ParallelData(nullptr);
+    }
     task_data->ptr = new TaskData(ToParallelData(parallel_data));
     TsanHappensAfter(ToParallelData(parallel_data)->GetParallelPtr());
+    TsanFuncEntry(ToParallelData(parallel_data)->codePtr);
     break;
   case ompt_scope_end:
     TaskData *Data = ToTaskData(task_data);
@@ -501,6 +514,7 @@ static void ompt_tsan_implicit_task(ompt_scope_endpoint_t endpoint,
     assert(Data->RefCount == 1 &&
            "All tasks should have finished at the implicit barrier!");
     delete Data;
+    TsanFuncExit();
     break;
   }
 }
@@ -513,6 +527,7 @@ static void ompt_tsan_sync_region(ompt_sync_region_t kind,
   TaskData *Data = ToTaskData(task_data);
   switch (endpoint) {
   case ompt_scope_begin:
+    TsanFuncEntry(codeptr_ra);
     switch (kind) {
       case ompt_sync_region_barrier_implementation:
       case ompt_sync_region_barrier_implicit:
@@ -546,6 +561,7 @@ static void ompt_tsan_sync_region(ompt_sync_region_t kind,
     }
     break;
   case ompt_scope_end:
+    TsanFuncExit();
     switch (kind) {
       case ompt_sync_region_barrier_implementation:
       case ompt_sync_region_barrier_implicit:
@@ -641,7 +657,7 @@ static void ompt_tsan_task_create(
     ompt_data_t *parallel_data;
     int team_size = 1;
     ompt_get_parallel_info(0, &parallel_data, &team_size);
-    ParallelData *PData = new ParallelData;
+    ParallelData *PData = new ParallelData(nullptr);
     parallel_data->ptr = PData;
 
     Data = new TaskData(PData);
