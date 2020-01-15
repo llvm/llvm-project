@@ -10895,8 +10895,8 @@ static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   SDLoc DL(Op);
-  EVT OpVT = Op.getValueType();
-  assert(OpVT.isScalableVector() && TLI.isTypeLegal(OpVT) &&
+  assert(Op.getValueType().isScalableVector() &&
+         TLI.isTypeLegal(Op.getValueType()) &&
          "Expected legal scalable vector type!");
 
   // Ensure target specific opcodes are using legal type.
