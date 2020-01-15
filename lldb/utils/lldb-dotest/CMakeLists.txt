@@ -26,9 +26,21 @@ if(LLDB_BUILT_STANDALONE)
     if(${config_type} IN_LIST LLVM_CONFIGURATION_TYPES)
       # Multi-configuration generator like Xcode (with a matching config).
       string(REPLACE ${CMAKE_CFG_INTDIR} ${config_type} LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
+      string(REPLACE ${CMAKE_CFG_INTDIR} ${config_type} LLDB_SOURCE_DIR "${LLDB_SOURCE_DIR}")
+      string(REPLACE ${CMAKE_CFG_INTDIR} ${config_type} LLDB_TEST_BUILD_DIRECTORY "${LLDB_TEST_BUILD_DIRECTORY}")
+      string(REPLACE ${CMAKE_CFG_INTDIR} ${config_type} LLDB_TEST_EXECUTABLE "${LLDB_TEST_EXECUTABLE}")
+      string(REPLACE ${CMAKE_CFG_INTDIR} ${config_type} LLDB_TEST_COMPILER "${LLDB_TEST_COMPILER}")
+      string(REPLACE ${CMAKE_CFG_INTDIR} ${config_type} LLDB_TEST_DSYMUTIL "${LLDB_TEST_DSYMUTIL}")
+      string(REPLACE ${CMAKE_CFG_INTDIR} ${config_type} LLDB_TEST_FILECHECK "${LLDB_TEST_FILECHECK}")
     else()
       # Single-configuration generator like Ninja.
       string(REPLACE ${CMAKE_CFG_INTDIR} "." LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
+      string(REPLACE ${CMAKE_CFG_INTDIR} "." LLDB_SOURCE_DIR "${LLDB_SOURCE_DIR}")
+      string(REPLACE ${CMAKE_CFG_INTDIR} "." LLDB_TEST_BUILD_DIRECTORY "${LLDB_TEST_BUILD_DIRECTORY}")
+      string(REPLACE ${CMAKE_CFG_INTDIR} "." LLDB_TEST_EXECUTABLE "${LLDB_TEST_EXECUTABLE}")
+      string(REPLACE ${CMAKE_CFG_INTDIR} "." LLDB_TEST_COMPILER "${LLDB_TEST_COMPILER}")
+      string(REPLACE ${CMAKE_CFG_INTDIR} "." LLDB_TEST_DSYMUTIL "${LLDB_TEST_DSYMUTIL}")
+      string(REPLACE ${CMAKE_CFG_INTDIR} "." LLDB_TEST_FILECHECK "${LLDB_TEST_FILECHECK}")
     endif()
 
     configure_file(
