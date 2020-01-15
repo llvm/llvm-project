@@ -1357,7 +1357,7 @@ void CodeGenModule::GenOpenCLArgMetadata(llvm::Function *Fn,
         std::string typeName;
         if (isPipe)
           typeName = ty.getCanonicalType()
-                         ->getAs<PipeType>()
+                         ->castAs<PipeType>()
                          ->getElementType()
                          .getAsString(Policy);
         else
@@ -1371,7 +1371,7 @@ void CodeGenModule::GenOpenCLArgMetadata(llvm::Function *Fn,
         std::string baseTypeName;
         if (isPipe)
           baseTypeName = ty.getCanonicalType()
-                             ->getAs<PipeType>()
+                             ->castAs<PipeType>()
                              ->getElementType()
                              .getCanonicalType()
                              .getAsString(Policy);
