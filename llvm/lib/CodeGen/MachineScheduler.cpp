@@ -1573,6 +1573,8 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
   for (unsigned Idx = 0, End = MemOpRecords.size(); Idx < (End - 1); ++Idx) {
     SUnit *SUa = MemOpRecords[Idx].SU;
     SUnit *SUb = MemOpRecords[Idx+1].SU;
+    if (SUa->NodeNum > SUb->NodeNum)
+      std::swap(SUa, SUb);
     if (TII->shouldClusterMemOps(*MemOpRecords[Idx].BaseOp,
                                  *MemOpRecords[Idx + 1].BaseOp,
                                  ClusterLength) &&

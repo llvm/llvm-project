@@ -133,10 +133,10 @@ entry:
 ; GCN-DAG: buffer_store_dword [[LOAD2]], off, s[0:3], s32 offset:8
 ; GCN-DAG: buffer_store_dword [[LOAD3]], off, s[0:3], s32 offset:12
 
+; GCN: buffer_load_dword [[LOAD4:v[0-9]+]], off, s[0:3], s34 offset:16
 ; GCN: buffer_load_dword [[LOAD5:v[0-9]+]], off, s[0:3], s34 offset:20
 ; GCN: buffer_load_dword [[LOAD6:v[0-9]+]], off, s[0:3], s34 offset:24
 ; GCN: buffer_load_dword [[LOAD7:v[0-9]+]], off, s[0:3], s34 offset:28
-; GCN: buffer_load_dword [[LOAD4:v[0-9]+]], off, s[0:3], s34 offset:16
 
 ; GCN-DAG: buffer_store_dword [[LOAD4]], off, s[0:3], s32 offset:16
 ; GCN-DAG: buffer_store_dword [[LOAD5]], off, s[0:3], s32 offset:20
@@ -331,10 +331,10 @@ entry:
 ; GCN-DAG: buffer_store_dword [[LOAD2]], off, s[0:3], s32 offset:8
 ; GCN-DAG: buffer_store_dword [[LOAD3]], off, s[0:3], s32 offset:12
 
+; GCN: buffer_load_dword [[LOAD4:v[0-9]+]], off, s[0:3], s34 offset:16
 ; GCN: buffer_load_dword [[LOAD5:v[0-9]+]], off, s[0:3], s34 offset:20
 ; GCN: buffer_load_dword [[LOAD6:v[0-9]+]], off, s[0:3], s34 offset:24
 ; GCN: buffer_load_dword [[LOAD7:v[0-9]+]], off, s[0:3], s34 offset:28
-; GCN: buffer_load_dword [[LOAD4:v[0-9]+]], off, s[0:3], s34 offset:16
 
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN-DAG: buffer_store_dword [[LOAD4]], off, s[0:3], s32 offset:16

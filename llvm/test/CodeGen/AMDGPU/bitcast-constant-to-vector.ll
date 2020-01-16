@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}cast_constant_i64_to_build_vector_v4i16:
-; GCN: global_store_dwordx2
-; GCN: global_store_dword v
 ; GCN: global_store_short
+; GCN: global_store_dword v
+; GCN: global_store_dwordx2
 define amdgpu_kernel void @cast_constant_i64_to_build_vector_v4i16(i8 addrspace(1)* nocapture %data) {
 entry:
   store i8 72, i8 addrspace(1)* %data, align 1
