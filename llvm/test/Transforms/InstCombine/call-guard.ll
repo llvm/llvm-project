@@ -1,4 +1,4 @@
-; RUN: opt < %s -instcombine -S | FileCheck %s
+; RUN: opt < %s -instcombine -instcombine-infinite-loop-threshold=2 -S | FileCheck %s
 ; RUN: opt < %s -instcombine -S -debugify-each | FileCheck %s
 
 declare void @llvm.experimental.guard(i1, ...)
