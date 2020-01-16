@@ -53,6 +53,10 @@ N: Steven Noonan
 E: steven@uplinklabs.net
 D: Patches for the ARM architecture and removal of several inconsistencies.
 
+N: Joachim Protze
+E: protze@itc.rwth-aachen.de
+D: OpenMP Tools Interface, Archer tool
+
 N: Alp Toker
 E: alp@nuanti.com
 D: Making build work for FreeBSD.
