@@ -132,6 +132,10 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
 
 Register
 WebAssemblyRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+  // If the PReg has been replaced by a VReg, return that.
+  const auto &MFI = MF.getInfo<WebAssemblyFunctionInfo>();
+  if (MFI->isFrameBaseVirtual())
+    return MFI->getFrameBaseVreg();
   static const unsigned Regs[2][2] = {
       /*            !isArch64Bit       isArch64Bit      */
       /* !hasFP */ {WebAssembly::SP32, WebAssembly::SP64},
