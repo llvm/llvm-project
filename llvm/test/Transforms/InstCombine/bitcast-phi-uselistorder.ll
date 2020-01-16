@@ -8,16 +8,13 @@ define double @test(i1 %c, i64* %p) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[LOAD:%.*]] = load i64, i64* bitcast (double* @Q to i64*), align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[LOAD]] to double
-; CHECK-NEXT:    [[PHITMP:%.*]] = bitcast i64 [[LOAD]] to double
+; CHECK-NEXT:    [[LOAD1:%.*]] = load double, double* @Q, align 8
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[TMP0]], [[IF]] ]
-; CHECK-NEXT:    [[PHI:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[PHITMP]], [[IF]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[P:%.*]] to double*
-; CHECK-NEXT:    store double [[TMP1]], double* [[TMP2]], align 8
-; CHECK-NEXT:    ret double [[PHI]]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[LOAD1]], [[IF]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[P:%.*]] to double*
+; CHECK-NEXT:    store double [[TMP0]], double* [[TMP1]], align 8
+; CHECK-NEXT:    ret double [[TMP0]]
 ;
 entry:
   br i1 %c, label %if, label %end
