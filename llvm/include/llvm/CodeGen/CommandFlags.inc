@@ -377,6 +377,17 @@ LLVM_ATTRIBUTE_UNUSED static std::vector<std::string> getFeatureList() {
   return Features.getFeatures();
 }
 
+static void renderBoolStringAttr(AttrBuilder &B, StringRef Name, bool Val) {
+  B.addAttribute(Name, Val ? "true" : "false");
+}
+
+#define HANDLE_BOOL_ATTR(CL, AttrName)                              \
+  do {                                                              \
+    if (CL.getNumOccurrences() > 0 && !F.hasFnAttribute(AttrName))  \
+      renderBoolStringAttr(NewAttrs, AttrName, CL);                 \
+  } while (0)
+
+
 /// Set function attributes of function \p F based on CPU, Features, and command
 /// line flags.
 LLVM_ATTRIBUTE_UNUSED static void
@@ -414,6 +425,11 @@ setFunctionAttributes(StringRef CPU, StringRef Features, Function &F) {
                           toStringRef(DisableTailCalls));
   if (StackRealign)
     NewAttrs.addAttribute("stackrealign");
+
+  HANDLE_BOOL_ATTR(EnableUnsafeFPMath, "unsafe-fp-math");
+  HANDLE_BOOL_ATTR(EnableNoInfsFPMath, "no-infs-fp-math");
+  HANDLE_BOOL_ATTR(EnableNoNaNsFPMath, "no-nans-fp-math");
+  HANDLE_BOOL_ATTR(EnableNoSignedZerosFPMath, "no-signed-zeros-fp-math");
 
   if (TrapFuncName.getNumOccurrences() > 0)
     for (auto &B : F)
