@@ -26,7 +26,23 @@ include "VEInstrFormats.td"
 
 def simm7       : PatLeaf<(imm), [{ return isInt<7>(N->getSExtValue()); }]>;
 def simm32      : PatLeaf<(imm), [{ return isInt<32>(N->getSExtValue()); }]>;
+def uimm32      : PatLeaf<(imm), [{ return isUInt<32>(N->getZExtValue()); }]>;
 def uimm6       : PatLeaf<(imm), [{ return isUInt<6>(N->getZExtValue()); }]>;
+def lomsbzero   : PatLeaf<(imm), [{ return (N->getZExtValue() & 0x80000000)
+                                      == 0; }]>;
+def lozero      : PatLeaf<(imm), [{ return (N->getZExtValue() & 0xffffffff)
+                                      == 0; }]>;
+
+def LO32 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(Lo_32(N->getZExtValue()),
+                                   SDLoc(N), MVT::i64);
+}]>;
+
+def HI32 : SDNodeXForm<imm, [{
+  // Transformation function: shift the immediate value down into the low bits.
+  return CurDAG->getTargetConstant(Hi_32(N->getZExtValue()),
+                                   SDLoc(N), MVT::i32);
+}]>;
 
 // ASX format of memory address
 def MEMri : Operand<iPTR> {
@@ -119,6 +135,14 @@ multiclass RMm<string opcStr, bits<8>opc,
     let cz = 1;
     let hasSideEffects = 0;
   }
+  def rzi : RM<
+    opc, (outs RC:$sx), (ins RC:$sz, immOp2:$imm32),
+    !strconcat(opcStr, " $sx, ${imm32}(${sz})")> {
+    let cy = 0;
+    let sy = 0;
+    let cz = 1;
+    let hasSideEffects = 0;
+  }
   def zzi : RM<
     opc, (outs RC:$sx), (ins immOp2:$imm32),
     !strconcat(opcStr, " $sx, $imm32")> {
@@ -172,6 +196,18 @@ multiclass RRNDmrm<string opcStr, bits<8>opc,
             }
 }
 
+multiclass RRNDmim<string opcStr, bits<8>opc,
+                 RegisterClass RCo, ValueType Tyo,
+                 RegisterClass RCi, ValueType Tyi,
+                 Operand immOp, Operand immOp2> {
+  def im1 : RR<opc, (outs RCo:$sx), (ins immOp:$sy, immOp2:$sz),
+               !strconcat(opcStr, " $sx, $sy, (${sz})1")> {
+              let cy = 0;
+              let cz = 0;
+              let hasSideEffects = 0;
+            }
+}
+
 // Used by add, mul, div, and similar commutative instructions
 //   The order of operands are "$sx, $sy, $sz"
 
@@ -180,7 +216,8 @@ multiclass RRm<string opcStr, bits<8>opc,
   RRmrr<opcStr, opc, RC, Ty, RC, Ty>,
   RRmri<opcStr, opc, RC, Ty, RC, Ty, immOp>,
   RRmiz<opcStr, opc, RC, Ty, RC, Ty, immOp>,
-  RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, immOp2>;
+  RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, immOp2>,
+  RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, immOp2>;
 
 // Branch multiclass
 let isBranch = 1, isTerminator = 1, hasDelaySlot = 1 in
@@ -264,6 +301,24 @@ let cx = 0, sx = 0, cy = 0, sy = 0, cz = 0, sz = 0, hasSideEffects = 0 in
 def MONC : RR<
     0x3F, (outs), (ins),
     "monc">;
+
+//===----------------------------------------------------------------------===//
+// Pattern Matchings
+//===----------------------------------------------------------------------===//
+
+// Small immediates.
+def : Pat<(i64 simm7:$val), (ORim1 imm:$val, 0)>;
+// Medium immediates.
+def : Pat<(i64 simm32:$val), (LEAzzi imm:$val)>;
+def : Pat<(i64 uimm32:$val), (ANDrm0 (LEAzzi imm:$val), 32)>;
+// Arbitrary immediates.
+def : Pat<(i64 lozero:$val),
+          (LEASLzzi (HI32 imm:$val))>;
+def : Pat<(i64 lomsbzero:$val),
+          (LEASLrzi (LEAzzi (LO32 imm:$val)), (HI32 imm:$val))>;
+def : Pat<(i64 imm:$val),
+          (LEASLrzi (ANDrm0 (LEAzzi (LO32 imm:$val)), 32),
+                    (HI32 imm:$val))>;
 
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions
