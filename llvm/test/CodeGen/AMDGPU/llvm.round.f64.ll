@@ -393,47 +393,47 @@ define amdgpu_kernel void @round_v4f64(<4 x double> addrspace(1)* %out, <4 x dou
 ;
 ; CI-LABEL: round_v4f64:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_load_dwordx2 s[8:9], s[0:1], 0x9
-; CI-NEXT:    s_load_dwordx8 s[0:7], s[0:1], 0x11
-; CI-NEXT:    s_brev_b32 s12, -2
+; CI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x9
+; CI-NEXT:    s_load_dwordx8 s[8:15], s[0:1], 0x11
+; CI-NEXT:    s_brev_b32 s2, -2
 ; CI-NEXT:    v_mov_b32_e32 v12, 0x3ff00000
-; CI-NEXT:    s_mov_b32 s11, 0xf000
-; CI-NEXT:    s_mov_b32 s10, -1
+; CI-NEXT:    s_mov_b32 s7, 0xf000
+; CI-NEXT:    s_mov_b32 s6, -1
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_trunc_f64_e32 v[0:1], s[2:3]
-; CI-NEXT:    v_mov_b32_e32 v4, s3
-; CI-NEXT:    v_add_f64 v[2:3], s[2:3], -v[0:1]
-; CI-NEXT:    v_bfi_b32 v4, s12, v12, v4
+; CI-NEXT:    v_trunc_f64_e32 v[0:1], s[10:11]
+; CI-NEXT:    v_mov_b32_e32 v4, s11
+; CI-NEXT:    v_add_f64 v[2:3], s[10:11], -v[0:1]
+; CI-NEXT:    v_bfi_b32 v4, s2, v12, v4
 ; CI-NEXT:    v_cmp_ge_f64_e64 vcc, |v[2:3]|, 0.5
-; CI-NEXT:    v_trunc_f64_e32 v[8:9], s[0:1]
+; CI-NEXT:    v_trunc_f64_e32 v[8:9], s[8:9]
 ; CI-NEXT:    v_cndmask_b32_e32 v3, 0, v4, vcc
 ; CI-NEXT:    v_mov_b32_e32 v2, 0
 ; CI-NEXT:    v_add_f64 v[2:3], v[0:1], v[2:3]
-; CI-NEXT:    v_add_f64 v[0:1], s[0:1], -v[8:9]
-; CI-NEXT:    v_mov_b32_e32 v4, s1
+; CI-NEXT:    v_add_f64 v[0:1], s[8:9], -v[8:9]
+; CI-NEXT:    v_mov_b32_e32 v4, s9
 ; CI-NEXT:    v_cmp_ge_f64_e64 vcc, |v[0:1]|, 0.5
-; CI-NEXT:    v_bfi_b32 v4, s12, v12, v4
+; CI-NEXT:    v_bfi_b32 v4, s2, v12, v4
 ; CI-NEXT:    v_cndmask_b32_e32 v1, 0, v4, vcc
-; CI-NEXT:    v_trunc_f64_e32 v[4:5], s[6:7]
-; CI-NEXT:    v_mov_b32_e32 v10, s7
-; CI-NEXT:    v_add_f64 v[6:7], s[6:7], -v[4:5]
-; CI-NEXT:    v_bfi_b32 v10, s12, v12, v10
+; CI-NEXT:    v_trunc_f64_e32 v[4:5], s[14:15]
+; CI-NEXT:    v_mov_b32_e32 v10, s15
+; CI-NEXT:    v_add_f64 v[6:7], s[14:15], -v[4:5]
+; CI-NEXT:    v_bfi_b32 v10, s2, v12, v10
 ; CI-NEXT:    v_cmp_ge_f64_e64 vcc, |v[6:7]|, 0.5
 ; CI-NEXT:    v_mov_b32_e32 v6, 0
 ; CI-NEXT:    v_cndmask_b32_e32 v7, 0, v10, vcc
-; CI-NEXT:    v_trunc_f64_e32 v[10:11], s[4:5]
+; CI-NEXT:    v_trunc_f64_e32 v[10:11], s[12:13]
 ; CI-NEXT:    v_add_f64 v[6:7], v[4:5], v[6:7]
-; CI-NEXT:    v_add_f64 v[4:5], s[4:5], -v[10:11]
-; CI-NEXT:    v_mov_b32_e32 v13, s5
+; CI-NEXT:    v_add_f64 v[4:5], s[12:13], -v[10:11]
+; CI-NEXT:    v_mov_b32_e32 v13, s13
 ; CI-NEXT:    v_cmp_ge_f64_e64 vcc, |v[4:5]|, 0.5
-; CI-NEXT:    v_bfi_b32 v12, s12, v12, v13
+; CI-NEXT:    v_bfi_b32 v12, s2, v12, v13
 ; CI-NEXT:    v_mov_b32_e32 v0, 0
 ; CI-NEXT:    v_cndmask_b32_e32 v5, 0, v12, vcc
 ; CI-NEXT:    v_mov_b32_e32 v4, 0
 ; CI-NEXT:    v_add_f64 v[4:5], v[10:11], v[4:5]
 ; CI-NEXT:    v_add_f64 v[0:1], v[8:9], v[0:1]
-; CI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[8:11], 0 offset:16
-; CI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[8:11], 0
+; CI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[4:7], 0 offset:16
+; CI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; CI-NEXT:    s_endpgm
   %result = call <4 x double> @llvm.round.v4f64(<4 x double> %in) #1
   store <4 x double> %result, <4 x double> addrspace(1)* %out
