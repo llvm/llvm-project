@@ -1,3 +1,18 @@
+import("//llvm/utils/gn/build/write_vcsrevision.gni")
+
+config("write_vcsrevision_config") {
+  # To pick up the generated inc file.
+  include_dirs = [ target_gen_dir ]
+  visibility = [ ":write_vcsrevision" ]
+}
+
+write_vcsrevision("write_vcsversion") {
+  visibility = [ ":Common" ]
+  header = "$target_gen_dir/VCSVersion.inc"
+  names = [ "LLD" ]
+  public_configs = [ ":write_vcsrevision_config" ]
+}
+
 static_library("Common") {
   output_name = "lldCommon"
   configs += [ "//llvm/utils/gn/build:lld_code" ]
@@ -6,6 +21,7 @@ static_library("Common") {
     "//lld/include/lld/Common:version",
   ]
   deps = [
+    ":write_vcsversion",
     "//llvm/lib/CodeGen",
     "//llvm/lib/Demangle",
     "//llvm/lib/IR",
@@ -25,8 +41,7 @@ static_library("Common") {
     "TargetOptionsCommandFlags.cpp",
     "Threads.cpp",
     "Timer.cpp",
-
-    # FIXME: This should be in its own target that passes -DHAVE_VCS_VERSION_INC
     "Version.cpp",
   ]
+  defines = [ "HAVE_VCS_VERSION_INC" ]  # For Version.cpp
 }
