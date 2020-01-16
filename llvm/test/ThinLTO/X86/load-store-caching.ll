@@ -22,5 +22,5 @@ entry:
 }
 
 ; CHECK:       ^0 = module:
-; CHECK-NEXT:  ^1 = gv: (name: "obj", summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 1)))) ; guid =
+; CHECK-NEXT:  ^1 = gv: (name: "obj", summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 1, constant: 0)))) ; guid =
 ; CHECK-NEXT:  ^2 = gv: (name: "foo", summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), insts: 3, refs: (^1)))) ; guid =
