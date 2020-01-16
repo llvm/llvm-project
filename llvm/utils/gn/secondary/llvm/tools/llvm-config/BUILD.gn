@@ -101,9 +101,7 @@ action("LibraryDependencies.inc") {
     "--enable-targets=$llvm_targets_to_build_string",
     "--write-library-table=" + rebase_path(output, root_out_dir),
   ]
-  outputs = [
-    output,
-  ]
+  outputs = [ output ]
 }
 
 executable("llvm-config") {

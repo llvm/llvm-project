@@ -9,9 +9,7 @@ tablegen("ARMGenSystemRegister") {
 
 static_library("Utils") {
   output_name = "LLVMARMUtils"
-  public_deps = [
-    ":ARMGenSystemRegister",
-  ]
+  public_deps = [ ":ARMGenSystemRegister" ]
   deps = [
     "//llvm/lib/Support",
 

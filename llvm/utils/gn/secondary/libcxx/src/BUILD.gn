@@ -219,9 +219,7 @@ if (libcxx_enable_shared) {
   }
 
   symlink_or_copy("cxx_symlink") {
-    deps = [
-      ":cxx_shared",
-    ]
+    deps = [ ":cxx_shared" ]
     source = "libc++.so.0"
     output = "$runtimes_dir/libc++.so"
   }
@@ -229,9 +227,7 @@ if (libcxx_enable_shared) {
   if (libcxx_enable_abi_linker_script) {
     action("cxx_linker_script") {
       script = "//llvm/utils/gn/secondary/libcxx/utils/gen_link_script.py"
-      outputs = [
-        "$runtimes_dir/libc++.so",
-      ]
+      outputs = [ "$runtimes_dir/libc++.so" ]
       args = [
         "--input",
         rebase_path("$runtimes_dir/libc++.so.0", root_build_dir),
@@ -240,9 +236,7 @@ if (libcxx_enable_shared) {
         "c++abi",
         "unwind",
       ]
-      deps = [
-        ":cxx_symlink",
-      ]
+      deps = [ ":cxx_symlink" ]
     }
   }
 }

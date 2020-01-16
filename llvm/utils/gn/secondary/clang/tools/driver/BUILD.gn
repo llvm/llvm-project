@@ -19,9 +19,7 @@ symlinks = [
 ]
 foreach(target, symlinks) {
   symlink_or_copy(target[0]) {
-    deps = [
-      ":clang",
-    ]
+    deps = [ ":clang" ]
     source = "clang"
     output = "$root_out_dir/bin/${target[1]}"
   }

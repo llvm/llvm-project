@@ -44,17 +44,13 @@ template("tablegen") {
     tblgen_target += "($host_toolchain)"
     tblgen_executable = get_label_info(tblgen_target, "root_out_dir") +
                         "/bin/" + get_label_info(tblgen_target, "name")
-    deps = [
-      tblgen_target,
-    ]
+    deps = [ tblgen_target ]
     if (defined(invoker.td_file)) {
       td_file = invoker.td_file
     } else {
       td_file = "$target_name.td"
     }
-    sources = [
-      td_file,
-    ]
+    sources = [ td_file ]
     script = "//llvm/utils/gn/build/run_tablegen.py"
     if (defined(invoker.output_name)) {
       gen_output = "$target_gen_dir/" + invoker.output_name
@@ -82,9 +78,7 @@ template("tablegen") {
              rebase_path(gen_output, root_build_dir),
              td_file,
            ] + invoker.args
-    outputs = [
-      gen_output,
-    ]
+    outputs = [ gen_output ]
 
     # Let targets depending on this find the generated file.
     public_configs = [ ":$config_name" ]

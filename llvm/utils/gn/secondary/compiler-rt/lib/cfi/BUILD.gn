@@ -10,10 +10,6 @@ source_set("sources") {
 }
 
 copy("blacklist") {
-  sources = [
-    "cfi_blacklist.txt",
-  ]
-  outputs = [
-    "$clang_resource_dir/share/{{source_target_relative}}",
-  ]
+  sources = [ "cfi_blacklist.txt" ]
+  outputs = [ "$clang_resource_dir/share/{{source_target_relative}}" ]
 }
