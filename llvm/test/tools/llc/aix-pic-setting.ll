@@ -1,3 +1,4 @@
+; REQUIRES: powerpc-registered-target
 ; RUN: llc -mtriple=powerpc-ibm-aix < %s 2>&1 1>/dev/null | FileCheck --allow-empty %s
 ; RUN: llc -mtriple=powerpc-ibm-aix --relocation-model=pic < %s 2>&1 1>/dev/null | FileCheck --allow-empty %s
 ; RUN: llc -mtriple=powerpc64-ibm-aix --relocation-model=pic < %s 2>&1 1>/dev/null | FileCheck --allow-empty %s
