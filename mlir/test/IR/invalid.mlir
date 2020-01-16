@@ -1120,13 +1120,6 @@ func @invalid_region_dominance() {
 
 // -----
 
-func @hexadecimal_bf16() {
-  // expected-error @+1 {{hexadecimal float literal not supported for bfloat16}}
-  "foo"() {value = 0xffff : bf16} : () -> ()
-}
-
-// -----
-
 func @hexadecimal_float_leading_minus() {
   // expected-error @+1 {{hexadecimal float literal should not have a leading minus}}
   "foo"() {value = -0x7fff : f16} : () -> ()
