@@ -779,24 +779,6 @@ bool AMDGPUInstructionSelector::selectG_ICMP(MachineInstr &I) const {
   return Ret;
 }
 
-static MachineInstr *
-buildEXP(const TargetInstrInfo &TII, MachineInstr *Insert, unsigned Tgt,
-         unsigned Reg0, unsigned Reg1, unsigned Reg2, unsigned Reg3,
-         unsigned VM, bool Compr, unsigned Enabled, bool Done) {
-  const DebugLoc &DL = Insert->getDebugLoc();
-  MachineBasicBlock &BB = *Insert->getParent();
-  unsigned Opcode = Done ? AMDGPU::EXP_DONE : AMDGPU::EXP;
-  return BuildMI(BB, Insert, DL, TII.get(Opcode))
-          .addImm(Tgt)
-          .addReg(Reg0)
-          .addReg(Reg1)
-          .addReg(Reg2)
-          .addReg(Reg3)
-          .addImm(VM)
-          .addImm(Compr)
-          .addImm(Enabled);
-}
-
 static bool isZero(Register Reg, MachineRegisterInfo &MRI) {
   int64_t C;
   if (mi_match(Reg, MRI, m_ICst(C)) && C == 0)
@@ -1111,38 +1093,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   MachineBasicBlock *BB = I.getParent();
   unsigned IntrinsicID = I.getIntrinsicID();
   switch (IntrinsicID) {
-  case Intrinsic::amdgcn_exp: {
-    int64_t Tgt = I.getOperand(1).getImm();
-    int64_t Enabled = I.getOperand(2).getImm();
-    int64_t Done = I.getOperand(7).getImm();
-    int64_t VM = I.getOperand(8).getImm();
-
-    MachineInstr *Exp = buildEXP(TII, &I, Tgt, I.getOperand(3).getReg(),
-                                 I.getOperand(4).getReg(),
-                                 I.getOperand(5).getReg(),
-                                 I.getOperand(6).getReg(),
-                                 VM, false, Enabled, Done);
-
-    I.eraseFromParent();
-    return constrainSelectedInstRegOperands(*Exp, TII, TRI, RBI);
-  }
-  case Intrinsic::amdgcn_exp_compr: {
-    const DebugLoc &DL = I.getDebugLoc();
-    int64_t Tgt = I.getOperand(1).getImm();
-    int64_t Enabled = I.getOperand(2).getImm();
-    Register Reg0 = I.getOperand(3).getReg();
-    Register Reg1 = I.getOperand(4).getReg();
-    Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    int64_t Done = I.getOperand(5).getImm();
-    int64_t VM = I.getOperand(6).getImm();
-
-    BuildMI(*BB, &I, DL, TII.get(AMDGPU::IMPLICIT_DEF), Undef);
-    MachineInstr *Exp = buildEXP(TII, &I, Tgt, Reg0, Reg1, Undef, Undef, VM,
-                                 true,  Enabled, Done);
-
-    I.eraseFromParent();
-    return constrainSelectedInstRegOperands(*Exp, TII, TRI, RBI);
-  }
   case Intrinsic::amdgcn_end_cf: {
     // FIXME: Manually selecting to avoid dealiing with the SReg_1 trick
     // SelectionDAG uses for wave32 vs wave64.
