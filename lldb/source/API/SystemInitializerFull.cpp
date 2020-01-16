@@ -73,6 +73,7 @@
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
+#include "Plugins/ObjectFile/wasm/ObjectFileWasm.h"
 #include "Plugins/OperatingSystem/Python/OperatingSystemPython.h"
 #include "Plugins/Platform/Android/PlatformAndroid.h"
 #include "Plugins/Platform/FreeBSD/PlatformFreeBSD.h"
@@ -203,6 +204,7 @@ llvm::Error SystemInitializerFull::Initialize() {
   ObjectFileELF::Initialize();
   ObjectFileMachO::Initialize();
   ObjectFilePECOFF::Initialize();
+  wasm::ObjectFileWasm::Initialize();
 
   ObjectContainerBSDArchive::Initialize();
   ObjectContainerUniversalMachO::Initialize();
@@ -449,6 +451,7 @@ void SystemInitializerFull::Terminate() {
   ObjectFileELF::Terminate();
   ObjectFileMachO::Terminate();
   ObjectFilePECOFF::Terminate();
+  wasm::ObjectFileWasm::Terminate();
 
   ObjectContainerBSDArchive::Terminate();
   ObjectContainerUniversalMachO::Terminate();
