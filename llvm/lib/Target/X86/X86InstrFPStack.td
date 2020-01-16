@@ -601,6 +601,7 @@ let SchedRW = [WriteMove], Uses = [FPCW] in {
 def LD_Frr   : FPI<0xD9, MRM0r, (outs), (ins RSTi:$op), "fld\t$op">;
 def ST_Frr   : FPI<0xDD, MRM2r, (outs), (ins RSTi:$op), "fst\t$op">;
 def ST_FPrr  : FPI<0xDD, MRM3r, (outs), (ins RSTi:$op), "fstp\t$op">;
+let mayRaiseFPException = 0 in
 def XCH_F    : FPI<0xD9, MRM1r, (outs), (ins RSTi:$op), "fxch\t$op">;
 }
 
@@ -620,13 +621,13 @@ def LD_Fp180 : FpI_<(outs RFP80:$dst), (ins), ZeroArgFP,
                 [(set RFP80:$dst, fpimm1)]>;
 }
 
-let SchedRW = [WriteFLD0], Uses = [FPCW] in
+let SchedRW = [WriteFLD0], Uses = [FPCW], mayRaiseFPException = 0 in
 def LD_F0 : FPI<0xD9, MRM_EE, (outs), (ins), "fldz">;
 
-let SchedRW = [WriteFLD1], Uses = [FPCW] in
+let SchedRW = [WriteFLD1], Uses = [FPCW], mayRaiseFPException = 0 in
 def LD_F1 : FPI<0xD9, MRM_E8, (outs), (ins), "fld1">;
 
-let SchedRW = [WriteFLDC], Defs = [FPSW], Uses = [FPCW] in {
+let SchedRW = [WriteFLDC], Defs = [FPSW], Uses = [FPCW], mayRaiseFPException = 0 in {
 def FLDL2T : I<0xD9, MRM_E9, (outs), (ins), "fldl2t", []>;
 def FLDL2E : I<0xD9, MRM_EA, (outs), (ins), "fldl2e", []>;
 def FLDPI : I<0xD9, MRM_EB, (outs), (ins), "fldpi", []>;

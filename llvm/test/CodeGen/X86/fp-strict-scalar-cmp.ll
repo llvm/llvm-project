@@ -52,6 +52,7 @@ define i32 @test_f32_oeq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -71,6 +72,7 @@ define i32 @test_f32_oeq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -124,6 +126,7 @@ define i32 @test_f32_ogt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -143,6 +146,7 @@ define i32 @test_f32_ogt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
@@ -195,6 +199,7 @@ define i32 @test_f32_oge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -214,6 +219,7 @@ define i32 @test_f32_oge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
@@ -266,6 +272,7 @@ define i32 @test_f32_olt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -285,6 +292,7 @@ define i32 @test_f32_olt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
@@ -337,6 +345,7 @@ define i32 @test_f32_ole_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -356,6 +365,7 @@ define i32 @test_f32_ole_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
@@ -408,6 +418,7 @@ define i32 @test_f32_one_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -427,6 +438,7 @@ define i32 @test_f32_one_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -479,6 +491,7 @@ define i32 @test_f32_ord_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -498,6 +511,7 @@ define i32 @test_f32_ord_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnpl %eax, %ecx
@@ -550,6 +564,7 @@ define i32 @test_f32_ueq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -569,6 +584,7 @@ define i32 @test_f32_ueq_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovel %eax, %ecx
@@ -621,6 +637,7 @@ define i32 @test_f32_ugt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -640,6 +657,7 @@ define i32 @test_f32_ugt_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
@@ -692,6 +710,7 @@ define i32 @test_f32_uge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -711,6 +730,7 @@ define i32 @test_f32_uge_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
@@ -763,6 +783,7 @@ define i32 @test_f32_ult_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -782,6 +803,7 @@ define i32 @test_f32_ult_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
@@ -834,6 +856,7 @@ define i32 @test_f32_ule_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -853,6 +876,7 @@ define i32 @test_f32_ule_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
@@ -909,6 +933,7 @@ define i32 @test_f32_une_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -928,6 +953,7 @@ define i32 @test_f32_une_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -981,6 +1007,7 @@ define i32 @test_f32_uno_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -1000,6 +1027,7 @@ define i32 @test_f32_uno_q(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
@@ -1056,6 +1084,7 @@ define i32 @test_f64_oeq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -1075,6 +1104,7 @@ define i32 @test_f64_oeq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -1128,6 +1158,7 @@ define i32 @test_f64_ogt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -1147,6 +1178,7 @@ define i32 @test_f64_ogt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
@@ -1199,6 +1231,7 @@ define i32 @test_f64_oge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -1218,6 +1251,7 @@ define i32 @test_f64_oge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
@@ -1270,6 +1304,7 @@ define i32 @test_f64_olt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -1289,6 +1324,7 @@ define i32 @test_f64_olt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
@@ -1341,6 +1377,7 @@ define i32 @test_f64_ole_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -1360,6 +1397,7 @@ define i32 @test_f64_ole_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
@@ -1412,6 +1450,7 @@ define i32 @test_f64_one_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -1431,6 +1470,7 @@ define i32 @test_f64_one_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -1483,6 +1523,7 @@ define i32 @test_f64_ord_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -1502,6 +1543,7 @@ define i32 @test_f64_ord_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnpl %eax, %ecx
@@ -1554,6 +1596,7 @@ define i32 @test_f64_ueq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -1573,6 +1616,7 @@ define i32 @test_f64_ueq_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovel %eax, %ecx
@@ -1625,6 +1669,7 @@ define i32 @test_f64_ugt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -1644,6 +1689,7 @@ define i32 @test_f64_ugt_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
@@ -1696,6 +1742,7 @@ define i32 @test_f64_uge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -1715,6 +1762,7 @@ define i32 @test_f64_uge_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
@@ -1767,6 +1815,7 @@ define i32 @test_f64_ult_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -1786,6 +1835,7 @@ define i32 @test_f64_ult_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
@@ -1838,6 +1888,7 @@ define i32 @test_f64_ule_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -1857,6 +1908,7 @@ define i32 @test_f64_ule_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
@@ -1913,6 +1965,7 @@ define i32 @test_f64_une_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -1932,6 +1985,7 @@ define i32 @test_f64_une_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -1985,6 +2039,7 @@ define i32 @test_f64_uno_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fucompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -2004,6 +2059,7 @@ define i32 @test_f64_uno_q(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fucompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
@@ -2060,6 +2116,7 @@ define i32 @test_f32_oeq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -2079,6 +2136,7 @@ define i32 @test_f32_oeq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -2132,6 +2190,7 @@ define i32 @test_f32_ogt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -2151,6 +2210,7 @@ define i32 @test_f32_ogt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
@@ -2203,6 +2263,7 @@ define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -2222,6 +2283,7 @@ define i32 @test_f32_oge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
@@ -2274,6 +2336,7 @@ define i32 @test_f32_olt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -2293,6 +2356,7 @@ define i32 @test_f32_olt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
@@ -2345,6 +2409,7 @@ define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -2364,6 +2429,7 @@ define i32 @test_f32_ole_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
@@ -2416,6 +2482,7 @@ define i32 @test_f32_one_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -2435,6 +2502,7 @@ define i32 @test_f32_one_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -2487,6 +2555,7 @@ define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -2506,6 +2575,7 @@ define i32 @test_f32_ord_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnpl %eax, %ecx
@@ -2558,6 +2628,7 @@ define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -2577,6 +2648,7 @@ define i32 @test_f32_ueq_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovel %eax, %ecx
@@ -2629,6 +2701,7 @@ define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -2648,6 +2721,7 @@ define i32 @test_f32_ugt_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
@@ -2700,6 +2774,7 @@ define i32 @test_f32_uge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -2719,6 +2794,7 @@ define i32 @test_f32_uge_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
@@ -2771,6 +2847,7 @@ define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -2790,6 +2867,7 @@ define i32 @test_f32_ult_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
@@ -2842,6 +2920,7 @@ define i32 @test_f32_ule_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -2861,6 +2940,7 @@ define i32 @test_f32_ule_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
@@ -2917,6 +2997,7 @@ define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -2936,6 +3017,7 @@ define i32 @test_f32_une_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -2989,6 +3071,7 @@ define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -3008,6 +3091,7 @@ define i32 @test_f32_uno_s(i32 %a, i32 %b, float %f1, float %f2) #0 {
 ; X87-CMOV-NEXT:    flds {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
@@ -3064,6 +3148,7 @@ define i32 @test_f64_oeq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -3083,6 +3168,7 @@ define i32 @test_f64_oeq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -3136,6 +3222,7 @@ define i32 @test_f64_ogt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -3155,6 +3242,7 @@ define i32 @test_f64_ogt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
@@ -3207,6 +3295,7 @@ define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -3226,6 +3315,7 @@ define i32 @test_f64_oge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
@@ -3278,6 +3368,7 @@ define i32 @test_f64_olt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -3297,6 +3388,7 @@ define i32 @test_f64_olt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmoval %eax, %ecx
@@ -3349,6 +3441,7 @@ define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -3368,6 +3461,7 @@ define i32 @test_f64_ole_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovael %eax, %ecx
@@ -3420,6 +3514,7 @@ define i32 @test_f64_one_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -3439,6 +3534,7 @@ define i32 @test_f64_one_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -3491,6 +3587,7 @@ define i32 @test_f64_ord_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -3510,6 +3607,7 @@ define i32 @test_f64_ord_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnpl %eax, %ecx
@@ -3562,6 +3660,7 @@ define i32 @test_f64_ueq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -3581,6 +3680,7 @@ define i32 @test_f64_ueq_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovel %eax, %ecx
@@ -3633,6 +3733,7 @@ define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -3652,6 +3753,7 @@ define i32 @test_f64_ugt_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
@@ -3704,6 +3806,7 @@ define i32 @test_f64_uge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -3723,6 +3826,7 @@ define i32 @test_f64_uge_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
@@ -3775,6 +3879,7 @@ define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -3794,6 +3899,7 @@ define i32 @test_f64_ult_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbl %eax, %ecx
@@ -3846,6 +3952,7 @@ define i32 @test_f64_ule_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -3865,6 +3972,7 @@ define i32 @test_f64_ule_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovbel %eax, %ecx
@@ -3921,6 +4029,7 @@ define i32 @test_f64_une_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -3940,6 +4049,7 @@ define i32 @test_f64_une_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovnel %eax, %ecx
@@ -3993,6 +4103,7 @@ define i32 @test_f64_uno_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-NEXT:    fcompp
+; X87-NEXT:    wait
 ; X87-NEXT:    fnstsw %ax
 ; X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X87-NEXT:    sahf
@@ -4012,6 +4123,7 @@ define i32 @test_f64_uno_s(i32 %a, i32 %b, double %f1, double %f2) #0 {
 ; X87-CMOV-NEXT:    fldl {{[0-9]+}}(%esp)
 ; X87-CMOV-NEXT:    fcompi %st(1), %st
 ; X87-CMOV-NEXT:    fstp %st(0)
+; X87-CMOV-NEXT:    wait
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X87-CMOV-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X87-CMOV-NEXT:    cmovpl %eax, %ecx
