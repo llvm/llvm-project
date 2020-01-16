@@ -1067,3 +1067,22 @@ llvm.func @null() -> !llvm<"i32*"> {
   // CHECK: ret i32* null
   llvm.return %0 : !llvm<"i32*">
 }
+
+// Check that dense elements attributes are exported properly in constants.
+// CHECK-LABEL: @elements_constant_3d_vector
+llvm.func @elements_constant_3d_vector() -> !llvm<"[2 x [2 x <2 x i32>]]"> {
+  // CHECK: ret [2 x [2 x <2 x i32>]]
+  // CHECK-SAME: {{\[}}[2 x <2 x i32>] [<2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>],
+  // CHECK-SAME:       [2 x <2 x i32>] [<2 x i32> <i32 42, i32 43>, <2 x i32> <i32 44, i32 45>]]
+  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : vector<2x2x2xi32>) : !llvm<"[2 x [2 x <2 x i32>]]">
+  llvm.return %0 : !llvm<"[2 x [2 x <2 x i32>]]">
+}
+
+// CHECK-LABEL: @elements_constant_3d_array
+llvm.func @elements_constant_3d_array() -> !llvm<"[2 x [2 x [2 x i32]]]"> {
+  // CHECK: ret [2 x [2 x [2 x i32]]]
+  // CHECK-SAME: {{\[}}[2 x [2 x i32]] {{\[}}[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]],
+  // CHECK-SAME:       [2 x [2 x i32]] {{\[}}[2 x i32] [i32 42, i32 43], [2 x i32] [i32 44, i32 45]]]
+  %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm<"[2 x [2 x [2 x i32]]]">
+  llvm.return %0 : !llvm<"[2 x [2 x [2 x i32]]]">
+}
