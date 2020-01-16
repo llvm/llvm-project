@@ -1064,7 +1064,7 @@ void ScriptInterpreterPythonImpl::ExecuteInterpreterLoop() {
 
   IOHandlerSP io_handler_sp(new IOHandlerPythonInterpreter(debugger, this));
   if (io_handler_sp) {
-    debugger.PushIOHandler(io_handler_sp);
+    debugger.RunIOHandlerAsync(io_handler_sp);
   }
 }
 
