@@ -876,6 +876,18 @@ def int_arm_mve_qsub_predicated: Intrinsic<[llvm_anyvector_ty],
 def int_arm_mve_hsub_predicated: Intrinsic<[llvm_anyvector_ty],
    [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty /* unsigned */,
     llvm_anyvector_ty, LLVMMatchType<0>], [IntrNoMem]>;
+def int_arm_mve_vmina_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty],
+    [IntrNoMem]>;
+def int_arm_mve_vmaxa_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty],
+    [IntrNoMem]>;
+def int_arm_mve_vminnma_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty],
+    [IntrNoMem]>;
+def int_arm_mve_vmaxnma_predicated: Intrinsic<[llvm_anyvector_ty],
+   [LLVMMatchType<0>, LLVMMatchType<0>, llvm_anyvector_ty],
+    [IntrNoMem]>;
 
 defm int_arm_mve_minv: IntrinsicSignSuffix<[llvm_i32_ty],
    [llvm_i32_ty, llvm_anyvector_ty], [IntrNoMem]>;
