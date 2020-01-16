@@ -1859,7 +1859,7 @@ bool CommandInterpreter::Confirm(llvm::StringRef message, bool default_answer) {
   IOHandlerConfirm *confirm =
       new IOHandlerConfirm(m_debugger, message, default_answer);
   IOHandlerSP io_handler_sp(confirm);
-  m_debugger.RunIOHandler(io_handler_sp);
+  m_debugger.RunIOHandlerSync(io_handler_sp);
   return confirm->GetResponse();
 }
 
@@ -2482,7 +2482,7 @@ void CommandInterpreter::HandleCommandsFromFile(
 
   m_command_source_depth++;
 
-  debugger.RunIOHandler(io_handler_sp);
+  debugger.RunIOHandlerSync(io_handler_sp);
   if (!m_command_source_flags.empty())
     m_command_source_flags.pop_back();
   m_command_source_depth--;
@@ -2859,7 +2859,7 @@ void CommandInterpreter::GetLLDBCommandsFromIOHandler(
 
   if (io_handler_sp) {
     io_handler_sp->SetUserData(baton);
-    debugger.PushIOHandler(io_handler_sp);
+    debugger.RunIOHandlerAsync(io_handler_sp);
   }
 }
 
@@ -2879,7 +2879,7 @@ void CommandInterpreter::GetPythonCommandsFromIOHandler(
 
   if (io_handler_sp) {
     io_handler_sp->SetUserData(baton);
-    debugger.PushIOHandler(io_handler_sp);
+    debugger.RunIOHandlerAsync(io_handler_sp);
   }
 }
 
@@ -2939,7 +2939,7 @@ void CommandInterpreter::RunCommandInterpreter(
   // Always re-create the command interpreter when we run it in case any file
   // handles have changed.
   bool force_create = true;
-  m_debugger.PushIOHandler(GetIOHandler(force_create, &options));
+  m_debugger.RunIOHandlerAsync(GetIOHandler(force_create, &options));
   m_stopped_for_crash = false;
 
   if (auto_handle_events)

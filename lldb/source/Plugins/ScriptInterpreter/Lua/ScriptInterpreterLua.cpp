@@ -80,7 +80,7 @@ void ScriptInterpreterLua::ExecuteInterpreterLoop() {
     return;
 
   IOHandlerSP io_handler_sp(new IOHandlerLuaInterpreter(debugger, *this));
-  debugger.PushIOHandler(io_handler_sp);
+  debugger.RunIOHandlerAsync(io_handler_sp);
 }
 
 bool ScriptInterpreterLua::LoadScriptingModule(

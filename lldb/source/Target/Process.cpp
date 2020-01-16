@@ -4564,7 +4564,8 @@ bool Process::PushProcessIOHandler() {
     // existing IOHandler that potentially provides the user interface (e.g.
     // the IOHandler for Editline).
     bool cancel_top_handler = !m_mod_id.IsRunningUtilityFunction();
-    GetTarget().GetDebugger().PushIOHandler(io_handler_sp, cancel_top_handler);
+    GetTarget().GetDebugger().RunIOHandlerAsync(io_handler_sp,
+                                                cancel_top_handler);
     return true;
   }
   return false;
@@ -4574,11 +4575,11 @@ bool Process::PopProcessIOHandler(bool pop_command_interpreter) {
   IOHandlerSP io_handler_sp(m_process_input_reader);
   if (io_handler_sp) {
     if (pop_command_interpreter)
-      return GetTarget().GetDebugger().PopIOHandlers(
+      return GetTarget().GetDebugger().RemoveIOHandlers(
           io_handler_sp,
           GetTarget().GetDebugger().GetCommandInterpreter().GetIOHandler());
     else
-      return GetTarget().GetDebugger().PopIOHandler(io_handler_sp);
+      return GetTarget().GetDebugger().RemoveIOHandler(io_handler_sp);
   }
   return false;
 }
