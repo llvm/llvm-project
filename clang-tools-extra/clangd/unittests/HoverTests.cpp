@@ -1514,6 +1514,56 @@ TEST(Hover, All) {
             HI.Name = "cls<cls<cls<int> > >";
             HI.Documentation = "type of nested templates.";
           }},
+      {
+          R"cpp(// type with decltype
+          int a;
+          decltype(a) [[b^]] = a;)cpp",
+          [](HoverInfo &HI) {
+            HI.Definition = "decltype(a) b = a";
+            HI.Kind = index::SymbolKind::Variable;
+            HI.NamespaceScope = "";
+            HI.Name = "b";
+            HI.Type = "int";
+          }},
+      {
+          R"cpp(// type with decltype
+          int a;
+          decltype(a) c;
+          decltype(c) [[b^]] = a;)cpp",
+          [](HoverInfo &HI) {
+            HI.Definition = "decltype(c) b = a";
+            HI.Kind = index::SymbolKind::Variable;
+            HI.NamespaceScope = "";
+            HI.Name = "b";
+            HI.Type = "int";
+          }},
+      {
+          R"cpp(// type with decltype
+          int a;
+          const decltype(a) [[b^]] = a;)cpp",
+          [](HoverInfo &HI) {
+            HI.Definition = "const decltype(a) b = a";
+            HI.Kind = index::SymbolKind::Variable;
+            HI.NamespaceScope = "";
+            HI.Name = "b";
+            HI.Type = "int";
+          }},
+      {
+          R"cpp(// type with decltype
+          int a;
+          auto [[f^oo]](decltype(a) x) -> decltype(a) { return 0; })cpp",
+          [](HoverInfo &HI) {
+            HI.Definition = "auto foo(decltype(a) x) -> decltype(a)";
+            HI.Kind = index::SymbolKind::Function;
+            HI.NamespaceScope = "";
+            HI.Name = "foo";
+            // FIXME: Handle composite types with decltype with a printing
+            // policy.
+            HI.Type = "auto (decltype(a)) -> decltype(a)";
+            HI.ReturnType = "int";
+            HI.Parameters = {
+                {std::string("int"), std::string("x"), llvm::None}};
+          }},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.
@@ -1542,6 +1592,7 @@ TEST(Hover, All) {
     Expected.SymRange = T.range();
     Case.ExpectedBuilder(Expected);
 
+    SCOPED_TRACE(H->present().asPlainText());
     EXPECT_EQ(H->NamespaceScope, Expected.NamespaceScope);
     EXPECT_EQ(H->LocalScope, Expected.LocalScope);
     EXPECT_EQ(H->Name, Expected.Name);
