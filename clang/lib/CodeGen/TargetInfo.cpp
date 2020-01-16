@@ -22,6 +22,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
@@ -996,11 +997,13 @@ static ABIArgInfo getDirectX86Hva(llvm::Type* T = nullptr) {
 
 /// Similar to llvm::CCState, but for Clang.
 struct CCState {
-  CCState(unsigned CC) : CC(CC), FreeRegs(0), FreeSSERegs(0) {}
+  CCState(CGFunctionInfo &FI)
+      : IsPreassigned(FI.arg_size()), CC(FI.getCallingConvention()) {}
 
-  unsigned CC;
-  unsigned FreeRegs;
-  unsigned FreeSSERegs;
+  llvm::SmallBitVector IsPreassigned;
+  unsigned CC = CallingConv::CC_C;
+  unsigned FreeRegs = 0;
+  unsigned FreeSSERegs = 0;
 };
 
 enum {
@@ -1071,8 +1074,7 @@ class X86_32ABIInfo : public SwiftABIInfo {
   void addFieldToArgStruct(SmallVector<llvm::Type *, 6> &FrameFields,
                            CharUnits &StackOffset, ABIArgInfo &Info,
                            QualType Type) const;
-  void computeVectorCallArgs(CGFunctionInfo &FI, CCState &State,
-                             bool &UsedInAlloca) const;
+  void runVectorCallFirstPass(CGFunctionInfo &FI, CCState &State) const;
 
 public:
 
@@ -1640,9 +1642,38 @@ bool X86_32ABIInfo::shouldPrimitiveUseInReg(QualType Ty, CCState &State) const {
   return true;
 }
 
+void X86_32ABIInfo::runVectorCallFirstPass(CGFunctionInfo &FI, CCState &State) const {
+  // Vectorcall x86 works subtly different than in x64, so the format is
+  // a bit different than the x64 version.  First, all vector types (not HVAs)
+  // are assigned, with the first 6 ending up in the [XYZ]MM0-5 registers.
+  // This differs from the x64 implementation, where the first 6 by INDEX get
+  // registers.
+  // In the second pass over the arguments, HVAs are passed in the remaining
+  // vector registers if possible, or indirectly by address. The address will be
+  // passed in ECX/EDX if available. Any other arguments are passed according to
+  // the usual fastcall rules.
+  MutableArrayRef<CGFunctionInfoArgInfo> Args = FI.arguments();
+  for (int I = 0, E = Args.size(); I < E; ++I) {
+    const Type *Base = nullptr;
+    uint64_t NumElts = 0;
+    const QualType &Ty = Args[I].type;
+    if ((Ty->isVectorType() || Ty->isBuiltinType()) &&
+        isHomogeneousAggregate(Ty, Base, NumElts)) {
+      if (State.FreeSSERegs >= NumElts) {
+        State.FreeSSERegs -= NumElts;
+        Args[I].info = ABIArgInfo::getDirect();
+        State.IsPreassigned.set(I);
+      }
+    }
+  }
+}
+
 ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
                                                CCState &State) const {
   // FIXME: Set alignment on indirect arguments.
+  bool IsFastCall = State.CC == llvm::CallingConv::X86_FastCall;
+  bool IsRegCall = State.CC == llvm::CallingConv::X86_RegCall;
+  bool IsVectorCall = State.CC == llvm::CallingConv::X86_VectorCall;
 
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
@@ -1662,11 +1693,16 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
   // to other targets.
   const Type *Base = nullptr;
   uint64_t NumElts = 0;
-  if (State.CC == llvm::CallingConv::X86_RegCall &&
+  if ((IsRegCall || IsVectorCall) &&
       isHomogeneousAggregate(Ty, Base, NumElts)) {
-
     if (State.FreeSSERegs >= NumElts) {
       State.FreeSSERegs -= NumElts;
+
+      // Vectorcall passes HVAs directly and does not flatten them, but regcall
+      // does.
+      if (IsVectorCall)
+        return getDirectX86Hva();
+
       if (Ty->isBuiltinType() || Ty->isVectorType())
         return ABIArgInfo::getDirect();
       return ABIArgInfo::getExpand();
@@ -1708,10 +1744,7 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
     if (getContext().getTypeSize(Ty) <= 4 * 32 &&
         (!IsMCUABI || State.FreeRegs == 0) && canExpandIndirectArgument(Ty))
       return ABIArgInfo::getExpandWithPadding(
-          State.CC == llvm::CallingConv::X86_FastCall ||
-              State.CC == llvm::CallingConv::X86_VectorCall ||
-              State.CC == llvm::CallingConv::X86_RegCall,
-          PaddingType);
+          IsFastCall || IsVectorCall || IsRegCall, PaddingType);
 
     return getIndirectResult(Ty, true, State);
   }
@@ -1750,60 +1783,8 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
   return ABIArgInfo::getDirect();
 }
 
-void X86_32ABIInfo::computeVectorCallArgs(CGFunctionInfo &FI, CCState &State,
-                                          bool &UsedInAlloca) const {
-  // Vectorcall x86 works subtly different than in x64, so the format is
-  // a bit different than the x64 version.  First, all vector types (not HVAs)
-  // are assigned, with the first 6 ending up in the YMM0-5 or XMM0-5 registers.
-  // This differs from the x64 implementation, where the first 6 by INDEX get
-  // registers.
-  // After that, integers AND HVAs are assigned Left to Right in the same pass.
-  // Integers are passed as ECX/EDX if one is available (in order).  HVAs will
-  // first take up the remaining YMM/XMM registers. If insufficient registers
-  // remain but an integer register (ECX/EDX) is available, it will be passed
-  // in that, else, on the stack.
-  for (auto &I : FI.arguments()) {
-    // First pass do all the vector types.
-    const Type *Base = nullptr;
-    uint64_t NumElts = 0;
-    const QualType& Ty = I.type;
-    if ((Ty->isVectorType() || Ty->isBuiltinType()) &&
-        isHomogeneousAggregate(Ty, Base, NumElts)) {
-      if (State.FreeSSERegs >= NumElts) {
-        State.FreeSSERegs -= NumElts;
-        I.info = ABIArgInfo::getDirect();
-      } else {
-        I.info = classifyArgumentType(Ty, State);
-      }
-      UsedInAlloca |= (I.info.getKind() == ABIArgInfo::InAlloca);
-    }
-  }
-
-  for (auto &I : FI.arguments()) {
-    // Second pass, do the rest!
-    const Type *Base = nullptr;
-    uint64_t NumElts = 0;
-    const QualType& Ty = I.type;
-    bool IsHva = isHomogeneousAggregate(Ty, Base, NumElts);
-
-    if (IsHva && !Ty->isVectorType() && !Ty->isBuiltinType()) {
-      // Assign true HVAs (non vector/native FP types).
-      if (State.FreeSSERegs >= NumElts) {
-        State.FreeSSERegs -= NumElts;
-        I.info = getDirectX86Hva();
-      } else {
-        I.info = getIndirectResult(Ty, /*ByVal=*/false, State);
-      }
-    } else if (!IsHva) {
-      // Assign all Non-HVAs, so this will exclude Vector/FP args.
-      I.info = classifyArgumentType(Ty, State);
-      UsedInAlloca |= (I.info.getKind() == ABIArgInfo::InAlloca);
-    }
-  }
-}
-
 void X86_32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
-  CCState State(FI.getCallingConvention());
+  CCState State(FI);
   if (IsMCUABI)
     State.FreeRegs = 3;
   else if (State.CC == llvm::CallingConv::X86_FastCall)
@@ -1835,15 +1816,20 @@ void X86_32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (FI.isChainCall())
     ++State.FreeRegs;
 
+  // For vectorcall, do a first pass over the arguments, assigning FP and vector
+  // arguments to XMM registers as available.
+  if (State.CC == llvm::CallingConv::X86_VectorCall)
+    runVectorCallFirstPass(FI, State);
+
   bool UsedInAlloca = false;
-  if (State.CC == llvm::CallingConv::X86_VectorCall) {
-    computeVectorCallArgs(FI, State, UsedInAlloca);
-  } else {
-    // If not vectorcall, revert to normal behavior.
-    for (auto &I : FI.arguments()) {
-      I.info = classifyArgumentType(I.type, State);
-      UsedInAlloca |= (I.info.getKind() == ABIArgInfo::InAlloca);
-    }
+  MutableArrayRef<CGFunctionInfoArgInfo> Args = FI.arguments();
+  for (int I = 0, E = Args.size(); I < E; ++I) {
+    // Skip arguments that have already been assigned.
+    if (State.IsPreassigned.test(I))
+      continue;
+
+    Args[I].info = classifyArgumentType(Args[I].type, State);
+    UsedInAlloca |= (Args[I].info.getKind() == ABIArgInfo::InAlloca);
   }
 
   // If we needed to use inalloca for any argument, do a second pass and rewrite
@@ -7594,7 +7580,7 @@ public:
   bool shouldUseInReg(QualType Ty, CCState &State) const;
 
   void computeInfo(CGFunctionInfo &FI) const override {
-    CCState State(FI.getCallingConvention());
+    CCState State(FI);
     // Lanai uses 4 registers to pass arguments unless the function has the
     // regparm attribute set.
     if (FI.getHasRegParm()) {
@@ -8570,7 +8556,7 @@ private:
   }
 
   void computeInfo(CGFunctionInfo &FI) const override {
-    CCState State(FI.getCallingConvention());
+    CCState State(FI);
     // ARC uses 8 registers to pass arguments.
     State.FreeRegs = 8;
 
