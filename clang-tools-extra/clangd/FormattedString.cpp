@@ -16,6 +16,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstddef>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <vector>
@@ -117,16 +118,52 @@ std::string renderBlocks(llvm::ArrayRef<std::unique_ptr<Block>> Children,
                          void (Block::*RenderFunc)(llvm::raw_ostream &) const) {
   std::string R;
   llvm::raw_string_ostream OS(R);
-  for (auto &C : Children)
+
+  // Trim rulers.
+  Children = Children.drop_while(
+      [](const std::unique_ptr<Block> &C) { return C->isRuler(); });
+  auto Last = llvm::find_if(
+      llvm::reverse(Children),
+      [](const std::unique_ptr<Block> &C) { return !C->isRuler(); });
+  Children = Children.drop_back(Children.end() - Last.base());
+
+  bool LastBlockWasRuler = true;
+  for (const auto &C : Children) {
+    if (C->isRuler() && LastBlockWasRuler)
+      continue;
+    LastBlockWasRuler = C->isRuler();
     ((*C).*RenderFunc)(OS);
-  return llvm::StringRef(OS.str()).trim().str();
+  }
+
+  // Get rid of redundant empty lines introduced in plaintext while imitating
+  // padding in markdown.
+  std::string AdjustedResult;
+  llvm::StringRef TrimmedText(OS.str());
+  TrimmedText = TrimmedText.trim();
+
+  llvm::copy_if(TrimmedText, std::back_inserter(AdjustedResult),
+                [&TrimmedText](const char &C) {
+                  return !llvm::StringRef(TrimmedText.data(),
+                                          &C - TrimmedText.data() + 1)
+                              // We allow at most two newlines.
+                              .endswith("\n\n\n");
+                });
+
+  return AdjustedResult;
 }
 
-// Puts a vertical space between blocks inside a document.
-class Spacer : public Block {
+// Seperates two blocks with extra spacing. Note that it might render strangely
+// in vscode if the trailing block is a codeblock, see
+// https://github.com/microsoft/vscode/issues/88416 for details.
+class Ruler : public Block {
 public:
-  void renderMarkdown(llvm::raw_ostream &OS) const override { OS << '\n'; }
+  void renderMarkdown(llvm::raw_ostream &OS) const override {
+    // Note that we need an extra new line before the ruler, otherwise we might
+    // make previous block a title instead of introducing a ruler.
+    OS << "\n---\n";
+  }
   void renderPlainText(llvm::raw_ostream &OS) const override { OS << '\n'; }
+  bool isRuler() const override { return true; }
 };
 
 class CodeBlock : public Block {
@@ -272,7 +309,7 @@ Paragraph &Document::addParagraph() {
   return *static_cast<Paragraph *>(Children.back().get());
 }
 
-void Document::addSpacer() { Children.push_back(std::make_unique<Spacer>()); }
+void Document::addRuler() { Children.push_back(std::make_unique<Ruler>()); }
 
 void Document::addCodeBlock(std::string Code, std::string Language) {
   Children.emplace_back(
