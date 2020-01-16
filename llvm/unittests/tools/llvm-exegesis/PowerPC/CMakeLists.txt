@@ -13,7 +13,7 @@ set(LLVM_LINK_COMPONENTS
   PowerPC
   )
 
-add_llvm_unittest(LLVMExegesisPowerPCTests
+add_llvm_target_unittest(LLVMExegesisPowerPCTests
   AnalysisTest.cpp
   TargetTest.cpp
   )
