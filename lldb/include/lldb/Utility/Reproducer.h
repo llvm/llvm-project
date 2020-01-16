@@ -245,6 +245,9 @@ public:
   /// might need to clean up files already written to disk.
   void Discard();
 
+  /// Enable or disable auto generate.
+  void SetAutoGenerate(bool b);
+
   /// Create and register a new provider.
   template <typename T> T *Create() {
     std::unique_ptr<ProviderBase> provider = llvm::make_unique<T>(m_root);
@@ -286,6 +289,9 @@ private:
 
   /// Flag to ensure that we never call both keep and discard.
   bool m_done = false;
+
+  /// Flag to auto generate a reproducer when it would otherwise be discarded.
+  bool m_auto_generate = false;
 };
 
 class Loader final {

@@ -167,8 +167,12 @@ Generator::Generator(FileSpec root) : m_root(MakeAbsolute(std::move(root))) {
 }
 
 Generator::~Generator() {
-  if (!m_done)
-    Discard();
+  if (!m_done) {
+    if (m_auto_generate)
+      Keep();
+    else
+      Discard();
+  }
 }
 
 ProviderBase *Generator::Register(std::unique_ptr<ProviderBase> provider) {
@@ -198,6 +202,8 @@ void Generator::Discard() {
 
   llvm::sys::fs::remove_directories(m_root.GetPath());
 }
+
+void Generator::SetAutoGenerate(bool b) { m_auto_generate = b; }
 
 const FileSpec &Generator::GetRoot() const { return m_root; }
 
