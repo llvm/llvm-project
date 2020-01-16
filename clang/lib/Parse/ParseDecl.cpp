@@ -3617,7 +3617,11 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       ConsumedEnd = ExplicitLoc;
       ConsumeToken(); // kw_explicit
       if (Tok.is(tok::l_paren)) {
-        if (getLangOpts().CPlusPlus2a) {
+        if (getLangOpts().CPlusPlus2a || isExplicitBool() == TPResult::True) {
+          Diag(Tok.getLocation(), getLangOpts().CPlusPlus2a
+                                      ? diag::warn_cxx17_compat_explicit_bool
+                                      : diag::ext_explicit_bool);
+
           ExprResult ExplicitExpr(static_cast<Expr *>(nullptr));
           BalancedDelimiterTracker Tracker(*this, tok::l_paren);
           Tracker.consumeOpen();
@@ -3630,8 +3634,9 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
                 Actions.ActOnExplicitBoolSpecifier(ExplicitExpr.get());
           } else
             Tracker.skipToEnd();
-        } else
+        } else {
           Diag(Tok.getLocation(), diag::warn_cxx2a_compat_explicit_bool);
+        }
       }
       isInvalid = DS.setFunctionSpecExplicit(ExplicitLoc, PrevSpec, DiagID,
                                              ExplicitSpec, CloseParenLoc);
