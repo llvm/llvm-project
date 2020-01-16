@@ -17,13 +17,11 @@ define double @c() nounwind {
 ; CHECK-NEXT:    subl %eax, %esi
 ; CHECK-NEXT:    sbbl %ecx, %edx
 ; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    setns %cl
 ; CHECK-NEXT:    movl %esi, (%esp)
 ; CHECK-NEXT:    movl %edx, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    shrl $31, %edx
 ; CHECK-NEXT:    fildll (%esp)
-; CHECK-NEXT:    fadds LCPI0_0(,%ecx,4)
+; CHECK-NEXT:    fadds LCPI0_0(,%edx,4)
 ; CHECK-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldz

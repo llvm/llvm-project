@@ -19377,21 +19377,21 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
                                          MVT::i64, MMO);
   Chain = Fild.getValue(1);
 
-  APInt FF(32, 0x5F800000ULL);
 
   // Check whether the sign bit is set.
   SDValue SignSet = DAG.getSetCC(
       dl, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), MVT::i64),
       Op.getOperand(OpNo), DAG.getConstant(0, dl, MVT::i64), ISD::SETLT);
 
-  // Build a 64 bit pair (0, FF) in the constant pool, with FF in the lo bits.
+  // Build a 64 bit pair (FF, 0) in the constant pool, with FF in the hi bits.
+  APInt FF(64, 0x5F80000000000000ULL);
   SDValue FudgePtr = DAG.getConstantPool(
-      ConstantInt::get(*DAG.getContext(), FF.zext(64)), PtrVT);
+      ConstantInt::get(*DAG.getContext(), FF), PtrVT);
 
   // Get a pointer to FF if the sign bit was set, or to 0 otherwise.
   SDValue Zero = DAG.getIntPtrConstant(0, dl);
   SDValue Four = DAG.getIntPtrConstant(4, dl);
-  SDValue Offset = DAG.getSelect(dl, Zero.getValueType(), SignSet, Zero, Four);
+  SDValue Offset = DAG.getSelect(dl, Zero.getValueType(), SignSet, Four, Zero);
   FudgePtr = DAG.getNode(ISD::ADD, dl, PtrVT, FudgePtr, Offset);
 
   // Load the value out, extending it from f32 to f80.
