@@ -1156,7 +1156,7 @@ def int_amdgcn_exp : Intrinsic <[], [
   llvm_i1_ty,        // done
   llvm_i1_ty         // vm
   ],
-  [ImmArg<0>, ImmArg<1>, ImmArg<6>, ImmArg<7>, IntrInaccessibleMemOnly]
+  [ImmArg<0>, ImmArg<1>, ImmArg<6>, ImmArg<7>, IntrWriteMem, IntrInaccessibleMemOnly]
 >;
 
 // exp with compr bit set.
@@ -1167,7 +1167,7 @@ def int_amdgcn_exp_compr : Intrinsic <[], [
   LLVMMatchType<0>,  // src1
   llvm_i1_ty,        // done
   llvm_i1_ty],       // vm
-  [ImmArg<0>, ImmArg<1>, ImmArg<4>, ImmArg<5>, IntrInaccessibleMemOnly]
+  [ImmArg<0>, ImmArg<1>, ImmArg<4>, ImmArg<5>, IntrWriteMem, IntrInaccessibleMemOnly]
 >;
 
 def int_amdgcn_buffer_wbinvl1_sc :
