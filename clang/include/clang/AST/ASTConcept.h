@@ -21,6 +21,7 @@
 #include <string>
 #include <utility>
 namespace clang {
+class ConceptDecl;
 
 /// \brief The result of a constraint satisfaction check, containing the
 /// necessary information to diagnose an unsatisfied constraint.
@@ -73,6 +74,102 @@ struct ASTConstraintSatisfaction final :
 
   static ASTConstraintSatisfaction *
   Create(const ASTContext &C, const ConstraintSatisfaction &Satisfaction);
+};
+
+/// \brief Common data class for constructs that reference concepts with
+/// template arguments.
+class ConceptReference {
+protected:
+  // \brief The optional nested name specifier used when naming the concept.
+  NestedNameSpecifierLoc NestedNameSpec;
+
+  /// \brief The location of the template keyword, if specified when naming the
+  /// concept.
+  SourceLocation TemplateKWLoc;
+
+  /// \brief The concept name used.
+  DeclarationNameInfo ConceptName;
+
+  /// \brief The declaration found by name lookup when the expression was
+  /// created.
+  /// Can differ from NamedConcept when, for example, the concept was found
+  /// through a UsingShadowDecl.
+  NamedDecl *FoundDecl;
+
+  /// \brief The concept named.
+  ConceptDecl *NamedConcept;
+
+  /// \brief The template argument list source info used to specialize the
+  /// concept.
+  const ASTTemplateArgumentListInfo *ArgsAsWritten;
+
+public:
+
+  ConceptReference(NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
+                   DeclarationNameInfo ConceptNameInfo, NamedDecl *FoundDecl,
+                   ConceptDecl *NamedConcept,
+                   const ASTTemplateArgumentListInfo *ArgsAsWritten) :
+      NestedNameSpec(NNS), TemplateKWLoc(TemplateKWLoc),
+      ConceptName(ConceptNameInfo), FoundDecl(FoundDecl),
+      NamedConcept(NamedConcept), ArgsAsWritten(ArgsAsWritten) {}
+
+  ConceptReference() : NestedNameSpec(), TemplateKWLoc(), ConceptName(),
+      FoundDecl(nullptr), NamedConcept(nullptr), ArgsAsWritten(nullptr) {}
+
+  const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
+    return NestedNameSpec;
+  }
+
+  const DeclarationNameInfo &getConceptNameInfo() const { return ConceptName; }
+
+  SourceLocation getConceptNameLoc() const {
+    return getConceptNameInfo().getLoc();
+  }
+
+  SourceLocation getTemplateKWLoc() const { return TemplateKWLoc; }
+
+  NamedDecl *getFoundDecl() const {
+    return FoundDecl;
+  }
+
+  ConceptDecl *getNamedConcept() const {
+    return NamedConcept;
+  }
+
+  const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
+    return ArgsAsWritten;
+  }
+
+  /// \brief Whether or not template arguments were explicitly specified in the
+  /// concept reference (they might not be in type constraints, for example)
+  bool hasExplicitTemplateArgs() const {
+    return ArgsAsWritten != nullptr;
+  }
+};
+
+class TypeConstraint : public ConceptReference {
+  /// \brief The immediately-declared constraint expression introduced by this
+  /// type-constraint.
+  Expr *ImmediatelyDeclaredConstraint = nullptr;
+
+public:
+  TypeConstraint(NestedNameSpecifierLoc NNS,
+                 DeclarationNameInfo ConceptNameInfo, NamedDecl *FoundDecl,
+                 ConceptDecl *NamedConcept,
+                 const ASTTemplateArgumentListInfo *ArgsAsWritten,
+                 Expr *ImmediatelyDeclaredConstraint) :
+      ConceptReference(NNS, /*TemplateKWLoc=*/SourceLocation(), ConceptNameInfo,
+                       FoundDecl, NamedConcept, ArgsAsWritten),
+      ImmediatelyDeclaredConstraint(ImmediatelyDeclaredConstraint) {}
+
+  /// \brief Get the immediately-declared constraint expression introduced by
+  /// this type-constraint, that is - the constraint expression that is added to
+  /// the associated constraints of the enclosing declaration in practice.
+  Expr *getImmediatelyDeclaredConstraint() const {
+    return ImmediatelyDeclaredConstraint;
+  }
+
+  void print(llvm::raw_ostream &OS, PrintingPolicy Policy) const;
 };
 
 } // clang
