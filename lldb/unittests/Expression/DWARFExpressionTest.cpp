@@ -355,4 +355,9 @@ TEST(DWARFExpression, DW_OP_piece) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_const2u, 0x11, 0x22, DW_OP_piece, 2,
                                  DW_OP_const2u, 0x33, 0x44, DW_OP_piece, 2}),
                        llvm::HasValue(GetScalar(32, 0x44332211, true)));
+  EXPECT_THAT_EXPECTED(
+      Evaluate({DW_OP_piece, 1, DW_OP_const1u, 0xff, DW_OP_piece, 1}),
+      // Note that the "00" should really be "undef", but we can't
+      // represent that yet.
+      llvm::HasValue(GetScalar(16, 0xff00, true)));
 }
