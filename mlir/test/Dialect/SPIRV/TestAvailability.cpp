@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/SPIRV/SPIRVLowering.h"
 #include "mlir/Dialect/SPIRV/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/IR/Function.h"
@@ -13,14 +14,18 @@
 
 using namespace mlir;
 
+//===----------------------------------------------------------------------===//
+// Printing op availability pass
+//===----------------------------------------------------------------------===//
+
 namespace {
 /// A pass for testing SPIR-V op availability.
-struct TestAvailability : public FunctionPass<TestAvailability> {
+struct PrintOpAvailability : public FunctionPass<PrintOpAvailability> {
   void runOnFunction() override;
 };
 } // end anonymous namespace
 
-void TestAvailability::runOnFunction() {
+void PrintOpAvailability::runOnFunction() {
   auto f = getFunction();
   llvm::outs() << f.getName() << "\n";
 
@@ -70,5 +75,105 @@ void TestAvailability::runOnFunction() {
   });
 }
 
-static PassRegistration<TestAvailability> pass("test-spirv-op-availability",
-                                               "Test SPIR-V op availability");
+static PassRegistration<PrintOpAvailability>
+    printOpAvailabilityPass("test-spirv-op-availability",
+                            "Test SPIR-V op availability");
+
+//===----------------------------------------------------------------------===//
+// Converting target environment pass
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// A pass for testing SPIR-V op availability.
+struct ConvertToTargetEnv : public FunctionPass<ConvertToTargetEnv> {
+  void runOnFunction() override;
+};
+
+struct ConvertToAtomCmpExchangeWeak : public RewritePattern {
+  ConvertToAtomCmpExchangeWeak(MLIRContext *context);
+  PatternMatchResult matchAndRewrite(Operation *op,
+                                     PatternRewriter &rewriter) const override;
+};
+
+struct ConvertToGroupNonUniformBallot : public RewritePattern {
+  ConvertToGroupNonUniformBallot(MLIRContext *context);
+  PatternMatchResult matchAndRewrite(Operation *op,
+                                     PatternRewriter &rewriter) const override;
+};
+
+struct ConvertToSubgroupBallot : public RewritePattern {
+  ConvertToSubgroupBallot(MLIRContext *context);
+  PatternMatchResult matchAndRewrite(Operation *op,
+                                     PatternRewriter &rewriter) const override;
+};
+} // end anonymous namespace
+
+void ConvertToTargetEnv::runOnFunction() {
+  MLIRContext *context = &getContext();
+  FuncOp fn = getFunction();
+
+  auto targetEnv = fn.getOperation()
+                       ->getAttr(spirv::getTargetEnvAttrName())
+                       .cast<spirv::TargetEnvAttr>();
+  auto target = spirv::SPIRVConversionTarget::get(targetEnv, context);
+
+  OwningRewritePatternList patterns;
+  patterns.insert<ConvertToAtomCmpExchangeWeak, ConvertToGroupNonUniformBallot,
+                  ConvertToSubgroupBallot>(context);
+
+  if (failed(applyPartialConversion(fn, *target, patterns)))
+    return signalPassFailure();
+}
+
+ConvertToAtomCmpExchangeWeak::ConvertToAtomCmpExchangeWeak(MLIRContext *context)
+    : RewritePattern("test.convert_to_atomic_compare_exchange_weak_op",
+                     {"spv.AtomicCompareExchangeWeak"}, 1, context) {}
+
+PatternMatchResult
+ConvertToAtomCmpExchangeWeak::matchAndRewrite(Operation *op,
+                                              PatternRewriter &rewriter) const {
+  Value ptr = op->getOperand(0);
+  Value value = op->getOperand(1);
+  Value comparator = op->getOperand(2);
+
+  // Create a spv.AtomicCompareExchangeWeak op with AtomicCounterMemory bits in
+  // memory semantics to additionally require AtomicStorage capability.
+  rewriter.replaceOpWithNewOp<spirv::AtomicCompareExchangeWeakOp>(
+      op, value.getType(), ptr, spirv::Scope::Workgroup,
+      spirv::MemorySemantics::AcquireRelease |
+          spirv::MemorySemantics::AtomicCounterMemory,
+      spirv::MemorySemantics::Acquire, value, comparator);
+  return matchSuccess();
+}
+
+ConvertToGroupNonUniformBallot::ConvertToGroupNonUniformBallot(
+    MLIRContext *context)
+    : RewritePattern("test.convert_to_group_non_uniform_ballot_op",
+                     {"spv.GroupNonUniformBallot"}, 1, context) {}
+
+PatternMatchResult ConvertToGroupNonUniformBallot::matchAndRewrite(
+    Operation *op, PatternRewriter &rewriter) const {
+  Value predicate = op->getOperand(0);
+
+  rewriter.replaceOpWithNewOp<spirv::GroupNonUniformBallotOp>(
+      op, op->getResult(0).getType(), spirv::Scope::Workgroup, predicate);
+  return matchSuccess();
+}
+
+ConvertToSubgroupBallot::ConvertToSubgroupBallot(MLIRContext *context)
+    : RewritePattern("test.convert_to_subgroup_ballot_op",
+                     {"spv.SubgroupBallotKHR"}, 1, context) {}
+
+PatternMatchResult
+ConvertToSubgroupBallot::matchAndRewrite(Operation *op,
+                                         PatternRewriter &rewriter) const {
+  Value predicate = op->getOperand(0);
+
+  rewriter.replaceOpWithNewOp<spirv::SubgroupBallotKHROp>(
+      op, op->getResult(0).getType(), predicate);
+  return matchSuccess();
+}
+
+static PassRegistration<ConvertToTargetEnv>
+    convertToTargetEnvPass("test-spirv-target-env",
+                           "Test SPIR-V target environment");

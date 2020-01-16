@@ -13,8 +13,10 @@
 #ifndef MLIR_DIALECT_SPIRV_SPIRVLOWERING_H
 #define MLIR_DIALECT_SPIRV_SPIRVLOWERING_H
 
+#include "mlir/Dialect/SPIRV/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/TargetAndABI.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallSet.h"
 
 namespace mlir {
 
@@ -48,7 +50,30 @@ protected:
 };
 
 namespace spirv {
-enum class BuiltIn : uint32_t;
+class SPIRVConversionTarget : public ConversionTarget {
+public:
+  /// Creates a SPIR-V conversion target for the given target environment.
+  static std::unique_ptr<SPIRVConversionTarget> get(TargetEnvAttr targetEnv,
+                                                    MLIRContext *context);
+
+private:
+  SPIRVConversionTarget(TargetEnvAttr targetEnv, MLIRContext *context);
+
+  // Be explicit that instance of this class cannot be copied or moved: there
+  // are lambdas capturing fields of the instance.
+  SPIRVConversionTarget(const SPIRVConversionTarget &) = delete;
+  SPIRVConversionTarget(SPIRVConversionTarget &&) = delete;
+  SPIRVConversionTarget &operator=(const SPIRVConversionTarget &) = delete;
+  SPIRVConversionTarget &operator=(SPIRVConversionTarget &&) = delete;
+
+  /// Returns true if the given `op` is legal to use under the current target
+  /// environment.
+  bool isLegalOp(Operation *op);
+
+  Version givenVersion;                            /// SPIR-V version to target
+  llvm::SmallSet<Extension, 4> givenExtensions;    /// Allowed extensions
+  llvm::SmallSet<Capability, 8> givenCapabilities; /// Allowed capabilities
+};
 
 /// Returns a value that represents a builtin variable value within the SPIR-V
 /// module.
