@@ -806,6 +806,16 @@ public:
                                                  bool IsNewScope);
   bool TryAnnotateCXXScopeToken(bool EnteringContext = false);
 
+  bool MightBeCXXScopeToken() {
+    return Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
+           (Tok.is(tok::annot_template_id) &&
+            NextToken().is(tok::coloncolon)) ||
+           Tok.is(tok::kw_decltype) || Tok.is(tok::kw___super);
+  }
+  bool TryAnnotateOptionalCXXScopeToken(bool EnteringContext = false) {
+    return MightBeCXXScopeToken() && TryAnnotateCXXScopeToken(EnteringContext);
+  }
+
 private:
   enum AnnotatedNameKind {
     /// Annotation has failed and emitted an error.
@@ -2394,6 +2404,11 @@ private:
   ///   '<' template-argument-list '>'
   /// rather than a less-than expression.
   TPResult isTemplateArgumentList(unsigned TokensToSkip);
+
+  /// Determine whether an '(' after an 'explicit' keyword is part of a C++20
+  /// 'explicit(bool)' declaration, in earlier language modes where that is an
+  /// extension.
+  TPResult isExplicitBool();
 
   /// Determine whether an identifier has been tentatively declared as a
   /// non-type. Such tentative declarations should not be found to name a type

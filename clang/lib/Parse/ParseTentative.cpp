@@ -202,9 +202,7 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
       }
     }
 
-    if (Tok.isOneOf(tok::identifier, tok::coloncolon, tok::kw_decltype,
-                    tok::annot_template_id) &&
-        TryAnnotateCXXScopeToken())
+    if (TryAnnotateOptionalCXXScopeToken())
       return TPResult::Error;
     if (Tok.is(tok::annot_cxxscope))
       ConsumeAnnotationToken();
@@ -785,9 +783,8 @@ Parser::isCXX11AttributeSpecifier(bool Disambiguate,
 
 Parser::TPResult Parser::TryParsePtrOperatorSeq() {
   while (true) {
-    if (Tok.isOneOf(tok::coloncolon, tok::identifier))
-      if (TryAnnotateCXXScopeToken(true))
-        return TPResult::Error;
+    if (TryAnnotateOptionalCXXScopeToken(true))
+      return TPResult::Error;
 
     if (Tok.isOneOf(tok::star, tok::amp, tok::caret, tok::ampamp) ||
         (Tok.is(tok::annot_cxxscope) && NextToken().is(tok::star))) {
@@ -2136,4 +2133,59 @@ Parser::TPResult Parser::isTemplateArgumentList(unsigned TokensToSkip) {
                 StopAtSemi | StopBeforeMatch))
     return TPResult::Ambiguous;
   return TPResult::False;
+}
+
+/// Determine whether we might be looking at the '(' of a C++20 explicit(bool)
+/// in an earlier language mode.
+Parser::TPResult Parser::isExplicitBool() {
+  assert(Tok.is(tok::l_paren) && "expected to be looking at a '(' token");
+
+  RevertingTentativeParsingAction PA(*this);
+  ConsumeParen();
+
+  // We can only have 'explicit' on a constructor, conversion function, or
+  // deduction guide. The declarator of a deduction guide cannot be
+  // parenthesized, so we know this isn't a deduction guide. So the only
+  // thing we need to check for is some number of parens followed by either
+  // the current class name or 'operator'.
+  while (Tok.is(tok::l_paren))
+    ConsumeParen();
+
+  if (TryAnnotateOptionalCXXScopeToken())
+    return TPResult::Error;
+
+  // Class-scope constructor and conversion function names can't really be
+  // qualified, but we get better diagnostics if we assume they can be.
+  CXXScopeSpec SS;
+  if (Tok.is(tok::annot_cxxscope)) {
+    Actions.RestoreNestedNameSpecifierAnnotation(Tok.getAnnotationValue(),
+                                                 Tok.getAnnotationRange(),
+                                                 SS);
+    ConsumeAnnotationToken();
+  }
+
+  // 'explicit(operator' might be explicit(bool) or the declaration of a
+  // conversion function, but it's probably a conversion function.
+  if (Tok.is(tok::kw_operator))
+    return TPResult::Ambiguous;
+
+  // If this can't be a constructor name, it can only be explicit(bool).
+  if (Tok.isNot(tok::identifier) && Tok.isNot(tok::annot_template_id))
+    return TPResult::True;
+  if (!Actions.isCurrentClassName(Tok.is(tok::identifier)
+                                      ? *Tok.getIdentifierInfo()
+                                      : *takeTemplateIdAnnotation(Tok)->Name,
+                                  getCurScope(), &SS))
+    return TPResult::True;
+  // Formally, we must have a right-paren after the constructor name to match
+  // the grammar for a constructor. But clang permits a parenthesized
+  // constructor declarator, so also allow a constructor declarator to follow
+  // with no ')' token after the constructor name.
+  if (!NextToken().is(tok::r_paren) &&
+      !isConstructorDeclarator(/*Unqualified=*/SS.isEmpty(),
+                               /*DeductionGuide=*/false))
+    return TPResult::True;
+
+  // Might be explicit(bool) or a parenthesized constructor name.
+  return TPResult::Ambiguous;
 }
