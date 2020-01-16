@@ -601,6 +601,19 @@ TEST(Hover, NoHover) {
       R"cpp(// non-named decls don't get hover. Don't crash!
             ^static_assert(1, "");
           )cpp",
+      R"cpp(// non-evaluatable expr
+          template <typename T> void foo() {
+            (void)[[size^of]](T);
+          })cpp",
+      // literals
+      "auto x = t^rue;",
+      "auto x = '^A';",
+      "auto x = ^(int){42};",
+      "auto x = ^42.;",
+      "auto x = ^42.0i;",
+      "auto x = ^42;",
+      "auto x = ^nullptr;",
+      "auto x = ^\"asdf\";",
   };
 
   for (const auto &Test : Tests) {
@@ -1500,6 +1513,26 @@ TEST(Hover, All) {
             HI.NamespaceScope = "";
             HI.Name = "cls<cls<cls<int> > >";
             HI.Documentation = "type of nested templates.";
+          }},
+      {
+          R"cpp(// sizeof expr
+          void foo() {
+            (void)[[size^of]](char);
+          })cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "expression";
+            HI.Type = "unsigned long";
+            HI.Value = "1";
+          }},
+      {
+          R"cpp(// alignof expr
+          void foo() {
+            (void)[[align^of]](char);
+          })cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "expression";
+            HI.Type = "unsigned long";
+            HI.Value = "1";
           }},
   };
 
