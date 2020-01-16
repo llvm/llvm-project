@@ -1231,7 +1231,7 @@ class OpshIRI_pat<InstHexagon MI, PatFrag Op, PatFrag ShOp,
   : Pat<(Op anyimm:$u8, (ShOp RegPred:$Rs, ImmPred:$U5)),
         (MI anyimm:$u8, RegPred:$Rs, imm:$U5)>;
 
-let AddedComplexity = 200 in {
+let AddedComplexity = 200, Predicates = [UseCompound] in {
   def: OpshIRI_pat<S4_addi_asl_ri,  Add, Su<Shl>, I32, u5_0ImmPred>;
   def: OpshIRI_pat<S4_addi_lsr_ri,  Add, Su<Srl>, I32, u5_0ImmPred>;
   def: OpshIRI_pat<S4_subi_asl_ri,  Sub, Su<Shl>, I32, u5_0ImmPred>;
@@ -1510,7 +1510,7 @@ let AddedComplexity = 110 in {  // greater than S2_asl_r_r_and/or/xor.
 
 // S4_addaddi and S4_subaddi don't have tied operands, so give them
 // a bit of preference.
-let AddedComplexity = 30 in {
+let AddedComplexity = 30, Predicates = [UseCompound] in {
   def: Pat<(add I32:$Rs, (Su<Add> I32:$Ru, anyimm:$s6)),
            (S4_addaddi IntRegs:$Rs, IntRegs:$Ru, imm:$s6)>;
   def: Pat<(add anyimm:$s6, (Su<Add> I32:$Rs, I32:$Ru)),
@@ -1523,8 +1523,10 @@ let AddedComplexity = 30 in {
            (S4_subaddi IntRegs:$Rs, imm:$s6, IntRegs:$Ru)>;
 }
 
+let Predicates = [UseCompound] in
 def: Pat<(or I32:$Ru, (Su<And> I32:$Rx, anyimm:$s10)),
          (S4_or_andix IntRegs:$Ru, IntRegs:$Rx, imm:$s10)>;
+
 def: Pat<(or I32:$Rx, (Su<And> I32:$Rs, anyimm:$s10)),
          (S4_or_andi IntRegs:$Rx, IntRegs:$Rs, imm:$s10)>;
 def: Pat<(or I32:$Rx, (Su<Or> I32:$Rs, anyimm:$s10)),
@@ -1625,21 +1627,22 @@ def : Pat <(mulhs I64:$Rss, I64:$Rtt),
 // will put the immediate addend into a register, while these instructions will
 // use it directly. Such a construct does not appear in the middle of a gep,
 // where M2_macsip would be preferable.
-let AddedComplexity = 20 in {
+let AddedComplexity = 20, Predicates = [UseCompound] in {
   def: Pat<(add (Su<Mul> I32:$Rs, u6_0ImmPred:$U6), anyimm:$u6),
            (M4_mpyri_addi imm:$u6, IntRegs:$Rs, imm:$U6)>;
   def: Pat<(add (Su<Mul> I32:$Rs, I32:$Rt), anyimm:$u6),
            (M4_mpyrr_addi imm:$u6, IntRegs:$Rs, IntRegs:$Rt)>;
 }
 
-// Keep these instructions less preferable to M2_macsip/M2_macsin.
-def: Pat<(add I32:$Ru, (Su<Mul> I32:$Rs, u6_2ImmPred:$u6_2)),
-         (M4_mpyri_addr_u2 IntRegs:$Ru, imm:$u6_2, IntRegs:$Rs)>;
-def: Pat<(add I32:$Ru, (Su<Mul> I32:$Rs, anyimm:$u6)),
-         (M4_mpyri_addr IntRegs:$Ru, IntRegs:$Rs, imm:$u6)>;
-def: Pat<(add I32:$Ru, (Su<Mul> I32:$Ry, I32:$Rs)),
-         (M4_mpyrr_addr IntRegs:$Ru, IntRegs:$Ry, IntRegs:$Rs)>;
-
+let Predicates = [UseCompound] in {
+  // Keep these instructions less preferable to M2_macsip/M2_macsin.
+  def: Pat<(add I32:$Ru, (Su<Mul> I32:$Rs, u6_2ImmPred:$u6_2)),
+           (M4_mpyri_addr_u2 IntRegs:$Ru, imm:$u6_2, IntRegs:$Rs)>;
+  def: Pat<(add I32:$Ru, (Su<Mul> I32:$Rs, anyimm:$u6)),
+           (M4_mpyri_addr IntRegs:$Ru, IntRegs:$Rs, imm:$u6)>;
+  def: Pat<(add I32:$Ru, (Su<Mul> I32:$Ry, I32:$Rs)),
+           (M4_mpyrr_addr IntRegs:$Ru, IntRegs:$Ry, IntRegs:$Rs)>;
+}
 
 def: Pat<(fma F32:$Rs, F32:$Rt, F32:$Rx),
          (F2_sffma F32:$Rx, F32:$Rs, F32:$Rt)>;

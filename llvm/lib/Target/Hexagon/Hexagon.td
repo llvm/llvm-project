@@ -48,6 +48,8 @@ def ExtensionHVX64B: SubtargetFeature<"hvx-length64b", "UseHVX64BOps",
 def ExtensionHVX128B: SubtargetFeature<"hvx-length128b", "UseHVX128BOps",
       "true", "Hexagon HVX 128B instructions", [ExtensionHVX]>;
 
+def FeatureCompound: SubtargetFeature<"compound", "UseCompound", "true",
+      "Use compound instructions">;
 def FeaturePackets: SubtargetFeature<"packets", "UsePackets", "true",
       "Support for instruction packets">;
 def FeatureLongCalls: SubtargetFeature<"long-calls", "UseLongCalls", "true",
@@ -91,6 +93,7 @@ def UseHVXV66          : Predicate<"HST->useHVXOps()">,
                          AssemblerPredicate<"ExtensionHVXV66">;
 def UseZReg            : Predicate<"HST->useZRegOps()">,
                          AssemblerPredicate<"ExtensionZReg">;
+def UseCompound        : Predicate<"HST->useCompound()">;
 
 def Hvx64:  HwMode<"+hvx-length64b">;
 def Hvx128: HwMode<"+hvx-length128b">;
@@ -335,32 +338,32 @@ class Proc<string Name, SchedMachineModel Model,
 
 def : Proc<"generic", HexagonModelV60,
            [ArchV5, ArchV55, ArchV60,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeatureMemops, FeatureNVJ,
+            FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv5",  HexagonModelV5,
            [ArchV5,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeatureMemops, FeatureNVJ,
+            FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv55", HexagonModelV55,
            [ArchV5, ArchV55,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeatureMemops, FeatureNVJ,
+            FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv60", HexagonModelV60,
            [ArchV5, ArchV55, ArchV60,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeatureMemops, FeatureNVJ,
+            FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv62", HexagonModelV62,
            [ArchV5, ArchV55, ArchV60, ArchV62,
-            FeatureDuplex, FeatureMemops, FeatureNVJ, FeatureNVS,
-            FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeatureMemops, FeatureNVJ,
+            FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv65", HexagonModelV65,
            [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65,
-            FeatureDuplex, FeatureMemNoShuf, FeatureMemops, FeatureNVJ,
-            FeatureNVS, FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv66", HexagonModelV66,
            [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66,
-            FeatureDuplex, FeatureMemNoShuf, FeatureMemops, FeatureNVJ,
-            FeatureNVS, FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing
