@@ -9,7 +9,7 @@
 # CHECK-NEXT:  "result": {
 # CHECK-NEXT:    "contents": {
 # CHECK-NEXT:      "kind": "plaintext",
-# CHECK-NEXT:      "value": "function foo → void\n\nvoid foo()"
+# CHECK-NEXT:      "value": "function foo\n\n🡺 void\n\nvoid foo()"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    "range": {
 # CHECK-NEXT:      "end": {
