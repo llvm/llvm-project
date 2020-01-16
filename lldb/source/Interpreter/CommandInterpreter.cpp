@@ -2839,8 +2839,7 @@ bool CommandInterpreter::IOHandlerInterrupt(IOHandler &io_handler) {
 }
 
 void CommandInterpreter::GetLLDBCommandsFromIOHandler(
-    const char *prompt, IOHandlerDelegate &delegate, bool asynchronously,
-    void *baton) {
+    const char *prompt, IOHandlerDelegate &delegate, void *baton) {
   Debugger &debugger = GetDebugger();
   IOHandlerSP io_handler_sp(
       new IOHandlerEditline(debugger, IOHandler::Type::CommandList,
@@ -2855,16 +2854,12 @@ void CommandInterpreter::GetLLDBCommandsFromIOHandler(
 
   if (io_handler_sp) {
     io_handler_sp->SetUserData(baton);
-    if (asynchronously)
-      debugger.PushIOHandler(io_handler_sp);
-    else
-      debugger.RunIOHandler(io_handler_sp);
+    debugger.PushIOHandler(io_handler_sp);
   }
 }
 
 void CommandInterpreter::GetPythonCommandsFromIOHandler(
-    const char *prompt, IOHandlerDelegate &delegate, bool asynchronously,
-    void *baton) {
+    const char *prompt, IOHandlerDelegate &delegate, void *baton) {
   Debugger &debugger = GetDebugger();
   IOHandlerSP io_handler_sp(
       new IOHandlerEditline(debugger, IOHandler::Type::PythonCode,
@@ -2879,10 +2874,7 @@ void CommandInterpreter::GetPythonCommandsFromIOHandler(
 
   if (io_handler_sp) {
     io_handler_sp->SetUserData(baton);
-    if (asynchronously)
-      debugger.PushIOHandler(io_handler_sp);
-    else
-      debugger.RunIOHandler(io_handler_sp);
+    debugger.PushIOHandler(io_handler_sp);
   }
 }
 
