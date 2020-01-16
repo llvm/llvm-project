@@ -7,7 +7,7 @@ module attributes {gpu.container_module} {
     return
   }
 
-  gpu.module @kernels {
+  module @kernels attributes {gpu.kernel_module} {
     gpu.func @loop_kernel(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>)
     attributes {gpu.kernel} {
       // CHECK: [[LB:%.*]] = spv.constant 4 : i32
