@@ -12,7 +12,7 @@
 include "mlir/IR/OpBase.td"
 
 //===----------------------------------------------------------------------===//
-// Op availaility definitions
+// Op availability definitions
 //===----------------------------------------------------------------------===//
 
 // The base class for defining op availability dimensions.

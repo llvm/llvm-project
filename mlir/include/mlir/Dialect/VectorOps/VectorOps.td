@@ -228,7 +228,7 @@ def Vector_ShuffleOp :
               v2 : <t_1 x t_2 x .. x t_k x type>
       we have s_i = t_i for all 1 < i <= k
     * the mask length equals the leading dimension size of the result
-    * numbering the input vector indices left to right accross the operands, all
+    * numbering the input vector indices left to right across the operands, all
       mask values must be within range, viz. given two k-D operands v1 and v2
       above, all mask values are in the range [0,s_1+t_1)
 
