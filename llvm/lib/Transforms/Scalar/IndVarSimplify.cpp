@@ -1508,33 +1508,22 @@ void WidenIV::widenWithVariantLoadUseCodegen(NarrowIVDefUse DU) {
   Builder.Insert(WideBO);
   WideBO->copyIRFlags(NarrowBO);
 
-  if (ExtKind == SignExtended)
-    ExtendKindMap[NarrowUse] = SignExtended;
-  else
-    ExtendKindMap[NarrowUse] = ZeroExtended;
+  assert(ExtKind != Unknown && "Unknown ExtKind not handled");
 
-  // Update the Use.
-  if (ExtKind == SignExtended) {
-    for (Use &U : NarrowUse->uses()) {
-      SExtInst *User = dyn_cast<SExtInst>(U.getUser());
-      if (User && User->getType() == WideType) {
-        LLVM_DEBUG(dbgs() << "INDVARS: eliminating " << *User << " replaced by "
-                          << *WideBO << "\n");
-        ++NumElimExt;
-        User->replaceAllUsesWith(WideBO);
-        DeadInsts.emplace_back(User);
-      }
-    }
-  } else { // ExtKind == ZeroExtended
-    for (Use &U : NarrowUse->uses()) {
-      ZExtInst *User = dyn_cast<ZExtInst>(U.getUser());
-      if (User && User->getType() == WideType) {
-        LLVM_DEBUG(dbgs() << "INDVARS: eliminating " << *User << " replaced by "
-                          << *WideBO << "\n");
-        ++NumElimExt;
-        User->replaceAllUsesWith(WideBO);
-        DeadInsts.emplace_back(User);
-      }
+  ExtendKindMap[NarrowUse] = ExtKind;
+
+  for (Use &U : NarrowUse->uses()) {
+    Instruction *User = nullptr;
+    if (ExtKind == SignExtended)
+      User = dyn_cast<SExtInst>(U.getUser());
+    else
+      User = dyn_cast<ZExtInst>(U.getUser());
+    if (User && User->getType() == WideType) {
+      LLVM_DEBUG(dbgs() << "INDVARS: eliminating " << *User << " replaced by "
+                        << *WideBO << "\n");
+      ++NumElimExt;
+      User->replaceAllUsesWith(WideBO);
+      DeadInsts.emplace_back(User);
     }
   }
 }
