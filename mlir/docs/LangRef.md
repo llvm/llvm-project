@@ -13,7 +13,7 @@ high-performance target-specific code.
 
 This document defines and describes the key concepts in MLIR, and is intended to
 be a dry reference document - the [rationale documentation](Rationale.md),
-[glossary](https://mlir.llvm.org/getting_started/Glossary/), and other content are hosted elsewhere.
+[glossary](../getting_started/Glossary.md), and other content are hosted elsewhere.
 
 MLIR is designed to be used in three different forms: a human-readable textual
 form suitable for debugging, an in-memory form suitable for programmatic
