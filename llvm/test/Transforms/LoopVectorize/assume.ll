@@ -1,9 +1,6 @@
-; RUN: opt < %s  -loop-vectorize -mtriple=x86_64-apple-macosx10.8.0 -mcpu=corei7 -S | FileCheck %s
-target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
+; RUN: opt < %s  -loop-vectorize -force-vector-width=4 -force-vector-interleave=2  -S | FileCheck %s
 
-; Function Attrs: nounwind uwtable
-define void @test1(float* noalias nocapture %a, float* noalias nocapture readonly %b) #0 {
+define void @test1(float* noalias nocapture %a, float* noalias nocapture readonly %b) {
 entry:
   br label %for.body
 
@@ -37,16 +34,13 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-; Function Attrs: nounwind
-declare void @llvm.assume(i1) #1
+declare void @llvm.assume(i1) #0
 
-attributes #0 = { nounwind uwtable }
-attributes #1 = { nounwind }
+attributes #0 = { nounwind willreturn }
 
 %struct.data = type { float*, float* }
 
-; Function Attrs: nounwind uwtable
-define void @test2(%struct.data* nocapture readonly %d) #0 {
+define void @test2(%struct.data* nocapture readonly %d) {
 entry:
   %b = getelementptr inbounds %struct.data, %struct.data* %d, i64 0, i32 1
   %0 = load float*, float** %b, align 8
@@ -97,4 +91,3 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   ret void
 }
-
