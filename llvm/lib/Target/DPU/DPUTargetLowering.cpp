@@ -235,6 +235,7 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   // and al.) and things become very complex for nothing
   // (see DAGTypeLegalizer::PromoteIntegerResult).
   setOperationActionForAllTypes(ISD::STORE, Custom);
+  setOperationActionForAllTypes(ISD::LOAD, Custom);
 
   setOperationAction(ISD::VAARG, MVT::Other, Custom);
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
@@ -330,6 +331,9 @@ SDValue DPUTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
 
   case ISD::BR_CC:
     return LowerBrCc(Op, DAG);
+
+  case ISD::LOAD:
+    return LowerLoad(Op, DAG);
 
   case ISD::STORE:
     return LowerStore(Op, DAG);
@@ -1606,229 +1610,40 @@ SDValue DPUTargetLowering::LowerBrCc(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(DPUISD::BrCCi, dl, VTs, Ops);
 }
 
-static bool canBeEncodedOn12Bits(uint64_t value) {
-  return (value <= 0x7FFL) || (value >= 0xFFFFFFFFFFFFF800L);
+void DPUTargetLowering::ReplaceNodeResults(SDNode *N,
+                                           SmallVectorImpl<SDValue> &Results,
+                                           SelectionDAG &DAG) const {
+  LLVM_DEBUG({
+    dbgs() << "ReplaceNodeResults:\n";
+    N->dump();
+  });
 }
 
-static bool canBeEncodedOn16Bits(uint64_t value) {
-  return (value <= 0x7FFFL) || (value >= 0xFFFFFFFFFFFF8000L);
+SDValue DPUTargetLowering::LowerLoad(SDValue Op, SelectionDAG &DAG) const {
+  LoadSDNode *LoadOp = cast<LoadSDNode>(Op.getNode());
+  unsigned NeedAlign =
+      LoadOp->getMemoryVT().getSimpleVT().getSizeInBits() / CHAR_BIT;
+  unsigned ClaimAlign = LoadOp->getAlignment();
+
+  if (ClaimAlign < NeedAlign) {
+    const SDLoc &dl(Op);
+    std::pair<SDValue, SDValue> P = expandUnalignedLoad(LoadOp, DAG);
+    return DAG.getMergeValues({P.first, P.second}, dl);
+  }
+
+  return SDValue();
 }
 
 SDValue DPUTargetLowering::LowerStore(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc dl(Op);
-  LLVM_DEBUG({
-    dbgs() << "DPU/Lower - lowering store ";
-    Op.dump(&DAG);
-  });
+  StoreSDNode *StoreOp = cast<StoreSDNode>(Op.getNode());
+  unsigned NeedAlign =
+      StoreOp->getMemoryVT().getSimpleVT().getSizeInBits() / CHAR_BIT;
+  unsigned ClaimAlign = StoreOp->getAlignment();
 
-  assert((Op.getNumOperands() == 4) &&
-         "unexpected number of operands to store operation");
-  SDValue Chain = Op.getOperand(0);
-  SDValue SourceOperand = Op.getOperand(1);
-  SDValue DestinationOperand = Op.getOperand(2);
-  SDValue ArgOperand = Op.getOperand(3);
-  bool usesImmediateOperand = false;
-  bool canUseStoreImmediate = false;
+  if (ClaimAlign < NeedAlign)
+    return expandUnalignedStore(StoreOp, DAG);
 
-  unsigned DPUOpcode;
-
-  StoreSDNode *StoreOp = cast<StoreSDNode>(Op);
-  unsigned AddressSpace = StoreOp->getAddressSpace();
-  MVT::SimpleValueType TargetType =
-      StoreOp->getMemoryVT().getSimpleVT().SimpleTy;
-
-  if (StoreOp) {
-    LLVM_DEBUG({
-      unsigned Alignment = StoreOp->getAlignment();
-      bool IsTruncating = StoreOp->isTruncatingStore();
-      dbgs() << "DPU/Lower - interpreting store operation:"
-             << " type = " << std::to_string(TargetType)
-             << " align=" << std::to_string(Alignment)
-             << " space=" << std::to_string(AddressSpace)
-             << " trunc=" << std::to_string(IsTruncating) << "\n";
-    });
-    LLVM_DEBUG(
-        dbgs() << "DPU/Lower - value type = "
-               << std::to_string(Op.getValueType().getSimpleVT().SimpleTy)
-               << "\n");
-    LLVM_DEBUG(dbgs() << "DPU/Lower - store args =\n");
-    for (unsigned eachArg = 0; eachArg < Op.getNumOperands(); eachArg++) {
-      LLVM_DEBUG({
-        dbgs() << "argument #" << std::to_string(eachArg) << " = ";
-        Op.getOperand(eachArg).dump(&DAG);
-      });
-    }
-
-    MachineMemOperand *MemOperand = StoreOp->getMemOperand();
-    if (!MemOperand) {
-      return Op;
-    }
-
-    // Because store immediate instructions only have an address offset on 12
-    // bits, we need to be careful, and check if we can really use them
-    unsigned int addressOpCode = DestinationOperand.getOpcode();
-    uint64_t offset = 0x8000000000000000L;
-    if (addressOpCode == ISD::ADD) {
-      SDValue firstAddOperand = DestinationOperand.getOperand(0);
-      SDValue secondAddOperand = DestinationOperand.getOperand(1);
-
-      (void)(canFetchConstantTo(firstAddOperand, &offset) ||
-             canFetchConstantTo(secondAddOperand, &offset));
-    } else if (const FrameIndexSDNode *FIDN =
-                   dyn_cast<FrameIndexSDNode>(DestinationOperand)) {
-      offset = (uint64_t)FIDN->getIndex() * 4;
-    } else {
-      canFetchConstantTo(DestinationOperand, &offset);
-    }
-
-    // Source may be either an immediate or a register... The DPU only supports
-    // a very restricted set of immediate stores, implying to force a copy to
-    // register in most of the cases. 8 and 16 bits operands can be stored as
-    // immediate. To avoid re-looping for truncstore stuff, we can immediately
-    // promote the operand to its value and let the instruction info play around
-    // with 32 bits values.
-    uint64_t immediate;
-    usesImmediateOperand = canFetchConstantTo(SourceOperand, &immediate);
-    if (((addressOpCode == ISD::CopyFromReg) || canBeEncodedOn12Bits(offset)) &&
-        usesImmediateOperand) {
-      switch (SourceOperand.getSimpleValueType().SimpleTy) {
-      case MVT::i1:
-      case MVT::i8:
-        LLVM_DEBUG({
-          dbgs() << "DPU/Lower - immediate operand to store can be truncated "
-                    "to 8 bits ";
-          SourceOperand.dump(&DAG);
-        });
-        SourceOperand =
-            DAG.getConstant(immediate, dl, EVT(MVT::i32), false /* isTarget */,
-                            false /* isOpaque */);
-        canUseStoreImmediate = true;
-        break;
-
-      case MVT::i16:
-        LLVM_DEBUG({
-          dbgs() << "DPU/Lower - immediate operand to store can be truncated "
-                    "to 16 bits ";
-          SourceOperand.dump(&DAG);
-        });
-        SourceOperand =
-            DAG.getConstant(immediate, dl, EVT(MVT::i32), false /* isTarget */,
-                            false /* isOpaque */);
-        canUseStoreImmediate = true;
-        break;
-      case MVT::i32:
-        if (canBeEncodedOn16Bits(immediate)) {
-          LLVM_DEBUG({
-            dbgs() << "DPU/Lower - immediate operand to store can be truncated "
-                      "to 16 bits ";
-            SourceOperand.dump(&DAG);
-          });
-          SourceOperand =
-              DAG.getConstant(immediate, dl, EVT(MVT::i32),
-                              false /* isTarget */, false /* isOpaque */);
-          canUseStoreImmediate = true;
-        } else {
-          LLVM_DEBUG({
-            dbgs() << "DPU/Lower - immediate operand will be fetched into "
-                      "temporary register: ";
-            SourceOperand.dump(&DAG);
-          });
-        }
-
-        break;
-      case MVT::i64:
-        if (canBeEncodedOn16Bits(immediate)) {
-          LLVM_DEBUG({
-            dbgs() << "DPU/Lower - immediate operand to store can be truncated "
-                      "to 16 bits ";
-            SourceOperand.dump(&DAG);
-          });
-          SourceOperand =
-              DAG.getConstant(immediate, dl, EVT(MVT::i64),
-                              false /* isTarget */, false /* isOpaque */);
-          canUseStoreImmediate = (MemOperand->getAlignment() % 8) == 0;
-        } else {
-          LLVM_DEBUG({
-            dbgs() << "DPU/Lower - immediate operand will be fetched into "
-                      "temporary register: ";
-            SourceOperand.dump(&DAG);
-          });
-        }
-
-        break;
-      default:
-        LLVM_DEBUG({
-          dbgs() << "DPU/Lower - immediate operand will be fetched into "
-                    "temporary register: ";
-          SourceOperand.dump(&DAG);
-        });
-        break;
-      }
-    }
-
-    if ((optLevel != CodeGenOpt::None) && canUseStoreImmediate &&
-        (AddressSpace == DPUADDR_SPACE::WRAM)) {
-      switch (TargetType) {
-      case MVT::i1:
-      case MVT::i8:
-        DPUOpcode = DPUISD::WRAM_STORE_8_IMM;
-        break;
-      case MVT::i16:
-        DPUOpcode = DPUISD::WRAM_STORE_16_IMM;
-        break;
-      case MVT::i32:
-        DPUOpcode = DPUISD::WRAM_STORE_32_IMM;
-        break;
-      case MVT::i64:
-        DPUOpcode = DPUISD::WRAM_STORE_64_IMM;
-        break;
-      default:
-        return SDValue();
-      }
-
-      SDValue Ops[] = {Chain, SourceOperand, DestinationOperand, ArgOperand};
-
-      SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
-      SDValue result = DAG.getNode(DPUOpcode, dl, VTs, Ops);
-      return result;
-    } else if (TargetType == MVT::i64) {
-      // A security: don't know where exactly the actual address space
-      // information is supplied. Making paranoid check sounds wiser right now.
-      const Value *Operand = MemOperand->getValue();
-      if (Operand) {
-        auto *PT = dyn_cast<PointerType>(Operand->getType());
-        if (PT) {
-          assert((PT->getAddressSpace() == AddressSpace) &&
-                 "address spaces are not consistent!!!");
-        }
-      }
-
-      switch (AddressSpace) {
-      default:
-        assert(false && "unknown target address space!");
-
-      case DPUADDR_SPACE::WRAM:
-        DPUOpcode = ((MemOperand->getAlignment() % 8) == 0)
-                        ? DPUISD::WRAM_STORE_64_ALIGNED
-                        : DPUISD::WRAM_STORE_64;
-        break;
-
-      case DPUADDR_SPACE::MRAM:
-        DPUOpcode = DPUISD::MRAM_STORE_64;
-        break;
-      }
-
-      SDValue Ops[] = {Chain, SourceOperand, DestinationOperand, ArgOperand};
-
-      SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
-      SDValue result = DAG.getNode(DPUOpcode, dl, VTs, Ops);
-      return result;
-    } else {
-      return SDValue();
-    }
-  } else {
-    return Op;
-  }
+  return SDValue();
 }
 
 SDValue DPUTargetLowering::LowerShift(SDValue Op, SelectionDAG &DAG,
@@ -2267,321 +2082,6 @@ EmitMramLoadDoubleWithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB) {
       .add(MI.getOperand(0))
       .addReg(WramCacheAddrReg)
       .addImm(0);
-
-  MI.eraseFromParent(); // The pseudo instruction is gone now.
-  return BB;
-}
-
-static MachineBasicBlock *
-EmitAlignedStoreWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
-                                                     MachineBasicBlock *BB) {
-  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
-  DebugLoc dl = MI.getDebugLoc();
-
-  BuildMI(*BB, MI, dl, TII.get(DPU::SDrir))
-      .add(MI.getOperand(1))
-      .add(MI.getOperand(2))
-      .add(MI.getOperand(0));
-
-  MI.eraseFromParent(); // The pseudo instruction is gone now.
-  return BB;
-}
-
-static MachineBasicBlock *
-EmitUnalignedStoreWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
-                                                       MachineBasicBlock *BB) {
-  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
-  DebugLoc dl = MI.getDebugLoc();
-  MachineFunction *F = BB->getParent();
-  MachineRegisterInfo &RI = F->getRegInfo();
-  int Alignment = -1;
-  int offset = MI.getOperand(2).getImm();
-
-  auto MemOp = MI.memoperands_begin();
-  auto MemOpEnd = MI.memoperands_end();
-  for (; MemOp != MemOpEnd; MemOp++) {
-    int MemOpAlignment = (*MemOp)->getAlignment();
-    if ((Alignment == -1) || (Alignment > MemOpAlignment))
-      Alignment = MemOpAlignment;
-  }
-  if (Alignment == 0)
-    Alignment = 1;
-  else if (Alignment == -1)
-    Alignment = 4;
-
-  if ((Alignment % 8) == 0 && (offset % 8) == 0) {
-    BuildMI(*BB, MI, dl, TII.get(DPU::SDrir))
-        .add(MI.getOperand(1))
-        .add(MI.getOperand(2))
-        .add(MI.getOperand(0));
-  } else {
-    if ((Alignment % 4) == 0 && (offset % 4) == 0) {
-
-      BuildMI(*BB, MI, dl, TII.get(DPU::SWrir))
-          .add(MI.getOperand(1))
-          .add(MI.getOperand(2))
-          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit);
-
-      BuildMI(*BB, MI, dl, TII.get(DPU::SWrir))
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 4)
-          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi);
-    } else if ((Alignment % 2) == 0 && (offset % 2) == 0) {
-      unsigned TmpReg1 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg2 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      BuildMI(*BB, MI, dl, TII.get(DPU::SHrir))
-          .add(MI.getOperand(1))
-          .add(MI.getOperand(2))
-          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg1)
-          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit)
-          .addImm(16);
-      BuildMI(*BB, MI, dl, TII.get(DPU::SHrir))
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 2)
-          .addReg(TmpReg1);
-
-      BuildMI(*BB, MI, dl, TII.get(DPU::SHrir))
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 4)
-          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg2)
-          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi)
-          .addImm(16);
-      BuildMI(*BB, MI, dl, TII.get(DPU::SHrir))
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 6)
-          .addReg(TmpReg2);
-    } else if (Alignment == 1) {
-      unsigned TmpReg1 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg2 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg3 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg4 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg5 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg6 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-          .add(MI.getOperand(1))
-          .add(MI.getOperand(2))
-          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg1)
-          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit)
-          .addImm(8);
-      BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 1)
-          .addReg(TmpReg1);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg2)
-          .addReg(TmpReg1)
-          .addImm(8);
-      BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 2)
-          .addReg(TmpReg2);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg3)
-          .addReg(TmpReg2)
-          .addImm(8);
-      BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 3)
-          .addReg(TmpReg3);
-
-      BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 4)
-          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg4)
-          .addReg(MI.getOperand(0).getReg(), 0, DPU::sub_32bit_hi)
-          .addImm(8);
-      BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 5)
-          .addReg(TmpReg4);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg5)
-          .addReg(TmpReg4)
-          .addImm(8);
-      BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 6)
-          .addReg(TmpReg5);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSRrri), TmpReg6)
-          .addReg(TmpReg5)
-          .addImm(8);
-      BuildMI(*BB, MI, dl, TII.get(DPU::SBrir))
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 7)
-          .addReg(TmpReg6);
-    } else {
-      llvm_unreachable(
-          "Unexpected Alignment in "
-          "EmitUnalignedStoreWramDoubleRegisterWithCustomInserter");
-    }
-  }
-
-  MI.eraseFromParent(); // The pseudo instruction is gone now.
-  return BB;
-}
-
-static MachineBasicBlock *
-EmitAlignedStoreWramDoubleImmediateWithCustomInserter(MachineInstr &MI,
-                                                      MachineBasicBlock *BB) {
-  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
-  DebugLoc dl = MI.getDebugLoc();
-
-  BuildMI(*BB, MI, dl, TII.get(DPU::SDrii))
-      .add(MI.getOperand(1))
-      .add(MI.getOperand(2))
-      .add(MI.getOperand(0));
-
-  MI.eraseFromParent(); // The pseudo instruction is gone now.
-  return BB;
-}
-
-static MachineBasicBlock *
-EmitUnalignedLoadWramDoubleRegisterWithCustomInserter(MachineInstr &MI,
-                                                      MachineBasicBlock *BB) {
-  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
-  DebugLoc dl = MI.getDebugLoc();
-  int Alignment = -1;
-  int offset = MI.getOperand(2).getImm();
-  MachineFunction *F = BB->getParent();
-  MachineRegisterInfo &RI = F->getRegInfo();
-
-  auto MemOp = MI.memoperands_begin();
-  auto MemOpEnd = MI.memoperands_end();
-  for (; MemOp != MemOpEnd; MemOp++) {
-    int MemOpAlignment = (*MemOp)->getAlignment();
-    if ((Alignment == -1) || (Alignment > MemOpAlignment))
-      Alignment = MemOpAlignment;
-  }
-  if (Alignment == 0)
-    Alignment = 1;
-  else if (Alignment == -1)
-    Alignment = 4;
-
-  if ((Alignment % 8) == 0 && (offset % 8) == 0) {
-    BuildMI(*BB, MI, dl, TII.get(DPU::LDrri))
-        .add(MI.getOperand(0))
-        .add(MI.getOperand(1))
-        .add(MI.getOperand(2));
-  } else {
-    unsigned DestLsb = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-    unsigned DestMsb = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-    unsigned UndefReg = RI.createVirtualRegister(&DPU::GP64_REGRegClass);
-    unsigned DestPart = RI.createVirtualRegister(&DPU::GP64_REGRegClass);
-
-    if ((Alignment % 4) == 0 && (offset % 4) == 0) {
-      BuildMI(*BB, MI, dl, TII.get(DPU::LWrri), DestLsb)
-          .add(MI.getOperand(1))
-          .add(MI.getOperand(2));
-
-      BuildMI(*BB, MI, dl, TII.get(DPU::LWrri), DestMsb)
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 4);
-    } else if ((Alignment % 2) == 0 && (offset % 2) == 0) {
-      unsigned TmpReg1 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg2 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg3 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg4 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LHUrri), TmpReg1)
-          .add(MI.getOperand(1))
-          .add(MI.getOperand(2));
-      BuildMI(*BB, MI, dl, TII.get(DPU::LHUrri), TmpReg2)
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 2);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), DestLsb)
-          .addReg(TmpReg1)
-          .addReg(TmpReg2)
-          .addImm(16);
-
-      BuildMI(*BB, MI, dl, TII.get(DPU::LHUrri), TmpReg3)
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 4);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LHUrri), TmpReg4)
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 6);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), DestMsb)
-          .addReg(TmpReg3)
-          .addReg(TmpReg4)
-          .addImm(16);
-    } else if (Alignment == 1) {
-      unsigned TmpReg1 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg2 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg3 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg4 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg5 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg6 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg7 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg8 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg9 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg10 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg11 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      unsigned TmpReg12 = RI.createVirtualRegister(&DPU::GP_REGRegClass);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg1)
-          .add(MI.getOperand(1))
-          .add(MI.getOperand(2));
-      BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg2)
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 1);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), TmpReg3)
-          .addReg(TmpReg1)
-          .addReg(TmpReg2)
-          .addImm(8);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg4)
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 2);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), TmpReg5)
-          .addReg(TmpReg3)
-          .addReg(TmpReg4)
-          .addImm(16);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg6)
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 3);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), DestLsb)
-          .addReg(TmpReg5)
-          .addReg(TmpReg6)
-          .addImm(24);
-
-      BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg7)
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 4);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg8)
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 5);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), TmpReg9)
-          .addReg(TmpReg7)
-          .addReg(TmpReg8)
-          .addImm(8);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg10)
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 6);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), TmpReg11)
-          .addReg(TmpReg9)
-          .addReg(TmpReg10)
-          .addImm(16);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LBUrri), TmpReg12)
-          .add(MI.getOperand(1))
-          .addImm(MI.getOperand(2).getImm() + 7);
-      BuildMI(*BB, MI, dl, TII.get(DPU::LSL_ADDrrri), DestMsb)
-          .addReg(TmpReg11)
-          .addReg(TmpReg12)
-          .addImm(24);
-    } else {
-      llvm_unreachable("Unexpected Alignment in "
-                       "EmitUnalignedLoadWramDoubleRegisterWithCustomInserter");
-    }
-
-    BuildMI(*BB, MI, dl, TII.get(DPU::IMPLICIT_DEF), UndefReg);
-
-    BuildMI(*BB, MI, dl, TII.get(DPU::INSERT_SUBREG), DestPart)
-        .addReg(UndefReg)
-        .addReg(DestLsb)
-        .addImm(DPU::sub_32bit);
-
-    BuildMI(*BB, MI, dl, TII.get(DPU::INSERT_SUBREG), MI.getOperand(0).getReg())
-        .addReg(DestPart)
-        .addReg(DestMsb)
-        .addImm(DPU::sub_32bit_hi);
-  }
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
@@ -3394,14 +2894,6 @@ DPUTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return EmitMramSubLoadWithCustomInserter(MI, BB, 4, DPU::LWrri);
   case DPU::MRAM_LOAD_DOUBLEmr:
     return EmitMramLoadDoubleWithCustomInserter(MI, BB);
-  case DPU::WRAM_STORE_DOUBLErm:
-    return EmitUnalignedStoreWramDoubleRegisterWithCustomInserter(MI, BB);
-  case DPU::WRAM_STORE_DOUBLE_ALIGNEDrm:
-    return EmitAlignedStoreWramDoubleRegisterWithCustomInserter(MI, BB);
-  case DPU::WRAM_STORE_DOUBLEim:
-    return EmitAlignedStoreWramDoubleImmediateWithCustomInserter(MI, BB);
-  case DPU::WRAM_LOAD_DOUBLErm:
-    return EmitUnalignedLoadWramDoubleRegisterWithCustomInserter(MI, BB);
   case DPU::LSL64rr:
     return EmitLsl64RegisterWithCustomInserter(MI, BB);
   case DPU::LSL64ri:

@@ -88,6 +88,9 @@ public:
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
+  void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                          SelectionDAG &DAG) const override;
+
 private:
   CodeGenOpt::Level optLevel;
 
@@ -103,6 +106,8 @@ private:
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerBrCc(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
 

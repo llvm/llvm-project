@@ -51,16 +51,6 @@ def DPUcallseq_end      : SDNode<"ISD::CALLSEQ_END",   SDT_DPUCallSeqEnd, [SDNPH
 
 def DPUcall             : SDNode<"DPUISD::CALL", SDT_DPUCall, [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 
-def SDT_STORE_OP : SDTypeProfile<0, 2, [SDTCisPtrTy<1>]>;
-def SDT_LOAD_OP : SDTypeProfile<1, 1, [SDTCisPtrTy<1>]>;
-def WramStore8Imm   : SDNode<"DPUISD::WRAM_STORE_8_IMM", SDT_STORE_OP, [SDNPHasChain, SDNPMayStore]>;
-def WramStore16Imm   : SDNode<"DPUISD::WRAM_STORE_16_IMM", SDT_STORE_OP, [SDNPHasChain, SDNPMayStore]>;
-def WramStore32Imm   : SDNode<"DPUISD::WRAM_STORE_32_IMM", SDT_STORE_OP, [SDNPHasChain, SDNPMayStore]>;
-def WramStore64Imm   : SDNode<"DPUISD::WRAM_STORE_64_IMM", SDT_STORE_OP, [SDNPHasChain, SDNPMayStore]>;
-def WramStore64   : SDNode<"DPUISD::WRAM_STORE_64", SDT_STORE_OP, [SDNPHasChain, SDNPMayStore]>;
-def WramStore64Aligned   : SDNode<"DPUISD::WRAM_STORE_64_ALIGNED", SDT_STORE_OP, [SDNPHasChain, SDNPMayStore]>;
-def MramStore64   : SDNode<"DPUISD::MRAM_STORE_64", SDT_STORE_OP, [SDNPHasChain, SDNPMayStore]>;
-
 // To promote special types of operands to registers (see the patterns below).
 def SDTDPUWrapper       : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>, SDTCisPtrTy<0>]>;
 def DPUWrapper          : SDNode<"DPUISD::Wrapper", SDTDPUWrapper>;
@@ -96,8 +86,6 @@ class wram_load_frag<PatFrag base_load> : PatFrag<(ops node:$ptr), (base_load no
 class wram_store_frag<PatFrag base_store> : PatFrag<(ops node:$val, node:$ptr), (base_store node:$val, node:$ptr), [{
     return IsAStoreToAddrSpace(N, DPUADDR_SPACE::WRAM);
 }]>;
-
-def wram_loadi64  : PatFrag<(ops node:$ptr), (i64 (wram_load_frag<load> node:$ptr))>;
 
 multiclass WramLoadXPat<ImmOperand LdTy, PatFrag LoadOp, DPUInstruction Inst> {
   def : Pat<(LdTy (wram_load_frag<LoadOp> SimpleRegOrCst:$ra)), (Inst SimpleRegOrCst:$ra, 0)>;
@@ -162,7 +150,7 @@ defm : WramLoadPat<extloadi8, LBSrri, LBS_Srri>;
 defm : WramLoadPat<zextloadi16, LHUrri, LHU_Urri>;
 defm : WramLoadPat<sextloadi16, LHSrri, LHS_Srri>;
 defm : WramLoadPat<extloadi16, LHSrri, LHS_Srri>;
-defm : WramLoadXPat<i32, load, LWrri>;
+defm : WramLoadPat<load, LWrri, LDrri>;
 defm : WramLoadXPat<i64, zextloadi32, LW_Urri>;
 defm : WramLoadXPat<i64, sextloadi32, LW_Srri>;
 defm : WramLoadXPat<i64, extloadi32, LW_Srri>;
@@ -170,66 +158,15 @@ defm : WramLoadXPat<i64, extloadi32, LW_Srri>;
 defm : WramStorePat<truncstorei8, SBrir, SimpleReg>;
 defm : WramStorePat<truncstorei16, SHrir, SimpleReg>;
 defm : WramStorePat<store, SWrir, SimpleReg>;
+defm : WramStorePat<store, SDrir, DoubleReg>;
 
 defm : WramStoreSub64Pat<truncstorei8, SBrir>;
 defm : WramStoreSub64Pat<truncstorei16, SHrir>;
 defm : WramStoreSub64Pat<truncstorei32, SWrir>;
 
-defm : WramStoreImmPat<WramStore8Imm, SBrii, su8_imm>;
-defm : WramStoreImmPat<WramStore16Imm, SHrii, su16_imm>;
-defm : WramStoreImmPat<WramStore32Imm, SWrii, s16_imm>;
-
-def mram_load : PatFrag<(ops node:$ptr), (unindexedload node:$ptr), [{
-  return (cast<LoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD) && IsALoadFromAddrSpace(N, DPUADDR_SPACE::MRAM);
-}]>;
-
-def mram_extload : PatFrag<(ops node:$ptr), (unindexedload node:$ptr), [{
-  return (cast<LoadSDNode>(N)->getExtensionType() == ISD::EXTLOAD) && IsALoadFromAddrSpace(N, DPUADDR_SPACE::MRAM);
-}]>;
-
-def mram_zextload : PatFrag<(ops node:$ptr), (unindexedload node:$ptr), [{
-  return (cast<LoadSDNode>(N)->getExtensionType() == ISD::ZEXTLOAD) && IsALoadFromAddrSpace(N, DPUADDR_SPACE::MRAM);
-}]>;
-
-def mram_sextload : PatFrag<(ops node:$ptr), (unindexedload node:$ptr), [{
-  return (cast<LoadSDNode>(N)->getExtensionType() == ISD::SEXTLOAD) && IsALoadFromAddrSpace(N, DPUADDR_SPACE::MRAM);
-}]>;
-
-def mram_extloadi8  : PatFrag<(ops node:$ptr), (mram_extload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i8;
-}]>;
-
-def mram_extloadi16  : PatFrag<(ops node:$ptr), (mram_extload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
-
-def mram_extloadi32 : PatFrag<(ops node:$ptr), (mram_extload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
-
-def mram_sextloadi8  : PatFrag<(ops node:$ptr), (mram_sextload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i8;
-}]>;
-
-def mram_sextloadi16  : PatFrag<(ops node:$ptr), (mram_sextload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
-
-def mram_sextloadi32 : PatFrag<(ops node:$ptr), (mram_sextload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
-
-def mram_zextloadi8  : PatFrag<(ops node:$ptr), (mram_zextload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i8;
-}]>;
-
-def mram_zextloadi16  : PatFrag<(ops node:$ptr), (mram_zextload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
-
-def mram_zextloadi32 : PatFrag<(ops node:$ptr), (mram_zextload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
+defm : WramStoreImmPat<truncstorei8, SBrii, su8_imm>;
+defm : WramStoreImmPat<truncstorei16, SHrii, su16_imm>;
+defm : WramStoreImmPat<store, SWrii, s16_imm>;
 
 // Special instructions for 64 bits emulation.
 
@@ -537,34 +474,60 @@ def : Pat<(i32 (DPUWrapper tglobaladdr :$dst)), (MOVEri tglobaladdr :$dst)>;
 def : Pat<(i32 (DPUWrapper texternalsym:$dst)), (MOVEri texternalsym:$dst)>;
 def : Pat<(i32 (DPUWrapper tblockaddress:$dst)), (MOVEri tblockaddress:$dst)>;
 
-// -----------------------------------------------------------------------------
-// LOAD/STORE
-// -----------------------------------------------------------------------------
+//===----------------------------------------------------------------------===//
+// Software cache instructions
+//===----------------------------------------------------------------------===//
+def mram_load : PatFrag<(ops node:$ptr), (unindexedload node:$ptr), [{
+  return (cast<LoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD) && IsALoadFromAddrSpace(N, DPUADDR_SPACE::MRAM);
+}]>;
 
-let isAsCheapAsAMove = 0, mayStore = 1, usesCustomInserter = 1 in {
-    def WRAM_STORE_DOUBLErm: PseudoDPUInstruction<
-                    (outs), (ins GP64_REG:$db, MEMri24:$addr),
-                    "",
-                    [(WramStore64 i64:$db, ADDRESS_IN_STACK:$addr)]
-                    >;
-    def WRAM_STORE_DOUBLE_ALIGNEDrm: PseudoDPUInstruction<
-                    (outs), (ins GP64_REG:$db, MEMri24:$addr),
-                    "",
-                    [(WramStore64Aligned i64:$db, ADDRESS_IN_STACK:$addr)]
-                    >;
-    def WRAM_STORE_DOUBLEim: PseudoDPUInstruction<
-                    (outs), (ins i64imm:$imm, MEMri24:$addr),
-                    "",
-                    [(WramStore64Imm (i64 imm:$imm), ADDRESS_IN_STACK:$addr)]
-                    >;
-}
+def mram_extload : PatFrag<(ops node:$ptr), (unindexedload node:$ptr), [{
+  return (cast<LoadSDNode>(N)->getExtensionType() == ISD::EXTLOAD) && IsALoadFromAddrSpace(N, DPUADDR_SPACE::MRAM);
+}]>;
 
-let usesCustomInserter = 1 in {
-    def WRAM_LOAD_DOUBLErm : PseudoDPUInstruction<
-           (outs GP64_REG:$dc), (ins MEMri24:$addr),
-           "",
-           [(set i64:$dc, (wram_loadi64 ADDRESS_IN_STACK:$addr))]>;
-}
+def mram_zextload : PatFrag<(ops node:$ptr), (unindexedload node:$ptr), [{
+  return (cast<LoadSDNode>(N)->getExtensionType() == ISD::ZEXTLOAD) && IsALoadFromAddrSpace(N, DPUADDR_SPACE::MRAM);
+}]>;
+
+def mram_sextload : PatFrag<(ops node:$ptr), (unindexedload node:$ptr), [{
+  return (cast<LoadSDNode>(N)->getExtensionType() == ISD::SEXTLOAD) && IsALoadFromAddrSpace(N, DPUADDR_SPACE::MRAM);
+}]>;
+
+def mram_extloadi8  : PatFrag<(ops node:$ptr), (mram_extload node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i8;
+}]>;
+
+def mram_extloadi16  : PatFrag<(ops node:$ptr), (mram_extload node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+
+def mram_extloadi32 : PatFrag<(ops node:$ptr), (mram_extload node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
+
+def mram_sextloadi8  : PatFrag<(ops node:$ptr), (mram_sextload node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i8;
+}]>;
+
+def mram_sextloadi16  : PatFrag<(ops node:$ptr), (mram_sextload node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+
+def mram_sextloadi32 : PatFrag<(ops node:$ptr), (mram_sextload node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
+
+def mram_zextloadi8  : PatFrag<(ops node:$ptr), (mram_zextload node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i8;
+}]>;
+
+def mram_zextloadi16  : PatFrag<(ops node:$ptr), (mram_zextload node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+
+def mram_zextloadi32 : PatFrag<(ops node:$ptr), (mram_zextload node:$ptr), [{
+  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
 
 def mram_store : PatFrag<(ops node:$val, node:$ptr),
                     (unindexedstore node:$val, node:$ptr), [{
@@ -592,9 +555,6 @@ def mram_truncstorei32 : PatFrag<(ops node:$val, node:$ptr),
             IsAStoreToAddrSpace(N, (unsigned int) DPUADDR_SPACE::MRAM);
 }]>;
 
-//===----------------------------------------------------------------------===//
-// Software cache instructions
-//===----------------------------------------------------------------------===//
 let usesCustomInserter = 1 in {
     class MRAM_STORE_X_rm<PatFrag OpNode> : PseudoDPUInstruction<
                       (outs), (ins GP_REG:$rb, MEMri24:$addr),
@@ -622,7 +582,7 @@ let usesCustomInserter = 1 in {
     def MRAM_STORE_DOUBLErm: PseudoDPUInstruction<
                       (outs), (ins GP64_REG:$db, MEMri24:$addr),
                       "",
-                      [(MramStore64 i64:$db, ADDRESS_IN_STACK:$addr)]
+                      [(mram_store i64:$db, ADDRESS_IN_STACK:$addr)]
                       >;
 
     def MRAM_LOADmr     : MRAM_LOAD_X_mr<mram_load>;
