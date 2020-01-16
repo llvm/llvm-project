@@ -2,7 +2,7 @@ set(LIBS
   MLIRAffineOps
   MLIRGPU
   MLIRIR
-  MLIRLinalg
+  MLIRLinalgOps
   MLIRPass
   MLIRStandardOps
   MLIRSupport
