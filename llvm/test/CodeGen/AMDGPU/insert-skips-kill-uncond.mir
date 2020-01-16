@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=polaris10 -run-pass si-insert-skips -amdgpu-skip-threshold=1 %s -o - | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=polaris10 -run-pass si-insert-skips -amdgpu-skip-threshold-legacy=1 %s -o - | FileCheck %s
 # https://bugs.freedesktop.org/show_bug.cgi?id=99019
 --- |
   define amdgpu_ps void @kill_uncond_branch() {

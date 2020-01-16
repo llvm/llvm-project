@@ -389,7 +389,6 @@ bb3:
 ; GCN-LABEL: {{^}}uniform_inside_divergent:
 ; GCN: v_cmp_gt_u32_e32 vcc, 16, v{{[0-9]+}}
 ; GCN-NEXT: s_and_saveexec_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], vcc
-; GCN-NEXT: ; mask branch [[ENDIF:BB[0-9]+_[0-9]+]]
 ; GCN-NEXT: s_cbranch_execnz [[IF:BB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: [[LONGBB:BB[0-9]+_[0-9]+]]: ; %entry
@@ -401,7 +400,7 @@ bb3:
 ; GCN-NEXT: [[IF]]: ; %if
 ; GCN: buffer_store_dword
 ; GCN: s_cmp_lg_u32
-; GCN: s_cbranch_scc1 [[ENDIF]]
+; GCN: s_cbranch_scc1 [[ENDIF:BB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: ; %bb.2: ; %if_uniform
 ; GCN: buffer_store_dword
@@ -438,12 +437,10 @@ endif:
 ; GCN: v_cmp_nlt_f32_e32 vcc
 ; GCN-NEXT: s_and_saveexec_b64 [[TEMP_MASK:s\[[0-9]+:[0-9]+\]]], vcc
 ; GCN-NEXT: s_xor_b64  [[MASK:s\[[0-9]+:[0-9]+\]]], exec, [[TEMP_MASK]]
-; GCN-NEXT: ; mask branch [[FLOW:BB[0-9]+_[0-9]+]]
 
-; GCN: [[FLOW]]: ; %Flow
+; GCN: BB{{[0-9]+_[0-9]+}}: ; %Flow
 ; GCN-NEXT: s_or_saveexec_b64 [[TEMP_MASK1:s\[[0-9]+:[0-9]+\]]], [[MASK]]
 ; GCN-NEXT: s_xor_b64 exec, exec, [[TEMP_MASK1]]
-; GCN-NEXT: ; mask branch [[RET:BB[0-9]+_[0-9]+]]
 
 ; GCN: [[LOOP_BODY:BB[0-9]+_[0-9]+]]: ; %loop{{$}}
 ; GCN: ;;#ASMSTART
@@ -454,7 +451,7 @@ endif:
 ; GCN: v_nop_e64
 ; GCN: v_nop_e64
 ; GCN: ;;#ASMEND
-; GCN: s_cbranch_vccz [[RET]]
+; GCN: s_cbranch_vccz [[RET:BB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: [[LONGBB:BB[0-9]+_[0-9]+]]: ; %loop
 ; GCN-NEXT: ; in Loop: Header=[[LOOP_BODY]] Depth=1

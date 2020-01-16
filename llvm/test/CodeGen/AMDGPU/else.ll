@@ -5,7 +5,6 @@
 ; CHECK: ; %Flow
 ; CHECK-NEXT: s_or_saveexec_b64 [[DST:s\[[0-9]+:[0-9]+\]]],
 ; CHECK-NEXT: s_xor_b64 exec, exec, [[DST]]
-; CHECK-NEXT: ; mask branch
 define amdgpu_ps float @else_no_execfix(i32 %z, float %v) #0 {
 main_body:
   %cc = icmp sgt i32 %z, 5
@@ -32,7 +31,7 @@ end:
 ; CHECK-NEXT: s_and_b64 exec, exec, [[INIT_EXEC]]
 ; CHECK-NEXT: s_and_b64 [[AND_INIT:s\[[0-9]+:[0-9]+\]]], exec, [[DST]]
 ; CHECK-NEXT: s_xor_b64 exec, exec, [[AND_INIT]]
-; CHECK-NEXT: ; mask branch
+; CHECK-NEXT: s_cbranch_execz
 define amdgpu_ps void @else_execfix_leave_wqm(i32 %z, float %v) #0 {
 main_body:
   %cc = icmp sgt i32 %z, 5
