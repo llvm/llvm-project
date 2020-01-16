@@ -13,14 +13,16 @@
 // pass. It should be easy to create an analysis pass around it if there
 // is a need (but D45420 needs to happen first).
 //
-#include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PatternMatch.h"
+#include "llvm/Transforms/Vectorize/LoopVectorize.h"
 
 using namespace llvm;
+using namespace PatternMatch;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -897,6 +899,14 @@ bool LoopVectorizationLegality::blockCanBePredicated(
         if (C->canTrap())
           return false;
     }
+
+    // We can predicate blocks with calls to assume, as long as we drop them in
+    // case we flatten the CFG via predication.
+    if (match(&I, m_Intrinsic<Intrinsic::assume>())) {
+      ConditionalAssumes.insert(&I);
+      continue;
+    }
+
     // We might be able to hoist the load.
     if (I.mayReadFromMemory()) {
       auto *LI = dyn_cast<LoadInst>(&I);

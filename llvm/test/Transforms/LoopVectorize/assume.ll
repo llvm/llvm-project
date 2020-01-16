@@ -91,3 +91,51 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   ret void
 }
+
+; Test case for PR43620. Make sure we can vectorize with predication in presence
+; of assume calls. For now, check that we drop all assumes in predicated blocks
+; in the vector body.
+define void @predicated_assume(float* noalias nocapture readonly %a, float* noalias nocapture %b, i32 %n) {
+
+; Check that the vector.body does not contain any assumes.
+
+; CHECK-LABEL: @predicated_assume(
+; CHECK:     vector.body:
+; CHECK-NOT:   call void @llvm.assume(
+; CHECK:     scalar.ph:
+;
+entry:
+  %cmp15 = icmp eq i32 %n, 0
+  br i1 %cmp15, label %for.cond.cleanup, label %for.body.preheader
+
+for.body.preheader:                               ; preds = %entry
+  %0 = zext i32 %n to i64
+  br label %for.body
+
+for.cond.cleanup.loopexit:                        ; preds = %if.end5
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+  ret void
+
+for.body:                                         ; preds = %for.body.preheader, %if.end5
+  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %if.end5 ]
+  %cmp1 = icmp ult i64 %indvars.iv, 495616
+  br i1 %cmp1, label %if.end5, label %if.else
+
+if.else:                                          ; preds = %for.body
+  %cmp2 = icmp ult i64 %indvars.iv, 991232
+  tail call void @llvm.assume(i1 %cmp2)
+  br label %if.end5
+
+if.end5:                                          ; preds = %for.body, %if.else
+  %x.0 = phi float [ 4.200000e+01, %if.else ], [ 2.300000e+01, %for.body ]
+  %arrayidx = getelementptr inbounds float, float* %a, i64 %indvars.iv
+  %1 = load float, float* %arrayidx, align 4
+  %mul = fmul float %x.0, %1
+  %arrayidx7 = getelementptr inbounds float, float* %b, i64 %indvars.iv
+  store float %mul, float* %arrayidx7, align 4
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %cmp = icmp eq i64 %indvars.iv.next, %0
+  br i1 %cmp, label %for.cond.cleanup.loopexit, label %for.body
+}
