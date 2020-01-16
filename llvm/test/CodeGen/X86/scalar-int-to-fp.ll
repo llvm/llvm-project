@@ -214,21 +214,19 @@ define double @s32_to_d(i32 %a) nounwind {
 }
 
 define x86_fp80 @u32_to_x(i32 %a) nounwind {
-; AVX512_32-LABEL: u32_to_x:
-; AVX512_32:       # %bb.0:
-; AVX512_32-NEXT:    pushl %ebp
-; AVX512_32-NEXT:    movl %esp, %ebp
-; AVX512_32-NEXT:    andl $-8, %esp
-; AVX512_32-NEXT:    subl $8, %esp
-; AVX512_32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512_32-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX512_32-NEXT:    vorpd %xmm0, %xmm1, %xmm1
-; AVX512_32-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
-; AVX512_32-NEXT:    vmovsd %xmm0, (%esp)
-; AVX512_32-NEXT:    fldl (%esp)
-; AVX512_32-NEXT:    movl %ebp, %esp
-; AVX512_32-NEXT:    popl %ebp
-; AVX512_32-NEXT:    retl
+; CHECK32-LABEL: u32_to_x:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    pushl %ebp
+; CHECK32-NEXT:    movl %esp, %ebp
+; CHECK32-NEXT:    andl $-8, %esp
+; CHECK32-NEXT:    subl $8, %esp
+; CHECK32-NEXT:    movl 8(%ebp), %eax
+; CHECK32-NEXT:    movl %eax, (%esp)
+; CHECK32-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; CHECK32-NEXT:    fildll (%esp)
+; CHECK32-NEXT:    movl %ebp, %esp
+; CHECK32-NEXT:    popl %ebp
+; CHECK32-NEXT:    retl
 ;
 ; CHECK64-LABEL: u32_to_x:
 ; CHECK64:       # %bb.0:
@@ -236,36 +234,6 @@ define x86_fp80 @u32_to_x(i32 %a) nounwind {
 ; CHECK64-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
 ; CHECK64-NEXT:    fildll -{{[0-9]+}}(%rsp)
 ; CHECK64-NEXT:    retq
-;
-; SSE2_32-LABEL: u32_to_x:
-; SSE2_32:       # %bb.0:
-; SSE2_32-NEXT:    pushl %ebp
-; SSE2_32-NEXT:    movl %esp, %ebp
-; SSE2_32-NEXT:    andl $-8, %esp
-; SSE2_32-NEXT:    subl $8, %esp
-; SSE2_32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2_32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2_32-NEXT:    orpd %xmm0, %xmm1
-; SSE2_32-NEXT:    subsd %xmm0, %xmm1
-; SSE2_32-NEXT:    movsd %xmm1, (%esp)
-; SSE2_32-NEXT:    fldl (%esp)
-; SSE2_32-NEXT:    movl %ebp, %esp
-; SSE2_32-NEXT:    popl %ebp
-; SSE2_32-NEXT:    retl
-;
-; X87-LABEL: u32_to_x:
-; X87:       # %bb.0:
-; X87-NEXT:    pushl %ebp
-; X87-NEXT:    movl %esp, %ebp
-; X87-NEXT:    andl $-8, %esp
-; X87-NEXT:    subl $8, %esp
-; X87-NEXT:    movl 8(%ebp), %eax
-; X87-NEXT:    movl %eax, (%esp)
-; X87-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; X87-NEXT:    fildll (%esp)
-; X87-NEXT:    movl %ebp, %esp
-; X87-NEXT:    popl %ebp
-; X87-NEXT:    retl
   %r = uitofp i32 %a to x86_fp80
   ret x86_fp80 %r
 }
