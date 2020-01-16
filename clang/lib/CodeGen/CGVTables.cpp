@@ -676,7 +676,12 @@ void CodeGenVTables::addVTableComponent(
       // Method is acceptable, continue processing as usual.
     }
 
-    auto getSpecialVirtualFn = [&](StringRef name) {
+    auto getSpecialVirtualFn = [&](StringRef name) -> llvm::Constant * {
+      // For NVPTX devices in OpenMP emit special functon as null pointers,
+      // otherwise linking ends up with unresolved references.
+      if (CGM.getLangOpts().OpenMP && CGM.getLangOpts().OpenMPIsDevice &&
+          CGM.getTriple().isNVPTX())
+        return llvm::ConstantPointerNull::get(CGM.Int8PtrTy);
       llvm::FunctionType *fnTy =
           llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
       llvm::Constant *fn = cast<llvm::Constant>(
