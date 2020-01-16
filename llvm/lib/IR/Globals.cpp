@@ -94,6 +94,13 @@ void GlobalValue::eraseFromParent() {
   llvm_unreachable("not a global");
 }
 
+bool GlobalValue::isInterposable() const {
+  if (isInterposableLinkage(getLinkage()))
+    return true;
+  return getParent() && getParent()->getSemanticInterposition() &&
+         !isDSOLocal();
+}
+
 unsigned GlobalValue::getAlignment() const {
   if (auto *GA = dyn_cast<GlobalAlias>(this)) {
     // In general we cannot compute this at the IR level, but we try.

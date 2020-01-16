@@ -5037,6 +5037,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                   options::OPT_fno_emulated_tls);
   Args.AddLastArg(CmdArgs, options::OPT_fkeep_static_consts);
 
+  if (Args.hasFlag(options::OPT_fsemantic_interposition,
+                   options::OPT_fno_semantic_interposition, false))
+    CmdArgs.push_back("-fsemantic-interposition");
+
   // AltiVec-like language extensions aren't relevant for assembling.
   if (!isa<PreprocessJobAction>(JA) || Output.getType() != types::TY_PP_Asm)
     Args.AddLastArg(CmdArgs, options::OPT_fzvector);
