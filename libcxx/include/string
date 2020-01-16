@@ -813,7 +813,7 @@ public:
     basic_string(basic_string&& __str, const allocator_type& __a);
 #endif  // _LIBCPP_CXX03_LANG
 
-    template <class = _EnableIf<__is_allocator<_Allocator>::value, nullptr_t>>
+    template <class = _EnableIf<__is_allocator<_Allocator>::value, nullptr_t> >
     _LIBCPP_INLINE_VISIBILITY
     basic_string(const _CharT* __s) : __r_(__default_init_tag(), __default_init_tag()) {
       _LIBCPP_ASSERT(__s != nullptr, "basic_string(const char*) detected nullptr");
@@ -823,7 +823,7 @@ public:
 #   endif
     }
 
-    template <class = _EnableIf<__is_allocator<_Allocator>::value, nullptr_t>>
+    template <class = _EnableIf<__is_allocator<_Allocator>::value, nullptr_t> >
         _LIBCPP_INLINE_VISIBILITY
         basic_string(const _CharT* __s, const _Allocator& __a);
 
@@ -834,7 +834,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     basic_string(size_type __n, _CharT __c);
 
-    template <class = _EnableIf<__is_allocator<_Allocator>::value, nullptr_t>>
+    template <class = _EnableIf<__is_allocator<_Allocator>::value, nullptr_t> >
         _LIBCPP_INLINE_VISIBILITY
         basic_string(size_type __n, _CharT __c, const _Allocator& __a);
 
@@ -858,10 +858,10 @@ public:
         _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         explicit basic_string(const _Tp& __t, const allocator_type& __a);
 
-    template<class _InputIterator, class = _EnableIf<__is_cpp17_input_iterator<_InputIterator>::value>>
+    template<class _InputIterator, class = _EnableIf<__is_cpp17_input_iterator<_InputIterator>::value> >
         _LIBCPP_INLINE_VISIBILITY
         basic_string(_InputIterator __first, _InputIterator __last);
-    template<class _InputIterator, class = _EnableIf<__is_cpp17_input_iterator<_InputIterator>::value>>
+    template<class _InputIterator, class = _EnableIf<__is_cpp17_input_iterator<_InputIterator>::value> >
         _LIBCPP_INLINE_VISIBILITY
         basic_string(_InputIterator __first, _InputIterator __last, const allocator_type& __a);
 #ifndef _LIBCPP_CXX03_LANG
