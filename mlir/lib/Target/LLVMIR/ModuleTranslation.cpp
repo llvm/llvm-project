@@ -16,6 +16,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Module.h"
+#include "mlir/IR/StandardTypes.h"
 #include "mlir/Support/LLVM.h"
 
 #include "llvm/ADT/SetVector.h"
@@ -30,6 +31,43 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 
+static llvm::Constant *
+buildSequentialConstant(ArrayRef<llvm::Constant *> &constants,
+                        ArrayRef<int64_t> shape, llvm::Type *type,
+                        Location loc) {
+  if (shape.empty()) {
+    llvm::Constant *result = constants.front();
+    constants = constants.drop_front();
+    return result;
+  }
+
+  if (!isa<llvm::SequentialType>(type)) {
+    emitError(loc) << "expected sequential LLVM types wrapping a scalar";
+    return nullptr;
+  }
+
+  llvm::Type *elementType = type->getSequentialElementType();
+  SmallVector<llvm::Constant *, 8> nested;
+  nested.reserve(shape.front());
+  for (int64_t i = 0; i < shape.front(); ++i) {
+    nested.push_back(buildSequentialConstant(constants, shape.drop_front(),
+                                             elementType, loc));
+    if (!nested.back())
+      return nullptr;
+  }
+
+  if (shape.size() == 1 && type->isVectorTy())
+    return llvm::ConstantVector::get(nested);
+  return llvm::ConstantArray::get(
+      llvm::ArrayType::get(elementType, shape.front()), nested);
+}
+
+static llvm::Type *getInnermostElementType(llvm::Type *type) {
+  while (isa<llvm::SequentialType>(type))
+    type = type->getSequentialElementType();
+  return type;
+}
+
 /// Create an LLVM IR constant of `llvmType` from the MLIR attribute `attr`.
 /// This currently supports integer, floating point, splat and dense element
 /// attributes and combinations thereof.  In case of error, report it to `loc`
@@ -39,6 +77,10 @@ llvm::Constant *ModuleTranslation::getLLVMConstant(llvm::Type *llvmType,
                                                    Location loc) {
   if (!attr)
     return llvm::UndefValue::get(llvmType);
+  if (llvmType->isStructTy()) {
+    emitError(loc, "struct types are not supported in constants");
+    return nullptr;
+  }
   if (auto intAttr = attr.dyn_cast<IntegerAttr>())
     return llvm::ConstantInt::get(llvmType, intAttr.getValue());
   if (auto floatAttr = attr.dyn_cast<FloatAttr>())
@@ -57,6 +99,8 @@ llvm::Constant *ModuleTranslation::getLLVMConstant(llvm::Type *llvmType,
         isa<llvm::SequentialType>(elementType) ? splatAttr
                                                : splatAttr.getSplatValue(),
         loc);
+    if (!child)
+      return nullptr;
     if (llvmType->isVectorTy())
       return llvm::ConstantVector::getSplat(numElements, child);
     if (llvmType->isArrayTy()) {
@@ -65,24 +109,29 @@ llvm::Constant *ModuleTranslation::getLLVMConstant(llvm::Type *llvmType,
       return llvm::ConstantArray::get(arrayType, constants);
     }
   }
+
   if (auto elementsAttr = attr.dyn_cast<ElementsAttr>()) {
-    auto *sequentialType = cast<llvm::SequentialType>(llvmType);
-    auto elementType = sequentialType->getElementType();
-    uint64_t numElements = sequentialType->getNumElements();
+    assert(elementsAttr.getType().hasStaticShape());
+    assert(elementsAttr.getNumElements() != 0 &&
+           "unexpected empty elements attribute");
+    assert(!elementsAttr.getType().getShape().empty() &&
+           "unexpected empty elements attribute shape");
+
     SmallVector<llvm::Constant *, 8> constants;
-    constants.reserve(numElements);
+    constants.reserve(elementsAttr.getNumElements());
+    llvm::Type *innermostType = getInnermostElementType(llvmType);
     for (auto n : elementsAttr.getValues<Attribute>()) {
-      constants.push_back(getLLVMConstant(elementType, n, loc));
+      constants.push_back(getLLVMConstant(innermostType, n, loc));
       if (!constants.back())
         return nullptr;
     }
-    if (llvmType->isVectorTy())
-      return llvm::ConstantVector::get(constants);
-    if (llvmType->isArrayTy()) {
-      auto arrayType = llvm::ArrayType::get(elementType, numElements);
-      return llvm::ConstantArray::get(arrayType, constants);
-    }
+    ArrayRef<llvm::Constant *> constantsRef = constants;
+    llvm::Constant *result = buildSequentialConstant(
+        constantsRef, elementsAttr.getType().getShape(), llvmType, loc);
+    assert(constantsRef.empty() && "did not consume all elemental constants");
+    return result;
   }
+
   if (auto stringAttr = attr.dyn_cast<StringAttr>()) {
     return llvm::ConstantDataArray::get(
         llvmModule->getContext(), ArrayRef<char>{stringAttr.getValue().data(),
