@@ -822,7 +822,7 @@ static bool IsScratchContextLocked(TargetSP target) {
 }
 
 bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Class(
-    ValueObject &in_value, SwiftASTContext &scratch_ctx,
+    ValueObject &in_value, SwiftASTContextForExpressions &scratch_ctx,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
     Address &address) {
   AddressType address_type;
