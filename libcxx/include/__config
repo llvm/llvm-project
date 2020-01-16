@@ -1125,7 +1125,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
       (defined(__MINGW32__) && __has_include(<pthread.h>))
 #    define _LIBCPP_HAS_THREAD_API_PTHREAD
 #  elif defined(__Fuchsia__)
-#    define _LIBCPP_HAS_THREAD_API_C11
+     // TODO(44575): Switch to C11 thread API when possible.
+#    define _LIBCPP_HAS_THREAD_API_PTHREAD
 #  elif defined(_LIBCPP_WIN32API)
 #    define _LIBCPP_HAS_THREAD_API_WIN32
 #  else
