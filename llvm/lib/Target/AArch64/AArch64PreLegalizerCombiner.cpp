@@ -27,6 +27,32 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
+/// Return true if a G_FCONSTANT instruction is known to be better-represented
+/// as a G_CONSTANT.
+static bool matchFConstantToConstant(MachineInstr &MI,
+                                     MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
+  Register DstReg = MI.getOperand(0).getReg();
+  const unsigned DstSize = MRI.getType(DstReg).getSizeInBits();
+  if (DstSize != 32 && DstSize != 64)
+    return false;
+
+  // When we're storing a value, it doesn't matter what register bank it's on.
+  // Since not all floating point constants can be materialized using a fmov,
+  // it makes more sense to just use a GPR.
+  return all_of(MRI.use_instructions(DstReg),
+                [](const MachineInstr &Use) { return Use.mayStore(); });
+}
+
+/// Change a G_FCONSTANT into a G_CONSTANT.
+static void applyFConstantToConstant(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
+  MachineIRBuilder MIB(MI);
+  const APFloat &ImmValAPF = MI.getOperand(1).getFPImm()->getValueAPF();
+  MIB.buildConstant(MI.getOperand(0).getReg(), ImmValAPF.bitcastToAPInt());
+  MI.eraseFromParent();
+}
+
 #define AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
 #include "AArch64GenGICombiner.inc"
 #undef AARCH64PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
