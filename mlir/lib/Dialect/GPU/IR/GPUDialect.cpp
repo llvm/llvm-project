@@ -72,10 +72,15 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
 
     // Check that `launch_func` refers to a well-formed GPU kernel module.
     StringRef kernelModuleName = launchOp.getKernelModuleName();
-    auto kernelModule = module.lookupSymbol<GPUModuleOp>(kernelModuleName);
+    auto kernelModule = module.lookupSymbol<ModuleOp>(kernelModuleName);
     if (!kernelModule)
       return launchOp.emitOpError()
              << "kernel module '" << kernelModuleName << "' is undefined";
+    if (!kernelModule.getAttrOfType<UnitAttr>(
+            GPUDialect::getKernelModuleAttrName()))
+      return launchOp.emitOpError("module '")
+             << kernelModuleName << "' is missing the '"
+             << GPUDialect::getKernelModuleAttrName() << "' attribute";
 
     // Check that `launch_func` refers to a well-formed kernel function.
     StringRef kernelName = launchOp.kernel();
@@ -512,9 +517,10 @@ void LaunchFuncOp::build(Builder *builder, OperationState &result,
   result.addOperands(kernelOperands);
   result.addAttribute(getKernelAttrName(),
                       builder->getStringAttr(kernelFunc.getName()));
-  auto kernelModule = kernelFunc.getParentOfType<GPUModuleOp>();
-  result.addAttribute(getKernelModuleAttrName(),
-                      builder->getSymbolRefAttr(kernelModule.getName()));
+  auto kernelModule = kernelFunc.getParentOfType<ModuleOp>();
+  if (Optional<StringRef> kernelModuleName = kernelModule.getName())
+    result.addAttribute(getKernelModuleAttrName(),
+                        builder->getSymbolRefAttr(*kernelModuleName));
 }
 
 void LaunchFuncOp::build(Builder *builder, OperationState &result,
@@ -812,47 +818,6 @@ LogicalResult GPUFuncOp::verifyBody() {
     return failure();
 
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// GPUModuleOp
-//===----------------------------------------------------------------------===//
-
-void GPUModuleOp::build(Builder *builder, OperationState &result,
-                        StringRef name) {
-  ensureTerminator(*result.addRegion(), *builder, result.location);
-  result.attributes.push_back(builder->getNamedAttr(
-      ::mlir::SymbolTable::getSymbolAttrName(), builder->getStringAttr(name)));
-}
-
-static ParseResult parseGPUModuleOp(OpAsmParser &parser,
-                                    OperationState &result) {
-  StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
-                             result.attributes))
-    return failure();
-
-  // If module attributes are present, parse them.
-  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
-    return failure();
-
-  // Parse the module body.
-  auto *body = result.addRegion();
-  if (parser.parseRegion(*body, None, None))
-    return failure();
-
-  // Ensure that this module has a valid terminator.
-  GPUModuleOp::ensureTerminator(*body, parser.getBuilder(), result.location);
-  return success();
-}
-
-static void print(OpAsmPrinter &p, GPUModuleOp op) {
-  p << op.getOperationName() << ' ';
-  p.printSymbolName(op.getName());
-  p.printOptionalAttrDictWithKeyword(op.getAttrs(),
-                                     {SymbolTable::getSymbolAttrName()});
-  p.printRegion(op.getOperation()->getRegion(0), /*printEntryBlockArgs=*/false,
-                /*printBlockTerminators=*/false);
 }
 
 // Namespace avoids ambiguous ReturnOpOperandAdaptor.
