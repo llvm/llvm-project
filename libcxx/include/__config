@@ -1111,7 +1111,6 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
     !defined(_LIBCPP_HAS_THREAD_API_WIN32) && \
     !defined(_LIBCPP_HAS_THREAD_API_EXTERNAL)
 #  if defined(__FreeBSD__) || \
-      defined(__Fuchsia__) || \
       defined(__wasi__) || \
       defined(__NetBSD__) || \
       defined(__linux__) || \
@@ -1121,6 +1120,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
       defined(__sun__) || \
       (defined(__MINGW32__) && __has_include(<pthread.h>))
 #    define _LIBCPP_HAS_THREAD_API_PTHREAD
+#  elif defined(__Fuchsia__)
+#    define _LIBCPP_HAS_THREAD_API_C11
 #  elif defined(_LIBCPP_WIN32API)
 #    define _LIBCPP_HAS_THREAD_API_WIN32
 #  else
@@ -1172,6 +1173,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 // TODO(EricWF): Enable this optimization on Bionic after speaking to their
 //               respective stakeholders.
 #if (defined(_LIBCPP_HAS_THREAD_API_PTHREAD) && defined(__GLIBC__)) \
+  || (defined(_LIBCPP_HAS_THREAD_API_C11) && defined(__Fuchsia__)) \
   || defined(_LIBCPP_HAS_THREAD_API_WIN32)
 # define _LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION
 #endif
@@ -1184,7 +1186,8 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 //
 // TODO(EricWF): This is potentially true for some pthread implementations
 // as well.
-#if defined(_LIBCPP_HAS_THREAD_API_WIN32)
+#if (defined(_LIBCPP_HAS_THREAD_API_C11) && defined(__Fuchsia__)) || \
+     defined(_LIBCPP_HAS_THREAD_API_WIN32)
 # define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION
 #endif
 
