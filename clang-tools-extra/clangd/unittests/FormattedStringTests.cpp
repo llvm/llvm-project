@@ -136,13 +136,37 @@ bar)pt";
   EXPECT_EQ(D.asPlainText(), ExpectedText);
 }
 
-TEST(Document, Spacer) {
+TEST(Document, Ruler) {
   Document D;
   D.addParagraph().appendText("foo");
-  D.addSpacer();
+  D.addRuler();
+
+  // Ruler followed by paragraph.
   D.addParagraph().appendText("bar");
-  EXPECT_EQ(D.asMarkdown(), "foo  \n\nbar");
+  EXPECT_EQ(D.asMarkdown(), "foo  \n\n---\nbar");
   EXPECT_EQ(D.asPlainText(), "foo\n\nbar");
+
+  D = Document();
+  D.addParagraph().appendText("foo");
+  D.addRuler();
+  D.addCodeBlock("bar");
+  // Ruler followed by a codeblock.
+  EXPECT_EQ(D.asMarkdown(), "foo  \n\n---\n```cpp\nbar\n```");
+  EXPECT_EQ(D.asPlainText(), "foo\n\nbar");
+
+  // Ruler followed by another ruler
+  D = Document();
+  D.addParagraph().appendText("foo");
+  D.addRuler();
+  D.addRuler();
+  EXPECT_EQ(D.asMarkdown(), "foo");
+  EXPECT_EQ(D.asPlainText(), "foo");
+
+  // Multiple rulers between blocks
+  D.addRuler();
+  D.addParagraph().appendText("foo");
+  EXPECT_EQ(D.asMarkdown(), "foo  \n\n---\nfoo");
+  EXPECT_EQ(D.asPlainText(), "foo\n\nfoo");
 }
 
 TEST(Document, Heading) {
@@ -182,14 +206,10 @@ foo
 foo
 ```)md";
   EXPECT_EQ(D.asMarkdown(), ExpectedMarkdown);
-  // FIXME: we shouldn't have 2 empty lines in between. A solution might be
-  // having a `verticalMargin` method for blocks, and let container insert new
-  // lines according to that before/after blocks.
   ExpectedPlainText =
       R"pt(foo
   bar
   baz
-
 
 foo)pt";
   EXPECT_EQ(D.asPlainText(), ExpectedPlainText);

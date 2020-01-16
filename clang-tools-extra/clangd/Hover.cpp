@@ -532,6 +532,8 @@ markup::Document HoverInfo::present() const {
     Header.appendCode(*Type);
   }
 
+  // Put a linebreak after header to increase readability.
+  Output.addRuler();
   // For functions we display signature in a list form, e.g.:
   // - `bool param1`
   // - `int param2 = 5`
@@ -555,6 +557,7 @@ markup::Document HoverInfo::present() const {
     Output.addParagraph().appendText(Documentation);
 
   if (!Definition.empty()) {
+    Output.addRuler();
     std::string ScopeComment;
     // Drop trailing "::".
     if (!LocalScope.empty()) {
