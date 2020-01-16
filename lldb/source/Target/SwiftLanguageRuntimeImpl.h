@@ -120,11 +120,10 @@ protected:
                                 const CompilerType &dynamic_type,
                                 bool is_indirect_enum_case);
 
-  bool GetDynamicTypeAndAddress_Class(ValueObject &in_value,
-                                      SwiftASTContext &scratch_ctx,
-                                      lldb::DynamicValueType use_dynamic,
-                                      TypeAndOrName &class_type_or_name,
-                                      Address &address);
+  bool GetDynamicTypeAndAddress_Class(
+      ValueObject &in_value, SwiftASTContextForExpressions &scratch_ctx,
+      lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
+      Address &address);
 
   bool GetDynamicTypeAndAddress_Protocol(ValueObject &in_value,
                                          CompilerType protocol_type,
