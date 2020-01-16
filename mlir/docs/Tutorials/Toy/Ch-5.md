@@ -24,7 +24,7 @@ level buffer access, as they are concrete references to a region of memory.
 # Dialect Conversions
 
 MLIR has many different dialects, so it is important to have a unified framework
-for [converting](../../Glossary.md#conversion) between them. This is where the
+for [converting](../../../getting_started/Glossary.md#conversion) between them. This is where the
 `DialectConversion` framework comes into play. This framework allows for
 transforming a set of `illegal` operations to a set of `legal` ones. To use this
 framework, we need to provide two things (and an optional third):
@@ -34,7 +34,7 @@ framework, we need to provide two things (and an optional third):
     -   This is the formal specification of what operations or dialects are
         legal for the conversion. Operations that aren't legal will require
         rewrite patterns to perform
-        [legalization](../../Glossary.md#legalization).
+        [legalization](../../../getting_started/Glossary.md#legalization).
 
 *   A set of
     [Rewrite Patterns](../../DialectConversion.md#rewrite-pattern-specification)
