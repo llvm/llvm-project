@@ -3046,6 +3046,14 @@ bool FunctionDecl::isReplaceableGlobalAllocationFunction(bool *IsAligned) const 
   return Params == FPT->getNumParams();
 }
 
+bool FunctionDecl::isInlineBuiltinDeclaration() const {
+  if (!getBuiltinID())
+    return false;
+
+  const FunctionDecl *Definition;
+  return hasBody(Definition) && Definition->isInlineSpecified();
+}
+
 bool FunctionDecl::isDestroyingOperatorDelete() const {
   // C++ P0722:
   //   Within a class C, a single object deallocation function with signature
