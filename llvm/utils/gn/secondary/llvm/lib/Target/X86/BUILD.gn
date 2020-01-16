@@ -99,6 +99,7 @@ static_library("LLVMX86CodeGen") {
     "X86ISelLowering.cpp",
     "X86IndirectBranchTracking.cpp",
     "X86InsertPrefetch.cpp",
+    "X86InsertWait.cpp",
     "X86InstrFMA3Info.cpp",
     "X86InstrFoldTables.cpp",
     "X86InstrInfo.cpp",
