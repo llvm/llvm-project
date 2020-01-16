@@ -953,7 +953,7 @@ void LinkerScript::adjustSectionsBeforeSorting() {
 
     // We do not want to keep any special flags for output section
     // in case it is empty.
-    bool isEmpty = getInputSections(sec).empty();
+    bool isEmpty = (getFirstInputSection(sec) == nullptr);
     if (isEmpty)
       sec->flags = flags & ((sec->nonAlloc ? 0 : (uint64_t)SHF_ALLOC) |
                             SHF_WRITE | SHF_EXECINSTR);
