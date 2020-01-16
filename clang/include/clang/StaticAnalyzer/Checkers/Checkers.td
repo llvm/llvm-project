@@ -602,6 +602,11 @@ def VirtualCallChecker : Checker<"VirtualCall">,
 
 let ParentPackage = CplusplusAlpha in {
 
+def ContainerModeling : Checker<"ContainerModeling">,
+  HelpText<"Models C++ containers">,
+  Documentation<NotDocumented>,
+  Hidden;
+
 def DeleteWithNonVirtualDtorChecker : Checker<"DeleteWithNonVirtualDtor">,
   HelpText<"Reports destructions of polymorphic objects with a non-virtual "
            "destructor in their base class">,
@@ -613,6 +618,7 @@ def EnumCastOutOfRangeChecker : Checker<"EnumCastOutOfRange">,
 
 def IteratorModeling : Checker<"IteratorModeling">,
   HelpText<"Models iterators of C++ containers">,
+  Dependencies<[ContainerModeling]>,
   Documentation<NotDocumented>,
   Hidden;
 
@@ -1373,9 +1379,14 @@ def ReportStmts : Checker<"ReportStmts">,
   HelpText<"Emits a warning for every statement.">,
   Documentation<NotDocumented>;
 
+def DebugContainerModeling : Checker<"DebugContainerModeling">,
+  HelpText<"Check the analyzer's understanding of C++ containers">,
+  Dependencies<[ContainerModeling]>,
+  Documentation<NotDocumented>;
+
 def DebugIteratorModeling : Checker<"DebugIteratorModeling">,
   HelpText<"Check the analyzer's understanding of C++ iterators">,
-  Dependencies<[IteratorModeling]>,
+  Dependencies<[DebugContainerModeling, IteratorModeling]>,
   Documentation<NotDocumented>;
 
 } // end "debug"
