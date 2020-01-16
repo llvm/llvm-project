@@ -1886,11 +1886,9 @@ define <4 x float> @test_mm_cvtu64_ss(<4 x float> %__A, i64 %__B) {
 ; X86-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
 ; X86-NEXT:    vmovq %xmm1, {{[0-9]+}}(%esp)
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    setns %cl
+; X86-NEXT:    shrl $31, %eax
 ; X86-NEXT:    fildll {{[0-9]+}}(%esp)
-; X86-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; X86-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]

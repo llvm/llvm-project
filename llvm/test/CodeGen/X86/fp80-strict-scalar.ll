@@ -846,11 +846,9 @@ define x86_fp80 @uint64_to_fp80(i64 %x) #0 {
 ; X86-NEXT:    movl 12(%ebp), %ecx
 ; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    setns %al
+; X86-NEXT:    shrl $31, %ecx
 ; X86-NEXT:    fildll (%esp)
-; X86-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
+; X86-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -861,7 +859,7 @@ define x86_fp80 @uint64_to_fp80(i64 %x) #0 {
 ; X64-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testq %rdi, %rdi
-; X64-NEXT:    setns %al
+; X64-NEXT:    sets %al
 ; X64-NEXT:    fildll -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    fadds {{\.LCPI.*}}(,%rax,4)
 ; X64-NEXT:    retq
