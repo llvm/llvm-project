@@ -400,7 +400,8 @@ setFunctionAttributes(StringRef CPU, StringRef Features, Function &F) {
       NewAttrs.addAttribute("target-features", Appended);
     }
   }
-  if (FramePointerUsage.getNumOccurrences() > 0) {
+  if (FramePointerUsage.getNumOccurrences() > 0 &&
+      !F.hasFnAttribute("frame-pointer")) {
     if (FramePointerUsage == llvm::FramePointer::All)
       NewAttrs.addAttribute("frame-pointer", "all");
     else if (FramePointerUsage == llvm::FramePointer::NonLeaf)
