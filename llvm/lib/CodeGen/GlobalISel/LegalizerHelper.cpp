@@ -680,7 +680,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
-  case TargetOpcode::G_ZEXT: {
+  case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_ANYEXT: {
     if (TypeIdx != 0)
       return UnableToLegalize;
 
@@ -689,13 +690,18 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     if (SizeOp0 % SizeOp1 != 0)
       return UnableToLegalize;
 
+    Register PadReg;
+    if (MI.getOpcode() == TargetOpcode::G_ZEXT)
+      PadReg = MIRBuilder.buildConstant(SrcTy, 0).getReg(0);
+    else
+      PadReg = MIRBuilder.buildUndef(SrcTy).getReg(0);
+
     // Generate a merge where the bottom bits are taken from the source, and
-    // zero everything else.
-    Register ZeroReg = MIRBuilder.buildConstant(SrcTy, 0).getReg(0);
+    // zero/impdef everything else.
     unsigned NumParts = SizeOp0 / SizeOp1;
     SmallVector<Register, 4> Srcs = {MI.getOperand(1).getReg()};
     for (unsigned Part = 1; Part < NumParts; ++Part)
-      Srcs.push_back(ZeroReg);
+      Srcs.push_back(PadReg);
     MIRBuilder.buildMerge(MI.getOperand(0).getReg(), Srcs);
     MI.eraseFromParent();
     return Legalized;
