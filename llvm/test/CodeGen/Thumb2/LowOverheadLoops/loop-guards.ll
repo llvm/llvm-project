@@ -18,9 +18,9 @@
 ; CHECK:   t2CMPri renamable $lr, 0
 ; CHECK:   tBcc %bb.3
 ; CHECK: bb.1.while.body.preheader:
-; CHECK:   $lr = t2DLS renamable $lr
+; CHECK:   $lr = t2DLS killed renamable $lr
 ; CHECK: bb.2.while.body:
-; CHECK:   $lr = t2LEUpdate renamable $lr, %bb.2
+; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
 define void @ne_and_guard(i1 zeroext %t1, i1 zeroext %t2, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
 entry:
   %brmerge.demorgan = and i1 %t1, %t2
@@ -51,9 +51,9 @@ if.end:                                           ; preds = %while.body, %entry
 ; CHECK:   t2CMPri renamable $lr, 0
 ; CHECK:   tBcc %bb.3
 ; CHECK: bb.1.while.body.preheader:
-; CHECK:   $lr = t2DLS renamable $lr
+; CHECK:   $lr = t2DLS killed renamable $lr
 ; CHECK: bb.2.while.body:
-; CHECK:   $lr = t2LEUpdate renamable $lr, %bb.2
+; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
 define void @ne_preheader(i1 zeroext %t1, i1 zeroext %t2, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
 entry:
   %brmerge.demorgan = and i1 %t1, %t2
@@ -86,9 +86,9 @@ if.end:                                           ; preds = %while.body, %while.
 ; CHECK:   t2CMPri renamable $lr, 0
 ; CHECK:   tBcc %bb.3
 ; CHECK: bb.1.while.body.preheader:
-; CHECK:   $lr = t2DLS renamable $lr
+; CHECK:   $lr = t2DLS killed renamable $lr
 ; CHECK: bb.2.while.body:
-; CHECK:   $lr = t2LEUpdate renamable $lr, %bb.2
+; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
 define void @eq_preheader(i1 zeroext %t1, i1 zeroext %t2, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
 entry:
   %brmerge.demorgan = and i1 %t1, %t2
@@ -121,9 +121,9 @@ if.end:                                           ; preds = %while.body, %while.
 ; CHECK:   t2CMPri renamable $lr, 0
 ; CHECK:   tBcc %bb.3
 ; CHECK: bb.1.while.body.preheader:
-; CHECK:   $lr = t2DLS renamable $lr
+; CHECK:   $lr = t2DLS killed renamable $lr
 ; CHECK: bb.2.while.body:
-; CHECK:   $lr = t2LEUpdate renamable $lr, %bb.2
+; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
 define void @ne_prepreheader(i1 zeroext %t1, i1 zeroext %t2, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
 entry:
   %cmp = icmp ne i32 %N, 0
@@ -152,9 +152,9 @@ if.end:                                           ; preds = %while.body, %while.
 ; CHECK: be_ne
 ; CHECK: body:
 ; CHECK: bb.0.entry:
-; CHECK:   $lr = t2DLS renamable $lr
+; CHECK:   $lr = t2DLS killed renamable $lr
 ; CHECK: bb.1.do.body:
-; CHECK:   $lr = t2LEUpdate renamable $lr, %bb.1
+; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.1
 define void @be_ne(i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
 entry:
   %cmp = icmp ne i32 %N, 0
@@ -187,7 +187,7 @@ if.end:                                           ; preds = %do.body, %entry
 ; CHECK: bb.1.do.body.preheader:
 ; CHECK:   $lr = tMOVr
 ; CHECK: bb.2.do.body:
-; CHECK:   $lr = t2LEUpdate renamable $lr, %bb.2
+; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
 define void @ne_trip_count(i1 zeroext %t1, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) {
 entry:
   br label %do.body.preheader

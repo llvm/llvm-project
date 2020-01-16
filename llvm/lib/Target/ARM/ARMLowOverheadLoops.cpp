@@ -60,6 +60,61 @@ using namespace llvm;
 
 namespace {
 
+  class PostOrderLoopTraversal {
+    MachineLoop &ML;
+    MachineLoopInfo &MLI;
+    SmallPtrSet<MachineBasicBlock*, 4> Visited;
+    SmallVector<MachineBasicBlock*, 4> Order;
+
+  public:
+    PostOrderLoopTraversal(MachineLoop &ML, MachineLoopInfo &MLI)
+      : ML(ML), MLI(MLI) { }
+
+    const SmallVectorImpl<MachineBasicBlock*> &getOrder() const {
+      return Order;
+    }
+
+    // Visit all the blocks within the loop, as well as exit blocks and any
+    // blocks properly dominating the header.
+    void ProcessLoop() {
+      std::function<void(MachineBasicBlock*)> Search = [this, &Search]
+        (MachineBasicBlock *MBB) -> void {
+        if (Visited.count(MBB))
+          return;
+
+        Visited.insert(MBB);
+        for (auto *Succ : MBB->successors()) {
+          if (!ML.contains(Succ))
+            continue;
+          Search(Succ);
+        }
+        Order.push_back(MBB);
+      };
+
+      // Insert exit blocks.
+      SmallVector<MachineBasicBlock*, 2> ExitBlocks;
+      ML.getExitBlocks(ExitBlocks);
+      for (auto *MBB : ExitBlocks)
+        Order.push_back(MBB);
+
+      // Then add the loop body.
+      Search(ML.getHeader());
+
+      // Then try the preheader and its predecessors.
+      std::function<void(MachineBasicBlock*)> GetPredecessor =
+        [this, &GetPredecessor] (MachineBasicBlock *MBB) -> void {
+        Order.push_back(MBB);
+        if (MBB->pred_size() == 1)
+          GetPredecessor(*MBB->pred_begin());
+      };
+
+      if (auto *Preheader = ML.getLoopPreheader())
+        GetPredecessor(Preheader);
+      else if (auto *Preheader = MLI.findLoopPreheader(&ML, true))
+        GetPredecessor(Preheader);
+    }
+  };
+
   struct PredicatedMI {
     MachineInstr *MI = nullptr;
     SetVector<MachineInstr*> Predicates;
@@ -1013,6 +1068,19 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
       ConvertVPTBlocks(LoLoop);
     }
   }
+
+  PostOrderLoopTraversal DFS(*LoLoop.ML, *MLI);
+  DFS.ProcessLoop();
+  const SmallVectorImpl<MachineBasicBlock*> &PostOrder = DFS.getOrder();
+  for (auto *MBB : PostOrder) {
+    recomputeLiveIns(*MBB);
+    // FIXME: For some reason, the live-in print order is non-deterministic for
+    // our tests and I can't out why... So just sort them.
+    MBB->sortUniqueLiveIns();
+  }
+
+  for (auto *MBB : reverse(PostOrder))
+    recomputeLivenessFlags(*MBB);
 }
 
 bool ARMLowOverheadLoops::RevertNonLoops() {

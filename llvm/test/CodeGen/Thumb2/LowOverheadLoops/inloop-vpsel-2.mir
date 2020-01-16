@@ -131,7 +131,7 @@ body:             |
   ; CHECK-LABEL: name: vpsel_after_vpt
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.4(0x30000000), %bb.1(0x50000000)
-  ; CHECK:   liveins: $r0, $r1, $r2, $r3, $r4, $r5, $r7, $lr
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r4, $r5, $r7
   ; CHECK:   frame-setup tPUSH 14, $noreg, killed $r4, killed $r5, killed $r7, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
@@ -150,7 +150,7 @@ body:             |
   ; CHECK:   renamable $q0 = MVE_VMOVimmi32 0, 0, $noreg, undef renamable $q0
   ; CHECK:   renamable $lr = t2SUBri killed renamable $lr, 4, 14, $noreg, $noreg
   ; CHECK:   renamable $r5 = nuw nsw t2ADDrs killed renamable $r4, killed renamable $lr, 19, 14, $noreg, $noreg
-  ; CHECK:   $lr = t2DLS renamable $r5
+  ; CHECK:   dead $lr = t2DLS renamable $r5
   ; CHECK:   $r4 = tMOVr killed $r5, 14, $noreg
   ; CHECK: bb.2.vector.body:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
@@ -169,7 +169,7 @@ body:             |
   ; CHECK:   renamable $q1 = MVE_VADDi32 killed renamable $q1, renamable $q0, 0, $noreg, undef renamable $q1
   ; CHECK:   renamable $r12 = t2SUBri killed renamable $r12, 4, 14, $noreg, $noreg
   ; CHECK:   renamable $q0 = MVE_VPSEL killed renamable $q1, killed renamable $q0, 0, killed renamable $vpr
-  ; CHECK:   $lr = t2LEUpdate killed renamable $lr, %bb.2
+  ; CHECK:   dead $lr = t2LEUpdate killed renamable $lr, %bb.2
   ; CHECK: bb.3.middle.block:
   ; CHECK:   liveins: $q0
   ; CHECK:   renamable $r0 = MVE_VADDVu32no_acc killed renamable $q0, 0, $noreg
