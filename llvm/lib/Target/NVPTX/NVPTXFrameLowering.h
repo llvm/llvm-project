@@ -30,7 +30,6 @@ public:
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I) const override;
-  DwarfFrameBase getDwarfFrameBase(const MachineFunction &MF) const override;
 };
 
 } // End llvm namespace
