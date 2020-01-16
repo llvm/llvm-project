@@ -40,7 +40,7 @@ declare i32 @ret32(i32, i64, i32) local_unnamed_addr
 ; YAML-NEXT:     Name:            name
 ; YAML-NEXT:     FunctionNames:   
 ; YAML-NEXT:       - Index:           0
-; YAML-NEXT:         Name:            'unreachable:ret32'
+; YAML-NEXT:         Name:            'signature_mismatch:ret32'
 ; YAML-NEXT:       - Index:           1
 ; YAML-NEXT:         Name:            _start
 ; YAML-NEXT:       - Index:           2
