@@ -56,6 +56,10 @@ function(get_debugserver_codesign_identity result)
   set(${result} "-" PARENT_SCOPE)
 endfunction()
 
+# debugserver does not depend on intrinsics_gen, or on llvm. Set the common
+# llvm dependencies in the current scope to the empty set.
+set(LLVM_COMMON_DEPENDS)
+
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -Wl,-sectcreate,__TEXT,__info_plist,${CMAKE_CURRENT_SOURCE_DIR}/../resources/lldb-debugserver-Info.plist")
 
 check_cxx_compiler_flag("-Wno-gnu-zero-variadic-macro-arguments"
