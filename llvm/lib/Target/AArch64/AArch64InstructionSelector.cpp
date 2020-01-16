@@ -4091,7 +4091,7 @@ bool AArch64InstructionSelector::selectIntrinsic(
   switch (IntrinID) {
   default:
     break;
-  case Intrinsic::aarch64_crypto_sha1h:
+  case Intrinsic::aarch64_crypto_sha1h: {
     Register DstReg = I.getOperand(0).getReg();
     Register SrcReg = I.getOperand(2).getReg();
 
@@ -4129,6 +4129,46 @@ bool AArch64InstructionSelector::selectIntrinsic(
 
     I.eraseFromParent();
     return true;
+  }
+  case Intrinsic::frameaddress:
+  case Intrinsic::returnaddress: {
+    MachineFunction &MF = *I.getParent()->getParent();
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+
+    unsigned Depth = I.getOperand(2).getImm();
+    Register DstReg = I.getOperand(0).getReg();
+    RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
+
+    if (Depth == 0 && IntrinID == Intrinsic::returnaddress) {
+      MFI.setReturnAddressIsTaken(true);
+      MF.addLiveIn(AArch64::LR, &AArch64::GPR64spRegClass);
+      I.getParent()->addLiveIn(AArch64::LR);
+      MIRBuilder.buildCopy({DstReg}, {Register(AArch64::LR)});
+      I.eraseFromParent();
+      return true;
+    }
+
+    MFI.setFrameAddressIsTaken(true);
+    Register FrameAddr(AArch64::FP);
+    while (Depth--) {
+      Register NextFrame = MRI.createVirtualRegister(&AArch64::GPR64spRegClass);
+      auto Ldr =
+          MIRBuilder.buildInstr(AArch64::LDRXui, {NextFrame}, {FrameAddr})
+              .addImm(0);
+      constrainSelectedInstRegOperands(*Ldr, TII, TRI, RBI);
+      FrameAddr = NextFrame;
+    }
+
+    if (IntrinID == Intrinsic::frameaddress)
+      MIRBuilder.buildCopy({DstReg}, {FrameAddr});
+    else {
+      MFI.setReturnAddressIsTaken(true);
+      MIRBuilder.buildInstr(AArch64::LDRXui, {DstReg}, {FrameAddr}).addImm(1);
+    }
+
+    I.eraseFromParent();
+    return true;
+  }
   }
   return false;
 }
