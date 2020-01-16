@@ -234,5 +234,7 @@ def replay: Separate<["--", "-"], "replay">,
   HelpText<"Tells the debugger to replay a reproducer from <filename>.">;
 def skip_version_check: F<"reproducer-skip-version-check">,
   HelpText<"Skip the reproducer version check.">;
+def auto_generate: F<"reproducer-auto-generate">,
+  HelpText<"Generate reproducer on exit.">;
 
 def REM : R<["--"], "">;
