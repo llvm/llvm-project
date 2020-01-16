@@ -1722,8 +1722,10 @@ template <typename T, typename C = bool> class Foo {})",
             HI.NamespaceScope = "ns::";
             HI.Definition = "ret_type foo(params) {}";
           },
-          R"(function foo → ret_type
+          R"(function foo
 
+🡺 ret_type
+Parameters:
 - 
 - type
 - type foo
@@ -1741,8 +1743,9 @@ ret_type foo(params) {})",
             HI.Type = "type";
             HI.Definition = "def";
           },
-          R"(variable foo : type
+          R"(variable foo
 
+Type: type
 Value = value
 
 // In test::bar
@@ -1763,9 +1766,8 @@ TEST(Hover, PresentHeadings) {
   HoverInfo HI;
   HI.Kind = index::SymbolKind::Variable;
   HI.Name = "foo";
-  HI.Type = "type";
 
-  EXPECT_EQ(HI.present().asMarkdown(), "### variable `foo` \\: `type`");
+  EXPECT_EQ(HI.present().asMarkdown(), "### variable `foo`");
 }
 
 // This is a separate test as rulers behave differently in markdown vs
