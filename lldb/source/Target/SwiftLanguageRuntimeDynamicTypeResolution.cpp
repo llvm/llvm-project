@@ -930,8 +930,9 @@ bool SwiftLanguageRuntimeImpl::IsValidErrorValue(ValueObject &in_value) {
 
 bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
     ValueObject &in_value, CompilerType protocol_type,
-    SwiftASTContext &scratch_ctx, lldb::DynamicValueType use_dynamic,
-    TypeAndOrName &class_type_or_name, Address &address) {
+    SwiftASTContextForExpressions &scratch_ctx,
+    lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
+    Address &address) {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
   auto &target = m_process.GetTarget();

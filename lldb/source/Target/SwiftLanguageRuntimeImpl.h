@@ -125,12 +125,11 @@ protected:
       lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
       Address &address);
 
-  bool GetDynamicTypeAndAddress_Protocol(ValueObject &in_value,
-                                         CompilerType protocol_type,
-                                         SwiftASTContext &scratch_ctx,
-                                         lldb::DynamicValueType use_dynamic,
-                                         TypeAndOrName &class_type_or_name,
-                                         Address &address);
+  bool GetDynamicTypeAndAddress_Protocol(
+      ValueObject &in_value, CompilerType protocol_type,
+      SwiftASTContextForExpressions &scratch_ctx,
+      lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
+      Address &address);
 
   bool GetDynamicTypeAndAddress_Value(ValueObject &in_value,
                                       CompilerType &bound_type,
