@@ -2916,7 +2916,7 @@ bool Sema::CheckHexagonBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall) {
     { Hexagon::BI__builtin_circ_ldd,                  {{ 3, true,  4,  3 }} },
     { Hexagon::BI__builtin_circ_ldw,                  {{ 3, true,  4,  2 }} },
     { Hexagon::BI__builtin_circ_ldh,                  {{ 3, true,  4,  1 }} },
-    { Hexagon::BI__builtin_circ_lduh,                 {{ 3, true,  4,  0 }} },
+    { Hexagon::BI__builtin_circ_lduh,                 {{ 3, true,  4,  1 }} },
     { Hexagon::BI__builtin_circ_ldb,                  {{ 3, true,  4,  0 }} },
     { Hexagon::BI__builtin_circ_ldub,                 {{ 3, true,  4,  0 }} },
     { Hexagon::BI__builtin_circ_std,                  {{ 3, true,  4,  3 }} },
