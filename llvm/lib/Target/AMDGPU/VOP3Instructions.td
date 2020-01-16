@@ -639,6 +639,34 @@ def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3
   let HasOMod = 0;
 }
 
+class PermlanePat<SDPatternOperator permlane,
+  Instruction inst> : GCNPat<
+  (permlane i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2,
+            timm:$fi, timm:$bc),
+  (inst (as_i1imm $fi), $src0, (as_i1imm $bc),
+        $src1, 0, $src2, $vdst_in)
+>;
+
+// Permlane intrinsic that has either fetch invalid or bound control
+// fields enabled.
+class BoundControlOrFetchInvalidPermlane<SDPatternOperator permlane> :
+  PatFrag<(ops node:$vdst_in, node:$src0, node:$src1, node:$src2,
+               node:$fi, node:$bc),
+          (permlane node:$vdst_in, node:$src0, node:
+                    $src1, node:$src2, node:$fi, node:$bc)> {
+  let PredicateCode = [{ return N->getConstantOperandVal(5) != 0 ||
+                                N->getConstantOperandVal(6) != 0; }];
+}
+
+// Drop the input value if it won't be read.
+class PermlaneDiscardVDstIn<SDPatternOperator permlane,
+                            Instruction inst> : GCNPat<
+  (permlane srcvalue, i32:$src0, i32:$src1, i32:$src2, timm:$fi, timm:$bc),
+  (inst (as_i1imm $fi), $src0, (as_i1imm $bc), $src1, 0, $src2,
+        (IMPLICIT_DEF))
+>;
+
+
 let SubtargetPredicate = isGFX10Plus in {
   def V_XOR3_B32 : VOP3Inst <"v_xor3_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
   def : ThreeOp_i32_Pats<xor, xor, V_XOR3_B32>;
@@ -648,14 +676,16 @@ let SubtargetPredicate = isGFX10Plus in {
     def V_PERMLANEX16_B32 : VOP3Inst <"v_permlanex16_b32", VOP3_PERMLANE_Profile>;
   } // End $vdst = $vdst_in, DisableEncoding $vdst_in
 
-  def : GCNPat<
-    (int_amdgcn_permlane16 i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2, timm:$fi, timm:$bc),
-    (V_PERMLANE16_B32 (as_i1imm $fi), $src0, (as_i1imm $bc), $src1, 0, $src2, $vdst_in)
-  >;
-  def : GCNPat<
-    (int_amdgcn_permlanex16 i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2, timm:$fi, timm:$bc),
-    (V_PERMLANEX16_B32 (as_i1imm $fi), $src0, (as_i1imm $bc), $src1, 0, $src2, $vdst_in)
-  >;
+  def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32>;
+  def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32>;
+
+  def : PermlaneDiscardVDstIn<
+    BoundControlOrFetchInvalidPermlane<int_amdgcn_permlane16>,
+    V_PERMLANE16_B32>;
+  def : PermlaneDiscardVDstIn<
+    BoundControlOrFetchInvalidPermlane<int_amdgcn_permlanex16>,
+    V_PERMLANEX16_B32>;
+
 } // End SubtargetPredicate = isGFX10Plus
 
 //===----------------------------------------------------------------------===//
