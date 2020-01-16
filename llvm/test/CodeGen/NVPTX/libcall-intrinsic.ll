@@ -1,4 +1,4 @@
-; RUN: not llc < %s -march=nvptx 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -march=nvptx 2>&1 | FileCheck %s
 ; used to seqfault and now fails with an "Undefined external symbol"
 
 ; CHECK: LLVM ERROR: Undefined external symbol "__powidf2"

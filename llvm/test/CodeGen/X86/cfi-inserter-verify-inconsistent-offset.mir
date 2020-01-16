@@ -1,4 +1,4 @@
-# RUN: not llc -o - %s -mtriple=x86_64-- -verify-cfiinstrs \
+# RUN: not --crash llc -o - %s -mtriple=x86_64-- -verify-cfiinstrs \
 # RUN:     -run-pass=cfi-instr-inserter 2>&1 | FileCheck %s
 # Test that CFI verifier finds inconsistent offset between bb.end and one of
 # its precedessors.

@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=arm-none-eabi -mcpu=cortex-a8 2>&1 | FileCheck %s --check-prefix=ACORE
-; RUN: not llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m4 2>&1 | FileCheck %s --check-prefix=MCORE
+; RUN: not --crash llc < %s -mtriple=thumb-none-eabi -mcpu=cortex-m4 2>&1 | FileCheck %s --check-prefix=MCORE
 
 ; MCORE: LLVM ERROR: Invalid register name "cpsr".
 

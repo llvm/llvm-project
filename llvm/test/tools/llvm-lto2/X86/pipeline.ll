@@ -28,13 +28,13 @@ define void @patatino() {
 ; CUSTOM-NEXT: }
 
 ; Check that invalid pipelines are caught as errors.
-; RUN: not llvm-lto2 run %t1.bc -o %t.o \
+; RUN: not --crash llvm-lto2 run %t1.bc -o %t.o \
 ; RUN:  -r %t1.bc,patatino,px -opt-pipeline foogoo 2>&1 | \
 ; RUN:  FileCheck %s --check-prefix=ERR
 
 ; ERR: LLVM ERROR: unable to parse pass pipeline description 'foogoo': unknown pass name 'foogoo'
 
-; RUN: not llvm-lto2 run %t1.bc -o %t.o \
+; RUN: not --crash llvm-lto2 run %t1.bc -o %t.o \
 ; RUN:  -r %t1.bc,patatino,px -aa-pipeline patatino \
 ; RUN:  -opt-pipeline loweratomic 2>&1 | \
 ; RUN:  FileCheck %s --check-prefix=AAERR
