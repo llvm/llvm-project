@@ -1,9 +1,7 @@
 import("//llvm/utils/unittest/unittest.gni")
 
 unittest("BitstreamTests") {
-  deps = [
-    "//llvm/lib/Bitstream/Reader",
-  ]
+  deps = [ "//llvm/lib/Bitstream/Reader" ]
   sources = [
     "BitstreamReaderTest.cpp",
     "BitstreamWriterTest.cpp",

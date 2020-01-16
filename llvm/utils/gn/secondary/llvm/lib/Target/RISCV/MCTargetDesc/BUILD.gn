@@ -47,9 +47,7 @@ group("tablegen") {
 
 static_library("MCTargetDesc") {
   output_name = "LLVMRISCVDesc"
-  public_deps = [
-    ":tablegen",
-  ]
+  public_deps = [ ":tablegen" ]
   deps = [
     ":RISCVGenAsmWriter",
     ":RISCVGenMCCodeEmitter",

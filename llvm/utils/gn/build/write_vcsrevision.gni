@@ -41,9 +41,7 @@ template("write_vcsrevision") {
       args += [ "--name=$name" ]
     }
 
-    outputs = [
-      header,
-    ]
+    outputs = [ header ]
 
     forward_variables_from(invoker,
                            [

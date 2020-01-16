@@ -66,9 +66,7 @@ write_cmake_config("abi-breaking") {
 }
 
 write_cmake_config("config") {
-  public_deps = [
-    ":llvm-config",
-  ]
+  public_deps = [ ":llvm-config" ]
 
   input = "config.h.cmake"
   output = "$target_gen_dir/config.h"

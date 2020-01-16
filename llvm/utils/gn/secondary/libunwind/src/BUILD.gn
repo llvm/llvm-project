@@ -23,25 +23,25 @@ if (target_os == "mac") {
 }
 
 unwind_sources = [
-  "libunwind.cpp",
-  "Unwind-EHABI.cpp",
-  "Unwind-seh.cpp",
-  "UnwindLevel1.c",
-  "UnwindLevel1-gcc-ext.c",
-  "Unwind-sjlj.c",
-  "UnwindRegistersRestore.S",
-  "UnwindRegistersSave.S",
   "AddressSpace.hpp",
-  "assembly.h",
   "CompactUnwinder.hpp",
-  "config.h",
-  "dwarf2.h",
   "DwarfInstructions.hpp",
   "DwarfParser.hpp",
-  "libunwind_ext.h",
-  "Registers.hpp",
   "RWMutex.hpp",
+  "Registers.hpp",
+  "Unwind-EHABI.cpp",
+  "Unwind-seh.cpp",
+  "Unwind-sjlj.c",
   "UnwindCursor.hpp",
+  "UnwindLevel1-gcc-ext.c",
+  "UnwindLevel1.c",
+  "UnwindRegistersRestore.S",
+  "UnwindRegistersSave.S",
+  "assembly.h",
+  "config.h",
+  "dwarf2.h",
+  "libunwind.cpp",
+  "libunwind_ext.h",
 ]
 if (target_os == "mac") {
   unwind_sources += [
@@ -80,9 +80,7 @@ if (libunwind_enable_shared) {
     }
     sources = unwind_sources
     public = unwind_headers
-    deps = [
-      "//compiler-rt/lib/builtins",
-    ]
+    deps = [ "//compiler-rt/lib/builtins" ]
     configs += [ ":unwind_config" ]
     configs -= [
       "//llvm/utils/gn/build:no_exceptions",
@@ -104,9 +102,7 @@ if (libunwind_enable_static) {
       cflags_cc = [ "-fvisibility-global-new-delete-hidden" ]
       defines = [ "_LIBUNWIND_DISABLE_VISIBILITY_ANNOTATIONS" ]
     }
-    deps = [
-      "//compiler-rt/lib/builtins",
-    ]
+    deps = [ "//compiler-rt/lib/builtins" ]
     configs += [ ":unwind_config" ]
     configs -= [
       "//llvm/utils/gn/build:no_exceptions",

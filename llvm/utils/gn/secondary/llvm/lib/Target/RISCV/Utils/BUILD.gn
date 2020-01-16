@@ -9,9 +9,7 @@ tablegen("RISCVGenSystemOperands") {
 
 static_library("Utils") {
   output_name = "LLVMRISCVUtils"
-  public_deps = [
-    ":RISCVGenSystemOperands",
-  ]
+  public_deps = [ ":RISCVGenSystemOperands" ]
   deps = [
     "//llvm/lib/MC",
     "//llvm/lib/Support",
