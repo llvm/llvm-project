@@ -20,5 +20,5 @@ __attribute__((noinline)) void foo(int m) {
     bar();
 }
 // CHECK-REMARK: remark: {{.*}}.c:
-// CHECK-WARNING: warning: Potential performance regression from use of __builtin_expect(): Annotation was correct on {{.*}}.c:{{[0-9]*}}:26: 50.00% (12 / 24) of profiled executions.
+// CHECK-WARNING: warning: Potential performance regression from use of __builtin_expect(): Annotation was correct on {{.*}}.c:{{[0-9]*}}:{{[0-9]*}}: 50.00% (12 / 24) of profiled executions.
 // CHECK-NOWARNING-NOT: warning: {{.*}}.c:{{[0-9]*}}:26: 50.00% (12 / 24)
