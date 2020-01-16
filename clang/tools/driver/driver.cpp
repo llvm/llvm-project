@@ -258,27 +258,6 @@ static void SetBackdoorDriverOutputsFromEnvVars(Driver &TheDriver) {
   TheDriver.CCLogDiagnostics = !!::getenv("CC_LOG_DIAGNOSTICS");
   if (TheDriver.CCLogDiagnostics)
     TheDriver.CCLogDiagnosticsFilename = ::getenv("CC_LOG_DIAGNOSTICS_FILE");
-
-  // Whether the cc1 tool should be called inside the current process, or if we
-  // should spawn a new clang process (old behavior).
-  // Not having an additional process saves some execution time of Windows,
-  // and makes debugging easier.
-  bool UseNewCC1Process = CLANG_SPAWN_CC1;
-
-  StringRef SpawnCC1Str = ::getenv("CLANG_SPAWN_CC1");
-  if (!SpawnCC1Str.empty()) {
-    if (SpawnCC1Str != "0" && SpawnCC1Str != "1") {
-      llvm::errs() << "error: the value of the environment variable "
-                      "CLANG_SPAWN_CC1 must be either 0 or 1.\n";
-      ::exit(1);
-    }
-    UseNewCC1Process = SpawnCC1Str[0] - '0';
-  }
-  if (!UseNewCC1Process) {
-    TheDriver.CC1Main = &ExecuteCC1Tool;
-    // Ensure the CC1Command actually catches cc1 crashes
-    llvm::CrashRecoveryContext::Enable();
-  }
 }
 
 static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
@@ -294,7 +273,7 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
 // This lets us create the DiagnosticsEngine with a properly-filled-out
 // DiagnosticOptions instance.
 static DiagnosticOptions *
-CreateAndPopulateDiagOpts(ArrayRef<const char *> argv) {
+CreateAndPopulateDiagOpts(ArrayRef<const char *> argv, bool &UseNewCC1Process) {
   auto *DiagOpts = new DiagnosticOptions;
   unsigned MissingArgIndex, MissingArgCount;
   InputArgList Args = getDriverOptTable().ParseArgs(
@@ -303,6 +282,12 @@ CreateAndPopulateDiagOpts(ArrayRef<const char *> argv) {
   // Any errors that would be diagnosed here will also be diagnosed later,
   // when the DiagnosticsEngine actually exists.
   (void)ParseDiagnosticArgs(*DiagOpts, Args);
+
+  UseNewCC1Process =
+      Args.hasFlag(clang::driver::options::OPT_fno_integrated_cc1,
+                   clang::driver::options::OPT_fintegrated_cc1,
+                   /*Default=*/CLANG_SPAWN_CC1);
+
   return DiagOpts;
 }
 
@@ -330,7 +315,7 @@ static void SetInstallDir(SmallVectorImpl<const char *> &argv,
 
 static int ExecuteCC1Tool(ArrayRef<const char *> argv) {
   // If we call the cc1 tool from the clangDriver library (through
-  // Driver::CC1Main), we need to cleanup the options usage count. The options
+  // Driver::CC1Main), we need to clean up the options usage count. The options
   // are currently global, and they might have been used previously by the
   // driver.
   llvm::cl::ResetAllOptionOccurrences();
@@ -413,6 +398,8 @@ int main(int argc_, const char **argv_) {
     return ExecuteCC1Tool(argv);
   }
 
+  // Handle options that need handling before the real command line parsing in
+  // Driver::BuildCompilation()
   bool CanonicalPrefixes = true;
   for (int i = 1, size = argv.size(); i < size; ++i) {
     // Skip end-of-line response file markers
@@ -457,8 +444,14 @@ int main(int argc_, const char **argv_) {
 
   std::string Path = GetExecutablePath(argv[0], CanonicalPrefixes);
 
+  // Whether the cc1 tool should be called inside the current process, or if we
+  // should spawn a new clang subprocess (old behavior).
+  // Not having an additional process saves some execution time of Windows,
+  // and makes debugging and profiling easier.
+  bool UseNewCC1Process;
+
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
-      CreateAndPopulateDiagOpts(argv);
+      CreateAndPopulateDiagOpts(argv, UseNewCC1Process);
 
   TextDiagnosticPrinter *DiagClient
     = new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
@@ -485,6 +478,12 @@ int main(int argc_, const char **argv_) {
   insertTargetAndModeArgs(TargetAndMode, argv, SavedStrings);
 
   SetBackdoorDriverOutputsFromEnvVars(TheDriver);
+
+  if (!UseNewCC1Process) {
+    TheDriver.CC1Main = &ExecuteCC1Tool;
+    // Ensure the CC1Command actually catches cc1 crashes
+    llvm::CrashRecoveryContext::Enable();
+  }
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(argv));
   int Res = 1;
