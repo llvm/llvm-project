@@ -956,9 +956,11 @@ DwarfCompileUnit::getDwarf5OrGNULocationAtom(dwarf::LocationAtom Loc) const {
   }
 }
 
-DIE &DwarfCompileUnit::constructCallSiteEntryDIE(
-    DIE &ScopeDIE, const DISubprogram *CalleeSP, bool IsTail,
-    const MCSymbol *PCAddr, const MCExpr *PCOffset, unsigned CallReg) {
+DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
+                                                 const DISubprogram *CalleeSP,
+                                                 bool IsTail,
+                                                 const MCSymbol *PCAddr,
+                                                 unsigned CallReg) {
   // Insert a call site entry DIE within ScopeDIE.
   DIE &CallSiteDIE = createAndAddDIE(getDwarf5OrGNUTag(dwarf::DW_TAG_call_site),
                                      ScopeDIE, nullptr);
@@ -984,8 +986,8 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(
     assert(PCAddr && "Missing PC information for a call");
     addLabelAddress(CallSiteDIE, dwarf::DW_AT_low_pc, PCAddr);
   } else if (!IsTail || DD->tuneForGDB()) {
-    assert(PCOffset && "Missing return PC information for a call");
-    addAddressExpr(CallSiteDIE, dwarf::DW_AT_call_return_pc, PCOffset);
+    assert(PCAddr && "Missing return PC information for a call");
+    addLabelAddress(CallSiteDIE, dwarf::DW_AT_call_return_pc, PCAddr);
   }
 
   return CallSiteDIE;
@@ -1283,12 +1285,6 @@ void DwarfCompileUnit::applyLabelAttributes(const DbgLabel &Label,
 void DwarfCompileUnit::addExpr(DIELoc &Die, dwarf::Form Form,
                                const MCExpr *Expr) {
   Die.addValue(DIEValueAllocator, (dwarf::Attribute)0, Form, DIEExpr(Expr));
-}
-
-void DwarfCompileUnit::addAddressExpr(DIE &Die, dwarf::Attribute Attribute,
-                                      const MCExpr *Expr) {
-  Die.addValue(DIEValueAllocator, Attribute, dwarf::DW_FORM_addr,
-               DIEExpr(Expr));
 }
 
 void DwarfCompileUnit::applySubprogramAttributesToDefinition(
