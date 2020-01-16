@@ -624,6 +624,7 @@ static std::string createResponseFile(const opt::InputArgList &args,
       break;
     case OPT_implib:
     case OPT_pdb:
+    case OPT_pdbstripped:
     case OPT_out:
       os << arg->getSpelling() << sys::path::filename(arg->getValue()) << "\n";
       break;
@@ -1264,6 +1265,10 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
     if (auto *arg = args.getLastArg(OPT_pdb_source_path))
       config->pdbSourcePath = arg->getValue();
   }
+
+  // Handle /pdbstripped
+  if (auto *arg = args.getLastArg(OPT_pdbstripped))
+    warn("ignoring /pdbstripped flag, it is not yet supported");
 
   // Handle /noentry
   if (args.hasArg(OPT_noentry)) {
