@@ -123,8 +123,25 @@ size_t InlineFunctionInfo::MemorySize() const {
 
 lldb::addr_t CallEdge::GetReturnPCAddress(Function &caller,
                                           Target &target) const {
-  const Address &base = caller.GetAddressRange().GetBaseAddress();
-  return base.GetLoadAddress(&target) + return_pc;
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
+
+  const Address &caller_start_addr = caller.GetAddressRange().GetBaseAddress();
+
+  ModuleSP caller_module_sp = caller_start_addr.GetModule();
+  if (!caller_module_sp) {
+    LLDB_LOG(log, "GetReturnPCAddress: cannot get Module for caller");
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  SectionList *section_list = caller_module_sp->GetSectionList();
+  if (!section_list) {
+    LLDB_LOG(log, "GetReturnPCAddress: cannot get SectionList for Module");
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  Address return_pc_addr = Address(return_pc, section_list);
+  lldb::addr_t ret_addr = return_pc_addr.GetLoadAddress(&target);
+  return ret_addr;
 }
 
 void DirectCallEdge::ParseSymbolFileAndResolve(ModuleList &images) {
