@@ -10,16 +10,14 @@
 #include "Latency.h"
 #include "LlvmState.h"
 #include "MCInstrDescView.h"
-#include "RegisterAliasing.h"
 #include "MipsInstrInfo.h"
+#include "RegisterAliasing.h"
+#include "TestBase.h"
 
 #include <unordered_set>
 
 namespace llvm {
 namespace exegesis {
-
-void InitializeMipsExegesisTarget();
-
 namespace {
 
 using testing::AnyOf;
@@ -29,21 +27,7 @@ using testing::SizeIs;
 MATCHER(IsInvalid, "") { return !arg.isValid(); }
 MATCHER(IsReg, "") { return arg.isReg(); }
 
-class MipsSnippetGeneratorTest : public ::testing::Test {
-protected:
-  MipsSnippetGeneratorTest() : State("mips-unknown-linux", "mips32"),
-	InstrInfo(State.getInstrInfo()) {}
-
-  static void SetUpTestCase() {
-    LLVMInitializeMipsTargetInfo();
-    LLVMInitializeMipsTarget();
-    LLVMInitializeMipsTargetMC();
-    InitializeMipsExegesisTarget();
-  }
-
-  LLVMState State;
-  const MCInstrInfo &InstrInfo;
-};
+class MipsSnippetGeneratorTest : public MipsTestBase {};
 
 template <typename SnippetGeneratorT>
 class SnippetGeneratorTest : public MipsSnippetGeneratorTest {
