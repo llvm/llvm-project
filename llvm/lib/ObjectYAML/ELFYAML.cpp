@@ -1101,12 +1101,6 @@ static void sectionMapping(IO &IO, ELFYAML::RelocationSection &Section) {
   IO.mapOptional("Relocations", Section.Relocations);
 }
 
-static void sectionMapping(IO &IO, ELFYAML::RelrSection &Section) {
-  commonSectionMapping(IO, Section);
-  IO.mapOptional("Entries", Section.Entries);
-  IO.mapOptional("Content", Section.Content);
-}
-
 static void groupSectionMapping(IO &IO, ELFYAML::Group &Group) {
   commonSectionMapping(IO, Group);
   IO.mapOptional("Info", Group.Signature);
@@ -1205,11 +1199,6 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     if (!IO.outputting())
       Section.reset(new ELFYAML::RelocationSection());
     sectionMapping(IO, *cast<ELFYAML::RelocationSection>(Section.get()));
-    break;
-  case ELF::SHT_RELR:
-    if (!IO.outputting())
-      Section.reset(new ELFYAML::RelrSection());
-    sectionMapping(IO, *cast<ELFYAML::RelrSection>(Section.get()));
     break;
   case ELF::SHT_GROUP:
     if (!IO.outputting())
@@ -1449,12 +1438,6 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
     if (VD->VerneedV && VD->Content)
       return "SHT_GNU_verneed: \"Dependencies\" and \"Content\" can't be used "
              "together";
-    return {};
-  }
-
-  if (const auto *RS = dyn_cast<ELFYAML::RelrSection>(C.get())) {
-    if (RS->Entries && RS->Content)
-      return "\"Entries\" and \"Content\" can't be used together";
     return {};
   }
 
