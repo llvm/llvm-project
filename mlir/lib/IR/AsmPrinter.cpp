@@ -1936,16 +1936,14 @@ void OperationPrinter::printOperation(Operation *op) {
     os << " = ";
   }
 
-  // TODO(riverriddle): FuncOp cannot be round-tripped currently, as
-  // FunctionType cannot be used in a TypeAttr.
-  if (printerFlags.shouldPrintGenericOpForm() && !isa<FuncOp>(op))
-    return printGenericOp(op);
-
-  // Check to see if this is a known operation.  If so, use the registered
-  // custom printer hook.
-  if (auto *opInfo = op->getAbstractOperation()) {
-    opInfo->printAssembly(op, *this);
-    return;
+  // If requested, always print the generic form.
+  if (!printerFlags.shouldPrintGenericOpForm()) {
+    // Check to see if this is a known operation.  If so, use the registered
+    // custom printer hook.
+    if (auto *opInfo = op->getAbstractOperation()) {
+      opInfo->printAssembly(op, *this);
+      return;
+    }
   }
 
   // Otherwise print with the generic assembly form.
