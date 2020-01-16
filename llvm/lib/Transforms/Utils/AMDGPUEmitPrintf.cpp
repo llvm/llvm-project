@@ -55,7 +55,7 @@ static Value *fitArgInto64Bits(IRBuilder<> &Builder, Value *Arg) {
     return Builder.CreateBitCast(Arg, Int64Ty);
   }
 
-  if (auto PtrTy = dyn_cast<PointerType>(Ty)) {
+  if (isa<PointerType>(Ty)) {
     return Builder.CreatePtrToInt(Arg, Int64Ty);
   }
 
