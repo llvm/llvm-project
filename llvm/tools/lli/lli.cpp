@@ -781,17 +781,18 @@ int runOrcLazyJIT(const char *ProgName) {
 
   auto Dump = createDebugDumper();
 
-  J->setLazyCompileTransform([&](orc::ThreadSafeModule TSM,
-                                 const orc::MaterializationResponsibility &R) {
-    TSM.withModuleDo([&](Module &M) {
-      if (verifyModule(M, &dbgs())) {
-        dbgs() << "Bad module: " << &M << "\n";
-        exit(1);
-      }
-      Dump(M);
-    });
-    return TSM;
-  });
+  J->getIRTransformLayer().setTransform(
+      [&](orc::ThreadSafeModule TSM,
+          const orc::MaterializationResponsibility &R) {
+        TSM.withModuleDo([&](Module &M) {
+          if (verifyModule(M, &dbgs())) {
+            dbgs() << "Bad module: " << &M << "\n";
+            exit(1);
+          }
+          Dump(M);
+        });
+        return TSM;
+      });
 
   orc::MangleAndInterner Mangle(J->getExecutionSession(), J->getDataLayout());
   J->getMainJITDylib().addGenerator(
