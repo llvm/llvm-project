@@ -78,6 +78,9 @@ private:
   /// `target`.
   SmallVector<Value, 4> processBranchArgs(llvm::BranchInst *br,
                                           llvm::BasicBlock *target);
+  /// Returns the standard type equivalent to be used in attributes for the
+  /// given LLVM IR dialect type.
+  Type getStdTypeForAttr(LLVMType type);
   /// Return `value` as an attribute to attach to a GlobalOp.
   Attribute getConstantAsAttr(llvm::Constant *value);
   /// Return `c` as an MLIR Value. This could either be a ConstantOp, or
@@ -193,6 +196,65 @@ LLVMType Importer::processType(llvm::Type *type) {
   }
 }
 
+// We only need integers, floats, doubles, and vectors and tensors thereof for
+// attributes. Scalar and vector types are converted to the standard
+// equivalents. Array types are converted to ranked tensors; nested array types
+// are converted to multi-dimensional tensors or vectors, depending on the
+// innermost type being a scalar or a vector.
+Type Importer::getStdTypeForAttr(LLVMType type) {
+  if (!type)
+    return nullptr;
+
+  if (type.isIntegerTy())
+    return b.getIntegerType(type.getUnderlyingType()->getIntegerBitWidth());
+
+  if (type.getUnderlyingType()->isFloatTy())
+    return b.getF32Type();
+
+  if (type.getUnderlyingType()->isDoubleTy())
+    return b.getF64Type();
+
+  // LLVM vectors can only contain scalars.
+  if (type.isVectorTy()) {
+    auto numElements = type.getUnderlyingType()->getVectorElementCount();
+    if (numElements.Scalable)
+      emitError(unknownLoc) << "scalable vectors not supported";
+    return VectorType::get(numElements.Min,
+                           getStdTypeForAttr(type.getVectorElementType()));
+  }
+
+  // LLVM arrays can contain other arrays or vectors.
+  if (type.isArrayTy()) {
+    // Recover the nested array shape.
+    SmallVector<int64_t, 4> shape;
+    shape.push_back(type.getArrayNumElements());
+    while (type.getArrayElementType().isArrayTy()) {
+      type = type.getArrayElementType();
+      shape.push_back(type.getArrayNumElements());
+    }
+
+    // If the innermost type is a vector, use the multi-dimensional vector as
+    // attribute type.
+    if (type.getArrayElementType().isVectorTy()) {
+      LLVMType vectorType = type.getArrayElementType();
+      auto numElements =
+          vectorType.getUnderlyingType()->getVectorElementCount();
+      if (numElements.Scalable)
+        emitError(unknownLoc) << "scalable vectors not supported";
+      shape.push_back(numElements.Min);
+
+      LLVMType elementType = vectorType.getVectorElementType();
+      return VectorType::get(shape, getStdTypeForAttr(elementType));
+    }
+
+    // Otherwise use a tensor.
+    return RankedTensorType::get(shape,
+                                 getStdTypeForAttr(type.getArrayElementType()));
+  }
+
+  llvm_unreachable("no equivalent standard type for typed attributes");
+}
+
 // Get the given constant as an attribute. Not all constants can be represented
 // as attributes.
 Attribute Importer::getConstantAsAttr(llvm::Constant *value) {
@@ -211,7 +273,59 @@ Attribute Importer::getConstantAsAttr(llvm::Constant *value) {
   }
   if (auto *f = dyn_cast<llvm::Function>(value))
     return b.getSymbolRefAttr(f->getName());
-  return Attribute();
+
+  // Convert constant data to a dense elements attribute.
+  if (auto *cd = dyn_cast<llvm::ConstantDataSequential>(value)) {
+    LLVMType type = processType(cd->getElementType());
+    auto attrType = getStdTypeForAttr(processType(cd->getType()))
+                        .dyn_cast_or_null<ShapedType>();
+    assert(attrType);
+    if (!attrType)
+      return nullptr;
+
+    if (type.isIntegerTy()) {
+      SmallVector<APInt, 8> values;
+      values.reserve(cd->getNumElements());
+      for (unsigned i = 0, e = cd->getNumElements(); i < e; ++i)
+        values.push_back(cd->getElementAsAPInt(i));
+      return DenseElementsAttr::get(attrType, values);
+    }
+
+    if (type.isFloatTy() || type.isDoubleTy()) {
+      SmallVector<APFloat, 8> values;
+      values.reserve(cd->getNumElements());
+      for (unsigned i = 0, e = cd->getNumElements(); i < e; ++i)
+        values.push_back(cd->getElementAsAPFloat(i));
+      return DenseElementsAttr::get(attrType, values);
+    }
+
+    return nullptr;
+  }
+
+  // Unpack constant aggregates to create dense elements attribute whenever
+  // possible. Return nullptr (failure) otherwise.
+  if (auto *ca = dyn_cast<llvm::ConstantAggregate>(value)) {
+    auto outerType = getStdTypeForAttr(processType(value->getType()))
+                         .dyn_cast_or_null<ShapedType>();
+    if (!outerType)
+      return nullptr;
+
+    SmallVector<Attribute, 8> values;
+    SmallVector<int64_t, 8> shape;
+
+    for (unsigned i = 0, e = value->getNumOperands(); i < e; ++i) {
+      auto nested = getConstantAsAttr(value->getAggregateElement(i))
+                        .dyn_cast_or_null<DenseElementsAttr>();
+      if (!nested)
+        return nullptr;
+
+      values.append(nested.attr_value_begin(), nested.attr_value_end());
+    }
+
+    return DenseElementsAttr::get(outerType, values);
+  }
+
+  return nullptr;
 }
 
 /// Converts LLVM global variable linkage type into the LLVM dialect predicate.
