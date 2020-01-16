@@ -299,7 +299,7 @@ class DefineOutline : public Tweak {
 public:
   const char *id() const override;
 
-  bool hidden() const override { return true; }
+  bool hidden() const override { return false; }
   Intent intent() const override { return Intent::Refactor; }
   std::string title() const override {
     return "Move function body to out-of-line.";
