@@ -416,21 +416,21 @@ public:
   /// Return the sample count of the first instruction of the function.
   /// The function can be either a standalone symbol or an inlined function.
   uint64_t getEntrySamples() const {
+    uint64_t Count = 0;
     // Use either BodySamples or CallsiteSamples which ever has the smaller
     // lineno.
     if (!BodySamples.empty() &&
         (CallsiteSamples.empty() ||
          BodySamples.begin()->first < CallsiteSamples.begin()->first))
-      return BodySamples.begin()->second.getSamples();
-    if (!CallsiteSamples.empty()) {
-      uint64_t T = 0;
+      Count = BodySamples.begin()->second.getSamples();
+    else if (!CallsiteSamples.empty()) {
       // An indirect callsite may be promoted to several inlined direct calls.
       // We need to get the sum of them.
       for (const auto &N_FS : CallsiteSamples.begin()->second)
-        T += N_FS.second.getEntrySamples();
-      return T;
+        Count += N_FS.second.getEntrySamples();
     }
-    return 0;
+    // Return at least 1 if total sample is not 0.
+    return Count ? Count : TotalSamples > 0;
   }
 
   /// Return all the samples collected in the body of the function.
