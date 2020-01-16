@@ -16,6 +16,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -114,8 +115,9 @@ void DWARFDebugLine::Prologue::dump(raw_ostream &OS,
      << format("     opcode_base: %u\n", OpcodeBase);
 
   for (uint32_t I = 0; I != StandardOpcodeLengths.size(); ++I)
-    OS << format("standard_opcode_lengths[%s] = %u\n",
-                 LNStandardString(I + 1).data(), StandardOpcodeLengths[I]);
+    OS << formatv("standard_opcode_lengths[{0}] = {1}\n",
+                  static_cast<dwarf::LineNumberOps>(I + 1),
+                  StandardOpcodeLengths[I]);
 
   if (!IncludeDirectories.empty()) {
     // DWARF v5 starts directory indexes at 0.
