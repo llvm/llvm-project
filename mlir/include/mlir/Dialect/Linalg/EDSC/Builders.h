@@ -24,6 +24,64 @@ namespace mlir {
 class BlockArgument;
 
 namespace edsc {
+
+/// A LoopRangeBuilder is a generic NestedBuilder for loop.for operations.
+/// More specifically it is meant to be used as a temporary object for
+/// representing any nested MLIR construct that is "related to" an mlir::Value
+/// (for now an induction variable).
+class LoopRangeBuilder : public NestedBuilder {
+public:
+  /// Constructs a new loop.for and captures the associated induction
+  /// variable. A ValueHandle pointer is passed as the first argument and is the
+  /// *only* way to capture the loop induction variable.
+  LoopRangeBuilder(ValueHandle *iv, ValueHandle range);
+  LoopRangeBuilder(ValueHandle *iv, Value range);
+  LoopRangeBuilder(ValueHandle *iv, SubViewOp::Range range);
+
+  LoopRangeBuilder(const LoopRangeBuilder &) = delete;
+  LoopRangeBuilder(LoopRangeBuilder &&) = default;
+
+  LoopRangeBuilder &operator=(const LoopRangeBuilder &) = delete;
+  LoopRangeBuilder &operator=(LoopRangeBuilder &&) = default;
+
+  /// The only purpose of this operator is to serve as a sequence point so that
+  /// the evaluation of `fun` (which build IR snippets in a scoped fashion) is
+  /// scoped within a LoopRangeBuilder.
+  ValueHandle operator()(std::function<void(void)> fun = nullptr);
+};
+
+/// Helper class to sugar building loop.for loop nests from ranges.
+/// This is similar to edsc::AffineLoopNestBuilder except it works on ranges
+/// directly. In the current implementation it produces loop.for operations.
+class LoopNestRangeBuilder {
+public:
+  LoopNestRangeBuilder(ArrayRef<edsc::ValueHandle *> ivs,
+                       ArrayRef<edsc::ValueHandle> ranges);
+  LoopNestRangeBuilder(ArrayRef<edsc::ValueHandle *> ivs,
+                       ArrayRef<Value> ranges);
+  LoopNestRangeBuilder(ArrayRef<edsc::ValueHandle *> ivs,
+                       ArrayRef<SubViewOp::Range> ranges);
+  edsc::ValueHandle operator()(std::function<void(void)> fun = nullptr);
+
+private:
+  SmallVector<LoopRangeBuilder, 4> loops;
+};
+
+/// Helper template class for building loop.for and affine.loop nests from
+/// ranges.
+template <typename LoopTy> class GenericLoopNestRangeBuilder {
+public:
+  GenericLoopNestRangeBuilder(ArrayRef<edsc::ValueHandle *> ivs,
+                              ArrayRef<Value> ranges);
+  void operator()(std::function<void(void)> fun = nullptr) { (*builder)(fun); }
+
+private:
+  typedef typename std::conditional<std::is_same<LoopTy, AffineForOp>::value,
+                                    AffineLoopNestBuilder,
+                                    LoopNestRangeBuilder>::type BuilderType;
+  std::unique_ptr<BuilderType> builder;
+};
+
 enum class IterType { Parallel, Reduction };
 
 inline StringRef toString(IterType t) {
