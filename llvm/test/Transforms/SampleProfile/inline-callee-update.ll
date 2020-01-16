@@ -5,6 +5,7 @@
 @y = global i32* ()* null, align 8
 @z = global i32* ()* null, align 8
 
+; CHECK: define i32* @sample_loader_inlinee() {{.*}} !prof ![[ENTRY:[0-9]+]]
 define i32* @sample_loader_inlinee() !dbg !3 {
 bb:
   %tmp = call i32* @direct_leaf_func(i32* null), !dbg !4
@@ -20,6 +21,7 @@ else:                                             ; preds = %bb
   ret i32* null
 }
 
+; CHECK: define i32* @cgscc_inlinee() {{.*}} !prof ![[ENTRY:[0-9]+]]
 define i32* @cgscc_inlinee() !dbg !6 {
 bb:
   %tmp = call i32* @direct_leaf_func(i32* null), !dbg !7
@@ -67,7 +69,4 @@ declare i32* @direct_leaf_func(i32*)
 !12 = !DILocation(line: 21, scope: !11)
 
 ; Make sure the ImportGUID stays with entry count metadata for ThinLTO-PreLink
-; CHECK: distinct !DISubprogram(name: "sample_loader_inlinee"
-; CHECK-NEXT: {!"function_entry_count", i64 1, i64 -9171813444624716006}
-; CHECK: distinct !DISubprogram(name: "cgscc_inlinee"
-; CHECK-NEXT: !{!"function_entry_count", i64 0, i64 -9171813444624716006}
+; CHECK: ![[ENTRY]] = !{!"function_entry_count", i64 1, i64 -9171813444624716006}
