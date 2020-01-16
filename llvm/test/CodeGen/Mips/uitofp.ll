@@ -7,17 +7,18 @@ define void @f0() nounwind {
 ; CHECK-NEXT:    addiu $sp, $sp, -8
 ; CHECK-NEXT:    addiu $1, $zero, 1
 ; CHECK-NEXT:    sw $1, 4($sp)
-; CHECK-NEXT:    lui $1, %hi($CPI0_0)
-; CHECK-NEXT:    addiu $1, $1, %lo($CPI0_0)
-; CHECK-NEXT:    lw $2, 4($sp)
-; CHECK-NEXT:    srl $3, $2, 29
-; CHECK-NEXT:    andi $3, $3, 4
-; CHECK-NEXT:    addu $1, $1, $3
-; CHECK-NEXT:    lwc1 $f0, 0($1)
-; CHECK-NEXT:    mtc1 $2, $f1
+; CHECK-NEXT:    lw $1, 4($sp)
+; CHECK-NEXT:    srl $2, $1, 1
+; CHECK-NEXT:    andi $3, $1, 1
+; CHECK-NEXT:    or $2, $3, $2
+; CHECK-NEXT:    mtc1 $2, $f0
+; CHECK-NEXT:    cvt.s.w $f0, $f0
+; CHECK-NEXT:    add.s $f0, $f0, $f0
+; CHECK-NEXT:    mtc1 $1, $f1
 ; CHECK-NEXT:    cvt.s.w $f1, $f1
-; CHECK-NEXT:    add.s $f0, $f1, $f0
-; CHECK-NEXT:    swc1 $f0, 0($sp)
+; CHECK-NEXT:    slti $1, $1, 0
+; CHECK-NEXT:    movn.s $f1, $f0, $1
+; CHECK-NEXT:    swc1 $f1, 0($sp)
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 8
 entry:
