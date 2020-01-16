@@ -295,7 +295,7 @@ LogicalResult TestOpWithVariadicResultsAndFolder::fold(
 }
 
 LogicalResult mlir::OpWithInferTypeInterfaceOp::inferReturnTypes(
-    llvm::Optional<Location> location, ValueRange operands,
+    MLIRContext *, Optional<Location> location, ValueRange operands,
     ArrayRef<NamedAttribute> attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferedReturnTypes) {
   if (operands[0].getType() != operands[1].getType()) {
@@ -304,6 +304,30 @@ LogicalResult mlir::OpWithInferTypeInterfaceOp::inferReturnTypes(
                              operands[1].getType());
   }
   inferedReturnTypes.assign({operands[0].getType()});
+  return success();
+}
+
+LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
+    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    ArrayRef<NamedAttribute> attributes, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents> &inferedComponents) {
+  // Create return type consisting of the first element of each shape of the
+  // input operands or unknown for unranked operand.
+  std::vector<int64_t> shape;
+  shape.reserve(operands.size());
+  for (auto operandType : operands.getTypes()) {
+    if (auto sval = operandType.dyn_cast<ShapedType>()) {
+      if (sval.hasRank())
+        shape.push_back(sval.getShape().front());
+      else
+        shape.push_back(ShapedType::kDynamicSize);
+    } else {
+      return emitOptionalError(location, "only shaped type operands allowed");
+    }
+  }
+  inferedComponents.reserve(1);
+  auto type = IntegerType::get(17, context);
+  inferedComponents.emplace_back(shape, type);
   return success();
 }
 

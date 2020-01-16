@@ -402,6 +402,21 @@ def OpWithInferTypeInterfaceOp : TEST_Op<"op_with_infer_type_if", [
   let results = (outs AnyTensor);
 }
 
+def InferTensorType : NativeOpTrait<"InferTensorType">;
+def OpWithShapedTypeInferTypeInterfaceOp : TEST_Op<"op_with_shaped_type_infer_type_if",
+  [
+     // Op implements infer type op interface.
+     InferTypeOpInterface,
+     // The op will have methods implementing the ShapedType type infer interface.
+     DeclareOpInterfaceMethods<InferShapedTypeOpInterface>,
+     // The op produces tensors and will use the ShapedType type infer interface
+     // along with knowledge that it is producing Tensors to infer shape.
+     InferTensorType
+   ]> {
+  let arguments = (ins AnyTensor, AnyTensor);
+  let results = (outs AnyTensor);
+}
+
 def IsNotScalar : Constraint<CPred<"$0.getType().getRank() != 0">>;
 
 def UpdateAttr : Pat<(I32ElementsAttrOp $attr),
