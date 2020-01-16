@@ -133,8 +133,7 @@ protected:
   /// Called at the end of the analysis of the callsite. Return the outcome of
   /// the analysis, i.e. 'InlineResult(true)' if the inlining may happen, or
   /// the reason it can't.
-  virtual InlineResult finalizeAnalysis() { return true; }
-
+  virtual InlineResult finalizeAnalysis() { return InlineResult::success(); }
   /// Called when we're about to start processing a basic block, and every time
   /// we are done processing an instruction. Return true if there is no point in
   /// continuing the analysis (e.g. we've determined already the call site is
@@ -145,8 +144,7 @@ protected:
   /// contexts propagated).  It checks callsite-specific information. Return a
   /// reason analysis can't continue if that's the case, or 'true' if it may
   /// continue.
-  virtual InlineResult onAnalysisStart() { return true; }
-
+  virtual InlineResult onAnalysisStart() { return InlineResult::success(); }
   /// Called if the analysis engine decides SROA cannot be done for the given
   /// alloca.
   virtual void onDisableSROA(AllocaInst *Arg) {}
@@ -458,7 +456,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       /// to instantiate the derived class.
       InlineCostCallAnalyzer CA(TTI, GetAssumptionCache, GetBFI, PSI, ORE, *F,
                                 Call, IndirectCallParams, false);
-      if (CA.analyze()) {
+      if (CA.analyze().isSuccess()) {
         // We were able to inline the indirect call! Subtract the cost from the
         // threshold to get the bonus we want to apply, but don't go below zero.
         Cost -= std::max(0, CA.getThreshold() - CA.getCost());
@@ -538,6 +536,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       SingleBB = false;
     }
   }
+
   InlineResult finalizeAnalysis() override {
     // Loops generally act a lot like calls in that they act like barriers to
     // movement, require a certain amount of setup, etc. So when optimising for
@@ -566,7 +565,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     else if (NumVectorInstructions <= NumInstructions / 2)
       Threshold -= VectorBonus / 2;
 
-    return Cost < std::max(1, Threshold);
+    if (Cost < std::max(1, Threshold))
+      return InlineResult::success();
+    return InlineResult::failure("Cost over threshold.");
   }
   bool shouldStop() override {
     // Bail out the moment we cross the threshold. This means we'll under-count
@@ -618,9 +619,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
     // Check if we're done. This can happen due to bonuses and penalties.
     if (Cost >= Threshold && !ComputeFullInlineCost)
-      return "high cost";
+      return InlineResult::failure("high cost");
 
-    return true;
+    return InlineResult::success();
   }
 
 public:
@@ -1768,26 +1769,26 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
 
     using namespace ore;
     // If the visit this instruction detected an uninlinable pattern, abort.
-    InlineResult IR;
+    InlineResult IR = InlineResult::success();
     if (IsRecursiveCall)
-      IR = "recursive";
+      IR = InlineResult::failure("recursive");
     else if (ExposesReturnsTwice)
-      IR = "exposes returns twice";
+      IR = InlineResult::failure("exposes returns twice");
     else if (HasDynamicAlloca)
-      IR = "dynamic alloca";
+      IR = InlineResult::failure("dynamic alloca");
     else if (HasIndirectBr)
-      IR = "indirect branch";
+      IR = InlineResult::failure("indirect branch");
     else if (HasUninlineableIntrinsic)
-      IR = "uninlinable intrinsic";
+      IR = InlineResult::failure("uninlinable intrinsic");
     else if (InitsVargArgs)
-      IR = "varargs";
-    if (!IR) {
+      IR = InlineResult::failure("varargs");
+    if (!IR.isSuccess()) {
       if (ORE)
         ORE->emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "NeverInline",
                                           &CandidateCall)
                  << NV("Callee", &F) << " has uninlinable pattern ("
-                 << NV("InlineResult", IR.message)
+                 << NV("InlineResult", IR.getFailureReason())
                  << ") and cost is not fully computed";
         });
       return IR;
@@ -1798,22 +1799,25 @@ CallAnalyzer::analyzeBlock(BasicBlock *BB,
     // the caller stack usage dramatically.
     if (IsCallerRecursive &&
         AllocatedSize > InlineConstants::TotalAllocaSizeRecursiveCaller) {
-      InlineResult IR = "recursive and allocates too much stack space";
+      auto IR =
+          InlineResult::failure("recursive and allocates too much stack space");
       if (ORE)
         ORE->emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "NeverInline",
                                           &CandidateCall)
-                 << NV("Callee", &F) << " is " << NV("InlineResult", IR.message)
+                 << NV("Callee", &F) << " is "
+                 << NV("InlineResult", IR.getFailureReason())
                  << ". Cost is not fully computed";
         });
       return IR;
     }
 
     if (shouldStop())
-      return false;
+      return InlineResult::failure(
+          "Call site analysis is not favorable to inlining.");
   }
 
-  return true;
+  return InlineResult::success();
 }
 
 /// Compute the base pointer and cumulative constant offsets for V.
@@ -1904,11 +1908,11 @@ InlineResult CallAnalyzer::analyze() {
   ++NumCallsAnalyzed;
 
   auto Result = onAnalysisStart();
-  if (!Result)
+  if (!Result.isSuccess())
     return Result;
 
   if (F.empty())
-    return true;
+    return InlineResult::success();
 
   Function *Caller = CandidateCall.getFunction();
   // Check if the caller function is recursive itself.
@@ -1983,12 +1987,12 @@ InlineResult CallAnalyzer::analyze() {
     if (BB->hasAddressTaken())
       for (User *U : BlockAddress::get(&*BB)->users())
         if (!isa<CallBrInst>(*U))
-          return "blockaddress used outside of callbr";
+          return InlineResult::failure("blockaddress used outside of callbr");
 
     // Analyze the cost of this block. If we blow through the threshold, this
     // returns false, and we can bail on out.
     InlineResult IR = analyzeBlock(BB, EphValues);
-    if (!IR)
+    if (!IR.isSuccess())
       return IR;
 
     Instruction *TI = BB->getTerminator();
@@ -2034,7 +2038,7 @@ InlineResult CallAnalyzer::analyze() {
   // inlining this would cause the removal of the caller (so the instruction
   // is not actually duplicated, just moved).
   if (!OnlyOneCallAndLocalLinkage && ContainsNoDuplicateCall)
-    return "noduplicate";
+    return InlineResult::failure("noduplicate");
 
   return finalizeAnalysis();
 }
@@ -2140,9 +2144,9 @@ InlineCost llvm::getInlineCost(
   // whenever possible.
   if (Call.hasFnAttr(Attribute::AlwaysInline)) {
     auto IsViable = isInlineViable(*Callee);
-    if (IsViable)
+    if (IsViable.isSuccess())
       return llvm::InlineCost::getAlways("always inline attribute");
-    return llvm::InlineCost::getNever(IsViable.message);
+    return llvm::InlineCost::getNever(IsViable.getFailureReason());
   }
 
   // Never inline functions with conflicting attributes (unless callee has
@@ -2182,9 +2186,9 @@ InlineCost llvm::getInlineCost(
   LLVM_DEBUG(CA.dump());
 
   // Check if there was a reason to force inlining or no inlining.
-  if (!ShouldInline && CA.getCost() < CA.getThreshold())
-    return InlineCost::getNever(ShouldInline.message);
-  if (ShouldInline && CA.getCost() >= CA.getThreshold())
+  if (!ShouldInline.isSuccess() && CA.getCost() < CA.getThreshold())
+    return InlineCost::getNever(ShouldInline.getFailureReason());
+  if (ShouldInline.isSuccess() && CA.getCost() >= CA.getThreshold())
     return InlineCost::getAlways("empty function");
 
   return llvm::InlineCost::get(CA.getCost(), CA.getThreshold());
@@ -2195,14 +2199,14 @@ InlineResult llvm::isInlineViable(Function &F) {
   for (Function::iterator BI = F.begin(), BE = F.end(); BI != BE; ++BI) {
     // Disallow inlining of functions which contain indirect branches.
     if (isa<IndirectBrInst>(BI->getTerminator()))
-      return "contains indirect branches";
+      return InlineResult::failure("contains indirect branches");
 
     // Disallow inlining of blockaddresses which are used by non-callbr
     // instructions.
     if (BI->hasAddressTaken())
       for (User *U : BlockAddress::get(&*BI)->users())
         if (!isa<CallBrInst>(*U))
-          return "blockaddress used outside of callbr";
+          return InlineResult::failure("blockaddress used outside of callbr");
 
     for (auto &II : *BI) {
       CallBase *Call = dyn_cast<CallBase>(&II);
@@ -2211,13 +2215,13 @@ InlineResult llvm::isInlineViable(Function &F) {
 
       // Disallow recursive calls.
       if (&F == Call->getCalledFunction())
-        return "recursive call";
+        return InlineResult::failure("recursive call");
 
       // Disallow calls which expose returns-twice to a function not previously
       // attributed as such.
       if (!ReturnsTwice && isa<CallInst>(Call) &&
           cast<CallInst>(Call)->canReturnTwice())
-        return "exposes returns-twice attribute";
+        return InlineResult::failure("exposes returns-twice attribute");
 
       if (Call->getCalledFunction())
         switch (Call->getCalledFunction()->getIntrinsicID()) {
@@ -2226,20 +2230,23 @@ InlineResult llvm::isInlineViable(Function &F) {
         case llvm::Intrinsic::icall_branch_funnel:
           // Disallow inlining of @llvm.icall.branch.funnel because current
           // backend can't separate call targets from call arguments.
-          return "disallowed inlining of @llvm.icall.branch.funnel";
+          return InlineResult::failure(
+              "disallowed inlining of @llvm.icall.branch.funnel");
         case llvm::Intrinsic::localescape:
           // Disallow inlining functions that call @llvm.localescape. Doing this
           // correctly would require major changes to the inliner.
-          return "disallowed inlining of @llvm.localescape";
+          return InlineResult::failure(
+              "disallowed inlining of @llvm.localescape");
         case llvm::Intrinsic::vastart:
           // Disallow inlining of functions that initialize VarArgs with
           // va_start.
-          return "contains VarArgs initialized with va_start";
+          return InlineResult::failure(
+              "contains VarArgs initialized with va_start");
         }
     }
   }
 
-  return true;
+  return InlineResult::success();
 }
 
 // APIs to create InlineParams based on command line flags and/or other
