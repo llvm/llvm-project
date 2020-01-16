@@ -154,10 +154,6 @@ static cl::opt<bool>
                        cl::desc("Allows loops to be peeled when the dynamic "
                                 "trip count is known to be low."));
 
-static cl::opt<bool> UnrollAllowLoopNestsPeeling(
-    "unroll-allow-loop-nests-peeling", cl::init(false), cl::Hidden,
-    cl::desc("Allows loop nests to be peeled."));
-
 static cl::opt<bool> UnrollUnrollRemainder(
   "unroll-remainder", cl::Hidden,
   cl::desc("Allow the loop remainder to be unrolled."));
@@ -219,7 +215,6 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
   UP.Force = false;
   UP.UpperBound = false;
   UP.AllowPeeling = true;
-  UP.AllowLoopNestsPeeling = false;
   UP.UnrollAndJam = false;
   UP.PeelProfiledIterations = true;
   UP.UnrollAndJamInnerLoopThreshold = 60;
@@ -260,8 +255,6 @@ TargetTransformInfo::UnrollingPreferences llvm::gatherUnrollingPreferences(
     UP.UpperBound = false;
   if (UnrollAllowPeeling.getNumOccurrences() > 0)
     UP.AllowPeeling = UnrollAllowPeeling;
-  if (UnrollAllowLoopNestsPeeling.getNumOccurrences() > 0)
-    UP.AllowLoopNestsPeeling = UnrollAllowLoopNestsPeeling;
   if (UnrollUnrollRemainder.getNumOccurrences() > 0)
     UP.UnrollRemainder = UnrollUnrollRemainder;
 
