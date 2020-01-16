@@ -131,7 +131,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
         return type_sp;
       }
     }
-    if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetCString()))
+    if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetStringRef()))
       mangled_name = name;
   }
 
@@ -241,7 +241,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
 
   // Cache this type.
   if (type_sp && mangled_name &&
-      SwiftLanguageRuntime::IsSwiftMangledName(mangled_name.GetCString()))
+      SwiftLanguageRuntime::IsSwiftMangledName(mangled_name.GetStringRef()))
     m_ast.SetCachedType(mangled_name, type_sp);
   die.GetDWARF()->GetDIEToType()[die.GetDIE()] = type_sp.get();
 

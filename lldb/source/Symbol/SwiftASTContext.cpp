@@ -3291,7 +3291,7 @@ public:
 
     // We will not find any Swift types in the Clang compile units.
     ConstString name_cs(name);
-    if (SwiftLanguageRuntime::IsSwiftMangledName(name_cs.GetCString()))
+    if (SwiftLanguageRuntime::IsSwiftMangledName(name_cs.GetStringRef()))
       return;
 
     auto clang_importer = m_swift_ast_ctx.GetClangImporter();
@@ -4367,7 +4367,7 @@ SwiftASTContext::GetTypeFromMangledTypename(ConstString mangled_typename,
 
   const char *mangled_cstr = mangled_typename.AsCString();
   if (mangled_typename.IsEmpty() ||
-      !SwiftLanguageRuntime::IsSwiftMangledName(mangled_cstr)) {
+      !SwiftLanguageRuntime::IsSwiftMangledName(mangled_typename.GetStringRef())) {
     error.SetErrorStringWithFormat(
         "typename \"%s\" is not a valid Swift mangled name", mangled_cstr);
     return {};

@@ -645,7 +645,7 @@ Module::LookupInfo::LookupInfo(ConstString name,
              ObjCLanguage::IsPossibleObjCMethodName(name_cstr))
       m_name_type_mask = eFunctionNameTypeFull;
     // BEGIN SWIFT
-    else if (SwiftLanguageRuntime::IsSwiftMangledName(name_cstr))
+    else if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetStringRef()))
       m_name_type_mask = eFunctionNameTypeFull;
     // END SWIFT
     else if (Language::LanguageIsC(language)) {
