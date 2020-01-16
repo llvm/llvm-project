@@ -11,7 +11,7 @@ declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1)
 ; Show that what the atomic optimization pass will do for raw buffers.
 
 ; GCN-LABEL: add_i32_constant:
-; GCN-LABEL: BB0_1:
+; %bb.{{[0-9]+}}:
 ; GCN32: v_cmp_ne_u32_e64 s[[exec_lo:[0-9]+]], 1, 0
 ; GCN64: v_cmp_ne_u32_e64 s{{\[}}[[exec_lo:[0-9]+]]:[[exec_hi:[0-9]+]]{{\]}}, 1, 0
 ; GCN: v_mbcnt_lo_u32_b32{{(_e[0-9]+)?}} v[[mbcnt:[0-9]+]], s[[exec_lo]], 0
