@@ -34,9 +34,6 @@ class ExprCommandCallBuiltinFunction(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        interp = self.dbg.GetCommandInterpreter()
-        result = lldb.SBCommandReturnObject()
-
         # Test different builtin functions.
 
         self.expect_expr("__builtin_isinf(0.0f)", result_type="int", result_value="0")

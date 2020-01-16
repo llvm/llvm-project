@@ -21,8 +21,5 @@ class CPPBoolTestCase(TestBase):
 
         self.runCmd("process launch", RUN_SUCCEEDED)
 
-        self.expect("expression -- bool second_bool = my_bool; second_bool",
-                    startstr="(bool) $0 = false")
-
-        self.expect("expression -- my_bool = true",
-                    startstr="(bool) $1 = true")
+        self.expect_expr("bool second_bool = my_bool; second_bool", result_type="bool", result_value="false")
+        self.expect_expr("my_bool = true", result_type="bool", result_value="true")
