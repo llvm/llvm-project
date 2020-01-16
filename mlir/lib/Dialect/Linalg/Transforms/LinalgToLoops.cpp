@@ -562,8 +562,7 @@ void LowerLinalgToLoopsPass<LoopType, IndexedValueType>::runOnFunction() {
 
 /// Create a pass to convert Linalg operations to loop.for loops and
 /// std.load/std.store accesses.
-std::unique_ptr<OpPassBase<FuncOp>>
-mlir::linalg::createConvertLinalgToLoopsPass() {
+std::unique_ptr<OpPassBase<FuncOp>> mlir::createConvertLinalgToLoopsPass() {
   return std::make_unique<
       LowerLinalgToLoopsPass<loop::ForOp, IndexedStdValue>>();
 }
@@ -572,7 +571,7 @@ mlir::linalg::createConvertLinalgToLoopsPass() {
 /// affine_load/affine_store accesses.
 /// Placeholder for now, this is NYI.
 std::unique_ptr<OpPassBase<FuncOp>>
-mlir::linalg::createConvertLinalgToAffineLoopsPass() {
+mlir::createConvertLinalgToAffineLoopsPass() {
   return std::make_unique<
       LowerLinalgToLoopsPass<AffineForOp, IndexedAffineValue>>();
 }
