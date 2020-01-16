@@ -439,7 +439,13 @@ bool isLiteral(const Expr *E) {
 
 llvm::StringLiteral getNameForExpr(const Expr *E) {
   // FIXME: Come up with names for `special` expressions.
-  return "expression";
+  //
+  // It's an known issue for GCC5, https://godbolt.org/z/Z_tbgi. Work around
+  // that by using explicit conversion constructor.
+  //
+  // TODO: Once GCC5 is fully retired and not the minimal requirement as stated
+  // in `GettingStarted`, please remove the explicit conversion constructor.
+  return llvm::StringLiteral("expression");
 }
 
 // Generates hover info for evaluatable expressions.
