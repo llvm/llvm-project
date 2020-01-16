@@ -1539,7 +1539,7 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
 
   // FIXME: we don't inline callbr yet.
   if (isa<CallBrInst>(TheCall))
-    return false;
+    return InlineResult::failure("We don't inline callbr yet.");
 
   // If IFI has any state in it, zap it before we fill it in.
   IFI.reset();
@@ -1547,7 +1547,7 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   Function *CalledFunc = CS.getCalledFunction();
   if (!CalledFunc ||               // Can't inline external function or indirect
       CalledFunc->isDeclaration()) // call!
-    return "external or indirect";
+    return InlineResult::failure("external or indirect");
 
   // The inliner does not know how to inline through calls with operand bundles
   // in general ...
@@ -1561,7 +1561,7 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       if (Tag == LLVMContext::OB_funclet)
         continue;
 
-      return "unsupported operand bundle";
+      return InlineResult::failure("unsupported operand bundle");
     }
   }
 
@@ -1580,7 +1580,7 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     if (!Caller->hasGC())
       Caller->setGC(CalledFunc->getGC());
     else if (CalledFunc->getGC() != Caller->getGC())
-      return "incompatible GC";
+      return InlineResult::failure("incompatible GC");
   }
 
   // Get the personality function from the callee if it contains a landing pad.
@@ -1604,7 +1604,7 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     // TODO: This isn't 100% true. Some personality functions are proper
     //       supersets of others and can be used in place of the other.
     else if (CalledPersonality != CallerPersonality)
-      return "incompatible personality";
+      return InlineResult::failure("incompatible personality");
   }
 
   // We need to figure out which funclet the callsite was in so that we may
@@ -1629,7 +1629,7 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
             // for catchpads.
             for (const BasicBlock &CalledBB : *CalledFunc) {
               if (isa<CatchSwitchInst>(CalledBB.getFirstNonPHI()))
-                return "catch in cleanup funclet";
+                return InlineResult::failure("catch in cleanup funclet");
             }
           }
         } else if (isAsynchronousEHPersonality(Personality)) {
@@ -1637,7 +1637,7 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
           // funclet in the callee.
           for (const BasicBlock &CalledBB : *CalledFunc) {
             if (CalledBB.isEHPad())
-              return "SEH in cleanup funclet";
+              return InlineResult::failure("SEH in cleanup funclet");
           }
         }
       }
@@ -2247,7 +2247,7 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     Returns[0]->eraseFromParent();
 
     // We are now done with the inlining.
-    return true;
+    return InlineResult::success();
   }
 
   // Otherwise, we have the normal case, of more than one block to inline or
@@ -2409,5 +2409,5 @@ llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     }
   }
 
-  return true;
+  return InlineResult::success();
 }

@@ -284,7 +284,7 @@ static InlineResult InlineCallIfPossible(
   // Try to inline the function.  Get the list of static allocas that were
   // inlined.
   InlineResult IR = InlineFunction(CS, IFI, &AAR, InsertLifetime);
-  if (!IR)
+  if (!IR.isSuccess())
     return IR;
 
   if (InlinerFunctionImportStats != InlinerFunctionImportStatsOpts::No)
@@ -687,13 +687,15 @@ inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
         InlineResult IR = InlineCallIfPossible(
             CS, InlineInfo, InlinedArrayAllocas, InlineHistoryID,
             InsertLifetime, AARGetter, ImportedFunctionsStats);
-        if (!IR) {
-          setInlineRemark(CS, std::string(IR) + "; " + inlineCostStr(*OIC));
+        if (!IR.isSuccess()) {
+          setInlineRemark(CS, std::string(IR.getFailureReason()) + "; " +
+                                  inlineCostStr(*OIC));
           ORE.emit([&]() {
             return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc,
                                             Block)
                    << NV("Callee", Callee) << " will not be inlined into "
-                   << NV("Caller", Caller) << ": " << NV("Reason", IR.message);
+                   << NV("Caller", Caller) << ": "
+                   << NV("Reason", IR.getFailureReason());
           });
           continue;
         }
@@ -1076,12 +1078,14 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       using namespace ore;
 
       InlineResult IR = InlineFunction(CS, IFI);
-      if (!IR) {
-        setInlineRemark(CS, std::string(IR) + "; " + inlineCostStr(*OIC));
+      if (!IR.isSuccess()) {
+        setInlineRemark(CS, std::string(IR.getFailureReason()) + "; " +
+                                inlineCostStr(*OIC));
         ORE.emit([&]() {
           return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc, Block)
                  << NV("Callee", &Callee) << " will not be inlined into "
-                 << NV("Caller", &F) << ": " << NV("Reason", IR.message);
+                 << NV("Caller", &F) << ": "
+                 << NV("Reason", IR.getFailureReason());
         });
         continue;
       }

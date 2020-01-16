@@ -909,7 +909,7 @@ bool SampleProfileLoader::inlineCallInstruction(Instruction *I) {
     return false;
   }
   InlineFunctionInfo IFI(nullptr, &GetAC);
-  if (InlineFunction(CS, IFI)) {
+  if (InlineFunction(CS, IFI).isSuccess()) {
     // The call to InlineFunction erases I, so we can't pass it here.
     ORE->emit(OptimizationRemark(CSINLINE_DEBUG, "InlineSuccess", DLoc, BB)
               << "inlined callee '" << ore::NV("Callee", CalledFunction)
