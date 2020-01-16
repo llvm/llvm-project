@@ -1436,9 +1436,10 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     // Do the arithmetic in the larger type.
     auto NewOp = MIRBuilder.buildInstr(Opcode, {WideTy}, {LHSZext, RHSZext});
     LLT OrigTy = MRI.getType(MI.getOperand(0).getReg());
-    APInt Mask = APInt::getAllOnesValue(OrigTy.getSizeInBits());
+    APInt Mask =
+        APInt::getLowBitsSet(WideTy.getSizeInBits(), OrigTy.getSizeInBits());
     auto AndOp = MIRBuilder.buildAnd(
-        WideTy, NewOp, MIRBuilder.buildConstant(WideTy, Mask.getZExtValue()));
+        WideTy, NewOp, MIRBuilder.buildConstant(WideTy, Mask));
     // There is no overflow if the AndOp is the same as NewOp.
     MIRBuilder.buildICmp(CmpInst::ICMP_NE, MI.getOperand(1), NewOp, AndOp);
     // Now trunc the NewOp to the original result.
