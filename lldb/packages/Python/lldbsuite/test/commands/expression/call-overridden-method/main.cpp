@@ -6,6 +6,7 @@ public:
 
 class Derived : public Base {
 public:
+  virtual ~Derived() {}
   virtual int foo() { return 2; }
 };
 
