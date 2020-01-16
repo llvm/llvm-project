@@ -1028,7 +1028,8 @@ static uint64_t getEncodedGVSummaryFlags(GlobalValueSummary::GVFlags Flags) {
 }
 
 static uint64_t getEncodedGVarFlags(GlobalVarSummary::GVarFlags Flags) {
-  uint64_t RawFlags = Flags.MaybeReadOnly | (Flags.MaybeWriteOnly << 1);
+  uint64_t RawFlags =
+      Flags.MaybeReadOnly | (Flags.MaybeWriteOnly << 1) | (Flags.Constant << 2);
   return RawFlags;
 }
 

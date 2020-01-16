@@ -221,7 +221,8 @@ bool ModuleSummaryIndex::canImportGlobalVar(GlobalValueSummary *S,
     // c) Link error (external declaration with internal definition).
     // However we do not promote objects referenced by writeonly GV
     // initializer by means of converting it to 'zeroinitializer'
-    return !isReadOnly(GVS) && !isWriteOnly(GVS) && GVS->refs().size();
+    return !GVS->isConstant() && !isReadOnly(GVS) && !isWriteOnly(GVS) &&
+           GVS->refs().size();
   };
   auto *GVS = cast<GlobalVarSummary>(S->getBaseObject());
 
@@ -405,6 +406,12 @@ static bool hasWriteOnlyFlag(const GlobalValueSummary *S) {
   return false;
 }
 
+static bool hasConstantFlag(const GlobalValueSummary *S) {
+  if (auto *GVS = dyn_cast<GlobalVarSummary>(S))
+    return GVS->isConstant();
+  return false;
+}
+
 void ModuleSummaryIndex::exportToDot(
     raw_ostream &OS,
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) const {
@@ -482,6 +489,8 @@ void ModuleSummaryIndex::exportToDot(
           A.addComment("immutable");
         if (Flags.Live && hasWriteOnlyFlag(SummaryIt.second))
           A.addComment("writeOnly");
+        if (Flags.Live && hasConstantFlag(SummaryIt.second))
+          A.addComment("constant");
       }
       if (Flags.DSOLocal)
         A.addComment("dsoLocal");
