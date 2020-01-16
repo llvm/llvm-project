@@ -19395,7 +19395,6 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   FudgePtr = DAG.getNode(ISD::ADD, dl, PtrVT, FudgePtr, Offset);
 
   // Load the value out, extending it from f32 to f80.
-  // FIXME: Avoid the extend by constructing the right constant pool?
   SDValue Fudge = DAG.getExtLoad(
       ISD::EXTLOAD, dl, MVT::f80, Chain, FudgePtr,
       MachinePointerInfo::getConstantPool(DAG.getMachineFunction()), MVT::f32,
