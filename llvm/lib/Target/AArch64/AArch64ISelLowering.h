@@ -218,6 +218,7 @@ enum NodeType : unsigned {
   TBL,
 
   INSR,
+  PTEST,
   PTRUE,
 
   // Unsigned gather loads.

@@ -1014,6 +1014,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  llvm_i32_ty],
                 [IntrNoMem]>;
 
+  class AdvSIMD_SVE_PTEST_Intrinsic
+    : Intrinsic<[llvm_i1_ty],
+                [llvm_anyvector_ty,
+                 LLVMMatchType<0>],
+                [IntrNoMem]>;
+
   class AdvSIMD_SVE_TBL_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMMatchType<0>,
@@ -1551,6 +1557,14 @@ def int_aarch64_sve_pfirst  : AdvSIMD_Pred1VectorArg_Intrinsic;
 def int_aarch64_sve_pnext   : AdvSIMD_Pred1VectorArg_Intrinsic;
 def int_aarch64_sve_punpkhi : AdvSIMD_SVE_PUNPKHI_Intrinsic;
 def int_aarch64_sve_punpklo : AdvSIMD_SVE_PUNPKHI_Intrinsic;
+
+//
+// Testing predicates
+//
+
+def int_aarch64_sve_ptest_any   : AdvSIMD_SVE_PTEST_Intrinsic;
+def int_aarch64_sve_ptest_first : AdvSIMD_SVE_PTEST_Intrinsic;
+def int_aarch64_sve_ptest_last  : AdvSIMD_SVE_PTEST_Intrinsic;
 
 //
 // Gather loads:
