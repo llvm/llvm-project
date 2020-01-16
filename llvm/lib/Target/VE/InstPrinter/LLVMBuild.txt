@@ -1,4 +1,4 @@
-;===- ./lib/Target/VE/MCTargetDesc/LLVMBuild.txt ---------------*- Conf -*--===;
+;===- ./lib/Target/VE/InstPrinter/LLVMBuild.txt ----------------*- Conf -*--===;
 ;
 ; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ; See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@
 
 [component_0]
 type = Library
-name = VEDesc
+name = VEAsmPrinter
 parent = VE
-required_libraries = MC VEAsmPrinter VEInfo Support
+required_libraries = MC Support
 add_to_library_groups = VE
