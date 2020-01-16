@@ -1,5 +1,5 @@
-; RUN: not --crash llc < %s -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 2>&1 | FileCheck %s
-; RUN: not --crash llc < %s -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 2>&1 | FileCheck %s
+; RUN: not llc < %s -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr8 2>&1 | FileCheck %s
+; RUN: not llc < %s -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr8 2>&1 | FileCheck %s
 
 ; This test expects a compiler diagnostic for an AIX limitation on Altivec
 ; support.  When the Altivec limitation diagnostic is removed, this test

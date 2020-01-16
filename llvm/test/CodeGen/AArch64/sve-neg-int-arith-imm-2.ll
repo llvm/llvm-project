@@ -1,4 +1,4 @@
-; RUN: not --crash llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s
+; RUN: not llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s
 
 ; Numbers smaller than -127 and greater than or equal to 127 are not allowed.
 ; This should get lowered to a regular vector multiply and these tests should
