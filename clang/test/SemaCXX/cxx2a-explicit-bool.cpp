@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only %s -verify -Wno-c++2a-extensions
 // RUN: %clang_cc1 -std=c++2a -fsyntax-only %s -verify
 
 template <bool b, auto val> struct enable_ifv {};
