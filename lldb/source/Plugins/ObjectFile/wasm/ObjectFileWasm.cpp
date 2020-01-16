@@ -367,7 +367,7 @@ DataExtractor ObjectFileWasm::ReadImageData(uint64_t offset, size_t size) {
   DataExtractor data;
   if (m_file) {
     if (offset < GetByteSize()) {
-      size = std::min(size, GetByteSize() - offset);
+      size = std::min(size, (size_t) (GetByteSize() - offset));
       auto buffer_sp = MapFileData(m_file, size, offset);
       return DataExtractor(buffer_sp, GetByteOrder(), GetAddressByteSize());
     }
