@@ -519,8 +519,8 @@ def int_memmove : Intrinsic<[],
 def int_memset  : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty,
                              llvm_i1_ty],
-                            [IntrArgMemOnly, IntrWillReturn, NoCapture<0>, WriteOnly<0>,
-                            ImmArg<3>]>;
+                            [IntrWriteMem, IntrArgMemOnly, IntrWillReturn, NoCapture<0>,
+                             WriteOnly<0>, ImmArg<3>]>;
 
 // FIXME: Add version of these floating point intrinsics which allow non-default
 // rounding modes and FP exception handling.
@@ -1213,7 +1213,8 @@ def int_memmove_element_unordered_atomic
 // @llvm.memset.element.unordered.atomic.*(dest, value, length, elementsize)
 def int_memset_element_unordered_atomic
     : Intrinsic<[], [ llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty, llvm_i32_ty ],
-                [ IntrArgMemOnly, IntrWillReturn, NoCapture<0>, WriteOnly<0>, ImmArg<3> ]>;
+                [ IntrWriteMem, IntrArgMemOnly, IntrWillReturn, NoCapture<0>, WriteOnly<0>,
+                  ImmArg<3> ]>;
 
 //===------------------------ Reduction Intrinsics ------------------------===//
 //
