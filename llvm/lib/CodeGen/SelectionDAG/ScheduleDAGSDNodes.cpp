@@ -929,10 +929,12 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     }
   }
 
-  // Insert all the dbg_values which have not already been inserted in source
+  // Insert all the DBG_VALUEs which have not already been inserted in source
   // order sequence.
   if (HasDbg) {
-    MachineBasicBlock::iterator BBBegin = BB->getFirstNonPHI();
+    // Always place DBG_VALUEs after all other special start-of-block
+    // instructions, to avoid debug data hiding start-of-block instructions.
+    MachineBasicBlock::iterator BBBegin = BB->SkipPHIsAndLabels(BB->begin());
 
     // Sort the source order instructions and use the order to insert debug
     // values. Use stable_sort so that DBG_VALUEs are inserted in the same order
