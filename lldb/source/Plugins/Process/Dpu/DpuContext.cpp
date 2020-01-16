@@ -115,12 +115,12 @@ bool DpuContext::ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list) {
   return dpu_finalize_fault_process_for_dpu(m_dpu, m_context) == DPU_OK;
 }
 
-dpu_result_t DpuContext::StepThread(uint32_t thread_index) {
+dpu_error_t DpuContext::StepThread(uint32_t thread_index) {
   ResetScheduling();
   ResetLastResumeThreads();
   AddThreadInScheduling(thread_index);
 
-  dpu_result_t ret =
+  dpu_error_t ret =
       dpu_execute_thread_step_in_fault_for_dpu(m_dpu, thread_index, m_context);
   if (ret != DPU_OK)
     return ret;

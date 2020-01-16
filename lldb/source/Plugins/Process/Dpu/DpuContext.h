@@ -50,7 +50,7 @@ public:
 
   bool StopThreads();
   bool ResumeThreads(llvm::SmallVector<uint32_t, 8> *resume_list);
-  dpu_result_t StepThread(uint32_t thread_index);
+  dpu_error_t StepThread(uint32_t thread_index);
 
   unsigned int GetExitStatus();
   lldb::addr_t GetPcOfThread(dpu_thread_t thread);

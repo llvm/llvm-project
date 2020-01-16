@@ -117,7 +117,7 @@ bool Dpu::LoadElf(const FileSpec &elf_file_path) {
   ModuleSP elf_mod(new Module(elf_file_path, k_dpu_arch));
 
   struct dpu_set_t set = dpu_set_from_dpu(m_dpu);
-  dpu_result_t status = dpu_load(set, elf_file_path.GetCString(), NULL);
+  dpu_error_t status = dpu_load(set, elf_file_path.GetCString(), NULL);
   if (status != DPU_OK)
     return false;
 
@@ -394,7 +394,7 @@ StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
 bool Dpu::WriteWRAM(uint32_t offset, const void *buf, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
 
-  dpu_result_t ret;
+  dpu_error_t ret;
   // fast path, everything is aligned
   if (((offset & dpuword_size_mod) == 0) && ((size & dpuword_size_mod) == 0)) {
     const dpuword_t *words = static_cast<const dpuword_t *>(buf);
@@ -445,7 +445,7 @@ bool Dpu::ReadWRAM(uint32_t offset, void *buf, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   dpuword_t *words = static_cast<dpuword_t *>(buf);
 
-  dpu_result_t ret;
+  dpu_error_t ret;
   size_t final_size =
       size + sizeof(dpuword_t) - 1 + (offset & dpuword_size_mod);
 
@@ -475,7 +475,7 @@ bool Dpu::ReadWRAM(uint32_t offset, void *buf, size_t size) {
 bool Dpu::WriteIRAM(uint32_t offset, const void *buf, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
 
-  dpu_result_t ret;
+  dpu_error_t ret;
   // fast path, everything is aligned
   if (((offset & instruction_size_mod) == 0) &&
       ((size & instruction_size_mod) == 0)) {
@@ -527,7 +527,7 @@ bool Dpu::ReadIRAM(uint32_t offset, void *buf, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   dpuinstruction_t *instrs = static_cast<dpuinstruction_t *>(buf);
 
-  dpu_result_t ret;
+  dpu_error_t ret;
   size_t final_size =
       size + sizeof(dpuinstruction_t) - 1 + (offset & instruction_size_mod);
 
@@ -560,7 +560,7 @@ bool Dpu::WriteMRAM(uint32_t offset, const void *buf, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   const uint8_t *bytes = static_cast<const uint8_t *>(buf);
 
-  dpu_result_t ret = dpu_copy_to_mram(m_dpu, offset, bytes, size, 0);
+  dpu_error_t ret = dpu_copy_to_mram(m_dpu, offset, bytes, size, 0);
   return ret == DPU_OK;
 }
 
@@ -568,7 +568,7 @@ bool Dpu::ReadMRAM(uint32_t offset, void *buf, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   uint8_t *bytes = static_cast<uint8_t *>(buf);
 
-  dpu_result_t ret = dpu_copy_from_mram(m_dpu, bytes, offset, size, 0);
+  dpu_error_t ret = dpu_copy_from_mram(m_dpu, bytes, offset, size, 0);
   return ret == DPU_OK;
 }
 
@@ -595,7 +595,7 @@ bool Dpu::GenerateSaveCore(const char *exe_path, const char *core_file_path,
   uint8_t *wram = new uint8_t[wram_size];
   uint8_t *mram = new uint8_t[mram_size];
 
-  dpu_result_t status;
+  dpu_error_t status;
   if (wram != NULL && mram != NULL) {
     status = dpu_copy_from_wram_for_dpu(m_dpu, (dpuword_t *)wram, 0,
                                         nb_word_in_wram);
