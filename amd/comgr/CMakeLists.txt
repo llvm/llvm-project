@@ -213,10 +213,14 @@ set(LLD_LIBS
   lldELF
   lldCommon)
 
-llvm_map_components_to_libnames(LLVM_LIBS
-  ${LLVM_TARGETS_TO_BUILD}
-  DebugInfoDWARF
-  Symbolize)
+if (LLVM_LINK_LLVM_DYLIB)
+  set(LLVM_LIBS LLVM)
+else()
+  llvm_map_components_to_libnames(LLVM_LIBS
+    ${LLVM_TARGETS_TO_BUILD}
+    DebugInfoDWARF
+    Symbolize)
+endif()
 
 target_link_libraries(amd_comgr
   PUBLIC
