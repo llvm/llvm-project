@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s 2>&1 | FileCheck %s
+; RUN: not --crash llvm-as < %s 2>&1 | FileCheck %s
 
 target datalayout = "i32:32:24"
 

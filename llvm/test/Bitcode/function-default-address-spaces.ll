@@ -1,6 +1,6 @@
 ; RUN: llvm-as %s  -o - | llvm-dis - | FileCheck %s -check-prefixes CHECK,PROG-AS0
 ; RUN: llvm-as -data-layout "P200" %s  -o - | llvm-dis | FileCheck %s -check-prefixes CHECK,PROG-AS200
-; RUN: not llvm-as -data-layout "P123456789" %s -o /dev/null 2>&1 | FileCheck %s -check-prefix BAD-DATALAYOUT
+; RUN: not --crash llvm-as -data-layout "P123456789" %s -o /dev/null 2>&1 | FileCheck %s -check-prefix BAD-DATALAYOUT
 ; BAD-DATALAYOUT: LLVM ERROR: Invalid address space, must be a 24-bit integer
 
 ; PROG-AS0-NOT: target datalayout

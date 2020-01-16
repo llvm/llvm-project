@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -filetype=obj -triple armv7-linux-gnueabi %s -o - 2>&1 | FileCheck %s
+# RUN: not --crash llvm-mc -filetype=obj -triple armv7-linux-gnueabi %s -o - 2>&1 | FileCheck %s
 
         # We cannot switch subtargets mid-bundle
         .syntax unified
