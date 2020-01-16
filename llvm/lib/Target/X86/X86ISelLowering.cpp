@@ -18832,7 +18832,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
     return LowerF128Call(Op, DAG, RTLIB::getSINTTOFP(SrcVT, VT));
 
   SDValue ValueToStore = Src;
-  if (SrcVT == MVT::i64 && UseSSEReg && !Subtarget.is64Bit())
+  if (SrcVT == MVT::i64 && Subtarget.hasSSE2() && !Subtarget.is64Bit())
     // Bitcasting to f64 here allows us to do a single 64-bit store from
     // an SSE register, avoiding the store forwarding penalty that would come
     // with two 32-bit stores.

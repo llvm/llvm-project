@@ -576,15 +576,13 @@ define float @s64_to_f_2(i64 %a) nounwind {
 ; SSE1_32-NEXT:    pushl %ebp
 ; SSE1_32-NEXT:    movl %esp, %ebp
 ; SSE1_32-NEXT:    andl $-8, %esp
-; SSE1_32-NEXT:    subl $24, %esp
+; SSE1_32-NEXT:    subl $16, %esp
 ; SSE1_32-NEXT:    movl 8(%ebp), %eax
 ; SSE1_32-NEXT:    movl 12(%ebp), %ecx
 ; SSE1_32-NEXT:    addl $5, %eax
-; SSE1_32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    adcl $0, %ecx
+; SSE1_32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; SSE1_32-NEXT:    fldl {{[0-9]+}}(%esp)
-; SSE1_32-NEXT:    fstpl {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    fildll {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    fstps {{[0-9]+}}(%esp)
 ; SSE1_32-NEXT:    flds {{[0-9]+}}(%esp)
