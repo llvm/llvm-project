@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 200 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,warn -fopenmp -ferror-limit 200 %s -Wuninitialized
 // RUN: %clang_cc1 -DCCODE -verify -fopenmp -ferror-limit 200 -x c %s -Wno-openmp -Wuninitialized
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 200 %s -Wno-openmp-target -Wuninitialized
@@ -499,13 +499,13 @@ T tmain(T argc) {
 #pragma omp target data map(tofrom: argc > 0 ? x : y) // expected-error 2 {{expected expression containing only member accesses and/or array sections based on named variables}}
 #pragma omp target data map(argc)
 #pragma omp target data map(S1) // expected-error {{'S1' does not refer to a value}}
-#pragma omp target data map(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}}
-#pragma omp target data map(ba)
-#pragma omp target data map(ca)
+#pragma omp target data map(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}} warn-warning 2 {{Type 'const S2' is not trivially copyable and not guaranteed to be mapped correctly}} warn-warning 2 {{Type 'const S3' is not trivially copyable and not guaranteed to be mapped correctly}}
+#pragma omp target data map(ba) // warn-warning 2 {{Type 'const S2 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
+#pragma omp target data map(ca) // warn-warning 2 {{Type 'const S3 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
 #pragma omp target data map(da)
 #pragma omp target data map(S2::S2s)
 #pragma omp target data map(S2::S2sc)
-#pragma omp target data map(e, g)
+#pragma omp target data map(e, g) // warn-warning 2 {{Type 'S4' is not trivially copyable and not guaranteed to be mapped correctly}} warn-warning 2 {{Type 'S5' is not trivially copyable and not guaranteed to be mapped correctly}}
 #pragma omp target data map(h) // expected-error {{threadprivate variables are not allowed in 'map' clause}}
 #pragma omp target data map(k) map(k) // expected-error 2 {{variable already marked as mapped in current construct}} expected-note 2 {{used here}}
 #pragma omp target map(k), map(k[:5]) // expected-error 2 {{pointer cannot be mapped along with a section derived from itself}} expected-note 2 {{used here}}
@@ -558,6 +558,17 @@ struct SC1{
   int b[10];
 };
 
+class S8 {
+public:
+  virtual void foo() = 0;
+} *s8;
+
+class S9 {
+public:
+  virtual void foo() {}
+} s9;
+
+
 int main(int argc, char **argv) {
   const int d = 5;
   const int da[5] = { 0 };
@@ -595,14 +606,14 @@ int main(int argc, char **argv) {
 #pragma omp target data map(tofrom: argc > 0 ? argv[1] : argv[2]) // expected-error {{xpected expression containing only member accesses and/or array sections based on named variables}}
 #pragma omp target data map(argc)
 #pragma omp target data map(S1) // expected-error {{'S1' does not refer to a value}}
-#pragma omp target data map(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}}
+#pragma omp target data map(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}} warn-warning {{Type 'const S2' is not trivially copyable and not guaranteed to be mapped correctly}} warn-warning {{Type 'const S3' is not trivially copyable and not guaranteed to be mapped correctly}}
 #pragma omp target data map(argv[1])
-#pragma omp target data map(ba)
-#pragma omp target data map(ca)
+#pragma omp target data map(ba) // warn-warning {{Type 'const S2 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
+#pragma omp target data map(ca) // warn-warning {{Type 'const S3 [5]' is not trivially copyable and not guaranteed to be mapped correctly}}
 #pragma omp target data map(da)
 #pragma omp target data map(S2::S2s)
 #pragma omp target data map(S2::S2sc)
-#pragma omp target data map(e, g)
+#pragma omp target data map(e, g) // warn-warning {{Type 'S4' is not trivially copyable and not guaranteed to be mapped correctly}} warn-warning {{Type 'S5' is not trivially copyable and not guaranteed to be mapped correctly}}
 #pragma omp target data map(h) // expected-error {{threadprivate variables are not allowed in 'map' clause}}
 #pragma omp target data map(k), map(k) // expected-error {{variable already marked as mapped in current construct}} expected-note {{used here}}
 #pragma omp target map(k), map(k[:5]) // expected-error {{pointer cannot be mapped along with a section derived from itself}} expected-note {{used here}}
@@ -635,7 +646,7 @@ int main(int argc, char **argv) {
   {}
 #pragma omp target firstprivate(j) map(j)  // expected-error {{firstprivate variable cannot be in a map clause in '#pragma omp target' directive}} expected-note {{defined as firstprivate}}
   {}
-#pragma omp target map(m)
+#pragma omp target map(m) // warn-warning {{Type 'S6<int>' is not trivially copyable and not guaranteed to be mapped correctly}}
   {}
 // expected-note@+1 {{used here}}
 #pragma omp target map(s.s.s)
@@ -681,6 +692,8 @@ int main(int argc, char **argv) {
   { s.a++; }
 #pragma omp target map(s.s.s.b[:2])
   { s.s.s.b[0]++; }
+#pragma omp target map(s8[0:1], s9) // warn-warning {{Type 'class S8' is not trivially copyable and not guaranteed to be mapped correctly}} warn-warning {{Type 'class S9' is not trivially copyable and not guaranteed to be mapped correctly}}
+  {}
 
   return tmain<int, 3>(argc)+tmain<from, 4>(argc); // expected-note {{in instantiation of function template specialization 'tmain<int, 3>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<int, 4>' requested here}}
 }
