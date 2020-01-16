@@ -1653,9 +1653,13 @@ static bool IsVectorConversion(Sema &S, QualType FromType,
   // 1)vector types are equivalent AltiVec and GCC vector types
   // 2)lax vector conversions are permitted and the vector types are of the
   //   same size
+  // 3)the destination type does not have the ARM MVE strict-polymorphism
+  //   attribute, which inhibits lax vector conversion for overload resolution
+  //   only
   if (ToType->isVectorType() && FromType->isVectorType()) {
     if (S.Context.areCompatibleVectorTypes(FromType, ToType) ||
-        S.isLaxVectorConversion(FromType, ToType)) {
+        (S.isLaxVectorConversion(FromType, ToType) &&
+         !ToType->hasAttr(attr::ArmMveStrictPolymorphism))) {
       ICK = ICK_Vector_Conversion;
       return true;
     }
