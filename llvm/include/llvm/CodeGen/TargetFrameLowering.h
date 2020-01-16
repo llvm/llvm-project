@@ -52,21 +52,6 @@ public:
     unsigned Reg;
     int Offset; // Offset relative to stack pointer on function entry.
   };
-
-  struct DwarfFrameBase {
-    // The frame base may be either a register (the default), the CFA,
-    // or a WebAssembly-specific location description.
-    enum FrameBaseKind { Register, CFA, WasmFrameBase } Kind;
-    struct WasmFrameBase {
-      unsigned Kind; // Wasm local, global, or value stack
-      unsigned Index;
-    };
-    union {
-      unsigned Reg;
-      struct WasmFrameBase WasmLoc;
-    } Location;
-  };
-
 private:
   StackDirection StackDir;
   Align StackAlignment;
@@ -409,10 +394,6 @@ public:
   /// Return initial CFA register value i.e. the one valid at the beginning of
   /// the function (before any stack operations).
   virtual unsigned getInitialCFARegister(const MachineFunction &MF) const;
-
-  /// Return the frame base information to be encoded in the DWARF subprogram
-  /// debug info.
-  virtual DwarfFrameBase getDwarfFrameBase(const MachineFunction &MF) const;
 };
 
 } // End llvm namespace

@@ -400,33 +400,15 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
 
   // Only include DW_AT_frame_base in full debug info
   if (!includeMinimalInlineScopes()) {
-    const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
-    TargetFrameLowering::DwarfFrameBase FrameBase =
-        TFI->getDwarfFrameBase(*Asm->MF);
-    switch (FrameBase.Kind) {
-    case TargetFrameLowering::DwarfFrameBase::Register: {
-      if (Register::isPhysicalRegister(FrameBase.Location.Reg)) {
-        MachineLocation Location(FrameBase.Location.Reg);
-        addAddress(*SPDie, dwarf::DW_AT_frame_base, Location);
-      }
-      break;
-    }
-    case TargetFrameLowering::DwarfFrameBase::CFA: {
+    if (Asm->MF->getTarget().getTargetTriple().isNVPTX()) {
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
       addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_call_frame_cfa);
       addBlock(*SPDie, dwarf::DW_AT_frame_base, Loc);
-      break;
-    }
-    case TargetFrameLowering::DwarfFrameBase::WasmFrameBase: {
-      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-      DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
-      DIExpressionCursor Cursor({});
-      DwarfExpr.addWasmLocation(FrameBase.Location.WasmLoc.Kind,
-                                FrameBase.Location.WasmLoc.Index);
-      DwarfExpr.addExpression(std::move(Cursor));
-      addBlock(*SPDie, dwarf::DW_AT_frame_base, DwarfExpr.finalize());
-      break;
-    }
+    } else {
+      const TargetRegisterInfo *RI = Asm->MF->getSubtarget().getRegisterInfo();
+      MachineLocation Location(RI->getFrameRegister(*Asm->MF));
+      if (Register::isPhysicalRegister(Location.getReg()))
+        addAddress(*SPDie, dwarf::DW_AT_frame_base, Location);
     }
   }
 
