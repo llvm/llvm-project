@@ -426,10 +426,12 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd) {
           cast<InputSection>(sec)->getRelocatedSection())
         continue;
 
+      // Check the name early to improve performance in the common case.
+      if (!pat.sectionPat.match(sec->name))
+        continue;
+
       std::string filename = getFilename(sec->file);
-      if (!cmd->filePat.match(filename) ||
-          pat.excludedFilePat.match(filename) ||
-          !pat.sectionPat.match(sec->name))
+      if (!cmd->filePat.match(filename) || pat.excludedFilePat.match(filename))
         continue;
 
       ret.push_back(sec);
