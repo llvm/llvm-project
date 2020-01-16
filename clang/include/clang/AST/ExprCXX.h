@@ -4841,7 +4841,7 @@ public:
 ///
 /// According to C++2a [expr.prim.id]p3 an id-expression that denotes the
 /// specialization of a concept results in a prvalue of type bool.
-class ConceptSpecializationExpr final : public Expr,
+class ConceptSpecializationExpr final : public Expr, public ConceptReference,
       private llvm::TrailingObjects<ConceptSpecializationExpr,
                                     TemplateArgument> {
   friend class ASTStmtReader;
@@ -4850,30 +4850,6 @@ public:
   using SubstitutionDiagnostic = std::pair<SourceLocation, std::string>;
 
 protected:
-
-  // \brief The optional nested name specifier used when naming the concept.
-  NestedNameSpecifierLoc NestedNameSpec;
-
-  /// \brief The location of the template keyword, if specified when naming the
-  /// concept.
-  SourceLocation TemplateKWLoc;
-
-  /// \brief The location of the concept name in the expression.
-  SourceLocation ConceptNameLoc;
-
-  /// \brief The declaration found by name lookup when the expression was
-  /// created.
-  /// Can differ from NamedConcept when, for example, the concept was found
-  /// through a UsingShadowDecl.
-  NamedDecl *FoundDecl;
-
-  /// \brief The concept named.
-  ConceptDecl *NamedConcept;
-
-  /// \brief The template argument list source info used to specialize the
-  /// concept.
-  const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
-
   /// \brief The number of template arguments in the tail-allocated list of
   /// converted template arguments.
   unsigned NumTemplateArgs;
@@ -4883,10 +4859,10 @@ protected:
   /// ignored.
   ASTConstraintSatisfaction *Satisfaction;
 
-  ConceptSpecializationExpr(ASTContext &C, NestedNameSpecifierLoc NNS,
+  ConceptSpecializationExpr(const ASTContext &C, NestedNameSpecifierLoc NNS,
                             SourceLocation TemplateKWLoc,
-                            SourceLocation ConceptNameLoc, NamedDecl *FoundDecl,
-                            ConceptDecl *NamedConcept,
+                            DeclarationNameInfo ConceptNameInfo,
+                            NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
                             const ASTTemplateArgumentListInfo *ArgsAsWritten,
                             ArrayRef<TemplateArgument> ConvertedArgs,
                             const ConstraintSatisfaction *Satisfaction);
@@ -4896,8 +4872,8 @@ protected:
 public:
 
   static ConceptSpecializationExpr *
-  Create(ASTContext &C, NestedNameSpecifierLoc NNS,
-         SourceLocation TemplateKWLoc, SourceLocation ConceptNameLoc,
+  Create(const ASTContext &C, NestedNameSpecifierLoc NNS,
+         SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
          NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
          const ASTTemplateArgumentListInfo *ArgsAsWritten,
          ArrayRef<TemplateArgument> ConvertedArgs,
@@ -4906,30 +4882,13 @@ public:
   static ConceptSpecializationExpr *
   Create(ASTContext &C, EmptyShell Empty, unsigned NumTemplateArgs);
 
-  const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
-    return NestedNameSpec;
-  }
-
-  NamedDecl *getFoundDecl() const {
-    return FoundDecl;
-  }
-
-  ConceptDecl *getNamedConcept() const {
-    return NamedConcept;
-  }
-
   ArrayRef<TemplateArgument> getTemplateArguments() const {
     return ArrayRef<TemplateArgument>(getTrailingObjects<TemplateArgument>(),
                                       NumTemplateArgs);
   }
 
-  const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
-    return ArgsAsWritten;
-  }
-
   /// \brief Set new template arguments for this concept specialization.
-  void setTemplateArguments(const ASTTemplateArgumentListInfo *ArgsAsWritten,
-                            ArrayRef<TemplateArgument> Converted);
+  void setTemplateArguments(ArrayRef<TemplateArgument> Converted);
 
   /// \brief Whether or not the concept with the given arguments was satisfied
   /// when the expression was created.
@@ -4949,15 +4908,14 @@ public:
     return *Satisfaction;
   }
 
-  SourceLocation getConceptNameLoc() const { return ConceptNameLoc; }
-
-  SourceLocation getTemplateKWLoc() const { return TemplateKWLoc; }
-
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ConceptSpecializationExprClass;
   }
 
-  SourceLocation getBeginLoc() const LLVM_READONLY { return ConceptNameLoc; }
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return ConceptName.getBeginLoc();
+  }
+
   SourceLocation getEndLoc() const LLVM_READONLY {
     return ArgsAsWritten->RAngleLoc;
   }
