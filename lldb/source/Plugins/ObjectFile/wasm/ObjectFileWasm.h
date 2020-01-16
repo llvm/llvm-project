@@ -52,6 +52,15 @@ public:
   uint32_t GetPluginVersion() override { return 1; }
   /// \}
 
+  /// LLVM RTTI support
+  /// \{
+  static char ID;
+  bool isA(const void *ClassID) const override {
+    return ClassID == &ID || ObjectFile::isA(ClassID);
+  }
+  static bool classof(const ObjectFile *obj) { return obj->isA(&ID); }
+  /// \}
+
   /// ObjectFile Protocol.
   /// \{
   bool ParseHeader() override;
@@ -96,6 +105,12 @@ public:
                         : Address(m_code_section_offset);
   }
   /// \}
+
+  /// A Wasm module that has external DWARF debug information should contain a
+  /// custom section named "external_debug_info", whose payload is an UTF-8
+  /// encoded string that points to a Wasm module that contains the debug
+  /// information for this module.
+  llvm::Optional<FileSpec> GetExternalDebugInfoFileSpec();
 
 private:
   ObjectFileWasm(const lldb::ModuleSP &module_sp, lldb::DataBufferSP &data_sp,
