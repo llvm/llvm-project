@@ -876,7 +876,7 @@ TEST_FUNC(linalg_pointwise_test) {
 //       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
 // CHECK-SAME: indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d2, d1)>, affine_map<(d0, d1, d2) -> (d0, d1)>],
 // CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction"]}
-///      CHECK:   ^bb1(%[[a0:.*]]: f32, %[[a1:.*]]: f32, %[[a2:.*]]: f32):
+///      CHECK:   ^bb0(%[[a0:.*]]: f32, %[[a1:.*]]: f32, %[[a2:.*]]: f32):
 //       CHECK:     %[[a3:.*]] = mulf %[[a0]], %[[a1]] : f32
 //       CHECK:     %[[a4:.*]] = addf %[[a2]], %[[a3]] : f32
 //       CHECK:     linalg.yield %[[a4]] : f32
@@ -906,7 +906,7 @@ TEST_FUNC(linalg_matmul_test) {
 // CHECK-SAME: affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d1)>,
 // CHECK-SAME: affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d2, d3, d1)>],
 // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction"]}
-///      CHECK:   ^bb1(%[[a0:.*]]: f32, %[[a1:.*]]: f32, %[[a2:.*]]: f32):
+///      CHECK:   ^bb0(%[[a0:.*]]: f32, %[[a1:.*]]: f32, %[[a2:.*]]: f32):
 //       CHECK:     %[[a3:.*]] = mulf %[[a0]], %[[a1]] : f32
 //       CHECK:     %[[a4:.*]] = addf %[[a2]], %[[a3]] : f32
 //       CHECK:     linalg.yield %[[a4]] : f32
@@ -937,7 +937,7 @@ TEST_FUNC(linalg_conv_nhwc) {
 // CHECK-SAME: affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d5, d6, d2, d1)>,
 // CHECK-SAME: affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d3, d4, d1 + d2 * 7)>],
 // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "reduction", "reduction"]}
-//       CHECK:   ^bb1(%[[a0:.*]]: f32, %[[a1:.*]]: f32, %[[a2:.*]]: f32):
+//       CHECK:   ^bb0(%[[a0:.*]]: f32, %[[a1:.*]]: f32, %[[a2:.*]]: f32):
 //       CHECK:     %[[a3:.*]] = mulf %[[a0]], %[[a1]] : f32
 //       CHECK:     %[[a4:.*]] = addf %[[a2]], %[[a3]] : f32
 //       CHECK:     linalg.yield %[[a4]] : f32
