@@ -189,27 +189,25 @@ define i32 @modifier_z_zero(i32 %a) nounwind {
 ; RV64I-NEXT:    add a0, a0, zero
 ; RV64I-NEXT:    #NO_APP
 ; RV64I-NEXT:    ret
-  %1 = tail call i32 asm "add $0, $1, ${2:z}", "=r,r,r"(i32 %a, i32 0)
+  %1 = tail call i32 asm "add $0, $1, ${2:z}", "=r,r,i"(i32 %a, i32 0)
   ret i32 %1
 }
 
 define i32 @modifier_z_nonzero(i32 %a) nounwind {
 ; RV32I-LABEL: modifier_z_nonzero:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a1, zero, 1
 ; RV32I-NEXT:    #APP
-; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    add a0, a0, 1
 ; RV32I-NEXT:    #NO_APP
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: modifier_z_nonzero:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    addi a1, zero, 1
 ; RV64I-NEXT:    #APP
-; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    add a0, a0, 1
 ; RV64I-NEXT:    #NO_APP
 ; RV64I-NEXT:    ret
-  %1 = tail call i32 asm "add $0, $1, ${2:z}", "=r,r,r"(i32 %a, i32 1)
+  %1 = tail call i32 asm "add $0, $1, ${2:z}", "=r,r,i"(i32 %a, i32 1)
   ret i32 %1
 }
 

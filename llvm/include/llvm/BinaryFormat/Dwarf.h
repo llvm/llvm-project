@@ -654,6 +654,11 @@ template <> struct EnumTraits<Tag> : public std::true_type {
   static constexpr char Type[4] = "TAG";
   static constexpr StringRef (*StringFn)(unsigned) = &TagString;
 };
+
+template <> struct EnumTraits<LineNumberOps> : public std::true_type {
+  static constexpr char Type[4] = "LNS";
+  static constexpr StringRef (*StringFn)(unsigned) = &LNStandardString;
+};
 } // End of namespace dwarf
 
 /// Dwarf constants format_provider

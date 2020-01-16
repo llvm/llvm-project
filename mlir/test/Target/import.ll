@@ -209,3 +209,39 @@ define void @FPArithmetic(float %a, float %b, double %c, double %d) {
   %11 = frem double %c, %d
   ret void
 }
+
+;
+; Functions as constants.
+;
+
+; Calling the function that has not been defined yet.
+; CHECK-LABEL: @precaller
+define i32 @precaller() {
+  %1 = alloca i32 ()*
+  ; CHECK: %[[func:.*]] = llvm.mlir.constant(@callee) : !llvm<"i32 ()*">
+  ; CHECK: llvm.store %[[func]], %[[loc:.*]]
+  store i32 ()* @callee, i32 ()** %1
+  ; CHECK: %[[indir:.*]] = llvm.load %[[loc]]
+  %2 = load i32 ()*, i32 ()** %1
+  ; CHECK: llvm.call %[[indir]]()
+  %3 = call i32 %2()
+  ret i32 %3
+}
+
+define i32 @callee() {
+  ret i32 42
+}
+
+; Calling the function that has been defined.
+; CHECK-LABEL: @postcaller
+define i32 @postcaller() {
+  %1 = alloca i32 ()*
+  ; CHECK: %[[func:.*]] = llvm.mlir.constant(@callee) : !llvm<"i32 ()*">
+  ; CHECK: llvm.store %[[func]], %[[loc:.*]]
+  store i32 ()* @callee, i32 ()** %1
+  ; CHECK: %[[indir:.*]] = llvm.load %[[loc]]
+  %2 = load i32 ()*, i32 ()** %1
+  ; CHECK: llvm.call %[[indir]]()
+  %3 = call i32 %2()
+  ret i32 %3
+}

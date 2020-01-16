@@ -16,9 +16,9 @@ unittest("GlobalISelTests") {
     "ConstantFoldingTest.cpp",
     "GISelMITest.cpp",
     "KnownBitsTest.cpp",
-    "LegalizerTest.cpp",
     "LegalizerHelperTest.cpp",
     "LegalizerInfoTest.cpp",
+    "LegalizerTest.cpp",
     "MachineIRBuilderTest.cpp",
     "PatternMatchTest.cpp",
   ]

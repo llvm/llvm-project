@@ -1,4 +1,4 @@
-//===- LowerToLoops.cpp - conversion from Linalg library ops to loops------===//
+//===- LinalgToLoops.cpp - conversion from Linalg library ops to loops-----===//
 //
 // Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Linalg/EDSC/Builders.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -438,7 +439,7 @@ LogicalResult LinalgOpToLoopsImpl<LoopTy, IndexedValueTy, ConcreteOpTy>::doit(
   SmallVector<ValueHandle *, 4> allPIvs =
       makeHandlePointers(MutableArrayRef<IndexHandle>(allIvs));
   auto loopRanges = emitLoopRanges(scope.getBuilder(), scope.getLocation(),
-                                   invertedMap, getViewSizes(linalgOp));
+                                   invertedMap, getViewSizes(b, linalgOp));
   assert(loopRanges.size() == allIvs.size());
 
   GenericLoopNestRangeBuilder<LoopTy>(allPIvs, loopRanges)([&] {
@@ -561,8 +562,7 @@ void LowerLinalgToLoopsPass<LoopType, IndexedValueType>::runOnFunction() {
 
 /// Create a pass to convert Linalg operations to loop.for loops and
 /// std.load/std.store accesses.
-std::unique_ptr<OpPassBase<FuncOp>>
-mlir::linalg::createConvertLinalgToLoopsPass() {
+std::unique_ptr<OpPassBase<FuncOp>> mlir::createConvertLinalgToLoopsPass() {
   return std::make_unique<
       LowerLinalgToLoopsPass<loop::ForOp, IndexedStdValue>>();
 }
@@ -571,7 +571,7 @@ mlir::linalg::createConvertLinalgToLoopsPass() {
 /// affine_load/affine_store accesses.
 /// Placeholder for now, this is NYI.
 std::unique_ptr<OpPassBase<FuncOp>>
-mlir::linalg::createConvertLinalgToAffineLoopsPass() {
+mlir::createConvertLinalgToAffineLoopsPass() {
   return std::make_unique<
       LowerLinalgToLoopsPass<AffineForOp, IndexedAffineValue>>();
 }

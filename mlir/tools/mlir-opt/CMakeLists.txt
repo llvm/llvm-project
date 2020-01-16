@@ -29,7 +29,7 @@ set(LIBS
   MLIRGPUtoNVVMTransforms
   MLIRGPUtoROCDLTransforms
   MLIRGPUtoSPIRVTransforms
-  MLIRLinalg
+  MLIRLinalgOps
   MLIRLLVMIR
   MLIRLoopOps
   MLIRNVVMIR

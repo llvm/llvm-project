@@ -360,7 +360,7 @@ struct LinalgFusionPass : public FunctionPass<LinalgFusionPass> {
 };
 } // namespace
 
-std::unique_ptr<OpPassBase<FuncOp>> mlir::linalg::createLinalgFusionPass() {
+std::unique_ptr<OpPassBase<FuncOp>> mlir::createLinalgFusionPass() {
   return std::make_unique<LinalgFusionPass>();
 }
 

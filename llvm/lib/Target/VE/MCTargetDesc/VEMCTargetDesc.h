@@ -18,10 +18,36 @@
 #include <memory>
 
 namespace llvm {
-
+class MCAsmBackend;
+class MCCodeEmitter;
+class MCContext;
+class MCInstrInfo;
+class MCObjectWriter;
+class MCRegisterInfo;
+class MCSubtargetInfo;
+class MCTargetOptions;
 class Target;
+class Triple;
+class StringRef;
+class raw_pwrite_stream;
+class raw_ostream;
+
 Target &getTheVETarget();
 
-} // end llvm namespace
+} // namespace llvm
+
+// Defines symbolic names for VE registers.  This defines a mapping from
+// register name to register number.
+//
+#define GET_REGINFO_ENUM
+#include "VEGenRegisterInfo.inc"
+
+// Defines symbolic names for the VE instructions.
+//
+#define GET_INSTRINFO_ENUM
+#include "VEGenInstrInfo.inc"
+
+#define GET_SUBTARGETINFO_ENUM
+#include "VEGenSubtargetInfo.inc"
 
 #endif

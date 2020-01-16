@@ -113,10 +113,10 @@ void DWARFDebugAranges::construct() {
   Endpoints.shrink_to_fit();
 }
 
-uint32_t DWARFDebugAranges::findAddress(uint64_t Address) const {
+uint64_t DWARFDebugAranges::findAddress(uint64_t Address) const {
   RangeCollIterator It =
       partition_point(Aranges, [=](Range R) { return R.HighPC() <= Address; });
   if (It != Aranges.end() && It->LowPC <= Address)
     return It->CUOffset;
-  return -1U;
+  return -1ULL;
 }

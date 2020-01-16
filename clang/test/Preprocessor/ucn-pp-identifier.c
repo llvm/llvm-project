@@ -28,8 +28,7 @@
 #define \U10000000  // expected-error {{macro name must be an identifier}}
 #define \u0061  // expected-error {{character 'a' cannot be specified by a universal character name}} expected-error {{macro name must be an identifier}}
 
-// FIXME: Not clear what our behavior should be here; \u0024 is "$".
-#define a\u0024  // expected-warning {{whitespace}}
+#define a\u0024
 
 #if \u0110 // expected-warning {{is not defined, evaluates to 0}}
 #endif

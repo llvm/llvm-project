@@ -986,7 +986,8 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
 // Decode the flags for GlobalVariable in the summary
 static GlobalVarSummary::GVarFlags getDecodedGVarFlags(uint64_t RawFlags) {
   return GlobalVarSummary::GVarFlags((RawFlags & 0x1) ? true : false,
-                                     (RawFlags & 0x2) ? true : false);
+                                     (RawFlags & 0x2) ? true : false,
+                                     (RawFlags & 0x4) ? true : false);
 }
 
 static GlobalValue::VisibilityTypes getDecodedVisibility(unsigned Val) {
@@ -5965,7 +5966,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       uint64_t RawFlags = Record[1];
       unsigned RefArrayStart = 2;
       GlobalVarSummary::GVarFlags GVF(/* ReadOnly */ false,
-                                      /* WriteOnly */ false);
+                                      /* WriteOnly */ false,
+                                      /* Constant */ false);
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
       if (Version >= 5) {
         GVF = getDecodedGVarFlags(Record[2]);
@@ -6101,7 +6103,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       uint64_t RawFlags = Record[2];
       unsigned RefArrayStart = 3;
       GlobalVarSummary::GVarFlags GVF(/* ReadOnly */ false,
-                                      /* WriteOnly */ false);
+                                      /* WriteOnly */ false,
+                                      /* Constant */ false);
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
       if (Version >= 5) {
         GVF = getDecodedGVarFlags(Record[3]);

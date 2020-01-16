@@ -1,5 +1,4 @@
-# The binary blobs in this file were created like this:
-# llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu Inputs/elf-relr-relocs1.s -o - | obj2yaml | grep Content:
+## This is a test to test how SHT_RELR sections are dumped.
 
 # RUN: yaml2obj -docnum 1 %s \
 # RUN:   | llvm-readobj --relocations --raw-relr - \
@@ -75,24 +74,19 @@
 # GNU1-NEXT: 0000000000020380  0000000000000008 R_X86_64_RELATIVE
 # GNU1-NEXT: 0000000000020390  0000000000000008 R_X86_64_RELATIVE
 
-# elf-relr-relocs1.s
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_DYN
-  Machine:         EM_X86_64
-  Entry:           0x0000000000001000
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+
 Sections:
-  - Name:            .relr.dyn
-    Type:            SHT_RELR
-    Flags:           [ SHF_ALLOC ]
-    Address:         0x00000000000001C8
-    Link:            .symtab
-    AddressAlign:    0x0000000000000001
-    Content:         600D0100000000000301000000000000000002000000000001050F00000000000900405005700A00
-Symbols: []
-...
+  - Name:  .relr.dyn
+    Type:  SHT_RELR
+    Flags: [ SHF_ALLOC ]
+    Entries: [ 0x0000000000010D60, 0x0000000000000103, 0x0000000000020000,
+               0x00000000000F0501, 0x000A700550400009 ]
 
 # RUN: yaml2obj -docnum 2 %s \
 # RUN:   | llvm-readobj --relocations --raw-relr - \
@@ -154,21 +148,16 @@ Symbols: []
 # GNU2-NEXT: 000200ec  00000008 R_386_RELATIVE
 # GNU2-NEXT: 000200f4  00000008 R_386_RELATIVE
 
-# elf-relr-relocs2.s
 --- !ELF
 FileHeader:
-  Class:           ELFCLASS32
-  Data:            ELFDATA2LSB
-  Type:            ET_DYN
-  Machine:         EM_386
-  Entry:           0x00001000
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+
 Sections:
-  - Name:            .relr.dyn
-    Type:            SHT_RELR
-    Flags:           [ SHF_ALLOC ]
-    Address:         0x000001C8
-    Link:            .symtab
-    AddressAlign:    0x00000001
-    Content:         600D0100030100000000020001050F0009004050
-Symbols: []
-...
+  - Name:  .relr.dyn
+    Type:  SHT_RELR
+    Flags: [ SHF_ALLOC ]
+    Entries: [ 0x00010D60, 0x00000103, 0x00020000,
+               0x000F0501, 0x50400009 ]

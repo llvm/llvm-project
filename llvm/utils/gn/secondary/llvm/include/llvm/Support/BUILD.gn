@@ -14,6 +14,7 @@ action("write_extension_def") {
   outputs = [
     "$target_gen_dir/Extension.def",
   ]
+
   # If any extensions should be enabled, they'd be passed as additional
   # arguments, e.g. `args += [ "Bye", "Polly" ]`.
   args = [

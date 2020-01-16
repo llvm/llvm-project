@@ -2,6 +2,9 @@
 // RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii -show-encoding %s | FileCheck %s --check-prefix=CI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=VI
 
+// Make sure interp instructions disassemble regardless of lds bank count
+// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx810 -show-encoding %s | FileCheck %s --check-prefix=VI
+
 // RUN: not llvm-mc -arch=amdgcn -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSI --check-prefix=NOSICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=hawaii -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOSICI
 // RUN: not llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s 2>&1 | FileCheck %s --check-prefix=NOVI

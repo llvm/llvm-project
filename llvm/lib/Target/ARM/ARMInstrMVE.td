@@ -2291,13 +2291,37 @@ class MVE_VMINMAXA<string iname, string suffix, bits<2> size,
   let validForTailPredication = 1;
 }
 
-def MVE_VMAXAs8  : MVE_VMINMAXA<"vmaxa", "s8",  0b00, 0b0>;
-def MVE_VMAXAs16 : MVE_VMINMAXA<"vmaxa", "s16", 0b01, 0b0>;
-def MVE_VMAXAs32 : MVE_VMINMAXA<"vmaxa", "s32", 0b10, 0b0>;
+multiclass MVE_VMINMAXA_m<string iname, MVEVectorVTInfo VTI,
+                      SDNode unpred_op, Intrinsic pred_int, bit bit_12> {
+  def "" : MVE_VMINMAXA<iname, VTI.Suffix, VTI.Size, bit_12>;
+  defvar Inst = !cast<Instruction>(NAME);
 
-def MVE_VMINAs8  : MVE_VMINMAXA<"vmina", "s8",  0b00, 0b1>;
-def MVE_VMINAs16 : MVE_VMINMAXA<"vmina", "s16", 0b01, 0b1>;
-def MVE_VMINAs32 : MVE_VMINMAXA<"vmina", "s32", 0b10, 0b1>;
+  let Predicates = [HasMVEInt] in {
+    // Unpredicated v(min|max)a
+    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qd), (abs (VTI.Vec MQPR:$Qm)))),
+              (VTI.Vec (Inst (VTI.Vec MQPR:$Qd), (VTI.Vec MQPR:$Qm)))>;
+
+    // Predicated v(min|max)a
+    def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qd), (VTI.Vec MQPR:$Qm),
+                            (VTI.Pred VCCR:$mask))),
+              (VTI.Vec (Inst (VTI.Vec MQPR:$Qd), (VTI.Vec MQPR:$Qm),
+                            ARMVCCThen, (VTI.Pred VCCR:$mask)))>;
+  }
+}
+
+multiclass MVE_VMINA<MVEVectorVTInfo VTI>
+  : MVE_VMINMAXA_m<"vmina", VTI, umin, int_arm_mve_vmina_predicated, 0b1>;
+
+defm MVE_VMAXAs8  : MVE_VMINA<MVE_v16s8>;
+defm MVE_VMAXAs16 : MVE_VMINA<MVE_v8s16>;
+defm MVE_VMAXAs32 : MVE_VMINA<MVE_v4s32>;
+
+multiclass MVE_VMAXA<MVEVectorVTInfo VTI>
+  : MVE_VMINMAXA_m<"vmaxa", VTI, umax, int_arm_mve_vmaxa_predicated, 0b0>;
+
+defm MVE_VMINAs8  : MVE_VMAXA<MVE_v16s8>;
+defm MVE_VMINAs16 : MVE_VMAXA<MVE_v8s16>;
+defm MVE_VMINAs32 : MVE_VMAXA<MVE_v4s32>;
 
 // end of MVE Integer instructions
 
@@ -3623,11 +3647,36 @@ class MVE_VMAXMINNMA<string iname, string suffix, bit size, bit bit_12,
   let Inst{0} = 0b1;
 }
 
-def MVE_VMAXNMAf32 : MVE_VMAXMINNMA<"vmaxnma", "f32", 0b0, 0b0>;
-def MVE_VMAXNMAf16 : MVE_VMAXMINNMA<"vmaxnma", "f16", 0b1, 0b0>;
+multiclass MVE_VMAXMINNMA_m<string iname, MVEVectorVTInfo VTI,
+                      SDNode unpred_op, Intrinsic pred_int,
+                      bit bit_12> {
+  def "" : MVE_VMAXMINNMA<iname, VTI.Suffix, VTI.Size{0}, bit_12>;
+  defvar Inst = !cast<Instruction>(NAME);
 
-def MVE_VMINNMAf32 : MVE_VMAXMINNMA<"vminnma", "f32", 0b0, 0b1>;
-def MVE_VMINNMAf16 : MVE_VMAXMINNMA<"vminnma", "f16", 0b1, 0b1>;
+  let Predicates = [HasMVEInt] in {
+    // Unpredicated v(max|min)nma
+    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qd), (fabs (VTI.Vec MQPR:$Qm)))),
+              (VTI.Vec (Inst (VTI.Vec MQPR:$Qd), (VTI.Vec MQPR:$Qm)))>;
+
+    // Predicated v(max|min)nma
+    def : Pat<(VTI.Vec (pred_int (VTI.Vec MQPR:$Qd), (VTI.Vec MQPR:$Qm),
+                            (VTI.Pred VCCR:$mask))),
+              (VTI.Vec (Inst (VTI.Vec MQPR:$Qd), (VTI.Vec MQPR:$Qm),
+                            ARMVCCThen, (VTI.Pred VCCR:$mask)))>;
+  }
+}
+
+multiclass MVE_VMAXNMA<MVEVectorVTInfo VTI, bit bit_12>
+  : MVE_VMAXMINNMA_m<"vmaxnma", VTI, fmaxnum, int_arm_mve_vmaxnma_predicated, bit_12>;
+
+defm MVE_VMAXNMAf32 : MVE_VMAXNMA<MVE_v4f32, 0b0>;
+defm MVE_VMAXNMAf16 : MVE_VMAXNMA<MVE_v8f16, 0b0>;
+
+multiclass MVE_VMINNMA<MVEVectorVTInfo VTI, bit bit_12>
+  : MVE_VMAXMINNMA_m<"vminnma", VTI, fminnum, int_arm_mve_vminnma_predicated, bit_12>;
+
+defm MVE_VMINNMAf32 : MVE_VMINNMA<MVE_v4f32, 0b1>;
+defm MVE_VMINNMAf16 : MVE_VMINNMA<MVE_v8f16, 0b1>;
 
 // end of MVE Floating Point instructions
 

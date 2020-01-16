@@ -79,16 +79,10 @@ define float @test3(float %A, float %B, float %C, float %D) {
 ; With sub reassociation, constant folding can eliminate the two 12 constants.
 
 define float @test4(float %A, float %B, float %C, float %D) {
-; FIXME: InstCombine should be able to get us to the following:
-; %sum = fadd fast float %B, %A
-; %sum1 = fadd fast float %sum, %C
-; %Q = fsub fast float %D, %sum1
-; ret i32 %Q
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[B_NEG:%.*]] = fsub fast float -0.000000e+00, [[B:%.*]]
-; CHECK-NEXT:    [[O_NEG:%.*]] = fsub fast float [[B_NEG]], [[A:%.*]]
-; CHECK-NEXT:    [[P:%.*]] = fsub fast float [[O_NEG]], [[C:%.*]]
-; CHECK-NEXT:    [[Q:%.*]] = fadd fast float [[P]], [[D:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast float [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast float [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = fsub fast float [[D:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret float [[Q]]
 ;
   %M = fadd fast float 1.200000e+01, %A

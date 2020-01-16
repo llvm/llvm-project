@@ -757,14 +757,29 @@ private:
 
 public:
   struct GVarFlags {
-    GVarFlags(bool ReadOnly, bool WriteOnly)
-        : MaybeReadOnly(ReadOnly), MaybeWriteOnly(WriteOnly) {}
+    GVarFlags(bool ReadOnly, bool WriteOnly, bool Constant)
+        : MaybeReadOnly(ReadOnly), MaybeWriteOnly(WriteOnly),
+          Constant(Constant) {}
 
-    // In permodule summaries both MaybeReadOnly and MaybeWriteOnly
-    // bits are set, because attribute propagation occurs later on
-    // thin link phase.
+    // If true indicates that this global variable might be accessed
+    // purely by non-volatile load instructions. This in turn means
+    // it can be internalized in source and destination modules during
+    // thin LTO import because it neither modified nor its address
+    // is taken.
     unsigned MaybeReadOnly : 1;
+    // If true indicates that variable is possibly only written to, so
+    // its value isn't loaded and its address isn't taken anywhere.
+    // False, when 'Constant' attribute is set.
     unsigned MaybeWriteOnly : 1;
+    // Indicates that value is a compile-time constant. Global variable
+    // can be 'Constant' while not being 'ReadOnly' on several occasions:
+    // - it is volatile, (e.g mapped device address)
+    // - its address is taken, meaning that unlike 'ReadOnly' vars we can't
+    //   internalize it.
+    // Constant variables are always imported thus giving compiler an
+    // opportunity to make some extra optimizations. Readonly constants
+    // are also internalized.
+    unsigned Constant : 1;
   } VarFlags;
 
   GlobalVarSummary(GVFlags Flags, GVarFlags VarFlags,
@@ -782,6 +797,7 @@ public:
   void setWriteOnly(bool WO) { VarFlags.MaybeWriteOnly = WO; }
   bool maybeReadOnly() const { return VarFlags.MaybeReadOnly; }
   bool maybeWriteOnly() const { return VarFlags.MaybeWriteOnly; }
+  bool isConstant() const { return VarFlags.Constant; }
 
   void setVTableFuncs(VTableFuncList Funcs) {
     assert(!VTableFuncs);

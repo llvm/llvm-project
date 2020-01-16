@@ -238,7 +238,7 @@ struct LinalgPromotionPass : public FunctionPass<LinalgPromotionPass> {
 } // namespace
 
 std::unique_ptr<OpPassBase<FuncOp>>
-mlir::linalg::createLinalgPromotionPass(bool dynamicBuffers) {
+mlir::createLinalgPromotionPass(bool dynamicBuffers) {
   return std::make_unique<LinalgPromotionPass>(dynamicBuffers);
 }
 

@@ -192,8 +192,10 @@ ParsedType Sema::getDestructorName(SourceLocation TildeLoc,
       AlreadySearched = true;
       LookupCtx = DC;
       isDependent = false;
-    } else if (DC && isa<CXXRecordDecl>(DC)) {
-      LookAtPrefix = false;
+    } else if (auto *RD = dyn_cast_or_null<CXXRecordDecl>(DC)) {
+      if ((RD->hasDefinition() && RD->hasSimpleDestructor()) ||
+          !RD->hasDefinition())
+        LookAtPrefix = false;
       LookInScope = true;
     }
 

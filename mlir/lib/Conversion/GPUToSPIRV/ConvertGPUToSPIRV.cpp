@@ -63,13 +63,27 @@ private:
   SmallVector<int32_t, 3> workGroupSizeAsInt32;
 };
 
-/// Pattern to convert a gpu.module to a spv.module.
-class GPUModuleConversion final : public SPIRVOpLowering<gpu::GPUModuleOp> {
+/// Pattern to convert a module with gpu.kernel_module attribute to a
+/// spv.module.
+class KernelModuleConversion final : public SPIRVOpLowering<ModuleOp> {
 public:
-  using SPIRVOpLowering<gpu::GPUModuleOp>::SPIRVOpLowering;
+  using SPIRVOpLowering<ModuleOp>::SPIRVOpLowering;
 
   PatternMatchResult
-  matchAndRewrite(gpu::GPUModuleOp moduleOp, ArrayRef<Value> operands,
+  matchAndRewrite(ModuleOp moduleOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Pattern to convert a module terminator op to a terminator of spv.module op.
+// TODO: Move this into DRR, but that requires ModuleTerminatorOp to be defined
+// in ODS.
+class KernelModuleTerminatorConversion final
+    : public SPIRVOpLowering<ModuleTerminatorOp> {
+public:
+  using SPIRVOpLowering<ModuleTerminatorOp>::SPIRVOpLowering;
+
+  PatternMatchResult
+  matchAndRewrite(ModuleTerminatorOp terminatorOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -270,12 +284,16 @@ KernelFnConversion::matchAndRewrite(gpu::GPUFuncOp funcOp,
 }
 
 //===----------------------------------------------------------------------===//
-// ModuleOp with gpu.module.
+// ModuleOp with gpu.kernel_module.
 //===----------------------------------------------------------------------===//
 
-PatternMatchResult GPUModuleConversion::matchAndRewrite(
-    gpu::GPUModuleOp moduleOp, ArrayRef<Value> operands,
+PatternMatchResult KernelModuleConversion::matchAndRewrite(
+    ModuleOp moduleOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
+  if (!moduleOp.getAttrOfType<UnitAttr>(
+          gpu::GPUDialect::getKernelModuleAttrName())) {
+    return matchFailure();
+  }
   // TODO : Generalize this to account for different extensions,
   // capabilities, extended_instruction_sets, other addressing models
   // and memory models.
@@ -284,14 +302,25 @@ PatternMatchResult GPUModuleConversion::matchAndRewrite(
       spirv::MemoryModel::GLSL450, spirv::Capability::Shader,
       spirv::Extension::SPV_KHR_storage_buffer_storage_class);
   // Move the region from the module op into the SPIR-V module.
-  Region &spvModuleRegion = spvModule.body();
-  rewriter.inlineRegionBefore(moduleOp.body(), spvModuleRegion,
+  Region &spvModuleRegion = spvModule.getOperation()->getRegion(0);
+  rewriter.inlineRegionBefore(moduleOp.getBodyRegion(), spvModuleRegion,
                               spvModuleRegion.begin());
   // The spv.module build method adds a block with a terminator. Remove that
   // block. The terminator of the module op in the remaining block will be
   // legalized later.
   spvModuleRegion.back().erase();
   rewriter.eraseOp(moduleOp);
+  return matchSuccess();
+}
+
+//===----------------------------------------------------------------------===//
+// ModuleTerminatorOp for gpu.kernel_module.
+//===----------------------------------------------------------------------===//
+
+PatternMatchResult KernelModuleTerminatorConversion::matchAndRewrite(
+    ModuleTerminatorOp terminatorOp, ArrayRef<Value> operands,
+    ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<spirv::ModuleEndOp>(terminatorOp);
   return matchSuccess();
 }
 
@@ -313,18 +342,14 @@ PatternMatchResult GPUReturnOpConversion::matchAndRewrite(
 // GPU To SPIRV Patterns.
 //===----------------------------------------------------------------------===//
 
-namespace {
-#include "GPUToSPIRV.cpp.inc"
-}
-
 void mlir::populateGPUToSPIRVPatterns(MLIRContext *context,
                                       SPIRVTypeConverter &typeConverter,
                                       OwningRewritePatternList &patterns,
                                       ArrayRef<int64_t> workGroupSize) {
-  populateWithGenerated(context, &patterns);
   patterns.insert<KernelFnConversion>(context, typeConverter, workGroupSize);
   patterns.insert<
-      GPUReturnOpConversion, ForOpConversion, GPUModuleConversion,
+      GPUReturnOpConversion, ForOpConversion, KernelModuleConversion,
+      KernelModuleTerminatorConversion,
       LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,

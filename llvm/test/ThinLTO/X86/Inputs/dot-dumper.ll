@@ -2,7 +2,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 @A = local_unnamed_addr global i32 10, align 4
-@B = local_unnamed_addr global i32 20, align 4
+@B = local_unnamed_addr constant i32 20, align 4
 
 ; Function Attrs: norecurse nounwind readonly uwtable
 define i32 @foo() local_unnamed_addr #0 {

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Linalg/EDSC/Builders.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -333,7 +334,7 @@ mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
   b.setInsertionPoint(op);
   ScopedContext scope(b, op.getLoc());
   // 2. Build the tiled loop ranges.
-  auto viewSizes = getViewSizes(op);
+  auto viewSizes = getViewSizes(b, op);
   // The flattened loopToOperandRangesMaps is expected to be an invertible
   // permutation map (asserted in the inverse calculation).
   auto viewSizesToLoopsMap =
@@ -456,7 +457,7 @@ LinalgTilingPass::LinalgTilingPass(ArrayRef<int64_t> sizes) {
 }
 
 std::unique_ptr<OpPassBase<FuncOp>>
-mlir::linalg::createLinalgTilingPass(ArrayRef<int64_t> tileSizes) {
+mlir::createLinalgTilingPass(ArrayRef<int64_t> tileSizes) {
   return std::make_unique<LinalgTilingPass>(tileSizes);
 }
 

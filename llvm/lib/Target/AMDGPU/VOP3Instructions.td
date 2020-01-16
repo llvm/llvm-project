@@ -229,7 +229,7 @@ class VOP3Interp<string OpName, VOPProfile P, list<dag> pattern = []> :
 def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
   let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                    Attr:$attr, AttrChan:$attrchan,
-                   clampmod:$clamp, omod:$omod);
+                   clampmod0:$clamp, omod0:$omod);
 
   let Asm64 = "$vdst, $src0_modifiers, $attr$attrchan$clamp$omod";
 }
@@ -237,7 +237,7 @@ def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
 def VOP3_INTERP_MOV : VOPProfile<[f32, i32, i32, untyped]> {
   let Ins64 = (ins InterpSlot:$src0,
                    Attr:$attr, AttrChan:$attrchan,
-                   clampmod:$clamp, omod:$omod);
+                   clampmod0:$clamp, omod0:$omod);
 
   let Asm64 = "$vdst, $src0, $attr$attrchan$clamp$omod";
 
@@ -480,12 +480,17 @@ def V_INTERP_P2_F16_gfx9 : VOP3Interp <"v_interp_p2_f16_gfx9", VOP3_INTERP16<[f1
 
 let Uses = [M0, EXEC], FPDPRounding = 1 in {
 def V_INTERP_P1LL_F16 : VOP3Interp <"v_interp_p1ll_f16", VOP3_INTERP16<[f32, f32, i32, untyped]>,
-       [(set f32:$vdst, (AMDGPUinterp_p1ll_f16 f32:$src0, (i32 timm:$attrchan),
-                                                          (i32 timm:$attr),
-                                                          (i32 timm:$src0_modifiers),
-                                                          (i1 timm:$high),
-                                                          (i1 timm:$clamp),
-                                                          (i32 timm:$omod)))]>;
+       [(set f32:$vdst, (int_amdgcn_interp_p1_f16 (VOP3Mods f32:$src0, i32:$src0_modifiers),
+                                                  (i32 timm:$attrchan),
+                                                  (i32 timm:$attr),
+                                                  (i1 timm:$high), M0))]> {
+  // This predicate should only apply to the selection pattern. The
+  // instruction still exists and should decode on subtargets with
+  // other bank counts.
+  let OtherPredicates = [has32BankLDS];
+}
+
+
 def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32, i32, f16]>,
        [(set f32:$vdst, (AMDGPUinterp_p1lv_f16 f32:$src0, (i32 timm:$attrchan),
                                                           (i32 timm:$attr),
