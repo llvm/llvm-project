@@ -73,7 +73,7 @@
 ; CHECK-O123-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-O123-NEXT: Starting CGSCC pass manager run.
 ; CHECK-O123-NEXT: Running pass: InlinerPass on (foo)
-; CHECK-O123-NEXT: Running pass: CGSCCToFunctionPassAdaptor<{{.*}}PassManager<{{.*}}Function> > on (foo)
+; CHECK-O123-NEXT: Running pass: CGSCCToFunctionPassAdaptor<{{.*}}PassManager{{.*}}>
 ; CHECK-O123-NEXT: Finished CGSCC pass manager run.
 ; CHECK-O123-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: PGOInstrumentationUse
