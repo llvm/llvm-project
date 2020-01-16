@@ -188,7 +188,8 @@ namespace llvm {
     SDValue LowerATOMIC_LOAD(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) const;
 
-    MachineMemOperand::Flags getMMOFlags(const Instruction &I) const override;
+    MachineMemOperand::Flags getTargetMMOFlags(
+      const Instruction &I) const override;
 
     // Inline asm support
     std::pair<unsigned, const TargetRegisterClass *>

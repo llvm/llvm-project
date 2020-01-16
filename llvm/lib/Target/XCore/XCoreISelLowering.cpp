@@ -996,7 +996,7 @@ LowerATOMIC_STORE(SDValue Op, SelectionDAG &DAG) const {
 }
 
 MachineMemOperand::Flags
-XCoreTargetLowering::getMMOFlags(const Instruction &I) const {
+XCoreTargetLowering::getTargetMMOFlags(const Instruction &I) const {
   // Because of how we convert atomic_load and atomic_store to normal loads and
   // stores in the DAG, we need to ensure that the MMOs are marked volatile
   // since DAGCombine hasn't been updated to account for atomic, but non
