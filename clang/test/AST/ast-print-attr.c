@@ -11,7 +11,7 @@ using B = int ** __ptr32 *[3];
 // CHECK: using C = int ((*))() __attribute__((cdecl));
 using C = int (*)() [[gnu::cdecl]];
 
-// CHECK: int fun_asm() asm("");
-int fun_asm() asm("");
-// CHECK: int var_asm asm("");
-int var_asm asm("");
+// CHECK: int fun_asm() asm("test");
+int fun_asm() asm("test");
+// CHECK: int var_asm asm("test");
+int var_asm asm("test");
