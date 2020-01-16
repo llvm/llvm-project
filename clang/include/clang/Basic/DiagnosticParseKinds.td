@@ -33,10 +33,6 @@ def err_asm_goto_cannot_have_output : Error<
 
 let CategoryName = "Parse Issue" in {
 
-def warn_cxx2a_compat_explicit_bool : Warning<
-  "this expression will be parsed as explicit(bool) in C++2a">,
-  InGroup<CXX2aCompat>, DefaultIgnore;
-
 def ext_empty_translation_unit : Extension<
   "ISO C requires a translation unit to contain at least one declaration">,
   InGroup<DiagGroup<"empty-translation-unit">>;
@@ -683,6 +679,15 @@ def err_ms_property_expected_comma_or_rparen : Error<
   "expected ',' or ')' at end of property accessor list">;
 def err_ms_property_initializer : Error<
   "property declaration cannot have an in-class initializer">;
+
+def warn_cxx2a_compat_explicit_bool : Warning<
+  "this expression will be parsed as explicit(bool) in C++2a">,
+  InGroup<CXX2aCompat>, DefaultIgnore;
+def warn_cxx17_compat_explicit_bool : Warning<
+  "explicit(bool) is incompatible with C++ standards before C++2a">,
+  InGroup<CXXPre2aCompat>, DefaultIgnore;
+def ext_explicit_bool : ExtWarn<"explicit(bool) is a C++2a extension">,
+  InGroup<CXX2a>;
 
 /// C++ Templates
 def err_expected_template : Error<"expected template">;
