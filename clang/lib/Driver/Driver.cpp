@@ -1035,6 +1035,10 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   // -no-canonical-prefixes is used very early in main.
   Args.ClaimAllArgs(options::OPT_no_canonical_prefixes);
 
+  // f(no-)integated-cc1 is also used very early in main.
+  Args.ClaimAllArgs(options::OPT_fintegrated_cc1);
+  Args.ClaimAllArgs(options::OPT_fno_integrated_cc1);
+
   // Ignore -pipe.
   Args.ClaimAllArgs(options::OPT_pipe);
 
