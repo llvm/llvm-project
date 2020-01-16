@@ -2734,7 +2734,7 @@ private:
            type.isa<VectorType>();
   }
 
-  // Returns a soruce value for the given block.
+  // Returns a source value for the given block.
   Value getSrcValue(Block *block) const {
     auto storeOp = cast<spirv::StoreOp>(block->front());
     return storeOp.value();
