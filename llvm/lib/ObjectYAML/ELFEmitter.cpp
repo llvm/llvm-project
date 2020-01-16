@@ -110,6 +110,7 @@ template <class ELFT> class ELFState {
   typedef typename ELFT::Rela Elf_Rela;
   typedef typename ELFT::Relr Elf_Relr;
   typedef typename ELFT::Dyn Elf_Dyn;
+  typedef typename ELFT::uint uintX_t;
 
   enum class SymtabType { Static, Dynamic };
 
@@ -164,6 +165,9 @@ template <class ELFT> class ELFState {
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::RelocationSection &Section,
+                           ContiguousBlobAccumulator &CBA);
+  void writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::RelrSection &Section,
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader, const ELFYAML::Group &Group,
                            ContiguousBlobAccumulator &CBA);
@@ -453,6 +457,8 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     } else if (auto S = dyn_cast<ELFYAML::SymtabShndxSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::RelocationSection>(Sec)) {
+      writeSectionContent(SHeader, *S, CBA);
+    } else if (auto S = dyn_cast<ELFYAML::RelrSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::Group>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
@@ -770,10 +776,6 @@ void ELFState<ELFT>::writeSectionContent(
 
   if (Section.EntSize)
     SHeader.sh_entsize = *Section.EntSize;
-  else if (Section.Type == llvm::ELF::SHT_RELR)
-    SHeader.sh_entsize = sizeof(Elf_Relr);
-  else
-    SHeader.sh_entsize = 0;
 
   if (Section.Info)
     SHeader.sh_info = *Section.Info;
@@ -825,6 +827,33 @@ void ELFState<ELFT>::writeSectionContent(
       OS.write((const char *)&REntry, sizeof(REntry));
     }
   }
+}
+
+template <class ELFT>
+void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
+                                         const ELFYAML::RelrSection &Section,
+                                         ContiguousBlobAccumulator &CBA) {
+  raw_ostream &OS =
+      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+  SHeader.sh_entsize =
+      Section.EntSize ? uint64_t(*Section.EntSize) : sizeof(Elf_Relr);
+
+  if (Section.Content) {
+    SHeader.sh_size = writeContent(OS, Section.Content, None);
+    return;
+  }
+
+  if (!Section.Entries)
+    return;
+
+  for (llvm::yaml::Hex64 E : *Section.Entries) {
+    if (!ELFT::Is64Bits && E > UINT32_MAX)
+      reportError(Section.Name + ": the value is too large for 32-bits: 0x" +
+                  Twine::utohexstr(E));
+    support::endian::write<uintX_t>(OS, E, ELFT::TargetEndianness);
+  }
+
+  SHeader.sh_size = sizeof(uintX_t) * Section.Entries->size();
 }
 
 template <class ELFT>
@@ -889,7 +918,6 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(
     Elf_Shdr &SHeader, const ELFYAML::StackSizesSection &Section,
     ContiguousBlobAccumulator &CBA) {
-  using uintX_t = typename ELFT::uint;
   raw_ostream &OS =
       CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
 
@@ -1115,8 +1143,6 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::DynamicSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  typedef typename ELFT::uint uintX_t;
-
   assert(Section.Type == llvm::ELF::SHT_DYNAMIC &&
          "Section type is not SHT_DYNAMIC");
 
