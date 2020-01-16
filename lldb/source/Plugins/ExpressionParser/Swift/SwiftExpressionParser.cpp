@@ -930,8 +930,9 @@ SetupASTContext(SwiftASTContextForExpressions *swift_ast_context,
 
 /// Returns the buffer_id for the expression's source code.
 static std::pair<unsigned, std::string>
-CreateMainFile(SwiftASTContext &swift_ast_context, StringRef filename,
-               StringRef text, const EvaluateExpressionOptions &options) {
+CreateMainFile(SwiftASTContextForExpressions &swift_ast_context,
+               StringRef filename, StringRef text,
+               const EvaluateExpressionOptions &options) {
   const bool generate_debug_info = options.GetGenerateDebugInfo();
   swift_ast_context.SetGenerateDebugInfo(generate_debug_info
                                            ? swift::IRGenDebugInfoLevel::Normal
