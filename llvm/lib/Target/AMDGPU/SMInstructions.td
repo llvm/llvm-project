@@ -769,22 +769,22 @@ multiclass SMLoad_Pattern <string Instr, ValueType vt> {
   // 1. Offset as an immediate
   def : GCNPat <
     (SIsbuffer_load v4i32:$sbase, (SMRDBufferImm i32:$offset), i1:$glc, i1:$dlc),
-    (vt (!cast<SM_Pseudo>(Instr#"_IMM") $sbase, $offset, (as_i1imm $glc),
-                                        (as_i1imm $dlc)))
+    (vt (!cast<SM_Pseudo>(Instr#"_IMM") $sbase, $offset, (as_i1timm $glc),
+                                        (as_i1timm $dlc)))
   >;
 
   // 2. 32-bit IMM offset on CI
   def : GCNPat <
     (vt (SIsbuffer_load v4i32:$sbase, (SMRDBufferImm32 i32:$offset), i1:$glc, i1:$dlc)),
-    (!cast<InstSI>(Instr#"_IMM_ci") $sbase, $offset, (as_i1imm $glc), (as_i1imm $dlc))> {
+    (!cast<InstSI>(Instr#"_IMM_ci") $sbase, $offset, (as_i1timm $glc), (as_i1timm $dlc))> {
     let OtherPredicates = [isGFX7Only];
   }
 
   // 3. Offset loaded in an 32bit SGPR
   def : GCNPat <
     (SIsbuffer_load v4i32:$sbase, i32:$offset, i1:$glc, i1:$dlc),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR") $sbase, $offset, (as_i1imm $glc),
-                                         (as_i1imm $dlc)))
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR") $sbase, $offset, (as_i1timm $glc),
+                                         (as_i1timm $dlc)))
   >;
 }
 
