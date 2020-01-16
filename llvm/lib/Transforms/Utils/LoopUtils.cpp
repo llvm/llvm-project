@@ -723,12 +723,15 @@ Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
   if (LatchBR->getSuccessor(0) != L->getHeader())
     std::swap(BackedgeTakenWeight, LatchExitWeight);
 
-  if (!BackedgeTakenWeight || !LatchExitWeight)
-    return 0;
+  if (!LatchExitWeight)
+    return None;
 
-  // Divide the count of the backedge by the count of the edge exiting the loop,
-  // rounding to nearest.
-  return llvm::divideNearest(BackedgeTakenWeight, LatchExitWeight);
+  // Estimated backedge taken count is a ratio of the backedge taken weight by
+  // the the edge exiting weight, rounded to nearest.
+  uint64_t BackedgeTakenCount =
+      llvm::divideNearest(BackedgeTakenWeight, LatchExitWeight);
+  // Estimated trip count is one plus estimated backedge taken count.
+  return BackedgeTakenCount + 1;
 }
 
 bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
