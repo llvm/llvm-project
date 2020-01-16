@@ -94,16 +94,5 @@ inline static const char *VECondCodeToString(VECC::CondCodes CC) {
   llvm_unreachable("Invalid cond code");
 }
 
-// Different to Hi_32/Lo_32 the HI32 and LO32 functions
-// preserve the correct numerical value
-// on the LLVM data type for MC immediates (int64_t).
-inline static int64_t HI32(int64_t imm) {
-  return (int32_t)(imm >> 32);
-}
-
-inline static int64_t LO32(int64_t imm) {
-  return (int32_t)(imm);
-}
-
 } // namespace llvm
 #endif

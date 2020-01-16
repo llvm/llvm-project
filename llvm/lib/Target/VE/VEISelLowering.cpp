@@ -41,9 +41,10 @@ using namespace llvm;
 bool VETargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
-  assert(!IsVarArg && "TODO implement var args");
-  assert(Outs.empty() && "TODO implement return values");
-  return true; // TODO support more than 'ret void'
+  CCAssignFn *RetCC = RetCC_VE;
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
+  return CCInfo.CheckReturn(Outs, RetCC);
 }
 
 SDValue
@@ -52,12 +53,55 @@ VETargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                               const SmallVectorImpl<ISD::OutputArg> &Outs,
                               const SmallVectorImpl<SDValue> &OutVals,
                               const SDLoc &DL, SelectionDAG &DAG) const {
-  assert(!IsVarArg && "TODO implement var args");
-  assert(Outs.empty() && "TODO implement return values");
-  assert(OutVals.empty() && "TODO implement return values");
+  // CCValAssign - represent the assignment of the return value to locations.
+  SmallVector<CCValAssign, 16> RVLocs;
 
+  // CCState - Info about the registers and stack slot.
+  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
+                 *DAG.getContext());
+
+  // Analyze return values.
+  CCInfo.AnalyzeReturn(Outs, RetCC_VE);
+
+  SDValue Flag;
   SmallVector<SDValue, 4> RetOps(1, Chain);
+
+  // Copy the result values into the output registers.
+  for (unsigned i = 0; i != RVLocs.size(); ++i) {
+    CCValAssign &VA = RVLocs[i];
+    assert(VA.isRegLoc() && "Can only return in registers!");
+    SDValue OutVal = OutVals[i];
+
+    // Integer return values must be sign or zero extended by the callee.
+    switch (VA.getLocInfo()) {
+    case CCValAssign::Full:
+      break;
+    case CCValAssign::SExt:
+      OutVal = DAG.getNode(ISD::SIGN_EXTEND, DL, VA.getLocVT(), OutVal);
+      break;
+    case CCValAssign::ZExt:
+      OutVal = DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), OutVal);
+      break;
+    case CCValAssign::AExt:
+      OutVal = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), OutVal);
+      break;
+    default:
+      llvm_unreachable("Unknown loc info!");
+    }
+
+    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVal, Flag);
+
+    // Guarantee that all emitted copies are stuck together with flags.
+    Flag = Chain.getValue(1);
+    RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
+  }
+
   RetOps[0] = Chain; // Update chain.
+
+  // Add the flag if we have it.
+  if (Flag.getNode())
+    RetOps.push_back(Flag);
+
   return DAG.getNode(VEISD::RET_FLAG, DL, MVT::Other, RetOps);
 }
 
@@ -65,8 +109,61 @@ SDValue VETargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+
+  // Get the size of the preserved arguments area
+  unsigned ArgsPreserved = 64;
+
+  // Analyze arguments according to CC_VE.
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
+                 *DAG.getContext());
+  // Allocate the preserved area first.
+  CCInfo.AllocateStack(ArgsPreserved, 8);
+  // We already allocated the preserved area, so the stack offset computed
+  // by CC_VE would be correct now.
+  CCInfo.AnalyzeFormalArguments(Ins, CC_VE);
+
+  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+    CCValAssign &VA = ArgLocs[i];
+    assert(VA.isRegLoc() && "TODO implement argument passing on stack");
+    if (VA.isRegLoc()) {
+      // This argument is passed in a register.
+      // All integer register arguments are promoted by the caller to i64.
+
+      // Create a virtual register for the promoted live-in value.
+      unsigned VReg =
+          MF.addLiveIn(VA.getLocReg(), getRegClassFor(VA.getLocVT()));
+      SDValue Arg = DAG.getCopyFromReg(Chain, DL, VReg, VA.getLocVT());
+
+      assert((VA.getValVT() == MVT::i64) &&
+             "TODO implement other argument types than i64");
+
+      // The caller promoted the argument, so insert an Assert?ext SDNode so we
+      // won't promote the value again in this function.
+      switch (VA.getLocInfo()) {
+      case CCValAssign::SExt:
+        Arg = DAG.getNode(ISD::AssertSext, DL, VA.getLocVT(), Arg,
+                          DAG.getValueType(VA.getValVT()));
+        break;
+      case CCValAssign::ZExt:
+        Arg = DAG.getNode(ISD::AssertZext, DL, VA.getLocVT(), Arg,
+                          DAG.getValueType(VA.getValVT()));
+        break;
+      default:
+        break;
+      }
+
+      // Truncate the register down to the argument type.
+      if (VA.isExtInLoc())
+        Arg = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Arg);
+
+      InVals.push_back(Arg);
+      continue;
+    }
+  }
+
   assert(!IsVarArg && "TODO implement var args");
-  assert(Ins.empty() && "TODO implement input arguments");
   return Chain;
 }
 

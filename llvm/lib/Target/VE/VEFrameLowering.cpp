@@ -124,14 +124,14 @@ void VEFrameLowering::emitSPAdjustment(MachineFunction &MF,
   //   and     %s13,%s13,(32)0
   //   lea.sl  %sp,%hi(NumBytes)(%sp, %s13)
   BuildMI(MBB, MBBI, dl, TII.get(VE::LEAzzi), VE::SX13)
-      .addImm(LO32(NumBytes));
+      .addImm(Lo_32(NumBytes));
   BuildMI(MBB, MBBI, dl, TII.get(VE::ANDrm0), VE::SX13)
       .addReg(VE::SX13)
       .addImm(32);
   BuildMI(MBB, MBBI, dl, TII.get(VE::LEASLrri), VE::SX11)
       .addReg(VE::SX11)
       .addReg(VE::SX13)
-      .addImm(HI32(NumBytes));
+      .addImm(Hi_32(NumBytes));
 }
 
 void VEFrameLowering::emitSPExtend(MachineFunction &MF, MachineBasicBlock &MBB,

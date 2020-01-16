@@ -60,7 +60,6 @@ void VEInstPrinter::printOperand(const MCInst *MI, int opNum,
     switch (MI->getOpcode()) {
     default:
       // Expects signed 32bit literals
-      assert(isInt<32>(MO.getImm()) && "Immediate too large");
       int32_t TruncatedImm = static_cast<int32_t>(MO.getImm());
       O << TruncatedImm;
       return;
