@@ -317,22 +317,6 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsicWSideEffects(
     const MachineInstr &MI, const MachineRegisterInfo &MRI) const {
 
   switch (MI.getIntrinsicID()) {
-  case Intrinsic::amdgcn_buffer_load: {
-    static const OpRegBankEntry<3> Table[4] = {
-      // Perfectly legal.
-      { { AMDGPU::SGPRRegBankID, AMDGPU::VGPRRegBankID, AMDGPU::SGPRRegBankID }, 1 },
-      { { AMDGPU::SGPRRegBankID, AMDGPU::VGPRRegBankID, AMDGPU::VGPRRegBankID }, 1 },
-
-      // Waterfall loop needed for rsrc. In the worst case this will execute
-      // approximately an extra 10 * wavesize + 2 instructions.
-      { { AMDGPU::VGPRRegBankID, AMDGPU::VGPRRegBankID, AMDGPU::SGPRRegBankID }, 1000 },
-      { { AMDGPU::VGPRRegBankID, AMDGPU::VGPRRegBankID, AMDGPU::VGPRRegBankID }, 1000 }
-    };
-
-    // rsrc, voffset, offset
-    const std::array<unsigned, 3> RegSrcOpIdx = { { 2, 3, 4 } };
-    return addMappingFromTable<3>(MI, MRI, RegSrcOpIdx, makeArrayRef(Table));
-  }
   case Intrinsic::amdgcn_s_buffer_load: {
     static const OpRegBankEntry<2> Table[4] = {
       // Perfectly legal.
@@ -2140,10 +2124,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS: {
     auto IntrID = MI.getIntrinsicID();
     switch (IntrID) {
-    case Intrinsic::amdgcn_buffer_load: {
-      executeInWaterfallLoop(MI, MRI, { 2 });
-      return;
-    }
     case Intrinsic::amdgcn_ds_ordered_add:
     case Intrinsic::amdgcn_ds_ordered_swap: {
       // This is only allowed to execute with 1 lane, so readfirstlane is safe.
@@ -3137,31 +3117,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[5] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
       OpdsMapping[6] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
       break;
-    case Intrinsic::amdgcn_buffer_load: {
-      Register RSrc = MI.getOperand(2).getReg();   // SGPR
-      Register VIndex = MI.getOperand(3).getReg(); // VGPR
-      Register Offset = MI.getOperand(4).getReg(); // SGPR/VGPR/imm
-
-      unsigned Size0 = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-      unsigned Size2 = MRI.getType(RSrc).getSizeInBits();
-      unsigned Size3 = MRI.getType(VIndex).getSizeInBits();
-      unsigned Size4 = MRI.getType(Offset).getSizeInBits();
-
-      unsigned RSrcBank = getRegBankID(RSrc, MRI, *TRI);
-      unsigned OffsetBank = getRegBankID(Offset, MRI, *TRI);
-
-      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size0);
-      OpdsMapping[1] = nullptr; // intrinsic id
-
-      // Lie and claim everything is legal, even though some need to be
-      // SGPRs. applyMapping will have to deal with it as a waterfall loop.
-      OpdsMapping[2] = AMDGPU::getValueMapping(RSrcBank, Size2); // rsrc
-      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size3);
-      OpdsMapping[4] = AMDGPU::getValueMapping(OffsetBank, Size4);
-      OpdsMapping[5] = nullptr;
-      OpdsMapping[6] = nullptr;
-      break;
-    }
     case Intrinsic::amdgcn_s_sendmsg:
     case Intrinsic::amdgcn_s_sendmsghalt: {
       // This must be an SGPR, but accept a VGPR.
