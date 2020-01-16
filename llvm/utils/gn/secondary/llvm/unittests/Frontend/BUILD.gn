@@ -3,8 +3,8 @@ import("//llvm/utils/unittest/unittest.gni")
 unittest("LLVMFrontendTests") {
   deps = [
     "//llvm/lib/Analysis",
-    "//llvm/lib/IR",
     "//llvm/lib/Frontend/OpenMP",
+    "//llvm/lib/IR",
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Testing/Support",
