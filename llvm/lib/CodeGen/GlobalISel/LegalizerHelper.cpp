@@ -657,35 +657,14 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
-  case TargetOpcode::G_SEXT: {
-    if (TypeIdx != 0)
-      return UnableToLegalize;
-
-    Register SrcReg = MI.getOperand(1).getReg();
-    LLT SrcTy = MRI.getType(SrcReg);
-
-    // FIXME: support the general case where the requested NarrowTy may not be
-    // the same as the source type. E.g. s128 = sext(s32)
-    if ((SrcTy.getSizeInBits() != SizeOp0 / 2) ||
-        SrcTy.getSizeInBits() != NarrowTy.getSizeInBits()) {
-      LLVM_DEBUG(dbgs() << "Can't narrow sext to type " << NarrowTy << "\n");
-      return UnableToLegalize;
-    }
-
-    // Shift the sign bit of the low register through the high register.
-    auto ShiftAmt =
-        MIRBuilder.buildConstant(LLT::scalar(64), NarrowTy.getSizeInBits() - 1);
-    auto Shift = MIRBuilder.buildAShr(NarrowTy, SrcReg, ShiftAmt);
-    MIRBuilder.buildMerge(MI.getOperand(0).getReg(), {SrcReg, Shift.getReg(0)});
-    MI.eraseFromParent();
-    return Legalized;
-  }
+  case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_ANYEXT: {
     if (TypeIdx != 0)
       return UnableToLegalize;
 
-    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
     uint64_t SizeOp1 = SrcTy.getSizeInBits();
     if (SizeOp0 % SizeOp1 != 0)
       return UnableToLegalize;
@@ -693,13 +672,19 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     Register PadReg;
     if (MI.getOpcode() == TargetOpcode::G_ZEXT)
       PadReg = MIRBuilder.buildConstant(SrcTy, 0).getReg(0);
-    else
+    else if (MI.getOpcode() == TargetOpcode::G_ANYEXT)
       PadReg = MIRBuilder.buildUndef(SrcTy).getReg(0);
+    else {
+      // Shift the sign bit of the low register through the high register.
+      auto ShiftAmt =
+        MIRBuilder.buildConstant(LLT::scalar(64), SrcTy.getSizeInBits() - 1);
+      PadReg = MIRBuilder.buildAShr(SrcTy, SrcReg, ShiftAmt).getReg(0);
+    }
 
     // Generate a merge where the bottom bits are taken from the source, and
-    // zero/impdef everything else.
+    // zero/impdef/sign bit everything else.
     unsigned NumParts = SizeOp0 / SizeOp1;
-    SmallVector<Register, 4> Srcs = {MI.getOperand(1).getReg()};
+    SmallVector<Register, 4> Srcs = {SrcReg};
     for (unsigned Part = 1; Part < NumParts; ++Part)
       Srcs.push_back(PadReg);
     MIRBuilder.buildMerge(MI.getOperand(0).getReg(), Srcs);
