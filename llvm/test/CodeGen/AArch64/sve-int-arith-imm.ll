@@ -363,3 +363,86 @@ define <vscale x 2 x i64> @umin_i64_large(<vscale x 2 x i64> %a) {
   %res = select <vscale x 2 x i1> %cmp, <vscale x 2 x i64> %a, <vscale x 2 x i64> %splat
   ret <vscale x 2 x i64> %res
 }
+
+;
+; MUL
+;
+define <vscale x 16 x i8> @mul_i8_neg(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: mul_i8_neg
+; CHECK: mul z0.b, z0.b, #-17
+; CHECK-NEXT: ret
+  %elt = insertelement <vscale x 16 x i8> undef, i8 -17, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %elt, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %res = mul <vscale x 16 x i8> %a, %splat
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 16 x i8> @mul_i8_pos(<vscale x 16 x i8> %a) {
+; CHECK-LABEL: mul_i8_pos
+; CHECK: mul z0.b, z0.b, #105
+; CHECK-NEXT: ret
+  %elt = insertelement <vscale x 16 x i8> undef, i8 105, i32 0
+  %splat = shufflevector <vscale x 16 x i8> %elt, <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
+  %res = mul <vscale x 16 x i8> %a, %splat
+  ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 8 x i16> @mul_i16_neg(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: mul_i16_neg
+; CHECK: mul z0.h, z0.h, #-17
+; CHECK-NEXT: ret
+  %elt = insertelement <vscale x 8 x i16> undef, i16 -17, i32 0
+  %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %res = mul <vscale x 8 x i16> %a, %splat
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 8 x i16> @mul_i16_pos(<vscale x 8 x i16> %a) {
+; CHECK-LABEL: mul_i16_pos
+; CHECK: mul z0.h, z0.h, #105
+; CHECK-NEXT: ret
+  %elt = insertelement <vscale x 8 x i16> undef, i16 105, i32 0
+  %splat = shufflevector <vscale x 8 x i16> %elt, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %res = mul <vscale x 8 x i16> %a, %splat
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 4 x i32> @mul_i32_neg(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: mul_i32_neg
+; CHECK: mul z0.s, z0.s, #-17
+; CHECK-NEXT: ret
+  %elt = insertelement <vscale x 4 x i32> undef, i32 -17, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %elt, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %res = mul <vscale x 4 x i32> %a, %splat
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @mul_i32_pos(<vscale x 4 x i32> %a) {
+; CHECK-LABEL: mul_i32_pos
+; CHECK: mul z0.s, z0.s, #105
+; CHECK-NEXT: ret
+  %elt = insertelement <vscale x 4 x i32> undef, i32 105, i32 0
+  %splat = shufflevector <vscale x 4 x i32> %elt, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %res = mul <vscale x 4 x i32> %a, %splat
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @mul_i64_neg(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: mul_i64_neg
+; CHECK: mul z0.d, z0.d, #-17
+; CHECK-NEXT: ret
+  %elt = insertelement <vscale x 2 x i64> undef, i64 -17, i32 0
+  %splat = shufflevector <vscale x 2 x i64> %elt, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %res = mul <vscale x 2 x i64> %a, %splat
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @mul_i64_pos(<vscale x 2 x i64> %a) {
+; CHECK-LABEL: mul_i64_pos
+; CHECK: mul z0.d, z0.d, #105
+; CHECK-NEXT: ret
+  %elt = insertelement <vscale x 2 x i64> undef, i64 105, i32 0
+  %splat = shufflevector <vscale x 2 x i64> %elt, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %res = mul <vscale x 2 x i64> %a, %splat
+  ret <vscale x 2 x i64> %res
+}
