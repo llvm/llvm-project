@@ -43,6 +43,11 @@ OPTIONS
             make histogram of location buckets generated (requires
             matplotlib)
 
+.. option:: --compare
+
+            compare the debug location coverage on two files provided, and draw
+            a plot showing the difference (requires matplotlib)
+
 EXIT STATUS
 -----------
 
@@ -92,6 +97,19 @@ Generate a plot as an image file.
   llvm-locstats --draw-plot file1.out
 
 .. image:: locstats-draw-plot.png
+  :align: center
+
+EXAMPLE 3
+--------------
+
+Generate a plot as an image file showing the difference in the debug location
+coverage.
+
+.. code-block:: none
+
+  llvm-locstats --compare file1.out file1.withentryvals.out
+
+.. image:: locstats-compare.png
   :align: center
 
 SEE ALSO
