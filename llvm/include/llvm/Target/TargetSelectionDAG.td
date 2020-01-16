@@ -717,19 +717,6 @@ class SDNodeXForm<SDNode opc, code xformFunction> {
 def NOOP_SDNodeXForm : SDNodeXForm<imm, [{}]>;
 
 //===----------------------------------------------------------------------===//
-// PatPred Subclasses.
-//
-// These allow specifying different sorts of predicates that control whether a
-// node is matched.
-//
-class PatPred;
-
-class CodePatPred<code predicate> : PatPred {
-  code PredicateCode = predicate;
-}
-
-
-//===----------------------------------------------------------------------===//
 // Selection DAG Pattern Fragments.
 //
 // Pattern fragments are reusable chunks of dags that match specific things.
