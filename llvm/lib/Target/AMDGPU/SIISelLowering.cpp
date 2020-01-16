@@ -6782,52 +6782,29 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   MachineFunction &MF = DAG.getMachineFunction();
 
   switch (IntrinsicID) {
-  case Intrinsic::amdgcn_exp: {
-    const ConstantSDNode *Tgt = cast<ConstantSDNode>(Op.getOperand(2));
-    const ConstantSDNode *En = cast<ConstantSDNode>(Op.getOperand(3));
-    const ConstantSDNode *Done = cast<ConstantSDNode>(Op.getOperand(8));
-    const ConstantSDNode *VM = cast<ConstantSDNode>(Op.getOperand(9));
-
-    const SDValue Ops[] = {
-      Chain,
-      DAG.getTargetConstant(Tgt->getZExtValue(), DL, MVT::i8), // tgt
-      DAG.getTargetConstant(En->getZExtValue(), DL, MVT::i8),  // en
-      Op.getOperand(4), // src0
-      Op.getOperand(5), // src1
-      Op.getOperand(6), // src2
-      Op.getOperand(7), // src3
-      DAG.getTargetConstant(0, DL, MVT::i1), // compr
-      DAG.getTargetConstant(VM->getZExtValue(), DL, MVT::i1)
-    };
-
-    unsigned Opc = Done->isNullValue() ?
-      AMDGPUISD::EXPORT : AMDGPUISD::EXPORT_DONE;
-    return DAG.getNode(Opc, DL, Op->getVTList(), Ops);
-  }
   case Intrinsic::amdgcn_exp_compr: {
-    const ConstantSDNode *Tgt = cast<ConstantSDNode>(Op.getOperand(2));
-    const ConstantSDNode *En = cast<ConstantSDNode>(Op.getOperand(3));
     SDValue Src0 = Op.getOperand(4);
     SDValue Src1 = Op.getOperand(5);
-    const ConstantSDNode *Done = cast<ConstantSDNode>(Op.getOperand(6));
-    const ConstantSDNode *VM = cast<ConstantSDNode>(Op.getOperand(7));
+    // Hack around illegal type on SI by directly selecting it.
+    if (isTypeLegal(Src0.getValueType()))
+      return SDValue();
 
+    const ConstantSDNode *Done = cast<ConstantSDNode>(Op.getOperand(6));
     SDValue Undef = DAG.getUNDEF(MVT::f32);
     const SDValue Ops[] = {
-      Chain,
-      DAG.getTargetConstant(Tgt->getZExtValue(), DL, MVT::i8), // tgt
-      DAG.getTargetConstant(En->getZExtValue(), DL, MVT::i8),  // en
-      DAG.getNode(ISD::BITCAST, DL, MVT::f32, Src0),
-      DAG.getNode(ISD::BITCAST, DL, MVT::f32, Src1),
+      Op.getOperand(2), // tgt
+      DAG.getNode(ISD::BITCAST, DL, MVT::f32, Src0), // src0
+      DAG.getNode(ISD::BITCAST, DL, MVT::f32, Src1), // src1
       Undef, // src2
       Undef, // src3
+      Op.getOperand(7), // vm
       DAG.getTargetConstant(1, DL, MVT::i1), // compr
-      DAG.getTargetConstant(VM->getZExtValue(), DL, MVT::i1)
+      Op.getOperand(3), // en
+      Op.getOperand(0) // Chain
     };
 
-    unsigned Opc = Done->isNullValue() ?
-      AMDGPUISD::EXPORT : AMDGPUISD::EXPORT_DONE;
-    return DAG.getNode(Opc, DL, Op->getVTList(), Ops);
+    unsigned Opc = Done->isNullValue() ? AMDGPU::EXP : AMDGPU::EXP_DONE;
+    return SDValue(DAG.getMachineNode(Opc, DL, Op->getVTList(), Ops), 0);
   }
   case Intrinsic::amdgcn_s_barrier: {
     if (getTargetMachine().getOptLevel() > CodeGenOpt::None) {

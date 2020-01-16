@@ -358,12 +358,6 @@ def AMDGPUExportOp : SDTypeProfile<0, 8, [
 
 ]>;
 
-def AMDGPUexport: SDNode<"AMDGPUISD::EXPORT", AMDGPUExportOp,
-  [SDNPHasChain, SDNPMayStore]>;
-
-def AMDGPUexport_done: SDNode<"AMDGPUISD::EXPORT_DONE", AMDGPUExportOp,
-  [SDNPHasChain, SDNPMayLoad, SDNPMayStore]>;
-
 
 def R600ExportOp : SDTypeProfile<0, 7, [SDTCisFP<0>, SDTCisInt<1>]>;
 
