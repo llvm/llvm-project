@@ -248,6 +248,9 @@ public:
   /// Enable or disable auto generate.
   void SetAutoGenerate(bool b);
 
+  /// Return whether auto generate is enabled.
+  bool IsAutoGenerate() const;
+
   /// Create and register a new provider.
   template <typename T> T *Create() {
     std::unique_ptr<ProviderBase> provider = llvm::make_unique<T>(m_root);

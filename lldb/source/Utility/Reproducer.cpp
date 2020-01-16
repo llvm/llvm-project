@@ -205,6 +205,8 @@ void Generator::Discard() {
 
 void Generator::SetAutoGenerate(bool b) { m_auto_generate = b; }
 
+bool Generator::IsAutoGenerate() const { return m_auto_generate; }
+
 const FileSpec &Generator::GetRoot() const { return m_root; }
 
 void Generator::AddProvidersToIndex() {
