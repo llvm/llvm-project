@@ -84,7 +84,7 @@ private:
   bool lowerGather(IntrinsicInst *I);
   // Create a gather from a base + vector of offsets
   Value *tryCreateMaskedGatherOffset(IntrinsicInst *I, Value *Ptr,
-                                     IRBuilder<> Builder);
+                                     Instruction *&Root, IRBuilder<> Builder);
   // Create a gather from a vector of pointers
   Value *tryCreateMaskedGatherBase(IntrinsicInst *I, Value *Ptr,
                                    IRBuilder<> Builder);
@@ -104,9 +104,9 @@ Pass *llvm::createMVEGatherScatterLoweringPass() {
 bool MVEGatherScatterLowering::isLegalTypeAndAlignment(unsigned NumElements,
                                                        unsigned ElemSize,
                                                        unsigned Alignment) {
-  // Do only allow non-extending gathers for now
-  if (((NumElements == 4 && ElemSize == 32) ||
-       (NumElements == 8 && ElemSize == 16) ||
+  if (((NumElements == 4 &&
+        (ElemSize == 32 || ElemSize == 16 || ElemSize == 8)) ||
+       (NumElements == 8 && (ElemSize == 16 || ElemSize == 8)) ||
        (NumElements == 16 && ElemSize == 8)) &&
       ElemSize / 8 <= Alignment)
     return true;
@@ -126,9 +126,6 @@ Value *MVEGatherScatterLowering::checkGEP(Value *&Offsets, Type *Ty, Value *Ptr,
                     << " from base + vector of offsets\n");
   Value *GEPPtr = GEP->getPointerOperand();
   if (GEPPtr->getType()->isVectorTy()) {
-    LLVM_DEBUG(dbgs() << "masked gathers: gather from a vector of pointers"
-                      << " hidden behind a getelementptr currently not"
-                      << " supported. Expanding.\n");
     return nullptr;
   }
   if (GEP->getNumOperands() != 2) {
@@ -194,7 +191,10 @@ bool MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
   IRBuilder<> Builder(I->getContext());
   Builder.SetInsertPoint(I);
   Builder.SetCurrentDebugLocation(I->getDebugLoc());
-  Value *Load = tryCreateMaskedGatherOffset(I, Ptr, Builder);
+
+  Instruction *Root = I;
+
+  Value *Load = tryCreateMaskedGatherOffset(I, Ptr, Root, Builder);
   if (!Load)
     Load = tryCreateMaskedGatherBase(I, Ptr, Builder);
   if (!Load)
@@ -206,18 +206,24 @@ bool MVEGatherScatterLowering::lowerGather(IntrinsicInst *I) {
     Load = Builder.CreateSelect(Mask, Load, PassThru);
   }
 
+  Root->replaceAllUsesWith(Load);
+  Root->eraseFromParent();
+  if (Root != I)
+    // If this was an extending gather, we need to get rid of the sext/zext
+    // sext/zext as well as of the gather itself
+    I->eraseFromParent();
   LLVM_DEBUG(dbgs() << "masked gathers: successfully built masked gather\n");
-  I->replaceAllUsesWith(Load);
-  I->eraseFromParent();
   return true;
 }
 
 Value *MVEGatherScatterLowering::tryCreateMaskedGatherBase(
     IntrinsicInst *I, Value *Ptr, IRBuilder<> Builder) {
   using namespace PatternMatch;
-  LLVM_DEBUG(dbgs() << "masked gathers: loading from vector of pointers\n");
+
   Type *Ty = I->getType();
-  if (Ty->getVectorNumElements() != 4)
+
+  LLVM_DEBUG(dbgs() << "masked gathers: loading from vector of pointers\n");
+  if (Ty->getVectorNumElements() != 4 || Ty->getScalarSizeInBits() != 32)
     // Can't build an intrinsic for this
     return nullptr;
   Value *Mask = I->getArgOperand(2);
@@ -233,23 +239,55 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherBase(
 }
 
 Value *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
-    IntrinsicInst *I, Value *Ptr, IRBuilder<> Builder) {
+    IntrinsicInst *I, Value *Ptr, Instruction *&Root, IRBuilder<> Builder) {
   using namespace PatternMatch;
-  Type *Ty = I->getType();
+
+  Type *OriginalTy = I->getType();
+  Type *ResultTy = OriginalTy;
+
+  unsigned Unsigned = 1;
+  // The size of the gather was already checked in isLegalTypeAndAlignment;
+  // if it was not a full vector width an appropriate extend should follow.
+  auto *Extend = Root;
+  if (OriginalTy->getPrimitiveSizeInBits() < 128) {
+    // Only transform gathers with exactly one use
+    if (!I->hasOneUse())
+      return nullptr;
+
+    // The correct root to replace is the not the CallInst itself, but the
+    // instruction which extends it
+    Extend = cast<Instruction>(*I->users().begin());
+    if (isa<SExtInst>(Extend)) {
+      Unsigned = 0;
+    } else if (!isa<ZExtInst>(Extend)) {
+      LLVM_DEBUG(dbgs() << "masked gathers: extend needed but not provided. "
+                        << "Expanding\n");
+      return nullptr;
+    }
+    LLVM_DEBUG(dbgs() << "masked gathers: found an extending gather\n");
+    ResultTy = Extend->getType();
+    // The final size of the gather must be a full vector width
+    if (ResultTy->getPrimitiveSizeInBits() != 128) {
+      LLVM_DEBUG(dbgs() << "masked gathers: extending from the wrong type. "
+                        << "Expanding\n");
+      return nullptr;
+    }
+  }
+
   Value *Offsets;
-  Value *BasePtr = checkGEP(Offsets, Ty, Ptr, Builder);
+  Value *BasePtr = checkGEP(Offsets, ResultTy, Ptr, Builder);
   if (!BasePtr)
     return nullptr;
 
   unsigned Scale;
   int GEPElemSize =
       BasePtr->getType()->getPointerElementType()->getPrimitiveSizeInBits();
-  int ResultElemSize = Ty->getScalarSizeInBits();
+  int MemoryElemSize = OriginalTy->getScalarSizeInBits();
   // This can be a 32bit load scaled by 4, a 16bit load scaled by 2, or a
   // 8bit, 16bit or 32bit load scaled by 1
-  if (GEPElemSize == 32 && ResultElemSize == 32) {
+  if (GEPElemSize == 32 && MemoryElemSize == 32) {
     Scale = 2;
-  } else if (GEPElemSize == 16 && ResultElemSize == 16) {
+  } else if (GEPElemSize == 16 && MemoryElemSize == 16) {
     Scale = 1;
   } else if (GEPElemSize == 8) {
     Scale = 0;
@@ -258,20 +296,21 @@ Value *MVEGatherScatterLowering::tryCreateMaskedGatherOffset(
                       << " create masked gather\n");
     return nullptr;
   }
+  Root = Extend;
 
   Value *Mask = I->getArgOperand(2);
   if (!match(Mask, m_One()))
     return Builder.CreateIntrinsic(
         Intrinsic::arm_mve_vldr_gather_offset_predicated,
-        {Ty, BasePtr->getType(), Offsets->getType(), Mask->getType()},
-        {BasePtr, Offsets, Builder.getInt32(Ty->getScalarSizeInBits()),
-         Builder.getInt32(Scale), Builder.getInt32(1), Mask});
+        {ResultTy, BasePtr->getType(), Offsets->getType(), Mask->getType()},
+        {BasePtr, Offsets, Builder.getInt32(OriginalTy->getScalarSizeInBits()),
+         Builder.getInt32(Scale), Builder.getInt32(Unsigned), Mask});
   else
     return Builder.CreateIntrinsic(
         Intrinsic::arm_mve_vldr_gather_offset,
-        {Ty, BasePtr->getType(), Offsets->getType()},
-        {BasePtr, Offsets, Builder.getInt32(Ty->getScalarSizeInBits()),
-         Builder.getInt32(Scale), Builder.getInt32(1)});
+        {ResultTy, BasePtr->getType(), Offsets->getType()},
+        {BasePtr, Offsets, Builder.getInt32(OriginalTy->getScalarSizeInBits()),
+         Builder.getInt32(Scale), Builder.getInt32(Unsigned)});
 }
 
 bool MVEGatherScatterLowering::runOnFunction(Function &F) {
