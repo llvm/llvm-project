@@ -47,7 +47,7 @@ Sections:
 ## when instead of expected SHT_RELA section it locates a section of a different type.
 
 # RUN: yaml2obj %s --docnum=3 -o %t3
-# RUN: not --crash llvm-dwarfdump -debug-line %t3 2>&1 | FileCheck --check-prefix=RELA %s
+# RUN: not llvm-dwarfdump -debug-line %t3 2>&1 | FileCheck --check-prefix=RELA %s
 
 # RELA: LLVM ERROR: Section is not SHT_RELA
 
