@@ -3568,7 +3568,8 @@ static bool combineInstructionsOverFunction(
     ProfileSummaryInfo *PSI, bool ExpensiveCombines, unsigned MaxIterations,
     LoopInfo *LI) {
   auto &DL = F.getParent()->getDataLayout();
-  ExpensiveCombines |= EnableExpensiveCombines;
+  if (EnableExpensiveCombines.getNumOccurrences())
+    ExpensiveCombines = EnableExpensiveCombines;
   MaxIterations = std::min(MaxIterations, LimitMaxIterations.getValue());
 
   /// Builder - This is an IRBuilder that automatically inserts new
