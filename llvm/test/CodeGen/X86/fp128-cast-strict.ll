@@ -39,6 +39,7 @@ define void @TestFPExtF32_F128() nounwind strictfp {
 ; X86-NEXT:    subl $24, %esp
 ; X86-NEXT:    flds vf32
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; X86-NEXT:    wait
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __extendsftf2
@@ -86,6 +87,7 @@ define void @TestFPExtF64_F128() nounwind strictfp {
 ; X86-NEXT:    subl $40, %esp
 ; X86-NEXT:    fldl vf64
 ; X86-NEXT:    fstpl {{[0-9]+}}(%esp)
+; X86-NEXT:    wait
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __extenddftf2
@@ -114,6 +116,7 @@ define void @TestFPExtF80_F128() nounwind strictfp {
 ; X64-SSE-NEXT:    subq $24, %rsp
 ; X64-SSE-NEXT:    fldt {{.*}}(%rip)
 ; X64-SSE-NEXT:    fstpt (%rsp)
+; X64-SSE-NEXT:    wait
 ; X64-SSE-NEXT:    callq __extendxftf2
 ; X64-SSE-NEXT:    movaps %xmm0, {{.*}}(%rip)
 ; X64-SSE-NEXT:    addq $24, %rsp
@@ -124,6 +127,7 @@ define void @TestFPExtF80_F128() nounwind strictfp {
 ; X64-AVX-NEXT:    subq $24, %rsp
 ; X64-AVX-NEXT:    fldt {{.*}}(%rip)
 ; X64-AVX-NEXT:    fstpt (%rsp)
+; X64-AVX-NEXT:    wait
 ; X64-AVX-NEXT:    callq __extendxftf2
 ; X64-AVX-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
 ; X64-AVX-NEXT:    addq $24, %rsp
@@ -135,6 +139,7 @@ define void @TestFPExtF80_F128() nounwind strictfp {
 ; X86-NEXT:    subl $40, %esp
 ; X86-NEXT:    fldt vf80
 ; X86-NEXT:    fstpt {{[0-9]+}}(%esp)
+; X86-NEXT:    wait
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%esp)
 ; X86-NEXT:    calll __extendxftf2
@@ -186,6 +191,7 @@ define void @TestFPTruncF128_F32() nounwind strictfp {
 ; X86-NEXT:    calll __trunctfsf2
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    fstps vf32
+; X86-NEXT:    wait
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
 entry:
@@ -224,6 +230,7 @@ define void @TestFPTruncF128_F64() nounwind strictfp {
 ; X86-NEXT:    calll __trunctfdf2
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    fstpl vf64
+; X86-NEXT:    wait
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
 entry:
@@ -240,6 +247,7 @@ define void @TestFPTruncF128_F80() nounwind strictfp {
 ; X64-SSE-NEXT:    movaps {{.*}}(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __trunctfxf2
 ; X64-SSE-NEXT:    fstpt {{.*}}(%rip)
+; X64-SSE-NEXT:    wait
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -249,6 +257,7 @@ define void @TestFPTruncF128_F80() nounwind strictfp {
 ; X64-AVX-NEXT:    vmovaps {{.*}}(%rip), %xmm0
 ; X64-AVX-NEXT:    callq __trunctfxf2
 ; X64-AVX-NEXT:    fstpt {{.*}}(%rip)
+; X64-AVX-NEXT:    wait
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 ;
@@ -262,6 +271,7 @@ define void @TestFPTruncF128_F80() nounwind strictfp {
 ; X86-NEXT:    calll __trunctfxf2
 ; X86-NEXT:    addl $16, %esp
 ; X86-NEXT:    fstpt vf80
+; X86-NEXT:    wait
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
 entry:
