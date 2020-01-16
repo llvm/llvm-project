@@ -3655,7 +3655,8 @@ multiclass MVE_VMAXMINNMA_m<string iname, MVEVectorVTInfo VTI,
 
   let Predicates = [HasMVEInt] in {
     // Unpredicated v(max|min)nma
-    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qd), (fabs (VTI.Vec MQPR:$Qm)))),
+    def : Pat<(VTI.Vec (unpred_op (fabs (VTI.Vec MQPR:$Qd)),
+                                  (fabs (VTI.Vec MQPR:$Qm)))),
               (VTI.Vec (Inst (VTI.Vec MQPR:$Qd), (VTI.Vec MQPR:$Qm)))>;
 
     // Predicated v(max|min)nma

@@ -307,10 +307,12 @@ let params = T.Float in {
                                  (IRIntBase<"maxnum", [Vector]> $a, $b)>;
   def vminnmaq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                                   (IRIntBase<"minnum", [Vector]>
-                                   $a, (IRIntBase<"fabs", [Vector]> $b))>;
+                                   (IRIntBase<"fabs", [Vector]> $a),
+                                   (IRIntBase<"fabs", [Vector]> $b))>;
   def vmaxnmaq: Intrinsic<Vector, (args Vector:$a, Vector:$b),
                                   (IRIntBase<"maxnum", [Vector]>
-                                   $a, (IRIntBase<"fabs", [Vector]> $b))>;
+                                   (IRIntBase<"fabs", [Vector]> $a),
+                                   (IRIntBase<"fabs", [Vector]> $b))>;
 }
 
 def vpselq: Intrinsic<Vector, (args Vector:$t, Vector:$f, Predicate:$pred),
