@@ -94,7 +94,7 @@ body:             |
   ; CHECK-LABEL: name: do_copy
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   liveins: $r0, $r1, $r2, $r7, $lr
+  ; CHECK:   liveins: $lr, $r1, $r2, $r7
   ; CHECK:   frame-setup tPUSH 14, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
@@ -102,7 +102,7 @@ body:             |
   ; CHECK:   renamable $r0, dead $cpsr = tSUBi3 killed renamable $r1, 4, 14, $noreg
   ; CHECK:   renamable $r1, dead $cpsr = tSUBi3 killed renamable $r2, 4, 14, $noreg
   ; CHECK:   renamable $r2 = t2LSRri renamable $r0, 1, 14, $noreg, $noreg
-  ; CHECK:   $lr = tMOVr killed $r0, 14, $noreg
+  ; CHECK:   $lr = tMOVr $r0, 14, $noreg
   ; CHECK: bb.1.while.body:
   ; CHECK:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   ; CHECK:   liveins: $lr, $r0, $r1, $r2
@@ -110,10 +110,11 @@ body:             |
   ; CHECK:   tCMPhir renamable $lr, renamable $r2, 14, $noreg, implicit-def $cpsr
   ; CHECK:   $lr = t2SUBri killed renamable $lr, 1, 14, $noreg, $noreg
   ; CHECK:   t2IT 2, 8, implicit-def $itstate
-  ; CHECK:   renamable $r3 = tLSRri $noreg, killed renamable $r3, 1, 2, killed $cpsr, implicit renamable $r3, implicit killed $itstate
+  ; CHECK:   renamable $r3 = tLSRri $noreg, killed renamable $r3, 1, 2, killed $cpsr, implicit killed renamable $r3, implicit killed $itstate
   ; CHECK:   early-clobber renamable $r0 = t2STR_PRE killed renamable $r3, killed renamable $r0, 4, 14, $noreg :: (store 4 into %ir.scevgep4)
+  ; CHECK:   renamable $lr = tMOVr killed $lr, 14, $noreg
   ; CHECK:   t2CMPri $lr, 0, 14, $noreg, implicit-def $cpsr
-  ; CHECK:   tBcc %bb.1, 1, $cpsr
+  ; CHECK:   tBcc %bb.1, 1, killed $cpsr
   ; CHECK:   tB %bb.2, 14, $noreg
   ; CHECK: bb.2.while.end:
   ; CHECK:   $r0, dead $cpsr = tMOVi8 0, 14, $noreg
