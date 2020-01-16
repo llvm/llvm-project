@@ -1335,9 +1335,9 @@ void StmtProfiler::VisitAtomicExpr(const AtomicExpr *S) {
 void StmtProfiler::VisitConceptSpecializationExpr(
                                            const ConceptSpecializationExpr *S) {
   VisitExpr(S);
-  VisitDecl(S->getFoundDecl());
-  VisitTemplateArguments(S->getTemplateArgsAsWritten()->getTemplateArgs(),
-                         S->getTemplateArgsAsWritten()->NumTemplateArgs);
+  VisitDecl(S->getNamedConcept());
+  for (const TemplateArgument &Arg : S->getTemplateArguments())
+    VisitTemplateArgument(Arg);
 }
 
 static Stmt::StmtClass DecodeOperatorCall(const CXXOperatorCallExpr *S,
