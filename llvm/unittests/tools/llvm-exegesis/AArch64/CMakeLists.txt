@@ -13,7 +13,7 @@ set(LLVM_LINK_COMPONENTS
   AArch64
   )
 
-add_llvm_unittest(LLVMExegesisAArch64Tests
+add_llvm_target_unittest(LLVMExegesisAArch64Tests
   TargetTest.cpp
   )
 target_link_libraries(LLVMExegesisAArch64Tests PRIVATE

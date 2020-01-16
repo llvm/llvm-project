@@ -724,6 +724,6 @@ void SystemZAsmPrinter::EmitEndOfAsmFile(Module &M) {
 }
 
 // Force static initialization.
-extern "C" void LLVMInitializeSystemZAsmPrinter() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZAsmPrinter() {
   RegisterAsmPrinter<SystemZAsmPrinter> X(getTheSystemZTarget());
 }
