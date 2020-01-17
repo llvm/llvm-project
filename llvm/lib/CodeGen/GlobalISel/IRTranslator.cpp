@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
@@ -858,11 +859,6 @@ static bool isSwiftError(const Value *V) {
 
 bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
   const LoadInst &LI = cast<LoadInst>(U);
-
-  auto Flags = LI.isVolatile() ? MachineMemOperand::MOVolatile
-                               : MachineMemOperand::MONone;
-  Flags |= MachineMemOperand::MOLoad;
-
   if (DL->getTypeStoreSize(LI.getType()) == 0)
     return true;
 
@@ -880,6 +876,9 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     MIRBuilder.buildCopy(Regs[0], VReg);
     return true;
   }
+
+  auto &TLI = *MF->getSubtarget().getTargetLowering();
+  MachineMemOperand::Flags Flags = TLI.getLoadMemOperandFlags(LI, *DL);
 
   const MDNode *Ranges =
       Regs.size() == 1 ? LI.getMetadata(LLVMContext::MD_range) : nullptr;
@@ -903,10 +902,6 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
 
 bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
   const StoreInst &SI = cast<StoreInst>(U);
-  auto Flags = SI.isVolatile() ? MachineMemOperand::MOVolatile
-                               : MachineMemOperand::MONone;
-  Flags |= MachineMemOperand::MOStore;
-
   if (DL->getTypeStoreSize(SI.getValueOperand()->getType()) == 0)
     return true;
 
@@ -925,6 +920,9 @@ bool IRTranslator::translateStore(const User &U, MachineIRBuilder &MIRBuilder) {
     MIRBuilder.buildCopy(VReg, Vals[0]);
     return true;
   }
+
+  auto &TLI = *MF->getSubtarget().getTargetLowering();
+  MachineMemOperand::Flags Flags = TLI.getStoreMemOperandFlags(SI, *DL);
 
   for (unsigned i = 0; i < Vals.size(); ++i) {
     Register Addr;

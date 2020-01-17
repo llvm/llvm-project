@@ -32,7 +32,7 @@ define void @foo() ssp {
 ; CHECK-MIR-NEXT:   G_STORE %2(p0), %0(p0) :: (volatile store 8 into %stack.0.StackGuardSlot)
 ; CHECK-MIR-NEXT:   %3:_(p0) = G_FRAME_INDEX %stack.1.buf
 ; CHECK-MIR-NEXT:   %4:gpr64sp(p0) = LOAD_STACK_GUARD :: (dereferenceable invariant load 8 from @__stack_chk_guard)
-; CHECK-MIR-NEXT:   %5:_(p0) = G_LOAD %0(p0) :: (volatile load 8 from %ir.StackGuardSlot)
+; CHECK-MIR-NEXT:   %5:_(p0) = G_LOAD %0(p0) :: (volatile dereferenceable load 8 from %ir.StackGuardSlot)
 ; CHECK-MIR-NEXT:   %6:_(s1) = G_ICMP intpred(eq), %4(p0), %5
 ; CHECK-MIR-NEXT:   G_BRCOND %6(s1), %bb.2
 ; CHECK-MIR-NEXT:   G_BR %bb.3

@@ -18,7 +18,7 @@ define i32 @main() #0 !dbg !14 {
   ; CHECK:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2, debug-location !DILocation(line: 0, scope: !22)
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; CHECK:   G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store 4 into %ir.retval)
-  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0), debug-location !17 :: (load 4 from @var1)
+  ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0), debug-location !17 :: (dereferenceable load 4 from @var1)
   ; CHECK:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[LOAD]](s32), [[C1]], debug-location !19
   ; CHECK:   G_BRCOND [[ICMP]](s1), %bb.2, debug-location !20
   ; CHECK:   G_BR %bb.3, debug-location !20
