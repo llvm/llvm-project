@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "../Common/AssemblerUtils.h"
-#include "Latency.h"
 #include "LlvmState.h"
 #include "MCInstrDescView.h"
+#include "ParallelSnippetGenerator.h"
 #include "RegisterAliasing.h"
+#include "SerialSnippetGenerator.h"
 #include "TestBase.h"
-#include "Uops.h"
 #include "X86InstrInfo.h"
 
 #include <unordered_set>
@@ -59,12 +59,12 @@ protected:
   SnippetGeneratorT Generator;
 };
 
-using LatencySnippetGeneratorTest =
-    SnippetGeneratorTest<LatencySnippetGenerator>;
+using SerialSnippetGeneratorTest = SnippetGeneratorTest<SerialSnippetGenerator>;
 
-using UopsSnippetGeneratorTest = SnippetGeneratorTest<UopsSnippetGenerator>;
+using ParallelSnippetGeneratorTest =
+    SnippetGeneratorTest<ParallelSnippetGenerator>;
 
-TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependencyThroughImplicitReg) {
+TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughImplicitReg) {
   // - ADC16i16
   // - Op0 Explicit Use Immediate
   // - Op1 Implicit Def Reg(AX)
@@ -90,7 +90,7 @@ TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependencyThroughImplicitReg) {
   EXPECT_THAT(IT.getVariableValues()[0], IsInvalid()) << "Immediate is not set";
 }
 
-TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependencyThroughTiedRegs) {
+TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughTiedRegs) {
   // - ADD16ri
   // - Op0 Explicit Def RegClass(GR16)
   // - Op1 Explicit Use RegClass(GR16) TiedToOp0
@@ -114,7 +114,7 @@ TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependencyThroughTiedRegs) {
   EXPECT_THAT(IT.getVariableValues()[1], IsInvalid()) << "Operand 2 is not set";
 }
 
-TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
+TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
   // - VXORPSrr
   // - Op0 Explicit Def RegClass(VR128)
   // - Op1 Explicit Use RegClass(VR128)
@@ -138,7 +138,7 @@ TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
       << "Op0 is either set to Op1 or to Op2";
 }
 
-TEST_F(LatencySnippetGeneratorTest,
+TEST_F(SerialSnippetGeneratorTest,
        ImplicitSelfDependencyThroughExplicitRegsForbidAll) {
   // - VXORPSrr
   // - Op0 Explicit Def RegClass(VR128)
@@ -158,7 +158,7 @@ TEST_F(LatencySnippetGeneratorTest,
   consumeError(std::move(Error));
 }
 
-TEST_F(LatencySnippetGeneratorTest, DependencyThroughOtherOpcode) {
+TEST_F(SerialSnippetGeneratorTest, DependencyThroughOtherOpcode) {
   // - CMP64rr
   // - Op0 Explicit Use RegClass(GR64)
   // - Op1 Explicit Use RegClass(GR64)
@@ -182,7 +182,7 @@ TEST_F(LatencySnippetGeneratorTest, DependencyThroughOtherOpcode) {
   }
 }
 
-TEST_F(LatencySnippetGeneratorTest, LAHF) {
+TEST_F(SerialSnippetGeneratorTest, LAHF) {
   // - LAHF
   // - Op0 Implicit Def Reg(AH)
   // - Op1 Implicit Use Reg(EFLAGS)
@@ -198,7 +198,7 @@ TEST_F(LatencySnippetGeneratorTest, LAHF) {
   }
 }
 
-TEST_F(UopsSnippetGeneratorTest, ParallelInstruction) {
+TEST_F(ParallelSnippetGeneratorTest, ParallelInstruction) {
   // - BNDCL32rr
   // - Op0 Explicit Use RegClass(BNDR)
   // - Op1 Explicit Use RegClass(GR32)
@@ -218,7 +218,7 @@ TEST_F(UopsSnippetGeneratorTest, ParallelInstruction) {
   EXPECT_THAT(IT.getVariableValues()[1], IsInvalid());
 }
 
-TEST_F(UopsSnippetGeneratorTest, SerialInstruction) {
+TEST_F(ParallelSnippetGeneratorTest, SerialInstruction) {
   // - CDQ
   // - Op0 Implicit Def Reg(EAX)
   // - Op1 Implicit Def Reg(EDX)
@@ -237,7 +237,7 @@ TEST_F(UopsSnippetGeneratorTest, SerialInstruction) {
   ASSERT_THAT(IT.getVariableValues(), SizeIs(0));
 }
 
-TEST_F(UopsSnippetGeneratorTest, StaticRenaming) {
+TEST_F(ParallelSnippetGeneratorTest, StaticRenaming) {
   // CMOV32rr has tied variables, we enumerate the possible values to execute
   // as many in parallel as possible.
 
@@ -268,7 +268,7 @@ TEST_F(UopsSnippetGeneratorTest, StaticRenaming) {
       << "Each instruction writes to a different register";
 }
 
-TEST_F(UopsSnippetGeneratorTest, NoTiedVariables) {
+TEST_F(ParallelSnippetGeneratorTest, NoTiedVariables) {
   // CMOV_GR32 has no tied variables, we make sure def and use are different
   // from each other.
 
@@ -302,7 +302,7 @@ TEST_F(UopsSnippetGeneratorTest, NoTiedVariables) {
   EXPECT_THAT(IT.getVariableValues()[3], IsInvalid());
 }
 
-TEST_F(UopsSnippetGeneratorTest, MemoryUse) {
+TEST_F(ParallelSnippetGeneratorTest, MemoryUse) {
   // Mov32rm reads from memory.
   // - MOV32rm
   // - Op0 Explicit Def RegClass(GR32)
@@ -326,7 +326,7 @@ TEST_F(UopsSnippetGeneratorTest, MemoryUse) {
   EXPECT_THAT(CT.Info, HasSubstr("no tied variables"));
   EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
   ASSERT_THAT(CT.Instructions,
-              SizeIs(UopsSnippetGenerator::kMinNumDifferentAddresses));
+              SizeIs(ParallelSnippetGenerator::kMinNumDifferentAddresses));
   const InstructionTemplate &IT = CT.Instructions[0];
   EXPECT_THAT(IT.getOpcode(), Opcode);
   ASSERT_THAT(IT.getVariableValues(), SizeIs(6));
