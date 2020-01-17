@@ -1325,8 +1325,9 @@ void HWAddressSanitizer::instrumentGlobals() {
   // cases where two libraries mutually depend on each other.
   //
   // We only need one note per binary, so put everything for the note in a
-  // comdat.
-  Comdat *NoteComdat = M.getOrInsertComdat(kHwasanNoteName);
+  // comdat. This need to be a comdat with an .init_array section to prevent
+  // newer versions of lld from discarding the note.
+  Comdat *NoteComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
 
   Type *Int8Arr0Ty = ArrayType::get(Int8Ty, 0);
   auto Start =
