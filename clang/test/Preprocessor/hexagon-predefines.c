@@ -33,6 +33,13 @@
 // CHECK-V65-NOT: #define __HVX__ 1
 // CHECK-V65: #define __hexagon__ 1
 
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv66 %s | FileCheck %s -check-prefix CHECK-V66
+// CHECK-V66: #define __HEXAGON_ARCH__ 66
+// CHECK-V66: #define __HEXAGON_V66__ 1
+// CHECK-V66-NOT: #define __HVX_LENGTH__
+// CHECK-V66-NOT: #define __HVX__ 1
+// CHECK-V66: #define __hexagon__ 1
+
 // The HVX flags are explicitly defined by the driver.
 // For v60,v62,v65 - 64B mode is default
 // For v66 and future archs - 128B is default
