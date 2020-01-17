@@ -131,9 +131,15 @@ void DfaEmitter::emit(StringRef Name, raw_ostream &OS) {
   OS << "}};\n\n";
 
   OS << "// A transition in the generated " << Name << " DFA.\n";
-  OS << "using " << Name << "Transition = TransitionType<";
+  OS << "struct " << Name << "Transition {\n";
+  OS << "  unsigned FromDfaState; // The transitioned-from DFA state.\n";
+  OS << "  ";
   printActionType(OS);
-  OS << ">;\n\n";
+  OS << " Action;       // The input symbol that causes this transition.\n";
+  OS << "  unsigned ToDfaState;   // The transitioned-to DFA state.\n";
+  OS << "  unsigned InfoIdx;      // Start index into " << Name
+     << "TransitionInfo.\n";
+  OS << "};\n\n";
 
   OS << "// A table of DFA transitions, ordered by {FromDfaState, Action}.\n";
   OS << "// The initial state is 1, not zero.\n";
