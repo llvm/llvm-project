@@ -7,6 +7,8 @@ set(LLVM_LINK_COMPONENTS
   Support
   Target
   PowerPCCodeGen
+  PowerPCDesc
+  PowerPCInfo
   )
 
 add_llvm_unittest(PowerPCTests
