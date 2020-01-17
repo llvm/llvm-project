@@ -54,6 +54,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UseSmallData = false;
   bool UseZRegOps = false;
 
+  bool HasPreV65 = false;
   bool HasMemNoShuf = false;
   bool EnableDuplex = false;
   bool ReservedR19 = false;
