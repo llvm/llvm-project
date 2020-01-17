@@ -130,6 +130,12 @@ string(REGEX REPLACE "([0-9]+)\\.[0-9]+(\\.[0-9]+)?" "\\1" LLD_VERSION_MAJOR
 string(REGEX REPLACE "[0-9]+\\.([0-9]+)(\\.[0-9]+)?" "\\1" LLD_VERSION_MINOR
   ${LLD_VERSION})
 
+# Configure the Version.inc file.
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/lld/Common/Version.inc.in
+  ${CMAKE_CURRENT_BINARY_DIR}/include/lld/Common/Version.inc)
+
+
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
   message(FATAL_ERROR "In-source builds are not allowed. CMake would overwrite "
 "the makefiles distributed with LLVM. Please create a directory and run cmake "
