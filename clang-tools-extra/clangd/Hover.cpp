@@ -123,6 +123,15 @@ void printParams(llvm::raw_ostream &OS,
   }
 }
 
+std::string printType(QualType QT, const PrintingPolicy &Policy) {
+  // TypePrinter doesn't resolve decltypes, so resolve them here.
+  // FIXME: This doesn't handle composite types that contain a decltype in them.
+  // We should rather have a printing policy for that.
+  while (const auto *DT = QT->getAs<DecltypeType>())
+    QT = DT->getUnderlyingType();
+  return QT.getAsString(Policy);
+}
+
 std::vector<HoverInfo::Param>
 fetchTemplateParameters(const TemplateParameterList *Params,
                         const PrintingPolicy &PP) {
@@ -131,8 +140,7 @@ fetchTemplateParameters(const TemplateParameterList *Params,
 
   for (const Decl *Param : *Params) {
     HoverInfo::Param P;
-    P.Type.emplace();
-    if (const auto TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
+    if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
       P.Type = TTP->wasDeclaredWithTypename() ? "typename" : "class";
       if (TTP->isParameterPack())
         *P.Type += "...";
@@ -141,21 +149,21 @@ fetchTemplateParameters(const TemplateParameterList *Params,
         P.Name = TTP->getNameAsString();
       if (TTP->hasDefaultArgument())
         P.Default = TTP->getDefaultArgument().getAsString(PP);
-    } else if (const auto NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
+    } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
       if (IdentifierInfo *II = NTTP->getIdentifier())
         P.Name = II->getName().str();
 
-      llvm::raw_string_ostream Out(*P.Type);
-      NTTP->getType().print(Out, PP);
+      P.Type = printType(NTTP->getType(), PP);
       if (NTTP->isParameterPack())
-        Out << "...";
+        *P.Type += "...";
 
       if (NTTP->hasDefaultArgument()) {
         P.Default.emplace();
         llvm::raw_string_ostream Out(*P.Default);
         NTTP->getDefaultArgument()->printPretty(Out, nullptr, PP);
       }
-    } else if (const auto TTPD = dyn_cast<TemplateTemplateParmDecl>(Param)) {
+    } else if (const auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(Param)) {
+      P.Type.emplace();
       llvm::raw_string_ostream OS(*P.Type);
       OS << "template <";
       printParams(OS,
@@ -241,7 +249,7 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
     HI.Parameters->emplace_back();
     auto &P = HI.Parameters->back();
     if (!PVD->getType().isNull()) {
-      P.Type = PVD->getType().getAsString(Policy);
+      P.Type = printType(PVD->getType(), Policy);
     } else {
       std::string Param;
       llvm::raw_string_ostream OS(Param);
@@ -265,12 +273,12 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
   } else if (llvm::isa<CXXDestructorDecl>(FD)) {
     HI.ReturnType = "void";
   } else {
-    HI.ReturnType = FD->getReturnType().getAsString(Policy);
+    HI.ReturnType = printType(FD->getReturnType(), Policy);
 
-    QualType FunctionType = FD->getType();
+    QualType QT = FD->getType();
     if (const VarDecl *VD = llvm::dyn_cast<VarDecl>(D)) // Lambdas
-      FunctionType = VD->getType().getDesugaredType(D->getASTContext());
-    HI.Type = FunctionType.getAsString(Policy);
+      QT = VD->getType().getDesugaredType(D->getASTContext());
+    HI.Type = printType(QT, Policy);
   }
   // FIXME: handle variadics.
 }
@@ -342,7 +350,7 @@ HoverInfo getHoverContents(const NamedDecl *D, const SymbolIndex *Index) {
         fetchTemplateParameters(TD->getTemplateParameters(), Policy);
     D = TD;
   } else if (const FunctionDecl *FD = D->getAsFunction()) {
-    if (const auto FTD = FD->getDescribedTemplate()) {
+    if (const auto *FTD = FD->getDescribedTemplate()) {
       HI.TemplateParameters =
           fetchTemplateParameters(FTD->getTemplateParameters(), Policy);
       D = FTD;
@@ -353,7 +361,7 @@ HoverInfo getHoverContents(const NamedDecl *D, const SymbolIndex *Index) {
   if (const FunctionDecl *FD = getUnderlyingFunction(D))
     fillFunctionTypeAndParams(HI, D, FD, Policy);
   else if (const auto *VD = dyn_cast<ValueDecl>(D))
-    HI.Type = VD->getType().getAsString(Policy);
+    HI.Type = printType(VD->getType(), Policy);
 
   // Fill in value with evaluated initializer if possible.
   if (const auto *Var = dyn_cast<VarDecl>(D)) {
@@ -449,7 +457,7 @@ llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST) {
     auto Policy =
         printingPolicyForDecls(AST.getASTContext().getPrintingPolicy());
     Policy.SuppressTagKeyword = true;
-    HI.Type = E->getType().getAsString(Policy);
+    HI.Type = printType(E->getType(), Policy);
     HI.Value = *Val;
     HI.Name = getNameForExpr(E);
     return HI;
