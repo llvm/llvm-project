@@ -291,6 +291,9 @@ public:
   /// Whether timestamps should be written to the produced PCH file.
   unsigned IncludeTimestamps : 1;
 
+  /// Should a temporary file be used during compilation.
+  unsigned UseTemporary : 1;
+
   CodeCompleteOptions CodeCompleteOpts;
 
   /// Specifies the output format of the AST.
@@ -440,8 +443,8 @@ public:
         UseGlobalModuleIndex(true), GenerateGlobalModuleIndex(true),
         ASTDumpDecls(false), ASTDumpLookups(false),
         BuildingImplicitModule(false), ModulesEmbedAllFiles(false),
-        IncludeTimestamps(true), IndexIgnoreSystemSymbols(false),
-        IndexRecordCodegenName(false) {}
+        IncludeTimestamps(true), UseTemporary(true),
+        IndexIgnoreSystemSymbols(false), IndexRecordCodegenName(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.
