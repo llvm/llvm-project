@@ -388,9 +388,6 @@ void SystemInitializerFull::Terminate() {
   DynamicLoaderStatic::Terminate();
   DynamicLoaderWindowsDYLD::Terminate();
 
-#if LLDB_ENABLE_PYTHON
-  OperatingSystemPython::Terminate();
-#endif
 
   platform_freebsd::PlatformFreeBSD::Terminate();
   platform_linux::PlatformLinux::Terminate();
