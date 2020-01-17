@@ -69,8 +69,6 @@ public:
   /// \param existing_ctxt An existing ASTContext.
   explicit ClangASTContext(clang::ASTContext &existing_ctxt);
 
-  ClangASTContext(clang::ASTContext *ast_ctx);
-
   ~ClangASTContext() override;
 
   void Finalize() override;
