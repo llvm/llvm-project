@@ -135,8 +135,8 @@ StringRef getOutputSectionName(const InputSectionBase *s) {
 }
 
 static bool needsInterpSection() {
-  return !config->shared && !config->dynamicLinker.empty() &&
-         script->needsInterpSection();
+  return !config->relocatable && !config->shared &&
+         !config->dynamicLinker.empty() && script->needsInterpSection();
 }
 
 template <class ELFT> void writeResult() { Writer<ELFT>().run(); }
