@@ -1,4 +1,5 @@
 int main() {
-  __asm__("add r0, r0, 1\n");
-  return 0;
+  int res;
+  __asm__("add %[r], r0, 1\n" : [ r ] "=r"(res));
+  return res;
 }
