@@ -2147,6 +2147,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(MI, MRI, 1); // M0
       return;
     }
+    case Intrinsic::amdgcn_ds_append:
+    case Intrinsic::amdgcn_ds_consume: {
+      constrainOpWithReadfirstlane(MI, MRI, 2); // M0
+      return;
+    }
     case Intrinsic::amdgcn_s_sendmsg:
     case Intrinsic::amdgcn_s_sendmsghalt: {
       // FIXME: Should this use a waterfall loop?
@@ -3080,8 +3085,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
       break;
     }
-    case Intrinsic::amdgcn_ds_append:
-    case Intrinsic::amdgcn_ds_consume:
     case Intrinsic::amdgcn_ds_fadd:
     case Intrinsic::amdgcn_ds_fmin:
     case Intrinsic::amdgcn_ds_fmax:
@@ -3096,6 +3099,13 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                                  AMDGPU::SGPRRegBankID);
       OpdsMapping[2] = AMDGPU::getValueMapping(M0Bank, 32);
       OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 32);
+      break;
+    }
+    case Intrinsic::amdgcn_ds_append:
+    case Intrinsic::amdgcn_ds_consume: {
+      unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
+      OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
     }
     case Intrinsic::amdgcn_exp_compr:
