@@ -65,6 +65,15 @@ public:
   void reportWarning(const Twine &Warning, const DebugMapObject &DMO,
                      const DWARFDie *DIE = nullptr) const;
 
+  /// Flags passed to DwarfLinker::lookForDIEsToKeep
+  enum TraversalFlags {
+    TF_Keep = 1 << 0,            ///< Mark the traversed DIEs as kept.
+    TF_InFunctionScope = 1 << 1, ///< Current scope is a function scope.
+    TF_DependencyWalk = 1 << 2,  ///< Walking the dependencies of a kept DIE.
+    TF_ParentWalk = 1 << 3,      ///< Walking up the parents of a kept DIE.
+    TF_ODR = 1 << 4,             ///< Use the ODR while keeping dependents.
+    TF_SkipPC = 1 << 5,          ///< Skip all location attributes.
+  };
 private:
   /// Remembers the oldest and newest DWARF version we've seen in a unit.
   void updateDwarfVersion(unsigned Version) {
@@ -215,15 +224,6 @@ private:
                         unsigned &UnitID, bool IsLittleEndian,
                         unsigned Indent = 0, bool Quiet = false);
 
-  /// Flags passed to DwarfLinker::lookForDIEsToKeep
-  enum TraversalFlags {
-    TF_Keep = 1 << 0,            ///< Mark the traversed DIEs as kept.
-    TF_InFunctionScope = 1 << 1, ///< Current scope is a function scope.
-    TF_DependencyWalk = 1 << 2,  ///< Walking the dependencies of a kept DIE.
-    TF_ParentWalk = 1 << 3,      ///< Walking up the parents of a kept DIE.
-    TF_ODR = 1 << 4,             ///< Use the ODR while keeping dependents.
-    TF_SkipPC = 1 << 5,          ///< Skip all location attributes.
-  };
 
   /// Mark the passed DIE as well as all the ones it depends on as kept.
   void keepDIEAndDependencies(RelocationManager &RelocMgr, RangesTy &Ranges,
