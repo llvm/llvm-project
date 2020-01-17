@@ -1050,7 +1050,8 @@ makeTemplateArgumentListInfo(Sema &S, TemplateIdAnnotation &TemplateId) {
   return TemplateArgs;
 }
 
-bool Sema::ActOnTypeConstraint(TemplateIdAnnotation *TypeConstr,
+bool Sema::ActOnTypeConstraint(const CXXScopeSpec &SS,
+                               TemplateIdAnnotation *TypeConstr,
                                TemplateTypeParmDecl *ConstrainedParameter,
                                SourceLocation EllipsisLoc) {
   ConceptDecl *CD =
@@ -1080,8 +1081,7 @@ bool Sema::ActOnTypeConstraint(TemplateIdAnnotation *TypeConstr,
         makeTemplateArgumentListInfo(*this, *TypeConstr);
   }
   return AttachTypeConstraint(
-      TypeConstr->SS.isSet() ? TypeConstr->SS.getWithLocInContext(Context) :
-      NestedNameSpecifierLoc(),
+      SS.isSet() ? SS.getWithLocInContext(Context) : NestedNameSpecifierLoc(),
       DeclarationNameInfo(DeclarationName(TypeConstr->Name),
                           TypeConstr->TemplateNameLoc), CD,
       TypeConstr->LAngleLoc.isValid() ? &TemplateArgs : nullptr,
@@ -7872,12 +7872,10 @@ bool Sema::CheckTemplatePartialSpecializationArgs(
 
 DeclResult Sema::ActOnClassTemplateSpecialization(
     Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
-    SourceLocation ModulePrivateLoc, TemplateIdAnnotation &TemplateId,
-    const ParsedAttributesView &Attr,
+    SourceLocation ModulePrivateLoc, CXXScopeSpec &SS,
+    TemplateIdAnnotation &TemplateId, const ParsedAttributesView &Attr,
     MultiTemplateParamsArg TemplateParameterLists, SkipBodyInfo *SkipBody) {
   assert(TUK != TUK_Reference && "References are not specializations");
-
-  CXXScopeSpec &SS = TemplateId.SS;
 
   // NOTE: KWLoc is the location of the tag keyword. This will instead
   // store the location of the outermost template keyword in the declaration.
