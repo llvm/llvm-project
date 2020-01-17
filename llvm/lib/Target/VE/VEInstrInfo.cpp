@@ -38,6 +38,23 @@ VEInstrInfo::VEInstrInfo(VESubtarget &ST)
     : VEGenInstrInfo(VE::ADJCALLSTACKDOWN, VE::ADJCALLSTACKUP), RI(),
       Subtarget(ST) {}
 
+void VEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator I, const DebugLoc &DL,
+                              MCRegister DestReg, MCRegister SrcReg,
+                              bool KillSrc) const {
+
+  if (VE::I64RegClass.contains(SrcReg) && VE::I64RegClass.contains(DestReg)) {
+    BuildMI(MBB, I, DL, get(VE::ORri), DestReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addImm(0);
+  } else {
+    const TargetRegisterInfo *TRI = &getRegisterInfo();
+    dbgs() << "Impossible reg-to-reg copy from " << printReg(SrcReg, TRI)
+           << " to " << printReg(DestReg, TRI) << "\n";
+    llvm_unreachable("Impossible reg-to-reg copy");
+  }
+}
+
 bool VEInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case VE::EXTEND_STACK: {
