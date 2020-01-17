@@ -818,6 +818,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
         Fn->addFnAttr(
             "xray-instruction-threshold",
             llvm::itostr(CGM.getCodeGenOpts().XRayInstructionThreshold));
+      if (CGM.getCodeGenOpts().XRayIgnoreLoops) {
+        Fn->addFnAttr("xray-ignore-loops");
+      }
     }
 
     if (const auto *Attr = D->getAttr<PatchableFunctionEntryAttr>()) {
