@@ -15,12 +15,15 @@
 #include "DPUTargetMachine.h"
 
 #include "DPUISelLowering.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/IR/GlobalObject.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -80,6 +83,8 @@ private:
   // Checks whether the target of a store operation is the requested address
   // space.
   bool IsAStoreToAddrSpace(SDNode *Node, unsigned int AddrSpace) const;
+
+  bool IsGlobalAddrInImmediateSection(SDNode *Node) const;
 
   void processFunctionAfterISel(MachineFunction &MF);
 
@@ -344,6 +349,31 @@ bool DPUDAGToDAGISel::IsAStoreToAddrSpace(SDNode *Node,
     }
   }
   return false;
+}
+
+bool DPUDAGToDAGISel::IsGlobalAddrInImmediateSection(SDNode *Node) const {
+  if (Node->getOpcode() != DPUISD::Wrapper) {
+    return false;
+  }
+
+  SDValue Value = Node->getOperand(0);
+
+  GlobalAddressSDNode *AddrNode = cast<GlobalAddressSDNode>(Value);
+
+  if (!AddrNode) {
+    return false;
+  }
+
+  const auto GO = AddrNode->getGlobal()->getBaseObject();
+  const auto *GVA = dyn_cast<GlobalVariable>(GO);
+
+  if (!GVA->hasSection()) {
+    return false;
+  }
+
+  StringRef Section = GVA->getSection();
+
+  return Section.startswith(".data.immediate_memory");
 }
 
 void DPUDAGToDAGISel::Select(SDNode *Node) {

@@ -87,6 +87,10 @@ class wram_store_frag<PatFrag base_store> : PatFrag<(ops node:$val, node:$ptr), 
     return IsAStoreToAddrSpace(N, DPUADDR_SPACE::WRAM);
 }]>;
 
+def IsInImmediateSection: PatFrag<(ops node:$sym), (DPUWrapper node:$sym), [{
+    return IsGlobalAddrInImmediateSection(N);
+}]>;
+
 multiclass WramLoadXPat<ImmOperand LdTy, PatFrag LoadOp, DPUInstruction Inst> {
   def : Pat<(LdTy (wram_load_frag<LoadOp> SimpleRegOrCst:$ra)), (Inst SimpleRegOrCst:$ra, 0)>;
   def : Pat<(LdTy (wram_load_frag<LoadOp> AddrFI:$ra)), (Inst AddrFI:$ra, 0)>;
@@ -135,13 +139,16 @@ multiclass WramStoreSub64Pat<PatFrag StoreOp, DPUInstruction Inst> {
 }
 
 multiclass WramStoreImmPat<PatFrag WramStoreImmOp, DPUInstruction Inst, ImmOperand StTy> {
+  def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), (IsInImmediateSection i32:$addr)), (Inst ZERO, i32:$addr, StTy:$imm)>;
   def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), SimpleRegOrCst:$ra), (Inst SimpleRegOrCst:$ra, 0, StTy:$imm)>;
   def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), AddrFI:$ra), (Inst AddrFI:$ra, 0, StTy:$imm)>;
+  def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), (add SimpleRegOrCst:$ra, (IsInImmediateSection i32:$off))), (Inst SimpleRegOrCst:$ra, i32:$off, StTy:$imm)>;
   def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), (add SimpleRegOrCst:$ra, s12_imm:$off)), (Inst SimpleRegOrCst:$ra, s12_imm:$off, StTy:$imm)>;
+  def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), (add AddrFI:$ra, (IsInImmediateSection i32:$off))), (Inst AddrFI:$ra, i32:$off, StTy:$imm)>;
   def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), (add AddrFI:$ra, s12_imm:$off)), (Inst AddrFI:$ra, s12_imm:$off, StTy:$imm)>;
+  def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), (IsOrAdd AddrFI:$ra, (IsInImmediateSection i32:$off))), (Inst AddrFI:$ra, i32:$off, StTy:$imm)>;
   def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), (IsOrAdd SimpleRegOrCst:$ra, s12_imm:$off)), (Inst SimpleRegOrCst:$ra, s12_imm:$off, StTy:$imm)>;
   def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), (IsOrAdd AddrFI:$ra, s12_imm:$off)), (Inst AddrFI:$ra, s12_imm:$off, StTy:$imm)>;
-  // todo: we could add the DPUWrapper Patterns here, if we could check that $off is at the start of the memory (in section ".data.immediate_memory")
 }
 
 defm : WramLoadPat<zextloadi8, LBUrri, LBU_Urri>;
