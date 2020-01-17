@@ -195,8 +195,13 @@ const CallInst *BasicBlock::getTerminatingDeoptimizeCall() const {
 
 const CallInst *BasicBlock::getPostdominatingDeoptimizeCall() const {
   const BasicBlock* BB = this;
-  while (BB->getUniqueSuccessor())
-    BB = BB->getUniqueSuccessor();
+  SmallPtrSet<const BasicBlock *, 8> Visited;
+  Visited.insert(BB);
+  while (auto *Succ = BB->getUniqueSuccessor()) {
+    if (!Visited.insert(Succ).second)
+      return nullptr;
+    BB = Succ;
+  }
   return BB->getTerminatingDeoptimizeCall();
 }
 
