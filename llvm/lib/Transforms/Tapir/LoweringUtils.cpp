@@ -522,12 +522,12 @@ Instruction *llvm::replaceDetachWithCallToOutline(
     // Create invoke instruction.  The ordinary return of the invoke is the
     // detach's continuation, and the unwind return is the detach's unwind.
     TopCall = InvokeInst::Create(Out.Outline, Out.ReplRet, Out.ReplUnwind,
-                                 OutlineInputs);
+                                 OutlineInputs, "", DI->getParent());
     // Use a fast calling convention for the outline.
     TopCall->setCallingConv(Out.Outline->getCallingConv());
     TopCall->setDebugLoc(DI->getDebugLoc());
-    // Replace the detach with the invoke.
-    ReplaceInstWithInst(Out.ReplCall, TopCall);
+    // Remove the detach.  The invoke serves as a replacement terminator.
+    DI->eraseFromParent();
     return TopCall;
   }
 }
