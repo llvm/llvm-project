@@ -1655,7 +1655,7 @@ TEST(Hover, Present) {
             HI.Kind = index::SymbolKind::Unknown;
             HI.Name = "X";
           },
-          R"(<unknown> X)",
+          R"(X)",
       },
       {
           [](HoverInfo &HI) {

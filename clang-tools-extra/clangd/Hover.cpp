@@ -522,7 +522,8 @@ markup::Document HoverInfo::present() const {
   // level 1 and 2 headers in a huge font, see
   // https://github.com/microsoft/vscode/issues/88417 for details.
   markup::Paragraph &Header = Output.addHeading(3);
-  Header.appendText(index::getSymbolKindString(Kind));
+  if (Kind != index::SymbolKind::Unknown)
+    Header.appendText(index::getSymbolKindString(Kind));
   assert(!Name.empty() && "hover triggered on a nameless symbol");
   Header.appendCode(Name);
 
