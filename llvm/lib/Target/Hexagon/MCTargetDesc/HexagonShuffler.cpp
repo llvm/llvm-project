@@ -105,62 +105,30 @@ unsigned HexagonResource::setWeight(unsigned s) {
   return Weight;
 }
 
-void HexagonCVIResource::SetupTUL(TypeUnitsAndLanes *TUL, StringRef CPU) {
-  (*TUL)[HexagonII::TypeCVI_VA] =
-      UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
-  (*TUL)[HexagonII::TypeCVI_VA_DV] = UnitsAndLanes(CVI_XLANE | CVI_MPY0, 2);
-  (*TUL)[HexagonII::TypeCVI_VX] = UnitsAndLanes(CVI_MPY0 | CVI_MPY1, 1);
-  (*TUL)[HexagonII::TypeCVI_VX_LATE] = UnitsAndLanes(CVI_MPY0 | CVI_MPY1, 1);
-  (*TUL)[HexagonII::TypeCVI_VX_DV] = UnitsAndLanes(CVI_MPY0, 2);
-  (*TUL)[HexagonII::TypeCVI_VP] = UnitsAndLanes(CVI_XLANE, 1);
-  (*TUL)[HexagonII::TypeCVI_VP_VS] = UnitsAndLanes(CVI_XLANE, 2);
-  (*TUL)[HexagonII::TypeCVI_VS] = UnitsAndLanes(CVI_SHIFT, 1);
-  (*TUL)[HexagonII::TypeCVI_VS_VX] = UnitsAndLanes(CVI_XLANE | CVI_SHIFT, 1);
-  (*TUL)[HexagonII::TypeCVI_VINLANESAT] =
-      (CPU == "hexagonv60")
-          ? UnitsAndLanes(CVI_SHIFT, 1)
-          : UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
-  (*TUL)[HexagonII::TypeCVI_VM_LD] =
-      UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
-  (*TUL)[HexagonII::TypeCVI_VM_TMP_LD] = UnitsAndLanes(CVI_NONE, 0);
-  (*TUL)[HexagonII::TypeCVI_VM_VP_LDU] = UnitsAndLanes(CVI_XLANE, 1);
-  (*TUL)[HexagonII::TypeCVI_VM_ST] =
-      UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
-  (*TUL)[HexagonII::TypeCVI_VM_NEW_ST] = UnitsAndLanes(CVI_NONE, 0);
-  (*TUL)[HexagonII::TypeCVI_VM_STU] = UnitsAndLanes(CVI_XLANE, 1);
-  (*TUL)[HexagonII::TypeCVI_HIST] = UnitsAndLanes(CVI_XLANE, 4);
-  (*TUL)[HexagonII::TypeCVI_GATHER] =
-      UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
-  (*TUL)[HexagonII::TypeCVI_SCATTER] =
-      UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
-  (*TUL)[HexagonII::TypeCVI_SCATTER_DV] =
-      UnitsAndLanes(CVI_XLANE | CVI_MPY0, 2);
-  (*TUL)[HexagonII::TypeCVI_SCATTER_NEW_ST] =
-      UnitsAndLanes(CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1, 1);
-  (*TUL)[HexagonII::TypeCVI_4SLOT_MPY] = UnitsAndLanes(CVI_XLANE, 4);
-  (*TUL)[HexagonII::TypeCVI_ZW] = UnitsAndLanes(CVI_ZW, 1);
-}
-
-HexagonCVIResource::HexagonCVIResource(TypeUnitsAndLanes *TUL,
-                                       MCInstrInfo const &MCII, unsigned s,
+HexagonCVIResource::HexagonCVIResource(MCInstrInfo const &MCII,
+                                       MCSubtargetInfo const &STI,
+                                       unsigned s,
                                        MCInst const *id)
     : HexagonResource(s) {
-  unsigned T = HexagonMCInstrInfo::getType(MCII, *id);
 
-  if (TUL->count(T)) {
-    // For an HVX insn.
-    Valid = true;
-    setUnits((*TUL)[T].first);
-    setLanes((*TUL)[T].second);
-    setLoad(HexagonMCInstrInfo::getDesc(MCII, *id).mayLoad());
-    setStore(HexagonMCInstrInfo::getDesc(MCII, *id).mayStore());
-  } else {
+  const unsigned ItinUnits = HexagonMCInstrInfo::getCVIResources(MCII, STI, *id);
+  unsigned Lanes;
+  const unsigned Units = HexagonConvertUnits(ItinUnits, &Lanes);
+
+  if (Units == 0 && Lanes == 0) {
     // For core insns.
     Valid = false;
     setUnits(0);
     setLanes(0);
     setLoad(false);
     setStore(false);
+  } else {
+    // For an HVX insn.
+    Valid = true;
+    setUnits(Units);
+    setLanes(Lanes);
+    setLoad(HexagonMCInstrInfo::getDesc(MCII, *id).mayLoad());
+    setStore(HexagonMCInstrInfo::getDesc(MCII, *id).mayStore());
   }
 }
 
@@ -201,7 +169,6 @@ HexagonShuffler::HexagonShuffler(MCContext &Context, bool ReportErrors,
                                  MCSubtargetInfo const &STI)
     : Context(Context), MCII(MCII), STI(STI), ReportErrors(ReportErrors) {
   reset();
-  HexagonCVIResource::SetupTUL(&TUL, STI.getCPU());
 }
 
 void HexagonShuffler::reset() {
@@ -212,7 +179,7 @@ void HexagonShuffler::reset() {
 
 void HexagonShuffler::append(MCInst const &ID, MCInst const *Extender,
                              unsigned S) {
-  HexagonInstr PI(&TUL, MCII, &ID, Extender, S);
+  HexagonInstr PI(MCII, STI, &ID, Extender, S);
 
   Packet.push_back(PI);
 }
@@ -362,6 +329,7 @@ bool HexagonShuffler::ValidResourceUsage(HexagonPacketSummary const &Summary) {
       continue; // not an hvx inst or an hvx inst that doesn't uses any pipes
     hvxInsts.push_back(inst);
   }
+
   // if there are any hvx instructions in this packet, check pipe usage
   if (hvxInsts.size() > 0) {
     unsigned startIdx, usedUnits;

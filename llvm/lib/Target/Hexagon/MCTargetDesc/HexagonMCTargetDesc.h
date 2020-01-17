@@ -94,6 +94,7 @@ std::unique_ptr<MCObjectTargetWriter>
 createHexagonELFObjectWriter(uint8_t OSABI, StringRef CPU);
 
 unsigned HexagonGetLastSlot();
+unsigned HexagonConvertUnits(unsigned ItinUnits, unsigned *Lanes);
 
 } // End llvm namespace
 

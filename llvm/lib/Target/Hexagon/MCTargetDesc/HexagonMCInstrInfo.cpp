@@ -394,6 +394,26 @@ unsigned HexagonMCInstrInfo::getType(MCInstrInfo const &MCII,
   return ((F >> HexagonII::TypePos) & HexagonII::TypeMask);
 }
 
+/// Return the resources used by this instruction
+unsigned HexagonMCInstrInfo::getCVIResources(MCInstrInfo const &MCII,
+                                      MCSubtargetInfo const &STI,
+                                      MCInst const &MCI) {
+
+  const InstrItinerary *II = STI.getSchedModel().InstrItineraries;
+  int SchedClass = HexagonMCInstrInfo::getDesc(MCII, MCI).getSchedClass();
+  int Size = II[SchedClass].LastStage - II[SchedClass].FirstStage;
+
+  // HVX resources used are currenty located at the second to last stage.
+  // This could also be done with a linear search of the stages looking for:
+  // CVI_ALL, CVI_MPY01, CVI_XLSHF, CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE,
+  // CVI_ZW
+  unsigned Stage = II[SchedClass].LastStage - 1;
+
+  if (Size < 2)
+    return 0;
+  return ((Stage + HexagonStages)->getUnits());
+}
+
 /// Return the slots this instruction can execute out of
 unsigned HexagonMCInstrInfo::getUnits(MCInstrInfo const &MCII,
                                       MCSubtargetInfo const &STI,
