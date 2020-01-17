@@ -1,6 +1,7 @@
 add_llvm_library(LLVMTapirOpts
   CilkABI.cpp
   CilkRABI.cpp
+  CilkRTSCilkFor.cpp
   CudaABI.cpp
   DRFScopedNoAliasAA.cpp
   LoopSpawningTI.cpp

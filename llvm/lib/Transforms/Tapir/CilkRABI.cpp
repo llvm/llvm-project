@@ -20,6 +20,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Transforms/Tapir/CilkRTSCilkFor.h"
 #include "llvm/Transforms/Tapir/Outline.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
@@ -165,6 +166,25 @@ FunctionCallee CilkRABI::Get__cilkrts_get_tls_worker() {
                                               WorkerPtrTy);
 
   return CilkRTSGetTLSWorker;
+}
+
+void CilkRABI::addHelperAttributes(Function &Helper) {
+  // Use a fast calling convention for the helper.
+  Helper.setCallingConv(CallingConv::Fast);
+  // Inlining the helper function is not legal.
+  Helper.removeFnAttr(Attribute::AlwaysInline);
+  Helper.addFnAttr(Attribute::NoInline);
+  // If the helper uses an argument structure, then it is not a write-only
+  // function.
+  if (getArgStructMode() != ArgStructMode::None) {
+    Helper.removeFnAttr(Attribute::WriteOnly);
+    Helper.removeFnAttr(Attribute::ArgMemOnly);
+    Helper.removeFnAttr(Attribute::InaccessibleMemOrArgMemOnly);
+  }
+  // Note that the address of the helper is unimportant.
+  Helper.setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  // The helper is private to this module.
+  Helper.setLinkage(GlobalValue::PrivateLinkage);
 }
 
 /// Helper methods for storing to and loading from struct fields.
@@ -1036,4 +1056,11 @@ void CilkRABI::postProcessFunction(Function &F, bool OutliningTapirLoops) {
 
 void CilkRABI::postProcessHelper(Function &F) {
   inlineCilkFunctions(F);
+}
+
+LoopOutlineProcessor *CilkRABI::getLoopOutlineProcessor(
+    const TapirLoopInfo *TL) const {
+  if (UseRuntimeCilkFor)
+    return new RuntimeCilkFor(M);
+  return nullptr;
 }
