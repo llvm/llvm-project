@@ -24,7 +24,6 @@
 ; CHECK: }
 ; CHECK: }
 ; CHECK: }
-; CHECK-NOT: }
 ; CHECK: }{{[ \t]*}}:endloop
 
 @g0 = external constant [10 x i16], align 128
@@ -199,5 +198,5 @@ b8:                                               ; preds = %b7, %b0
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvx,+hvx-length64b" }
+attributes #1 = { nounwind "target-cpu"="hexagonv62" "target-features"="+hvx,+hvx-length64b" }
 attributes #2 = { nounwind }

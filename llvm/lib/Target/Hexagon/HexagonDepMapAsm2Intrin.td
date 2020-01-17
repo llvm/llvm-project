@@ -1728,6 +1728,65 @@ def: Pat<(int_hexagon_F2_dfsub DoubleRegs:$src1, DoubleRegs:$src2),
 def: Pat<(int_hexagon_S2_mask u5_0ImmPred_timm:$src1, u5_0ImmPred_timm:$src2),
          (S2_mask u5_0ImmPred_timm:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV66]>;
 
+// V67 Scalar Instructions.
+
+def: Pat<(int_hexagon_M7_dcmpyrw DoubleRegs:$src1, DoubleRegs:$src2),
+         (M7_dcmpyrw DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_dcmpyrw_acc DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
+         (M7_dcmpyrw_acc DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_dcmpyrwc DoubleRegs:$src1, DoubleRegs:$src2),
+         (M7_dcmpyrwc DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_dcmpyrwc_acc DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
+         (M7_dcmpyrwc_acc DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_dcmpyiw DoubleRegs:$src1, DoubleRegs:$src2),
+         (M7_dcmpyiw DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_dcmpyiw_acc DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
+         (M7_dcmpyiw_acc DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_dcmpyiwc DoubleRegs:$src1, DoubleRegs:$src2),
+         (M7_dcmpyiwc DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_dcmpyiwc_acc DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
+         (M7_dcmpyiwc_acc DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_vdmpy DoubleRegs:$src1, DoubleRegs:$src2),
+         (M7_dcmpyrwc DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_vdmpy_acc DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
+         (M7_dcmpyrwc_acc DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_wcmpyrw DoubleRegs:$src1, DoubleRegs:$src2),
+         (M7_wcmpyrw DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_wcmpyrwc DoubleRegs:$src1, DoubleRegs:$src2),
+         (M7_wcmpyrwc DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_wcmpyiw DoubleRegs:$src1, DoubleRegs:$src2),
+         (M7_wcmpyiw DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_wcmpyiwc DoubleRegs:$src1, DoubleRegs:$src2),
+         (M7_wcmpyiwc DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_wcmpyrw_rnd DoubleRegs:$src1, DoubleRegs:$src2),
+         (M7_wcmpyrw_rnd DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_wcmpyrwc_rnd DoubleRegs:$src1, DoubleRegs:$src2),
+         (M7_wcmpyrwc_rnd DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_wcmpyiw_rnd DoubleRegs:$src1, DoubleRegs:$src2),
+         (M7_wcmpyiw_rnd DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_M7_wcmpyiwc_rnd DoubleRegs:$src1, DoubleRegs:$src2),
+         (M7_wcmpyiwc_rnd DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_A7_croundd_ri DoubleRegs:$src1, u6_0ImmPred_timm:$src2),
+         (A7_croundd_ri DoubleRegs:$src1, u6_0ImmPred_timm:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_A7_croundd_rr DoubleRegs:$src1, IntRegs:$src2),
+         (A7_croundd_rr DoubleRegs:$src1, IntRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_A7_clip IntRegs:$src1, u5_0ImmPred_timm:$src2),
+         (A7_clip IntRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_A7_vclip DoubleRegs:$src1, u5_0ImmPred_timm:$src2),
+         (A7_vclip DoubleRegs:$src1, u5_0ImmPred_timm:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_F2_dfmax DoubleRegs:$src1, DoubleRegs:$src2),
+         (F2_dfmax DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_F2_dfmin DoubleRegs:$src1, DoubleRegs:$src2),
+         (F2_dfmin DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_F2_dfmpyfix DoubleRegs:$src1, DoubleRegs:$src2),
+         (F2_dfmpyfix DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_F2_dfmpyll DoubleRegs:$src1, DoubleRegs:$src2),
+         (F2_dfmpyll DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_F2_dfmpylh DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
+         (F2_dfmpylh DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV67]>;
+def: Pat<(int_hexagon_F2_dfmpyhh DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
+         (F2_dfmpyhh DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV67]>;
+
 // V60 HVX Instructions.
 
 def: Pat<(int_hexagon_V6_vS32b_qpred_ai HvxQR:$src1, IntRegs:$src2, HvxVR:$src3),

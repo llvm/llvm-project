@@ -923,6 +923,13 @@ let AddedComplexity = 100 in {
   defm: MinMax_pats<F2_sfmax, F2_sfmin, select, setole, i1, F32>;
 }
 
+let AddedComplexity = 100, Predicates = [HasV67] in {
+  defm: MinMax_pats<F2_dfmin, F2_dfmax, select, setogt, i1, F64>;
+  defm: MinMax_pats<F2_dfmin, F2_dfmax, select, setoge, i1, F64>;
+  defm: MinMax_pats<F2_dfmax, F2_dfmin, select, setolt, i1, F64>;
+  defm: MinMax_pats<F2_dfmax, F2_dfmin, select, setole, i1, F64>;
+}
+
 defm: MinMax_pats<A2_vminb,  A2_vmaxb,  vselect,  setgt,  v8i1,  V8I8>;
 defm: MinMax_pats<A2_vminb,  A2_vmaxb,  vselect,  setge,  v8i1,  V8I8>;
 defm: MinMax_pats<A2_vminh,  A2_vmaxh,  vselect,  setgt,  v4i1, V4I16>;
@@ -1408,6 +1415,26 @@ let Predicates = [HasV66] in {
   def: OpR_RR_pat<F2_dfsub,     pf2<fsub>,    f64, F64>;
 }
 
+def DfMpy: OutPatFrag<(ops node:$Rs, node:$Rt),
+  (F2_dfmpyhh
+    (F2_dfmpylh
+      (F2_dfmpylh
+        (F2_dfmpyll $Rs, $Rt),
+      $Rs, $Rt),
+    $Rt, $Rs),
+  $Rs, $Rt)>;
+
+let Predicates = [HasV67,UseUnsafeMath], AddedComplexity = 50 in {
+  def: Pat<(fmul F64:$Rs, F64:$Rt), (DfMpy $Rs, $Rt)>;
+}
+let Predicates = [HasV67] in {
+  def: OpR_RR_pat<F2_dfmin,     pf2<fminnum>, f64, F64>;
+  def: OpR_RR_pat<F2_dfmax,     pf2<fmaxnum>, f64, F64>;
+
+  def: Pat<(fmul F64:$Rs, F64:$Rt), (DfMpy (F2_dfmpyfix $Rs, $Rt),
+                                           (F2_dfmpyfix $Rt, $Rs))>;
+}
+
 // In expressions like a0*b0 + a1*b1 + ..., prefer to generate multiply-add,
 // over add-add with individual multiplies as inputs.
 let AddedComplexity = 10 in {
@@ -1634,8 +1661,8 @@ let AddedComplexity = 20, Predicates = [UseCompound] in {
            (M4_mpyrr_addi imm:$u6, IntRegs:$Rs, IntRegs:$Rt)>;
 }
 
+// Keep these instructions less preferable to M2_macsip/M2_macsin.
 let Predicates = [UseCompound] in {
-  // Keep these instructions less preferable to M2_macsip/M2_macsin.
   def: Pat<(add I32:$Ru, (Su<Mul> I32:$Rs, u6_2ImmPred:$u6_2)),
            (M4_mpyri_addr_u2 IntRegs:$Ru, imm:$u6_2, IntRegs:$Rs)>;
   def: Pat<(add I32:$Ru, (Su<Mul> I32:$Rs, anyimm:$u6)),
@@ -1650,7 +1677,6 @@ def: Pat<(fma (fneg F32:$Rs), F32:$Rt, F32:$Rx),
          (F2_sffms F32:$Rx, F32:$Rs, F32:$Rt)>;
 def: Pat<(fma F32:$Rs, (fneg F32:$Rt), F32:$Rx),
          (F2_sffms F32:$Rx, F32:$Rs, F32:$Rt)>;
-
 
 def: Pat<(mul V2I32:$Rs, V2I32:$Rt),
          (PS_vmulw V2I32:$Rs, V2I32:$Rt)>;

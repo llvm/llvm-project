@@ -1762,6 +1762,11 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FADD, MVT::f64, Legal);
     setOperationAction(ISD::FSUB, MVT::f64, Legal);
   }
+  if (Subtarget.hasV67Ops()) {
+    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMUL,    MVT::f64, Legal);
+  }
 
   setTargetDAGCombine(ISD::VSELECT);
 

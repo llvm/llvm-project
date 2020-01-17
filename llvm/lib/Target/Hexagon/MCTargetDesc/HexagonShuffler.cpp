@@ -458,6 +458,7 @@ HexagonShuffler::HexagonPacketSummary HexagonShuffler::GetPacketSummary() {
     case HexagonII::TypeCVI_VM_LD:
     case HexagonII::TypeCVI_VM_TMP_LD:
     case HexagonII::TypeCVI_GATHER:
+    case HexagonII::TypeCVI_GATHER_DV:
     case HexagonII::TypeCVI_GATHER_RST:
       ++Summary.NonZCVIloads;
       LLVM_FALLTHROUGH;

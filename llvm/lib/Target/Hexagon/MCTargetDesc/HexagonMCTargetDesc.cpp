@@ -10,13 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/HexagonMCTargetDesc.h"
-#include "HexagonDepArch.h"
+#include "HexagonArch.h"
 #include "HexagonTargetStreamer.h"
 #include "MCTargetDesc/HexagonInstPrinter.h"
 #include "MCTargetDesc/HexagonMCAsmInfo.h"
 #include "MCTargetDesc/HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
+#include "MCTargetDesc/HexagonMCTargetDesc.h"
 #include "TargetInfo/HexagonTargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -39,6 +39,7 @@
 #include <cstdint>
 #include <new>
 #include <string>
+#include <unordered_map>
 
 using namespace llvm;
 
@@ -72,6 +73,8 @@ cl::opt<bool> MV65("mv65", cl::Hidden, cl::desc("Build for Hexagon V65"),
                    cl::init(false));
 cl::opt<bool> MV66("mv66", cl::Hidden, cl::desc("Build for Hexagon V66"),
                    cl::init(false));
+cl::opt<bool> MV67("mv67", cl::Hidden, cl::desc("Build for Hexagon V67"),
+                   cl::init(false));
 
 cl::opt<Hexagon::ArchEnum>
     EnableHVX("mhvx",
@@ -81,6 +84,7 @@ cl::opt<Hexagon::ArchEnum>
         clEnumValN(Hexagon::ArchEnum::V62, "v62", "Build for HVX v62"),
         clEnumValN(Hexagon::ArchEnum::V65, "v65", "Build for HVX v65"),
         clEnumValN(Hexagon::ArchEnum::V66, "v66", "Build for HVX v66"),
+        clEnumValN(Hexagon::ArchEnum::V67, "v67", "Build for HVX v67"),
         // Sentinel for no value specified.
         clEnumValN(Hexagon::ArchEnum::Generic, "", "")),
       // Sentinel for flag not present.
@@ -107,6 +111,8 @@ static StringRef HexagonGetArchVariant() {
     return "hexagonv65";
   if (MV66)
     return "hexagonv66";
+  if (MV67)
+    return "hexagonv67";
   return "";
 }
 
@@ -168,13 +174,6 @@ unsigned llvm::HexagonConvertUnits(unsigned ItinUnits, unsigned *Lanes) {
   return (*Lanes = 0, CVI_NONE);
 }
 
-namespace llvm {
-namespace HexagonFUnits {
-bool isSlot0Only(unsigned units) {
-  return (HexagonItinerariesV62FU::SLOT0 == units);
-}
-}
-}
 
 namespace {
 
@@ -345,30 +344,28 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
   case Hexagon::ArchEnum::V66:
     Result.push_back("+hvxv66");
     break;
+  case Hexagon::ArchEnum::V67:
+    Result.push_back("+hvxv67");
+    break;
   case Hexagon::ArchEnum::Generic:{
     Result.push_back(StringSwitch<StringRef>(CPU)
              .Case("hexagonv60", "+hvxv60")
              .Case("hexagonv62", "+hvxv62")
              .Case("hexagonv65", "+hvxv65")
-             .Case("hexagonv66", "+hvxv66"));
+             .Case("hexagonv66", "+hvxv66")
+             .Case("hexagonv67", "+hvxv67"));
     break;
   }
   case Hexagon::ArchEnum::NoArch:
-    // Sentinal if -mhvx isn't specified
+    // Sentinel if -mhvx isn't specified
     break;
   }
   return join(Result.begin(), Result.end(), ",");
 }
 }
 
-static bool isCPUValid(std::string CPU)
-{
-  std::vector<std::string> table {
-    "generic",    "hexagonv5",  "hexagonv55", "hexagonv60",
-    "hexagonv62", "hexagonv65", "hexagonv66",
-  };
-
-  return std::find(table.begin(), table.end(), CPU) != table.end();
+static bool isCPUValid(const std::string &CPU) {
+  return Hexagon::CpuTable.find(CPU) != Hexagon::CpuTable.cend();
 }
 
 namespace {
@@ -387,7 +384,8 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
   // turns on hvxvNN, corresponding to the existing ArchVNN.
   FeatureBitset FB = S;
   unsigned CpuArch = ArchV5;
-  for (unsigned F : {ArchV66, ArchV65, ArchV62, ArchV60, ArchV55, ArchV5}) {
+  for (unsigned F : {ArchV67, ArchV66, ArchV65, ArchV62, ArchV60, ArchV55,
+                     ArchV5}) {
     if (!FB.test(F))
       continue;
     CpuArch = F;
@@ -402,7 +400,7 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
   }
   bool HasHvxVer = false;
   for (unsigned F : {ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65,
-                     ExtensionHVXV66}) {
+                     ExtensionHVXV66, ExtensionHVXV67}) {
     if (!FB.test(F))
       continue;
     HasHvxVer = true;
@@ -415,6 +413,9 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
 
   // HasHvxVer is false, and UseHvx is true.
   switch (CpuArch) {
+    case ArchV67:
+      FB.set(ExtensionHVXV67);
+      LLVM_FALLTHROUGH;
     case ArchV66:
       FB.set(ExtensionHVXV66);
       LLVM_FALLTHROUGH;
@@ -438,19 +439,34 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
   StringRef CPUName = Features.first;
   StringRef ArchFS = Features.second;
 
+  MCSubtargetInfo *X = createHexagonMCSubtargetInfoImpl(TT, CPUName, ArchFS);
+
+  if (CPU.equals("help"))
+      exit(0);
+
   if (!isCPUValid(CPUName.str())) {
     errs() << "error: invalid CPU \"" << CPUName.str().c_str()
            << "\" specified\n";
     return nullptr;
   }
 
-  MCSubtargetInfo *X = createHexagonMCSubtargetInfoImpl(TT, CPUName, ArchFS);
   if (HexagonDisableDuplex) {
     llvm::FeatureBitset Features = X->getFeatureBits();
     X->setFeatureBits(Features.reset(Hexagon::FeatureDuplex));
   }
 
   X->setFeatureBits(completeHVXFeatures(X->getFeatureBits()));
+
+  // The Z-buffer instructions are grandfathered in for current
+  // architectures but omitted for new ones.  Future instruction
+  // sets may introduce new/conflicting z-buffer instructions.
+  const bool ZRegOnDefault =
+      (CPUName == "hexagonv67") || (CPUName == "hexagonv66");
+  if (ZRegOnDefault) {
+    llvm::FeatureBitset Features = X->getFeatureBits();
+    X->setFeatureBits(Features.set(Hexagon::ExtensionZReg));
+  }
+
   return X;
 }
 
@@ -462,6 +478,7 @@ unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
     {"hexagonv62", ELF::EF_HEXAGON_MACH_V62},
     {"hexagonv65", ELF::EF_HEXAGON_MACH_V65},
     {"hexagonv66", ELF::EF_HEXAGON_MACH_V66},
+    {"hexagonv67", ELF::EF_HEXAGON_MACH_V67},
   };
 
   auto F = ElfFlags.find(STI.getCPU());
@@ -486,6 +503,10 @@ public:
 
   bool evaluateBranch(MCInst const &Inst, uint64_t Addr,
                       uint64_t Size, uint64_t &Target) const override {
+    if (!(isCall(Inst) || isUnconditionalBranch(Inst) ||
+          isConditionalBranch(Inst)))
+      return false;
+
     //assert(!HexagonMCInstrInfo::isBundle(Inst));
     if(!HexagonMCInstrInfo::isExtendable(*Info, Inst))
       return false;
