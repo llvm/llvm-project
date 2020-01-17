@@ -39,9 +39,10 @@ entry:
 
 bb0:
   %desc = load <4 x i32>, <4 x i32>* %arg, align 8
-  tail call void @llvm.amdgcn.buffer.store.f32(float undef, <4 x i32> %desc, i32 0, i32 undef, i1 zeroext false, i1 zeroext false)
+  tail call void @llvm.amdgcn.raw.buffer.store.f32(float undef, <4 x i32> %desc, i32 undef, i32 0, i32 0)
   br label %bb0
 }
 
-; Function Attrs: nounwind writeonly
-declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1 immarg, i1 immarg)
+declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg) #0
+
+attributes #0 = { nounwind writeonly }

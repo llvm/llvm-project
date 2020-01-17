@@ -9,8 +9,8 @@
 ;CHECK: v_add_f32_e32
 define amdgpu_ps float @test1(i32 inreg %idx0, i32 inreg %idx1) {
 main_body:
-  %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
-  %src1 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i1 0, i1 0)
+  %src0 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i32 0, i32 0)
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.softwqm.f32(float %out)
   ret float %out.0
@@ -25,8 +25,8 @@ main_body:
 ;CHECK: v_add_f32_e32
 define amdgpu_ps float @test2(i32 inreg %idx0, i32 inreg %idx1) {
 main_body:
-  %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
-  %src1 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i1 0, i1 0)
+  %src0 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i32 0, i32 0)
   %out = fadd float %src0, %src1
   %out.0 = bitcast float %out to i32
   %out.1 = call i32 @llvm.amdgcn.softwqm.i32(i32 %out.0)
@@ -45,10 +45,10 @@ main_body:
 ;CHECK: v_add_f32_e32
 define amdgpu_ps float @test_softwqm1(i32 inreg %idx0, i32 inreg %idx1) {
 main_body:
-  %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
-  %src1 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i1 0, i1 0)
+  %src0 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i32 0, i32 0)
   %temp = fadd float %src0, %src1
-  call void @llvm.amdgcn.buffer.store.f32(float %temp, <4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
+  call void @llvm.amdgcn.struct.buffer.store.f32(float %temp, <4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
   %out = fadd float %temp, %temp
   %out.0 = call float @llvm.amdgcn.softwqm.f32(float %out)
   ret float %out.0
@@ -67,11 +67,11 @@ main_body:
 ;CHECK: v_add_f32_e32
 define amdgpu_ps float @test_softwqm2(i32 inreg %idx0, i32 inreg %idx1) {
 main_body:
-  %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
-  %src1 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i1 0, i1 0)
+  %src0 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i32 0, i32 0)
   %temp = fadd float %src0, %src1
   %temp.0 = call float @llvm.amdgcn.wqm.f32(float %temp)
-  call void @llvm.amdgcn.buffer.store.f32(float %temp.0, <4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
+  call void @llvm.amdgcn.struct.buffer.store.f32(float %temp.0, <4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
   %out = fadd float %temp, %temp
   %out.0 = call float @llvm.amdgcn.softwqm.f32(float %out)
   ret float %out.0
@@ -89,9 +89,9 @@ main_body:
 ;CHECK-NOT: s_wqm_b64
 define amdgpu_ps float @test_wwm1(i32 inreg %idx0, i32 inreg %idx1) {
 main_body:
-  %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
-  call void @llvm.amdgcn.buffer.store.f32(float %src0, <4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
-  %src1 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i1 0, i1 0)
+  %src0 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.buffer.store.f32(float %src0, <4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i32 0, i32 0)
   %temp = fadd float %src0, %src1
   %temp.0 = call float @llvm.amdgcn.wwm.f32(float %temp)
   %out = fadd float %temp.0, %temp.0
@@ -115,14 +115,14 @@ main_body:
   br i1 %cmp, label %IF, label %ELSE
 
 IF:
-  %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
-  %src1 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i1 0, i1 0)
+  %src0 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i32 0, i32 0)
   %out = fadd float %src0, %src1
   %data.if = call float @llvm.amdgcn.softwqm.f32(float %out)
   br label %END
 
 ELSE:
-  call void @llvm.amdgcn.buffer.store.f32(float %data, <4 x i32> undef, i32 %c, i32 0, i1 0, i1 0)
+  call void @llvm.amdgcn.struct.buffer.store.f32(float %data, <4 x i32> undef, i32 %c, i32 0, i32 0, i32 0)
   br label %END
 
 END:
@@ -157,14 +157,14 @@ main_body:
   br i1 %cmp, label %IF, label %ELSE
 
 IF:
-  %src0 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i1 0, i1 0)
-  %src1 = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i1 0, i1 0)
+  %src0 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i32 0, i32 0)
   %out = fadd float %src0, %src1
   %data.if = call float @llvm.amdgcn.softwqm.f32(float %out)
   br label %END
 
 ELSE:
-  call void @llvm.amdgcn.buffer.store.f32(float %data.sample, <4 x i32> undef, i32 %c, i32 0, i1 0, i1 0)
+  call void @llvm.amdgcn.struct.buffer.store.f32(float %data.sample, <4 x i32> undef, i32 %c, i32 0, i32 0, i32 0)
   br label %END
 
 END:
@@ -172,9 +172,9 @@ END:
   ret float %r
 }
 
-declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1) #2
-declare void @llvm.amdgcn.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i1, i1) #2
-declare float @llvm.amdgcn.buffer.load.f32(<4 x i32>, i32, i32, i1, i1) #3
+declare void @llvm.amdgcn.struct.buffer.store.f32(float, <4 x i32>, i32, i32, i32, i32 immarg) #2
+declare void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32, i32 immarg) #2
+declare float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32>, i32, i32, i32, i32 immarg) #3
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #3
 declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #3
 declare void @llvm.amdgcn.kill(i1) #1

@@ -38,7 +38,7 @@ bb:
   %tmp16 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp15, align 16, !tbaa !0
   %tmp17 = add i32 %arg5, %arg7
   %tmp16.cast = bitcast <4 x i32> %tmp16 to <4 x i32>
-  %tmp18 = call <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> %tmp16.cast, i32 %tmp17, i32 0, i1 false, i1 false)
+  %tmp18 = call <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32> %tmp16.cast, i32 %tmp17, i32 0, i32 0, i32 0)
   %tmp19 = extractelement <4 x float> %tmp18, i32 0
   %tmp20 = extractelement <4 x float> %tmp18, i32 1
   %tmp21 = extractelement <4 x float> %tmp18, i32 2
@@ -489,7 +489,7 @@ declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 
 declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32) #1
-declare <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32>, i32, i32, i1, i1) #2
+declare <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32, i32 immarg) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
