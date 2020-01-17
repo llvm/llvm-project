@@ -785,6 +785,7 @@ private:
     __compressed_pair<__rep, allocator_type> __r_;
 
 public:
+    _LIBCPP_FUNC_VIS
     static const size_type npos = -1;
 
     _LIBCPP_INLINE_VISIBILITY basic_string()
