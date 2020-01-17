@@ -130,12 +130,12 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace,
           .getValueOr(Name);
     };
     if (auto Fixup = getDoubleUnderscoreFixup(InProgressFixup(), LangOpts))
-      AppendFailure(DoubleUnderscoreTag, *std::move(Fixup));
+      AppendFailure(DoubleUnderscoreTag, std::move(*Fixup));
     if (auto Fixup = getUnderscoreCapitalFixup(InProgressFixup()))
-      AppendFailure(UnderscoreCapitalTag, *std::move(Fixup));
+      AppendFailure(UnderscoreCapitalTag, std::move(*Fixup));
     if (auto Fixup = getUnderscoreGlobalNamespaceFixup(InProgressFixup(),
                                                        IsInGlobalNamespace))
-      AppendFailure(GlobalUnderscoreTag, *std::move(Fixup));
+      AppendFailure(GlobalUnderscoreTag, std::move(*Fixup));
 
     return Info;
   }
