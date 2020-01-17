@@ -1,6 +1,6 @@
-// REQUIRES: darwin
+// REQUIRES: linux
 
-// RUN: %clang -fprofile-instr-generate -fcoverage-mapping -o %t.exe %s
+// RUN: %clang -fprofile-instr-generate -fcoverage-mapping -mllvm -runtime-counter-relocation=true -o %t.exe %s
 // RUN: echo "garbage" > %t.profraw
 // RUN: env LLVM_PROFILE_FILE="%c%t.profraw" %run %t.exe
 // RUN: llvm-profdata show --counts --all-functions %t.profraw | FileCheck %s -check-prefix=CHECK-COUNTS
@@ -19,11 +19,11 @@
 // CHECK-COUNTS-NEXT: Maximum function count: 1
 // CHECK-COUNTS-NEXT: Maximum internal block count: 1
 
-// CHECK-COVERAGE: Filename    Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover
+// CHECK-COVERAGE: Filename                         Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover
 // CHECK-COVERAGE-NEXT: ---
-// CHECK-COVERAGE-NEXT: basic.c      4                 1    75.00%           1                 0   100.00%           5                 2    60.00%
+// CHECK-COVERAGE-NEXT: runtime-counter-relocation.c      4                 1    75.00%           1                 0   100.00%           5                 2    60.00%
 // CHECK-COVERAGE-NEXT: ---
-// CHECK-COVERAGE-NEXT: TOTAL        4                 1    75.00%           1                 0   100.00%           5                 2    60.00%
+// CHECK-COVERAGE-NEXT: TOTAL                             4                 1    75.00%           1                 0   100.00%           5                 2    60.00%
 
 extern int __llvm_profile_is_continuous_mode_enabled(void);
 

@@ -153,6 +153,10 @@ inline StringRef getInstrProfRuntimeHookVarUseFuncName() {
   return "__llvm_profile_runtime_user";
 }
 
+inline StringRef getInstrProfCounterBiasVarName() {
+  return "__llvm_profile_counter_bias";
+}
+
 /// Return the marker used to separate PGO names during serialization.
 inline StringRef getInstrProfNameSeparator() { return "\01"; }
 

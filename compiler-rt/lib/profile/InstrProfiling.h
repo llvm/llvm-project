@@ -307,4 +307,11 @@ extern uint64_t INSTR_PROF_RAW_VERSION_VAR; /* __llvm_profile_raw_version */
  */
 extern char INSTR_PROF_PROFILE_NAME_VAR[1]; /* __llvm_profile_filename. */
 
+/*!
+ * This variable is a weak symbol defined in InstrProfilingBiasVar.c. It
+ * allows compiler instrumentation to provide overriding definition with
+ * value from compiler command line. This variable has hidden visibility.
+ */
+COMPILER_RT_VISIBILITY extern intptr_t __llvm_profile_counter_bias;
+
 #endif /* PROFILE_INSTRPROFILING_H_ */
