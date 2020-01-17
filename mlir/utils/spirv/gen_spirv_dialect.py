@@ -138,10 +138,72 @@ def uniquify_enum_cases(lst):
   return uniqued_cases, duplicated_cases
 
 
-def get_capability_mapping(operand_kinds):
-  """Returns the capability mapping from duplicated cases to their canonicalized
+def toposort(dag, sort_fn):
+  """Topologically sorts the given dag.
 
-  case.
+  Arguments:
+    - dag: a dict mapping from a node to its incoming nodes.
+    - sort_fn: a function for sorting nodes in the same batch.
+
+  Returns:
+    A list containing topologically sorted nodes.
+  """
+
+  # Returns the next batch of nodes without incoming edges
+  def get_next_batch(dag):
+    while True:
+      no_prev_nodes = set(node for node, prev in dag.items() if not prev)
+      if not no_prev_nodes:
+        break
+      yield sorted(no_prev_nodes, key=sort_fn)
+      dag = {
+          node: (prev - no_prev_nodes)
+          for node, prev in dag.items()
+          if node not in no_prev_nodes
+      }
+    assert not dag, 'found cyclic dependency'
+
+  sorted_nodes = []
+  for batch in get_next_batch(dag):
+    sorted_nodes.extend(batch)
+
+  return sorted_nodes
+
+
+def toposort_capabilities(all_cases, capability_mapping):
+  """Returns topologically sorted capability (symbol, value) pairs.
+
+  Arguments:
+    - all_cases: all capability cases (containing symbol, value, and implied
+      capabilities).
+    - capability_mapping: mapping from duplicated capability symbols to the
+      canonicalized symbol chosen for SPIRVBase.td.
+
+  Returns:
+    A list containing topologically sorted capability (symbol, value) pairs.
+  """
+  dag = {}
+  name_to_value = {}
+  for case in all_cases:
+    # Get the current capability.
+    cur = case['enumerant']
+    name_to_value[cur] = case['value']
+    # Ignore duplicated symbols.
+    if cur in capability_mapping:
+      continue
+
+    # Get capabilities implied by the current capability.
+    prev = case.get('capabilities', [])
+    uniqued_prev = set([capability_mapping.get(c, c) for c in prev])
+    dag[cur] = uniqued_prev
+
+  sorted_caps = toposort(dag, lambda x: name_to_value[x])
+  # Attach the capability's value as the second component of the pair.
+  return [(c, name_to_value[c]) for c in sorted_caps]
+
+
+def get_capability_mapping(operand_kinds):
+  """Returns the capability mapping from duplicated cases to canonicalized ones.
 
   Arguments:
     - operand_kinds: all operand kinds' grammar spec
@@ -164,7 +226,7 @@ def get_capability_mapping(operand_kinds):
   return capability_mapping
 
 
-def get_availability_spec(enum_case, capability_mapping, for_op):
+def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
   """Returns the availability specification string for the given enum case.
 
   Arguments:
@@ -174,11 +236,15 @@ def get_availability_spec(enum_case, capability_mapping, for_op):
       canonicalized symbol chosen for SPIRVBase.td.
     - for_op: bool value indicating whether this is the availability spec for an
       op itself.
+    - for_cap: bool value indicating whether this is the availability spec for
+      capabilities themselves.
 
   Returns:
     - A `let availability = [...];` string if with availability spec or
       empty string if without availability spec
   """
+  assert not (for_op and for_cap), 'cannot set both for_op and for_cap'
+
   min_version = enum_case.get('version', '')
   if min_version == 'None':
     min_version = ''
@@ -206,6 +272,7 @@ def get_availability_spec(enum_case, capability_mapping, for_op):
     exts = 'Extension<[]>'
 
   caps = enum_case.get('capabilities', [])
+  implies = ''
   if caps:
     canonicalized_caps = []
     for c in caps:
@@ -213,8 +280,19 @@ def get_availability_spec(enum_case, capability_mapping, for_op):
         canonicalized_caps.append(capability_mapping[c])
       else:
         canonicalized_caps.append(c)
-    caps = 'Capability<[{}]>'.format(', '.join(
-        ['SPV_C_{}'.format(c) for c in sorted(set(canonicalized_caps))]))
+    prefixed_caps = [
+        'SPV_C_{}'.format(c) for c in sorted(set(canonicalized_caps))
+    ]
+    if for_cap:
+      # If this is generating the availability for capabilities, we need to
+      # put the capability "requirements" in implies field because now
+      # the "capabilities" field in the source grammar means so.
+      caps = ''
+      implies = 'list<I32EnumAttrCase> implies = [{}];'.format(
+          ', '.join(prefixed_caps))
+    else:
+      caps = 'Capability<[{}]>'.format(', '.join(prefixed_caps))
+      implies = ''
   # TODO(antiagainst): delete this once ODS can support dialect-specific content
   # and we can use omission to mean no requirements.
   if for_op and not caps:
@@ -227,7 +305,7 @@ def get_availability_spec(enum_case, capability_mapping, for_op):
     avail = '{} availability = [\n    {}\n  ];'.format(
         'let' if for_op else 'list<Availability>', joined_spec)
 
-  return avail
+  return '{}{}{}'.format(implies, '\n  ' if implies and avail else '', avail)
 
 
 def gen_operand_kind_enum_attr(operand_kind, capability_mapping):
@@ -258,9 +336,15 @@ def gen_operand_kind_enum_attr(operand_kind, capability_mapping):
   for case in operand_kind['enumerants']:
     name_to_case_dict[case['enumerant']] = case
 
-  kind_cases = [(case['enumerant'], case['value'])
-                for case in operand_kind['enumerants']]
-  kind_cases, _ = uniquify_enum_cases(kind_cases)
+  if kind_name == 'Capability':
+    # Special treatment for capability cases: we need to sort them topologically
+    # because a capability can refer to another via the 'implies' field.
+    kind_cases = toposort_capabilities(operand_kind['enumerants'],
+                                       capability_mapping)
+  else:
+    kind_cases = [(case['enumerant'], case['value'])
+                  for case in operand_kind['enumerants']]
+    kind_cases, _ = uniquify_enum_cases(kind_cases)
   max_len = max([len(symbol) for (symbol, _) in kind_cases])
 
   # Generate the definition for each enum case
@@ -268,12 +352,9 @@ def gen_operand_kind_enum_attr(operand_kind, capability_mapping):
             '{category}EnumAttrCase<"{symbol}", {value}>{avail}'
   case_defs = []
   for case in kind_cases:
-    if kind_name == 'Capability':
-      avail = ''
-    else:
-      avail = get_availability_spec(name_to_case_dict[case[0]],
-                                    capability_mapping,
-                                    False)
+    avail = get_availability_spec(name_to_case_dict[case[0]],
+                                  capability_mapping,
+                                  False, kind_name == 'Capability')
     case_def = fmt_str.format(
         category=kind_category,
         acronym=kind_acronym,
@@ -558,7 +639,7 @@ def get_op_definition(instruction, doc, existing_info, capability_mapping):
   operands = instruction.get('operands', [])
 
   # Op availability
-  avail = get_availability_spec(instruction, capability_mapping, True)
+  avail = get_availability_spec(instruction, capability_mapping, True, False)
   if avail:
     avail = '\n\n  {0}'.format(avail)
 
