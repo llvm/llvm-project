@@ -228,7 +228,7 @@ def: Pat<(int_hexagon_A2_vnavgw DoubleRegs:$src1, DoubleRegs:$src2),
 def: Pat<(int_hexagon_S2_asl_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
          (S2_asl_i_r_acc IntRegs:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S4_subi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
-         (S4_subi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+         (S4_subi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_S2_vzxthw IntRegs:$src1),
          (S2_vzxthw IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_F2_sfadd IntRegs:$src1, IntRegs:$src2),
@@ -382,7 +382,7 @@ def: Pat<(int_hexagon_M2_cmacr_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3
 def: Pat<(int_hexagon_M4_or_and IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M4_or_and IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_mpyrr_addi u32_0ImmPred_timm:$src1, IntRegs:$src2, IntRegs:$src3),
-         (M4_mpyrr_addi u32_0ImmPred_timm:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
+         (M4_mpyrr_addi u32_0ImmPred_timm:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_S4_or_andi IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3),
          (S4_or_andi IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_sat_hl_s0 IntRegs:$src1, IntRegs:$src2),
@@ -390,7 +390,7 @@ def: Pat<(int_hexagon_M2_mpy_sat_hl_s0 IntRegs:$src1, IntRegs:$src2),
 def: Pat<(int_hexagon_M2_mpy_sat_hl_s1 IntRegs:$src1, IntRegs:$src2),
          (M2_mpy_sat_hl_s1 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_mpyrr_addr IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
-         (M4_mpyrr_addr IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
+         (M4_mpyrr_addr IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_M2_mmachs_rs0 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
          (M2_mmachs_rs0 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mmachs_rs1 DoubleRegs:$src1, DoubleRegs:$src2, DoubleRegs:$src3),
@@ -558,7 +558,7 @@ def: Pat<(int_hexagon_M2_cnacsc_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src
 def: Pat<(int_hexagon_M2_cnacsc_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_cnacsc_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S4_subaddi IntRegs:$src1, s32_0ImmPred_timm:$src2, IntRegs:$src3),
-         (S4_subaddi IntRegs:$src1, s32_0ImmPred_timm:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
+         (S4_subaddi IntRegs:$src1, s32_0ImmPred_timm:$src2, IntRegs:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_M2_mpyud_nac_hl_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyud_nac_hl_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyud_nac_hl_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -670,7 +670,7 @@ def: Pat<(int_hexagon_C2_andn PredRegs:$src1, PredRegs:$src2),
 def: Pat<(int_hexagon_M2_vmpy2s_s0pack IntRegs:$src1, IntRegs:$src2),
          (M2_vmpy2s_s0pack IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S4_addaddi IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3),
-         (S4_addaddi IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+         (S4_addaddi IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_M2_mpyd_acc_ll_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyd_acc_ll_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_acc_sat_hl_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -722,7 +722,7 @@ def: Pat<(int_hexagon_M2_cmpyi_s0 IntRegs:$src1, IntRegs:$src2),
 def: Pat<(int_hexagon_S2_asl_r_p_or DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
          (S2_asl_r_p_or DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S4_ori_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
-         (S4_ori_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+         (S4_ori_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_C4_nbitsset IntRegs:$src1, IntRegs:$src2),
          (C4_nbitsset IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyu_acc_hh_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
@@ -784,7 +784,7 @@ def: Pat<(int_hexagon_M4_or_andn IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
 def: Pat<(int_hexagon_A2_minp DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_minp DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S4_or_andix IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3),
-         (S4_or_andix IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+         (S4_or_andix IntRegs:$src1, IntRegs:$src2, s32_0ImmPred_timm:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_rnd_lh_s0 IntRegs:$src1, IntRegs:$src2),
          (M2_mpy_rnd_lh_s0 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_rnd_lh_s1 IntRegs:$src1, IntRegs:$src2),
@@ -820,7 +820,7 @@ def: Pat<(int_hexagon_S2_lsl_r_r_or IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)
 def: Pat<(int_hexagon_C4_cmplteui IntRegs:$src1, u32_0ImmPred_timm:$src2),
          (C4_cmplteui IntRegs:$src1, u32_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S4_addi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
-         (S4_addi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+         (S4_addi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_A4_tfrcpp CtrRegs64:$src1),
          (A4_tfrcpp CtrRegs64:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_asr_i_svw_trun DoubleRegs:$src1, u5_0ImmPred_timm:$src2),
@@ -838,7 +838,7 @@ def: Pat<(int_hexagon_S2_insertp_rp DoubleRegs:$src1, DoubleRegs:$src2, DoubleRe
 def: Pat<(int_hexagon_A2_vnavghcr DoubleRegs:$src1, DoubleRegs:$src2),
          (A2_vnavghcr DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S4_subi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
-         (S4_subi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+         (S4_subi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_S2_lsl_r_vh DoubleRegs:$src1, IntRegs:$src2),
          (S2_lsl_r_vh DoubleRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_hh_s0 IntRegs:$src1, IntRegs:$src2),
@@ -958,9 +958,9 @@ def: Pat<(int_hexagon_M2_mpy_nac_sat_lh_s0 IntRegs:$src1, IntRegs:$src2, IntRegs
 def: Pat<(int_hexagon_C2_cmpeqp DoubleRegs:$src1, DoubleRegs:$src2),
          (C2_cmpeqp DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_mpyri_addi u32_0ImmPred_timm:$src1, IntRegs:$src2, u6_0ImmPred_timm:$src3),
-         (M4_mpyri_addi u32_0ImmPred_timm:$src1, IntRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+         (M4_mpyri_addi u32_0ImmPred_timm:$src1, IntRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_S4_andi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
-         (S4_andi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+         (S4_andi_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_M2_macsip IntRegs:$src1, IntRegs:$src2, u32_0ImmPred_timm:$src3),
          (M2_macsip IntRegs:$src1, IntRegs:$src2, u32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_tfrcrr CtrRegs:$src1),
@@ -1018,7 +1018,7 @@ def: Pat<(int_hexagon_A2_vmaxh DoubleRegs:$src1, DoubleRegs:$src2),
 def: Pat<(int_hexagon_S2_vsxthw IntRegs:$src1),
          (S2_vsxthw IntRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S4_andi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
-         (S4_andi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+         (S4_andi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_S2_asl_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3),
          (S2_asl_i_p_nac DoubleRegs:$src1, DoubleRegs:$src2, u6_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsl_r_p_xor DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
@@ -1196,7 +1196,7 @@ def: Pat<(int_hexagon_M2_mpyud_acc_lh_s1 DoubleRegs:$src1, IntRegs:$src2, IntReg
 def: Pat<(int_hexagon_M2_vcmpy_s1_sat_r DoubleRegs:$src1, DoubleRegs:$src2),
          (M2_vcmpy_s1_sat_r DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_mpyri_addr_u2 IntRegs:$src1, u6_2ImmPred_timm:$src2, IntRegs:$src3),
-         (M4_mpyri_addr_u2 IntRegs:$src1, u6_2ImmPred_timm:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
+         (M4_mpyri_addr_u2 IntRegs:$src1, u6_2ImmPred_timm:$src2, IntRegs:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_M2_vcmpy_s1_sat_i DoubleRegs:$src1, DoubleRegs:$src2),
          (M2_vcmpy_s1_sat_i DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S2_lsl_r_p_nac DoubleRegs:$src1, DoubleRegs:$src2, IntRegs:$src3),
@@ -1260,7 +1260,7 @@ def: Pat<(int_hexagon_A2_tfrih IntRegs:$src1, u16_0ImmPred_timm:$src2),
 def: Pat<(int_hexagon_A2_tfril IntRegs:$src1, u16_0ImmPred_timm:$src2),
          (A2_tfril IntRegs:$src1, u16_0ImmPred_timm:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M4_mpyri_addr IntRegs:$src1, IntRegs:$src2, u32_0ImmPred_timm:$src3),
-         (M4_mpyri_addr IntRegs:$src1, IntRegs:$src2, u32_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+         (M4_mpyri_addr IntRegs:$src1, IntRegs:$src2, u32_0ImmPred_timm:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_S2_vtrunehb DoubleRegs:$src1),
          (S2_vtrunehb DoubleRegs:$src1)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_A2_vabsw DoubleRegs:$src1),
@@ -1478,7 +1478,7 @@ def: Pat<(int_hexagon_A2_addpsat DoubleRegs:$src1, DoubleRegs:$src2),
 def: Pat<(int_hexagon_A2_svaddhs IntRegs:$src1, IntRegs:$src2),
          (A2_svaddhs IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S4_ori_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
-         (S4_ori_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+         (S4_ori_lsr_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_sat_rnd_ll_s1 IntRegs:$src1, IntRegs:$src2),
          (M2_mpy_sat_rnd_ll_s1 IntRegs:$src1, IntRegs:$src2)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpy_sat_rnd_ll_s0 IntRegs:$src1, IntRegs:$src2),
@@ -1590,7 +1590,7 @@ def: Pat<(int_hexagon_M2_mpy_acc_hh_s1 IntRegs:$src1, IntRegs:$src2, IntRegs:$sr
 def: Pat<(int_hexagon_M2_mpy_acc_hh_s0 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpy_acc_hh_s0 IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_S4_addi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3),
-         (S4_addi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[HasV5]>;
+         (S4_addi_asl_ri u32_0ImmPred_timm:$src1, IntRegs:$src2, u5_0ImmPred_timm:$src3)>, Requires<[UseCompound, HasV5]>;
 def: Pat<(int_hexagon_M2_mpyd_nac_hh_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),
          (M2_mpyd_nac_hh_s1 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV5]>;
 def: Pat<(int_hexagon_M2_mpyd_nac_hh_s0 DoubleRegs:$src1, IntRegs:$src2, IntRegs:$src3),

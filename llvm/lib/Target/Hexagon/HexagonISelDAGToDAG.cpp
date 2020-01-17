@@ -787,10 +787,18 @@ void HexagonDAGToDAGISel::SelectVAlign(SDNode *N) {
                                        MVT::i64, Ops);
 
     // Shift right by "(Addr & 0x3) * 8" bytes.
+    SDNode *C;
     SDValue M0 = CurDAG->getTargetConstant(0x18, dl, MVT::i32);
     SDValue M1 = CurDAG->getTargetConstant(0x03, dl, MVT::i32);
-    SDNode *C = CurDAG->getMachineNode(Hexagon::S4_andi_asl_ri, dl, MVT::i32,
-                                       M0, N->getOperand(2), M1);
+    if (HST->useCompound()) {
+      C = CurDAG->getMachineNode(Hexagon::S4_andi_asl_ri, dl, MVT::i32,
+                                 M0, N->getOperand(2), M1);
+    } else {
+      SDNode *T = CurDAG->getMachineNode(Hexagon::S2_asl_i_r, dl, MVT::i32,
+                                         N->getOperand(2), M1);
+      C = CurDAG->getMachineNode(Hexagon::A2_andir, dl, MVT::i32,
+                                 SDValue(T, 0), M0);
+    }
     SDNode *S = CurDAG->getMachineNode(Hexagon::S2_lsr_r_p, dl, MVT::i64,
                                        SDValue(R, 0), SDValue(C, 0));
     SDValue E = CurDAG->getTargetExtractSubreg(Hexagon::isub_lo, dl, ResTy,

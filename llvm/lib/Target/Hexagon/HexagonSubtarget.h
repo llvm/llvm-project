@@ -45,6 +45,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UseHVX64BOps = false;
   bool UseHVX128BOps = false;
 
+  bool UseCompound = false;
   bool UseLongCalls = false;
   bool UseMemops = false;
   bool UsePackets = false;
@@ -158,6 +159,7 @@ public:
     return getHexagonArchVersion() == Hexagon::ArchEnum::V66;
   }
 
+  bool useCompound() const { return UseCompound; }
   bool useLongCalls() const { return UseLongCalls; }
   bool useMemops() const { return UseMemops; }
   bool usePackets() const { return UsePackets; }

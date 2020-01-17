@@ -17106,7 +17106,7 @@ def M4_mpyri_addi : HInst<
 (outs IntRegs:$Rd32),
 (ins u32_0Imm:$Ii, IntRegs:$Rs32, u6_0Imm:$II),
 "$Rd32 = add(#$Ii,mpyi($Rs32,#$II))",
-tc_05d3a09b, TypeALU64>, Enc_322e1b, ImmRegRel {
+tc_05d3a09b, TypeALU64>, Enc_322e1b, Requires<[UseCompound]>, ImmRegRel {
 let Inst{31-24} = 0b11011000;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -17122,7 +17122,7 @@ def M4_mpyri_addr : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Ru32, IntRegs:$Rs32, u32_0Imm:$Ii),
 "$Rd32 = add($Ru32,mpyi($Rs32,#$Ii))",
-tc_05d3a09b, TypeALU64>, Enc_420cf3, ImmRegRel {
+tc_05d3a09b, TypeALU64>, Enc_420cf3, Requires<[UseCompound]>, ImmRegRel {
 let Inst{31-23} = 0b110111111;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -17139,7 +17139,7 @@ def M4_mpyri_addr_u2 : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Ru32, u6_2Imm:$Ii, IntRegs:$Rs32),
 "$Rd32 = add($Ru32,mpyi(#$Ii,$Rs32))",
-tc_1a2fd869, TypeALU64>, Enc_277737 {
+tc_1a2fd869, TypeALU64>, Enc_277737, Requires<[UseCompound]> {
 let Inst{31-23} = 0b110111110;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -17149,7 +17149,7 @@ def M4_mpyrr_addi : HInst<
 (outs IntRegs:$Rd32),
 (ins u32_0Imm:$Ii, IntRegs:$Rs32, IntRegs:$Rt32),
 "$Rd32 = add(#$Ii,mpyi($Rs32,$Rt32))",
-tc_d773585a, TypeALU64>, Enc_a7b8e8, ImmRegRel {
+tc_d773585a, TypeALU64>, Enc_a7b8e8, Requires<[UseCompound]>, ImmRegRel {
 let Inst{31-23} = 0b110101110;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -17166,7 +17166,7 @@ def M4_mpyrr_addr : HInst<
 (outs IntRegs:$Ry32),
 (ins IntRegs:$Ru32, IntRegs:$Ry32in, IntRegs:$Rs32),
 "$Ry32 = add($Ru32,mpyi($Ry32in,$Rs32))",
-tc_d773585a, TypeM>, Enc_7f1a05, ImmRegRel {
+tc_d773585a, TypeM>, Enc_7f1a05, Requires<[UseCompound]>, ImmRegRel {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b11100011000;
@@ -22001,7 +22001,7 @@ def S4_addaddi : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, IntRegs:$Ru32, s32_0Imm:$Ii),
 "$Rd32 = add($Rs32,add($Ru32,#$Ii))",
-tc_f675fee8, TypeALU64>, Enc_8b8d61 {
+tc_f675fee8, TypeALU64>, Enc_8b8d61, Requires<[UseCompound]> {
 let Inst{31-23} = 0b110110110;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -22016,7 +22016,7 @@ def S4_addi_asl_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = add(#$Ii,asl($Rx32in,#$II))",
-tc_f675fee8, TypeALU64>, Enc_c31910 {
+tc_f675fee8, TypeALU64>, Enc_c31910, Requires<[UseCompound]> {
 let Inst{2-0} = 0b100;
 let Inst{4-4} = 0b0;
 let Inst{31-24} = 0b11011110;
@@ -22034,7 +22034,7 @@ def S4_addi_lsr_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = add(#$Ii,lsr($Rx32in,#$II))",
-tc_f675fee8, TypeALU64>, Enc_c31910 {
+tc_f675fee8, TypeALU64>, Enc_c31910, Requires<[UseCompound]> {
 let Inst{2-0} = 0b100;
 let Inst{4-4} = 0b1;
 let Inst{31-24} = 0b11011110;
@@ -22052,7 +22052,7 @@ def S4_andi_asl_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = and(#$Ii,asl($Rx32in,#$II))",
-tc_f429765c, TypeALU64>, Enc_c31910 {
+tc_f429765c, TypeALU64>, Enc_c31910, Requires<[UseCompound]> {
 let Inst{2-0} = 0b000;
 let Inst{4-4} = 0b0;
 let Inst{31-24} = 0b11011110;
@@ -22070,7 +22070,7 @@ def S4_andi_lsr_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = and(#$Ii,lsr($Rx32in,#$II))",
-tc_f429765c, TypeALU64>, Enc_c31910 {
+tc_f429765c, TypeALU64>, Enc_c31910, Requires<[UseCompound]> {
 let Inst{2-0} = 0b000;
 let Inst{4-4} = 0b1;
 let Inst{31-24} = 0b11011110;
@@ -22208,7 +22208,7 @@ def S4_or_andix : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Ru32, IntRegs:$Rx32in, s32_0Imm:$Ii),
 "$Rx32 = or($Ru32,and($Rx32in,#$Ii))",
-tc_f429765c, TypeALU64>, Enc_b4e6cf {
+tc_f429765c, TypeALU64>, Enc_b4e6cf, Requires<[UseCompound]> {
 let Inst{31-22} = 0b1101101001;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -22241,7 +22241,7 @@ def S4_ori_asl_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = or(#$Ii,asl($Rx32in,#$II))",
-tc_f429765c, TypeALU64>, Enc_c31910 {
+tc_f429765c, TypeALU64>, Enc_c31910, Requires<[UseCompound]> {
 let Inst{2-0} = 0b010;
 let Inst{4-4} = 0b0;
 let Inst{31-24} = 0b11011110;
@@ -22259,7 +22259,7 @@ def S4_ori_lsr_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = or(#$Ii,lsr($Rx32in,#$II))",
-tc_f429765c, TypeALU64>, Enc_c31910 {
+tc_f429765c, TypeALU64>, Enc_c31910, Requires<[UseCompound]> {
 let Inst{2-0} = 0b010;
 let Inst{4-4} = 0b1;
 let Inst{31-24} = 0b11011110;
@@ -25106,7 +25106,7 @@ def S4_subaddi : HInst<
 (outs IntRegs:$Rd32),
 (ins IntRegs:$Rs32, s32_0Imm:$Ii, IntRegs:$Ru32),
 "$Rd32 = add($Rs32,sub(#$Ii,$Ru32))",
-tc_f675fee8, TypeALU64>, Enc_8b8d61 {
+tc_f675fee8, TypeALU64>, Enc_8b8d61, Requires<[UseCompound]> {
 let Inst{31-23} = 0b110110111;
 let hasNewValue = 1;
 let opNewValue = 0;
@@ -25121,7 +25121,7 @@ def S4_subi_asl_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = sub(#$Ii,asl($Rx32in,#$II))",
-tc_f675fee8, TypeALU64>, Enc_c31910 {
+tc_f675fee8, TypeALU64>, Enc_c31910, Requires<[UseCompound]> {
 let Inst{2-0} = 0b110;
 let Inst{4-4} = 0b0;
 let Inst{31-24} = 0b11011110;
@@ -25139,7 +25139,7 @@ def S4_subi_lsr_ri : HInst<
 (outs IntRegs:$Rx32),
 (ins u32_0Imm:$Ii, IntRegs:$Rx32in, u5_0Imm:$II),
 "$Rx32 = sub(#$Ii,lsr($Rx32in,#$II))",
-tc_f675fee8, TypeALU64>, Enc_c31910 {
+tc_f675fee8, TypeALU64>, Enc_c31910, Requires<[UseCompound]> {
 let Inst{2-0} = 0b110;
 let Inst{4-4} = 0b1;
 let Inst{31-24} = 0b11011110;
