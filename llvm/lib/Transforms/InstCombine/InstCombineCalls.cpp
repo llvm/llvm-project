@@ -3959,6 +3959,21 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     II->setOperand(0, UndefValue::get(Old->getType()));
     return II;
   }
+  case Intrinsic::amdgcn_permlane16:
+  case Intrinsic::amdgcn_permlanex16: {
+    // Discard vdst_in if it's not going to be read.
+    Value *VDstIn = II->getArgOperand(0);
+   if (isa<UndefValue>(VDstIn))
+     break;
+
+    ConstantInt *FetchInvalid = cast<ConstantInt>(II->getArgOperand(4));
+    ConstantInt *BoundCtrl = cast<ConstantInt>(II->getArgOperand(5));
+    if (!FetchInvalid->getZExtValue() && !BoundCtrl->getZExtValue())
+      break;
+
+    II->setArgOperand(0, UndefValue::get(VDstIn->getType()));
+    return II;
+  }
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane: {
     // A constant value is trivially uniform.
