@@ -894,7 +894,7 @@ void Debugger::ClearIOHandlers() {
   }
 }
 
-void Debugger::ExecuteIOHandlers() {
+void Debugger::RunIOHandlers() {
   while (true) {
     IOHandlerSP reader_sp(m_io_handler_stack.Top());
     if (!reader_sp)
@@ -1551,7 +1551,7 @@ void Debugger::StopEventHandlerThread() {
 
 lldb::thread_result_t Debugger::IOHandlerThread(lldb::thread_arg_t arg) {
   Debugger *debugger = (Debugger *)arg;
-  debugger->ExecuteIOHandlers();
+  debugger->RunIOHandlers();
   debugger->StopEventHandlerThread();
   return {};
 }
