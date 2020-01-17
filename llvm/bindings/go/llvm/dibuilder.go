@@ -145,7 +145,7 @@ func (d *DIBuilder) CreateCompileUnit(cu DICompileUnit) Metadata {
 		/*DWOId=*/ 0,
 		/*SplitDebugInlining*/ C.LLVMBool(boolToCInt(true)),
 		/*DebugInfoForProfiling*/ C.LLVMBool(boolToCInt(false)),
-		sysroot,
+		sysroot, C.size_t(len(cu.SysRoot)),
 	)
 	return Metadata{C: result}
 }
