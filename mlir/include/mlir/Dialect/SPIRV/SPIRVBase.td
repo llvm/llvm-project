@@ -2706,6 +2706,7 @@ def SPV_MM_OpenCL  : I32EnumAttrCase<"OpenCL", 2> {
 def SPV_MM_Vulkan  : I32EnumAttrCase<"Vulkan", 3> {
   list<Availability> availability = [
     MinVersion<SPV_V_1_5>,
+    Extension<[SPV_KHR_vulkan_memory_model]>,
     Capability<[SPV_C_VulkanMemoryModel]>
   ];
 }
