@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include <algorithm>
+#include <cctype>
 
 using namespace clang::ast_matchers;
 
