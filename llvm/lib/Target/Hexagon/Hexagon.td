@@ -52,6 +52,8 @@ def FeatureCompound: SubtargetFeature<"compound", "UseCompound", "true",
       "Use compound instructions">;
 def FeaturePackets: SubtargetFeature<"packets", "UsePackets", "true",
       "Support for instruction packets">;
+def FeatureHasPreV65: SubtargetFeature<"prev65", "HasPreV65", "true",
+      "Support features deprecated in v65">;
 def FeatureLongCalls: SubtargetFeature<"long-calls", "UseLongCalls", "true",
       "Use constant-extended calls">;
 def FeatureMemNoShuf: SubtargetFeature<"mem_noshuf", "HasMemNoShuf", "false",
@@ -94,6 +96,8 @@ def UseHVXV66          : Predicate<"HST->useHVXOps()">,
 def UseZReg            : Predicate<"HST->useZRegOps()">,
                          AssemblerPredicate<"ExtensionZReg">;
 def UseCompound        : Predicate<"HST->useCompound()">;
+def HasPreV65          : Predicate<"HST->hasPreV65()">,
+                         AssemblerPredicate<"FeatureHasPreV65">;
 
 def Hvx64:  HwMode<"+hvx-length64b">;
 def Hvx128: HwMode<"+hvx-length128b">;
@@ -102,6 +106,7 @@ def Hvx128: HwMode<"+hvx-length128b">;
 // Classes used for relation maps.
 //===----------------------------------------------------------------------===//
 
+// The classes below should remain in hierarchical order...
 class ImmRegShl;
 // ImmRegRel - Filter class used to relate instructions having reg-reg form
 // with their reg-imm counterparts.
@@ -109,17 +114,14 @@ class ImmRegRel;
 // PredRel - Filter class used to relate non-predicated instructions with their
 // predicated forms.
 class PredRel;
-// PredNewRel - Filter class used to relate predicated instructions with their
-// predicate-new forms.
 class PredNewRel: PredRel;
 // NewValueRel - Filter class used to relate regular store instructions with
 // their new-value store form.
 class NewValueRel: PredNewRel;
-// NewValueRel - Filter class used to relate load/store instructions having
-// different addressing modes with each other.
 class AddrModeRel: NewValueRel;
 class PostInc_BaseImm;
 class IntrinsicsRel;
+// ... through here.
 
 //===----------------------------------------------------------------------===//
 // Generate mapping table to relate non-predicate instructions with their
@@ -338,24 +340,24 @@ class Proc<string Name, SchedMachineModel Model,
 
 def : Proc<"generic", HexagonModelV60,
            [ArchV5, ArchV55, ArchV60,
-            FeatureCompound, FeatureDuplex, FeatureMemops, FeatureNVJ,
-            FeatureNVS, FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeatureHasPreV65, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv5",  HexagonModelV5,
            [ArchV5,
-            FeatureCompound, FeatureDuplex, FeatureMemops, FeatureNVJ,
-            FeatureNVS, FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeatureHasPreV65, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv55", HexagonModelV55,
            [ArchV5, ArchV55,
-            FeatureCompound, FeatureDuplex, FeatureMemops, FeatureNVJ,
-            FeatureNVS, FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeatureHasPreV65, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv60", HexagonModelV60,
            [ArchV5, ArchV55, ArchV60,
-            FeatureCompound, FeatureDuplex, FeatureMemops, FeatureNVJ,
-            FeatureNVS, FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeatureHasPreV65, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv62", HexagonModelV62,
            [ArchV5, ArchV55, ArchV60, ArchV62,
-            FeatureCompound, FeatureDuplex, FeatureMemops, FeatureNVJ,
-            FeatureNVS, FeaturePackets, FeatureSmallData]>;
+            FeatureCompound, FeatureDuplex, FeatureHasPreV65, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv65", HexagonModelV65,
            [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65,
             FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,

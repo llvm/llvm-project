@@ -5709,7 +5709,7 @@ def J2_trap1 : HInst<
 (outs IntRegs:$Rx32),
 (ins IntRegs:$Rx32in, u8_0Imm:$Ii),
 "trap1($Rx32,#$Ii)",
-tc_b9e09e03, TypeJ>, Enc_33f8ba {
+tc_b9e09e03, TypeJ>, Enc_33f8ba, Requires<[HasV65]> {
 let Inst{1-0} = 0b00;
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
@@ -5726,7 +5726,7 @@ def J2_trap1_noregmap : HInst<
 (outs),
 (ins u8_0Imm:$Ii),
 "trap1(#$Ii)",
-tc_b9e09e03, TypeMAPPING> {
+tc_b9e09e03, TypeMAPPING>, Requires<[HasV65]> {
 let hasSideEffects = 1;
 let isPseudo = 1;
 let isCodeGenOnly = 1;
@@ -17875,6 +17875,17 @@ let isExtentSigned = 0;
 let opExtentBits = 18;
 let opExtentAlign = 2;
 let opNewValue = 1;
+}
+def PS_trap1 : HInst<
+(outs),
+(ins u8_0Imm:$Ii),
+"trap1(#$Ii)",
+tc_b9e09e03, TypeJ>, Enc_a51a9a, Requires<[HasPreV65]> {
+let Inst{1-0} = 0b00;
+let Inst{7-5} = 0b000;
+let Inst{13-13} = 0b0;
+let Inst{31-16} = 0b0101010010000000;
+let isSolo = 1;
 }
 def S2_addasl_rrri : HInst<
 (outs IntRegs:$Rd32),
