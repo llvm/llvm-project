@@ -313,7 +313,7 @@ public:
 
   bool LoadPlugin(const FileSpec &spec, Status &error);
 
-  void ExecuteIOHandlers();
+  void RunIOHandlers();
 
   bool IsForwardingEvents();
 
