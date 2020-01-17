@@ -324,7 +324,7 @@ static lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
   return new_thread_plan_sp;
 }
 
-bool SwiftLanguageRuntime::IsSwiftMangledName(const char *name) {
+bool SwiftLanguageRuntime::IsSwiftMangledName(llvm::StringRef name) {
   return swift::Demangle::isSwiftSymbol(name);
 }
 
