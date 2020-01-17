@@ -40,13 +40,13 @@ t3_ff8_ldr:
         ldr x0, [x0, :got_lo12:dat]
         ret
 
-// CHECK-PRINT: detected cortex-a53-843419 erratum sequence starting at 11FFC in unpatched output.
-// CHECK: 0000000000011ffc t3_ff8_ldr:
+// CHECK-PRINT: detected cortex-a53-843419 erratum sequence starting at 11FF8 in unpatched output.
+// CHECK: 0000000000011ff8 t3_ff8_ldr:
 // CHECK-NEXT: adrp    x0, #134213632
 // CHECK-NEXT: ldr     x1, [x1]
 // CHECK-NEXT: b       #8
 // CHECK-NEXT: ret
-// CHECK: 000000000001200c __CortexA53843419_12004:
+// CHECK: 0000000000012008 __CortexA53843419_12000:
 // CHECK-NEXT: ldr     x0, [x0, #8]
 // CHECK-NEXT: b       #-8
         .section .text.04, "ax", %progbits
