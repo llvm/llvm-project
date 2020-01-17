@@ -724,6 +724,10 @@ public:
     return ScalarFlatScratchInsts;
   }
 
+  bool hasMultiDwordFlatScratchAddressing() const {
+    return getGeneration() >= GFX9;
+  }
+
   bool hasFlatSegmentOffsetBug() const {
     return HasFlatSegmentOffsetBug;
   }

@@ -1,7 +1,8 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=bonaire < %s | FileCheck -check-prefixes=CHECK,CIVI %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,CIVI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,CIVI,HSA %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,CIVI,HSA,CIVI-HSA %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,HSA,GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=CHECK,HSA,GFX10 %s
 
 ; CHECK-LABEL: {{^}}store_flat_i32:
 ; CHECK-DAG: s_load_dwordx2 s{{\[}}[[LO_SREG:[0-9]+]]:[[HI_SREG:[0-9]+]]],
@@ -145,8 +146,10 @@ define amdgpu_kernel void @flat_scratch_unaligned_store() {
 }
 
 ; CHECK-LABEL: flat_scratch_multidword_load:
-; HSA: flat_load_dword
-; HSA: flat_load_dword
+; CIVI-HSA: flat_load_dword v
+; CIVI-HSA: flat_load_dword v
+; GFX9:  flat_load_dwordx2
+; GFX10: flat_load_dwordx2
 ; FIXME: These tests are broken for os = mesa3d, becasue it doesn't initialize flat_scr
 define amdgpu_kernel void @flat_scratch_multidword_load() {
   %scratch = alloca <2 x i32>, addrspace(5)
@@ -156,8 +159,10 @@ define amdgpu_kernel void @flat_scratch_multidword_load() {
 }
 
 ; CHECK-LABEL: flat_scratch_multidword_store:
-; HSA: flat_store_dword
-; HSA: flat_store_dword
+; CIVI-HSA: flat_store_dword v
+; CIVI-HSA: flat_store_dword v
+; GFX9:  flat_store_dwordx2
+; GFX10: flat_store_dwordx2
 ; FIXME: These tests are broken for os = mesa3d, becasue it doesn't initialize flat_scr
 define amdgpu_kernel void @flat_scratch_multidword_store() {
   %scratch = alloca <2 x i32>, addrspace(5)
