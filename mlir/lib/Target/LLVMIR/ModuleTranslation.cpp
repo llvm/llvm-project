@@ -211,6 +211,58 @@ static llvm::CmpInst::Predicate getLLVMCmpPredicate(FCmpPredicate p) {
   llvm_unreachable("incorrect comparison predicate");
 }
 
+static llvm::AtomicRMWInst::BinOp getLLVMAtomicBinOp(AtomicBinOp op) {
+  switch (op) {
+  case LLVM::AtomicBinOp::xchg:
+    return llvm::AtomicRMWInst::BinOp::Xchg;
+  case LLVM::AtomicBinOp::add:
+    return llvm::AtomicRMWInst::BinOp::Add;
+  case LLVM::AtomicBinOp::sub:
+    return llvm::AtomicRMWInst::BinOp::Sub;
+  case LLVM::AtomicBinOp::_and:
+    return llvm::AtomicRMWInst::BinOp::And;
+  case LLVM::AtomicBinOp::nand:
+    return llvm::AtomicRMWInst::BinOp::Nand;
+  case LLVM::AtomicBinOp::_or:
+    return llvm::AtomicRMWInst::BinOp::Or;
+  case LLVM::AtomicBinOp::_xor:
+    return llvm::AtomicRMWInst::BinOp::Xor;
+  case LLVM::AtomicBinOp::max:
+    return llvm::AtomicRMWInst::BinOp::Max;
+  case LLVM::AtomicBinOp::min:
+    return llvm::AtomicRMWInst::BinOp::Min;
+  case LLVM::AtomicBinOp::umax:
+    return llvm::AtomicRMWInst::BinOp::UMax;
+  case LLVM::AtomicBinOp::umin:
+    return llvm::AtomicRMWInst::BinOp::UMin;
+  case LLVM::AtomicBinOp::fadd:
+    return llvm::AtomicRMWInst::BinOp::FAdd;
+  case LLVM::AtomicBinOp::fsub:
+    return llvm::AtomicRMWInst::BinOp::FSub;
+  }
+  llvm_unreachable("incorrect atomic binary operator");
+}
+
+static llvm::AtomicOrdering getLLVMAtomicOrdering(AtomicOrdering ordering) {
+  switch (ordering) {
+  case LLVM::AtomicOrdering::not_atomic:
+    return llvm::AtomicOrdering::NotAtomic;
+  case LLVM::AtomicOrdering::unordered:
+    return llvm::AtomicOrdering::Unordered;
+  case LLVM::AtomicOrdering::monotonic:
+    return llvm::AtomicOrdering::Monotonic;
+  case LLVM::AtomicOrdering::acquire:
+    return llvm::AtomicOrdering::Acquire;
+  case LLVM::AtomicOrdering::release:
+    return llvm::AtomicOrdering::Release;
+  case LLVM::AtomicOrdering::acq_rel:
+    return llvm::AtomicOrdering::AcquireRelease;
+  case LLVM::AtomicOrdering::seq_cst:
+    return llvm::AtomicOrdering::SequentiallyConsistent;
+  }
+  llvm_unreachable("incorrect atomic ordering");
+}
+
 /// Given a single MLIR operation, create the corresponding LLVM IR operation
 /// using the `builder`.  LLVM IR Builder does not have a generic interface so
 /// this has to be a long chain of `if`s calling different functions with a

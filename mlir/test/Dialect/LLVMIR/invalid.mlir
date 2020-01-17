@@ -393,4 +393,51 @@ llvm.func @recursive_type(%a : !llvm<"%a = type { %a* }">) ->
   llvm.return %a : !llvm<"%a = type { %a* }">
 }
 
+// -----
 
+// CHECK-LABEL: @atomicrmw_expected_ptr
+func @atomicrmw_expected_ptr(%f32 : !llvm.float) {
+  // expected-error@+1 {{expected LLVM IR pointer type for operand #0}}
+  %0 = llvm.atomicrmw "fadd" "unordered" %f32, %f32 : (!llvm.float, !llvm.float) -> !llvm.float
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @atomicrmw_mismatched_operands
+func @atomicrmw_mismatched_operands(%f32_ptr : !llvm<"float*">, %i32 : !llvm.i32) {
+  // expected-error@+1 {{expected LLVM IR element type for operand #0 to match type for operand #1}}
+  %0 = llvm.atomicrmw "fadd" "unordered" %f32_ptr, %i32 : (!llvm<"float*">, !llvm.i32) -> !llvm.float
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @atomicrmw_mismatched_result
+func @atomicrmw_mismatched_operands(%f32_ptr : !llvm<"float*">, %f32 : !llvm.float) {
+  // expected-error@+1 {{expected LLVM IR result type to match type for operand #1}}
+  %0 = llvm.atomicrmw "fadd" "unordered" %f32_ptr, %f32 : (!llvm<"float*">, !llvm.float) -> !llvm.i32
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @atomicrmw_expected_float
+func @atomicrmw_expected_float(%i32_ptr : !llvm<"i32*">, %i32 : !llvm.i32) {
+  // expected-error@+1 {{expected LLVM IR floating point type}}
+  %0 = llvm.atomicrmw "fadd" "unordered" %i32_ptr, %i32 : (!llvm<"i32*">, !llvm.i32) -> !llvm.i32
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @atomicrmw_unexpected_xchg_type
+func @atomicrmw_xchg_type(%i1_ptr : !llvm<"i1*">, %i1 : !llvm.i1) {
+  // expected-error@+1 {{unexpected LLVM IR type for 'xchg' bin_op}}
+  %0 = llvm.atomicrmw "xchg" "unordered" %i1_ptr, %i1 : (!llvm<"i1*">, !llvm.i1) -> !llvm.i1
+  llvm.return
+}
+
+// -----
+// CHECK-LABEL: @atomicrmw_expected_int
+func @atomicrmw_expected_int(%f32_ptr : !llvm<"float*">, %f32 : !llvm.float) {
+  // expected-error@+1 {{expected LLVM IR integer type}}
+  %0 = llvm.atomicrmw "max" "unordered" %f32_ptr, %f32 : (!llvm<"float*">, !llvm.float) -> !llvm.float
+  llvm.return
+}
