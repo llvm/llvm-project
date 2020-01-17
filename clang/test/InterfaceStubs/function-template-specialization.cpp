@@ -10,8 +10,7 @@
 // RUN: -DSPECIALIZE_TEMPLATE_FUNCTION=1 %s | \
 // RUN: FileCheck -check-prefix=CHECK-SPECIALIZES-TEMPLATE-FUNCTION %s
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -o - -c \
-// RUN: %s | llvm-nm - 2>&1 | FileCheck %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -o - -c %s | llvm-nm - 2>&1 | count 0
 
 // RUN: %clang -target x86_64-unknown-linux-gnu -o - -c \
 // RUN: -DUSE_TEMPLATE_FUNCTION=1 %s | llvm-nm - 2>&1 | \
