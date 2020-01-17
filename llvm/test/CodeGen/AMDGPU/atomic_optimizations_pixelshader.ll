@@ -5,8 +5,8 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN32,GFX8MORE,GFX8MORE32 %s
 
 declare i1 @llvm.amdgcn.wqm.vote(i1)
-declare i32 @llvm.amdgcn.buffer.atomic.add(i32, <4 x i32>, i32, i32, i1)
-declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1)
+declare i32 @llvm.amdgcn.raw.buffer.atomic.add(i32, <4 x i32>, i32, i32, i32 immarg)
+declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg)
 
 ; Show that what the atomic optimization pass will do for raw buffers.
 
@@ -25,13 +25,13 @@ declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1)
 define amdgpu_ps void @add_i32_constant(<4 x i32> inreg %out, <4 x i32> inreg %inout) {
 entry:
   %cond1 = call i1 @llvm.amdgcn.wqm.vote(i1 true)
-  %old = call i32 @llvm.amdgcn.buffer.atomic.add(i32 5, <4 x i32> %inout, i32 0, i32 0, i1 0)
+  %old = call i32 @llvm.amdgcn.raw.buffer.atomic.add(i32 5, <4 x i32> %inout, i32 0, i32 0, i32 0)
   %cond2 = call i1 @llvm.amdgcn.wqm.vote(i1 true)
   %cond = and i1 %cond1, %cond2
   br i1 %cond, label %if, label %else
 if:
   %bitcast = bitcast i32 %old to float
-  call void @llvm.amdgcn.buffer.store.f32(float %bitcast, <4 x i32> %out, i32 0, i32 0, i1 0, i1 0)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %bitcast, <4 x i32> %out, i32 0, i32 0, i32 0)
   ret void
 else:
   ret void
@@ -55,13 +55,13 @@ else:
 define amdgpu_ps void @add_i32_varying(<4 x i32> inreg %out, <4 x i32> inreg %inout, i32 %val) {
 entry:
   %cond1 = call i1 @llvm.amdgcn.wqm.vote(i1 true)
-  %old = call i32 @llvm.amdgcn.buffer.atomic.add(i32 %val, <4 x i32> %inout, i32 0, i32 0, i1 0)
+  %old = call i32 @llvm.amdgcn.raw.buffer.atomic.add(i32 %val, <4 x i32> %inout, i32 0, i32 0, i32 0)
   %cond2 = call i1 @llvm.amdgcn.wqm.vote(i1 true)
   %cond = and i1 %cond1, %cond2
   br i1 %cond, label %if, label %else
 if:
   %bitcast = bitcast i32 %old to float
-  call void @llvm.amdgcn.buffer.store.f32(float %bitcast, <4 x i32> %out, i32 0, i32 0, i1 0, i1 0)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %bitcast, <4 x i32> %out, i32 0, i32 0, i32 0)
   ret void
 else:
   ret void

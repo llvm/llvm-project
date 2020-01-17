@@ -5,8 +5,9 @@
 ; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN32,GFX8MORE,GFX8MORE32 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
-declare i32 @llvm.amdgcn.buffer.atomic.add(i32, <4 x i32>, i32, i32, i1)
-declare i32 @llvm.amdgcn.buffer.atomic.sub(i32, <4 x i32>, i32, i32, i1)
+declare i32 @llvm.amdgcn.raw.buffer.atomic.add(i32, <4 x i32>, i32, i32, i32 immarg)
+declare i32 @llvm.amdgcn.struct.buffer.atomic.add(i32, <4 x i32>, i32, i32, i32, i32 immarg)
+declare i32 @llvm.amdgcn.raw.buffer.atomic.sub(i32, <4 x i32>, i32, i32, i32 immarg)
 
 ; Show that what the atomic optimization pass will do for raw buffers.
 
@@ -22,7 +23,7 @@ declare i32 @llvm.amdgcn.buffer.atomic.sub(i32, <4 x i32>, i32, i32, i1)
 ; GCN: buffer_atomic_add v[[value]]
 define amdgpu_kernel void @add_i32_constant(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
-  %old = call i32 @llvm.amdgcn.buffer.atomic.add(i32 5, <4 x i32> %inout, i32 0, i32 0, i1 0)
+  %old = call i32 @llvm.amdgcn.raw.buffer.atomic.add(i32 5, <4 x i32> %inout, i32 0, i32 0, i32 0)
   store i32 %old, i32 addrspace(1)* %out
   ret void
 }
@@ -40,7 +41,7 @@ entry:
 ; GCN: buffer_atomic_add v[[value]]
 define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, <4 x i32> %inout, i32 %additive) {
 entry:
-  %old = call i32 @llvm.amdgcn.buffer.atomic.add(i32 %additive, <4 x i32> %inout, i32 0, i32 0, i1 0)
+  %old = call i32 @llvm.amdgcn.raw.buffer.atomic.add(i32 %additive, <4 x i32> %inout, i32 0, i32 0, i32 0)
   store i32 %old, i32 addrspace(1)* %out
   ret void
 }
@@ -64,7 +65,31 @@ entry:
 define amdgpu_kernel void @add_i32_varying_vdata(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = call i32 @llvm.amdgcn.buffer.atomic.add(i32 %lane, <4 x i32> %inout, i32 0, i32 0, i1 0)
+  %old = call i32 @llvm.amdgcn.raw.buffer.atomic.add(i32 %lane, <4 x i32> %inout, i32 0, i32 0, i32 0)
+  store i32 %old, i32 addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: struct_add_i32_varying_vdata:
+; GFX7LESS-NOT: v_mbcnt_lo_u32_b32
+; GFX7LESS-NOT: v_mbcnt_hi_u32_b32
+; GFX7LESS-NOT: s_bcnt1_i32_b64
+; GFX7LESS: buffer_atomic_add v{{[0-9]+}}
+; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_shr:1 row_mask:0xf bank_mask:0xf
+; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_shr:2 row_mask:0xf bank_mask:0xf
+; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_shr:4 row_mask:0xf bank_mask:0xf
+; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_shr:8 row_mask:0xf bank_mask:0xf
+; GFX89:    v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_bcast:15 row_mask:0xa bank_mask:0xf
+; GFX89:    v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_bcast:31 row_mask:0xc bank_mask:0xf
+; GFX8MORE32: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 31
+; GFX8MORE64: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 63
+; GFX89: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} wave_shr:1 row_mask:0xf bank_mask:0xf
+; GFX8MORE: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
+; GFX8MORE: buffer_atomic_add v[[value]]
+define amdgpu_kernel void @struct_add_i32_varying_vdata(i32 addrspace(1)* %out, <4 x i32> %inout, i32 %vindex) {
+entry:
+  %lane = call i32 @llvm.amdgcn.workitem.id.x()
+  %old = call i32 @llvm.amdgcn.struct.buffer.atomic.add(i32 %lane, <4 x i32> %inout, i32 %vindex, i32 0, i32 0, i32 0)
   store i32 %old, i32 addrspace(1)* %out
   ret void
 }
@@ -77,7 +102,7 @@ entry:
 define amdgpu_kernel void @add_i32_varying_offset(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = call i32 @llvm.amdgcn.buffer.atomic.add(i32 1, <4 x i32> %inout, i32 %lane, i32 0, i1 0)
+  %old = call i32 @llvm.amdgcn.raw.buffer.atomic.add(i32 1, <4 x i32> %inout, i32 %lane, i32 0, i32 0)
   store i32 %old, i32 addrspace(1)* %out
   ret void
 }
@@ -94,7 +119,7 @@ entry:
 ; GCN: buffer_atomic_sub v[[value]]
 define amdgpu_kernel void @sub_i32_constant(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
-  %old = call i32 @llvm.amdgcn.buffer.atomic.sub(i32 5, <4 x i32> %inout, i32 0, i32 0, i1 0)
+  %old = call i32 @llvm.amdgcn.raw.buffer.atomic.sub(i32 5, <4 x i32> %inout, i32 0, i32 0, i32 0)
   store i32 %old, i32 addrspace(1)* %out
   ret void
 }
@@ -112,7 +137,7 @@ entry:
 ; GCN: buffer_atomic_sub v[[value]]
 define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, <4 x i32> %inout, i32 %subitive) {
 entry:
-  %old = call i32 @llvm.amdgcn.buffer.atomic.sub(i32 %subitive, <4 x i32> %inout, i32 0, i32 0, i1 0)
+  %old = call i32 @llvm.amdgcn.raw.buffer.atomic.sub(i32 %subitive, <4 x i32> %inout, i32 0, i32 0, i32 0)
   store i32 %old, i32 addrspace(1)* %out
   ret void
 }
@@ -136,7 +161,7 @@ entry:
 define amdgpu_kernel void @sub_i32_varying_vdata(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = call i32 @llvm.amdgcn.buffer.atomic.sub(i32 %lane, <4 x i32> %inout, i32 0, i32 0, i1 0)
+  %old = call i32 @llvm.amdgcn.raw.buffer.atomic.sub(i32 %lane, <4 x i32> %inout, i32 0, i32 0, i32 0)
   store i32 %old, i32 addrspace(1)* %out
   ret void
 }
@@ -149,7 +174,7 @@ entry:
 define amdgpu_kernel void @sub_i32_varying_offset(i32 addrspace(1)* %out, <4 x i32> %inout) {
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
-  %old = call i32 @llvm.amdgcn.buffer.atomic.sub(i32 1, <4 x i32> %inout, i32 %lane, i32 0, i1 0)
+  %old = call i32 @llvm.amdgcn.raw.buffer.atomic.sub(i32 1, <4 x i32> %inout, i32 %lane, i32 0, i32 0)
   store i32 %old, i32 addrspace(1)* %out
   ret void
 }
