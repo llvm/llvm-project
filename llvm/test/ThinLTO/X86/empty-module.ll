@@ -3,8 +3,7 @@
 ; RUN: rm -f %t2.0
 ; RUN: llvm-lto2 run  %t.bc -r %t.bc,foo,pl -o %t2 -thinlto-distributed-indexes
 ; RUN: llvm-readobj -h %t2.0 | FileCheck %s
-; RUN: llvm-nm %t2.0 2>&1 | FileCheck %s -check-prefix=NO-SYMBOLS
-; NO-SYMBOLS: no symbols
+; RUN: llvm-nm %t2.0 2>&1 | count 0
 
 ; CHECK: Format: ELF64-x86-64
 
