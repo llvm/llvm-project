@@ -41,6 +41,7 @@ static_library("bugprone") {
     "NotNullTerminatedResultCheck.cpp",
     "ParentVirtualCallCheck.cpp",
     "PosixReturnCheck.cpp",
+    "ReservedIdentifierCheck.cpp",
     "SignedCharMisuseCheck.cpp",
     "SizeofContainerCheck.cpp",
     "SizeofExpressionCheck.cpp",
