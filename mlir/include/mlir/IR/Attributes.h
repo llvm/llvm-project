@@ -622,7 +622,7 @@ public:
   }
 
   // Note: We could steal more bits if the need arises.
-  enum { NumLowBitsAvailable = 1 };
+  static constexpr int NumLowBitsAvailable = 1;
 };
 
 /// Pair of raw pointer and a boolean flag of whether the pointer holds a splat,
@@ -1442,7 +1442,7 @@ template <> struct PointerLikeTypeTraits<mlir::Attribute> {
   static inline mlir::Attribute getFromVoidPointer(void *ptr) {
     return mlir::Attribute::getFromOpaquePointer(ptr);
   }
-  enum { NumLowBitsAvailable = 3 };
+  static constexpr int NumLowBitsAvailable = 3;
 };
 
 template <>

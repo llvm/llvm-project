@@ -161,7 +161,7 @@ public:
   static inline mlir::ModuleOp getFromVoidPointer(void *P) {
     return mlir::ModuleOp::getFromOpaquePointer(P);
   }
-  enum { NumLowBitsAvailable = 3 };
+  static constexpr int NumLowBitsAvailable = 3;
 };
 
 } // end namespace llvm
