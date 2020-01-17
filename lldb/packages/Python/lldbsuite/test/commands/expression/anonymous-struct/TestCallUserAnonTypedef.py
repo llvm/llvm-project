@@ -41,4 +41,4 @@ class TestExprLookupAnonStructTypedef(TestBase):
         )
 
         self.runCmd("run", RUN_SUCCEEDED)
-        self.expect("expr multiply(&s)", substrs=['$0 = 1'])
+        self.expect_expr("multiply(&s)", result_type="double", result_value="1")

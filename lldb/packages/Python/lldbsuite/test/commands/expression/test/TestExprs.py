@@ -61,37 +61,14 @@ class BasicExprCommandsTestCase(TestBase):
     def test_many_expr_commands(self):
         self.build_and_run()
 
-        self.expect("expression 2",
-                    patterns=["\(int\) \$.* = 2"])
-        # (int) $0 = 1
-
-        self.expect("expression 2ull",
-                    patterns=["\(unsigned long long\) \$.* = 2"])
-        # (unsigned long long) $1 = 2
-
-        self.expect("expression 0.5f",
-                    patterns=["\(float\) \$.* = 0\.5"])
-        # (float) $2 = 0.5
-
-        self.expect("expression 2.234",
-                    patterns=["\(double\) \$.* = 2\.234"])
-        # (double) $3 = 2.234
-
-        self.expect("expression 2+3",
-                    patterns=["\(int\) \$.* = 5"])
-        # (int) $4 = 5
-
-        self.expect("expression argc",
-                    patterns=["\(int\) \$.* = 1"])
-        # (int) $5 = 1
-
-        self.expect("expression argc + 22",
-                    patterns=["\(int\) \$.* = 23"])
-        # (int) $6 = 23
-
-        self.expect("expression argv",
-                    patterns=["\(const char \*\*\) \$.* = 0x"])
-        # (const char *) $7 = ...
+        self.expect_expr("2", result_type="int", result_value="2")
+        self.expect_expr("2ull", result_type="unsigned long long", result_value="2")
+        self.expect_expr("0.5f", result_type="float", result_value="0.5")
+        self.expect_expr("2.234", result_type="double", result_value="2.234")
+        self.expect_expr("2+3", result_type="int", result_value="5")
+        self.expect_expr("argc", result_type="int", result_value="1")
+        self.expect_expr("argc + 22", result_type="int", result_value="23")
+        self.expect_expr("argv", result_type="const char **")
 
         self.expect("expression argv[0]",
                     substrs=["(const char *)",

@@ -22,13 +22,8 @@ class Radar8638051TestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        self.expect("expression val",
-                    startstr="(int) $0 = 1")
-        # (int) $0 = 1
-
-        self.expect("expression *(&val)",
-                    startstr="(int) $1 = 1")
-        # (int) $1 = 1
+        self.expect_expr("val", result_type="int", result_value="1")
+        self.expect_expr("*(&val)", result_type="int", result_value="1")
 
         # rdar://problem/8638051
         # lldb expression command: Could this crash be avoided
