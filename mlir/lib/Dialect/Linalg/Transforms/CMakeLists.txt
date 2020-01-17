@@ -7,6 +7,7 @@ set(LIBS
   MLIRLinalgAnalysis
   MLIRLinalgEDSC
   MLIRLinalgOps
+  MLIRLinalgUtils
   MLIRLoopOps
   MLIRPass
   MLIRStandardOps
