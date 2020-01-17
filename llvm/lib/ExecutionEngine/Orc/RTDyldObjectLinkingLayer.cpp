@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/Object/COFF.h"
 
 namespace {
 
@@ -160,6 +161,39 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
     std::set<StringRef> &InternalSymbols) {
   SymbolFlagsMap ExtraSymbolsToClaim;
   SymbolMap Symbols;
+
+  // Hack to support COFF constant pool comdats introduced during compilation:
+  // (See http://llvm.org/PR40074)
+  if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(&Obj)) {
+    auto &ES = getExecutionSession();
+
+    // For all resolved symbols that are not already in the responsibilty set:
+    // check whether the symbol is in a comdat section and if so mark it as
+    // weak.
+    for (auto &Sym : COFFObj->symbols()) {
+      if (Sym.getFlags() & object::BasicSymbolRef::SF_Undefined)
+        continue;
+      auto Name = Sym.getName();
+      if (!Name)
+        return Name.takeError();
+      auto I = Resolved.find(*Name);
+
+      // Skip unresolved symbols, internal symbols, and symbols that are
+      // already in the responsibility set.
+      if (I == Resolved.end() || InternalSymbols.count(*Name) ||
+          R.getSymbols().count(ES.intern(*Name)))
+        continue;
+      auto Sec = Sym.getSection();
+      if (!Sec)
+        return Sec.takeError();
+      if (*Sec == COFFObj->section_end())
+        continue;
+      auto &COFFSec = *COFFObj->getCOFFSection(**Sec);
+      if (COFFSec.Characteristics & COFF::IMAGE_SCN_LNK_COMDAT)
+        I->second.setFlags(I->second.getFlags() | JITSymbolFlags::Weak);
+    }
+  }
+
   for (auto &KV : Resolved) {
     // Scan the symbols and add them to the Symbols map for resolution.
 
@@ -184,9 +218,16 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
     Symbols[InternedName] = JITEvaluatedSymbol(KV.second.getAddress(), Flags);
   }
 
-  if (!ExtraSymbolsToClaim.empty())
+  if (!ExtraSymbolsToClaim.empty()) {
     if (auto Err = R.defineMaterializing(ExtraSymbolsToClaim))
       return Err;
+
+    // If we claimed responsibility for any weak symbols but were rejected then
+    // we need to remove them from the resolved set.
+    for (auto &KV : ExtraSymbolsToClaim)
+      if (KV.second.isWeak() && !R.getSymbols().count(KV.first))
+        Symbols.erase(KV.first);
+  }
 
   if (auto Err = R.notifyResolved(Symbols)) {
     R.failMaterialization();
