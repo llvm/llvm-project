@@ -8,6 +8,7 @@ add_public_tablegen_target(MLIRSPIRVEnumsIncGen)
 set(LLVM_TARGET_DEFINITIONS SPIRVBase.td)
 mlir_tablegen(SPIRVEnumAvailability.h.inc -gen-spirv-enum-avail-decls)
 mlir_tablegen(SPIRVEnumAvailability.cpp.inc -gen-spirv-enum-avail-defs)
+mlir_tablegen(SPIRVCapabilityImplication.inc -gen-spirv-capability-implication)
 add_public_tablegen_target(MLIRSPIRVEnumAvailabilityIncGen)
 
 set(LLVM_TARGET_DEFINITIONS SPIRVOps.td)
