@@ -1305,7 +1305,7 @@ static bool emitCapabilityImplication(const RecordKeeper &recordKeeper,
       continue;
 
     os << "  case Capability::" << enumerant.getSymbol()
-       << ": {static Capability implies[] = {";
+       << ": {static const Capability implies[] = {";
     std::vector<Record *> impliedCapsDefs = def.getValueAsListOfDefs("implies");
     mlir::interleaveComma(impliedCapsDefs, os, [&](const Record *capDef) {
       os << "Capability::" << EnumAttrCase(capDef).getSymbol();
