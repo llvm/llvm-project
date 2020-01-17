@@ -2943,7 +2943,7 @@ void CommandInterpreter::RunCommandInterpreter(
   if (spawn_thread) {
     m_debugger.StartIOHandlerThread();
   } else {
-    m_debugger.ExecuteIOHandlers();
+    m_debugger.RunIOHandlers();
 
     if (auto_handle_events)
       m_debugger.StopEventHandlerThread();
