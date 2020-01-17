@@ -2168,6 +2168,38 @@ TEST_F(FormatTestJS, JSDocAnnotations) {
                    getGoogleJSStyleWithColumns(20)));
 }
 
+TEST_F(FormatTestJS, TslintComments) {
+  // tslint uses pragma comments that must be on their own line.
+  verifyFormat("// Comment that needs wrapping. Comment that needs wrapping. "
+               "Comment that needs\n"
+               "// wrapping. Trailing line.\n"
+               "// tslint:disable-next-line:must-be-on-own-line",
+               "// Comment that needs wrapping. Comment that needs wrapping. "
+               "Comment that needs wrapping.\n"
+               "// Trailing line.\n"
+               "// tslint:disable-next-line:must-be-on-own-line");
+}
+
+TEST_F(FormatTestJS, TscComments) {
+  // As above, @ts-ignore and @ts-check comments must be on their own line.
+  verifyFormat("// Comment that needs wrapping. Comment that needs wrapping. "
+               "Comment that needs\n"
+               "// wrapping. Trailing line.\n"
+               "// @ts-ignore",
+               "// Comment that needs wrapping. Comment that needs wrapping. "
+               "Comment that needs wrapping.\n"
+               "// Trailing line.\n"
+               "// @ts-ignore");
+  verifyFormat("// Comment that needs wrapping. Comment that needs wrapping. "
+               "Comment that needs\n"
+               "// wrapping. Trailing line.\n"
+               "// @ts-check",
+               "// Comment that needs wrapping. Comment that needs wrapping. "
+               "Comment that needs wrapping.\n"
+               "// Trailing line.\n"
+               "// @ts-check");
+}
+
 TEST_F(FormatTestJS, RequoteStringsSingle) {
   verifyFormat("var x = 'foo';", "var x = \"foo\";");
   verifyFormat("var x = 'fo\\'o\\'';", "var x = \"fo'o'\";");
