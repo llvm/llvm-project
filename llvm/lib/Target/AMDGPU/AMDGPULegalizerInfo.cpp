@@ -244,6 +244,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     S32, S64, S16, V2S16
   };
 
+  const LLT MinLegalScalarShiftTy = ST.has16BitInsts() ? S16 : S32;
+
   setAction({G_BRCOND, S1}, Legal); // VCC branches
   setAction({G_BRCOND, S32}, Legal); // SCC branches
 
@@ -1117,7 +1119,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(1);
   }
 
-  getActionDefinitionsBuilder(G_SEXT_INREG).lower();
+  // TODO: Make legal for s32, s64. s64 case needs break down in regbankselect.
+  getActionDefinitionsBuilder(G_SEXT_INREG)
+    .clampScalar(0, MinLegalScalarShiftTy, S64)
+    .lower();
 
   getActionDefinitionsBuilder({G_READ_REGISTER, G_WRITE_REGISTER}).lower();
 
