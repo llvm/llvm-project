@@ -10,7 +10,7 @@ Introduction
 
 This document aims to provide a high-level overview of the design and
 implementation of the ORC JIT APIs. Except where otherwise stated, all
-discussion applies to the design of the APIs as of LLVM version 9 (ORCv2).
+discussion applies to the design of the APIs as of LLVM Version 10 (ORCv2).
 
 Use-cases
 =========
@@ -39,41 +39,42 @@ Features
 
 ORC provides the following features:
 
-- *JIT-linking* links relocatable object files (COFF, ELF, MachO) [1]_ into a
-  target process at runtime. The target process may be the same process that
-  contains the JIT session object and jit-linker, or may be another process
+*JIT-linking*
+  ORC provides APIs to link relocatable object files (COFF, ELF, MachO) [1]_
+  into a target process at runtime. The target process may be the same process
+  that contains the JIT session object and jit-linker, or may be another process
   (even one running on a different machine or architecture) that communicates
   with the JIT via RPC.
 
-- *LLVM IR compilation*, which is provided by off the shelf components
-  (IRCompileLayer, SimpleCompiler, ConcurrentIRCompiler) that make it easy to
-  add LLVM IR to a JIT'd process.
+*LLVM IR compilation*
+  ORC provides off the shelf components (IRCompileLayer, SimpleCompiler,
+  ConcurrentIRCompiler) that make it easy to add LLVM IR to a JIT'd process.
 
-- *Eager and lazy compilation*. By default, ORC will compile symbols as soon as
-  they are looked up in the JIT session object (``ExecutionSession``). Compiling
-  eagerly by default makes it easy to use ORC as a simple in-memory compiler for
-  an existing JIT. ORC also provides a simple mechanism, lazy-reexports, for
-  deferring compilation until first call.
+*Eager and lazy compilation*
+  By default, ORC will compile symbols as soon as they are looked up in the JIT
+  session object (``ExecutionSession``). Compiling eagerly by default makes it
+  easy to use ORC as a simple in-memory compiler within an existing JIT
+  infrastructure. However ORC also provides support for lazy compilation via
+  lazy-reexports (see Laziness_).
 
-- *Support for custom compilers and program representations*. Clients can supply
-  custom compilers for each symbol that they define in their JIT session. ORC
-  will run the user-supplied compiler when the a definition of a symbol is
-  needed. ORC is actually fully language agnostic: LLVM IR is not treated
-  specially, and is supported via the same wrapper mechanism (the
+*Support for Custom Compilers and Program Representations*
+  Clients can supply custom compilers for each symbol that they define in their
+  JIT session. ORC will run the user-supplied compiler when the a definition of
+  a symbol is needed. ORC is actually fully language agnostic: LLVM IR is not
+  treated specially, and is supported via the same wrapper mechanism (the
   ``MaterializationUnit`` class) that is used for custom compilers.
 
-- *Concurrent JIT'd code* and *concurrent compilation*. JIT'd code may spawn
-  multiple threads, and may re-enter the JIT (e.g. for lazy compilation)
-  concurrently from multiple threads. The ORC APIs also support running multiple
-  compilers concurrently, and provides off-the-shelf infrastructure to track
-  dependencies on running compiles (e.g. to ensure that we never call into code
-  until it is safe to do so, even if that involves waiting on multiple
-  compiles).
+*Concurrent JIT'd code* and *Concurrent Compilation*
+  JIT'd code may spawn multiple threads, and may re-enter the JIT (e.g. for lazy
+  compilation) concurrently from multiple threads. The ORC APIs also support
+  running multiple compilers concurrently. Built-in dependency tracking (via the
+  JIT linker) ensures that ORC does not release code for execution until it is
+  safe to call.
 
-- *Orthogonality* and *composability*: Each of the features above can be used (or
-  not) independently. It is possible to put ORC components together to make a
-  non-lazy, in-process, single threaded JIT or a lazy, out-of-process,
-  concurrent JIT, or anything in between.
+*Orthogonality* and *Composability*
+  Each of the features above can be used (or not) independently. It is possible
+  to put ORC components together to make a non-lazy, in-process, single threaded
+  JIT or a lazy, out-of-process, concurrent JIT, or anything in between.
 
 LLJIT and LLLazyJIT
 ===================
@@ -198,7 +199,7 @@ checking omitted for brevity) as:
   auto MainSym = ExitOnErr(ES.lookup({&ES.getMainJITDylib()}, "main"));
   auto *Main = (int(*)(int, char*[]))MainSym.getAddress();
 
-v  int Result = Main(...);
+  int Result = Main(...);
 
 This example tells us nothing about *how* or *when* compilation will happen.
 That will depend on the implementation of the hypothetical CXXCompilingLayer.
@@ -288,11 +289,119 @@ of them, but Layer authors will use them:
   that must be materialized and provides a way to notify the JITDylib once they
   are either successfully materialized or a failure occurs.
 
-Handy utilities
-===============
+Absolute Symbols, Aliases, and Reexports
+========================================
 
-TBD: absolute symbols, aliases, off-the-shelf layers.
+ORC makes it easy to define symbols with absolute addresses, or symbols that
+are simply aliases of other symbols:
 
+Absolute Symbols
+----------------
+
+Absolute symbols are symbols that map directly to addresses without requiring
+further materialization, for example: "foo" = 0x1234. One use case for
+absolute symbols is allowing resolution of process symbols. E.g.
+
+.. code-block: c++
+
+  JD.define(absoluteSymbols(SymbolMap({
+      { Mangle("printf"),
+        { pointerToJITTargetAddress(&printf),
+          JITSymbolFlags::Callable } }
+    });
+
+With this mapping established code added to the JIT can refer to printf
+symbolically rather than requiring the address of printf to be "baked in".
+This in turn allows cached versions of the JIT'd code (e.g. compiled objects)
+to be re-used across JIT sessions as the JIT'd code no longer changes, only the
+absolute symbol definition does.
+
+For process and library symbols the DynamicLibrarySearchGenerator utility (See
+ProcessAndLibrarySymbols_) can be used to automatically build absolute symbol
+mappings for you. However the absoluteSymbols function is still useful for
+making non-global objects in your JIT visible to JIT'd code. For example,
+imagine that your JIT standard library needs access to your JIT object to make
+some calls. We could bake the address of your object into the library, but then
+it would need to be recompiled for each session:
+
+.. code-block: c++
+
+  // From standard library for JIT'd code:
+
+  class MyJIT {
+  public:
+    void log(const char *Msg);
+  };
+
+  void log(const char *Msg) { ((MyJIT*)0x1234)->log(Msg); }
+
+We can turn this into a symbolic reference in the JIT standard library:
+
+.. code-block: c++
+
+  extern MyJIT *__MyJITInstance;
+
+  void log(const char *Msg) { __MyJITInstance->log(Msg); }
+
+And then make our JIT object visible to the JIT standard library with an
+absolute symbol definition when the JIT is started:
+
+.. code-block: c++
+
+  MyJIT J = ...;
+
+  auto &JITStdLibJD = ... ;
+
+  JITStdLibJD.define(absoluteSymbols(SymbolMap({
+      { Mangle("__MyJITInstance"),
+        { pointerToJITTargetAddress(&J), JITSymbolFlags() } }
+    });
+
+Aliases and Reexports
+---------------------
+
+Aliases and reexports allow you to define new symbols that map to existing
+symbols. This can be useful for changing linkage relationships between symbols
+across sessions without having to recompile code. For example, imagine that
+JIT'd code has access to a log function, ``void log(const char*)`` for which
+there are two implementations in the JIT standard library: ``log_fast`` and
+``log_detailed``. Your JIT can choose which one of these definitions will be
+used when the ``log`` symbol is referenced by setting up an alias at JIT startup
+time:
+
+.. code-block: c++
+
+  auto &JITStdLibJD = ... ;
+
+  auto LogImplementationSymbol =
+   Verbose ? Mangle("log_detailed") : Mangle("log_fast");
+
+  JITStdLibJD.define(
+    symbolAliases(SymbolAliasMap({
+        { Mangle("log"),
+          { LogImplementationSymbol
+            JITSymbolFlags::Exported | JITSymbolFlags::Callable } }
+      });
+
+The ``symbolAliases`` function allows you to define aliases within a single
+JITDylib. The ``reexports`` function provides the same functionality, but
+operates across JITDylib boundaries. E.g.
+
+.. code-block: c++
+
+  auto &JD1 = ... ;
+  auto &JD2 = ... ;
+
+  // Make 'bar' in JD2 an alias for 'foo' from JD1.
+  JD2.define(
+    reexports(JD1, SymbolAliasMap({
+        { Mangle("bar"), { Mangle("foo"), JITSymbolFlags::Exported } }
+      });
+
+The reexports utility can be handy for composing a single JITDylib interface by
+re-exporting symbols from several other JITDylibs.
+
+.. _Laziness:
 Laziness
 ========
 
@@ -570,6 +679,7 @@ all modules on the same context:
       CompileLayer.add(ES.getMainJITDylib(), ThreadSafeModule(std::move(TSM));
     }
 
+.. _ProcessAndLibrarySymbols:
 How to Add Process and Library Symbols to the JITDylibs
 =======================================================
 
