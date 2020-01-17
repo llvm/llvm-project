@@ -504,9 +504,8 @@ struct PointerLikeTypeTraits<
   static void *getAsVoidPointer(Ptr P) { return P.getOpaqueValue(); }
   static Ptr getFromVoidPointer(void *P) { return Ptr::getFromOpaqueValue(P); }
 
-  enum {
-    NumLowBitsAvailable = PointerLikeTypeTraits<T>::NumLowBitsAvailable - 1
-  };
+  static constexpr int NumLowBitsAvailable =
+      PointerLikeTypeTraits<T>::NumLowBitsAvailable - 1;
 };
 
 } // namespace llvm

@@ -147,7 +147,7 @@ namespace llvm {
       return clang::DeclGroupRef::getFromOpaquePtr(P);
     }
 
-    enum { NumLowBitsAvailable = 0 };
+    static constexpr int NumLowBitsAvailable = 0;
   };
 
 } // namespace llvm
