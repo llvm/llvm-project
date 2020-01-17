@@ -124,6 +124,10 @@ if(swift IN_LIST LLVM_EXTERNAL_PROJECTS)
 endif()
 # END Swift Mods
 
+if (LLDB_BUILT_STANDALONE)
+  set(LLVM_HOST_TRIPLE ${TARGET_TRIPLE})
+endif()
+
 add_lldb_test_dependency(
   lit-cpuid
   llc
