@@ -46,11 +46,6 @@ sections with improvements to Clang's support for those languages.
 Major New Features
 ------------------
 
-- clang used to run the actual compilation in a subprocess ("clang -cc1").
-  Now compilations are done in-process by default. ``-fno-integrated-cc1``
-  restores the former behavior. The ``-v`` and ``-###`` flags will print
-  "(in-process)" when compilations are done in-process.
-
 - ...
 
 Improvements to Clang's diagnostics
