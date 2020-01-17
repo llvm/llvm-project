@@ -5460,8 +5460,11 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
   unsigned DimIdx = AddrIdx + BaseOpcode->NumExtraArgs;
   MVT VAddrVT = Op.getOperand(DimIdx).getSimpleValueType();
   const MVT VAddrScalarVT = VAddrVT.getScalarType();
-  if (((VAddrScalarVT == MVT::f16) || (VAddrScalarVT == MVT::i16)) &&
-      ST->hasFeature(AMDGPU::FeatureR128A16)) {
+  if (((VAddrScalarVT == MVT::f16) || (VAddrScalarVT == MVT::i16))) {
+    // Illegal to use a16 images
+    if (!ST->hasFeature(AMDGPU::FeatureR128A16))
+      return Op;
+
     IsA16 = true;
     const MVT VectorVT = VAddrScalarVT == MVT::f16 ? MVT::v2f16 : MVT::v2i16;
     for (unsigned i = AddrIdx; i < (AddrIdx + NumMIVAddrs); ++i) {
