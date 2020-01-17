@@ -2,8 +2,6 @@ from __future__ import absolute_import
 
 # System modules
 import time
-#import numpy
-from lldbsuite.test.lldbtest import *
 
 # Third-party modules
 
