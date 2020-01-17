@@ -284,11 +284,9 @@ TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
 
     // Check whether the PCH was cached.
     if (ShouldCache)
-      EXPECT_EQ(InMemoryModuleCache::Final,
-                Compiler.getModuleCache().getPCMState(PCHFilename));
+      EXPECT_TRUE(Compiler.getModuleCache().isPCMFinal(PCHFilename));
     else
-      EXPECT_EQ(InMemoryModuleCache::Unknown,
-                Compiler.getModuleCache().getPCMState(PCHFilename));
+      EXPECT_EQ(nullptr, Compiler.getModuleCache().lookupPCM(PCHFilename));
   }
 }
 
