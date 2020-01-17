@@ -141,7 +141,7 @@ body:             |
   ; CHECK-LABEL: name: arm_elementwise_mul_s8
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
-  ; CHECK:   liveins: $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7, $lr
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3, $r4, $r5, $r6, $r7
   ; CHECK:   frame-setup tPUSH 14, $noreg, killed $r4, killed $r5, killed $r6, killed $r7, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 20
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
@@ -171,7 +171,7 @@ body:             |
   ; CHECK:   renamable $q2 = MVE_VMAXu32 killed renamable $q2, renamable $q1, 0, $noreg, undef renamable $q2
   ; CHECK:   renamable $q2 = MVE_VMINu32 killed renamable $q2, renamable $q0, 0, $noreg, undef renamable $q2
   ; CHECK:   renamable $r5 = MVE_VSTRWU32_post killed renamable $q2, killed renamable $r5, 4, 0, killed $noreg :: (store 16 into %ir.output_cast, align 4)
-  ; CHECK:   $lr = MVE_LETP renamable $lr, %bb.2
+  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK: bb.3.for.cond.cleanup:
   ; CHECK:   $r0, dead $cpsr = tMOVi8 0, 14, $noreg
   ; CHECK:   tPOP_RET 14, $noreg, def $r4, def $r5, def $r6, def $r7, def $pc, implicit killed $r0
