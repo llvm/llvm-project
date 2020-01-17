@@ -16,12 +16,14 @@
 namespace llvm {
 
 enum class TapirTargetID {
-  None,    // Perform no lowering
-  Serial,  // FIXME: Make this option useful.  Perhaps only outline tasks?
-  Cilk,    // Lower to the Cilk Plus ABI
-  OpenMP,  // Lower to OpenMP
-  CilkR,   // Lower to the CilkR ABI
-  Cheetah, // Lower to the Cheetah ABI
+  None,     // Perform no lowering
+  Serial,   // Lower to serial projection
+  Cheetah,  // Lower to the Cheetah ABI
+  Cilk,     // Lower to the Cilk Plus ABI
+  CilkR,    // Lower to the CilkR ABI
+  Cuda,     // Lower to Cuda ABI
+  OpenMP,   // Lower to OpenMP
+  Qthreads, // Lower to Qthreads
   Last_TapirTargetID
 };
 

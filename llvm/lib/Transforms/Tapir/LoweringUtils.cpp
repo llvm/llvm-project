@@ -19,8 +19,11 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Transforms/Tapir/CilkABI.h"
 #include "llvm/Transforms/Tapir/CilkRABI.h"
+#include "llvm/Transforms/Tapir/CudaABI.h"
 #include "llvm/Transforms/Tapir/OpenMPABI.h"
 #include "llvm/Transforms/Tapir/Outline.h"
+#include "llvm/Transforms/Tapir/QthreadsABI.h"
+#include "llvm/Transforms/Tapir/SerialABI.h"
 #include "llvm/Transforms/Tapir/TapirLoopInfo.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -35,16 +38,21 @@ static const char TimerGroupDescription[] = "Tapir lowering";
 
 TapirTarget *llvm::getTapirTargetFromID(Module &M, TapirTargetID ID) {
   switch (ID) {
+  case TapirTargetID::None:
+    return nullptr;
+  case TapirTargetID::Serial:
+    return new SerialABI(M);
   case TapirTargetID::Cilk:
     return new CilkABI(M);
-  case TapirTargetID::OpenMP:
-    return new OpenMPABI(M);
   case TapirTargetID::CilkR:
   case TapirTargetID::Cheetah:
     return new CilkRABI(M);
-  case TapirTargetID::None:
-  case TapirTargetID::Serial:
-    return nullptr;
+  case TapirTargetID::Cuda:
+    return new CudaABI(M);
+  case TapirTargetID::OpenMP:
+    return new OpenMPABI(M);
+  case TapirTargetID::Qthreads:
+    return new QthreadsABI(M);
   default:
     llvm_unreachable("Invalid TapirTargetID");
   }
