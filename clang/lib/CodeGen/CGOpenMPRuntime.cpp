@@ -1517,7 +1517,7 @@ static llvm::Function *emitParallelOrTeamsOutlinedFunction(
   CGOpenMPOutlinedRegionInfo CGInfo(*CS, ThreadIDVar, CodeGen, InnermostKind,
                                     HasCancel, OutlinedHelperName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
-  return CGF.GenerateOpenMPCapturedStmtFunction(*CS);
+  return CGF.GenerateOpenMPCapturedStmtFunction(*CS, D.getBeginLoc());
 }
 
 llvm::Function *CGOpenMPRuntime::emitParallelOutlinedFunction(
@@ -3772,6 +3772,7 @@ void CGOpenMPRuntime::emitForStaticInit(CodeGenFunction &CGF,
   llvm::Value *ThreadId = getThreadID(CGF, Loc);
   llvm::FunctionCallee StaticInitFunction =
       createForStaticInitFunction(Values.IVSize, Values.IVSigned);
+  auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
   emitForStaticInitCall(CGF, UpdatedLocation, ThreadId, StaticInitFunction,
                         ScheduleNum, ScheduleKind.M1, ScheduleKind.M2, Values);
 }
@@ -3806,6 +3807,7 @@ void CGOpenMPRuntime::emitForStaticFinish(CodeGenFunction &CGF,
                                    ? OMP_IDENT_WORK_LOOP
                                    : OMP_IDENT_WORK_SECTIONS),
       getThreadID(CGF, Loc)};
+  auto DL = ApplyDebugLocation::CreateDefaultArtificial(CGF, Loc);
   CGF.EmitRuntimeCall(createRuntimeFunction(OMPRTL__kmpc_for_static_fini),
                       Args);
 }
@@ -6484,7 +6486,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
   CGOpenMPTargetRegionInfo CGInfo(CS, CodeGen, EntryFnName);
   CodeGenFunction::CGCapturedStmtRAII CapInfoRAII(CGF, &CGInfo);
 
-  OutlinedFn = CGF.GenerateOpenMPCapturedStmtFunction(CS);
+  OutlinedFn = CGF.GenerateOpenMPCapturedStmtFunction(CS, D.getBeginLoc());
 
   // If this target outline function is not an offload entry, we don't need to
   // register it.
