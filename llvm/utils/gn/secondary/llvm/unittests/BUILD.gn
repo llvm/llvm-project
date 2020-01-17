@@ -66,7 +66,10 @@ group("unittests") {
     deps += [ "tools/llvm-exegesis/Mips:LLVMExegesisMipsTests" ]
   }
   if (llvm_build_PowerPC) {
-    deps += [ "tools/llvm-exegesis/PowerPC:LLVMExegesisPowerPCTests" ]
+    deps += [
+      "Target/PowerPC:PowerPCTests",
+      "tools/llvm-exegesis/PowerPC:LLVMExegesisPowerPCTests",
+    ]
   }
   if (llvm_build_WebAssembly) {
     deps += [ "Target/WebAssembly:WebAssemblyTests" ]
