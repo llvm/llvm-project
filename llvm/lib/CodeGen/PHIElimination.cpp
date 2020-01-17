@@ -210,11 +210,6 @@ bool PHIElimination::EliminatePHINodes(MachineFunction &MF,
   MachineBasicBlock::iterator LastPHIIt =
     std::prev(MBB.SkipPHIsAndLabels(MBB.begin()));
 
-  assert((LastPHIIt == skipDebugInstructionsBackward(
-            std::prev(MBB.SkipPHIsLabelsAndDebug(MBB.begin())),
-            MBB.begin())) &&
-         "There must be no DBG_VALUEs between PHI and LABEL");
-
   while (MBB.front().isPHI())
     LowerPHINode(MBB, LastPHIIt);
 

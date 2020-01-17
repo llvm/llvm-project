@@ -273,7 +273,6 @@ namespace {
     void markReachable(const MachineBasicBlock *MBB);
     void calcRegsPassed();
     void checkPHIOps(const MachineBasicBlock &MBB);
-    void checkPHIDbg(const MachineBasicBlock &MBB);
 
     void calcRegsRequired();
     void verifyLiveVariables();
@@ -2263,31 +2262,11 @@ void MachineVerifier::checkPHIOps(const MachineBasicBlock &MBB) {
   }
 }
 
-// Check there must be no DBG_VALUEs between PHIs and LABELs, so that
-// the PHIs could lower after LABELs successfully without dbg barriers.
-void MachineVerifier::checkPHIDbg(const MachineBasicBlock &MBB) {
-
-  // Quick exit for basic blocks without PHIs.
-  if (MBB.empty() || !MBB.front().isPHI())
-    return;
-
-  MachineBasicBlock &MBB2 = const_cast<MachineBasicBlock &>(MBB);
-  MachineBasicBlock::iterator LastPHIIt =
-    std::prev(MBB2.SkipPHIsAndLabels(MBB2.begin()));
-  // Backward to skip debug if the lastPHIIt is DBG_VALUE, the LastPHIIt
-  // should be the same if no DBG_VALUEs between PHIs and LABELs.
-  if (LastPHIIt != skipDebugInstructionsBackward(
-          std::prev(MBB2.SkipPHIsLabelsAndDebug(MBB2.begin())), MBB2.begin()))
-    report("Unexpected DBG_VALUEs between PHI and LABEL", &MBB2);
-}
-
 void MachineVerifier::visitMachineFunctionAfter() {
   calcRegsPassed();
 
-  for (const MachineBasicBlock &MBB : *MF) {
+  for (const MachineBasicBlock &MBB : *MF)
     checkPHIOps(MBB);
-    checkPHIDbg(MBB);
-  }
 
   // Now check liveness info if available
   calcRegsRequired();
