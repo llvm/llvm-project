@@ -586,7 +586,8 @@ TEST(ConstantsTest, FoldGlobalVariablePtr) {
 }
 
 // Check that undefined elements in vector constants are matched
-// correctly for both integer and floating-point types.
+// correctly for both integer and floating-point types. Just don't
+// crash on vectors of pointers (could be handled?).
 
 TEST(ConstantsTest, isElementWiseEqual) {
   LLVMContext Context;
@@ -607,7 +608,6 @@ TEST(ConstantsTest, isElementWiseEqual) {
   EXPECT_FALSE(C12U1->isElementWiseEqual(C12U2));
   EXPECT_FALSE(C12U21->isElementWiseEqual(C12U2));
 
-/* FIXME: This will crash.
   Type *FltTy = Type::getFloatTy(Context);
   Constant *CFU = UndefValue::get(FltTy);
   Constant *CF1 = ConstantFP::get(FltTy, 1.0);
@@ -621,7 +621,19 @@ TEST(ConstantsTest, isElementWiseEqual) {
   EXPECT_TRUE(CF12U1->isElementWiseEqual(CF1211));
   EXPECT_FALSE(CF12U2->isElementWiseEqual(CF12U1));
   EXPECT_FALSE(CF12U1->isElementWiseEqual(CF12U2));
-*/
+
+  PointerType *PtrTy = Type::getInt8PtrTy(Context);
+  Constant *CPU = UndefValue::get(PtrTy);
+  Constant *CP0 = ConstantPointerNull::get(PtrTy);
+
+  Constant *CP0000 = ConstantVector::get({CP0, CP0, CP0, CP0});
+  Constant *CP00U0 = ConstantVector::get({CP0, CP0, CPU, CP0});
+  Constant *CP00U = ConstantVector::get({CP0, CP0, CPU});
+
+  EXPECT_FALSE(CP0000->isElementWiseEqual(CP00U0));
+  EXPECT_FALSE(CP00U0->isElementWiseEqual(CP0000));
+  EXPECT_FALSE(CP0000->isElementWiseEqual(CP00U));
+  EXPECT_FALSE(CP00U->isElementWiseEqual(CP00U0));
 }
 
 }  // end anonymous namespace
