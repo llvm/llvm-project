@@ -214,6 +214,7 @@ defm : SLMWriteResPair<WriteFCmp64X,  [SLM_FPC_RSV1], 3>;
 defm : SLMWriteResPair<WriteFCmp64Y,  [SLM_FPC_RSV1], 3>;
 defm : X86WriteResPairUnsupported<WriteFCmp64Z>;
 defm : SLMWriteResPair<WriteFCom,     [SLM_FPC_RSV1], 3>;
+defm : SLMWriteResPair<WriteFComX,    [SLM_FPC_RSV1], 3>;
 defm : SLMWriteResPair<WriteFMul,     [SLM_FPC_RSV0, SLMFPMultiplier], 5, [1,2]>;
 defm : SLMWriteResPair<WriteFMulX,    [SLM_FPC_RSV0, SLMFPMultiplier], 5, [1,2]>;
 defm : SLMWriteResPair<WriteFMulY,    [SLM_FPC_RSV0, SLMFPMultiplier], 5, [1,2]>;

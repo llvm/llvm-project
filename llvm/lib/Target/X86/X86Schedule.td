@@ -250,7 +250,8 @@ defm WriteFCmp64  : X86SchedWritePair<ReadAfterVecLd>;  // Floating point double
 defm WriteFCmp64X : X86SchedWritePair<ReadAfterVecXLd>; // Floating point double compare (XMM).
 defm WriteFCmp64Y : X86SchedWritePair<ReadAfterVecYLd>; // Floating point double compare (YMM).
 defm WriteFCmp64Z : X86SchedWritePair<ReadAfterVecYLd>; // Floating point double compare (ZMM).
-defm WriteFCom    : X86SchedWritePair<ReadAfterVecLd>;  // Floating point compare to flags.
+defm WriteFCom    : X86SchedWritePair<ReadAfterVecLd>;  // Floating point compare to flags (X87).
+defm WriteFComX   : X86SchedWritePair<ReadAfterVecLd>;  // Floating point compare to flags (SSE).
 defm WriteFMul    : X86SchedWritePair<ReadAfterVecLd>;  // Floating point multiplication.
 defm WriteFMulX   : X86SchedWritePair<ReadAfterVecXLd>; // Floating point multiplication (XMM).
 defm WriteFMulY   : X86SchedWritePair<ReadAfterVecYLd>; // Floating point multiplication (YMM).

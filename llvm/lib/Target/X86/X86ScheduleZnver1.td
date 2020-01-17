@@ -295,6 +295,7 @@ defm : ZnWriteResFpuPair<WriteFCmp64X,   [ZnFPU0],  3>;
 defm : ZnWriteResFpuPair<WriteFCmp64Y,   [ZnFPU0],  3>;
 defm : X86WriteResPairUnsupported<WriteFCmp64Z>;
 defm : ZnWriteResFpuPair<WriteFCom,      [ZnFPU0],  3>;
+defm : ZnWriteResFpuPair<WriteFComX,     [ZnFPU0],  3>;
 defm : ZnWriteResFpuPair<WriteFBlend,    [ZnFPU01], 1>;
 defm : ZnWriteResFpuPair<WriteFBlendY,   [ZnFPU01], 1>;
 defm : X86WriteResPairUnsupported<WriteFBlendZ>;

@@ -1830,7 +1830,7 @@ let Constraints = "$src1 = $dst" in {
 multiclass sse12_ord_cmp<bits<8> opc, RegisterClass RC, SDNode OpNode,
                          ValueType vt, X86MemOperand x86memop,
                          PatFrag ld_frag, string OpcodeStr, Domain d,
-                         X86FoldableSchedWrite sched = WriteFCom> {
+                         X86FoldableSchedWrite sched = WriteFComX> {
 let hasSideEffects = 0, Uses = [MXCSR], mayRaiseFPException = 1,
     ExeDomain = d in {
   def rr: SI<opc, MRMSrcReg, (outs), (ins RC:$src1, RC:$src2),
@@ -1851,7 +1851,7 @@ multiclass sse12_ord_cmp_int<bits<8> opc, RegisterClass RC, SDNode OpNode,
                              ValueType vt, Operand memop,
                              ComplexPattern mem_cpat, string OpcodeStr,
                              Domain d,
-                             X86FoldableSchedWrite sched = WriteFCom> {
+                             X86FoldableSchedWrite sched = WriteFComX> {
 let Uses = [MXCSR], mayRaiseFPException = 1, ExeDomain = d in {
   def rr_Int: SI<opc, MRMSrcReg, (outs), (ins RC:$src1, RC:$src2),
                      !strconcat(OpcodeStr, "\t{$src2, $src1|$src1, $src2}"),

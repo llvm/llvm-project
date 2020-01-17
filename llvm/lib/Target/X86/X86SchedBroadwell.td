@@ -260,7 +260,8 @@ defm : BWWriteResPair<WriteFCmp64X, [BWPort1],  3, [1], 1, 5>; // Floating point
 defm : BWWriteResPair<WriteFCmp64Y, [BWPort1],  3, [1], 1, 6>; // Floating point double compare (YMM/ZMM).
 defm : X86WriteResPairUnsupported<WriteFCmp64Z>;
 
-defm : BWWriteResPair<WriteFCom,    [BWPort1],  3>; // Floating point compare to flags.
+defm : BWWriteResPair<WriteFCom,    [BWPort1],  3>; // Floating point compare to flags (X87).
+defm : BWWriteResPair<WriteFComX,   [BWPort1],  3>; // Floating point compare to flags (SSE).
 
 defm : BWWriteResPair<WriteFMul,    [BWPort01], 3, [1], 1, 5>; // Floating point multiplication.
 defm : BWWriteResPair<WriteFMulX,   [BWPort01], 3, [1], 1, 5>; // Floating point multiplication (XMM).
