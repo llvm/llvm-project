@@ -201,7 +201,7 @@ public:
   bool RemoveIOHandler(const lldb::IOHandlerSP &reader_sp);
 
   ///  Remove the given IO handlers if it's currently active.
-  bool RemoveIOHandlers(const lldb::IOHandlerSP &reader1_sp,
+  uint32_t RemoveIOHandlers(const lldb::IOHandlerSP &reader1_sp,
                         const lldb::IOHandlerSP &reader2_sp);
 
   bool IsTopIOHandler(const lldb::IOHandlerSP &reader_sp);
@@ -325,9 +325,9 @@ public:
 
   Status RunREPL(lldb::LanguageType language, const char *repl_options);
 
-  bool REPLIsActive() { return m_input_reader_stack.REPLIsActive(); }
+  bool REPLIsActive() { return m_io_handler_stack.REPLIsActive(); }
 
-  bool REPLIsEnabled() { return m_input_reader_stack.REPLIsEnabled(); }
+  bool REPLIsEnabled() { return m_io_handler_stack.REPLIsEnabled(); }
 
   // This is for use in the command interpreter, when you either want the
   // selected target, or if no target is present you want to prime the dummy
