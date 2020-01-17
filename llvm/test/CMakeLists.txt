@@ -80,6 +80,7 @@ set(LLVM_TEST_DEPENDS
           llvm-lto2
           llvm-mc
           llvm-mca
+          llvm-ml
           llvm-modextract
           llvm-mt
           llvm-nm
