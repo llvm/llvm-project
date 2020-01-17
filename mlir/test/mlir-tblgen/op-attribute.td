@@ -186,6 +186,11 @@ def DOp : NS_Op<"d_op", []> {
 // DECL-LABEL: DOp declarations
 // DECL: static void build({{.*}}, APInt i32_attr, APFloat f64_attr, StringRef str_attr, bool bool_attr, ::SomeI32Enum enum_attr, APInt dv_i32_attr, APFloat dv_f64_attr, StringRef dv_str_attr = "abc", bool dv_bool_attr = true, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
 
+// DEF-LABEL: DOp definitions
+// DEF: odsState.addAttribute("str_attr", (*odsBuilder).getStringAttr(str_attr));
+// DEF: odsState.addAttribute("dv_str_attr", (*odsBuilder).getStringAttr(dv_str_attr));
+
+
 // Test that only default valued attributes at the end of the arguments
 // list get default values in the builder signature
 // ---

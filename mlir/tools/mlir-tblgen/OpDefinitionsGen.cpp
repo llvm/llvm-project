@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Support/STLExtras.h"
+#include "mlir/Support/StringExtras.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/OpClass.h"
@@ -90,6 +91,17 @@ static const char *const opCommentHeader = R"(
 //===----------------------------------------------------------------------===//
 // Utility structs and functions
 //===----------------------------------------------------------------------===//
+
+// Replaces all occurrences of `match` in `str` with `substitute`.
+static std::string replaceAllSubstrs(std::string str, const std::string &match,
+                                     const std::string &substitute) {
+  std::string::size_type scanLoc = 0, matchLoc = std::string::npos;
+  while ((matchLoc = str.find(match, scanLoc)) != std::string::npos) {
+    str = str.replace(matchLoc, match.size(), substitute);
+    scanLoc = matchLoc + substitute.size();
+  }
+  return str;
+}
 
 // Returns whether the record has a value of the given name that can be returned
 // via getValueAsString.
@@ -968,8 +980,17 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
         // instance.
         FmtContext fctx;
         fctx.withBuilder("(*odsBuilder)");
-        std::string value =
-            tgfmt(attr.getConstBuilderTemplate(), &fctx, namedAttr.name);
+
+        std::string builderTemplate = attr.getConstBuilderTemplate();
+
+        // For StringAttr, its constant builder call will wrap the input in
+        // quotes, which is correct for normal string literals, but incorrect
+        // here given we use function arguments. So we need to strip the
+        // wrapping quotes.
+        if (StringRef(builderTemplate).contains("\"$0\""))
+          builderTemplate = replaceAllSubstrs(builderTemplate, "\"$0\"", "$0");
+
+        std::string value = tgfmt(builderTemplate, &fctx, namedAttr.name);
         body << formatv("  {0}.addAttribute(\"{1}\", {2});\n", builderOpState,
                         namedAttr.name, value);
       } else {
