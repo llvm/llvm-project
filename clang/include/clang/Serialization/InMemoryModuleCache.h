@@ -45,61 +45,35 @@ class InMemoryModuleCache : public llvm::RefCountedBase<InMemoryModuleCache> {
   llvm::StringMap<PCM> PCMs;
 
 public:
-  /// There are four states for a PCM.  It must monotonically increase.
-  ///
-  ///  1. Unknown: the PCM has neither been read from disk nor built.
-  ///  2. Tentative: the PCM has been read from disk but not yet imported or
-  ///     built.  It might work.
-  ///  3. ToBuild: the PCM read from disk did not work but a new one has not
-  ///     been built yet.
-  ///  4. Final: indicating that the current PCM was either built in this
-  ///     process or has been successfully imported.
-  enum State { Unknown, Tentative, ToBuild, Final };
-
-  /// Get the state of the PCM.
-  State getPCMState(llvm::StringRef Filename) const;
-
   /// Store the PCM under the Filename.
   ///
-  /// \pre state is Unknown
-  /// \post state is Tentative
+  /// \pre PCM for the same Filename shouldn't be in cache already.
   /// \return a reference to the buffer as a convenience.
   llvm::MemoryBuffer &addPCM(llvm::StringRef Filename,
                              std::unique_ptr<llvm::MemoryBuffer> Buffer);
 
-  /// Store a just-built PCM under the Filename.
+  /// Store a final PCM under the Filename.
   ///
-  /// \pre state is Unknown or ToBuild.
-  /// \pre state is not Tentative.
+  /// \pre PCM for the same Filename shouldn't be in cache already.
   /// \return a reference to the buffer as a convenience.
-  llvm::MemoryBuffer &addBuiltPCM(llvm::StringRef Filename,
+  llvm::MemoryBuffer &addFinalPCM(llvm::StringRef Filename,
                                   std::unique_ptr<llvm::MemoryBuffer> Buffer);
 
-  /// Try to remove a buffer from the cache.  No effect if state is Final.
+  /// Try to remove a PCM from the cache.  No effect if it is Final.
   ///
-  /// \pre state is Tentative/Final.
-  /// \post Tentative => ToBuild or Final => Final.
-  /// \return false on success, i.e. if Tentative => ToBuild.
-  bool tryToDropPCM(llvm::StringRef Filename);
+  /// \return false on success.
+  bool tryToRemovePCM(llvm::StringRef Filename);
 
   /// Mark a PCM as final.
-  ///
-  /// \pre state is Tentative or Final.
-  /// \post state is Final.
   void finalizePCM(llvm::StringRef Filename);
 
-  /// Get a pointer to the pCM if it exists; else nullptr.
+  /// Get a pointer to the PCM if it exists; else nullptr.
   llvm::MemoryBuffer *lookupPCM(llvm::StringRef Filename) const;
 
   /// Check whether the PCM is final and has been shown to work.
   ///
   /// \return true iff state is Final.
   bool isPCMFinal(llvm::StringRef Filename) const;
-
-  /// Check whether the PCM is waiting to be built.
-  ///
-  /// \return true iff state is ToBuild.
-  bool shouldBuildPCM(llvm::StringRef Filename) const;
 };
 
 } // end namespace clang
