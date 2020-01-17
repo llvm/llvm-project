@@ -132,8 +132,15 @@ set(generated_mach_interfaces
   ${CMAKE_CURRENT_BINARY_DIR}/mach_excServer.c
   ${CMAKE_CURRENT_BINARY_DIR}/mach_excUser.c
   )
+
+set(MIG_ARCH_FLAGS "")
+foreach(ARCH ${CMAKE_OSX_ARCHITECTURES})
+  set(MIG_ARCH_FLAGS "${MIG_ARCH_FLAGS} -arch ${ARCH}")
+endforeach()
+separate_arguments(MIG_ARCH_FLAGS_SEPARTED NATIVE_COMMAND "${MIG_ARCH_FLAGS}")
+
 add_custom_command(OUTPUT ${generated_mach_interfaces}
-  COMMAND mig ${CMAKE_CURRENT_SOURCE_DIR}/MacOSX/dbgnub-mig.defs
+  VERBATIM COMMAND mig ${MIG_ARCH_FLAGS_SEPARTED} -isysroot ${CMAKE_OSX_SYSROOT} ${CMAKE_CURRENT_SOURCE_DIR}/MacOSX/dbgnub-mig.defs
   DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/MacOSX/dbgnub-mig.defs
   )
 
