@@ -184,14 +184,16 @@ Operation *mlir::edsc::makeGenericLinalgOp(
                              ? getElementTypeOrSelf(it.value())
                              : it.value().getType());
 
-  assert(op->getRegions().front().empty());
-  op->getRegions().front().push_front(new Block);
-  OpBuilder bb(op->getRegions().front());
-  ScopedContext scope(bb, op->getLoc());
+  assert(op->getNumRegions() == 1);
+  assert(op->getRegion(0).empty());
+  OpBuilder opBuilder(op);
+  ScopedContext scope(opBuilder, op->getLoc());
   BlockHandle b;
   auto handles = makeValueHandles(blockTypes);
-  BlockBuilder(&b, makeHandlePointers(MutableArrayRef<ValueHandle>(handles)))(
+  BlockBuilder(&b, op->getRegion(0),
+               makeHandlePointers(MutableArrayRef<ValueHandle>(handles)))(
       [&] { regionBuilder(b.getBlock()->getArguments()); });
+  assert(op->getRegion(0).getBlocks().size() == 1);
   return op;
 }
 
