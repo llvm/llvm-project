@@ -2421,10 +2421,11 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
   assert(!isSigned && "Legalize cannot Expand SINT_TO_FP for i64 yet");
 
   // TODO: Generalize this for use with other types.
-  if (SrcVT == MVT::i64 && DestVT == MVT::f32) {
-    LLVM_DEBUG(dbgs() << "Converting unsigned i64 to f32\n");
+  if ((SrcVT == MVT::i32 || SrcVT == MVT::i64) && DestVT == MVT::f32) {
+    LLVM_DEBUG(dbgs() << "Converting unsigned i32/i64 to f32\n");
     // For unsigned conversions, convert them to signed conversions using the
-    // algorithm from the x86_64 __floatundidf in compiler_rt.
+    // algorithm from the x86_64 __floatundisf in compiler_rt. That method
+    // should be valid for i32->f32 as well.
 
     // TODO: This really should be implemented using a branch rather than a
     // select.  We happen to get lucky and machinesink does the right
@@ -2469,8 +2470,13 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
     return DAG.getSelect(dl, DestVT, SignBitTest, Slow, Fast);
   }
 
-  // FIXME: This can produce slightly incorrect results. See details in
-  // FIXME: https://reviews.llvm.org/D69275
+  // The following optimization is valid only if every value in SrcVT (when
+  // treated as signed) is representable in DestVT.  Check that the mantissa
+  // size of DestVT is >= than the number of bits in SrcVT -1.
+  assert(APFloat::semanticsPrecision(DAG.EVTToAPFloatSemantics(DestVT)) >=
+             SrcVT.getSizeInBits() - 1 &&
+         "Cannot perform lossless SINT_TO_FP!");
+
   SDValue Tmp1;
   if (Node->isStrictFPOpcode()) {
     Tmp1 = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, { DestVT, MVT::Other },
