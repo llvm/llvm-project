@@ -1048,25 +1048,25 @@ uint32_t Debugger::RemoveIOHandlers(const IOHandlerSP &reader1_sp,
                                     const IOHandlerSP &reader2_sp) {
   uint32_t result = 0;
 
-  std::lock_guard<std::recursive_mutex> guard(m_input_reader_stack.GetMutex());
+  std::lock_guard<std::recursive_mutex> guard(m_io_handler_stack.GetMutex());
 
   // The reader on the stop of the stack is done, so let the next
   // read on the stack refresh its prompt and if there is one...
-  if (!m_input_reader_stack.IsEmpty()) {
-    IOHandlerSP reader_sp(m_input_reader_stack.Top());
+  if (!m_io_handler_stack.IsEmpty()) {
+    IOHandlerSP reader_sp(m_io_handler_stack.Top());
 
     if (!reader1_sp || reader1_sp.get() == reader_sp.get()) {
       reader_sp->Deactivate();
       reader_sp->Cancel();
-      m_input_reader_stack.Pop();
+      m_io_handler_stack.Pop();
       ++result;
 
-      reader_sp = m_input_reader_stack.Top();
+      reader_sp = m_io_handler_stack.Top();
 
       if (reader2_sp && reader2_sp.get() == reader_sp.get()) {
-        m_input_reader_stack.Pop();
+        m_io_handler_stack.Pop();
         ++result;
-        reader_sp = m_input_reader_stack.Top();
+        reader_sp = m_io_handler_stack.Top();
       }
 
       if (reader_sp)
