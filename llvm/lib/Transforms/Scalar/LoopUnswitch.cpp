@@ -903,30 +903,6 @@ bool LoopUnswitch::unswitchIfProfitable(Value *LoopCond, Constant *Val,
   return true;
 }
 
-/// Recursively clone the specified loop and all of its children,
-/// mapping the blocks with the specified map.
-static Loop *cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM, LoopInfo *LI,
-                       LPPassManager *LPM) {
-  Loop &New = *LI->AllocateLoop();
-  if (PL)
-    PL->addChildLoop(&New);
-  else
-    LI->addTopLevelLoop(&New);
-  LPM->addLoop(New);
-
-  // Add all of the blocks in L to the new loop.
-  for (Loop::block_iterator I = L->block_begin(), E = L->block_end();
-       I != E; ++I)
-    if (LI->getLoopFor(*I) == L)
-      New.addBasicBlockToLoop(cast<BasicBlock>(VM[*I]), *LI);
-
-  // Add all of the subloops to the new loop.
-  for (Loop *I : *L)
-    cloneLoop(I, &New, VM, LI, LPM);
-
-  return &New;
-}
-
 /// Emit a conditional branch on two values if LIC == Val, branch to TrueDst,
 /// otherwise branch to FalseDest. Insert the code immediately before OldBranch
 /// and remove (but not erase!) it from the function.
