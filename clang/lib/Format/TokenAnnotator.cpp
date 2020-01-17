@@ -2707,10 +2707,17 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return false;
   if (Right.isOneOf(tok::star, tok::amp, tok::ampamp) &&
       (Left.is(tok::identifier) || Left.isSimpleTypeSpecifier()) &&
-      Left.Previous && Left.Previous->is(tok::kw_operator))
-    // Space between the type and the *
-    // operator void*(), operator char*(), operator Foo*() dependant
-    // on PointerAlignment style.
+      // Space between the type and the * in:
+      //   operator void*()
+      //   operator char*()
+      //   operator /*comment*/ const char*()
+      //   operator volatile /*comment*/ char*()
+      //   operator Foo*()
+      // dependent on PointerAlignment style.
+      Left.Previous &&
+      (Left.Previous->endsSequence(tok::kw_operator) ||
+       Left.Previous->endsSequence(tok::kw_const, tok::kw_operator) ||
+       Left.Previous->endsSequence(tok::kw_volatile, tok::kw_operator)))
     return (Style.PointerAlignment != FormatStyle::PAS_Left);
   const auto SpaceRequiredForArrayInitializerLSquare =
       [](const FormatToken &LSquareTok, const FormatStyle &Style) {
