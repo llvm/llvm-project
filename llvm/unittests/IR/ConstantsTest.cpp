@@ -616,9 +616,11 @@ TEST(ConstantsTest, isElementWiseEqual) {
   Constant *CF1211 = ConstantVector::get({CF1, CF2, CF1, CF1});
   Constant *CF12U1 = ConstantVector::get({CF1, CF2, CFU, CF1});
   Constant *CF12U2 = ConstantVector::get({CF1, CF2, CFU, CF2});
+  Constant *CFUU1U = ConstantVector::get({CFU, CFU, CF1, CFU});
 
   EXPECT_TRUE(CF1211->isElementWiseEqual(CF12U1));
   EXPECT_TRUE(CF12U1->isElementWiseEqual(CF1211));
+  EXPECT_FALSE(CFUU1U->isElementWiseEqual(CF12U1)); // FIXME - all lanes compare as undef
   EXPECT_FALSE(CF12U2->isElementWiseEqual(CF12U1));
   EXPECT_FALSE(CF12U1->isElementWiseEqual(CF12U2));
 
