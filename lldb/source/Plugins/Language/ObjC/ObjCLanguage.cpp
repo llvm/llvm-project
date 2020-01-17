@@ -982,7 +982,7 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
 
     friend class lldb_private::ObjCLanguage;
   };
-
+  
   class ObjCDebugInfoScavenger : public Language::ImageListTypeScavenger {
   public:
     CompilerType AdjustForInclusion(CompilerType &candidate) override {
