@@ -199,7 +199,7 @@ public:
   }
 
   void addAliasForDirective(StringRef Directive, StringRef Alias) override {
-    DirectiveKindMap[Directive] = DirectiveKindMap[Alias];
+    DirectiveKindMap[Directive.lower()] = DirectiveKindMap[Alias.lower()];
   }
 
   /// @name MCAsmParser Interface
@@ -1750,7 +1750,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
   // have to do this so that .endif isn't skipped in a ".if 0" block for
   // example.
   StringMap<DirectiveKind>::const_iterator DirKindIt =
-      DirectiveKindMap.find(IDVal);
+      DirectiveKindMap.find(IDVal.lower());
   DirectiveKind DirKind = (DirKindIt == DirectiveKindMap.end())
 
                               ? DK_NO_DIRECTIVE
@@ -5320,6 +5320,12 @@ bool AsmParser::parseDirectiveEndIf(SMLoc DirectiveLoc) {
 }
 
 void AsmParser::initializeDirectiveKindMap() {
+  /* Lookup will be done with the directive
+   * converted to lower case, so all these
+   * keys should be lower case.
+   * (target specific directives are handled
+   *  elsewhere)
+   */
   DirectiveKindMap[".set"] = DK_SET;
   DirectiveKindMap[".equ"] = DK_EQU;
   DirectiveKindMap[".equiv"] = DK_EQUIV;
