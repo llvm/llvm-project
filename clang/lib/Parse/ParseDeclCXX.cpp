@@ -1142,7 +1142,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
     if (TemplateId->Kind == TNK_Type_template ||
         TemplateId->Kind == TNK_Dependent_template_name ||
         TemplateId->Kind == TNK_Undeclared_template) {
-      AnnotateTemplateIdTokenAsType(/*IsClassName*/true);
+      AnnotateTemplateIdTokenAsType(SS, /*IsClassName*/true);
 
       assert(Tok.is(tok::annot_typename) && "template-id -> type failed");
       ParsedType Type = getTypeAnnotation(Tok);
@@ -1193,7 +1193,7 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
                                 TemplateName))
       return true;
     if (TNK == TNK_Type_template || TNK == TNK_Dependent_template_name)
-      AnnotateTemplateIdTokenAsType(/*IsClassName*/true);
+      AnnotateTemplateIdTokenAsType(SS, /*IsClassName*/true);
 
     // If we didn't end up with a typename token, there's nothing more we
     // can do.
@@ -1826,7 +1826,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
                 TemplateInfo.Kind == ParsedTemplateInfo::NonTemplate)) {
       ProhibitAttributes(attrs);
       TypeResult = Actions.ActOnTagTemplateIdType(TUK, TagType, StartLoc,
-                                                  TemplateId->SS,
+                                                  SS,
                                                   TemplateId->TemplateKWLoc,
                                                   TemplateId->Template,
                                                   TemplateId->TemplateNameLoc,
@@ -1876,7 +1876,7 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       // Build the class template specialization.
       TagOrTempResult = Actions.ActOnClassTemplateSpecialization(
           getCurScope(), TagType, TUK, StartLoc, DS.getModulePrivateSpecLoc(),
-          *TemplateId, attrs,
+          SS, *TemplateId, attrs,
           MultiTemplateParamsArg(TemplateParams ? &(*TemplateParams)[0]
                                                 : nullptr,
                                  TemplateParams ? TemplateParams->size() : 0),
@@ -3520,7 +3520,7 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
     if (TemplateId && (TemplateId->Kind == TNK_Type_template ||
                        TemplateId->Kind == TNK_Dependent_template_name ||
                        TemplateId->Kind == TNK_Undeclared_template)) {
-      AnnotateTemplateIdTokenAsType(/*IsClassName*/true);
+      AnnotateTemplateIdTokenAsType(SS, /*IsClassName*/true);
       assert(Tok.is(tok::annot_typename) && "template-id -> type failed");
       TemplateTypeTy = getTypeAnnotation(Tok);
       ConsumeAnnotationToken();
