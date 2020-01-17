@@ -74,7 +74,7 @@ class SettingsCommandTestCase(TestBase):
 
         local_outfile = self.getBuildArtifact("output.txt")
         if lldb.remote_platform:
-            remote_outfile = "output.txt" # Relative to platform's PWD
+            remote_outfile = lldb.remote_platform.GetWorkingDirectory() + "/output.txt"
         else:
             remote_outfile = local_outfile
 
