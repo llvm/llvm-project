@@ -92,14 +92,41 @@ directory structure will be created.  Additionally, the following special
   instrumented program crashes, or is killed by a signal, perfect coverage
   information can still be recovered. Continuous mode does not support value
   profiling for PGO, and is only supported on Darwin at the moment. Support for
-  Linux may be mostly complete but requires testing, and support for
-  Fuchsia/Windows may require more extensive changes: please get involved if
-  you are interested in porting this feature.
+  Linux may be mostly complete but requires testing, and support for Windows
+  may require more extensive changes: please get involved if you are interested
+  in porting this feature.
 
 .. code-block:: console
 
     # Step 2: Run the program.
     % LLVM_PROFILE_FILE="foo.profraw" ./foo
+
+Note that continuous mode is also used on Fuchsia where it's the only supported
+mode, but the implementation is different. The Darwin and Linux implementation
+relies on padding and the ability to map a file over the existing memory
+mapping which is generally only available on POSIX systems and isn't suitable
+for other platforms.
+
+On Fuchsia, we rely on the the ability to relocate counters at runtime using a
+level of indirection. On every counter access, we add a bias to the counter
+address. This bias is stored in ``__llvm_profile_counter_bias`` symbol that's
+provided by the profile runtime and is initially set to zero, meaning no
+relocation. The runtime can map the profile into memory at abitrary location,
+and set bias to the offset between the original and the new counter location,
+at which point every subsequent counter access will be to the new location,
+which allows updating profile directly akin to the continous mode.
+
+The advantage of this approach is that doesn't require any special OS support.
+The disadvantage is the extra overhead due to additional instructions required
+for each counter access (overhead both in terms of binary size and performance)
+plus duplication of counters (i.e. one copy in the binary itself and another
+copy that's mapped into memory). This implementation can be also enabled for
+other platforms by passing the ``-runtime-counter-relocation`` option to the
+backend during compilation.
+
+.. code-block:: console
+
+    % clang++ -fprofile-instr-generate -fcoverage-mapping -mllvm -runtime-counter-relocation foo.cc -o foo
 
 Creating coverage reports
 =========================

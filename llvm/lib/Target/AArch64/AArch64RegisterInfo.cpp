@@ -390,6 +390,10 @@ bool AArch64RegisterInfo::needsFrameBaseReg(MachineInstr *MI,
   if (isFrameOffsetLegal(MI, AArch64::SP, Offset))
     return false;
 
+  // If even offset 0 is illegal, we don't want a virtual base register.
+  if (!isFrameOffsetLegal(MI, AArch64::SP, 0))
+    return false;
+
   // The offset likely isn't legal; we want to allocate a virtual base register.
   return true;
 }
@@ -443,6 +447,27 @@ void AArch64RegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
   bool Done = rewriteAArch64FrameIndex(MI, i, BaseReg, Off, TII);
   assert(Done && "Unable to resolve frame index!");
   (void)Done;
+}
+
+// Create a scratch register for the frame index elimination in an instruction.
+// This function has special handling of stack tagging loop pseudos, in which
+// case it can also change the instruction opcode (but not the operands).
+static Register
+createScratchRegisterForInstruction(MachineInstr &MI,
+                                    const AArch64InstrInfo *TII) {
+  // ST*Gloop have a reserved scratch register in operand 1. Use it, and also
+  // replace the instruction with the writeback variant because it will now
+  // satisfy the operand constraints for it.
+  if (MI.getOpcode() == AArch64::STGloop) {
+    MI.setDesc(TII->get(AArch64::STGloop_wback));
+    return MI.getOperand(1).getReg();
+  } else if (MI.getOpcode() == AArch64::STZGloop) {
+    MI.setDesc(TII->get(AArch64::STZGloop_wback));
+    return MI.getOperand(1).getReg();
+  } else {
+    return MI.getMF()->getRegInfo().createVirtualRegister(
+        &AArch64::GPR64RegClass);
+  }
 }
 
 void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
@@ -531,8 +556,7 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // If we get here, the immediate doesn't fit into the instruction.  We folded
   // as much as possible above.  Handle the rest, providing a register that is
   // SP+LargeImm.
-  Register ScratchReg =
-      MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+  Register ScratchReg = createScratchRegisterForInstruction(MI, TII);
   emitFrameOffset(MBB, II, MI.getDebugLoc(), ScratchReg, FrameReg, Offset, TII);
   MI.getOperand(FIOperandNum).ChangeToRegister(ScratchReg, false, false, true);
 }
