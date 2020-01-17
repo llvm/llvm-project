@@ -148,40 +148,51 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
   bool AlwaysInstrument = !InstrAttr.hasAttribute(Attribute::None) &&
                           InstrAttr.isStringAttribute() &&
                           InstrAttr.getValueAsString() == "xray-always";
-  Attribute Attr = F.getFnAttribute("xray-instruction-threshold");
-  unsigned XRayThreshold = 0;
+  auto ThresholdAttr = F.getFnAttribute("xray-instruction-threshold");
+  auto IgnoreLoopsAttr = F.getFnAttribute("xray-ignore-loops");
+  unsigned int XRayThreshold = 0;
   if (!AlwaysInstrument) {
-    if (Attr.hasAttribute(Attribute::None) || !Attr.isStringAttribute())
+    if (ThresholdAttr.hasAttribute(Attribute::None) ||
+        !ThresholdAttr.isStringAttribute())
       return false; // XRay threshold attribute not found.
-    if (Attr.getValueAsString().getAsInteger(10, XRayThreshold))
+    if (ThresholdAttr.getValueAsString().getAsInteger(10, XRayThreshold))
       return false; // Invalid value for threshold.
+
+    bool IgnoreLoops = !IgnoreLoopsAttr.hasAttribute(Attribute::None);
 
     // Count the number of MachineInstr`s in MachineFunction
     int64_t MICount = 0;
     for (const auto &MBB : MF)
       MICount += MBB.size();
 
-    // Get MachineDominatorTree or compute it on the fly if it's unavailable
-    auto *MDT = getAnalysisIfAvailable<MachineDominatorTree>();
-    MachineDominatorTree ComputedMDT;
-    if (!MDT) {
-      ComputedMDT.getBase().recalculate(MF);
-      MDT = &ComputedMDT;
-    }
+    bool TooFewInstrs = MICount < XRayThreshold;
 
-    // Get MachineLoopInfo or compute it on the fly if it's unavailable
-    auto *MLI = getAnalysisIfAvailable<MachineLoopInfo>();
-    MachineLoopInfo ComputedMLI;
-    if (!MLI) {
-      ComputedMLI.getBase().analyze(MDT->getBase());
-      MLI = &ComputedMLI;
-    }
+    if (!IgnoreLoops) {
+      // Get MachineDominatorTree or compute it on the fly if it's unavailable
+      auto *MDT = getAnalysisIfAvailable<MachineDominatorTree>();
+      MachineDominatorTree ComputedMDT;
+      if (!MDT) {
+        ComputedMDT.getBase().recalculate(MF);
+        MDT = &ComputedMDT;
+      }
 
-    // Check if we have a loop.
-    // FIXME: Maybe make this smarter, and see whether the loops are dependent
-    // on inputs or side-effects?
-    if (MLI->empty() && MICount < XRayThreshold)
-      return false; // Function is too small and has no loops.
+      // Get MachineLoopInfo or compute it on the fly if it's unavailable
+      auto *MLI = getAnalysisIfAvailable<MachineLoopInfo>();
+      MachineLoopInfo ComputedMLI;
+      if (!MLI) {
+        ComputedMLI.getBase().analyze(MDT->getBase());
+        MLI = &ComputedMLI;
+      }
+
+      // Check if we have a loop.
+      // FIXME: Maybe make this smarter, and see whether the loops are dependent
+      // on inputs or side-effects?
+      if (MLI->empty() && TooFewInstrs)
+        return false; // Function is too small and has no loops.
+    } else if (TooFewInstrs) {
+      // Function is too small
+      return false;
+    }
   }
 
   // We look for the first non-empty MachineBasicBlock, so that we can insert
