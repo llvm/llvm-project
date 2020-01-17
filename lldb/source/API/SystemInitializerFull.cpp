@@ -95,6 +95,7 @@
 #include "Plugins/SymbolFile/PDB/SymbolFilePDB.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "Plugins/SymbolVendor/ELF/SymbolVendorELF.h"
+#include "Plugins/SymbolVendor/wasm/SymbolVendorWasm.h"
 #include "Plugins/SystemRuntime/MacOSX/SystemRuntimeMacOSX.h"
 #include "Plugins/UnwindAssembly/InstEmulation/UnwindAssemblyInstEmulation.h"
 #include "Plugins/UnwindAssembly/x86/UnwindAssembly-x86.h"
@@ -274,6 +275,7 @@ llvm::Error SystemInitializerFull::Initialize() {
   SymbolFileDWARF::Initialize();
   SymbolFilePDB::Initialize();
   SymbolFileSymtab::Initialize();
+  wasm::SymbolVendorWasm::Initialize();
   UnwindAssemblyInstEmulation::Initialize();
   UnwindAssembly_x86::Initialize();
 
@@ -375,6 +377,7 @@ void SystemInitializerFull::Terminate() {
   // BEGIN SWIFT
   SwiftRuntimeReporting::Terminate();
   // END SWIFT
+  wasm::SymbolVendorWasm::Terminate();
   SymbolVendorELF::Terminate();
   breakpad::SymbolFileBreakpad::Terminate();
   SymbolFileDWARF::Terminate();

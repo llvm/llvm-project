@@ -72,6 +72,8 @@ GetWasmString(llvm::DataExtractor &data, llvm::DataExtractor::Cursor &c) {
   return ConstString(str);
 }
 
+char ObjectFileWasm::ID;
+
 void ObjectFileWasm::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance,
@@ -177,6 +179,9 @@ bool ObjectFileWasm::DecodeNextSection(lldb::offset_t *offset_ptr) {
     return false;
 
   if (section_id == llvm::wasm::WASM_SEC_CUSTOM) {
+    // Custom sections have the id 0. Their contents consist of a name
+    // identifying the custom section, followed by an uninterpreted sequence
+    // of bytes.
     lldb::offset_t prev_offset = c.tell();
     llvm::Optional<ConstString> sect_name = GetWasmString(data, c);
     if (!sect_name)
@@ -387,6 +392,24 @@ DataExtractor ObjectFileWasm::ReadImageData(uint64_t offset, size_t size) {
 
   data.SetByteOrder(GetByteOrder());
   return data;
+}
+
+llvm::Optional<FileSpec> ObjectFileWasm::GetExternalDebugInfoFileSpec() {
+  static ConstString g_sect_name_external_debug_info("external_debug_info");
+
+  for (const section_info &sect_info : m_sect_infos) {
+    if (g_sect_name_external_debug_info == sect_info.name) {
+      const uint32_t kBufferSize = 1024;
+      DataExtractor section_header_data =
+          ReadImageData(sect_info.offset, kBufferSize);
+      llvm::DataExtractor data = section_header_data.GetAsLLVM();
+      llvm::DataExtractor::Cursor c(0);
+      llvm::Optional<ConstString> symbols_url = GetWasmString(data, c);
+      if (symbols_url)
+        return FileSpec(symbols_url->GetStringRef());
+    }
+  }
+  return llvm::None;
 }
 
 void ObjectFileWasm::Dump(Stream *s) {

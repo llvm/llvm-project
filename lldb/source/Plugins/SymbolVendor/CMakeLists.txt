@@ -3,3 +3,4 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
 endif()
 
 add_subdirectory(ELF)
+add_subdirectory(wasm)
