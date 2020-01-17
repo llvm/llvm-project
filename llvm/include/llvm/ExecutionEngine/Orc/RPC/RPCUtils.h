@@ -1528,20 +1528,20 @@ public:
             Args...)) {
       detail::ResultTraits<typename Func::ReturnType>::consumeAbandoned(
           std::move(Result));
-      return std::move(Err);
+      return Err;
     }
 
     if (auto Err = this->C.send()) {
       detail::ResultTraits<typename Func::ReturnType>::consumeAbandoned(
           std::move(Result));
-      return std::move(Err);
+      return Err;
     }
 
     while (!ReceivedResponse) {
       if (auto Err = this->handleOne()) {
         detail::ResultTraits<typename Func::ReturnType>::consumeAbandoned(
             std::move(Result));
-        return std::move(Err);
+        return Err;
       }
     }
 
