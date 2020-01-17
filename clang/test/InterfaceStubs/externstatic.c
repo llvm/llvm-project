@@ -13,8 +13,7 @@
 // RUN: %clang -cc1 -fvisibility default -DSTORAGE="static" -o - -emit-interface-stubs -std=c99 -xc %s | \
 // RUN: FileCheck -check-prefix=CHECK-STATIC %s
 
-// RUN: %clang -fvisibility=default -DSTORAGE="static" -O0 -o - -c -std=c99 -xc %s | llvm-nm - 2>&1 | \
-// RUN: FileCheck -check-prefix=CHECK-STATIC %s
+// RUN: %clang -fvisibility=default -DSTORAGE="static" -O0 -o - -c -std=c99 -xc %s | llvm-nm - 2>&1 | count 0
 
 // CHECK-EXTERN-NOT: foo
 // CHECK-STATIC-NOT: foo
