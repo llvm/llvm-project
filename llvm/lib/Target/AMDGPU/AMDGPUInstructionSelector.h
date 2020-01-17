@@ -80,6 +80,8 @@ private:
   MachineOperand getSubOperand64(MachineOperand &MO,
                                  const TargetRegisterClass &SubRC,
                                  unsigned SubIdx) const;
+
+  bool constrainCopyLikeIntrin(MachineInstr &MI, unsigned NewOpc) const;
   bool selectCOPY(MachineInstr &I) const;
   bool selectPHI(MachineInstr &I) const;
   bool selectG_TRUNC(MachineInstr &I) const;
