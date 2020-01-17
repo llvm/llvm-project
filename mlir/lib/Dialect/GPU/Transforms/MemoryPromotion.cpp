@@ -57,7 +57,7 @@ static void insertCopyLoops(OpBuilder &builder, Location loc,
     steps.resize(extraLoops, one);
   }
 
-  // Add existing bonuds.
+  // Add existing bounds.
   lbs.append(bounds.getLbs().begin(), bounds.getLbs().end());
   ubs.append(bounds.getUbs().begin(), bounds.getUbs().end());
 

@@ -35,7 +35,7 @@ def SPV_Dialect : Dialect {
     SPIR-V itself.
 
     The SPIR-V dialect aims to be a proper compiler intermediate representation
-    to faciliate transformations. Ops in this dialect stay at the same semantic
+    to facilitate transformations. Ops in this dialect stay at the same semantic
     level as the SPIR-V specification and try to have one-to-one mapping to the
     corresponding SPIR-V instructions; but they may deviate representationally
     to utilize MLIR mechanisms if it results in better representation and thus

@@ -19,7 +19,7 @@
 
 // Forward declare enum classes related to op availability. Their definitions
 // are in the TableGen'erated SPIRVEnums.h.inc and can be referenced by other
-// dclarations in SPIRVEnums.h.inc.
+// declarations in SPIRVEnums.h.inc.
 namespace mlir {
 namespace spirv {
 enum class Version : uint32_t;
