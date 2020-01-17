@@ -105,7 +105,7 @@ static LogicalResult runMLIRPasses(ModuleOp m) {
   applyPassManagerCLOptions(pm);
 
   pm.addPass(createGpuKernelOutliningPass());
-  auto &kernelPm = pm.nest<ModuleOp>();
+  auto &kernelPm = pm.nest<gpu::GPUModuleOp>();
   kernelPm.addPass(createLowerGpuOpsToNVVMOpsPass());
   kernelPm.addPass(createConvertGPUKernelToCubinPass(&compilePtxToCubin));
   pm.addPass(createLowerToLLVMPass());

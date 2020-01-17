@@ -1,6 +1,6 @@
 // RUN: mlir-opt --convert-gpu-to-nvvm --split-input-file %s | FileCheck %s
 
-module attributes {gpu.kernel_module} {
+gpu.module @kernel {
   // CHECK-LABEL:  llvm.func @private
   gpu.func @private(%arg0: f32) private(%arg1: memref<4xf32, 5>) {
     // Allocate private memory inside the function.
@@ -32,7 +32,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @kernel {
   // Workgroup buffers are allocated as globals.
   // CHECK: llvm.mlir.global internal @[[buffer:.*]]()
   // CHECK-SAME:  addr_space = 3
@@ -72,7 +72,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @kernel {
   // Check that the total size was computed correctly.
   // CHECK: llvm.mlir.global internal @[[buffer:.*]]()
   // CHECK-SAME:  addr_space = 3
@@ -113,7 +113,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @kernel {
   // Check that several buffers are defined.
   // CHECK: llvm.mlir.global internal @[[buffer1:.*]]()
   // CHECK-SAME:  !llvm<"[1 x float]">

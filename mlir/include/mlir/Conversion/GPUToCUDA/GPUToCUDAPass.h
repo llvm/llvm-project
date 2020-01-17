@@ -19,11 +19,15 @@ namespace mlir {
 class Location;
 class ModuleOp;
 
+template <typename T> class OpPassBase;
+
+namespace gpu {
+class GPUModuleOp;
+} // namespace gpu
+
 namespace LLVM {
 class LLVMDialect;
 } // namespace LLVM
-
-template <typename T> class OpPassBase;
 
 using OwnedCubin = std::unique_ptr<std::vector<char>>;
 using CubinGenerator =
@@ -38,7 +42,7 @@ using CubinGenerator =
 /// attached as a string attribute named 'nvvm.cubin' to the kernel function.
 /// After the transformation, the body of the kernel function is removed (i.e.,
 /// it is turned into a declaration).
-std::unique_ptr<OpPassBase<ModuleOp>>
+std::unique_ptr<OpPassBase<gpu::GPUModuleOp>>
 createConvertGPUKernelToCubinPass(CubinGenerator cubinGenerator);
 
 /// Creates a pass to convert a gpu.launch_func operation into a sequence of
