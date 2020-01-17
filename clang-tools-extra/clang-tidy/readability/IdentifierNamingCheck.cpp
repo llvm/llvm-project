@@ -22,44 +22,6 @@
 
 using namespace clang::ast_matchers;
 
-namespace llvm {
-/// Specialisation of DenseMapInfo to allow NamingCheckId objects in DenseMaps
-template <>
-struct DenseMapInfo<
-    clang::tidy::readability::IdentifierNamingCheck::NamingCheckId> {
-  using NamingCheckId =
-      clang::tidy::readability::IdentifierNamingCheck::NamingCheckId;
-
-  static inline NamingCheckId getEmptyKey() {
-    return NamingCheckId(
-        clang::SourceLocation::getFromRawEncoding(static_cast<unsigned>(-1)),
-        "EMPTY");
-  }
-
-  static inline NamingCheckId getTombstoneKey() {
-    return NamingCheckId(
-        clang::SourceLocation::getFromRawEncoding(static_cast<unsigned>(-2)),
-        "TOMBSTONE");
-  }
-
-  static unsigned getHashValue(NamingCheckId Val) {
-    assert(Val != getEmptyKey() && "Cannot hash the empty key!");
-    assert(Val != getTombstoneKey() && "Cannot hash the tombstone key!");
-
-    std::hash<NamingCheckId::second_type> SecondHash;
-    return Val.first.getRawEncoding() + SecondHash(Val.second);
-  }
-
-  static bool isEqual(const NamingCheckId &LHS, const NamingCheckId &RHS) {
-    if (RHS == getEmptyKey())
-      return LHS == getEmptyKey();
-    if (RHS == getTombstoneKey())
-      return LHS == getTombstoneKey();
-    return LHS == RHS;
-  }
-};
-} // namespace llvm
-
 namespace clang {
 namespace tidy {
 namespace readability {
@@ -164,7 +126,7 @@ private:
 
 IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
                                              ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context) {
+    : RenamerClangTidyCheck(Name, Context) {
   auto const fromString = [](StringRef Str) {
     return llvm::StringSwitch<llvm::Optional<CaseType>>(Str)
         .Case("aNy_CasE", CT_AnyCase)
@@ -231,39 +193,6 @@ void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   }
 
   Options.store(Opts, "IgnoreFailedSplit", IgnoreFailedSplit);
-}
-
-void IdentifierNamingCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(namedDecl().bind("decl"), this);
-  Finder->addMatcher(usingDecl().bind("using"), this);
-  Finder->addMatcher(declRefExpr().bind("declRef"), this);
-  Finder->addMatcher(cxxConstructorDecl(unless(isImplicit())).bind("classRef"),
-                     this);
-  Finder->addMatcher(cxxDestructorDecl(unless(isImplicit())).bind("classRef"),
-                     this);
-  Finder->addMatcher(typeLoc().bind("typeLoc"), this);
-  Finder->addMatcher(nestedNameSpecifierLoc().bind("nestedNameLoc"), this);
-  Finder->addMatcher(
-      functionDecl(unless(cxxMethodDecl(isImplicit())),
-                   hasBody(forEachDescendant(memberExpr().bind("memberExpr")))),
-      this);
-  Finder->addMatcher(
-      cxxConstructorDecl(
-          unless(isImplicit()),
-          forEachConstructorInitializer(
-              allOf(isWritten(), withInitializer(forEachDescendant(
-                                     memberExpr().bind("memberExpr")))))),
-      this);
-  Finder->addMatcher(fieldDecl(hasInClassInitializer(
-                         forEachDescendant(memberExpr().bind("memberExpr")))),
-                     this);
-}
-
-void IdentifierNamingCheck::registerPPCallbacks(
-    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
-  ModuleExpanderPP->addPPCallbacks(
-      std::make_unique<IdentifierNamingCheckPPCallbacks>(ModuleExpanderPP,
-                                                          this));
 }
 
 static bool matchesStyle(StringRef Name,
@@ -683,243 +612,47 @@ static StyleKind findStyleKind(
   return SK_Invalid;
 }
 
-static void addUsage(IdentifierNamingCheck::NamingCheckFailureMap &Failures,
-                     const IdentifierNamingCheck::NamingCheckId &Decl,
-                     SourceRange Range, SourceManager *SourceMgr = nullptr) {
-  // Do nothing if the provided range is invalid.
-  if (Range.getBegin().isInvalid() || Range.getEnd().isInvalid())
-    return;
+llvm::Optional<RenamerClangTidyCheck::FailureInfo>
+IdentifierNamingCheck::GetDeclFailureInfo(const NamedDecl *Decl,
+                                          const SourceManager &SM) const {
+  StyleKind SK = findStyleKind(Decl, NamingStyles);
+  if (SK == SK_Invalid)
+    return None;
 
-  // If we have a source manager, use it to convert to the spelling location for
-  // performing the fix. This is necessary because macros can map the same
-  // spelling location to different source locations, and we only want to fix
-  // the token once, before it is expanded by the macro.
-  SourceLocation FixLocation = Range.getBegin();
-  if (SourceMgr)
-    FixLocation = SourceMgr->getSpellingLoc(FixLocation);
-  if (FixLocation.isInvalid())
-    return;
+  if (!NamingStyles[SK])
+    return None;
 
-  // Try to insert the identifier location in the Usages map, and bail out if it
-  // is already in there
-  auto &Failure = Failures[Decl];
-  if (!Failure.RawUsageLocs.insert(FixLocation.getRawEncoding()).second)
-    return;
+  const NamingStyle &Style = *NamingStyles[SK];
+  StringRef Name = Decl->getName();
+  if (matchesStyle(Name, Style))
+    return None;
 
-  if (!Failure.ShouldFix())
-    return;
+  std::string KindName = fixupWithCase(StyleNames[SK], CT_LowerCase);
+  std::replace(KindName.begin(), KindName.end(), '_', ' ');
 
-  if (!utils::rangeCanBeFixed(Range, SourceMgr))
-    Failure.FixStatus = IdentifierNamingCheck::ShouldFixStatus::InsideMacro;
+  std::string Fixup = fixupWithStyle(Name, Style);
+  if (StringRef(Fixup).equals(Name)) {
+    if (!IgnoreFailedSplit) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << Decl->getBeginLoc().printToString(SM)
+                 << llvm::format(": unable to split words for %s '%s'\n",
+                                 KindName.c_str(), Name.str().c_str()));
+    }
+    return None;
+  }
+  return FailureInfo{std::move(KindName), std::move(Fixup)};
 }
 
-/// Convenience method when the usage to be added is a NamedDecl
-static void addUsage(IdentifierNamingCheck::NamingCheckFailureMap &Failures,
-                     const NamedDecl *Decl, SourceRange Range,
-                     SourceManager *SourceMgr = nullptr) {
-  return addUsage(Failures,
-                  IdentifierNamingCheck::NamingCheckId(Decl->getLocation(),
-                                                       Decl->getNameAsString()),
-                  Range, SourceMgr);
-}
-
-void IdentifierNamingCheck::check(const MatchFinder::MatchResult &Result) {
-  if (const auto *Decl =
-          Result.Nodes.getNodeAs<CXXConstructorDecl>("classRef")) {
-
-    addUsage(NamingCheckFailures, Decl->getParent(),
-             Decl->getNameInfo().getSourceRange());
-
-    for (const auto *Init : Decl->inits()) {
-      if (!Init->isWritten() || Init->isInClassMemberInitializer())
-        continue;
-      if (const auto *FD = Init->getAnyMember())
-        addUsage(NamingCheckFailures, FD,
-                 SourceRange(Init->getMemberLocation()));
-      // Note: delegating constructors and base class initializers are handled
-      // via the "typeLoc" matcher.
-    }
-    return;
-  }
-
-  if (const auto *Decl =
-          Result.Nodes.getNodeAs<CXXDestructorDecl>("classRef")) {
-
-    SourceRange Range = Decl->getNameInfo().getSourceRange();
-    if (Range.getBegin().isInvalid())
-      return;
-    // The first token that will be found is the ~ (or the equivalent trigraph),
-    // we want instead to replace the next token, that will be the identifier.
-    Range.setBegin(CharSourceRange::getTokenRange(Range).getEnd());
-
-    addUsage(NamingCheckFailures, Decl->getParent(), Range);
-    return;
-  }
-
-  if (const auto *Loc = Result.Nodes.getNodeAs<TypeLoc>("typeLoc")) {
-    NamedDecl *Decl = nullptr;
-    if (const auto &Ref = Loc->getAs<TagTypeLoc>()) {
-      Decl = Ref.getDecl();
-    } else if (const auto &Ref = Loc->getAs<InjectedClassNameTypeLoc>()) {
-      Decl = Ref.getDecl();
-    } else if (const auto &Ref = Loc->getAs<UnresolvedUsingTypeLoc>()) {
-      Decl = Ref.getDecl();
-    } else if (const auto &Ref = Loc->getAs<TemplateTypeParmTypeLoc>()) {
-      Decl = Ref.getDecl();
-    }
-
-    if (Decl) {
-      addUsage(NamingCheckFailures, Decl, Loc->getSourceRange());
-      return;
-    }
-
-    if (const auto &Ref = Loc->getAs<TemplateSpecializationTypeLoc>()) {
-      const auto *Decl =
-          Ref.getTypePtr()->getTemplateName().getAsTemplateDecl();
-
-      SourceRange Range(Ref.getTemplateNameLoc(), Ref.getTemplateNameLoc());
-      if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl)) {
-        if (const auto *TemplDecl = ClassDecl->getTemplatedDecl())
-          addUsage(NamingCheckFailures, TemplDecl, Range);
-        return;
-      }
-    }
-
-    if (const auto &Ref =
-            Loc->getAs<DependentTemplateSpecializationTypeLoc>()) {
-      if (const auto *Decl = Ref.getTypePtr()->getAsTagDecl())
-        addUsage(NamingCheckFailures, Decl, Loc->getSourceRange());
-      return;
-    }
-  }
-
-  if (const auto *Loc =
-          Result.Nodes.getNodeAs<NestedNameSpecifierLoc>("nestedNameLoc")) {
-    if (NestedNameSpecifier *Spec = Loc->getNestedNameSpecifier()) {
-      if (NamespaceDecl *Decl = Spec->getAsNamespace()) {
-        addUsage(NamingCheckFailures, Decl, Loc->getLocalSourceRange());
-        return;
-      }
-    }
-  }
-
-  if (const auto *Decl = Result.Nodes.getNodeAs<UsingDecl>("using")) {
-    for (const auto *Shadow : Decl->shadows()) {
-      addUsage(NamingCheckFailures, Shadow->getTargetDecl(),
-               Decl->getNameInfo().getSourceRange());
-    }
-    return;
-  }
-
-  if (const auto *DeclRef = Result.Nodes.getNodeAs<DeclRefExpr>("declRef")) {
-    SourceRange Range = DeclRef->getNameInfo().getSourceRange();
-    addUsage(NamingCheckFailures, DeclRef->getDecl(), Range,
-             Result.SourceManager);
-    return;
-  }
-
-  if (const auto *MemberRef =
-          Result.Nodes.getNodeAs<MemberExpr>("memberExpr")) {
-    SourceRange Range = MemberRef->getMemberNameInfo().getSourceRange();
-    addUsage(NamingCheckFailures, MemberRef->getMemberDecl(), Range,
-             Result.SourceManager);
-    return;
-  }
-
-  if (const auto *Decl = Result.Nodes.getNodeAs<NamedDecl>("decl")) {
-    if (!Decl->getIdentifier() || Decl->getName().empty() || Decl->isImplicit())
-      return;
-
-    // Fix type aliases in value declarations
-    if (const auto *Value = Result.Nodes.getNodeAs<ValueDecl>("decl")) {
-      if (const auto *TypePtr = Value->getType().getTypePtrOrNull()) {
-        if (const auto *Typedef = TypePtr->getAs<TypedefType>()) {
-          addUsage(NamingCheckFailures, Typedef->getDecl(),
-                   Value->getSourceRange());
-        }
-      }
-    }
-
-    // Fix type aliases in function declarations
-    if (const auto *Value = Result.Nodes.getNodeAs<FunctionDecl>("decl")) {
-      if (const auto *Typedef =
-              Value->getReturnType().getTypePtr()->getAs<TypedefType>()) {
-        addUsage(NamingCheckFailures, Typedef->getDecl(),
-                 Value->getSourceRange());
-      }
-      for (unsigned i = 0; i < Value->getNumParams(); ++i) {
-        if (const auto *Typedef = Value->parameters()[i]
-                                      ->getType()
-                                      .getTypePtr()
-                                      ->getAs<TypedefType>()) {
-          addUsage(NamingCheckFailures, Typedef->getDecl(),
-                   Value->getSourceRange());
-        }
-      }
-    }
-
-    // Ignore ClassTemplateSpecializationDecl which are creating duplicate
-    // replacements with CXXRecordDecl
-    if (isa<ClassTemplateSpecializationDecl>(Decl))
-      return;
-
-    StyleKind SK = findStyleKind(Decl, NamingStyles);
-    if (SK == SK_Invalid)
-      return;
-
-    if (!NamingStyles[SK])
-      return;
-
-    const NamingStyle &Style = *NamingStyles[SK];
-    StringRef Name = Decl->getName();
-    if (matchesStyle(Name, Style))
-      return;
-
-    std::string KindName = fixupWithCase(StyleNames[SK], CT_LowerCase);
-    std::replace(KindName.begin(), KindName.end(), '_', ' ');
-
-    std::string Fixup = fixupWithStyle(Name, Style);
-    if (StringRef(Fixup).equals(Name)) {
-      if (!IgnoreFailedSplit) {
-        LLVM_DEBUG(llvm::dbgs()
-                   << Decl->getBeginLoc().printToString(*Result.SourceManager)
-                   << llvm::format(": unable to split words for %s '%s'\n",
-                                   KindName.c_str(), Name.str().c_str()));
-      }
-    } else {
-      NamingCheckFailure &Failure = NamingCheckFailures[NamingCheckId(
-          Decl->getLocation(), Decl->getNameAsString())];
-      SourceRange Range =
-          DeclarationNameInfo(Decl->getDeclName(), Decl->getLocation())
-              .getSourceRange();
-
-      const IdentifierTable &Idents = Decl->getASTContext().Idents;
-      auto CheckNewIdentifier = Idents.find(Fixup);
-      if (CheckNewIdentifier != Idents.end()) {
-        const IdentifierInfo *Ident = CheckNewIdentifier->second;
-        if (Ident->isKeyword(getLangOpts()))
-          Failure.FixStatus = ShouldFixStatus::ConflictsWithKeyword;
-        else if (Ident->hasMacroDefinition())
-          Failure.FixStatus = ShouldFixStatus::ConflictsWithMacroDefinition;
-      }
-
-      Failure.Fixup = std::move(Fixup);
-      Failure.KindName = std::move(KindName);
-      addUsage(NamingCheckFailures, Decl, Range);
-    }
-  }
-}
-
-void IdentifierNamingCheck::checkMacro(SourceManager &SourceMgr,
-                                       const Token &MacroNameTok,
-                                       const MacroInfo *MI) {
+llvm::Optional<RenamerClangTidyCheck::FailureInfo>
+IdentifierNamingCheck::GetMacroFailureInfo(const Token &MacroNameTok,
+                                           const SourceManager &SM) const {
   if (!NamingStyles[SK_MacroDefinition])
-    return;
+    return None;
 
   StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
   const NamingStyle &Style = *NamingStyles[SK_MacroDefinition];
   if (matchesStyle(Name, Style))
-    return;
+    return None;
 
   std::string KindName =
       fixupWithCase(StyleNames[SK_MacroDefinition], CT_LowerCase);
@@ -929,74 +662,22 @@ void IdentifierNamingCheck::checkMacro(SourceManager &SourceMgr,
   if (StringRef(Fixup).equals(Name)) {
     if (!IgnoreFailedSplit) {
       LLVM_DEBUG(llvm::dbgs()
-                 << MacroNameTok.getLocation().printToString(SourceMgr)
+                 << MacroNameTok.getLocation().printToString(SM)
                  << llvm::format(": unable to split words for %s '%s'\n",
                                  KindName.c_str(), Name.str().c_str()));
     }
-  } else {
-    NamingCheckId ID(MI->getDefinitionLoc(), Name);
-    NamingCheckFailure &Failure = NamingCheckFailures[ID];
-    SourceRange Range(MacroNameTok.getLocation(), MacroNameTok.getEndLoc());
-
-    Failure.Fixup = std::move(Fixup);
-    Failure.KindName = std::move(KindName);
-    addUsage(NamingCheckFailures, ID, Range);
+    return None;
   }
+  return FailureInfo{std::move(KindName), std::move(Fixup)};
 }
 
-void IdentifierNamingCheck::expandMacro(const Token &MacroNameTok,
-                                        const MacroInfo *MI) {
-  StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
-  NamingCheckId ID(MI->getDefinitionLoc(), Name);
-
-  auto Failure = NamingCheckFailures.find(ID);
-  if (Failure == NamingCheckFailures.end())
-    return;
-
-  SourceRange Range(MacroNameTok.getLocation(), MacroNameTok.getEndLoc());
-  addUsage(NamingCheckFailures, ID, Range);
-}
-
-void IdentifierNamingCheck::onEndOfTranslationUnit() {
-  for (const auto &Pair : NamingCheckFailures) {
-    const NamingCheckId &Decl = Pair.first;
-    const NamingCheckFailure &Failure = Pair.second;
-
-    if (Failure.KindName.empty())
-      continue;
-
-    if (Failure.ShouldNotify()) {
-      auto Diag =
-          diag(Decl.first,
-               "invalid case style for %0 '%1'%select{|" // Case 0 is empty on
-                                                         // purpose, because we
-                                                         // intent to provide a
-                                                         // fix
-               "; cannot be fixed because '%3' would conflict with a keyword|"
-               "; cannot be fixed because '%3' would conflict with a macro "
-               "definition}2")
-          << Failure.KindName << Decl.second
-          << static_cast<int>(Failure.FixStatus) << Failure.Fixup;
-
-      if (Failure.ShouldFix()) {
-        for (const auto &Loc : Failure.RawUsageLocs) {
-          // We assume that the identifier name is made of one token only. This
-          // is always the case as we ignore usages in macros that could build
-          // identifier names by combining multiple tokens.
-          //
-          // For destructors, we already take care of it by remembering the
-          // location of the start of the identifier and not the start of the
-          // tilde.
-          //
-          // Other multi-token identifiers, such as operators are not checked at
-          // all.
-          Diag << FixItHint::CreateReplacement(
-              SourceRange(SourceLocation::getFromRawEncoding(Loc)),
-              Failure.Fixup);
-        }
-      }
-    }
-  }
+RenamerClangTidyCheck::DiagInfo
+IdentifierNamingCheck::GetDiagInfo(const NamingCheckId &ID,
+                                   const NamingCheckFailure &Failure) const {
+  return DiagInfo{"invalid case style for %0 '%1'",
+                  [&](DiagnosticBuilder &diag) {
+                    diag << Failure.Info.KindName << ID.second;
+                  }};
 }
 
 } // namespace readability
