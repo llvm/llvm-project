@@ -70,10 +70,23 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone-reserved-identifier>` check.
+
+  Checks for usages of identifiers reserved for use by the implementation.
 
 New aliases
 ^^^^^^^^^^^
 
+- New alias :doc:`cert-dcl37-c
+  <clang-tidy/checks/cert-dcl37-c>` to
+  :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone-reserved-identifier>` was added.
+
+- New alias :doc:`cert-dcl51-cpp
+  <clang-tidy/checks/cert-dcl51-cpp>` to
+  :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone-reserved-identifier>` was added.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
