@@ -753,9 +753,10 @@ unsigned PPCInstrInfo::insertBranch(MachineBasicBlock &MBB,
 
 // Select analysis.
 bool PPCInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
-                ArrayRef<MachineOperand> Cond,
-                unsigned TrueReg, unsigned FalseReg,
-                int &CondCycles, int &TrueCycles, int &FalseCycles) const {
+                                   ArrayRef<MachineOperand> Cond,
+                                   unsigned DstReg, unsigned TrueReg,
+                                   unsigned FalseReg, int &CondCycles,
+                                   int &TrueCycles, int &FalseCycles) const {
   if (Cond.size() != 2)
     return false;
 
