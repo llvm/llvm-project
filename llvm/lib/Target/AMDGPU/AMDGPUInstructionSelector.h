@@ -177,8 +177,12 @@ private:
   void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx = -1) const;
 
-  void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                       int OpIdx) const;
+  void renderTruncTImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                         int OpIdx) const;
+  void renderTruncTImm16(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                         int OpIdx) const;
+  void renderTruncTImm1(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
 
   void renderNegateImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
