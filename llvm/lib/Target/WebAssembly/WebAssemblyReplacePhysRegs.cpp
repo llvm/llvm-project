@@ -67,7 +67,7 @@ bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
   });
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  const auto &TRI = *MF.getSubtarget<WebAssemblySubtarget>().getRegisterInfo();
+  auto &TRI = *MF.getSubtarget<WebAssemblySubtarget>().getRegisterInfo();
   bool Changed = false;
 
   assert(!mustPreserveAnalysisID(LiveIntervalsID) &&
@@ -88,8 +88,18 @@ bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
     for (auto I = MRI.reg_begin(PReg), E = MRI.reg_end(); I != E;) {
       MachineOperand &MO = *I++;
       if (!MO.isImplicit()) {
-        if (VReg == WebAssembly::NoRegister)
+        if (VReg == WebAssembly::NoRegister) {
           VReg = MRI.createVirtualRegister(RC);
+          if (PReg == TRI.getFrameRegister(MF)) {
+            auto FI = MF.getInfo<WebAssemblyFunctionInfo>();
+            assert(!FI->isFrameBaseVirtual());
+            FI->setFrameBaseVreg(VReg);
+            LLVM_DEBUG({
+              dbgs() << "replacing preg " << PReg << " with " << VReg << " ("
+                     << Register::virtReg2Index(VReg) << ")\n";
+            });
+          }
+        }
         MO.setReg(VReg);
         if (MO.getParent()->isDebugValue())
           MO.setIsDebug();
