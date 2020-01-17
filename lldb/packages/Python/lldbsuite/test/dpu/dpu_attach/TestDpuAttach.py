@@ -35,7 +35,7 @@ class DpuAttachTestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         breakpoint_launch = \
-            target.BreakpointCreateByName("dpu_launch_thread_on_rank")
+            target.BreakpointCreateByName("dpu_launch_thread_on_dpu")
 
         env = ["%s=%s" % (k, v) for k, v in os.environ.iteritems()]
         process = target.LaunchSimple(
@@ -46,11 +46,11 @@ class DpuAttachTestCase(TestBase):
         self.assertTrue(thread.GetStopReason() == lldb.eStopReasonBreakpoint)
         target.BreakpointDelete(breakpoint_launch.GetID())
         while thread.GetFrameAtIndex(0).GetFunctionName() \
-                != "dpu_launch_thread_on_rank":
+                != "dpu_launch_thread_on_dpu":
             thread.StepOut()
         thread.StepOut()
 
-        breakpoint_poll = target.BreakpointCreateByName("dpu_poll_rank")
+        breakpoint_poll = target.BreakpointCreateByName("dpu_poll_dpu")
         process.Continue()
         self.assertTrue(thread.GetStopReason() == lldb.eStopReasonBreakpoint)
         target.BreakpointDelete(breakpoint_poll.GetID())

@@ -142,13 +142,13 @@ def break_to_next_boot_and_get_dpus(debugger, target):
     if function_name == launch_rank_function:
         rank = frame.FindVariable("rank")
         nb_ci, nb_dpu_per_ci = \
-            get_nb_slices_and_nb_dpus_per_slices(rank, target)
+            get_nb_slices_and_nb_dpus_per_slice(rank, target)
         nb_dpu = nb_ci * nb_dpu_per_ci
         for each_dpu in range(0, nb_dpu):
-            dpu_list.append(rank.GetValueForExpressionPath(
-                "->dpus[" + str(each_dpu) + "]"))
+            dpu_list.append(int(str(rank.GetValueForExpressionPath(
+                "->dpus[" + str(each_dpu) + "]").GetAddress()), 16))
     elif function_name == launch_dpu_function:
-        dpu_list.append(frame.FindVariable("dpu"))
+        dpu_list.append(frame.FindVariable("dpu").GetValueAsUnsigned())
 
     return dpu_list, frame
 
@@ -174,7 +174,7 @@ def dpu_attach_on_boot(debugger, command, result, internal_dict):
             print("Could not find the dpu to attach to")
             return None
         dpus_booting = filter(
-            lambda dpu: dpu.GetValue() == dpu_to_attach.GetValue(),
+            lambda dpu: dpu == dpu_to_attach.GetValueAsUnsigned(),
             dpus_booting)
         while len(dpus_booting) == 0:
             dpus_booting, host_frame =\
@@ -183,11 +183,11 @@ def dpu_attach_on_boot(debugger, command, result, internal_dict):
                 print("Could not find the dpu booting")
                 return None
             dpus_booting = filter(
-                lambda dpu: dpu.GetValue() == dpu_to_attach.GetValue(),
+                lambda dpu: dpu == dpu_to_attach.GetValueAsUnsigned(),
                 dpus_booting)
 
-    dpu_addr = dpus_booting[0].GetValue()
-    print("Setting up dpu '" + dpu_addr + "' for attach on boot...")
+    dpu_addr = str(hex(dpus_booting[0]))
+    print("Setting up dpu '" + str(dpu_addr) + "' for attach on boot...")
     target_dpu = dpu_attach(debugger, dpu_addr, None, None)
     if target_dpu is None:
         print("Could not attach to dpu")
@@ -315,10 +315,10 @@ def dpu_attach(debugger, command, result, internal_dict):
         .FindFirstGlobalVariable("__stdout_buffer_state")
 
     if (open_print_sequence_fct.IsValid()
-        and close_print_sequence_fct.IsValid()
-        and print_buffer_var.IsValid()
-        and print_buffer_size_var.IsValid()
-        and print_buffer_var_var.IsValid()):
+            and close_print_sequence_fct.IsValid()
+            and print_buffer_var.IsValid()
+            and print_buffer_size_var.IsValid()
+            and print_buffer_var_var.IsValid()):
 
         open_print_sequence_addr = open_print_sequence_fct \
             .GetContextAtIndex(0).GetFunction().GetStartAddress() \
