@@ -42,7 +42,7 @@ public:
   struct Set {
     /// The total length of the entries for that set, not including the length
     /// field itself.
-    uint32_t Length;
+    uint64_t Length;
 
     /// This number is specific to the name lookup table and is independent of
     /// the DWARF version number.
@@ -54,7 +54,7 @@ public:
 
     /// The size in bytes of the contents of the .debug_info section generated
     /// to represent that compilation unit.
-    uint32_t Size;
+    uint64_t Size;
 
     std::vector<Entry> Entries;
   };
