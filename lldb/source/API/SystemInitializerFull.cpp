@@ -414,6 +414,18 @@ void SystemInitializerFull::Terminate() {
   ObjectContainerBSDArchive::Terminate();
   ObjectContainerUniversalMachO::Terminate();
 
+#if LLDB_ENABLE_PYTHON
+  OperatingSystemPython::Terminate();
+#endif
+
+#if LLDB_ENABLE_PYTHON
+  ScriptInterpreterPython::Terminate();
+#endif
+
+#if LLDB_ENABLE_LUA
+  ScriptInterpreterLua::Terminate();
+#endif
+
   // Now shutdown the common parts, in reverse order.
   SystemInitializerCommon::Terminate();
 }
