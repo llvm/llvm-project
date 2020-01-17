@@ -523,7 +523,7 @@ How-tos
 =======
 
 How to manage symbol strings
-############################
+----------------------------
 
 Symbol strings in ORC are uniqued to improve lookup performance, reduce memory
 overhead, and allow symbol names to function as efficient keys. To get the
@@ -556,7 +556,7 @@ will perform both jobs for you:
     auto Sym = ES.lookup({&ES.getMainJITDylib()}, Mangle("main"));
 
 How to create JITDylibs and set up linkage relationships
-########################################################
+--------------------------------------------------------
 
 In ORC, all symbol definitions reside in JITDylibs. JITDylibs are created by
 calling the ``ExecutionSession::createJITDylib`` method with a unique name:
@@ -579,7 +579,7 @@ default. A reference to it can be obtained by calling
     auto &MainJD = ES.getMainJITDylib();
 
 How to use ThreadSafeModule and ThreadSafeContext
-#################################################
+-------------------------------------------------
 
 ThreadSafeModule and ThreadSafeContext are wrappers around Modules and
 LLVMContexts respectively. A ThreadSafeModule is a pair of a
