@@ -163,7 +163,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Load the contents of the module
   if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
     // The buffer was already provided for us.
-    NewModule->Buffer = &ModuleCache->addBuiltPCM(FileName, std::move(Buffer));
+    NewModule->Buffer = &ModuleCache->addFinalPCM(FileName, std::move(Buffer));
     // Since the cached buffer is reused, it is safe to close the file
     // descriptor that was opened while stat()ing the PCM in
     // lookupModuleFile() above, it won't be needed any longer.
@@ -173,11 +173,6 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     NewModule->Buffer = Buffer;
     // As above, the file descriptor is no longer needed.
     Entry->closeFile();
-  } else if (getModuleCache().shouldBuildPCM(FileName)) {
-    // Report that the module is out of date, since we tried (and failed) to
-    // import it earlier.
-    Entry->closeFile();
-    return OutOfDate;
   } else {
     // Open the AST file.
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf((std::error_code()));
@@ -185,7 +180,9 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
       Buf = llvm::MemoryBuffer::getSTDIN();
     } else {
       // Get a buffer of the file and close the file descriptor when done.
-      Buf = FileMgr.getBufferForFile(NewModule->File, /*isVolatile=*/false);
+      // The file is volatile because in a parallel build we expect multiple
+      // compiler processes to use the same module file rebuilding it if needed.
+      Buf = FileMgr.getBufferForFile(NewModule->File, /*isVolatile=*/true);
     }
 
     if (!Buf) {

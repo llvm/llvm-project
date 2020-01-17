@@ -11,16 +11,6 @@
 
 using namespace clang;
 
-InMemoryModuleCache::State
-InMemoryModuleCache::getPCMState(llvm::StringRef Filename) const {
-  auto I = PCMs.find(Filename);
-  if (I == PCMs.end())
-    return Unknown;
-  if (I->second.IsFinal)
-    return Final;
-  return I->second.Buffer ? Tentative : ToBuild;
-}
-
 llvm::MemoryBuffer &
 InMemoryModuleCache::addPCM(llvm::StringRef Filename,
                             std::unique_ptr<llvm::MemoryBuffer> Buffer) {
@@ -30,11 +20,11 @@ InMemoryModuleCache::addPCM(llvm::StringRef Filename,
 }
 
 llvm::MemoryBuffer &
-InMemoryModuleCache::addBuiltPCM(llvm::StringRef Filename,
+InMemoryModuleCache::addFinalPCM(llvm::StringRef Filename,
                                  std::unique_ptr<llvm::MemoryBuffer> Buffer) {
   auto &PCM = PCMs[Filename];
   assert(!PCM.IsFinal && "Trying to override finalized PCM?");
-  assert(!PCM.Buffer && "Trying to override tentative PCM?");
+  assert(!PCM.Buffer && "Already has a non-final PCM");
   PCM.Buffer = std::move(Buffer);
   PCM.IsFinal = true;
   return *PCM.Buffer;
@@ -49,24 +39,21 @@ InMemoryModuleCache::lookupPCM(llvm::StringRef Filename) const {
 }
 
 bool InMemoryModuleCache::isPCMFinal(llvm::StringRef Filename) const {
-  return getPCMState(Filename) == Final;
+  auto I = PCMs.find(Filename);
+  if (I == PCMs.end())
+    return false;
+  return I->second.IsFinal;
 }
 
-bool InMemoryModuleCache::shouldBuildPCM(llvm::StringRef Filename) const {
-  return getPCMState(Filename) == ToBuild;
-}
-
-bool InMemoryModuleCache::tryToDropPCM(llvm::StringRef Filename) {
+bool InMemoryModuleCache::tryToRemovePCM(llvm::StringRef Filename) {
   auto I = PCMs.find(Filename);
   assert(I != PCMs.end() && "PCM to remove is unknown...");
 
   auto &PCM = I->second;
-  assert(PCM.Buffer && "PCM to remove is scheduled to be built...");
-
   if (PCM.IsFinal)
     return true;
 
-  PCM.Buffer.reset();
+  PCMs.erase(I);
   return false;
 }
 
