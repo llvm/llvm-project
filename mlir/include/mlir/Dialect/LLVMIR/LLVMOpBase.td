@@ -49,4 +49,11 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<OpTrait> traits = []> :
   string llvmBuilder = "";
 }
 
+// Base class for LLVM operations. All operations get an "llvm." prefix in
+// their name automatically. LLVM operations have either zero or one result,
+// this class is specialized below for both cases and should not be used
+// directly.
+class LLVM_Op<string mnemonic, list<OpTrait> traits = []> :
+    LLVM_OpBase<LLVM_Dialect, mnemonic, traits>;
+
 #endif  // LLVMIR_OP_BASE
