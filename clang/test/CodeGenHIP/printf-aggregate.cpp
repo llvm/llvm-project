@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
-// RUN:    -verify -emit-llvm %s
+// RUN:    -verify -emit-llvm-only %s
 
 #define __device__ __attribute__((device))
 extern "C" __device__ int printf(const char *format, ...);
