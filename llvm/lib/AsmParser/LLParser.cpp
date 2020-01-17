@@ -4633,8 +4633,7 @@ bool LLParser::ParseDIFile(MDNode *&Result, bool IsDistinct) {
 ///                      isOptimized: true, flags: "-O2", runtimeVersion: 1,
 ///                      splitDebugFilename: "abc.debug",
 ///                      emissionKind: FullDebug, enums: !1, retainedTypes: !2,
-///                      globals: !4, imports: !5, macros: !6, dwoId: 0x0abcd,
-///                      sysroot: "/")
+///                      globals: !4, imports: !5, macros: !6, dwoId: 0x0abcd)
 bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   if (!IsDistinct)
     return Lex.Error("missing 'distinct', required for !DICompileUnit");
@@ -4657,8 +4656,7 @@ bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(splitDebugInlining, MDBoolField, = true);                           \
   OPTIONAL(debugInfoForProfiling, MDBoolField, = false);                       \
   OPTIONAL(nameTableKind, NameTableKindField, );                               \
-  OPTIONAL(debugBaseAddress, MDBoolField, = false);                            \
-  OPTIONAL(sysroot, MDStringField, );
+  OPTIONAL(debugBaseAddress, MDBoolField, = false);
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -4667,7 +4665,7 @@ bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
       runtimeVersion.Val, splitDebugFilename.Val, emissionKind.Val, enums.Val,
       retainedTypes.Val, globals.Val, imports.Val, macros.Val, dwoId.Val,
       splitDebugInlining.Val, debugInfoForProfiling.Val, nameTableKind.Val,
-      debugBaseAddress.Val, sysroot.Val);
+      debugBaseAddress.Val);
   return false;
 }
 
@@ -4823,18 +4821,19 @@ bool LLParser::ParseDIMacroFile(MDNode *&Result, bool IsDistinct) {
 
 /// ParseDIModule:
 ///   ::= !DIModule(scope: !0, name: "SomeModule", configMacros: "-DNDEBUG",
-///                 includePath: "/usr/include")
+///                 includePath: "/usr/include", sysroot: "/")
 bool LLParser::ParseDIModule(MDNode *&Result, bool IsDistinct) {
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
   REQUIRED(scope, MDField, );                                                  \
   REQUIRED(name, MDStringField, );                                             \
   OPTIONAL(configMacros, MDStringField, );                                     \
-  OPTIONAL(includePath, MDStringField, );
+  OPTIONAL(includePath, MDStringField, );                                      \
+  OPTIONAL(sysroot, MDStringField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
   Result = GET_OR_DISTINCT(DIModule, (Context, scope.Val, name.Val,
-                           configMacros.Val, includePath.Val));
+                           configMacros.Val, includePath.Val, sysroot.Val));
   return false;
 }
 
