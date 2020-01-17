@@ -4327,7 +4327,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       "an array");
     break;
   }
-#define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC, DAGN)                  \
+#define INSTRUCTION(NAME, NARGS, ROUND_MODE, INTRINSIC)                        \
   case Intrinsic::INTRINSIC:
 #include "llvm/IR/ConstrainedOps.def"
     visitConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(Call));
@@ -4778,7 +4778,7 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
   unsigned NumOperands;
   bool HasRoundingMD;
   switch (FPI.getIntrinsicID()) {
-#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)                   \
+#define INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC)                         \
   case Intrinsic::INTRINSIC:                                                   \
     NumOperands = NARG;                                                        \
     HasRoundingMD = ROUND_MODE;                                                \
