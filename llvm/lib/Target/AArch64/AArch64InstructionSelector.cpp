@@ -2005,9 +2005,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     // Add and set the set condition flag.
     unsigned AddsOpc = OpSize == 32 ? AArch64::ADDSWrr : AArch64::ADDSXrr;
     MachineIRBuilder MIRBuilder(I);
-    auto AddsMI = MIRBuilder.buildInstr(
-        AddsOpc, {I.getOperand(0).getReg()},
-        {I.getOperand(2).getReg(), I.getOperand(3).getReg()});
+    auto AddsMI = MIRBuilder.buildInstr(AddsOpc, {I.getOperand(0)},
+                                        {I.getOperand(2), I.getOperand(3)});
     constrainSelectedInstRegOperands(*AddsMI, TII, TRI, RBI);
 
     // Now, put the overflow result in the register given by the first operand
@@ -3248,7 +3247,7 @@ AArch64InstructionSelector::emitADD(Register DefReg, MachineOperand &LHS,
   bool Is32Bit = MRI.getType(LHS.getReg()).getSizeInBits() == 32;
   auto ImmFns = selectArithImmed(RHS);
   unsigned Opc = OpcTable[Is32Bit][ImmFns.hasValue()];
-  auto AddMI = MIRBuilder.buildInstr(Opc, {DefReg}, {LHS.getReg()});
+  auto AddMI = MIRBuilder.buildInstr(Opc, {DefReg}, {LHS});
 
   // If we matched a valid constant immediate, add those operands.
   if (ImmFns) {
@@ -3274,7 +3273,7 @@ AArch64InstructionSelector::emitCMN(MachineOperand &LHS, MachineOperand &RHS,
   unsigned Opc = OpcTable[Is32Bit][ImmFns.hasValue()];
   Register ZReg = Is32Bit ? AArch64::WZR : AArch64::XZR;
 
-  auto CmpMI = MIRBuilder.buildInstr(Opc, {ZReg}, {LHS.getReg()});
+  auto CmpMI = MIRBuilder.buildInstr(Opc, {ZReg}, {LHS});
 
   // If we matched a valid constant immediate, add those operands.
   if (ImmFns) {
@@ -3852,9 +3851,8 @@ bool AArch64InstructionSelector::selectShuffleVector(
                     .addUse(Src2Reg)
                     .addImm(AArch64::qsub1);
 
-  auto TBL2 =
-      MIRBuilder.buildInstr(AArch64::TBLv16i8Two, {I.getOperand(0).getReg()},
-                            {RegSeq, IndexLoad->getOperand(0).getReg()});
+  auto TBL2 = MIRBuilder.buildInstr(AArch64::TBLv16i8Two, {I.getOperand(0)},
+                                    {RegSeq, IndexLoad->getOperand(0)});
   constrainSelectedInstRegOperands(*RegSeq, TII, TRI, RBI);
   constrainSelectedInstRegOperands(*TBL2, TII, TRI, RBI);
   I.eraseFromParent();
