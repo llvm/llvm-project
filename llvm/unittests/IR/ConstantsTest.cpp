@@ -585,5 +585,56 @@ TEST(ConstantsTest, FoldGlobalVariablePtr) {
       Instruction::And, TheConstantExpr, TheConstant)->isNullValue());
 }
 
+// Check that undefined elements in vector constants are matched
+// correctly for both integer and floating-point types. Just don't
+// crash on vectors of pointers (could be handled?).
+
+TEST(ConstantsTest, isElementWiseEqual) {
+  LLVMContext Context;
+
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Constant *CU = UndefValue::get(Int32Ty);
+  Constant *C1 = ConstantInt::get(Int32Ty, 1);
+  Constant *C2 = ConstantInt::get(Int32Ty, 2);
+
+  Constant *C1211 = ConstantVector::get({C1, C2, C1, C1});
+  Constant *C12U1 = ConstantVector::get({C1, C2, CU, C1});
+  Constant *C12U2 = ConstantVector::get({C1, C2, CU, C2});
+  Constant *C12U21 = ConstantVector::get({C1, C2, CU, C2, C1});
+
+  EXPECT_TRUE(C1211->isElementWiseEqual(C12U1));
+  EXPECT_TRUE(C12U1->isElementWiseEqual(C1211));
+  EXPECT_FALSE(C12U2->isElementWiseEqual(C12U1));
+  EXPECT_FALSE(C12U1->isElementWiseEqual(C12U2));
+  EXPECT_FALSE(C12U21->isElementWiseEqual(C12U2));
+
+  Type *FltTy = Type::getFloatTy(Context);
+  Constant *CFU = UndefValue::get(FltTy);
+  Constant *CF1 = ConstantFP::get(FltTy, 1.0);
+  Constant *CF2 = ConstantFP::get(FltTy, 2.0);
+
+  Constant *CF1211 = ConstantVector::get({CF1, CF2, CF1, CF1});
+  Constant *CF12U1 = ConstantVector::get({CF1, CF2, CFU, CF1});
+  Constant *CF12U2 = ConstantVector::get({CF1, CF2, CFU, CF2});
+
+  EXPECT_TRUE(CF1211->isElementWiseEqual(CF12U1));
+  EXPECT_TRUE(CF12U1->isElementWiseEqual(CF1211));
+  EXPECT_FALSE(CF12U2->isElementWiseEqual(CF12U1));
+  EXPECT_FALSE(CF12U1->isElementWiseEqual(CF12U2));
+
+  PointerType *PtrTy = Type::getInt8PtrTy(Context);
+  Constant *CPU = UndefValue::get(PtrTy);
+  Constant *CP0 = ConstantPointerNull::get(PtrTy);
+
+  Constant *CP0000 = ConstantVector::get({CP0, CP0, CP0, CP0});
+  Constant *CP00U0 = ConstantVector::get({CP0, CP0, CPU, CP0});
+  Constant *CP00U = ConstantVector::get({CP0, CP0, CPU});
+
+  EXPECT_FALSE(CP0000->isElementWiseEqual(CP00U0));
+  EXPECT_FALSE(CP00U0->isElementWiseEqual(CP0000));
+  EXPECT_FALSE(CP0000->isElementWiseEqual(CP00U));
+  EXPECT_FALSE(CP00U->isElementWiseEqual(CP00U0));
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm

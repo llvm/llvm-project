@@ -151,6 +151,29 @@ namespace clang {
       FrontendTimesIsEnabled = TimePasses;
       llvm::TimePassesIsEnabled = TimePasses;
     }
+
+    // This constructor is used in installing an empty BackendConsumer
+    // to use the clang diagnostic handler for IR input files. It avoids
+    // initializing the OS field.
+    BackendConsumer(BackendAction Action, DiagnosticsEngine &Diags,
+                    const HeaderSearchOptions &HeaderSearchOpts,
+                    const PreprocessorOptions &PPOpts,
+                    const CodeGenOptions &CodeGenOpts,
+                    const TargetOptions &TargetOpts,
+                    const LangOptions &LangOpts, bool TimePasses,
+                    SmallVector<LinkModule, 4> LinkModules, LLVMContext &C,
+                    CoverageSourceInfo *CoverageInfo = nullptr)
+        : Diags(Diags), Action(Action), HeaderSearchOpts(HeaderSearchOpts),
+          CodeGenOpts(CodeGenOpts), TargetOpts(TargetOpts), LangOpts(LangOpts),
+          Context(nullptr),
+          LLVMIRGeneration("irgen", "LLVM IR Generation Time"),
+          LLVMIRGenerationRefCount(0),
+          Gen(CreateLLVMCodeGen(Diags, "", HeaderSearchOpts, PPOpts,
+                                CodeGenOpts, C, CoverageInfo)),
+          LinkModules(std::move(LinkModules)) {
+      FrontendTimesIsEnabled = TimePasses;
+      llvm::TimePassesIsEnabled = TimePasses;
+    }
     llvm::Module *getModule() const { return Gen->GetModule(); }
     std::unique_ptr<llvm::Module> takeModule() {
       return std::unique_ptr<llvm::Module>(Gen->ReleaseModule());
@@ -616,10 +639,20 @@ void BackendConsumer::UnsupportedDiagHandler(
   StringRef Filename;
   unsigned Line, Column;
   bool BadDebugInfo = false;
-  FullSourceLoc Loc =
-      getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
+  FullSourceLoc Loc;
+  std::string Msg;
+  raw_string_ostream MsgStream(Msg);
 
-  Diags.Report(Loc, diag::err_fe_backend_unsupported) << D.getMessage().str();
+  // Context will be nullptr for IR input files, we will construct the diag
+  // message from llvm::DiagnosticInfoUnsupported.
+  if (Context != nullptr) {
+    Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
+    MsgStream << D.getMessage();
+  } else {
+    DiagnosticPrinterRawOStream DP(MsgStream);
+    D.print(DP);
+  }
+  Diags.Report(Loc, diag::err_fe_backend_unsupported) << MsgStream.str();
 
   if (BadDebugInfo)
     // If we were not able to translate the file:line:col information
@@ -635,10 +668,21 @@ void BackendConsumer::MisExpectDiagHandler(
   StringRef Filename;
   unsigned Line, Column;
   bool BadDebugInfo = false;
-  FullSourceLoc Loc =
-      getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
+  FullSourceLoc Loc;
+  std::string Msg;
+  raw_string_ostream MsgStream(Msg);
+  DiagnosticPrinterRawOStream DP(MsgStream);
 
-  Diags.Report(Loc, diag::warn_profile_data_misexpect) << D.getMsg().str();
+  // Context will be nullptr for IR input files, we will construct the diag
+  // message from llvm::DiagnosticInfoMisExpect.
+  if (Context != nullptr) {
+    Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
+    MsgStream << D.getMsg();
+  } else {
+    DiagnosticPrinterRawOStream DP(MsgStream);
+    D.print(DP);
+  }
+  Diags.Report(Loc, diag::warn_profile_data_misexpect) << MsgStream.str();
 
   if (BadDebugInfo)
     // If we were not able to translate the file:line:col information
@@ -658,12 +702,19 @@ void BackendConsumer::EmitOptimizationMessage(
   StringRef Filename;
   unsigned Line, Column;
   bool BadDebugInfo = false;
-  FullSourceLoc Loc =
-      getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
-
+  FullSourceLoc Loc;
   std::string Msg;
   raw_string_ostream MsgStream(Msg);
-  MsgStream << D.getMsg();
+
+  // Context will be nullptr for IR input files, we will construct the remark
+  // message from llvm::DiagnosticInfoOptimizationBase.
+  if (Context != nullptr) {
+    Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
+    MsgStream << D.getMsg();
+  } else {
+    DiagnosticPrinterRawOStream DP(MsgStream);
+    D.print(DP);
+  }
 
   if (D.getHotness())
     MsgStream << " (hotness: " << *D.getHotness() << ")";
@@ -1088,12 +1139,20 @@ void CodeGenAction::ExecuteAction() {
     Ctx.setInlineAsmDiagnosticHandler(BitcodeInlineAsmDiagHandler,
                                       &Diagnostics);
 
+    // Set clang diagnostic handler. To do this we need to create a fake
+    // BackendConsumer.
+    BackendConsumer Result(BA, CI.getDiagnostics(), CI.getHeaderSearchOpts(),
+                           CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
+                           CI.getTargetOpts(), CI.getLangOpts(),
+                           CI.getFrontendOpts().ShowTimers,
+                           std::move(LinkModules), *VMContext, nullptr);
+    Ctx.setDiagnosticHandler(
+        std::make_unique<ClangDiagnosticHandler>(CodeGenOpts, &Result));
+
     Expected<std::unique_ptr<llvm::ToolOutputFile>> OptRecordFileOrErr =
         setupOptimizationRemarks(
-            Ctx, CodeGenOpts.OptRecordFile,
-            CodeGenOpts.OptRecordPasses,
-            CodeGenOpts.OptRecordFormat,
-            CodeGenOpts.DiagnosticsWithHotness,
+            Ctx, CodeGenOpts.OptRecordFile, CodeGenOpts.OptRecordPasses,
+            CodeGenOpts.OptRecordFormat, CodeGenOpts.DiagnosticsWithHotness,
             CodeGenOpts.DiagnosticsHotnessThreshold);
 
     if (Error E = OptRecordFileOrErr.takeError()) {
@@ -1101,10 +1160,10 @@ void CodeGenAction::ExecuteAction() {
       return;
     }
     std::unique_ptr<llvm::ToolOutputFile> OptRecordFile =
-      std::move(*OptRecordFileOrErr);
+        std::move(*OptRecordFileOrErr);
 
-    EmitBackendOutput(Diagnostics, CI.getHeaderSearchOpts(),
-                      CodeGenOpts, TargetOpts, CI.getLangOpts(),
+    EmitBackendOutput(Diagnostics, CI.getHeaderSearchOpts(), CodeGenOpts,
+                      TargetOpts, CI.getLangOpts(),
                       CI.getTarget().getDataLayout(), TheModule.get(), BA,
                       std::move(OS));
 

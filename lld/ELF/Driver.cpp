@@ -1375,7 +1375,7 @@ static void excludeLibs(opt::InputArgList &args) {
     if (!file->archiveName.empty())
       if (all || libs.count(path::filename(file->archiveName)))
         for (Symbol *sym : file->getSymbols())
-          if (!sym->isLocal() && sym->file == file)
+          if (!sym->isUndefined() && !sym->isLocal() && sym->file == file)
             sym->versionId = VER_NDX_LOCAL;
   };
 

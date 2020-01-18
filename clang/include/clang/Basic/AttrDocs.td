@@ -4789,3 +4789,45 @@ close the handle. It is also assumed to require an open handle to work with.
   zx_status_t zx_handle_close(zx_handle_t handle [[clang::release_handle]]);
   }];
 }
+
+def ArmMveStrictPolymorphismDocs : Documentation {
+    let Category = DocCatType;
+    let Content = [{
+This attribute is used in the implementation of the ACLE intrinsics for the Arm
+MVE instruction set. It is used to define the vector types used by the MVE
+intrinsics.
+
+Its effect is to modify the behavior of a vector type with respect to function
+overloading. If a candidate function for overload resolution has a parameter
+type with this attribute, then the selection of that candidate function will be
+disallowed if the actual argument can only be converted via a lax vector
+conversion. The aim is to prevent spurious ambiguity in ARM MVE polymorphic
+intrinsics.
+
+.. code-block:: c++
+
+  void overloaded(uint16x8_t vector, uint16_t scalar);
+  void overloaded(int32x4_t vector, int32_t scalar);
+  uint16x8_t myVector;
+  uint16_t myScalar;
+
+  // myScalar is promoted to int32_t as a side effect of the addition,
+  // so if lax vector conversions are considered for myVector, then
+  // the two overloads are equally good (one argument conversion
+  // each). But if the vector has the __clang_arm_mve_strict_polymorphism
+  // attribute, only the uint16x8_t,uint16_t overload will match.
+  overloaded(myVector, myScalar + 1);
+
+However, this attribute does not prohibit lax vector conversions in contexts
+other than overloading.
+
+.. code-block:: c++
+
+  uint16x8_t function();
+
+  // This is still permitted with lax vector conversion enabled, even
+  // if the vector types have __clang_arm_mve_strict_polymorphism
+  int32x4_t result = function();
+
+    }];
+}

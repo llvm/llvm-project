@@ -757,6 +757,11 @@ bool CursorVisitor::VisitClassTemplatePartialSpecializationDecl(
 }
 
 bool CursorVisitor::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
+  if (const auto *TC = D->getTypeConstraint())
+    if (Visit(MakeCXCursor(TC->getImmediatelyDeclaredConstraint(), StmtParent,
+                           TU, RegionOfInterest)))
+      return true;
+
   // Visit the default argument.
   if (D->hasDefaultArgument() && !D->defaultArgumentWasInherited())
     if (TypeSourceInfo *DefArg = D->getDefaultArgumentInfo())
@@ -5050,7 +5055,12 @@ CXString clang_getCursorDisplayName(CXCursor C) {
       // There is no parameter name, which makes this tricky. Try to come up
       // with something useful that isn't too long.
       if (TemplateTypeParmDecl *TTP = dyn_cast<TemplateTypeParmDecl>(Param))
-        OS << (TTP->wasDeclaredWithTypename()? "typename" : "class");
+        if (const auto *TC = TTP->getTypeConstraint()) {
+          TC->getConceptNameInfo().printName(OS, Policy);
+          if (TC->hasExplicitTemplateArgs())
+            OS << "<...>";
+        } else
+          OS << (TTP->wasDeclaredWithTypename()? "typename" : "class");
       else if (NonTypeTemplateParmDecl *NTTP
                                     = dyn_cast<NonTypeTemplateParmDecl>(Param))
         OS << NTTP->getType().getAsString(Policy);

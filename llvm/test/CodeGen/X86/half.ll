@@ -362,11 +362,10 @@ define void @test_uitofp_i64(i64 %a, half* %p) #0 {
 ; CHECK-I686-NEXT:    pushl %esi
 ; CHECK-I686-NEXT:    subl $24, %esp
 ; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-I686-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-I686-NEXT:    movlps %xmm0, {{[0-9]+}}(%esp)
-; CHECK-I686-NEXT:    xorl %eax, %eax
-; CHECK-I686-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; CHECK-I686-NEXT:    setns %al
+; CHECK-I686-NEXT:    shrl $31, %eax
 ; CHECK-I686-NEXT:    fildll {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    fadds {{\.LCPI.*}}(,%eax,4)
 ; CHECK-I686-NEXT:    fstps (%esp)

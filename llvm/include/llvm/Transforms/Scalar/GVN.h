@@ -61,13 +61,50 @@ class GVNLegacyPass;
 
 } // end namespace gvn
 
+/// A set of parameters to control various transforms performed by GVN pass.
+//  Each of the optional boolean parameters can be set to:
+///      true - enabling the transformation.
+///      false - disabling the transformation.
+///      None - relying on a global default.
+/// Intended use is to create a default object, modify parameters with
+/// additional setters and then pass it to GVN.
+struct GVNOptions {
+  Optional<bool> AllowPRE = None;
+  Optional<bool> AllowLoadPRE = None;
+  Optional<bool> AllowMemDep = None;
+
+  GVNOptions() = default;
+
+  /// Enables or disables PRE in GVN.
+  GVNOptions &setPRE(bool PRE) {
+    AllowPRE = PRE;
+    return *this;
+  }
+
+  /// Enables or disables PRE of loads in GVN.
+  GVNOptions &setLoadPRE(bool LoadPRE) {
+    AllowLoadPRE = LoadPRE;
+    return *this;
+  }
+
+  /// Enables or disables use of MemDepAnalysis.
+  GVNOptions &setMemDep(bool MemDep) {
+    AllowMemDep = MemDep;
+    return *this;
+  }
+};
+
 /// The core GVN pass object.
 ///
 /// FIXME: We should have a good summary of the GVN algorithm implemented by
 /// this particular pass here.
 class GVN : public PassInfoMixin<GVN> {
+  GVNOptions Options;
+
 public:
   struct Expression;
+
+  GVN(GVNOptions Options = {}) : Options(Options) {}
 
   /// Run the pass over the function.
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
@@ -82,6 +119,10 @@ public:
   DominatorTree &getDominatorTree() const { return *DT; }
   AliasAnalysis *getAliasAnalysis() const { return VN.getAliasAnalysis(); }
   MemoryDependenceResults &getMemDep() const { return *MD; }
+
+  bool isPREEnabled() const;
+  bool isLoadPREEnabled() const;
+  bool isMemDepEnabled() const;
 
   /// This class holds the mapping between values and value numbers.  It is used
   /// as an efficient mechanism to determine the expression-wise equivalence of
@@ -294,8 +335,8 @@ private:
 };
 
 /// Create a legacy GVN pass. This also allows parameterizing whether or not
-/// loads are eliminated by the pass.
-FunctionPass *createGVNPass(bool NoLoads = false);
+/// MemDep is enabled.
+FunctionPass *createGVNPass(bool NoMemDepAnalysis = false);
 
 /// A simple and fast domtree-based GVN pass to hoist common expressions
 /// from sibling branches.

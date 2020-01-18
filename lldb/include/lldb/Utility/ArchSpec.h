@@ -188,6 +188,8 @@ public:
 
     eCore_arc, // little endian ARC
 
+    eCore_wasm32,
+
     kNumCores,
 
     kCore_invalid,

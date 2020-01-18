@@ -22,13 +22,13 @@ class ImportStdModule(TestBase):
         # Activate importing of std module.
         self.runCmd("settings set target.import-std-module true")
         # Calling some normal std functions that return non-template types.
-        self.expect("expr std::abs(-42)", substrs=['(int) $0 = 42'])
-        self.expect("expr std::div(2, 1).quot", substrs=['(int) $1 = 2'])
+        self.expect_expr("std::abs(-42)", result_type="int", result_value="42")
+        self.expect_expr("std::div(2, 1).quot", result_type="int", result_value="2")
         # Using types from std.
-        self.expect("expr (std::size_t)33U", substrs=['(size_t) $2 = 33'])
+        self.expect_expr("(std::size_t)33U", result_type="size_t", result_value="33")
         # Calling templated functions that return non-template types.
-        self.expect("expr char char_a = 'b'; char char_b = 'a'; std::swap(char_a, char_b); char_a",
-                    substrs=["(char) $3 = 'a'"])
+        self.expect_expr("char char_a = 'b'; char char_b = 'a'; std::swap(char_a, char_b); char_a",
+                    result_type="char", result_value="'a'")
 
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))

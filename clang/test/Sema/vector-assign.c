@@ -14,12 +14,12 @@ void test1() {
   
   v1 = v2; // expected-warning {{incompatible vector types assigning to 'v2s' (vector of 2 'int' values) from 'v2u' (vector of 2 'unsigned int' values)}}
   v1 = v3; // expected-error {{assigning to 'v2s' (vector of 2 'int' values) from incompatible type 'v1s' (vector of 1 'int' value)}}
-  v1 = v4; // expected-warning {{incompatible vector types assigning to 'v2s' (vector of 2 'int' values) from 'v2f' (vector of 2 'float' values)}}
+  v1 = v4; // expected-error {{assigning to 'v2s' (vector of 2 'int' values) from incompatible type 'v2f' (vector of 2 'float' values)}}
   v1 = v5; // expected-warning {{incompatible vector types assigning to 'v2s' (vector of 2 'int' values) from 'v4ss' (vector of 4 'short' values)}}
   
   v2 = v1; // expected-warning {{incompatible vector types assigning to 'v2u' (vector of 2 'unsigned int' values) from 'v2s' (vector of 2 'int' values)}}
   v2 = v3; // expected-error {{assigning to 'v2u' (vector of 2 'unsigned int' values) from incompatible type 'v1s' (vector of 1 'int' value)}}
-  v2 = v4; // expected-warning {{incompatible vector types assigning to 'v2u' (vector of 2 'unsigned int' values) from 'v2f' (vector of 2 'float' values)}}
+  v2 = v4; // expected-error {{assigning to 'v2u' (vector of 2 'unsigned int' values) from incompatible type 'v2f' (vector of 2 'float' values)}}
   v2 = v5; // expected-warning {{incompatible vector types assigning to 'v2u' (vector of 2 'unsigned int' values) from 'v4ss' (vector of 4 'short' values)}}
   
   v3 = v1; // expected-error {{assigning to 'v1s' (vector of 1 'int' value) from incompatible type 'v2s' (vector of 2 'int' values)}}
@@ -27,15 +27,15 @@ void test1() {
   v3 = v4; // expected-error {{assigning to 'v1s' (vector of 1 'int' value) from incompatible type 'v2f' (vector of 2 'float' values)}}
   v3 = v5; // expected-error {{assigning to 'v1s' (vector of 1 'int' value) from incompatible type 'v4ss'}}
   
-  v4 = v1; // expected-warning {{incompatible vector types assigning to 'v2f' (vector of 2 'float' values) from 'v2s' (vector of 2 'int' values)}}
-  v4 = v2; // expected-warning {{incompatible vector types assigning to 'v2f' (vector of 2 'float' values) from 'v2u' (vector of 2 'unsigned int' values)}}
+  v4 = v1; // expected-error {{assigning to 'v2f' (vector of 2 'float' values) from incompatible type 'v2s' (vector of 2 'int' values)}}
+  v4 = v2; // expected-error {{assigning to 'v2f' (vector of 2 'float' values) from incompatible type 'v2u' (vector of 2 'unsigned int' values)}}
   v4 = v3; // expected-error {{assigning to 'v2f' (vector of 2 'float' values) from incompatible type 'v1s' (vector of 1 'int' value)}}
-  v4 = v5; // expected-warning {{incompatible vector types assigning to 'v2f' (vector of 2 'float' values) from 'v4ss' (vector of 4 'short' values)}}
+  v4 = v5; // expected-error {{assigning to 'v2f' (vector of 2 'float' values) from incompatible type 'v4ss' (vector of 4 'short' values)}}
   
   v5 = v1; // expected-warning {{incompatible vector types assigning to 'v4ss' (vector of 4 'short' values) from 'v2s' (vector of 2 'int' values)}}
   v5 = v2; // expected-warning {{incompatible vector types assigning to 'v4ss' (vector of 4 'short' values) from 'v2u' (vector of 2 'unsigned int' values)}}
   v5 = v3; // expected-error {{assigning to 'v4ss' (vector of 4 'short' values) from incompatible type 'v1s' (vector of 1 'int' value)}}
-  v5 = v4; // expected-warning {{incompatible vector types assigning to 'v4ss' (vector of 4 'short' values) from 'v2f'}}
+  v5 = v4; // expected-error {{assigning to 'v4ss' (vector of 4 'short' values) from incompatible type 'v2f'}}
 }
 
 // PR2263

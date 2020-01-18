@@ -26,9 +26,9 @@
 ; GCN:      s_mov_b64         [[ACCUM_MASK:s\[[0-9]+:[0-9]+\]]], 0{{$}}
 
 ; GCN: [[LOOP_ENTRY:BB[0-9]+_[0-9]+]]: ; %bb1
-; GCN:     s_add_i32 s4, s4, 1
+; GCN:     s_add_i32 s6, s6, 1
 ; GCN:     s_or_b64 [[INNER_MASK:s\[[0-9]+:[0-9]+\]]], [[INNER_MASK]], exec
-; GCN:     s_cmp_gt_i32 s4, -1
+; GCN:     s_cmp_gt_i32 s6, -1
 ; GCN:     s_cbranch_scc1   [[FLOW:BB[0-9]+_[0-9]+]]
 
 ; GCN: ; %bb4

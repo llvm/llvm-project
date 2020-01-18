@@ -281,8 +281,7 @@ public:
   /// made the call.
   lldb::addr_t GetReturnPCAddress(Function &caller, Target &target) const;
 
-  /// Like \ref GetReturnPCAddress, but returns an unslid function-local PC
-  /// offset.
+  /// Like \ref GetReturnPCAddress, but returns an unresolved file address.
   lldb::addr_t GetUnresolvedReturnPCAddress() const { return return_pc; }
 
   /// Get the call site parameters available at this call edge.
@@ -294,9 +293,8 @@ protected:
   CallEdge(lldb::addr_t return_pc, CallSiteParameterArray &&parameters)
       : return_pc(return_pc), parameters(std::move(parameters)) {}
 
-  /// An invalid address if this is a tail call. Otherwise, the function-local
-  /// PC offset. Adding this PC offset to the function's base load address
-  /// gives the return PC for the call.
+  /// An invalid address if this is a tail call. Otherwise, the return PC for
+  /// the call. Note that this is a file address which must be resolved.
   lldb::addr_t return_pc;
 
   CallSiteParameterArray parameters;

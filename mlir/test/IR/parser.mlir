@@ -1030,6 +1030,32 @@ func @f64_special_values() {
   return
 }
 
+// FIXME: bfloat16 currently uses f64 as a storage format. This test should be
+// changed when that gets fixed.
+// CHECK-LABEL: @bfloat16_special_values
+func @bfloat16_special_values() {
+  // bfloat16 signaling NaNs.
+  // CHECK: constant 0x7FF0000000000001 : bf16
+  %0 = constant 0x7FF0000000000001 : bf16
+  // CHECK: constant 0x7FF8000000000000 : bf16
+  %1 = constant 0x7FF8000000000000 : bf16
+
+  // bfloat16 quiet NaNs.
+  // CHECK: constant 0x7FF0000001000000 : bf16
+  %2 = constant 0x7FF0000001000000 : bf16
+  // CHECK: constant 0xFFF0000001000000 : bf16
+  %3 = constant 0xFFF0000001000000 : bf16
+
+  // bfloat16 positive infinity.
+  // CHECK: constant 0x7FF0000000000000 : bf16
+  %4 = constant 0x7FF0000000000000 : bf16
+  // bfloat16 negative infinity.
+  // CHECK: constant 0xFFF0000000000000 : bf16
+  %5 = constant 0xFFF0000000000000 : bf16
+
+  return
+}
+
 // We want to print floats in exponential notation with 6 significant digits,
 // but it may lead to precision loss when parsing back, in which case we print
 // the decimal form instead.

@@ -76,7 +76,7 @@ TargetPassConfig *AVRTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new AVRPassConfig(*this, PM);
 }
 
-extern "C" void LLVMInitializeAVRTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
   // Register the target.
   RegisterTargetMachine<AVRTargetMachine> X(getTheAVRTarget());
 

@@ -94,7 +94,7 @@ static cl::opt<bool>
   ReduceCRLogical("ppc-reduce-cr-logicals",
                   cl::desc("Expand eligible cr-logical binary ops to branches"),
                   cl::init(true), cl::Hidden);
-extern "C" void LLVMInitializePowerPCTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTarget() {
   // Register the targets
   RegisterTargetMachine<PPCTargetMachine> A(getThePPC32Target());
   RegisterTargetMachine<PPCTargetMachine> B(getThePPC64Target());
@@ -223,6 +223,9 @@ static PPCTargetMachine::PPCABI computeTargetABI(const Triple &TT,
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            Optional<Reloc::Model> RM) {
+  assert((!TT.isOSAIX() || !RM.hasValue() || *RM == Reloc::PIC_) &&
+         "Invalid relocation model for AIX.");
+
   if (RM.hasValue())
     return *RM;
 
@@ -230,8 +233,8 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
   if (TT.isOSDarwin())
     return Reloc::DynamicNoPIC;
 
-  // Big Endian PPC is PIC by default.
-  if (TT.getArch() == Triple::ppc64)
+  // Big Endian PPC and AIX default to PIC.
+  if (TT.getArch() == Triple::ppc64 || TT.isOSAIX())
     return Reloc::PIC_;
 
   // Rest are static by default.

@@ -200,7 +200,7 @@ private:
     auto type = operand.getType().cast<LLVM::LLVMType>();
 
     // Create shared memory array to store the warp reduction.
-    auto module = operand.getDefiningOp()->getParentOfType<gpu::GPUModuleOp>();
+    auto module = operand.getDefiningOp()->getParentOfType<ModuleOp>();
     assert(module && "op must belong to a module");
     Value sharedMemPtr =
         createSharedMemoryArray(loc, module, type, kWarpSize, rewriter);
@@ -391,10 +391,10 @@ private:
   }
 
   /// Creates a global array stored in shared memory.
-  Value createSharedMemoryArray(Location loc, gpu::GPUModuleOp module,
+  Value createSharedMemoryArray(Location loc, ModuleOp module,
                                 LLVM::LLVMType elementType, int numElements,
                                 ConversionPatternRewriter &rewriter) const {
-    OpBuilder builder(module.body());
+    OpBuilder builder(module.getBodyRegion());
 
     auto arrayType = LLVM::LLVMType::getArrayTy(elementType, numElements);
     StringRef name = "reduce_buffer";
@@ -699,11 +699,13 @@ struct GPUReturnOpLowering : public LLVMOpLowering {
 ///
 /// This pass only handles device code and is not meant to be run on GPU host
 /// code.
-class LowerGpuOpsToNVVMOpsPass
-    : public OperationPass<LowerGpuOpsToNVVMOpsPass, gpu::GPUModuleOp> {
+class LowerGpuOpsToNVVMOpsPass : public ModulePass<LowerGpuOpsToNVVMOpsPass> {
 public:
-  void runOnOperation() override {
-    gpu::GPUModuleOp m = getOperation();
+  void runOnModule() override {
+    ModuleOp m = getModule();
+    if (!m.getAttrOfType<UnitAttr>(gpu::GPUDialect::getKernelModuleAttrName()))
+      return;
+
     OwningRewritePatternList patterns;
     NVVMTypeConverter converter(m.getContext());
     populateStdToLLVMConversionPatterns(converter, patterns);
@@ -716,7 +718,7 @@ public:
     target.addLegalDialect<LLVM::LLVMDialect>();
     target.addLegalDialect<NVVM::NVVMDialect>();
     // TODO(csigg): Remove once we support replacing non-root ops.
-    target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
+    target.addLegalOp<gpu::YieldOp>();
     if (failed(applyPartialConversion(m, target, patterns, &converter)))
       signalPassFailure();
   }
@@ -748,8 +750,7 @@ void mlir::populateGpuToNVVMConversionPatterns(
                                                "__nv_exp");
 }
 
-std::unique_ptr<OpPassBase<gpu::GPUModuleOp>>
-mlir::createLowerGpuOpsToNVVMOpsPass() {
+std::unique_ptr<OpPassBase<ModuleOp>> mlir::createLowerGpuOpsToNVVMOpsPass() {
   return std::make_unique<LowerGpuOpsToNVVMOpsPass>();
 }
 

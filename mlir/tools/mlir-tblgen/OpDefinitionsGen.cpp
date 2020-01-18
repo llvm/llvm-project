@@ -58,8 +58,8 @@ ODSDialectHookRegistration::ODSDialectHookRegistration(
 //===----------------------------------------------------------------------===//
 
 static const char *const tblgenNamePrefix = "tblgen_";
-static const char *const generatedArgName = "tblgen_arg";
-static const char *const builderOpState = "tblgen_state";
+static const char *const generatedArgName = "odsArg";
+static const char *const builderOpState = "odsState";
 
 // The logic to calculate the actual value range for a declared operand/result
 // of an op with variadic operands/results. Note that this logic is not for
@@ -627,8 +627,9 @@ void OpEmitter::genSeparateArgParamBuilder() {
       // TODO(jpienaar): Expand to handle regions.
       body << formatv(R"(
         SmallVector<Type, 2> inferedReturnTypes;
-        if (succeeded({0}::inferReturnTypes({1}.location, {1}.operands,
-                      {1}.attributes, /*regions=*/{{}, inferedReturnTypes)))
+        if (succeeded({0}::inferReturnTypes(odsBuilder->getContext(),
+                      {1}.location, {1}.operands, {1}.attributes,
+                      /*regions=*/{{}, inferedReturnTypes)))
           {1}.addTypes(inferedReturnTypes);
         else
           llvm::report_fatal_error("Failed to infer result type(s).");)",
@@ -702,7 +703,7 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 void OpEmitter::genInferedTypeCollectiveParamBuilder() {
   // TODO(jpienaar): Expand to support regions.
   const char *params =
-      "Builder *builder, OperationState &{0}, "
+      "Builder *odsBuilder, OperationState &{0}, "
       "ValueRange operands, ArrayRef<NamedAttribute> attributes";
   auto &m =
       opClass.newMethod("void", "build", formatv(params, builderOpState).str(),
@@ -710,9 +711,10 @@ void OpEmitter::genInferedTypeCollectiveParamBuilder() {
   auto &body = m.body();
   body << formatv(R"(
     SmallVector<Type, 2> inferedReturnTypes;
-    if (succeeded({0}::inferReturnTypes({1}.location, operands, attributes,
+    if (succeeded({0}::inferReturnTypes(odsBuilder->getContext(),
+                  {1}.location, operands, attributes,
                   /*regions=*/{{}, inferedReturnTypes)))
-      build(builder, tblgen_state, inferedReturnTypes, operands, attributes);
+      build(odsBuilder, odsState, inferedReturnTypes, operands, attributes);
     else
       llvm::report_fatal_error("Failed to infer result type(s).");)",
                   opClass.getClassName(), builderOpState);
@@ -878,7 +880,7 @@ void OpEmitter::buildParamList(std::string &paramList,
   auto numResults = op.getNumResults();
   resultTypeNames.reserve(numResults);
 
-  paramList = "Builder *tblgen_builder, OperationState &";
+  paramList = "Builder *odsBuilder, OperationState &";
   paramList.append(builderOpState);
 
   switch (typeParamKind) {
@@ -1000,7 +1002,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
         // If this is a raw value, then we need to wrap it in an Attribute
         // instance.
         FmtContext fctx;
-        fctx.withBuilder("(*tblgen_builder)");
+        fctx.withBuilder("(*odsBuilder)");
         std::string value =
             tgfmt(attr.getConstBuilderTemplate(), &fctx, namedAttr.name);
         body << formatv("  {0}.addAttribute(\"{1}\", {2});\n", builderOpState,

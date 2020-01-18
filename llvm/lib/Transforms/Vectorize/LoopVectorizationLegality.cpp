@@ -13,14 +13,16 @@
 // pass. It should be easy to create an analysis pass around it if there
 // is a need (but D45420 needs to happen first).
 //
-#include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PatternMatch.h"
+#include "llvm/Transforms/Vectorize/LoopVectorize.h"
 
 using namespace llvm;
+using namespace PatternMatch;
 
 #define LV_NAME "loop-vectorize"
 #define DEBUG_TYPE LV_NAME
@@ -566,6 +568,28 @@ bool LoopVectorizationLegality::setupOuterLoopInductions() {
     return false;
 }
 
+/// Checks if a function is scalarizable according to the TLI, in
+/// the sense that it should be vectorized and then expanded in
+/// multiple scalarcalls. This is represented in the
+/// TLI via mappings that do not specify a vector name, as in the
+/// following example:
+///
+///    const VecDesc VecIntrinsics[] = {
+///      {"llvm.phx.abs.i32", "", 4}
+///    };
+static bool isTLIScalarize(const TargetLibraryInfo &TLI, const CallInst &CI) {
+  const StringRef ScalarName = CI.getCalledFunction()->getName();
+  bool Scalarize = TLI.isFunctionVectorizable(ScalarName);
+  // Check that all known VFs are not associated to a vector
+  // function, i.e. the vector name is emty.
+  if (Scalarize)
+    for (unsigned VF = 2, WidestVF = TLI.getWidestVF(ScalarName);
+         VF <= WidestVF; VF *= 2) {
+      Scalarize &= !TLI.isFunctionVectorizable(ScalarName, VF);
+    }
+  return Scalarize;
+}
+
 bool LoopVectorizationLegality::canVectorizeInstrs() {
   BasicBlock *Header = TheLoop->getHeader();
 
@@ -667,10 +691,12 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
       //   * Have a mapping to an IR intrinsic.
       //   * Have a vector version available.
       auto *CI = dyn_cast<CallInst>(&I);
+
       if (CI && !getVectorIntrinsicIDForCall(CI, TLI) &&
           !isa<DbgInfoIntrinsic>(CI) &&
           !(CI->getCalledFunction() && TLI &&
-            TLI->isFunctionVectorizable(CI->getCalledFunction()->getName()))) {
+            (!VFDatabase::getMappings(*CI).empty() ||
+             isTLIScalarize(*TLI, *CI)))) {
         // If the call is a recognized math libary call, it is likely that
         // we can vectorize it given loosened floating-point constraints.
         LibFunc Func;
@@ -685,7 +711,8 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           // but it's hard to provide meaningful yet generic advice.
           // Also, should this be guarded by allowExtraAnalysis() and/or be part
           // of the returned info from isFunctionVectorizable()?
-          reportVectorizationFailure("Found a non-intrinsic callsite",
+          reportVectorizationFailure(
+              "Found a non-intrinsic callsite",
               "library call cannot be vectorized. "
               "Try compiling with -fno-math-errno, -ffast-math, "
               "or similar flags",
@@ -897,6 +924,14 @@ bool LoopVectorizationLegality::blockCanBePredicated(
         if (C->canTrap())
           return false;
     }
+
+    // We can predicate blocks with calls to assume, as long as we drop them in
+    // case we flatten the CFG via predication.
+    if (match(&I, m_Intrinsic<Intrinsic::assume>())) {
+      ConditionalAssumes.insert(&I);
+      continue;
+    }
+
     // We might be able to hoist the load.
     if (I.mayReadFromMemory()) {
       auto *LI = dyn_cast<LoadInst>(&I);

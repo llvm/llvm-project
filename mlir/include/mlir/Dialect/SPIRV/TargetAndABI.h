@@ -27,21 +27,33 @@ class Value;
 namespace spirv {
 enum class StorageClass : uint32_t;
 
-/// Attribute name for specifying argument ABI information.
+/// Returns the attribute name for specifying argument ABI information.
 StringRef getInterfaceVarABIAttrName();
 
-/// Get the InterfaceVarABIAttr given its fields.
+/// Gets the InterfaceVarABIAttr given its fields.
 InterfaceVarABIAttr getInterfaceVarABIAttr(unsigned descriptorSet,
                                            unsigned binding,
                                            StorageClass storageClass,
                                            MLIRContext *context);
 
-/// Attribute name for specifying entry point information.
+/// Returns the attribute name for specifying entry point information.
 StringRef getEntryPointABIAttrName();
 
-/// Get the EntryPointABIAttr given its fields.
+/// Gets the EntryPointABIAttr given its fields.
 EntryPointABIAttr getEntryPointABIAttr(ArrayRef<int32_t> localSize,
                                        MLIRContext *context);
+
+/// Returns the attribute name for specifying SPIR-V target environment.
+StringRef getTargetEnvAttrName();
+
+/// Returns the default target environment: SPIR-V 1.0 with Shader capability
+/// and no extra extensions.
+TargetEnvAttr getDefaultTargetEnv(MLIRContext *context);
+
+/// Queries the target environment from the given `op` or returns the default
+/// target environment (SPIR-V 1.0 with Shader capability and no extra
+/// extensions) if not provided.
+TargetEnvAttr lookupTargetEnvOrDefault(Operation *op);
 } // namespace spirv
 } // namespace mlir
 

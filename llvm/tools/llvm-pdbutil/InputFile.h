@@ -43,7 +43,7 @@ class InputFile {
   std::unique_ptr<NativeSession> PdbSession;
   object::OwningBinary<object::Binary> CoffObject;
   std::unique_ptr<MemoryBuffer> UnknownFile;
-  PointerUnion3<PDBFile *, object::COFFObjectFile *, MemoryBuffer *> PdbOrObj;
+  PointerUnion<PDBFile *, object::COFFObjectFile *, MemoryBuffer *> PdbOrObj;
 
   using TypeCollectionPtr = std::unique_ptr<codeview::LazyRandomTypeCollection>;
 

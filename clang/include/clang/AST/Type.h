@@ -85,7 +85,7 @@ namespace llvm {
       return static_cast< ::clang::Type*>(P);
     }
 
-    enum { NumLowBitsAvailable = clang::TypeAlignmentInBits };
+    static constexpr int NumLowBitsAvailable = clang::TypeAlignmentInBits;
   };
 
   template<>
@@ -96,7 +96,7 @@ namespace llvm {
       return static_cast< ::clang::ExtQuals*>(P);
     }
 
-    enum { NumLowBitsAvailable = clang::TypeAlignmentInBits };
+    static constexpr int NumLowBitsAvailable = clang::TypeAlignmentInBits;
   };
 
 } // namespace llvm
@@ -1295,7 +1295,7 @@ struct PointerLikeTypeTraits<clang::QualType> {
   }
 
   // Various qualifiers go in low bits.
-  enum { NumLowBitsAvailable = 0 };
+  static constexpr int NumLowBitsAvailable = 0;
 };
 
 } // namespace llvm

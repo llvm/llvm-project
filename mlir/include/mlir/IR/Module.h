@@ -57,6 +57,8 @@ public:
 
   /// Print the this module in the custom top-level form.
   void print(raw_ostream &os, OpPrintingFlags flags = llvm::None);
+  void print(raw_ostream &os, AsmState &state,
+             OpPrintingFlags flags = llvm::None);
   void dump();
 
   //===--------------------------------------------------------------------===//
@@ -159,7 +161,7 @@ public:
   static inline mlir::ModuleOp getFromVoidPointer(void *P) {
     return mlir::ModuleOp::getFromOpaquePointer(P);
   }
-  enum { NumLowBitsAvailable = 3 };
+  static constexpr int NumLowBitsAvailable = 3;
 };
 
 } // end namespace llvm

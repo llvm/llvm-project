@@ -2901,7 +2901,8 @@ void AssemblyWriter::printAliasSummary(const AliasSummary *AS) {
 
 void AssemblyWriter::printGlobalVarSummary(const GlobalVarSummary *GS) {
   Out << ", varFlags: (readonly: " << GS->VarFlags.MaybeReadOnly << ", "
-      << "writeonly: " << GS->VarFlags.MaybeWriteOnly << ")";
+      << "writeonly: " << GS->VarFlags.MaybeWriteOnly << ", "
+      << "constant: " << GS->VarFlags.Constant << ")";
 
   auto VTableFuncs = GS->vTableFuncs();
   if (!VTableFuncs.empty()) {

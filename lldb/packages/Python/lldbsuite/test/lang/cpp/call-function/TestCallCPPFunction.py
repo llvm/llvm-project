@@ -31,5 +31,4 @@ class CallCPPFunctionTestCase(TestBase):
                     STOPPED_DUE_TO_BREAKPOINT,
                     substrs=['stopped', 'stop reason = breakpoint'])
 
-        self.expect("expression -- a_function_to_call()",
-                    startstr="(int) $0 = 0")
+        self.expect_expr("a_function_to_call()", result_type="int", result_value="0")

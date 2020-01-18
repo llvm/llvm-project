@@ -270,6 +270,7 @@ Clang-Tidy Checks
    `readability-misplaced-array-index <readability-misplaced-array-index.html>`_, "Yes"
    `readability-named-parameter <readability-named-parameter.html>`_, "Yes"
    `readability-non-const-parameter <readability-non-const-parameter.html>`_, "Yes"
+   `readability-qualified-auto <readability-qualified-auto.html>`_, "Yes"
    `readability-redundant-access-specifiers <readability-redundant-access-specifiers.html>`_, "Yes"
    `readability-redundant-control-flow <readability-redundant-control-flow.html>`_, "Yes"
    `readability-redundant-declaration <readability-redundant-declaration.html>`_, "Yes"
@@ -402,3 +403,4 @@ Clang-Tidy Checks
    `hicpp-use-nullptr <hicpp-use-nullptr.html>`_, `modernize-use-nullptr <modernize-use-nullptr.html>`_, "Yes"
    `hicpp-use-override <hicpp-use-override.html>`_, `modernize-use-override <modernize-use-override.html>`_, "Yes"
    `hicpp-vararg <hicpp-vararg.html>`_, `cppcoreguidelines-pro-type-vararg <cppcoreguidelines-pro-type-vararg.html>`_,
+   `llvm-qualified-auto <llvm-qualified-auto.html>`_, `readability-qualified-auto <readability-qualified-auto.html>`_, "Yes"

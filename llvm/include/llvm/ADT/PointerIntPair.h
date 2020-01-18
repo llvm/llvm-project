@@ -235,7 +235,8 @@ struct PointerLikeTypeTraits<
     return PointerIntPair<PointerTy, IntBits, IntType>::getFromOpaqueValue(P);
   }
 
-  enum { NumLowBitsAvailable = PtrTraits::NumLowBitsAvailable - IntBits };
+  static constexpr int NumLowBitsAvailable =
+      PtrTraits::NumLowBitsAvailable - IntBits;
 };
 
 } // end namespace llvm

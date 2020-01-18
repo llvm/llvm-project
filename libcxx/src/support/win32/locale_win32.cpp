@@ -127,3 +127,11 @@ long double strtold_l(const char* nptr, char** endptr, locale_t loc) {
   return strtold(nptr, endptr);
 }
 #endif
+
+#if defined(__MINGW32__) && __MSVCRT_VERSION__ < 0x0800
+size_t strftime_l(char *ret, size_t n, const char *format, const struct tm *tm,
+                  locale_t loc) {
+  __libcpp_locale_guard __current(loc);
+  return strftime(ret, n, format, tm);
+}
+#endif

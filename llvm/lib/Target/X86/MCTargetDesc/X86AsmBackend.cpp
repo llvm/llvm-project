@@ -94,6 +94,14 @@ cl::opt<X86AlignBranchKind, true, cl::parser<std::string>> X86AlignBranch(
                    "indirect indicates indirect jumps."),
     cl::location(X86AlignBranchKindLoc));
 
+cl::opt<bool> X86AlignBranchWithin32BBoundaries(
+    "x86-branches-within-32B-boundaries", cl::init(false),
+    cl::desc(
+        "Align selected instructions to mitigate negative performance impact "
+        "of Intel's micro code update for errata skx102.  May break "
+        "assumptions about labels corresponding to particular instructions, "
+        "and should be used with caution."));
+
 class X86ELFObjectWriter : public MCELFObjectTargetWriter {
 public:
   X86ELFObjectWriter(bool is64Bit, uint8_t OSABI, uint16_t EMachine,
@@ -119,8 +127,21 @@ public:
   X86AsmBackend(const Target &T, const MCSubtargetInfo &STI)
       : MCAsmBackend(support::little), STI(STI),
         MCII(T.createMCInstrInfo()) {
-    AlignBoundary = assumeAligned(X86AlignBranchBoundary);
-    AlignBranchType = X86AlignBranchKindLoc;
+    if (X86AlignBranchWithin32BBoundaries) {
+      // At the moment, this defaults to aligning fused branches, unconditional
+      // jumps, and (unfused) conditional jumps with nops.  Both the
+      // instructions aligned and the alignment method (nop vs prefix) may
+      // change in the future.
+      AlignBoundary = assumeAligned(32);;
+      AlignBranchType.addKind(X86::AlignBranchFused);
+      AlignBranchType.addKind(X86::AlignBranchJcc);
+      AlignBranchType.addKind(X86::AlignBranchJmp);
+    }
+    // Allow overriding defaults set by master flag
+    if (X86AlignBranchBoundary.getNumOccurrences())
+      AlignBoundary = assumeAligned(X86AlignBranchBoundary);
+    if (X86AlignBranch.getNumOccurrences())
+      AlignBranchType = X86AlignBranchKindLoc;
   }
 
   bool allowAutoPadding() const override;

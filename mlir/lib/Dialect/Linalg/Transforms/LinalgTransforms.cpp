@@ -93,6 +93,8 @@ bool mlir::linalg::detail::isProducedByOpOfTypeImpl(
     Operation *consumerOp, Value consumedView,
     function_ref<bool(Operation *)> isaOpType) {
   LinalgOp consumer = dyn_cast<LinalgOp>(consumerOp);
+  assert(consumer.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
   if (!consumer)
     return false;
 
@@ -171,7 +173,7 @@ mlir::linalg::vectorizeGenericLinalgOpPrecondition(Operation *op) {
       return false;
     return true;
   };
-  if (!llvm::all_of(genericOp.getInputsAndOutputs(),
+  if (!llvm::all_of(genericOp.getInputsAndOutputBuffers(),
                     isStaticMemRefWithIdentityLayout))
     return failure();
   return success();
@@ -188,6 +190,8 @@ mlir::linalg::vectorizeGenericLinalgOp(PatternRewriter &rewriter,
          "DRR failure case must be a precondition");
 
   auto genericOp = cast<linalg::GenericOp>(op);
+  assert(genericOp.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
   edsc::ScopedContext scope(rewriter, op->getLoc());
   using edsc::intrinsics::std_load;
   using edsc::intrinsics::std_store;
@@ -195,7 +199,7 @@ mlir::linalg::vectorizeGenericLinalgOp(PatternRewriter &rewriter,
   using vector_type_cast = edsc::intrinsics::ValueBuilder<vector::TypeCastOp>;
   auto vA = std_load(vector_type_cast(genericOp.getInput(0)));
   auto vB = std_load(vector_type_cast(genericOp.getInput(1)));
-  auto vectorMemRefC = vector_type_cast(genericOp.getOutput(0));
+  auto vectorMemRefC = vector_type_cast(genericOp.getOutputBuffer(0));
   auto vC = std_load(vectorMemRefC);
   auto vRes = vector_contract(vA, vB, vC, genericOp.indexing_maps(),
                               genericOp.iterator_types());
@@ -262,7 +266,7 @@ LogicalResult mlir::linalg::promoteSubviewsLinalgOpPrecondition(Operation *op) {
   // Transformation applies to buffers only.
   if (!linOp || !linOp.hasBufferSemantics())
     return failure();
-  if (llvm::none_of(linOp.getInputsAndOutputs(), [](Value v) {
+  if (llvm::none_of(linOp.getInputsAndOutputBuffers(), [](Value v) {
         return isa_and_nonnull<SubViewOp>(v.getDefiningOp());
       }))
     return failure();
@@ -279,8 +283,10 @@ mlir::linalg::promoteSubviewsLinalgOp(PatternRewriter &rewriter,
          "DRR failure case must be a precondition");
 
   LinalgOp linOp = cast<LinalgOp>(op);
+  assert(linOp.hasBufferSemantics() &&
+         "expected linalg op with buffer semantics");
   SetVector<Value> subViews;
-  for (auto it : linOp.getInputsAndOutputs())
+  for (auto it : linOp.getInputsAndOutputBuffers())
     if (auto sv = dyn_cast_or_null<SubViewOp>(it.getDefiningOp()))
       subViews.insert(sv);
   if (!subViews.empty()) {

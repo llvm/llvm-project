@@ -2433,9 +2433,12 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
 
     // Get result memref type.
     auto memrefType = viewOp.getType();
-    if (memrefType.getAffineMaps().size() != 1)
+    if (memrefType.getAffineMaps().size() > 1)
       return matchFailure();
-    auto map = memrefType.getAffineMaps()[0];
+    auto map = memrefType.getAffineMaps().empty()
+                   ? AffineMap::getMultiDimIdentityMap(memrefType.getRank(),
+                                                       rewriter.getContext())
+                   : memrefType.getAffineMaps()[0];
 
     // Get offset from old memref view type 'memRefType'.
     int64_t oldOffset;

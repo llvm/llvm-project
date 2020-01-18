@@ -842,6 +842,53 @@ entry:
   ret <4 x i32> %gather
 }
 
+define arm_aapcs_vfpcc <8 x i32> @sext_unsigned_unscaled_i8_i8_toi64(i8* %base, <8 x i8>* %offptr) {
+; CHECK-LABEL: sext_unsigned_unscaled_i8_i8_toi64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r7, lr}
+; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    vldrb.u32 q0, [r1]
+; CHECK-NEXT:    vldrb.u32 q1, [r1, #4]
+; CHECK-NEXT:    vadd.i32 q0, q0, r0
+; CHECK-NEXT:    vadd.i32 q1, q1, r0
+; CHECK-NEXT:    vmov r2, s2
+; CHECK-NEXT:    vmov r3, s3
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov r1, s5
+; CHECK-NEXT:    vmov r5, s1
+; CHECK-NEXT:    vmov r4, s7
+; CHECK-NEXT:    ldrb.w r12, [r2]
+; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    ldrb.w lr, [r3]
+; CHECK-NEXT:    vmov r3, s6
+; CHECK-NEXT:    ldrb r0, [r0]
+; CHECK-NEXT:    ldrb r1, [r1]
+; CHECK-NEXT:    ldrb r5, [r5]
+; CHECK-NEXT:    vmov.32 q1[0], r0
+; CHECK-NEXT:    ldrb r4, [r4]
+; CHECK-NEXT:    vmov.32 q1[1], r1
+; CHECK-NEXT:    ldrb r2, [r2]
+; CHECK-NEXT:    ldrb r3, [r3]
+; CHECK-NEXT:    vmov.32 q0[0], r2
+; CHECK-NEXT:    vmov.32 q0[1], r5
+; CHECK-NEXT:    vmov.32 q1[2], r3
+; CHECK-NEXT:    vmov.32 q0[2], r12
+; CHECK-NEXT:    vmov.32 q1[3], r4
+; CHECK-NEXT:    vmov.32 q0[3], lr
+; CHECK-NEXT:    vmovlb.s8 q1, q1
+; CHECK-NEXT:    vmovlb.s8 q0, q0
+; CHECK-NEXT:    vmovlb.s16 q1, q1
+; CHECK-NEXT:    vmovlb.s16 q0, q0
+; CHECK-NEXT:    pop {r4, r5, r7, pc}
+entry:
+  %offs = load <8 x i8>, <8 x i8>* %offptr, align 1
+  %offs.zext = zext <8 x i8> %offs to <8 x i32>
+  %ptrs = getelementptr inbounds i8, i8* %base, <8 x i32> %offs.zext
+  %gather = call <8 x i8> @llvm.masked.gather.v8i8.v8p0i8(<8 x i8*> %ptrs, i32 1, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i8> undef)
+  %gather.sext = sext <8 x i8> %gather to <8 x i32>
+  ret <8 x i32> %gather.sext
+}
+
 declare <2 x i32> @llvm.masked.gather.v2i32.v2p0i32(<2 x i32*>, i32, <2 x i1>, <2 x i32>)
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*>, i32, <4 x i1>, <4 x i32>)
 declare <8 x i32> @llvm.masked.gather.v8i32.v8p0i32(<8 x i32*>, i32, <8 x i1>, <8 x i32>)

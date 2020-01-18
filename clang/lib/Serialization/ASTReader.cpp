@@ -3224,7 +3224,8 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
     case MODULAR_CODEGEN_DECLS:
       // FIXME: Skip reading this record if our ASTConsumer doesn't care about
       // them (ie: if we're not codegenerating this module).
-      if (F.Kind == MK_MainFile)
+      if (F.Kind == MK_MainFile ||
+          getContext().getLangOpts().BuildingPCHWithObjectFile)
         for (unsigned I = 0, N = Record.size(); I != N; ++I)
           EagerlyDeserializedDecls.push_back(getGlobalDeclID(F, Record[I]));
       break;
@@ -4502,7 +4503,7 @@ ASTReader::ReadASTCore(StringRef FileName,
     if (ShouldFinalizePCM)
       MC.finalizePCM(FileName);
     else
-      MC.tryToDropPCM(FileName);
+      MC.tryToRemovePCM(FileName);
   });
   ModuleFile &F = *M;
   BitstreamCursor &Stream = F.Stream;
@@ -10093,14 +10094,22 @@ void ASTReader::diagnoseOdrViolations() {
         }
 
         if (IsFirstBitField && IsSecondBitField) {
-          ODRDiagError(FirstField->getLocation(), FirstField->getSourceRange(),
-                       FieldDifferentWidthBitField)
-              << FirstII << FirstField->getBitWidth()->getSourceRange();
-          ODRDiagNote(SecondField->getLocation(), SecondField->getSourceRange(),
-                      FieldDifferentWidthBitField)
-              << SecondII << SecondField->getBitWidth()->getSourceRange();
-          Diagnosed = true;
-          break;
+          unsigned FirstBitWidthHash =
+              ComputeODRHash(FirstField->getBitWidth());
+          unsigned SecondBitWidthHash =
+              ComputeODRHash(SecondField->getBitWidth());
+          if (FirstBitWidthHash != SecondBitWidthHash) {
+            ODRDiagError(FirstField->getLocation(),
+                         FirstField->getSourceRange(),
+                         FieldDifferentWidthBitField)
+                << FirstII << FirstField->getBitWidth()->getSourceRange();
+            ODRDiagNote(SecondField->getLocation(),
+                        SecondField->getSourceRange(),
+                        FieldDifferentWidthBitField)
+                << SecondII << SecondField->getBitWidth()->getSourceRange();
+            Diagnosed = true;
+            break;
+          }
         }
 
         const bool IsFirstMutable = FirstField->isMutable();

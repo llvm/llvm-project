@@ -19,6 +19,100 @@ using namespace mlir;
 using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::edsc::ops;
+using namespace mlir::linalg;
+using namespace mlir::loop;
+
+mlir::edsc::LoopRangeBuilder::LoopRangeBuilder(ValueHandle *iv,
+                                               ValueHandle range) {
+  assert(range.getType() && "expected !linalg.range type");
+  assert(range.getValue().getDefiningOp() &&
+         "need operations to extract range parts");
+  auto rangeOp = cast<RangeOp>(range.getValue().getDefiningOp());
+  auto lb = rangeOp.min();
+  auto ub = rangeOp.max();
+  auto step = rangeOp.step();
+  auto forOp = OperationHandle::createOp<ForOp>(lb, ub, step);
+  *iv = ValueHandle(forOp.getInductionVar());
+  auto *body = forOp.getBody();
+  enter(body, /*prev=*/1);
+}
+
+mlir::edsc::LoopRangeBuilder::LoopRangeBuilder(ValueHandle *iv,
+                                               SubViewOp::Range range) {
+  auto forOp =
+      OperationHandle::createOp<ForOp>(range.offset, range.size, range.stride);
+  *iv = ValueHandle(forOp.getInductionVar());
+  auto *body = forOp.getBody();
+  enter(body, /*prev=*/1);
+}
+
+ValueHandle mlir::edsc::LoopRangeBuilder::
+operator()(std::function<void(void)> fun) {
+  if (fun)
+    fun();
+  exit();
+  return ValueHandle::null();
+}
+
+mlir::edsc::LoopNestRangeBuilder::LoopNestRangeBuilder(
+    ArrayRef<ValueHandle *> ivs, ArrayRef<SubViewOp::Range> ranges) {
+  loops.reserve(ranges.size());
+  for (unsigned i = 0, e = ranges.size(); i < e; ++i) {
+    loops.emplace_back(ivs[i], ranges[i]);
+  }
+  assert(loops.size() == ivs.size() && "Mismatch loops vs ivs size");
+}
+
+mlir::edsc::LoopNestRangeBuilder::LoopNestRangeBuilder(
+    ArrayRef<ValueHandle *> ivs, ArrayRef<ValueHandle> ranges) {
+  loops.reserve(ranges.size());
+  for (unsigned i = 0, e = ranges.size(); i < e; ++i) {
+    loops.emplace_back(ivs[i], ranges[i]);
+  }
+  assert(loops.size() == ivs.size() && "Mismatch loops vs ivs size");
+}
+
+mlir::edsc::LoopNestRangeBuilder::LoopNestRangeBuilder(
+    ArrayRef<ValueHandle *> ivs, ArrayRef<Value> ranges)
+    : LoopNestRangeBuilder(
+          ivs, SmallVector<ValueHandle, 4>(ranges.begin(), ranges.end())) {}
+
+ValueHandle LoopNestRangeBuilder::LoopNestRangeBuilder::
+operator()(std::function<void(void)> fun) {
+  if (fun)
+    fun();
+  for (auto &lit : reverse(loops)) {
+    lit({});
+  }
+  return ValueHandle::null();
+}
+
+namespace mlir {
+namespace edsc {
+template <>
+GenericLoopNestRangeBuilder<loop::ForOp>::GenericLoopNestRangeBuilder(
+    ArrayRef<edsc::ValueHandle *> ivs, ArrayRef<Value> ranges) {
+  builder = std::make_unique<LoopNestRangeBuilder>(ivs, ranges);
+}
+
+template <>
+GenericLoopNestRangeBuilder<AffineForOp>::GenericLoopNestRangeBuilder(
+    ArrayRef<ValueHandle *> ivs, ArrayRef<Value> ranges) {
+  SmallVector<ValueHandle, 4> lbs;
+  SmallVector<ValueHandle, 4> ubs;
+  SmallVector<int64_t, 4> steps;
+  for (Value range : ranges) {
+    assert(range.getType() && "expected linalg.range type");
+    assert(range.getDefiningOp() && "need operations to extract range parts");
+    RangeOp rangeOp = cast<RangeOp>(range.getDefiningOp());
+    lbs.emplace_back(ValueHandle(rangeOp.min()));
+    ubs.emplace_back(ValueHandle(rangeOp.max()));
+    steps.emplace_back(ValueHandle(rangeOp.step()));
+  }
+  builder = std::make_unique<AffineLoopNestBuilder>(ivs, lbs, ubs, steps);
+}
+} // namespace edsc
+} // namespace mlir
 
 static void getMaxDimIndex(ArrayRef<StructuredIndexed> structuredIndices,
                            unsigned &pos) {
@@ -90,14 +184,16 @@ Operation *mlir::edsc::makeGenericLinalgOp(
                              ? getElementTypeOrSelf(it.value())
                              : it.value().getType());
 
-  assert(op->getRegions().front().empty());
-  op->getRegions().front().push_front(new Block);
-  OpBuilder bb(op->getRegions().front());
-  ScopedContext scope(bb, op->getLoc());
+  assert(op->getNumRegions() == 1);
+  assert(op->getRegion(0).empty());
+  OpBuilder opBuilder(op);
+  ScopedContext scope(opBuilder, op->getLoc());
   BlockHandle b;
   auto handles = makeValueHandles(blockTypes);
-  BlockBuilder(&b, makeHandlePointers(MutableArrayRef<ValueHandle>(handles)))(
+  BlockBuilder(&b, op->getRegion(0),
+               makeHandlePointers(MutableArrayRef<ValueHandle>(handles)))(
       [&] { regionBuilder(b.getBlock()->getArguments()); });
+  assert(op->getRegion(0).getBlocks().size() == 1);
   return op;
 }
 

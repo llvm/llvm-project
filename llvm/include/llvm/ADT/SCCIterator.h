@@ -134,7 +134,10 @@ public:
   /// has been deleted, and \c New is to be used in its place.
   void ReplaceNode(NodeRef Old, NodeRef New) {
     assert(nodeVisitNumbers.count(Old) && "Old not in scc_iterator?");
-    nodeVisitNumbers[New] = nodeVisitNumbers[Old];
+    // Do the assignment in two steps, in case 'New' is not yet in the map, and
+    // inserting it causes the map to grow.
+    auto tempVal = nodeVisitNumbers[Old];
+    nodeVisitNumbers[New] = tempVal;
     nodeVisitNumbers.erase(Old);
   }
 };

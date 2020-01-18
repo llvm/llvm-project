@@ -209,6 +209,8 @@ Attribute Importer::getConstantAsAttr(llvm::Constant *value) {
     else if (c->getType()->isFloatingPointTy())
       return b.getFloatAttr(FloatType::getF32(context), c->getValueAPF());
   }
+  if (auto *f = dyn_cast<llvm::Function>(value))
+    return b.getSymbolRefAttr(f->getName());
   return Attribute();
 }
 

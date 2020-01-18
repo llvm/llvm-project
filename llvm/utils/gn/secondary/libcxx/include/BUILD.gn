@@ -35,30 +35,20 @@ if (libcxx_needs_site_config) {
       "$target_gen_dir/__config_site",
       "__config",
     ]
-    outputs = [
-      "$target_gen_dir/__config",
-    ]
+    outputs = [ "$target_gen_dir/__config" ]
     args = [
       "$target_gen_dir/__config_site",
       "__config",
       "-o",
       "$target_gen_dir/__config",
     ]
-    deps = [
-      ":write_config",
-    ]
+    deps = [ ":write_config" ]
   }
 
   copy("copy_config") {
-    sources = [
-      "$target_gen_dir/__config",
-    ]
-    outputs = [
-      "$clang_resource_dir/include/c++/v1/{{source_file_part}}",
-    ]
-    deps = [
-      ":concat_config",
-    ]
+    sources = [ "$target_gen_dir/__config" ]
+    outputs = [ "$clang_resource_dir/include/c++/v1/{{source_file_part}}" ]
+    deps = [ ":concat_config" ]
   }
 }
 
@@ -220,9 +210,7 @@ copy("include") {
     "wchar.h",
     "wctype.h",
   ]
-  deps = [
-    "//libcxxabi/include",
-  ]
+  deps = [ "//libcxxabi/include" ]
   if (!libcxx_needs_site_config) {
     sources += [ "__config" ]
   } else {
@@ -252,7 +240,5 @@ copy("include") {
       ]
     }
   }
-  outputs = [
-    "$root_build_dir/include/c++/v1/{{source_target_relative}}",
-  ]
+  outputs = [ "$root_build_dir/include/c++/v1/{{source_target_relative}}" ]
 }

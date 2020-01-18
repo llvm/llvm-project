@@ -163,6 +163,26 @@ private:
                    LLT PartTy, ArrayRef<Register> PartRegs,
                    LLT LeftoverTy = LLT(), ArrayRef<Register> LeftoverRegs = {});
 
+  /// Unmerge \p SrcReg into \p Parts with the greatest common divisor type with
+  /// \p DstTy and \p NarrowTy. Returns the GCD type.
+  LLT extractGCDType(SmallVectorImpl<Register> &Parts, LLT DstTy,
+                     LLT NarrowTy, Register SrcReg);
+
+  /// Produce a merge of values in \p VRegs to define \p DstReg. Perform a merge
+  /// from the least common multiple type, and convert as appropriate to \p
+  /// DstReg.
+  ///
+  /// \p VRegs should each have type \p GCDTy. This type should be greatest
+  /// common divisor type of \p DstReg, \p NarrowTy, and an undetermined source
+  /// type.
+  ///
+  /// \p NarrowTy is the desired result merge source type. If the source value
+  /// needs to be widened to evenly cover \p DstReg, inserts high bits
+  /// corresponding to the extension opcode \p PadStrategy.
+  void buildLCMMerge(Register DstReg, LLT NarrowTy, LLT GCDTy,
+                     SmallVectorImpl<Register> &VRegs,
+                     unsigned PadStrategy = TargetOpcode::G_ANYEXT);
+
   /// Perform generic multiplication of values held in multiple registers.
   /// Generated instructions use only types NarrowTy and i1.
   /// Destination can be same or two times size of the source.
@@ -219,8 +239,10 @@ public:
   LegalizeResult narrowScalarInsert(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
   LegalizeResult narrowScalarBasic(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult narrowScalarExt(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult narrowScalarSelect(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
+  LegalizeResult lowerBitcast(MachineInstr &MI);
   LegalizeResult lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
   LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);

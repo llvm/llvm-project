@@ -6,7 +6,7 @@ config("write_vcsrevision_config") {
   visibility = [ ":write_vcsrevision" ]
 }
 
-write_vcsrevision("write_vcsrevision") {
+write_vcsrevision("write_vcsversion") {
   visibility = [ ":Basic" ]
   header = "$target_gen_dir/VCSVersion.inc"
   names = [
@@ -29,7 +29,7 @@ static_library("Basic") {
     "//clang/include/clang/Basic:version",
   ]
   deps = [
-    ":write_vcsrevision",
+    ":write_vcsversion",
     "//clang/include/clang/Basic:AttrHasAttributeImpl",
     "//clang/include/clang/Basic:arm_fp16",
     "//clang/include/clang/Basic:arm_neon",

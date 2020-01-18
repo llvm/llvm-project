@@ -59,6 +59,7 @@ define i1 @fptosi_f32toi1(float %x) #0 {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -105,6 +106,7 @@ define i8 @fptosi_f32toi8(float %x) #0 {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -151,6 +153,7 @@ define i16 @fptosi_f32toi16(float %x) #0 {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -193,6 +196,7 @@ define i32 @fptosi_f32toi32(float %x) #0 {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw (%esp)
 ; CHECK-NEXT:    movzwl (%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -222,6 +226,7 @@ define i64 @fptosi_f32toi64(float %x) #0 {
 ; SSE-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-X86-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    wait
 ; SSE-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; SSE-X86-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -254,6 +259,7 @@ define i64 @fptosi_f32toi64(float %x) #0 {
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
 ; AVX-X86-NEXT:    fisttpll (%esp)
+; AVX-X86-NEXT:    wait
 ; AVX-X86-NEXT:    movl (%esp), %eax
 ; AVX-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; AVX-X86-NEXT:    movl %ebp, %esp
@@ -276,6 +282,7 @@ define i64 @fptosi_f32toi64(float %x) #0 {
 ; CHECK-NEXT:    andl $-8, %esp
 ; CHECK-NEXT:    subl $16, %esp
 ; CHECK-NEXT:    flds 8(%ebp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -324,6 +331,7 @@ define i1 @fptoui_f32toi1(float %x) #0 {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -370,6 +378,7 @@ define i8 @fptoui_f32toi8(float %x) #0 {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -416,6 +425,7 @@ define i16 @fptoui_f32toi16(float %x) #0 {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw (%esp)
 ; CHECK-NEXT:    movzwl (%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -471,6 +481,7 @@ define i32 @fptoui_f32toi32(float %x) #0 {
 ; AVX1-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX1-X86-NEXT:    flds (%esp)
 ; AVX1-X86-NEXT:    fisttpll (%esp)
+; AVX1-X86-NEXT:    wait
 ; AVX1-X86-NEXT:    movl (%esp), %eax
 ; AVX1-X86-NEXT:    movl %ebp, %esp
 ; AVX1-X86-NEXT:    popl %ebp
@@ -503,6 +514,7 @@ define i32 @fptoui_f32toi32(float %x) #0 {
 ; CHECK-NEXT:    andl $-8, %esp
 ; CHECK-NEXT:    subl $16, %esp
 ; CHECK-NEXT:    flds 8(%ebp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -542,6 +554,7 @@ define i64 @fptoui_f32toi64(float %x) #0 {
 ; SSE-X86-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    setbe %al
 ; SSE-X86-NEXT:    flds {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    wait
 ; SSE-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; SSE-X86-NEXT:    orl $3072, %ecx # imm = 0xC00
@@ -596,6 +609,7 @@ define i64 @fptoui_f32toi64(float %x) #0 {
 ; AVX1-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX1-X86-NEXT:    flds (%esp)
 ; AVX1-X86-NEXT:    fisttpll (%esp)
+; AVX1-X86-NEXT:    wait
 ; AVX1-X86-NEXT:    setbe %al
 ; AVX1-X86-NEXT:    movzbl %al, %edx
 ; AVX1-X86-NEXT:    shll $31, %edx
@@ -644,6 +658,7 @@ define i64 @fptoui_f32toi64(float %x) #0 {
 ; AVX512-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX512-X86-NEXT:    flds (%esp)
 ; AVX512-X86-NEXT:    fisttpll (%esp)
+; AVX512-X86-NEXT:    wait
 ; AVX512-X86-NEXT:    setbe %dl
 ; AVX512-X86-NEXT:    shll $31, %edx
 ; AVX512-X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
@@ -670,6 +685,7 @@ define i64 @fptoui_f32toi64(float %x) #0 {
 ; CHECK-NEXT:    flds 8(%ebp)
 ; CHECK-NEXT:    flds {{\.LCPI.*}}
 ; CHECK-NEXT:    fcom %st(1)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
@@ -684,6 +700,7 @@ define i64 @fptoui_f32toi64(float %x) #0 {
 ; CHECK-NEXT:  .LBB9_2:
 ; CHECK-NEXT:    fstp %st(1)
 ; CHECK-NEXT:    fsubrp %st, %st(1)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    orl $3072, %ecx # imm = 0xC00
@@ -734,6 +751,7 @@ define i8 @fptosi_f64toi8(double %x) #0 {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -780,6 +798,7 @@ define i16 @fptosi_f64toi16(double %x) #0 {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -822,6 +841,7 @@ define i32 @fptosi_f64toi32(double %x) #0 {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw (%esp)
 ; CHECK-NEXT:    movzwl (%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -851,6 +871,7 @@ define i64 @fptosi_f64toi64(double %x) #0 {
 ; SSE-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-X86-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    wait
 ; SSE-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; SSE-X86-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -883,6 +904,7 @@ define i64 @fptosi_f64toi64(double %x) #0 {
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
 ; AVX-X86-NEXT:    fisttpll (%esp)
+; AVX-X86-NEXT:    wait
 ; AVX-X86-NEXT:    movl (%esp), %eax
 ; AVX-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; AVX-X86-NEXT:    movl %ebp, %esp
@@ -905,6 +927,7 @@ define i64 @fptosi_f64toi64(double %x) #0 {
 ; CHECK-NEXT:    andl $-8, %esp
 ; CHECK-NEXT:    subl $16, %esp
 ; CHECK-NEXT:    fldl 8(%ebp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -953,6 +976,7 @@ define i1 @fptoui_f64toi1(double %x) #0 {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -999,6 +1023,7 @@ define i8 @fptoui_f64toi8(double %x) #0 {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -1045,6 +1070,7 @@ define i16 @fptoui_f64toi16(double %x) #0 {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%esp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw (%esp)
 ; CHECK-NEXT:    movzwl (%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -1100,6 +1126,7 @@ define i32 @fptoui_f64toi32(double %x) #0 {
 ; AVX1-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX1-X86-NEXT:    fldl (%esp)
 ; AVX1-X86-NEXT:    fisttpll (%esp)
+; AVX1-X86-NEXT:    wait
 ; AVX1-X86-NEXT:    movl (%esp), %eax
 ; AVX1-X86-NEXT:    movl %ebp, %esp
 ; AVX1-X86-NEXT:    popl %ebp
@@ -1132,6 +1159,7 @@ define i32 @fptoui_f64toi32(double %x) #0 {
 ; CHECK-NEXT:    andl $-8, %esp
 ; CHECK-NEXT:    subl $16, %esp
 ; CHECK-NEXT:    fldl 8(%ebp)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
@@ -1171,6 +1199,7 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ; SSE-X86-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    setbe %al
 ; SSE-X86-NEXT:    fldl {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    wait
 ; SSE-X86-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; SSE-X86-NEXT:    orl $3072, %ecx # imm = 0xC00
@@ -1225,6 +1254,7 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ; AVX1-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX1-X86-NEXT:    fldl (%esp)
 ; AVX1-X86-NEXT:    fisttpll (%esp)
+; AVX1-X86-NEXT:    wait
 ; AVX1-X86-NEXT:    setbe %al
 ; AVX1-X86-NEXT:    movzbl %al, %edx
 ; AVX1-X86-NEXT:    shll $31, %edx
@@ -1273,6 +1303,7 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ; AVX512-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX512-X86-NEXT:    fldl (%esp)
 ; AVX512-X86-NEXT:    fisttpll (%esp)
+; AVX512-X86-NEXT:    wait
 ; AVX512-X86-NEXT:    setbe %dl
 ; AVX512-X86-NEXT:    shll $31, %edx
 ; AVX512-X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
@@ -1299,6 +1330,7 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ; CHECK-NEXT:    fldl 8(%ebp)
 ; CHECK-NEXT:    flds {{\.LCPI.*}}
 ; CHECK-NEXT:    fcom %st(1)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstsw %ax
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    # kill: def $ah killed $ah killed $ax
@@ -1313,6 +1345,7 @@ define i64 @fptoui_f64toi64(double %x) #0 {
 ; CHECK-NEXT:  .LBB18_2:
 ; CHECK-NEXT:    fstp %st(1)
 ; CHECK-NEXT:    fsubrp %st, %st(1)
+; CHECK-NEXT:    wait
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    orl $3072, %ecx # imm = 0xC00

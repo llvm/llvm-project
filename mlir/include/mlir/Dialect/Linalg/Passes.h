@@ -21,7 +21,6 @@ class FuncOp;
 class ModuleOp;
 template <typename T> class OpPassBase;
 
-namespace linalg {
 std::unique_ptr<OpPassBase<FuncOp>> createLinalgFusionPass();
 
 std::unique_ptr<OpPassBase<FuncOp>>
@@ -39,10 +38,6 @@ std::unique_ptr<OpPassBase<FuncOp>> createConvertLinalgToLoopsPass();
 /// Placeholder for now, this is NYI.
 std::unique_ptr<OpPassBase<FuncOp>> createConvertLinalgToAffineLoopsPass();
 
-/// Create a pass to convert Linalg operations to the LLVMIR dialect.
-std::unique_ptr<OpPassBase<ModuleOp>> createConvertLinalgToLLVMPass();
-
-} // namespace linalg
 } // namespace mlir
 
 #endif // MLIR_DIALECT_LINALG_PASSES_H_

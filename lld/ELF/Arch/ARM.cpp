@@ -140,7 +140,7 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
     // given address. It can be used to implement a special linker mode which
     // rewrites ARMv4T inputs to ARMv4. Since we support only ARMv4 input and
     // not ARMv4 output, we can just ignore it.
-    return R_HINT;
+    return R_NONE;
   default:
     return R_ABS;
   }

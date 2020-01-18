@@ -3,7 +3,7 @@
 
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: stp_i64_scale:%bb.0
-; CHECK:Cluster ld/st SU(4) - SU(3)
+; CHECK:Cluster ld/st SU(3) - SU(4)
 ; CHECK:Cluster ld/st SU(2) - SU(5)
 ; CHECK:SU(4):   STRXui %1:gpr64, %0:gpr64common, 1
 ; CHECK:SU(3):   STRXui %1:gpr64, %0:gpr64common, 2
@@ -24,7 +24,7 @@ entry:
 
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-LABEL: stp_i32_scale:%bb.0
-; CHECK:Cluster ld/st SU(4) - SU(3)
+; CHECK:Cluster ld/st SU(3) - SU(4)
 ; CHECK:Cluster ld/st SU(2) - SU(5)
 ; CHECK:SU(4):   STRWui %1:gpr32, %0:gpr64common, 1
 ; CHECK:SU(3):   STRWui %1:gpr32, %0:gpr64common, 2
@@ -45,12 +45,12 @@ entry:
 
 ; CHECK:********** MI Scheduling **********
 ; CHECK-LABEL:stp_i64_unscale:%bb.0 entry
-; CHECK:Cluster ld/st SU(5) - SU(2)
-; CHECK:Cluster ld/st SU(4) - SU(3)
-; CHECK:SU(5):   STURXi %1:gpr64, %0:gpr64common, -32
+; CHECK:Cluster ld/st SU(2) - SU(5)
+; CHECK:Cluster ld/st SU(3) - SU(4)
 ; CHECK:SU(2):   STURXi %1:gpr64, %0:gpr64common, -24
-; CHECK:SU(4):   STURXi %1:gpr64, %0:gpr64common, -16
 ; CHECK:SU(3):   STURXi %1:gpr64, %0:gpr64common, -8
+; CHECK:SU(4):   STURXi %1:gpr64, %0:gpr64common, -16
+; CHECK:SU(5):   STURXi %1:gpr64, %0:gpr64common, -32
 define void @stp_i64_unscale(i64* nocapture %P, i64 %v) #0 {
 entry:
   %arrayidx = getelementptr inbounds i64, i64* %P, i64 -3
@@ -66,12 +66,12 @@ entry:
 
 ; CHECK:********** MI Scheduling **********
 ; CHECK-LABEL:stp_i32_unscale:%bb.0 entry
-; CHECK:Cluster ld/st SU(5) - SU(2)
-; CHECK:Cluster ld/st SU(4) - SU(3)
-; CHECK:SU(5):   STURWi %1:gpr32, %0:gpr64common, -16
+; CHECK:Cluster ld/st SU(2) - SU(5)
+; CHECK:Cluster ld/st SU(3) - SU(4)
 ; CHECK:SU(2):   STURWi %1:gpr32, %0:gpr64common, -12
-; CHECK:SU(4):   STURWi %1:gpr32, %0:gpr64common, -8
 ; CHECK:SU(3):   STURWi %1:gpr32, %0:gpr64common, -4
+; CHECK:SU(4):   STURWi %1:gpr32, %0:gpr64common, -8
+; CHECK:SU(5):   STURWi %1:gpr32, %0:gpr64common, -16
 define void @stp_i32_unscale(i32* nocapture %P, i32 %v) #0 {
 entry:
   %arrayidx = getelementptr inbounds i32, i32* %P, i32 -3

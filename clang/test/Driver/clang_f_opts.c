@@ -251,6 +251,7 @@
 // RUN:     -fexec-charset=UTF-8                                             \
 // RUN:     -fivopts -fno-ivopts                                              \
 // RUN:     -fnon-call-exceptions -fno-non-call-exceptions                    \
+// RUN:     -fno-semantic-interposition                                       \
 // RUN:     -fpermissive -fno-permissive                                      \
 // RUN:     -fdefer-pop -fno-defer-pop                                        \
 // RUN:     -fprefetch-loop-arrays -fno-prefetch-loop-arrays                  \

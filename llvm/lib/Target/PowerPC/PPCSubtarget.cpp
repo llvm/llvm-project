@@ -127,6 +127,8 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     // If cross-compiling with -march=ppc64le without -mcpu
     if (TargetTriple.getArch() == Triple::ppc64le)
       CPUName = "ppc64le";
+    else if (TargetTriple.getSubArch() == Triple::PPCSubArch_spe)
+      CPUName = "e500";
     else
       CPUName = "generic";
   }
@@ -150,9 +152,6 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
       TargetTriple.isOSNetBSD() || TargetTriple.isOSOpenBSD() ||
       TargetTriple.isMusl())
     SecurePlt = true;
-
-  if (TargetTriple.getSubArch() == Triple::PPCSubArch_spe)
-    HasSPE = true;
 
   if (HasSPE && IsPPC64)
     report_fatal_error( "SPE is only supported for 32-bit targets.\n", false);

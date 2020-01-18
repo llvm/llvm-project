@@ -16,8 +16,6 @@
 namespace llvm {
 namespace orc {
 
-void LazyCallThroughManager::NotifyResolvedFunction::anchor() {}
-
 LazyCallThroughManager::LazyCallThroughManager(
     ExecutionSession &ES, JITTargetAddress ErrorHandlerAddr,
     std::unique_ptr<TrampolinePool> TP)
@@ -25,7 +23,7 @@ LazyCallThroughManager::LazyCallThroughManager(
 
 Expected<JITTargetAddress> LazyCallThroughManager::getCallThroughTrampoline(
     JITDylib &SourceJD, SymbolStringPtr SymbolName,
-    std::shared_ptr<NotifyResolvedFunction> NotifyResolved) {
+    NotifyResolvedFunction NotifyResolved) {
   std::lock_guard<std::mutex> Lock(LCTMMutex);
   auto Trampoline = TP->getTrampoline();
 
@@ -62,18 +60,18 @@ LazyCallThroughManager::callThroughToSymbol(JITTargetAddress TrampolineAddr) {
 
   auto ResolvedAddr = LookupResult->getAddress();
 
-  std::shared_ptr<NotifyResolvedFunction> NotifyResolved = nullptr;
+  NotifyResolvedFunction NotifyResolved;
   {
     std::lock_guard<std::mutex> Lock(LCTMMutex);
     auto I = Notifiers.find(TrampolineAddr);
     if (I != Notifiers.end()) {
-      NotifyResolved = I->second;
+      NotifyResolved = std::move(I->second);
       Notifiers.erase(I);
     }
   }
 
   if (NotifyResolved) {
-    if (auto Err = (*NotifyResolved)(*SourceJD, SymbolName, ResolvedAddr)) {
+    if (auto Err = NotifyResolved(ResolvedAddr)) {
       ES.reportError(std::move(Err));
       return ErrorHandlerAddr;
     }
@@ -128,11 +126,6 @@ LazyReexportsMaterializationUnit::LazyReexportsMaterializationUnit(
     : MaterializationUnit(extractFlags(CallableAliases), std::move(K)),
       LCTManager(LCTManager), ISManager(ISManager), SourceJD(SourceJD),
       CallableAliases(std::move(CallableAliases)),
-      NotifyResolved(LazyCallThroughManager::createNotifyResolvedFunction(
-          [&ISManager](JITDylib &JD, const SymbolStringPtr &SymbolName,
-                       JITTargetAddress ResolvedAddr) {
-            return ISManager.updatePointer(*SymbolName, ResolvedAddr);
-          })),
       AliaseeTable(SrcJDLoc) {}
 
 StringRef LazyReexportsMaterializationUnit::getName() const {
@@ -159,7 +152,11 @@ void LazyReexportsMaterializationUnit::materialize(
   for (auto &Alias : RequestedAliases) {
 
     auto CallThroughTrampoline = LCTManager.getCallThroughTrampoline(
-        SourceJD, Alias.second.Aliasee, NotifyResolved);
+        SourceJD, Alias.second.Aliasee,
+        [&ISManager = this->ISManager,
+         StubSym = Alias.first](JITTargetAddress ResolvedAddr) -> Error {
+          return ISManager.updatePointer(*StubSym, ResolvedAddr);
+        });
 
     if (!CallThroughTrampoline) {
       SourceJD.getExecutionSession().reportError(

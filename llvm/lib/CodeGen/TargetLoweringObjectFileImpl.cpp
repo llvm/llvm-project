@@ -1870,7 +1870,10 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
   if (Kind.isText())
     return TextSection;
 
-  if (Kind.isData())
+  if (Kind.isData() || Kind.isReadOnlyWithRel())
+    // TODO: We may put this under option control, because user may want to
+    // have read-only data with relocations placed into a read-only section by
+    // the compiler.
     return DataSection;
 
   // Zero initialized data must be emitted to the .data section because external

@@ -642,7 +642,7 @@ private:
   /// the location of the 'super' keyword.  When it's an interface,
   /// this is that interface.
   SourceLocation ReceiverLoc;
-  llvm::PointerUnion3<Stmt *, const Type *, ObjCInterfaceDecl *> Receiver;
+  llvm::PointerUnion<Stmt *, const Type *, ObjCInterfaceDecl *> Receiver;
 
 public:
   ObjCPropertyRefExpr(ObjCPropertyDecl *PD, QualType t,

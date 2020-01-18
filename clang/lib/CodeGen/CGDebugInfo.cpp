@@ -1648,6 +1648,12 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
   if (CGM.getLangOpts().Optimize)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
+  // In this debug mode, emit type info for a class when its constructor type
+  // info is emitted.
+  if (DebugKind == codegenoptions::DebugInfoConstructor)
+    if (const CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(Method))
+      completeClass(CD->getParent());
+
   llvm::DINodeArray TParamsArray = CollectFunctionTemplateParams(Method, Unit);
   llvm::DISubprogram *SP = DBuilder.createMethod(
       RecordTy, MethodName, MethodLinkageName, MethodDefUnit, MethodLine,
@@ -2210,6 +2216,17 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
   if (CXXDecl->hasDefinition() && CXXDecl->isDynamicClass() &&
       !isClassOrMethodDLLImport(CXXDecl))
     return true;
+
+  // In constructor debug mode, only emit debug info for a class when its
+  // constructor is emitted. Skip this optimization if the class or any of
+  // its methods are marked dllimport.
+  if (DebugKind == codegenoptions::DebugInfoConstructor &&
+      !CXXDecl->isLambda() && !isClassOrMethodDLLImport(CXXDecl)) {
+    for (const auto *Ctor : CXXDecl->ctors()) {
+      if (Ctor->isUserProvided())
+        return true;
+    }
+  }
 
   TemplateSpecializationKind Spec = TSK_Undeclared;
   if (const auto *SD = dyn_cast<ClassTemplateSpecializationDecl>(RD))

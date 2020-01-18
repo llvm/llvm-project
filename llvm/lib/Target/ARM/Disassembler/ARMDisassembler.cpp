@@ -1099,7 +1099,7 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
   return MCDisassembler::Fail;
 }
 
-extern "C" void LLVMInitializeARMDisassembler() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMDisassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheARMLETarget(),
                                          createARMDisassembler);
   TargetRegistry::RegisterMCDisassembler(getTheARMBETarget(),

@@ -77,13 +77,13 @@ entry:
   %e = getelementptr [2 x i32], [2 x i32] addrspace(5)* %v1a, i32 0, i32 %idx
   %x = load i32, i32 addrspace(5)* %e
   %xf = bitcast i32 %x to float
-  call void @llvm.amdgcn.buffer.store.f32(float %xf, <4 x i32> undef, i32 0, i32 0, i1 0, i1 0)
+  call void @llvm.amdgcn.raw.buffer.store.f32(float %xf, <4 x i32> undef, i32 0, i32 0, i32 0)
   ret void
 }
 
 attributes #0 = { nounwind "amdgpu-git-ptr-high"="0x1234" }
 
-declare void @llvm.amdgcn.buffer.store.f32(float, <4 x i32>, i32, i32, i1, i1)
+declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg)
 
 
 ; Check we have CS_NUM_USED_VGPRS in PAL metadata.

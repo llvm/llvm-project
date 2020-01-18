@@ -358,6 +358,22 @@ TEST_F(FormatTestJS, ReservedWordsMethods) {
       "    x();\n"
       "  }\n"
       "}\n");
+  verifyFormat("class KeywordNamedMethods {\n"
+               "  do() {\n"
+               "  }\n"
+               "  for() {\n"
+               "  }\n"
+               "  while() {\n"
+               "  }\n"
+               "  if() {\n"
+               "  }\n"
+               "  else() {\n"
+               "  }\n"
+               "  try() {\n"
+               "  }\n"
+               "  catch() {\n"
+               "  }\n"
+               "}\n");
 }
 
 TEST_F(FormatTestJS, ReservedWordsParenthesized) {
@@ -737,6 +753,22 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "   function a() {\n"
                "  return   1;\n"
                "}  \n");
+  // clang-format must not insert breaks between async and function, otherwise
+  // automatic semicolon insertion may trigger (in particular in a class body).
+  verifyFormat("async function\n"
+               "hello(\n"
+               "    myparamnameiswaytooloooong) {\n"
+               "}",
+               "async function hello(myparamnameiswaytooloooong) {}",
+               getGoogleJSStyleWithColumns(10));
+  verifyFormat("class C {\n"
+               "  async hello(\n"
+               "      myparamnameiswaytooloooong) {\n"
+               "  }\n"
+               "}",
+               "class C {\n"
+               "  async hello(myparamnameiswaytooloooong) {} }",
+               getGoogleJSStyleWithColumns(10));
   verifyFormat("async function* f() {\n"
                "  yield fetch(x);\n"
                "}");

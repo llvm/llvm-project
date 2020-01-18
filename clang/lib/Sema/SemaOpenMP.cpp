@@ -16008,8 +16008,22 @@ static void checkMappableExpressionList(
           return MC.getAssociatedDeclaration();
         });
     assert(I != CurComponents.end() && "Null decl on map clause.");
-    QualType Type =
-        I->getAssociatedDeclaration()->getType().getNonReferenceType();
+    QualType Type;
+    auto *ASE = dyn_cast<ArraySubscriptExpr>(VE->IgnoreParens());
+    auto *OASE = dyn_cast<OMPArraySectionExpr>(VE->IgnoreParens());
+    if (ASE) {
+      Type = ASE->getType().getNonReferenceType();
+    } else if (OASE) {
+      QualType BaseType =
+          OMPArraySectionExpr::getBaseOriginalType(OASE->getBase());
+      if (const auto *ATy = BaseType->getAsArrayTypeUnsafe())
+        Type = ATy->getElementType();
+      else
+        Type = BaseType->getPointeeType();
+      Type = Type.getNonReferenceType();
+    } else {
+      Type = VE->getType();
+    }
 
     // OpenMP 4.5 [2.10.5, target update Construct, Restrictions, p.4]
     // A list item in a to or from clause must have a mappable type.
@@ -16018,6 +16032,8 @@ static void checkMappableExpressionList(
     if (!checkTypeMappable(VE->getExprLoc(), VE->getSourceRange(), SemaRef,
                            DSAS, Type))
       continue;
+
+    Type = I->getAssociatedDeclaration()->getType().getNonReferenceType();
 
     if (CKind == OMPC_map) {
       // target enter data

@@ -1431,6 +1431,8 @@ void Lexer::SetByteOffset(unsigned Offset, bool StartOfLine) {
 static bool isAllowedIDChar(uint32_t C, const LangOptions &LangOpts) {
   if (LangOpts.AsmPreprocessor) {
     return false;
+  } else if (LangOpts.DollarIdents && '$' == C) {
+    return true;
   } else if (LangOpts.CPlusPlus11 || LangOpts.C11) {
     static const llvm::sys::UnicodeCharSet C11AllowedIDChars(
         C11AllowedIDCharRanges);

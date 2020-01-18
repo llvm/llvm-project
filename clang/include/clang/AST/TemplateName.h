@@ -190,8 +190,8 @@ public:
 /// only be understood in the context of
 class TemplateName {
   using StorageType =
-      llvm::PointerUnion4<TemplateDecl *, UncommonTemplateNameStorage *,
-                          QualifiedTemplateName *, DependentTemplateName *>;
+      llvm::PointerUnion<TemplateDecl *, UncommonTemplateNameStorage *,
+                         QualifiedTemplateName *, DependentTemplateName *>;
 
   StorageType Storage;
 
@@ -559,7 +559,7 @@ struct PointerLikeTypeTraits<clang::TemplateName> {
   }
 
   // No bits are available!
-  enum { NumLowBitsAvailable = 0 };
+  static constexpr int NumLowBitsAvailable = 0;
 };
 
 } // namespace llvm.

@@ -708,7 +708,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_source_manager_up(), m_source_file_cache(),
       m_command_interpreter_up(
           std::make_unique<CommandInterpreter>(*this, false)),
-      m_input_reader_stack(), m_instance_name(), m_loaded_plugins(),
+      m_io_handler_stack(), m_instance_name(), m_loaded_plugins(),
       m_event_handler_thread(), m_io_handler_thread(),
       m_sync_broadcaster(nullptr, "lldb.debugger.sync"),
       m_forward_listener_sp(), m_clear_once() {
@@ -870,15 +870,15 @@ ExecutionContext Debugger::GetSelectedExecutionContext() {
 }
 
 void Debugger::DispatchInputInterrupt() {
-  std::lock_guard<std::recursive_mutex> guard(m_input_reader_stack.GetMutex());
-  IOHandlerSP reader_sp(m_input_reader_stack.Top());
+  std::lock_guard<std::recursive_mutex> guard(m_io_handler_stack.GetMutex());
+  IOHandlerSP reader_sp(m_io_handler_stack.Top());
   if (reader_sp)
     reader_sp->Interrupt();
 }
 
 void Debugger::DispatchInputEndOfFile() {
-  std::lock_guard<std::recursive_mutex> guard(m_input_reader_stack.GetMutex());
-  IOHandlerSP reader_sp(m_input_reader_stack.Top());
+  std::lock_guard<std::recursive_mutex> guard(m_io_handler_stack.GetMutex());
+  IOHandlerSP reader_sp(m_io_handler_stack.Top());
   if (reader_sp)
     reader_sp->GotEOF();
 }
@@ -886,17 +886,17 @@ void Debugger::DispatchInputEndOfFile() {
 void Debugger::ClearIOHandlers() {
   // The bottom input reader should be the main debugger input reader.  We do
   // not want to close that one here.
-  std::lock_guard<std::recursive_mutex> guard(m_input_reader_stack.GetMutex());
-  while (m_input_reader_stack.GetSize() > 1) {
-    IOHandlerSP reader_sp(m_input_reader_stack.Top());
+  std::lock_guard<std::recursive_mutex> guard(m_io_handler_stack.GetMutex());
+  while (m_io_handler_stack.GetSize() > 1) {
+    IOHandlerSP reader_sp(m_io_handler_stack.Top());
     if (reader_sp)
       PopIOHandler(reader_sp);
   }
 }
 
-void Debugger::ExecuteIOHandlers() {
+void Debugger::RunIOHandlers() {
   while (true) {
-    IOHandlerSP reader_sp(m_input_reader_stack.Top());
+    IOHandlerSP reader_sp(m_io_handler_stack.Top());
     if (!reader_sp)
       break;
 
@@ -904,7 +904,7 @@ void Debugger::ExecuteIOHandlers() {
 
     // Remove all input readers that are done from the top of the stack
     while (true) {
-      IOHandlerSP top_reader_sp = m_input_reader_stack.Top();
+      IOHandlerSP top_reader_sp = m_io_handler_stack.Top();
       if (top_reader_sp && top_reader_sp->GetIsDone())
         PopIOHandler(top_reader_sp);
       else
@@ -915,33 +915,42 @@ void Debugger::ExecuteIOHandlers() {
 }
 
 bool Debugger::IsTopIOHandler(const lldb::IOHandlerSP &reader_sp) {
-  return m_input_reader_stack.IsTop(reader_sp);
+  return m_io_handler_stack.IsTop(reader_sp);
 }
 
 bool Debugger::CheckTopIOHandlerTypes(IOHandler::Type top_type,
                                       IOHandler::Type second_top_type) {
-  return m_input_reader_stack.CheckTopIOHandlerTypes(top_type, second_top_type);
+  return m_io_handler_stack.CheckTopIOHandlerTypes(top_type, second_top_type);
 }
 
 void Debugger::PrintAsync(const char *s, size_t len, bool is_stdout) {
   lldb_private::StreamFile &stream =
       is_stdout ? GetOutputStream() : GetErrorStream();
-  m_input_reader_stack.PrintAsync(&stream, s, len);
+  m_io_handler_stack.PrintAsync(&stream, s, len);
 }
 
 ConstString Debugger::GetTopIOHandlerControlSequence(char ch) {
-  return m_input_reader_stack.GetTopIOHandlerControlSequence(ch);
+  return m_io_handler_stack.GetTopIOHandlerControlSequence(ch);
 }
 
 const char *Debugger::GetIOHandlerCommandPrefix() {
-  return m_input_reader_stack.GetTopIOHandlerCommandPrefix();
+  return m_io_handler_stack.GetTopIOHandlerCommandPrefix();
 }
 
 const char *Debugger::GetIOHandlerHelpPrologue() {
-  return m_input_reader_stack.GetTopIOHandlerHelpPrologue();
+  return m_io_handler_stack.GetTopIOHandlerHelpPrologue();
 }
 
-void Debugger::RunIOHandler(const IOHandlerSP &reader_sp) {
+bool Debugger::RemoveIOHandler(const IOHandlerSP &reader_sp) {
+  return PopIOHandler(reader_sp);
+}
+
+void Debugger::RunIOHandlerAsync(const IOHandlerSP &reader_sp,
+                                 bool cancel_top_handler) {
+  PushIOHandler(reader_sp, cancel_top_handler);
+}
+
+void Debugger::RunIOHandlerSync(const IOHandlerSP &reader_sp) {
   PushIOHandler(reader_sp);
 
   IOHandlerSP top_reader_sp = reader_sp;
@@ -954,7 +963,7 @@ void Debugger::RunIOHandler(const IOHandlerSP &reader_sp) {
     }
 
     while (true) {
-      top_reader_sp = m_input_reader_stack.Top();
+      top_reader_sp = m_io_handler_stack.Top();
       if (top_reader_sp && top_reader_sp->GetIsDone())
         PopIOHandler(top_reader_sp);
       else
@@ -970,8 +979,8 @@ void Debugger::AdoptTopIOHandlerFilesIfInvalid(FileSP &in, StreamFileSP &out,
   // input reader's in/out/err streams, or fall back to the debugger file
   // handles, or we fall back onto stdin/stdout/stderr as a last resort.
 
-  std::lock_guard<std::recursive_mutex> guard(m_input_reader_stack.GetMutex());
-  IOHandlerSP top_reader_sp(m_input_reader_stack.Top());
+  std::lock_guard<std::recursive_mutex> guard(m_io_handler_stack.GetMutex());
+  IOHandlerSP top_reader_sp(m_io_handler_stack.Top());
   // If no STDIN has been set, then set it appropriately
   if (!in || !in->IsValid()) {
     if (top_reader_sp)
@@ -1009,17 +1018,17 @@ void Debugger::PushIOHandler(const IOHandlerSP &reader_sp,
   if (!reader_sp)
     return;
 
-  std::lock_guard<std::recursive_mutex> guard(m_input_reader_stack.GetMutex());
+  std::lock_guard<std::recursive_mutex> guard(m_io_handler_stack.GetMutex());
 
   // Get the current top input reader...
-  IOHandlerSP top_reader_sp(m_input_reader_stack.Top());
+  IOHandlerSP top_reader_sp(m_io_handler_stack.Top());
 
   // Don't push the same IO handler twice...
   if (reader_sp == top_reader_sp)
     return;
 
   // Push our new input reader
-  m_input_reader_stack.Push(reader_sp);
+  m_io_handler_stack.Push(reader_sp);
   reader_sp->Activate();
 
   // Interrupt the top input reader to it will exit its Run() function and let
@@ -1035,23 +1044,23 @@ bool Debugger::PopIOHandler(const IOHandlerSP &pop_reader_sp) {
   if (!pop_reader_sp)
     return false;
 
-  std::lock_guard<std::recursive_mutex> guard(m_input_reader_stack.GetMutex());
+  std::lock_guard<std::recursive_mutex> guard(m_io_handler_stack.GetMutex());
 
   // The reader on the stop of the stack is done, so let the next read on the
   // stack refresh its prompt and if there is one...
-  if (m_input_reader_stack.IsEmpty())
+  if (m_io_handler_stack.IsEmpty())
     return false;
 
-  IOHandlerSP reader_sp(m_input_reader_stack.Top());
+  IOHandlerSP reader_sp(m_io_handler_stack.Top());
 
   if (pop_reader_sp != reader_sp)
     return false;
 
   reader_sp->Deactivate();
   reader_sp->Cancel();
-  m_input_reader_stack.Pop();
+  m_io_handler_stack.Pop();
 
-  reader_sp = m_input_reader_stack.Top();
+  reader_sp = m_io_handler_stack.Top();
   if (reader_sp)
     reader_sp->Activate();
 
@@ -1542,7 +1551,7 @@ void Debugger::StopEventHandlerThread() {
 
 lldb::thread_result_t Debugger::IOHandlerThread(lldb::thread_arg_t arg) {
   Debugger *debugger = (Debugger *)arg;
-  debugger->ExecuteIOHandlers();
+  debugger->RunIOHandlers();
   debugger->StopEventHandlerThread();
   return {};
 }

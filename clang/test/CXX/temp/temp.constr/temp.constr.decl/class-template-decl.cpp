@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -x c++ -verify %s
+// RUN: %clang_cc1 -std=c++2a -fconcepts-ts -x c++ -verify %s
 
 namespace nodiag {
 
@@ -6,6 +6,14 @@ template <typename T> requires (bool(T()))
 struct A;
 template <typename U> requires (bool(U()))
 struct A;
+
+template<typename T>
+concept C1 = true;
+
+template <C1 T> requires (bool(T()))
+struct B;
+template <C1 U> requires (bool(U()))
+struct B;
 
 } // end namespace nodiag
 
@@ -23,6 +31,14 @@ template <typename T> requires true // expected-note{{previous template declarat
 struct C;
 template <typename T> requires (!0) // expected-error{{requires clause differs in template redeclaration}}
 struct C;
+
+template<typename T>
+concept C1 = true;
+
+template <C1 T> // expected-note{{previous template declaration is here}}
+struct D;
+template <typename T> requires C1<T> // expected-error{{type constraint differs in template redeclaration}}
+struct D;
 
 } // end namespace diag
 

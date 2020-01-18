@@ -453,6 +453,13 @@ void test_builtin_launder(int *p) {
   int *d = __builtin_launder(p);
 }
 
+// __warn_memset_zero_len should be NOP, see https://sourceware.org/bugzilla/show_bug.cgi?id=25399
+// CHECK-LABEL: define void @test___warn_memset_zero_len
+void test___warn_memset_zero_len() {
+  // CHECK-NOT: @__warn_memset_zero_len
+  __warn_memset_zero_len();
+}
+
 // Behavior of __builtin_os_log differs between platforms, so only test on X86
 #ifdef __x86_64__
 

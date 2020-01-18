@@ -2417,10 +2417,65 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(SDNode *Node,
     }
     return Result;
   }
-  assert(!isSigned && "Legalize cannot Expand SINT_TO_FP for i64 yet");
   // Code below here assumes !isSigned without checking again.
-  // FIXME: This can produce slightly incorrect results. See details in
-  // FIXME: https://reviews.llvm.org/D69275
+  assert(!isSigned && "Legalize cannot Expand SINT_TO_FP for i64 yet");
+
+  // TODO: Generalize this for use with other types.
+  if ((SrcVT == MVT::i32 || SrcVT == MVT::i64) && DestVT == MVT::f32) {
+    LLVM_DEBUG(dbgs() << "Converting unsigned i32/i64 to f32\n");
+    // For unsigned conversions, convert them to signed conversions using the
+    // algorithm from the x86_64 __floatundisf in compiler_rt. That method
+    // should be valid for i32->f32 as well.
+
+    // TODO: This really should be implemented using a branch rather than a
+    // select.  We happen to get lucky and machinesink does the right
+    // thing most of the time.  This would be a good candidate for a
+    // pseudo-op, or, even better, for whole-function isel.
+    EVT SetCCVT = getSetCCResultType(SrcVT);
+
+    SDValue SignBitTest = DAG.getSetCC(
+        dl, SetCCVT, Op0, DAG.getConstant(0, dl, SrcVT), ISD::SETLT);
+
+    EVT ShiftVT = TLI.getShiftAmountTy(SrcVT, DAG.getDataLayout());
+    SDValue ShiftConst = DAG.getConstant(1, dl, ShiftVT);
+    SDValue Shr = DAG.getNode(ISD::SRL, dl, SrcVT, Op0, ShiftConst);
+    SDValue AndConst = DAG.getConstant(1, dl, SrcVT);
+    SDValue And = DAG.getNode(ISD::AND, dl, SrcVT, Op0, AndConst);
+    SDValue Or = DAG.getNode(ISD::OR, dl, SrcVT, And, Shr);
+
+    SDValue Slow, Fast;
+    if (Node->isStrictFPOpcode()) {
+      // In strict mode, we must avoid spurious exceptions, and therefore
+      // must make sure to only emit a single STRICT_SINT_TO_FP.
+      SDValue InCvt = DAG.getSelect(dl, SrcVT, SignBitTest, Or, Op0);
+      Fast = DAG.getNode(ISD::STRICT_SINT_TO_FP, dl, { DestVT, MVT::Other },
+                         { Node->getOperand(0), InCvt });
+      Slow = DAG.getNode(ISD::STRICT_FADD, dl, { DestVT, MVT::Other },
+                         { Fast.getValue(1), Fast, Fast });
+      Chain = Slow.getValue(1);
+      // The STRICT_SINT_TO_FP inherits the exception mode from the
+      // incoming STRICT_UINT_TO_FP node; the STRICT_FADD node can
+      // never raise any exception.
+      SDNodeFlags Flags;
+      Flags.setNoFPExcept(Node->getFlags().hasNoFPExcept());
+      Fast->setFlags(Flags);
+      Flags.setNoFPExcept(true);
+      Slow->setFlags(Flags);
+    } else {
+      SDValue SignCvt = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Or);
+      Slow = DAG.getNode(ISD::FADD, dl, DestVT, SignCvt, SignCvt);
+      Fast = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Op0);
+    }
+
+    return DAG.getSelect(dl, DestVT, SignBitTest, Slow, Fast);
+  }
+
+  // The following optimization is valid only if every value in SrcVT (when
+  // treated as signed) is representable in DestVT.  Check that the mantissa
+  // size of DestVT is >= than the number of bits in SrcVT -1.
+  assert(APFloat::semanticsPrecision(DAG.EVTToAPFloatSemantics(DestVT)) >=
+             SrcVT.getSizeInBits() - 1 &&
+         "Cannot perform lossless SINT_TO_FP!");
 
   SDValue Tmp1;
   if (Node->isStrictFPOpcode()) {

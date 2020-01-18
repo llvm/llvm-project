@@ -1636,8 +1636,7 @@ void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
       TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
 
   SectionKind GVKind = getObjFileLowering().getKindForGlobal(GV, TM);
-  if ((!GVKind.isCommon() && !GVKind.isBSS() && !GVKind.isData() &&
-       !GVKind.isReadOnly()) ||
+  if ((!GVKind.isGlobalWriteableData() && !GVKind.isReadOnly()) ||
       GVKind.isMergeable2ByteCString() || GVKind.isMergeable4ByteCString())
     report_fatal_error("Encountered a global variable kind that is "
                        "not supported yet.");
@@ -1802,7 +1801,7 @@ createPPCAsmPrinterPass(TargetMachine &tm,
 }
 
 // Force static initialization.
-extern "C" void LLVMInitializePowerPCAsmPrinter() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCAsmPrinter() {
   TargetRegistry::RegisterAsmPrinter(getThePPC32Target(),
                                      createPPCAsmPrinterPass);
   TargetRegistry::RegisterAsmPrinter(getThePPC64Target(),

@@ -18606,7 +18606,8 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
              "Trying to extract from >1 concat operand?");
       assert(NewExtIdx % ExtNumElts == 0 &&
              "Extract index is not a multiple of the input vector length.");
-      SDValue NewIndexC = DAG.getIntPtrConstant(NewExtIdx, DL);
+      MVT IdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
+      SDValue NewIndexC = DAG.getConstant(NewExtIdx, DL, IdxTy);
       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NVT,
                          V.getOperand(ConcatOpIdx), NewIndexC);
     }

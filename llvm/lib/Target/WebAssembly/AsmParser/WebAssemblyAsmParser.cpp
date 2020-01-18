@@ -899,7 +899,7 @@ public:
 } // end anonymous namespace
 
 // Force static initialization.
-extern "C" void LLVMInitializeWebAssemblyAsmParser() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeWebAssemblyAsmParser() {
   RegisterMCAsmParser<WebAssemblyAsmParser> X(getTheWebAssemblyTarget32());
   RegisterMCAsmParser<WebAssemblyAsmParser> Y(getTheWebAssemblyTarget64());
 }

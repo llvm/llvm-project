@@ -4,7 +4,7 @@
     {
       "artifacts": [
         {
-          "length": 951,
+          "length": 1077,
           "location": {
           },
           "mimeType": "text/plain",
@@ -13,6 +13,7 @@
           ]
         }
       ],
+      "columnKind": "unicodeCodePoints",
       "results": [
         {
           "codeFlows": [
@@ -32,9 +33,9 @@
                           },
                           "region": {
                             "endColumn": 6,
-                            "endLine": 34,
+                            "endLine": 39,
                             "startColumn": 3,
-                            "startLine": 34
+                            "startLine": 39
                           }
                         }
                       }
@@ -102,9 +103,9 @@
                           },
                           "region": {
                             "endColumn": 6,
-                            "endLine": 35,
+                            "endLine": 40,
                             "startColumn": 3,
-                            "startLine": 35
+                            "startLine": 40
                           }
                         }
                       }
@@ -120,7 +121,7 @@
                             "index": 0,
                           },
                           "region": {
-                            "endColumn": 11,
+                            "endColumn": 12,
                             "endLine": 15,
                             "startColumn": 3,
                             "startLine": 15
@@ -363,6 +364,74 @@
           },
           "ruleId": "unix.Malloc",
           "ruleIndex": 3
+        },
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "'løçål' initialized to 0"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 12,
+                            "endLine": 34,
+                            "startColumn": 3,
+                            "startLine": 34
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Division by zero"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "index": 0,
+                          },
+                          "region": {
+                            "endColumn": 20,
+                            "startColumn": 20,
+                            "startLine": 35
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0,
+                },
+                "region": {
+                  "endColumn": 20,
+                  "startColumn": 20,
+                  "startLine": 35
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Division by zero"
+          },
+          "ruleId": "core.DivideZero",
+          "ruleIndex": 2
         }
       ],
       "tool": {

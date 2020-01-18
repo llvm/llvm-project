@@ -1064,7 +1064,7 @@ void ScriptInterpreterPythonImpl::ExecuteInterpreterLoop() {
 
   IOHandlerSP io_handler_sp(new IOHandlerPythonInterpreter(debugger, this));
   if (io_handler_sp) {
-    debugger.PushIOHandler(io_handler_sp);
+    debugger.RunIOHandlerAsync(io_handler_sp);
   }
 }
 
@@ -1248,14 +1248,14 @@ void ScriptInterpreterPythonImpl::CollectDataForBreakpointCommandCallback(
     CommandReturnObject &result) {
   m_active_io_handler = eIOHandlerBreakpoint;
   m_debugger.GetCommandInterpreter().GetPythonCommandsFromIOHandler(
-      "    ", *this, true, &bp_options_vec);
+      "    ", *this, &bp_options_vec);
 }
 
 void ScriptInterpreterPythonImpl::CollectDataForWatchpointCommandCallback(
     WatchpointOptions *wp_options, CommandReturnObject &result) {
   m_active_io_handler = eIOHandlerWatchpoint;
   m_debugger.GetCommandInterpreter().GetPythonCommandsFromIOHandler(
-      "    ", *this, true, wp_options);
+      "    ", *this, wp_options);
 }
 
 Status ScriptInterpreterPythonImpl::SetBreakpointCommandCallbackFunction(

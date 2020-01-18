@@ -229,7 +229,7 @@ class VOP3Interp<string OpName, VOPProfile P, list<dag> pattern = []> :
 def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
   let Ins64 = (ins Src0Mod:$src0_modifiers, VRegSrc_32:$src0,
                    Attr:$attr, AttrChan:$attrchan,
-                   clampmod:$clamp, omod:$omod);
+                   clampmod0:$clamp, omod0:$omod);
 
   let Asm64 = "$vdst, $src0_modifiers, $attr$attrchan$clamp$omod";
 }
@@ -237,7 +237,7 @@ def VOP3_INTERP : VOPProfile<[f32, f32, i32, untyped]> {
 def VOP3_INTERP_MOV : VOPProfile<[f32, i32, i32, untyped]> {
   let Ins64 = (ins InterpSlot:$src0,
                    Attr:$attr, AttrChan:$attrchan,
-                   clampmod:$clamp, omod:$omod);
+                   clampmod0:$clamp, omod0:$omod);
 
   let Asm64 = "$vdst, $src0, $attr$attrchan$clamp$omod";
 
@@ -480,12 +480,17 @@ def V_INTERP_P2_F16_gfx9 : VOP3Interp <"v_interp_p2_f16_gfx9", VOP3_INTERP16<[f1
 
 let Uses = [M0, EXEC], FPDPRounding = 1 in {
 def V_INTERP_P1LL_F16 : VOP3Interp <"v_interp_p1ll_f16", VOP3_INTERP16<[f32, f32, i32, untyped]>,
-       [(set f32:$vdst, (AMDGPUinterp_p1ll_f16 f32:$src0, (i32 timm:$attrchan),
-                                                          (i32 timm:$attr),
-                                                          (i32 timm:$src0_modifiers),
-                                                          (i1 timm:$high),
-                                                          (i1 timm:$clamp),
-                                                          (i32 timm:$omod)))]>;
+       [(set f32:$vdst, (int_amdgcn_interp_p1_f16 (VOP3Mods f32:$src0, i32:$src0_modifiers),
+                                                  (i32 timm:$attrchan),
+                                                  (i32 timm:$attr),
+                                                  (i1 timm:$high), M0))]> {
+  // This predicate should only apply to the selection pattern. The
+  // instruction still exists and should decode on subtargets with
+  // other bank counts.
+  let OtherPredicates = [has32BankLDS];
+}
+
+
 def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32, i32, f16]>,
        [(set f32:$vdst, (AMDGPUinterp_p1lv_f16 f32:$src0, (i32 timm:$attrchan),
                                                           (i32 timm:$attr),
@@ -634,6 +639,34 @@ def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3
   let HasOMod = 0;
 }
 
+class PermlanePat<SDPatternOperator permlane,
+  Instruction inst> : GCNPat<
+  (permlane i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2,
+            timm:$fi, timm:$bc),
+  (inst (as_i1imm $fi), $src0, (as_i1imm $bc),
+        $src1, 0, $src2, $vdst_in)
+>;
+
+// Permlane intrinsic that has either fetch invalid or bound control
+// fields enabled.
+class BoundControlOrFetchInvalidPermlane<SDPatternOperator permlane> :
+  PatFrag<(ops node:$vdst_in, node:$src0, node:$src1, node:$src2,
+               node:$fi, node:$bc),
+          (permlane node:$vdst_in, node:$src0, node:
+                    $src1, node:$src2, node:$fi, node:$bc)> {
+  let PredicateCode = [{ return N->getConstantOperandVal(5) != 0 ||
+                                N->getConstantOperandVal(6) != 0; }];
+}
+
+// Drop the input value if it won't be read.
+class PermlaneDiscardVDstIn<SDPatternOperator permlane,
+                            Instruction inst> : GCNPat<
+  (permlane srcvalue, i32:$src0, i32:$src1, i32:$src2, timm:$fi, timm:$bc),
+  (inst (as_i1imm $fi), $src0, (as_i1imm $bc), $src1, 0, $src2,
+        (IMPLICIT_DEF))
+>;
+
+
 let SubtargetPredicate = isGFX10Plus in {
   def V_XOR3_B32 : VOP3Inst <"v_xor3_b32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
   def : ThreeOp_i32_Pats<xor, xor, V_XOR3_B32>;
@@ -643,14 +676,16 @@ let SubtargetPredicate = isGFX10Plus in {
     def V_PERMLANEX16_B32 : VOP3Inst <"v_permlanex16_b32", VOP3_PERMLANE_Profile>;
   } // End $vdst = $vdst_in, DisableEncoding $vdst_in
 
-  def : GCNPat<
-    (int_amdgcn_permlane16 i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2, timm:$fi, timm:$bc),
-    (V_PERMLANE16_B32 (as_i1imm $fi), $src0, (as_i1imm $bc), $src1, 0, $src2, $vdst_in)
-  >;
-  def : GCNPat<
-    (int_amdgcn_permlanex16 i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2, timm:$fi, timm:$bc),
-    (V_PERMLANEX16_B32 (as_i1imm $fi), $src0, (as_i1imm $bc), $src1, 0, $src2, $vdst_in)
-  >;
+  def : PermlanePat<int_amdgcn_permlane16, V_PERMLANE16_B32>;
+  def : PermlanePat<int_amdgcn_permlanex16, V_PERMLANEX16_B32>;
+
+  def : PermlaneDiscardVDstIn<
+    BoundControlOrFetchInvalidPermlane<int_amdgcn_permlane16>,
+    V_PERMLANE16_B32>;
+  def : PermlaneDiscardVDstIn<
+    BoundControlOrFetchInvalidPermlane<int_amdgcn_permlanex16>,
+    V_PERMLANEX16_B32>;
+
 } // End SubtargetPredicate = isGFX10Plus
 
 //===----------------------------------------------------------------------===//

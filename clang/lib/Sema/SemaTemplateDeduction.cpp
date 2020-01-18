@@ -643,6 +643,10 @@ static TemplateParameter makeTemplateParameter(Decl *D) {
 
 /// If \p Param is an expanded parameter pack, get the number of expansions.
 static Optional<unsigned> getExpandedPackSize(NamedDecl *Param) {
+  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param))
+    if (TTP->isExpandedParameterPack())
+      return TTP->getNumExpansionParameters();
+
   if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param))
     if (NTTP->isExpandedParameterPack())
       return NTTP->getNumExpansionTypes();
@@ -720,38 +724,48 @@ private:
     // Compute the set of template parameter indices that correspond to
     // parameter packs expanded by the pack expansion.
     llvm::SmallBitVector SawIndices(TemplateParams->size());
+    llvm::SmallVector<TemplateArgument, 4> ExtraDeductions;
 
     auto AddPack = [&](unsigned Index) {
       if (SawIndices[Index])
         return;
       SawIndices[Index] = true;
       addPack(Index);
+
+      // Deducing a parameter pack that is a pack expansion also constrains the
+      // packs appearing in that parameter to have the same deduced arity. Also,
+      // in C++17 onwards, deducing a non-type template parameter deduces its
+      // type, so we need to collect the pending deduced values for those packs.
+      if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(
+              TemplateParams->getParam(Index))) {
+        if (auto *Expansion = dyn_cast<PackExpansionType>(NTTP->getType()))
+          ExtraDeductions.push_back(Expansion->getPattern());
+      }
+      // FIXME: Also collect the unexpanded packs in any type and template
+      // parameter packs that are pack expansions.
     };
 
-    // First look for unexpanded packs in the pattern.
-    SmallVector<UnexpandedParameterPack, 2> Unexpanded;
-    S.collectUnexpandedParameterPacks(Pattern, Unexpanded);
-    for (unsigned I = 0, N = Unexpanded.size(); I != N; ++I) {
-      unsigned Depth, Index;
-      std::tie(Depth, Index) = getDepthAndIndex(Unexpanded[I]);
-      if (Depth == Info.getDeducedDepth())
-        AddPack(Index);
-    }
+    auto Collect = [&](TemplateArgument Pattern) {
+      SmallVector<UnexpandedParameterPack, 2> Unexpanded;
+      S.collectUnexpandedParameterPacks(Pattern, Unexpanded);
+      for (unsigned I = 0, N = Unexpanded.size(); I != N; ++I) {
+        unsigned Depth, Index;
+        std::tie(Depth, Index) = getDepthAndIndex(Unexpanded[I]);
+        if (Depth == Info.getDeducedDepth())
+          AddPack(Index);
+      }
+    };
+
+    // Look for unexpanded packs in the pattern.
+    Collect(Pattern);
     assert(!Packs.empty() && "Pack expansion without unexpanded packs?");
 
     unsigned NumNamedPacks = Packs.size();
 
-    // We can also have deduced template parameters that do not actually
-    // appear in the pattern, but can be deduced by it (the type of a non-type
-    // template parameter pack, in particular). These won't have prevented us
-    // from partially expanding the pack.
-    llvm::SmallBitVector Used(TemplateParams->size());
-    MarkUsedTemplateParameters(S.Context, Pattern, /*OnlyDeduced*/true,
-                               Info.getDeducedDepth(), Used);
-    for (int Index = Used.find_first(); Index != -1;
-         Index = Used.find_next(Index))
-      if (TemplateParams->getParam(Index)->isParameterPack())
-        AddPack(Index);
+    // Also look for unexpanded packs that are indirectly deduced by deducing
+    // the sizes of the packs in this pattern.
+    while (!ExtraDeductions.empty())
+      Collect(ExtraDeductions.pop_back_val());
 
     return NumNamedPacks;
   }
@@ -4542,11 +4556,12 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
 
   // Build template<class TemplParam> void Func(FuncParam);
   TemplateTypeParmDecl *TemplParam = TemplateTypeParmDecl::Create(
-      Context, nullptr, SourceLocation(), Loc, Depth, 0, nullptr, false, false);
+      Context, nullptr, SourceLocation(), Loc, Depth, 0, nullptr, false, false,
+      false);
   QualType TemplArg = QualType(TemplParam->getTypeForDecl(), 0);
   NamedDecl *TemplParamPtr = TemplParam;
   FixedSizeTemplateParameterListStorage<1, false> TemplateParamsSt(
-      Loc, Loc, TemplParamPtr, Loc, nullptr);
+      Context, Loc, Loc, TemplParamPtr, Loc, nullptr);
 
   QualType FuncParam =
       SubstituteDeducedTypeTransform(*this, TemplArg, /*UseTypeSugar*/false)
@@ -5276,9 +5291,8 @@ Sema::getMoreSpecializedPartialSpecialization(
       return nullptr;
     if (IsAtLeastAsConstrained(PS2, AC2, PS1, AC1, AtLeastAsConstrained2))
       return nullptr;
-    if (AtLeastAsConstrained1 == AtLeastAsConstrained2) {
+    if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
       return nullptr;
-    }
     return AtLeastAsConstrained1 ? PS1 : PS2;
   }
 
@@ -5352,7 +5366,8 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
     SFINAETrap Trap(*this);
 
     Context.getInjectedTemplateArgs(P, PArgs);
-    TemplateArgumentListInfo PArgList(P->getLAngleLoc(), P->getRAngleLoc());
+    TemplateArgumentListInfo PArgList(P->getLAngleLoc(),
+                                      P->getRAngleLoc());
     for (unsigned I = 0, N = P->size(); I != N; ++I) {
       // Unwrap packs that getInjectedTemplateArgs wrapped around pack
       // expansions, to form an "as written" argument list.

@@ -183,7 +183,7 @@ static cl::opt<bool> EnableScalarIRPasses(
   cl::init(true),
   cl::Hidden);
 
-extern "C" void LLVMInitializeAMDGPUTarget() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
   RegisterTargetMachine<GCNTargetMachine> Y(getTheGCNTarget());
@@ -229,6 +229,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSIModeRegisterPass(*PR);
   initializeSIWholeQuadModePass(*PR);
   initializeSILowerControlFlowPass(*PR);
+  initializeSIRemoveShortExecBranchesPass(*PR);
   initializeSIInsertSkipsPass(*PR);
   initializeSIBufMemMergePass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
@@ -961,7 +962,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   insertPass(&RegisterCoalescerID, &SIPreAllocateWWMRegsID, false);
 
   if (EnableDCEInRA)
-    insertPass(&RenameIndependentSubregsID, &DeadMachineInstructionElimID);
+    insertPass(&DetectDeadLanesID, &DeadMachineInstructionElimID);
 
   TargetPassConfig::addOptimizedRegAlloc();
 }
@@ -1007,6 +1008,7 @@ void GCNPassConfig::addPreEmitPass() {
   // be better for it to emit S_NOP <N> when possible.
   addPass(&PostRAHazardRecognizerID);
 
+  addPass(&SIRemoveShortExecBranchesID);
   addPass(&SIInsertSkipsPassID);
   addPass(&BranchRelaxationPassID);
 }

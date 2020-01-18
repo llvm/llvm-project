@@ -29,6 +29,8 @@ target_link_libraries(MLIRTestTransforms
   MLIRAnalysis
   MLIREDSC
   MLIRGPU
+  MLIRLinalgOps
+  MLIRLinalgTransforms
   MLIRLoopOps
   MLIRPass
   MLIRTestDialect

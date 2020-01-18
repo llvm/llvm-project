@@ -286,7 +286,11 @@ append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
 # Linux test function-sections-are-bad.cpp fails with the following error:
 # 'undefined symbol: __sanitizer_unaligned_load32'.
 if(DEFINED TARGET_powerpc64le_CFLAGS)
-  append_list_if(COMPILER_RT_HAS_FNO_FUNCTION_SECTIONS_FLAG -fno-function-sections TARGET_powerpc64le_CFLAGS)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "XL")
+    append("-qnofuncsect" TARGET_powerpc64le_CFLAGS)
+  else()
+    append_list_if(COMPILER_RT_HAS_FNO_FUNCTION_SECTIONS_FLAG -fno-function-sections TARGET_powerpc64le_CFLAGS)
+  endif()
 endif()
 
 # The following is a workaround for s390x.  This avoids creation of "partial

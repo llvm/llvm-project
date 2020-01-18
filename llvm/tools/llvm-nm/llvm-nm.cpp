@@ -708,8 +708,8 @@ static bool symbolIsDefined(const NMSymbol &Sym) {
 }
 
 static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
-                                   const std::string &ArchiveName,
-                                   const std::string &ArchitectureName) {
+                                   StringRef ArchiveName,
+                                   StringRef ArchitectureName) {
   if (!NoSort) {
     using Comparator = bool (*)(const NMSymbol &, const NMSymbol &);
     Comparator Cmp;
@@ -1184,10 +1184,9 @@ static unsigned getNsectInMachO(MachOObjectFile &Obj, BasicSymbolRef Sym) {
   return (STE.n_type & MachO::N_TYPE) == MachO::N_SECT ? STE.n_sect : 0;
 }
 
-static void
-dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
-                          const std::string &ArchiveName = std::string(),
-                          const std::string &ArchitectureName = std::string()) {
+static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
+                                      StringRef ArchiveName = {},
+                                      StringRef ArchitectureName = {}) {
   auto Symbols = Obj.symbols();
   if (DynamicSyms) {
     const auto *E = dyn_cast<ELFObjectFileBase>(&Obj);

@@ -21,11 +21,6 @@ using namespace llvm;
 
 AMDGPURegisterInfo::AMDGPURegisterInfo() : AMDGPUGenRegisterInfo(0) {}
 
-//===----------------------------------------------------------------------===//
-// Function handling callbacks - Functions are a seldom used feature of GPUS, so
-// they are not supported at this time.
-//===----------------------------------------------------------------------===//
-
 // Table of NumRegs sized pieces at every 32-bit offset.
 static const uint16_t SubRegFromChannelTable[][32] = {
   { AMDGPU::sub0, AMDGPU::sub1, AMDGPU::sub2, AMDGPU::sub3,

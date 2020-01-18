@@ -1357,6 +1357,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::UUNPKHI:           return "AArch64ISD::UUNPKHI";
   case AArch64ISD::UUNPKLO:           return "AArch64ISD::UUNPKLO";
   case AArch64ISD::INSR:              return "AArch64ISD::INSR";
+  case AArch64ISD::PTEST:             return "AArch64ISD::PTEST";
   case AArch64ISD::PTRUE:             return "AArch64ISD::PTRUE";
   case AArch64ISD::GLD1:              return "AArch64ISD::GLD1";
   case AArch64ISD::GLD1_SCALED:       return "AArch64ISD::GLD1_SCALED";
@@ -9014,7 +9015,7 @@ AArch64TargetLowering::getNumInterleavedAccesses(VectorType *VecTy,
 }
 
 MachineMemOperand::Flags
-AArch64TargetLowering::getMMOFlags(const Instruction &I) const {
+AArch64TargetLowering::getTargetMMOFlags(const Instruction &I) const {
   if (Subtarget->getProcFamily() == AArch64Subtarget::Falkor &&
       I.getMetadata(FALKOR_STRIDED_ACCESS_MD) != nullptr)
     return MOStridedAccess;
@@ -10889,6 +10890,30 @@ static SDValue tryConvertSVEWideCompare(SDNode *N, unsigned ReplacementIID,
   return SDValue();
 }
 
+static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
+                        AArch64CC::CondCode Cond) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  SDLoc DL(Op);
+  assert(Op.getValueType().isScalableVector() &&
+         TLI.isTypeLegal(Op.getValueType()) &&
+         "Expected legal scalable vector type!");
+
+  // Ensure target specific opcodes are using legal type.
+  EVT OutVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  SDValue TVal = DAG.getConstant(1, DL, OutVT);
+  SDValue FVal = DAG.getConstant(0, DL, OutVT);
+
+  // Set condition code (CC) flags.
+  SDValue Test = DAG.getNode(AArch64ISD::PTEST, DL, MVT::Other, Pg, Op);
+
+  // Convert CC to integer based on requested condition.
+  // NOTE: Cond is inverted to promote CSEL's removal when it feeds a compare.
+  SDValue CC = DAG.getConstant(getInvertedCondCode(Cond), DL, MVT::i32);
+  SDValue Res = DAG.getNode(AArch64ISD::CSEL, DL, OutVT, FVal, TVal, CC, Test);
+  return DAG.getZExtOrTrunc(Res, DL, VT);
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -10989,6 +11014,15 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_cmpls_wide:
     return tryConvertSVEWideCompare(N, Intrinsic::aarch64_sve_cmphs, true,
                                     DCI, DAG);
+  case Intrinsic::aarch64_sve_ptest_any:
+    return getPTest(DAG, N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                    AArch64CC::ANY_ACTIVE);
+  case Intrinsic::aarch64_sve_ptest_first:
+    return getPTest(DAG, N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                    AArch64CC::FIRST_ACTIVE);
+  case Intrinsic::aarch64_sve_ptest_last:
+    return getPTest(DAG, N->getValueType(0), N->getOperand(1), N->getOperand(2),
+                    AArch64CC::LAST_ACTIVE);
   }
   return SDValue();
 }

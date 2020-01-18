@@ -13,6 +13,14 @@ add_llvm_component_library(LLVMTarget
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Target
   )
 
+# When building shared objects for each target there are some internal APIs
+# that are used across shared objects which we can't hide.
+if (NOT BUILD_SHARED_LIBS AND NOT APPLE)
+  # Set default visibility to hidden, so we don't export all the Target classes
+  # in libLLVM.so.
+  set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+endif()
+
 foreach(t ${LLVM_TARGETS_TO_BUILD})
   message(STATUS "Targeting ${t}")
   add_subdirectory(${t})

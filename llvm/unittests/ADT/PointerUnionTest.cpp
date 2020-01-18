@@ -13,8 +13,8 @@ using namespace llvm;
 namespace {
 
 typedef PointerUnion<int *, float *> PU;
-typedef PointerUnion3<int *, float *, long long *> PU3;
-typedef PointerUnion4<int *, float *, long long *, double *> PU4;
+typedef PointerUnion<int *, float *, long long *> PU3;
+typedef PointerUnion<int *, float *, long long *, double *> PU4;
 
 struct PointerUnionTest : public testing::Test {
   float f;

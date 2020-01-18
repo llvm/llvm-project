@@ -180,7 +180,7 @@ public:
   static inline mlir::FuncOp getFromVoidPointer(void *P) {
     return mlir::FuncOp::getFromOpaquePointer(P);
   }
-  enum { NumLowBitsAvailable = 3 };
+  static constexpr int NumLowBitsAvailable = 3;
 };
 
 } // namespace llvm

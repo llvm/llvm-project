@@ -11,9 +11,8 @@ write_vcsrevision("write_vcsrevision") {
 # in their args.gn and with empty defaults (similar to llvm_targets_to_build).
 action("write_extension_def") {
   script = "//llvm/utils/gn/secondary/llvm/include/llvm/Support/write_extension_def.py"
-  outputs = [
-    "$target_gen_dir/Extension.def",
-  ]
+  outputs = [ "$target_gen_dir/Extension.def" ]
+
   # If any extensions should be enabled, they'd be passed as additional
   # arguments, e.g. `args += [ "Bye", "Polly" ]`.
   args = [

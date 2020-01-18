@@ -22,7 +22,7 @@ entry:
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            'unreachable:ret32'
+; CHECK-NEXT:         Name:            'signature_mismatch:ret32'
 ; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            _start
 ; CHECK-NEXT:       - Index:           2

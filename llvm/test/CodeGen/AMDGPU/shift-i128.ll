@@ -509,8 +509,8 @@ define amdgpu_kernel void @s_shl_v2i128ss(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-NEXT:    v_mov_b32_e32 v10, 16
 ; GCN-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v11, 0
-; GCN-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; GCN-NEXT:    flat_store_dwordx4 v[10:11], v[4:7]
+; GCN-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; GCN-NEXT:    s_endpgm
   %shift = shl <2 x i128> %lhs, %rhs
   store <2 x i128> %shift, <2 x i128> addrspace(1)* null
@@ -579,8 +579,8 @@ define amdgpu_kernel void @s_lshr_v2i128_ss(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-NEXT:    v_cndmask_b32_e64 v4, v4, v10, s[0:1]
 ; GCN-NEXT:    v_mov_b32_e32 v10, 16
 ; GCN-NEXT:    v_mov_b32_e32 v11, 0
-; GCN-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; GCN-NEXT:    flat_store_dwordx4 v[10:11], v[4:7]
+; GCN-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; GCN-NEXT:    s_endpgm
   %shift = lshr <2 x i128> %lhs, %rhs
   store <2 x i128> %shift, <2 x i128> addrspace(1)* null
@@ -653,8 +653,8 @@ define amdgpu_kernel void @s_ashr_v2i128_ss(<2 x i128> %lhs, <2 x i128> %rhs) {
 ; GCN-NEXT:    v_cndmask_b32_e64 v4, v4, v10, s[0:1]
 ; GCN-NEXT:    v_mov_b32_e32 v10, 16
 ; GCN-NEXT:    v_mov_b32_e32 v11, 0
-; GCN-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; GCN-NEXT:    flat_store_dwordx4 v[10:11], v[4:7]
+; GCN-NEXT:    flat_store_dwordx4 v[8:9], v[0:3]
 ; GCN-NEXT:    s_endpgm
   %shift = ashr <2 x i128> %lhs, %rhs
   store <2 x i128> %shift, <2 x i128> addrspace(1)* null

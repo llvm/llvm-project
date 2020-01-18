@@ -58,50 +58,71 @@ static mlir::PassRegistration<TestPatternDriver>
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct ReturnTypeOpMatch : public RewritePattern {
-  ReturnTypeOpMatch(MLIRContext *ctx)
-      : RewritePattern(OpWithInferTypeInterfaceOp::getOperationName(), 1, ctx) {
-  }
+// Generate ops for each instance where the type can be succesfully infered.
+template <typename OpTy>
+static void invokeCreateWithInferedReturnType(Operation *op) {
+  auto *context = op->getContext();
+  auto fop = op->getParentOfType<FuncOp>();
+  auto location = UnknownLoc::get(context);
+  OpBuilder b(op);
+  b.setInsertionPointAfter(op);
 
-  PatternMatchResult matchAndRewrite(Operation *op,
-                                     PatternRewriter &rewriter) const final {
-    if (auto retTypeFn = dyn_cast<InferTypeOpInterface>(op)) {
-      SmallVector<Value, 4> values(op->getOperands());
+  // Use permutations of 2 args as operands.
+  assert(fop.getNumArguments() >= 2);
+  for (int i = 0, e = fop.getNumArguments(); i < e; ++i) {
+    for (int j = 0; j < e; ++j) {
+      std::array<Value, 2> values = {fop.getArgument(i), fop.getArgument(j)};
       SmallVector<Type, 2> inferedReturnTypes;
-      if (failed(retTypeFn.inferReturnTypes(op->getLoc(), values,
-                                            op->getAttrs(), op->getRegions(),
-                                            inferedReturnTypes)))
-        return matchFailure();
-      SmallVector<Type, 1> resultTypes(op->getResultTypes());
-      if (!retTypeFn.isCompatibleReturnTypes(inferedReturnTypes, resultTypes))
-        return op->emitOpError(
-                   "inferred type incompatible with return type of operation"),
-               matchFailure();
-
-      // TODO(jpienaar): Split this out to make the test more focused.
-      // Create new op with unknown location to verify building with
-      // InferTypeOpInterface is triggered.
-      auto fop = op->getParentOfType<FuncOp>();
-      if (values[0] == fop.getArgument(0)) {
-        // Use the 2nd function argument if the first function argument is used
-        // when constructing the new op so that a new return type is inferred.
-        values[0] = fop.getArgument(1);
-        values[1] = fop.getArgument(1);
+      if (succeeded(OpTy::inferReturnTypes(context, llvm::None, values,
+                                           op->getAttrs(), op->getRegions(),
+                                           inferedReturnTypes))) {
+        OperationState state(location, OpTy::getOperationName());
         // TODO(jpienaar): Expand to regions.
-        rewriter.create<OpWithInferTypeInterfaceOp>(
-            UnknownLoc::get(op->getContext()), values, op->getAttrs());
+        OpTy::build(&b, state, values, op->getAttrs());
+        (void)b.createOperation(state);
       }
     }
-    return matchFailure();
   }
-};
+}
 
 struct TestReturnTypeDriver : public FunctionPass<TestReturnTypeDriver> {
   void runOnFunction() override {
-    mlir::OwningRewritePatternList patterns;
-    populateWithGenerated(&getContext(), &patterns);
-    patterns.insert<ReturnTypeOpMatch>(&getContext());
-    applyPatternsGreedily(getFunction(), patterns);
+    if (getFunction().getName() == "testCreateFunctions") {
+      std::vector<Operation *> ops;
+      // Collect ops to avoid triggering on inserted ops.
+      for (auto &op : getFunction().getBody().front())
+        ops.push_back(&op);
+      // Generate test patterns for each, but skip terminator.
+      for (auto *op : llvm::makeArrayRef(ops).drop_back()) {
+        // Test create method of each of the Op classes below. The resultant
+        // output would be in reverse order underneath `op` from which
+        // the attributes and regions are used.
+        invokeCreateWithInferedReturnType<OpWithInferTypeInterfaceOp>(op);
+        invokeCreateWithInferedReturnType<OpWithShapedTypeInferTypeInterfaceOp>(
+            op);
+      };
+      return;
+    }
+
+    // Verification check.
+    // TODO: Move to ops that implement type infer interface.
+    getFunction().walk([this](Operation *op) -> void {
+      auto retTypeFn = dyn_cast<InferTypeOpInterface>(op);
+      if (!retTypeFn)
+        return;
+      auto *context = &getContext();
+      SmallVector<Type, 2> inferedReturnTypes;
+      if (failed(retTypeFn.inferReturnTypes(
+              context, op->getLoc(), op->getOperands(), op->getAttrs(),
+              op->getRegions(), inferedReturnTypes)))
+        return;
+      SmallVector<Type, 1> resultTypes(op->getResultTypes());
+      if (!retTypeFn.isCompatibleReturnTypes(inferedReturnTypes, resultTypes)) {
+        op->emitOpError(
+            "inferred type incompatible with return type of operation");
+        return;
+      }
+    });
   }
 };
 } // end anonymous namespace

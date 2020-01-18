@@ -297,13 +297,13 @@ static void emitAvailabilityQueryForIntEnum(const Record &enumDef,
   StringRef enumName = enumAttr.getEnumClassName();
   std::vector<EnumAttrCase> enumerants = enumAttr.getAllCases();
 
-  // Mapping from availability class name to (enumerant, availablity
+  // Mapping from availability class name to (enumerant, availability
   // specification) pairs.
   llvm::StringMap<llvm::SmallVector<std::pair<EnumAttrCase, Availability>, 1>>
       classCaseMap;
 
-  // Place all availablity specifications to their corresponding
-  // availablility classes.
+  // Place all availability specifications to their corresponding
+  // availability classes.
   for (const EnumAttrCase &enumerant : enumerants)
     for (const Availability &avail : getAvailabilities(enumerant.getDef()))
       classCaseMap[avail.getClass()].push_back({enumerant, avail});
@@ -339,13 +339,13 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
   std::string underlyingType = enumAttr.getUnderlyingType();
   std::vector<EnumAttrCase> enumerants = enumAttr.getAllCases();
 
-  // Mapping from availability class name to (enumerant, availablity
+  // Mapping from availability class name to (enumerant, availability
   // specification) pairs.
   llvm::StringMap<llvm::SmallVector<std::pair<EnumAttrCase, Availability>, 1>>
       classCaseMap;
 
-  // Place all availablity specifications to their corresponding
-  // availablility classes.
+  // Place all availability specifications to their corresponding
+  // availability classes.
   for (const EnumAttrCase &enumerant : enumerants)
     for (const Availability &avail : getAvailabilities(enumerant.getDef()))
       classCaseMap[avail.getClass()].push_back({enumerant, avail});
@@ -391,8 +391,8 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
 
   llvm::StringSet<> handledClasses;
 
-  // Place all availablity specifications to their corresponding
-  // availablility classes.
+  // Place all availability specifications to their corresponding
+  // availability classes.
   for (const EnumAttrCase &enumerant : enumerants)
     for (const Availability &avail : getAvailabilities(enumerant.getDef())) {
       StringRef className = avail.getClass();
@@ -1165,8 +1165,8 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
   std::vector<Availability> opAvailabilities =
       getAvailabilities(srcOp.getDef());
 
-  // First collect all availablity classes this op should implement.
-  // All availablity instances keep information for the generated interface and
+  // First collect all availability classes this op should implement.
+  // All availability instances keep information for the generated interface and
   // the instance's specific requirement. Here we remember a random instance so
   // we can get the information regarding the generated interface.
   llvm::StringMap<Availability> availClasses;
@@ -1211,7 +1211,7 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
       if (!enumAttr)
         continue;
 
-      // (enumerant, availablity specification) pairs for this availability
+      // (enumerant, availability specification) pairs for this availability
       // class.
       SmallVector<std::pair<EnumAttrCase, Availability>, 1> caseSpecs;
 
@@ -1222,7 +1222,7 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
           if (availClassName == caseAvail.getClass())
             caseSpecs.push_back({enumerant, caseAvail});
 
-      // If this attribute kind does not have any availablity spec from any of
+      // If this attribute kind does not have any availability spec from any of
       // its cases, no more work to do.
       if (caseSpecs.empty())
         continue;

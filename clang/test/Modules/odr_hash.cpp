@@ -311,6 +311,20 @@ S9 s9;
 #endif
 
 #if defined(FIRST)
+struct S9b {
+  mutable int x : 2;
+};
+#elif defined(SECOND)
+struct S9b {
+  int x : 2;
+};
+#else
+S9b s9b;
+// expected-error@second.h:* {{'Field::S9b' has different definitions in different modules; first difference is definition in module 'SecondModule' found non-mutable field 'x'}}
+// expected-note@first.h:* {{but in 'FirstModule' found mutable field 'x'}}
+#endif
+
+#if defined(FIRST)
 struct S10 {
   unsigned x = 5;
 };
@@ -372,7 +386,9 @@ S13 s13;
   unsigned c : 1 + 2; \
   s d;                \
   double e = 1.0;     \
-  long f[5];
+  long f[5];          \
+  mutable int g;      \
+  mutable int h : 5;
 
 #if defined(FIRST) || defined(SECOND)
 typedef short s;

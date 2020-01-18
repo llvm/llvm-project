@@ -116,3 +116,24 @@ void __vectorcall HVAAnywhere(struct HFA2 p1, int p2, int p3, float p4, int p5, 
 // X32: define dso_local x86_vectorcallcc void @"\01HVAAnywhere@@88"(%struct.HFA2 inreg %p1.coerce, i32 inreg %p2, i32 inreg %p3, float %p4, i32 %p5, i32 %p6, %struct.HFA4* %p7, %struct.HFA2 inreg %p8.coerce, float %p9)
 // X64: define dso_local x86_vectorcallcc void @"\01HVAAnywhere@@112"(%struct.HFA2 inreg %p1.coerce, i32 %p2, i32 %p3, float %p4, i32 %p5, i32 %p6, %struct.HFA4* %p7, %struct.HFA2 inreg %p8.coerce, float %p9) 
 
+#ifndef __x86_64__
+// This covers the three ways XMM values can be passed on 32-bit x86:
+// - directly in XMM register (xmm5)
+// - indirectly by address, address in GPR (ecx)
+// - indirectly by address, address on stack
+void __vectorcall vectorcall_indirect_vec(
+    double xmm0, double xmm1, double xmm2, double xmm3, double xmm4,
+    v4f32 xmm5, v4f32 ecx, int edx, v4f32 mem) {
+}
+
+// X32: define dso_local x86_vectorcallcc void @"\01vectorcall_indirect_vec@@{{[0-9]+}}"
+// X32-SAME: (double %xmm0,
+// X32-SAME: double %xmm1,
+// X32-SAME: double %xmm2,
+// X32-SAME: double %xmm3,
+// X32-SAME: double %xmm4,
+// X32-SAME: <4 x float> %xmm5,
+// X32-SAME: <4 x float>* inreg %0,
+// X32-SAME: i32 inreg %edx,
+// X32-SAME: <4 x float>* %1)
+#endif

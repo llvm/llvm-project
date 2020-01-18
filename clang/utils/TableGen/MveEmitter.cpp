@@ -1454,8 +1454,9 @@ void MveEmitter::EmitHeader(raw_ostream &OS) {
     raw_ostream &OS = parts[ST->requiresFloat() ? Float : 0];
     const VectorType *VT = getVectorType(ST);
 
-    OS << "typedef __attribute__((neon_vector_type(" << VT->lanes() << "))) "
-       << ST->cName() << " " << VT->cName() << ";\n";
+    OS << "typedef __attribute__((__neon_vector_type__(" << VT->lanes()
+       << "), __clang_arm_mve_strict_polymorphism)) " << ST->cName() << " "
+       << VT->cName() << ";\n";
 
     // Every vector type also comes with a pair of multi-vector types for
     // the VLD2 and VLD4 instructions.

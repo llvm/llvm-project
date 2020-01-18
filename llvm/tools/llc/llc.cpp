@@ -461,8 +461,17 @@ static int compileModule(char **argv, LLVMContext &Context) {
   Options.MCOptions.IASSearchPaths = IncludeDirs;
   Options.MCOptions.SplitDwarfFile = SplitDwarfFile;
 
+  // On AIX, setting the relocation model to anything other than PIC is considered
+  // a user error.
+  Optional<Reloc::Model> RM = getRelocModel();
+  if (TheTriple.isOSAIX() && RM.hasValue() && *RM != Reloc::PIC_) {
+    WithColor::error(errs(), argv[0])
+        << "invalid relocation model, AIX only supports PIC.\n";
+    return 1;
+  }
+
   std::unique_ptr<TargetMachine> Target(TheTarget->createTargetMachine(
-      TheTriple.getTriple(), CPUStr, FeaturesStr, Options, getRelocModel(),
+      TheTriple.getTriple(), CPUStr, FeaturesStr, Options, RM,
       getCodeModel(), OLvl));
 
   assert(Target && "Could not allocate target machine!");

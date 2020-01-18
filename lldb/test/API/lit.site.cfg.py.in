@@ -42,8 +42,10 @@ if dotest_lit_args_str:
 try:
     config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
     config.llvm_libs_dir = config.llvm_libs_dir % lit_config.params
-    config.dotest_args_str = config.dotest_args_str % lit_config.params
+    config.llvm_shlib_dir = config.llvm_shlib_dir % lit_config.params
     config.llvm_build_mode = config.llvm_build_mode % lit_config.params
+    config.lldb_executable = config.lldb_executable % lit_config.params
+    config.dotest_args_str = config.dotest_args_str % lit_config.params
 except KeyError as e:
     key, = e.args
     lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))

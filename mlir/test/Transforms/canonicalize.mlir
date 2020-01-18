@@ -692,6 +692,7 @@ func @cast_values(%arg0: tensor<*xi32>, %arg1: memref<?xi32>) -> (tensor<2xi32>,
 // CHECK-DAG: #[[VIEW_MAP2:map[0-9]+]] = affine_map<(d0, d1)[s0] -> (d0 * s0 + d1 + 15)>
 // CHECK-DAG: #[[VIEW_MAP3:map[0-9]+]] = affine_map<(d0, d1, d2)[s0] -> (d0 * s0 + d1 * 7 + d2)>
 // CHECK-DAG: #[[VIEW_MAP4:map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 4 + d1 + 15)>
+// CHECK-DAG: #[[VIEW_MAP5:map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 7 + d1)>
 
 // CHECK-LABEL: func @view
 func @view(%arg0 : index) {
@@ -736,7 +737,7 @@ func @view(%arg0 : index) {
   load %5[%c0, %c0] : memref<?x4xf32, #TEST_VIEW_MAP2>
 
   // Test: folding static alloc and memref_cast into a view.
-  // CHECK: std.view %[[ALLOC_MEM]][][%c15, %c7] : memref<2048xi8> to memref<?x?xf32>
+  // CHECK: std.view %[[ALLOC_MEM]][][] : memref<2048xi8> to memref<15x7xf32, #[[VIEW_MAP5]]>
   %6 = memref_cast %0 : memref<2048xi8> to memref<?xi8>
   %7 = view %6[%c15][%c7] : memref<?xi8> to memref<?x?xf32>
   load %7[%c0, %c0] : memref<?x?xf32>

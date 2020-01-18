@@ -42,7 +42,7 @@
 ; W32: v_mov_b32_e32 v0, [[RES]]
 
 define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
-  %call = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> %i, i32 %c, i32 0, i1 zeroext false, i1 zeroext false) #1
+  %call = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %i, i32 %c, i32 0, i32 0, i32 0) #1
   ret float %call
 }
 
@@ -128,8 +128,8 @@ define float @mubuf_vgpr(<4 x i32> %i, i32 %c) #0 {
 
 define void @mubuf_vgpr_adjacent_in_block(<4 x i32> %i, <4 x i32> %j, i32 %c, float addrspace(1)* %out0, float addrspace(1)* %out1) #0 {
 entry:
-  %val0 = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> %i, i32 %c, i32 0, i1 zeroext false, i1 zeroext false) #1
-  %val1 = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> %j, i32 %c, i32 0, i1 zeroext false, i1 zeroext false) #1
+  %val0 = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %i, i32 %c, i32 0, i32 0, i32 0) #1
+  %val1 = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %j, i32 %c, i32 0, i32 0, i32 0) #1
   store volatile float %val0, float addrspace(1)* %out0
   store volatile float %val1, float addrspace(1)* %out1
   ret void
@@ -158,7 +158,7 @@ entry:
 ; W64: s_mov_b64 exec, [[SAVEEXEC]]
 ; W64: s_cbranch_execz [[TERMBB:BB[0-9]+_[0-9]+]]
 
-; W64: BB{{[0-9]+_[0-9]+}}:
+; W64: ; %bb.{{[0-9]+}}:
 ; W64-DAG: v_mov_b32_e32 [[IDX:v[0-9]+]], s4
 ; W64-DAG: s_mov_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], exec
 
@@ -204,7 +204,7 @@ entry:
 ; W32: s_mov_b32 exec_lo, [[SAVEEXEC]]
 ; W32: s_cbranch_execz [[TERMBB:BB[0-9]+_[0-9]+]]
 
-; W32: BB{{[0-9]+_[0-9]+}}:
+; W32: ; %bb.{{[0-9]+}}:
 ; W32-DAG: v_mov_b32_e32 [[IDX:v[0-9]+]], s4
 ; W32-DAG: s_mov_b32 [[SAVEEXEC:s[0-9]+]], exec_lo
 
@@ -270,7 +270,7 @@ entry:
 ; W64-O0: buffer_store_dword [[RES]], off, s[0:3], s32 offset:[[RES_OFF:[0-9]+]] ; 4-byte Folded Spill
 ; W64-O0: s_cbranch_execz [[TERMBB:BB[0-9]+_[0-9]+]]
 
-; W64-O0: BB{{[0-9]+_[0-9]+}}:
+; W64-O0: ; %bb.{{[0-9]+}}:
 ; W64-O0-DAG: s_mov_b64 s{{\[}}[[SAVEEXEC0:[0-9]+]]:[[SAVEEXEC1:[0-9]+]]{{\]}}, exec
 ; W64-O0-DAG: buffer_store_dword {{v[0-9]+}}, off, s[0:3], s32 offset:[[IDX_OFF:[0-9]+]] ; 4-byte Folded Spill
 ; W64-O0: v_writelane_b32 [[VSAVEEXEC:v[0-9]+]], s[[SAVEEXEC0]], [[SAVEEXEC_IDX0:[0-9]+]]
@@ -317,13 +317,13 @@ entry:
 define void @mubuf_vgpr_outside_entry(<4 x i32> %i, <4 x i32> %j, i32 %c, float addrspace(1)* %in, float addrspace(1)* %out) #0 {
 entry:
   %live.out.reg = call i32 asm sideeffect "s_mov_b32 $0, 17", "={s4}" ()
-  %val0 = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> %i, i32 %live.out.reg, i32 0, i1 zeroext false, i1 zeroext false) #1
+  %val0 = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %i, i32 %live.out.reg, i32 0, i32 0, i32 0) #1
   %idx = call i32 @llvm.amdgcn.workitem.id.x() #1
   %cmp = icmp eq i32 %idx, 0
   br i1 %cmp, label %bb1, label %bb2
 
 bb1:
-  %val1 = call float @llvm.amdgcn.buffer.load.format.f32(<4 x i32> %j, i32 %live.out.reg, i32 0, i1 zeroext false, i1 zeroext false) #1
+  %val1 = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %j, i32 %live.out.reg, i32 0, i32 0, i32 0) #1
   br label %bb2
 
 bb2:
@@ -333,7 +333,7 @@ bb2:
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
-declare float @llvm.amdgcn.buffer.load.format.f32(<4 x i32>, i32, i32, i1, i1) #1
+declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i32, i32 immarg) #1
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind readnone }
+attributes #1 = { nounwind readonly }

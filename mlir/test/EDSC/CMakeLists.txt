@@ -9,7 +9,8 @@ target_link_libraries(mlir-edsc-builder-api-test
   MLIRAffineOps
   MLIREDSC
   MLIRIR
-  MLIRLinalg
+  MLIRLinalgEDSC
+  MLIRLinalgOps
   MLIRLoopOps
   MLIRStandardOps
   MLIRTransforms
@@ -21,7 +22,7 @@ target_include_directories(mlir-edsc-builder-api-test PRIVATE ..)
 
 whole_archive_link(mlir-edsc-builder-api-test
   MLIRAffineOps
-  MLIRLinalg
+  MLIRLinalgOps
   MLIRLoopOps
   MLIRStandardOps
   MLIRTransforms

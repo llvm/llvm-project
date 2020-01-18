@@ -155,6 +155,8 @@ LinalgOp mlir::linalg::promoteSubViewOperands(OpBuilder &b, LinalgOp op,
                                               SetVector<Value> subViews,
                                               bool dynamicBuffers,
                                               OperationFolder *folder) {
+  assert(op.hasBufferSemantics() && "expected linalg op with buffer semantics");
+
   // 1. Promote the specified views and use them in the new op.
   ScopedContext scope(b, op.getLoc());
   auto promotedBufferAndViews = promoteSubViews(
@@ -164,7 +166,7 @@ LinalgOp mlir::linalg::promoteSubViewOperands(OpBuilder &b, LinalgOp op,
   SmallVector<std::pair<Value, Value>, 8> writebackViews;
   writebackViews.reserve(subViews.size());
   unsigned promotedIdx = 0;
-  for (auto view : op.getInputsAndOutputs()) {
+  for (auto view : op.getInputsAndOutputBuffers()) {
     if (subViews.count(view) != 0) {
       opViews.push_back(promotedBufferAndViews[promotedIdx].fullLocalView);
       writebackViews.emplace_back(std::make_pair(
@@ -187,7 +189,7 @@ LinalgOp mlir::linalg::promoteSubViewOperands(OpBuilder &b, LinalgOp op,
     // WARNING: MUST use the old op to determine whether the operand view is an
     // output.
     bool isOutput =
-        op.getIndexOfOutput(viewAndPartialLocalView.first).hasValue();
+        op.getIndexOfOutputBuffer(viewAndPartialLocalView.first).hasValue();
     if (isOutput)
       copy(viewAndPartialLocalView.second, viewAndPartialLocalView.first);
   }
@@ -203,11 +205,14 @@ static void promoteSubViews(FuncOp f, bool dynamicBuffers) {
   SmallVector<LinalgOp, 8> toErase;
   OperationFolder folder(f.getContext());
   f.walk([dynamicBuffers, &folder, &toErase](LinalgOp op) {
+    if (!op.hasBufferSemantics())
+      return;
+
     // TODO(ntv) some heuristic here to decide what to promote. Atm it is all or
     // nothing.
     SetVector<Value> subViews;
     OpBuilder b(op);
-    for (auto it : op.getInputsAndOutputs())
+    for (auto it : op.getInputsAndOutputBuffers())
       if (auto sv = dyn_cast_or_null<SubViewOp>(it.getDefiningOp()))
         subViews.insert(sv);
     if (!subViews.empty()) {
@@ -233,7 +238,7 @@ struct LinalgPromotionPass : public FunctionPass<LinalgPromotionPass> {
 } // namespace
 
 std::unique_ptr<OpPassBase<FuncOp>>
-mlir::linalg::createLinalgPromotionPass(bool dynamicBuffers) {
+mlir::createLinalgPromotionPass(bool dynamicBuffers) {
   return std::make_unique<LinalgPromotionPass>(dynamicBuffers);
 }
 

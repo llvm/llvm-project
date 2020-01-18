@@ -117,11 +117,17 @@
 /// not accessible from outside it.  Can also be used to mark variables and
 /// functions, making them private to any shared library they are linked into.
 /// On PE/COFF targets, library visibility is the default, so this isn't needed.
+///
+/// LLVM_EXTERNAL_VISIBILITY - classes, functions, and variables marked with
+/// this attribute will be made public and visible outside of any shared library
+/// they are linked in to.
 #if (__has_attribute(visibility) || LLVM_GNUC_PREREQ(4, 0, 0)) &&              \
     !defined(__MINGW32__) && !defined(__CYGWIN__) && !defined(_WIN32)
 #define LLVM_LIBRARY_VISIBILITY __attribute__ ((visibility("hidden")))
+#define LLVM_EXTERNAL_VISIBILITY __attribute__ ((visibility("default")))
 #else
 #define LLVM_LIBRARY_VISIBILITY
+#define LLVM_EXTERNAL_VISIBILITY
 #endif
 
 #if defined(__GNUC__)
@@ -506,19 +512,15 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 /// extern globals, and static globals.
 ///
 /// This is essentially an extremely restricted analog to C++11's thread_local
-/// support, and uses that when available. However, it falls back on
-/// platform-specific or vendor-provided extensions when necessary. These
-/// extensions don't support many of the C++11 thread_local's features. You
-/// should only use this for PODs that you can statically initialize to
-/// some constant value. In almost all circumstances this is most appropriate
-/// for use with a pointer, integer, or small aggregation of pointers and
-/// integers.
+/// support. It uses thread_local if available, falling back on gcc __thread
+/// if not. __thread doesn't support many of the C++11 thread_local's
+/// features. You should only use this for PODs that you can statically
+/// initialize to some constant value. In almost all circumstances this is most
+/// appropriate for use with a pointer, integer, or small aggregation of
+/// pointers and integers.
 #if LLVM_ENABLE_THREADS
-#if __has_feature(cxx_thread_local)
+#if __has_feature(cxx_thread_local) || defined(_MSC_VER)
 #define LLVM_THREAD_LOCAL thread_local
-#elif defined(_MSC_VER)
-// MSVC supports this with a __declspec.
-#define LLVM_THREAD_LOCAL __declspec(thread)
 #else
 // Clang, GCC, and other compatible compilers used __thread prior to C++11 and
 // we only need the restricted functionality that provides.

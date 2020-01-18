@@ -1363,6 +1363,10 @@ unsigned DwarfLinkerForBinary::DIECloner::cloneAddressAttribute(
       // it. Otherwise (when no relocations where applied) just use the
       // one we just decoded.
       Addr = (Info.OrigHighPc ? Info.OrigHighPc : Addr) + Info.PCOffset;
+  } else if (AttrSpec.Attr == dwarf::DW_AT_call_return_pc) {
+    // Relocate a return PC address within a call site entry.
+    if (Die.getTag() == dwarf::DW_TAG_call_site)
+      Addr += Info.PCOffset;
   }
 
   Die.addValue(DIEAlloc, static_cast<dwarf::Attribute>(AttrSpec.Attr),

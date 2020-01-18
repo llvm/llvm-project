@@ -73,7 +73,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @bar = global void (...)* bitcast (void ()* @func to void (...)*), align 8
 
-@globalvar = global i32 0, align 4
+@globalvar = constant i32 0, align 4
 
 declare void @func() #0
 declare i32 @func2(...) #1
@@ -154,11 +154,12 @@ entry:
 ; DIS-DAG: = gv: (name: "foo") ; guid = 6699318081062747564
 ; DIS-DAG: = gv: (name: "func") ; guid = 7289175272376759421
 ; DIS-DAG: = gv: (name: "func3") ; guid = 11517462787082255043
-; DIS-DAG: = gv: (name: "globalvar", summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 1)))) ; guid = 12887606300320728018
+; Check that default value of writeonly attribute is zero for constant variables 
+; DIS-DAG: = gv: (name: "globalvar", summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 0, constant: 1)))) ; guid = 12887606300320728018
 ; DIS-DAG: = gv: (name: "func2") ; guid = 14069196320850861797
 ; DIS-DAG: = gv: (name: "llvm.ctpop.i8") ; guid = 15254915475081819833
 ; DIS-DAG: = gv: (name: "main", summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 9, calls: ((callee: ^{{.*}})), refs: (^{{.*}})))) ; guid = 15822663052811949562
-; DIS-DAG: = gv: (name: "bar", summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 1),  refs: (^{{.*}})))) ; guid = 16434608426314478903
+; DIS-DAG: = gv: (name: "bar", summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 1, constant: 0),  refs: (^{{.*}})))) ; guid = 16434608426314478903
 ; Don't try to match the exact GUID. Since it is private, the file path
 ; will get hashed, and that will be test dependent.
 ; DIS-DAG: = gv: (name: "Y", summaries: (function: (module: ^0, flags: (linkage: private, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), insts: 14, calls: ((callee: ^{{.*}}))))) ; guid =

@@ -67,7 +67,7 @@ Error LLJIT::addIRModule(JITDylib &JD, ThreadSafeModule TSM) {
           TSM.withModuleDo([&](Module &M) { return applyDataLayout(M); }))
     return Err;
 
-  return CompileLayer->add(JD, std::move(TSM), ES->allocateVModule());
+  return TransformLayer->add(JD, std::move(TSM), ES->allocateVModule());
 }
 
 Error LLJIT::addObjectFile(JITDylib &JD, std::unique_ptr<MemoryBuffer> Obj) {
@@ -128,6 +128,7 @@ LLJIT::createCompileFunction(LLJITBuilderState &S,
 LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     : ES(S.ES ? std::move(S.ES) : std::make_unique<ExecutionSession>()),
       Main(this->ES->createJITDylib("<main>")), DL(""),
+      TT(S.JTMB->getTargetTriple()),
       ObjLinkingLayer(createObjectLinkingLayer(S, *ES)),
       ObjTransformLayer(*this->ES, *ObjLinkingLayer), CtorRunner(Main),
       DtorRunner(Main) {
@@ -149,10 +150,11 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     }
     CompileLayer = std::make_unique<IRCompileLayer>(
         *ES, ObjTransformLayer, std::move(*CompileFunction));
+    TransformLayer = std::make_unique<IRTransformLayer>(*ES, *CompileLayer);
   }
 
   if (S.NumCompileThreads > 0) {
-    CompileLayer->setCloneToNewContextOnEmit(true);
+    TransformLayer->setCloneToNewContextOnEmit(true);
     CompileThreads = std::make_unique<ThreadPool>(S.NumCompileThreads);
     ES->setDispatchMaterialization(
         [this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
@@ -248,9 +250,6 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
                                   inconvertibleErrorCode());
     return;
   }
-
-  // Create the transform layer.
-  TransformLayer = std::make_unique<IRTransformLayer>(*ES, *CompileLayer);
 
   // Create the COD layer.
   CODLayer = std::make_unique<CompileOnDemandLayer>(

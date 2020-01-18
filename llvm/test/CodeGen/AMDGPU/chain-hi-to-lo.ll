@@ -199,15 +199,14 @@ define amdgpu_kernel void @vload2_private(i16 addrspace(1)* nocapture readonly %
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v2, s4
 ; GCN-NEXT:    v_mov_b32_e32 v3, s5
-; GCN-NEXT:    global_load_dword v4, v[2:3], off
-; GCN-NEXT:    global_load_ushort v2, v[2:3], off offset:4
+; GCN-NEXT:    global_load_ushort v4, v[2:3], off offset:4
+; GCN-NEXT:    global_load_dword v2, v[2:3], off
 ; GCN-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-NEXT:    v_mov_b32_e32 v1, s7
-; GCN-NEXT:    s_waitcnt vmcnt(1)
-; GCN-NEXT:    buffer_store_short v4, off, s[0:3], s9 offset:4
-; GCN-NEXT:    buffer_store_short_d16_hi v4, off, s[0:3], s9 offset:6
-; GCN-NEXT:    s_waitcnt vmcnt(2)
-; GCN-NEXT:    buffer_store_short v2, off, s[0:3], s9 offset:8
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    buffer_store_short v2, off, s[0:3], s9 offset:4
+; GCN-NEXT:    buffer_store_short_d16_hi v2, off, s[0:3], s9 offset:6
+; GCN-NEXT:    buffer_store_short v4, off, s[0:3], s9 offset:8
 ; GCN-NEXT:    buffer_load_ushort v2, off, s[0:3], s9 offset:4
 ; GCN-NEXT:    buffer_load_ushort v4, off, s[0:3], s9 offset:6
 ; GCN-NEXT:    s_waitcnt vmcnt(1)

@@ -234,6 +234,7 @@ define <4 x float> @f13(<4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
 ; SSE-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE-X86-NEXT:    calll fmaf
 ; SSE-X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; SSE-X86-NEXT:    wait
 ; SSE-X86-NEXT:    movups {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-X86-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-X86-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
@@ -245,6 +246,7 @@ define <4 x float> @f13(<4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
 ; SSE-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE-X86-NEXT:    calll fmaf
 ; SSE-X86-NEXT:    fstpt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Spill
+; SSE-X86-NEXT:    wait
 ; SSE-X86-NEXT:    movups {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-X86-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; SSE-X86-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
@@ -269,8 +271,10 @@ define <4 x float> @f13(<4 x float> %a, <4 x float> %b, <4 x float> %c) #0 {
 ; SSE-X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
 ; SSE-X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    wait
 ; SSE-X86-NEXT:    calll fmaf
 ; SSE-X86-NEXT:    fstps {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    wait
 ; SSE-X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE-X86-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
@@ -359,8 +363,10 @@ define <2 x double> @f14(<2 x double> %a, <2 x double> %b, <2 x double> %c) #0 {
 ; SSE-X86-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-X86-NEXT:    movhps %xmm0, (%esp)
 ; SSE-X86-NEXT:    fstpl {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    wait
 ; SSE-X86-NEXT:    calll fma
 ; SSE-X86-NEXT:    fstpl {{[0-9]+}}(%esp)
+; SSE-X86-NEXT:    wait
 ; SSE-X86-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-X86-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE-X86-NEXT:    movl %ebp, %esp

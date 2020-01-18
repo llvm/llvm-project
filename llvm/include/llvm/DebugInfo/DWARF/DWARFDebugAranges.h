@@ -21,7 +21,7 @@ class DWARFContext;
 class DWARFDebugAranges {
 public:
   void generate(DWARFContext *CTX);
-  uint32_t findAddress(uint64_t Address) const;
+  uint64_t findAddress(uint64_t Address) const;
 
 private:
   void clear();
@@ -32,8 +32,7 @@ private:
   void construct();
 
   struct Range {
-    explicit Range(uint64_t LowPC = -1ULL, uint64_t HighPC = -1ULL,
-                   uint32_t CUOffset = -1U)
+    explicit Range(uint64_t LowPC, uint64_t HighPC, uint64_t CUOffset)
       : LowPC(LowPC), Length(HighPC - LowPC), CUOffset(CUOffset) {}
 
     void setHighPC(uint64_t HighPC) {
@@ -54,8 +53,8 @@ private:
     }
 
     uint64_t LowPC; /// Start of address range.
-    uint32_t Length; /// End of address range (not including this address).
-    uint32_t CUOffset; /// Offset of the compile unit or die.
+    uint64_t Length; /// End of address range (not including this address).
+    uint64_t CUOffset; /// Offset of the compile unit or die.
   };
 
   struct RangeEndpoint {

@@ -4,38 +4,9 @@
 define arm_aapcs_vfpcc <8 x i16> @zext_unscaled_i8_i16(i8* %base, <8 x i16>* %offptr) {
 ; CHECK-LABEL: zext_unscaled_i8_i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vldrh.u32 q0, [r1]
-; CHECK-NEXT:    vldrh.u32 q1, [r1, #8]
-; CHECK-NEXT:    vadd.i32 q0, q0, r0
-; CHECK-NEXT:    vadd.i32 q1, q1, r0
-; CHECK-NEXT:    vmov r2, s3
-; CHECK-NEXT:    vmov r3, s1
-; CHECK-NEXT:    vmov r5, s0
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov r1, s5
-; CHECK-NEXT:    vmov r4, s7
-; CHECK-NEXT:    ldrb.w r12, [r2]
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    ldrb.w lr, [r3]
-; CHECK-NEXT:    vmov r3, s6
-; CHECK-NEXT:    ldrb r5, [r5]
-; CHECK-NEXT:    ldrb r0, [r0]
-; CHECK-NEXT:    vmov.16 q0[0], r5
-; CHECK-NEXT:    ldrb r1, [r1]
-; CHECK-NEXT:    vmov.16 q0[1], lr
-; CHECK-NEXT:    ldrb r4, [r4]
-; CHECK-NEXT:    ldrb r2, [r2]
-; CHECK-NEXT:    ldrb r3, [r3]
-; CHECK-NEXT:    vmov.16 q0[2], r2
-; CHECK-NEXT:    vmov.16 q0[3], r12
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov.16 q0[5], r1
-; CHECK-NEXT:    vmov.16 q0[6], r3
-; CHECK-NEXT:    vmov.16 q0[7], r4
-; CHECK-NEXT:    vmovlb.u8 q0, q0
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    vldrh.u16 q1, [r1]
+; CHECK-NEXT:    vldrb.u16 q0, [r0, q1]
+; CHECK-NEXT:    bx lr
 entry:
   %offs = load <8 x i16>, <8 x i16>* %offptr, align 2
   %offs.zext = zext <8 x i16> %offs to <8 x i32>
@@ -48,38 +19,9 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @sext_unscaled_i8_i16(i8* %base, <8 x i16>* %offptr) {
 ; CHECK-LABEL: sext_unscaled_i8_i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vldrh.u32 q0, [r1]
-; CHECK-NEXT:    vldrh.u32 q1, [r1, #8]
-; CHECK-NEXT:    vadd.i32 q0, q0, r0
-; CHECK-NEXT:    vadd.i32 q1, q1, r0
-; CHECK-NEXT:    vmov r2, s3
-; CHECK-NEXT:    vmov r3, s1
-; CHECK-NEXT:    vmov r5, s0
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov r1, s5
-; CHECK-NEXT:    vmov r4, s7
-; CHECK-NEXT:    ldrb.w r12, [r2]
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    ldrb.w lr, [r3]
-; CHECK-NEXT:    vmov r3, s6
-; CHECK-NEXT:    ldrb r5, [r5]
-; CHECK-NEXT:    ldrb r0, [r0]
-; CHECK-NEXT:    vmov.16 q0[0], r5
-; CHECK-NEXT:    ldrb r1, [r1]
-; CHECK-NEXT:    vmov.16 q0[1], lr
-; CHECK-NEXT:    ldrb r4, [r4]
-; CHECK-NEXT:    ldrb r2, [r2]
-; CHECK-NEXT:    ldrb r3, [r3]
-; CHECK-NEXT:    vmov.16 q0[2], r2
-; CHECK-NEXT:    vmov.16 q0[3], r12
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov.16 q0[5], r1
-; CHECK-NEXT:    vmov.16 q0[6], r3
-; CHECK-NEXT:    vmov.16 q0[7], r4
-; CHECK-NEXT:    vmovlb.s8 q0, q0
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    vldrh.u16 q1, [r1]
+; CHECK-NEXT:    vldrb.s16 q0, [r0, q1]
+; CHECK-NEXT:    bx lr
 entry:
   %offs = load <8 x i16>, <8 x i16>* %offptr, align 2
   %offs.zext = zext <8 x i16> %offs to <8 x i32>
@@ -122,38 +64,9 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @zext_unsigned_unscaled_i8_i8(i8* %base, <8 x i8>* %offptr) {
 ; CHECK-LABEL: zext_unsigned_unscaled_i8_i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vldrb.u32 q0, [r1]
-; CHECK-NEXT:    vldrb.u32 q1, [r1, #4]
-; CHECK-NEXT:    vadd.i32 q0, q0, r0
-; CHECK-NEXT:    vadd.i32 q1, q1, r0
-; CHECK-NEXT:    vmov r2, s3
-; CHECK-NEXT:    vmov r3, s1
-; CHECK-NEXT:    vmov r5, s0
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov r1, s5
-; CHECK-NEXT:    vmov r4, s7
-; CHECK-NEXT:    ldrb.w r12, [r2]
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    ldrb.w lr, [r3]
-; CHECK-NEXT:    vmov r3, s6
-; CHECK-NEXT:    ldrb r5, [r5]
-; CHECK-NEXT:    ldrb r0, [r0]
-; CHECK-NEXT:    vmov.16 q0[0], r5
-; CHECK-NEXT:    ldrb r1, [r1]
-; CHECK-NEXT:    vmov.16 q0[1], lr
-; CHECK-NEXT:    ldrb r4, [r4]
-; CHECK-NEXT:    ldrb r2, [r2]
-; CHECK-NEXT:    ldrb r3, [r3]
-; CHECK-NEXT:    vmov.16 q0[2], r2
-; CHECK-NEXT:    vmov.16 q0[3], r12
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov.16 q0[5], r1
-; CHECK-NEXT:    vmov.16 q0[6], r3
-; CHECK-NEXT:    vmov.16 q0[7], r4
-; CHECK-NEXT:    vmovlb.u8 q0, q0
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    vldrb.u16 q1, [r1]
+; CHECK-NEXT:    vldrb.u16 q0, [r0, q1]
+; CHECK-NEXT:    bx lr
 entry:
   %offs = load <8 x i8>, <8 x i8>* %offptr, align 1
   %offs.zext = zext <8 x i8> %offs to <8 x i32>
@@ -166,38 +79,9 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @sext_unsigned_unscaled_i8_i8(i8* %base, <8 x i8>* %offptr) {
 ; CHECK-LABEL: sext_unsigned_unscaled_i8_i8:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vldrb.u32 q0, [r1]
-; CHECK-NEXT:    vldrb.u32 q1, [r1, #4]
-; CHECK-NEXT:    vadd.i32 q0, q0, r0
-; CHECK-NEXT:    vadd.i32 q1, q1, r0
-; CHECK-NEXT:    vmov r2, s3
-; CHECK-NEXT:    vmov r3, s1
-; CHECK-NEXT:    vmov r5, s0
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    vmov r1, s5
-; CHECK-NEXT:    vmov r4, s7
-; CHECK-NEXT:    ldrb.w r12, [r2]
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    ldrb.w lr, [r3]
-; CHECK-NEXT:    vmov r3, s6
-; CHECK-NEXT:    ldrb r5, [r5]
-; CHECK-NEXT:    ldrb r0, [r0]
-; CHECK-NEXT:    vmov.16 q0[0], r5
-; CHECK-NEXT:    ldrb r1, [r1]
-; CHECK-NEXT:    vmov.16 q0[1], lr
-; CHECK-NEXT:    ldrb r4, [r4]
-; CHECK-NEXT:    ldrb r2, [r2]
-; CHECK-NEXT:    ldrb r3, [r3]
-; CHECK-NEXT:    vmov.16 q0[2], r2
-; CHECK-NEXT:    vmov.16 q0[3], r12
-; CHECK-NEXT:    vmov.16 q0[4], r0
-; CHECK-NEXT:    vmov.16 q0[5], r1
-; CHECK-NEXT:    vmov.16 q0[6], r3
-; CHECK-NEXT:    vmov.16 q0[7], r4
-; CHECK-NEXT:    vmovlb.s8 q0, q0
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    vldrb.u16 q1, [r1]
+; CHECK-NEXT:    vldrb.s16 q0, [r0, q1]
+; CHECK-NEXT:    bx lr
 entry:
   %offs = load <8 x i8>, <8 x i8>* %offptr, align 1
   %offs.zext = zext <8 x i8> %offs to <8 x i32>

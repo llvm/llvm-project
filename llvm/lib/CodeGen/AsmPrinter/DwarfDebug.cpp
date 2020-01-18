@@ -719,7 +719,6 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   assert(TII && "TargetInstrInfo not found: cannot label tail calls");
-  bool ApplyGNUExtensions = getDwarfVersion() == 4 && tuneForGDB();
 
   // Emit call site entries for each call or tail call in the function.
   for (const MachineBasicBlock &MBB : MF) {
@@ -781,25 +780,16 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       const MachineInstr *TopLevelCallMI =
           MI.isInsideBundle() ? &*getBundleStart(MI.getIterator()) : &MI;
 
-      // For tail calls, for non-gdb tuning, no return PC information is needed.
+      // For tail calls, no return PC information is needed.
       // For regular calls (and tail calls in GDB tuning), the return PC
       // is needed to disambiguate paths in the call graph which could lead to
       // some target function.
-      const MCExpr *PCOffset =
+      const MCSymbol *PCAddr =
           (IsTail && !tuneForGDB())
               ? nullptr
-              : getFunctionLocalOffsetAfterInsn(TopLevelCallMI);
+              : const_cast<MCSymbol *>(getLabelAfterInsn(TopLevelCallMI));
 
-      // Return address of a call-like instruction for a normal call or a
-      // jump-like instruction for a tail call. This is needed for
-      // GDB + DWARF 4 tuning.
-      const MCSymbol *PCAddr =
-          ApplyGNUExtensions
-              ? const_cast<MCSymbol *>(getLabelAfterInsn(TopLevelCallMI))
-              : nullptr;
-
-      assert((IsTail || PCOffset || PCAddr) &&
-             "Call without return PC information");
+      assert((IsTail || PCAddr) && "Call without return PC information");
 
       LLVM_DEBUG(dbgs() << "CallSiteEntry: " << MF.getName() << " -> "
                         << (CalleeDecl ? CalleeDecl->getName()
@@ -808,9 +798,8 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
                                                        ->getName(CallReg)))
                         << (IsTail ? " [IsTail]" : "") << "\n");
 
-      DIE &CallSiteDIE =
-            CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP, IsTail, PCAddr,
-                                         PCOffset, CallReg);
+      DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP,
+                                                      IsTail, PCAddr, CallReg);
 
       // GDB and LLDB support call site parameter debug info.
       if (Asm->TM.Options.EnableDebugEntryValues &&

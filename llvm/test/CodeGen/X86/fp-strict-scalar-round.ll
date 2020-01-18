@@ -26,6 +26,7 @@ define float @fceil32(float %f) #0 {
 ; SSE41-X86-NEXT:    roundss $10, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE41-X86-NEXT:    flds (%esp)
+; SSE41-X86-NEXT:    wait
 ; SSE41-X86-NEXT:    popl %eax
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 4
 ; SSE41-X86-NEXT:    retl
@@ -43,6 +44,7 @@ define float @fceil32(float %f) #0 {
 ; AVX-X86-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
+; AVX-X86-NEXT:    wait
 ; AVX-X86-NEXT:    popl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 4
 ; AVX-X86-NEXT:    retl
@@ -70,6 +72,7 @@ define double @fceilf64(double %f) #0 {
 ; SSE41-X86-NEXT:    roundsd $10, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
 ; SSE41-X86-NEXT:    fldl (%esp)
+; SSE41-X86-NEXT:    wait
 ; SSE41-X86-NEXT:    movl %ebp, %esp
 ; SSE41-X86-NEXT:    popl %ebp
 ; SSE41-X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -93,6 +96,7 @@ define double @fceilf64(double %f) #0 {
 ; AVX-X86-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
+; AVX-X86-NEXT:    wait
 ; AVX-X86-NEXT:    movl %ebp, %esp
 ; AVX-X86-NEXT:    popl %ebp
 ; AVX-X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -116,6 +120,7 @@ define float @ffloor32(float %f) #0 {
 ; SSE41-X86-NEXT:    roundss $9, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE41-X86-NEXT:    flds (%esp)
+; SSE41-X86-NEXT:    wait
 ; SSE41-X86-NEXT:    popl %eax
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 4
 ; SSE41-X86-NEXT:    retl
@@ -133,6 +138,7 @@ define float @ffloor32(float %f) #0 {
 ; AVX-X86-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
+; AVX-X86-NEXT:    wait
 ; AVX-X86-NEXT:    popl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 4
 ; AVX-X86-NEXT:    retl
@@ -160,6 +166,7 @@ define double @ffloorf64(double %f) #0 {
 ; SSE41-X86-NEXT:    roundsd $9, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
 ; SSE41-X86-NEXT:    fldl (%esp)
+; SSE41-X86-NEXT:    wait
 ; SSE41-X86-NEXT:    movl %ebp, %esp
 ; SSE41-X86-NEXT:    popl %ebp
 ; SSE41-X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -183,6 +190,7 @@ define double @ffloorf64(double %f) #0 {
 ; AVX-X86-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
+; AVX-X86-NEXT:    wait
 ; AVX-X86-NEXT:    movl %ebp, %esp
 ; AVX-X86-NEXT:    popl %ebp
 ; AVX-X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -206,6 +214,7 @@ define float @ftrunc32(float %f) #0 {
 ; SSE41-X86-NEXT:    roundss $11, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE41-X86-NEXT:    flds (%esp)
+; SSE41-X86-NEXT:    wait
 ; SSE41-X86-NEXT:    popl %eax
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 4
 ; SSE41-X86-NEXT:    retl
@@ -223,6 +232,7 @@ define float @ftrunc32(float %f) #0 {
 ; AVX-X86-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
+; AVX-X86-NEXT:    wait
 ; AVX-X86-NEXT:    popl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 4
 ; AVX-X86-NEXT:    retl
@@ -250,6 +260,7 @@ define double @ftruncf64(double %f) #0 {
 ; SSE41-X86-NEXT:    roundsd $11, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
 ; SSE41-X86-NEXT:    fldl (%esp)
+; SSE41-X86-NEXT:    wait
 ; SSE41-X86-NEXT:    movl %ebp, %esp
 ; SSE41-X86-NEXT:    popl %ebp
 ; SSE41-X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -273,6 +284,7 @@ define double @ftruncf64(double %f) #0 {
 ; AVX-X86-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
+; AVX-X86-NEXT:    wait
 ; AVX-X86-NEXT:    movl %ebp, %esp
 ; AVX-X86-NEXT:    popl %ebp
 ; AVX-X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -296,6 +308,7 @@ define float @frint32(float %f) #0 {
 ; SSE41-X86-NEXT:    roundss $4, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE41-X86-NEXT:    flds (%esp)
+; SSE41-X86-NEXT:    wait
 ; SSE41-X86-NEXT:    popl %eax
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 4
 ; SSE41-X86-NEXT:    retl
@@ -313,6 +326,7 @@ define float @frint32(float %f) #0 {
 ; AVX-X86-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
+; AVX-X86-NEXT:    wait
 ; AVX-X86-NEXT:    popl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 4
 ; AVX-X86-NEXT:    retl
@@ -341,6 +355,7 @@ define double @frintf64(double %f) #0 {
 ; SSE41-X86-NEXT:    roundsd $4, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
 ; SSE41-X86-NEXT:    fldl (%esp)
+; SSE41-X86-NEXT:    wait
 ; SSE41-X86-NEXT:    movl %ebp, %esp
 ; SSE41-X86-NEXT:    popl %ebp
 ; SSE41-X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -364,6 +379,7 @@ define double @frintf64(double %f) #0 {
 ; AVX-X86-NEXT:    vroundsd $4, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
+; AVX-X86-NEXT:    wait
 ; AVX-X86-NEXT:    movl %ebp, %esp
 ; AVX-X86-NEXT:    popl %ebp
 ; AVX-X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -388,6 +404,7 @@ define float @fnearbyint32(float %f) #0 {
 ; SSE41-X86-NEXT:    roundss $12, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE41-X86-NEXT:    flds (%esp)
+; SSE41-X86-NEXT:    wait
 ; SSE41-X86-NEXT:    popl %eax
 ; SSE41-X86-NEXT:    .cfi_def_cfa_offset 4
 ; SSE41-X86-NEXT:    retl
@@ -405,6 +422,7 @@ define float @fnearbyint32(float %f) #0 {
 ; AVX-X86-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
+; AVX-X86-NEXT:    wait
 ; AVX-X86-NEXT:    popl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 4
 ; AVX-X86-NEXT:    retl
@@ -433,6 +451,7 @@ define double @fnearbyintf64(double %f) #0 {
 ; SSE41-X86-NEXT:    roundsd $12, %xmm0, %xmm0
 ; SSE41-X86-NEXT:    movsd %xmm0, (%esp)
 ; SSE41-X86-NEXT:    fldl (%esp)
+; SSE41-X86-NEXT:    wait
 ; SSE41-X86-NEXT:    movl %ebp, %esp
 ; SSE41-X86-NEXT:    popl %ebp
 ; SSE41-X86-NEXT:    .cfi_def_cfa %esp, 4
@@ -456,6 +475,7 @@ define double @fnearbyintf64(double %f) #0 {
 ; AVX-X86-NEXT:    vroundsd $12, %xmm0, %xmm0, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
+; AVX-X86-NEXT:    wait
 ; AVX-X86-NEXT:    movl %ebp, %esp
 ; AVX-X86-NEXT:    popl %ebp
 ; AVX-X86-NEXT:    .cfi_def_cfa %esp, 4

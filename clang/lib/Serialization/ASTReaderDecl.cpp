@@ -501,8 +501,12 @@ uint64_t ASTDeclReader::GetCurrentCursorOffset() {
 }
 
 void ASTDeclReader::ReadFunctionDefinition(FunctionDecl *FD) {
-  if (Record.readInt())
+  if (Record.readInt()) {
     Reader.DefinitionSource[FD] = Loc.F->Kind == ModuleKind::MK_MainFile;
+    if (Reader.getContext().getLangOpts().BuildingPCHWithObjectFile &&
+        Reader.DeclIsFromPCHWithObjectFile(FD))
+      Reader.DefinitionSource[FD] = true;
+  }
   if (auto *CD = dyn_cast<CXXConstructorDecl>(FD)) {
     CD->setNumCtorInitializers(Record.readInt());
     if (CD->getNumCtorInitializers())
@@ -1417,8 +1421,12 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
       Reader.getContext().setBlockVarCopyInit(VD, CopyExpr, Record.readInt());
   }
 
-  if (VD->getStorageDuration() == SD_Static && Record.readInt())
+  if (VD->getStorageDuration() == SD_Static && Record.readInt()) {
     Reader.DefinitionSource[VD] = Loc.F->Kind == ModuleKind::MK_MainFile;
+    if (Reader.getContext().getLangOpts().BuildingPCHWithObjectFile &&
+        Reader.DeclIsFromPCHWithObjectFile(VD))
+      Reader.DefinitionSource[VD] = true;
+  }
 
   enum VarKind {
     VarNotTemplate = 0, VarTemplate, StaticDataMemberSpecialization
@@ -1677,8 +1685,12 @@ void ASTDeclReader::ReadCXXDefinitionData(
   Data.ODRHash = Record.readInt();
   Data.HasODRHash = true;
 
-  if (Record.readInt())
+  if (Record.readInt()) {
     Reader.DefinitionSource[D] = Loc.F->Kind == ModuleKind::MK_MainFile;
+    if (Reader.getContext().getLangOpts().BuildingPCHWithObjectFile &&
+        Reader.DeclIsFromPCHWithObjectFile(D))
+      Reader.DefinitionSource[D] = true;
+  }
 
   Data.NumBases = Record.readInt();
   if (Data.NumBases)
@@ -2301,7 +2313,20 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
 
   D->setDeclaredWithTypename(Record.readInt());
 
-  // TODO: Concepts: Immediately introduced constraint
+  if (Record.readInt()) {
+    NestedNameSpecifierLoc NNS = Record.readNestedNameSpecifierLoc();
+    DeclarationNameInfo DN = Record.readDeclarationNameInfo();
+    ConceptDecl *NamedConcept = cast<ConceptDecl>(Record.readDecl());
+    const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
+    if (Record.readInt())
+        ArgsAsWritten = Record.readASTTemplateArgumentListInfo();
+    Expr *ImmediatelyDeclaredConstraint = Record.readExpr();
+    D->setTypeConstraint(NNS, DN, /*FoundDecl=*/nullptr, NamedConcept,
+                         ArgsAsWritten, ImmediatelyDeclaredConstraint);
+    if ((D->ExpandedParameterPack = Record.readInt()))
+      D->NumExpanded = Record.readInt();
+  }
+
   if (Record.readInt())
     D->setDefaultArgument(readTypeSourceInfo());
 }
@@ -3788,9 +3813,12 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   case DECL_FUNCTION_TEMPLATE:
     D = FunctionTemplateDecl::CreateDeserialized(Context, ID);
     break;
-  case DECL_TEMPLATE_TYPE_PARM:
-    D = TemplateTypeParmDecl::CreateDeserialized(Context, ID);
+  case DECL_TEMPLATE_TYPE_PARM: {
+    bool HasTypeConstraint = Record.readInt();
+    D = TemplateTypeParmDecl::CreateDeserialized(Context, ID,
+                                                 HasTypeConstraint);
     break;
+  }
   case DECL_NON_TYPE_TEMPLATE_PARM:
     D = NonTypeTemplateParmDecl::CreateDeserialized(Context, ID);
     break;

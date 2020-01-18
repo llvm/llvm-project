@@ -30,7 +30,7 @@
 # CHECK-NEXT: standard_opcode_lengths[DW_LNS_set_prologue_end] = 0
 # CHECK-NEXT: standard_opcode_lengths[DW_LNS_set_epilogue_begin] = 0
 # CHECK-NEXT: standard_opcode_lengths[DW_LNS_set_isa] = 1
-# CHECK-NEXT: standard_opcode_lengths[(null)] = 0
+# CHECK-NEXT: standard_opcode_lengths[DW_LNS_unknown_d] = 0
 # CHECK-NEXT: include_directories[  0] = "dir1/dir2"
 # CHECK-NEXT: file_names[  0]:
 # CHECK-NEXT:            name: "file1.c"

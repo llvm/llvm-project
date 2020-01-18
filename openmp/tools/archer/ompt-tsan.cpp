@@ -82,6 +82,31 @@ public:
   }
 };
 
+class TsanFlags {
+public:
+  int ignore_noninstrumented_modules;
+
+  TsanFlags(const char *env) : ignore_noninstrumented_modules(0) {
+    if (env) {
+      std::vector<std::string> tokens;
+      std::string token;
+      std::string str(env);
+      std::istringstream iss(str);
+      while (std::getline(iss, token, ' '))
+        tokens.push_back(token);
+
+      for (std::vector<std::string>::iterator it = tokens.begin();
+           it != tokens.end(); ++it) {
+        // we are interested in ignore_noninstrumented_modules to print a
+        // warning
+        if (sscanf(it->c_str(), "ignore_noninstrumented_modules=%d",
+                   &ignore_noninstrumented_modules))
+          continue;
+      }
+    }
+  }
+};
+
 #if (LLVM_VERSION) >= 40
 extern "C" {
 int __attribute__((weak)) __archer_get_omp_status();
@@ -836,8 +861,8 @@ static void ompt_tsan_mutex_released(ompt_mutex_t kind,
 static int ompt_tsan_initialize(ompt_function_lookup_t lookup,
                                 int device_num,
                                 ompt_data_t *tool_data) {
-  const char *options = getenv("ARCHER_OPTIONS");
-  archer_flags = new ArcherFlags(options);
+  const char *options = getenv("TSAN_OPTIONS");
+  TsanFlags tsan_flags(options);
 
   ompt_set_callback_t ompt_set_callback =
       (ompt_set_callback_t)lookup("ompt_set_callback");
@@ -869,6 +894,12 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup,
   SET_CALLBACK_T(mutex_acquired, mutex);
   SET_CALLBACK_T(mutex_released, mutex);
   SET_OPTIONAL_CALLBACK_T(reduction, sync_region, hasReductionCallback, ompt_set_never);
+
+  if (!tsan_flags.ignore_noninstrumented_modules)
+    fprintf(
+        stderr,
+        "Warning: please export TSAN_OPTIONS='ignore_noninstrumented_modules=1' "
+        "to avoid false positive reports from the OpenMP runtime.!\n");
   return 1; // success
 }
 

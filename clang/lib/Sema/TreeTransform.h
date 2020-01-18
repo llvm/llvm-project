@@ -3064,13 +3064,13 @@ public:
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildConceptSpecializationExpr(NestedNameSpecifierLoc NNS,
-      SourceLocation TemplateKWLoc, SourceLocation ConceptNameLoc,
+      SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
       NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
       TemplateArgumentListInfo *TALI) {
     CXXScopeSpec SS;
     SS.Adopt(NNS);
     ExprResult Result = getSema().CheckConceptTemplateId(SS, TemplateKWLoc,
-                                                         ConceptNameLoc,
+                                                         ConceptNameInfo,
                                                          FoundDecl,
                                                          NamedConcept, TALI);
     if (Result.isInvalid())
@@ -11175,7 +11175,7 @@ TreeTransform<Derived>::TransformConceptSpecializationExpr(
 
   return getDerived().RebuildConceptSpecializationExpr(
       E->getNestedNameSpecifierLoc(), E->getTemplateKWLoc(),
-      E->getConceptNameLoc(), E->getFoundDecl(), E->getNamedConcept(),
+      E->getConceptNameInfo(), E->getFoundDecl(), E->getNamedConcept(),
       &TransArgs);
 }
 

@@ -34,12 +34,9 @@ class ExprCommandCallBuiltinFunction(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        interp = self.dbg.GetCommandInterpreter()
-        result = lldb.SBCommandReturnObject()
-
         # Test different builtin functions.
 
-        self.expect("expr __builtin_isinf(0.0f)", substrs=["(int) $", " = 0\n"])
-        self.expect("expr __builtin_isnormal(0.0f)", substrs=["(int) $", " = 0\n"])
-        self.expect("expr __builtin_constant_p(1)", substrs=["(int) $", " = 1\n"])
-        self.expect("expr __builtin_abs(-14)", substrs=["(int) $", " = 14\n"])
+        self.expect_expr("__builtin_isinf(0.0f)", result_type="int", result_value="0")
+        self.expect_expr("__builtin_isnormal(0.0f)", result_type="int", result_value="0")
+        self.expect_expr("__builtin_constant_p(1)", result_type="int", result_value="1")
+        self.expect_expr("__builtin_abs(-14)", result_type="int", result_value="14")

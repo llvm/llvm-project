@@ -183,7 +183,7 @@ static MCInstPrinter *createSystemZMCInstPrinter(const Triple &T,
   return new SystemZInstPrinter(MAI, MII, MRI);
 }
 
-extern "C" void LLVMInitializeSystemZTargetMC() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
   // Register the MCAsmInfo.
   TargetRegistry::RegisterMCAsmInfo(getTheSystemZTarget(),
                                     createSystemZMCAsmInfo);

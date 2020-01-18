@@ -97,10 +97,9 @@ STATISTIC(NumGVNSimpl,  "Number of instructions simplified");
 STATISTIC(NumGVNEqProp, "Number of equalities propagated");
 STATISTIC(NumPRELoad,   "Number of loads PRE'd");
 
-static cl::opt<bool> EnablePRE("enable-pre",
-                               cl::init(true), cl::Hidden);
-static cl::opt<bool> EnableLoadPRE("enable-load-pre", cl::init(true));
-static cl::opt<bool> EnableMemDep("enable-gvn-memdep", cl::init(true));
+static cl::opt<bool> GVNEnablePRE("enable-pre", cl::init(true), cl::Hidden);
+static cl::opt<bool> GVNEnableLoadPRE("enable-load-pre", cl::init(true));
+static cl::opt<bool> GVNEnableMemDep("enable-gvn-memdep", cl::init(true));
 
 // Maximum allowed recursion depth.
 static cl::opt<uint32_t>
@@ -610,6 +609,17 @@ void GVN::ValueTable::verifyRemoved(const Value *V) const {
 //                                GVN Pass
 //===----------------------------------------------------------------------===//
 
+bool GVN::isPREEnabled() const {
+  return Options.AllowPRE.getValueOr(GVNEnablePRE);
+}
+
+bool GVN::isLoadPREEnabled() const {
+  return Options.AllowLoadPRE.getValueOr(GVNEnableLoadPRE);
+}
+bool GVN::isMemDepEnabled() const {
+  return Options.AllowMemDep.getValueOr(GVNEnableMemDep);
+}
+
 PreservedAnalyses GVN::run(Function &F, FunctionAnalysisManager &AM) {
   // FIXME: The order of evaluation of these 'getResult' calls is very
   // significant! Re-ordering these variables will cause GVN when run alone to
@@ -619,10 +629,11 @@ PreservedAnalyses GVN::run(Function &F, FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
-  auto &MemDep = AM.getResult<MemoryDependenceAnalysis>(F);
+  auto *MemDep =
+      isMemDepEnabled() ? &AM.getResult<MemoryDependenceAnalysis>(F) : nullptr;
   auto *LI = AM.getCachedResult<LoopAnalysis>(F);
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  bool Changed = runImpl(F, AC, DT, TLI, AA, &MemDep, LI, &ORE);
+  bool Changed = runImpl(F, AC, DT, TLI, AA, MemDep, LI, &ORE);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -1383,7 +1394,7 @@ bool GVN::processNonLocalLoad(LoadInst *LI) {
   }
 
   // Step 4: Eliminate partial redundancy.
-  if (!EnablePRE || !EnableLoadPRE)
+  if (!isPREEnabled() || !isLoadPREEnabled())
     return false;
 
   return PerformLoadPRE(LI, ValuesPerBlock, UnavailableBlocks);
@@ -2148,7 +2159,7 @@ bool GVN::runImpl(Function &F, AssumptionCache &RunAC, DominatorTree &RunDT,
     ++Iteration;
   }
 
-  if (EnablePRE) {
+  if (isPREEnabled()) {
     // Fabricate val-num for dead-code in order to suppress assertion in
     // performPRE().
     assignValNumForDeadCode();
@@ -2682,8 +2693,8 @@ class llvm::gvn::GVNLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  explicit GVNLegacyPass(bool NoMemDepAnalysis = !EnableMemDep)
-      : FunctionPass(ID), NoMemDepAnalysis(NoMemDepAnalysis) {
+  explicit GVNLegacyPass(bool NoMemDepAnalysis = !GVNEnableMemDep)
+      : FunctionPass(ID), Impl(GVNOptions().setMemDep(!NoMemDepAnalysis)) {
     initializeGVNLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -2698,9 +2709,9 @@ public:
         getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
         getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F),
         getAnalysis<AAResultsWrapperPass>().getAAResults(),
-        NoMemDepAnalysis
-            ? nullptr
-            : &getAnalysis<MemoryDependenceWrapperPass>().getMemDep(),
+        Impl.isMemDepEnabled()
+            ? &getAnalysis<MemoryDependenceWrapperPass>().getMemDep()
+            : nullptr,
         LIWP ? &LIWP->getLoopInfo() : nullptr,
         &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE());
   }
@@ -2710,7 +2721,7 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
-    if (!NoMemDepAnalysis)
+    if (Impl.isMemDepEnabled())
       AU.addRequired<MemoryDependenceWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
 
@@ -2723,7 +2734,6 @@ public:
   }
 
 private:
-  bool NoMemDepAnalysis;
   GVN Impl;
 };
 

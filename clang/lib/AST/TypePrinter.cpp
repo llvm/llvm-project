@@ -1558,6 +1558,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::AcquireHandle:
     OS << "acquire_handle";
     break;
+  case attr::ArmMveStrictPolymorphism:
+    OS << "__clang_arm_mve_strict_polymorphism";
+    break;
   }
   OS << "))";
 }

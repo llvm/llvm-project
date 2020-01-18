@@ -62,6 +62,6 @@ void ARCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 }
 
 // Force static initialization.
-extern "C" void LLVMInitializeARCAsmPrinter() {
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARCAsmPrinter() {
   RegisterAsmPrinter<ARCAsmPrinter> X(getTheARCTarget());
 }

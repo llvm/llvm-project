@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=hawaii -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,LOOP %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,GFX10 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx900 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -asm-verbose=0 -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,NOLOOP,NOLOOP-SDAG,GFX10 %s
 
 ; Make sure the op is emitted bundled with a waitcnt with and without the retry loop, and the bundle is not removed by ExpandPostRAPseudos.
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -stop-after=postrapseudos -o - -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=MIR %s
@@ -51,8 +51,13 @@ define amdgpu_kernel void @gws_barrier_offset63(i32 %val) #0 {
 ; FIXME: Should be able to shift directly into m0
 ; GCN-LABEL: {{^}}gws_barrier_sgpr_offset:
 ; NOLOOP-DAG: s_load_dwordx2 s{{\[}}[[BAR_NUM:[0-9]+]]:[[OFFSET:[0-9]+]]{{\]}}
-; NOLOOP-DAG: s_lshl_b32 [[SHL:s[0-9]+]], s[[OFFSET]], 16
-; NOLOOP-DAG: s_mov_b32 m0, [[SHL]]{{$}}
+
+; NOLOOP-SDAG-DAG: s_lshl_b32 [[SHL:s[0-9]+]], s[[OFFSET]], 16
+; NOLOOP-SDAG-DAG: s_mov_b32 m0, [[SHL]]{{$}}
+
+; NOLOOP-GISEL-DAG: s_lshl_b32 m0, s[[OFFSET]], 16
+
+
 ; NOLOOP-DAG: v_mov_b32_e32 [[GWS_VAL:v[0-9]+]], s[[BAR_NUM]]
 ; NOLOOP: ds_gws_barrier [[GWS_VAL]] gds{{$}}
 define amdgpu_kernel void @gws_barrier_sgpr_offset(i32 %val, i32 %offset) #0 {
@@ -63,8 +68,12 @@ define amdgpu_kernel void @gws_barrier_sgpr_offset(i32 %val, i32 %offset) #0 {
 ; Variable offset in SGPR with constant add
 ; GCN-LABEL: {{^}}gws_barrier_sgpr_offset_add1:
 ; NOLOOP-DAG: s_load_dwordx2 s{{\[}}[[BAR_NUM:[0-9]+]]:[[OFFSET:[0-9]+]]{{\]}}
-; NOLOOP-DAG: s_lshl_b32 [[SHL:s[0-9]+]], s[[OFFSET]], 16
-; NOLOOP-DAG: s_mov_b32 m0, [[SHL]]{{$}}
+
+; NOLOOP-SDAG-DAG: s_lshl_b32 [[SHL:s[0-9]+]], s[[OFFSET]], 16
+; NOLOOP-SDAG-DAG: s_mov_b32 m0, [[SHL]]{{$}}
+
+; NOLOOP-GISEL-DAG: s_lshl_b32 m0, s[[OFFSET]], 16
+
 ; NOLOOP-DAG: v_mov_b32_e32 [[GWS_VAL:v[0-9]+]], s[[BAR_NUM]]
 ; NOLOOP: ds_gws_barrier [[GWS_VAL]] offset:1 gds{{$}}
 define amdgpu_kernel void @gws_barrier_sgpr_offset_add1(i32 %val, i32 %offset.base) #0 {
@@ -76,8 +85,12 @@ define amdgpu_kernel void @gws_barrier_sgpr_offset_add1(i32 %val, i32 %offset.ba
 ; GCN-LABEL: {{^}}gws_barrier_vgpr_offset:
 ; NOLOOP-DAG: s_load_dword [[BAR_NUM:s[0-9]+]]
 ; NOLOOP-DAG: v_readfirstlane_b32 [[READLANE:s[0-9]+]], v0
-; NOLOOP-DAG: s_lshl_b32 [[SHL:s[0-9]+]], [[READLANE]], 16
-; NOLOOP-DAG: s_mov_b32 m0, [[SHL]]{{$}}
+
+; NOLOOP-SDAG-DAG: s_lshl_b32 [[SHL:s[0-9]+]], [[READLANE]], 16
+; NOLOOP-SDAG-DAG: s_mov_b32 m0, [[SHL]]{{$}}
+
+; NOLOOP-GISEL-DAG: s_lshl_b32 m0, [[READLANE]], 16
+
 ; NOLOOP-DAG: v_mov_b32_e32 [[GWS_VAL:v[0-9]+]], [[BAR_NUM]]
 ; NOLOOP: ds_gws_barrier [[GWS_VAL]] gds{{$}}
 define amdgpu_kernel void @gws_barrier_vgpr_offset(i32 %val) #0 {
@@ -90,8 +103,12 @@ define amdgpu_kernel void @gws_barrier_vgpr_offset(i32 %val) #0 {
 ; GCN-LABEL: {{^}}gws_barrier_vgpr_offset_add:
 ; NOLOOP-DAG: s_load_dword [[BAR_NUM:s[0-9]+]]
 ; NOLOOP-DAG: v_readfirstlane_b32 [[READLANE:s[0-9]+]], v0
-; NOLOOP-DAG: s_lshl_b32 [[SHL:s[0-9]+]], [[READLANE]], 16
-; NOLOOP-DAG: s_mov_b32 m0, [[SHL]]{{$}}
+
+; NOLOOP-SDAG-DAG: s_lshl_b32 [[SHL:s[0-9]+]], [[READLANE]], 16
+; NOLOOP-SDAG-DAG: s_mov_b32 m0, [[SHL]]{{$}}
+
+; NOLOOP-GISEL-DAG: s_lshl_b32 m0, [[READLANE]], 16
+
 ; NOLOOP-DAG: v_mov_b32_e32 [[GWS_VAL:v[0-9]+]], [[BAR_NUM]]
 ; NOLOOP: ds_gws_barrier [[GWS_VAL]] offset:3 gds{{$}}
 define amdgpu_kernel void @gws_barrier_vgpr_offset_add(i32 %val) #0 {

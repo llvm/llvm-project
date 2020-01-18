@@ -21,6 +21,7 @@ add_clang_library(clangTidyReadabilityModule
   NamedParameterCheck.cpp
   NamespaceCommentCheck.cpp
   NonConstParameterCheck.cpp
+  QualifiedAutoCheck.cpp
   ReadabilityTidyModule.cpp
   RedundantAccessSpecifiersCheck.cpp
   RedundantControlFlowCheck.cpp

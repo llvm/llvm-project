@@ -57,8 +57,10 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[COPY]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
-    ; CHECK: G_STORE [[MV]](s128), [[COPY1]](p0) :: (store 16)
+    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[C]](s32)
+    ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK: [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[MV]](s64), [[C1]](s64)
+    ; CHECK: G_STORE [[MV1]](s128), [[COPY1]](p0) :: (store 16)
     ; CHECK: RET_ReallyLR
     %0:_(s32) = COPY $w0
     %1:_(p0) = COPY $x1

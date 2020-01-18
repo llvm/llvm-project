@@ -2366,6 +2366,45 @@ FileCheck output:
         self.assertTrue(matched if matching else not matched,
                         msg if msg else EXP_MSG(str, output, exe))
 
+    def expect_expr(
+            self,
+            expr,
+            result_summary=None,
+            result_value=None,
+            result_type=None,
+            error_msg=None,
+            ):
+        """
+        Evaluates the given expression and verifies the result.
+        :param expr: The expression as a string.
+        :param result_summary: The summary that the expression should have. None if the summary should not be checked.
+        :param result_value: The value that the expression should have. None if the value should not be checked.
+        :param result_type: The type that the expression result should have. None if the type should not be checked.
+        :param error_msg: The error message the expression should return. None if the error output should not be checked.
+        """
+        self.assertTrue(expr.strip() == expr, "Expression contains trailing/leading whitespace: '" + expr + "'")
+
+        frame = self.frame()
+        eval_result = frame.EvaluateExpression(expr)
+
+        if error_msg:
+            self.assertFalse(eval_result.IsValid())
+            self.assertEqual(error_msg, eval_result.GetError().GetCString())
+            return
+
+        if not eval_result.GetError().Success():
+            self.assertTrue(eval_result.GetError().Success(),
+                "Unexpected failure with msg: " + eval_result.GetError().GetCString())
+
+        if result_type:
+            self.assertEqual(result_type, eval_result.GetTypeName())
+
+        if result_value:
+            self.assertEqual(result_value, eval_result.GetValue())
+
+        if result_summary:
+            self.assertEqual(result_summary, eval_result.GetSummary())
+
     def invoke(self, obj, name, trace=False):
         """Use reflection to call a method dynamically with no argument."""
         trace = (True if traceAlways else trace)

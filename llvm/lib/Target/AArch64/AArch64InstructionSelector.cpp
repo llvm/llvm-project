@@ -2005,9 +2005,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     // Add and set the set condition flag.
     unsigned AddsOpc = OpSize == 32 ? AArch64::ADDSWrr : AArch64::ADDSXrr;
     MachineIRBuilder MIRBuilder(I);
-    auto AddsMI = MIRBuilder.buildInstr(
-        AddsOpc, {I.getOperand(0).getReg()},
-        {I.getOperand(2).getReg(), I.getOperand(3).getReg()});
+    auto AddsMI = MIRBuilder.buildInstr(AddsOpc, {I.getOperand(0)},
+                                        {I.getOperand(2), I.getOperand(3)});
     constrainSelectedInstRegOperands(*AddsMI, TII, TRI, RBI);
 
     // Now, put the overflow result in the register given by the first operand
@@ -3248,7 +3247,7 @@ AArch64InstructionSelector::emitADD(Register DefReg, MachineOperand &LHS,
   bool Is32Bit = MRI.getType(LHS.getReg()).getSizeInBits() == 32;
   auto ImmFns = selectArithImmed(RHS);
   unsigned Opc = OpcTable[Is32Bit][ImmFns.hasValue()];
-  auto AddMI = MIRBuilder.buildInstr(Opc, {DefReg}, {LHS.getReg()});
+  auto AddMI = MIRBuilder.buildInstr(Opc, {DefReg}, {LHS});
 
   // If we matched a valid constant immediate, add those operands.
   if (ImmFns) {
@@ -3274,7 +3273,7 @@ AArch64InstructionSelector::emitCMN(MachineOperand &LHS, MachineOperand &RHS,
   unsigned Opc = OpcTable[Is32Bit][ImmFns.hasValue()];
   Register ZReg = Is32Bit ? AArch64::WZR : AArch64::XZR;
 
-  auto CmpMI = MIRBuilder.buildInstr(Opc, {ZReg}, {LHS.getReg()});
+  auto CmpMI = MIRBuilder.buildInstr(Opc, {ZReg}, {LHS});
 
   // If we matched a valid constant immediate, add those operands.
   if (ImmFns) {
@@ -3852,9 +3851,8 @@ bool AArch64InstructionSelector::selectShuffleVector(
                     .addUse(Src2Reg)
                     .addImm(AArch64::qsub1);
 
-  auto TBL2 =
-      MIRBuilder.buildInstr(AArch64::TBLv16i8Two, {I.getOperand(0).getReg()},
-                            {RegSeq, IndexLoad->getOperand(0).getReg()});
+  auto TBL2 = MIRBuilder.buildInstr(AArch64::TBLv16i8Two, {I.getOperand(0)},
+                                    {RegSeq, IndexLoad->getOperand(0)});
   constrainSelectedInstRegOperands(*RegSeq, TII, TRI, RBI);
   constrainSelectedInstRegOperands(*TBL2, TII, TRI, RBI);
   I.eraseFromParent();
@@ -4091,7 +4089,7 @@ bool AArch64InstructionSelector::selectIntrinsic(
   switch (IntrinID) {
   default:
     break;
-  case Intrinsic::aarch64_crypto_sha1h:
+  case Intrinsic::aarch64_crypto_sha1h: {
     Register DstReg = I.getOperand(0).getReg();
     Register SrcReg = I.getOperand(2).getReg();
 
@@ -4129,6 +4127,46 @@ bool AArch64InstructionSelector::selectIntrinsic(
 
     I.eraseFromParent();
     return true;
+  }
+  case Intrinsic::frameaddress:
+  case Intrinsic::returnaddress: {
+    MachineFunction &MF = *I.getParent()->getParent();
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+
+    unsigned Depth = I.getOperand(2).getImm();
+    Register DstReg = I.getOperand(0).getReg();
+    RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
+
+    if (Depth == 0 && IntrinID == Intrinsic::returnaddress) {
+      MFI.setReturnAddressIsTaken(true);
+      MF.addLiveIn(AArch64::LR, &AArch64::GPR64spRegClass);
+      I.getParent()->addLiveIn(AArch64::LR);
+      MIRBuilder.buildCopy({DstReg}, {Register(AArch64::LR)});
+      I.eraseFromParent();
+      return true;
+    }
+
+    MFI.setFrameAddressIsTaken(true);
+    Register FrameAddr(AArch64::FP);
+    while (Depth--) {
+      Register NextFrame = MRI.createVirtualRegister(&AArch64::GPR64spRegClass);
+      auto Ldr =
+          MIRBuilder.buildInstr(AArch64::LDRXui, {NextFrame}, {FrameAddr})
+              .addImm(0);
+      constrainSelectedInstRegOperands(*Ldr, TII, TRI, RBI);
+      FrameAddr = NextFrame;
+    }
+
+    if (IntrinID == Intrinsic::frameaddress)
+      MIRBuilder.buildCopy({DstReg}, {FrameAddr});
+    else {
+      MFI.setReturnAddressIsTaken(true);
+      MIRBuilder.buildInstr(AArch64::LDRXui, {DstReg}, {FrameAddr}).addImm(1);
+    }
+
+    I.eraseFromParent();
+    return true;
+  }
   }
   return false;
 }

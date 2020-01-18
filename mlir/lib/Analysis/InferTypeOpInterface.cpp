@@ -12,11 +12,36 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/InferTypeOpInterface.h"
-#include "mlir/IR/Attributes.h"
-#include "mlir/IR/Operation.h"
-#include "mlir/IR/Types.h"
-#include "llvm/ADT/SmallVector.h"
+
+#include "mlir/IR/StandardTypes.h"
+
+using namespace mlir;
 
 namespace mlir {
 #include "mlir/Analysis/InferTypeOpInterface.cpp.inc"
 } // namespace mlir
+
+LogicalResult mlir::detail::inferReturnTensorTypes(
+    function_ref<LogicalResult(
+        MLIRContext *, Optional<Location> location, ValueRange operands,
+        ArrayRef<NamedAttribute> attributes, RegionRange regions,
+        SmallVectorImpl<ShapedTypeComponents> &retComponents)>
+        componentTypeFn,
+    MLIRContext *context, Optional<Location> location, ValueRange operands,
+    ArrayRef<NamedAttribute> attributes, RegionRange regions,
+    SmallVectorImpl<Type> &inferedReturnTypes) {
+  SmallVector<ShapedTypeComponents, 2> retComponents;
+  if (failed(componentTypeFn(context, location, operands, attributes, regions,
+                             retComponents)))
+    return failure();
+  for (auto shapeAndType : retComponents) {
+    assert(shapeAndType.getAttribute() == nullptr && "attribute not supported");
+    if (shapeAndType.hasRank())
+      inferedReturnTypes.push_back(RankedTensorType::get(
+          shapeAndType.getDims(), shapeAndType.getElementType()));
+    else
+      inferedReturnTypes.push_back(
+          UnrankedTensorType::get(shapeAndType.getElementType()));
+  }
+  return success();
+}

@@ -1,4 +1,4 @@
-//===------------ target_impl.h - AMDGCN OpenMP GPU options ------ CUDA -*-===//
+//===------- target_impl.h - AMDGCN OpenMP GPU implementation ----- HIP -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Definitions of target specific functions
+// Declarations and definitions of target specific functions and constants
 //
 //===----------------------------------------------------------------------===//
-#ifndef _TARGET_IMPL_H_
-#define _TARGET_IMPL_H_
+#ifndef OMPTARGET_AMDGCN_TARGET_IMPL_H
+#define OMPTARGET_AMDGCN_TARGET_IMPL_H
 
 #ifndef __AMDGCN__
 #error "amdgcn target_impl.h expects to be compiled under __AMDGCN__"
@@ -40,20 +40,18 @@
 
 #define WARPSIZE 64
 
-
 // The named barrier for active parallel threads of a team in an L1 parallel
 // region to synchronize with each other.
 #define L1_BARRIER (1)
 
-// Maximum number of preallocated arguments to an outlined parallel/simd function.
-// Anything more requires dynamic memory allocation.
+// Maximum number of preallocated arguments to an outlined parallel/simd
+// function. Anything more requires dynamic memory allocation.
 #define MAX_SHARED_ARGS 20
 
 // Maximum number of omp state objects per SM allocated statically in global
 // memory.
 #define OMP_STATE_COUNT 32
 #define MAX_SM 64
-
 
 #define OMP_ACTIVE_PARALLEL_LEVEL 128
 
@@ -69,18 +67,6 @@ enum DATA_SHARING_SIZES {
   DS_Max_Warp_Number = 16,
 };
 
-// warp vote function
-EXTERN uint64_t __ballot64(int predicate);
-// initialized with a 64-bit mask with bits set in positions less than the
-// thread's lane number in the warp
-EXTERN uint64_t __lanemask_lt();
-// initialized with a 64-bit mask with bits set in positions greater than the
-// thread's lane number in the warp
-EXTERN uint64_t __lanemask_gt();
-
-// CU id
-EXTERN unsigned __smid();
-
 INLINE void __kmpc_impl_unpack(uint64_t val, uint32_t &lo, uint32_t &hi) {
   lo = (uint32_t)(val & UINT64_C(0x00000000FFFFFFFF));
   hi = (uint32_t)((val & UINT64_C(0xFFFFFFFF00000000)) >> 32);
@@ -93,24 +79,15 @@ INLINE uint64_t __kmpc_impl_pack(uint32_t lo, uint32_t hi) {
 static const __kmpc_impl_lanemask_t __kmpc_impl_all_lanes =
     UINT64_C(0xffffffffffffffff);
 
-INLINE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt() {
-  return __lanemask_lt();
-}
+DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_lt();
 
-INLINE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt() {
-  return __lanemask_gt();
-}
+DEVICE __kmpc_impl_lanemask_t __kmpc_impl_lanemask_gt();
 
-INLINE uint32_t __kmpc_impl_smid() {
-  return __smid();
-}
+DEVICE uint32_t __kmpc_impl_smid();
 
-INLINE double __kmpc_impl_get_wtick() { return ((double)1E-9); }
+DEVICE double __kmpc_impl_get_wtick();
 
-EXTERN uint64_t __clock64();
-INLINE double __kmpc_impl_get_wtime() {
-  return ((double)1.0 / 745000000.0) * __clock64();
-}
+DEVICE double __kmpc_impl_get_wtime();
 
 INLINE uint64_t __kmpc_impl_ffs(uint64_t x) { return __builtin_ffsl(x); }
 
@@ -120,14 +97,12 @@ template <typename T> INLINE T __kmpc_impl_min(T x, T y) {
   return x < y ? x : y;
 }
 
-INLINE __kmpc_impl_lanemask_t __kmpc_impl_activemask() {
-  return __ballot64(1);
-}
+DEVICE __kmpc_impl_lanemask_t __kmpc_impl_activemask();
 
-EXTERN int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t, int32_t Var,
+DEVICE int32_t __kmpc_impl_shfl_sync(__kmpc_impl_lanemask_t, int32_t Var,
                                      int32_t SrcLane);
 
-EXTERN int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t Var,
+DEVICE int32_t __kmpc_impl_shfl_down_sync(__kmpc_impl_lanemask_t, int32_t Var,
                                           uint32_t Delta, int32_t Width);
 
 INLINE void __kmpc_impl_syncthreads() { __builtin_amdgcn_s_barrier(); }
@@ -143,40 +118,36 @@ INLINE void __kmpc_impl_named_sync(int barrier, uint32_t num_threads) {
   __builtin_amdgcn_s_barrier();
 }
 
-EXTERN void __kmpc_impl_threadfence(void);
-EXTERN void __kmpc_impl_threadfence_block(void);
-EXTERN void __kmpc_impl_threadfence_system(void);
+DEVICE void __kmpc_impl_threadfence(void);
+DEVICE void __kmpc_impl_threadfence_block(void);
+DEVICE void __kmpc_impl_threadfence_system(void);
 
 // Calls to the AMDGCN layer (assuming 1D layout)
-EXTERN uint64_t __ockl_get_local_size(uint32_t);
-EXTERN uint64_t __ockl_get_num_groups(uint32_t);
 INLINE int GetThreadIdInBlock() { return __builtin_amdgcn_workitem_id_x(); }
 INLINE int GetBlockIdInKernel() { return __builtin_amdgcn_workgroup_id_x(); }
-INLINE int GetNumberOfBlocksInKernel() { return __ockl_get_num_groups(0); }
-INLINE int GetNumberOfThreadsInBlock() { return __ockl_get_local_size(0); }
+DEVICE int GetNumberOfBlocksInKernel();
+DEVICE int GetNumberOfThreadsInBlock();
 
-EXTERN bool __kmpc_impl_is_first_active_thread();
+DEVICE bool __kmpc_impl_is_first_active_thread();
 
 // Locks
-EXTERN void __kmpc_impl_init_lock(omp_lock_t *lock);
-EXTERN void __kmpc_impl_destroy_lock(omp_lock_t *lock);
-EXTERN void __kmpc_impl_set_lock(omp_lock_t *lock);
-EXTERN void __kmpc_impl_unset_lock(omp_lock_t *lock);
-EXTERN int __kmpc_impl_test_lock(omp_lock_t *lock);
+DEVICE void __kmpc_impl_init_lock(omp_lock_t *lock);
+DEVICE void __kmpc_impl_destroy_lock(omp_lock_t *lock);
+DEVICE void __kmpc_impl_set_lock(omp_lock_t *lock);
+DEVICE void __kmpc_impl_unset_lock(omp_lock_t *lock);
+DEVICE int __kmpc_impl_test_lock(omp_lock_t *lock);
 
 // Memory
-EXTERN void *__kmpc_impl_malloc(size_t x);
-EXTERN void __kmpc_impl_free(void *x);
+DEVICE void *__kmpc_impl_malloc(size_t x);
+DEVICE void __kmpc_impl_free(void *x);
 
 // DEVICE versions of part of libc
-extern "C" {
-DEVICE __attribute__((noreturn)) void
+EXTERN __attribute__((noreturn)) void
 __assertfail(const char *, const char *, unsigned, const char *, size_t);
-INLINE static void __assert_fail(const char *__message, const char *__file,
-                                 unsigned int __line, const char *__function) {
+INLINE void __assert_fail(const char *__message, const char *__file,
+                          unsigned int __line, const char *__function) {
   __assertfail(__message, __file, __line, __function, sizeof(char));
 }
-DEVICE int printf(const char *, ...);
-}
+EXTERN int printf(const char *, ...);
 
 #endif

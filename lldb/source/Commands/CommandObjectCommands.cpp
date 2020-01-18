@@ -1007,7 +1007,7 @@ protected:
           *this, nullptr));
 
       if (io_handler_sp) {
-        debugger.PushIOHandler(io_handler_sp);
+        debugger.RunIOHandlerAsync(io_handler_sp);
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       }
     } else {
@@ -1650,11 +1650,8 @@ protected:
     if (m_options.m_class_name.empty()) {
       if (m_options.m_funct_name.empty()) {
         m_interpreter.GetPythonCommandsFromIOHandler(
-            "     ",  // Prompt
-            *this,    // IOHandlerDelegate
-            true,     // Run IOHandler in async mode
-            nullptr); // Baton for the "io_handler" that will be passed back
-                      // into our IOHandlerDelegate functions
+            "     ", // Prompt
+            *this);  // IOHandlerDelegate
       } else {
         CommandObjectSP new_cmd(new CommandObjectPythonFunction(
             m_interpreter, m_cmd_name, m_options.m_funct_name,

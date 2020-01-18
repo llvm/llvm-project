@@ -1364,6 +1364,9 @@ void FPS::handleTwoArgFP(MachineBasicBlock::iterator &I) {
   MBB->remove(&*I++);
   I = BuildMI(*MBB, I, dl, TII->get(Opcode)).addReg(getSTReg(NotTOS));
 
+  if (!MI.mayRaiseFPException())
+    I->setFlag(MachineInstr::MIFlag::NoFPExcept);
+
   // If both operands are killed, pop one off of the stack in addition to
   // overwriting the other one.
   if (KillsOp0 && KillsOp1 && Op0 != Op1) {
