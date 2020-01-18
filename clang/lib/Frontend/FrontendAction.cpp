@@ -345,7 +345,8 @@ static std::error_code collectModuleHeaderIncludes(
       // file relative to the module build directory (the directory containing
       // the module map file) so this will find the same file that we found
       // while parsing the module map.
-      addHeaderInclude(H.NameAsWritten, Includes, LangOpts, Module->IsExternC);
+      addHeaderInclude(H.PathRelativeToRootModuleDirectory, Includes, LangOpts,
+                       Module->IsExternC);
     }
   }
   // Note that Module->PrivateHeaders will not be a TopHeader.
@@ -354,8 +355,8 @@ static std::error_code collectModuleHeaderIncludes(
     Module->addTopHeader(UmbrellaHeader.Entry);
     if (Module->Parent)
       // Include the umbrella header for submodules.
-      addHeaderInclude(UmbrellaHeader.NameAsWritten, Includes, LangOpts,
-                       Module->IsExternC);
+      addHeaderInclude(UmbrellaHeader.PathRelativeToRootModuleDirectory,
+                       Includes, LangOpts, Module->IsExternC);
   } else if (Module::DirectoryName UmbrellaDir = Module->getUmbrellaDir()) {
     // Add all of the headers we find in this subdirectory.
     std::error_code EC;
@@ -388,7 +389,8 @@ static std::error_code collectModuleHeaderIncludes(
       auto PathIt = llvm::sys::path::rbegin(Dir->path());
       for (int I = 0; I != Dir.level() + 1; ++I, ++PathIt)
         Components.push_back(*PathIt);
-      SmallString<128> RelativeHeader(UmbrellaDir.NameAsWritten);
+      SmallString<128> RelativeHeader(
+                                UmbrellaDir.PathRelativeToRootModuleDirectory);
       for (auto It = Components.rbegin(), End = Components.rend(); It != End;
            ++It)
         llvm::sys::path::append(RelativeHeader, *It);
@@ -518,8 +520,8 @@ getInputBufferForModule(CompilerInstance &CI, Module *M) {
   SmallString<256> HeaderContents;
   std::error_code Err = std::error_code();
   if (Module::Header UmbrellaHeader = M->getUmbrellaHeader())
-    addHeaderInclude(UmbrellaHeader.NameAsWritten, HeaderContents,
-                     CI.getLangOpts(), M->IsExternC);
+    addHeaderInclude(UmbrellaHeader.PathRelativeToRootModuleDirectory,
+                     HeaderContents, CI.getLangOpts(), M->IsExternC);
   Err = collectModuleHeaderIncludes(
       CI.getLangOpts(), FileMgr, CI.getDiagnostics(),
       CI.getPreprocessor().getHeaderSearchInfo().getModuleMap(), M,
