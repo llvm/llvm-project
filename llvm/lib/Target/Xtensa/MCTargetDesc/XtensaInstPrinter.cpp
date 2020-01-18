@@ -25,6 +25,15 @@ using namespace llvm;
 
 #include "XtensaGenAsmWriter.inc"
 
+void XtensaInstPrinter::printAddress(unsigned Base, int64_t Disp,
+                                     raw_ostream &O) {
+  O << Disp;
+  if (Base) {
+    O << '(';
+    O << getRegisterName(Base) << ')';
+  }
+}
+
 static void printExpr(const MCExpr *Expr, raw_ostream &OS) {
   int Offset = 0;
   const MCSymbolRefExpr *SRE;
@@ -260,6 +269,28 @@ void XtensaInstPrinter::printImm32n_95_AsmOperand(const MCInst *MI, int OpNum,
     printOperand(MI, OpNum, O);
 }
 
+void XtensaInstPrinter::printImm8n_7_AsmOperand(const MCInst *MI, int OpNum,
+                                                raw_ostream &O) {
+  if (MI->getOperand(OpNum).isImm()) {
+    int64_t Value = MI->getOperand(OpNum).getImm();
+    assert((Value >= -8 && Value <= 7) &&
+           "Invalid argument, value must be in ranges <-8,7>");
+    O << Value;
+  } else
+    printOperand(MI, OpNum, O);
+}
+
+void XtensaInstPrinter::printImm64n_4n_AsmOperand(const MCInst *MI, int OpNum,
+                                                  raw_ostream &O) {
+  if (MI->getOperand(OpNum).isImm()) {
+    int64_t Value = MI->getOperand(OpNum).getImm();
+    assert((Value >= -64 && Value <= -4) & ((Value & 0x3) == 0) &&
+           "Invalid argument, value must be in ranges <-64,-4>");
+    O << Value;
+  } else
+    printOperand(MI, OpNum, O);
+}
+
 void XtensaInstPrinter::printOffset8m8_AsmOperand(const MCInst *MI, int OpNum,
                                                   raw_ostream &O) {
   if (MI->getOperand(OpNum).isImm()) {
@@ -374,6 +405,17 @@ void XtensaInstPrinter::printB4constu_AsmOperand(const MCInst *MI, int OpNum,
     default:
       assert((0) && "Invalid B4constu argument");
     }
+    O << Value;
+  } else
+    printOperand(MI, OpNum, O);
+}
+
+void XtensaInstPrinter::printSeimm7_22_AsmOperand(const MCInst *MI, int OpNum,
+                                                  raw_ostream &O) {
+  if (MI->getOperand(OpNum).isImm()) {
+    int64_t Value = MI->getOperand(OpNum).getImm();
+    assert((Value >= 7 && Value <= 22) &&
+           "Invalid argument, value must be in range <7,22>");
     O << Value;
   } else
     printOperand(MI, OpNum, O);

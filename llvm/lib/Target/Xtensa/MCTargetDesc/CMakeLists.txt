@@ -6,4 +6,5 @@ add_llvm_library(LLVMXtensaDesc
   XtensaMCCodeEmitter.cpp
   XtensaMCExpr.cpp
   XtensaMCTargetDesc.cpp
+  XtensaTargetStreamer.cpp
  )

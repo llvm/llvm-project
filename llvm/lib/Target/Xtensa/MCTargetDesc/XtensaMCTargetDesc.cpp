@@ -10,8 +10,10 @@
 #include "XtensaMCTargetDesc.h"
 #include "XtensaInstPrinter.h"
 #include "XtensaMCAsmInfo.h"
+#include "XtensaTargetStreamer.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
@@ -33,6 +35,9 @@ using namespace llvm;
 static MCAsmInfo *createXtensaMCAsmInfo(const MCRegisterInfo &MRI,
                                         const Triple &TT) {
   MCAsmInfo *MAI = new XtensaMCAsmInfo(TT);
+  MCCFIInstruction Inst = MCCFIInstruction::createDefCfa(
+      nullptr, MRI.getDwarfRegNum(Xtensa::SP, true), 0);
+  MAI->addInitialFrameState(Inst);
   return MAI;
 }
 
@@ -52,13 +57,24 @@ static MCInstPrinter *createXtensaMCInstPrinter(const Triple &TT,
 
 static MCRegisterInfo *createXtensaMCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
-  InitXtensaMCRegisterInfo(X, Xtensa::SP);
+  InitXtensaMCRegisterInfo(X, Xtensa::A0);
   return X;
 }
 
 static MCSubtargetInfo *
 createXtensaMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   return createXtensaMCSubtargetInfoImpl(TT, CPU, FS);
+}
+
+static MCTargetStreamer *
+createXtensaAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
+                              MCInstPrinter *InstPrint, bool isVerboseAsm) {
+  return new XtensaTargetAsmStreamer(S, OS);
+}
+
+static MCTargetStreamer *
+createXtensaObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+  return new XtensaTargetELFStreamer(S);
 }
 
 extern "C" void LLVMInitializeXtensaTargetMC() {
@@ -87,4 +103,12 @@ extern "C" void LLVMInitializeXtensaTargetMC() {
   // Register the MCAsmBackend.
   TargetRegistry::RegisterMCAsmBackend(TheXtensaTarget,
                                        createXtensaMCAsmBackend);
+
+  // Register the asm target streamer.
+  TargetRegistry::RegisterAsmTargetStreamer(TheXtensaTarget,
+                                            createXtensaAsmTargetStreamer);
+
+  // Register the ELF target streamer.
+  TargetRegistry::RegisterObjectTargetStreamer(
+      TheXtensaTarget, createXtensaObjectTargetStreamer);
 }

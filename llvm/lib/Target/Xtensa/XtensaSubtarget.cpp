@@ -27,9 +27,10 @@ using namespace llvm;
 XtensaSubtarget &
 XtensaSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   std::string CPUName = CPU;
+  // CPU;
   if (CPUName.empty()) {
     // set default cpu name
-    CPUName = "generic";
+    CPUName = "esp32";
   }
 
   HasDensity = false;
@@ -55,4 +56,4 @@ XtensaSubtarget::XtensaSubtarget(const Triple &TT, const std::string &CPU,
                                  const std::string &FS, const TargetMachine &TM)
     : XtensaGenSubtargetInfo(TT, CPU, FS), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
-      TSInfo(), FrameLowering() {}
+      TSInfo(), FrameLowering(), UseSmallSection(false) {}

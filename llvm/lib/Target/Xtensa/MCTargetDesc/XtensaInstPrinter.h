@@ -34,6 +34,9 @@ public:
   // Print the given operand.
   static void printOperand(const MCOperand &MO, raw_ostream &O);
 
+  // Print an address
+  static void printAddress(unsigned Base, int64_t Disp, raw_ostream &O);
+
   // Override MCInstPrinter.
   void printRegName(raw_ostream &O, unsigned RegNo) const override;
   void printInst(const MCInst *MI, raw_ostream &O, StringRef Annot,
@@ -58,6 +61,8 @@ private:
   void printImm1_16_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printImm1n_15_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printImm32n_95_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printImm8n_7_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printImm64n_4n_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printOffset8m8_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printOffset8m16_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printOffset8m32_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
@@ -65,6 +70,7 @@ private:
   void printEntry_Imm12_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printB4const_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printB4constu_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printSeimm7_22_AsmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
 };
 } // end namespace llvm
 

@@ -1,4 +1,4 @@
-//===-- XtensaMCAsmBackend.cpp - Xtensa assembler backend ---------------===//
+//===-- XtensaMCAsmBackend.cpp - Xtensa assembler backend -----------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,7 +6,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===--------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/XtensaFixupKinds.h"
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
@@ -134,6 +134,8 @@ static unsigned getSize(unsigned Kind) {
   switch (Kind) {
   default:
     return 3;
+  case MCFixupKind::FK_Data_4:
+    return 4;
   case Xtensa::fixup_xtensa_branch_6:
     return 2;
   }

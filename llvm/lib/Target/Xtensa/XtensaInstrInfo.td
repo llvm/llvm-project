@@ -1,4 +1,4 @@
-//===- XtensaInstrInfo.td - Target Description for Xtensa Target -*- tablegen -*-===//
+//===- XtensaInstrInfo.td - Xtensa Target Description ------*- tablegen -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,11 +6,11 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===----------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // This file describes the Xtensa instructions in TableGen format.
 //
-//===----------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 include "XtensaInstrFormats.td"
 include "XtensaOperands.td"
@@ -108,26 +108,29 @@ def MOVGEZ : RRR_Inst<0x00, 0x03, 0x0B, (outs AR:$r), (ins AR:$s, AR:$t),
 //===----------------------------------------------------------------------===//
 // Shift instructions
 //===----------------------------------------------------------------------===//
-
 let Uses = [SAR] in
 {
   def SLL: RRR_Inst<0x00, 0x01, 0x0A, (outs AR:$r), (ins AR:$s),
-                   "sll\t$r, $s", []>
+                   "sll\t$r, $s",
+                   [(set AR:$r, (Xtensa_shl AR:$s))]>
   {
     let t = 0x00;
   }
 
   def SRA: RRR_Inst<0x00, 0x01, 0x0B, (outs AR:$r), (ins AR:$t),
-                   "sra\t$r, $t", []>
+                   "sra\t$r, $t",
+                   [(set AR:$r, (Xtensa_sra AR:$t))]>
   {
     let s = 0x00;
   }
 
   def SRC: RRR_Inst<0x00, 0x01, 0x08, (outs AR:$r), (ins AR:$s, AR:$t),
-                   "src\t$r, $s, $t", []>;
+                   "src\t$r, $s, $t",
+                   [(set AR:$r, (Xtensa_src AR:$s, AR:$t))]>;
 
   def SRL: RRR_Inst<0x00, 0x01, 0x09, (outs AR:$r), (ins AR:$t),
-                   "srl\t$r, $t", []>
+                   "srl\t$r, $t",
+                   [(set AR:$r, (Xtensa_srl AR:$t))]>
   {
     let s = 0x00;
   }
@@ -136,19 +139,22 @@ let Uses = [SAR] in
 let Defs = [SAR] in
 {
   def SSL: RRR_Inst<0x00, 0x00, 0x04, (outs), (ins AR:$s),
-                   "ssl\t$s", []>
+                   "ssl\t$s",
+                   [(Xtensa_ssl AR:$s)]>
   {
     let r = 0x01;
     let t = 0x00;
   }
 
   def SSR: RRR_Inst<0x00, 0x00, 0x04, (outs), (ins AR:$s),
-                   "ssr\t$s", []>
+                   "ssr\t$s", 
+                   [(Xtensa_ssr AR:$s)]>
   {
     let r = 0x00;
     let t = 0x00;
   }
 }
+
 
 def EXTUI: RRR_Inst<0x00, 0x04, 0x00, (outs AR:$r), (ins AR:$t, uimm5:$imm1, imm1_16:$imm2),
                    "extui\t$r, $t, $imm1, $imm2",
@@ -527,7 +533,7 @@ def : Pat<(Xtensa_call AR:$dst),
 //===----------------------------------------------------------------------===//
 
 def MEMW:  RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
-                   "memw", []>
+                   "memw", [(Xtensa_mem_barrier)]>
 {
   let r = 0x2;
   let t = 0x0c;
@@ -597,6 +603,37 @@ def RSR: RSR_Inst<0x00, 0x03, 0x00, (outs AR:$t), (ins SR:$sr),
 def XSR: RSR_Inst<0x00, 0x01, 0x06, (outs), (ins AR:$t, SR:$sr),
                  "xsr\t$t, $sr", []>;
 
+def WUR: RRR_Inst<0x00, 0x03, 0x0F, (outs UR:$ur), (ins AR:$t),
+                 "wur\t$t, $ur", []>
+{
+  bits<8> ur;
+
+  let r = ur{7-4};
+  let s = ur{3-0};
+}
+
+def RUR: RRR_Inst<0x00, 0x03, 0x0E, (outs AR:$r), (ins UR:$ur),
+                 "rur\t$r, $ur", [(set AR:$r, (Xtensa_rur UR:$ur))]>
+{
+  bits<8> ur;
+
+  let s = ur{7-4};
+  let t = ur{3-0};
+}
+
+def RER: RRR_Inst<0x00, 0x00, 0x04, (outs AR:$t), (ins AR:$s),
+                 "rer\t$t, $s", []>
+{
+  let r = 0x6;
+}
+
+def WER: RRR_Inst<0x00, 0x00, 0x04, (outs), (ins AR:$t, AR:$s),
+                 "wer\t$t, $s", []>
+{
+  let r = 0x7;
+  let hasSideEffects = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Stack allocation
 //===----------------------------------------------------------------------===//
@@ -632,7 +669,7 @@ class ArithLogic_RRRN<bits<4> oper0, string instrAsm,
       SDPatternOperator opNode, bit isComm = 0>
   : RRRN_Inst<oper0, (outs AR:$r), (ins AR:$s, AR:$t),
               instrAsm#"\t$r, $s, $t",
-             [(set AR:$r, (opNode AR:$s, AR:$t))]> 
+             [(set AR:$r, (opNode AR:$s, AR:$t))]>, Requires<[HasDensity]> 
 {
   let isCommutable = isComm;
   let isReMaterializable = 0;
@@ -642,7 +679,7 @@ def ADD_N: ArithLogic_RRRN<0x0a, "add.n", add, 1>;
 
 def ADDI_N: RRRN_Inst<0x0B, (outs AR:$r), (ins AR:$s, imm1n_15:$imm),
                      "addi.n\t$r, $s, $imm",
-                     [(set AR:$r, (add AR:$s, imm1n_15:$imm))]> 
+                     [(set AR:$r, (add AR:$s, imm1n_15:$imm))]>, Requires<[HasDensity]>
 {
   bits<4> imm;
 
@@ -650,21 +687,22 @@ def ADDI_N: RRRN_Inst<0x0B, (outs AR:$r), (ins AR:$s, imm1n_15:$imm),
 }
 
 def MOV_N: RRRN_Inst<0x0D, (outs AR:$t), (ins AR:$s),
-                    "mov.n\t$t, $s",
-                    []>
+                    "mov.n\t$t, $s", []>, Requires<[HasDensity]>
 {
   let r = 0;
 }
 
+def : InstAlias<"mov\t $t, $s", (OR AR:$t, AR:$s, AR:$s)>;
+
 def MOVI_N: RI7_Inst<0xc, 0x0, (outs AR:$s), (ins imm32n_95:$imm7),
                     "movi.n\t$s, $imm7",
-                    [(set AR:$s, imm32n_95:$imm7)]>;
+                    [(set AR:$s, imm32n_95:$imm7)]>, Requires<[HasDensity]>;
 
 // Load instruction
 let mayLoad = 1, usesCustomInserter = 1 in
 {
   def L32I_N: RRRN_Inst<0x8, (outs AR:$t), (ins mem32n:$addr), 
-                       "l32i.n\t$t, $addr", []>
+                       "l32i.n\t$t, $addr", []>, Requires<[HasDensity]>
   {
     bits<8> addr;
 
@@ -677,7 +715,7 @@ let mayLoad = 1, usesCustomInserter = 1 in
 let mayStore = 1, usesCustomInserter = 1 in
 {
   def S32I_N: RRRN_Inst<0x9, (outs), (ins  AR:$t, mem32n:$addr),
-                       "s32i.n\t$t, $addr", []>
+                       "s32i.n\t$t, $addr", []>, Requires<[HasDensity]>
   {
     bits<8> addr;
 
@@ -691,7 +729,7 @@ let isReturn = 1, isTerminator = 1,
     isBarrier = 1, hasCtrlDep = 1, Uses = [A0] in
 {
   def RET_N: RRRN_Inst<0x0D, (outs), (ins),
-                "ret.n", [(Xtensa_retflag)]>
+                "ret.n", [(Xtensa_retflag)]>, Requires<[HasDensity]>
   {
     let r = 0x0F;
     let s = 0;
@@ -773,7 +811,7 @@ let isReturn = 1, isTerminator = 1,
     isBarrier = 1, hasCtrlDep = 1, Uses = [A0] in
 {
   def RETW_N: RRRN_Inst<0x0D, (outs), (ins),
-                "retw.n", [(Xtensa_retWflag)]>, Requires<[HasWindowed]>
+                "retw.n", [(Xtensa_retWflag)]>, Requires<[HasWindowed, HasDensity]>
   {
     let r = 0x0F;
     let s = 0;
@@ -788,6 +826,59 @@ let isReturn = 1, isTerminator = 1,
     let s = 0;
     let r = 0;
   }
+}
+
+//Store 32-bit for Window Exceptions
+def S32E: RRI4_Inst<0x00, 0x09, (outs), (ins AR:$t, AR:$s, imm64n_4n:$imm),
+					"s32e\t$t $s $imm", []>, Requires<[HasWindowed]>
+{
+  bits<6> imm;
+
+  let r = imm{5-2};
+  let imm4 = 0x4;
+  let mayStore = 1;
+}
+
+def L32E: RRI4_Inst<0x00, 0x09, (outs), (ins AR:$t, AR:$s, imm64n_4n:$imm),
+					"l32e\t$t $s $imm", []>, Requires<[HasWindowed]>
+{
+  bits<6> imm;
+
+  let r = imm{5-2};
+  let imm4 = 0x0;
+  let mayLoad = 1;
+}
+
+//Return from window
+def RFWU: RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
+                  "rfwu", []>, Requires<[HasWindowed]>
+{
+  bits<4> imm;
+
+  let r = 0x3;
+  let s = 0x5;
+  let t = 0x0;
+}
+
+def RFWO: RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
+                  "rfwo", []>, Requires<[HasWindowed]>
+{
+  bits<4> imm;
+
+  let r = 0x3;
+  let s = 0x4;
+  let t = 0x0;
+}
+
+//Rotate window
+def ROTW: RRR_Inst<0x00, 0x00, 0x04, (outs), (ins imm8n_7:$imm),
+                  "rotw\t$imm", []>, Requires<[HasWindowed]>
+{
+  bits<4> imm;
+
+  let r = 0x8;
+  let s = 0x0;
+  let t = imm{3-0};
 }
 
 //===----------------------------------------------------------------------===//
@@ -952,6 +1043,68 @@ def MOV_S: RRR_Inst<0x00, 0x0A, 0x0f, (outs FPR:$r), (ins FPR:$s),
   let t = 0x00;
 }
 
+def CONST_S: RRR_Inst<0x00, 0x0a, 0x0f, (outs FPR:$r), (ins uimm4:$imm),
+					"const.s\t$r, $imm", []>, Requires<[HasSingleFloat]> 
+{
+  bits<4> imm;
+
+  let t = 0x03;
+  let s = imm{3-0};
+}
+
+def DIV0_S: RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+					"div0.s\t$r, $s", []>, Requires<[HasSingleFloat]> 
+{
+  let t = 0x7;
+}
+
+def MADDN_S: RRR_Inst<0x00, 0x0A, 0x06, (outs FPR:$r), (ins FPR:$s, FPR:$t),
+					"maddn.s\t$r, $s, $t", []>, Requires<[HasSingleFloat]> 
+{
+  let isCommutable = 0;
+}
+
+def MKDADJ_S: RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+					"mkdadj.s\t$r, $s", []>, Requires<[HasSingleFloat]> 
+{
+  let t = 0x0D;
+}
+
+def MKSADJ_S: RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+					"mksadj.s\t$r, $s", []>, Requires<[HasSingleFloat]> 
+{
+  let t = 0x0C;
+}
+
+def ADDEXP_S: RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+					"addexp.s\t$r, $s", []>, Requires<[HasSingleFloat]> 
+{
+  let t = 0x0E;
+}
+
+def ADDEXPM_S: RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+					"addexpm.s\t$r, $s", []>, Requires<[HasSingleFloat]> 
+{
+  let t = 0x0F;
+}
+
+def DIVN_S: RRR_Inst<0x00, 0x0A, 0x07, (outs FPR:$r), (ins FPR:$s, FPR:$t),
+					"divn.s\t$r, $s, $t", []>, Requires<[HasSingleFloat]> 
+{
+}
+
+def NEXP01_S: RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+					"nexp01.s\t$r, $s", []>, Requires<[HasSingleFloat]> 
+{
+  let t = 0x0B;
+}
+
+def SQRT0_S: RRR_Inst<0x00, 0x0A, 0x0F, (outs FPR:$r), (ins FPR:$s),
+					"sqrt0.s\t$r, $s", []>, Requires<[HasSingleFloat]> 
+{
+  let t = 0x09;
+}
+
 //===----------------------------------------------------------------------===//
 // Boolean branch Instructions
 //===----------------------------------------------------------------------===//
@@ -983,4 +1136,327 @@ let isBranch = 1, isTerminator = 1, Predicates = [HasBoolean] in
     let t = 0x7; 
     let imm8 = target;
   }
-} 
+}
+
+
+//===----------------------------------------------------------------------===//
+// FP select operations
+let usesCustomInserter = 1 in
+{
+  def SELECT_CC_FP_INT: Pseudo<(outs AR:$dst), (ins FPR:$lhs, FPR:$rhs, AR:$t, AR:$f, i32imm:$cond),
+                                    "!select_cc_fp_int $dst, $lhs, $rhs, $t, $f, $cond",
+                                    [(set AR:$dst, (Xtensa_select_cc_fp FPR:$lhs, FPR:$rhs, AR:$t, AR:$f, imm:$cond))]>;
+  def SELECT_CC_INT_FP: Pseudo<(outs FPR:$dst), (ins AR:$lhs, AR:$rhs, FPR:$t, FPR:$f, i32imm:$cond),
+                                    "!select_cc_int_fp $dst, $lhs, $rhs, $t, $f, $cond",
+                                    [(set FPR:$dst, (Xtensa_select_cc_fp AR:$lhs, AR:$rhs, FPR:$t, FPR:$f, imm:$cond))]>;
+  def SELECT_CC_FP_FP: Pseudo<(outs FPR:$dst), (ins FPR:$lhs, FPR:$rhs, FPR:$t, FPR:$f, i32imm:$cond),
+                                    "!select_cc_fp_fp $dst, $lhs, $rhs, $t, $f, $cond",
+                                    [(set FPR:$dst, (Xtensa_select_cc_fp FPR:$lhs, FPR:$rhs, FPR:$t, FPR:$f, imm:$cond))]>;
+}
+
+// Shift Pseudo instructions:
+// SSL/SSR + Shift combination
+let usesCustomInserter = 1 in
+{
+  def SLL_P: Pseudo<(outs AR:$r), (ins AR:$s, AR:$sa),
+                       "# SLL_P $r, $s, $sa",
+                       [(set AR:$r, (shl AR:$s, AR:$sa))]>;
+ 
+  def SRA_P: Pseudo<(outs AR:$r), (ins AR:$t, AR:$sa),
+                       "# SRA_P $r, $t, $sa",
+                       [(set AR:$r, (sra AR:$t, AR:$sa))]>;
+
+  def SRL_P: Pseudo<(outs AR:$r), (ins AR:$t, AR:$sa),
+                       "# SRL_P $r, $t, $sa",
+                       [(set AR:$r, (srl AR:$t, AR:$sa))]>;
+}
+
+// Xtensa missed L8I load operation, use pseudo operation
+let usesCustomInserter = 1 in
+def L8I_P: Pseudo<(outs AR:$t), (ins mem8:$addr),
+               "!L8I_P $t, $addr",
+                [(set AR:$t, (sextloadi8 
+				addr_ish1:$addr))]>;
+
+def SEXT: RRR_Inst<0x00, 0x03, 0x02, (outs AR:$r), (ins AR:$s, seimm7_22:$imm),
+     "sext\t$r, $s, $imm",
+     []>,Requires<[HasSEXT]>
+{
+  bits<4> imm;
+
+  let t = imm;
+}
+
+// FrameIndexes are legalized when they are operands from load/store
+// instructions. The same not happens for stack address copies, so an
+// add op with mem ComplexPattern is used and the stack address copy
+// can be matched.
+// Setting of attribute mayLoad is trick to process instruction operands
+// in function XtensaRegisterInfo::eliminateFI
+
+let isCodeGenOnly = 1, mayLoad = 1 in
+{
+
+  def LEA_ADD : RRI8_Inst<0x02, (outs AR:$t), (ins mem32:$addr),
+       "addi\t$t, $addr",
+       [(set AR:$t, addr_ish4:$addr)]>
+  {
+   bits<12> addr;
+
+   let r = 0x0C;
+   let imm8{7-0} = addr{11-4};
+   let s{3-0} = addr{3-0};
+  }
+}
+
+def MULL: ArithLogic_RRR<0x08, 0x02, "mull", mul, 1>, Requires<[HasMul32]>;
+def MULUH: ArithLogic_RRR<0x0A, 0x02, "muluh", mulhu, 1>, Requires<[HasMul32High]>;
+def MULSH: ArithLogic_RRR<0x0B, 0x02, "mulsh", mulhs, 1>, Requires<[HasMul32High]>;
+def QUOS: ArithLogic_RRR<0x0D, 0x02, "quos", sdiv>, Requires<[HasDiv32]>;
+def QUOU: ArithLogic_RRR<0x0C, 0x02, "quou", udiv>, Requires<[HasDiv32]>;
+def REMS: ArithLogic_RRR<0x0F, 0x02, "rems", srem>, Requires<[HasDiv32]>;
+def REMU: ArithLogic_RRR<0x0E, 0x02, "remu", urem>, Requires<[HasDiv32]>;
+
+let Predicates = [HasNSA] in {
+  def NSA : RRR_Inst<0x00, 0x00, 0x04, (outs AR:$t), (ins AR:$s),
+       "nsa\t$t, $s",
+       []>
+  {
+    let r = 0xE;
+  }
+
+  def NSAU : RRR_Inst<0x00, 0x00, 0x04, (outs AR:$t), (ins AR:$s),
+       "nsau\t$t, $s",
+       []>
+  {
+    let r = 0xF;
+  }
+}
+
+def : Pat<(brcond AR:$s, bb:$target),
+          (BNEZ AR:$s, bb:$target)>;
+
+// It's a trick for redundant branches with -O0 option
+// like br i1 true, label ...
+def : Pat<(brcond (i32 1), bb:$target),
+          (J bb:$target)>;
+
+let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1, Size = 3 in 
+{
+  def BR_JT: Pseudo<(outs), (ins AR:$s, i32imm:$jt),
+                     "!br_jt_p, $s, $jt",
+                    [(Xtensa_brjt AR:$s, tjumptable:$jt)]>;
+}
+
+//extended loads
+def : Pat<(i32 (extloadi1  addr_ish1:$addr)), (L8UI addr_ish1:$addr)>;
+def : Pat<(i32 (extloadi8  addr_ish1:$addr)), (L8UI addr_ish1:$addr)>;
+def : Pat<(i32 (extloadi16 addr_ish2:$addr)), (L16UI addr_ish2:$addr)>;
+
+//break
+let isBarrier = 1, isTerminator = 1 in
+{
+  def BREAK: RRR_Inst<0x00, 0x00, 0x00, (outs), (ins i32imm:$t, i32imm:$s),
+                     "break\t$t, $s", []>
+  {
+    let r = 0x04;
+  }
+}
+
+def: Pat<(trap), (BREAK (i32 1), (i32 15))>;
+
+// calls
+def : Pat<(Xtensa_call (i32 tglobaladdr:$dst)),
+          (CALL0 tglobaladdr:$dst)>;
+def : Pat<(Xtensa_callw (i32 tglobaladdr:$dst)),
+          (CALL8 tglobaladdr:$dst)>;
+def : Pat<(Xtensa_call (i32 texternalsym:$dst)),
+          (CALL0 texternalsym:$dst)>;
+def : Pat<(Xtensa_callw (i32 texternalsym:$dst)),
+          (CALL8 texternalsym:$dst)>;
+def : Pat<(Xtensa_call AR:$dst),
+          (CALLX0 AR:$dst)>;
+def : Pat<(Xtensa_callw AR:$dst),
+          (CALLX8 AR:$dst)>;
+
+def RSIL: RRR_Inst<0x00, 0x00, 0x00, (outs AR:$t), (ins uimm4:$imm),
+					"rsil\t$t, $imm", []>
+{
+  bits<4> imm;
+
+  let r = 0x6;
+  let s = imm{3-0};
+}
+
+def WAITI: RRR_Inst<0x00, 0x00, 0x00, (outs), (ins uimm4:$imm),
+					"waiti\t$imm", []>
+{
+  bits<4> imm;
+
+  let r = 0x7;
+  let s = imm{3-0};
+  let t = 0;
+}
+
+def WDTLB: RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+					"wdtlb\t$t, $s", []>
+{
+  let r = 0xE;
+}
+
+def WITLB: RRR_Inst<0x00, 0x00, 0x05, (outs AR:$t), (ins AR:$s),
+					"witlb\t$t, $s", []>
+{
+  let r = 0x6;
+}
+
+def RFI: RRR_Inst<0x00, 0x00, 0x00, (outs), (ins uimm4:$imm),
+					"rfi\t$imm", []>
+{
+  bits<4> imm;
+
+  let r = 0x3;
+  let s = imm{3-0};
+  let t = 0x1;
+}
+
+let mayStore = 1, mayLoad = 1, usesCustomInserter = 1, Predicates = [HasS32C1I] in
+{
+  def S32C1I: RRI8_Inst<0x02, (outs AR:$a), (ins AR:$t, mem32:$addr),
+                       "s32c1i\t$t, $addr", []>
+  {
+    bits<12> addr;
+
+    let r = 0x0e;
+    let Uses = [SCOMPARE1];
+    let Constraints = "$a = $t";
+    let imm8{7-0} = addr{11-4};
+    let s{3-0} = addr{3-0};
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Atomic patterns
+//===----------------------------------------------------------------------===//
+
+def : Pat<(i32 (atomic_load_8  addr_ish1:$addr)), (L8UI addr_ish1:$addr)>;
+def : Pat<(i32 (atomic_load_16 addr_ish2:$addr)), (L16UI addr_ish2:$addr)>;
+def : Pat<(i32 (atomic_load_32 addr_ish4:$addr)), (L32I addr_ish4:$addr)>;
+
+def : Pat<(atomic_store_8  addr_ish1:$addr, AR:$t), (S8I AR:$t, addr_ish1:$addr)>;
+def : Pat<(atomic_store_16 addr_ish2:$addr, AR:$t), (S16I AR:$t, addr_ish2:$addr)>;
+def : Pat<(atomic_store_32 addr_ish4:$addr, AR:$t), (S32I AR:$t, addr_ish4:$addr)>;
+
+let usesCustomInserter = 1, Predicates = [HasS32C1I] in
+{
+	def ATOMIC_CMP_SWAP_8_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$cmp, AR:$swap),
+										"!atomic_cmp_swap_8_p, $dst, $ptr, $cmp, $swap",
+										[(set AR:$dst, (atomic_cmp_swap_8 AR:$ptr, AR:$cmp, AR:$swap))]>;
+	def ATOMIC_CMP_SWAP_16_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$cmp, AR:$swap),
+										"!atomic_cmp_swap_16_p, $dst, $ptr, $cmp, $swap",
+										[(set AR:$dst, (atomic_cmp_swap_16 AR:$ptr, AR:$cmp, AR:$swap))]>;
+	def ATOMIC_CMP_SWAP_32_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$cmp, AR:$swap),
+										"!atomic_cmp_swap_32_p, $dst, $ptr, $cmp, $swap",
+										[(set AR:$dst, (atomic_cmp_swap_32 AR:$ptr, AR:$cmp, AR:$swap))]>;
+
+	def ATOMIC_LOAD_ADD_8_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_add_8_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_add_8 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_ADD_16_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_add_16_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_add_16 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_ADD_32_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_add_32_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_add_32 AR:$ptr, AR:$arg))]>;
+
+	def ATOMIC_LOAD_SUB_8_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_sub_8_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_sub_8 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_SUB_16_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_sub_16_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_sub_16 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_SUB_32_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_sub_32_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_sub_32 AR:$ptr, AR:$arg))]>;
+
+	def ATOMIC_LOAD_AND_8_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_and_8_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_and_8 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_AND_16_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_and_16_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_and_16 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_AND_32_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_and_32_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_and_32 AR:$ptr, AR:$arg))]>;
+
+	def ATOMIC_LOAD_OR_8_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_or_8_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_or_8 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_OR_16_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_or_16_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_or_16 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_OR_32_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_or_32_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_or_32 AR:$ptr, AR:$arg))]>;
+
+	def ATOMIC_LOAD_XOR_8_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_xor_8_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_xor_8 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_XOR_16_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_xor_16_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_xor_16 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_XOR_32_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_xor_32_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_xor_32 AR:$ptr, AR:$arg))]>;
+
+	def ATOMIC_LOAD_NAND_8_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_nand_8_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_nand_8 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_NAND_16_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_nand_16_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_nand_16 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_NAND_32_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_nand_32_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_nand_32 AR:$ptr, AR:$arg))]>;
+
+	def ATOMIC_LOAD_MIN_8_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_min_8_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_min_8 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_MIN_16_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_min_16_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_min_16 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_MIN_32_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_min_32_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_min_32 AR:$ptr, AR:$arg))]>;			
+										
+	def ATOMIC_LOAD_MAX_8_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_max_8_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_max_8 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_MAX_16_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_max_16_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_max_16 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_MAX_32_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_max_32_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_max_32 AR:$ptr, AR:$arg))]>;	
+
+	def ATOMIC_LOAD_UMIN_8_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_umin_8_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_umin_8 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_UMIN_16_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_umin_16_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_umin_16 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_UMIN_32_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_umin_32_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_umin_32 AR:$ptr, AR:$arg))]>;			
+										
+	def ATOMIC_LOAD_UMAX_8_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_umax_8_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_umax_8 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_UMAX_16_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_umax_16_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_umax_16 AR:$ptr, AR:$arg))]>;
+	def ATOMIC_LOAD_UMAX_32_P: Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+										"!atomic_load_umax_32_p, $dst, $ptr, $arg",
+										[(set AR:$dst, (atomic_load_umax_32 AR:$ptr, AR:$arg))]>;	
+}
+

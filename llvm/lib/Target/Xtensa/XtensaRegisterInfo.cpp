@@ -28,18 +28,30 @@
 
 using namespace llvm;
 
+// WinABI callee save list - empty
+static const MCPhysReg CSRWE_Xtensa_SaveList[] = {0};
+
+// WinABI call preserved mask - empty
+static const uint32_t CSRWE_Xtensa_RegMask[] = {0};
+
 XtensaRegisterInfo::XtensaRegisterInfo(const XtensaSubtarget &STI)
     : XtensaGenRegisterInfo(Xtensa::A0), Subtarget(STI) {}
 
 const uint16_t *
 XtensaRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  return CSR_Xtensa_SaveList;
+  if (Subtarget.isWinABI())
+    return CSRWE_Xtensa_SaveList;
+  else
+    return CSR_Xtensa_SaveList;
 }
 
 const uint32_t *
 XtensaRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                          CallingConv::ID) const {
-  return CSR_Xtensa_RegMask;
+  if (Subtarget.isWinABI())
+    return CSRWE_Xtensa_RegMask;
+  else
+    return CSR_Xtensa_RegMask;
 }
 
 BitVector XtensaRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
@@ -107,6 +119,7 @@ void XtensaRegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
 
   bool Valid = false;
   switch (MI.getOpcode()) {
+  case Xtensa::L8I_P:
   case Xtensa::L8UI:
   case Xtensa::S8I:
     Valid = (Offset >= 0 && Offset <= 255);
@@ -115,6 +128,9 @@ void XtensaRegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
   case Xtensa::L16UI:
   case Xtensa::S16I:
     Valid = (Offset >= 0 && Offset <= 510);
+    break;
+  case Xtensa::LEA_ADD:
+    Valid = (Offset >= -128 && Offset <= 127);
     break;
   default:
     Valid = (Offset >= 0 && Offset <= 1020);
@@ -168,5 +184,6 @@ void XtensaRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
 Register XtensaRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  return TFI->hasFP(MF) ? (Xtensa::A15) : Xtensa::SP;
+  return TFI->hasFP(MF) ? (Subtarget.isWinABI() ? Xtensa::A7 : Xtensa::A15)
+                        : Xtensa::SP;
 }

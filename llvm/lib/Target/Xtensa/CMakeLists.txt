@@ -19,10 +19,13 @@ add_llvm_target(XtensaCodeGen
   XtensaInstrInfo.cpp
   XtensaISelDAGToDAG.cpp
   XtensaISelLowering.cpp
+  XtensaMachineFunctionInfo.cpp
   XtensaMCInstLower.cpp
   XtensaRegisterInfo.cpp
+  XtensaSizeReductionPass.cpp
   XtensaSubtarget.cpp
   XtensaTargetMachine.cpp
+  XtensaTargetObjectFile.cpp
   )
 
 add_subdirectory(AsmParser)

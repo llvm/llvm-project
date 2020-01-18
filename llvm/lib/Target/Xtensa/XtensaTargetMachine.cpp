@@ -82,13 +82,22 @@ public:
     return getTM<XtensaTargetMachine>();
   }
 
+  void addIRPasses() override;
   bool addInstSelector() override;
+  void addPreEmitPass() override;
 };
 } // end anonymous namespace
 
 bool XtensaPassConfig::addInstSelector() {
   addPass(createXtensaISelDag(getXtensaTargetMachine(), getOptLevel()));
   return false;
+}
+
+void XtensaPassConfig::addIRPasses() { addPass(createAtomicExpandPass()); }
+
+void XtensaPassConfig::addPreEmitPass() {
+  addPass(createXtensaSizeReductionPass());
+  addPass(&BranchRelaxationPassID);
 }
 
 TargetPassConfig *XtensaTargetMachine::createPassConfig(PassManagerBase &PM) {

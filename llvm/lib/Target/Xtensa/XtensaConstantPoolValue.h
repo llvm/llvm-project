@@ -33,6 +33,7 @@ enum XtensaCPKind {
   CPValue,
   CPExtSymbol,
   CPBlockAddress,
+  CPMachineBasicBlock,
   CPJumpTable
 };
 
@@ -96,6 +97,9 @@ public:
   bool isGlobalValue() const { return Kind == XtensaCP::CPValue; }
   bool isExtSymbol() const { return Kind == XtensaCP::CPExtSymbol; }
   bool isBlockAddress() const { return Kind == XtensaCP::CPBlockAddress; }
+  bool isMachineBasicBlock() const {
+    return Kind == XtensaCP::CPMachineBasicBlock;
+  }
   bool isJumpTable() const { return Kind == XtensaCP::CPJumpTable; }
 
   int getExistingMachineCPValue(MachineConstantPool *CP,
@@ -203,6 +207,40 @@ public:
 
   bool equals(const XtensaConstantPoolSymbol *A) const {
     return S == A->S && XtensaConstantPoolValue::equals(A);
+  }
+};
+
+/// XtensaConstantPoolMBB - Xtensa-specific constantpool value of a machine
+/// basic block.
+class XtensaConstantPoolMBB : public XtensaConstantPoolValue {
+  const MachineBasicBlock *MBB; // Machine basic block.
+
+  XtensaConstantPoolMBB(LLVMContext &C, const MachineBasicBlock *mbb,
+                        unsigned id);
+
+public:
+  static XtensaConstantPoolMBB *
+  Create(LLVMContext &C, const MachineBasicBlock *mbb, unsigned ID);
+
+  const MachineBasicBlock *getMBB() const { return MBB; }
+
+  int getExistingMachineCPValue(MachineConstantPool *CP,
+                                unsigned Alignment) override;
+
+  void addSelectionDAGCSEId(FoldingSetNodeID &ID) override;
+
+  /// hasSameValue - Return true if this Xtensa constpool value can share the
+  /// same constantpool entry as another Xtensa constpool value.
+  bool hasSameValue(XtensaConstantPoolValue *ACPV) override;
+
+  void print(raw_ostream &O) const override;
+
+  static bool classof(const XtensaConstantPoolValue *ACPV) {
+    return ACPV->isMachineBasicBlock();
+  }
+
+  bool equals(const XtensaConstantPoolMBB *A) const {
+    return MBB == A->MBB && XtensaConstantPoolValue::equals(A);
   }
 };
 

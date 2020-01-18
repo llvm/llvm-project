@@ -171,6 +171,39 @@ void XtensaConstantPoolSymbol::print(raw_ostream &O) const {
   XtensaConstantPoolValue::print(O);
 }
 
+XtensaConstantPoolMBB::XtensaConstantPoolMBB(LLVMContext &C,
+                                             const MachineBasicBlock *mbb,
+                                             unsigned id)
+    : XtensaConstantPoolValue(C, 0, XtensaCP::CPMachineBasicBlock, false),
+      MBB(mbb) {}
+
+XtensaConstantPoolMBB *
+XtensaConstantPoolMBB::Create(LLVMContext &C, const MachineBasicBlock *mbb,
+                              unsigned idx) {
+  return new XtensaConstantPoolMBB(C, mbb, idx);
+}
+
+int XtensaConstantPoolMBB::getExistingMachineCPValue(MachineConstantPool *CP,
+                                                     unsigned Alignment) {
+  return getExistingMachineCPValueImpl<XtensaConstantPoolMBB>(CP, Alignment);
+}
+
+bool XtensaConstantPoolMBB::hasSameValue(XtensaConstantPoolValue *ACPV) {
+  const XtensaConstantPoolMBB *ACPMBB = dyn_cast<XtensaConstantPoolMBB>(ACPV);
+  return ACPMBB && ACPMBB->MBB == MBB &&
+         XtensaConstantPoolValue::hasSameValue(ACPV);
+}
+
+void XtensaConstantPoolMBB::addSelectionDAGCSEId(FoldingSetNodeID &ID) {
+  ID.AddPointer(MBB);
+  XtensaConstantPoolValue::addSelectionDAGCSEId(ID);
+}
+
+void XtensaConstantPoolMBB::print(raw_ostream &O) const {
+  O << "BB#" << MBB->getNumber();
+  XtensaConstantPoolValue::print(O);
+}
+
 XtensaConstantPoolJumpTable::XtensaConstantPoolJumpTable(LLVMContext &C,
                                                          unsigned idx)
     : XtensaConstantPoolValue(C, 0, XtensaCP::CPJumpTable, false), IDX(idx) {}

@@ -1,4 +1,4 @@
-//===- XtensaRegisterInfo.td - Xtensa Register defs -----------*- tablegen -*-===//
+//===- XtensaRegisterInfo.td - Xtensa Register defs --------*- tablegen -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,7 +6,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===-------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
 // Class definitions.
@@ -75,7 +75,103 @@ class SRReg<bits<8> num, string n, list<string> alt = []> : XtensaReg<n> {
 // Shift Amount Register
 def SAR : SRReg<3, "sar", ["SAR","3"]>;
 
-def SR :  RegisterClass<"Xtensa", [i32], 32, (add SAR)>;
+// Expected data value for S32C1I operation
+def SCOMPARE1 : SRReg<12, "scompare1", ["SCOMPARE1"]>;
+
+// Instuction breakpoint enable register
+def IBREAKENABLE : SRReg<96, "ibreakenable", ["IBREAKENABLE"]>;
+
+// Memory Control Register
+def MEMCTL : SRReg<97, "memctl", ["MEMCTL"]>;
+
+// Instuction break address register 0
+def IBREAKA0 : SRReg<128, "ibreaka0", ["IBREAKA0"]>;
+
+// Instuction break address register 1
+def IBREAKA1 : SRReg<129, "ibreaka1", ["IBREAKA1"]>;
+
+// Data break address register 0
+def DBREAKA0 : SRReg<144, "dbreaka0", ["DBREAKA0"]>;
+
+// Data break address register 1
+def DBREAKA1 : SRReg<145, "dbreaka1", ["DBREAKA1"]>;
+
+// Data breakpoint control register 0
+def DBREAKC0 : SRReg<160, "dbreakc0", ["DBREAKC0"]>;
+
+// Data breakpoint control register 1
+def DBREAKC1 : SRReg<161, "dbreakc1", ["DBREAKC1"]>;
+
+def CONFIGID0 : SRReg<176, "configid0", ["CONFIGID0"]>;
+
+// Exception PC1
+def EPC1 : SRReg<177, "epc1", ["EPC1"]>;
+
+// Exception PC2
+def EPC2 : SRReg<178, "epc2", ["EPC2"]>;
+
+// Exception PC3
+def EPC3 : SRReg<179, "epc3", ["EPC3"]>;
+
+// Exception PC4
+def EPC4 : SRReg<180, "epc4", ["EPC4"]>;
+
+// Exception PC5
+def EPC5 : SRReg<181, "epc5", ["EPC5"]>;
+
+// Exception PC6
+def EPC6 : SRReg<182, "epc6", ["EPC6"]>;
+
+// Exception PC7
+def EPC7 : SRReg<183, "epc7", ["EPC7"]>;
+
+def CONFIGID1 : SRReg<208, "configid1", ["CONFIGID1"]>;
+
+// Interrupt enable mask register
+def INTSET : SRReg<226, "intset", ["INTSET"]>;
+
+// Interrupt enable mask register
+def INTENABLE : SRReg<228, "intenable", ["INTENABLE"]>;
+
+// Processor State
+def PS : SRReg<230, "ps", ["PS", "230"]>;
+
+// Vector base register
+def VECBASE : SRReg<231, "vecbase", ["VECBASE"]>;
+
+// Cause of last debug exception register
+def DEBUGCAUSE : SRReg<233, "debugcause", ["DEBUGCAUSE"]>;
+
+// Processor Clock Count Register
+def CCOUNT : SRReg<234, "ccount", ["CCOUNT"]>;
+
+// Processor ID Register
+def PRID : SRReg<235, "prid", ["PRID"]>;
+
+// Cycle number to interrupt register 0
+def CCOMPARE0 : SRReg<240, "ccompare0", ["CCOMPARE0"]>;
+
+// Cycle number to interrupt register 1
+def CCOMPARE1 : SRReg<241, "ccompare1", ["CCOMPARE1"]>;
+
+// Cycle number to interrupt register 2
+def CCOMPARE2 : SRReg<242, "ccompare2", ["CCOMPARE2"]>;  
+
+def SR :  RegisterClass<"Xtensa", [i32], 32, (add SAR, SCOMPARE1, IBREAKENABLE, MEMCTL, IBREAKA0, IBREAKA1, DBREAKA0, DBREAKA1,
+  DBREAKC0, DBREAKC1, CONFIGID0, CONFIGID1, EPC1, EPC2, EPC3, EPC4, EPC5, EPC6, EPC7, INTSET, INTENABLE, PS, VECBASE, DEBUGCAUSE, CCOUNT, PRID, CCOMPARE0, CCOMPARE1, CCOMPARE2)>; 
+
+//===----------------------------------------------------------------------===//
+// USER registers
+//===----------------------------------------------------------------------===//
+class URReg<bits<16> num, string n, list<string> alt = []> : XtensaReg<n> {
+  let HWEncoding{15-0} = num;
+  let AltNames = alt;
+}
+
+// Thread Pointer register
+def THREADPTR : URReg<231, "threadptr", ["THREADPTR"]>;  
+
+def UR :  RegisterClass<"Xtensa", [i32], 32, (add THREADPTR)>; 
 
 //===----------------------------------------------------------------------===//
 // Floating-Point registers

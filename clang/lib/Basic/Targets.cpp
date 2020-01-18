@@ -592,9 +592,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
   case llvm::Triple::renderscript64:
     return new LinuxTargetInfo<RenderScript64TargetInfo>(Triple, Opts);
 
-
   case llvm::Triple::xtensa:
-    return new XtensaTargetInfo(Triple, Opts);
+    return new XtensaTargetInfo(Triple, Opts); 
   }
 }
 } // namespace targets

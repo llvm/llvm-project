@@ -32,13 +32,18 @@ public:
 
   XtensaRegisterInfo(const XtensaSubtarget &STI);
 
-  // Override TargetRegisterInfo.h.
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;
   }
+
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override {
     return true;
   }
+
+  bool trackLivenessAfterRegAlloc(const MachineFunction &) const override {
+    return true;
+  }
+
   const uint16_t *
   getCalleeSavedRegs(const MachineFunction *MF = 0) const override;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
@@ -51,8 +56,7 @@ public:
 
 private:
   void eliminateFI(MachineBasicBlock::iterator II, unsigned OpNo,
-                           int FrameIndex, uint64_t StackSize,
-                           int64_t SPOffset) const;
+                   int FrameIndex, uint64_t StackSize, int64_t SPOffset) const;
 };
 
 } // end namespace llvm

@@ -46,10 +46,14 @@ XtensaObjectWriter::~XtensaObjectWriter() {}
 unsigned XtensaObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
+  MCSymbolRefExpr::VariantKind Modifier = Target.getAccessVariant();
 
   switch ((unsigned)Fixup.getKind()) {
   case FK_Data_4:
-    return ELF::R_XTENSA_32;
+    if (Modifier == MCSymbolRefExpr::VariantKind::VK_TPOFF)
+      return ELF::R_XTENSA_TLS_TPOFF;
+    else
+      return ELF::R_XTENSA_32;
   default:
     return ELF::R_XTENSA_SLOT0_OP;
   }

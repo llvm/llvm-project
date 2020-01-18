@@ -7611,7 +7611,7 @@ static TypedefDecl *CreateVaListDecl(const ASTContext *Context,
   case TargetInfo::SystemZBuiltinVaList:
     return CreateSystemZBuiltinVaListDecl(Context);
   case TargetInfo::XtensaABIBuiltinVaList:
-    return CreateXtensaABIBuiltinVaListDecl(Context);    
+    return CreateXtensaABIBuiltinVaListDecl(Context);
   }
 
   llvm_unreachable("Unhandled __builtin_va_list type kind");

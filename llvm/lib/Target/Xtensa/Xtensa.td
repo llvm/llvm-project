@@ -1,4 +1,4 @@
-//===- Xtensa.td - Describe the Xtensa Target Machine -----------*- tablegen -*-===//
+//===- Xtensa.td - Describe the Xtensa Target Machine ------*- tablegen -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,7 +6,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===---------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
 // Target-independent interfaces
@@ -89,6 +89,10 @@ class Proc<string Name, list<SubtargetFeature> Features>
     : Processor<Name, NoItineraries, Features>;
 
 def : Proc<"generic", []>;
+def : Proc<"esp32", [FeatureDensity, FeatureSingleFloat, FeatureLoop, FeatureMAC16, FeatureWindowed, FeatureBoolean, 
+                     FeatureSEXT, FeatureNSA, FeatureMul32, FeatureMul32High, FeatureS32C1I, FeatureTHREADPTR, FeatureDiv32]>;
+def : Proc<"esp8266", [FeatureDensity, FeatureNSA, FeatureMul32]>; 
+def : Proc<"esp32-S2", [FeatureDensity, FeatureWindowed, FeatureSEXT, FeatureNSA, FeatureMul32, FeatureMul32High, FeatureTHREADPTR, FeatureDiv32]>;
 
 //===----------------------------------------------------------------------===//
 // Register File Description

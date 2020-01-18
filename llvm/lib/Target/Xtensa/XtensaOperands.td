@@ -1,4 +1,4 @@
-//===- XtensaOperands.td - Xtensa instruction operands ----*- tblgen-*--===//
+//===- XtensaOperands.td - Xtensa instruction operands -------*- tblgen-*--===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,7 +6,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===-------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 // Immediate operands with a shared generic render method.
 class ImmAsmOperand<string name> : AsmOperandClass 
@@ -28,6 +28,20 @@ def Imm8_AsmOperand: ImmAsmOperand<"Imm8">;
 def imm8: Immediate<i32, [{ return Imm >= -128 && Imm <= 127; }], "Imm8_AsmOperand"> {
   let EncoderMethod = "getImm8OpValue";
   let DecoderMethod = "decodeImm8Operand";
+}
+
+// imm8n_7 predicate - Immediate in the range [-8,7]
+def Imm8n_7_AsmOperand: ImmAsmOperand<"Imm8n_7">;
+def imm8n_7: Immediate<i32, [{ return Imm >= -8 && Imm <= 7; }], "Imm8n_7_AsmOperand"> {
+  let EncoderMethod = "getImm8n_7OpValue";
+  let DecoderMethod = "decodeImm8n_7Operand";
+}
+
+// imm64n_4n predicate - Immediate in the range [-64,-4]
+def Imm64n_4n_AsmOperand: ImmAsmOperand<"Imm64n_4n">;
+def imm64n_4n: Immediate<i32, [{ return Imm >= -64 && Imm <= -4; }], "Imm64n_4n_AsmOperand"> {
+  let EncoderMethod = "getImm64n_4nOpValue";
+  let DecoderMethod = "decodeImm64n_4nOperand";
 } 
 
 // imm8_sh8 predicate - Immediate in the range [-32768,32512] with (bits[7-0] == 0)
@@ -155,6 +169,14 @@ def b4constu: Immediate<i32,
   let EncoderMethod = "getB4constuOpValue";
   let DecoderMethod = "decodeB4constuOperand";
 }
+
+// seimm7_22 predicate - Immediate in the range [7,22] for sign extend
+def Seimm7_22_AsmOperand: ImmAsmOperand<"seimm7_22">;
+def seimm7_22: Immediate<i32, [{ return Imm >= 7 && Imm <= 22; }], "Seimm7_22_AsmOperand"> {
+  let EncoderMethod = "getSeimm7_22OpValue";
+  let DecoderMethod = "decodeSeimm7_22Operand";
+}
+
 //===----------------------------------------------------------------------===//
 // Memory address operands
 //===----------------------------------------------------------------------===//
@@ -233,3 +255,4 @@ def L32Rtarget: Operand<i32>
   let DecoderMethod = "decodeL32ROperand";
   let ParserMatchClass = XtensaPCRelTargetAsmOperand;
 } 
+

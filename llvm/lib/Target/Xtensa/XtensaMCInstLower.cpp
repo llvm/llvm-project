@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "XtensaMCInstLower.h"
+#include "MCTargetDesc/XtensaBaseInfo.h"
 #include "MCTargetDesc/XtensaMCExpr.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -29,9 +30,24 @@ XtensaMCInstLower::XtensaMCInstLower(MCContext &ctx,
     : Ctx(ctx), Printer(asmPrinter) {}
 
 MCSymbol *
+XtensaMCInstLower::GetExternalSymbolSymbol(const MachineOperand &MO) const {
+  return Printer.GetExternalSymbolSymbol(MO.getSymbolName());
+}
+
+MCSymbol *
+XtensaMCInstLower::GetJumpTableSymbol(const MachineOperand &MO) const {
+  return Printer.GetJTISymbol(MO.getIndex());
+}
+
+MCSymbol *
 XtensaMCInstLower::GetConstantPoolIndexSymbol(const MachineOperand &MO) const {
   // Create a symbol for the name.
   return Printer.GetCPISymbol(MO.getIndex());
+}
+
+MCSymbol *
+XtensaMCInstLower::GetBlockAddressSymbol(const MachineOperand &MO) const {
+  return Printer.GetBlockAddressSymbol(MO.getBlockAddress());
 }
 
 MCOperand
@@ -52,6 +68,13 @@ XtensaMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   case MachineOperand::MO_BlockAddress:
     Symbol = Printer.GetBlockAddressSymbol(MO.getBlockAddress());
     Offset += MO.getOffset();
+    break;
+  case MachineOperand::MO_ExternalSymbol:
+    Symbol = GetExternalSymbolSymbol(MO);
+    Offset += MO.getOffset();
+    break;
+  case MachineOperand::MO_JumpTableIndex:
+    Symbol = GetJumpTableSymbol(MO);
     break;
   case MachineOperand::MO_ConstantPoolIndex:
     Symbol = GetConstantPoolIndexSymbol(MO);
@@ -89,10 +112,15 @@ MCOperand XtensaMCInstLower::lowerOperand(const MachineOperand &MO,
     return MCOperand::createReg(MO.getReg());
   case MachineOperand::MO_Immediate:
     return MCOperand::createImm(MO.getImm() + Offset);
+  case MachineOperand::MO_MachineBasicBlock:
+  case MachineOperand::MO_GlobalAddress:
+  case MachineOperand::MO_ExternalSymbol:
+  case MachineOperand::MO_JumpTableIndex:
+  case MachineOperand::MO_ConstantPoolIndex:
+  case MachineOperand::MO_BlockAddress:
+    return LowerSymbolOperand(MO, MOTy, Offset);
   case MachineOperand::MO_RegisterMask:
     break;
-  case MachineOperand::MO_ConstantPoolIndex:
-    return LowerSymbolOperand(MO, MOTy, Offset);
   default:
     llvm_unreachable("unknown operand type");
   }

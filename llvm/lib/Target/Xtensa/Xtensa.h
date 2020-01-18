@@ -25,5 +25,6 @@ class FunctionPass;
 
 FunctionPass *createXtensaISelDag(XtensaTargetMachine &TM,
                                   CodeGenOpt::Level OptLevel);
+FunctionPass *createXtensaSizeReductionPass();
 } // namespace llvm
 #endif /* LLVM_LIB_TARGET_XTENSA_XTENSA_H */

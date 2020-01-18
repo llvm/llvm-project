@@ -99,6 +99,9 @@ public:
 
   bool isValidCPUName(StringRef Name) const override {
     return llvm::StringSwitch<bool>(Name)
+        .Case("esp32", true)
+        .Case("esp8266", true)
+        .Case("esp32-s2", true)
         .Case("generic", true)
         .Default(false);
   }

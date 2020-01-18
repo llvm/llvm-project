@@ -41,9 +41,67 @@ public:
   // Override SelectionDAGISel.
   void Select(SDNode *Node) override;
 
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
+                                    std::vector<SDValue> &OutOps) override;
+
   bool selectMemRegAddr(SDValue Addr, SDValue &Base, SDValue &Offset,
                         int Scale) {
-    report_fatal_error("MemReg address is not implemented yet");
+    EVT ValTy = Addr.getValueType();
+
+    // if Address is FI, get the TargetFrameIndex.
+    if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
+      Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+      Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), ValTy);
+
+      return true;
+    }
+
+    if (TM.isPositionIndependent())
+      report_fatal_error("PIC relocations is not supported");
+
+    if ((Addr.getOpcode() == ISD::TargetExternalSymbol ||
+         Addr.getOpcode() == ISD::TargetGlobalAddress))
+      return false;
+
+    // Addresses of the form FI+const or FI|const
+    bool Valid = false;
+    if (CurDAG->isBaseWithConstantOffset(Addr)) {
+      ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
+      int64_t OffsetVal = CN->getSExtValue();
+
+      switch (Scale) {
+      case 1:
+        Valid = (OffsetVal >= 0 && OffsetVal <= 255);
+        break;
+      case 2:
+        Valid =
+            (OffsetVal >= 0 && OffsetVal <= 510) && ((OffsetVal & 0x1) == 0);
+        break;
+      case 4:
+        Valid =
+            (OffsetVal >= 0 && OffsetVal <= 1020) && ((OffsetVal & 0x3) == 0);
+        break;
+      default:
+        break;
+      }
+
+      if (Valid) {
+        // If the first operand is a FI, get the TargetFI Node
+        if (FrameIndexSDNode *FIN =
+                dyn_cast<FrameIndexSDNode>(Addr.getOperand(0)))
+          Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+        else
+          Base = Addr.getOperand(0);
+
+        Offset =
+            CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(Addr), ValTy);
+        return true;
+      }
+    }
+
+    // Last case
+    Base = Addr;
+    Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), Addr.getValueType());
     return true;
   }
 
@@ -81,4 +139,26 @@ void XtensaDAGToDAGISel::Select(SDNode *Node) {
   }
 
   SelectCode(Node);
+}
+
+bool XtensaDAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, unsigned ConstraintID, std::vector<SDValue> &OutOps) {
+  switch (ConstraintID) {
+  default:
+    llvm_unreachable("Unexpected asm memory constraint");
+  case InlineAsm::Constraint_m: {
+    SDValue Base, Offset;
+    // TODO
+    selectMemRegAddr(Op, Base, Offset, 4);
+    OutOps.push_back(Base);
+    OutOps.push_back(Offset);
+    return false;
+  }
+  case InlineAsm::Constraint_i:
+  case InlineAsm::Constraint_R:
+  case InlineAsm::Constraint_ZC:
+    OutOps.push_back(Op);
+    return false;
+  }
+  return false;
 }

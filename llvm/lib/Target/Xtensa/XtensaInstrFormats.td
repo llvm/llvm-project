@@ -1,4 +1,4 @@
-//===- XtensaInstrFormats.td - Xtensa Instruction Formats -------*- tablegen -*-===//
+//===- XtensaInstrFormats.td - Xtensa Instruction Formats --*- tablegen -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -6,7 +6,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===---------------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 // Base class for Xtensa 16 & 24 bit Formats
 class XtensaInst<int size, dag outs, dag ins, string asmstr, list<dag> pattern,
