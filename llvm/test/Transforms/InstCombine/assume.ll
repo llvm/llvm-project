@@ -190,16 +190,10 @@ entry:
 }
 
 define i32 @icmp1(i32 %a) #0 {
-; EXPENSIVE-ON-LABEL: @icmp1(
-; EXPENSIVE-ON-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 5
-; EXPENSIVE-ON-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; EXPENSIVE-ON-NEXT:    ret i32 1
-;
-; EXPENSIVE-OFF-LABEL: @icmp1(
-; EXPENSIVE-OFF-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 5
-; EXPENSIVE-OFF-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; EXPENSIVE-OFF-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; EXPENSIVE-OFF-NEXT:    ret i32 1
+; CHECK-LABEL: @icmp1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 5
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    ret i32 1
 ;
   %cmp = icmp sgt i32 %a, 5
   tail call void @llvm.assume(i1 %cmp)
