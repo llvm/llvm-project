@@ -1190,13 +1190,16 @@ struct CmpClass_match {
       : Predicate(Pred), L(LHS), R(RHS) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (auto *I = dyn_cast<Class>(V))
-      if ((L.match(I->getOperand(0)) && R.match(I->getOperand(1))) ||
-          (Commutable && L.match(I->getOperand(1)) &&
-           R.match(I->getOperand(0)))) {
+    if (auto *I = dyn_cast<Class>(V)) {
+      if (L.match(I->getOperand(0)) && R.match(I->getOperand(1))) {
         Predicate = I->getPredicate();
         return true;
+      } else if (Commutable && L.match(I->getOperand(1)) &&
+           R.match(I->getOperand(0))) {
+        Predicate = I->getSwappedPredicate();
+        return true;
       }
+    }
     return false;
   }
 };
@@ -1882,7 +1885,7 @@ inline AnyBinaryOp_match<LHS, RHS, true> m_c_BinOp(const LHS &L, const RHS &R) {
 }
 
 /// Matches an ICmp with a predicate over LHS and RHS in either order.
-/// Does not swap the predicate.
+/// Swaps the predicate if operands are commuted.
 template <typename LHS, typename RHS>
 inline CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>
 m_c_ICmp(ICmpInst::Predicate &Pred, const LHS &L, const RHS &R) {
