@@ -1311,7 +1311,8 @@ static bool emitCapabilityImplication(const RecordKeeper &recordKeeper,
     mlir::interleaveComma(impliedCapsDefs, os, [&](const Record *capDef) {
       os << "Capability::" << EnumAttrCase(capDef).getSymbol();
     });
-    os << "}; return implies; }\n";
+    os << "}; return ArrayRef<Capability>(implies, " << impliedCapsDefs.size()
+       << "); }\n";
   }
   os << "  }\n";
   os << "}\n";
