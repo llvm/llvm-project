@@ -111,22 +111,6 @@ namespace ARMVCC {
   };
 }
 
-inline static unsigned getARMVPTBlockMask(unsigned NumInsts) {
-  switch (NumInsts) {
-  case 1:
-    return ARMVCC::T;
-  case 2:
-    return ARMVCC::TT;
-  case 3:
-    return ARMVCC::TTT;
-  case 4:
-    return ARMVCC::TTTT;
-  default:
-    break;
-  };
-  llvm_unreachable("Unexpected number of instruction in a VPT block");
-}
-
 inline static const char *ARMVPTPredToString(ARMVCC::VPTCodes CC) {
   switch (CC) {
   case ARMVCC::None:  return "none";
