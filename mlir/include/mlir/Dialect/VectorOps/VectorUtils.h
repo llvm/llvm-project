@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_VECTOROPS_UTILS_H_
-#define MLIR_DIALECT_VECTOROPS_UTILS_H_
+#ifndef MLIR_DIALECT_VECTOROPS_VECTORUTILS_H_
+#define MLIR_DIALECT_VECTOROPS_VECTORUTILS_H_
 
 #include "mlir/Support/LLVM.h"
 
@@ -131,4 +131,4 @@ bool operatesOnSuperVectorsOf(Operation &op, VectorType subVectorType);
 } // end namespace matcher
 } // end namespace mlir
 
-#endif // MLIR_DIALECT_VECTOROPS_UTILS_H_
+#endif // MLIR_DIALECT_VECTOROPS_VECTORUTILS_H_
