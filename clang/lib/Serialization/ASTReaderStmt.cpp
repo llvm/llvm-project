@@ -724,6 +724,28 @@ void ASTStmtReader::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E) {
   E->setRParenLoc(readSourceLocation());
 }
 
+static ConstraintSatisfaction
+readConstraintSatisfaction(ASTRecordReader &Record) {
+  ConstraintSatisfaction Satisfaction;
+  Satisfaction.IsSatisfied = Record.readInt();
+  if (!Satisfaction.IsSatisfied) {
+    unsigned NumDetailRecords = Record.readInt();
+    for (unsigned i = 0; i != NumDetailRecords; ++i) {
+      Expr *ConstraintExpr = Record.readExpr();
+      if (bool IsDiagnostic = Record.readInt()) {
+        SourceLocation DiagLocation = Record.readSourceLocation();
+        std::string DiagMessage = Record.readString();
+        Satisfaction.Details.emplace_back(
+            ConstraintExpr, new (Record.getContext())
+                                ConstraintSatisfaction::SubstitutionDiagnostic{
+                                    DiagLocation, DiagMessage});
+      } else
+        Satisfaction.Details.emplace_back(ConstraintExpr, Record.readExpr());
+    }
+  }
+  return Satisfaction;
+}
+
 void ASTStmtReader::VisitConceptSpecializationExpr(
         ConceptSpecializationExpr *E) {
   VisitExpr(E);
@@ -737,26 +759,121 @@ void ASTStmtReader::VisitConceptSpecializationExpr(
   for (unsigned I = 0; I < NumTemplateArgs; ++I)
     Args.push_back(Record.readTemplateArgument());
   E->setTemplateArguments(Args);
-  ConstraintSatisfaction Satisfaction;
-  Satisfaction.IsSatisfied = Record.readInt();
-  if (!Satisfaction.IsSatisfied) {
-    unsigned NumDetailRecords = Record.readInt();
-    for (unsigned i = 0; i != NumDetailRecords; ++i) {
-      Expr *ConstraintExpr = Record.readExpr();
-      bool IsDiagnostic = Record.readInt();
-      if (IsDiagnostic) {
-        SourceLocation DiagLocation = Record.readSourceLocation();
-        std::string DiagMessage = Record.readString();
-        Satisfaction.Details.emplace_back(
-            ConstraintExpr, new (Record.getContext())
-                                ConstraintSatisfaction::SubstitutionDiagnostic{
-                                    DiagLocation, DiagMessage});
-      } else
-        Satisfaction.Details.emplace_back(ConstraintExpr, Record.readExpr());
+  E->Satisfaction = E->isValueDependent() ? nullptr :
+      ASTConstraintSatisfaction::Create(Record.getContext(),
+                                        readConstraintSatisfaction(Record));
+}
+
+static concepts::Requirement::SubstitutionDiagnostic *
+readSubstitutionDiagnostic(ASTRecordReader &Record) {
+  std::string SubstitutedEntity = Record.readString();
+  SourceLocation DiagLoc = Record.readSourceLocation();
+  std::string DiagMessage = Record.readString();
+  return new (Record.getContext())
+      concepts::Requirement::SubstitutionDiagnostic{SubstitutedEntity, DiagLoc,
+                                                    DiagMessage};
+}
+
+void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
+  VisitExpr(E);
+  unsigned NumLocalParameters = Record.readInt();
+  unsigned NumRequirements = Record.readInt();
+  E->RequiresExprBits.RequiresKWLoc = Record.readSourceLocation();
+  E->RequiresExprBits.IsSatisfied = Record.readInt();
+  E->Body = Record.readDeclAs<RequiresExprBodyDecl>();
+  llvm::SmallVector<ParmVarDecl *, 4> LocalParameters;
+  for (unsigned i = 0; i < NumLocalParameters; ++i)
+    LocalParameters.push_back(cast<ParmVarDecl>(Record.readDecl()));
+  std::copy(LocalParameters.begin(), LocalParameters.end(),
+            E->getTrailingObjects<ParmVarDecl *>());
+  llvm::SmallVector<concepts::Requirement *, 4> Requirements;
+  for (unsigned i = 0; i < NumRequirements; ++i) {
+    auto RK =
+        static_cast<concepts::Requirement::RequirementKind>(Record.readInt());
+    concepts::Requirement *R = nullptr;
+    switch (RK) {
+      case concepts::Requirement::RK_Type: {
+        auto Status =
+            static_cast<concepts::TypeRequirement::SatisfactionStatus>(
+                Record.readInt());
+        if (Status == concepts::TypeRequirement::SS_SubstitutionFailure)
+          R = new (Record.getContext())
+              concepts::TypeRequirement(readSubstitutionDiagnostic(Record));
+        else
+          R = new (Record.getContext())
+              concepts::TypeRequirement(Record.readTypeSourceInfo());
+      } break;
+      case concepts::Requirement::RK_Simple:
+      case concepts::Requirement::RK_Compound: {
+        auto Status =
+            static_cast<concepts::ExprRequirement::SatisfactionStatus>(
+                Record.readInt());
+        llvm::PointerUnion<concepts::Requirement::SubstitutionDiagnostic *,
+                           Expr *> E;
+        if (Status == concepts::ExprRequirement::SS_ExprSubstitutionFailure) {
+          E = readSubstitutionDiagnostic(Record);
+        } else
+          E = Record.readExpr();
+
+        llvm::Optional<concepts::ExprRequirement::ReturnTypeRequirement> Req;
+        ConceptSpecializationExpr *SubstitutedConstraintExpr = nullptr;
+        SourceLocation NoexceptLoc;
+        if (RK == concepts::Requirement::RK_Simple) {
+          Req.emplace();
+        } else {
+          NoexceptLoc = Record.readSourceLocation();
+          switch (auto returnTypeRequirementKind = Record.readInt()) {
+            case 0:
+              // No return type requirement.
+              Req.emplace();
+              break;
+            case 1: {
+              // type-constraint
+              TemplateParameterList *TPL = Record.readTemplateParameterList();
+              if (Status >=
+                  concepts::ExprRequirement::SS_ConstraintsNotSatisfied)
+                SubstitutedConstraintExpr =
+                    cast<ConceptSpecializationExpr>(Record.readExpr());
+              Req.emplace(TPL);
+            } break;
+            case 2:
+              // Substitution failure
+              Req.emplace(readSubstitutionDiagnostic(Record));
+              break;
+          }
+        }
+        if (Expr *Ex = E.dyn_cast<Expr *>())
+          R = new (Record.getContext()) concepts::ExprRequirement(
+                  Ex, RK == concepts::Requirement::RK_Simple, NoexceptLoc,
+                  std::move(*Req), Status, SubstitutedConstraintExpr);
+        else
+          R = new (Record.getContext()) concepts::ExprRequirement(
+                  E.get<concepts::Requirement::SubstitutionDiagnostic *>(),
+                  RK == concepts::Requirement::RK_Simple, NoexceptLoc,
+                  std::move(*Req));
+      } break;
+      case concepts::Requirement::RK_Nested: {
+        if (bool IsSubstitutionDiagnostic = Record.readInt()) {
+          R = new (Record.getContext()) concepts::NestedRequirement(
+              readSubstitutionDiagnostic(Record));
+          break;
+        }
+        Expr *E = Record.readExpr();
+        if (E->isInstantiationDependent())
+          R = new (Record.getContext()) concepts::NestedRequirement(E);
+        else
+          R = new (Record.getContext())
+              concepts::NestedRequirement(Record.getContext(), E,
+                                          readConstraintSatisfaction(Record));
+      } break;
     }
+    if (!R)
+      continue;
+    Requirements.push_back(R);
   }
-  E->Satisfaction = ASTConstraintSatisfaction::Create(Record.getContext(),
-                                                      Satisfaction);
+  std::copy(Requirements.begin(), Requirements.end(),
+            E->getTrailingObjects<concepts::Requirement *>());
+  E->RBraceLoc = Record.readSourceLocation();
 }
 
 void ASTStmtReader::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
@@ -3566,11 +3683,18 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) DependentCoawaitExpr(Empty);
       break;
 
-    case EXPR_CONCEPT_SPECIALIZATION:
+    case EXPR_CONCEPT_SPECIALIZATION: {
       unsigned numTemplateArgs = Record[ASTStmtReader::NumExprFields];
       S = ConceptSpecializationExpr::Create(Context, Empty, numTemplateArgs);
       break;
-      
+    }
+
+    case EXPR_REQUIRES:
+      unsigned numLocalParameters = Record[ASTStmtReader::NumExprFields];
+      unsigned numRequirement = Record[ASTStmtReader::NumExprFields + 1];
+      S = RequiresExpr::Create(Context, Empty, numLocalParameters,
+                               numRequirement);
+      break;
     }
 
     // We hit a STMT_STOP, so we're done with this expression.
