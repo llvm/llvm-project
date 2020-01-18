@@ -768,6 +768,7 @@ public:
 
   void addSectionLabel(const MCSymbol *Sym);
   const MCSymbol *getSectionLabel(const MCSection *S);
+  void insertSectionLabel(const MCSymbol *S);
 
   static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
                                 const DbgValueLoc &Value,
