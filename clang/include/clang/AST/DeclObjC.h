@@ -1196,6 +1196,7 @@ public:
 class ObjCInterfaceDecl : public ObjCContainerDecl
                         , public Redeclarable<ObjCInterfaceDecl> {
   friend class ASTContext;
+  friend class ASTReader;
 
   /// TypeForDecl - This indicates the Type object that represents this
   /// TypeDecl.  It is a cache maintained by ASTContext::getObjCInterfaceType
@@ -1253,6 +1254,12 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
     /// One of the \c InheritedDesignatedInitializersState enumeratos.
     mutable unsigned InheritedDesignatedInitializers : 2;
 
+    /// Tracks whether a ODR hash has been computed for this interface.
+    unsigned HasODRHash : 1;
+
+    /// A hash of parts of the class to help in ODR checking.
+    unsigned ODRHash = 0;
+
     /// The location of the last location in this declaration, before
     /// the properties/methods. For example, this will be the '>', '}', or
     /// identifier,
@@ -1261,7 +1268,7 @@ class ObjCInterfaceDecl : public ObjCContainerDecl
     DefinitionData()
         : ExternallyCompleted(false), IvarListMissingImplementation(true),
           HasDesignatedInitializers(false),
-          InheritedDesignatedInitializers(IDI_Unknown) {}
+          InheritedDesignatedInitializers(IDI_Unknown), HasODRHash(false) {}
   };
 
   /// The type parameters associated with this class, if any.
@@ -1946,7 +1953,14 @@ public:
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ObjCInterface; }
 
+  /// Get precomputed ODRHash or add a new one.
+  unsigned getODRHash();
+
 private:
+  /// True if a valid hash is stored in ODRHash.
+  bool hasODRHash() const;
+  void setHasODRHash(bool Hash = true);
+
   const ObjCInterfaceDecl *findInterfaceWithDesignatedInitializers() const;
   bool inheritsDesignatedInitializers() const;
 };
