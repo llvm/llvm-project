@@ -64,6 +64,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -1846,14 +1847,46 @@ void MveEmitter::EmitBuiltinCG(raw_ostream &OS) {
 }
 
 void MveEmitter::EmitBuiltinAliases(raw_ostream &OS) {
+  // Build a sorted table of:
+  // - intrinsic id number
+  // - full name
+  // - polymorphic name or -1
+  StringToOffsetTable StringTable;
+  OS << "struct IntrinToName {\n"
+        "  uint32_t Id;\n"
+        "  int32_t FullName;\n"
+        "  int32_t ShortName;\n"
+        "};\n";
+  OS << "static const IntrinToName Map[] = {\n";
   for (const auto &kv : ACLEIntrinsics) {
     const ACLEIntrinsic &Int = *kv.second;
-    OS << "case ARM::BI__builtin_arm_mve_" << Int.fullName() << ":\n"
-       << "  return AliasName == \"" << Int.fullName() << "\"";
-    if (Int.polymorphic())
-      OS << " || AliasName == \"" << Int.shortName() << "\"";
-    OS << ";\n";
+    int32_t ShortNameOffset =
+        Int.polymorphic() ? StringTable.GetOrAddStringOffset(Int.shortName())
+                          : -1;
+    OS << "  { ARM::BI__builtin_arm_mve_" << Int.fullName() << ", "
+       << StringTable.GetOrAddStringOffset(Int.fullName()) << ", "
+       << ShortNameOffset << "},\n";
   }
+  OS << "};\n\n";
+
+  OS << "static const char IntrinNames[] = {\n";
+  StringTable.EmitString(OS);
+  OS << "};\n\n";
+
+  OS << "auto It = std::lower_bound(std::begin(Map), "
+        "std::end(Map), BuiltinID,\n"
+        "  [](const IntrinToName &L, unsigned Id) {\n"
+        "    return L.Id < Id;\n"
+        "  });\n";
+  OS << "if (It == std::end(Map) || It->Id != BuiltinID)\n"
+        "  return false;\n";
+  OS << "StringRef FullName(&IntrinNames[It->FullName]);\n";
+  OS << "if (AliasName == FullName)\n"
+        "  return true;\n";
+  OS << "if (It->ShortName == -1)\n"
+        "  return false;\n";
+  OS << "StringRef ShortName(&IntrinNames[It->ShortName]);\n";
+  OS << "return AliasName == ShortName;\n";
 }
 
 } // namespace
