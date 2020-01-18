@@ -382,3 +382,15 @@ func @nvvm_invalid_mma_7(%a0 : !llvm<"<2 x half>">, %a1 : !llvm<"<2 x half>">,
   %0 = nvvm.mma.sync %a0, %a1, %b0, %b1, %c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7 {alayout="col", blayout="row"} : (!llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm<"<2 x half>">, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float, !llvm.float) -> (!llvm<"{ float, float, float, float, float, float, float, float }">, !llvm.i32)
   llvm.return %0 : (!llvm<"{ float, float, float, float, float, float, float, float }">, !llvm.i32)
 }
+
+// -----
+
+// FIXME: the LLVM-IR dialect should parse mutually recursive types
+// CHECK-LABEL: @recursive_type
+// expected-error@+1 {{expected end of string}}
+llvm.func @recursive_type(%a : !llvm<"%a = type { %a* }">) ->
+                          !llvm<"%a = type { %a* }"> {
+  llvm.return %a : !llvm<"%a = type { %a* }">
+}
+
+

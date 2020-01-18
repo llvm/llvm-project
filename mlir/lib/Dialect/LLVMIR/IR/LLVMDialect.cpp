@@ -1641,6 +1641,35 @@ LLVMType LLVMType::getStructTy(LLVMDialect *dialect,
                                  isPacked);
   });
 }
+inline static SmallVector<llvm::Type *, 8>
+toUnderlyingTypes(ArrayRef<LLVMType> elements) {
+  SmallVector<llvm::Type *, 8> llvmElements;
+  for (auto elt : elements)
+    llvmElements.push_back(elt.getUnderlyingType());
+  return llvmElements;
+}
+LLVMType LLVMType::createStructTy(LLVMDialect *dialect,
+                                  ArrayRef<LLVMType> elements,
+                                  Optional<StringRef> name, bool isPacked) {
+  StringRef sr = name.hasValue() ? *name : "";
+  SmallVector<llvm::Type *, 8> llvmElements(toUnderlyingTypes(elements));
+  return getLocked(dialect, [=] {
+    auto *rv = llvm::StructType::create(dialect->getLLVMContext(), sr);
+    if (!llvmElements.empty())
+      rv->setBody(llvmElements, isPacked);
+    return rv;
+  });
+}
+LLVMType LLVMType::setStructTyBody(LLVMType structType,
+                                   ArrayRef<LLVMType> elements, bool isPacked) {
+  llvm::StructType *st =
+      llvm::cast<llvm::StructType>(structType.getUnderlyingType());
+  SmallVector<llvm::Type *, 8> llvmElements(toUnderlyingTypes(elements));
+  return getLocked(&structType.getDialect(), [=] {
+    st->setBody(llvmElements, isPacked);
+    return st;
+  });
+}
 LLVMType LLVMType::getVectorTy(LLVMType elementType, unsigned numElements) {
   // Lock access to the dialect as this may modify the LLVM context.
   return getLocked(&elementType.getDialect(), [=] {
