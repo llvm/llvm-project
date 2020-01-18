@@ -218,3 +218,10 @@ func @null() {
   %1 = llvm.mlir.null : !llvm<"{void(i32, void()*)*, i64}*">
   llvm.return
 }
+
+// CHECK-LABEL: @atomics
+func @atomics(%arg0 : !llvm<"float*">, %arg1 : !llvm.float) {
+  // CHECK: llvm.atomicrmw "fadd" "unordered" %{{.*}}, %{{.*}} : (!llvm<"float*">, !llvm.float) -> !llvm.float
+  %0 = llvm.atomicrmw "fadd" "unordered" %arg0, %arg1 : (!llvm<"float*">, !llvm.float) -> !llvm.float
+  llvm.return
+}
