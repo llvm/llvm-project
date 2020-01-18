@@ -209,7 +209,7 @@ int foo(int n) {
 // CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
 // CHECK:       [[FAIL]]
 // CHECK:       [[BP0:%.+]] = load i[[SZ]]*, i[[SZ]]** %
-// CHECK:       [[BP1_I32:%.+]] = load i32, i32* %
+// CHECK:       [[BP1_I32:%.+]] = load i32, i32* @
 // CHECK-64:    [[BP1_CAST:%.+]] = bitcast i[[SZ]]* [[BP1_PTR:%.+]] to i32*
 // CHECK-64:    store i32 [[BP1_I32]], i32* [[BP1_CAST]],
 // CHECK-32:    store i32 [[BP1_I32]], i32* [[BP1_PTR:%.+]],
@@ -223,7 +223,7 @@ int foo(int n) {
 // CHECK:       call void (i8*, ...) %
 // CHECK:       [[DEVICE_CAP:%.+]] = getelementptr inbounds %{{.+}}, %{{.+}}* %{{.+}}, i32 0, i32 2
 // CHECK:       [[BP0:%.+]] = load i[[SZ]]*, i[[SZ]]** %
-// CHECK:       [[BP1_I32:%.+]] = load i32, i32* %
+// CHECK:       [[BP1_I32:%.+]] = load i32, i32* @
 // CHECK-64:    [[BP1_CAST:%.+]] = bitcast i[[SZ]]* [[BP1_PTR:%.+]] to i32*
 // CHECK-64:    store i32 [[BP1_I32]], i32* [[BP1_CAST]],
 // CHECK-32:    store i32 [[BP1_I32]], i32* [[BP1_PTR:%.+]],
