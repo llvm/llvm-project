@@ -318,4 +318,4 @@ bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
   }
 
   return true;
-};
+}
