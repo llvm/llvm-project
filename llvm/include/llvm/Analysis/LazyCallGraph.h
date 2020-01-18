@@ -937,6 +937,9 @@ public:
   LazyCallGraph(LazyCallGraph &&G);
   LazyCallGraph &operator=(LazyCallGraph &&RHS);
 
+  bool invalidate(Module &, const PreservedAnalyses &PA,
+                  ModuleAnalysisManager::Invalidator &);
+
   EdgeSequence::iterator begin() { return EntryEdges.begin(); }
   EdgeSequence::iterator end() { return EntryEdges.end(); }
 
