@@ -11,8 +11,12 @@
 //===----------------------------------------------------------------------===//
 #include "clang/Tooling/Transformer/SourceCode.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/Support/Errc.h"
 
 using namespace clang;
+
+using llvm::errc;
+using llvm::StringError;
 
 StringRef clang::tooling::getText(CharSourceRange Range,
                                   const ASTContext &Context) {
@@ -28,6 +32,34 @@ CharSourceRange clang::tooling::maybeExtendRange(CharSourceRange Range,
   if (!Tok || !Tok->is(Next))
     return Range;
   return CharSourceRange::getTokenRange(Range.getBegin(), Tok->getLocation());
+}
+
+llvm::Error clang::tooling::validateEditRange(const CharSourceRange &Range,
+                                              const SourceManager &SM) {
+  if (Range.isInvalid())
+    return llvm::make_error<StringError>(errc::invalid_argument,
+                                         "Invalid range");
+
+  if (Range.getBegin().isMacroID() || Range.getEnd().isMacroID())
+    return llvm::make_error<StringError>(
+        errc::invalid_argument, "Range starts or ends in a macro expansion");
+
+  if (SM.isInSystemHeader(Range.getBegin()) ||
+      SM.isInSystemHeader(Range.getEnd()))
+    return llvm::make_error<StringError>(errc::invalid_argument,
+                                         "Range is in system header");
+
+  std::pair<FileID, unsigned> BeginInfo = SM.getDecomposedLoc(Range.getBegin());
+  std::pair<FileID, unsigned> EndInfo = SM.getDecomposedLoc(Range.getEnd());
+  if (BeginInfo.first != EndInfo.first)
+    return llvm::make_error<StringError>(
+        errc::invalid_argument, "Range begins and ends in different files");
+
+  if (BeginInfo.second > EndInfo.second)
+    return llvm::make_error<StringError>(
+        errc::invalid_argument, "Range's begin is past its end");
+
+  return llvm::Error::success();
 }
 
 llvm::Optional<CharSourceRange>
@@ -46,20 +78,9 @@ clang::tooling::getRangeForEdit(const CharSourceRange &EditRange,
   //    foo(DO_NOTHING(6))
   // Decide whether the current behavior is desirable and modify if not.
   CharSourceRange Range = Lexer::makeFileCharRange(EditRange, SM, LangOpts);
-  if (Range.isInvalid())
-    return None;
-
-  if (Range.getBegin().isMacroID() || Range.getEnd().isMacroID())
-    return None;
-  if (SM.isInSystemHeader(Range.getBegin()) ||
-      SM.isInSystemHeader(Range.getEnd()))
-    return None;
-
-  std::pair<FileID, unsigned> BeginInfo = SM.getDecomposedLoc(Range.getBegin());
-  std::pair<FileID, unsigned> EndInfo = SM.getDecomposedLoc(Range.getEnd());
-  if (BeginInfo.first != EndInfo.first ||
-      BeginInfo.second > EndInfo.second)
-    return None;
-
+  bool IsInvalid = llvm::errorToBool(validateEditRange(Range, SM));
+  if (IsInvalid)
+    return llvm::None;
   return Range;
+
 }

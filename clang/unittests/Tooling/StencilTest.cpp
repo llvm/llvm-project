@@ -368,6 +368,21 @@ TEST_F(StencilTest, RunOp) {
   testExpr(Id, "3;", run(SimpleFn), "Bound");
 }
 
+TEST_F(StencilTest, CatOfInvalidRangeFails) {
+  StringRef Snippet = R"cpp(
+#define MACRO (3.77)
+  double foo(double d);
+  foo(MACRO);)cpp";
+
+  auto StmtMatch =
+      matchStmt(Snippet, callExpr(callee(functionDecl(hasName("foo"))),
+                                  argumentCountIs(1),
+                                  hasArgument(0, expr().bind("arg"))));
+  ASSERT_TRUE(StmtMatch);
+  Stencil S = cat(node("arg"));
+  EXPECT_THAT_EXPECTED(S->eval(StmtMatch->Result), Failed<StringError>());
+}
+
 TEST(StencilToStringTest, RawTextOp) {
   auto S = cat("foo bar baz");
   StringRef Expected = R"("foo bar baz")";
