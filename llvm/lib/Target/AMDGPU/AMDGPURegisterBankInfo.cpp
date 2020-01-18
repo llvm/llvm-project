@@ -2497,6 +2497,22 @@ AMDGPURegisterBankInfo::getImageMapping(const MachineRegisterInfo &MRI,
   return getInstructionMapping(1, 1, getOperandsMapping(OpdsMapping), NumOps);
 }
 
+/// Return the mapping for a pointer arugment.
+const RegisterBankInfo::ValueMapping *
+AMDGPURegisterBankInfo::getValueMappingForPtr(const MachineRegisterInfo &MRI,
+                                              Register PtrReg) const {
+  LLT PtrTy = MRI.getType(PtrReg);
+  unsigned Size = PtrTy.getSizeInBits();
+  if (Subtarget.useFlatForGlobal() ||
+      !SITargetLowering::isFlatGlobalAddrSpace(PtrTy.getAddressSpace()))
+    return AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+
+  // If we're using MUBUF instructions for global memory, an SGPR base register
+  // is possible. Otherwise this needs to be a VGPR.
+  const RegisterBank *PtrBank = getRegBank(PtrReg, MRI, *TRI);
+  return AMDGPU::getValueMapping(PtrBank->getID(), Size);
+}
+
 const RegisterBankInfo::InstructionMapping &
 AMDGPURegisterBankInfo::getInstrMappingForLoad(const MachineInstr &MI) const {
 
@@ -2516,12 +2532,23 @@ AMDGPURegisterBankInfo::getInstrMappingForLoad(const MachineInstr &MI) const {
   const RegisterBank *PtrBank = getRegBank(PtrReg, MRI, *TRI);
 
   if (PtrBank == &AMDGPU::SGPRRegBank &&
-      (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::REGION_ADDRESS &&
-       AS != AMDGPUAS::PRIVATE_ADDRESS) &&
-      isScalarLoadLegal(MI)) {
-    // We have a uniform instruction so we want to use an SMRD load
-    ValMapping = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
-    PtrMapping = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, PtrSize);
+      SITargetLowering::isFlatGlobalAddrSpace(AS)) {
+    if (isScalarLoadLegal(MI)) {
+      // We have a uniform instruction so we want to use an SMRD load
+      ValMapping = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
+      PtrMapping = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, PtrSize);
+    } else {
+      ValMapping = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+
+      // If we're using MUBUF instructions for global memory, an SGPR base
+      // register is possible. Otherwise this needs to be a VGPR.
+      unsigned PtrBankID = Subtarget.useFlatForGlobal() ?
+        AMDGPU::VGPRRegBankID : AMDGPU::SGPRRegBankID;
+
+      PtrMapping = AMDGPU::getValueMapping(PtrBankID, PtrSize);
+      ValMapping = AMDGPU::getValueMappingLoadSGPROnly(AMDGPU::VGPRRegBankID,
+                                                       LoadTy);
+    }
   } else {
     ValMapping = AMDGPU::getValueMappingLoadSGPROnly(AMDGPU::VGPRRegBankID, LoadTy);
     PtrMapping = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, PtrSize);
@@ -2945,21 +2972,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_STORE: {
     assert(MI.getOperand(0).isReg());
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-    // FIXME: We need to specify a different reg bank once scalar stores
-    // are supported.
+
+    // FIXME: We need to specify a different reg bank once scalar stores are
+    // supported.
     const ValueMapping *ValMapping =
         AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
-    // FIXME: Depending on the type of store, the pointer could be in
-    // the SGPR Reg bank.
-    // FIXME: Pointer size should be based on the address space.
-    const ValueMapping *PtrMapping =
-        AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 64);
-
     OpdsMapping[0] = ValMapping;
-    OpdsMapping[1] = PtrMapping;
+    OpdsMapping[1] = getValueMappingForPtr(MRI, MI.getOperand(1).getReg());
     break;
   }
-
   case AMDGPU::G_ICMP: {
     auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
     unsigned Size = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
@@ -3478,11 +3499,20 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_ATOMICRMW_UMAX:
   case AMDGPU::G_ATOMICRMW_UMIN:
   case AMDGPU::G_ATOMICRMW_FADD:
-  case AMDGPU::G_ATOMIC_CMPXCHG:
   case AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG:
   case AMDGPU::G_AMDGPU_ATOMIC_INC:
   case AMDGPU::G_AMDGPU_ATOMIC_DEC: {
-    return getDefaultMappingAllVGPR(MI);
+    OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+    OpdsMapping[1] = getValueMappingForPtr(MRI, MI.getOperand(1).getReg());
+    OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+    break;
+  }
+  case AMDGPU::G_ATOMIC_CMPXCHG: {
+    OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+    OpdsMapping[1] = getValueMappingForPtr(MRI, MI.getOperand(1).getReg());
+    OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+    OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
+    break;
   }
   case AMDGPU::G_BRCOND: {
     unsigned Bank = getRegBankID(MI.getOperand(0).getReg(), MRI, *TRI,
