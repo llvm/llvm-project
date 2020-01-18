@@ -460,7 +460,7 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
   // Dig out the module definition.
   HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
   Module *M = HS.lookupModule(CI.getLangOpts().CurrentModule,
-                              /*AllowSearch=*/false);
+                              /*AllowSearch=*/true);
   if (!M) {
     CI.getDiagnostics().Report(diag::err_missing_module)
       << CI.getLangOpts().CurrentModule << ModuleMapFilename;
