@@ -54,11 +54,11 @@ concise and structured loop nests.
               i7(constant_int(7, 32)),
               i13(constant_int(13, 32));
   AffineLoopNestBuilder(&i, lb, ub, 3)([&]{
-      lb * index_t(3) + ub;
-      lb + index_t(3);
+      lb * index_type(3) + ub;
+      lb + index_type(3);
       AffineLoopNestBuilder(&j, lb, ub, 2)([&]{
-          ceilDiv(index_t(31) * floorDiv(i + j * index_t(3), index_t(32)),
-                  index_t(32));
+          ceilDiv(index_type(31) * floorDiv(i + j * index_type(3), index_type(32)),
+                  index_type(32));
           ((f7 + f13) / f7) % f13 - f7 * f13;
           ((i7 + i13) / i7) % i13 - i7 * i13;
       });

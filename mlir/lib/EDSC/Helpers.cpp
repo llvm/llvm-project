@@ -24,7 +24,7 @@ static SmallVector<ValueHandle, 8> getMemRefSizes(Value memRef) {
     if (shape[idx] == -1) {
       res.push_back(ValueHandle::create<DimOp>(memRef, idx));
     } else {
-      res.push_back(static_cast<index_t>(shape[idx]));
+      res.push_back(static_cast<index_type>(shape[idx]));
     }
   }
   return res;
@@ -35,7 +35,7 @@ mlir::edsc::MemRefView::MemRefView(Value v) : base(v) {
 
   auto memrefSizeValues = getMemRefSizes(v);
   for (auto &size : memrefSizeValues) {
-    lbs.push_back(static_cast<index_t>(0));
+    lbs.push_back(static_cast<index_type>(0));
     ubs.push_back(size);
     steps.push_back(1);
   }
@@ -45,8 +45,8 @@ mlir::edsc::VectorView::VectorView(Value v) : base(v) {
   auto vectorType = v.getType().cast<VectorType>();
 
   for (auto s : vectorType.getShape()) {
-    lbs.push_back(static_cast<index_t>(0));
-    ubs.push_back(static_cast<index_t>(s));
+    lbs.push_back(static_cast<index_type>(0));
+    ubs.push_back(static_cast<index_type>(s));
     steps.push_back(1);
   }
 }
