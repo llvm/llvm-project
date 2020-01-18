@@ -620,7 +620,7 @@ TEST(ConstantsTest, isElementWiseEqual) {
 
   EXPECT_TRUE(CF1211->isElementWiseEqual(CF12U1));
   EXPECT_TRUE(CF12U1->isElementWiseEqual(CF1211));
-  EXPECT_FALSE(CFUU1U->isElementWiseEqual(CF12U1)); // FIXME - all lanes compare as undef
+  EXPECT_TRUE(CFUU1U->isElementWiseEqual(CF12U1));
   EXPECT_FALSE(CF12U2->isElementWiseEqual(CF12U1));
   EXPECT_FALSE(CF12U1->isElementWiseEqual(CF12U2));
 
