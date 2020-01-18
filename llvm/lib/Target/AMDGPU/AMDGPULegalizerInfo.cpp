@@ -2340,6 +2340,22 @@ bool AMDGPULegalizerInfo::legalizeRawBufferStore(MachineInstr &MI,
   return Ty == S32;
 }
 
+bool AMDGPULegalizerInfo::legalizeAtomicIncDec(MachineInstr &MI,
+                                               MachineIRBuilder &B,
+                                               bool IsInc) const {
+  B.setInstr(MI);
+  unsigned Opc = IsInc ? AMDGPU::G_AMDGPU_ATOMIC_INC :
+                         AMDGPU::G_AMDGPU_ATOMIC_DEC;
+  B.buildInstr(Opc)
+    .addDef(MI.getOperand(0).getReg())
+    .addUse(MI.getOperand(2).getReg())
+    .addUse(MI.getOperand(3).getReg())
+    .cloneMemRefs(MI);
+  MI.eraseFromParent();
+  return true;
+}
+
+// FIMXE: Needs observer like custom
 bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
                                             MachineRegisterInfo &MRI,
                                             MachineIRBuilder &B) const {
@@ -2458,6 +2474,10 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     return legalizeRawBufferStore(MI, MRI, B, false);
   case Intrinsic::amdgcn_raw_buffer_store_format:
     return legalizeRawBufferStore(MI, MRI, B, true);
+  case Intrinsic::amdgcn_atomic_inc:
+    return legalizeAtomicIncDec(MI, B, true);
+  case Intrinsic::amdgcn_atomic_dec:
+    return legalizeAtomicIncDec(MI, B, false);
   default:
     return true;
   }
