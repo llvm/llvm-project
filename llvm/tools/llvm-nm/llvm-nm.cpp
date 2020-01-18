@@ -707,19 +707,6 @@ static bool symbolIsDefined(const NMSymbol &Sym) {
   return Sym.TypeChar != 'U' && Sym.TypeChar != 'w' && Sym.TypeChar != 'v';
 }
 
-static void writeFileName(raw_ostream &S, StringRef ArchiveName,
-                          StringRef ArchitectureName) {
-  if (!ArchitectureName.empty())
-    S << "(for architecture " << ArchitectureName << "):";
-  if (OutputFormat == posix && !ArchiveName.empty())
-    S << ArchiveName << "[" << CurrentFilename << "]: ";
-  else {
-    if (!ArchiveName.empty())
-      S << ArchiveName << ":";
-    S << CurrentFilename << ": ";
-  }
-}
-
 static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
                                    StringRef ArchiveName,
                                    StringRef ArchitectureName) {
@@ -786,6 +773,24 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
     }
   }
 
+  auto writeFileName = [&](raw_ostream &S) {
+    if (!ArchitectureName.empty())
+      S << "(for architecture " << ArchitectureName << "):";
+    if (OutputFormat == posix && !ArchiveName.empty())
+      S << ArchiveName << "[" << CurrentFilename << "]: ";
+    else {
+      if (!ArchiveName.empty())
+        S << ArchiveName << ":";
+      S << CurrentFilename << ": ";
+    }
+  };
+
+  if (SymbolList.empty()) {
+    if (PrintFileName)
+      writeFileName(errs());
+    errs() << "no symbols\n";
+  }
+
   for (const NMSymbol &S : SymbolList) {
     uint32_t SymFlags;
     std::string Name = S.Name.str();
@@ -806,7 +811,7 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
         (!Global && ExternalOnly) || (Weak && NoWeakSymbols))
       continue;
     if (PrintFileName)
-      writeFileName(outs(), ArchiveName, ArchitectureName);
+      writeFileName(outs());
     if ((JustSymbolName ||
          (UndefinedOnly && MachO && OutputFormat != darwin)) &&
         OutputFormat != posix) {
@@ -1203,7 +1208,7 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
     if (Nsect == 0)
       return;
   }
-  if (!(MachO && DyldInfoOnly)) {
+  if (!MachO || !DyldInfoOnly) {
     for (BasicSymbolRef Sym : Symbols) {
       uint32_t SymFlags = Sym.getFlags();
       if (!DebugSyms && (SymFlags & SymbolRef::SF_FormatSpecific))
@@ -1733,12 +1738,6 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
   }
 
   CurrentFilename = Obj.getFileName();
-
-  if (Symbols.empty() && SymbolList.empty()) {
-    writeFileName(errs(), ArchiveName, ArchitectureName);
-    errs() << "no symbols\n";
-  }
-
   sortAndPrintSymbolList(Obj, printName, ArchiveName, ArchitectureName);
 }
 
