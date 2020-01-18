@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 %s -triple x86_64-pc-win32 -fms-extensions -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple i686-pc-win32 -fms-extensions -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple aarch64-windows -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-pc-win32 -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple i686-pc-win32 -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple aarch64-windows -fms-extensions -emit-llvm -O1 -disable-llvm-passes -o - | FileCheck %s
+// NOTE: we're passing "-O1 -disable-llvm-passes" to avoid adding optnone and noinline everywhere.
 
 void abort(void) __attribute__((noreturn));
 void might_crash(void);
@@ -281,7 +282,6 @@ void finally_with_func() {
 // CHECK-LABEL: define internal void @"?fin$0@0@finally_with_func@@"({{[^)]*}})
 // CHECK: call void @cleanup_with_func(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @"??_C@_0BC@COAGBPGM@finally_with_func?$AA@", i{{32|64}} 0, i{{32|64}} 0))
 
-// Look for the absence of noinline. Enum attributes come first, so check that
-// a string attribute is the first to verify that no enum attributes are
-// present.
-// CHECK: attributes [[finally_attrs]] = { "{{.*}}" }
+// Look for the absence of noinline.  nounwind is expected; any further
+// attributes should be string attributes.
+// CHECK: attributes [[finally_attrs]] = { nounwind "{{.*}}" }
