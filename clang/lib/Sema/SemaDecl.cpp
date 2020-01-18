@@ -6468,8 +6468,6 @@ static bool shouldConsiderLinkage(const VarDecl *VD) {
     return true;
   if (DC->isRecord())
     return false;
-  if (isa<RequiresExprBodyDecl>(DC))
-    return false;
   llvm_unreachable("Unexpected context");
 }
 

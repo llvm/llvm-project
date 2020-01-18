@@ -46,7 +46,6 @@ add_clang_library(clangAST
   DeclTemplate.cpp
   Expr.cpp
   ExprClassification.cpp
-  ExprConcepts.cpp
   ExprConstant.cpp
   ExprCXX.cpp
   ExprObjC.cpp
