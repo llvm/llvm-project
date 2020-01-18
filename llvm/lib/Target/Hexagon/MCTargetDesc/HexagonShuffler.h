@@ -67,7 +67,6 @@ public:
 class HexagonCVIResource : public HexagonResource {
 public:
   using UnitsAndLanes = std::pair<unsigned, unsigned>;
-  using TypeUnitsAndLanes = DenseMap<unsigned, UnitsAndLanes>;
 
 private:
   // Available HVX slots.
@@ -92,10 +91,9 @@ private:
   void setStore(bool f = true) { Store = f; }
 
 public:
-  HexagonCVIResource(TypeUnitsAndLanes *TUL, MCInstrInfo const &MCII,
+  HexagonCVIResource(MCInstrInfo const &MCII,
+                     MCSubtargetInfo const &STI,
                      unsigned s, MCInst const *id);
-
-  static void SetupTUL(TypeUnitsAndLanes *TUL, StringRef CPU);
 
   bool isValid() const { return Valid; }
   unsigned getLanes() const { return Lanes; }
@@ -113,10 +111,10 @@ class HexagonInstr {
   HexagonCVIResource CVI;
 
 public:
-  HexagonInstr(HexagonCVIResource::TypeUnitsAndLanes *T,
-               MCInstrInfo const &MCII, MCInst const *id,
+  HexagonInstr(MCInstrInfo const &MCII,
+               MCSubtargetInfo const &STI, MCInst const *id,
                MCInst const *Extender, unsigned s)
-      : ID(id), Extender(Extender), Core(s), CVI(T, MCII, s, id) {}
+      : ID(id), Extender(Extender), Core(s), CVI(MCII, STI, s, id){};
 
   MCInst const &getDesc() const { return *ID; }
   MCInst const *getExtender() const { return Extender; }
@@ -166,8 +164,6 @@ class HexagonShuffler {
   };
   // Insn handles in a bundle.
   HexagonPacket Packet;
-
-  HexagonCVIResource::TypeUnitsAndLanes TUL;
 
 protected:
   MCContext &Context;
