@@ -202,6 +202,7 @@ class Configuration(object):
                 te = ValgrindExecutor(self.lit_config.valgrindArgs, te)
 
         te.target_info = self.target_info
+        self.target_info.executor = te
 
         self.executor = te
 
