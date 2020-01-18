@@ -408,6 +408,14 @@ static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
 
   assert(absVal && relE);
 
+  // Allow R_PLT_PC (optimized to R_PC here) to a hidden undefined weak symbol
+  // in PIC mode. This is a little strange, but it allows us to link function
+  // calls to such symbols (e.g. glibc/stdlib/exit.c:__run_exit_handlers).
+  // Normally such a call will be guarded with a comparison, which will load a
+  // zero from the GOT.
+  if (sym.isUndefWeak())
+    return true;
+
   // We set the final symbols values for linker script defined symbols later.
   // They always can be computed as a link time constant.
   if (sym.scriptDefined)
