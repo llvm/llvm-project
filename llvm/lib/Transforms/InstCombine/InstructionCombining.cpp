@@ -856,6 +856,23 @@ Value *InstCombiner::dyn_castNegVal(Value *V) const {
   return nullptr;
 }
 
+/// Get negated V (that is 0-V) without increasing instruction count,
+/// assuming that the original V will become unused.
+Value *InstCombiner::freelyNegateValue(Value *V) {
+  if (Value *NegV = dyn_castNegVal(V))
+    return NegV;
+
+  if (!V->hasOneUse())
+    return nullptr;
+
+  Value *A, *B;
+  // 0-(A-B)  =>  B-A
+  if (match(V, m_Sub(m_Value(A), m_Value(B))))
+    return Builder.CreateSub(B, A);
+
+  return nullptr;
+}
+
 static Value *foldOperationIntoSelectOperand(Instruction &I, Value *SO,
                                              InstCombiner::BuilderTy &Builder) {
   if (auto *Cast = dyn_cast<CastInst>(&I))
