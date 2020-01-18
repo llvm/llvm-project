@@ -856,6 +856,15 @@ void BranchProbabilityInfo::releaseMemory() {
   Probs.clear();
 }
 
+bool BranchProbabilityInfo::invalidate(Function &, const PreservedAnalyses &PA,
+                                       FunctionAnalysisManager::Invalidator &) {
+  // Check whether the analysis, all analyses on functions, or the function's
+  // CFG have been preserved.
+  auto PAC = PA.getChecker<BranchProbabilityAnalysis>();
+  return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>() ||
+           PAC.preservedSet<CFGAnalyses>());
+}
+
 void BranchProbabilityInfo::print(raw_ostream &OS) const {
   OS << "---- Branch Probabilities ----\n";
   // We print the probabilities from the last function the analysis ran over,
