@@ -34,7 +34,7 @@ namespace edsc {
 struct IndexHandle : public ValueHandle {
   explicit IndexHandle()
       : ValueHandle(ScopedContext::getBuilder().getIndexType()) {}
-  explicit IndexHandle(index_t v) : ValueHandle(v) {}
+  explicit IndexHandle(index_type v) : ValueHandle(v) {}
   explicit IndexHandle(Value v) : ValueHandle(v) {
     assert(v.getType() == ScopedContext::getBuilder().getIndexType() &&
            "Expected index type");
@@ -96,7 +96,7 @@ public:
   ValueHandleArray(ArrayRef<IndexHandle> vals) {
     values.append(vals.begin(), vals.end());
   }
-  ValueHandleArray(ArrayRef<index_t> vals) {
+  ValueHandleArray(ArrayRef<index_type> vals) {
     SmallVector<IndexHandle, 8> tmp(vals.begin(), vals.end());
     values.append(tmp.begin(), tmp.end());
   }

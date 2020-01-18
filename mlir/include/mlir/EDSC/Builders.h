@@ -24,8 +24,8 @@ namespace mlir {
 
 namespace edsc {
 
-struct index_t {
-  explicit index_t(int64_t v) : v(v) {}
+struct index_type {
+  explicit index_type(int64_t v) : v(v) {}
   explicit operator int64_t() { return v; }
   int64_t v;
 };
@@ -310,7 +310,7 @@ public:
   /// This implicit constructor is provided to each build an eager Value for a
   /// constant at the current insertion point in the IR. An implicit constructor
   /// allows idiomatic expressions mixing ValueHandle and literals.
-  ValueHandle(index_t cst);
+  ValueHandle(index_type cst);
 
   /// ValueHandle is a value type, use the default copy constructor.
   ValueHandle(const ValueHandle &other) = default;
