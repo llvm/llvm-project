@@ -6612,7 +6612,7 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
 /// [C++11] attribute-specifier-seq parameter-declaration
 ///
 void Parser::ParseParameterDeclarationClause(
-       DeclaratorContext DeclaratorContext,
+       DeclaratorContext DeclaratorCtx,
        ParsedAttributes &FirstArgAttrs,
        SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
        SourceLocation &EllipsisLoc) {
@@ -6661,9 +6661,9 @@ void Parser::ParseParameterDeclarationClause(
     // "LambdaExprParameterContext", because we must accept either
     // 'declarator' or 'abstract-declarator' here.
     Declarator ParmDeclarator(
-        DS, DeclaratorContext == DeclaratorContext::RequiresExprContext
+        DS, DeclaratorCtx == DeclaratorContext::RequiresExprContext
                 ? DeclaratorContext::RequiresExprContext
-                : DeclaratorContext == DeclaratorContext::LambdaExprContext
+                : DeclaratorCtx == DeclaratorContext::LambdaExprContext
                       ? DeclaratorContext::LambdaExprParameterContext
                       : DeclaratorContext::PrototypeContext);
     ParseDeclarator(ParmDeclarator);
@@ -6719,7 +6719,7 @@ void Parser::ParseParameterDeclarationClause(
         SourceLocation EqualLoc = Tok.getLocation();
 
         // Parse the default argument
-        if (DeclaratorContext == DeclaratorContext::MemberContext) {
+        if (DeclaratorCtx == DeclaratorContext::MemberContext) {
           // If we're inside a class definition, cache the tokens
           // corresponding to the default argument. We'll actually parse
           // them when we see the end of the class definition.
