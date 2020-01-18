@@ -14,6 +14,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Identifier.h"
 #include "mlir/IR/StandardTypes.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -56,17 +57,17 @@ ArrayRef<Extension> spirv::getImpliedExtensions(Version version) {
   default:
     return {};
   case Version::V_1_3: {
-    static Extension exts[] = {V_1_3_IMPLIED_EXTS};
-    return exts;
+    static const Extension exts[] = {V_1_3_IMPLIED_EXTS};
+    return ArrayRef<Extension>(exts, llvm::array_lengthof(exts));
   }
   case Version::V_1_4: {
-    static Extension exts[] = {V_1_3_IMPLIED_EXTS, V_1_4_IMPLIED_EXTS};
-    return exts;
+    static const Extension exts[] = {V_1_3_IMPLIED_EXTS, V_1_4_IMPLIED_EXTS};
+    return ArrayRef<Extension>(exts, llvm::array_lengthof(exts));
   }
   case Version::V_1_5: {
-    static Extension exts[] = {V_1_3_IMPLIED_EXTS, V_1_4_IMPLIED_EXTS,
-                               V_1_5_IMPLIED_EXTS};
-    return exts;
+    static const Extension exts[] = {V_1_3_IMPLIED_EXTS, V_1_4_IMPLIED_EXTS,
+                                     V_1_5_IMPLIED_EXTS};
+    return ArrayRef<Extension>(exts, llvm::array_lengthof(exts));
   }
   }
 
