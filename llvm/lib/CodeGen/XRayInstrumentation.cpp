@@ -212,43 +212,47 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
     return false;
   }
 
-  // First, insert an PATCHABLE_FUNCTION_ENTER as the first instruction of the
-  // MachineFunction.
-  BuildMI(FirstMBB, FirstMI, FirstMI.getDebugLoc(),
-          TII->get(TargetOpcode::PATCHABLE_FUNCTION_ENTER));
+  if (!F.hasFnAttribute("xray-skip-entry")) {
+    // First, insert an PATCHABLE_FUNCTION_ENTER as the first instruction of the
+    // MachineFunction.
+    BuildMI(FirstMBB, FirstMI, FirstMI.getDebugLoc(),
+            TII->get(TargetOpcode::PATCHABLE_FUNCTION_ENTER));
+  }
 
-  switch (MF.getTarget().getTargetTriple().getArch()) {
-  case Triple::ArchType::arm:
-  case Triple::ArchType::thumb:
-  case Triple::ArchType::aarch64:
-  case Triple::ArchType::mips:
-  case Triple::ArchType::mipsel:
-  case Triple::ArchType::mips64:
-  case Triple::ArchType::mips64el: {
-    // For the architectures which don't have a single return instruction
-    InstrumentationOptions op;
-    op.HandleTailcall = false;
-    op.HandleAllReturns = true;
-    prependRetWithPatchableExit(MF, TII, op);
-    break;
-  }
-  case Triple::ArchType::ppc64le: {
-    // PPC has conditional returns. Turn them into branch and plain returns.
-    InstrumentationOptions op;
-    op.HandleTailcall = false;
-    op.HandleAllReturns = true;
-    replaceRetWithPatchableRet(MF, TII, op);
-    break;
-  }
-  default: {
-    // For the architectures that have a single return instruction (such as
-    //   RETQ on x86_64).
-    InstrumentationOptions op;
-    op.HandleTailcall = true;
-    op.HandleAllReturns = false;
-    replaceRetWithPatchableRet(MF, TII, op);
-    break;
-  }
+  if (!F.hasFnAttribute("xray-skip-exit")) {
+    switch (MF.getTarget().getTargetTriple().getArch()) {
+    case Triple::ArchType::arm:
+    case Triple::ArchType::thumb:
+    case Triple::ArchType::aarch64:
+    case Triple::ArchType::mips:
+    case Triple::ArchType::mipsel:
+    case Triple::ArchType::mips64:
+    case Triple::ArchType::mips64el: {
+      // For the architectures which don't have a single return instruction
+      InstrumentationOptions op;
+      op.HandleTailcall = false;
+      op.HandleAllReturns = true;
+      prependRetWithPatchableExit(MF, TII, op);
+      break;
+    }
+    case Triple::ArchType::ppc64le: {
+      // PPC has conditional returns. Turn them into branch and plain returns.
+      InstrumentationOptions op;
+      op.HandleTailcall = false;
+      op.HandleAllReturns = true;
+      replaceRetWithPatchableRet(MF, TII, op);
+      break;
+    }
+    default: {
+      // For the architectures that have a single return instruction (such as
+      //   RETQ on x86_64).
+      InstrumentationOptions op;
+      op.HandleTailcall = true;
+      op.HandleAllReturns = false;
+      replaceRetWithPatchableRet(MF, TII, op);
+      break;
+    }
+    }
   }
   return true;
 }

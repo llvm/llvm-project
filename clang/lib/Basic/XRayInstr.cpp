@@ -16,13 +16,17 @@
 namespace clang {
 
 XRayInstrMask parseXRayInstrValue(StringRef Value) {
-  XRayInstrMask ParsedKind = llvm::StringSwitch<XRayInstrMask>(Value)
-                                 .Case("all", XRayInstrKind::All)
-                                 .Case("custom", XRayInstrKind::Custom)
-                                 .Case("function", XRayInstrKind::Function)
-                                 .Case("typed", XRayInstrKind::Typed)
-                                 .Case("none", XRayInstrKind::None)
-                                 .Default(XRayInstrKind::None);
+  XRayInstrMask ParsedKind =
+      llvm::StringSwitch<XRayInstrMask>(Value)
+          .Case("all", XRayInstrKind::All)
+          .Case("custom", XRayInstrKind::Custom)
+          .Case("function",
+                XRayInstrKind::FunctionEntry | XRayInstrKind::FunctionExit)
+          .Case("function-entry", XRayInstrKind::FunctionEntry)
+          .Case("function-exit", XRayInstrKind::FunctionExit)
+          .Case("typed", XRayInstrKind::Typed)
+          .Case("none", XRayInstrKind::None)
+          .Default(XRayInstrKind::None);
   return ParsedKind;
 }
 
