@@ -172,6 +172,18 @@ public:
   bool useHVXOps() const {
     return HexagonHVXVersion > Hexagon::ArchEnum::NoArch;
   }
+  bool useHVXV60Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V60;
+  }
+  bool useHVXV62Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V62;
+  }
+  bool useHVXV65Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V65;
+  }
+  bool useHVXV66Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V66;
+  }
   bool useHVX128BOps() const { return useHVXOps() && UseHVX128BOps; }
   bool useHVX64BOps() const { return useHVXOps() && UseHVX64BOps; }
 

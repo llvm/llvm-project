@@ -85,13 +85,13 @@ def UseHVX128B         : Predicate<"HST->useHVX128BOps()">,
                          AssemblerPredicate<"ExtensionHVX128B">;
 def UseHVX             : Predicate<"HST->useHVXOps()">,
                          AssemblerPredicate<"ExtensionHVXV60">;
-def UseHVXV60          : Predicate<"HST->useHVXOps()">,
+def UseHVXV60          : Predicate<"HST->useHVXV60Ops()">,
                          AssemblerPredicate<"ExtensionHVXV60">;
-def UseHVXV62          : Predicate<"HST->useHVXOps()">,
+def UseHVXV62          : Predicate<"HST->useHVXV62Ops()">,
                          AssemblerPredicate<"ExtensionHVXV62">;
-def UseHVXV65          : Predicate<"HST->useHVXOps()">,
+def UseHVXV65          : Predicate<"HST->useHVXV65Ops()">,
                          AssemblerPredicate<"ExtensionHVXV65">;
-def UseHVXV66          : Predicate<"HST->useHVXOps()">,
+def UseHVXV66          : Predicate<"HST->useHVXV66Ops()">,
                          AssemblerPredicate<"ExtensionHVXV66">;
 def UseZReg            : Predicate<"HST->useZRegOps()">,
                          AssemblerPredicate<"ExtensionZReg">;
