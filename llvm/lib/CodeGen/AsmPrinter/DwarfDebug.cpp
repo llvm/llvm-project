@@ -836,9 +836,6 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   NewCU.addUInt(Die, dwarf::DW_AT_language, dwarf::DW_FORM_data2,
                 DIUnit->getSourceLanguage());
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
-  StringRef SysRoot = DIUnit->getSysRoot();
-  if (!SysRoot.empty())
-    NewCU.addString(Die, dwarf::DW_AT_LLVM_sysroot, SysRoot);
 
   // Add DW_str_offsets_base to the unit DIE, except for split units.
   if (useSegmentedStringOffsetsTable() && !useSplitDwarf())
@@ -851,6 +848,7 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     // skeleton CU and so we don't need to duplicate it here.
     if (!CompilationDir.empty())
       NewCU.addString(Die, dwarf::DW_AT_comp_dir, CompilationDir);
+
     addGnuPubAttributes(NewCU, Die);
   }
 
@@ -2824,6 +2822,7 @@ void DwarfDebug::initSkeletonUnit(const DwarfUnit &U, DIE &Die,
 
   if (!CompilationDir.empty())
     NewU->addString(Die, dwarf::DW_AT_comp_dir, CompilationDir);
+
   addGnuPubAttributes(*NewU, Die);
 
   SkeletonHolder.addUnit(std::move(NewU));
