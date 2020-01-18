@@ -1,3 +1,4 @@
+// REQUIRES: x86-registered-target
 // RUN: %clang -cc1 -fvisibility default -DSTORAGE="extern" -o - -emit-interface-stubs -std=c99 -xc %s | \
 // RUN: FileCheck -check-prefix=CHECK-EXTERN %s
 
