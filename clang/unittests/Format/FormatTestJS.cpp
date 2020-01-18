@@ -358,6 +358,22 @@ TEST_F(FormatTestJS, ReservedWordsMethods) {
       "    x();\n"
       "  }\n"
       "}\n");
+  verifyFormat("class KeywordNamedMethods {\n"
+               "  do() {\n"
+               "  }\n"
+               "  for() {\n"
+               "  }\n"
+               "  while() {\n"
+               "  }\n"
+               "  if() {\n"
+               "  }\n"
+               "  else() {\n"
+               "  }\n"
+               "  try() {\n"
+               "  }\n"
+               "  catch() {\n"
+               "  }\n"
+               "}\n");
 }
 
 TEST_F(FormatTestJS, ReservedWordsParenthesized) {
