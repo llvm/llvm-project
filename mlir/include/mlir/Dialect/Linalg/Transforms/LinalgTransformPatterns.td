@@ -86,10 +86,11 @@ class LinalgOpToAffineLoops<string OpType> : NativeCodeCall<
 //===----------------------------------------------------------------------===//
 // Linalg to vector patterns precondition and DRR.
 //===----------------------------------------------------------------------===//
-def PreconditionVectorizeGenericLinalgOp : CPred<
-  "succeeded(vectorizeGenericLinalgOpPrecondition(op))">;
-def VectorizeGenericLinalgOp : NativeCodeCall<
-  "vectorizeGenericLinalgOp($_builder, op)">;
+def PreconditionVectorizeLinalgOp : CPred<
+  "succeeded(vectorizeLinalgOpPrecondition(op))">;
+def VectorizeLinalgOp : NativeCodeCall<
+  "vectorizeLinalgOp($_builder, op)">;
+
 
 //===----------------------------------------------------------------------===//
 // Linalg generic permutation patterns precondition and DRR.

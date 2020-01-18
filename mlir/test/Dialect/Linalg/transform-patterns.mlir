@@ -173,7 +173,7 @@ func @fusion_test(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
     affine_map<(m, n, k) -> (m, n)>
   ],
   iterator_types = ["parallel", "parallel", "reduction"],
-  __internal_linalg_transform__ = "_marked_matmul_"
+  __internal_linalg_transform__ = "VECTORIZE"
 }
 func @vectorization_test(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
                          %C: memref<8x32xf32>) {
@@ -185,7 +185,6 @@ func @vectorization_test(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
   } : memref<8x16xf32>, memref<16x32xf32>, memref<8x32xf32>
   return
 }
-
 // CHECK-LABEL: func @vectorization_test
 //       CHECK: vector.type_cast %{{.*}} : memref<8x16xf32> to memref<vector<8x16xf32>>
 //       CHECK: load %{{.*}}[] : memref<vector<8x16xf32>>
@@ -195,6 +194,17 @@ func @vectorization_test(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
 //       CHECK: load %{{.*}}[] : memref<vector<8x32xf32>>
 //       CHECK: vector.contract {indexing_maps = [#[[mk]], #[[kn]], #[[mn]]], iterator_types = ["parallel", "parallel", "reduction"]} %{{.*}}, %{{.*}}, %{{.*}} : vector<8x16xf32>, vector<16x32xf32> into vector<8x32xf32>
 //       CHECK: store %{{.*}}, %{{.*}}[] : memref<vector<8x32xf32>>
+
+func @vectorization_test_2(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
+                         %C: memref<8x32xf32>) {
+  linalg.matmul(%A, %B, %C) { __internal_linalg_transform__ = "VECTORIZE"} :
+    memref<8x16xf32>, memref<16x32xf32>, memref<8x32xf32>
+  return
+}
+// CHECK-LABEL: func @vectorization_test_2
+//       CHECK: vector.contract {{.*}} :
+//                vector<8x16xf32>, vector<16x32xf32> into vector<8x32xf32>
+
 func @fma(%a: f32, %b: f32, %c: f32) -> f32 {
           %d = mulf %a, %b: f32
           %e = addf %c, %d: f32
@@ -213,7 +223,6 @@ func @fma(%a: f32, %b: f32, %c: f32) -> f32 {
           library_call = "linalg_matmul",
           iterator_types = ["parallel", "parallel", "reduction"]
         }
-
 func @permute_generic(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
            %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
            %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
