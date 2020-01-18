@@ -464,6 +464,27 @@ void ODRHash::AddSubDecl(const Decl *D) {
   ODRDeclVisitor(ID, *this).Visit(D);
 }
 
+void ODRHash::AddObjCInterfaceDecl(const ObjCInterfaceDecl *IF) {
+  AddDecl(IF);
+
+  auto *SuperClass = IF->getSuperClass();
+  AddBoolean(SuperClass);
+  if (SuperClass)
+    ID.AddInteger(SuperClass->getODRHash());
+  ID.AddInteger(IF->getReferencedProtocols().size());
+
+  // Filter out sub-Decls which will not be processed in order to get an
+  // accurate count of Decl's.
+  llvm::SmallVector<const Decl *, 16> Decls;
+  for (Decl *SubDecl : IF->decls())
+    if (isWhitelistedDecl(SubDecl, IF))
+      Decls.push_back(SubDecl);
+
+  ID.AddInteger(Decls.size());
+  for (auto *SubDecl : Decls)
+    AddSubDecl(SubDecl);
+}
+
 void ODRHash::AddRecordDecl(const RecordDecl *Record) {
   AddDecl(Record);
 

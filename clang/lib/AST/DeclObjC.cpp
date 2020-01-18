@@ -16,6 +16,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/ODRHash.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -769,6 +770,33 @@ ObjCMethodDecl *ObjCInterfaceDecl::lookupPrivateMethod(
   if (!Method && getSuperClass())
     return getSuperClass()->lookupPrivateMethod(Sel, Instance);
   return Method;
+}
+
+unsigned ObjCInterfaceDecl::getODRHash() {
+  assert(hasDefinition() && "ODRHash only for records with definitions");
+
+  // Previously calculated hash is stored in DefinitionData.
+  if (hasODRHash())
+    return data().ODRHash;
+
+  // Only calculate hash on first call of getODRHash per record.
+  class ODRHash Hash;
+  Hash.AddObjCInterfaceDecl(getDefinition());
+  setHasODRHash();
+  data().ODRHash = Hash.CalculateHash();
+
+  return data().ODRHash;
+}
+
+bool ObjCInterfaceDecl::hasODRHash() const {
+  if (!hasDefinition())
+    return false;
+  return data().HasODRHash;
+}
+
+void ObjCInterfaceDecl::setHasODRHash(bool Hash) {
+  assert(hasDefinition() && "Cannot set ODRHash without definition");
+  data().HasODRHash = Hash;
 }
 
 //===----------------------------------------------------------------------===//
