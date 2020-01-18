@@ -9,8 +9,11 @@
 // RUN:   -mode preprocess-minimized-sources -format experimental-full > %t.db
 // RUN: %S/module-deps-to-rsp.py %t.db --module-name=Inferred > %t.inferred.rsp
 // RUN: %S/module-deps-to-rsp.py %t.db --tu-index=0 > %t.tu.rsp
-// RUN: not %clang_cc1 -E %t.dir/modules_cdb_input.cpp -F%S/Inputs/frameworks -fmodules -fimplicit-module-maps @%t.inferred.rsp 2>&1 | grep "'Inferred.h' file not found"
-// RUN: not %clang_cc1 -E %t.dir/modules_cdb_input.cpp -F%S/Inputs/frameworks -fmodules -fimplicit-module-maps @%t.tu.rsp
+// RUN: %clang_cc1 -x objective-c -E %t.dir/modules_cdb_input.cpp \
+// RUN:   -F%S/Inputs/frameworks -fmodules -fimplicit-module-maps \
+// RUN:   @%t.inferred.rsp
+// RUN: %clang_cc1 -x objective-c -E %t.dir/modules_cdb_input.cpp \
+// RUN:   -F%S/Inputs/frameworks -fmodules -fimplicit-module-maps @%t.tu.rsp
 
 #include <Inferred/Inferred.h>
 
