@@ -16,7 +16,7 @@
 // RUN: -emit-interface-stubs -std=c99 -xc %s | \
 // RUN: FileCheck -check-prefix=CHECK-STD %s
 // RUN: %clang -DINLINE=inline -target x86_64-linux-gnu -O0 -o - -c -std=c99 \
-// RUN: -xc %s | llvm-nm - 2>&1 | FileCheck -check-prefix=CHECK-STD %s
+// RUN: -xc %s | llvm-nm - 2>&1 | count 0
 
 // RUN: %clang_cc1 -DINLINE="__attribute__((noinline))" \
 // RUN: -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs -std=c99 -xc %s | \
@@ -29,8 +29,7 @@
 // RUN: -emit-interface-stubs -std=c99 -xc %s | \
 // RUN: FileCheck -check-prefix=CHECK-STATIC %s
 // RUN: %clang -DINLINE="static" -target x86_64-linux-gnu -O0 -o - -c \
-// RUN: -std=c99 -xc %s | llvm-nm - 2>&1 | \
-// RUN: FileCheck -check-prefix=CHECK-STATIC %s
+// RUN:   -std=c99 -xc %s | llvm-nm - 2>&1 | count 0
 
 // CHECK-GNU-DAG: foo
 // CHECK-GNU-DAG: foo.var
