@@ -95,8 +95,20 @@ struct ConvertToAtomCmpExchangeWeak : public RewritePattern {
                                      PatternRewriter &rewriter) const override;
 };
 
+struct ConvertToBitReverse : public RewritePattern {
+  ConvertToBitReverse(MLIRContext *context);
+  PatternMatchResult matchAndRewrite(Operation *op,
+                                     PatternRewriter &rewriter) const override;
+};
+
 struct ConvertToGroupNonUniformBallot : public RewritePattern {
   ConvertToGroupNonUniformBallot(MLIRContext *context);
+  PatternMatchResult matchAndRewrite(Operation *op,
+                                     PatternRewriter &rewriter) const override;
+};
+
+struct ConvertToModule : public RewritePattern {
+  ConvertToModule(MLIRContext *context);
   PatternMatchResult matchAndRewrite(Operation *op,
                                      PatternRewriter &rewriter) const override;
 };
@@ -118,7 +130,8 @@ void ConvertToTargetEnv::runOnFunction() {
   auto target = spirv::SPIRVConversionTarget::get(targetEnv, context);
 
   OwningRewritePatternList patterns;
-  patterns.insert<ConvertToAtomCmpExchangeWeak, ConvertToGroupNonUniformBallot,
+  patterns.insert<ConvertToAtomCmpExchangeWeak, ConvertToBitReverse,
+                  ConvertToGroupNonUniformBallot, ConvertToModule,
                   ConvertToSubgroupBallot>(context);
 
   if (failed(applyPartialConversion(fn, *target, patterns)))
@@ -146,6 +159,20 @@ ConvertToAtomCmpExchangeWeak::matchAndRewrite(Operation *op,
   return matchSuccess();
 }
 
+ConvertToBitReverse::ConvertToBitReverse(MLIRContext *context)
+    : RewritePattern("test.convert_to_bit_reverse_op", {"spv.BitReverse"}, 1,
+                     context) {}
+
+PatternMatchResult
+ConvertToBitReverse::matchAndRewrite(Operation *op,
+                                     PatternRewriter &rewriter) const {
+  Value predicate = op->getOperand(0);
+
+  rewriter.replaceOpWithNewOp<spirv::BitReverseOp>(
+      op, op->getResult(0).getType(), predicate);
+  return matchSuccess();
+}
+
 ConvertToGroupNonUniformBallot::ConvertToGroupNonUniformBallot(
     MLIRContext *context)
     : RewritePattern("test.convert_to_group_non_uniform_ballot_op",
@@ -157,6 +184,18 @@ PatternMatchResult ConvertToGroupNonUniformBallot::matchAndRewrite(
 
   rewriter.replaceOpWithNewOp<spirv::GroupNonUniformBallotOp>(
       op, op->getResult(0).getType(), spirv::Scope::Workgroup, predicate);
+  return matchSuccess();
+}
+
+ConvertToModule::ConvertToModule(MLIRContext *context)
+    : RewritePattern("test.convert_to_module_op", {"spv.module"}, 1, context) {}
+
+PatternMatchResult
+ConvertToModule::matchAndRewrite(Operation *op,
+                                 PatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<spirv::ModuleOp>(
+      op, spirv::AddressingModel::PhysicalStorageBuffer64,
+      spirv::MemoryModel::Vulkan);
   return matchSuccess();
 }
 

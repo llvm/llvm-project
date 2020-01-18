@@ -137,11 +137,14 @@ StringRef tblgen::ConstantAttr::getConstantValue() const {
   return def->getValueAsString("value");
 }
 
-tblgen::EnumAttrCase::EnumAttrCase(const llvm::DefInit *init)
-    : Attribute(init) {
+tblgen::EnumAttrCase::EnumAttrCase(const llvm::Record *record)
+    : Attribute(record) {
   assert(isSubClassOf("EnumAttrCaseInfo") &&
          "must be subclass of TableGen 'EnumAttrInfo' class");
 }
+
+tblgen::EnumAttrCase::EnumAttrCase(const llvm::DefInit *init)
+    : EnumAttrCase(init->getDef()) {}
 
 bool tblgen::EnumAttrCase::isStrCase() const {
   return isSubClassOf("StrEnumAttrCase");
