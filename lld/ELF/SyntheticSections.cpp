@@ -3457,13 +3457,8 @@ ThunkSection::ThunkSection(OutputSection *os, uint64_t off)
   this->outSecOff = off;
 }
 
-// When the errata patching is on, we round the size up to a 4 KiB
-// boundary. This limits the effect that adding Thunks has on the addresses
-// of the program modulo 4 KiB. As the errata patching is sensitive to address
-// modulo 4 KiB this can prevent further patches from being needed due to
-// Thunk insertion.
 size_t ThunkSection::getSize() const {
-  if (config->fixCortexA53Errata843419 || config->fixCortexA8)
+  if (roundUpSizeForErrata)
     return alignTo(size, 4096);
   return size;
 }
