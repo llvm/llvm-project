@@ -83,6 +83,11 @@ cl::opt<bool> DoHashBasedCounterSplit(
     cl::desc("Rename counter variable of a comdat function based on cfg hash"),
     cl::init(true));
 
+cl::opt<bool> RuntimeCounterRelocation(
+    "runtime-counter-relocation",
+    cl::desc("Enable relocating counters at runtime."),
+    cl::init(false));
+
 cl::opt<bool> ValueProfileStaticAlloc(
     "vp-static-alloc",
     cl::desc("Do static counter allocation for value profiler"),
@@ -431,6 +436,13 @@ bool InstrProfiling::lowerIntrinsics(Function *F) {
   return true;
 }
 
+bool InstrProfiling::isRuntimeCounterRelocationEnabled() const {
+  if (RuntimeCounterRelocation.getNumOccurrences() > 0)
+    return RuntimeCounterRelocation;
+
+  return TT.isOSFuchsia();
+}
+
 bool InstrProfiling::isCounterPromotionEnabled() const {
   if (DoCounterPromotion.getNumOccurrences() > 0)
     return DoCounterPromotion;
@@ -640,6 +652,26 @@ void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
   uint64_t Index = Inc->getIndex()->getZExtValue();
   Value *Addr = Builder.CreateConstInBoundsGEP2_64(Counters->getValueType(),
                                                    Counters, 0, Index);
+
+  if (isRuntimeCounterRelocationEnabled()) {
+    Type *Int64Ty = Type::getInt64Ty(M->getContext());
+    Type *Int64PtrTy = Type::getInt64PtrTy(M->getContext());
+    Function *Fn = Inc->getParent()->getParent();
+    Instruction &I = Fn->getEntryBlock().front();
+    LoadInst *LI = dyn_cast<LoadInst>(&I);
+    if (!LI) {
+      IRBuilder<> Builder(&I);
+      Type *Int64Ty = Type::getInt64Ty(M->getContext());
+      GlobalVariable *Bias = M->getGlobalVariable(getInstrProfCounterBiasVarName());
+      if (!Bias)
+        Bias = new GlobalVariable(*M, Int64Ty, false, GlobalValue::LinkOnceODRLinkage,
+                                  Constant::getNullValue(Int64Ty),
+                                  getInstrProfCounterBiasVarName());
+      LI = Builder.CreateLoad(Int64Ty, Bias);
+    }
+    auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), LI);
+    Addr = Builder.CreateIntToPtr(Add, Int64PtrTy);
+  }
 
   if (Options.Atomic || AtomicCounterUpdateAll) {
     Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),

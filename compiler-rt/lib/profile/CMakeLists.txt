@@ -52,6 +52,7 @@ set(PROFILE_SOURCES
   GCDAProfiling.c
   InstrProfiling.c
   InstrProfilingValue.c
+  InstrProfilingBiasVar.c
   InstrProfilingBuffer.c
   InstrProfilingFile.c
   InstrProfilingMerge.c
