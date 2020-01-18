@@ -1688,6 +1688,21 @@ namespace llvm {
     }
   }
 
+  /// Similar to unpacklo/unpackhi, but without the 128-bit lane limitation
+  /// imposed by AVX and specific to the unary pattern. Example:
+  /// v8iX Lo --> <0, 0, 1, 1, 2, 2, 3, 3>
+  /// v8iX Hi --> <4, 4, 5, 5, 6, 6, 7, 7>
+  template <typename T = int>
+  void createSplat2ShuffleMask(MVT VT, SmallVectorImpl<T> &Mask, bool Lo) {
+    assert(Mask.empty() && "Expected an empty shuffle mask vector");
+    int NumElts = VT.getVectorNumElements();
+    for (int i = 0; i < NumElts; ++i) {
+      int Pos = i / 2;
+      Pos += (Lo ? 0 : NumElts / 2);
+      Mask.push_back(Pos);
+    }
+  }
+
   /// Helper function to scale a shuffle or target shuffle mask, replacing each
   /// mask index with the scaled sequential indices for an equivalent narrowed
   /// mask. This is the reverse process to canWidenShuffleElements, but can
