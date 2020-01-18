@@ -468,18 +468,6 @@ public:
   /// with the same queried instruction.
   MemDepResult getInvariantGroupPointerDependency(LoadInst *LI, BasicBlock *BB);
 
-  /// Looks at a memory location for a load (specified by MemLocBase, Offs, and
-  /// Size) and compares it against a load.
-  ///
-  /// If the specified load could be safely widened to a larger integer load
-  /// that is 1) still efficient, 2) safe for the target, and 3) would provide
-  /// the specified memory location value, then this function returns the size
-  /// in bytes of the load width to use.  If not, this returns zero.
-  static unsigned getLoadLoadClobberFullWidthSize(const Value *MemLocBase,
-                                                  int64_t MemLocOffs,
-                                                  unsigned MemLocSize,
-                                                  const LoadInst *LI);
-
   /// Release memory in caches.
   void releaseMemory();
 
