@@ -541,6 +541,7 @@ defm : JWriteResFpuPair<WriteFCmp64X,      [JFPU0, JFPA],  2>;
 defm : JWriteResYMMPair<WriteFCmp64Y,      [JFPU0, JFPA],  2, [2,2], 2>;
 defm : X86WriteResPairUnsupported<WriteFCmp64Z>;
 defm : JWriteResFpuPair<WriteFCom,  [JFPU0, JFPA, JALU0],  3>;
+defm : JWriteResFpuPair<WriteFComX, [JFPU0, JFPA, JALU0],  3>;
 defm : JWriteResFpuPair<WriteFMul,         [JFPU1, JFPM],  2>;
 defm : JWriteResFpuPair<WriteFMulX,        [JFPU1, JFPM],  2>;
 defm : JWriteResYMMPair<WriteFMulY,        [JFPU1, JFPM],  2, [2,2], 2>;
