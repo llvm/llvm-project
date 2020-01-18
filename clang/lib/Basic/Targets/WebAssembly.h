@@ -40,6 +40,8 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasTailCall = false;
   bool HasReferenceTypes = false;
 
+  std::string ABI;
+
 public:
   explicit WebAssemblyTargetInfo(const llvm::Triple &T, const TargetOptions &)
       : TargetInfo(T) {
@@ -58,6 +60,9 @@ public:
     PtrDiffType = SignedLong;
     IntPtrType = SignedLong;
   }
+
+  StringRef getABI() const override;
+  bool setABI(const std::string &Name) override;
 
 protected:
   void getTargetDefines(const LangOptions &Opts,

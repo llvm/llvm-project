@@ -33,6 +33,16 @@ const Builtin::Info WebAssemblyTargetInfo::BuiltinInfo[] = {
 static constexpr llvm::StringLiteral ValidCPUNames[] = {
     {"mvp"}, {"bleeding-edge"}, {"generic"}};
 
+StringRef WebAssemblyTargetInfo::getABI() const { return ABI; }
+
+bool WebAssemblyTargetInfo::setABI(const std::string &Name) {
+  if (Name != "mvp" && Name != "experimental-mv")
+    return false;
+
+  ABI = Name;
+  return true;
+}
+
 bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("simd128", SIMDLevel >= SIMD128)
