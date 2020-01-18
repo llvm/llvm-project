@@ -31,6 +31,10 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 
+/// Builds a constant of a sequential LLVM type `type`, potentially containing
+/// other sequential types recursively, from the individual constant values
+/// provided in `constants`. `shape` contains the number of elements in nested
+/// sequential types. Reports errors at `loc` and returns nullptr on error.
 static llvm::Constant *
 buildSequentialConstant(ArrayRef<llvm::Constant *> &constants,
                         ArrayRef<int64_t> shape, llvm::Type *type,
@@ -62,6 +66,7 @@ buildSequentialConstant(ArrayRef<llvm::Constant *> &constants,
       llvm::ArrayType::get(elementType, shape.front()), nested);
 }
 
+/// Returns the first non-sequential type netsed in sequential types.
 static llvm::Type *getInnermostElementType(llvm::Type *type) {
   while (isa<llvm::SequentialType>(type))
     type = type->getSequentialElementType();
