@@ -374,5 +374,14 @@ TEST_F(FormatTestCSharp, CSharpSpaceBefore) {
                Style);
 }
 
+TEST_F(FormatTestCSharp, CSharpSpaceAfterCStyleCast) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat("(int)x / y;", Style);
+
+  Style.SpaceAfterCStyleCast = true;
+  verifyFormat("(int) x / y;", Style);
+}
+
 } // namespace format
 } // end namespace clang
