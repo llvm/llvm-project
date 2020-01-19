@@ -1182,7 +1182,7 @@ def PATCHABLE_FUNCTION_ENTER : StandardPseudoInstruction {
   let InOperandList = (ins);
   let AsmString = "# XRay Function Enter.";
   let usesCustomInserter = 1;
-  let hasSideEffects = 0;
+  let hasSideEffects = 1;
 }
 def PATCHABLE_RET : StandardPseudoInstruction {
   let OutOperandList = (outs);
@@ -1198,7 +1198,7 @@ def PATCHABLE_FUNCTION_EXIT : StandardPseudoInstruction {
   let InOperandList = (ins);
   let AsmString = "# XRay Function Exit.";
   let usesCustomInserter = 1;
-  let hasSideEffects = 0; // FIXME: is this correct?
+  let hasSideEffects = 1;
   let isReturn = 0; // Original return instruction will follow
 }
 def PATCHABLE_TAIL_CALL : StandardPseudoInstruction {
