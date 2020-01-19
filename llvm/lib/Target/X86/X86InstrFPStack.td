@@ -29,16 +29,11 @@ def SDTX86CwdStore  : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 def X86fld          : SDNode<"X86ISD::FLD", SDTX86Fld,
                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def X86fst          : SDNode<"X86ISD::FST", SDTX86Fst,
-                             [SDNPHasChain, SDNPOptInGlue, SDNPMayStore,
-                              SDNPMemOperand]>;
+                             [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def X86fild         : SDNode<"X86ISD::FILD", SDTX86Fild,
                              [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def X86fildflag     : SDNode<"X86ISD::FILD_FLAG", SDTX86Fild,
-                             [SDNPHasChain, SDNPOutGlue, SDNPMayLoad,
-                              SDNPMemOperand]>;
 def X86fist         : SDNode<"X86ISD::FIST", SDTX86Fist,
-                             [SDNPHasChain, SDNPOptInGlue, SDNPMayStore,
-                              SDNPMemOperand]>;
+                             [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def X86fp_stsw      : SDNode<"X86ISD::FNSTSW16r", SDTX86Fnstsw>;
 def X86fp_to_mem : SDNode<"X86ISD::FP_TO_INT_IN_MEM", SDTX86Fst,
                           [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
@@ -76,10 +71,6 @@ def X86fild32 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
 }]>;
 def X86fild64 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
-
-def X86fildflag64 : PatFrag<(ops node:$ptr), (X86fildflag node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
 }]>;
 
@@ -800,11 +791,7 @@ def : Pat<(f64 fpimmneg1), (CHS_Fp64 (LD_Fp164))>, Requires<[FPStackf64]>;
 def : Pat<(f80 fpimmneg0), (CHS_Fp80 (LD_Fp080))>;
 def : Pat<(f80 fpimmneg1), (CHS_Fp80 (LD_Fp180))>;
 
-// Used to conv. i64 to f64 since there isn't a SSE version.
-def : Pat<(X86fildflag64 addr:$src), (ILD_Fp64m64 addr:$src)>;
-
 // Used to conv. between f80 and i64 for i64 atomic loads.
-def : Pat<(X86fildflag64 addr:$src), (ILD_Fp64m80 addr:$src)>;
 def : Pat<(X86fist64 RFP80:$src, addr:$op), (IST_Fp64m80 addr:$op, RFP80:$src)>;
 
 // FP extensions map onto simple pseudo-value conversions if they are to/from
