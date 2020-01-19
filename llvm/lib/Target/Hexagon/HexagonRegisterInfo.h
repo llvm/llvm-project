@@ -56,10 +56,6 @@ public:
   /// Returns true if the frame pointer is valid.
   bool useFPForScavengingIndex(const MachineFunction &MF) const override;
 
-  bool trackLivenessAfterRegAlloc(const MachineFunction &MF) const override {
-    return true;
-  }
-
   bool shouldCoalesce(MachineInstr *MI, const TargetRegisterClass *SrcRC,
         unsigned SubReg, const TargetRegisterClass *DstRC, unsigned DstSubReg,
         const TargetRegisterClass *NewRC, LiveIntervals &LIS) const override;
