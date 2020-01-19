@@ -27,7 +27,7 @@ on every edge:
 
 Every edge will have its own `guard_variable` (uint32_t).
 
-The compler will also insert calls to a module constructor:
+The compiler will also insert calls to a module constructor:
 
 .. code-block:: c++
 
@@ -376,7 +376,7 @@ to produce a ``.symcov`` file first:
 
     sancov -symbolize my_program.123.sancov my_program > my_program.123.symcov
 
-The ``.symcov`` file can be browsed overlayed over the source code by
+The ``.symcov`` file can be browsed overlaid over the source code by
 running ``tools/sancov/coverage-report-server.py`` script that will start
 an HTTP server.
 
