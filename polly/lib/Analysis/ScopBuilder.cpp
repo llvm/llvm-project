@@ -96,6 +96,11 @@ static cl::opt<bool> PollyAllowDereferenceOfAllFunctionParams(
         " their loads. "),
     cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
+static cl::opt<bool>
+    PollyIgnoreInbounds("polly-ignore-inbounds",
+                        cl::desc("Do not take inbounds assumptions at all"),
+                        cl::Hidden, cl::init(false), cl::cat(PollyCategory));
+
 static cl::opt<unsigned> RunTimeChecksMaxArraysPerGroup(
     "polly-rtc-max-arrays-per-group",
     cl::desc("The maximal number of arrays to compare in each alias group."),
@@ -344,7 +349,7 @@ __isl_give isl_pw_aff *
 ScopBuilder::getPwAff(BasicBlock *BB,
                       DenseMap<BasicBlock *, isl::set> &InvalidDomainMap,
                       const SCEV *E, bool NonNegative) {
-  PWACtx PWAC = scop->getPwAff(E, BB, NonNegative);
+  PWACtx PWAC = scop->getPwAff(E, BB, NonNegative, &RecordedAssumptions);
   InvalidDomainMap[BB] = InvalidDomainMap[BB].unite(PWAC.second);
   return PWAC.first.release();
 }
@@ -796,9 +801,8 @@ bool ScopBuilder::addLoopBoundsToHeaderDomain(
     return true;
 
   isl::set UnboundedCtx = Parts.first.params();
-  scop->recordAssumption(INFINITELOOP, UnboundedCtx,
-                         HeaderBB->getTerminator()->getDebugLoc(),
-                         AS_RESTRICTION);
+  recordAssumption(&RecordedAssumptions, INFINITELOOP, UnboundedCtx,
+                   HeaderBB->getTerminator()->getDebugLoc(), AS_RESTRICTION);
   return true;
 }
 
@@ -1019,9 +1023,8 @@ bool ScopBuilder::propagateInvalidStmtDomains(
     } else {
       InvalidDomain = Domain;
       isl::set DomPar = Domain.params();
-      scop->recordAssumption(ERRORBLOCK, DomPar,
-                             BB->getTerminator()->getDebugLoc(),
-                             AS_RESTRICTION);
+      recordAssumption(&RecordedAssumptions, ERRORBLOCK, DomPar,
+                       BB->getTerminator()->getDebugLoc(), AS_RESTRICTION);
       Domain = isl::set::empty(Domain.get_space());
     }
 
@@ -1488,7 +1491,7 @@ Value *ScopBuilder::findFADAllocationInvisible(MemAccInst Inst) {
 }
 
 void ScopBuilder::addRecordedAssumptions() {
-  for (auto &AS : llvm::reverse(scop->recorded_assumptions())) {
+  for (auto &AS : llvm::reverse(RecordedAssumptions)) {
 
     if (!AS.BB) {
       scop->addAssumption(AS.Kind, AS.Set, AS.Loc, AS.Sign,
@@ -1518,7 +1521,6 @@ void ScopBuilder::addRecordedAssumptions() {
 
     scop->addAssumption(AS.Kind, isl::manage(S), AS.Loc, AS_RESTRICTION, AS.BB);
   }
-  scop->clearRecordedAssumptions();
 }
 
 void ScopBuilder::addUserAssumptions(
@@ -2502,9 +2504,17 @@ void ScopBuilder::foldAccessRelations() {
 }
 
 void ScopBuilder::assumeNoOutOfBounds() {
+  if (PollyIgnoreInbounds)
+    return;
   for (auto &Stmt : *scop)
-    for (auto &Access : Stmt)
-      Access->assumeNoOutOfBound();
+    for (auto &Access : Stmt) {
+      isl::set Outside = Access->assumeNoOutOfBound();
+      const auto &Loc = Access->getAccessInstruction()
+                            ? Access->getAccessInstruction()->getDebugLoc()
+                            : DebugLoc();
+      recordAssumption(&RecordedAssumptions, INBOUNDS, Outside, Loc,
+                       AS_ASSUMPTION);
+    }
 }
 
 void ScopBuilder::ensureValueWrite(Instruction *Inst) {
@@ -2959,8 +2969,8 @@ bool ScopBuilder::canAlwaysBeHoisted(MemoryAccess *MA,
   // Even if the statement is not modeled precisely we can hoist the load if it
   // does not involve any parameters that might have been specialized by the
   // statement domain.
-  for (unsigned u = 0, e = MA->getNumSubscripts(); u < e; u++)
-    if (!isa<SCEVConstant>(MA->getSubscript(u)))
+  for (const SCEV *Subscript : MA->subscripts())
+    if (!isa<SCEVConstant>(Subscript))
       return false;
   return true;
 }
@@ -3214,8 +3224,26 @@ void ScopBuilder::buildAccessRelations(ScopStmt &Stmt) {
     else
       Ty = MemoryKind::Array;
 
+    // Create isl::pw_aff for SCEVs which describe sizes. Collect all
+    // assumptions which are taken. isl::pw_aff objects are cached internally
+    // and they are used later by scop.
+    for (const SCEV *Size : Access->Sizes) {
+      if (!Size)
+        continue;
+      scop->getPwAff(Size, nullptr, false, &RecordedAssumptions);
+    }
     auto *SAI = scop->getOrCreateScopArrayInfo(Access->getOriginalBaseAddr(),
                                                ElementType, Access->Sizes, Ty);
+
+    // Create isl::pw_aff for SCEVs which describe subscripts. Collect all
+    // assumptions which are taken. isl::pw_aff objects are cached internally
+    // and they are used later by scop.
+    for (const SCEV *Subscript : Access->subscripts()) {
+      if (!Access->isAffine() || !Subscript)
+        continue;
+      scop->getPwAff(Subscript, Stmt.getEntryBlock(), false,
+                     &RecordedAssumptions);
+    }
     Access->buildAccessRelation(SAI);
     scop->addAccessData(Access);
   }
@@ -3768,6 +3796,7 @@ ScopBuilder::ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
     InfeasibleScops++;
     Msg = "SCoP ends here but was dismissed.";
     LLVM_DEBUG(dbgs() << "SCoP detected but dismissed\n");
+    RecordedAssumptions.clear();
     scop.reset();
   } else {
     Msg = "SCoP ends here.";
