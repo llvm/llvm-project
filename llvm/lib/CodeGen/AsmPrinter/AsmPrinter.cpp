@@ -715,16 +715,6 @@ void AsmPrinter::EmitFunctionHeader() {
   // their wild and crazy things as required.
   EmitFunctionEntryLabel();
 
-  // If the function had address-taken blocks that got deleted, then we have
-  // references to the dangling symbols.  Emit them at the start of the function
-  // so that we don't get references to undefined symbols.
-  std::vector<MCSymbol*> DeadBlockSyms;
-  MMI->takeDeletedSymbolsForFunction(&F, DeadBlockSyms);
-  for (unsigned i = 0, e = DeadBlockSyms.size(); i != e; ++i) {
-    OutStreamer->AddComment("Address taken block that was later removed");
-    OutStreamer->EmitLabel(DeadBlockSyms[i]);
-  }
-
   if (CurrentFnBegin) {
     if (MAI->useAssignmentForEHBegin()) {
       MCSymbol *CurPos = OutContext.createTempSymbol();
