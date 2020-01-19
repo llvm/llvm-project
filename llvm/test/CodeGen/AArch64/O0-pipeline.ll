@@ -63,14 +63,14 @@
 ; CHECK-NEXT:       AArch64 pseudo instruction expansion pass
 ; CHECK-NEXT:       AArch64 speculation hardening pass
 ; CHECK-NEXT:       Analyze Machine Code For Garbage Collection
+; CHECK-NEXT:       Insert fentry calls
+; CHECK-NEXT:       Insert XRay ops
+; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       AArch64 Branch Targets
 ; CHECK-NEXT:       Branch relaxation pass
 ; CHECK-NEXT:       Contiguously Lay Out Funclets
 ; CHECK-NEXT:       StackMap Liveness Analysis
 ; CHECK-NEXT:       Live DEBUG_VALUE analysis
-; CHECK-NEXT:       Insert fentry calls
-; CHECK-NEXT:       Insert XRay ops
-; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       AArch64 Assembly Printer
