@@ -202,7 +202,7 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   uint64_t BytesEntryValuesCovered = 0;
   auto &FnStats = FnStatMap[FnPrefix];
   bool IsParam = Die.getTag() == dwarf::DW_TAG_formal_parameter;
-  bool IsLocalVar = Die.getTag() == dwarf::DW_TAG_variable;
+  bool IsVariable = Die.getTag() == dwarf::DW_TAG_variable;
 
   if (Die.getTag() == dwarf::DW_TAG_call_site ||
       Die.getTag() == dwarf::DW_TAG_GNU_call_site) {
@@ -216,10 +216,14 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
     return;
   }
 
-  if (!IsParam && !IsLocalVar && Die.getTag() != dwarf::DW_TAG_member) {
+  if (!IsParam && !IsVariable && Die.getTag() != dwarf::DW_TAG_member) {
     // Not a variable or constant member.
     return;
   }
+
+  // Ignore declarations of global variables.
+  if (IsVariable && Die.find(dwarf::DW_AT_declaration))
+    return;
 
   if (Die.findRecursively(dwarf::DW_AT_decl_file) &&
       Die.findRecursively(dwarf::DW_AT_decl_line))
@@ -282,17 +286,17 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
     LocStats.NumVarParam++;
     if (IsParam)
       LocStats.NumParam++;
-    else if (IsLocalVar)
+    else if (IsVariable)
       LocStats.NumVar++;
 
     collectLocStats(BytesCovered, BytesInScope, LocStats.VarParamLocStats,
                     LocStats.ParamLocStats, LocStats.VarLocStats, IsParam,
-                    IsLocalVar);
+                    IsVariable);
     // Non debug entry values coverage statistics.
     collectLocStats(BytesCovered - BytesEntryValuesCovered, BytesInScope,
                     LocStats.VarParamNonEntryValLocStats,
                     LocStats.ParamNonEntryValLocStats,
-                    LocStats.VarNonEntryValLocStats, IsParam, IsLocalVar);
+                    LocStats.VarNonEntryValLocStats, IsParam, IsVariable);
   }
 
   // Collect PC range coverage data.
@@ -314,7 +318,7 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
           std::min(BytesInScope, BytesCovered);
       GlobalStats.ParamScopeBytes += BytesInScope;
       GlobalStats.ParamScopeEntryValueBytesCovered += BytesEntryValuesCovered;
-    } else if (IsLocalVar) {
+    } else if (IsVariable) {
       GlobalStats.VarScopeBytesCovered += std::min(BytesInScope, BytesCovered);
       GlobalStats.VarScopeBytes += BytesInScope;
       GlobalStats.VarScopeEntryValueBytesCovered += BytesEntryValuesCovered;
@@ -334,7 +338,7 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
         FnStats.NumParamSourceLocations++;
       if (HasLoc)
         FnStats.NumParamLocations++;
-    } else if (IsLocalVar) {
+    } else if (IsVariable) {
       FnStats.NumVars++;
       if (HasType)
         FnStats.NumVarTypes++;
