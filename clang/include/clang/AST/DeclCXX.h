@@ -1893,6 +1893,37 @@ public:
   static bool classofKind(Kind K) { return K == CXXDeductionGuide; }
 };
 
+/// \brief Represents the body of a requires-expression.
+///
+/// This decl exists merely to serve as the DeclContext for the local
+/// parameters of the requires expression as well as other declarations inside
+/// it.
+///
+/// \code
+/// template<typename T> requires requires (T t) { {t++} -> regular; }
+/// \endcode
+///
+/// In this example, a RequiresExpr object will be generated for the expression,
+/// and a RequiresExprBodyDecl will be created to hold the parameter t and the
+/// template argument list imposed by the compound requirement.
+class RequiresExprBodyDecl : public Decl, public DeclContext {
+  RequiresExprBodyDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc)
+      : Decl(RequiresExprBody, DC, StartLoc), DeclContext(RequiresExprBody) {}
+
+public:
+  friend class ASTDeclReader;
+  friend class ASTDeclWriter;
+
+  static RequiresExprBodyDecl *Create(ASTContext &C, DeclContext *DC,
+                                      SourceLocation StartLoc);
+
+  static RequiresExprBodyDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+
+  // Implement isa/cast/dyncast/etc.
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == RequiresExprBody; }
+};
+
 /// Represents a static or instance method of a struct/union/class.
 ///
 /// In the terminology of the C++ Standard, these are the (static and
