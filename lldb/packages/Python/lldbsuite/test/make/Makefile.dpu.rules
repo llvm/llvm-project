@@ -41,7 +41,7 @@ CFLAGS ?= -g -O0
 HOST_OBJECT =
 HOST_EXE =
 HOST_LDFLAGS = -L$(UPMEM_HOME)/lib64 -L$(UPMEM_HOME)/lib -ldpu
-HOST_CFLAGS ?= -g -O2
+HOST_CFLAGS ?= -g -O2 --std=c99
 
 #----------------------------------------------------------------------
 # Check if we have any C source files
