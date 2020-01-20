@@ -10145,9 +10145,8 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
 
     SDValue Stores[4];
     for (unsigned Idx = 0; Idx < 4; ++Idx) {
-      SDValue Ex = DAG.getNode(
-          ISD::EXTRACT_VECTOR_ELT, dl, ScalarVT, Value,
-          DAG.getConstant(Idx, dl, getVectorIdxTy(DAG.getDataLayout())));
+      SDValue Ex = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ScalarVT, Value,
+                               DAG.getVectorIdxConstant(Idx, dl));
       SDValue Store;
       if (ScalarVT != ScalarMemVT)
         Store =

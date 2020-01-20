@@ -699,9 +699,8 @@ SDValue R600TargetLowering::vectorToVerticalVector(SelectionDAG &DAG,
   SmallVector<SDValue, 8> Args;
 
   for (unsigned i = 0, e = VecVT.getVectorNumElements(); i != e; ++i) {
-    Args.push_back(DAG.getNode(
-        ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vector,
-        DAG.getConstant(i, DL, getVectorIdxTy(DAG.getDataLayout()))));
+    Args.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vector,
+                               DAG.getVectorIdxConstant(i, DL)));
   }
 
   return DAG.getNode(AMDGPUISD::BUILD_VERTICAL_VECTOR, DL, VecVT, Args);

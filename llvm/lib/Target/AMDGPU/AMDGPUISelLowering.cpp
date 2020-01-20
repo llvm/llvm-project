@@ -1383,12 +1383,11 @@ AMDGPUTargetLowering::splitVector(const SDValue &N, const SDLoc &DL,
                  (HiVT.isVector() ? HiVT.getVectorNumElements() : 1) <=
              N.getValueType().getVectorNumElements() &&
          "More vector elements requested than available!");
-  auto IdxTy = getVectorIdxTy(DAG.getDataLayout());
   SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LoVT, N,
-                           DAG.getConstant(0, DL, IdxTy));
+                           DAG.getVectorIdxConstant(0, DL));
   SDValue Hi = DAG.getNode(
       HiVT.isVector() ? ISD::EXTRACT_SUBVECTOR : ISD::EXTRACT_VECTOR_ELT, DL,
-      HiVT, N, DAG.getConstant(LoVT.getVectorNumElements(), DL, IdxTy));
+      HiVT, N, DAG.getVectorIdxConstant(LoVT.getVectorNumElements(), DL));
   return std::make_pair(Lo, Hi);
 }
 
@@ -1433,18 +1432,17 @@ SDValue AMDGPUTargetLowering::SplitVectorLoad(const SDValue Op,
                      HiPtr, SrcValue.getWithOffset(LoMemVT.getStoreSize()),
                      HiMemVT, HiAlign, Load->getMemOperand()->getFlags());
 
-  auto IdxTy = getVectorIdxTy(DAG.getDataLayout());
   SDValue Join;
   if (LoVT == HiVT) {
     // This is the case that the vector is power of two so was evenly split.
     Join = DAG.getNode(ISD::CONCAT_VECTORS, SL, VT, LoLoad, HiLoad);
   } else {
     Join = DAG.getNode(ISD::INSERT_SUBVECTOR, SL, VT, DAG.getUNDEF(VT), LoLoad,
-                       DAG.getConstant(0, SL, IdxTy));
-    Join = DAG.getNode(HiVT.isVector() ? ISD::INSERT_SUBVECTOR
-                                       : ISD::INSERT_VECTOR_ELT,
-                       SL, VT, Join, HiLoad,
-                       DAG.getConstant(LoVT.getVectorNumElements(), SL, IdxTy));
+                       DAG.getVectorIdxConstant(0, SL));
+    Join = DAG.getNode(
+        HiVT.isVector() ? ISD::INSERT_SUBVECTOR : ISD::INSERT_VECTOR_ELT, SL,
+        VT, Join, HiLoad,
+        DAG.getVectorIdxConstant(LoVT.getVectorNumElements(), SL));
   }
 
   SDValue Ops[] = {Join, DAG.getNode(ISD::TokenFactor, SL, MVT::Other,
@@ -1474,7 +1472,7 @@ SDValue AMDGPUTargetLowering::WidenVectorLoad(SDValue Op,
       WideMemVT, BaseAlign, Load->getMemOperand()->getFlags());
   return DAG.getMergeValues(
       {DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, VT, WideLoad,
-                   DAG.getConstant(0, SL, getVectorIdxTy(DAG.getDataLayout()))),
+                   DAG.getVectorIdxConstant(0, SL)),
        WideLoad.getValue(1)},
       SL);
 }
