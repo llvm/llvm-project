@@ -15,6 +15,8 @@
 
 namespace llvm {
 
+template class BumpPtrAllocatorImpl<>;
+
 namespace detail {
 
 void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t BytesAllocated,
