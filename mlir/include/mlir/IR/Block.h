@@ -87,6 +87,9 @@ public:
   /// Add one argument to the argument list for each type specified in the list.
   iterator_range<args_iterator> addArguments(ArrayRef<Type> types);
 
+  // Add one value to the argument list at the specified position.
+  BlockArgument insertArgument(unsigned index, Type type);
+
   /// Erase the argument at 'index' and remove it from the argument list. If
   /// 'updatePredTerms' is set to true, this argument is also removed from the
   /// terminators of each predecessor to this block.
