@@ -58,11 +58,10 @@ define void @vst2_v8i32(<8 x i32> *%src, <16 x i32> *%dst) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #16]
-; CHECK-NEXT:    add.w r0, r1, #32
 ; CHECK-NEXT:    vst20.32 {q0, q1}, [r1]
-; CHECK-NEXT:    vst21.32 {q0, q1}, [r1]
-; CHECK-NEXT:    vst20.32 {q2, q3}, [r0]
-; CHECK-NEXT:    vst21.32 {q2, q3}, [r0]
+; CHECK-NEXT:    vst21.32 {q0, q1}, [r1]!
+; CHECK-NEXT:    vst20.32 {q2, q3}, [r1]
+; CHECK-NEXT:    vst21.32 {q2, q3}, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <8 x i32>, <8 x i32>* %src, i32 0
@@ -79,21 +78,20 @@ define void @vst2_v16i32(<16 x i32> *%src, <32 x i32> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    vldrw.u32 q7, [r0, #64]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #112]
 ; CHECK-NEXT:    vldrw.u32 q3, [r0, #96]
 ; CHECK-NEXT:    vldrw.u32 q5, [r0, #80]
-; CHECK-NEXT:    vldrw.u32 q7, [r0, #64]
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q6, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q4, [r0, #16]
+; CHECK-NEXT:    vst20.32 {q6, q7}, [r1]
 ; CHECK-NEXT:    add.w r0, r1, #96
 ; CHECK-NEXT:    add.w r2, r1, #64
-; CHECK-NEXT:    add.w r3, r1, #32
-; CHECK-NEXT:    vst20.32 {q6, q7}, [r1]
-; CHECK-NEXT:    vst21.32 {q6, q7}, [r1]
-; CHECK-NEXT:    vst20.32 {q4, q5}, [r3]
-; CHECK-NEXT:    vst21.32 {q4, q5}, [r3]
+; CHECK-NEXT:    vst21.32 {q6, q7}, [r1]!
+; CHECK-NEXT:    vst20.32 {q4, q5}, [r1]
+; CHECK-NEXT:    vst21.32 {q4, q5}, [r1]
 ; CHECK-NEXT:    vst20.32 {q2, q3}, [r2]
 ; CHECK-NEXT:    vst21.32 {q2, q3}, [r2]
 ; CHECK-NEXT:    vst20.32 {q0, q1}, [r0]
@@ -178,11 +176,10 @@ define void @vst2_v16i16(<16 x i16> *%src, <32 x i16> *%dst) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #16]
-; CHECK-NEXT:    add.w r0, r1, #32
 ; CHECK-NEXT:    vst20.16 {q0, q1}, [r1]
-; CHECK-NEXT:    vst21.16 {q0, q1}, [r1]
-; CHECK-NEXT:    vst20.16 {q2, q3}, [r0]
-; CHECK-NEXT:    vst21.16 {q2, q3}, [r0]
+; CHECK-NEXT:    vst21.16 {q0, q1}, [r1]!
+; CHECK-NEXT:    vst20.16 {q2, q3}, [r1]
+; CHECK-NEXT:    vst21.16 {q2, q3}, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <16 x i16>, <16 x i16>* %src, i32 0
@@ -385,11 +382,10 @@ define void @vst2_v8f32(<8 x float> *%src, <16 x float> *%dst) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #16]
-; CHECK-NEXT:    add.w r0, r1, #32
 ; CHECK-NEXT:    vst20.32 {q0, q1}, [r1]
-; CHECK-NEXT:    vst21.32 {q0, q1}, [r1]
-; CHECK-NEXT:    vst20.32 {q2, q3}, [r0]
-; CHECK-NEXT:    vst21.32 {q2, q3}, [r0]
+; CHECK-NEXT:    vst21.32 {q0, q1}, [r1]!
+; CHECK-NEXT:    vst20.32 {q2, q3}, [r1]
+; CHECK-NEXT:    vst21.32 {q2, q3}, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <8 x float>, <8 x float>* %src, i32 0
@@ -406,21 +402,20 @@ define void @vst2_v16f32(<16 x float> *%src, <32 x float> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    vldrw.u32 q7, [r0, #64]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #112]
 ; CHECK-NEXT:    vldrw.u32 q3, [r0, #96]
 ; CHECK-NEXT:    vldrw.u32 q5, [r0, #80]
-; CHECK-NEXT:    vldrw.u32 q7, [r0, #64]
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q6, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q4, [r0, #16]
+; CHECK-NEXT:    vst20.32 {q6, q7}, [r1]
 ; CHECK-NEXT:    add.w r0, r1, #96
 ; CHECK-NEXT:    add.w r2, r1, #64
-; CHECK-NEXT:    add.w r3, r1, #32
-; CHECK-NEXT:    vst20.32 {q6, q7}, [r1]
-; CHECK-NEXT:    vst21.32 {q6, q7}, [r1]
-; CHECK-NEXT:    vst20.32 {q4, q5}, [r3]
-; CHECK-NEXT:    vst21.32 {q4, q5}, [r3]
+; CHECK-NEXT:    vst21.32 {q6, q7}, [r1]!
+; CHECK-NEXT:    vst20.32 {q4, q5}, [r1]
+; CHECK-NEXT:    vst21.32 {q4, q5}, [r1]
 ; CHECK-NEXT:    vst20.32 {q2, q3}, [r2]
 ; CHECK-NEXT:    vst21.32 {q2, q3}, [r2]
 ; CHECK-NEXT:    vst20.32 {q0, q1}, [r0]
@@ -531,15 +526,14 @@ entry:
 define void @vst2_v16f16(<16 x half> *%src, <32 x half> *%dst) {
 ; CHECK-LABEL: vst2_v16f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q3, [r0, #32]
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
+; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    add.w r0, r1, #32
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
 ; CHECK-NEXT:    vst20.16 {q2, q3}, [r1]
-; CHECK-NEXT:    vst21.16 {q2, q3}, [r1]
-; CHECK-NEXT:    vst20.16 {q0, q1}, [r0]
-; CHECK-NEXT:    vst21.16 {q0, q1}, [r0]
+; CHECK-NEXT:    vst21.16 {q2, q3}, [r1]!
+; CHECK-NEXT:    vst20.16 {q0, q1}, [r1]
+; CHECK-NEXT:    vst21.16 {q0, q1}, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <16 x half>, <16 x half>* %src, i32 0

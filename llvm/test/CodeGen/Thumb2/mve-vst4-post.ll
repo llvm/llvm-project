@@ -10,11 +10,11 @@ define <16 x i32> *@vst4_v4i32(<4 x i32> *%src, <16 x i32> *%dst) {
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    add.w r0, r1, #64
 ; CHECK-NEXT:    vst40.32 {q0, q1, q2, q3}, [r1]
 ; CHECK-NEXT:    vst41.32 {q0, q1, q2, q3}, [r1]
 ; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r1]
-; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r1]!
+; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <4 x i32>, <4 x i32>* %src, i32 0
@@ -42,11 +42,11 @@ define <32 x i16> *@vst4_v8i16(<8 x i16> *%src, <32 x i16> *%dst) {
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    add.w r0, r1, #64
 ; CHECK-NEXT:    vst40.16 {q0, q1, q2, q3}, [r1]
 ; CHECK-NEXT:    vst41.16 {q0, q1, q2, q3}, [r1]
 ; CHECK-NEXT:    vst42.16 {q0, q1, q2, q3}, [r1]
-; CHECK-NEXT:    vst43.16 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst43.16 {q0, q1, q2, q3}, [r1]!
+; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <8 x i16>, <8 x i16>* %src, i32 0
@@ -74,11 +74,11 @@ define <64 x i8> *@vst4_v16i8(<16 x i8> *%src, <64 x i8> *%dst) {
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    add.w r0, r1, #64
 ; CHECK-NEXT:    vst40.8 {q0, q1, q2, q3}, [r1]
 ; CHECK-NEXT:    vst41.8 {q0, q1, q2, q3}, [r1]
 ; CHECK-NEXT:    vst42.8 {q0, q1, q2, q3}, [r1]
-; CHECK-NEXT:    vst43.8 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst43.8 {q0, q1, q2, q3}, [r1]!
+; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <16 x i8>, <16 x i8>* %src, i32 0
@@ -153,11 +153,11 @@ define <16 x float> *@vst4_v4f32(<4 x float> *%src, <16 x float> *%dst) {
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    add.w r0, r1, #64
 ; CHECK-NEXT:    vst40.32 {q0, q1, q2, q3}, [r1]
 ; CHECK-NEXT:    vst41.32 {q0, q1, q2, q3}, [r1]
 ; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r1]
-; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r1]!
+; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <4 x float>, <4 x float>* %src, i32 0
@@ -185,11 +185,11 @@ define <32 x half> *@vst4_v8f16(<8 x half> *%src, <32 x half> *%dst) {
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #16]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    add.w r0, r1, #64
 ; CHECK-NEXT:    vst40.16 {q0, q1, q2, q3}, [r1]
 ; CHECK-NEXT:    vst41.16 {q0, q1, q2, q3}, [r1]
 ; CHECK-NEXT:    vst42.16 {q0, q1, q2, q3}, [r1]
-; CHECK-NEXT:    vst43.16 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst43.16 {q0, q1, q2, q3}, [r1]!
+; CHECK-NEXT:    mov r0, r1
 ; CHECK-NEXT:    bx lr
 entry:
   %s1 = getelementptr <8 x half>, <8 x half>* %src, i32 0

@@ -11,8 +11,7 @@ define <16 x i32> *@vld4_v4i32(<16 x i32> *%src, <4 x i32> *%dst) {
 ; CHECK-NEXT:    vld40.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld41.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld42.32 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vld43.32 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    adds r0, #64
+; CHECK-NEXT:    vld43.32 {q0, q1, q2, q3}, [r0]!
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3
 ; CHECK-NEXT:    vadd.i32 q4, q2, q3
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
@@ -44,8 +43,7 @@ define <32 x i16> *@vld4_v8i16(<32 x i16> *%src, <8 x i16> *%dst) {
 ; CHECK-NEXT:    vld40.16 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld41.16 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld42.16 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vld43.16 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    adds r0, #64
+; CHECK-NEXT:    vld43.16 {q0, q1, q2, q3}, [r0]!
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3
 ; CHECK-NEXT:    vadd.i16 q4, q2, q3
 ; CHECK-NEXT:    vadd.i16 q0, q0, q1
@@ -77,8 +75,7 @@ define <64 x i8> *@vld4_v16i8(<64 x i8> *%src, <16 x i8> *%dst) {
 ; CHECK-NEXT:    vld40.8 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld41.8 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld42.8 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vld43.8 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    adds r0, #64
+; CHECK-NEXT:    vld43.8 {q0, q1, q2, q3}, [r0]!
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3
 ; CHECK-NEXT:    vadd.i8 q4, q2, q3
 ; CHECK-NEXT:    vadd.i8 q0, q0, q1
@@ -188,8 +185,7 @@ define <16 x float> *@vld4_v4f32(<16 x float> *%src, <4 x float> *%dst) {
 ; CHECK-NEXT:    vld40.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld41.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld42.32 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vld43.32 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    adds r0, #64
+; CHECK-NEXT:    vld43.32 {q0, q1, q2, q3}, [r0]!
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3
 ; CHECK-NEXT:    vadd.f32 q4, q2, q3
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
@@ -221,8 +217,7 @@ define <32 x half> *@vld4_v8f16(<32 x half> *%src, <8 x half> *%dst) {
 ; CHECK-NEXT:    vld40.16 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld41.16 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld42.16 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vld43.16 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    adds r0, #64
+; CHECK-NEXT:    vld43.16 {q0, q1, q2, q3}, [r0]!
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3
 ; CHECK-NEXT:    vadd.f16 q4, q2, q3
 ; CHECK-NEXT:    vadd.f16 q0, q0, q1

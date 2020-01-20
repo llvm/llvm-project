@@ -7,8 +7,7 @@ define <8 x i32> *@vld2_v4i32(<8 x i32> *%src, <4 x i32> *%dst) {
 ; CHECK-LABEL: vld2_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
-; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]
-; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]!
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
@@ -28,8 +27,7 @@ define <16 x i16> *@vld2_v8i16(<16 x i16> *%src, <8 x i16> *%dst) {
 ; CHECK-LABEL: vld2_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld20.16 {q0, q1}, [r0]
-; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]
-; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]!
 ; CHECK-NEXT:    vadd.i16 q0, q0, q1
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
@@ -49,8 +47,7 @@ define <32 x i8> *@vld2_v16i8(<32 x i8> *%src, <16 x i8> *%dst) {
 ; CHECK-LABEL: vld2_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld20.8 {q0, q1}, [r0]
-; CHECK-NEXT:    vld21.8 {q0, q1}, [r0]
-; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    vld21.8 {q0, q1}, [r0]!
 ; CHECK-NEXT:    vadd.i8 q0, q0, q1
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
@@ -114,8 +111,7 @@ define <8 x float> *@vld2_v4f32(<8 x float> *%src, <4 x float> *%dst) {
 ; CHECK-LABEL: vld2_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
-; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]
-; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]!
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
@@ -135,8 +131,7 @@ define <16 x half> *@vld2_v8f16(<16 x half> *%src, <8 x half> *%dst) {
 ; CHECK-LABEL: vld2_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld20.16 {q0, q1}, [r0]
-; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]
-; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]!
 ; CHECK-NEXT:    vadd.f16 q0, q0, q1
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
