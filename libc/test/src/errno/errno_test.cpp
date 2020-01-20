@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/errno/llvmlibc_errno.h"
-
-#include "gtest/gtest.h"
+#include "utils/UnitTest/Test.h"
 
 TEST(ErrnoTest, Basic) {
   int test_val = 123;
