@@ -47,6 +47,7 @@ class PredicatedScalarEvolution;
 class PredIteratorCache;
 class ScalarEvolution;
 class SCEV;
+class SCEVExpander;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 
@@ -356,6 +357,18 @@ bool cannotBeMaxInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE,
 /// Returns true if \p S is defined and never is equal to signed/unsigned min.
 bool cannotBeMinInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE,
                        bool Signed);
+
+enum ReplaceExitVal { NeverRepl, OnlyCheapRepl, NoHardUse, AlwaysRepl };
+
+/// If the final value of any expressions that are recurrent in the loop can
+/// be computed, substitute the exit values from the loop into any instructions
+/// outside of the loop that use the final values of the current expressions.
+/// Return the number of loop exit values that have been replaced, and the
+/// corresponding phi node will be added to DeadInsts.
+int rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
+                          ScalarEvolution *SE, SCEVExpander &Rewriter,
+                          DominatorTree *DT, ReplaceExitVal ReplaceExitValue,
+                          SmallVector<WeakTrackingVH, 16> &DeadInsts);
 
 } // end namespace llvm
 
