@@ -36087,6 +36087,17 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       if (SimplifyDemandedBits(Op.getOperand(1), SignMask, DemandedRHS,
                                KnownRHS, TLO, Depth + 1))
         return true;
+
+      // Attempt to avoid multi-use ops if we don't need anything from them.
+      SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
+          Op.getOperand(0), SignMask, DemandedLHS, TLO.DAG, Depth + 1);
+      SDValue DemandedOp1 = SimplifyMultipleUseDemandedBits(
+          Op.getOperand(1), SignMask, DemandedRHS, TLO.DAG, Depth + 1);
+      if (DemandedOp0 || DemandedOp1) {
+        SDValue Op0 = DemandedOp0 ? DemandedOp0 : Op.getOperand(0);
+        SDValue Op1 = DemandedOp1 ? DemandedOp1 : Op.getOperand(1);
+        return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, SDLoc(Op), VT, Op0, Op1));
+      }
     }
     // TODO - add general PACKSS/PACKUS SimplifyDemandedBits support.
     break;

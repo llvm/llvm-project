@@ -47,6 +47,7 @@ class PredicatedScalarEvolution;
 class PredIteratorCache;
 class ScalarEvolution;
 class SCEV;
+class SCEVExpander;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 
@@ -261,10 +262,22 @@ TransformationMode hasLICMVersioningTransformation(Loop *L);
 void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
                              unsigned V = 0);
 
-/// Get a loop's estimated trip count based on branch weight metadata.
+/// Returns a loop's estimated trip count based on branch weight metadata.
+/// In addition if \p EstimatedLoopInvocationWeight is not null it is
+/// initialized with weight of loop's latch leading to the exit.
 /// Returns 0 when the count is estimated to be 0, or None when a meaningful
 /// estimate can not be made.
-Optional<unsigned> getLoopEstimatedTripCount(Loop *L);
+Optional<unsigned>
+getLoopEstimatedTripCount(Loop *L,
+                          unsigned *EstimatedLoopInvocationWeight = nullptr);
+
+/// Set a loop's branch weight metadata to reflect that loop has \p
+/// EstimatedTripCount iterations and \p EstimatedLoopInvocationWeight exits
+/// through latch. Returns true if metadata is successfully updated, false
+/// otherwise. Note that loop must have a latch block which controls loop exit
+/// in order to succeed.
+bool setLoopEstimatedTripCount(Loop *L, unsigned EstimatedTripCount,
+                               unsigned EstimatedLoopInvocationWeight);
 
 /// Check inner loop (L) backedge count is known to be invariant on all
 /// iterations of its outer loop. If the loop has no parent, this is trivially
@@ -356,6 +369,35 @@ bool cannotBeMaxInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE,
 /// Returns true if \p S is defined and never is equal to signed/unsigned min.
 bool cannotBeMinInLoop(const SCEV *S, const Loop *L, ScalarEvolution &SE,
                        bool Signed);
+
+enum ReplaceExitVal { NeverRepl, OnlyCheapRepl, NoHardUse, AlwaysRepl };
+
+/// If the final value of any expressions that are recurrent in the loop can
+/// be computed, substitute the exit values from the loop into any instructions
+/// outside of the loop that use the final values of the current expressions.
+/// Return the number of loop exit values that have been replaced, and the
+/// corresponding phi node will be added to DeadInsts.
+int rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
+                          ScalarEvolution *SE, SCEVExpander &Rewriter,
+                          DominatorTree *DT, ReplaceExitVal ReplaceExitValue,
+                          SmallVector<WeakTrackingVH, 16> &DeadInsts);
+
+/// Set weights for \p UnrolledLoop and \p RemainderLoop based on weights for
+/// \p OrigLoop and the following distribution of \p OrigLoop iteration among \p
+/// UnrolledLoop and \p RemainderLoop. \p UnrolledLoop receives weights that
+/// reflect TC/UF iterations, and \p RemainderLoop receives weights that reflect
+/// the remaining TC%UF iterations.
+///
+/// Note that \p OrigLoop may be equal to either \p UnrolledLoop or \p
+/// RemainderLoop in which case weights for \p OrigLoop are updated accordingly.
+/// Note also behavior is undefined if \p UnrolledLoop and \p RemainderLoop are
+/// equal. \p UF must be greater than zero.
+/// If \p OrigLoop has no profile info associated nothing happens.
+///
+/// This utility may be useful for such optimizations as unroller and
+/// vectorizer as it's typical transformation for them.
+void setProfileInfoAfterUnrolling(Loop *OrigLoop, Loop *UnrolledLoop,
+                                  Loop *RemainderLoop, uint64_t UF);
 
 } // end namespace llvm
 

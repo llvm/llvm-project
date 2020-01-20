@@ -80,23 +80,22 @@ define void @vst4_v8i32(<8 x i32> *%src, <32 x i32> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    vldrw.u32 q2, [r0, #80]
 ; CHECK-NEXT:    vldrw.u32 q6, [r0, #64]
+; CHECK-NEXT:    vldrw.u32 q2, [r0, #80]
 ; CHECK-NEXT:    vldrw.u32 q5, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q4, [r0]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
 ; CHECK-NEXT:    vmov q7, q6
-; CHECK-NEXT:    add.w r0, r1, #64
 ; CHECK-NEXT:    vmov q3, q2
 ; CHECK-NEXT:    vst40.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst41.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst42.32 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst43.32 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst40.32 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vst41.32 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r0]
+; CHECK-NEXT:    vst43.32 {q4, q5, q6, q7}, [r1]!
+; CHECK-NEXT:    vst40.32 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst41.32 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r1]
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -122,53 +121,59 @@ define void @vst4_v16i32(<16 x i32> *%src, <64 x i32> *%dst) {
 ; CHECK-NEXT:    push {r4, r5}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #152
-; CHECK-NEXT:    sub sp, #152
-; CHECK-NEXT:    vldrw.u32 q2, [r0, #176]
-; CHECK-NEXT:    add r2, sp, #64
-; CHECK-NEXT:    vstmia sp, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
-; CHECK-NEXT:    vldrw.u32 q2, [r0, #160]
-; CHECK-NEXT:    vldrw.u32 q6, [r0, #128]
-; CHECK-NEXT:    vstmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
-; CHECK-NEXT:    add r2, sp, #64
-; CHECK-NEXT:    vldrw.u32 q5, [r0, #64]
-; CHECK-NEXT:    vldmia sp, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Reload
-; CHECK-NEXT:    vldrw.u32 q4, [r0]
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #112]
-; CHECK-NEXT:    vmov q7, q6
-; CHECK-NEXT:    vstmia sp, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
-; CHECK-NEXT:    vldmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Reload
-; CHECK-NEXT:    add r2, sp, #64
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #96]
-; CHECK-NEXT:    vstmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
-; CHECK-NEXT:    add r2, sp, #64
-; CHECK-NEXT:    vldmia sp, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Reload
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #48]
-; CHECK-NEXT:    vstmia sp, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
-; CHECK-NEXT:    vldmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Reload
-; CHECK-NEXT:    add r2, sp, #64
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #32]
-; CHECK-NEXT:    vstmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
+; CHECK-NEXT:    .pad #216
+; CHECK-NEXT:    sub sp, #216
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #144]
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #80]
 ; CHECK-NEXT:    add r2, sp, #64
+; CHECK-NEXT:    vldrw.u32 q1, [r0, #80]
+; CHECK-NEXT:    vldrw.u32 q6, [r0, #176]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
-; CHECK-NEXT:    add.w r0, r1, #64
+; CHECK-NEXT:    vstmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
+; CHECK-NEXT:    add r2, sp, #128
+; CHECK-NEXT:    vldrw.u32 q2, [r0, #128]
+; CHECK-NEXT:    vstmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Spill
+; CHECK-NEXT:    add r2, sp, #64
+; CHECK-NEXT:    vldrw.u32 q1, [r0, #64]
+; CHECK-NEXT:    vldmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Reload
+; CHECK-NEXT:    add r2, sp, #64
+; CHECK-NEXT:    vmov q7, q6
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vstmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Spill
+; CHECK-NEXT:    add r2, sp, #128
+; CHECK-NEXT:    vldrw.u32 q6, [r0, #160]
 ; CHECK-NEXT:    vmov q3, q2
-; CHECK-NEXT:    vst40.32 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst41.32 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst42.32 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst43.32 {q4, q5, q6, q7}, [r1]
+; CHECK-NEXT:    vstmia sp, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Spill
+; CHECK-NEXT:    vldmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Reload
+; CHECK-NEXT:    add r2, sp, #128
+; CHECK-NEXT:    vldrw.u32 q5, [r0, #112]
+; CHECK-NEXT:    vstmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Spill
+; CHECK-NEXT:    add r2, sp, #128
+; CHECK-NEXT:    vldmia sp, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Reload
+; CHECK-NEXT:    vldrw.u32 q5, [r0, #96]
+; CHECK-NEXT:    vstmia sp, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Spill
+; CHECK-NEXT:    vldmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Reload
+; CHECK-NEXT:    add r2, sp, #128
+; CHECK-NEXT:    vldrw.u32 q4, [r0, #48]
+; CHECK-NEXT:    vstmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Spill
+; CHECK-NEXT:    add r2, sp, #64
+; CHECK-NEXT:    vldmia sp, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Reload
+; CHECK-NEXT:    vldrw.u32 q4, [r0, #32]
+; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    vst40.32 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst41.32 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r0]!
+; CHECK-NEXT:    vldmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Reload
+; CHECK-NEXT:    add r2, sp, #128
+; CHECK-NEXT:    vmov q7, q6
 ; CHECK-NEXT:    vst40.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst41.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r0]
+; CHECK-NEXT:    vldmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Reload
 ; CHECK-NEXT:    add.w r0, r1, #192
-; CHECK-NEXT:    vldmia sp, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Reload
 ; CHECK-NEXT:    adds r1, #128
 ; CHECK-NEXT:    vmov q3, q2
-; CHECK-NEXT:    vldmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Reload
-; CHECK-NEXT:    vmov q7, q6
 ; CHECK-NEXT:    vst40.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst41.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst42.32 {q4, q5, q6, q7}, [r1]
@@ -177,7 +182,7 @@ define void @vst4_v16i32(<16 x i32> *%src, <64 x i32> *%dst) {
 ; CHECK-NEXT:    vst41.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    add sp, #152
+; CHECK-NEXT:    add sp, #216
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    pop {r4, r5}
 ; CHECK-NEXT:    bx lr
@@ -328,23 +333,22 @@ define void @vst4_v16i16(<16 x i16> *%src, <64 x i16> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    vldrw.u32 q2, [r0, #80]
 ; CHECK-NEXT:    vldrw.u32 q6, [r0, #64]
+; CHECK-NEXT:    vldrw.u32 q2, [r0, #80]
 ; CHECK-NEXT:    vldrw.u32 q5, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q4, [r0]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
 ; CHECK-NEXT:    vmov q7, q6
-; CHECK-NEXT:    add.w r0, r1, #64
 ; CHECK-NEXT:    vmov q3, q2
 ; CHECK-NEXT:    vst40.16 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst41.16 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst42.16 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst43.16 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst40.16 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vst41.16 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vst42.16 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vst43.16 {q0, q1, q2, q3}, [r0]
+; CHECK-NEXT:    vst43.16 {q4, q5, q6, q7}, [r1]!
+; CHECK-NEXT:    vst40.16 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst41.16 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst42.16 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst43.16 {q0, q1, q2, q3}, [r1]
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -736,23 +740,22 @@ define void @vst4_v8f32(<8 x float> *%src, <32 x float> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    vldrw.u32 q2, [r0, #80]
 ; CHECK-NEXT:    vldrw.u32 q6, [r0, #64]
+; CHECK-NEXT:    vldrw.u32 q2, [r0, #80]
 ; CHECK-NEXT:    vldrw.u32 q5, [r0, #32]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q4, [r0]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
 ; CHECK-NEXT:    vmov q7, q6
-; CHECK-NEXT:    add.w r0, r1, #64
 ; CHECK-NEXT:    vmov q3, q2
 ; CHECK-NEXT:    vst40.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst41.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst42.32 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst43.32 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst40.32 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vst41.32 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r0]
+; CHECK-NEXT:    vst43.32 {q4, q5, q6, q7}, [r1]!
+; CHECK-NEXT:    vst40.32 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst41.32 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r1]
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -778,53 +781,59 @@ define void @vst4_v16f32(<16 x float> *%src, <64 x float> *%dst) {
 ; CHECK-NEXT:    push {r4, r5}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #152
-; CHECK-NEXT:    sub sp, #152
-; CHECK-NEXT:    vldrw.u32 q2, [r0, #176]
-; CHECK-NEXT:    add r2, sp, #64
-; CHECK-NEXT:    vstmia sp, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
-; CHECK-NEXT:    vldrw.u32 q2, [r0, #160]
-; CHECK-NEXT:    vldrw.u32 q6, [r0, #128]
-; CHECK-NEXT:    vstmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
-; CHECK-NEXT:    add r2, sp, #64
-; CHECK-NEXT:    vldrw.u32 q5, [r0, #64]
-; CHECK-NEXT:    vldmia sp, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Reload
-; CHECK-NEXT:    vldrw.u32 q4, [r0]
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #112]
-; CHECK-NEXT:    vmov q7, q6
-; CHECK-NEXT:    vstmia sp, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
-; CHECK-NEXT:    vldmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Reload
-; CHECK-NEXT:    add r2, sp, #64
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #96]
-; CHECK-NEXT:    vstmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
-; CHECK-NEXT:    add r2, sp, #64
-; CHECK-NEXT:    vldmia sp, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Reload
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #48]
-; CHECK-NEXT:    vstmia sp, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
-; CHECK-NEXT:    vldmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Reload
-; CHECK-NEXT:    add r2, sp, #64
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #32]
-; CHECK-NEXT:    vstmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
+; CHECK-NEXT:    .pad #216
+; CHECK-NEXT:    sub sp, #216
 ; CHECK-NEXT:    vldrw.u32 q2, [r0, #144]
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #80]
 ; CHECK-NEXT:    add r2, sp, #64
+; CHECK-NEXT:    vldrw.u32 q1, [r0, #80]
+; CHECK-NEXT:    vldrw.u32 q6, [r0, #176]
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
-; CHECK-NEXT:    add.w r0, r1, #64
+; CHECK-NEXT:    vstmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Spill
+; CHECK-NEXT:    add r2, sp, #128
+; CHECK-NEXT:    vldrw.u32 q2, [r0, #128]
+; CHECK-NEXT:    vstmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Spill
+; CHECK-NEXT:    add r2, sp, #64
+; CHECK-NEXT:    vldrw.u32 q1, [r0, #64]
+; CHECK-NEXT:    vldmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Reload
+; CHECK-NEXT:    add r2, sp, #64
+; CHECK-NEXT:    vmov q7, q6
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vstmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Spill
+; CHECK-NEXT:    add r2, sp, #128
+; CHECK-NEXT:    vldrw.u32 q6, [r0, #160]
 ; CHECK-NEXT:    vmov q3, q2
-; CHECK-NEXT:    vst40.32 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst41.32 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst42.32 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst43.32 {q4, q5, q6, q7}, [r1]
+; CHECK-NEXT:    vstmia sp, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Spill
+; CHECK-NEXT:    vldmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Reload
+; CHECK-NEXT:    add r2, sp, #128
+; CHECK-NEXT:    vldrw.u32 q5, [r0, #112]
+; CHECK-NEXT:    vstmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Spill
+; CHECK-NEXT:    add r2, sp, #128
+; CHECK-NEXT:    vldmia sp, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Reload
+; CHECK-NEXT:    vldrw.u32 q5, [r0, #96]
+; CHECK-NEXT:    vstmia sp, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Spill
+; CHECK-NEXT:    vldmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Reload
+; CHECK-NEXT:    add r2, sp, #128
+; CHECK-NEXT:    vldrw.u32 q4, [r0, #48]
+; CHECK-NEXT:    vstmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Spill
+; CHECK-NEXT:    add r2, sp, #64
+; CHECK-NEXT:    vldmia sp, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Reload
+; CHECK-NEXT:    vldrw.u32 q4, [r0, #32]
+; CHECK-NEXT:    mov r0, r1
+; CHECK-NEXT:    vst40.32 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst41.32 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r0]!
+; CHECK-NEXT:    vldmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Reload
+; CHECK-NEXT:    add r2, sp, #128
+; CHECK-NEXT:    vmov q7, q6
 ; CHECK-NEXT:    vst40.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst41.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r0]
+; CHECK-NEXT:    vldmia r2, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Reload
 ; CHECK-NEXT:    add.w r0, r1, #192
-; CHECK-NEXT:    vldmia sp, {d0, d1, d2, d3, d4, d5, d6, d7} @ 64-byte Reload
 ; CHECK-NEXT:    adds r1, #128
 ; CHECK-NEXT:    vmov q3, q2
-; CHECK-NEXT:    vldmia r2, {d8, d9, d10, d11, d12, d13, d14, d15} @ 64-byte Reload
-; CHECK-NEXT:    vmov q7, q6
 ; CHECK-NEXT:    vst40.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst41.32 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst42.32 {q4, q5, q6, q7}, [r1]
@@ -833,7 +842,7 @@ define void @vst4_v16f32(<16 x float> *%src, <64 x float> *%dst) {
 ; CHECK-NEXT:    vst41.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst42.32 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst43.32 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    add sp, #152
+; CHECK-NEXT:    add sp, #216
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    pop {r4, r5}
 ; CHECK-NEXT:    bx lr
@@ -1006,23 +1015,22 @@ define void @vst4_v16f16(<16 x half> *%src, <64 x half> *%dst) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    vldrw.u32 q2, [r0, #80]
 ; CHECK-NEXT:    vldrw.u32 q6, [r0, #64]
-; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
+; CHECK-NEXT:    vldrw.u32 q2, [r0, #80]
 ; CHECK-NEXT:    vldrw.u32 q5, [r0, #32]
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
+; CHECK-NEXT:    vldrw.u32 q1, [r0, #48]
 ; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
 ; CHECK-NEXT:    vmov q7, q6
 ; CHECK-NEXT:    vmov q3, q2
-; CHECK-NEXT:    add.w r0, r1, #64
 ; CHECK-NEXT:    vst40.16 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst41.16 {q4, q5, q6, q7}, [r1]
 ; CHECK-NEXT:    vst42.16 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst43.16 {q4, q5, q6, q7}, [r1]
-; CHECK-NEXT:    vst40.16 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vst41.16 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vst42.16 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vst43.16 {q0, q1, q2, q3}, [r0]
+; CHECK-NEXT:    vst43.16 {q4, q5, q6, q7}, [r1]!
+; CHECK-NEXT:    vst40.16 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst41.16 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst42.16 {q0, q1, q2, q3}, [r1]
+; CHECK-NEXT:    vst43.16 {q0, q1, q2, q3}, [r1]
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
 entry:

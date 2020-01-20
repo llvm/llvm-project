@@ -1025,6 +1025,15 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
       SmallVector<MachineMemOperand *, 2> NewMMOs;
       bool ReplaceMemOps = false;
       for (MachineMemOperand *MMO : I.memoperands()) {
+        if (const auto *FSV = dyn_cast_or_null<FixedStackPseudoSourceValue>(
+                MMO->getPseudoValue())) {
+          int FI = FSV->getFrameIndex();
+          auto To = SlotRemap.find(FI);
+          if (To != SlotRemap.end())
+            const_cast<FixedStackPseudoSourceValue *>(FSV)->setFrameIndex(
+                To->second);
+        }
+
         // If this memory location can be a slot remapped here,
         // we remove AA information.
         bool MayHaveConflictingAAMD = false;

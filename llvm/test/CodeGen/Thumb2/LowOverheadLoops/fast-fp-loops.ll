@@ -78,20 +78,18 @@ define arm_aapcs_vfpcc void @fast_float_mul(float* nocapture %a, float* nocaptur
 ; CHECK-NEXT:  .LBB0_8: @ %for.cond.cleanup.loopexit.unr-lcssa
 ; CHECK-NEXT:    wls lr, r7, .LBB0_11
 ; CHECK-NEXT:  @ %bb.9: @ %for.body.epil.preheader
-; CHECK-NEXT:    mvn r3, #3
+; CHECK-NEXT:    add.w r1, r1, r12, lsl #2
+; CHECK-NEXT:    add.w r2, r2, r12, lsl #2
+; CHECK-NEXT:    add.w r0, r0, r12, lsl #2
 ; CHECK-NEXT:    mov lr, r7
-; CHECK-NEXT:    add.w r3, r3, r12, lsl #2
-; CHECK-NEXT:    add r1, r3
-; CHECK-NEXT:    add r2, r3
-; CHECK-NEXT:    add r0, r3
 ; CHECK-NEXT:  .LBB0_10: @ %for.body.epil
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldr s0, [r1, #4]
+; CHECK-NEXT:    vldr s0, [r1]
 ; CHECK-NEXT:    adds r1, #4
-; CHECK-NEXT:    vldr s2, [r2, #4]
+; CHECK-NEXT:    vldr s2, [r2]
 ; CHECK-NEXT:    adds r2, #4
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
-; CHECK-NEXT:    vstr s0, [r0, #4]
+; CHECK-NEXT:    vstr s0, [r0]
 ; CHECK-NEXT:    adds r0, #4
 ; CHECK-NEXT:    le lr, .LBB0_10
 ; CHECK-NEXT:  .LBB0_11: @ %for.cond.cleanup
@@ -226,11 +224,12 @@ define arm_aapcs_vfpcc float @fast_float_mac(float* nocapture readonly %b, float
 ; CHECK-NEXT:    sub.w r12, r3, #4
 ; CHECK-NEXT:    movs r3, #1
 ; CHECK-NEXT:    add.w lr, r3, r12, lsr #2
+; CHECK-NEXT:    lsr.w r3, r12, #2
+; CHECK-NEXT:    sub.w r3, r2, r3, lsl #2
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB1_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vctp.32 r2
-; CHECK-NEXT:    mov r3, r2
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vpstt
@@ -325,7 +324,7 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    vdup.32 q2, r12
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    b .LBB2_4
-; CHECK-NEXT:  .LBB2_2: @ %cond.load24
+; CHECK-NEXT:  .LBB2_2: @ %cond.load25
 ; CHECK-NEXT:    @ in Loop: Header=BB2_4 Depth=1
 ; CHECK-NEXT:    vmovx.f16 s0, s28
 ; CHECK-NEXT:    vmov r4, s28
@@ -337,7 +336,7 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    vmov.16 q6[2], r2
 ; CHECK-NEXT:    vmov r2, s0
 ; CHECK-NEXT:    vmov.16 q6[3], r2
-; CHECK-NEXT:  .LBB2_3: @ %else25
+; CHECK-NEXT:  .LBB2_3: @ %else26
 ; CHECK-NEXT:    @ in Loop: Header=BB2_4 Depth=1
 ; CHECK-NEXT:    vmul.f16 q5, q6, q5
 ; CHECK-NEXT:    adds r0, #8
@@ -380,7 +379,7 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    @ in Loop: Header=BB2_4 Depth=1
 ; CHECK-NEXT:    lsls r4, r2, #30
 ; CHECK-NEXT:    bpl .LBB2_10
-; CHECK-NEXT:  .LBB2_6: @ %cond.load5
+; CHECK-NEXT:  .LBB2_6: @ %cond.load6
 ; CHECK-NEXT:    @ in Loop: Header=BB2_4 Depth=1
 ; CHECK-NEXT:    vldr.16 s20, [r0, #2]
 ; CHECK-NEXT:    vmov r5, s24
@@ -410,7 +409,7 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    vmov q5, q6
 ; CHECK-NEXT:    lsls r4, r2, #29
 ; CHECK-NEXT:    bpl .LBB2_7
-; CHECK-NEXT:  .LBB2_11: @ %cond.load8
+; CHECK-NEXT:  .LBB2_11: @ %cond.load9
 ; CHECK-NEXT:    @ in Loop: Header=BB2_4 Depth=1
 ; CHECK-NEXT:    vmovx.f16 s24, s20
 ; CHECK-NEXT:    vmov r4, s20
@@ -425,7 +424,7 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    vmov.16 q6[3], r4
 ; CHECK-NEXT:    lsls r2, r2, #28
 ; CHECK-NEXT:    bpl .LBB2_8
-; CHECK-NEXT:  .LBB2_12: @ %cond.load11
+; CHECK-NEXT:  .LBB2_12: @ %cond.load12
 ; CHECK-NEXT:    @ in Loop: Header=BB2_4 Depth=1
 ; CHECK-NEXT:    vmovx.f16 s20, s24
 ; CHECK-NEXT:    vmov r4, s24
@@ -437,7 +436,7 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    vmov.16 q5[2], r2
 ; CHECK-NEXT:    vmov r2, s24
 ; CHECK-NEXT:    vmov.16 q5[3], r2
-; CHECK-NEXT:  .LBB2_13: @ %else12
+; CHECK-NEXT:  .LBB2_13: @ %else13
 ; CHECK-NEXT:    @ in Loop: Header=BB2_4 Depth=1
 ; CHECK-NEXT:    vcmp.u32 cs, q2, q4
 ; CHECK-NEXT:    @ implicit-def: $q7
@@ -457,11 +456,11 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    bfi r2, r4, #3, #1
 ; CHECK-NEXT:    lsls r4, r2, #31
 ; CHECK-NEXT:    bne .LBB2_17
-; CHECK-NEXT:  @ %bb.14: @ %else16
+; CHECK-NEXT:  @ %bb.14: @ %else17
 ; CHECK-NEXT:    @ in Loop: Header=BB2_4 Depth=1
 ; CHECK-NEXT:    lsls r4, r2, #30
 ; CHECK-NEXT:    bpl .LBB2_18
-; CHECK-NEXT:  .LBB2_15: @ %cond.load18
+; CHECK-NEXT:  .LBB2_15: @ %cond.load19
 ; CHECK-NEXT:    @ in Loop: Header=BB2_4 Depth=1
 ; CHECK-NEXT:    vldr.16 s24, [r1, #2]
 ; CHECK-NEXT:    vmov r5, s28
@@ -480,7 +479,7 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    lsls r2, r2, #28
 ; CHECK-NEXT:    bmi.w .LBB2_2
 ; CHECK-NEXT:    b .LBB2_20
-; CHECK-NEXT:  .LBB2_17: @ %cond.load15
+; CHECK-NEXT:  .LBB2_17: @ %cond.load16
 ; CHECK-NEXT:    @ in Loop: Header=BB2_4 Depth=1
 ; CHECK-NEXT:    vldr.16 s28, [r1]
 ; CHECK-NEXT:    lsls r4, r2, #30
@@ -489,7 +488,7 @@ define arm_aapcs_vfpcc float @fast_float_half_mac(half* nocapture readonly %b, h
 ; CHECK-NEXT:    vmov q6, q7
 ; CHECK-NEXT:    lsls r4, r2, #29
 ; CHECK-NEXT:    bpl .LBB2_16
-; CHECK-NEXT:  .LBB2_19: @ %cond.load21
+; CHECK-NEXT:  .LBB2_19: @ %cond.load22
 ; CHECK-NEXT:    @ in Loop: Header=BB2_4 Depth=1
 ; CHECK-NEXT:    vmovx.f16 s28, s24
 ; CHECK-NEXT:    vmov r4, s24

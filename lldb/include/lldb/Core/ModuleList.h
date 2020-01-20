@@ -20,6 +20,7 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/RWMutex.h"
 
 #include <functional>
 #include <list>
@@ -46,6 +47,11 @@ class UUID;
 class VariableList;
 
 class ModuleListProperties : public Properties {
+  mutable llvm::sys::RWMutex m_symlink_paths_mutex;
+  PathMappingList m_symlink_paths;
+
+  void UpdateSymlinkMappings();
+
 public:
   ModuleListProperties();
 
@@ -53,6 +59,8 @@ public:
   bool SetClangModulesCachePath(llvm::StringRef path);
   bool GetEnableExternalLookup() const;
   bool SetEnableExternalLookup(bool new_value);
+
+  PathMappingList GetSymlinkMappings() const;
 };
 
 /// \class ModuleList ModuleList.h "lldb/Core/ModuleList.h"

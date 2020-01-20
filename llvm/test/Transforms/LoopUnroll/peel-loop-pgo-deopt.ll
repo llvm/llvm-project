@@ -8,7 +8,7 @@
 ; All side exits to deopt does not change weigths.
 
 ; CHECK: Loop Unroll: F[basic]
-; CHECK: PEELING loop %for.body with iteration count 3!
+; CHECK: PEELING loop %for.body with iteration count 4!
 ; CHECK-NO-PEEL-NOT: PEELING loop %for.body
 ; CHECK-LABEL: @basic
 ; CHECK: br i1 %c, label %{{.*}}, label %side_exit, !prof !15

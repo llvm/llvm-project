@@ -82,15 +82,13 @@ entry:
 define void @vmla32_in_loop(i32* %s1, i32 %x, i32* %d, i32 %n) {
 ; CHECK-LABEL: vmla32_in_loop:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #16
-; CHECK-NEXT:    subs r2, #16
 ; CHECK-NEXT:  .LBB6_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]!
-; CHECK-NEXT:    vldrw.u32 q1, [r2, #16]!
+; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r2]
 ; CHECK-NEXT:    subs r3, #4
 ; CHECK-NEXT:    vmla.u32 q1, q0, r1
-; CHECK-NEXT:    vstrw.32 q1, [r2]
+; CHECK-NEXT:    vstrb.8 q1, [r2], #16
 ; CHECK-NEXT:    bne .LBB6_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
@@ -122,15 +120,13 @@ for.cond.cleanup:
 define void @vmla16_in_loop(i16* %s1, i16 %x, i16* %d, i32 %n) {
 ; CHECK-LABEL: vmla16_in_loop:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #16
-; CHECK-NEXT:    subs r2, #16
 ; CHECK-NEXT:  .LBB7_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q0, [r0, #16]!
-; CHECK-NEXT:    vldrh.u16 q1, [r2, #16]!
+; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
+; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    subs r3, #8
 ; CHECK-NEXT:    vmla.u16 q1, q0, r1
-; CHECK-NEXT:    vstrh.16 q1, [r2]
+; CHECK-NEXT:    vstrb.8 q1, [r2], #16
 ; CHECK-NEXT:    bne .LBB7_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr
@@ -162,15 +158,13 @@ for.cond.cleanup:
 define void @vmla8_in_loop(i8* %s1, i8 %x, i8* %d, i32 %n) {
 ; CHECK-LABEL: vmla8_in_loop:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    subs r0, #16
-; CHECK-NEXT:    subs r2, #16
 ; CHECK-NEXT:  .LBB8_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q0, [r0, #16]!
-; CHECK-NEXT:    vldrh.u16 q1, [r2, #16]!
+; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
+; CHECK-NEXT:    vldrh.u16 q1, [r2]
 ; CHECK-NEXT:    subs r3, #16
 ; CHECK-NEXT:    vmla.u8 q1, q0, r1
-; CHECK-NEXT:    vstrh.16 q1, [r2]
+; CHECK-NEXT:    vstrb.8 q1, [r2], #16
 ; CHECK-NEXT:    bne .LBB8_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    bx lr

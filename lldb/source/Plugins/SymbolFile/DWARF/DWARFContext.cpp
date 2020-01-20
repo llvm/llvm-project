@@ -117,32 +117,17 @@ llvm::DWARFContext &DWARFContext::GetAsLLVM() {
   if (!m_llvm_context) {
     llvm::StringMap<std::unique_ptr<llvm::MemoryBuffer>> section_map;
     uint8_t addr_size = 0;
-
-    auto AddSection = [&](Section &section) {
-      DataExtractor section_data;
-      section.GetSectionData(section_data);
-
+    auto AddSection = [&](llvm::StringRef name, DWARFDataExtractor data) {
       // Set the address size the first time we see it.
       if (addr_size == 0)
-        addr_size = section_data.GetByteSize();
+        addr_size = data.GetAddressByteSize();
 
-      llvm::StringRef data = llvm::toStringRef(section_data.GetData());
-      llvm::StringRef name = section.GetName().GetStringRef();
-      if (name.startswith("."))
-        name = name.drop_front();
       section_map.try_emplace(
-          name, llvm::MemoryBuffer::getMemBuffer(data, name, false));
+          name, llvm::MemoryBuffer::getMemBuffer(toStringRef(data.GetData()),
+                                                 name, false));
     };
 
-    if (m_main_section_list) {
-      for (auto &section : *m_main_section_list)
-        AddSection(*section);
-    }
-
-    if (m_dwo_section_list) {
-      for (auto &section : *m_dwo_section_list)
-        AddSection(*section);
-    }
+    AddSection("debug_line_str", getOrLoadLineStrData());
 
     m_llvm_context = llvm::DWARFContext::create(section_map, addr_size);
   }

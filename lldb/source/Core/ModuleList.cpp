@@ -12,6 +12,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/OptionValueFileSpec.h"
+#include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/LocateSymbolFile.h"
@@ -77,6 +78,8 @@ ModuleListProperties::ModuleListProperties() {
   m_collection_sp =
       std::make_shared<OptionValueProperties>(ConstString("symbols"));
   m_collection_sp->Initialize(g_modulelist_properties);
+  m_collection_sp->SetValueChangedCallback(ePropertySymLinkPaths,
+                                           [this] { UpdateSymlinkMappings(); });
 
   llvm::SmallString<128> path;
   clang::driver::Driver::getDefaultModuleCachePath(path);
@@ -104,6 +107,28 @@ FileSpec ModuleListProperties::GetClangModulesCachePath() const {
 bool ModuleListProperties::SetClangModulesCachePath(llvm::StringRef path) {
   return m_collection_sp->SetPropertyAtIndexAsString(
       nullptr, ePropertyClangModulesCachePath, path);
+}
+
+void ModuleListProperties::UpdateSymlinkMappings() {
+  FileSpecList list = m_collection_sp
+                          ->GetPropertyAtIndexAsOptionValueFileSpecList(
+                              nullptr, false, ePropertySymLinkPaths)
+                          ->GetCurrentValue();
+  llvm::sys::ScopedWriter lock(m_symlink_paths_mutex);
+  const bool notify = false;
+  m_symlink_paths.Clear(notify);
+  for (FileSpec symlink : list) {
+    FileSpec resolved;
+    Status status = FileSystem::Instance().Readlink(symlink, resolved);
+    if (status.Success())
+      m_symlink_paths.Append(ConstString(symlink.GetPath()),
+                             ConstString(resolved.GetPath()), notify);
+  }
+}
+
+PathMappingList ModuleListProperties::GetSymlinkMappings() const {
+  llvm::sys::ScopedReader lock(m_symlink_paths_mutex);
+  return m_symlink_paths;
 }
 
 ModuleList::ModuleList()

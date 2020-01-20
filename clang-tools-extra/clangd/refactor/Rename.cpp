@@ -335,8 +335,6 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
 // as the file content we rename on, and fallback to file content on disk if
 // there is no dirty buffer.
 //
-// FIXME: Add range patching heuristics to detect staleness of the index, and
-// report to users.
 // FIXME: Our index may return implicit references, which are not eligible for
 // rename, we should filter out these references.
 llvm::Expected<FileEdits> renameOutsideFile(
