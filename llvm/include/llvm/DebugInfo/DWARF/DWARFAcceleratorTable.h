@@ -231,7 +231,6 @@ public:
   struct Header {
     uint32_t UnitLength;
     uint16_t Version;
-    uint16_t Padding;
     uint32_t CompUnitCount;
     uint32_t LocalTypeUnitCount;
     uint32_t ForeignTypeUnitCount;

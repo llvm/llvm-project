@@ -366,7 +366,6 @@ void DWARFDebugNames::Header::dump(ScopedPrinter &W) const {
   DictScope HeaderScope(W, "Header");
   W.printHex("Length", UnitLength);
   W.printNumber("Version", Version);
-  W.printHex("Padding", Padding);
   W.printNumber("CU count", CompUnitCount);
   W.printNumber("Local TU count", LocalTypeUnitCount);
   W.printNumber("Foreign TU count", ForeignTypeUnitCount);
@@ -397,7 +396,8 @@ Error DWARFDebugNames::Header::extract(const DWARFDataExtractor &AS,
 
   UnitLength = AS.getU32(Offset);
   Version = AS.getU16(Offset);
-  Padding = AS.getU16(Offset);
+  // Skip padding
+  *Offset += 2;
   CompUnitCount = AS.getU32(Offset);
   LocalTypeUnitCount = AS.getU32(Offset);
   ForeignTypeUnitCount = AS.getU32(Offset);
