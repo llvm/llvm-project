@@ -328,6 +328,8 @@ DIE *DwarfCompileUnit::getOrCreateCommonBlock(
 }
 
 void DwarfCompileUnit::addRange(RangeSpan Range) {
+  DD->insertSectionLabel(Range.Begin);
+
   bool SameAsPrevCU = this == DD->getPrevCU();
   DD->setPrevCU(this);
   // If we have no current ranges just add the range and return, otherwise,
