@@ -9929,7 +9929,7 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
         assert(!VarElt.getNode() && !InsIndex.getNode() &&
                "Expected one variable element in this vector");
         VarElt = Elt;
-        InsIndex = DAG.getConstant(i, dl, getVectorIdxTy(DAG.getDataLayout()));
+        InsIndex = DAG.getVectorIdxConstant(i, dl);
       }
     }
     Constant *CV = ConstantVector::get(ConstVecOps);
@@ -43843,11 +43843,9 @@ static SDValue combineVectorSizedSetCCEquality(SDNode *SetCC, SelectionDAG &DAG,
       X = DAG.getBitcast(TmpCastVT, X);
       if (!NeedZExt && !TmpZext)
         return X;
-      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-      MVT VecIdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
       return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VecVT,
                          DAG.getConstant(0, DL, VecVT), X,
-                         DAG.getConstant(0, DL, VecIdxVT));
+                         DAG.getVectorIdxConstant(0, DL));
     };
 
     SDValue Cmp;

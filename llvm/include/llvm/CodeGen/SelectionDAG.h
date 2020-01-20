@@ -600,6 +600,8 @@ public:
                             bool isTarget = false);
   SDValue getShiftAmountConstant(uint64_t Val, EVT VT, const SDLoc &DL,
                                  bool LegalTypes = true);
+  SDValue getVectorIdxConstant(uint64_t Val, const SDLoc &DL,
+                               bool isTarget = false);
 
   SDValue getTargetConstant(uint64_t Val, const SDLoc &DL, EVT VT,
                             bool isOpaque = false) {
