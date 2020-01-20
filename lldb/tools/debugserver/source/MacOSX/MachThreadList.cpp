@@ -502,65 +502,56 @@ bool MachThreadList::DisableHardwareBreakpoint(const DNBBreakpoint *bp) const {
   return false;
 }
 
+uint32_t MachThreadList::DoHardwareBreakpointAction(
+    const DNBBreakpoint *wp, HardwareBreakpointAction action) const {
+  if (wp == NULL)
+    return INVALID_NUB_HW_INDEX;
+
+  uint32_t hw_index = INVALID_NUB_HW_INDEX;
+  PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
+  const size_t num_threads = m_threads.size();
+  // On Mac OS X we have to prime the control registers for new threads.  We do
+  // this using the control register data for the first thread, for lack of a
+  // better way of choosing.
+  bool also_set_on_task = true;
+  for (uint32_t idx = 0; idx < num_threads; ++idx) {
+    switch (action) {
+    case HardwareBreakpointAction::EnableWatchpoint:
+      hw_index = m_threads[idx]->EnableHardwareWatchpoint(wp, also_set_on_task);
+      break;
+    case HardwareBreakpointAction::DisableWatchpoint:
+      hw_index =
+          m_threads[idx]->DisableHardwareWatchpoint(wp, also_set_on_task);
+      break;
+    }
+    if (hw_index == INVALID_NUB_HW_INDEX) {
+      // We know that idx failed for some reason.  Let's rollback the
+      // transaction for [0, idx).
+      for (uint32_t i = 0; i < idx; ++i)
+        m_threads[i]->RollbackTransForHWP();
+      return INVALID_NUB_HW_INDEX;
+    }
+    also_set_on_task = false;
+  }
+  // Notify each thread to commit the pending transaction.
+  for (uint32_t idx = 0; idx < num_threads; ++idx)
+    m_threads[idx]->FinishTransForHWP();
+  return hw_index;
+}
+
 // DNBWatchpointSet() -> MachProcess::CreateWatchpoint() ->
 // MachProcess::EnableWatchpoint()
 // -> MachThreadList::EnableHardwareWatchpoint().
 uint32_t
 MachThreadList::EnableHardwareWatchpoint(const DNBBreakpoint *wp) const {
-  uint32_t hw_index = INVALID_NUB_HW_INDEX;
-  if (wp != NULL) {
-    PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
-    const size_t num_threads = m_threads.size();
-    // On Mac OS X we have to prime the control registers for new threads.  We
-    // do this
-    // using the control register data for the first thread, for lack of a
-    // better way of choosing.
-    bool also_set_on_task = true;
-    for (uint32_t idx = 0; idx < num_threads; ++idx) {
-      if ((hw_index = m_threads[idx]->EnableHardwareWatchpoint(
-               wp, also_set_on_task)) == INVALID_NUB_HW_INDEX) {
-        // We know that idx failed for some reason.  Let's rollback the
-        // transaction for [0, idx).
-        for (uint32_t i = 0; i < idx; ++i)
-          m_threads[i]->RollbackTransForHWP();
-        return INVALID_NUB_HW_INDEX;
-      }
-      also_set_on_task = false;
-    }
-    // Notify each thread to commit the pending transaction.
-    for (uint32_t idx = 0; idx < num_threads; ++idx)
-      m_threads[idx]->FinishTransForHWP();
-  }
-  return hw_index;
+  return DoHardwareBreakpointAction(wp,
+                                    HardwareBreakpointAction::EnableWatchpoint);
 }
 
 bool MachThreadList::DisableHardwareWatchpoint(const DNBBreakpoint *wp) const {
-  if (wp != NULL) {
-    PTHREAD_MUTEX_LOCKER(locker, m_threads_mutex);
-    const size_t num_threads = m_threads.size();
-
-    // On Mac OS X we have to prime the control registers for new threads.  We
-    // do this
-    // using the control register data for the first thread, for lack of a
-    // better way of choosing.
-    bool also_set_on_task = true;
-    for (uint32_t idx = 0; idx < num_threads; ++idx) {
-      if (!m_threads[idx]->DisableHardwareWatchpoint(wp, also_set_on_task)) {
-        // We know that idx failed for some reason.  Let's rollback the
-        // transaction for [0, idx).
-        for (uint32_t i = 0; i < idx; ++i)
-          m_threads[i]->RollbackTransForHWP();
-        return false;
-      }
-      also_set_on_task = false;
-    }
-    // Notify each thread to commit the pending transaction.
-    for (uint32_t idx = 0; idx < num_threads; ++idx)
-      m_threads[idx]->FinishTransForHWP();
-
-    return true;
-  }
-  return false;
+  return DoHardwareBreakpointAction(
+             wp, HardwareBreakpointAction::DisableWatchpoint) !=
+         INVALID_NUB_HW_INDEX;
 }
 
 uint32_t MachThreadList::NumSupportedHardwareWatchpoints() const {
