@@ -177,7 +177,7 @@ private:
   IFuncListType IFuncList;        ///< The IFuncs in the module
   NamedMDListType NamedMDList;    ///< The named metadata in the module
   std::string GlobalScopeAsm;     ///< Inline Asm at global scope.
-  ValueSymbolTable *ValSymTab;    ///< Symbol table for values
+  std::unique_ptr<ValueSymbolTable> ValSymTab; ///< Symbol table for values
   ComdatSymTabType ComdatSymTab;  ///< Symbol table for COMDATs
   std::unique_ptr<MemoryBuffer>
   OwnedMemoryBuffer;              ///< Memory buffer directly owned by this
