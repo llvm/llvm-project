@@ -47,35 +47,29 @@
 ---
 name:            atf_tc_fail_nonfatal
 alignment:       4
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-failedISel:      false
 tracksRegLiveness: true
-hasWinCFI:       false
 registers:
-  - { id: 0, class: gprc, preferred-register: '' }
-  - { id: 1, class: gprc, preferred-register: '' }
-  - { id: 2, class: gprc, preferred-register: '' }
-  - { id: 3, class: gprc, preferred-register: '' }
-  - { id: 4, class: gprc, preferred-register: '' }
-  - { id: 5, class: gprc, preferred-register: '' }
-  - { id: 6, class: gprc, preferred-register: '' }
-  - { id: 7, class: gprc, preferred-register: '' }
-  - { id: 8, class: f8rc, preferred-register: '' }
-  - { id: 9, class: f8rc, preferred-register: '' }
-  - { id: 10, class: f8rc, preferred-register: '' }
-  - { id: 11, class: f8rc, preferred-register: '' }
-  - { id: 12, class: f8rc, preferred-register: '' }
-  - { id: 13, class: f8rc, preferred-register: '' }
-  - { id: 14, class: f8rc, preferred-register: '' }
-  - { id: 15, class: f8rc, preferred-register: '' }
-  - { id: 16, class: crbitrc, preferred-register: '' }
-  - { id: 17, class: gprc, preferred-register: '' }
-  - { id: 18, class: gprc, preferred-register: '' }
-  - { id: 19, class: gprc, preferred-register: '' }
-  - { id: 20, class: gprc, preferred-register: '' }
+  - { id: 0, class: gprc }
+  - { id: 1, class: gprc }
+  - { id: 2, class: gprc }
+  - { id: 3, class: gprc }
+  - { id: 4, class: gprc }
+  - { id: 5, class: gprc }
+  - { id: 6, class: gprc }
+  - { id: 7, class: gprc }
+  - { id: 8, class: f8rc }
+  - { id: 9, class: f8rc }
+  - { id: 10, class: f8rc }
+  - { id: 11, class: f8rc }
+  - { id: 12, class: f8rc }
+  - { id: 13, class: f8rc }
+  - { id: 14, class: f8rc }
+  - { id: 15, class: f8rc }
+  - { id: 16, class: crbitrc }
+  - { id: 17, class: gprc }
+  - { id: 18, class: gprc }
+  - { id: 19, class: gprc }
+  - { id: 20, class: gprc }
 liveins:
   - { reg: '$r3', virtual-reg: '%0' }
   - { reg: '$r4', virtual-reg: '%1' }
@@ -94,44 +88,17 @@ liveins:
   - { reg: '$f7', virtual-reg: '%14' }
   - { reg: '$f8', virtual-reg: '%15' }
 frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
   maxAlignment:    8
-  adjustsStack:    false
   hasCalls:        true
-  stackProtector:  ''
-  maxCallFrameSize: 4294967295
-  cvBytesOfCalleeSavedRegisters: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
-  localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
 fixedStack:
-  - { id: 0, type: default, offset: 8, size: 4, alignment: 8, stack-id: default,
-      isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 0, offset: 8, size: 4, alignment: 8, isImmutable: true }
 stack:
-  - { id: 0, name: buf.i.i, type: default, offset: 0, size: 1024, alignment: 1,
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 1, name: ap2.i.i, type: default, offset: 0, size: 12, alignment: 8,
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-  - { id: 2, name: '', type: default, offset: 0, size: 96, alignment: 8,
-      stack-id: default, callee-saved-register: '', callee-saved-restored: true,
-      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
-callSites:       []
-constants:       []
+  - { id: 0, name: buf.i.i, size: 1024, alignment: 1 }
+  - { id: 1, name: ap2.i.i, size: 12, alignment: 8 }
+  - { id: 2, size: 96, alignment: 8 }
 machineFunctionInfo: {}
 body:             |
   bb.0.entry:
-    successors: %bb.2(0x40000000), %bb.1(0x40000000)
     liveins: $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10, $f1, $f2, $f3, $f4, $f5, $f6, $f7, $f8
 
     %15:f8rc = COPY $f8
