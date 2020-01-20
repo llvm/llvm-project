@@ -434,6 +434,8 @@ private:
   template <typename T> friend class SpecificBumpPtrAllocator;
 };
 
+extern template class BumpPtrAllocatorImpl<>;
+
 /// The standard BumpPtrAllocator which just uses the default template
 /// parameters.
 typedef BumpPtrAllocatorImpl<> BumpPtrAllocator;
