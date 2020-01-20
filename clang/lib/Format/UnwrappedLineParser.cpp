@@ -2003,7 +2003,8 @@ void UnwrappedLineParser::parseLabel(bool LeftAlignLabel) {
     --Line->Level;
   if (LeftAlignLabel)
     Line->Level = 0;
-  if (CommentsBeforeNextToken.empty() && FormatTok->Tok.is(tok::l_brace)) {
+  if (!Style.IndentCaseBlocks && CommentsBeforeNextToken.empty() &&
+      FormatTok->Tok.is(tok::l_brace)) {
     CompoundStatementIndenter Indenter(this, Line->Level,
                                        Style.BraceWrapping.AfterCaseLabel,
                                        Style.BraceWrapping.IndentBraces);
