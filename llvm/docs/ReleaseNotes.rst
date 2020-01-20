@@ -98,6 +98,8 @@ Non-comprehensive list of changes in this release
   which has 3 values: ``none``, ``non-leaf``, and ``all``. The values mean what
   functions should retain frame pointers.
 
+* ...
+
 Changes to the LLVM IR
 ----------------------
 
