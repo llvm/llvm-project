@@ -2294,6 +2294,11 @@ TEST_F(FormatTestJS, NullPropagatingOperator) {
 
 TEST_F(FormatTestJS, NullishCoalescingOperator) {
   verifyFormat("const val = something ?? 'some other default';\n");
+  verifyFormat(
+      "const val = something ?? otherDefault ??\n"
+      "    evenMore ?? evenMore;\n",
+      "const val = something ?? otherDefault ?? evenMore ?? evenMore;\n",
+      getGoogleJSStyleWithColumns(40));
 }
 
 TEST_F(FormatTestJS, Conditional) {
