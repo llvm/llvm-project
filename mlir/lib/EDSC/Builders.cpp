@@ -65,7 +65,7 @@ MLIRContext *mlir::edsc::ScopedContext::getContext() {
   return getBuilder().getContext();
 }
 
-mlir::edsc::ValueHandle::ValueHandle(index_t cst) {
+mlir::edsc::ValueHandle::ValueHandle(index_type cst) {
   auto &b = ScopedContext::getBuilder();
   auto loc = ScopedContext::getLocation();
   v = b.create<ConstantIndexOp>(loc, cst.v).getResult();
