@@ -192,8 +192,6 @@ public:
   /// Code Generation virtual methods...
   bool requiresRegisterScavenging(const MachineFunction &MF) const override;
 
-  bool trackLivenessAfterRegAlloc(const MachineFunction &MF) const override;
-
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;
 
   bool requiresVirtualBaseRegisters(const MachineFunction &MF) const override;

@@ -6,14 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/errno.h"
+#include "include/sys/mman.h"
 #include "src/errno/llvmlibc_errno.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
-
-#include "gtest/gtest.h"
-
-#include "errno.h"
-#include "sys/mman.h"
+#include "utils/UnitTest/Test.h"
 
 TEST(MMapTest, NoError) {
   size_t alloc_size = 128;

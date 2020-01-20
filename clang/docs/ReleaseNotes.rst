@@ -57,15 +57,6 @@ Non-comprehensive list of changes in this release
 -------------------------------------------------
 
 
-* Lax vector conversions involving floating-point vectors have been disabled
-  by default, and can no longer be enabled with ``-flax-vector-conversions``.
-  This matches the behavior of these flags in GCC, but code relying on implicit
-  vector bitcasts between integer and floating-point types that used to compile
-  with older versions of Clang is no longer accepted by default in Clang 10.
-  The old behavior can be restored with ``-flax-vector-conversions=all``.
-  In a future release of Clang, we intend to change the default to
-  ``-fno-lax-vector-conversions``.
-
 New Compiler Flags
 ------------------
 
@@ -81,21 +72,6 @@ future versions of Clang.
 Modified Compiler Flags
 -----------------------
 
-
-- ``-flax-vector-conversions`` has been split into three different levels of
-  laxness:
-
-  - ``-flax-vector-conversions=all``: This is Clang's historical default, and
-    permits implicit vector conversions (performed as bitcasts) between any
-    two vector types of the same overall bit-width.
-
-  - ``-flax-vector-conversions=integer``: This is Clang's current default,
-    and permits implicit vector conversions (performed as bitcasts) between
-    any two integer vector types of the same overall bit-width.
-    Synonym: ``-flax-vector-conversions``.
-
-  - ``-flax-vector-conversions=none``: Do not perform any implicit bitcasts
-    between vector types. Synonym: ``-fno-lax-vector-conversions``.
 
 New Pragmas in Clang
 --------------------
@@ -176,6 +152,25 @@ AST Matchers
 clang-format
 ------------
 
+
+- Option ``IndentCaseBlocks`` has been added to support treating the block
+  following a switch case label as a scope block which gets indented itself.
+  It helps avoid having the closing bracket align with the switch statement's
+  closing bracket (when ``IndentCaseLabels`` is ``false``).
+
+  .. code-block:: c++
+  
+    switch (fool) {                vs.     switch (fool) {
+    case 1:                                case 1: {
+      {                                      bar();
+         bar();                            } break;
+      }                                    default: {
+      break;                                 plop();
+    default:                               }
+      {                                    }
+        plop();
+      }
+    }
 
 libclang
 --------

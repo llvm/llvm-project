@@ -67,11 +67,11 @@ TEST_FUNC(builder_dynamic_for_func_args) {
   ValueHandle i7(constant_int(7, 32));
   ValueHandle i13(constant_int(13, 32));
   AffineLoopNestBuilder(&i, lb, ub, 3)([&] {
-    lb *index_t(3) + ub;
-    lb + index_t(3);
+    lb *index_type(3) + ub;
+    lb + index_type(3);
     AffineLoopNestBuilder(&j, lb, ub, 2)([&] {
-      ceilDiv(index_t(31) * floorDiv(i + j * index_t(3), index_t(32)),
-              index_t(32));
+      ceilDiv(index_type(31) * floorDiv(i + j * index_type(3), index_type(32)),
+              index_type(32));
       ((f7 + f13) / f7) % f13 - f7 *f13;
       ((i7 + i13) / i7) % i13 - i7 *i13;
     });
@@ -411,7 +411,7 @@ TEST_FUNC(custom_ops) {
   ValueHandle vh(indexType), vh20(indexType), vh21(indexType);
   OperationHandle ih0, ih2;
   IndexHandle m, n, M(f.getArgument(0)), N(f.getArgument(1));
-  IndexHandle ten(index_t(10)), twenty(index_t(20));
+  IndexHandle ten(index_type(10)), twenty(index_type(20));
   AffineLoopNestBuilder({&m, &n}, {M, N}, {M + ten, N + twenty}, {1, 1})([&]{
     vh = MY_CUSTOM_OP({m, m + n}, {indexType}, {});
     ih0 = MY_CUSTOM_OP_0({m, m + n}, {});

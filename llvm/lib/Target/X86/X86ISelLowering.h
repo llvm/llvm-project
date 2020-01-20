@@ -659,10 +659,9 @@ namespace llvm {
       /// This instruction implements SINT_TO_FP with the
       /// integer source in memory and FP reg result.  This corresponds to the
       /// X86::FILD*m instructions. It has two inputs (token chain and address)
-      /// and two outputs (FP value and token chain). FILD_FLAG also produces a
-      /// flag). The integer source type is specified by the memory VT.
+      /// and two outputs (FP value and token chain). The integer source type is
+      /// specified by the memory VT.
       FILD,
-      FILD_FLAG,
 
       /// This instruction implements a fp->int store from FP stack
       /// slots. This corresponds to the fist instruction. It takes a

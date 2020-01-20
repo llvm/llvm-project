@@ -162,4 +162,4 @@ define float @repeated_div_fast_ftz(i1 %pred, float %a, float %b, float %divisor
 }
 
 attributes #0 = { "unsafe-fp-math" = "true" }
-attributes #1 = { "nvptx-f32ftz" = "true" }
+attributes #1 = { "denormal-fp-math-f32" = "preserve-sign" }

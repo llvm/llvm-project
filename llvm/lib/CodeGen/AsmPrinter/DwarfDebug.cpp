@@ -1833,9 +1833,6 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   if (SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug)
     return;
 
-  SectionLabels.insert(std::make_pair(&Asm->getFunctionBegin()->getSection(),
-                                      Asm->getFunctionBegin()));
-
   DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
 
   // Set DwarfDwarfCompileUnitID in MCContext to the Compile Unit this function
@@ -2532,8 +2529,9 @@ void DwarfDebug::emitDebugLocDWO() {
       // offset_pair, so the implementations can't really share much since they
       // need to use different representations)
       // * as of October 2018, at least
-      // Ideally/in v5, this could use SectionLabels to reuse existing addresses
-      // in the address pool to minimize object size/relocations.
+      //
+      // In v5 (see emitLocList), this uses SectionLabels to reuse existing
+      // addresses in the address pool to minimize object size/relocations.
       Asm->emitInt8(dwarf::DW_LLE_startx_length);
       unsigned idx = AddrPool.getIndex(Entry.Begin);
       Asm->EmitULEB128(idx);
@@ -3076,4 +3074,7 @@ uint16_t DwarfDebug::getDwarfVersion() const {
 
 const MCSymbol *DwarfDebug::getSectionLabel(const MCSection *S) {
   return SectionLabels.find(S)->second;
+}
+void DwarfDebug::insertSectionLabel(const MCSymbol *S) {
+  SectionLabels.insert(std::make_pair(&S->getSection(), S));
 }

@@ -1326,7 +1326,7 @@ static bool emitCapabilityImplication(const RecordKeeper &recordKeeper,
 
 static mlir::GenRegistration
     genCapabilityImplication("gen-spirv-capability-implication",
-                             "Generate utilty function to return implied "
+                             "Generate utility function to return implied "
                              "capabilities for a given capability",
                              [](const RecordKeeper &records, raw_ostream &os) {
                                return emitCapabilityImplication(records, os);

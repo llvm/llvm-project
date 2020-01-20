@@ -670,15 +670,15 @@ all of the new IR instructions:
   entry:
     %obj = alloca %struct.Cleanup, align 4
     %e = alloca i32, align 4
-    %call = invoke %struct.Cleanup* @"\01??0Cleanup@@QEAA@XZ"(%struct.Cleanup* nonnull %obj)
+    %call = invoke %struct.Cleanup* @"??0Cleanup@@QEAA@XZ"(%struct.Cleanup* nonnull %obj)
             to label %invoke.cont unwind label %lpad.catch
 
   invoke.cont:                                      ; preds = %entry
-    invoke void @"\01?may_throw@@YAXXZ"()
+    invoke void @"?may_throw@@YAXXZ"()
             to label %invoke.cont.2 unwind label %lpad.cleanup
 
   invoke.cont.2:                                    ; preds = %invoke.cont
-    call void @"\01??_DCleanup@@QEAA@XZ"(%struct.Cleanup* nonnull %obj) nounwind
+    call void @"??_DCleanup@@QEAA@XZ"(%struct.Cleanup* nonnull %obj) nounwind
     br label %return
 
   return:                                           ; preds = %invoke.cont.3, %invoke.cont.2
@@ -687,15 +687,15 @@ all of the new IR instructions:
 
   lpad.cleanup:                                     ; preds = %invoke.cont.2
     %0 = cleanuppad within none []
-    call void @"\01??1Cleanup@@QEAA@XZ"(%struct.Cleanup* nonnull %obj) nounwind
+    call void @"??1Cleanup@@QEAA@XZ"(%struct.Cleanup* nonnull %obj) nounwind
     cleanupret %0 unwind label %lpad.catch
 
   lpad.catch:                                       ; preds = %lpad.cleanup, %entry
     %1 = catchswitch within none [label %catch.body] unwind label %lpad.terminate
 
   catch.body:                                       ; preds = %lpad.catch
-    %catch = catchpad within %1 [%rtti.TypeDescriptor2* @"\01??_R0H@8", i32 0, i32* %e]
-    invoke void @"\01?may_throw@@YAXXZ"()
+    %catch = catchpad within %1 [%rtti.TypeDescriptor2* @"??_R0H@8", i32 0, i32* %e]
+    invoke void @"?may_throw@@YAXXZ"()
             to label %invoke.cont.3 unwind label %lpad.terminate
 
   invoke.cont.3:                                    ; preds = %catch.body
@@ -704,7 +704,7 @@ all of the new IR instructions:
 
   lpad.terminate:                                   ; preds = %catch.body, %lpad.catch
     cleanuppad within none []
-    call void @"\01?terminate@@YAXXZ"
+    call void @"?terminate@@YAXXZ"
     unreachable
   }
 

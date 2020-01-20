@@ -439,7 +439,7 @@ optin.cplusplus.UninitializedObject (C++)
 This checker reports uninitialized fields in objects created after a constructor
 call. It doesn't only find direct uninitialized fields, but rather makes a deep
 inspection of the object, analyzing all of it's fields subfields.
-The checker regards inherited fields as direct fields, so one will recieve
+The checker regards inherited fields as direct fields, so one will receive
 warnings for uninitialized inherited data members as well.
 
 .. code-block:: cpp
@@ -525,7 +525,7 @@ This checker has several options which can be set from command line (e.g.
   objects that don't have at least one initialized field. Defaults to false.
 
 * ``NotesAsWarnings``  (boolean). If set to true, the checker will emit a
-  warning for each uninitalized field, as opposed to emitting one warning per
+  warning for each uninitialized field, as opposed to emitting one warning per
   constructor call, and listing the uninitialized fields that belongs to it in
   notes. *Defaults to false*.
 

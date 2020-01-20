@@ -7,6 +7,8 @@ add_libc_unittest(
   SRCS
     mmap_test.cpp
   DEPENDS
+    errno_h
+    sys_mman_h
     mmap
     munmap
     __errno_location

@@ -210,11 +210,10 @@ entry:
 ; DEFAULT:  ldrb [[A:w.*]], [x{{.*}}]
 ; DEFAULT:  ldrb [[B:w.*]], [x{{.*}}]
 
-; ALWAYS: ldg [[PA:x.*]], [x{{.*}}]
-; ALWAYS: ldrb [[B:w.*]], [sp]
-; ALWAYS: ldrb [[A:w.*]], {{\[}}[[PA]]{{\]}}
+; ALWAYS-DAG: ldg [[PA:x.*]], [x{{.*}}]
+; ALWAYS-DAG: ldrb [[B:w.*]], [sp]
+; ALWAYS-DAG: ldrb [[A:w.*]], {{\[}}[[PA]]{{\]}}
 
-; COMMON: add w0, [[B]], [[A]]
 ; COMMON: ret
 
 ; One of these allocas is closer to FP than to SP, and within 256 bytes

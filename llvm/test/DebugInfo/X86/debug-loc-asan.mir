@@ -1,5 +1,5 @@
-# RUN: llc -o - %s -start-after=patchable-function -O0 -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
-# RUN: llc -o - %s -start-after=patchable-function  -O0 -mtriple=x86_64-unknown-linux-gnu -filetype=obj \
+# RUN: llc -o - %s -start-after=livedebugvalues -O0 -mtriple=x86_64-unknown-linux-gnu | FileCheck %s
+# RUN: llc -o - %s -start-after=livedebugvalues  -O0 -mtriple=x86_64-unknown-linux-gnu -filetype=obj \
 # RUN:   | llvm-dwarfdump -debug-info - | FileCheck %s --check-prefix=DWARF
 #
 # Verify that we have correct debug info for local variables in code

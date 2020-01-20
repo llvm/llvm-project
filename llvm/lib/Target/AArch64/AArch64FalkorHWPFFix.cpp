@@ -823,9 +823,6 @@ bool FalkorHWPFFix::runOnMachineFunction(MachineFunction &Fn) {
   TII = static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());
   TRI = ST.getRegisterInfo();
 
-  assert(TRI->trackLivenessAfterRegAlloc(Fn) &&
-         "Register liveness not available!");
-
   MachineLoopInfo &LI = getAnalysis<MachineLoopInfo>();
 
   Modified = false;

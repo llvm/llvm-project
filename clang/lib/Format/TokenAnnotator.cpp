@@ -1640,8 +1640,9 @@ private:
 
   /// Determine whether ')' is ending a cast.
   bool rParenEndsCast(const FormatToken &Tok) {
-    // C-style casts are only used in C++ and Java.
-    if (!Style.isCpp() && Style.Language != FormatStyle::LK_Java)
+    // C-style casts are only used in C++, C# and Java.
+    if (!Style.isCSharp() && !Style.isCpp() &&
+        Style.Language != FormatStyle::LK_Java)
       return false;
 
     // Empty parens aren't casts and there are no casts at the end of the line.
@@ -2596,7 +2597,7 @@ bool TokenAnnotator::spaceRequiredBeforeParens(const FormatToken &Right) const {
 /// otherwise.
 static bool isKeywordWithCondition(const FormatToken &Tok) {
   return Tok.isOneOf(tok::kw_if, tok::kw_for, tok::kw_while, tok::kw_switch,
-                     tok::kw_constexpr);
+                     tok::kw_constexpr, tok::kw_catch);
 }
 
 bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,

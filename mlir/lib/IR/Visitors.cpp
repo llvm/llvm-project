@@ -1,4 +1,4 @@
-//===- Visitors.cpp - MLIR Visitor Utilties -------------------------------===//
+//===- Visitors.cpp - MLIR Visitor Utilities ------------------------------===//
 //
 // Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

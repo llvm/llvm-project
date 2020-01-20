@@ -480,11 +480,6 @@ requiresRegisterScavenging(const MachineFunction &MF) const {
 }
 
 bool ARMBaseRegisterInfo::
-trackLivenessAfterRegAlloc(const MachineFunction &MF) const {
-  return true;
-}
-
-bool ARMBaseRegisterInfo::
 requiresFrameIndexScavenging(const MachineFunction &MF) const {
   return true;
 }

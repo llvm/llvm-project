@@ -14,6 +14,7 @@ CHECK-NEXT:              DW_AT_name	("hi.c")
 CHECK:   DW_TAG_subprogram
 CHECK-NEXT:                DW_AT_low_pc
 CHECK-NEXT:                DW_AT_high_pc
+CHECK-NEXT:                DW_AT_frame_base
 CHECK-NEXT:                DW_AT_name	("test")
 CHECK-NEXT:                DW_AT_decl_file	("/Users/yury/llvmwasm{{(/|\\)}}hi.c")
 CHECK-NEXT:                DW_AT_decl_line	(3)
@@ -27,6 +28,7 @@ CHECK-NEXT:                  DW_AT_decl_line	(3)
 CHECK:   DW_TAG_subprogram
 CHECK-NEXT:                DW_AT_low_pc
 CHECK-NEXT:                DW_AT_high_pc
+CHECK-NEXT:                DW_AT_frame_base
 CHECK-NEXT:                DW_AT_name	("_start")
 CHECK-NEXT:                DW_AT_decl_file	("/Users/yury/llvmwasm{{(/|\\)}}hi.c")
 CHECK-NEXT:                DW_AT_decl_line	(7)
@@ -43,7 +45,7 @@ CHECK-NEXT:              DW_AT_name	("hi_foo.c")
 
 CHECK:   DW_TAG_variable
 CHECK-NEXT:                DW_AT_name	("y")
-CHECK-NEXT:                DW_AT_type	(0x00000097 "int[2]")
+CHECK-NEXT:                DW_AT_type	(0x000000a1 "int[2]")
 CHECK-NEXT:                DW_AT_external	(true)
 CHECK-NEXT:                DW_AT_decl_file	("{{.*}}hi_foo.c")
 CHECK-NEXT:                DW_AT_decl_line	(1)
@@ -65,7 +67,7 @@ CHECK-NEXT:                DW_AT_encoding	(DW_ATE_unsigned)
 
 CHECK:   DW_TAG_variable
 CHECK-NEXT:                DW_AT_name	("z")
-CHECK-NEXT:                DW_AT_type	(0x00000097 "int[2]")
+CHECK-NEXT:                DW_AT_type	(0x000000a1 "int[2]")
 CHECK-NEXT:                DW_AT_external	(true)
 CHECK-NEXT:                DW_AT_decl_file	("{{.*}}hi_foo.c")
 CHECK-NEXT:                DW_AT_decl_line	(8)
@@ -74,6 +76,7 @@ CHECK-NEXT:                DW_AT_location	(DW_OP_addr 0x0)
 CHECK:   DW_TAG_subprogram
 CHECK-NEXT:                DW_AT_low_pc	
 CHECK-NEXT:                DW_AT_high_pc
+CHECK-NEXT:                DW_AT_frame_base
 CHECK-NEXT:                DW_AT_name	("foo")
 CHECK-NEXT:                DW_AT_decl_file	("{{.*}}hi_foo.c")
 CHECK-NEXT:                DW_AT_decl_line	(3)

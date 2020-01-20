@@ -285,7 +285,7 @@ bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
 
   // Make sure this op's required extensions are allowed to use. For each op,
   // we return a vector of vector for its extension requirements following
-  // ((Extension::A OR Extenion::B) AND (Extension::C OR Extension::D))
+  // ((Extension::A OR Extension::B) AND (Extension::C OR Extension::D))
   // convention. Ops not implementing QueryExtensionInterface do not require
   // extensions to be available.
   if (auto extensions = dyn_cast<spirv::QueryExtensionInterface>(op)) {
@@ -302,7 +302,7 @@ bool spirv::SPIRVConversionTarget::isLegalOp(Operation *op) {
 
   // Make sure this op's required extensions are allowed to use. For each op,
   // we return a vector of vector for its capability requirements following
-  // ((Capability::A OR Extenion::B) AND (Capability::C OR Capability::D))
+  // ((Capability::A OR Extension::B) AND (Capability::C OR Capability::D))
   // convention. Ops not implementing QueryExtensionInterface do not require
   // extensions to be available.
   if (auto capabilities = dyn_cast<spirv::QueryCapabilityInterface>(op)) {

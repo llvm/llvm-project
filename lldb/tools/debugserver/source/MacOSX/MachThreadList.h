@@ -83,6 +83,14 @@ protected:
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
 
+  enum class HardwareBreakpointAction {
+    EnableWatchpoint,
+    DisableWatchpoint,
+  };
+
+  uint32_t DoHardwareBreakpointAction(const DNBBreakpoint *wp,
+                                      HardwareBreakpointAction action) const;
+
   uint32_t UpdateThreadList(MachProcess *process, bool update,
                             collection *num_threads = NULL);
   //  const_iterator  FindThreadByID (thread_t tid) const;
