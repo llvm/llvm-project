@@ -47,6 +47,9 @@ const uint32_t instruction_size_mod = sizeof(dpuinstruction_t) - 1;
 const uint32_t instruction_size_mask = ~instruction_size_mod;
 const uint32_t dpuword_size_mod = sizeof(dpuword_t) - 1;
 const uint32_t dpuword_size_mask = ~dpuword_size_mod;
+const uint32_t mram_aligned = 8;
+const uint32_t mram_aligned_mod = mram_aligned - 1;
+const uint32_t mram_aligned_mask = ~mram_aligned_mod;
 } // namespace
 
 // -----------------------------------------------------------------------------
@@ -406,36 +409,32 @@ bool Dpu::WriteWRAM(uint32_t offset, const void *buf, size_t size) {
   // slow path
 
   // compute final_offset to start from and the final_size to use
-  uint32_t final_offset = offset & dpuword_size_mask;
-  size_t size_with_start_padding = final_offset + size;
-  size_t final_size;
-  if ((size_with_start_padding & dpuword_size_mod) != 0)
-    final_size = size_with_start_padding + sizeof(dpuword_t) -
-                 (final_size & dpuword_size_mask);
-  else
-    final_size = size_with_start_padding;
+  uint32_t final_offset_in_dpuword =
+      (offset & dpuword_size_mask) / sizeof(dpuword_t);
+  size_t padding = offset & dpuword_size_mod;
+  size_t final_size_in_dpuword =
+      ((size + dpuword_size_mod + padding) & dpuword_size_mask) /
+      sizeof(dpuword_t);
 
   // allocating the buffer of dpuwords to read/write from
-  wram_size_t nb_dpuwords = final_size / sizeof(dpuword_t);
-  dpuword_t *words = new dpuword_t[nb_dpuwords];
+  dpuword_t *words = new dpuword_t[final_size_in_dpuword];
   if (words == NULL)
     return false;
 
   // reading the dpuwords
-  ret =
-      dpu_copy_from_wram_for_dpu(m_dpu, words, final_offset / sizeof(dpuword_t),
-                                 final_size / sizeof(dpuword_t));
+  ret = dpu_copy_from_wram_for_dpu(m_dpu, words, final_offset_in_dpuword,
+                                   final_size_in_dpuword);
   if (ret != DPU_OK) {
     delete[] words;
     return false;
   }
 
   // copy the dpuwords into our buffer
-  memcpy(&((uint8_t *)words)[offset - final_offset], buf, size);
+  memcpy(&((uint8_t *)words)[padding], buf, size);
 
   // writing the buffer
-  ret = dpu_copy_to_wram_for_dpu(m_dpu, final_offset / sizeof(dpuword_t), words,
-                                 final_size / sizeof(dpuword_t));
+  ret = dpu_copy_to_wram_for_dpu(m_dpu, final_offset_in_dpuword, words,
+                                 final_size_in_dpuword);
 
   delete[] words;
   return ret == DPU_OK;
@@ -446,23 +445,24 @@ bool Dpu::ReadWRAM(uint32_t offset, void *buf, size_t size) {
   dpuword_t *words = static_cast<dpuword_t *>(buf);
 
   dpu_error_t ret;
-  size_t final_size =
-      size + sizeof(dpuword_t) - 1 + (offset & dpuword_size_mod);
+  uint32_t padding = offset & dpuword_size_mod;
+  size_t final_size = (size + dpuword_size_mod + padding) & dpuword_size_mask;
 
   // if an aligned copy copy more than asked by the function, let's read more
   // and then copy only the wanted part into the output buffer.
   if (final_size != size) {
     iram_size_t final_size_in_dpuword = final_size / sizeof(dpuword_t);
-    uint32_t final_offset = offset & dpuword_size_mask;
+    uint32_t final_offset_in_dpuword =
+        (offset & dpuword_size_mask) / sizeof(dpuword_t);
 
     words = new dpuword_t[final_size_in_dpuword];
     if (words == NULL)
       return false;
 
-    ret = dpu_copy_from_wram_for_dpu(
-        m_dpu, words, final_offset / sizeof(dpuword_t), final_size_in_dpuword);
+    ret = dpu_copy_from_wram_for_dpu(m_dpu, words, final_offset_in_dpuword,
+                                     final_size_in_dpuword);
 
-    memcpy(buf, &words[offset - final_offset], size);
+    memcpy(buf, &words[padding], size);
     delete[] words;
 
   } else {
@@ -488,36 +488,28 @@ bool Dpu::WriteIRAM(uint32_t offset, const void *buf, size_t size) {
   // slow path
 
   // compute final_offset to start from and the final_size to use
-  uint32_t final_offset = offset & instruction_size_mask;
-  size_t size_with_start_padding = final_offset + size;
-  size_t final_size;
-  if ((size_with_start_padding & instruction_size_mod) != 0)
-    final_size = size_with_start_padding + sizeof(dpuinstruction_t) -
-                 (final_size & instruction_size_mask);
-  else
-    final_size = size_with_start_padding;
+  uint32_t final_offset_in_instructions = offset & instruction_size_mask;
+  size_t padding = offset & instruction_size_mod;
+  size_t final_size_in_instructions =
+      ((size + instruction_size_mod + padding) & instruction_size_mask) /
+      sizeof(dpuinstruction_t);
 
   // allocating the buffer of instruction to read/write from
-  iram_size_t nb_instructions = final_size / sizeof(dpuinstruction_t);
-  dpuinstruction_t *instrs = new dpuinstruction_t[nb_instructions];
+  dpuinstruction_t *instrs = new dpuinstruction_t[final_size_in_instructions];
   if (instrs == NULL)
     return false;
 
-  // reading the instructions
-  ret = dpu_copy_from_iram_for_dpu(m_dpu, instrs,
-                                   final_offset / sizeof(dpuinstruction_t),
-                                   final_size / sizeof(dpuinstruction_t));
+  ret = dpu_copy_from_iram_for_dpu(m_dpu, instrs, final_offset_in_instructions,
+                                   final_size_in_instructions);
   if (ret != DPU_OK) {
     delete[] instrs;
     return false;
   }
 
-  // copy the instructions into our buffer
-  memcpy(&((uint8_t *)instrs)[offset - final_offset], buf, size);
+  memcpy(&((uint8_t *)instrs)[padding], buf, size);
 
-  // writing the buffer
-  ret = dpu_copy_to_iram_for_dpu(m_dpu, final_offset / sizeof(dpuinstruction_t),
-                                 instrs, final_size / sizeof(dpuinstruction_t));
+  ret = dpu_copy_to_iram_for_dpu(m_dpu, final_offset_in_instructions, instrs,
+                                 final_size_in_instructions);
 
   delete[] instrs;
   return ret == DPU_OK;
@@ -528,25 +520,27 @@ bool Dpu::ReadIRAM(uint32_t offset, void *buf, size_t size) {
   dpuinstruction_t *instrs = static_cast<dpuinstruction_t *>(buf);
 
   dpu_error_t ret;
+  uint32_t padding = offset & instruction_size_mod;
   size_t final_size =
-      size + sizeof(dpuinstruction_t) - 1 + (offset & instruction_size_mod);
+      (size + instruction_size_mod + padding) & instruction_size_mask;
 
   // if an aligned copy copy more than asked by the function, let's read more
   // and then copy only the wanted part into the output buffer.
   if (final_size != size) {
     iram_size_t final_size_in_instructions =
         final_size / sizeof(dpuinstruction_t);
-    uint32_t final_offset = offset & instruction_size_mask;
+    uint32_t final_offset_in_instructions =
+        (offset & instruction_size_mask) / sizeof(dpuinstruction_t);
 
     instrs = new dpuinstruction_t[final_size_in_instructions];
     if (instrs == NULL)
       return false;
 
-    ret = dpu_copy_from_iram_for_dpu(m_dpu, instrs,
-                                     final_offset / sizeof(dpuinstruction_t),
-                                     final_size_in_instructions);
+    ret =
+        dpu_copy_from_iram_for_dpu(m_dpu, instrs, final_offset_in_instructions,
+                                   final_size_in_instructions);
 
-    memcpy(buf, &instrs[offset - final_offset], size);
+    memcpy(buf, &instrs[padding], size);
     delete[] instrs;
   } else {
     ret = dpu_copy_from_iram_for_dpu(m_dpu, instrs,
@@ -558,17 +552,62 @@ bool Dpu::ReadIRAM(uint32_t offset, void *buf, size_t size) {
 
 bool Dpu::WriteMRAM(uint32_t offset, const void *buf, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
-  const uint8_t *bytes = static_cast<const uint8_t *>(buf);
 
-  dpu_error_t ret = dpu_copy_to_mram(m_dpu, offset, bytes, size, 0);
+  dpu_error_t ret;
+  // fast path, everything is aligned
+  if (((offset & mram_aligned_mod) == 0) && ((size & mram_aligned_mod) == 0)) {
+    const uint8_t *bytes = static_cast<const uint8_t *>(buf);
+    ret = dpu_copy_to_mram(m_dpu, offset, bytes, size, 0);
+    return ret == DPU_OK;
+  }
+
+  // slow path
+
+  // compute final_offset to start from and the final_size to use
+  uint32_t final_offset = offset & mram_aligned_mask;
+  size_t padding = offset & mram_aligned_mod;
+  size_t final_size = (size + padding + mram_aligned_mod) & mram_aligned_mask;
+
+  // allocation the buffer of mram to read/write from
+  uint8_t *bytes = new uint8_t[final_size];
+  if (bytes == NULL)
+    return false;
+
+  ret = dpu_copy_from_mram(m_dpu, bytes, final_offset, final_size, 0);
+  if (ret != DPU_OK) {
+    delete[] bytes;
+    return false;
+  }
+
+  memcpy(&((uint8_t *)bytes)[padding], buf, size);
+
+  ret = dpu_copy_to_mram(m_dpu, final_offset, bytes, final_size, 0);
+
+  delete[] bytes;
   return ret == DPU_OK;
 }
 
 bool Dpu::ReadMRAM(uint32_t offset, void *buf, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_rank->GetLock());
   uint8_t *bytes = static_cast<uint8_t *>(buf);
+  dpu_error_t ret;
 
-  dpu_error_t ret = dpu_copy_from_mram(m_dpu, bytes, offset, size, 0);
+  const uint32_t padding = offset & mram_aligned_mod;
+  size_t final_size = (size + mram_aligned_mod + padding) & mram_aligned_mask;
+
+  if (final_size != size) {
+    const uint32_t final_offset = offset & mram_aligned_mask;
+    bytes = new uint8_t[final_size];
+    if (bytes == NULL)
+      return false;
+
+    ret = dpu_copy_from_mram(m_dpu, bytes, final_offset, final_size, 0);
+    memcpy(buf, &bytes[padding], size);
+    delete[] bytes;
+  } else {
+    ret = dpu_copy_from_mram(m_dpu, bytes, offset, size, 0);
+  }
+
   return ret == DPU_OK;
 }
 
