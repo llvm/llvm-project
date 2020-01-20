@@ -59,8 +59,7 @@ define <2 x i32> @equal_arms_vec(<2 x i1> %cond, <2 x i32> %x) {
 
 define <2 x i32> @equal_arms_vec_undef(<2 x i1> %cond) {
 ; CHECK-LABEL: @equal_arms_vec_undef(
-; CHECK-NEXT:    [[V:%.*]] = select <2 x i1> [[COND:%.*]], <2 x i32> <i32 42, i32 undef>, <2 x i32> <i32 undef, i32 42>
-; CHECK-NEXT:    ret <2 x i32> [[V]]
+; CHECK-NEXT:    ret <2 x i32> <i32 42, i32 42>
 ;
   %V = select <2 x i1> %cond, <2 x i32> <i32 42, i32 undef>, <2 x i32> <i32 undef, i32 42>
   ret <2 x i32> %V
@@ -68,8 +67,7 @@ define <2 x i32> @equal_arms_vec_undef(<2 x i1> %cond) {
 
 define <3 x float> @equal_arms_vec_less_undef(<3 x i1> %cond) {
 ; CHECK-LABEL: @equal_arms_vec_less_undef(
-; CHECK-NEXT:    [[V:%.*]] = select <3 x i1> [[COND:%.*]], <3 x float> <float 4.200000e+01, float undef, float 4.300000e+01>, <3 x float> <float 4.200000e+01, float 4.200000e+01, float 4.300000e+01>
-; CHECK-NEXT:    ret <3 x float> [[V]]
+; CHECK-NEXT:    ret <3 x float> <float 4.200000e+01, float 4.200000e+01, float 4.300000e+01>
 ;
   %V = select <3 x i1> %cond, <3 x float> <float 42.0, float undef, float 43.0>, <3 x float> <float 42.0, float 42.0, float 43.0>
   ret <3 x float> %V
@@ -77,8 +75,7 @@ define <3 x float> @equal_arms_vec_less_undef(<3 x i1> %cond) {
 
 define <3 x float> @equal_arms_vec_more_undef(<3 x i1> %cond) {
 ; CHECK-LABEL: @equal_arms_vec_more_undef(
-; CHECK-NEXT:    [[V:%.*]] = select <3 x i1> [[COND:%.*]], <3 x float> <float 4.200000e+01, float undef, float undef>, <3 x float> <float undef, float undef, float 4.300000e+01>
-; CHECK-NEXT:    ret <3 x float> [[V]]
+; CHECK-NEXT:    ret <3 x float> <float 4.200000e+01, float undef, float 4.300000e+01>
 ;
   %V = select <3 x i1> %cond, <3 x float> <float 42.0, float undef, float undef>, <3 x float> <float undef, float undef, float 43.0>
   ret <3 x float> %V
