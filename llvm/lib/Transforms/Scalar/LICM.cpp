@@ -226,7 +226,7 @@ struct LegacyLICMPass : public LoopPass {
                               *L->getHeader()->getParent()),
                           &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
                               *L->getHeader()->getParent()),
-                          SE ? &SE->getSE() : nullptr, MSSA, &ORE, false);
+                          SE ? &SE->getSE() : nullptr, MSSA, &ORE, true);
   }
 
   /// This transformation requires natural loop information & requires that
