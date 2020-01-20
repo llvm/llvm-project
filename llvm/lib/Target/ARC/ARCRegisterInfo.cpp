@@ -153,11 +153,6 @@ bool ARCRegisterInfo::requiresRegisterScavenging(
   return true;
 }
 
-bool ARCRegisterInfo::trackLivenessAfterRegAlloc(
-    const MachineFunction &MF) const {
-  return true;
-}
-
 bool ARCRegisterInfo::useFPForScavengingIndex(const MachineFunction &MF) const {
   return true;
 }
