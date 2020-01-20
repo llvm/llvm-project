@@ -12,7 +12,7 @@ func @invalid_noalias(%arg0: !llvm.i32 {llvm.noalias = 3}) {
 // -----
 
 func @icmp_non_string(%arg0 : !llvm.i32, %arg1 : !llvm<"i16">) {
-  // expected-error@+1 {{expected 'predicate' attribute of string type}}
+  // expected-error@+1 {{invalid kind of attribute specified}}
   llvm.icmp 42 %arg0, %arg0 : !llvm.i32
   return
 }
@@ -156,7 +156,7 @@ func @insertvalue_non_llvm_type(%a : i32, %b : i32) {
 func @insertvalue_non_array_position() {
   // Note the double-type, otherwise attribute parsing consumes the trailing
   // type of the op as the (wrong) attribute type.
-  // expected-error@+1 {{expected an array attribute}}
+  // expected-error@+1 {{invalid kind of attribute specified}}
   llvm.insertvalue %a, %b 0 : i32 : !llvm<"{i32}">
 }
 
@@ -200,7 +200,7 @@ func @extractvalue_non_llvm_type(%a : i32, %b : i32) {
 func @extractvalue_non_array_position() {
   // Note the double-type, otherwise attribute parsing consumes the trailing
   // type of the op as the (wrong) attribute type.
-  // expected-error@+1 {{expected an array attribute}}
+  // expected-error@+1 {{invalid kind of attribute specified}}
   llvm.extractvalue %b 0 : i32 : !llvm<"{i32}">
 }
 
