@@ -11,7 +11,7 @@ declare void @f2()
 define void @test1(i32 %k) !prof !4 {
 ; CHECK: Loop Unroll: F[test1] Loop %for.body
 ; CHECK: PEELING loop %for.body with iteration count 2!
-; CHECK: PEELING loop %for.body with iteration count 4!
+; CHECK: PEELING loop %for.body with iteration count 5!
 ; CHECK: llvm.loop.unroll.disable
 for.body.lr.ph:
   br label %for.body
