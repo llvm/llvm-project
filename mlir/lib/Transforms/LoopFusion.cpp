@@ -541,7 +541,7 @@ public:
   // on the value of 'createPrivateMemRef'.
   void updateEdges(unsigned srcId, unsigned dstId, Value oldMemRef,
                    bool createPrivateMemRef) {
-    // For each edge in 'inEdges[srcId]': add new edge remaping to 'dstId'.
+    // For each edge in 'inEdges[srcId]': add new edge remapping to 'dstId'.
     if (inEdges.count(srcId) > 0) {
       SmallVector<Edge, 2> oldInEdges = inEdges[srcId];
       for (auto &inEdge : oldInEdges) {

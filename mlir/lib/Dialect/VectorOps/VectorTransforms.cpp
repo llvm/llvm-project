@@ -471,7 +471,7 @@ SmallVector<Value, 1> mlir::vector::unrollSingleResultOpMatchingType(
   unsigned resultIndex;
 
   if (auto contractionOp = dyn_cast<vector::ContractionOp>(op)) {
-    // Popultate state for vector ContractionOp.
+    // Populate state for vector ContractionOp.
     getVectorContractionOpUnrollState(contractionOp, targetShape,
                                       iterationBounds, vectors, resultIndex);
   } else {
@@ -529,7 +529,7 @@ struct SplitTransferReadOp : public OpRewritePattern<vector::TransferReadOp> {
 
   PatternMatchResult matchAndRewrite(vector::TransferReadOp xferReadOp,
                                      PatternRewriter &rewriter) const override {
-    // TODO(andydavis, ntv) Support spliting TransferReadOp with non-identity
+    // TODO(andydavis, ntv) Support splitting TransferReadOp with non-identity
     // permutation maps. Repurpose code from MaterializeVectors transformation.
     if (!xferReadOp.permutation_map().isIdentity())
       return matchFailure();
@@ -582,7 +582,7 @@ struct SplitTransferWriteOp : public OpRewritePattern<vector::TransferWriteOp> {
 
   PatternMatchResult matchAndRewrite(vector::TransferWriteOp xferWriteOp,
                                      PatternRewriter &rewriter) const override {
-    // TODO(andydavis, ntv) Support spliting TransferWriteOp with non-identity
+    // TODO(andydavis, ntv) Support splitting TransferWriteOp with non-identity
     // permutation maps. Repurpose code from MaterializeVectors transformation.
     if (!xferWriteOp.permutation_map().isIdentity())
       return matchFailure();

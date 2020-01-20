@@ -44,7 +44,7 @@ Shape inference is currently tested alongside type inference by
 `TestReturnTypeDriver` in the test dialect. The driver performs two checks:
 
 1.  Verification that the return types specified matches the infered types. This
-    explicit check will be removed and made part of Op verificaton instead.
+    explicit check will be removed and made part of Op verification instead.
 2.  Test the creation of Ops without specifying the return type explicitly in
     function `testCreateFunctions` by creating new binary Ops (Op classes
     specified in `TestReturnTypeDriver`) using 1) all operands to

@@ -137,7 +137,7 @@ class Extension<list<StrEnumAttrCase> extensions> : Availability {
     extensions for the implementing SPIR-V operation. The returned value
     is a nested vector whose element is `mlir::spirv::Extension`s. The outer
     vector's elements (which are vectors) should be interpreted as conjunction
-    while the innner vector's elements (which are `mlir::spirv::Extension`s)
+    while the inner vector's elements (which are `mlir::spirv::Extension`s)
     should be interpreted as disjunction. For example, given
 
     ```
@@ -174,9 +174,9 @@ class Capability<list<I32EnumAttrCase> capabilities> : Availability {
 
     This interface provides a `getCapabilities()` method to query the required
     capabilities for the implementing SPIR-V operation. The returned value
-    is a neted vector whose element is `mlir::spirv::Capability`s. The outer
+    is a nested vector whose element is `mlir::spirv::Capability`s. The outer
     vector's elements (which are vectors) should be interpreted as conjunction
-    while the innner vector's elements (which are `mlir::spirv::Capability`s)
+    while the inner vector's elements (which are `mlir::spirv::Capability`s)
     should be interpreted as disjunction. For example, given
 
     ```

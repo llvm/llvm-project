@@ -66,7 +66,7 @@ buildSequentialConstant(ArrayRef<llvm::Constant *> &constants,
       llvm::ArrayType::get(elementType, shape.front()), nested);
 }
 
-/// Returns the first non-sequential type netsed in sequential types.
+/// Returns the first non-sequential type nested in sequential types.
 static llvm::Type *getInnermostElementType(llvm::Type *type) {
   while (isa<llvm::SequentialType>(type))
     type = type->getSequentialElementType();

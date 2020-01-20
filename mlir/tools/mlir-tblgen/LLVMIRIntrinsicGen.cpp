@@ -47,7 +47,7 @@ public:
 
     name = record.getName();
     assert(name.startswith("int_") &&
-           "LLVM intinsic names are expected to start with 'int_'");
+           "LLVM intrinsic names are expected to start with 'int_'");
     name = name.drop_front(4);
     llvm::SmallVector<llvm::StringRef, 8> chunks;
     name.split(chunks, '_');
@@ -58,7 +58,7 @@ public:
   llvm::StringRef getProperRecordName() const {
     llvm::StringRef name = record.getName();
     assert(name.startswith("int_") &&
-           "LLVM intinsic names are expected to start with 'int_'");
+           "LLVM intrinsic names are expected to start with 'int_'");
     return name.drop_front(4);
   }
 
@@ -109,7 +109,7 @@ public:
   }
 
 private:
-  /// Names of the fileds in the Intrinsic LLVM Tablegen class.
+  /// Names of the fields in the Intrinsic LLVM Tablegen class.
   const char *fieldName = "LLVMName";
   const char *fieldOperands = "ParamTypes";
   const char *fieldResults = "RetTypes";
