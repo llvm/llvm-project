@@ -45,14 +45,13 @@ entry:
 define void @vld2_v8i32(<16 x i32> *%src, <8 x i32> *%dst) {
 ; CHECK-LABEL: vld2_v8i32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    add.w r2, r0, #32
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
-; CHECK-NEXT:    vld20.32 {q2, q3}, [r2]
-; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]
-; CHECK-NEXT:    vld21.32 {q2, q3}, [r2]
+; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]!
+; CHECK-NEXT:    vld20.32 {q2, q3}, [r0]
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vadd.i32 q1, q2, q3
+; CHECK-NEXT:    vld21.32 {q2, q3}, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
+; CHECK-NEXT:    vadd.i32 q1, q2, q3
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #16]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -70,17 +69,16 @@ define void @vld2_v16i32(<32 x i32> *%src, <16 x i32> *%dst) {
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
-; CHECK-NEXT:    add.w r12, r0, #96
-; CHECK-NEXT:    add.w r3, r0, #32
-; CHECK-NEXT:    add.w r2, r0, #64
-; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]
+; CHECK-NEXT:    add.w r2, r0, #96
+; CHECK-NEXT:    add.w r3, r0, #64
+; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]!
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
-; CHECK-NEXT:    vld20.32 {q1, q2}, [r2]
-; CHECK-NEXT:    vld20.32 {q3, q4}, [r12]
-; CHECK-NEXT:    vld20.32 {q5, q6}, [r3]
-; CHECK-NEXT:    vld21.32 {q5, q6}, [r3]
-; CHECK-NEXT:    vld21.32 {q1, q2}, [r2]
-; CHECK-NEXT:    vld21.32 {q3, q4}, [r12]
+; CHECK-NEXT:    vld20.32 {q1, q2}, [r3]
+; CHECK-NEXT:    vld20.32 {q3, q4}, [r2]
+; CHECK-NEXT:    vld20.32 {q5, q6}, [r0]
+; CHECK-NEXT:    vld21.32 {q5, q6}, [r0]
+; CHECK-NEXT:    vld21.32 {q1, q2}, [r3]
+; CHECK-NEXT:    vld21.32 {q3, q4}, [r2]
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q1_q2
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    vadd.i32 q5, q5, q6
@@ -162,14 +160,13 @@ entry:
 define void @vld2_v16i16(<32 x i16> *%src, <16 x i16> *%dst) {
 ; CHECK-LABEL: vld2_v16i16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    add.w r2, r0, #32
 ; CHECK-NEXT:    vld20.16 {q0, q1}, [r0]
-; CHECK-NEXT:    vld20.16 {q2, q3}, [r2]
-; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]
-; CHECK-NEXT:    vld21.16 {q2, q3}, [r2]
+; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]!
+; CHECK-NEXT:    vld20.16 {q2, q3}, [r0]
 ; CHECK-NEXT:    vadd.i16 q0, q0, q1
-; CHECK-NEXT:    vadd.i16 q1, q2, q3
+; CHECK-NEXT:    vld21.16 {q2, q3}, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
+; CHECK-NEXT:    vadd.i16 q1, q2, q3
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #16]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -408,14 +405,13 @@ entry:
 define void @vld2_v8f32(<16 x float> *%src, <8 x float> *%dst) {
 ; CHECK-LABEL: vld2_v8f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    add.w r2, r0, #32
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
-; CHECK-NEXT:    vld20.32 {q2, q3}, [r2]
-; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]
-; CHECK-NEXT:    vld21.32 {q2, q3}, [r2]
+; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]!
+; CHECK-NEXT:    vld20.32 {q2, q3}, [r0]
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
-; CHECK-NEXT:    vadd.f32 q1, q2, q3
+; CHECK-NEXT:    vld21.32 {q2, q3}, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
+; CHECK-NEXT:    vadd.f32 q1, q2, q3
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #16]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -433,17 +429,16 @@ define void @vld2_v16f32(<32 x float> *%src, <16 x float> *%dst) {
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
-; CHECK-NEXT:    add.w r12, r0, #96
-; CHECK-NEXT:    add.w r3, r0, #32
-; CHECK-NEXT:    add.w r2, r0, #64
-; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]
+; CHECK-NEXT:    add.w r2, r0, #96
+; CHECK-NEXT:    add.w r3, r0, #64
+; CHECK-NEXT:    vld21.32 {q0, q1}, [r0]!
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
-; CHECK-NEXT:    vld20.32 {q1, q2}, [r2]
-; CHECK-NEXT:    vld20.32 {q3, q4}, [r12]
-; CHECK-NEXT:    vld20.32 {q5, q6}, [r3]
-; CHECK-NEXT:    vld21.32 {q5, q6}, [r3]
-; CHECK-NEXT:    vld21.32 {q1, q2}, [r2]
-; CHECK-NEXT:    vld21.32 {q3, q4}, [r12]
+; CHECK-NEXT:    vld20.32 {q1, q2}, [r3]
+; CHECK-NEXT:    vld20.32 {q3, q4}, [r2]
+; CHECK-NEXT:    vld20.32 {q5, q6}, [r0]
+; CHECK-NEXT:    vld21.32 {q5, q6}, [r0]
+; CHECK-NEXT:    vld21.32 {q1, q2}, [r3]
+; CHECK-NEXT:    vld21.32 {q3, q4}, [r2]
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q1_q2
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    vadd.f32 q5, q5, q6
@@ -552,15 +547,14 @@ entry:
 define void @vld2_v16f16(<32 x half> *%src, <16 x half> *%dst) {
 ; CHECK-LABEL: vld2_v16f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    add.w r2, r0, #32
-; CHECK-NEXT:    vld20.16 {q0, q1}, [r2]
-; CHECK-NEXT:    vld21.16 {q0, q1}, [r2]
+; CHECK-NEXT:    vld20.16 {q0, q1}, [r0]
+; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]!
+; CHECK-NEXT:    vld20.16 {q2, q3}, [r0]
 ; CHECK-NEXT:    vadd.f16 q0, q0, q1
-; CHECK-NEXT:    vld20.16 {q1, q2}, [r0]
-; CHECK-NEXT:    vld21.16 {q1, q2}, [r0]
-; CHECK-NEXT:    vstrw.32 q0, [r1, #16]
-; CHECK-NEXT:    vadd.f16 q0, q1, q2
+; CHECK-NEXT:    vld21.16 {q2, q3}, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
+; CHECK-NEXT:    vadd.f16 q2, q2, q3
+; CHECK-NEXT:    vstrw.32 q2, [r1, #16]
 ; CHECK-NEXT:    bx lr
 entry:
   %l1 = load <32 x half>, <32 x half>* %src, align 4

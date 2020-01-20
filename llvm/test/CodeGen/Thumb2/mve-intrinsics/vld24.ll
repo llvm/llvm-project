@@ -25,8 +25,7 @@ define arm_aapcs_vfpcc half *@test_vld2q_f16_post(half* %addr, <8 x half>* %dst)
 ; CHECK-LABEL: test_vld2q_f16_post:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld20.16 {q0, q1}, [r0]
-; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]
-; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    vld21.16 {q0, q1}, [r0]!
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -66,8 +65,7 @@ define arm_aapcs_vfpcc i8* @test_vld4q_u8_post(i8* %addr, <16 x i8>* %dst) {
 ; CHECK-NEXT:    vld40.8 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld41.8 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vld42.8 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vld43.8 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    adds r0, #64
+; CHECK-NEXT:    vld43.8 {q0, q1, q2, q3}, [r0]!
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -102,8 +100,7 @@ define arm_aapcs_vfpcc i32* @test_vst2q_u32_post(i32* %addr, %struct.uint32x4x2_
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    vst20.32 {q0, q1}, [r0]
-; CHECK-NEXT:    vst21.32 {q0, q1}, [r0]
-; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    vst21.32 {q0, q1}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %value.coerce.fca.0.0.extract = extractvalue %struct.uint32x4x2_t %value.coerce, 0, 0
@@ -138,8 +135,7 @@ define arm_aapcs_vfpcc half* @test_vst2q_f16_post(half* %addr, %struct.float16x8
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    vst20.16 {q0, q1}, [r0]
-; CHECK-NEXT:    vst21.16 {q0, q1}, [r0]
-; CHECK-NEXT:    adds r0, #32
+; CHECK-NEXT:    vst21.16 {q0, q1}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %value.coerce.fca.0.0.extract = extractvalue %struct.float16x8x2_t %value.coerce, 0, 0
@@ -186,8 +182,7 @@ define arm_aapcs_vfpcc i8* @test_vst4q_s8_post(i8* %addr, %struct.int8x16x4_t %v
 ; CHECK-NEXT:    vst40.8 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst41.8 {q0, q1, q2, q3}, [r0]
 ; CHECK-NEXT:    vst42.8 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    vst43.8 {q0, q1, q2, q3}, [r0]
-; CHECK-NEXT:    adds r0, #64
+; CHECK-NEXT:    vst43.8 {q0, q1, q2, q3}, [r0]!
 ; CHECK-NEXT:    bx lr
 entry:
   %value.coerce.fca.0.0.extract = extractvalue %struct.int8x16x4_t %value.coerce, 0, 0
