@@ -245,7 +245,8 @@ void AMDGPUTargetInfo::adjustTargetOptions(const CodeGenOptions &CGOpts,
   }
   if (!hasFP32Denormals)
     TargetOpts.Features.push_back(
-      (Twine(hasFastFMAF() && hasFullRateDenormalsF32() && !CGOpts.FlushDenorm
+      (Twine(hasFastFMAF() && hasFullRateDenormalsF32() &&
+             CGOpts.FP32DenormalMode == llvm::DenormalMode::IEEE
              ? '+' : '-') + Twine("fp32-denormals"))
             .str());
   // Always do not flush fp64 or fp16 denorms.

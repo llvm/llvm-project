@@ -289,4 +289,4 @@ define double @fma_double(double %a, double %b, double %c) {
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { "nvptx-f32ftz" = "true" }
+attributes #1 = { "denormal-fp-math-f32" = "preserve-sign" }
