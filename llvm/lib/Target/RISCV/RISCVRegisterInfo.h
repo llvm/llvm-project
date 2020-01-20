@@ -51,10 +51,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
     return true;
   }
 
-  bool trackLivenessAfterRegAlloc(const MachineFunction &) const override {
-    return true;
-  }
-
   const TargetRegisterClass *
   getPointerRegClass(const MachineFunction &MF,
                      unsigned Kind = 0) const override {
