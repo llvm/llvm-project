@@ -165,13 +165,6 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
     return false;
   }
 
-  if (Tok.is(tok::annot_template_id)) {
-    // If the current token is an annotated template id, it may already have
-    // a scope specifier. Restore it.
-    TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
-    SS = TemplateId->SS;
-  }
-
   // Has to happen before any "return false"s in this function.
   bool CheckForDestructor = false;
   if (MayBePseudoDestructor && *MayBePseudoDestructor) {
@@ -2405,7 +2398,7 @@ bool Parser::ParseUnqualifiedIdTemplateId(CXXScopeSpec &SS,
             : Id.OperatorFunctionId.Operator;
 
     TemplateIdAnnotation *TemplateId = TemplateIdAnnotation::Create(
-        SS, TemplateKWLoc, Id.StartLocation, TemplateII, OpKind, Template, TNK,
+        TemplateKWLoc, Id.StartLocation, TemplateII, OpKind, Template, TNK,
         LAngleLoc, RAngleLoc, TemplateArgs, TemplateIds);
 
     Id.setTemplateId(TemplateId);

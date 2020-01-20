@@ -1550,7 +1550,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
         CXXScopeSpec SS;
         ParseOptionalCXXScopeSpecifier(SS, nullptr,
                                        /*EnteringContext=*/false);
-        AnnotateTemplateIdTokenAsType();
+        AnnotateTemplateIdTokenAsType(SS);
         return ParseCastExpression(ParseKind, isAddressOfOperand, NotCastExpr,
                                    isTypeCast, isVectorLiteral,
                                    NotPrimaryExpression);
@@ -1568,7 +1568,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       // We have a template-id that we know refers to a type,
       // translate it into a type and continue parsing as a cast
       // expression.
-      AnnotateTemplateIdTokenAsType();
+      CXXScopeSpec SS;
+      AnnotateTemplateIdTokenAsType(SS);
       return ParseCastExpression(ParseKind, isAddressOfOperand,
                                  NotCastExpr, isTypeCast, isVectorLiteral,
                                  NotPrimaryExpression);
