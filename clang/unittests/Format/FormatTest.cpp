@@ -14980,6 +14980,7 @@ TEST_F(FormatTest, SpacesInConditionalStatement) {
   verifyFormat("while ( a )\n  return;", Spaces);
   verifyFormat("while ( (a && b) )\n  return;", Spaces);
   verifyFormat("do {\n} while ( 1 != 0 );", Spaces);
+  verifyFormat("try {\n} catch ( const std::exception & ) {\n}", Spaces);
   // Check that space on the left of "::" is inserted as expected at beginning
   // of condition.
   verifyFormat("while ( ::func() )\n  return;", Spaces);
