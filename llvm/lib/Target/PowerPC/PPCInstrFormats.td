@@ -39,7 +39,7 @@ class I<bits<6> opcode, dag OOL, dag IOL, string asmstr, InstrItinClass itin>
 
   // Indicate that this instruction is of type X-Form Load or Store
   bits<1> XFormMemOp = 0;
-  let TSFlags{7}  = XFormMemOp;
+  let TSFlags{6}  = XFormMemOp;
 
   // Fields used for relation models.
   string BaseName = "";
