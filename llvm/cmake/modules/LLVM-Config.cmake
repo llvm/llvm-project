@@ -171,13 +171,6 @@ function(llvm_expand_pseudo_components out_components)
           list(APPEND expanded_components "${t}CodeGen")
         endif()
       endforeach(t)
-    elseif( c STREQUAL "AllTargetsAsmPrinters" )
-      # Link all the asm printers from all the targets
-      foreach(t ${LLVM_TARGETS_TO_BUILD})
-        if( TARGET LLVM${t}AsmPrinter )
-          list(APPEND expanded_components "${t}AsmPrinter")
-        endif()
-      endforeach(t)
     elseif( c STREQUAL "AllTargetsAsmParsers" )
       # Link all the asm parsers from all the targets
       foreach(t ${LLVM_TARGETS_TO_BUILD})
