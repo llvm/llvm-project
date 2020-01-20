@@ -26,7 +26,6 @@
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TemplateInstCallback.h"
-#include "clang/Sema/SemaConcept.h"
 #include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
@@ -200,10 +199,8 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case DeducedTemplateArgumentSubstitution:
   case PriorTemplateArgumentSubstitution:
   case ConstraintsCheck:
-  case NestedRequirementConstraintsCheck:
     return true;
 
-  case RequirementInstantiation:
   case DefaultTemplateArgumentChecking:
   case DeclaringSpecialMember:
   case DeclaringImplicitEqualityComparison:
@@ -250,7 +247,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     Inst.InstantiationRange = InstantiationRange;
     SemaRef.pushCodeSynthesisContext(Inst);
 
-    AlreadyInstantiating = !Inst.Entity ? false :
+    AlreadyInstantiating =
         !SemaRef.InstantiatingSpecializations
              .insert(std::make_pair(Inst.Entity->getCanonicalDecl(), Inst.Kind))
              .second;
@@ -369,26 +366,6 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
-    concepts::Requirement *Req, sema::TemplateDeductionInfo &DeductionInfo,
-    SourceRange InstantiationRange)
-    : InstantiatingTemplate(
-          SemaRef, CodeSynthesisContext::RequirementInstantiation,
-          PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
-          /*Template=*/nullptr, /*TemplateArgs=*/None, &DeductionInfo) {}
-
-
-Sema::InstantiatingTemplate::InstantiatingTemplate(
-    Sema &SemaRef, SourceLocation PointOfInstantiation,
-    concepts::NestedRequirement *Req, ConstraintsCheck,
-    SourceRange InstantiationRange)
-    : InstantiatingTemplate(
-          SemaRef, CodeSynthesisContext::NestedRequirementConstraintsCheck,
-          PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
-          /*Template=*/nullptr, /*TemplateArgs=*/None) {}
-
-
-Sema::InstantiatingTemplate::InstantiatingTemplate(
-    Sema &SemaRef, SourceLocation PointOfInstantiation,
     ConstraintsCheck, NamedDecl *Template,
     ArrayRef<TemplateArgument> TemplateArgs, SourceRange InstantiationRange)
     : InstantiatingTemplate(
@@ -469,9 +446,8 @@ void Sema::InstantiatingTemplate::Clear() {
   if (!Invalid) {
     if (!AlreadyInstantiating) {
       auto &Active = SemaRef.CodeSynthesisContexts.back();
-      if (Active.Entity)
-        SemaRef.InstantiatingSpecializations.erase(
-            std::make_pair(Active.Entity, Active.Kind));
+      SemaRef.InstantiatingSpecializations.erase(
+          std::make_pair(Active.Entity, Active.Kind));
     }
 
     atTemplateEnd(SemaRef.TemplateInstCallbacks, SemaRef,
@@ -708,18 +684,6 @@ void Sema::PrintInstantiationStack() {
         << Active->InstantiationRange;
       break;
 
-    case CodeSynthesisContext::RequirementInstantiation:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_template_requirement_instantiation_here)
-        << Active->InstantiationRange;
-      break;
-
-    case CodeSynthesisContext::NestedRequirementConstraintsCheck:
-      Diags.Report(Active->PointOfInstantiation,
-                   diag::note_nested_requirement_here)
-        << Active->InstantiationRange;
-      break;
-
     case CodeSynthesisContext::DeclaringSpecialMember:
       Diags.Report(Active->PointOfInstantiation,
                    diag::note_in_declaration_of_implicit_special_member)
@@ -824,7 +788,6 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
     case CodeSynthesisContext::ConstraintsCheck:
     case CodeSynthesisContext::ParameterMappingSubstitution:
     case CodeSynthesisContext::ConstraintNormalization:
-    case CodeSynthesisContext::NestedRequirementConstraintsCheck:
       // This is a template instantiation, so there is no SFINAE.
       return None;
 
@@ -839,10 +802,9 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
     case CodeSynthesisContext::ExplicitTemplateArgumentSubstitution:
     case CodeSynthesisContext::DeducedTemplateArgumentSubstitution:
     case CodeSynthesisContext::ConstraintSubstitution:
-    case CodeSynthesisContext::RequirementInstantiation:
-      // We're either substituting explicitly-specified template arguments,
-      // deduced template arguments, a constraint expression or a requirement
-      // in a requires expression, so SFINAE applies.
+      // We're either substituting explicitly-specified template arguments
+      // or deduced template arguments or a constraint expression, so SFINAE
+      // applies.
       assert(Active->DeductionInfo && "Missing deduction info pointer");
       return Active->DeductionInfo;
 
@@ -1094,41 +1056,6 @@ namespace {
       return TreeTransform<TemplateInstantiator>::TransformLambdaExpr(E);
     }
 
-    ExprResult TransformRequiresExpr(RequiresExpr *E) {
-      LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
-      return TreeTransform<TemplateInstantiator>::TransformRequiresExpr(E);
-    }
-
-    bool TransformRequiresExprRequirements(
-        ArrayRef<concepts::Requirement *> Reqs,
-        SmallVectorImpl<concepts::Requirement *> &Transformed) {
-      bool SatisfactionDetermined = false;
-      for (concepts::Requirement *Req : Reqs) {
-        concepts::Requirement *TransReq = nullptr;
-        if (!SatisfactionDetermined) {
-          if (auto *TypeReq = dyn_cast<concepts::TypeRequirement>(Req))
-            TransReq = TransformTypeRequirement(TypeReq);
-          else if (auto *ExprReq = dyn_cast<concepts::ExprRequirement>(Req))
-            TransReq = TransformExprRequirement(ExprReq);
-          else
-            TransReq = TransformNestedRequirement(
-                cast<concepts::NestedRequirement>(Req));
-          if (!TransReq)
-            return true;
-          if (!TransReq->isDependent() && !TransReq->isSatisfied())
-            // [expr.prim.req]p6
-            //   [...]  The substitution and semantic constraint checking
-            //   proceeds in lexical order and stops when a condition that
-            //   determines the result of the requires-expression is
-            //   encountered. [..]
-            SatisfactionDetermined = true;
-        } else
-          TransReq = Req;
-        Transformed.push_back(TransReq);
-      }
-      return false;
-    }
-
     TemplateParameterList *TransformTemplateParameterList(
                               TemplateParameterList *OrigTPL)  {
       if (!OrigTPL || !OrigTPL->size()) return OrigTPL;
@@ -1138,14 +1065,6 @@ namespace {
                         /* DeclContext *Owner */ Owner, TemplateArgs);
       return DeclInstantiator.SubstTemplateParams(OrigTPL);
     }
-
-    concepts::TypeRequirement *
-    TransformTypeRequirement(concepts::TypeRequirement *Req);
-    concepts::ExprRequirement *
-    TransformExprRequirement(concepts::ExprRequirement *Req);
-    concepts::NestedRequirement *
-    TransformNestedRequirement(concepts::NestedRequirement *Req);
-
   private:
     ExprResult transformNonTypeTemplateParmRef(NonTypeTemplateParmDecl *parm,
                                                SourceLocation loc,
@@ -1749,163 +1668,6 @@ TemplateInstantiator::TransformSubstTemplateTypeParmPackType(
   NewTL.setNameLoc(TL.getNameLoc());
   return Result;
 }
-
-template<typename EntityPrinter>
-static concepts::Requirement::SubstitutionDiagnostic *
-createSubstDiag(Sema &S, TemplateDeductionInfo &Info, EntityPrinter Printer) {
-  SmallString<128> Message;
-  SourceLocation ErrorLoc;
-  if (Info.hasSFINAEDiagnostic()) {
-    PartialDiagnosticAt PDA(SourceLocation(),
-                            PartialDiagnostic::NullDiagnostic{});
-    Info.takeSFINAEDiagnostic(PDA);
-    PDA.second.EmitToString(S.getDiagnostics(), Message);
-    ErrorLoc = PDA.first;
-  } else {
-    ErrorLoc = Info.getLocation();
-  }
-  char *MessageBuf = new (S.Context) char[Message.size()];
-  std::copy(Message.begin(), Message.end(), MessageBuf);
-  SmallString<128> Entity;
-  llvm::raw_svector_ostream OS(Entity);
-  Printer(OS);
-  char *EntityBuf = new (S.Context) char[Entity.size()];
-  std::copy(Entity.begin(), Entity.end(), EntityBuf);
-  return new (S.Context) concepts::Requirement::SubstitutionDiagnostic{
-      StringRef(EntityBuf, Entity.size()), ErrorLoc,
-      StringRef(MessageBuf, Message.size())};
-}
-
-concepts::TypeRequirement *
-TemplateInstantiator::TransformTypeRequirement(concepts::TypeRequirement *Req) {
-  if (!Req->isDependent() && !AlwaysRebuild())
-    return Req;
-  if (Req->isSubstitutionFailure()) {
-    if (AlwaysRebuild())
-      return RebuildTypeRequirement(
-              Req->getSubstitutionDiagnostic());
-    return Req;
-  }
-
-  Sema::SFINAETrap Trap(SemaRef);
-  TemplateDeductionInfo Info(Req->getType()->getTypeLoc().getBeginLoc());
-  Sema::InstantiatingTemplate TypeInst(SemaRef,
-      Req->getType()->getTypeLoc().getBeginLoc(), Req, Info,
-      Req->getType()->getTypeLoc().getSourceRange());
-  if (TypeInst.isInvalid())
-    return nullptr;
-  TypeSourceInfo *TransType = TransformType(Req->getType());
-  if (!TransType || Trap.hasErrorOccurred())
-    return RebuildTypeRequirement(createSubstDiag(SemaRef, Info,
-        [&] (llvm::raw_ostream& OS) {
-            Req->getType()->getType().print(OS, SemaRef.getPrintingPolicy());
-        }));
-  return RebuildTypeRequirement(TransType);
-}
-
-concepts::ExprRequirement *
-TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
-  if (!Req->isDependent() && !AlwaysRebuild())
-    return Req;
-
-  Sema::SFINAETrap Trap(SemaRef);
-  TemplateDeductionInfo Info(Req->getExpr()->getBeginLoc());
-
-  llvm::PointerUnion<Expr *, concepts::Requirement::SubstitutionDiagnostic *>
-      TransExpr;
-  if (Req->isExprSubstitutionFailure())
-    TransExpr = Req->getExprSubstitutionDiagnostic();
-  else {
-    Sema::InstantiatingTemplate ExprInst(SemaRef, Req->getExpr()->getBeginLoc(),
-                                         Req, Info,
-                                         Req->getExpr()->getSourceRange());
-    if (ExprInst.isInvalid())
-      return nullptr;
-    ExprResult TransExprRes = TransformExpr(Req->getExpr());
-    if (TransExprRes.isInvalid() || Trap.hasErrorOccurred())
-      TransExpr = createSubstDiag(SemaRef, Info,
-          [&] (llvm::raw_ostream& OS) {
-              Req->getExpr()->printPretty(OS, nullptr,
-                                          SemaRef.getPrintingPolicy());
-          });
-    else
-      TransExpr = TransExprRes.get();
-  }
-
-  llvm::Optional<concepts::ExprRequirement::ReturnTypeRequirement> TransRetReq;
-  const auto &RetReq = Req->getReturnTypeRequirement();
-  if (RetReq.isEmpty())
-    TransRetReq.emplace();
-  else if (RetReq.isSubstitutionFailure())
-    TransRetReq.emplace(RetReq.getSubstitutionDiagnostic());
-  else if (RetReq.isTypeConstraint()) {
-    TemplateParameterList *OrigTPL =
-        RetReq.getTypeConstraintTemplateParameterList();
-    Sema::InstantiatingTemplate TPLInst(SemaRef, OrigTPL->getTemplateLoc(),
-                                        Req, Info, OrigTPL->getSourceRange());
-    if (TPLInst.isInvalid())
-      return nullptr;
-    TemplateParameterList *TPL =
-        TransformTemplateParameterList(OrigTPL);
-    if (!TPL)
-      TransRetReq.emplace(createSubstDiag(SemaRef, Info,
-          [&] (llvm::raw_ostream& OS) {
-              RetReq.getTypeConstraint()->getImmediatelyDeclaredConstraint()
-                  ->printPretty(OS, nullptr, SemaRef.getPrintingPolicy());
-          }));
-    else {
-      TPLInst.Clear();
-      TransRetReq.emplace(TPL);
-    }
-  }
-  assert(TransRetReq.hasValue() &&
-         "All code paths leading here must set TransRetReq");
-  if (Expr *E = TransExpr.dyn_cast<Expr *>())
-    return RebuildExprRequirement(E, Req->isSimple(), Req->getNoexceptLoc(),
-                                  std::move(*TransRetReq));
-  return RebuildExprRequirement(
-      TransExpr.get<concepts::Requirement::SubstitutionDiagnostic *>(),
-      Req->isSimple(), Req->getNoexceptLoc(), std::move(*TransRetReq));
-}
-
-concepts::NestedRequirement *
-TemplateInstantiator::TransformNestedRequirement(
-    concepts::NestedRequirement *Req) {
-  if (!Req->isDependent() && !AlwaysRebuild())
-    return Req;
-  if (Req->isSubstitutionFailure()) {
-    if (AlwaysRebuild())
-      return RebuildNestedRequirement(
-          Req->getSubstitutionDiagnostic());
-    return Req;
-  }
-  Sema::InstantiatingTemplate ReqInst(SemaRef,
-      Req->getConstraintExpr()->getBeginLoc(), Req,
-      Sema::InstantiatingTemplate::ConstraintsCheck{},
-      Req->getConstraintExpr()->getSourceRange());
-
-  ExprResult TransConstraint;
-  TemplateDeductionInfo Info(Req->getConstraintExpr()->getBeginLoc());
-  {
-    EnterExpressionEvaluationContext ContextRAII(
-        SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-    Sema::SFINAETrap Trap(SemaRef);
-    Sema::InstantiatingTemplate ConstrInst(SemaRef,
-        Req->getConstraintExpr()->getBeginLoc(), Req, Info,
-        Req->getConstraintExpr()->getSourceRange());
-    if (ConstrInst.isInvalid())
-      return nullptr;
-    TransConstraint = TransformExpr(Req->getConstraintExpr());
-    if (TransConstraint.isInvalid() || Trap.hasErrorOccurred())
-      return RebuildNestedRequirement(createSubstDiag(SemaRef, Info,
-          [&] (llvm::raw_ostream& OS) {
-              Req->getConstraintExpr()->printPretty(OS, nullptr,
-                                                    SemaRef.getPrintingPolicy());
-          }));
-  }
-  return RebuildNestedRequirement(TransConstraint.get());
-}
-
 
 /// Perform substitution on the type T with a given set of template
 /// arguments.

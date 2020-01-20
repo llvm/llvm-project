@@ -1575,9 +1575,7 @@ llvm::DenseSet<Module*> &Sema::getLookupModules() {
   unsigned N = CodeSynthesisContexts.size();
   for (unsigned I = CodeSynthesisContextLookupModules.size();
        I != N; ++I) {
-    Module *M = CodeSynthesisContexts[I].Entity ?
-                getDefiningModule(*this, CodeSynthesisContexts[I].Entity) :
-                nullptr;
+    Module *M = getDefiningModule(*this, CodeSynthesisContexts[I].Entity);
     if (M && !LookupModulesCache.insert(M).second)
       M = nullptr;
     CodeSynthesisContextLookupModules.push_back(M);

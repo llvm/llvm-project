@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_AST_STMTVISITOR_H
 #define LLVM_CLANG_AST_STMTVISITOR_H
 
-#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"

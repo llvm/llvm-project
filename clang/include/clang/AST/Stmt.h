@@ -910,17 +910,6 @@ protected:
     SourceLocation NameLoc;
   };
 
-  class RequiresExprBitfields {
-    friend class ASTStmtReader;
-    friend class ASTStmtWriter;
-    friend class RequiresExpr;
-
-    unsigned : NumExprBits;
-
-    unsigned IsSatisfied : 1;
-    SourceLocation RequiresKWLoc;
-  };
-
   //===--- C++ Coroutines TS bitfields classes ---===//
 
   class CoawaitExprBitfields {
@@ -1019,7 +1008,6 @@ protected:
     UnresolvedMemberExprBitfields UnresolvedMemberExprBits;
     CXXNoexceptExprBitfields CXXNoexceptExprBits;
     SubstNonTypeTemplateParmExprBitfields SubstNonTypeTemplateParmExprBits;
-    RequiresExprBitfields RequiresExprBits;
 
     // C++ Coroutines TS expressions
     CoawaitExprBitfields CoawaitBits;
