@@ -49,17 +49,20 @@ class TestWeakSymbolsInExpressions(TestBase):
         
     def do_test(self):
         hidden_dir = os.path.join(self.getBuildDir(), "hidden")
-        
+        hidden_dylib = os.path.join(hidden_dir, "libdylib.dylib")
+
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetWorkingDirectory(self.getBuildDir())
         # We have to point to the hidden directory to pick up the
         # version of the dylib without the weak symbols:
         env_expr = self.platformContext.shlib_environment_var + "=" + hidden_dir
         launch_info.SetEnvironmentEntries([env_expr], True)
-        
-        (self.target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                                                            "Set a breakpoint here", self.main_source_file,
-                                                                            launch_info = launch_info)
+
+        (self.target, _, thread, _) = lldbutil.run_to_source_breakpoint(
+                                              self, "Set a breakpoint here",
+                                              self.main_source_file,
+                                              launch_info = launch_info,
+                                              extra_images = [hidden_dylib])
         # First we have to import the Dylib module so we get the type info
         # for the weak symbol.  We need to add the source dir to the module
         # search paths, and then run @import to introduce it into the expression
