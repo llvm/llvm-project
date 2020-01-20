@@ -275,7 +275,8 @@ static bool hasSecRelSymbolRef(const MCExpr *Expr) {
 static bool isPCRel32Branch(const MCInst &MI, const MCInstrInfo &MCII) {
   unsigned Opcode = MI.getOpcode();
   const MCInstrDesc &Desc = MCII.get(Opcode);
-  if ((Opcode != X86::CALL64pcrel32 && Opcode != X86::JMP_4) ||
+  if ((Opcode != X86::CALL64pcrel32 && Opcode != X86::JMP_4 &&
+       Opcode != X86::JCC_4) ||
       getImmFixupKind(Desc.TSFlags) != FK_PCRel_4)
     return false;
 
