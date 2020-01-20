@@ -35,12 +35,14 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 
 using namespace llvm;
 
@@ -56,8 +58,13 @@ namespace {
 class MVETailPredication : public LoopPass {
   SmallVector<IntrinsicInst*, 4> MaskedInsts;
   Loop *L = nullptr;
+  LoopInfo *LI = nullptr;
+  const DataLayout *DL;
+  DominatorTree *DT = nullptr;
   ScalarEvolution *SE = nullptr;
   TargetTransformInfo *TTI = nullptr;
+  TargetLibraryInfo *TLI = nullptr;
+  bool ClonedVCTPInExitBlock = false;
 
 public:
   static char ID;
@@ -69,6 +76,8 @@ public:
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.setPreservesCFG();
   }
@@ -97,6 +106,11 @@ private:
                            DenseMap<Instruction*, Instruction*> &NewPredicates,
                            VectorType *VecTy,
                            Value *NumElements);
+
+  /// Rematerialize the iteration count in exit blocks, which enables
+  /// ARMLowOverheadLoops to better optimise away loop update statements inside
+  /// hardware-loops.
+  void RematerializeIterCount();
 };
 
 } // end namespace
@@ -120,6 +134,16 @@ static bool IsMasked(Instruction *I) {
   return ID == Intrinsic::masked_store || ID == Intrinsic::masked_load;
 }
 
+void MVETailPredication::RematerializeIterCount() {
+  SmallVector<WeakTrackingVH, 16> DeadInsts;
+  SCEVExpander Rewriter(*SE, *DL, "mvetp");
+  ReplaceExitVal ReplaceExitValue = AlwaysRepl;
+
+  formLCSSARecursively(*L, *DT, LI, SE);
+  rewriteLoopExitValues(L, LI, TLI, SE, Rewriter, DT, ReplaceExitValue,
+                        DeadInsts);
+}
+
 bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
   if (skipLoop(L) || DisableTailPredication)
     return false;
@@ -128,8 +152,13 @@ bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
   auto &TPC = getAnalysis<TargetPassConfig>();
   auto &TM = TPC.getTM<TargetMachine>();
   auto *ST = &TM.getSubtarget<ARMSubtarget>(F);
+  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
+  TLI = TLIP ? &TLIP->getTLI(*L->getHeader()->getParent()) : nullptr;
+  DL = &L->getHeader()->getModule()->getDataLayout();
   this->L = L;
 
   // The MVE and LOB extensions are combined to enable tail-predication, but
@@ -185,7 +214,14 @@ bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
 
   LLVM_DEBUG(dbgs() << "ARM TP: Running on Loop: " << *L << *Setup << "\n"
              << *Decrement << "\n");
-  return TryConvert(Setup->getArgOperand(0));
+
+  if (TryConvert(Setup->getArgOperand(0))) {
+    if (ClonedVCTPInExitBlock)
+      RematerializeIterCount();
+    return true;
+  }
+
+  return false;
 }
 
 bool MVETailPredication::isTailPredicate(Instruction *I, Value *NumElements) {
@@ -407,13 +443,15 @@ Value* MVETailPredication::ComputeElements(Value *TripCount,
 // in the block. This means that the VPR doesn't have to be live into the
 // exit block which should make it easier to convert this loop into a proper
 // tail predicated loop.
-static void Cleanup(DenseMap<Instruction*, Instruction*> &NewPredicates,
+static bool Cleanup(DenseMap<Instruction*, Instruction*> &NewPredicates,
                     SetVector<Instruction*> &MaybeDead, Loop *L) {
   BasicBlock *Exit = L->getUniqueExitBlock();
   if (!Exit) {
     LLVM_DEBUG(dbgs() << "ARM TP: can't find loop exit block\n");
-    return;
+    return false;
   }
+
+  bool ClonedVCTPInExitBlock = false;
 
   for (auto &Pair : NewPredicates) {
     Instruction *OldPred = Pair.first;
@@ -425,6 +463,7 @@ static void Cleanup(DenseMap<Instruction*, Instruction*> &NewPredicates,
         PredClone->insertBefore(&I);
         I.replaceAllUsesWith(PredClone);
         MaybeDead.insert(&I);
+        ClonedVCTPInExitBlock = true;
         LLVM_DEBUG(dbgs() << "ARM TP: replacing: "; I.dump();
                    dbgs() << "ARM TP: with:      "; PredClone->dump());
         break;
@@ -455,6 +494,8 @@ static void Cleanup(DenseMap<Instruction*, Instruction*> &NewPredicates,
 
   for (auto I : L->blocks())
     DeleteDeadPHIs(I);
+
+  return ClonedVCTPInExitBlock;
 }
 
 void MVETailPredication::InsertVCTPIntrinsic(Instruction *Predicate,
@@ -538,7 +579,7 @@ bool MVETailPredication::TryConvert(Value *TripCount) {
   }
 
   // Now clean up.
-  Cleanup(NewPredicates, Predicates, L);
+  ClonedVCTPInExitBlock = Cleanup(NewPredicates, Predicates, L);
   return true;
 }
 
