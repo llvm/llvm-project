@@ -19,7 +19,7 @@ def compute_dpu_pid(region_id, rank_id, slice_id, dpu_id):
 
 def get_value_from_command(debugger, command, base):
     return_obj = lldb.SBCommandReturnObject()
-    debugger.GetCommandInterpreter().HandleCommand("p " + command, return_obj)
+    debugger.GetCommandInterpreter().HandleCommand("p/x " + command, return_obj)
     if return_obj.GetStatus() != lldb.eReturnStatusSuccessFinishResult:
         return False, 0
     if return_obj.GetOutput() is None:
@@ -187,7 +187,7 @@ def dpu_attach_on_boot(debugger, command, result, internal_dict):
                 dpus_booting)
 
     dpu_addr = str(hex(dpus_booting[0]))
-    print("Setting up dpu '" + str(dpu_addr) + "' for attach on boot...")
+    print("Setting up dpu '" + dpu_addr + "' for attach on boot...")
     target_dpu = dpu_attach(debugger, dpu_addr, None, None)
     if target_dpu is None:
         print("Could not attach to dpu")
