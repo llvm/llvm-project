@@ -162,13 +162,20 @@ template <class ELFT>
 void printDynamicSection(const ELFFile<ELFT> *Elf, StringRef Filename) {
   ArrayRef<typename ELFT::Dyn> DynamicEntries =
       unwrapOrError(Elf->dynamicEntries(), Filename);
+
+  // Find the maximum tag name length to format the value column properly.
+  size_t MaxLen = 0;
+  for (const typename ELFT::Dyn &Dyn : DynamicEntries)
+    MaxLen = std::max(MaxLen, Elf->getDynamicTagAsString(Dyn.d_tag).size());
+  std::string TagFmt = "  %-" + std::to_string(MaxLen) + "s ";
+
   outs() << "Dynamic Section:\n";
   for (const typename ELFT::Dyn &Dyn : DynamicEntries) {
     if (Dyn.d_tag == ELF::DT_NULL)
       continue;
 
     std::string Str = Elf->getDynamicTagAsString(Dyn.d_tag);
-    outs() << format("  %-21s", Str.c_str());
+    outs() << format(TagFmt.c_str(), Str.c_str());
 
     const char *Fmt =
         ELFT::Is64Bits ? "0x%016" PRIx64 "\n" : "0x%08" PRIx64 "\n";
