@@ -727,7 +727,7 @@ Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
     return None;
 
   // Estimated backedge taken count is a ratio of the backedge taken weight by
-  // the the edge exiting weight, rounded to nearest.
+  // the weight of the edge exiting the loop, rounded to nearest.
   uint64_t BackedgeTakenCount =
       llvm::divideNearest(BackedgeTakenWeight, LatchExitWeight);
   // Estimated trip count is one plus estimated backedge taken count.
