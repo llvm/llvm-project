@@ -96,8 +96,10 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
   auto ObjLinkingLayer =
       std::make_unique<RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
 
-  if (S.JTMB->getTargetTriple().isOSBinFormatCOFF())
+  if (S.JTMB->getTargetTriple().isOSBinFormatCOFF()) {
     ObjLinkingLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
+    ObjLinkingLayer->setAutoClaimResponsibilityForObjectSymbols(true);
+  }
 
   // FIXME: Explicit conversion to std::unique_ptr<ObjectLayer> added to silence
   //        errors from some GCC / libstdc++ bots. Remove this conversion (i.e.
