@@ -83,8 +83,7 @@
 ; RUN:    --plugin-opt=obj-path=%t5.o \
 ; RUN:    -shared %t.o %t2.o -o %t4
 ; RUN: llvm-readobj -h %t5.o | FileCheck %s --check-prefix=FORMAT
-; RUN: llvm-nm %t5.o 2>&1 | FileCheck %s -check-prefix=NO-SYMBOLS
-; NO-SYMBOLS: no symbols
+; RUN: llvm-nm %t5.o 2>&1 | count 0
 
 ; NM: T f
 ; NM2: T {{f|g}}
