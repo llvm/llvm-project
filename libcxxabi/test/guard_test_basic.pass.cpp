@@ -127,7 +127,7 @@ int main() {
 #endif
   }
   {
-#if defined(__APPLE__) || defined(__linux__)
+#if (defined(__APPLE__) || defined(__linux__))  && !defined(_LIBCXXABI_HAS_NO_THREADS)
     assert(PlatformThreadID);
 #endif
     if (PlatformSupportsThreadID()) {
