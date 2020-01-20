@@ -9,7 +9,7 @@
 ; from the loop, and update the branch weights for the peeled loop properly.
 
 ; CHECK: Loop Unroll: F[basic]
-; CHECK: PEELING loop %for.body with iteration count 3!
+; CHECK: PEELING loop %for.body with iteration count 4!
 ; CHECK: Loop Unroll: F[optsize]
 ; CHECK-NOT: PEELING
 
