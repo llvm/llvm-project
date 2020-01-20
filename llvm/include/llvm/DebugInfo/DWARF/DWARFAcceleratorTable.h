@@ -222,8 +222,13 @@ public:
 /// referenced by the name table and interpreted with the help of the
 /// abbreviation table.
 class DWARFDebugNames : public DWARFAcceleratorTable {
-  /// The fixed-size part of a DWARF v5 Name Index header
-  struct HeaderPOD {
+public:
+  class NameIndex;
+  class NameIterator;
+  class ValueIterator;
+
+  /// DWARF v5 Name Index header.
+  struct Header {
     uint32_t UnitLength;
     uint16_t Version;
     uint16_t Padding;
@@ -234,15 +239,6 @@ class DWARFDebugNames : public DWARFAcceleratorTable {
     uint32_t NameCount;
     uint32_t AbbrevTableSize;
     uint32_t AugmentationStringSize;
-  };
-
-public:
-  class NameIndex;
-  class NameIterator;
-  class ValueIterator;
-
-  /// DWARF v5 Name Index header.
-  struct Header : public HeaderPOD {
     SmallString<8> AugmentationString;
 
     Error extract(const DWARFDataExtractor &AS, uint64_t *Offset);
