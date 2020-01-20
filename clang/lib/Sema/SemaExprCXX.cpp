@@ -3866,7 +3866,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     ICS.DiagnoseAmbiguousConversion(*this, From->getExprLoc(),
                           PDiag(diag::err_typecheck_ambiguous_condition)
                             << From->getSourceRange());
-     return ExprError();
+    return ExprError();
 
   case ImplicitConversionSequence::EllipsisConversion:
     llvm_unreachable("Cannot perform an ellipsis conversion");
@@ -4347,6 +4347,16 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
         ToAtomicType->castAs<AtomicType>()->getValueType(), From->getType()));
     From = ImpCastExprToType(From, ToAtomicType, CK_NonAtomicToAtomic,
                              VK_RValue, nullptr, CCK).get();
+  }
+
+  // Materialize a temporary if we're implicitly converting to a reference
+  // type. This is not required by the C++ rules but is necessary to maintain
+  // AST invariants.
+  if (ToType->isReferenceType() && From->isRValue()) {
+    ExprResult Res = TemporaryMaterializationConversion(From);
+    if (Res.isInvalid())
+      return ExprError();
+    From = Res.get();
   }
 
   // If this conversion sequence succeeded and involved implicitly converting a
