@@ -84,7 +84,7 @@ void DPUInstPrinter::printUImm(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                                const char *Modifier) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isImm()) {
-    O << formatImm(Op.getImm());
+    O << formatImm(Op.getImm() & ((1L << Bits) - 1));
   } else if (Op.isExpr()) {
     Op.getExpr()->print(O, &MAI);
   } else {

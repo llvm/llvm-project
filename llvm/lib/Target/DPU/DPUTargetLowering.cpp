@@ -2271,7 +2271,7 @@ EmitLsl64ImmediateWithCustomInserter(MachineInstr &MI, MachineBasicBlock *BB) {
   } else if (ShiftImm > 32) {
     if (ShiftImm >= 64) {
       // ShiftImm >= 64 (should not be generated, undef behavior) ==> Result = 0
-      BuildMI(*BB, MI, dl, TII.get(DPU::MOVE64ri), Dest).addImm(0);
+      BuildMI(*BB, MI, dl, TII.get(DPU::MOVE_Uri), Dest).addImm(0);
     } else {
       // 32 < ShiftImm < 64
       /*
@@ -2493,7 +2493,7 @@ static MachineBasicBlock *EmitShiftRight64ImmediateWithCustomInserter(
   } else if (ShiftImm > 32) {
     if (ShiftImm >= 64) {
       // ShiftImm >= 64 (should not be generated, undef behavior) ==> Result = 0
-      BuildMI(*BB, MI, dl, TII.get(DPU::MOVE64ri), Dest).addImm(0);
+      BuildMI(*BB, MI, dl, TII.get(DPU::MOVE_Uri), Dest).addImm(0);
     } else {
       // 32 < ShiftImm < 64
       /*

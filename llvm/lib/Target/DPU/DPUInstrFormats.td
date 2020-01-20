@@ -96,6 +96,11 @@ def u32_imm : SUImmOperand<32, i32>;
 def u5_imm  : UImmOperand< 5, i32>;
 def u8_imm  : UImmOperand< 8, i32>;
 
+def s8_i64_imm : SImmOperand<8, i64>;
+def s16_i64_imm : SImmOperand<16, i64>;
+def s32_i64_imm : SImmOperand<32, i64>;
+def u32_i64_imm : UImmOperand<32, i64>;
+
 def pc16 : PCImmOperand<16, OtherVT> {
 }
 def pc24 : PCImmOperand<24, i32> {
@@ -10914,9 +10919,9 @@ def MOVErrci: DPUInstruction {
 
 def MOVE_Sri: DPUInstruction {
 	let OutOperandList   = (outs DoubleReg:$dc);
-	let InOperandList    = (ins u32_imm:$imm);
+	let InOperandList    = (ins s32_i64_imm:$imm);
 	let AsmString        = "move.s $dc, $imm";
-	let Pattern          = [];
+	let Pattern          = [(set DoubleReg:$dc, s32_i64_imm:$imm)];
 	let isAsCheapAsAMove = 1;
 	bits<32> imm; bits<5> dc;
 	let Inst{11-0} = imm{23-12};
@@ -10934,7 +10939,7 @@ def MOVE_Sri: DPUInstruction {
 
 def MOVE_Srici: DPUInstruction {
 	let OutOperandList   = (outs DoubleReg:$dc);
-	let InOperandList    = (ins s8_imm:$imm, log_nz_cc:$cc, pc16:$pc);
+	let InOperandList    = (ins s8_i64_imm:$imm, log_nz_cc:$cc, pc16:$pc);
 	let AsmString        = "move.s $dc, $imm, $cc, $pc";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
@@ -10987,9 +10992,9 @@ def MOVE_Srrci: DPUInstruction {
 
 def MOVE_Uri: DPUInstruction {
 	let OutOperandList   = (outs DoubleReg:$dc);
-	let InOperandList    = (ins u32_imm:$imm);
+	let InOperandList    = (ins u32_i64_imm:$imm);
 	let AsmString        = "move.u $dc, $imm";
-	let Pattern          = [];
+	let Pattern          = [(set DoubleReg:$dc, u32_i64_imm:$imm)];
 	let isAsCheapAsAMove = 1;
 	bits<32> imm; bits<5> dc;
 	let Inst{11-0} = imm{23-12};
@@ -18046,7 +18051,7 @@ def SBSrir: DPUInstruction {
 
 def SDerii: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins endian:$endian, SimpleRegOrCst:$ra, s12_imm:$off, s16_imm:$imm);
+	let InOperandList    = (ins endian:$endian, SimpleRegOrCst:$ra, s12_imm:$off, s16_i64_imm:$imm);
 	let AsmString        = "sd $endian, $ra, $off, $imm";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
@@ -18094,7 +18099,7 @@ def SDerir: DPUInstruction {
 
 def SDesii: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins endian:$endian, SafeRegOrCst:$sa, s12_imm:$off, s16_imm:$imm);
+	let InOperandList    = (ins endian:$endian, SafeRegOrCst:$sa, s12_imm:$off, s16_i64_imm:$imm);
 	let AsmString        = "sd $endian, $sa, $off, $imm";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
@@ -18142,7 +18147,7 @@ def SDesir: DPUInstruction {
 
 def SDrii: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$off, s16_imm:$imm);
+	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$off, s16_i64_imm:$imm);
 	let AsmString        = "sd $ra, $off, $imm";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
@@ -18186,7 +18191,7 @@ def SDrir: DPUInstruction {
 
 def SD_IDerii: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins endian:$endian, SimpleRegOrCst:$ra, s12_imm:$off, s16_imm:$imm);
+	let InOperandList    = (ins endian:$endian, SimpleRegOrCst:$ra, s12_imm:$off, s16_i64_imm:$imm);
 	let AsmString        = "sd_id $endian, $ra, $off, $imm";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;
@@ -18230,7 +18235,7 @@ def SD_IDri: DPUInstruction {
 
 def SD_IDrii: DPUInstruction {
 	let OutOperandList   = (outs);
-	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$off, s16_imm:$imm);
+	let InOperandList    = (ins SimpleRegOrCst:$ra, s12_imm:$off, s16_i64_imm:$imm);
 	let AsmString        = "sd_id $ra, $off, $imm";
 	let Pattern          = [];
 	let isAsCheapAsAMove = 1;

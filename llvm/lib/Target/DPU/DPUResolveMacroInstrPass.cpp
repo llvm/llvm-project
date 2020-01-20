@@ -426,27 +426,15 @@ static bool resolveMacroInstructionsInMBB(MachineBasicBlock *MBB,
 
       int64_t LSBOp1Imm = Op1Imm & 0xFFFFFFFFl;
       int64_t MSBOp1Imm = (Op1Imm >> 32) & 0xFFFFFFFFl;
-      if (isInt<32>(Op1Imm)) {
-        if (Op1Imm < 0) {
-          BuildMI(*MBB, MBBIter, MBBIter->getDebugLoc(),
-                  InstrInfo.get(DPU::MOVE_Sri), DestReg)
-              .addImm(LSBOp1Imm);
-        } else {
-          BuildMI(*MBB, MBBIter, MBBIter->getDebugLoc(),
-                  InstrInfo.get(DPU::MOVE_Uri), DestReg)
-              .addImm(LSBOp1Imm);
-        }
-      } else {
-        unsigned int LSBDestReg = TRI->getSubReg(DestReg, DPU::sub_32bit);
-        unsigned int MSBDestReg = TRI->getSubReg(DestReg, DPU::sub_32bit_hi);
+      unsigned int LSBDestReg = TRI->getSubReg(DestReg, DPU::sub_32bit);
+      unsigned int MSBDestReg = TRI->getSubReg(DestReg, DPU::sub_32bit_hi);
 
-        BuildMI(*MBB, MBBIter, MBBIter->getDebugLoc(),
-                InstrInfo.get(DPU::MOVEri), LSBDestReg)
-            .addImm(LSBOp1Imm);
-        BuildMI(*MBB, MBBIter, MBBIter->getDebugLoc(),
-                InstrInfo.get(DPU::MOVEri), MSBDestReg)
-            .addImm(MSBOp1Imm);
-      }
+      BuildMI(*MBB, MBBIter, MBBIter->getDebugLoc(), InstrInfo.get(DPU::MOVEri),
+              LSBDestReg)
+          .addImm(LSBOp1Imm);
+      BuildMI(*MBB, MBBIter, MBBIter->getDebugLoc(), InstrInfo.get(DPU::MOVEri),
+              MSBDestReg)
+          .addImm(MSBOp1Imm);
       break;
     }
     case DPU::ADD64rr:

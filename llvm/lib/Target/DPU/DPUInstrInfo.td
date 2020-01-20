@@ -167,6 +167,7 @@ defm : WramStoreSub64Pat<truncstorei32, SWrir>;
 defm : WramStoreImmPat<truncstorei8, SBrii, su8_imm>;
 defm : WramStoreImmPat<truncstorei16, SHrii, su16_imm>;
 defm : WramStoreImmPat<store, SWrii, s16_imm>;
+defm : WramStoreImmPat<store, SDrii, s16_i64_imm>;
 
 // Special instructions for 64 bits emulation.
 
