@@ -400,7 +400,7 @@ is transformed into the equivalent of the following code:
 
 ```mlir
 // Compute the linearized index from strides. Each block below extracts one
-// stride from the descriptor, multipllies it with the index and accumulates
+// stride from the descriptor, multiplies it with the index and accumulates
 // the total offset.
 %stride1 = llvm.extractvalue[4, 0] : !llvm<"{float*, float*, i64, i64[4], i64[4]}">
 %idx1 = llvm.mlir.constant(1 : index) !llvm.i64

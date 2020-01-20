@@ -428,7 +428,7 @@ flatten the most minor dimensions to `1-D` `vector<Kxf32>` where `K` is an
 appropriate constant. Then, the existing lowering to LLVM-IR immediately
 applies, with extensions for accelerator-specific intrinsics.
 
-It is the role of an Accelerator-specfic vector dialect (see codegen flow in
+It is the role of an Accelerator-specific vector dialect (see codegen flow in
 the figure above) to lower the `vector.cast`. Accelerator -> LLVM lowering
 would then consist of a bunch of `Accelerator -> Accelerator` rewrites to
 perform the casts composed with `Accelerator -> LLVM` conversions + intrinsics

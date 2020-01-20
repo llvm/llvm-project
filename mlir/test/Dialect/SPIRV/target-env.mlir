@@ -11,7 +11,7 @@
 // whose value, if containing AtomicCounterMemory bit, additionally requires
 // AtomicStorage capability.
 
-// spv.BitReverse is available in all SPIR-V versiosn under Shader capability.
+// spv.BitReverse is available in all SPIR-V versions under Shader capability.
 
 // spv.GroupNonUniformBallot is available starting from SPIR-V 1.3 under
 // GroupNonUniform capability.
