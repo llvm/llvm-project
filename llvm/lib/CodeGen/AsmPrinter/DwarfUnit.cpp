@@ -1163,6 +1163,14 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
   DIE *DeclDie = nullptr;
   StringRef DeclLinkageName;
   if (auto *SPDecl = SP->getDeclaration()) {
+    DITypeRefArray DeclArgs, DefinitionArgs;
+    DeclArgs = SPDecl->getType()->getTypeArray();
+    DefinitionArgs = SP->getType()->getTypeArray();
+
+    if (DeclArgs.size() && DefinitionArgs.size())
+      if (DefinitionArgs[0] != NULL && DeclArgs[0] != DefinitionArgs[0])
+        addType(SPDie, DefinitionArgs[0]);
+
     DeclDie = getDIE(SPDecl);
     assert(DeclDie && "This DIE should've already been constructed when the "
                       "definition DIE was created in "
