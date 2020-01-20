@@ -747,12 +747,11 @@ define void @foo_ptr_p_int32_t(i32* %dest, i32** %src, i32 %n) {
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    subs r1, #16
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB22_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r1, #16]!
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    vptt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q1, [q0]
 ; CHECK-NEXT:    vstrwt.32 q1, [r0], #16
@@ -793,12 +792,11 @@ define void @foo_ptr_p_float(float* %dest, float** %src, i32 %n) {
 ; CHECK-NEXT:    poplt {r7, pc}
 ; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    movs r3, #1
-; CHECK-NEXT:    subs r1, #16
 ; CHECK-NEXT:    add.w lr, r3, r2, lsr #2
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB23_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r1, #16]!
+; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    vptt.i32 ne, q0, zr
 ; CHECK-NEXT:    vldrwt.u32 q1, [q0]
 ; CHECK-NEXT:    vstrwt.32 q1, [r0], #16
