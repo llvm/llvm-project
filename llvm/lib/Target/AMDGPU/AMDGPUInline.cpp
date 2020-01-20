@@ -190,9 +190,9 @@ InlineCost AMDGPUInliner::getInlineCost(CallSite CS) {
 
   if (CS.hasFnAttr(Attribute::AlwaysInline)) {
     auto IsViable = isInlineViable(*Callee);
-    if (IsViable)
+    if (IsViable.isSuccess())
       return llvm::InlineCost::getAlways("alwaysinline viable");
-    return llvm::InlineCost::getNever(IsViable.message);
+    return llvm::InlineCost::getNever(IsViable.getFailureReason());
   }
 
   if (isWrapperOnlyCall(CS))

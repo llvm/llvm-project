@@ -290,7 +290,7 @@ vec_promote(unsigned long long __scalar, int __index) {
 #if __ARCH__ >= 12
 static inline __ATTRS_o_ai vector float
 vec_promote(float __scalar, int __index) {
-  const vector float __zero = (vector float)0;
+  const vector float __zero = (vector float)0.0f;
   vector float __vec = __builtin_shufflevector(__zero, __zero, -1, -1, -1, -1);
   __vec[__index & 3] = __scalar;
   return __vec;
@@ -299,7 +299,7 @@ vec_promote(float __scalar, int __index) {
 
 static inline __ATTRS_o_ai vector double
 vec_promote(double __scalar, int __index) {
-  const vector double __zero = (vector double)0;
+  const vector double __zero = (vector double)0.0;
   vector double __vec = __builtin_shufflevector(__zero, __zero, -1, -1);
   __vec[__index & 1] = __scalar;
   return __vec;
@@ -366,7 +366,7 @@ vec_insert_and_zero(const unsigned long long *__ptr) {
 #if __ARCH__ >= 12
 static inline __ATTRS_o_ai vector float
 vec_insert_and_zero(const float *__ptr) {
-  vector float __vec = (vector float)0;
+  vector float __vec = (vector float)0.0f;
   __vec[1] = *__ptr;
   return __vec;
 }
@@ -374,7 +374,7 @@ vec_insert_and_zero(const float *__ptr) {
 
 static inline __ATTRS_o_ai vector double
 vec_insert_and_zero(const double *__ptr) {
-  vector double __vec = (vector double)0;
+  vector double __vec = (vector double)0.0;
   __vec[0] = *__ptr;
   return __vec;
 }

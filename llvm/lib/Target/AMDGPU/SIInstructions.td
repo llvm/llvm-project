@@ -24,8 +24,41 @@ include "BUFInstructions.td"
 // EXP Instructions
 //===----------------------------------------------------------------------===//
 
-defm EXP : EXP_m<0, AMDGPUexport>;
-defm EXP_DONE : EXP_m<1, AMDGPUexport_done>;
+defm EXP : EXP_m<0>;
+defm EXP_DONE : EXP_m<1>;
+
+// FIXME: GlobalISel successfully imports this pattern, but fails to
+// select because the i1 done_val does a type check on done_val, which
+// only works on register operands.
+class ExpPattern<ValueType vt, Instruction Inst, int done_val> : GCNPat<
+  (int_amdgcn_exp timm:$tgt, timm:$en,
+                  (vt ExpSrc0:$src0), (vt ExpSrc1:$src1),
+                  (vt ExpSrc2:$src2), (vt ExpSrc3:$src3),
+                  done_val, timm:$vm),
+  (Inst timm:$tgt, ExpSrc0:$src0, ExpSrc1:$src1,
+        ExpSrc2:$src2, ExpSrc3:$src3, timm:$vm, 0, timm:$en)
+>;
+
+class ExpComprPattern<ValueType vt, Instruction Inst, int done_val> : GCNPat<
+  (int_amdgcn_exp_compr timm:$tgt, timm:$en,
+                        (vt ExpSrc0:$src0), (vt ExpSrc1:$src1),
+                        done_val, timm:$vm),
+  (Inst timm:$tgt, ExpSrc0:$src0, ExpSrc1:$src1,
+        (IMPLICIT_DEF), (IMPLICIT_DEF), timm:$vm, 1, timm:$en)
+>;
+
+// FIXME: The generated DAG matcher seems to have strange behavior
+// with a 1-bit literal to match, so use a -1 for checking a true
+// 1-bit value.
+def : ExpPattern<i32, EXP, 0>;
+def : ExpPattern<i32, EXP_DONE, -1>;
+def : ExpPattern<f32, EXP, 0>;
+def : ExpPattern<f32, EXP_DONE, -1>;
+
+def : ExpComprPattern<v2i16, EXP, 0>;
+def : ExpComprPattern<v2i16, EXP_DONE, -1>;
+def : ExpComprPattern<v2f16, EXP, 0>;
+def : ExpComprPattern<v2f16, EXP_DONE, -1>;
 
 //===----------------------------------------------------------------------===//
 // VINTRP Instructions
@@ -1782,15 +1815,6 @@ def : GCNPat <
                   SRCMODS.NONE, $src2, $clamp, $omod)
 >;
 
-// Allow integer inputs
-class ExpPattern<SDPatternOperator node, ValueType vt, Instruction Inst> : GCNPat<
-  (node (i8 timm:$tgt), (i8 timm:$en), vt:$src0, vt:$src1, vt:$src2, vt:$src3, (i1 timm:$compr), (i1 timm:$vm)),
-  (Inst i8:$tgt, vt:$src0, vt:$src1, vt:$src2, vt:$src3, i1:$vm, i1:$compr, i8:$en)
->;
-
-def : ExpPattern<AMDGPUexport, i32, EXP>;
-def : ExpPattern<AMDGPUexport_done, i32, EXP_DONE>;
-
 // COPY is workaround tablegen bug from multiple outputs
 // from S_LSHL_B32's multiple outputs from implicit scc def.
 def : GCNPat <
@@ -1883,9 +1907,9 @@ def : GCNPat <
 def : GCNPat <
   (i64 (int_amdgcn_update_dpp i64:$old, i64:$src, timm:$dpp_ctrl, timm:$row_mask,
                               timm:$bank_mask, timm:$bound_ctrl)),
-  (V_MOV_B64_DPP_PSEUDO $old, $src, (as_i32imm $dpp_ctrl),
-                        (as_i32imm $row_mask), (as_i32imm $bank_mask),
-                        (as_i1imm $bound_ctrl))
+  (V_MOV_B64_DPP_PSEUDO VReg_64:$old, VReg_64:$src, (as_i32timm $dpp_ctrl),
+                        (as_i32timm $row_mask), (as_i32timm $bank_mask),
+                        (as_i1timm $bound_ctrl))
 >;
 
 //===----------------------------------------------------------------------===//

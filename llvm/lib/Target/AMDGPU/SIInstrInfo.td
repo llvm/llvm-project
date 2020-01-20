@@ -669,6 +669,10 @@ def as_i1imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i1);
 }]>;
 
+def as_i1timm : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i1);
+}]>;
+
 def as_i8imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i8);
 }]>;
@@ -1101,7 +1105,7 @@ def abid : NamedOperandU32<"ABID", NamedMatchClass<"ABID">>;
 
 def hwreg : NamedOperandU16<"Hwreg", NamedMatchClass<"Hwreg", 0>>;
 
-def exp_tgt : NamedOperandU8<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
+def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
 
 }
 
@@ -1380,24 +1384,21 @@ class SIMCInstr <string pseudo, int subtarget> {
 // EXP classes
 //===----------------------------------------------------------------------===//
 
-class EXP_Helper<bit done, SDPatternOperator node = null_frag> : EXPCommon<
+class EXP_Helper<bit done> : EXPCommon<
   (outs),
   (ins exp_tgt:$tgt,
        ExpSrc0:$src0, ExpSrc1:$src1, ExpSrc2:$src2, ExpSrc3:$src3,
-       exp_vm:$vm, exp_compr:$compr, i8imm:$en),
-  "exp$tgt $src0, $src1, $src2, $src3"#!if(done, " done", "")#"$compr$vm",
-  [(node (i8 timm:$tgt), (i8 timm:$en),
-         f32:$src0, f32:$src1, f32:$src2, f32:$src3,
-         (i1 timm:$compr), (i1 timm:$vm))]> {
+       exp_vm:$vm, exp_compr:$compr, i32imm:$en),
+  "exp$tgt $src0, $src1, $src2, $src3"#!if(done, " done", "")#"$compr$vm", []> {
   let AsmMatchConverter = "cvtExp";
 }
 
 // Split EXP instruction into EXP and EXP_DONE so we can set
 // mayLoad for done=1.
-multiclass EXP_m<bit done, SDPatternOperator node> {
+multiclass EXP_m<bit done> {
   let mayLoad = done, DisableWQM = 1 in {
     let isPseudo = 1, isCodeGenOnly = 1 in {
-      def "" : EXP_Helper<done, node>,
+      def "" : EXP_Helper<done>,
                SIMCInstr <"exp"#!if(done, "_done", ""), SIEncodingFamily.NONE>;
     }
 

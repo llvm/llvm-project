@@ -184,4 +184,12 @@ INTERFACE WEAK int SCUDO_PREFIX(malloc_info)(UNUSED int options, FILE *stream) {
   return 0;
 }
 
+// Disable memory tagging for the heap. The caller must disable memory tag
+// checks globally (e.g. by clearing TCF0 on aarch64) before calling this
+// function, and may not re-enable them after calling the function. The program
+// must be single threaded at the point when the function is called.
+INTERFACE WEAK void SCUDO_PREFIX(malloc_disable_memory_tagging)() {
+  SCUDO_ALLOCATOR.disableMemoryTagging();
+}
+
 } // extern "C"

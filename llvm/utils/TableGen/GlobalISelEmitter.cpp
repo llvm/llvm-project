@@ -3971,6 +3971,10 @@ Error GlobalISelEmitter::importChildMatcher(
           "Src pattern child def is an unsupported tablegen class (ImmLeaf)");
     }
 
+    // Place holder for SRCVALUE nodes. Nothing to do here.
+    if (ChildRec->getName() == "srcvalue")
+      return Error::success();
+
     return failedImport(
         "Src pattern child def is an unsupported tablegen class");
   }

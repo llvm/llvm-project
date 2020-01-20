@@ -42,9 +42,9 @@ func @module_logical_glsl450() {
 
 // CHECK-LABEL: module_physical_storage_buffer64_vulkan
 func @module_physical_storage_buffer64_vulkan() {
-  // CHECK: spv.module min version: V_1_5
+  // CHECK: spv.module min version: V_1_0
   // CHECK: spv.module max version: V_1_5
-  // CHECK: spv.module extensions: [ [SPV_EXT_physical_storage_buffer, SPV_KHR_physical_storage_buffer] ]
+  // CHECK: spv.module extensions: [ [SPV_EXT_physical_storage_buffer, SPV_KHR_physical_storage_buffer] [SPV_KHR_vulkan_memory_model] ]
   // CHECK: spv.module capabilities: [ [PhysicalStorageBufferAddresses] [VulkanMemoryModel] ]
   spv.module "PhysicalStorageBuffer64" "Vulkan" { }
   return

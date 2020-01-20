@@ -2,6 +2,11 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 // RUN: ld.lld %t.o -o %t.so -shared
 // RUN: llvm-readobj -r -S --section-data %t.so | FileCheck %s
+// RUN: ld.lld %t.o -o %t -pie
+// RUN: llvm-readobj -r -S --section-data %t | FileCheck %s
+
+/// This is usually guarded with a comparison. Don't report an error.
+call g
 
 .data
 .weak g

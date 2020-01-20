@@ -96,8 +96,10 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
   auto ObjLinkingLayer =
       std::make_unique<RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
 
-  if (S.JTMB->getTargetTriple().isOSBinFormatCOFF())
+  if (S.JTMB->getTargetTriple().isOSBinFormatCOFF()) {
     ObjLinkingLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
+    ObjLinkingLayer->setAutoClaimResponsibilityForObjectSymbols(true);
+  }
 
   // FIXME: Explicit conversion to std::unique_ptr<ObjectLayer> added to silence
   //        errors from some GCC / libstdc++ bots. Remove this conversion (i.e.
@@ -150,10 +152,11 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     }
     CompileLayer = std::make_unique<IRCompileLayer>(
         *ES, ObjTransformLayer, std::move(*CompileFunction));
+    TransformLayer = std::make_unique<IRTransformLayer>(*ES, *CompileLayer);
   }
 
   if (S.NumCompileThreads > 0) {
-    CompileLayer->setCloneToNewContextOnEmit(true);
+    TransformLayer->setCloneToNewContextOnEmit(true);
     CompileThreads = std::make_unique<ThreadPool>(S.NumCompileThreads);
     ES->setDispatchMaterialization(
         [this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
@@ -163,8 +166,6 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
           CompileThreads->async(std::move(Work));
         });
   }
-
-  TransformLayer = std::make_unique<IRTransformLayer>(*ES, *CompileLayer);
 }
 
 std::string LLJIT::mangle(StringRef UnmangledName) {

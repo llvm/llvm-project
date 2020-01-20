@@ -15,9 +15,7 @@ write_cmake_config("llvm-lit") {
   }
 
   # lit's lit/llvm/config.py shells out to llvm-config.
-  deps = [
-    "//llvm/tools/llvm-config",
-  ]
+  deps = [ "//llvm/tools/llvm-config" ]
 
   # Generate LLVM_LIT_CONFIG_MAP parameter.
   # llvm-lit contains a mapping from each lit.cfg.py file to the corresponding

@@ -66,6 +66,11 @@ public:
   void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args,
                              Action::OffloadKind DeviceOffloadKind) const override;
+
+  llvm::DenormalMode getDefaultDenormalModeForType(
+      const llvm::opt::ArgList &DriverArgs,
+      Action::OffloadKind DeviceOffloadKind,
+      const llvm::fltSemantics *FPType = nullptr) const override;
 };
 
 } // end namespace toolchains

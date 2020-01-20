@@ -384,7 +384,7 @@ struct PointerLikeTypeTraits<clang::CanQual<T>> {
   }
 
   // qualifier information is encoded in the low bits.
-  enum { NumLowBitsAvailable = 0 };
+  static constexpr int NumLowBitsAvailable = 0;
 };
 
 } // namespace llvm

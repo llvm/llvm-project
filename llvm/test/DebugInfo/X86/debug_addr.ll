@@ -9,6 +9,7 @@
 ; }
 ;
 ; void bar() {
+;   foo();
 ; }
 
 ; DWARF4: .debug_info contents:
@@ -18,11 +19,14 @@
 ; DWARF4-NOT: DW_TAG_{{.*}}
 ; DWARF4: DW_AT_GNU_dwo_name{{.*}}test.dwo
 ; DWARF4: DW_AT_GNU_addr_base{{.*}}0x00000000
+; DWARF4: DW_TAG_GNU_call_site
+; DWARF4:   DW_AT_low_pc [DW_FORM_GNU_addr_index] (indexed (00000002) address = 0x0000000000000018 ".text")
 ; DWARF4: .debug_addr contents:
 ; DWARF4-NEXT: 0x00000000: Addr Section: length = 0x00000000, version = 0x0004, addr_size = 0x04, seg_size = 0x00
 ; DWARF4-NEXT: Addrs: [
 ; DWARF4-NEXT: 0x00000000
 ; DWARF4-NEXT: 0x00000010
+; DWARF4-NEXT: 0x00000018
 ; DWARF4-NEXT: ]
 
 ; DWARF5: .debug_info contents:
@@ -33,11 +37,13 @@
 ; DWARF5: DW_AT_dwo_name{{.*}}test.dwo
 ; DWARF5: DW_AT_addr_base{{.*}}0x00000008
 ; DWARF5: DW_AT_low_pc [DW_FORM_addrx] (indexed (00000000) address = 0x0000000000000000 ".text")
+; DWARF5: DW_AT_call_return_pc [DW_FORM_addrx] (indexed (00000002) address = 0x0000000000000018 ".text")
 ; DWARF5: .debug_addr contents:
-; DWARF5-NEXT: 0x00000000: Addr Section: length = 0x0000000c, version = 0x0005, addr_size = 0x04, seg_size = 0x00
+; DWARF5-NEXT: 0x00000000: Addr Section: length = 0x00000010, version = 0x0005, addr_size = 0x04, seg_size = 0x00
 ; DWARF5-NEXT: Addrs: [
 ; DWARF5-NEXT: 0x00000000
 ; DWARF5-NEXT: 0x00000010
+; DWARF5-NEXT: 0x00000018
 ; DWARF5-NEXT: ]
 
 ; ModuleID = './test.c'
@@ -54,6 +60,7 @@ entry:
 ; Function Attrs: noinline nounwind optnone
 define void @bar() #0 !dbg !13 {
 entry:
+  call void @foo(), !dbg !14
   ret void, !dbg !14
 }
 
@@ -76,5 +83,5 @@ attributes #0 = { noinline nounwind optnone }
 !10 = !DISubroutineType(types: !11)
 !11 = !{null}
 !12 = !DILocation(line: 2, column: 3, scope: !8)
-!13 = distinct !DISubprogram(name: "bar", scope: !9, file: !9, line: 5, type: !10, isLocal: false, isDefinition: true, scopeLine: 5, isOptimized: false, unit: !0)
+!13 = distinct !DISubprogram(name: "bar", scope: !9, file: !9, line: 5, type: !10, isLocal: false, isDefinition: true, flags: DIFlagAllCallsDescribed, scopeLine: 5, isOptimized: false, unit: !0)
 !14 = !DILocation(line: 6, column: 3, scope: !13)

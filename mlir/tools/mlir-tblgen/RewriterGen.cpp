@@ -790,7 +790,7 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
     // values and replacement values, ops in nested patterns, auxiliary ops), we
     // still need to supply the result types when building the op. But because
     // we don't generate a builder automatically with ODS for them, it's the
-    // developer's responsiblity to make sure such a builder (with result type
+    // developer's responsibility to make sure such a builder (with result type
     // deduction ability) exists. We go through the separate-parameter builder
     // here given that it's easier for developers to write compared to
     // aggregate-parameter builders.

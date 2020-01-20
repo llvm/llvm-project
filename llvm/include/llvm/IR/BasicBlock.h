@@ -133,6 +133,15 @@ public:
          static_cast<const BasicBlock *>(this)->getTerminatingDeoptimizeCall());
   }
 
+  /// Returns the call instruction calling \@llvm.experimental.deoptimize
+  /// that is present either in current basic block or in block that is a unique
+  /// successor to current block, if such call is present. Otherwise, returns null.
+  const CallInst *getPostdominatingDeoptimizeCall() const;
+  CallInst *getPostdominatingDeoptimizeCall() {
+    return const_cast<CallInst *>(
+         static_cast<const BasicBlock *>(this)->getPostdominatingDeoptimizeCall());
+  }
+
   /// Returns the call instruction marked 'musttail' prior to the terminating
   /// return instruction of this basic block, if such a call is present.
   /// Otherwise, returns null.

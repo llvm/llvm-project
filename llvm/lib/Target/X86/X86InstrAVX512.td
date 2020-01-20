@@ -8552,7 +8552,7 @@ let Predicates = [HasVLX] in {
 //  Unordered/Ordered scalar fp compare with Sae and set EFLAGS
 multiclass avx512_ord_cmp_sae<bits<8> opc, X86VectorVTInfo _,
                             string OpcodeStr, Domain d,
-                            X86FoldableSchedWrite sched = WriteFCom> {
+                            X86FoldableSchedWrite sched = WriteFComX> {
   let hasSideEffects = 0, Uses = [MXCSR] in
   def rrb: AVX512<opc, MRMSrcReg, (outs), (ins _.RC:$src1, _.RC:$src2),
                   !strconcat(OpcodeStr, "\t{{sae}, $src2, $src1|$src1, $src2, {sae}}"), []>,

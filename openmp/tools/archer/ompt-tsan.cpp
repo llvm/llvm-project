@@ -114,7 +114,6 @@ void __attribute__((weak)) __tsan_flush_memory() {}
 }
 #endif
 ArcherFlags *archer_flags;
-TsanFlags *tsan_flags;
 
 // The following definitions are pasted from "llvm/Support/Compiler.h" to allow
 // the code
@@ -862,10 +861,8 @@ static void ompt_tsan_mutex_released(ompt_mutex_t kind,
 static int ompt_tsan_initialize(ompt_function_lookup_t lookup,
                                 int device_num,
                                 ompt_data_t *tool_data) {
-  const char *options = getenv("ARCHER_OPTIONS");
-  archer_flags = new ArcherFlags(options);
-  options = getenv("TSAN_OPTIONS");
-  tsan_flags = new TsanFlags(options);
+  const char *options = getenv("TSAN_OPTIONS");
+  TsanFlags tsan_flags(options);
 
   ompt_set_callback_t ompt_set_callback =
       (ompt_set_callback_t)lookup("ompt_set_callback");
@@ -898,7 +895,7 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup,
   SET_CALLBACK_T(mutex_released, mutex);
   SET_OPTIONAL_CALLBACK_T(reduction, sync_region, hasReductionCallback, ompt_set_never);
 
-  if (!tsan_flags->ignore_noninstrumented_modules)
+  if (!tsan_flags.ignore_noninstrumented_modules)
     fprintf(
         stderr,
         "Warning: please export TSAN_OPTIONS='ignore_noninstrumented_modules=1' "

@@ -1573,26 +1573,28 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
   for (unsigned Idx = 0, End = MemOpRecords.size(); Idx < (End - 1); ++Idx) {
     SUnit *SUa = MemOpRecords[Idx].SU;
     SUnit *SUb = MemOpRecords[Idx+1].SU;
-    if (SUa->NodeNum > SUb->NodeNum)
-      std::swap(SUa, SUb);
     if (TII->shouldClusterMemOps(*MemOpRecords[Idx].BaseOp,
                                  *MemOpRecords[Idx + 1].BaseOp,
-                                 ClusterLength) &&
-        DAG->addEdge(SUb, SDep(SUa, SDep::Cluster))) {
-      LLVM_DEBUG(dbgs() << "Cluster ld/st SU(" << SUa->NodeNum << ") - SU("
-                        << SUb->NodeNum << ")\n");
-      // Copy successor edges from SUa to SUb. Interleaving computation
-      // dependent on SUa can prevent load combining due to register reuse.
-      // Predecessor edges do not need to be copied from SUb to SUa since nearby
-      // loads should have effectively the same inputs.
-      for (const SDep &Succ : SUa->Succs) {
-        if (Succ.getSUnit() == SUb)
-          continue;
-        LLVM_DEBUG(dbgs() << "  Copy Succ SU(" << Succ.getSUnit()->NodeNum
-                          << ")\n");
-        DAG->addEdge(Succ.getSUnit(), SDep(SUb, SDep::Artificial));
-      }
-      ++ClusterLength;
+                                 ClusterLength)) {
+      if (SUa->NodeNum > SUb->NodeNum)
+        std::swap(SUa, SUb);
+      if (DAG->addEdge(SUb, SDep(SUa, SDep::Cluster))) {
+        LLVM_DEBUG(dbgs() << "Cluster ld/st SU(" << SUa->NodeNum << ") - SU("
+                          << SUb->NodeNum << ")\n");
+        // Copy successor edges from SUa to SUb. Interleaving computation
+        // dependent on SUa can prevent load combining due to register reuse.
+        // Predecessor edges do not need to be copied from SUb to SUa since
+        // nearby loads should have effectively the same inputs.
+        for (const SDep &Succ : SUa->Succs) {
+          if (Succ.getSUnit() == SUb)
+            continue;
+          LLVM_DEBUG(dbgs()
+                     << "  Copy Succ SU(" << Succ.getSUnit()->NodeNum << ")\n");
+          DAG->addEdge(Succ.getSUnit(), SDep(SUb, SDep::Artificial));
+        }
+        ++ClusterLength;
+      } else
+        ClusterLength = 1;
     } else
       ClusterLength = 1;
   }

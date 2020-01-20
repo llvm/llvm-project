@@ -1810,7 +1810,7 @@ bool Parser::TryAnnotateTypeOrScopeToken() {
                                        /*EnteringContext=*/false, nullptr,
                                        /*IsTypename*/ true))
       return true;
-    if (!SS.isSet()) {
+    if (SS.isEmpty()) {
       if (Tok.is(tok::identifier) || Tok.is(tok::annot_template_id) ||
           Tok.is(tok::annot_decltype)) {
         // Attempt to recover by skipping the invalid 'typename'
@@ -1983,7 +1983,7 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
       // template-id annotation in a context where we weren't allowed
       // to produce a type annotation token. Update the template-id
       // annotation token to a type annotation token now.
-      AnnotateTemplateIdTokenAsType();
+      AnnotateTemplateIdTokenAsType(SS);
       return false;
     }
   }
@@ -2005,10 +2005,7 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
 bool Parser::TryAnnotateCXXScopeToken(bool EnteringContext) {
   assert(getLangOpts().CPlusPlus &&
          "Call sites of this function should be guarded by checking for C++");
-  assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
-          (Tok.is(tok::annot_template_id) && NextToken().is(tok::coloncolon)) ||
-          Tok.is(tok::kw_decltype) || Tok.is(tok::kw___super)) &&
-         "Cannot be a type or scope token!");
+  assert(MightBeCXXScopeToken() && "Cannot be a type or scope token!");
 
   CXXScopeSpec SS;
   if (ParseOptionalCXXScopeSpecifier(SS, nullptr, EnteringContext))

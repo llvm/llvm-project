@@ -34,8 +34,9 @@ llvm::Optional<Token> findQualToken(const VarDecl *Decl, Qualifier Qual,
   // sure that we have a consistent `CharSourceRange`, located entirely in the
   // source file.
 
-  assert(Qual == Qualifier::Const || Qual == Qualifier::Volatile ||
-         Qual == Qualifier::Restrict && "Invalid Qualifier");
+  assert((Qual == Qualifier::Const || Qual == Qualifier::Volatile ||
+          Qual == Qualifier::Restrict) &&
+         "Invalid Qualifier");
 
   SourceLocation BeginLoc = Decl->getQualifierLoc().getBeginLoc();
   if (BeginLoc.isInvalid())

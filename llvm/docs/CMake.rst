@@ -272,7 +272,7 @@ LLVM-specific variables
   Generate build targets for the LLVM benchmarks. Defaults to ON.
 
 **LLVM_APPEND_VC_REV**:BOOL
-  Embed version control revision info (svn revision number or Git revision id).
+  Embed version control revision info (Git revision id).
   The version info is provided by the ``LLVM_REVISION`` macro in
   ``llvm/include/llvm/Support/VCSRevision.h``. Developers using git who don't
   need revision info can disable this option to avoid re-linking most binaries

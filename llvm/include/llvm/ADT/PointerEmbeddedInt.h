@@ -94,7 +94,7 @@ struct PointerLikeTypeTraits<PointerEmbeddedInt<IntT, Bits>> {
     return T(reinterpret_cast<uintptr_t>(P), typename T::RawValueTag());
   }
 
-  enum { NumLowBitsAvailable = T::Shift };
+  static constexpr int NumLowBitsAvailable = T::Shift;
 };
 
 // Teach DenseMap how to use PointerEmbeddedInt objects as keys if the Int type

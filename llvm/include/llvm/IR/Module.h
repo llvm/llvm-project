@@ -79,6 +79,8 @@ public:
   using NamedMDListType = ilist<NamedMDNode>;
   /// The type of the comdat "symbol" table.
   using ComdatSymTabType = StringMap<Comdat>;
+  /// The type for mapping names to named metadata.
+  using NamedMDSymTabType = StringMap<NamedMDNode *>;
 
   /// The Global Variable iterator.
   using global_iterator = GlobalListType::iterator;
@@ -175,7 +177,7 @@ private:
   IFuncListType IFuncList;        ///< The IFuncs in the module
   NamedMDListType NamedMDList;    ///< The named metadata in the module
   std::string GlobalScopeAsm;     ///< Inline Asm at global scope.
-  ValueSymbolTable *ValSymTab;    ///< Symbol table for values
+  std::unique_ptr<ValueSymbolTable> ValSymTab; ///< Symbol table for values
   ComdatSymTabType ComdatSymTab;  ///< Symbol table for COMDATs
   std::unique_ptr<MemoryBuffer>
   OwnedMemoryBuffer;              ///< Memory buffer directly owned by this
@@ -187,7 +189,7 @@ private:
                                   ///< recorded in bitcode.
   std::string TargetTriple;       ///< Platform target triple Module compiled on
                                   ///< Format: (arch)(sub)-(vendor)-(sys0-(abi)
-  void *NamedMDSymTab;            ///< NamedMDNode names.
+  NamedMDSymTabType NamedMDSymTab;  ///< NamedMDNode names.
   DataLayout DL;                  ///< DataLayout associated with the module
 
   friend class Constant;

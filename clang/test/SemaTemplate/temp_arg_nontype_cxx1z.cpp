@@ -434,3 +434,17 @@ namespace VoidPtr {
   int n;
   template void f<(void*)&n>();
 }
+
+namespace PR42108 {
+  struct R {};
+  struct S { constexpr S() {} constexpr S(R) {} };
+  struct T { constexpr operator S() { return {}; } };
+  template <const S &> struct A {};
+  void f() {
+    A<R{}>(); // expected-error {{would bind reference to a temporary}}
+    A<S{}>(); // expected-error {{non-type template argument is not a constant expression}} expected-note 2{{temporary}}
+    // FIXME: We could diagnose this better if we treated this as not binding
+    // directly. It's unclear whether that's the intent.
+    A<T{}>(); // expected-error {{non-type template argument is not a constant expression}} expected-note 2{{temporary}}
+  }
+}

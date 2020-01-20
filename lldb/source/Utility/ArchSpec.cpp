@@ -100,9 +100,9 @@ static const CoreDefinition g_core_definitions[] = {
     {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
      ArchSpec::eCore_arm_armv8, "armv8"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm,
-      ArchSpec::eCore_arm_armv8l, "armv8l"},
+     ArchSpec::eCore_arm_armv8l, "armv8l"},
     {eByteOrderLittle, 4, 4, 4, llvm::Triple::aarch64_32,
-      ArchSpec::eCore_arm_arm64_32, "arm64_32"},
+     ArchSpec::eCore_arm_arm64_32, "arm64_32"},
     {eByteOrderLittle, 8, 4, 4, llvm::Triple::aarch64,
      ArchSpec::eCore_arm_aarch64, "aarch64"},
 
@@ -216,7 +216,10 @@ static const CoreDefinition g_core_definitions[] = {
      ArchSpec::eCore_uknownMach32, "unknown-mach-32"},
     {eByteOrderLittle, 8, 4, 4, llvm::Triple::UnknownArch,
      ArchSpec::eCore_uknownMach64, "unknown-mach-64"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arc, ArchSpec::eCore_arc, "arc"}
+    {eByteOrderLittle, 4, 2, 4, llvm::Triple::arc, ArchSpec::eCore_arc, "arc"},
+
+    {eByteOrderLittle, 4, 1, 4, llvm::Triple::wasm32, ArchSpec::eCore_wasm32,
+     "wasm32"},
 };
 
 // Ensure that we have an entry in the g_core_definitions for each core. If you

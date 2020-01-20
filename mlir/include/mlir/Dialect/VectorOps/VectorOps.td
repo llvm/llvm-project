@@ -228,7 +228,7 @@ def Vector_ShuffleOp :
               v2 : <t_1 x t_2 x .. x t_k x type>
       we have s_i = t_i for all 1 < i <= k
     * the mask length equals the leading dimension size of the result
-    * numbering the input vector indices left to right accross the operands, all
+    * numbering the input vector indices left to right across the operands, all
       mask values must be within range, viz. given two k-D operands v1 and v2
       above, all mask values are in the range [0,s_1+t_1)
 
@@ -742,9 +742,9 @@ def Vector_TransferReadOp :
     a [MemRef](../LangRef.md#memref-type) supplied as its first operand
     into a [vector](../LangRef.md#vector-type) of the same base elemental type.
 
-    A vector memref operand must have its vector element type match a suffix
-    (shape and element type) of the vector (e.g. memref<3x2x6x4x3xf32>,
-    vector<1x1x4x3xf32>).
+    A memref operand with vector element type, must have its vector element
+    type match a suffix (shape and element type) of the vector (e.g.
+    memref<3x2x6x4x3xf32>, vector<1x1x4x3xf32>).
 
     The slice is further defined by a full-rank index within the MemRef,
     supplied as the operands `2 .. 1 + rank(memref)`. The permutation_map

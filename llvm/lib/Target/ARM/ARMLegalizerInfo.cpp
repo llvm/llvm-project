@@ -462,7 +462,7 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
     // Convert to integer constants, while preserving the binary representation.
     auto AsInteger =
         MI.getOperand(1).getFPImm()->getValueAPF().bitcastToAPInt();
-    MIRBuilder.buildConstant(MI.getOperand(0).getReg(),
+    MIRBuilder.buildConstant(MI.getOperand(0),
                              *ConstantInt::get(Ctx, AsInteger));
     break;
   }

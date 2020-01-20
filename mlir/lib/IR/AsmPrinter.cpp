@@ -422,7 +422,7 @@ namespace {
 /// This class manages the state of SSA value names.
 class SSANameState {
 public:
-  /// A sentinal value used for values with names set.
+  /// A sentinel value used for values with names set.
   enum : unsigned { NameSentinel = ~0U };
 
   SSANameState(Operation *op,

@@ -29,53 +29,25 @@
     %vctp = call <4 x i1> @llvm.arm.mve.vctp32(i32 %tmp8)
     %and = and <4 x i1> %vctp, %invariant.mask
     %tmp11 = sub i32 %tmp8, 4
-    %tmp17 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv24, i32 4, <4 x i1> %and, <4 x i32> undef), !tbaa !3
-    %tmp22 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1, i32 4, <4 x i1> %and, <4 x i32> undef), !tbaa !3
+    %tmp17 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv24, i32 4, <4 x i1> %and, <4 x i32> undef)
+    %tmp22 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv1, i32 4, <4 x i1> %and, <4 x i32> undef)
     %tmp23 = mul nsw <4 x i32> %tmp22, %tmp17
-    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %tmp23, <4 x i32>* %lsr.iv1, i32 4, <4 x i1> %and), !tbaa !3
+    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %tmp23, <4 x i32>* %lsr.iv1, i32 4, <4 x i1> %and)
     %tmp12 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %tmp7, i32 1)
     %tmp13 = icmp ne i32 %tmp12, 0
     %scevgep = getelementptr i32, i32* %lsr.iv, i32 4
     %scevgep3 = getelementptr i32, i32* %lsr.iv2, i32 4
-    br i1 %tmp13, label %bb9, label %bb27, !llvm.loop !7
+    br i1 %tmp13, label %bb9, label %bb27
 
   bb27:                                             ; preds = %bb9, %bb
     ret void
   }
-  ; Function Attrs: argmemonly nounwind readonly willreturn
   declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>) #1
-  ; Function Attrs: argmemonly nounwind willreturn
   declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>) #2
-  ; Function Attrs: noduplicate nounwind
   declare void @llvm.set.loop.iterations.i32(i32) #3
-  ; Function Attrs: noduplicate nounwind
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #3
-  ; Function Attrs: nounwind readnone
   declare <4 x i1> @llvm.arm.mve.vctp32(i32) #4
-  ; Function Attrs: nounwind readnone
   declare <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32) #4
-  ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #5
-
-  attributes #0 = { nofree norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "target-features"="+mve" "unsafe-fp-math"="false" "use-soft-float"="false" }
-  attributes #1 = { argmemonly nounwind readonly willreturn "target-features"="+mve" }
-  attributes #2 = { argmemonly nounwind willreturn "target-features"="+mve" }
-  attributes #3 = { noduplicate nounwind "target-features"="+mve" }
-  attributes #4 = { nounwind readnone "target-features"="+mve" }
-  attributes #5 = { nounwind }
-
-  !llvm.module.flags = !{!0, !1}
-  !llvm.ident = !{!2}
-
-  !0 = !{i32 1, !"wchar_size", i32 4}
-  !1 = !{i32 1, !"min_enum_size", i32 4}
-  !2 = !{!"clang version 10.0.0 (https://github.com/llvm/llvm-project.git 8f92f97150cbdd3b9f569570b8377db78ed61a9e)"}
-  !3 = !{!4, !4, i64 0}
-  !4 = !{!"int", !5, i64 0}
-  !5 = !{!"omnipotent char", !6, i64 0}
-  !6 = !{!"Simple C/C++ TBAA"}
-  !7 = distinct !{!7, !8}
-  !8 = !{!"llvm.loop.isvectorized", i32 1}
 
 ...
 ---
@@ -131,8 +103,8 @@ body:             |
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0.bb:
   ; CHECK:   successors: %bb.3(0x30000000), %bb.1(0x50000000)
-  ; CHECK:   liveins: $r0, $r1, $r2, $r3, $lr
-  ; CHECK:   frame-setup tPUSH 14, $noreg, $r7, killed $lr, implicit-def $sp, implicit $sp
+  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
+  ; CHECK:   frame-setup tPUSH 14, $noreg, killed $lr, implicit-def $sp, implicit $sp
   ; CHECK:   frame-setup CFI_INSTRUCTION def_cfa_offset 8
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $lr, -4
   ; CHECK:   frame-setup CFI_INSTRUCTION offset $r7, -8
@@ -146,19 +118,19 @@ body:             |
   ; CHECK:   $vpr = VMSR_P0 killed $r3, 14, $noreg
   ; CHECK:   VSTR_P0_off killed renamable $vpr, $sp, 0, 14, $noreg :: (store 4 into %stack.0)
   ; CHECK:   $r3 = tMOVr $r0, 14, $noreg
-  ; CHECK:   $lr = MVE_DLSTP_32 renamable $r2
+  ; CHECK:   $lr = MVE_DLSTP_32 killed renamable $r2
   ; CHECK: bb.2.bb9:
   ; CHECK:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
-  ; CHECK:   liveins: $lr, $r0, $r1, $r2, $r3
+  ; CHECK:   liveins: $lr, $r0, $r1, $r3
   ; CHECK:   renamable $vpr = VLDR_P0_off $sp, 0, 14, $noreg :: (load 4 from %stack.0)
   ; CHECK:   MVE_VPST 4, implicit $vpr
-  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv24, align 4, !tbaa !3)
-  ; CHECK:   renamable $r3, renamable $q1 = MVE_VLDRWU32_post killed renamable $r3, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv1, align 4, !tbaa !3)
+  ; CHECK:   renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv24, align 4)
+  ; CHECK:   renamable $r3, renamable $q1 = MVE_VLDRWU32_post killed renamable $r3, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv1, align 4)
   ; CHECK:   renamable $q0 = nsw MVE_VMULi32 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
   ; CHECK:   MVE_VPST 8, implicit $vpr
-  ; CHECK:   MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr :: (store 16 into %ir.lsr.iv1, align 4, !tbaa !3)
+  ; CHECK:   MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr :: (store 16 into %ir.lsr.iv1, align 4)
   ; CHECK:   $r0 = tMOVr $r3, 14, $noreg
-  ; CHECK:   $lr = MVE_LETP renamable $lr, %bb.2
+  ; CHECK:   $lr = MVE_LETP killed renamable $lr, %bb.2
   ; CHECK: bb.3.bb27:
   ; CHECK:   $sp = tADDspi $sp, 1, 14, $noreg
   ; CHECK:   tPOP_RET 14, $noreg, def $r7, def $pc
@@ -166,7 +138,7 @@ body:             |
     successors: %bb.3(0x30000000), %bb.1(0x50000000)
     liveins: $r0, $r1, $r2, $r3, $lr
 
-    frame-setup tPUSH 14, $noreg, $r7, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup tPUSH 14, $noreg, killed $lr, implicit-def $sp, implicit $sp
     frame-setup CFI_INSTRUCTION def_cfa_offset 8
     frame-setup CFI_INSTRUCTION offset $lr, -4
     frame-setup CFI_INSTRUCTION offset $r7, -8
@@ -196,12 +168,12 @@ body:             |
     renamable $vpr = VLDR_P0_off $sp, 0, 14, $noreg :: (load 4 from %stack.0)
     MVE_VPST 2, implicit $vpr
     renamable $vpr = MVE_VCTP32 renamable $r2, 1, killed renamable $vpr
-    renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv24, align 4, !tbaa !3)
-    renamable $r3, renamable $q1 = MVE_VLDRWU32_post killed renamable $r3, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv1, align 4, !tbaa !3)
+    renamable $r1, renamable $q0 = MVE_VLDRWU32_post killed renamable $r1, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv24, align 4)
+    renamable $r3, renamable $q1 = MVE_VLDRWU32_post killed renamable $r3, 16, 1, renamable $vpr :: (load 16 from %ir.lsr.iv1, align 4)
     renamable $r2, dead $cpsr = tSUBi8 killed renamable $r2, 4, 14, $noreg
     renamable $q0 = nsw MVE_VMULi32 killed renamable $q1, killed renamable $q0, 0, $noreg, undef renamable $q0
     MVE_VPST 8, implicit $vpr
-    MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr :: (store 16 into %ir.lsr.iv1, align 4, !tbaa !3)
+    MVE_VSTRWU32 killed renamable $q0, killed renamable $r0, 0, 1, killed renamable $vpr :: (store 16 into %ir.lsr.iv1, align 4)
     renamable $lr = t2LoopDec killed renamable $lr, 1
     $r0 = tMOVr $r3, 14, $noreg
     t2LoopEnd renamable $lr, %bb.2, implicit-def dead $cpsr

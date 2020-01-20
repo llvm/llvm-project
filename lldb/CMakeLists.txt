@@ -92,8 +92,7 @@ option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests." ${LL
 if(LLDB_INCLUDE_TESTS)
   add_subdirectory(test)
   add_subdirectory(unittests)
-  add_subdirectory(utils/lit-cpuid)
-  add_subdirectory(utils/lldb-dotest)
+  add_subdirectory(utils)
 endif()
 
 if (LLDB_ENABLE_PYTHON)

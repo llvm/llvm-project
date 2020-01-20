@@ -118,7 +118,7 @@ compiler passes - does not include locations in the output by default. The
 MLIR is designed to be a completely extensible system, and as such, the
 infrastructure has the capability to opaquely represent all of its core
 components: attributes, operations, types, etc. This allows MLIR to parse,
-represent, and [round-trip](../../Glossary.md#round-trip) any valid IR. For
+represent, and [round-trip](../../../getting_started/Glossary.md#round-trip) any valid IR. For
 example, we could place our Toy operation from above into an `.mlir` file and
 round-trip through *mlir-opt* without registering anything:
 

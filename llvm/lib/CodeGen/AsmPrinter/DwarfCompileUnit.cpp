@@ -339,6 +339,8 @@ DIE *DwarfCompileUnit::getOrCreateCommonBlock(
 }
 
 void DwarfCompileUnit::addRange(RangeSpan Range) {
+  DD->insertSectionLabel(Range.Begin);
+
   bool SameAsPrevCU = this == DD->getPrevCU();
   DD->setPrevCU(this);
   // If we have no current ranges just add the range and return, otherwise,
@@ -411,15 +413,33 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
 
   // Only include DW_AT_frame_base in full debug info
   if (!includeMinimalInlineScopes()) {
-    if (Asm->MF->getTarget().getTargetTriple().isNVPTX()) {
+    const TargetFrameLowering *TFI = Asm->MF->getSubtarget().getFrameLowering();
+    TargetFrameLowering::DwarfFrameBase FrameBase =
+        TFI->getDwarfFrameBase(*Asm->MF);
+    switch (FrameBase.Kind) {
+    case TargetFrameLowering::DwarfFrameBase::Register: {
+      if (Register::isPhysicalRegister(FrameBase.Location.Reg)) {
+        MachineLocation Location(FrameBase.Location.Reg);
+        addAddress(*SPDie, dwarf::DW_AT_frame_base, Location);
+      }
+      break;
+    }
+    case TargetFrameLowering::DwarfFrameBase::CFA: {
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
       addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_call_frame_cfa);
       addBlock(*SPDie, dwarf::DW_AT_frame_base, Loc);
-    } else {
-      const TargetRegisterInfo *RI = Asm->MF->getSubtarget().getRegisterInfo();
-      MachineLocation Location(RI->getFrameRegister(*Asm->MF));
-      if (Register::isPhysicalRegister(Location.getReg()))
-        addAddress(*SPDie, dwarf::DW_AT_frame_base, Location);
+      break;
+    }
+    case TargetFrameLowering::DwarfFrameBase::WasmFrameBase: {
+      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+      DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+      DIExpressionCursor Cursor({});
+      DwarfExpr.addWasmLocation(FrameBase.Location.WasmLoc.Kind,
+                                FrameBase.Location.WasmLoc.Index);
+      DwarfExpr.addExpression(std::move(Cursor));
+      addBlock(*SPDie, dwarf::DW_AT_frame_base, DwarfExpr.finalize());
+      break;
+    }
     }
   }
 
@@ -945,6 +965,7 @@ DwarfCompileUnit::getDwarf5OrGNUAttr(dwarf::Attribute Attr) const {
   case dwarf::DW_AT_call_origin:
     return dwarf::DW_AT_abstract_origin;
   case dwarf::DW_AT_call_pc:
+  case dwarf::DW_AT_call_return_pc:
     return dwarf::DW_AT_low_pc;
   case dwarf::DW_AT_call_value:
     return dwarf::DW_AT_GNU_call_site_value;
@@ -967,9 +988,11 @@ DwarfCompileUnit::getDwarf5OrGNULocationAtom(dwarf::LocationAtom Loc) const {
   }
 }
 
-DIE &DwarfCompileUnit::constructCallSiteEntryDIE(
-    DIE &ScopeDIE, const DISubprogram *CalleeSP, bool IsTail,
-    const MCSymbol *PCAddr, const MCExpr *PCOffset, unsigned CallReg) {
+DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
+                                                 const DISubprogram *CalleeSP,
+                                                 bool IsTail,
+                                                 const MCSymbol *PCAddr,
+                                                 unsigned CallReg) {
   // Insert a call site entry DIE within ScopeDIE.
   DIE &CallSiteDIE = createAndAddDIE(getDwarf5OrGNUTag(dwarf::DW_TAG_call_site),
                                      ScopeDIE, nullptr);
@@ -991,12 +1014,13 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(
 
   // Attach the return PC to allow the debugger to disambiguate call paths
   // from one function to another.
-  if (DD->getDwarfVersion() == 4 && DD->tuneForGDB()) {
-    assert(PCAddr && "Missing PC information for a call");
-    addLabelAddress(CallSiteDIE, dwarf::DW_AT_low_pc, PCAddr);
-  } else if (!IsTail || DD->tuneForGDB()) {
-    assert(PCOffset && "Missing return PC information for a call");
-    addAddressExpr(CallSiteDIE, dwarf::DW_AT_call_return_pc, PCOffset);
+  //
+  // The return PC is only really needed when the call /isn't/ a tail call, but
+  // for some reason GDB always expects it.
+  if (!IsTail || DD->tuneForGDB()) {
+    assert(PCAddr && "Missing return PC information for a call");
+    addLabelAddress(CallSiteDIE,
+                    getDwarf5OrGNUAttr(dwarf::DW_AT_call_return_pc), PCAddr);
   }
 
   return CallSiteDIE;
@@ -1294,12 +1318,6 @@ void DwarfCompileUnit::applyLabelAttributes(const DbgLabel &Label,
 void DwarfCompileUnit::addExpr(DIELoc &Die, dwarf::Form Form,
                                const MCExpr *Expr) {
   Die.addValue(DIEValueAllocator, (dwarf::Attribute)0, Form, DIEExpr(Expr));
-}
-
-void DwarfCompileUnit::addAddressExpr(DIE &Die, dwarf::Attribute Attribute,
-                                      const MCExpr *Expr) {
-  Die.addValue(DIEValueAllocator, Attribute, dwarf::DW_FORM_addr,
-               DIEExpr(Expr));
 }
 
 void DwarfCompileUnit::applySubprogramAttributesToDefinition(

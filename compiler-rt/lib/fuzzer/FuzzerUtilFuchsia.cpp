@@ -34,6 +34,8 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
+#include <vector>
+
 namespace fuzzer {
 
 // Given that Fuchsia doesn't have the POSIX signals that libFuzzer was written
@@ -424,6 +426,17 @@ RunOnDestruction<Fn> at_scope_exit(Fn fn) {
   return RunOnDestruction<Fn>(fn);
 }
 
+static fdio_spawn_action_t clone_fd_action(int localFd, int targetFd) {
+  return {
+      .action = FDIO_SPAWN_ACTION_CLONE_FD,
+      .fd =
+          {
+              .local_fd = localFd,
+              .target_fd = targetFd,
+          },
+  };
+}
+
 int ExecuteCommand(const Command &Cmd) {
   zx_status_t rc;
 
@@ -442,17 +455,26 @@ int ExecuteCommand(const Command &Cmd) {
   // so write the log file(s) there.
   // However, we don't want to apply this logic for absolute paths.
   int FdOut = STDOUT_FILENO;
+  bool discardStdout = false;
+  bool discardStderr = false;
+
   if (Cmd.hasOutputFile()) {
     std::string Path = Cmd.getOutputFile();
-    bool IsAbsolutePath = Path.length() > 1 && Path[0] == '/';
-    if (!IsAbsolutePath && Cmd.hasFlag("artifact_prefix"))
-      Path = Cmd.getFlagValue("artifact_prefix") + "/" + Path;
+    if (Path == getDevNull()) {
+      // On Fuchsia, there's no "/dev/null" like-file, so we
+      // just don't copy the FDs into the spawned process.
+      discardStdout = true;
+    } else {
+      bool IsAbsolutePath = Path.length() > 1 && Path[0] == '/';
+      if (!IsAbsolutePath && Cmd.hasFlag("artifact_prefix"))
+        Path = Cmd.getFlagValue("artifact_prefix") + "/" + Path;
 
-    FdOut = open(Path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0);
-    if (FdOut == -1) {
-      Printf("libFuzzer: failed to open %s: %s\n", Path.c_str(),
-             strerror(errno));
-      return ZX_ERR_IO;
+      FdOut = open(Path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0);
+      if (FdOut == -1) {
+        Printf("libFuzzer: failed to open %s: %s\n", Path.c_str(),
+               strerror(errno));
+        return ZX_ERR_IO;
+      }
     }
   }
   auto CloseFdOut = at_scope_exit([FdOut]() {
@@ -462,43 +484,29 @@ int ExecuteCommand(const Command &Cmd) {
 
   // Determine stderr
   int FdErr = STDERR_FILENO;
-  if (Cmd.isOutAndErrCombined())
+  if (Cmd.isOutAndErrCombined()) {
     FdErr = FdOut;
+    if (discardStdout)
+      discardStderr = true;
+  }
 
   // Clone the file descriptors into the new process
-  fdio_spawn_action_t SpawnAction[] = {
-      {
-          .action = FDIO_SPAWN_ACTION_CLONE_FD,
-          .fd =
-              {
-                  .local_fd = STDIN_FILENO,
-                  .target_fd = STDIN_FILENO,
-              },
-      },
-      {
-          .action = FDIO_SPAWN_ACTION_CLONE_FD,
-          .fd =
-              {
-                  .local_fd = FdOut,
-                  .target_fd = STDOUT_FILENO,
-              },
-      },
-      {
-          .action = FDIO_SPAWN_ACTION_CLONE_FD,
-          .fd =
-              {
-                  .local_fd = FdErr,
-                  .target_fd = STDERR_FILENO,
-              },
-      },
-  };
+  std::vector<fdio_spawn_action_t> SpawnActions;
+  SpawnActions.push_back(clone_fd_action(STDIN_FILENO, STDIN_FILENO));
+
+  if (!discardStdout)
+    SpawnActions.push_back(clone_fd_action(FdOut, STDOUT_FILENO));
+  if (!discardStderr)
+    SpawnActions.push_back(clone_fd_action(FdErr, STDERR_FILENO));
 
   // Start the process.
   char ErrorMsg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   zx_handle_t ProcessHandle = ZX_HANDLE_INVALID;
-  rc = fdio_spawn_etc(
-      ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL & (~FDIO_SPAWN_CLONE_STDIO),
-      Argv[0], Argv.get(), nullptr, 3, SpawnAction, &ProcessHandle, ErrorMsg);
+  rc = fdio_spawn_etc(ZX_HANDLE_INVALID,
+                      FDIO_SPAWN_CLONE_ALL & (~FDIO_SPAWN_CLONE_STDIO), Argv[0],
+                      Argv.get(), nullptr, SpawnActions.size(),
+                      SpawnActions.data(), &ProcessHandle, ErrorMsg);
+
   if (rc != ZX_OK) {
     Printf("libFuzzer: failed to launch '%s': %s, %s\n", Argv[0], ErrorMsg,
            _zx_status_get_string(rc));

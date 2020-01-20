@@ -23,9 +23,7 @@ config("googletest_config") {
 }
 
 static_library("gtest") {
-  deps = [
-    "//llvm/lib/Support",
-  ]
+  deps = [ "//llvm/lib/Support" ]
   include_dirs = [
     "googletest",  # For including src/gtest.cc
     "googlemock",  # For including src/gmock.cc

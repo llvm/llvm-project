@@ -31,9 +31,23 @@ class CMTimeDataFormatterTestCase(TestBase):
         self.expect(
             'frame variable t1',
             substrs=[
+                '1 half seconds', 'value = 1', 'timescale = 2', 'epoch = 0'
+            ])
+        self.expect(
+            'frame variable t2',
+            substrs=[
+                '1 third of a second', 'value = 1', 'timescale = 3',
+                'epoch = 0'
+            ])
+        self.expect(
+            'frame variable t3',
+            substrs=[
                 '1 10th of a second', 'value = 1', 'timescale = 10',
                 'epoch = 0'
             ])
         self.expect(
-            'frame variable t2',
+            'frame variable t4',
             substrs=['10 seconds', 'value = 10', 'timescale = 1', 'epoch = 0'])
+        self.expect('frame variable t5', '-oo')
+        self.expect('frame variable t6', '+oo')
+        self.expect('frame variable t7', 'indefinite')

@@ -286,12 +286,18 @@ bool Constant::isElementWiseEqual(Value *Y) const {
   if (!isa<Constant>(Y) || !Ty->isVectorTy() || Ty != Y->getType())
     return false;
 
+  // TODO: Compare pointer constants?
+  if (!(Ty->getVectorElementType()->isIntegerTy() ||
+        Ty->getVectorElementType()->isFloatingPointTy()))
+    return false;
+
   // They may still be identical element-wise (if they have `undef`s).
-  // FIXME: This crashes on FP vector constants.
-  return match(ConstantExpr::getICmp(ICmpInst::Predicate::ICMP_EQ,
-                                     const_cast<Constant *>(this),
-                                     cast<Constant>(Y)),
-               m_One());
+  // Bitcast to integer to allow exact bitwise comparison for all types.
+  Type *IntTy = VectorType::getInteger(cast<VectorType>(Ty));
+  Constant *C0 = ConstantExpr::getBitCast(const_cast<Constant *>(this), IntTy);
+  Constant *C1 = ConstantExpr::getBitCast(cast<Constant>(Y), IntTy);
+  Constant *CmpEq = ConstantExpr::getICmp(ICmpInst::ICMP_EQ, C0, C1);
+  return isa<UndefValue>(CmpEq) || match(CmpEq, m_One());
 }
 
 bool Constant::containsUndefElement() const {

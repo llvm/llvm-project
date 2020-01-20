@@ -220,10 +220,11 @@ private:
   /// Class for underlying value iterator support.
   template <typename AttrTy>
   class attr_value_iterator final
-      : public llvm::mapped_iterator<iterator, AttrTy (*)(Attribute)> {
+      : public llvm::mapped_iterator<ArrayAttr::iterator,
+                                     AttrTy (*)(Attribute)> {
   public:
-    explicit attr_value_iterator(iterator it)
-        : llvm::mapped_iterator<iterator, AttrTy (*)(Attribute)>(
+    explicit attr_value_iterator(ArrayAttr::iterator it)
+        : llvm::mapped_iterator<ArrayAttr::iterator, AttrTy (*)(Attribute)>(
               it, [](Attribute attr) { return attr.cast<AttrTy>(); }) {}
     AttrTy operator*() { return (*this->I).template cast<AttrTy>(); }
   };
@@ -622,7 +623,7 @@ public:
   }
 
   // Note: We could steal more bits if the need arises.
-  enum { NumLowBitsAvailable = 1 };
+  static constexpr int NumLowBitsAvailable = 1;
 };
 
 /// Pair of raw pointer and a boolean flag of whether the pointer holds a splat,
@@ -1442,7 +1443,7 @@ template <> struct PointerLikeTypeTraits<mlir::Attribute> {
   static inline mlir::Attribute getFromVoidPointer(void *ptr) {
     return mlir::Attribute::getFromOpaquePointer(ptr);
   }
-  enum { NumLowBitsAvailable = 3 };
+  static constexpr int NumLowBitsAvailable = 3;
 };
 
 template <>

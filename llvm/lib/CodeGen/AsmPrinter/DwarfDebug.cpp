@@ -719,7 +719,6 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
 
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   assert(TII && "TargetInstrInfo not found: cannot label tail calls");
-  bool ApplyGNUExtensions = getDwarfVersion() == 4 && tuneForGDB();
 
   // Emit call site entries for each call or tail call in the function.
   for (const MachineBasicBlock &MBB : MF) {
@@ -781,25 +780,16 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       const MachineInstr *TopLevelCallMI =
           MI.isInsideBundle() ? &*getBundleStart(MI.getIterator()) : &MI;
 
-      // For tail calls, for non-gdb tuning, no return PC information is needed.
+      // For tail calls, no return PC information is needed.
       // For regular calls (and tail calls in GDB tuning), the return PC
       // is needed to disambiguate paths in the call graph which could lead to
       // some target function.
-      const MCExpr *PCOffset =
+      const MCSymbol *PCAddr =
           (IsTail && !tuneForGDB())
               ? nullptr
-              : getFunctionLocalOffsetAfterInsn(TopLevelCallMI);
+              : const_cast<MCSymbol *>(getLabelAfterInsn(TopLevelCallMI));
 
-      // Return address of a call-like instruction for a normal call or a
-      // jump-like instruction for a tail call. This is needed for
-      // GDB + DWARF 4 tuning.
-      const MCSymbol *PCAddr =
-          ApplyGNUExtensions
-              ? const_cast<MCSymbol *>(getLabelAfterInsn(TopLevelCallMI))
-              : nullptr;
-
-      assert((IsTail || PCOffset || PCAddr) &&
-             "Call without return PC information");
+      assert((IsTail || PCAddr) && "Call without return PC information");
 
       LLVM_DEBUG(dbgs() << "CallSiteEntry: " << MF.getName() << " -> "
                         << (CalleeDecl ? CalleeDecl->getName()
@@ -808,9 +798,8 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
                                                        ->getName(CallReg)))
                         << (IsTail ? " [IsTail]" : "") << "\n");
 
-      DIE &CallSiteDIE =
-            CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP, IsTail, PCAddr,
-                                         PCOffset, CallReg);
+      DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP,
+                                                      IsTail, PCAddr, CallReg);
 
       // GDB and LLDB support call site parameter debug info.
       if (Asm->TM.Options.EnableDebugEntryValues &&
@@ -847,6 +836,9 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   NewCU.addUInt(Die, dwarf::DW_AT_language, dwarf::DW_FORM_data2,
                 DIUnit->getSourceLanguage());
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
+  StringRef SysRoot = DIUnit->getSysRoot();
+  if (!SysRoot.empty())
+    NewCU.addString(Die, dwarf::DW_AT_LLVM_sysroot, SysRoot);
 
   // Add DW_str_offsets_base to the unit DIE, except for split units.
   if (useSegmentedStringOffsetsTable() && !useSplitDwarf())
@@ -859,7 +851,6 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     // skeleton CU and so we don't need to duplicate it here.
     if (!CompilationDir.empty())
       NewCU.addString(Die, dwarf::DW_AT_comp_dir, CompilationDir);
-
     addGnuPubAttributes(NewCU, Die);
   }
 
@@ -1842,9 +1833,6 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   if (SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug)
     return;
 
-  SectionLabels.insert(std::make_pair(&Asm->getFunctionBegin()->getSection(),
-                                      Asm->getFunctionBegin()));
-
   DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
 
   // Set DwarfDwarfCompileUnitID in MCContext to the Compile Unit this function
@@ -2541,8 +2529,9 @@ void DwarfDebug::emitDebugLocDWO() {
       // offset_pair, so the implementations can't really share much since they
       // need to use different representations)
       // * as of October 2018, at least
-      // Ideally/in v5, this could use SectionLabels to reuse existing addresses
-      // in the address pool to minimize object size/relocations.
+      //
+      // In v5 (see emitLocList), this uses SectionLabels to reuse existing
+      // addresses in the address pool to minimize object size/relocations.
       Asm->emitInt8(dwarf::DW_LLE_startx_length);
       unsigned idx = AddrPool.getIndex(Entry.Begin);
       Asm->EmitULEB128(idx);
@@ -2833,7 +2822,6 @@ void DwarfDebug::initSkeletonUnit(const DwarfUnit &U, DIE &Die,
 
   if (!CompilationDir.empty())
     NewU->addString(Die, dwarf::DW_AT_comp_dir, CompilationDir);
-
   addGnuPubAttributes(*NewU, Die);
 
   SkeletonHolder.addUnit(std::move(NewU));
@@ -3086,4 +3074,7 @@ uint16_t DwarfDebug::getDwarfVersion() const {
 
 const MCSymbol *DwarfDebug::getSectionLabel(const MCSection *S) {
   return SectionLabels.find(S)->second;
+}
+void DwarfDebug::insertSectionLabel(const MCSymbol *S) {
+  SectionLabels.insert(std::make_pair(&S->getSection(), S));
 }

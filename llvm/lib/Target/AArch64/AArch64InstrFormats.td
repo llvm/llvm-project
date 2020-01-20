@@ -647,6 +647,13 @@ def tvecshiftR32 : Operand<i32>, TImmLeaf<i32, [{
   let DecoderMethod = "DecodeVecShiftR32Imm";
   let ParserMatchClass = Imm1_32Operand;
 }
+def tvecshiftR64 : Operand<i32>, TImmLeaf<i32, [{
+  return (((uint32_t)Imm) > 0) && (((uint32_t)Imm) < 65);
+}]> {
+  let EncoderMethod = "getVecShiftR64OpValue";
+  let DecoderMethod = "DecodeVecShiftR64Imm";
+  let ParserMatchClass = Imm1_64Operand;
+}
 
 def Imm0_1Operand : AsmImmRange<0, 1>;
 def Imm0_7Operand : AsmImmRange<0, 7>;
@@ -682,7 +689,6 @@ def vecshiftL64 : Operand<i32>, ImmLeaf<i32, [{
   let DecoderMethod = "DecodeVecShiftL64Imm";
   let ParserMatchClass = Imm0_63Operand;
 }
-
 
 // Crazy immediate formats used by 32-bit and 64-bit logical immediate
 // instructions for splatting repeating bit patterns across the immediate.
@@ -832,7 +838,7 @@ def imm0_7 : Operand<i64>, ImmLeaf<i64, [{
 }
 
 // imm32_0_7 predicate - True if the 32-bit immediate is in the range [0,7]
-def imm32_0_7 : Operand<i32>, ImmLeaf<i32, [{
+def imm32_0_7 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) < 8;
 }]> {
   let ParserMatchClass = Imm0_7Operand;
@@ -1091,10 +1097,15 @@ class AsmVectorIndex<int Min, int Max, string NamePrefix=""> : AsmOperandClass {
   let RenderMethod = "addVectorIndexOperands";
 }
 
-class AsmVectorIndexOpnd<ValueType ty, AsmOperandClass mc, code pred>
-    : Operand<ty>, ImmLeaf<ty, pred> {
+class AsmVectorIndexOpnd<ValueType ty, AsmOperandClass mc>
+    : Operand<ty> {
   let ParserMatchClass = mc;
   let PrintMethod = "printVectorIndex";
+}
+
+multiclass VectorIndex<ValueType ty, AsmOperandClass mc, code pred> {
+  def "" : AsmVectorIndexOpnd<ty, mc>, ImmLeaf<ty, pred>;
+  def _timm : AsmVectorIndexOpnd<ty, mc>, TImmLeaf<ty, pred>;
 }
 
 def VectorIndex1Operand : AsmVectorIndex<1, 1>;
@@ -1103,17 +1114,27 @@ def VectorIndexHOperand : AsmVectorIndex<0, 7>;
 def VectorIndexSOperand : AsmVectorIndex<0, 3>;
 def VectorIndexDOperand : AsmVectorIndex<0, 1>;
 
-def VectorIndex1 : AsmVectorIndexOpnd<i64, VectorIndex1Operand, [{ return ((uint64_t)Imm) == 1; }]>;
-def VectorIndexB : AsmVectorIndexOpnd<i64, VectorIndexBOperand, [{ return ((uint64_t)Imm) < 16; }]>;
-def VectorIndexH : AsmVectorIndexOpnd<i64, VectorIndexHOperand, [{ return ((uint64_t)Imm) < 8; }]>;
-def VectorIndexS : AsmVectorIndexOpnd<i64, VectorIndexSOperand, [{ return ((uint64_t)Imm) < 4; }]>;
-def VectorIndexD : AsmVectorIndexOpnd<i64, VectorIndexDOperand, [{ return ((uint64_t)Imm) < 2; }]>;
+defm VectorIndex1 : VectorIndex<i64, VectorIndex1Operand,
+                                [{ return ((uint64_t)Imm) == 1; }]>;
+defm VectorIndexB : VectorIndex<i64, VectorIndexBOperand,
+                                [{ return ((uint64_t)Imm) < 16; }]>;
+defm VectorIndexH : VectorIndex<i64, VectorIndexHOperand,
+                                [{ return ((uint64_t)Imm) < 8; }]>;
+defm VectorIndexS : VectorIndex<i64, VectorIndexSOperand,
+                                [{ return ((uint64_t)Imm) < 4; }]>;
+defm VectorIndexD : VectorIndex<i64, VectorIndexDOperand,
+                                [{ return ((uint64_t)Imm) < 2; }]>;
 
-def VectorIndex132b : AsmVectorIndexOpnd<i32, VectorIndex1Operand, [{ return ((uint64_t)Imm) == 1; }]>;
-def VectorIndexB32b : AsmVectorIndexOpnd<i32, VectorIndexBOperand, [{ return ((uint64_t)Imm) < 16; }]>;
-def VectorIndexH32b : AsmVectorIndexOpnd<i32, VectorIndexHOperand, [{ return ((uint64_t)Imm) < 8; }]>;
-def VectorIndexS32b : AsmVectorIndexOpnd<i32, VectorIndexSOperand, [{ return ((uint64_t)Imm) < 4; }]>;
-def VectorIndexD32b : AsmVectorIndexOpnd<i32, VectorIndexDOperand, [{ return ((uint64_t)Imm) < 2; }]>;
+defm VectorIndex132b : VectorIndex<i32, VectorIndex1Operand,
+                                   [{ return ((uint64_t)Imm) == 1; }]>;
+defm VectorIndexB32b : VectorIndex<i32, VectorIndexBOperand,
+                                   [{ return ((uint64_t)Imm) < 16; }]>;
+defm VectorIndexH32b : VectorIndex<i32, VectorIndexHOperand,
+                                   [{ return ((uint64_t)Imm) < 8; }]>;
+defm VectorIndexS32b : VectorIndex<i32, VectorIndexSOperand,
+                                   [{ return ((uint64_t)Imm) < 4; }]>;
+defm VectorIndexD32b : VectorIndex<i32, VectorIndexDOperand,
+                                   [{ return ((uint64_t)Imm) < 2; }]>;
 
 def SVEVectorIndexExtDupBOperand : AsmVectorIndex<0, 63, "SVE">;
 def SVEVectorIndexExtDupHOperand : AsmVectorIndex<0, 31, "SVE">;
@@ -1121,16 +1142,21 @@ def SVEVectorIndexExtDupSOperand : AsmVectorIndex<0, 15, "SVE">;
 def SVEVectorIndexExtDupDOperand : AsmVectorIndex<0, 7, "SVE">;
 def SVEVectorIndexExtDupQOperand : AsmVectorIndex<0, 3, "SVE">;
 
-def sve_elm_idx_extdup_b
-  : AsmVectorIndexOpnd<i64, SVEVectorIndexExtDupBOperand, [{ return ((uint64_t)Imm) < 64; }]>;
-def sve_elm_idx_extdup_h
-  : AsmVectorIndexOpnd<i64, SVEVectorIndexExtDupHOperand, [{ return ((uint64_t)Imm) < 32; }]>;
-def sve_elm_idx_extdup_s
-  : AsmVectorIndexOpnd<i64, SVEVectorIndexExtDupSOperand, [{ return ((uint64_t)Imm) < 16; }]>;
-def sve_elm_idx_extdup_d
-  : AsmVectorIndexOpnd<i64, SVEVectorIndexExtDupDOperand, [{ return ((uint64_t)Imm) < 8; }]>;
-def sve_elm_idx_extdup_q
-  : AsmVectorIndexOpnd<i64, SVEVectorIndexExtDupQOperand, [{ return ((uint64_t)Imm) < 4; }]>;
+defm sve_elm_idx_extdup_b
+  : VectorIndex<i64, SVEVectorIndexExtDupBOperand,
+                [{ return ((uint64_t)Imm) < 64; }]>;
+defm sve_elm_idx_extdup_h
+  : VectorIndex<i64, SVEVectorIndexExtDupHOperand,
+                [{ return ((uint64_t)Imm) < 32; }]>;
+defm sve_elm_idx_extdup_s
+  : VectorIndex<i64, SVEVectorIndexExtDupSOperand,
+                [{ return ((uint64_t)Imm) < 16; }]>;
+defm sve_elm_idx_extdup_d
+  : VectorIndex<i64, SVEVectorIndexExtDupDOperand,
+                [{ return ((uint64_t)Imm) < 8; }]>;
+defm sve_elm_idx_extdup_q
+  : VectorIndex<i64, SVEVectorIndexExtDupQOperand,
+                [{ return ((uint64_t)Imm) < 4; }]>;
 
 // 8-bit immediate for AdvSIMD where 64-bit values of the form:
 // aaaaaaaa bbbbbbbb cccccccc dddddddd eeeeeeee ffffffff gggggggg hhhhhhhh

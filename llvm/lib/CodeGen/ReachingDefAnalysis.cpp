@@ -225,7 +225,7 @@ int ReachingDefAnalysis::getClearance(MachineInstr *MI, MCPhysReg PhysReg) {
 }
 
 void ReachingDefAnalysis::getReachingLocalUses(MachineInstr *Def, int PhysReg,
-    SmallVectorImpl<MachineInstr*> &Uses) {
+    SmallPtrSetImpl<MachineInstr*> &Uses) {
   MachineBasicBlock *MBB = Def->getParent();
   MachineBasicBlock::iterator MI = MachineBasicBlock::iterator(Def);
   while (++MI != MBB->end()) {
@@ -238,17 +238,54 @@ void ReachingDefAnalysis::getReachingLocalUses(MachineInstr *Def, int PhysReg,
       if (!MO.isReg() || !MO.isUse() || MO.getReg() != PhysReg)
         continue;
 
-      Uses.push_back(&*MI);
+      Uses.insert(&*MI);
       if (MO.isKill())
         return;
     }
   }
 }
 
-unsigned ReachingDefAnalysis::getNumUses(MachineInstr *Def, int PhysReg) {
-  SmallVector<MachineInstr*, 4> Uses;
-  getReachingLocalUses(Def, PhysReg, Uses);
-  return Uses.size();
+bool ReachingDefAnalysis::getLiveInUses(MachineBasicBlock *MBB, int PhysReg,
+                                        SmallPtrSetImpl<MachineInstr*> &Uses) {
+  for (auto &MI : *MBB) {
+    for (auto &MO : MI.operands()) {
+      if (!MO.isReg() || !MO.isUse() || MO.getReg() != PhysReg)
+        continue;
+      if (getReachingDef(&MI, PhysReg) >= 0)
+        return false;
+      Uses.insert(&MI);
+    }
+  }
+  return isReachingDefLiveOut(&MBB->back(), PhysReg);
+}
+
+void ReachingDefAnalysis::getGlobalUses(MachineInstr *MI, int PhysReg,
+                                        SmallPtrSetImpl<MachineInstr*> &Uses) {
+  MachineBasicBlock *MBB = MI->getParent();
+
+  // Collect the uses that each def touches within the block.
+  getReachingLocalUses(MI, PhysReg, Uses);
+
+  // Handle live-out values.
+  if (auto *LiveOut = getLocalLiveOutMIDef(MI->getParent(), PhysReg)) {
+    if (LiveOut != MI)
+      return;
+
+    SmallVector<MachineBasicBlock*, 4> ToVisit;
+    ToVisit.insert(ToVisit.begin(), MBB->successors().begin(),
+                   MBB->successors().end());
+    SmallPtrSet<MachineBasicBlock*, 4>Visited;
+    while (!ToVisit.empty()) {
+      MachineBasicBlock *MBB = ToVisit.back();
+      ToVisit.pop_back();
+      if (Visited.count(MBB) || !MBB->isLiveIn(PhysReg))
+        continue;
+      if (getLiveInUses(MBB, PhysReg, Uses))
+        ToVisit.insert(ToVisit.end(), MBB->successors().begin(),
+                       MBB->successors().end());
+      Visited.insert(MBB);
+    }
+  }
 }
 
 bool ReachingDefAnalysis::isRegUsedAfter(MachineInstr *MI, int PhysReg) {
@@ -304,29 +341,4 @@ MachineInstr* ReachingDefAnalysis::getLocalLiveOutMIDef(MachineBasicBlock *MBB,
       return Last;
 
   return Def < 0 ? nullptr : getInstFromId(MBB, Def);
-}
-
-MachineInstr *ReachingDefAnalysis::getInstWithUseBefore(MachineInstr *MI,
-    int PhysReg) {
-  auto I = MachineBasicBlock::reverse_iterator(MI);
-  auto E = MI->getParent()->rend();
-  I++;
-
-  for ( ; I != E; I++)
-    for (auto &MO : I->operands())
-      if (MO.isReg() && MO.isUse() && MO.getReg() == PhysReg)
-        return &*I;
-
-  return nullptr;
-}
-
-void ReachingDefAnalysis::getAllInstWithUseBefore(MachineInstr *MI,
-    int PhysReg, SmallVectorImpl<MachineInstr*> &Uses) {
-  MachineInstr *Use = nullptr;
-  MachineInstr *Pos = MI;
-
-  while ((Use = getInstWithUseBefore(Pos, PhysReg))) {
-    Uses.push_back(Use);
-    Pos = Use;
-  }
 }

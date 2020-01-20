@@ -1,3 +1,5 @@
+// REQUIRES: darwin
+
 // Test the online merging mode (%m) along with continuous mode (%c).
 //
 // Create & cd into a temporary directory.

@@ -1538,17 +1538,29 @@ def TAGPstack
 // register / expression for the tagged base pointer of the current function.
 def : Pat<(int_aarch64_irg_sp i64:$Rm), (IRGstack SP, i64:$Rm)>;
 
-// Large STG to be expanded into a loop. $Rm is the size, $Rn is start address.
-// $Rn_wback is one past the end of the range.
+// Large STG to be expanded into a loop. $sz is the size, $Rn is start address.
+// $Rn_wback is one past the end of the range. $Rm is the loop counter.
 let isCodeGenOnly=1, mayStore=1 in {
+def STGloop_wback
+    : Pseudo<(outs GPR64common:$Rm, GPR64sp:$Rn_wback), (ins i64imm:$sz, GPR64sp:$Rn),
+             [], "$Rn = $Rn_wback,@earlyclobber $Rn_wback,@earlyclobber $Rm" >,
+      Sched<[WriteAdr, WriteST]>;
+
+def STZGloop_wback
+    : Pseudo<(outs GPR64common:$Rm, GPR64sp:$Rn_wback), (ins i64imm:$sz, GPR64sp:$Rn),
+             [], "$Rn = $Rn_wback,@earlyclobber $Rn_wback,@earlyclobber $Rm" >,
+      Sched<[WriteAdr, WriteST]>;
+
+// A variant of the above where $Rn2 is an independent register not tied to the input register $Rn.
+// Their purpose is to use a FrameIndex operand as $Rn (which of course can not be written back).
 def STGloop
-    : Pseudo<(outs GPR64common:$Rm_wback, GPR64sp:$Rn_wback), (ins GPR64common:$Rm, GPR64sp:$Rn),
-             [], "$Rn = $Rn_wback,@earlyclobber $Rn_wback,$Rm = $Rm_wback,@earlyclobber $Rm_wback" >,
+    : Pseudo<(outs GPR64common:$Rm, GPR64sp:$Rn2), (ins i64imm:$sz, GPR64sp:$Rn),
+             [], "@earlyclobber $Rn2,@earlyclobber $Rm" >,
       Sched<[WriteAdr, WriteST]>;
 
 def STZGloop
-    : Pseudo<(outs GPR64common:$Rm_wback, GPR64sp:$Rn_wback), (ins GPR64common:$Rm, GPR64sp:$Rn),
-             [], "$Rn = $Rn_wback,@earlyclobber $Rn_wback,$Rm = $Rm_wback,@earlyclobber $Rm_wback" >,
+    : Pseudo<(outs GPR64common:$Rm, GPR64sp:$Rn2), (ins i64imm:$sz, GPR64sp:$Rn),
+             [], "@earlyclobber $Rn2,@earlyclobber $Rm" >,
       Sched<[WriteAdr, WriteST]>;
 }
 

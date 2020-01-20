@@ -5,8 +5,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown   -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefixes=CHECK,CHECK64,AVX512_64,AVX512DQ_64
 ; RUN: llc < %s -mtriple=i386-unknown-unknown     -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,CHECK32,AVX512_32,AVX512F_32
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown   -mattr=+avx512f | FileCheck %s --check-prefixes=CHECK,CHECK64,AVX512_64,AVX512F_64
-; RUN: llc < %s -mtriple=i386-unknown-unknown     -mattr=+sse2    | FileCheck %s --check-prefixes=CHECK,CHECK32,SSE2_32
+; RUN: llc < %s -mtriple=i386-unknown-unknown     -mattr=+sse2    | FileCheck %s --check-prefixes=CHECK,CHECK32,SSE_32,SSE2_32
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown   -mattr=+sse2    | FileCheck %s --check-prefixes=CHECK,CHECK64,SSE2_64
+; RUN: llc < %s -mtriple=i386-unknown-unknown     -mattr=+sse     | FileCheck %s --check-prefixes=CHECK,CHECK32,SSE_32,SSE1_32
 ; RUN: llc < %s -mtriple=i386-unknown-unknown     -mattr=-sse     | FileCheck %s --check-prefixes=CHECK,CHECK32,X87
 
 ; Verify that scalar integer conversions to FP compile successfully
@@ -48,6 +49,22 @@ define float @u32_to_f(i32 %a) nounwind {
 ; SSE2_64-NEXT:    cvtsi2ss %rax, %xmm0
 ; SSE2_64-NEXT:    retq
 ;
+; SSE1_32-LABEL: u32_to_f:
+; SSE1_32:       # %bb.0:
+; SSE1_32-NEXT:    pushl %ebp
+; SSE1_32-NEXT:    movl %esp, %ebp
+; SSE1_32-NEXT:    andl $-8, %esp
+; SSE1_32-NEXT:    subl $16, %esp
+; SSE1_32-NEXT:    movl 8(%ebp), %eax
+; SSE1_32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    fildll {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    fstps {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    flds {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    movl %ebp, %esp
+; SSE1_32-NEXT:    popl %ebp
+; SSE1_32-NEXT:    retl
+;
 ; X87-LABEL: u32_to_f:
 ; X87:       # %bb.0:
 ; X87-NEXT:    pushl %ebp
@@ -80,14 +97,14 @@ define float @s32_to_f(i32 %a) nounwind {
 ; AVX512_64-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
 ; AVX512_64-NEXT:    retq
 ;
-; SSE2_32-LABEL: s32_to_f:
-; SSE2_32:       # %bb.0:
-; SSE2_32-NEXT:    pushl %eax
-; SSE2_32-NEXT:    cvtsi2ssl {{[0-9]+}}(%esp), %xmm0
-; SSE2_32-NEXT:    movss %xmm0, (%esp)
-; SSE2_32-NEXT:    flds (%esp)
-; SSE2_32-NEXT:    popl %eax
-; SSE2_32-NEXT:    retl
+; SSE_32-LABEL: s32_to_f:
+; SSE_32:       # %bb.0:
+; SSE_32-NEXT:    pushl %eax
+; SSE_32-NEXT:    cvtsi2ssl {{[0-9]+}}(%esp), %xmm0
+; SSE_32-NEXT:    movss %xmm0, (%esp)
+; SSE_32-NEXT:    flds (%esp)
+; SSE_32-NEXT:    popl %eax
+; SSE_32-NEXT:    retl
 ;
 ; SSE2_64-LABEL: s32_to_f:
 ; SSE2_64:       # %bb.0:
@@ -147,6 +164,20 @@ define double @u32_to_d(i32 %a) nounwind {
 ; SSE2_64-NEXT:    cvtsi2sd %rax, %xmm0
 ; SSE2_64-NEXT:    retq
 ;
+; SSE1_32-LABEL: u32_to_d:
+; SSE1_32:       # %bb.0:
+; SSE1_32-NEXT:    pushl %ebp
+; SSE1_32-NEXT:    movl %esp, %ebp
+; SSE1_32-NEXT:    andl $-8, %esp
+; SSE1_32-NEXT:    subl $8, %esp
+; SSE1_32-NEXT:    movl 8(%ebp), %eax
+; SSE1_32-NEXT:    movl %eax, (%esp)
+; SSE1_32-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    fildll (%esp)
+; SSE1_32-NEXT:    movl %ebp, %esp
+; SSE1_32-NEXT:    popl %ebp
+; SSE1_32-NEXT:    retl
+;
 ; X87-LABEL: u32_to_d:
 ; X87:       # %bb.0:
 ; X87-NEXT:    pushl %ebp
@@ -200,6 +231,15 @@ define double @s32_to_d(i32 %a) nounwind {
 ; SSE2_64:       # %bb.0:
 ; SSE2_64-NEXT:    cvtsi2sd %edi, %xmm0
 ; SSE2_64-NEXT:    retq
+;
+; SSE1_32-LABEL: s32_to_d:
+; SSE1_32:       # %bb.0:
+; SSE1_32-NEXT:    pushl %eax
+; SSE1_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE1_32-NEXT:    movl %eax, (%esp)
+; SSE1_32-NEXT:    fildl (%esp)
+; SSE1_32-NEXT:    popl %eax
+; SSE1_32-NEXT:    retl
 ;
 ; X87-LABEL: s32_to_d:
 ; X87:       # %bb.0:
@@ -341,6 +381,29 @@ define float @u64_to_f(i64 %a) nounwind {
 ; SSE2_64-NEXT:    addss %xmm0, %xmm0
 ; SSE2_64-NEXT:    retq
 ;
+; SSE1_32-LABEL: u64_to_f:
+; SSE1_32:       # %bb.0:
+; SSE1_32-NEXT:    pushl %ebp
+; SSE1_32-NEXT:    movl %esp, %ebp
+; SSE1_32-NEXT:    andl $-8, %esp
+; SSE1_32-NEXT:    subl $24, %esp
+; SSE1_32-NEXT:    movl 8(%ebp), %eax
+; SSE1_32-NEXT:    movl 12(%ebp), %ecx
+; SSE1_32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    fldl {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    fstpl {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    shrl $31, %ecx
+; SSE1_32-NEXT:    fildll {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; SSE1_32-NEXT:    fstps {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE1_32-NEXT:    movss %xmm0, (%esp)
+; SSE1_32-NEXT:    flds (%esp)
+; SSE1_32-NEXT:    movl %ebp, %esp
+; SSE1_32-NEXT:    popl %ebp
+; SSE1_32-NEXT:    retl
+;
 ; X87-LABEL: u64_to_f:
 ; X87:       # %bb.0:
 ; X87-NEXT:    pushl %ebp
@@ -400,14 +463,14 @@ define float @s64_to_f(i64 %a) nounwind {
 ; AVX512F_32-NEXT:    popl %eax
 ; AVX512F_32-NEXT:    retl
 ;
-; SSE2_32-LABEL: s64_to_f:
-; SSE2_32:       # %bb.0:
-; SSE2_32-NEXT:    pushl %eax
-; SSE2_32-NEXT:    fildll {{[0-9]+}}(%esp)
-; SSE2_32-NEXT:    fstps (%esp)
-; SSE2_32-NEXT:    flds (%esp)
-; SSE2_32-NEXT:    popl %eax
-; SSE2_32-NEXT:    retl
+; SSE_32-LABEL: s64_to_f:
+; SSE_32:       # %bb.0:
+; SSE_32-NEXT:    pushl %eax
+; SSE_32-NEXT:    fildll {{[0-9]+}}(%esp)
+; SSE_32-NEXT:    fstps (%esp)
+; SSE_32-NEXT:    flds (%esp)
+; SSE_32-NEXT:    popl %eax
+; SSE_32-NEXT:    retl
 ;
 ; SSE2_64-LABEL: s64_to_f:
 ; SSE2_64:       # %bb.0:
@@ -507,6 +570,25 @@ define float @s64_to_f_2(i64 %a) nounwind {
 ; SSE2_64-NEXT:    addq $5, %rdi
 ; SSE2_64-NEXT:    cvtsi2ss %rdi, %xmm0
 ; SSE2_64-NEXT:    retq
+;
+; SSE1_32-LABEL: s64_to_f_2:
+; SSE1_32:       # %bb.0:
+; SSE1_32-NEXT:    pushl %ebp
+; SSE1_32-NEXT:    movl %esp, %ebp
+; SSE1_32-NEXT:    andl $-8, %esp
+; SSE1_32-NEXT:    subl $16, %esp
+; SSE1_32-NEXT:    movl 8(%ebp), %eax
+; SSE1_32-NEXT:    movl 12(%ebp), %ecx
+; SSE1_32-NEXT:    addl $5, %eax
+; SSE1_32-NEXT:    adcl $0, %ecx
+; SSE1_32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    fildll {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    fstps {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    flds {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    movl %ebp, %esp
+; SSE1_32-NEXT:    popl %ebp
+; SSE1_32-NEXT:    retl
 ;
 ; X87-LABEL: s64_to_f_2:
 ; X87:       # %bb.0:
@@ -610,6 +692,25 @@ define double @u64_to_d(i64 %a) nounwind {
 ; SSE2_64-NEXT:    addsd %xmm1, %xmm0
 ; SSE2_64-NEXT:    retq
 ;
+; SSE1_32-LABEL: u64_to_d:
+; SSE1_32:       # %bb.0:
+; SSE1_32-NEXT:    pushl %ebp
+; SSE1_32-NEXT:    movl %esp, %ebp
+; SSE1_32-NEXT:    andl $-8, %esp
+; SSE1_32-NEXT:    subl $16, %esp
+; SSE1_32-NEXT:    movl 8(%ebp), %eax
+; SSE1_32-NEXT:    movl 12(%ebp), %ecx
+; SSE1_32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    movl %eax, (%esp)
+; SSE1_32-NEXT:    shrl $31, %ecx
+; SSE1_32-NEXT:    fildll (%esp)
+; SSE1_32-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; SSE1_32-NEXT:    fstpl {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    fldl {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    movl %ebp, %esp
+; SSE1_32-NEXT:    popl %ebp
+; SSE1_32-NEXT:    retl
+;
 ; X87-LABEL: u64_to_d:
 ; X87:       # %bb.0:
 ; X87-NEXT:    pushl %ebp
@@ -712,6 +813,25 @@ define double @u64_to_d_optsize(i64 %a) nounwind optsize {
 ; SSE2_64-NEXT:    addsd %xmm1, %xmm0
 ; SSE2_64-NEXT:    retq
 ;
+; SSE1_32-LABEL: u64_to_d_optsize:
+; SSE1_32:       # %bb.0:
+; SSE1_32-NEXT:    pushl %ebp
+; SSE1_32-NEXT:    movl %esp, %ebp
+; SSE1_32-NEXT:    andl $-8, %esp
+; SSE1_32-NEXT:    subl $16, %esp
+; SSE1_32-NEXT:    movl 8(%ebp), %eax
+; SSE1_32-NEXT:    movl 12(%ebp), %ecx
+; SSE1_32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    movl %eax, (%esp)
+; SSE1_32-NEXT:    shrl $31, %ecx
+; SSE1_32-NEXT:    fildll (%esp)
+; SSE1_32-NEXT:    fadds {{\.LCPI.*}}(,%ecx,4)
+; SSE1_32-NEXT:    fstpl {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    fldl {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    movl %ebp, %esp
+; SSE1_32-NEXT:    popl %ebp
+; SSE1_32-NEXT:    retl
+;
 ; X87-LABEL: u64_to_d_optsize:
 ; X87:       # %bb.0:
 ; X87-NEXT:    pushl %ebp
@@ -800,6 +920,11 @@ define double @s64_to_d(i64 %a) nounwind {
 ; SSE2_64:       # %bb.0:
 ; SSE2_64-NEXT:    cvtsi2sd %rdi, %xmm0
 ; SSE2_64-NEXT:    retq
+;
+; SSE1_32-LABEL: s64_to_d:
+; SSE1_32:       # %bb.0:
+; SSE1_32-NEXT:    fildll {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    retl
 ;
 ; X87-LABEL: s64_to_d:
 ; X87:       # %bb.0:
@@ -902,6 +1027,23 @@ define double @s64_to_d_2(i64 %a) nounwind {
 ; SSE2_64-NEXT:    addq $5, %rdi
 ; SSE2_64-NEXT:    cvtsi2sd %rdi, %xmm0
 ; SSE2_64-NEXT:    retq
+;
+; SSE1_32-LABEL: s64_to_d_2:
+; SSE1_32:       # %bb.0:
+; SSE1_32-NEXT:    pushl %ebp
+; SSE1_32-NEXT:    movl %esp, %ebp
+; SSE1_32-NEXT:    andl $-8, %esp
+; SSE1_32-NEXT:    subl $8, %esp
+; SSE1_32-NEXT:    movl 8(%ebp), %eax
+; SSE1_32-NEXT:    movl 12(%ebp), %ecx
+; SSE1_32-NEXT:    addl $5, %eax
+; SSE1_32-NEXT:    adcl $0, %ecx
+; SSE1_32-NEXT:    movl %eax, (%esp)
+; SSE1_32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; SSE1_32-NEXT:    fildll (%esp)
+; SSE1_32-NEXT:    movl %ebp, %esp
+; SSE1_32-NEXT:    popl %ebp
+; SSE1_32-NEXT:    retl
 ;
 ; X87-LABEL: s64_to_d_2:
 ; X87:       # %bb.0:

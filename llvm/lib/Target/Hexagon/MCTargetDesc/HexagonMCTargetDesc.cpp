@@ -127,6 +127,55 @@ StringRef Hexagon_MC::selectHexagonCPU(StringRef CPU) {
 
 unsigned llvm::HexagonGetLastSlot() { return HexagonItinerariesV5FU::SLOT3; }
 
+unsigned llvm::HexagonConvertUnits(unsigned ItinUnits, unsigned *Lanes) {
+  enum {
+    CVI_NONE = 0,
+    CVI_XLANE = 1 << 0,
+    CVI_SHIFT = 1 << 1,
+    CVI_MPY0 = 1 << 2,
+    CVI_MPY1 = 1 << 3,
+    CVI_ZW = 1 << 4
+  };
+
+  if (ItinUnits == HexagonItinerariesV62FU::CVI_ALL ||
+      ItinUnits == HexagonItinerariesV62FU::CVI_ALL_NOMEM)
+    return (*Lanes = 4, CVI_XLANE);
+  else if (ItinUnits & HexagonItinerariesV62FU::CVI_MPY01 &&
+           ItinUnits & HexagonItinerariesV62FU::CVI_XLSHF)
+    return (*Lanes = 2, CVI_XLANE | CVI_MPY0);
+  else if (ItinUnits & HexagonItinerariesV62FU::CVI_MPY01)
+    return (*Lanes = 2, CVI_MPY0);
+  else if (ItinUnits & HexagonItinerariesV62FU::CVI_XLSHF)
+    return (*Lanes = 2, CVI_XLANE);
+  else if (ItinUnits & HexagonItinerariesV62FU::CVI_XLANE &&
+           ItinUnits & HexagonItinerariesV62FU::CVI_SHIFT &&
+           ItinUnits & HexagonItinerariesV62FU::CVI_MPY0 &&
+           ItinUnits & HexagonItinerariesV62FU::CVI_MPY1)
+    return (*Lanes = 1, CVI_XLANE | CVI_SHIFT | CVI_MPY0 | CVI_MPY1);
+  else if (ItinUnits & HexagonItinerariesV62FU::CVI_XLANE &&
+           ItinUnits & HexagonItinerariesV62FU::CVI_SHIFT)
+    return (*Lanes = 1, CVI_XLANE | CVI_SHIFT);
+  else if (ItinUnits & HexagonItinerariesV62FU::CVI_MPY0 &&
+           ItinUnits & HexagonItinerariesV62FU::CVI_MPY1)
+    return (*Lanes = 1, CVI_MPY0 | CVI_MPY1);
+  else if (ItinUnits == HexagonItinerariesV62FU::CVI_ZW)
+    return (*Lanes = 1, CVI_ZW);
+  else if (ItinUnits == HexagonItinerariesV62FU::CVI_XLANE)
+    return (*Lanes = 1, CVI_XLANE);
+  else if (ItinUnits == HexagonItinerariesV62FU::CVI_SHIFT)
+    return (*Lanes = 1, CVI_SHIFT);
+
+  return (*Lanes = 0, CVI_NONE);
+}
+
+namespace llvm {
+namespace HexagonFUnits {
+bool isSlot0Only(unsigned units) {
+  return (HexagonItinerariesV62FU::SLOT0 == units);
+}
+}
+}
+
 namespace {
 
 class HexagonTargetAsmStreamer : public HexagonTargetStreamer {

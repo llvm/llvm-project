@@ -358,6 +358,22 @@ TEST_F(FormatTestJS, ReservedWordsMethods) {
       "    x();\n"
       "  }\n"
       "}\n");
+  verifyFormat("class KeywordNamedMethods {\n"
+               "  do() {\n"
+               "  }\n"
+               "  for() {\n"
+               "  }\n"
+               "  while() {\n"
+               "  }\n"
+               "  if() {\n"
+               "  }\n"
+               "  else() {\n"
+               "  }\n"
+               "  try() {\n"
+               "  }\n"
+               "  catch() {\n"
+               "  }\n"
+               "}\n");
 }
 
 TEST_F(FormatTestJS, ReservedWordsParenthesized) {
@@ -737,6 +753,22 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "   function a() {\n"
                "  return   1;\n"
                "}  \n");
+  // clang-format must not insert breaks between async and function, otherwise
+  // automatic semicolon insertion may trigger (in particular in a class body).
+  verifyFormat("async function\n"
+               "hello(\n"
+               "    myparamnameiswaytooloooong) {\n"
+               "}",
+               "async function hello(myparamnameiswaytooloooong) {}",
+               getGoogleJSStyleWithColumns(10));
+  verifyFormat("class C {\n"
+               "  async hello(\n"
+               "      myparamnameiswaytooloooong) {\n"
+               "  }\n"
+               "}",
+               "class C {\n"
+               "  async hello(myparamnameiswaytooloooong) {} }",
+               getGoogleJSStyleWithColumns(10));
   verifyFormat("async function* f() {\n"
                "  yield fetch(x);\n"
                "}");
@@ -2134,6 +2166,38 @@ TEST_F(FormatTestJS, JSDocAnnotations) {
                    "  function f(a) {}\n"
                    "}",
                    getGoogleJSStyleWithColumns(20)));
+}
+
+TEST_F(FormatTestJS, TslintComments) {
+  // tslint uses pragma comments that must be on their own line.
+  verifyFormat("// Comment that needs wrapping. Comment that needs wrapping. "
+               "Comment that needs\n"
+               "// wrapping. Trailing line.\n"
+               "// tslint:disable-next-line:must-be-on-own-line",
+               "// Comment that needs wrapping. Comment that needs wrapping. "
+               "Comment that needs wrapping.\n"
+               "// Trailing line.\n"
+               "// tslint:disable-next-line:must-be-on-own-line");
+}
+
+TEST_F(FormatTestJS, TscComments) {
+  // As above, @ts-ignore and @ts-check comments must be on their own line.
+  verifyFormat("// Comment that needs wrapping. Comment that needs wrapping. "
+               "Comment that needs\n"
+               "// wrapping. Trailing line.\n"
+               "// @ts-ignore",
+               "// Comment that needs wrapping. Comment that needs wrapping. "
+               "Comment that needs wrapping.\n"
+               "// Trailing line.\n"
+               "// @ts-ignore");
+  verifyFormat("// Comment that needs wrapping. Comment that needs wrapping. "
+               "Comment that needs\n"
+               "// wrapping. Trailing line.\n"
+               "// @ts-check",
+               "// Comment that needs wrapping. Comment that needs wrapping. "
+               "Comment that needs wrapping.\n"
+               "// Trailing line.\n"
+               "// @ts-check");
 }
 
 TEST_F(FormatTestJS, RequoteStringsSingle) {

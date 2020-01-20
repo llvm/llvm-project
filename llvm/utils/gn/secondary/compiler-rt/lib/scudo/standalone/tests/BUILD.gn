@@ -3,9 +3,7 @@ import("//llvm/utils/unittest/unittest.gni")
 
 unittest("ScudoUnitTest") {
   configs += [ "//llvm/utils/gn/build:crt_code" ]
-  deps = [
-    "//compiler-rt/lib/scudo/standalone:sources",
-  ]
+  deps = [ "//compiler-rt/lib/scudo/standalone:sources" ]
   sources = [
     "atomic_test.cpp",
     "bytemap_test.cpp",

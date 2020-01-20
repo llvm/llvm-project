@@ -769,7 +769,7 @@ bool PartialInlinerImpl::shouldPartialInline(
   assert(Callee == Cloner.ClonedFunc);
 
   if (SkipCostAnalysis)
-    return isInlineViable(*Callee);
+    return isInlineViable(*Callee).isSuccess();
 
   Function *Caller = CS.getCaller();
   auto &CalleeTTI = (*GetTTI)(*Callee);
@@ -1411,7 +1411,8 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
     // bail on vararg functions.
     if (!InlineFunction(CS, IFI, nullptr, true,
                         (Cloner.ClonedOI ? Cloner.OutlinedFunctions.back().first
-                                         : nullptr)))
+                                         : nullptr))
+             .isSuccess())
       continue;
 
     CallerORE.emit(OR);

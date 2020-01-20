@@ -203,16 +203,16 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   default:
     llvm_unreachable("Invalid optimization level");
   case 0:
-    OL = PassBuilder::O0;
+    OL = PassBuilder::OptimizationLevel::O0;
     break;
   case 1:
-    OL = PassBuilder::O1;
+    OL = PassBuilder::OptimizationLevel::O1;
     break;
   case 2:
-    OL = PassBuilder::O2;
+    OL = PassBuilder::OptimizationLevel::O2;
     break;
   case 3:
-    OL = PassBuilder::O3;
+    OL = PassBuilder::OptimizationLevel::O3;
     break;
   }
 

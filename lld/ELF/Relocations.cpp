@@ -408,6 +408,14 @@ static bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
 
   assert(absVal && relE);
 
+  // Allow R_PLT_PC (optimized to R_PC here) to a hidden undefined weak symbol
+  // in PIC mode. This is a little strange, but it allows us to link function
+  // calls to such symbols (e.g. glibc/stdlib/exit.c:__run_exit_handlers).
+  // Normally such a call will be guarded with a comparison, which will load a
+  // zero from the GOT.
+  if (sym.isUndefWeak())
+    return true;
+
   // We set the final symbols values for linker script defined symbols later.
   // They always can be computed as a link time constant.
   if (sym.scriptDefined)
@@ -1744,6 +1752,37 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
                                             uint64_t off) {
   auto *ts = make<ThunkSection>(os, off);
   ts->partition = os->partition;
+  if ((config->fixCortexA53Errata843419 || config->fixCortexA8) &&
+      !isd->sections.empty()) {
+    // The errata fixes are sensitive to addresses modulo 4 KiB. When we add
+    // thunks we disturb the base addresses of sections placed after the thunks
+    // this makes patches we have generated redundant, and may cause us to
+    // generate more patches as different instructions are now in sensitive
+    // locations. When we generate more patches we may force more branches to
+    // go out of range, causing more thunks to be generated. In pathological
+    // cases this can cause the address dependent content pass not to converge.
+    // We fix this by rounding up the size of the ThunkSection to 4KiB, this
+    // limits the insertion of a ThunkSection on the addresses modulo 4 KiB,
+    // which means that adding Thunks to the section does not invalidate
+    // errata patches for following code.
+    // Rounding up the size to 4KiB has consequences for code-size and can
+    // trip up linker script defined assertions. For example the linux kernel
+    // has an assertion that what LLD represents as an InputSectionDescription
+    // does not exceed 4 KiB even if the overall OutputSection is > 128 Mib.
+    // We use the heuristic of rounding up the size when both of the following
+    // conditions are true:
+    // 1.) The OutputSection is larger than the ThunkSectionSpacing. This
+    //     accounts for the case where no single InputSectionDescription is
+    //     larger than the OutputSection size. This is conservative but simple.
+    // 2.) The InputSectionDescription is larger than 4 KiB. This will prevent
+    //     any assertion failures that an InputSectionDescription is < 4 KiB
+    //     in size.
+    uint64_t isdSize = isd->sections.back()->outSecOff +
+                       isd->sections.back()->getSize() -
+                       isd->sections.front()->outSecOff;
+    if (os->size > target->getThunkSectionSpacing() && isdSize > 4096)
+      ts->roundUpSizeForErrata = true;
+  }
   isd->thunkSections.push_back({ts, pass});
   return ts;
 }

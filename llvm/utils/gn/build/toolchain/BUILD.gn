@@ -18,9 +18,7 @@ template("unix_toolchain") {
       command = "$cc -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}}"
       depsformat = "gcc"
       description = "CC {{output}}"
-      outputs = [
-        "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o",
-      ]
+      outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o" ]
     }
 
     tool("cxx") {
@@ -28,9 +26,7 @@ template("unix_toolchain") {
       command = "$cxx -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}}"
       depsformat = "gcc"
       description = "CXX {{output}}"
-      outputs = [
-        "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o",
-      ]
+      outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o" ]
     }
 
     tool("asm") {
@@ -38,9 +34,7 @@ template("unix_toolchain") {
       command = "$cc -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{asmflags}}"
       depsformat = "gcc"
       description = "ASM {{output}}"
-      outputs = [
-        "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o",
-      ]
+      outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.o" ]
     }
 
     tool("alink") {
@@ -53,9 +47,7 @@ template("unix_toolchain") {
             "rm -f {{output}} && $ar rcsD {{arflags}} {{output}} {{inputs}}"
       }
       description = "AR {{output}}"
-      outputs = [
-        "{{output_dir}}/{{target_output_name}}.a",
-      ]
+      outputs = [ "{{output_dir}}/{{target_output_name}}.a" ]
       output_prefix = "lib"
       default_output_dir = "{{root_out_dir}}/lib"
     }
@@ -70,9 +62,7 @@ template("unix_toolchain") {
         default_output_extension = ".so"
       }
       description = "SOLINK $outfile"
-      outputs = [
-        outfile,
-      ]
+      outputs = [ outfile ]
       lib_switch = "-l"
       output_prefix = "lib"
       default_output_dir = "{{root_out_dir}}/lib"
@@ -88,9 +78,7 @@ template("unix_toolchain") {
         default_output_extension = ".so"
       }
       description = "SOLINK $outfile"
-      outputs = [
-        outfile,
-      ]
+      outputs = [ outfile ]
       lib_switch = "-l"
       default_output_dir = "{{root_out_dir}}/lib"
     }
@@ -103,9 +91,7 @@ template("unix_toolchain") {
         command = "$ld {{ldflags}} -o $outfile {{libs}} -Wl,--start-group {{inputs}} -Wl,--end-group"
       }
       description = "LINK $outfile"
-      outputs = [
-        outfile,
-      ]
+      outputs = [ outfile ]
       lib_switch = "-l"
 
       # Setting this allows targets to override the default executable output by
@@ -237,26 +223,20 @@ toolchain("win") {
     command = "$cl /nologo /showIncludes /Fo{{output}} /c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}}"
     depsformat = "msvc"
     description = "CC {{output}}"
-    outputs = [
-      "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.obj",
-    ]
+    outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.obj" ]
   }
 
   tool("cxx") {
     command = "$cl /nologo /showIncludes /Fo{{output}} /c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}}"
     depsformat = "msvc"
     description = "CXX {{output}}"
-    outputs = [
-      "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.obj",
-    ]
+    outputs = [ "{{source_out_dir}}/{{label_name}}.{{source_name_part}}.obj" ]
   }
 
   tool("alink") {
     command = "$link /lib /nologo {{arflags}} /out:{{output}} {{inputs}}"
     description = "LIB {{output}}"
-    outputs = [
-      "{{output_dir}}/{{target_output_name}}.lib",
-    ]
+    outputs = [ "{{output_dir}}/{{target_output_name}}.lib" ]
     default_output_dir = "{{root_out_dir}}/lib"
   }
 
@@ -294,9 +274,7 @@ toolchain("win") {
     pdbfile = "$outprefix.pdb"
     command = "$link /nologo /dll {{ldflags}} /out:$dllfile /pdb:$pdbfile {{libs}} {{inputs}}"
     description = "LINK_MODULE $dllfile"
-    outputs = [
-      dllfile,
-    ]
+    outputs = [ dllfile ]
     lib_switch = ""
     runtime_outputs = outputs
     default_output_extension = ".dll"
@@ -310,9 +288,7 @@ toolchain("win") {
     pdbfile = "$outprefix.pdb"
     command = "$link /nologo {{ldflags}} /out:$outfile /pdb:$pdbfile {{libs}} {{inputs}}"
     description = "LINK $outfile"
-    outputs = [
-      outfile,
-    ]
+    outputs = [ outfile ]
     lib_switch = ""
     default_output_extension = ".exe"
 

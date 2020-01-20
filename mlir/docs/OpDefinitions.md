@@ -429,14 +429,14 @@ The following builders are generated:
 
 ```c++
 // All result-types/operands/attributes have one aggregate parameter.
-static void build(Builder *tblgen_builder, OperationState &tblgen_state,
+static void build(Builder *odsBuilder, OperationState &odsState,
                   ArrayRef<Type> resultTypes,
                   ValueRange operands,
                   ArrayRef<NamedAttribute> attributes);
 
 // Each result-type/operand/attribute has a separate parameter. The parameters
 // for attributes are of mlir::Attribute types.
-static void build(Builder *tblgen_builder, OperationState &tblgen_state,
+static void build(Builder *odsBuilder, OperationState &odsState,
                   Type i32_result, Type f32_result, ...,
                   Value i32_operand, Value f32_operand, ...,
                   IntegerAttr i32_attr, FloatAttr f32_attr, ...);
@@ -445,20 +445,20 @@ static void build(Builder *tblgen_builder, OperationState &tblgen_state,
 // for attributes are raw values unwrapped with mlir::Attribute instances.
 // (Note that this builder will not always be generated. See the following
 // explanation for more details.)
-static void build(Builder *tblgen_builder, OperationState &tblgen_state,
+static void build(Builder *odsBuilder, OperationState &odsState,
                   Type i32_result, Type f32_result, ...,
                   Value i32_operand, Value f32_operand, ...,
                   APInt i32_attr, StringRef f32_attr, ...);
 
 // Each operand/attribute has a separate parameter but result type is aggregate.
-static void build(Builder *tblgen_builder, OperationState &tblgen_state,
+static void build(Builder *odsBuilder, OperationState &odsState,
                   ArrayRef<Type> resultTypes,
                   Value i32_operand, Value f32_operand, ...,
                   IntegerAttr i32_attr, FloatAttr f32_attr, ...);
 
 // All operands/attributes have aggregate parameters.
 // Generated if InferTypeOpInterface interface is specified.
-static void build(Builder *tblgen_builder, OperationState &tblgen_state,
+static void build(Builder *odsBuilder, OperationState &odsState,
                   ValueRange operands,
                   ArrayRef<NamedAttribute> attributes);
 
@@ -1099,7 +1099,7 @@ requirements that were desirable:
 *   The op's traits (e.g., commutative) are modelled along with the op in the
     registry.
 *   The op's operand/return type constraints are modelled along with the op in
-    the registry (see [Shape inference](#shape-inference) discussion below),
+    the registry (see [Shape inference](ShapeInference.md) discussion below),
     this allows (e.g.) optimized concise syntax in textual dumps.
 *   Behavior of the op is documented along with the op with a summary and a
     description. The description is written in markdown and extracted for
@@ -1155,49 +1155,6 @@ tfl.add $lhs, $rhs {fused_activation_function: $fused_activation_function}: ${ty
 
 Printing is effectively the inverse of the parsing function generated with the
 mnemonic string serving as a template.
-
-### Shape inference
-
-Type constraints are along (at least) three axis: 1) elemental type, 2) rank
-(including static or dynamic), 3) dimensions. While some ops have no compile
-time fixed shape (e.g., output shape is dictated by data) we could still have
-some knowledge of constraints/bounds in the system for that op (e.g., the output
-of a `tf.where` is at most the size of the input data). And so there are
-additional valuable constraints that could be captured even without full
-knowledge.
-
-Initially the shape inference will be declaratively specified using:
-
-*   Constraint on the operands of an operation directly. For example
-    constraining the input type to be tensor/vector elements or that the
-    elemental type be of a specific type (e.g., output of sign is of elemental
-    type `i1`) or class (e.g., float like).
-*   Constraints across operands and results of an operation. For example,
-    enabling specifying equality constraints on type/constituents of a type
-    (shape and elemental type) between operands and results (e.g., the output
-    type of an add is the same as those of the input operands).
-
-In general there is an input/output transfer function which maps the inputs to
-the outputs (e.g., given input X and Y [or slices thereof] with these sizes, the
-output is Z [or this slice thereof]). Such a function could be used to determine
-the output type (shape) for given input type (shape).
-
-But shape functions are determined by attributes and could be arbitrarily
-complicated with a wide-range of specification possibilities. Equality
-relationships are common (e.g., the elemental type of the output matches the
-primitive type of the inputs, both inputs have exactly the same type [primitive
-type and shape]) and so these should be easy to specify. Algebraic relationships
-would also be common (e.g., a concat of `[n,m]` and `[n,m]` matrix along axis 0
-is `[n+n, m]` matrix), while some ops only have defined shapes under certain
-cases (e.g., matrix multiplication of `[a,b]` and `[c,d]` is only defined if
-`b == c`). As ops are also verified, the shape inference need only specify rules
-for the allowed cases (e.g., shape inference for matmul can ignore the case
-where `b != c`), which would simplify type constraint specification.
-
-Instead of specifying an additional mechanism to specify a shape transfer
-function, the reference implementation of the operation will be used to derive
-the shape function. The reference implementation is general and can support the
-arbitrary computations needed to specify output shapes.
 
 [TableGen]: https://llvm.org/docs/TableGen/index.html
 [TableGenIntro]: https://llvm.org/docs/TableGen/LangIntro.html

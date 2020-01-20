@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Support/STLExtras.h"
 #include "mlir/Support/StringExtras.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Format.h"
@@ -297,13 +298,13 @@ static void emitAvailabilityQueryForIntEnum(const Record &enumDef,
   StringRef enumName = enumAttr.getEnumClassName();
   std::vector<EnumAttrCase> enumerants = enumAttr.getAllCases();
 
-  // Mapping from availability class name to (enumerant, availablity
+  // Mapping from availability class name to (enumerant, availability
   // specification) pairs.
   llvm::StringMap<llvm::SmallVector<std::pair<EnumAttrCase, Availability>, 1>>
       classCaseMap;
 
-  // Place all availablity specifications to their corresponding
-  // availablility classes.
+  // Place all availability specifications to their corresponding
+  // availability classes.
   for (const EnumAttrCase &enumerant : enumerants)
     for (const Availability &avail : getAvailabilities(enumerant.getDef()))
       classCaseMap[avail.getClass()].push_back({enumerant, avail});
@@ -339,13 +340,13 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
   std::string underlyingType = enumAttr.getUnderlyingType();
   std::vector<EnumAttrCase> enumerants = enumAttr.getAllCases();
 
-  // Mapping from availability class name to (enumerant, availablity
+  // Mapping from availability class name to (enumerant, availability
   // specification) pairs.
   llvm::StringMap<llvm::SmallVector<std::pair<EnumAttrCase, Availability>, 1>>
       classCaseMap;
 
-  // Place all availablity specifications to their corresponding
-  // availablility classes.
+  // Place all availability specifications to their corresponding
+  // availability classes.
   for (const EnumAttrCase &enumerant : enumerants)
     for (const Availability &avail : getAvailabilities(enumerant.getDef()))
       classCaseMap[avail.getClass()].push_back({enumerant, avail});
@@ -391,8 +392,8 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
 
   llvm::StringSet<> handledClasses;
 
-  // Place all availablity specifications to their corresponding
-  // availablility classes.
+  // Place all availability specifications to their corresponding
+  // availability classes.
   for (const EnumAttrCase &enumerant : enumerants)
     for (const Availability &avail : getAvailabilities(enumerant.getDef())) {
       StringRef className = avail.getClass();
@@ -1165,8 +1166,8 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
   std::vector<Availability> opAvailabilities =
       getAvailabilities(srcOp.getDef());
 
-  // First collect all availablity classes this op should implement.
-  // All availablity instances keep information for the generated interface and
+  // First collect all availability classes this op should implement.
+  // All availability instances keep information for the generated interface and
   // the instance's specific requirement. Here we remember a random instance so
   // we can get the information regarding the generated interface.
   llvm::StringMap<Availability> availClasses;
@@ -1211,7 +1212,7 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
       if (!enumAttr)
         continue;
 
-      // (enumerant, availablity specification) pairs for this availability
+      // (enumerant, availability specification) pairs for this availability
       // class.
       SmallVector<std::pair<EnumAttrCase, Availability>, 1> caseSpecs;
 
@@ -1222,7 +1223,7 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
           if (availClassName == caseAvail.getClass())
             caseSpecs.push_back({enumerant, caseAvail});
 
-      // If this attribute kind does not have any availablity spec from any of
+      // If this attribute kind does not have any availability spec from any of
       // its cases, no more work to do.
       if (caseSpecs.empty())
         continue;
@@ -1283,3 +1284,50 @@ static mlir::GenRegistration
                           [](const RecordKeeper &records, raw_ostream &os) {
                             return emitAvailabilityImpl(records, os);
                           });
+
+//===----------------------------------------------------------------------===//
+// SPIR-V Capability Implication AutoGen
+//===----------------------------------------------------------------------===//
+
+static bool emitCapabilityImplication(const RecordKeeper &recordKeeper,
+                                      raw_ostream &os) {
+  llvm::emitSourceFileHeader("SPIR-V Capability Implication", os);
+
+  EnumAttr enumAttr(recordKeeper.getDef("SPV_CapabilityAttr"));
+
+  os << "ArrayRef<Capability> "
+        "spirv::getDirectImpliedCapabilities(Capability cap) {\n"
+     << "  switch (cap) {\n"
+     << "  default: return {};\n";
+  for (const EnumAttrCase &enumerant : enumAttr.getAllCases()) {
+    const Record &def = enumerant.getDef();
+    if (!def.getValue("implies"))
+      continue;
+
+    std::vector<Record *> impliedCapsDefs = def.getValueAsListOfDefs("implies");
+    os << "  case Capability::" << enumerant.getSymbol()
+       << ": {static const Capability implies[" << impliedCapsDefs.size()
+       << "] = {";
+    mlir::interleaveComma(impliedCapsDefs, os, [&](const Record *capDef) {
+      os << "Capability::" << EnumAttrCase(capDef).getSymbol();
+    });
+    os << "}; return ArrayRef<Capability>(implies, " << impliedCapsDefs.size()
+       << "); }\n";
+  }
+  os << "  }\n";
+  os << "}\n";
+
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
+// SPIR-V Capability Implication Hook Registration
+//===----------------------------------------------------------------------===//
+
+static mlir::GenRegistration
+    genCapabilityImplication("gen-spirv-capability-implication",
+                             "Generate utility function to return implied "
+                             "capabilities for a given capability",
+                             [](const RecordKeeper &records, raw_ostream &os) {
+                               return emitCapabilityImplication(records, os);
+                             });

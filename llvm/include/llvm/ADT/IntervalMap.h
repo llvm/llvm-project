@@ -491,7 +491,7 @@ class NodeRef {
   struct CacheAlignedPointerTraits {
     static inline void *getAsVoidPointer(void *P) { return P; }
     static inline void *getFromVoidPointer(void *P) { return P; }
-    enum { NumLowBitsAvailable = Log2CacheLine };
+    static constexpr int NumLowBitsAvailable = Log2CacheLine;
   };
   PointerIntPair<void*, Log2CacheLine, unsigned, CacheAlignedPointerTraits> pip;
 

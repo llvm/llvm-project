@@ -22,9 +22,8 @@ include "mlir/IR/OpBase.td"
 // mismatch).
 def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
   let description = [{
-    Interface to access a registered method to infer the return types for an
-    operation that could be used during op construction, verification or
-    type inference.
+    Interface to infer the return types for an operation that could be used
+    during op construction, verification or type inference.
   }];
 
   let methods = [
@@ -38,7 +37,8 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       }],
       /*retTy=*/"LogicalResult",
       /*methodName=*/"inferReturnTypes",
-      /*args=*/(ins "Optional<Location>":$location,
+      /*args=*/(ins "MLIRContext*":$context,
+                    "Optional<Location>":$location,
                     "ValueRange":$operands,
                     "ArrayRef<NamedAttribute>":$attributes,
                     "RegionRange":$regions,
@@ -58,6 +58,40 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
         /// compatibility by default.
         return lhs == rhs;
       }]
+    >,
+  ];
+}
+
+def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
+  let description = [{
+    Interface to infer the components of a ShapedType returned by an operation
+    that could be used during op construction, verification or shape inference.
+
+    The components consists of element type, shape and raw attribute.
+  }];
+
+  let methods = [
+    StaticInterfaceMethod<
+      /*desc=*/[{Infer the components of return type of shape containter.
+
+      The method takes an optional location which, if set, will be used to
+      report errors on. The operands and attributes correspond to those with
+      which an Operation would be created (e.g., as used in Operation::create)
+      and the regions of the op.
+
+      Unknown (e.g., unranked) shape and nullptrs for element type and attribute
+      may be returned by this function while returning success. E.g., partial
+      population of components is not error condition.
+      }],
+      /*retTy=*/"LogicalResult",
+      /*methodName=*/"inferReturnTypeComponents",
+      /*args=*/(ins "MLIRContext*":$context,
+                    "Optional<Location>":$location,
+                    "ValueRange":$operands,
+                    "ArrayRef<NamedAttribute>":$attributes,
+                    "RegionRange":$regions,
+                    "SmallVectorImpl<ShapedTypeComponents>&":
+                      $inferedReturnShapes)
     >,
   ];
 }

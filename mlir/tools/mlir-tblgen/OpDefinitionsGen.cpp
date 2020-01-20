@@ -14,13 +14,11 @@
 #include "mlir/Support/STLExtras.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
-#include "mlir/TableGen/ODSDialectHook.h"
 #include "mlir/TableGen/OpClass.h"
 #include "mlir/TableGen/OpInterfaces.h"
 #include "mlir/TableGen/OpTrait.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -28,38 +26,13 @@
 
 #define DEBUG_TYPE "mlir-tblgen-opdefgen"
 
+using namespace llvm;
 using namespace mlir;
 using namespace mlir::tblgen;
 
-using llvm::CodeInit;
-using llvm::DefInit;
-using llvm::formatv;
-using llvm::Init;
-using llvm::ListInit;
-using llvm::Record;
-using llvm::RecordKeeper;
-using llvm::StringInit;
-
-//===----------------------------------------------------------------------===//
-// Dialect hook registration
-//===----------------------------------------------------------------------===//
-
-static llvm::ManagedStatic<llvm::StringMap<DialectEmitFunction>> dialectHooks;
-
-ODSDialectHookRegistration::ODSDialectHookRegistration(
-    StringRef dialectName, DialectEmitFunction emitFn) {
-  bool inserted = dialectHooks->try_emplace(dialectName, emitFn).second;
-  assert(inserted && "Multiple ODS hooks for the same dialect!");
-  (void)inserted;
-}
-
-//===----------------------------------------------------------------------===//
-// Static string definitions
-//===----------------------------------------------------------------------===//
-
 static const char *const tblgenNamePrefix = "tblgen_";
-static const char *const generatedArgName = "tblgen_arg";
-static const char *const builderOpState = "tblgen_state";
+static const char *const generatedArgName = "odsArg";
+static const char *const builderOpState = "odsState";
 
 // The logic to calculate the actual value range for a declared operand/result
 // of an op with variadic operands/results. Note that this logic is not for
@@ -306,7 +279,6 @@ OpEmitter::OpEmitter(const Operator &op)
   verifyCtx.withOp("(*this->getOperation())");
 
   genTraits();
-
   // Generate C++ code for various op methods. The order here determines the
   // methods in the generated file.
   genOpAsmInterface();
@@ -322,13 +294,6 @@ OpEmitter::OpEmitter(const Operator &op)
   genCanonicalizerDecls();
   genFolderDecls();
   genOpInterfaceMethods();
-
-  // If a dialect hook is registered for this op's dialect, emit dialect
-  // specific content.
-  auto dialectHookIt = dialectHooks->find(op.getDialectName());
-  if (dialectHookIt != dialectHooks->end()) {
-    dialectHookIt->second(op, opClass);
-  }
 }
 
 void OpEmitter::emitDecl(const Operator &op, raw_ostream &os) {
@@ -627,8 +592,9 @@ void OpEmitter::genSeparateArgParamBuilder() {
       // TODO(jpienaar): Expand to handle regions.
       body << formatv(R"(
         SmallVector<Type, 2> inferedReturnTypes;
-        if (succeeded({0}::inferReturnTypes({1}.location, {1}.operands,
-                      {1}.attributes, /*regions=*/{{}, inferedReturnTypes)))
+        if (succeeded({0}::inferReturnTypes(odsBuilder->getContext(),
+                      {1}.location, {1}.operands, {1}.attributes,
+                      /*regions=*/{{}, inferedReturnTypes)))
           {1}.addTypes(inferedReturnTypes);
         else
           llvm::report_fatal_error("Failed to infer result type(s).");)",
@@ -702,7 +668,7 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 void OpEmitter::genInferedTypeCollectiveParamBuilder() {
   // TODO(jpienaar): Expand to support regions.
   const char *params =
-      "Builder *builder, OperationState &{0}, "
+      "Builder *odsBuilder, OperationState &{0}, "
       "ValueRange operands, ArrayRef<NamedAttribute> attributes";
   auto &m =
       opClass.newMethod("void", "build", formatv(params, builderOpState).str(),
@@ -710,9 +676,10 @@ void OpEmitter::genInferedTypeCollectiveParamBuilder() {
   auto &body = m.body();
   body << formatv(R"(
     SmallVector<Type, 2> inferedReturnTypes;
-    if (succeeded({0}::inferReturnTypes({1}.location, operands, attributes,
+    if (succeeded({0}::inferReturnTypes(odsBuilder->getContext(),
+                  {1}.location, operands, attributes,
                   /*regions=*/{{}, inferedReturnTypes)))
-      build(builder, tblgen_state, inferedReturnTypes, operands, attributes);
+      build(odsBuilder, odsState, inferedReturnTypes, operands, attributes);
     else
       llvm::report_fatal_error("Failed to infer result type(s).");)",
                   opClass.getClassName(), builderOpState);
@@ -878,7 +845,7 @@ void OpEmitter::buildParamList(std::string &paramList,
   auto numResults = op.getNumResults();
   resultTypeNames.reserve(numResults);
 
-  paramList = "Builder *tblgen_builder, OperationState &";
+  paramList = "Builder *odsBuilder, OperationState &";
   paramList.append(builderOpState);
 
   switch (typeParamKind) {
@@ -1000,7 +967,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
         // If this is a raw value, then we need to wrap it in an Attribute
         // instance.
         FmtContext fctx;
-        fctx.withBuilder("(*tblgen_builder)");
+        fctx.withBuilder("(*odsBuilder)");
         std::string value =
             tgfmt(attr.getConstBuilderTemplate(), &fctx, namedAttr.name);
         body << formatv("  {0}.addAttribute(\"{1}\", {2});\n", builderOpState,

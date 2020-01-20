@@ -193,7 +193,6 @@ FUNCTION_PASS("lower-constant-intrinsics", LowerConstantIntrinsicsPass())
 FUNCTION_PASS("lower-matrix-intrinsics", LowerMatrixIntrinsicsPass())
 FUNCTION_PASS("lower-widenable-condition", LowerWidenableConditionPass())
 FUNCTION_PASS("guard-widening", GuardWideningPass())
-FUNCTION_PASS("gvn", GVN())
 FUNCTION_PASS("load-store-vectorizer", LoadStoreVectorizerPass())
 FUNCTION_PASS("loop-simplify", LoopSimplifyPass())
 FUNCTION_PASS("loop-sink", LoopSinkPass())
@@ -282,6 +281,11 @@ FUNCTION_PASS_WITH_PARAMS("mldst-motion",
                              return MergedLoadStoreMotionPass(Opts);
                            },
                            parseMergedLoadStoreMotionOptions)
+FUNCTION_PASS_WITH_PARAMS("gvn",
+                           [](GVNOptions Opts) {
+                             return GVN(Opts);
+                           },
+                           parseGVNOptions)
 #undef FUNCTION_PASS_WITH_PARAMS
 
 #ifndef LOOP_ANALYSIS

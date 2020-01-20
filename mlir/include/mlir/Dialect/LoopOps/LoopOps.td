@@ -182,8 +182,8 @@ def ParallelOp : Loop_Op<"parallel",
 def ReduceOp : Loop_Op<"reduce", [HasParent<"ParallelOp">]> {
   let summary = "reduce operation for parallel for";
   let description = [{
-    "loop.reduce" is an operation occuring inside "loop.parallel" operations. It
-    consists of one block with two arguments which have the same type as the
+    "loop.reduce" is an operation occurring inside "loop.parallel" operations.
+    It consists of one block with two arguments which have the same type as the
     operand of "loop.reduce".
 
     "loop.reduce" is used to model the value for reduction computations of a

@@ -230,6 +230,8 @@ Error evalData(const SelectorData &Data, const MatchFinder::MatchResult &Match,
   auto Range = Data.Selector(Match);
   if (!Range)
     return Range.takeError();
+  if (auto Err = tooling::validateEditRange(*Range, *Match.SourceManager))
+    return Err;
   *Result += tooling::getText(*Range, *Match.Context);
   return Error::success();
 }

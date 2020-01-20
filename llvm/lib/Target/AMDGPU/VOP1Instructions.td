@@ -843,11 +843,12 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (i32 (int_amdgcn_update_dpp i32:$old, i32:$src, timm:$dpp_ctrl, timm:$row_mask,
-                      timm:$bank_mask, timm:$bound_ctrl)),
-  (V_MOV_B32_dpp $old, $src, (as_i32imm $dpp_ctrl),
-                       (as_i32imm $row_mask), (as_i32imm $bank_mask),
-                       (as_i1imm $bound_ctrl))
+  (i32 (int_amdgcn_update_dpp i32:$old, i32:$src, timm:$dpp_ctrl,
+                              timm:$row_mask, timm:$bank_mask,
+                              timm:$bound_ctrl)),
+  (V_MOV_B32_dpp VGPR_32:$old, VGPR_32:$src, (as_i32timm $dpp_ctrl),
+                 (as_i32timm $row_mask), (as_i32timm $bank_mask),
+                 (as_i1timm $bound_ctrl))
 >;
 
 } // End OtherPredicates = [isGFX8Plus]

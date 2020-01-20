@@ -158,10 +158,20 @@ static bool isMatmul(linalg::GenericOp genericOp) {
          genericOp.indexing_maps() == maps && hasMultiplyAddBody(genericOp);
 }
 
-LogicalResult
-mlir::linalg::vectorizeGenericLinalgOpPrecondition(Operation *op) {
-  // TODO(ntv): This is in fact much more general than just vectorization for
-  // matmul ops.
+// TODO(ntv): This is in fact much more general than just vectorization for
+// matmul ops.
+LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(Operation *op) {
+  auto linalgOp = cast<linalg::LinalgOp>(op);
+  // All types must be static shape to go to vector.
+  for (Value operand : linalgOp.getInputsAndOutputBuffers())
+    if (!operand.getType().cast<ShapedType>().hasStaticShape())
+      return failure();
+  for (Type outputTensorType : linalgOp.getOutputTensorTypes())
+    if (!outputTensorType.cast<ShapedType>().hasStaticShape())
+      return failure();
+  if (isa<linalg::MatmulOp>(op))
+    return success();
+
   auto genericOp = dyn_cast<linalg::GenericOp>(op);
   if (!genericOp || !isMatmul(genericOp))
     return failure();
@@ -179,30 +189,29 @@ mlir::linalg::vectorizeGenericLinalgOpPrecondition(Operation *op) {
   return success();
 }
 
-SmallVector<Value, 0>
-mlir::linalg::vectorizeGenericLinalgOp(PatternRewriter &rewriter,
-                                       Operation *op) {
+SmallVector<Value, 0> mlir::linalg::vectorizeLinalgOp(PatternRewriter &rewriter,
+                                                      Operation *op) {
   LLVM_DEBUG(dbgs() << "\n[" DEBUG_TYPE
                        "]: Rewrite linalg op as vector.contract: "
                     << *op << ":\n");
 
-  assert(succeeded(vectorizeGenericLinalgOpPrecondition(op)) &&
+  assert(succeeded(vectorizeLinalgOpPrecondition(op)) &&
          "DRR failure case must be a precondition");
 
-  auto genericOp = cast<linalg::GenericOp>(op);
-  assert(genericOp.hasBufferSemantics() &&
+  auto linalgOp = cast<linalg::LinalgOp>(op);
+  assert(linalgOp.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
   edsc::ScopedContext scope(rewriter, op->getLoc());
   using edsc::intrinsics::std_load;
   using edsc::intrinsics::std_store;
   using vector_contract = edsc::intrinsics::ValueBuilder<vector::ContractionOp>;
   using vector_type_cast = edsc::intrinsics::ValueBuilder<vector::TypeCastOp>;
-  auto vA = std_load(vector_type_cast(genericOp.getInput(0)));
-  auto vB = std_load(vector_type_cast(genericOp.getInput(1)));
-  auto vectorMemRefC = vector_type_cast(genericOp.getOutputBuffer(0));
+  auto vA = std_load(vector_type_cast(linalgOp.getInput(0)));
+  auto vB = std_load(vector_type_cast(linalgOp.getInput(1)));
+  auto vectorMemRefC = vector_type_cast(linalgOp.getOutputBuffer(0));
   auto vC = std_load(vectorMemRefC);
-  auto vRes = vector_contract(vA, vB, vC, genericOp.indexing_maps(),
-                              genericOp.iterator_types());
+  auto vRes = vector_contract(vA, vB, vC, linalgOp.indexing_maps(),
+                              linalgOp.iterator_types());
   std_store(vRes, vectorMemRefC);
   return {};
 }

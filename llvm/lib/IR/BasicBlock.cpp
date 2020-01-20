@@ -193,6 +193,18 @@ const CallInst *BasicBlock::getTerminatingDeoptimizeCall() const {
   return nullptr;
 }
 
+const CallInst *BasicBlock::getPostdominatingDeoptimizeCall() const {
+  const BasicBlock* BB = this;
+  SmallPtrSet<const BasicBlock *, 8> Visited;
+  Visited.insert(BB);
+  while (auto *Succ = BB->getUniqueSuccessor()) {
+    if (!Visited.insert(Succ).second)
+      return nullptr;
+    BB = Succ;
+  }
+  return BB->getTerminatingDeoptimizeCall();
+}
+
 const Instruction* BasicBlock::getFirstNonPHI() const {
   for (const Instruction &I : *this)
     if (!isa<PHINode>(I))

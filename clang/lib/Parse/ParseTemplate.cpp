@@ -499,10 +499,7 @@ Parser::ParseTemplateParameterList(const unsigned Depth,
 
 /// Determine whether the parser is at the start of a template
 /// type parameter.
-/// \param ScopeError will receive true if there was an error parsing a
-/// scope specifier at the current location.
-bool Parser::isStartOfTemplateTypeParameter(bool &ScopeError) {
-  ScopeError = false;
+Parser::TPResult Parser::isStartOfTemplateTypeParameter() {
   if (Tok.is(tok::kw_class)) {
     // "class" may be the start of an elaborated-type-specifier or a
     // type-parameter. Per C++ [temp.param]p3, we prefer the type-parameter.
@@ -512,7 +509,7 @@ bool Parser::isStartOfTemplateTypeParameter(bool &ScopeError) {
     case tok::greater:
     case tok::greatergreater:
     case tok::ellipsis:
-      return true;
+      return TPResult::True;
 
     case tok::identifier:
       // This may be either a type-parameter or an elaborated-type-specifier.
@@ -520,7 +517,7 @@ bool Parser::isStartOfTemplateTypeParameter(bool &ScopeError) {
       break;
 
     default:
-      return false;
+      return TPResult::False;
     }
 
     switch (GetLookAheadToken(2).getKind()) {
@@ -528,51 +525,28 @@ bool Parser::isStartOfTemplateTypeParameter(bool &ScopeError) {
     case tok::comma:
     case tok::greater:
     case tok::greatergreater:
-      return true;
+      return TPResult::True;
 
     default:
-      return false;
+      return TPResult::False;
     }
   }
 
-  bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);
-  CXXScopeSpec SS;
-  ScopeError =
-      ParseOptionalCXXScopeSpecifier(SS, ParsedType(),
-                                     /*EnteringContext=*/false,
-                                     /*MayBePseudoDestructor=*/nullptr,
-                                     // If this is not a type-constraint, then
-                                     // this scope-spec is part of the typename
-                                     // of a non-type template parameter
-                                     /*IsTypename=*/true, /*LastII=*/nullptr,
-                                     // We won't find concepts in
-                                     // non-namespaces anyway, so might as well
-                                     // parse this correctly for possible type
-                                     // names.
-                                     /*OnlyNamespace=*/false);
-  if (ScopeError)
-    return false;
-  if (TryAnnotateTypeConstraint(SS))
-    return false;
-  bool IsTypeConstraint = isTypeConstraintAnnotation();
-  if (!IsTypeConstraint && SS.isNotEmpty()) {
-    // This isn't a type-constraint but we've already parsed this scope
-    // specifier - annotate it.
-    AnnotateScopeToken(SS, /*isNewAnnotation=*/!WasScopeAnnotation);
-    return false;
-  }
+  if (TryAnnotateTypeConstraint())
+    return TPResult::Error;
 
-  if (IsTypeConstraint &&
+  if (isTypeConstraintAnnotation() &&
       // Next token might be 'auto' or 'decltype', indicating that this
       // type-constraint is in fact part of a placeholder-type-specifier of a
       // non-type template parameter.
-      !NextToken().isOneOf(tok::kw_auto, tok::kw_decltype))
-    return true;
+      !GetLookAheadToken(Tok.is(tok::annot_cxxscope) ? 2 : 1)
+           .isOneOf(tok::kw_auto, tok::kw_decltype))
+    return TPResult::True;
 
   // 'typedef' is a reasonably-common typo/thinko for 'typename', and is
   // ill-formed otherwise.
   if (Tok.isNot(tok::kw_typename) && Tok.isNot(tok::kw_typedef))
-    return false;
+    return TPResult::False;
 
   // C++ [temp.param]p2:
   //   There is no semantic difference between class and typename in a
@@ -592,17 +566,17 @@ bool Parser::isStartOfTemplateTypeParameter(bool &ScopeError) {
   case tok::greater:
   case tok::greatergreater:
   case tok::ellipsis:
-    return true;
+    return TPResult::True;
 
   case tok::kw_typename:
   case tok::kw_typedef:
   case tok::kw_class:
     // These indicate that a comma was missed after a type parameter, not that
     // we have found a non-type parameter.
-    return true;
+    return TPResult::True;
 
   default:
-    return false;
+    return TPResult::False;
   }
 }
 
@@ -627,13 +601,8 @@ bool Parser::isStartOfTemplateTypeParameter(bool &ScopeError) {
 ///         typename
 ///
 NamedDecl *Parser::ParseTemplateParameter(unsigned Depth, unsigned Position) {
-  // We could be facing a type-constraint, which (could) start a type parameter.
-  // Annotate it now (we might end up not using it if we determine this
-  // type-constraint is in fact part of a placeholder-type-specifier of a
-  // non-type template parameter.
-
-  bool ScopeError;
-  if (isStartOfTemplateTypeParameter(ScopeError)) {
+  switch (isStartOfTemplateTypeParameter()) {
+  case TPResult::True:
     // Is there just a typo in the input code? ('typedef' instead of
     // 'typename')
     if (Tok.is(tok::kw_typedef)) {
@@ -649,8 +618,11 @@ NamedDecl *Parser::ParseTemplateParameter(unsigned Depth, unsigned Position) {
     }
 
     return ParseTypeParameter(Depth, Position);
-  }
-  if (ScopeError) {
+
+  case TPResult::False:
+    break;
+
+  case TPResult::Error: {
     // We return an invalid parameter as opposed to null to avoid having bogus
     // diagnostics about an empty template parameter list.
     // FIXME: Fix ParseTemplateParameterList to better handle nullptr results
@@ -670,6 +642,11 @@ NamedDecl *Parser::ParseTemplateParameter(unsigned Depth, unsigned Position) {
               StopAtSemi | StopBeforeMatch);
     return ErrorParam;
   }
+
+  case TPResult::Ambiguous:
+    llvm_unreachable("template param classification can't be ambiguous");
+  }
+
   if (Tok.is(tok::kw_template))
     return ParseTemplateTemplateParameter(Depth, Position);
 
@@ -682,15 +659,15 @@ NamedDecl *Parser::ParseTemplateParameter(unsigned Depth, unsigned Position) {
 /// Check whether the current token is a template-id annotation denoting a
 /// type-constraint.
 bool Parser::isTypeConstraintAnnotation() {
-  if (Tok.isNot(tok::annot_template_id))
+  const Token &T = Tok.is(tok::annot_cxxscope) ? NextToken() : Tok;
+  if (T.isNot(tok::annot_template_id))
     return false;
   const auto *ExistingAnnot =
-      static_cast<TemplateIdAnnotation *>(Tok.getAnnotationValue());
+      static_cast<TemplateIdAnnotation *>(T.getAnnotationValue());
   return ExistingAnnot->Kind == TNK_Concept_template;
 }
 
-/// Try parsing a type-constraint construct at the current location, after the
-/// optional scope specifier.
+/// Try parsing a type-constraint at the current location.
 ///
 ///     type-constraint:
 ///       nested-name-specifier[opt] concept-name
@@ -698,35 +675,60 @@ bool Parser::isTypeConstraintAnnotation() {
 ///           '<' template-argument-list[opt] '>'[opt]
 ///
 /// \returns true if an error occurred, and false otherwise.
-bool Parser::TryAnnotateTypeConstraint(CXXScopeSpec &SS) {
-  if (!getLangOpts().ConceptsTS || Tok.isNot(tok::identifier))
+bool Parser::TryAnnotateTypeConstraint() {
+  if (!getLangOpts().ConceptsTS)
     return false;
 
-  UnqualifiedId PossibleConceptName;
-  PossibleConceptName.setIdentifier(Tok.getIdentifierInfo(),
-                                    Tok.getLocation());
+  CXXScopeSpec SS;
+  bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);
+  if (ParseOptionalCXXScopeSpecifier(
+          SS, ParsedType(),
+          /*EnteringContext=*/false,
+          /*MayBePseudoDestructor=*/nullptr,
+          // If this is not a type-constraint, then
+          // this scope-spec is part of the typename
+          // of a non-type template parameter
+          /*IsTypename=*/true, /*LastII=*/nullptr,
+          // We won't find concepts in
+          // non-namespaces anyway, so might as well
+          // parse this correctly for possible type
+          // names.
+          /*OnlyNamespace=*/false))
+    return true;
 
-  TemplateTy PossibleConcept;
-  bool MemberOfUnknownSpecialization = false;
-  auto TNK = Actions.isTemplateName(getCurScope(), SS,
-                                    /*hasTemplateKeyword=*/false,
-                                    PossibleConceptName,
-                                    /*ObjectType=*/ParsedType(),
-                                    /*EnteringContext=*/false,
-                                    PossibleConcept,
-                                    MemberOfUnknownSpecialization);
-  assert(!MemberOfUnknownSpecialization
-         && "Member when we only allowed namespace scope qualifiers??");
-  if (!PossibleConcept || TNK != TNK_Concept_template)
-    return false;
+  if (Tok.is(tok::identifier)) {
+    UnqualifiedId PossibleConceptName;
+    PossibleConceptName.setIdentifier(Tok.getIdentifierInfo(),
+                                      Tok.getLocation());
 
-  // At this point we're sure we're dealing with a constrained parameter. It
-  // may or may not have a template parameter list following the concept name.
-  return AnnotateTemplateIdToken(PossibleConcept, TNK, SS,
-                                 /*TemplateKWLoc=*/SourceLocation(),
-                                 PossibleConceptName,
-                                 /*AllowTypeAnnotation=*/false,
-                                 /*TypeConstraint=*/true);
+    TemplateTy PossibleConcept;
+    bool MemberOfUnknownSpecialization = false;
+    auto TNK = Actions.isTemplateName(getCurScope(), SS,
+                                      /*hasTemplateKeyword=*/false,
+                                      PossibleConceptName,
+                                      /*ObjectType=*/ParsedType(),
+                                      /*EnteringContext=*/false,
+                                      PossibleConcept,
+                                      MemberOfUnknownSpecialization);
+    assert(!MemberOfUnknownSpecialization
+           && "Member when we only allowed namespace scope qualifiers??");
+    if (!PossibleConcept || TNK != TNK_Concept_template)
+      return false;
+
+    // At this point we're sure we're dealing with a constrained parameter. It
+    // may or may not have a template parameter list following the concept
+    // name.
+    if (AnnotateTemplateIdToken(PossibleConcept, TNK, SS,
+                                   /*TemplateKWLoc=*/SourceLocation(),
+                                   PossibleConceptName,
+                                   /*AllowTypeAnnotation=*/false,
+                                   /*TypeConstraint=*/true))
+      return true;
+  }
+
+  if (SS.isNotEmpty())
+    AnnotateScopeToken(SS, !WasScopeAnnotation);
+  return false;
 }
 
 /// ParseTypeParameter - Parse a template type parameter (C++ [temp.param]).
@@ -739,13 +741,17 @@ bool Parser::TryAnnotateTypeConstraint(CXXScopeSpec &SS) {
 ///         'typename' ...[opt][C++0x] identifier[opt]
 ///         'typename' identifier[opt] '=' type-id
 NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
-  assert(Tok.isOneOf(tok::kw_class, tok::kw_typename, tok::annot_template_id) &&
+  assert((Tok.isOneOf(tok::kw_class, tok::kw_typename) ||
+          isTypeConstraintAnnotation()) &&
          "A type-parameter starts with 'class', 'typename' or a "
          "type-constraint");
 
+  CXXScopeSpec TypeConstraintSS;
   TemplateIdAnnotation *TypeConstraint = nullptr;
   bool TypenameKeyword = false;
   SourceLocation KeyLoc;
+  ParseOptionalCXXScopeSpecifier(TypeConstraintSS, nullptr,
+                                 /*EnteringContext*/ false);
   if (Tok.is(tok::annot_template_id)) {
     // Consume the 'type-constraint'.
     TypeConstraint =
@@ -754,6 +760,9 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
            "stray non-concept template-id annotation");
     KeyLoc = ConsumeAnnotationToken();
   } else {
+    assert(TypeConstraintSS.isEmpty() &&
+           "expected type constraint after scope specifier");
+
     // Consume the 'class' or 'typename' keyword.
     TypenameKeyword = Tok.is(tok::kw_typename);
     KeyLoc = ConsumeToken();
@@ -795,7 +804,8 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   ParsedType DefaultArg;
   if (TryConsumeToken(tok::equal, EqualLoc))
     DefaultArg = ParseTypeName(/*Range=*/nullptr,
-                               DeclaratorContext::TemplateTypeArgContext).get();
+                               DeclaratorContext::TemplateTypeArgContext)
+                     .get();
 
   NamedDecl *NewDecl = Actions.ActOnTypeParameter(getCurScope(),
                                                   TypenameKeyword, EllipsisLoc,
@@ -804,10 +814,11 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
                                                   DefaultArg,
                                                   TypeConstraint != nullptr);
 
-  if (TypeConstraint)
-    Actions.ActOnTypeConstraint(TypeConstraint,
+  if (TypeConstraint) {
+    Actions.ActOnTypeConstraint(TypeConstraintSS, TypeConstraint,
                                 cast<TemplateTypeParmDecl>(NewDecl),
                                 EllipsisLoc);
+  }
 
   return NewDecl;
 }
@@ -1331,8 +1342,8 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
             : TemplateName.OperatorFunctionId.Operator;
 
     TemplateIdAnnotation *TemplateId = TemplateIdAnnotation::Create(
-      SS, TemplateKWLoc, TemplateNameLoc, TemplateII, OpKind, Template, TNK,
-      LAngleLoc, RAngleLoc, TemplateArgs, TemplateIds);
+        TemplateKWLoc, TemplateNameLoc, TemplateII, OpKind, Template, TNK,
+        LAngleLoc, RAngleLoc, TemplateArgs, TemplateIds);
 
     Tok.setAnnotationValue(TemplateId);
     if (TemplateKWLoc.isValid())
@@ -1357,11 +1368,14 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
 /// a type annotation token will still be created, but will have a
 /// NULL type pointer to signify an error.
 ///
+/// \param SS The scope specifier appearing before the template-id, if any.
+///
 /// \param IsClassName Is this template-id appearing in a context where we
 /// know it names a class, such as in an elaborated-type-specifier or
 /// base-specifier? ('typename' and 'template' are unneeded and disallowed
 /// in those contexts.)
-void Parser::AnnotateTemplateIdTokenAsType(bool IsClassName) {
+void Parser::AnnotateTemplateIdTokenAsType(CXXScopeSpec &SS,
+                                           bool IsClassName) {
   assert(Tok.is(tok::annot_template_id) && "Requires template-id tokens");
 
   TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
@@ -1375,7 +1389,7 @@ void Parser::AnnotateTemplateIdTokenAsType(bool IsClassName) {
 
   TypeResult Type
     = Actions.ActOnTemplateIdType(getCurScope(),
-                                  TemplateId->SS,
+                                  SS,
                                   TemplateId->TemplateKWLoc,
                                   TemplateId->Template,
                                   TemplateId->Name,
@@ -1388,8 +1402,8 @@ void Parser::AnnotateTemplateIdTokenAsType(bool IsClassName) {
   // Create the new "type" annotation token.
   Tok.setKind(tok::annot_typename);
   setTypeAnnotation(Tok, Type.isInvalid() ? nullptr : Type.get());
-  if (TemplateId->SS.isNotEmpty()) // it was a C++ qualified type name.
-    Tok.setLocation(TemplateId->SS.getBeginLoc());
+  if (SS.isNotEmpty()) // it was a C++ qualified type name.
+    Tok.setLocation(SS.getBeginLoc());
   // End location stays the same
 
   // Replace the template-id annotation token, and possible the scope-specifier

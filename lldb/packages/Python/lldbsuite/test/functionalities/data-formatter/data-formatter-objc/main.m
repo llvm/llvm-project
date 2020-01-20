@@ -401,7 +401,7 @@ int main (int argc, const char * argv[])
 
 	    [mutableGetConst length];
 
-	    NSData *immutableData = [[NSData alloc] initWithBytes:"HELLO" length:4];
+	    NSData *immutableData = [[NSData alloc] initWithBytes:"HELLO" length:5];
 	    NSData *mutableData = [[NSMutableData alloc] initWithBytes:"NODATA" length:6];
 
 	    // No-copy versions of NSData initializers use NSConcreteData if over 2^16 elements are specified.

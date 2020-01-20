@@ -1,9 +1,7 @@
 import("//llvm/utils/unittest/unittest.gni")
 
 unittest("DemangleTests") {
-  deps = [
-    "//llvm/lib/Demangle",
-  ]
+  deps = [ "//llvm/lib/Demangle" ]
   sources = [
     "DemangleTest.cpp",
     "ItaniumDemangleTest.cpp",

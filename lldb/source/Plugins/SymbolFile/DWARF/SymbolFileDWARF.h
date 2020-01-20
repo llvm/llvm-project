@@ -417,6 +417,18 @@ protected:
   bool ClassContainsSelector(const DWARFDIE &class_die,
                              lldb_private::ConstString selector);
 
+  /// Parse call site entries (DW_TAG_call_site), including any nested call site
+  /// parameters (DW_TAG_call_site_parameter).
+  std::vector<std::unique_ptr<lldb_private::CallEdge>>
+  CollectCallEdges(lldb::ModuleSP module, DWARFDIE function_die);
+
+  /// If this symbol file is linked to by a debug map (see
+  /// SymbolFileDWARFDebugMap), and \p file_addr is a file address relative to
+  /// an object file, adjust \p file_addr so that it is relative to the main
+  /// binary. Returns the adjusted address, or \p file_addr if no adjustment is
+  /// needed, on success and LLDB_INVALID_ADDRESS otherwise.
+  lldb::addr_t FixupAddress(lldb::addr_t file_addr);
+
   bool FixupAddress(lldb_private::Address &addr);
 
   typedef std::set<lldb_private::Type *> TypeSet;

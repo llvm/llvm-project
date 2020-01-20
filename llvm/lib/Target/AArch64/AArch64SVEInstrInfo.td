@@ -290,20 +290,20 @@ let Predicates = [HasSVE] in {
   def MOVPRFX_ZZ : sve_int_bin_cons_misc_0_c<0b00000001, "movprfx", ZPRAny>;
   defm FEXPA_ZZ : sve_int_bin_cons_misc_0_c_fexpa<"fexpa", int_aarch64_sve_fexpa_x>;
 
-  def BRKPA_PPzPP  : sve_int_brkp<0b00, "brkpa">;
-  def BRKPAS_PPzPP : sve_int_brkp<0b10, "brkpas">;
-  def BRKPB_PPzPP  : sve_int_brkp<0b01, "brkpb">;
-  def BRKPBS_PPzPP : sve_int_brkp<0b11, "brkpbs">;
+  defm BRKPA_PPzPP  : sve_int_brkp<0b00, "brkpa",  int_aarch64_sve_brkpa_z>;
+  defm BRKPAS_PPzPP : sve_int_brkp<0b10, "brkpas", null_frag>;
+  defm BRKPB_PPzPP  : sve_int_brkp<0b01, "brkpb",  int_aarch64_sve_brkpb_z>;
+  defm BRKPBS_PPzPP : sve_int_brkp<0b11, "brkpbs", null_frag>;
 
-  def BRKN_PPzP    : sve_int_brkn<0b0, "brkn">;
-  def BRKNS_PPzP   : sve_int_brkn<0b1, "brkns">;
+  defm BRKN_PPzP  : sve_int_brkn<0b0, "brkn",  int_aarch64_sve_brkn_z>;
+  defm BRKNS_PPzP : sve_int_brkn<0b1, "brkns", null_frag>;
 
-  defm BRKA_PPzP  : sve_int_break_z<0b000, "brka">;
-  defm BRKA_PPmP  : sve_int_break_m<0b001, "brka">;
-  defm BRKAS_PPzP : sve_int_break_z<0b010, "brkas">;
-  defm BRKB_PPzP  : sve_int_break_z<0b100, "brkb">;
-  defm BRKB_PPmP  : sve_int_break_m<0b101, "brkb">;
-  defm BRKBS_PPzP : sve_int_break_z<0b110, "brkbs">;
+  defm BRKA_PPzP  : sve_int_break_z<0b000, "brka",  int_aarch64_sve_brka_z>;
+  defm BRKA_PPmP  : sve_int_break_m<0b001, "brka",  int_aarch64_sve_brka>;
+  defm BRKAS_PPzP : sve_int_break_z<0b010, "brkas", null_frag>;
+  defm BRKB_PPzP  : sve_int_break_z<0b100, "brkb",  int_aarch64_sve_brkb_z>;
+  defm BRKB_PPmP  : sve_int_break_m<0b101, "brkb",  int_aarch64_sve_brkb>;
+  defm BRKBS_PPzP : sve_int_break_z<0b110, "brkbs", null_frag>;
 
   def PTEST_PP : sve_int_ptest<0b010000, "ptest">;
   def PFALSE   : sve_int_pfalse<0b000000, "pfalse">;

@@ -13,6 +13,7 @@
 #include "common.h"
 #include "list.h"
 #include "local_cache.h"
+#include "memtag.h"
 #include "release.h"
 #include "stats.h"
 #include "string_utils.h"
@@ -38,12 +39,18 @@ namespace scudo {
 // The memory used by this allocator is never unmapped, but can be partially
 // released if the platform allows for it.
 
-template <class SizeClassMapT, uptr RegionSizeLog> class SizeClassAllocator64 {
+template <class SizeClassMapT, uptr RegionSizeLog,
+          bool MaySupportMemoryTagging = false>
+class SizeClassAllocator64 {
 public:
   typedef SizeClassMapT SizeClassMap;
-  typedef SizeClassAllocator64<SizeClassMap, RegionSizeLog> ThisT;
+  typedef SizeClassAllocator64<SizeClassMap, RegionSizeLog,
+                               MaySupportMemoryTagging>
+      ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
   typedef typename CacheT::TransferBatch TransferBatch;
+  static const bool SupportsMemoryTagging =
+      MaySupportMemoryTagging && archSupportsMemoryTagging();
 
   static uptr getSizeByClassId(uptr ClassId) {
     return (ClassId == SizeClassMap::BatchClassId)
@@ -85,6 +92,9 @@ public:
       Region->RandState = getRandomU32(&Seed);
     }
     ReleaseToOsIntervalMs = ReleaseToOsInterval;
+
+    if (SupportsMemoryTagging)
+      UseMemoryTagging = systemSupportsMemoryTagging();
   }
   void init(s32 ReleaseToOsInterval) {
     memset(this, 0, sizeof(*this));
@@ -189,6 +199,11 @@ public:
     return TotalReleasedBytes;
   }
 
+  bool useMemoryTagging() const {
+    return SupportsMemoryTagging && UseMemoryTagging;
+  }
+  void disableMemoryTagging() { UseMemoryTagging = false; }
+
 private:
   static const uptr RegionSize = 1UL << RegionSizeLog;
   static const uptr NumClasses = SizeClassMap::NumClasses;
@@ -230,6 +245,7 @@ private:
   RegionInfo *RegionInfoArray;
   MapPlatformData Data;
   s32 ReleaseToOsIntervalMs;
+  bool UseMemoryTagging;
 
   RegionInfo *getRegionInfo(uptr ClassId) const {
     DCHECK_LT(ClassId, NumClasses);
@@ -294,7 +310,9 @@ private:
         Region->Data = Data;
       if (UNLIKELY(!map(reinterpret_cast<void *>(RegionBeg + MappedUser),
                         UserMapSize, "scudo:primary",
-                        MAP_ALLOWNOMEM | MAP_RESIZABLE, &Region->Data)))
+                        MAP_ALLOWNOMEM | MAP_RESIZABLE |
+                            (useMemoryTagging() ? MAP_MEMTAG : 0),
+                        &Region->Data)))
         return nullptr;
       Region->MappedUser += UserMapSize;
       C->getStats().add(StatMapped, UserMapSize);

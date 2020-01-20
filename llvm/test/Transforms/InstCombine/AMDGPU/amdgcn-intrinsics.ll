@@ -2655,5 +2655,83 @@ define amdgpu_kernel void @update_dpp_undef_old(i32 addrspace(1)* %out, i32 %in1
   ret void
 }
 
-; CHECK: attributes [[CONVERGENT]] = { convergent }
 
+; --------------------------------------------------------------------
+; llvm.amdgcn.permlane16
+; --------------------------------------------------------------------
+
+declare i32 @llvm.amdgcn.permlane16(i32, i32, i32, i32, i1 immarg, i1 immarg)
+
+define amdgpu_kernel void @permlane16(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) {
+; CHECK-LABEL: @permlane16(
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 false)
+; CHECK-NEXT:    store i32 [[RES]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %res = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store i32 %res, i32 addrspace(1)* %out
+  ret void
+}
+
+define amdgpu_kernel void @permlane16_bound_ctrl(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) {
+; CHECK-LABEL: @permlane16_bound_ctrl(
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
+; CHECK-NEXT:    store i32 [[RES]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %res = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 true)
+  store i32 %res, i32 addrspace(1)* %out
+  ret void
+}
+
+define amdgpu_kernel void @permlane16_fetch_invalid_bound_ctrl(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) {
+; CHECK-LABEL: @permlane16_fetch_invalid_bound_ctrl(
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlane16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
+; CHECK-NEXT:    store i32 [[RES]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %res = call i32 @llvm.amdgcn.permlane16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
+  store i32 %res, i32 addrspace(1)* %out
+  ret void
+}
+
+; --------------------------------------------------------------------
+; llvm.amdgcn.permlanex16
+; --------------------------------------------------------------------
+
+declare i32 @llvm.amdgcn.permlanex16(i32, i32, i32, i32, i1 immarg, i1 immarg)
+
+define amdgpu_kernel void @permlanex16(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) {
+; CHECK-LABEL: @permlanex16(
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 false)
+; CHECK-NEXT:    store i32 [[RES]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %res = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 false)
+  store i32 %res, i32 addrspace(1)* %out
+  ret void
+}
+
+define amdgpu_kernel void @permlanex16_bound_ctrl(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) {
+; CHECK-LABEL: @permlanex16_bound_ctrl(
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 false, i1 true)
+; CHECK-NEXT:    store i32 [[RES]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %res = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 false, i1 true)
+  store i32 %res, i32 addrspace(1)* %out
+  ret void
+}
+
+define amdgpu_kernel void @permlanex16_fetch_invalid_bound_ctrl(i32 addrspace(1)* %out, i32 %src0, i32 %src1, i32 %src2) {
+; CHECK-LABEL: @permlanex16_fetch_invalid_bound_ctrl(
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.amdgcn.permlanex16(i32 undef, i32 [[SRC0:%.*]], i32 [[SRC1:%.*]], i32 [[SRC2:%.*]], i1 true, i1 true)
+; CHECK-NEXT:    store i32 [[RES]], i32 addrspace(1)* [[OUT:%.*]], align 4
+; CHECK-NEXT:    ret void
+;
+  %res = call i32 @llvm.amdgcn.permlanex16(i32 12345, i32 %src0, i32 %src1, i32 %src2, i1 true, i1 true)
+  store i32 %res, i32 addrspace(1)* %out
+  ret void
+}
+
+; CHECK: attributes [[CONVERGENT]] = { convergent }

@@ -1,3 +1,5 @@
+// REQUIRES: darwin
+
 // RUN: rm -rf %t.dir && mkdir -p %t.dir
 // RUN: %clang_pgogen -o %t.exe %s
 //

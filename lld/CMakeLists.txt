@@ -130,33 +130,6 @@ string(REGEX REPLACE "([0-9]+)\\.[0-9]+(\\.[0-9]+)?" "\\1" LLD_VERSION_MAJOR
 string(REGEX REPLACE "[0-9]+\\.([0-9]+)(\\.[0-9]+)?" "\\1" LLD_VERSION_MINOR
   ${LLD_VERSION})
 
-# Determine LLD revision and repository.
-# TODO: Figure out a way to get the revision and the repository on windows.
-if ( NOT CMAKE_SYSTEM_NAME MATCHES "Windows" )
-  execute_process(COMMAND ${CMAKE_SOURCE_DIR}/utils/GetSourceVersion ${LLD_SOURCE_DIR}
-                  OUTPUT_VARIABLE LLD_REVISION)
-
-  execute_process(COMMAND ${CMAKE_SOURCE_DIR}/utils/GetRepositoryPath ${LLD_SOURCE_DIR}
-                  OUTPUT_VARIABLE LLD_REPOSITORY)
-  if ( LLD_REPOSITORY )
-    # Replace newline characters with spaces
-    string(REGEX REPLACE "(\r?\n)+" " " LLD_REPOSITORY ${LLD_REPOSITORY})
-    # Remove leading spaces
-    STRING(REGEX REPLACE "^[ \t\r\n]+" "" LLD_REPOSITORY "${LLD_REPOSITORY}" )
-    # Remove trailing spaces
-    string(REGEX REPLACE "(\ )+$" "" LLD_REPOSITORY ${LLD_REPOSITORY})
-  endif()
-
-  if ( LLD_REVISION )
-    # Replace newline characters with spaces
-    string(REGEX REPLACE "(\r?\n)+" " " LLD_REVISION ${LLD_REVISION})
-    # Remove leading spaces
-    STRING(REGEX REPLACE "^[ \t\r\n]+" "" LLD_REVISION "${LLD_REVISION}" )
-    # Remove trailing spaces
-    string(REGEX REPLACE "(\ )+$" "" LLD_REVISION ${LLD_REVISION})
-  endif()
-endif ()
-
 # Configure the Version.inc file.
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/lld/Common/Version.inc.in
