@@ -468,15 +468,19 @@ Error MaterializationResponsibility::notifyEmitted() {
 }
 
 Error MaterializationResponsibility::defineMaterializing(
-    const SymbolFlagsMap &NewSymbolFlags) {
-  // Add the given symbols to this responsibility object.
-  // It's ok if we hit a duplicate here: In that case the new version will be
-  // discarded, and the JITDylib::defineMaterializing method will return a
-  // duplicate symbol error.
-  for (auto &KV : NewSymbolFlags)
-    SymbolFlags.insert(KV);
+    SymbolFlagsMap NewSymbolFlags) {
 
-  return JD.defineMaterializing(NewSymbolFlags);
+  LLVM_DEBUG({
+      dbgs() << "In " << JD.getName() << " defining materializing symbols "
+             << NewSymbolFlags << "\n";
+    });
+  if (auto AcceptedDefs = JD.defineMaterializing(std::move(NewSymbolFlags))) {
+    // Add all newly accepted symbols to this responsibility object.
+    for (auto &KV : *AcceptedDefs)
+      SymbolFlags.insert(KV);
+    return Error::success();
+  } else
+    return AcceptedDefs.takeError();
 }
 
 void MaterializationResponsibility::failMaterialization() {
@@ -809,31 +813,52 @@ void JITDylib::removeGenerator(DefinitionGenerator &G) {
   });
 }
 
-Error JITDylib::defineMaterializing(const SymbolFlagsMap &SymbolFlags) {
-  return ES.runSessionLocked([&]() -> Error {
+Expected<SymbolFlagsMap>
+JITDylib::defineMaterializing(SymbolFlagsMap SymbolFlags) {
+
+  return ES.runSessionLocked([&]() -> Expected<SymbolFlagsMap> {
     std::vector<SymbolTable::iterator> AddedSyms;
+    std::vector<SymbolFlagsMap::iterator> RejectedWeakDefs;
 
-    for (auto &KV : SymbolFlags) {
-      SymbolTable::iterator EntryItr;
-      bool Added;
+    for (auto SFItr = SymbolFlags.begin(), SFEnd = SymbolFlags.end();
+         SFItr != SFEnd; ++SFItr) {
 
-      std::tie(EntryItr, Added) =
-          Symbols.insert(std::make_pair(KV.first, SymbolTableEntry(KV.second)));
+      auto &Name = SFItr->first;
+      auto &Flags = SFItr->second;
 
-      if (Added) {
-        AddedSyms.push_back(EntryItr);
-        EntryItr->second.setState(SymbolState::Materializing);
-      } else {
-        // Remove any symbols already added.
-        for (auto &SI : AddedSyms)
-          Symbols.erase(SI);
+      auto EntryItr = Symbols.find(Name);
 
-        // FIXME: Return all duplicates.
-        return make_error<DuplicateDefinition>(*KV.first);
-      }
+      // If the entry already exists...
+      if (EntryItr != Symbols.end()) {
+
+        // If this is a strong definition then error out.
+        if (!Flags.isWeak()) {
+          // Remove any symbols already added.
+          for (auto &SI : AddedSyms)
+            Symbols.erase(SI);
+
+          // FIXME: Return all duplicates.
+          return make_error<DuplicateDefinition>(*Name);
+        }
+
+        // Otherwise just make a note to discard this symbol after the loop.
+        RejectedWeakDefs.push_back(SFItr);
+        continue;
+      } else
+        EntryItr =
+          Symbols.insert(std::make_pair(Name, SymbolTableEntry(Flags))).first;
+
+      AddedSyms.push_back(EntryItr);
+      EntryItr->second.setState(SymbolState::Materializing);
     }
 
-    return Error::success();
+    // Remove any rejected weak definitions from the SymbolFlags map.
+    while (!RejectedWeakDefs.empty()) {
+      SymbolFlags.erase(RejectedWeakDefs.back());
+      RejectedWeakDefs.pop_back();
+    }
+
+    return SymbolFlags;
   });
 }
 
