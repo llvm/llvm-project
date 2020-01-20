@@ -410,6 +410,8 @@ protected:
       m_script_interpreters;
 
   IOHandlerStack m_io_handler_stack;
+  std::recursive_mutex m_io_handler_synchronous_mutex;
+
   llvm::StringMap<std::weak_ptr<llvm::raw_ostream>> m_log_streams;
   std::shared_ptr<llvm::raw_ostream> m_log_callback_stream_sp;
   ConstString m_instance_name;

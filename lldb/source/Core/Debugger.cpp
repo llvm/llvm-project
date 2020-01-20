@@ -895,23 +895,62 @@ void Debugger::ClearIOHandlers() {
 }
 
 void Debugger::RunIOHandlers() {
+  IOHandlerSP reader_sp = m_io_handler_stack.Top();
   while (true) {
-    IOHandlerSP reader_sp(m_io_handler_stack.Top());
     if (!reader_sp)
       break;
 
     reader_sp->Run();
+    {
+      std::lock_guard<std::recursive_mutex> guard(
+          m_io_handler_synchronous_mutex);
 
-    // Remove all input readers that are done from the top of the stack
-    while (true) {
-      IOHandlerSP top_reader_sp = m_io_handler_stack.Top();
-      if (top_reader_sp && top_reader_sp->GetIsDone())
-        PopIOHandler(top_reader_sp);
-      else
-        break;
+      // Remove all input readers that are done from the top of the stack
+      while (true) {
+        IOHandlerSP top_reader_sp = m_io_handler_stack.Top();
+        if (top_reader_sp && top_reader_sp->GetIsDone())
+          PopIOHandler(top_reader_sp);
+        else
+          break;
+      }
+      reader_sp = m_io_handler_stack.Top();
     }
   }
   ClearIOHandlers();
+}
+
+void Debugger::RunIOHandlerSync(const IOHandlerSP &reader_sp) {
+  std::lock_guard<std::recursive_mutex> guard(m_io_handler_synchronous_mutex);
+
+  PushIOHandler(reader_sp);
+  IOHandlerSP top_reader_sp = reader_sp;
+
+  while (top_reader_sp) {
+    if (!top_reader_sp)
+      break;
+
+    top_reader_sp->Run();
+
+    // Don't unwind past the starting point.
+    if (top_reader_sp.get() == reader_sp.get()) {
+      if (PopIOHandler(reader_sp))
+        break;
+    }
+
+    // If we pushed new IO handlers, pop them if they're done or restart the
+    // loop to run them if they're not.
+    while (true) {
+      top_reader_sp = m_io_handler_stack.Top();
+      if (top_reader_sp && top_reader_sp->GetIsDone()) {
+        PopIOHandler(top_reader_sp);
+        // Don't unwind past the starting point.
+        if (top_reader_sp.get() == reader_sp.get())
+          return;
+      } else {
+        break;
+      }
+    }
+  }
 }
 
 bool Debugger::IsTopIOHandler(const lldb::IOHandlerSP &reader_sp) {
@@ -948,28 +987,6 @@ bool Debugger::RemoveIOHandler(const IOHandlerSP &reader_sp) {
 void Debugger::RunIOHandlerAsync(const IOHandlerSP &reader_sp,
                                  bool cancel_top_handler) {
   PushIOHandler(reader_sp, cancel_top_handler);
-}
-
-void Debugger::RunIOHandlerSync(const IOHandlerSP &reader_sp) {
-  PushIOHandler(reader_sp);
-
-  IOHandlerSP top_reader_sp = reader_sp;
-  while (top_reader_sp) {
-    top_reader_sp->Run();
-
-    if (top_reader_sp.get() == reader_sp.get()) {
-      if (PopIOHandler(reader_sp))
-        break;
-    }
-
-    while (true) {
-      top_reader_sp = m_io_handler_stack.Top();
-      if (top_reader_sp && top_reader_sp->GetIsDone())
-        PopIOHandler(top_reader_sp);
-      else
-        break;
-    }
-  }
 }
 
 void Debugger::AdoptTopIOHandlerFilesIfInvalid(FileSP &in, StreamFileSP &out,
