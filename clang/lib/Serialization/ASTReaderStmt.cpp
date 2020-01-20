@@ -732,7 +732,7 @@ readConstraintSatisfaction(ASTRecordReader &Record) {
     unsigned NumDetailRecords = Record.readInt();
     for (unsigned i = 0; i != NumDetailRecords; ++i) {
       Expr *ConstraintExpr = Record.readExpr();
-      if (bool IsDiagnostic = Record.readInt()) {
+      if (/* IsDiagnostic */Record.readInt()) {
         SourceLocation DiagLocation = Record.readSourceLocation();
         std::string DiagMessage = Record.readString();
         Satisfaction.Details.emplace_back(
@@ -822,7 +822,7 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
           Req.emplace();
         } else {
           NoexceptLoc = Record.readSourceLocation();
-          switch (auto returnTypeRequirementKind = Record.readInt()) {
+          switch (/* returnTypeRequirementKind */Record.readInt()) {
             case 0:
               // No return type requirement.
               Req.emplace();
@@ -853,7 +853,7 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
                   std::move(*Req));
       } break;
       case concepts::Requirement::RK_Nested: {
-        if (bool IsSubstitutionDiagnostic = Record.readInt()) {
+        if (/* IsSubstitutionDiagnostic */Record.readInt()) {
           R = new (Record.getContext()) concepts::NestedRequirement(
               readSubstitutionDiagnostic(Record));
           break;
