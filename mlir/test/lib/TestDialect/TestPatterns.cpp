@@ -58,7 +58,7 @@ static mlir::PassRegistration<TestPatternDriver>
 //===----------------------------------------------------------------------===//
 
 namespace {
-// Generate ops for each instance where the type can be succesfully infered.
+// Generate ops for each instance where the type can be successfully infered.
 template <typename OpTy>
 static void invokeCreateWithInferedReturnType(Operation *op) {
   auto *context = op->getContext();
