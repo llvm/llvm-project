@@ -1,4 +1,4 @@
-//===-- Latency.cpp ---------------------------------------------*- C++ -*-===//
+//===-- SerialSnippetGenerator.cpp ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Latency.h"
+#include "SerialSnippetGenerator.h"
 
-#include "Assembler.h"
-#include "BenchmarkRunner.h"
 #include "MCInstrDescView.h"
-#include "PerfHelper.h"
-#include "Target.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCInstBuilder.h"
-#include "llvm/Support/FormatVariadic.h"
+#include "CodeTemplate.h"
+#include <algorithm>
+#include <numeric>
+#include <vector>
 
 namespace llvm {
 namespace exegesis {
@@ -149,10 +145,10 @@ static void appendCodeTemplates(const LLVMState &State,
   }
 }
 
-LatencySnippetGenerator::~LatencySnippetGenerator() = default;
+SerialSnippetGenerator::~SerialSnippetGenerator() = default;
 
 Expected<std::vector<CodeTemplate>>
-LatencySnippetGenerator::generateCodeTemplates(
+SerialSnippetGenerator::generateCodeTemplates(
     const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
   std::vector<CodeTemplate> Results;
   const ExecutionMode EM = getExecutionModes(Instr, ForbiddenRegisters);
@@ -167,44 +163,6 @@ LatencySnippetGenerator::generateCodeTemplates(
     return make_error<Failure>(
         "No strategy found to make the execution serial");
   return std::move(Results);
-}
-
-LatencyBenchmarkRunner::LatencyBenchmarkRunner(const LLVMState &State,
-                                               InstructionBenchmark::ModeE Mode)
-    : BenchmarkRunner(State, Mode) {
-  assert((Mode == InstructionBenchmark::Latency ||
-          Mode == InstructionBenchmark::InverseThroughput) &&
-         "invalid mode");
-}
-
-LatencyBenchmarkRunner::~LatencyBenchmarkRunner() = default;
-
-Expected<std::vector<BenchmarkMeasure>> LatencyBenchmarkRunner::runMeasurements(
-    const FunctionExecutor &Executor) const {
-  // Cycle measurements include some overhead from the kernel. Repeat the
-  // measure several times and take the minimum value.
-  constexpr const int NumMeasurements = 30;
-  int64_t MinValue = std::numeric_limits<int64_t>::max();
-  const char *CounterName = State.getPfmCounters().CycleCounter;
-  for (size_t I = 0; I < NumMeasurements; ++I) {
-    auto ExpectedCounterValue = Executor.runAndMeasure(CounterName);
-    if (!ExpectedCounterValue)
-      return ExpectedCounterValue.takeError();
-    if (*ExpectedCounterValue < MinValue)
-      MinValue = *ExpectedCounterValue;
-  }
-  std::vector<BenchmarkMeasure> Result;
-  switch (Mode) {
-  case InstructionBenchmark::Latency:
-    Result = {BenchmarkMeasure::Create("latency", MinValue)};
-    break;
-  case InstructionBenchmark::InverseThroughput:
-    Result = {BenchmarkMeasure::Create("inverse_throughput", MinValue)};
-    break;
-  default:
-    break;
-  }
-  return std::move(Result);
 }
 
 } // namespace exegesis

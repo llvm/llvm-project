@@ -1,4 +1,4 @@
-//===-- Uops.cpp ------------------------------------------------*- C++ -*-===//
+//===-- ParallelSnippetGenerator.cpp ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Uops.h"
+#include "ParallelSnippetGenerator.h"
 
-#include "Assembler.h"
 #include "BenchmarkRunner.h"
 #include "MCInstrDescView.h"
 #include "Target.h"
@@ -16,9 +15,9 @@
 // FIXME: Load constants into registers (e.g. with fld1) to not break
 // instructions like x87.
 
-// Ideally we would like the only limitation on executing uops to be the issue
-// ports. Maximizing port pressure increases the likelihood that the load is
-// distributed evenly across possible ports.
+// Ideally we would like the only limitation on executing instructions to be the
+// availability of the CPU resources (e.g. execution ports) needed to execute
+// them, instead of the availability of their data dependencies.
 
 // To achieve that, one approach is to generate instructions that do not have
 // data dependencies between them.
@@ -89,11 +88,9 @@ getVariablesWithTiedOperands(const Instruction &Instr) {
   return Result;
 }
 
-UopsBenchmarkRunner::~UopsBenchmarkRunner() = default;
+ParallelSnippetGenerator::~ParallelSnippetGenerator() = default;
 
-UopsSnippetGenerator::~UopsSnippetGenerator() = default;
-
-void UopsSnippetGenerator::instantiateMemoryOperands(
+void ParallelSnippetGenerator::instantiateMemoryOperands(
     const unsigned ScratchSpacePointerInReg,
     std::vector<InstructionTemplate> &Instructions) const {
   if (ScratchSpacePointerInReg == 0)
@@ -157,7 +154,7 @@ static std::vector<InstructionTemplate> generateSnippetUsingStaticRenaming(
   }
 }
 
-Expected<std::vector<CodeTemplate>> UopsSnippetGenerator::generateCodeTemplates(
+Expected<std::vector<CodeTemplate>> ParallelSnippetGenerator::generateCodeTemplates(
     const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
   CodeTemplate CT;
   CT.ScratchSpacePointerInReg =
@@ -219,34 +216,7 @@ Expected<std::vector<CodeTemplate>> UopsSnippetGenerator::generateCodeTemplates(
   return getSingleton(std::move(CT));
 }
 
-Expected<std::vector<BenchmarkMeasure>>
-UopsBenchmarkRunner::runMeasurements(const FunctionExecutor &Executor) const {
-  std::vector<BenchmarkMeasure> Result;
-  const PfmCountersInfo &PCI = State.getPfmCounters();
-  // Uops per port.
-  for (const auto *IssueCounter = PCI.IssueCounters,
-                  *IssueCounterEnd = PCI.IssueCounters + PCI.NumIssueCounters;
-       IssueCounter != IssueCounterEnd; ++IssueCounter) {
-    if (!IssueCounter->Counter)
-      continue;
-    auto ExpectedCounterValue = Executor.runAndMeasure(IssueCounter->Counter);
-    if (!ExpectedCounterValue)
-      return ExpectedCounterValue.takeError();
-    Result.push_back(BenchmarkMeasure::Create(IssueCounter->ProcResName,
-                                              *ExpectedCounterValue));
-  }
-  // NumMicroOps.
-  if (const char *const UopsCounter = PCI.UopsCounter) {
-    auto ExpectedCounterValue = Executor.runAndMeasure(UopsCounter);
-    if (!ExpectedCounterValue)
-      return ExpectedCounterValue.takeError();
-    Result.push_back(
-        BenchmarkMeasure::Create("NumMicroOps", *ExpectedCounterValue));
-  }
-  return std::move(Result);
-}
-
-constexpr const size_t UopsSnippetGenerator::kMinNumDifferentAddresses;
+constexpr const size_t ParallelSnippetGenerator::kMinNumDifferentAddresses;
 
 } // namespace exegesis
 } // namespace llvm

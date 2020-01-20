@@ -25,7 +25,7 @@ NO-COUNTS: error: {{.*}}no-counts.proftext: Malformed instrumentation profile da
 4- Detect binary input
 RUN: not llvm-profdata show %p/Inputs/text-format-errors.text.bin 2>&1 | FileCheck %s --check-prefix=BINARY
 BINARY: error: {{.+}}: Unrecognized instrumentation profile encoding format
-BINARY: Perhaps you forgot to use the -sample option?
+BINARY: Perhaps you forgot to use the --sample option?
 
 5- Detect malformed value profile data
 RUN: not llvm-profdata show %p/Inputs/vp-malform.proftext 2>&1 | FileCheck %s --check-prefix=VP

@@ -12303,10 +12303,33 @@ static SDValue performST1ScatterCombine(SDNode *N, SelectionDAG &DAG,
 
   // Depending on the addressing mode, this is either a pointer or a vector of
   // pointers (that fits into one register)
-  const SDValue Base = N->getOperand(4);
+  SDValue Base = N->getOperand(4);
   // Depending on the addressing mode, this is either a single offset or a
   // vector of offsets  (that fits into one register)
   SDValue Offset = N->getOperand(5);
+
+  // SST1_IMM requires that the offset is an immediate:
+  // * multiple of #SizeInBytes
+  // * in the range [0, 31 x #SizeInBytes]
+  // where #SizeInBytes is the size in bytes of the stored
+  // items. For immediates outside that range and non-immediate scalar offsets use
+  // SST1 or SST1_UXTW instead.
+  if (Opcode == AArch64ISD::SST1_IMM) {
+    uint64_t MaxIndex = 31;
+    uint64_t SrcElSize = SrcElVT.getStoreSize().getKnownMinSize();
+
+    ConstantSDNode *OffsetConst = dyn_cast<ConstantSDNode>(Offset.getNode());
+    if (nullptr == OffsetConst ||
+        OffsetConst->getZExtValue() > MaxIndex * SrcElSize ||
+        OffsetConst->getZExtValue() % SrcElSize) {
+      if (MVT::nxv4i32 == Base.getValueType().getSimpleVT().SimpleTy)
+        Opcode = AArch64ISD::SST1_UXTW;
+      else
+        Opcode = AArch64ISD::SST1;
+
+      std::swap(Base, Offset);
+    }
+  }
 
   auto &TLI = DAG.getTargetLoweringInfo();
   if (!TLI.isTypeLegal(Base.getValueType()))
@@ -12363,10 +12386,36 @@ static SDValue performLD1GatherCombine(SDNode *N, SelectionDAG &DAG,
 
   // Depending on the addressing mode, this is either a pointer or a vector of
   // pointers (that fits into one register)
-  const SDValue Base = N->getOperand(3);
+  SDValue Base = N->getOperand(3);
   // Depending on the addressing mode, this is either a single offset or a
   // vector of offsets  (that fits into one register)
   SDValue Offset = N->getOperand(4);
+
+  // GLD1_IMM requires that the offset is an immediate:
+  // * multiple of #SizeInBytes
+  // * in the range [0, 31 x #SizeInBytes]
+  // where #SizeInBytes is the size in bytes of the loaded items.  For immediates
+  // outside that range and non-immediate scalar offsets use GLD1 or GLD1_UXTW
+  // instead.
+  if (Opcode == AArch64ISD::GLD1_IMM) {
+    uint64_t MaxIndex = 31;
+    uint64_t RetElSize = RetVT.getVectorElementType()
+                             .getSimpleVT()
+                             .getStoreSize()
+                             .getKnownMinSize();
+
+    ConstantSDNode *OffsetConst = dyn_cast<ConstantSDNode>(Offset.getNode());
+    if (nullptr == OffsetConst ||
+        OffsetConst->getZExtValue() > MaxIndex * RetElSize ||
+        OffsetConst->getZExtValue() % RetElSize) {
+      if (MVT::nxv4i32 == Base.getValueType().getSimpleVT().SimpleTy)
+        Opcode = AArch64ISD::GLD1_UXTW;
+      else
+        Opcode = AArch64ISD::GLD1;
+
+      std::swap(Base, Offset);
+    }
+  }
 
   auto &TLI = DAG.getTargetLoweringInfo();
   if (!TLI.isTypeLegal(Base.getValueType()))
@@ -12573,7 +12622,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_sve_ld1_gather_uxtw_index:
       return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_UXTW_SCALED,
                                       /*OnlyPackedOffsets=*/false);
-    case Intrinsic::aarch64_sve_ld1_gather_imm:
+    case Intrinsic::aarch64_sve_ld1_gather_scalar_offset:
       return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_IMM);
     case Intrinsic::aarch64_sve_st1_scatter:
       return performST1ScatterCombine(N, DAG, AArch64ISD::SST1);
@@ -12591,7 +12640,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_sve_st1_scatter_uxtw_index:
       return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_UXTW_SCALED,
                                       /*OnlyPackedOffsets=*/false);
-    case Intrinsic::aarch64_sve_st1_scatter_imm:
+    case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
       return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_IMM);
     default:
       break;

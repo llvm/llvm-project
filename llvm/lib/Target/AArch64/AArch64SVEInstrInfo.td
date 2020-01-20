@@ -640,16 +640,16 @@ let Predicates = [HasSVE] in {
 
   // Scatters using 32/64-bit pointers with offset, e.g.
   //    st1h z0.s, p0, [z0.s, #16]
-  defm SST1B_S : sve_mem_32b_sst_vi_ptrs<0b001, "st1b", timm0_31, AArch64st1_scatter_imm, nxv4i8>;
-  defm SST1H_S : sve_mem_32b_sst_vi_ptrs<0b011, "st1h", tuimm5s2, AArch64st1_scatter_imm, nxv4i16>;
-  defm SST1W   : sve_mem_32b_sst_vi_ptrs<0b101, "st1w", tuimm5s4, AArch64st1_scatter_imm, nxv4i32>;
+  defm SST1B_S : sve_mem_32b_sst_vi_ptrs<0b001, "st1b", imm0_31, AArch64st1_scatter_imm, nxv4i8>;
+  defm SST1H_S : sve_mem_32b_sst_vi_ptrs<0b011, "st1h", uimm5s2, AArch64st1_scatter_imm, nxv4i16>;
+  defm SST1W   : sve_mem_32b_sst_vi_ptrs<0b101, "st1w", uimm5s4, AArch64st1_scatter_imm, nxv4i32>;
 
   // Scatters using 32/64-bit pointers with offset, e.g.
   //    st1h z0.d, p0, [z0.d, #16]
-  defm SST1B_D : sve_mem_64b_sst_vi_ptrs<0b000, "st1b", timm0_31, AArch64st1_scatter_imm, nxv2i8>;
-  defm SST1H_D : sve_mem_64b_sst_vi_ptrs<0b010, "st1h", tuimm5s2, AArch64st1_scatter_imm, nxv2i16>;
-  defm SST1W_D : sve_mem_64b_sst_vi_ptrs<0b100, "st1w", tuimm5s4, AArch64st1_scatter_imm, nxv2i32>;
-  defm SST1D   : sve_mem_64b_sst_vi_ptrs<0b110, "st1d", tuimm5s8, AArch64st1_scatter_imm, nxv2i64>;
+  defm SST1B_D : sve_mem_64b_sst_vi_ptrs<0b000, "st1b", imm0_31, AArch64st1_scatter_imm, nxv2i8>;
+  defm SST1H_D : sve_mem_64b_sst_vi_ptrs<0b010, "st1h", uimm5s2, AArch64st1_scatter_imm, nxv2i16>;
+  defm SST1W_D : sve_mem_64b_sst_vi_ptrs<0b100, "st1w", uimm5s4, AArch64st1_scatter_imm, nxv2i32>;
+  defm SST1D   : sve_mem_64b_sst_vi_ptrs<0b110, "st1d", uimm5s8, AArch64st1_scatter_imm, nxv2i64>;
 
   // Scatters using unscaled 64-bit offsets, e.g.
   //    st1h z0.d, p0, [x0, z0.d]

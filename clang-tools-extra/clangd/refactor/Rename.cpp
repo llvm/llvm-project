@@ -215,7 +215,7 @@ std::vector<SourceLocation> findOccurrencesWithinFile(ParsedAST &AST,
   // getUSRsForDeclaration will find other related symbols, e.g. virtual and its
   // overriddens, primary template and all explicit specializations.
   // FIXME: Get rid of the remaining tooling APIs.
-  const auto RenameDecl =
+  const auto *RenameDecl =
       ND.getDescribedTemplate() ? ND.getDescribedTemplate() : &ND;
   std::vector<std::string> RenameUSRs =
       tooling::getUSRsForDeclaration(RenameDecl, AST.getASTContext());

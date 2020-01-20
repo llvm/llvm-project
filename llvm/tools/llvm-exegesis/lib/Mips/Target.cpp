@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "../Error.h"
 #include "../Target.h"
-#include "../Latency.h"
 #include "MCTargetDesc/MipsBaseInfo.h"
 #include "Mips.h"
 #include "MipsRegisterInfo.h"

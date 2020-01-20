@@ -201,7 +201,7 @@ CallInst *IRBuilderBase::CreateMemCpy(Value *Dst, MaybeAlign DstAlign,
 }
 
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
-    Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign, Value *Size,
+    Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
     uint32_t ElementSize, MDNode *TBAATag, MDNode *TBAAStructTag,
     MDNode *ScopeTag, MDNode *NoAliasTag) {
   assert(DstAlign >= ElementSize &&

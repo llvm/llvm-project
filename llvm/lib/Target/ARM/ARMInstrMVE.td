@@ -2312,16 +2312,16 @@ multiclass MVE_VMINMAXA_m<string iname, MVEVectorVTInfo VTI,
 multiclass MVE_VMINA<MVEVectorVTInfo VTI>
   : MVE_VMINMAXA_m<"vmina", VTI, umin, int_arm_mve_vmina_predicated, 0b1>;
 
-defm MVE_VMAXAs8  : MVE_VMINA<MVE_v16s8>;
-defm MVE_VMAXAs16 : MVE_VMINA<MVE_v8s16>;
-defm MVE_VMAXAs32 : MVE_VMINA<MVE_v4s32>;
+defm MVE_VMINAs8  : MVE_VMINA<MVE_v16s8>;
+defm MVE_VMINAs16 : MVE_VMINA<MVE_v8s16>;
+defm MVE_VMINAs32 : MVE_VMINA<MVE_v4s32>;
 
 multiclass MVE_VMAXA<MVEVectorVTInfo VTI>
   : MVE_VMINMAXA_m<"vmaxa", VTI, umax, int_arm_mve_vmaxa_predicated, 0b0>;
 
-defm MVE_VMINAs8  : MVE_VMAXA<MVE_v16s8>;
-defm MVE_VMINAs16 : MVE_VMAXA<MVE_v8s16>;
-defm MVE_VMINAs32 : MVE_VMAXA<MVE_v4s32>;
+defm MVE_VMAXAs8  : MVE_VMAXA<MVE_v16s8>;
+defm MVE_VMAXAs16 : MVE_VMAXA<MVE_v8s16>;
+defm MVE_VMAXAs32 : MVE_VMAXA<MVE_v4s32>;
 
 // end of MVE Integer instructions
 
@@ -3655,7 +3655,8 @@ multiclass MVE_VMAXMINNMA_m<string iname, MVEVectorVTInfo VTI,
 
   let Predicates = [HasMVEInt] in {
     // Unpredicated v(max|min)nma
-    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qd), (fabs (VTI.Vec MQPR:$Qm)))),
+    def : Pat<(VTI.Vec (unpred_op (fabs (VTI.Vec MQPR:$Qd)),
+                                  (fabs (VTI.Vec MQPR:$Qm)))),
               (VTI.Vec (Inst (VTI.Vec MQPR:$Qd), (VTI.Vec MQPR:$Qm)))>;
 
     // Predicated v(max|min)nma
