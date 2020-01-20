@@ -111,6 +111,7 @@ CODEGENOPT(XRayAlwaysEmitTypedEvents , 1, 0)
 VALUE_CODEGENOPT(XRayInstructionThreshold , 32, 200)
 
 VALUE_CODEGENOPT(PatchableFunctionEntryCount , 32, 0) ///< Number of NOPs at function entry
+VALUE_CODEGENOPT(PatchableFunctionEntryOffset , 32, 0)
 
 CODEGENOPT(InstrumentForProfiling , 1, 0) ///< Set when -pg is enabled.
 CODEGENOPT(CallFEntry , 1, 0) ///< Set when -mfentry is enabled.

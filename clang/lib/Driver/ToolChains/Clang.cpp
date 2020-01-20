@@ -5077,20 +5077,23 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Arg *A = Args.getLastArg(options::OPT_fpatchable_function_entry_EQ)) {
     StringRef S0 = A->getValue(), S = S0;
-    unsigned Size, Start = 0;
+    unsigned Size, Offset = 0;
     if (!Triple.isAArch64() && Triple.getArch() != llvm::Triple::x86 &&
         Triple.getArch() != llvm::Triple::x86_64)
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     else if (S.consumeInteger(10, Size) ||
              (!S.empty() && (!S.consume_front(",") ||
-                             S.consumeInteger(10, Start) || !S.empty())))
+                             S.consumeInteger(10, Offset) || !S.empty())))
       D.Diag(diag::err_drv_invalid_argument_to_option)
           << S0 << A->getOption().getName();
-    else if (Start)
+    else if (Size < Offset)
       D.Diag(diag::err_drv_unsupported_fpatchable_function_entry_argument);
-    else
+    else {
       CmdArgs.push_back(Args.MakeArgString(A->getSpelling() + Twine(Size)));
+      CmdArgs.push_back(Args.MakeArgString(
+          "-fpatchable-function-entry-offset=" + Twine(Offset)));
+    }
   }
 
   if (TC.SupportsProfiling()) {

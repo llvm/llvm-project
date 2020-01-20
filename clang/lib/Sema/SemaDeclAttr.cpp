@@ -4924,9 +4924,9 @@ static void handlePatchableFunctionEntryAttr(Sema &S, Decl *D,
     Expr *Arg = AL.getArgAsExpr(1);
     if (!checkUInt32Argument(S, AL, Arg, Offset, 1, true))
       return;
-    if (Offset) {
+    if (Count < Offset) {
       S.Diag(getAttrLoc(AL), diag::err_attribute_argument_out_of_range)
-          << &AL << 0 << 0 << Arg->getBeginLoc();
+          << &AL << 0 << Count << Arg->getBeginLoc();
       return;
     }
   }

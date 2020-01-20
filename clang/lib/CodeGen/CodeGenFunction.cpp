@@ -820,13 +820,18 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
             llvm::itostr(CGM.getCodeGenOpts().XRayInstructionThreshold));
     }
 
+    unsigned Count, Offset;
     if (const auto *Attr = D->getAttr<PatchableFunctionEntryAttr>()) {
-      // Attr->getStart is currently ignored.
-      Fn->addFnAttr("patchable-function-entry",
-                    std::to_string(Attr->getCount()));
-    } else if (unsigned Count = CGM.getCodeGenOpts().PatchableFunctionEntryCount) {
-      Fn->addFnAttr("patchable-function-entry",
-                    std::to_string(Count));
+      Count = Attr->getCount();
+      Offset = Attr->getOffset();
+    } else {
+      Count = CGM.getCodeGenOpts().PatchableFunctionEntryCount;
+      Offset = CGM.getCodeGenOpts().PatchableFunctionEntryOffset;
+    }
+    if (Count && Offset <= Count) {
+      Fn->addFnAttr("patchable-function-entry", std::to_string(Count - Offset));
+      if (Offset)
+        Fn->addFnAttr("patchable-function-prefix", std::to_string(Offset));
     }
   }
 

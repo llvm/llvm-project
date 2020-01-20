@@ -372,6 +372,9 @@ def fsanitize_coverage_no_prune
 def fsanitize_coverage_stack_depth
     : Flag<["-"], "fsanitize-coverage-stack-depth">,
       HelpText<"Enable max stack depth tracing">;
+def fpatchable_function_entry_offset_EQ
+    : Joined<["-"], "fpatchable-function-entry-offset=">, MetaVarName<"<M>">,
+      HelpText<"Generate M NOPs before function entry">;
 def fprofile_instrument_EQ : Joined<["-"], "fprofile-instrument=">,
     HelpText<"Enable PGO instrumentation. The accepted value is clang, llvm, "
              "or none">, Values<"none,clang,llvm">;
