@@ -7783,6 +7783,19 @@ bool ClangASTContext::CompleteTagDeclarationDefinition(
     clang::TagDecl *tag_decl = tag_type->getDecl();
 
     if (auto *cxx_record_decl = llvm::dyn_cast<CXXRecordDecl>(tag_decl)) {
+      // If we have a move constructor declared but no copy constructor we
+      // need to explicitly mark it as deleted. Usually Sema would do this for
+      // us in Sema::DeclareImplicitCopyConstructor but we don't have a Sema
+      // when building an AST from debug information.
+      // See also:
+      // C++11 [class.copy]p7, p18:
+      //  If the class definition declares a move constructor or move assignment
+      //  operator, an implicitly declared copy constructor or copy assignment
+      //  operator is defined as deleted.
+      if (cxx_record_decl->hasUserDeclaredMoveConstructor() &&
+          cxx_record_decl->needsImplicitCopyConstructor())
+        cxx_record_decl->setImplicitCopyConstructorIsDeleted();
+
       if (!cxx_record_decl->isCompleteDefinition())
         cxx_record_decl->completeDefinition();
       cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);

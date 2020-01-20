@@ -523,3 +523,89 @@ TEST_F(TestClangASTContext, TestFunctionTemplateInRecordConstruction) {
   EXPECT_EQ("foo", func_template->getName());
   EXPECT_EQ(clang::AccessSpecifier::AS_public, func_template->getAccess());
 }
+
+TEST_F(TestClangASTContext, TestDeletingImplicitCopyCstrDueToMoveCStr) {
+  // We need to simulate this behavior in our AST that we construct as we don't
+  // have a Sema instance that can do this for us:
+  // C++11 [class.copy]p7, p18:
+  //  If the class definition declares a move constructor or move assignment
+  //  operator, an implicitly declared copy constructor or copy assignment
+  //  operator is defined as deleted.
+
+  // Create a record and start defining it.
+  llvm::StringRef class_name = "S";
+  CompilerType t = clang_utils::createRecord(*m_ast, class_name);
+  m_ast->StartTagDeclarationDefinition(t);
+
+  // Create a move constructor that will delete the implicit copy constructor.
+  CompilerType return_type = m_ast->GetBasicType(lldb::eBasicTypeVoid);
+  CompilerType param_type = t.GetRValueReferenceType();
+  CompilerType function_type =
+      m_ast->CreateFunctionType(return_type, &param_type, /*num_params*/ 1,
+                                /*variadic=*/false, /*quals*/ 0U);
+  bool is_virtual = false;
+  bool is_static = false;
+  bool is_inline = false;
+  bool is_explicit = true;
+  bool is_attr_used = false;
+  bool is_artificial = false;
+  m_ast->AddMethodToCXXRecordType(
+      t.GetOpaqueQualType(), class_name, nullptr, function_type,
+      lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
+      is_explicit, is_attr_used, is_artificial);
+
+  // Complete the definition and check the created record.
+  m_ast->CompleteTagDeclarationDefinition(t);
+  auto *record = llvm::cast<CXXRecordDecl>(ClangUtil::GetAsTagDecl(t));
+  // We can't call defaultedCopyConstructorIsDeleted() as this requires that
+  // the Decl passes through Sema which will actually compute this field.
+  // Instead we check that there is no copy constructor declared by the user
+  // which only leaves a non-deleted defaulted copy constructor as an option
+  // that our record will have no simple copy constructor.
+  EXPECT_FALSE(record->hasUserDeclaredCopyConstructor());
+  EXPECT_FALSE(record->hasSimpleCopyConstructor());
+}
+
+TEST_F(TestClangASTContext, TestNotDeletingUserCopyCstrDueToMoveCStr) {
+  // Tests that we don't delete the a user-defined copy constructor when
+  // a move constructor is provided.
+  // See also the TestDeletingImplicitCopyCstrDueToMoveCStr test.
+  llvm::StringRef class_name = "S";
+  CompilerType t = clang_utils::createRecord(*m_ast, class_name);
+  m_ast->StartTagDeclarationDefinition(t);
+
+  CompilerType return_type = m_ast->GetBasicType(lldb::eBasicTypeVoid);
+  bool is_virtual = false;
+  bool is_static = false;
+  bool is_inline = false;
+  bool is_explicit = true;
+  bool is_attr_used = false;
+  bool is_artificial = false;
+  // Create a move constructor.
+  {
+    CompilerType param_type = t.GetRValueReferenceType();
+    CompilerType function_type =
+        m_ast->CreateFunctionType(return_type, &param_type, /*num_params*/ 1,
+                                  /*variadic=*/false, /*quals*/ 0U);
+    m_ast->AddMethodToCXXRecordType(
+        t.GetOpaqueQualType(), class_name, nullptr, function_type,
+        lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
+        is_explicit, is_attr_used, is_artificial);
+  }
+  // Create a copy constructor.
+  {
+    CompilerType param_type = t.GetLValueReferenceType().AddConstModifier();
+    CompilerType function_type =
+        m_ast->CreateFunctionType(return_type, &param_type, /*num_params*/ 1,
+                                  /*variadic=*/false, /*quals*/ 0U);
+    m_ast->AddMethodToCXXRecordType(
+        t.GetOpaqueQualType(), class_name, nullptr, function_type,
+        lldb::AccessType::eAccessPublic, is_virtual, is_static, is_inline,
+        is_explicit, is_attr_used, is_artificial);
+  }
+
+  // Complete the definition and check the created record.
+  m_ast->CompleteTagDeclarationDefinition(t);
+  auto *record = llvm::cast<CXXRecordDecl>(ClangUtil::GetAsTagDecl(t));
+  EXPECT_TRUE(record->hasUserDeclaredCopyConstructor());
+}
