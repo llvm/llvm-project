@@ -1197,6 +1197,36 @@ bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPUInstructionSelector::selectDSAppendConsume(MachineInstr &MI,
+                                                      bool IsAppend) const {
+  Register PtrBase = MI.getOperand(2).getReg();
+  LLT PtrTy = MRI->getType(PtrBase);
+  bool IsGDS = PtrTy.getAddressSpace() == AMDGPUAS::REGION_ADDRESS;
+
+  unsigned Offset;
+  std::tie(PtrBase, Offset) = selectDS1Addr1OffsetImpl(MI.getOperand(2));
+
+  // TODO: Should this try to look through readfirstlane like GWS?
+  if (!isDSOffsetLegal(PtrBase, Offset, 16)) {
+    PtrBase = MI.getOperand(2).getReg();
+    Offset = 0;
+  }
+
+  MachineBasicBlock *MBB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  const unsigned Opc = IsAppend ? AMDGPU::DS_APPEND : AMDGPU::DS_CONSUME;
+
+  BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
+    .addReg(PtrBase);
+  BuildMI(*MBB, &MI, DL, TII.get(Opc), MI.getOperand(0).getReg())
+    .addImm(Offset)
+    .addImm(IsGDS ? -1 : 0)
+    .cloneMemRefs(MI);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
@@ -1230,6 +1260,10 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_ds_gws_sema_p:
   case Intrinsic::amdgcn_ds_gws_sema_release_all:
     return selectDSGWSIntrinsic(I, IntrinsicID);
+  case Intrinsic::amdgcn_ds_append:
+    return selectDSAppendConsume(I, true);
+  case Intrinsic::amdgcn_ds_consume:
+    return selectDSAppendConsume(I, false);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -2248,8 +2282,7 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffen(MachineOperand &Root) const {
            }}};
 }
 
-bool AMDGPUInstructionSelector::isDSOffsetLegal(const MachineRegisterInfo &MRI,
-                                                const MachineOperand &Base,
+bool AMDGPUInstructionSelector::isDSOffsetLegal(Register Base,
                                                 int64_t Offset,
                                                 unsigned OffsetBits) const {
   if ((OffsetBits == 16 && !isUInt<16>(Offset)) ||
@@ -2261,7 +2294,7 @@ bool AMDGPUInstructionSelector::isDSOffsetLegal(const MachineRegisterInfo &MRI,
 
   // On Southern Islands instruction with a negative base value and an offset
   // don't seem to work.
-  return KnownBits->signBitIsZero(Base.getReg());
+  return KnownBits->signBitIsZero(Base);
 }
 
 InstructionSelector::ComplexRendererFns
@@ -2292,15 +2325,11 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
   }};
 }
 
-InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectDS1Addr1Offset(MachineOperand &Root) const {
+std::pair<Register, unsigned>
+AMDGPUInstructionSelector::selectDS1Addr1OffsetImpl(MachineOperand &Root) const {
   const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
-  if (!RootDef) {
-    return {{
-        [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }
-      }};
-  }
+  if (!RootDef)
+    return std::make_pair(Root.getReg(), 0);
 
   int64_t ConstAddr = 0;
   if (isBaseWithConstantOffset(Root, *MRI)) {
@@ -2311,26 +2340,32 @@ AMDGPUInstructionSelector::selectDS1Addr1Offset(MachineOperand &Root) const {
     if (LHSDef && RHSDef) {
       int64_t PossibleOffset =
         RHSDef->getOperand(1).getCImm()->getSExtValue();
-      if (isDSOffsetLegal(*MRI, LHS, PossibleOffset, 16)) {
+      if (isDSOffsetLegal(LHS.getReg(), PossibleOffset, 16)) {
         // (add n0, c0)
-        return {{
-            [=](MachineInstrBuilder &MIB) { MIB.add(LHS); },
-            [=](MachineInstrBuilder &MIB) { MIB.addImm(PossibleOffset); }
-          }};
+        return std::make_pair(LHS.getReg(), PossibleOffset);
       }
     }
   } else if (RootDef->getOpcode() == AMDGPU::G_SUB) {
-
+    // TODO
 
 
   } else if (mi_match(Root.getReg(), *MRI, m_ICst(ConstAddr))) {
-
+    // TODO
 
   }
 
+  return std::make_pair(Root.getReg(), 0);
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectDS1Addr1Offset(MachineOperand &Root) const {
+
+  Register Reg;
+  unsigned Offset;
+  std::tie(Reg, Offset) = selectDS1Addr1OffsetImpl(Root);
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Reg); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); }
     }};
 }
 
