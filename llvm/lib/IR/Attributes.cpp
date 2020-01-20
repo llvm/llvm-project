@@ -491,6 +491,10 @@ bool Attribute::operator<(Attribute A) const {
   return *pImpl < *A.pImpl;
 }
 
+void Attribute::Profile(FoldingSetNodeID &ID) const {
+  ID.AddPointer(pImpl);
+}
+
 //===----------------------------------------------------------------------===//
 // AttributeImpl Definition
 //===----------------------------------------------------------------------===//
