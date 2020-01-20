@@ -1102,6 +1102,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.PatchableFunctionEntryCount =
       getLastArgIntValue(Args, OPT_fpatchable_function_entry_EQ, 0, Diags);
+  Opts.PatchableFunctionEntryOffset = getLastArgIntValue(
+      Args, OPT_fpatchable_function_entry_offset_EQ, 0, Diags);
   Opts.InstrumentForProfiling = Args.hasArg(OPT_pg);
   Opts.CallFEntry = Args.hasArg(OPT_mfentry);
   Opts.MNopMCount = Args.hasArg(OPT_mnop_mcount);
