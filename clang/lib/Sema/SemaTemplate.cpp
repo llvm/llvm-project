@@ -6670,7 +6670,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       // -- a predefined __func__ variable
       APValue::LValueBase Base = Value.getLValueBase();
       auto *VD = const_cast<ValueDecl *>(Base.dyn_cast<const ValueDecl *>());
-      if (Base && !VD) {
+      if (Base && (!VD || isa<LifetimeExtendedTemporaryDecl>(VD))) {
         auto *E = Base.dyn_cast<const Expr *>();
         if (E && isa<CXXUuidofExpr>(E)) {
           Converted = TemplateArgument(ArgResult.get()->IgnoreImpCasts());
