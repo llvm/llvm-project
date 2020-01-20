@@ -72,6 +72,27 @@ private:
 
 } // end anonymous namespace
 
+/// A RAII helper which defines a region of instructions which can't have
+/// padding added between them for correctness.
+struct NoAutoPaddingScope {
+  MCStreamer &OS;
+  const bool OldAllowAutoPadding;
+  NoAutoPaddingScope(MCStreamer &OS)
+      : OS(OS), OldAllowAutoPadding(OS.getAllowAutoPadding()) {
+    changeAndComment(false);
+  }
+  ~NoAutoPaddingScope() { changeAndComment(OldAllowAutoPadding); }
+  void changeAndComment(bool b) {
+    if (b == OS.getAllowAutoPadding())
+      return;
+    OS.setAllowAutoPadding(b);
+    if (b)
+      OS.emitRawComment("autopadding");
+    else
+      OS.emitRawComment("noautopadding");
+  }
+};
+
 // Emit a minimal sequence of nops spanning NumBytes bytes.
 static void EmitNops(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
                      const MCSubtargetInfo &STI);
@@ -929,6 +950,7 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
 
 void X86AsmPrinter::LowerTlsAddr(X86MCInstLower &MCInstLowering,
                                  const MachineInstr &MI) {
+  NoAutoPaddingScope NoPadScope(*OutStreamer);
   bool Is64Bits = MI.getOpcode() == X86::TLS_addr64 ||
                   MI.getOpcode() == X86::TLS_base_addr64;
   MCContext &Ctx = OutStreamer->getContext();
@@ -1160,29 +1182,6 @@ static void EmitNops(MCStreamer &OS, unsigned NumBytes, bool Is64Bit,
     assert(NopsToEmit >= NumBytes && "Emitted more than I asked for!");
   }
 }
-
-/// A RAII helper which defines a region of instructions which can't have
-/// padding added between them for correctness.
-struct NoAutoPaddingScope {
-  MCStreamer &OS;
-  const bool OldAllowAutoPadding;
-  NoAutoPaddingScope(MCStreamer &OS)
-    : OS(OS), OldAllowAutoPadding(OS.getAllowAutoPadding()) {
-    changeAndComment(false);
-  }
-  ~NoAutoPaddingScope() {
-    changeAndComment(OldAllowAutoPadding);
-  }
-  void changeAndComment(bool b) {
-    if (b == OS.getAllowAutoPadding())
-      return;
-    OS.setAllowAutoPadding(b);
-    if (b)
-      OS.emitRawComment("autopadding");
-    else
-      OS.emitRawComment("noautopadding");
-  }
-};
 
 void X86AsmPrinter::LowerSTATEPOINT(const MachineInstr &MI,
                                     X86MCInstLower &MCIL) {
