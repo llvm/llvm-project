@@ -385,6 +385,9 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     else
       Builder.defineMacro("__cplusplus", "199711L");
 
+    if (LangOpts.ConceptsTS)
+      Builder.defineMacro("__cpp_concepts", "201707L");
+
     // C++1z [cpp.predefined]p1:
     //   An integer literal of type std::size_t whose value is the alignment
     //   guaranteed by a call to operator new(std::size_t)
