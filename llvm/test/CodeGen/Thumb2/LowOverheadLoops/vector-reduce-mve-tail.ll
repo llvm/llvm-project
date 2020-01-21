@@ -3,6 +3,12 @@
 
 ; CHECK-LABEL: vec_mul_reduce_add
 
+; CHECK: vector.ph:
+; CHECK:  call void @llvm.set.loop.iterations.i32
+; CHECK:  [[UF:%[^ ]+]] = shl i32 %{{.*}}, 2
+; CHECK:  [[REMAT_ITER:%[^ ]+]] = sub i32 %N, [[UF]]
+; CHECK:  br label %vector.body
+
 ; CHECK: vector.body:
 ; CHECK-NOT: phi i32 [ 0, %vector.ph ]
 ; CHECK: [[ELTS:%[^ ]+]] = phi i32 [ %N, %vector.ph ], [ [[SUB:%[^ ]+]], %vector.body ]
@@ -12,7 +18,7 @@
 ; CHECK: call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* {{.*}}, i32 4, <4 x i1> [[VCTP]],
 
 ; CHECK: middle.block:
-; CHECK: [[VCTP_CLONE:%[^ ]+]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[ELTS]])
+; CHECK: [[VCTP_CLONE:%[^ ]+]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[REMAT_ITER]])
 ; CHECK: [[VPSEL:%[^ ]+]] = select <4 x i1> [[VCTP_CLONE]],
 ; CHECK: call i32 @llvm.experimental.vector.reduce.add.v4i32(<4 x i32> [[VPSEL]])
 
