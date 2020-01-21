@@ -1,4 +1,4 @@
-//===-- UBSanRuntime.cpp ----------------------------------------*- C++ -*-===//
+//===-- InstrumentationRuntimeUBSan.cpp -------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "UBSanRuntime.h"
+#include "InstrumentationRuntimeUBSan.h"
 
 #include "Plugins/Process/Utility/HistoryThread.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
@@ -36,35 +36,29 @@
 using namespace lldb;
 using namespace lldb_private;
 
-UndefinedBehaviorSanitizerRuntime::~UndefinedBehaviorSanitizerRuntime() {
-  Deactivate();
-}
+InstrumentationRuntimeUBSan::~InstrumentationRuntimeUBSan() { Deactivate(); }
 
 lldb::InstrumentationRuntimeSP
-UndefinedBehaviorSanitizerRuntime::CreateInstance(
-    const lldb::ProcessSP &process_sp) {
-  return InstrumentationRuntimeSP(
-      new UndefinedBehaviorSanitizerRuntime(process_sp));
+InstrumentationRuntimeUBSan::CreateInstance(const lldb::ProcessSP &process_sp) {
+  return InstrumentationRuntimeSP(new InstrumentationRuntimeUBSan(process_sp));
 }
 
-void UndefinedBehaviorSanitizerRuntime::Initialize() {
+void InstrumentationRuntimeUBSan::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(),
       "UndefinedBehaviorSanitizer instrumentation runtime plugin.",
       CreateInstance, GetTypeStatic);
 }
 
-void UndefinedBehaviorSanitizerRuntime::Terminate() {
+void InstrumentationRuntimeUBSan::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString
-UndefinedBehaviorSanitizerRuntime::GetPluginNameStatic() {
+lldb_private::ConstString InstrumentationRuntimeUBSan::GetPluginNameStatic() {
   return ConstString("UndefinedBehaviorSanitizer");
 }
 
-lldb::InstrumentationRuntimeType
-UndefinedBehaviorSanitizerRuntime::GetTypeStatic() {
+lldb::InstrumentationRuntimeType InstrumentationRuntimeUBSan::GetTypeStatic() {
   return eInstrumentationRuntimeTypeUndefinedBehaviorSanitizer;
 }
 
@@ -110,7 +104,7 @@ static std::string RetrieveString(ValueObjectSP return_value_sp,
   return str;
 }
 
-StructuredData::ObjectSP UndefinedBehaviorSanitizerRuntime::RetrieveReportData(
+StructuredData::ObjectSP InstrumentationRuntimeUBSan::RetrieveReportData(
     ExecutionContextRef exe_ctx_ref) {
   ProcessSP process_sp = GetProcessSP();
   if (!process_sp)
@@ -187,8 +181,8 @@ StructuredData::ObjectSP UndefinedBehaviorSanitizerRuntime::RetrieveReportData(
 
 static std::string GetStopReasonDescription(StructuredData::ObjectSP report) {
   llvm::StringRef stop_reason_description_ref;
-  report->GetAsDictionary()->GetValueForKeyAsString("description",
-                                                    stop_reason_description_ref);
+  report->GetAsDictionary()->GetValueForKeyAsString(
+      "description", stop_reason_description_ref);
   std::string stop_reason_description = stop_reason_description_ref;
 
   if (!stop_reason_description.size()) {
@@ -202,15 +196,15 @@ static std::string GetStopReasonDescription(StructuredData::ObjectSP report) {
   return stop_reason_description;
 }
 
-bool UndefinedBehaviorSanitizerRuntime::NotifyBreakpointHit(
+bool InstrumentationRuntimeUBSan::NotifyBreakpointHit(
     void *baton, StoppointCallbackContext *context, user_id_t break_id,
     user_id_t break_loc_id) {
   assert(baton && "null baton");
   if (!baton)
     return false; ///< false => resume execution.
 
-  UndefinedBehaviorSanitizerRuntime *const instance =
-      static_cast<UndefinedBehaviorSanitizerRuntime *>(baton);
+  InstrumentationRuntimeUBSan *const instance =
+      static_cast<InstrumentationRuntimeUBSan *>(baton);
 
   ProcessSP process_sp = instance->GetProcessSP();
   ThreadSP thread_sp = context->exe_ctx_ref.GetThreadSP();
@@ -235,12 +229,12 @@ bool UndefinedBehaviorSanitizerRuntime::NotifyBreakpointHit(
 }
 
 const RegularExpression &
-UndefinedBehaviorSanitizerRuntime::GetPatternForRuntimeLibrary() {
+InstrumentationRuntimeUBSan::GetPatternForRuntimeLibrary() {
   static RegularExpression regex(llvm::StringRef("libclang_rt\\.(a|t|ub)san_"));
   return regex;
 }
 
-bool UndefinedBehaviorSanitizerRuntime::CheckIfRuntimeIsValid(
+bool InstrumentationRuntimeUBSan::CheckIfRuntimeIsValid(
     const lldb::ModuleSP module_sp) {
   static ConstString ubsan_test_sym("__ubsan_on_report");
   const Symbol *symbol = module_sp->FindFirstSymbolWithNameAndType(
@@ -249,7 +243,7 @@ bool UndefinedBehaviorSanitizerRuntime::CheckIfRuntimeIsValid(
 }
 
 // FIXME: Factor out all the logic we have in common with the {a,t}san plugins.
-void UndefinedBehaviorSanitizerRuntime::Activate() {
+void InstrumentationRuntimeUBSan::Activate() {
   if (IsActive())
     return;
 
@@ -280,15 +274,15 @@ void UndefinedBehaviorSanitizerRuntime::Activate() {
           .CreateBreakpoint(symbol_address, /*internal=*/true,
                             /*hardware=*/false)
           .get();
-  breakpoint->SetCallback(
-      UndefinedBehaviorSanitizerRuntime::NotifyBreakpointHit, this, true);
+  breakpoint->SetCallback(InstrumentationRuntimeUBSan::NotifyBreakpointHit,
+                          this, true);
   breakpoint->SetBreakpointKind("undefined-behavior-sanitizer-report");
   SetBreakpointID(breakpoint->GetID());
 
   SetActive(true);
 }
 
-void UndefinedBehaviorSanitizerRuntime::Deactivate() {
+void InstrumentationRuntimeUBSan::Deactivate() {
   SetActive(false);
 
   auto BID = GetBreakpointID();
@@ -302,7 +296,7 @@ void UndefinedBehaviorSanitizerRuntime::Deactivate() {
 }
 
 lldb::ThreadCollectionSP
-UndefinedBehaviorSanitizerRuntime::GetBacktracesFromExtendedStopInfo(
+InstrumentationRuntimeUBSan::GetBacktracesFromExtendedStopInfo(
     StructuredData::ObjectSP info) {
   ThreadCollectionSP threads;
   threads = std::make_shared<ThreadCollection>();

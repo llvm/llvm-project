@@ -1,4 +1,4 @@
-//===-- UBSanRuntime.h ------------------------------------------*- C++ -*-===//
+//===-- InstrumentationRuntimeUBSan.h ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,10 +16,10 @@
 
 namespace lldb_private {
 
-class UndefinedBehaviorSanitizerRuntime
+class InstrumentationRuntimeUBSan
     : public lldb_private::InstrumentationRuntime {
 public:
-  ~UndefinedBehaviorSanitizerRuntime() override;
+  ~InstrumentationRuntimeUBSan() override;
 
   static lldb::InstrumentationRuntimeSP
   CreateInstance(const lldb::ProcessSP &process_sp);
@@ -44,7 +44,7 @@ public:
   GetBacktracesFromExtendedStopInfo(StructuredData::ObjectSP info) override;
 
 private:
-  UndefinedBehaviorSanitizerRuntime(const lldb::ProcessSP &process_sp)
+  InstrumentationRuntimeUBSan(const lldb::ProcessSP &process_sp)
       : lldb_private::InstrumentationRuntime(process_sp) {}
 
   const RegularExpression &GetPatternForRuntimeLibrary() override;
