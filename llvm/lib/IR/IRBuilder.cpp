@@ -276,7 +276,7 @@ CallInst *IRBuilderBase::CreateMemMove(Value *Dst, MaybeAlign DstAlign,
 }
 
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
-    Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign, Value *Size,
+    Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
     uint32_t ElementSize, MDNode *TBAATag, MDNode *TBAAStructTag,
     MDNode *ScopeTag, MDNode *NoAliasTag) {
   assert(DstAlign >= ElementSize &&
@@ -295,10 +295,8 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
   CallInst *CI = createCallHelper(TheFn, Ops, this);
 
   // Set the alignment of the pointer args.
-  CI->addParamAttr(
-      0, Attribute::getWithAlignment(CI->getContext(), Align(DstAlign)));
-  CI->addParamAttr(
-      1, Attribute::getWithAlignment(CI->getContext(), Align(SrcAlign)));
+  CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), DstAlign));
+  CI->addParamAttr(1, Attribute::getWithAlignment(CI->getContext(), SrcAlign));
 
   // Set the TBAA info if present.
   if (TBAATag)
