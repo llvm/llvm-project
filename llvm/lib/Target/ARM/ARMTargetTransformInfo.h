@@ -158,7 +158,9 @@ public:
 
   bool isLegalMaskedGather(Type *Ty, MaybeAlign Alignment);
 
-  bool isLegalMaskedScatter(Type *Ty, MaybeAlign Alignment) { return false; }
+  bool isLegalMaskedScatter(Type *Ty, MaybeAlign Alignment) {
+    return isLegalMaskedGather(Ty, Alignment);
+  }
 
   int getMemcpyCost(const Instruction *I);
 
