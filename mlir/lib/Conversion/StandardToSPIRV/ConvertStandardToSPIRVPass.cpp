@@ -51,6 +51,9 @@ FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
   {
     for (auto argType : enumerate(funcOp.getType().getInputs())) {
       auto convertedType = typeConverter.convertType(argType.value());
+      if (!convertedType) {
+        return matchFailure();
+      }
       signatureConverter.addInputs(argType.index(), convertedType);
     }
   }
