@@ -55,6 +55,15 @@ multiclass CALL<ValueType vt, WebAssemblyRegClass rt, string prefix,
 }
 
 let Uses = [SP32, SP64], isCall = 1 in {
+
+// TODO: Split CALL into separate nodes for operands and results.
+// TODO: Add an indirect version of the variadic call, delete CALL_*
+let variadicOpsAreDefs = 1 in
+defm CALL :
+  I<(outs), (ins function32_op:$callee, variable_ops),
+    (outs), (ins function32_op:$callee), [],
+    "call    \t$callee", "call\t$callee", 0x10>;
+
 defm "" : CALL<i32, I32, "i32.">;
 defm "" : CALL<i64, I64, "i64.">;
 defm "" : CALL<f32, F32, "f32.">;
@@ -68,6 +77,7 @@ defm "" : CALL<v4f32, V128, "v128.", [HasSIMD128]>;
 defm "" : CALL<v2f64, V128, "v128.", [HasSIMD128]>;
 
 let IsCanonical = 1 in {
+
 defm CALL_VOID :
   I<(outs), (ins function32_op:$callee, variable_ops),
     (outs), (ins function32_op:$callee),

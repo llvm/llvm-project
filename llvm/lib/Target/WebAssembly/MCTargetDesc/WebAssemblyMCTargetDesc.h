@@ -509,8 +509,8 @@ inline bool isCallIndirect(unsigned Opc) {
 
 /// Returns the operand number of a callee, assuming the argument is a call
 /// instruction.
-inline unsigned getCalleeOpNo(unsigned Opc) {
-  switch (Opc) {
+inline const MachineOperand &getCalleeOp(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
   case WebAssembly::CALL_VOID:
   case WebAssembly::CALL_VOID_S:
   case WebAssembly::CALL_INDIRECT_VOID:
@@ -519,7 +519,7 @@ inline unsigned getCalleeOpNo(unsigned Opc) {
   case WebAssembly::RET_CALL_S:
   case WebAssembly::RET_CALL_INDIRECT:
   case WebAssembly::RET_CALL_INDIRECT_S:
-    return 0;
+    return MI.getOperand(0);
   case WebAssembly::CALL_i32:
   case WebAssembly::CALL_i32_S:
   case WebAssembly::CALL_i64:
@@ -564,7 +564,10 @@ inline unsigned getCalleeOpNo(unsigned Opc) {
   case WebAssembly::CALL_INDIRECT_v2f64_S:
   case WebAssembly::CALL_INDIRECT_exnref:
   case WebAssembly::CALL_INDIRECT_exnref_S:
-    return 1;
+    return MI.getOperand(1);
+  case WebAssembly::CALL:
+  case WebAssembly::CALL_S:
+    return MI.getOperand(MI.getNumDefs());
   default:
     llvm_unreachable("Not a call instruction");
   }
