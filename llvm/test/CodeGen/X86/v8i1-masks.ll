@@ -212,18 +212,10 @@ define <8 x i32> @three_ands(<8 x float> %x) {
 ; X32-NEXT:    vmovaps {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X32-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X32-NEXT:    vcmpltps LCPI4_1, %ymm0, %ymm2
-; X32-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X32-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm0
-; X32-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X32-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X32-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
+; X32-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; X32-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: three_ands:
@@ -231,18 +223,10 @@ define <8 x i32> @three_ands(<8 x float> %x) {
 ; X64-NEXT:    vmovaps {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X64-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X64-NEXT:    vcmpltps {{.*}}(%rip), %ymm0, %ymm2
-; X64-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X64-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
+; X64-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; X64-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X32-AVX2-LABEL: three_ands:
@@ -251,15 +235,10 @@ define <8 x i32> @three_ands(<8 x float> %x) {
 ; X32-AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X32-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
-; X32-AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X32-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X32-AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X32-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X32-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
+; X32-AVX2-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; X32-AVX2-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: three_ands:
@@ -268,15 +247,10 @@ define <8 x i32> @three_ands(<8 x float> %x) {
 ; X64-AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X64-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
-; X64-AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X64-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; X64-AVX2-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    retq
 entry:
   %cmp = fcmp oge <8 x float> %x, <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
@@ -294,22 +268,12 @@ define <8 x i32> @four_ands(<8 x float> %x) {
 ; X32-NEXT:    vmovaps {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X32-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X32-NEXT:    vcmpltps LCPI5_1, %ymm0, %ymm2
-; X32-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X32-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X32-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X32-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X32-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X32-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X32-NEXT:    vandps %ymm3, %ymm2, %ymm2
 ; X32-NEXT:    vcmpneqps LCPI5_2, %ymm0, %ymm0
-; X32-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X32-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X32-NEXT:    vpand %xmm0, %xmm2, %xmm0
-; X32-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; X32-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: four_ands:
@@ -317,22 +281,12 @@ define <8 x i32> @four_ands(<8 x float> %x) {
 ; X64-NEXT:    vmovaps {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X64-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X64-NEXT:    vcmpltps {{.*}}(%rip), %ymm0, %ymm2
-; X64-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X64-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X64-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X64-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X64-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X64-NEXT:    vandps %ymm3, %ymm2, %ymm2
 ; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X64-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X64-NEXT:    vpand %xmm0, %xmm2, %xmm0
-; X64-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; X64-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X32-AVX2-LABEL: four_ands:
@@ -341,20 +295,13 @@ define <8 x i32> @four_ands(<8 x float> %x) {
 ; X32-AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X32-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
-; X32-AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X32-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X32-AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X32-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X32-AVX2-NEXT:    vandps %ymm3, %ymm2, %ymm2
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
 ; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X32-AVX2-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X32-AVX2-NEXT:    vpand %xmm0, %xmm2, %xmm0
-; X32-AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X32-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X32-AVX2-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; X32-AVX2-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: four_ands:
@@ -363,20 +310,13 @@ define <8 x i32> @four_ands(<8 x float> %x) {
 ; X64-AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X64-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
-; X64-AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X64-AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X64-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X64-AVX2-NEXT:    vandps %ymm3, %ymm2, %ymm2
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
 ; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X64-AVX2-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpand %xmm0, %xmm2, %xmm0
-; X64-AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X64-AVX2-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; X64-AVX2-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    retq
 entry:
   %cmp = fcmp oge <8 x float> %x, <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
@@ -396,26 +336,14 @@ define <8 x i32> @five_ands(<8 x float> %x) {
 ; X32-NEXT:    vmovaps {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X32-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X32-NEXT:    vcmpltps LCPI6_1, %ymm0, %ymm2
-; X32-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X32-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X32-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X32-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X32-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X32-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X32-NEXT:    vandps %ymm3, %ymm2, %ymm2
 ; X32-NEXT:    vcmpneqps LCPI6_2, %ymm0, %ymm3
-; X32-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; X32-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
-; X32-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; X32-NEXT:    vandps %ymm3, %ymm2, %ymm2
 ; X32-NEXT:    vcmpneqps LCPI6_3, %ymm0, %ymm0
-; X32-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X32-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X32-NEXT:    vpand %xmm0, %xmm2, %xmm0
-; X32-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; X32-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: five_ands:
@@ -423,26 +351,14 @@ define <8 x i32> @five_ands(<8 x float> %x) {
 ; X64-NEXT:    vmovaps {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X64-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X64-NEXT:    vcmpltps {{.*}}(%rip), %ymm0, %ymm2
-; X64-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X64-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X64-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X64-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X64-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X64-NEXT:    vandps %ymm3, %ymm2, %ymm2
 ; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm3
-; X64-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; X64-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
-; X64-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; X64-NEXT:    vandps %ymm3, %ymm2, %ymm2
 ; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X64-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X64-NEXT:    vpand %xmm0, %xmm2, %xmm0
-; X64-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; X64-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X32-AVX2-LABEL: five_ands:
@@ -451,25 +367,16 @@ define <8 x i32> @five_ands(<8 x float> %x) {
 ; X32-AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X32-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
-; X32-AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X32-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X32-AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X32-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X32-AVX2-NEXT:    vandps %ymm3, %ymm2, %ymm2
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
 ; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; X32-AVX2-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
-; X32-AVX2-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; X32-AVX2-NEXT:    vandps %ymm3, %ymm2, %ymm2
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
 ; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X32-AVX2-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X32-AVX2-NEXT:    vpand %xmm0, %xmm2, %xmm0
-; X32-AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X32-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X32-AVX2-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; X32-AVX2-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: five_ands:
@@ -478,25 +385,16 @@ define <8 x i32> @five_ands(<8 x float> %x) {
 ; X64-AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X64-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
-; X64-AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X64-AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X64-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X64-AVX2-NEXT:    vandps %ymm3, %ymm2, %ymm2
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
 ; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; X64-AVX2-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
-; X64-AVX2-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; X64-AVX2-NEXT:    vandps %ymm3, %ymm2, %ymm2
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
 ; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X64-AVX2-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpand %xmm0, %xmm2, %xmm0
-; X64-AVX2-NEXT:    vpand %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X64-AVX2-NEXT:    vandps %ymm0, %ymm2, %ymm0
+; X64-AVX2-NEXT:    vandps %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    retq
 entry:
   %cmp = fcmp oge <8 x float> %x, <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
@@ -560,18 +458,10 @@ define <8 x i32> @three_or(<8 x float> %x) {
 ; X32-NEXT:    vmovaps {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X32-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X32-NEXT:    vcmpltps LCPI8_1, %ymm0, %ymm2
-; X32-NEXT:    vorps %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X32-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm0
-; X32-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X32-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X32-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
+; X32-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; X32-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: three_or:
@@ -579,18 +469,10 @@ define <8 x i32> @three_or(<8 x float> %x) {
 ; X64-NEXT:    vmovaps {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X64-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X64-NEXT:    vcmpltps {{.*}}(%rip), %ymm0, %ymm2
-; X64-NEXT:    vorps %ymm2, %ymm1, %ymm1
-; X64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X64-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
+; X64-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; X64-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X32-AVX2-LABEL: three_or:
@@ -599,15 +481,10 @@ define <8 x i32> @three_or(<8 x float> %x) {
 ; X32-AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X32-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
-; X32-AVX2-NEXT:    vorps %ymm2, %ymm1, %ymm1
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X32-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X32-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X32-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X32-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
+; X32-AVX2-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; X32-AVX2-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: three_or:
@@ -616,15 +493,10 @@ define <8 x i32> @three_or(<8 x float> %x) {
 ; X64-AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X64-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
-; X64-AVX2-NEXT:    vorps %ymm2, %ymm1, %ymm1
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X64-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; X64-AVX2-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    retq
 entry:
   %cmp = fcmp oge <8 x float> %x, <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
@@ -642,22 +514,12 @@ define <8 x i32> @four_or(<8 x float> %x) {
 ; X32-NEXT:    vmovaps {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X32-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X32-NEXT:    vcmpltps LCPI9_1, %ymm0, %ymm2
-; X32-NEXT:    vorps %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X32-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X32-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X32-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X32-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X32-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X32-NEXT:    vorps %ymm3, %ymm2, %ymm2
 ; X32-NEXT:    vcmpneqps LCPI9_2, %ymm0, %ymm0
-; X32-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X32-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X32-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; X32-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; X32-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: four_or:
@@ -665,22 +527,12 @@ define <8 x i32> @four_or(<8 x float> %x) {
 ; X64-NEXT:    vmovaps {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X64-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X64-NEXT:    vcmpltps {{.*}}(%rip), %ymm0, %ymm2
-; X64-NEXT:    vorps %ymm2, %ymm1, %ymm1
-; X64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X64-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X64-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X64-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X64-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X64-NEXT:    vorps %ymm3, %ymm2, %ymm2
 ; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X64-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X64-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; X64-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; X64-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X32-AVX2-LABEL: four_or:
@@ -689,20 +541,13 @@ define <8 x i32> @four_or(<8 x float> %x) {
 ; X32-AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X32-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
-; X32-AVX2-NEXT:    vorps %ymm2, %ymm1, %ymm1
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X32-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X32-AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X32-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X32-AVX2-NEXT:    vorps %ymm3, %ymm2, %ymm2
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
 ; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X32-AVX2-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X32-AVX2-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; X32-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X32-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X32-AVX2-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; X32-AVX2-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: four_or:
@@ -711,20 +556,13 @@ define <8 x i32> @four_or(<8 x float> %x) {
 ; X64-AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X64-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
-; X64-AVX2-NEXT:    vorps %ymm2, %ymm1, %ymm1
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X64-AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X64-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X64-AVX2-NEXT:    vorps %ymm3, %ymm2, %ymm2
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
 ; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X64-AVX2-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; X64-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X64-AVX2-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; X64-AVX2-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    retq
 entry:
   %cmp = fcmp oge <8 x float> %x, <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
@@ -744,26 +582,14 @@ define <8 x i32> @five_or(<8 x float> %x) {
 ; X32-NEXT:    vmovaps {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X32-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X32-NEXT:    vcmpltps LCPI10_1, %ymm0, %ymm2
-; X32-NEXT:    vorps %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X32-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X32-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X32-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X32-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X32-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X32-NEXT:    vorps %ymm3, %ymm2, %ymm2
 ; X32-NEXT:    vcmpneqps LCPI10_2, %ymm0, %ymm3
-; X32-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; X32-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
-; X32-NEXT:    vpor %xmm3, %xmm2, %xmm2
+; X32-NEXT:    vorps %ymm3, %ymm2, %ymm2
 ; X32-NEXT:    vcmpneqps LCPI10_3, %ymm0, %ymm0
-; X32-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X32-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X32-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; X32-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; X32-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: five_or:
@@ -771,26 +597,14 @@ define <8 x i32> @five_or(<8 x float> %x) {
 ; X64-NEXT:    vmovaps {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X64-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X64-NEXT:    vcmpltps {{.*}}(%rip), %ymm0, %ymm2
-; X64-NEXT:    vorps %ymm2, %ymm1, %ymm1
-; X64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; X64-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X64-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X64-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X64-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X64-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X64-NEXT:    vorps %ymm3, %ymm2, %ymm2
 ; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm3
-; X64-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; X64-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
-; X64-NEXT:    vpor %xmm3, %xmm2, %xmm2
+; X64-NEXT:    vorps %ymm3, %ymm2, %ymm2
 ; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X64-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X64-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; X64-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; X64-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X32-AVX2-LABEL: five_or:
@@ -799,25 +613,16 @@ define <8 x i32> @five_or(<8 x float> %x) {
 ; X32-AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X32-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
-; X32-AVX2-NEXT:    vorps %ymm2, %ymm1, %ymm1
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X32-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X32-AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X32-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X32-AVX2-NEXT:    vorps %ymm3, %ymm2, %ymm2
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
 ; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; X32-AVX2-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
-; X32-AVX2-NEXT:    vpor %xmm3, %xmm2, %xmm2
+; X32-AVX2-NEXT:    vorps %ymm3, %ymm2, %ymm2
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
 ; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X32-AVX2-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X32-AVX2-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; X32-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X32-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X32-AVX2-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; X32-AVX2-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: five_or:
@@ -826,25 +631,16 @@ define <8 x i32> @five_or(<8 x float> %x) {
 ; X64-AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X64-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
-; X64-AVX2-NEXT:    vorps %ymm2, %ymm1, %ymm1
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X64-AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; X64-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X64-AVX2-NEXT:    vorps %ymm3, %ymm2, %ymm2
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
 ; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; X64-AVX2-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
-; X64-AVX2-NEXT:    vpor %xmm3, %xmm2, %xmm2
+; X64-AVX2-NEXT:    vorps %ymm3, %ymm2, %ymm2
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
 ; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X64-AVX2-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; X64-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X64-AVX2-NEXT:    vorps %ymm0, %ymm2, %ymm0
+; X64-AVX2-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    retq
 entry:
   %cmp = fcmp oge <8 x float> %x, <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
@@ -923,19 +719,11 @@ define <8 x i32> @four_or_and(<8 x float> %x) {
 ; X32-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X32-NEXT:    vcmpltps LCPI12_1, %ymm0, %ymm2
 ; X32-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X32-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X32-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
 ; X32-NEXT:    vcmpneqps LCPI12_2, %ymm0, %ymm0
 ; X32-NEXT:    vandps %ymm0, %ymm2, %ymm0
-; X32-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X32-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: four_or_and:
@@ -944,19 +732,11 @@ define <8 x i32> @four_or_and(<8 x float> %x) {
 ; X64-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X64-NEXT:    vcmpltps {{.*}}(%rip), %ymm0, %ymm2
 ; X64-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X64-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
 ; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vandps %ymm0, %ymm2, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X32-AVX2-LABEL: four_or_and:
@@ -966,17 +746,12 @@ define <8 x i32> @four_or_and(<8 x float> %x) {
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X32-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
 ; X32-AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
 ; X32-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X32-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
 ; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
 ; X32-AVX2-NEXT:    vandps %ymm0, %ymm2, %ymm0
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X32-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X32-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X32-AVX2-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: four_or_and:
@@ -986,17 +761,12 @@ define <8 x i32> @four_or_and(<8 x float> %x) {
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X64-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
 ; X64-AVX2-NEXT:    vandps %ymm2, %ymm1, %ymm1
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X64-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
 ; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vandps %ymm0, %ymm2, %ymm0
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X64-AVX2-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    retq
 entry:
   %cmp = fcmp oge <8 x float> %x, <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
@@ -1019,19 +789,11 @@ define <8 x i32> @five_or_and(<8 x float> %x) {
 ; X32-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; X32-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
 ; X32-NEXT:    vandps %ymm3, %ymm2, %ymm2
-; X32-NEXT:    vorps %ymm1, %ymm2, %ymm1
-; X32-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-NEXT:    vcmpneqps LCPI13_2, %ymm0, %ymm2
+; X32-NEXT:    vcmpneqps LCPI13_2, %ymm0, %ymm3
 ; X32-NEXT:    vcmpneqps LCPI13_3, %ymm0, %ymm0
-; X32-NEXT:    vandps %ymm0, %ymm2, %ymm0
-; X32-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X32-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-NEXT:    vandps %ymm0, %ymm3, %ymm0
+; X32-NEXT:    vorps %ymm0, %ymm1, %ymm0
+; X32-NEXT:    vorps %ymm0, %ymm2, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: five_or_and:
@@ -1042,19 +804,11 @@ define <8 x i32> @five_or_and(<8 x float> %x) {
 ; X64-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; X64-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
 ; X64-NEXT:    vandps %ymm3, %ymm2, %ymm2
-; X64-NEXT:    vorps %ymm1, %ymm2, %ymm1
-; X64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm2
+; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm3
 ; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm0
-; X64-NEXT:    vandps %ymm0, %ymm2, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-NEXT:    vandps %ymm0, %ymm3, %ymm0
+; X64-NEXT:    vorps %ymm0, %ymm1, %ymm0
+; X64-NEXT:    vorps %ymm0, %ymm2, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X32-AVX2-LABEL: five_or_and:
@@ -1066,18 +820,13 @@ define <8 x i32> @five_or_and(<8 x float> %x) {
 ; X32-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
 ; X32-AVX2-NEXT:    vandps %ymm3, %ymm2, %ymm2
-; X32-AVX2-NEXT:    vorps %ymm1, %ymm2, %ymm1
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
-; X32-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
-; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vandps %ymm0, %ymm2, %ymm0
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X32-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X32-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
+; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm4 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
+; X32-AVX2-NEXT:    vcmpneqps %ymm4, %ymm0, %ymm0
+; X32-AVX2-NEXT:    vandps %ymm0, %ymm3, %ymm0
+; X32-AVX2-NEXT:    vorps %ymm0, %ymm1, %ymm0
+; X32-AVX2-NEXT:    vorps %ymm0, %ymm2, %ymm0
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: five_or_and:
@@ -1089,18 +838,13 @@ define <8 x i32> @five_or_and(<8 x float> %x) {
 ; X64-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
 ; X64-AVX2-NEXT:    vandps %ymm3, %ymm2, %ymm2
-; X64-AVX2-NEXT:    vorps %ymm1, %ymm2, %ymm1
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
-; X64-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
-; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vandps %ymm0, %ymm2, %ymm0
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
+; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm4 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
+; X64-AVX2-NEXT:    vcmpneqps %ymm4, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vandps %ymm0, %ymm3, %ymm0
+; X64-AVX2-NEXT:    vorps %ymm0, %ymm1, %ymm0
+; X64-AVX2-NEXT:    vorps %ymm0, %ymm2, %ymm0
 ; X64-AVX2-NEXT:    retq
 entry:
   %cmp = fcmp oge <8 x float> %x, <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
@@ -1123,19 +867,11 @@ define <8 x i32> @four_or_and_xor(<8 x float> %x) {
 ; X32-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X32-NEXT:    vcmpltps LCPI14_1, %ymm0, %ymm2
 ; X32-NEXT:    vxorps %ymm2, %ymm1, %ymm1
-; X32-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X32-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X32-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
 ; X32-NEXT:    vcmpneqps LCPI14_2, %ymm0, %ymm0
 ; X32-NEXT:    vandps %ymm0, %ymm2, %ymm0
-; X32-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X32-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: four_or_and_xor:
@@ -1144,19 +880,11 @@ define <8 x i32> @four_or_and_xor(<8 x float> %x) {
 ; X64-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
 ; X64-NEXT:    vcmpltps {{.*}}(%rip), %ymm0, %ymm2
 ; X64-NEXT:    vxorps %ymm2, %ymm1, %ymm1
-; X64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; X64-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X64-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
 ; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vandps %ymm0, %ymm2, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X32-AVX2-LABEL: four_or_and_xor:
@@ -1166,17 +894,12 @@ define <8 x i32> @four_or_and_xor(<8 x float> %x) {
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X32-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
 ; X32-AVX2-NEXT:    vxorps %ymm2, %ymm1, %ymm1
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
 ; X32-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X32-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
 ; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
 ; X32-AVX2-NEXT:    vandps %ymm0, %ymm2, %ymm0
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X32-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X32-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X32-AVX2-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: four_or_and_xor:
@@ -1186,17 +909,12 @@ define <8 x i32> @four_or_and_xor(<8 x float> %x) {
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X64-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
 ; X64-AVX2-NEXT:    vxorps %ymm2, %ymm1, %ymm1
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; X64-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
 ; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vandps %ymm0, %ymm2, %ymm0
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X64-AVX2-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    retq
 entry:
   %cmp = fcmp oge <8 x float> %x, <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
@@ -1215,100 +933,66 @@ define <8 x i32> @five_or_and_xor(<8 x float> %x) {
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    vmovaps {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X32-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
-; X32-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
 ; X32-NEXT:    vcmpltps LCPI15_1, %ymm0, %ymm2
 ; X32-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; X32-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
-; X32-NEXT:    vxorps %ymm3, %ymm2, %ymm2
-; X32-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X32-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
-; X32-NEXT:    vcmpneqps LCPI15_2, %ymm0, %ymm3
+; X32-NEXT:    vcmpneqps LCPI15_2, %ymm0, %ymm4
 ; X32-NEXT:    vcmpneqps LCPI15_3, %ymm0, %ymm0
-; X32-NEXT:    vandps %ymm0, %ymm3, %ymm0
-; X32-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X32-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X32-NEXT:    vpxor %xmm0, %xmm2, %xmm0
-; X32-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-NEXT:    vandps %ymm0, %ymm4, %ymm0
+; X32-NEXT:    vxorps %ymm0, %ymm3, %ymm0
+; X32-NEXT:    vxorps %ymm0, %ymm2, %ymm0
+; X32-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: five_or_and_xor:
 ; X64:       ## %bb.0: ## %entry
 ; X64-NEXT:    vmovaps {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X64-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
-; X64-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vcmpltps {{.*}}(%rip), %ymm0, %ymm2
 ; X64-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; X64-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
-; X64-NEXT:    vxorps %ymm3, %ymm2, %ymm2
-; X64-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X64-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
-; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm3
+; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm4
 ; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm0
-; X64-NEXT:    vandps %ymm0, %ymm3, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X64-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X64-NEXT:    vpxor %xmm0, %xmm2, %xmm0
-; X64-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-NEXT:    vandps %ymm0, %ymm4, %ymm0
+; X64-NEXT:    vxorps %ymm0, %ymm3, %ymm0
+; X64-NEXT:    vxorps %ymm0, %ymm2, %ymm0
+; X64-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X32-AVX2-LABEL: five_or_and_xor:
 ; X32-AVX2:       ## %bb.0: ## %entry
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X32-AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X32-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
 ; X32-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
-; X32-AVX2-NEXT:    vxorps %ymm3, %ymm2, %ymm2
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X32-AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
-; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
-; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
-; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm4 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
-; X32-AVX2-NEXT:    vcmpneqps %ymm4, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vandps %ymm0, %ymm3, %ymm0
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X32-AVX2-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X32-AVX2-NEXT:    vpxor %xmm0, %xmm2, %xmm0
-; X32-AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; X32-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm4 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
+; X32-AVX2-NEXT:    vcmpneqps %ymm4, %ymm0, %ymm4
+; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm5 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
+; X32-AVX2-NEXT:    vcmpneqps %ymm5, %ymm0, %ymm0
+; X32-AVX2-NEXT:    vandps %ymm0, %ymm4, %ymm0
+; X32-AVX2-NEXT:    vxorps %ymm0, %ymm3, %ymm0
+; X32-AVX2-NEXT:    vxorps %ymm0, %ymm2, %ymm0
+; X32-AVX2-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: five_or_and_xor:
 ; X64-AVX2:       ## %bb.0: ## %entry
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; X64-AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X64-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
 ; X64-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
-; X64-AVX2-NEXT:    vxorps %ymm3, %ymm2, %ymm2
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X64-AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
-; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm4 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
-; X64-AVX2-NEXT:    vcmpneqps %ymm4, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vandps %ymm0, %ymm3, %ymm0
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; X64-AVX2-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpxor %xmm0, %xmm2, %xmm0
-; X64-AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm4 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
+; X64-AVX2-NEXT:    vcmpneqps %ymm4, %ymm0, %ymm4
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm5 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
+; X64-AVX2-NEXT:    vcmpneqps %ymm5, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vandps %ymm0, %ymm4, %ymm0
+; X64-AVX2-NEXT:    vxorps %ymm0, %ymm3, %ymm0
+; X64-AVX2-NEXT:    vxorps %ymm0, %ymm2, %ymm0
+; X64-AVX2-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    retq
 entry:
   %cmp = fcmp oge <8 x float> %x, <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
@@ -1331,26 +1015,14 @@ define <8 x i32> @six_or_and_xor(<8 x float> %x) {
 ; X32-NEXT:    vcmpltps LCPI16_1, %ymm0, %ymm2
 ; X32-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; X32-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X32-NEXT:    vcmpneqps LCPI16_2, %ymm0, %ymm4
+; X32-NEXT:    vandps %ymm4, %ymm3, %ymm3
 ; X32-NEXT:    vandps %ymm3, %ymm2, %ymm2
-; X32-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X32-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
-; X32-NEXT:    vcmpneqps LCPI16_2, %ymm0, %ymm3
-; X32-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; X32-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
-; X32-NEXT:    vpand %xmm3, %xmm2, %xmm2
-; X32-NEXT:    vcmpneqps LCPI16_3, %ymm0, %ymm3
-; X32-NEXT:    vxorps %ymm1, %ymm3, %ymm1
-; X32-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; X32-NEXT:    vpackssdw %xmm3, %xmm1, %xmm1
-; X32-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; X32-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X32-NEXT:    vcmpneqps LCPI16_3, %ymm0, %ymm2
+; X32-NEXT:    vxorps %ymm1, %ymm2, %ymm1
 ; X32-NEXT:    vcmpneqps LCPI16_4, %ymm0, %ymm0
-; X32-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X32-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X32-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X32-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: six_or_and_xor:
@@ -1360,26 +1032,14 @@ define <8 x i32> @six_or_and_xor(<8 x float> %x) {
 ; X64-NEXT:    vcmpltps {{.*}}(%rip), %ymm0, %ymm2
 ; X64-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; X64-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm4
+; X64-NEXT:    vandps %ymm4, %ymm3, %ymm3
 ; X64-NEXT:    vandps %ymm3, %ymm2, %ymm2
-; X64-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X64-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
-; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm3
-; X64-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; X64-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
-; X64-NEXT:    vpand %xmm3, %xmm2, %xmm2
-; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm3
-; X64-NEXT:    vxorps %ymm1, %ymm3, %ymm1
-; X64-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; X64-NEXT:    vpackssdw %xmm3, %xmm1, %xmm1
-; X64-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; X64-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm2
+; X64-NEXT:    vxorps %ymm1, %ymm2, %ymm1
 ; X64-NEXT:    vcmpneqps {{.*}}(%rip), %ymm0, %ymm0
-; X64-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X64-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-NEXT:    vpmovsxwd %xmm0, %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X32-AVX2-LABEL: six_or_and_xor:
@@ -1390,26 +1050,17 @@ define <8 x i32> @six_or_and_xor(<8 x float> %x) {
 ; X32-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
 ; X32-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm4 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
+; X32-AVX2-NEXT:    vcmpneqps %ymm4, %ymm0, %ymm4
+; X32-AVX2-NEXT:    vandps %ymm4, %ymm3, %ymm3
 ; X32-AVX2-NEXT:    vandps %ymm3, %ymm2, %ymm2
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X32-AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
-; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
-; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; X32-AVX2-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
-; X32-AVX2-NEXT:    vpand %xmm3, %xmm2, %xmm2
-; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
-; X32-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
-; X32-AVX2-NEXT:    vxorps %ymm1, %ymm3, %ymm1
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; X32-AVX2-NEXT:    vpackssdw %xmm3, %xmm1, %xmm1
-; X32-AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; X32-AVX2-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
+; X32-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
+; X32-AVX2-NEXT:    vxorps %ymm1, %ymm2, %ymm1
 ; X32-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [4.00000006E-1,4.00000006E-1,4.00000006E-1,4.00000006E-1,4.00000006E-1,4.00000006E-1,4.00000006E-1,4.00000006E-1]
 ; X32-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X32-AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X32-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X32-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X32-AVX2-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X32-AVX2-NEXT:    retl
 ;
 ; X64-AVX2-LABEL: six_or_and_xor:
@@ -1420,26 +1071,17 @@ define <8 x i32> @six_or_and_xor(<8 x float> %x) {
 ; X64-AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm2
 ; X64-AVX2-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm4 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
+; X64-AVX2-NEXT:    vcmpneqps %ymm4, %ymm0, %ymm4
+; X64-AVX2-NEXT:    vandps %ymm4, %ymm3, %ymm3
 ; X64-AVX2-NEXT:    vandps %ymm3, %ymm2, %ymm2
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; X64-AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1,1.00000001E-1]
-; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; X64-AVX2-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
-; X64-AVX2-NEXT:    vpand %xmm3, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm3 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
-; X64-AVX2-NEXT:    vcmpneqps %ymm3, %ymm0, %ymm3
-; X64-AVX2-NEXT:    vxorps %ymm1, %ymm3, %ymm1
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; X64-AVX2-NEXT:    vpackssdw %xmm3, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vxorps %ymm2, %ymm1, %ymm1
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1,2.00000003E-1]
+; X64-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm2
+; X64-AVX2-NEXT:    vxorps %ymm1, %ymm2, %ymm1
 ; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [4.00000006E-1,4.00000006E-1,4.00000006E-1,4.00000006E-1,4.00000006E-1,4.00000006E-1,4.00000006E-1,4.00000006E-1]
 ; X64-AVX2-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; X64-AVX2-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; X64-AVX2-NEXT:    vpmovsxwd %xmm0, %ymm0
+; X64-AVX2-NEXT:    vorps %ymm0, %ymm1, %ymm0
 ; X64-AVX2-NEXT:    retq
 entry:
   %cmp = fcmp oge <8 x float> %x, <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
