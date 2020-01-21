@@ -64,7 +64,7 @@ struct MatchKey {
   bool operator<(const MatchKey &Other) const {
     return std::tie(Traversal, MatcherID, Node, BoundNodes) <
            std::tie(Other.Traversal, Other.MatcherID, Other.Node,
-            Other.BoundNodes);
+                    Other.BoundNodes);
   }
 };
 
