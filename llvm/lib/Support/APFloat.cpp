@@ -2621,24 +2621,70 @@ IEEEFloat::convertFromDecimalString(StringRef str, roundingMode rounding_mode) {
 }
 
 bool IEEEFloat::convertFromStringSpecials(StringRef str) {
+  const size_t MIN_NAME_SIZE = 3;
+
+  if (str.size() < MIN_NAME_SIZE)
+    return false;
+
   if (str.equals("inf") || str.equals("INFINITY") || str.equals("+Inf")) {
     makeInf(false);
     return true;
   }
 
-  if (str.equals("-inf") || str.equals("-INFINITY") || str.equals("-Inf")) {
-    makeInf(true);
-    return true;
+  bool IsNegative = str.front() == '-';
+  if (IsNegative) {
+    str = str.drop_front();
+    if (str.size() < MIN_NAME_SIZE)
+      return false;
+
+    if (str.equals("inf") || str.equals("INFINITY") || str.equals("Inf")) {
+      makeInf(true);
+      return true;
+    }
   }
 
-  if (str.equals("nan") || str.equals("NaN")) {
-    makeNaN(false, false);
-    return true;
+  // If we have a 's' (or 'S') prefix, then this is a Signaling NaN.
+  bool IsSignaling = str.front() == 's' || str.front() == 'S';
+  if (IsSignaling) {
+    str = str.drop_front();
+    if (str.size() < MIN_NAME_SIZE)
+      return false;
   }
 
-  if (str.equals("-nan") || str.equals("-NaN")) {
-    makeNaN(false, true);
-    return true;
+  if (str.startswith("nan") || str.startswith("NaN")) {
+    str = str.drop_front(3);
+
+    // A NaN without payload.
+    if (str.empty()) {
+      makeNaN(IsSignaling, IsNegative);
+      return true;
+    }
+
+    // Allow the payload to be inside parentheses.
+    if (str.front() == '(') {
+      // Parentheses should be balanced (and not empty).
+      if (str.size() <= 2 || str.back() != ')')
+        return false;
+
+      str = str.slice(1, str.size() - 1);
+    }
+
+    // Determine the payload number's radix.
+    unsigned Radix = 10;
+    if (str[0] == '0') {
+      if (str.size() > 1 && tolower(str[1]) == 'x') {
+        str = str.drop_front(2);
+        Radix = 16;
+      } else
+        Radix = 8;
+    }
+
+    // Parse the payload and make the NaN.
+    APInt Payload;
+    if (!str.getAsInteger(Radix, Payload)) {
+      makeNaN(IsSignaling, IsNegative, &Payload);
+      return true;
+    }
   }
 
   return false;
