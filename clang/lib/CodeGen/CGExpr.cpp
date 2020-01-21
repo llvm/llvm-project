@@ -177,11 +177,6 @@ llvm::Value *CodeGenFunction::EvaluateExprAsBool(const Expr *E) {
                                        Loc);
 }
 
-// Helper method to check if the underlying ABI is AAPCS
-static bool isAAPCS(const TargetInfo &TargetInfo) {
-  return TargetInfo.getABI().startswith("aapcs");
-}
-
 /// EmitIgnoredExpr - Emit code to compute the specified expression,
 /// ignoring the result.
 void CodeGenFunction::EmitIgnoredExpr(const Expr *E) {
@@ -4057,120 +4052,15 @@ static bool hasAnyVptr(const QualType Type, const ASTContext &Context) {
   return false;
 }
 
-// AAPCS requires volatile bitfield accesses to be performed using the
-// natural alignment / width of the bitfield declarative type, if that
-// won't cause overlap over a non-bitfield member nor access outside the
-// the data structure.
-bool CodeGenFunction::AdjustAAPCSBitfieldLValue(Address &Base,
-                                                CGBitFieldInfo &Info,
-                                                const FieldDecl *Field,
-                                                const QualType FieldType,
-                                                const CGRecordLayout &RL) {
-  llvm::Type *ResLTy = ConvertTypeForMem(FieldType);
-  // CGRecordLowering::setBitFieldInfo() pre-adjusts the bitfield offsets for
-  // big-endian targets, but it assumes a container of width Info.StorageSize.
-  // Since AAPCS uses a different container size (width of the type), we first
-  // undo that calculation here and redo it once the bitfield offset within the
-  // new container is calculated
-  const bool BE = CGM.getTypes().getDataLayout().isBigEndian();
-  const unsigned OldOffset =
-      BE ? Info.StorageSize - (Info.Offset + Info.Size) : Info.Offset;
-  // Offset to the bitfield from the beginning of the struct
-  const unsigned AbsoluteOffset =
-      getContext().toBits(Info.StorageOffset) + OldOffset;
-
-  // Container size is the width of the bitfield type
-  const unsigned ContainerSize = ResLTy->getPrimitiveSizeInBits();
-  // Nothing to do if the access uses the desired
-  // container width and is naturally aligned
-  if (Info.StorageSize == ContainerSize && (OldOffset % ContainerSize == 0))
-    return false;
-
-  // Offset within the container
-  unsigned MemberOffset = AbsoluteOffset & (ContainerSize - 1);
-
-  // Bail out if an aligned load of the container cannot cover the entire
-  // bitfield. This can happen for example, if the bitfield is part of a packed
-  // struct. AAPCS does not define access rules for such cases, we let clang to
-  // follow its own rules.
-  if (MemberOffset + Info.Size > ContainerSize) {
-    return false;
-  }
-  // Re-adjust offsets for big-endian targets
-  if (BE)
-    MemberOffset = ContainerSize - (MemberOffset + Info.Size);
-
-  const CharUnits NewOffset =
-      getContext().toCharUnitsFromBits(AbsoluteOffset & ~(ContainerSize - 1));
-  const CharUnits End = NewOffset +
-                        getContext().toCharUnitsFromBits(ContainerSize) -
-                        CharUnits::One();
-
-  const ASTRecordLayout &Layout =
-      getContext().getASTRecordLayout(Field->getParent());
-  // If we access outside memory outside the record, than bail out
-  const CharUnits RecordSize = Layout.getSize();
-  if (End >= RecordSize) {
-    return false;
-  }
-
-  // Bail out if performing this load would access non-bitfields members
-
-  for (auto it : Field->getParent()->fields()) {
-    const FieldDecl &F = *it;
-    // We distinct allow bitfields overlaps
-    if (F.isBitField())
-      continue;
-    const CharUnits FOffset = getContext().toCharUnitsFromBits(
-        Layout.getFieldOffset(F.getFieldIndex()));
-    const CharUnits FEnd =
-        FOffset +
-        getContext().toCharUnitsFromBits(
-            ConvertTypeForMem(F.getType())->getPrimitiveSizeInBits()) -
-        CharUnits::One();
-    if (End < FOffset) {
-      // The other field starts after the desired load end.
-      break;
-    }
-    if (FEnd < NewOffset) {
-      // The other field ends before the desired load offset.
-      continue;
-    }
-    // The desired load overlaps a non-bitfiel member, bail out.
-    return false;
-  }
-
-  // Write the new bitfield access parameters
-  Info.StorageOffset = NewOffset;
-  Info.StorageSize = ContainerSize;
-  Info.Offset = MemberOffset;
-  // GEP into the bitfield container. Here we essentially treat the Base as a
-  // pointer to a block of containers and index into it appropriately
-  Base =
-      Builder.CreateConstInBoundsGEP(Builder.CreateElementBitCast(Base, ResLTy),
-                                     AbsoluteOffset / ContainerSize);
-  return true;
-}
-
 LValue CodeGenFunction::EmitLValueForField(LValue base,
                                            const FieldDecl *field) {
   LValueBaseInfo BaseInfo = base.getBaseInfo();
 
   if (field->isBitField()) {
     const CGRecordLayout &RL =
-        CGM.getTypes().getCGRecordLayout(field->getParent());
-    CGBitFieldInfo Info = RL.getBitFieldInfo(field);
+      CGM.getTypes().getCGRecordLayout(field->getParent());
+    const CGBitFieldInfo &Info = RL.getBitFieldInfo(field);
     Address Addr = base.getAddress(*this);
-    const QualType FieldType =
-        field->getType().withCVRQualifiers(base.getVRQualifiers());
-
-    if (isAAPCS(CGM.getTarget()) && FieldType.isVolatileQualified()) {
-      if (AdjustAAPCSBitfieldLValue(Addr, Info, field, FieldType, RL)) {
-        return LValue::MakeBitfield(Addr, Info, FieldType, BaseInfo,
-                                    TBAAAccessInfo());
-      }
-    }
-
     unsigned Idx = RL.getLLVMFieldNo(field);
     const RecordDecl *rec = field->getParent();
     if (!IsInPreservedAIRegion &&
@@ -4192,9 +4082,11 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     if (Addr.getElementType() != FieldIntTy)
       Addr = Builder.CreateElementBitCast(Addr, FieldIntTy);
 
+    QualType fieldType =
+      field->getType().withCVRQualifiers(base.getVRQualifiers());
     // TODO: Support TBAA for bit fields.
     LValueBaseInfo FieldBaseInfo(BaseInfo.getAlignmentSource());
-    return LValue::MakeBitfield(Addr, Info, FieldType, FieldBaseInfo,
+    return LValue::MakeBitfield(Addr, Info, fieldType, FieldBaseInfo,
                                 TBAAAccessInfo());
   }
 
