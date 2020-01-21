@@ -226,8 +226,10 @@ Status ProcessMinidump::DoLoadCore() {
 
   llvm::Optional<lldb::pid_t> pid = m_minidump_parser->GetPid();
   if (!pid) {
-    error.SetErrorString("failed to parse PID");
-    return error;
+    GetTarget().GetDebugger().GetAsyncErrorStream()->PutCString(
+        "Unable to retrieve process ID from minidump file, setting process ID "
+        "to 1.\n");
+    pid = 1;
   }
   SetID(pid.getValue());
 
