@@ -722,7 +722,7 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
     void onDiagnosticsReady(PathRef File,
                             std::vector<Diag> Diagnostics) override {}
   } DiagConsumer;
-  // rename is runnning on the "^" point in FooH, and "[[]]" ranges are the
+  // rename is runnning on all "^" points in FooH, and "[[]]" ranges are the
   // expected rename occurrences.
   struct Case {
     llvm::StringRef FooH;
@@ -763,28 +763,10 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
       )cpp",
       },
       {
-          // Constructor.
+          // rename on constructor and destructor.
           R"cpp(
         class [[Foo]] {
           [[^Foo]]();
-          ~[[Foo]]();
-        };
-      )cpp",
-          R"cpp(
-        #include "foo.h"
-        [[Foo]]::[[Foo]]() {}
-        [[Foo]]::~[[Foo]]() {}
-
-        void func() {
-          [[Foo]] foo;
-        }
-      )cpp",
-      },
-      {
-          // Destructor (selecting before the identifier).
-          R"cpp(
-        class [[Foo]] {
-          [[Foo]]();
           ~[[Foo^]]();
         };
       )cpp",
@@ -891,12 +873,15 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
     runAddDocument(Server, FooCCPath, FooCC.code());
 
     llvm::StringRef NewName = "NewName";
-    auto FileEditsList =
-        llvm::cantFail(runRename(Server, FooHPath, FooH.point(), NewName));
-    EXPECT_THAT(applyEdits(std::move(FileEditsList)),
-                UnorderedElementsAre(
-                    Pair(Eq(FooHPath), Eq(expectedResult(T.FooH, NewName))),
-                    Pair(Eq(FooCCPath), Eq(expectedResult(T.FooCC, NewName)))));
+    for (const auto &RenamePos : FooH.points()) {
+      auto FileEditsList =
+          llvm::cantFail(runRename(Server, FooHPath, RenamePos, NewName));
+      EXPECT_THAT(
+          applyEdits(std::move(FileEditsList)),
+          UnorderedElementsAre(
+              Pair(Eq(FooHPath), Eq(expectedResult(T.FooH, NewName))),
+              Pair(Eq(FooCCPath), Eq(expectedResult(T.FooCC, NewName)))));
+    }
   }
 }
 
