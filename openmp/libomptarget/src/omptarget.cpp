@@ -72,6 +72,11 @@ static int InitLibrary(DeviceTy& Device) {
       ii = HostEntriesBeginToTransTable.begin();
       ii != HostEntriesBeginToTransTable.end(); ++ii) {
     TranslationTable *TransTable = &ii->second;
+    if (TransTable->HostTable.EntriesBegin ==
+        TransTable->HostTable.EntriesEnd) {
+      // No host entry so no need to proceed
+      continue;
+    }
     if (TransTable->TargetsTable[device_id] != 0) {
       // Library entries have already been processed
       continue;
