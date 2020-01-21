@@ -102,13 +102,6 @@
 
 #if defined(__APPLE__)
 #include "Plugins/DynamicLoader/Darwin-Kernel/DynamicLoaderDarwinKernel.h"
-#include "Plugins/Platform/MacOSX/PlatformAppleTVSimulator.h"
-#include "Plugins/Platform/MacOSX/PlatformAppleWatchSimulator.h"
-#include "Plugins/Platform/MacOSX/PlatformDarwinKernel.h"
-#include "Plugins/Platform/MacOSX/PlatformRemoteAppleBridge.h"
-#include "Plugins/Platform/MacOSX/PlatformRemoteAppleTV.h"
-#include "Plugins/Platform/MacOSX/PlatformRemoteAppleWatch.h"
-#include "Plugins/Platform/MacOSX/PlatformiOSSimulator.h"
 #include "Plugins/Process/MacOSX-Kernel/ProcessKDP.h"
 #include "Plugins/SymbolVendor/MacOSX/SymbolVendorMacOSX.h"
 #endif
@@ -206,10 +199,6 @@ llvm::Error SystemInitializerFull::Initialize() {
   platform_android::PlatformAndroid::Initialize();
   PlatformRemoteiOS::Initialize();
   PlatformMacOSX::Initialize();
-#if defined(__APPLE__)
-  PlatformiOSSimulator::Initialize();
-  PlatformDarwinKernel::Initialize();
-#endif
 
   // Initialize LLVM and Clang
   llvm::InitializeAllTargets();
@@ -273,11 +262,6 @@ llvm::Error SystemInitializerFull::Initialize() {
 #if defined(__APPLE__)
   SymbolVendorMacOSX::Initialize();
   ProcessKDP::Initialize();
-  PlatformAppleTVSimulator::Initialize();
-  PlatformAppleWatchSimulator::Initialize();
-  PlatformRemoteAppleTV::Initialize();
-  PlatformRemoteAppleWatch::Initialize();
-  PlatformRemoteAppleBridge::Initialize();
   DynamicLoaderDarwinKernel::Initialize();
 #endif
 
@@ -366,11 +350,6 @@ void SystemInitializerFull::Terminate() {
   DynamicLoaderDarwinKernel::Terminate();
   ProcessKDP::Terminate();
   SymbolVendorMacOSX::Terminate();
-  PlatformAppleTVSimulator::Terminate();
-  PlatformAppleWatchSimulator::Terminate();
-  PlatformRemoteAppleTV::Terminate();
-  PlatformRemoteAppleWatch::Terminate();
-  PlatformRemoteAppleBridge::Terminate();
 #endif
 
 #if defined(__FreeBSD__)
@@ -388,7 +367,6 @@ void SystemInitializerFull::Terminate() {
   DynamicLoaderStatic::Terminate();
   DynamicLoaderWindowsDYLD::Terminate();
 
-
   platform_freebsd::PlatformFreeBSD::Terminate();
   platform_linux::PlatformLinux::Terminate();
   platform_netbsd::PlatformNetBSD::Terminate();
@@ -397,10 +375,6 @@ void SystemInitializerFull::Terminate() {
   platform_android::PlatformAndroid::Terminate();
   PlatformMacOSX::Terminate();
   PlatformRemoteiOS::Terminate();
-#if defined(__APPLE__)
-  PlatformiOSSimulator::Terminate();
-  PlatformDarwinKernel::Terminate();
-#endif
 
   breakpad::ObjectFileBreakpad::Terminate();
   ObjectFileELF::Terminate();
