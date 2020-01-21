@@ -61,8 +61,10 @@ define i32 @foo_low_trip_count3(i1 %cond, i32 %bound) !prof !0 {
 ; but has a high trip count per invocation. Vectorize it.
 
 ; CHECK-LABEL: @foo_low_trip_count3(
-; CHECK: vector.body:
-
+; CHECK:  [[VECTOR_BODY:vector\.body]]:
+; CHECK:    br i1 [[TMP9:%.*]], label [[MIDDLE_BLOCK:%.*]], label %[[VECTOR_BODY]], !prof [[LP3:\!.*]],
+; CHECK:  [[FOR_BODY:for\.body]]:
+; CHECK:    br i1 [[EXITCOND:%.*]], label [[FOR_END_LOOPEXIT:%.*]], label %[[FOR_BODY]], !prof [[LP6:\!.*]],
 entry:
   br i1 %cond, label %for.preheader, label %for.end, !prof !2
 
@@ -204,6 +206,15 @@ for.body:                                         ; preds = %for.body, %entry
 for.end:                                          ; preds = %for.body
   ret i32 0
 }
+
+; CHECK: [[LP3]] = !{!"branch_weights", i32 10, i32 2490}
+; CHECK: [[LP6]] = !{!"branch_weights", i32 10, i32 0}
+; original loop has latchExitWeight=10 and backedgeTakenWeight=10,000,
+; therefore estimatedBackedgeTakenCount=1,000 and estimatedTripCount=1,001.
+; Vectorizing by 4 produces estimatedTripCounts of 1,001/4=250 and 1,001%4=1
+; for vectorized and remainder loops, respectively, therefore their
+; estimatedBackedgeTakenCounts are 249 and 0, and so the weights recorded with
+; loop invocation weights of 10 are the above {10, 2490} and {10, 0}.
 
 !0 = !{!"function_entry_count", i64 100}
 !1 = !{!"branch_weights", i32 100, i32 0}
