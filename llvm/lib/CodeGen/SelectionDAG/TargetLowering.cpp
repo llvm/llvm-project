@@ -1355,8 +1355,9 @@ bool TargetLowering::SimplifyDemandedBits(
         }
       }
 
-      if (SimplifyDemandedBits(Op0, DemandedBits.lshr(ShAmt), DemandedElts,
-                               Known, TLO, Depth + 1))
+      APInt InDemandedMask = DemandedBits.lshr(ShAmt);
+      if (SimplifyDemandedBits(Op0, InDemandedMask, DemandedElts, Known, TLO,
+                               Depth + 1))
         return true;
 
       // Try shrinking the operation as long as the shift amount will still be
