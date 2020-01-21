@@ -158,7 +158,7 @@ entry:
 ; W64: s_mov_b64 exec, [[SAVEEXEC]]
 ; W64: s_cbranch_execz [[TERMBB:BB[0-9]+_[0-9]+]]
 
-; W64: ; %bb.{{[0-9]+}}:
+; W64: BB{{[0-9]+_[0-9]+}}:
 ; W64-DAG: v_mov_b32_e32 [[IDX:v[0-9]+]], s4
 ; W64-DAG: s_mov_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], exec
 
@@ -204,7 +204,7 @@ entry:
 ; W32: s_mov_b32 exec_lo, [[SAVEEXEC]]
 ; W32: s_cbranch_execz [[TERMBB:BB[0-9]+_[0-9]+]]
 
-; W32: ; %bb.{{[0-9]+}}:
+; W32: BB{{[0-9]+_[0-9]+}}:
 ; W32-DAG: v_mov_b32_e32 [[IDX:v[0-9]+]], s4
 ; W32-DAG: s_mov_b32 [[SAVEEXEC:s[0-9]+]], exec_lo
 
@@ -270,7 +270,7 @@ entry:
 ; W64-O0: buffer_store_dword [[RES]], off, s[0:3], s32 offset:[[RES_OFF:[0-9]+]] ; 4-byte Folded Spill
 ; W64-O0: s_cbranch_execz [[TERMBB:BB[0-9]+_[0-9]+]]
 
-; W64-O0: ; %bb.{{[0-9]+}}:
+; W64-O0: BB{{[0-9]+_[0-9]+}}:
 ; W64-O0-DAG: s_mov_b64 s{{\[}}[[SAVEEXEC0:[0-9]+]]:[[SAVEEXEC1:[0-9]+]]{{\]}}, exec
 ; W64-O0-DAG: buffer_store_dword {{v[0-9]+}}, off, s[0:3], s32 offset:[[IDX_OFF:[0-9]+]] ; 4-byte Folded Spill
 ; W64-O0: v_writelane_b32 [[VSAVEEXEC:v[0-9]+]], s[[SAVEEXEC0]], [[SAVEEXEC_IDX0:[0-9]+]]
