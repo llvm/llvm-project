@@ -3690,6 +3690,92 @@ Hexagon_double_doubledouble_Intrinsic<"HEXAGON_F2_dfsub", [IntrNoMem, Throws]>;
 def int_hexagon_S2_mask :
 Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_mask", [IntrNoMem, ImmArg<0>, ImmArg<1>]>;
 
+// V67 Scalar Instructions.
+
+def int_hexagon_M7_dcmpyrw :
+Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M7_dcmpyrw">;
+
+def int_hexagon_M7_dcmpyrw_acc :
+Hexagon_i64_i64i64i64_Intrinsic<"HEXAGON_M7_dcmpyrw_acc">;
+
+def int_hexagon_M7_dcmpyrwc :
+Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M7_dcmpyrwc">;
+
+def int_hexagon_M7_dcmpyrwc_acc :
+Hexagon_i64_i64i64i64_Intrinsic<"HEXAGON_M7_dcmpyrwc_acc">;
+
+def int_hexagon_M7_dcmpyiw :
+Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M7_dcmpyiw">;
+
+def int_hexagon_M7_dcmpyiw_acc :
+Hexagon_i64_i64i64i64_Intrinsic<"HEXAGON_M7_dcmpyiw_acc">;
+
+def int_hexagon_M7_dcmpyiwc :
+Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M7_dcmpyiwc">;
+
+def int_hexagon_M7_dcmpyiwc_acc :
+Hexagon_i64_i64i64i64_Intrinsic<"HEXAGON_M7_dcmpyiwc_acc">;
+
+def int_hexagon_M7_vdmpy :
+Hexagon_i64_i64i64_Intrinsic<"HEXAGON_M7_vdmpy">;
+
+def int_hexagon_M7_vdmpy_acc :
+Hexagon_i64_i64i64i64_Intrinsic<"HEXAGON_M7_vdmpy_acc">;
+
+def int_hexagon_M7_wcmpyrw :
+Hexagon_i32_i64i64_Intrinsic<"HEXAGON_M7_wcmpyrw">;
+
+def int_hexagon_M7_wcmpyrwc :
+Hexagon_i32_i64i64_Intrinsic<"HEXAGON_M7_wcmpyrwc">;
+
+def int_hexagon_M7_wcmpyiw :
+Hexagon_i32_i64i64_Intrinsic<"HEXAGON_M7_wcmpyiw">;
+
+def int_hexagon_M7_wcmpyiwc :
+Hexagon_i32_i64i64_Intrinsic<"HEXAGON_M7_wcmpyiwc">;
+
+def int_hexagon_M7_wcmpyrw_rnd :
+Hexagon_i32_i64i64_Intrinsic<"HEXAGON_M7_wcmpyrw_rnd">;
+
+def int_hexagon_M7_wcmpyrwc_rnd :
+Hexagon_i32_i64i64_Intrinsic<"HEXAGON_M7_wcmpyrwc_rnd">;
+
+def int_hexagon_M7_wcmpyiw_rnd :
+Hexagon_i32_i64i64_Intrinsic<"HEXAGON_M7_wcmpyiw_rnd">;
+
+def int_hexagon_M7_wcmpyiwc_rnd :
+Hexagon_i32_i64i64_Intrinsic<"HEXAGON_M7_wcmpyiwc_rnd">;
+
+def int_hexagon_A7_croundd_ri :
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_A7_croundd_ri", [IntrNoMem, ImmArg<1>]>;
+
+def int_hexagon_A7_croundd_rr :
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_A7_croundd_rr">;
+
+def int_hexagon_A7_clip :
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_A7_clip", [IntrNoMem, ImmArg<1>]>;
+
+def int_hexagon_A7_vclip :
+Hexagon_i64_i64i32_Intrinsic<"HEXAGON_A7_vclip", [IntrNoMem, ImmArg<1>]>;
+
+def int_hexagon_F2_dfmax :
+Hexagon_double_doubledouble_Intrinsic<"HEXAGON_F2_dfmax", [IntrNoMem, Throws]>;
+
+def int_hexagon_F2_dfmin :
+Hexagon_double_doubledouble_Intrinsic<"HEXAGON_F2_dfmin", [IntrNoMem, Throws]>;
+
+def int_hexagon_F2_dfmpyfix :
+Hexagon_double_doubledouble_Intrinsic<"HEXAGON_F2_dfmpyfix", [IntrNoMem, Throws]>;
+
+def int_hexagon_F2_dfmpyll :
+Hexagon_double_doubledouble_Intrinsic<"HEXAGON_F2_dfmpyll", [IntrNoMem, Throws]>;
+
+def int_hexagon_F2_dfmpylh :
+Hexagon_double_doubledoubledouble_Intrinsic<"HEXAGON_F2_dfmpylh", [IntrNoMem, Throws]>;
+
+def int_hexagon_F2_dfmpyhh :
+Hexagon_double_doubledoubledouble_Intrinsic<"HEXAGON_F2_dfmpyhh", [IntrNoMem, Throws]>;
+
 // V60 HVX Instructions.
 
 def int_hexagon_V6_vS32b_qpred_ai :

@@ -42,11 +42,18 @@ def ExtensionHVXV66: SubtargetFeature<"hvxv66", "HexagonHVXVersion",
       "Hexagon::ArchEnum::V66", "Hexagon HVX instructions",
       [ExtensionHVX, ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65,
        ExtensionZReg]>;
+def ExtensionHVXV67: SubtargetFeature<"hvxv67", "HexagonHVXVersion",
+      "Hexagon::ArchEnum::V67", "Hexagon HVX instructions",
+      [ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65, ExtensionHVXV66]>;
+
 
 def ExtensionHVX64B: SubtargetFeature<"hvx-length64b", "UseHVX64BOps",
       "true", "Hexagon HVX 64B instructions", [ExtensionHVX]>;
 def ExtensionHVX128B: SubtargetFeature<"hvx-length128b", "UseHVX128BOps",
       "true", "Hexagon HVX 128B instructions", [ExtensionHVX]>;
+
+def ExtensionAudio: SubtargetFeature<"audio", "UseAudioOps", "true",
+      "Hexagon Audio extension instructions">;
 
 def FeatureCompound: SubtargetFeature<"compound", "UseCompound", "true",
       "Use compound instructions">;
@@ -68,6 +75,8 @@ def FeatureSmallData: SubtargetFeature<"small-data", "UseSmallData", "true",
       "Allow GP-relative addressing of global variables">;
 def FeatureDuplex: SubtargetFeature<"duplex", "EnableDuplex", "true",
       "Enable generation of duplex instruction">;
+def FeatureUnsafeFP: SubtargetFeature<"unsafe-fp", "UseUnsafeMath", "true",
+      "Use unsafe FP math">;
 def FeatureReservedR19: SubtargetFeature<"reserved-r19", "ReservedR19",
       "true", "Reserve register R19">;
 def FeatureNoreturnStackElim: SubtargetFeature<"noreturn-stack-elim",
@@ -93,11 +102,18 @@ def UseHVXV65          : Predicate<"HST->useHVXV65Ops()">,
                          AssemblerPredicate<"ExtensionHVXV65">;
 def UseHVXV66          : Predicate<"HST->useHVXV66Ops()">,
                          AssemblerPredicate<"ExtensionHVXV66">;
+def UseHVXV67          : Predicate<"HST->useHVXV67Ops()">,
+                         AssemblerPredicate<"ExtensionHVXV67">;
+def UseAudio           : Predicate<"HST->useAudioOps()">,
+                         AssemblerPredicate<"ExtensionAudio">;
 def UseZReg            : Predicate<"HST->useZRegOps()">,
                          AssemblerPredicate<"ExtensionZReg">;
 def UseCompound        : Predicate<"HST->useCompound()">;
 def HasPreV65          : Predicate<"HST->hasPreV65()">,
                          AssemblerPredicate<"FeatureHasPreV65">;
+def HasMemNoShuf       : Predicate<"HST->hasMemNoShuf()">,
+                         AssemblerPredicate<"FeatureMemNoShuf">;
+def UseUnsafeMath      : Predicate<"HST->useUnsafeMath()">;
 
 def Hvx64:  HwMode<"+hvx-length64b">;
 def Hvx128: HwMode<"+hvx-length128b">;
@@ -364,6 +380,10 @@ def : Proc<"hexagonv65", HexagonModelV65,
             FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 def : Proc<"hexagonv66", HexagonModelV66,
            [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66,
+            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
+def : Proc<"hexagonv67", HexagonModelV67,
+           [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
             FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
             FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 
