@@ -135,12 +135,12 @@ multiclass WramStoreSub64Pat<PatFrag StoreOp, DPUInstruction Inst> {
 }
 
 multiclass WramStoreImmPat<PatFrag WramStoreImmOp, DPUInstruction Inst, ImmOperand StTy> {
-  def : Pat<(WramStoreImmOp (StTy:$imm), SimpleRegOrCst:$ra), (Inst SimpleRegOrCst:$ra, 0, StTy:$imm)>;
-  def : Pat<(WramStoreImmOp (StTy:$imm), AddrFI:$ra), (Inst AddrFI:$ra, 0, StTy:$imm)>;
-  def : Pat<(WramStoreImmOp (StTy:$imm), (add SimpleRegOrCst:$ra, s12_imm:$off)), (Inst SimpleRegOrCst:$ra, s12_imm:$off, StTy:$imm)>;
-  def : Pat<(WramStoreImmOp (StTy:$imm), (add AddrFI:$ra, s12_imm:$off)), (Inst AddrFI:$ra, s12_imm:$off, StTy:$imm)>;
-  def : Pat<(WramStoreImmOp (StTy:$imm), (IsOrAdd SimpleRegOrCst:$ra, s12_imm:$off)), (Inst SimpleRegOrCst:$ra, s12_imm:$off, StTy:$imm)>;
-  def : Pat<(WramStoreImmOp (StTy:$imm), (IsOrAdd AddrFI:$ra, s12_imm:$off)), (Inst AddrFI:$ra, s12_imm:$off, StTy:$imm)>;
+  def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), SimpleRegOrCst:$ra), (Inst SimpleRegOrCst:$ra, 0, StTy:$imm)>;
+  def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), AddrFI:$ra), (Inst AddrFI:$ra, 0, StTy:$imm)>;
+  def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), (add SimpleRegOrCst:$ra, s12_imm:$off)), (Inst SimpleRegOrCst:$ra, s12_imm:$off, StTy:$imm)>;
+  def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), (add AddrFI:$ra, s12_imm:$off)), (Inst AddrFI:$ra, s12_imm:$off, StTy:$imm)>;
+  def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), (IsOrAdd SimpleRegOrCst:$ra, s12_imm:$off)), (Inst SimpleRegOrCst:$ra, s12_imm:$off, StTy:$imm)>;
+  def : Pat<(wram_store_frag<WramStoreImmOp> (StTy:$imm), (IsOrAdd AddrFI:$ra, s12_imm:$off)), (Inst AddrFI:$ra, s12_imm:$off, StTy:$imm)>;
   // todo: we could add the DPUWrapper Patterns here, if we could check that $off is at the start of the memory (in section ".data.immediate_memory")
 }
 
