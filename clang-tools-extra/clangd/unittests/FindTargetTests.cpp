@@ -879,6 +879,56 @@ TEST_F(FindExplicitReferencesTest, All) {
         "8: targets = {INT2}, decl\n"
         "9: targets = {NS}, decl\n"
         "10: targets = {ns}\n"},
+       // User-defined conversion operator.
+       {R"cpp(
+            void foo() {
+               class $0^Bar {};
+               class $1^Foo {
+               public:
+                 // FIXME: This should have only one reference to Bar.
+                 $2^operator $3^$4^Bar();
+               };
+
+               $5^Foo $6^f;
+               $7^f.$8^operator $9^Bar();
+            }
+        )cpp",
+        "0: targets = {Bar}, decl\n"
+        "1: targets = {Foo}, decl\n"
+        "2: targets = {foo()::Foo::operator Bar}, decl\n"
+        "3: targets = {Bar}\n"
+        "4: targets = {Bar}\n"
+        "5: targets = {Foo}\n"
+        "6: targets = {f}, decl\n"
+        "7: targets = {f}\n"
+        "8: targets = {foo()::Foo::operator Bar}\n"
+        "9: targets = {Bar}\n"},
+       // Destructor.
+       {R"cpp(
+             void foo() {
+               class $0^Foo {
+               public:
+                 ~$1^Foo() {}
+
+                 void $2^destructMe() {
+                   this->~$3^Foo();
+                 }
+               };
+
+               $4^Foo $5^f;
+               $6^f.~ /*...*/ $7^Foo();
+             }
+           )cpp",
+        "0: targets = {Foo}, decl\n"
+        // FIXME: It's better to target destructor's FunctionDecl instead of
+        // the type itself (similar to constructor).
+        "1: targets = {Foo}\n"
+        "2: targets = {foo()::Foo::destructMe}, decl\n"
+        "3: targets = {Foo}\n"
+        "4: targets = {Foo}\n"
+        "5: targets = {f}, decl\n"
+        "6: targets = {f}\n"
+        "7: targets = {Foo}\n"},
        // cxx constructor initializer.
        {R"cpp(
              class Base {};
