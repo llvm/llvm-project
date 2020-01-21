@@ -140,25 +140,64 @@ DWARFDIE::GetAttributeValueAsReferenceDIE(const dw_attr_t attr) const {
 }
 
 DWARFDIE
-DWARFDIE::LookupDeepestBlock(lldb::addr_t file_addr) const {
-  if (IsValid()) {
-    SymbolFileDWARF *dwarf = GetDWARF();
-    DWARFUnit *cu = GetCU();
-    DWARFDebugInfoEntry *function_die = nullptr;
-    DWARFDebugInfoEntry *block_die = nullptr;
-    if (m_die->LookupAddress(file_addr, cu, &function_die, &block_die)) {
-      if (block_die && block_die != function_die) {
-        if (cu->ContainsDIEOffset(block_die->GetOffset()))
-          return DWARFDIE(cu, block_die);
-        else
-          return DWARFDIE(dwarf->DebugInfo()->GetUnit(DIERef(
-                              cu->GetSymbolFileDWARF().GetDwoNum(),
-                              cu->GetDebugSection(), block_die->GetOffset())),
-                          block_die);
+DWARFDIE::LookupDeepestBlock(lldb::addr_t address) const {
+  if (!IsValid())
+    return DWARFDIE();
+
+  DWARFDIE result;
+  bool check_children = false;
+  bool match_addr_range = false;
+  switch (Tag()) {
+  case DW_TAG_class_type:
+  case DW_TAG_namespace:
+  case DW_TAG_structure_type:
+  case DW_TAG_common_block:
+    check_children = true;
+    break;
+  case DW_TAG_compile_unit:
+  case DW_TAG_module:
+  case DW_TAG_catch_block:
+  case DW_TAG_subprogram:
+  case DW_TAG_try_block:
+  case DW_TAG_partial_unit:
+    match_addr_range = true;
+    break;
+  case DW_TAG_lexical_block:
+  case DW_TAG_inlined_subroutine:
+    check_children = true;
+    match_addr_range = true;
+    break;
+  default:
+    break;
+  }
+
+  if (match_addr_range) {
+    DWARFRangeList ranges;
+    if (m_die->GetAttributeAddressRanges(m_cu, ranges,
+                                         /*check_hi_lo_pc=*/true) &&
+        ranges.FindEntryThatContains(address)) {
+      check_children = true;
+      switch (Tag()) {
+      default:
+        break;
+
+      case DW_TAG_inlined_subroutine: // Inlined Function
+      case DW_TAG_lexical_block:      // Block { } in code
+        result = *this;
+        break;
       }
+    } else {
+      check_children = false;
     }
   }
-  return DWARFDIE();
+
+  if (check_children) {
+    for (DWARFDIE child = GetFirstChild(); child; child = child.GetSibling()) {
+      if (DWARFDIE child_result = child.LookupDeepestBlock(address))
+        return child_result;
+    }
+  }
+  return result;
 }
 
 const char *DWARFDIE::GetMangledName() const {
