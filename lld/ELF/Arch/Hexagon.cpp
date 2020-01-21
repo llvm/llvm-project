@@ -55,6 +55,8 @@ Hexagon::Hexagon() {
   defaultMaxPageSize = 0x10000;
   noneRel = R_HEX_NONE;
   tlsGotRel = R_HEX_TPREL_32;
+  tlsModuleIndexRel = R_HEX_DTPMOD_32;
+  tlsOffsetRel = R_HEX_DTPREL_32;
 }
 
 uint32_t Hexagon::calcEFlags() const {
@@ -102,6 +104,7 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_32_6_X:
   case R_HEX_HI16:
   case R_HEX_LO16:
+  case R_HEX_DTPREL_32:
     return R_ABS;
   case R_HEX_B9_PCREL:
   case R_HEX_B13_PCREL:
@@ -121,6 +124,10 @@ RelExpr Hexagon::getRelExpr(RelType type, const Symbol &s,
   case R_HEX_IE_HI16:
   case R_HEX_IE_LO16:
     return R_GOT;
+  case R_HEX_GD_GOT_11_X:
+  case R_HEX_GD_GOT_16_X:
+  case R_HEX_GD_GOT_32_6_X:
+    return R_TLSGD_GOTPLT;
   case R_HEX_GOTREL_11_X:
   case R_HEX_GOTREL_16_X:
   case R_HEX_GOTREL_32_6_X:
@@ -240,6 +247,7 @@ void Hexagon::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
     or32le(loc, applyMask(0x00203fe0, val & 0x3f));
     break;
   case R_HEX_11_X:
+  case R_HEX_GD_GOT_11_X:
   case R_HEX_IE_GOT_11_X:
   case R_HEX_GOT_11_X:
   case R_HEX_GOTREL_11_X:
@@ -252,6 +260,7 @@ void Hexagon::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   case R_HEX_16_X: // These relocs only have 6 effective bits.
   case R_HEX_IE_16_X:
   case R_HEX_IE_GOT_16_X:
+  case R_HEX_GD_GOT_16_X:
   case R_HEX_GOT_16_X:
   case R_HEX_GOTREL_16_X:
   case R_HEX_TPREL_16_X:
@@ -262,9 +271,11 @@ void Hexagon::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
     break;
   case R_HEX_32:
   case R_HEX_32_PCREL:
+  case R_HEX_DTPREL_32:
     or32le(loc, val);
     break;
   case R_HEX_32_6_X:
+  case R_HEX_GD_GOT_32_6_X:
   case R_HEX_GOT_32_6_X:
   case R_HEX_GOTREL_32_6_X:
   case R_HEX_IE_GOT_32_6_X:
