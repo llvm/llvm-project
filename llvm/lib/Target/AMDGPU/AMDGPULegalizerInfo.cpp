@@ -499,8 +499,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   getActionDefinitionsBuilder(G_PTR_ADD)
-    .legalForCartesianProduct(AddrSpaces64, {S64})
-    .legalForCartesianProduct(AddrSpaces32, {S32})
+    .legalIf(isPointer(0))
     .scalarize(0);
 
   getActionDefinitionsBuilder(G_PTR_MASK)
