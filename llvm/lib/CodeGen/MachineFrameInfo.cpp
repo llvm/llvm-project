@@ -89,7 +89,7 @@ int MachineFrameInfo::CreateFixedObject(uint64_t Size, int64_t SPOffset,
   // stack needs realignment, we can't assume that the stack will in fact be
   // aligned.
   Align Alignment =
-      commonAlignment(ForcedRealign ? Align::None() : StackAlignment, SPOffset);
+      commonAlignment(ForcedRealign ? Align(1) : StackAlignment, SPOffset);
   Alignment = clampStackAlignment(!StackRealignable, Alignment, StackAlignment);
   Objects.insert(Objects.begin(),
                  StackObject(Size, Alignment, SPOffset, IsImmutable,
@@ -102,7 +102,7 @@ int MachineFrameInfo::CreateFixedSpillStackObject(uint64_t Size,
                                                   int64_t SPOffset,
                                                   bool IsImmutable) {
   Align Alignment =
-      commonAlignment(ForcedRealign ? Align::None() : StackAlignment, SPOffset);
+      commonAlignment(ForcedRealign ? Align(1) : StackAlignment, SPOffset);
   Alignment = clampStackAlignment(!StackRealignable, Alignment, StackAlignment);
   Objects.insert(Objects.begin(),
                  StackObject(Size, Alignment, SPOffset, IsImmutable,

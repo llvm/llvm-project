@@ -2362,7 +2362,7 @@ bool ModuleAddressSanitizer::InstrumentGlobals(IRBuilder<> &IRB, Module &M,
       // Set meaningful attributes for indicator symbol.
       ODRIndicatorSym->setVisibility(NewGlobal->getVisibility());
       ODRIndicatorSym->setDLLStorageClass(NewGlobal->getDLLStorageClass());
-      ODRIndicatorSym->setAlignment(Align::None());
+      ODRIndicatorSym->setAlignment(Align(1));
       ODRIndicator = ODRIndicatorSym;
     }
 

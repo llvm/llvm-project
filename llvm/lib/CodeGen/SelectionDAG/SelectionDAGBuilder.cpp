@@ -9279,7 +9279,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         if (NumParts > 1 && j == 0)
           MyFlags.Flags.setSplit();
         else if (j != 0) {
-          MyFlags.Flags.setOrigAlign(Align::None());
+          MyFlags.Flags.setOrigAlign(Align(1));
           if (j == NumParts - 1)
             MyFlags.Flags.setSplitEnd();
         }
@@ -9754,7 +9754,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
           MyFlags.Flags.setSplit();
         // if it isn't first piece, alignment must be 1
         else if (i > 0) {
-          MyFlags.Flags.setOrigAlign(Align::None());
+          MyFlags.Flags.setOrigAlign(Align(1));
           if (i == NumRegs - 1)
             MyFlags.Flags.setSplitEnd();
         }

@@ -10591,11 +10591,11 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_storedquqi512_mask:
   case X86::BI__builtin_ia32_storeupd512_mask:
   case X86::BI__builtin_ia32_storeups512_mask:
-    return EmitX86MaskedStore(*this, Ops, Align::None());
+    return EmitX86MaskedStore(*this, Ops, Align(1));
 
   case X86::BI__builtin_ia32_storess128_mask:
   case X86::BI__builtin_ia32_storesd128_mask:
-    return EmitX86MaskedStore(*this, Ops, Align::None());
+    return EmitX86MaskedStore(*this, Ops, Align(1));
 
   case X86::BI__builtin_ia32_vpopcntb_128:
   case X86::BI__builtin_ia32_vpopcntd_128:
@@ -10730,11 +10730,11 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_loaddqudi128_mask:
   case X86::BI__builtin_ia32_loaddqudi256_mask:
   case X86::BI__builtin_ia32_loaddqudi512_mask:
-    return EmitX86MaskedLoad(*this, Ops, Align::None());
+    return EmitX86MaskedLoad(*this, Ops, Align(1));
 
   case X86::BI__builtin_ia32_loadss128_mask:
   case X86::BI__builtin_ia32_loadsd128_mask:
-    return EmitX86MaskedLoad(*this, Ops, Align::None());
+    return EmitX86MaskedLoad(*this, Ops, Align(1));
 
   case X86::BI__builtin_ia32_loadaps128_mask:
   case X86::BI__builtin_ia32_loadaps256_mask:
@@ -11558,7 +11558,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     // Unaligned nontemporal store of the scalar value.
     StoreInst *SI = Builder.CreateDefaultAlignedStore(Src, BC);
     SI->setMetadata(CGM.getModule().getMDKindID("nontemporal"), Node);
-    SI->setAlignment(llvm::Align::None());
+    SI->setAlignment(llvm::Align(1));
     return SI;
   }
   // Rotate is a special case of funnel shift - 1st 2 args are the same.
@@ -12509,7 +12509,7 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__stosb: {
     // We treat __stosb as a volatile memset - it may not generate "rep stosb"
     // instruction, but it will create a memset that won't be optimized away.
-    return Builder.CreateMemSet(Ops[0], Ops[1], Ops[2], Align::None(), true);
+    return Builder.CreateMemSet(Ops[0], Ops[1], Ops[2], Align(1), true);
   }
   case X86::BI__ud2:
     // llvm.trap makes a ud2a instruction on x86.

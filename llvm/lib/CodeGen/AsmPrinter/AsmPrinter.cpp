@@ -2182,7 +2182,7 @@ void AsmPrinter::EmitAlignment(Align Alignment, const GlobalObject *GV) const {
   if (GV)
     Alignment = getGVAlignment(GV, GV->getParent()->getDataLayout(), Alignment);
 
-  if (Alignment == Align::None())
+  if (Alignment == Align(1))
     return; // 1-byte aligned: no need to emit alignment.
 
   if (getCurrentSection()->getKind().isText())
@@ -2955,7 +2955,7 @@ void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
 
   // Emit an alignment directive for this block, if needed.
   const Align Alignment = MBB.getAlignment();
-  if (Alignment != Align::None())
+  if (Alignment != Align(1))
     EmitAlignment(Alignment);
 
   // If the block has its address taken, emit any labels that were used to

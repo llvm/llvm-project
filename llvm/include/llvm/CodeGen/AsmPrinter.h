@@ -659,7 +659,7 @@ public:
 
   /// Return the alignment for the specified \p GV.
   static Align getGVAlignment(const GlobalValue *GV, const DataLayout &DL,
-                              Align InAlign = Align::None());
+                              Align InAlign = Align(1));
 
 private:
   /// Private state for PrintSpecial()
