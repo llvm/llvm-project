@@ -179,3 +179,11 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
   MAIN_CONFIG
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py)
+
+if (CMAKE_GENERATOR STREQUAL "Xcode")
+  # Xcode does not get the auto-generated targets. We need to create
+  # check-lldb-api manually.
+  add_lit_testsuite(check-lldb-api "Running lldb api test suite"
+    ${CMAKE_CURRENT_BINARY_DIR}
+    DEPENDS lldb-test-deps)
+endif()
