@@ -449,6 +449,15 @@ TEST_F(DocumentSymbolsTest, DeclarationDefinition) {
                 SymNameRange(Main.range("def")))));
 }
 
+TEST_F(DocumentSymbolsTest, Concepts) {
+  CDB.ExtraClangFlags = {"-std=c++2a"};
+  std::string FilePath = testPath("foo.cpp");
+  addFile(FilePath,
+          "template <typename T> concept C = requires(T t) { t.foo(); };");
+
+  EXPECT_THAT(getSymbols(FilePath), ElementsAre(WithName("C")));
+}
+
 TEST_F(DocumentSymbolsTest, ExternSymbol) {
   std::string FilePath = testPath("foo.cpp");
   addFile(testPath("foo.h"), R"cpp(
