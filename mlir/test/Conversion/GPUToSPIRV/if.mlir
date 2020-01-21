@@ -7,7 +7,7 @@ module attributes {gpu.container_module} {
     return
   }
 
-  module @kernels attributes {gpu.kernel_module} {
+  gpu.module @kernels {
     // CHECK-LABEL: @kernel_simple_selection
     gpu.func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1)
     attributes {gpu.kernel} {
