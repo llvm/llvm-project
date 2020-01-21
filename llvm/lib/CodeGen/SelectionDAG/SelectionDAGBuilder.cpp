@@ -1482,6 +1482,9 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
                              TLI.getPointerTy(DAG.getDataLayout(), AS));
     }
 
+    if (match(C, m_VScale(DAG.getDataLayout())))
+      return DAG.getVScale(getCurSDLoc(), VT, APInt(VT.getSizeInBits(), 1));
+
     if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C))
       return DAG.getConstantFP(*CFP, getCurSDLoc(), VT);
 
@@ -5772,6 +5775,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // By default, turn this into a target intrinsic node.
     visitTargetIntrinsic(I, Intrinsic);
     return;
+  case Intrinsic::vscale: {
+    match(&I, m_VScale(DAG.getDataLayout()));
+    EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I,
+             DAG.getVScale(getCurSDLoc(), VT, APInt(VT.getSizeInBits(), 1)));
+    return;
+  }
   case Intrinsic::vastart:  visitVAStart(I); return;
   case Intrinsic::vaend:    visitVAEnd(I); return;
   case Intrinsic::vacopy:   visitVACopy(I); return;

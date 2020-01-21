@@ -5185,11 +5185,20 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N2C && N2C->isNullValue())
       return N1;
     break;
+  case ISD::MUL:
+    assert(VT.isInteger() && "This operator does not apply to FP types!");
+    assert(N1.getValueType() == N2.getValueType() &&
+           N1.getValueType() == VT && "Binary operator types must match!");
+    if (N2C && (N1.getOpcode() == ISD::VSCALE) && Flags.hasNoSignedWrap()) {
+      APInt MulImm = cast<ConstantSDNode>(N1->getOperand(0))->getAPIntValue();
+      APInt N2CImm = N2C->getAPIntValue();
+      return getVScale(DL, VT, MulImm * N2CImm);
+    }
+    break;
   case ISD::UDIV:
   case ISD::UREM:
   case ISD::MULHU:
   case ISD::MULHS:
-  case ISD::MUL:
   case ISD::SDIV:
   case ISD::SREM:
   case ISD::SMIN:
@@ -5222,6 +5231,12 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
            "Invalid FCOPYSIGN!");
     break;
   case ISD::SHL:
+    if (N2C && (N1.getOpcode() == ISD::VSCALE) && Flags.hasNoSignedWrap()) {
+      APInt MulImm = cast<ConstantSDNode>(N1->getOperand(0))->getAPIntValue();
+      APInt ShiftImm = N2C->getAPIntValue();
+      return getVScale(DL, VT, MulImm << ShiftImm);
+    }
+    LLVM_FALLTHROUGH;
   case ISD::SRA:
   case ISD::SRL:
     if (SDValue V = simplifyShift(N1, N2))

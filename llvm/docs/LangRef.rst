@@ -17889,6 +17889,34 @@ information on the *based on* terminology see
 mask argument does not match the pointer size of the target, the mask is
 zero-extended or truncated accordingly.
 
+.. _int_vscale:
+
+'``llvm.vscale``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i32 llvm.vscale.i32()
+      declare i64 llvm.vscale.i64()
+
+Overview:
+"""""""""
+
+The ``llvm.vscale`` intrinsic returns the value for ``vscale`` in scalable
+vectors such as ``<vscale x 16 x i8>``.
+
+Semantics:
+""""""""""
+
+``vscale`` is a positive value that is constant throughout program
+execution, but is unknown at compile time.
+If the result value does not fit in the result type, then the result is
+a :ref:`poison value <poisonvalues>`.
+
+
 Stack Map Intrinsics
 --------------------
 

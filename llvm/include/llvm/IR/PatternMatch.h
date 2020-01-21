@@ -32,6 +32,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -2000,6 +2001,42 @@ template <int Ind, typename Opnd_t> struct ExtractValue_match {
 template <int Ind, typename Val_t>
 inline ExtractValue_match<Ind, Val_t> m_ExtractValue(const Val_t &V) {
   return ExtractValue_match<Ind, Val_t>(V);
+}
+
+/// Matches patterns for `vscale`. This can either be a call to `llvm.vscale` or
+/// the constant expression
+///  `ptrtoint(gep <vscale x 1 x i8>, <vscale x 1 x i8>* null, i32 1>`
+/// under the right conditions determined by DataLayout.
+struct VScaleVal_match {
+private:
+  template <typename Base, typename Offset>
+  inline BinaryOp_match<Base, Offset, Instruction::GetElementPtr>
+  m_OffsetGep(const Base &B, const Offset &O) {
+    return BinaryOp_match<Base, Offset, Instruction::GetElementPtr>(B, O);
+  }
+
+public:
+  const DataLayout &DL;
+  VScaleVal_match(const DataLayout &DL) : DL(DL) {}
+
+  template <typename ITy> bool match(ITy *V) {
+    if (m_Intrinsic<Intrinsic::vscale>().match(V))
+      return true;
+
+    if (m_PtrToInt(m_OffsetGep(m_Zero(), m_SpecificInt(1))).match(V)) {
+      Type *PtrTy = cast<Operator>(V)->getOperand(0)->getType();
+      Type *DerefTy = PtrTy->getPointerElementType();
+      if (DerefTy->isVectorTy() && DerefTy->getVectorIsScalable() &&
+          DL.getTypeAllocSizeInBits(DerefTy).getKnownMinSize() == 8)
+        return true;
+    }
+
+    return false;
+  }
+};
+
+inline VScaleVal_match m_VScale(const DataLayout &DL) {
+  return VScaleVal_match(DL);
 }
 
 } // end namespace PatternMatch

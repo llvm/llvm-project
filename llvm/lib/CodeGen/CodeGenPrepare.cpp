@@ -2010,6 +2010,22 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
       return despeculateCountZeros(II, TLI, DL, ModifiedDT);
     case Intrinsic::dbg_value:
       return fixupDbgValue(II);
+    case Intrinsic::vscale: {
+      // If datalayout has no special restrictions on vector data layout,
+      // replace `llvm.vscale` by an equivalent constant expression
+      // to benefit from cheap constant propagation.
+      Type *ScalableVectorTy =
+          VectorType::get(Type::getInt8Ty(II->getContext()), 1, true);
+      if (DL->getTypeAllocSize(ScalableVectorTy).getKnownMinSize() == 8) {
+        auto Null = Constant::getNullValue(ScalableVectorTy->getPointerTo());
+        auto One = ConstantInt::getSigned(II->getType(), 1);
+        auto *CGep =
+            ConstantExpr::getGetElementPtr(ScalableVectorTy, Null, One);
+        II->replaceAllUsesWith(ConstantExpr::getPtrToInt(CGep, II->getType()));
+        II->eraseFromParent();
+        return true;
+      }
+    }
     }
 
     if (TLI) {

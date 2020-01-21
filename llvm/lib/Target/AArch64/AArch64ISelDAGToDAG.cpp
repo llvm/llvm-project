@@ -62,6 +62,9 @@ public:
                                     unsigned ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 
+  template <signed Low, signed High, signed Scale>
+  bool SelectRDVLImm(SDValue N, SDValue &Imm);
+
   bool tryMLAV64LaneV128(SDNode *N);
   bool tryMULLV64LaneV128(unsigned IntNo, SDNode *N);
   bool SelectArithExtendedRegister(SDValue N, SDValue &Reg, SDValue &Shift);
@@ -679,6 +682,23 @@ static SDValue narrowIfNeeded(SelectionDAG *CurDAG, SDValue N) {
   return SDValue(Node, 0);
 }
 
+// Returns a suitable CNT/INC/DEC/RDVL multiplier to calculate VSCALE*N.
+template<signed Low, signed High, signed Scale>
+bool AArch64DAGToDAGISel::SelectRDVLImm(SDValue N, SDValue &Imm) {
+  if (!isa<ConstantSDNode>(N))
+    return false;
+
+  int64_t MulImm = cast<ConstantSDNode>(N)->getSExtValue();
+  if ((MulImm % std::abs(Scale)) == 0) {
+    int64_t RDVLImm = MulImm / Scale;
+    if ((RDVLImm >= Low) && (RDVLImm <= High)) {
+      Imm = CurDAG->getTargetConstant(RDVLImm, SDLoc(N), MVT::i32);
+      return true;
+    }
+  }
+
+  return false;
+}
 
 /// SelectArithExtendedRegister - Select a "extended register" operand.  This
 /// operand folds in an extend followed by an optional left shift.

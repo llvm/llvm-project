@@ -836,6 +836,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
+    if (Subtarget->hasSVE())
+      setOperationAction(ISD::VSCALE, MVT::i32, Custom);
+
     setTruncStoreAction(MVT::v4i16, MVT::v4i8, Custom);
   }
 
@@ -3254,6 +3257,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerATOMIC_LOAD_AND(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::VSCALE:
+    return LowerVSCALE(Op, DAG);
   }
 }
 
@@ -8639,6 +8644,17 @@ AArch64TargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
 
   SDValue Ops[2] = {SP, Chain};
   return DAG.getMergeValues(Ops, dl);
+}
+
+SDValue AArch64TargetLowering::LowerVSCALE(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  EVT VT = Op.getValueType();
+  assert(VT != MVT::i64 && "Expected illegal VSCALE node");
+
+  SDLoc DL(Op);
+  APInt MulImm = cast<ConstantSDNode>(Op.getOperand(0))->getAPIntValue();
+  return DAG.getZExtOrTrunc(DAG.getVScale(DL, MVT::i64, MulImm.sextOrSelf(64)),
+                            DL, VT);
 }
 
 /// getTgtMemIntrinsic - Represent NEON load and store intrinsics as

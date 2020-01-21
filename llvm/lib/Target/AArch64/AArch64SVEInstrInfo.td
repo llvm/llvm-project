@@ -46,6 +46,17 @@ def AArch64ld1_gather_uxtw_scaled    : SDNode<"AArch64ISD::GLD1_UXTW_SCALED",   
 def AArch64ld1_gather_sxtw_scaled    : SDNode<"AArch64ISD::GLD1_SXTW_SCALED",   SDT_AArch64_GLD1,     [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 def AArch64ld1_gather_imm            : SDNode<"AArch64ISD::GLD1_IMM",           SDT_AArch64_GLD1_IMM, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 
+// SVE CNT/INC/RDVL
+def sve_rdvl_imm : ComplexPattern<i32, 1, "SelectRDVLImm<-32, 31, 16>">;
+def sve_cnth_imm : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, 8>">;
+def sve_cntw_imm : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, 4>">;
+def sve_cntd_imm : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, 2>">;
+
+// SVE DEC
+def sve_cnth_imm_neg : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, -8>">;
+def sve_cntw_imm_neg : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, -4>">;
+def sve_cntd_imm_neg : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, -2>">;
+
 def AArch64ld1s_gather               : SDNode<"AArch64ISD::GLD1S",              SDT_AArch64_GLD1,     [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 def AArch64ld1s_gather_scaled        : SDNode<"AArch64ISD::GLD1S_SCALED",       SDT_AArch64_GLD1,     [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 def AArch64ld1s_gather_uxtw          : SDNode<"AArch64ISD::GLD1S_UXTW",         SDT_AArch64_GLD1,     [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
@@ -1104,6 +1115,23 @@ let Predicates = [HasSVE] in {
   def : Pat<(sext_inreg (nxv4i32 ZPR:$Zs), nxv4i16), (SXTH_ZPmZ_S (IMPLICIT_DEF), (PTRUE_S 31), ZPR:$Zs)>;
   def : Pat<(sext_inreg (nxv4i32 ZPR:$Zs), nxv4i8),  (SXTB_ZPmZ_S (IMPLICIT_DEF), (PTRUE_S 31), ZPR:$Zs)>;
   def : Pat<(sext_inreg (nxv8i16 ZPR:$Zs), nxv8i8),  (SXTB_ZPmZ_H (IMPLICIT_DEF), (PTRUE_H 31), ZPR:$Zs)>;
+
+  // General case that we ideally never want to match.
+  def : Pat<(vscale GPR64:$scale), (MADDXrrr (UBFMXri (RDVLI_XI 1), 4, 63), $scale, XZR)>;
+
+  let AddedComplexity = 5 in {
+    def : Pat<(vscale (i64 1)), (UBFMXri (RDVLI_XI 1), 4, 63)>;
+    def : Pat<(vscale (i64 -1)), (SBFMXri (RDVLI_XI -1), 4, 63)>;
+
+    def : Pat<(vscale (sve_rdvl_imm i32:$imm)), (RDVLI_XI $imm)>;
+    def : Pat<(vscale (sve_cnth_imm i32:$imm)), (CNTH_XPiI 31, $imm)>;
+    def : Pat<(vscale (sve_cntw_imm i32:$imm)), (CNTW_XPiI 31, $imm)>;
+    def : Pat<(vscale (sve_cntd_imm i32:$imm)), (CNTD_XPiI 31, $imm)>;
+
+    def : Pat<(vscale (sve_cnth_imm_neg i32:$imm)), (SUBXrs XZR, (CNTH_XPiI 31, $imm), 0)>;
+    def : Pat<(vscale (sve_cntw_imm_neg i32:$imm)), (SUBXrs XZR, (CNTW_XPiI 31, $imm), 0)>;
+    def : Pat<(vscale (sve_cntd_imm_neg i32:$imm)), (SUBXrs XZR, (CNTD_XPiI 31, $imm), 0)>;
+  }
 
   def : Pat<(nxv16i8 (bitconvert (nxv8i16 ZPR:$src))), (nxv16i8 ZPR:$src)>;
   def : Pat<(nxv16i8 (bitconvert (nxv4i32 ZPR:$src))), (nxv16i8 ZPR:$src)>;

@@ -828,7 +828,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
   Type *SrcElemTy = GEP->getSourceElementType();
   Type *ResElemTy = GEP->getResultElementType();
   Type *ResTy = GEP->getType();
-  if (!SrcElemTy->isSized())
+  if (!SrcElemTy->isSized() ||
+      (SrcElemTy->isVectorTy() && SrcElemTy->getVectorIsScalable()))
     return nullptr;
 
   if (Constant *C = CastGEPIndices(SrcElemTy, Ops, ResTy,
