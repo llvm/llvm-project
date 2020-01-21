@@ -31,12 +31,11 @@ namespace {
 //
 // This pass only handles device code and is not meant to be run on GPU host
 // code.
-class LowerGpuOpsToROCDLOpsPass : public ModulePass<LowerGpuOpsToROCDLOpsPass> {
+class LowerGpuOpsToROCDLOpsPass
+    : public OperationPass<LowerGpuOpsToROCDLOpsPass, gpu::GPUModuleOp> {
 public:
-  void runOnModule() override {
-    ModuleOp m = getModule();
-    if (!m.getAttrOfType<UnitAttr>(gpu::GPUDialect::getKernelModuleAttrName()))
-      return;
+  void runOnOperation() override {
+    gpu::GPUModuleOp m = getOperation();
 
     OwningRewritePatternList patterns;
     LLVMTypeConverter converter(m.getContext());
@@ -73,7 +72,8 @@ public:
 
 } // anonymous namespace
 
-std::unique_ptr<OpPassBase<ModuleOp>> mlir::createLowerGpuOpsToROCDLOpsPass() {
+std::unique_ptr<OpPassBase<gpu::GPUModuleOp>>
+mlir::createLowerGpuOpsToROCDLOpsPass() {
   return std::make_unique<LowerGpuOpsToROCDLOpsPass>();
 }
 

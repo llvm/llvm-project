@@ -16,7 +16,7 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL: spv.module "Logical" "GLSL450"
-  module @kernels attributes {gpu.kernel_module} {
+  gpu.module @kernels {
     // CHECK-DAG: spv.globalVariable [[WORKGROUPSIZEVAR:@.*]] built_in("WorkgroupSize") : !spv.ptr<vector<3xi32>, Input>
     // CHECK-DAG: spv.globalVariable [[NUMWORKGROUPSVAR:@.*]] built_in("NumWorkgroups") : !spv.ptr<vector<3xi32>, Input>
     // CHECK-DAG: spv.globalVariable [[LOCALINVOCATIONIDVAR:@.*]] built_in("LocalInvocationId") : !spv.ptr<vector<3xi32>, Input>

@@ -9,7 +9,7 @@ module attributes {gpu.container_module} {
 
   // CHECK-LABEL:  spv.module "Logical" "GLSL450"
   // CHECK: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
-  module @kernels attributes {gpu.kernel_module} {
+  gpu.module @kernels {
     gpu.func @builtin_workgroup_id_x()
       attributes {gpu.kernel} {
       // CHECK: [[ADDRESS:%.*]] = spv._address_of [[WORKGROUPID]]
@@ -32,7 +32,7 @@ module attributes {gpu.container_module} {
 
   // CHECK-LABEL:  spv.module "Logical" "GLSL450"
   // CHECK: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
-  module @kernels attributes {gpu.kernel_module} {
+  gpu.module @kernels {
     gpu.func @builtin_workgroup_id_y()
       attributes {gpu.kernel} {
       // CHECK: [[ADDRESS:%.*]] = spv._address_of [[WORKGROUPID]]
@@ -55,7 +55,7 @@ module attributes {gpu.container_module} {
 
   // CHECK-LABEL:  spv.module "Logical" "GLSL450"
   // CHECK: spv.globalVariable [[WORKGROUPID:@.*]] built_in("WorkgroupId")
-  module @kernels attributes {gpu.kernel_module} {
+  gpu.module @kernels {
     gpu.func @builtin_workgroup_id_z()
       attributes {gpu.kernel} {
       // CHECK: [[ADDRESS:%.*]] = spv._address_of [[WORKGROUPID]]
@@ -78,7 +78,7 @@ module attributes {gpu.container_module} {
 
   // CHECK-LABEL:  spv.module "Logical" "GLSL450"
   // CHECK: spv.globalVariable [[WORKGROUPSIZE:@.*]] built_in("WorkgroupSize")
-  module @kernels attributes {gpu.kernel_module} {
+  gpu.module @kernels {
     gpu.func @builtin_workgroup_size_x()
       attributes {gpu.kernel} {
       // CHECK: [[ADDRESS:%.*]] = spv._address_of [[WORKGROUPSIZE]]
@@ -101,7 +101,7 @@ module attributes {gpu.container_module} {
 
   // CHECK-LABEL:  spv.module "Logical" "GLSL450"
   // CHECK: spv.globalVariable [[LOCALINVOCATIONID:@.*]] built_in("LocalInvocationId")
-  module @kernels attributes {gpu.kernel_module} {
+  gpu.module @kernels {
     gpu.func @builtin_local_id_x()
       attributes {gpu.kernel} {
       // CHECK: [[ADDRESS:%.*]] = spv._address_of [[LOCALINVOCATIONID]]
@@ -124,7 +124,7 @@ module attributes {gpu.container_module} {
 
   // CHECK-LABEL:  spv.module "Logical" "GLSL450"
   // CHECK: spv.globalVariable [[NUMWORKGROUPS:@.*]] built_in("NumWorkgroups")
-  module @kernels attributes {gpu.kernel_module} {
+  gpu.module @kernels {
     gpu.func @builtin_num_workgroups_x()
       attributes {gpu.kernel} {
       // CHECK: [[ADDRESS:%.*]] = spv._address_of [[NUMWORKGROUPS]]
