@@ -229,6 +229,8 @@ public:
 
   bool GetRequireHardwareBreakpoints() const;
 
+  bool GetAutoInstallMainExecutable() const;
+
 private:
   // Callbacks for m_launch_info.
   void Arg0ValueChangedCallback();
