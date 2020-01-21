@@ -1,4 +1,4 @@
-//===-- MainThreadCheckerRuntime.cpp ----------------------------*- C++ -*-===//
+//===-- InstrumentationRuntimeMainThreadChecker.cpp -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MainThreadCheckerRuntime.h"
+#include "InstrumentationRuntimeMainThreadChecker.h"
 
+#include "Plugins/Process/Utility/HistoryThread.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -22,47 +23,52 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/RegularExpression.h"
-#include "Plugins/Process/Utility/HistoryThread.h"
 
 #include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
 
-MainThreadCheckerRuntime::~MainThreadCheckerRuntime() {
+InstrumentationRuntimeMainThreadChecker::
+    ~InstrumentationRuntimeMainThreadChecker() {
   Deactivate();
 }
 
 lldb::InstrumentationRuntimeSP
-MainThreadCheckerRuntime::CreateInstance(const lldb::ProcessSP &process_sp) {
-  return InstrumentationRuntimeSP(new MainThreadCheckerRuntime(process_sp));
+InstrumentationRuntimeMainThreadChecker::CreateInstance(
+    const lldb::ProcessSP &process_sp) {
+  return InstrumentationRuntimeSP(
+      new InstrumentationRuntimeMainThreadChecker(process_sp));
 }
 
-void MainThreadCheckerRuntime::Initialize() {
+void InstrumentationRuntimeMainThreadChecker::Initialize() {
   PluginManager::RegisterPlugin(
-      GetPluginNameStatic(), "MainThreadChecker instrumentation runtime plugin.",
-      CreateInstance, GetTypeStatic);
+      GetPluginNameStatic(),
+      "MainThreadChecker instrumentation runtime plugin.", CreateInstance,
+      GetTypeStatic);
 }
 
-void MainThreadCheckerRuntime::Terminate() {
+void InstrumentationRuntimeMainThreadChecker::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString MainThreadCheckerRuntime::GetPluginNameStatic() {
+lldb_private::ConstString
+InstrumentationRuntimeMainThreadChecker::GetPluginNameStatic() {
   return ConstString("MainThreadChecker");
 }
 
-lldb::InstrumentationRuntimeType MainThreadCheckerRuntime::GetTypeStatic() {
+lldb::InstrumentationRuntimeType
+InstrumentationRuntimeMainThreadChecker::GetTypeStatic() {
   return eInstrumentationRuntimeTypeMainThreadChecker;
 }
 
 const RegularExpression &
-MainThreadCheckerRuntime::GetPatternForRuntimeLibrary() {
+InstrumentationRuntimeMainThreadChecker::GetPatternForRuntimeLibrary() {
   static RegularExpression regex(llvm::StringRef("libMainThreadChecker.dylib"));
   return regex;
 }
 
-bool MainThreadCheckerRuntime::CheckIfRuntimeIsValid(
+bool InstrumentationRuntimeMainThreadChecker::CheckIfRuntimeIsValid(
     const lldb::ModuleSP module_sp) {
   static ConstString test_sym("__main_thread_checker_on_report");
   const Symbol *symbol =
@@ -71,7 +77,8 @@ bool MainThreadCheckerRuntime::CheckIfRuntimeIsValid(
 }
 
 StructuredData::ObjectSP
-MainThreadCheckerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
+InstrumentationRuntimeMainThreadChecker::RetrieveReportData(
+    ExecutionContextRef exe_ctx_ref) {
   ProcessSP process_sp = GetProcessSP();
   if (!process_sp)
     return StructuredData::ObjectSP();
@@ -148,15 +155,15 @@ MainThreadCheckerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
   return dict_sp;
 }
 
-bool MainThreadCheckerRuntime::NotifyBreakpointHit(
+bool InstrumentationRuntimeMainThreadChecker::NotifyBreakpointHit(
     void *baton, StoppointCallbackContext *context, user_id_t break_id,
     user_id_t break_loc_id) {
   assert(baton && "null baton");
   if (!baton)
     return false; ///< false => resume execution.
 
-  MainThreadCheckerRuntime *const instance =
-      static_cast<MainThreadCheckerRuntime *>(baton);
+  InstrumentationRuntimeMainThreadChecker *const instance =
+      static_cast<InstrumentationRuntimeMainThreadChecker *>(baton);
 
   ProcessSP process_sp = instance->GetProcessSP();
   ThreadSP thread_sp = context->exe_ctx_ref.GetThreadSP();
@@ -172,9 +179,9 @@ bool MainThreadCheckerRuntime::NotifyBreakpointHit(
 
   if (report) {
     std::string description = report->GetAsDictionary()
-                                ->GetValueForKey("description")
-                                ->GetAsString()
-                                ->GetValue();
+                                  ->GetValueForKey("description")
+                                  ->GetAsString()
+                                  ->GetValue();
     thread_sp->SetStopInfo(
         InstrumentationRuntimeStopInfo::CreateStopReasonWithInstrumentationData(
             *thread_sp, description, report));
@@ -184,7 +191,7 @@ bool MainThreadCheckerRuntime::NotifyBreakpointHit(
   return false;
 }
 
-void MainThreadCheckerRuntime::Activate() {
+void InstrumentationRuntimeMainThreadChecker::Activate() {
   if (IsActive())
     return;
 
@@ -215,15 +222,15 @@ void MainThreadCheckerRuntime::Activate() {
           .CreateBreakpoint(symbol_address, /*internal=*/true,
                             /*hardware=*/false)
           .get();
-  breakpoint->SetCallback(MainThreadCheckerRuntime::NotifyBreakpointHit, this,
-                          true);
+  breakpoint->SetCallback(
+      InstrumentationRuntimeMainThreadChecker::NotifyBreakpointHit, this, true);
   breakpoint->SetBreakpointKind("main-thread-checker-report");
   SetBreakpointID(breakpoint->GetID());
 
   SetActive(true);
 }
 
-void MainThreadCheckerRuntime::Deactivate() {
+void InstrumentationRuntimeMainThreadChecker::Deactivate() {
   SetActive(false);
 
   auto BID = GetBreakpointID();
@@ -237,7 +244,7 @@ void MainThreadCheckerRuntime::Deactivate() {
 }
 
 lldb::ThreadCollectionSP
-MainThreadCheckerRuntime::GetBacktracesFromExtendedStopInfo(
+InstrumentationRuntimeMainThreadChecker::GetBacktracesFromExtendedStopInfo(
     StructuredData::ObjectSP info) {
   ThreadCollectionSP threads;
   threads = std::make_shared<ThreadCollection>();
@@ -245,7 +252,7 @@ MainThreadCheckerRuntime::GetBacktracesFromExtendedStopInfo(
   ProcessSP process_sp = GetProcessSP();
 
   if (info->GetObjectForDotSeparatedPath("instrumentation_class")
-      ->GetStringValue() != "MainThreadChecker")
+          ->GetStringValue() != "MainThreadChecker")
     return threads;
 
   std::vector<lldb::addr_t> PCs;
