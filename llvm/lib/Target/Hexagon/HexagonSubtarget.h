@@ -86,6 +86,7 @@ public:
 
 private:
   std::string CPUString;
+  Triple TargetTriple;
   HexagonInstrInfo InstrInfo;
   HexagonRegisterInfo RegInfo;
   HexagonTargetLowering TLInfo;
@@ -96,6 +97,11 @@ private:
 public:
   HexagonSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                    const TargetMachine &TM);
+
+  const Triple &getTargetTriple() const { return TargetTriple; }
+  bool isEnvironmentMusl() const {
+    return TargetTriple.getEnvironment() == Triple::Musl;
+  }
 
   /// getInstrItins - Return the instruction itineraries based on subtarget
   /// selection.
