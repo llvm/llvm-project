@@ -24,7 +24,7 @@ LineTable::LineTable(CompileUnit *comp_unit)
 LineTable::LineTable(CompileUnit *comp_unit, std::vector<LineSequence *> &sequences)
     : m_comp_unit(comp_unit), m_entries() {
   LineTable::Entry::LessThanBinaryPredicate less_than_bp(this);
-  std::sort(sequences.begin(), sequences.end(), less_than_bp);
+  llvm::stable_sort(sequences, less_than_bp);
   for (auto *sequence : sequences) {
     LineSequenceImpl *seq = reinterpret_cast<LineSequenceImpl *>(sequence);
     m_entries.insert(m_entries.end(), seq->m_entries.begin(),
