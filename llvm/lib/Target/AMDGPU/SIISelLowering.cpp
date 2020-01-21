@@ -1912,67 +1912,45 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
     Info.setScratchRSrcReg(ReservedBufferReg);
   }
 
-  // hasFP should be accurate for kernels even before the frame is finalized.
-  if (ST.getFrameLowering()->hasFP(MF)) {
-    MachineRegisterInfo &MRI = MF.getRegInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
 
-    // Try to use s32 as the SP, but move it if it would interfere with input
-    // arguments. This won't work with calls though.
-    //
-    // FIXME: Move SP to avoid any possible inputs, or find a way to spill input
-    // registers.
-    if (!MRI.isLiveIn(AMDGPU::SGPR32)) {
-      Info.setStackPtrOffsetReg(AMDGPU::SGPR32);
-    } else {
-      assert(AMDGPU::isShader(MF.getFunction().getCallingConv()));
-
-      if (MFI.hasCalls())
-        report_fatal_error("call in graphics shader with too many input SGPRs");
-
-      for (unsigned Reg : AMDGPU::SGPR_32RegClass) {
-        if (!MRI.isLiveIn(Reg)) {
-          Info.setStackPtrOffsetReg(Reg);
-          break;
-        }
-      }
-
-      if (Info.getStackPtrOffsetReg() == AMDGPU::SP_REG)
-        report_fatal_error("failed to find register for SP");
-    }
-
-    if (MFI.hasCalls()) {
-      Info.setScratchWaveOffsetReg(AMDGPU::SGPR33);
-      Info.setFrameOffsetReg(AMDGPU::SGPR33);
-    } else {
-      unsigned ReservedOffsetReg =
-        TRI.reservedPrivateSegmentWaveByteOffsetReg(MF);
-      Info.setScratchWaveOffsetReg(ReservedOffsetReg);
-      Info.setFrameOffsetReg(ReservedOffsetReg);
-    }
-  } else if (RequiresStackAccess) {
-    assert(!MFI.hasCalls());
-    // We know there are accesses and they will be done relative to SP, so just
-    // pin it to the input.
-    //
-    // FIXME: Should not do this if inline asm is reading/writing these
-    // registers.
-    Register PreloadedSP = Info.getPreloadedReg(
-        AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
-
-    Info.setStackPtrOffsetReg(PreloadedSP);
-    Info.setScratchWaveOffsetReg(PreloadedSP);
-    Info.setFrameOffsetReg(PreloadedSP);
+  // For entry functions we have to set up the stack pointer if we use it,
+  // whereas non-entry functions get this "for free". This means there is no
+  // intrinsic advantage to using S32 over S34 in cases where we do not have
+  // calls but do need a frame pointer (i.e. if we are requested to have one
+  // because frame pointer elimination is disabled). To keep things simple we
+  // only ever use S32 as the call ABI stack pointer, and so using it does not
+  // imply we need a separate frame pointer.
+  //
+  // Try to use s32 as the SP, but move it if it would interfere with input
+  // arguments. This won't work with calls though.
+  //
+  // FIXME: Move SP to avoid any possible inputs, or find a way to spill input
+  // registers.
+  if (!MRI.isLiveIn(AMDGPU::SGPR32)) {
+    Info.setStackPtrOffsetReg(AMDGPU::SGPR32);
   } else {
-    assert(!MFI.hasCalls());
+    assert(AMDGPU::isShader(MF.getFunction().getCallingConv()));
 
-    // There may not be stack access at all. There may still be spills, or
-    // access of a constant pointer (in which cases an extra copy will be
-    // emitted in the prolog).
-    unsigned ReservedOffsetReg
-      = TRI.reservedPrivateSegmentWaveByteOffsetReg(MF);
-    Info.setStackPtrOffsetReg(ReservedOffsetReg);
-    Info.setScratchWaveOffsetReg(ReservedOffsetReg);
-    Info.setFrameOffsetReg(ReservedOffsetReg);
+    if (MFI.hasCalls())
+      report_fatal_error("call in graphics shader with too many input SGPRs");
+
+    for (unsigned Reg : AMDGPU::SGPR_32RegClass) {
+      if (!MRI.isLiveIn(Reg)) {
+        Info.setStackPtrOffsetReg(Reg);
+        break;
+      }
+    }
+
+    if (Info.getStackPtrOffsetReg() == AMDGPU::SP_REG)
+      report_fatal_error("failed to find register for SP");
+  }
+
+  // hasFP should be accurate for entry functions even before the frame is
+  // finalized, because it does not rely on the known stack size, only
+  // properties like whether variable sized objects are present.
+  if (ST.getFrameLowering()->hasFP(MF)) {
+    Info.setFrameOffsetReg(AMDGPU::SGPR34);
   }
 }
 
@@ -2231,8 +2209,6 @@ SDValue SITargetLowering::LowerFormalArguments(
     allocateSystemSGPRs(CCInfo, MF, *Info, CallConv, IsShader);
   } else {
     CCInfo.AllocateReg(Info->getScratchRSrcReg());
-    CCInfo.AllocateReg(Info->getScratchWaveOffsetReg());
-    CCInfo.AllocateReg(Info->getFrameOffsetReg());
     allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
 
@@ -10652,11 +10628,6 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
 
   if (Info->getFrameOffsetReg() != AMDGPU::FP_REG)
     MRI.replaceRegWith(AMDGPU::FP_REG, Info->getFrameOffsetReg());
-
-  if (Info->getScratchWaveOffsetReg() != AMDGPU::SCRATCH_WAVE_OFFSET_REG) {
-    MRI.replaceRegWith(AMDGPU::SCRATCH_WAVE_OFFSET_REG,
-                       Info->getScratchWaveOffsetReg());
-  }
 
   Info->limitOccupancy(MF);
 

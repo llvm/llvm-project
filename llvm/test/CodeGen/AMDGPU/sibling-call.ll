@@ -117,7 +117,7 @@ entry:
 ; GCN-LABEL: {{^}}sibling_call_i32_fastcc_i32_byval_i32:
 ; GCN-NOT: v0
 ; GCN-NOT: s32
-; GCN: buffer_load_dword v1, off, s[0:3], s33 offset:16
+; GCN: buffer_load_dword v1, off, s[0:3], 0 offset:16
 ; GCN: buffer_store_dword v1, off, s[0:3], s32{{$}}
 ; GCN-NEXT: s_setpc_b64
 define fastcc i32 @sibling_call_i32_fastcc_i32_byval_i32(i32 %a, [32 x i32] %large) #1 {

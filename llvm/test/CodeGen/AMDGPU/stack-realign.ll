@@ -9,18 +9,17 @@
 ; = 144 bytes with padding between them
 
 ; GCN-LABEL: {{^}}needs_align16_default_stack_align:
-; GCN: s_sub_u32 [[SUB:s[0-9]+]], s32, s33
 ; GCN-DAG: v_lshlrev_b32_e32 [[SCALED_IDX:v[0-9]+]], 4, v0
-; GCN-DAG: v_lshrrev_b32_e64 [[FRAMEDIFF:v[0-9]+]], 6, [[SUB]]
+; GCN-DAG: v_lshrrev_b32_e64 [[FRAMEDIFF:v[0-9]+]], 6, s32
 ; GCN: v_add_u32_e32 [[FI:v[0-9]+]], vcc, [[FRAMEDIFF]], [[SCALED_IDX]]
 
 ; GCN-NOT: s32
 
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], s33 offen
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, 12
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], s33 offen
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], s33 offen
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], s33 offen
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 
 ; GCN-NOT: s32
 
@@ -35,13 +34,13 @@ define void @needs_align16_default_stack_align(i32 %idx) #0 {
 ; GCN-LABEL: {{^}}needs_align16_stack_align4:
 ; GCN: s_add_u32 [[SCRATCH_REG:s[0-9]+]], s32, 0x3c0{{$}}
 ; GCN: s_and_b32 s34, [[SCRATCH_REG]], 0xfffffc00
-; GCN: s_add_u32 s32, s32, 0x2800{{$}}
 
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], s33 offen
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, 12
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], s33 offen
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], s33 offen
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], s33 offen
+; GCN: s_add_u32 s32, s32, 0x2800{{$}}
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 
 ; GCN: s_sub_u32 s32, s32, 0x2800
 
@@ -56,13 +55,13 @@ define void @needs_align16_stack_align4(i32 %idx) #2 {
 ; GCN-LABEL: {{^}}needs_align32:
 ; GCN: s_add_u32 [[SCRATCH_REG:s[0-9]+]], s32, 0x7c0{{$}}
 ; GCN: s_and_b32 s34, [[SCRATCH_REG]], 0xfffff800
-; GCN: s_add_u32 s32, s32, 0x3000{{$}}
 
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], s33 offen
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 ; GCN: v_or_b32_e32 v{{[0-9]+}}, 12
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], s33 offen
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], s33 offen
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], s33 offen
+; GCN: s_add_u32 s32, s32, 0x3000{{$}}
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 
 ; GCN: s_sub_u32 s32, s32, 0x3000
 
@@ -79,7 +78,7 @@ define void @needs_align32(i32 %idx) #0 {
 ; GCN: s_and_b32 s34, [[SCRATCH_REG]], 0xffffff00
 ; GCN: s_add_u32 s32, s32, 0xd00{{$}}
 
-; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], s33 offen
+; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 ; GCN: s_sub_u32 s32, s32, 0xd00
 
 ; GCN: ; ScratchSize: 52
@@ -91,8 +90,7 @@ define void @force_realign4(i32 %idx) #1 {
 }
 
 ; GCN-LABEL: {{^}}kernel_call_align16_from_8:
-; GCN: s_mov_b32 s33, s7{{$}}
-; GCN-NEXT: s_add_u32 s32, s33, 0x400{{$}}
+; GCN: s_movk_i32 s32, 0x400{{$}}
 ; GCN-NOT: s32
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kernel_call_align16_from_8() #0 {
@@ -104,8 +102,7 @@ define amdgpu_kernel void @kernel_call_align16_from_8() #0 {
 
 ; The call sequence should keep the stack on call aligned to 4
 ; GCN-LABEL: {{^}}kernel_call_align16_from_5:
-; GCN: s_mov_b32 s33, s7{{$}}
-; GCN-NEXT: s_add_u32 s32, s33, 0x400
+; GCN: s_movk_i32 s32, 0x400
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kernel_call_align16_from_5() {
   %alloca0 = alloca i8, align 1, addrspace(5)
@@ -116,8 +113,7 @@ define amdgpu_kernel void @kernel_call_align16_from_5() {
 }
 
 ; GCN-LABEL: {{^}}kernel_call_align4_from_5:
-; GCN: s_mov_b32 s33, s7{{$}}
-; GCN: s_add_u32 s32, s33, 0x400
+; GCN: s_movk_i32 s32, 0x400
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kernel_call_align4_from_5() {
   %alloca0 = alloca i8, align 1, addrspace(5)
