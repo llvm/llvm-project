@@ -376,8 +376,8 @@ def IfFirstOperandIsNoneThenSoIsSecond :
   let arguments = (ins AnyType:$x, AnyType:$y);
 }
 
-def BroadcastableOp : TEST_Op<"broadcastable", [Broadcastable]> {
-  let arguments = (ins AnyTensor, AnyTensor);
+def BroadcastableOp : TEST_Op<"broadcastable", [ResultsBroadcastableShape]> {
+  let arguments = (ins Variadic<AnyTensor>);
   let results = (outs AnyTensor);
 }
 

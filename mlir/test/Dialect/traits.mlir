@@ -78,7 +78,7 @@ func @broadcast_tensor_tensor_tensor(tensor<4x3x2xi32>, tensor<3x3xi32>) -> tens
 // Check incompatible result type with known dimension
 func @broadcast_tensor_tensor_tensor(tensor<4x3x2xi32>, tensor<3x1xi32>) -> tensor<4x3x3xi32> {
 ^bb0(%arg0: tensor<4x3x2xi32>, %arg1: tensor<3x1xi32>):
-  // expected-error @+1 {{does not have shape compatible with the one computed}}
+  // expected-error @+1 {{op result type '4x3x3' not broadcast compatible with broadcasted operands's shapes '4x3x2'}}
   %0 = "test.broadcastable"(%arg0, %arg1) : (tensor<4x3x2xi32>, tensor<3x1xi32>) -> tensor<4x3x3xi32>
   return %0 : tensor<4x3x3xi32>
 }
@@ -88,7 +88,7 @@ func @broadcast_tensor_tensor_tensor(tensor<4x3x2xi32>, tensor<3x1xi32>) -> tens
 // Check incompatible result type with known dimension
 func @broadcast_tensor_tensor_tensor(tensor<8x1x6x1xi32>, tensor<7x1x5xi32>) -> tensor<8x7x6x1xi32> {
 ^bb0(%arg0: tensor<8x1x6x1xi32>, %arg1: tensor<7x1x5xi32>):
-  // expected-error @+1 {{does not have shape compatible with the one computed}}
+  // expected-error @+1 {{op result type '8x7x6x1' not broadcast compatible with broadcasted operands's shapes '8x7x6x5'}}
   %0 = "test.broadcastable"(%arg0, %arg1) : (tensor<8x1x6x1xi32>, tensor<7x1x5xi32>) -> tensor<8x7x6x1xi32>
   return %0 : tensor<8x7x6x1xi32>
 }
@@ -123,7 +123,7 @@ func @broadcast_tensor_tensor_tensor(tensor<*xi32>, tensor<*xi32>) -> tensor<2xi
 // Unranked operand and compatible ranked result
 func @broadcast_tensor_tensor_tensor(tensor<3x2xi32>, tensor<*xi32>) -> tensor<4x3x2xi32> {
 ^bb0(%arg0: tensor<3x2xi32>, %arg1: tensor<*xi32>):
-  %0 = "test.broadcastable"(%arg0, %arg1) : (tensor<3x2xi32>, tensor<*xi32>) -> tensor<4x3x2xi32>
+  %0 = "test.broadcastable"(%arg0, %arg0, %arg1) : (tensor<3x2xi32>, tensor<3x2xi32>, tensor<*xi32>) -> tensor<4x3x2xi32>
   return %0 : tensor<4x3x2xi32>
 }
 
@@ -131,7 +131,7 @@ func @broadcast_tensor_tensor_tensor(tensor<3x2xi32>, tensor<*xi32>) -> tensor<4
 
 func @broadcast_tensor_tensor_tensor(tensor<3x2xi32>, tensor<*xi32>) -> tensor<2xi32> {
 ^bb0(%arg0: tensor<3x2xi32>, %arg1: tensor<*xi32>):
-  // expected-error @+1 {{shape incompatible with a ranked operand type}}
+  // expected-error @+1 {{op result type '2' not broadcast compatible with broadcasted operands's shapes '3x2'}}
   %0 = "test.broadcastable"(%arg0, %arg1) : (tensor<3x2xi32>, tensor<*xi32>) -> tensor<2xi32>
   return %0 : tensor<2xi32>
 }
