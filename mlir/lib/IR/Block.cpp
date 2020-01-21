@@ -160,6 +160,13 @@ auto Block::addArguments(ArrayRef<Type> types)
   return {arguments.data() + initialSize, arguments.data() + arguments.size()};
 }
 
+BlockArgument Block::insertArgument(unsigned index, Type type) {
+  auto arg = BlockArgument::create(type, this);
+  assert(index <= arguments.size());
+  arguments.insert(arguments.begin() + index, arg);
+  return arg;
+}
+
 void Block::eraseArgument(unsigned index, bool updatePredTerms) {
   assert(index < arguments.size());
 

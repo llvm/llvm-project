@@ -159,6 +159,16 @@ def GPU_GPUFuncOp : GPU_Op<"func", [FunctionLike, IsolatedFromAbove, Symbol]> {
       return {begin, end};
     }
 
+    // Adds a new block argument that corresponds to buffers located in
+    // workgroup memory.
+    BlockArgument addWorkgroupAttribution(Type type) {
+      auto attrName = getNumWorkgroupAttributionsAttrName();
+      auto attr = getAttrOfType<IntegerAttr>(attrName);
+      setAttr(attrName, IntegerAttr::get(attr.getType(), attr.getValue() + 1));
+      return getBody().front().insertArgument(
+          getType().getNumInputs() + attr.getInt(), type);
+    }
+
     /// Returns a list of block arguments that correspond to buffers located in
     /// the private memory.
     ArrayRef<BlockArgument> getPrivateAttributions() {
