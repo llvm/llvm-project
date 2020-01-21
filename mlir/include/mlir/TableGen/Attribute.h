@@ -64,8 +64,8 @@ public:
 
   // Returns the template that can be used to produce an instance of the
   // attribute.
-  // Syntax: {0} should be replaced with a builder, {1} should be replaced with
-  // the constant value.
+  // Syntax: `$builder` should be replaced with a builder, `$0` should be
+  // replaced with the constant value.
   StringRef getConstBuilderTemplate() const;
 
   // Returns the base-level attribute that this attribute constraint is
