@@ -105,6 +105,7 @@ Clang-Tidy Checks
    `cert-mem57-cpp <cert-mem57-cpp.html>`_,
    `cert-msc50-cpp <cert-msc50-cpp.html>`_,
    `cert-msc51-cpp <cert-msc51-cpp.html>`_,
+   `cert-oop57-cpp <cert-oop57-cpp.html>`_,
    `cert-oop58-cpp <cert-oop58-cpp.html>`_,
    `clang-analyzer-core.DynamicTypePropagation <clang-analyzer-core.DynamicTypePropagation.html>`_,
    `clang-analyzer-core.uninitialized.CapturedBlockVariable <clang-analyzer-core.uninitialized.CapturedBlockVariable.html>`_,

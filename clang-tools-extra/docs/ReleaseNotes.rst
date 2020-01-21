@@ -74,6 +74,12 @@ New checks
   <clang-tidy/checks/bugprone-reserved-identifier>` check.
 
   Checks for usages of identifiers reserved for use by the implementation.
+  
+- New :doc:`cert-oop57-cpp
+  <clang-tidy/checks/cert-oop57-cpp>` check.
+  
+  Flags use of the `C` standard library functions ``memset``, ``memcpy`` and
+  ``memcmp`` and similar derivatives on non-trivial types.
 
 New aliases
 ^^^^^^^^^^^
