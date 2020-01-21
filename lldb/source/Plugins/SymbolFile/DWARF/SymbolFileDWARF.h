@@ -381,6 +381,13 @@ protected:
   bool ResolveFunction(const DWARFDIE &die, bool include_inlines,
                        lldb_private::SymbolContextList &sc_list);
 
+  /// Resolve functions and (possibly) blocks for the given file address and a
+  /// compile unit. The compile unit comes from the sc argument and it must be
+  /// set. The results of the lookup (if any) are written back to the symbol
+  /// context.
+  void ResolveFunctionAndBlock(lldb::addr_t file_vm_addr, bool lookup_block,
+                               lldb_private::SymbolContext &sc);
+
   virtual lldb::TypeSP
   FindDefinitionTypeForDWARFDeclContext(const DWARFDeclContext &die_decl_ctx);
 

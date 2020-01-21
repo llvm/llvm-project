@@ -534,9 +534,6 @@ static bool CompareDIEOffset(const DWARFDebugInfoEntry &die,
 DWARFDIE
 DWARFUnit::GetDIE(dw_offset_t die_offset) {
   if (die_offset != DW_INVALID_OFFSET) {
-    if (GetDwoSymbolFile())
-      return GetDwoSymbolFile()->GetCompileUnit()->GetDIE(die_offset);
-
     if (ContainsDIEOffset(die_offset)) {
       ExtractDIEsIfNeeded();
       DWARFDebugInfoEntry::const_iterator end = m_die_array.cend();
