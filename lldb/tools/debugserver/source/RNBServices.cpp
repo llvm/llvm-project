@@ -62,9 +62,8 @@ int GetProcesses(CFMutableArrayRef plistMutableArray, bool all_users) {
           proc_info.kp_proc.p_stat ==
               SZOMB || // Zombies are bad, they like brains...
           proc_info.kp_proc.p_flag & P_TRACED || // Being debugged?
-          proc_info.kp_proc.p_flag & P_WEXIT ||  // Working on exiting?
-          proc_info.kp_proc.p_flag &
-              P_TRANSLATED) // Skip translated ppc (Rosetta)
+          proc_info.kp_proc.p_flag & P_WEXIT     // Working on exiting?
+      )
         continue;
 
       // Create a new mutable dictionary for each application
