@@ -2996,6 +2996,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, Size);
       break;
     }
+    case Intrinsic::amdgcn_ps_live: {
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1);
+      break;
+    }
     case Intrinsic::amdgcn_s_buffer_load: {
       // FIXME: This should be moved to G_INTRINSIC_W_SIDE_EFFECTS
       Register RSrc = MI.getOperand(2).getReg();   // SGPR
