@@ -30,6 +30,7 @@
 #include "MacroParenthesesCheck.h"
 #include "MacroRepeatedSideEffectsCheck.h"
 #include "MisplacedOperatorInStrlenInAllocCheck.h"
+#include "MisplacedPointerArithmeticInAllocCheck.h"
 #include "MisplacedWideningCastCheck.h"
 #include "MoveForwardingReferenceCheck.h"
 #include "MultipleStatementMacroCheck.h"
@@ -107,6 +108,8 @@ public:
         "bugprone-macro-repeated-side-effects");
     CheckFactories.registerCheck<MisplacedOperatorInStrlenInAllocCheck>(
         "bugprone-misplaced-operator-in-strlen-in-alloc");
+    CheckFactories.registerCheck<MisplacedPointerArithmeticInAllocCheck>(
+        "bugprone-misplaced-pointer-arithmetic-in-alloc");
     CheckFactories.registerCheck<MisplacedWideningCastCheck>(
         "bugprone-misplaced-widening-cast");
     CheckFactories.registerCheck<MoveForwardingReferenceCheck>(
