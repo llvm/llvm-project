@@ -525,7 +525,7 @@ $InactiveCode[[]]      #endif
         using $Typedef[[LVReference]] = $TemplateParameter[[T]] &;
         using $Typedef[[RVReference]] = $TemplateParameter[[T]]&&;
         using $Typedef[[Array]] = $TemplateParameter[[T]]*[3];
-        using $Typedef[[MemberPointer]] = int (A::*)(int);
+        using $Typedef[[MemberPointer]] = int ($Class[[A]]::*)(int);
 
         // Use various previously defined typedefs in a function type.
         void $Method[[func]](

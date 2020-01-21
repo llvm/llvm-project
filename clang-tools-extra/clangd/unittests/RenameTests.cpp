@@ -127,6 +127,16 @@ TEST(RenameTest, WithinFileRename) {
         void [[Foo]]::foo(int x) {}
       )cpp",
 
+      // Rename template class, including constructor/destructor.
+      R"cpp(
+        template <typename T>
+        class [[F^oo]] {
+          [[F^oo]]();
+          ~[[F^oo]]();
+          void f([[Foo]] x);
+        };
+      )cpp",
+
       // Class in template argument.
       R"cpp(
         class [[F^oo]] {};
