@@ -30,6 +30,14 @@ ELF Improvements
   with GNU now. (`r375051
   <https://github.com/llvm/llvm-project/commit/48993d5ab9413f0e5b94dfa292a233ce55b09e3e>`_)
 
+* New ``elf32btsmipn32_fbsd`` and ``elf32ltsmipn32_fbsd`` emulations
+  are supported.
+
+* Relax MIPS ``jalr``and ``jr`` instructions marked by the ``R_MIPS_JALR``
+  relocation.
+
+* Reduced size of linked MIPS binaries.
+
 COFF Improvements
 -----------------
 

@@ -110,6 +110,9 @@ Non-comprehensive list of changes in this release
   Clang-specific flag ``-flax-vector-conversions=all``. In a future release of
   Clang, we intend to change the default to ``-fno-lax-vector-conversions``.
 
+* Improved support for ``octeon`` MIPS-family CPU. Added ``octeon+`` to
+  the list of of CPUs accepted by the driver.
+
 New Compiler Flags
 ------------------
 

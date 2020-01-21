@@ -124,8 +124,22 @@ Changes to the ARM Backend
 Changes to the MIPS Target
 --------------------------
 
- During this release ...
-
+* Improved support for ``octeon`` and added support for ``octeon+``
+  MIPS-family CPU.
+* ``min``, ``max``, ``umin``, ``umax`` atomics now supported on MIPS targets.
+* Now PC-relative relocations are generated for ``.eh_frame`` sections when
+  possible. That allows to link MIPS binaries without having to pass the
+  ``-Wl,-z,notext`` option.
+* Fix evaluating J-format branch (``j``, ``jal``, ...) targets when the
+  instruction is not in the first 256 MB region.
+* Fixed ``jal``, ``sc``, ``scs``, ``ll``, ``lld``, ``la``, ``lw``, ``sw``
+  instructions expanding. Now they accept more types of expression as arguments,
+  correctly handle load/store for ``XGOT`` model, expand using less instructions
+  or registers.
+* Initial MIPS support has been added to ``llvm-exegesis``.
+* Generates ``_mcount`` calls using proper MIPS ABI.
+* Improved support of GlobalISel instruction selection framework. This feature
+  is still in experimental state for MIPS targets though.
 
 Changes to the PowerPC Target
 -----------------------------
