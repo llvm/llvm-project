@@ -45,3 +45,17 @@ LogicalResult mlir::detail::inferReturnTensorTypes(
   }
   return success();
 }
+
+LogicalResult mlir::detail::verifyInferredResultTypes(Operation *op) {
+  SmallVector<Type, 4> inferedReturnTypes;
+  auto retTypeFn = cast<InferTypeOpInterface>(op);
+  if (failed(retTypeFn.inferReturnTypes(op->getContext(), op->getLoc(),
+                                        op->getOperands(), op->getAttrs(),
+                                        op->getRegions(), inferedReturnTypes)))
+    return failure();
+  SmallVector<Type, 4> resultTypes(op->getResultTypes());
+  if (!retTypeFn.isCompatibleReturnTypes(inferedReturnTypes, resultTypes))
+    return op->emitOpError(
+        "inferred type incompatible with return type of operation");
+  return success();
+}

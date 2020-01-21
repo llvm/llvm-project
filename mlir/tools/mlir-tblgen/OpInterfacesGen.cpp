@@ -12,6 +12,7 @@
 
 #include "DocGenUtilities.h"
 #include "mlir/Support/STLExtras.h"
+#include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/OpInterfaces.h"
 #include "llvm/ADT/SmallVector.h"
@@ -152,6 +153,12 @@ static void emitTraitDecl(OpInterface &interface, raw_ostream &os,
 
   // Insert the default implementation for any methods.
   for (auto &method : interface.getMethods()) {
+    // Flag interface methods named verifyTrait.
+    if (method.getName() == "verifyTrait")
+      PrintFatalError(
+          formatv("'verifyTrait' method cannot be specified as interface "
+                  "method for '{0}'; set 'verify' on OpInterfaceTrait instead",
+                  interfaceName));
     auto defaultImpl = method.getDefaultImplementation();
     if (!defaultImpl)
       continue;
@@ -160,6 +167,13 @@ static void emitTraitDecl(OpInterface &interface, raw_ostream &os,
        << " ";
     emitMethodNameAndArgs(method, os, /*addOperationArg=*/false);
     os << " {\n" << defaultImpl.getValue() << "  }\n";
+  }
+
+  tblgen::FmtContext traitCtx;
+  traitCtx.withOp("op");
+  if (auto verify = interface.getVerify()) {
+    os << "  static LogicalResult verifyTrait(Operation* op) {\n"
+       << tblgen::tgfmt(*verify, &traitCtx) << "\n  }\n";
   }
 
   os << "  };\n";
