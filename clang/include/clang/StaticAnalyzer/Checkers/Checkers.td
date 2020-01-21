@@ -470,6 +470,12 @@ def NewDeleteLeaksChecker : Checker<"NewDeleteLeaks">,
   Dependencies<[NewDeleteChecker]>,
   Documentation<HasDocumentation>;
 
+def PlacementNewChecker : Checker<"PlacementNew">,
+  HelpText<"Check if default placement new is provided with pointers to "
+           "sufficient storage capacity">,
+  Dependencies<[NewDeleteChecker]>,
+  Documentation<HasDocumentation>;
+
 def CXXSelfAssignmentChecker : Checker<"SelfAssignment">,
   HelpText<"Checks C++ copy and move assignment operators for self assignment">,
   Documentation<NotDocumented>,
@@ -614,12 +620,6 @@ def MismatchedIteratorChecker : Checker<"MismatchedIterator">,
            "of the same container are expected">,
   Dependencies<[IteratorModeling]>,
   Documentation<HasAlphaDocumentation>;
-
-def PlacementNewChecker : Checker<"PlacementNew">,
-  HelpText<"Check if default placement new is provided with pointers to "
-           "sufficient storage capacity">,
-  Dependencies<[NewDeleteChecker]>,
-  Documentation<HasDocumentation>;
 
 } // end: "alpha.cplusplus"
 
