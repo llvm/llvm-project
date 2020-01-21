@@ -339,6 +339,24 @@ TEST_F(TargetDeclTest, ClassTemplate) {
                {"struct Test", Rel::TemplatePattern});
 }
 
+TEST_F(TargetDeclTest, Concept) {
+  Code = R"cpp(
+    template <typename T>
+    concept Fooable = requires (T t) { t.foo(); };
+
+    template <typename T> requires [[Fooable]]<T>
+    void bar(T t) {
+      t.foo();
+    }
+  )cpp";
+  Flags.push_back("-std=c++2a");
+  EXPECT_DECLS(
+      "ConceptSpecializationExpr",
+      // FIXME: Should we truncate the pretty-printed form of a concept decl
+      // somewhere?
+      {"template <typename T> concept Fooable = requires (T t) { t.foo(); };"});
+}
+
 TEST_F(TargetDeclTest, FunctionTemplate) {
   Code = R"cpp(
     // Implicit specialization.

@@ -17,6 +17,7 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -278,6 +279,9 @@ public:
 
       void VisitCallExpr(const CallExpr *CE) {
         Outer.add(CE->getCalleeDecl(), Flags);
+      }
+      void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
+        Outer.add(E->getNamedConcept(), Flags);
       }
       void VisitDeclRefExpr(const DeclRefExpr *DRE) {
         const Decl *D = DRE->getDecl();
