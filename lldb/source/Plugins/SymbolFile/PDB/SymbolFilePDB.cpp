@@ -1225,7 +1225,7 @@ void SymbolFilePDB::CacheFunctionNames() {
 
         // To search a method name, like NS::Class:MemberFunc, LLDB searches
         // its base name, i.e. MemberFunc by default. Since PDBSymbolFunc does
-        // not have inforamtion of this, we extract base names and cache them
+        // not have information of this, we extract base names and cache them
         // by our own effort.
         llvm::StringRef basename = MSVCUndecoratedNameParser::DropScope(name);
         if (!basename.empty())
