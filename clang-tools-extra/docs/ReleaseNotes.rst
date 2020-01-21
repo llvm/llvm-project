@@ -70,6 +70,13 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc
+  <clang-tidy/checks/bugprone-misplaced-pointer-arithmetic-in-alloc>` check.
+
+  Finds cases where an integer expression is added to or subtracted from the
+  result of a memory allocation function (``malloc()``, ``calloc()``,
+  ``realloc()``, ``alloca()``) instead of its argument.
+
 - New :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone-reserved-identifier>` check.
 
