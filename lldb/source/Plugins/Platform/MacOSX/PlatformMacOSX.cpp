@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PlatformMacOSX.h"
+#if defined(__APPLE__)
 #include "PlatformAppleTVSimulator.h"
 #include "PlatformAppleWatchSimulator.h"
 #include "PlatformDarwinKernel.h"
@@ -14,6 +15,7 @@
 #include "PlatformRemoteAppleTV.h"
 #include "PlatformRemoteAppleWatch.h"
 #include "PlatformiOSSimulator.h"
+#endif
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
@@ -40,6 +42,7 @@ static uint32_t g_initialize_count = 0;
 
 void PlatformMacOSX::Initialize() {
   PlatformDarwin::Initialize();
+#if defined(__APPLE__)
   PlatformiOSSimulator::Initialize();
   PlatformDarwinKernel::Initialize();
   PlatformAppleTVSimulator::Initialize();
@@ -47,6 +50,7 @@ void PlatformMacOSX::Initialize() {
   PlatformRemoteAppleTV::Initialize();
   PlatformRemoteAppleWatch::Initialize();
   PlatformRemoteAppleBridge::Initialize();
+#endif
 
   if (g_initialize_count++ == 0) {
 #if defined(__APPLE__)
@@ -67,6 +71,7 @@ void PlatformMacOSX::Terminate() {
     }
   }
 
+#if defined(__APPLE__)
   PlatformRemoteAppleBridge::Terminate();
   PlatformRemoteAppleWatch::Terminate();
   PlatformRemoteAppleTV::Terminate();
@@ -74,6 +79,7 @@ void PlatformMacOSX::Terminate() {
   PlatformAppleTVSimulator::Terminate();
   PlatformDarwinKernel::Terminate();
   PlatformiOSSimulator::Terminate();
+#endif
   PlatformDarwin::Terminate();
 }
 
