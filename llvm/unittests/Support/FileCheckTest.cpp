@@ -239,13 +239,13 @@ public:
     P = Pattern(Check::CheckPlain, &Context, LineNumber++);
   }
 
-  bool parseSubstExpect(StringRef Expr) {
+  bool parseSubstExpect(StringRef Expr, bool IsLegacyLineExpr = false) {
     StringRef ExprBufferRef = bufferize(SM, Expr);
     Optional<NumericVariable *> DefinedNumericVariable;
-    return errorToBool(
-        P.parseNumericSubstitutionBlock(ExprBufferRef, DefinedNumericVariable,
-                                        false, LineNumber - 1, &Context, SM)
-            .takeError());
+    return errorToBool(P.parseNumericSubstitutionBlock(
+                            ExprBufferRef, DefinedNumericVariable,
+                            IsLegacyLineExpr, LineNumber - 1, &Context, SM)
+                           .takeError());
   }
 
   bool parsePatternExpect(StringRef Pattern) {
@@ -260,14 +260,15 @@ public:
   }
 };
 
-TEST_F(FileCheckTest, ParseExpr) {
+TEST_F(FileCheckTest, ParseNumericSubstitutionBlock) {
   PatternTester Tester;
 
   // Variable definition.
 
-  // Definition of invalid variable.
-  EXPECT_TRUE(Tester.parseSubstExpect("10VAR:"));
-  EXPECT_TRUE(Tester.parseSubstExpect("@FOO:"));
+  // Invalid variable name.
+  EXPECT_TRUE(Tester.parseSubstExpect("%VAR:"));
+
+  // Invalid definition of pseudo variable.
   EXPECT_TRUE(Tester.parseSubstExpect("@LINE:"));
 
   // Conflict with pattern variable.
@@ -281,82 +282,100 @@ TEST_F(FileCheckTest, ParseExpr) {
   EXPECT_FALSE(Tester.parseSubstExpect("  VAR2:"));
   EXPECT_FALSE(Tester.parseSubstExpect("VAR3  :"));
   EXPECT_FALSE(Tester.parseSubstExpect("VAR3:  "));
-  EXPECT_FALSE(Tester.parsePatternExpect("[[#FOOBAR: FOO+1]]"));
+  EXPECT_FALSE(Tester.parseSubstExpect("FOOBAR: FOO+1"));
 
   // Numeric expression.
 
-  // Unacceptable variable.
-  EXPECT_TRUE(Tester.parseSubstExpect("10VAR"));
+  // Invalid variable name.
+  EXPECT_TRUE(Tester.parseSubstExpect("%VAR"));
+
+  // Invalid pseudo variable.
   EXPECT_TRUE(Tester.parseSubstExpect("@FOO"));
 
-  // Only valid variable.
-  EXPECT_FALSE(Tester.parseSubstExpect("@LINE"));
-  EXPECT_FALSE(Tester.parseSubstExpect("FOO"));
-  EXPECT_FALSE(Tester.parseSubstExpect("UNDEF"));
+  // Invalid use of variable defined on the same line. Use parsePatternExpect
+  // for the variable to be recorded in GlobalNumericVariableTable and thus
+  // appear defined to parseNumericVariableUse. Note that the same pattern
+  // object is used for the parsePatternExpect and parseSubstExpect since no
+  // initNextPattern is called, thus appearing as being on the same line from
+  // the pattern's point of view.
+  ASSERT_FALSE(Tester.parsePatternExpect("[[#SAME_LINE_VAR:]]"));
+  EXPECT_TRUE(Tester.parseSubstExpect("SAME_LINE_VAR"));
+
+  // Invalid use of variable defined on the same line from an expression not
+  // using any variable defined on the same line.
+  ASSERT_FALSE(Tester.parsePatternExpect("[[#SAME_LINE_EXPR_VAR:@LINE+1]]"));
+  EXPECT_TRUE(Tester.parseSubstExpect("SAME_LINE_EXPR_VAR"));
+
+  // Valid use of undefined variable which creates the variable and record it
+  // in GlobalNumericVariableTable.
+  ASSERT_FALSE(Tester.parseSubstExpect("UNDEF"));
+  EXPECT_TRUE(Tester.parsePatternExpect("[[UNDEF:.*]]"));
+
+  // Invalid literal.
+  EXPECT_TRUE(Tester.parseSubstExpect("42U"));
 
   // Valid empty expression.
   EXPECT_FALSE(Tester.parseSubstExpect(""));
 
-  // Invalid use of variable defined on the same line from expression. Note
-  // that the same pattern object is used for the parsePatternExpect and
-  // parseSubstExpect since no initNextPattern is called, thus appearing as
-  // being on the same line from the pattern's point of view.
-  ASSERT_FALSE(Tester.parsePatternExpect("[[#LINE1VAR:FOO+1]]"));
-  EXPECT_TRUE(Tester.parseSubstExpect("LINE1VAR"));
+  // Valid single operand expression.
+  EXPECT_FALSE(Tester.parseSubstExpect("FOO"));
 
-  // Invalid use of variable defined on same line from input. As above, the
-  // absence of a call to initNextPattern makes it appear to be on the same
-  // line from the pattern's point of view.
-  ASSERT_FALSE(Tester.parsePatternExpect("[[#LINE2VAR:]]"));
-  EXPECT_TRUE(Tester.parseSubstExpect("LINE2VAR"));
+  // Valid expression with 2 or more operands.
+  EXPECT_FALSE(Tester.parseSubstExpect("FOO+3"));
+  EXPECT_FALSE(Tester.parseSubstExpect("FOO-3+FOO"));
 
   // Unsupported operator.
   EXPECT_TRUE(Tester.parseSubstExpect("@LINE/2"));
 
-  // Missing offset operand.
+  // Missing RHS operand.
   EXPECT_TRUE(Tester.parseSubstExpect("@LINE+"));
 
-  // Valid expression.
-  EXPECT_FALSE(Tester.parseSubstExpect("@LINE+5"));
-  EXPECT_FALSE(Tester.parseSubstExpect("FOO+4"));
-  Tester.initNextPattern();
-  EXPECT_FALSE(Tester.parseSubstExpect("FOOBAR"));
-  EXPECT_FALSE(Tester.parseSubstExpect("LINE1VAR"));
-  EXPECT_FALSE(Tester.parsePatternExpect("[[#FOO+FOO]]"));
-  EXPECT_FALSE(Tester.parsePatternExpect("[[#FOO+3-FOO]]"));
+  // Errors in RHS operand are bubbled up by parseBinop() to
+  // parseNumericSubstitutionBlock.
+  EXPECT_TRUE(Tester.parseSubstExpect("@LINE+%VAR"));
+
+  // Invalid legacy @LINE expression with non literal rhs.
+  EXPECT_TRUE(Tester.parseSubstExpect("@LINE+@LINE", /*IsLegacyNumExpr=*/true));
+
+  // Invalid legacy @LINE expression made of a single literal.
+  EXPECT_TRUE(Tester.parseSubstExpect("2", /*IsLegacyNumExpr=*/true));
+
+  // Valid legacy @LINE expression.
+  EXPECT_FALSE(Tester.parseSubstExpect("@LINE+2", /*IsLegacyNumExpr=*/true));
+
+  // Invalid legacy @LINE expression with more than 2 operands.
+  EXPECT_TRUE(
+      Tester.parseSubstExpect("@LINE+2+@LINE", /*IsLegacyNumExpr=*/true));
+  EXPECT_TRUE(Tester.parseSubstExpect("@LINE+2+2", /*IsLegacyNumExpr=*/true));
 }
 
 TEST_F(FileCheckTest, ParsePattern) {
   PatternTester Tester;
 
-  // Space in pattern variable expression.
+  // Invalid space in string substitution.
   EXPECT_TRUE(Tester.parsePatternExpect("[[ BAR]]"));
 
-  // Invalid variable name.
+  // Invalid variable name in string substitution.
   EXPECT_TRUE(Tester.parsePatternExpect("[[42INVALID]]"));
 
-  // Invalid pattern variable definition.
+  // Invalid string variable definition.
   EXPECT_TRUE(Tester.parsePatternExpect("[[@PAT:]]"));
   EXPECT_TRUE(Tester.parsePatternExpect("[[PAT+2:]]"));
 
   // Collision with numeric variable.
   EXPECT_TRUE(Tester.parsePatternExpect("[[FOO:]]"));
 
-  // Valid use of pattern variable.
+  // Valid use of string variable.
   EXPECT_FALSE(Tester.parsePatternExpect("[[BAR]]"));
 
-  // Valid pattern variable definition.
+  // Valid string variable definition.
   EXPECT_FALSE(Tester.parsePatternExpect("[[PAT:[0-9]+]]"));
 
-  // Invalid numeric expressions.
+  // Invalid numeric substitution.
   EXPECT_TRUE(Tester.parsePatternExpect("[[#42INVALID]]"));
-  EXPECT_TRUE(Tester.parsePatternExpect("[[#@FOO]]"));
-  EXPECT_TRUE(Tester.parsePatternExpect("[[#@LINE/2]]"));
 
-  // Valid numeric expressions and numeric variable definition.
+  // Valid numeric substitution.
   EXPECT_FALSE(Tester.parsePatternExpect("[[#FOO]]"));
-  EXPECT_FALSE(Tester.parsePatternExpect("[[#@LINE+2]]"));
-  EXPECT_FALSE(Tester.parsePatternExpect("[[#NUMVAR:]]"));
 }
 
 TEST_F(FileCheckTest, Match) {
@@ -374,7 +393,17 @@ TEST_F(FileCheckTest, Match) {
   EXPECT_TRUE(Tester.matchExpect(""));
   EXPECT_FALSE(Tester.matchExpect("18"));
 
-  // Check matching the variable defined matches the correct number only
+  // Check matching an undefined variable returns a NotFound error.
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePatternExpect("100"));
+  EXPECT_TRUE(Tester.matchExpect("101"));
+
+  // Check matching the defined variable matches the correct number only.
+  Tester.initNextPattern();
+  ASSERT_FALSE(Tester.parsePatternExpect("[[#NUMVAR]]"));
+  EXPECT_FALSE(Tester.matchExpect("18"));
+
+  // Check matching several substitutions does not match them independently.
   Tester.initNextPattern();
   Tester.parsePatternExpect("[[#NUMVAR]] [[#NUMVAR+2]]");
   EXPECT_TRUE(Tester.matchExpect("19 21"));
@@ -385,16 +414,16 @@ TEST_F(FileCheckTest, Match) {
   // the correct value for @LINE.
   Tester.initNextPattern();
   EXPECT_FALSE(Tester.parsePatternExpect("[[#@LINE]]"));
-  // Ok, @LINE is 5 now.
-  EXPECT_FALSE(Tester.matchExpect("5"));
+  // Ok, @LINE is 7 now.
+  EXPECT_FALSE(Tester.matchExpect("7"));
   Tester.initNextPattern();
-  // @LINE is now 6, match with substitution failure.
+  // @LINE is now 8, match with substitution failure.
   EXPECT_FALSE(Tester.parsePatternExpect("[[#UNKNOWN]]"));
   EXPECT_TRUE(Tester.matchExpect("FOO"));
   Tester.initNextPattern();
-  // Check that @LINE is 7 as expected.
+  // Check that @LINE is 9 as expected.
   EXPECT_FALSE(Tester.parsePatternExpect("[[#@LINE]]"));
-  EXPECT_FALSE(Tester.matchExpect("7"));
+  EXPECT_FALSE(Tester.matchExpect("9"));
 }
 
 TEST_F(FileCheckTest, Substitution) {
@@ -411,30 +440,19 @@ TEST_F(FileCheckTest, Substitution) {
   ASSERT_FALSE(bool(SubstValue));
   expectUndefError("VAR404", SubstValue.takeError());
 
-  // Substitutions of defined pseudo and non-pseudo numeric variables return
-  // the right value.
-  NumericVariable LineVar("@LINE", 1);
+  // Numeric substitution blocks constituted of defined numeric variables are
+  // substituted for the variable's value.
   NumericVariable NVar("N", 1);
-  LineVar.setValue(42);
   NVar.setValue(10);
-  auto LineVarUse = std::make_unique<NumericVariableUse>("@LINE", &LineVar);
   auto NVarUse = std::make_unique<NumericVariableUse>("N", &NVar);
-  NumericSubstitution SubstitutionLine(&Context, "@LINE", std::move(LineVarUse),
-                                       12);
-  NumericSubstitution SubstitutionN(&Context, "N", std::move(NVarUse), 30);
-  SubstValue = SubstitutionLine.getResult();
-  ASSERT_TRUE(bool(SubstValue));
-  EXPECT_EQ("42", *SubstValue);
+  NumericSubstitution SubstitutionN(&Context, "N", std::move(NVarUse),
+                                    /*InsertIdx=*/30);
   SubstValue = SubstitutionN.getResult();
   ASSERT_TRUE(bool(SubstValue));
   EXPECT_EQ("10", *SubstValue);
 
   // Substitution of an undefined numeric variable fails, error holds name of
   // undefined variable.
-  LineVar.clearValue();
-  SubstValue = SubstitutionLine.getResult();
-  ASSERT_FALSE(bool(SubstValue));
-  expectUndefError("@LINE", SubstValue.takeError());
   NVar.clearValue();
   SubstValue = SubstitutionN.getResult();
   ASSERT_FALSE(bool(SubstValue));
@@ -452,6 +470,9 @@ TEST_F(FileCheckTest, FileCheckContext) {
   FileCheckPatternContext Cxt;
   std::vector<std::string> GlobalDefines;
   SourceMgr SM;
+
+  // No definition.
+  EXPECT_FALSE(errorToBool(Cxt.defineCmdlineVariables(GlobalDefines, SM)));
 
   // Missing equal sign.
   GlobalDefines.emplace_back(std::string("LocalVar"));
@@ -505,19 +526,35 @@ TEST_F(FileCheckTest, FileCheckContext) {
   GlobalDefines.emplace_back(std::string("#LocalNumVar2=LocalNumVar1+2"));
   ASSERT_FALSE(errorToBool(Cxt.defineCmdlineVariables(GlobalDefines, SM)));
 
-  // Check defined variables are present and undefined is absent.
+  // Create @LINE pseudo numeric variable and check it is present by matching
+  // it.
+  size_t LineNumber = 1;
+  Pattern P(Check::CheckPlain, &Cxt, LineNumber);
+  FileCheckRequest Req;
+  Cxt.createLineVariable();
+  ASSERT_FALSE(P.parsePattern("[[@LINE]]", "CHECK", SM, Req));
+  size_t MatchLen;
+  ASSERT_FALSE(errorToBool(P.match("1", MatchLen, SM).takeError()));
+
+#ifndef NDEBUG
+  // Recreating @LINE pseudo numeric variable fails.
+  EXPECT_DEATH(Cxt.createLineVariable(),
+               "@LINE pseudo numeric variable already created");
+#endif
+
+  // Check defined variables are present and undefined ones are absent.
   StringRef LocalVarStr = "LocalVar";
   StringRef LocalNumVar1Ref = bufferize(SM, "LocalNumVar1");
   StringRef LocalNumVar2Ref = bufferize(SM, "LocalNumVar2");
   StringRef EmptyVarStr = "EmptyVar";
   StringRef UnknownVarStr = "UnknownVar";
   Expected<StringRef> LocalVar = Cxt.getPatternVarValue(LocalVarStr);
-  Pattern P(Check::CheckPlain, &Cxt, 1);
+  P = Pattern(Check::CheckPlain, &Cxt, ++LineNumber);
   Optional<NumericVariable *> DefinedNumericVariable;
   Expected<std::unique_ptr<ExpressionAST>> ExpressionASTPointer =
       P.parseNumericSubstitutionBlock(LocalNumVar1Ref, DefinedNumericVariable,
-                                      /*IsLegacyLineExpr=*/false,
-                                      /*LineNumber=*/1, &Cxt, SM);
+                                      /*IsLegacyLineExpr=*/false, LineNumber,
+                                      &Cxt, SM);
   ASSERT_TRUE(bool(LocalVar));
   EXPECT_EQ(*LocalVar, "FOO");
   Expected<StringRef> EmptyVar = Cxt.getPatternVarValue(EmptyVarStr);
@@ -526,10 +563,9 @@ TEST_F(FileCheckTest, FileCheckContext) {
   Expected<uint64_t> ExpressionVal = (*ExpressionASTPointer)->eval();
   ASSERT_TRUE(bool(ExpressionVal));
   EXPECT_EQ(*ExpressionVal, 18U);
-  ExpressionASTPointer =
-      P.parseNumericSubstitutionBlock(LocalNumVar2Ref, DefinedNumericVariable,
-                                      /*IsLegacyLineExpr=*/false,
-                                      /*LineNumber=*/1, &Cxt, SM);
+  ExpressionASTPointer = P.parseNumericSubstitutionBlock(
+      LocalNumVar2Ref, DefinedNumericVariable,
+      /*IsLegacyLineExpr=*/false, LineNumber, &Cxt, SM);
   ASSERT_TRUE(bool(ExpressionASTPointer));
   ExpressionVal = (*ExpressionASTPointer)->eval();
   ASSERT_TRUE(bool(ExpressionVal));
@@ -547,16 +583,16 @@ TEST_F(FileCheckTest, FileCheckContext) {
   // variable clearing due to --enable-var-scope happens after numeric
   // expressions are linked to the numeric variables they use.
   EXPECT_TRUE(errorToBool((*ExpressionASTPointer)->eval().takeError()));
-  P = Pattern(Check::CheckPlain, &Cxt, 2);
+  P = Pattern(Check::CheckPlain, &Cxt, ++LineNumber);
   ExpressionASTPointer = P.parseNumericSubstitutionBlock(
       LocalNumVar1Ref, DefinedNumericVariable, /*IsLegacyLineExpr=*/false,
-      /*LineNumber=*/2, &Cxt, SM);
+      LineNumber, &Cxt, SM);
   ASSERT_TRUE(bool(ExpressionASTPointer));
   ExpressionVal = (*ExpressionASTPointer)->eval();
   EXPECT_TRUE(errorToBool(ExpressionVal.takeError()));
   ExpressionASTPointer = P.parseNumericSubstitutionBlock(
       LocalNumVar2Ref, DefinedNumericVariable, /*IsLegacyLineExpr=*/false,
-      /*LineNumber=*/2, &Cxt, SM);
+      LineNumber, &Cxt, SM);
   ASSERT_TRUE(bool(ExpressionASTPointer));
   ExpressionVal = (*ExpressionASTPointer)->eval();
   EXPECT_TRUE(errorToBool(ExpressionVal.takeError()));
@@ -575,10 +611,10 @@ TEST_F(FileCheckTest, FileCheckContext) {
   Expected<StringRef> GlobalVar = Cxt.getPatternVarValue(GlobalVarStr);
   ASSERT_TRUE(bool(GlobalVar));
   EXPECT_EQ(*GlobalVar, "BAR");
-  P = Pattern(Check::CheckPlain, &Cxt, 3);
+  P = Pattern(Check::CheckPlain, &Cxt, ++LineNumber);
   ExpressionASTPointer = P.parseNumericSubstitutionBlock(
       GlobalNumVarRef, DefinedNumericVariable, /*IsLegacyLineExpr=*/false,
-      /*LineNumber=*/3, &Cxt, SM);
+      LineNumber, &Cxt, SM);
   ASSERT_TRUE(bool(ExpressionASTPointer));
   ExpressionVal = (*ExpressionASTPointer)->eval();
   ASSERT_TRUE(bool(ExpressionVal));
@@ -587,10 +623,10 @@ TEST_F(FileCheckTest, FileCheckContext) {
   // Clear local variables and check global variables remain defined.
   Cxt.clearLocalVars();
   EXPECT_FALSE(errorToBool(Cxt.getPatternVarValue(GlobalVarStr).takeError()));
-  P = Pattern(Check::CheckPlain, &Cxt, 4);
+  P = Pattern(Check::CheckPlain, &Cxt, ++LineNumber);
   ExpressionASTPointer = P.parseNumericSubstitutionBlock(
       GlobalNumVarRef, DefinedNumericVariable, /*IsLegacyLineExpr=*/false,
-      /*LineNumber=*/4, &Cxt, SM);
+      LineNumber, &Cxt, SM);
   ASSERT_TRUE(bool(ExpressionASTPointer));
   ExpressionVal = (*ExpressionASTPointer)->eval();
   ASSERT_TRUE(bool(ExpressionVal));
