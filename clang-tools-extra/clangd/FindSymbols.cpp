@@ -193,8 +193,11 @@ private:
   enum class VisitKind { No, OnlyDecl, DeclAndChildren };
 
   void traverseDecl(Decl *D, std::vector<DocumentSymbol> &Results) {
-    if (auto *Templ = llvm::dyn_cast<TemplateDecl>(D))
-      D = Templ->getTemplatedDecl();
+    if (auto *Templ = llvm::dyn_cast<TemplateDecl>(D)) {
+      // TemplatedDecl might be null, e.g. concepts.
+      if (auto *TD = Templ->getTemplatedDecl())
+        D = TD;
+    }
     auto *ND = llvm::dyn_cast<NamedDecl>(D);
     if (!ND)
       return;
