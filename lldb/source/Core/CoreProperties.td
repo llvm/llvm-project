@@ -18,6 +18,10 @@ let Definition = "modulelist" in {
     EnumValues<"OptionEnumValues(g_swift_module_loading_mode_enums)">,
     Desc<"The module loading mode to use when loading modules for Swift.">;
 // END SWIFT
+  def SymLinkPaths: Property<"debug-info-symlink-paths", "FileSpecList">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"Debug info path which should be resolved while parsing, relative to the host filesystem.">;
 }
 
 let Definition = "debugger" in {
