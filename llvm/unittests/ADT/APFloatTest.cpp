@@ -919,6 +919,120 @@ TEST(APFloatTest, fromDecimalString) {
   EXPECT_EQ(2.71828, convertToDoubleFromString("2.71828"));
 }
 
+TEST(APFloatTest, fromStringSpecials) {
+  const fltSemantics &Sem = APFloat::IEEEdouble();
+  const unsigned Precision = 53;
+  const unsigned PayloadBits = Precision - 2;
+  uint64_t PayloadMask = (uint64_t(1) << PayloadBits) - uint64_t(1);
+
+  uint64_t NaNPayloads[] = {
+      0,
+      1,
+      123,
+      0xDEADBEEF,
+      uint64_t(-2),
+      uint64_t(1) << PayloadBits,       // overflow bit
+      uint64_t(1) << (PayloadBits - 1), // signaling bit
+      uint64_t(1) << (PayloadBits - 2)  // highest possible bit
+  };
+
+  // Convert payload integer to decimal string representation.
+  std::string NaNPayloadDecStrings[array_lengthof(NaNPayloads)];
+  for (size_t I = 0; I < array_lengthof(NaNPayloads); ++I)
+    NaNPayloadDecStrings[I] = utostr(NaNPayloads[I]);
+
+  // Convert payload integer to hexadecimal string representation.
+  std::string NaNPayloadHexStrings[array_lengthof(NaNPayloads)];
+  for (size_t I = 0; I < array_lengthof(NaNPayloads); ++I)
+    NaNPayloadHexStrings[I] = "0x" + utohexstr(NaNPayloads[I]);
+
+  // Fix payloads to expected result.
+  for (uint64_t &Payload : NaNPayloads)
+    Payload &= PayloadMask;
+
+  // Signaling NaN must have a non-zero payload. In case a zero payload is
+  // requested, a default arbitrary payload is set instead. Save this payload
+  // for testing.
+  const uint64_t SNaNDefaultPayload =
+      APFloat::getSNaN(Sem).bitcastToAPInt().getZExtValue() & PayloadMask;
+
+  // Negative sign prefix (or none - for positive).
+  const char Signs[] = {0, '-'};
+
+  // "Signaling" prefix (or none - for "Quiet").
+  const char NaNTypes[] = {0, 's', 'S'};
+
+  const StringRef NaNStrings[] = {"nan", "NaN"};
+  for (StringRef NaNStr : NaNStrings)
+    for (char TypeChar : NaNTypes) {
+      bool Signaling = (TypeChar == 's' || TypeChar == 'S');
+
+      for (size_t J = 0; J < array_lengthof(NaNPayloads); ++J) {
+        uint64_t Payload = (Signaling && !NaNPayloads[J]) ? SNaNDefaultPayload
+                                                          : NaNPayloads[J];
+        std::string &PayloadDec = NaNPayloadDecStrings[J];
+        std::string &PayloadHex = NaNPayloadHexStrings[J];
+
+        for (char SignChar : Signs) {
+          bool Negative = (SignChar == '-');
+
+          std::string TestStrings[5];
+          size_t NumTestStrings = 0;
+
+          std::string Prefix;
+          if (SignChar)
+            Prefix += SignChar;
+          if (TypeChar)
+            Prefix += TypeChar;
+          Prefix += NaNStr;
+
+          // Test without any paylod.
+          if (!Payload)
+            TestStrings[NumTestStrings++] = Prefix;
+
+          // Test with the payload as a suffix.
+          TestStrings[NumTestStrings++] = Prefix + PayloadDec;
+          TestStrings[NumTestStrings++] = Prefix + PayloadHex;
+
+          // Test with the payload inside parentheses.
+          TestStrings[NumTestStrings++] = Prefix + '(' + PayloadDec + ')';
+          TestStrings[NumTestStrings++] = Prefix + '(' + PayloadHex + ')';
+
+          for (size_t K = 0; K < NumTestStrings; ++K) {
+            StringRef TestStr = TestStrings[K];
+
+            APFloat F(Sem);
+            bool HasError = !F.convertFromString(
+                TestStr, llvm::APFloat::rmNearestTiesToEven);
+            EXPECT_FALSE(HasError);
+            EXPECT_TRUE(F.isNaN());
+            EXPECT_EQ(Signaling, F.isSignaling());
+            EXPECT_EQ(Negative, F.isNegative());
+            uint64_t PayloadResult =
+                F.bitcastToAPInt().getZExtValue() & PayloadMask;
+            EXPECT_EQ(Payload, PayloadResult);
+          }
+        }
+      }
+    }
+
+  const StringRef InfStrings[] = {"inf",  "INFINITY",  "+Inf",
+                                  "-inf", "-INFINITY", "-Inf"};
+  for (StringRef InfStr : InfStrings) {
+    bool Negative = InfStr.front() == '-';
+
+    StringRef TestStr;
+    APFloat F(Sem);
+    bool HasError =
+        !F.convertFromString(InfStr, llvm::APFloat::rmNearestTiesToEven);
+    EXPECT_FALSE(HasError);
+    EXPECT_TRUE(F.isInfinity());
+    EXPECT_EQ(Negative, F.isNegative());
+    uint64_t PayloadResult = F.bitcastToAPInt().getZExtValue() & PayloadMask;
+    EXPECT_EQ(0, PayloadResult);
+  }
+}
+
 TEST(APFloatTest, fromToStringSpecials) {
   auto expects = [] (const char *first, const char *second) {
     std::string roundtrip = convertToString(convertToDoubleFromString(second), 0, 3);
