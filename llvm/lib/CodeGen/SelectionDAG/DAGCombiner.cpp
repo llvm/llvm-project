@@ -18581,6 +18581,13 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
                                              V.getOperand(0), NewIndex);
             return DAG.getBitcast(NVT, NewExtract);
           }
+          if (NewExtNumElts == 1 &&
+              TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, ScalarVT)) {
+            SDValue NewIndex = DAG.getVectorIdxConstant(IndexValScaled, DL);
+            SDValue NewExtract = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT,
+                                             V.getOperand(0), NewIndex);
+            return DAG.getBitcast(NVT, NewExtract);
+          }
         }
       }
     }

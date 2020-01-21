@@ -183,10 +183,10 @@ define <4 x i16> @test_interleaved(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    vext.16 d16, d16, d17, #3
-; CHECK-NEXT:    vorr d17, d16, d16
-; CHECK-NEXT:    vld1.64 {d18, d19}, [r1]
-; CHECK-NEXT:    vuzp.16 d16, d17
-; CHECK-NEXT:    vzip.16 d16, d18
+; CHECK-NEXT:    vorr d18, d16, d16
+; CHECK-NEXT:    vldr d17, [r1]
+; CHECK-NEXT:    vuzp.16 d16, d18
+; CHECK-NEXT:    vzip.16 d16, d17
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
         %tmp1 = load <8 x i16>, <8 x i16>* %A
@@ -216,17 +216,15 @@ define <4 x i16> @test_undef(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 define <4 x i16> @test_multisource(<32 x i16>* %B) nounwind {
 ; CHECK-LABEL: test_multisource:
 ; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldr d18, [r0, #32]
 ; CHECK-NEXT:    mov r1, r0
-; CHECK-NEXT:    add r2, r0, #48
-; CHECK-NEXT:    add r0, r0, #32
+; CHECK-NEXT:    vorr d22, d18, d18
 ; CHECK-NEXT:    vld1.16 {d16, d17}, [r1:128]!
-; CHECK-NEXT:    vld1.64 {d20, d21}, [r0:128]
-; CHECK-NEXT:    vorr d24, d20, d20
-; CHECK-NEXT:    vld1.64 {d18, d19}, [r2:128]
-; CHECK-NEXT:    vld1.64 {d22, d23}, [r1:128]
-; CHECK-NEXT:    vzip.16 d24, d18
-; CHECK-NEXT:    vtrn.16 q8, q11
-; CHECK-NEXT:    vext.16 d18, d20, d24, #2
+; CHECK-NEXT:    vldr d19, [r0, #48]
+; CHECK-NEXT:    vld1.64 {d20, d21}, [r1:128]
+; CHECK-NEXT:    vzip.16 d22, d19
+; CHECK-NEXT:    vtrn.16 q8, q10
+; CHECK-NEXT:    vext.16 d18, d18, d22, #2
 ; CHECK-NEXT:    vext.16 d16, d18, d16, #2
 ; CHECK-NEXT:    vext.16 d16, d16, d16, #2
 ; CHECK-NEXT:    vmov r0, r1, d16
