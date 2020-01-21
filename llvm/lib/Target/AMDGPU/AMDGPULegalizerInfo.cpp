@@ -498,11 +498,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
   }
 
-  getActionDefinitionsBuilder(G_PTR_ADD)
-    .legalIf(isPointer(0))
-    .scalarize(0);
-
-  getActionDefinitionsBuilder(G_PTR_MASK)
+  getActionDefinitionsBuilder({G_PTR_ADD, G_PTR_MASK})
     .scalarize(0)
     .alwaysLegal();
 
