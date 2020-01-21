@@ -188,7 +188,8 @@ static void setMemOp(InstructionTemplate &IT, int OpIdx,
 static Expected<std::vector<CodeTemplate>> generateLEATemplatesCommon(
     const Instruction &Instr, const BitVector &ForbiddenRegisters,
     const LLVMState &State, const SnippetGenerator::Options &Opts,
-    std::function<unsigned(unsigned, unsigned)> GetDestReg) {
+    std::function<void(unsigned, unsigned, BitVector &CandidateDestRegs)>
+        RestrictDestRegs) {
   assert(Instr.Operands.size() == 6 && "invalid LEA");
   assert(X86II::getMemoryOperandNo(Instr.Description.TSFlags) == 1 &&
          "invalid LEA");
@@ -222,8 +223,15 @@ static Expected<std::vector<CodeTemplate>> generateLEATemplatesCommon(
           // SegmentReg must be 0 for LEA.
           setMemOp(IT, 5, MCOperand::createReg(0));
 
-          // Output reg is selected by the caller.
-          setMemOp(IT, 0, MCOperand::createReg(GetDestReg(BaseReg, IndexReg)));
+          // Output reg candidates are selected by the caller.
+          auto PossibleDestRegsNow = PossibleDestRegs;
+          RestrictDestRegs(BaseReg, IndexReg, PossibleDestRegsNow);
+          assert(PossibleDestRegsNow.set_bits().begin() !=
+                     PossibleDestRegsNow.set_bits().end() &&
+                 "no remaining registers");
+          setMemOp(
+              IT, 0,
+              MCOperand::createReg(*PossibleDestRegsNow.set_bits().begin()));
 
           CodeTemplate CT;
           CT.Instructions.push_back(std::move(IT));
@@ -261,12 +269,15 @@ X86SerialSnippetGenerator::generateCodeTemplates(
   // LEA gets special attention.
   const auto Opcode = Instr.Description.getOpcode();
   if (Opcode == X86::LEA64r || Opcode == X86::LEA64_32r) {
-    return generateLEATemplatesCommon(Instr, ForbiddenRegisters, State, Opts,
-                                      [](unsigned BaseReg, unsigned IndexReg) {
-                                        // We just select the same base and
-                                        // output register.
-                                        return BaseReg;
-                                      });
+    return generateLEATemplatesCommon(
+        Instr, ForbiddenRegisters, State, Opts,
+        [this](unsigned BaseReg, unsigned IndexReg,
+               BitVector &CandidateDestRegs) {
+          // We just select a destination register that aliases the base
+          // register.
+          CandidateDestRegs &=
+              State.getRATC().getRegister(BaseReg).aliasedBits();
+        });
   }
 
   switch (getX86FPFlags(Instr)) {
@@ -312,22 +323,15 @@ X86ParallelSnippetGenerator::generateCodeTemplates(
   // LEA gets special attention.
   const auto Opcode = Instr.Description.getOpcode();
   if (Opcode == X86::LEA64r || Opcode == X86::LEA64_32r) {
-    // Any destination register that is not used for adddressing is fine.
-    auto PossibleDestRegs =
-        Instr.Operands[0].getRegisterAliasing().sourceBits();
-    remove(PossibleDestRegs, ForbiddenRegisters);
     return generateLEATemplatesCommon(
         Instr, ForbiddenRegisters, State, Opts,
-        [this, &PossibleDestRegs](unsigned BaseReg, unsigned IndexReg) {
-          auto PossibleDestRegsNow = PossibleDestRegs;
-          remove(PossibleDestRegsNow,
+        [this](unsigned BaseReg, unsigned IndexReg,
+               BitVector &CandidateDestRegs) {
+          // Any destination register that is not used for addressing is fine.
+          remove(CandidateDestRegs,
                  State.getRATC().getRegister(BaseReg).aliasedBits());
-          remove(PossibleDestRegsNow,
+          remove(CandidateDestRegs,
                  State.getRATC().getRegister(IndexReg).aliasedBits());
-          assert(PossibleDestRegsNow.set_bits().begin() !=
-                     PossibleDestRegsNow.set_bits().end() &&
-                 "no remaining registers");
-          return *PossibleDestRegsNow.set_bits().begin();
         });
   }
 
