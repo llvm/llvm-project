@@ -53,6 +53,9 @@
 # CHECK-NEXT:            "entity.name.type.template.cpp"
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          [
+# CHECK-NEXT:            "entity.name.type.concept.cpp"
+# CHECK-NEXT:          ],
+# CHECK-NEXT:          [
 # CHECK-NEXT:            "storage.type.primitive.cpp"
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          [
