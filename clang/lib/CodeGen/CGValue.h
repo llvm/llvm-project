@@ -14,13 +14,12 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGVALUE_H
 #define LLVM_CLANG_LIB_CODEGEN_CGVALUE_H
 
-#include "Address.h"
-#include "CGRecordLayout.h"
-#include "CodeGenTBAA.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
-#include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/Type.h"
+#include "Address.h"
+#include "CodeGenTBAA.h"
 
 namespace llvm {
   class Constant;
@@ -182,10 +181,10 @@ class LValue {
 
     // ExtVector element subset: V.xyx
     llvm::Constant *VectorElts;
-  };
 
-  // BitField start bit and size
-  CGBitFieldInfo BitFieldInfo;
+    // BitField start bit and size
+    const CGBitFieldInfo *BitFieldInfo;
+  };
 
   QualType Type;
 
@@ -358,13 +357,10 @@ public:
   Address getBitFieldAddress() const {
     return Address(getBitFieldPointer(), getAlignment());
   }
-  llvm::Value *getBitFieldPointer() const {
-    assert(isBitField());
-    return V;
-  }
+  llvm::Value *getBitFieldPointer() const { assert(isBitField()); return V; }
   const CGBitFieldInfo &getBitFieldInfo() const {
     assert(isBitField());
-    return BitFieldInfo;
+    return *BitFieldInfo;
   }
 
   // global register lvalue
@@ -419,7 +415,7 @@ public:
     LValue R;
     R.LVType = BitField;
     R.V = Addr.getPointer();
-    R.BitFieldInfo = Info;
+    R.BitFieldInfo = &Info;
     R.Initialize(type, type.getQualifiers(), Addr.getAlignment(), BaseInfo,
                  TBAAInfo);
     return R;

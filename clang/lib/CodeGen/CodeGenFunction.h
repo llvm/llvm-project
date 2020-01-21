@@ -1619,14 +1619,8 @@ private:
   void EmitOpenCLKernelMetadata(const FunctionDecl *FD,
                                 llvm::Function *Fn);
 
-  /// Perform AAPCS specific tweaks on volatile bitfield accesses.
-  bool AdjustAAPCSBitfieldLValue(Address &Base, CGBitFieldInfo &Info,
-                                 const FieldDecl *Field,
-                                 const QualType FieldType,
-                                 const CGRecordLayout &RL);
-
 public:
-  CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext = false);
+  CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext=false);
   ~CodeGenFunction();
 
   CodeGenTypes &getTypes() const { return CGM.getTypes(); }
