@@ -23,10 +23,9 @@ AppleObjCTypeEncodingParser::AppleObjCTypeEncodingParser(
     ObjCLanguageRuntime &runtime)
     : ObjCLanguageRuntime::EncodingToType(), m_runtime(runtime) {
   if (!m_scratch_ast_ctx_up)
-    m_scratch_ast_ctx_up.reset(new ClangASTContext(runtime.GetProcess()
-                                                       ->GetTarget()
-                                                       .GetArchitecture()
-                                                       .GetTriple()));
+    m_scratch_ast_ctx_up.reset(new ClangASTContext(
+        "AppleObjCTypeEncodingParser ASTContext",
+        runtime.GetProcess()->GetTarget().GetArchitecture().GetTriple()));
 }
 
 std::string AppleObjCTypeEncodingParser::ReadStructName(StringLexer &type) {
