@@ -219,9 +219,16 @@ func @null() {
   llvm.return
 }
 
-// CHECK-LABEL: @atomics
-func @atomics(%arg0 : !llvm<"float*">, %arg1 : !llvm.float) {
-  // CHECK: llvm.atomicrmw "fadd" "unordered" %{{.*}}, %{{.*}} : (!llvm<"float*">, !llvm.float) -> !llvm.float
-  %0 = llvm.atomicrmw "fadd" "unordered" %arg0, %arg1 : (!llvm<"float*">, !llvm.float) -> !llvm.float
+// CHECK-LABEL: @atomicrmw
+func @atomicrmw(%ptr : !llvm<"float*">, %val : !llvm.float) {
+  // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} unordered : !llvm.float
+  %0 = llvm.atomicrmw fadd %ptr, %val unordered : !llvm.float
+  llvm.return
+}
+
+// CHECK-LABEL: @cmpxchg
+func @cmpxchg(%ptr : !llvm<"float*">, %cmp : !llvm.float, %new : !llvm.float) {
+  // CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : !llvm.float
+  %0 = llvm.cmpxchg %ptr, %cmp, %new acq_rel monotonic : !llvm.float
   llvm.return
 }
