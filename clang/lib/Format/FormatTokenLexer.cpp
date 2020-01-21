@@ -120,8 +120,11 @@ void FormatTokenLexer::tryMergePreviousTokens() {
       Tokens.back()->Tok.setKind(tok::starequal);
       return;
     }
-    if (tryMergeTokens(JSNullishOperator, TT_JsNullishCoalescingOperator))
+    if (tryMergeTokens(JSNullishOperator, TT_JsNullishCoalescingOperator)) {
+      // Treat like the "||" operator (as opposed to the ternary ?).
+      Tokens.back()->Tok.setKind(tok::pipepipe);
       return;
+    }
     if (tryMergeTokens(JSNullPropagatingOperator,
                        TT_JsNullPropagatingOperator)) {
       // Treat like a regular "." access.
