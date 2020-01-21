@@ -154,9 +154,6 @@ let Definition = "target" in {
   def RequireHardwareBreakpoints: Property<"require-hardware-breakpoint", "Boolean">,
     DefaultFalse,
     Desc<"Require all breakpoints to be hardware breakpoints.">;
-  def AutoInstallMainExecutable: Property<"auto-install-main-executable", "Boolean">,
-    DefaultTrue,
-    Desc<"Always install the main executable when connected to a remote platform.">;
 }
 
 let Definition = "process" in {
