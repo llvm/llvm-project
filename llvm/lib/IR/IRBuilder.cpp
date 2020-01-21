@@ -466,14 +466,14 @@ CallInst *IRBuilderBase::CreateAssumption(Value *Cond) {
 }
 
 /// Create a call to a Masked Load intrinsic.
-/// \p Ptr      - base pointer for the load
-/// \p Align    - alignment of the source location
-/// \p Mask     - vector of booleans which indicates what vector lanes should
-///               be accessed in memory
-/// \p PassThru - pass-through value that is used to fill the masked-off lanes
-///               of the result
-/// \p Name     - name of the result variable
-CallInst *IRBuilderBase::CreateMaskedLoad(Value *Ptr, unsigned Align,
+/// \p Ptr       - base pointer for the load
+/// \p Alignment - alignment of the source location
+/// \p Mask      - vector of booleans which indicates what vector lanes should
+///                be accessed in memory
+/// \p PassThru  - pass-through value that is used to fill the masked-off lanes
+///                of the result
+/// \p Name      - name of the result variable
+CallInst *IRBuilderBase::CreateMaskedLoad(Value *Ptr, Align Alignment,
                                           Value *Mask, Value *PassThru,
                                           const Twine &Name) {
   auto *PtrTy = cast<PointerType>(Ptr->getType());
@@ -483,7 +483,7 @@ CallInst *IRBuilderBase::CreateMaskedLoad(Value *Ptr, unsigned Align,
   if (!PassThru)
     PassThru = UndefValue::get(DataTy);
   Type *OverloadedTypes[] = { DataTy, PtrTy };
-  Value *Ops[] = { Ptr, getInt32(Align), Mask,  PassThru};
+  Value *Ops[] = {Ptr, getInt32(Alignment.value()), Mask, PassThru};
   return CreateMaskedIntrinsic(Intrinsic::masked_load, Ops,
                                OverloadedTypes, Name);
 }
