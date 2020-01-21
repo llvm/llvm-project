@@ -32,6 +32,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ValueHandle.h"
@@ -690,17 +691,17 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
   }
 }
 
-Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
-  // Support loops with an exiting latch and other existing exists only
-  // deoptimize.
-
-  // Get the branch weights for the loop's backedge.
+/// Checks if \p L has single exit through latch block except possibly
+/// "deoptimizing" exits. Returns branch instruction terminating the loop
+/// latch if above check is successful, nullptr otherwise.
+static BranchInst *getExpectedExitLoopLatchBranch(Loop *L) {
   BasicBlock *Latch = L->getLoopLatch();
   if (!Latch)
-    return None;
+    return nullptr;
+
   BranchInst *LatchBR = dyn_cast<BranchInst>(Latch->getTerminator());
   if (!LatchBR || LatchBR->getNumSuccessors() != 2 || !L->isLoopExiting(Latch))
-    return None;
+    return nullptr;
 
   assert((LatchBR->getSuccessor(0) == L->getHeader() ||
           LatchBR->getSuccessor(1) == L->getHeader()) &&
@@ -711,20 +712,35 @@ Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
   if (any_of(ExitBlocks, [](const BasicBlock *EB) {
         return !EB->getTerminatingDeoptimizeCall();
       }))
+    return nullptr;
+
+  return LatchBR;
+}
+
+Optional<unsigned>
+llvm::getLoopEstimatedTripCount(Loop *L,
+                                unsigned *EstimatedLoopInvocationWeight) {
+  // Support loops with an exiting latch and other existing exists only
+  // deoptimize.
+  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  if (!LatchBranch)
     return None;
 
   // To estimate the number of times the loop body was executed, we want to
   // know the number of times the backedge was taken, vs. the number of times
   // we exited the loop.
   uint64_t BackedgeTakenWeight, LatchExitWeight;
-  if (!LatchBR->extractProfMetadata(BackedgeTakenWeight, LatchExitWeight))
+  if (!LatchBranch->extractProfMetadata(BackedgeTakenWeight, LatchExitWeight))
     return None;
 
-  if (LatchBR->getSuccessor(0) != L->getHeader())
+  if (LatchBranch->getSuccessor(0) != L->getHeader())
     std::swap(BackedgeTakenWeight, LatchExitWeight);
 
   if (!LatchExitWeight)
     return None;
+
+  if (EstimatedLoopInvocationWeight)
+    *EstimatedLoopInvocationWeight = LatchExitWeight;
 
   // Estimated backedge taken count is a ratio of the backedge taken weight by
   // the weight of the edge exiting the loop, rounded to nearest.
@@ -732,6 +748,37 @@ Optional<unsigned> llvm::getLoopEstimatedTripCount(Loop *L) {
       llvm::divideNearest(BackedgeTakenWeight, LatchExitWeight);
   // Estimated trip count is one plus estimated backedge taken count.
   return BackedgeTakenCount + 1;
+}
+
+bool llvm::setLoopEstimatedTripCount(Loop *L, unsigned EstimatedTripCount,
+                                     unsigned EstimatedloopInvocationWeight) {
+  // Support loops with an exiting latch and other existing exists only
+  // deoptimize.
+  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  if (!LatchBranch)
+    return false;
+
+  // Calculate taken and exit weights.
+  unsigned LatchExitWeight = 0;
+  unsigned BackedgeTakenWeight = 0;
+
+  if (EstimatedTripCount > 0) {
+    LatchExitWeight = EstimatedloopInvocationWeight;
+    BackedgeTakenWeight = (EstimatedTripCount - 1) * LatchExitWeight;
+  }
+
+  // Make a swap if back edge is taken when condition is "false".
+  if (LatchBranch->getSuccessor(0) != L->getHeader())
+    std::swap(BackedgeTakenWeight, LatchExitWeight);
+
+  MDBuilder MDB(LatchBranch->getContext());
+
+  // Set/Update profile metadata.
+  LatchBranch->setMetadata(
+      LLVMContext::MD_prof,
+      MDB.createBranchWeights(BackedgeTakenWeight, LatchExitWeight));
+
+  return true;
 }
 
 bool llvm::hasIterationCountInvariantInParent(Loop *InnerLoop,
@@ -1350,4 +1397,30 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI,
   // so that the rewriter doesn't trip over it later.
   Rewriter.clearInsertPoint();
   return NumReplaced;
+}
+
+/// Set weights for \p UnrolledLoop and \p RemainderLoop based on weights for
+/// \p OrigLoop.
+void llvm::setProfileInfoAfterUnrolling(Loop *OrigLoop, Loop *UnrolledLoop,
+                                        Loop *RemainderLoop, uint64_t UF) {
+  assert(UF > 0 && "Zero unrolled factor is not supported");
+  assert(UnrolledLoop != RemainderLoop &&
+         "Unrolled and Remainder loops are expected to distinct");
+
+  // Get number of iterations in the original scalar loop.
+  unsigned OrigLoopInvocationWeight = 0;
+  Optional<unsigned> OrigAverageTripCount =
+      getLoopEstimatedTripCount(OrigLoop, &OrigLoopInvocationWeight);
+  if (!OrigAverageTripCount)
+    return;
+
+  // Calculate number of iterations in unrolled loop.
+  unsigned UnrolledAverageTripCount = *OrigAverageTripCount / UF;
+  // Calculate number of iterations for remainder loop.
+  unsigned RemainderAverageTripCount = *OrigAverageTripCount % UF;
+
+  setLoopEstimatedTripCount(UnrolledLoop, UnrolledAverageTripCount,
+                            OrigLoopInvocationWeight);
+  setLoopEstimatedTripCount(RemainderLoop, RemainderAverageTripCount,
+                            OrigLoopInvocationWeight);
 }
