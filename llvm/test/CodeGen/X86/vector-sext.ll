@@ -1748,11 +1748,11 @@ define <4 x i64> @load_sext_4i1_to_4i64(<4 x i1> *%ptr) {
 ; SSE41-NEXT:    pinsrd $1, %ecx, %xmm1
 ; SSE41-NEXT:    movl %eax, %ecx
 ; SSE41-NEXT:    shrl $2, %ecx
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero
 ; SSE41-NEXT:    pinsrd $2, %ecx, %xmm1
 ; SSE41-NEXT:    shrl $3, %eax
 ; SSE41-NEXT:    pinsrd $3, %eax, %xmm1
 ; SSE41-NEXT:    pand {{.*}}(%rip), %xmm1
-; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero
 ; SSE41-NEXT:    psllq $63, %xmm0
 ; SSE41-NEXT:    psrad $31, %xmm0
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
@@ -1851,11 +1851,11 @@ define <4 x i64> @load_sext_4i1_to_4i64(<4 x i1> *%ptr) {
 ; X32-SSE41-NEXT:    pinsrd $1, %ecx, %xmm1
 ; X32-SSE41-NEXT:    movl %eax, %ecx
 ; X32-SSE41-NEXT:    shrl $2, %ecx
+; X32-SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero
 ; X32-SSE41-NEXT:    pinsrd $2, %ecx, %xmm1
 ; X32-SSE41-NEXT:    shrl $3, %eax
 ; X32-SSE41-NEXT:    pinsrd $3, %eax, %xmm1
 ; X32-SSE41-NEXT:    pand {{\.LCPI.*}}, %xmm1
-; X32-SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero
 ; X32-SSE41-NEXT:    psllq $63, %xmm0
 ; X32-SSE41-NEXT:    psrad $31, %xmm0
 ; X32-SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
