@@ -124,6 +124,11 @@ public:
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     return RegNo < 2 ? RegNo : -1;
   }
+
+  bool isTinyCore() const {
+    // We can write more stricter checks later.
+    return CPU.find('t') != std::string::npos;
+  }
 };
 } // namespace targets
 } // namespace clang

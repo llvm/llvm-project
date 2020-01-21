@@ -37,6 +37,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
+#include <mutex>
 #include <new>
 #include <string>
 #include <unordered_map>
@@ -75,6 +76,8 @@ cl::opt<bool> MV66("mv66", cl::Hidden, cl::desc("Build for Hexagon V66"),
                    cl::init(false));
 cl::opt<bool> MV67("mv67", cl::Hidden, cl::desc("Build for Hexagon V67"),
                    cl::init(false));
+cl::opt<bool> MV67T("mv67t", cl::Hidden, cl::desc("Build for Hexagon V67T"),
+                    cl::init(false));
 
 cl::opt<Hexagon::ArchEnum>
     EnableHVX("mhvx",
@@ -113,14 +116,20 @@ static StringRef HexagonGetArchVariant() {
     return "hexagonv66";
   if (MV67)
     return "hexagonv67";
+  if (MV67T)
+    return "hexagonv67t";
   return "";
 }
 
 StringRef Hexagon_MC::selectHexagonCPU(StringRef CPU) {
   StringRef ArchV = HexagonGetArchVariant();
   if (!ArchV.empty() && !CPU.empty()) {
-    if (ArchV != CPU)
-      report_fatal_error("conflicting architectures specified.");
+    // Tiny cores have a "t" suffix that is discarded when creating a secondary
+    // non-tiny subtarget.  See: addArchSubtarget
+    std::pair<StringRef,StringRef> ArchP = ArchV.split('t');
+    std::pair<StringRef,StringRef> CPUP = CPU.split('t');
+    if (!ArchP.first.equals(CPUP.first))
+        report_fatal_error("conflicting architectures specified.");
     return CPU;
   }
   if (ArchV.empty()) {
@@ -174,6 +183,14 @@ unsigned llvm::HexagonConvertUnits(unsigned ItinUnits, unsigned *Lanes) {
   return (*Lanes = 0, CVI_NONE);
 }
 
+
+namespace llvm {
+namespace HexagonFUnits {
+bool isSlot0Only(unsigned units) {
+  return HexagonItinerariesV62FU::SLOT0 == units;
+}
+} // namespace HexagonFUnits
+} // namespace llvm
 
 namespace {
 
@@ -353,7 +370,8 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
              .Case("hexagonv62", "+hvxv62")
              .Case("hexagonv65", "+hvxv65")
              .Case("hexagonv66", "+hvxv66")
-             .Case("hexagonv67", "+hvxv67"));
+             .Case("hexagonv67", "+hvxv67")
+             .Case("hexagonv67t", "+hvxv67"));
     break;
   }
   case Hexagon::ArchEnum::NoArch:
@@ -376,6 +394,18 @@ std::pair<std::string, std::string> selectCPUAndFS(StringRef CPU,
   Result.second = selectHexagonFS(Result.first, FS);
   return Result;
 }
+std::mutex ArchSubtargetMutex;
+std::unordered_map<std::string, std::unique_ptr<MCSubtargetInfo const>>
+    ArchSubtarget;
+} // namespace
+
+MCSubtargetInfo const *
+Hexagon_MC::getArchSubtarget(MCSubtargetInfo const *STI) {
+  std::lock_guard<std::mutex> Lock(ArchSubtargetMutex);
+  auto Existing = ArchSubtarget.find(std::string(STI->getCPU()));
+  if (Existing == ArchSubtarget.end())
+    return nullptr;
+  return Existing->second.get();
 }
 
 FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
@@ -440,6 +470,8 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
   StringRef ArchFS = Features.second;
 
   MCSubtargetInfo *X = createHexagonMCSubtargetInfoImpl(TT, CPUName, ArchFS);
+  if (X != nullptr && (CPUName == "hexagonv67t"))
+    addArchSubtarget(X, ArchFS);
 
   if (CPU.equals("help"))
       exit(0);
@@ -470,6 +502,19 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
   return X;
 }
 
+void Hexagon_MC::addArchSubtarget(MCSubtargetInfo const *STI,
+                                  StringRef FS) {
+  assert(STI != nullptr);
+  if (STI->getCPU().contains("t")) {
+    auto ArchSTI = createHexagonMCSubtargetInfo(
+        STI->getTargetTriple(),
+        STI->getCPU().substr(0, STI->getCPU().size() - 1), FS);
+    std::lock_guard<std::mutex> Lock(ArchSubtargetMutex);
+    ArchSubtarget[std::string(STI->getCPU())] =
+        std::unique_ptr<MCSubtargetInfo const>(ArchSTI);
+  }
+}
+
 unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
   static std::map<StringRef,unsigned> ElfFlags = {
     {"hexagonv5",  ELF::EF_HEXAGON_MACH_V5},
@@ -479,6 +524,7 @@ unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
     {"hexagonv65", ELF::EF_HEXAGON_MACH_V65},
     {"hexagonv66", ELF::EF_HEXAGON_MACH_V66},
     {"hexagonv67", ELF::EF_HEXAGON_MACH_V67},
+    {"hexagonv67t", ELF::EF_HEXAGON_MACH_V67T},
   };
 
   auto F = ElfFlags.find(STI.getCPU());

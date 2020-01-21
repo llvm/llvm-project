@@ -109,19 +109,19 @@ public:
                      bool AllowModify) const override;
 
   /// Remove the branching code at the end of the specific MBB.
-  /// This is only invoked in cases where AnalyzeBranch returns success. It
+  /// This is only invoked in cases where analyzeBranch returns success. It
   /// returns the number of instructions that were removed.
   unsigned removeBranch(MachineBasicBlock &MBB,
                         int *BytesRemoved = nullptr) const override;
 
   /// Insert branch code into the end of the specified MachineBasicBlock.
   /// The operands to this method are the same as those
-  /// returned by AnalyzeBranch.  This is only invoked in cases where
-  /// AnalyzeBranch returns success. It returns the number of instructions
+  /// returned by analyzeBranch.  This is only invoked in cases where
+  /// analyzeBranch returns success. It returns the number of instructions
   /// inserted.
   ///
   /// It is also invoked by tail merging to add unconditional branches in
-  /// cases where AnalyzeBranch doesn't apply because there was no original
+  /// cases where analyzeBranch doesn't apply because there was no original
   /// branch to analyze.  At least this much must be implemented, else tail
   /// merging needs to be disabled.
   unsigned insertBranch(MachineBasicBlock &MBB, MachineBasicBlock *TBB,
@@ -341,10 +341,10 @@ public:
                               MachineBasicBlock *TargetBB,
                               SmallPtrSet<MachineBasicBlock *, 8> &Visited) const;
 
-  bool isBaseImmOffset(const MachineInstr &MI) const;
   bool isAbsoluteSet(const MachineInstr &MI) const;
   bool isAccumulator(const MachineInstr &MI) const;
   bool isAddrModeWithOffset(const MachineInstr &MI) const;
+  bool isBaseImmOffset(const MachineInstr &MI) const;
   bool isComplex(const MachineInstr &MI) const;
   bool isCompoundBranchInstr(const MachineInstr &MI) const;
   bool isConstExtended(const MachineInstr &MI) const;
@@ -387,6 +387,8 @@ public:
   bool isPredicated(unsigned Opcode) const;
   bool isPredicateLate(unsigned Opcode) const;
   bool isPredictedTaken(unsigned Opcode) const;
+  bool isPureSlot0(const MachineInstr &MI) const;
+  bool isRestrictNoSlot1Store(const MachineInstr &MI) const;
   bool isSaveCalleeSavedRegsCall(const MachineInstr &MI) const;
   bool isSignExtendingLoad(const MachineInstr &MI) const;
   bool isSolo(const MachineInstr &MI) const;
@@ -435,6 +437,7 @@ public:
   getCompoundCandidateGroup(const MachineInstr &MI) const;
   unsigned getCompoundOpcode(const MachineInstr &GA,
                              const MachineInstr &GB) const;
+  int getDuplexOpcode(const MachineInstr &MI, bool ForBigCore = true) const;
   int getCondOpcode(int Opc, bool sense) const;
   int getDotCurOp(const MachineInstr &MI) const;
   int getNonDotCurOp(const MachineInstr &MI) const;
@@ -480,6 +483,17 @@ public:
 
   void setBundleNoShuf(MachineBasicBlock::instr_iterator MIB) const;
   bool getBundleNoShuf(const MachineInstr &MIB) const;
+
+  // When TinyCore with Duplexes is enabled, this function is used to translate
+  // tiny-instructions to big-instructions and vice versa to get the slot
+  // consumption.
+  void changeDuplexOpcode(MachineBasicBlock::instr_iterator MII,
+                          bool ToBigInstrs) const;
+  void translateInstrsForDup(MachineFunction &MF,
+                             bool ToBigInstrs = true) const;
+  void translateInstrsForDup(MachineBasicBlock::instr_iterator MII,
+                             bool ToBigInstrs) const;
+
   // Addressing mode relations.
   short changeAddrMode_abs_io(short Opc) const;
   short changeAddrMode_io_abs(short Opc) const;

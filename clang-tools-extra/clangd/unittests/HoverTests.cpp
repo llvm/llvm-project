@@ -327,7 +327,6 @@ class Foo {})cpp";
          HI.Name = "X";
          HI.LocalScope = "X<T *>::"; // FIXME: X<T *, void>::
          HI.Kind = index::SymbolKind::Constructor;
-         HI.ReturnType = "X<T *>";
          HI.Definition = "X()";
          HI.Parameters.emplace();
        }},
@@ -337,8 +336,16 @@ class Foo {})cpp";
          HI.Name = "~X";
          HI.LocalScope = "X::";
          HI.Kind = index::SymbolKind::Destructor;
-         HI.ReturnType = "void";
          HI.Definition = "~X()";
+         HI.Parameters.emplace();
+       }},
+      {"class X { operator [[in^t]](); };",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "operator int";
+         HI.LocalScope = "X::";
+         HI.Kind = index::SymbolKind::ConversionFunction;
+         HI.Definition = "operator int()";
          HI.Parameters.emplace();
        }},
 

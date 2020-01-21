@@ -362,6 +362,16 @@ def Rol: pf2<rotl>;
 // --(1) Immediate -------------------------------------------------------
 //
 
+def Imm64Lo: SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(int32_t (N->getSExtValue()),
+                                   SDLoc(N), MVT::i32);
+}]>;
+def Imm64Hi: SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(int32_t (N->getSExtValue()>>32),
+                                   SDLoc(N), MVT::i32);
+}]>;
+
+
 def SDTHexagonCONST32
   : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisPtrTy<0>]>;
 
@@ -389,7 +399,10 @@ def: Pat<(HexagonCP         tconstpool:$A),     (A2_tfrsi imm:$A)>;
 
 def: Pat<(i1 0),        (PS_false)>;
 def: Pat<(i1 1),        (PS_true)>;
-def: Pat<(i64 imm:$v),  (CONST64 imm:$v)>;
+def: Pat<(i64 imm:$v),  (CONST64 imm:$v)>,
+     Requires<[UseSmallData,NotOptTinyCore]>;
+def: Pat<(i64 imm:$v),
+         (Combinew (A2_tfrsi (Imm64Hi $v)), (A2_tfrsi (Imm64Lo $v)))>;
 
 def ftoi : SDNodeXForm<fpimm, [{
   APInt I = N->getValueAPF().bitcastToAPInt();

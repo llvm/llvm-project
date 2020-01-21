@@ -276,7 +276,7 @@ CallInst *IRBuilderBase::CreateMemMove(Value *Dst, MaybeAlign DstAlign,
 }
 
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
-    Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign, Value *Size,
+    Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
     uint32_t ElementSize, MDNode *TBAATag, MDNode *TBAAStructTag,
     MDNode *ScopeTag, MDNode *NoAliasTag) {
   assert(DstAlign >= ElementSize &&
@@ -295,10 +295,8 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemMove(
   CallInst *CI = createCallHelper(TheFn, Ops, this);
 
   // Set the alignment of the pointer args.
-  CI->addParamAttr(
-      0, Attribute::getWithAlignment(CI->getContext(), Align(DstAlign)));
-  CI->addParamAttr(
-      1, Attribute::getWithAlignment(CI->getContext(), Align(SrcAlign)));
+  CI->addParamAttr(0, Attribute::getWithAlignment(CI->getContext(), DstAlign));
+  CI->addParamAttr(1, Attribute::getWithAlignment(CI->getContext(), SrcAlign));
 
   // Set the TBAA info if present.
   if (TBAATag)
@@ -466,14 +464,14 @@ CallInst *IRBuilderBase::CreateAssumption(Value *Cond) {
 }
 
 /// Create a call to a Masked Load intrinsic.
-/// \p Ptr      - base pointer for the load
-/// \p Align    - alignment of the source location
-/// \p Mask     - vector of booleans which indicates what vector lanes should
-///               be accessed in memory
-/// \p PassThru - pass-through value that is used to fill the masked-off lanes
-///               of the result
-/// \p Name     - name of the result variable
-CallInst *IRBuilderBase::CreateMaskedLoad(Value *Ptr, unsigned Align,
+/// \p Ptr       - base pointer for the load
+/// \p Alignment - alignment of the source location
+/// \p Mask      - vector of booleans which indicates what vector lanes should
+///                be accessed in memory
+/// \p PassThru  - pass-through value that is used to fill the masked-off lanes
+///                of the result
+/// \p Name      - name of the result variable
+CallInst *IRBuilderBase::CreateMaskedLoad(Value *Ptr, Align Alignment,
                                           Value *Mask, Value *PassThru,
                                           const Twine &Name) {
   auto *PtrTy = cast<PointerType>(Ptr->getType());
@@ -483,7 +481,7 @@ CallInst *IRBuilderBase::CreateMaskedLoad(Value *Ptr, unsigned Align,
   if (!PassThru)
     PassThru = UndefValue::get(DataTy);
   Type *OverloadedTypes[] = { DataTy, PtrTy };
-  Value *Ops[] = { Ptr, getInt32(Align), Mask,  PassThru};
+  Value *Ops[] = {Ptr, getInt32(Alignment.value()), Mask, PassThru};
   return CreateMaskedIntrinsic(Intrinsic::masked_load, Ops,
                                OverloadedTypes, Name);
 }

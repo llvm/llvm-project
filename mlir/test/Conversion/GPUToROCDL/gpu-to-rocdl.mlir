@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -convert-gpu-to-rocdl -split-input-file | FileCheck %s
 
-module attributes {gpu.kernel_module} {
+gpu.module @kernel_module {
   // CHECK-LABEL: func @gpu_index_ops()
   func @gpu_index_ops()
       attributes { gpu.kernel } {
@@ -38,7 +38,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @kernel_module {
   // CHECK: llvm.func @_ocml_fabs_f32(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @_ocml_fabs_f64(!llvm.double) -> !llvm.double
   // CHECK-LABEL: func @gpu_fabs
@@ -53,7 +53,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @kernel_module {
   // CHECK: llvm.func @_ocml_ceil_f32(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @_ocml_ceil_f64(!llvm.double) -> !llvm.double
   // CHECK-LABEL: func @gpu_ceil
@@ -68,7 +68,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @kernel_module {
   // CHECK: llvm.func @_ocml_cos_f32(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @_ocml_cos_f64(!llvm.double) -> !llvm.double
   // CHECK-LABEL: func @gpu_cos
@@ -83,7 +83,7 @@ module attributes {gpu.kernel_module} {
 
 // -----
 
-module attributes {gpu.kernel_module} {
+gpu.module @kernel_module {
   // CHECK: llvm.func @_ocml_exp_f32(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @_ocml_exp_f64(!llvm.double) -> !llvm.double
   // CHECK-LABEL: func @gpu_exp
@@ -102,7 +102,7 @@ module attributes {gpu.kernel_module} {
 // -----
 
 // Test that we handled properly operation with SymbolTable other than module op
-module attributes {gpu.kernel_module} {
+gpu.module @kernel_module {
   "test.symbol_scope"() ({
     // CHECK: test.symbol_scope
     // CHECK: llvm.func @_ocml_exp_f32(!llvm.float) -> !llvm.float

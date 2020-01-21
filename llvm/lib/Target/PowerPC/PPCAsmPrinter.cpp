@@ -176,23 +176,7 @@ void PPCAsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
                                        raw_ostream &O) {
   // Computing the address of a global symbol, not calling it.
   const GlobalValue *GV = MO.getGlobal();
-  MCSymbol *SymToPrint;
-
-  // External or weakly linked global variables need non-lazily-resolved stubs
-  if (Subtarget->hasLazyResolverStub(GV)) {
-    SymToPrint = getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
-    MachineModuleInfoImpl::StubValueTy &StubSym =
-        MMI->getObjFileInfo<MachineModuleInfoMachO>().getGVStubEntry(
-            SymToPrint);
-    if (!StubSym.getPointer())
-      StubSym = MachineModuleInfoImpl::StubValueTy(getSymbol(GV),
-                                                   !GV->hasInternalLinkage());
-  } else {
-    SymToPrint = getSymbol(GV);
-  }
-
-  SymToPrint->print(O, MAI);
-
+  getSymbol(GV)->print(O, MAI);
   printOffset(MO.getOffset(), O);
 }
 
@@ -208,9 +192,7 @@ void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
 
     // Linux assembler (Others?) does not take register mnemonics.
     // FIXME - What about special registers used in mfspr/mtspr?
-    if (!Subtarget->isDarwin())
-      RegName = PPCRegisterInfo::stripRegisterPrefix(RegName);
-    O << RegName;
+    O << PPCRegisterInfo::stripRegisterPrefix(RegName);
     return;
   }
   case MachineOperand::MO_Immediate:
@@ -298,15 +280,11 @@ bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
 
     switch (ExtraCode[0]) {
     default: return true;  // Unknown modifier.
-    case 'y': // A memory reference for an X-form instruction
-      {
-        const char *RegName = "r0";
-        if (!Subtarget->isDarwin())
-          RegName = PPCRegisterInfo::stripRegisterPrefix(RegName);
-        O << RegName << ", ";
-        printOperand(MI, OpNo, O);
-        return false;
-      }
+    case 'y': {            // A memory reference for an X-form instruction
+      O << "0, ";
+      printOperand(MI, OpNo, O);
+      return false;
+    }
     case 'U': // Print 'u' for update form.
     case 'X': // Print 'x' for indexed form.
     {

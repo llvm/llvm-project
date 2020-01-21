@@ -775,4 +775,19 @@ def LLVM_AtomicRMWOp : LLVM_Op<"atomicrmw">,
   let verifier = "return ::verify(*this);";
 }
 
+def LLVM_AtomicCmpXchgOp : LLVM_Op<"cmpxchg">,
+    Arguments<(ins LLVM_Type:$ptr, LLVM_Type:$cmp, LLVM_Type:$val,
+                   AtomicOrdering:$success_ordering,
+                   AtomicOrdering:$failure_ordering)>,
+    Results<(outs LLVM_Type:$res)> {
+  let llvmBuilder = [{
+    $res = builder.CreateAtomicCmpXchg($ptr, $cmp, $val,
+                   getLLVMAtomicOrdering($success_ordering),
+                   getLLVMAtomicOrdering($failure_ordering));
+  }];
+  let parser = [{ return parseAtomicCmpXchgOp(parser, result); }];
+  let printer = [{ printAtomicCmpXchgOp(p, *this); }];
+  let verifier = "return ::verify(*this);";
+}
+
 #endif // LLVMIR_OPS

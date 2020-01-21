@@ -60,6 +60,9 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   } else if (CPU == "hexagonv67") {
     Builder.defineMacro("__HEXAGON_V67__");
     Builder.defineMacro("__HEXAGON_ARCH__", "67");
+  } else if (CPU == "hexagonv67t") {
+    Builder.defineMacro("__HEXAGON_V67T__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "67");
   }
 
   if (hasFeature("hvx-length64b")) {
@@ -79,13 +82,20 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (hasFeature("audio")) {
     Builder.defineMacro("__HEXAGON_AUDIO__");
   }
+
+  std::string NumPhySlots = isTinyCore() ? "3" : "4";
+  Builder.defineMacro("__HEXAGON_PHYSICAL_SLOTS__", NumPhySlots);
 }
 
 bool HexagonTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
+  if (isTinyCore())
+    Features["audio"] = true;
+
   StringRef CPUFeature = CPU;
   CPUFeature.consume_front("hexagon");
+  CPUFeature.consume_back("t");
   Features[CPUFeature] = true;
 
   Features["long-calls"] = false;
@@ -174,7 +184,7 @@ static constexpr CPUSuffix Suffixes[] = {
     {{"hexagonv5"},  {"5"}},  {{"hexagonv55"},  {"55"}},
     {{"hexagonv60"}, {"60"}}, {{"hexagonv62"},  {"62"}},
     {{"hexagonv65"}, {"65"}}, {{"hexagonv66"},  {"66"}},
-    {{"hexagonv67"}, {"67"}},
+    {{"hexagonv67"}, {"67"}}, {{"hexagonv67t"}, {"67t"}},
 };
 
 const char *HexagonTargetInfo::getHexagonCPUSuffix(StringRef Name) {

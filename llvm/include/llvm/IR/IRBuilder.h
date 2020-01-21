@@ -657,20 +657,40 @@ public:
   /// specified, it will be added to the instruction. Likewise with alias.scope
   /// and noalias tags.
   CallInst *CreateElementUnorderedAtomicMemMove(
-      Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign,
-      uint64_t Size, uint32_t ElementSize, MDNode *TBAATag = nullptr,
-      MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
-      MDNode *NoAliasTag = nullptr) {
-    return CreateElementUnorderedAtomicMemMove(
-        Dst, DstAlign, Src, SrcAlign, getInt64(Size), ElementSize, TBAATag,
-        TBAAStructTag, ScopeTag, NoAliasTag);
-  }
-
-  CallInst *CreateElementUnorderedAtomicMemMove(
-      Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign, Value *Size,
+      Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
       uint32_t ElementSize, MDNode *TBAATag = nullptr,
       MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
       MDNode *NoAliasTag = nullptr);
+
+  /// FIXME: Remove this function once transition to Align is over.
+  /// Use the version that takes Align instead of this one.
+  LLVM_ATTRIBUTE_DEPRECATED(CallInst *CreateElementUnorderedAtomicMemMove(
+                                Value *Dst, unsigned DstAlign, Value *Src,
+                                unsigned SrcAlign, uint64_t Size,
+                                uint32_t ElementSize, MDNode *TBAATag = nullptr,
+                                MDNode *TBAAStructTag = nullptr,
+                                MDNode *ScopeTag = nullptr,
+                                MDNode *NoAliasTag = nullptr),
+                            "Use the version that takes Align instead") {
+    return CreateElementUnorderedAtomicMemMove(
+        Dst, Align(DstAlign), Src, Align(SrcAlign), getInt64(Size), ElementSize,
+        TBAATag, TBAAStructTag, ScopeTag, NoAliasTag);
+  }
+
+  /// FIXME: Remove this function once transition to Align is over.
+  /// Use the version that takes Align instead of this one.
+  LLVM_ATTRIBUTE_DEPRECATED(CallInst *CreateElementUnorderedAtomicMemMove(
+                                Value *Dst, unsigned DstAlign, Value *Src,
+                                unsigned SrcAlign, Value *Size,
+                                uint32_t ElementSize, MDNode *TBAATag = nullptr,
+                                MDNode *TBAAStructTag = nullptr,
+                                MDNode *ScopeTag = nullptr,
+                                MDNode *NoAliasTag = nullptr),
+                            "Use the version that takes Align instead") {
+    return CreateElementUnorderedAtomicMemMove(
+        Dst, Align(DstAlign), Src, Align(SrcAlign), Size, ElementSize, TBAATag,
+        TBAAStructTag, ScopeTag, NoAliasTag);
+  }
 
   /// Create a vector fadd reduction intrinsic of the source vector.
   /// The first parameter is a scalar accumulator value for ordered reductions.
@@ -727,7 +747,14 @@ public:
   CallInst *CreateInvariantStart(Value *Ptr, ConstantInt *Size = nullptr);
 
   /// Create a call to Masked Load intrinsic
-  CallInst *CreateMaskedLoad(Value *Ptr, unsigned Align, Value *Mask,
+  LLVM_ATTRIBUTE_DEPRECATED(
+      CallInst *CreateMaskedLoad(Value *Ptr, unsigned Alignment, Value *Mask,
+                                 Value *PassThru = nullptr,
+                                 const Twine &Name = ""),
+      "Use the version that takes Align instead") {
+    return CreateMaskedLoad(Ptr, Align(Alignment), Mask, PassThru, Name);
+  }
+  CallInst *CreateMaskedLoad(Value *Ptr, Align Alignment, Value *Mask,
                              Value *PassThru = nullptr, const Twine &Name = "");
 
   /// Create a call to Masked Store intrinsic

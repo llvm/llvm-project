@@ -35,6 +35,7 @@ static_library("bugprone") {
     "MacroParenthesesCheck.cpp",
     "MacroRepeatedSideEffectsCheck.cpp",
     "MisplacedOperatorInStrlenInAllocCheck.cpp",
+    "MisplacedPointerArithmeticInAllocCheck.cpp",
     "MisplacedWideningCastCheck.cpp",
     "MoveForwardingReferenceCheck.cpp",
     "MultipleStatementMacroCheck.cpp",

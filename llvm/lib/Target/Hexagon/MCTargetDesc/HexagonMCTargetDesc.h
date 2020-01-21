@@ -78,6 +78,9 @@ namespace Hexagon_MC {
   /// etc. do not need to go through TargetRegistry.
   MCSubtargetInfo *createHexagonMCSubtargetInfo(const Triple &TT, StringRef CPU,
                                                 StringRef FS);
+  MCSubtargetInfo const *getArchSubtarget(MCSubtargetInfo const *STI);
+  void addArchSubtarget(MCSubtargetInfo const *STI,
+                        StringRef FS);
   unsigned GetELFFlags(const MCSubtargetInfo &STI);
 }
 

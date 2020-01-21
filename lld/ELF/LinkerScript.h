@@ -155,8 +155,10 @@ struct SectionPattern {
 };
 
 struct InputSectionDescription : BaseCommand {
-  InputSectionDescription(StringRef filePattern)
-      : BaseCommand(InputSectionKind), filePat(filePattern) {}
+  InputSectionDescription(StringRef filePattern, uint64_t withFlags = 0,
+                          uint64_t withoutFlags = 0)
+      : BaseCommand(InputSectionKind), filePat(filePattern),
+        withFlags(withFlags), withoutFlags(withoutFlags) {}
 
   static bool classof(const BaseCommand *c) {
     return c->kind == InputSectionKind;
@@ -180,6 +182,10 @@ struct InputSectionDescription : BaseCommand {
   // they were created in. This is used to insert newly created ThunkSections
   // into Sections at the end of a createThunks() pass.
   std::vector<std::pair<ThunkSection *, uint32_t>> thunkSections;
+
+  // SectionPatterns can be filtered with the INPUT_SECTION_FLAGS command.
+  uint64_t withFlags;
+  uint64_t withoutFlags;
 };
 
 // Represents BYTE(), SHORT(), LONG(), or QUAD().

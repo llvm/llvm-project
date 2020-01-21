@@ -469,13 +469,16 @@ bool HexagonAsmParser::finishBundle(SMLoc IDLoc, MCStreamer &Out) {
   LLVM_DEBUG(dbgs() << "--\n");
 
   MCB.setLoc(IDLoc);
+
   // Check the bundle for errors.
   const MCRegisterInfo *RI = getContext().getRegisterInfo();
-  HexagonMCChecker Check(getContext(), MII, getSTI(), MCB, *RI);
+  MCSubtargetInfo const &STI = getSTI();
 
-  bool CheckOk = HexagonMCInstrInfo::canonicalizePacket(MII, getSTI(),
-                                                        getContext(), MCB,
-                                                        &Check);
+  MCInst OrigBundle = MCB;
+  HexagonMCChecker Check(getContext(), MII, STI, MCB, *RI, true);
+
+  bool CheckOk = HexagonMCInstrInfo::canonicalizePacket(
+      MII, STI, getContext(), MCB, &Check, true);
 
   if (CheckOk) {
     if (HexagonMCInstrInfo::bundleSize(MCB) == 0) {
@@ -484,15 +487,12 @@ bool HexagonAsmParser::finishBundle(SMLoc IDLoc, MCStreamer &Out) {
       // Empty packets are valid yet aren't emitted
       return false;
     }
-    Out.EmitInstruction(MCB, getSTI());
-  } else {
-    // If compounding and duplexing didn't reduce the size below
-    // 4 or less we have a packet that is too big.
-    if (HexagonMCInstrInfo::bundleSize(MCB) > HEXAGON_PACKET_SIZE) {
-      Error(IDLoc, "invalid instruction packet: out of slots");
-    }
+
+    assert(HexagonMCInstrInfo::isBundle(MCB));
+
+    Out.EmitInstruction(MCB, STI);
+  } else
     return true; // Error
-  }
 
   return false; // No error
 }
@@ -520,6 +520,8 @@ bool HexagonAsmParser::matchBundleOptions() {
         HexagonMCInstrInfo::setMemReorderDisabled(MCB);
       else
         return getParser().Error(IDLoc, MemNoShuffMsg);
+    } else if (Option.compare_lower("mem_no_order") == 0) {
+      // Nothing.
     } else
       return getParser().Error(IDLoc, llvm::Twine("'") + Option +
                                           "' is not a valid bundle option");

@@ -1345,74 +1345,90 @@ static LogicalResult verify(LLVM::NullOp op) {
 }
 
 //===----------------------------------------------------------------------===//
+// Utility functions for parsing atomic ops
+//===----------------------------------------------------------------------===//
+
+// Helper function to parse a keyword into the specified attribute named by
+// `attrName`. The keyword must match one of the string values defined by the
+// AtomicBinOp enum. The resulting I64 attribute is added to the `result`
+// state.
+static ParseResult parseAtomicBinOp(OpAsmParser &parser, OperationState &result,
+                                    StringRef attrName) {
+  llvm::SMLoc loc;
+  StringRef keyword;
+  if (parser.getCurrentLocation(&loc) || parser.parseKeyword(&keyword))
+    return failure();
+
+  // Replace the keyword `keyword` with an integer attribute.
+  auto kind = symbolizeAtomicBinOp(keyword);
+  if (!kind) {
+    return parser.emitError(loc)
+           << "'" << keyword << "' is an incorrect value of the '" << attrName
+           << "' attribute";
+  }
+
+  auto value = static_cast<int64_t>(kind.getValue());
+  auto attr = parser.getBuilder().getI64IntegerAttr(value);
+  result.addAttribute(attrName, attr);
+
+  return success();
+}
+
+// Helper function to parse a keyword into the specified attribute named by
+// `attrName`. The keyword must match one of the string values defined by the
+// AtomicOrdering enum. The resulting I64 attribute is added to the `result`
+// state.
+static ParseResult parseAtomicOrdering(OpAsmParser &parser,
+                                       OperationState &result,
+                                       StringRef attrName) {
+  llvm::SMLoc loc;
+  StringRef ordering;
+  if (parser.getCurrentLocation(&loc) || parser.parseKeyword(&ordering))
+    return failure();
+
+  // Replace the keyword `ordering` with an integer attribute.
+  auto kind = symbolizeAtomicOrdering(ordering);
+  if (!kind) {
+    return parser.emitError(loc)
+           << "'" << ordering << "' is an incorrect value of the '" << attrName
+           << "' attribute";
+  }
+
+  auto value = static_cast<int64_t>(kind.getValue());
+  auto attr = parser.getBuilder().getI64IntegerAttr(value);
+  result.addAttribute(attrName, attr);
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Printer, parser and verifier for LLVM::AtomicRMWOp.
 //===----------------------------------------------------------------------===//
 
 static void printAtomicRMWOp(OpAsmPrinter &p, AtomicRMWOp &op) {
-  p << op.getOperationName() << " ";
-  p << '"' << stringifyAtomicBinOp(op.bin_op()) << "\" ";
-  p << '"' << stringifyAtomicOrdering(op.ordering()) << "\" ";
-  p << op.ptr() << ", " << op.val();
+  p << op.getOperationName() << ' ' << stringifyAtomicBinOp(op.bin_op()) << ' '
+    << op.ptr() << ", " << op.val() << ' '
+    << stringifyAtomicOrdering(op.ordering()) << ' ';
   p.printOptionalAttrDict(op.getAttrs(), {"bin_op", "ordering"});
-  p << " : (" << op.ptr().getType() << ", " << op.val().getType() << ") -> "
-    << op.res().getType();
+  p << " : " << op.res().getType();
 }
 
-// <operation> ::= `llvm.atomicrmw` string-literal string-literal
-//                 ssa-use `,` ssa-use attribute-dict? `:` type
+// <operation> ::= `llvm.atomicrmw` keyword ssa-use `,` ssa-use keyword
+//                 attribute-dict? `:` type
 static ParseResult parseAtomicRMWOp(OpAsmParser &parser,
                                     OperationState &result) {
-  Type type;
-  StringAttr binOp, ordering;
-  llvm::SMLoc binOpLoc, orderingLoc, trailingTypeLoc;
+  LLVMType type;
   OpAsmParser::OperandType ptr, val;
-  if (parser.getCurrentLocation(&binOpLoc) ||
-      parser.parseAttribute(binOp, "bin_op", result.attributes) ||
-      parser.getCurrentLocation(&orderingLoc) ||
-      parser.parseAttribute(ordering, "ordering", result.attributes) ||
-      parser.parseOperand(ptr) || parser.parseComma() ||
-      parser.parseOperand(val) ||
-      parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
-      parser.getCurrentLocation(&trailingTypeLoc) || parser.parseType(type))
+  if (parseAtomicBinOp(parser, result, "bin_op") || parser.parseOperand(ptr) ||
+      parser.parseComma() || parser.parseOperand(val) ||
+      parseAtomicOrdering(parser, result, "ordering") ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(type) ||
+      parser.resolveOperand(ptr, type.getPointerTo(), result.operands) ||
+      parser.resolveOperand(val, type, result.operands))
     return failure();
 
-  // Extract the result type from the trailing function type.
-  auto funcType = type.dyn_cast<FunctionType>();
-  if (!funcType || funcType.getNumInputs() != 2 ||
-      funcType.getNumResults() != 1)
-    return parser.emitError(
-        trailingTypeLoc,
-        "expected trailing function type with two arguments and one result");
-
-  if (parser.resolveOperand(ptr, funcType.getInput(0), result.operands) ||
-      parser.resolveOperand(val, funcType.getInput(1), result.operands))
-    return failure();
-
-  // Replace the string attribute `bin_op` with an integer attribute.
-  auto binOpKind = symbolizeAtomicBinOp(binOp.getValue());
-  if (!binOpKind) {
-    return parser.emitError(binOpLoc)
-           << "'" << binOp.getValue()
-           << "' is an incorrect value of the 'bin_op' attribute";
-  }
-
-  auto binOpValue = static_cast<int64_t>(binOpKind.getValue());
-  auto binOpAttr = parser.getBuilder().getI64IntegerAttr(binOpValue);
-  result.attributes[0].second = binOpAttr;
-
-  // Replace the string attribute `ordering` with an integer attribute.
-  auto orderingKind = symbolizeAtomicOrdering(ordering.getValue());
-  if (!orderingKind) {
-    return parser.emitError(orderingLoc)
-           << "'" << ordering.getValue()
-           << "' is an incorrect value of the 'ordering' attribute";
-  }
-
-  auto orderingValue = static_cast<int64_t>(orderingKind.getValue());
-  auto orderingAttr = parser.getBuilder().getI64IntegerAttr(orderingValue);
-  result.attributes[1].second = orderingAttr;
-
-  result.addTypes(funcType.getResults());
+  result.addTypes(type);
   return success();
 }
 
@@ -1434,14 +1450,76 @@ static LogicalResult verify(AtomicRMWOp op) {
   } else if (op.bin_op() == AtomicBinOp::xchg) {
     if (!valType.isIntegerTy(8) && !valType.isIntegerTy(16) &&
         !valType.isIntegerTy(32) && !valType.isIntegerTy(64) &&
-        !valType.getUnderlyingType()->isHalfTy() && !valType.isFloatTy() &&
-        !valType.isDoubleTy())
+        !valType.isHalfTy() && !valType.isFloatTy() && !valType.isDoubleTy())
       return op.emitOpError("unexpected LLVM IR type for 'xchg' bin_op");
   } else {
     if (!valType.isIntegerTy(8) && !valType.isIntegerTy(16) &&
         !valType.isIntegerTy(32) && !valType.isIntegerTy(64))
       return op.emitOpError("expected LLVM IR integer type");
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Printer, parser and verifier for LLVM::AtomicCmpXchgOp.
+//===----------------------------------------------------------------------===//
+
+static void printAtomicCmpXchgOp(OpAsmPrinter &p, AtomicCmpXchgOp &op) {
+  p << op.getOperationName() << ' ' << op.ptr() << ", " << op.cmp() << ", "
+    << op.val() << ' ' << stringifyAtomicOrdering(op.success_ordering()) << ' '
+    << stringifyAtomicOrdering(op.failure_ordering());
+  p.printOptionalAttrDict(op.getAttrs(),
+                          {"success_ordering", "failure_ordering"});
+  p << " : " << op.val().getType();
+}
+
+// <operation> ::= `llvm.cmpxchg` ssa-use `,` ssa-use `,` ssa-use
+//                 keyword keyword attribute-dict? `:` type
+static ParseResult parseAtomicCmpXchgOp(OpAsmParser &parser,
+                                        OperationState &result) {
+  auto &builder = parser.getBuilder();
+  LLVMType type;
+  OpAsmParser::OperandType ptr, cmp, val;
+  if (parser.parseOperand(ptr) || parser.parseComma() ||
+      parser.parseOperand(cmp) || parser.parseComma() ||
+      parser.parseOperand(val) ||
+      parseAtomicOrdering(parser, result, "success_ordering") ||
+      parseAtomicOrdering(parser, result, "failure_ordering") ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseColonType(type) ||
+      parser.resolveOperand(ptr, type.getPointerTo(), result.operands) ||
+      parser.resolveOperand(cmp, type, result.operands) ||
+      parser.resolveOperand(val, type, result.operands))
+    return failure();
+
+  auto *dialect = builder.getContext()->getRegisteredDialect<LLVMDialect>();
+  auto boolType = LLVMType::getInt1Ty(dialect);
+  auto resultType = LLVMType::getStructTy(type, boolType);
+  result.addTypes(resultType);
+
+  return success();
+}
+
+static LogicalResult verify(AtomicCmpXchgOp op) {
+  auto ptrType = op.ptr().getType().cast<LLVM::LLVMType>();
+  if (!ptrType.isPointerTy())
+    return op.emitOpError("expected LLVM IR pointer type for operand #0");
+  auto cmpType = op.cmp().getType().cast<LLVM::LLVMType>();
+  auto valType = op.val().getType().cast<LLVM::LLVMType>();
+  if (cmpType != ptrType.getPointerElementTy() || cmpType != valType)
+    return op.emitOpError("expected LLVM IR element type for operand #0 to "
+                          "match type for all other operands");
+  if (!valType.isPointerTy() && !valType.isIntegerTy(8) &&
+      !valType.isIntegerTy(16) && !valType.isIntegerTy(32) &&
+      !valType.isIntegerTy(64) && !valType.isHalfTy() && !valType.isFloatTy() &&
+      !valType.isDoubleTy())
+    return op.emitOpError("unexpected LLVM IR type");
+  if (op.success_ordering() < AtomicOrdering::monotonic ||
+      op.failure_ordering() < AtomicOrdering::monotonic)
+    return op.emitOpError("ordering must be at least 'monotonic'");
+  if (op.failure_ordering() == AtomicOrdering::release ||
+      op.failure_ordering() == AtomicOrdering::acq_rel)
+    return op.emitOpError("failure ordering cannot be 'release' or 'acq_rel'");
   return success();
 }
 

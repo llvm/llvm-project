@@ -56,6 +56,7 @@ public:
   llvm::Type *getUnderlyingType() const;
 
   /// Utilities to identify types.
+  bool isHalfTy() { return getUnderlyingType()->isHalfTy(); }
   bool isFloatTy() { return getUnderlyingType()->isFloatTy(); }
   bool isDoubleTy() { return getUnderlyingType()->isDoubleTy(); }
   bool isIntegerTy() { return getUnderlyingType()->isIntegerTy(); }

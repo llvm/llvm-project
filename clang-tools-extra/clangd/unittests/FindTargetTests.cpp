@@ -1,4 +1,4 @@
-//===-- FindSymbolsTests.cpp -------------------------*- C++ -*------------===//
+//===-- FindTargetTests.cpp --------------------------*- C++ -*------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -553,8 +553,8 @@ protected:
     std::string DumpedReferences;
   };
 
-  /// Parses \p Code, finds function '::foo' and annotates its body with results
-  /// of findExplicitReferecnces.
+  /// Parses \p Code, finds function or namespace '::foo' and annotates its body
+  /// with results of findExplicitReferecnces.
   /// See actual tests for examples of annotation format.
   AllRefs annotateReferencesInFoo(llvm::StringRef Code) {
     TestTU TU;
@@ -574,12 +574,21 @@ protected:
     auto *TestDecl = &findDecl(AST, "foo");
     if (auto *T = llvm::dyn_cast<FunctionTemplateDecl>(TestDecl))
       TestDecl = T->getTemplatedDecl();
-    auto &Func = llvm::cast<FunctionDecl>(*TestDecl);
 
     std::vector<ReferenceLoc> Refs;
-    findExplicitReferences(Func.getBody(), [&Refs](ReferenceLoc R) {
-      Refs.push_back(std::move(R));
-    });
+    if (const auto *Func = llvm::dyn_cast<FunctionDecl>(TestDecl))
+      findExplicitReferences(Func->getBody(), [&Refs](ReferenceLoc R) {
+        Refs.push_back(std::move(R));
+      });
+    else if (const auto *NS = llvm::dyn_cast<NamespaceDecl>(TestDecl))
+      findExplicitReferences(NS, [&Refs, &NS](ReferenceLoc R) {
+        // Avoid adding the namespace foo decl to the results.
+        if (R.Targets.size() == 1 && R.Targets.front() == NS)
+          return;
+        Refs.push_back(std::move(R));
+      });
+    else
+      ADD_FAILURE() << "Failed to find ::foo decl for test";
 
     auto &SM = AST.getSourceManager();
     llvm::sort(Refs, [&](const ReferenceLoc &L, const ReferenceLoc &R) {
@@ -720,6 +729,25 @@ TEST_F(FindExplicitReferencesTest, All) {
         "1: targets = {vi}, decl\n"
         "2: targets = {valias}\n"
         "3: targets = {vb}, decl\n"},
+       // Injected class name.
+       {R"cpp(
+            namespace foo {
+              template <typename $0^T>
+              class $1^$2^Bar {
+                ~$3^Bar();
+                void $4^f($5^Bar);
+              };
+            }
+          )cpp",
+        "0: targets = {foo::Bar::T}, decl\n"
+        // FIXME: avoid the 2 duplicated foo::Bar references below, the first
+        // one comes from ClassTemplateDecl; the second comes from the
+        // underlying CXXRecordDecl.
+        "1: targets = {foo::Bar}, decl\n"
+        "2: targets = {foo::Bar}, decl\n"
+        "3: targets = {foo::Bar}\n"
+        "4: targets = {foo::Bar::f}, decl\n"
+        "5: targets = {foo::Bar}\n"},
        // MemberExpr should know their using declaration.
        {R"cpp(
             struct X { void func(int); };

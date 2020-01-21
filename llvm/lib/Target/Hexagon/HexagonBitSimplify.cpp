@@ -1433,10 +1433,16 @@ unsigned ConstGeneration::genTfrConst(const TargetRegisterClass *RC, int64_t C,
           .addImm(int32_t(Lo));
       return Reg;
     }
+    MachineFunction *MF = B.getParent();
+    auto &HST = MF->getSubtarget<HexagonSubtarget>();
 
-    BuildMI(B, At, DL, HII.get(Hexagon::CONST64), Reg)
-        .addImm(C);
-    return Reg;
+    // Disable CONST64 for tiny core since it takes a LD resource.
+    if (!HST.isTinyCore() ||
+        MF->getFunction().hasOptSize()) {
+      BuildMI(B, At, DL, HII.get(Hexagon::CONST64), Reg)
+          .addImm(C);
+      return Reg;
+    }
   }
 
   if (RC == &Hexagon::PredRegsRegClass) {

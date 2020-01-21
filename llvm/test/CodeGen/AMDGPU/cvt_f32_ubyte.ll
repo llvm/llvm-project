@@ -388,17 +388,15 @@ define amdgpu_kernel void @load_v7i8_to_v7f32(<7 x float> addrspace(1)* noalias 
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v2
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
-; SI-NEXT:    v_or_b32_e32 v4, v3, v6
-; SI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v0
-; SI-NEXT:    v_or_b32_e32 v4, v4, v5
-; SI-NEXT:    v_cvt_f32_ubyte1_e32 v5, v4
+; SI-NEXT:    v_or_b32_e32 v3, v3, v6
+; SI-NEXT:    v_cvt_f32_ubyte1_e32 v5, v3
+; SI-NEXT:    v_cvt_f32_ubyte0_e32 v4, v3
 ; SI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
 ; SI-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
 ; SI-NEXT:    v_cvt_f32_ubyte1_e32 v1, v0
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; SI-NEXT:    v_cvt_f32_ubyte0_e32 v4, v4
-; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; SI-NEXT:    buffer_store_dwordx2 v[4:5], off, s[4:7], 0 offset:16
+; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: load_v7i8_to_v7f32:
@@ -437,23 +435,20 @@ define amdgpu_kernel void @load_v7i8_to_v7f32(<7 x float> addrspace(1)* noalias 
 ; VI-NEXT:    v_lshlrev_b32_e32 v5, 8, v10
 ; VI-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(2)
 ; VI-NEXT:    v_lshlrev_b32_e32 v3, 8, v3
-; VI-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; VI-NEXT:    v_or_b32_e32 v4, v3, v4
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v6, v0
 ; VI-NEXT:    v_or_b32_e32 v0, v1, v8
 ; VI-NEXT:    v_or_b32_sdwa v1, v5, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT:    v_or_b32_e32 v2, v3, v4
 ; VI-NEXT:    v_or_b32_e32 v0, v1, v0
-; VI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v0
-; VI-NEXT:    v_or_b32_e32 v4, v4, v5
-; VI-NEXT:    v_cvt_f32_ubyte1_e32 v5, v4
+; VI-NEXT:    v_cvt_f32_ubyte1_e32 v5, v2
+; VI-NEXT:    v_cvt_f32_ubyte0_e32 v4, v2
 ; VI-NEXT:    v_cvt_f32_ubyte3_e32 v3, v0
 ; VI-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
 ; VI-NEXT:    v_cvt_f32_ubyte1_e32 v1, v0
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v4, v4
-; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    buffer_store_dwordx3 v[4:6], off, s[4:7], 0 offset:16
+; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <7 x i8>, <7 x i8> addrspace(1)* %in, i32 %tid
