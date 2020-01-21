@@ -70,8 +70,8 @@ static void exitWithError(Error E, StringRef Whence = "") {
       instrprof_error instrError = IPE.get();
       StringRef Hint = "";
       if (instrError == instrprof_error::unrecognized_format) {
-        // Hint for common error of forgetting -sample for sample profiles.
-        Hint = "Perhaps you forgot to use the -sample option?";
+        // Hint for common error of forgetting --sample for sample profiles.
+        Hint = "Perhaps you forgot to use the --sample option?";
       }
       exitWithError(IPE.message(), Whence, Hint);
     });
