@@ -513,6 +513,8 @@ def ADJCALLSTACKDOWN : SPseudoInstSI<
 let Defs = [M0, EXEC, SCC],
   UseNamedOperandTable = 1 in {
 
+// SI_INDIRECT_SRC/DST are only used by legacy SelectionDAG indirect
+// addressing implementation.
 class SI_INDIRECT_SRC<RegisterClass rc> : VPseudoInstSI <
   (outs VGPR_32:$vdst),
   (ins rc:$src, VS_32:$idx, i32imm:$offset)> {
@@ -526,7 +528,6 @@ class SI_INDIRECT_DST<RegisterClass rc> : VPseudoInstSI <
   let usesCustomInserter = 1;
 }
 
-// TODO: We can support indirect SGPR access.
 def SI_INDIRECT_SRC_V1 : SI_INDIRECT_SRC<VGPR_32>;
 def SI_INDIRECT_SRC_V2 : SI_INDIRECT_SRC<VReg_64>;
 def SI_INDIRECT_SRC_V4 : SI_INDIRECT_SRC<VReg_128>;
@@ -540,6 +541,65 @@ def SI_INDIRECT_DST_V8 : SI_INDIRECT_DST<VReg_256>;
 def SI_INDIRECT_DST_V16 : SI_INDIRECT_DST<VReg_512>;
 
 } // End Uses = [EXEC], Defs = [M0, EXEC]
+
+
+// This is a pseudo variant of the v_movreld_b32 (or v_mov_b32
+// expecting to be executed with gpr indexing mode enabled)
+// instruction in which the vector operand appears only twice, once as
+// def and once as use. Using this pseudo avoids problems with the Two
+// Address instructions pass.
+class INDIRECT_REG_WRITE_pseudo<RegisterClass rc,
+                                RegisterOperand val_ty> : PseudoInstSI <
+  (outs rc:$vdst), (ins rc:$vsrc, val_ty:$val, i32imm:$subreg)> {
+  let Constraints = "$vsrc = $vdst";
+  let Uses = [M0];
+}
+
+class V_INDIRECT_REG_WRITE_B32_pseudo<RegisterClass rc> :
+  INDIRECT_REG_WRITE_pseudo<rc, VSrc_b32> {
+  let VALU = 1;
+  let VOP1 = 1;
+  let Uses = [M0, EXEC];
+}
+
+class S_INDIRECT_REG_WRITE_pseudo<RegisterClass rc,
+                                  RegisterOperand val_ty> :
+  INDIRECT_REG_WRITE_pseudo<rc, val_ty> {
+  let SALU = 1;
+  let SOP1 = 1;
+  let Uses = [M0];
+}
+
+class S_INDIRECT_REG_WRITE_B32_pseudo<RegisterClass rc> :
+  S_INDIRECT_REG_WRITE_pseudo<rc, SSrc_b32>;
+class S_INDIRECT_REG_WRITE_B64_pseudo<RegisterClass rc> :
+  S_INDIRECT_REG_WRITE_pseudo<rc, SSrc_b64>;
+
+
+def V_INDIRECT_REG_WRITE_B32_V1 : V_INDIRECT_REG_WRITE_B32_pseudo<VGPR_32>;
+def V_INDIRECT_REG_WRITE_B32_V2 : V_INDIRECT_REG_WRITE_B32_pseudo<VReg_64>;
+def V_INDIRECT_REG_WRITE_B32_V3 : V_INDIRECT_REG_WRITE_B32_pseudo<VReg_96>;
+def V_INDIRECT_REG_WRITE_B32_V4 : V_INDIRECT_REG_WRITE_B32_pseudo<VReg_128>;
+def V_INDIRECT_REG_WRITE_B32_V5 : V_INDIRECT_REG_WRITE_B32_pseudo<VReg_160>;
+def V_INDIRECT_REG_WRITE_B32_V8 : V_INDIRECT_REG_WRITE_B32_pseudo<VReg_256>;
+def V_INDIRECT_REG_WRITE_B32_V16 : V_INDIRECT_REG_WRITE_B32_pseudo<VReg_512>;
+def V_INDIRECT_REG_WRITE_B32_V32 : V_INDIRECT_REG_WRITE_B32_pseudo<VReg_1024>;
+
+def S_INDIRECT_REG_WRITE_B32_V1 : S_INDIRECT_REG_WRITE_B32_pseudo<SReg_32>;
+def S_INDIRECT_REG_WRITE_B32_V2 : S_INDIRECT_REG_WRITE_B32_pseudo<SReg_64>;
+def S_INDIRECT_REG_WRITE_B32_V3 : S_INDIRECT_REG_WRITE_B32_pseudo<SReg_96>;
+def S_INDIRECT_REG_WRITE_B32_V4 : S_INDIRECT_REG_WRITE_B32_pseudo<SReg_128>;
+def S_INDIRECT_REG_WRITE_B32_V5 : S_INDIRECT_REG_WRITE_B32_pseudo<SReg_160>;
+def S_INDIRECT_REG_WRITE_B32_V8 : S_INDIRECT_REG_WRITE_B32_pseudo<SReg_256>;
+def S_INDIRECT_REG_WRITE_B32_V16 : S_INDIRECT_REG_WRITE_B32_pseudo<SReg_512>;
+def S_INDIRECT_REG_WRITE_B32_V32 : S_INDIRECT_REG_WRITE_B32_pseudo<SReg_1024>;
+
+def S_INDIRECT_REG_WRITE_B64_V1 : S_INDIRECT_REG_WRITE_B64_pseudo<SReg_64>;
+def S_INDIRECT_REG_WRITE_B64_V2 : S_INDIRECT_REG_WRITE_B64_pseudo<SReg_128>;
+def S_INDIRECT_REG_WRITE_B64_V4 : S_INDIRECT_REG_WRITE_B64_pseudo<SReg_256>;
+def S_INDIRECT_REG_WRITE_B64_V8 : S_INDIRECT_REG_WRITE_B64_pseudo<SReg_512>;
+def S_INDIRECT_REG_WRITE_B64_V16 : S_INDIRECT_REG_WRITE_B64_pseudo<SReg_1024>;
+
 
 multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
   let UseNamedOperandTable = 1, SGPRSpill = 1, Uses = [EXEC] in {
