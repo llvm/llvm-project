@@ -118,7 +118,8 @@ private:
 
 int getPriority(StringRef s);
 
-std::vector<InputSection *> getInputSections(OutputSection* os);
+InputSection *getFirstInputSection(const OutputSection *os);
+std::vector<InputSection *> getInputSections(const OutputSection *os);
 
 // All output sections that are handled by the linker specially are
 // globally accessible. Writer initializes them, so don't use them
