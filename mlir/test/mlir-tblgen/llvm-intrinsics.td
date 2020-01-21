@@ -21,6 +21,7 @@
 // CHECK:        module, llvm::Intrinsic::is_constant, {
 // CHECK:        opInst.getOperand(0).getType().cast<LLVM::LLVMType>().getUnderlyingType(),
 // CHECK: });
+// CHECK:        lookupValues(opInst.getOperands());
 
 //---------------------------------------------------------------------------//
 
