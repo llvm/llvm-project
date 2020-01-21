@@ -149,13 +149,6 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_64_AllRegs_SaveList;
   }
 
-  if (Subtarget.isDarwinABI())
-    return TM.isPPC64()
-               ? (Subtarget.hasAltivec() ? CSR_Darwin64_Altivec_SaveList
-                                         : CSR_Darwin64_SaveList)
-               : (Subtarget.hasAltivec() ? CSR_Darwin32_Altivec_SaveList
-                                         : CSR_Darwin32_SaveList);
-
   if (TM.isPPC64() && MF->getInfo<PPCFunctionInfo>()->isSplitCSR())
     return CSR_SRV464_TLS_PE_SaveList;
 
@@ -198,8 +191,6 @@ const MCPhysReg *
 PPCRegisterInfo::getCalleeSavedRegsViaCopy(const MachineFunction *MF) const {
   assert(MF && "Invalid MachineFunction pointer.");
   const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
-  if (Subtarget.isDarwinABI())
-    return nullptr;
   if (!TM.isPPC64())
     return nullptr;
   if (MF->getFunction().getCallingConv() != CallingConv::CXX_FAST_TLS)
@@ -231,11 +222,6 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return CSR_64_AllRegs_RegMask;
   }
 
-  if (Subtarget.isDarwinABI())
-    return TM.isPPC64() ? (Subtarget.hasAltivec() ? CSR_Darwin64_Altivec_RegMask
-                                                  : CSR_Darwin64_RegMask)
-                        : (Subtarget.hasAltivec() ? CSR_Darwin32_Altivec_RegMask
-                                                  : CSR_Darwin32_RegMask);
   if (Subtarget.isAIXABI()) {
     assert(!Subtarget.hasAltivec() && "Altivec is not implemented on AIX yet.");
     return TM.isPPC64() ? CSR_AIX64_RegMask : CSR_AIX32_RegMask;
@@ -295,8 +281,7 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   markSuperRegs(Reserved, PPC::LR8);
   markSuperRegs(Reserved, PPC::RM);
 
-  if (!Subtarget.isDarwinABI() || !Subtarget.hasAltivec())
-    markSuperRegs(Reserved, PPC::VRSAVE);
+  markSuperRegs(Reserved, PPC::VRSAVE);
 
   // The SVR4 ABI reserves r2 and r13
   if (Subtarget.isSVR4ABI()) {

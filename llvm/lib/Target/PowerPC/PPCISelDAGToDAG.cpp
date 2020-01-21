@@ -5126,8 +5126,6 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     const bool isELFABI = PPCSubTarget->isSVR4ABI();
     const bool isAIXABI = PPCSubTarget->isAIXABI();
 
-    assert(!PPCSubTarget->isDarwin() && "TOC is an ELF/XCOFF construct");
-
     // PowerPC only support small, medium and large code model.
     const CodeModel::Model CModel = TM.getCodeModel();
     assert(!(CModel == CodeModel::Tiny || CModel == CodeModel::Kernel) &&
@@ -6428,10 +6426,6 @@ void PPCDAGToDAGISel::PeepholePPC64ZExt() {
 }
 
 void PPCDAGToDAGISel::PeepholePPC64() {
-  // These optimizations are currently supported only for 64-bit SVR4.
-  if (PPCSubTarget->isDarwin() || !PPCSubTarget->isPPC64())
-    return;
-
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
 
   while (Position != CurDAG->allnodes_begin()) {
