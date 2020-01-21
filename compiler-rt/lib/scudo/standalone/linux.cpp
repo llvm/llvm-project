@@ -132,7 +132,10 @@ u64 getMonotonicTime() {
 
 u32 getNumberOfCPUs() {
   cpu_set_t CPUs;
-  CHECK_EQ(sched_getaffinity(0, sizeof(cpu_set_t), &CPUs), 0);
+  // sched_getaffinity can fail for a variety of legitimate reasons (lack of
+  // CAP_SYS_NICE, syscall filtering, etc), in which case we shall return 0.
+  if (sched_getaffinity(0, sizeof(cpu_set_t), &CPUs) != 0)
+    return 0;
   return static_cast<u32>(CPU_COUNT(&CPUs));
 }
 
