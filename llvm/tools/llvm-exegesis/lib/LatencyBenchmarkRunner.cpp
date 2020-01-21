@@ -14,8 +14,6 @@
 namespace llvm {
 namespace exegesis {
 
-static constexpr size_t kMaxAliasingInstructions = 10;
-
 LatencyBenchmarkRunner::LatencyBenchmarkRunner(const LLVMState &State,
                                                InstructionBenchmark::ModeE Mode)
     : BenchmarkRunner(State, Mode) {
