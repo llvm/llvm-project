@@ -4628,7 +4628,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       llvm::ConstantInt *AlignmentCI = cast<llvm::ConstantInt>(Alignment);
       EmitAlignmentAssumption(Ret.getScalarVal(), RetTy, Loc, AA->getLocation(),
                               AlignmentCI, OffsetValue);
-    } else if (const auto *AA = TargetDecl->getAttr<AllocAlignAttr>()) {
+    }
+    if (const auto *AA = TargetDecl->getAttr<AllocAlignAttr>()) {
       llvm::Value *AlignmentVal = CallArgs[AA->getParamIndex().getLLVMIndex()]
                                       .getRValue(*this)
                                       .getScalarVal();
