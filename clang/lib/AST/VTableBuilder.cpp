@@ -1474,10 +1474,10 @@ void ItaniumVTableBuilder::AddMethods(
       llvm_unreachable("Found a duplicate primary base!");
   }
 
-  const CXXDestructorDecl *ImplicitVirtualDtor = nullptr;
-
   typedef llvm::SmallVector<const CXXMethodDecl *, 8> NewVirtualFunctionsTy;
   NewVirtualFunctionsTy NewVirtualFunctions;
+
+  llvm::SmallVector<const CXXMethodDecl*, 4> NewImplicitVirtualFunctions;
 
   // Now go through all virtual member functions and add them.
   for (const auto *MD : RD->methods()) {
@@ -1542,24 +1542,30 @@ void ItaniumVTableBuilder::AddMethods(
       }
     }
 
-    if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(MD)) {
-      if (MD->isImplicit()) {
-        // Itanium C++ ABI 2.5.2:
-        //   If a class has an implicitly-defined virtual destructor,
-        //   its entries come after the declared virtual function pointers.
-
-        assert(!ImplicitVirtualDtor &&
-               "Did already see an implicit virtual dtor!");
-        ImplicitVirtualDtor = DD;
-        continue;
-      }
-    }
-
-    NewVirtualFunctions.push_back(MD);
+    if (MD->isImplicit())
+      NewImplicitVirtualFunctions.push_back(MD);
+    else
+      NewVirtualFunctions.push_back(MD);
   }
 
-  if (ImplicitVirtualDtor)
-    NewVirtualFunctions.push_back(ImplicitVirtualDtor);
+  std::stable_sort(
+      NewImplicitVirtualFunctions.begin(), NewImplicitVirtualFunctions.end(),
+      [](const CXXMethodDecl *A, const CXXMethodDecl *B) {
+        if (A->isCopyAssignmentOperator() != B->isCopyAssignmentOperator())
+          return A->isCopyAssignmentOperator();
+        if (A->isMoveAssignmentOperator() != B->isMoveAssignmentOperator())
+          return A->isMoveAssignmentOperator();
+        if (isa<CXXDestructorDecl>(A) != isa<CXXDestructorDecl>(B))
+          return isa<CXXDestructorDecl>(A);
+        assert(A->getOverloadedOperator() == OO_EqualEqual &&
+               B->getOverloadedOperator() == OO_EqualEqual &&
+               "unexpected or duplicate implicit virtual function");
+        // We rely on Sema to have declared the operator== members in the
+        // same order as the corresponding operator<=> members.
+        return false;
+      });
+  NewVirtualFunctions.append(NewImplicitVirtualFunctions.begin(),
+                             NewImplicitVirtualFunctions.end());
 
   for (const CXXMethodDecl *MD : NewVirtualFunctions) {
     // Get the final overrider.
