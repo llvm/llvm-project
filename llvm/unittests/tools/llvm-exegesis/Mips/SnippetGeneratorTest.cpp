@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "../Common/AssemblerUtils.h"
-#include "Latency.h"
 #include "LlvmState.h"
 #include "MCInstrDescView.h"
 #include "MipsInstrInfo.h"
+#include "ParallelSnippetGenerator.h"
 #include "RegisterAliasing.h"
+#include "SerialSnippetGenerator.h"
 #include "TestBase.h"
-#include "Uops.h"
 
 #include <unordered_set>
 
@@ -48,12 +48,12 @@ protected:
   SnippetGeneratorT Generator;
 };
 
-using LatencySnippetGeneratorTest =
-    SnippetGeneratorTest<LatencySnippetGenerator>;
+using SerialSnippetGeneratorTest = SnippetGeneratorTest<SerialSnippetGenerator>;
 
-using UopsSnippetGeneratorTest = SnippetGeneratorTest<UopsSnippetGenerator>;
+using ParallelSnippetGeneratorTest =
+    SnippetGeneratorTest<ParallelSnippetGenerator>;
 
-TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
+TEST_F(SerialSnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
   // - ADD
   // - Op0 Explicit Def RegClass(GPR32)
   // - Op1 Explicit Use RegClass(GPR32)
@@ -77,8 +77,8 @@ TEST_F(LatencySnippetGeneratorTest, ImplicitSelfDependencyThroughExplicitRegs) {
       << "Op0 is either set to Op1 or to Op2";
 }
 
-TEST_F(LatencySnippetGeneratorTest,
- ImplicitSelfDependencyThroughExplicitRegsForbidAll) {
+TEST_F(SerialSnippetGeneratorTest,
+       ImplicitSelfDependencyThroughExplicitRegsForbidAll) {
   // - XOR
   // - Op0 Explicit Def RegClass(GPR32)
   // - Op1 Explicit Use RegClass(GPR32)
@@ -96,7 +96,7 @@ TEST_F(LatencySnippetGeneratorTest,
   consumeError(std::move(Error));
 }
 
-TEST_F(UopsSnippetGeneratorTest, MemoryUse) {
+TEST_F(ParallelSnippetGeneratorTest, MemoryUse) {
   // LB reads from memory.
   // - LB
   // - Op0 Explicit Def RegClass(GPR32)
@@ -110,10 +110,11 @@ TEST_F(UopsSnippetGeneratorTest, MemoryUse) {
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
   ASSERT_THAT(CodeTemplates, SizeIs(1));
   const auto &CT = CodeTemplates[0];
-  EXPECT_THAT(CT.Info, HasSubstr("instruction is parallel, repeating a random one."));
+  EXPECT_THAT(CT.Info,
+              HasSubstr("instruction is parallel, repeating a random one."));
   EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
   ASSERT_THAT(CT.Instructions,
-              SizeIs(UopsSnippetGenerator::kMinNumDifferentAddresses));
+              SizeIs(ParallelSnippetGenerator::kMinNumDifferentAddresses));
   const InstructionTemplate &IT = CT.Instructions[0];
   EXPECT_THAT(IT.getOpcode(), Opcode);
   ASSERT_THAT(IT.getVariableValues(), SizeIs(3));

@@ -1,4 +1,4 @@
-//===-- Uops.h --------------------------------------------------*- C++ -*-===//
+//===-- ParallelSnippetGenerator.h ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,23 +7,22 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// A BenchmarkRunner implementation to measure uop decomposition.
+/// A SnippetGenerator implementation to create parallel instruction snippets.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_EXEGESIS_UOPS_H
-#define LLVM_TOOLS_LLVM_EXEGESIS_UOPS_H
+#ifndef LLVM_TOOLS_LLVM_EXEGESIS_PARALLELSNIPPETGENERATOR_H
+#define LLVM_TOOLS_LLVM_EXEGESIS_PARALLELSNIPPETGENERATOR_H
 
-#include "BenchmarkRunner.h"
 #include "SnippetGenerator.h"
 
 namespace llvm {
 namespace exegesis {
 
-class UopsSnippetGenerator : public SnippetGenerator {
+class ParallelSnippetGenerator : public SnippetGenerator {
 public:
   using SnippetGenerator::SnippetGenerator;
-  ~UopsSnippetGenerator() override;
+  ~ParallelSnippetGenerator() override;
 
   Expected<std::vector<CodeTemplate>>
   generateCodeTemplates(const Instruction &Instr,
@@ -60,20 +59,7 @@ private:
       std::vector<InstructionTemplate> &SnippetTemplate) const;
 };
 
-class UopsBenchmarkRunner : public BenchmarkRunner {
-public:
-  UopsBenchmarkRunner(const LLVMState &State)
-      : BenchmarkRunner(State, InstructionBenchmark::Uops) {}
-  ~UopsBenchmarkRunner() override;
-
-  static constexpr const size_t kMinNumDifferentAddresses = 6;
-
-private:
-  Expected<std::vector<BenchmarkMeasure>>
-  runMeasurements(const FunctionExecutor &Executor) const override;
-};
-
 } // namespace exegesis
 } // namespace llvm
 
-#endif // LLVM_TOOLS_LLVM_EXEGESIS_UOPS_H
+#endif // LLVM_TOOLS_LLVM_EXEGESIS_PARALLELSNIPPETGENERATOR_H

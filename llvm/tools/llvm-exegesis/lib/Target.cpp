@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 #include "Target.h"
 
-#include "Latency.h"
-#include "Uops.h"
+#include "LatencyBenchmarkRunner.h"
+#include "ParallelSnippetGenerator.h"
+#include "SerialSnippetGenerator.h"
+#include "UopsBenchmarkRunner.h"
 
 namespace llvm {
 namespace exegesis {
@@ -43,10 +45,10 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createSnippetGenerator(
   case InstructionBenchmark::Unknown:
     return nullptr;
   case InstructionBenchmark::Latency:
-    return createLatencySnippetGenerator(State, Opts);
+    return createSerialSnippetGenerator(State, Opts);
   case InstructionBenchmark::Uops:
   case InstructionBenchmark::InverseThroughput:
-    return createUopsSnippetGenerator(State, Opts);
+    return createParallelSnippetGenerator(State, Opts);
   }
   return nullptr;
 }
@@ -77,14 +79,14 @@ ExegesisTarget::createBenchmarkRunner(InstructionBenchmark::ModeE Mode,
   return nullptr;
 }
 
-std::unique_ptr<SnippetGenerator> ExegesisTarget::createLatencySnippetGenerator(
+std::unique_ptr<SnippetGenerator> ExegesisTarget::createSerialSnippetGenerator(
     const LLVMState &State, const SnippetGenerator::Options &Opts) const {
-  return std::make_unique<LatencySnippetGenerator>(State, Opts);
+  return std::make_unique<SerialSnippetGenerator>(State, Opts);
 }
 
-std::unique_ptr<SnippetGenerator> ExegesisTarget::createUopsSnippetGenerator(
+std::unique_ptr<SnippetGenerator> ExegesisTarget::createParallelSnippetGenerator(
     const LLVMState &State, const SnippetGenerator::Options &Opts) const {
-  return std::make_unique<UopsSnippetGenerator>(State, Opts);
+  return std::make_unique<ParallelSnippetGenerator>(State, Opts);
 }
 
 std::unique_ptr<BenchmarkRunner> ExegesisTarget::createLatencyBenchmarkRunner(
