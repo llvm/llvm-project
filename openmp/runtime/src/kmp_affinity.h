@@ -303,8 +303,9 @@ class KMPNativeAffinity : public KMPAffinity {
       int retval =
           syscall(__NR_sched_getaffinity, 0, __kmp_affin_mask_size, mask);
 #elif KMP_OS_FREEBSD
-      int retval =
+      int r =
           pthread_getaffinity_np(pthread_self(), __kmp_affin_mask_size, reinterpret_cast<cpuset_t *>(mask));
+      int retval = (r == 0 ? 0 : -1);
 #endif
       if (retval >= 0) {
         return 0;
@@ -322,8 +323,9 @@ class KMPNativeAffinity : public KMPAffinity {
       int retval =
           syscall(__NR_sched_setaffinity, 0, __kmp_affin_mask_size, mask);
 #elif KMP_OS_FREEBSD
-      int retval =
+      int r =
           pthread_setaffinity_np(pthread_self(), __kmp_affin_mask_size, reinterpret_cast<cpuset_t *>(mask));
+      int retval = (r == 0 ? 0 : -1);
 #endif
       if (retval >= 0) {
         return 0;
