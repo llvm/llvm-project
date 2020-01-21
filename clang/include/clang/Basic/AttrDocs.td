@@ -260,6 +260,7 @@ The ``sycl_kernel`` attribute specifies that a function template will be used
 to outline device code and to generate an OpenCL kernel.
 Here is a code example of the SYCL program, which demonstrates the compiler's
 outlining job:
+
 .. code-block:: c++
 
   int foo(int x) { return ++x; }
@@ -282,27 +283,29 @@ compilation of functions for the device part can be found in the SYCL 1.2.1
 specification Section 6.4.
 To show to the compiler entry point to the "device part" of the code, the SYCL
 runtime can use the ``sycl_kernel`` attribute in the following way:
-.. code-block:: c++
-namespace cl {
-namespace sycl {
-class handler {
-  template <typename KernelName, typename KernelType/*, ...*/>
-  __attribute__((sycl_kernel)) void sycl_kernel_function(KernelType KernelFuncObj) {
-    // ...
-    KernelFuncObj();
-  }
 
-  template <typename KernelName, typename KernelType, int Dims>
-  void parallel_for(range<Dims> NumWorkItems, KernelType KernelFunc) {
-#ifdef __SYCL_DEVICE_ONLY__
-    sycl_kernel_function<KernelName, KernelType, Dims>(KernelFunc);
-#else
-    // Host implementation
-#endif
-  }
-};
-} // namespace sycl
-} // namespace cl
+.. code-block:: c++
+
+  namespace cl {
+  namespace sycl {
+  class handler {
+    template <typename KernelName, typename KernelType/*, ...*/>
+    __attribute__((sycl_kernel)) void sycl_kernel_function(KernelType KernelFuncObj) {
+      // ...
+      KernelFuncObj();
+    }
+
+    template <typename KernelName, typename KernelType, int Dims>
+    void parallel_for(range<Dims> NumWorkItems, KernelType KernelFunc) {
+  #ifdef __SYCL_DEVICE_ONLY__
+      sycl_kernel_function<KernelName, KernelType, Dims>(KernelFunc);
+  #else
+      // Host implementation
+  #endif
+    }
+  };
+  } // namespace sycl
+  } // namespace cl
 
 The compiler will also generate an OpenCL kernel using the function marked with
 the ``sycl_kernel`` attribute.
