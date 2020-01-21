@@ -1028,7 +1028,7 @@ TEST(APFloatTest, fromStringSpecials) {
     EXPECT_TRUE(F.isInfinity());
     EXPECT_EQ(Negative, F.isNegative());
     uint64_t PayloadResult = F.bitcastToAPInt().getZExtValue() & PayloadMask;
-    EXPECT_EQ(0, PayloadResult);
+    EXPECT_EQ(UINT64_C(0), PayloadResult);
   }
 }
 
