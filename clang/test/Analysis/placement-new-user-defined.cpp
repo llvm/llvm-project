@@ -1,7 +1,7 @@
 // RUN: %clang_analyze_cc1 -std=c++11 %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=cplusplus.NewDelete \
-// RUN:   -analyzer-checker=alpha.cplusplus.PlacementNew \
+// RUN:   -analyzer-checker=cplusplus.PlacementNew \
 // RUN:   -analyzer-output=text -verify \
 // RUN:   -triple x86_64-unknown-linux-gnu
 
