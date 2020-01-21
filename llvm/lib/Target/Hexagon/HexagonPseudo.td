@@ -527,13 +527,15 @@ multiclass NewCircularLoad<RegisterClass RC, MemAccessSize MS> {
 
 let isCodeGenOnly = 1, isPseudo = 1, Defs = [CS], Uses = [CS],
     addrMode = PostInc, accessSize = MS, hasSideEffects = 0 in {
+  // Use timing class of L2_loadrb_pci.
   def NAME#_pci : LDInst<(outs RC:$Rd32, IntRegs:$Rx32),
        (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, IntRegs:$Cs),
-       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_e93a3d71>;
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_5ceb2f9e>;
 
+  // Use timing class of L2_loadrb_pcr.
   def NAME#_pcr : LDInst<(outs RC:$Rd32, IntRegs:$Rx32),
        (ins IntRegs:$Rx32in, ModRegs:$Mu2, IntRegs:$Cs),
-       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_44d3da28>;
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_075c8dd8>;
 }
 }
 
@@ -548,13 +550,15 @@ multiclass NewCircularStore<RegisterClass RC, MemAccessSize MS> {
 
 let isCodeGenOnly = 1, isPseudo = 1, Defs = [CS], Uses = [CS],
     addrMode = PostInc, accessSize = MS, hasSideEffects = 0 in {
+  // Use timing class of S2_storerb_pci.
   def NAME#_pci : STInst<(outs IntRegs:$Rx32),
        (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, RC:$Rt32, IntRegs:$Cs),
-       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_e86aa961>;
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_b4dc7630>;
 
+  // Use timing class of S2_storerb_pcr.
   def NAME#_pcr : STInst<(outs IntRegs:$Rx32),
        (ins IntRegs:$Rx32in, ModRegs:$Mu2, RC:$Rt32, IntRegs:$Cs),
-       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_da97ee82>;
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_a2b365d2>;
 }
 }
 

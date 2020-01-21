@@ -4,6 +4,8 @@
 // RUN: llvm-objdump -triple=aarch64-linux-gnu -d %t2 | FileCheck %s -check-prefixes=CHECK,CHECK-FIX
 // RUN: ld.lld %t.o -z separate-code -o %t3
 // RUN: llvm-objdump -triple=aarch64-linux-gnu -d %t3 | FileCheck %s -check-prefixes=CHECK,CHECK-NOFIX
+// RUN: ld.lld -fix-cortex-a53-843419 -r -z separate-code %t.o -o %t4
+// RUN: llvm-objdump -triple=aarch64-linux-gnu -d %t4 | FileCheck %s -check-prefixes=CHECK-RELOCATABLE
 // Test cases for Cortex-A53 Erratum 843419
 // See ARM-EPM-048406 Cortex_A53_MPCore_Software_Developers_Errata_Notice.pdf
 // for full erratum details.
@@ -33,6 +35,12 @@
 // CHECK-FIX:     212000:        03 c8 00 14     b       #204812
 // CHECK-NOFIX:   212000:        00 00 40 f9     ldr             x0, [x0]
 // CHECK-NEXT:    212004:        c0 03 5f d6     ret
+// CHECK-RELOCATABLE: t3_ff8_ldr:
+// CHECK-RELOCATABLE-NEXT:    ff8:        00 00 00 90     adrp    x0, #0
+// CHECK-RELOCATABLE-NEXT:    ffc:        21 00 40 f9     ldr             x1, [x1]
+// CHECK-RELOCATABLE-NEXT:   1000:        00 00 40 f9     ldr             x0, [x0]
+// CHECK-RELOCATABLE-NEXT:   1004:        c0 03 5f d6     ret
+
         .section .text.01, "ax", %progbits
         .balign 4096
         .globl t3_ff8_ldr

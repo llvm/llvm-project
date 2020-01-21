@@ -767,7 +767,8 @@ GlobalOp AddressOfOp::getGlobal() {
 }
 
 static void printAddressOfOp(OpAsmPrinter &p, AddressOfOp op) {
-  p << op.getOperationName() << " @" << op.global_name();
+  p << op.getOperationName() << " ";
+  p.printSymbolName(op.global_name());
   p.printOptionalAttrDict(op.getAttrs(), {"global_name"});
   p << " : " << op.getResult().getType();
 }

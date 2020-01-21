@@ -6,8 +6,8 @@ llvm.mlir.global internal @global(42 : i64) : !llvm.i64
 // CHECK: llvm.mlir.global internal constant @constant(3.700000e+01 : f64) : !llvm.float
 llvm.mlir.global internal constant @constant(37.0) : !llvm.float
 
-// CHECK: llvm.mlir.global internal constant @string("foobar")
-llvm.mlir.global internal constant @string("foobar") : !llvm<"[6 x i8]">
+// CHECK: llvm.mlir.global internal constant @".string"("foobar")
+llvm.mlir.global internal constant @".string"("foobar") : !llvm<"[6 x i8]">
 
 // CHECK: llvm.mlir.global internal @string_notype("1234567")
 llvm.mlir.global internal @string_notype("1234567")
@@ -51,8 +51,8 @@ func @references() {
   // CHECK: llvm.mlir.addressof @global : !llvm<"i64*">
   %0 = llvm.mlir.addressof @global : !llvm<"i64*">
 
-  // CHECK: llvm.mlir.addressof @string : !llvm<"[6 x i8]*">
-  %1 = llvm.mlir.addressof @string : !llvm<"[6 x i8]*">
+  // CHECK: llvm.mlir.addressof @".string" : !llvm<"[6 x i8]*">
+  %1 = llvm.mlir.addressof @".string" : !llvm<"[6 x i8]*">
 
   llvm.return
 }

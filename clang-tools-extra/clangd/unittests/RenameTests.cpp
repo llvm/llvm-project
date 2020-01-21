@@ -265,6 +265,33 @@ TEST(RenameTest, WithinFileRename) {
         }
       )cpp",
 
+      // Destructor explicit call.
+      R"cpp(
+        class [[F^oo]] {
+        public:
+          ~[[^Foo]]();
+        };
+
+        [[Foo^]]::~[[^Foo]]() {}
+
+        int main() {
+          [[Fo^o]] f;
+          f.~/*something*/[[^Foo]]();
+          f.~[[^Foo]]();
+        }
+      )cpp",
+
+      // Derived destructor explicit call.
+      R"cpp(
+        class [[Bas^e]] {};
+        class Derived : public [[Bas^e]] {}
+
+        int main() {
+          [[Bas^e]] *foo = new Derived();
+          foo->[[^Base]]::~[[^Base]]();
+        }
+      )cpp",
+
       // CXXConstructor initializer list.
       R"cpp(
         class Baz {};

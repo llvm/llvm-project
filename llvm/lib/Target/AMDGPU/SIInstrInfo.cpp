@@ -1482,30 +1482,33 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.eraseFromParent();
     break;
   }
-  case AMDGPU::V_MOVRELD_B32_V1:
-  case AMDGPU::V_MOVRELD_B32_V2:
-  case AMDGPU::V_MOVRELD_B32_V4:
-  case AMDGPU::V_MOVRELD_B32_V8:
-  case AMDGPU::V_MOVRELD_B32_V16: {
-    const MCInstrDesc &MovRelDesc = get(AMDGPU::V_MOVRELD_B32_e32);
+  case AMDGPU::V_INDIRECT_REG_WRITE_B32_V1:
+  case AMDGPU::V_INDIRECT_REG_WRITE_B32_V2:
+  case AMDGPU::V_INDIRECT_REG_WRITE_B32_V3:
+  case AMDGPU::V_INDIRECT_REG_WRITE_B32_V4:
+  case AMDGPU::V_INDIRECT_REG_WRITE_B32_V5:
+  case AMDGPU::V_INDIRECT_REG_WRITE_B32_V8:
+  case AMDGPU::V_INDIRECT_REG_WRITE_B32_V16:
+  case AMDGPU::V_INDIRECT_REG_WRITE_B32_V32: {
+    unsigned Opc = ST.useVGPRIndexMode() ?
+      AMDGPU::V_MOV_B32_indirect : AMDGPU::V_MOVRELD_B32_e32;
+    const MCInstrDesc &OpDesc = get(Opc);
     Register VecReg = MI.getOperand(0).getReg();
     bool IsUndef = MI.getOperand(1).isUndef();
-    unsigned SubReg = AMDGPU::sub0 + MI.getOperand(3).getImm();
+    unsigned SubReg = MI.getOperand(3).getImm();
     assert(VecReg == MI.getOperand(1).getReg());
 
-    MachineInstr *MovRel =
-        BuildMI(MBB, MI, DL, MovRelDesc)
-            .addReg(RI.getSubReg(VecReg, SubReg), RegState::Undef)
-            .add(MI.getOperand(2))
-            .addReg(VecReg, RegState::ImplicitDefine)
-            .addReg(VecReg,
-                    RegState::Implicit | (IsUndef ? RegState::Undef : 0));
+    MachineInstrBuilder MIB =
+      BuildMI(MBB, MI, DL, OpDesc)
+        .addReg(RI.getSubReg(VecReg, SubReg), RegState::Undef)
+        .add(MI.getOperand(2))
+        .addReg(VecReg, RegState::ImplicitDefine)
+        .addReg(VecReg, RegState::Implicit | (IsUndef ? RegState::Undef : 0));
 
     const int ImpDefIdx =
-        MovRelDesc.getNumOperands() + MovRelDesc.getNumImplicitUses();
+      OpDesc.getNumOperands() + OpDesc.getNumImplicitUses();
     const int ImpUseIdx = ImpDefIdx + 1;
-    MovRel->tieOperands(ImpDefIdx, ImpUseIdx);
-
+    MIB->tieOperands(ImpDefIdx, ImpUseIdx);
     MI.eraseFromParent();
     break;
   }

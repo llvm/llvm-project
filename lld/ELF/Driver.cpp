@@ -874,7 +874,8 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_export_dynamic, OPT_no_export_dynamic, false);
   config->filterList = args::getStrings(args, OPT_filter);
   config->fini = args.getLastArgValue(OPT_fini, "_fini");
-  config->fixCortexA53Errata843419 = args.hasArg(OPT_fix_cortex_a53_843419);
+  config->fixCortexA53Errata843419 = args.hasArg(OPT_fix_cortex_a53_843419) &&
+                                     !args.hasArg(OPT_relocatable);
   config->fixCortexA8 = args.hasArg(OPT_fix_cortex_a8);
   config->forceBTI = hasZOption(args, "force-bti");
   config->gcSections = args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, false);

@@ -27,11 +27,6 @@ namespace HexagonII {
   unsigned const TypeCVI_FIRST = TypeCVI_4SLOT_MPY;
   unsigned const TypeCVI_LAST = TypeCVI_ZW;
 
-  enum SubTarget {
-    HasV55SubT    = 0x3c,
-    HasV60SubT    = 0x38,
-  };
-
   enum AddrMode {
     NoAddrMode     = 0,  // No addressing mode
     Absolute       = 1,  // Absolute addressing mode
@@ -165,6 +160,9 @@ namespace HexagonII {
 
     CVINewPos = 62,
     CVINewMask = 0x1,
+
+    isCVIPos = 63,
+    isCVIMask = 0x1,
   };
 
   // *** The code above must match HexagonInstrFormat*.td *** //
