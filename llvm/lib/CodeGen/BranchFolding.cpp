@@ -1437,7 +1437,7 @@ ReoptimizeBlock:
     // has been used, but it can happen if tail merging splits a fall-through
     // predecessor of a block.
     // This has to check PrevBB->succ_size() because EH edges are ignored by
-    // AnalyzeBranch.
+    // analyzeBranch.
     if (PriorCond.empty() && !PriorTBB && MBB->pred_size() == 1 &&
         PrevBB.succ_size() == 1 &&
         !MBB->hasAddressTaken() && !MBB->isEHPad()) {

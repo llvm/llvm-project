@@ -91,7 +91,7 @@ namespace X86 {
     COND_G = 15,
     LAST_VALID_COND = COND_G,
 
-    // Artificial condition codes. These are used by AnalyzeBranch
+    // Artificial condition codes. These are used by analyzeBranch
     // to indicate a block terminated with two conditional branches that together
     // form a compound condition. They occur in code using FCMP_OEQ or FCMP_UNE,
     // which can't be represented on x86 with a single condition. These

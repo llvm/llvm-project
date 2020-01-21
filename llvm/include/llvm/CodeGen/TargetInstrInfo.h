@@ -644,7 +644,7 @@ public:
   }
 
   /// Remove the branching code at the end of the specific MBB.
-  /// This is only invoked in cases where AnalyzeBranch returns success. It
+  /// This is only invoked in cases where analyzeBranch returns success. It
   /// returns the number of instructions that were removed.
   /// If \p BytesRemoved is non-null, report the change in code size from the
   /// removed instructions.
@@ -654,13 +654,13 @@ public:
   }
 
   /// Insert branch code into the end of the specified MachineBasicBlock. The
-  /// operands to this method are the same as those returned by AnalyzeBranch.
-  /// This is only invoked in cases where AnalyzeBranch returns success. It
+  /// operands to this method are the same as those returned by analyzeBranch.
+  /// This is only invoked in cases where analyzeBranch returns success. It
   /// returns the number of instructions inserted. If \p BytesAdded is non-null,
   /// report the change in code size from the added instructions.
   ///
   /// It is also invoked by tail merging to add unconditional branches in
-  /// cases where AnalyzeBranch doesn't apply because there was no original
+  /// cases where analyzeBranch doesn't apply because there was no original
   /// branch to analyze.  At least this much must be implemented, else tail
   /// merging needs to be disabled.
   ///
@@ -837,7 +837,7 @@ public:
   /// Some x86 implementations have 2-cycle cmov instructions.
   ///
   /// @param MBB         Block where select instruction would be inserted.
-  /// @param Cond        Condition returned by AnalyzeBranch.
+  /// @param Cond        Condition returned by analyzeBranch.
   /// @param TrueReg     Virtual register to select when Cond is true.
   /// @param FalseReg    Virtual register to select when Cond is false.
   /// @param CondCycles  Latency from Cond+Branch to select output.
@@ -854,7 +854,7 @@ public:
   /// DstReg when Cond is true, and FalseReg to DstReg when Cond is false.
   ///
   /// This function can only be called after canInsertSelect() returned true.
-  /// The condition in Cond comes from AnalyzeBranch, and it can be assumed
+  /// The condition in Cond comes from analyzeBranch, and it can be assumed
   /// that the same flags or registers required by Cond are available at the
   /// insertion point.
   ///
@@ -862,7 +862,7 @@ public:
   /// @param I        Insertion point.
   /// @param DL       Source location for debugging.
   /// @param DstReg   Virtual register to be defined by select instruction.
-  /// @param Cond     Condition as computed by AnalyzeBranch.
+  /// @param Cond     Condition as computed by analyzeBranch.
   /// @param TrueReg  Virtual register to copy when Cond is true.
   /// @param FalseReg Virtual register to copy when Cons is false.
   virtual void insertSelect(MachineBasicBlock &MBB,
