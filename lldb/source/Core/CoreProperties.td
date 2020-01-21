@@ -9,6 +9,10 @@ let Definition = "modulelist" in {
     Global,
     DefaultStringValue<"">,
     Desc<"The path to the clang modules cache directory (-fmodules-cache-path).">;
+  def SymLinkPaths: Property<"debug-info-symlink-paths", "FileSpecList">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"Debug info path which should be resolved while parsing, relative to the host filesystem.">;
 }
 
 let Definition = "debugger" in {

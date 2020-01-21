@@ -601,7 +601,7 @@ ClangModulesDeclVendor::Create(Target &target) {
 
   {
     llvm::SmallString<128> path;
-    auto props = ModuleList::GetGlobalModuleListProperties();
+    const auto &props = ModuleList::GetGlobalModuleListProperties();
     props.GetClangModulesCachePath().GetPath(path);
     std::string module_cache_argument("-fmodules-cache-path=");
     module_cache_argument.append(path.str());
