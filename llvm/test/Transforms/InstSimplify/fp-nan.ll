@@ -103,7 +103,7 @@ define float @frem_nan_op1(float %x) {
 
 define double @fneg_nan_1(double %x) {
 ; CHECK-LABEL: @fneg_nan_1(
-; CHECK-NEXT:    ret double 0xFFFABCDEF0123456
+; CHECK-NEXT:    ret double 0x7FFABCDEF0123456
 ;
   %r = fsub double -0.0, 0x7FFABCDEF0123456
   ret double %r
@@ -119,7 +119,7 @@ define double @unary_fneg_nan_1(double %x) {
 
 define <2 x double> @fneg_nan_2(<2 x double> %x) {
 ; CHECK-LABEL: @fneg_nan_2(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF1234567890ABC, double 0xFFF0000000000001>
+; CHECK-NEXT:    ret <2 x double> <double 0xFFF9234567890ABC, double 0x7FF8000000000001>
 ;
   %r = fsub <2 x double> <double -0.0, double -0.0>, <double 0xFFF1234567890ABC, double 0x7FF0000000000001>
   ret <2 x double> %r
