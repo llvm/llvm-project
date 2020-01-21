@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wthread-safety -verify %s
 
 typedef int __attribute__((capability("role"))) ThreadRole;
-typedef int __attribute__((capability("role"))) ThreadRole;
 struct __attribute__((shared_capability("mutex"))) Mutex {};
 struct NotACapability {};
 
