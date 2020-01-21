@@ -15,6 +15,8 @@ template <class P> P InternalTemplateFunction(P a) {}
 
 namespace container_internal {
 struct InternalStruct {};
+
+template <typename T> struct InternalTemplate {};
 } // namespace container_internal
 } // namespace absl
 
