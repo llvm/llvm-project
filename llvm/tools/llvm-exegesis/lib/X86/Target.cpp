@@ -8,9 +8,9 @@
 #include "../Target.h"
 
 #include "../Error.h"
-#include "../Latency.h"
+#include "../SerialSnippetGenerator.h"
 #include "../SnippetGenerator.h"
-#include "../Uops.h"
+#include "../ParallelSnippetGenerator.h"
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86.h"
@@ -242,9 +242,9 @@ static Expected<std::vector<CodeTemplate>> generateLEATemplatesCommon(
 }
 
 namespace {
-class X86LatencySnippetGenerator : public LatencySnippetGenerator {
+class X86SerialSnippetGenerator : public SerialSnippetGenerator {
 public:
-  using LatencySnippetGenerator::LatencySnippetGenerator;
+  using SerialSnippetGenerator::SerialSnippetGenerator;
 
   Expected<std::vector<CodeTemplate>>
   generateCodeTemplates(const Instruction &Instr,
@@ -253,7 +253,7 @@ public:
 } // namespace
 
 Expected<std::vector<CodeTemplate>>
-X86LatencySnippetGenerator::generateCodeTemplates(
+X86SerialSnippetGenerator::generateCodeTemplates(
     const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
   if (auto E = IsInvalidOpcode(Instr))
     return std::move(E);
@@ -271,7 +271,7 @@ X86LatencySnippetGenerator::generateCodeTemplates(
 
   switch (getX86FPFlags(Instr)) {
   case X86II::NotFP:
-    return LatencySnippetGenerator::generateCodeTemplates(Instr,
+    return SerialSnippetGenerator::generateCodeTemplates(Instr,
                                                           ForbiddenRegisters);
   case X86II::ZeroArgFP:
   case X86II::OneArgFP:
@@ -292,9 +292,9 @@ X86LatencySnippetGenerator::generateCodeTemplates(
 }
 
 namespace {
-class X86UopsSnippetGenerator : public UopsSnippetGenerator {
+class X86ParallelSnippetGenerator : public ParallelSnippetGenerator {
 public:
-  using UopsSnippetGenerator::UopsSnippetGenerator;
+  using ParallelSnippetGenerator::ParallelSnippetGenerator;
 
   Expected<std::vector<CodeTemplate>>
   generateCodeTemplates(const Instruction &Instr,
@@ -304,7 +304,7 @@ public:
 } // namespace
 
 Expected<std::vector<CodeTemplate>>
-X86UopsSnippetGenerator::generateCodeTemplates(
+X86ParallelSnippetGenerator::generateCodeTemplates(
     const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
   if (auto E = IsInvalidOpcode(Instr))
     return std::move(E);
@@ -333,7 +333,7 @@ X86UopsSnippetGenerator::generateCodeTemplates(
 
   switch (getX86FPFlags(Instr)) {
   case X86II::NotFP:
-    return UopsSnippetGenerator::generateCodeTemplates(Instr,
+    return ParallelSnippetGenerator::generateCodeTemplates(Instr,
                                                        ForbiddenRegisters);
   case X86II::ZeroArgFP:
   case X86II::OneArgFP:
@@ -577,16 +577,16 @@ private:
                             sizeof(kUnavailableRegisters[0]));
   }
 
-  std::unique_ptr<SnippetGenerator> createLatencySnippetGenerator(
+  std::unique_ptr<SnippetGenerator> createSerialSnippetGenerator(
       const LLVMState &State,
       const SnippetGenerator::Options &Opts) const override {
-    return std::make_unique<X86LatencySnippetGenerator>(State, Opts);
+    return std::make_unique<X86SerialSnippetGenerator>(State, Opts);
   }
 
-  std::unique_ptr<SnippetGenerator> createUopsSnippetGenerator(
+  std::unique_ptr<SnippetGenerator> createParallelSnippetGenerator(
       const LLVMState &State,
       const SnippetGenerator::Options &Opts) const override {
-    return std::make_unique<X86UopsSnippetGenerator>(State, Opts);
+    return std::make_unique<X86ParallelSnippetGenerator>(State, Opts);
   }
 
   bool matchesArch(Triple::ArchType Arch) const override {

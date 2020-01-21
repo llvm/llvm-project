@@ -27,18 +27,20 @@ add_library(LLVMExegesis
   BenchmarkRunner.cpp
   Clustering.cpp
   CodeTemplate.cpp
-  Latency.cpp
+  LatencyBenchmarkRunner.cpp
   LlvmState.cpp
   MCInstrDescView.cpp
+  ParallelSnippetGenerator.cpp
   PerfHelper.cpp
   RegisterAliasing.cpp
   RegisterValue.cpp
   SchedClassResolution.cpp
+  SerialSnippetGenerator.cpp
   SnippetFile.cpp
   SnippetGenerator.cpp
   SnippetRepetitor.cpp
   Target.cpp
-  Uops.cpp
+  UopsBenchmarkRunner.cpp
   )
 
 llvm_update_compile_flags(LLVMExegesis)
