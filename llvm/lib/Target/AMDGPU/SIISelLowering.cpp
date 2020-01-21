@@ -3465,21 +3465,27 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
   return LoopBB;
 }
 
-static unsigned getMOVRELDPseudo(const SIRegisterInfo &TRI,
+static unsigned getIndirectRegWritePseudo(const SIRegisterInfo &TRI,
                                  const TargetRegisterClass *VecRC) {
   switch (TRI.getRegSizeInBits(*VecRC)) {
   case 32: // 4 bytes
-    return AMDGPU::V_MOVRELD_B32_V1;
+    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V1;
   case 64: // 8 bytes
-    return AMDGPU::V_MOVRELD_B32_V2;
+    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V2;
+  case 96: // 12 bytes
+    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V3;
   case 128: // 16 bytes
-    return AMDGPU::V_MOVRELD_B32_V4;
+    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V4;
+  case 160: // 20 bytes
+    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V5;
   case 256: // 32 bytes
-    return AMDGPU::V_MOVRELD_B32_V8;
+    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V8;
   case 512: // 64 bytes
-    return AMDGPU::V_MOVRELD_B32_V16;
+    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V16;
+  case 1024: // 128 bytes
+    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V32;
   default:
-    llvm_unreachable("unsupported size for MOVRELD pseudos");
+    llvm_unreachable("unsupported size for IndirectRegWrite pseudos");
   }
 }
 
@@ -3526,24 +3532,14 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
     MachineBasicBlock::iterator I(&MI);
     const DebugLoc &DL = MI.getDebugLoc();
 
-    if (UseGPRIdxMode) {
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOV_B32_indirect))
-          .addReg(SrcVec->getReg(), RegState::Undef, SubReg) // vdst
-          .add(*Val)
-          .addReg(Dst, RegState::ImplicitDefine)
-          .addReg(SrcVec->getReg(), RegState::Implicit)
-          .addReg(AMDGPU::M0, RegState::Implicit);
-
+    const MCInstrDesc &MovRelDesc
+      = TII->get(getIndirectRegWritePseudo(TRI, VecRC));
+    BuildMI(MBB, I, DL, MovRelDesc, Dst)
+      .addReg(SrcVec->getReg())
+      .add(*Val)
+      .addImm(SubReg);
+    if (UseGPRIdxMode)
       BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
-    } else {
-      const MCInstrDesc &MovRelDesc = TII->get(getMOVRELDPseudo(TRI, VecRC));
-
-      BuildMI(MBB, I, DL, MovRelDesc)
-          .addReg(Dst, RegState::Define)
-          .addReg(SrcVec->getReg())
-          .add(*Val)
-          .addImm(SubReg - AMDGPU::sub0);
-    }
 
     MI.eraseFromParent();
     return &MBB;
@@ -3560,26 +3556,15 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
                               Offset, UseGPRIdxMode, false);
   MachineBasicBlock *LoopBB = InsPt->getParent();
 
-  if (UseGPRIdxMode) {
-    BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::V_MOV_B32_indirect))
-        .addReg(PhiReg, RegState::Undef, SubReg) // vdst
-        .add(*Val)                               // src0
-        .addReg(Dst, RegState::ImplicitDefine)
-        .addReg(PhiReg, RegState::Implicit)
-        .addReg(AMDGPU::M0, RegState::Implicit);
+  const MCInstrDesc &MovRelDesc = TII->get(getIndirectRegWritePseudo(TRI, VecRC));
+  BuildMI(*LoopBB, InsPt, DL, MovRelDesc, Dst)
+    .addReg(PhiReg)
+    .add(*Val)
+    .addImm(AMDGPU::sub0);
+  if (UseGPRIdxMode)
     BuildMI(*LoopBB, InsPt, DL, TII->get(AMDGPU::S_SET_GPR_IDX_OFF));
-  } else {
-    const MCInstrDesc &MovRelDesc = TII->get(getMOVRELDPseudo(TRI, VecRC));
-
-    BuildMI(*LoopBB, InsPt, DL, MovRelDesc)
-        .addReg(Dst, RegState::Define)
-        .addReg(PhiReg)
-        .add(*Val)
-        .addImm(SubReg - AMDGPU::sub0);
-  }
 
   MI.eraseFromParent();
-
   return LoopBB;
 }
 
