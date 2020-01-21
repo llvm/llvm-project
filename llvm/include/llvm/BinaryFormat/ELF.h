@@ -583,6 +583,7 @@ enum {
   EF_HEXAGON_MACH_V65 = 0x00000065,  // Hexagon V65
   EF_HEXAGON_MACH_V66 = 0x00000066,  // Hexagon V66
   EF_HEXAGON_MACH_V67 = 0x00000067,  // Hexagon V67
+  EF_HEXAGON_MACH_V67T = 0x00008067, // Hexagon V67T
 
   // Highest ISA version flags
   EF_HEXAGON_ISA_MACH = 0x00000000, // Same as specified in bits[11:0]
