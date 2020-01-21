@@ -370,7 +370,7 @@ bool HexagonInstrInfo::hasStoreToStackSlot(
 /// This function can analyze one/two way branching only and should (mostly) be
 /// called by target independent side.
 /// First entry is always the opcode of the branching instruction, except when
-/// the Cond vector is supposed to be empty, e.g., when AnalyzeBranch fails, a
+/// the Cond vector is supposed to be empty, e.g., when analyzeBranch fails, a
 /// BB with only unconditional jump. Subsequent entries depend upon the opcode,
 /// e.g. Jump_c p will have
 /// Cond[0] = Jump_c

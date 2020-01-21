@@ -669,12 +669,12 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
       !isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     report("MBB has more than one landing pad successor", MBB);
 
-  // Call AnalyzeBranch. If it succeeds, there several more conditions to check.
+  // Call analyzeBranch. If it succeeds, there several more conditions to check.
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
   if (!TII->analyzeBranch(*const_cast<MachineBasicBlock *>(MBB), TBB, FBB,
                           Cond)) {
-    // Ok, AnalyzeBranch thinks it knows what's going on with this block. Let's
+    // Ok, analyzeBranch thinks it knows what's going on with this block. Let's
     // check whether its answers match up with reality.
     if (!TBB && !FBB) {
       // Block falls through to its successor.
@@ -791,7 +791,7 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
                "condition!", MBB);
       }
     } else {
-      report("AnalyzeBranch returned invalid data!", MBB);
+      report("analyzeBranch returned invalid data!", MBB);
     }
   }
 

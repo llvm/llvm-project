@@ -162,7 +162,7 @@ define double @f11(double %a, double %b, i32 %i1, i64 %base, i64 %index) {
   ret double %res
 }
 
-; The first branch here got recreated by InsertBranch while splitting the
+; The first branch here got recreated by insertBranch while splitting the
 ; critical edge %entry->%while.body, which lost the kills information for CC.
 define void @f12(i32 %a, i32 %b) {
 ; CHECK-LABEL: f12:

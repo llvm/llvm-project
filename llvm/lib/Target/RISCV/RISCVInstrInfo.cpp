@@ -342,7 +342,7 @@ unsigned RISCVInstrInfo::insertBranch(
     *BytesAdded = 0;
 
   // Shouldn't be a fall through.
-  assert(TBB && "InsertBranch must not be told to insert a fallthrough");
+  assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 3 || Cond.size() == 0) &&
          "RISCV branch conditions have two components!");
 

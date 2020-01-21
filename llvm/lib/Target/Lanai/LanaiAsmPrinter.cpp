@@ -211,7 +211,7 @@ void LanaiAsmPrinter::EmitInstruction(const MachineInstr *MI) {
 // isBlockOnlyReachableByFallthough - Return true if the basic block has
 // exactly one predecessor and the control transfer mechanism between
 // the predecessor and this block is a fall-through.
-// FIXME: could the overridden cases be handled in AnalyzeBranch?
+// FIXME: could the overridden cases be handled in analyzeBranch?
 bool LanaiAsmPrinter::isBlockOnlyReachableByFallthrough(
     const MachineBasicBlock *MBB) const {
   // The predecessor has to be immediately before this block.
