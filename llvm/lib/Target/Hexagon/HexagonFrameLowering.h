@@ -29,6 +29,8 @@ class TargetRegisterClass;
 
 class HexagonFrameLowering : public TargetFrameLowering {
 public:
+  // First register which could possibly hold a variable argument.
+  int FirstVarArgSavedReg;
   explicit HexagonFrameLowering()
       : TargetFrameLowering(StackGrowsDown, Align(8), 0, Align::None(), true) {}
 
