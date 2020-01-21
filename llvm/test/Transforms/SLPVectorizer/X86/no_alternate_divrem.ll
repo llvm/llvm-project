@@ -12,23 +12,22 @@ define void @test_add_sdiv(i32 *%arr1, i32 *%arr2, i32 %a0, i32 %a1, i32 %a2, i3
 ; CHECK-NEXT:    [[GEP2_1:%.*]] = getelementptr i32, i32* [[ARR2]], i32 1
 ; CHECK-NEXT:    [[GEP2_2:%.*]] = getelementptr i32, i32* [[ARR2]], i32 2
 ; CHECK-NEXT:    [[GEP2_3:%.*]] = getelementptr i32, i32* [[ARR2]], i32 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[GEP1_0]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 [[A0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[A1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[A2:%.*]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[A3:%.*]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[TMP5]], <i32 1146, i32 146, i32 42, i32 0>
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> [[TMP1]], [[TMP6]]
-
-;; FIXME: Last lane of TMP6 may contain zero (if %a3 is zero). In such case, the
-;; next instruction would cause division by zero resulting in SIGFPE during
-;; execution.
-; CHECK-NEXT:    [[TMP8:%.*]] = sdiv <4 x i32> [[TMP1]], [[TMP6]]
-
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32* [[GEP2_0]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP9]], <4 x i32>* [[TMP10]], align 4
+; CHECK-NEXT:    [[V0:%.*]] = load i32, i32* [[GEP1_0]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[GEP1_1]]
+; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[GEP1_2]]
+; CHECK-NEXT:    [[V3:%.*]] = load i32, i32* [[GEP1_3]]
+; CHECK-NEXT:    [[Y0:%.*]] = add nsw i32 [[A0:%.*]], 1146
+; CHECK-NEXT:    [[Y1:%.*]] = add nsw i32 [[A1:%.*]], 146
+; CHECK-NEXT:    [[Y2:%.*]] = add nsw i32 [[A2:%.*]], 42
+; CHECK-NEXT:    [[Y3:%.*]] = add nsw i32 [[A3:%.*]], 0
+; CHECK-NEXT:    [[RES0:%.*]] = add nsw i32 [[V0]], [[Y0]]
+; CHECK-NEXT:    [[RES1:%.*]] = add nsw i32 [[V1]], [[Y1]]
+; CHECK-NEXT:    [[RES2:%.*]] = sdiv i32 [[V2]], [[Y2]]
+; CHECK-NEXT:    [[RES3:%.*]] = add nsw i32 [[V3]], [[Y3]]
+; CHECK-NEXT:    store i32 [[RES0]], i32* [[GEP2_0]]
+; CHECK-NEXT:    store i32 [[RES1]], i32* [[GEP2_1]]
+; CHECK-NEXT:    store i32 [[RES2]], i32* [[GEP2_2]]
+; CHECK-NEXT:    store i32 [[RES3]], i32* [[GEP2_3]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -77,23 +76,22 @@ define void @test_urem_add(i32 *%arr1, i32 *%arr2, i32 %a0, i32 %a1, i32 %a2, i3
 ; CHECK-NEXT:    [[GEP2_1:%.*]] = getelementptr i32, i32* [[ARR2]], i32 1
 ; CHECK-NEXT:    [[GEP2_2:%.*]] = getelementptr i32, i32* [[ARR2]], i32 2
 ; CHECK-NEXT:    [[GEP2_3:%.*]] = getelementptr i32, i32* [[ARR2]], i32 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[GEP1_0]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> undef, i32 [[A0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[A1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[A2:%.*]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP4]], i32 [[A3:%.*]], i32 3
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw <4 x i32> [[TMP5]], <i32 1146, i32 146, i32 42, i32 0>
-
-;; FIXME: Last lane of TMP6 may contain zero (if %a3 is zero). In such case, the
-;; next instruction would cause division by zero resulting in SIGFPE during
-;; execution.
-; CHECK-NEXT:    [[TMP7:%.*]] = urem <4 x i32> [[TMP1]], [[TMP6]]
-
-; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[TMP1]], [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast i32* [[GEP2_0]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP9]], <4 x i32>* [[TMP10]], align 4
+; CHECK-NEXT:    [[V0:%.*]] = load i32, i32* [[GEP1_0]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, i32* [[GEP1_1]]
+; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[GEP1_2]]
+; CHECK-NEXT:    [[V3:%.*]] = load i32, i32* [[GEP1_3]]
+; CHECK-NEXT:    [[Y0:%.*]] = add nsw i32 [[A0:%.*]], 1146
+; CHECK-NEXT:    [[Y1:%.*]] = add nsw i32 [[A1:%.*]], 146
+; CHECK-NEXT:    [[Y2:%.*]] = add nsw i32 [[A2:%.*]], 42
+; CHECK-NEXT:    [[Y3:%.*]] = add nsw i32 [[A3:%.*]], 0
+; CHECK-NEXT:    [[RES0:%.*]] = urem i32 [[V0]], [[Y0]]
+; CHECK-NEXT:    [[RES1:%.*]] = urem i32 [[V1]], [[Y1]]
+; CHECK-NEXT:    [[RES2:%.*]] = urem i32 [[V2]], [[Y2]]
+; CHECK-NEXT:    [[RES3:%.*]] = add nsw i32 [[V3]], [[Y3]]
+; CHECK-NEXT:    store i32 [[RES0]], i32* [[GEP2_0]]
+; CHECK-NEXT:    store i32 [[RES1]], i32* [[GEP2_1]]
+; CHECK-NEXT:    store i32 [[RES2]], i32* [[GEP2_2]]
+; CHECK-NEXT:    store i32 [[RES3]], i32* [[GEP2_3]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
