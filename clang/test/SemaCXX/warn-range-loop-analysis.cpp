@@ -454,3 +454,75 @@ void test10() {
   // expected-note@-2 {{'Bar'}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:17-[[@LINE-3]]:18}:" "
 }
+
+template <class T>
+void test_template_function() {
+  // In a template instantiation the diagnostics should not be emitted for
+  // loops with dependent types.
+  Container<Bar> C;
+  for (const Bar &x : C) {}
+  // expected-warning@-1 {{always a copy}}
+  // expected-note@-2 {{'Bar'}}
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:18-[[@LINE-3]]:19}:""
+
+  Container<T> Dependent;
+  for (const T &x : Dependent) {}
+}
+template void test_template_function<Bar>();
+
+template <class T>
+struct test_template_struct {
+  static void static_member() {
+    Container<Bar> C;
+    for (const Bar &x : C) {}
+    // expected-warning@-1 {{always a copy}}
+    // expected-note@-2 {{'Bar'}}
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:20-[[@LINE-3]]:21}:""
+
+    Container<T> Dependent;
+    for (const T &x : Dependent) {}
+  }
+
+  void member() {
+    Container<Bar> C;
+    for (const Bar &x : C) {}
+    // expected-warning@-1 {{always a copy}}
+    // expected-note@-2 {{'Bar'}}
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:20-[[@LINE-3]]:21}:""
+
+    Container<T> Dependent;
+    for (const T &x : Dependent) {}
+  }
+};
+template struct test_template_struct<Bar>;
+
+struct test_struct_with_templated_member {
+  void member() {
+    Container<Bar> C;
+    for (const Bar &x : C) {}
+    // expected-warning@-1 {{always a copy}}
+    // expected-note@-2 {{'Bar'}}
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:20-[[@LINE-3]]:21}:""
+  }
+
+  template <class T>
+  void template_member() {
+    Container<Bar> C;
+    for (const Bar &x : C) {}
+    // expected-warning@-1 {{always a copy}}
+    // expected-note@-2 {{'Bar'}}
+    // CHECK: fix-it:"{{.*}}":{[[@LINE-3]]:20-[[@LINE-3]]:21}:""
+
+    Container<T> Dependent;
+    for (const T &x : Dependent) {}
+  }
+};
+template void test_struct_with_templated_member::template_member<Bar>();
+
+#define TEST_MACRO            \
+  void test_macro() {         \
+    Container<Bar> C;         \
+    for (const Bar &x : C) {} \
+  }
+
+TEST_MACRO
