@@ -200,11 +200,11 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
   unsigned int current_id = invocation_id++;
 
   if (log) {
-    LLDB_LOGF(log,
-              "    CompleteTagDecl[%u] on (ASTContext*)%p Completing "
-              "(TagDecl*)%p named %s",
-              current_id, static_cast<void *>(m_ast_context),
-              static_cast<void *>(tag_decl), tag_decl->getName().str().c_str());
+    LLDB_LOG(log,
+             "    CompleteTagDecl[{0}] on (ASTContext*){1} Completing "
+             "(TagDecl*){2} named {3}",
+             current_id, static_cast<void *>(m_ast_context),
+             static_cast<void *>(tag_decl), tag_decl->getName());
 
     LLDB_LOG(log, "      CTD[%u] Before:\n{0}", current_id,
              ClangUtil::DumpDecl(tag_decl));
@@ -224,10 +224,10 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
     // We couldn't complete the type.  Maybe there's a definition somewhere
     // else that can be completed.
 
-    LLDB_LOGF(log,
-              "      CTD[%u] Type could not be completed in the module in "
-              "which it was first found.",
-              current_id);
+    LLDB_LOG(log,
+             "      CTD[{0}] Type could not be completed in the module in "
+             "which it was first found.",
+             current_id);
 
     bool found = false;
 
@@ -239,9 +239,9 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
           m_ast_importer_sp->GetNamespaceMap(namespace_context);
 
       if (log && log->GetVerbose())
-        LLDB_LOGF(log, "      CTD[%u] Inspecting namespace map %p (%d entries)",
-                  current_id, static_cast<void *>(namespace_map.get()),
-                  static_cast<int>(namespace_map->size()));
+        LLDB_LOG(log,
+                 "      CTD[{0}] Inspecting namespace map{1} ({2} entries)",
+                 current_id, namespace_map.get(), namespace_map->size());
 
       if (!namespace_map)
         return;
@@ -249,9 +249,9 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
       for (ClangASTImporter::NamespaceMap::iterator i = namespace_map->begin(),
                                                     e = namespace_map->end();
            i != e && !found; ++i) {
-        LLDB_LOGF(log, "      CTD[%u] Searching namespace %s in module %s",
-                  current_id, i->second.GetName().AsCString(),
-                  i->first->GetFileSpec().GetFilename().GetCString());
+        LLDB_LOG(log, "      CTD[{0}] Searching namespace {1} in module {2}",
+                 current_id, i->second.GetName(),
+                 i->first->GetFileSpec().GetFilename());
 
         TypeList types;
 
@@ -335,11 +335,10 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
 void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  LLDB_LOGF(log,
-            "    [CompleteObjCInterfaceDecl] on (ASTContext*)%p Completing "
-            "an ObjCInterfaceDecl named %s",
-            static_cast<void *>(m_ast_context),
-            interface_decl->getName().str().c_str());
+  LLDB_LOG(log,
+           "    [CompleteObjCInterfaceDecl] on (ASTContext*){0} Completing "
+           "an ObjCInterfaceDecl named {1}",
+           m_ast_context, interface_decl->getName());
   LLDB_LOG(log, "      [COID] Before:\n{0}",
            ClangUtil::DumpDecl(interface_decl));
 
@@ -369,7 +368,7 @@ void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
     CompleteType(interface_decl->getSuperClass());
 
   if (log) {
-    LLDB_LOGF(log, "      [COID] After:");
+    LLDB_LOG(log, "      [COID] After:");
     LLDB_LOG(log, "      [COID] {0}", ClangUtil::DumpDecl(interface_decl));
   }
 }
@@ -441,23 +440,24 @@ void ClangASTSource::FindExternalLexicalDecls(
 
   if (log) {
     if (const NamedDecl *context_named_decl = dyn_cast<NamedDecl>(context_decl))
-      LLDB_LOGF(
-          log,
-          "FindExternalLexicalDecls[%u] on (ASTContext*)%p in '%s' (%sDecl*)%p",
-          current_id, static_cast<void *>(m_ast_context),
-          context_named_decl->getNameAsString().c_str(),
-          context_decl->getDeclKindName(),
-          static_cast<const void *>(context_decl));
+      LLDB_LOG(log,
+               "FindExternalLexicalDecls[{0}] on (ASTContext*){1} in '{2}' "
+               "(%sDecl*){3}",
+               current_id, static_cast<void *>(m_ast_context),
+               context_named_decl->getNameAsString().c_str(),
+               context_decl->getDeclKindName(),
+               static_cast<const void *>(context_decl));
     else if (context_decl)
-      LLDB_LOGF(
-          log, "FindExternalLexicalDecls[%u] on (ASTContext*)%p in (%sDecl*)%p",
+      LLDB_LOG(
+          log,
+          "FindExternalLexicalDecls[{0}] on (ASTContext*){1} in ({2}Decl*){3}",
           current_id, static_cast<void *>(m_ast_context),
           context_decl->getDeclKindName(),
           static_cast<const void *>(context_decl));
     else
-      LLDB_LOGF(
+      LLDB_LOG(
           log,
-          "FindExternalLexicalDecls[%u] on (ASTContext*)%p in a NULL context",
+          "FindExternalLexicalDecls[{0}] on (ASTContext*){1} in a NULL context",
           current_id, static_cast<const void *>(m_ast_context));
   }
 
@@ -511,13 +511,13 @@ void ClangASTSource::FindExternalLexicalDecls(
         std::string ast_dump = ClangUtil::DumpDecl(decl);
         if (const NamedDecl *context_named_decl =
                 dyn_cast<NamedDecl>(context_decl))
-          LLDB_LOGF(log, "  FELD[%d] Adding [to %sDecl %s] lexical %sDecl %s",
-                    current_id, context_named_decl->getDeclKindName(),
-                    context_named_decl->getNameAsString().c_str(),
-                    decl->getDeclKindName(), ast_dump.c_str());
+          LLDB_LOG(
+              log, "  FELD[{0}] Adding [to {1}Decl {2}] lexical {3}Decl {4}",
+              current_id, context_named_decl->getDeclKindName(),
+              context_named_decl->getName(), decl->getDeclKindName(), ast_dump);
         else
-          LLDB_LOGF(log, "  FELD[%d] Adding lexical %sDecl %s", current_id,
-                    decl->getDeclKindName(), ast_dump.c_str());
+          LLDB_LOG(log, "  FELD[{0}] Adding lexical {1}Decl {2}", current_id,
+                   decl->getDeclKindName(), ast_dump);
       }
 
       Decl *copied_decl = CopyDecl(decl);
@@ -561,25 +561,22 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
 
   if (log) {
     if (!context.m_decl_context)
-      LLDB_LOGF(log,
-                "ClangASTSource::FindExternalVisibleDecls[%u] on "
-                "(ASTContext*)%p for '%s' in a NULL DeclContext",
-                current_id, static_cast<void *>(m_ast_context),
-                name.GetCString());
+      LLDB_LOG(log,
+               "ClangASTSource::FindExternalVisibleDecls[{0}] on "
+               "(ASTContext*){1} for '{2}' in a NULL DeclContext",
+               current_id, m_ast_context, name);
     else if (const NamedDecl *context_named_decl =
                  dyn_cast<NamedDecl>(context.m_decl_context))
-      LLDB_LOGF(log,
-                "ClangASTSource::FindExternalVisibleDecls[%u] on "
-                "(ASTContext*)%p for '%s' in '%s'",
-                current_id, static_cast<void *>(m_ast_context),
-                name.GetCString(),
-                context_named_decl->getNameAsString().c_str());
+      LLDB_LOG(log,
+               "ClangASTSource::FindExternalVisibleDecls[{0}] on "
+               "(ASTContext*){1} for '{2}' in '{3}'",
+               current_id, m_ast_context, name, context_named_decl->getName());
     else
-      LLDB_LOGF(log,
-                "ClangASTSource::FindExternalVisibleDecls[%u] on "
-                "(ASTContext*)%p for '%s' in a '%s'",
-                current_id, static_cast<void *>(m_ast_context),
-                name.GetCString(), context.m_decl_context->getDeclKindName());
+      LLDB_LOG(log,
+               "ClangASTSource::FindExternalVisibleDecls[{0}] on "
+               "(ASTContext*){1} for '{2}' in a '{3}'",
+               current_id, m_ast_context, name,
+               context.m_decl_context->getDeclKindName());
   }
 
   context.m_namespace_map = std::make_shared<ClangASTImporter::NamespaceMap>();
@@ -590,9 +587,9 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
         m_ast_importer_sp->GetNamespaceMap(namespace_context) : nullptr;
 
     if (log && log->GetVerbose())
-      LLDB_LOGF(log, "  CAS::FEVD[%u] Inspecting namespace map %p (%d entries)",
-                current_id, static_cast<void *>(namespace_map.get()),
-                static_cast<int>(namespace_map->size()));
+      LLDB_LOG(log,
+               "  CAS::FEVD[{0}] Inspecting namespace map {1} ({2} entries)",
+               current_id, namespace_map.get(), namespace_map->size());
 
     if (!namespace_map)
       return;
@@ -600,9 +597,9 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
     for (ClangASTImporter::NamespaceMap::iterator i = namespace_map->begin(),
                                                   e = namespace_map->end();
          i != e; ++i) {
-      LLDB_LOGF(log, "  CAS::FEVD[%u] Searching namespace %s in module %s",
-                current_id, i->second.GetName().AsCString(),
-                i->first->GetFileSpec().GetFilename().GetCString());
+      LLDB_LOG(log, "  CAS::FEVD[{0}] Searching namespace {1} in module {2}",
+               current_id, i->second.GetName(),
+               i->first->GetFileSpec().GetFilename());
 
       FindExternalVisibleDecls(context, i->first, i->second, current_id);
     }
@@ -614,7 +611,7 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
   } else {
     CompilerDeclContext namespace_decl;
 
-    LLDB_LOGF(log, "  CAS::FEVD[%u] Searching the root namespace", current_id);
+    LLDB_LOG(log, "  CAS::FEVD[{0}] Searching the root namespace", current_id);
 
     FindExternalVisibleDecls(context, lldb::ModuleSP(), namespace_decl,
                              current_id);
@@ -622,10 +619,10 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
 
   if (!context.m_namespace_map->empty()) {
     if (log && log->GetVerbose())
-      LLDB_LOGF(log,
-                "  CAS::FEVD[%u] Registering namespace map %p (%d entries)",
-                current_id, static_cast<void *>(context.m_namespace_map.get()),
-                static_cast<int>(context.m_namespace_map->size()));
+      LLDB_LOG(log,
+               "  CAS::FEVD[{0}] Registering namespace map {1} ({2} entries)",
+               current_id, context.m_namespace_map.get(),
+               context.m_namespace_map->size());
 
     NamespaceDecl *clang_namespace_decl =
         AddNamespace(context, context.m_namespace_map);
@@ -683,9 +680,8 @@ void ClangASTSource::FindExternalVisibleDecls(
             std::pair<lldb::ModuleSP, CompilerDeclContext>(
                 module_sp, found_namespace_decl));
 
-        LLDB_LOGF(log, "  CAS::FEVD[%u] Found namespace %s in module %s",
-                  current_id, name.GetCString(),
-                  module_sp->GetFileSpec().GetFilename().GetCString());
+        LLDB_LOG(log, "  CAS::FEVD[{0}] Found namespace {1} in module {2}",
+                 current_id, name, module_sp->GetFileSpec().GetFilename());
       }
     }
   } else {
@@ -712,9 +708,8 @@ void ClangASTSource::FindExternalVisibleDecls(
             std::pair<lldb::ModuleSP, CompilerDeclContext>(
                 image, found_namespace_decl));
 
-        LLDB_LOGF(log, "  CAS::FEVD[%u] Found namespace %s in module %s",
-                  current_id, name.GetCString(),
-                  image->GetFileSpec().GetFilename().GetCString());
+        LLDB_LOG(log, "  CAS::FEVD[{0}] Found namespace {1} in module {2}",
+                 current_id, name, image->GetFileSpec().GetFilename());
       }
     }
   }
@@ -740,9 +735,9 @@ void ClangASTSource::FindExternalVisibleDecls(
         if (log) {
           const char *name_string = type_sp->GetName().GetCString();
 
-          LLDB_LOGF(log, "  CAS::FEVD[%u] Matching type found for \"%s\": %s",
-                    current_id, name.GetCString(),
-                    (name_string ? name_string : "<anonymous>"));
+          LLDB_LOG(log, "  CAS::FEVD[{0}] Matching type found for \"{1}\": {2}",
+                   current_id, name,
+                   (name_string ? name_string : "<anonymous>"));
         }
 
         CompilerType full_type = type_sp->GetFullCompilerType();
@@ -750,8 +745,8 @@ void ClangASTSource::FindExternalVisibleDecls(
         CompilerType copied_clang_type(GuardedCopyType(full_type));
 
         if (!copied_clang_type) {
-          LLDB_LOGF(log, "  CAS::FEVD[%u] - Couldn't export a type",
-                    current_id);
+          LLDB_LOG(log, "  CAS::FEVD[{0}] - Couldn't export a type",
+                   current_id);
 
           continue;
         }
@@ -777,10 +772,10 @@ void ClangASTSource::FindExternalVisibleDecls(
             break;
 
           if (log) {
-            LLDB_LOGF(log,
-                      "  CAS::FEVD[%u] Matching entity found for \"%s\" in "
-                      "the modules",
-                      current_id, name.GetCString());
+            LLDB_LOG(log,
+                     "  CAS::FEVD[{0}] Matching entity found for \"{1}\" in "
+                     "the modules",
+                     current_id, name);
           }
 
           clang::NamedDecl *const decl_from_modules = decls[0];
@@ -793,9 +788,9 @@ void ClangASTSource::FindExternalVisibleDecls(
                 copied_decl ? dyn_cast<clang::NamedDecl>(copied_decl) : nullptr;
 
             if (!copied_named_decl) {
-              LLDB_LOGF(
+              LLDB_LOG(
                   log,
-                  "  CAS::FEVD[%u] - Couldn't export a type from the modules",
+                  "  CAS::FEVD[{0}] - Couldn't export a type from the modules",
                   current_id);
 
               break;
@@ -839,10 +834,10 @@ void ClangASTSource::FindExternalVisibleDecls(
           break;
 
         if (log) {
-          LLDB_LOGF(
+          LLDB_LOG(
               log,
-              "  CAS::FEVD[%u] Matching type found for \"%s\" in the runtime",
-              current_id, name.GetCString());
+              "  CAS::FEVD[{0}] Matching type found for \"{0}\" in the runtime",
+              current_id, name);
         }
 
         clang::Decl *copied_decl = CopyDecl(decls[0]);
@@ -850,9 +845,9 @@ void ClangASTSource::FindExternalVisibleDecls(
             copied_decl ? dyn_cast<clang::NamedDecl>(copied_decl) : nullptr;
 
         if (!copied_named_decl) {
-          LLDB_LOGF(log,
-                    "  CAS::FEVD[%u] - Couldn't export a type from the runtime",
-                    current_id);
+          LLDB_LOG(log,
+                   "  CAS::FEVD[{0}] - Couldn't export a type from the runtime",
+                   current_id);
 
           break;
         }
@@ -1046,12 +1041,10 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
 
   ConstString selector_name(ss.GetString());
 
-  LLDB_LOGF(log,
-            "ClangASTSource::FindObjCMethodDecls[%d] on (ASTContext*)%p "
-            "for selector [%s %s]",
-            current_id, static_cast<void *>(m_ast_context),
-            interface_decl->getNameAsString().c_str(),
-            selector_name.AsCString());
+  LLDB_LOG(log,
+           "ClangASTSource::FindObjCMethodDecls[{0}] on (ASTContext*){1} "
+           "for selector [{2} {3}]",
+           current_id, m_ast_context, interface_decl->getName(), selector_name);
   SymbolContextList sc_list;
 
   const bool include_symbols = false;
@@ -1199,11 +1192,11 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     if (complete_interface_decl == interface_decl)
       break; // already checked this one
 
-    LLDB_LOGF(log,
-              "CAS::FOPD[%d] trying origin "
-              "(ObjCInterfaceDecl*)%p/(ASTContext*)%p...",
-              current_id, static_cast<void *>(complete_interface_decl),
-              static_cast<void *>(&complete_iface_decl->getASTContext()));
+    LLDB_LOG(log,
+             "CAS::FOPD[{0}] trying origin "
+             "(ObjCInterfaceDecl*){1}/(ASTContext*){2}...",
+             current_id, complete_interface_decl,
+             &complete_iface_decl->getASTContext());
 
     FindObjCMethodDeclsWithOrigin(current_id, context, complete_interface_decl,
                                   "in debug info");
@@ -1342,23 +1335,22 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
 
   ConstString class_name(parser_iface_decl->getNameAsString().c_str());
 
-  LLDB_LOGF(log,
-            "ClangASTSource::FindObjCPropertyAndIvarDecls[%d] on "
-            "(ASTContext*)%p for '%s.%s'",
-            current_id, static_cast<void *>(m_ast_context),
-            parser_iface_decl->getNameAsString().c_str(),
-            context.m_decl_name.getAsString().c_str());
+  LLDB_LOG(log,
+           "ClangASTSource::FindObjCPropertyAndIvarDecls[{0}] on "
+           "(ASTContext*){1} for '{2}.{3}'",
+           current_id, m_ast_context, parser_iface_decl->getName(),
+           context.m_decl_name.getAsString());
 
   if (FindObjCPropertyAndIvarDeclsWithOrigin(
           current_id, context, *this, origin_iface_decl))
     return;
 
-  LLDB_LOGF(log,
-            "CAS::FOPD[%d] couldn't find the property on origin "
-            "(ObjCInterfaceDecl*)%p/(ASTContext*)%p, searching "
-            "elsewhere...",
-            current_id, static_cast<const void *>(origin_iface_decl.decl),
-            static_cast<void *>(&origin_iface_decl->getASTContext()));
+  LLDB_LOG(log,
+           "CAS::FOPD[{0}] couldn't find the property on origin "
+           "(ObjCInterfaceDecl*){1}/(ASTContext*){2}, searching "
+           "elsewhere...",
+           current_id, origin_iface_decl.decl,
+           &origin_iface_decl->getASTContext());
 
   SymbolContext null_sc;
   TypeList type_list;
@@ -1379,11 +1371,11 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
     if (complete_iface_decl.decl == origin_iface_decl.decl)
       break; // already checked this one
 
-    LLDB_LOGF(log,
-              "CAS::FOPD[%d] trying origin "
-              "(ObjCInterfaceDecl*)%p/(ASTContext*)%p...",
-              current_id, static_cast<const void *>(complete_iface_decl.decl),
-              static_cast<void *>(&complete_iface_decl->getASTContext()));
+    LLDB_LOG(log,
+             "CAS::FOPD[{0}] trying origin "
+             "(ObjCInterfaceDecl*){1}/(ASTContext*){2}...",
+             current_id, complete_iface_decl.decl,
+             &complete_iface_decl->getASTContext());
 
     FindObjCPropertyAndIvarDeclsWithOrigin(current_id, context, *this,
                                            complete_iface_decl);
@@ -1414,12 +1406,11 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
     if (!interface_decl_from_modules.IsValid())
       break;
 
-    LLDB_LOGF(
-        log,
-        "CAS::FOPD[%d] trying module "
-        "(ObjCInterfaceDecl*)%p/(ASTContext*)%p...",
-        current_id, static_cast<const void *>(interface_decl_from_modules.decl),
-        static_cast<void *>(&interface_decl_from_modules->getASTContext()));
+    LLDB_LOG(log,
+             "CAS::FOPD[{0}] trying module "
+             "(ObjCInterfaceDecl*){1}/(ASTContext*){2}...",
+             current_id, interface_decl_from_modules.decl,
+             &interface_decl_from_modules->getASTContext());
 
     if (FindObjCPropertyAndIvarDeclsWithOrigin(current_id, context, *this,
                                                interface_decl_from_modules))
@@ -1459,12 +1450,11 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
     if (!interface_decl_from_runtime.IsValid())
       break;
 
-    LLDB_LOGF(
-        log,
-        "CAS::FOPD[%d] trying runtime "
-        "(ObjCInterfaceDecl*)%p/(ASTContext*)%p...",
-        current_id, static_cast<const void *>(interface_decl_from_runtime.decl),
-        static_cast<void *>(&interface_decl_from_runtime->getASTContext()));
+    LLDB_LOG(log,
+             "CAS::FOPD[{0}] trying runtime "
+             "(ObjCInterfaceDecl*){1}/(ASTContext*){2}...",
+             current_id, interface_decl_from_runtime.decl,
+             &interface_decl_from_runtime->getASTContext());
 
     if (FindObjCPropertyAndIvarDeclsWithOrigin(
             current_id, context, *this, interface_decl_from_runtime))
@@ -1562,12 +1552,10 @@ bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  LLDB_LOGF(log,
-            "LayoutRecordType[%u] on (ASTContext*)%p for (RecordDecl*)%p "
-            "[name = '%s']",
-            current_id, static_cast<void *>(m_ast_context),
-            static_cast<const void *>(record),
-            record->getNameAsString().c_str());
+  LLDB_LOG(log,
+           "LayoutRecordType[{0}] on (ASTContext*){1} for (RecordDecl*){2} "
+           "[name = '{3}']",
+           current_id, m_ast_context, record, record->getName());
 
   DeclFromParser<const RecordDecl> parser_record(record);
   DeclFromUser<const RecordDecl> origin_record(
@@ -1631,25 +1619,23 @@ bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
               m_ast_context->getCharWidth();
 
   if (log) {
-    LLDB_LOGF(log, "LRT[%u] returned:", current_id);
-    LLDB_LOGF(log, "LRT[%u]   Original = (RecordDecl*)%p", current_id,
-              static_cast<const void *>(origin_record.decl));
-    LLDB_LOGF(log, "LRT[%u]   Size = %" PRId64, current_id, size);
-    LLDB_LOGF(log, "LRT[%u]   Alignment = %" PRId64, current_id, alignment);
-    LLDB_LOGF(log, "LRT[%u]   Fields:", current_id);
+    LLDB_LOG(log, "LRT[{0}] returned:", current_id);
+    LLDB_LOG(log, "LRT[{0}]   Original = (RecordDecl*)%p", current_id,
+             static_cast<const void *>(origin_record.decl));
+    LLDB_LOG(log, "LRT[{0}]   Size = %" PRId64, current_id, size);
+    LLDB_LOG(log, "LRT[{0}]   Alignment = %" PRId64, current_id, alignment);
+    LLDB_LOG(log, "LRT[{0}]   Fields:", current_id);
     for (RecordDecl::field_iterator fi = record->field_begin(),
                                     fe = record->field_end();
          fi != fe; ++fi) {
-      LLDB_LOGF(log,
-                "LRT[%u]     (FieldDecl*)%p, Name = '%s', Offset = %" PRId64
-                " bits",
-                current_id, static_cast<void *>(*fi),
-                fi->getNameAsString().c_str(), field_offsets[*fi]);
+      LLDB_LOG(log,
+               "LRT[{0}]     (FieldDecl*){1}, Name = '{2}', Offset = {3} bits",
+               current_id, *fi, fi->getName(), field_offsets[*fi]);
     }
     DeclFromParser<const CXXRecordDecl> parser_cxx_record =
         DynCast<const CXXRecordDecl>(parser_record);
     if (parser_cxx_record.IsValid()) {
-      LLDB_LOGF(log, "LRT[%u]   Bases:", current_id);
+      LLDB_LOG(log, "LRT[{0}]   Bases:", current_id);
       for (CXXRecordDecl::base_class_const_iterator
                bi = parser_cxx_record->bases_begin(),
                be = parser_cxx_record->bases_end();
@@ -1662,19 +1648,17 @@ bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
         DeclFromParser<CXXRecordDecl> base_cxx_record =
             DynCast<CXXRecordDecl>(base_record);
 
-        LLDB_LOGF(
-            log,
-            "LRT[%u]     %s(CXXRecordDecl*)%p, Name = '%s', Offset = %" PRId64
-            " chars",
-            current_id, (is_virtual ? "Virtual " : ""),
-            static_cast<void *>(base_cxx_record.decl),
-            base_cxx_record.decl->getNameAsString().c_str(),
-            (is_virtual
-                 ? virtual_base_offsets[base_cxx_record.decl].getQuantity()
-                 : base_offsets[base_cxx_record.decl].getQuantity()));
+        LLDB_LOG(log,
+                 "LRT[{0}]     {1}(CXXRecordDecl*){2}, Name = '{3}', Offset = "
+                 "{4} chars",
+                 current_id, (is_virtual ? "Virtual " : ""),
+                 base_cxx_record.decl, base_cxx_record.decl->getName(),
+                 (is_virtual
+                      ? virtual_base_offsets[base_cxx_record.decl].getQuantity()
+                      : base_offsets[base_cxx_record.decl].getQuantity()));
       }
     } else {
-      LLDB_LOGF(log, "LRD[%u]   Not a CXXRecord, so no bases", current_id);
+      LLDB_LOG(log, "LRD[{0}]   Not a CXXRecord, so no bases", current_id);
     }
   }
 
@@ -1691,18 +1675,16 @@ void ClangASTSource::CompleteNamespaceMap(
 
   if (log) {
     if (parent_map && parent_map->size())
-      LLDB_LOGF(log,
-                "CompleteNamespaceMap[%u] on (ASTContext*)%p Searching for "
-                "namespace %s in namespace %s",
-                current_id, static_cast<void *>(m_ast_context),
-                name.GetCString(),
-                parent_map->begin()->second.GetName().AsCString());
+      LLDB_LOG(log,
+               "CompleteNamespaceMap[{0}] on (ASTContext*){1} Searching for "
+               "namespace {2} in namespace {3}",
+               current_id, m_ast_context, name,
+               parent_map->begin()->second.GetName());
     else
-      LLDB_LOGF(log,
-                "CompleteNamespaceMap[%u] on (ASTContext*)%p Searching for "
-                "namespace %s",
-                current_id, static_cast<void *>(m_ast_context),
-                name.GetCString());
+      LLDB_LOG(log,
+               "CompleteNamespaceMap[{0}] on (ASTContext*){1} Searching for "
+               "namespace {2}",
+               current_id, m_ast_context, name);
   }
 
   if (parent_map) {
@@ -1728,9 +1710,8 @@ void ClangASTSource::CompleteNamespaceMap(
       namespace_map->push_back(std::pair<lldb::ModuleSP, CompilerDeclContext>(
           module_sp, found_namespace_decl));
 
-      LLDB_LOGF(log, "  CMN[%u] Found namespace %s in module %s", current_id,
-                name.GetCString(),
-                module_sp->GetFileSpec().GetFilename().GetCString());
+      LLDB_LOG(log, "  CMN[{0}] Found namespace {1} in module {2}", current_id,
+               name, module_sp->GetFileSpec().GetFilename());
     }
   } else {
     const ModuleList &target_images = m_target->GetImages();
@@ -1760,9 +1741,8 @@ void ClangASTSource::CompleteNamespaceMap(
       namespace_map->push_back(std::pair<lldb::ModuleSP, CompilerDeclContext>(
           image, found_namespace_decl));
 
-      LLDB_LOGF(log, "  CMN[%u] Found namespace %s in module %s", current_id,
-                name.GetCString(),
-                image->GetFileSpec().GetFilename().GetCString());
+      LLDB_LOG(log, "  CMN[{0}] Found namespace {1} in module {2}", current_id,
+               name, image->GetFileSpec().GetFilename());
     }
   }
 }
@@ -1944,7 +1924,7 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
   } else {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-    LLDB_LOGF(log, "Function type wasn't a FunctionProtoType");
+    LLDB_LOG(log, "Function type wasn't a FunctionProtoType");
   }
 
   // If this is an operator (e.g. operator new or operator==), only insert the
