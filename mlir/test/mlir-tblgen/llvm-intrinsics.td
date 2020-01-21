@@ -6,16 +6,21 @@
 // includes from the main file to avoid unnecessary dependencies and decrease
 // the test cost. The command-line flags further ensure a specific intrinsic is
 // processed and we only check the ouptut below.
+// We also verify emission of type specialization for overloadable intrinsics.
 //
 // RUN: cat %S/../../../llvm/include/llvm/IR/Intrinsics.td \
 // RUN: | grep -v "llvm/IR/Intrinsics" \
-// RUN: | mlir-tblgen -gen-llvmir-intrinsics -I %S/../../../llvm/include/ --llvmir-intrinsics-filter=vastart \
+// RUN: | mlir-tblgen -gen-llvmir-intrinsics -I %S/../../../llvm/include/ --llvmir-intrinsics-filter=is_constant \
 // RUN: | FileCheck %s
 
-// CHECK-LABEL: def LLVM_vastart
+// CHECK-LABEL: def LLVM_is_constant
 // CHECK: LLVM_Op<"intr
 // CHECK: Arguments<(ins
 // CHECK: Results<(outs
+// CHECK: llvm::Function *fn = llvm::Intrinsic::getDeclaration(
+// CHECK:        module, llvm::Intrinsic::is_constant, {
+// CHECK:        opInst.getOperand(0).getType().cast<LLVM::LLVMType>().getUnderlyingType(),
+// CHECK: });
 
 //---------------------------------------------------------------------------//
 
