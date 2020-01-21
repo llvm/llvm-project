@@ -272,7 +272,8 @@ enum NodeType : unsigned {
   STZ2G,
 
   LDP,
-  STP
+  STP,
+  STNP
 };
 
 } // end namespace AArch64ISD
