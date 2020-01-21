@@ -373,7 +373,7 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
 
 void CC1Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
                        CrashReportInfo *CrashInfo) const {
-  OS << " (in-process)\n";
+  OS << " (in-process)";
   Command::Print(OS, Terminator, Quote, CrashInfo);
 }
 
