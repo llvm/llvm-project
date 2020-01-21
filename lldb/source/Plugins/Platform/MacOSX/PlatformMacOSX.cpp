@@ -7,16 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "PlatformMacOSX.h"
-#include "lldb/Host/Config.h"
-
-
-#include <sstream>
-
+#include "PlatformAppleTVSimulator.h"
+#include "PlatformAppleWatchSimulator.h"
+#include "PlatformDarwinKernel.h"
+#include "PlatformRemoteAppleBridge.h"
+#include "PlatformRemoteAppleTV.h"
+#include "PlatformRemoteAppleWatch.h"
+#include "PlatformiOSSimulator.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -28,6 +31,8 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
+#include <sstream>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -35,6 +40,13 @@ static uint32_t g_initialize_count = 0;
 
 void PlatformMacOSX::Initialize() {
   PlatformDarwin::Initialize();
+  PlatformiOSSimulator::Initialize();
+  PlatformDarwinKernel::Initialize();
+  PlatformAppleTVSimulator::Initialize();
+  PlatformAppleWatchSimulator::Initialize();
+  PlatformRemoteAppleTV::Initialize();
+  PlatformRemoteAppleWatch::Initialize();
+  PlatformRemoteAppleBridge::Initialize();
 
   if (g_initialize_count++ == 0) {
 #if defined(__APPLE__)
@@ -55,6 +67,13 @@ void PlatformMacOSX::Terminate() {
     }
   }
 
+  PlatformRemoteAppleBridge::Terminate();
+  PlatformRemoteAppleWatch::Terminate();
+  PlatformRemoteAppleTV::Terminate();
+  PlatformAppleWatchSimulator::Terminate();
+  PlatformAppleTVSimulator::Terminate();
+  PlatformDarwinKernel::Terminate();
+  PlatformiOSSimulator::Terminate();
   PlatformDarwin::Terminate();
 }
 
