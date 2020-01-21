@@ -636,6 +636,10 @@ void ExegesisX86Target::randomizeMCOperand(
 
   const Operand &Op = Instr.getPrimaryOperand(Var);
   switch (Op.getExplicitOperandInfo().OperandType) {
+  case X86::OperandType::OPERAND_ROUNDING_CONTROL:
+    AssignedValue =
+        MCOperand::createImm(randomIndex(X86::STATIC_ROUNDING::NO_EXC));
+    break;
   case X86::OperandType::OPERAND_COND_CODE:
     AssignedValue =
         MCOperand::createImm(randomIndex(X86::CondCode::LAST_VALID_COND));
