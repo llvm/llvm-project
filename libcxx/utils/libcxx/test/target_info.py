@@ -206,15 +206,25 @@ class LinuxLocalTI(DefaultTargetInfo):
     def platform(self):
         return 'linux'
 
+    def _distribution(self):
+        try:
+            # linux_distribution is not available since Python 3.8
+            # However, this function is only used to detect SLES 11,
+            # which is quite an old distribution that doesn't have
+            # Python 3.8.
+            return platform.linux_distribution()
+        except AttributeError:
+            return '', '', ''
+
     def platform_name(self):
-        name, _, _ = platform.linux_distribution()
+        name, _, _ = self._distribution()
         # Some distros have spaces, e.g. 'SUSE Linux Enterprise Server'
         # lit features can't have spaces
         name = name.lower().strip().replace(' ', '-')
         return name # Permitted to be None
 
     def platform_ver(self):
-        _, ver, _ = platform.linux_distribution()
+        _, ver, _ = self._distribution()
         ver = ver.lower().strip().replace(' ', '-')
         return ver # Permitted to be None.
 
