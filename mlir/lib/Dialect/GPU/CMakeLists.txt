@@ -1,6 +1,7 @@
 add_llvm_library(MLIRGPU
   IR/GPUDialect.cpp
   IR/DialectRegistration.cpp
+  Transforms/AllReduceLowering.cpp
   Transforms/KernelOutlining.cpp
   Transforms/MemoryPromotion.cpp
 
