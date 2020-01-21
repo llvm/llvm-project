@@ -1,4 +1,0 @@
-RUN: llvm-readobj --dynamic-table %p/Inputs/rpath.exe.elf-x86_64 \
-RUN:   | FileCheck %s
-
-CHECK: 0x000000000000000F RPATH  Library rpath: [/usr/local/lib]
