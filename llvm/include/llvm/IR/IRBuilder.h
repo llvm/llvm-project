@@ -569,20 +569,40 @@ public:
   /// specified, it will be added to the instruction. Likewise with alias.scope
   /// and noalias tags.
   CallInst *CreateElementUnorderedAtomicMemCpy(
-      Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign,
-      uint64_t Size, uint32_t ElementSize, MDNode *TBAATag = nullptr,
-      MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
-      MDNode *NoAliasTag = nullptr) {
-    return CreateElementUnorderedAtomicMemCpy(
-        Dst, DstAlign, Src, SrcAlign, getInt64(Size), ElementSize, TBAATag,
-        TBAAStructTag, ScopeTag, NoAliasTag);
-  }
-
-  CallInst *CreateElementUnorderedAtomicMemCpy(
-      Value *Dst, unsigned DstAlign, Value *Src, unsigned SrcAlign, Value *Size,
+      Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
       uint32_t ElementSize, MDNode *TBAATag = nullptr,
       MDNode *TBAAStructTag = nullptr, MDNode *ScopeTag = nullptr,
       MDNode *NoAliasTag = nullptr);
+
+  /// FIXME: Remove this function once transition to Align is over.
+  /// Use the version that takes Align instead of this one.
+  LLVM_ATTRIBUTE_DEPRECATED(CallInst *CreateElementUnorderedAtomicMemCpy(
+                                Value *Dst, unsigned DstAlign, Value *Src,
+                                unsigned SrcAlign, uint64_t Size,
+                                uint32_t ElementSize, MDNode *TBAATag = nullptr,
+                                MDNode *TBAAStructTag = nullptr,
+                                MDNode *ScopeTag = nullptr,
+                                MDNode *NoAliasTag = nullptr),
+                            "Use the version that takes Align instead") {
+    return CreateElementUnorderedAtomicMemCpy(
+        Dst, Align(DstAlign), Src, Align(SrcAlign), getInt64(Size), ElementSize,
+        TBAATag, TBAAStructTag, ScopeTag, NoAliasTag);
+  }
+
+  /// FIXME: Remove this function once transition to Align is over.
+  /// Use the version that takes Align instead of this one.
+  LLVM_ATTRIBUTE_DEPRECATED(CallInst *CreateElementUnorderedAtomicMemCpy(
+                                Value *Dst, unsigned DstAlign, Value *Src,
+                                unsigned SrcAlign, Value *Size,
+                                uint32_t ElementSize, MDNode *TBAATag = nullptr,
+                                MDNode *TBAAStructTag = nullptr,
+                                MDNode *ScopeTag = nullptr,
+                                MDNode *NoAliasTag = nullptr),
+                            "Use the version that takes Align instead") {
+    return CreateElementUnorderedAtomicMemCpy(
+        Dst, Align(DstAlign), Src, Align(SrcAlign), Size, ElementSize, TBAATag,
+        TBAAStructTag, ScopeTag, NoAliasTag);
+  }
 
   /// Create and insert a memmove between the specified
   /// pointers.
