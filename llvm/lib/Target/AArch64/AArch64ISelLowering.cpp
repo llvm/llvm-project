@@ -293,6 +293,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::UINT_TO_FP, MVT::i128, Custom);
   setOperationAction(ISD::FP_ROUND, MVT::f32, Custom);
   setOperationAction(ISD::FP_ROUND, MVT::f64, Custom);
+  setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Custom);
+  setOperationAction(ISD::STRICT_FP_ROUND, MVT::f64, Custom);
 
   // Variable arguments.
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
@@ -2521,21 +2523,26 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
 
 SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
                                              SelectionDAG &DAG) const {
-  if (Op.getOperand(0).getValueType() != MVT::f128) {
+  bool IsStrict = Op->isStrictFPOpcode();
+  SDValue SrcVal = Op.getOperand(IsStrict ? 1 : 0);
+  if (SrcVal.getValueType() != MVT::f128) {
     // It's legal except when f128 is involved
     return Op;
   }
 
   RTLIB::Libcall LC;
-  LC = RTLIB::getFPROUND(Op.getOperand(0).getValueType(), Op.getValueType());
+  LC = RTLIB::getFPROUND(SrcVal.getValueType(), Op.getValueType());
 
   // FP_ROUND node has a second operand indicating whether it is known to be
   // precise. That doesn't take part in the LibCall so we can't directly use
   // LowerF128Call.
-  SDValue SrcVal = Op.getOperand(0);
   MakeLibCallOptions CallOptions;
-  return makeLibCall(DAG, LC, Op.getValueType(), SrcVal, CallOptions,
-                     SDLoc(Op)).first;
+  SDValue Chain = IsStrict ? Op.getOperand(0) : SDValue();
+  SDValue Result;
+  SDLoc dl(Op);
+  std::tie(Result, Chain) = makeLibCall(DAG, LC, Op.getValueType(), SrcVal,
+                                        CallOptions, dl, Chain);
+  return IsStrict ? DAG.getMergeValues({Result, Chain}, dl) : Result;
 }
 
 SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
@@ -3210,6 +3217,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::FDIV:
     return LowerF128Call(Op, DAG, RTLIB::DIV_F128);
   case ISD::FP_ROUND:
+  case ISD::STRICT_FP_ROUND:
     return LowerFP_ROUND(Op, DAG);
   case ISD::FP_EXTEND:
     return LowerFP_EXTEND(Op, DAG);
