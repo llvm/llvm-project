@@ -9727,8 +9727,8 @@ static Value *EmitX86MaskedStore(CodeGenFunction &CGF,
   return CGF.Builder.CreateMaskedStore(Ops[1], Ptr, Align, MaskVec);
 }
 
-static Value *EmitX86MaskedLoad(CodeGenFunction &CGF,
-                                ArrayRef<Value *> Ops, unsigned Align) {
+static Value *EmitX86MaskedLoad(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
+                                Align Alignment) {
   // Cast the pointer to right type.
   Value *Ptr = CGF.Builder.CreateBitCast(Ops[0],
                                llvm::PointerType::getUnqual(Ops[1]->getType()));
@@ -9736,7 +9736,7 @@ static Value *EmitX86MaskedLoad(CodeGenFunction &CGF,
   Value *MaskVec = getMaskVecValue(CGF, Ops[2],
                                    Ops[1]->getType()->getVectorNumElements());
 
-  return CGF.Builder.CreateMaskedLoad(Ptr, Align, MaskVec, Ops[1]);
+  return CGF.Builder.CreateMaskedLoad(Ptr, Alignment, MaskVec, Ops[1]);
 }
 
 static Value *EmitX86ExpandLoad(CodeGenFunction &CGF,
@@ -10731,11 +10731,11 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_loaddqudi128_mask:
   case X86::BI__builtin_ia32_loaddqudi256_mask:
   case X86::BI__builtin_ia32_loaddqudi512_mask:
-    return EmitX86MaskedLoad(*this, Ops, 1);
+    return EmitX86MaskedLoad(*this, Ops, Align::None());
 
   case X86::BI__builtin_ia32_loadss128_mask:
   case X86::BI__builtin_ia32_loadsd128_mask:
-    return EmitX86MaskedLoad(*this, Ops, 1);
+    return EmitX86MaskedLoad(*this, Ops, Align::None());
 
   case X86::BI__builtin_ia32_loadaps128_mask:
   case X86::BI__builtin_ia32_loadaps256_mask:
@@ -10748,11 +10748,10 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_movdqa32load512_mask:
   case X86::BI__builtin_ia32_movdqa64load128_mask:
   case X86::BI__builtin_ia32_movdqa64load256_mask:
-  case X86::BI__builtin_ia32_movdqa64load512_mask: {
-    unsigned Align =
-      getContext().getTypeAlignInChars(E->getArg(1)->getType()).getQuantity();
-    return EmitX86MaskedLoad(*this, Ops, Align);
-  }
+  case X86::BI__builtin_ia32_movdqa64load512_mask:
+    return EmitX86MaskedLoad(
+        *this, Ops,
+        getContext().getTypeAlignInChars(E->getArg(1)->getType()).getAsAlign());
 
   case X86::BI__builtin_ia32_expandloaddf128_mask:
   case X86::BI__builtin_ia32_expandloaddf256_mask:

@@ -2263,7 +2263,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr,
                           : ShuffledMask;
         }
         NewLoad =
-            Builder.CreateMaskedLoad(AddrParts[Part], Group->getAlignment(),
+            Builder.CreateMaskedLoad(AddrParts[Part], Group->getAlign(),
                                      GroupMask, UndefVec, "wide.masked.vec");
       }
       else
@@ -2475,8 +2475,8 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
       auto *VecPtr = CreateVecPtr(Part, State.get(Addr, {0, 0}));
       if (isMaskRequired)
         NewLI = Builder.CreateMaskedLoad(
-            VecPtr, Alignment.value(), BlockInMaskParts[Part],
-            UndefValue::get(DataTy), "wide.masked.load");
+            VecPtr, Alignment, BlockInMaskParts[Part], UndefValue::get(DataTy),
+            "wide.masked.load");
       else
         NewLI = Builder.CreateAlignedLoad(DataTy, VecPtr, Alignment.value(),
                                           "wide.load");

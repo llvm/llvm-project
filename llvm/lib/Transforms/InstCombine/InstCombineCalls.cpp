@@ -1331,7 +1331,7 @@ static Instruction *simplifyX86MaskedLoad(IntrinsicInst &II, InstCombiner &IC) {
 
   // The pass-through vector for an x86 masked load is a zero vector.
   CallInst *NewMaskedLoad =
-      IC.Builder.CreateMaskedLoad(PtrCast, 1, BoolMask, ZeroVec);
+      IC.Builder.CreateMaskedLoad(PtrCast, Align::None(), BoolMask, ZeroVec);
   return IC.replaceInstUsesWith(II, NewMaskedLoad);
 }
 

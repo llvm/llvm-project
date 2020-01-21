@@ -509,6 +509,7 @@ public:
   bool isReverse() const { return Reverse; }
   uint32_t getFactor() const { return Factor; }
   uint32_t getAlignment() const { return Alignment.value(); }
+  Align getAlign() const { return Alignment; }
   uint32_t getNumMembers() const { return Members.size(); }
 
   /// Try to insert a new member \p Instr with index \p Index and
