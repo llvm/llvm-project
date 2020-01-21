@@ -77,9 +77,19 @@ define i64 @fptoui_i64_f32(float %x) #0 {
   ret i64 %val
 }
 
-; TODO: sitofp_f32_i32 (missing STRICT_FP_ROUND handling)
+; CHECK-LABEL: sitofp_f32_i32:
+; FIXME-CHECK: scvtf s0, w0
+define float @sitofp_f32_i32(i32 %x) #0 {
+  %val = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %val
+}
 
-; TODO: uitofp_f32_i32 (missing STRICT_FP_ROUND handling)
+; CHECK-LABEL: uitofp_f32_i32:
+; FIXME-CHECK: ucvtf s0, w0
+define float @uitofp_f32_i32(i32 %x) #0 {
+  %val = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %val
+}
 
 ; TODO: sitofp_f32_i64 (missing STRICT_SINT_TO_FP handling)
 
@@ -880,7 +890,12 @@ define i32 @fcmps_une_f64(double %a, double %b) #0 {
 
 ; Single/Double conversion intrinsics
 
-; TODO: fptrunc_f32 (missing STRICT_FP_ROUND handling)
+; CHECK-LABEL: fptrunc_f32:
+; CHECK: fcvt s0, d0
+define float @fptrunc_f32(double %x) #0 {
+  %val = call float @llvm.experimental.constrained.fptrunc.f32.f64(double %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %val
+}
 
 ; CHECK-LABEL: fpext_f32:
 ; CHECK: fcvt d0, s0
