@@ -752,13 +752,21 @@ public:
                                  Value *PassThru = nullptr,
                                  const Twine &Name = ""),
       "Use the version that takes Align instead") {
-    return CreateMaskedLoad(Ptr, Align(Alignment), Mask, PassThru, Name);
+    return CreateMaskedLoad(Ptr, assumeAligned(Alignment), Mask, PassThru,
+                            Name);
   }
   CallInst *CreateMaskedLoad(Value *Ptr, Align Alignment, Value *Mask,
                              Value *PassThru = nullptr, const Twine &Name = "");
 
   /// Create a call to Masked Store intrinsic
-  CallInst *CreateMaskedStore(Value *Val, Value *Ptr, unsigned Align,
+  LLVM_ATTRIBUTE_DEPRECATED(CallInst *CreateMaskedStore(Value *Val, Value *Ptr,
+                                                        unsigned Alignment,
+                                                        Value *Mask),
+                            "Use the version that takes Align instead") {
+    return CreateMaskedStore(Val, Ptr, assumeAligned(Alignment), Mask);
+  }
+
+  CallInst *CreateMaskedStore(Value *Val, Value *Ptr, Align Alignment,
                               Value *Mask);
 
   /// Create a call to Masked Gather intrinsic

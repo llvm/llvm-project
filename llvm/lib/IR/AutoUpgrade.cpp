@@ -1237,18 +1237,19 @@ static Value *UpgradeMaskedStore(IRBuilder<> &Builder,
   // Cast the pointer to the right type.
   Ptr = Builder.CreateBitCast(Ptr,
                               llvm::PointerType::getUnqual(Data->getType()));
-  unsigned Align =
-    Aligned ? cast<VectorType>(Data->getType())->getBitWidth() / 8 : 1;
+  const Align Alignment =
+      Aligned ? Align(cast<VectorType>(Data->getType())->getBitWidth() / 8)
+              : Align::None();
 
   // If the mask is all ones just emit a regular store.
   if (const auto *C = dyn_cast<Constant>(Mask))
     if (C->isAllOnesValue())
-      return Builder.CreateAlignedStore(Data, Ptr, Align);
+      return Builder.CreateAlignedStore(Data, Ptr, Alignment);
 
   // Convert the mask from an integer type to a vector of i1.
   unsigned NumElts = Data->getType()->getVectorNumElements();
   Mask = getX86MaskVec(Builder, Mask, NumElts);
-  return Builder.CreateMaskedStore(Data, Ptr, Align, Mask);
+  return Builder.CreateMaskedStore(Data, Ptr, Alignment, Mask);
 }
 
 static Value *UpgradeMaskedLoad(IRBuilder<> &Builder,

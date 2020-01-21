@@ -9714,9 +9714,8 @@ static Value *getMaskVecValue(CodeGenFunction &CGF, Value *Mask,
   return MaskVec;
 }
 
-static Value *EmitX86MaskedStore(CodeGenFunction &CGF,
-                                 ArrayRef<Value *> Ops,
-                                 unsigned Align) {
+static Value *EmitX86MaskedStore(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
+                                 Align Alignment) {
   // Cast the pointer to right type.
   Value *Ptr = CGF.Builder.CreateBitCast(Ops[0],
                                llvm::PointerType::getUnqual(Ops[1]->getType()));
@@ -9724,7 +9723,7 @@ static Value *EmitX86MaskedStore(CodeGenFunction &CGF,
   Value *MaskVec = getMaskVecValue(CGF, Ops[2],
                                    Ops[1]->getType()->getVectorNumElements());
 
-  return CGF.Builder.CreateMaskedStore(Ops[1], Ptr, Align, MaskVec);
+  return CGF.Builder.CreateMaskedStore(Ops[1], Ptr, Alignment, MaskVec);
 }
 
 static Value *EmitX86MaskedLoad(CodeGenFunction &CGF, ArrayRef<Value *> Ops,
@@ -10592,12 +10591,12 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_storedquqi512_mask:
   case X86::BI__builtin_ia32_storeupd512_mask:
   case X86::BI__builtin_ia32_storeups512_mask:
-    return EmitX86MaskedStore(*this, Ops, 1);
+    return EmitX86MaskedStore(*this, Ops, Align::None());
 
   case X86::BI__builtin_ia32_storess128_mask:
-  case X86::BI__builtin_ia32_storesd128_mask: {
-    return EmitX86MaskedStore(*this, Ops, 1);
-  }
+  case X86::BI__builtin_ia32_storesd128_mask:
+    return EmitX86MaskedStore(*this, Ops, Align::None());
+
   case X86::BI__builtin_ia32_vpopcntb_128:
   case X86::BI__builtin_ia32_vpopcntd_128:
   case X86::BI__builtin_ia32_vpopcntq_128:
@@ -10708,11 +10707,11 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   case X86::BI__builtin_ia32_movdqa32store512_mask:
   case X86::BI__builtin_ia32_movdqa64store512_mask:
   case X86::BI__builtin_ia32_storeaps512_mask:
-  case X86::BI__builtin_ia32_storeapd512_mask: {
-    unsigned Align =
-      getContext().getTypeAlignInChars(E->getArg(1)->getType()).getQuantity();
-    return EmitX86MaskedStore(*this, Ops, Align);
-  }
+  case X86::BI__builtin_ia32_storeapd512_mask:
+    return EmitX86MaskedStore(
+        *this, Ops,
+        getContext().getTypeAlignInChars(E->getArg(1)->getType()).getAsAlign());
+
   case X86::BI__builtin_ia32_loadups128_mask:
   case X86::BI__builtin_ia32_loadups256_mask:
   case X86::BI__builtin_ia32_loadups512_mask:
