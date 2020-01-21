@@ -995,21 +995,22 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   // FIXME: Rather than parsing the whole line table and then copying it over
   // into LLDB, we should explore using a callback to populate the line table
   // while we parse to reduce memory usage.
-  LineSequence *sequence = LineTable::CreateLineSequenceContainer();
-  std::vector<LineSequence *> sequences;
+  std::unique_ptr<LineSequence> sequence =
+      LineTable::CreateLineSequenceContainer();
+  std::vector<std::unique_ptr<LineSequence>> sequences;
   for (auto &row : line_table->Rows) {
     LineTable::AppendLineEntryToSequence(
-        sequence, row.Address.Address, row.Line, row.Column, row.File,
+        sequence.get(), row.Address.Address, row.Line, row.Column, row.File,
         row.IsStmt, row.BasicBlock, row.PrologueEnd, row.EpilogueBegin,
         row.EndSequence);
     if (row.EndSequence) {
-      sequences.push_back(sequence);
+      sequences.push_back(std::move(sequence));
       sequence = LineTable::CreateLineSequenceContainer();
     }
   }
 
   std::unique_ptr<LineTable> line_table_up =
-      std::make_unique<LineTable>(&comp_unit, sequences);
+      std::make_unique<LineTable>(&comp_unit, std::move(sequences));
 
   if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile()) {
     // We have an object file that has a line table with addresses that are not
