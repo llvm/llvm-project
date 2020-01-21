@@ -215,7 +215,7 @@ private:
   SourceMgr SM;
   FileCheckRequest Req;
   FileCheckPatternContext Context;
-  Pattern P{Check::CheckPlain, &Context, LineNumber++};
+  Pattern P{Check::CheckPlain, &Context, LineNumber};
 
 public:
   PatternTester() {
@@ -236,15 +236,17 @@ public:
   }
 
   void initNextPattern() {
-    P = Pattern(Check::CheckPlain, &Context, LineNumber++);
+    P = Pattern(Check::CheckPlain, &Context, ++LineNumber);
   }
+
+  size_t getLineNumber() const { return LineNumber; }
 
   bool parseSubstExpect(StringRef Expr, bool IsLegacyLineExpr = false) {
     StringRef ExprBufferRef = bufferize(SM, Expr);
     Optional<NumericVariable *> DefinedNumericVariable;
     return errorToBool(P.parseNumericSubstitutionBlock(
                             ExprBufferRef, DefinedNumericVariable,
-                            IsLegacyLineExpr, LineNumber - 1, &Context, SM)
+                            IsLegacyLineExpr, LineNumber, &Context, SM)
                            .takeError());
   }
 
@@ -414,16 +416,17 @@ TEST_F(FileCheckTest, Match) {
   // the correct value for @LINE.
   Tester.initNextPattern();
   EXPECT_FALSE(Tester.parsePatternExpect("[[#@LINE]]"));
-  // Ok, @LINE is 7 now.
-  EXPECT_FALSE(Tester.matchExpect("7"));
+  // Ok, @LINE matches the current line number.
+  EXPECT_FALSE(Tester.matchExpect(std::to_string(Tester.getLineNumber())));
   Tester.initNextPattern();
-  // @LINE is now 8, match with substitution failure.
+  // Match with substitution failure.
   EXPECT_FALSE(Tester.parsePatternExpect("[[#UNKNOWN]]"));
   EXPECT_TRUE(Tester.matchExpect("FOO"));
   Tester.initNextPattern();
-  // Check that @LINE is 9 as expected.
+  // Check that @LINE matches the later (given the calls to initNextPattern())
+  // line number.
   EXPECT_FALSE(Tester.parsePatternExpect("[[#@LINE]]"));
-  EXPECT_FALSE(Tester.matchExpect("9"));
+  EXPECT_FALSE(Tester.matchExpect(std::to_string(Tester.getLineNumber())));
 }
 
 TEST_F(FileCheckTest, Substitution) {
