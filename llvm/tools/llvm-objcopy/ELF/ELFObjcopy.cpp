@@ -83,6 +83,8 @@ uint64_t getNewShfFlags(SectionFlag AllFlags) {
     NewFlags |= ELF::SHF_MERGE;
   if (AllFlags & SectionFlag::SecStrings)
     NewFlags |= ELF::SHF_STRINGS;
+  if (AllFlags & SectionFlag::SecExclude)
+    NewFlags |= ELF::SHF_EXCLUDE;
   return NewFlags;
 }
 
@@ -90,10 +92,11 @@ static uint64_t getSectionFlagsPreserveMask(uint64_t OldFlags,
                                             uint64_t NewFlags) {
   // Preserve some flags which should not be dropped when setting flags.
   // Also, preserve anything OS/processor dependant.
-  const uint64_t PreserveMask = ELF::SHF_COMPRESSED | ELF::SHF_EXCLUDE |
-                                ELF::SHF_GROUP | ELF::SHF_LINK_ORDER |
-                                ELF::SHF_MASKOS | ELF::SHF_MASKPROC |
-                                ELF::SHF_TLS | ELF::SHF_INFO_LINK;
+  const uint64_t PreserveMask =
+      (ELF::SHF_COMPRESSED | ELF::SHF_GROUP | ELF::SHF_LINK_ORDER |
+       ELF::SHF_MASKOS | ELF::SHF_MASKPROC | ELF::SHF_TLS |
+       ELF::SHF_INFO_LINK) &
+      ~ELF::SHF_EXCLUDE;
   return (OldFlags & PreserveMask) | (NewFlags & ~PreserveMask);
 }
 
