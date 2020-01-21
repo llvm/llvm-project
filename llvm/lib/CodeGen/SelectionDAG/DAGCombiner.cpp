@@ -17100,6 +17100,10 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
 
   // (vextract (scalar_to_vector val, 0) -> val
   if (VecOp.getOpcode() == ISD::SCALAR_TO_VECTOR) {
+    // Only 0'th element of SCALAR_TO_VECTOR is defined.
+    if (DAG.isKnownNeverZero(Index))
+      return DAG.getUNDEF(ScalarVT);
+
     // Check if the result type doesn't match the inserted element type. A
     // SCALAR_TO_VECTOR may truncate the inserted element and the
     // EXTRACT_VECTOR_ELT may widen the extracted vector.
