@@ -727,7 +727,14 @@ public:
   CallInst *CreateInvariantStart(Value *Ptr, ConstantInt *Size = nullptr);
 
   /// Create a call to Masked Load intrinsic
-  CallInst *CreateMaskedLoad(Value *Ptr, unsigned Align, Value *Mask,
+  LLVM_ATTRIBUTE_DEPRECATED(
+      CallInst *CreateMaskedLoad(Value *Ptr, unsigned Alignment, Value *Mask,
+                                 Value *PassThru = nullptr,
+                                 const Twine &Name = ""),
+      "Use the version that takes Align instead") {
+    return CreateMaskedLoad(Ptr, Align(Alignment), Mask, PassThru, Name);
+  }
+  CallInst *CreateMaskedLoad(Value *Ptr, Align Alignment, Value *Mask,
                              Value *PassThru = nullptr, const Twine &Name = "");
 
   /// Create a call to Masked Store intrinsic
