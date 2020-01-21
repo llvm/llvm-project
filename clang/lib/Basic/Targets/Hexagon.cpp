@@ -24,6 +24,9 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__qdsp6__", "1");
   Builder.defineMacro("__hexagon__", "1");
 
+  // The macro __HVXDBL__ is deprecated.
+  bool DefineHvxDbl = false;
+
   if (CPU == "hexagonv5") {
     Builder.defineMacro("__HEXAGON_V5__");
     Builder.defineMacro("__HEXAGON_ARCH__", "5");
@@ -37,19 +40,26 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__QDSP6_V55__");
     Builder.defineMacro("__QDSP6_ARCH__", "55");
   } else if (CPU == "hexagonv60") {
+    DefineHvxDbl = true;
     Builder.defineMacro("__HEXAGON_V60__");
     Builder.defineMacro("__HEXAGON_ARCH__", "60");
     Builder.defineMacro("__QDSP6_V60__");
     Builder.defineMacro("__QDSP6_ARCH__", "60");
   } else if (CPU == "hexagonv62") {
+    DefineHvxDbl = true;
     Builder.defineMacro("__HEXAGON_V62__");
     Builder.defineMacro("__HEXAGON_ARCH__", "62");
   } else if (CPU == "hexagonv65") {
+    DefineHvxDbl = true;
     Builder.defineMacro("__HEXAGON_V65__");
     Builder.defineMacro("__HEXAGON_ARCH__", "65");
   } else if (CPU == "hexagonv66") {
+    DefineHvxDbl = true;
     Builder.defineMacro("__HEXAGON_V66__");
     Builder.defineMacro("__HEXAGON_ARCH__", "66");
+  } else if (CPU == "hexagonv67") {
+    Builder.defineMacro("__HEXAGON_V67__");
+    Builder.defineMacro("__HEXAGON_ARCH__", "67");
   }
 
   if (hasFeature("hvx-length64b")) {
@@ -62,8 +72,12 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__HVX__");
     Builder.defineMacro("__HVX_ARCH__", HVXVersion);
     Builder.defineMacro("__HVX_LENGTH__", "128");
-    // FIXME: This macro is deprecated.
-    Builder.defineMacro("__HVXDBL__");
+    if (DefineHvxDbl)
+      Builder.defineMacro("__HVXDBL__");
+  }
+
+  if (hasFeature("audio")) {
+    Builder.defineMacro("__HEXAGON_AUDIO__");
   }
 }
 
@@ -95,6 +109,8 @@ bool HexagonTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       UseLongCalls = true;
     else if (F == "-long-calls")
       UseLongCalls = false;
+    else if (F == "+audio")
+      HasAudio = true;
   }
   return true;
 }
@@ -145,6 +161,7 @@ bool HexagonTargetInfo::hasFeature(StringRef Feature) const {
       .Case("hvx-length64b", HasHVX64B)
       .Case("hvx-length128b", HasHVX128B)
       .Case("long-calls", UseLongCalls)
+      .Case("audio", HasAudio)
       .Default(false);
 }
 
@@ -154,9 +171,10 @@ struct CPUSuffix {
 };
 
 static constexpr CPUSuffix Suffixes[] = {
-    {{"hexagonv5"},  {"5"}},  {{"hexagonv55"}, {"55"}},
-    {{"hexagonv60"}, {"60"}}, {{"hexagonv62"}, {"62"}},
-    {{"hexagonv65"}, {"65"}}, {{"hexagonv66"}, {"66"}},
+    {{"hexagonv5"},  {"5"}},  {{"hexagonv55"},  {"55"}},
+    {{"hexagonv60"}, {"60"}}, {{"hexagonv62"},  {"62"}},
+    {{"hexagonv65"}, {"65"}}, {{"hexagonv66"},  {"66"}},
+    {{"hexagonv67"}, {"67"}},
 };
 
 const char *HexagonTargetInfo::getHexagonCPUSuffix(StringRef Name) {

@@ -13,7 +13,7 @@
 #ifndef LLVM_LIB_TARGET_HEXAGON_HEXAGONSUBTARGET_H
 #define LLVM_LIB_TARGET_HEXAGON_HEXAGONSUBTARGET_H
 
-#include "HexagonDepArch.h"
+#include "HexagonArch.h"
 #include "HexagonFrameLowering.h"
 #include "HexagonISelLowering.h"
 #include "HexagonInstrInfo.h"
@@ -45,6 +45,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UseHVX64BOps = false;
   bool UseHVX128BOps = false;
 
+  bool UseAudioOps = false;
   bool UseCompound = false;
   bool UseLongCalls = false;
   bool UseMemops = false;
@@ -52,6 +53,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UseNewValueJumps = false;
   bool UseNewValueStores = false;
   bool UseSmallData = false;
+  bool UseUnsafeMath = false;
   bool UseZRegOps = false;
 
   bool HasPreV65 = false;
@@ -165,7 +167,14 @@ public:
   bool hasV66OpsOnly() const {
     return getHexagonArchVersion() == Hexagon::ArchEnum::V66;
   }
+  bool hasV67Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V67;
+  }
+  bool hasV67OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V67;
+  }
 
+  bool useAudioOps() const { return UseAudioOps; }
   bool useCompound() const { return UseCompound; }
   bool useLongCalls() const { return UseLongCalls; }
   bool useMemops() const { return UseMemops; }
@@ -173,6 +182,7 @@ public:
   bool useNewValueJumps() const { return UseNewValueJumps; }
   bool useNewValueStores() const { return UseNewValueStores; }
   bool useSmallData() const { return UseSmallData; }
+  bool useUnsafeMath() const { return UseUnsafeMath; }
   bool useZRegOps() const { return UseZRegOps; }
 
   bool useHVXOps() const {
@@ -189,6 +199,9 @@ public:
   }
   bool useHVXV66Ops() const {
     return HexagonHVXVersion >= Hexagon::ArchEnum::V66;
+  }
+  bool useHVXV67Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V67;
   }
   bool useHVX128BOps() const { return useHVXOps() && UseHVX128BOps; }
   bool useHVX64BOps() const { return useHVXOps() && UseHVX64BOps; }
@@ -207,7 +220,11 @@ public:
   // compiler time and will be removed eventually anyway.
   bool enableMachineSchedDefaultSched() const override { return false; }
 
+  // For use with PostRAScheduling: get the anti-dependence breaking that should
+  // be performed before post-RA scheduling.
   AntiDepBreakMode getAntiDepBreakMode() const override { return ANTIDEP_ALL; }
+  /// True if the subtarget should run a scheduler after register
+  /// allocation.
   bool enablePostRAScheduler() const override { return true; }
 
   bool enableSubRegLiveness() const override;

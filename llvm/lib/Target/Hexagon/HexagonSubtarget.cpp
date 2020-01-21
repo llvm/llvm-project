@@ -90,24 +90,16 @@ HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
 
 HexagonSubtarget &
 HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
-  static std::map<StringRef, Hexagon::ArchEnum> CpuTable{
-      {"generic", Hexagon::ArchEnum::V60},
-      {"hexagonv5", Hexagon::ArchEnum::V5},
-      {"hexagonv55", Hexagon::ArchEnum::V55},
-      {"hexagonv60", Hexagon::ArchEnum::V60},
-      {"hexagonv62", Hexagon::ArchEnum::V62},
-      {"hexagonv65", Hexagon::ArchEnum::V65},
-      {"hexagonv66", Hexagon::ArchEnum::V66},
-  };
-
-  auto FoundIt = CpuTable.find(CPUString);
-  if (FoundIt != CpuTable.end())
-    HexagonArchVersion = FoundIt->second;
+  Optional<Hexagon::ArchEnum> ArchVer =
+      Hexagon::GetCpu(Hexagon::CpuTable, CPUString);
+  if (ArchVer)
+    HexagonArchVersion = *ArchVer;
   else
     llvm_unreachable("Unrecognized Hexagon processor version");
 
   UseHVX128BOps = false;
   UseHVX64BOps = false;
+  UseAudioOps = false;
   UseLongCalls = false;
 
   UseBSBScheduling = hasV60Ops() && EnableBSBSched;
