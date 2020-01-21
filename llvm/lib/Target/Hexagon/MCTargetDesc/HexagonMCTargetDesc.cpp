@@ -37,6 +37,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
+#include <mutex>
 #include <new>
 #include <string>
 #include <unordered_map>
