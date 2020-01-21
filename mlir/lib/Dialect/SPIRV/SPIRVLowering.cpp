@@ -41,10 +41,18 @@ Type SPIRVTypeConverter::getIndexType(MLIRContext *context) {
 // TODO(ravishankarm): This is a utility function that should probably be
 // exposed by the SPIR-V dialect. Keeping it local till the use case arises.
 static Optional<int64_t> getTypeNumBytes(Type t) {
-  if (auto integerType = t.dyn_cast<IntegerType>()) {
-    return integerType.getWidth() / 8;
-  } else if (auto floatType = t.dyn_cast<FloatType>()) {
-    return floatType.getWidth() / 8;
+  if (spirv::SPIRVDialect::isValidScalarType(t)) {
+    auto bitWidth = t.getIntOrFloatBitWidth();
+    // According to the SPIR-V spec:
+    // "There is no physical size or bit pattern defined for values with boolean
+    // type. If they are stored (in conjunction with OpVariable), they can only
+    // be used with logical addressing operations, not physical, and only with
+    // non-externally visible shader Storage Classes: Workgroup, CrossWorkgroup,
+    // Private, Function, Input, and Output."
+    if (bitWidth == 1) {
+      return llvm::None;
+    }
+    return bitWidth / 8;
   } else if (auto memRefType = t.dyn_cast<MemRefType>()) {
     // TODO: Layout should also be controlled by the ABI attributes. For now
     // using the layout from MemRef.
