@@ -2297,6 +2297,15 @@ TEST(CompletionTest, DeprecatedResults) {
                            AllOf(Named("TestClangc"), Deprecated())));
 }
 
+TEST(SignatureHelpTest, PartialSpec) {
+  const auto Results = signatures(R"cpp(
+      template <typename T> struct Foo {};
+      template <typename T> struct Foo<T*> { Foo(T); };
+      Foo<int*> F(^);)cpp");
+  EXPECT_THAT(Results.signatures, Contains(Sig("Foo([[T]])")));
+  EXPECT_EQ(0, Results.activeParameter);
+}
+
 TEST(SignatureHelpTest, InsideArgument) {
   {
     const auto Results = signatures(R"cpp(
