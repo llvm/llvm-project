@@ -7,9 +7,10 @@ define arm_aapcs_vfpcc <8 x half> @test_vmaxnmaq_f16(<8 x half> %a, <8 x half> %
 ; CHECK-NEXT:    vmaxnma.f16 q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> %b)
-  %1 = tail call <8 x half> @llvm.maxnum.v8f16(<8 x half> %a, <8 x half> %0)
-  ret <8 x half> %1
+  %0 = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> %a)
+  %1 = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> %b)
+  %2 = tail call <8 x half> @llvm.maxnum.v8f16(<8 x half> %0, <8 x half> %1)
+  ret <8 x half> %2
 }
 
 declare <8 x half> @llvm.fabs.v8f16(<8 x half>) #1
@@ -22,9 +23,10 @@ define arm_aapcs_vfpcc <4 x float> @test_vmaxnmaq_f32(<4 x float> %a, <4 x float
 ; CHECK-NEXT:    vmaxnma.f32 q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
-  %0 = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %b)
-  %1 = tail call <4 x float> @llvm.maxnum.v4f32(<4 x float> %a, <4 x float> %0)
-  ret <4 x float> %1
+  %0 = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
+  %1 = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %b)
+  %2 = tail call <4 x float> @llvm.maxnum.v4f32(<4 x float> %0, <4 x float> %1)
+  ret <4 x float> %2
 }
 
 declare <4 x float> @llvm.fabs.v4f32(<4 x float>) #1
