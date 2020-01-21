@@ -391,9 +391,10 @@ block-arg-list ::= `(` ssa-id-and-type-list? `)`
 ```
 
 A [block](https://en.wikipedia.org/wiki/Basic_block) is a sequential list of
-operations without control flow (calls are not considered control flow for this
-purpose) that are executed from top to bottom. The last operation in a block is
-a [terminator operation](#terminator-operations), which ends the block.
+operations without control flow (a call or entering an op's region is not
+considered control flow for this purpose) that are executed from top to bottom.
+The last operation in a block is a
+[terminator operation](#terminator-operations), which ends the block.
 
 Blocks in MLIR take a list of block arguments, which represent SSA PHI nodes in
 a functional notation. The arguments are defined by the block, and values are
@@ -501,8 +502,11 @@ outside the region completely.
 Regions are Single-Entry-Multiple-Exit (SEME). This means that control can only
 flow into the first block of the region, but can flow out of the region at the
 end of any of the contained blocks (This behavior is similar to that of a
-function body in most programming languages). When exiting a Region, control is
-returned to the enclosing operation.
+function body in most programming languages). A terminator of a block within a
+region may transfer the control flow to another block in this region, or return
+it to the immediately enclosing op. The semantics of the enclosing op defines
+where the control flow is transmitted next. It may, for example, enter a region
+of the same op, including the same region that returned the control flow.
 
 The enclosing operation determines the way in which control is transmitted into
 the entry block of a Region. The successor to a region’s exit points may not
