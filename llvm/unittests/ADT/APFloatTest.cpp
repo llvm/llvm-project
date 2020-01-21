@@ -1021,7 +1021,6 @@ TEST(APFloatTest, fromStringSpecials) {
   for (StringRef InfStr : InfStrings) {
     bool Negative = InfStr.front() == '-';
 
-    StringRef TestStr;
     APFloat F(Sem);
     bool HasError =
         !F.convertFromString(InfStr, llvm::APFloat::rmNearestTiesToEven);
