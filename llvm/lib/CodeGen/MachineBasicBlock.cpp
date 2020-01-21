@@ -1117,7 +1117,7 @@ bool MachineBasicBlock::canSplitCriticalEdge(
     return false;
 
   // We may need to update this's terminator, but we can't do that if
-  // AnalyzeBranch fails. If this uses a jump table, we won't touch it.
+  // analyzeBranch fails. If this uses a jump table, we won't touch it.
   const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
@@ -1234,7 +1234,7 @@ bool MachineBasicBlock::CorrectExtraCFGEdges(MachineBasicBlock *DestA,
                                              MachineBasicBlock *DestB,
                                              bool IsCond) {
   // The values of DestA and DestB frequently come from a call to the
-  // 'TargetInstrInfo::AnalyzeBranch' method. We take our meaning of the initial
+  // 'TargetInstrInfo::analyzeBranch' method. We take our meaning of the initial
   // values from there.
   //
   // 1. If both DestA and DestB are null, then the block ends with no branches

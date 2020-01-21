@@ -640,7 +640,7 @@ CountValue *HexagonHardwareLoops::getLoopTripCount(MachineLoop *L,
   if (!TB || (FB && TB != Header && FB != Header))
     return nullptr;
 
-  // Branches of form "if (!P) ..." cause HexagonInstrInfo::AnalyzeBranch
+  // Branches of form "if (!P) ..." cause HexagonInstrInfo::analyzeBranch
   // to put imm(0), followed by P in the vector Cond.
   // If TB is not the header, it means that the "not-taken" path must lead
   // to the header.
@@ -1657,7 +1657,7 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
 
   MachineBasicBlock *TB = nullptr, *FB = nullptr;
   SmallVector<MachineOperand,2> Cond;
-  // AnalyzeBranch returns true if it fails to analyze branch.
+  // analyzeBranch returns true if it fails to analyze branch.
   bool NotAnalyzed = TII->analyzeBranch(*ExitingBlock, TB, FB, Cond, false);
   if (NotAnalyzed || Cond.empty())
     return false;
@@ -1693,7 +1693,7 @@ bool HexagonHardwareLoops::fixupInductionVariable(MachineLoop *L) {
 
   // Expecting a predicate register as a condition.  It won't be a hardware
   // predicate register at this point yet, just a vreg.
-  // HexagonInstrInfo::AnalyzeBranch for negated branches inserts imm(0)
+  // HexagonInstrInfo::analyzeBranch for negated branches inserts imm(0)
   // into Cond, followed by the predicate register.  For non-negated branches
   // it's just the register.
   unsigned CSz = Cond.size();

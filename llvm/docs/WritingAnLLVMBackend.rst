@@ -1100,21 +1100,21 @@ Branch Folding and If Conversion
 --------------------------------
 
 Performance can be improved by combining instructions or by eliminating
-instructions that are never reached.  The ``AnalyzeBranch`` method in
+instructions that are never reached.  The ``analyzeBranch`` method in
 ``XXXInstrInfo`` may be implemented to examine conditional instructions and
-remove unnecessary instructions.  ``AnalyzeBranch`` looks at the end of a
+remove unnecessary instructions.  ``analyzeBranch`` looks at the end of a
 machine basic block (MBB) for opportunities for improvement, such as branch
 folding and if conversion.  The ``BranchFolder`` and ``IfConverter`` machine
 function passes (see the source files ``BranchFolding.cpp`` and
-``IfConversion.cpp`` in the ``lib/CodeGen`` directory) call ``AnalyzeBranch``
+``IfConversion.cpp`` in the ``lib/CodeGen`` directory) call ``analyzeBranch``
 to improve the control flow graph that represents the instructions.
 
-Several implementations of ``AnalyzeBranch`` (for ARM, Alpha, and X86) can be
-examined as models for your own ``AnalyzeBranch`` implementation.  Since SPARC
-does not implement a useful ``AnalyzeBranch``, the ARM target implementation is
+Several implementations of ``analyzeBranch`` (for ARM, Alpha, and X86) can be
+examined as models for your own ``analyzeBranch`` implementation.  Since SPARC
+does not implement a useful ``analyzeBranch``, the ARM target implementation is
 shown below.
 
-``AnalyzeBranch`` returns a Boolean value and takes four parameters:
+``analyzeBranch`` returns a Boolean value and takes four parameters:
 
 * ``MachineBasicBlock &MBB`` --- The incoming block to be examined.
 
@@ -1130,12 +1130,12 @@ shown below.
 In the simplest case, if a block ends without a branch, then it falls through
 to the successor block.  No destination blocks are specified for either ``TBB``
 or ``FBB``, so both parameters return ``NULL``.  The start of the
-``AnalyzeBranch`` (see code below for the ARM target) shows the function
+``analyzeBranch`` (see code below for the ARM target) shows the function
 parameters and the code for the simplest case.
 
 .. code-block:: c++
 
-  bool ARMInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
+  bool ARMInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *&TBB,
                                    MachineBasicBlock *&FBB,
                                    std::vector<MachineOperand> &Cond) const
@@ -1145,7 +1145,7 @@ parameters and the code for the simplest case.
       return false;
 
 If a block ends with a single unconditional branch instruction, then
-``AnalyzeBranch`` (shown below) should return the destination of that branch in
+``analyzeBranch`` (shown below) should return the destination of that branch in
 the ``TBB`` parameter.
 
 .. code-block:: c++
@@ -1171,7 +1171,7 @@ instruction and return the penultimate branch in the ``TBB`` parameter.
 
 A block may end with a single conditional branch instruction that falls through
 to successor block if the condition evaluates to false.  In that case,
-``AnalyzeBranch`` (shown below) should return the destination of that
+``analyzeBranch`` (shown below) should return the destination of that
 conditional branch in the ``TBB`` parameter and a list of operands in the
 ``Cond`` parameter to evaluate the condition.
 
@@ -1186,7 +1186,7 @@ conditional branch in the ``TBB`` parameter and a list of operands in the
     }
 
 If a block ends with both a conditional branch and an ensuing unconditional
-branch, then ``AnalyzeBranch`` (shown below) should return the conditional
+branch, then ``analyzeBranch`` (shown below) should return the conditional
 branch destination (assuming it corresponds to a conditional evaluation of
 "``true``") in the ``TBB`` parameter and the unconditional branch destination
 in the ``FBB`` (corresponding to a conditional evaluation of "``false``").  A
@@ -1209,14 +1209,14 @@ parameter.
 For the last two cases (ending with a single conditional branch or ending with
 one conditional and one unconditional branch), the operands returned in the
 ``Cond`` parameter can be passed to methods of other instructions to create new
-branches or perform other operations.  An implementation of ``AnalyzeBranch``
-requires the helper methods ``RemoveBranch`` and ``InsertBranch`` to manage
+branches or perform other operations.  An implementation of ``analyzeBranch``
+requires the helper methods ``removeBranch`` and ``insertBranch`` to manage
 subsequent operations.
 
-``AnalyzeBranch`` should return false indicating success in most circumstances.
-``AnalyzeBranch`` should only return true when the method is stumped about what
+``analyzeBranch`` should return false indicating success in most circumstances.
+``analyzeBranch`` should only return true when the method is stumped about what
 to do, for example, if a block has three terminating branches.
-``AnalyzeBranch`` may return true if it encounters a terminator it cannot
+``analyzeBranch`` may return true if it encounters a terminator it cannot
 handle, such as an indirect branch.
 
 .. _instruction-selector:

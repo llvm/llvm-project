@@ -152,7 +152,7 @@ static void maybeUpdateTerminator(MachineBasicBlock *MBB) {
     AllAnalyzable &= Term.isBranch() && !Term.isIndirectBranch();
   }
   assert((AnyBarrier || AllAnalyzable) &&
-         "AnalyzeBranch needs to analyze any block with a fallthrough");
+         "analyzeBranch needs to analyze any block with a fallthrough");
   if (AllAnalyzable)
     MBB->updateTerminator();
 }
