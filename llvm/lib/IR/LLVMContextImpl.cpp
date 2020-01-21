@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLVMContextImpl.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/Type.h"
@@ -142,18 +143,19 @@ LLVMContextImpl::~LLVMContextImpl() {
 }
 
 void LLVMContextImpl::dropTriviallyDeadConstantArrays() {
-  bool Changed;
-  do {
-    Changed = false;
+  SmallSetVector<ConstantArray *, 4> WorkList(ArrayConstants.begin(),
+                                              ArrayConstants.end());
 
-    for (auto I = ArrayConstants.begin(), E = ArrayConstants.end(); I != E;) {
-      auto *C = *I++;
-      if (C->use_empty()) {
-        Changed = true;
-        C->destroyConstant();
+  while (!WorkList.empty()) {
+    ConstantArray *C = WorkList.pop_back_val();
+    if (C->use_empty()) {
+      for (const Use &Op : C->operands()) {
+        if (auto *COp = dyn_cast<ConstantArray>(Op))
+          WorkList.insert(COp);
       }
+      C->destroyConstant();
     }
-  } while (Changed);
+  }
 }
 
 void Module::dropTriviallyDeadConstantArrays() {
