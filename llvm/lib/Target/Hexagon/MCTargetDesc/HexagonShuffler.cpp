@@ -184,10 +184,6 @@ void HexagonShuffler::append(MCInst const &ID, MCInst const *Extender,
   Packet.push_back(PI);
 }
 
-const static struct {
-  unsigned first;
-  unsigned second;
-} jumpSlots[] = {{8, 4}, {8, 2}, {8, 1}, {4, 2}, {4, 1}, {2, 1}};
 
 static const unsigned Slot0Mask = 1 << 0;
 static const unsigned Slot1Mask = 1 << 1;
@@ -256,6 +252,8 @@ bool HexagonShuffler::applySlotRestrictions(
   restrictSlot1AOK(Summary);
   restrictNoSlot1Store(Summary);
 
+  permitNonSlot();
+
   // These restrictions can modify the slot masks in the instructions
   // in the Packet member, but they can also detect constraint failures
   // which are fatal.
@@ -279,20 +277,22 @@ void HexagonShuffler::restrictBranchOrder(HexagonPacketSummary const &Summary) {
     return;
   }
 
+  const static std::pair<unsigned, unsigned> jumpSlots[] = {
+      {8, 4}, {8, 2}, {8, 1}, {4, 2}, {4, 1}, {2, 1}};
   // try all possible choices
-  for (unsigned int i = 0; i < array_lengthof(jumpSlots); ++i) {
+  for (std::pair<unsigned, unsigned> jumpSlot : jumpSlots) {
     // validate first jump with this slot rule
-    if (!(jumpSlots[i].first & Summary.branchInsts[0]->Core.getUnits()))
+    if (!(jumpSlot.first & Summary.branchInsts[0]->Core.getUnits()))
       continue;
 
     // validate second jump with this slot rule
-    if (!(jumpSlots[i].second & Summary.branchInsts[1]->Core.getUnits()))
+    if (!(jumpSlot.second & Summary.branchInsts[1]->Core.getUnits()))
       continue;
 
     // both valid for this configuration, set new slot rules
     const HexagonPacket PacketSave = Packet;
-    Summary.branchInsts[0]->Core.setUnits(jumpSlots[i].first);
-    Summary.branchInsts[1]->Core.setUnits(jumpSlots[i].second);
+    Summary.branchInsts[0]->Core.setUnits(jumpSlot.first);
+    Summary.branchInsts[1]->Core.setUnits(jumpSlot.second);
 
     const bool HasShuffledPacket = tryAuction(Summary).hasValue();
     if (HasShuffledPacket)
@@ -304,6 +304,15 @@ void HexagonShuffler::restrictBranchOrder(HexagonPacketSummary const &Summary) {
   }
 
   reportError("invalid instruction packet: out of slots");
+}
+
+
+void HexagonShuffler::permitNonSlot() {
+  for (HexagonInstr &ISJ : insts()) {
+    const bool RequiresSlot = HexagonMCInstrInfo::requiresSlot(STI, *ISJ.ID);
+    if (!RequiresSlot)
+      ISJ.Core.setAllUnits();
+  }
 }
 
 bool HexagonShuffler::ValidResourceUsage(HexagonPacketSummary const &Summary) {
@@ -394,8 +403,16 @@ bool HexagonShuffler::restrictStoreLoadOrder(
     // A single store must use slot #0.
     if (HexagonMCInstrInfo::getDesc(MCII, ID).mayStore()) {
       if (!Summary.store0) {
-        if (Summary.stores == 1 &&
-            (Summary.loads == 0 || !isMemReorderDisabled()))
+        const bool PacketHasNoOnlySlot0 =
+            llvm::none_of(insts(), [&](HexagonInstr const &I) {
+              return I.Core.getUnits() == Slot0Mask &&
+                     I.ID->getOpcode() != ID.getOpcode();
+            });
+        const bool SafeToMoveToSlot0 =
+            (Summary.loads == 0) ||
+            (!isMemReorderDisabled() && PacketHasNoOnlySlot0);
+
+        if (Summary.stores == 1 && SafeToMoveToSlot0)
           // Pin the store to slot #0 only if isMemReorderDisabled() == false
           ISJ->Core.setUnits(ISJ->Core.getUnits() & slotSingleStore);
         else if (Summary.stores >= 1) {
@@ -415,12 +432,6 @@ bool HexagonShuffler::restrictStoreLoadOrder(
         reportError("invalid instruction packet: too many stores");
         return false;
       }
-    }
-
-    if (!ISJ->Core.getUnits()) {
-      // Error if insn may not be executed in any slot.
-      reportError("invalid instruction packet: out of slots");
-      return false;
     }
   }
 

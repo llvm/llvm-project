@@ -23,6 +23,9 @@ include "llvm/Target/Target.td"
 // Hexagon Architectures
 include "HexagonDepArch.td"
 
+def ProcTinyCore: SubtargetFeature<"tinycore", "HexagonProcFamily",
+      "TinyCore", "Hexagon Tiny Core">;
+
 // Hexagon ISA Extensions
 def ExtensionZReg: SubtargetFeature<"zreg", "UseZRegOps", "true",
       "Hexagon ZReg extension instructions">;
@@ -114,6 +117,11 @@ def HasPreV65          : Predicate<"HST->hasPreV65()">,
 def HasMemNoShuf       : Predicate<"HST->hasMemNoShuf()">,
                          AssemblerPredicate<"FeatureMemNoShuf">;
 def UseUnsafeMath      : Predicate<"HST->useUnsafeMath()">;
+def NotOptTinyCore     : Predicate<"!HST->isTinyCore() ||"
+                                   "MF->getFunction().hasOptSize()"> {
+  let RecomputePerFunction = 1;
+}
+def UseSmallData       : Predicate<"HST->useSmallData()">;
 
 def Hvx64:  HwMode<"+hvx-length64b">;
 def Hvx128: HwMode<"+hvx-length128b">;
@@ -386,6 +394,14 @@ def : Proc<"hexagonv67", HexagonModelV67,
            [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
             FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
             FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
+// Need to update the correct features for tiny core.
+// Disable NewValueJumps since the packetizer is unable to handle a packet with
+// a new value jump and another SLOT0 instruction.
+def : Proc<"hexagonv67t", HexagonModelV67T,
+           [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
+            ProcTinyCore, ExtensionAudio,
+            FeatureCompound, FeatureMemNoShuf, FeatureMemops,
+            FeatureNVS, FeaturePackets, FeatureSmallData]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing
