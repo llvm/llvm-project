@@ -654,7 +654,6 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
   if (IsSigned)
     ++DivBits;
 
-  Type *Ty = Num->getType();
   Type *I32Ty = Builder.getInt32Ty();
   Type *F32Ty = Builder.getFloatTy();
   ConstantInt *One = Builder.getInt32(1);
