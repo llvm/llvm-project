@@ -6809,6 +6809,14 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
                                 const TargetLowering &TLI) {
   // Handle simple but common cases only.
   Type *StoreType = SI.getValueOperand()->getType();
+
+  // The code below assumes shifting a value by <number of bits>,
+  // whereas scalable vectors would have to be shifted by
+  // <2log(vscale) + number of bits> in order to store the
+  // low/high parts. Bailing out for now.
+  if (StoreType->isVectorTy() && StoreType->getVectorIsScalable())
+    return false;
+
   if (!DL.typeSizeEqualsStoreSize(StoreType) ||
       DL.getTypeSizeInBits(StoreType) == 0)
     return false;
