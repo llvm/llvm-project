@@ -69,6 +69,11 @@ static cl::opt<unsigned> UnrollThresholdIf(
   cl::desc("Unroll threshold increment for AMDGPU for each if statement inside loop"),
   cl::init(150), cl::Hidden);
 
+static cl::opt<bool> UseLegacyDA(
+  "amdgpu-use-legacy-divergence-analysis",
+  cl::desc("Enable legacy divergence analysis for AMDGPU"),
+  cl::init(false), cl::Hidden);
+
 static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
                               unsigned Depth = 0) {
   const Instruction *I = dyn_cast<Instruction>(Cond);
@@ -599,6 +604,11 @@ static bool isArgPassedInSGPR(const Argument *A) {
     // TODO: Should calls support inreg for SGPR inputs?
     return false;
   }
+}
+
+/// \returns true if the new GPU divergence analysis is enabled.
+bool GCNTTIImpl::useGPUDivergenceAnalysis() const {
+  return !UseLegacyDA;
 }
 
 /// \returns true if the result of the value could potentially be
