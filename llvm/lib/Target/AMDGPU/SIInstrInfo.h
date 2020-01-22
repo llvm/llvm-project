@@ -245,6 +245,9 @@ public:
   // DstRC, then AMDGPU::COPY is returned.
   unsigned getMovOpcode(const TargetRegisterClass *DstRC) const;
 
+  const MCInstrDesc &getIndirectRegWritePseudo(
+    unsigned VecSize, unsigned EltSize, bool IsSGPR) const;
+
   LLVM_READONLY
   int commuteOpcode(unsigned Opc) const;
 
