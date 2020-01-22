@@ -1,5 +1,5 @@
-# RUN: yaml2obj %p/Inputs/arm64-slice.yaml > %t-arm64.o
-# RUN: yaml2obj %p/Inputs/armv7-slice.yaml > %t-armv7.o
+# RUN: yaml2obj %p/Inputs/arm64-slice.yaml -o %t-arm64.o
+# RUN: yaml2obj %p/Inputs/armv7-slice.yaml -o %t-armv7.o
 
 # RUN: not llvm-lipo %t-armv7.o %t-arm64.o -create -o %t.o -segalign a 2>&1 | FileCheck --check-prefix=MISSING_ARG %s
 # MISSING_ARG: error: segalign is missing an argument: expects -segalign arch_type alignment_value

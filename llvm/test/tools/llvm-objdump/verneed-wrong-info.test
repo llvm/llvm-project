@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objdump -p %t 2>&1 | FileCheck %s
 
 # We have a SHT_GNU_verneed section with a broken sh_info field

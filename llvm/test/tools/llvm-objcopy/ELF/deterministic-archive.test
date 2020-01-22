@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 
 # Create an archive, specifying U so that timestamps/etc. are preserved.
 # We only test timestamps as a proxy for full deterministic writing; i.e. we

@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 # RUN: llvm-objcopy %t.o %t.2.o
 # RUN: llvm-readelf --elf-section-groups --sections %t.o | FileCheck %s --check-prefix=IN
 # RUN: llvm-readelf --elf-section-groups --sections %t.2.o | FileCheck %s --check-prefix=OUT

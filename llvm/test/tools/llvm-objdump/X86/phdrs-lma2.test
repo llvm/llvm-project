@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 
 ## If there are no sections with different LMA to VMA,
 ## we do not display LMA column.

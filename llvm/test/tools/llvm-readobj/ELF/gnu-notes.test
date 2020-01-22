@@ -1,6 +1,6 @@
 ## Test tools are able to dump different types of notes.
 
-# RUN: yaml2obj --docnum=1 %s > %t1.so
+# RUN: yaml2obj --docnum=1 %s -o %t1.so
 # RUN: llvm-readelf --notes %t1.so | FileCheck %s --check-prefix=GNU --strict-whitespace --match-full-lines
 # RUN: llvm-readobj --notes %t1.so | FileCheck %s --check-prefix=LLVM
 # RUN: llvm-objcopy --strip-sections %t1.so %t1.stripped.so
@@ -104,7 +104,7 @@ ProgramHeaders:
 ## Test tools report an error if a note section has an invalid offset
 ## that goes past the end of file.
 
-# RUN: yaml2obj --docnum=2 %s > %t2.so
+# RUN: yaml2obj --docnum=2 %s -o %t2.so
 # RUN: not llvm-readelf --notes %t2.so 2>&1 | FileCheck -DFILE=%t2.so %s --check-prefix=ERR1
 # RUN: not llvm-readobj --notes %t2.so 2>&1 | FileCheck -DFILE=%t2.so %s --check-prefix=ERR1
 
@@ -125,7 +125,7 @@ Sections:
 ## Test tools report an error if a note section has invalid size
 ## that goes past the end of file.
 
-# RUN: yaml2obj --docnum=3 %s > %t3.so
+# RUN: yaml2obj --docnum=3 %s -o %t3.so
 # RUN: not llvm-readelf --notes %t3.so 2>&1 | FileCheck -DFILE=%t3.so %s --check-prefix=ERR2
 # RUN: not llvm-readobj --notes %t3.so 2>&1 | FileCheck -DFILE=%t3.so %s --check-prefix=ERR2
 
@@ -146,7 +146,7 @@ Sections:
 ## Test tools report an error if a note program header has an invalid offset that
 ## goes past the end of file.
 
-# RUN: yaml2obj --docnum=4 %s > %t4.so
+# RUN: yaml2obj --docnum=4 %s -o %t4.so
 # RUN: not llvm-readelf --notes %t4.so 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefix=ERR3
 # RUN: not llvm-readobj --notes %t4.so 2>&1 | FileCheck -DFILE=%t4.so %s --check-prefix=ERR3
 
@@ -171,7 +171,7 @@ ProgramHeaders:
 ## Test tools report an error if a note program header has an invalid size that
 ## goes past the end of file.
 
-# RUN: yaml2obj --docnum=5 %s > %t5.so
+# RUN: yaml2obj --docnum=5 %s -o %t5.so
 # RUN: not llvm-readelf --notes %t5.so 2>&1 | FileCheck -DFILE=%t5.so  %s --check-prefix=ERR4
 # RUN: not llvm-readobj --notes %t5.so 2>&1 | FileCheck -DFILE=%t5.so %s --check-prefix=ERR4
 

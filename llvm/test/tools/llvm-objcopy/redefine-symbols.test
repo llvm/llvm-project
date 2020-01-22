@@ -1,6 +1,6 @@
 ## Test common parsing errors general to all supported binary formats.
 
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 
 # RUN: not llvm-objcopy --redefine-sym bar %t /dev/null 2>&1 | FileCheck %s --check-prefix=BAD-FORMAT
 # BAD-FORMAT: bad format for --redefine-sym

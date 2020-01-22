@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --rename-section=.test1=.test2 --rename-section=.test3=.test4 --rename-section=.test5=.test6 %t %t2
 # RUN: llvm-readobj --file-headers --sections --section-data %t2 | FileCheck %s
 
