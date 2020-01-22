@@ -118,6 +118,7 @@ add_llvm_target(AMDGPUCodeGen
   SIOptimizeExecMaskingPreRA.cpp
   SIPeepholeSDWA.cpp
   SIRegisterInfo.cpp
+  SIRemoveShortExecBranches.cpp
   SIShrinkInstructions.cpp
   SIWholeQuadMode.cpp
   GCNILPSched.cpp

@@ -1,5 +1,5 @@
 add_lldb_library(lldbPluginInstrumentationRuntimeASan PLUGIN
-  ASanRuntime.cpp
+  InstrumentationRuntimeASan.cpp
 
   LINK_LIBS
     lldbBreakpoint

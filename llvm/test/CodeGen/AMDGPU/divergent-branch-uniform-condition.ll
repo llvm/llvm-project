@@ -44,9 +44,8 @@ define amdgpu_ps void @main(i32, float) {
 ; CHECK-NEXT:    s_mov_b64 s[6:7], -1
 ; CHECK-NEXT:    s_and_saveexec_b64 s[8:9], vcc
 ; CHECK-NEXT:    s_xor_b64 s[8:9], exec, s[8:9]
-; CHECK-NEXT:    ; mask branch BB0_1
 ; CHECK-NEXT:    s_cbranch_execz BB0_1
-; CHECK-NEXT:  BB0_5: ; %endif2
+; CHECK-NEXT:  ; %bb.5: ; %endif2
 ; CHECK-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_add_i32 s0, s0, 1
 ; CHECK-NEXT:    s_xor_b64 s[6:7], exec, -1
@@ -55,10 +54,9 @@ define amdgpu_ps void @main(i32, float) {
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[0:1], s[4:5]
-; CHECK-NEXT:    ; mask branch BB0_8
-; CHECK-NEXT:  BB0_7: ; %if1
+; CHECK-NEXT:  ; %bb.7: ; %if1
 ; CHECK-NEXT:    v_sqrt_f32_e32 v1, v0
-; CHECK-NEXT:  BB0_8: ; %endloop
+; CHECK-NEXT:  ; %bb.8: ; %endloop
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; CHECK-NEXT:    exp mrt0 v1, v1, v1, v1 done vm
 ; CHECK-NEXT:    s_endpgm

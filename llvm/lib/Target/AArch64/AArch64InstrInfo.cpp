@@ -496,14 +496,21 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
 
 bool AArch64InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                        ArrayRef<MachineOperand> Cond,
-                                       unsigned TrueReg, unsigned FalseReg,
-                                       int &CondCycles, int &TrueCycles,
+                                       unsigned DstReg, unsigned TrueReg,
+                                       unsigned FalseReg, int &CondCycles,
+                                       int &TrueCycles,
                                        int &FalseCycles) const {
   // Check register classes.
   const MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   const TargetRegisterClass *RC =
       RI.getCommonSubClass(MRI.getRegClass(TrueReg), MRI.getRegClass(FalseReg));
   if (!RC)
+    return false;
+
+  // Also need to check the dest regclass, in case we're trying to optimize
+  // something like:
+  // %1(gpr) = PHI %2(fpr), bb1, %(fpr), bb2
+  if (!RI.getCommonSubClass(RC, MRI.getRegClass(DstReg)))
     return false;
 
   // Expanding cbz/tbz requires an extra cycle of latency on the condition.

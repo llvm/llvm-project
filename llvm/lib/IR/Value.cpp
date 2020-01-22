@@ -729,6 +729,17 @@ MaybeAlign Value::getPointerAlignment(const DataLayout &DL) const {
       ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
       return MaybeAlign(CI->getLimitedValue());
     }
+  } else if (auto *CstPtr = dyn_cast<Constant>(this)) {
+    if (auto *CstInt = dyn_cast_or_null<ConstantInt>(ConstantExpr::getPtrToInt(
+            const_cast<Constant *>(CstPtr), DL.getIntPtrType(getType()),
+            /*OnlyIfReduced=*/true))) {
+      size_t TrailingZeros = CstInt->getValue().countTrailingZeros();
+      // While the actual alignment may be large, elsewhere we have
+      // an arbitrary upper alignmet limit, so let's clamp to it.
+      return Align(TrailingZeros < Value::MaxAlignmentExponent
+                       ? uint64_t(1) << TrailingZeros
+                       : Value::MaximumAlignment);
+    }
   }
   return llvm::None;
 }

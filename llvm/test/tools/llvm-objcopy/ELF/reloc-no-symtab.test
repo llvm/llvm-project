@@ -5,7 +5,7 @@
 # $ llvm-strip /tmp/a -o /tmp/b
 # llvm-strip: error: Link field value 0 in section .rela.plt is invalid.
 
-# RUN: yaml2obj %s > %t.original
+# RUN: yaml2obj %s -o %t.original
 # RUN: llvm-strip %t.original -o %t.stripped
 # RUN: llvm-readobj --sections %t.original | FileCheck %s
 # RUN: llvm-readobj --sections %t.stripped | FileCheck %s

@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 
 # Tests that only global symbols (via -G/--keep-global-symbols) are kept via
 # the several different variants of -G/--keep-global-symbol(s).

@@ -559,6 +559,9 @@ def ftest_module_file_extension_EQ :
            "The argument is parsed as blockname:major:minor:hashed:user info">;
 def fconcepts_ts : Flag<["-"], "fconcepts-ts">,
   HelpText<"Enable C++ Extensions for Concepts.">;
+def fno_concept_satisfaction_caching : Flag<["-"],
+                                            "fno-concept-satisfaction-caching">,
+  HelpText<"Disable satisfaction caching for C++2a Concepts.">;
 
 let Group = Action_Group in {
 

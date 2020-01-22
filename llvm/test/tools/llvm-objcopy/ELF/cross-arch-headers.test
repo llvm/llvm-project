@@ -2,7 +2,7 @@
 # and DWO output.
 # Note that we don't actually need any DWARF to produce the DWO file.
 
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 
 # Without --output-format, the format should match the input.
 # RUN: llvm-objcopy %t.o %t.default.o --split-dwo=%t.default.dwo

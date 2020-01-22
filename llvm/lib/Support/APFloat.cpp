@@ -1439,23 +1439,24 @@ IEEEFloat::opStatus IEEEFloat::addOrSubtractSpecials(const IEEEFloat &rhs,
   default:
     llvm_unreachable(nullptr);
 
+  case PackCategoriesIntoKey(fcZero, fcNaN):
+  case PackCategoriesIntoKey(fcNormal, fcNaN):
+  case PackCategoriesIntoKey(fcInfinity, fcNaN):
+    assign(rhs);
+    LLVM_FALLTHROUGH;
   case PackCategoriesIntoKey(fcNaN, fcZero):
   case PackCategoriesIntoKey(fcNaN, fcNormal):
   case PackCategoriesIntoKey(fcNaN, fcInfinity):
   case PackCategoriesIntoKey(fcNaN, fcNaN):
+    if (isSignaling()) {
+      makeQuiet();
+      return opInvalidOp;
+    }
+    return rhs.isSignaling() ? opInvalidOp : opOK;
+
   case PackCategoriesIntoKey(fcNormal, fcZero):
   case PackCategoriesIntoKey(fcInfinity, fcNormal):
   case PackCategoriesIntoKey(fcInfinity, fcZero):
-    return opOK;
-
-  case PackCategoriesIntoKey(fcZero, fcNaN):
-  case PackCategoriesIntoKey(fcNormal, fcNaN):
-  case PackCategoriesIntoKey(fcInfinity, fcNaN):
-    // We need to be sure to flip the sign here for subtraction because we
-    // don't have a separate negate operation so -NaN becomes 0 - NaN here.
-    sign = rhs.sign ^ subtract;
-    category = fcNaN;
-    copySignificand(rhs);
     return opOK;
 
   case PackCategoriesIntoKey(fcNormal, fcInfinity):
@@ -1562,20 +1563,22 @@ IEEEFloat::opStatus IEEEFloat::multiplySpecials(const IEEEFloat &rhs) {
   default:
     llvm_unreachable(nullptr);
 
+  case PackCategoriesIntoKey(fcZero, fcNaN):
+  case PackCategoriesIntoKey(fcNormal, fcNaN):
+  case PackCategoriesIntoKey(fcInfinity, fcNaN):
+    assign(rhs);
+    sign = false;
+    LLVM_FALLTHROUGH;
   case PackCategoriesIntoKey(fcNaN, fcZero):
   case PackCategoriesIntoKey(fcNaN, fcNormal):
   case PackCategoriesIntoKey(fcNaN, fcInfinity):
   case PackCategoriesIntoKey(fcNaN, fcNaN):
-    sign = false;
-    return opOK;
-
-  case PackCategoriesIntoKey(fcZero, fcNaN):
-  case PackCategoriesIntoKey(fcNormal, fcNaN):
-  case PackCategoriesIntoKey(fcInfinity, fcNaN):
-    sign = false;
-    category = fcNaN;
-    copySignificand(rhs);
-    return opOK;
+    sign ^= rhs.sign; // restore the original sign
+    if (isSignaling()) {
+      makeQuiet();
+      return opInvalidOp;
+    }
+    return rhs.isSignaling() ? opInvalidOp : opOK;
 
   case PackCategoriesIntoKey(fcNormal, fcInfinity):
   case PackCategoriesIntoKey(fcInfinity, fcNormal):
@@ -1607,15 +1610,20 @@ IEEEFloat::opStatus IEEEFloat::divideSpecials(const IEEEFloat &rhs) {
   case PackCategoriesIntoKey(fcZero, fcNaN):
   case PackCategoriesIntoKey(fcNormal, fcNaN):
   case PackCategoriesIntoKey(fcInfinity, fcNaN):
-    category = fcNaN;
-    copySignificand(rhs);
+    assign(rhs);
+    sign = false;
     LLVM_FALLTHROUGH;
   case PackCategoriesIntoKey(fcNaN, fcZero):
   case PackCategoriesIntoKey(fcNaN, fcNormal):
   case PackCategoriesIntoKey(fcNaN, fcInfinity):
   case PackCategoriesIntoKey(fcNaN, fcNaN):
-    sign = false;
-    LLVM_FALLTHROUGH;
+    sign ^= rhs.sign; // restore the original sign
+    if (isSignaling()) {
+      makeQuiet();
+      return opInvalidOp;
+    }
+    return rhs.isSignaling() ? opInvalidOp : opOK;
+
   case PackCategoriesIntoKey(fcInfinity, fcZero):
   case PackCategoriesIntoKey(fcInfinity, fcNormal):
   case PackCategoriesIntoKey(fcZero, fcInfinity):
@@ -1645,21 +1653,24 @@ IEEEFloat::opStatus IEEEFloat::modSpecials(const IEEEFloat &rhs) {
   default:
     llvm_unreachable(nullptr);
 
+  case PackCategoriesIntoKey(fcZero, fcNaN):
+  case PackCategoriesIntoKey(fcNormal, fcNaN):
+  case PackCategoriesIntoKey(fcInfinity, fcNaN):
+    assign(rhs);
+    LLVM_FALLTHROUGH;
   case PackCategoriesIntoKey(fcNaN, fcZero):
   case PackCategoriesIntoKey(fcNaN, fcNormal):
   case PackCategoriesIntoKey(fcNaN, fcInfinity):
   case PackCategoriesIntoKey(fcNaN, fcNaN):
+    if (isSignaling()) {
+      makeQuiet();
+      return opInvalidOp;
+    }
+    return rhs.isSignaling() ? opInvalidOp : opOK;
+
   case PackCategoriesIntoKey(fcZero, fcInfinity):
   case PackCategoriesIntoKey(fcZero, fcNormal):
   case PackCategoriesIntoKey(fcNormal, fcInfinity):
-    return opOK;
-
-  case PackCategoriesIntoKey(fcZero, fcNaN):
-  case PackCategoriesIntoKey(fcNormal, fcNaN):
-  case PackCategoriesIntoKey(fcInfinity, fcNaN):
-    sign = false;
-    category = fcNaN;
-    copySignificand(rhs);
     return opOK;
 
   case PackCategoriesIntoKey(fcNormal, fcZero):
@@ -2621,24 +2632,70 @@ IEEEFloat::convertFromDecimalString(StringRef str, roundingMode rounding_mode) {
 }
 
 bool IEEEFloat::convertFromStringSpecials(StringRef str) {
+  const size_t MIN_NAME_SIZE = 3;
+
+  if (str.size() < MIN_NAME_SIZE)
+    return false;
+
   if (str.equals("inf") || str.equals("INFINITY") || str.equals("+Inf")) {
     makeInf(false);
     return true;
   }
 
-  if (str.equals("-inf") || str.equals("-INFINITY") || str.equals("-Inf")) {
-    makeInf(true);
-    return true;
+  bool IsNegative = str.front() == '-';
+  if (IsNegative) {
+    str = str.drop_front();
+    if (str.size() < MIN_NAME_SIZE)
+      return false;
+
+    if (str.equals("inf") || str.equals("INFINITY") || str.equals("Inf")) {
+      makeInf(true);
+      return true;
+    }
   }
 
-  if (str.equals("nan") || str.equals("NaN")) {
-    makeNaN(false, false);
-    return true;
+  // If we have a 's' (or 'S') prefix, then this is a Signaling NaN.
+  bool IsSignaling = str.front() == 's' || str.front() == 'S';
+  if (IsSignaling) {
+    str = str.drop_front();
+    if (str.size() < MIN_NAME_SIZE)
+      return false;
   }
 
-  if (str.equals("-nan") || str.equals("-NaN")) {
-    makeNaN(false, true);
-    return true;
+  if (str.startswith("nan") || str.startswith("NaN")) {
+    str = str.drop_front(3);
+
+    // A NaN without payload.
+    if (str.empty()) {
+      makeNaN(IsSignaling, IsNegative);
+      return true;
+    }
+
+    // Allow the payload to be inside parentheses.
+    if (str.front() == '(') {
+      // Parentheses should be balanced (and not empty).
+      if (str.size() <= 2 || str.back() != ')')
+        return false;
+
+      str = str.slice(1, str.size() - 1);
+    }
+
+    // Determine the payload number's radix.
+    unsigned Radix = 10;
+    if (str[0] == '0') {
+      if (str.size() > 1 && tolower(str[1]) == 'x') {
+        str = str.drop_front(2);
+        Radix = 16;
+      } else
+        Radix = 8;
+    }
+
+    // Parse the payload and make the NaN.
+    APInt Payload;
+    if (!str.getAsInteger(Radix, Payload)) {
+      makeNaN(IsSignaling, IsNegative, &Payload);
+      return true;
+    }
   }
 
   return false;

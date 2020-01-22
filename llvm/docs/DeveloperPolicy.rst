@@ -384,8 +384,8 @@ after they are committed, depending on the nature of the change).  You are
 encouraged to review other peoples' patches as well, but you aren't required
 to do so.
 
-Current Contributors - Transfering from SVN
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current Contributors - Transferring from SVN
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you had commit access to SVN and would like to request commit access to
 GitHub, please email `llvm-admin <mailto:llvm-admin@lists.llvm.org>`_ with your
 SVN username and GitHub username.
@@ -744,7 +744,7 @@ OpenMP, etc), Polly, and all other subprojects.  There are a few exceptions:
   is used by LLVM.
 * Some subprojects are impractical or uninteresting to relicense (e.g. llvm-gcc
   and dragonegg). These will be split off from the LLVM project (e.g. to
-  separate Github projects), allowing interested people to continue their
+  separate GitHub projects), allowing interested people to continue their
   development elsewhere.
 
 To relicense LLVM, we will be seeking approval from all of the copyright holders
@@ -875,7 +875,7 @@ holds though)::
 
    Q2: If at any time after my contribution, I am able to license other patent
    claims that would have been subject to Apache's Grant of Patent License if
-   they were licenseable by me at the time of my contribution, do those other
+   they were licensable by me at the time of my contribution, do those other
    claims become subject to the Grant of Patent License?
 
    A2: Yes.

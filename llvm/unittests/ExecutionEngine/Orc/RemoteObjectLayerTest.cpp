@@ -105,7 +105,7 @@ MockObjectLayer::ObjectPtr createTestObject() {
   B.CreateRet(ConstantInt::getSigned(Type::getInt32Ty(Ctx), 42));
 
   SimpleCompiler IRCompiler(*TM);
-  return IRCompiler(*MB.getModule());
+  return cantFail(IRCompiler(*MB.getModule()));
 }
 
 TEST(RemoteObjectLayer, AddObject) {

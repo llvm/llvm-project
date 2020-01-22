@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objdump --all-headers -D -z %t | FileCheck %s --check-prefixes=COMMON,NOADJUST
 # RUN: llvm-objdump --all-headers -D -z --adjust-vma=0x0 %t | FileCheck %s --check-prefixes=COMMON,NOADJUST
 # RUN: llvm-objdump --all-headers -D -z --adjust-vma=0x123000 %t | FileCheck %s --check-prefixes=COMMON,ADJUST

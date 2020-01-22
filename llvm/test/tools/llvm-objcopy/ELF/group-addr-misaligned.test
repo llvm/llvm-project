@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: not llvm-objcopy %t %t2 2>&1 | FileCheck %s
 # CHECK: error: invalid alignment 1 of group section '.group'
 

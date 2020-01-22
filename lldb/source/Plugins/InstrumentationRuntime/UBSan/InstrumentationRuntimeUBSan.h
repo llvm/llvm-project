@@ -1,4 +1,4 @@
-//===-- TSanRuntime.h -------------------------------------------*- C++ -*-===//
+//===-- InstrumentationRuntimeUBSan.h ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ThreadSanitizerRuntime_h_
-#define liblldb_ThreadSanitizerRuntime_h_
+#ifndef liblldb_UndefinedBehaviorSanitizerRuntime_h_
+#define liblldb_UndefinedBehaviorSanitizerRuntime_h_
 
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/InstrumentationRuntime.h"
@@ -16,9 +16,10 @@
 
 namespace lldb_private {
 
-class ThreadSanitizerRuntime : public lldb_private::InstrumentationRuntime {
+class InstrumentationRuntimeUBSan
+    : public lldb_private::InstrumentationRuntime {
 public:
-  ~ThreadSanitizerRuntime() override;
+  ~InstrumentationRuntimeUBSan() override;
 
   static lldb::InstrumentationRuntimeSP
   CreateInstance(const lldb::ProcessSP &process_sp);
@@ -43,7 +44,7 @@ public:
   GetBacktracesFromExtendedStopInfo(StructuredData::ObjectSP info) override;
 
 private:
-  ThreadSanitizerRuntime(const lldb::ProcessSP &process_sp)
+  InstrumentationRuntimeUBSan(const lldb::ProcessSP &process_sp)
       : lldb_private::InstrumentationRuntime(process_sp) {}
 
   const RegularExpression &GetPatternForRuntimeLibrary() override;
@@ -60,22 +61,8 @@ private:
                                   lldb::user_id_t break_loc_id);
 
   StructuredData::ObjectSP RetrieveReportData(ExecutionContextRef exe_ctx_ref);
-
-  std::string FormatDescription(StructuredData::ObjectSP report);
-
-  std::string GenerateSummary(StructuredData::ObjectSP report);
-
-  lldb::addr_t GetMainRacyAddress(StructuredData::ObjectSP report);
-
-  std::string GetLocationDescription(StructuredData::ObjectSP report,
-                                     lldb::addr_t &global_addr,
-                                     std::string &global_name,
-                                     std::string &filename, uint32_t &line);
-
-  lldb::addr_t GetFirstNonInternalFramePc(StructuredData::ObjectSP trace,
-                                          bool skip_one_frame = false);
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_ThreadSanitizerRuntime_h_
+#endif // liblldb_UndefinedBehaviorSanitizerRuntime_h_

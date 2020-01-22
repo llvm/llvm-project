@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 
 # Single flags on a section with no flags:
 # RUN: llvm-objcopy --set-section-flags=.foo=alloc \

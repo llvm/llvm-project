@@ -102,7 +102,7 @@ appropriateness of our response, but we don't guarantee we'll act on it.
 After any incident, the advisory committee will make a report on the situation
 to the LLVM Foundation board. The board may choose to make a public statement
 about the incident. If that's the case, the identities of anyone involved will
-remain confidential unless instructed by those inviduals otherwise.
+remain confidential unless instructed by those individuals otherwise.
 
 Appealing
 =========
@@ -114,7 +114,7 @@ the case.
 
 In general, it is **not** appropriate to appeal a particular decision on
 a public mailing list. Doing so would involve disclosure of information which
-whould be confidential. Disclosing this kind of information publicly may be
+would be confidential. Disclosing this kind of information publicly may be
 considered a separate and (potentially) more serious violation of the Code of
 Conduct. This is not meant to limit discussion of the Code of Conduct, the
 advisory board itself, or the appropriateness of responses in general, but

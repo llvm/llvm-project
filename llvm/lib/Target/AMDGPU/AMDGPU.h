@@ -156,6 +156,9 @@ extern char &SIWholeQuadModeID;
 void initializeSILowerControlFlowPass(PassRegistry &);
 extern char &SILowerControlFlowID;
 
+void initializeSIRemoveShortExecBranchesPass(PassRegistry &);
+extern char &SIRemoveShortExecBranchesID;
+
 void initializeSIInsertSkipsPass(PassRegistry &);
 extern char &SIInsertSkipsPassID;
 

@@ -38,19 +38,9 @@ class PythonSynthDataFormatterTestCase(TestBase):
 
     def data_formatter_commands(self):
         """Test using Python synthetic children provider."""
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.cpp", self.line, num_expected_locations=1, loc_exact=True)
-
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        process = self.dbg.GetSelectedTarget().GetProcess()
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        _, process, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp"), self.line)
 
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
@@ -72,6 +62,7 @@ class PythonSynthDataFormatterTestCase(TestBase):
         # now set up the synth
         self.runCmd("script from fooSynthProvider import *")
         self.runCmd("type synth add -l fooSynthProvider foo")
+        self.runCmd("type synth add -l wrapfooSynthProvider wrapfoo")
         self.expect("type synthetic list foo", substrs=['fooSynthProvider'])
 
         # note that the value of fake_a depends on target byte order
@@ -147,6 +138,10 @@ class PythonSynthDataFormatterTestCase(TestBase):
                     substrs=['r = 45',
                              'fake_a = %d' % fake_a_val,
                              'a = 12'])
+        self.expect("frame variable --ptr-depth 1 wrapper",
+                    substrs=['r = 45',
+                             'fake_a = %d' % fake_a_val,
+                             'a = 12'])
 
         # now add a filter.. it should fail
         self.expect("type filter add foo --child b --child j", error=True,
@@ -160,15 +155,34 @@ class PythonSynthDataFormatterTestCase(TestBase):
                     substrs=['r = 45',
                              'fake_a = %d' % fake_a_val,
                              'a = 12'])
+        self.expect("frame variable --ptr-depth 1 wrapper",
+                    substrs=['r = 45',
+                             'fake_a = %d' % fake_a_val,
+                             'a = 12'])
+
+        # Test that the custom dereference operator for `wrapfoo` works through
+        # the Python API. The synthetic children provider gets queried at
+        # slightly different times in this case.
+        wrapper_var = thread.GetSelectedFrame().FindVariable('wrapper')
+        foo_var = wrapper_var.Dereference()
+        self.assertEqual(foo_var.GetNumChildren(), 3)
+        self.assertEqual(foo_var.GetChildAtIndex(0).GetName(), 'a')
+        self.assertEqual(foo_var.GetChildAtIndex(1).GetName(), 'fake_a')
+        self.assertEqual(foo_var.GetChildAtIndex(2).GetName(), 'r')
 
         # now delete the synth and add the filter
         self.runCmd("type synth delete foo")
+        self.runCmd("type synth delete wrapfoo")
         self.runCmd("type filter add foo --child b --child j")
 
         self.expect('frame variable f00_1',
                     substrs=['b = 2',
                              'j = 18'])
         self.expect("frame variable --ptr-depth 1 f00_ptr", matching=False,
+                    substrs=['r = 45',
+                             'fake_a = %d' % fake_a_val,
+                             'a = 12'])
+        self.expect("frame variable --ptr-depth 1 wrapper", matching=False,
                     substrs=['r = 45',
                              'fake_a = %d' % fake_a_val,
                              'a = 12'])
@@ -194,6 +208,10 @@ class PythonSynthDataFormatterTestCase(TestBase):
                     substrs=['b = 2',
                              'j = 18'])
         self.expect("frame variable --ptr-depth 1 f00_ptr",
+                    substrs=['r = 45',
+                             'fake_a = %d' % fake_a_val,
+                             'a = 12'])
+        self.expect("frame variable --ptr-depth 1 wrapper",
                     substrs=['r = 45',
                              'fake_a = %d' % fake_a_val,
                              'a = 12'])

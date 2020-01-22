@@ -303,9 +303,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, S32, S32)
     .scalarize(0); // TODO: Implement.
 
-  getActionDefinitionsBuilder({G_SADDO, G_SSUBO})
-    .lower();
-
   getActionDefinitionsBuilder(G_BITCAST)
     // Don't worry about the size constraint.
     .legalIf(all(isRegisterType(0), isRegisterType(1)))
@@ -313,6 +310,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalForCartesianProduct({S16, LLT::vector(2, 8), })
     .lower();
 
+
+  getActionDefinitionsBuilder(G_CONSTANT)
+    .legalFor({S1, S32, S64, S16, GlobalPtr,
+               LocalPtr, ConstantPtr, PrivatePtr, FlatPtr })
+    .clampScalar(0, S32, S64)
+    .widenScalarToNextPow2(0)
+    .legalIf(isPointer(0));
 
   getActionDefinitionsBuilder(G_FCONSTANT)
     .legalFor({S32, S64, S16})
@@ -327,21 +331,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .widenScalarToNextPow2(0, 32)
     .clampMaxNumElements(0, S32, 16);
 
-
-  // FIXME: i1 operands to intrinsics should always be legal, but other i1
-  // values may not be legal.  We need to figure out how to distinguish
-  // between these two scenarios.
-  getActionDefinitionsBuilder(G_CONSTANT)
-    .legalFor({S1, S32, S64, S16, GlobalPtr,
-               LocalPtr, ConstantPtr, PrivatePtr, FlatPtr })
-    .clampScalar(0, S32, S64)
-    .widenScalarToNextPow2(0)
-    .legalIf(isPointer(0));
-
   setAction({G_FRAME_INDEX, PrivatePtr}, Legal);
   getActionDefinitionsBuilder(G_GLOBAL_VALUE)
     .customFor({LocalPtr, GlobalPtr, ConstantPtr, Constant32Ptr});
-
+  setAction({G_BLOCK_ADDR, CodePtr}, Legal);
 
   auto &FPOpActions = getActionDefinitionsBuilder(
     { G_FADD, G_FMUL, G_FMA, G_FCANONICALIZE})
@@ -401,9 +394,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0)
     .clampScalar(0, S16, S64);
 
-  // TODO: Implement
-  getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM}).lower();
-
   if (ST.has16BitInsts()) {
     getActionDefinitionsBuilder({G_FSQRT, G_FFLOOR})
       .legalFor({S32, S64, S16})
@@ -424,9 +414,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({{S64, S32}, {S32, S16}})
     .lowerFor({{S64, S16}}) // FIXME: Implement
     .scalarize(0);
-
-  // TODO: Verify V_BFI_B32 is generated from expanded bit ops.
-  getActionDefinitionsBuilder(G_FCOPYSIGN).lower();
 
   getActionDefinitionsBuilder(G_FSUB)
       // Use actual fsub instruction
@@ -498,16 +485,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0);
   }
 
-  getActionDefinitionsBuilder(G_PTR_ADD)
-    .legalForCartesianProduct(AddrSpaces64, {S64})
-    .legalForCartesianProduct(AddrSpaces32, {S32})
-    .scalarize(0);
-
-  getActionDefinitionsBuilder(G_PTR_MASK)
+  getActionDefinitionsBuilder({G_PTR_ADD, G_PTR_MASK})
     .scalarize(0)
     .alwaysLegal();
-
-  setAction({G_BLOCK_ADDR, CodePtr}, Legal);
 
   auto &CmpBuilder =
     getActionDefinitionsBuilder(G_ICMP)
@@ -900,10 +880,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                 {S32, FlatPtr}, {S64, FlatPtr}})
     .legalFor({{S32, LocalPtr}, {S64, LocalPtr},
                {S32, RegionPtr}, {S64, RegionPtr}});
-
-  getActionDefinitionsBuilder(G_ATOMIC_CMPXCHG_WITH_SUCCESS)
-    .lower();
-
   // TODO: Pointer types, any 32-bit or 64-bit vector
 
   // Condition should be s32 for scalar, s1 for vector.
@@ -1124,10 +1100,22 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, MinLegalScalarShiftTy, S64)
     .lower();
 
-  getActionDefinitionsBuilder({G_READ_REGISTER, G_WRITE_REGISTER}).lower();
-
   getActionDefinitionsBuilder(G_READCYCLECOUNTER)
     .legalFor({S64});
+
+  getActionDefinitionsBuilder({
+      // TODO: Verify V_BFI_B32 is generated from expanded bit ops
+      G_FCOPYSIGN,
+
+      G_ATOMIC_CMPXCHG_WITH_SUCCESS,
+      G_READ_REGISTER,
+      G_WRITE_REGISTER,
+
+      G_SADDO, G_SSUBO,
+
+       // TODO: Implement
+      G_FMINIMUM, G_FMAXIMUM
+    }).lower();
 
   getActionDefinitionsBuilder({G_VASTART, G_VAARG, G_BRJT, G_JUMP_TABLE,
         G_DYN_STACKALLOC, G_INDEXED_LOAD, G_INDEXED_SEXTLOAD,

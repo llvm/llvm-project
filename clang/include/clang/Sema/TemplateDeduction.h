@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SEMA_TEMPLATEDEDUCTION_H
 
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/SemaConcept.h"
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/DeclAccessPair.h"
 #include "clang/AST/DeclTemplate.h"

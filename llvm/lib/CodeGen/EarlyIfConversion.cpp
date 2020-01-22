@@ -520,8 +520,9 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
     assert(Register::isVirtualRegister(PI.FReg) && "Bad PHI");
 
     // Get target information.
-    if (!TII->canInsertSelect(*Head, Cond, PI.TReg, PI.FReg,
-                              PI.CondCycles, PI.TCycles, PI.FCycles)) {
+    if (!TII->canInsertSelect(*Head, Cond, PI.PHI->getOperand(0).getReg(),
+                              PI.TReg, PI.FReg, PI.CondCycles, PI.TCycles,
+                              PI.FCycles)) {
       LLVM_DEBUG(dbgs() << "Can't convert: " << *PI.PHI);
       return false;
     }

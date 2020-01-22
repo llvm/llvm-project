@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: not llvm-objcopy %t no/such/dir 2>&1 | FileCheck %s
 # Don't check "No such file" which is OS dependent.
 # CHECK: 'no/such/dir':

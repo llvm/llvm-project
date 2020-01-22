@@ -176,7 +176,7 @@ int Compilation::ExecuteCommand(const Command &C,
     }
 
     if (getDriver().CCPrintOptions)
-      *OS << "[Logging clang options]";
+      *OS << "[Logging clang options]\n";
 
     C.Print(*OS, "\n", /*Quote=*/getDriver().CCPrintOptions);
   }

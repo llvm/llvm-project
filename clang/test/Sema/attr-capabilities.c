@@ -8,8 +8,8 @@ struct NotACapability {};
 union __attribute__((capability("mutex"))) MutexUnion { int a; char* b; };
 typedef union { int a; char* b; } __attribute__((capability("mutex"))) MutexUnion2;
 
-// Test an invalid capability name
-struct __attribute__((capability("wrong"))) IncorrectName {}; // expected-warning {{invalid capability name 'wrong'; capability name must be 'mutex' or 'role'}}
+// Test a different capability name
+struct __attribute__((capability("custom"))) CustomName {};
 
 int Test1 __attribute__((capability("test1")));  // expected-error {{'capability' attribute only applies to structs, unions, classes, and typedefs}}
 int Test2 __attribute__((shared_capability("test2"))); // expected-error {{'shared_capability' attribute only applies to structs, unions, classes, and typedefs}}

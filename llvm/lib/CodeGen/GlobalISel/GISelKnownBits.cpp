@@ -24,14 +24,12 @@ using namespace llvm;
 
 char llvm::GISelKnownBitsAnalysis::ID = 0;
 
-INITIALIZE_PASS_BEGIN(GISelKnownBitsAnalysis, DEBUG_TYPE,
-                      "Analysis for ComputingKnownBits", false, true)
-INITIALIZE_PASS_END(GISelKnownBitsAnalysis, DEBUG_TYPE,
-                    "Analysis for ComputingKnownBits", false, true)
+INITIALIZE_PASS(GISelKnownBitsAnalysis, DEBUG_TYPE,
+                "Analysis for ComputingKnownBits", false, true)
 
-GISelKnownBits::GISelKnownBits(MachineFunction &MF)
+GISelKnownBits::GISelKnownBits(MachineFunction &MF, unsigned MaxDepth)
     : MF(MF), MRI(MF.getRegInfo()), TL(*MF.getSubtarget().getTargetLowering()),
-      DL(MF.getFunction().getParent()->getDataLayout()) {}
+      DL(MF.getFunction().getParent()->getDataLayout()), MaxDepth(MaxDepth) {}
 
 Align GISelKnownBits::inferAlignmentForFrameIdx(int FrameIdx, int Offset,
                                                 const MachineFunction &MF) {

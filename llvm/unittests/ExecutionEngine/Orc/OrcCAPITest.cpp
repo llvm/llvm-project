@@ -44,7 +44,7 @@ protected:
     return MB.takeModule();
   }
 
-  std::unique_ptr<MemoryBuffer> createTestObject() {
+  Expected<std::unique_ptr<MemoryBuffer>> createTestObject() {
     orc::SimpleCompiler IRCompiler(*TM);
     auto M = createTestModule(TM->getTargetTriple());
     M->setDataLayout(TM->createDataLayout());
@@ -161,7 +161,7 @@ TEST_F(OrcCAPIExecutionTest, TestAddObjectFile) {
   if (!SupportsJIT)
     return;
 
-  auto ObjBuffer = createTestObject();
+  auto ObjBuffer = cantFail(createTestObject());
 
   LLVMOrcJITStackRef JIT =
     LLVMOrcCreateInstance(wrap(TM.get()));

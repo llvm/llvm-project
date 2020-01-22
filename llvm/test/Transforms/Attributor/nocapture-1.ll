@@ -322,7 +322,7 @@ declare void @unknown(i8*)
 define void @test_callsite() {
 entry:
 ; We know that 'null' in AS 0 does not alias anything and cannot be captured. Though the latter is not qurried -> derived atm.
-; ATTRIBUTOR: call void @unknown(i8* noalias null)
+; ATTRIBUTOR: call void @unknown(i8* noalias align 536870912 null)
   call void @unknown(i8* null)
   ret void
 }

@@ -33,10 +33,10 @@ define dso_local i32 @main() {
 ; CHECK-NEXT:    [[ALLOC1:%.*]] = alloca i8, align 8
 ; CHECK-NEXT:    [[ALLOC2:%.*]] = alloca i8, align 8
 ; CHECK-NEXT:    [[THREAD:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias null, i8* (i8*)* nonnull @foo, i8* noalias nofree readnone null)
-; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias null, i8* (i8*)* nonnull @bar, i8* nofree nonnull readnone align 8 dereferenceable(8) bitcast (i8** @GlobalVPtr to i8*))
-; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias null, i8* (i8*)* nonnull @baz, i8* noalias nocapture nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC1]])
-; CHECK-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias null, i8* (i8*)* nonnull @buz, i8* nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC2]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @foo, i8* noalias nofree readnone align 536870912 null)
+; CHECK-NEXT:    [[CALL1:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @bar, i8* nofree nonnull readnone align 8 dereferenceable(8) bitcast (i8** @GlobalVPtr to i8*))
+; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @baz, i8* noalias nocapture nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC1]])
+; CHECK-NEXT:    [[CALL3:%.*]] = call i32 @pthread_create(i64* nonnull align 8 dereferenceable(8) [[THREAD]], %union.pthread_attr_t* noalias align 536870912 null, i8* (i8*)* nonnull @buz, i8* nofree nonnull readnone align 8 dereferenceable(1) [[ALLOC2]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -54,7 +54,7 @@ declare !callback !0 dso_local i32 @pthread_create(i64*, %union.pthread_attr_t*,
 
 define internal i8* @foo(i8* %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (i8* noalias nofree readnone returned [[ARG:%.*]])
+; CHECK-SAME: (i8* noalias nofree readnone returned align 536870912 [[ARG:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret i8* null
 ;

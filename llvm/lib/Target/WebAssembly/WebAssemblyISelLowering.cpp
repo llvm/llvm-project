@@ -434,6 +434,29 @@ static MachineBasicBlock *LowerFPToInt(MachineInstr &MI, DebugLoc DL,
   return DoneMBB;
 }
 
+static MachineBasicBlock *LowerCallResults(MachineInstr &CallResults,
+                                           DebugLoc DL, MachineBasicBlock *BB,
+                                           const TargetInstrInfo &TII) {
+  MachineInstr &CallParams = *CallResults.getPrevNode();
+  assert(CallParams.getOpcode() == WebAssembly::CALL_PARAMS);
+  assert(CallResults.getOpcode() == WebAssembly::CALL_RESULTS);
+
+  MachineFunction &MF = *BB->getParent();
+  const MCInstrDesc &MCID = TII.get(WebAssembly::CALL);
+  MachineInstrBuilder MIB(MF, MF.CreateMachineInstr(MCID, DL));
+
+  for (auto Def : CallResults.defs())
+    MIB.add(Def);
+  for (auto Use : CallParams.uses())
+    MIB.add(Use);
+
+  BB->insert(CallResults.getIterator(), MIB);
+  CallParams.eraseFromParent();
+  CallResults.eraseFromParent();
+
+  return BB;
+}
+
 MachineBasicBlock *WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
   const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
@@ -466,7 +489,8 @@ MachineBasicBlock *WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
   case WebAssembly::FP_TO_UINT_I64_F64:
     return LowerFPToInt(MI, DL, BB, TII, true, true, true,
                         WebAssembly::I64_TRUNC_U_F64);
-    llvm_unreachable("Unexpected instruction to emit with custom inserter");
+  case WebAssembly::CALL_RESULTS:
+    return LowerCallResults(MI, DL, BB, TII);
   }
 }
 
@@ -702,9 +726,6 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
-  if (Ins.size() > 1)
-    fail(DL, DAG, "WebAssembly doesn't support more than 1 returned value yet");
-
   SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
   SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
 
@@ -850,18 +871,27 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   InTys.push_back(MVT::Other);
-  SDVTList InTyList = DAG.getVTList(InTys);
-  SDValue Res =
-      DAG.getNode(Ins.empty() ? WebAssemblyISD::CALL0 : WebAssemblyISD::CALL1,
-                  DL, InTyList, Ops);
-  if (Ins.empty()) {
-    Chain = Res;
-  } else {
-    InVals.push_back(Res);
-    Chain = Res.getValue(1);
+  unsigned Opc;
+  // TODO: Remove CALL0 and CALL1 in favor of CALL
+  switch (Ins.size()) {
+  case 0:
+    Opc = WebAssemblyISD::CALL0;
+    break;
+  case 1:
+    Opc = WebAssemblyISD::CALL1;
+    break;
+  default:
+    Opc = WebAssemblyISD::CALL;
+    break;
   }
+  SDVTList InTyList = DAG.getVTList(InTys);
+  SDValue Res = DAG.getNode(Opc, DL, InTyList, Ops);
 
-  return Chain;
+  for (size_t I = 0; I < Ins.size(); ++I)
+    InVals.push_back(Res.getValue(I));
+
+  // Return the chain
+  return Res.getValue(Ins.size());
 }
 
 bool WebAssemblyTargetLowering::CanLowerReturn(

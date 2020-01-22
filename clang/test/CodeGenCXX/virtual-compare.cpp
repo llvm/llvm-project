@@ -43,11 +43,11 @@ struct A : X, Y {
 // For Y:
 // CHECK-SAME: @_ZTI1A
 
-// CHECK-SAME: @_ZThn8_N1AD1Ev
-// CHECK-SAME: @_ZThn8_N1AD0Ev
+// CHECK-SAME: @_ZThn{{[0-9]*}}_N1AD1Ev
+// CHECK-SAME: @_ZThn{{[0-9]*}}_N1AD0Ev
 // virtual ~Y();
 
-// CHECK-SAME: @_ZThn8_N1AaSERKS_
+// CHECK-SAME: @_ZThn{{[0-9]*}}_N1AaSERKS_
 // virtual A &operator=(const A &);
 
 void A::f() {}

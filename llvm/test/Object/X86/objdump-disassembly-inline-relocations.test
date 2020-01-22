@@ -69,7 +69,7 @@
 # MACHO-x86-64:       23:       48 83 c4 08                                     addq    $8, %rsp
 # MACHO-x86-64:       27:       c3                                              ret
 
-# RUN: yaml2obj -docnum=1 %s > %t.elf-i386
+# RUN: yaml2obj --docnum=1 %s -o %t.elf-i386
 # RUN: llvm-objdump -d -r %t.elf-i386 | FileCheck %s -check-prefix ELF-i386
 
 # ELF-i386: file format ELF32-i386
@@ -126,7 +126,7 @@ Symbols:
   - Name:    puts
     Binding: STB_GLOBAL
 
-# RUN: yaml2obj -docnum=2 %s > %t.elf-x86-64
+# RUN: yaml2obj --docnum=2 %s -o %t.elf-x86-64
 # RUN: llvm-objdump -d -r %t.elf-x86-64 | FileCheck %s -check-prefix ELF-x86-64
 
 --- !ELF

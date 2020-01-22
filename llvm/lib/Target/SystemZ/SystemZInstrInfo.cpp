@@ -532,8 +532,9 @@ bool SystemZInstrInfo::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
 
 bool SystemZInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                        ArrayRef<MachineOperand> Pred,
-                                       unsigned TrueReg, unsigned FalseReg,
-                                       int &CondCycles, int &TrueCycles,
+                                       unsigned DstReg, unsigned TrueReg,
+                                       unsigned FalseReg, int &CondCycles,
+                                       int &TrueCycles,
                                        int &FalseCycles) const {
   // Not all subtargets have LOCR instructions.
   if (!STI.hasLoadStoreOnCond())

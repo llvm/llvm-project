@@ -512,7 +512,7 @@ LLVM to make it generate good GPU code.  Among these changes are:
 
 * `Memory space inference
   <http://llvm.org/doxygen/NVPTXInferAddressSpaces_8cpp_source.html>`_ --
-  In PTX, we can operate on pointers that are in a paricular "address space"
+  In PTX, we can operate on pointers that are in a particular "address space"
   (global, shared, constant, or local), or we can operate on pointers in the
   "generic" address space, which can point to anything.  Operations in a
   non-generic address space are faster, but pointers in CUDA are not explicitly
@@ -528,7 +528,7 @@ LLVM to make it generate good GPU code.  Among these changes are:
   which fit in 32-bits at runtime. This optimization provides a fast path for
   this common case.
 
-* Aggressive loop unrooling and function inlining -- Loop unrolling and
+* Aggressive loop unrolling and function inlining -- Loop unrolling and
   function inlining need to be more aggressive for GPUs than for CPUs because
   control flow transfer in GPU is more expensive. More aggressive unrolling and
   inlining also promote other optimizations, such as constant propagation and

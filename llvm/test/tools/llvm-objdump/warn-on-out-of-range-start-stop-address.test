@@ -2,10 +2,10 @@
 ## do not intersect with address ranges of sections that have the SHF_ALLOC
 ## flag.
 
-# RUN: yaml2obj --docnum=1 %s > %t
-# RUN: yaml2obj --docnum=2 %s > %t.2
-# RUN: yaml2obj --docnum=3 %s > %t.o
-# RUN: yaml2obj --docnum=4 %s > %t.3
+# RUN: yaml2obj --docnum=1 %s -o %t
+# RUN: yaml2obj --docnum=2 %s -o %t.2
+# RUN: yaml2obj --docnum=3 %s -o %t.o
+# RUN: yaml2obj --docnum=4 %s -o %t.3
 
 ## Warn if no section covers any part of the specified range.
 

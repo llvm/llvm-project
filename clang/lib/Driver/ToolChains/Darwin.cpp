@@ -1149,7 +1149,6 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
     } else {
       addExportedSymbol(CmdArgs, "___llvm_profile_filename");
       addExportedSymbol(CmdArgs, "___llvm_profile_raw_version");
-      addExportedSymbol(CmdArgs, "___llvm_profile_counter_bias");
     }
     addExportedSymbol(CmdArgs, "_lprofDirMode");
   }

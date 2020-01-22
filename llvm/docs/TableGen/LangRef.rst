@@ -142,7 +142,7 @@ values can be used in the class body.
 A given class can only be defined once. A ``class`` declaration is
 considered to define the class if any of the following is true:
 
-.. break ObjectBody into its consituents so that they are present here?
+.. break ObjectBody into its constituents so that they are present here?
 
 #. The :token:`TemplateArgList` is present.
 #. The :token:`Body` in the :token:`ObjectBody` is present and is not empty.
