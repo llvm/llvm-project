@@ -1,4 +1,4 @@
-//===-- TSanRuntime.h -------------------------------------------*- C++ -*-===//
+//===-- InstrumentationRuntimeTSan.h ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,9 +16,9 @@
 
 namespace lldb_private {
 
-class ThreadSanitizerRuntime : public lldb_private::InstrumentationRuntime {
+class InstrumentationRuntimeTSan : public lldb_private::InstrumentationRuntime {
 public:
-  ~ThreadSanitizerRuntime() override;
+  ~InstrumentationRuntimeTSan() override;
 
   static lldb::InstrumentationRuntimeSP
   CreateInstance(const lldb::ProcessSP &process_sp);
@@ -43,7 +43,7 @@ public:
   GetBacktracesFromExtendedStopInfo(StructuredData::ObjectSP info) override;
 
 private:
-  ThreadSanitizerRuntime(const lldb::ProcessSP &process_sp)
+  InstrumentationRuntimeTSan(const lldb::ProcessSP &process_sp)
       : lldb_private::InstrumentationRuntime(process_sp) {}
 
   const RegularExpression &GetPatternForRuntimeLibrary() override;
