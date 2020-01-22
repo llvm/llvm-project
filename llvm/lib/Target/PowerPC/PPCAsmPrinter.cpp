@@ -1561,9 +1561,8 @@ void PPCAIXAsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   // Get the function descriptor symbol.
   CurrentFnDescSym = getSymbol(&MF.getFunction());
   // Set the containing csect.
-  MCSectionXCOFF *FnDescSec = OutStreamer->getContext().getXCOFFSection(
-      CurrentFnDescSym->getName(), XCOFF::XMC_DS, XCOFF::XTY_SD,
-      XCOFF::C_HIDEXT, SectionKind::getData());
+  MCSectionXCOFF *FnDescSec = cast<MCSectionXCOFF>(
+      getObjFileLowering().getSectionForFunctionDescriptor(CurrentFnDescSym));
   cast<MCSymbolXCOFF>(CurrentFnDescSym)->setContainingCsect(FnDescSec);
 
   return AsmPrinter::SetupMachineFunction(MF);
@@ -1585,14 +1584,10 @@ const MCExpr *PPCAIXAsmPrinter::lowerConstant(const Constant *CV) {
   if (const Function *F = dyn_cast<Function>(CV)) {
     MCSymbolXCOFF *FSym = cast<MCSymbolXCOFF>(getSymbol(F));
     if (!FSym->hasContainingCsect()) {
-      const XCOFF::StorageClass SC =
+      MCSectionXCOFF *Csect = cast<MCSectionXCOFF>(
           F->isDeclaration()
-              ? TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(F)
-              : XCOFF::C_HIDEXT;
-      MCSectionXCOFF *Csect = OutStreamer->getContext().getXCOFFSection(
-          FSym->getName(), XCOFF::XMC_DS,
-          F->isDeclaration() ? XCOFF::XTY_ER : XCOFF::XTY_SD, SC,
-          SectionKind::getData());
+              ? getObjFileLowering().getSectionForExternalReference(F, TM)
+              : getObjFileLowering().getSectionForFunctionDescriptor(FSym));
       FSym->setContainingCsect(Csect);
     }
     return MCSymbolRefExpr::create(
@@ -1604,26 +1599,34 @@ const MCExpr *PPCAIXAsmPrinter::lowerConstant(const Constant *CV) {
 void PPCAIXAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   ValidateGV(GV);
 
-  // External global variables are already handled.
-  if (!GV->hasInitializer())
-    return;
-
   // Create the symbol, set its storage class.
   MCSymbolXCOFF *GVSym = cast<MCSymbolXCOFF>(getSymbol(GV));
   GVSym->setStorageClass(
       TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GV));
 
-  SectionKind GVKind = getObjFileLowering().getKindForGlobal(GV, TM);
+  SectionKind GVKind;
+
+  // Create the containing csect and set it. We set it for externals as well,
+  // since this may not have been set elsewhere depending on how they are used.
+  MCSectionXCOFF *Csect = cast<MCSectionXCOFF>(
+      GV->isDeclaration()
+          ? getObjFileLowering().getSectionForExternalReference(GV, TM)
+          : getObjFileLowering().SectionForGlobal(
+                GV, GVKind = getObjFileLowering().getKindForGlobal(GV, TM),
+                TM));
+  GVSym->setContainingCsect(Csect);
+
+  // External global variables are already handled.
+  if (GV->isDeclaration())
+    return;
+
   if ((!GVKind.isGlobalWriteableData() && !GVKind.isReadOnly()) ||
       GVKind.isMergeable2ByteCString() || GVKind.isMergeable4ByteCString())
     report_fatal_error("Encountered a global variable kind that is "
                        "not supported yet.");
 
-  // Create the containing csect and switch to it.
-  MCSectionXCOFF *Csect = cast<MCSectionXCOFF>(
-      getObjFileLowering().SectionForGlobal(GV, GVKind, TM));
+  // Switch to the containing csect.
   OutStreamer->SwitchSection(Csect);
-  GVSym->setContainingCsect(Csect);
 
   const DataLayout &DL = GV->getParent()->getDataLayout();
 
@@ -1661,10 +1664,9 @@ void PPCAIXAsmPrinter::EmitFunctionDescriptor() {
   OutStreamer->EmitValue(MCSymbolRefExpr::create(CurrentFnSym, OutContext),
                          PointerSize);
   // Emit TOC base address.
-  const MCSectionXCOFF *TOCBaseSec = OutStreamer->getContext().getXCOFFSection(
-      StringRef("TOC"), XCOFF::XMC_TC0, XCOFF::XTY_SD, XCOFF::C_HIDEXT,
-      SectionKind::getData());
-  const MCSymbol *TOCBaseSym = TOCBaseSec->getQualNameSymbol();
+  const MCSymbol *TOCBaseSym =
+      cast<MCSectionXCOFF>(getObjFileLowering().getTOCBaseSection())
+          ->getQualNameSymbol();
   OutStreamer->EmitValue(MCSymbolRefExpr::create(TOCBaseSym, OutContext),
                          PointerSize);
   // Emit a null environment pointer.
@@ -1679,23 +1681,16 @@ void PPCAIXAsmPrinter::EmitEndOfAsmFile(Module &M) {
   if (M.empty())
     return;
 
-  // Emit TOC base.
-  MCSectionXCOFF *TOCBaseSection = OutStreamer->getContext().getXCOFFSection(
-      StringRef("TOC"), XCOFF::XMC_TC0, XCOFF::XTY_SD, XCOFF::C_HIDEXT,
-      SectionKind::getData());
-  // The TOC-base always has 0 size, but 4 byte alignment.
-  TOCBaseSection->setAlignment(Align(4));
   // Switch to section to emit TOC base.
-  OutStreamer->SwitchSection(TOCBaseSection);
+  OutStreamer->SwitchSection(getObjFileLowering().getTOCBaseSection());
 
   PPCTargetStreamer &TS =
       static_cast<PPCTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
   for (auto &I : TOC) {
     // Setup the csect for the current TC entry.
-    MCSectionXCOFF *TCEntry = OutStreamer->getContext().getXCOFFSection(
-        cast<MCSymbolXCOFF>(I.first)->getUnqualifiedName(), XCOFF::XMC_TC,
-        XCOFF::XTY_SD, XCOFF::C_HIDEXT, SectionKind::getData());
+    MCSectionXCOFF *TCEntry = cast<MCSectionXCOFF>(
+        getObjFileLowering().getSectionForTOCEntry(I.first));
     cast<MCSymbolXCOFF>(I.second)->setContainingCsect(TCEntry);
     OutStreamer->SwitchSection(TCEntry);
 
@@ -1728,19 +1723,9 @@ PPCAIXAsmPrinter::getMCSymbolForTOCPseudoMO(const MachineOperand &MO) {
   // Hence we may need to explictly create a MCSectionXCOFF for it so that we
   // can return its symbol later.
   if (GO->isDeclaration()) {
-    if (!XSym->hasContainingCsect()) {
-      // Make sure the storage class is set.
-      const XCOFF::StorageClass SC =
-          TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(GO);
-      XSym->setStorageClass(SC);
-
-      MCSectionXCOFF *Csect = OutStreamer->getContext().getXCOFFSection(
-          XSym->getName(), isa<Function>(GO) ? XCOFF::XMC_DS : XCOFF::XMC_UA,
-          XCOFF::XTY_ER, SC, SectionKind::getMetadata());
-      XSym->setContainingCsect(Csect);
-    }
-
-    return XSym->getContainingCsect()->getQualNameSymbol();
+    return cast<MCSectionXCOFF>(
+               getObjFileLowering().getSectionForExternalReference(GO, TM))
+        ->getQualNameSymbol();
   }
 
   // Handle initialized global variables and defined functions.
@@ -1749,9 +1734,8 @@ PPCAIXAsmPrinter::getMCSymbolForTOCPseudoMO(const MachineOperand &MO) {
   if (GOKind.isText()) {
     // If the MO is a function, we want to make sure to refer to the function
     // descriptor csect.
-    return OutStreamer->getContext()
-        .getXCOFFSection(XSym->getName(), XCOFF::XMC_DS, XCOFF::XTY_SD,
-                         XCOFF::C_HIDEXT, SectionKind::getData())
+    return cast<MCSectionXCOFF>(
+               getObjFileLowering().getSectionForFunctionDescriptor(XSym))
         ->getQualNameSymbol();
   } else if (GOKind.isCommon() || GOKind.isBSSLocal()) {
     // If the operand is a common then we should refer to the csect symbol.
