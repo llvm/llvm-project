@@ -110,11 +110,14 @@ struct StructuredIndexed {
 
   operator Value() const /* implicit */ { return value; }
   ArrayRef<AffineExpr> getExprs() { return exprs; }
+  Type getType() { return value.getType(); }
 
 private:
   StructuredIndexed(Value v, ArrayRef<AffineExpr> indexings)
       : value(v), exprs(indexings.begin(), indexings.end()) {
-    assert(v.getType().isa<MemRefType>() && "MemRefType expected");
+    assert((v.getType().isa<MemRefType>() ||
+            v.getType().isa<RankedTensorType>()) &&
+           "MemRef or RankedTensor expected");
   }
   StructuredIndexed(ValueHandle v, ArrayRef<AffineExpr> indexings)
       : StructuredIndexed(v.getValue(), indexings) {}
@@ -125,9 +128,21 @@ private:
 
 inline void defaultRegionBuilder(ArrayRef<BlockArgument> args) {}
 
+/// Build a `linalg.generic` op with the specified inputs, outputs and region.
+///
+/// `otherValues` and `otherAttributes` may be passed and will be appended as
+/// operands and attributes respectively.
+///
+/// This accepts both buffers and tensors as `inputs` but only buffers as
+/// `outputs`. Output tensors can be specified with `resultTensorTypes`, in
+/// which case, the canonical identity indexing_map is assumed.
+//
+// TODO(ntv) In the future we may want to relax this identity assumption (e.g.
+// for automatic differentiation purposes). In that case we will want to make
+// StructuredIndexed work with ValueHandle to encode type or value.
 Operation *makeGenericLinalgOp(
     ArrayRef<IterType> iteratorTypes, ArrayRef<StructuredIndexed> inputs,
-    ArrayRef<StructuredIndexed> outputs,
+    ArrayRef<StructuredIndexed> outputs, ArrayRef<Type> resultTensorTypes = {},
     function_ref<void(ArrayRef<BlockArgument>)> regionBuilder =
         defaultRegionBuilder,
     ArrayRef<Value> otherValues = {}, ArrayRef<Attribute> otherAttributes = {});
@@ -167,32 +182,77 @@ void macRegionBuilder(ArrayRef<BlockArgument> args);
 /// with in-place semantics and parallelism.
 
 /// Unary pointwise operation (with broadcast) entry point.
+///
+/// This accepts both buffers and tensors as `inputs` but only buffers as
+/// `outputs`. Output tensors can be specified with `resultTensorTypes`, in
+/// which case, the canonical identity indexing_map is assumed.
+//
+// TODO(ntv) In the future we may want to relax this identity assumption (e.g.
+// for automatic differentiation purposes). In that case we will want to make
+// StructuredIndexed work with ValueHandle to encode type or value.
 using UnaryPointwiseOpBuilder = function_ref<Value(ValueHandle)>;
 Operation *linalg_pointwise(UnaryPointwiseOpBuilder unaryOp,
-                            StructuredIndexed I, StructuredIndexed O);
+                            StructuredIndexed I, StructuredIndexed O,
+                            ArrayRef<Type> resultTensorTypes = {});
 
 /// Build a linalg.pointwise with all `parallel` iterators and a region that
 /// computes `O = tanh(I)`. The client is responsible for specifying the proper
 /// indexings when creating the StructuredIndexed.
-Operation *linalg_pointwise_tanh(StructuredIndexed I, StructuredIndexed O);
+///
+/// This accepts both buffers and tensors as `inputs` but only buffers as
+/// `outputs`. Output tensors can be specified with `resultTensorTypes`, in
+/// which case, the canonical identity indexing_map is assumed.
+//
+// TODO(ntv) In the future we may want to relax this identity assumption (e.g.
+// for automatic differentiation purposes). In that case we will want to make
+// StructuredIndexed work with ValueHandle to encode type or value.
+Operation *linalg_pointwise_tanh(StructuredIndexed I, StructuredIndexed O,
+                                 ArrayRef<Type> resultTensorTypes = {});
 
 /// Binary pointwise operation (with broadcast) entry point.
+///
+/// This accepts both buffers and tensors as `inputs` but only buffers as
+/// `outputs`. Output tensors can be specified with `resultTensorTypes`, in
+/// which case, the canonical identity indexing_map is assumed.
+//
+// TODO(ntv) In the future we may want to relax this identity assumption (e.g.
+// for automatic differentiation purposes). In that case we will want to make
+// StructuredIndexed work with ValueHandle to encode type or value.
 using BinaryPointwiseOpBuilder = function_ref<Value(ValueHandle, ValueHandle)>;
 Operation *linalg_pointwise(BinaryPointwiseOpBuilder binaryOp,
                             StructuredIndexed I1, StructuredIndexed I2,
-                            StructuredIndexed O);
+                            StructuredIndexed O,
+                            ArrayRef<Type> resultTensorTypes = {});
 
 /// Build a linalg.pointwise with all `parallel` iterators and a region that
 /// computes `O = I1 + I2`. The client is responsible for specifying the proper
 /// indexings when creating the StructuredIndexed.
+///
+/// This accepts both buffers and tensors as `inputs` but only buffers as
+/// `outputs`. Output tensors can be specified with `resultTensorTypes`, in
+/// which case, the canonical identity indexing_map is assumed.
+//
+// TODO(ntv) In the future we may want to relax this identity assumption (e.g.
+// for automatic differentiation purposes). In that case we will want to make
+// StructuredIndexed work with ValueHandle to encode type or value.
 Operation *linalg_pointwise_add(StructuredIndexed I1, StructuredIndexed I2,
-                                StructuredIndexed O);
+                                StructuredIndexed O,
+                                ArrayRef<Type> resultTensorTypes = {});
 
 /// Build a linalg.pointwise with all `parallel` iterators and a region that
 /// computes `O = max(I!, I2)`. The client is responsible for specifying the
 /// proper indexings when creating the StructuredIndexed.
+///
+/// This accepts both buffers and tensors as `inputs` but only buffers as
+/// `outputs`. Output tensors can be specified with `resultTensorTypes`, in
+/// which case, the canonical identity indexing_map is assumed.
+//
+// TODO(ntv) In the future we may want to relax this identity assumption (e.g.
+// for automatic differentiation purposes). In that case we will want to make
+// StructuredIndexed work with ValueHandle to encode type or value.
 Operation *linalg_pointwise_max(StructuredIndexed I1, StructuredIndexed I2,
-                                StructuredIndexed O);
+                                StructuredIndexed O,
+                                ArrayRef<Type> resultTensorTypes = {});
 
 // TODO(ntv): Implement more useful pointwise operations on a per-need basis.
 
@@ -203,11 +263,23 @@ Operation *linalg_pointwise_max(StructuredIndexed I1, StructuredIndexed I2,
 ///    |
 ///    |  C(m, n) += A(m, k) * B(k, n)
 /// ```
-Operation *linalg_matmul(ValueHandle vA, ValueHandle vB, ValueHandle vC);
+///
+/// This accepts both buffers and tensors as `inputs` but only buffers as
+/// `outputs`. Output tensors can be specified with `resultTensorTypes`, in
+/// which case, the canonical identity indexing_map is assumed.
+//
+// TODO(ntv) In the future we may want to relax this identity assumption (e.g.
+// for automatic differentiation purposes). In that case we will want to make
+// StructuredIndexed work with ValueHandle to encode type or value.
+Operation *linalg_matmul(ValueHandle vA, ValueHandle vB, ValueHandle vC,
+                         ArrayRef<Type> resultTensorTypes = {});
 
-template <typename Container> Operation *linalg_matmul(Container values) {
+template <typename Container>
+Operation *linalg_matmul(Container values,
+                         ArrayRef<Type> resultTensorTypes = {}) {
   assert(values.size() == 3 && "Expected exactly 3 values");
-  return linalg_matmul(values[0], values[1], values[2]);
+  assert(resultTensorTypes.size() <= 1 && "Expected at most 1 result tensor");
+  return linalg_matmul(values[0], values[1], values[2], resultTensorTypes);
 }
 
 /// Build a linalg.generic, under the current ScopedContext, at the current
@@ -231,16 +303,28 @@ template <typename Container> Operation *linalg_matmul(Container values) {
 ///
 /// For now `...` must be empty (i.e. only 2-D convolutions are supported).
 ///
+/// This accepts both buffers and tensors as `inputs` but only buffers as
+/// `outputs`. Output tensors can be specified with `resultTensorTypes`, in
+/// which case, the canonical identity indexing_map is assumed.
+//
+// TODO(ntv) In the future we may want to relax this identity assumption (e.g.
+// for automatic differentiation purposes). In that case we will want to make
+// StructuredIndexed work with ValueHandle to encode type or value.
+//
 // TODO(ntv) Extend convolution rank with some template magic.
 Operation *linalg_conv_nhwc(ValueHandle vI, ValueHandle vW, ValueHandle vO,
+                            ArrayRef<Type> resultTensorTypes = {},
                             ArrayRef<int> strides = {},
                             ArrayRef<int> dilations = {});
 
 template <typename Container>
-Operation *linalg_conv_nhwc(Container values, ArrayRef<int> strides = {},
-                            ArrayRef<int> dilations = {}) {
+Operation *
+linalg_conv_nhwc(Container values, ArrayRef<Type> resultTensorTypes = {},
+                 ArrayRef<int> strides = {}, ArrayRef<int> dilations = {}) {
   assert(values.size() == 3 && "Expected exactly 3 values");
-  return linalg_conv_nhwc(values[0], values[1], values[2], strides, dilations);
+  assert(resultTensorTypes.size() <= 1 && "Expected at most 1 result tensor");
+  return linalg_conv_nhwc(values[0], values[1], values[2], resultTensorTypes,
+                          strides, dilations);
 }
 
 /// Build a linalg.generic, under the current ScopedContext, at the current
@@ -249,7 +333,7 @@ Operation *linalg_conv_nhwc(Container values, ArrayRef<int> strides = {},
 ///    (batch, dm, c, [h, w, ...], [kh, kw, ...]) =
 ///    |  (par, par, par, [par, par, ...], [red, red, ...])
 ///    |
-///    | O(batch, [h, w, ...], c * depth_multiplier) +=
+///    | O(batch, [h, w, ...], c * depthMultiplier) +=
 ///    |   I(batch,
 ///    |     [
 ///    |       stride[0] * h + dilations[0] * kh,
@@ -257,26 +341,40 @@ Operation *linalg_conv_nhwc(Container values, ArrayRef<int> strides = {},
 ///          ],
 ///    |     c)
 ///    |   *
-///    |   W([kh, kw, ...], c, depth_multiplier)
+///    |   W([kh, kw, ...], c, depthMultiplier)
 /// ```
 /// If `dilations` or `strides` are left empty, the default value of `1` is used
 /// along each relevant dimension.
 ///
 /// For now `...` must be empty (i.e. only 2-D convolutions are supported).
 ///
+/// This accepts both buffers and tensors as `inputs` but only buffers as
+/// `outputs`. Output tensors can be specified with `resultTensorTypes`, in
+/// which case, the canonical identity indexing_map is assumed.
+//
+// TODO(ntv) In the future we may want to relax this identity assumption (e.g.
+// for automatic differentiation purposes). In that case we will want to make
+// StructuredIndexed work with ValueHandle to encode type or value.
+//
 // TODO(ntv) Extend convolution rank with some template magic.
 Operation *linalg_dilated_conv_nhwc(ValueHandle vI, ValueHandle vW,
-                                    ValueHandle vO, int depth_multiplier = 1,
+                                    ValueHandle vO,
+                                    ArrayRef<Type> resultTensorTypes = {},
+                                    int depthMultiplier = 1,
                                     ArrayRef<int> strides = {},
                                     ArrayRef<int> dilations = {});
 
 template <typename Container>
-Operation *linalg_dilated_conv_nhwc(Container values, int depth_multiplier,
+Operation *linalg_dilated_conv_nhwc(Container values,
+                                    ArrayRef<Type> resultTensorTypes = {},
+                                    int depthMultiplier = 1,
                                     ArrayRef<int> strides = {},
                                     ArrayRef<int> dilations = {}) {
   assert(values.size() == 3 && "Expected exactly 3 values");
+  assert(resultTensorTypes.size() <= 1 && "Expected at most 1 result tensor");
   return linalg_dilated_conv_nhwc(values[0], values[1], values[2],
-                                  depth_multiplier, strides, dilations);
+                                  resultTensorTypes, depthMultiplier, strides,
+                                  dilations);
 }
 
 } // namespace ops

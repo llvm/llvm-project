@@ -128,16 +128,20 @@ static void getMaxDimIndex(ArrayRef<StructuredIndexed> structuredIndices,
 
 Operation *mlir::edsc::makeGenericLinalgOp(
     ArrayRef<IterType> iteratorTypes, ArrayRef<StructuredIndexed> inputs,
-    ArrayRef<StructuredIndexed> outputs,
+    ArrayRef<StructuredIndexed> outputBuffers, ArrayRef<Type> resultTensorTypes,
     function_ref<void(ArrayRef<BlockArgument>)> regionBuilder,
     ArrayRef<Value> otherValues, ArrayRef<Attribute> otherAttributes) {
+  assert(
+      llvm::all_of(llvm::make_range(outputBuffers.begin(), outputBuffers.end()),
+                   [](Value v) { return v.getType().isa<MemRefType>(); }) &&
+      "output operands must all be buffers.");
   auto &builder = edsc::ScopedContext::getBuilder();
   auto *ctx = builder.getContext();
   unsigned nInputs = inputs.size();
-  unsigned nOutputs = outputs.size();
+  unsigned nOutputs = outputBuffers.size() + resultTensorTypes.size();
   unsigned maxPos = 0;
   getMaxDimIndex(inputs, maxPos);
-  getMaxDimIndex(outputs, maxPos);
+  getMaxDimIndex(outputBuffers, maxPos);
   // maxPos is 0 indexed, need to turn this into a count (i.e. +1)
   unsigned nDims = maxPos + 1;
 
@@ -146,7 +150,7 @@ Operation *mlir::edsc::makeGenericLinalgOp(
   for (auto in : inputs)
     maps.push_back(
         AffineMap::get(/*dimCount=*/nDims, /*symbolCount=*/0, in.getExprs()));
-  for (auto out : outputs)
+  for (auto out : outputBuffers)
     maps.push_back(
         AffineMap::get(/*dimCount=*/nDims, /*symbolCount=*/0, out.getExprs()));
 
@@ -154,7 +158,7 @@ Operation *mlir::edsc::makeGenericLinalgOp(
   SmallVector<Value, 4> values;
   values.reserve(nViews);
   values.append(inputs.begin(), inputs.end());
-  values.append(outputs.begin(), outputs.end());
+  values.append(outputBuffers.begin(), outputBuffers.end());
 
   auto iteratorStrTypes = functional::map(toString, iteratorTypes);
   // clang-format off
@@ -162,7 +166,7 @@ Operation *mlir::edsc::makeGenericLinalgOp(
       edsc::ScopedContext::getBuilder()
           .create<linalg::GenericOp>(
               edsc::ScopedContext::getLocation(),
-              ArrayRef<Type>{}, // TODO(ntv): support tensors
+              resultTensorTypes,
               values,
               IntegerAttr::get(IntegerType::get(64, ctx), nInputs),
               IntegerAttr::get(IntegerType::get(64, ctx), nOutputs),
@@ -207,7 +211,8 @@ void mlir::edsc::ops::macRegionBuilder(ArrayRef<BlockArgument> args) {
 
 Operation *mlir::edsc::ops::linalg_pointwise(UnaryPointwiseOpBuilder unaryOp,
                                              StructuredIndexed I,
-                                             StructuredIndexed O) {
+                                             StructuredIndexed O,
+                                             ArrayRef<Type> resultTensorTypes) {
   SmallVector<edsc::IterType, 4> iterTypes(O.getExprs().size(),
                                            edsc::IterType::Parallel);
   auto fun = [&unaryOp](ArrayRef<BlockArgument> args) {
@@ -215,22 +220,30 @@ Operation *mlir::edsc::ops::linalg_pointwise(UnaryPointwiseOpBuilder unaryOp,
     ValueHandle a(args[0]);
     linalg_yield(unaryOp(a));
   };
-  return makeGenericLinalgOp(iterTypes, {I}, {O}, fun);
+
+  // Distinguish between tensor and buffer semantics.
+  if (O.getType().isa<MemRefType>()) {
+    assert(resultTensorTypes.empty());
+    return makeGenericLinalgOp(iterTypes, {I}, {O}, {}, fun);
+  }
+  return makeGenericLinalgOp(iterTypes, {I, O}, {}, resultTensorTypes, fun);
 }
 
-Operation *mlir::edsc::ops::linalg_pointwise_tanh(StructuredIndexed I,
-                                                  StructuredIndexed O) {
+Operation *
+mlir::edsc::ops::linalg_pointwise_tanh(StructuredIndexed I, StructuredIndexed O,
+                                       ArrayRef<Type> resultTensorTypes) {
   ;
   using edsc::intrinsics::tanh;
   UnaryPointwiseOpBuilder unOp([](ValueHandle a) -> Value { return tanh(a); });
-  return linalg_pointwise(unOp, I, O);
+  return linalg_pointwise(unOp, I, O, resultTensorTypes);
 }
 
 /// Binary pointwise operation (with broadcast) entry point.
 Operation *mlir::edsc::ops::linalg_pointwise(BinaryPointwiseOpBuilder binaryOp,
                                              StructuredIndexed I1,
                                              StructuredIndexed I2,
-                                             StructuredIndexed O) {
+                                             StructuredIndexed O,
+                                             ArrayRef<Type> resultTensorTypes) {
   SmallVector<edsc::IterType, 4> iterTypes(O.getExprs().size(),
                                            edsc::IterType::Parallel);
   auto fun = [&binaryOp](ArrayRef<BlockArgument> args) {
@@ -238,45 +251,62 @@ Operation *mlir::edsc::ops::linalg_pointwise(BinaryPointwiseOpBuilder binaryOp,
     ValueHandle a(args[0]), b(args[1]);
     linalg_yield(binaryOp(a, b));
   };
-  return makeGenericLinalgOp(iterTypes, {I1, I2}, {O}, fun);
+  // Distinguish between tensor and buffer semantics.
+  if (O.getType().isa<MemRefType>()) {
+    assert(resultTensorTypes.empty());
+    return makeGenericLinalgOp(iterTypes, {I1, I2}, {O}, {}, fun);
+  }
+  return makeGenericLinalgOp(iterTypes, {I1, I2, O}, {}, resultTensorTypes,
+                             fun);
 }
 
-Operation *mlir::edsc::ops::linalg_pointwise_add(StructuredIndexed I1,
-                                                 StructuredIndexed I2,
-                                                 StructuredIndexed O) {
+Operation *
+mlir::edsc::ops::linalg_pointwise_add(StructuredIndexed I1,
+                                      StructuredIndexed I2, StructuredIndexed O,
+                                      ArrayRef<Type> resultTensorTypes) {
   using edsc::op::operator+;
   BinaryPointwiseOpBuilder binOp(
       [](ValueHandle a, ValueHandle b) -> Value { return a + b; });
-  return linalg_pointwise(binOp, I1, I2, O);
+  return linalg_pointwise(binOp, I1, I2, O, resultTensorTypes);
 }
 
-Operation *mlir::edsc::ops::linalg_pointwise_max(StructuredIndexed I1,
-                                                 StructuredIndexed I2,
-                                                 StructuredIndexed O) {
+Operation *
+mlir::edsc::ops::linalg_pointwise_max(StructuredIndexed I1,
+                                      StructuredIndexed I2, StructuredIndexed O,
+                                      ArrayRef<Type> resultTensorTypes) {
   BinaryPointwiseOpBuilder binOp([](ValueHandle a, ValueHandle b) -> Value {
     using edsc::intrinsics::select;
     using edsc::op::operator>;
     return select(a > b, a, b).getValue();
   });
-  return linalg_pointwise(binOp, I1, I2, O);
+  return linalg_pointwise(binOp, I1, I2, O, resultTensorTypes);
 }
 
 Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
-                                          ValueHandle vC) {
-  // clang-format off
+                                          ValueHandle vC,
+                                          ArrayRef<Type> resultTensorTypes) {
   AffineExpr m, n, k;
   bindDims(ScopedContext::getContext(), m, n, k);
   StructuredIndexed A(vA), B(vB), C(vC);
+
+  assert(!C.getType().isa<MemRefType>() || resultTensorTypes.empty());
+  StructuredIndexed allIndexed[3]{A({m, k}), B({k, n}), C({m, n})};
+  ArrayRef<StructuredIndexed> inputs =
+      (C.getType().isa<MemRefType>())
+          ? ArrayRef<StructuredIndexed>{allIndexed, allIndexed + 2}
+          : ArrayRef<StructuredIndexed>{allIndexed, allIndexed + 3};
+  ArrayRef<StructuredIndexed> outputs =
+      (C.getType().isa<MemRefType>())
+          ? ArrayRef<StructuredIndexed>{allIndexed + 2, allIndexed + 3}
+          : ArrayRef<StructuredIndexed>{};
   return makeGenericLinalgOp(
-    {IterType::Parallel, IterType::Parallel, IterType::Reduction},
-    {A({m, k}), B({k, n})},
-    {C({m, n})},
-    macRegionBuilder);
-  // clang-format on
+      {IterType::Parallel, IterType::Parallel, IterType::Reduction}, inputs,
+      outputs, resultTensorTypes, macRegionBuilder);
 }
 
 Operation *mlir::edsc::ops::linalg_conv_nhwc(ValueHandle vI, ValueHandle vW,
                                              ValueHandle vO,
+                                             ArrayRef<Type> resultTensorTypes,
                                              ArrayRef<int> strides,
                                              ArrayRef<int> dilations) {
   MLIRContext *ctx = ScopedContext::getContext();
@@ -294,23 +324,33 @@ Operation *mlir::edsc::ops::linalg_conv_nhwc(ValueHandle vI, ValueHandle vW,
   bindDims(ctx, b, f, h, w, kh, kw, c);
   unsigned numDims = c.cast<AffineDimExpr>().getPosition() + 1;
   StructuredIndexed I(vI), W(vW), O(vO);
+
+  assert(!O.getType().isa<MemRefType>() || resultTensorTypes.empty());
+  // Roundtrip to flattened form to serve as canonicalization and ensure
+  // consistent ordering of subexpressions.
   // clang-format off
-  return makeGenericLinalgOp(
-    {par, par, par, par, red, red, red}, {
+  StructuredIndexed allIndexed[3] = {
       I({b,
-         // Roundtrip to flattened form to serve as canonicalization and ensure
-         // consistent ordering of subexpressions.
          simplifyAffineExpr(s[0] * h + d[0] * kh, numDims, 0),
          simplifyAffineExpr(s[1] * w + d[1] * kw, numDims, 0),
          c}),
-      W({kh, kw, c, f})}, {
-      O({b, h, w, f})},
-    macRegionBuilder);
+      W({kh, kw, c, f}),
+      O({b, h, w, f})};
   // clang-format on
+  auto inputs = (O.getType().isa<MemRefType>())
+                    ? ArrayRef<StructuredIndexed>{allIndexed, allIndexed + 2}
+                    : ArrayRef<StructuredIndexed>{allIndexed, allIndexed + 3};
+  ArrayRef<StructuredIndexed> outputs =
+      (O.getType().isa<MemRefType>())
+          ? ArrayRef<StructuredIndexed>{allIndexed + 2, allIndexed + 3}
+          : ArrayRef<StructuredIndexed>{};
+  return makeGenericLinalgOp({par, par, par, par, red, red, red}, inputs,
+                             outputs, resultTensorTypes, macRegionBuilder);
 }
 
 Operation *mlir::edsc::ops::linalg_dilated_conv_nhwc(
-    ValueHandle vI, ValueHandle vW, ValueHandle vO, int depth_multiplier,
+    ValueHandle vI, ValueHandle vW, ValueHandle vO,
+    ArrayRef<Type> resultTensorTypes, int depthMultiplier,
     ArrayRef<int> strides, ArrayRef<int> dilations) {
   MLIRContext *ctx = ScopedContext::getContext();
   // TODO(ntv) some template magic to make everything rank-polymorphic.
@@ -328,16 +368,26 @@ Operation *mlir::edsc::ops::linalg_dilated_conv_nhwc(
   bindDims(ctx, b, dm, c, h, w, kh, kw);
   unsigned numDims = kw.cast<AffineDimExpr>().getPosition() + 1;
   StructuredIndexed I(vI), W(vW), O(vO);
-  return makeGenericLinalgOp(
-    {par, par, par, par, par, red, red}, {
+  // Roundtrip to flattened form to serve as canonicalization and ensure
+  // consistent ordering of subexpressions.
+  // clang-format off
+  StructuredIndexed allIndexed[3] = {
       I({b,
          // Roundtrip to flattened form to serve as canonicalization and ensure
          // consistent ordering of subexpressions.
          simplifyAffineExpr(s[0] * h + d[0] * kh, numDims, 0),
          simplifyAffineExpr(s[1] * w + d[1] * kw, numDims, 0),
          c}),
-      W({kh, kw, c, dm})}, {
-      O({b, h, w, simplifyAffineExpr(c * depth_multiplier + dm, numDims, 0)})},
-    macRegionBuilder);
+      W({kh, kw, c, dm}),
+      O({b, h, w, simplifyAffineExpr(c * depthMultiplier + dm, numDims, 0)})};
   // clang-format on
+  auto inputs = (O.getType().isa<MemRefType>())
+                    ? ArrayRef<StructuredIndexed>{allIndexed, allIndexed + 2}
+                    : ArrayRef<StructuredIndexed>{allIndexed, allIndexed + 3};
+  ArrayRef<StructuredIndexed> outputs =
+      (O.getType().isa<MemRefType>())
+          ? ArrayRef<StructuredIndexed>{allIndexed + 2, allIndexed + 3}
+          : ArrayRef<StructuredIndexed>{};
+  return makeGenericLinalgOp({par, par, par, par, par, red, red}, inputs,
+                             outputs, resultTensorTypes, macRegionBuilder);
 }
