@@ -410,13 +410,18 @@ define i32 @select_mul_rhs_const_i32(i1 %cond) {
 ; IR-LABEL: @select_mul_rhs_const_i32(
 ; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i32 5000, i32 8000
 ; IR-NEXT:    ret i32 [[OP]]
+;
   %select = select i1 %cond, i32 5, i32 8
   %op = mul i32 %select, 1000
   ret i32 %op
 }
 
-; FIXME: Truncate from promoted select blocks this.
 define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
+; IR-LABEL: @select_add_lhs_const_i16(
+; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i16 128, i16 131
+; IR-NEXT:    store i16 [[OP]], i16 addrspace(1)* undef
+; IR-NEXT:    ret void
+
 ; GCN-LABEL: select_add_lhs_const_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -428,16 +433,62 @@ define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
 ; GCN-NEXT:    flat_store_short v[0:1], v0
 ; GCN-NEXT:    s_endpgm
-; IR-LABEL: @select_add_lhs_const_i16(
-; IR-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i32 5, i32 8
-; IR-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
-; IR-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP2]] to i32
-; IR-NEXT:    [[TMP4:%.*]] = add nuw nsw i32 [[TMP3]], 123
-; IR-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i16
-; IR-NEXT:    store i16 [[TMP5]], i16 addrspace(1)* undef
-; IR-NEXT:    ret void
+;
   %select = select i1 %cond, i16 5, i16 8
   %op = add i16 %select, 123
   store i16 %op, i16 addrspace(1)* undef
   ret void
+}
+
+define i16 @select_add_trunc_select(i1 %cond) {
+; GCN-LABEL: select_add_trunc_select:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 50, 47, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+; IR-LABEL: @select_add_trunc_select(
+; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i16 47, i16 50
+; IR-NEXT:    ret i16 [[OP]]
+;
+  %select = select i1 %cond, i32 5, i32 8
+  %trunc = trunc i32 %select to i16
+  %op = add i16 %trunc, 42
+  ret i16 %op
+}
+
+define i32 @select_add_sext_select(i1 %cond) {
+; IR-LABEL: @select_add_sext_select(
+; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i32 29, i32 50
+; IR-NEXT:    ret i32 [[OP]]
+; GCN-LABEL: select_add_sext_select:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 50, 29, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %select = select i1 %cond, i16 -13, i16 8
+  %trunc = sext i16 %select to i32
+  %op = add i32 %trunc, 42
+  ret i32 %op
+}
+
+define i32 @select_add_zext_select(i1 %cond) {
+; IR-LABEL: @select_add_zext_select(
+; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i32 47, i32 50
+; IR-NEXT:    ret i32 [[OP]]
+
+; GCN-LABEL: select_add_zext_select:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 50, 47, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %select = select i1 %cond, i16 5, i16 8
+  %trunc = zext i16 %select to i32
+  %op = add i32 %trunc, 42
+  ret i32 %op
 }

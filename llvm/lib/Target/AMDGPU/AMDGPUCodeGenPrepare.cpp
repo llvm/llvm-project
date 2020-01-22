@@ -530,14 +530,32 @@ bool AMDGPUCodeGenPrepare::replaceMulWithMul24(BinaryOperator &I) const {
   return true;
 }
 
+// Find a select instruction, which may have been casted. This is mostly to deal
+// with cases where i16 selects weer promoted here to i32.
+static SelectInst *findSelectThroughCast(Value *V, CastInst *&Cast) {
+  Cast = nullptr;
+  if (SelectInst *Sel = dyn_cast<SelectInst>(V))
+    return Sel;
+
+  if ((Cast = dyn_cast<CastInst>(V))) {
+    if (SelectInst *Sel = dyn_cast<SelectInst>(Cast->getOperand(0)))
+      return Sel;
+  }
+
+  return nullptr;
+}
+
 bool AMDGPUCodeGenPrepare::foldBinOpIntoSelect(BinaryOperator &BO) const {
   // Don't do this unless the old select is going away. We want to eliminate the
   // binary operator, not replace a binop with a select.
   int SelOpNo = 0;
-  SelectInst *Sel = dyn_cast<SelectInst>(BO.getOperand(0));
+
+  CastInst *CastOp;
+
+  SelectInst *Sel = findSelectThroughCast(BO.getOperand(0), CastOp);
   if (!Sel || !Sel->hasOneUse()) {
     SelOpNo = 1;
-    Sel = dyn_cast<SelectInst>(BO.getOperand(1));
+    Sel = findSelectThroughCast(BO.getOperand(1), CastOp);
   }
 
   if (!Sel || !Sel->hasOneUse())
@@ -548,6 +566,11 @@ bool AMDGPUCodeGenPrepare::foldBinOpIntoSelect(BinaryOperator &BO) const {
   Constant *CBO = dyn_cast<Constant>(BO.getOperand(SelOpNo ^ 1));
   if (!CBO || !CT || !CF)
     return false;
+
+  if (CastOp) {
+    CT = ConstantFoldCastOperand(CastOp->getOpcode(), CT, BO.getType(), *DL);
+    CF = ConstantFoldCastOperand(CastOp->getOpcode(), CF, BO.getType(), *DL);
+  }
 
   // TODO: Handle special 0/-1 cases DAG combine does, although we only really
   // need to handle divisions here.
@@ -573,6 +596,8 @@ bool AMDGPUCodeGenPrepare::foldBinOpIntoSelect(BinaryOperator &BO) const {
   NewSelect->takeName(&BO);
   BO.replaceAllUsesWith(NewSelect);
   BO.eraseFromParent();
+  if (CastOp)
+    CastOp->eraseFromParent();
   Sel->eraseFromParent();
   return true;
 }
