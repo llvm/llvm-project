@@ -47,6 +47,18 @@ class CompDirSymLinkTestCase(TestBase):
     @skipIf(hostoslist=["windows"])
     def test_symlink_paths_unset(self):
         pwd_symlink = self.create_src_symlink()
+        self.doBuild(pwd_symlink, None)
+        src_path = self.getBuildArtifact(_SRC_FILE)
+        self.assertRaises(
+            AssertionError,
+            lldbutil.run_break_set_by_file_and_line,
+            self,
+            src_path,
+            self.line)
+
+    @skipIf(hostoslist=["windows"])
+    def test_symlink_paths_empty(self):
+        pwd_symlink = self.create_src_symlink()
         self.doBuild(pwd_symlink, "")
         src_path = self.getBuildArtifact(_SRC_FILE)
         self.assertRaises(
@@ -67,9 +79,11 @@ class CompDirSymLinkTestCase(TestBase):
     def doBuild(self, pwd_symlink, setting_value):
         self.build(None, None, {'PWD': pwd_symlink})
 
-        self.runCmd(
-            "settings set %s '%s'" %
-            (_COMP_DIR_SYM_LINK_PROP, setting_value))
+        if setting_value:
+            cmd = "settings set %s '%s'" % (_COMP_DIR_SYM_LINK_PROP, setting_value)
+        else:
+            cmd = "settings clear %s"%_COMP_DIR_SYM_LINK_PROP
+        self.runCmd(cmd)
 
         exe = self.getBuildArtifact(_EXE_NAME)
         self.runCmd('file ' + exe, CURRENT_EXECUTABLE_SET)
