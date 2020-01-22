@@ -57,7 +57,7 @@
 #include "Plugins/InstrumentationRuntime/ASan/InstrumentationRuntimeASan.h"
 #include "Plugins/InstrumentationRuntime/MainThreadChecker/MainThreadCheckerRuntime.h"
 #include "Plugins/InstrumentationRuntime/TSan/InstrumentationRuntimeTSan.h"
-#include "Plugins/InstrumentationRuntime/UBSan/UBSanRuntime.h"
+#include "Plugins/InstrumentationRuntime/UBSan/InstrumentationRuntimeUBSan.h"
 #include "Plugins/JITLoader/GDB/JITLoaderGDB.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
@@ -224,7 +224,7 @@ llvm::Error SystemInitializerFull::Initialize() {
   MemoryHistoryASan::Initialize();
   InstrumentationRuntimeASan::Initialize();
   InstrumentationRuntimeTSan::Initialize();
-  UndefinedBehaviorSanitizerRuntime::Initialize();
+  InstrumentationRuntimeUBSan::Initialize();
   MainThreadCheckerRuntime::Initialize();
 
   SymbolVendorELF::Initialize();
@@ -318,7 +318,7 @@ void SystemInitializerFull::Terminate() {
   MemoryHistoryASan::Terminate();
   InstrumentationRuntimeASan::Terminate();
   InstrumentationRuntimeTSan::Terminate();
-  UndefinedBehaviorSanitizerRuntime::Terminate();
+  InstrumentationRuntimeUBSan::Terminate();
   MainThreadCheckerRuntime::Terminate();
   wasm::SymbolVendorWasm::Terminate();
   SymbolVendorELF::Terminate();
