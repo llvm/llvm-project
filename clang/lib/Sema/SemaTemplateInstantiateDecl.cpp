@@ -1766,70 +1766,6 @@ Decl *TemplateDeclInstantiator::VisitCXXRecordDecl(CXXRecordDecl *D) {
   return Record;
 }
 
-/// Introduce the instantiated function parameters into the local
-/// instantiation scope, and set the parameter names to those used
-/// in the template.
-static bool addInstantiatedParametersToScope(Sema &S, FunctionDecl *Function,
-                                             const FunctionDecl *PatternDecl,
-                                             LocalInstantiationScope &Scope,
-                           const MultiLevelTemplateArgumentList &TemplateArgs) {
-  unsigned FParamIdx = 0;
-  for (unsigned I = 0, N = PatternDecl->getNumParams(); I != N; ++I) {
-    const ParmVarDecl *PatternParam = PatternDecl->getParamDecl(I);
-    if (!PatternParam->isParameterPack()) {
-      // Simple case: not a parameter pack.
-      assert(FParamIdx < Function->getNumParams());
-      ParmVarDecl *FunctionParam = Function->getParamDecl(FParamIdx);
-      FunctionParam->setDeclName(PatternParam->getDeclName());
-      // If the parameter's type is not dependent, update it to match the type
-      // in the pattern. They can differ in top-level cv-qualifiers, and we want
-      // the pattern's type here. If the type is dependent, they can't differ,
-      // per core issue 1668. Substitute into the type from the pattern, in case
-      // it's instantiation-dependent.
-      // FIXME: Updating the type to work around this is at best fragile.
-      if (!PatternDecl->getType()->isDependentType()) {
-        QualType T = S.SubstType(PatternParam->getType(), TemplateArgs,
-                                 FunctionParam->getLocation(),
-                                 FunctionParam->getDeclName());
-        if (T.isNull())
-          return true;
-        FunctionParam->setType(T);
-      }
-
-      Scope.InstantiatedLocal(PatternParam, FunctionParam);
-      ++FParamIdx;
-      continue;
-    }
-
-    // Expand the parameter pack.
-    Scope.MakeInstantiatedLocalArgPack(PatternParam);
-    Optional<unsigned> NumArgumentsInExpansion
-      = S.getNumArgumentsInExpansion(PatternParam->getType(), TemplateArgs);
-    if (NumArgumentsInExpansion) {
-      QualType PatternType =
-          PatternParam->getType()->castAs<PackExpansionType>()->getPattern();
-      for (unsigned Arg = 0; Arg < *NumArgumentsInExpansion; ++Arg) {
-        ParmVarDecl *FunctionParam = Function->getParamDecl(FParamIdx);
-        FunctionParam->setDeclName(PatternParam->getDeclName());
-        if (!PatternDecl->getType()->isDependentType()) {
-          Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(S, Arg);
-          QualType T = S.SubstType(PatternType, TemplateArgs,
-                                   FunctionParam->getLocation(),
-                                   FunctionParam->getDeclName());
-          if (T.isNull())
-            return true;
-          FunctionParam->setType(T);
-        }
-
-        Scope.InstantiatedLocalPackArg(PatternParam, FunctionParam);
-        ++FParamIdx;
-      }
-    }
-  }
-
-  return false;
-}
-
 /// Adjust the given function type for an instantiation of the
 /// given declaration, to cope with modifications to the function's type that
 /// aren't reflected in the type-source information.
@@ -1912,11 +1848,6 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
   // FIXME: Concepts: Do not substitute into constraint expressions
   Expr *TrailingRequiresClause = D->getTrailingRequiresClause();
   if (TrailingRequiresClause) {
-    if (D->isTemplateInstantiation() &&
-        addInstantiatedParametersToScope(
-            SemaRef, D, D->getTemplateInstantiationPattern(), Scope,
-            TemplateArgs))
-      return nullptr;
     ExprResult SubstRC = SemaRef.SubstExpr(TrailingRequiresClause,
                                            TemplateArgs);
     if (SubstRC.isInvalid())
@@ -4182,6 +4113,70 @@ TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
   }
 
   return NewTInfo;
+}
+
+/// Introduce the instantiated function parameters into the local
+/// instantiation scope, and set the parameter names to those used
+/// in the template.
+static bool addInstantiatedParametersToScope(Sema &S, FunctionDecl *Function,
+                                             const FunctionDecl *PatternDecl,
+                                             LocalInstantiationScope &Scope,
+                           const MultiLevelTemplateArgumentList &TemplateArgs) {
+  unsigned FParamIdx = 0;
+  for (unsigned I = 0, N = PatternDecl->getNumParams(); I != N; ++I) {
+    const ParmVarDecl *PatternParam = PatternDecl->getParamDecl(I);
+    if (!PatternParam->isParameterPack()) {
+      // Simple case: not a parameter pack.
+      assert(FParamIdx < Function->getNumParams());
+      ParmVarDecl *FunctionParam = Function->getParamDecl(FParamIdx);
+      FunctionParam->setDeclName(PatternParam->getDeclName());
+      // If the parameter's type is not dependent, update it to match the type
+      // in the pattern. They can differ in top-level cv-qualifiers, and we want
+      // the pattern's type here. If the type is dependent, they can't differ,
+      // per core issue 1668. Substitute into the type from the pattern, in case
+      // it's instantiation-dependent.
+      // FIXME: Updating the type to work around this is at best fragile.
+      if (!PatternDecl->getType()->isDependentType()) {
+        QualType T = S.SubstType(PatternParam->getType(), TemplateArgs,
+                                 FunctionParam->getLocation(),
+                                 FunctionParam->getDeclName());
+        if (T.isNull())
+          return true;
+        FunctionParam->setType(T);
+      }
+
+      Scope.InstantiatedLocal(PatternParam, FunctionParam);
+      ++FParamIdx;
+      continue;
+    }
+
+    // Expand the parameter pack.
+    Scope.MakeInstantiatedLocalArgPack(PatternParam);
+    Optional<unsigned> NumArgumentsInExpansion
+      = S.getNumArgumentsInExpansion(PatternParam->getType(), TemplateArgs);
+    if (NumArgumentsInExpansion) {
+      QualType PatternType =
+          PatternParam->getType()->castAs<PackExpansionType>()->getPattern();
+      for (unsigned Arg = 0; Arg < *NumArgumentsInExpansion; ++Arg) {
+        ParmVarDecl *FunctionParam = Function->getParamDecl(FParamIdx);
+        FunctionParam->setDeclName(PatternParam->getDeclName());
+        if (!PatternDecl->getType()->isDependentType()) {
+          Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(S, Arg);
+          QualType T = S.SubstType(PatternType, TemplateArgs,
+                                   FunctionParam->getLocation(),
+                                   FunctionParam->getDeclName());
+          if (T.isNull())
+            return true;
+          FunctionParam->setType(T);
+        }
+
+        Scope.InstantiatedLocalPackArg(PatternParam, FunctionParam);
+        ++FParamIdx;
+      }
+    }
+  }
+
+  return false;
 }
 
 void Sema::InstantiateExceptionSpec(SourceLocation PointOfInstantiation,
