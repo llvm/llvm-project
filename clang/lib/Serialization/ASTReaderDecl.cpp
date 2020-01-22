@@ -2319,12 +2319,12 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
 
   D->setDeclaredWithTypename(Record.readInt());
 
-  if (Record.readInt()) {
+  if (Record.readBool()) {
     NestedNameSpecifierLoc NNS = Record.readNestedNameSpecifierLoc();
     DeclarationNameInfo DN = Record.readDeclarationNameInfo();
-    ConceptDecl *NamedConcept = cast<ConceptDecl>(Record.readDecl());
+    ConceptDecl *NamedConcept = Record.readDeclAs<ConceptDecl>();
     const ASTTemplateArgumentListInfo *ArgsAsWritten = nullptr;
-    if (Record.readInt())
+    if (Record.readBool())
         ArgsAsWritten = Record.readASTTemplateArgumentListInfo();
     Expr *ImmediatelyDeclaredConstraint = Record.readExpr();
     D->setTypeConstraint(NNS, DN, /*FoundDecl=*/nullptr, NamedConcept,
@@ -2342,6 +2342,8 @@ void ASTDeclReader::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
   // TemplateParmPosition.
   D->setDepth(Record.readInt());
   D->setPosition(Record.readInt());
+  if (D->hasPlaceholderTypeConstraint())
+    D->setPlaceholderTypeConstraint(Record.readExpr());
   if (D->isExpandedParameterPack()) {
     auto TypesAndInfos =
         D->getTrailingObjects<std::pair<QualType, TypeSourceInfo *>>();
@@ -3827,13 +3829,19 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
                                                  HasTypeConstraint);
     break;
   }
-  case DECL_NON_TYPE_TEMPLATE_PARM:
-    D = NonTypeTemplateParmDecl::CreateDeserialized(Context, ID);
-    break;
-  case DECL_EXPANDED_NON_TYPE_TEMPLATE_PARM_PACK:
+  case DECL_NON_TYPE_TEMPLATE_PARM: {
+    bool HasTypeConstraint = Record.readInt();
     D = NonTypeTemplateParmDecl::CreateDeserialized(Context, ID,
-                                                    Record.readInt());
+                                                    HasTypeConstraint);
     break;
+  }
+  case DECL_EXPANDED_NON_TYPE_TEMPLATE_PARM_PACK: {
+    bool HasTypeConstraint = Record.readInt();
+    D = NonTypeTemplateParmDecl::CreateDeserialized(Context, ID,
+                                                    Record.readInt(),
+                                                    HasTypeConstraint);
+    break;
+  }
   case DECL_TEMPLATE_TEMPLATE_PARM:
     D = TemplateTemplateParmDecl::CreateDeserialized(Context, ID);
     break;

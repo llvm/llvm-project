@@ -548,8 +548,8 @@ public:
   }
 
   void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *D) {
-    if (const auto *TC = D->getPlaceholderTypeConstraint())
-      Visit(TC->getImmediatelyDeclaredConstraint());
+    if (const auto *E = D->getPlaceholderTypeConstraint())
+      Visit(E);
     if (D->hasDefaultArgument())
       Visit(D->getDefaultArgument(), SourceRange(),
             D->getDefaultArgStorage().getInheritedFrom(),
