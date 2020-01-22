@@ -4,8 +4,8 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 ; GCN-LABEL: {{^}}convergent_inlineasm:
 ; GCN: %bb.0:
 ; GCN: v_cmp_ne_u32_e64
-; GCN: ; mask branch
-; GCN: BB{{[0-9]+_[0-9]+}}:
+; GCN: s_cbranch_execz
+; GCN: ; %bb.{{[0-9]+}}:
 define amdgpu_kernel void @convergent_inlineasm(i64 addrspace(1)* nocapture %arg) {
 bb:
   %tmp = call i32 @llvm.amdgcn.workitem.id.x()
@@ -23,9 +23,9 @@ bb5:                                              ; preds = %bb3, %bb
 }
 
 ; GCN-LABEL: {{^}}nonconvergent_inlineasm:
-; GCN: ; mask branch
+; GCN: s_cbranch_execz
 
-; GCN: BB{{[0-9]+_[0-9]+}}:
+; GCN: ; %bb.{{[0-9]+}}:
 ; GCN: v_cmp_ne_u32_e64
 
 ; GCN: BB{{[0-9]+_[0-9]+}}:

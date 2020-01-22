@@ -8,7 +8,7 @@
 ; CHECK: s_mov_b32 [[SREG:s[0-9]+]], 1.0
 ; CHECK: %bb.1:
 ; CHECK-NOT: v_mov_b32_e32 {{v[0-9]+}}, 1.0
-; CHECK: BB0_4:
+; CHECK: BB0_3:
 ; CHECK: v_mov_b32_e32 v{{[0-9]+}}, [[SREG]]
 
 define amdgpu_ps void @mov_opt(i32 %arg, i32 inreg %arg1, i32 inreg %arg2) local_unnamed_addr #0 {
