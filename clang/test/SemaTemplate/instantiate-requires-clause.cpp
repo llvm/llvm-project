@@ -29,3 +29,13 @@ using f31 = decltype(f3('a'));
 using f32 = decltype(f3(1, 'b'));
 using f33 = decltype(f3(1, 'b', 2));
 // expected-error@-1 {{no matching function for call to 'f3'}}
+
+template<typename T>
+struct S {
+	template<typename U>
+	static constexpr auto f(U const index) requires(index, true) {
+		return true;
+	}
+};
+
+static_assert(S<void>::f(1));
