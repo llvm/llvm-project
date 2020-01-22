@@ -26,7 +26,8 @@ public:
   SubsystemRAII<FileSystem, HostInfo> subsystems;
 
   void SetUp() override {
-    m_ast.reset(new ClangASTContext(HostInfo::GetTargetTriple()));
+    m_ast.reset(
+        new ClangASTContext("test ASTContext", HostInfo::GetTargetTriple()));
   }
 
   void TearDown() override { m_ast.reset(); }
@@ -218,6 +219,16 @@ TEST_F(TestClangASTContext, TestBuiltinTypeForEncodingAndBitSize) {
 
   VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 32);
   VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 64);
+}
+
+TEST_F(TestClangASTContext, TestDisplayName) {
+  ClangASTContext ast("some name", llvm::Triple());
+  EXPECT_EQ("some name", ast.getDisplayName());
+}
+
+TEST_F(TestClangASTContext, TestDisplayNameEmpty) {
+  ClangASTContext ast("", llvm::Triple());
+  EXPECT_EQ("", ast.getDisplayName());
 }
 
 TEST_F(TestClangASTContext, TestIsClangType) {
