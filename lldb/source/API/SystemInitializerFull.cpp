@@ -54,7 +54,7 @@
 #include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
 #include "Plugins/Instruction/MIPS64/EmulateInstructionMIPS64.h"
 #include "Plugins/Instruction/PPC64/EmulateInstructionPPC64.h"
-#include "Plugins/InstrumentationRuntime/ASan/ASanRuntime.h"
+#include "Plugins/InstrumentationRuntime/ASan/InstrumentationRuntimeASan.h"
 #include "Plugins/InstrumentationRuntime/MainThreadChecker/MainThreadCheckerRuntime.h"
 #include "Plugins/InstrumentationRuntime/TSan/TSanRuntime.h"
 #include "Plugins/InstrumentationRuntime/UBSan/UBSanRuntime.h"
@@ -222,7 +222,7 @@ llvm::Error SystemInitializerFull::Initialize() {
   ProcessMachCore::Initialize();
   minidump::ProcessMinidump::Initialize();
   MemoryHistoryASan::Initialize();
-  AddressSanitizerRuntime::Initialize();
+  InstrumentationRuntimeASan::Initialize();
   ThreadSanitizerRuntime::Initialize();
   UndefinedBehaviorSanitizerRuntime::Initialize();
   MainThreadCheckerRuntime::Initialize();
@@ -316,7 +316,7 @@ void SystemInitializerFull::Terminate() {
   ProcessMachCore::Terminate();
   minidump::ProcessMinidump::Terminate();
   MemoryHistoryASan::Terminate();
-  AddressSanitizerRuntime::Terminate();
+  InstrumentationRuntimeASan::Terminate();
   ThreadSanitizerRuntime::Terminate();
   UndefinedBehaviorSanitizerRuntime::Terminate();
   MainThreadCheckerRuntime::Terminate();
