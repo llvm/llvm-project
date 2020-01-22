@@ -2552,6 +2552,84 @@ AMDGPUInstructionSelector::selectDS1Addr1Offset(MachineOperand &Root) const {
     }};
 }
 
+static void addZeroImm(MachineInstrBuilder &MIB) {
+  MIB.addImm(0);
+}
+
+/// Return a resource descriptor for use with an arbitrary 64-bit pointer. If \p
+/// BasePtr is not valid, a null base pointer will be ussed.
+static Register buildRSrc(MachineInstr *MI, MachineRegisterInfo &MRI,
+                          const SIInstrInfo &TII, Register BasePtr) {
+  Register RSrc2 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  Register RSrc3 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  Register RSrcHi = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
+  Register RSrc = MRI.createVirtualRegister(&AMDGPU::SGPR_128RegClass);
+
+  const DebugLoc &DL = MI->getDebugLoc();
+  MachineBasicBlock *BB = MI->getParent();
+
+  // TODO: Try to use a real pointer if available.
+  BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_MOV_B32), RSrc2)
+    .addImm(0);
+  BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_MOV_B32), RSrc3)
+    .addImm(TII.getDefaultRsrcDataFormat() >> 32);
+
+  // Build the half of the subregister with the constants before building the
+  // full 128-bit register. If we are building multiple resource descriptors,
+  // this will allow CSEing of the 2-component register.
+  BuildMI(*BB, MI, DL, TII.get(AMDGPU::REG_SEQUENCE), RSrcHi)
+    .addReg(RSrc2)
+    .addImm(AMDGPU::sub0)
+    .addReg(RSrc3)
+    .addImm(AMDGPU::sub1);
+
+  Register RSrcLo = BasePtr;
+  if (!BasePtr) {
+    RSrcLo = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
+    BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_MOV_B64), RSrcLo)
+      .addImm(0);
+  }
+
+  BuildMI(*BB, MI, DL, TII.get(AMDGPU::REG_SEQUENCE), RSrc)
+    .addReg(RSrcLo)
+    .addImm(AMDGPU::sub0_sub1)
+    .addReg(RSrcHi)
+    .addImm(AMDGPU::sub2_sub3);
+
+  return RSrc;
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectMUBUFAddr64(MachineOperand &Root) const {
+  // FIXME: Predicates should stop this from reaching here.
+  // addr64 bit was removed for volcanic islands.
+  if (!STI.hasAddr64() || STI.useFlatForGlobal())
+    return {};
+
+  MachineInstr *MI = MRI->getVRegDef(Root.getReg());
+  Register VAddr = Root.getReg();
+  int64_t Offset = 0;
+
+  // TODO: Attempt to use addressing modes. We need to look back through regbank
+  // copies to find a 64-bit SGPR base and VGPR offset.
+
+  // FIXME: Use defaulted operands for trailing 0s and remove from the complex
+  // pattern.
+  return {{
+      [=](MachineInstrBuilder &MIB) {  // rsrc
+        MIB.addReg(buildRSrc(MI, *MRI, TII, Register()));
+      },
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(VAddr); },  // vaddr
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); }, // soffset
+      addZeroImm, //  offset
+      addZeroImm, //  glc
+      addZeroImm, //  slc
+      addZeroImm, //  tfe
+      addZeroImm, //  dlc
+      addZeroImm  //  swz
+    }};
+}
+
 void AMDGPUInstructionSelector::renderTruncImm32(MachineInstrBuilder &MIB,
                                                  const MachineInstr &MI,
                                                  int OpIdx) const {

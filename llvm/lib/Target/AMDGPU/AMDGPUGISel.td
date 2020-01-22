@@ -84,6 +84,10 @@ def gi_ds_1addr_1offset :
     GIComplexOperandMatcher<s32, "selectDS1Addr1Offset">,
     GIComplexPatternEquiv<DS1Addr1Offset>;
 
+def gi_mubuf_addr64 :
+    GIComplexOperandMatcher<s64, "selectMUBUFAddr64">,
+    GIComplexPatternEquiv<MUBUFAddr64>;
+
 
 // Separate load nodes are defined to glue m0 initialization in
 // SelectionDAG. The GISel selector can just insert m0 initialization
