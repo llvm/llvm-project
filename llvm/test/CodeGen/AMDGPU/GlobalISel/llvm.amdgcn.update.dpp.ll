@@ -64,18 +64,17 @@ define amdgpu_kernel void @update_dpp64_test(i64 addrspace(1)* %arg, i64 %in1, i
 ; GFX10-LABEL: update_dpp64_test:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX10-NEXT:    v_mul_lo_u32 v2, 0, v0
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-NEXT:    v_mul_lo_u32 v2, 0, v0
 ; GFX10-NEXT:    v_mul_hi_u32 v3, 8, v0
 ; GFX10-NEXT:    v_mul_lo_u32 v0, 8, v0
 ; GFX10-NEXT:    v_mul_lo_u32 v1, 8, v1
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
-; GFX10-NEXT:    v_add_nc_u32_e32 v1, v2, v1
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_add_co_u32_e64 v6, vcc_lo, s0, v0
+; GFX10-NEXT:    v_add3_u32 v1, v2, v1, v3
 ; GFX10-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX10-NEXT:    v_mov_b32_e32 v4, s2
-; GFX10-NEXT:    v_add_nc_u32_e32 v1, v1, v3
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, s1, v1, vcc_lo
 ; GFX10-NEXT:    global_load_dwordx2 v[2:3], v[6:7], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
