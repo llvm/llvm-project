@@ -499,7 +499,9 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
   Opts.NoInlineDefine = !Opt;
 }
 
-ClangASTContext::ClangASTContext(llvm::Triple target_triple) {
+ClangASTContext::ClangASTContext(llvm::StringRef name,
+                                 llvm::Triple target_triple) {
+  m_display_name = name.str();
   if (!target_triple.str().empty())
     SetTargetTriple(target_triple.str());
   // The caller didn't pass an ASTContext so create a new one for this
@@ -507,7 +509,9 @@ ClangASTContext::ClangASTContext(llvm::Triple target_triple) {
   CreateASTContext();
 }
 
-ClangASTContext::ClangASTContext(ASTContext &existing_ctxt) {
+ClangASTContext::ClangASTContext(llvm::StringRef name,
+                                 ASTContext &existing_ctxt) {
+  m_display_name = name.str();
   SetTargetTriple(existing_ctxt.getTargetInfo().getTriple().str());
 
   m_ast_up.reset(&existing_ctxt);
@@ -556,9 +560,11 @@ lldb::TypeSystemSP ClangASTContext::CreateInstance(lldb::LanguageType language,
     }
   }
 
-  if (module)
-    return std::make_shared<ClangASTContext>(triple);
-  else if (target && target->IsValid())
+  if (module) {
+    std::string ast_name =
+        "ASTContext for '" + module->GetFileSpec().GetPath() + "'";
+    return std::make_shared<ClangASTContext>(ast_name, triple);
+  } else if (target && target->IsValid())
     return std::make_shared<ClangASTContextForExpressions>(*target, triple);
   return lldb::TypeSystemSP();
 }
@@ -9252,7 +9258,8 @@ ClangASTContext::DeclContextGetClangASTContext(const CompilerDeclContext &dc) {
 
 ClangASTContextForExpressions::ClangASTContextForExpressions(
     Target &target, llvm::Triple triple)
-    : ClangASTContext(triple), m_target_wp(target.shared_from_this()),
+    : ClangASTContext("scratch ASTContext", triple),
+      m_target_wp(target.shared_from_this()),
       m_persistent_variables(new ClangPersistentVariables) {
   m_scratch_ast_source_up.reset(new ClangASTSource(
       target.shared_from_this(), target.GetClangASTImporter()));
