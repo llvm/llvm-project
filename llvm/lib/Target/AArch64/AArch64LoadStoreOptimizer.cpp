@@ -1325,6 +1325,19 @@ canRenameUpToDef(MachineInstr &FirstMI, LiveRegUnits &UsedInBetween,
 
     // For defs, check if we can rename the first def of RegToRename.
     if (FoundDef) {
+      // For some pseudo instructions, we might not generate code in the end
+      // (e.g. KILL) and we would end up without a correct def for the rename
+      // register.
+      // TODO: This might be overly conservative and we could handle those cases
+      // in multiple ways:
+      //       1. Insert an extra copy, to materialize the def.
+      //       2. Skip pseudo-defs until we find an non-pseudo def.
+      if (MI.isPseudo()) {
+        LLVM_DEBUG(dbgs() << "  Cannot rename pseudo instruction " << MI
+                          << "\n");
+        return false;
+      }
+
       for (auto &MOP : MI.operands()) {
         if (!MOP.isReg() || !MOP.isDef() || MOP.isDebug() || !MOP.getReg() ||
             !TRI->regsOverlap(MOP.getReg(), RegToRename))
