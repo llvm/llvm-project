@@ -55,7 +55,7 @@
 #include "Plugins/Instruction/MIPS64/EmulateInstructionMIPS64.h"
 #include "Plugins/Instruction/PPC64/EmulateInstructionPPC64.h"
 #include "Plugins/InstrumentationRuntime/ASan/InstrumentationRuntimeASan.h"
-#include "Plugins/InstrumentationRuntime/MainThreadChecker/MainThreadCheckerRuntime.h"
+#include "Plugins/InstrumentationRuntime/MainThreadChecker/InstrumentationRuntimeMainThreadChecker.h"
 #include "Plugins/InstrumentationRuntime/TSan/InstrumentationRuntimeTSan.h"
 #include "Plugins/InstrumentationRuntime/UBSan/InstrumentationRuntimeUBSan.h"
 #include "Plugins/JITLoader/GDB/JITLoaderGDB.h"
@@ -225,7 +225,7 @@ llvm::Error SystemInitializerFull::Initialize() {
   InstrumentationRuntimeASan::Initialize();
   InstrumentationRuntimeTSan::Initialize();
   InstrumentationRuntimeUBSan::Initialize();
-  MainThreadCheckerRuntime::Initialize();
+  InstrumentationRuntimeMainThreadChecker::Initialize();
 
   SymbolVendorELF::Initialize();
   breakpad::SymbolFileBreakpad::Initialize();
@@ -319,7 +319,8 @@ void SystemInitializerFull::Terminate() {
   InstrumentationRuntimeASan::Terminate();
   InstrumentationRuntimeTSan::Terminate();
   InstrumentationRuntimeUBSan::Terminate();
-  MainThreadCheckerRuntime::Terminate();
+  InstrumentationRuntimeMainThreadChecker::Terminate();
+
   wasm::SymbolVendorWasm::Terminate();
   SymbolVendorELF::Terminate();
   breakpad::SymbolFileBreakpad::Terminate();
