@@ -1,40 +1,20 @@
-// RUN: %check_clang_tidy %s misc-misplaced-const %t -- -- -DUSING
-// RUN: %check_clang_tidy %s misc-misplaced-const %t -- -- -DTYPEDEF
+// RUN: %check_clang_tidy %s misc-misplaced-const %t
 
-#ifdef TYPEDEF
-typedef int int_;
-typedef int *ptr_to_int;
-typedef const int *ptr_to_const_int;
-#endif
-#ifdef USING
-using int_ = int;
-using ptr_to_int = int *;
-using ptr_to_const_int = const int *;
-#endif
+typedef int plain_i;
+typedef int *ip;
+typedef const int *cip;
 
-void const_pointers() {
-  if (const int *i = 0) {
-    i = 0;
-    // *i = 0;
-  }
+void func() {
+  if (const int *i = 0)
+    ;
+  if (const plain_i *i = 0)
+    ;
+  if (const cip i = 0)
+    ;
 
-  if (const int_ *i = 0) {
-    i = 0;
-    // *i = 0;
-  }
-
-  if (const ptr_to_const_int i = 0) {
-    // i = 0;
-    // *i = 0;
-  }
-
-  // Potentially quite unexpectedly the int can be modified here
-  // CHECK-MESSAGES: :[[@LINE+1]]:23: warning: 'i' declared with a const-qualified {{.*}}; results in the type being 'int *const' instead of 'const int *'
-  if (const ptr_to_int i = 0) {
-    //i = 0;
-
-    *i = 0;
-  }
+  // CHECK-MESSAGES: :[[@LINE+1]]:16: warning: 'i' declared with a const-qualified typedef type; results in the type being 'int *const' instead of 'const int *'
+  if (const ip i = 0)
+    ;
 }
 
 template <typename Ty>
@@ -44,8 +24,8 @@ struct S {
 };
 
 template struct S<int>;
-template struct S<ptr_to_int>; // ok
-template struct S<ptr_to_const_int>;
+template struct S<ip>; // ok
+template struct S<cip>;
 
 template <typename Ty>
 struct U {
