@@ -1,4 +1,4 @@
-//===-- TSanRuntime.cpp -----------------------------------------*- C++ -*-===//
+//===-- InstrumentationRuntimeTSan.cpp --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TSanRuntime.h"
+#include "InstrumentationRuntimeTSan.h"
 
 #include "Plugins/Process/Utility/HistoryThread.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
@@ -36,29 +36,29 @@ using namespace lldb;
 using namespace lldb_private;
 
 lldb::InstrumentationRuntimeSP
-ThreadSanitizerRuntime::CreateInstance(const lldb::ProcessSP &process_sp) {
-  return InstrumentationRuntimeSP(new ThreadSanitizerRuntime(process_sp));
+InstrumentationRuntimeTSan::CreateInstance(const lldb::ProcessSP &process_sp) {
+  return InstrumentationRuntimeSP(new InstrumentationRuntimeTSan(process_sp));
 }
 
-void ThreadSanitizerRuntime::Initialize() {
+void InstrumentationRuntimeTSan::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), "ThreadSanitizer instrumentation runtime plugin.",
       CreateInstance, GetTypeStatic);
 }
 
-void ThreadSanitizerRuntime::Terminate() {
+void InstrumentationRuntimeTSan::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString ThreadSanitizerRuntime::GetPluginNameStatic() {
+lldb_private::ConstString InstrumentationRuntimeTSan::GetPluginNameStatic() {
   return ConstString("ThreadSanitizer");
 }
 
-lldb::InstrumentationRuntimeType ThreadSanitizerRuntime::GetTypeStatic() {
+lldb::InstrumentationRuntimeType InstrumentationRuntimeTSan::GetTypeStatic() {
   return eInstrumentationRuntimeTypeThreadSanitizer;
 }
 
-ThreadSanitizerRuntime::~ThreadSanitizerRuntime() { Deactivate(); }
+InstrumentationRuntimeTSan::~InstrumentationRuntimeTSan() { Deactivate(); }
 
 const char *thread_sanitizer_retrieve_report_data_prefix = R"(
 extern "C"
@@ -84,7 +84,7 @@ extern "C"
                                  int *running, const char **name, int *parent_tid,
                                  void **trace, unsigned long trace_size);
     int __tsan_get_report_unique_tid(void *report, unsigned long idx, int *tid);
-  
+
     // TODO: dlsym won't work on Windows.
     void *dlsym(void* handle, const char* symbol);
     int (*ptr__tsan_get_report_loc_object_type)(void *report, unsigned long idx, const char **object_type);
@@ -99,15 +99,15 @@ struct data {
     const char *description;
     int report_count;
     unsigned long tag;
-    
+
     void *sleep_trace[REPORT_TRACE_SIZE];
-    
+
     int stack_count;
     struct {
         int idx;
         void *trace[REPORT_TRACE_SIZE];
     } stacks[REPORT_ARRAY_SIZE];
-    
+
     int mop_count;
     struct {
         int idx;
@@ -118,7 +118,7 @@ struct data {
         void *addr;
         void *trace[REPORT_TRACE_SIZE];
     } mops[REPORT_ARRAY_SIZE];
-    
+
     int loc_count;
     struct {
         int idx;
@@ -132,7 +132,7 @@ struct data {
         void *trace[REPORT_TRACE_SIZE];
         const char *object_type;
     } locs[REPORT_ARRAY_SIZE];
-    
+
     int mutex_count;
     struct {
         int idx;
@@ -141,7 +141,7 @@ struct data {
         int destroyed;
         void *trace[REPORT_TRACE_SIZE];
     } mutexes[REPORT_ARRAY_SIZE];
-    
+
     int thread_count;
     struct {
         int idx;
@@ -152,7 +152,7 @@ struct data {
         int parent_tid;
         void *trace[REPORT_TRACE_SIZE];
     } threads[REPORT_ARRAY_SIZE];
-    
+
     int unique_tid_count;
     struct {
         int idx;
@@ -305,8 +305,8 @@ static user_id_t Renumber(uint64_t id,
   return IT->second;
 }
 
-StructuredData::ObjectSP
-ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
+StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
+    ExecutionContextRef exe_ctx_ref) {
   ProcessSP process_sp = GetProcessSP();
   if (!process_sp)
     return StructuredData::ObjectSP();
@@ -494,8 +494,9 @@ ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
   return StructuredData::ObjectSP(dict);
 }
 
-std::string ThreadSanitizerRuntime::FormatDescription(
-    StructuredData::ObjectSP report, bool &is_swift_access_race) {
+std::string
+InstrumentationRuntimeTSan::FormatDescription(StructuredData::ObjectSP report,
+                                              bool &is_swift_access_race) {
   std::string description = report->GetAsDictionary()
                                 ->GetValueForKey("issue_type")
                                 ->GetAsString()
@@ -599,7 +600,7 @@ static void GetSymbolDeclarationFromAddress(ProcessSP process_sp, addr_t addr,
   decl = var->GetDeclaration();
 }
 
-addr_t ThreadSanitizerRuntime::GetFirstNonInternalFramePc(
+addr_t InstrumentationRuntimeTSan::GetFirstNonInternalFramePc(
     StructuredData::ObjectSP trace, bool skip_one_frame) {
   ProcessSP process_sp = GetProcessSP();
   ModuleSP runtime_module_sp = GetRuntimeModuleSP();
@@ -628,7 +629,7 @@ addr_t ThreadSanitizerRuntime::GetFirstNonInternalFramePc(
 }
 
 std::string
-ThreadSanitizerRuntime::GenerateSummary(StructuredData::ObjectSP report) {
+InstrumentationRuntimeTSan::GenerateSummary(StructuredData::ObjectSP report) {
   ProcessSP process_sp = GetProcessSP();
 
   std::string summary = report->GetAsDictionary()
@@ -719,8 +720,8 @@ ThreadSanitizerRuntime::GenerateSummary(StructuredData::ObjectSP report) {
   return summary;
 }
 
-addr_t
-ThreadSanitizerRuntime::GetMainRacyAddress(StructuredData::ObjectSP report) {
+addr_t InstrumentationRuntimeTSan::GetMainRacyAddress(
+    StructuredData::ObjectSP report) {
   addr_t result = (addr_t)-1;
 
   report->GetObjectForDotSeparatedPath("mops")->GetAsArray()->ForEach(
@@ -735,7 +736,7 @@ ThreadSanitizerRuntime::GetMainRacyAddress(StructuredData::ObjectSP report) {
   return (result == (addr_t)-1) ? 0 : result;
 }
 
-std::string ThreadSanitizerRuntime::GetLocationDescription(
+std::string InstrumentationRuntimeTSan::GetLocationDescription(
     StructuredData::ObjectSP report, addr_t &global_addr,
     std::string &global_name, std::string &filename, uint32_t &line) {
   std::string result = "";
@@ -815,15 +816,15 @@ std::string ThreadSanitizerRuntime::GetLocationDescription(
   return result;
 }
 
-bool ThreadSanitizerRuntime::NotifyBreakpointHit(
+bool InstrumentationRuntimeTSan::NotifyBreakpointHit(
     void *baton, StoppointCallbackContext *context, user_id_t break_id,
     user_id_t break_loc_id) {
   assert(baton && "null baton");
   if (!baton)
     return false;
 
-  ThreadSanitizerRuntime *const instance =
-      static_cast<ThreadSanitizerRuntime *>(baton);
+  InstrumentationRuntimeTSan *const instance =
+      static_cast<InstrumentationRuntimeTSan *>(baton);
 
   ProcessSP process_sp = instance->GetProcessSP();
 
@@ -901,12 +902,13 @@ bool ThreadSanitizerRuntime::NotifyBreakpointHit(
     return false; // Let target run
 }
 
-const RegularExpression &ThreadSanitizerRuntime::GetPatternForRuntimeLibrary() {
+const RegularExpression &
+InstrumentationRuntimeTSan::GetPatternForRuntimeLibrary() {
   static RegularExpression regex(llvm::StringRef("libclang_rt.tsan_"));
   return regex;
 }
 
-bool ThreadSanitizerRuntime::CheckIfRuntimeIsValid(
+bool InstrumentationRuntimeTSan::CheckIfRuntimeIsValid(
     const lldb::ModuleSP module_sp) {
   static ConstString g_tsan_get_current_report("__tsan_get_current_report");
   const Symbol *symbol = module_sp->FindFirstSymbolWithNameAndType(
@@ -914,7 +916,7 @@ bool ThreadSanitizerRuntime::CheckIfRuntimeIsValid(
   return symbol != nullptr;
 }
 
-void ThreadSanitizerRuntime::Activate() {
+void InstrumentationRuntimeTSan::Activate() {
   if (IsActive())
     return;
 
@@ -944,7 +946,7 @@ void ThreadSanitizerRuntime::Activate() {
       process_sp->GetTarget()
           .CreateBreakpoint(symbol_address, internal, hardware)
           .get();
-  breakpoint->SetCallback(ThreadSanitizerRuntime::NotifyBreakpointHit, this,
+  breakpoint->SetCallback(InstrumentationRuntimeTSan::NotifyBreakpointHit, this,
                           true);
   breakpoint->SetBreakpointKind("thread-sanitizer-report");
   SetBreakpointID(breakpoint->GetID());
@@ -952,7 +954,7 @@ void ThreadSanitizerRuntime::Activate() {
   SetActive(true);
 }
 
-void ThreadSanitizerRuntime::Deactivate() {
+void InstrumentationRuntimeTSan::Deactivate() {
   if (GetBreakpointID() != LLDB_INVALID_BREAK_ID) {
     ProcessSP process_sp = GetProcessSP();
     if (process_sp) {
@@ -1071,7 +1073,7 @@ static void AddThreadsForPath(const std::string &path,
 }
 
 lldb::ThreadCollectionSP
-ThreadSanitizerRuntime::GetBacktracesFromExtendedStopInfo(
+InstrumentationRuntimeTSan::GetBacktracesFromExtendedStopInfo(
     StructuredData::ObjectSP info) {
   ThreadCollectionSP threads;
   threads = std::make_shared<ThreadCollection>();
