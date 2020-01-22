@@ -272,36 +272,56 @@ static bool CheckConstraintSatisfaction(Sema &S, TemplateDeclT *Template,
   return false;
 }
 
-bool Sema::CheckConstraintSatisfaction(TemplateDecl *Template,
-                                       ArrayRef<const Expr *> ConstraintExprs,
-                                       ArrayRef<TemplateArgument> TemplateArgs,
-                                       SourceRange TemplateIDRange,
-                                       ConstraintSatisfaction &Satisfaction) {
-  return ::CheckConstraintSatisfaction(*this, Template, ConstraintExprs,
-                                       TemplateArgs, TemplateIDRange,
-                                       Satisfaction);
-}
+bool Sema::CheckConstraintSatisfaction(
+    NamedDecl *Template, ArrayRef<const Expr *> ConstraintExprs,
+    ArrayRef<TemplateArgument> TemplateArgs, SourceRange TemplateIDRange,
+    ConstraintSatisfaction &OutSatisfaction) {
+  if (ConstraintExprs.empty()) {
+    OutSatisfaction.IsSatisfied = true;
+    return false;
+  }
 
-bool
-Sema::CheckConstraintSatisfaction(ClassTemplatePartialSpecializationDecl* Part,
-                                  ArrayRef<const Expr *> ConstraintExprs,
-                                  ArrayRef<TemplateArgument> TemplateArgs,
-                                  SourceRange TemplateIDRange,
-                                  ConstraintSatisfaction &Satisfaction) {
-  return ::CheckConstraintSatisfaction(*this, Part, ConstraintExprs,
-                                       TemplateArgs, TemplateIDRange,
-                                       Satisfaction);
-}
+  llvm::FoldingSetNodeID ID;
+  void *InsertPos;
+  ConstraintSatisfaction *Satisfaction = nullptr;
+  if (LangOpts.ConceptSatisfactionCaching) {
+    ConstraintSatisfaction::Profile(ID, Context, Template, TemplateArgs);
+    Satisfaction = SatisfactionCache.FindNodeOrInsertPos(ID, InsertPos);
+    if (Satisfaction) {
+      OutSatisfaction = *Satisfaction;
+      return false;
+    }
+    Satisfaction = new ConstraintSatisfaction(Template, TemplateArgs);
+  } else {
+    Satisfaction = &OutSatisfaction;
+  }
+  bool Failed;
+  if (auto *T = dyn_cast<TemplateDecl>(Template))
+    Failed = ::CheckConstraintSatisfaction(*this, T, ConstraintExprs,
+                                           TemplateArgs, TemplateIDRange,
+                                           *Satisfaction);
+  else if (auto *P =
+               dyn_cast<ClassTemplatePartialSpecializationDecl>(Template))
+    Failed = ::CheckConstraintSatisfaction(*this, P, ConstraintExprs,
+                                           TemplateArgs, TemplateIDRange,
+                                           *Satisfaction);
+  else
+    Failed = ::CheckConstraintSatisfaction(
+        *this, cast<VarTemplatePartialSpecializationDecl>(Template),
+        ConstraintExprs, TemplateArgs, TemplateIDRange, *Satisfaction);
+  if (Failed) {
+    if (LangOpts.ConceptSatisfactionCaching)
+      delete Satisfaction;
+    return true;
+  }
 
-bool
-Sema::CheckConstraintSatisfaction(VarTemplatePartialSpecializationDecl* Partial,
-                                  ArrayRef<const Expr *> ConstraintExprs,
-                                  ArrayRef<TemplateArgument> TemplateArgs,
-                                  SourceRange TemplateIDRange,
-                                  ConstraintSatisfaction &Satisfaction) {
-  return ::CheckConstraintSatisfaction(*this, Partial, ConstraintExprs,
-                                       TemplateArgs, TemplateIDRange,
-                                       Satisfaction);
+  if (LangOpts.ConceptSatisfactionCaching) {
+    // We cannot use InsertNode here because CheckConstraintSatisfaction might
+    // have invalidated it.
+    SatisfactionCache.InsertNode(Satisfaction);
+    OutSatisfaction = *Satisfaction;
+  }
+  return false;
 }
 
 bool Sema::CheckConstraintSatisfaction(const Expr *ConstraintExpr,

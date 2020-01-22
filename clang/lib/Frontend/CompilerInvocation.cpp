@@ -2859,6 +2859,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     Opts.NewAlignOverride = 0;
   }
   Opts.ConceptsTS = Args.hasArg(OPT_fconcepts_ts);
+  Opts.ConceptSatisfactionCaching =
+      !Args.hasArg(OPT_fno_concept_satisfaction_caching);
   Opts.HeinousExtensions = Args.hasArg(OPT_fheinous_gnu_extensions);
   Opts.AccessControl = !Args.hasArg(OPT_fno_access_control);
   Opts.ElideConstructors = !Args.hasArg(OPT_fno_elide_constructors);
