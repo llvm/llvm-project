@@ -2804,14 +2804,9 @@ void CodeGenFunction::EmitVTablePtrCheck(const CXXRecordDecl *RD,
 
 bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
   if (!CGM.getCodeGenOpts().WholeProgramVTables ||
+      !SanOpts.has(SanitizerKind::CFIVCall) ||
+      !CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIVCall) ||
       !CGM.HasHiddenLTOVisibility(RD))
-    return false;
-
-  if (CGM.getCodeGenOpts().VirtualFunctionElimination)
-    return true;
-
-  if (!SanOpts.has(SanitizerKind::CFIVCall) ||
-      !CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIVCall))
     return false;
 
   std::string TypeName = RD->getQualifiedNameAsString();
@@ -2836,13 +2831,8 @@ llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(
        TypeId});
   llvm::Value *CheckResult = Builder.CreateExtractValue(CheckedLoad, 1);
 
-  std::string TypeName = RD->getQualifiedNameAsString();
-  if (SanOpts.has(SanitizerKind::CFIVCall) &&
-      !getContext().getSanitizerBlacklist().isBlacklistedType(
-          SanitizerKind::CFIVCall, TypeName)) {
-    EmitCheck(std::make_pair(CheckResult, SanitizerKind::CFIVCall),
-              SanitizerHandler::CFICheckFail, {}, {});
-  }
+  EmitCheck(std::make_pair(CheckResult, SanitizerKind::CFIVCall),
+            SanitizerHandler::CFICheckFail, nullptr, nullptr);
 
   return Builder.CreateBitCast(
       Builder.CreateExtractValue(CheckedLoad, 0),
