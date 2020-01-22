@@ -2962,6 +2962,7 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
       case Sema::NC_ContextIndependentExpr:
       case Sema::NC_VarTemplate:
       case Sema::NC_FunctionTemplate:
+      case Sema::NC_Concept:
         // Might be a redeclaration of a prior entity.
         break;
       }
@@ -3193,6 +3194,18 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         continue;
       }
 
+      if (Next.is(tok::annot_template_id) &&
+          static_cast<TemplateIdAnnotation *>(Next.getAnnotationValue())
+            ->Kind == TNK_Concept_template &&
+          GetLookAheadToken(2).isOneOf(tok::kw_auto, tok::kw_decltype)) {
+        DS.getTypeSpecScope() = SS;
+        // This is a qualified placeholder-specifier, e.g., ::C<int> auto ...
+        // Consume the scope annotation and continue to consume the template-id
+        // as a placeholder-specifier.
+        ConsumeAnnotationToken();
+        continue;
+      }
+
       if (Next.is(tok::annot_typename)) {
         DS.getTypeSpecScope() = SS;
         ConsumeAnnotationToken(); // The C++ scope.
@@ -3235,6 +3248,10 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // C++ doesn't have implicit int.  Diagnose it as a typo w.r.t. to the
       // typename.
       if (!TypeRep) {
+        if (TryAnnotateTypeConstraint())
+          goto DoneWithDeclSpec;
+        if (isTypeConstraintAnnotation())
+          continue;
         // Eat the scope spec so the identifier is current.
         ConsumeAnnotationToken();
         ParsedAttributesWithRange Attrs(AttrFactory);
@@ -3384,6 +3401,10 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // If this is not a typedef name, don't parse it as part of the declspec,
       // it must be an implicit int or an error.
       if (!TypeRep) {
+        if (TryAnnotateTypeConstraint())
+          goto DoneWithDeclSpec;
+        if (isTypeConstraintAnnotation())
+          continue;
         ParsedAttributesWithRange Attrs(AttrFactory);
         if (ParseImplicitInt(DS, nullptr, TemplateInfo, AS, DSContext, Attrs)) {
           if (!Attrs.empty()) {
@@ -3433,9 +3454,51 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       continue;
     }
 
-      // type-name
+      // type-name or placeholder-specifier
     case tok::annot_template_id: {
       TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
+      if (TemplateId->Kind == TNK_Concept_template) {
+        if (NextToken().is(tok::identifier)) {
+          Diag(Loc, diag::err_placeholder_expected_auto_or_decltype_auto)
+              << FixItHint::CreateInsertion(NextToken().getLocation(), "auto");
+          // Attempt to continue as if 'auto' was placed here.
+          isInvalid = DS.SetTypeSpecType(TST_auto, Loc, PrevSpec, DiagID,
+                                         TemplateId, Policy);
+          break;
+        }
+        if (!NextToken().isOneOf(tok::kw_auto, tok::kw_decltype))
+            goto DoneWithDeclSpec;
+        ConsumeAnnotationToken();
+        SourceLocation AutoLoc = Tok.getLocation();
+        if (TryConsumeToken(tok::kw_decltype)) {
+          BalancedDelimiterTracker Tracker(*this, tok::l_paren);
+          if (Tracker.consumeOpen()) {
+            // Something like `void foo(Iterator decltype i)`
+            Diag(Tok, diag::err_expected) << tok::l_paren;
+          } else {
+            if (!TryConsumeToken(tok::kw_auto)) {
+              // Something like `void foo(Iterator decltype(int) i)`
+              Tracker.skipToEnd();
+              Diag(Tok, diag::err_placeholder_expected_auto_or_decltype_auto)
+                << FixItHint::CreateReplacement(SourceRange(AutoLoc,
+                                                            Tok.getLocation()),
+                                                "auto");
+            } else {
+              Tracker.consumeClose();
+            }
+          }
+          ConsumedEnd = Tok.getLocation();
+          // Even if something went wrong above, continue as if we've seen
+          // `decltype(auto)`.
+          isInvalid = DS.SetTypeSpecType(TST_decltype_auto, Loc, PrevSpec,
+                                         DiagID, TemplateId, Policy);
+        } else {
+          isInvalid = DS.SetTypeSpecType(TST_auto, Loc, PrevSpec, DiagID,
+                                         TemplateId, Policy);
+        }
+        break;
+      }
+
       if (TemplateId->Kind != TNK_Type_template &&
           TemplateId->Kind != TNK_Undeclared_template) {
         // This template-id does not refer to a type name, so we're
@@ -6027,11 +6090,12 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
 
   while (1) {
     if (Tok.is(tok::l_paren)) {
+      bool IsFunctionDeclaration = D.isFunctionDeclaratorAFunctionDeclaration();
       // Enter function-declaration scope, limiting any declarators to the
       // function prototype scope, including parameter declarators.
       ParseScope PrototypeScope(this,
                                 Scope::FunctionPrototypeScope|Scope::DeclScope|
-                                (D.isFunctionDeclaratorAFunctionDeclaration()
+                                (IsFunctionDeclaration
                                    ? Scope::FunctionDeclarationScope : 0));
 
       // The paren may be part of a C++ direct initializer, eg. "int x(1);".
@@ -6050,7 +6114,12 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       ParsedAttributes attrs(AttrFactory);
       BalancedDelimiterTracker T(*this, tok::l_paren);
       T.consumeOpen();
+      if (IsFunctionDeclaration)
+        Actions.ActOnStartFunctionDeclarationDeclarator(D,
+                                                        TemplateParameterDepth);
       ParseFunctionDeclarator(D, attrs, T, IsAmbiguous);
+      if (IsFunctionDeclaration)
+        Actions.ActOnFinishFunctionDeclarationDeclarator(D);
       PrototypeScope.Exit();
     } else if (Tok.is(tok::l_square)) {
       ParseBracketDeclarator(D);

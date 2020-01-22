@@ -17386,3 +17386,50 @@ MSPropertyDecl *Sema::HandleMSProperty(Scope *S, RecordDecl *Record,
 
   return NewPD;
 }
+
+void Sema::ActOnStartFunctionDeclarationDeclarator(
+    Declarator &Declarator, unsigned TemplateParameterDepth) {
+  auto &Info = InventedParameterInfos.emplace_back();
+  TemplateParameterList *ExplicitParams = nullptr;
+  ArrayRef<TemplateParameterList *> ExplicitLists =
+      Declarator.getTemplateParameterLists();
+  if (!ExplicitLists.empty()) {
+    bool IsMemberSpecialization, IsInvalid;
+    ExplicitParams = MatchTemplateParametersToScopeSpecifier(
+        Declarator.getBeginLoc(), Declarator.getIdentifierLoc(),
+        Declarator.getCXXScopeSpec(), /*TemplateId=*/nullptr,
+        ExplicitLists, /*IsFriend=*/false, IsMemberSpecialization, IsInvalid,
+        /*SuppressDiagnostic=*/true);
+  }
+  if (ExplicitParams) {
+    Info.AutoTemplateParameterDepth = ExplicitParams->getDepth();
+    for (NamedDecl *Param : *ExplicitParams)
+      Info.TemplateParams.push_back(Param);
+    Info.NumExplicitTemplateParams = ExplicitParams->size();
+  } else {
+    Info.AutoTemplateParameterDepth = TemplateParameterDepth;
+    Info.NumExplicitTemplateParams = 0;
+  }
+}
+
+void Sema::ActOnFinishFunctionDeclarationDeclarator(Declarator &Declarator) {
+  auto &FSI = InventedParameterInfos.back();
+  if (FSI.TemplateParams.size() > FSI.NumExplicitTemplateParams) {
+    if (FSI.NumExplicitTemplateParams != 0) {
+      TemplateParameterList *ExplicitParams =
+          Declarator.getTemplateParameterLists().back();
+      Declarator.setInventedTemplateParameterList(
+          TemplateParameterList::Create(
+              Context, ExplicitParams->getTemplateLoc(),
+              ExplicitParams->getLAngleLoc(), FSI.TemplateParams,
+              ExplicitParams->getRAngleLoc(),
+              ExplicitParams->getRequiresClause()));
+    } else {
+      Declarator.setInventedTemplateParameterList(
+          TemplateParameterList::Create(
+              Context, SourceLocation(), SourceLocation(), FSI.TemplateParams,
+              SourceLocation(), /*RequiresClause=*/nullptr));
+    }
+  }
+  InventedParameterInfos.pop_back();
+}
