@@ -94,6 +94,8 @@ private:
   bool selectG_PTR_ADD(MachineInstr &I) const;
   bool selectG_IMPLICIT_DEF(MachineInstr &I) const;
   bool selectG_INSERT(MachineInstr &I) const;
+
+  bool selectInterpP1F16(MachineInstr &MI) const;
   bool selectG_INTRINSIC(MachineInstr &I) const;
 
   std::tuple<Register, unsigned, unsigned>
