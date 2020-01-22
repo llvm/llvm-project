@@ -716,61 +716,6 @@ ASTContext::CanonicalTemplateTemplateParm::Profile(llvm::FoldingSetNodeID &ID,
     RequiresClause->Profile(ID, C, /*Canonical=*/true);
 }
 
-static Expr *
-canonicalizeImmediatelyDeclaredConstraint(const ASTContext &C, Expr *IDC,
-                                          QualType ConstrainedType) {
-  // This is a bit ugly - we need to form a new immediately-declared
-  // constraint that references the new parameter; this would ideally
-  // require semantic analysis (e.g. template<C T> struct S {}; - the
-  // converted arguments of C<T> could be an argument pack if C is
-  // declared as template<typename... T> concept C = ...).
-  // We don't have semantic analysis here so we dig deep into the
-  // ready-made constraint expr and change the thing manually.
-  ConceptSpecializationExpr *CSE;
-  if (const auto *Fold = dyn_cast<CXXFoldExpr>(IDC))
-    CSE = cast<ConceptSpecializationExpr>(Fold->getLHS());
-  else
-    CSE = cast<ConceptSpecializationExpr>(IDC);
-  ArrayRef<TemplateArgument> OldConverted = CSE->getTemplateArguments();
-  SmallVector<TemplateArgument, 3> NewConverted;
-  NewConverted.reserve(OldConverted.size());
-  if (OldConverted.front().getKind() == TemplateArgument::Pack) {
-    // The case:
-    // template<typename... T> concept C = true;
-    // template<C<int> T> struct S; -> constraint is C<{T, int}>
-    NewConverted.push_back(ConstrainedType);
-    for (auto &Arg : OldConverted.front().pack_elements().drop_front(1))
-      NewConverted.push_back(Arg);
-    TemplateArgument NewPack(NewConverted);
-
-    NewConverted.clear();
-    NewConverted.push_back(NewPack);
-    assert(OldConverted.size() == 1 &&
-           "Template parameter pack should be the last parameter");
-  } else {
-    assert(OldConverted.front().getKind() == TemplateArgument::Type &&
-           "Unexpected first argument kind for immediately-declared "
-           "constraint");
-    NewConverted.push_back(ConstrainedType);
-    for (auto &Arg : OldConverted.drop_front(1))
-      NewConverted.push_back(Arg);
-  }
-  Expr *NewIDC = ConceptSpecializationExpr::Create(
-      C, NestedNameSpecifierLoc(), /*TemplateKWLoc=*/SourceLocation(),
-      CSE->getConceptNameInfo(), /*FoundDecl=*/CSE->getNamedConcept(),
-      CSE->getNamedConcept(),
-      // Actually canonicalizing a TemplateArgumentLoc is difficult so we
-      // simply omit the ArgsAsWritten
-      /*ArgsAsWritten=*/nullptr, NewConverted, nullptr);
-
-  if (auto *OrigFold = dyn_cast<CXXFoldExpr>(IDC))
-    NewIDC = new (C) CXXFoldExpr(OrigFold->getType(), SourceLocation(), NewIDC,
-                                 BinaryOperatorKind::BO_LAnd,
-                                 SourceLocation(), /*RHS=*/nullptr,
-                                 SourceLocation(), /*NumExpansions=*/None);
-  return NewIDC;
-}
-
 TemplateTemplateParmDecl *
 ASTContext::getCanonicalTemplateTemplateParmDecl(
                                           TemplateTemplateParmDecl *TTP) const {
@@ -798,23 +743,68 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
           TTP->isExpandedParameterPack() ?
           llvm::Optional<unsigned>(TTP->getNumExpansionParameters()) : None);
       if (const auto *TC = TTP->getTypeConstraint()) {
+        // This is a bit ugly - we need to form a new immediately-declared
+        // constraint that references the new parameter; this would ideally
+        // require semantic analysis (e.g. template<C T> struct S {}; - the
+        // converted arguments of C<T> could be an argument pack if C is
+        // declared as template<typename... T> concept C = ...).
+        // We don't have semantic analysis here so we dig deep into the
+        // ready-made constraint expr and change the thing manually.
+        Expr *IDC = TC->getImmediatelyDeclaredConstraint();
+        ConceptSpecializationExpr *CSE;
+        if (const auto *Fold = dyn_cast<CXXFoldExpr>(IDC))
+          CSE = cast<ConceptSpecializationExpr>(Fold->getLHS());
+        else
+          CSE = cast<ConceptSpecializationExpr>(IDC);
+        ArrayRef<TemplateArgument> OldConverted = CSE->getTemplateArguments();
+        SmallVector<TemplateArgument, 3> NewConverted;
+        NewConverted.reserve(OldConverted.size());
+
         QualType ParamAsArgument(NewTTP->getTypeForDecl(), 0);
-        Expr *NewIDC = canonicalizeImmediatelyDeclaredConstraint(
-                *this, TC->getImmediatelyDeclaredConstraint(),
-                ParamAsArgument);
-        TemplateArgumentListInfo CanonArgsAsWritten;
-        if (auto *Args = TC->getTemplateArgsAsWritten())
-          for (const auto &ArgLoc : Args->arguments())
-            CanonArgsAsWritten.addArgument(
-                TemplateArgumentLoc(ArgLoc.getArgument(),
-                                    TemplateArgumentLocInfo()));
+        if (OldConverted.front().getKind() == TemplateArgument::Pack) {
+          // The case:
+          // template<typename... T> concept C = true;
+          // template<C<int> T> struct S; -> constraint is C<{T, int}>
+          NewConverted.push_back(ParamAsArgument);
+          for (auto &Arg : OldConverted.front().pack_elements().drop_front(1))
+            NewConverted.push_back(Arg);
+          TemplateArgument NewPack(NewConverted);
+
+          NewConverted.clear();
+          NewConverted.push_back(NewPack);
+          assert(OldConverted.size() == 1 &&
+                 "Template parameter pack should be the last parameter");
+        } else {
+          assert(OldConverted.front().getKind() == TemplateArgument::Type &&
+                 "Unexpected first argument kind for immediately-declared "
+                 "constraint");
+          NewConverted.push_back(ParamAsArgument);
+          for (auto &Arg : OldConverted.drop_front(1))
+            NewConverted.push_back(Arg);
+        }
+        Expr *NewIDC = ConceptSpecializationExpr::Create(*this,
+            NestedNameSpecifierLoc(), /*TemplateKWLoc=*/SourceLocation(),
+            CSE->getConceptNameInfo(), /*FoundDecl=*/CSE->getNamedConcept(),
+            CSE->getNamedConcept(),
+            // Actually canonicalizing a TemplateArgumentLoc is difficult so we
+            // simply omit the ArgsAsWritten
+            /*ArgsAsWritten=*/nullptr, NewConverted, nullptr);
+
+        if (auto *OrigFold = dyn_cast<CXXFoldExpr>(IDC))
+          NewIDC = new (*this) CXXFoldExpr(OrigFold->getType(),
+                                           SourceLocation(), NewIDC,
+                                           BinaryOperatorKind::BO_LAnd,
+                                           SourceLocation(), /*RHS=*/nullptr,
+                                           SourceLocation(),
+                                           /*NumExpansions=*/None);
+
         NewTTP->setTypeConstraint(
             NestedNameSpecifierLoc(),
             DeclarationNameInfo(TC->getNamedConcept()->getDeclName(),
                                 SourceLocation()), /*FoundDecl=*/nullptr,
             // Actually canonicalizing a TemplateArgumentLoc is difficult so we
             // simply omit the ArgsAsWritten
-            TC->getNamedConcept(), /*ArgsAsWritten=*/nullptr, NewIDC);
+            CSE->getNamedConcept(), /*ArgsAsWritten=*/nullptr, NewIDC);
       }
       CanonParams.push_back(NewTTP);
     } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(*P)) {
@@ -848,13 +838,6 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
                                                 T,
                                                 NTTP->isParameterPack(),
                                                 TInfo);
-      }
-      if (AutoType *AT = T->getContainedAutoType()) {
-        if (AT->isConstrained()) {
-          Param->setPlaceholderTypeConstraint(
-              canonicalizeImmediatelyDeclaredConstraint(
-                  *this, NTTP->getPlaceholderTypeConstraint(), T));
-        }
       }
       CanonParams.push_back(Param);
 
@@ -960,7 +943,7 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
                        Builtin::Context &builtins)
     : ConstantArrayTypes(this_()), FunctionProtoTypes(this_()),
       TemplateSpecializationTypes(this_()),
-      DependentTemplateSpecializationTypes(this_()), AutoTypes(this_()),
+      DependentTemplateSpecializationTypes(this_()),
       SubstTemplateTemplateParmPacks(this_()),
       CanonTemplateTemplateParms(this_()), SourceMgr(SM), LangOpts(LOpts),
       SanitizerBL(new SanitizerBlacklist(LangOpts.SanitizerBlacklistFiles, SM)),
@@ -5141,29 +5124,21 @@ QualType ASTContext::getUnaryTransformType(QualType BaseType,
 /// getAutoType - Return the uniqued reference to the 'auto' type which has been
 /// deduced to the given type, or to the canonical undeduced 'auto' type, or the
 /// canonical deduced-but-dependent 'auto' type.
-QualType
-ASTContext::getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
-                        bool IsDependent, bool IsPack,
-                        ConceptDecl *TypeConstraintConcept,
-                        ArrayRef<TemplateArgument> TypeConstraintArgs) const {
+QualType ASTContext::getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
+                                 bool IsDependent, bool IsPack) const {
   assert((!IsPack || IsDependent) && "only use IsPack for a dependent pack");
-  if (DeducedType.isNull() && Keyword == AutoTypeKeyword::Auto &&
-      !TypeConstraintConcept && !IsDependent)
+  if (DeducedType.isNull() && Keyword == AutoTypeKeyword::Auto && !IsDependent)
     return getAutoDeductType();
 
   // Look in the folding set for an existing type.
   void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
-  AutoType::Profile(ID, *this, DeducedType, Keyword, IsDependent,
-                    TypeConstraintConcept, TypeConstraintArgs);
+  AutoType::Profile(ID, DeducedType, Keyword, IsDependent, IsPack);
   if (AutoType *AT = AutoTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(AT, 0);
 
-  void *Mem = Allocate(sizeof(AutoType) +
-                       sizeof(TemplateArgument) * TypeConstraintArgs.size(),
-                       TypeAlignment);
-  auto *AT = new (Mem) AutoType(DeducedType, Keyword, IsDependent, IsPack,
-                                TypeConstraintConcept, TypeConstraintArgs);
+  auto *AT = new (*this, TypeAlignment)
+      AutoType(DeducedType, Keyword, IsDependent, IsPack);
   Types.push_back(AT);
   if (InsertPos)
     AutoTypes.InsertNode(AT, InsertPos);
@@ -5225,8 +5200,7 @@ QualType ASTContext::getAutoDeductType() const {
   if (AutoDeductTy.isNull())
     AutoDeductTy = QualType(
       new (*this, TypeAlignment) AutoType(QualType(), AutoTypeKeyword::Auto,
-                                          /*dependent*/false, /*pack*/false,
-                                          /*concept*/nullptr, /*args*/{}),
+                                          /*dependent*/false, /*pack*/false),
       0);
   return AutoDeductTy;
 }

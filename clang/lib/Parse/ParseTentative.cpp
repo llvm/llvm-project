@@ -1313,18 +1313,6 @@ public:
 Parser::TPResult
 Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
                                   bool *InvalidAsDeclSpec) {
-  auto IsPlaceholderSpecifier = [&] (TemplateIdAnnotation *TemplateId,
-                                     int Lookahead) {
-    // We have a placeholder-constraint (we check for 'auto' or 'decltype' to
-    // distinguish 'C<int>;' from 'C<int> auto c = 1;')
-    return TemplateId->Kind == TNK_Concept_template &&
-        GetLookAheadToken(Lookahead + 1).isOneOf(tok::kw_auto, tok::kw_decltype,
-            // If we have an identifier here, the user probably forgot the
-            // 'auto' in the placeholder constraint, e.g. 'C<int> x = 2;'
-            // This will be diagnosed nicely later, so disambiguate as a
-            // declaration.
-            tok::identifier);
-  };
   switch (Tok.getKind()) {
   case tok::identifier: {
     // Check for need to substitute AltiVec __vector keyword
@@ -1528,8 +1516,6 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
       *InvalidAsDeclSpec = NextToken().is(tok::l_paren);
       return TPResult::Ambiguous;
     }
-    if (IsPlaceholderSpecifier(TemplateId, /*Lookahead=*/0))
-      return TPResult::True;
     if (TemplateId->Kind != TNK_Type_template)
       return TPResult::False;
     CXXScopeSpec SS;
@@ -1543,13 +1529,6 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
     if (TryAnnotateTypeOrScopeToken())
       return TPResult::Error;
     if (!Tok.is(tok::annot_typename)) {
-      if (Tok.is(tok::annot_cxxscope) &&
-          NextToken().is(tok::annot_template_id)) {
-        TemplateIdAnnotation *TemplateId =
-            takeTemplateIdAnnotation(NextToken());
-        if (IsPlaceholderSpecifier(TemplateId, /*Lookahead=*/1))
-          return TPResult::True;
-      }
       // If the next token is an identifier or a type qualifier, then this
       // can't possibly be a valid expression either.
       if (Tok.is(tok::annot_cxxscope) && NextToken().is(tok::identifier)) {

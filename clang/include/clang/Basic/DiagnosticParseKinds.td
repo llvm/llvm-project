@@ -1371,8 +1371,6 @@ def err_concept_definition_not_identifier : Error<
 def ext_concept_legacy_bool_keyword : ExtWarn<
   "ISO C++2a does not permit the 'bool' keyword after 'concept'">,
   InGroup<DiagGroup<"concepts-ts-compat">>;
-def err_placeholder_expected_auto_or_decltype_auto : Error<
-  "expected 'auto' or 'decltype(auto)' after concept name">;
 }
 
 } // end of Parser diagnostics
