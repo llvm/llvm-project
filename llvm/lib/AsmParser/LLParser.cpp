@@ -8050,12 +8050,10 @@ bool LLParser::ParseGVEntry(unsigned ID) {
 
   // Have a list of summaries
   if (ParseToken(lltok::kw_summaries, "expected 'summaries' here") ||
-      ParseToken(lltok::colon, "expected ':' here"))
+      ParseToken(lltok::colon, "expected ':' here") ||
+      ParseToken(lltok::lparen, "expected '(' here"))
     return true;
-
   do {
-    if (ParseToken(lltok::lparen, "expected '(' here"))
-      return true;
     switch (Lex.getKind()) {
     case lltok::kw_function:
       if (ParseFunctionSummary(Name, GUID, ID))
@@ -8072,11 +8070,10 @@ bool LLParser::ParseGVEntry(unsigned ID) {
     default:
       return Error(Lex.getLoc(), "expected summary type");
     }
-    if (ParseToken(lltok::rparen, "expected ')' here"))
-      return true;
   } while (EatIfPresent(lltok::comma));
 
-  if (ParseToken(lltok::rparen, "expected ')' here"))
+  if (ParseToken(lltok::rparen, "expected ')' here") ||
+      ParseToken(lltok::rparen, "expected ')' here"))
     return true;
 
   return false;
