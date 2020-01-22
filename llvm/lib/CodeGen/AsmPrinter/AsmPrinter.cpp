@@ -450,6 +450,21 @@ MCSymbol *AsmPrinter::getSymbol(const GlobalValue *GV) const {
   return TM.getSymbol(GV);
 }
 
+MCSymbol *AsmPrinter::getSymbolPreferLocal(const GlobalValue &GV) const {
+  // On ELF, use .Lfoo$local if GV is a non-interposable GlobalObject with an
+  // exact definion (intersection of GlobalValue::hasExactDefinition() and
+  // !isInterposable()). These linkages include: external, appending, internal,
+  // private. It may be profitable to use a local alias for external. The
+  // assembler would otherwise be conservative and assume a global default
+  // visibility symbol can be interposable, even if the code generator already
+  // assumed it.
+  if (TM.getTargetTriple().isOSBinFormatELF() &&
+      GlobalObject::isExternalLinkage(GV.getLinkage()) && GV.isDSOLocal() &&
+      !GV.isDeclaration() && isa<GlobalObject>(GV))
+    return getSymbolWithGlobalValueBase(&GV, "$local");
+  return TM.getSymbol(&GV);
+}
+
 /// EmitGlobalVariable - Emit the specified global variable to the .s file.
 void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   bool IsEmuTLSVar = TM.useEmulatedTLS() && GV->isThreadLocal();
@@ -631,6 +646,9 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   EmitAlignment(Alignment, GV);
 
   OutStreamer->EmitLabel(EmittedInitSym);
+  MCSymbol *LocalAlias = getSymbolPreferLocal(*GV);
+  if (LocalAlias != EmittedInitSym)
+    OutStreamer->EmitLabel(LocalAlias);
 
   EmitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
 
@@ -767,7 +785,13 @@ void AsmPrinter::EmitFunctionEntryLabel() {
     report_fatal_error("'" + Twine(CurrentFnSym->getName()) +
                        "' label emitted multiple times to assembly file");
 
-  return OutStreamer->EmitLabel(CurrentFnSym);
+  OutStreamer->EmitLabel(CurrentFnSym);
+
+  if (TM.getTargetTriple().isOSBinFormatELF()) {
+    MCSymbol *Sym = getSymbolPreferLocal(MF->getFunction());
+    if (Sym != CurrentFnSym)
+      OutStreamer->EmitLabel(Sym);
+  }
 }
 
 /// emitComments - Pretty-print comments for instructions.

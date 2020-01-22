@@ -247,6 +247,11 @@ public:
 
   MCSymbol *getSymbol(const GlobalValue *GV) const;
 
+  /// Similar to getSymbol() but preferred for references. On ELF, this uses a
+  /// local symbol if a reference to GV is guaranteed to be resolved to the
+  /// definition in the same module.
+  MCSymbol *getSymbolPreferLocal(const GlobalValue &GV) const;
+
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
   //===------------------------------------------------------------------===//

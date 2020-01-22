@@ -1,9 +1,9 @@
-; RUN: llc -mtriple x86_64-pc-linux \
-; RUN:     -relocation-model=static  < %s | FileCheck --check-prefix=STATIC %s
-; RUN: llc -mtriple x86_64-pc-linux \
-; RUN:     -relocation-model=pic             < %s | FileCheck %s
-; RUN: llc -mtriple x86_64-pc-linux \
-; RUN:     -relocation-model=dynamic-no-pic  < %s | FileCheck %s
+; RUN: llc -mtriple x86_64-pc-linux -relocation-model=static < %s | \
+; RUN:   FileCheck --check-prefixes=COMMON,STATIC %s
+; RUN: llc -mtriple x86_64-pc-linux -relocation-model=pic < %s | \
+; RUN:   FileCheck --check-prefixes=COMMON,CHECK %s
+; RUN: llc -mtriple x86_64-pc-linux -relocation-model=dynamic-no-pic < %s | \
+; RUN:   FileCheck --check-prefixes=COMMON,CHECK %s
 
 ; 32 bits
 
@@ -173,6 +173,8 @@ define dso_local void @strong_local_function() {
 define void()* @get_strong_local_function() {
   ret void()* @strong_local_function
 }
+; COMMON:     {{^}}strong_local_function:
+; COMMON-NEXT .Lstrong_local_function:
 ; CHECK: leaq strong_local_function(%rip), %rax
 ; STATIC: movl $strong_local_function, %eax
 ; CHECK32: leal strong_local_function@GOTOFF(%eax), %eax
@@ -223,3 +225,6 @@ define void()* @get_external_preemptable_function() {
 ; CHECK: movq external_preemptable_function@GOTPCREL(%rip), %rax
 ; STATIC: movl $external_preemptable_function, %eax
 ; CHECK32: movl external_preemptable_function@GOT(%eax), %eax
+
+; COMMON:     {{^}}strong_local_global:
+; COMMON-NEXT .Lstrong_local_global:
