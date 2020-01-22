@@ -21,17 +21,17 @@ import subprocess
 
 
 def help():
-    print("usage: {} capture|replay [args]".fmt(sys.argv[0]))
+    print("usage: {} capture|replay [args]".format(sys.argv[0]))
 
 
 def main():
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         help()
         return 1
 
     # Compute a hash based on the input arguments and the current working
     # directory.
-    args = ' '.join(sys.argv[3:])
+    args = ' '.join(sys.argv[2:])
     cwd = os.getcwd()
     input_hash = str(hash((cwd, args)))
 
@@ -40,15 +40,15 @@ def main():
 
     # Create a new lldb invocation with capture or replay enabled.
     lldb = os.path.join(os.path.dirname(sys.argv[0]), 'lldb')
-    new_args = [sys.argv[1]]
-    if sys.argv[2] == "replay":
+    new_args = [lldb]
+    if sys.argv[1] == "replay":
         new_args.extend(['--replay', reproducer_path])
-    elif sys.argv[2] == "capture":
+    elif sys.argv[1] == "capture":
         new_args.extend([
             '--capture', '--capture-path', reproducer_path,
             '--reproducer-auto-generate'
         ])
-        new_args.extend(sys.argv[1:])
+        new_args.extend(sys.argv[2:])
     else:
         help()
         return 1
