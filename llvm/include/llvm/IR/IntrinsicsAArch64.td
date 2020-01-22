@@ -775,6 +775,12 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMPointerTo<0>],
                 [IntrReadMem, IntrArgMemOnly]>;
 
+  class AdvSIMD_1Vec_PredFaultingLoad_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                 LLVMPointerToElt<0>],
+                [IntrReadMem, IntrArgMemOnly]>;
+
   class AdvSIMD_1Vec_PredStore_Intrinsic
     : Intrinsic<[],
                 [llvm_anyvector_ty,
@@ -1168,6 +1174,8 @@ class AdvSIMD_ScatterStore_VectorBase_Intrinsic
 //
 
 def int_aarch64_sve_ldnt1 : AdvSIMD_1Vec_PredLoad_Intrinsic;
+
+def int_aarch64_sve_ldnf1 : AdvSIMD_1Vec_PredFaultingLoad_Intrinsic;
 
 //
 // Stores
