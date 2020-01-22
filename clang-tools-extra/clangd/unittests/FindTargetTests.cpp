@@ -286,6 +286,14 @@ TEST_F(TargetDeclTest, Types) {
   )cpp";
   // FIXME: We don't do a good job printing TemplateTypeParmDecls, apparently!
   EXPECT_DECLS("SizeOfPackExpr", "");
+
+  Code = R"cpp(
+    template <typename T>
+    class Foo {
+      void f([[Foo]] x);
+    };
+  )cpp";
+  EXPECT_DECLS("InjectedClassNameTypeLoc", "class Foo");
 }
 
 TEST_F(TargetDeclTest, ClassTemplate) {
