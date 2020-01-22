@@ -196,8 +196,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
   // Try to refine the mod-ref info further using other API entry points to the
   // aggregate set of AA results.
   auto MRB = getModRefBehavior(Call);
-  if (MRB == FMRB_DoesNotAccessMemory ||
-      MRB == FMRB_OnlyAccessesInaccessibleMem)
+  if (onlyAccessesInaccessibleMem(MRB))
     return ModRefInfo::NoModRef;
 
   if (onlyReadsMemory(MRB))

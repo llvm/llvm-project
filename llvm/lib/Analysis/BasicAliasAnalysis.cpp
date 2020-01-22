@@ -723,7 +723,7 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
   if (Call->onlyReadsMemory())
     Min = FMRB_OnlyReadsMemory;
   else if (Call->doesNotReadMemory())
-    Min = FMRB_DoesNotReadMemory;
+    Min = FMRB_OnlyWritesMemory;
 
   if (Call->onlyAccessesArgMemory())
     Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesArgumentPointees);
@@ -756,7 +756,7 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const Function *F) {
   if (F->onlyReadsMemory())
     Min = FMRB_OnlyReadsMemory;
   else if (F->doesNotReadMemory())
-    Min = FMRB_DoesNotReadMemory;
+    Min = FMRB_OnlyWritesMemory;
 
   if (F->onlyAccessesArgMemory())
     Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesArgumentPointees);
