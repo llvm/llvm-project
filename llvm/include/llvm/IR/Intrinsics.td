@@ -1394,6 +1394,11 @@ def int_ptrauth_sign_generic : Intrinsic<[llvm_anyint_ty],
                                          [LLVMMatchType<0>, LLVMMatchType<0>],
                                          [IntrNoMem]>;
 
+//===---------- Intrinsics to query properties of scalable vectors --------===//
+def int_vscale : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
+
+//===----------------------------------------------------------------------===//
+
 //===----------------------------------------------------------------------===//
 // Target-specific intrinsics
 //===----------------------------------------------------------------------===//

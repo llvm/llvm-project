@@ -91,6 +91,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::TRUNCATE:    Res = PromoteIntRes_TRUNCATE(N); break;
   case ISD::UNDEF:       Res = PromoteIntRes_UNDEF(N); break;
   case ISD::VAARG:       Res = PromoteIntRes_VAARG(N); break;
+  case ISD::VSCALE:      Res = PromoteIntRes_VSCALE(N); break;
 
   case ISD::EXTRACT_SUBVECTOR:
                          Res = PromoteIntRes_EXTRACT_SUBVECTOR(N); break;
@@ -1177,6 +1178,13 @@ SDValue DAGTypeLegalizer::PromoteIntRes_XMULO(SDNode *N, unsigned ResNo) {
 SDValue DAGTypeLegalizer::PromoteIntRes_UNDEF(SDNode *N) {
   return DAG.getUNDEF(TLI.getTypeToTransformTo(*DAG.getContext(),
                                                N->getValueType(0)));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_VSCALE(SDNode *N) {
+  EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+
+  APInt MulImm = cast<ConstantSDNode>(N->getOperand(0))->getAPIntValue();
+  return DAG.getVScale(SDLoc(N), VT, MulImm.sextOrSelf(VT.getSizeInBits()));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_VAARG(SDNode *N) {
