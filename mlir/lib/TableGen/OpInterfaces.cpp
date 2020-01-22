@@ -85,3 +85,9 @@ llvm::Optional<StringRef> OpInterface::getDescription() const {
   auto value = def->getValueAsString("description");
   return value.empty() ? llvm::Optional<StringRef>() : value;
 }
+
+// Return the body for this method if it has one.
+llvm::Optional<StringRef> OpInterface::getVerify() const {
+  auto value = def->getValueAsString("verify");
+  return value.empty() ? llvm::Optional<StringRef>() : value;
+}

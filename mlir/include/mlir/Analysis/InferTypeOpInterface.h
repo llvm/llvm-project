@@ -72,8 +72,6 @@ private:
   Attribute attr;
 };
 
-#include "mlir/Analysis/InferTypeOpInterface.h.inc"
-
 namespace detail {
 // Helper function to infer return tensor returns types given element and shape
 // inference function.
@@ -89,7 +87,13 @@ LogicalResult inferReturnTensorTypes(
     MLIRContext *context, Optional<Location> location, ValueRange operands,
     ArrayRef<NamedAttribute> attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferedReturnTypes);
+
+/// Verifies that the inferred result types match the actual result types for
+/// the op. Precondition: op implements InferTypeOpInterface.
+LogicalResult verifyInferredResultTypes(Operation *op);
 } // namespace detail
+
+#include "mlir/Analysis/InferTypeOpInterface.h.inc"
 
 namespace OpTrait {
 
