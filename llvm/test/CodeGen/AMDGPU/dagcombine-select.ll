@@ -112,9 +112,7 @@ define amdgpu_kernel void @sel_constants_sub_constant_sel_constants(i32 addrspac
 }
 
 ; GCN-LABEL: {{^}}sel_constants_sub_constant_sel_constants_i16:
-; TODO: shrink i16 constant. This is correct but suboptimal.
-; GCN: v_mov_b32_e32 [[T:v[0-9]+]], 0xffff0009
-; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 2, [[T]],
+; GCN: v_cndmask_b32_e64 v2, 2, 9,
 define amdgpu_kernel void @sel_constants_sub_constant_sel_constants_i16(i16 addrspace(1)* %p, i1 %cond) {
   %sel = select i1 %cond, i16 -4, i16 3
   %bo = sub i16 5, %sel
