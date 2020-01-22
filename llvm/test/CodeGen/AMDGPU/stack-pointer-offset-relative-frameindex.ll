@@ -28,9 +28,8 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; GCN-NEXT:    s_and_saveexec_b32 s0, vcc_lo
-; GCN-NEXT:    ; mask branch BB0_2
 ; GCN-NEXT:    s_cbranch_execz BB0_2
-; GCN-NEXT:  BB0_1: ; %if.then4.i
+; GCN-NEXT:  ; %bb.1: ; %if.then4.i
 ; GCN-NEXT:    buffer_load_dword v0, v32, s[36:39], s32 offen
 ; GCN-NEXT:    buffer_load_dword v1, v32, s[36:39], s32 offen offset:4
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
