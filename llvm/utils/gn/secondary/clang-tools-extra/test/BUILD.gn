@@ -98,7 +98,8 @@ action("check-clang-tools") {
         rebase_path(clang_tools_extra_lit_unit_site_cfg_file, root_out_dir),
     rebase_path(".", root_out_dir),
   ]
-  outputs = [ "$target_gen_dir/run-lit" ]  # Non-existing, so that ninja runs it each time.
+  outputs = [ "$target_gen_dir/run-lit" ]  # Non-existing, so that ninja runs it
+                                           # each time.
 
   # Since check-clang-tools is always dirty, //:default doesn't depend on it so
   # that it's not part of the default ninja target.  Hence, check-clang-tools
