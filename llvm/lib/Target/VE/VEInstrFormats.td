@@ -44,8 +44,8 @@ class RM<bits<8>opVal, dag outs, dag ins, string asmstr, list<dag> pattern=[]>
   let Inst{63-32}  = imm32;
 }
 
-class RR<bits<8>opVal, dag outs, dag ins, string asmstr>
-   : RM<opVal, outs, ins, asmstr> {
+class RR<bits<8>opVal, dag outs, dag ins, string asmstr, list<dag> pattern=[]>
+   : RM<opVal, outs, ins, asmstr, pattern> {
   bits<1> cw = 0;
   bits<1> cw2 = 0;
   bits<4> cfw = 0;

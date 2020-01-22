@@ -89,6 +89,8 @@ VETargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       llvm_unreachable("Unknown loc info!");
     }
 
+    assert(!VA.needsCustom() && "Unexpected custom lowering");
+
     Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVal, Flag);
 
     // Guarantee that all emitted copies are stuck together with flags.
@@ -136,8 +138,10 @@ SDValue VETargetLowering::LowerFormalArguments(
           MF.addLiveIn(VA.getLocReg(), getRegClassFor(VA.getLocVT()));
       SDValue Arg = DAG.getCopyFromReg(Chain, DL, VReg, VA.getLocVT());
 
-      assert((VA.getValVT() == MVT::i64) &&
-             "TODO implement other argument types than i64");
+      // Get the high bits for i32 struct elements.
+      if (VA.getValVT() == MVT::i32 && VA.needsCustom())
+        Arg = DAG.getNode(ISD::SRL, DL, VA.getLocVT(), Arg,
+                          DAG.getConstant(32, DL, MVT::i32));
 
       // The caller promoted the argument, so insert an Assert?ext SDNode so we
       // won't promote the value again in this function.
@@ -193,6 +197,14 @@ Register VETargetLowering::getRegisterByName(const char *RegName, LLT VT,
 // TargetLowering Implementation
 //===----------------------------------------------------------------------===//
 
+/// isFPImmLegal - Returns true if the target can instruction select the
+/// specified FP immediate natively. If false, the legalizer will
+/// materialize the FP immediate as a load from a constant pool.
+bool VETargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                    bool ForCodeSize) const {
+  return VT == MVT::f32 || VT == MVT::f64;
+}
+
 VETargetLowering::VETargetLowering(const TargetMachine &TM,
                                    const VESubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
@@ -205,7 +217,10 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   setBooleanVectorContents(ZeroOrOneBooleanContent);
 
   // Set up the register classes.
+  addRegisterClass(MVT::i32, &VE::I32RegClass);
   addRegisterClass(MVT::i64, &VE::I64RegClass);
+  addRegisterClass(MVT::f32, &VE::F32RegClass);
+  addRegisterClass(MVT::f64, &VE::I64RegClass);
 
   setStackPointerRegisterToSaveRestore(VE::SX11);
 
