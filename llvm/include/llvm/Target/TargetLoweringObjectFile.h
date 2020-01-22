@@ -212,6 +212,27 @@ public:
     return nullptr;
   }
 
+  /// On targets that use separate function descriptor symbols, return a section
+  /// for the descriptor given its symbol. Use only with defined functions.
+  virtual MCSection *getSectionForFunctionDescriptor(const MCSymbol *S) const {
+    return nullptr;
+  }
+
+  /// On targets that support TOC entries, return a section for the entry given
+  /// the symbol it refers to.
+  /// TODO: Implement this interface for existing ELF targets.
+  virtual MCSection *getSectionForTOCEntry(const MCSymbol *S) const {
+    return nullptr;
+  }
+
+  /// On targets that associate external references with a section, return such
+  /// a section for the given external global.
+  virtual MCSection *
+  getSectionForExternalReference(const GlobalObject *GO,
+                                 const TargetMachine &TM) const {
+    return nullptr;
+  }
+
 protected:
   virtual MCSection *SelectSectionForGlobal(const GlobalObject *GO,
                                             SectionKind Kind,
