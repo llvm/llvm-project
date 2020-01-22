@@ -2826,11 +2826,11 @@ unsigned X86InstrInfo::insertBranch(MachineBasicBlock &MBB,
   return Count;
 }
 
-bool X86InstrInfo::
-canInsertSelect(const MachineBasicBlock &MBB,
-                ArrayRef<MachineOperand> Cond,
-                unsigned TrueReg, unsigned FalseReg,
-                int &CondCycles, int &TrueCycles, int &FalseCycles) const {
+bool X86InstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
+                                   ArrayRef<MachineOperand> Cond,
+                                   unsigned DstReg, unsigned TrueReg,
+                                   unsigned FalseReg, int &CondCycles,
+                                   int &TrueCycles, int &FalseCycles) const {
   // Not all subtargets have cmov instructions.
   if (!Subtarget.hasCMov())
     return false;

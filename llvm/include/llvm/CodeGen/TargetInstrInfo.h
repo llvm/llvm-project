@@ -838,15 +838,17 @@ public:
   ///
   /// @param MBB         Block where select instruction would be inserted.
   /// @param Cond        Condition returned by analyzeBranch.
+  /// @param DstReg      Virtual dest register that the result should write to.
   /// @param TrueReg     Virtual register to select when Cond is true.
   /// @param FalseReg    Virtual register to select when Cond is false.
   /// @param CondCycles  Latency from Cond+Branch to select output.
   /// @param TrueCycles  Latency from TrueReg to select output.
   /// @param FalseCycles Latency from FalseReg to select output.
   virtual bool canInsertSelect(const MachineBasicBlock &MBB,
-                               ArrayRef<MachineOperand> Cond, unsigned TrueReg,
-                               unsigned FalseReg, int &CondCycles,
-                               int &TrueCycles, int &FalseCycles) const {
+                               ArrayRef<MachineOperand> Cond, unsigned DstReg,
+                               unsigned TrueReg, unsigned FalseReg,
+                               int &CondCycles, int &TrueCycles,
+                               int &FalseCycles) const {
     return false;
   }
 
