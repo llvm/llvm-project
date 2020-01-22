@@ -37098,6 +37098,10 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   if (SrcSVT == MVT::i1 || !isa<ConstantSDNode>(Idx))
     return SDValue();
 
+  const APInt &IdxC = N->getConstantOperandAPInt(1);
+  if (IdxC.uge(NumSrcElts))
+    return SDValue();
+
   SDValue SrcBC = peekThroughBitcasts(Src);
 
   // Handle extract(broadcast(scalar_value)), it doesn't matter what index is.
@@ -37127,8 +37131,7 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   // Handle extract(truncate(x)) for 0'th index.
   // TODO: Treat this as a faux shuffle?
   // TODO: When can we use this for general indices?
-  if (ISD::TRUNCATE == Src.getOpcode() && SrcVT.is128BitVector() &&
-      isNullConstant(Idx)) {
+  if (ISD::TRUNCATE == Src.getOpcode() && SrcVT.is128BitVector() && IdxC == 0) {
     Src = extract128BitVector(Src.getOperand(0), 0, DAG, dl);
     Src = DAG.getBitcast(SrcVT, Src);
     return DAG.getNode(N->getOpcode(), dl, VT, Src, Idx);
@@ -37170,7 +37173,7 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
   if (Mask.size() != NumSrcElts)
     return SDValue();
 
-  int SrcIdx = Mask[N->getConstantOperandVal(1)];
+  int SrcIdx = Mask[IdxC.getZExtValue()];
 
   // If the shuffle source element is undef/zero then we can just accept it.
   if (SrcIdx == SM_SentinelUndef)
