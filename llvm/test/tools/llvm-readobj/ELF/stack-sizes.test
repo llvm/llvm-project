@@ -1,7 +1,7 @@
 ## Check that we correctly display the contents of the .stack_sizes section
 ## in a relocatable object file.
 
-# RUN: yaml2obj --docnum=1 %s > %t01
+# RUN: yaml2obj --docnum=1 %s -o %t01
 # RUN: llvm-readelf --stack-sizes %t01 \
 # RUN:   | FileCheck %s --check-prefix=RELOC-GNU --strict-whitespace --match-full-lines
 # RUN: llvm-readobj --stack-sizes %t01 | FileCheck %s --check-prefix=RELOC-LLVM
@@ -94,7 +94,7 @@ Symbols:
 ## Check that we correctly report the stack sizes in an executable (non-relocatable)
 ## object file.
 
-# RUN: yaml2obj --docnum=2 %s > %t02
+# RUN: yaml2obj --docnum=2 %s -o %t02
 # RUN: llvm-readelf --stack-sizes %t02 \
 # RUN:   | FileCheck %s --check-prefix=EXEC-GNU --strict-whitespace --match-full-lines
 # RUN: llvm-readobj --stack-sizes %t02 | FileCheck %s --check-prefix=EXEC-LLVM
@@ -149,7 +149,7 @@ Symbols:
 ## Check that we report an error when we find relocations whose offsets point outside
 ## of the .stack_sizes section.
 
-# RUN: yaml2obj --docnum=3 %s > %t03
+# RUN: yaml2obj --docnum=3 %s -o %t03
 # RUN: not llvm-readelf --stack-sizes %t03 2>&1 | FileCheck %s --check-prefix=SHORT -DFILE=%t03
 # RUN: not llvm-readobj --stack-sizes %t03 2>&1 | FileCheck %s --check-prefix=SHORT -DFILE=%t03
 
@@ -186,7 +186,7 @@ Symbols:
 ## Check that we warn about a function symbol that is not in the section
 ## that is referenced by the stack sizes section's sh_link.
 
-# RUN: yaml2obj --docnum=4 %s > %t04
+# RUN: yaml2obj --docnum=4 %s -o %t04
 # RUN: llvm-readelf --stack-sizes %t04 2> %t04-gnu.err | FileCheck %s --check-prefix=WRONGSECTION-GNU
 # RUN: FileCheck %s < %t04-gnu.err --check-prefix=WRONGSECTION-ERR -DFILE=%t04
 # RUN: llvm-readobj --stack-sizes %t04 2> %t04-llvm.err | FileCheck %s --check-prefix=WRONGSECTION-LLVM
@@ -242,7 +242,7 @@ Symbols:
 
 ## Check that we report an error when a stack sizes section ends with an incomplete stack size entry.
 
-# RUN: yaml2obj --docnum=5 %s > %t05
+# RUN: yaml2obj --docnum=5 %s -o %t05
 # RUN: not llvm-readelf --stack-sizes %t05 2>&1 | \
 # RUN:    FileCheck %s --check-prefix=SUDDENEND -DFILE=%t05
 # RUN: not llvm-readobj --stack-sizes %t05 2>&1 | \
@@ -275,7 +275,7 @@ Symbols:
 ## Check that we report an invalid stack size, which is represented by a ULEB that
 ## ends in a byte with the high bit set.
 
-# RUN: yaml2obj --docnum=6 %s > %t06
+# RUN: yaml2obj --docnum=6 %s -o %t06
 # RUN: not llvm-readelf --stack-sizes %t06 2>&1 | FileCheck %s --check-prefix=BADSIZE -DFILE=%t06
 # RUN: not llvm-readobj --stack-sizes %t06 2>&1 | FileCheck %s --check-prefix=BADSIZE -DFILE=%t06
 
@@ -307,7 +307,7 @@ Symbols:
 ## valid section. We expect a stack size entry with an unknown symbol in the 
 ## output.
 
-# RUN: yaml2obj --docnum=7 %s > %t07
+# RUN: yaml2obj --docnum=7 %s -o %t07
 # RUN: llvm-readelf --stack-sizes %t07 2> %t07-gnu.err | FileCheck %s --check-prefix=BADSECTION-OUT-GNU
 # RUN: FileCheck %s < %t07-gnu.err --check-prefix=BADSECTION-ERR -DFILE=%t07
 # RUN: llvm-readobj --stack-sizes %t07 2> %t07-llvm.err | FileCheck %s --check-prefix=BADSECTION-OUT-LLVM
@@ -361,7 +361,7 @@ Symbols:
 ## Check that we report a warning when a stack sizes section does not come with
 ## a corresponding relocation section.
 
-# RUN: yaml2obj --docnum=8 %s > %t08
+# RUN: yaml2obj --docnum=8 %s -o %t08
 # RUN: llvm-readelf --stack-sizes %t08 2> %t08-gnu.err | FileCheck %s --check-prefix=NORELOCSECTION-OUT-GNU
 # RUN: FileCheck %s < %t08-gnu.err --check-prefix=NORELOCSECTION-ERR -DFILE=%t08
 # RUN: llvm-readobj --stack-sizes %t08 2> %t08-llvm.err | FileCheck %s --check-prefix=NORELOCSECTION-OUT-LLVM
@@ -454,7 +454,7 @@ Sections:
 ## Check that we do not consider symbols that are not function symbols, even though
 ## a relocation references them. 
 
-# RUN: yaml2obj --docnum=9 %s > %t14
+# RUN: yaml2obj --docnum=9 %s -o %t14
 # RUN: llvm-readelf --stack-sizes %t14 2> %t14-gnu.err | FileCheck %s --check-prefix=NONFUNCTIONSYM-GNU
 # RUN: FileCheck %s < %t14-gnu.err --check-prefix=NONFUNCTIONSYM-ERR -DFILE=%t14
 # RUN: llvm-readobj --stack-sizes %t14 2> %t14-llvm.err | FileCheck %s --check-prefix=NONFUNCTIONSYM-LLVM
@@ -503,7 +503,7 @@ Symbols:
 ## Check that we report an error when we find an unsupported relocation
 ## in the section that contains the stack size entries' relocations.
 
-# RUN: yaml2obj --docnum=10 %s > %t15
+# RUN: yaml2obj --docnum=10 %s -o %t15
 # RUN: not llvm-readelf --stack-sizes %t15 2>&1 | FileCheck %s --check-prefix=UNSUPPRELOC -DFILE=%t15
 # RUN: not llvm-readobj --stack-sizes %t15 2>&1 | FileCheck %s --check-prefix=UNSUPPRELOC -DFILE=%t15
 
@@ -585,7 +585,7 @@ Symbols:
 
 ## Check that we demangle function names when requested.
 
-# RUN: yaml2obj --docnum=11 %s > %t16
+# RUN: yaml2obj --docnum=11 %s -o %t16
 # RUN: llvm-readelf --stack-sizes --demangle %t16 | FileCheck %s --check-prefix=DEMANGLE-GNU
 # RUN: llvm-readobj --stack-sizes --demangle %t16 | FileCheck %s --check-prefix=DEMANGLE-LLVM
 
@@ -619,7 +619,7 @@ Symbols:
 ## Check that we report an error when we are unable to resolve a relocation for a given ELF architecture.
 ## Here we have a 64-bit relocation used in a 32-bit object.
 
-# RUN: yaml2obj --docnum=12 %s > %t17
+# RUN: yaml2obj --docnum=12 %s -o %t17
 # RUN: not llvm-readelf --stack-sizes %t17 2>&1 | FileCheck %s -DFILE=%t17 --check-prefix=UNSUPPRELOC2
 # RUN: not llvm-readobj --stack-sizes %t17 2>&1 | FileCheck %s -DFILE=%t17 --check-prefix=UNSUPPRELOC2
 
@@ -646,7 +646,7 @@ Sections:
 ## identified by the sh_info field is invalid. Here the sh_info value is larger than
 ## the number of sections.
 
-# RUN: yaml2obj --docnum=13 %s > %t18
+# RUN: yaml2obj --docnum=13 %s -o %t18
 # RUN: not llvm-readelf --stack-sizes %t18 2>&1 | FileCheck %s -DFILE=%t18 --check-prefix=INVALID-TARGET
 # RUN: not llvm-readobj --stack-sizes %t18 2>&1 | FileCheck %s -DFILE=%t18 --check-prefix=INVALID-TARGET
 

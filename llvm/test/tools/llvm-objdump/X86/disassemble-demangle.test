@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objdump -d -C %t | FileCheck --check-prefix=DEMANGLE %s
 # RUN: llvm-objdump -d --demangle %t | FileCheck --check-prefix=DEMANGLE %s
 # RUN: llvm-objdump -d %t | FileCheck --check-prefix=NO-DEMANGLE %s

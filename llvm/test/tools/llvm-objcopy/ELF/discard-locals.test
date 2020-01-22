@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: cp %t %t1
 # RUN: llvm-objcopy --discard-locals %t %t2
 # Verify that llvm-objcopy has not modified the input.

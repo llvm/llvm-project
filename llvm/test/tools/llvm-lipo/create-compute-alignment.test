@@ -1,6 +1,6 @@
-# RUN: yaml2obj %p/Inputs/i386-slice.yaml > %t-i386.o
-# RUN: yaml2obj %p/Inputs/CPU14-slice.yaml > %t-CPU14.o
-# RUN: yaml2obj %p/Inputs/CPU10-slice.yaml > %t-CPU10.o
+# RUN: yaml2obj %p/Inputs/i386-slice.yaml -o %t-i386.o
+# RUN: yaml2obj %p/Inputs/CPU14-slice.yaml -o %t-CPU14.o
+# RUN: yaml2obj %p/Inputs/CPU10-slice.yaml -o %t-CPU10.o
 
 # RUN: llvm-lipo %t-i386.o %t-CPU14.o %t-CPU10.o -create -output %t-universal.o
 

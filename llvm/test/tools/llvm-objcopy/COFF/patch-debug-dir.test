@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.in.exe
+# RUN: yaml2obj %s -o %t.in.exe
 
 # RUN: llvm-objdump -s %t.in.exe | FileCheck %s --check-prefixes=CONTENTS,CONTENTS-PRE
 # RUN: llvm-readobj --sections %t.in.exe | FileCheck %s --check-prefixes=SECTIONS,SECTIONS-PRE

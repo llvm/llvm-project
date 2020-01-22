@@ -4,7 +4,7 @@
 ## Check how we dump symbols when they have only STV_* bits set for st_other.
 ## (This is the most common case).
 
-# RUN: yaml2obj --docnum=1 %s > %t1.o
+# RUN: yaml2obj --docnum=1 %s -o %t1.o
 # RUN: llvm-readobj --symbols %t1.o | FileCheck %s --check-prefix=LLVM
 # RUN: llvm-readelf --symbols %t1.o | FileCheck %s --strict-whitespace --check-prefix=GNU
 
@@ -52,7 +52,7 @@ Symbols:
 
 ## Check the output when we have non-visibility bits set for at least one of the symbols.
 
-# RUN: yaml2obj --docnum=2 %s > %t2.o
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
 # RUN: llvm-readobj --symbols %t2.o | FileCheck %s --check-prefixes=LLVM,LLVM-OTHER
 # RUN: llvm-readelf --symbols %t2.o | FileCheck %s --strict-whitespace --check-prefix=GNU-OTHER
 

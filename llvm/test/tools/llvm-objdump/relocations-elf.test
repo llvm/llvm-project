@@ -1,4 +1,4 @@
-# RUN: yaml2obj --docnum=1 %s > %t
+# RUN: yaml2obj --docnum=1 %s -o %t
 # RUN: llvm-objdump --reloc %t > %t1
 # RUN: llvm-objdump -r      %t > %t2
 # RUN: cmp %t1 %t2
@@ -73,7 +73,7 @@ Symbols:
 
 ## Check we report an error if the relocated section identified by the
 ## sh_info field of a relocation section is invalid.
-# RUN: yaml2obj --docnum=2 %s > %t2
+# RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: not llvm-objdump --reloc %t2 2>&1 | FileCheck %s -DFILE=%t2 --check-prefix=ERR
 # ERR: error: '[[FILE]]': section (1): unable to get a relocation target: invalid section index: 255
 
@@ -92,7 +92,7 @@ Sections:
       Type: R_X86_64_NONE
 
 ## Check ranges of addends being displayed in a dump of relocations.
-# RUN: yaml2obj --docnum=3 %s > %t3
+# RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: llvm-objdump -r %t3 | FileCheck %s --check-prefix=ADDENDS
 
 # ADDENDS: RELOCATION RECORDS FOR [.text]:

@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 
 ## Check we are able to strip all symbols and relocatable information at the same time.
 

@@ -2,7 +2,7 @@
 # and also for unknown types, both in the os/processor specific ranges and not,
 # for both GNU and LLVM styles.
 
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj --symbols %t | FileCheck %s --check-prefix=LLVM
 # RUN: llvm-readelf --symbols %t | FileCheck %s --check-prefix=GNU
 

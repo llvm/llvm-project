@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-readelf --notes %t | FileCheck %s --check-prefix=GNU
 # RUN: llvm-readobj --elf-output-style LLVM --notes %t | FileCheck %s --check-prefix=LLVM
 

@@ -1,6 +1,6 @@
 ## Test that NT_FILE sections in core files are interpreted correctly.
 
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 # RUN: llvm-readelf --notes %t.o | FileCheck %s --check-prefix=GNU
 # RUN: llvm-readobj --notes %t.o | FileCheck %s --check-prefix=LLVM
 
