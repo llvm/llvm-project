@@ -77,9 +77,7 @@ define i2 @bitcast_v4i32_to_v2i2(<4 x i32> %a0) nounwind {
 ; AVX512-NEXT:    movzbl %cl, %eax
 ; AVX512-NEXT:    shrl $2, %eax
 ; AVX512-NEXT:    andl $3, %eax
-; AVX512-NEXT:    vpbroadcastq %rax, %xmm0
 ; AVX512-NEXT:    andl $3, %ecx
-; AVX512-NEXT:    vpextrb $8, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    retq
@@ -124,9 +122,7 @@ define i4 @bitcast_v8i16_to_v2i4(<8 x i16> %a0) nounwind {
 ; AVX512-NEXT:    kmovd %k0, %ecx
 ; AVX512-NEXT:    movzbl %cl, %eax
 ; AVX512-NEXT:    shrl $4, %eax
-; AVX512-NEXT:    vpbroadcastq %rax, %xmm0
 ; AVX512-NEXT:    andl $15, %ecx
-; AVX512-NEXT:    vpextrb $8, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    retq
@@ -214,9 +210,7 @@ define i2 @bitcast_v4i64_to_v2i2(<4 x i64> %a0) nounwind {
 ; AVX512-NEXT:    movzbl %cl, %eax
 ; AVX512-NEXT:    shrl $2, %eax
 ; AVX512-NEXT:    andl $3, %eax
-; AVX512-NEXT:    vpbroadcastq %rax, %xmm0
 ; AVX512-NEXT:    andl $3, %ecx
-; AVX512-NEXT:    vpextrb $8, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    vzeroupper
@@ -264,9 +258,7 @@ define i4 @bitcast_v8i32_to_v2i4(<8 x i32> %a0) nounwind {
 ; AVX512-NEXT:    kmovd %k0, %ecx
 ; AVX512-NEXT:    movzbl %cl, %eax
 ; AVX512-NEXT:    shrl $4, %eax
-; AVX512-NEXT:    vpbroadcastq %rax, %xmm0
 ; AVX512-NEXT:    andl $15, %ecx
-; AVX512-NEXT:    vpextrb $8, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    vzeroupper
@@ -451,9 +443,7 @@ define i4 @bitcast_v8i64_to_v2i4(<8 x i64> %a0) nounwind {
 ; AVX512-NEXT:    kmovd %k0, %ecx
 ; AVX512-NEXT:    movzbl %cl, %eax
 ; AVX512-NEXT:    shrl $4, %eax
-; AVX512-NEXT:    vpbroadcastq %rax, %xmm0
 ; AVX512-NEXT:    andl $15, %ecx
-; AVX512-NEXT:    vpextrb $8, %xmm0, %eax
 ; AVX512-NEXT:    addb %cl, %al
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    vzeroupper
