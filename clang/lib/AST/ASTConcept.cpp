@@ -14,7 +14,10 @@
 
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/Sema/SemaConcept.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/TemplateBase.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/FoldingSet.h"
 using namespace clang;
 
 ASTConstraintSatisfaction::ASTConstraintSatisfaction(const ASTContext &C,
