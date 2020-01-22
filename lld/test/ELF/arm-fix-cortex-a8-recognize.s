@@ -10,6 +10,8 @@
 // RUN: llvm-objdump -d %t2 --start-address=0x17ffa --stop-address=0x18002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE6 %s
 // RUN: llvm-objdump -d %t2 --start-address=0x18ffa --stop-address=0x19002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE7 %s
 // RUN: llvm-objdump -d %t2 --start-address=0x19ff4 --stop-address=0x1a002 --no-show-raw-insn | FileCheck --check-prefix=CALLSITE8 %s
+// RUN: ld.lld --fix-cortex-a8 -verbose -r %t.o -o %t3 2>&1 | FileCheck --check-prefix=CHECK-RELOCATABLE-LLD %s
+// RUN: llvm-objdump --no-show-raw-insn -d %t3 --start-address=0xffa --stop-address=0x1002 | FileCheck --check-prefix=CHECK-RELOCATABLE %s
 
 // CHECK:      ld.lld: detected cortex-a8-657419 erratum sequence starting at 12FFE in unpatched output.
 // CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 13FFE in unpatched output.
@@ -18,6 +20,10 @@
 // CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 16FFE in unpatched output.
 // CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 17FFE in unpatched output.
 // CHECK-NEXT: ld.lld: detected cortex-a8-657419 erratum sequence starting at 18FFE in unpatched output.
+
+/// We do not detect errors when doing a relocatable link as we don't know what
+/// the final addresses are.
+// CHECK-RELOCATABLE-LLD-NOT: ld.lld: detected cortex-a8-657419 erratum sequence
 
 /// Basic tests for the -fix-cortex-a8 erratum fix. The full details of the
 /// erratum and the patch are in ARMA8ErrataFix.cpp . The test creates an
@@ -50,6 +56,10 @@ target:
 // CALLSITE1:      00012ffa target:
 // CALLSITE1-NEXT:    12ffa:            nop.w
 // CALLSITE1-NEXT:    12ffe:            b.w     #28674
+/// Expect no patch when doing a relocatable link ld -r.
+// CHECK-RELOCATABLE: 00000ffa target:
+// CHECK-RELOCATABLE-NEXT:      ffa:            nop.w
+// CHECK-RELOCATABLE-NEXT:      ffe:            b.w     #-4
 
  .space 4088
  .type target2, %function
