@@ -531,7 +531,7 @@ bool AMDGPUCodeGenPrepare::replaceMulWithMul24(BinaryOperator &I) const {
 }
 
 // Find a select instruction, which may have been casted. This is mostly to deal
-// with cases where i16 selects weer promoted here to i32.
+// with cases where i16 selects were promoted here to i32.
 static SelectInst *findSelectThroughCast(Value *V, CastInst *&Cast) {
   Cast = nullptr;
   if (SelectInst *Sel = dyn_cast<SelectInst>(V))
