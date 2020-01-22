@@ -15,7 +15,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Target/ExecutionContext.h"
 
-#include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
+#include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace lldb;
