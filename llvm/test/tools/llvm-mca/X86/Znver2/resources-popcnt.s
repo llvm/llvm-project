@@ -47,9 +47,9 @@ popcntq     (%rax), %rcx
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
-# CHECK-NEXT:  -      -     -      0.25   0.25   0.25   0.25    -      -      -      -      -      -     popcntw	%cx, %cx
-# CHECK-NEXT: 0.33   0.33   0.33    0.25   0.25   0.25   0.25    -      -      -      -      -      -     popcntw	(%rax), %cx
-# CHECK-NEXT:  -      -     -      0.25   0.25   0.25   0.25    -      -      -      -      -      -     popcntl	%eax, %ecx
-# CHECK-NEXT: 0.33   0.33   0.33    0.25   0.25   0.25   0.25    -      -      -      -      -      -     popcntl	(%rax), %ecx
-# CHECK-NEXT:  -      -     -      0.25   0.25   0.25   0.25    -      -      -      -      -      -     popcntq	%rax, %rcx
-# CHECK-NEXT: 0.33   0.33   0.33    0.25   0.25   0.25   0.25    -      -      -      -      -      -     popcntq	(%rax), %rcx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     popcntw	%cx, %cx
+# CHECK-NEXT: 0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -      -      -     popcntw	(%rax), %cx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     popcntl	%eax, %ecx
+# CHECK-NEXT: 0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -      -      -     popcntl	(%rax), %ecx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     popcntq	%rax, %rcx
+# CHECK-NEXT: 0.33   0.33   0.33   0.25   0.25   0.25   0.25    -      -      -      -      -      -     popcntq	(%rax), %rcx

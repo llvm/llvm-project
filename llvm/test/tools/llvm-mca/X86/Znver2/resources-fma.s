@@ -516,9 +516,9 @@ vfnmsub231ss (%rax), %xmm1, %xmm2
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     0.50    -      -     0.50    -     vfmadd132pd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -      -     0.50    -     vfmadd132pd	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     0.50    -      -     0.50    -     vfmadd132pd	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -        -      -      -      -      -      -      -   0.50    -      -     0.50    -     vfmadd213pd	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -      -     0.50    -     vfmadd213pd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     0.50    -      -     0.50    -     vfmadd213pd	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -       -      -      -      -      -      -      -    0.50    -      -     0.50    -     vfmadd213pd	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -      -     0.50    -     vfmadd213pd	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     0.50    -      -     0.50    -     vfmadd213pd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50    -      -     0.50    -     vfmadd231pd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     0.50    -      -     0.50    -     vfmadd231pd	(%rax), %xmm1, %xmm2

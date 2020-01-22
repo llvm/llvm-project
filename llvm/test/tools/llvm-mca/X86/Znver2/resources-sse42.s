@@ -78,7 +78,7 @@ pcmpgtq     (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 2.00  2.00   2.00    -      -      -      -      -     11.00   -      -     1.00    -
+# CHECK-NEXT: 2.00   2.00   2.00    -      -      -      -      -     11.00   -      -     1.00    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
