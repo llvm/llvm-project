@@ -52,6 +52,21 @@ SourceLocation Sema::getLocForEndOfToken(SourceLocation Loc, unsigned Offset) {
 
 ModuleLoader &Sema::getModuleLoader() const { return PP.getModuleLoader(); }
 
+IdentifierInfo *
+Sema::InventAbbreviatedTemplateParameterTypeName(IdentifierInfo *ParamName,
+                                                 unsigned int Index) {
+  std::string InventedName;
+  llvm::raw_string_ostream OS(InventedName);
+
+  if (!ParamName)
+    OS << "auto:" << Index + 1;
+  else
+    OS << ParamName->getName() << ":auto";
+
+  OS.flush();
+  return &Context.Idents.get(OS.str());
+}
+
 PrintingPolicy Sema::getPrintingPolicy(const ASTContext &Context,
                                        const Preprocessor &PP) {
   PrintingPolicy Policy = Context.getPrintingPolicy();

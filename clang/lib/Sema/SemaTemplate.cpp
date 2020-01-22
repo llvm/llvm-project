@@ -1088,6 +1088,50 @@ bool Sema::ActOnTypeConstraint(const CXXScopeSpec &SS,
       ConstrainedParameter, EllipsisLoc);
 }
 
+template<typename ArgumentLocAppender>
+static ExprResult formImmediatelyDeclaredConstraint(
+    Sema &S, NestedNameSpecifierLoc NS, DeclarationNameInfo NameInfo,
+    ConceptDecl *NamedConcept, SourceLocation LAngleLoc,
+    SourceLocation RAngleLoc, QualType ConstrainedType,
+    SourceLocation ParamNameLoc, ArgumentLocAppender Appender,
+    SourceLocation EllipsisLoc) {
+
+  TemplateArgumentListInfo ConstraintArgs;
+  ConstraintArgs.addArgument(
+    S.getTrivialTemplateArgumentLoc(TemplateArgument(ConstrainedType),
+                                    /*NTTPType=*/QualType(), ParamNameLoc));
+
+  ConstraintArgs.setRAngleLoc(RAngleLoc);
+  ConstraintArgs.setLAngleLoc(LAngleLoc);
+  Appender(ConstraintArgs);
+
+  // C++2a [temp.param]p4:
+  //     [...] This constraint-expression E is called the immediately-declared
+  //     constraint of T. [...]
+  CXXScopeSpec SS;
+  SS.Adopt(NS);
+  ExprResult ImmediatelyDeclaredConstraint = S.CheckConceptTemplateId(
+      SS, /*TemplateKWLoc=*/SourceLocation(), NameInfo,
+      /*FoundDecl=*/NamedConcept, NamedConcept, &ConstraintArgs);
+  if (ImmediatelyDeclaredConstraint.isInvalid() || !EllipsisLoc.isValid())
+    return ImmediatelyDeclaredConstraint;
+
+  // C++2a [temp.param]p4:
+  //     [...] If T is not a pack, then E is E', otherwise E is (E' && ...).
+  //
+  // We have the following case:
+  //
+  // template<typename T> concept C1 = true;
+  // template<C1... T> struct s1;
+  //
+  // The constraint: (C1<T> && ...)
+  return S.BuildCXXFoldExpr(/*LParenLoc=*/SourceLocation(),
+                            ImmediatelyDeclaredConstraint.get(), BO_LAnd,
+                            EllipsisLoc, /*RHS=*/nullptr,
+                            /*RParenLoc=*/SourceLocation(),
+                            /*NumExpansions=*/None);
+}
+
 /// Attach a type-constraint to a template parameter.
 /// \returns true if an error occured. This can happen if the
 /// immediately-declared constraint could not be formed (e.g. incorrect number
@@ -1106,55 +1150,57 @@ bool Sema::AttachTypeConstraint(NestedNameSpecifierLoc NS,
                                                        *TemplateArgs) : nullptr;
 
   QualType ParamAsArgument(ConstrainedParameter->getTypeForDecl(), 0);
-  TemplateArgumentListInfo ConstraintArgs;
-  ConstraintArgs.addArgument(
-    TemplateArgumentLoc(
-        TemplateArgument(ParamAsArgument),
-        TemplateArgumentLocInfo(
-            Context.getTrivialTypeSourceInfo(ParamAsArgument,
-                ConstrainedParameter->getLocation()))));
-  if (TemplateArgs) {
-    ConstraintArgs.setRAngleLoc(TemplateArgs->getRAngleLoc());
-    ConstraintArgs.setLAngleLoc(TemplateArgs->getLAngleLoc());
-    for (const TemplateArgumentLoc &ArgLoc : TemplateArgs->arguments())
-      ConstraintArgs.addArgument(ArgLoc);
-  }
 
-  // C++2a [temp.param]p4:
-  //     [...] This constraint-expression E is called the immediately-declared
-  //     constraint of T. [...]
-  CXXScopeSpec SS;
-  SS.Adopt(NS);
-  ExprResult ImmediatelyDeclaredConstraint = CheckConceptTemplateId(SS,
-      /*TemplateKWLoc=*/SourceLocation(), NameInfo, /*FoundDecl=*/NamedConcept,
-      NamedConcept, &ConstraintArgs);
+  ExprResult ImmediatelyDeclaredConstraint =
+      formImmediatelyDeclaredConstraint(
+          *this, NS, NameInfo, NamedConcept,
+          TemplateArgs ? TemplateArgs->getLAngleLoc() : SourceLocation(),
+          TemplateArgs ? TemplateArgs->getRAngleLoc() : SourceLocation(),
+          ParamAsArgument, ConstrainedParameter->getLocation(),
+          [&] (TemplateArgumentListInfo &ConstraintArgs) {
+            if (TemplateArgs)
+              for (const auto &ArgLoc : TemplateArgs->arguments())
+                ConstraintArgs.addArgument(ArgLoc);
+          }, EllipsisLoc);
   if (ImmediatelyDeclaredConstraint.isInvalid())
     return true;
-
-  if (ConstrainedParameter->isParameterPack()) {
-    // C++2a [temp.param]p4:
-    //     [...] If T is not a pack, then E is E', otherwise E is (E' && ...).
-    //
-    // We have the following case:
-    //
-    // template<typename T> concept C1 = true;
-    // template<C1... T> struct s1;
-    //
-    // The constraint: (C1<T> && ...)
-    ImmediatelyDeclaredConstraint =
-        BuildCXXFoldExpr(/*LParenLoc=*/SourceLocation(),
-                         ImmediatelyDeclaredConstraint.get(), BO_LAnd,
-                         EllipsisLoc, /*RHS=*/nullptr,
-                         /*RParenLoc=*/SourceLocation(),
-                         /*NumExpansions=*/None).get();
-    if (ImmediatelyDeclaredConstraint.isInvalid())
-      return true;
-  }
 
   ConstrainedParameter->setTypeConstraint(NS, NameInfo,
                                           /*FoundDecl=*/NamedConcept,
                                           NamedConcept, ArgsAsWritten,
                                           ImmediatelyDeclaredConstraint.get());
+  return false;
+}
+
+bool Sema::AttachTypeConstraint(AutoTypeLoc TL, NonTypeTemplateParmDecl *NTTP,
+                                SourceLocation EllipsisLoc) {
+  if (NTTP->getType() != TL.getType() ||
+      TL.getAutoKeyword() != AutoTypeKeyword::Auto) {
+    Diag(NTTP->getTypeSourceInfo()->getTypeLoc().getBeginLoc(),
+         diag::err_unsupported_placeholder_constraint)
+       << NTTP->getTypeSourceInfo()->getTypeLoc().getSourceRange();
+    return true;
+  }
+  // FIXME: Concepts: This should be the type of the placeholder, but this is
+  // unclear in the wording right now.
+  DeclRefExpr *Ref = BuildDeclRefExpr(NTTP, NTTP->getType(), VK_RValue,
+                                      NTTP->getLocation());
+  if (!Ref)
+    return true;
+  ExprResult ImmediatelyDeclaredConstraint =
+      formImmediatelyDeclaredConstraint(
+          *this, TL.getNestedNameSpecifierLoc(), TL.getConceptNameInfo(),
+          TL.getNamedConcept(), TL.getLAngleLoc(), TL.getRAngleLoc(),
+          BuildDecltypeType(Ref, NTTP->getLocation()), NTTP->getLocation(),
+          [&] (TemplateArgumentListInfo &ConstraintArgs) {
+            for (unsigned I = 0, C = TL.getNumArgs(); I != C; ++I)
+              ConstraintArgs.addArgument(TL.getArgLoc(I));
+          }, EllipsisLoc);
+  if (ImmediatelyDeclaredConstraint.isInvalid() ||
+     !ImmediatelyDeclaredConstraint.isUsable())
+    return true;
+
+  NTTP->setPlaceholderTypeConstraint(ImmediatelyDeclaredConstraint.get());
   return false;
 }
 
@@ -1318,6 +1364,11 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
       D.getIdentifierLoc(), Depth, Position, ParamName, T, IsParameterPack,
       TInfo);
   Param->setAccess(AS_public);
+
+  if (AutoTypeLoc TL = TInfo->getTypeLoc().getContainedAutoTypeLoc())
+    if (TL.isConstrained())
+      if (AttachTypeConstraint(TL, Param, D.getEllipsisLoc()))
+        Invalid = true;
 
   if (Invalid)
     Param->setInvalidDecl();
@@ -2762,7 +2813,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     SourceLocation DeclStartLoc, SourceLocation DeclLoc, const CXXScopeSpec &SS,
     TemplateIdAnnotation *TemplateId,
     ArrayRef<TemplateParameterList *> ParamLists, bool IsFriend,
-    bool &IsMemberSpecialization, bool &Invalid) {
+    bool &IsMemberSpecialization, bool &Invalid, bool SuppressDiagnostic) {
   IsMemberSpecialization = false;
   Invalid = false;
 
@@ -2870,8 +2921,9 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
 
   auto CheckExplicitSpecialization = [&](SourceRange Range, bool Recovery) {
     if (SawNonEmptyTemplateParameterList) {
-      Diag(DeclLoc, diag::err_specialize_member_of_template)
-        << !Recovery << Range;
+      if (!SuppressDiagnostic)
+        Diag(DeclLoc, diag::err_specialize_member_of_template)
+          << !Recovery << Range;
       Invalid = true;
       IsMemberSpecialization = false;
       return true;
@@ -2892,9 +2944,10 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
     else
       ExpectedTemplateLoc = DeclStartLoc;
 
-    Diag(DeclLoc, diag::err_template_spec_needs_header)
-      << Range
-      << FixItHint::CreateInsertion(ExpectedTemplateLoc, "template<> ");
+    if (!SuppressDiagnostic)
+      Diag(DeclLoc, diag::err_template_spec_needs_header)
+        << Range
+        << FixItHint::CreateInsertion(ExpectedTemplateLoc, "template<> ");
     return false;
   };
 
@@ -2984,12 +3037,13 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
       if (ParamIdx < ParamLists.size()) {
         if (ParamLists[ParamIdx]->size() > 0) {
           // The header has template parameters when it shouldn't. Complain.
-          Diag(ParamLists[ParamIdx]->getTemplateLoc(),
-               diag::err_template_param_list_matches_nontemplate)
-            << T
-            << SourceRange(ParamLists[ParamIdx]->getLAngleLoc(),
-                           ParamLists[ParamIdx]->getRAngleLoc())
-            << getRangeOfTypeInNestedNameSpecifier(Context, T, SS);
+          if (!SuppressDiagnostic)
+            Diag(ParamLists[ParamIdx]->getTemplateLoc(),
+                 diag::err_template_param_list_matches_nontemplate)
+              << T
+              << SourceRange(ParamLists[ParamIdx]->getLAngleLoc(),
+                             ParamLists[ParamIdx]->getRAngleLoc())
+              << getRangeOfTypeInNestedNameSpecifier(Context, T, SS);
           Invalid = true;
           return nullptr;
         }
@@ -3025,7 +3079,7 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
         if (ExpectedTemplateParams &&
             !TemplateParameterListsAreEqual(ParamLists[ParamIdx],
                                             ExpectedTemplateParams,
-                                            true, TPL_TemplateMatch))
+                                            !SuppressDiagnostic, TPL_TemplateMatch))
           Invalid = true;
 
         if (!Invalid &&
@@ -3037,9 +3091,10 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
         continue;
       }
 
-      Diag(DeclLoc, diag::err_template_spec_needs_template_parameters)
-        << T
-        << getRangeOfTypeInNestedNameSpecifier(Context, T, SS);
+      if (!SuppressDiagnostic)
+        Diag(DeclLoc, diag::err_template_spec_needs_template_parameters)
+          << T
+          << getRangeOfTypeInNestedNameSpecifier(Context, T, SS);
       Invalid = true;
       continue;
     }
@@ -3075,16 +3130,18 @@ TemplateParameterList *Sema::MatchTemplateParametersToScopeSpecifier(
         AllExplicitSpecHeaders = false;
     }
 
-    Diag(ParamLists[ParamIdx]->getTemplateLoc(),
-         AllExplicitSpecHeaders ? diag::warn_template_spec_extra_headers
-                                : diag::err_template_spec_extra_headers)
-        << SourceRange(ParamLists[ParamIdx]->getTemplateLoc(),
-                       ParamLists[ParamLists.size() - 2]->getRAngleLoc());
+    if (!SuppressDiagnostic)
+      Diag(ParamLists[ParamIdx]->getTemplateLoc(),
+           AllExplicitSpecHeaders ? diag::warn_template_spec_extra_headers
+                                  : diag::err_template_spec_extra_headers)
+          << SourceRange(ParamLists[ParamIdx]->getTemplateLoc(),
+                         ParamLists[ParamLists.size() - 2]->getRAngleLoc());
 
     // If there was a specialization somewhere, such that 'template<>' is
     // not required, and there were any 'template<>' headers, note where the
     // specialization occurred.
-    if (ExplicitSpecLoc.isValid() && HasAnyExplicitSpecHeader)
+    if (ExplicitSpecLoc.isValid() && HasAnyExplicitSpecHeader &&
+        !SuppressDiagnostic)
       Diag(ExplicitSpecLoc,
            diag::note_explicit_template_spec_does_not_need_header)
         << NestedTypes.back();
@@ -6530,7 +6587,12 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       DeductionArg = PE->getPattern();
     if (DeduceAutoType(
             Context.getTrivialTypeSourceInfo(ParamType, Param->getLocation()),
-            DeductionArg, ParamType, Depth) == DAR_Failed) {
+            DeductionArg, ParamType, Depth,
+            // We do not check constraints right now because the
+            // immediately-declared constraint of the auto type is also an
+            // associated constraint, and will be checked along with the other
+            // associated constraints after checking the template argument list.
+            /*IgnoreConstraints=*/true) == DAR_Failed) {
       Diag(Arg->getExprLoc(),
            diag::err_non_type_template_parm_type_deduction_failure)
         << Param->getDeclName() << Param->getType() << Arg->getType()

@@ -1114,7 +1114,9 @@ public:
       return QualType(T, 0);
 
     return Ctx.getAutoType(deducedType, T->getKeyword(),
-                           T->isDependentType());
+                           T->isDependentType(), /*IsPack=*/false,
+                           T->getTypeConstraintConcept(),
+                           T->getTypeConstraintArguments());
   }
 
   // FIXME: Non-trivial to implement, but important for C++
@@ -4157,4 +4159,36 @@ void clang::FixedPointValueToString(SmallVectorImpl<char> &Str,
                              /*IsSaturated=*/false,
                              /*HasUnsignedPadding=*/false);
   APFixedPoint(Val, FXSema).toString(Str);
+}
+
+AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
+                   bool IsDeducedAsDependent, bool IsDeducedAsPack,
+                   ConceptDecl *TypeConstraintConcept,
+                   ArrayRef<TemplateArgument> TypeConstraintArgs)
+    : DeducedType(Auto, DeducedAsType, IsDeducedAsDependent,
+                  IsDeducedAsDependent, IsDeducedAsPack) {
+  AutoTypeBits.Keyword = (unsigned)Keyword;
+  AutoTypeBits.NumArgs = TypeConstraintArgs.size();
+  this->TypeConstraintConcept = TypeConstraintConcept;
+  if (TypeConstraintConcept) {
+    TemplateArgument *ArgBuffer = getArgBuffer();
+    for (const TemplateArgument &Arg : TypeConstraintArgs) {
+      if (Arg.containsUnexpandedParameterPack())
+        setContainsUnexpandedParameterPack();
+
+      new (ArgBuffer++) TemplateArgument(Arg);
+    }
+  }
+}
+
+void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
+                      QualType Deduced, AutoTypeKeyword Keyword,
+                      bool IsDependent, ConceptDecl *CD,
+                      ArrayRef<TemplateArgument> Arguments) {
+  ID.AddPointer(Deduced.getAsOpaquePtr());
+  ID.AddInteger((unsigned)Keyword);
+  ID.AddBoolean(IsDependent);
+  ID.AddPointer(CD);
+  for (const TemplateArgument &Arg : Arguments)
+    Arg.Profile(ID, Context);
 }
