@@ -20,7 +20,7 @@
 #include "lldb/Target/UnwindAssembly.h"
 #include "lldb/Utility/ArchSpec.h"
 
-#include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
+#include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
 #include "llvm/Support/TargetSelect.h"
