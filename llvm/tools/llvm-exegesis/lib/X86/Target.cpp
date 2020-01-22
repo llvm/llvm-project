@@ -22,9 +22,9 @@
 namespace llvm {
 namespace exegesis {
 
-// Returns an error if we cannot handle the memory references in this
+// Returns a non-null reason if we cannot handle the memory references in this
 // instruction.
-static Error isInvalidMemoryInstr(const Instruction &Instr) {
+static const char *isInvalidMemoryInstr(const Instruction &Instr) {
   switch (Instr.Description.TSFlags & X86II::FormMask) {
   default:
     llvm_unreachable("Unknown FormMask value");
@@ -112,15 +112,14 @@ static Error isInvalidMemoryInstr(const Instruction &Instr) {
   case X86II::MRM_FE:
   case X86II::MRM_FF:
   case X86II::RawFrmImm8:
-    return Error::success();
+    return nullptr;
   case X86II::AddRegFrm:
     return (Instr.Description.Opcode == X86::POP16r ||
             Instr.Description.Opcode == X86::POP32r ||
             Instr.Description.Opcode == X86::PUSH16r ||
             Instr.Description.Opcode == X86::PUSH32r)
-               ? make_error<Failure>(
-                     "unsupported opcode: unsupported memory access")
-               : Error::success();
+               ? "unsupported opcode: unsupported memory access"
+               : nullptr;
   // These access memory and are handled.
   case X86II::MRMDestMem:
   case X86II::MRMSrcMem:
@@ -137,38 +136,40 @@ static Error isInvalidMemoryInstr(const Instruction &Instr) {
   case X86II::MRM5m:
   case X86II::MRM6m:
   case X86II::MRM7m:
-    return Error::success();
+    return nullptr;
   // These access memory and are not handled yet.
   case X86II::RawFrmImm16:
   case X86II::RawFrmMemOffs:
   case X86II::RawFrmSrc:
   case X86II::RawFrmDst:
   case X86II::RawFrmDstSrc:
-    return make_error<Failure>("unsupported opcode: non uniform memory access");
+    return "unsupported opcode: non uniform memory access";
   }
 }
 
-static Error IsInvalidOpcode(const Instruction &Instr) {
+// If the opcode is invalid, returns a pointer to a character literal indicating
+// the reason. nullptr indicates a valid opcode.
+static const char *isInvalidOpcode(const Instruction &Instr) {
   const auto OpcodeName = Instr.Name;
   if ((Instr.Description.TSFlags & X86II::FormMask) == X86II::Pseudo)
-    return make_error<Failure>("unsupported opcode: pseudo instruction");
-  if (OpcodeName.startswith("POPF") || OpcodeName.startswith("PUSHF") ||
-      OpcodeName.startswith("ADJCALLSTACK"))
-    return make_error<Failure>("unsupported opcode: Push/Pop/AdjCallStack");
-  if (Error Error = isInvalidMemoryInstr(Instr))
-    return Error;
+    return "unsupported opcode: pseudo instruction";
+  if (OpcodeName.startswith("POP") || OpcodeName.startswith("PUSH") ||
+      OpcodeName.startswith("ADJCALLSTACK") || OpcodeName.startswith("LEAVE"))
+    return "unsupported opcode: Push/Pop/AdjCallStack/Leave";
+  if (const auto reason = isInvalidMemoryInstr(Instr))
+    return reason;
   // We do not handle instructions with OPERAND_PCREL.
   for (const Operand &Op : Instr.Operands)
     if (Op.isExplicit() &&
         Op.getExplicitOperandInfo().OperandType == MCOI::OPERAND_PCREL)
-      return make_error<Failure>("unsupported opcode: PC relative operand");
+      return "unsupported opcode: PC relative operand";
   // We do not handle second-form X87 instructions. We only handle first-form
   // ones (_Fp), see comment in X86InstrFPStack.td.
   for (const Operand &Op : Instr.Operands)
     if (Op.isReg() && Op.isExplicit() &&
         Op.getExplicitOperandInfo().RegClass == X86::RSTRegClassID)
-      return make_error<Failure>("unsupported second-form X87 instruction");
-  return Error::success();
+      return "unsupported second-form X87 instruction";
+  return nullptr;
 }
 
 static unsigned getX86FPFlags(const Instruction &Instr) {
@@ -263,8 +264,8 @@ public:
 Expected<std::vector<CodeTemplate>>
 X86SerialSnippetGenerator::generateCodeTemplates(
     const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
-  if (auto E = IsInvalidOpcode(Instr))
-    return std::move(E);
+  if (const auto reason = isInvalidOpcode(Instr))
+    return make_error<Failure>(reason);
 
   // LEA gets special attention.
   const auto Opcode = Instr.Description.getOpcode();
@@ -279,6 +280,10 @@ X86SerialSnippetGenerator::generateCodeTemplates(
               State.getRATC().getRegister(BaseReg).aliasedBits();
         });
   }
+
+  if (Instr.hasMemoryOperands())
+    return make_error<Failure>(
+        "unsupported memory operand in latency measurements");
 
   switch (getX86FPFlags(Instr)) {
   case X86II::NotFP:
@@ -317,8 +322,8 @@ public:
 Expected<std::vector<CodeTemplate>>
 X86ParallelSnippetGenerator::generateCodeTemplates(
     const Instruction &Instr, const BitVector &ForbiddenRegisters) const {
-  if (auto E = IsInvalidOpcode(Instr))
-    return std::move(E);
+  if (const auto reason = isInvalidOpcode(Instr))
+    return make_error<Failure>(reason);
 
   // LEA gets special attention.
   const auto Opcode = Instr.Description.getOpcode();
@@ -581,6 +586,12 @@ private:
                             sizeof(kUnavailableRegisters[0]));
   }
 
+  bool allowAsBackToBack(const Instruction &Instr) const override {
+    const unsigned Opcode = Instr.Description.Opcode;
+    return !isInvalidOpcode(Instr) && Opcode != X86::LEA64r &&
+           Opcode != X86::LEA64_32r && Opcode != X86::LEA16r;
+  }
+
   std::unique_ptr<SnippetGenerator> createSerialSnippetGenerator(
       const LLVMState &State,
       const SnippetGenerator::Options &Opts) const override {
@@ -727,8 +738,8 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
     return CI.popFlagAndFinalize();
   if (Reg == X86::MXCSR)
     return CI.loadImplicitRegAndFinalize(
-              STI.getFeatureBits()[X86::FeatureAVX] ? X86::VLDMXCSR
-                                                    : X86::LDMXCSR, 0x1f80);
+        STI.getFeatureBits()[X86::FeatureAVX] ? X86::VLDMXCSR : X86::LDMXCSR,
+        0x1f80);
   if (Reg == X86::FPCW)
     return CI.loadImplicitRegAndFinalize(X86::FLDCW16m, 0x37f);
   return {}; // Not yet implemented.

@@ -115,6 +115,13 @@ public:
                                   MCOperand &AssignedValue,
                                   const BitVector &ForbiddenRegs) const;
 
+  // Returns true if this instruction is supported as a back-to-back
+  // instructions.
+  // FIXME: Eventually we should discover this dynamically.
+  virtual bool allowAsBackToBack(const Instruction &Instr) const {
+    return true;
+  }
+
   // Creates a snippet generator for the given mode.
   std::unique_ptr<SnippetGenerator>
   createSnippetGenerator(InstructionBenchmark::ModeE Mode,
