@@ -5903,7 +5903,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue S = DAG.getNode(
         ISD::INTRINSIC_WO_CHAIN, DL, MVT::f32,
         DAG.getTargetConstant(Intrinsic::amdgcn_interp_mov, DL, MVT::i32),
-        DAG.getConstant(2, DL, MVT::i32), // P0
+        DAG.getTargetConstant(2, DL, MVT::i32), // P0
         Op.getOperand(2),  // Attrchan
         Op.getOperand(3),  // Attr
         Op.getOperand(5)); // m0

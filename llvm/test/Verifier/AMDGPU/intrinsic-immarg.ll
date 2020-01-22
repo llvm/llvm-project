@@ -615,16 +615,22 @@ define void @test_interp_p2(float %arg0, float %arg1, i32 %arg2, i32 %arg3, i32 
 declare float @llvm.amdgcn.interp.mov(i32, i32, i32, i32)
 define void @test_interp_mov(i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3) {
   ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %arg1
-  ; CHECK-NEXT: %val0 = call float @llvm.amdgcn.interp.mov(i32 %arg0, i32 %arg1, i32 0, i32 0)
-  %val0 = call float @llvm.amdgcn.interp.mov(i32 %arg0, i32 %arg1, i32 0, i32 0)
+  ; CHECK-NEXT: i32 %arg0
+  ; CHECK-NEXT: %val0 = call float @llvm.amdgcn.interp.mov(i32 %arg0, i32 0, i32 0, i32 0)
+  %val0 = call float @llvm.amdgcn.interp.mov(i32 %arg0, i32 0, i32 0, i32 0)
   store volatile float %val0, float addrspace(1)* undef
 
   ; CHECK: immarg operand has non-immediate parameter
-  ; CHECK-NEXT: i32 %arg2
-  ; CHECK-NEXT: %val1 = call float @llvm.amdgcn.interp.mov(i32 %arg0, i32 0, i32 %arg2, i32 0)
-  %val1 = call float @llvm.amdgcn.interp.mov(i32 %arg0, i32 0, i32 %arg2, i32 0)
+  ; CHECK-NEXT: i32 %arg1
+  ; CHECK-NEXT: %val1 = call float @llvm.amdgcn.interp.mov(i32 0, i32 %arg1, i32 0, i32 0)
+  %val1 = call float @llvm.amdgcn.interp.mov(i32 0, i32 %arg1, i32 0, i32 0)
   store volatile float %val1, float addrspace(1)* undef
+
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg2
+  ; CHECK-NEXT: %val2 = call float @llvm.amdgcn.interp.mov(i32 0, i32 0, i32 %arg2, i32 0)
+  %val2 = call float @llvm.amdgcn.interp.mov(i32 0, i32 0, i32 %arg2, i32 0)
+  store volatile float %val2, float addrspace(1)* undef
 
   ret void
 }

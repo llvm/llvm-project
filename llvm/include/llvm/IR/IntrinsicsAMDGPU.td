@@ -1223,7 +1223,7 @@ def int_amdgcn_interp_mov :
   GCCBuiltin<"__builtin_amdgcn_interp_mov">,
   Intrinsic<[llvm_float_ty],
             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrNoMem, IntrSpeculatable, ImmArg<1>, ImmArg<2>]>;
+            [IntrNoMem, IntrSpeculatable, ImmArg<0>, ImmArg<1>, ImmArg<2>]>;
 
 // __builtin_amdgcn_interp_p1 <i>, <attr_chan>, <attr>, <m0>
 // This intrinsic reads from lds, but the memory values are constant,
