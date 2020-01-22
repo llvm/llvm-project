@@ -469,3 +469,36 @@ body:             |
     RET undef $lr
 
 ...
+# Make sure we do not rename if pseudo-defs. Noop pseudo instructions like KILL
+# may lead to a missing definition of the rename register.
+#
+# CHECK-LABEL: name: test14_pseudo
+# CHECK: bb.0:
+# CHECK-NEXT:    liveins: $w8, $fp, $w25
+# CHECK:         renamable $w8 = KILL killed renamable $w8, implicit-def $x8
+# CHECK-NEXT:    STURXi killed renamable $x8, $fp, -40 :: (store 8)
+# CHECK-NEXT:    $w8 = ORRWrs $wzr, killed $w25, 0, implicit-def $x8
+# CHECK-NEXT:    STURXi killed renamable $x8, $fp, -32 :: (store 8)
+# CHECK-NEXT:    RET undef $lr
+#
+name:            test14_pseudo
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$x8' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $w8, $fp, $w25
+
+    renamable $w8 = KILL killed renamable $w8, implicit-def $x8
+    STURXi killed renamable $x8, $fp, -40 :: (store 8)
+    $w8 = ORRWrs $wzr, killed $w25, 0, implicit-def $x8
+    STURXi killed renamable $x8, $fp, -32 :: (store 8)
+    RET undef $lr
+...
