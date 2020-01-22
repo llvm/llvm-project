@@ -124,7 +124,7 @@ protected:
   static std::unique_ptr<ObjectLayer>
   createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES);
 
-  static Expected<IRCompileLayer::CompileFunction>
+  static Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>
   createCompileFunction(LLJITBuilderState &S, JITTargetMachineBuilder JTMB);
 
   /// Create an LLJIT instance with a single compile thread.
@@ -192,7 +192,7 @@ public:
       ExecutionSession &, const Triple &TT)>;
 
   using CompileFunctionCreator =
-      std::function<Expected<IRCompileLayer::CompileFunction>(
+      std::function<Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>(
           JITTargetMachineBuilder JTMB)>;
 
   std::unique_ptr<ExecutionSession> ES;

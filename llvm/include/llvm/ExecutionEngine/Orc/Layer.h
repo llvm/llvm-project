@@ -21,14 +21,61 @@
 namespace llvm {
 namespace orc {
 
+/// IRMaterializationUnit is a convenient base class for MaterializationUnits
+/// wrapping LLVM IR. Represents materialization responsibility for all symbols
+/// in the given module. If symbols are overridden by other definitions, then
+/// their linkage is changed to available-externally.
+class IRMaterializationUnit : public MaterializationUnit {
+public:
+  struct ManglingOptions {
+    bool EmulatedTLS = false;
+  };
+
+  using SymbolNameToDefinitionMap = std::map<SymbolStringPtr, GlobalValue *>;
+
+  /// Create an IRMaterializationLayer. Scans the module to build the
+  /// SymbolFlags and SymbolToDefinition maps.
+  IRMaterializationUnit(ExecutionSession &ES, const ManglingOptions &MO,
+                        ThreadSafeModule TSM, VModuleKey K);
+
+  /// Create an IRMaterializationLayer from a module, and pre-existing
+  /// SymbolFlags and SymbolToDefinition maps. The maps must provide
+  /// entries for each definition in M.
+  /// This constructor is useful for delegating work from one
+  /// IRMaterializationUnit to another.
+  IRMaterializationUnit(ThreadSafeModule TSM, VModuleKey K,
+                        SymbolFlagsMap SymbolFlags,
+                        SymbolNameToDefinitionMap SymbolToDefinition);
+
+  /// Return the ModuleIdentifier as the name for this MaterializationUnit.
+  StringRef getName() const override;
+
+  const ThreadSafeModule &getModule() const { return TSM; }
+
+protected:
+  ThreadSafeModule TSM;
+  SymbolNameToDefinitionMap SymbolToDefinition;
+
+private:
+  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
+};
+
 /// Interface for layers that accept LLVM IR.
 class IRLayer {
 public:
-  IRLayer(ExecutionSession &ES);
+  IRLayer(ExecutionSession &ES,
+          const IRMaterializationUnit::ManglingOptions *&MO)
+      : ES(ES), MO(MO) {}
+
   virtual ~IRLayer();
 
   /// Returns the ExecutionSession for this layer.
   ExecutionSession &getExecutionSession() { return ES; }
+
+  /// Get the mangling options for this layer.
+  const IRMaterializationUnit::ManglingOptions *&getManglingOptions() const {
+    return MO;
+  }
 
   /// Sets the CloneToNewContextOnEmit flag (false by default).
   ///
@@ -57,49 +104,15 @@ public:
 private:
   bool CloneToNewContextOnEmit = false;
   ExecutionSession &ES;
-};
-
-/// IRMaterializationUnit is a convenient base class for MaterializationUnits
-/// wrapping LLVM IR. Represents materialization responsibility for all symbols
-/// in the given module. If symbols are overridden by other definitions, then
-/// their linkage is changed to available-externally.
-class IRMaterializationUnit : public MaterializationUnit {
-public:
-  using SymbolNameToDefinitionMap = std::map<SymbolStringPtr, GlobalValue *>;
-
-  /// Create an IRMaterializationLayer. Scans the module to build the
-  /// SymbolFlags and SymbolToDefinition maps.
-  IRMaterializationUnit(ExecutionSession &ES, ThreadSafeModule TSM,
-                        VModuleKey K);
-
-  /// Create an IRMaterializationLayer from a module, and pre-existing
-  /// SymbolFlags and SymbolToDefinition maps. The maps must provide
-  /// entries for each definition in M.
-  /// This constructor is useful for delegating work from one
-  /// IRMaterializationUnit to another.
-  IRMaterializationUnit(ThreadSafeModule TSM, VModuleKey K,
-                        SymbolFlagsMap SymbolFlags,
-                        SymbolNameToDefinitionMap SymbolToDefinition);
-
-  /// Return the ModuleIdentifier as the name for this MaterializationUnit.
-  StringRef getName() const override;
-
-  const ThreadSafeModule &getModule() const { return TSM; }
-
-protected:
-  ThreadSafeModule TSM;
-  SymbolNameToDefinitionMap SymbolToDefinition;
-
-private:
-  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
+  const IRMaterializationUnit::ManglingOptions *&MO;
 };
 
 /// MaterializationUnit that materializes modules by calling the 'emit' method
 /// on the given IRLayer.
 class BasicIRLayerMaterializationUnit : public IRMaterializationUnit {
 public:
-  BasicIRLayerMaterializationUnit(IRLayer &L, VModuleKey K,
-                                  ThreadSafeModule TSM);
+  BasicIRLayerMaterializationUnit(IRLayer &L, const ManglingOptions &MO,
+                                  ThreadSafeModule TSM, VModuleKey K);
 
 private:
 

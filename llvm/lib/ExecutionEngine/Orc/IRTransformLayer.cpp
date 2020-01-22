@@ -12,10 +12,10 @@
 namespace llvm {
 namespace orc {
 
-IRTransformLayer::IRTransformLayer(ExecutionSession &ES,
-                                     IRLayer &BaseLayer,
-                                     TransformFunction Transform)
-    : IRLayer(ES), BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
+IRTransformLayer::IRTransformLayer(ExecutionSession &ES, IRLayer &BaseLayer,
+                                   TransformFunction Transform)
+    : IRLayer(ES, BaseLayer.getManglingOptions()), BaseLayer(BaseLayer),
+      Transform(std::move(Transform)) {}
 
 void IRTransformLayer::emit(MaterializationResponsibility R,
                             ThreadSafeModule TSM) {

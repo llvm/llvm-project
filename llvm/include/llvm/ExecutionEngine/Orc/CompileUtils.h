@@ -13,7 +13,9 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_COMPILEUTILS_H
 #define LLVM_EXECUTIONENGINE_ORC_COMPILEUTILS_H
 
+#include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+#include "llvm/ExecutionEngine/Orc/Layer.h"
 #include <memory>
 
 namespace llvm {
@@ -28,24 +30,31 @@ namespace orc {
 
 class JITTargetMachineBuilder;
 
+IRMaterializationUnit::ManglingOptions
+irManglingOptionsFromTargetOptions(const TargetOptions &Opts);
+
 /// Simple compile functor: Takes a single IR module and returns an ObjectFile.
 /// This compiler supports a single compilation thread and LLVMContext only.
 /// For multithreaded compilation, use ConcurrentIRCompiler below.
-class SimpleCompiler {
+class SimpleCompiler : public IRCompileLayer::IRCompiler {
 public:
   using CompileResult = std::unique_ptr<MemoryBuffer>;
 
   /// Construct a simple compile functor with the given target.
   SimpleCompiler(TargetMachine &TM, ObjectCache *ObjCache = nullptr)
-    : TM(TM), ObjCache(ObjCache) {}
+      : IRCompiler(irManglingOptionsFromTargetOptions(TM.Options)), TM(TM),
+        ObjCache(ObjCache) {}
 
   /// Set an ObjectCache to query before compiling.
   void setObjectCache(ObjectCache *NewCache) { ObjCache = NewCache; }
 
   /// Compile a Module to an ObjectFile.
-  CompileResult operator()(Module &M);
+  Expected<CompileResult> operator()(Module &M) override;
 
 private:
+  IRMaterializationUnit::ManglingOptions
+  manglingOptionsForTargetMachine(const TargetMachine &TM);
+
   CompileResult tryToLoadFromObjectCache(const Module &M);
   void notifyObjectCompiled(const Module &M, const MemoryBuffer &ObjBuffer);
 
@@ -73,14 +82,14 @@ private:
 ///
 /// This class creates a new TargetMachine and SimpleCompiler instance for each
 /// compile.
-class ConcurrentIRCompiler {
+class ConcurrentIRCompiler : public IRCompileLayer::IRCompiler {
 public:
   ConcurrentIRCompiler(JITTargetMachineBuilder JTMB,
                        ObjectCache *ObjCache = nullptr);
 
   void setObjectCache(ObjectCache *ObjCache) { this->ObjCache = ObjCache; }
 
-  std::unique_ptr<MemoryBuffer> operator()(Module &M);
+  Expected<std::unique_ptr<MemoryBuffer>> operator()(Module &M) override;
 
 private:
   JITTargetMachineBuilder JTMB;
