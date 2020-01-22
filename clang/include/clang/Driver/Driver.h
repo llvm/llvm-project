@@ -208,7 +208,7 @@ public:
   /// When the clangDriver lib is used through clang.exe, this provides a
   /// shortcut for executing the -cc1 command-line directly, in the same
   /// process.
-  typedef int (*CC1ToolFunc)(ArrayRef<const char *> argv);
+  typedef int (*CC1ToolFunc)(SmallVectorImpl<const char *> &ArgV);
   CC1ToolFunc CC1Main = nullptr;
 
 private:
