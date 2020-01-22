@@ -60,6 +60,10 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       }]
     >,
   ];
+
+  let verify = [{
+    return detail::verifyInferredResultTypes($_op);
+  }];
 }
 
 def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {

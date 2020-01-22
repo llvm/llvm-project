@@ -86,6 +86,9 @@ public:
   // Return the description of this method if it has one.
   llvm::Optional<StringRef> getDescription() const;
 
+  // Return the verify method body if it has one.
+  llvm::Optional<StringRef> getVerify() const;
+
 private:
   // The TableGen definition of this interface.
   const llvm::Record *def;
