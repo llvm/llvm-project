@@ -2642,8 +2642,6 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
   }
 
   ParsingDeclarator DeclaratorInfo(*this, DS, DeclaratorContext::MemberContext);
-  if (TemplateInfo.TemplateParams)
-    DeclaratorInfo.setTemplateParameterLists(TemplateParams);
   VirtSpecifiers VS;
 
   // Hold late-parsed attributes so we can attach a Decl to them later.

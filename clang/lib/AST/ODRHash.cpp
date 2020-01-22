@@ -857,13 +857,6 @@ public:
 
   void VisitAutoType(const AutoType *T) {
     ID.AddInteger((unsigned)T->getKeyword());
-    ID.AddInteger(T->isConstrained());
-    if (T->isConstrained()) {
-      AddDecl(T->getTypeConstraintConcept());
-      ID.AddInteger(T->getNumArgs());
-      for (const auto &TA : T->getTypeConstraintArguments())
-        Hash.AddTemplateArgument(TA);
-    }
     VisitDeducedType(T);
   }
 

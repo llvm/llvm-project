@@ -1102,17 +1102,6 @@ public:
   /// template.
   ArrayRef<TemplateArgument> getInjectedTemplateArgs();
 
-  /// Return whether this function template is an abbreviated function template,
-  /// e.g. `void foo(auto x)` or `template<typename T> void foo(auto x)`
-  bool isAbbreviated() const {
-    // Since the invented template parameters generated from 'auto' parameters
-    // are either appended to the end of the explicit template parameter list or
-    // form a new template paramter list, we can simply observe the last
-    // parameter to determine if such a thing happened.
-    const TemplateParameterList *TPL = getTemplateParameters();
-    return TPL->getParam(TPL->size() - 1)->isImplicit();
-  }
-
   /// Merge \p Prev with our RedeclarableTemplateDecl::Common.
   void mergePrevDecl(FunctionTemplateDecl *Prev);
 
@@ -1226,6 +1215,7 @@ public:
                                       bool ParameterPack,
                                       bool HasTypeConstraint = false,
                                       Optional<unsigned> NumExpanded = None);
+
   static TemplateTypeParmDecl *CreateDeserialized(const ASTContext &C,
                                                   unsigned ID);
   static TemplateTypeParmDecl *CreateDeserialized(const ASTContext &C,
@@ -1384,8 +1374,7 @@ class NonTypeTemplateParmDecl final
     : public DeclaratorDecl,
       protected TemplateParmPosition,
       private llvm::TrailingObjects<NonTypeTemplateParmDecl,
-                                    std::pair<QualType, TypeSourceInfo *>,
-                                    Expr *> {
+                                    std::pair<QualType, TypeSourceInfo *>> {
   friend class ASTDeclReader;
   friend TrailingObjects;
 
@@ -1440,12 +1429,10 @@ public:
          ArrayRef<TypeSourceInfo *> ExpandedTInfos);
 
   static NonTypeTemplateParmDecl *CreateDeserialized(ASTContext &C,
-                                                     unsigned ID,
-                                                     bool HasTypeConstraint);
+                                                     unsigned ID);
   static NonTypeTemplateParmDecl *CreateDeserialized(ASTContext &C,
                                                      unsigned ID,
-                                                     unsigned NumExpandedTypes,
-                                                     bool HasTypeConstraint);
+                                                     unsigned NumExpandedTypes);
 
   using TemplateParmPosition::getDepth;
   using TemplateParmPosition::setDepth;
@@ -1556,22 +1543,20 @@ public:
     return TypesAndInfos[I].second;
   }
 
-  /// Return the constraint introduced by the placeholder type of this non-type
+  /// Return the type-constraint in the placeholder type of this non-type
   /// template parameter (if any).
-  Expr *getPlaceholderTypeConstraint() const {
-    return hasPlaceholderTypeConstraint() ? *getTrailingObjects<Expr *>() :
-        nullptr;
-  }
-
-  void setPlaceholderTypeConstraint(Expr *E) {
-    *getTrailingObjects<Expr *>() = E;
+  TypeConstraint *getPlaceholderTypeConstraint() const {
+    // TODO: Concepts: Implement once we have actual placeholders with type
+    //                 constraints.
+    return nullptr;
   }
 
   /// Determine whether this non-type template parameter's type has a
   /// placeholder with a type-constraint.
   bool hasPlaceholderTypeConstraint() const {
-    auto *AT = getType()->getContainedAutoType();
-    return AT && AT->isConstrained();
+    // TODO: Concepts: Implement once we have actual placeholders with type
+    //                 constraints.
+    return false;
   }
 
   /// \brief Get the associated-constraints of this template parameter.
@@ -1581,8 +1566,8 @@ public:
   /// Use this instead of getPlaceholderImmediatelyDeclaredConstraint for
   /// concepts APIs that accept an ArrayRef of constraint expressions.
   void getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
-    if (Expr *E = getPlaceholderTypeConstraint())
-      AC.push_back(E);
+    if (TypeConstraint *TC = getPlaceholderTypeConstraint())
+      AC.push_back(TC->getImmediatelyDeclaredConstraint());
   }
 
   // Implement isa/cast/dyncast/etc.
