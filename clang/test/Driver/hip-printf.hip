@@ -6,4 +6,4 @@
 // RUN:   %s 2>&1 | FileCheck %s
 
 // CHECK: [[CLANG:".*clang.*"]] "-cc1"
-// CHECK-SAME: "-Werror=format-nonliteral"
+// CHECK-NOT: "-Werror=format-nonliteral"
