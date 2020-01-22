@@ -515,10 +515,6 @@ TEST(LocateSymbol, All) {
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
 
     auto AST = TU.build();
-    for (auto &D : AST.getDiagnostics())
-      ADD_FAILURE() << D;
-    ASSERT_TRUE(AST.getDiagnostics().empty()) << Test;
-
     auto Results = locateSymbolAt(AST, T.point());
 
     if (!WantDecl) {
@@ -868,7 +864,7 @@ TEST(FindReferences, WithinAST) {
 
       R"cpp(// Forward declaration
         class [[Foo]];
-        class [[Foo]] {}
+        class [[Foo]] {};
         int main() {
           [[Fo^o]] foo;
         }
@@ -878,7 +874,7 @@ TEST(FindReferences, WithinAST) {
         int [[foo]](int) {}
         int main() {
           auto *X = &[[^foo]];
-          [[foo]](42)
+          [[foo]](42);
         }
       )cpp",
 
@@ -1182,8 +1178,6 @@ TEST(GetNonLocalDeclRefs, All) {
   for (const Case &C : Cases) {
     Annotations File(C.AnnotatedCode);
     auto AST = TestTU::withCode(File.code()).build();
-    ASSERT_TRUE(AST.getDiagnostics().empty())
-        << AST.getDiagnostics().begin()->Message;
     SourceLocation SL = llvm::cantFail(
         sourceLocationInMainFile(AST.getSourceManager(), File.point()));
 

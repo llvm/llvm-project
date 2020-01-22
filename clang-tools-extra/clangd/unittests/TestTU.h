@@ -64,6 +64,8 @@ struct TestTU {
   // Simulate a header guard of the header (using an #import directive).
   bool ImplicitHeaderGuard = true;
 
+  // By default, build() will report Error diagnostics as GTest errors.
+  // Suppress this behavior by adding an 'error-ok' comment to the code.
   ParsedAST build() const;
   SymbolSlab headerSymbols() const;
   std::unique_ptr<SymbolIndex> index() const;
