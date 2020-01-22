@@ -1,63 +1,102 @@
-// Check dumping of the GNU Hash section
-// The input was generated using the following:
-// $ llvm-mc -filetype=obj -triple=i386-pc-linux      -o example-i386.o   example.s
-// $ llvm-mc -filetype=obj -triple=x86_64-pc-linux    -o example-x86_64.o example.s
-// $ llvm-mc -filetype=obj -triple=powerpc-pc-linux   -o example-ppc.o    example.s
-// $ llvm-mc -filetype=obj -triple=powerpc64-pc-linux -o example-ppc64.o  example.s
-// $ ld -shared -m elf_i386   -hash-style=gnu -o gnuhash.so.elf-i386   example-i386.o
-// $ ld -shared -m elf_x86_64 -hash-style=gnu -o gnuhash.so.elf-x86_64 example-x86_64.o
-// $ ld -shared -m elf32ppc   -hash-style=gnu -o gnuhash.so.elf-ppc    example-ppc.o
-// $ ld -shared -m elf64ppc   -hash-style=gnu -o gnuhash.so.elf-ppc64  example-ppc64.o
-// $ cat example.s
-// .globl foo
-// foo:
+## Check how the GNU Hash section is dumped with --gnu-hash-table.
 
-RUN: llvm-readobj --gnu-hash-table %p/Inputs/gnuhash.so.elf-i386   | FileCheck %s -check-prefix I386
-RUN: llvm-readobj --gnu-hash-table %p/Inputs/gnuhash.so.elf-x86_64 | FileCheck %s -check-prefix X86_64
-RUN: llvm-readobj --gnu-hash-table %p/Inputs/gnuhash.so.elf-ppc    | FileCheck %s -check-prefix PPC
-RUN: llvm-readobj --gnu-hash-table %p/Inputs/gnuhash.so.elf-ppc64  | FileCheck %s -check-prefix PPC64
+# RUN: yaml2obj --docnum=1 %s -o %t.x64
+# RUN: yaml2obj --docnum=2 %s -o %t.x32
 
-I386:      Arch: i386
-I386:      GnuHashTable {
-I386-NEXT:   Num Buckets: 3
-I386-NEXT:   First Hashed Symbol Index: 1
-I386-NEXT:   Num Mask Words: 1
-I386-NEXT:   Shift Count: 5
-I386-NEXT:   Bloom Filter: [0x39004608]
-I386-NEXT:   Buckets: [1, 4, 0]
-I386-NEXT:   Values: [0xB887388, 0xECD54542, 0x7C92E3BB, 0x1C5871D9]
-I386-NEXT: }
+# RUN: llvm-readobj --gnu-hash-table %t.x64 | FileCheck %s
+# RUN: llvm-readelf --gnu-hash-table %t.x64 | FileCheck %s
 
-X86_64:      Arch: x86_64
-X86_64:      GnuHashTable {
-X86_64-NEXT:   Num Buckets: 3
-X86_64-NEXT:   First Hashed Symbol Index: 1
-X86_64-NEXT:   Num Mask Words: 1
-X86_64-NEXT:   Shift Count: 6
-X86_64-NEXT:   Bloom Filter: [0x800000001204288]
-X86_64-NEXT:   Buckets: [1, 4, 0]
-X86_64-NEXT:   Values: [0xB887388, 0xECD54542, 0x7C92E3BB, 0x1C5871D9]
-X86_64-NEXT: }
+# RUN: llvm-readobj --gnu-hash-table %t.x32 | FileCheck %s
+# RUN: llvm-readelf --gnu-hash-table %t.x32 | FileCheck %s
 
-PPC:      Arch: powerpc
-PPC:      GnuHashTable {
-PPC-NEXT:   Num Buckets: 3
-PPC-NEXT:   First Hashed Symbol Index: 1
-PPC-NEXT:   Num Mask Words: 1
-PPC-NEXT:   Shift Count: 5
-PPC-NEXT:   Bloom Filter: [0x3D00460A]
-PPC-NEXT:   Buckets: [1, 5, 0]
-PPC-NEXT:   Values: [0xEEBEC3A, 0xB887388, 0xECD54542, 0x7C92E3BB, 0x1C5871D9]
-PPC-NEXT: }
+# CHECK:      GnuHashTable {
+# CHECK-NEXT:   Num Buckets: 3
+# CHECK-NEXT:   First Hashed Symbol Index: 1
+# CHECK-NEXT:   Num Mask Words: 2
+# CHECK-NEXT:   Shift Count: 2
+# CHECK-NEXT:   Bloom Filter: [0x3, 0x4]
+# CHECK-NEXT:   Buckets: [5, 6, 7]
+# CHECK-NEXT:   Values: [0x8, 0x9, 0xA, 0xB]
+# CHECK-NEXT: }
 
-PPC64:      Arch: powerpc64
-PPC64:      GnuHashTable {
-PPC64-NEXT:   Num Buckets: 3
-PPC64-NEXT:   First Hashed Symbol Index: 1
-PPC64-NEXT:   Num Mask Words: 1
-PPC64-NEXT:   Shift Count: 6
-PPC64-NEXT:   Bloom Filter: [0x800000001204288]
-PPC64-NEXT:   Buckets: [1, 4, 0]
-PPC64-NEXT:   Values: [0xB887388, 0xECD54542, 0x7C92E3BB, 0x1C5871D9]
-PPC64-NEXT: }
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x1
+      Shift2: 0x2
+    BloomFilter: [0x3, 0x4]
+    HashBuckets: [0x5, 0x6, 0x7]
+    HashValues:  [0x8, 0x9, 0xA, 0xB]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Link:  .dynstr
+    Entries:
+      - Tag:   DT_GNU_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols:
+  - Name:    aaa
+    Binding: STB_GLOBAL
+  - Name:    bbb
+    Binding: STB_GLOBAL
+  - Name:    ccc
+    Binding: STB_GLOBAL
+  - Name:    ddd
+    Binding: STB_GLOBAL
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Sections:
+      - Section: .gnu.hash
+      - Section: .dynamic
 
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x1
+      Shift2: 0x2
+    BloomFilter: [0x3, 0x4]
+    HashBuckets: [0x5, 0x6, 0x7]
+    HashValues:  [0x8, 0x9, 0xA, 0xB]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Link:  .dynstr
+    Entries:
+      - Tag:   DT_GNU_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols:
+  - Name:    aaa
+    Binding: STB_GLOBAL
+  - Name:    bbb
+    Binding: STB_GLOBAL
+  - Name:    ccc
+    Binding: STB_GLOBAL
+  - Name:    ddd
+    Binding: STB_GLOBAL
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Sections:
+      - Section: .gnu.hash
+      - Section: .dynamic
