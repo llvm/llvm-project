@@ -1,3 +1,4 @@
+// RUN: rm -rf %t
 // RUN: %clang_cc1 -x c++ -std=c++17 -fmodules -fmodules-local-submodule-visibility -fmodules-cache-path=%t %s -verify
 
 // expected-no-diagnostics
