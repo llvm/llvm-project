@@ -561,7 +561,7 @@ const DiagnosticBuilder &clang::operator<<(const DiagnosticBuilder &DB,
 }
 
 const ASTTemplateArgumentListInfo *
-ASTTemplateArgumentListInfo::Create(const ASTContext &C,
+ASTTemplateArgumentListInfo::Create(ASTContext &C,
                                     const TemplateArgumentListInfo &List) {
   std::size_t size = totalSizeToAlloc<TemplateArgumentLoc>(List.size());
   void *Mem = C.Allocate(size, alignof(ASTTemplateArgumentListInfo));
