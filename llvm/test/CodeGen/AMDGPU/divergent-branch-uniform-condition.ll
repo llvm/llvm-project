@@ -32,6 +32,7 @@ define amdgpu_ps void @main(i32, float) {
 ; CHECK-NEXT:    s_and_b64 s[8:9], s[8:9], exec
 ; CHECK-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
 ; CHECK-NEXT:    s_andn2_b64 exec, exec, s[2:3]
+; CHECK-NEXT:    s_cbranch_execz BB0_6
 ; CHECK-NEXT:  BB0_3: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_or_b64 s[6:7], s[6:7], exec
@@ -49,7 +50,7 @@ define amdgpu_ps void @main(i32, float) {
 ; CHECK-NEXT:    s_add_i32 s0, s0, 1
 ; CHECK-NEXT:    s_xor_b64 s[6:7], exec, -1
 ; CHECK-NEXT:    s_branch BB0_1
-; CHECK-NEXT:  ; %bb.6: ; %Flow2
+; CHECK-NEXT:  BB0_6: ; %Flow2
 ; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    s_and_saveexec_b64 s[0:1], s[4:5]
