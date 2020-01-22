@@ -1373,6 +1373,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::INSR:              return "AArch64ISD::INSR";
   case AArch64ISD::PTEST:             return "AArch64ISD::PTEST";
   case AArch64ISD::PTRUE:             return "AArch64ISD::PTRUE";
+  case AArch64ISD::LDNF1:             return "AArch64ISD::LDNF1";
+  case AArch64ISD::LDNF1S:            return "AArch64ISD::LDNF1S";
   case AArch64ISD::GLD1:              return "AArch64ISD::GLD1";
   case AArch64ISD::GLD1_SCALED:       return "AArch64ISD::GLD1_SCALED";
   case AArch64ISD::GLD1_SXTW:         return "AArch64ISD::GLD1_SXTW";
@@ -10225,9 +10227,14 @@ static SDValue performSVEAndCombine(SDNode *N,
   if (!Src.hasOneUse())
     return SDValue();
 
-  // GLD1* instructions perform an implicit zero-extend, which makes them
+  EVT MemVT;
+
+  // SVE load instructions perform an implicit zero-extend, which makes them
   // perfect candidates for combining.
   switch (Src->getOpcode()) {
+  case AArch64ISD::LDNF1:
+    MemVT = cast<VTSDNode>(Src->getOperand(3))->getVT();
+    break;
   case AArch64ISD::GLD1:
   case AArch64ISD::GLD1_SCALED:
   case AArch64ISD::GLD1_SXTW:
@@ -10235,12 +10242,11 @@ static SDValue performSVEAndCombine(SDNode *N,
   case AArch64ISD::GLD1_UXTW:
   case AArch64ISD::GLD1_UXTW_SCALED:
   case AArch64ISD::GLD1_IMM:
+    MemVT = cast<VTSDNode>(Src->getOperand(4))->getVT();
     break;
   default:
     return SDValue();
   }
-
-  EVT MemVT = cast<VTSDNode>(Src->getOperand(4))->getVT();
 
   if (isConstantSplatVectorMaskForType(Mask.getNode(), MemVT))
     return Src;
@@ -11217,6 +11223,35 @@ static SDValue splitStoreSplat(SelectionDAG &DAG, StoreSDNode &St,
   return NewST1;
 }
 
+// Returns an SVE type that ContentTy can be trivially sign or zero extended
+// into.
+static MVT getSVEContainerType(EVT ContentTy) {
+  assert(ContentTy.isSimple() && "No SVE containers for extended types");
+
+  switch (ContentTy.getSimpleVT().SimpleTy) {
+  default:
+    llvm_unreachable("No known SVE container for this MVT type");
+  case MVT::nxv2i8:
+  case MVT::nxv2i16:
+  case MVT::nxv2i32:
+  case MVT::nxv2i64:
+  case MVT::nxv2f32:
+  case MVT::nxv2f64:
+    return MVT::nxv2i64;
+  case MVT::nxv4i8:
+  case MVT::nxv4i16:
+  case MVT::nxv4i32:
+  case MVT::nxv4f32:
+    return MVT::nxv4i32;
+  case MVT::nxv8i8:
+  case MVT::nxv8i16:
+  case MVT::nxv8f16:
+    return MVT::nxv8i16;
+  case MVT::nxv16i8:
+    return MVT::nxv16i8;
+  }
+}
+
 static SDValue performLDNT1Combine(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
@@ -11257,6 +11292,32 @@ static SDValue performSTNT1Combine(SDNode *N, SelectionDAG &DAG) {
                             DAG.getUNDEF(PtrTy), MINode->getOperand(3),
                             MINode->getMemoryVT(), MINode->getMemOperand(),
                             ISD::UNINDEXED, false, false);
+}
+
+static SDValue performLDNF1Combine(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  if (VT.getSizeInBits().getKnownMinSize() > AArch64::SVEBitsPerBlock)
+    return SDValue();
+
+  EVT ContainerVT = VT;
+  if (ContainerVT.isInteger())
+    ContainerVT = getSVEContainerType(ContainerVT);
+
+  SDVTList VTs = DAG.getVTList(ContainerVT, MVT::Other);
+  SDValue Ops[] = { N->getOperand(0), // Chain
+                    N->getOperand(2), // Pg
+                    N->getOperand(3), // Base
+                    DAG.getValueType(VT) };
+
+  SDValue Load = DAG.getNode(AArch64ISD::LDNF1, DL, VTs, Ops);
+  SDValue LoadChain = SDValue(Load.getNode(), 1);
+
+  if (ContainerVT.isInteger() && (VT != ContainerVT))
+    Load = DAG.getNode(ISD::TRUNCATE, DL, VT, Load.getValue(0));
+
+  return DAG.getMergeValues({ Load, LoadChain }, DL);
 }
 
 /// Replace a splat of zeros to a vector store by scalar stores of WZR/XZR.  The
@@ -12310,29 +12371,6 @@ static SDValue performGlobalAddressCombine(SDNode *N, SelectionDAG &DAG,
                      DAG.getConstant(MinOffset, DL, MVT::i64));
 }
 
-// Returns an SVE type that ContentTy can be trivially sign or zero extended
-// into.
-static MVT getSVEContainerType(EVT ContentTy) {
-  assert(ContentTy.isSimple() && "No SVE containers for extended types");
-
-  switch (ContentTy.getSimpleVT().SimpleTy) {
-  default:
-    llvm_unreachable("No known SVE container for this MVT type");
-  case MVT::nxv2i8:
-  case MVT::nxv2i16:
-  case MVT::nxv2i32:
-  case MVT::nxv2i64:
-  case MVT::nxv2f32:
-  case MVT::nxv2f64:
-    return MVT::nxv2i64;
-  case MVT::nxv4i8:
-  case MVT::nxv4i16:
-  case MVT::nxv4i32:
-  case MVT::nxv4f32:
-    return MVT::nxv4i32;
-  }
-}
-
 static SDValue performST1ScatterCombine(SDNode *N, SelectionDAG &DAG,
                                         unsigned Opcode,
                                         bool OnlyPackedOffsets = true) {
@@ -12520,10 +12558,15 @@ performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   SDValue Src = N->getOperand(0);
   unsigned Opc = Src->getOpcode();
 
-  // Gather load nodes (e.g. AArch64ISD::GLD1) are straightforward candidates
+  // SVE load nodes (e.g. AArch64ISD::GLD1) are straightforward candidates
   // for DAG Combine with SIGN_EXTEND_INREG. Bail out for all other nodes.
   unsigned NewOpc;
+  unsigned MemVTOpNum = 4;
   switch (Opc) {
+  case AArch64ISD::LDNF1:
+    NewOpc = AArch64ISD::LDNF1S;
+    MemVTOpNum = 3;
+    break;
   case AArch64ISD::GLD1:
     NewOpc = AArch64ISD::GLD1S;
     break;
@@ -12550,15 +12593,17 @@ performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   }
 
   EVT SignExtSrcVT = cast<VTSDNode>(N->getOperand(1))->getVT();
-  EVT GLD1SrcMemVT = cast<VTSDNode>(Src->getOperand(4))->getVT();
+  EVT SrcMemVT = cast<VTSDNode>(Src->getOperand(MemVTOpNum))->getVT();
 
-  if ((SignExtSrcVT != GLD1SrcMemVT) || !Src.hasOneUse())
+  if ((SignExtSrcVT != SrcMemVT) || !Src.hasOneUse())
     return SDValue();
 
   EVT DstVT = N->getValueType(0);
   SDVTList VTs = DAG.getVTList(DstVT, MVT::Other);
-  SDValue Ops[] = {Src->getOperand(0), Src->getOperand(1), Src->getOperand(2),
-                   Src->getOperand(3), Src->getOperand(4)};
+
+  SmallVector<SDValue, 5> Ops;
+  for (unsigned I = 0; I < Src->getNumOperands(); ++I)
+    Ops.push_back(Src->getOperand(I));
 
   SDValue ExtLoad = DAG.getNode(NewOpc, SDLoc(N), VTs, Ops);
   DCI.CombineTo(N, ExtLoad);
@@ -12656,6 +12701,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
       return performNEONPostLDSTCombine(N, DCI, DAG);
     case Intrinsic::aarch64_sve_ldnt1:
       return performLDNT1Combine(N, DAG);
+    case Intrinsic::aarch64_sve_ldnf1:
+      return performLDNF1Combine(N, DAG);
     case Intrinsic::aarch64_sve_stnt1:
       return performSTNT1Combine(N, DAG);
     case Intrinsic::aarch64_sve_ld1_gather:
