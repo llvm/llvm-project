@@ -55,13 +55,8 @@ config("compiler_defaults") {
         "/Zi",
         "/FS",
       ]
+      ldflags += [ "/DEBUG" ]
     }
-
-    # Always ask the linker for a pdb. If the .obj files don't contain debug
-    # info, this will produce enough for function names in backtraces, and
-    # it doesn't slow down linking much.
-    ldflags += [ "/DEBUG" ]
-
     if (is_optimized) {
       cflags += [
         "/O2",
