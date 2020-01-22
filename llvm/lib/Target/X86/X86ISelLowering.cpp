@@ -37126,6 +37126,28 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
     }
   }
 
+  // Handle extract(scalar_to_vector(scalar_value)) for integers.
+  // TODO: Move to DAGCombine?
+  if (SrcBC.getOpcode() == ISD::SCALAR_TO_VECTOR && VT.isInteger() &&
+      SrcBC.getValueType().isInteger() &&
+      (SrcBC.getScalarValueSizeInBits() % SrcSVT.getSizeInBits()) == 0 &&
+      SrcBC.getScalarValueSizeInBits() ==
+          SrcBC.getOperand(0).getValueSizeInBits()) {
+    unsigned Scale = SrcBC.getScalarValueSizeInBits() / SrcSVT.getSizeInBits();
+    if (IdxC.ult(Scale)) {
+      unsigned Offset = IdxC.getZExtValue() * SrcVT.getScalarSizeInBits();
+      SDValue Scl = SrcBC.getOperand(0);
+      EVT SclVT = Scl.getValueType();
+      if (Offset) {
+        Scl = DAG.getNode(ISD::SRL, dl, SclVT, Scl,
+                          DAG.getShiftAmountConstant(Offset, SclVT, dl));
+      }
+      Scl = DAG.getZExtOrTrunc(Scl, dl, SrcVT.getScalarType());
+      Scl = DAG.getZExtOrTrunc(Scl, dl, VT);
+      return Scl;
+    }
+  }
+
   // Handle extract(truncate(x)) for 0'th index.
   // TODO: Treat this as a faux shuffle?
   // TODO: When can we use this for general indices?

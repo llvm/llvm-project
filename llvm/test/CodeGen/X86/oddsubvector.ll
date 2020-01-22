@@ -9,65 +9,73 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mattr=+xop | FileCheck %s --check-prefixes=AVX,XOP
 
 define void @insert_v7i8_v2i16_2(<7 x i8> *%a0, <2 x i16> *%a1) nounwind {
-; SSE2-LABEL: insert_v7i8_v2i16_2:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; SSE2-NEXT:    pextrw $3, %xmm1, %eax
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; SSE2-NEXT:    movd %xmm1, (%rdi)
-; SSE2-NEXT:    movb %al, 6(%rdi)
-; SSE2-NEXT:    pextrw $1, %xmm0, %eax
-; SSE2-NEXT:    movw %ax, 4(%rdi)
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: insert_v7i8_v2i16_2:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE42-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; SSE42-NEXT:    pextrb $6, %xmm1, 6(%rdi)
-; SSE42-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; SSE42-NEXT:    pextrw $1, %xmm0, 4(%rdi)
-; SSE42-NEXT:    movd %xmm1, (%rdi)
-; SSE42-NEXT:    retq
+; SSE-LABEL: insert_v7i8_v2i16_2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movl (%rsi), %eax
+; SSE-NEXT:    movd %eax, %xmm0
+; SSE-NEXT:    movq (%rdi), %rcx
+; SSE-NEXT:    movq %rcx, %xmm1
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE-NEXT:    shrq $48, %rcx
+; SSE-NEXT:    movb %cl, 6(%rdi)
+; SSE-NEXT:    shrl $16, %eax
+; SSE-NEXT:    movw %ax, 4(%rdi)
+; SSE-NEXT:    movd %xmm1, (%rdi)
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: insert_v7i8_v2i16_2:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX1-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; AVX1-NEXT:    vpextrb $6, %xmm1, 6(%rdi)
-; AVX1-NEXT:    vpextrw $1, %xmm0, 4(%rdi)
-; AVX1-NEXT:    vmovd %xmm2, (%rdi)
+; AVX1-NEXT:    movl (%rsi), %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    movq (%rdi), %rcx
+; AVX1-NEXT:    vmovq %rcx, %xmm1
+; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; AVX1-NEXT:    shrq $48, %rcx
+; AVX1-NEXT:    movb %cl, 6(%rdi)
+; AVX1-NEXT:    shrl $16, %eax
+; AVX1-NEXT:    movw %ax, 4(%rdi)
+; AVX1-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: insert_v7i8_v2i16_2:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX2-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; AVX2-NEXT:    vpextrb $6, %xmm1, 6(%rdi)
-; AVX2-NEXT:    vpextrw $1, %xmm0, 4(%rdi)
-; AVX2-NEXT:    vmovd %xmm2, (%rdi)
+; AVX2-NEXT:    movl (%rsi), %eax
+; AVX2-NEXT:    vmovd %eax, %xmm0
+; AVX2-NEXT:    movq (%rdi), %rcx
+; AVX2-NEXT:    vmovq %rcx, %xmm1
+; AVX2-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; AVX2-NEXT:    shrq $48, %rcx
+; AVX2-NEXT:    movb %cl, 6(%rdi)
+; AVX2-NEXT:    shrl $16, %eax
+; AVX2-NEXT:    movw %ax, 4(%rdi)
+; AVX2-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: insert_v7i8_v2i16_2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm2 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; AVX512-NEXT:    vpextrb $6, %xmm1, 6(%rdi)
-; AVX512-NEXT:    vpextrw $1, %xmm0, 4(%rdi)
-; AVX512-NEXT:    vmovd %xmm2, (%rdi)
+; AVX512-NEXT:    movl (%rsi), %eax
+; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    movq (%rdi), %rcx
+; AVX512-NEXT:    vmovq %rcx, %xmm1
+; AVX512-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; AVX512-NEXT:    shrq $48, %rcx
+; AVX512-NEXT:    movb %cl, 6(%rdi)
+; AVX512-NEXT:    shrl $16, %eax
+; AVX512-NEXT:    movw %ax, 4(%rdi)
+; AVX512-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
 ;
 ; XOP-LABEL: insert_v7i8_v2i16_2:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; XOP-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; XOP-NEXT:    vpextrb $6, %xmm1, 6(%rdi)
+; XOP-NEXT:    movl (%rsi), %eax
+; XOP-NEXT:    vmovd %eax, %xmm0
+; XOP-NEXT:    movq (%rdi), %rcx
+; XOP-NEXT:    vmovq %rcx, %xmm1
 ; XOP-NEXT:    insertq {{.*#+}} xmm1 = xmm1[0,1],xmm0[0,1,2,3],xmm1[6,7,u,u,u,u,u,u,u,u]
-; XOP-NEXT:    vpextrw $1, %xmm0, 4(%rdi)
+; XOP-NEXT:    shrq $48, %rcx
+; XOP-NEXT:    movb %cl, 6(%rdi)
+; XOP-NEXT:    shrl $16, %eax
+; XOP-NEXT:    movw %ax, 4(%rdi)
 ; XOP-NEXT:    vmovd %xmm1, (%rdi)
 ; XOP-NEXT:    retq
   %1 = load <2 x i16>, <2 x i16> *%a1
