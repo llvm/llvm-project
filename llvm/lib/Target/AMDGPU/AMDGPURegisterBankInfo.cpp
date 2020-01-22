@@ -2070,11 +2070,13 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     auto CastSrc = B.buildBitcast(Vec32, SrcReg);
     auto One = B.buildConstant(S32, 1);
 
+    MachineBasicBlock::iterator MII = MI.getIterator();
+
     // Split the vector index into 32-bit pieces. Prepare to move all of the
     // new instructions into a waterfall loop if necessary.
     //
     // Don't put the bitcast or constant in the loop.
-    MachineInstrSpan Span(MachineBasicBlock::iterator(&MI), &B.getMBB());
+    MachineInstrSpan Span(MII, &B.getMBB());
 
     // Compute 32-bit element indices, (2 * OrigIdx, 2 * OrigIdx + 1).
     auto IdxLo = B.buildShl(S32, BaseIdxReg, One);
@@ -2196,7 +2198,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     auto InsLo = B.buildInsertVectorElement(Vec32, CastSrc, InsRegs[0], IdxLo);
     auto InsHi = B.buildInsertVectorElement(Vec32, InsLo, InsRegs[1], IdxHi);
-    B.buildBitcast(DstReg, InsHi);
 
     const RegisterBank *DstBank =
       OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
@@ -2216,6 +2217,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     SmallSet<Register, 4> OpsToWaterfall;
     if (!collectWaterfallOperands(OpsToWaterfall, MI, MRI, { 3 })) {
+      B.setInsertPt(B.getMBB(), MI);
+      B.buildBitcast(DstReg, InsHi);
       MI.eraseFromParent();
       return;
     }
@@ -2223,8 +2226,16 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     B.setInstr(*Span.begin());
     MI.eraseFromParent();
 
+    // Figure out the point after the waterfall loop before mangling the control
+    // flow.
     executeInWaterfallLoop(B, make_range(Span.begin(), Span.end()),
                            OpsToWaterfall, MRI);
+
+    // The insertion point is now right after the original instruction.
+    //
+    // Keep the bitcast to the original vector type out of the loop. Doing this
+    // saved an extra phi we don't need inside the loop.
+    B.buildBitcast(DstReg, InsHi);
 
     // Re-insert the constant offset add inside the waterfall loop.
     if (ShouldMoveIndexIntoLoop)
