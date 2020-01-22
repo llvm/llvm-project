@@ -712,8 +712,11 @@ bool Parser::TryAnnotateTypeConstraint() {
                                       MemberOfUnknownSpecialization);
     assert(!MemberOfUnknownSpecialization
            && "Member when we only allowed namespace scope qualifiers??");
-    if (!PossibleConcept || TNK != TNK_Concept_template)
+    if (!PossibleConcept || TNK != TNK_Concept_template) {
+      if (SS.isNotEmpty())
+        AnnotateScopeToken(SS, !WasScopeAnnotation);
       return false;
+    }
 
     // At this point we're sure we're dealing with a constrained parameter. It
     // may or may not have a template parameter list following the concept
