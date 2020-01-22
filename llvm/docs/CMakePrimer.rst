@@ -333,7 +333,7 @@ When defining a CMake command handling arguments is very useful. The examples
 in this section will all use the CMake ``function`` block, but this all applies
 to the ``macro`` block as well.
 
-CMake commands can have named arguments that are requried at every call site. In
+CMake commands can have named arguments that are required at every call site. In
 addition, all commands will implicitly accept a variable number of extra
 arguments (In C parlance, all commands are varargs functions). When a command is
 invoked with extra arguments (beyond the named ones) CMake will store the full

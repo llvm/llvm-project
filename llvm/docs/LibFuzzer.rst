@@ -287,7 +287,7 @@ The most important command line options are:
   that trigger new code coverage will be merged into the first corpus
   directory.  Defaults to 0. This flag can be used to minimize a corpus.
 ``-merge_control_file``
-  Specify a control file used for the merge proccess.
+  Specify a control file used for the merge process.
   If a merge process gets killed it tries to leave this file in a state
   suitable for resuming the merge. By default a temporary file will be used.
 ``-minimize_crash``
@@ -515,7 +515,7 @@ and extra run-time flag ``-use_value_profile=1`` the fuzzer will
 collect value profiles for the parameters of compare instructions
 and treat some new values as new coverage.
 
-The current imlpementation does roughly the following:
+The current implementation does roughly the following:
 
 * The compiler instruments all CMP instructions with a callback that receives both CMP arguments.
 * The callback computes `(caller_pc&4095) | (popcnt(Arg1 ^ Arg2) << 12)` and uses this value to set a bit in a bitset.

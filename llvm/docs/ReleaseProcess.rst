@@ -204,7 +204,7 @@ and that will be the official binary.
 
 * Rename (or link) ``clang+llvm-REL-ARCH-ENV`` to the .install directory
 
-* Tar that into the same name with ``.tar.gz`` extensioan from outside the
+* Tar that into the same name with ``.tar.gz`` extension from outside the
   directory
 
 * Make it available for the release manager to download

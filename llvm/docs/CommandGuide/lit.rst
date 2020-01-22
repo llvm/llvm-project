@@ -176,7 +176,7 @@ SELECTION OPTIONS
  "shards", and run only one of them.  Must be used with the
  ``--run-shard=N`` option, which selects the shard to run. The environment
  variable ``LIT_NUM_SHARDS`` can also be used in place of this
- option. These two options provide a coarse mechanism for paritioning large
+ option. These two options provide a coarse mechanism for partitioning large
  testsuites, for parallel execution on separate machines (say in a large
  testing farm).
 

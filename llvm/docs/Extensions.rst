@@ -213,7 +213,7 @@ ELF-Dependent
 ^^^^^^^^^^^^^^^^^^^^^^
 
 In order to support creating multiple sections with the same name and comdat,
-it is possible to add an unique number at the end of the ``.seciton`` directive.
+it is possible to add an unique number at the end of the ``.section`` directive.
 For example, the following code creates two sections named ``.text``.
 
 .. code-block:: gas

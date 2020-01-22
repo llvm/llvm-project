@@ -41,7 +41,7 @@ Instruction Annotations
 Contextual markups
 ------------------
 
-Annoated assembly display will supply contextual markup to help clients more
+Annotated assembly display will supply contextual markup to help clients more
 efficiently implement things like pretty printers. Most markup will be target
 independent, so clients can effectively provide good display without any target
 specific knowledge.

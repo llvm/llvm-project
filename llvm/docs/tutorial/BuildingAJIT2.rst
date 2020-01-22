@@ -170,7 +170,7 @@ can be implemented.
     TransformFunction Transform;
   };
 
-  // From IRTransfomrLayer.cpp:
+  // From IRTransformLayer.cpp:
 
   IRTransformLayer::IRTransformLayer(ExecutionSession &ES,
                                      IRLayer &BaseLayer,
