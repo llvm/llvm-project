@@ -35,9 +35,9 @@
 
 ; GCN: s_mov_b64 exec, s{{\[}}[[ANDEXEC_LO]]:[[ANDEXEC_HI]]{{\]}}
 
-; GCN: mask branch [[ENDIF:BB[0-9]+_[0-9]+]]
+; GCN: s_cbranch_execz [[ENDIF:BB[0-9]+_[0-9]+]]
 
-; GCN: {{^}}BB{{[0-9]+}}_1: ; %if
+; GCN: ; %bb.{{[0-9]+}}: ; %if
 ; GCN: s_mov_b32 m0, -1
 ; GCN: ds_read_b32 [[LOAD1:v[0-9]+]]
 ; GCN: buffer_load_dword [[RELOAD_LOAD0:v[0-9]+]], off, s[0:3], s7 offset:[[LOAD0_OFFSET]] ; 4-byte Folded Reload
@@ -116,8 +116,7 @@ endif:
 
 ; GCN: s_mov_b64 exec, s{{\[}}[[ANDEXEC_LO]]:[[ANDEXEC_HI]]{{\]}}
 
-; GCN-NEXT: ; mask branch [[END:BB[0-9]+_[0-9]+]]
-; GCN-NEXT: s_cbranch_execz [[END]]
+; GCN-NEXT: s_cbranch_execz [[END:BB[0-9]+_[0-9]+]]
 
 
 ; GCN: [[LOOP:BB[0-9]+_[0-9]+]]:
@@ -194,8 +193,7 @@ end:
 ; GCN: s_mov_b64 exec, [[CMP0]]
 
 ; FIXME: It makes no sense to put this skip here
-; GCN-NEXT: ; mask branch [[FLOW:BB[0-9]+_[0-9]+]]
-; GCN: s_cbranch_execz [[FLOW]]
+; GCN: s_cbranch_execz [[FLOW:BB[0-9]+_[0-9]+]]
 ; GCN-NEXT: s_branch [[ELSE:BB[0-9]+_[0-9]+]]
 
 ; GCN: [[FLOW]]: ; %Flow
@@ -229,11 +227,10 @@ end:
 
 ; GCN: buffer_store_dword [[FLOW_VAL]], off, s[0:3], s7 offset:[[RESULT_OFFSET:[0-9]+]] ; 4-byte Folded Spill
 ; GCN: s_xor_b64 exec, exec, s{{\[}}[[FLOW_S_RELOAD_SAVEEXEC_LO]]:[[FLOW_S_RELOAD_SAVEEXEC_HI]]{{\]}}
-; GCN-NEXT: ; mask branch [[ENDIF:BB[0-9]+_[0-9]+]]
-; GCN-NEXT: s_cbranch_execz [[ENDIF]]
+; GCN-NEXT: s_cbranch_execz [[ENDIF:BB[0-9]+_[0-9]+]]
 
 
-; GCN: BB{{[0-9]+}}_2: ; %if
+; GCN: ; %bb.{{[0-9]+}}: ; %if
 ; GCN: ds_read_b32
 ; GCN: buffer_load_dword v[[LOAD0_RELOAD:[0-9]+]], off, s[0:3], s7 offset:[[LOAD0_OFFSET]] ; 4-byte Folded Reload
 ; GCN: v_add_i32_e32 [[ADD:v[0-9]+]], vcc, v{{[0-9]+}}, v[[LOAD0_RELOAD]]

@@ -9,7 +9,7 @@
 ; CHECK-NOT: v_cmp
 ; CHECK_NOT: v_cndmask
 ; CHECK: s_and_saveexec_b64 s[{{[[0-9]+:[0-9]+}}], [[COND]]
-; CHECK: BB0_2:
+; CHECK: ; %bb.2:
 
 define amdgpu_kernel void @hoist_cond(float addrspace(1)* nocapture %arg, float addrspace(1)* noalias nocapture readonly %arg1, i32 %arg3, i32 %arg4) {
 bb:
