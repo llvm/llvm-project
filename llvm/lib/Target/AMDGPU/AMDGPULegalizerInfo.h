@@ -77,7 +77,8 @@ public:
 
   bool legalizeAtomicCmpXChg(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B) const;
-
+  bool legalizeFlog(MachineInstr &MI, MachineIRBuilder &B,
+                    double Log2BaseInverted) const;
   Register getLiveInRegister(MachineRegisterInfo &MRI,
                              Register Reg, LLT Ty) const;
 
