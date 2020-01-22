@@ -324,10 +324,11 @@ define void @test_udiv_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X64-LABEL: test_udiv_v2i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %rcx
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    movd %xmm1, %esi
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    movq %rax, %xmm0
+; X64-NEXT:    movq (%rsi), %rsi
+; X64-NEXT:    movq %rsi, %xmm1
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %esi
 ; X64-NEXT:    movd %eax, %xmm2
@@ -377,10 +378,11 @@ define void @test_urem_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X64-LABEL: test_urem_v2i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %rcx
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    movd %xmm1, %esi
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    movq %rax, %xmm0
+; X64-NEXT:    movq (%rsi), %rsi
+; X64-NEXT:    movq %rsi, %xmm1
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %esi
 ; X64-NEXT:    movd %edx, %xmm2
@@ -430,10 +432,11 @@ define void @test_sdiv_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X64-LABEL: test_sdiv_v2i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %rcx
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    movd %xmm1, %esi
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    movq %rax, %xmm0
+; X64-NEXT:    movq (%rsi), %rsi
+; X64-NEXT:    movq %rsi, %xmm1
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    cltd
 ; X64-NEXT:    idivl %esi
 ; X64-NEXT:    movd %eax, %xmm2
@@ -488,10 +491,11 @@ define void @test_srem_v2i32(<2 x i32>* %x, <2 x i32>* %y, <2 x i32>* %z) nounwi
 ; X64-LABEL: test_srem_v2i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %rcx
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    movd %xmm1, %esi
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    movq %rax, %xmm0
+; X64-NEXT:    movq (%rsi), %rsi
+; X64-NEXT:    movq %rsi, %xmm1
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    cltd
 ; X64-NEXT:    idivl %esi
 ; X64-NEXT:    movd %eax, %xmm2
