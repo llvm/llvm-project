@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-elfabi --elf %t --emit-tbe=- | FileCheck %s
 
 !ELF

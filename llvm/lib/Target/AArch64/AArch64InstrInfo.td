@@ -245,6 +245,7 @@ def SDT_AArch64TLSDescCall : SDTypeProfile<0, -2, [SDTCisPtrTy<0>,
 
 def SDT_AArch64ldp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64stnp : SDTypeProfile<0, 3, [SDTCisVT<0, v4i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 
 // Generates the general dynamic sequences, i.e.
 //  adrp  x0, :tlsdesc:var
@@ -544,6 +545,7 @@ def AArch64uunpklo : SDNode<"AArch64ISD::UUNPKLO", SDT_AArch64unpk>;
 
 def AArch64ldp : SDNode<"AArch64ISD::LDP", SDT_AArch64ldp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AArch64stp : SDNode<"AArch64ISD::STP", SDT_AArch64stp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64stnp : SDNode<"AArch64ISD::STNP", SDT_AArch64stnp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
 
@@ -1538,17 +1540,29 @@ def TAGPstack
 // register / expression for the tagged base pointer of the current function.
 def : Pat<(int_aarch64_irg_sp i64:$Rm), (IRGstack SP, i64:$Rm)>;
 
-// Large STG to be expanded into a loop. $Rm is the size, $Rn is start address.
-// $Rn_wback is one past the end of the range.
+// Large STG to be expanded into a loop. $sz is the size, $Rn is start address.
+// $Rn_wback is one past the end of the range. $Rm is the loop counter.
 let isCodeGenOnly=1, mayStore=1 in {
+def STGloop_wback
+    : Pseudo<(outs GPR64common:$Rm, GPR64sp:$Rn_wback), (ins i64imm:$sz, GPR64sp:$Rn),
+             [], "$Rn = $Rn_wback,@earlyclobber $Rn_wback,@earlyclobber $Rm" >,
+      Sched<[WriteAdr, WriteST]>;
+
+def STZGloop_wback
+    : Pseudo<(outs GPR64common:$Rm, GPR64sp:$Rn_wback), (ins i64imm:$sz, GPR64sp:$Rn),
+             [], "$Rn = $Rn_wback,@earlyclobber $Rn_wback,@earlyclobber $Rm" >,
+      Sched<[WriteAdr, WriteST]>;
+
+// A variant of the above where $Rn2 is an independent register not tied to the input register $Rn.
+// Their purpose is to use a FrameIndex operand as $Rn (which of course can not be written back).
 def STGloop
-    : Pseudo<(outs GPR64common:$Rm_wback, GPR64sp:$Rn_wback), (ins GPR64common:$Rm, GPR64sp:$Rn),
-             [], "$Rn = $Rn_wback,@earlyclobber $Rn_wback,$Rm = $Rm_wback,@earlyclobber $Rm_wback" >,
+    : Pseudo<(outs GPR64common:$Rm, GPR64sp:$Rn2), (ins i64imm:$sz, GPR64sp:$Rn),
+             [], "@earlyclobber $Rn2,@earlyclobber $Rm" >,
       Sched<[WriteAdr, WriteST]>;
 
 def STZGloop
-    : Pseudo<(outs GPR64common:$Rm_wback, GPR64sp:$Rn_wback), (ins GPR64common:$Rm, GPR64sp:$Rn),
-             [], "$Rn = $Rn_wback,@earlyclobber $Rn_wback,$Rm = $Rm_wback,@earlyclobber $Rm_wback" >,
+    : Pseudo<(outs GPR64common:$Rm, GPR64sp:$Rn2), (ins i64imm:$sz, GPR64sp:$Rn),
+             [], "@earlyclobber $Rn2,@earlyclobber $Rm" >,
       Sched<[WriteAdr, WriteST]>;
 }
 
@@ -2721,6 +2735,10 @@ defm STNPQ : StorePairNoAlloc<0b10, 1, FPR128Op, simm7s16, "stnp">;
 
 def : Pat<(AArch64stp GPR64z:$Rt, GPR64z:$Rt2, (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
           (STPXi GPR64z:$Rt, GPR64z:$Rt2, GPR64sp:$Rn, simm7s8:$offset)>;
+
+def : Pat<(AArch64stnp FPR128:$Rt, FPR128:$Rt2, (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
+          (STNPQi FPR128:$Rt, FPR128:$Rt2, GPR64sp:$Rn, simm7s16:$offset)>;
+
 
 //---
 // (Register offset)

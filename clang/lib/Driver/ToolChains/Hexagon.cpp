@@ -47,13 +47,12 @@ static void handleHVXWarnings(const Driver &D, const ArgList &Args) {
 // Handle hvx target features explicitly.
 static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
                                     std::vector<StringRef> &Features,
-                                    bool &HasHVX) {
+                                    StringRef Cpu, bool &HasHVX) {
   // Handle HVX warnings.
   handleHVXWarnings(D, Args);
 
   // Add the +hvx* features based on commandline flags.
   StringRef HVXFeature, HVXLength;
-  StringRef Cpu(toolchains::HexagonToolChain::GetTargetCPUVersion(Args));
 
   // Handle -mhvx, -mhvx=, -mno-hvx.
   if (Arg *A = Args.getLastArg(options::OPT_mno_hexagon_hvx,
@@ -107,7 +106,15 @@ void hexagon::getHexagonTargetFeatures(const Driver &D, const ArgList &Args,
   Features.push_back(UseLongCalls ? "+long-calls" : "-long-calls");
 
   bool HasHVX = false;
-  handleHVXTargetFeatures(D, Args, Features, HasHVX);
+  StringRef Cpu(toolchains::HexagonToolChain::GetTargetCPUVersion(Args));
+  // 't' in Cpu denotes tiny-core micro-architecture. For now, the co-processors
+  // have no dependency on micro-architecture.
+  const bool TinyCore = Cpu.contains('t');
+
+  if (TinyCore)
+    Cpu = Cpu.take_front(Cpu.size() - 1);
+
+  handleHVXTargetFeatures(D, Args, Features, Cpu, HasHVX);
 
   if (HexagonToolChain::isAutoHVXEnabled(Args) && !HasHVX)
     D.Diag(diag::warn_drv_vectorize_needs_hvx);

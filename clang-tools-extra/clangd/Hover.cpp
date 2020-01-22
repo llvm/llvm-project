@@ -266,20 +266,19 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
     }
   }
 
-  if (const auto *CCD = llvm::dyn_cast<CXXConstructorDecl>(FD)) {
-    // Constructor's "return type" is the class type.
-    HI.ReturnType = declaredType(CCD->getParent()).getAsString(Policy);
-    // Don't provide any type for the constructor itself.
-  } else if (llvm::isa<CXXDestructorDecl>(FD)) {
-    HI.ReturnType = "void";
-  } else {
-    HI.ReturnType = printType(FD->getReturnType(), Policy);
+  // We don't want any type info, if name already contains it. This is true for
+  // constructors/destructors and conversion operators.
+  const auto NK = FD->getDeclName().getNameKind();
+  if (NK == DeclarationName::CXXConstructorName ||
+      NK == DeclarationName::CXXDestructorName ||
+      NK == DeclarationName::CXXConversionFunctionName)
+    return;
 
-    QualType QT = FD->getType();
-    if (const VarDecl *VD = llvm::dyn_cast<VarDecl>(D)) // Lambdas
-      QT = VD->getType().getDesugaredType(D->getASTContext());
-    HI.Type = printType(QT, Policy);
-  }
+  HI.ReturnType = printType(FD->getReturnType(), Policy);
+  QualType QT = FD->getType();
+  if (const VarDecl *VD = llvm::dyn_cast<VarDecl>(D)) // Lambdas
+    QT = VD->getType().getDesugaredType(D->getASTContext());
+  HI.Type = printType(QT, Policy);
   // FIXME: handle variadics.
 }
 

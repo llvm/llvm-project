@@ -78,6 +78,9 @@ namespace Hexagon_MC {
   /// etc. do not need to go through TargetRegistry.
   MCSubtargetInfo *createHexagonMCSubtargetInfo(const Triple &TT, StringRef CPU,
                                                 StringRef FS);
+  MCSubtargetInfo const *getArchSubtarget(MCSubtargetInfo const *STI);
+  void addArchSubtarget(MCSubtargetInfo const *STI,
+                        StringRef FS);
   unsigned GetELFFlags(const MCSubtargetInfo &STI);
 }
 
@@ -94,6 +97,7 @@ std::unique_ptr<MCObjectTargetWriter>
 createHexagonELFObjectWriter(uint8_t OSABI, StringRef CPU);
 
 unsigned HexagonGetLastSlot();
+unsigned HexagonConvertUnits(unsigned ItinUnits, unsigned *Lanes);
 
 } // End llvm namespace
 

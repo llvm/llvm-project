@@ -1225,7 +1225,7 @@ void SymbolFilePDB::CacheFunctionNames() {
 
         // To search a method name, like NS::Class:MemberFunc, LLDB searches
         // its base name, i.e. MemberFunc by default. Since PDBSymbolFunc does
-        // not have inforamtion of this, we extract base names and cache them
+        // not have information of this, we extract base names and cache them
         // by our own effort.
         llvm::StringRef basename = MSVCUndecoratedNameParser::DropScope(name);
         if (!basename.empty())
@@ -1817,7 +1817,7 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(CompileUnit &comp_unit,
             prev_source_idx, false, false, false, false, true);
 
         line_table->InsertSequence(sequence.release());
-        sequence.reset(line_table->CreateLineSequenceContainer());
+        sequence = line_table->CreateLineSequenceContainer();
       }
 
       if (ShouldAddLine(match_line, lno, length)) {
@@ -1854,7 +1854,7 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(CompileUnit &comp_unit,
           prev_source_idx, false, false, false, false, true);
     }
 
-    line_table->InsertSequence(sequence.release());
+    line_table->InsertSequence(sequence.get());
   }
 
   if (line_table->GetSize()) {

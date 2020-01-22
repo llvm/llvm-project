@@ -2312,16 +2312,16 @@ multiclass MVE_VMINMAXA_m<string iname, MVEVectorVTInfo VTI,
 multiclass MVE_VMINA<MVEVectorVTInfo VTI>
   : MVE_VMINMAXA_m<"vmina", VTI, umin, int_arm_mve_vmina_predicated, 0b1>;
 
-defm MVE_VMAXAs8  : MVE_VMINA<MVE_v16s8>;
-defm MVE_VMAXAs16 : MVE_VMINA<MVE_v8s16>;
-defm MVE_VMAXAs32 : MVE_VMINA<MVE_v4s32>;
+defm MVE_VMINAs8  : MVE_VMINA<MVE_v16s8>;
+defm MVE_VMINAs16 : MVE_VMINA<MVE_v8s16>;
+defm MVE_VMINAs32 : MVE_VMINA<MVE_v4s32>;
 
 multiclass MVE_VMAXA<MVEVectorVTInfo VTI>
   : MVE_VMINMAXA_m<"vmaxa", VTI, umax, int_arm_mve_vmaxa_predicated, 0b0>;
 
-defm MVE_VMINAs8  : MVE_VMAXA<MVE_v16s8>;
-defm MVE_VMINAs16 : MVE_VMAXA<MVE_v8s16>;
-defm MVE_VMINAs32 : MVE_VMAXA<MVE_v4s32>;
+defm MVE_VMAXAs8  : MVE_VMAXA<MVE_v16s8>;
+defm MVE_VMAXAs16 : MVE_VMAXA<MVE_v8s16>;
+defm MVE_VMAXAs32 : MVE_VMAXA<MVE_v4s32>;
 
 // end of MVE Integer instructions
 
@@ -3655,7 +3655,8 @@ multiclass MVE_VMAXMINNMA_m<string iname, MVEVectorVTInfo VTI,
 
   let Predicates = [HasMVEInt] in {
     // Unpredicated v(max|min)nma
-    def : Pat<(VTI.Vec (unpred_op (VTI.Vec MQPR:$Qd), (fabs (VTI.Vec MQPR:$Qm)))),
+    def : Pat<(VTI.Vec (unpred_op (fabs (VTI.Vec MQPR:$Qd)),
+                                  (fabs (VTI.Vec MQPR:$Qm)))),
               (VTI.Vec (Inst (VTI.Vec MQPR:$Qd), (VTI.Vec MQPR:$Qm)))>;
 
     // Predicated v(max|min)nma
@@ -5053,22 +5054,44 @@ foreach wb = [MVE_vldst24_writeback<
                      "vst" # n.nvecs # stage # "." # s.lanesize>;
 }
 
+def SDTARMVST2    : SDTypeProfile<1, 5, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>, SDTCisVec<3>,
+                                         SDTCisSameAs<3, 4>, SDTCisVT<5, i32>]>;
+def SDTARMVST4    : SDTypeProfile<1, 7, [SDTCisPtrTy<0>, SDTCisPtrTy<1>, SDTCisVT<2, i32>, SDTCisVec<3>,
+                                         SDTCisSameAs<3, 4>, SDTCisSameAs<3, 5>,
+                                         SDTCisSameAs<3, 6>, SDTCisVT<7, i32>]>;
+def MVEVST2UPD       : SDNode<"ARMISD::VST2_UPD", SDTARMVST2, [SDNPHasChain]>;
+def MVEVST4UPD       : SDNode<"ARMISD::VST4_UPD", SDTARMVST4, [SDNPHasChain]>;
+
 multiclass MVE_vst24_patterns<int lanesize, ValueType VT> {
   foreach stage = [0,1] in
     def : Pat<(int_arm_mve_vst2q i32:$addr,
-               (VT MQPR:$v0), (VT MQPR:$v1), (i32 stage)),
+                (VT MQPR:$v0), (VT MQPR:$v1), (i32 stage)),
               (!cast<Instruction>("MVE_VST2"#stage#"_"#lanesize)
-               (REG_SEQUENCE QQPR, VT:$v0, qsub_0, VT:$v1, qsub_1),
-               t2_addr_offset_none:$addr)>;
+                (REG_SEQUENCE QQPR, VT:$v0, qsub_0, VT:$v1, qsub_1),
+                t2_addr_offset_none:$addr)>;
+  foreach stage = [0,1] in
+    def : Pat<(i32 (MVEVST2UPD i32:$addr, (i32 32),
+                (VT MQPR:$v0), (VT MQPR:$v1), (i32 stage))),
+              (i32 (!cast<Instruction>("MVE_VST2"#stage#"_"#lanesize#_wb)
+                (REG_SEQUENCE QQPR, VT:$v0, qsub_0, VT:$v1, qsub_1),
+                t2_addr_offset_none:$addr))>;
 
   foreach stage = [0,1,2,3] in
     def : Pat<(int_arm_mve_vst4q i32:$addr,
-               (VT MQPR:$v0), (VT MQPR:$v1),
-               (VT MQPR:$v2), (VT MQPR:$v3), (i32 stage)),
+                (VT MQPR:$v0), (VT MQPR:$v1),
+                (VT MQPR:$v2), (VT MQPR:$v3), (i32 stage)),
               (!cast<Instruction>("MVE_VST4"#stage#"_"#lanesize)
-               (REG_SEQUENCE QQQQPR, VT:$v0, qsub_0, VT:$v1, qsub_1,
-                                     VT:$v2, qsub_2, VT:$v3, qsub_3),
-               t2_addr_offset_none:$addr)>;
+                (REG_SEQUENCE QQQQPR, VT:$v0, qsub_0, VT:$v1, qsub_1,
+                                      VT:$v2, qsub_2, VT:$v3, qsub_3),
+                t2_addr_offset_none:$addr)>;
+  foreach stage = [0,1,2,3] in
+    def : Pat<(i32 (MVEVST4UPD i32:$addr, (i32 64),
+                (VT MQPR:$v0), (VT MQPR:$v1),
+                (VT MQPR:$v2), (VT MQPR:$v3), (i32 stage))),
+              (i32 (!cast<Instruction>("MVE_VST4"#stage#"_"#lanesize#_wb)
+                (REG_SEQUENCE QQQQPR, VT:$v0, qsub_0, VT:$v1, qsub_1,
+                                      VT:$v2, qsub_2, VT:$v3, qsub_3),
+                t2_addr_offset_none:$addr))>;
 }
 defm : MVE_vst24_patterns<8, v16i8>;
 defm : MVE_vst24_patterns<16, v8i16>;

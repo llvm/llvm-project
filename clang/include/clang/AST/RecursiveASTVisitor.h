@@ -23,6 +23,7 @@
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
@@ -2138,6 +2139,8 @@ DEF_TRAVERSE_DECL(ParmVarDecl, {
     TRY_TO(TraverseStmt(D->getDefaultArg()));
 })
 
+DEF_TRAVERSE_DECL(RequiresExprBodyDecl, {})
+
 #undef DEF_TRAVERSE_DECL
 
 // ----------------- Stmt traversal -----------------
@@ -2707,6 +2710,28 @@ DEF_TRAVERSE_STMT(CoyieldExpr, {
 
 DEF_TRAVERSE_STMT(ConceptSpecializationExpr, {
   TRY_TO(TraverseConceptReference(*S));
+})
+
+DEF_TRAVERSE_STMT(RequiresExpr, {
+  TRY_TO(TraverseDecl(S->getBody()));
+  for (ParmVarDecl *Parm : S->getLocalParameters())
+    TRY_TO(TraverseDecl(Parm));
+  for (concepts::Requirement *Req : S->getRequirements())
+    if (auto *TypeReq = dyn_cast<concepts::TypeRequirement>(Req)) {
+      if (!TypeReq->isSubstitutionFailure())
+        TRY_TO(TraverseTypeLoc(TypeReq->getType()->getTypeLoc()));
+    } else if (auto *ExprReq = dyn_cast<concepts::ExprRequirement>(Req)) {
+      if (!ExprReq->isExprSubstitutionFailure())
+        TRY_TO(TraverseStmt(ExprReq->getExpr()));
+      auto &RetReq = ExprReq->getReturnTypeRequirement();
+      if (RetReq.isTypeConstraint())
+        TRY_TO(TraverseTemplateParameterListHelper(
+                   RetReq.getTypeConstraintTemplateParameterList()));
+    } else {
+      auto *NestedReq = cast<concepts::NestedRequirement>(Req);
+      if (!NestedReq->isSubstitutionFailure())
+        TRY_TO(TraverseStmt(NestedReq->getConstraintExpr()));
+    }
 })
 
 // These literals (all of them) do not need any action.

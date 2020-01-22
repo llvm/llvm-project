@@ -1747,9 +1747,16 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
 
     if (CodeGenOpts.NullPointerIsValid)
       FuncAttrs.addAttribute("null-pointer-is-valid", "true");
+
+    // TODO: Omit attribute when the default is IEEE.
     if (CodeGenOpts.FPDenormalMode != llvm::DenormalMode::Invalid)
       FuncAttrs.addAttribute("denormal-fp-math",
                              llvm::denormalModeName(CodeGenOpts.FPDenormalMode));
+
+    if (CodeGenOpts.FP32DenormalMode != llvm::DenormalMode::Invalid)
+      FuncAttrs.addAttribute(
+          "denormal-fp-math-f32",
+          llvm::denormalModeName(CodeGenOpts.FP32DenormalMode));
 
     FuncAttrs.addAttribute("no-trapping-math",
                            llvm::toStringRef(CodeGenOpts.NoTrappingMath));
@@ -1776,10 +1783,6 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
     FuncAttrs.addAttribute(
         "correctly-rounded-divide-sqrt-fp-math",
         llvm::toStringRef(CodeGenOpts.CorrectlyRoundedDivSqrt));
-
-    if (getLangOpts().OpenCL)
-      FuncAttrs.addAttribute("denorms-are-zero",
-                             llvm::toStringRef(CodeGenOpts.FlushDenorm));
 
     // TODO: Reciprocal estimate codegen options should apply to instructions?
     const std::vector<std::string> &Recips = CodeGenOpts.Reciprocals;
@@ -1813,10 +1816,6 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
   if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice) {
     // Exceptions aren't supported in CUDA device code.
     FuncAttrs.addAttribute(llvm::Attribute::NoUnwind);
-
-    // Respect -fcuda-flush-denormals-to-zero.
-    if (CodeGenOpts.FlushDenorm)
-      FuncAttrs.addAttribute("nvptx-f32ftz", "true");
   }
 
   for (StringRef Attr : CodeGenOpts.DefaultFunctionAttrs) {
@@ -2441,9 +2440,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
               EmitScalarExpr(AVAttr->getAlignment());
             llvm::ConstantInt *AlignmentCI =
               cast<llvm::ConstantInt>(AlignmentValue);
-            unsigned Alignment = std::min((unsigned)AlignmentCI->getZExtValue(),
-                                          +llvm::Value::MaximumAlignment);
-            AI->addAttrs(llvm::AttrBuilder().addAlignmentAttr(Alignment));
+            AI->addAttrs(llvm::AttrBuilder().addAlignmentAttr(llvm::MaybeAlign(
+                AlignmentCI->getLimitedValue(llvm::Value::MaximumAlignment))));
           }
         }
 
@@ -4629,7 +4627,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       llvm::ConstantInt *AlignmentCI = cast<llvm::ConstantInt>(Alignment);
       EmitAlignmentAssumption(Ret.getScalarVal(), RetTy, Loc, AA->getLocation(),
                               AlignmentCI, OffsetValue);
-    } else if (const auto *AA = TargetDecl->getAttr<AllocAlignAttr>()) {
+    }
+    if (const auto *AA = TargetDecl->getAttr<AllocAlignAttr>()) {
       llvm::Value *AlignmentVal = CallArgs[AA->getParamIndex().getLLVMIndex()]
                                       .getRValue(*this)
                                       .getScalarVal();

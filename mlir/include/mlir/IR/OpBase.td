@@ -1327,7 +1327,10 @@ class PredOpTrait<string descr, Pred pred> : OpTrait {
 }
 
 // Op supports operand broadcast behavior.
-def Broadcastable  : NativeOpTrait<"BroadcastableTwoOperandsOneResult">;
+def ResultsBroadcastableShape :
+  NativeOpTrait<"ResultsBroadcastableShape">;
+// TODO: Alias of the above, remove post integrate.
+def Broadcastable : NativeOpTrait<"ResultsBroadcastableShape">;
 // X op Y == Y op X
 def Commutative  : NativeOpTrait<"IsCommutative">;
 // Op behaves like a function.

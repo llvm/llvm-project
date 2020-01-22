@@ -31,6 +31,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 using namespace clang;
 using namespace llvm::omp;
@@ -2010,7 +2011,23 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
       //
       if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
         return nullptr;
-      return VD;
+      CapturedRegionScopeInfo *CSI = nullptr;
+      for (FunctionScopeInfo *FSI : llvm::drop_begin(
+               llvm::reverse(FunctionScopes),
+               CheckScopeInfo ? (FunctionScopes.size() - (StopAt + 1)) : 0)) {
+        if (!isa<CapturingScopeInfo>(FSI))
+          return nullptr;
+        if (auto *RSI = dyn_cast<CapturedRegionScopeInfo>(FSI))
+          if (RSI->CapRegionKind == CR_OpenMP) {
+            CSI = RSI;
+            break;
+          }
+      }
+      SmallVector<OpenMPDirectiveKind, 4> Regions;
+      getOpenMPCaptureRegions(Regions,
+                              DSAStack->getDirective(CSI->OpenMPLevel));
+      if (Regions[CSI->OpenMPCaptureLevel] != OMPD_task)
+        return VD;
     }
   }
 
@@ -2151,15 +2168,18 @@ void Sema::setOpenMPCaptureKind(FieldDecl *FD, const ValueDecl *D,
     FD->addAttr(OMPCaptureKindAttr::CreateImplicit(Context, OMPC));
 }
 
-bool Sema::isOpenMPTargetCapturedDecl(const ValueDecl *D,
-                                      unsigned Level) const {
+bool Sema::isOpenMPTargetCapturedDecl(const ValueDecl *D, unsigned Level,
+                                      unsigned CaptureLevel) const {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
   // Return true if the current level is no longer enclosed in a target region.
 
+  SmallVector<OpenMPDirectiveKind, 4> Regions;
+  getOpenMPCaptureRegions(Regions, DSAStack->getDirective(Level));
   const auto *VD = dyn_cast<VarDecl>(D);
   return VD && !VD->hasLocalStorage() &&
          DSAStack->hasExplicitDirective(isOpenMPTargetExecutionDirective,
-                                        Level);
+                                        Level) &&
+         Regions[CaptureLevel] != OMPD_task;
 }
 
 void Sema::DestroyDataSharingAttributesStack() { delete DSAStack; }

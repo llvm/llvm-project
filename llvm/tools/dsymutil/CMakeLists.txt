@@ -3,7 +3,6 @@ tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(DsymutilTableGen)
 
 set(LLVM_LINK_COMPONENTS
-  AllTargetsAsmPrinters
   AllTargetsCodeGens
   AllTargetsDescs
   AllTargetsInfos

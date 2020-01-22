@@ -1,4 +1,4 @@
-# RUN: yaml2obj --docnum=1 %s > %t1
+# RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-objcopy %t1 %t2
 # RUN: llvm-readobj --relocations %t2 | FileCheck %s
 
@@ -31,7 +31,7 @@ Sections:
 ## Check we produce a valid output when stripping unneeded symbols from an object that
 ## has a symbol table and a relocation with a symbol index of 0.
 
-# RUN: yaml2obj --docnum=2 %s > %t3
+# RUN: yaml2obj --docnum=2 %s -o %t3
 # RUN: llvm-objcopy --strip-unneeded %t3 %t4
 # RUN: llvm-readobj --relocations --sections --symbols %t4 | FileCheck %s --check-prefix=STRIP
 

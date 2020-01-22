@@ -126,6 +126,7 @@ inline uptr getPageSizeCached() {
   return getPageSizeSlow();
 }
 
+// Returns 0 if the number of CPUs could not be determined.
 u32 getNumberOfCPUs();
 
 const char *getEnv(const char *Name);

@@ -135,14 +135,6 @@ public:
     m_collection_sp->Initialize(g_symbolfiledwarf_properties);
   }
 
-  FileSpecList GetSymLinkPaths() {
-    const OptionValueFileSpecList *option_value =
-        m_collection_sp->GetPropertyAtIndexAsOptionValueFileSpecList(
-            nullptr, true, ePropertySymLinkPaths);
-    assert(option_value);
-    return option_value->GetCurrentValue();
-  }
-
   bool IgnoreFileIndexes() const {
     return m_collection_sp->GetPropertyAtIndexAsBoolean(
         nullptr, ePropertyIgnoreIndexes, false);
@@ -225,10 +217,6 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
   }
 
   return support_files;
-}
-
-FileSpecList SymbolFileDWARF::GetSymlinkPaths() {
-  return GetGlobalPluginProperties()->GetSymLinkPaths();
 }
 
 void SymbolFileDWARF::Initialize() {
@@ -970,7 +958,7 @@ bool SymbolFileDWARF::ParseImportedModules(
       if (const char *include_path = module_die.GetAttributeValueAsString(
               DW_AT_LLVM_include_path, nullptr))
         module.search_path = ConstString(include_path);
-      if (const char *sysroot = module_die.GetAttributeValueAsString(
+      if (const char *sysroot = dwarf_cu->DIE().GetAttributeValueAsString(
               DW_AT_LLVM_sysroot, nullptr))
         module.sysroot = ConstString(sysroot);
       imported_modules.push_back(module);
@@ -1007,19 +995,22 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   // FIXME: Rather than parsing the whole line table and then copying it over
   // into LLDB, we should explore using a callback to populate the line table
   // while we parse to reduce memory usage.
-  std::unique_ptr<LineTable> line_table_up =
-      std::make_unique<LineTable>(&comp_unit);
-  LineSequence *sequence = line_table_up->CreateLineSequenceContainer();
+  std::unique_ptr<LineSequence> sequence =
+      LineTable::CreateLineSequenceContainer();
+  std::vector<std::unique_ptr<LineSequence>> sequences;
   for (auto &row : line_table->Rows) {
-    line_table_up->AppendLineEntryToSequence(
-        sequence, row.Address.Address, row.Line, row.Column, row.File,
+    LineTable::AppendLineEntryToSequence(
+        sequence.get(), row.Address.Address, row.Line, row.Column, row.File,
         row.IsStmt, row.BasicBlock, row.PrologueEnd, row.EpilogueBegin,
         row.EndSequence);
     if (row.EndSequence) {
-      line_table_up->InsertSequence(sequence);
-      sequence = line_table_up->CreateLineSequenceContainer();
+      sequences.push_back(std::move(sequence));
+      sequence = LineTable::CreateLineSequenceContainer();
     }
   }
+
+  std::unique_ptr<LineTable> line_table_up =
+      std::make_unique<LineTable>(&comp_unit, std::move(sequences));
 
   if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile()) {
     // We have an object file that has a line table with addresses that are not

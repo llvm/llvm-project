@@ -119,13 +119,6 @@ public:
   /// use or a live out.
   bool isRegUsedAfter(MachineInstr *MI, int PhysReg);
 
-  /// Provides the first instruction before MI that uses PhysReg
-  MachineInstr *getInstWithUseBefore(MachineInstr *MI, int PhysReg);
-
-  /// Provides all instructions before MI that uses PhysReg
-  void getAllInstWithUseBefore(MachineInstr *MI, int PhysReg,
-                               SmallVectorImpl<MachineInstr*> &Uses);
-
   /// Provides the clearance - the number of instructions since the closest
   /// reaching def instuction of PhysReg that reaches MI.
   int getClearance(MachineInstr *MI, MCPhysReg PhysReg);
@@ -133,11 +126,18 @@ public:
   /// Provides the uses, in the same block as MI, of register that MI defines.
   /// This does not consider live-outs.
   void getReachingLocalUses(MachineInstr *MI, int PhysReg,
-                            SmallVectorImpl<MachineInstr*> &Uses);
+                            SmallPtrSetImpl<MachineInstr*> &Uses);
 
-  /// Provide the number of uses, in the same block as MI, of the register that
-  /// MI defines.
-  unsigned getNumUses(MachineInstr *MI, int PhysReg);
+  /// For the given block, collect the instructions that use the live-in
+  /// value of the provided register. Return whether the value is still
+  /// live on exit.
+  bool getLiveInUses(MachineBasicBlock *MBB, int PhysReg,
+                     SmallPtrSetImpl<MachineInstr*> &Uses);
+
+  /// Collect the users of the value stored in PhysReg, which is defined
+  /// by MI.
+  void getGlobalUses(MachineInstr *MI, int PhysReg,
+                     SmallPtrSetImpl<MachineInstr*> &Uses);
 
 private:
   /// Set up LiveRegs by merging predecessor live-out values.

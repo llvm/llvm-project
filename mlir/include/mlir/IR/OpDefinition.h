@@ -984,7 +984,7 @@ public:
   /// Return true if this "op class" can match against the specified operation.
   static bool classof(Operation *op) {
     if (auto *abstractOp = op->getAbstractOperation())
-      return &classof == abstractOp->classof;
+      return ClassID::getID<ConcreteType>() == abstractOp->classID;
     return op->getName().getStringRef() == ConcreteType::getOperationName();
   }
 

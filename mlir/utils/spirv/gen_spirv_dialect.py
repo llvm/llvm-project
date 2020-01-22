@@ -266,6 +266,13 @@ def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
   exts = enum_case.get('extensions', [])
   if exts:
     exts = 'Extension<[{}]>'.format(', '.join(sorted(set(exts))))
+    # We need to strip the minimal version requirement if this symbol is
+    # available via an extension, which means *any* SPIR-V version can support
+    # it as long as the extension is provided. The grammar's 'version' field
+    # under such case should be interpreted as this symbol is introduced as
+    # a core symbol since the given version, rather than a minimal version
+    # requirement.
+    min_version = 'MinVersion<SPV_V_1_0>' if for_op else ''
   # TODO(antiagainst): delete this once ODS can support dialect-specific content
   # and we can use omission to mean no requirements.
   if for_op and not exts:

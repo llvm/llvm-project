@@ -72,10 +72,15 @@ FunctionPass *llvm::createWebAssemblyExplicitLocals() {
 /// Return a local id number for the given register, assigning it a new one
 /// if it doesn't yet have one.
 static unsigned getLocalId(DenseMap<unsigned, unsigned> &Reg2Local,
-                           unsigned &CurLocal, unsigned Reg) {
+                           WebAssemblyFunctionInfo &MFI, unsigned &CurLocal,
+                           unsigned Reg) {
   auto P = Reg2Local.insert(std::make_pair(Reg, CurLocal));
-  if (P.second)
+  if (P.second) {
+    // Mark the local allocated for the frame base vreg.
+    if (MFI.isFrameBaseVirtual() && Reg == MFI.getFrameBaseVreg())
+      MFI.setFrameBaseLocal(CurLocal);
     ++CurLocal;
+  }
   return P.first->second;
 }
 
@@ -244,7 +249,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
 
         // Stackify the input if it isn't stackified yet.
         if (!MFI.isVRegStackified(OldReg)) {
-          unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
+          unsigned LocalId = getLocalId(Reg2Local, MFI, CurLocal, OldReg);
           Register NewReg = MRI.createVirtualRegister(RC);
           unsigned Opc = getLocalGetOpcode(RC);
           BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Opc), NewReg)
@@ -255,7 +260,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
 
         // Replace the TEE with a LOCAL_TEE.
         unsigned LocalId =
-            getLocalId(Reg2Local, CurLocal, MI.getOperand(1).getReg());
+            getLocalId(Reg2Local, MFI, CurLocal, MI.getOperand(1).getReg());
         unsigned Opc = getLocalTeeOpcode(RC);
         BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Opc),
                 MI.getOperand(0).getReg())
@@ -291,7 +296,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
             // After the drop instruction, this reg operand will not be used
             Drop->getOperand(0).setIsKill();
           } else {
-            unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
+            unsigned LocalId = getLocalId(Reg2Local, MFI, CurLocal, OldReg);
             unsigned Opc = getLocalSetOpcode(RC);
 
             WebAssemblyDebugValueManager(&MI).replaceWithLocal(LocalId);
@@ -323,7 +328,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         // immediates.
         if (MO.isDef()) {
           assert(MI.isInlineAsm());
-          unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
+          unsigned LocalId = getLocalId(Reg2Local, MFI, CurLocal, OldReg);
           // If this register operand is tied to another operand, we can't
           // change it to an immediate. Untie it first.
           MI.untieRegOperand(MI.getOperandNo(&MO));
@@ -341,7 +346,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         // Our contract with inline asm register operands is to provide local
         // indices as immediates.
         if (MI.isInlineAsm()) {
-          unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
+          unsigned LocalId = getLocalId(Reg2Local, MFI, CurLocal, OldReg);
           // Untie it first if this reg operand is tied to another operand.
           MI.untieRegOperand(MI.getOperandNo(&MO));
           MO.ChangeToImmediate(LocalId);
@@ -349,7 +354,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         }
 
         // Insert a local.get.
-        unsigned LocalId = getLocalId(Reg2Local, CurLocal, OldReg);
+        unsigned LocalId = getLocalId(Reg2Local, MFI, CurLocal, OldReg);
         const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
         Register NewReg = MRI.createVirtualRegister(RC);
         unsigned Opc = getLocalGetOpcode(RC);

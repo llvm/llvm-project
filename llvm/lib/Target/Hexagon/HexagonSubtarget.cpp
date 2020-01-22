@@ -79,10 +79,11 @@ static cl::opt<bool> EnableCheckBankConflict("hexagon-check-bank-conflict",
 HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
                                    StringRef FS, const TargetMachine &TM)
     : HexagonGenSubtargetInfo(TT, CPU, FS), OptLevel(TM.getOptLevel()),
-      CPUString(Hexagon_MC::selectHexagonCPU(CPU)),
+      CPUString(Hexagon_MC::selectHexagonCPU(CPU)), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)),
       RegInfo(getHwMode()), TLInfo(TM, *this),
       InstrItins(getInstrItineraryForCPU(CPUString)) {
+  Hexagon_MC::addArchSubtarget(this, FS);
   // Beware of the default constructor of InstrItineraryData: it will
   // reset all members to 0.
   assert(InstrItins.Itineraries != nullptr && "InstrItins not initialized");
@@ -90,24 +91,16 @@ HexagonSubtarget::HexagonSubtarget(const Triple &TT, StringRef CPU,
 
 HexagonSubtarget &
 HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
-  static std::map<StringRef, Hexagon::ArchEnum> CpuTable{
-      {"generic", Hexagon::ArchEnum::V60},
-      {"hexagonv5", Hexagon::ArchEnum::V5},
-      {"hexagonv55", Hexagon::ArchEnum::V55},
-      {"hexagonv60", Hexagon::ArchEnum::V60},
-      {"hexagonv62", Hexagon::ArchEnum::V62},
-      {"hexagonv65", Hexagon::ArchEnum::V65},
-      {"hexagonv66", Hexagon::ArchEnum::V66},
-  };
-
-  auto FoundIt = CpuTable.find(CPUString);
-  if (FoundIt != CpuTable.end())
-    HexagonArchVersion = FoundIt->second;
+  Optional<Hexagon::ArchEnum> ArchVer =
+      Hexagon::GetCpu(Hexagon::CpuTable, CPUString);
+  if (ArchVer)
+    HexagonArchVersion = *ArchVer;
   else
     llvm_unreachable("Unrecognized Hexagon processor version");
 
   UseHVX128BOps = false;
   UseHVX64BOps = false;
+  UseAudioOps = false;
   UseLongCalls = false;
 
   UseBSBScheduling = hasV60Ops() && EnableBSBSched;
@@ -116,6 +109,13 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
 
   if (OverrideLongCalls.getPosition())
     UseLongCalls = OverrideLongCalls;
+
+  if (isTinyCore()) {
+    // Tiny core has a single thread, so back-to-back scheduling is enabled by
+    // default.
+    if (!EnableBSBSched.getPosition())
+      UseBSBScheduling = false;
+  }
 
   FeatureBitset Features = getFeatureBits();
   if (HexagonDisableDuplex)

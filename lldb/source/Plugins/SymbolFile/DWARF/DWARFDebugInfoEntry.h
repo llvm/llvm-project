@@ -50,10 +50,6 @@ public:
   bool Extract(const lldb_private::DWARFDataExtractor &data,
                const DWARFUnit *cu, lldb::offset_t *offset_ptr);
 
-  bool LookupAddress(const dw_addr_t address, DWARFUnit *cu,
-                     DWARFDebugInfoEntry **function_die,
-                     DWARFDebugInfoEntry **block_die);
-
   size_t GetAttributes(const DWARFUnit *cu,
                        DWARFAttributes &attrs,
                        uint32_t curr_depth = 0)

@@ -418,6 +418,7 @@ them.
  - `load` = if the section has `SHT_NOBITS` type, mark it as a `SHT_PROGBITS`
    section.
  - `readonly` = if this flag is not specified, add the `SHF_WRITE` flag.
+ - `exclude` = add the `SHF_EXCLUDE` flag.
  - `code` = add the `SHF_EXECINSTR` flag.
  - `merge` = add the `SHF_MERGE` flag.
  - `strings` = add the `SHF_STRINGS` flag.

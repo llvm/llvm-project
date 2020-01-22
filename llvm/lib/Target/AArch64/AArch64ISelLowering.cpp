@@ -525,6 +525,17 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::i128, Custom);
   setOperationAction(ISD::STORE, MVT::i128, Custom);
 
+  // 256 bit non-temporal stores can be lowered to STNP. Do this as part of the
+  // custom lowering, as there are no un-paired non-temporal stores and
+  // legalization will break up 256 bit inputs.
+  setOperationAction(ISD::STORE, MVT::v32i8, Custom);
+  setOperationAction(ISD::STORE, MVT::v16i16, Custom);
+  setOperationAction(ISD::STORE, MVT::v16f16, Custom);
+  setOperationAction(ISD::STORE, MVT::v8i32, Custom);
+  setOperationAction(ISD::STORE, MVT::v8f32, Custom);
+  setOperationAction(ISD::STORE, MVT::v4f64, Custom);
+  setOperationAction(ISD::STORE, MVT::v4i64, Custom);
+
   // Lower READCYCLECOUNTER using an mrs from PMCCNTR_EL0.
   // This requires the Performance Monitors extension.
   if (Subtarget->hasPerfMon())
@@ -1382,6 +1393,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::SST1_IMM:          return "AArch64ISD::SST1_IMM";
   case AArch64ISD::LDP:               return "AArch64ISD::LDP";
   case AArch64ISD::STP:               return "AArch64ISD::STP";
+  case AArch64ISD::STNP:              return "AArch64ISD::STNP";
   }
   return nullptr;
 }
@@ -3069,6 +3081,30 @@ SDValue AArch64TargetLowering::LowerSTORE(SDValue Op,
 
     if (StoreNode->isTruncatingStore()) {
       return LowerTruncateVectorStore(Dl, StoreNode, VT, MemVT, DAG);
+    }
+    // 256 bit non-temporal stores can be lowered to STNP. Do this as part of
+    // the custom lowering, as there are no un-paired non-temporal stores and
+    // legalization will break up 256 bit inputs.
+    if (StoreNode->isNonTemporal() && MemVT.getSizeInBits() == 256u &&
+        MemVT.getVectorElementCount().Min % 2u == 0 &&
+        ((MemVT.getScalarSizeInBits() == 8u ||
+          MemVT.getScalarSizeInBits() == 16u ||
+          MemVT.getScalarSizeInBits() == 32u ||
+          MemVT.getScalarSizeInBits() == 64u))) {
+      SDValue Lo =
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, Dl,
+                      MemVT.getHalfNumVectorElementsVT(*DAG.getContext()),
+                      StoreNode->getValue(), DAG.getConstant(0, Dl, MVT::i64));
+      SDValue Hi = DAG.getNode(
+          ISD::EXTRACT_SUBVECTOR, Dl,
+          MemVT.getHalfNumVectorElementsVT(*DAG.getContext()),
+          StoreNode->getValue(),
+          DAG.getConstant(MemVT.getVectorElementCount().Min / 2, Dl, MVT::i64));
+      SDValue Result = DAG.getMemIntrinsicNode(
+          AArch64ISD::STNP, Dl, DAG.getVTList(MVT::Other),
+          {StoreNode->getChain(), Lo, Hi, StoreNode->getBasePtr()},
+          StoreNode->getMemoryVT(), StoreNode->getMemOperand());
+      return Result;
     }
   } else if (MemVT == MVT::i128 && StoreNode->isVolatile()) {
     assert(StoreNode->getValue()->getValueType(0) == MVT::i128);
@@ -12303,10 +12339,33 @@ static SDValue performST1ScatterCombine(SDNode *N, SelectionDAG &DAG,
 
   // Depending on the addressing mode, this is either a pointer or a vector of
   // pointers (that fits into one register)
-  const SDValue Base = N->getOperand(4);
+  SDValue Base = N->getOperand(4);
   // Depending on the addressing mode, this is either a single offset or a
   // vector of offsets  (that fits into one register)
   SDValue Offset = N->getOperand(5);
+
+  // SST1_IMM requires that the offset is an immediate:
+  // * multiple of #SizeInBytes
+  // * in the range [0, 31 x #SizeInBytes]
+  // where #SizeInBytes is the size in bytes of the stored
+  // items. For immediates outside that range and non-immediate scalar offsets use
+  // SST1 or SST1_UXTW instead.
+  if (Opcode == AArch64ISD::SST1_IMM) {
+    uint64_t MaxIndex = 31;
+    uint64_t SrcElSize = SrcElVT.getStoreSize().getKnownMinSize();
+
+    ConstantSDNode *OffsetConst = dyn_cast<ConstantSDNode>(Offset.getNode());
+    if (nullptr == OffsetConst ||
+        OffsetConst->getZExtValue() > MaxIndex * SrcElSize ||
+        OffsetConst->getZExtValue() % SrcElSize) {
+      if (MVT::nxv4i32 == Base.getValueType().getSimpleVT().SimpleTy)
+        Opcode = AArch64ISD::SST1_UXTW;
+      else
+        Opcode = AArch64ISD::SST1;
+
+      std::swap(Base, Offset);
+    }
+  }
 
   auto &TLI = DAG.getTargetLoweringInfo();
   if (!TLI.isTypeLegal(Base.getValueType()))
@@ -12363,10 +12422,36 @@ static SDValue performLD1GatherCombine(SDNode *N, SelectionDAG &DAG,
 
   // Depending on the addressing mode, this is either a pointer or a vector of
   // pointers (that fits into one register)
-  const SDValue Base = N->getOperand(3);
+  SDValue Base = N->getOperand(3);
   // Depending on the addressing mode, this is either a single offset or a
   // vector of offsets  (that fits into one register)
   SDValue Offset = N->getOperand(4);
+
+  // GLD1_IMM requires that the offset is an immediate:
+  // * multiple of #SizeInBytes
+  // * in the range [0, 31 x #SizeInBytes]
+  // where #SizeInBytes is the size in bytes of the loaded items.  For immediates
+  // outside that range and non-immediate scalar offsets use GLD1 or GLD1_UXTW
+  // instead.
+  if (Opcode == AArch64ISD::GLD1_IMM) {
+    uint64_t MaxIndex = 31;
+    uint64_t RetElSize = RetVT.getVectorElementType()
+                             .getSimpleVT()
+                             .getStoreSize()
+                             .getKnownMinSize();
+
+    ConstantSDNode *OffsetConst = dyn_cast<ConstantSDNode>(Offset.getNode());
+    if (nullptr == OffsetConst ||
+        OffsetConst->getZExtValue() > MaxIndex * RetElSize ||
+        OffsetConst->getZExtValue() % RetElSize) {
+      if (MVT::nxv4i32 == Base.getValueType().getSimpleVT().SimpleTy)
+        Opcode = AArch64ISD::GLD1_UXTW;
+      else
+        Opcode = AArch64ISD::GLD1;
+
+      std::swap(Base, Offset);
+    }
+  }
 
   auto &TLI = DAG.getTargetLoweringInfo();
   if (!TLI.isTypeLegal(Base.getValueType()))
@@ -12573,7 +12658,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_sve_ld1_gather_uxtw_index:
       return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_UXTW_SCALED,
                                       /*OnlyPackedOffsets=*/false);
-    case Intrinsic::aarch64_sve_ld1_gather_imm:
+    case Intrinsic::aarch64_sve_ld1_gather_scalar_offset:
       return performLD1GatherCombine(N, DAG, AArch64ISD::GLD1_IMM);
     case Intrinsic::aarch64_sve_st1_scatter:
       return performST1ScatterCombine(N, DAG, AArch64ISD::SST1);
@@ -12591,7 +12676,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_sve_st1_scatter_uxtw_index:
       return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_UXTW_SCALED,
                                       /*OnlyPackedOffsets=*/false);
-    case Intrinsic::aarch64_sve_st1_scatter_imm:
+    case Intrinsic::aarch64_sve_st1_scatter_scalar_offset:
       return performST1ScatterCombine(N, DAG, AArch64ISD::SST1_IMM);
     default:
       break;

@@ -31,6 +31,31 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+/// Pattern to convert a loop::IfOp within kernel functions into
+/// spirv::SelectionOp.
+class IfOpConversion final : public SPIRVOpLowering<loop::IfOp> {
+public:
+  using SPIRVOpLowering<loop::IfOp>::SPIRVOpLowering;
+
+  PatternMatchResult
+  matchAndRewrite(loop::IfOp IfOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Pattern to erase a loop::TerminatorOp.
+class TerminatorOpConversion final
+    : public SPIRVOpLowering<loop::TerminatorOp> {
+public:
+  using SPIRVOpLowering<loop::TerminatorOp>::SPIRVOpLowering;
+
+  PatternMatchResult
+  matchAndRewrite(loop::TerminatorOp terminatorOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    rewriter.eraseOp(terminatorOp);
+    return matchSuccess();
+  }
+};
+
 /// Pattern lowering GPU block/thread size/id to loading SPIR-V invocation
 /// builin variables.
 template <typename SourceOp, spirv::BuiltIn builtin>
@@ -63,27 +88,13 @@ private:
   SmallVector<int32_t, 3> workGroupSizeAsInt32;
 };
 
-/// Pattern to convert a module with gpu.kernel_module attribute to a
-/// spv.module.
-class KernelModuleConversion final : public SPIRVOpLowering<ModuleOp> {
+/// Pattern to convert a gpu.module to a spv.module.
+class GPUModuleConversion final : public SPIRVOpLowering<gpu::GPUModuleOp> {
 public:
-  using SPIRVOpLowering<ModuleOp>::SPIRVOpLowering;
+  using SPIRVOpLowering<gpu::GPUModuleOp>::SPIRVOpLowering;
 
   PatternMatchResult
-  matchAndRewrite(ModuleOp moduleOp, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override;
-};
-
-/// Pattern to convert a module terminator op to a terminator of spv.module op.
-// TODO: Move this into DRR, but that requires ModuleTerminatorOp to be defined
-// in ODS.
-class KernelModuleTerminatorConversion final
-    : public SPIRVOpLowering<ModuleTerminatorOp> {
-public:
-  using SPIRVOpLowering<ModuleTerminatorOp>::SPIRVOpLowering;
-
-  PatternMatchResult
-  matchAndRewrite(ModuleTerminatorOp terminatorOp, ArrayRef<Value> operands,
+  matchAndRewrite(gpu::GPUModuleOp moduleOp, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -170,6 +181,58 @@ ForOpConversion::matchAndRewrite(loop::ForOp forOp, ArrayRef<Value> operands,
   rewriter.create<spirv::BranchOp>(loc, header, updatedIndVar);
 
   rewriter.eraseOp(forOp);
+  return matchSuccess();
+}
+
+//===----------------------------------------------------------------------===//
+// loop::IfOp.
+//===----------------------------------------------------------------------===//
+
+PatternMatchResult
+IfOpConversion::matchAndRewrite(loop::IfOp ifOp, ArrayRef<Value> operands,
+                                ConversionPatternRewriter &rewriter) const {
+  // When lowering `loop::IfOp` we explicitly create a selection header block
+  // before the control flow diverges and a merge block where control flow
+  // subsequently converges.
+  loop::IfOpOperandAdaptor ifOperands(operands);
+  auto loc = ifOp.getLoc();
+
+  // Create `spv.selection` operation, selection header block and merge block.
+  auto selectionControl = rewriter.getI32IntegerAttr(
+      static_cast<uint32_t>(spirv::SelectionControl::None));
+  auto selectionOp = rewriter.create<spirv::SelectionOp>(loc, selectionControl);
+  selectionOp.addMergeBlock();
+  auto *mergeBlock = selectionOp.getMergeBlock();
+
+  OpBuilder::InsertionGuard guard(rewriter);
+  auto *selectionHeaderBlock = new Block();
+  selectionOp.body().getBlocks().push_front(selectionHeaderBlock);
+
+  // Inline `then` region before the merge block and branch to it.
+  auto &thenRegion = ifOp.thenRegion();
+  auto *thenBlock = &thenRegion.front();
+  rewriter.setInsertionPointToEnd(&thenRegion.back());
+  rewriter.create<spirv::BranchOp>(loc, mergeBlock);
+  rewriter.inlineRegionBefore(thenRegion, mergeBlock);
+
+  auto *elseBlock = mergeBlock;
+  // If `else` region is not empty, inline that region before the merge block
+  // and branch to it.
+  if (!ifOp.elseRegion().empty()) {
+    auto &elseRegion = ifOp.elseRegion();
+    elseBlock = &elseRegion.front();
+    rewriter.setInsertionPointToEnd(&elseRegion.back());
+    rewriter.create<spirv::BranchOp>(loc, mergeBlock);
+    rewriter.inlineRegionBefore(elseRegion, mergeBlock);
+  }
+
+  // Create a `spv.BranchConditional` operation for selection header block.
+  rewriter.setInsertionPointToEnd(selectionHeaderBlock);
+  rewriter.create<spirv::BranchConditionalOp>(loc, ifOperands.condition(),
+                                              thenBlock, ArrayRef<Value>(),
+                                              elseBlock, ArrayRef<Value>());
+
+  rewriter.eraseOp(ifOp);
   return matchSuccess();
 }
 
@@ -284,16 +347,12 @@ KernelFnConversion::matchAndRewrite(gpu::GPUFuncOp funcOp,
 }
 
 //===----------------------------------------------------------------------===//
-// ModuleOp with gpu.kernel_module.
+// ModuleOp with gpu.module.
 //===----------------------------------------------------------------------===//
 
-PatternMatchResult KernelModuleConversion::matchAndRewrite(
-    ModuleOp moduleOp, ArrayRef<Value> operands,
+PatternMatchResult GPUModuleConversion::matchAndRewrite(
+    gpu::GPUModuleOp moduleOp, ArrayRef<Value> operands,
     ConversionPatternRewriter &rewriter) const {
-  if (!moduleOp.getAttrOfType<UnitAttr>(
-          gpu::GPUDialect::getKernelModuleAttrName())) {
-    return matchFailure();
-  }
   // TODO : Generalize this to account for different extensions,
   // capabilities, extended_instruction_sets, other addressing models
   // and memory models.
@@ -302,25 +361,14 @@ PatternMatchResult KernelModuleConversion::matchAndRewrite(
       spirv::MemoryModel::GLSL450, spirv::Capability::Shader,
       spirv::Extension::SPV_KHR_storage_buffer_storage_class);
   // Move the region from the module op into the SPIR-V module.
-  Region &spvModuleRegion = spvModule.getOperation()->getRegion(0);
-  rewriter.inlineRegionBefore(moduleOp.getBodyRegion(), spvModuleRegion,
+  Region &spvModuleRegion = spvModule.body();
+  rewriter.inlineRegionBefore(moduleOp.body(), spvModuleRegion,
                               spvModuleRegion.begin());
   // The spv.module build method adds a block with a terminator. Remove that
   // block. The terminator of the module op in the remaining block will be
   // legalized later.
   spvModuleRegion.back().erase();
   rewriter.eraseOp(moduleOp);
-  return matchSuccess();
-}
-
-//===----------------------------------------------------------------------===//
-// ModuleTerminatorOp for gpu.kernel_module.
-//===----------------------------------------------------------------------===//
-
-PatternMatchResult KernelModuleTerminatorConversion::matchAndRewrite(
-    ModuleTerminatorOp terminatorOp, ArrayRef<Value> operands,
-    ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<spirv::ModuleEndOp>(terminatorOp);
   return matchSuccess();
 }
 
@@ -342,18 +390,24 @@ PatternMatchResult GPUReturnOpConversion::matchAndRewrite(
 // GPU To SPIRV Patterns.
 //===----------------------------------------------------------------------===//
 
+namespace {
+#include "GPUToSPIRV.cpp.inc"
+}
+
 void mlir::populateGPUToSPIRVPatterns(MLIRContext *context,
                                       SPIRVTypeConverter &typeConverter,
                                       OwningRewritePatternList &patterns,
                                       ArrayRef<int64_t> workGroupSize) {
+  populateWithGenerated(context, &patterns);
   patterns.insert<KernelFnConversion>(context, typeConverter, workGroupSize);
   patterns.insert<
-      GPUReturnOpConversion, ForOpConversion, KernelModuleConversion,
-      KernelModuleTerminatorConversion,
+      ForOpConversion, GPUReturnOpConversion, IfOpConversion,
+      GPUModuleConversion,
+      GPUReturnOpConversion, ForOpConversion, GPUModuleConversion,
       LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::ThreadIdOp,
-                             spirv::BuiltIn::LocalInvocationId>>(context,
-                                                                 typeConverter);
+                             spirv::BuiltIn::LocalInvocationId>,
+      TerminatorOpConversion>(context, typeConverter);
 }

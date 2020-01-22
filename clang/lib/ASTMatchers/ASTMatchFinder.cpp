@@ -62,9 +62,9 @@ struct MatchKey {
   ast_type_traits::TraversalKind Traversal = ast_type_traits::TK_AsIs;
 
   bool operator<(const MatchKey &Other) const {
-    return std::tie(MatcherID, Node, BoundNodes, Traversal) <
-           std::tie(Other.MatcherID, Other.Node, Other.BoundNodes,
-                    Other.Traversal);
+    return std::tie(Traversal, MatcherID, Node, BoundNodes) <
+           std::tie(Other.Traversal, Other.MatcherID, Other.Node,
+                    Other.BoundNodes);
   }
 };
 

@@ -170,7 +170,6 @@
 ; CHECK-O: Invalidating analysis: DemandedBitsAnalysis on main
 ; CHECK-O: Invalidating analysis: PostDominatorTreeAnalysis on main
 ; CHECK-O: Invalidating analysis: CallGraphAnalysis
-; CHECK-O: Invalidating analysis: GlobalsAA
 ; CHECK-O: Finished {{.*}}Module pass manager run.
 ; CHECK-O: Running pass: PassManager<{{.*}}Module>
 ; CHECK-O: Starting {{.*}}Module pass manager run.
@@ -180,7 +179,6 @@
 ; CHECK-O: Running pass: ReversePostOrderFunctionAttrsPass
 ; CHECK-O: Running analysis: CallGraphAnalysis
 ; CHECK-O: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
-; CHECK-O: Running analysis: GlobalsAA
 ; CHECK-O: Running pass: ModuleToFunctionPassAdaptor<{{.*}}PassManager<{{.*}}Function> >
 ; CHECK-O: Starting {{.*}}Function pass manager run.
 ; CHECK-O: Running pass: Float2IntPass on main

@@ -72,12 +72,6 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
   }
 }
 
-bool
-X86RegisterInfo::trackLivenessAfterRegAlloc(const MachineFunction &MF) const {
-  // ExecutionDomainFix, BreakFalseDeps and PostRAScheduler require liveness.
-  return true;
-}
-
 int
 X86RegisterInfo::getSEHRegNum(unsigned i) const {
   return getEncodingValue(i);

@@ -2900,6 +2900,12 @@ static Expr *IgnoreImplicitAsWrittenSingleStep(Expr *E) {
   return IgnoreImplicitSingleStep(E);
 }
 
+static Expr *IgnoreParensOnlySingleStep(Expr *E) {
+  if (auto *PE = dyn_cast<ParenExpr>(E))
+    return PE->getSubExpr();
+  return E;
+}
+
 static Expr *IgnoreParensSingleStep(Expr *E) {
   if (auto *PE = dyn_cast<ParenExpr>(E))
     return PE->getSubExpr();
@@ -3026,7 +3032,8 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
   Expr *LastE = nullptr;
   while (E != LastE) {
     LastE = E;
-    E = E->IgnoreParenImpCasts();
+    E = IgnoreExprNodes(E, IgnoreImplicitSingleStep, IgnoreImpCastsSingleStep,
+                        IgnoreParensOnlySingleStep);
 
     auto SR = E->getSourceRange();
 
@@ -3457,6 +3464,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case OpaqueValueExprClass:
   case SourceLocExprClass:
   case ConceptSpecializationExprClass:
+  case RequiresExprClass:
     // These never have a side-effect.
     return false;
 

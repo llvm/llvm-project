@@ -810,6 +810,14 @@ bool GlobalsAAResult::isNonEscapingGlobalNoAlias(const GlobalValue *GV,
   return true;
 }
 
+bool GlobalsAAResult::invalidate(Module &, const PreservedAnalyses &PA,
+                                 ModuleAnalysisManager::Invalidator &) {
+  // Check whether the analysis has been explicitly invalidated. Otherwise, it's
+  // stateless and remains preserved.
+  auto PAC = PA.getChecker<GlobalsAA>();
+  return !PAC.preservedWhenStateless();
+}
+
 /// alias - If one of the pointers is to a global that we are tracking, and the
 /// other is some random pointer, we know there cannot be an alias, because the
 /// address of the global isn't taken.

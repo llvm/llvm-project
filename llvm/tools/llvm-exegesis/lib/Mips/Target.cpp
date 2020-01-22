@@ -5,13 +5,46 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "../Error.h"
 #include "../Target.h"
-#include "../Latency.h"
+#include "MCTargetDesc/MipsBaseInfo.h"
 #include "Mips.h"
 #include "MipsRegisterInfo.h"
 
 namespace llvm {
 namespace exegesis {
+
+#ifndef NDEBUG
+// Returns an error if we cannot handle the memory references in this
+// instruction.
+static Error isInvalidMemoryInstr(const Instruction &Instr) {
+  switch (Instr.Description.TSFlags & MipsII::FormMask) {
+  default:
+    llvm_unreachable("Unknown FormMask value");
+  // These have no memory access.
+  case MipsII::Pseudo:
+  case MipsII::FrmR:
+  case MipsII::FrmJ:
+  case MipsII::FrmFR:
+    return Error::success();
+  // These access memory and are handled.
+  case MipsII::FrmI:
+    return Error::success();
+  // These access memory and are not handled yet.
+  case MipsII::FrmFI:
+  case MipsII::FrmOther:
+    return make_error<Failure>("unsupported opcode: non uniform memory access");
+  }
+}
+#endif
+
+// Helper to fill a memory operand with a value.
+static void setMemOp(InstructionTemplate &IT, int OpIdx,
+                     const MCOperand &OpVal) {
+  const auto Op = IT.getInstr().Operands[OpIdx];
+  assert(Op.isExplicit() && "invalid memory pattern");
+  IT.getValueFor(Op) = OpVal;
+}
 
 #include "MipsGenExegesis.inc"
 
@@ -21,6 +54,11 @@ public:
   ExegesisMipsTarget() : ExegesisTarget(MipsCpuPfmCounters) {}
 
 private:
+  unsigned getScratchMemoryRegister(const llvm::Triple &TT) const override;
+  unsigned getMaxMemoryAccessSize() const override { return 64; }
+  void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
+                          unsigned Offset) const override;
+
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
                                const APInt &Value) const override;
   bool matchesArch(Triple::ArchType Arch) const override {
@@ -90,6 +128,20 @@ static std::vector<MCInst> loadImmediate(unsigned Reg, bool IsGPR32,
   }
 
   llvm_unreachable("Not implemented for values wider than 32 bits");
+}
+
+unsigned ExegesisMipsTarget::getScratchMemoryRegister(const Triple &TT) const {
+  return TT.isArch64Bit() ? Mips::A0_64 : Mips::A0;
+}
+
+void ExegesisMipsTarget::fillMemoryOperands(InstructionTemplate &IT,
+                                            unsigned Reg,
+                                            unsigned Offset) const {
+  assert(!isInvalidMemoryInstr(IT.getInstr()) &&
+         "fillMemoryOperands requires a valid memory instruction");
+  setMemOp(IT, 0, MCOperand::createReg(0));      // IndexReg
+  setMemOp(IT, 1, MCOperand::createReg(Reg));    // BaseReg
+  setMemOp(IT, 2, MCOperand::createImm(Offset)); // Disp
 }
 
 std::vector<MCInst> ExegesisMipsTarget::setRegTo(const MCSubtargetInfo &STI,

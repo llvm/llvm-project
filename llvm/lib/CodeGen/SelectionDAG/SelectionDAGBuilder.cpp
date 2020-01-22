@@ -438,9 +438,8 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
     if (PartEVT.getVectorElementType() == ValueVT.getVectorElementType()) {
       assert(PartEVT.getVectorNumElements() > ValueVT.getVectorNumElements() &&
              "Cannot narrow, it would be a lossy transformation");
-      return DAG.getNode(
-          ISD::EXTRACT_SUBVECTOR, DL, ValueVT, Val,
-          DAG.getConstant(0, DL, TLI.getVectorIdxTy(DAG.getDataLayout())));
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ValueVT, Val,
+                         DAG.getVectorIdxConstant(0, DL));
     }
 
     // Vector/Vector bitcast.
@@ -472,9 +471,8 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
        EVT WiderVecType = EVT::getVectorVT(*DAG.getContext(),
                                            ValueVT.getVectorElementType(), Elts);
        Val = DAG.getBitcast(WiderVecType, Val);
-       return DAG.getNode(
-           ISD::EXTRACT_SUBVECTOR, DL, ValueVT, Val,
-           DAG.getConstant(0, DL, TLI.getVectorIdxTy(DAG.getDataLayout())));
+       return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, ValueVT, Val,
+                          DAG.getVectorIdxConstant(0, DL));
      }
 
      diagnosePossiblyInvalidConstraint(
@@ -686,9 +684,8 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
       Val = DAG.getAnyExtOrTrunc(Val, DL, PartVT);
     } else {
       if (ValueVT.getVectorNumElements() == 1) {
-        Val = DAG.getNode(
-            ISD::EXTRACT_VECTOR_ELT, DL, PartVT, Val,
-            DAG.getConstant(0, DL, TLI.getVectorIdxTy(DAG.getDataLayout())));
+        Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, PartVT, Val,
+                          DAG.getVectorIdxConstant(0, DL));
       } else {
         assert(PartVT.getSizeInBits() > ValueVT.getSizeInBits() &&
                "lossy conversion of vector to scalar type");
@@ -731,7 +728,6 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
 
   EVT BuiltVectorTy = EVT::getVectorVT(
       *DAG.getContext(), IntermediateVT.getScalarType(), DestVectorNoElts);
-  MVT IdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
   if (ValueVT != BuiltVectorTy) {
     if (SDValue Widened = widenVectorToPartType(DAG, Val, DL, BuiltVectorTy))
       Val = Widened;
@@ -743,12 +739,12 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   SmallVector<SDValue, 8> Ops(NumIntermediates);
   for (unsigned i = 0; i != NumIntermediates; ++i) {
     if (IntermediateVT.isVector()) {
-      Ops[i] = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, IntermediateVT, Val,
-                           DAG.getConstant(i * IntermediateNumElts, DL, IdxVT));
+      Ops[i] =
+          DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, IntermediateVT, Val,
+                      DAG.getVectorIdxConstant(i * IntermediateNumElts, DL));
     } else {
-      Ops[i] = DAG.getNode(
-          ISD::EXTRACT_VECTOR_ELT, DL, IntermediateVT, Val,
-          DAG.getConstant(i, DL, IdxVT));
+      Ops[i] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, IntermediateVT, Val,
+                           DAG.getVectorIdxConstant(i, DL));
     }
   }
 
@@ -3586,10 +3582,9 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
 
   if (MaskV->isNullValue() && VT.isScalableVector()) {
     // Canonical splat form of first element of first input vector.
-    SDValue FirstElt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
-                                   SrcVT.getScalarType(), Src1,
-                                   DAG.getConstant(0, DL, 
-                                   TLI.getVectorIdxTy(DAG.getDataLayout())));
+    SDValue FirstElt =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, SrcVT.getScalarType(), Src1,
+                    DAG.getVectorIdxConstant(0, DL));
     setValue(&I, DAG.getNode(ISD::SPLAT_VECTOR, DL, VT, FirstElt));
     return;
   }
@@ -3683,9 +3678,8 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
     // If the concatenated vector was padded, extract a subvector with the
     // correct number of elements.
     if (MaskNumElts != PaddedMaskNumElts)
-      Result = DAG.getNode(
-          ISD::EXTRACT_SUBVECTOR, DL, VT, Result,
-          DAG.getConstant(0, DL, TLI.getVectorIdxTy(DAG.getDataLayout())));
+      Result = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Result,
+                           DAG.getVectorIdxConstant(0, DL));
 
     setValue(&I, Result);
     return;
@@ -3729,10 +3723,8 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
         if (StartIdx[Input] < 0)
           Src = DAG.getUNDEF(VT);
         else {
-          Src = DAG.getNode(
-              ISD::EXTRACT_SUBVECTOR, DL, VT, Src,
-              DAG.getConstant(StartIdx[Input], DL,
-                              TLI.getVectorIdxTy(DAG.getDataLayout())));
+          Src = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Src,
+                            DAG.getVectorIdxConstant(StartIdx[Input], DL));
         }
       }
 
@@ -3754,7 +3746,6 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   // replacing the shuffle with extract and build vector.
   // to insert and build vector.
   EVT EltVT = VT.getVectorElementType();
-  EVT IdxVT = TLI.getVectorIdxTy(DAG.getDataLayout());
   SmallVector<SDValue,8> Ops;
   for (int Idx : Mask) {
     SDValue Res;
@@ -3765,8 +3756,8 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
       SDValue &Src = Idx < (int)SrcNumElts ? Src1 : Src2;
       if (Idx >= (int)SrcNumElts) Idx -= SrcNumElts;
 
-      Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
-                        EltVT, Src, DAG.getConstant(Idx, DL, IdxVT));
+      Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Src,
+                        DAG.getVectorIdxConstant(Idx, DL));
     }
 
     Ops.push_back(Res);

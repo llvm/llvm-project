@@ -159,6 +159,16 @@ def GPU_GPUFuncOp : GPU_Op<"func", [FunctionLike, IsolatedFromAbove, Symbol]> {
       return {begin, end};
     }
 
+    // Adds a new block argument that corresponds to buffers located in
+    // workgroup memory.
+    BlockArgument addWorkgroupAttribution(Type type) {
+      auto attrName = getNumWorkgroupAttributionsAttrName();
+      auto attr = getAttrOfType<IntegerAttr>(attrName);
+      setAttr(attrName, IntegerAttr::get(attr.getType(), attr.getValue() + 1));
+      return getBody().front().insertArgument(
+          getType().getNumInputs() + attr.getInt(), type);
+    }
+
     /// Returns a list of block arguments that correspond to buffers located in
     /// the private memory.
     ArrayRef<BlockArgument> getPrivateAttributions() {
@@ -584,6 +594,58 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
     Either none or all work items of a workgroup need to execute this op
     in convergence.
   }];
+  let parser = [{ return success(); }];
+  let printer = [{ p << getOperationName(); }];
+}
+
+def GPU_GPUModuleOp : GPU_Op<"module", [
+  IsolatedFromAbove, SymbolTable, Symbol,
+  SingleBlockImplicitTerminator<"ModuleEndOp">
+]> {
+  let summary = "A top level compilation unit containing code to be run on a GPU.";
+  let description = [{
+    GPU module contains code that is intended to be run on a GPU. A host device
+    can launch this code through a gpu.launc_func that creates a fully
+    qualified symbol through the gpu.module's symbol and a gpu.func symbol
+    contained in the gpu.module.
+
+    The module's top-level scope is modeled by a single region with a single
+    block. GPU modules are required to have a name that is used for symbol
+    resolution by the gpu.launch_func operation.
+
+    Using an op with a region to define a GPU module enables "embedding" GPU
+    modules with SIMT execution models in other dialects in a clean manner and
+    allows filtering of code regions to execute passes on only code intended to
+    or not intended to be run on the separate device.
+
+    ```
+      gpu.module @symbol_name {
+      gpu.func {}
+        ...
+      gpu.module_end
+    }
+
+    ```
+  }];
+  let builders = [OpBuilder<"Builder *builder, OperationState &result, "
+                            "StringRef name">];
+  let parser = [{ return ::parseGPUModuleOp(parser, result); }];
+  let printer = [{ return ::print(p, *this); }];
+  let regions = (region SizedRegion<1>:$body);
+
+  // We need to ensure the block inside the region is properly terminated;
+  // the auto-generated builders do not guarantee that.
+  let skipDefaultBuilders = 1;
+}
+
+def GPU_ModuleEndOp : GPU_Op<"module_end", [
+  Terminator, HasParent<"GPUModuleOp">
+]> {
+  let summary = "A pseudo op that marks the end of a gpu.module.";
+  let description = [{
+    This op terminates the only block inside the only region of a `gpu.module`.
+  }];
+
   let parser = [{ return success(); }];
   let printer = [{ p << getOperationName(); }];
 }

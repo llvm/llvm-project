@@ -20,15 +20,13 @@
 #include <unistd.h>
 
 // Define nub_addr_t and the invalid address value from the architecture
-#if defined(__x86_64__) || defined(__ppc64__) || defined(__arm64__) ||         \
-    defined(__aarch64__)
+#if defined(__x86_64__) || defined(__arm64__) || defined(__aarch64__)
 
 // 64 bit address architectures
 typedef uint64_t nub_addr_t;
 #define INVALID_NUB_ADDRESS ((nub_addr_t)~0ull)
 
-#elif defined(__i386__) || defined(__powerpc__) || defined(__ppc__) ||         \
-    defined(__arm__)
+#elif defined(__i386__) || defined(__powerpc__) || defined(__arm__)
 
 // 32 bit address architectures
 

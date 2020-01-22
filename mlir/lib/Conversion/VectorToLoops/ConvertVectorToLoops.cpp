@@ -75,7 +75,7 @@ static SmallVector<edsc::ValueHandle, 8> clip(TransferOpTy transfer,
   using namespace edsc::op;
   using edsc::intrinsics::select;
 
-  IndexHandle zero(index_t(0)), one(index_t(1));
+  IndexHandle zero(index_type(0)), one(index_type(1));
   SmallVector<edsc::ValueHandle, 8> memRefAccess(transfer.indices());
   SmallVector<edsc::ValueHandle, 8> clippedScalarAccessExprs(
       memRefAccess.size(), edsc::IndexHandle());

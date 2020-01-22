@@ -215,7 +215,7 @@ ProgramHeaders:
     Sections:
       - Section: .dynamic
 
-# RUN: yaml2obj --docnum=2 %s > %t2
+# RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: llvm-objdump -p %t2 | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=ELF32
 
 #      ELF32:Dynamic Section:
@@ -430,3 +430,45 @@ ProgramHeaders:
     VAddr: 0x1010
     Sections:
       - Section: .dynamic
+
+## When printing the value column we want to have the minimal possible indentation.
+## Use an arbitrary dynamic tag to demonstrate that.
+
+# RUN: yaml2obj --docnum=3 %s -o %t3
+# RUN: llvm-objdump -p %t3 | FileCheck %s --strict-whitespace --check-prefix=INDENT
+
+# RUN: yaml2obj --docnum=4 %s -o %t4
+# RUN: llvm-objdump -p %t4 | FileCheck %s --strict-whitespace --check-prefix=INDENT
+
+# INDENT: {{^}}Dynamic Section:
+# INDENT: {{^}}  NEEDED 0x
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+     - Tag:   DT_NEEDED
+       Value: 0x1
+     - Tag:   DT_NULL
+       Value: 0x0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_386
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+     - Tag:   DT_NEEDED
+       Value: 0x1
+     - Tag:   DT_NULL
+       Value: 0x0

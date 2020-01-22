@@ -756,6 +756,7 @@ class CastExpressionIdValidator final : public CorrectionCandidateCallback {
 /// [C++11] user-defined-literal
 ///         '(' expression ')'
 /// [C11]   generic-selection
+/// [C++2a] requires-expression
 ///         '__func__'        [C99 6.4.2.2]
 /// [GNU]   '__FUNCTION__'
 /// [MS]    '__FUNCDNAME__'
@@ -1530,7 +1531,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
         CXXScopeSpec SS;
         ParseOptionalCXXScopeSpecifier(SS, nullptr,
                                        /*EnteringContext=*/false);
-        AnnotateTemplateIdTokenAsType();
+        AnnotateTemplateIdTokenAsType(SS);
         return ParseCastExpression(ParseKind, isAddressOfOperand, NotCastExpr,
                                    isTypeCast, isVectorLiteral,
                                    NotPrimaryExpression);
@@ -1548,7 +1549,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       // We have a template-id that we know refers to a type,
       // translate it into a type and continue parsing as a cast
       // expression.
-      AnnotateTemplateIdTokenAsType();
+      CXXScopeSpec SS;
+      AnnotateTemplateIdTokenAsType(SS);
       return ParseCastExpression(ParseKind, isAddressOfOperand,
                                  NotCastExpr, isTypeCast, isVectorLiteral,
                                  NotPrimaryExpression);
@@ -1599,6 +1601,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
     return ParseCXXDeleteExpression(false, Tok.getLocation());
+
+  case tok::kw_requires: // [C++2a] requires-expression
+    return ParseRequiresExpression();
 
   case tok::kw_noexcept: { // [C++0x] 'noexcept' '(' expression ')'
     if (NotPrimaryExpression)

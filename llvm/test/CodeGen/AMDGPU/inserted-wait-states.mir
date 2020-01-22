@@ -422,12 +422,12 @@ body: |
 
   bb.2:
     $m0 = S_MOV_B32 0
-    $sgpr0 = S_MOVRELD_B32 $sgpr0, implicit $m0
+    S_MOVRELD_B32 $sgpr0, $sgpr0, implicit $m0
     S_BRANCH %bb.3
 
   bb.3:
     $m0 = S_MOV_B32 0
-    $sgpr0_sgpr1 = S_MOVRELD_B64 $sgpr0_sgpr1, implicit $m0
+    S_MOVRELD_B64 $sgpr0_sgpr1, $sgpr0_sgpr1, implicit $m0
     S_ENDPGM 0
 ...
 

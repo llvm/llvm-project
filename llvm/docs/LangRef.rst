@@ -1818,6 +1818,30 @@ example:
     mode or that might alter the state of floating-point status flags that
     might otherwise be set or cleared by calling this function. LLVM will
     not introduce any new floating-point instructions that may trap.
+
+``"denormal-fp-math"``
+  This indicates the denormal (subnormal) handling that may be assumed
+   for the default floating-point environment. This may be one of
+   ``"ieee"``, ``"preserve-sign"``, or ``"positive-zero"``.  If this
+   is attribute is not specified, the default is ``"ieee"``. If the
+   mode is ``"preserve-sign"``, or ``"positive-zero"``, denormal
+   outputs may be flushed to zero by standard floating point
+   operations. It is not mandated that flushing to zero occurs, but if
+   a denormal output is flushed to zero, it must respect the sign
+   mode. Not all targets support all modes. While this indicates the
+   expected floating point mode the function will be executed with,
+   this does not make any attempt to ensure the mode is
+   consistent. User or platform code is expected to set the floating
+   point mode appropriately before function entry.
+
+``"denormal-fp-math-f32"``
+   Same as ``"denormal-fp-math"``, but only controls the behavior of
+   the 32-bit float type (or vectors of 32-bit floats). If both are
+   are present, this overrides ``"denormal-fp-math"``. Not all targets
+   support separately setting the denormal mode per type, and no
+   attempt is made to diagnose unsupported uses. Currently this
+   attribute is respected by the AMDGPU and NVPTX backends.
+
 ``"thunk"``
     This attribute indicates that the function will delegate to some other
     function with a tail call. The prototype of a thunk should not be used for
@@ -4842,9 +4866,9 @@ refines this address to produce a concrete location for the source variable.
 
 A ``llvm.dbg.value`` intrinsic describes the direct value of a source variable.
 The first operand of the intrinsic may be a direct or indirect value. A
-DIExpresion attached to the intrinsic refines the first operand to produce a
+DIExpression attached to the intrinsic refines the first operand to produce a
 direct value. For example, if the first operand is an indirect value, it may be
-necessary to insert ``DW_OP_deref`` into the DIExpresion in order to produce a
+necessary to insert ``DW_OP_deref`` into the DIExpression in order to produce a
 valid debug intrinsic.
 
 .. note::
@@ -6325,7 +6349,7 @@ The list is encoded in the IR using named metadata with the name
 ``!llvm.dependent-libraries``. Each operand is expected to be a metadata node
 which should contain a single string operand.
 
-For example, the following metadata section contains two library specfiers::
+For example, the following metadata section contains two library specifiers::
 
     !0 = !{!"a library specifier"}
     !1 = !{!"another library specifier"}
@@ -15114,7 +15138,7 @@ This is an overloaded intrinsic. Several values of integer, floating point or po
 Overview:
 """""""""
 
-Reads a number of scalar values sequentially from memory location provided in '``ptr``' and spreads them in a vector. The '``mask``' holds a bit for each vector lane. The number of elements read from memory is equal to the number of '1' bits in the mask. The loaded elements are positioned in the destination vector according to the sequence of '1' and '0' bits in the mask. E.g., if the mask vector is '10010001', "explandload" reads 3 values from memory addresses ptr, ptr+1, ptr+2 and places them in lanes 0, 3 and 7 accordingly. The masked-off lanes are filled by elements from the corresponding lanes of the '``passthru``' operand.
+Reads a number of scalar values sequentially from memory location provided in '``ptr``' and spreads them in a vector. The '``mask``' holds a bit for each vector lane. The number of elements read from memory is equal to the number of '1' bits in the mask. The loaded elements are positioned in the destination vector according to the sequence of '1' and '0' bits in the mask. E.g., if the mask vector is '10010001', "expandload" reads 3 values from memory addresses ptr, ptr+1, ptr+2 and places them in lanes 0, 3 and 7 accordingly. The masked-off lanes are filled by elements from the corresponding lanes of the '``passthru``' operand.
 
 
 Arguments:

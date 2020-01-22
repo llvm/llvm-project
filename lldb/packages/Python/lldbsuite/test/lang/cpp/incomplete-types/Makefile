@@ -1,33 +1,22 @@
-CXX_SOURCES = main.cpp length.cpp a.cpp
-
-CFLAGS_LIMIT = -c $(CXXFLAGS)
-CFLAGS_NO_LIMIT = -c $(CXXFLAGS)
-
-ifneq (,$(findstring clang,$(CC)))
-  CFLAGS_LIMIT += -flimit-debug-info
-  CFLAGS_NO_LIMIT += -fno-limit-debug-info
-endif
+CXX_SOURCES := length.cpp a.o main.o
+EXE := nolimit
 
 all: limit nolimit
 
-limit: main.o length_limit.o a.o
-	$(CXX) main.o length_limit.o a.o -o limit $(LDFLAGS)
-
-nolimit: main.o length_nolimit.o a.o
-	$(CXX) main.o length_nolimit.o a.o -o nolimit $(LDFLAGS)
-
-main.o: main.cpp
-	$(CXX) $(CFLAGS_LIMIT) $(SRCDIR)/main.cpp -o main.o
-
-length_limit.o: length.cpp
-	$(CXX) $(CFLAGS_LIMIT) $(SRCDIR)/length.cpp -o length_limit.o
-
-length_nolimit.o: length.cpp
-	$(CXX) $(CFLAGS_NO_LIMIT) $(SRCDIR)/length.cpp -o length_nolimit.o
-
-a.o: a.cpp
-	$(CXX) $(CFLAGS_NO_DEBUG) -c $(SRCDIR)/a.cpp -o a.o
-
-clean: OBJECTS += limit nolimit length_limit.o length_nolimit.o length_limit.dwo length_nolimit.dwo
-
 include Makefile.rules
+
+# Force a.cpp to be built with no debug information
+a.o: CFLAGS = $(CFLAGS_NO_DEBUG)
+
+# The default testsuite setup forces -fno-limit-debug-info. Let's not rely on
+# CFLAGS_EXTRAS being passed after the default arguments. This rule makes
+# sure the variable used by Makefile.rules for this argument is cleared.
+main.o: NO_LIMIT_DEBUG_INFO_FLAGS = ""
+main.o: CFLAGS_EXTRAS = -flimit-debug-info
+
+limit: a.o main.o
+	mkdir -p build_limit
+	$(MAKE) -C $(BUILDDIR)/build_limit -f $(MAKEFILE_RULES) \
+		EXE=../limit CXX_SOURCES="length.cpp ../a.o ../main.o" \
+		CFLAGS_EXTRAS=-flimit-debug-info NO_LIMIT_DEBUG_INFO_FLAGS=""
+

@@ -56,6 +56,7 @@ public:
   llvm::Type *getUnderlyingType() const;
 
   /// Utilities to identify types.
+  bool isHalfTy() { return getUnderlyingType()->isHalfTy(); }
   bool isFloatTy() { return getUnderlyingType()->isFloatTy(); }
   bool isDoubleTy() { return getUnderlyingType()->isDoubleTy(); }
   bool isIntegerTy() { return getUnderlyingType()->isIntegerTy(); }
@@ -137,6 +138,47 @@ public:
   }
   static LLVMType getVectorTy(LLVMType elementType, unsigned numElements);
   static LLVMType getVoidTy(LLVMDialect *dialect);
+
+  // Creation and setting of LLVM's identified struct types
+  static LLVMType createStructTy(LLVMDialect *dialect,
+                                 ArrayRef<LLVMType> elements,
+                                 Optional<StringRef> name,
+                                 bool isPacked = false);
+
+  static LLVMType createStructTy(LLVMDialect *dialect,
+                                 Optional<StringRef> name) {
+    return createStructTy(dialect, llvm::None, name);
+  }
+
+  static LLVMType createStructTy(ArrayRef<LLVMType> elements,
+                                 Optional<StringRef> name,
+                                 bool isPacked = false) {
+    assert(!elements.empty() &&
+           "This method may not be invoked with an empty list");
+    LLVMType ele0 = elements.front();
+    return createStructTy(&ele0.getDialect(), elements, name, isPacked);
+  }
+
+  template <typename... Args>
+  static typename std::enable_if_t<llvm::are_base_of<LLVMType, Args...>::value,
+                                   LLVMType>
+  createStructTy(StringRef name, LLVMType elt1, Args... elts) {
+    SmallVector<LLVMType, 8> fields({elt1, elts...});
+    Optional<StringRef> opt_name(name);
+    return createStructTy(&elt1.getDialect(), fields, opt_name);
+  }
+
+  static LLVMType setStructTyBody(LLVMType structType,
+                                  ArrayRef<LLVMType> elements,
+                                  bool isPacked = false);
+
+  template <typename... Args>
+  static typename std::enable_if_t<llvm::are_base_of<LLVMType, Args...>::value,
+                                   LLVMType>
+  setStructTyBody(LLVMType structType, LLVMType elt1, Args... elts) {
+    SmallVector<LLVMType, 8> fields({elt1, elts...});
+    return setStructTyBody(structType, fields);
+  }
 
 private:
   friend LLVMDialect;

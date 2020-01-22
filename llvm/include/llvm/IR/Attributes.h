@@ -17,7 +17,6 @@
 
 #include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -38,6 +37,7 @@ class AttributeImpl;
 class AttributeListImpl;
 class AttributeSetNode;
 template<typename T> struct DenseMapInfo;
+class FoldingSetNodeID;
 class Function;
 class LLVMContext;
 class Type;
@@ -180,9 +180,7 @@ public:
   /// Less-than operator. Useful for sorting the attributes list.
   bool operator<(Attribute A) const;
 
-  void Profile(FoldingSetNodeID &ID) const {
-    ID.AddPointer(pImpl);
-  }
+  void Profile(FoldingSetNodeID &ID) const;
 
   /// Return a raw pointer that uniquely identifies this attribute.
   void *getRawPointer() const {

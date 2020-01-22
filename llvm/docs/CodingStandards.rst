@@ -647,7 +647,7 @@ Beware of non-deterministic sorting order of equal elements
 
 ``std::sort`` uses a non-stable sorting algorithm in which the order of equal
 elements is not guaranteed to be preserved. Thus using ``std::sort`` for a
-container having equal elements may result in non-determinstic behavior.
+container having equal elements may result in non-deterministic behavior.
 To uncover such instances of non-determinism, LLVM has introduced a new
 llvm::sort wrapper function. For an EXPENSIVE_CHECKS build this will randomly
 shuffle the container before sorting. Default to using ``llvm::sort`` instead
@@ -1206,7 +1206,7 @@ Don't evaluate ``end()`` every time through a loop
 
 In cases where range-based ``for`` loops can't be used and it is necessary
 to write an explicit iterator-based loop, pay close attention to whether
-``end()`` is re-evaluted on each loop iteration. One common mistake is to
+``end()`` is re-evaluated on each loop iteration. One common mistake is to
 write a loop in this style:
 
 .. code-block:: c++

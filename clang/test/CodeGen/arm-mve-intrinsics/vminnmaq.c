@@ -6,9 +6,10 @@
 
 // CHECK-LABEL: @test_vminnmaq_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> [[B:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x half> @llvm.minnum.v8f16(<8 x half> [[A:%.*]], <8 x half> [[TMP0]])
-// CHECK-NEXT:    ret <8 x half> [[TMP1]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> [[A:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> [[B:%.*]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <8 x half> @llvm.minnum.v8f16(<8 x half> [[TMP0]], <8 x half> [[TMP1]])
+// CHECK-NEXT:    ret <8 x half> [[TMP2]]
 //
 float16x8_t test_vminnmaq_f16(float16x8_t a, float16x8_t b)
 {
@@ -21,9 +22,10 @@ float16x8_t test_vminnmaq_f16(float16x8_t a, float16x8_t b)
 
 // CHECK-LABEL: @test_vminnmaq_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> [[B:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.minnum.v4f32(<4 x float> [[A:%.*]], <4 x float> [[TMP0]])
-// CHECK-NEXT:    ret <4 x float> [[TMP1]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> [[A:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> [[B:%.*]])
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP0]], <4 x float> [[TMP1]])
+// CHECK-NEXT:    ret <4 x float> [[TMP2]]
 //
 float32x4_t test_vminnmaq_f32(float32x4_t a, float32x4_t b)
 {

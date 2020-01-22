@@ -194,14 +194,14 @@ define i32 @ipccp3() {
 %struct.X = type { i8* }
 define internal i32* @test_inalloca(i32* inalloca %a) {
 ; CHECK-LABEL: define {{[^@]+}}@test_inalloca
-; CHECK-SAME: (i32* inalloca noalias nofree returned writeonly [[A:%.*]])
+; CHECK-SAME: (i32* inalloca noalias nofree returned writeonly align 536870912 [[A:%.*]])
 ; CHECK-NEXT:    ret i32* [[A]]
 ;
   ret i32* %a
 }
 define i32* @complicated_args_inalloca() {
 ; CHECK-LABEL: define {{[^@]+}}@complicated_args_inalloca()
-; CHECK-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree writeonly null)
+; CHECK-NEXT:    [[CALL:%.*]] = call i32* @test_inalloca(i32* noalias nofree writeonly align 536870912 null)
 ; CHECK-NEXT:    ret i32* [[CALL]]
 ;
   %call = call i32* @test_inalloca(i32* null)
@@ -210,7 +210,7 @@ define i32* @complicated_args_inalloca() {
 
 define internal void @test_sret(%struct.X* sret %a, %struct.X** %b) {
 ; CHECK-LABEL: define {{[^@]+}}@test_sret
-; CHECK-SAME: (%struct.X* nofree sret writeonly [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly dereferenceable(8) [[B:%.*]])
+; CHECK-SAME: (%struct.X* nofree sret writeonly align 536870912 [[A:%.*]], %struct.X** nocapture nofree nonnull writeonly dereferenceable(8) [[B:%.*]])
 ; CHECK-NEXT:    store %struct.X* [[A]], %struct.X** [[B]]
 ; CHECK-NEXT:    ret void
 ;
@@ -220,7 +220,7 @@ define internal void @test_sret(%struct.X* sret %a, %struct.X** %b) {
 define void @complicated_args_sret(%struct.X** %b) {
 ; CHECK-LABEL: define {{[^@]+}}@complicated_args_sret
 ; CHECK-SAME: (%struct.X** nocapture nofree writeonly [[B:%.*]])
-; CHECK-NEXT:    call void @test_sret(%struct.X* nofree writeonly null, %struct.X** nocapture nofree writeonly [[B]])
+; CHECK-NEXT:    call void @test_sret(%struct.X* nofree writeonly align 536870912 null, %struct.X** nocapture nofree writeonly [[B]])
 ; CHECK-NEXT:    ret void
 ;
   call void @test_sret(%struct.X* null, %struct.X** %b)
@@ -229,14 +229,14 @@ define void @complicated_args_sret(%struct.X** %b) {
 
 define internal %struct.X* @test_nest(%struct.X* nest %a) {
 ; CHECK-LABEL: define {{[^@]+}}@test_nest
-; CHECK-SAME: (%struct.X* nest noalias nofree readnone returned [[A:%.*]])
+; CHECK-SAME: (%struct.X* nest noalias nofree readnone returned align 536870912 [[A:%.*]])
 ; CHECK-NEXT:    ret %struct.X* [[A]]
 ;
   ret %struct.X* %a
 }
 define %struct.X* @complicated_args_nest() {
 ; CHECK-LABEL: define {{[^@]+}}@complicated_args_nest()
-; CHECK-NEXT:    [[CALL:%.*]] = call %struct.X* @test_nest(%struct.X* noalias nofree readnone null)
+; CHECK-NEXT:    [[CALL:%.*]] = call %struct.X* @test_nest(%struct.X* noalias nofree readnone align 536870912 null)
 ; CHECK-NEXT:    ret %struct.X* [[CALL]]
 ;
   %call = call %struct.X* @test_nest(%struct.X* null)

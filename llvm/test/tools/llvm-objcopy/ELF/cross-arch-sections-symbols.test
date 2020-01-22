@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 # Preserve input to verify it is not modified.
 # RUN: cp %t.o %t-copy.o
 # RUN: llvm-objcopy %t.o -O elf64-x86-64 %t.2.o

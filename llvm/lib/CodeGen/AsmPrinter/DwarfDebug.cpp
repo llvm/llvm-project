@@ -836,6 +836,9 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
   NewCU.addUInt(Die, dwarf::DW_AT_language, dwarf::DW_FORM_data2,
                 DIUnit->getSourceLanguage());
   NewCU.addString(Die, dwarf::DW_AT_name, FN);
+  StringRef SysRoot = DIUnit->getSysRoot();
+  if (!SysRoot.empty())
+    NewCU.addString(Die, dwarf::DW_AT_LLVM_sysroot, SysRoot);
 
   // Add DW_str_offsets_base to the unit DIE, except for split units.
   if (useSegmentedStringOffsetsTable() && !useSplitDwarf())
@@ -848,7 +851,6 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     // skeleton CU and so we don't need to duplicate it here.
     if (!CompilationDir.empty())
       NewCU.addString(Die, dwarf::DW_AT_comp_dir, CompilationDir);
-
     addGnuPubAttributes(NewCU, Die);
   }
 
@@ -1831,9 +1833,6 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   if (SP->getUnit()->getEmissionKind() == DICompileUnit::NoDebug)
     return;
 
-  SectionLabels.insert(std::make_pair(&Asm->getFunctionBegin()->getSection(),
-                                      Asm->getFunctionBegin()));
-
   DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(SP->getUnit());
 
   // Set DwarfDwarfCompileUnitID in MCContext to the Compile Unit this function
@@ -2530,8 +2529,9 @@ void DwarfDebug::emitDebugLocDWO() {
       // offset_pair, so the implementations can't really share much since they
       // need to use different representations)
       // * as of October 2018, at least
-      // Ideally/in v5, this could use SectionLabels to reuse existing addresses
-      // in the address pool to minimize object size/relocations.
+      //
+      // In v5 (see emitLocList), this uses SectionLabels to reuse existing
+      // addresses in the address pool to minimize object size/relocations.
       Asm->emitInt8(dwarf::DW_LLE_startx_length);
       unsigned idx = AddrPool.getIndex(Entry.Begin);
       Asm->EmitULEB128(idx);
@@ -2822,7 +2822,6 @@ void DwarfDebug::initSkeletonUnit(const DwarfUnit &U, DIE &Die,
 
   if (!CompilationDir.empty())
     NewU->addString(Die, dwarf::DW_AT_comp_dir, CompilationDir);
-
   addGnuPubAttributes(*NewU, Die);
 
   SkeletonHolder.addUnit(std::move(NewU));
@@ -3075,4 +3074,7 @@ uint16_t DwarfDebug::getDwarfVersion() const {
 
 const MCSymbol *DwarfDebug::getSectionLabel(const MCSection *S) {
   return SectionLabels.find(S)->second;
+}
+void DwarfDebug::insertSectionLabel(const MCSymbol *S) {
+  SectionLabels.insert(std::make_pair(&S->getSection(), S));
 }

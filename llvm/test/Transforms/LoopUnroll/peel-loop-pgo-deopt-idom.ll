@@ -5,7 +5,7 @@
 ; Regression test for setting the correct idom for exit blocks.
 
 ; CHECK: Loop Unroll: F[basic]
-; CHECK: PEELING loop %for.body with iteration count 1!
+; CHECK: PEELING loop %for.body with iteration count 2!
 
 define i32 @basic(i32* %p, i32 %k, i1 %c1, i1 %c2) #0 !prof !3 {
 entry:

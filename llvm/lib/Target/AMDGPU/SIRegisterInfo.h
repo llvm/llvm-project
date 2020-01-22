@@ -77,7 +77,6 @@ public:
   bool requiresFrameIndexReplacementScavenging(
     const MachineFunction &MF) const override;
   bool requiresVirtualBaseRegisters(const MachineFunction &Fn) const override;
-  bool trackLivenessAfterRegAlloc(const MachineFunction &MF) const override;
 
   int64_t getMUBUFInstrOffset(const MachineInstr *MI) const;
 

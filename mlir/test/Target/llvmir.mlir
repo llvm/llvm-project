@@ -1086,3 +1086,47 @@ llvm.func @elements_constant_3d_array() -> !llvm<"[2 x [2 x [2 x i32]]]"> {
   %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm<"[2 x [2 x [2 x i32]]]">
   llvm.return %0 : !llvm<"[2 x [2 x [2 x i32]]]">
 }
+
+// CHECK-LABEL: @atomicrmw
+llvm.func @atomicrmw(
+    %f32_ptr : !llvm<"float*">, %f32 : !llvm.float,
+    %i32_ptr : !llvm<"i32*">, %i32 : !llvm.i32) {
+  // CHECK: atomicrmw fadd float* %{{.*}}, float %{{.*}} unordered
+  %0 = llvm.atomicrmw fadd %f32_ptr, %f32 unordered : !llvm.float
+  // CHECK: atomicrmw fsub float* %{{.*}}, float %{{.*}} unordered
+  %1 = llvm.atomicrmw fsub %f32_ptr, %f32 unordered : !llvm.float
+  // CHECK: atomicrmw xchg float* %{{.*}}, float %{{.*}} monotonic
+  %2 = llvm.atomicrmw xchg %f32_ptr, %f32 monotonic : !llvm.float
+  // CHECK: atomicrmw add i32* %{{.*}}, i32 %{{.*}} acquire
+  %3 = llvm.atomicrmw add %i32_ptr, %i32 acquire : !llvm.i32
+  // CHECK: atomicrmw sub i32* %{{.*}}, i32 %{{.*}} release
+  %4 = llvm.atomicrmw sub %i32_ptr, %i32 release : !llvm.i32
+  // CHECK: atomicrmw and i32* %{{.*}}, i32 %{{.*}} acq_rel
+  %5 = llvm.atomicrmw _and %i32_ptr, %i32 acq_rel : !llvm.i32
+  // CHECK: atomicrmw nand i32* %{{.*}}, i32 %{{.*}} seq_cst
+  %6 = llvm.atomicrmw nand %i32_ptr, %i32 seq_cst : !llvm.i32
+  // CHECK: atomicrmw or i32* %{{.*}}, i32 %{{.*}} unordered
+  %7 = llvm.atomicrmw _or %i32_ptr, %i32 unordered : !llvm.i32
+  // CHECK: atomicrmw xor i32* %{{.*}}, i32 %{{.*}} unordered
+  %8 = llvm.atomicrmw _xor %i32_ptr, %i32 unordered : !llvm.i32
+  // CHECK: atomicrmw max i32* %{{.*}}, i32 %{{.*}} unordered
+  %9 = llvm.atomicrmw max %i32_ptr, %i32 unordered : !llvm.i32
+  // CHECK: atomicrmw min i32* %{{.*}}, i32 %{{.*}} unordered
+  %10 = llvm.atomicrmw min %i32_ptr, %i32 unordered : !llvm.i32
+  // CHECK: atomicrmw umax i32* %{{.*}}, i32 %{{.*}} unordered
+  %11 = llvm.atomicrmw umax %i32_ptr, %i32 unordered : !llvm.i32
+  // CHECK: atomicrmw umin i32* %{{.*}}, i32 %{{.*}} unordered
+  %12 = llvm.atomicrmw umin %i32_ptr, %i32 unordered : !llvm.i32
+  llvm.return
+}
+
+// CHECK-LABEL: @cmpxchg
+llvm.func @cmpxchg(%ptr : !llvm<"float*">, %cmp : !llvm.float, %val: !llvm.float) {
+  // CHECK: cmpxchg float* %{{.*}}, float %{{.*}}, float %{{.*}} acq_rel monotonic
+  %0 = llvm.cmpxchg %ptr, %cmp, %val acq_rel monotonic : !llvm.float
+  // CHECK: %{{[0-9]+}} = extractvalue { float, i1 } %{{[0-9]+}}, 0
+  %1 = llvm.extractvalue %0[0] : !llvm<"{ float, i1 }">
+  // CHECK: %{{[0-9]+}} = extractvalue { float, i1 } %{{[0-9]+}}, 1
+  %2 = llvm.extractvalue %0[1] : !llvm<"{ float, i1 }">
+  llvm.return
+}

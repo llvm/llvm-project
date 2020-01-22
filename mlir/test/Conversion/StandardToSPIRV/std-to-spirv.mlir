@@ -289,3 +289,12 @@ func @sitofp(%arg0 : i32) {
   %0 = std.sitofp %arg0 : i32 to f32
   return
 }
+
+//===----------------------------------------------------------------------===//
+// memref type
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @memref_type({{%.*}}: memref<3xi1>) {
+func @memref_type(%arg0: memref<3xi1>) {
+  return
+}

@@ -59,7 +59,7 @@ parser, which will be used to report errors found during code generation
     let double_type = double_type context
 
 The static variables will be used during code generation.
-``Codgen.the_module`` is the LLVM construct that contains all of the
+``Codegen.the_module`` is the LLVM construct that contains all of the
 functions and global variables in a chunk of code. In many ways, it is
 the top-level structure that the LLVM IR uses to contain code.
 
@@ -78,7 +78,7 @@ function body.
 
 With these basics in place, we can start talking about how to generate
 code for each expression. Note that this assumes that the
-``Codgen.builder`` has been set up to generate code *into* something.
+``Codegen.builder`` has been set up to generate code *into* something.
 For now, we'll assume that this has already been done, and we'll just
 use it to emit code.
 

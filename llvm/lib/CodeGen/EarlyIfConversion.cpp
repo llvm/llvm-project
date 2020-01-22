@@ -91,10 +91,10 @@ public:
   /// The block containing phis after the if-then-else.
   MachineBasicBlock *Tail;
 
-  /// The 'true' conditional block as determined by AnalyzeBranch.
+  /// The 'true' conditional block as determined by analyzeBranch.
   MachineBasicBlock *TBB;
 
-  /// The 'false' conditional block as determined by AnalyzeBranch.
+  /// The 'false' conditional block as determined by analyzeBranch.
   MachineBasicBlock *FBB;
 
   /// isTriangle - When there is no 'else' block, either TBB or FBB will be
@@ -121,7 +121,7 @@ public:
   SmallVector<PHIInfo, 8> PHIs;
 
 private:
-  /// The branch condition determined by AnalyzeBranch.
+  /// The branch condition determined by analyzeBranch.
   SmallVector<MachineOperand, 4> Cond;
 
   /// Instructions in Head that define values used by the conditional blocks.
@@ -486,18 +486,18 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
 
   // This is weird, probably some sort of degenerate CFG.
   if (!TBB) {
-    LLVM_DEBUG(dbgs() << "AnalyzeBranch didn't find conditional branch.\n");
+    LLVM_DEBUG(dbgs() << "analyzeBranch didn't find conditional branch.\n");
     return false;
   }
 
   // Make sure the analyzed branch is conditional; one of the successors
   // could be a landing pad. (Empty landing pads can be generated on Windows.)
   if (Cond.empty()) {
-    LLVM_DEBUG(dbgs() << "AnalyzeBranch found an unconditional branch.\n");
+    LLVM_DEBUG(dbgs() << "analyzeBranch found an unconditional branch.\n");
     return false;
   }
 
-  // AnalyzeBranch doesn't set FBB on a fall-through branch.
+  // analyzeBranch doesn't set FBB on a fall-through branch.
   // Make sure it is always set.
   FBB = TBB == Succ0 ? Succ1 : Succ0;
 
@@ -520,8 +520,9 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
     assert(Register::isVirtualRegister(PI.FReg) && "Bad PHI");
 
     // Get target information.
-    if (!TII->canInsertSelect(*Head, Cond, PI.TReg, PI.FReg,
-                              PI.CondCycles, PI.TCycles, PI.FCycles)) {
+    if (!TII->canInsertSelect(*Head, Cond, PI.PHI->getOperand(0).getReg(),
+                              PI.TReg, PI.FReg, PI.CondCycles, PI.TCycles,
+                              PI.FCycles)) {
       LLVM_DEBUG(dbgs() << "Can't convert: " << *PI.PHI);
       return false;
     }

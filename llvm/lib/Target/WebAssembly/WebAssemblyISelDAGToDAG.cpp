@@ -206,6 +206,27 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
+  case WebAssemblyISD::CALL: {
+    // CALL has both variable operands and variable results, but ISel only
+    // supports one or the other. Split calls into two nodes glued together, one
+    // for the operands and one for the results. These two nodes will be
+    // recombined in a custom inserter hook into a single MachineInstr.
+    SmallVector<SDValue, 16> Ops;
+    for (size_t i = 1; i < Node->getNumOperands(); ++i) {
+      SDValue Op = Node->getOperand(i);
+      if (Op->getOpcode() == WebAssemblyISD::Wrapper)
+        Op = Op->getOperand(0);
+      Ops.push_back(Op);
+    }
+    Ops.push_back(Node->getOperand(0));
+    MachineSDNode *CallParams =
+        CurDAG->getMachineNode(WebAssembly::CALL_PARAMS, DL, MVT::Glue, Ops);
+    SDValue Link(CallParams, 0);
+    MachineSDNode *CallResults = CurDAG->getMachineNode(
+        WebAssembly::CALL_RESULTS, DL, Node->getVTList(), Link);
+    ReplaceNode(Node, CallResults);
+    return;
+  }
 
   default:
     break;

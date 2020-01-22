@@ -405,6 +405,9 @@ def cfguard_no_checks : Flag<["-"], "cfguard-no-checks">,
 def cfguard : Flag<["-"], "cfguard">,
     HelpText<"Emit Windows Control Flow Guard tables and checks">;
 
+def fdenormal_fp_math_f32_EQ : Joined<["-"], "fdenormal-fp-math-f32=">,
+   Group<f_Group>;
+
 //===----------------------------------------------------------------------===//
 // Dependency Output Options
 //===----------------------------------------------------------------------===//
@@ -554,6 +557,9 @@ def ftest_module_file_extension_EQ :
            "The argument is parsed as blockname:major:minor:hashed:user info">;
 def fconcepts_ts : Flag<["-"], "fconcepts-ts">,
   HelpText<"Enable C++ Extensions for Concepts.">;
+def fno_concept_satisfaction_caching : Flag<["-"],
+                                            "fno-concept-satisfaction-caching">,
+  HelpText<"Disable satisfaction caching for C++2a Concepts.">;
 
 let Group = Action_Group in {
 

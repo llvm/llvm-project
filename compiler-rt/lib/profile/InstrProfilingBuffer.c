@@ -10,6 +10,9 @@
 #include "InstrProfilingInternal.h"
 #include "InstrProfilingPort.h"
 
+/* When counters are being relocated at runtime, this parameter is set to 1. */
+COMPILER_RT_VISIBILITY int RuntimeCounterRelocation = 0;
+
 /* When continuous mode is enabled (%c), this parameter is set to 1.
  *
  * This parameter is defined here in InstrProfilingBuffer.o, instead of in
@@ -62,7 +65,8 @@ void __llvm_profile_get_padding_sizes_for_counters(
     uint64_t DataSize, uint64_t CountersSize, uint64_t NamesSize,
     uint64_t *PaddingBytesBeforeCounters, uint64_t *PaddingBytesAfterCounters,
     uint64_t *PaddingBytesAfterNames) {
-  if (!__llvm_profile_is_continuous_mode_enabled()) {
+  if (!__llvm_profile_is_continuous_mode_enabled() ||
+      RuntimeCounterRelocation) {
     *PaddingBytesBeforeCounters = 0;
     *PaddingBytesAfterCounters = 0;
     *PaddingBytesAfterNames = __llvm_profile_get_num_padding_bytes(NamesSize);

@@ -30,6 +30,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <cassert>
 #include <limits>
 #include <vector>
@@ -91,10 +92,13 @@ private:
   OutputSection *readOutputSectionDescription(StringRef outSec);
   std::vector<BaseCommand *> readOverlay();
   std::vector<StringRef> readOutputSectionPhdrs();
+  std::pair<uint64_t, uint64_t> readInputSectionFlags();
   InputSectionDescription *readInputSectionDescription(StringRef tok);
   StringMatcher readFilePatterns();
   std::vector<SectionPattern> readInputSectionsList();
-  InputSectionDescription *readInputSectionRules(StringRef filePattern);
+  InputSectionDescription *readInputSectionRules(StringRef filePattern,
+                                                 uint64_t withFlags,
+                                                 uint64_t withoutFlags);
   unsigned readPhdrType();
   SortSectionPolicy readSortKind();
   SymbolAssignment *readProvideHidden(bool provide, bool hidden);
@@ -657,8 +661,10 @@ std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
 //
 // <section-list> is parsed by readInputSectionsList().
 InputSectionDescription *
-ScriptParser::readInputSectionRules(StringRef filePattern) {
-  auto *cmd = make<InputSectionDescription>(filePattern);
+ScriptParser::readInputSectionRules(StringRef filePattern, uint64_t withFlags,
+                                    uint64_t withoutFlags) {
+  auto *cmd =
+      make<InputSectionDescription>(filePattern, withFlags, withoutFlags);
   expect("(");
 
   while (!errorCount() && !consume(")")) {
@@ -694,15 +700,23 @@ InputSectionDescription *
 ScriptParser::readInputSectionDescription(StringRef tok) {
   // Input section wildcard can be surrounded by KEEP.
   // https://sourceware.org/binutils/docs/ld/Input-Section-Keep.html#Input-Section-Keep
+  uint64_t withFlags = 0;
+  uint64_t withoutFlags = 0;
   if (tok == "KEEP") {
     expect("(");
-    StringRef filePattern = next();
-    InputSectionDescription *cmd = readInputSectionRules(filePattern);
+    if (consume("INPUT_SECTION_FLAGS"))
+      std::tie(withFlags, withoutFlags) = readInputSectionFlags();
+    InputSectionDescription *cmd =
+        readInputSectionRules(next(), withFlags, withoutFlags);
     expect(")");
     script->keptSections.push_back(cmd);
     return cmd;
   }
-  return readInputSectionRules(tok);
+  if (tok == "INPUT_SECTION_FLAGS") {
+    std::tie(withFlags, withoutFlags) = readInputSectionFlags();
+    tok = next();
+  }
+  return readInputSectionRules(tok, withFlags, withoutFlags);
 }
 
 void ScriptParser::readSort() {
@@ -781,9 +795,14 @@ OutputSection *ScriptParser::readOverlaySectionDescription() {
       script->createOutputSection(next(), getCurrentLocation());
   cmd->inOverlay = true;
   expect("{");
-  while (!errorCount() && !consume("}"))
-    cmd->sectionCommands.push_back(readInputSectionRules(next()));
-  cmd->phdrs = readOutputSectionPhdrs();
+  while (!errorCount() && !consume("}")) {
+    uint64_t withFlags = 0;
+    uint64_t withoutFlags = 0;
+    if (consume("INPUT_SECTION_FLAGS"))
+      std::tie(withFlags, withoutFlags) = readInputSectionFlags();
+    cmd->sectionCommands.push_back(
+        readInputSectionRules(next(), withFlags, withoutFlags));
+  }
   return cmd;
 }
 
@@ -841,6 +860,9 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef outSec) {
       // We have a file name and no input sections description. It is not a
       // commonly used syntax, but still acceptable. In that case, all sections
       // from the file will be included.
+      // FIXME: GNU ld permits INPUT_SECTION_FLAGS to be used here. We do not
+      // handle this case here as it will already have been matched by the
+      // case above.
       auto *isd = make<InputSectionDescription>(tok);
       isd->sectionPatterns.push_back({{}, StringMatcher({"*"})});
       cmd->sectionCommands.push_back(isd);
@@ -1100,6 +1122,63 @@ ByteCommand *ScriptParser::readByteCommand(StringRef tok) {
       tok.str() + " " +
       llvm::join(tokens.begin() + oldPos, tokens.begin() + pos, " ");
   return make<ByteCommand>(e, size, commandString);
+}
+
+static llvm::Optional<uint64_t> parseFlag(StringRef tok) {
+  if (llvm::Optional<uint64_t> asInt = parseInt(tok))
+    return asInt;
+#define CASE_ENT(enum) #enum, ELF::enum
+  return StringSwitch<llvm::Optional<uint64_t>>(tok)
+      .Case(CASE_ENT(SHF_WRITE))
+      .Case(CASE_ENT(SHF_ALLOC))
+      .Case(CASE_ENT(SHF_EXECINSTR))
+      .Case(CASE_ENT(SHF_MERGE))
+      .Case(CASE_ENT(SHF_STRINGS))
+      .Case(CASE_ENT(SHF_INFO_LINK))
+      .Case(CASE_ENT(SHF_LINK_ORDER))
+      .Case(CASE_ENT(SHF_OS_NONCONFORMING))
+      .Case(CASE_ENT(SHF_GROUP))
+      .Case(CASE_ENT(SHF_TLS))
+      .Case(CASE_ENT(SHF_COMPRESSED))
+      .Case(CASE_ENT(SHF_EXCLUDE))
+      .Case(CASE_ENT(SHF_ARM_PURECODE))
+      .Default(None);
+#undef CASE_ENT
+}
+
+// Reads the '(' <flags> ')' list of section flags in
+// INPUT_SECTION_FLAGS '(' <flags> ')' in the
+// following form:
+// <flags> ::= <flag>
+//           | <flags> & flag
+// <flag>  ::= Recognized Flag Name, or Integer value of flag.
+// If the first character of <flag> is a ! then this means without flag,
+// otherwise with flag.
+// Example: SHF_EXECINSTR & !SHF_WRITE means with flag SHF_EXECINSTR and
+// without flag SHF_WRITE.
+std::pair<uint64_t, uint64_t> ScriptParser::readInputSectionFlags() {
+   uint64_t withFlags = 0;
+   uint64_t withoutFlags = 0;
+   expect("(");
+   while (!errorCount()) {
+    StringRef tok = unquote(next());
+    bool without = tok.consume_front("!");
+    if (llvm::Optional<uint64_t> flag = parseFlag(tok)) {
+      if (without)
+        withoutFlags |= *flag;
+      else
+        withFlags |= *flag;
+    } else {
+      setError("unrecognised flag: " + tok);
+    }
+    if (consume(")"))
+      break;
+    if (!consume("&")) {
+      next();
+      setError("expected & or )");
+    }
+  }
+  return std::make_pair(withFlags, withoutFlags);
 }
 
 StringRef ScriptParser::readParenLiteral() {

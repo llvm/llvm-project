@@ -144,9 +144,9 @@ private:
 
   // Targets can implement their own snippet generators/benchmarks runners by
   // implementing these.
-  std::unique_ptr<SnippetGenerator> virtual createLatencySnippetGenerator(
+  std::unique_ptr<SnippetGenerator> virtual createSerialSnippetGenerator(
       const LLVMState &State, const SnippetGenerator::Options &Opts) const;
-  std::unique_ptr<SnippetGenerator> virtual createUopsSnippetGenerator(
+  std::unique_ptr<SnippetGenerator> virtual createParallelSnippetGenerator(
       const LLVMState &State, const SnippetGenerator::Options &Opts) const;
   std::unique_ptr<BenchmarkRunner> virtual createLatencyBenchmarkRunner(
       const LLVMState &State, InstructionBenchmark::ModeE Mode) const;

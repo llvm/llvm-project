@@ -255,7 +255,8 @@ defm : SKXWriteResPair<WriteFCmp64X,   [SKXPort01],  4, [1], 1, 6>;
 defm : SKXWriteResPair<WriteFCmp64Y,   [SKXPort01],  4, [1], 1, 7>;
 defm : SKXWriteResPair<WriteFCmp64Z,   [SKXPort05],  4, [1], 1, 7>;
 
-defm : SKXWriteResPair<WriteFCom,       [SKXPort0],  2>; // Floating point compare to flags.
+defm : SKXWriteResPair<WriteFCom,       [SKXPort0],  2>; // Floating point compare to flags (X87).
+defm : SKXWriteResPair<WriteFComX,      [SKXPort0],  2>; // Floating point compare to flags (SSE).
 
 defm : SKXWriteResPair<WriteFMul,      [SKXPort01],  4, [1], 1, 5>; // Floating point multiplication.
 defm : SKXWriteResPair<WriteFMulX,     [SKXPort01],  4, [1], 1, 6>;

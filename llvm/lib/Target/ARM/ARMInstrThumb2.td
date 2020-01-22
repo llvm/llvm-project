@@ -5360,6 +5360,7 @@ def t2DoLoopStart :
   t2PseudoInst<(outs), (ins rGPR:$elts), 4, IIC_Br,
   [(int_set_loop_iterations rGPR:$elts)]>, Sched<[WriteBr]>;
 
+let hasSideEffects = 0 in
 def t2LoopDec :
   t2PseudoInst<(outs GPRlr:$Rm), (ins GPRlr:$Rn, imm0_7:$size),
                4, IIC_Br, []>, Sched<[WriteBr]>;

@@ -238,6 +238,7 @@ defm : SBWriteResPair<WriteFCmp64Y, [SBPort1],  3, [1], 1, 7>;
 defm : SBWriteResPair<WriteFCmp64Z, [SBPort1],  3, [1], 1, 7>; // Unsupported = 1
 
 defm : SBWriteResPair<WriteFCom,    [SBPort1],  3>;
+defm : SBWriteResPair<WriteFComX,   [SBPort1],  3>;
 
 defm : SBWriteResPair<WriteFMul,    [SBPort0],  5, [1], 1, 6>;
 defm : SBWriteResPair<WriteFMulX,   [SBPort0],  5, [1], 1, 6>;

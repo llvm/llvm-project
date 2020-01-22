@@ -159,7 +159,7 @@ private:
   // TODO(ajcbik): consider replacing this one-pattern lowering
   //               with a two-pattern lowering using other vector
   //               ops once all insert/extract/shuffle operations
-  //               are available with lowering implemention.
+  //               are available with lowering implementation.
   //
   Value expandRanks(Value value, Location loc, VectorType srcVectorType,
                     VectorType dstVectorType,

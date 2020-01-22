@@ -1211,6 +1211,58 @@ TEST_F(FormatTest, FormatsSwitchStatement) {
                    "  }\n"
                    "}",
                    Style));
+  Style.IndentCaseLabels = false;
+  Style.IndentCaseBlocks = true;
+  EXPECT_EQ("switch (n)\n"
+            "{\n"
+            "case 0:\n"
+            "  {\n"
+            "    return false;\n"
+            "  }\n"
+            "case 1:\n"
+            "  break;\n"
+            "default:\n"
+            "  {\n"
+            "    return true;\n"
+            "  }\n"
+            "}",
+            format("switch (n) {\n"
+                   "case 0: {\n"
+                   "  return false;\n"
+                   "}\n"
+                   "case 1:\n"
+                   "  break;\n"
+                   "default: {\n"
+                   "  return true;\n"
+                   "}\n"
+                   "}",
+                   Style));
+  Style.IndentCaseLabels = true;
+  Style.IndentCaseBlocks = true;
+  EXPECT_EQ("switch (n)\n"
+            "{\n"
+            "  case 0:\n"
+            "    {\n"
+            "      return false;\n"
+            "    }\n"
+            "  case 1:\n"
+            "    break;\n"
+            "  default:\n"
+            "    {\n"
+            "      return true;\n"
+            "    }\n"
+            "}",
+            format("switch (n) {\n"
+                   "case 0: {\n"
+                   "  return false;\n"
+                   "}\n"
+                   "case 1:\n"
+                   "  break;\n"
+                   "default: {\n"
+                   "  return true;\n"
+                   "}\n"
+                   "}",
+                   Style));
 }
 
 TEST_F(FormatTest, CaseRanges) {
@@ -12578,6 +12630,7 @@ TEST_F(FormatTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
   CHECK_PARSE_BOOL(DisableFormat);
   CHECK_PARSE_BOOL(IndentCaseLabels);
+  CHECK_PARSE_BOOL(IndentCaseBlocks);
   CHECK_PARSE_BOOL(IndentGotoLabels);
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);
   CHECK_PARSE_BOOL(KeepEmptyLinesAtTheStartOfBlocks);
@@ -14927,6 +14980,7 @@ TEST_F(FormatTest, SpacesInConditionalStatement) {
   verifyFormat("while ( a )\n  return;", Spaces);
   verifyFormat("while ( (a && b) )\n  return;", Spaces);
   verifyFormat("do {\n} while ( 1 != 0 );", Spaces);
+  verifyFormat("try {\n} catch ( const std::exception & ) {\n}", Spaces);
   // Check that space on the left of "::" is inserted as expected at beginning
   // of condition.
   verifyFormat("while ( ::func() )\n  return;", Spaces);
@@ -15007,6 +15061,9 @@ TEST_F(FormatTest, OperatorSpacing) {
   Style.PointerAlignment = FormatStyle::PAS_Left;
   verifyFormat("Foo::operator*();", Style);
   verifyFormat("Foo::operator void*();", Style);
+  verifyFormat("Foo::operator/*comment*/ void*();", Style);
+  verifyFormat("Foo::operator/*a*/ const /*b*/ void*();", Style);
+  verifyFormat("Foo::operator/*a*/ volatile /*b*/ void*();", Style);
   verifyFormat("Foo::operator()(void*);", Style);
   verifyFormat("Foo::operator*(void*);", Style);
   verifyFormat("Foo::operator*();", Style);
@@ -15014,6 +15071,9 @@ TEST_F(FormatTest, OperatorSpacing) {
 
   verifyFormat("Foo::operator&();", Style);
   verifyFormat("Foo::operator void&();", Style);
+  verifyFormat("Foo::operator/*comment*/ void&();", Style);
+  verifyFormat("Foo::operator/*a*/ const /*b*/ void&();", Style);
+  verifyFormat("Foo::operator/*a*/ volatile /*b*/ void&();", Style);
   verifyFormat("Foo::operator()(void&);", Style);
   verifyFormat("Foo::operator&(void&);", Style);
   verifyFormat("Foo::operator&();", Style);
@@ -15021,6 +15081,9 @@ TEST_F(FormatTest, OperatorSpacing) {
 
   verifyFormat("Foo::operator&&();", Style);
   verifyFormat("Foo::operator void&&();", Style);
+  verifyFormat("Foo::operator/*comment*/ void&&();", Style);
+  verifyFormat("Foo::operator/*a*/ const /*b*/ void&&();", Style);
+  verifyFormat("Foo::operator/*a*/ volatile /*b*/ void&&();", Style);
   verifyFormat("Foo::operator()(void&&);", Style);
   verifyFormat("Foo::operator&&(void&&);", Style);
   verifyFormat("Foo::operator&&();", Style);

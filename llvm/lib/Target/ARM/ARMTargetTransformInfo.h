@@ -93,11 +93,8 @@ public:
 
   bool enableInterleavedAccessVectorization() { return true; }
 
-  bool shouldFavorBackedgeIndex(const Loop *L) const {
-    if (L->getHeader()->getParent()->hasOptSize())
-      return false;
-    return ST->isMClass() && ST->isThumb2() && L->getNumBlocks() == 1;
-  }
+  bool shouldFavorBackedgeIndex(const Loop *L) const;
+  bool shouldFavorPostInc() const;
 
   /// Floating-point computation using ARMv8 AArch32 Advanced
   /// SIMD instructions remains unchanged from ARMv7. Only AArch64 SIMD
@@ -161,7 +158,9 @@ public:
 
   bool isLegalMaskedGather(Type *Ty, MaybeAlign Alignment);
 
-  bool isLegalMaskedScatter(Type *Ty, MaybeAlign Alignment) { return false; }
+  bool isLegalMaskedScatter(Type *Ty, MaybeAlign Alignment) {
+    return isLegalMaskedGather(Ty, Alignment);
+  }
 
   int getMemcpyCost(const Instruction *I);
 

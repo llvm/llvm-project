@@ -47,7 +47,7 @@ static const MCPhysReg VRRegNo[] = {
 };
 
 static unsigned computeReturnSaveOffset(const PPCSubtarget &STI) {
-  if (STI.isDarwinABI() || STI.isAIXABI())
+  if (STI.isAIXABI())
     return STI.isPPC64() ? 16 : 8;
   // SVR4 ABI:
   return STI.isPPC64() ? 16 : 4;
@@ -60,20 +60,12 @@ static unsigned computeTOCSaveOffset(const PPCSubtarget &STI) {
 }
 
 static unsigned computeFramePointerSaveOffset(const PPCSubtarget &STI) {
-  // For the Darwin ABI:
-  // We cannot use the TOC save slot (offset +20) in the PowerPC linkage area
-  // for saving the frame pointer (if needed.)  While the published ABI has
-  // not used this slot since at least MacOSX 10.2, there is older code
-  // around that does use it, and that needs to continue to work.
-  if (STI.isDarwinABI())
-    return STI.isPPC64() ? -8U : -4U;
-
   // SVR4 ABI: First slot in the general register save area.
   return STI.isPPC64() ? -8U : -4U;
 }
 
 static unsigned computeLinkageSize(const PPCSubtarget &STI) {
-  if ((STI.isDarwinABI() || STI.isAIXABI()) || STI.isPPC64())
+  if (STI.isAIXABI() || STI.isPPC64())
     return (STI.isELFv2ABI() ? 4 : 6) * (STI.isPPC64() ? 8 : 4);
 
   // 32-bit SVR4 ABI:
@@ -81,9 +73,6 @@ static unsigned computeLinkageSize(const PPCSubtarget &STI) {
 }
 
 static unsigned computeBasePointerSaveOffset(const PPCSubtarget &STI) {
-  if (STI.isDarwinABI())
-    return STI.isPPC64() ? -16U : -8U;
-
   // SVR4 ABI: First slot in the general register save area.
   return STI.isPPC64()
              ? -16U
@@ -108,17 +97,6 @@ PPCFrameLowering::PPCFrameLowering(const PPCSubtarget &STI)
 // With the SVR4 ABI, callee-saved registers have fixed offsets on the stack.
 const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
     unsigned &NumEntries) const {
-  if (Subtarget.isDarwinABI()) {
-    NumEntries = 1;
-    if (Subtarget.isPPC64()) {
-      static const SpillSlot darwin64Offsets = {PPC::X31, -8};
-      return &darwin64Offsets;
-    } else {
-      static const SpillSlot darwinOffsets = {PPC::R31, -4};
-      return &darwinOffsets;
-    }
-  }
-
   // Early exit if not using the SVR4 ABI.
   if (!Subtarget.isSVR4ABI()) {
     NumEntries = 0;
@@ -790,8 +768,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   bool isSVR4ABI = Subtarget.isSVR4ABI();
   bool isAIXABI = Subtarget.isAIXABI();
   bool isELFv2ABI = Subtarget.isELFv2ABI();
-  assert((Subtarget.isDarwinABI() || isSVR4ABI || isAIXABI) &&
-         "Unsupported PPC ABI.");
+  assert((isSVR4ABI || isAIXABI) && "Unsupported PPC ABI.");
 
   // Scan the prolog, looking for an UPDATE_VRSAVE instruction.  If we find it,
   // process it.
@@ -1776,7 +1753,6 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
   //  Save R31 if necessary
   int FPSI = FI->getFramePointerSaveIndex();
   const bool isPPC64 = Subtarget.isPPC64();
-  const bool IsDarwinABI  = Subtarget.isDarwinABI();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // If the frame pointer save index hasn't been defined yet.
@@ -1825,9 +1801,8 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   // For 32-bit SVR4, allocate the nonvolatile CR spill slot iff the
   // function uses CR 2, 3, or 4.
-  if (!isPPC64 && !IsDarwinABI &&
-      (SavedRegs.test(PPC::CR2) ||
-       SavedRegs.test(PPC::CR3) ||
+  if (Subtarget.is32BitELFABI() &&
+      (SavedRegs.test(PPC::CR2) || SavedRegs.test(PPC::CR3) ||
        SavedRegs.test(PPC::CR4))) {
     int FrameIdx = MFI.CreateFixedObject((uint64_t)4, (int64_t)-4, true);
     FI->setCRSpillFrameIndex(FrameIdx);
@@ -2201,10 +2176,8 @@ PPCFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     unsigned Reg = CSI[i].getReg();
-    // Only Darwin actually uses the VRSAVE register, but it can still appear
-    // here if, for example, @llvm.eh.unwind.init() is used.  If we're not on
-    // Darwin, ignore it.
-    if (Reg == PPC::VRSAVE && !Subtarget.isDarwinABI())
+    // VRSAVE can appear here if, for example, @llvm.eh.unwind.init() is used.
+    if (Reg == PPC::VRSAVE)
       continue;
 
     // CR2 through CR4 are the nonvolatile CR fields.
@@ -2374,10 +2347,8 @@ PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     unsigned Reg = CSI[i].getReg();
 
-    // Only Darwin actually uses the VRSAVE register, but it can still appear
-    // here if, for example, @llvm.eh.unwind.init() is used.  If we're not on
-    // Darwin, ignore it.
-    if (Reg == PPC::VRSAVE && !Subtarget.isDarwinABI())
+    // VRSAVE can appear here if, for example, @llvm.eh.unwind.init() is used.
+    if (Reg == PPC::VRSAVE)
       continue;
 
     if ((Reg == PPC::X2 || Reg == PPC::R2) && MustSaveTOC)

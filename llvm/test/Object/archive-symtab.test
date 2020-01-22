@@ -1,5 +1,5 @@
-# RUN: yaml2obj -docnum=1 %s > %t.elf-x86-64
-# RUN: yaml2obj -docnum=2 %s > %t2.elf-x86-64
+# RUN: yaml2obj --docnum=1 %s -o %t.elf-x86-64
+# RUN: yaml2obj --docnum=2 %s -o %t2.elf-x86-64
 
 --- !ELF
 FileHeader:

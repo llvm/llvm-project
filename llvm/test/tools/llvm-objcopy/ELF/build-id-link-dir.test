@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: mkdir -p %t-dir
 
 # RUN: llvm-objcopy --build-id-link-dir=%t-dir %t %t2

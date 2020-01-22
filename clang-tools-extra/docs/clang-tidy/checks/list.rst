@@ -65,6 +65,7 @@ Clang-Tidy Checks
    `bugprone-macro-parentheses <bugprone-macro-parentheses.html>`_, "Yes"
    `bugprone-macro-repeated-side-effects <bugprone-macro-repeated-side-effects.html>`_,
    `bugprone-misplaced-operator-in-strlen-in-alloc <bugprone-misplaced-operator-in-strlen-in-alloc.html>`_, "Yes"
+   `bugprone-misplaced-pointer-arithmetic-in-alloc <bugprone-misplaced-pointer-arithmetic-in-alloc.html>`_, "Yes"
    `bugprone-misplaced-widening-cast <bugprone-misplaced-widening-cast.html>`_,
    `bugprone-move-forwarding-reference <bugprone-move-forwarding-reference.html>`_, "Yes"
    `bugprone-multiple-statement-macro <bugprone-multiple-statement-macro.html>`_,
@@ -105,6 +106,7 @@ Clang-Tidy Checks
    `cert-mem57-cpp <cert-mem57-cpp.html>`_,
    `cert-msc50-cpp <cert-msc50-cpp.html>`_,
    `cert-msc51-cpp <cert-msc51-cpp.html>`_,
+   `cert-oop57-cpp <cert-oop57-cpp.html>`_,
    `cert-oop58-cpp <cert-oop58-cpp.html>`_,
    `clang-analyzer-core.DynamicTypePropagation <clang-analyzer-core.DynamicTypePropagation.html>`_,
    `clang-analyzer-core.uninitialized.CapturedBlockVariable <clang-analyzer-core.uninitialized.CapturedBlockVariable.html>`_,

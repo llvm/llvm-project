@@ -41,6 +41,13 @@ MAKEFILE_RULES := $(lastword $(MAKEFILE_LIST))
 THIS_FILE_DIR := $(shell dirname $(MAKEFILE_RULES))
 LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 
+# The test harness invokes the test Makefiles with an explicit 'all'
+# target, but its handy to be able to recursively call this Makefile
+# without specifying a goal. You almost certainly want to build 'all',
+# and not only the first target defined in this file (which might vary
+# according to variable values).
+.DEFAULT_GOAL := all
+
 #----------------------------------------------------------------------
 # If OS is not defined, use 'uname -s' to determine the OS name.
 #

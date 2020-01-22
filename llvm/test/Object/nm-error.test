@@ -1,7 +1,7 @@
 ## Test that llvm-nm returns an error because of the unknown file type, but
 ## keeps processing subsequent files.
 
-# RUN: yaml2obj %s > %t-i386
+# RUN: yaml2obj %s -o %t-i386
 # RUN: touch %t
 # RUN: not llvm-nm %t-i386 %t %t-i386 | FileCheck %s
 

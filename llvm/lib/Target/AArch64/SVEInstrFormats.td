@@ -6600,6 +6600,12 @@ class sve_int_brkp<bits<2> opc, string asm>
   let Defs = !if(!eq (opc{1}, 1), [NZCV], []);
 }
 
+multiclass sve_int_brkp<bits<2> opc, string asm, SDPatternOperator op> {
+  def NAME : sve_int_brkp<opc, asm>;
+
+  def : SVE_3_Op_Pat<nxv16i1, op, nxv16i1, nxv16i1, nxv16i1, !cast<Instruction>(NAME)>;
+}
+
 
 //===----------------------------------------------------------------------===//
 // SVE Partition Break Group
@@ -6626,6 +6632,12 @@ class sve_int_brkn<bit S, string asm>
   let Defs = !if(!eq (S, 0b1), [NZCV], []);
 }
 
+multiclass sve_int_brkn<bits<1> opc, string asm, SDPatternOperator op> {
+  def NAME : sve_int_brkn<opc, asm>;
+
+  def : SVE_3_Op_Pat<nxv16i1, op, nxv16i1, nxv16i1, nxv16i1, !cast<Instruction>(NAME)>;
+}
+
 class sve_int_break<bits<3> opc, string asm, string suffix, dag iops>
 : I<(outs PPR8:$Pd), iops,
   asm, "\t$Pd, $Pg"#suffix#", $Pn",
@@ -6648,12 +6660,16 @@ class sve_int_break<bits<3> opc, string asm, string suffix, dag iops>
 
 }
 
-multiclass sve_int_break_m<bits<3> opc, string asm> {
+multiclass sve_int_break_m<bits<3> opc, string asm, SDPatternOperator op> {
   def NAME : sve_int_break<opc, asm, "/m", (ins PPR8:$_Pd, PPRAny:$Pg, PPR8:$Pn)>;
+
+  def : SVE_3_Op_Pat<nxv16i1, op, nxv16i1, nxv16i1, nxv16i1, !cast<Instruction>(NAME)>;
 }
 
-multiclass sve_int_break_z<bits<3> opc, string asm> {
+multiclass sve_int_break_z<bits<3> opc, string asm, SDPatternOperator op> {
   def NAME : sve_int_break<opc, asm, "/z", (ins PPRAny:$Pg, PPR8:$Pn)>;
+
+  def : SVE_2_Op_Pat<nxv16i1, op, nxv16i1, nxv16i1, !cast<Instruction>(NAME)>;
 }
 
 //===----------------------------------------------------------------------===//

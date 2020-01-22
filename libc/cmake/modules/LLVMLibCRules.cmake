@@ -339,10 +339,9 @@ function(add_libc_unittest target_name)
   target_include_directories(
     ${target_name}
     PRIVATE
-      ${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include
-      ${LLVM_MAIN_SRC_DIR}/utils/unittest/googlemock/include
       ${LIBC_SOURCE_DIR}
       ${LIBC_BUILD_DIR}
+      ${LIBC_BUILD_DIR}/include
   )
 
   if(library_deps)
@@ -357,7 +356,7 @@ function(add_libc_unittest target_name)
     gtest
   )
 
-  target_link_libraries(${target_name} PRIVATE gtest_main gtest)
+  target_link_libraries(${target_name} PRIVATE LibcUnitTest LLVMSupport)
 
   add_custom_command(
     TARGET ${target_name}

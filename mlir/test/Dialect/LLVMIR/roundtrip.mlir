@@ -218,3 +218,17 @@ func @null() {
   %1 = llvm.mlir.null : !llvm<"{void(i32, void()*)*, i64}*">
   llvm.return
 }
+
+// CHECK-LABEL: @atomicrmw
+func @atomicrmw(%ptr : !llvm<"float*">, %val : !llvm.float) {
+  // CHECK: llvm.atomicrmw fadd %{{.*}}, %{{.*}} unordered : !llvm.float
+  %0 = llvm.atomicrmw fadd %ptr, %val unordered : !llvm.float
+  llvm.return
+}
+
+// CHECK-LABEL: @cmpxchg
+func @cmpxchg(%ptr : !llvm<"float*">, %cmp : !llvm.float, %new : !llvm.float) {
+  // CHECK: llvm.cmpxchg %{{.*}}, %{{.*}}, %{{.*}} acq_rel monotonic : !llvm.float
+  %0 = llvm.cmpxchg %ptr, %cmp, %new acq_rel monotonic : !llvm.float
+  llvm.return
+}

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Support/STLExtras.h"
 #include "mlir/Support/StringExtras.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Format.h"
@@ -1283,3 +1284,50 @@ static mlir::GenRegistration
                           [](const RecordKeeper &records, raw_ostream &os) {
                             return emitAvailabilityImpl(records, os);
                           });
+
+//===----------------------------------------------------------------------===//
+// SPIR-V Capability Implication AutoGen
+//===----------------------------------------------------------------------===//
+
+static bool emitCapabilityImplication(const RecordKeeper &recordKeeper,
+                                      raw_ostream &os) {
+  llvm::emitSourceFileHeader("SPIR-V Capability Implication", os);
+
+  EnumAttr enumAttr(recordKeeper.getDef("SPV_CapabilityAttr"));
+
+  os << "ArrayRef<Capability> "
+        "spirv::getDirectImpliedCapabilities(Capability cap) {\n"
+     << "  switch (cap) {\n"
+     << "  default: return {};\n";
+  for (const EnumAttrCase &enumerant : enumAttr.getAllCases()) {
+    const Record &def = enumerant.getDef();
+    if (!def.getValue("implies"))
+      continue;
+
+    std::vector<Record *> impliedCapsDefs = def.getValueAsListOfDefs("implies");
+    os << "  case Capability::" << enumerant.getSymbol()
+       << ": {static const Capability implies[" << impliedCapsDefs.size()
+       << "] = {";
+    mlir::interleaveComma(impliedCapsDefs, os, [&](const Record *capDef) {
+      os << "Capability::" << EnumAttrCase(capDef).getSymbol();
+    });
+    os << "}; return ArrayRef<Capability>(implies, " << impliedCapsDefs.size()
+       << "); }\n";
+  }
+  os << "  }\n";
+  os << "}\n";
+
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
+// SPIR-V Capability Implication Hook Registration
+//===----------------------------------------------------------------------===//
+
+static mlir::GenRegistration
+    genCapabilityImplication("gen-spirv-capability-implication",
+                             "Generate utility function to return implied "
+                             "capabilities for a given capability",
+                             [](const RecordKeeper &records, raw_ostream &os) {
+                               return emitCapabilityImplication(records, os);
+                             });

@@ -236,8 +236,14 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_TPREL_LO12_S:
     return R_TLS;
   case R_RISCV_RELAX:
-  case R_RISCV_ALIGN:
   case R_RISCV_TPREL_ADD:
+    return R_NONE;
+  case R_RISCV_ALIGN:
+    // Not just a hint; always padded to the worst-case number of NOPs, so may
+    // not currently be aligned, and without linker relaxation support we can't
+    // delete NOPs to realign.
+    errorOrWarn(getErrorLocation(loc) + "relocation R_RISCV_ALIGN requires "
+                "unimplemented linker relaxation; recompile with -mno-relax");
     return R_NONE;
   default:
     error(getErrorLocation(loc) + "unknown relocation (" + Twine(type) +
@@ -431,7 +437,6 @@ void RISCV::relocateOne(uint8_t *loc, const RelType type,
     write64le(loc, val - dtpOffset);
     break;
 
-  case R_RISCV_ALIGN:
   case R_RISCV_RELAX:
     return; // Ignored (for now)
 

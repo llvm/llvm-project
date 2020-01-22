@@ -1,5 +1,5 @@
 ## Don't crash if required information is absent
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj --dyn-syms %t
 
 --- !ELF

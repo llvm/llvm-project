@@ -1,5 +1,5 @@
 # REQUIRES: system-windows
-# RUN: yaml2obj %s > %t.o
+# RUN: yaml2obj %s -o %t.o
 # RUN: rm -f %t2.o
 # RUN: cp %t.o %t2.o
 # RUN: attrib +r %t2.o

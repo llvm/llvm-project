@@ -781,16 +781,22 @@ std::string PatternEmitter::handleOpCreation(DagNode tree, int resultIndex,
     return resultValue;
   }
 
-  bool isBroadcastable =
-      resultOp.getTrait("OpTrait::BroadcastableTwoOperandsOneResult");
+  // TODO: Remove once broadcastable has been updated. This query here is not
+  // really about broadcastable or not, it is about which build method to invoke
+  // and that requires knowledge of whether ODS generated a builder that need
+  // not take return types. That knowledge should be captured in one place
+  // rather than duplicated.
+  bool isResultsBroadcastableShape =
+      resultOp.getTrait("OpTrait::ResultsBroadcastableShape");
   bool usePartialResults = valuePackName != resultValue;
 
-  if (isBroadcastable || usePartialResults || depth > 0 || resultIndex < 0) {
+  if (isResultsBroadcastableShape || usePartialResults || depth > 0 ||
+      resultIndex < 0) {
     // For these cases (broadcastable ops, op results used both as auxiliary
     // values and replacement values, ops in nested patterns, auxiliary ops), we
     // still need to supply the result types when building the op. But because
     // we don't generate a builder automatically with ODS for them, it's the
-    // developer's responsiblity to make sure such a builder (with result type
+    // developer's responsibility to make sure such a builder (with result type
     // deduction ability) exists. We go through the separate-parameter builder
     // here given that it's easier for developers to write compared to
     // aggregate-parameter builders.

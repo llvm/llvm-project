@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: not llvm-lipo %t -info 2>&1 | FileCheck %s
 # CHECK: has unsupported binary format
 

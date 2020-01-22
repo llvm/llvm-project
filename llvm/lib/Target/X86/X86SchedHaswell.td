@@ -261,6 +261,7 @@ defm : HWWriteResPair<WriteFCmp64Y, [HWPort1],  3, [1], 1, 7>;
 defm : HWWriteResPair<WriteFCmp64Z, [HWPort1],  3, [1], 1, 7>; // Unsupported = 1
 
 defm : HWWriteResPair<WriteFCom,    [HWPort1],  3>;
+defm : HWWriteResPair<WriteFComX,   [HWPort1],  3>;
 
 defm : HWWriteResPair<WriteFMul,    [HWPort01],  5, [1], 1, 5>;
 defm : HWWriteResPair<WriteFMulX,   [HWPort01],  5, [1], 1, 6>;

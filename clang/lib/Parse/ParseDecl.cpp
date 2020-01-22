@@ -3177,7 +3177,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
              DSContext == DeclSpecContext::DSC_class) &&
             TemplateId->Name &&
             Actions.isCurrentClassName(*TemplateId->Name, getCurScope(), &SS) &&
-            isConstructorDeclarator(/*Unqualified*/ false)) {
+            isConstructorDeclarator(/*Unqualified=*/false)) {
           // The user meant this to be an out-of-line constructor
           // definition, but template arguments are not allowed
           // there.  Just allow this as a constructor; we'll
@@ -3189,7 +3189,7 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
         ConsumeAnnotationToken(); // The C++ scope.
         assert(Tok.is(tok::annot_template_id) &&
                "ParseOptionalCXXScopeSpecifier not working");
-        AnnotateTemplateIdTokenAsType();
+        AnnotateTemplateIdTokenAsType(SS);
         continue;
       }
 
@@ -3448,12 +3448,13 @@ void Parser::ParseDeclarationSpecifiers(DeclSpec &DS,
       // constructor declaration.
       if (getLangOpts().CPlusPlus && DSContext == DeclSpecContext::DSC_class &&
           Actions.isCurrentClassName(*TemplateId->Name, getCurScope()) &&
-          isConstructorDeclarator(TemplateId->SS.isEmpty()))
+          isConstructorDeclarator(/*Unqualified=*/true))
         goto DoneWithDeclSpec;
 
       // Turn the template-id annotation token into a type annotation
       // token, then try again to parse it as a type-specifier.
-      AnnotateTemplateIdTokenAsType();
+      CXXScopeSpec SS;
+      AnnotateTemplateIdTokenAsType(SS);
       continue;
     }
 
@@ -6365,7 +6366,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     ProhibitAttributes(FnAttrs);
   } else {
     if (Tok.isNot(tok::r_paren))
-      ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo,
+      ParseParameterDeclarationClause(D.getContext(), FirstArgAttrs, ParamInfo,
                                       EllipsisLoc);
     else if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
@@ -6583,9 +6584,9 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
 /// after the opening parenthesis. This function will not parse a K&R-style
 /// identifier list.
 ///
-/// D is the declarator being parsed.  If FirstArgAttrs is non-null, then the
-/// caller parsed those arguments immediately after the open paren - they should
-/// be considered to be part of the first parameter.
+/// DeclContext is the context of the declarator being parsed.  If FirstArgAttrs
+/// is non-null, then the caller parsed those attributes immediately after the
+/// open paren - they should be considered to be part of the first parameter.
 ///
 /// After returning, ParamInfo will hold the parsed parameters. EllipsisLoc will
 /// be the location of the ellipsis, if any was parsed.
@@ -6611,7 +6612,7 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
 /// [C++11] attribute-specifier-seq parameter-declaration
 ///
 void Parser::ParseParameterDeclarationClause(
-       Declarator &D,
+       DeclaratorContext DeclaratorCtx,
        ParsedAttributes &FirstArgAttrs,
        SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
        SourceLocation &EllipsisLoc) {
@@ -6660,9 +6661,11 @@ void Parser::ParseParameterDeclarationClause(
     // "LambdaExprParameterContext", because we must accept either
     // 'declarator' or 'abstract-declarator' here.
     Declarator ParmDeclarator(
-        DS, D.getContext() == DeclaratorContext::LambdaExprContext
-                ? DeclaratorContext::LambdaExprParameterContext
-                : DeclaratorContext::PrototypeContext);
+        DS, DeclaratorCtx == DeclaratorContext::RequiresExprContext
+                ? DeclaratorContext::RequiresExprContext
+                : DeclaratorCtx == DeclaratorContext::LambdaExprContext
+                      ? DeclaratorContext::LambdaExprParameterContext
+                      : DeclaratorContext::PrototypeContext);
     ParseDeclarator(ParmDeclarator);
 
     // Parse GNU attributes, if present.
@@ -6716,7 +6719,7 @@ void Parser::ParseParameterDeclarationClause(
         SourceLocation EqualLoc = Tok.getLocation();
 
         // Parse the default argument
-        if (D.getContext() == DeclaratorContext::MemberContext) {
+        if (DeclaratorCtx == DeclaratorContext::MemberContext) {
           // If we're inside a class definition, cache the tokens
           // corresponding to the default argument. We'll actually parse
           // them when we see the end of the class definition.

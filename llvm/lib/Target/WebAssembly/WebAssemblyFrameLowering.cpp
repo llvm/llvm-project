@@ -19,6 +19,7 @@
 
 #include "WebAssemblyFrameLowering.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssembly.h"
 #include "WebAssemblyInstrInfo.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
@@ -258,4 +259,21 @@ void WebAssemblyFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   writeSPToGlobal(SPReg, MF, MBB, InsertPt, DL);
+}
+
+TargetFrameLowering::DwarfFrameBase
+WebAssemblyFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
+  DwarfFrameBase Loc;
+  Loc.Kind = DwarfFrameBase::WasmFrameBase;
+  const WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
+  if (needsSP(MF)) {
+    unsigned LocalNum = MFI.getFrameBaseLocal();
+    Loc.Location.WasmLoc = {WebAssembly::TI_LOCAL_START, LocalNum};
+  } else {
+    // TODO: This should work on a breakpoint at a function with no frame,
+    // but probably won't work for traversing up the stack.
+    // TODO: This needs a relocation for correct __stack_pointer
+    Loc.Location.WasmLoc = {WebAssembly::TI_GLOBAL_START, 0};
+  }
+  return Loc;
 }

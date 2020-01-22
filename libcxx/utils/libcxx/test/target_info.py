@@ -19,6 +19,7 @@ from libcxx.util import executeCommand
 class DefaultTargetInfo(object):
     def __init__(self, full_config):
         self.full_config = full_config
+        self.executor = None
 
     def platform(self):
         return sys.platform.lower().strip()
@@ -50,39 +51,37 @@ class DefaultTargetInfo(object):
             dest_env['PATH'] = '%s%s%s' % (new_path, split_char,
                                            dest_env['PATH'])
 
+    def _test_locale(self, loc):
+        assert loc is not None
+        default_locale = locale.setlocale(locale.LC_ALL)
+        try:
+            locale.setlocale(locale.LC_ALL, loc)
+            return True
+        except locale.Error:
+            return False
+        finally:
+            locale.setlocale(locale.LC_ALL, default_locale)
 
-def test_locale(loc):
-    assert loc is not None
-    default_locale = locale.setlocale(locale.LC_ALL)
-    try:
-        locale.setlocale(locale.LC_ALL, loc)
-        return True
-    except locale.Error:
-        return False
-    finally:
-        locale.setlocale(locale.LC_ALL, default_locale)
-
-
-def add_common_locales(features, lit_config, is_windows=False):
-    # A list of locales needed by the test-suite.
-    # The list uses the canonical name for the locale used in the test-suite
-    # TODO: On Linux ISO8859 *may* needs to hyphenated.
-    locales = [
-        ('en_US.UTF-8', 'English_United States.1252'),
-        ('fr_FR.UTF-8', 'French_France.1252'),
-        ('ru_RU.UTF-8', 'Russian_Russia.1251'),
-        ('zh_CN.UTF-8', 'Chinese_China.936'),
-        ('fr_CA.ISO8859-1', 'French_Canada.1252'),
-        ('cs_CZ.ISO8859-2', 'Czech_Czech Republic.1250')
-    ]
-    for loc_id, windows_loc_name in locales:
-        loc_name = windows_loc_name if is_windows else loc_id
-        if test_locale(loc_name):
-            features.add('locale.{0}'.format(loc_id))
-        else:
-            lit_config.warning('The locale {0} is not supported by '
-                               'your platform. Some tests will be '
-                               'unsupported.'.format(loc_name))
+    def add_common_locales(self, features, is_windows=False):
+        # A list of locales needed by the test-suite.
+        # The list uses the canonical name for the locale used in the test-suite
+        # TODO: On Linux ISO8859 *may* needs to hyphenated.
+        locales = [
+            ('en_US.UTF-8', 'English_United States.1252'),
+            ('fr_FR.UTF-8', 'French_France.1252'),
+            ('ru_RU.UTF-8', 'Russian_Russia.1251'),
+            ('zh_CN.UTF-8', 'Chinese_China.936'),
+            ('fr_CA.ISO8859-1', 'French_Canada.1252'),
+            ('cs_CZ.ISO8859-2', 'Czech_Czech Republic.1250')
+        ]
+        for loc_id, windows_loc_name in locales:
+            loc_name = windows_loc_name if is_windows else loc_id
+            if self._test_locale(loc_name):
+                features.add('locale.{0}'.format(loc_id))
+            else:
+                self.full_config.lit_config.warning('The locale {0} is not supported by '
+                                'your platform. Some tests will be '
+                                'unsupported.'.format(loc_name))
 
 
 class DarwinLocalTI(DefaultTargetInfo):
@@ -136,7 +135,7 @@ class DarwinLocalTI(DefaultTargetInfo):
         return (True, name, version)
 
     def add_locale_features(self, features):
-        add_common_locales(features, self.full_config.lit_config)
+        self.add_common_locales(features)
 
     def add_cxx_compile_flags(self, flags):
         if self.full_config.use_deployment:
@@ -182,7 +181,7 @@ class FreeBSDLocalTI(DefaultTargetInfo):
         super(FreeBSDLocalTI, self).__init__(full_config)
 
     def add_locale_features(self, features):
-        add_common_locales(features, self.full_config.lit_config)
+        self.add_common_locales(features)
 
     def add_cxx_link_flags(self, flags):
         flags += ['-lc', '-lm', '-lpthread', '-lgcc_s', '-lcxxrt']
@@ -193,7 +192,7 @@ class NetBSDLocalTI(DefaultTargetInfo):
         super(NetBSDLocalTI, self).__init__(full_config)
 
     def add_locale_features(self, features):
-        add_common_locales(features, self.full_config.lit_config)
+        self.add_common_locales(features)
 
     def add_cxx_link_flags(self, flags):
         flags += ['-lc', '-lm', '-lpthread', '-lgcc_s', '-lc++abi',
@@ -207,20 +206,30 @@ class LinuxLocalTI(DefaultTargetInfo):
     def platform(self):
         return 'linux'
 
+    def _distribution(self):
+        try:
+            # linux_distribution is not available since Python 3.8
+            # However, this function is only used to detect SLES 11,
+            # which is quite an old distribution that doesn't have
+            # Python 3.8.
+            return platform.linux_distribution()
+        except AttributeError:
+            return '', '', ''
+
     def platform_name(self):
-        name, _, _ = platform.linux_distribution()
+        name, _, _ = self._distribution()
         # Some distros have spaces, e.g. 'SUSE Linux Enterprise Server'
         # lit features can't have spaces
         name = name.lower().strip().replace(' ', '-')
         return name # Permitted to be None
 
     def platform_ver(self):
-        _, ver, _ = platform.linux_distribution()
+        _, ver, _ = self._distribution()
         ver = ver.lower().strip().replace(' ', '-')
         return ver # Permitted to be None.
 
     def add_locale_features(self, features):
-        add_common_locales(features, self.full_config.lit_config)
+        self.add_common_locales(features)
         # Some linux distributions have different locale data than others.
         # Insert the distributions name and name-version into the available
         # features to allow tests to XFAIL on them.
@@ -268,14 +277,30 @@ class LinuxLocalTI(DefaultTargetInfo):
             # clang/lib/Driver/Tools.cpp
             flags += ['-lpthread', '-lrt', '-lm', '-ldl']
 
+class LinuxRemoteTI(LinuxLocalTI):
+    def __init__(self, full_config):
+        super(LinuxRemoteTI, self).__init__(full_config)
+        self.__cached_locales = None
+    
+    def _test_locale(self, loc):
+        if self.__cached_locales is None:
+            self.full_config.lit_config.note('asking the remote host for supported locales...')
+            _, out, err, exit_code = self.executor.execute_command_remote(['locale', '-a'])
+            if exit_code != 0:
+                raise RuntimeError(err)
+            self.__cached_locales = out.splitlines()
+
+        # It is possible that the output will use 'en_US.utf8' instead of 'en_US.UTF-8',
+        # so we check both variants.
+        return loc in self.__cached_locales or \
+               loc.replace('UTF-8', 'utf8') in self.__cached_locales
 
 class WindowsLocalTI(DefaultTargetInfo):
     def __init__(self, full_config):
         super(WindowsLocalTI, self).__init__(full_config)
 
     def add_locale_features(self, features):
-        add_common_locales(features, self.full_config.lit_config,
-                           is_windows=True)
+        self.add_common_locales(features, is_windows=True)
 
     def use_lit_shell_default(self):
         # Default to the internal shell on Windows, as bash on Windows is

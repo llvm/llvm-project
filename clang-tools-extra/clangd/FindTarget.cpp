@@ -614,6 +614,10 @@ llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
     }
 
     void VisitMemberExpr(const MemberExpr *E) {
+      // Skip destructor calls to avoid duplication: TypeLoc within will be
+      // visited separately.
+      if (llvm::dyn_cast<CXXDestructorDecl>(E->getFoundDecl().getDecl()))
+        return;
       Refs.push_back(ReferenceLoc{E->getQualifierLoc(),
                                   E->getMemberNameInfo().getLoc(),
                                   /*IsDecl=*/false,
@@ -689,6 +693,13 @@ llvm::SmallVector<ReferenceLoc, 2> refInTypeLoc(TypeLoc L) {
           NestedNameSpecifierLoc(), L.getNameLoc(), /*IsDecl=*/false,
           explicitReferenceTargets(DynTypedNode::create(L.getType()),
                                    DeclRelation::Alias)};
+    }
+
+    void VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
+      Ref = ReferenceLoc{NestedNameSpecifierLoc(),
+                         TL.getNameLoc(),
+                         /*IsDecl=*/false,
+                         {TL.getDecl()}};
     }
 
     void VisitDependentTemplateSpecializationTypeLoc(

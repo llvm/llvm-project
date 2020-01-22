@@ -324,15 +324,18 @@ llvm_config.feature_config(
      ('--has-global-isel', {'ON': 'global-isel'})])
 
 if 'darwin' == sys.platform:
-    try:
-        sysctl_cmd = subprocess.Popen(['sysctl', 'hw.optional.fma'],
-                                      stdout=subprocess.PIPE)
-    except OSError:
-        print('Could not exec sysctl')
-    result = sysctl_cmd.stdout.read().decode('ascii')
-    if -1 != result.find('hw.optional.fma: 1'):
-        config.available_features.add('fma3')
-    sysctl_cmd.wait()
+    cmd = ['sysctl', 'hw.optional.fma']
+    sysctl_cmd = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+
+    # Non zero return, probably a permission issue
+    if sysctl_cmd.wait():
+        print(
+          "Warning: sysctl exists but calling \"{}\" failed, defaulting to no fma3.".format(
+          " ".join(cmd)))
+    else:
+        result = sysctl_cmd.stdout.read().decode('ascii')
+        if 'hw.optional.fma: 1' in result:
+            config.available_features.add('fma3')
 
 # .debug_frame is not emitted for targeting Windows x64.
 if not re.match(r'^x86_64.*-(windows-gnu|windows-msvc)', config.target_triple):

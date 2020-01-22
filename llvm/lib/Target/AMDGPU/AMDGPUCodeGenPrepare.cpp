@@ -654,7 +654,6 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
   if (IsSigned)
     ++DivBits;
 
-  Type *Ty = Num->getType();
   Type *I32Ty = Builder.getInt32Ty();
   Type *F32Ty = Builder.getFloatTy();
   ConstantInt *One = Builder.getInt32(1);
@@ -725,10 +724,10 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
     Res = Builder.CreateSub(Num, Rem);
   }
 
-  // Truncate to number of bits this divide really is.
+  // Extend in register from the number of bits this divide really is.
   if (IsSigned) {
-    Res = Builder.CreateTrunc(Res, Builder.getIntNTy(DivBits));
-    Res = Builder.CreateSExt(Res, Ty);
+    Res = Builder.CreateShl(Res, 32 - DivBits);
+    Res = Builder.CreateAShr(Res, 32 - DivBits);
   } else {
     ConstantInt *TruncMask = Builder.getInt32((UINT64_C(1) << DivBits) - 1);
     Res = Builder.CreateAnd(Res, TruncMask);

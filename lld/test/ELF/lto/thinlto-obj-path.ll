@@ -7,8 +7,7 @@
 ; RUN: rm -f %t4.o
 ; RUN: ld.lld --plugin-opt=thinlto-index-only --plugin-opt=obj-path=%t4.o -shared %t1.o %t2.o -o /dev/null
 ; RUN: llvm-readobj -h %t4.o | FileCheck %s
-; RUN: llvm-nm %t4.o 2>&1 | FileCheck %s -check-prefix=NO-SYMBOLS
-; NO-SYMBOLS: no symbols
+; RUN: llvm-nm %t4.o 2>&1 | count 0
 
 ; Check that this also works without the --plugin-opt= prefix.
 ; RUN: rm -f %t4.o

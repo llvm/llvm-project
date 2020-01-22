@@ -65,7 +65,7 @@ enum {
   NewDef_Shift = 6,
 
   /// This instruction is an X-Form memory operation.
-  XFormMemOp = 0x1 << (NewDef_Shift+1)
+  XFormMemOp = 0x1 << NewDef_Shift
 };
 } // end namespace PPCII
 
@@ -273,7 +273,8 @@ public:
 
   // Select analysis.
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
-                       unsigned, unsigned, int &, int &, int &) const override;
+                       unsigned, unsigned, unsigned, int &, int &,
+                       int &) const override;
   void insertSelect(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                     const DebugLoc &DL, unsigned DstReg,
                     ArrayRef<MachineOperand> Cond, unsigned TrueReg,

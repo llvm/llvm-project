@@ -131,7 +131,15 @@ def get_cc1_command_for_args(cmd, env):
       print('Fatal error: unable to determine cc1 command: %r' % cc_output)
       exit(1)
 
-  cc1_cmd = shlex.split(cc_commands[0])
+  cc_command = cc_commands[0]
+
+  # When cc1 runs in the same process as the driver, it prefixes the cc1
+  # invocation with ' (in-process)'. Skip it.
+  skip_pfx_line = ' (in-process)'
+  if cc_command.startswith(skip_pfx_line):
+      cc_command = cc_command[len(skip_pfx_line):]
+
+  cc1_cmd = shlex.split(cc_command)
   if not cc1_cmd:
       print('Fatal error: unable to determine cc1 command: %r' % cc_output)
       exit(1)

@@ -54,7 +54,31 @@ multiclass CALL<ValueType vt, WebAssemblyRegClass rt, string prefix,
     Requires<preds>;
 }
 
+// CALL should take both variadic arguments and produce variadic results, but
+// this is not possible to model directly. Instead, we select calls to a
+// CALL_PARAMS taking variadic aguments linked with a CALL_RESULTS that handles
+// producing the call's variadic results. We recombine the two in a custom
+// inserter hook after DAG ISel, so passes over MachineInstrs will only ever
+// observe CALL nodes with all of the expected variadic uses and defs.
+let isPseudo = 1 in
+defm CALL_PARAMS :
+  I<(outs), (ins function32_op:$callee, variable_ops),
+    (outs), (ins function32_op:$callee), [],
+    "call_params\t$callee", "call_params\t$callee", -1>;
+
+let variadicOpsAreDefs = 1, usesCustomInserter = 1, isPseudo = 1 in
+defm CALL_RESULTS :
+  I<(outs), (ins variable_ops), (outs), (ins), [],
+     "call_results", "call_results", -1>;
+
 let Uses = [SP32, SP64], isCall = 1 in {
+
+// TODO: Add an indirect version of the variadic call, delete CALL_*
+defm CALL :
+  I<(outs), (ins function32_op:$callee, variable_ops),
+    (outs), (ins function32_op:$callee), [],
+    "call\t$callee", "call\t$callee", 0x10>;
+
 defm "" : CALL<i32, I32, "i32.">;
 defm "" : CALL<i64, I64, "i64.">;
 defm "" : CALL<f32, F32, "f32.">;
@@ -68,6 +92,7 @@ defm "" : CALL<v4f32, V128, "v128.", [HasSIMD128]>;
 defm "" : CALL<v2f64, V128, "v128.", [HasSIMD128]>;
 
 let IsCanonical = 1 in {
+
 defm CALL_VOID :
   I<(outs), (ins function32_op:$callee, variable_ops),
     (outs), (ins function32_op:$callee),

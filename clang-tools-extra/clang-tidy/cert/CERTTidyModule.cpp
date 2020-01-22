@@ -9,8 +9,9 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
 #include "../ClangTidyModuleRegistry.h"
-#include "../bugprone/UnhandledSelfAssignmentCheck.h"
 #include "../bugprone/BadSignalToKillThreadCheck.h"
+#include "../bugprone/ReservedIdentifierCheck.h"
+#include "../bugprone/UnhandledSelfAssignmentCheck.h"
 #include "../google/UnnamedNamespaceInHeaderCheck.h"
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/NonCopyableObjects.h"
@@ -24,6 +25,7 @@
 #include "FloatLoopCounter.h"
 #include "LimitedRandomnessCheck.h"
 #include "MutatingCopyCheck.h"
+#include "NonTrivialTypesLibcMemoryCallsCheck.h"
 #include "PostfixOperatorCheck.h"
 #include "ProperlySeededRandomGeneratorCheck.h"
 #include "SetLongJmpCheck.h"
@@ -44,6 +46,8 @@ public:
     CheckFactories.registerCheck<PostfixOperatorCheck>(
         "cert-dcl21-cpp");
     CheckFactories.registerCheck<VariadicFunctionDefCheck>("cert-dcl50-cpp");
+    CheckFactories.registerCheck<bugprone::ReservedIdentifierCheck>(
+        "cert-dcl51-cpp");
     CheckFactories.registerCheck<misc::NewDeleteOverloadsCheck>(
         "cert-dcl54-cpp");
     CheckFactories.registerCheck<DontModifyStdNamespaceCheck>(
@@ -70,6 +74,8 @@ public:
         "cert-oop11-cpp");
     CheckFactories.registerCheck<bugprone::UnhandledSelfAssignmentCheck>(
         "cert-oop54-cpp");
+    CheckFactories.registerCheck<NonTrivialTypesLibcMemoryCallsCheck>(
+        "cert-oop57-cpp");
     CheckFactories.registerCheck<MutatingCopyCheck>(
         "cert-oop58-cpp");
 
@@ -78,6 +84,8 @@ public:
     CheckFactories.registerCheck<misc::StaticAssertCheck>("cert-dcl03-c");
     CheckFactories.registerCheck<readability::UppercaseLiteralSuffixCheck>(
         "cert-dcl16-c");
+    CheckFactories.registerCheck<bugprone::ReservedIdentifierCheck>(
+        "cert-dcl37-c");
     // ENV
     CheckFactories.registerCheck<CommandProcessorCheck>("cert-env33-c");
     // FLP

@@ -766,6 +766,7 @@ defm : PdWriteResYMMPair<WriteFCmp64Y,      [PdFPU0, PdFPFMA],  2, [1, 2]>;
 defm : X86WriteResPairUnsupported<WriteFCmp64Z>;
 
 defm : PdWriteResXMMPair<WriteFCom,         [PdFPU0, PdFPFMA, PdEX0], 1, [], 2>;
+defm : PdWriteResXMMPair<WriteFComX,        [PdFPU0, PdFPFMA, PdEX0], 1, [], 2>;
 
 def PdWriteFCOMPm : SchedWriteRes<[PdFPU1, PdFPFMA]> {
   let Latency = 6;

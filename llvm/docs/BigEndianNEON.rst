@@ -12,7 +12,7 @@ Generating code for big endian ARM processors is for the most part straightforwa
 
 The aim of this document is to explain the problem with NEON loads and stores, and the solution that has been implemented in LLVM.
 
-In this document the term "vector" refers to what the ARM ABI calls a "short vector", which is a sequence of items that can fit in a NEON register. This sequence can be 64 or 128 bits in length, and can constitute 8, 16, 32 or 64 bit items. This document refers to A64 instructions throughout, but is almost applicable to the A32/ARMv7 instruction sets also. The ABI format for passing vectors in A32 is sligtly different to A64. Apart from that, the same concepts apply.
+In this document the term "vector" refers to what the ARM ABI calls a "short vector", which is a sequence of items that can fit in a NEON register. This sequence can be 64 or 128 bits in length, and can constitute 8, 16, 32 or 64 bit items. This document refers to A64 instructions throughout, but is almost applicable to the A32/ARMv7 instruction sets also. The ABI format for passing vectors in A32 is slightly different to A64. Apart from that, the same concepts apply.
 
 Example: C-level intrinsics -> assembly
 ---------------------------------------

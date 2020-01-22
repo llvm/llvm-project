@@ -182,8 +182,8 @@ public:
   IRSpeculationLayer(ExecutionSession &ES, IRCompileLayer &BaseLayer,
                      Speculator &Spec, MangleAndInterner &Mangle,
                      ResultEval Interpreter)
-      : IRLayer(ES), NextLayer(BaseLayer), S(Spec), Mangle(Mangle),
-        QueryAnalysis(Interpreter) {}
+      : IRLayer(ES, BaseLayer.getManglingOptions()), NextLayer(BaseLayer),
+        S(Spec), Mangle(Mangle), QueryAnalysis(Interpreter) {}
 
   void emit(MaterializationResponsibility R, ThreadSafeModule TSM);
 

@@ -2567,10 +2567,6 @@ def Capability : InheritableAttr {
   let Accessors = [Accessor<"isShared",
                     [Clang<"shared_capability", 0>]>];
   let Documentation = [Undocumented];
-  let AdditionalMembers = [{
-    bool isMutex() const { return getName().equals_lower("mutex"); }
-    bool isRole() const { return getName().equals_lower("role"); }
-  }];
 }
 
 def AssertCapability : InheritableAttr {

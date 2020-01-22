@@ -30,12 +30,14 @@
 #include "MacroParenthesesCheck.h"
 #include "MacroRepeatedSideEffectsCheck.h"
 #include "MisplacedOperatorInStrlenInAllocCheck.h"
+#include "MisplacedPointerArithmeticInAllocCheck.h"
 #include "MisplacedWideningCastCheck.h"
 #include "MoveForwardingReferenceCheck.h"
 #include "MultipleStatementMacroCheck.h"
 #include "NotNullTerminatedResultCheck.h"
 #include "ParentVirtualCallCheck.h"
 #include "PosixReturnCheck.h"
+#include "ReservedIdentifierCheck.h"
 #include "SignedCharMisuseCheck.h"
 #include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
@@ -106,6 +108,8 @@ public:
         "bugprone-macro-repeated-side-effects");
     CheckFactories.registerCheck<MisplacedOperatorInStrlenInAllocCheck>(
         "bugprone-misplaced-operator-in-strlen-in-alloc");
+    CheckFactories.registerCheck<MisplacedPointerArithmeticInAllocCheck>(
+        "bugprone-misplaced-pointer-arithmetic-in-alloc");
     CheckFactories.registerCheck<MisplacedWideningCastCheck>(
         "bugprone-misplaced-widening-cast");
     CheckFactories.registerCheck<MoveForwardingReferenceCheck>(
@@ -120,6 +124,8 @@ public:
         "bugprone-parent-virtual-call");
     CheckFactories.registerCheck<PosixReturnCheck>(
         "bugprone-posix-return");
+    CheckFactories.registerCheck<ReservedIdentifierCheck>(
+        "bugprone-reserved-identifier");
     CheckFactories.registerCheck<SignedCharMisuseCheck>(
         "bugprone-signed-char-misuse");
     CheckFactories.registerCheck<SizeofContainerCheck>(

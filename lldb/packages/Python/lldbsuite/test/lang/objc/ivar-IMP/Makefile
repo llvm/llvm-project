@@ -1,13 +1,8 @@
-CFLAGS := -g -O0
-CFLAGS_NO_DEBUG = 
-
-all: aout
-
-aout: 
-	$(CC) $(CFLAGS_NO_DEBUG) $(SRCDIR)/myclass.m -c -o myclass.o
-	$(CC) $(CFLAGS) myclass.o $(SRCDIR)/repro.m -framework Foundation
-
-clean::
-	rm -f myclass.o
+OBJC_SOURCES := myclass.m repro.m
+LD_EXTRAS := -framework Foundation
 
 include Makefile.rules
+
+# Force myclass.m to be compiled without debug info
+myclass.o: CFLAGS = $(CFLAGS_NO_DEBUG)
+

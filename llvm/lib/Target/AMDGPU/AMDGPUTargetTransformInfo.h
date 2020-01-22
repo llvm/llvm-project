@@ -136,6 +136,7 @@ public:
       HasFP32Denormals(ST->hasFP32Denormals(F)) { }
 
   bool hasBranchDivergence() { return true; }
+  bool useGPUDivergenceAnalysis() const;
 
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);

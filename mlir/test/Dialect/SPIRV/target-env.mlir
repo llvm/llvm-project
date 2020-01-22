@@ -11,16 +11,30 @@
 // whose value, if containing AtomicCounterMemory bit, additionally requires
 // AtomicStorage capability.
 
+// spv.BitReverse is available in all SPIR-V versions under Shader capability.
+
 // spv.GroupNonUniformBallot is available starting from SPIR-V 1.3 under
 // GroupNonUniform capability.
 
 // spv.SubgroupBallotKHR is available under in all SPIR-V versions under
 // SubgroupBallotKHR capability and SPV_KHR_shader_ballot extension.
 
+// The GeometryPointSize capability implies the Geometry capability, which
+// implies the Shader capability.
+
+// PhysicalStorageBuffer64 addressing model is available via extension
+// SPV_EXT_physical_storage_buffer or SPV_KHR_physical_storage_buffer;
+// both extensions are incorporated into SPIR-V 1.5.
+
+// Vulkan memory model is available via extension SPV_KHR_vulkan_memory_model,
+// which extensions are incorporated into SPIR-V 1.5.
+
 // Enum case symbol (value) map:
-// Version: 1.0 (0), 1.1 (1), 1.2 (2), 1.3 (3), 1.4 (4)
-// Capability: Kernel (6), AtomicStorage (21), GroupNonUniformBallot (64),
-//             SubgroupBallotKHR (4423)
+// Version: 1.0 (0), 1.1 (1), 1.2 (2), 1.3 (3), 1.4 (4), 1.5 (5)
+// Capability: Shader (1), Geometry (2), Kernel (6), AtomicStorage (21),
+//             GeometryPointSize (24), GroupNonUniformBallot (64),
+//             SubgroupBallotKHR (4423), VulkanMemoryModel (5345),
+//             PhysicalStorageBufferAddresses (5347)
 
 //===----------------------------------------------------------------------===//
 // MaxVersion
@@ -97,6 +111,24 @@ func @subgroup_ballot_missing_capability(%predicate: i1) -> vector<4xi32> attrib
   return %0: vector<4xi32>
 }
 
+// CHECK-LABEL: @bit_reverse_directly_implied_capability
+func @bit_reverse_directly_implied_capability(%operand: i32) -> i32 attributes {
+  spv.target_env = {version = 0: i32, extensions = [], capabilities = [2: i32]}
+} {
+  // CHECK: spv.BitReverse
+  %0 = "test.convert_to_bit_reverse_op"(%operand): (i32) -> (i32)
+  return %0: i32
+}
+
+// CHECK-LABEL: @bit_reverse_recursively_implied_capability
+func @bit_reverse_recursively_implied_capability(%operand: i32) -> i32 attributes {
+  spv.target_env = {version = 0: i32, extensions = [], capabilities = [24: i32]}
+} {
+  // CHECK: spv.BitReverse
+  %0 = "test.convert_to_bit_reverse_op"(%operand): (i32) -> (i32)
+  return %0: i32
+}
+
 //===----------------------------------------------------------------------===//
 // Extension
 //===----------------------------------------------------------------------===//
@@ -117,4 +149,50 @@ func @subgroup_ballot_missing_extension(%predicate: i1) -> vector<4xi32> attribu
   // CHECK: test.convert_to_subgroup_ballot_op
   %0 = "test.convert_to_subgroup_ballot_op"(%predicate): (i1) -> (vector<4xi32>)
   return %0: vector<4xi32>
+}
+
+// CHECK-LABEL: @module_suitable_extension1
+func @module_suitable_extension1() attributes {
+  spv.target_env = {version = 0: i32, extensions = ["SPV_KHR_vulkan_memory_model", "SPV_EXT_physical_storage_buffer"], capabilities = [5345: i32, 5347: i32]}
+} {
+  // CHECK: spv.module "PhysicalStorageBuffer64" "Vulkan"
+  "test.convert_to_module_op"() : () ->()
+  return
+}
+
+// CHECK-LABEL: @module_suitable_extension2
+func @module_suitable_extension2() attributes {
+  spv.target_env = {version = 0: i32, extensions = ["SPV_KHR_vulkan_memory_model", "SPV_KHR_physical_storage_buffer"], capabilities = [5345: i32, 5347: i32]}
+} {
+  // CHECK: spv.module "PhysicalStorageBuffer64" "Vulkan"
+  "test.convert_to_module_op"() : () -> ()
+  return
+}
+
+// CHECK-LABEL: @module_missing_extension_mm
+func @module_missing_extension_mm() attributes {
+  spv.target_env = {version = 0: i32, extensions = ["SPV_KHR_physical_storage_buffer"], capabilities = [5345: i32, 5347: i32]}
+} {
+  // CHECK: test.convert_to_module_op
+  "test.convert_to_module_op"() : () -> ()
+  return
+}
+
+// CHECK-LABEL: @module_missing_extension_am
+func @module_missing_extension_am() attributes {
+  spv.target_env = {version = 0: i32, extensions = ["SPV_KHR_vulkan_memory_model"], capabilities = [5345: i32, 5347: i32]}
+} {
+  // CHECK: test.convert_to_module_op
+  "test.convert_to_module_op"() : () -> ()
+  return
+}
+
+// CHECK-LABEL: @module_implied_extension
+func @module_implied_extension() attributes {
+  // Version 1.5 implies SPV_KHR_vulkan_memory_model and SPV_KHR_physical_storage_buffer.
+  spv.target_env = {version = 5: i32, extensions = [], capabilities = [5345: i32, 5347: i32]}
+} {
+  // CHECK: spv.module "PhysicalStorageBuffer64" "Vulkan"
+  "test.convert_to_module_op"() : () -> ()
+  return
 }

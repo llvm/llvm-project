@@ -97,6 +97,17 @@ class SOP1_0_32 <string opName, list<dag> pattern = []> : SOP1_Pseudo <
   let has_sdst = 0;
 }
 
+// Special case for movreld where sdst is treated as a use operand.
+class SOP1_32_movreld <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
+  opName, (outs), (ins SReg_32:$sdst, SSrc_b32:$src0),
+  "$sdst, $src0", pattern>;
+
+// Special case for movreld where sdst is treated as a use operand.
+class SOP1_64_movreld <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
+  opName, (outs), (ins SReg_64:$sdst, SSrc_b64:$src0),
+  "$sdst, $src0", pattern
+>;
+
 class SOP1_0_32R <string opName, list<dag> pattern = []> : SOP1_Pseudo <
   opName, (outs), (ins SReg_32:$src0),
   "$src0", pattern> {
@@ -267,8 +278,8 @@ def S_QUADMASK_B64 : SOP1_64 <"s_quadmask_b64">;
 let Uses = [M0] in {
 def S_MOVRELS_B32 : SOP1_32R <"s_movrels_b32">;
 def S_MOVRELS_B64 : SOP1_64R <"s_movrels_b64">;
-def S_MOVRELD_B32 : SOP1_32 <"s_movreld_b32">;
-def S_MOVRELD_B64 : SOP1_64 <"s_movreld_b64">;
+def S_MOVRELD_B32 : SOP1_32_movreld <"s_movreld_b32">;
+def S_MOVRELD_B64 : SOP1_64_movreld <"s_movreld_b64">;
 } // End Uses = [M0]
 
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9 in {

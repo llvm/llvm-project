@@ -12,15 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Support/STLExtras.h"
+#include "mlir/Support/StringExtras.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
-#include "mlir/TableGen/ODSDialectHook.h"
 #include "mlir/TableGen/OpClass.h"
 #include "mlir/TableGen/OpInterfaces.h"
 #include "mlir/TableGen/OpTrait.h"
 #include "mlir/TableGen/Operator.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -28,34 +27,9 @@
 
 #define DEBUG_TYPE "mlir-tblgen-opdefgen"
 
+using namespace llvm;
 using namespace mlir;
 using namespace mlir::tblgen;
-
-using llvm::CodeInit;
-using llvm::DefInit;
-using llvm::formatv;
-using llvm::Init;
-using llvm::ListInit;
-using llvm::Record;
-using llvm::RecordKeeper;
-using llvm::StringInit;
-
-//===----------------------------------------------------------------------===//
-// Dialect hook registration
-//===----------------------------------------------------------------------===//
-
-static llvm::ManagedStatic<llvm::StringMap<DialectEmitFunction>> dialectHooks;
-
-ODSDialectHookRegistration::ODSDialectHookRegistration(
-    StringRef dialectName, DialectEmitFunction emitFn) {
-  bool inserted = dialectHooks->try_emplace(dialectName, emitFn).second;
-  assert(inserted && "Multiple ODS hooks for the same dialect!");
-  (void)inserted;
-}
-
-//===----------------------------------------------------------------------===//
-// Static string definitions
-//===----------------------------------------------------------------------===//
 
 static const char *const tblgenNamePrefix = "tblgen_";
 static const char *const generatedArgName = "odsArg";
@@ -117,6 +91,17 @@ static const char *const opCommentHeader = R"(
 //===----------------------------------------------------------------------===//
 // Utility structs and functions
 //===----------------------------------------------------------------------===//
+
+// Replaces all occurrences of `match` in `str` with `substitute`.
+static std::string replaceAllSubstrs(std::string str, const std::string &match,
+                                     const std::string &substitute) {
+  std::string::size_type scanLoc = 0, matchLoc = std::string::npos;
+  while ((matchLoc = str.find(match, scanLoc)) != std::string::npos) {
+    str = str.replace(matchLoc, match.size(), substitute);
+    scanLoc = matchLoc + substitute.size();
+  }
+  return str;
+}
 
 // Returns whether the record has a value of the given name that can be returned
 // via getValueAsString.
@@ -306,7 +291,6 @@ OpEmitter::OpEmitter(const Operator &op)
   verifyCtx.withOp("(*this->getOperation())");
 
   genTraits();
-
   // Generate C++ code for various op methods. The order here determines the
   // methods in the generated file.
   genOpAsmInterface();
@@ -322,13 +306,6 @@ OpEmitter::OpEmitter(const Operator &op)
   genCanonicalizerDecls();
   genFolderDecls();
   genOpInterfaceMethods();
-
-  // If a dialect hook is registered for this op's dialect, emit dialect
-  // specific content.
-  auto dialectHookIt = dialectHooks->find(op.getDialectName());
-  if (dialectHookIt != dialectHooks->end()) {
-    dialectHookIt->second(op, opClass);
-  }
 }
 
 void OpEmitter::emitDecl(const Operator &op, raw_ostream &os) {
@@ -1003,8 +980,17 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
         // instance.
         FmtContext fctx;
         fctx.withBuilder("(*odsBuilder)");
-        std::string value =
-            tgfmt(attr.getConstBuilderTemplate(), &fctx, namedAttr.name);
+
+        std::string builderTemplate = attr.getConstBuilderTemplate();
+
+        // For StringAttr, its constant builder call will wrap the input in
+        // quotes, which is correct for normal string literals, but incorrect
+        // here given we use function arguments. So we need to strip the
+        // wrapping quotes.
+        if (StringRef(builderTemplate).contains("\"$0\""))
+          builderTemplate = replaceAllSubstrs(builderTemplate, "\"$0\"", "$0");
+
+        std::string value = tgfmt(builderTemplate, &fctx, namedAttr.name);
         body << formatv("  {0}.addAttribute(\"{1}\", {2});\n", builderOpState,
                         namedAttr.name, value);
       } else {

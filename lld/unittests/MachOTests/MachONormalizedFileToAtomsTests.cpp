@@ -106,7 +106,7 @@ TEST(ToAtomsTest, reservedUnitLength) {
       0xef, 0xff, 0xff, 0xff, // The maximum valid length value for DWARF32
       0x00, 0x00              // Wrong version
   };
-  static const uint8_t debugAbbrevDummyContent[] = {0x00};
+  static const uint8_t dummyContent[] = {0x00};
 
   NormalizedFile fReservedLength, fValidBigLength;
   fReservedLength.arch = lld::MachOLinkingContext::arch_x86;
@@ -119,7 +119,10 @@ TEST(ToAtomsTest, reservedUnitLength) {
   section.content = llvm::makeArrayRef(debugInfoWithValidBigLengthContent);
   fValidBigLength.sections.push_back(section);
   section.sectionName = "__debug_abbrev";
-  section.content = llvm::makeArrayRef(debugAbbrevDummyContent);
+  section.content = llvm::makeArrayRef(dummyContent);
+  fReservedLength.sections.push_back(section);
+  fValidBigLength.sections.push_back(section);
+  section.sectionName = "__debug_str";
   fReservedLength.sections.push_back(section);
   fValidBigLength.sections.push_back(section);
 

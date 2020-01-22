@@ -21,6 +21,18 @@ using namespace lldb_private;
 LineTable::LineTable(CompileUnit *comp_unit)
     : m_comp_unit(comp_unit), m_entries() {}
 
+LineTable::LineTable(CompileUnit *comp_unit,
+                     std::vector<std::unique_ptr<LineSequence>> &&sequences)
+    : m_comp_unit(comp_unit), m_entries() {
+  LineTable::Entry::LessThanBinaryPredicate less_than_bp(this);
+  llvm::stable_sort(sequences, less_than_bp);
+  for (const auto &sequence : sequences) {
+    LineSequenceImpl *seq = static_cast<LineSequenceImpl *>(sequence.get());
+    m_entries.insert(m_entries.end(), seq->m_entries.begin(),
+                     seq->m_entries.end());
+  }
+}
+
 // Destructor
 LineTable::~LineTable() {}
 
@@ -50,8 +62,8 @@ LineSequence::LineSequence() {}
 
 void LineTable::LineSequenceImpl::Clear() { m_entries.clear(); }
 
-LineSequence *LineTable::CreateLineSequenceContainer() {
-  return new LineTable::LineSequenceImpl();
+std::unique_ptr<LineSequence> LineTable::CreateLineSequenceContainer() {
+  return std::make_unique<LineTable::LineSequenceImpl>();
 }
 
 void LineTable::AppendLineEntryToSequence(
@@ -152,6 +164,14 @@ operator()(const LineTable::Entry &a, const LineTable::Entry &b) const {
   LT_COMPARE(a.file_idx, b.file_idx);
   return false;
 #undef LT_COMPARE
+}
+
+bool LineTable::Entry::LessThanBinaryPredicate::
+operator()(const std::unique_ptr<LineSequence> &sequence_a,
+           const std::unique_ptr<LineSequence> &sequence_b) const {
+  auto *seq_a = static_cast<const LineSequenceImpl *>(sequence_a.get());
+  auto *seq_b = static_cast<const LineSequenceImpl *>(sequence_b.get());
+  return (*this)(seq_a->m_entries.front(), seq_b->m_entries.front());
 }
 
 uint32_t LineTable::GetSize() const { return m_entries.size(); }

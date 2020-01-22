@@ -305,11 +305,6 @@ bool SIRegisterInfo::requiresVirtualBaseRegisters(
   return true;
 }
 
-bool SIRegisterInfo::trackLivenessAfterRegAlloc(const MachineFunction &MF) const {
-  // This helps catch bugs as verifier errors.
-  return true;
-}
-
 int64_t SIRegisterInfo::getMUBUFInstrOffset(const MachineInstr *MI) const {
   assert(SIInstrInfo::isMUBUF(*MI));
 

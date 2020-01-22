@@ -153,7 +153,7 @@ TargetRegisterInfo           tri
 In some cases renaming acronyms to the full type name will result in overly
 verbose code. Unlike most classes, a variable's scope is limited and therefore
 some of its purpose can implied from that scope, meaning that fewer words are
-necessary to give it a clear name. For example, in an optization pass the reader
+necessary to give it a clear name. For example, in an optimization pass the reader
 can assume that a variable's purpose relates to optimization and therefore an
 ``OptimizationRemarkEmitter`` variable could be given the name ``remarkEmitter``
 or even ``remarker``.

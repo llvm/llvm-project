@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 
 # Single flags on a section with no flags:
 # RUN: llvm-objcopy --rename-section=.foo=.bar,alloc  \
@@ -13,6 +13,9 @@
 # RUN: llvm-objcopy --rename-section=.foo=.bar,readonly  \
 # RUN:   --rename-section=.baz=.blah,readonly %t %t.readonly
 # RUN: llvm-readobj --sections %t.readonly | FileCheck %s --check-prefixes=CHECK,PROGBITS
+# RUN: llvm-objcopy --rename-section=.foo=.bar,exclude  \
+# RUN:   --rename-section=.baz=.blah,exclude %t %t.exclude
+# RUN: llvm-readobj --sections %t.exclude | FileCheck %s --check-prefixes=CHECK,PROGBITS,EXCLUDE,WRITE
 # RUN: llvm-objcopy --rename-section=.foo=.bar,debug  \
 # RUN:   --rename-section=.baz=.blah,debug %t %t.debug
 # RUN: llvm-readobj --sections %t.debug | FileCheck %s --check-prefixes=CHECK,PROGBITS,WRITE
@@ -81,6 +84,7 @@ Sections:
 # EXEC-NEXT:       SHF_EXECINSTR (0x4)
 # MERGE-NEXT:      SHF_MERGE (0x10)
 # STRINGS-NEXT:    SHF_STRINGS (0x20)
+# EXCLUDE-NEXT:    SHF_EXCLUDE (0x80000000)
 # WRITE-NEXT:      SHF_WRITE (0x1)
 # CHECK-NEXT:    ]
 
@@ -92,7 +96,8 @@ Sections:
 # EXEC-NEXT:       SHF_EXECINSTR (0x4)
 # MERGE-NEXT:      SHF_MERGE (0x10)
 # STRINGS-NEXT:    SHF_STRINGS (0x20)
+# EXCLUDE-NEXT:    SHF_EXCLUDE (0x80000000)
 # WRITE-NEXT:      SHF_WRITE (0x1)
 # CHECK-NEXT:    ]
 
-# BAD-FLAG: unrecognized section flag 'xyzzy'. Flags supported for GNU compatibility: alloc, load, noload, readonly, debug, code, data, rom, share, contents, merge, strings
+# BAD-FLAG: unrecognized section flag 'xyzzy'. Flags supported for GNU compatibility: alloc, load, noload, readonly, exclude, debug, code, data, rom, share, contents, merge, strings

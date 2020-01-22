@@ -1122,8 +1122,6 @@ DIE *DwarfUnit::getOrCreateModule(const DIModule *M) {
               M->getConfigurationMacros());
   if (!M->getIncludePath().empty())
     addString(MDie, dwarf::DW_AT_LLVM_include_path, M->getIncludePath());
-  if (!M->getSysRoot().empty())
-    addString(MDie, dwarf::DW_AT_LLVM_sysroot, M->getSysRoot());
 
   return &MDie;
 }
@@ -1165,6 +1163,14 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
   DIE *DeclDie = nullptr;
   StringRef DeclLinkageName;
   if (auto *SPDecl = SP->getDeclaration()) {
+    DITypeRefArray DeclArgs, DefinitionArgs;
+    DeclArgs = SPDecl->getType()->getTypeArray();
+    DefinitionArgs = SP->getType()->getTypeArray();
+
+    if (DeclArgs.size() && DefinitionArgs.size())
+      if (DefinitionArgs[0] != NULL && DeclArgs[0] != DefinitionArgs[0])
+        addType(SPDie, DefinitionArgs[0]);
+
     DeclDie = getDIE(SPDecl);
     assert(DeclDie && "This DIE should've already been constructed when the "
                       "definition DIE was created in "

@@ -237,6 +237,14 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
   std::string FS = !FSAttr.hasAttribute(Attribute::None)
                        ? FSAttr.getValueAsString().str()
                        : TargetFS;
+  // Append the preexisting target features last, so that +mattr overrides
+  // the "unsafe-fp-math" function attribute.
+  // Creating a separate target feature is not strictly necessary, it only
+  // exists to make "unsafe-fp-math" force creating a new subtarget.
+
+  if (FnAttrs.hasFnAttribute("unsafe-fp-math") &&
+      F.getFnAttribute("unsafe-fp-math").getValueAsString() == "true")
+    FS = FS.empty() ? "+unsafe-fp" : "+unsafe-fp," + FS;
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I) {

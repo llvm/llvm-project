@@ -67,6 +67,20 @@ bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
   return MatchExact && MatchSubset;
 }
 
+bool ARMTTIImpl::shouldFavorBackedgeIndex(const Loop *L) const {
+  if (L->getHeader()->getParent()->hasOptSize())
+    return false;
+  if (ST->hasMVEIntegerOps())
+    return false;
+  return ST->isMClass() && ST->isThumb2() && L->getNumBlocks() == 1;
+}
+
+bool ARMTTIImpl::shouldFavorPostInc() const {
+  if (ST->hasMVEIntegerOps())
+    return true;
+  return false;
+}
+
 int ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
   assert(Ty->isIntegerTy());
 

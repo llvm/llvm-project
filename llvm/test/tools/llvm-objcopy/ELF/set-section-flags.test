@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 
 # Single flags on a section with no flags:
 # RUN: llvm-objcopy --set-section-flags=.foo=alloc \
@@ -13,6 +13,9 @@
 # RUN: llvm-objcopy --set-section-flags=.foo=readonly \
 # RUN:   --set-section-flags=.baz=readonly --set-section-flags=.rela.baz=readonly %t %t.readonly
 # RUN: llvm-readobj --sections %t.readonly | FileCheck %s --check-prefixes=CHECK,PROGBITS
+# RUN: llvm-objcopy --set-section-flags=.foo=exclude \
+# RUN:   --set-section-flags=.baz=exclude --set-section-flags=.rela.baz=exclude %t %t.exclude
+# RUN: llvm-readobj --sections %t.exclude | FileCheck %s --check-prefixes=CHECK,PROGBITS,EXCLUDE,WRITE
 # RUN: llvm-objcopy --set-section-flags=.foo=debug \
 # RUN:   --set-section-flags=.baz=debug --set-section-flags=.rela.baz=debug %t %t.debug
 # RUN: llvm-readobj --sections %t.debug | FileCheck %s --check-prefixes=CHECK,PROGBITS,WRITE
@@ -93,6 +96,7 @@ Sections:
 # EXEC-NEXT:       SHF_EXECINSTR (0x4)
 # MERGE-NEXT:      SHF_MERGE (0x10)
 # STRINGS-NEXT:    SHF_STRINGS (0x20)
+# EXCLUDE-NEXT:    SHF_EXCLUDE (0x80000000)
 # WRITE-NEXT:      SHF_WRITE (0x1)
 # CHECK-NEXT:    ]
 
@@ -104,6 +108,7 @@ Sections:
 # EXEC-NEXT:       SHF_EXECINSTR (0x4)
 # MERGE-NEXT:      SHF_MERGE (0x10)
 # STRINGS-NEXT:    SHF_STRINGS (0x20)
+# EXCLUDE-NEXT:    SHF_EXCLUDE (0x80000000)
 # WRITE-NEXT:      SHF_WRITE (0x1)
 # CHECK-NEXT:    ]
 
@@ -114,10 +119,11 @@ Sections:
 # EXEC-NEXT:       SHF_EXECINSTR (0x4)
 # MERGE-NEXT:      SHF_MERGE (0x10)
 # STRINGS-NEXT:    SHF_STRINGS (0x20)
+# EXCLUDE-NEXT:    SHF_EXCLUDE (0x80000000)
 # WRITE-NEXT:      SHF_WRITE (0x1)
 # CHECK-NEXT:    ]
 
 # BAD-FORMAT: bad format for --set-section-flags: missing '='
 # MULTIPLE-SETS: --set-section-flags set multiple times for section '.foo'
 
-# BAD-FLAG: unrecognized section flag 'xyzzy'. Flags supported for GNU compatibility: alloc, load, noload, readonly, debug, code, data, rom, share, contents, merge, strings
+# BAD-FLAG: unrecognized section flag 'xyzzy'. Flags supported for GNU compatibility: alloc, load, noload, readonly, exclude, debug, code, data, rom, share, contents, merge, strings

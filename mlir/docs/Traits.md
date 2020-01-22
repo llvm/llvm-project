@@ -137,20 +137,20 @@ section goes as follows:
 
 ### Broadcastable
 
-*   `OpTrait::BroadcastableTwoOperandsOneResult` -- `Broadcastable`
+*   `OpTrait::ResultsBroadcastableShape` -- `ResultsBroadcastableShape`
 
-This trait provides the API for operations that are known to have
+This trait adds the property that the operation is known to have
 [broadcast-compatible](https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html)
-operand and result types. Specifically, starting from the most varying
-dimension, each dimension pair of the two operands' types should either be the
-same or one of them is one. Also, the result type should have the corresponding
+operands and its result types' shape is the broadcast compatible with the shape
+of the broadcasted operands. Specifically, starting from the most varying
+dimension, each dimension pair of the two operands' shapes should either be the
+same or one of them is one. Also, the result shape should have the corresponding
 dimension equal to the larger one, if known. Shapes are checked partially if
 ranks or dimensions are not known. For example, an op with `tensor<?x2xf32>` and
 `tensor<2xf32>` as operand types and `tensor<3x2xf32>` as the result type is
 broadcast-compatible.
 
-Ths trait assumes the op has two operands and one result, and it asserts if the
-pre-condition is not satisfied.
+This trait requires that the operands are either vector or tensor types.
 
 ### Commutative
 

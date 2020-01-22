@@ -70,10 +70,36 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-misplaced-pointer-arithmetic-in-alloc
+  <clang-tidy/checks/bugprone-misplaced-pointer-arithmetic-in-alloc>` check.
+
+  Finds cases where an integer expression is added to or subtracted from the
+  result of a memory allocation function (``malloc()``, ``calloc()``,
+  ``realloc()``, ``alloca()``) instead of its argument.
+
+- New :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone-reserved-identifier>` check.
+
+  Checks for usages of identifiers reserved for use by the implementation.
+  
+- New :doc:`cert-oop57-cpp
+  <clang-tidy/checks/cert-oop57-cpp>` check.
+  
+  Flags use of the `C` standard library functions ``memset``, ``memcpy`` and
+  ``memcmp`` and similar derivatives on non-trivial types.
 
 New aliases
 ^^^^^^^^^^^
 
+- New alias :doc:`cert-dcl37-c
+  <clang-tidy/checks/cert-dcl37-c>` to
+  :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone-reserved-identifier>` was added.
+
+- New alias :doc:`cert-dcl51-cpp
+  <clang-tidy/checks/cert-dcl51-cpp>` to
+  :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone-reserved-identifier>` was added.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

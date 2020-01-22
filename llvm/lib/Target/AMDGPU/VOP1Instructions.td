@@ -812,26 +812,6 @@ def V_MOV_B32_indirect : VPseudoInstSI<(outs),
   let SubtargetPredicate = isGFX8GFX9;
 }
 
-// This is a pseudo variant of the v_movreld_b32 instruction in which the
-// vector operand appears only twice, once as def and once as use. Using this
-// pseudo avoids problems with the Two Address instructions pass.
-class V_MOVRELD_B32_pseudo<RegisterClass rc> : VPseudoInstSI <
-  (outs rc:$vdst),
-  (ins rc:$vsrc, VSrc_b32:$val, i32imm:$offset)> {
-  let VOP1 = 1;
-
-  let Constraints = "$vsrc = $vdst";
-  let Uses = [M0, EXEC];
-
-  let SubtargetPredicate = HasMovrel;
-}
-
-def V_MOVRELD_B32_V1 : V_MOVRELD_B32_pseudo<VGPR_32>;
-def V_MOVRELD_B32_V2 : V_MOVRELD_B32_pseudo<VReg_64>;
-def V_MOVRELD_B32_V4 : V_MOVRELD_B32_pseudo<VReg_128>;
-def V_MOVRELD_B32_V8 : V_MOVRELD_B32_pseudo<VReg_256>;
-def V_MOVRELD_B32_V16 : V_MOVRELD_B32_pseudo<VReg_512>;
-
 let OtherPredicates = [isGFX8Plus] in {
 
 def : GCNPat <
@@ -843,11 +823,12 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (i32 (int_amdgcn_update_dpp i32:$old, i32:$src, timm:$dpp_ctrl, timm:$row_mask,
-                      timm:$bank_mask, timm:$bound_ctrl)),
-  (V_MOV_B32_dpp $old, $src, (as_i32imm $dpp_ctrl),
-                       (as_i32imm $row_mask), (as_i32imm $bank_mask),
-                       (as_i1imm $bound_ctrl))
+  (i32 (int_amdgcn_update_dpp i32:$old, i32:$src, timm:$dpp_ctrl,
+                              timm:$row_mask, timm:$bank_mask,
+                              timm:$bound_ctrl)),
+  (V_MOV_B32_dpp VGPR_32:$old, VGPR_32:$src, (as_i32timm $dpp_ctrl),
+                 (as_i32timm $row_mask), (as_i32timm $bank_mask),
+                 (as_i1timm $bound_ctrl))
 >;
 
 } // End OtherPredicates = [isGFX8Plus]

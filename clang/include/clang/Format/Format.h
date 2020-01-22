@@ -1314,7 +1314,8 @@ struct FormatStyle {
   ///
   /// When ``false``, use the same indentation level as for the switch
   /// statement. Switch statement body is always indented one level more than
-  /// case labels.
+  /// case labels (except the first block following the case label, which
+  /// itself indents the code - unless IndentCaseBlocks is enabled).
   /// \code
   ///    false:                                 true:
   ///    switch (fool) {                vs.     switch (fool) {
@@ -1326,6 +1327,28 @@ struct FormatStyle {
   ///    }                                      }
   /// \endcode
   bool IndentCaseLabels;
+
+  /// Indent case label blocks one level from the case label.
+  ///
+  /// When ``false``, the block following the case label uses the same
+  /// indentation level as for the case label, treating the case label the same
+  /// as an if-statement.
+  /// When ``true``, the block gets indented as a scope block.
+  /// \code
+  ///    false:                                 true:
+  ///    switch (fool) {                vs.     switch (fool) {
+  ///    case 1: {                              case 1:
+  ///      bar();                                 {
+  ///    } break;                                   bar();
+  ///    default: {                               }
+  ///      plop();                                break;
+  ///    }                                      default:
+  ///    }                                        {
+  ///                                               plop();
+  ///                                             }
+  ///                                           }
+  /// \endcode
+  bool IndentCaseBlocks;
 
   /// Indent goto labels.
   ///
@@ -2119,6 +2142,7 @@ struct FormatStyle {
            IncludeStyle.IncludeIsMainSourceRegex ==
                R.IncludeStyle.IncludeIsMainSourceRegex &&
            IndentCaseLabels == R.IndentCaseLabels &&
+           IndentCaseBlocks == R.IndentCaseBlocks &&
            IndentGotoLabels == R.IndentGotoLabels &&
            IndentPPDirectives == R.IndentPPDirectives &&
            IndentWidth == R.IndentWidth && Language == R.Language &&

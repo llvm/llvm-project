@@ -2263,7 +2263,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr,
                           : ShuffledMask;
         }
         NewLoad =
-            Builder.CreateMaskedLoad(AddrParts[Part], Group->getAlignment(),
+            Builder.CreateMaskedLoad(AddrParts[Part], Group->getAlign(),
                                      GroupMask, UndefVec, "wide.masked.vec");
       }
       else
@@ -2475,8 +2475,8 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
       auto *VecPtr = CreateVecPtr(Part, State.get(Addr, {0, 0}));
       if (isMaskRequired)
         NewLI = Builder.CreateMaskedLoad(
-            VecPtr, Alignment.value(), BlockInMaskParts[Part],
-            UndefValue::get(DataTy), "wide.masked.load");
+            VecPtr, Alignment, BlockInMaskParts[Part], UndefValue::get(DataTy),
+            "wide.masked.load");
       else
         NewLI = Builder.CreateAlignedLoad(DataTy, VecPtr, Alignment.value(),
                                           "wide.load");
@@ -3483,6 +3483,19 @@ void InnerLoopVectorizer::fixVectorizedLoop() {
 
   // Remove redundant induction instructions.
   cse(LoopVectorBody);
+
+  // Set/update profile weights for the vector and remainder loops as original
+  // loop iterations are now distributed among them. Note that original loop
+  // represented by LoopScalarBody becomes remainder loop after vectorization.
+  //
+  // For cases like foldTailByMasking() and requiresScalarEpiloque() we may
+  // end up getting slightly roughened result but that should be OK since
+  // profile is not inherently precise anyway. Note also possible bypass of
+  // vector code caused by legality checks is ignored, assigning all the weight
+  // to the vector loop, optimistically.
+  setProfileInfoAfterUnrolling(LI->getLoopFor(LoopScalarBody),
+                               LI->getLoopFor(LoopVectorBody),
+                               LI->getLoopFor(LoopScalarBody), VF * UF);
 }
 
 void InnerLoopVectorizer::fixCrossIterationPHIs() {
