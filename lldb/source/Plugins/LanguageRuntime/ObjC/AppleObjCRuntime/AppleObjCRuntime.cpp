@@ -8,10 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "AppleObjCRuntime.h"
+#include "AppleObjCRuntimeV1.h"
+#include "AppleObjCRuntimeV2.h"
 #include "AppleObjCTrampolineHandler.h"
-
-#include "clang/AST/Type.h"
-
+#include "Plugins/Language/ObjC/NSString.h"
+#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
+#include "Plugins/Process/Utility/HistoryThread.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
@@ -35,10 +37,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
-
-#include "Plugins/Process/Utility/HistoryThread.h"
-#include "Plugins/Language/ObjC/NSString.h"
-#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
+#include "clang/AST/Type.h"
 
 #include <vector>
 
@@ -53,6 +52,16 @@ AppleObjCRuntime::AppleObjCRuntime(Process *process)
     : ObjCLanguageRuntime(process), m_read_objc_library(false),
       m_objc_trampoline_handler_up(), m_Foundation_major() {
   ReadObjCLibraryIfNeeded(process->GetTarget().GetImages());
+}
+
+void AppleObjCRuntime::Initialize() {
+  AppleObjCRuntimeV2::Initialize();
+  AppleObjCRuntimeV1::Initialize();
+}
+
+void AppleObjCRuntime::Terminate() {
+  AppleObjCRuntimeV2::Terminate();
+  AppleObjCRuntimeV1::Terminate();
 }
 
 bool AppleObjCRuntime::GetObjectDescription(Stream &str, ValueObject &valobj) {
@@ -479,7 +488,7 @@ ValueObjectSP AppleObjCRuntime::GetExceptionObjectForThread(
 
   auto descriptor = GetClassDescriptor(*cpp_exception);
   if (!descriptor || !descriptor->IsValid()) return ValueObjectSP();
-  
+
   while (descriptor) {
     ConstString class_name(descriptor->GetClassName());
     if (class_name == "NSException")

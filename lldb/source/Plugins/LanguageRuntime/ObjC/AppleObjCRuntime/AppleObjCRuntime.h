@@ -31,6 +31,10 @@ public:
 
   static char ID;
 
+  static void Initialize();
+
+  static void Terminate();
+
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || ObjCLanguageRuntime::isA(ClassID);
   }
@@ -84,7 +88,7 @@ public:
   bool ExceptionBreakpointsExplainStop(lldb::StopInfoSP stop_reason) override;
 
   lldb::SearchFilterSP CreateExceptionSearchFilter() override;
-  
+
   static std::tuple<FileSpec, ConstString> GetExceptionThrowLocation();
 
   lldb::ValueObjectSP GetExceptionObjectForThread(
@@ -97,7 +101,7 @@ public:
 
   virtual void GetValuesForGlobalCFBooleans(lldb::addr_t &cf_true,
                                             lldb::addr_t &cf_false);
-                                            
+
   virtual bool IsTaggedPointer (lldb::addr_t addr) { return false; }
 
 protected:
