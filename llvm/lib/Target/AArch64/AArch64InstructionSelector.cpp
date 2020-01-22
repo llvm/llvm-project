@@ -63,6 +63,7 @@ public:
     // cache it here for each run of the selector.
     ProduceNonFlagSettingCondBr =
         !MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening);
+    MFReturnAddr = Register();
   }
 
 private:
@@ -123,7 +124,7 @@ private:
                                 MachineRegisterInfo &MRI) const;
   bool selectIntrinsicWithSideEffects(MachineInstr &I,
                                       MachineRegisterInfo &MRI) const;
-  bool selectIntrinsic(MachineInstr &I, MachineRegisterInfo &MRI) const;
+  bool selectIntrinsic(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectVectorICmp(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectIntrinsicTrunc(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectIntrinsicRound(MachineInstr &I, MachineRegisterInfo &MRI) const;
@@ -294,6 +295,11 @@ private:
   const AArch64RegisterBankInfo &RBI;
 
   bool ProduceNonFlagSettingCondBr = false;
+
+  // Some cached values used during selection.
+  // We use LR as a live-in register, and we keep track of it here as it can be
+  // clobbered by calls.
+  Register MFReturnAddr;
 
 #define GET_GLOBALISEL_PREDICATES_DECL
 #include "AArch64GenGlobalISel.inc"
@@ -4079,8 +4085,8 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
   return true;
 }
 
-bool AArch64InstructionSelector::selectIntrinsic(
-    MachineInstr &I, MachineRegisterInfo &MRI) const {
+bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
+                                                 MachineRegisterInfo &MRI) {
   unsigned IntrinID = findIntrinsicID(I);
   if (!IntrinID)
     return false;
@@ -4138,10 +4144,20 @@ bool AArch64InstructionSelector::selectIntrinsic(
     RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
 
     if (Depth == 0 && IntrinID == Intrinsic::returnaddress) {
+      if (MFReturnAddr) {
+        MIRBuilder.buildCopy({DstReg}, MFReturnAddr);
+        I.eraseFromParent();
+        return true;
+      }
       MFI.setReturnAddressIsTaken(true);
       MF.addLiveIn(AArch64::LR, &AArch64::GPR64spRegClass);
       I.getParent()->addLiveIn(AArch64::LR);
-      MIRBuilder.buildCopy({DstReg}, {Register(AArch64::LR)});
+      // Insert the copy from LR/X30 into the entry block, before it can be
+      // clobbered by anything.
+      MachineIRBuilder EntryBuilder(MF);
+      EntryBuilder.setInstr(*MF.begin()->begin());
+      EntryBuilder.buildCopy({DstReg}, {Register(AArch64::LR)});
+      MFReturnAddr = DstReg;
       I.eraseFromParent();
       return true;
     }
