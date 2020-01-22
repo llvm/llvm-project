@@ -41,11 +41,11 @@ lzcnt %ax, %bx  ## partial register stall.
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
-# CHECK-NEXT:  -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     lzcntw	%ax, %bx
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -     lzcntw	%ax, %bx
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0
@@ -53,9 +53,9 @@ lzcnt %ax, %bx  ## partial register stall.
 
 # CHECK:      [0,0]     DeER .    .   lzcntw	%ax, %bx
 # CHECK-NEXT: [1,0]     D=eER.    .   lzcntw	%ax, %bx
-# CHECK-NEXT: [2,0]     D==eER .      lzcntw	%ax, %bx
-# CHECK-NEXT: [3,0]     D===eER .     lzcntw	%ax, %bx
-# CHECK-NEXT: [4,0]     .D===eER .    lzcntw	%ax, %bx
+# CHECK-NEXT: [2,0]     D==eER    .   lzcntw	%ax, %bx
+# CHECK-NEXT: [3,0]     D===eER   .   lzcntw	%ax, %bx
+# CHECK-NEXT: [4,0]     .D===eER  .   lzcntw	%ax, %bx
 # CHECK-NEXT: [5,0]     .D====eER .   lzcntw	%ax, %bx
 # CHECK-NEXT: [6,0]     .D=====eER.   lzcntw	%ax, %bx
 # CHECK-NEXT: [7,0]     .D======eER   lzcntw	%ax, %bx

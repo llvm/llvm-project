@@ -779,7 +779,7 @@ vpxor           (%rax), %ymm1, %ymm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 42.67 42.67  42.67    -      -      -      -      -     70.17 75.17  85.00  42.67    -
+# CHECK-NEXT: 42.67  42.67  42.67   -      -      -      -      -     70.17  75.17  85.00  42.67   -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
