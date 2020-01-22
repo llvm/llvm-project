@@ -14,7 +14,7 @@
 ; RUN:     -wholeprogramdevirt-summary-action=export -o /dev/null 2>&1 | FileCheck %s --check-prefix=MISSING-MODULE
 
 ; Check single impl devirtulation in summary
-; CHECK: typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: unsat, sizeM1BitWidth: 0), wpdResolutions: ((offset: 0, wpdRes: (kind: singleImpl, singleImplName: "_ZNK1A1fEv"))))) ; guid
+; CHECK: typeid: (name: "_ZTS1A", summary: (typeTestRes: (kind: unknown, sizeM1BitWidth: 0), wpdResolutions: ((offset: 0, wpdRes: (kind: singleImpl, singleImplName: "_ZNK1A1fEv"))))) ; guid
 
 ; MISSING-MODULE: combined summary should contain Regular LTO module
 
