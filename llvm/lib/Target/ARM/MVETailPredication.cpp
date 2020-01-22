@@ -148,6 +148,7 @@ bool MVETailPredication::runOnLoop(Loop *L, LPPassManager&) {
   if (skipLoop(L) || DisableTailPredication)
     return false;
 
+  MaskedInsts.clear();
   Function &F = *L->getHeader()->getParent();
   auto &TPC = getAnalysis<TargetPassConfig>();
   auto &TM = TPC.getTM<TargetMachine>();
