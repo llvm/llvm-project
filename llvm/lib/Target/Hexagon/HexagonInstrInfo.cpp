@@ -2946,12 +2946,15 @@ bool HexagonInstrInfo::addLatencyToSchedule(const MachineInstr &MI1,
 }
 
 /// Get the base register and byte offset of a load/store instr.
-bool HexagonInstrInfo::getMemOperandWithOffset(
-    const MachineInstr &LdSt, const MachineOperand *&BaseOp, int64_t &Offset,
-    const TargetRegisterInfo *TRI) const {
+bool HexagonInstrInfo::getMemOperandsWithOffset(
+    const MachineInstr &LdSt, SmallVectorImpl<const MachineOperand *> &BaseOps,
+    int64_t &Offset, const TargetRegisterInfo *TRI) const {
   unsigned AccessSize = 0;
-  BaseOp = getBaseAndOffset(LdSt, Offset, AccessSize);
-  return BaseOp != nullptr && BaseOp->isReg();
+  const MachineOperand *BaseOp = getBaseAndOffset(LdSt, Offset, AccessSize);
+  if (!BaseOp || !BaseOp->isReg())
+    return false;
+  BaseOps.push_back(BaseOp);
+  return true;
 }
 
 /// Can these instructions execute at the same time in a bundle.

@@ -1238,15 +1238,21 @@ public:
   }
 
   /// Get the base operand and byte offset of an instruction that reads/writes
+  /// memory. This is a convenience function for callers that are only prepared
+  /// to handle a single base operand.
+  bool getMemOperandWithOffset(const MachineInstr &MI,
+                               const MachineOperand *&BaseOp, int64_t &Offset,
+                               const TargetRegisterInfo *TRI) const;
+
+  /// Get the base operands and byte offset of an instruction that reads/writes
   /// memory.
   /// It returns false if MI does not read/write memory.
-  /// It returns false if no base operand and offset was found.
-  /// It is not guaranteed to always recognize base operand and offsets in all
+  /// It returns false if no base operands and offset was found.
+  /// It is not guaranteed to always recognize base operands and offsets in all
   /// cases.
-  virtual bool getMemOperandWithOffset(const MachineInstr &MI,
-                                       const MachineOperand *&BaseOp,
-                                       int64_t &Offset,
-                                       const TargetRegisterInfo *TRI) const {
+  virtual bool getMemOperandsWithOffset(
+      const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
+      int64_t &Offset, const TargetRegisterInfo *TRI) const {
     return false;
   }
 
@@ -1270,8 +1276,8 @@ public:
   /// or
   ///   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   /// to TargetPassConfig::createMachineScheduler() to have an effect.
-  virtual bool shouldClusterMemOps(const MachineOperand &BaseOp1,
-                                   const MachineOperand &BaseOp2,
+  virtual bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                                   ArrayRef<const MachineOperand *> BaseOps2,
                                    unsigned NumLoads) const {
     llvm_unreachable("target did not implement shouldClusterMemOps()");
   }

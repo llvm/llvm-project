@@ -1471,40 +1471,45 @@ namespace {
 class BaseMemOpClusterMutation : public ScheduleDAGMutation {
   struct MemOpInfo {
     SUnit *SU;
-    const MachineOperand *BaseOp;
+    SmallVector<const MachineOperand *, 4> BaseOps;
     int64_t Offset;
 
-    MemOpInfo(SUnit *su, const MachineOperand *Op, int64_t ofs)
-        : SU(su), BaseOp(Op), Offset(ofs) {}
+    MemOpInfo(SUnit *SU, ArrayRef<const MachineOperand *> BaseOps,
+              int64_t Offset)
+        : SU(SU), BaseOps(BaseOps.begin(), BaseOps.end()), Offset(Offset) {}
 
-    bool operator<(const MemOpInfo &RHS) const {
-      if (BaseOp->getType() != RHS.BaseOp->getType())
-        return BaseOp->getType() < RHS.BaseOp->getType();
-
-      if (BaseOp->isReg())
-        return std::make_tuple(BaseOp->getReg(), Offset, SU->NodeNum) <
-               std::make_tuple(RHS.BaseOp->getReg(), RHS.Offset,
-                               RHS.SU->NodeNum);
-      if (BaseOp->isFI()) {
-        const MachineFunction &MF =
-            *BaseOp->getParent()->getParent()->getParent();
+    static bool Compare(const MachineOperand *const &A,
+                        const MachineOperand *const &B) {
+      if (A->getType() != B->getType())
+        return A->getType() < B->getType();
+      if (A->isReg())
+        return A->getReg() < B->getReg();
+      if (A->isFI()) {
+        const MachineFunction &MF = *A->getParent()->getParent()->getParent();
         const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
         bool StackGrowsDown = TFI.getStackGrowthDirection() ==
                               TargetFrameLowering::StackGrowsDown;
-        // Can't use tuple comparison here since we might need to use a
-        // different order when the stack grows down.
-        if (BaseOp->getIndex() != RHS.BaseOp->getIndex())
-          return StackGrowsDown ? BaseOp->getIndex() > RHS.BaseOp->getIndex()
-                                : BaseOp->getIndex() < RHS.BaseOp->getIndex();
-
-        if (Offset != RHS.Offset)
-          return Offset < RHS.Offset;
-
-        return SU->NodeNum < RHS.SU->NodeNum;
+        return StackGrowsDown ? A->getIndex() > B->getIndex()
+                              : A->getIndex() < B->getIndex();
       }
 
       llvm_unreachable("MemOpClusterMutation only supports register or frame "
                        "index bases.");
+    }
+
+    bool operator<(const MemOpInfo &RHS) const {
+      // FIXME: Don't compare everything twice. Maybe use C++20 three way
+      // comparison instead when it's available.
+      if (std::lexicographical_compare(BaseOps.begin(), BaseOps.end(),
+                                       RHS.BaseOps.begin(), RHS.BaseOps.end(),
+                                       Compare))
+        return true;
+      if (std::lexicographical_compare(RHS.BaseOps.begin(), RHS.BaseOps.end(),
+                                       BaseOps.begin(), BaseOps.end(), Compare))
+        return false;
+      if (Offset != RHS.Offset)
+        return Offset < RHS.Offset;
+      return SU->NodeNum < RHS.SU->NodeNum;
     }
   };
 
@@ -1560,10 +1565,14 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     ArrayRef<SUnit *> MemOps, ScheduleDAGInstrs *DAG) {
   SmallVector<MemOpInfo, 32> MemOpRecords;
   for (SUnit *SU : MemOps) {
-    const MachineOperand *BaseOp;
+    SmallVector<const MachineOperand *, 4> BaseOps;
     int64_t Offset;
-    if (TII->getMemOperandWithOffset(*SU->getInstr(), BaseOp, Offset, TRI))
-      MemOpRecords.push_back(MemOpInfo(SU, BaseOp, Offset));
+    if (TII->getMemOperandsWithOffset(*SU->getInstr(), BaseOps, Offset, TRI))
+      MemOpRecords.push_back(MemOpInfo(SU, BaseOps, Offset));
+#ifndef NDEBUG
+    for (auto *Op : BaseOps)
+      assert(Op);
+#endif
   }
   if (MemOpRecords.size() < 2)
     return;
@@ -1573,8 +1582,8 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
   for (unsigned Idx = 0, End = MemOpRecords.size(); Idx < (End - 1); ++Idx) {
     SUnit *SUa = MemOpRecords[Idx].SU;
     SUnit *SUb = MemOpRecords[Idx+1].SU;
-    if (TII->shouldClusterMemOps(*MemOpRecords[Idx].BaseOp,
-                                 *MemOpRecords[Idx + 1].BaseOp,
+    if (TII->shouldClusterMemOps(MemOpRecords[Idx].BaseOps,
+                                 MemOpRecords[Idx + 1].BaseOps,
                                  ClusterLength)) {
       if (SUa->NodeNum > SUb->NodeNum)
         std::swap(SUa, SUb);
