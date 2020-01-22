@@ -54,8 +54,7 @@ public:
 
 private:
   // Whether analysis should be performed by GPUDivergenceAnalysis.
-  bool shouldUseGPUDivergenceAnalysis(const Function &F,
-                                      const TargetTransformInfo &TTI) const;
+  bool shouldUseGPUDivergenceAnalysis(const Function &F) const;
 
   // (optional) handle to new DivergenceAnalysis
   std::unique_ptr<GPUDivergenceAnalysis> gpuDA;
