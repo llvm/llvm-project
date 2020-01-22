@@ -37,7 +37,7 @@ Implementation
 ==============
 
 See `HardwareAssistedAddressSanitizer`_ for a general overview of a
-tag-based approach to memory safety.  MemTagSanitizer followes a
+tag-based approach to memory safety.  MemTagSanitizer follows a
 similar implementation strategy, but with the tag storage (shadow)
 provided by the hardware.
 

@@ -562,7 +562,7 @@ various reasons, it is not practical to emit the instructions inline.
 
 There's two typical examples of this.
 
-Some CPUs support multiple instruction sets which can be swiched back and forth
+Some CPUs support multiple instruction sets which can be switched back and forth
 on function-call boundaries. For example, MIPS supports the MIPS16 ISA, which
 has a smaller instruction encoding than the usual MIPS32 ISA. ARM, similarly,
 has the Thumb ISA. In MIPS16 and earlier versions of Thumb, the atomic

@@ -1006,13 +1006,13 @@ Given a class declaration with copy constructor declared as deleted:
      foo(const foo&) = deleted;
   };
 
-A C++ frontend would generate follwing:
+A C++ frontend would generate following:
 
 .. code-block:: text
 
   !17 = !DISubprogram(name: "foo", scope: !11, file: !1, line: 5, type: !18, scopeLine: 5, flags: DIFlagPublic | DIFlagPrototyped, spFlags: DISPFlagDeleted)
 
-and this will produce an additional DWARF attibute as:
+and this will produce an additional DWARF attribute as:
 
 .. code-block:: text
 
@@ -2107,7 +2107,7 @@ The most straightforward way to use ``debugify`` is as follows::
 This will inject synthetic DI to ``sample.ll`` run the ``pass-to-test``
 and then check for missing DI.
 
-Some other ways to run debugify are avaliable:
+Some other ways to run debugify are available:
 
 .. code-block:: bash
 
