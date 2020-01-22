@@ -120,6 +120,7 @@ private:
   bool selectG_FRAME_INDEX(MachineInstr &I) const;
   bool selectG_PTR_MASK(MachineInstr &I) const;
   bool selectG_EXTRACT_VECTOR_ELT(MachineInstr &I) const;
+  bool selectG_INSERT_VECTOR_ELT(MachineInstr &I) const;
 
   std::pair<Register, unsigned>
   selectVOP3ModsImpl(Register Src) const;
