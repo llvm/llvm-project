@@ -8,9 +8,8 @@
 ; hardware being present or absent work as expected (i.e. we get an instruction
 ; when one is available, otherwise a libcall).
 
-; FIXME: Tests fails as various things in CodeGen and Target/ARM need fixing.
-; XFAIL: *
-
+; FIXME: We're not generating the right instructions for some of these
+; operations (see further FIXMEs down below).
 
 ; Single-precision intrinsics
 
@@ -71,7 +70,7 @@ define i32 @fptosi_f32(float %x) #0 {
 
 ; CHECK-LABEL: fptoui_f32:
 ; CHECK-NOSP: bl __aeabi_f2uiz
-; CHECK-SP: vcvt.u32.f32
+; FIXME-CHECK-SP: vcvt.u32.f32
 define i32 @fptoui_f32(float %x) #0 {
   %val = call i32 @llvm.experimental.constrained.fptoui.f32(float %x, metadata !"fpexcept.strict") #0
   ret i32 %val
@@ -240,6 +239,226 @@ define float @trunc_f32(float %x) #0 {
   ret float %val
 }
 
+; CHECK-LABEL: fcmp_olt_f32:
+; CHECK-NOSP: bl __aeabi_fcmplt
+; CHECK-SP: vcmp.f32
+define i32 @fcmp_olt_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"olt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ole_f32:
+; CHECK-NOSP: bl __aeabi_fcmple
+; CHECK-SP: vcmp.f32
+define i32 @fcmp_ole_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"ole", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ogt_f32:
+; CHECK-NOSP: bl __aeabi_fcmpgt
+; CHECK-SP: vcmp.f32
+define i32 @fcmp_ogt_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"ogt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_oge_f32:
+; CHECK-NOSP: bl __aeabi_fcmpge
+; CHECK-SP: vcmp.f32
+define i32 @fcmp_oge_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"oge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_oeq_f32:
+; CHECK-NOSP: bl __aeabi_fcmpeq
+; CHECK-SP: vcmp.f32
+define i32 @fcmp_oeq_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_one_f32:
+; CHECK-NOSP: bl __aeabi_fcmpeq
+; CHECK-NOSP: bl __aeabi_fcmpun
+; CHECK-SP: vcmp.f32
+define i32 @fcmp_one_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"one", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ult_f32:
+; CHECK-NOSP: bl __aeabi_fcmpge
+; CHECK-SP: vcmp.f32
+define i32 @fcmp_ult_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"ult", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ule_f32:
+; CHECK-NOSP: bl __aeabi_fcmpgt
+; CHECK-SP: vcmp.f32
+define i32 @fcmp_ule_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"ule", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ugt_f32:
+; CHECK-NOSP: bl __aeabi_fcmple
+; CHECK-SP: vcmp.f32
+define i32 @fcmp_ugt_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"ugt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_uge_f32:
+; CHECK-NOSP: bl __aeabi_fcmplt
+; CHECK-SP: vcmp.f32
+define i32 @fcmp_uge_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"uge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ueq_f32:
+; CHECK-NOSP: bl __aeabi_fcmpeq
+; CHECK-NOSP: bl __aeabi_fcmpun
+; CHECK-SP: vcmp.f32
+define i32 @fcmp_ueq_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"ueq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_une_f32:
+; CHECK-NOSP: bl __aeabi_fcmpeq
+; CHECK-SP: vcmp.f32
+define i32 @fcmp_une_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"une", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_olt_f32:
+; CHECK-NOSP: bl __aeabi_fcmplt
+; CHECK-SP: vcmpe.f32
+define i32 @fcmps_olt_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"olt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ole_f32:
+; CHECK-NOSP: bl __aeabi_fcmple
+; CHECK-SP: vcmpe.f32
+define i32 @fcmps_ole_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"ole", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ogt_f32:
+; CHECK-NOSP: bl __aeabi_fcmpgt
+; CHECK-SP: vcmpe.f32
+define i32 @fcmps_ogt_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"ogt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_oge_f32:
+; CHECK-NOSP: bl __aeabi_fcmpge
+; CHECK-SP: vcmpe.f32
+define i32 @fcmps_oge_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"oge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_oeq_f32:
+; CHECK-NOSP: bl __aeabi_fcmpeq
+; CHECK-SP: vcmpe.f32
+define i32 @fcmps_oeq_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_one_f32:
+; CHECK-NOSP: bl __aeabi_fcmpeq
+; CHECK-NOSP: bl __aeabi_fcmpun
+; CHECK-SP: vcmpe.f32
+define i32 @fcmps_one_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"one", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ult_f32:
+; CHECK-NOSP: bl __aeabi_fcmpge
+; CHECK-SP: vcmpe.f32
+define i32 @fcmps_ult_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"ult", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ule_f32:
+; CHECK-NOSP: bl __aeabi_fcmpgt
+; CHECK-SP: vcmpe.f32
+define i32 @fcmps_ule_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"ule", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ugt_f32:
+; CHECK-NOSP: bl __aeabi_fcmple
+; CHECK-SP: vcmpe.f32
+define i32 @fcmps_ugt_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"ugt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_uge_f32:
+; CHECK-NOSP: bl __aeabi_fcmplt
+; CHECK-SP: vcmpe.f32
+define i32 @fcmps_uge_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"uge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ueq_f32:
+; CHECK-NOSP: bl __aeabi_fcmpeq
+; CHECK-NOSP: bl __aeabi_fcmpun
+; CHECK-SP: vcmpe.f32
+define i32 @fcmps_ueq_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"ueq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_une_f32:
+; CHECK-NOSP: bl __aeabi_fcmpeq
+; CHECK-SP: vcmpe.f32
+define i32 @fcmps_une_f32(float %a, float %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %b, metadata !"une", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
 
 ; Double-precision intrinsics
 
@@ -300,7 +519,7 @@ define i32 @fptosi_f64(double %x) #0 {
 
 ; CHECK-LABEL: fptoui_f64:
 ; CHECK-NODP: bl __aeabi_d2uiz
-; CHECK-DP: vcvt.u32.f64
+; FIXME-CHECK-DP: vcvt.u32.f64
 define i32 @fptoui_f64(double %x) #0 {
   %val = call i32 @llvm.experimental.constrained.fptoui.f64(double %x, metadata !"fpexcept.strict") #0
   ret i32 %val
@@ -469,6 +688,226 @@ define double @trunc_f64(double %x) #0 {
   ret double %val
 }
 
+; CHECK-LABEL: fcmp_olt_f64:
+; CHECK-NODP: bl __aeabi_dcmplt
+; CHECK-DP: vcmp.f64
+define i32 @fcmp_olt_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"olt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ole_f64:
+; CHECK-NODP: bl __aeabi_dcmple
+; CHECK-DP: vcmp.f64
+define i32 @fcmp_ole_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"ole", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ogt_f64:
+; CHECK-NODP: bl __aeabi_dcmpgt
+; CHECK-DP: vcmp.f64
+define i32 @fcmp_ogt_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"ogt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_oge_f64:
+; CHECK-NODP: bl __aeabi_dcmpge
+; CHECK-DP: vcmp.f64
+define i32 @fcmp_oge_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"oge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_oeq_f64:
+; CHECK-NODP: bl __aeabi_dcmpeq
+; CHECK-DP: vcmp.f64
+define i32 @fcmp_oeq_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_one_f64:
+; CHECK-NODP-DAG: bl __aeabi_dcmpeq
+; CHECK-NODP-DAG: bl __aeabi_dcmpun
+; CHECK-DP: vcmp.f64
+define i32 @fcmp_one_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"one", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ult_f64:
+; CHECK-NODP: bl __aeabi_dcmpge
+; CHECK-DP: vcmp.f64
+define i32 @fcmp_ult_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"ult", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ule_f64:
+; CHECK-NODP: bl __aeabi_dcmpgt
+; CHECK-DP: vcmp.f64
+define i32 @fcmp_ule_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"ule", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ugt_f64:
+; CHECK-NODP: bl __aeabi_dcmple
+; CHECK-DP: vcmp.f64
+define i32 @fcmp_ugt_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"ugt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_uge_f64:
+; CHECK-NODP: bl __aeabi_dcmplt
+; CHECK-DP: vcmp.f64
+define i32 @fcmp_uge_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"uge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ueq_f64:
+; CHECK-NODP-DAG: bl __aeabi_dcmpeq
+; CHECK-NODP-DAG: bl __aeabi_dcmpun
+; CHECK-DP: vcmp.f64
+define i32 @fcmp_ueq_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"ueq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_une_f64:
+; CHECK-NODP: bl __aeabi_dcmpeq
+; CHECK-DP: vcmp.f64
+define i32 @fcmp_une_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"une", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_olt_f64:
+; CHECK-NODP: bl __aeabi_dcmplt
+; CHECK-DP: vcmpe.f64
+define i32 @fcmps_olt_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"olt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ole_f64:
+; CHECK-NODP: bl __aeabi_dcmple
+; CHECK-DP: vcmpe.f64
+define i32 @fcmps_ole_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ole", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ogt_f64:
+; CHECK-NODP: bl __aeabi_dcmpgt
+; CHECK-DP: vcmpe.f64
+define i32 @fcmps_ogt_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ogt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_oge_f64:
+; CHECK-NODP: bl __aeabi_dcmpge
+; CHECK-DP: vcmpe.f64
+define i32 @fcmps_oge_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"oge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_oeq_f64:
+; CHECK-NODP: bl __aeabi_dcmpeq
+; CHECK-DP: vcmpe.f64
+define i32 @fcmps_oeq_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_one_f64:
+; CHECK-NODP-DAG: bl __aeabi_dcmpeq
+; CHECK-NODP-DAG: bl __aeabi_dcmpun
+; CHECK-DP: vcmpe.f64
+define i32 @fcmps_one_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"one", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ult_f64:
+; CHECK-NODP: bl __aeabi_dcmpge
+; CHECK-DP: vcmpe.f64
+define i32 @fcmps_ult_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ult", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ule_f64:
+; CHECK-NODP: bl __aeabi_dcmpgt
+; CHECK-DP: vcmpe.f64
+define i32 @fcmps_ule_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ule", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ugt_f64:
+; CHECK-NODP: bl __aeabi_dcmple
+; CHECK-DP: vcmpe.f64
+define i32 @fcmps_ugt_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ugt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_uge_f64:
+; CHECK-NODP: bl __aeabi_dcmplt
+; CHECK-DP: vcmpe.f64
+define i32 @fcmps_uge_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"uge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ueq_f64:
+; CHECK-NODP-DAG: bl __aeabi_dcmpeq
+; CHECK-NODP-DAG: bl __aeabi_dcmpun
+; CHECK-DP: vcmpe.f64
+define i32 @fcmps_ueq_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ueq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_une_f64:
+; CHECK-NODP: bl __aeabi_dcmpeq
+; CHECK-DP: vcmpe.f64
+define i32 @fcmps_une_f64(double %a, double %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"une", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
 
 ; Single/Double conversion intrinsics
 
@@ -490,15 +929,15 @@ define double @fpext_f32(float %x) #0 {
 
 ; CHECK-LABEL: sitofp_f32_i32:
 ; CHECK-NOSP: bl __aeabi_i2f
-; CHECK-SP: vcvt.f32.s32
+; FIXME-CHECK-SP: vcvt.f32.s32
 define float @sitofp_f32_i32(i32 %x) #0 {
   %val = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %val
 }
 
 ; CHECK-LABEL: sitofp_f64_i32:
-; CHECK-NODP: bl __aeabi_i2d
-; CHECK-DP: vcvt.f64.s32
+; FIXME-CHECK-NODP: bl __aeabi_i2d
+; FIXME-CHECK-DP: vcvt.f64.s32
 define double @sitofp_f64_i32(i32 %x) #0 {
   %val = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret double %val
@@ -537,6 +976,8 @@ declare i32 @llvm.experimental.constrained.lround.f32(float, metadata)
 declare i32 @llvm.experimental.constrained.llround.f32(float, metadata)
 declare float @llvm.experimental.constrained.round.f32(float, metadata)
 declare float @llvm.experimental.constrained.trunc.f32(float, metadata)
+declare i1 @llvm.experimental.constrained.fcmps.f32(float, float, metadata, metadata)
+declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
 
 declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)
 declare double @llvm.experimental.constrained.fsub.f64(double, double, metadata, metadata)
@@ -568,6 +1009,8 @@ declare i32 @llvm.experimental.constrained.lround.f64(double, metadata)
 declare i32 @llvm.experimental.constrained.llround.f64(double, metadata)
 declare double @llvm.experimental.constrained.round.f64(double, metadata)
 declare double @llvm.experimental.constrained.trunc.f64(double, metadata)
+declare i1 @llvm.experimental.constrained.fcmps.f64(double, double, metadata, metadata)
+declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
 
 declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
