@@ -467,8 +467,7 @@ TEST_FUNC(zero_and_sign_extendi_op_i1_to_i8) {
   auto i1Type = IntegerType::get(1, &globalContext());
   auto i8Type = IntegerType::get(8, &globalContext());
   auto memrefType = MemRefType::get({}, i1Type, {}, 0);
-  auto f =
-      makeFunction("zero_and_sign_extendi_op", {}, {memrefType, memrefType});
+  auto f = makeFunction("zero_and_sign_extendi_op", {}, {memrefType, memrefType});
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
@@ -796,12 +795,10 @@ TEST_FUNC(empty_map_load_store) {
 }
 
 // CHECK-LABEL: func @affine_if_op
-// CHECK:       affine.if affine_set<([[d0:.*]], [[d1:.*]]){{\[}}
-// CHECK-SAME:    [[s0:.*]], [[s1:.*]]{{\]}}
+// CHECK:       affine.if affine_set<([[d0:.*]], [[d1:.*]]){{\[}}[[s0:.*]], [[s1:.*]]{{\]}}
 // CHECK-NOT:   else
-// CHECK:       affine.if affine_set<([[d0:.*]], [[d1:.*]]){{\[}}
-// CHECK-SAME:    [[s0:.*]], [[s1:.*]]{{\]}}
-// CHECK-NEXT:  } else {
+// CHECK:       affine.if affine_set<([[d0:.*]], [[d1:.*]]){{\[}}[[s0:.*]], [[s1:.*]]{{\]}}
+// CHECK-NEXT: } else {
 TEST_FUNC(affine_if_op) {
   using namespace edsc;
   using namespace edsc::intrinsics;
@@ -903,36 +900,6 @@ TEST_FUNC(linalg_matmul_test) {
 }
 
 // clang-format off
-// CHECK-LABEL: func @linalg_matmul_mixed_tensors
-//       CHECK:   linalg.generic {args_in = 3 : i64, args_out = 1 : i64,
-// CHECK-SAME: indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d2, d1)>, affine_map<(d0, d1, d2) -> (d0, d1)>],
-// CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction"]}
-///      CHECK:   ^bb0(%[[a0:.*]]: f32, %[[a1:.*]]: f32, %[[a2:.*]]: f32):
-//       CHECK:     %[[a3:.*]] = mulf %[[a0]], %[[a1]] : f32
-//       CHECK:     %[[a4:.*]] = addf %[[a2]], %[[a3]] : f32
-//       CHECK:     linalg.yield %[[a4]] : f32
-//       CHECK:   }: tensor<?x?xf32>, memref<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
-// clang-format on
-TEST_FUNC(linalg_matmul_mixed_tensors_test) {
-  using namespace edsc;
-  using namespace edsc::ops;
-
-  auto f32Type = FloatType::getF32(&globalContext());
-  auto memrefType = MemRefType::get({-1, -1}, f32Type, {}, 0);
-  auto tensorType = RankedTensorType::get({-1, -1}, f32Type);
-  auto f = makeFunction("linalg_matmul_mixed_tensors", {},
-                        {tensorType, memrefType, tensorType});
-
-  OpBuilder builder(f.getBody());
-  ScopedContext scope(builder, f.getLoc());
-  linalg_matmul(makeValueHandles(llvm::to_vector<3>(f.getArguments())),
-                tensorType);
-
-  f.print(llvm::outs());
-  f.erase();
-}
-
-// clang-format off
 // CHECK-LABEL: func @linalg_conv_nhwc
 //       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
 // CHECK-SAME: indexing_maps = [affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d2 * 3 + d4 * 5, d3 * 4 + d5 * 6, d6)>,
@@ -956,7 +923,7 @@ TEST_FUNC(linalg_conv_nhwc) {
 
   OpBuilder builder(f.getBody());
   ScopedContext scope(builder, f.getLoc());
-  linalg_conv_nhwc(makeValueHandles(llvm::to_vector<3>(f.getArguments())), {},
+  linalg_conv_nhwc(makeValueHandles(llvm::to_vector<3>(f.getArguments())),
                    /*strides=*/{3, 4}, /*dilations=*/{5, 6});
 
   f.print(llvm::outs());
@@ -989,7 +956,6 @@ TEST_FUNC(linalg_dilated_conv_nhwc) {
   ScopedContext scope(builder, f.getLoc());
   linalg_dilated_conv_nhwc(
       makeValueHandles(llvm::to_vector<3>(f.getArguments())),
-      /*outputTensorTypes=*/{},
       /*depth_multiplier=*/7,
       /*strides=*/{3, 4}, /*dilations=*/{5, 6});
 
