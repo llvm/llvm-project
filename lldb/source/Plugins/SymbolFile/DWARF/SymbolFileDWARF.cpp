@@ -220,10 +220,6 @@ ParseSupportFilesFromPrologue(const lldb::ModuleSP &module,
   return support_files;
 }
 
-FileSpecList SymbolFileDWARF::GetSymlinkPaths() {
-  return GetGlobalPluginProperties()->GetSymLinkPaths();
-}
-
 static inline bool IsSwiftLanguage(LanguageType language) {
   return language == eLanguageTypePLI || language == eLanguageTypeSwift ||
          ((uint32_t)language == (uint32_t)llvm::dwarf::DW_LANG_Swift);

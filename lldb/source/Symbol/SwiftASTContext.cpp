@@ -841,7 +841,7 @@ static bool IsDeviceSupport(const char *path) {
 
 static std::string GetClangModulesCacheProperty() {
   llvm::SmallString<128> path;
-  auto props = ModuleList::GetGlobalModuleListProperties();
+  const auto &props = ModuleList::GetGlobalModuleListProperties();
   props.GetClangModulesCachePath().GetPath(path);
   return path.str();
 }
@@ -2690,7 +2690,7 @@ swift::ClangImporterOptions &SwiftASTContext::GetClangImporterOptions() {
 
     // Set the Clang module search path.
     llvm::SmallString<128> path;
-    auto props = ModuleList::GetGlobalModuleListProperties();
+    const auto &props = ModuleList::GetGlobalModuleListProperties();
     props.GetClangModulesCachePath().GetPath(path);
     clang_importer_options.ModuleCachePath = path.str();
 
@@ -3423,7 +3423,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   if (!m_ast_context_ap->SearchPathOpts.SDKPath.empty() || TargetHasNoSDK()) {
     if (!clang_importer_options.OverrideResourceDir.empty()) {
       // Create the DWARFImporterDelegate.
-      auto props = ModuleList::GetGlobalModuleListProperties();
+      const auto &props = ModuleList::GetGlobalModuleListProperties();
       if (props.GetUseDWARFImporter())
         m_dwarf_importer_delegate_up =
             std::make_unique<SwiftDWARFImporterDelegate>(*this);
@@ -3480,7 +3480,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
              prebuiltModuleCachePath.c_str());
 
   // Determine the Swift module loading mode to use.
-  auto props = ModuleList::GetGlobalModuleListProperties();
+  const auto &props = ModuleList::GetGlobalModuleListProperties();
   swift::ModuleLoadingMode loading_mode;
   switch (props.GetSwiftModuleLoadingMode()) {
   case eSwiftModuleLoadingModePreferSerialized:
