@@ -147,7 +147,10 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
         Context::current().clone(), FSProvider, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(
             [&CDB](llvm::StringRef File) { return CDB.getProjectInfo(File); }),
-        std::max(Opts.AsyncThreadsCount, 1u));
+        std::max(Opts.AsyncThreadsCount, 1u),
+        [&DiagConsumer](BackgroundQueue::Stats S) {
+          DiagConsumer.onBackgroundIndexProgress(S);
+        });
     AddIndex(BackgroundIdx.get());
   }
   if (DynamicIdx)

@@ -598,6 +598,13 @@ inline bool fromJSON(const Value &E, bool &Out) {
   }
   return false;
 }
+inline bool fromJSON(const Value &E, std::nullptr_t &Out) {
+  if (auto S = E.getAsNull()) {
+    Out = *S;
+    return true;
+  }
+  return false;
+}
 template <typename T> bool fromJSON(const Value &E, llvm::Optional<T> &Out) {
   if (E.getAsNull()) {
     Out = llvm::None;
