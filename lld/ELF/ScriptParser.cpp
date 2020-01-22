@@ -597,10 +597,11 @@ static int precedence(StringRef op) {
 }
 
 StringMatcher ScriptParser::readFilePatterns() {
-  std::vector<StringRef> v;
+  StringMatcher Matcher;
+
   while (!errorCount() && !consume(")"))
-    v.push_back(next());
-  return StringMatcher(v);
+    Matcher.addPattern(SingleStringMatcher(next()));
+  return Matcher;
 }
 
 SortSectionPolicy ScriptParser::readSortKind() {
@@ -637,12 +638,12 @@ std::vector<SectionPattern> ScriptParser::readInputSectionsList() {
       excludeFilePat = readFilePatterns();
     }
 
-    std::vector<StringRef> v;
+    StringMatcher SectionMatcher;
     while (!errorCount() && peek() != ")" && peek() != "EXCLUDE_FILE")
-      v.push_back(unquote(next()));
+      SectionMatcher.addPattern(unquote(next()));
 
-    if (!v.empty())
-      ret.push_back({std::move(excludeFilePat), StringMatcher(v)});
+    if (!SectionMatcher.empty())
+      ret.push_back({std::move(excludeFilePat), std::move(SectionMatcher)});
     else
       setError("section pattern is expected");
   }
@@ -864,7 +865,7 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef outSec) {
       // handle this case here as it will already have been matched by the
       // case above.
       auto *isd = make<InputSectionDescription>(tok);
-      isd->sectionPatterns.push_back({{}, StringMatcher({"*"})});
+      isd->sectionPatterns.push_back({{}, StringMatcher("*")});
       cmd->sectionCommands.push_back(isd);
     }
   }

@@ -31,18 +31,28 @@ std::string lld::demangleItanium(StringRef name) {
   return demangle(name);
 }
 
-StringMatcher::StringMatcher(ArrayRef<StringRef> pat) {
-  for (StringRef s : pat) {
-    Expected<GlobPattern> pat = GlobPattern::create(s);
-    if (!pat)
-      error(toString(pat.takeError()));
-    else
-      patterns.push_back(*pat);
+SingleStringMatcher::SingleStringMatcher(StringRef Pattern) {
+  if (Pattern.size() > 2 && Pattern.startswith("\"") &&
+      Pattern.endswith("\"")) {
+    ExactMatch = true;
+    ExactPattern = Pattern.substr(1, Pattern.size() - 2);
+  } else {
+    Expected<GlobPattern> Glob = GlobPattern::create(Pattern);
+    if (!Glob) {
+      error(toString(Glob.takeError()));
+      return;
+    }
+    ExactMatch = false;
+    GlobPatternMatcher = *Glob;
   }
 }
 
+bool SingleStringMatcher::match(StringRef s) const {
+  return ExactMatch ? (ExactPattern == s) : GlobPatternMatcher.match(s);
+}
+
 bool StringMatcher::match(StringRef s) const {
-  for (const GlobPattern &pat : patterns)
+  for (const SingleStringMatcher &pat : patterns)
     if (pat.match(s))
       return true;
   return false;
