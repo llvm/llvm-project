@@ -104,7 +104,7 @@ private:
       : ES(std::move(ES)), DL(std::move(DL)),
         MainJD(this->ES->createJITDylib("<main>")), LCTMgr(std::move(LCTMgr)),
         CompileLayer(*this->ES, ObjLayer,
-                     ConcurrentIRCompiler(std::move(JTMB))),
+                     std::make_unique<ConcurrentIRCompiler>(std::move(JTMB))),
         S(Imps, *this->ES),
         SpeculateLayer(*this->ES, CompileLayer, S, Mangle, BlockFreqQuery()),
         CODLayer(*this->ES, SpeculateLayer, *this->LCTMgr,
