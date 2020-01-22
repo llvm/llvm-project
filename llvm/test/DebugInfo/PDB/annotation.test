@@ -1,4 +1,4 @@
-# RUN: yaml2obj < %s > %t.obj
+# RUN: yaml2obj %s -o %t.obj
 # RUN: llvm-pdbutil dump --symbols %t.obj | FileCheck %s
 # RUN: llvm-readobj -codeview %t.obj | FileCheck %s --check-prefix=READOBJ
 

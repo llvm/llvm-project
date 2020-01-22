@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 
 # RUN: not llvm-lipo %t -thin arm64_32 -output %t.out 2>&1 | FileCheck --check-prefix=ARCH_NOT_IN_FILE %s
 # ARCH_NOT_IN_FILE: does not contain the specified architecture arm64_32 to thin it to
@@ -6,9 +6,9 @@
 # RUN: not llvm-lipo %t -thin aarch101 -output %t.out 2>&1 | FileCheck --check-prefix=INVALID_ARCH %s
 # INVALID_ARCH: Invalid architecture: aarch101
 
-# RUN: yaml2obj %p/Inputs/i386-x86_64-universal.yaml > %t-universal.o
+# RUN: yaml2obj %p/Inputs/i386-x86_64-universal.yaml -o %t-universal.o
 # RUN: llvm-lipo %t-universal.o -thin i386 -output %t32.o
-# RUN: yaml2obj %p/Inputs/i386-slice.yaml > %t-basic32.o
+# RUN: yaml2obj %p/Inputs/i386-slice.yaml -o %t-basic32.o
 # RUN: cmp %t32.o %t-basic32.o
 
 --- !fat-mach-o

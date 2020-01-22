@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy -R .got.plt %t %t2
 
 ## .rela.plt is a dynamic relocation section that has a connection

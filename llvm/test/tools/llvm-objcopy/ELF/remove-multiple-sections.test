@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy -R .test2 -R .test3 -R .test5 %t %t2
 # RUN: llvm-readobj --sections %t2 | FileCheck %s
 

@@ -1,4 +1,4 @@
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objdump --full-contents %t > %t.out1
 # RUN: llvm-objdump -s %t > %t.out2
 # RUN: cmp %t.out1 %t.out2

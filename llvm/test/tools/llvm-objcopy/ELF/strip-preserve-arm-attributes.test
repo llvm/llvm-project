@@ -2,7 +2,7 @@
 ## .ARM.attributes sections in ELF files. This is needed to maintain
 ## compatibility for Ubuntu/Debian distributions on ARM.
 
-# RUN: yaml2obj %s > %t
+# RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --strip-all %t %t2
 # RUN: llvm-readobj --sections %t2 | FileCheck %s
 # RUN: llvm-objcopy --strip-all-gnu %t %t3

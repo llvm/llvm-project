@@ -1,4 +1,4 @@
-RUN: yaml2obj %p/Inputs/only-keep-sections.yaml > %t.in.exe
+RUN: yaml2obj %p/Inputs/only-keep-sections.yaml -o %t.in.exe
 
 RUN: llvm-objcopy --only-section .debug_discardable %t.in.exe %t.out.exe
 RUN: llvm-objdump --section-headers -t %t.out.exe | FileCheck %s --check-prefixes=SECTIONS,SECTIONS-DEBUG,SYMBOLS,SYMBOLS-DEBUG

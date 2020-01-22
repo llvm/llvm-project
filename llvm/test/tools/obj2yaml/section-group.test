@@ -1,6 +1,6 @@
 ## Checks that the tool is able to read section groups from ELF.
 
-# RUN: yaml2obj --docnum=1 %s > %t1.o
+# RUN: yaml2obj --docnum=1 %s -o %t1.o
 # RUN: llvm-readobj --elf-section-groups %t1.o | FileCheck %s -check-prefix=OBJ
 # RUN: obj2yaml %t1.o | FileCheck %s --check-prefix YAML
 
@@ -50,7 +50,7 @@ Symbols:
 ## Check obj2yaml report an error when sh_info field of
 ## group section contains invalid (too large) signature symbol index.
 
-# RUN: yaml2obj --docnum=2 %s > %t2.o
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
 # RUN: not obj2yaml %t2.o 2>&1 | FileCheck %s --check-prefix ERR
 
 --- !ELF

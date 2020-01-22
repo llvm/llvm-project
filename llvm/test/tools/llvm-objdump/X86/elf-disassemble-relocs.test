@@ -63,7 +63,7 @@ Sections:
   Relocations: []
 
 ## Check ranges of addends being displayed in a dump of relocations mixed with disassembly.
-# RUN: yaml2obj --docnum=3 %s > %t3
+# RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: llvm-objdump -d -r %t3 | FileCheck %s --check-prefix=ADDENDS
 
 # ADDENDS: Disassembly of section .text:

@@ -1,4 +1,4 @@
-RUN: yaml2obj %p/Inputs/strip-symbols.yaml > %t.in.o
+RUN: yaml2obj %p/Inputs/strip-symbols.yaml -o %t.in.o
 
 RUN: llvm-readobj -r %t.in.o | FileCheck %s --check-prefixes=RELOCS,RELOCS-PRE
 RUN: llvm-objdump -t %t.in.o | FileCheck %s --check-prefixes=SYMBOLS,SYMBOLS-PRE

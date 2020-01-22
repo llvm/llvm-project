@@ -19,7 +19,7 @@ Symbols:
 ## Test that STO_* can be used with their correct machine type.
 ## We use the same YAML as above, but with a change of machine type.
 
-# RUN: yaml2obj --docnum=2 %s > %t2
+# RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: llvm-readobj --symbols %t2 | FileCheck %s --check-prefix=USE-OTHER
 
 # USE-OTHER:      Name: foo
@@ -40,7 +40,7 @@ Symbols:
 ## Test that we can mix named and unnamed constants and set
 ## st_other to any arbitrary value.
 
-# RUN: yaml2obj --docnum=3 %s > %t3
+# RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: llvm-readobj --symbols %t3 | FileCheck %s --check-prefix=VALUE
 
 # VALUE:      Name: foo

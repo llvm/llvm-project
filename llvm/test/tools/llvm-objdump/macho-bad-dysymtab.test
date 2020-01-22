@@ -1,4 +1,4 @@
-#RUN: yaml2obj %s > %t1.dylib
+#RUN: yaml2obj %s -o %t1.dylib
 #RUN: not llvm-objdump -d %t1.dylib 2>&1 | FileCheck %s
 
 --- !mach-o

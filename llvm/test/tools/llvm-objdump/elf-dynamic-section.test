@@ -215,7 +215,7 @@ ProgramHeaders:
     Sections:
       - Section: .dynamic
 
-# RUN: yaml2obj --docnum=2 %s > %t2
+# RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: llvm-objdump -p %t2 | FileCheck %s --strict-whitespace --match-full-lines --check-prefix=ELF32
 
 #      ELF32:Dynamic Section:
