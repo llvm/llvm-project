@@ -106,6 +106,10 @@ public:
                           Register Reg) const;
   bool legalizeRawBufferStore(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B, bool IsFormat) const;
+
+  bool legalizeAtomicIncDec(MachineInstr &MI,  MachineIRBuilder &B,
+                            bool IsInc) const;
+
   bool legalizeIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const override;
 
