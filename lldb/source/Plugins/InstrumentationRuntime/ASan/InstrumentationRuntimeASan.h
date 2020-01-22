@@ -1,4 +1,4 @@
-//===-- ASanRuntime.h -------------------------------------------*- C++ -*-===//
+//===-- InstrumentationRuntimeASan.h ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,9 +16,9 @@
 
 namespace lldb_private {
 
-class AddressSanitizerRuntime : public lldb_private::InstrumentationRuntime {
+class InstrumentationRuntimeASan : public lldb_private::InstrumentationRuntime {
 public:
-  ~AddressSanitizerRuntime() override;
+  ~InstrumentationRuntimeASan() override;
 
   static lldb::InstrumentationRuntimeSP
   CreateInstance(const lldb::ProcessSP &process_sp);
@@ -40,7 +40,7 @@ public:
   uint32_t GetPluginVersion() override { return 1; }
 
 private:
-  AddressSanitizerRuntime(const lldb::ProcessSP &process_sp)
+  InstrumentationRuntimeASan(const lldb::ProcessSP &process_sp)
       : lldb_private::InstrumentationRuntime(process_sp) {}
 
   const RegularExpression &GetPatternForRuntimeLibrary() override;

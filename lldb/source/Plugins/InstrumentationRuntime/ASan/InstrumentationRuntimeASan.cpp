@@ -1,4 +1,4 @@
-//===-- ASanRuntime.cpp -----------------------------------------*- C++ -*-===//
+//===-- InstrumentationRuntimeASan.cpp --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ASanRuntime.h"
+#include "InstrumentationRuntimeASan.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
@@ -31,39 +31,39 @@ using namespace lldb;
 using namespace lldb_private;
 
 lldb::InstrumentationRuntimeSP
-AddressSanitizerRuntime::CreateInstance(const lldb::ProcessSP &process_sp) {
-  return InstrumentationRuntimeSP(new AddressSanitizerRuntime(process_sp));
+InstrumentationRuntimeASan::CreateInstance(const lldb::ProcessSP &process_sp) {
+  return InstrumentationRuntimeSP(new InstrumentationRuntimeASan(process_sp));
 }
 
-void AddressSanitizerRuntime::Initialize() {
+void InstrumentationRuntimeASan::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), "AddressSanitizer instrumentation runtime plugin.",
       CreateInstance, GetTypeStatic);
 }
 
-void AddressSanitizerRuntime::Terminate() {
+void InstrumentationRuntimeASan::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb_private::ConstString AddressSanitizerRuntime::GetPluginNameStatic() {
+lldb_private::ConstString InstrumentationRuntimeASan::GetPluginNameStatic() {
   return ConstString("AddressSanitizer");
 }
 
-lldb::InstrumentationRuntimeType AddressSanitizerRuntime::GetTypeStatic() {
+lldb::InstrumentationRuntimeType InstrumentationRuntimeASan::GetTypeStatic() {
   return eInstrumentationRuntimeTypeAddressSanitizer;
 }
 
-AddressSanitizerRuntime::~AddressSanitizerRuntime() { Deactivate(); }
+InstrumentationRuntimeASan::~InstrumentationRuntimeASan() { Deactivate(); }
 
 const RegularExpression &
-AddressSanitizerRuntime::GetPatternForRuntimeLibrary() {
+InstrumentationRuntimeASan::GetPatternForRuntimeLibrary() {
   // FIXME: This shouldn't include the "dylib" suffix.
   static RegularExpression regex(
       llvm::StringRef("libclang_rt.asan_(.*)_dynamic\\.dylib"));
   return regex;
 }
 
-bool AddressSanitizerRuntime::CheckIfRuntimeIsValid(
+bool InstrumentationRuntimeASan::CheckIfRuntimeIsValid(
     const lldb::ModuleSP module_sp) {
   const Symbol *symbol = module_sp->FindFirstSymbolWithNameAndType(
       ConstString("__asan_get_alloc_stack"), lldb::eSymbolTypeAny);
@@ -108,7 +108,7 @@ t.description = __asan_get_report_description();
 t
 )";
 
-StructuredData::ObjectSP AddressSanitizerRuntime::RetrieveReportData() {
+StructuredData::ObjectSP InstrumentationRuntimeASan::RetrieveReportData() {
   ProcessSP process_sp = GetProcessSP();
   if (!process_sp)
     return StructuredData::ObjectSP();
@@ -189,7 +189,7 @@ StructuredData::ObjectSP AddressSanitizerRuntime::RetrieveReportData() {
 }
 
 std::string
-AddressSanitizerRuntime::FormatDescription(StructuredData::ObjectSP report) {
+InstrumentationRuntimeASan::FormatDescription(StructuredData::ObjectSP report) {
   std::string description = report->GetAsDictionary()
                                 ->GetValueForKey("description")
                                 ->GetAsString()
@@ -235,15 +235,15 @@ AddressSanitizerRuntime::FormatDescription(StructuredData::ObjectSP report) {
       .Default("AddressSanitizer detected: " + description);
 }
 
-bool AddressSanitizerRuntime::NotifyBreakpointHit(
+bool InstrumentationRuntimeASan::NotifyBreakpointHit(
     void *baton, StoppointCallbackContext *context, user_id_t break_id,
     user_id_t break_loc_id) {
   assert(baton && "null baton");
   if (!baton)
     return false;
 
-  AddressSanitizerRuntime *const instance =
-      static_cast<AddressSanitizerRuntime *>(baton);
+  InstrumentationRuntimeASan *const instance =
+      static_cast<InstrumentationRuntimeASan *>(baton);
 
   ProcessSP process_sp = instance->GetProcessSP();
 
@@ -275,7 +275,7 @@ bool AddressSanitizerRuntime::NotifyBreakpointHit(
     return false; // Let target run
 }
 
-void AddressSanitizerRuntime::Activate() {
+void InstrumentationRuntimeASan::Activate() {
   if (IsActive())
     return;
 
@@ -305,7 +305,7 @@ void AddressSanitizerRuntime::Activate() {
       process_sp->GetTarget()
           .CreateBreakpoint(symbol_address, internal, hardware)
           .get();
-  breakpoint->SetCallback(AddressSanitizerRuntime::NotifyBreakpointHit, this,
+  breakpoint->SetCallback(InstrumentationRuntimeASan::NotifyBreakpointHit, this,
                           true);
   breakpoint->SetBreakpointKind("address-sanitizer-report");
   SetBreakpointID(breakpoint->GetID());
@@ -313,7 +313,7 @@ void AddressSanitizerRuntime::Activate() {
   SetActive(true);
 }
 
-void AddressSanitizerRuntime::Deactivate() {
+void InstrumentationRuntimeASan::Deactivate() {
   if (GetBreakpointID() != LLDB_INVALID_BREAK_ID) {
     ProcessSP process_sp = GetProcessSP();
     if (process_sp) {
