@@ -112,10 +112,9 @@ public:
   /// Hint that pairing the given load or store is unprofitable.
   static void suppressLdStPair(MachineInstr &MI);
 
-  bool getMemOperandWithOffset(const MachineInstr &MI,
-                               const MachineOperand *&BaseOp,
-                               int64_t &Offset,
-                               const TargetRegisterInfo *TRI) const override;
+  bool getMemOperandsWithOffset(
+      const MachineInstr &MI, SmallVectorImpl<const MachineOperand *> &BaseOps,
+      int64_t &Offset, const TargetRegisterInfo *TRI) const override;
 
   bool getMemOperandWithOffsetWidth(const MachineInstr &MI,
                                     const MachineOperand *&BaseOp,
@@ -132,8 +131,8 @@ public:
   static bool getMemOpInfo(unsigned Opcode, unsigned &Scale, unsigned &Width,
                            int64_t &MinOffset, int64_t &MaxOffset);
 
-  bool shouldClusterMemOps(const MachineOperand &BaseOp1,
-                           const MachineOperand &BaseOp2,
+  bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
+                           ArrayRef<const MachineOperand *> BaseOps2,
                            unsigned NumLoads) const override;
 
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
