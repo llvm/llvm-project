@@ -89,7 +89,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
   if (!TM)
     return;
 
-  auto Obj = SimpleCompiler(*TM)(*M);
+  auto Obj = cantFail(SimpleCompiler(*TM)(*M));
 
   EXPECT_FALSE(testSetProcessAllSections(
       MemoryBuffer::getMemBufferCopy(Obj->getBuffer()), false))
@@ -115,7 +115,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestOverrideObjectFlags) {
   public:
     FunkySimpleCompiler(TargetMachine &TM) : SimpleCompiler(TM) {}
 
-    CompileResult operator()(Module &M) {
+    Expected<CompileResult> operator()(Module &M) {
       auto *Foo = M.getFunction("foo");
       assert(Foo && "Expected function Foo not found");
       Foo->setVisibility(GlobalValue::HiddenVisibility);
@@ -155,7 +155,8 @@ TEST(RTDyldObjectLinkingLayerTest, TestOverrideObjectFlags) {
   auto Foo = ES.intern("foo");
   RTDyldObjectLinkingLayer ObjLayer(
       ES, []() { return std::make_unique<SectionMemoryManager>(); });
-  IRCompileLayer CompileLayer(ES, ObjLayer, FunkySimpleCompiler(*TM));
+  IRCompileLayer CompileLayer(ES, ObjLayer,
+                              std::make_unique<FunkySimpleCompiler>(*TM));
 
   ObjLayer.setOverrideObjectFlagsWithResponsibilityFlags(true);
 
@@ -184,7 +185,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
   public:
     FunkySimpleCompiler(TargetMachine &TM) : SimpleCompiler(TM) {}
 
-    CompileResult operator()(Module &M) {
+    Expected<CompileResult> operator()(Module &M) {
       Function *BarImpl = Function::Create(
           FunctionType::get(Type::getVoidTy(M.getContext()), {}, false),
           GlobalValue::ExternalLinkage, "bar", &M);
@@ -221,7 +222,8 @@ TEST(RTDyldObjectLinkingLayerTest, TestAutoClaimResponsibilityForSymbols) {
   auto Foo = ES.intern("foo");
   RTDyldObjectLinkingLayer ObjLayer(
       ES, []() { return std::make_unique<SectionMemoryManager>(); });
-  IRCompileLayer CompileLayer(ES, ObjLayer, FunkySimpleCompiler(*TM));
+  IRCompileLayer CompileLayer(ES, ObjLayer,
+                              std::make_unique<FunkySimpleCompiler>(*TM));
 
   ObjLayer.setAutoClaimResponsibilityForObjectSymbols(true);
 
