@@ -398,6 +398,99 @@ define void @test12-6(i32* align 4 %p) {
   ret void
 }
 
+define void @test13(i1 %c, i32* align 32 %dst) #0 {
+; ATTRIBUTOR-LABEL: define {{[^@]+}}@test13
+; ATTRIBUTOR-SAME: (i1 [[C:%.*]], i32* nocapture nofree writeonly align 32 [[DST:%.*]])
+; ATTRIBUTOR-NEXT:    br i1 [[C]], label [[TRUEBB:%.*]], label [[FALSEBB:%.*]]
+; ATTRIBUTOR:       truebb:
+; ATTRIBUTOR-NEXT:    br label [[END:%.*]]
+; ATTRIBUTOR:       falsebb:
+; ATTRIBUTOR-NEXT:    br label [[END]]
+; ATTRIBUTOR:       end:
+; ATTRIBUTOR-NEXT:    [[PTR:%.*]] = phi i32* [ [[DST]], [[TRUEBB]] ], [ null, [[FALSEBB]] ]
+; ATTRIBUTOR-NEXT:    store i32 0, i32* [[PTR]], align 32
+; ATTRIBUTOR-NEXT:    ret void
+;
+  br i1 %c, label %truebb, label %falsebb
+truebb:
+  br label %end
+falsebb:
+  br label %end
+end:
+  %ptr = phi i32* [ %dst, %truebb ], [ null, %falsebb ]
+  store i32 0, i32* %ptr
+  ret void
+}
+
+define void @test13-1(i1 %c, i32* align 32 %dst) {
+; ATTRIBUTOR-LABEL: @test13-1(
+; ATTRIBUTOR-NEXT:    br i1 [[C:%.*]], label [[TRUEBB:%.*]], label [[FALSEBB:%.*]]
+; ATTRIBUTOR:       truebb:
+; ATTRIBUTOR-NEXT:    br label [[END:%.*]]
+; ATTRIBUTOR:       falsebb:
+; ATTRIBUTOR-NEXT:    br label [[END]]
+; ATTRIBUTOR:       end:
+; ATTRIBUTOR-NEXT:    [[PTR:%.*]] = phi i32* [ [[DST:%.*]], [[TRUEBB]] ], [ inttoptr (i64 48 to i32*), [[FALSEBB]] ]
+; ATTRIBUTOR-NEXT:    store i32 0, i32* [[PTR]], align 16
+; ATTRIBUTOR-NEXT:    ret void
+;
+  br i1 %c, label %truebb, label %falsebb
+truebb:
+  br label %end
+falsebb:
+  br label %end
+end:
+  %ptr = phi i32* [ %dst, %truebb ], [ inttoptr (i64 48 to i32*), %falsebb ]
+  store i32 0, i32* %ptr
+  ret void
+}
+
+define void @test13-2(i1 %c, i32* align 32 %dst) {
+; ATTRIBUTOR-LABEL: @test13-2(
+; ATTRIBUTOR-NEXT:    br i1 [[C:%.*]], label [[TRUEBB:%.*]], label [[FALSEBB:%.*]]
+; ATTRIBUTOR:       truebb:
+; ATTRIBUTOR-NEXT:    br label [[END:%.*]]
+; ATTRIBUTOR:       falsebb:
+; ATTRIBUTOR-NEXT:    br label [[END]]
+; ATTRIBUTOR:       end:
+; ATTRIBUTOR-NEXT:    [[PTR:%.*]] = phi i32* [ [[DST:%.*]], [[TRUEBB]] ], [ inttoptr (i64 160 to i32*), [[FALSEBB]] ]
+; ATTRIBUTOR-NEXT:    store i32 0, i32* [[PTR]], align 32
+; ATTRIBUTOR-NEXT:    ret void
+;
+  br i1 %c, label %truebb, label %falsebb
+truebb:
+  br label %end
+falsebb:
+  br label %end
+end:
+  %ptr = phi i32* [ %dst, %truebb ], [ inttoptr (i64 160 to i32*), %falsebb ]
+  store i32 0, i32* %ptr
+  ret void
+}
+
+define void @test13-3(i1 %c, i32* align 32 %dst) {
+; ATTRIBUTOR-LABEL: @test13-3(
+; ATTRIBUTOR-NEXT:    br i1 [[C:%.*]], label [[TRUEBB:%.*]], label [[FALSEBB:%.*]]
+; ATTRIBUTOR:       truebb:
+; ATTRIBUTOR-NEXT:    br label [[END:%.*]]
+; ATTRIBUTOR:       falsebb:
+; ATTRIBUTOR-NEXT:    br label [[END]]
+; ATTRIBUTOR:       end:
+; ATTRIBUTOR-NEXT:    [[PTR:%.*]] = phi i32* [ [[DST:%.*]], [[TRUEBB]] ], [ inttoptr (i64 128 to i32*), [[FALSEBB]] ]
+; ATTRIBUTOR-NEXT:    store i32 0, i32* [[PTR]], align 32
+; ATTRIBUTOR-NEXT:    ret void
+;
+  br i1 %c, label %truebb, label %falsebb
+truebb:
+  br label %end
+falsebb:
+  br label %end
+end:
+  %ptr = phi i32* [ %dst, %truebb ], [ inttoptr (i64 128 to i32*), %falsebb ]
+  store i32 0, i32* %ptr
+  ret void
+}
+
 ; Don't crash on ptr2int/int2ptr uses.
 define i64 @ptr2int(i32* %p) {
   %p2i = ptrtoint i32* %p to i64
@@ -410,3 +503,4 @@ define i64* @int2ptr(i64 %i) {
 
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { uwtable noinline }
+attributes #2 = { "null-pointer-is-valid"="true" }
