@@ -37102,11 +37102,24 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
 
   SDValue SrcBC = peekThroughBitcasts(Src);
 
-  // Handle extract(broadcast(scalar_value)), it doesn't matter what index is.
+  // Handle extract(bitcast(broadcast(scalar_value))).
   if (X86ISD::VBROADCAST == SrcBC.getOpcode()) {
     SDValue SrcOp = SrcBC.getOperand(0);
     if (SrcOp.getValueSizeInBits() == VT.getSizeInBits())
       return DAG.getBitcast(VT, SrcOp);
+
+    EVT SrcOpVT = SrcOp.getValueType();
+    if (SrcOpVT.isScalarInteger() && VT.isInteger() &&
+        (SrcOpVT.getSizeInBits() % SrcSVT.getSizeInBits()) == 0) {
+      unsigned Scale = SrcOpVT.getSizeInBits() / SrcSVT.getSizeInBits();
+      unsigned Offset = IdxC.urem(Scale) * SrcSVT.getSizeInBits();
+      // TODO support non-zero offsets.
+      if (Offset == 0) {
+        SrcOp = DAG.getZExtOrTrunc(SrcOp, dl, SrcVT.getScalarType());
+        SrcOp = DAG.getZExtOrTrunc(SrcOp, dl, VT);
+        return SrcOp;
+      }
+    }
   }
 
   // If we're extracting a single element from a broadcast load and there are
@@ -37126,7 +37139,7 @@ static SDValue combineExtractWithShuffle(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // Handle extract(scalar_to_vector(scalar_value)) for integers.
+  // Handle extract(bitcast(scalar_to_vector(scalar_value))) for integers.
   // TODO: Move to DAGCombine?
   if (SrcBC.getOpcode() == ISD::SCALAR_TO_VECTOR && VT.isInteger() &&
       SrcBC.getValueType().isInteger() &&
