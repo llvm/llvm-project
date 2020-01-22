@@ -153,33 +153,6 @@ static void *AcceptPIDFromInferior(void *arg) {
   return NULL;
 }
 
-static bool WaitForProcessToSIGSTOP(const lldb::pid_t pid,
-                                    const int timeout_in_seconds) {
-  const int time_delta_usecs = 100000;
-  const int num_retries = timeout_in_seconds / time_delta_usecs;
-  for (int i = 0; i < num_retries; i++) {
-    struct proc_bsdinfo bsd_info;
-    int error = ::proc_pidinfo(pid, PROC_PIDTBSDINFO, (uint64_t)0, &bsd_info,
-                               PROC_PIDTBSDINFO_SIZE);
-
-    switch (error) {
-    case EINVAL:
-    case ENOTSUP:
-    case ESRCH:
-    case EPERM:
-      return false;
-
-    default:
-      break;
-
-    case 0:
-      if (bsd_info.pbi_status == SSTOP)
-        return true;
-    }
-    ::usleep(time_delta_usecs);
-  }
-  return false;
-}
 #if !defined(__arm__) && !defined(__arm64__) && !defined(__aarch64__)
 
 const char *applscript_in_new_tty = "tell application \"Terminal\"\n"
@@ -325,11 +298,6 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
   lldb_error = accept_thread->Join(&accept_thread_result);
   if (lldb_error.Success() && accept_thread_result) {
     pid = (intptr_t)accept_thread_result;
-
-    // Wait for process to be stopped at the entry point by watching
-    // for the process status to be set to SSTOP which indicates it it
-    // SIGSTOP'ed at the entry point
-    WaitForProcessToSIGSTOP(pid, 5);
   }
 
   llvm::sys::fs::remove(unix_socket_name);
