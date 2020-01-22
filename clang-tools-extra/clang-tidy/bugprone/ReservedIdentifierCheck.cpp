@@ -172,7 +172,7 @@ ReservedIdentifierCheck::GetDiagInfo(const NamingCheckId &ID,
                     diag << ID.second
                          << getMessageSelectIndex(Failure.Info.KindName);
                   }};
-};
+}
 
 } // namespace bugprone
 } // namespace tidy
