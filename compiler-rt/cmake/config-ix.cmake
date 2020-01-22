@@ -224,6 +224,18 @@ function(get_test_cflags_for_apple_platform platform arch cflags_out)
   set(${cflags_out} "${test_cflags_str}" PARENT_SCOPE)
 endfunction()
 
+function(get_capitalized_apple_platform platform platform_capitalized)
+  # TODO(dliew): Remove uses of this function. It exists to preserve needlessly complex
+  # directory naming conventions used by the Sanitizer lit test suites.
+  is_valid_apple_platform("${platform}" is_valid_platform)
+  if (NOT is_valid_platform)
+    message(FATAL_ERROR "\"${platform}\" is not a valid apple platform")
+  endif()
+  string(TOUPPER "${platform}" platform_upper)
+  string(REGEX REPLACE "OSSIM$" "OSSim" platform_upper_capitalized "${platform_upper}")
+  set(${platform_capitalized} "${platform_upper_capitalized}" PARENT_SCOPE)
+endfunction()
+
 function(is_valid_apple_platform platform is_valid_out)
   set(is_valid FALSE)
   if ("${platform}" STREQUAL "")
