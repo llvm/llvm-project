@@ -381,8 +381,8 @@ def dpu_list(debugger, command, result, internal_dict):
 
     result_list = []
     for each_rank in range(0, nb_allocated_rank.GetValueAsUnsigned()):
-        rank = rank_list.GetChildAtIndex(each_rank)
-        if rank.GetValue() is None:
+        rank = rank_list.GetValueForExpressionPath("[" + str(each_rank) + "]")
+        if rank.GetValueAsUnsigned() == 0:
             continue
 
         region_id, rank_id = get_region_id_and_rank_id(rank, target)
