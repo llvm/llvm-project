@@ -1261,6 +1261,52 @@ let Predicates = [HasSVE] in {
   defm : pred_store<nxv4i32, nxv4i1,  non_temporal_store, STNT1W_ZRI>;
   defm : pred_store<nxv2i64, nxv2i1,  non_temporal_store, STNT1D_ZRI>;
 
+  multiclass unpred_store<ValueType Ty, Instruction RegImmInst, Instruction PTrue> {
+    def _fi : Pat<(store (Ty ZPR:$val), (am_sve_fi GPR64sp:$base, simm4s1:$offset)),
+                       (RegImmInst ZPR:$val, (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
+  }
+
+  defm Pat_ST1B        : unpred_store<nxv16i8, ST1B_IMM, PTRUE_B>;
+  defm Pat_ST1H        : unpred_store<nxv8i16, ST1H_IMM, PTRUE_H>;
+  defm Pat_ST1W        : unpred_store<nxv4i32, ST1W_IMM, PTRUE_S>;
+  defm Pat_ST1D        : unpred_store<nxv2i64, ST1D_IMM, PTRUE_D>;
+  defm Pat_ST1H_float16: unpred_store<nxv8f16, ST1H_IMM, PTRUE_H>;
+  defm Pat_ST1W_float  : unpred_store<nxv4f32, ST1W_IMM, PTRUE_S>;
+  defm Pat_ST1D_double : unpred_store<nxv2f64, ST1D_IMM, PTRUE_D>;
+
+  multiclass unpred_load<ValueType Ty, Instruction RegImmInst, Instruction PTrue> {
+    def _fi : Pat<(Ty (load  (am_sve_fi GPR64sp:$base, simm4s1:$offset))),
+                  (RegImmInst (PTrue 31), GPR64sp:$base, simm4s1:$offset)>;
+  }
+
+  defm Pat_LD1B        : unpred_load<nxv16i8, LD1B_IMM, PTRUE_B>;
+  defm Pat_LD1H        : unpred_load<nxv8i16, LD1H_IMM, PTRUE_H>;
+  defm Pat_LD1W        : unpred_load<nxv4i32, LD1W_IMM, PTRUE_S>;
+  defm Pat_LD1D        : unpred_load<nxv2i64, LD1D_IMM, PTRUE_D>;
+  defm Pat_LD1H_float16: unpred_load<nxv8f16, LD1H_IMM, PTRUE_H>;
+  defm Pat_LD1W_float  : unpred_load<nxv4f32, LD1W_IMM, PTRUE_S>;
+  defm Pat_LD1D_double : unpred_load<nxv2f64, LD1D_IMM, PTRUE_D>;
+
+  multiclass unpred_store_predicate<ValueType Ty, Instruction Store> {
+    def _fi : Pat<(store (Ty PPR:$val), (am_sve_fi GPR64sp:$base, simm9:$offset)),
+                  (Store PPR:$val, GPR64sp:$base, simm9:$offset)>;
+  }
+
+  defm Pat_Store_P16 : unpred_store_predicate<nxv16i1, STR_PXI>;
+  defm Pat_Store_P8  : unpred_store_predicate<nxv8i1, STR_PXI>;
+  defm Pat_Store_P4  : unpred_store_predicate<nxv4i1, STR_PXI>;
+  defm Pat_Store_P2  : unpred_store_predicate<nxv2i1, STR_PXI>;
+
+  multiclass unpred_load_predicate<ValueType Ty, Instruction Load> {
+    def _fi : Pat<(Ty (load (am_sve_fi GPR64sp:$base, simm9:$offset))),
+                  (Load GPR64sp:$base, simm9:$offset)>;
+  }
+
+  defm Pat_Load_P16 : unpred_load_predicate<nxv16i1, LDR_PXI>;
+  defm Pat_Load_P8  : unpred_load_predicate<nxv8i1, LDR_PXI>;
+  defm Pat_Load_P4  : unpred_load_predicate<nxv4i1, LDR_PXI>;
+  defm Pat_Load_P2  : unpred_load_predicate<nxv2i1, LDR_PXI>;
+
   multiclass ldnf1<Instruction I, ValueType Ty, SDPatternOperator Load, ValueType PredTy, ValueType MemVT> {
     // base
     def : Pat<(Ty (Load  (PredTy PPR:$gp), GPR64:$base, MemVT)),
