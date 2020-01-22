@@ -463,6 +463,10 @@ typedef __char32_t char32_t;
 #define _LIBCPP_HAS_OBJC_ARC_WEAK
 #endif
 
+#if __has_extension(blocks)
+#  define _LIBCPP_HAS_EXTENSION_BLOCKS
+#endif
+
 #if !(__has_feature(cxx_relaxed_constexpr))
 #define _LIBCPP_HAS_NO_CXX14_CONSTEXPR
 #endif
