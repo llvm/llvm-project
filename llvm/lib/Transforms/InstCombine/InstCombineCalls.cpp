@@ -1372,7 +1372,7 @@ static bool simplifyX86MaskedStore(IntrinsicInst &II, InstCombiner &IC) {
   // on each element's most significant bit (the sign bit).
   Constant *BoolMask = getNegativeIsTrueBoolVec(ConstMask);
 
-  IC.Builder.CreateMaskedStore(Vec, PtrCast, 1, BoolMask);
+  IC.Builder.CreateMaskedStore(Vec, PtrCast, Align::None(), BoolMask);
 
   // 'Replace uses' doesn't work for stores. Erase the original masked store.
   IC.eraseInstFromFunction(II);

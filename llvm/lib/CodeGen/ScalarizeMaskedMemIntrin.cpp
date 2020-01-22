@@ -849,39 +849,41 @@ bool ScalarizeMaskedMemIntrin::optimizeCallInst(CallInst *CI,
                                                 bool &ModifiedDT) {
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
   if (II) {
-    unsigned Alignment;
     switch (II->getIntrinsicID()) {
     default:
       break;
-    case Intrinsic::masked_load: {
+    case Intrinsic::masked_load:
       // Scalarize unsupported vector masked load
-      Alignment = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
-      if (TTI->isLegalMaskedLoad(CI->getType(), MaybeAlign(Alignment)))
+      if (TTI->isLegalMaskedLoad(
+              CI->getType(),
+              cast<ConstantInt>(CI->getArgOperand(1))->getAlignValue()))
         return false;
       scalarizeMaskedLoad(CI, ModifiedDT);
       return true;
-    }
-    case Intrinsic::masked_store: {
-      Alignment = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
-      if (TTI->isLegalMaskedStore(CI->getArgOperand(0)->getType(),
-                                  MaybeAlign(Alignment)))
+    case Intrinsic::masked_store:
+      if (TTI->isLegalMaskedStore(
+              CI->getArgOperand(0)->getType(),
+              cast<ConstantInt>(CI->getArgOperand(2))->getAlignValue()))
         return false;
       scalarizeMaskedStore(CI, ModifiedDT);
       return true;
-    }
-    case Intrinsic::masked_gather:
-      Alignment = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
+    case Intrinsic::masked_gather: {
+      unsigned Alignment =
+          cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
       if (TTI->isLegalMaskedGather(CI->getType(), MaybeAlign(Alignment)))
         return false;
       scalarizeMaskedGather(CI, ModifiedDT);
       return true;
-    case Intrinsic::masked_scatter:
-      Alignment = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+    }
+    case Intrinsic::masked_scatter: {
+      unsigned Alignment =
+          cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
       if (TTI->isLegalMaskedScatter(CI->getArgOperand(0)->getType(),
                                     MaybeAlign(Alignment)))
         return false;
       scalarizeMaskedScatter(CI, ModifiedDT);
       return true;
+    }
     case Intrinsic::masked_expandload:
       if (TTI->isLegalMaskedExpandLoad(CI->getType()))
         return false;

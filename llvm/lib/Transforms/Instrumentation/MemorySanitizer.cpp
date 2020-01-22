@@ -2904,7 +2904,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
     Value *V = I.getArgOperand(0);
     Value *Addr = I.getArgOperand(1);
-    const MaybeAlign Alignment(
+    const Align Alignment(
         cast<ConstantInt>(I.getArgOperand(2))->getZExtValue());
     Value *Mask = I.getArgOperand(3);
     Value *Shadow = getShadow(V);
@@ -2921,21 +2921,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       insertShadowCheck(Mask, &I);
     }
 
-    IRB.CreateMaskedStore(Shadow, ShadowPtr, Alignment ? Alignment->value() : 0,
-                          Mask);
+    IRB.CreateMaskedStore(Shadow, ShadowPtr, Alignment, Mask);
 
     if (MS.TrackOrigins) {
       auto &DL = F.getParent()->getDataLayout();
       paintOrigin(IRB, getOrigin(V), OriginPtr,
                   DL.getTypeStoreSize(Shadow->getType()),
-                  llvm::max(Alignment, kMinOriginAlignment));
+                  std::max(Alignment, kMinOriginAlignment));
     }
   }
 
   bool handleMaskedLoad(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
     Value *Addr = I.getArgOperand(0);
-    const MaybeAlign Alignment(
+    const Align Alignment(
         cast<ConstantInt>(I.getArgOperand(1))->getZExtValue());
     Value *Mask = I.getArgOperand(2);
     Value *PassThru = I.getArgOperand(3);
@@ -2945,7 +2944,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (PropagateShadow) {
       std::tie(ShadowPtr, OriginPtr) =
           getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment, /*isStore*/ false);
-      setShadow(&I, IRB.CreateMaskedLoad(ShadowPtr, *Alignment, Mask,
+      setShadow(&I, IRB.CreateMaskedLoad(ShadowPtr, Alignment, Mask,
                                          getShadow(PassThru), "_msmaskedld"));
     } else {
       setShadow(&I, getCleanShadow(&I));
