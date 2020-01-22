@@ -384,6 +384,13 @@ TEST_F(Core2Avx512TargetTest, FillMemoryOperands_VGATHERDPSZ128rm) {
   EXPECT_THAT(IT.getValueFor(I.Operands[8]), IsReg(0));
 }
 
+TEST_F(Core2TargetTest, AllowAsBackToBack) {
+  EXPECT_TRUE(
+      State.getExegesisTarget().allowAsBackToBack(getInstr(X86::ADD64rr)));
+  EXPECT_FALSE(
+      State.getExegesisTarget().allowAsBackToBack(getInstr(X86::LEA64r)));
+}
+
 } // namespace
 } // namespace exegesis
 } // namespace llvm
