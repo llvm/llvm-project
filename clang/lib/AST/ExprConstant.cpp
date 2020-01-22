@@ -12920,6 +12920,9 @@ bool FixedPointExprEvaluator::VisitCastExpr(const CastExpr *E) {
 }
 
 bool FixedPointExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
+  if (E->isPtrMemOp() || E->isAssignmentOp() || E->getOpcode() == BO_Comma)
+    return ExprEvaluatorBaseTy::VisitBinaryOperator(E);
+
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
   FixedPointSemantics ResultFXSema =
