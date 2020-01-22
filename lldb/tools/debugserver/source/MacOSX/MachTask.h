@@ -85,6 +85,7 @@ public:
   const MachProcess *Process() const { return m_process; }
 
   nub_size_t PageSize();
+  void TaskWillExecProcessesSuspended() { m_exec_will_be_suspended = true; }
 
 protected:
   MachProcess *m_process; // The mach process that owns this MachTask
@@ -97,6 +98,12 @@ protected:
                                 // need it
   mach_port_t m_exception_port; // Exception port on which we will receive child
                                 // exceptions
+  bool m_exec_will_be_suspended; // If this task exec's another process, that
+                                // process will be launched suspended and we will
+                                // need to execute one extra Resume to get it
+                                // to progress from dyld_start.
+  bool m_do_double_resume;      // next time we task_resume(), do it twice to
+                                // fix a too-high suspend count.
 
   typedef std::map<mach_vm_address_t, size_t> allocation_collection;
   allocation_collection m_allocations;
