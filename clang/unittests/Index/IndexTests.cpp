@@ -293,6 +293,27 @@ TEST(IndexTest, Constructors) {
                 WrittenAt(Position(4, 8)))));
 }
 
+TEST(IndexTest, InjecatedNameClass) {
+  std::string Code = R"cpp(
+    template <typename T>
+    class Foo {
+      void f(Foo x);
+    };
+  )cpp";
+  auto Index = std::make_shared<Indexer>();
+  IndexingOptions Opts;
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
+  EXPECT_THAT(Index->Symbols,
+              UnorderedElementsAre(AllOf(QName("Foo"), Kind(SymbolKind::Class),
+                                         WrittenAt(Position(3, 11))),
+                                   AllOf(QName("Foo::f"),
+                                         Kind(SymbolKind::InstanceMethod),
+                                         WrittenAt(Position(4, 12))),
+                                   AllOf(QName("Foo"), Kind(SymbolKind::Class),
+                                         HasRole(SymbolRole::Reference),
+                                         WrittenAt(Position(4, 14)))));
+}
+
 } // namespace
 } // namespace index
 } // namespace clang
