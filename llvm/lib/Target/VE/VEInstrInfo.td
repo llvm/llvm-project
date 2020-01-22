@@ -368,6 +368,13 @@ multiclass RRIm<string opcStr, bits<8>opc, SDNode OpNode,
 let Constraints = "$sx = $sd", DisableEncoding = "$sd" in
 multiclass RRCMOVm<string opcStr, bits<8>opc,
                RegisterClass RC, ValueType Ty, Operand immOp, Operand immOp2> {
+  def rr : RR<
+    opc, (outs I64:$sx), (ins CCOp:$cf, RC:$sy, I64:$sz, I64:$sd),
+    !strconcat(opcStr, " $sx, $sz, $sy")> {
+    let cy = 1;
+    let cz = 1;
+    let hasSideEffects = 0;
+  }
   def rm0 : RR<
     opc, (outs I64:$sx), (ins CCOp:$cf, RC:$sy, immOp2:$sz, I64:$sd),
     !strconcat(opcStr, " $sx, (${sz})0, $sy")> {
@@ -449,6 +456,19 @@ defm CPSU : RRNDm<"cmps.w.zx", 0x7A, I32, i32, simm7Op32, uimm6Op32>;
 let cx = 0 in
 defm CPX : RRNDm<"cmps.l", 0x6A, I64, i64, simm7Op64, uimm6Op64>;
 
+// cx: sx/zx, cw: max/min
+
+let cw = 0 in defm CMXa :
+  RRNDm<"maxs.l", 0x68, I64, i64, simm7Op64, uimm6Op64>;
+
+let cx = 0, cw = 0 in defm CMSa :
+  RRNDm<"maxs.w.zx", 0x78, I32, i32, simm7Op32, uimm6Op32>;
+
+let cw = 1 in defm CMXi :
+  RRNDm<"mins.l", 0x68, I64, i64, simm7Op64, uimm6Op64>;
+
+let cx = 1, cw = 0 in defm CMSi :
+  RRNDm<"mins.w.zx", 0x78, I32, i32, simm7Op32, uimm6Op32>;
 
 // 5.3.2.3. Logical Arithmetic Operation Instructions
 
@@ -480,6 +500,20 @@ let cx = 0 in
 defm FCP : RRNDm<"fcmp.d", 0x7E, I64, f64, simm7Op64, uimm6Op64>;
 let cx = 1 in
 defm FCPS : RRNDm<"fcmp.s", 0x7E, F32, f32, simm7Op32, uimm6Op32>;
+
+// FCM
+let cw = 0 in {
+  let cx = 0 in
+  defm FCMA : RRNDm<"fmax.d", 0x3E, I64, f64, simm7Op64, uimm6Op64>;
+  let cx = 1 in
+  defm FCMAS : RRNDm<"fmax.s", 0x3E, F32, f32, simm7Op32, uimm6Op32>;
+}
+let cw = 1 in {
+  let cx = 0 in
+  defm FCMI : RRNDm<"fmin.d", 0x3E, I64, f64, simm7Op64, uimm6Op64>;
+  let cx = 1 in
+  defm FCMIS : RRNDm<"fmin.s", 0x3E, F32, f32, simm7Op32, uimm6Op32>;
+}
 
 // Load and Store instructions
 // As 1st step, only uses sz and imm32 to represent $addr
@@ -675,6 +709,192 @@ def : Pat<(i32 (setcc f32:$LHS, f32:$RHS, cond:$cond)),
                         (FCPSrr f32:$LHS, f32:$RHS),
                         63,
                         (ORim1 0, 0)), sub_i32)>;
+
+// Special SELECTCC pattern matches
+// Use min/max for better performance.
+//
+//   MAX/MIN  %res, %lhs, %rhs
+
+def : Pat<(f64 (selectcc f64:$LHS, f64:$RHS, f64:$LHS, f64:$RHS, SETOGT)),
+          (FCMArr $LHS, $RHS)>;
+def : Pat<(f32 (selectcc f32:$LHS, f32:$RHS, f32:$LHS, f32:$RHS, SETOGT)),
+          (FCMASrr $LHS, $RHS)>;
+def : Pat<(i64 (selectcc i64:$LHS, i64:$RHS, i64:$LHS, i64:$RHS, SETGT)),
+          (CMXarr $LHS, $RHS)>;
+def : Pat<(i32 (selectcc i32:$LHS, i32:$RHS, i32:$LHS, i32:$RHS, SETGT)),
+          (CMSarr $LHS, $RHS)>;
+def : Pat<(f64 (selectcc f64:$LHS, f64:$RHS, f64:$LHS, f64:$RHS, SETOGE)),
+          (FCMArr $LHS, $RHS)>;
+def : Pat<(f32 (selectcc f32:$LHS, f32:$RHS, f32:$LHS, f32:$RHS, SETOGE)),
+          (FCMASrr $LHS, $RHS)>;
+def : Pat<(i64 (selectcc i64:$LHS, i64:$RHS, i64:$LHS, i64:$RHS, SETGE)),
+          (CMXarr $LHS, $RHS)>;
+def : Pat<(i32 (selectcc i32:$LHS, i32:$RHS, i32:$LHS, i32:$RHS, SETGE)),
+          (CMSarr $LHS, $RHS)>;
+
+def : Pat<(f64 (selectcc f64:$LHS, f64:$RHS, f64:$LHS, f64:$RHS, SETOLT)),
+          (FCMIrr $LHS, $RHS)>;
+def : Pat<(f32 (selectcc f32:$LHS, f32:$RHS, f32:$LHS, f32:$RHS, SETOLT)),
+          (FCMISrr $LHS, $RHS)>;
+def : Pat<(i64 (selectcc i64:$LHS, i64:$RHS, i64:$LHS, i64:$RHS, SETLT)),
+          (CMXirr $LHS, $RHS)>;
+def : Pat<(i32 (selectcc i32:$LHS, i32:$RHS, i32:$LHS, i32:$RHS, SETLT)),
+          (CMSirr $LHS, $RHS)>;
+def : Pat<(f64 (selectcc f64:$LHS, f64:$RHS, f64:$LHS, f64:$RHS, SETOLE)),
+          (FCMIrr $LHS, $RHS)>;
+def : Pat<(f32 (selectcc f32:$LHS, f32:$RHS, f32:$LHS, f32:$RHS, SETOLE)),
+          (FCMISrr $LHS, $RHS)>;
+def : Pat<(i64 (selectcc i64:$LHS, i64:$RHS, i64:$LHS, i64:$RHS, SETLE)),
+          (CMXirr $LHS, $RHS)>;
+def : Pat<(i32 (selectcc i32:$LHS, i32:$RHS, i32:$LHS, i32:$RHS, SETLE)),
+          (CMSirr $LHS, $RHS)>;
+
+// Generic SELECTCC pattern matches
+//
+//   CMP  %tmp, %l, %r       ; compare %l and %r
+//   or   %res, %f, (0)1     ; initialize by %f
+//   CMOV %res, %t, %tmp     ; set %t if %tmp is true
+
+// selectcc for i64 result
+def : Pat<(i64 (selectcc i32:$l, i32:$r, i64:$t, i64:$f, CCSIOp:$cond)),
+          (CMOVWrr (icond2cc $cond), (CPSrr $l, $r), $t, $f)>;
+def : Pat<(i64 (selectcc i32:$l, i32:$r, i64:$t, i64:$f, CCUIOp:$cond)),
+          (CMOVWrr (icond2cc $cond), (CMPUWrr $l, $r), $t, $f)>;
+def : Pat<(i64 (selectcc i64:$l, i64:$r, i64:$t, i64:$f, CCSIOp:$cond)),
+          (CMOVLrr (icond2cc $cond), (CPXrr $l, $r), $t, $f)>;
+def : Pat<(i64 (selectcc i64:$l, i64:$r, i64:$t, i64:$f, CCUIOp:$cond)),
+          (CMOVLrr (icond2cc $cond), (CMPrr $l, $r), $t, $f)>;
+def : Pat<(i64 (selectcc f32:$l, f32:$r, i64:$t, i64:$f, cond:$cond)),
+          (CMOVSrr (fcond2cc $cond), (FCPSrr $l, $r), $t, $f)>;
+def : Pat<(i64 (selectcc f64:$l, f64:$r, i64:$t, i64:$f, cond:$cond)),
+          (CMOVDrr (fcond2cc $cond), (FCPrr $l, $r), $t, $f)>;
+
+// selectcc for i32 result
+def : Pat<(i32 (selectcc i32:$l, i32:$r, i32:$t, i32:$f, CCSIOp:$cond)),
+          (EXTRACT_SUBREG
+              (CMOVWrr (icond2cc $cond),
+                       (CPSrr $l, $r),
+                       (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $t, sub_i32),
+                       (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $f, sub_i32)),
+              sub_i32)>;
+def : Pat<(i32 (selectcc i32:$l, i32:$r, i32:$t, i32:$f, CCUIOp:$cond)),
+          (EXTRACT_SUBREG
+              (CMOVWrr (icond2cc $cond),
+                       (CMPUWrr $l, $r),
+                       (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $t, sub_i32),
+                       (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $f, sub_i32)),
+              sub_i32)>;
+def : Pat<(i32 (selectcc i64:$l, i64:$r, i32:$t, i32:$f, CCSIOp:$cond)),
+          (EXTRACT_SUBREG
+              (CMOVLrr (icond2cc $cond),
+                       (CPXrr $l, $r),
+                       (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $t, sub_i32),
+                       (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $f, sub_i32)),
+              sub_i32)>;
+def : Pat<(i32 (selectcc i64:$l, i64:$r, i32:$t, i32:$f, CCUIOp:$cond)),
+          (EXTRACT_SUBREG
+              (CMOVLrr (icond2cc $cond),
+                       (CMPrr $l, $r),
+                       (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $t, sub_i32),
+                       (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $f, sub_i32)),
+              sub_i32)>;
+def : Pat<(i32 (selectcc f32:$l, f32:$r, i32:$t, i32:$f, cond:$cond)),
+          (EXTRACT_SUBREG
+              (CMOVSrr (fcond2cc $cond),
+                       (FCPSrr $l, $r),
+                       (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $t, sub_i32),
+                       (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $f, sub_i32)),
+              sub_i32)>;
+def : Pat<(i32 (selectcc f64:$l, f64:$r, i32:$t, i32:$f, cond:$cond)),
+          (EXTRACT_SUBREG
+              (CMOVDrr (fcond2cc $cond),
+                       (FCPrr $l, $r),
+                       (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $t, sub_i32),
+                       (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $f, sub_i32)),
+              sub_i32)>;
+
+// selectcc for f64 result
+def : Pat<(f64 (selectcc i32:$l, i32:$r, f64:$t, f64:$f, CCSIOp:$cond)),
+          (CMOVWrr (icond2cc $cond), (CPSrr $l, $r), $t, $f)>;
+def : Pat<(f64 (selectcc i32:$l, i32:$r, f64:$t, f64:$f, CCUIOp:$cond)),
+          (CMOVWrr (icond2cc $cond), (CMPUWrr $l, $r), $t, $f)>;
+def : Pat<(f64 (selectcc i64:$l, i64:$r, f64:$t, f64:$f, CCSIOp:$cond)),
+          (CMOVLrr (icond2cc $cond), (CPXrr $l, $r), $t, $f)>;
+def : Pat<(f64 (selectcc i64:$l, i64:$r, f64:$t, f64:$f, CCUIOp:$cond)),
+          (CMOVLrr (icond2cc $cond), (CMPrr $l, $r), $t, $f)>;
+def : Pat<(f64 (selectcc f32:$l, f32:$r, f64:$t, f64:$f, cond:$cond)),
+          (CMOVSrr (fcond2cc $cond), (FCPSrr $l, $r), $t, $f)>;
+def : Pat<(f64 (selectcc f64:$l, f64:$r, f64:$t, f64:$f, cond:$cond)),
+          (CMOVDrr (fcond2cc $cond), (FCPrr $l, $r), $t, $f)>;
+
+// selectcc for f32 result
+def : Pat<(f32 (selectcc i32:$l, i32:$r, f32:$t, f32:$f, CCSIOp:$cond)),
+          (EXTRACT_SUBREG
+              (CMOVWrr (icond2cc $cond),
+                       (CPSrr $l, $r),
+                       (INSERT_SUBREG (f64 (IMPLICIT_DEF)), $t, sub_f32),
+                       (INSERT_SUBREG (f64 (IMPLICIT_DEF)), $f, sub_f32)),
+              sub_f32)>;
+def : Pat<(f32 (selectcc i32:$l, i32:$r, f32:$t, f32:$f, CCUIOp:$cond)),
+          (EXTRACT_SUBREG
+              (CMOVWrr (icond2cc $cond),
+                       (CMPUWrr $l, $r),
+                       (INSERT_SUBREG (f64 (IMPLICIT_DEF)), $t, sub_f32),
+                       (INSERT_SUBREG (f64 (IMPLICIT_DEF)), $f, sub_f32)),
+              sub_f32)>;
+def : Pat<(f32 (selectcc i64:$l, i64:$r, f32:$t, f32:$f, CCSIOp:$cond)),
+          (EXTRACT_SUBREG
+              (CMOVLrr (icond2cc $cond),
+                       (CPXrr $l, $r),
+                       (INSERT_SUBREG (f64 (IMPLICIT_DEF)), $t, sub_f32),
+                       (INSERT_SUBREG (f64 (IMPLICIT_DEF)), $f, sub_f32)),
+              sub_f32)>;
+def : Pat<(f32 (selectcc i64:$l, i64:$r, f32:$t, f32:$f, CCUIOp:$cond)),
+          (EXTRACT_SUBREG
+              (CMOVLrr (icond2cc $cond),
+                       (CMPrr $l, $r),
+                       (INSERT_SUBREG (f64 (IMPLICIT_DEF)), $t, sub_f32),
+                       (INSERT_SUBREG (f64 (IMPLICIT_DEF)), $f, sub_f32)),
+              sub_f32)>;
+def : Pat<(f32 (selectcc f32:$l, f32:$r, f32:$t, f32:$f, cond:$cond)),
+          (EXTRACT_SUBREG
+              (CMOVSrr (fcond2cc $cond),
+                       (FCPSrr $l, $r),
+                       (INSERT_SUBREG (f64 (IMPLICIT_DEF)), $t, sub_f32),
+                       (INSERT_SUBREG (f64 (IMPLICIT_DEF)), $f, sub_f32)),
+              sub_f32)>;
+def : Pat<(f32 (selectcc f64:$l, f64:$r, f32:$t, f32:$f, cond:$cond)),
+          (EXTRACT_SUBREG
+              (CMOVDrr (fcond2cc $cond),
+                       (FCPrr $l, $r),
+                       (INSERT_SUBREG (f64 (IMPLICIT_DEF)), $t, sub_f32),
+                       (INSERT_SUBREG (f64 (IMPLICIT_DEF)), $f, sub_f32)),
+              sub_f32)>;
+
+// Generic SELECT pattern matches
+// Use cmov.w for all cases since %pred holds i32.
+//
+//   CMOV.w.ne %res, %tval, %tmp  ; set tval if %tmp is true
+
+def : Pat<(i64 (select i32:$pred, i64:$t, i64:$f)),
+          (CMOVWrr CC_INE, $pred, $t, $f)>;
+
+def : Pat<(i32 (select i32:$pred, i32:$t, i32:$f)),
+          (EXTRACT_SUBREG
+              (CMOVWrr CC_INE, $pred,
+                       (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $t, sub_i32),
+                       (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $f, sub_i32)),
+              sub_i32)>;
+
+def : Pat<(f64 (select i32:$pred, f64:$t, f64:$f)),
+          (CMOVWrr CC_INE, $pred, $t, $f)>;
+
+def : Pat<(f32 (select i32:$pred, f32:$t, f32:$f)),
+          (EXTRACT_SUBREG
+            (CMOVWrr CC_INE, $pred,
+                     (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $t, sub_f32),
+                     (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $f, sub_f32)),
+            sub_f32)>;
 
 
 // Several special pattern matches to optimize code
