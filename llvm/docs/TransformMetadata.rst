@@ -343,7 +343,7 @@ all of the aforementioned output loops.
 
 It is recommended to add ``llvm.loop.disable_nonforced`` to
 ``llvm.loop.distribute.followup_fallback``. This avoids that the
-fallback version (which is likely never executed) is further optimzed
+fallback version (which is likely never executed) is further optimized
 which would increase the code size.
 
 Versioning LICM

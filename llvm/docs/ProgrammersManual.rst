@@ -2996,7 +2996,7 @@ proper operation in multithreaded mode.
 
 Note that, on Unix-like platforms, LLVM requires the presence of GCC's atomic
 intrinsics in order to support threaded operation.  If you need a
-multhreading-capable LLVM on a platform without a suitably modern system
+multithreading-capable LLVM on a platform without a suitably modern system
 compiler, consider compiling LLVM and LLVM-GCC in single-threaded mode, and
 using the resultant compiler to build a copy of LLVM with multithreading
 support.
@@ -3307,7 +3307,7 @@ place the ``vptr`` in the first word of the instances.)
 
 .. _polymorphism:
 
-Designing Type Hiercharies and Polymorphic Interfaces
+Designing Type Hierarchies and Polymorphic Interfaces
 -----------------------------------------------------
 
 There are two different design patterns that tend to result in the use of
@@ -3351,7 +3351,7 @@ by Sean Parent in several of his talks and papers:
    describing this technique in more detail.
 #. `Sean Parent's Papers and Presentations
    <http://github.com/sean-parent/sean-parent.github.com/wiki/Papers-and-Presentations>`_
-   - A Github project full of links to slides, video, and sometimes code.
+   - A GitHub project full of links to slides, video, and sometimes code.
 
 When deciding between creating a type hierarchy (with either tagged or virtual
 dispatch) and using templates or concepts-based polymorphism, consider whether
@@ -3400,7 +3400,7 @@ The Core LLVM Class Hierarchy Reference
 
 header source: `Type.h <http://llvm.org/doxygen/Type_8h_source.html>`_
 
-doxygen info: `Type Clases <http://llvm.org/doxygen/classllvm_1_1Type.html>`_
+doxygen info: `Type Classes <http://llvm.org/doxygen/classllvm_1_1Type.html>`_
 
 The Core LLVM classes are the primary means of representing the program being
 inspected or transformed.  The core LLVM classes are defined in header files in

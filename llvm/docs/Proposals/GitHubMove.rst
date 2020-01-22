@@ -202,14 +202,14 @@ Step #4 : Post Move
 14. Update links on the LLVM website pointing to viewvc/klaus/phab etc. to
     point to GitHub instead.
 
-Github Repository Description
+GitHub Repository Description
 =============================
 
 Monorepo
 ----------------
 
 The LLVM git repository hosted at https://github.com/llvm/llvm-project contains all
-sub-projects in a single source tree.  It is often refered to as a monorepo and
+sub-projects in a single source tree.  It is often referred to as a monorepo and
 mimics an export of the current SVN repository, with each sub-project having its
 own top-level directory. Not all sub-projects are used for building toolchains.
 For example, www/ and test-suite/ are not part of the monorepo.
@@ -281,7 +281,7 @@ Monorepo Drawbacks
    1GB for the monorepo), and the commit rate of LLVM may cause more frequent
    `git push` collisions when upstreaming. Affected contributors may be able to
    use the SVN bridge or the single-subproject Git mirrors. However, it's
-   undecided if these projects will continue to be mantained.
+   undecided if these projects will continue to be maintained.
  * Using the monolithic repository may add overhead for those *integrating* a
    standalone sub-project, even if they aren't contributing to it, due to the
    same disk space concern as the point above. The availability of the
@@ -356,7 +356,7 @@ Before you push, you'll need to fetch and rebase (`git pull --rebase`) as
 usual.
 
 Note that when you fetch you'll likely pull in changes to sub-projects you don't
-care about. If you are using spasre checkout, the files from other projects
+care about. If you are using sparse checkout, the files from other projects
 won't appear on your disk. The only effect is that your commit hash changes.
 
 You can check whether the changes in the last fetch are relevant to your commit
@@ -657,7 +657,7 @@ done for each branch.  Ref paths will need to be updated to map the
 local branch to the corresponding upstream branch.  If local branches
 have no corresponding upstream branch, then the creation of
 ``local/octopus/<local branch>`` need not use ``git-merge-base`` to
-pinpont its root commit; it may simply be branched from the
+pinpoint its root commit; it may simply be branched from the
 appropriate component branch (say, ``llvm/local_release_X``).
 
 Zipping local history
@@ -812,7 +812,7 @@ The tool handles nested submodules (e.g. llvm is a submodule in
 umbrella and clang is a submodule in llvm).  The file
 ``submodule-map.txt`` is a list of pairs, one per line.  The first
 pair item describes the path to a submodule in the umbrella
-repository.  The second pair item secribes the path where trees for
+repository.  The second pair item describes the path where trees for
 that submodule should be written in the zipped history.  
 
 Let's say your umbrella repository is actually the llvm repository and
@@ -945,7 +945,7 @@ getting them into the monorepo.  A recipe follows::
       --tag-prefix="myrepo-"
    )
 
-   # Preserve release braches.
+   # Preserve release branches.
    for ref in $(git -C my-monorepo for-each-ref --format="%(refname)" \
                   refs/remotes/myrepo/release); do
      branch=${ref#refs/remotes/myrepo/}

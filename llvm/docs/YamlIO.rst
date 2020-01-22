@@ -730,7 +730,7 @@ The YAML syntax supports tags as a way to specify the type of a node before
 it is parsed. This allows dynamic types of nodes.  But the YAML I/O model uses
 static typing, so there are limits to how you can use tags with the YAML I/O
 model. Recently, we added support to YAML I/O for checking/setting the optional 
-tag on a map. Using this functionality it is even possbile to support different 
+tag on a map. Using this functionality it is even possible to support different 
 mappings, as long as they are convertible.  
 
 To check a tag, inside your mapping() method you can use io.mapTag() to specify

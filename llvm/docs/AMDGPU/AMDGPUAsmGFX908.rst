@@ -24,8 +24,8 @@ Notation
 
 Notation used in this document is explained :ref:`here<amdgpu_syn_instruction_notation>`.
 
-Overvew
-=======
+Overview
+========
 
 An overview of generic syntax and other features of AMDGPU instructions may be found :ref:`in this document<amdgpu_syn_instructions>`.
 

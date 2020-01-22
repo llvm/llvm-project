@@ -12,7 +12,7 @@ Introduction
 ============
 
 LLVM's code coverage mapping format is used to provide code coverage
-analysis using LLVM's and Clang's instrumenation based profiling
+analysis using LLVM's and Clang's instrumentation based profiling
 (Clang's ``-fprofile-instr-generate`` option).
 
 This document is aimed at those who use LLVM's code coverage mapping to provide

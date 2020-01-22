@@ -82,7 +82,7 @@ by a cut edge should equal ``UINT64_MAX``.  In other words, mass is conserved
 as it "falls" through the DAG.
 
 If a function's basic block graph is a DAG, then block masses are valid block
-frequencies.  This works poorly in practise though, since downstream users rely
+frequencies.  This works poorly in practice though, since downstream users rely
 on adding block frequencies together without hitting the maximum.
 
 Loop Scale

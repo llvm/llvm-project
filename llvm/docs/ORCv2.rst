@@ -124,7 +124,7 @@ module ``M`` loaded on a ThreadSafeContext ``Ctx``:
   // Call into JIT'd code.
   Entry();
 
-The builder clasess provide a number of configuration options that can be
+The builder classes provide a number of configuration options that can be
 specified before the JIT instance is constructed. For example:
 
 .. code-block:: c++
@@ -483,7 +483,7 @@ to be aware of:
      references are resolved, and symbol resolvers are no longer used. See the
      section `Design Overview`_ for more details.
 
-     Unless multiple JITDylibs are needed to model linkage relationsips, ORCv1
+     Unless multiple JITDylibs are needed to model linkage relationships, ORCv1
      clients should place all code in the main JITDylib (returned by
      ``ExecutionSession::getMainJITDylib()``). MCJIT clients should use LLJIT
      (see `LLJIT and LLLazyJIT`_).
