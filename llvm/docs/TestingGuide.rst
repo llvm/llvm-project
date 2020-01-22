@@ -45,7 +45,7 @@ Unit tests
 ----------
 
 Unit tests are written using `Google Test <https://github.com/google/googletest/blob/master/googletest/docs/primer.md>`_
-and `Google Mock <https://github.com/google/googletest/blob/master/googlemock/docs/ForDummies.md>`_
+and `Google Mock <https://github.com/google/googletest/blob/master/googlemock/docs/for_dummies.md>`_
 and are located in the ``llvm/unittests`` directory.
 
 Regression tests
