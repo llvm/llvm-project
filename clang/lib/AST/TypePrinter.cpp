@@ -1046,6 +1046,13 @@ void TypePrinter::printAutoBefore(const AutoType *T, raw_ostream &OS) {
   if (!T->getDeducedType().isNull()) {
     printBefore(T->getDeducedType(), OS);
   } else {
+    if (T->isConstrained()) {
+      OS << T->getTypeConstraintConcept()->getName();
+      auto Args = T->getTypeConstraintArguments();
+      if (!Args.empty())
+        printTemplateArgumentList(OS, Args, Policy);
+      OS << ' ';
+    }
     switch (T->getKeyword()) {
     case AutoTypeKeyword::Auto: OS << "auto"; break;
     case AutoTypeKeyword::DecltypeAuto: OS << "decltype(auto)"; break;
@@ -1234,20 +1241,18 @@ void TypePrinter::printEnumAfter(const EnumType *T, raw_ostream &OS) {}
 
 void TypePrinter::printTemplateTypeParmBefore(const TemplateTypeParmType *T,
                                               raw_ostream &OS) {
-  if (IdentifierInfo *Id = T->getIdentifier())
-    OS << Id->getName();
-  else {
-    bool IsLambdaAutoParam = false;
-    if (auto D = T->getDecl()) {
-      if (auto M = dyn_cast_or_null<CXXMethodDecl>(D->getDeclContext()))
-        IsLambdaAutoParam = D->isImplicit() && M->getParent()->isLambda();
+  TemplateTypeParmDecl *D = T->getDecl();
+  if (D && D->isImplicit()) {
+    if (auto *TC = D->getTypeConstraint()) {
+      TC->print(OS, Policy);
+      OS << ' ';
     }
+    OS << "auto";
+  } else if (IdentifierInfo *Id = T->getIdentifier())
+    OS << Id->getName();
+  else
+    OS << "type-parameter-" << T->getDepth() << '-' << T->getIndex();
 
-    if (IsLambdaAutoParam)
-      OS << "auto";
-    else
-      OS << "type-parameter-" << T->getDepth() << '-' << T->getIndex();
-  }
   spaceBeforePlaceHolder(OS);
 }
 

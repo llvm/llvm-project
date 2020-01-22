@@ -2102,11 +2102,8 @@ def err_auto_not_allowed : Error<
   "|in template argument|in typedef|in type alias|in function return type"
   "|in conversion function type|here|in lambda parameter"
   "|in type allocated by 'new'|in K&R-style function parameter"
-  "|in template parameter|in friend declaration"
-  "|in requires expression parameter}1">;
-def err_auto_not_allowed_in_return_type_requirement : Error<
-  "%select{'auto'|'decltype(auto)'|'__auto_type'}0 not allowed in expression "
-  "type requirement">;
+  "|in template parameter|in friend declaration|in function prototype that is "
+  "not a function declaration|in requires expression parameter}1">;
 def err_dependent_deduced_tst : Error<
   "typename specifier refers to "
   "%select{class template|function template|variable template|alias template|"
@@ -2655,6 +2652,9 @@ def note_ambiguous_atomic_constraints : Note<
   "same concept">;
 def note_ambiguous_atomic_constraints_similar_expression : Note<
   "similar constraint expression here">;
+def err_unsupported_placeholder_constraint : Error<
+  "constrained placeholder types other than simple 'auto' on non-type template "
+  "parameters not supported yet">;
 
 def err_template_different_requires_clause : Error<
   "requires clause differs in template redeclaration">;
@@ -2669,6 +2669,8 @@ def err_type_constraint_non_type_concept : Error<
 def err_type_constraint_missing_arguments : Error<
   "%0 requires more than 1 template argument; provide the remaining arguments "
   "explicitly to use it here">;
+def err_placeholder_constraints_not_satisfied : Error<
+  "deduced type %0 does not satisfy %1">;
 
 // C++11 char16_t/char32_t
 def warn_cxx98_compat_unicode_type : Warning<

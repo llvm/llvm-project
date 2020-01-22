@@ -58,6 +58,7 @@ namespace clang {
 
 class ExtQuals;
 class QualType;
+class ConceptDecl;
 class TagDecl;
 class Type;
 
@@ -1683,6 +1684,15 @@ protected:
     /// Was this placeholder type spelled as 'auto', 'decltype(auto)',
     /// or '__auto_type'?  AutoTypeKeyword value.
     unsigned Keyword : 2;
+
+    /// The number of template arguments in the type-constraints, which is
+    /// expected to be able to hold at least 1024 according to [implimits].
+    /// However as this limit is somewhat easy to hit with template
+    /// metaprogramming we'd prefer to keep it as large as possible.
+    /// At the moment it has been left as a non-bitfield since this type
+    /// safely fits in 64 bits as an unsigned, so there is no reason to
+    /// introduce the performance impact of a bitfield.
+    unsigned NumArgs;
   };
 
   class SubstTemplateTypeParmPackTypeBitfields {
@@ -4814,8 +4824,7 @@ public:
 
 /// Common base class for placeholders for types that get replaced by
 /// placeholder type deduction: C++11 auto, C++14 decltype(auto), C++17 deduced
-/// class template types, and (eventually) constrained type names from the C++
-/// Concepts TS.
+/// class template types, and constrained type names.
 ///
 /// These types are usually a placeholder for a deduced type. However, before
 /// the initializer is attached, or (usually) if the initializer is
@@ -4860,18 +4869,50 @@ public:
   }
 };
 
-/// Represents a C++11 auto or C++14 decltype(auto) type.
-class AutoType : public DeducedType, public llvm::FoldingSetNode {
+/// Represents a C++11 auto or C++14 decltype(auto) type, possibly constrained
+/// by a type-constraint.
+class alignas(8) AutoType : public DeducedType, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
+  ConceptDecl *TypeConstraintConcept;
+
   AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
-           bool IsDeducedAsDependent, bool IsDeducedAsPack)
-      : DeducedType(Auto, DeducedAsType, IsDeducedAsDependent,
-                    IsDeducedAsDependent, IsDeducedAsPack) {
-    AutoTypeBits.Keyword = (unsigned)Keyword;
+           bool IsDeducedAsDependent, bool IsDeducedAsPack, ConceptDecl *CD,
+           ArrayRef<TemplateArgument> TypeConstraintArgs);
+
+  const TemplateArgument *getArgBuffer() const {
+    return reinterpret_cast<const TemplateArgument*>(this+1);
+  }
+
+  TemplateArgument *getArgBuffer() {
+    return reinterpret_cast<TemplateArgument*>(this+1);
   }
 
 public:
+  /// Retrieve the template arguments.
+  const TemplateArgument *getArgs() const {
+    return getArgBuffer();
+  }
+
+  /// Retrieve the number of template arguments.
+  unsigned getNumArgs() const {
+    return AutoTypeBits.NumArgs;
+  }
+
+  const TemplateArgument &getArg(unsigned Idx) const; // in TemplateBase.h
+
+  ArrayRef<TemplateArgument> getTypeConstraintArguments() const {
+    return {getArgs(), getNumArgs()};
+  }
+
+  ConceptDecl *getTypeConstraintConcept() const {
+    return TypeConstraintConcept;
+  }
+
+  bool isConstrained() const {
+    return TypeConstraintConcept != nullptr;
+  }
+
   bool isDecltypeAuto() const {
     return getKeyword() == AutoTypeKeyword::DecltypeAuto;
   }
@@ -4880,18 +4921,15 @@ public:
     return (AutoTypeKeyword)AutoTypeBits.Keyword;
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getDeducedType(), getKeyword(), isDependentType(),
-            containsUnexpandedParameterPack());
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
+    Profile(ID, Context, getDeducedType(), getKeyword(), isDependentType(),
+            getTypeConstraintConcept(), getTypeConstraintArguments());
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Deduced,
-                      AutoTypeKeyword Keyword, bool IsDependent, bool IsPack) {
-    ID.AddPointer(Deduced.getAsOpaquePtr());
-    ID.AddInteger((unsigned)Keyword);
-    ID.AddBoolean(IsDependent);
-    ID.AddBoolean(IsPack);
-  }
+  static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
+                      QualType Deduced, AutoTypeKeyword Keyword,
+                      bool IsDependent, ConceptDecl *CD,
+                      ArrayRef<TemplateArgument> Arguments);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == Auto;
