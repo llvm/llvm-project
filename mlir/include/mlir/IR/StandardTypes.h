@@ -390,6 +390,52 @@ public:
 class MemRefType : public Type::TypeBase<MemRefType, BaseMemRefType,
                                          detail::MemRefTypeStorage> {
 public:
+  /// This is a builder type that keeps local references to arguments. Arguments
+  /// that are passed into the builder must out-live the builder.
+  class Builder {
+  public:
+    // Build from another MemRefType.
+    explicit Builder(MemRefType other)
+        : shape(other.getShape()), elementType(other.getElementType()),
+          affineMaps(other.getAffineMaps()),
+          memorySpace(other.getMemorySpace()) {}
+
+    // Build from scratch.
+    Builder(ArrayRef<int64_t> shape, Type elementType)
+        : shape(shape), elementType(elementType), affineMaps(), memorySpace(0) {
+    }
+
+    Builder &setShape(ArrayRef<int64_t> newShape) {
+      shape = newShape;
+      return *this;
+    }
+
+    Builder &setElementType(Type newElementType) {
+      elementType = newElementType;
+      return *this;
+    }
+
+    Builder &setAffineMaps(ArrayRef<AffineMap> newAffineMaps) {
+      affineMaps = newAffineMaps;
+      return *this;
+    }
+
+    Builder &setMemorySpace(unsigned newMemorySpace) {
+      memorySpace = newMemorySpace;
+      return *this;
+    }
+
+    operator MemRefType() {
+      return MemRefType::get(shape, elementType, affineMaps, memorySpace);
+    }
+
+  private:
+    ArrayRef<int64_t> shape;
+    Type elementType;
+    ArrayRef<AffineMap> affineMaps;
+    unsigned memorySpace;
+  };
+
   using Base::Base;
 
   /// Get or create a new MemRefType based on shape, element type, affine

@@ -41,8 +41,7 @@ public:
     auto memref = type.dyn_cast<MemRefType>();
     if (memref &&
         memref.getMemorySpace() == gpu::GPUDialect::getPrivateAddressSpace()) {
-      type = MemRefType::get(memref.getShape(), memref.getElementType(),
-                             memref.getAffineMaps());
+      type = MemRefType::Builder(memref).setMemorySpace(0);
     }
 
     return LLVMTypeConverter::convertType(type);
