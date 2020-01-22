@@ -1691,6 +1691,8 @@ unsigned AArch64InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   case AArch64::STRSui:
   case AArch64::STRDui:
   case AArch64::STRQui:
+  case AArch64::LDR_PXI:
+  case AArch64::STR_PXI:
     if (MI.getOperand(0).getSubReg() == 0 && MI.getOperand(1).isFI() &&
         MI.getOperand(2).isImm() && MI.getOperand(2).getImm() == 0) {
       FrameIndex = MI.getOperand(1).getIndex();
@@ -1803,9 +1805,19 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STNPSi:
   case AArch64::LDG:
   case AArch64::STGPi:
+  case AArch64::LD1B_IMM:
+  case AArch64::LD1H_IMM:
+  case AArch64::LD1W_IMM:
+  case AArch64::LD1D_IMM:
+  case AArch64::ST1B_IMM:
+  case AArch64::ST1H_IMM:
+  case AArch64::ST1W_IMM:
+  case AArch64::ST1D_IMM:
     return 3;
   case AArch64::ADDG:
   case AArch64::STGOffset:
+  case AArch64::LDR_PXI:
+  case AArch64::STR_PXI:
     return 2;
   }
 }
@@ -2056,6 +2068,7 @@ AArch64InstrInfo::getMemOpBaseRegImmOfsOffsetOperand(MachineInstr &LdSt) const {
 bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, unsigned &Scale,
                                     unsigned &Width, int64_t &MinOffset,
                                     int64_t &MaxOffset) {
+  const unsigned SVEMaxBytesPerVector = AArch64::SVEMaxBitsPerVector / 8;
   switch (Opcode) {
   // Not a memory operation or something we want to handle.
   default:
@@ -2220,15 +2233,32 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, unsigned &Scale,
     break;
   case AArch64::LDR_PXI:
   case AArch64::STR_PXI:
-    Scale = Width = 2;
+    Scale = 2;
+    Width = SVEMaxBytesPerVector / 8;
     MinOffset = -256;
     MaxOffset = 255;
     break;
   case AArch64::LDR_ZXI:
   case AArch64::STR_ZXI:
-    Scale = Width = 16;
+    Scale = 16;
+    Width = SVEMaxBytesPerVector;
     MinOffset = -256;
     MaxOffset = 255;
+    break;
+  case AArch64::LD1B_IMM:
+  case AArch64::LD1H_IMM:
+  case AArch64::LD1W_IMM:
+  case AArch64::LD1D_IMM:
+  case AArch64::ST1B_IMM:
+  case AArch64::ST1H_IMM:
+  case AArch64::ST1W_IMM:
+  case AArch64::ST1D_IMM:
+    // A full vectors worth of data
+    // Width = mbytes * elements
+    Scale = 16;
+    Width = SVEMaxBytesPerVector;
+    MinOffset = -8;
+    MaxOffset = 7;
     break;
   case AArch64::ST2GOffset:
   case AArch64::STZ2GOffset:
@@ -3433,6 +3463,14 @@ static bool isSVEScaledImmInstruction(unsigned Opcode) {
   case AArch64::STR_ZXI:
   case AArch64::LDR_PXI:
   case AArch64::STR_PXI:
+  case AArch64::LD1B_IMM:
+  case AArch64::LD1H_IMM:
+  case AArch64::LD1W_IMM:
+  case AArch64::LD1D_IMM:
+  case AArch64::ST1B_IMM:
+  case AArch64::ST1H_IMM:
+  case AArch64::ST1W_IMM:
+  case AArch64::ST1D_IMM:
     return true;
   default:
     return false;
