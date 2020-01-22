@@ -2132,6 +2132,12 @@ static Instruction *foldFNegIntoConstant(Instruction &I) {
   if (match(&I, m_FNeg(m_OneUse(m_FDiv(m_Constant(C), m_Value(X))))))
     return BinaryOperator::CreateFDivFMF(ConstantExpr::getFNeg(C), X, &I);
 
+  // With NSZ [ counter-example with -0.0: -(-0.0 + 0.0) != 0.0 + -0.0 ]:
+  // -(X + C) --> -X + -C --> -C - X
+  if (I.hasNoSignedZeros() &&
+      match(&I, m_FNeg(m_OneUse(m_FAdd(m_Value(X), m_Constant(C))))))
+    return BinaryOperator::CreateFSubFMF(ConstantExpr::getFNeg(C), X, &I);
+
   return nullptr;
 }
 
