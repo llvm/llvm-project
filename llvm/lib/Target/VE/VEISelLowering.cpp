@@ -245,5 +245,5 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
 
 EVT VETargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
                                          EVT VT) const {
-  return MVT::i64;
+  return MVT::i32;
 }
