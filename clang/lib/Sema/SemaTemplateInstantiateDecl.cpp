@@ -4252,9 +4252,9 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
         MLTAL.getInnermost(), SourceRange());
     if (Inst.isInvalid())
       return true;
-    if (addInstantiatedParametersToScope(*this, Decl,
-                                        Decl->getTemplateInstantiationPattern(),
-                                         Scope, MLTAL))
+    if (addInstantiatedParametersToScope(
+            *this, Decl, Decl->getPrimaryTemplate()->getTemplatedDecl(),
+            Scope, MLTAL))
       return true;
   }
 
