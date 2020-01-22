@@ -30,7 +30,8 @@ class TestSwiftDWARFImporter_Swift(lldbtest.TestBase):
         self.runCmd("settings set symbols.use-swift-dwarfimporter true")
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
-            self, 'break here', lldb.SBFileSpec('main.swift'))
+            self, 'break here', lldb.SBFileSpec('main.swift'),
+            extra_images = ['Library'])
 
         log = self.getBuildArtifact("types.log")
         self.runCmd('log enable lldb types -f "%s"' % log)
