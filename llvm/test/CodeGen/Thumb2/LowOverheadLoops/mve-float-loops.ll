@@ -1357,9 +1357,9 @@ define arm_aapcs_vfpcc void @half_short_mul(half* nocapture readonly %a, i16* no
 ; CHECK-NEXT:    dls lr, lr
 ; CHECK-NEXT:  .LBB8_4: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vldrh.u32 q0, [r5], #8
 ; CHECK-NEXT:    ldr.w r9, [r4]
 ; CHECK-NEXT:    ldr.w r8, [r4, #4]
-; CHECK-NEXT:    vldrh.u32 q0, [r5], #8
 ; CHECK-NEXT:    adds r4, #8
 ; CHECK-NEXT:    vmov r7, s0
 ; CHECK-NEXT:    vmov.16 q1[0], r7
