@@ -30,12 +30,12 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux \
 # RUN:   %p/Inputs/filename-spec.s -o %t.dir/filename-spec2.o
 
-# RUN: echo "SECTIONS{.foo :{ %/t.dir/filename-spec2.o(.foo) %/t.dir/filename-spec1.o(.foo) }}" > %t5.script
+# RUN: echo "SECTIONS{.foo :{ \"%/t.dir/filename-spec2.o\"(.foo) \"%/t.dir/filename-spec1.o\"(.foo) }}" > %t5.script
 # RUN: ld.lld -o %t5 --script %t5.script \
 # RUN:   %/t.dir/filename-spec1.o %/t.dir/filename-spec2.o
 # RUN: llvm-objdump -s %t5 | FileCheck --check-prefix=SECONDFIRST %s
 
-# RUN: echo "SECTIONS{.foo :{ %/t.dir/filename-spec1.o(.foo) %/t.dir/filename-spec2.o(.foo) }}" > %t6.script
+# RUN: echo "SECTIONS{.foo :{ \"%/t.dir/filename-spec1.o\"(.foo) \"%/t.dir/filename-spec2.o\"(.foo) }}" > %t6.script
 # RUN: ld.lld -o %t6 --script %t6.script \
 # RUN:   %/t.dir/filename-spec1.o %/t.dir/filename-spec2.o
 # RUN: llvm-objdump -s %t6 | FileCheck --check-prefix=FIRSTY %s

@@ -204,10 +204,11 @@ public:
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   /// Get the base register and byte offset of a load/store instr.
-  bool getMemOperandWithOffset(const MachineInstr &LdSt,
-                               const MachineOperand *&BaseOp,
-                               int64_t &Offset,
-                               const TargetRegisterInfo *TRI) const override;
+  bool
+  getMemOperandsWithOffset(const MachineInstr &LdSt,
+                           SmallVectorImpl<const MachineOperand *> &BaseOps,
+                           int64_t &Offset,
+                           const TargetRegisterInfo *TRI) const override;
 
   /// Reverses the branch condition of the specified condition list,
   /// returning false on success and true if it cannot be reversed.

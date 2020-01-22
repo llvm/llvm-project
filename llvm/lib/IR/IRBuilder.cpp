@@ -487,19 +487,19 @@ CallInst *IRBuilderBase::CreateMaskedLoad(Value *Ptr, Align Alignment,
 }
 
 /// Create a call to a Masked Store intrinsic.
-/// \p Val   - data to be stored,
-/// \p Ptr   - base pointer for the store
-/// \p Align - alignment of the destination location
-/// \p Mask  - vector of booleans which indicates what vector lanes should
-///            be accessed in memory
+/// \p Val       - data to be stored,
+/// \p Ptr       - base pointer for the store
+/// \p Alignment - alignment of the destination location
+/// \p Mask      - vector of booleans which indicates what vector lanes should
+///                be accessed in memory
 CallInst *IRBuilderBase::CreateMaskedStore(Value *Val, Value *Ptr,
-                                           unsigned Align, Value *Mask) {
+                                           Align Alignment, Value *Mask) {
   auto *PtrTy = cast<PointerType>(Ptr->getType());
   Type *DataTy = PtrTy->getElementType();
   assert(DataTy->isVectorTy() && "Ptr should point to a vector");
   assert(Mask && "Mask should not be all-ones (null)");
   Type *OverloadedTypes[] = { DataTy, PtrTy };
-  Value *Ops[] = { Val, Ptr, getInt32(Align), Mask };
+  Value *Ops[] = {Val, Ptr, getInt32(Alignment.value()), Mask};
   return CreateMaskedIntrinsic(Intrinsic::masked_store, Ops, OverloadedTypes);
 }
 

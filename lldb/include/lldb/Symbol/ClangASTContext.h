@@ -57,17 +57,20 @@ public:
 
   /// Constructs a ClangASTContext with an ASTContext using the given triple.
   ///
+  /// \param name The name for the ClangASTContext (for logging purposes)
   /// \param triple The llvm::Triple used for the ASTContext. The triple defines
   ///               certain characteristics of the ASTContext and its types
   ///               (e.g., whether certain primitive types exist or what their
   ///               signedness is).
-  explicit ClangASTContext(llvm::Triple triple);
+  explicit ClangASTContext(llvm::StringRef name, llvm::Triple triple);
 
   /// Constructs a ClangASTContext that uses an existing ASTContext internally.
   /// Useful when having an existing ASTContext created by Clang.
   ///
+  /// \param name The name for the ClangASTContext (for logging purposes)
   /// \param existing_ctxt An existing ASTContext.
-  explicit ClangASTContext(clang::ASTContext &existing_ctxt);
+  explicit ClangASTContext(llvm::StringRef name,
+                           clang::ASTContext &existing_ctxt);
 
   ~ClangASTContext() override;
 
@@ -103,6 +106,10 @@ public:
     }
     return llvm::dyn_cast<ClangASTContext>(&type_system_or_err.get());
   }
+
+  /// Returns the display name of this ClangASTContext that indicates what
+  /// purpose it serves in LLDB. Used for example in logs.
+  llvm::StringRef getDisplayName() const { return m_display_name; }
 
   clang::ASTContext &getASTContext();
 
@@ -947,6 +954,10 @@ private:
   std::unique_ptr<clang::MangleContext> m_mangle_ctx_up;
   uint32_t m_pointer_byte_size = 0;
   bool m_ast_owned = false;
+  /// A string describing what this ClangASTContext represents (e.g.,
+  /// AST for debug information, an expression, some other utility ClangAST).
+  /// Useful for logging and debugging.
+  std::string m_display_name;
 
   typedef llvm::DenseMap<const clang::Decl *, ClangASTMetadata> DeclMetadataMap;
   /// Maps Decls to their associated ClangASTMetadata.

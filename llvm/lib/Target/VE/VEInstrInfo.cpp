@@ -38,12 +38,18 @@ VEInstrInfo::VEInstrInfo(VESubtarget &ST)
     : VEGenInstrInfo(VE::ADJCALLSTACKDOWN, VE::ADJCALLSTACKUP), RI(),
       Subtarget(ST) {}
 
+static bool IsAliasOfSX(Register Reg) {
+  return VE::I8RegClass.contains(Reg) || VE::I16RegClass.contains(Reg) ||
+         VE::I32RegClass.contains(Reg) || VE::I64RegClass.contains(Reg) ||
+         VE::F32RegClass.contains(Reg);
+}
+
 void VEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator I, const DebugLoc &DL,
                               MCRegister DestReg, MCRegister SrcReg,
                               bool KillSrc) const {
 
-  if (VE::I64RegClass.contains(SrcReg) && VE::I64RegClass.contains(DestReg)) {
+  if (IsAliasOfSX(SrcReg) && IsAliasOfSX(DestReg)) {
     BuildMI(MBB, I, DL, get(VE::ORri), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
         .addImm(0);

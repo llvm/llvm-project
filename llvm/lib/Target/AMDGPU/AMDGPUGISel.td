@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 include "AMDGPU.td"
+include "AMDGPUCombine.td"
 
 def sd_vsrc0 : ComplexPattern<i32, 1, "">;
 def gi_vsrc0 :
@@ -118,6 +119,12 @@ def : GINodeEquiv<G_ATOMICRMW_FADD, atomic_load_fadd_glue>;
 
 def : GINodeEquiv<G_AMDGPU_FFBH_U32, AMDGPUffbh_u32>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_CMPXCHG, AMDGPUatomic_cmp_swap>;
+
+// FIXME: Check MMO is atomic
+def : GINodeEquiv<G_AMDGPU_ATOMIC_INC, SIatomic_inc>;
+def : GINodeEquiv<G_AMDGPU_ATOMIC_DEC, SIatomic_dec>;
+def : GINodeEquiv<G_AMDGPU_ATOMIC_INC, atomic_inc_glue>;
+def : GINodeEquiv<G_AMDGPU_ATOMIC_DEC, atomic_dec_glue>;
 
 
 class GISelSop2Pat <

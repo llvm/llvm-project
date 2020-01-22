@@ -3465,30 +3465,6 @@ static MachineBasicBlock *emitIndirectSrc(MachineInstr &MI,
   return LoopBB;
 }
 
-static unsigned getIndirectRegWritePseudo(const SIRegisterInfo &TRI,
-                                 const TargetRegisterClass *VecRC) {
-  switch (TRI.getRegSizeInBits(*VecRC)) {
-  case 32: // 4 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V1;
-  case 64: // 8 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V2;
-  case 96: // 12 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V3;
-  case 128: // 16 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V4;
-  case 160: // 20 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V5;
-  case 256: // 32 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V8;
-  case 512: // 64 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V16;
-  case 1024: // 128 bytes
-    return AMDGPU::V_INDIRECT_REG_WRITE_B32_V32;
-  default:
-    llvm_unreachable("unsupported size for IndirectRegWrite pseudos");
-  }
-}
-
 static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
                                           MachineBasicBlock &MBB,
                                           const GCNSubtarget &ST) {
@@ -3528,12 +3504,12 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
     return &MBB;
   }
 
+  const MCInstrDesc &MovRelDesc
+    = TII->getIndirectRegWritePseudo(TRI.getRegSizeInBits(*VecRC), 32, false);
+
   if (setM0ToIndexFromSGPR(TII, MRI, MI, Offset, UseGPRIdxMode, false)) {
     MachineBasicBlock::iterator I(&MI);
     const DebugLoc &DL = MI.getDebugLoc();
-
-    const MCInstrDesc &MovRelDesc
-      = TII->get(getIndirectRegWritePseudo(TRI, VecRC));
     BuildMI(MBB, I, DL, MovRelDesc, Dst)
       .addReg(SrcVec->getReg())
       .add(*Val)
@@ -3556,7 +3532,6 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
                               Offset, UseGPRIdxMode, false);
   MachineBasicBlock *LoopBB = InsPt->getParent();
 
-  const MCInstrDesc &MovRelDesc = TII->get(getIndirectRegWritePseudo(TRI, VecRC));
   BuildMI(*LoopBB, InsPt, DL, MovRelDesc, Dst)
     .addReg(PhiReg)
     .add(*Val)
@@ -5215,6 +5190,24 @@ static bool parseCachePolicy(SDValue CachePolicy, SelectionDAG &DAG,
   return Value == 0;
 }
 
+static SDValue padEltsToUndef(SelectionDAG &DAG, const SDLoc &DL, EVT CastVT,
+                              SDValue Src, int ExtraElts) {
+  EVT SrcVT = Src.getValueType();
+
+  SmallVector<SDValue, 8> Elts;
+
+  if (SrcVT.isVector())
+    DAG.ExtractVectorElements(Src, Elts);
+  else
+    Elts.push_back(Src);
+
+  SDValue Undef = DAG.getUNDEF(SrcVT.getScalarType());
+  while (ExtraElts--)
+    Elts.push_back(Undef);
+
+  return DAG.getBuildVector(CastVT, DL, Elts);
+}
+
 // Re-construct the required return value for a image load intrinsic.
 // This is more complicated due to the optional use TexFailCtrl which means the required
 // return type is an aggregate
@@ -5226,76 +5219,56 @@ static SDValue constructRetValue(SelectionDAG &DAG,
                                  const SDLoc &DL, LLVMContext &Context) {
   // Determine the required return type. This is the same regardless of IsTexFail flag
   EVT ReqRetVT = ResultTypes[0];
-  EVT ReqRetEltVT = ReqRetVT.isVector() ? ReqRetVT.getVectorElementType() : ReqRetVT;
   int ReqRetNumElts = ReqRetVT.isVector() ? ReqRetVT.getVectorNumElements() : 1;
-  EVT AdjEltVT = Unpacked && IsD16 ? MVT::i32 : ReqRetEltVT;
-  EVT AdjVT = Unpacked ? ReqRetNumElts > 1 ? EVT::getVectorVT(Context, AdjEltVT, ReqRetNumElts)
-                                           : AdjEltVT
-                       : ReqRetVT;
+  int NumDataDwords = (!IsD16 || (IsD16 && Unpacked)) ?
+    ReqRetNumElts : (ReqRetNumElts + 1) / 2;
 
-  // Extract data part of the result
-  // Bitcast the result to the same type as the required return type
-  int NumElts;
-  if (IsD16 && !Unpacked)
-    NumElts = NumVDataDwords << 1;
-  else
-    NumElts = NumVDataDwords;
+  int MaskPopDwords = (!IsD16 || (IsD16 && Unpacked)) ?
+    DMaskPop : (DMaskPop + 1) / 2;
 
-  EVT CastVT = NumElts > 1 ? EVT::getVectorVT(Context, AdjEltVT, NumElts)
-                           : AdjEltVT;
+  MVT DataDwordVT = NumDataDwords == 1 ?
+    MVT::i32 : MVT::getVectorVT(MVT::i32, NumDataDwords);
 
-  // Special case for v6f16. Rather than add support for this, use v3i32 to
-  // extract the data elements
-  bool V6F16Special = false;
-  if (NumElts == 6) {
-    CastVT = EVT::getVectorVT(Context, MVT::i32, NumElts / 2);
-    DMaskPop >>= 1;
-    ReqRetNumElts >>= 1;
-    V6F16Special = true;
-    AdjVT = MVT::v2i32;
+  MVT MaskPopVT = MaskPopDwords == 1 ?
+    MVT::i32 : MVT::getVectorVT(MVT::i32, MaskPopDwords);
+
+  SDValue Data(Result, 0);
+  SDValue TexFail;
+
+  if (IsTexFail) {
+    SDValue ZeroIdx = DAG.getConstant(0, DL, MVT::i32);
+    if (MaskPopVT.isVector()) {
+      Data = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MaskPopVT,
+                         SDValue(Result, 0), ZeroIdx);
+    } else {
+      Data = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MaskPopVT,
+                         SDValue(Result, 0), ZeroIdx);
+    }
+
+    TexFail = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
+                          SDValue(Result, 0),
+                          DAG.getConstant(MaskPopDwords, DL, MVT::i32));
   }
 
-  SDValue N = SDValue(Result, 0);
-  SDValue CastRes = DAG.getNode(ISD::BITCAST, DL, CastVT, N);
+  if (DataDwordVT.isVector())
+    Data = padEltsToUndef(DAG, DL, DataDwordVT, Data,
+                          NumDataDwords - MaskPopDwords);
 
-  // Iterate over the result
-  SmallVector<SDValue, 4> BVElts;
+  if (IsD16)
+    Data = adjustLoadValueTypeImpl(Data, ReqRetVT, DL, DAG, Unpacked);
 
-  if (CastVT.isVector()) {
-    DAG.ExtractVectorElements(CastRes, BVElts, 0, DMaskPop);
-  } else {
-    BVElts.push_back(CastRes);
-  }
-  int ExtraElts = ReqRetNumElts - DMaskPop;
-  while(ExtraElts--)
-    BVElts.push_back(DAG.getUNDEF(AdjEltVT));
+  if (!ReqRetVT.isVector())
+    Data = DAG.getNode(ISD::TRUNCATE, DL, ReqRetVT.changeTypeToInteger(), Data);
 
-  SDValue PreTFCRes;
-  if (ReqRetNumElts > 1) {
-    SDValue NewVec = DAG.getBuildVector(AdjVT, DL, BVElts);
-    if (IsD16 && Unpacked)
-      PreTFCRes = adjustLoadValueTypeImpl(NewVec, ReqRetVT, DL, DAG, Unpacked);
-    else
-      PreTFCRes = NewVec;
-  } else {
-    PreTFCRes = BVElts[0];
-  }
+  Data = DAG.getNode(ISD::BITCAST, DL, ReqRetVT, Data);
 
-  if (V6F16Special)
-    PreTFCRes = DAG.getNode(ISD::BITCAST, DL, MVT::v4f16, PreTFCRes);
+  if (TexFail)
+    return DAG.getMergeValues({Data, TexFail, SDValue(Result, 1)}, DL);
 
-  if (!IsTexFail) {
-    if (Result->getNumValues() > 1)
-      return DAG.getMergeValues({PreTFCRes, SDValue(Result, 1)}, DL);
-    else
-      return PreTFCRes;
-  }
+  if (Result->getNumValues() == 1)
+    return Data;
 
-  // Extract the TexFail result and insert into aggregate return
-  SmallVector<SDValue, 1> TFCElt;
-  DAG.ExtractVectorElements(N, TFCElt, DMaskPop, 1);
-  SDValue TFCRes = DAG.getNode(ISD::BITCAST, DL, ResultTypes[1], TFCElt[0]);
-  return DAG.getMergeValues({PreTFCRes, TFCRes, SDValue(Result, 1)}, DL);
+  return DAG.getMergeValues({Data, SDValue(Result, 1)}, DL);
 }
 
 static bool parseTexFail(SDValue TexFailCtrl, SelectionDAG &DAG, SDValue *TFE,
@@ -5545,8 +5518,8 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
     }
 
     EVT NewVT = NumVDataDwords > 1 ?
-                  EVT::getVectorVT(*DAG.getContext(), MVT::f32, NumVDataDwords)
-                : MVT::f32;
+                  EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumVDataDwords)
+                : MVT::i32;
 
     ResultTypes[0] = NewVT;
     if (ResultTypes.size() == 3) {
@@ -5903,7 +5876,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue S = DAG.getNode(
         ISD::INTRINSIC_WO_CHAIN, DL, MVT::f32,
         DAG.getTargetConstant(Intrinsic::amdgcn_interp_mov, DL, MVT::i32),
-        DAG.getConstant(2, DL, MVT::i32), // P0
+        DAG.getTargetConstant(2, DL, MVT::i32), // P0
         Op.getOperand(2),  // Attrchan
         Op.getOperand(3),  // Attr
         Op.getOperand(5)); // m0

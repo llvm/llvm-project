@@ -9,6 +9,20 @@ entry:
   ret i8* %0
 }
 
+define i8* @rt0_call_clobber(i32 %x) nounwind readnone {
+entry:
+; CHECK-LABEL: rt0_call_clobber:
+; CHECK: stp     x20, x19, [sp, #-32]!
+; CHECK: stp     x29, x30, [sp, #16]
+; CHECK: mov     x19, x30
+; CHECK: bl      _foo
+; CHECK: ldp     x29, x30, [sp, #16]
+; CHECK: mov     x0, x19
+  %ret = call i32 @foo()
+  %0 = tail call i8* @llvm.returnaddress(i32 0)
+  ret i8* %0
+}
+
 define i8* @rt2() nounwind readnone {
 entry:
 ; CHECK-LABEL: rt2:
@@ -19,4 +33,6 @@ entry:
   ret i8* %0
 }
 
+
+declare i32 @foo()
 declare i8* @llvm.returnaddress(i32) nounwind readnone

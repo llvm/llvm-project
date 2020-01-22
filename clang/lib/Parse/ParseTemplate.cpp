@@ -240,6 +240,8 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
 
   // Parse the declarator.
   ParsingDeclarator DeclaratorInfo(*this, DS, (DeclaratorContext)Context);
+  if (TemplateInfo.TemplateParams)
+    DeclaratorInfo.setTemplateParameterLists(*TemplateInfo.TemplateParams);
   ParseDeclarator(DeclaratorInfo);
   // Error parsing the declarator?
   if (!DeclaratorInfo.hasName()) {
@@ -601,6 +603,7 @@ Parser::TPResult Parser::isStartOfTemplateTypeParameter() {
 ///         typename
 ///
 NamedDecl *Parser::ParseTemplateParameter(unsigned Depth, unsigned Position) {
+
   switch (isStartOfTemplateTypeParameter()) {
   case TPResult::True:
     // Is there just a typo in the input code? ('typedef' instead of
@@ -618,7 +621,6 @@ NamedDecl *Parser::ParseTemplateParameter(unsigned Depth, unsigned Position) {
     }
 
     return ParseTypeParameter(Depth, Position);
-
   case TPResult::False:
     break;
 
@@ -678,7 +680,6 @@ bool Parser::isTypeConstraintAnnotation() {
 bool Parser::TryAnnotateTypeConstraint() {
   if (!getLangOpts().ConceptsTS)
     return false;
-
   CXXScopeSpec SS;
   bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);
   if (ParseOptionalCXXScopeSpecifier(
@@ -712,8 +713,11 @@ bool Parser::TryAnnotateTypeConstraint() {
                                       MemberOfUnknownSpecialization);
     assert(!MemberOfUnknownSpecialization
            && "Member when we only allowed namespace scope qualifiers??");
-    if (!PossibleConcept || TNK != TNK_Concept_template)
+    if (!PossibleConcept || TNK != TNK_Concept_template) {
+      if (SS.isNotEmpty())
+        AnnotateScopeToken(SS, !WasScopeAnnotation);
       return false;
+    }
 
     // At this point we're sure we're dealing with a constrained parameter. It
     // may or may not have a template parameter list following the concept

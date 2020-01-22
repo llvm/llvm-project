@@ -286,6 +286,14 @@ TEST_F(TargetDeclTest, Types) {
   )cpp";
   // FIXME: We don't do a good job printing TemplateTypeParmDecls, apparently!
   EXPECT_DECLS("SizeOfPackExpr", "");
+
+  Code = R"cpp(
+    template <typename T>
+    class Foo {
+      void f([[Foo]] x);
+    };
+  )cpp";
+  EXPECT_DECLS("InjectedClassNameTypeLoc", "class Foo");
 }
 
 TEST_F(TargetDeclTest, ClassTemplate) {
@@ -733,21 +741,17 @@ TEST_F(FindExplicitReferencesTest, All) {
        {R"cpp(
             namespace foo {
               template <typename $0^T>
-              class $1^$2^Bar {
-                ~$3^Bar();
-                void $4^f($5^Bar);
+              class $1^Bar {
+                ~$2^Bar();
+                void $3^f($4^Bar);
               };
             }
           )cpp",
         "0: targets = {foo::Bar::T}, decl\n"
-        // FIXME: avoid the 2 duplicated foo::Bar references below, the first
-        // one comes from ClassTemplateDecl; the second comes from the
-        // underlying CXXRecordDecl.
         "1: targets = {foo::Bar}, decl\n"
-        "2: targets = {foo::Bar}, decl\n"
-        "3: targets = {foo::Bar}\n"
-        "4: targets = {foo::Bar::f}, decl\n"
-        "5: targets = {foo::Bar}\n"},
+        "2: targets = {foo::Bar}\n"
+        "3: targets = {foo::Bar::f}, decl\n"
+        "4: targets = {foo::Bar}\n"},
        // MemberExpr should know their using declaration.
        {R"cpp(
             struct X { void func(int); };
@@ -1047,7 +1051,47 @@ TEST_F(FindExplicitReferencesTest, All) {
               }
             )cpp",
            "0: targets = {Test}\n"
-           "1: targets = {a}, decl\n"}};
+           "1: targets = {a}, decl\n"},
+       // Templates
+       {R"cpp(
+            namespace foo {
+              template <typename $0^T>
+              class $1^Bar {};
+            }
+          )cpp",
+        "0: targets = {foo::Bar::T}, decl\n"
+        "1: targets = {foo::Bar}, decl\n"},
+       // Templates
+       {R"cpp(
+            namespace foo {
+              template <typename $0^T>
+              void $1^func();
+            }
+          )cpp",
+        "0: targets = {T}, decl\n"
+        "1: targets = {foo::func}, decl\n"},
+       // Templates
+       {R"cpp(
+            namespace foo {
+              template <typename $0^T>
+              $1^T $2^x;
+            }
+          )cpp",
+        "0: targets = {foo::T}, decl\n"
+        "1: targets = {foo::T}\n"
+        "2: targets = {foo::x}, decl\n"},
+       // Templates
+       {R"cpp(
+            template<typename T> class vector {};
+            namespace foo {
+              template <typename $0^T>
+              using $1^V = $2^vector<$3^T>;
+            }
+          )cpp",
+        "0: targets = {foo::T}, decl\n"
+        "1: targets = {foo::V}, decl\n"
+        "2: targets = {vector}\n"
+        "3: targets = {foo::T}\n"}};
 
   for (const auto &C : Cases) {
     llvm::StringRef ExpectedCode = C.first;

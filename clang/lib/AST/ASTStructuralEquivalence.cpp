@@ -729,11 +729,31 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
 
-  case Type::Auto:
-    if (!IsStructurallyEquivalent(Context, cast<AutoType>(T1)->getDeducedType(),
-                                  cast<AutoType>(T2)->getDeducedType()))
+  case Type::Auto: {
+    auto *Auto1 = cast<AutoType>(T1);
+    auto *Auto2 = cast<AutoType>(T2);
+    if (!IsStructurallyEquivalent(Context, Auto1->getDeducedType(),
+                                  Auto2->getDeducedType()))
       return false;
+    if (Auto1->isConstrained() != Auto2->isConstrained())
+      return false;
+    if (Auto1->isConstrained()) {
+      if (Auto1->getTypeConstraintConcept() !=
+          Auto2->getTypeConstraintConcept())
+        return false;
+      ArrayRef<TemplateArgument> Auto1Args =
+          Auto1->getTypeConstraintArguments();
+      ArrayRef<TemplateArgument> Auto2Args =
+          Auto2->getTypeConstraintArguments();
+      if (Auto1Args.size() != Auto2Args.size())
+        return false;
+      for (unsigned I = 0, N = Auto1Args.size(); I != N; ++I) {
+        if (!IsStructurallyEquivalent(Context, Auto1Args[I], Auto2Args[I]))
+          return false;
+      }
+    }
     break;
+  }
 
   case Type::DeducedTemplateSpecialization: {
     const auto *DT1 = cast<DeducedTemplateSpecializationType>(T1);

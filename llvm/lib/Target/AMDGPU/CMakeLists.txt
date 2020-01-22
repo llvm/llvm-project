@@ -15,6 +15,8 @@ tablegen(LLVM AMDGPUGenSubtargetInfo.inc -gen-subtarget)
 
 set(LLVM_TARGET_DEFINITIONS AMDGPUGISel.td)
 tablegen(LLVM AMDGPUGenGlobalISel.inc -gen-global-isel)
+tablegen(LLVM AMDGPUGenGICombiner.inc -gen-global-isel-combiner
+              -combiners="AMDGPUPreLegalizerCombinerHelper")
 
 set(LLVM_TARGET_DEFINITIONS R600.td)
 tablegen(LLVM R600GenAsmWriter.inc -gen-asm-writer)
@@ -59,6 +61,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUMacroFusion.cpp
   AMDGPUMCInstLower.cpp
   AMDGPUOpenCLEnqueuedBlockLowering.cpp
+  AMDGPUPreLegalizerCombiner.cpp
   AMDGPUPromoteAlloca.cpp
   AMDGPUPromotePointerKernArgsToGlobal.cpp
   AMDGPUPropagateAttributes.cpp

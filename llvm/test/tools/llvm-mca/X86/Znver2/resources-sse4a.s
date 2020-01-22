@@ -43,7 +43,7 @@ movntss     %xmm0, (%rax)
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 0.67  0.67    0.67    -      -      -      -      -     1.00   3.00   5.00   1.00    -
+# CHECK-NEXT: 0.67   0.67   0.67    -      -      -      -      -     1.00   3.00   5.00   1.00    -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:

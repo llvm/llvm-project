@@ -112,9 +112,7 @@ define amdgpu_kernel void @sel_constants_sub_constant_sel_constants(i32 addrspac
 }
 
 ; GCN-LABEL: {{^}}sel_constants_sub_constant_sel_constants_i16:
-; TODO: shrink i16 constant. This is correct but suboptimal.
-; GCN: v_mov_b32_e32 [[T:v[0-9]+]], 0xffff0009
-; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 2, [[T]],
+; GCN: v_cndmask_b32_e64 v2, 2, 9,
 define amdgpu_kernel void @sel_constants_sub_constant_sel_constants_i16(i16 addrspace(1)* %p, i1 %cond) {
   %sel = select i1 %cond, i16 -4, i16 3
   %bo = sub i16 5, %sel
@@ -155,18 +153,27 @@ define amdgpu_kernel void @sel_constants_sub_constant_sel_constants_v4i32(<4 x i
   ret void
 }
 
-; GCN-LABEL: {{^}}sdiv_constant_sel_constants:
+; GCN-LABEL: {{^}}sdiv_constant_sel_constants_i64:
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 5, 0,
-define amdgpu_kernel void @sdiv_constant_sel_constants(i64 addrspace(1)* %p, i1 %cond) {
+define amdgpu_kernel void @sdiv_constant_sel_constants_i64(i64 addrspace(1)* %p, i1 %cond) {
   %sel = select i1 %cond, i64 121, i64 23
   %bo = sdiv i64 120, %sel
   store i64 %bo, i64 addrspace(1)* %p, align 8
   ret void
 }
 
-; GCN-LABEL: {{^}}udiv_constant_sel_constants:
+; GCN-LABEL: {{^}}sdiv_constant_sel_constants_i32:
+; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 8, 26,
+define amdgpu_kernel void @sdiv_constant_sel_constants_i32(i32 addrspace(1)* %p, i1 %cond) {
+  %sel = select i1 %cond, i32 7, i32 23
+  %bo = sdiv i32 184, %sel
+  store i32 %bo, i32 addrspace(1)* %p, align 8
+  ret void
+}
+
+; GCN-LABEL: {{^}}udiv_constant_sel_constants_i64:
 ; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 5, 0,
-define amdgpu_kernel void @udiv_constant_sel_constants(i64 addrspace(1)* %p, i1 %cond) {
+define amdgpu_kernel void @udiv_constant_sel_constants_i64(i64 addrspace(1)* %p, i1 %cond) {
   %sel = select i1 %cond, i64 -4, i64 23
   %bo = udiv i64 120, %sel
   store i64 %bo, i64 addrspace(1)* %p, align 8

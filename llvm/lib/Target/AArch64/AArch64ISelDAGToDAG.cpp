@@ -62,6 +62,9 @@ public:
                                     unsigned ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 
+  template <signed Low, signed High, signed Scale>
+  bool SelectRDVLImm(SDValue N, SDValue &Imm);
+
   bool tryMLAV64LaneV128(SDNode *N);
   bool tryMULLV64LaneV128(unsigned IntNo, SDNode *N);
   bool SelectArithExtendedRegister(SDValue N, SDValue &Reg, SDValue &Shift);
@@ -216,6 +219,8 @@ public:
                          unsigned SubRegIdx);
   void SelectLoadLane(SDNode *N, unsigned NumVecs, unsigned Opc);
   void SelectPostLoadLane(SDNode *N, unsigned NumVecs, unsigned Opc);
+
+  bool SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base, SDValue &OffImm);
 
   void SelectStore(SDNode *N, unsigned NumVecs, unsigned Opc);
   void SelectPostStore(SDNode *N, unsigned NumVecs, unsigned Opc);
@@ -679,6 +684,23 @@ static SDValue narrowIfNeeded(SelectionDAG *CurDAG, SDValue N) {
   return SDValue(Node, 0);
 }
 
+// Returns a suitable CNT/INC/DEC/RDVL multiplier to calculate VSCALE*N.
+template<signed Low, signed High, signed Scale>
+bool AArch64DAGToDAGISel::SelectRDVLImm(SDValue N, SDValue &Imm) {
+  if (!isa<ConstantSDNode>(N))
+    return false;
+
+  int64_t MulImm = cast<ConstantSDNode>(N)->getSExtValue();
+  if ((MulImm % std::abs(Scale)) == 0) {
+    int64_t RDVLImm = MulImm / Scale;
+    if ((RDVLImm >= Low) && (RDVLImm <= High)) {
+      Imm = CurDAG->getTargetConstant(RDVLImm, SDLoc(N), MVT::i32);
+      return true;
+    }
+  }
+
+  return false;
+}
 
 /// SelectArithExtendedRegister - Select a "extended register" operand.  This
 /// operand folds in an extend followed by an optional left shift.
@@ -1352,6 +1374,23 @@ void AArch64DAGToDAGISel::SelectStore(SDNode *N, unsigned NumVecs,
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(St), {MemOp});
 
   ReplaceNode(N, St);
+}
+
+bool AArch64DAGToDAGISel::SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base,
+                                                      SDValue &OffImm) {
+  SDLoc dl(N);
+  const DataLayout &DL = CurDAG->getDataLayout();
+  const TargetLowering *TLI = getTargetLowering();
+
+  // Try to match it for the frame address
+  if (auto FINode = dyn_cast<FrameIndexSDNode>(N)) {
+    int FI = FINode->getIndex();
+    Base = CurDAG->getTargetFrameIndex(FI, TLI->getPointerTy(DL));
+    OffImm = CurDAG->getTargetConstant(0, dl, MVT::i64);
+    return true;
+  }
+
+  return false;
 }
 
 void AArch64DAGToDAGISel::SelectPostStore(SDNode *N, unsigned NumVecs,

@@ -635,6 +635,51 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
   return true;
 }
 
+bool AMDGPUInstructionSelector::selectInterpP1F16(MachineInstr &MI) const {
+  if (STI.getLDSBankCount() != 16)
+    return selectImpl(MI, *CoverageInfo);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src0 = MI.getOperand(2).getReg();
+  Register M0Val = MI.getOperand(6).getReg();
+  if (!RBI.constrainGenericRegister(M0Val, AMDGPU::SReg_32RegClass, *MRI) ||
+      !RBI.constrainGenericRegister(Dst, AMDGPU::VGPR_32RegClass, *MRI) ||
+      !RBI.constrainGenericRegister(Src0, AMDGPU::VGPR_32RegClass, *MRI))
+    return false;
+
+  // This requires 2 instructions. It is possible to write a pattern to support
+  // this, but the generated isel emitter doesn't correctly deal with multiple
+  // output instructions using the same physical register input. The copy to m0
+  // is incorrectly placed before the second instruction.
+  //
+  // TODO: Match source modifiers.
+
+  Register InterpMov = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineBasicBlock *MBB = MI.getParent();
+
+  BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
+    .addReg(M0Val);
+  BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::V_INTERP_MOV_F32), InterpMov)
+    .addImm(2)
+    .addImm(MI.getOperand(4).getImm())  // $attr
+    .addImm(MI.getOperand(3).getImm()); // $attrchan
+
+  BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::V_INTERP_P1LV_F16), Dst)
+    .addImm(0)                          // $src0_modifiers
+    .addReg(Src0)                       // $src0
+    .addImm(MI.getOperand(4).getImm())  // $attr
+    .addImm(MI.getOperand(3).getImm())  // $attrchan
+    .addImm(0)                          // $src2_modifiers
+    .addReg(InterpMov)                  // $src2 - 2 f16 values selected by high
+    .addImm(MI.getOperand(5).getImm())  // $high
+    .addImm(0)                          // $clamp
+    .addImm(0);                         // $omod
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   unsigned IntrinsicID = I.getIntrinsicID();
   switch (IntrinsicID) {
@@ -659,6 +704,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
 
     return true;
   }
+  case Intrinsic::amdgcn_interp_p1_f16:
+    return selectInterpP1F16(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -1792,6 +1839,30 @@ bool AMDGPUInstructionSelector::selectG_PTR_MASK(MachineInstr &I) const {
   return true;
 }
 
+/// Return the register to use for the index value, and the subregister to use
+/// for the indirectly accessed register.
+static std::pair<Register, unsigned>
+computeIndirectRegIndex(MachineRegisterInfo &MRI,
+                        const SIRegisterInfo &TRI,
+                        const TargetRegisterClass *SuperRC,
+                        Register IdxReg,
+                        unsigned EltSize) {
+  Register IdxBaseReg;
+  int Offset;
+  MachineInstr *Unused;
+
+  std::tie(IdxBaseReg, Offset, Unused)
+    = AMDGPU::getBaseWithConstantOffset(MRI, IdxReg);
+
+  ArrayRef<int16_t> SubRegs = TRI.getRegSplitParts(SuperRC, EltSize);
+
+  // Skip out of bounds offsets, or else we would end up using an undefined
+  // register.
+  if (static_cast<unsigned>(Offset) >= SubRegs.size())
+    return std::make_pair(IdxReg, SubRegs[0]);
+  return std::make_pair(IdxBaseReg, SubRegs[Offset]);
+}
+
 bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
   MachineInstr &MI) const {
   Register DstReg = MI.getOperand(0).getReg();
@@ -1823,7 +1894,9 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
   const DebugLoc &DL = MI.getDebugLoc();
   const bool Is64 = DstTy.getSizeInBits() == 64;
 
-  unsigned SubReg = Is64 ? AMDGPU::sub0_sub1 : AMDGPU::sub0;
+  unsigned SubReg;
+  std::tie(IdxReg, SubReg) = computeIndirectRegIndex(*MRI, TRI, SrcRC, IdxReg,
+                                                     DstTy.getSizeInBits() / 8);
 
   if (SrcRB->getID() == AMDGPU::SGPRRegBankID) {
     if (DstTy.getSizeInBits() != 32 && !Is64)
@@ -1861,6 +1934,78 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
     .addReg(SrcReg, RegState::Implicit)
     .addReg(AMDGPU::M0, RegState::Implicit);
   BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_SET_GPR_IDX_OFF));
+
+  MI.eraseFromParent();
+  return true;
+}
+
+// TODO: Fold insert_vector_elt (extract_vector_elt) into movrelsd
+bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
+  MachineInstr &MI) const {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register VecReg = MI.getOperand(1).getReg();
+  Register ValReg = MI.getOperand(2).getReg();
+  Register IdxReg = MI.getOperand(3).getReg();
+
+  LLT VecTy = MRI->getType(DstReg);
+  LLT ValTy = MRI->getType(ValReg);
+  unsigned VecSize = VecTy.getSizeInBits();
+  unsigned ValSize = ValTy.getSizeInBits();
+
+  const RegisterBank *VecRB = RBI.getRegBank(VecReg, *MRI, TRI);
+  const RegisterBank *ValRB = RBI.getRegBank(ValReg, *MRI, TRI);
+  const RegisterBank *IdxRB = RBI.getRegBank(IdxReg, *MRI, TRI);
+
+  assert(VecTy.getElementType() == ValTy);
+
+  // The index must be scalar. If it wasn't RegBankSelect should have moved this
+  // into a waterfall loop.
+  if (IdxRB->getID() != AMDGPU::SGPRRegBankID)
+    return false;
+
+  const TargetRegisterClass *VecRC = TRI.getRegClassForTypeOnBank(VecTy, *VecRB,
+                                                                  *MRI);
+  const TargetRegisterClass *ValRC = TRI.getRegClassForTypeOnBank(ValTy, *ValRB,
+                                                                  *MRI);
+
+  if (!RBI.constrainGenericRegister(VecReg, *VecRC, *MRI) ||
+      !RBI.constrainGenericRegister(DstReg, *VecRC, *MRI) ||
+      !RBI.constrainGenericRegister(ValReg, *ValRC, *MRI) ||
+      !RBI.constrainGenericRegister(IdxReg, AMDGPU::SReg_32RegClass, *MRI))
+    return false;
+
+  if (VecRB->getID() == AMDGPU::VGPRRegBankID && ValSize != 32)
+    return false;
+
+  unsigned SubReg;
+  std::tie(IdxReg, SubReg) = computeIndirectRegIndex(*MRI, TRI, VecRC, IdxReg,
+                                                     ValSize / 8);
+
+  const bool IndexMode = VecRB->getID() == AMDGPU::VGPRRegBankID &&
+                         STI.useVGPRIndexMode();
+
+  MachineBasicBlock *BB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  if (IndexMode) {
+    BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_SET_GPR_IDX_ON))
+      .addReg(IdxReg)
+      .addImm(AMDGPU::VGPRIndexMode::DST_ENABLE);
+  } else {
+    BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
+      .addReg(IdxReg);
+  }
+
+  const MCInstrDesc &RegWriteOp
+    = TII.getIndirectRegWritePseudo(VecSize, ValSize,
+                                    VecRB->getID() == AMDGPU::SGPRRegBankID);
+  BuildMI(*BB, MI, DL, RegWriteOp, DstReg)
+    .addReg(VecReg)
+    .addReg(ValReg)
+    .addImm(SubReg);
+
+  if (IndexMode)
+    BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_SET_GPR_IDX_OFF));
 
   MI.eraseFromParent();
   return true;
@@ -1956,6 +2101,12 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_PTR_MASK(I);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return selectG_EXTRACT_VECTOR_ELT(I);
+  case TargetOpcode::G_INSERT_VECTOR_ELT:
+    return selectG_INSERT_VECTOR_ELT(I);
+  case AMDGPU::G_AMDGPU_ATOMIC_INC:
+  case AMDGPU::G_AMDGPU_ATOMIC_DEC:
+    initM0(I);
+    return selectImpl(I, *CoverageInfo);
   default:
     return selectImpl(I, *CoverageInfo);
   }

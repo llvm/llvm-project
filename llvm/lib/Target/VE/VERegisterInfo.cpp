@@ -48,21 +48,29 @@ const uint32_t *VERegisterInfo::getNoPreservedMask() const {
 
 BitVector VERegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
-  Reserved.set(VE::SX8);  // stack limit
-  Reserved.set(VE::SX9);  // frame pointer
-  Reserved.set(VE::SX10); // link register (return address)
-  Reserved.set(VE::SX11); // stack pointer
 
-  Reserved.set(VE::SX12); // outer register
-  Reserved.set(VE::SX13); // id register for dynamic linker
+  const Register ReservedRegs[] = {
+      VE::SX8,  // Stack limit
+      VE::SX9,  // Frame pointer
+      VE::SX10, // Link register (return address)
+      VE::SX11, // Stack pointer
 
-  Reserved.set(VE::SX14); // thread pointer
-  Reserved.set(VE::SX15); // global offset table register
-  Reserved.set(VE::SX16); // procedure linkage table register
-  Reserved.set(VE::SX17); // linkage-area register
+      // FIXME: maybe not need to be reserved
+      VE::SX12, // Outer register
+      VE::SX13, // Id register for dynamic linker
 
-  // sx18-sx33 are callee-saved registers
-  // sx34-sx63 are temporary registers
+      VE::SX14, // Thread pointer
+      VE::SX15, // Global offset table register
+      VE::SX16, // Procedure linkage table register
+      VE::SX17, // Linkage-area register
+                // sx18-sx33 are callee-saved registers
+                // sx34-sx63 are temporary registers
+  };
+
+  for (auto R : ReservedRegs)
+    for (MCRegAliasIterator ItAlias(R, this, true); ItAlias.isValid();
+         ++ItAlias)
+      Reserved.set(*ItAlias);
 
   return Reserved;
 }

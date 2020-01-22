@@ -217,6 +217,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPULowerIntrinsicsPass(*PR);
   initializeAMDGPUOpenCLEnqueuedBlockLoweringPass(*PR);
+  initializeAMDGPUPreLegalizerCombinerPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUPromotePointerKernArgsToGlobalPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
@@ -622,6 +623,7 @@ public:
   bool addILPOpts() override;
   bool addInstSelector() override;
   bool addIRTranslator() override;
+  void addPreLegalizeMachineIR() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
@@ -900,6 +902,11 @@ bool GCNPassConfig::addInstSelector() {
 bool GCNPassConfig::addIRTranslator() {
   addPass(new IRTranslator());
   return false;
+}
+
+void GCNPassConfig::addPreLegalizeMachineIR() {
+  bool IsOptNone = getOptLevel() == CodeGenOpt::None;
+  addPass(createAMDGPUPreLegalizeCombiner(IsOptNone));
 }
 
 bool GCNPassConfig::addLegalizeMachineIR() {

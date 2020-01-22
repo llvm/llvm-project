@@ -549,6 +549,13 @@ def AArch64stnp : SDNode<"AArch64ISD::STNP", SDT_AArch64stnp, [SDNPHasChain, SDN
 
 def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
 
+def SDT_AArch64_LDNF1 : SDTypeProfile<1, 3, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisPtrTy<2>,
+  SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>
+]>;
+
+def AArch64ldnf1  : SDNode<"AArch64ISD::LDNF1",  SDT_AArch64_LDNF1, [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//

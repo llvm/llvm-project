@@ -181,9 +181,9 @@ static void emitBuilder(const LLVMIntrinsic &intr, llvm::raw_ostream &os) {
   if (overloadedRes.any() || overloadedOps.any())
     os << "\n  ";
   os << "});\n";
-  os << "    auto operands = llvm::to_vector<8, Value *>(\n";
-  os << "        opInst.operand_begin(), opInst.operand_end());\n";
-  os << "    " << (intr.getNumResults() > 0 ? "$res = " : "")
+  os << "    auto operands =\n";
+  os << "        lookupValues(opInst.getOperands());\n";
+  os << "  " << (intr.getNumResults() > 0 ? "$res = " : "")
      << "builder.CreateCall(fn, operands);\n";
   os << "  ";
 }

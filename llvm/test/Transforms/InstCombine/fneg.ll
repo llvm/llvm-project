@@ -377,3 +377,129 @@ define float @fneg_fneg_sel_extra_use3(float %x, float %y, i1 %cond) {
   %sel = select i1 %cond, float %n1, float %n2
   ret float %sel
 }
+
+; Negative test
+
+define float @fneg_fadd_constant(float %x) {
+; CHECK-LABEL: @fneg_fadd_constant(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[A]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %a = fadd float %x, 42.0
+  %r = fneg float %a
+  ret float %r
+}
+
+; Negative test
+
+define float @fake_nsz_fadd_constant(float %x) {
+; CHECK-LABEL: @fake_nsz_fadd_constant(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = fsub float -0.000000e+00, [[A]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %a = fadd float %x, 42.0
+  %r = fsub float -0.0, %a
+  ret float %r
+}
+
+; -(X + C) --> -C - X
+
+define float @fneg_nsz_fadd_constant(float %x) {
+; CHECK-LABEL: @fneg_nsz_fadd_constant(
+; CHECK-NEXT:    [[R:%.*]] = fsub nsz float -4.200000e+01, [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %a = fadd float %x, 42.0
+  %r = fneg nsz float %a
+  ret float %r
+}
+
+; -(X + C) --> -C - X
+
+define float @fake_fneg_nsz_fadd_constant(float %x) {
+; CHECK-LABEL: @fake_fneg_nsz_fadd_constant(
+; CHECK-NEXT:    [[R:%.*]] = fsub fast float -4.200000e+01, [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %a = fadd float %x, 42.0
+  %r = fsub fast float -0.0, %a
+  ret float %r
+}
+
+; Negative test
+
+define float @fneg_nsz_fadd_constant_extra_use(float %x) {
+; CHECK-LABEL: @fneg_nsz_fadd_constant_extra_use(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    call void @use(float [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fneg nsz float [[A]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %a = fadd float %x, 42.0
+  call void @use(float %a)
+  %r = fneg nsz float %a
+  ret float %r
+}
+
+; Negative test
+
+define float @fake_fneg_nsz_fadd_constant_extra_use(float %x) {
+; CHECK-LABEL: @fake_fneg_nsz_fadd_constant_extra_use(
+; CHECK-NEXT:    [[A:%.*]] = fadd float [[X:%.*]], 4.200000e+01
+; CHECK-NEXT:    call void @use(float [[A]])
+; CHECK-NEXT:    [[R:%.*]] = fsub fast float -0.000000e+00, [[A]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %a = fadd float %x, 42.0
+  call void @use(float %a)
+  %r = fsub fast float -0.0, %a
+  ret float %r
+}
+
+; -(X + C) --> -C - X
+
+define <2 x float> @fneg_nsz_fadd_constant_vec(<2 x float> %x) {
+; CHECK-LABEL: @fneg_nsz_fadd_constant_vec(
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nnan nsz <2 x float> <float -4.200000e+01, float -4.300000e+01>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %a = fadd <2 x float> %x, <float 42.0, float 43.0>
+  %r = fneg nsz nnan reassoc <2 x float> %a
+  ret <2 x float> %r
+}
+
+; -(X + C) --> -C - X
+
+define <2 x float> @fake_fneg_nsz_fadd_constant_vec(<2 x float> %x) {
+; CHECK-LABEL: @fake_fneg_nsz_fadd_constant_vec(
+; CHECK-NEXT:    [[R:%.*]] = fsub nsz <2 x float> <float -4.200000e+01, float undef>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %a = fadd <2 x float> %x, <float 42.0, float undef>
+  %r = fsub nsz <2 x float> <float undef, float -0.0>, %a
+  ret <2 x float> %r
+}
+
+@g = external global i16, align 1
+
+define float @fneg_nsz_fadd_constant_expr(float %x) {
+; CHECK-LABEL: @fneg_nsz_fadd_constant_expr(
+; CHECK-NEXT:    [[R:%.*]] = fsub nsz float fneg (float bitcast (i32 ptrtoint (i16* @g to i32) to float)), [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %a = fadd float %x, bitcast (i32 ptrtoint (i16* @g to i32) to float)
+  %r = fneg nsz float %a
+  ret float %r
+}
+
+define float @fake_fneg_nsz_fadd_constant_expr(float %x) {
+; CHECK-LABEL: @fake_fneg_nsz_fadd_constant_expr(
+; CHECK-NEXT:    [[R:%.*]] = fsub nsz float fneg (float bitcast (i32 ptrtoint (i16* @g to i32) to float)), [[X:%.*]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %a = fadd float %x, bitcast (i32 ptrtoint (i16* @g to i32) to float)
+  %r = fsub nsz float -0.0, %a
+  ret float %r
+}

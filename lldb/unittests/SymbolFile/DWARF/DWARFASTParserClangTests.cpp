@@ -39,7 +39,7 @@ public:
 // defining here, causing this test to fail, feel free to delete it.
 TEST_F(DWARFASTParserClangTests,
        EnsureAllDIEsInDeclContextHaveBeenParsedParsesOnlyMatchingEntries) {
-  ClangASTContext ast_ctx(HostInfoBase::GetTargetTriple());
+  ClangASTContext ast_ctx("dummy ASTContext", HostInfoBase::GetTargetTriple());
   DWARFASTParserClangStub ast_parser(ast_ctx);
 
   DWARFUnit *unit = nullptr;

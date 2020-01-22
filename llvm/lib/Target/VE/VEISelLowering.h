@@ -34,6 +34,9 @@ public:
   VETargetLowering(const TargetMachine &TM, const VESubtarget &STI);
 
   const char *getTargetNodeName(unsigned Opcode) const override;
+  MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
+    return MVT::i32;
+  }
 
   Register getRegisterByName(const char *RegName, LLT VT,
                              const MachineFunction &MF) const override;
@@ -56,6 +59,9 @@ public:
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
                       SelectionDAG &DAG) const override;
+
+  bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                    bool ForCodeSize) const override;
 };
 } // namespace llvm
 

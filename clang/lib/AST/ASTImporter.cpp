@@ -1366,9 +1366,21 @@ ExpectedType ASTNodeImporter::VisitAutoType(const AutoType *T) {
   if (!ToDeducedTypeOrErr)
     return ToDeducedTypeOrErr.takeError();
 
-  return Importer.getToContext().getAutoType(*ToDeducedTypeOrErr,
-                                             T->getKeyword(),
-                                             /*IsDependent*/false);
+  ExpectedDecl ToTypeConstraintConcept = import(T->getTypeConstraintConcept());
+  if (!ToTypeConstraintConcept)
+    return ToTypeConstraintConcept.takeError();
+
+  SmallVector<TemplateArgument, 2> ToTemplateArgs;
+  ArrayRef<TemplateArgument> FromTemplateArgs = T->getTypeConstraintArguments();
+  if (Error Err = ImportTemplateArguments(FromTemplateArgs.data(),
+                                          FromTemplateArgs.size(),
+                                          ToTemplateArgs))
+    return std::move(Err);
+
+  return Importer.getToContext().getAutoType(
+      *ToDeducedTypeOrErr, T->getKeyword(), /*IsDependent*/false,
+      /*IsPack=*/false, cast_or_null<ConceptDecl>(*ToTypeConstraintConcept),
+      ToTemplateArgs);
 }
 
 ExpectedType ASTNodeImporter::VisitInjectedClassNameType(
@@ -8241,7 +8253,7 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
           // FIXME Should we remove these Decls from the LookupTable,
           // and from ImportedFromDecls?
       }
-    SavedImportPaths[FromD].clear();
+    SavedImportPaths.erase(FromD);
 
     // Do not return ToDOrErr, error was taken out of it.
     return make_error<ImportError>(ErrOut);
@@ -8274,7 +8286,7 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
   Imported(FromD, ToD);
 
   updateFlags(FromD, ToD);
-  SavedImportPaths[FromD].clear();
+  SavedImportPaths.erase(FromD);
   return ToDOrErr;
 }
 

@@ -203,8 +203,8 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
     LLDB_LOG(log,
              "    CompleteTagDecl[{0}] on (ASTContext*){1} Completing "
              "(TagDecl*){2} named {3}",
-             current_id, static_cast<void *>(m_ast_context),
-             static_cast<void *>(tag_decl), tag_decl->getName());
+             current_id, m_clang_ast_context->getDisplayName(), tag_decl,
+             tag_decl->getName());
 
     LLDB_LOG(log, "      CTD[%u] Before:\n{0}", current_id,
              ClangUtil::DumpDecl(tag_decl));
@@ -336,9 +336,10 @@ void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   LLDB_LOG(log,
-           "    [CompleteObjCInterfaceDecl] on (ASTContext*){0} Completing "
-           "an ObjCInterfaceDecl named {1}",
-           m_ast_context, interface_decl->getName());
+           "    [CompleteObjCInterfaceDecl] on (ASTContext*){0} '{1}' "
+           "Completing an ObjCInterfaceDecl named {1}",
+           m_ast_context, m_clang_ast_context->getDisplayName(),
+           interface_decl->getName());
   LLDB_LOG(log, "      [COID] Before:\n{0}",
            ClangUtil::DumpDecl(interface_decl));
 
@@ -441,24 +442,25 @@ void ClangASTSource::FindExternalLexicalDecls(
   if (log) {
     if (const NamedDecl *context_named_decl = dyn_cast<NamedDecl>(context_decl))
       LLDB_LOG(log,
-               "FindExternalLexicalDecls[{0}] on (ASTContext*){1} in '{2}' "
-               "(%sDecl*){3}",
-               current_id, static_cast<void *>(m_ast_context),
+               "FindExternalLexicalDecls[{0}] on (ASTContext*){1} '{2}' in "
+               "'{3}' (%sDecl*){4}",
+               current_id, m_ast_context, m_clang_ast_context->getDisplayName(),
                context_named_decl->getNameAsString().c_str(),
                context_decl->getDeclKindName(),
                static_cast<const void *>(context_decl));
     else if (context_decl)
-      LLDB_LOG(
-          log,
-          "FindExternalLexicalDecls[{0}] on (ASTContext*){1} in ({2}Decl*){3}",
-          current_id, static_cast<void *>(m_ast_context),
-          context_decl->getDeclKindName(),
-          static_cast<const void *>(context_decl));
+      LLDB_LOG(log,
+               "FindExternalLexicalDecls[{0}] on (ASTContext*){1} '{2}' in "
+               "({3}Decl*){4}",
+               current_id, m_ast_context, m_clang_ast_context->getDisplayName(),
+               context_decl->getDeclKindName(),
+               static_cast<const void *>(context_decl));
     else
-      LLDB_LOG(
-          log,
-          "FindExternalLexicalDecls[{0}] on (ASTContext*){1} in a NULL context",
-          current_id, static_cast<const void *>(m_ast_context));
+      LLDB_LOG(log,
+               "FindExternalLexicalDecls[{0}] on (ASTContext*){1} '{2}' in a "
+               "NULL context",
+               current_id, m_ast_context,
+               m_clang_ast_context->getDisplayName());
   }
 
   ClangASTImporter::DeclOrigin original = m_ast_importer_sp->GetDeclOrigin(context_decl);
@@ -466,10 +468,10 @@ void ClangASTSource::FindExternalLexicalDecls(
   if (!original.Valid())
     return;
 
-  LLDB_LOG(
-      log, "  FELD[{0}] Original decl (ASTContext*){1:x} (Decl*){2:x}:\n{3}",
-      current_id, static_cast<void *>(original.ctx),
-      static_cast<void *>(original.decl), ClangUtil::DumpDecl(original.decl));
+  LLDB_LOG(log, "  FELD[{0}] Original decl {1} (Decl*){2:x}:\n{3}", current_id,
+           static_cast<void *>(original.ctx),
+           static_cast<void *>(original.decl),
+           ClangUtil::DumpDecl(original.decl));
 
   if (ObjCInterfaceDecl *original_iface_decl =
           dyn_cast<ObjCInterfaceDecl>(original.decl)) {
@@ -563,20 +565,22 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
     if (!context.m_decl_context)
       LLDB_LOG(log,
                "ClangASTSource::FindExternalVisibleDecls[{0}] on "
-               "(ASTContext*){1} for '{2}' in a NULL DeclContext",
-               current_id, m_ast_context, name);
+               "(ASTContext*){1} '{2}' for '{3}' in a NULL DeclContext",
+               current_id, m_ast_context, m_clang_ast_context->getDisplayName(),
+               name);
     else if (const NamedDecl *context_named_decl =
                  dyn_cast<NamedDecl>(context.m_decl_context))
       LLDB_LOG(log,
                "ClangASTSource::FindExternalVisibleDecls[{0}] on "
-               "(ASTContext*){1} for '{2}' in '{3}'",
-               current_id, m_ast_context, name, context_named_decl->getName());
+               "(ASTContext*){1} '{2}' for '{3}' in '{4}'",
+               current_id, m_ast_context, m_clang_ast_context->getDisplayName(),
+               name, context_named_decl->getName());
     else
       LLDB_LOG(log,
                "ClangASTSource::FindExternalVisibleDecls[{0}] on "
-               "(ASTContext*){1} for '{2}' in a '{3}'",
-               current_id, m_ast_context, name,
-               context.m_decl_context->getDeclKindName());
+               "(ASTContext*){1} '{2}' for '{3}' in a '{4}'",
+               current_id, m_ast_context, m_clang_ast_context->getDisplayName(),
+               name, context.m_decl_context->getDeclKindName());
   }
 
   context.m_namespace_map = std::make_shared<ClangASTImporter::NamespaceMap>();
@@ -1042,9 +1046,10 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
   ConstString selector_name(ss.GetString());
 
   LLDB_LOG(log,
-           "ClangASTSource::FindObjCMethodDecls[{0}] on (ASTContext*){1} "
-           "for selector [{2} {3}]",
-           current_id, m_ast_context, interface_decl->getName(), selector_name);
+           "ClangASTSource::FindObjCMethodDecls[{0}] on (ASTContext*){1} '{2}' "
+           "for selector [{3} {4}]",
+           current_id, m_ast_context, m_clang_ast_context->getDisplayName(),
+           interface_decl->getName(), selector_name);
   SymbolContextList sc_list;
 
   const bool include_symbols = false;
@@ -1337,9 +1342,9 @@ void ClangASTSource::FindObjCPropertyAndIvarDecls(NameSearchContext &context) {
 
   LLDB_LOG(log,
            "ClangASTSource::FindObjCPropertyAndIvarDecls[{0}] on "
-           "(ASTContext*){1} for '{2}.{3}'",
-           current_id, m_ast_context, parser_iface_decl->getName(),
-           context.m_decl_name.getAsString());
+           "(ASTContext*){1} '{2}' for '{3}.{4}'",
+           current_id, m_ast_context, m_clang_ast_context->getDisplayName(),
+           parser_iface_decl->getName(), context.m_decl_name.getAsString());
 
   if (FindObjCPropertyAndIvarDeclsWithOrigin(
           current_id, context, *this, origin_iface_decl))
@@ -1553,9 +1558,10 @@ bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   LLDB_LOG(log,
-           "LayoutRecordType[{0}] on (ASTContext*){1} for (RecordDecl*){2} "
-           "[name = '{3}']",
-           current_id, m_ast_context, record, record->getName());
+           "LayoutRecordType[{0}] on (ASTContext*){1} '{2}' for (RecordDecl*)"
+           "{3} [name = '{4}']",
+           current_id, m_ast_context, m_clang_ast_context->getDisplayName(),
+           record, record->getName());
 
   DeclFromParser<const RecordDecl> parser_record(record);
   DeclFromUser<const RecordDecl> origin_record(
@@ -1676,15 +1682,16 @@ void ClangASTSource::CompleteNamespaceMap(
   if (log) {
     if (parent_map && parent_map->size())
       LLDB_LOG(log,
-               "CompleteNamespaceMap[{0}] on (ASTContext*){1} Searching for "
-               "namespace {2} in namespace {3}",
-               current_id, m_ast_context, name,
-               parent_map->begin()->second.GetName());
+               "CompleteNamespaceMap[{0}] on (ASTContext*){1} '{2}' Searching "
+               "for namespace {3} in namespace {4}",
+               current_id, m_ast_context, m_clang_ast_context->getDisplayName(),
+               name, parent_map->begin()->second.GetName());
     else
       LLDB_LOG(log,
-               "CompleteNamespaceMap[{0}] on (ASTContext*){1} Searching for "
-               "namespace {2}",
-               current_id, m_ast_context, name);
+               "CompleteNamespaceMap[{0}] on (ASTContext*){1} '{2}' Searching "
+               "for namespace {3}",
+               current_id, m_ast_context, m_clang_ast_context->getDisplayName(),
+               name);
   }
 
   if (parent_map) {

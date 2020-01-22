@@ -15738,7 +15738,14 @@ bool DAGCombiner::MergeConsecutiveStores(StoreSDNode *St) {
   if (OptLevel == CodeGenOpt::None || !EnableStoreMerging)
     return false;
 
+  // TODO: Extend this function to merge stores of scalable vectors.
+  // (i.e. two <vscale x 8 x i8> stores can be merged to one <vscale x 16 x i8>
+  // store since we know <vscale x 16 x i8> is exactly twice as large as
+  // <vscale x 8 x i8>). Until then, bail out for scalable vectors.
   EVT MemVT = St->getMemoryVT();
+  if (MemVT.isScalableVector())
+    return false;
+
   int64_t ElementSizeBytes = MemVT.getStoreSize();
   unsigned NumMemElts = MemVT.isVector() ? MemVT.getVectorNumElements() : 1;
 
@@ -18558,16 +18565,18 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
       unsigned DestSrcRatio = DestNumElts / SrcNumElts;
       if ((NVT.getVectorNumElements() % DestSrcRatio) == 0) {
         unsigned NewExtNumElts = NVT.getVectorNumElements() / DestSrcRatio;
-        EVT NewExtVT = EVT::getVectorVT(*DAG.getContext(),
-                                        SrcVT.getScalarType(), NewExtNumElts);
-        if ((N->getConstantOperandVal(1) % DestSrcRatio) == 0 &&
-            TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NewExtVT)) {
-          unsigned IndexValScaled = N->getConstantOperandVal(1) / DestSrcRatio;
+        EVT ScalarVT = SrcVT.getScalarType();
+        if ((N->getConstantOperandVal(1) % DestSrcRatio) == 0) {
           SDLoc DL(N);
-          SDValue NewIndex = DAG.getVectorIdxConstant(IndexValScaled, DL);
-          SDValue NewExtract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewExtVT,
-                                           V.getOperand(0), NewIndex);
-          return DAG.getBitcast(NVT, NewExtract);
+          unsigned IndexValScaled = N->getConstantOperandVal(1) / DestSrcRatio;
+          EVT NewExtVT = EVT::getVectorVT(*DAG.getContext(),
+                                          ScalarVT, NewExtNumElts);
+          if (TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, NewExtVT)) {
+            SDValue NewIndex = DAG.getVectorIdxConstant(IndexValScaled, DL);
+            SDValue NewExtract = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NewExtVT,
+                                             V.getOperand(0), NewIndex);
+            return DAG.getBitcast(NVT, NewExtract);
+          }
         }
       }
     }
@@ -20842,9 +20851,11 @@ bool DAGCombiner::isAlias(SDNode *Op0, SDNode *Op1) const {
                      : (LSN->getAddressingMode() == ISD::PRE_DEC)
                            ? -1 * C->getSExtValue()
                            : 0;
+      uint64_t Size =
+          MemoryLocation::getSizeOrUnknown(LSN->getMemoryVT().getStoreSize());
       return {LSN->isVolatile(), LSN->isAtomic(), LSN->getBasePtr(),
               Offset /*base offset*/,
-              Optional<int64_t>(LSN->getMemoryVT().getStoreSize()),
+              Optional<int64_t>(Size),
               LSN->getMemOperand()};
     }
     if (const auto *LN = cast<LifetimeSDNode>(N))
@@ -21122,6 +21133,12 @@ bool DAGCombiner::parallelizeChainedStores(StoreSDNode *St) {
 
   // Do not handle stores to undef base pointers.
   if (BasePtr.getBase().isUndef())
+    return false;
+
+  // BaseIndexOffset assumes that offsets are fixed-size, which
+  // is not valid for scalable vectors where the offsets are
+  // scaled by `vscale`, so bail out early.
+  if (St->getMemoryVT().isScalableVector())
     return false;
 
   // Add ST's interval.

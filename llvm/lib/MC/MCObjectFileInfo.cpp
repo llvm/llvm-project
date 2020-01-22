@@ -795,6 +795,13 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
   ReadOnlySection = Ctx->getXCOFFSection(
       ".rodata", XCOFF::StorageMappingClass::XMC_RO, XCOFF::XTY_SD,
       XCOFF::C_HIDEXT, SectionKind::getReadOnly());
+
+  TOCBaseSection = Ctx->getXCOFFSection(
+      "TOC", XCOFF::StorageMappingClass::XMC_TC0, XCOFF::XTY_SD,
+      XCOFF::C_HIDEXT, SectionKind::getData());
+
+  // The TOC-base always has 0 size, but 4 byte alignment.
+  TOCBaseSection->setAlignment(Align(4));
 }
 
 void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,

@@ -27,6 +27,10 @@ class TargetOptions;
 class PassRegistry;
 class Module;
 
+// GlobalISel passes
+void initializeAMDGPUPreLegalizerCombinerPass(PassRegistry &);
+FunctionPass *createAMDGPUPreLegalizeCombiner(bool IsOptNone);
+
 // R600 Passes
 FunctionPass *createR600VectorRegMerger();
 FunctionPass *createR600ExpandSpecialInstrsPass();

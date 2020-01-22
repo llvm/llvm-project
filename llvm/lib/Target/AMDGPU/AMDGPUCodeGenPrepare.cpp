@@ -17,6 +17,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -151,6 +152,10 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   /// Replace mul instructions with llvm.amdgcn.mul.u24 or llvm.amdgcn.mul.s24.
   /// SelectionDAG has an issue where an and asserting the bits are known
   bool replaceMulWithMul24(BinaryOperator &I) const;
+
+  /// Perform same function as equivalently named function in DAGCombiner. Since
+  /// we expand some divisions here, we need to perform this before obscuring.
+  bool foldBinOpIntoSelect(BinaryOperator &I) const;
 
   /// Expands 24 bit div or rem.
   Value* expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I,
@@ -525,6 +530,78 @@ bool AMDGPUCodeGenPrepare::replaceMulWithMul24(BinaryOperator &I) const {
   return true;
 }
 
+// Find a select instruction, which may have been casted. This is mostly to deal
+// with cases where i16 selects were promoted here to i32.
+static SelectInst *findSelectThroughCast(Value *V, CastInst *&Cast) {
+  Cast = nullptr;
+  if (SelectInst *Sel = dyn_cast<SelectInst>(V))
+    return Sel;
+
+  if ((Cast = dyn_cast<CastInst>(V))) {
+    if (SelectInst *Sel = dyn_cast<SelectInst>(Cast->getOperand(0)))
+      return Sel;
+  }
+
+  return nullptr;
+}
+
+bool AMDGPUCodeGenPrepare::foldBinOpIntoSelect(BinaryOperator &BO) const {
+  // Don't do this unless the old select is going away. We want to eliminate the
+  // binary operator, not replace a binop with a select.
+  int SelOpNo = 0;
+
+  CastInst *CastOp;
+
+  SelectInst *Sel = findSelectThroughCast(BO.getOperand(0), CastOp);
+  if (!Sel || !Sel->hasOneUse()) {
+    SelOpNo = 1;
+    Sel = findSelectThroughCast(BO.getOperand(1), CastOp);
+  }
+
+  if (!Sel || !Sel->hasOneUse())
+    return false;
+
+  Constant *CT = dyn_cast<Constant>(Sel->getTrueValue());
+  Constant *CF = dyn_cast<Constant>(Sel->getFalseValue());
+  Constant *CBO = dyn_cast<Constant>(BO.getOperand(SelOpNo ^ 1));
+  if (!CBO || !CT || !CF)
+    return false;
+
+  if (CastOp) {
+    CT = ConstantFoldCastOperand(CastOp->getOpcode(), CT, BO.getType(), *DL);
+    CF = ConstantFoldCastOperand(CastOp->getOpcode(), CF, BO.getType(), *DL);
+  }
+
+  // TODO: Handle special 0/-1 cases DAG combine does, although we only really
+  // need to handle divisions here.
+  Constant *FoldedT = SelOpNo ?
+    ConstantFoldBinaryOpOperands(BO.getOpcode(), CBO, CT, *DL) :
+    ConstantFoldBinaryOpOperands(BO.getOpcode(), CT, CBO, *DL);
+  if (isa<ConstantExpr>(FoldedT))
+    return false;
+
+  Constant *FoldedF = SelOpNo ?
+    ConstantFoldBinaryOpOperands(BO.getOpcode(), CBO, CF, *DL) :
+    ConstantFoldBinaryOpOperands(BO.getOpcode(), CF, CBO, *DL);
+  if (isa<ConstantExpr>(FoldedF))
+    return false;
+
+  IRBuilder<> Builder(&BO);
+  Builder.SetCurrentDebugLocation(BO.getDebugLoc());
+  if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(&BO))
+    Builder.setFastMathFlags(FPOp->getFastMathFlags());
+
+  Value *NewSelect = Builder.CreateSelect(Sel->getCondition(),
+                                          FoldedT, FoldedF);
+  NewSelect->takeName(&BO);
+  BO.replaceAllUsesWith(NewSelect);
+  BO.eraseFromParent();
+  if (CastOp)
+    CastOp->eraseFromParent();
+  Sel->eraseFromParent();
+  return true;
+}
+
 static bool shouldKeepFDivF32(Value *Num, bool UnsafeDiv, bool HasDenormals) {
   const ConstantFP *CNum = dyn_cast<ConstantFP>(Num);
   if (!CNum)
@@ -883,6 +960,9 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
 }
 
 bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
+  if (foldBinOpIntoSelect(I))
+    return true;
+
   if (ST->has16BitInsts() && needsPromotionToI32(I.getType()) &&
       DA->isUniform(&I) && promoteUniformOpToI32(I))
     return true;
