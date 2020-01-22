@@ -221,6 +221,9 @@ enum NodeType : unsigned {
   PTEST,
   PTRUE,
 
+  LDNF1,
+  LDNF1S,
+
   // Unsigned gather loads.
   GLD1,
   GLD1_SCALED,
