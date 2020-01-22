@@ -1956,6 +1956,10 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectG_PTR_MASK(I);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return selectG_EXTRACT_VECTOR_ELT(I);
+  case AMDGPU::G_AMDGPU_ATOMIC_INC:
+  case AMDGPU::G_AMDGPU_ATOMIC_DEC:
+    initM0(I);
+    return selectImpl(I, *CoverageInfo);
   default:
     return selectImpl(I, *CoverageInfo);
   }
