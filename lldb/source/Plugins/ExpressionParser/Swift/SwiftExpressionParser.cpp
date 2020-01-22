@@ -1651,8 +1651,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   if (log) {
     std::string s;
     llvm::raw_string_ostream ss(s);
-    const bool verbose = false;
-    sil_module->print(ss, verbose, &parsed_expr->module);
+    sil_module->print(ss, &parsed_expr->module);
     ss.flush();
 
     log->Printf("SIL module before linking:");
@@ -1667,8 +1666,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   if (log) {
     std::string s;
     llvm::raw_string_ostream ss(s);
-    const bool verbose = false;
-    sil_module->print(ss, verbose, &parsed_expr->module);
+    sil_module->print(ss, &parsed_expr->module);
     ss.flush();
 
     log->Printf("Generated SIL module:");
@@ -1681,8 +1679,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   if (log) {
     std::string s;
     llvm::raw_string_ostream ss(s);
-    const bool verbose = false;
-    sil_module->print(ss, verbose, &parsed_expr->module);
+    sil_module->print(ss, &parsed_expr->module);
     ss.flush();
 
     log->Printf("SIL module after diagnostic passes:");
