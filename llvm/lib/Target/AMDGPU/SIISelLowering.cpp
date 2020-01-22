@@ -3505,7 +3505,7 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
   }
 
   const MCInstrDesc &MovRelDesc
-    = TII->getIndirectRegWritePseudo(TRI.getRegSizeInBits(*VecRC), 4, false);
+    = TII->getIndirectRegWritePseudo(TRI.getRegSizeInBits(*VecRC), 32, false);
 
   if (setM0ToIndexFromSGPR(TII, MRI, MI, Offset, UseGPRIdxMode, false)) {
     MachineBasicBlock::iterator I(&MI);
