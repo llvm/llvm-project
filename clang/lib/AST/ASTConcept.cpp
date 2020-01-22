@@ -14,6 +14,7 @@
 
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/Sema/SemaConcept.h"
 using namespace clang;
 
 ASTConstraintSatisfaction::ASTConstraintSatisfaction(const ASTContext &C,
@@ -52,4 +53,13 @@ ASTConstraintSatisfaction::Create(const ASTContext &C,
           Satisfaction.Details.size());
   void *Mem = C.Allocate(size, alignof(ASTConstraintSatisfaction));
   return new (Mem) ASTConstraintSatisfaction(C, Satisfaction);
+}
+
+void ConstraintSatisfaction::Profile(
+    llvm::FoldingSetNodeID &ID, const ASTContext &C, NamedDecl *ConstraintOwner,
+    ArrayRef<TemplateArgument> TemplateArgs) {
+  ID.AddPointer(ConstraintOwner);
+  ID.AddInteger(TemplateArgs.size());
+  for (auto &Arg : TemplateArgs)
+    Arg.Profile(ID, C);
 }
