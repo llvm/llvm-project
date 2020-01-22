@@ -16,7 +16,6 @@
 #define LLVM_ADT_OPTIONAL_H
 
 #include "llvm/ADT/None.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <memory>
@@ -69,20 +68,18 @@ public:
 
   bool hasValue() const noexcept { return hasVal; }
 
-  T &getValue() LLVM_LVALUE_FUNCTION noexcept {
+  T &getValue() & noexcept {
     assert(hasVal);
     return value;
   }
-  T const &getValue() const LLVM_LVALUE_FUNCTION noexcept {
+  T const &getValue() const & noexcept {
     assert(hasVal);
     return value;
   }
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   T &&getValue() && noexcept {
     assert(hasVal);
     return std::move(value);
   }
-#endif
 
   template <class... Args> void emplace(Args &&... args) {
     reset();
@@ -169,20 +166,18 @@ public:
 
   bool hasValue() const noexcept { return hasVal; }
 
-  T &getValue() LLVM_LVALUE_FUNCTION noexcept {
+  T &getValue() & noexcept {
     assert(hasVal);
     return value;
   }
-  T const &getValue() const LLVM_LVALUE_FUNCTION noexcept {
+  T const &getValue() const & noexcept {
     assert(hasVal);
     return value;
   }
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   T &&getValue() && noexcept {
     assert(hasVal);
     return std::move(value);
   }
-#endif
 
   template <class... Args> void emplace(Args &&... args) {
     reset();
@@ -252,30 +247,29 @@ public:
 
   const T *getPointer() const { return &Storage.getValue(); }
   T *getPointer() { return &Storage.getValue(); }
-  const T &getValue() const LLVM_LVALUE_FUNCTION { return Storage.getValue(); }
-  T &getValue() LLVM_LVALUE_FUNCTION { return Storage.getValue(); }
+  const T &getValue() const & { return Storage.getValue(); }
+  T &getValue() & { return Storage.getValue(); }
 
   explicit operator bool() const { return hasValue(); }
   bool hasValue() const { return Storage.hasValue(); }
   const T *operator->() const { return getPointer(); }
   T *operator->() { return getPointer(); }
-  const T &operator*() const LLVM_LVALUE_FUNCTION { return getValue(); }
-  T &operator*() LLVM_LVALUE_FUNCTION { return getValue(); }
+  const T &operator*() const & { return getValue(); }
+  T &operator*() & { return getValue(); }
 
   template <typename U>
-  constexpr T getValueOr(U &&value) const LLVM_LVALUE_FUNCTION {
+  constexpr T getValueOr(U &&value) const & {
     return hasValue() ? getValue() : std::forward<U>(value);
   }
 
   /// Apply a function to the value if present; otherwise return None.
   template <class Function>
-  auto map(const Function &F) const
+  auto map(const Function &F) const &
       -> Optional<decltype(F(getValue()))> {
     if (*this) return F(getValue());
     return None;
   }
 
-#if LLVM_HAS_RVALUE_REFERENCE_THIS
   T &&getValue() && { return std::move(Storage.getValue()); }
   T &&operator*() && { return std::move(Storage.getValue()); }
 
@@ -291,7 +285,6 @@ public:
     if (*this) return F(std::move(*this).getValue());
     return None;
   }
-#endif
 };
 
 template <typename T, typename U>
