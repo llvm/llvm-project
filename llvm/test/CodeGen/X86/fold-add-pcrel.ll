@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=x86_64 -code-model=medium -relocation-model=static < %s | FileCheck --check-prefixes=CHECK,MSTATIC %s
 ; RUN: llc -mtriple=x86_64 -code-model=medium -relocation-model=pic < %s | FileCheck --check-prefixes=CHECK,MPIC %s
 
-@foo = dso_local global i32 0
+@foo = internal global i32 0
 
 define dso_local i64 @zero() {
 ; CHECK-LABEL: zero:
