@@ -339,14 +339,14 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
                     << "] Countable Loop %" << CurLoop->getHeader()->getName()
                     << "\n");
 
-  bool MadeChange = false;
-
   // The following transforms hoist stores/memsets into the loop pre-header.
-  // Give up if the loop has instructions may throw.
+  // Give up if the loop has instructions that may throw.
   SimpleLoopSafetyInfo SafetyInfo;
   SafetyInfo.computeLoopSafetyInfo(CurLoop);
   if (SafetyInfo.anyBlockMayThrow())
-    return MadeChange;
+    return false;
+
+  bool MadeChange = false;
 
   // Scan all the blocks in the loop that are not in subloops.
   for (auto *BB : CurLoop->getBlocks()) {
