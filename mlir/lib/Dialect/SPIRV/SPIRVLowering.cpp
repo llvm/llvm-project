@@ -80,6 +80,19 @@ static Optional<int64_t> getTypeNumBytes(Type t) {
       memrefSize = std::max(memrefSize, shape.value() * strides[shape.index()]);
     }
     return (offset + memrefSize) * elementSize.getValue();
+  } else if (auto tensorType = t.dyn_cast<TensorType>()) {
+    if (!tensorType.hasStaticShape()) {
+      return llvm::None;
+    }
+    auto elementSize = getTypeNumBytes(tensorType.getElementType());
+    if (!elementSize) {
+      return llvm::None;
+    }
+    int64_t size = elementSize.getValue();
+    for (auto shape : tensorType.getShape()) {
+      size *= shape;
+    }
+    return size;
   }
   // TODO: Add size computation for other types.
   return llvm::None;
@@ -131,6 +144,27 @@ static Type convertStdType(Type type) {
     }
   }
 
+  if (auto tensorType = type.dyn_cast<TensorType>()) {
+    // TODO(ravishankarm) : Handle dynamic shapes.
+    if (!tensorType.hasStaticShape()) {
+      return Type();
+    }
+    auto elementType = convertStdType(tensorType.getElementType());
+    if (!elementType) {
+      return Type();
+    }
+    auto elementSize = getTypeNumBytes(elementType);
+    if (!elementSize) {
+      return Type();
+    }
+    auto tensorSize = getTypeNumBytes(tensorType);
+    if (!tensorSize) {
+      return Type();
+    }
+    return spirv::ArrayType::get(elementType,
+                                 tensorSize.getValue() / elementSize.getValue(),
+                                 elementSize.getValue());
+  }
   return Type();
 }
 
