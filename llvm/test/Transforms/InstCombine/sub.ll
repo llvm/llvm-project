@@ -543,9 +543,8 @@ define i32 @test26(i32 %x) {
 
 define i64 @test_neg_shl_sub(i64 %a, i64 %b) {
 ; CHECK-LABEL: @test_neg_shl_sub(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = shl i64 [[SUB]], 2
-; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[MUL]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = shl i64 [[TMP1]], 2
 ; CHECK-NEXT:    ret i64 [[NEG]]
 ;
   %sub = sub i64 %a, %b

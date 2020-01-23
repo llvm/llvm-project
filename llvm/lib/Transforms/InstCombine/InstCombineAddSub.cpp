@@ -1985,7 +1985,7 @@ Instruction *InstCombiner::visitSub(BinaryOperator &I) {
 
     // 0 - (X << Y)  -> (-X << Y)   when X is freely negatable.
     if (match(Op1, m_Shl(m_Value(X), m_Value(Y))) && match(Op0, m_Zero()))
-      if (Value *XNeg = dyn_castNegVal(X))
+      if (Value *XNeg = freelyNegateValue(X))
         return BinaryOperator::CreateShl(XNeg, Y);
 
     // Subtracting -1/0 is the same as adding 1/0:
