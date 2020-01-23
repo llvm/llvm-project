@@ -170,17 +170,33 @@ void InfiniteLoopCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *LoopStmt = Result.Nodes.getNodeAs<Stmt>("loop-stmt");
   const auto *Func = Result.Nodes.getNodeAs<FunctionDecl>("func");
 
+  bool ShouldHaveConditionVariables = true;
+  if (const auto *While = dyn_cast<WhileStmt>(LoopStmt)) {
+    if (const VarDecl *LoopVarDecl = While->getConditionVariable()) {
+      if (const Expr *Init = LoopVarDecl->getInit()) {
+        ShouldHaveConditionVariables = false;
+        Cond = Init;
+      }
+    }
+  }
+
   if (isAtLeastOneCondVarChanged(Func, LoopStmt, Cond, Result.Context))
     return;
 
   std::string CondVarNames = getCondVarNames(Cond);
-  if (CondVarNames.empty())
+  if (ShouldHaveConditionVariables && CondVarNames.empty())
     return;
 
-  diag(LoopStmt->getBeginLoc(),
-       "this loop is infinite; none of its condition variables (%0)"
-       " are updated in the loop body")
+  if (CondVarNames.empty()) {
+    diag(LoopStmt->getBeginLoc(),
+         "this loop is infinite; it does not check any variables in the"
+         " condition");
+  } else {
+    diag(LoopStmt->getBeginLoc(),
+         "this loop is infinite; none of its condition variables (%0)"
+         " are updated in the loop body")
       << CondVarNames;
+  }
 }
 
 } // namespace bugprone
