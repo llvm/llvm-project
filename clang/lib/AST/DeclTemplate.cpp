@@ -164,15 +164,10 @@ static void AdoptTemplateParameterList(TemplateParameterList *Params,
 void TemplateParameterList::
 getAssociatedConstraints(llvm::SmallVectorImpl<const Expr *> &AC) const {
   if (HasConstrainedParameters)
-    for (const NamedDecl *Param : *this) {
-      if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param)) {
+    for (const NamedDecl *Param : *this)
+      if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param))
         if (const auto *TC = TTP->getTypeConstraint())
           AC.push_back(TC->getImmediatelyDeclaredConstraint());
-      } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
-        if (const Expr *E = NTTP->getPlaceholderTypeConstraint())
-          AC.push_back(E);
-      }
-    }
   if (HasRequiresClause)
     AC.push_back(getRequiresClause());
 }
@@ -692,14 +687,8 @@ NonTypeTemplateParmDecl::Create(const ASTContext &C, DeclContext *DC,
                                 unsigned D, unsigned P, IdentifierInfo *Id,
                                 QualType T, bool ParameterPack,
                                 TypeSourceInfo *TInfo) {
-  AutoType *AT =
-      C.getLangOpts().ConceptsTS ? T->getContainedAutoType() : nullptr;
-  return new (C, DC,
-              additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>,
-                                    Expr *>(0,
-                                            AT && AT->isConstrained() ? 1 : 0))
-      NonTypeTemplateParmDecl(DC, StartLoc, IdLoc, D, P, Id, T, ParameterPack,
-                              TInfo);
+  return new (C, DC) NonTypeTemplateParmDecl(DC, StartLoc, IdLoc, D, P, Id,
+                                             T, ParameterPack, TInfo);
 }
 
 NonTypeTemplateParmDecl *NonTypeTemplateParmDecl::Create(
@@ -707,34 +696,26 @@ NonTypeTemplateParmDecl *NonTypeTemplateParmDecl::Create(
     SourceLocation IdLoc, unsigned D, unsigned P, IdentifierInfo *Id,
     QualType T, TypeSourceInfo *TInfo, ArrayRef<QualType> ExpandedTypes,
     ArrayRef<TypeSourceInfo *> ExpandedTInfos) {
-  AutoType *AT = TInfo->getType()->getContainedAutoType();
   return new (C, DC,
-              additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>,
-                                    Expr *>(
-                  ExpandedTypes.size(), AT && AT->isConstrained() ? 1 : 0))
+              additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>>(
+                  ExpandedTypes.size()))
       NonTypeTemplateParmDecl(DC, StartLoc, IdLoc, D, P, Id, T, TInfo,
                               ExpandedTypes, ExpandedTInfos);
 }
 
 NonTypeTemplateParmDecl *
-NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, unsigned ID,
-                                            bool HasTypeConstraint) {
-  return new (C, ID, additionalSizeToAlloc<std::pair<QualType,
-                                                     TypeSourceInfo *>,
-                                           Expr *>(0,
-                                                   HasTypeConstraint ? 1 : 0))
-          NonTypeTemplateParmDecl(nullptr, SourceLocation(), SourceLocation(),
-                                  0, 0, nullptr, QualType(), false, nullptr);
+NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+  return new (C, ID) NonTypeTemplateParmDecl(nullptr, SourceLocation(),
+                                             SourceLocation(), 0, 0, nullptr,
+                                             QualType(), false, nullptr);
 }
 
 NonTypeTemplateParmDecl *
 NonTypeTemplateParmDecl::CreateDeserialized(ASTContext &C, unsigned ID,
-                                            unsigned NumExpandedTypes,
-                                            bool HasTypeConstraint) {
+                                            unsigned NumExpandedTypes) {
   auto *NTTP =
-      new (C, ID, additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>,
-                                        Expr *>(
-                      NumExpandedTypes, HasTypeConstraint ? 1 : 0))
+      new (C, ID, additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>>(
+                      NumExpandedTypes))
           NonTypeTemplateParmDecl(nullptr, SourceLocation(), SourceLocation(),
                                   0, 0, nullptr, QualType(), nullptr, None,
                                   None);

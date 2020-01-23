@@ -99,8 +99,6 @@ def DeclRef : RefPropertyType<"Decl"> { let ConstWhenWriting = 1; }
     SubclassPropertyType<"TagDecl", DeclRef>;
   def TemplateDeclRef :
     SubclassPropertyType<"TemplateDecl", DeclRef>;
-  def ConceptDeclRef :
-    SubclassPropertyType<"ConceptDecl", DeclRef>;
   def TemplateTypeParmDeclRef :
     SubclassPropertyType<"TemplateTypeParmDecl", DeclRef>;
   def TemplateTemplateParmDeclRef :
