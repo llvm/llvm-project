@@ -245,7 +245,8 @@ class DWARFLinker {
 public:
   DWARFLinker(const Triple &Triple, DwarfEmitter *Emitter,
               DwarfLinkerClient ClientID = DwarfLinkerClient::General)
-      : Triple(Triple), DwarfEmitter(Emitter), DwarfLinkerClientID(ClientID) {}
+      : TheTriple(Triple), TheDwarfEmitter(Emitter),
+        DwarfLinkerClientID(ClientID) {}
 
   /// Add object file to be linked.
   void addObjectFile(DwarfLinkerObjFile &ObjFile);
@@ -597,8 +598,6 @@ private:
       AttributesInfo() = default;
     };
 
-    friend DIECloner;
-
     /// Helper for cloneDIE.
     unsigned cloneAttribute(DIE &Die, const DWARFDie &InputDIE,
                             const DwarfLinkerObjFile &OF, CompileUnit &U,
@@ -719,9 +718,9 @@ private:
   BumpPtrAllocator DIEAlloc;
   /// @}
 
-  Triple Triple;
+  Triple TheTriple;
 
-  DwarfEmitter *DwarfEmitter;
+  DwarfEmitter *TheDwarfEmitter;
   std::vector<LinkContext> ObjectContexts;
 
   unsigned MaxDwarfVersion = 0;
