@@ -41,6 +41,23 @@ TEST(DWARFDebugArangeSet, LengthExceedsSectionSize) {
       "the length of address range table at offset 0x0 exceeds section size");
 }
 
+TEST(DWARFDebugArangeSet, LengthExceedsSectionSizeDWARF64) {
+  static const char DebugArangesSecRaw[] =
+      "\xff\xff\xff\xff"                 // DWARF64 mark
+      "\x15\x00\x00\x00\x00\x00\x00\x00" // The length exceeds the section
+                                         // boundaries
+      "\x02\x00"                         // Version
+      "\x00\x00\x00\x00\x00\x00\x00\x00" // Debug Info Offset
+      "\x04"                             // Address Size
+      "\x00"                             // Segment Selector Size
+                                         // No padding
+      "\x00\x00\x00\x00"                 // Termination tuple
+      "\x00\x00\x00\x00";
+  ExpectExtractError(
+      DebugArangesSecRaw,
+      "the length of address range table at offset 0x0 exceeds section size");
+}
+
 TEST(DWARFDebugArangeSet, UnsupportedAddressSize) {
   static const char DebugArangesSecRaw[] =
       "\x0c\x00\x00\x00"  // Length
@@ -70,6 +87,15 @@ TEST(DWARFDebugArangeSet, NoTerminationEntry) {
   ExpectExtractError(
       DebugArangesSecRaw,
       "address range table at offset 0x0 is not terminated by null entry");
+}
+
+TEST(DWARFDebugArangeSet, ReservedUnitLength) {
+  static const char DebugArangesSecRaw[] =
+      "\xf0\xff\xff\xff"; // Reserved unit length value
+  ExpectExtractError(
+      DebugArangesSecRaw,
+      "address range table at offset 0x0 has unsupported reserved unit length "
+      "of value 0xfffffff0");
 }
 
 } // end anonymous namespace
