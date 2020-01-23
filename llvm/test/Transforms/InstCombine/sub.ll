@@ -583,6 +583,144 @@ define i64 @test_neg_shl_sub_extra_use2(i64 %a, i64 %b, i64* %p) {
   ret i64 %neg
 }
 
+define i64 @test_neg_shl_div(i64 %a) {
+; CHECK-LABEL: @test_neg_shl_div(
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 [[A:%.*]], 3
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[DIV]], 2
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[SHL]]
+; CHECK-NEXT:    ret i64 [[NEG]]
+;
+  %div = sdiv i64 %a, 3
+  %shl = shl i64 %div, 2
+  %neg = sub i64 0, %shl
+  ret i64 %neg
+}
+
+define i64 @test_neg_shl_zext_i1(i1 %a, i64 %b) {
+; CHECK-LABEL: @test_neg_shl_zext_i1(
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[A:%.*]] to i64
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[EXT]], [[B:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[SHL]]
+; CHECK-NEXT:    ret i64 [[NEG]]
+;
+  %ext = zext i1 %a to i64
+  %shl = shl i64 %ext, %b
+  %neg = sub i64 0, %shl
+  ret i64 %neg
+}
+
+define i64 @test_neg_shl_sext_i1(i1 %a, i64 %b) {
+; CHECK-LABEL: @test_neg_shl_sext_i1(
+; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[A:%.*]] to i64
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[EXT]], [[B:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[SHL]]
+; CHECK-NEXT:    ret i64 [[NEG]]
+;
+  %ext = sext i1 %a to i64
+  %shl = shl i64 %ext, %b
+  %neg = sub i64 0, %shl
+  ret i64 %neg
+}
+
+define i64 @test_neg_zext_i1_extra_use(i1 %a, i64 %b, i64* %p) {
+; CHECK-LABEL: @test_neg_zext_i1_extra_use(
+; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[A:%.*]] to i64
+; CHECK-NEXT:    [[NEG:%.*]] = sext i1 [[A]] to i64
+; CHECK-NEXT:    store i64 [[EXT]], i64* [[P:%.*]], align 8
+; CHECK-NEXT:    ret i64 [[NEG]]
+;
+  %ext = zext i1 %a to i64
+  %neg = sub i64 0, %ext
+  store i64 %ext, i64* %p
+  ret i64 %neg
+}
+
+define i64 @test_neg_sext_i1_extra_use(i1 %a, i64 %b, i64* %p) {
+; CHECK-LABEL: @test_neg_sext_i1_extra_use(
+; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[A:%.*]] to i64
+; CHECK-NEXT:    [[NEG:%.*]] = zext i1 [[A]] to i64
+; CHECK-NEXT:    store i64 [[EXT]], i64* [[P:%.*]], align 8
+; CHECK-NEXT:    ret i64 [[NEG]]
+;
+  %ext = sext i1 %a to i64
+  %neg = sub i64 0, %ext
+  store i64 %ext, i64* %p
+  ret i64 %neg
+}
+
+define i32 @test_neg_trunc_shl_sub(i64 %a, i64 %b) {
+; CHECK-LABEL: @test_neg_trunc_shl_sub(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SUB_TR:%.*]] = trunc i64 [[SUB]] to i32
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl i32 [[SUB_TR]], 2
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[TRUNC]]
+; CHECK-NEXT:    ret i32 [[NEG]]
+;
+  %sub = sub i64 %a, %b
+  %shl = shl i64 %sub, 2
+  %trunc = trunc i64 %shl to i32
+  %neg = sub i32 0, %trunc
+  ret i32 %neg
+}
+
+define i32 @test_neg_trunc_shl_ashr(i64 %a, i64 %b) {
+; CHECK-LABEL: @test_neg_trunc_shl_ashr(
+; CHECK-NEXT:    [[SHR:%.*]] = ashr i64 [[A:%.*]], 63
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[SHR]], [[B:%.*]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[SHL]] to i32
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[TRUNC]]
+; CHECK-NEXT:    ret i32 [[NEG]]
+;
+  %shr = ashr i64 %a, 63
+  %shl = shl i64 %shr, %b
+  %trunc = trunc i64 %shl to i32
+  %neg = sub i32 0, %trunc
+  ret i32 %neg
+}
+
+define i32 @test_neg_trunc_shl_lshr(i64 %a, i64 %b) {
+; CHECK-LABEL: @test_neg_trunc_shl_lshr(
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[A:%.*]], 63
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[SHR]], [[B:%.*]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[SHL]] to i32
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[TRUNC]]
+; CHECK-NEXT:    ret i32 [[NEG]]
+;
+  %shr = lshr i64 %a, 63
+  %shl = shl i64 %shr, %b
+  %trunc = trunc i64 %shl to i32
+  %neg = sub i32 0, %trunc
+  ret i32 %neg
+}
+
+define i64 @test_neg_mul_sub(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: @test_neg_mul_sub(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[SUB]], [[C:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[MUL]]
+; CHECK-NEXT:    ret i64 [[NEG]]
+;
+  %sub = sub i64 %a, %b
+  %mul = mul i64 %sub, %c
+  %neg = sub i64 0, %mul
+  ret i64 %neg
+}
+
+define i64 @test_neg_mul_sub_communted(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: @test_neg_mul_sub_communted(
+; CHECK-NEXT:    [[COMPLEX:%.*]] = mul i64 [[C:%.*]], [[C]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[COMPLEX]], [[SUB]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[MUL]]
+; CHECK-NEXT:    ret i64 [[NEG]]
+;
+  %complex = mul i64 %c, %c
+  %sub = sub i64 %a, %b
+  %mul = mul i64 %complex, %sub
+  %neg = sub i64 0, %mul
+  ret i64 %neg
+}
+
 define i32 @test27(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test27(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[Y:%.*]], 3
