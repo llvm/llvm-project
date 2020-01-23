@@ -65,6 +65,11 @@ public:
                                      const MCAsmLayout &Layout,
                                      MCAlignFragment &AF) override;
 
+  bool evaluateTargetFixup(const MCAssembler &Asm, const MCAsmLayout &Layout,
+                           const MCFixup &Fixup, const MCFragment *DF,
+                           const MCValue &Target, uint64_t &Value,
+                           bool &WasForced) override;
+
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
@@ -101,9 +106,12 @@ public:
       { "fixup_riscv_hi20",         12,     20,  0 },
       { "fixup_riscv_lo12_i",       20,     12,  0 },
       { "fixup_riscv_lo12_s",        0,     32,  0 },
-      { "fixup_riscv_pcrel_hi20",   12,     20,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_pcrel_lo12_i", 20,     12,  MCFixupKindInfo::FKF_IsPCRel },
-      { "fixup_riscv_pcrel_lo12_s",  0,     32,  MCFixupKindInfo::FKF_IsPCRel },
+      { "fixup_riscv_pcrel_hi20",   12,     20,
+        MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget },
+      { "fixup_riscv_pcrel_lo12_i", 20,     12,
+        MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget },
+      { "fixup_riscv_pcrel_lo12_s",  0,     32,
+        MCFixupKindInfo::FKF_IsPCRel | MCFixupKindInfo::FKF_IsTarget },
       { "fixup_riscv_got_hi20",     12,     20,  MCFixupKindInfo::FKF_IsPCRel },
       { "fixup_riscv_tprel_hi20",   12,     20,  0 },
       { "fixup_riscv_tprel_lo12_i", 20,     12,  0 },

@@ -9,6 +9,7 @@
 #include "RISCVAsmBackend.h"
 #include "RISCVMCExpr.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDirectives.h"
@@ -28,8 +29,6 @@ using namespace llvm;
 bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                             const MCFixup &Fixup,
                                             const MCValue &Target) {
-  bool ShouldForce = false;
-
   switch (Fixup.getTargetKind()) {
   default:
     break;
@@ -44,40 +43,9 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   case RISCV::fixup_riscv_tls_got_hi20:
   case RISCV::fixup_riscv_tls_gd_hi20:
     return true;
-  case RISCV::fixup_riscv_pcrel_lo12_i:
-  case RISCV::fixup_riscv_pcrel_lo12_s:
-    // For pcrel_lo12, force a relocation if the target of the corresponding
-    // pcrel_hi20 is not in the same fragment.
-    const MCFixup *T = cast<RISCVMCExpr>(Fixup.getValue())->getPCRelHiFixup();
-    if (!T) {
-      Asm.getContext().reportError(Fixup.getLoc(),
-                                   "could not find corresponding %pcrel_hi");
-      return false;
-    }
-
-    switch (T->getTargetKind()) {
-    default:
-      llvm_unreachable("Unexpected fixup kind for pcrel_lo12");
-      break;
-    case RISCV::fixup_riscv_got_hi20:
-    case RISCV::fixup_riscv_tls_got_hi20:
-    case RISCV::fixup_riscv_tls_gd_hi20:
-      ShouldForce = true;
-      break;
-    case RISCV::fixup_riscv_pcrel_hi20: {
-      MCFragment *TFragment = T->getValue()->findAssociatedFragment();
-      MCFragment *FixupFragment = Fixup.getValue()->findAssociatedFragment();
-      assert(FixupFragment && "We should have a fragment for this fixup");
-      ShouldForce =
-          !TFragment || TFragment->getParent() != FixupFragment->getParent();
-      break;
-    }
-    }
-    break;
   }
 
-  return ShouldForce || STI.getFeatureBits()[RISCV::FeatureRelax] ||
-         ForceRelocs;
+  return STI.getFeatureBits()[RISCV::FeatureRelax] || ForceRelocs;
 }
 
 bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
@@ -282,6 +250,67 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 
   }
+}
+
+bool RISCVAsmBackend::evaluateTargetFixup(
+    const MCAssembler &Asm, const MCAsmLayout &Layout, const MCFixup &Fixup,
+    const MCFragment *DF, const MCValue &Target, uint64_t &Value,
+    bool &WasForced) {
+  const MCFixup *AUIPCFixup;
+  const MCFragment *AUIPCDF;
+  MCValue AUIPCTarget;
+  switch (Fixup.getTargetKind()) {
+  default:
+    llvm_unreachable("Unexpected fixup kind!");
+  case RISCV::fixup_riscv_pcrel_hi20:
+    AUIPCFixup = &Fixup;
+    AUIPCDF = DF;
+    AUIPCTarget = Target;
+    break;
+  case RISCV::fixup_riscv_pcrel_lo12_i:
+  case RISCV::fixup_riscv_pcrel_lo12_s: {
+    AUIPCFixup = cast<RISCVMCExpr>(Fixup.getValue())->getPCRelHiFixup(&AUIPCDF);
+    if (!AUIPCFixup) {
+      Asm.getContext().reportError(Fixup.getLoc(),
+                                   "could not find corresponding %pcrel_hi");
+      return true;
+    }
+
+    // MCAssembler::evaluateFixup will emit an error for this case when it sees
+    // the %pcrel_hi, so don't duplicate it when also seeing the %pcrel_lo.
+    const MCExpr *AUIPCExpr = AUIPCFixup->getValue();
+    if (!AUIPCExpr->evaluateAsRelocatable(AUIPCTarget, &Layout, AUIPCFixup))
+      return true;
+    break;
+  }
+  }
+
+  if (!AUIPCTarget.getSymA() || AUIPCTarget.getSymB())
+    return false;
+
+  const MCSymbolRefExpr *A = AUIPCTarget.getSymA();
+  const MCSymbol &SA = A->getSymbol();
+  if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined())
+    return false;
+
+  auto *Writer = Asm.getWriterPtr();
+  if (!Writer)
+    return false;
+
+  bool IsResolved = Writer->isSymbolRefDifferenceFullyResolvedImpl(
+      Asm, SA, *AUIPCDF, false, true);
+  if (!IsResolved)
+    return false;
+
+  Value = Layout.getSymbolOffset(SA) + AUIPCTarget.getConstant();
+  Value -= Layout.getFragmentOffset(AUIPCDF) + AUIPCFixup->getOffset();
+
+  if (shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget)) {
+    WasForced = true;
+    return false;
+  }
+
+  return true;
 }
 
 void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
