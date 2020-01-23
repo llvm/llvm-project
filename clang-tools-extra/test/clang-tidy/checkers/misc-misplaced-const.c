@@ -14,13 +14,13 @@ void func(void) {
 
   // Not ok
   const ip i3 = 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: 'i3' declared with a const-qualified typedef type; results in the type being 'int *const' instead of 'const int *'
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: 'i3' declared with a const-qualified typedef; results in the type being 'int *const' instead of 'const int *'
 
   ip const i4 = 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: 'i4' declared with a const-qualified
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: 'i4' declared with a const-qualified typedef; results in the type being 'int *const' instead of 'const int *'
 
   const volatile ip i5 = 0;
-  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: 'i5' declared with a const-qualified typedef type; results in the type being 'int *const volatile' instead of 'const int *volatile'
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: 'i5' declared with a const-qualified typedef; results in the type being 'int *const volatile' instead of 'const int *volatile'
 }
 
 void func2(const plain_i *i1,
