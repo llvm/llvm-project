@@ -1626,11 +1626,9 @@ void Sema::AddAssumeAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
       return;
     }
 
-    // Alignment calculations can wrap around if it's greater than 2**29.
-    unsigned MaximumAlignment = 536870912;
-    if (I > MaximumAlignment)
+    if (I > Sema::MaximumAlignment)
       Diag(CI.getLoc(), diag::warn_assume_aligned_too_great)
-          << CI.getRange() << MaximumAlignment;
+          << CI.getRange() << Sema::MaximumAlignment;
   }
 
   if (OE) {
@@ -3815,13 +3813,9 @@ void Sema::AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
     }
   }
 
-  // Alignment calculations can wrap around if it's greater than 2**28.
-  unsigned MaxValidAlignment =
-      Context.getTargetInfo().getTriple().isOSBinFormatCOFF() ? 8192
-                                                              : 268435456;
-  if (AlignVal > MaxValidAlignment) {
-    Diag(AttrLoc, diag::err_attribute_aligned_too_great) << MaxValidAlignment
-                                                         << E->getSourceRange();
+  if (AlignVal > Sema::MaximumAlignment) {
+    Diag(AttrLoc, diag::err_attribute_aligned_too_great)
+        << Sema::MaximumAlignment << E->getSourceRange();
     return;
   }
 
