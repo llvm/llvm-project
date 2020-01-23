@@ -571,7 +571,7 @@ protected:
     // FIXME: Auto-completion in a template requires disabling delayed template
     // parsing.
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
-    TU.ExtraArgs.push_back("-std=c++17");
+    TU.ExtraArgs.push_back("-std=c++2a");
 
     auto AST = TU.build();
     for (auto &D : AST.getDiagnostics()) {
@@ -1091,7 +1091,27 @@ TEST_F(FindExplicitReferencesTest, All) {
         "0: targets = {foo::T}, decl\n"
         "1: targets = {foo::V}, decl\n"
         "2: targets = {vector}\n"
-        "3: targets = {foo::T}\n"}};
+        "3: targets = {foo::T}\n"},
+       // Concept
+       {
+           R"cpp(
+              template <typename T>
+              concept Drawable = requires (T t) { t.draw(); };
+
+              namespace foo {
+                template <typename $0^T> requires $1^Drawable<$2^T>
+                void $3^bar($4^T $5^t) {
+                  $6^t.draw();
+                }
+              }
+          )cpp",
+           "0: targets = {T}, decl\n"
+           "1: targets = {Drawable}\n"
+           "2: targets = {T}\n"
+           "3: targets = {foo::bar}, decl\n"
+           "4: targets = {T}\n"
+           "5: targets = {t}, decl\n"
+           "6: targets = {t}\n"}};
 
   for (const auto &C : Cases) {
     llvm::StringRef ExpectedCode = C.first;

@@ -55,6 +55,7 @@ std::vector<HighlightingToken> getExpectedTokens(Annotations &Test) {
       {HighlightingKind::DependentType, "DependentType"},
       {HighlightingKind::DependentName, "DependentName"},
       {HighlightingKind::TemplateParameter, "TemplateParameter"},
+      {HighlightingKind::Concept, "Concept"},
       {HighlightingKind::Primitive, "Primitive"},
       {HighlightingKind::Macro, "Macro"}};
   std::vector<HighlightingToken> ExpectedTokens;
@@ -108,6 +109,7 @@ void checkHighlightings(llvm::StringRef Code,
   // FIXME: Auto-completion in a template requires disabling delayed template
   // parsing.
   TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+  TU.ExtraArgs.push_back("-std=c++2a");
 
   for (auto File : AdditionalFiles)
     TU.AdditionalFiles.insert({File.first, File.second});
@@ -649,6 +651,19 @@ sizeof...($TemplateParameter[[Elements]]);
         static const int $StaticField[[Value]] = $TemplateParameter[[T]]
             ::$DependentType[[Resolver]]::$DependentName[[Value]];
       };
+    )cpp",
+      // Concepts
+      R"cpp(
+      template <typename $TemplateParameter[[T]]>
+      concept $Concept[[Fooable]] = 
+          requires($TemplateParameter[[T]] $Parameter[[F]]) {
+            $Parameter[[F]].$DependentName[[foo]]();
+          };
+      template <typename $TemplateParameter[[T]]>
+          requires $Concept[[Fooable]]<$TemplateParameter[[T]]>
+      void $Function[[bar]]($TemplateParameter[[T]] $Parameter[[F]]) {
+        $Parameter[[F]].$DependentName[[foo]]();
+      }
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);

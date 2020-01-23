@@ -618,6 +618,12 @@ llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
     // FIXME: handle more complicated cases, e.g. ObjC, designated initializers.
     llvm::SmallVector<ReferenceLoc, 2> Refs;
 
+    void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
+      Refs.push_back(ReferenceLoc{E->getNestedNameSpecifierLoc(),
+                                  E->getConceptNameLoc(),
+                                  /*IsDecl=*/false,
+                                  {E->getNamedConcept()}});
+    }
     void VisitDeclRefExpr(const DeclRefExpr *E) {
       Refs.push_back(ReferenceLoc{E->getQualifierLoc(),
                                   E->getNameInfo().getLoc(),
