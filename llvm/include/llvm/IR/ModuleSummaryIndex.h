@@ -757,9 +757,10 @@ private:
 
 public:
   struct GVarFlags {
-    GVarFlags(bool ReadOnly, bool WriteOnly, bool Constant)
+    GVarFlags(bool ReadOnly, bool WriteOnly, bool Constant,
+              GlobalObject::VCallVisibility Vis)
         : MaybeReadOnly(ReadOnly), MaybeWriteOnly(WriteOnly),
-          Constant(Constant) {}
+          Constant(Constant), VCallVisibility(Vis) {}
 
     // If true indicates that this global variable might be accessed
     // purely by non-volatile load instructions. This in turn means
@@ -780,6 +781,9 @@ public:
     // opportunity to make some extra optimizations. Readonly constants
     // are also internalized.
     unsigned Constant : 1;
+    // Set from metadata on vtable definitions during the module summary
+    // analysis.
+    unsigned VCallVisibility : 2;
   } VarFlags;
 
   GlobalVarSummary(GVFlags Flags, GVarFlags VarFlags,
@@ -798,6 +802,12 @@ public:
   bool maybeReadOnly() const { return VarFlags.MaybeReadOnly; }
   bool maybeWriteOnly() const { return VarFlags.MaybeWriteOnly; }
   bool isConstant() const { return VarFlags.Constant; }
+  void setVCallVisibility(GlobalObject::VCallVisibility Vis) {
+    VarFlags.VCallVisibility = Vis;
+  }
+  GlobalObject::VCallVisibility getVCallVisibility() const {
+    return (GlobalObject::VCallVisibility)VarFlags.VCallVisibility;
+  }
 
   void setVTableFuncs(VTableFuncList Funcs) {
     assert(!VTableFuncs);
