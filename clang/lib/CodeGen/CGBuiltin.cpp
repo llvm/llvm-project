@@ -3930,7 +3930,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         auto *V =
             Builder.CreateZExtOrTrunc(EmitScalarExpr(E->getArg(I)), SizeTy);
         Builder.CreateAlignedStore(
-            V, GEP, CGM.getDataLayout().getPrefTypeAlignment(SizeTy));
+            V, GEP, CGM.getDataLayout().getPrefTypeAlign(SizeTy));
       }
       return std::tie(ElemPtr, TmpSize, TmpPtr);
     };

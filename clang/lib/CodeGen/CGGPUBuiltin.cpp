@@ -111,7 +111,7 @@ CodeGenFunction::EmitNVPTXDevicePrintfCallExpr(const CallExpr *E,
     for (unsigned I = 1, NumArgs = Args.size(); I < NumArgs; ++I) {
       llvm::Value *P = Builder.CreateStructGEP(AllocaTy, Alloca, I - 1);
       llvm::Value *Arg = Args[I].getRValue(*this).getScalarVal();
-      Builder.CreateAlignedStore(Arg, P, DL.getPrefTypeAlignment(Arg->getType()));
+      Builder.CreateAlignedStore(Arg, P, DL.getPrefTypeAlign(Arg->getType()));
     }
     BufferPtr = Builder.CreatePointerCast(Alloca, llvm::Type::getInt8PtrTy(Ctx));
   }

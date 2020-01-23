@@ -2346,8 +2346,8 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr,
           IVec, AddrParts[Part], Group->getAlign(), ShuffledMask);
     }
     else
-      NewStoreInstr = Builder.CreateAlignedStore(IVec, AddrParts[Part],
-                                                 Group->getAlignment());
+      NewStoreInstr =
+          Builder.CreateAlignedStore(IVec, AddrParts[Part], Group->getAlign());
 
     Group->addMetadata(NewStoreInstr);
   }
@@ -2452,8 +2452,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
           NewSI = Builder.CreateMaskedStore(StoredVal, VecPtr, Alignment,
                                             BlockInMaskParts[Part]);
         else
-          NewSI =
-              Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment.value());
+          NewSI = Builder.CreateAlignedStore(StoredVal, VecPtr, Alignment);
       }
       addMetadata(NewSI, SI);
     }

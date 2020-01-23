@@ -6885,8 +6885,8 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
       Addr = Builder.CreateGEP(
           SplitStoreType, Addr,
           ConstantInt::get(Type::getInt32Ty(SI.getContext()), 1));
-    Builder.CreateAlignedStore(
-        V, Addr, Upper ? SI.getAlignment() / 2 : SI.getAlignment());
+    Builder.CreateAlignedStore(V, Addr,
+                               Upper ? SI.getAlign() / 2 : SI.getAlign());
   };
 
   CreateSplitStore(LValue, false);

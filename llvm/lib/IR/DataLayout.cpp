@@ -752,8 +752,13 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
                           abi_or_pref, Ty);
 }
 
+/// TODO: Remove this function once the transition to Align is over.
 unsigned DataLayout::getABITypeAlignment(Type *Ty) const {
-  return getAlignment(Ty, true).value();
+  return getABITypeAlign(Ty).value();
+}
+
+Align DataLayout::getABITypeAlign(Type *Ty) const {
+  return getAlignment(Ty, true);
 }
 
 /// getABIIntegerTypeAlignment - Return the minimum ABI-required alignment for
@@ -762,8 +767,13 @@ Align DataLayout::getABIIntegerTypeAlignment(unsigned BitWidth) const {
   return getAlignmentInfo(INTEGER_ALIGN, BitWidth, true, nullptr);
 }
 
+/// TODO: Remove this function once the transition to Align is over.
 unsigned DataLayout::getPrefTypeAlignment(Type *Ty) const {
-  return getAlignment(Ty, false).value();
+  return getPrefTypeAlign(Ty).value();
+}
+
+Align DataLayout::getPrefTypeAlign(Type *Ty) const {
+  return getAlignment(Ty, false);
 }
 
 IntegerType *DataLayout::getIntPtrType(LLVMContext &C,
