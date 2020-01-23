@@ -3809,6 +3809,90 @@ void CodeGenFunction::deferPlaceholderReplacement(llvm::Instruction *Old,
   DeferredReplacements.push_back(std::make_pair(Old, New));
 }
 
+namespace {
+
+/// Specify given \p NewAlign as the alignment of return value attribute. If
+/// such attribute already exists, re-set it to the maximal one of two options.
+LLVM_NODISCARD llvm::AttributeList
+maybeRaiseRetAlignmentAttribute(llvm::LLVMContext &Ctx,
+                                const llvm::AttributeList &Attrs,
+                                llvm::Align NewAlign) {
+  llvm::Align CurAlign = Attrs.getRetAlignment().valueOrOne();
+  if (CurAlign >= NewAlign)
+    return Attrs;
+  llvm::Attribute AlignAttr = llvm::Attribute::getWithAlignment(Ctx, NewAlign);
+  return Attrs
+      .removeAttribute(Ctx, llvm::AttributeList::ReturnIndex,
+                       llvm::Attribute::AttrKind::Alignment)
+      .addAttribute(Ctx, llvm::AttributeList::ReturnIndex, AlignAttr);
+}
+
+template <typename AlignedAttrTy> class AbstractAssumeAlignedAttrEmitter {
+protected:
+  CodeGenFunction &CGF;
+
+  /// We do nothing if this is, or becomes, nullptr.
+  const AlignedAttrTy *AA = nullptr;
+
+  llvm::Value *Alignment = nullptr;      // May or may not be a constant.
+  llvm::ConstantInt *OffsetCI = nullptr; // Constant, hopefully zero.
+
+  AbstractAssumeAlignedAttrEmitter(CodeGenFunction &CGF_, const Decl *FuncDecl)
+      : CGF(CGF_) {
+    if (!FuncDecl)
+      return;
+    AA = FuncDecl->getAttr<AlignedAttrTy>();
+  }
+
+public:
+  /// If we can, materialize the alignment as an attribute on return value.
+  LLVM_NODISCARD llvm::AttributeList
+  TryEmitAsCallSiteAttribute(const llvm::AttributeList &Attrs) {
+    if (!AA || OffsetCI || CGF.SanOpts.has(SanitizerKind::Alignment))
+      return Attrs;
+    const auto *AlignmentCI = dyn_cast<llvm::ConstantInt>(Alignment);
+    if (!AlignmentCI)
+      return Attrs;
+    llvm::AttributeList NewAttrs = maybeRaiseRetAlignmentAttribute(
+        CGF.getLLVMContext(), Attrs,
+        llvm::Align(
+            AlignmentCI->getLimitedValue(llvm::Value::MaximumAlignment)));
+    AA = nullptr; // We're done. Disallow doing anything else.
+    return NewAttrs;
+  }
+
+  /// Emit alignment assumption.
+  /// This is a general fallback that we take if either there is an offset,
+  /// or the alignment is variable or we are sanitizing for alignment.
+  void EmitAsAnAssumption(SourceLocation Loc, QualType RetTy, RValue &Ret) {
+    if (!AA)
+      return;
+    CGF.EmitAlignmentAssumption(Ret.getScalarVal(), RetTy, Loc,
+                                AA->getLocation(), Alignment, OffsetCI);
+    AA = nullptr; // We're done. Disallow doing anything else.
+  }
+};
+
+/// Helper data structure to emit `AssumeAlignedAttr`.
+class AssumeAlignedAttrEmitter final
+    : public AbstractAssumeAlignedAttrEmitter<AssumeAlignedAttr> {
+public:
+  AssumeAlignedAttrEmitter(CodeGenFunction &CGF_, const Decl *FuncDecl)
+      : AbstractAssumeAlignedAttrEmitter(CGF_, FuncDecl) {
+    if (!AA)
+      return;
+    // It is guaranteed that the alignment/offset are constants.
+    Alignment = cast<llvm::ConstantInt>(CGF.EmitScalarExpr(AA->getAlignment()));
+    if (Expr *Offset = AA->getOffset()) {
+      OffsetCI = cast<llvm::ConstantInt>(CGF.EmitScalarExpr(Offset));
+      if (OffsetCI->isNullValue()) // Canonicalize zero offset to no offset.
+        OffsetCI = nullptr;
+    }
+  }
+};
+
+} // namespace
+
 RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                                  const CGCallee &Callee,
                                  ReturnValueSlot ReturnValue,
@@ -4400,6 +4484,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         Attrs.addAttribute(getLLVMContext(), llvm::AttributeList::FunctionIndex,
                            llvm::Attribute::StrictFP);
 
+  AssumeAlignedAttrEmitter AssumeAlignedAttrEmitter(*this, TargetDecl);
+  Attrs = AssumeAlignedAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);
+
   // Emit the actual call/invoke instruction.
   llvm::CallBase *CI;
   if (!InvokeDest) {
@@ -4618,16 +4705,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 
   // Emit the assume_aligned check on the return value.
   if (Ret.isScalar() && TargetDecl) {
-    if (const auto *AA = TargetDecl->getAttr<AssumeAlignedAttr>()) {
-      llvm::Value *OffsetValue = nullptr;
-      if (const auto *Offset = AA->getOffset())
-        OffsetValue = EmitScalarExpr(Offset);
+    AssumeAlignedAttrEmitter.EmitAsAnAssumption(Loc, RetTy, Ret);
 
-      llvm::Value *Alignment = EmitScalarExpr(AA->getAlignment());
-      llvm::ConstantInt *AlignmentCI = cast<llvm::ConstantInt>(Alignment);
-      EmitAlignmentAssumption(Ret.getScalarVal(), RetTy, Loc, AA->getLocation(),
-                              AlignmentCI, OffsetValue);
-    }
     if (const auto *AA = TargetDecl->getAttr<AllocAlignAttr>()) {
       llvm::Value *AlignmentVal = CallArgs[AA->getParamIndex().getLLVMIndex()]
                                       .getRValue(*this)
