@@ -16,7 +16,7 @@
 
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ClangASTMetadata.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -202,7 +202,7 @@ static bool IsAnonymousNamespaceName(llvm::StringRef name) {
   return name == "`anonymous namespace'" || name == "`anonymous-namespace'";
 }
 
-PdbAstBuilder::PdbAstBuilder(ObjectFile &obj, PdbIndex &index, ClangASTContext &clang)
+PdbAstBuilder::PdbAstBuilder(ObjectFile &obj, PdbIndex &index, TypeSystemClang &clang)
     : m_index(index), m_clang(clang) {
   BuildParentMap();
 }
@@ -656,7 +656,7 @@ bool PdbAstBuilder::CompleteTagDecl(clang::TagDecl &tag) {
   lldbassert(IsTagRecord(type_id, m_index.tpi()));
 
   clang::QualType tag_qt = m_clang.getASTContext().getTypeDeclType(&tag);
-  ClangASTContext::SetHasExternalStorage(tag_qt.getAsOpaquePtr(), false);
+  TypeSystemClang::SetHasExternalStorage(tag_qt.getAsOpaquePtr(), false);
 
   TypeIndex tag_ti = type_id.index;
   CVType cvt = m_index.tpi().getType(tag_ti);
@@ -781,7 +781,7 @@ clang::QualType PdbAstBuilder::CreateRecordType(PdbTypeSymId id,
 
   lldbassert(ct.IsValid());
 
-  ClangASTContext::StartTagDeclarationDefinition(ct);
+  TypeSystemClang::StartTagDeclarationDefinition(ct);
 
   // Even if it's possible, don't complete it at this point. Just mark it
   // forward resolved, and if/when LLDB needs the full definition, it can
@@ -789,7 +789,7 @@ clang::QualType PdbAstBuilder::CreateRecordType(PdbTypeSymId id,
   clang::QualType result =
       clang::QualType::getFromOpaquePtr(ct.GetOpaqueQualType());
 
-  ClangASTContext::SetHasExternalStorage(result.getAsOpaquePtr(), true);
+  TypeSystemClang::SetHasExternalStorage(result.getAsOpaquePtr(), true);
   return result;
 }
 
@@ -1105,8 +1105,8 @@ clang::QualType PdbAstBuilder::CreateEnumType(PdbTypeSymId id,
       uname.c_str(), decl_context, declaration, ToCompilerType(underlying_type),
       er.isScoped());
 
-  ClangASTContext::StartTagDeclarationDefinition(enum_ct);
-  ClangASTContext::SetHasExternalStorage(enum_ct.GetOpaqueQualType(), true);
+  TypeSystemClang::StartTagDeclarationDefinition(enum_ct);
+  TypeSystemClang::SetHasExternalStorage(enum_ct.GetOpaqueQualType(), true);
 
   return clang::QualType::getFromOpaquePtr(enum_ct.GetOpaqueQualType());
 }

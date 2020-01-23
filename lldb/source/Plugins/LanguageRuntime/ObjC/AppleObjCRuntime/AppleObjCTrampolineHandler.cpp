@@ -19,7 +19,7 @@
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Expression/UtilityFunction.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -521,8 +521,8 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::RefreshTrampolines(
     Process *process = exe_ctx.GetProcessPtr();
     const ABI *abi = process->GetABI().get();
 
-    ClangASTContext *clang_ast_context =
-        ClangASTContext::GetScratch(process->GetTarget());
+    TypeSystemClang *clang_ast_context =
+        TypeSystemClang::GetScratch(process->GetTarget());
     if (!clang_ast_context)
       return false;
 
@@ -804,8 +804,8 @@ AppleObjCTrampolineHandler::SetupDispatchFunction(Thread &thread,
       }
 
       // Next make the runner function for our implementation utility function.
-      ClangASTContext *clang_ast_context =
-          ClangASTContext::GetScratch(thread.GetProcess()->GetTarget());
+      TypeSystemClang *clang_ast_context =
+          TypeSystemClang::GetScratch(thread.GetProcess()->GetTarget());
       if (!clang_ast_context)
         return LLDB_INVALID_ADDRESS;
 
@@ -901,7 +901,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
 
     TargetSP target_sp(thread.CalculateTarget());
 
-    ClangASTContext *clang_ast_context = ClangASTContext::GetScratch(*target_sp);
+    TypeSystemClang *clang_ast_context = TypeSystemClang::GetScratch(*target_sp);
     if (!clang_ast_context)
       return ret_plan_sp;
 

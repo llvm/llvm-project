@@ -308,7 +308,7 @@ public:
   }
 
   clang::ObjCMethodDecl *
-  BuildMethod(ClangASTContext &clang_ast_ctxt,
+  BuildMethod(TypeSystemClang &clang_ast_ctxt,
               clang::ObjCInterfaceDecl *interface_decl, const char *name,
               bool instance,
               ObjCLanguageRuntime::EncodingToTypeSP type_realizer_sp) {

@@ -1,4 +1,4 @@
-//===-- TestClangASTContext.cpp ---------------------------------*- C++ -*-===//
+//===-- TestTypeSystemClang.cpp ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 #include "TestingSupport/Symbol/ClangTestUtils.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/Declaration.h"
 #include "clang/AST/DeclCXX.h"
@@ -21,19 +21,19 @@ using namespace clang;
 using namespace lldb;
 using namespace lldb_private;
 
-class TestClangASTContext : public testing::Test {
+class TestTypeSystemClang : public testing::Test {
 public:
   SubsystemRAII<FileSystem, HostInfo> subsystems;
 
   void SetUp() override {
     m_ast.reset(
-        new ClangASTContext("test ASTContext", HostInfo::GetTargetTriple()));
+        new TypeSystemClang("test ASTContext", HostInfo::GetTargetTriple()));
   }
 
   void TearDown() override { m_ast.reset(); }
 
 protected:
-  std::unique_ptr<ClangASTContext> m_ast;
+  std::unique_ptr<TypeSystemClang> m_ast;
 
   QualType GetBasicQualType(BasicType type) const {
     return ClangUtil::GetQualType(m_ast->GetBasicTypeFromAST(type));
@@ -45,7 +45,7 @@ protected:
   }
 };
 
-TEST_F(TestClangASTContext, TestGetBasicTypeFromEnum) {
+TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
   clang::ASTContext &context = m_ast->getASTContext();
 
   EXPECT_TRUE(
@@ -108,7 +108,7 @@ TEST_F(TestClangASTContext, TestGetBasicTypeFromEnum) {
       context.hasSameType(GetBasicQualType(eBasicTypeWChar), context.WCharTy));
 }
 
-TEST_F(TestClangASTContext, TestGetBasicTypeFromName) {
+TEST_F(TestTypeSystemClang, TestGetBasicTypeFromName) {
   EXPECT_EQ(GetBasicQualType(eBasicTypeChar), GetBasicQualType("char"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeSignedChar),
             GetBasicQualType("signed char"));
@@ -159,7 +159,7 @@ TEST_F(TestClangASTContext, TestGetBasicTypeFromName) {
   EXPECT_EQ(GetBasicQualType(eBasicTypeNullPtr), GetBasicQualType("nullptr"));
 }
 
-void VerifyEncodingAndBitSize(ClangASTContext &clang_context,
+void VerifyEncodingAndBitSize(TypeSystemClang &clang_context,
                               lldb::Encoding encoding, unsigned int bit_size) {
   clang::ASTContext &context = clang_context.getASTContext();
 
@@ -197,7 +197,7 @@ void VerifyEncodingAndBitSize(ClangASTContext &clang_context,
   }
 }
 
-TEST_F(TestClangASTContext, TestBuiltinTypeForEncodingAndBitSize) {
+TEST_F(TestTypeSystemClang, TestBuiltinTypeForEncodingAndBitSize) {
   // Make sure we can get types of every possible size in every possible
   // encoding.
   // We can't make any guarantee about which specific type we get, because the
@@ -221,20 +221,20 @@ TEST_F(TestClangASTContext, TestBuiltinTypeForEncodingAndBitSize) {
   VerifyEncodingAndBitSize(*m_ast, eEncodingIEEE754, 64);
 }
 
-TEST_F(TestClangASTContext, TestDisplayName) {
-  ClangASTContext ast("some name", llvm::Triple());
+TEST_F(TestTypeSystemClang, TestDisplayName) {
+  TypeSystemClang ast("some name", llvm::Triple());
   EXPECT_EQ("some name", ast.getDisplayName());
 }
 
-TEST_F(TestClangASTContext, TestDisplayNameEmpty) {
-  ClangASTContext ast("", llvm::Triple());
+TEST_F(TestTypeSystemClang, TestDisplayNameEmpty) {
+  TypeSystemClang ast("", llvm::Triple());
   EXPECT_EQ("", ast.getDisplayName());
 }
 
-TEST_F(TestClangASTContext, TestIsClangType) {
+TEST_F(TestTypeSystemClang, TestIsClangType) {
   clang::ASTContext &context = m_ast->getASTContext();
   lldb::opaque_compiler_type_t bool_ctype =
-      ClangASTContext::GetOpaqueCompilerType(&context, lldb::eBasicTypeBool);
+      TypeSystemClang::GetOpaqueCompilerType(&context, lldb::eBasicTypeBool);
   CompilerType bool_type(m_ast.get(), bool_ctype);
   CompilerType record_type = m_ast->CreateRecordType(
       nullptr, lldb::eAccessPublic, "FooRecord", clang::TTK_Struct,
@@ -247,7 +247,7 @@ TEST_F(TestClangASTContext, TestIsClangType) {
   EXPECT_FALSE(ClangUtil::IsClangType(CompilerType()));
 }
 
-TEST_F(TestClangASTContext, TestRemoveFastQualifiers) {
+TEST_F(TestTypeSystemClang, TestRemoveFastQualifiers) {
   CompilerType record_type = m_ast->CreateRecordType(
       nullptr, lldb::eAccessPublic, "FooRecord", clang::TTK_Struct,
       lldb::eLanguageTypeC_plus_plus, nullptr);
@@ -265,84 +265,84 @@ TEST_F(TestClangASTContext, TestRemoveFastQualifiers) {
   EXPECT_EQ(0u, qt.getLocalFastQualifiers());
 }
 
-TEST_F(TestClangASTContext, TestConvertAccessTypeToAccessSpecifier) {
+TEST_F(TestTypeSystemClang, TestConvertAccessTypeToAccessSpecifier) {
   EXPECT_EQ(AS_none,
-            ClangASTContext::ConvertAccessTypeToAccessSpecifier(eAccessNone));
-  EXPECT_EQ(AS_none, ClangASTContext::ConvertAccessTypeToAccessSpecifier(
+            TypeSystemClang::ConvertAccessTypeToAccessSpecifier(eAccessNone));
+  EXPECT_EQ(AS_none, TypeSystemClang::ConvertAccessTypeToAccessSpecifier(
                          eAccessPackage));
   EXPECT_EQ(AS_public,
-            ClangASTContext::ConvertAccessTypeToAccessSpecifier(eAccessPublic));
-  EXPECT_EQ(AS_private, ClangASTContext::ConvertAccessTypeToAccessSpecifier(
+            TypeSystemClang::ConvertAccessTypeToAccessSpecifier(eAccessPublic));
+  EXPECT_EQ(AS_private, TypeSystemClang::ConvertAccessTypeToAccessSpecifier(
                             eAccessPrivate));
-  EXPECT_EQ(AS_protected, ClangASTContext::ConvertAccessTypeToAccessSpecifier(
+  EXPECT_EQ(AS_protected, TypeSystemClang::ConvertAccessTypeToAccessSpecifier(
                               eAccessProtected));
 }
 
-TEST_F(TestClangASTContext, TestUnifyAccessSpecifiers) {
+TEST_F(TestTypeSystemClang, TestUnifyAccessSpecifiers) {
   // Unifying two of the same type should return the same type
   EXPECT_EQ(AS_public,
-            ClangASTContext::UnifyAccessSpecifiers(AS_public, AS_public));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_public));
   EXPECT_EQ(AS_private,
-            ClangASTContext::UnifyAccessSpecifiers(AS_private, AS_private));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_private));
   EXPECT_EQ(AS_protected,
-            ClangASTContext::UnifyAccessSpecifiers(AS_protected, AS_protected));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_protected));
 
   // Otherwise the result should be the strictest of the two.
   EXPECT_EQ(AS_private,
-            ClangASTContext::UnifyAccessSpecifiers(AS_private, AS_public));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_public));
   EXPECT_EQ(AS_private,
-            ClangASTContext::UnifyAccessSpecifiers(AS_private, AS_protected));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_protected));
   EXPECT_EQ(AS_private,
-            ClangASTContext::UnifyAccessSpecifiers(AS_public, AS_private));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_private));
   EXPECT_EQ(AS_private,
-            ClangASTContext::UnifyAccessSpecifiers(AS_protected, AS_private));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_private));
   EXPECT_EQ(AS_protected,
-            ClangASTContext::UnifyAccessSpecifiers(AS_protected, AS_public));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_public));
   EXPECT_EQ(AS_protected,
-            ClangASTContext::UnifyAccessSpecifiers(AS_public, AS_protected));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_protected));
 
   // None is stricter than everything (by convention)
   EXPECT_EQ(AS_none,
-            ClangASTContext::UnifyAccessSpecifiers(AS_none, AS_public));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_none, AS_public));
   EXPECT_EQ(AS_none,
-            ClangASTContext::UnifyAccessSpecifiers(AS_none, AS_protected));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_none, AS_protected));
   EXPECT_EQ(AS_none,
-            ClangASTContext::UnifyAccessSpecifiers(AS_none, AS_private));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_none, AS_private));
   EXPECT_EQ(AS_none,
-            ClangASTContext::UnifyAccessSpecifiers(AS_public, AS_none));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_none));
   EXPECT_EQ(AS_none,
-            ClangASTContext::UnifyAccessSpecifiers(AS_protected, AS_none));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_none));
   EXPECT_EQ(AS_none,
-            ClangASTContext::UnifyAccessSpecifiers(AS_private, AS_none));
+            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_none));
 }
 
-TEST_F(TestClangASTContext, TestRecordHasFields) {
+TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   CompilerType int_type = m_ast->GetBasicType(eBasicTypeInt);
 
   // Test that a record with no fields returns false
   CompilerType empty_base = m_ast->CreateRecordType(
       nullptr, lldb::eAccessPublic, "EmptyBase", clang::TTK_Struct,
       lldb::eLanguageTypeC_plus_plus, nullptr);
-  ClangASTContext::StartTagDeclarationDefinition(empty_base);
-  ClangASTContext::CompleteTagDeclarationDefinition(empty_base);
+  TypeSystemClang::StartTagDeclarationDefinition(empty_base);
+  TypeSystemClang::CompleteTagDeclarationDefinition(empty_base);
 
-  RecordDecl *empty_base_decl = ClangASTContext::GetAsRecordDecl(empty_base);
+  RecordDecl *empty_base_decl = TypeSystemClang::GetAsRecordDecl(empty_base);
   EXPECT_NE(nullptr, empty_base_decl);
-  EXPECT_FALSE(ClangASTContext::RecordHasFields(empty_base_decl));
+  EXPECT_FALSE(TypeSystemClang::RecordHasFields(empty_base_decl));
 
   // Test that a record with direct fields returns true
   CompilerType non_empty_base = m_ast->CreateRecordType(
       nullptr, lldb::eAccessPublic, "NonEmptyBase", clang::TTK_Struct,
       lldb::eLanguageTypeC_plus_plus, nullptr);
-  ClangASTContext::StartTagDeclarationDefinition(non_empty_base);
+  TypeSystemClang::StartTagDeclarationDefinition(non_empty_base);
   FieldDecl *non_empty_base_field_decl = m_ast->AddFieldToRecordType(
       non_empty_base, "MyField", int_type, eAccessPublic, 0);
-  ClangASTContext::CompleteTagDeclarationDefinition(non_empty_base);
+  TypeSystemClang::CompleteTagDeclarationDefinition(non_empty_base);
   RecordDecl *non_empty_base_decl =
-      ClangASTContext::GetAsRecordDecl(non_empty_base);
+      TypeSystemClang::GetAsRecordDecl(non_empty_base);
   EXPECT_NE(nullptr, non_empty_base_decl);
   EXPECT_NE(nullptr, non_empty_base_field_decl);
-  EXPECT_TRUE(ClangASTContext::RecordHasFields(non_empty_base_decl));
+  EXPECT_TRUE(TypeSystemClang::RecordHasFields(non_empty_base_decl));
 
   std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
 
@@ -350,50 +350,50 @@ TEST_F(TestClangASTContext, TestRecordHasFields) {
   CompilerType empty_derived = m_ast->CreateRecordType(
       nullptr, lldb::eAccessPublic, "EmptyDerived", clang::TTK_Struct,
       lldb::eLanguageTypeC_plus_plus, nullptr);
-  ClangASTContext::StartTagDeclarationDefinition(empty_derived);
+  TypeSystemClang::StartTagDeclarationDefinition(empty_derived);
   std::unique_ptr<clang::CXXBaseSpecifier> non_empty_base_spec =
       m_ast->CreateBaseClassSpecifier(non_empty_base.GetOpaqueQualType(),
                                       lldb::eAccessPublic, false, false);
   bases.push_back(std::move(non_empty_base_spec));
   bool result = m_ast->TransferBaseClasses(empty_derived.GetOpaqueQualType(),
                                            std::move(bases));
-  ClangASTContext::CompleteTagDeclarationDefinition(empty_derived);
+  TypeSystemClang::CompleteTagDeclarationDefinition(empty_derived);
   EXPECT_TRUE(result);
   CXXRecordDecl *empty_derived_non_empty_base_cxx_decl =
       m_ast->GetAsCXXRecordDecl(empty_derived.GetOpaqueQualType());
   RecordDecl *empty_derived_non_empty_base_decl =
-      ClangASTContext::GetAsRecordDecl(empty_derived);
-  EXPECT_EQ(1u, ClangASTContext::GetNumBaseClasses(
+      TypeSystemClang::GetAsRecordDecl(empty_derived);
+  EXPECT_EQ(1u, TypeSystemClang::GetNumBaseClasses(
                     empty_derived_non_empty_base_cxx_decl, false));
   EXPECT_TRUE(
-      ClangASTContext::RecordHasFields(empty_derived_non_empty_base_decl));
+      TypeSystemClang::RecordHasFields(empty_derived_non_empty_base_decl));
 
   // Test that a record with no direct fields, but fields in a virtual base
   // returns true
   CompilerType empty_derived2 = m_ast->CreateRecordType(
       nullptr, lldb::eAccessPublic, "EmptyDerived2", clang::TTK_Struct,
       lldb::eLanguageTypeC_plus_plus, nullptr);
-  ClangASTContext::StartTagDeclarationDefinition(empty_derived2);
+  TypeSystemClang::StartTagDeclarationDefinition(empty_derived2);
   std::unique_ptr<CXXBaseSpecifier> non_empty_vbase_spec =
       m_ast->CreateBaseClassSpecifier(non_empty_base.GetOpaqueQualType(),
                                       lldb::eAccessPublic, true, false);
   bases.push_back(std::move(non_empty_vbase_spec));
   result = m_ast->TransferBaseClasses(empty_derived2.GetOpaqueQualType(),
                                       std::move(bases));
-  ClangASTContext::CompleteTagDeclarationDefinition(empty_derived2);
+  TypeSystemClang::CompleteTagDeclarationDefinition(empty_derived2);
   EXPECT_TRUE(result);
   CXXRecordDecl *empty_derived_non_empty_vbase_cxx_decl =
       m_ast->GetAsCXXRecordDecl(empty_derived2.GetOpaqueQualType());
   RecordDecl *empty_derived_non_empty_vbase_decl =
-      ClangASTContext::GetAsRecordDecl(empty_derived2);
-  EXPECT_EQ(1u, ClangASTContext::GetNumBaseClasses(
+      TypeSystemClang::GetAsRecordDecl(empty_derived2);
+  EXPECT_EQ(1u, TypeSystemClang::GetNumBaseClasses(
                     empty_derived_non_empty_vbase_cxx_decl, false));
   EXPECT_TRUE(
-      ClangASTContext::RecordHasFields(empty_derived_non_empty_vbase_decl));
+      TypeSystemClang::RecordHasFields(empty_derived_non_empty_vbase_decl));
 }
 
-TEST_F(TestClangASTContext, TemplateArguments) {
-  ClangASTContext::TemplateParameterInfos infos;
+TEST_F(TestTypeSystemClang, TemplateArguments) {
+  TypeSystemClang::TemplateParameterInfos infos;
   infos.names.push_back("T");
   infos.args.push_back(TemplateArgument(m_ast->getASTContext().IntTy));
   infos.names.push_back("I");
@@ -456,34 +456,34 @@ static QualType makeConstInt(clang::ASTContext &ctxt) {
   return result;
 }
 
-TEST_F(TestClangASTContext, TestGetTypeClassDeclType) {
+TEST_F(TestTypeSystemClang, TestGetTypeClassDeclType) {
   clang::ASTContext &ctxt = m_ast->getASTContext();
   auto *nullptr_expr = new (ctxt) CXXNullPtrLiteralExpr(ctxt.NullPtrTy, SourceLocation());
   QualType t = ctxt.getDecltypeType(nullptr_expr, makeConstInt(ctxt));
   EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
 }
 
-TEST_F(TestClangASTContext, TestGetTypeClassTypeOf) {
+TEST_F(TestTypeSystemClang, TestGetTypeClassTypeOf) {
   clang::ASTContext &ctxt = m_ast->getASTContext();
   QualType t = ctxt.getTypeOfType(makeConstInt(ctxt));
   EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
 }
 
-TEST_F(TestClangASTContext, TestGetTypeClassTypeOfExpr) {
+TEST_F(TestTypeSystemClang, TestGetTypeClassTypeOfExpr) {
   clang::ASTContext &ctxt = m_ast->getASTContext();
   auto *nullptr_expr = new (ctxt) CXXNullPtrLiteralExpr(ctxt.NullPtrTy, SourceLocation());
   QualType t = ctxt.getTypeOfExprType(nullptr_expr);
   EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
 }
 
-TEST_F(TestClangASTContext, TestGetTypeClassNested) {
+TEST_F(TestTypeSystemClang, TestGetTypeClassNested) {
   clang::ASTContext &ctxt = m_ast->getASTContext();
   QualType t_base = ctxt.getTypeOfType(makeConstInt(ctxt));
   QualType t = ctxt.getTypeOfType(t_base);
   EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
 }
 
-TEST_F(TestClangASTContext, TestFunctionTemplateConstruction) {
+TEST_F(TestTypeSystemClang, TestFunctionTemplateConstruction) {
   // Tests creating a function template.
 
   CompilerType int_type = m_ast->GetBasicType(lldb::eBasicTypeInt);
@@ -494,7 +494,7 @@ TEST_F(TestClangASTContext, TestFunctionTemplateConstruction) {
       m_ast->CreateFunctionType(int_type, nullptr, 0U, false, 0U);
   FunctionDecl *func =
       m_ast->CreateFunctionDeclaration(TU, "foo", clang_type, 0, false);
-  ClangASTContext::TemplateParameterInfos empty_params;
+  TypeSystemClang::TemplateParameterInfos empty_params;
 
   // Create the actual function template.
   clang::FunctionTemplateDecl *func_template =
@@ -505,7 +505,7 @@ TEST_F(TestClangASTContext, TestFunctionTemplateConstruction) {
   EXPECT_EQ(clang::AccessSpecifier::AS_none, func_template->getAccess());
 }
 
-TEST_F(TestClangASTContext, TestFunctionTemplateInRecordConstruction) {
+TEST_F(TestTypeSystemClang, TestFunctionTemplateInRecordConstruction) {
   // Tests creating a function template inside a record.
 
   CompilerType int_type = m_ast->GetBasicType(lldb::eBasicTypeInt);
@@ -524,7 +524,7 @@ TEST_F(TestClangASTContext, TestFunctionTemplateInRecordConstruction) {
   // 2. It is mirroring the behavior of DWARFASTParserClang::ParseSubroutine.
   FunctionDecl *func =
       m_ast->CreateFunctionDeclaration(TU, "foo", clang_type, 0, false);
-  ClangASTContext::TemplateParameterInfos empty_params;
+  TypeSystemClang::TemplateParameterInfos empty_params;
 
   // Create the actual function template.
   clang::FunctionTemplateDecl *func_template =
@@ -535,7 +535,7 @@ TEST_F(TestClangASTContext, TestFunctionTemplateInRecordConstruction) {
   EXPECT_EQ(clang::AccessSpecifier::AS_public, func_template->getAccess());
 }
 
-TEST_F(TestClangASTContext, TestDeletingImplicitCopyCstrDueToMoveCStr) {
+TEST_F(TestTypeSystemClang, TestDeletingImplicitCopyCstrDueToMoveCStr) {
   // We need to simulate this behavior in our AST that we construct as we don't
   // have a Sema instance that can do this for us:
   // C++11 [class.copy]p7, p18:
@@ -577,7 +577,7 @@ TEST_F(TestClangASTContext, TestDeletingImplicitCopyCstrDueToMoveCStr) {
   EXPECT_FALSE(record->hasSimpleCopyConstructor());
 }
 
-TEST_F(TestClangASTContext, TestNotDeletingUserCopyCstrDueToMoveCStr) {
+TEST_F(TestTypeSystemClang, TestNotDeletingUserCopyCstrDueToMoveCStr) {
   // Tests that we don't delete the a user-defined copy constructor when
   // a move constructor is provided.
   // See also the TestDeletingImplicitCopyCstrDueToMoveCStr test.

@@ -22,7 +22,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Utility/Timer.h"
 
 #include "Plugins/ABI/MacOSX-arm/ABIMacOSX_arm.h"
@@ -231,7 +231,7 @@ llvm::Error SystemInitializerFull::Initialize() {
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllDisassemblers();
 
-  ClangASTContext::Initialize();
+  TypeSystemClang::Initialize();
   // BEGIN SWIFT
   SwiftASTContext::Initialize();
   // END SWIFT
@@ -333,7 +333,7 @@ void SystemInitializerFull::Terminate() {
   // Terminate and unload and loaded system or user LLDB plug-ins
   PluginManager::Terminate();
 
-  ClangASTContext::Terminate();
+  TypeSystemClang::Terminate();
   // BEGIN SWIFT
   SwiftASTContext::Terminate();
   // END SWIFT

@@ -48,11 +48,11 @@ public:
       : m_file_manager(clang::FileSystemOptions(),
                        FileSystem::Instance().GetVirtualFileSystem()) {}
 
-  CompilerType CopyType(ClangASTContext &dst, const CompilerType &src_type);
+  CompilerType CopyType(TypeSystemClang &dst, const CompilerType &src_type);
 
   clang::Decl *CopyDecl(clang::ASTContext *dst_ctx, clang::Decl *decl);
 
-  CompilerType DeportType(ClangASTContext &dst, const CompilerType &src_type);
+  CompilerType DeportType(TypeSystemClang &dst, const CompilerType &src_type);
 
   clang::Decl *DeportDecl(clang::ASTContext *dst_ctx, clang::Decl *decl);
 
