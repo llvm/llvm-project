@@ -536,7 +536,7 @@ bool Type::ResolveClangType(ResolveState compiler_type_resolve_state) {
         LLDB_LOG_ERROR(
             lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
             std::move(err),
-            "Unable to construct void type from ClangASTContext");
+            "Unable to construct void type from TypeSystemClang");
       } else {
         CompilerType void_compiler_type =
             type_system_or_err->GetBasicTypeFromAST(eBasicTypeVoid);

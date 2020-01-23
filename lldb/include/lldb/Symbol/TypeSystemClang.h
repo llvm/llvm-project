@@ -1,4 +1,4 @@
-//===-- ClangASTContext.h ---------------------------------------*- C++ -*-===//
+//===-- TypeSystemClang.h ---------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ClangASTContext_h_
-#define liblldb_ClangASTContext_h_
+#ifndef liblldb_TypeSystemClang_h_
+#define liblldb_TypeSystemClang_h_
 
 #include <stdint.h>
 
@@ -42,7 +42,7 @@ namespace lldb_private {
 
 class Declaration;
 
-class ClangASTContext : public TypeSystem {
+class TypeSystemClang : public TypeSystem {
   // LLVM RTTI support
   static char ID;
 
@@ -55,24 +55,24 @@ public:
   bool isA(const void *ClassID) const override { return ClassID == &ID; }
   static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
 
-  /// Constructs a ClangASTContext with an ASTContext using the given triple.
+  /// Constructs a TypeSystemClang with an ASTContext using the given triple.
   ///
-  /// \param name The name for the ClangASTContext (for logging purposes)
+  /// \param name The name for the TypeSystemClang (for logging purposes)
   /// \param triple The llvm::Triple used for the ASTContext. The triple defines
   ///               certain characteristics of the ASTContext and its types
   ///               (e.g., whether certain primitive types exist or what their
   ///               signedness is).
-  explicit ClangASTContext(llvm::StringRef name, llvm::Triple triple);
+  explicit TypeSystemClang(llvm::StringRef name, llvm::Triple triple);
 
-  /// Constructs a ClangASTContext that uses an existing ASTContext internally.
+  /// Constructs a TypeSystemClang that uses an existing ASTContext internally.
   /// Useful when having an existing ASTContext created by Clang.
   ///
-  /// \param name The name for the ClangASTContext (for logging purposes)
+  /// \param name The name for the TypeSystemClang (for logging purposes)
   /// \param existing_ctxt An existing ASTContext.
-  explicit ClangASTContext(llvm::StringRef name,
+  explicit TypeSystemClang(llvm::StringRef name,
                            clang::ASTContext &existing_ctxt);
 
-  ~ClangASTContext() override;
+  ~TypeSystemClang() override;
 
   void Finalize() override;
 
@@ -93,21 +93,21 @@ public:
 
   static void Terminate();
 
-  static ClangASTContext *GetASTContext(clang::ASTContext *ast_ctx);
+  static TypeSystemClang *GetASTContext(clang::ASTContext *ast_ctx);
 
-  static ClangASTContext *GetScratch(Target &target,
+  static TypeSystemClang *GetScratch(Target &target,
                                      bool create_on_demand = true) {
     auto type_system_or_err = target.GetScratchTypeSystemForLanguage(
         lldb::eLanguageTypeC, create_on_demand);
     if (auto err = type_system_or_err.takeError()) {
       LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET),
-                     std::move(err), "Couldn't get scratch ClangASTContext");
+                     std::move(err), "Couldn't get scratch TypeSystemClang");
       return nullptr;
     }
-    return llvm::dyn_cast<ClangASTContext>(&type_system_or_err.get());
+    return llvm::dyn_cast<TypeSystemClang>(&type_system_or_err.get());
   }
 
-  /// Returns the display name of this ClangASTContext that indicates what
+  /// Returns the display name of this TypeSystemClang that indicates what
   /// purpose it serves in LLDB. Used for example in logs.
   llvm::StringRef getDisplayName() const { return m_display_name; }
 
@@ -128,7 +128,7 @@ public:
       llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> &ast_source_up);
 
   bool GetCompleteDecl(clang::Decl *decl) {
-    return ClangASTContext::GetCompleteDecl(&getASTContext(), decl);
+    return TypeSystemClang::GetCompleteDecl(&getASTContext(), decl);
   }
 
   static void DumpDeclHiearchy(clang::Decl *decl);
@@ -176,16 +176,16 @@ public:
                            bool ignore_qualifiers = false);
 
   /// Creates a CompilerType form the given QualType with the current
-  /// ClangASTContext instance as the CompilerType's typesystem.
+  /// TypeSystemClang instance as the CompilerType's typesystem.
   /// \param qt The QualType for a type that belongs to the ASTContext of this
-  ///           ClangASTContext.
+  ///           TypeSystemClang.
   /// \return The CompilerType representing the given QualType. If the
   ///         QualType's type pointer is a nullptr then the function returns an
   ///         invalid CompilerType.
   CompilerType GetType(clang::QualType qt) {
     if (qt.getTypePtrOrNull() == nullptr)
       return CompilerType();
-    // Check that the type actually belongs to this ClangASTContext.
+    // Check that the type actually belongs to this TypeSystemClang.
     assert(qt->getAsTagDecl() == nullptr ||
            &qt->getAsTagDecl()->getASTContext() == &getASTContext());
     return CompilerType(this, qt.getAsOpaquePtr());
@@ -326,7 +326,7 @@ public:
                                        int *assigned_accessibilities,
                                        size_t num_assigned_accessibilities);
 
-  // Returns a mask containing bits from the ClangASTContext::eTypeXXX
+  // Returns a mask containing bits from the TypeSystemClang::eTypeXXX
   // enumerations
 
   // Namespace Declarations
@@ -392,7 +392,7 @@ public:
   DWARFASTParser *GetDWARFParser() override;
   PDBASTParser *GetPDBParser() override;
 
-  // ClangASTContext callbacks for external source lookups.
+  // TypeSystemClang callbacks for external source lookups.
   void CompleteTagDecl(clang::TagDecl *);
 
   void CompleteObjCInterfaceDecl(clang::ObjCInterfaceDecl *);
@@ -424,9 +424,9 @@ public:
   // CompilerDeclContext override functions
 
   /// Creates a CompilerDeclContext from the given DeclContext
-  /// with the current ClangASTContext instance as its typesystem.
+  /// with the current TypeSystemClang instance as its typesystem.
   /// The DeclContext has to come from the ASTContext of this
-  /// ClangASTContext.
+  /// TypeSystemClang.
   CompilerDeclContext CreateDeclContext(clang::DeclContext *ctx);
 
   std::vector<CompilerDecl>
@@ -466,7 +466,7 @@ public:
                                                   const clang::Decl *object);
 
   static clang::ASTContext *
-  DeclContextGetClangASTContext(const CompilerDeclContext &dc);
+  DeclContextGetTypeSystemClang(const CompilerDeclContext &dc);
 
   // Tests
 
@@ -898,7 +898,7 @@ public:
   clang::ClassTemplateDecl *ParseClassTemplateDecl(
       clang::DeclContext *decl_ctx, lldb::AccessType access_type,
       const char *parent_name, int tag_decl_kind,
-      const ClangASTContext::TemplateParameterInfos &template_param_infos);
+      const TypeSystemClang::TemplateParameterInfos &template_param_infos);
 
   clang::BlockDecl *CreateBlockDeclaration(clang::DeclContext *ctx);
 
@@ -936,7 +936,7 @@ private:
   const clang::ClassTemplateSpecializationDecl *
   GetAsTemplateSpecialization(lldb::opaque_compiler_type_t type);
 
-  // Classes that inherit from ClangASTContext can see and modify these
+  // Classes that inherit from TypeSystemClang can see and modify these
   std::string m_target_triple;
   std::unique_ptr<clang::ASTContext> m_ast_up;
   std::unique_ptr<clang::LangOptions> m_language_options_up;
@@ -954,7 +954,7 @@ private:
   std::unique_ptr<clang::MangleContext> m_mangle_ctx_up;
   uint32_t m_pointer_byte_size = 0;
   bool m_ast_owned = false;
-  /// A string describing what this ClangASTContext represents (e.g.,
+  /// A string describing what this TypeSystemClang represents (e.g.,
   /// AST for debug information, an expression, some other utility ClangAST).
   /// Useful for logging and debugging.
   std::string m_display_name;
@@ -972,19 +972,19 @@ private:
   /// ASTContext wasn't created by parsing source code.
   clang::Sema *m_sema = nullptr;
 
-  // For ClangASTContext only
-  ClangASTContext(const ClangASTContext &);
-  const ClangASTContext &operator=(const ClangASTContext &);
+  // For TypeSystemClang only
+  TypeSystemClang(const TypeSystemClang &);
+  const TypeSystemClang &operator=(const TypeSystemClang &);
   /// Creates the internal ASTContext.
   void CreateASTContext();
   void SetTargetTriple(llvm::StringRef target_triple);
 };
 
-class ClangASTContextForExpressions : public ClangASTContext {
+class TypeSystemClangForExpressions : public TypeSystemClang {
 public:
-  ClangASTContextForExpressions(Target &target, llvm::Triple triple);
+  TypeSystemClangForExpressions(Target &target, llvm::Triple triple);
 
-  ~ClangASTContextForExpressions() override = default;
+  ~TypeSystemClangForExpressions() override = default;
 
   void Finalize() override;
 
@@ -1014,4 +1014,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ClangASTContext_h_
+#endif // liblldb_TypeSystemClang_h_
