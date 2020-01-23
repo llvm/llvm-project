@@ -93,6 +93,31 @@ Design
 
 Coming soon.
 
+Testing
+-------
+
+Reproducers are tested in the following ways:
+
+ - Unit tests to cover the generic reproducer infrastructure.
+ - Focused test cases in the ``test/Shell/Reproducer`` directory. These tests
+   serve as integration tests for the reproducers infrastructure, as well as
+   doing some sanity checking for basic debugger functionality.
+
+Additional testing is possible:
+
+ - It's possible to unconditionally capture reproducers while running the
+   entire test suite by setting the ``LLDB_CAPTURE_REPRODUCER`` environment
+   variable. Assuming the reproducers behave correctly, this can also help to
+   reproduce test failures.
+ - It's possible to run the shell tests from a reproducer replay. The
+   ``check-lldb-repro`` target will run the shell test suite twice. First it
+   runs the test suite and captures a reproducer for every lldb invocation and
+   saves it to a known location based off lldb's arguments and  working
+   directory. Then it runs the test suite again, this time replaying the
+   reproducers. Certain tests do not fit this paradigm (for example test that
+   check the output of the binary being debugged) and can be skipped by setting
+   ``UNSUPPORTED: lldb-repro`` at the top of the test.
+
 Knows Issues
 ------------
 
