@@ -140,7 +140,6 @@ class IndVarSimplify {
   const DataLayout &DL;
   TargetLibraryInfo *TLI;
   const TargetTransformInfo *TTI;
-  MemorySSA *MSSA;
   std::unique_ptr<MemorySSAUpdater> MSSAU;
 
   SmallVector<WeakTrackingVH, 16> DeadInsts;
@@ -167,7 +166,7 @@ public:
   IndVarSimplify(LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
                  const DataLayout &DL, TargetLibraryInfo *TLI,
                  TargetTransformInfo *TTI, MemorySSA *MSSA)
-      : LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI), MSSA(MSSA) {
+      : LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
