@@ -158,10 +158,20 @@ let Predicates = [HasSVE] in {
   defm UMAX_ZI   : sve_int_arith_imm1_unsigned<0b01, "umax", umax>;
   defm UMIN_ZI   : sve_int_arith_imm1_unsigned<0b11, "umin", umin>;
 
-  defm MUL_ZI    : sve_int_arith_imm2<"mul", mul>;
-  defm MUL_ZPmZ   : sve_int_bin_pred_arit_2<0b000, "mul", int_aarch64_sve_mul>;
+  defm MUL_ZI     : sve_int_arith_imm2<"mul", mul>;
+  defm MUL_ZPmZ   : sve_int_bin_pred_arit_2<0b000, "mul",   int_aarch64_sve_mul>;
   defm SMULH_ZPmZ : sve_int_bin_pred_arit_2<0b010, "smulh", int_aarch64_sve_smulh>;
   defm UMULH_ZPmZ : sve_int_bin_pred_arit_2<0b011, "umulh", int_aarch64_sve_umulh>;
+
+  // Add unpredicated alternative for the mul instruction.
+  def : Pat<(mul nxv16i8:$Op1, nxv16i8:$Op2),
+            (MUL_ZPmZ_B (PTRUE_B 31), $Op1, $Op2)>;
+  def : Pat<(mul nxv8i16:$Op1, nxv8i16:$Op2),
+            (MUL_ZPmZ_H (PTRUE_H 31), $Op1, $Op2)>;
+  def : Pat<(mul nxv4i32:$Op1, nxv4i32:$Op2),
+            (MUL_ZPmZ_S (PTRUE_S 31), $Op1, $Op2)>;
+  def : Pat<(mul nxv2i64:$Op1, nxv2i64:$Op2),
+            (MUL_ZPmZ_D (PTRUE_D 31), $Op1, $Op2)>;
 
   defm SDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b100, "sdiv", int_aarch64_sve_sdiv>;
   defm UDIV_ZPmZ  : sve_int_bin_pred_arit_2_div<0b101, "udiv", int_aarch64_sve_udiv>;
@@ -1405,15 +1415,32 @@ let Predicates = [HasSVE2] in {
   defm SQRDMULH_ZZZI : sve2_int_mul_by_indexed_elem<0b1101, "sqrdmulh">;
 
   // SVE2 signed saturating doubling multiply high (unpredicated)
-  defm SQDMULH_ZZZ  : sve2_int_mul<0b100, "sqdmulh">;
-  defm SQRDMULH_ZZZ : sve2_int_mul<0b101, "sqrdmulh">;
+  defm SQDMULH_ZZZ  : sve2_int_mul<0b100, "sqdmulh",  int_aarch64_sve_sqdmulh>;
+  defm SQRDMULH_ZZZ : sve2_int_mul<0b101, "sqrdmulh", int_aarch64_sve_sqrdmulh>;
 
   // SVE2 integer multiply vectors (unpredicated)
-  defm MUL_ZZZ    : sve2_int_mul<0b000, "mul">;
-  defm SMULH_ZZZ  : sve2_int_mul<0b010, "smulh">;
-  defm UMULH_ZZZ  : sve2_int_mul<0b011, "umulh">;
-  def  PMUL_ZZZ_B : sve2_int_mul<0b00, 0b001, "pmul", ZPR8>;
+  defm MUL_ZZZ    : sve2_int_mul<0b000,  "mul",   mul>;
+  defm SMULH_ZZZ  : sve2_int_mul<0b010,  "smulh", null_frag>;
+  defm UMULH_ZZZ  : sve2_int_mul<0b011,  "umulh", null_frag>;
+  defm PMUL_ZZZ   : sve2_int_mul_single<0b001, "pmul",  int_aarch64_sve_pmul>;
 
+  // Add patterns for unpredicated version of smulh and umulh.
+  def : Pat<(nxv16i8 (int_aarch64_sve_smulh (nxv16i1 (AArch64ptrue 31)), nxv16i8:$Op1, nxv16i8:$Op2)),
+            (SMULH_ZZZ_B $Op1, $Op2)>;
+  def : Pat<(nxv8i16 (int_aarch64_sve_smulh (nxv8i1 (AArch64ptrue 31)), nxv8i16:$Op1, nxv8i16:$Op2)),
+            (SMULH_ZZZ_H $Op1, $Op2)>;
+  def : Pat<(nxv4i32 (int_aarch64_sve_smulh (nxv4i1 (AArch64ptrue 31)), nxv4i32:$Op1, nxv4i32:$Op2)),
+            (SMULH_ZZZ_S $Op1, $Op2)>;
+  def : Pat<(nxv2i64 (int_aarch64_sve_smulh (nxv2i1 (AArch64ptrue 31)), nxv2i64:$Op1, nxv2i64:$Op2)),
+            (SMULH_ZZZ_D $Op1, $Op2)>;
+  def : Pat<(nxv16i8 (int_aarch64_sve_umulh (nxv16i1 (AArch64ptrue 31)), nxv16i8:$Op1, nxv16i8:$Op2)),
+            (UMULH_ZZZ_B $Op1, $Op2)>;
+  def : Pat<(nxv8i16 (int_aarch64_sve_umulh (nxv8i1 (AArch64ptrue 31)), nxv8i16:$Op1, nxv8i16:$Op2)),
+            (UMULH_ZZZ_H $Op1, $Op2)>;
+  def : Pat<(nxv4i32 (int_aarch64_sve_umulh (nxv4i1 (AArch64ptrue 31)), nxv4i32:$Op1, nxv4i32:$Op2)),
+            (UMULH_ZZZ_S $Op1, $Op2)>;
+  def : Pat<(nxv2i64 (int_aarch64_sve_umulh (nxv2i1 (AArch64ptrue 31)), nxv2i64:$Op1, nxv2i64:$Op2)),
+            (UMULH_ZZZ_D $Op1, $Op2)>;
   // SVE2 complex integer dot product (indexed)
   defm CDOT_ZZZI : sve2_cintx_dot_by_indexed_elem<"cdot">;
 
