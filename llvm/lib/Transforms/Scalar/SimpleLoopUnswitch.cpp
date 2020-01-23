@@ -2983,10 +2983,6 @@ bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
   if (MSSA && VerifyMemorySSA)
     MSSA->verifyMemorySSA();
 
-  // If anything was unswitched, also clear any cached information about this
-  // loop.
-  LPM.deleteSimpleAnalysisLoop(L);
-
   // Historically this pass has had issues with the dominator tree so verify it
   // in asserts builds.
   assert(DT.verify(DominatorTree::VerificationLevel::Fast));
