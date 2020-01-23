@@ -1204,6 +1204,11 @@ void TextNodeDumper::VisitAutoType(const AutoType *T) {
     OS << " decltype(auto)";
   if (!T->isDeduced())
     OS << " undeduced";
+  if (T->isConstrained()) {
+    dumpDeclRef(T->getTypeConstraintConcept());
+    for (const auto &Arg : T->getTypeConstraintArguments())
+      VisitTemplateArgument(Arg);
+  }
 }
 
 void TextNodeDumper::VisitTemplateSpecializationType(
