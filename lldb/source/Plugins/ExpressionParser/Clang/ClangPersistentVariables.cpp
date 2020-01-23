@@ -9,7 +9,7 @@
 #include "ClangPersistentVariables.h"
 
 #include "lldb/Core/Value.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
@@ -82,7 +82,7 @@ ClangPersistentVariables::GetCompilerTypeFromPersistentDecl(
 
 void ClangPersistentVariables::RegisterPersistentDecl(ConstString name,
                                                       clang::NamedDecl *decl,
-                                                      ClangASTContext *ctx) {
+                                                      TypeSystemClang *ctx) {
   PersistentDecl p = {decl, ctx};
   m_persistent_decls.insert(std::make_pair(name.GetCString(), p));
 

@@ -8,7 +8,7 @@
 
 #include "lldb/Symbol/CxxModuleHandler.h"
 
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Utility/Log.h"
 #include "clang/Sema/Lookup.h"
 #include "llvm/Support/Error.h"
@@ -18,7 +18,7 @@ using namespace clang;
 
 CxxModuleHandler::CxxModuleHandler(ASTImporter &importer, ASTContext *target)
     : m_importer(&importer),
-      m_sema(ClangASTContext::GetASTContext(target)->getSema()) {
+      m_sema(TypeSystemClang::GetASTContext(target)->getSema()) {
 
   std::initializer_list<const char *> supported_names = {
       // containers

@@ -17,7 +17,7 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/VectorIterator.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
@@ -241,8 +241,8 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
       auto addr(m_pair_ptr->GetValueAsUnsigned(LLDB_INVALID_ADDRESS));
       m_pair_ptr = nullptr;
       if (addr && addr != LLDB_INVALID_ADDRESS) {
-        ClangASTContext *ast_ctx =
-            llvm::dyn_cast_or_null<ClangASTContext>(pair_type.GetTypeSystem());
+        TypeSystemClang *ast_ctx =
+            llvm::dyn_cast_or_null<TypeSystemClang>(pair_type.GetTypeSystem());
         if (!ast_ctx)
           return false;
         CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
@@ -572,8 +572,8 @@ bool lldb_private::formatters::LibcxxWStringSummaryProvider(
   location_sp->GetPointeeData(extractor, 0, size);
 
   // std::wstring::size() is measured in 'characters', not bytes
-  ClangASTContext *ast_context =
-      ClangASTContext::GetScratch(*valobj.GetTargetSP());
+  TypeSystemClang *ast_context =
+      TypeSystemClang::GetScratch(*valobj.GetTargetSP());
   if (!ast_context)
     return false;
 

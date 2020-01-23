@@ -16,7 +16,7 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Expression/FunctionCaller.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -436,7 +436,7 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::NSArrayMSyntheticFrontE
     : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_ptr_size(8),
       m_id_type() {
   if (valobj_sp) {
-    auto *clang_ast_context = ClangASTContext::GetScratch(
+    auto *clang_ast_context = TypeSystemClang::GetScratch(
         *valobj_sp->GetExecutionContextRef().GetTargetSP());
     if (clang_ast_context)
       m_id_type = CompilerType(
@@ -584,7 +584,7 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
   if (valobj_sp) {
     CompilerType type = valobj_sp->GetCompilerType();
     if (type) {
-      auto *clang_ast_context = ClangASTContext::GetScratch(
+      auto *clang_ast_context = TypeSystemClang::GetScratch(
           *valobj_sp->GetExecutionContextRef().GetTargetSP());
       if (clang_ast_context)
         m_id_type = clang_ast_context->GetType(
@@ -753,7 +753,7 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::GetChildAtIndex(
 
   if (idx == 0) {
     auto *clang_ast_context =
-        ClangASTContext::GetScratch(*m_backend.GetTargetSP());
+        TypeSystemClang::GetScratch(*m_backend.GetTargetSP());
     if (clang_ast_context) {
       CompilerType id_type(
           clang_ast_context->GetBasicType(lldb::eBasicTypeObjCID));

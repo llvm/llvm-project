@@ -8,7 +8,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangDeclVendor.h"
 
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Utility/ConstString.h"
 
 using namespace lldb_private;

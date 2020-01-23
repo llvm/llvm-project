@@ -45,7 +45,7 @@ class BroadcastEventSpec;
 class Broadcaster;
 class BroadcasterManager;
 class CallFrameInfo;
-class ClangASTContext;
+class TypeSystemClang;
 class ClangASTImporter;
 class ClangASTMetadata;
 class ClangASTSource;
@@ -304,7 +304,7 @@ typedef std::shared_ptr<lldb_private::BreakpointResolver> BreakpointResolverSP;
 typedef std::shared_ptr<lldb_private::Broadcaster> BroadcasterSP;
 typedef std::shared_ptr<lldb_private::BroadcasterManager> BroadcasterManagerSP;
 typedef std::weak_ptr<lldb_private::BroadcasterManager> BroadcasterManagerWP;
-typedef std::unique_ptr<lldb_private::ClangASTContext> ClangASTContextUP;
+typedef std::unique_ptr<lldb_private::TypeSystemClang> TypeSystemClangUP;
 typedef std::shared_ptr<lldb_private::ClangASTImporter> ClangASTImporterSP;
 typedef std::unique_ptr<lldb_private::ClangModulesDeclVendor>
     ClangModulesDeclVendorUP;

@@ -24,7 +24,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/TypeMap.h"
@@ -54,7 +54,7 @@ public:
     HostInfo::Initialize();
     ObjectFilePECOFF::Initialize();
     SymbolFileDWARF::Initialize();
-    ClangASTContext::Initialize();
+    TypeSystemClang::Initialize();
     SymbolFilePDB::Initialize();
 
     m_pdb_test_exe = GetInputFilePath("test-pdb.exe");
@@ -63,7 +63,7 @@ public:
 
   void TearDown() override {
     SymbolFilePDB::Terminate();
-    ClangASTContext::Initialize();
+    TypeSystemClang::Initialize();
     SymbolFileDWARF::Terminate();
     ObjectFilePECOFF::Terminate();
     HostInfo::Terminate();
@@ -360,7 +360,7 @@ TEST_F(SymbolFilePDBTests, TestSimpleClassTypes) {
   lldb::TypeSP udt_type = results.GetTypeAtIndex(0);
   EXPECT_EQ(ConstString("Class"), udt_type->GetName());
   CompilerType compiler_type = udt_type->GetForwardCompilerType();
-  EXPECT_TRUE(ClangASTContext::IsClassType(compiler_type.GetOpaqueQualType()));
+  EXPECT_TRUE(TypeSystemClang::IsClassType(compiler_type.GetOpaqueQualType()));
   EXPECT_EQ(GetGlobalConstantInteger(session, "sizeof_Class"),
             udt_type->GetByteSize());
 }
@@ -381,7 +381,7 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   ASSERT_THAT_EXPECTED(clang_ast_ctx_or_err, llvm::Succeeded());
 
   auto clang_ast_ctx =
-      llvm::dyn_cast_or_null<ClangASTContext>(&clang_ast_ctx_or_err.get());
+      llvm::dyn_cast_or_null<TypeSystemClang>(&clang_ast_ctx_or_err.get());
   EXPECT_NE(nullptr, clang_ast_ctx);
 
   symfile->FindTypes(ConstString("Class"), nullptr, 0, searched_files, results);
@@ -412,7 +412,7 @@ TEST_F(SymbolFilePDBTests, TestNestedClassTypes) {
   EXPECT_EQ(ConstString("NestedClass"), udt_type->GetName());
 
   CompilerType compiler_type = udt_type->GetForwardCompilerType();
-  EXPECT_TRUE(ClangASTContext::IsClassType(compiler_type.GetOpaqueQualType()));
+  EXPECT_TRUE(TypeSystemClang::IsClassType(compiler_type.GetOpaqueQualType()));
 
   EXPECT_EQ(GetGlobalConstantInteger(session, "sizeof_NestedClass"),
             udt_type->GetByteSize());
@@ -434,7 +434,7 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   ASSERT_THAT_EXPECTED(clang_ast_ctx_or_err, llvm::Succeeded());
 
   auto clang_ast_ctx =
-      llvm::dyn_cast_or_null<ClangASTContext>(&clang_ast_ctx_or_err.get());
+      llvm::dyn_cast_or_null<TypeSystemClang>(&clang_ast_ctx_or_err.get());
   EXPECT_NE(nullptr, clang_ast_ctx);
 
   clang::ASTContext &ast_ctx = clang_ast_ctx->getASTContext();
@@ -456,7 +456,7 @@ TEST_F(SymbolFilePDBTests, TestClassInNamespace) {
   EXPECT_EQ(ConstString("NSClass"), udt_type->GetName());
 
   CompilerType compiler_type = udt_type->GetForwardCompilerType();
-  EXPECT_TRUE(ClangASTContext::IsClassType(compiler_type.GetOpaqueQualType()));
+  EXPECT_TRUE(TypeSystemClang::IsClassType(compiler_type.GetOpaqueQualType()));
 
   EXPECT_EQ(GetGlobalConstantInteger(session, "sizeof_NSClass"),
             udt_type->GetByteSize());
@@ -479,8 +479,8 @@ TEST_F(SymbolFilePDBTests, TestEnumTypes) {
     lldb::TypeSP enum_type = results.GetTypeAtIndex(0);
     EXPECT_EQ(ConstString(Enum), enum_type->GetName());
     CompilerType compiler_type = enum_type->GetFullCompilerType();
-    EXPECT_TRUE(ClangASTContext::IsEnumType(compiler_type.GetOpaqueQualType()));
-    clang::EnumDecl *enum_decl = ClangASTContext::GetAsEnumDecl(compiler_type);
+    EXPECT_TRUE(TypeSystemClang::IsEnumType(compiler_type.GetOpaqueQualType()));
+    clang::EnumDecl *enum_decl = TypeSystemClang::GetAsEnumDecl(compiler_type);
     EXPECT_NE(nullptr, enum_decl);
     EXPECT_EQ(2, std::distance(enum_decl->enumerator_begin(),
                                enum_decl->enumerator_end()));
@@ -528,8 +528,8 @@ TEST_F(SymbolFilePDBTests, TestTypedefs) {
     lldb::TypeSP typedef_type = results.GetTypeAtIndex(0);
     EXPECT_EQ(ConstString(Typedef), typedef_type->GetName());
     CompilerType compiler_type = typedef_type->GetFullCompilerType();
-    ClangASTContext *clang_type_system =
-        llvm::dyn_cast_or_null<ClangASTContext>(compiler_type.GetTypeSystem());
+    TypeSystemClang *clang_type_system =
+        llvm::dyn_cast_or_null<TypeSystemClang>(compiler_type.GetTypeSystem());
     EXPECT_TRUE(
         clang_type_system->IsTypedefType(compiler_type.GetOpaqueQualType()));
 

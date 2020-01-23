@@ -63,7 +63,7 @@ public:
   GetCompilerTypeFromPersistentDecl(ConstString type_name) override;
 
   void RegisterPersistentDecl(ConstString name, clang::NamedDecl *decl,
-                              ClangASTContext *ctx);
+                              TypeSystemClang *ctx);
 
   clang::NamedDecl *GetPersistentDecl(ConstString name);
 
@@ -84,8 +84,8 @@ private:
   struct PersistentDecl {
     /// The persistent decl.
     clang::NamedDecl *m_decl = nullptr;
-    /// The ClangASTContext for the ASTContext of m_decl.
-    ClangASTContext *m_context = nullptr;
+    /// The TypeSystemClang for the ASTContext of m_decl.
+    TypeSystemClang *m_context = nullptr;
   };
 
   typedef llvm::DenseMap<const char *, PersistentDecl> PersistentDeclMap;

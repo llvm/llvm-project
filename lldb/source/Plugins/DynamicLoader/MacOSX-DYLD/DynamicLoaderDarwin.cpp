@@ -16,7 +16,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Host/FileSystem.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
@@ -1072,8 +1072,8 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
         }
         StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0);
         if (frame_sp) {
-          ClangASTContext *clang_ast_context =
-              ClangASTContext::GetScratch(target);
+          TypeSystemClang *clang_ast_context =
+              TypeSystemClang::GetScratch(target);
 
           if (!clang_ast_context)
             return LLDB_INVALID_ADDRESS;

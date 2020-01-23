@@ -40,7 +40,7 @@ class EnumTypesTestCase(TestBase):
         self.expect("fr var all", DATA_TYPES_DISPLAYED_CORRECTLY,
                     patterns=[' = ALL$'])
         # Test that an enum that doesn't match the heuristic we use in
-        # ClangASTContext::DumpEnumValue, gets printed as a raw integer.
+        # TypeSystemClang::DumpEnumValue, gets printed as a raw integer.
         self.expect("fr var omega", DATA_TYPES_DISPLAYED_CORRECTLY,
                     patterns=[' = 7$'])
         # Test the behavior in case have a variable of a type considered

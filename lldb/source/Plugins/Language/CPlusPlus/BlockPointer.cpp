@@ -10,7 +10,7 @@
 
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ClangASTImporter.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -45,12 +45,12 @@ public:
     if (auto err = type_system_or_err.takeError()) {
       LLDB_LOG_ERROR(
           lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS),
-          std::move(err), "Failed to get scratch ClangASTContext");
+          std::move(err), "Failed to get scratch TypeSystemClang");
       return;
     }
 
-    ClangASTContext *clang_ast_context =
-        llvm::dyn_cast<ClangASTContext>(&type_system_or_err.get());
+    TypeSystemClang *clang_ast_context =
+        llvm::dyn_cast<TypeSystemClang>(&type_system_or_err.get());
 
     if (!clang_ast_context) {
       return;
