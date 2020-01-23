@@ -2916,6 +2916,12 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     if (V.use_empty())
       return ChangeStatus::UNCHANGED;
 
+    bool UsedAssumedInformation = false;
+    Optional<ConstantInt *> CI =
+        getAssumedConstant(A, V, *this, UsedAssumedInformation);
+    if (CI.hasValue() && CI.getValue())
+      return ChangeStatus::UNCHANGED;
+
     UndefValue &UV = *UndefValue::get(V.getType());
     bool AnyChange = A.changeValueAfterManifest(V, UV);
     return AnyChange ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
@@ -3092,6 +3098,9 @@ struct AAIsDeadReturned : public AAIsDeadValueImpl {
     UndefValue &UV = *UndefValue::get(getAssociatedFunction()->getReturnType());
     auto RetInstPred = [&](Instruction &I) {
       ReturnInst &RI = cast<ReturnInst>(I);
+      if (auto *CI = dyn_cast<CallInst>(RI.getReturnValue()))
+        if (CI->isMustTailCall())
+          return true;
       if (!isa<UndefValue>(RI.getReturnValue()))
         AnyChange |= A.changeUseAfterManifest(RI.getOperandUse(0), UV);
       return true;
@@ -4729,6 +4738,14 @@ struct AAValueSimplifyCallSite : AAValueSimplifyFunction {
 struct AAValueSimplifyCallSiteReturned : AAValueSimplifyReturned {
   AAValueSimplifyCallSiteReturned(const IRPosition &IRP)
       : AAValueSimplifyReturned(IRP) {}
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    if (auto *CI = dyn_cast<CallInst>(&getAssociatedValue()))
+      if (CI->isMustTailCall())
+        return ChangeStatus::UNCHANGED;
+    return AAValueSimplifyReturned::manifest(A);
+  }
 
   void trackStatistics() const override {
     STATS_DECLTRACK_CSRET_ATTR(value_simplify)
@@ -6557,6 +6574,24 @@ bool Attributor::isAssumedDead(const AbstractAttribute &AA,
 bool Attributor::checkForAllUses(
     const function_ref<bool(const Use &, bool &)> &Pred,
     const AbstractAttribute &QueryingAA, const Value &V) {
+
+  // Check the trivial case first as it catches void values.
+  if (V.use_empty())
+    return true;
+
+  // If the value is replaced by another one, for now a constant, we do not have
+  // uses. Note that this requires users of `checkForAllUses` to not recurse but
+  // instead use the `follow` callback argument to look at transitive users,
+  // however, that should be clear from the presence of the argument.
+  bool UsedAssumedInformation = false;
+  Optional<ConstantInt *> CI =
+      getAssumedConstant(*this, V, QueryingAA, UsedAssumedInformation);
+  if (CI.hasValue() && CI.getValue()) {
+    LLVM_DEBUG(dbgs() << "[Attributor] Value is simplified, uses skipped: " << V
+                      << " -> " << *CI.getValue() << "\n");
+    return true;
+  }
+
   const IRPosition &IRP = QueryingAA.getIRPosition();
   SmallVector<const Use *, 16> Worklist;
   SmallPtrSet<const Use *, 16> Visited;
@@ -6566,9 +6601,6 @@ bool Attributor::checkForAllUses(
 
   LLVM_DEBUG(dbgs() << "[Attributor] Got " << Worklist.size()
                     << " initial uses to check\n");
-
-  if (Worklist.empty())
-    return true;
 
   bool AnyDead = false;
   const Function *ScopeFn = IRP.getAnchorScope();

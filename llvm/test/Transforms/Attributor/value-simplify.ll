@@ -136,14 +136,6 @@ f:
 }
 
 define internal i1 @ipccp2i(i1 %a) {
-; CHECK-LABEL: define {{[^@]+}}@ipccp2i
-; CHECK-SAME: (i1 returned [[A:%.*]])
-; CHECK-NEXT:    br label %t
-; CHECK:       t:
-; CHECK-NEXT:    ret i1 true
-; CHECK:       f:
-; CHECK-NEXT:    unreachable
-;
   br i1 %a, label %t, label %f
 t:
   ret i1 %a
@@ -153,23 +145,31 @@ f:
 }
 
 define i1 @ipccp2() {
-; CHECK-LABEL: define {{[^@]+}}@ipccp2()
-; CHECK-NEXT:    [[R:%.*]] = call i1 @ipccp2i(i1 true)
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-LABEL: define {{[^@]+}}@ipccp2() #1
+; CHECK-NEXT:    ret i1 true
 ;
   %r = call i1 @ipccp2i(i1 true)
   ret i1 %r
 }
 
-define internal i32 @ipccp3i(i32 %a) {
-; CHECK-LABEL: define {{[^@]+}}@ipccp3i
-; CHECK-SAME: (i32 returned [[A:%.*]])
-; CHECK-NEXT:    br label [[T:%.*]]
-; CHECK:       t:
-; CHECK-NEXT:    ret i32 7
-; CHECK:       f:
-; CHECK-NEXT:    unreachable
+define internal i1 @ipccp2ib(i1 %a) {
+  br i1 %a, label %t, label %f
+t:
+  ret i1 true
+f:
+  %r = call i1 @ipccp2ib(i1 false)
+  ret i1 %r
+}
+
+define i1 @ipccp2b() {
+; CHECK-LABEL: define {{[^@]+}}@ipccp2b() #1
+; CHECK-NEXT:    ret i1 true
 ;
+  %r = call i1 @ipccp2ib(i1 true)
+  ret i1 %r
+}
+
+define internal i32 @ipccp3i(i32 %a) {
   %c = icmp eq i32 %a, 7
   br i1 %c, label %t, label %f
 t:
@@ -181,9 +181,7 @@ f:
 
 define i32 @ipccp3() {
 ; CHECK-LABEL: define {{[^@]+}}@ipccp3()
-; CHECK-NEXT:    [[R:%.*]] = call i32 @ipccp3i(i32 7)
-; CHECK-NEXT:    ret i32 [[R]]
-; FIXME: R should be replaced with 7
+; CHECK-NEXT:    ret i32 7
   %r = call i32 @ipccp3i(i32 7)
   ret i32 %r
 }
