@@ -137,7 +137,7 @@ Symbols:
 # RUN: yaml2obj %s --docnum=7 -o %t7
 # RUN: llvm-readobj --dyn-symbols %t7 2>&1 | FileCheck -DFILE=%t7 --check-prefix=INVALID-DYNSYM-SIZE %s
 
-# INVALID-DYNSYM-SIZE: warning: '[[FILE]]': invalid section size (48) or entity size (32)
+# INVALID-DYNSYM-SIZE: warning: '[[FILE]]': section with index 1 has invalid size (0x30) or entry size (0x20)
 
 --- !ELF
 FileHeader:
@@ -474,7 +474,7 @@ ProgramHeaders:
 # RUN:   %p/Inputs/corrupt-invalid-relocation-size.elf.x86-64 2>&1 \
 # RUN:    | FileCheck -DFILE=%p/Inputs/corrupt-invalid-relocation-size.elf.x86-64 --check-prefix=RELOC-BROKEN-ENTSIZE %s
 
-# RELOC-BROKEN-ENTSIZE: warning: '[[FILE]]': invalid section size (24) or entity size (25)
+# RELOC-BROKEN-ENTSIZE: warning: '[[FILE]]': invalid DT_RELASZ value (0x18) or DT_RELAENT value (0x19)
 
 ## Check that llvm-readobj reports a warning when .dynamic section has an invalid
 ## size, which isn't a multiple of the dynamic entry size. 
@@ -482,7 +482,7 @@ ProgramHeaders:
 # RUN: yaml2obj %s --docnum=22 -o %t22
 # RUN: llvm-readobj --dyn-relocations %t22 2>&1 | FileCheck -DFILE=%t22 --check-prefix=DYN-TABLE-SIZE %s
 
-# DYN-TABLE-SIZE: warning: '[[FILE]]': invalid section size (1) or entity size (16)
+# DYN-TABLE-SIZE: warning: '[[FILE]]': section with index 1 has invalid size (0x1){{$}}
 
 --- !ELF
 FileHeader:
