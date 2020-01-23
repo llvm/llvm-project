@@ -59,9 +59,31 @@ Error DWARFDebugArangeSet::extract(DataExtractor data, uint64_t *offset_ptr) {
   // the segment selectors are omitted from all tuples, including
   // the terminating tuple.
 
+  constexpr unsigned CommonFieldsLength = 2 + // Version
+                                          1 + // Address Size
+                                          1;  // Segment Selector Size
+  constexpr unsigned DWARF32HeaderLength =
+      dwarf::getUnitLengthFieldByteSize(dwarf::DWARF32) + CommonFieldsLength +
+      dwarf::getDwarfOffsetByteSize(dwarf::DWARF32); // Debug Info Offset
+  constexpr unsigned DWARF64HeaderLength =
+      dwarf::getUnitLengthFieldByteSize(dwarf::DWARF64) + CommonFieldsLength +
+      dwarf::getDwarfOffsetByteSize(dwarf::DWARF64); // Debug Info Offset
+
+  if (!data.isValidOffsetForDataOfSize(Offset, DWARF32HeaderLength))
+    return createStringError(errc::invalid_argument,
+                             "section is not large enough to contain "
+                             "an address range table at offset 0x%" PRIx64,
+                             Offset);
+
   dwarf::DwarfFormat format = dwarf::DWARF32;
   HeaderData.Length = data.getU32(offset_ptr);
   if (HeaderData.Length == dwarf::DW_LENGTH_DWARF64) {
+    if (!data.isValidOffsetForDataOfSize(Offset, DWARF64HeaderLength))
+      return createStringError(
+          errc::invalid_argument,
+          "section is not large enough to contain a DWARF64 "
+          "address range table at offset 0x%" PRIx64,
+          Offset);
     HeaderData.Length = data.getU64(offset_ptr);
     format = dwarf::DWARF64;
   } else if (HeaderData.Length >= dwarf::DW_LENGTH_lo_reserved) {
@@ -91,16 +113,37 @@ Error DWARFDebugArangeSet::extract(DataExtractor data, uint64_t *offset_ptr) {
                              " has unsupported address size: %d "
                              "(4 and 8 supported)",
                              Offset, HeaderData.AddrSize);
+  if (HeaderData.SegSize != 0)
+    return createStringError(errc::not_supported,
+                             "non-zero segment selector size in address range "
+                             "table at offset 0x%" PRIx64 " is not supported",
+                             Offset);
 
-  // The first tuple following the header in each set begins at an offset
-  // that is a multiple of the size of a single tuple (that is, twice the
-  // size of an address). The header is padded, if necessary, to the
-  // appropriate boundary.
-  const uint32_t header_size = *offset_ptr - Offset;
+  // The first tuple following the header in each set begins at an offset that
+  // is a multiple of the size of a single tuple (that is, twice the size of
+  // an address because we do not support non-zero segment selector sizes).
+  // Therefore, the full length should also be a multiple of the tuple size.
   const uint32_t tuple_size = HeaderData.AddrSize * 2;
+  if (full_length % tuple_size != 0)
+    return createStringError(
+        errc::invalid_argument,
+        "address range table at offset 0x%" PRIx64
+        " has length that is not a multiple of the tuple size",
+        Offset);
+
+  // The header is padded, if necessary, to the appropriate boundary.
+  const uint32_t header_size = *offset_ptr - Offset;
   uint32_t first_tuple_offset = 0;
   while (first_tuple_offset < header_size)
     first_tuple_offset += tuple_size;
+
+  // There should be space for at least one tuple.
+  if (full_length <= first_tuple_offset)
+    return createStringError(
+        errc::invalid_argument,
+        "address range table at offset 0x%" PRIx64
+        " has an insufficient length to contain any entries",
+        Offset);
 
   *offset_ptr = Offset + first_tuple_offset;
 
@@ -111,14 +154,23 @@ Error DWARFDebugArangeSet::extract(DataExtractor data, uint64_t *offset_ptr) {
                 "Different datatypes for addresses and sizes!");
   assert(sizeof(arangeDescriptor.Address) >= HeaderData.AddrSize);
 
-  while (data.isValidOffset(*offset_ptr)) {
+  uint64_t end_offset = Offset + full_length;
+  while (*offset_ptr < end_offset) {
     arangeDescriptor.Address = data.getUnsigned(offset_ptr, HeaderData.AddrSize);
     arangeDescriptor.Length = data.getUnsigned(offset_ptr, HeaderData.AddrSize);
 
-    // Each set of tuples is terminated by a 0 for the address and 0
-    // for the length.
-    if (arangeDescriptor.Address == 0 && arangeDescriptor.Length == 0)
-      return ErrorSuccess();
+    if (arangeDescriptor.Length == 0) {
+      // Each set of tuples is terminated by a 0 for the address and 0
+      // for the length.
+      if (arangeDescriptor.Address == 0 && *offset_ptr == end_offset)
+        return ErrorSuccess();
+      return createStringError(
+          errc::invalid_argument,
+          "address range table at offset 0x%" PRIx64
+          " has an invalid tuple (length = 0) at offset 0x%" PRIx64,
+          Offset, *offset_ptr - tuple_size);
+    }
+
     ArangeDescriptors.push_back(arangeDescriptor);
   }
 
