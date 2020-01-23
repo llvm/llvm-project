@@ -381,7 +381,7 @@ void AsmWriterEmitter::EmitPrintInstruction(raw_ostream &O) {
 
   // Emit the string table itself.
   O << "  static const char AsmStrs[] = {\n";
-  StringTable.emit(O, printChar);
+  StringTable.emit_string_literals(O);
   O << "  };\n\n";
 
   // Emit the lookup tables in pieces to minimize wasted bytes.
@@ -538,7 +538,7 @@ emitRegisterNameString(raw_ostream &O, StringRef AltName,
 
   StringTable.layout();
   O << "  static const char AsmStrs" << AltName << "[] = {\n";
-  StringTable.emit(O, printChar);
+  StringTable.emit_string_literals(O);
   O << "  };\n\n";
 
   O << "  static const " << getMinimalTypeForRange(StringTable.size() - 1, 32)
