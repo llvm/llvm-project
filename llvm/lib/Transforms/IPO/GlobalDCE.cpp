@@ -263,6 +263,15 @@ void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
   if (!ClEnableVFE)
     return;
 
+  // If the Virtual Function Elim module flag is present and set to zero, then
+  // the vcall_visibility metadata was inserted for another optimization (WPD)
+  // and we may not have type checked loads on all accesses to the vtable.
+  // Don't attempt VFE in that case.
+  auto *Val = mdconst::dyn_extract_or_null<ConstantInt>(
+      M.getModuleFlag("Virtual Function Elim"));
+  if (!Val || Val->getZExtValue() == 0)
+    return;
+
   ScanVTables(M);
 
   if (VFESafeVTables.empty())
