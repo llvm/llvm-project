@@ -459,7 +459,7 @@ void ASTResultSynthesizer::CommitPersistentDecls() {
     StringRef name = decl->getName();
     ConstString name_cs(name.str().c_str());
 
-    Decl *D_scratch = m_target.GetClangASTImporter()->DeportDecl(
+    Decl *D_scratch = persistent_vars->GetClangASTImporter()->DeportDecl(
         &scratch_ctx->getASTContext(), decl);
 
     if (!D_scratch) {

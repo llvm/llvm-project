@@ -9262,7 +9262,7 @@ TypeSystemClangForExpressions::TypeSystemClangForExpressions(
       m_target_wp(target.shared_from_this()),
       m_persistent_variables(new ClangPersistentVariables) {
   m_scratch_ast_source_up.reset(new ClangASTSource(
-      target.shared_from_this(), target.GetClangASTImporter()));
+      target.shared_from_this(), m_persistent_variables->GetClangASTImporter()));
   m_scratch_ast_source_up->InstallASTContext(*this);
   llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
       m_scratch_ast_source_up->CreateProxy());
