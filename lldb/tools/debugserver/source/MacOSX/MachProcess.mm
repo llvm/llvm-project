@@ -734,6 +734,8 @@ bool MachProcess::GetMachOInformationFromMemory(
       this_seg.nsects = seg.nsects;
       this_seg.flags = seg.flags;
       inf.segments.push_back(this_seg);
+      if (this_seg.name == "ExecExtraSuspend")
+        m_task.TaskWillExecProcessesSuspended();
     }
     if (lc.cmd == LC_SEGMENT_64) {
       struct segment_command_64 seg;
@@ -755,6 +757,8 @@ bool MachProcess::GetMachOInformationFromMemory(
       this_seg.nsects = seg.nsects;
       this_seg.flags = seg.flags;
       inf.segments.push_back(this_seg);
+      if (this_seg.name == "ExecExtraSuspend")
+        m_task.TaskWillExecProcessesSuspended();
     }
     if (lc.cmd == LC_UUID) {
       struct uuid_command uuidcmd;
