@@ -521,19 +521,20 @@ static bool areAllUsesEqual(Instruction *I) {
 /// delete it.  If that makes any of its operands trivially dead, delete them
 /// too, recursively.  Return true if a change was made.
 bool llvm::RecursivelyDeleteDeadPHINode(PHINode *PN,
-                                        const TargetLibraryInfo *TLI) {
+                                        const TargetLibraryInfo *TLI,
+                                        llvm::MemorySSAUpdater *MSSAU) {
   SmallPtrSet<Instruction*, 4> Visited;
   for (Instruction *I = PN; areAllUsesEqual(I) && !I->mayHaveSideEffects();
        I = cast<Instruction>(*I->user_begin())) {
     if (I->use_empty())
-      return RecursivelyDeleteTriviallyDeadInstructions(I, TLI);
+      return RecursivelyDeleteTriviallyDeadInstructions(I, TLI, MSSAU);
 
     // If we find an instruction more than once, we're on a cycle that
     // won't prove fruitful.
     if (!Visited.insert(I).second) {
       // Break the cycle and delete the instruction and its operands.
       I->replaceAllUsesWith(UndefValue::get(I->getType()));
-      (void)RecursivelyDeleteTriviallyDeadInstructions(I, TLI);
+      (void)RecursivelyDeleteTriviallyDeadInstructions(I, TLI, MSSAU);
       return true;
     }
   }
