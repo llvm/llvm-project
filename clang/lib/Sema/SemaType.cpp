@@ -3115,7 +3115,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
       InventedTemplateParameterInfo *Info = nullptr;
       if (D.getContext() == DeclaratorContext::PrototypeContext) {
         // With concepts we allow 'auto' in function parameters.
-        if (!SemaRef.getLangOpts().ConceptsTS || !Auto ||
+        if (!SemaRef.getLangOpts().CPlusPlus2a || !Auto ||
             Auto->getKeyword() != AutoTypeKeyword::Auto) {
           Error = 0;
           break;
@@ -4730,7 +4730,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             // An error occurred parsing the trailing return type.
             T = Context.IntTy;
             D.setInvalidType(true);
-          } else if (S.getLangOpts().ConceptsTS)
+          } else if (S.getLangOpts().CPlusPlus2a)
             // Handle cases like: `auto f() -> auto` or `auto f() -> C auto`.
             if (AutoType *Auto = T->getContainedAutoType())
               if (S.getCurScope()->isFunctionDeclarationScope())
@@ -5356,7 +5356,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // We represent function parameter packs as function parameters whose
       // type is a pack expansion.
       if (!T->containsUnexpandedParameterPack() &&
-          (!LangOpts.ConceptsTS || !T->getContainedAutoType())) {
+          (!LangOpts.CPlusPlus2a || !T->getContainedAutoType())) {
         S.Diag(D.getEllipsisLoc(),
              diag::err_function_parameter_pack_without_parameter_packs)
           << T <<  D.getSourceRange();
