@@ -32,6 +32,12 @@ static llvm::cl::opt<std::string>
                               "substring in their record name"),
                llvm::cl::cat(IntrinsicGenCat));
 
+static llvm::cl::opt<std::string>
+    opBaseClass("dialect-opclass-base",
+                llvm::cl::desc("The base class for the ops in the dialect we "
+                               "are planning to emit"),
+                llvm::cl::init("LLVM_IntrOp"), llvm::cl::cat(IntrinsicGenCat));
+
 // Used to represent the indices of overloadable operands/results.
 using IndicesTy = llvm::SmallBitVector;
 
@@ -84,8 +90,20 @@ public:
            "LLVM intrinsic names are expected to start with 'int_'");
     name = name.drop_front(4);
     llvm::SmallVector<llvm::StringRef, 8> chunks;
+    llvm::StringRef targetPrefix = record.getValueAsString("TargetPrefix");
     name.split(chunks, '_');
-    return llvm::join(chunks, ".");
+    auto chunksBegin = chunks.begin();
+    // Remove the target prefix from target specific intrinsics.
+    if (!targetPrefix.empty()) {
+      assert(targetPrefix == *chunksBegin &&
+             "Intrinsic has TargetPrefix, but "
+             "record name doesn't begin with it");
+      assert(chunks.size() >= 2 &&
+             "Intrinsic has TargetPrefix, but "
+             "chunks has only one element meaning the intrinsic name is empty");
+      ++chunksBegin;
+    }
+    return llvm::join(chunksBegin, chunks.end(), ".");
   }
 
   /// Get the name of the record without the "intrinsic" prefix.
@@ -205,8 +223,8 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
                                                  "LLVM_Type");
 
   // Emit the definition.
-  os << "def LLVM_" << intr.getProperRecordName() << " : LLVM_Op<\"intr."
-     << intr.getOperationName() << "\", [";
+  os << "def LLVM_" << intr.getProperRecordName() << " : " << opBaseClass
+     << "<\"" << intr.getOperationName() << "\", [";
   mlir::interleaveComma(traits, os);
   os << "]>, Arguments<(ins" << (operands.empty() ? "" : " ");
   mlir::interleaveComma(operands, os);
