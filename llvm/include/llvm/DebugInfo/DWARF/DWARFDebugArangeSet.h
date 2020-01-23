@@ -24,10 +24,10 @@ public:
   struct Header {
     /// The total length of the entries for that set, not including the length
     /// field itself.
-    uint32_t Length;
+    uint64_t Length;
     /// The offset from the beginning of the .debug_info section of the
     /// compilation unit entry referenced by the table.
-    uint32_t CuOffset;
+    uint64_t CuOffset;
     /// The DWARF version number.
     uint16_t Version;
     /// The size in bytes of an address on the target architecture. For segmented
@@ -61,7 +61,7 @@ public:
   Error extract(DataExtractor data, uint64_t *offset_ptr);
   void dump(raw_ostream &OS) const;
 
-  uint32_t getCompileUnitDIEOffset() const { return HeaderData.CuOffset; }
+  uint64_t getCompileUnitDIEOffset() const { return HeaderData.CuOffset; }
 
   const Header &getHeader() const { return HeaderData; }
 

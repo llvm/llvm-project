@@ -63,3 +63,24 @@
     .quad   0, 0                    # Termination tuple
 # CHECK-NOT: [0x
 .L3end:
+
+## Case 4: Check that 64-bit DWARF format is supported.
+    .long 0xffffffff                # DWARF64 mark
+    .quad   .L4end - .L4version     # Length
+# CHECK: Address Range Header: length = 0x0000001c,
+.L4version:
+    .short  2                       # Version
+    .quad   0x1234567899aabbcc      # Debug Info Offset
+    .byte   4                       # Address Size
+    .byte   0                       # Segment Selector Size
+# CHECK-SAME: version = 0x0002,
+# CHECK-SAME: cu_offset = 0x1234567899aabbcc,
+# CHECK-SAME: addr_size = 0x04,
+# CHECK-SAME: seg_size = 0x00
+                                    # No padding
+.L4tuples:
+    .long   0, 1                    # Address and length
+# CHECK-NEXT: [0x00000000,  0x00000001)
+    .long   0, 0                    # Termination tuple
+# CHECK-NOT: [0x
+.L4end:
