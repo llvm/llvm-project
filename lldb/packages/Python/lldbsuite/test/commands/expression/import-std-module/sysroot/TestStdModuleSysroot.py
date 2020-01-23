@@ -12,6 +12,7 @@ class ImportStdModule(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(compiler=no_match("clang"))
+    @skipIfRemote # This test messes with the platform, can't be run remotely.
     def test(self):
         self.build()
 
