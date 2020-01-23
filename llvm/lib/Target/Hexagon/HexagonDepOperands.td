@@ -124,12 +124,6 @@ defm u5_2ImmPred : ImmOpPred<[{ return isShiftedUInt<5, 2>(N->getSExtValue());}]
 def s6_3ImmOperand : AsmOperandClass { let Name = "s6_3Imm"; let RenderMethod = "addSignedImmOperands"; }
 def s6_3Imm : Operand<i32> { let ParserMatchClass = s6_3ImmOperand; let DecoderMethod = "s6_3ImmDecoder"; }
 defm s6_3ImmPred : ImmOpPred<[{ return isShiftedInt<6, 3>(N->getSExtValue());}]>;
-def s10_6ImmOperand : AsmOperandClass { let Name = "s10_6Imm"; let RenderMethod = "addSignedImmOperands"; }
-def s10_6Imm : Operand<i32> { let ParserMatchClass = s10_6ImmOperand; let DecoderMethod = "s10_6ImmDecoder"; }
-defm s10_6ImmPred : ImmOpPred<[{ return isShiftedInt<10, 6>(N->getSExtValue());}]>;
-def s10_0ImmOperand : AsmOperandClass { let Name = "s10_0Imm"; let RenderMethod = "addSignedImmOperands"; }
-def s10_0Imm : Operand<i32> { let ParserMatchClass = s10_0ImmOperand; let DecoderMethod = "s10_0ImmDecoder"; }
-defm s10_0ImmPred : ImmOpPred<[{ return isShiftedInt<10, 0>(N->getSExtValue());}]>;
 def s3_0ImmOperand : AsmOperandClass { let Name = "s3_0Imm"; let RenderMethod = "addSignedImmOperands"; }
 def s3_0Imm : Operand<i32> { let ParserMatchClass = s3_0ImmOperand; let DecoderMethod = "s3_0ImmDecoder"; }
 defm s3_0ImmPred : ImmOpPred<[{ return isShiftedInt<3, 0>(N->getSExtValue());}]>;
