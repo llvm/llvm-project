@@ -417,24 +417,15 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:        "offset": 197,
-// CHECK-NEXT:        "col": 33,
-// CHECK-NEXT:        "tokLen": 1
+// CHECK-NEXT:       "offset": 193,
+// CHECK-NEXT:       "col": 29,
+// CHECK-NEXT:       "tokLen": 4
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
-// CHECK-NEXT:        "begin": {
-// CHECK-NEXT:          "offset": 193,
-// CHECK-NEXT:          "col": 29,
-// CHECK-NEXT:          "tokLen": 4
-// CHECK-NEXT:        },
-// CHECK-NEXT:        "end": {
-// CHECK-NEXT:          "offset": 197,
-// CHECK-NEXT:          "col": 33,
-// CHECK-NEXT:          "tokLen": 1
-// CHECK-NEXT:        }
+// CHECK-NEXT:       "begin": {},
+// CHECK-NEXT:       "end": {}
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
-// CHECK-NEXT:      "name": "auto:1",
 // CHECK-NEXT:      "tagUsed": "class",
 // CHECK-NEXT:      "depth": 0,
 // CHECK-NEXT:      "index": 0
@@ -533,24 +524,15 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:        "offset": 197,
-// CHECK-NEXT:        "col": 33,
-// CHECK-NEXT:        "tokLen": 1
+// CHECK-NEXT:       "offset": 193,
+// CHECK-NEXT:       "col": 29,
+// CHECK-NEXT:       "tokLen": 4
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
-// CHECK-NEXT:        "begin": {
-// CHECK-NEXT:          "offset": 193,
-// CHECK-NEXT:          "col": 29,
-// CHECK-NEXT:          "tokLen": 4
-// CHECK-NEXT:        },
-// CHECK-NEXT:        "end": {
-// CHECK-NEXT:          "offset": 197,
-// CHECK-NEXT:          "col": 33,
-// CHECK-NEXT:          "tokLen": 1
-// CHECK-NEXT:        }
+// CHECK-NEXT:       "begin": {},
+// CHECK-NEXT:       "end": {}
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
-// CHECK-NEXT:      "name": "auto:1",
 // CHECK-NEXT:      "tagUsed": "class",
 // CHECK-NEXT:      "depth": 0,
 // CHECK-NEXT:      "index": 0
@@ -608,24 +590,15 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
-// CHECK-NEXT:        "offset": 197,
-// CHECK-NEXT:        "col": 33,
-// CHECK-NEXT:        "tokLen": 1
+// CHECK-NEXT:       "offset": 193,
+// CHECK-NEXT:       "col": 29,
+// CHECK-NEXT:       "tokLen": 4
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
-// CHECK-NEXT:        "begin": {
-// CHECK-NEXT:          "offset": 193,
-// CHECK-NEXT:          "col": 29,
-// CHECK-NEXT:          "tokLen": 4
-// CHECK-NEXT:        },
-// CHECK-NEXT:        "end": {
-// CHECK-NEXT:          "offset": 197,
-// CHECK-NEXT:          "col": 33,
-// CHECK-NEXT:          "tokLen": 1
-// CHECK-NEXT:        }
+// CHECK-NEXT:       "begin": {},
+// CHECK-NEXT:       "end": {}
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
-// CHECK-NEXT:      "name": "auto:1",
 // CHECK-NEXT:      "tagUsed": "class",
 // CHECK-NEXT:      "depth": 0,
 // CHECK-NEXT:      "index": 0

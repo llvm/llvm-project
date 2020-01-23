@@ -395,13 +395,6 @@ let Class = AutoType in {
   def : Property<"keyword", AutoTypeKeyword> {
     let Read = [{ node->getKeyword() }];
   }
-  def : Property<"typeConstraintConcept", Optional<ConceptDeclRef>> {
-    let Read = [{ makeOptionalFromPointer(
-        const_cast<const ConceptDecl*>(node->getTypeConstraintConcept())) }];
-  }
-  def : Property<"typeConstraintArguments", Array<TemplateArgument>> {
-    let Read = [{ node->getTypeConstraintArguments() }];
-  }
   // FIXME: better enumerated value
   // Only really required when the deduced type is null
   def : Property<"dependence", UInt32> {
@@ -413,9 +406,7 @@ let Class = AutoType in {
   def : Creator<[{
     return ctx.getAutoType(makeNullableFromOptional(deducedType), keyword,
                            /*isDependentWithoutDeducedType*/ dependence > 0,
-                           /*isPackWithoutDeducedType*/ dependence > 1,
-                           makePointerFromOptional(typeConstraintConcept),
-                           typeConstraintArguments);
+                           /*isPackWithoutDeducedType*/ dependence > 1);
   }]>;
 }
 
