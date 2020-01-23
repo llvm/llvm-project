@@ -231,6 +231,9 @@ void ReachingDefAnalysis::getReachingLocalUses(MachineInstr *Def, int PhysReg,
   MachineBasicBlock *MBB = Def->getParent();
   MachineBasicBlock::iterator MI = MachineBasicBlock::iterator(Def);
   while (++MI != MBB->end()) {
+    if (MI->isDebugInstr())
+      continue;
+
     // If/when we find a new reaching def, we know that there's no more uses
     // of 'Def'.
     if (getReachingMIDef(&*MI, PhysReg) != Def)
@@ -251,6 +254,8 @@ bool
 ReachingDefAnalysis::getLiveInUses(MachineBasicBlock *MBB, int PhysReg,
                                    SmallPtrSetImpl<MachineInstr*> &Uses) const {
   for (auto &MI : *MBB) {
+    if (MI.isDebugInstr())
+      continue;
     for (auto &MO : MI.operands()) {
       if (!MO.isReg() || !MO.isUse() || MO.getReg() != PhysReg)
         continue;
