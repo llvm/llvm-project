@@ -1836,15 +1836,19 @@ public:
                              Align, isVolatile, Name);
   }
 
-  StoreInst *CreateAlignedStore(Value *Val, Value *Ptr, unsigned Align,
-                                bool isVolatile = false) {
-    StoreInst *SI = CreateStore(Val, Ptr, isVolatile);
-    SI->setAlignment(MaybeAlign(Align));
-    return SI;
+  /// FIXME: Remove this function once transition to Align is over.
+  /// Use the version that takes MaybeAlign instead of this one.
+  LLVM_ATTRIBUTE_DEPRECATED(
+      StoreInst *CreateAlignedStore(Value *Val, Value *Ptr, unsigned Align,
+                                    bool isVolatile = false),
+      "Use the version that takes MaybeAlign instead") {
+    return CreateAlignedStore(Val, Ptr, MaybeAlign(Align), isVolatile);
   }
   StoreInst *CreateAlignedStore(Value *Val, Value *Ptr, MaybeAlign Align,
                                 bool isVolatile = false) {
-    return CreateAlignedStore(Val, Ptr, Align ? Align->value() : 0, isVolatile);
+    StoreInst *SI = CreateStore(Val, Ptr, isVolatile);
+    SI->setAlignment(Align);
+    return SI;
   }
   FenceInst *CreateFence(AtomicOrdering Ordering,
                          SyncScope::ID SSID = SyncScope::System,

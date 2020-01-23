@@ -523,8 +523,8 @@ public:
 
   StoreInst *createColumnStore(Value *ColumnValue, Value *ColumnPtr,
                                Type *EltType, IRBuilder<> Builder) {
-    unsigned Align = DL.getABITypeAlignment(EltType);
-    return Builder.CreateAlignedStore(ColumnValue, ColumnPtr, Align);
+    return Builder.CreateAlignedStore(ColumnValue, ColumnPtr,
+                                      DL.getABITypeAlign(EltType));
   }
 
 

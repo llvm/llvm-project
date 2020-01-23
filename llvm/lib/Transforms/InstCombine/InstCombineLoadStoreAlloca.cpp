@@ -489,7 +489,7 @@ static StoreInst *combineStoreToNewValue(InstCombiner &IC, StoreInst &SI, Value 
 
   StoreInst *NewStore = IC.Builder.CreateAlignedStore(
       V, IC.Builder.CreateBitCast(Ptr, V->getType()->getPointerTo(AS)),
-      SI.getAlignment(), SI.isVolatile());
+      SI.getAlign(), SI.isVolatile());
   NewStore->setAtomic(SI.getOrdering(), SI.getSyncScopeID());
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
@@ -1200,9 +1200,7 @@ static bool unpackStoreToAggregate(InstCombiner &IC, StoreInst &SI) {
     if (SL->hasPadding())
       return false;
 
-    auto Align = SI.getAlignment();
-    if (!Align)
-      Align = DL.getABITypeAlignment(ST);
+    const auto Align = DL.getValueOrABITypeAlignment(SI.getAlign(), ST);
 
     SmallString<16> EltName = V->getName();
     EltName += ".elt";
@@ -1220,7 +1218,7 @@ static bool unpackStoreToAggregate(InstCombiner &IC, StoreInst &SI) {
       auto *Ptr = IC.Builder.CreateInBoundsGEP(ST, Addr, makeArrayRef(Indices),
                                                AddrName);
       auto *Val = IC.Builder.CreateExtractValue(V, i, EltName);
-      auto EltAlign = MinAlign(Align, SL->getElementOffset(i));
+      auto EltAlign = commonAlignment(Align, SL->getElementOffset(i));
       llvm::Instruction *NS = IC.Builder.CreateAlignedStore(Val, Ptr, EltAlign);
       AAMDNodes AAMD;
       SI.getAAMetadata(AAMD);
@@ -1248,9 +1246,7 @@ static bool unpackStoreToAggregate(InstCombiner &IC, StoreInst &SI) {
 
     const DataLayout &DL = IC.getDataLayout();
     auto EltSize = DL.getTypeAllocSize(AT->getElementType());
-    auto Align = SI.getAlignment();
-    if (!Align)
-      Align = DL.getABITypeAlignment(T);
+    const auto Align = DL.getValueOrABITypeAlignment(SI.getAlign(), T);
 
     SmallString<16> EltName = V->getName();
     EltName += ".elt";
@@ -1270,7 +1266,7 @@ static bool unpackStoreToAggregate(InstCombiner &IC, StoreInst &SI) {
       auto *Ptr = IC.Builder.CreateInBoundsGEP(AT, Addr, makeArrayRef(Indices),
                                                AddrName);
       auto *Val = IC.Builder.CreateExtractValue(V, i, EltName);
-      auto EltAlign = MinAlign(Align, Offset);
+      auto EltAlign = commonAlignment(Align, Offset);
       Instruction *NS = IC.Builder.CreateAlignedStore(Val, Ptr, EltAlign);
       AAMDNodes AAMD;
       SI.getAAMetadata(AAMD);

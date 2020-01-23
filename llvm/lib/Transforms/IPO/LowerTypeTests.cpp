@@ -1269,7 +1269,7 @@ void LowerTypeTestsModule::moveInitializerToModuleConstructor(
 
   IRBuilder<> IRB(WeakInitializerFn->getEntryBlock().getTerminator());
   GV->setConstant(false);
-  IRB.CreateAlignedStore(GV->getInitializer(), GV, GV->getAlignment());
+  IRB.CreateAlignedStore(GV->getInitializer(), GV, GV->getAlign());
   GV->setInitializer(Constant::getNullValue(GV->getValueType()));
 }
 

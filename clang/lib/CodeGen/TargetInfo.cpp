@@ -10042,9 +10042,9 @@ llvm::Function *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
   auto IP = CGF.Builder.saveIP();
   auto *BB = llvm::BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);
-  unsigned BlockAlign = CGF.CGM.getDataLayout().getPrefTypeAlignment(BlockTy);
+  const auto BlockAlign = CGF.CGM.getDataLayout().getPrefTypeAlign(BlockTy);
   auto *BlockPtr = Builder.CreateAlloca(BlockTy, nullptr);
-  BlockPtr->setAlignment(llvm::MaybeAlign(BlockAlign));
+  BlockPtr->setAlignment(BlockAlign);
   Builder.CreateAlignedStore(F->arg_begin(), BlockPtr, BlockAlign);
   auto *Cast = Builder.CreatePointerCast(BlockPtr, InvokeFT->getParamType(0));
   llvm::SmallVector<llvm::Value *, 2> Args;
