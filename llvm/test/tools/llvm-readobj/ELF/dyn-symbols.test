@@ -69,11 +69,19 @@ ProgramHeaders:
     Sections:
       - Section: .dynsym
 
-## Case 2: Check the two-letter alias --dt is equivalent to the --dyn-symbols
+## Case 2: Check the output for aliases.
+## a) Check the two-letter alias --dt is equivalent to the --dyn-symbols
 ## full flag name.
 # RUN: llvm-readobj --dt %t1.so > %t.readobj-dt-alias
 # RUN: llvm-readobj --dyn-symbols %t1.so > %t.readobj-dt-no-alias
 # RUN: cmp %t.readobj-dt-alias %t.readobj-dt-no-alias
+## b) Check --dyn-syms equals --dyn-symbols, --dt for llvm-readobj.
+# RUN: llvm-readobj --dyn-syms %t1.so > %t.readobj-dyn-syms
+# RUN: cmp %t.readobj-dt-alias %t.readobj-dyn-syms
+## c) Check --dyn-syms equals --dyn-symbols for llvm-readelf.
+# RUN: llvm-readelf --dyn-syms %t1.so > %t.readelf-dyn-syms
+# RUN: llvm-readelf --dyn-symbols %t1.so > %t.readelf-dyn-symbols
+# RUN: cmp %t.readelf-dyn-symbols %t.readelf-dyn-syms
 
 ## Case 3: Check that we are able to dump the dynamic symbol table even when we have no program headers.
 ## In this case we find the table by it's type (SHT_DYNSYM) and ignore the DT_SYMTAB value.
