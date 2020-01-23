@@ -279,8 +279,7 @@ void FileSystem::Resolve(FileSpec &file_spec) {
 std::shared_ptr<DataBufferLLVM>
 FileSystem::CreateDataBuffer(const llvm::Twine &path, uint64_t size,
                              uint64_t offset) {
-  if (m_collector)
-    m_collector->addFile(path);
+  AddFile(path);
 
   const bool is_volatile = !IsLocal(path);
   const ErrorOr<std::string> external_path = GetExternalPath(path);
@@ -418,8 +417,7 @@ static mode_t GetOpenMode(uint32_t permissions) {
 Expected<FileUP> FileSystem::Open(const FileSpec &file_spec,
                                   File::OpenOptions options,
                                   uint32_t permissions, bool should_close_fd) {
-  if (m_collector)
-    m_collector->addFile(file_spec.GetPath());
+  AddFile(file_spec.GetPath());
 
   const int open_flags = GetOpenFlags(options);
   const mode_t open_mode =
@@ -465,4 +463,10 @@ ErrorOr<std::string> FileSystem::GetExternalPath(const llvm::Twine &path) {
 
 ErrorOr<std::string> FileSystem::GetExternalPath(const FileSpec &file_spec) {
   return GetExternalPath(file_spec.GetPath());
+}
+
+void FileSystem::AddFile(const llvm::Twine &file) {
+  if (m_collector && !llvm::sys::fs::is_directory(file)) {
+    m_collector->addFile(file);
+  }
 }
