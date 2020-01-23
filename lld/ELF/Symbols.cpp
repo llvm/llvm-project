@@ -99,7 +99,7 @@ static uint64_t getSymVA(const Symbol &sym, int64_t &addend) {
     // MIPS relocatable files can mix regular and microMIPS code.
     // Linker needs to distinguish such code. To do so microMIPS
     // symbols has the `STO_MIPS_MICROMIPS` flag in the `st_other`
-    // field. Unfortunately, the `MIPS::relocateOne()` method has
+    // field. Unfortunately, the `MIPS::relocate()` method has
     // a symbol value only. To pass type of the symbol (regular/microMIPS)
     // to that routine as well as other places where we write
     // a symbol value as-is (.dynamic section, `Elf_Ehdr::e_entry`
