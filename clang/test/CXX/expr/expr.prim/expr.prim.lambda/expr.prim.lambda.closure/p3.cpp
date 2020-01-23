@@ -1,4 +1,4 @@
-// RUN:  %clang_cc1 -std=c++2a -fconcepts-ts -verify %s
+// RUN:  %clang_cc1 -std=c++2a -verify %s
 
 auto l1 = [] (auto x) requires (sizeof(decltype(x)) == 1) { return x; };
 // expected-note@-1{{candidate template ignored: constraints not satisfied [with x:auto = int]}}

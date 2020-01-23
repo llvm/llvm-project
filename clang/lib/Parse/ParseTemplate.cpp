@@ -678,7 +678,7 @@ bool Parser::isTypeConstraintAnnotation() {
 ///
 /// \returns true if an error occurred, and false otherwise.
 bool Parser::TryAnnotateTypeConstraint() {
-  if (!getLangOpts().ConceptsTS)
+  if (!getLangOpts().CPlusPlus2a)
     return false;
   CXXScopeSpec SS;
   bool WasScopeAnnotation = Tok.is(tok::annot_cxxscope);
@@ -711,9 +711,8 @@ bool Parser::TryAnnotateTypeConstraint() {
                                       /*EnteringContext=*/false,
                                       PossibleConcept,
                                       MemberOfUnknownSpecialization);
-    assert(!MemberOfUnknownSpecialization
-           && "Member when we only allowed namespace scope qualifiers??");
-    if (!PossibleConcept || TNK != TNK_Concept_template) {
+    if (MemberOfUnknownSpecialization || !PossibleConcept ||
+        TNK != TNK_Concept_template) {
       if (SS.isNotEmpty())
         AnnotateScopeToken(SS, !WasScopeAnnotation);
       return false;
