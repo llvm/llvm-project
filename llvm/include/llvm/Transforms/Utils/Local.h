@@ -162,7 +162,8 @@ void RecursivelyDeleteTriviallyDeadInstructions(
 /// operands trivially dead, delete them too, recursively. Return true if a
 /// change was made.
 bool RecursivelyDeleteDeadPHINode(PHINode *PN,
-                                  const TargetLibraryInfo *TLI = nullptr);
+                                  const TargetLibraryInfo *TLI = nullptr,
+                                  MemorySSAUpdater *MSSAU = nullptr);
 
 /// Scan the specified basic block and try to simplify any instructions in it
 /// and recursively delete dead instructions.
