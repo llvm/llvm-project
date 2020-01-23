@@ -9484,6 +9484,7 @@ void ASTReader::diagnoseOdrViolations() {
     Var,
     Friend,
     FunctionTemplate,
+    ObjCMethod,
     Other
   };
 
@@ -9535,6 +9536,11 @@ void ASTReader::diagnoseOdrViolations() {
     FunctionTemplateParameterDifferentDefaultArgument,
     FunctionTemplateParameterDifferentType,
     FunctionTemplatePackParameter,
+    ObjCMethodReturnType,
+    ObjCMethodName,
+    ObjCMethodInstanceOrClass,
+    ObjCDesignatedInitializer,
+    ObjCDirectMethod
   };
 
   // These lambdas have the common portions of the ODR diagnostics.  This
@@ -9919,6 +9925,8 @@ void ASTReader::diagnoseOdrViolations() {
       return Friend;
     case Decl::FunctionTemplate:
       return FunctionTemplate;
+    case Decl::ObjCMethod:
+      return ObjCMethod;
     }
   };
 
@@ -10383,6 +10391,7 @@ void ASTReader::diagnoseOdrViolations() {
       case PublicSpecifer:
       case PrivateSpecifer:
       case ProtectedSpecifer:
+      case ObjCMethod:
         llvm_unreachable("Invalid diff type");
 
       case StaticAssert: {
@@ -11168,6 +11177,7 @@ void ASTReader::diagnoseOdrViolations() {
       switch (FirstDiffType) {
       case EndOfClass:
       case Other:
+      case ObjCMethod:
       // C++ only, invalid in this context.
       case PublicSpecifer:
       case PrivateSpecifer:
@@ -11213,6 +11223,84 @@ void ASTReader::diagnoseOdrViolations() {
       Diagnosed = true;
     }
   }
+
+  auto ODRDiagObjCMethod =
+      [&ComputeQualTypeODRHash, &ODRDiagDeclError, &ODRDiagDeclNote,
+       &ODRDiagCommonMethodChecks](
+          NamedDecl *FirstObjCContainer, StringRef FirstModule,
+          StringRef SecondModule, ObjCMethodDecl *FirstMethod,
+          ObjCMethodDecl *SecondMethod) {
+        if (ComputeQualTypeODRHash(FirstMethod->getReturnType()) !=
+            ComputeQualTypeODRHash(SecondMethod->getReturnType())) {
+          ODRDiagDeclError(FirstObjCContainer, FirstModule,
+                           FirstMethod->getLocation(),
+                           FirstMethod->getSourceRange(), ObjCMethodReturnType)
+              << FirstMethod->getReturnType();
+          ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
+                          SecondMethod->getSourceRange(), ObjCMethodReturnType)
+              << SecondMethod->getReturnType();
+          return true;
+        }
+        if (FirstMethod->isInstanceMethod() != SecondMethod->isInstanceMethod()) {
+          ODRDiagDeclError(FirstObjCContainer, FirstModule,
+                           FirstMethod->getLocation(),
+                           FirstMethod->getSourceRange(), ObjCMethodInstanceOrClass)
+              << FirstMethod->isInstanceMethod();
+          ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
+                          SecondMethod->getSourceRange(), ObjCMethodInstanceOrClass)
+              << SecondMethod->isInstanceMethod();
+          return true;
+
+        }
+
+        if (FirstMethod->isThisDeclarationADesignatedInitializer() !=
+            SecondMethod->isThisDeclarationADesignatedInitializer()) {
+          ODRDiagDeclError(
+              FirstObjCContainer, FirstModule, FirstMethod->getLocation(),
+              FirstMethod->getSourceRange(), ObjCDesignatedInitializer)
+              << FirstMethod->isThisDeclarationADesignatedInitializer();
+          ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
+                          SecondMethod->getSourceRange(),
+                          ObjCDesignatedInitializer)
+              << SecondMethod->isThisDeclarationADesignatedInitializer();
+          return true;
+        }
+
+        if (FirstMethod->isDirectMethod() != SecondMethod->isDirectMethod()) {
+          ODRDiagDeclError(FirstObjCContainer, FirstModule,
+                           FirstMethod->getLocation(),
+                           FirstMethod->getSourceRange(), ObjCDirectMethod)
+              << FirstMethod->isDirectMethod();
+          ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
+                          SecondMethod->getSourceRange(), ObjCDirectMethod)
+              << SecondMethod->isDirectMethod();
+          return true;
+        }
+
+        if (ODRDiagCommonMethodChecks(FirstObjCContainer, FirstModule,
+                                         SecondModule, DiagMethod, DiagMethod,
+                                         FirstMethod, SecondMethod))
+          return true;
+
+        // Check method name *after* looking at the parameters otherwise we get a
+        // less ideal diagnostics: a ObjCMethodName mismatch given that selectors
+        // embed the argument name.
+        auto FirstName = FirstMethod->getDeclName();
+        auto SecondName = SecondMethod->getDeclName();
+        if (FirstName != SecondName) {
+          ODRDiagDeclError(FirstObjCContainer, FirstModule, FirstMethod->getLocation(),
+                           FirstMethod->getSourceRange(), ObjCMethodName)
+              << FirstName;
+          ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
+                          SecondMethod->getSourceRange(), ObjCMethodName)
+              << SecondName;
+          return true;
+        }
+
+        // TODO: check method bodies whenever we get ODR hash support and diagnostics
+        // for @implementation.
+        return false;
+      };
 
   for (auto &Merge : ObjCInterfaceOdrMergeFailures) {
     // If we've already pointed out a specific problem with this interface,
@@ -11364,6 +11452,32 @@ void ASTReader::diagnoseOdrViolations() {
         DiagnoseODRMismatch(DR, FirstID, FirstModule, SecondID, SecondModule);
         Diagnosed = true;
         break;
+      }
+
+      assert(FirstDiffType == SecondDiffType);
+      switch (FirstDiffType) {
+      case EndOfClass:
+      case Other:
+      case Field:
+      case TypeDef:
+      case Var:
+      // C++ only, invalid in this context.
+      case PublicSpecifer:
+      case PrivateSpecifer:
+      case ProtectedSpecifer:
+      case StaticAssert:
+      case CXXMethod:
+      case TypeAlias:
+      case Friend:
+      case FunctionTemplate:
+        llvm_unreachable("Invalid diff type");
+
+      case ObjCMethod: {
+        Diagnosed = ODRDiagObjCMethod(FirstID, FirstModule, SecondModule,
+                                      cast<ObjCMethodDecl>(FirstDecl),
+                                      cast<ObjCMethodDecl>(SecondDecl));
+        break;
+      }
       }
 
       if (Diagnosed)

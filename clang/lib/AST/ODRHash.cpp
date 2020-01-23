@@ -79,6 +79,7 @@ void ODRHash::AddDeclarationNameImpl(DeclarationName Name) {
         AddIdentifierInfo(II);
       }
     }
+    ID.AddString(S.getAsString());
     break;
   }
   case DeclarationName::CXXConstructorName:
@@ -346,6 +347,11 @@ public:
     Inherited::VisitCXXMethodDecl(D);
   }
 
+  void VisitObjCMethodDecl(const ObjCMethodDecl *D) {
+    ID.AddInteger(D->getODRHash());
+    Inherited::VisitObjCMethodDecl(D);
+  }
+
   void VisitTypedefNameDecl(const TypedefNameDecl *D) {
     AddQualType(D->getUnderlyingType());
 
@@ -454,6 +460,7 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const DeclContext *Parent) {
     case Decl::TypeAlias:
     case Decl::Typedef:
     case Decl::Var:
+    case Decl::ObjCMethod:
       return true;
   }
 }
@@ -482,6 +489,70 @@ void ODRHash::AddObjCInterfaceDecl(const ObjCInterfaceDecl *IF) {
 
   ID.AddInteger(Decls.size());
   for (auto *SubDecl : Decls)
+    AddSubDecl(SubDecl);
+}
+
+void ODRHash::AddObjCMethodDecl(const ObjCMethodDecl *Method) {
+  assert(Method && "Expecting non-null pointer.");
+
+  ID.AddInteger(Method->getDeclKind());
+  AddBoolean(Method->isInstanceMethod()); // false if class method
+  AddBoolean(Method->isPropertyAccessor());
+  AddBoolean(Method->isVariadic());
+  AddBoolean(Method->isSynthesizedAccessorStub());
+  AddBoolean(Method->isDefined());
+  AddBoolean(Method->isOverriding());
+  AddBoolean(Method->isDirectMethod());
+  AddBoolean(Method->isThisDeclarationADesignatedInitializer());
+  AddBoolean(Method->hasSkippedBody());
+  AddBoolean(Method->isPropertyAccessor());
+  AddBoolean(Method->isDeprecated());
+
+  ID.AddInteger(Method->getImplementationControl());
+  ID.AddInteger(Method->getMethodFamily());
+  ImplicitParamDecl *Cmd = Method->getCmdDecl();
+  AddBoolean(Cmd);
+  if (Cmd)
+    ID.AddInteger(Cmd->getParameterKind());
+
+  ImplicitParamDecl *Self = Method->getSelfDecl();
+  AddBoolean(Self);
+  if (Self)
+    ID.AddInteger(Self->getParameterKind());
+
+  AddDecl(Method);
+
+  AddQualType(Method->getReturnType());
+  ID.AddInteger(Method->param_size());
+  for (auto Param : Method->parameters())
+    AddSubDecl(Param);
+
+  bool SkipBody = Method->hasBody();
+  if (SkipBody) {
+    AddBoolean(false);
+    return;
+  }
+
+  const bool HasBody = Method->isThisDeclarationADefinition();
+  AddBoolean(HasBody);
+  if (!HasBody) {
+    return;
+  }
+
+  auto *Body = Method->getBody();
+  AddBoolean(Body);
+  if (Body)
+    AddStmt(Body);
+
+  // Filter out sub-Decls which will not be processed in order to get an
+  // accurate count of Decl's.
+  llvm::SmallVector<const Decl *, 16> Decls;
+  for (Decl *SubDecl : Method->decls())
+    if (isWhitelistedDecl(SubDecl, Method))
+      Decls.push_back(SubDecl);
+
+  ID.AddInteger(Decls.size());
+  for (auto SubDecl : Decls)
     AddSubDecl(SubDecl);
 }
 

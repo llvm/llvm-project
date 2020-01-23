@@ -219,6 +219,121 @@ B3 *b3;
 B4 *b4;
 #endif
 
+#if defined(FIRST)
+@interface M1
+- (void)sayHello;
+@end
+#elif defined(SECOND)
+@interface M1
+- (int)sayHello;
+@end
+#else
+struct SM1 {
+  M1 *x1;
+};
+struct SM1 sm1;
+// expected-error@first.h:* {{'M1' has different definitions in different modules; first difference is definition in module 'FirstModule' found return type is 'void'}}
+// expected-note@second.h:* {{but in 'SecondModule' found different return type 'int'}}
+#endif
+
+#if defined(FIRST)
+@interface M2
+- (void)sayHello;
+@end
+#elif defined(SECOND)
+@interface M2
+- (void)sayGoodbye;
+@end
+#else
+M2 *m2;
+// expected-error@first.h:* {{'M2' has different definitions in different modules; first difference is definition in module 'FirstModule' found method name 'sayHello'}}
+// expected-note@second.h:* {{but in 'SecondModule' found method name 'sayGoodbye'}}
+#endif
+
+#if defined(FIRST)
+@interface M3
+- (void)sayHello;
+@end
+#elif defined(SECOND)
+@interface M3
++ (void)sayHello;
+@end
+#else
+M3 *m3;
+// expected-error@first.h:* {{'M3' has different definitions in different modules; first difference is definition in module 'FirstModule' found instance method}}
+// expected-note@second.h:* {{but in 'SecondModule' found class method}}
+#endif
+
+#if defined(FIRST)
+@interface MP1
+- (void)compute:(int)arg;
+@end
+#elif defined(SECOND)
+@interface MP1
+- (void)compute:(float)arg;
+@end
+#else
+MP1 *mp1;
+// expected-error@first.h:* {{'MP1' has different definitions in different modules; first difference is definition in module 'FirstModule' found method 'compute:' with 1st parameter of type 'int'}}
+// expected-note@second.h:* {{but in 'SecondModule' found method 'compute:' with 1st parameter of type 'float'}}
+#endif
+
+#if defined(FIRST)
+@interface MP2
+- (void)compute:(int)arg0 :(int)arg1;
+@end
+#elif defined(SECOND)
+@interface MP2
+- (void)compute:(int)arg0;
+@end
+#else
+MP2 *mp2;
+// expected-error@first.h:* {{'MP2' has different definitions in different modules; first difference is definition in module 'FirstModule' found method 'compute::' that has 2 parameters}}
+// expected-note@second.h:* {{but in 'SecondModule' found method 'compute:' that has 1 parameter}}
+#endif
+
+#if defined(FIRST)
+@interface MP3
+- (void)compute:(int)arg0;
+@end
+#elif defined(SECOND)
+@interface MP3
+- (void)compute:(int)arg1;
+@end
+#else
+MP3 *mp3;
+// expected-error@first.h:* {{'MP3' has different definitions in different modules; first difference is definition in module 'FirstModule' found method 'compute:' with 1st parameter named 'arg0'}}
+// expected-note@second.h:* {{but in 'SecondModule' found method 'compute:' with 1st parameter named 'arg1'}}
+#endif
+
+#if defined(FIRST)
+@interface MD
+- (id)init __attribute__((objc_designated_initializer));
+@end
+#elif defined(SECOND)
+@interface MD
+- (id)init;
+@end
+#else
+MD *md;
+// expected-error@first.h:* {{'MD' has different definitions in different modules; first difference is definition in module 'FirstModule' found method with designater initializer}}
+// expected-note@second.h:* {{but in 'SecondModule' found method with no designater initializer}}
+#endif
+
+#if defined(FIRST)
+@interface MDT
+- (int)fastBinOp __attribute__((objc_direct));
+@end
+#elif defined(SECOND)
+@interface MDT
+- (int)fastBinOp;
+@end
+#else
+MDT *mdt;
+// expected-error@first.h:* {{'MDT' has different definitions in different modules; first difference is definition in module 'FirstModule' found direct method}}
+// expected-note@second.h:* {{but in 'SecondModule' found no direct method}}
+#endif
+
 // Keep macros contained to one file.
 #ifdef FIRST
 #undef FIRST
