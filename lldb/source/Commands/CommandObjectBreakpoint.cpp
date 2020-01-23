@@ -274,7 +274,7 @@ public:
         m_func_name_type_mask |= eFunctionNameTypeBase;
         break;
 
-      case 'C':
+      case 'u':
         if (option_arg.getAsInteger(0, m_column))
           error.SetErrorStringWithFormat("invalid column number: %s",
                                          option_arg.str().c_str());
