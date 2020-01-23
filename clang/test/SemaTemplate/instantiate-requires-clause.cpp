@@ -39,3 +39,15 @@ struct S {
 };
 
 static_assert(S<void>::f(1));
+
+constexpr auto value = 0;
+
+template<typename T>
+struct S2 {
+  template<typename = void> requires(value, true)
+  static constexpr auto f() requires(value, true) {
+  }
+};
+
+static_assert((S2<int>::f(), true));
+
