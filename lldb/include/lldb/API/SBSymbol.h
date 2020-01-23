@@ -41,6 +41,8 @@ public:
   lldb::SBInstructionList GetInstructions(lldb::SBTarget target,
                                           const char *flavor_string);
 
+  uint64_t GetIntegerValue();
+
   SBAddress GetStartAddress();
 
   SBAddress GetEndAddress();

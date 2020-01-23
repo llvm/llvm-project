@@ -46,7 +46,7 @@ public:
                               const uint32_t print_buffer_addr,
                               const uint32_t print_buffer_size,
                               const uint32_t print_var_addr);
-  bool SetPrintfSequenceAddrsFromRuntimeInfo();
+  bool SetPrintfSequenceAddrsFromRuntimeInfo(dpu_program_t *runtime);
 
   bool LoadElf(const FileSpec &elf_file_path);
   bool Boot();
@@ -79,6 +79,7 @@ public:
                         uint8_t *iram, uint32_t iram_size);
 
   int GetNrThreads() { return nr_threads; }
+  void SetNrThreads(int _nr_threads) { nr_threads = _nr_threads; }
 
   uint32_t *ThreadContextRegs(int thread_index);
   uint16_t *ThreadContextPC(int thread_index);

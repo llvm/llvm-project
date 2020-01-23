@@ -146,6 +146,12 @@ lldb_private::Symbol *SBSymbol::get() { return m_opaque_ptr; }
 
 void SBSymbol::reset(lldb_private::Symbol *symbol) { m_opaque_ptr = symbol; }
 
+uint64_t SBSymbol::GetIntegerValue() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint64_t, SBSymbol, GetIntegerValue);
+
+  return LLDB_RECORD_RESULT(m_opaque_ptr->GetIntegerValue());
+}
+
 SBAddress SBSymbol::GetStartAddress() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBAddress, SBSymbol, GetStartAddress);
 

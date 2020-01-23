@@ -279,6 +279,16 @@ def dpu_attach(debugger, command, result, internal_dict):
     lldb_server_dpu_env["UPMEM_LLDB_SLICE_TARGET"] = str(slice_target)
     lldb_server_dpu_env["UPMEM_LLDB_HOST_MUX_MRAM_STATE"] = \
         str(host_mux_mram_state)
+
+    if not(program_path is None):
+        module_spec = lldb.SBModuleSpec()
+        module_spec.SetFileSpec(lldb.SBFileSpec(program_path))
+
+        nr_tasklets = lldb.SBModule(module_spec).FindSymbol('NR_TASKLETS')
+        if nr_tasklets.IsValid():
+            lldb_server_dpu_env["UPMEM_LLDB_NR_TASKLETS"] = \
+                str(nr_tasklets.GetIntegerValue())
+
     subprocess.Popen(['lldb-server-dpu',
                       'gdbserver',
                       '--attach',

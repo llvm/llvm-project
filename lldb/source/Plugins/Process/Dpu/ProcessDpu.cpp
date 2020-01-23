@@ -156,6 +156,7 @@ ProcessDpu::Factory::Attach(
   char *structure_value_ptr = std::getenv("UPMEM_LLDB_STRUCTURE_VALUE");
   char *slice_target_ptr = std::getenv("UPMEM_LLDB_SLICE_TARGET");
   char *host_mux_mram_state_ptr = std::getenv("UPMEM_LLDB_HOST_MUX_MRAM_STATE");
+  char *nr_tasklets_ptr = std::getenv("UPMEM_LLDB_NR_TASKLETS");
   uint64_t structure_value = structure_value_ptr == NULL
                                  ? 0ULL
                                  : ::strtoll(structure_value_ptr, NULL, 10);
@@ -167,6 +168,8 @@ ProcessDpu::Factory::Attach(
           : ::strtoll(host_mux_mram_state_ptr, NULL, 10);
   LLDB_LOG(log, "saving slice context ({0:x}, {1:x}, {2:x})", structure_value,
            slice_target, host_mux_mram_state);
+  if (nr_tasklets_ptr != NULL)
+    dpu->SetNrThreads(::strtoll(nr_tasklets_ptr, NULL, 10));
 
   success =
       dpu->SaveSliceContext(structure_value, slice_target, host_mux_mram_state);

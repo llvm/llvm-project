@@ -100,8 +100,7 @@ bool Dpu::SetPrintfSequenceAddrs(const uint32_t _open_print_sequence_addr,
   return true;
 }
 
-bool Dpu::SetPrintfSequenceAddrsFromRuntimeInfo() {
-  dpu_program_t *runtime = dpu_get_program(m_dpu);
+bool Dpu::SetPrintfSequenceAddrsFromRuntimeInfo(dpu_program_t *runtime) {
   lldb::addr_t _open_print_sequence_addr = runtime->open_print_sequence_addr;
   lldb::addr_t _close_print_sequence_addr = runtime->close_print_sequence_addr;
   if (_open_print_sequence_addr != (lldb::addr_t)LLDB_INVALID_ADDRESS &&
@@ -124,7 +123,15 @@ bool Dpu::LoadElf(const FileSpec &elf_file_path) {
   if (status != DPU_OK)
     return false;
 
-  if (!SetPrintfSequenceAddrsFromRuntimeInfo())
+  dpu_program_t *runtime = dpu_get_program(m_dpu);
+  if (!runtime)
+    return false;
+
+  int nr_threads_enabled = runtime->nr_threads_enabled;
+  if (nr_threads_enabled != -1)
+    nr_threads = nr_threads_enabled;
+
+  if (!SetPrintfSequenceAddrsFromRuntimeInfo(runtime))
     return false;
 
   return true;
