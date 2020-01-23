@@ -216,7 +216,7 @@ void X86InterleavedAccessGroup::decompose(
     Value *NewBasePtr =
         Builder.CreateGEP(VecBaseTy, VecBasePtr, Builder.getInt32(i));
     Instruction *NewLoad =
-        Builder.CreateAlignedLoad(VecBaseTy, NewBasePtr, LI->getAlignment());
+        Builder.CreateAlignedLoad(VecBaseTy, NewBasePtr, LI->getAlign());
     DecomposedVectors.push_back(NewLoad);
   }
 }

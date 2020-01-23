@@ -1194,7 +1194,8 @@ bool Vectorizer::vectorizeLoadChain(
 
   Value *Bitcast =
       Builder.CreateBitCast(L0->getPointerOperand(), VecTy->getPointerTo(AS));
-  LoadInst *LI = Builder.CreateAlignedLoad(VecTy, Bitcast, Alignment);
+  LoadInst *LI =
+      Builder.CreateAlignedLoad(VecTy, Bitcast, MaybeAlign(Alignment));
   propagateMetadata(LI, Chain);
 
   if (VecLoadTy) {
