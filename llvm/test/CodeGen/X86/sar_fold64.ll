@@ -105,14 +105,6 @@ define <4 x i32> @all_sign_bit_ashr_vec1(<4 x i32> %x) {
 ; SSE-NEXT:    pxor %xmm1, %xmm1
 ; SSE-NEXT:    psubd %xmm0, %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,0,0,0]
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    psrad $5, %xmm1
-; SSE-NEXT:    punpckhqdq {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    psrad $31, %xmm2
-; SSE-NEXT:    psrad $1, %xmm0
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,3],xmm1[0,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: all_sign_bit_ashr_vec1:
@@ -121,12 +113,6 @@ define <4 x i32> @all_sign_bit_ashr_vec1(<4 x i32> %x) {
 ; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm0[4,5,6,7]
-; AVX1-NEXT:    vpsrad $5, %xmm0, %xmm2
-; AVX1-NEXT:    vpsrad $1, %xmm0, %xmm0
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: all_sign_bit_ashr_vec1:
@@ -136,7 +122,6 @@ define <4 x i32> @all_sign_bit_ashr_vec1(<4 x i32> %x) {
 ; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
-; AVX2-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %and = and <4 x i32> %x, <i32 1, i32 1, i32 1 , i32 1>
   %sub = sub <4 x i32> <i32 0, i32 1, i32 2, i32 3>, %and
