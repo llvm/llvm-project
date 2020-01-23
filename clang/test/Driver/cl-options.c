@@ -458,6 +458,7 @@
 // RUN:     /openmp:experimental \
 // RUN:     /Qfast_transcendentals \
 // RUN:     /QIfist \
+// RUN:     /QIntel-jcc-erratum \
 // RUN:     /Qimprecise_fwaits \
 // RUN:     /Qpar \
 // RUN:     /Qpar-report:1 \
