@@ -1003,7 +1003,7 @@ static Value vectorizeOperand(Value operand, Operation *op,
     return nullptr;
   }
   // 3. vectorize constant.
-  if (auto constant = dyn_cast<ConstantOp>(operand.getDefiningOp())) {
+  if (auto constant = dyn_cast_or_null<ConstantOp>(operand.getDefiningOp())) {
     return vectorizeConstant(
         op, constant,
         VectorType::get(state->strategy->vectorSizes, operand.getType()));
@@ -1037,6 +1037,8 @@ static Operation *vectorizeOneOperation(Operation *opInst,
     auto memRef = store.getMemRef();
     auto value = store.getValueToStore();
     auto vectorValue = vectorizeOperand(value, opInst, state);
+    if (!vectorValue)
+      return nullptr;
 
     ValueRange mapOperands = store.getMapOperands();
     SmallVector<Value, 8> indices;
