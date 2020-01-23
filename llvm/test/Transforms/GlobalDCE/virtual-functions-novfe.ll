@@ -1,3 +1,5 @@
+; Tests that VFE is not performed when the Virtual Function Elim metadata set
+; to 0. This is the same as virtual-functions.ll otherwise.
 ; RUN: opt < %s -globaldce -S | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -11,14 +13,12 @@ declare { i8*, i1 } @llvm.type.checked.load(i8*, i32, metadata)
 ; intrinsic. Function test_A makes a call to A::foo, but there is no call to
 ; A::bar anywhere, so A::bar can be deleted, and its vtable slot replaced with
 ; null.
+; However, with the metadata set to 0 we should not perform this VFE.
 
 %struct.A = type { i32 (...)** }
 
-; The pointer to A::bar in the vtable can be removed, because it will never be
-; loaded. We replace it with null to keep the layout the same. Because it is at
-; the end of the vtable we could potentially shrink the vtable, but don't
-; currently do that.
-; CHECK: @_ZTV1A = internal unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* null, i8* bitcast (i32 (%struct.A*)* @_ZN1A3fooEv to i8*), i8* null] }
+; We should retain @_ZN1A3barEv in the vtable.
+; CHECK: @_ZTV1A = internal unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* null, i8* bitcast (i32 (%struct.A*)* @_ZN1A3fooEv to i8*), i8* bitcast (i32 (%struct.A*)* @_ZN1A3barEv to i8*)] }
 @_ZTV1A = internal unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* null, i8* bitcast (i32 (%struct.A*)* @_ZN1A3fooEv to i8*), i8* bitcast (i32 (%struct.A*)* @_ZN1A3barEv to i8*)] }, align 8, !type !0, !type !1, !type !2, !vcall_visibility !3
 
 ; A::foo is called, so must be retained.
@@ -28,8 +28,9 @@ entry:
   ret i32 42
 }
 
-; A::bar is not used, so can be deleted.
-; CHECK-NOT: define internal i32 @_ZN1A3barEv(
+; A::bar is not used, so can be deleted with VFE, however, we should not be
+; performing that elimination here.
+; CHECK: define internal i32 @_ZN1A3barEv(
 define internal i32 @_ZN1A3barEv(%struct.A* nocapture readnone %this) {
 entry:
   ret i32 1337
@@ -54,5 +55,5 @@ entry:
 !1 = !{i64 16, !"_ZTSM1AFivE.virtual"}
 !2 = !{i64 24, !"_ZTSM1AFivE.virtual"}
 !3 = !{i64 2}
-!4 = !{i32 1, !"Virtual Function Elim", i32 1}
+!4 = !{i32 1, !"Virtual Function Elim", i32 0}
 !9 = !{}
