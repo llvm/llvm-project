@@ -94,6 +94,11 @@ bool areOptimizationsEnabled(const llvm::opt::ArgList &Args);
 
 bool isUseSeparateSections(const llvm::Triple &Triple);
 
+/// \p EnvVar is split by system delimiter for environment variables.
+/// If \p ArgName is "-I", "-L", or an empty string, each entry from \p EnvVar
+/// is prefixed by \p ArgName then added to \p Args. Otherwise, for each
+/// entry of \p EnvVar, \p ArgName is added to \p Args first, then the entry
+/// itself is added.
 void addDirectoryList(const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs, const char *ArgName,
                       const char *EnvVar);

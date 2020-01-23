@@ -327,7 +327,7 @@ void HIPToolChain::addClangTargetOptions(
        DriverArgs.getAllArgValues(options::OPT_hip_device_lib_path_EQ))
     LibraryPaths.push_back(DriverArgs.MakeArgString(Path));
 
-  addDirectoryList(DriverArgs, LibraryPaths, "-L", "HIP_DEVICE_LIB_PATH");
+  addDirectoryList(DriverArgs, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
 
   llvm::SmallVector<std::string, 10> BCLibs;
 

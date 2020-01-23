@@ -91,7 +91,7 @@ void tools::addDirectoryList(const ArgList &Args, ArgStringList &CmdArgs,
     return; // Nothing to do.
 
   StringRef Name(ArgName);
-  if (Name.equals("-I") || Name.equals("-L"))
+  if (Name.equals("-I") || Name.equals("-L") || Name.empty())
     CombinedArg = true;
 
   StringRef Dirs(DirList);
