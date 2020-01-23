@@ -75,3 +75,21 @@ define <4 x i32> @rot_v4i32_non_splat_2masks(<4 x i32> %x) {
   %5 = or <4 x i32> %2, %4
   ret <4 x i32> %5
 }
+
+define <4 x i32> @rot_v4i32_zero_non_splat(<4 x i32> %x) {
+; XOP-LABEL: rot_v4i32_zero_non_splat:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vprotd $0, %xmm0, %xmm0
+; XOP-NEXT:    vpbroadcastd %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX512-LABEL: rot_v4i32_zero_non_splat:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vprold $0, %xmm0, %xmm0
+; AVX512-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %1 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> <i32 0, i32 1, i32 2, i32 3>)
+  %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> zeroinitializer
+  ret <4 x i32> %2
+}
+declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
