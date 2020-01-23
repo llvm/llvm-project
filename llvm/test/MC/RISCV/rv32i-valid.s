@@ -11,6 +11,9 @@
 
 .equ CONST, 30
 
+# Needed for testing valid %pcrel_lo expressions
+.Lpcrel_hi0: auipc a0, %pcrel_hi(foo)
+
 # CHECK-ASM-AND-OBJ: lui a0, 2
 # CHECK-ASM: encoding: [0x37,0x25,0x00,0x00]
 lui a0, 2
@@ -161,11 +164,11 @@ lw a0, 97(a2)
 # CHECK-OBJ: lbu s5, 0(s6)
 # CHECK-OBJ: R_RISCV_LO12
 lbu s5, %lo(foo)(s6)
-# CHECK-ASM: lhu t3, %pcrel_lo(foo)(t3)
+# CHECK-ASM: lhu t3, %pcrel_lo(.Lpcrel_hi0)(t3)
 # CHECK-ASM: encoding: [0x03,0x5e,0bAAAA1110,A]
 # CHECK-OBJ: lhu t3, 0(t3)
 # CHECK-OBJ: R_RISCV_PCREL_LO12
-lhu t3, %pcrel_lo(foo)(t3)
+lhu t3, %pcrel_lo(.Lpcrel_hi0)(t3)
 # CHECK-ASM-AND-OBJ: lb t0, 30(t1)
 # CHECK-ASM: encoding: [0x83,0x02,0xe3,0x01]
 lb t0, CONST(t1)
