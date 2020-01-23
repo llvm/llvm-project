@@ -564,7 +564,7 @@ struct FormParams {
 };
 
 /// Get the byte size of the unit length field depending on the DWARF format.
-inline uint8_t getUnitLengthFieldByteSize(DwarfFormat Format) {
+constexpr uint8_t getUnitLengthFieldByteSize(DwarfFormat Format) {
   switch (Format) {
   case DwarfFormat::DWARF32:
     return 4;
