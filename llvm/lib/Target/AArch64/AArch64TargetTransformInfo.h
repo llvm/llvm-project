@@ -172,6 +172,24 @@ public:
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
+  bool isLegalNTStore(Type *DataType, Align Alignment) {
+    // NOTE: The logic below is mostly geared towards LV, which calls it with
+    //       vectors with 2 elements. We might want to improve that, if other
+    //       users show up.
+    // Nontemporal vector stores can be directly lowered to STNP, if the vector
+    // can be halved so that each half fits into a register. That's the case if
+    // the element type fits into a register and the number of elements is a
+    // power of 2 > 1.
+    if (isa<VectorType>(DataType)) {
+      unsigned NumElements = DataType->getVectorNumElements();
+      unsigned EltSize =
+          DataType->getVectorElementType()->getScalarSizeInBits();
+      return NumElements > 1 && isPowerOf2_64(NumElements) && EltSize >= 8 &&
+             EltSize <= 128 && isPowerOf2_64(EltSize);
+    }
+    return BaseT::isLegalNTStore(DataType, Alignment);
+  }
+
   int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy, unsigned Factor,
                                  ArrayRef<unsigned> Indices, unsigned Alignment,
                                  unsigned AddressSpace,
