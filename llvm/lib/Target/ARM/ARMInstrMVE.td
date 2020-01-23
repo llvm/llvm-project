@@ -1367,36 +1367,50 @@ class MVE_bit_cmode<string iname, string suffix, bit halfword, dag inOps>
   let Inst{3-0} = imm{3-0};
 }
 
-class MVE_VORR<string suffix, bit hw, Operand imm_type>
-  : MVE_bit_cmode<"vorr", suffix, hw, (ins MQPR:$Qd_src, imm_type:$imm)> {
-  let Inst{5} = 0b0;
-  let validForTailPredication = 1;
+multiclass MVE_bit_cmode_p<string iname, bit opcode,
+                           MVEVectorVTInfo VTI, Operand imm_type, SDNode op> {
+  def "" : MVE_bit_cmode<iname, VTI.Suffix, VTI.Size{0},
+                         (ins MQPR:$Qd_src, imm_type:$imm)> {
+    let Inst{5} = opcode;
+    let validForTailPredication = 1;
+  }
+
+  defvar Inst = !cast<Instruction>(NAME);
+  defvar UnpredPat = (VTI.Vec (op (VTI.Vec MQPR:$src), timm:$simm));
+
+  let Predicates = [HasMVEInt] in {
+    def : Pat<UnpredPat, (VTI.Vec (Inst (VTI.Vec MQPR:$src), imm_type:$simm))>;
+    def : Pat<(VTI.Vec (vselect (VTI.Pred VCCR:$pred),
+                          UnpredPat, (VTI.Vec MQPR:$src))),
+              (VTI.Vec (Inst (VTI.Vec MQPR:$src), imm_type:$simm,
+                             ARMVCCThen, (VTI.Pred VCCR:$pred)))>;
+  }
 }
 
-def MVE_VORRimmi16 : MVE_VORR<"i16", 1, nImmSplatI16>;
-def MVE_VORRimmi32 : MVE_VORR<"i32", 0, nImmSplatI32>;
+multiclass MVE_VORRimm<MVEVectorVTInfo VTI, Operand imm_type> {
+  defm "": MVE_bit_cmode_p<"vorr", 0, VTI, imm_type, ARMvorrImm>;
+}
+multiclass MVE_VBICimm<MVEVectorVTInfo VTI, Operand imm_type> {
+  defm "": MVE_bit_cmode_p<"vbic", 1, VTI, imm_type, ARMvbicImm>;
+}
+
+defm MVE_VORRimmi16 : MVE_VORRimm<MVE_v8i16, nImmSplatI16>;
+defm MVE_VORRimmi32 : MVE_VORRimm<MVE_v4i32, nImmSplatI32>;
+defm MVE_VBICimmi16 : MVE_VBICimm<MVE_v8i16, nImmSplatI16>;
+defm MVE_VBICimmi32 : MVE_VBICimm<MVE_v4i32, nImmSplatI32>;
 
 def MVE_VORNimmi16 : MVEInstAlias<"vorn${vp}.i16\t$Qd, $imm",
     (MVE_VORRimmi16 MQPR:$Qd, nImmSplatNotI16:$imm, vpred_n:$vp), 0>;
 def MVE_VORNimmi32 : MVEInstAlias<"vorn${vp}.i32\t$Qd, $imm",
     (MVE_VORRimmi32 MQPR:$Qd, nImmSplatNotI32:$imm, vpred_n:$vp), 0>;
 
-def MVE_VMOV : MVEInstAlias<"vmov${vp}\t$Qd, $Qm",
-    (MVE_VORR MQPR:$Qd, MQPR:$Qm, MQPR:$Qm, vpred_r:$vp)>;
-
-class MVE_VBIC<string suffix, bit hw, Operand imm_type>
-  : MVE_bit_cmode<"vbic", suffix, hw, (ins MQPR:$Qd_src, imm_type:$imm)> {
-  let Inst{5} = 0b1;
-  let validForTailPredication = 1;
-}
-
-def MVE_VBICimmi16 : MVE_VBIC<"i16", 1, nImmSplatI16>;
-def MVE_VBICimmi32 : MVE_VBIC<"i32", 0, nImmSplatI32>;
-
 def MVE_VANDimmi16 : MVEInstAlias<"vand${vp}.i16\t$Qd, $imm",
     (MVE_VBICimmi16 MQPR:$Qd, nImmSplatNotI16:$imm, vpred_n:$vp), 0>;
 def MVE_VANDimmi32 : MVEInstAlias<"vand${vp}.i32\t$Qd, $imm",
     (MVE_VBICimmi32 MQPR:$Qd, nImmSplatNotI32:$imm, vpred_n:$vp), 0>;
+
+def MVE_VMOV : MVEInstAlias<"vmov${vp}\t$Qd, $Qm",
+    (MVE_VORR MQPR:$Qd, MQPR:$Qm, MQPR:$Qm, vpred_r:$vp)>;
 
 class MVE_VMOV_lane_direction {
   bit bit_20;
@@ -2206,6 +2220,15 @@ let Predicates = [HasMVEInt] in {
 
   def : Pat<(v4f32 (ARMvmovFPImm timm:$simm)),
             (v4f32 (MVE_VMOVimmf32 nImmVMOVF32:$simm))>;
+
+  def : Pat<(v8i16 (vselect (v8i1 VCCR:$pred), (ARMvmvnImm timm:$simm),
+                            MQPR:$inactive)),
+            (v8i16 (MVE_VMVNimmi16 nImmSplatI16:$simm,
+                            ARMVCCThen, VCCR:$pred, MQPR:$inactive))>;
+  def : Pat<(v4i32 (vselect (v4i1 VCCR:$pred), (ARMvmvnImm timm:$simm),
+                            MQPR:$inactive)),
+            (v4i32 (MVE_VMVNimmi32 nImmSplatI32:$simm,
+                            ARMVCCThen, VCCR:$pred, MQPR:$inactive))>;
 }
 
 class MVE_VMINMAXA<string iname, string suffix, bits<2> size,
@@ -2341,7 +2364,7 @@ let Predicates = [HasMVEInt] in {
   def : Pat<(and (v4i32 MQPR:$src), (v4i32 (ARMvmovImm (i32 0xCFF)))),
             (MVE_VMOVLu16bh MQPR:$src)>;
   // zext_inreg 8 -> 16
-  def : Pat<(and (v8i16 MQPR:$src), (v8i16 (ARMvmovImm (i32 0x8FF)))),
+  def : Pat<(ARMvbicImm (v8i16 MQPR:$src), (i32 0xAFF)),
             (MVE_VMOVLu8bh MQPR:$src)>;
 }
 
