@@ -195,11 +195,6 @@ void SSAUpdater::RewriteUse(Use &U) {
   else
     V = GetValueInMiddleOfBlock(User->getParent());
 
-  // Notify that users of the existing value that it is being replaced.
-  Value *OldVal = U.get();
-  if (OldVal != V && OldVal->hasValueHandle())
-    ValueHandleBase::ValueIsRAUWd(OldVal, V);
-
   U.set(V);
 }
 

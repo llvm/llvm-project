@@ -1,4 +1,3 @@
-; XFAIL: *
 ; RUN: opt -passes="verify<scalar-evolution>,lcssa,verify<scalar-evolution>" -verify-scev-strict -S -disable-output %s
 
 ; The first SCEV verification is required because it queries SCEV and populates
