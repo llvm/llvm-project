@@ -343,7 +343,7 @@ void BlockGenerator::generateArrayStore(ScopStmt &Stmt, StoreInst *Store,
       RuntimeDebugBuilder::createCPUPrinter(Builder, "Store to  ", NewPointer,
                                             ": ", ValueOperand, "\n");
 
-    Builder.CreateAlignedStore(ValueOperand, NewPointer, Store->getAlignment());
+    Builder.CreateAlignedStore(ValueOperand, NewPointer, Store->getAlign());
   });
 }
 

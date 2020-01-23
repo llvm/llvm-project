@@ -793,8 +793,7 @@ bool X86InterleavedAccessGroup::lowerIntoOptimizedSequence() {
 
   //   4. Generate a store instruction for wide-vec.
   StoreInst *SI = cast<StoreInst>(Inst);
-  Builder.CreateAlignedStore(WideVec, SI->getPointerOperand(),
-                             SI->getAlignment());
+  Builder.CreateAlignedStore(WideVec, SI->getPointerOperand(), SI->getAlign());
 
   return true;
 }

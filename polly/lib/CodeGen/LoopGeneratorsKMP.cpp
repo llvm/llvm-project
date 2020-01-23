@@ -176,7 +176,7 @@ ParallelLoopGeneratorKMP::createSubFn(Value *StrideNotUsed,
   extractValuesFromStruct(Data, StructData->getAllocatedType(), UserContext,
                           Map);
 
-  const int Alignment = (is64BitArch()) ? 8 : 4;
+  const auto Alignment = llvm::Align(is64BitArch() ? 8 : 4);
   Value *ID =
       Builder.CreateAlignedLoad(IDPtr, Alignment, "polly.par.global_tid");
 
