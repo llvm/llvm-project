@@ -1,4 +1,5 @@
 # REQUIRES: lua
+# UNSUPPORTED: lldb-repro
 #
 # This tests that the convenience variables are not nil. Given that there is no
 # target we only expect the debugger to be valid.
