@@ -39,10 +39,14 @@ public:
 
   RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
                           RelExpr expr) const override;
-  void relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const override;
+  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
 };
 } // namespace
 
@@ -320,7 +324,7 @@ void X86::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   }
 }
 
-void X86::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
+void X86::relaxTlsGdToLe(uint8_t *loc, const Relocation &, uint64_t val) const {
   // Convert
   //   leal x@tlsgd(, %ebx, 1),
   //   call __tls_get_addr@plt
@@ -335,7 +339,7 @@ void X86::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
   write32le(loc + 5, val);
 }
 
-void X86::relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const {
+void X86::relaxTlsGdToIe(uint8_t *loc, const Relocation &, uint64_t val) const {
   // Convert
   //   leal x@tlsgd(, %ebx, 1),
   //   call __tls_get_addr@plt
@@ -352,14 +356,15 @@ void X86::relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const {
 
 // In some conditions, relocations can be optimized to avoid using GOT.
 // This function does that for Initial Exec to Local Exec case.
-void X86::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
+void X86::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                         uint64_t val) const {
   // Ulrich's document section 6.2 says that @gotntpoff can
   // be used with MOVL or ADDL instructions.
   // @indntpoff is similar to @gotntpoff, but for use in
   // position dependent code.
   uint8_t reg = (loc[-1] >> 3) & 7;
 
-  if (type == R_386_TLS_IE) {
+  if (rel.type == R_386_TLS_IE) {
     if (loc[-1] == 0xa1) {
       // "movl foo@indntpoff,%eax" -> "movl $foo,%eax"
       // This case is different from the generic case below because
@@ -375,7 +380,7 @@ void X86::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
       loc[-1] = 0xc0 | reg;
     }
   } else {
-    assert(type == R_386_TLS_GOTIE);
+    assert(rel.type == R_386_TLS_GOTIE);
     if (loc[-2] == 0x8b) {
       // "movl foo@gottpoff(%rip),%reg" -> "movl $foo,%reg"
       loc[-2] = 0xc7;
@@ -389,8 +394,9 @@ void X86::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
   write32le(loc, val);
 }
 
-void X86::relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const {
-  if (type == R_386_TLS_LDO_32) {
+void X86::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                         uint64_t val) const {
+  if (rel.type == R_386_TLS_LDO_32) {
     write32le(loc, val);
     return;
   }

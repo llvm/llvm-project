@@ -48,9 +48,12 @@ public:
   void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
   RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
                           RelExpr expr) const override;
-  void relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const override;
+  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
 };
 } // namespace
 
@@ -455,7 +458,8 @@ void AArch64::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   }
 }
 
-void AArch64::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
+void AArch64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                             uint64_t val) const {
   // TLSDESC Global-Dynamic relocation are in the form:
   //   adrp    x0, :tlsdesc:v             [R_AARCH64_TLSDESC_ADR_PAGE21]
   //   ldr     x1, [x0, #:tlsdesc_lo12:v  [R_AARCH64_TLSDESC_LD64_LO12]
@@ -467,9 +471,9 @@ void AArch64::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
   //   movk    x0, #0x10
   //   nop
   //   nop
-  checkUInt(loc, val, 32, type);
+  checkUInt(loc, val, 32, rel.type);
 
-  switch (type) {
+  switch (rel.type) {
   case R_AARCH64_TLSDESC_ADD_LO12:
   case R_AARCH64_TLSDESC_CALL:
     write32le(loc, 0xd503201f); // nop
@@ -485,7 +489,8 @@ void AArch64::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
   }
 }
 
-void AArch64::relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const {
+void AArch64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                             uint64_t val) const {
   // TLSDESC Global-Dynamic relocation are in the form:
   //   adrp    x0, :tlsdesc:v             [R_AARCH64_TLSDESC_ADR_PAGE21]
   //   ldr     x1, [x0, #:tlsdesc_lo12:v  [R_AARCH64_TLSDESC_LD64_LO12]
@@ -498,7 +503,7 @@ void AArch64::relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const {
   //   nop
   //   nop
 
-  switch (type) {
+  switch (rel.type) {
   case R_AARCH64_TLSDESC_ADD_LO12:
   case R_AARCH64_TLSDESC_CALL:
     write32le(loc, 0xd503201f); // nop
@@ -516,16 +521,17 @@ void AArch64::relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const {
   }
 }
 
-void AArch64::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
-  checkUInt(loc, val, 32, type);
+void AArch64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                             uint64_t val) const {
+  checkUInt(loc, val, 32, rel.type);
 
-  if (type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21) {
+  if (rel.type == R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21) {
     // Generate MOVZ.
     uint32_t regNo = read32le(loc) & 0x1f;
     write32le(loc, (0xd2a00000 | regNo) | (((val >> 16) & 0xffff) << 5));
     return;
   }
-  if (type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC) {
+  if (rel.type == R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC) {
     // Generate MOVK.
     uint32_t regNo = read32le(loc) & 0x1f;
     write32le(loc, (0xf2800000 | regNo) | ((val & 0xffff) << 5));
