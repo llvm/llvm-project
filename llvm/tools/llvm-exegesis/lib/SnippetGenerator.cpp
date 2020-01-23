@@ -72,7 +72,8 @@ Expected<std::vector<BenchmarkCode>> SnippetGenerator::generateConfigurations(
         BenchmarkCode BC;
         BC.Info = CT.Info;
         for (InstructionTemplate &IT : CT.Instructions) {
-          randomizeUnsetVariables(State.getExegesisTarget(), ForbiddenRegs, IT);
+          if (auto error = randomizeUnsetVariables(State, ForbiddenRegs, IT))
+            return std::move(error);
           BC.Key.Instructions.push_back(IT.build());
         }
         if (CT.ScratchSpacePointerInReg)
@@ -215,15 +216,53 @@ void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
   setRegisterOperandValue(randomElement(RandomConf.Uses), UseIB);
 }
 
-void randomizeUnsetVariables(const ExegesisTarget &Target,
-                             const BitVector &ForbiddenRegs,
-                             InstructionTemplate &IT) {
+static Error randomizeMCOperand(const LLVMState &State,
+                                const Instruction &Instr, const Variable &Var,
+                                MCOperand &AssignedValue,
+                                const BitVector &ForbiddenRegs) {
+  const Operand &Op = Instr.getPrimaryOperand(Var);
+  if (Op.getExplicitOperandInfo().OperandType >=
+      MCOI::OperandType::OPERAND_FIRST_TARGET)
+    return State.getExegesisTarget().randomizeTargetMCOperand(
+        Instr, Var, AssignedValue, ForbiddenRegs);
+  switch (Op.getExplicitOperandInfo().OperandType) {
+  case MCOI::OperandType::OPERAND_IMMEDIATE:
+    // FIXME: explore immediate values too.
+    AssignedValue = MCOperand::createImm(1);
+    break;
+  case MCOI::OperandType::OPERAND_REGISTER: {
+    assert(Op.isReg());
+    auto AllowedRegs = Op.getRegisterAliasing().sourceBits();
+    assert(AllowedRegs.size() == ForbiddenRegs.size());
+    for (auto I : ForbiddenRegs.set_bits())
+      AllowedRegs.reset(I);
+    if (!AllowedRegs.any())
+      return make_error<Failure>(
+          Twine("no available registers:\ncandidates:\n")
+              .concat(debugString(State.getRegInfo(),
+                                  Op.getRegisterAliasing().sourceBits()))
+              .concat("\nforbidden:\n")
+              .concat(debugString(State.getRegInfo(), ForbiddenRegs)));
+    AssignedValue = MCOperand::createReg(randomBit(AllowedRegs));
+    break;
+  }
+  default:
+    break;
+  }
+  return Error::success();
+}
+
+Error randomizeUnsetVariables(const LLVMState &State,
+                              const BitVector &ForbiddenRegs,
+                              InstructionTemplate &IT) {
   for (const Variable &Var : IT.getInstr().Variables) {
     MCOperand &AssignedValue = IT.getValueFor(Var);
     if (!AssignedValue.isValid())
-      Target.randomizeMCOperand(IT.getInstr(), Var, AssignedValue,
-                                ForbiddenRegs);
+      if (auto Err = randomizeMCOperand(State, IT.getInstr(), Var,
+                                        AssignedValue, ForbiddenRegs))
+        return Err;
   }
+  return Error::success();
 }
 
 } // namespace exegesis
