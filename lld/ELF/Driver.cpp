@@ -602,8 +602,13 @@ static DiscardPolicy getDiscard(opt::InputArgList &args) {
 
 static StringRef getDynamicLinker(opt::InputArgList &args) {
   auto *arg = args.getLastArg(OPT_dynamic_linker, OPT_no_dynamic_linker);
-  if (!arg || arg->getOption().getID() == OPT_no_dynamic_linker)
+  if (!arg)
     return "";
+  if (arg->getOption().getID() == OPT_no_dynamic_linker) {
+    // --no-dynamic-linker suppresses undefined weak symbols in .dynsym
+    config->noDynamicLinker = true;
+    return "";
+  }
   return arg->getValue();
 }
 
