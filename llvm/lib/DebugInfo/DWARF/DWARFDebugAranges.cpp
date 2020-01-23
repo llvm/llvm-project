@@ -26,7 +26,11 @@ void DWARFDebugAranges::extract(DataExtractor DebugArangesData) {
   uint64_t Offset = 0;
   DWARFDebugArangeSet Set;
 
-  while (Set.extract(DebugArangesData, &Offset)) {
+  while (DebugArangesData.isValidOffset(Offset)) {
+    if (Error E = Set.extract(DebugArangesData, &Offset)) {
+      WithColor::error() << toString(std::move(E)) << '\n';
+      return;
+    }
     uint64_t CUOffset = Set.getCompileUnitDIEOffset();
     for (const auto &Desc : Set.descriptors()) {
       uint64_t LowPC = Desc.Address;
