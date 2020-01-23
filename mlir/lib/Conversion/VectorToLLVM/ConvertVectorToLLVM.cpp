@@ -34,8 +34,6 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-namespace {
-
 template <typename T>
 static LLVM::LLVMType getPtrToElementType(T containerType,
                                           LLVMTypeConverter &lowering) {
@@ -125,6 +123,7 @@ static SmallVector<int64_t, 4> getI64SubArray(ArrayAttr arrayAttr,
   return res;
 }
 
+namespace {
 class VectorBroadcastOpConversion : public LLVMOpLowering {
 public:
   explicit VectorBroadcastOpConversion(MLIRContext *context,
