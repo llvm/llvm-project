@@ -495,10 +495,10 @@ def Vector_InsertStridedSliceOp :
     Results<(outs AnyVector)> {
   let summary = "strided_slice operation";
   let description = [{
-    Takes a k-D source vector, an n-D destination vector (n >= k), n-D `offsets`
-    integer array attribute, a k-D `strides` integer array attribute and inserts
-    the k-D source vector as a strided subvector at the proper offset into the
-    n-D destination vector.
+    Takes a k-D source vector, an n-D destination vector (n >= k), n-sized
+    `offsets` integer array attribute, a k-sized `strides` integer array attribute
+    and inserts the k-D source vector as a strided subvector at the proper offset
+    into the n-D destination vector.
 
     At the moment strides must contain only 1s.
 
@@ -509,7 +509,7 @@ def Vector_InsertStridedSliceOp :
     Examples:
     ```
       %2 = vector.insert_strided_slice %0, %1
-          {offsets : [0, 0, 2], strides : [1, 1]}:
+          {offsets = [0, 0, 2], strides = [1, 1]}:
         vector<2x4xf32> into vector<16x4x8xf32>
     ```
   }];
@@ -693,9 +693,9 @@ def Vector_StridedSliceOp :
     Results<(outs AnyVector)> {
   let summary = "strided_slice operation";
   let description = [{
-    Takes an n-D vector, k-D `offsets` integer array attribute, a k-D `sizes`
-    integer array attribute, a k-D `strides` integer array attribute and
-    extracts the n-D subvector at the proper offset.
+    Takes an n-D vector, k-D `offsets` integer array attribute, a k-sized
+    `sizes` integer array attribute, a k-sized `strides` integer array
+    attribute and extracts the n-D subvector at the proper offset.
 
     At the moment strides must contain only 1s.
     // TODO(ntv) support non-1 strides.
@@ -707,7 +707,7 @@ def Vector_StridedSliceOp :
     Examples:
     ```
       %1 = vector.strided_slice %0
-          {offsets : [0, 2], sizes : [2, 4], strides : [1, 1]}:
+          {offsets = [0, 2], sizes = [2, 4], strides = [1, 1]}:
         vector<4x8x16xf32> to vector<2x4x16xf32>
     ```
 
