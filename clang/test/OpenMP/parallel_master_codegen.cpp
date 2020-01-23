@@ -433,38 +433,61 @@ int main() {
 
 #endif
 #ifdef CK9
+///==========================================================================///
+// RUN: %clang_cc1 -DCK9 -verify -fopenmp -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefix CK9
+// RUN: %clang_cc1 -DCK9 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -DCK9 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefix CK9
+
+// RUN: %clang_cc1 -DCK9 -verify -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -DCK9 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -DCK9 -fopenmp-simd -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // CK9-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CK9-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
 // CK9-DAG: [[DEF_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+typedef void **omp_allocator_handle_t;
+extern const omp_allocator_handle_t omp_default_mem_alloc;
+extern const omp_allocator_handle_t omp_large_cap_mem_alloc;
+extern const omp_allocator_handle_t omp_const_mem_alloc;
+extern const omp_allocator_handle_t omp_high_bw_mem_alloc;
+extern const omp_allocator_handle_t omp_low_lat_mem_alloc;
+extern const omp_allocator_handle_t omp_cgroup_mem_alloc;
+extern const omp_allocator_handle_t omp_pteam_mem_alloc;
+extern const omp_allocator_handle_t omp_thread_mem_alloc;
 
 void parallel_master_allocate() {
   int a;
-#pragma omp parallel master firstprivate(a) allocate(a)
+  omp_allocator_handle_t myalloc = nullptr;
+#pragma omp parallel master firstprivate(a) allocate(myalloc:a)
   a++;
 }
 
 // CK9-LABEL: define void @{{.+}}parallel_master_allocate{{.+}}
-// CK9:       [[A_VAL:%.+]] = alloca i32
+// CK9:       [[A_VAL:%.+]] = alloca i32,
 // CK9:       [[A_CASTED:%.+]] = alloca i64
 // CK9:       [[ZERO:%.+]] = load i32, i32* [[A_VAL]]
 // CK9:       [[CONV:%.+]] = bitcast i64* [[A_CASTED]] to i32*
 // CK9:       store i32 [[ZERO]], i32* [[CONV]]
 // CK9:       [[ONE:%.+]] = load i64, i64* [[A_CASTED]]
-// CK9:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i64)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i64 [[ONE]])
+// CK9:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i64, i8***)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*), i64 [[ONE]], i8*** %{{.+}})
 
-// CK9:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias [[GLOBAL_TID:%.+]], i32* noalias [[BOUND_TID:%.+]], i64 [[A_VAL]])
+// CK9:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias [[GLOBAL_TID:%.+]], i32* noalias [[BOUND_TID:%.+]], i64 [[A_VAL]], i8*** {{.*}})
 // CK9:       [[GLOBAL_TID_ADDR:%.+]] = alloca i32*
 // CK9:       [[BOUND_TID_ADDR:%.+]] = alloca i32*
-// CK9:       [[A_ADDR:%.+]] = alloca i64 
+// CK9:       [[A_ADDR:%.+]] = alloca i64,
 // CK9:       store i32* [[GLOBAL_TID]], i32** [[GLOBAL_TID_ADDR]]
 // CK9:       store i32* [[BOUND_TID]], i32** [[BOUND_TID_ADDR]]
 // CK9:       store i64 [[A_VAL]], i64* [[A_ADDR]]
 // CK9:       [[CONV]] = bitcast i64* [[A_ADDR]] to i32*
+// CK9:       [[A_FP_VOID_ADDR:%.+]] = call i8* @__kmpc_alloc(i32 %{{.+}}, i64 4, i8* %{{.+}})
+// CK9:       [[A_FP_ADDR:%.+]] = bitcast i8* [[A_FP_VOID_ADDR]] to i32*
+// CK9:       [[A:%.+]] = load i32, i32* [[CONV]],
+// CK9:       store i32 [[A]], i32* [[A_FP_ADDR]],
 // CK9-NOT:   __kmpc_global_thread_num
 // CK9:       call i32 @__kmpc_master({{.+}})
-// CK9:       [[FOUR:%.+]] = load i32, i32* [[CONV]]
+// CK9:       [[FOUR:%.+]] = load i32, i32* [[A_FP_ADDR]]
 // CK9:       [[INC:%.+]] = add nsw i32 [[FOUR]]
-// CK9:       store i32 [[INC]], i32* [[CONV]]
+// CK9:       store i32 [[INC]], i32* [[A_FP_ADDR]]
 // CK9-NOT:   __kmpc_global_thread_num
 // CK9:       call void @__kmpc_end_master({{.+}})
 #endif
