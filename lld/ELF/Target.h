@@ -129,11 +129,16 @@ public:
 
   virtual RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
                                   RelExpr expr) const;
-  virtual void relaxGot(uint8_t *loc, RelType type, uint64_t val) const;
-  virtual void relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const;
-  virtual void relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const;
-  virtual void relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const;
-  virtual void relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const;
+  virtual void relaxGot(uint8_t *loc, const Relocation &rel,
+                        uint64_t val) const;
+  virtual void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                              uint64_t val) const;
+  virtual void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                              uint64_t val) const;
+  virtual void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                              uint64_t val) const;
+  virtual void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                              uint64_t val) const;
 
 protected:
   // On FreeBSD x86_64 the first page cannot be mmaped.
@@ -171,8 +176,7 @@ static inline std::string getErrorLocation(const uint8_t *loc) {
 
 void writePPC32GlinkSection(uint8_t *buf, size_t numEntries);
 
-bool tryRelaxPPC64TocIndirection(RelType type, const Relocation &rel,
-                                 uint8_t *bufLoc);
+bool tryRelaxPPC64TocIndirection(const Relocation &rel, uint8_t *bufLoc);
 unsigned getPPCDFormOp(unsigned secondaryOp);
 
 // In the PowerPC64 Elf V2 abi a function can have 2 entry points.  The first

@@ -39,11 +39,16 @@ public:
 
   RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
                           RelExpr expr) const override;
-  void relaxGot(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const override;
+  void relaxGot(uint8_t *loc, const Relocation &rel,
+                uint64_t val) const override;
+  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
   bool adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                         uint8_t stOther) const override;
 };
@@ -177,8 +182,9 @@ RelType X86_64::getDynRel(RelType type) const {
   return R_X86_64_NONE;
 }
 
-void X86_64::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
-  if (type == R_X86_64_TLSGD) {
+void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                            uint64_t val) const {
+  if (rel.type == R_X86_64_TLSGD) {
     // Convert
     //   .byte 0x66
     //   leaq x@tlsgd(%rip), %rdi
@@ -201,7 +207,7 @@ void X86_64::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
     //   lea x@tlsgd(%rip), %rax
     //   call *(%rax)
     // to the following two instructions.
-    assert(type == R_X86_64_GOTPC32_TLSDESC);
+    assert(rel.type == R_X86_64_GOTPC32_TLSDESC);
     if (memcmp(loc - 3, "\x48\x8d\x05", 3)) {
       error(getErrorLocation(loc - 3) + "R_X86_64_GOTPC32_TLSDESC must be used "
                                         "in callq *x@tlsdesc(%rip), %rax");
@@ -217,8 +223,9 @@ void X86_64::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
   }
 }
 
-void X86_64::relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const {
-  if (type == R_X86_64_TLSGD) {
+void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                            uint64_t val) const {
+  if (rel.type == R_X86_64_TLSGD) {
     // Convert
     //   .byte 0x66
     //   leaq x@tlsgd(%rip), %rdi
@@ -241,7 +248,7 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const {
     //   lea x@tlsgd(%rip), %rax
     //   call *(%rax)
     // to the following two instructions.
-    assert(type == R_X86_64_GOTPC32_TLSDESC);
+    assert(rel.type == R_X86_64_GOTPC32_TLSDESC);
     if (memcmp(loc - 3, "\x48\x8d\x05", 3)) {
       error(getErrorLocation(loc - 3) + "R_X86_64_GOTPC32_TLSDESC must be used "
                                         "in callq *x@tlsdesc(%rip), %rax");
@@ -258,7 +265,8 @@ void X86_64::relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const {
 
 // In some conditions, R_X86_64_GOTTPOFF relocation can be optimized to
 // R_X86_64_TPOFF32 so that it does not use GOT.
-void X86_64::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
+void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &,
+                            uint64_t val) const {
   uint8_t *inst = loc - 3;
   uint8_t reg = loc[-1] >> 3;
   uint8_t *regSlot = loc - 1;
@@ -299,12 +307,13 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
   write32le(loc, val + 4);
 }
 
-void X86_64::relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const {
-  if (type == R_X86_64_DTPOFF64) {
+void X86_64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                            uint64_t val) const {
+  if (rel.type == R_X86_64_DTPOFF64) {
     write64le(loc, val);
     return;
   }
-  if (type == R_X86_64_DTPOFF32) {
+  if (rel.type == R_X86_64_DTPOFF32) {
     write32le(loc, val);
     return;
   }
@@ -495,7 +504,7 @@ static void relaxGotNoPic(uint8_t *loc, uint64_t val, uint8_t op,
   write32le(loc, val);
 }
 
-void X86_64::relaxGot(uint8_t *loc, RelType type, uint64_t val) const {
+void X86_64::relaxGot(uint8_t *loc, const Relocation &, uint64_t val) const {
   const uint8_t op = loc[-2];
   const uint8_t modRm = loc[-1];
 
