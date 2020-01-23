@@ -155,8 +155,7 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
 //   ld/lwa 3, 0(3)           # load the value from the address
 //
 // Returns true if the relaxation is performed.
-bool tryRelaxPPC64TocIndirection(RelType type, const Relocation &rel,
-                                 uint8_t *bufLoc) {
+bool tryRelaxPPC64TocIndirection(const Relocation &rel, uint8_t *bufLoc) {
   assert(config->tocOptimize);
   if (rel.addend < 0)
     return false;
@@ -187,7 +186,7 @@ bool tryRelaxPPC64TocIndirection(RelType type, const Relocation &rel,
     return false;
 
   // Add PPC64TocOffset that will be subtracted by relocateOne().
-  target->relaxGot(bufLoc, type, tocRelative + ppc64TocOffset);
+  target->relaxGot(bufLoc, rel, tocRelative + ppc64TocOffset);
   return true;
 }
 
@@ -214,11 +213,16 @@ public:
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
   RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
                           RelExpr expr) const override;
-  void relaxGot(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const override;
-  void relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const override;
+  void relaxGot(uint8_t *loc, const Relocation &rel,
+                uint64_t val) const override;
+  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
 
   bool adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                         uint8_t stOther) const override;
@@ -364,11 +368,11 @@ uint32_t PPC64::calcEFlags() const {
   return 2;
 }
 
-void PPC64::relaxGot(uint8_t *loc, RelType type, uint64_t val) const {
-  switch (type) {
+void PPC64::relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  switch (rel.type) {
   case R_PPC64_TOC16_HA:
     // Convert "addis reg, 2, .LC0@toc@h" to "addis reg, 2, var@toc@h" or "nop".
-    relocateOne(loc, type, val);
+    relocateOne(loc, rel.type, val);
     break;
   case R_PPC64_TOC16_LO_DS: {
     // Convert "ld reg, .LC0@toc@l(reg)" to "addi reg, reg, var@toc@l" or
@@ -385,7 +389,8 @@ void PPC64::relaxGot(uint8_t *loc, RelType type, uint64_t val) const {
   }
 }
 
-void PPC64::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
+void PPC64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                           uint64_t val) const {
   // Reference: 3.7.4.2 of the 64-bit ELF V2 abi supplement.
   // The general dynamic code sequence for a global `x` will look like:
   // Instruction                    Relocation                Symbol
@@ -401,7 +406,7 @@ void PPC64::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
   // bl __tls_get_addr(x@tlsgd)      into      nop
   // nop                             into      addi r3, r3, x@tprel@l
 
-  switch (type) {
+  switch (rel.type) {
   case R_PPC64_GOT_TLSGD16_HA:
     writeFromHalf16(loc, 0x60000000); // nop
     break;
@@ -424,7 +429,8 @@ void PPC64::relaxTlsGdToLe(uint8_t *loc, RelType type, uint64_t val) const {
   }
 }
 
-void PPC64::relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const {
+void PPC64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                           uint64_t val) const {
   // Reference: 3.7.4.3 of the 64-bit ELF V2 abi supplement.
   // The local dynamic code sequence for a global `x` will look like:
   // Instruction                    Relocation                Symbol
@@ -440,7 +446,7 @@ void PPC64::relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const {
   // bl __tls_get_addr(x@tlsgd)     into      nop
   // nop                            into      addi r3, r3, 4096
 
-  switch (type) {
+  switch (rel.type) {
   case R_PPC64_GOT_TLSLD16_HA:
     writeFromHalf16(loc, 0x60000000); // nop
     break;
@@ -457,7 +463,7 @@ void PPC64::relaxTlsLdToLe(uint8_t *loc, RelType type, uint64_t val) const {
   case R_PPC64_DTPREL16_DS:
   case R_PPC64_DTPREL16_LO:
   case R_PPC64_DTPREL16_LO_DS:
-    relocateOne(loc, type, val);
+    relocateOne(loc, rel.type, val);
     break;
   default:
     llvm_unreachable("unsupported relocation for TLS LD to LE relaxation");
@@ -489,7 +495,8 @@ unsigned getPPCDFormOp(unsigned secondaryOp) {
   }
 }
 
-void PPC64::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
+void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                           uint64_t val) const {
   // The initial exec code sequence for a global `x` will look like:
   // Instruction                    Relocation                Symbol
   // addis r9, r2, x@got@tprel@ha   R_PPC64_GOT_TPREL16_HA      x
@@ -510,7 +517,7 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, RelType type, uint64_t val) const {
   // indexed load or store instructions.
 
   unsigned offset = (config->ekind == ELF64BEKind) ? 2 : 0;
-  switch (type) {
+  switch (rel.type) {
   case R_PPC64_GOT_TPREL16_HA:
     write32(loc - offset, 0x60000000); // nop
     break;
@@ -971,8 +978,9 @@ RelExpr PPC64::adjustRelaxExpr(RelType type, const uint8_t *data,
 //    thread pointer.
 // Since the nop must directly follow the call, the R_PPC64_TLSGD relocation is
 // used as the relaxation hint for both steps 2 and 3.
-void PPC64::relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const {
-  switch (type) {
+void PPC64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                           uint64_t val) const {
+  switch (rel.type) {
   case R_PPC64_GOT_TLSGD16_HA:
     // This is relaxed from addis rT, r2, sym@got@tlsgd@ha to
     //                      addis rT, r2, sym@got@tprel@ha.

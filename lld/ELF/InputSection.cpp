@@ -939,29 +939,29 @@ void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
     switch (expr) {
     case R_RELAX_GOT_PC:
     case R_RELAX_GOT_PC_NOPIC:
-      target->relaxGot(bufLoc, type, targetVA);
+      target->relaxGot(bufLoc, rel, targetVA);
       break;
     case R_PPC64_RELAX_TOC:
-      if (!tryRelaxPPC64TocIndirection(type, rel, bufLoc))
+      if (!tryRelaxPPC64TocIndirection(rel, bufLoc))
         target->relocateOne(bufLoc, type, targetVA);
       break;
     case R_RELAX_TLS_IE_TO_LE:
-      target->relaxTlsIeToLe(bufLoc, type, targetVA);
+      target->relaxTlsIeToLe(bufLoc, rel, targetVA);
       break;
     case R_RELAX_TLS_LD_TO_LE:
     case R_RELAX_TLS_LD_TO_LE_ABS:
-      target->relaxTlsLdToLe(bufLoc, type, targetVA);
+      target->relaxTlsLdToLe(bufLoc, rel, targetVA);
       break;
     case R_RELAX_TLS_GD_TO_LE:
     case R_RELAX_TLS_GD_TO_LE_NEG:
-      target->relaxTlsGdToLe(bufLoc, type, targetVA);
+      target->relaxTlsGdToLe(bufLoc, rel, targetVA);
       break;
     case R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
     case R_RELAX_TLS_GD_TO_IE:
     case R_RELAX_TLS_GD_TO_IE_ABS:
     case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
     case R_RELAX_TLS_GD_TO_IE_GOTPLT:
-      target->relaxTlsGdToIe(bufLoc, type, targetVA);
+      target->relaxTlsGdToIe(bufLoc, rel, targetVA);
       break;
     case R_PPC64_CALL:
       // If this is a call to __tls_get_addr, it may be part of a TLS
