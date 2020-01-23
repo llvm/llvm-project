@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -fconcepts-ts -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++2a -x c++ %s -verify
 
 template <typename... Args> requires ((sizeof(Args) == 1), ...)
 // expected-note@-1 {{because '(sizeof(int) == 1) , (sizeof(char) == 1) , (sizeof(int) == 1)' evaluated to false}}

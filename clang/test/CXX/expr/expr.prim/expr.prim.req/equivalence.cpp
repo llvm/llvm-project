@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -fconcepts-ts -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++2a -x c++ %s -verify
 
 template<typename T, typename U> constexpr bool is_same_v = false;
 template<typename T> constexpr bool is_same_v<T, T> = true;
