@@ -1194,7 +1194,7 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
     }
   }
 
-  uint64_t ShadowAlign = Align * DFS.ShadowWidth / 8;
+  const MaybeAlign ShadowAlign(Align * DFS.ShadowWidth / 8);
   SmallVector<const Value *, 2> Objs;
   GetUnderlyingObjects(Addr, Objs, Pos->getModule()->getDataLayout());
   bool AllConstants = true;
@@ -1216,7 +1216,7 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
     return DFS.ZeroShadow;
   case 1: {
     LoadInst *LI = new LoadInst(DFS.ShadowTy, ShadowAddr, "", Pos);
-    LI->setAlignment(MaybeAlign(ShadowAlign));
+    LI->setAlignment(ShadowAlign);
     return LI;
   }
   case 2: {

@@ -27474,7 +27474,7 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   // Finally we can emit the atomic load.
   LoadInst *Loaded =
       Builder.CreateAlignedLoad(AI->getType(), AI->getPointerOperand(),
-                                AI->getType()->getPrimitiveSizeInBits());
+                                Align(AI->getType()->getPrimitiveSizeInBits()));
   Loaded->setAtomic(Order, SSID);
   AI->replaceAllUsesWith(Loaded);
   AI->eraseFromParent();

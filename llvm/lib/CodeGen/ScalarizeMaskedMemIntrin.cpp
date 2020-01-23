@@ -130,7 +130,7 @@ static void scalarizeMaskedLoad(CallInst *CI, bool &ModifiedDT) {
   Value *Mask = CI->getArgOperand(2);
   Value *Src0 = CI->getArgOperand(3);
 
-  unsigned AlignVal = cast<ConstantInt>(Alignment)->getZExtValue();
+  const Align AlignVal = cast<ConstantInt>(Alignment)->getAlignValue();
   VectorType *VecType = cast<VectorType>(CI->getType());
 
   Type *EltTy = VecType->getElementType();
@@ -151,7 +151,8 @@ static void scalarizeMaskedLoad(CallInst *CI, bool &ModifiedDT) {
   }
 
   // Adjust alignment for the scalar instruction.
-  AlignVal = MinAlign(AlignVal, EltTy->getPrimitiveSizeInBits() / 8);
+  const Align AdjustedAlignVal =
+      commonAlignment(AlignVal, EltTy->getPrimitiveSizeInBits() / 8);
   // Bitcast %addr from i8* to EltTy*
   Type *NewPtrType =
       EltTy->getPointerTo(Ptr->getType()->getPointerAddressSpace());
@@ -166,7 +167,7 @@ static void scalarizeMaskedLoad(CallInst *CI, bool &ModifiedDT) {
       if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
         continue;
       Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
-      LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AlignVal);
+      LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AdjustedAlignVal);
       VResult = Builder.CreateInsertElement(VResult, Load, Idx);
     }
     CI->replaceAllUsesWith(VResult);
@@ -210,7 +211,7 @@ static void scalarizeMaskedLoad(CallInst *CI, bool &ModifiedDT) {
     Builder.SetInsertPoint(InsertPt);
 
     Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
-    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AlignVal);
+    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AdjustedAlignVal);
     Value *NewVResult = Builder.CreateInsertElement(VResult, Load, Idx);
 
     // Create "else" block, fill it in the next iteration
@@ -414,8 +415,8 @@ static void scalarizeMaskedGather(CallInst *CI, bool &ModifiedDT) {
       if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
         continue;
       Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
-      LoadInst *Load =
-          Builder.CreateAlignedLoad(EltTy, Ptr, AlignVal, "Load" + Twine(Idx));
+      LoadInst *Load = Builder.CreateAlignedLoad(
+          EltTy, Ptr, MaybeAlign(AlignVal), "Load" + Twine(Idx));
       VResult =
           Builder.CreateInsertElement(VResult, Load, Idx, "Res" + Twine(Idx));
     }
@@ -459,8 +460,8 @@ static void scalarizeMaskedGather(CallInst *CI, bool &ModifiedDT) {
     Builder.SetInsertPoint(InsertPt);
 
     Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
-    LoadInst *Load =
-        Builder.CreateAlignedLoad(EltTy, Ptr, AlignVal, "Load" + Twine(Idx));
+    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Ptr, MaybeAlign(AlignVal),
+                                               "Load" + Twine(Idx));
     Value *NewVResult =
         Builder.CreateInsertElement(VResult, Load, Idx, "Res" + Twine(Idx));
 
@@ -624,8 +625,8 @@ static void scalarizeMaskedExpandLoad(CallInst *CI, bool &ModifiedDT) {
       if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
         continue;
       Value *NewPtr = Builder.CreateConstInBoundsGEP1_32(EltTy, Ptr, MemIndex);
-      LoadInst *Load =
-          Builder.CreateAlignedLoad(EltTy, NewPtr, 1, "Load" + Twine(Idx));
+      LoadInst *Load = Builder.CreateAlignedLoad(EltTy, NewPtr, Align(1),
+                                                 "Load" + Twine(Idx));
       VResult =
           Builder.CreateInsertElement(VResult, Load, Idx, "Res" + Twine(Idx));
       ++MemIndex;
@@ -670,7 +671,7 @@ static void scalarizeMaskedExpandLoad(CallInst *CI, bool &ModifiedDT) {
                                                      "cond.load");
     Builder.SetInsertPoint(InsertPt);
 
-    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Ptr, 1);
+    LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Ptr, Align(1));
     Value *NewVResult = Builder.CreateInsertElement(VResult, Load, Idx);
 
     // Move the pointer if there are more blocks to come.
