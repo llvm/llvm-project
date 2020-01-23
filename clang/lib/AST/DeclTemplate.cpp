@@ -488,7 +488,10 @@ static void ProfileTemplateParameterList(ASTContext &C,
     if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(D)) {
       ID.AddInteger(1);
       ID.AddBoolean(TTP->isParameterPack());
-      // TODO: Concepts: profile type-constraints.
+      ID.AddBoolean(TTP->hasTypeConstraint());
+      if (const TypeConstraint *TC = TTP->getTypeConstraint())
+        TC->getImmediatelyDeclaredConstraint()->Profile(ID, C,
+                                                        /*Canonical=*/true);
       continue;
     }
     const auto *TTP = cast<TemplateTemplateParmDecl>(D);
