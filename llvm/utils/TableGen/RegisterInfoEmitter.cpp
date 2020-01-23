@@ -993,7 +993,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   // Emit the string table.
   RegStrings.layout();
   OS << "extern const char " << TargetName << "RegStrings[] = {\n";
-  RegStrings.emit_string_literals(OS);
+  RegStrings.emit(OS, printChar);
   OS << "};\n\n";
 
   OS << "extern const MCRegisterDesc " << TargetName
@@ -1066,7 +1066,7 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   RegClassStrings.layout();
   OS << "extern const char " << TargetName << "RegClassStrings[] = {\n";
-  RegClassStrings.emit_string_literals(OS);
+  RegClassStrings.emit(OS, printChar);
   OS << "};\n\n";
 
   OS << "extern const MCRegisterClass " << TargetName
