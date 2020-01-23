@@ -101,7 +101,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Host/XML.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -893,7 +893,7 @@ ConstString SwiftASTContext::GetPluginNameStatic() {
 }
 
 ConstString SwiftASTContext::GetPluginName() {
-  return ClangASTContext::GetPluginNameStatic();
+  return TypeSystemClang::GetPluginNameStatic();
 }
 
 uint32_t SwiftASTContext::GetPluginVersion() { return 1; }
@@ -3312,7 +3312,7 @@ public:
     llvm::DenseSet<SymbolFile *> searched_symbol_files;
     auto search = [&](Module &module) {
       module.FindTypes(decl_context,
-                       ClangASTContext::GetSupportedLanguagesForTypes(),
+                       TypeSystemClang::GetSupportedLanguagesForTypes(),
                        searched_symbol_files, clang_types);
     };
     if (Module *module = m_swift_ast_ctx.GetModule())
@@ -3370,7 +3370,7 @@ public:
       CompilerType compiler_type = clang_type_sp->GetFullCompilerType();
 
       // Filter our non-Clang types.
-      auto *type_system = llvm::dyn_cast_or_null<ClangASTContext>(
+      auto *type_system = llvm::dyn_cast_or_null<TypeSystemClang>(
           compiler_type.GetTypeSystem());
       if (!type_system)
         return true;
@@ -8067,7 +8067,7 @@ bool SwiftASTContext::IsImportedType(const CompilerType &type,
         if (const clang::ObjCInterfaceDecl *objc_interface_decl =
                 llvm::dyn_cast<clang::ObjCInterfaceDecl>(clang_decl)) {
           *original_type =
-              CompilerType(ClangASTContext::GetASTContext(
+              CompilerType(TypeSystemClang::GetASTContext(
                                &objc_interface_decl->getASTContext()),
                            clang::QualType::getFromOpaquePtr(
                                objc_interface_decl->getTypeForDecl())
@@ -8075,7 +8075,7 @@ bool SwiftASTContext::IsImportedType(const CompilerType &type,
         } else if (const clang::TypeDecl *type_decl =
                        llvm::dyn_cast<clang::TypeDecl>(clang_decl)) {
           *original_type = CompilerType(
-              ClangASTContext::GetASTContext(&type_decl->getASTContext()),
+              TypeSystemClang::GetASTContext(&type_decl->getASTContext()),
               clang::QualType::getFromOpaquePtr(type_decl->getTypeForDecl())
                   .getAsOpaquePtr());
         } else {
@@ -8098,7 +8098,7 @@ bool SwiftASTContext::IsImportedObjectiveCType(const CompilerType &type,
 
     if (IsImportedType(type, &local_original_type)) {
       if (local_original_type.IsValid()) {
-        ClangASTContext *clang_ast = llvm::dyn_cast_or_null<ClangASTContext>(
+        TypeSystemClang *clang_ast = llvm::dyn_cast_or_null<TypeSystemClang>(
             local_original_type.GetTypeSystem());
         if (clang_ast &&
             clang_ast->IsObjCObjectOrInterfaceType(local_original_type)) {

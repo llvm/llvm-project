@@ -3245,7 +3245,7 @@ void LLDBSwigPythonCallPythonLogOutputCallback(const char *str, void *baton);
 #define SWIGTYPE_p_std__shared_ptrT_lldb_private__VariableList_t swig_types[211]
 #define SWIGTYPE_p_std__shared_ptrT_lldb_private__Variable_t swig_types[212]
 #define SWIGTYPE_p_std__shared_ptrT_lldb_private__Watchpoint_t swig_types[213]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__ClangASTContext_t swig_types[214]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__TypeSystemClang_t swig_types[214]
 #define SWIGTYPE_p_std__unique_ptrT_lldb_private__ClangModulesDeclVendor_t swig_types[215]
 #define SWIGTYPE_p_std__unique_ptrT_lldb_private__ClangPersistentVariables_t swig_types[216]
 #define SWIGTYPE_p_std__unique_ptrT_lldb_private__DynamicCheckerFunctions_t swig_types[217]
@@ -85110,7 +85110,7 @@ static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__Value_t = {"_p_st
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__VariableList_t = {"_p_std__shared_ptrT_lldb_private__VariableList_t", "std::shared_ptr< lldb_private::VariableList > *|lldb::VariableListSP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__Variable_t = {"_p_std__shared_ptrT_lldb_private__Variable_t", "lldb::VariableSP *|std::shared_ptr< lldb_private::Variable > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__Watchpoint_t = {"_p_std__shared_ptrT_lldb_private__Watchpoint_t", "lldb::WatchpointSP *|std::shared_ptr< lldb_private::Watchpoint > *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_std__unique_ptrT_lldb_private__ClangASTContext_t = {"_p_std__unique_ptrT_lldb_private__ClangASTContext_t", "lldb::ClangASTContextUP *|std::unique_ptr< lldb_private::ClangASTContext > *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_std__unique_ptrT_lldb_private__TypeSystemClang_t = {"_p_std__unique_ptrT_lldb_private__TypeSystemClang_t", "lldb::TypeSystemClangUP *|std::unique_ptr< lldb_private::TypeSystemClang > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unique_ptrT_lldb_private__ClangModulesDeclVendor_t = {"_p_std__unique_ptrT_lldb_private__ClangModulesDeclVendor_t", "std::unique_ptr< lldb_private::ClangModulesDeclVendor > *|lldb::ClangModulesDeclVendorUP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unique_ptrT_lldb_private__ClangPersistentVariables_t = {"_p_std__unique_ptrT_lldb_private__ClangPersistentVariables_t", "std::unique_ptr< lldb_private::ClangPersistentVariables > *|lldb::ClangPersistentVariablesUP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__unique_ptrT_lldb_private__DynamicCheckerFunctions_t = {"_p_std__unique_ptrT_lldb_private__DynamicCheckerFunctions_t", "lldb::DynamicCheckerFunctionsUP *|std::unique_ptr< lldb_private::DynamicCheckerFunctions > *", 0, 0, (void*)0, 0};
@@ -85368,7 +85368,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_std__shared_ptrT_lldb_private__VariableList_t,
   &_swigt__p_std__shared_ptrT_lldb_private__Variable_t,
   &_swigt__p_std__shared_ptrT_lldb_private__Watchpoint_t,
-  &_swigt__p_std__unique_ptrT_lldb_private__ClangASTContext_t,
+  &_swigt__p_std__unique_ptrT_lldb_private__TypeSystemClang_t,
   &_swigt__p_std__unique_ptrT_lldb_private__ClangModulesDeclVendor_t,
   &_swigt__p_std__unique_ptrT_lldb_private__ClangPersistentVariables_t,
   &_swigt__p_std__unique_ptrT_lldb_private__DynamicCheckerFunctions_t,
@@ -85626,7 +85626,7 @@ static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__Value_t[] = {  {&
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__VariableList_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__VariableList_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__Variable_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__Variable_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__Watchpoint_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__Watchpoint_t, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_std__unique_ptrT_lldb_private__ClangASTContext_t[] = {  {&_swigt__p_std__unique_ptrT_lldb_private__ClangASTContext_t, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_std__unique_ptrT_lldb_private__TypeSystemClang_t[] = {  {&_swigt__p_std__unique_ptrT_lldb_private__TypeSystemClang_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unique_ptrT_lldb_private__ClangModulesDeclVendor_t[] = {  {&_swigt__p_std__unique_ptrT_lldb_private__ClangModulesDeclVendor_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unique_ptrT_lldb_private__ClangPersistentVariables_t[] = {  {&_swigt__p_std__unique_ptrT_lldb_private__ClangPersistentVariables_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__unique_ptrT_lldb_private__DynamicCheckerFunctions_t[] = {  {&_swigt__p_std__unique_ptrT_lldb_private__DynamicCheckerFunctions_t, 0, 0, 0},{0, 0, 0, 0}};
@@ -85884,7 +85884,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_std__shared_ptrT_lldb_private__VariableList_t,
   _swigc__p_std__shared_ptrT_lldb_private__Variable_t,
   _swigc__p_std__shared_ptrT_lldb_private__Watchpoint_t,
-  _swigc__p_std__unique_ptrT_lldb_private__ClangASTContext_t,
+  _swigc__p_std__unique_ptrT_lldb_private__TypeSystemClang_t,
   _swigc__p_std__unique_ptrT_lldb_private__ClangModulesDeclVendor_t,
   _swigc__p_std__unique_ptrT_lldb_private__ClangPersistentVariables_t,
   _swigc__p_std__unique_ptrT_lldb_private__DynamicCheckerFunctions_t,

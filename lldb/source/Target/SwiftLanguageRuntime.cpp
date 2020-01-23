@@ -24,7 +24,7 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/RegisterContext.h"
@@ -963,7 +963,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
                 ABISP abi_sp(frame.GetThread()->GetProcess()->GetABI());
                 ValueList argument_values;
                 Value input_value;
-                auto clang_ctx = ClangASTContext::GetScratch(target);
+                auto clang_ctx = TypeSystemClang::GetScratch(target);
                 if (!clang_ctx)
                   continue;
 

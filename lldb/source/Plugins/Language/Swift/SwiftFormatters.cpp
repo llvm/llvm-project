@@ -13,7 +13,7 @@
 #include "SwiftFormatters.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -316,8 +316,8 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     "native/shared strings already handled");
 
   if ((discriminator & 0xE0) == 0x40) { // 010xxxxx: Bridged
-    ClangASTContext *clang_ast_context =
-        ClangASTContext::GetScratch(process->GetTarget());
+    TypeSystemClang *clang_ast_context =
+        TypeSystemClang::GetScratch(process->GetTarget());
     if (!clang_ast_context)
       return false;
 
