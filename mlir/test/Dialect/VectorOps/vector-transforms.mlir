@@ -302,3 +302,12 @@ func @vector_transfers(%arg0: index, %arg1: index) {
   }
   return
 }
+
+// CHECK-LABEL: func @tuple_get(%arg0: vector<4xf32>, %arg1: vector<8xf32>)
+//       CHECK: return %arg1
+
+func @tuple_get(%arg0: vector<4xf32>, %arg1: vector<8xf32>) -> vector<8xf32> {
+  %0 = vector.tuple %arg0, %arg1 : vector<4xf32>, vector<8xf32>
+  %1 = vector.tuple_get %0, 1 : tuple<vector<4xf32>, vector<8xf32>>
+  return %1 : vector<8xf32>
+}

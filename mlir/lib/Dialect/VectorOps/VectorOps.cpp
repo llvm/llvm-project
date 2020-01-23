@@ -1681,6 +1681,18 @@ static LogicalResult verify(TupleGetOp op) {
   return success();
 }
 
+OpFoldResult TupleGetOp::fold(ArrayRef<Attribute> operands) {
+  // Rewrite:
+  //    %t = vector.tuple .., %e_i, ..
+  //    %x = vector.tuple_get %t, i
+  // into:
+  //    %t = vector.tuple .., %e_i, ..  // one less use
+  //    %x = %e_i
+  if (auto tupleOp = dyn_cast_or_null<TupleOp>(getOperand().getDefiningOp()))
+    return tupleOp.getOperand(getIndex());
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // ConstantMaskOp
 //===----------------------------------------------------------------------===//

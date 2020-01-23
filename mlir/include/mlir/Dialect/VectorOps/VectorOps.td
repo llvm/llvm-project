@@ -1115,6 +1115,7 @@ def Vector_TupleGetOp :
     }
     static StringRef getIndexAttrName() { return "index"; }
   }];
+  let hasFolder = 1;
 }
 
 def Vector_PrintOp :
