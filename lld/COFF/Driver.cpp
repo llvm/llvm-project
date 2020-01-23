@@ -1267,7 +1267,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   }
 
   // Handle /pdbstripped
-  if (auto *arg = args.getLastArg(OPT_pdbstripped))
+  if (args.hasArg(OPT_pdbstripped))
     warn("ignoring /pdbstripped flag, it is not yet supported");
 
   // Handle /noentry
