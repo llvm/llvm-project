@@ -62,10 +62,10 @@ Error DWARFDebugArangeSet::extract(DataExtractor data, uint64_t *offset_ptr) {
   constexpr unsigned CommonFieldsLength = 2 + // Version
                                           1 + // Address Size
                                           1;  // Segment Selector Size
-  constexpr unsigned DWARF32HeaderLength =
+  static const unsigned DWARF32HeaderLength =
       dwarf::getUnitLengthFieldByteSize(dwarf::DWARF32) + CommonFieldsLength +
       dwarf::getDwarfOffsetByteSize(dwarf::DWARF32); // Debug Info Offset
-  constexpr unsigned DWARF64HeaderLength =
+  static const unsigned DWARF64HeaderLength =
       dwarf::getUnitLengthFieldByteSize(dwarf::DWARF64) + CommonFieldsLength +
       dwarf::getDwarfOffsetByteSize(dwarf::DWARF64); // Debug Info Offset
 
