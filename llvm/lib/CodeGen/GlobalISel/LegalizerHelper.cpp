@@ -751,7 +751,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     SmallVector<Register, 2> DstRegs;
     for (int i = 0; i < NumParts; ++i)
       DstRegs.push_back(
-          MIRBuilder.buildUndef(NarrowTy)->getOperand(0).getReg());
+          MIRBuilder.buildUndef(NarrowTy).getReg(0));
 
     Register DstReg = MI.getOperand(0).getReg();
     if(MRI.getType(DstReg).isVector())
@@ -1091,7 +1091,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       // sign-extending the dst.
       MachineOperand &MO1 = MI.getOperand(1);
       auto TruncMIB = MIRBuilder.buildTrunc(NarrowTy, MO1);
-      MO1.setReg(TruncMIB->getOperand(0).getReg());
+      MO1.setReg(TruncMIB.getReg(0));
 
       MachineOperand &MO2 = MI.getOperand(0);
       Register DstExt = MRI.createGenericVirtualRegister(NarrowTy);
@@ -1127,8 +1127,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
     Register AshrCstReg =
         MIRBuilder.buildConstant(NarrowTy, NarrowTy.getScalarSizeInBits() - 1)
-            ->getOperand(0)
-            .getReg();
+            .getReg(0);
     Register FullExtensionReg = 0;
     Register PartialExtensionReg = 0;
 
@@ -1145,8 +1144,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
         }
         DstRegs.push_back(
             MIRBuilder.buildAShr(NarrowTy, PartialExtensionReg, AshrCstReg)
-                ->getOperand(0)
-                .getReg());
+                .getReg(0));
         FullExtensionReg = DstRegs.back();
       } else {
         DstRegs.push_back(
@@ -1154,8 +1152,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
                 .buildInstr(
                     TargetOpcode::G_SEXT_INREG, {NarrowTy},
                     {SrcRegs[i], SizeInBits % NarrowTy.getScalarSizeInBits()})
-                ->getOperand(0)
-                .getReg());
+                .getReg(0));
         PartialExtensionReg = DstRegs.back();
       }
     }
@@ -1195,14 +1192,14 @@ void LegalizerHelper::widenScalarSrc(MachineInstr &MI, LLT WideTy,
                                      unsigned OpIdx, unsigned ExtOpcode) {
   MachineOperand &MO = MI.getOperand(OpIdx);
   auto ExtB = MIRBuilder.buildInstr(ExtOpcode, {WideTy}, {MO});
-  MO.setReg(ExtB->getOperand(0).getReg());
+  MO.setReg(ExtB.getReg(0));
 }
 
 void LegalizerHelper::narrowScalarSrc(MachineInstr &MI, LLT NarrowTy,
                                       unsigned OpIdx) {
   MachineOperand &MO = MI.getOperand(OpIdx);
   auto ExtB = MIRBuilder.buildTrunc(NarrowTy, MO);
-  MO.setReg(ExtB->getOperand(0).getReg());
+  MO.setReg(ExtB.getReg(0));
 }
 
 void LegalizerHelper::widenScalarDst(MachineInstr &MI, LLT WideTy,
@@ -1415,7 +1412,7 @@ LegalizerHelper::widenScalarUnmergeValues(MachineInstr &MI, unsigned TypeIdx,
 
   Observer.changingInstr(MI);
 
-  MI.getOperand(NumDst).setReg(WideSrc->getOperand(0).getReg());
+  MI.getOperand(NumDst).setReg(WideSrc.getReg(0));
   for (unsigned I = 0; I != NumDst; ++I)
     widenScalarDst(MI, WideTy, I);
 
@@ -2145,7 +2142,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
         *cast<ConstantFP>(ConstantFP::getZeroValueForNegation(ZeroTy));
     auto Zero = MIRBuilder.buildFConstant(Ty, ZeroForNegation);
     Register SubByReg = MI.getOperand(1).getReg();
-    Register ZeroReg = Zero->getOperand(0).getReg();
+    Register ZeroReg = Zero.getReg(0);
     MIRBuilder.buildFSub(Res, ZeroReg, SubByReg, MI.getFlags());
     MI.eraseFromParent();
     return Legalized;
@@ -3769,14 +3766,14 @@ LegalizerHelper::narrowScalarBasic(MachineInstr &MI, unsigned TypeIdx,
   for (unsigned I = 0, E = Src1Regs.size(); I != E; ++I) {
     auto Inst = MIRBuilder.buildInstr(MI.getOpcode(), {NarrowTy},
                                         {Src0Regs[I], Src1Regs[I]});
-    DstRegs.push_back(Inst->getOperand(0).getReg());
+    DstRegs.push_back(Inst.getReg(0));
   }
 
   for (unsigned I = 0, E = Src1LeftoverRegs.size(); I != E; ++I) {
     auto Inst = MIRBuilder.buildInstr(
       MI.getOpcode(),
       {LeftoverTy}, {Src0LeftoverRegs[I], Src1LeftoverRegs[I]});
-    DstLeftoverRegs.push_back(Inst->getOperand(0).getReg());
+    DstLeftoverRegs.push_back(Inst.getReg(0));
   }
 
   insertParts(DstReg, DstTy, NarrowTy, DstRegs,
@@ -3836,13 +3833,13 @@ LegalizerHelper::narrowScalarSelect(MachineInstr &MI, unsigned TypeIdx,
   for (unsigned I = 0, E = Src1Regs.size(); I != E; ++I) {
     auto Select = MIRBuilder.buildSelect(NarrowTy,
                                          CondReg, Src1Regs[I], Src2Regs[I]);
-    DstRegs.push_back(Select->getOperand(0).getReg());
+    DstRegs.push_back(Select.getReg(0));
   }
 
   for (unsigned I = 0, E = Src1LeftoverRegs.size(); I != E; ++I) {
     auto Select = MIRBuilder.buildSelect(
       LeftoverTy, CondReg, Src1LeftoverRegs[I], Src2LeftoverRegs[I]);
-    DstLeftoverRegs.push_back(Select->getOperand(0).getReg());
+    DstLeftoverRegs.push_back(Select.getReg(0));
   }
 
   insertParts(DstReg, DstTy, NarrowTy, DstRegs,
@@ -3901,7 +3898,7 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
       auto MIBShiftAmt = MIRBuilder.buildConstant(Ty, 1ULL << i);
       auto MIBOp =
           MIRBuilder.buildOr(Ty, Op, MIRBuilder.buildLShr(Ty, Op, MIBShiftAmt));
-      Op = MIBOp->getOperand(0).getReg();
+      Op = MIBOp.getReg(0);
     }
     auto MIBPop = MIRBuilder.buildCTPOP(Ty, Op);
     MIRBuilder.buildSub(MI.getOperand(0), MIRBuilder.buildConstant(Ty, Len),
@@ -3948,7 +3945,7 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
       return Legalized;
     }
     MI.setDesc(TII.get(TargetOpcode::G_CTPOP));
-    MI.getOperand(1).setReg(MIBTmp->getOperand(0).getReg());
+    MI.getOperand(1).setReg(MIBTmp.getReg(0));
     return Legalized;
   }
   }
