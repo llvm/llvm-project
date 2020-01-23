@@ -3760,13 +3760,13 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::ADDC:
     // Add can have at most one carry bit.  Thus we know that the output
     // is, at worst, one more bit than the inputs.
-    Tmp = ComputeNumSignBits(Op.getOperand(0), Depth+1);
-    if (Tmp == 1) return 1;  // Early out.
+    Tmp = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    if (Tmp == 1) return 1; // Early out.
 
     // Special case decrementing a value (ADD X, -1):
-    if (ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(Op.getOperand(1)))
+    if (ConstantSDNode *CRHS = isConstOrConstSplat(Op.getOperand(1)))
       if (CRHS->isAllOnesValue()) {
-        KnownBits Known = computeKnownBits(Op.getOperand(0), Depth+1);
+        KnownBits Known = computeKnownBits(Op.getOperand(0), Depth + 1);
 
         // If the input is known to be 0 or 1, the output is 0/-1, which is all
         // sign bits set.
@@ -3779,10 +3779,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
           return Tmp;
       }
 
-    Tmp2 = ComputeNumSignBits(Op.getOperand(1), Depth+1);
-    if (Tmp2 == 1) return 1;
-    return std::min(Tmp, Tmp2)-1;
-
+    Tmp2 = ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    if (Tmp2 == 1) return 1; // Early out.
+    return std::min(Tmp, Tmp2) - 1;
   case ISD::SUB:
     Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
     if (Tmp2 == 1) return 1; // Early out.
