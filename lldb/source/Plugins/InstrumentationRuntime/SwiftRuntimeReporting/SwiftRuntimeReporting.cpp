@@ -12,7 +12,7 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/Variable.h"
@@ -217,7 +217,7 @@ SwiftRuntimeReporting::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
     return StructuredData::ObjectSP();
 
   // Prepare the argument types: treat all of them as pointers
-  ClangASTContext *clang_ast_context = ClangASTContext::GetScratch(target);
+  TypeSystemClang *clang_ast_context = TypeSystemClang::GetScratch(target);
   ValueList args;
   Value input_value;
   input_value.SetCompilerType(

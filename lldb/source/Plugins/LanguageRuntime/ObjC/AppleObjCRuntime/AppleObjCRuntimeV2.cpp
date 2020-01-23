@@ -480,7 +480,7 @@ bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
             std::vector<CompilerDecl> decls;
             if (vendor->FindDecls(class_name, false, 1, decls) &&
                 decls.size()) {
-              auto *ctx = llvm::dyn_cast<ClangASTContext>(decls[0].GetTypeSystem());
+              auto *ctx = llvm::dyn_cast<TypeSystemClang>(decls[0].GetTypeSystem());
               if (ctx)
                 if (CompilerType type =
                         ctx->GetTypeForDecl(decls[0].GetOpaqueDecl()))

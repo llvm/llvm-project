@@ -384,9 +384,9 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
   std::vector<clang::NamedDecl *> decls;
   CompilerType class_type;
   bool is_pointer_type = false;
-  if (ClangASTContext::IsObjCObjectPointerType(compiler_type, &class_type))
+  if (TypeSystemClang::IsObjCObjectPointerType(compiler_type, &class_type))
     is_pointer_type = true;
-  else if (ClangASTContext::IsObjCObjectOrInterfaceType(compiler_type))
+  else if (TypeSystemClang::IsObjCObjectOrInterfaceType(compiler_type))
     class_type = compiler_type;
   else
     return compiler_type;
@@ -421,7 +421,7 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
                                     compiler_decls) > 0 &&
           compiler_decls.size() > 0) {
         auto *ctx =
-            llvm::dyn_cast<ClangASTContext>(compiler_decls[0].GetTypeSystem());
+            llvm::dyn_cast<TypeSystemClang>(compiler_decls[0].GetTypeSystem());
         if (ctx) {
           CompilerType runtime_type =
               ctx->GetTypeForDecl(compiler_decls[0].GetOpaqueDecl());

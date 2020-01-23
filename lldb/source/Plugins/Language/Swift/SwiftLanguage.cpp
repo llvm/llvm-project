@@ -21,7 +21,7 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Variable.h"
@@ -842,8 +842,8 @@ SwiftLanguage::GetHardcodedSynthetics() {
            FormatManager &format_manager) -> lldb::SyntheticChildrenSP {
           struct IsEligible {
             static bool Check(const CompilerType &type) {
-              if ((ClangASTContext::IsObjCObjectPointerType(type) ||
-                   ClangASTContext::IsObjCObjectOrInterfaceType(type)) &&
+              if ((TypeSystemClang::IsObjCObjectPointerType(type) ||
+                   TypeSystemClang::IsObjCObjectOrInterfaceType(type)) &&
                   SwiftLanguageRuntime::IsSwiftClassName(type.GetTypeName().GetCString()))
                 return true;
 

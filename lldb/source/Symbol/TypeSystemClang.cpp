@@ -721,7 +721,7 @@ TypeSystemClang *TypeSystemClang::GetASTContext(clang::ASTContext *ast) {
   TypeSystemClang *clang_ast = GetASTMap().Lookup(ast);
   if (!clang_ast)
     clang_ast = new TypeSystemClang(
-        "ASTContext from ClangASTContext::GetASTContext", *ast);
+        "ASTContext from TypeSystemClang::GetASTContext", *ast);
   return clang_ast;
 }
 

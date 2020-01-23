@@ -13,7 +13,7 @@
 #include "SwiftLanguageRuntimeImpl.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
@@ -252,8 +252,8 @@ const CompilerType &SwiftLanguageRuntimeImpl::GetBoxMetadataType() {
 
   static ConstString g_type_name("__lldb_autogen_boxmetadata");
   const bool is_packed = false;
-  if (ClangASTContext *ast_ctx =
-          ClangASTContext::GetScratch(m_process.GetTarget())) {
+  if (TypeSystemClang *ast_ctx =
+          TypeSystemClang::GetScratch(m_process.GetTarget())) {
     CompilerType voidstar =
         ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
     CompilerType uint32 = ast_ctx->GetIntTypeFromBitSize(32, false);
@@ -1545,7 +1545,7 @@ TypeAndOrName SwiftLanguageRuntimeImpl::FixUpDynamicType(
   CompilerType static_type = static_value.GetCompilerType();
   CompilerType dynamic_type = type_and_or_name.GetCompilerType();
   // The logic in this function only applies to static/dynamic Swift types.
-  if (llvm::isa<ClangASTContext>(static_type.GetTypeSystem()))
+  if (llvm::isa<TypeSystemClang>(static_type.GetTypeSystem()))
     return type_and_or_name;
 
   bool should_be_made_into_ref = false;

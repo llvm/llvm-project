@@ -26,7 +26,7 @@
 #include "clang/AST/DeclObjC.h"
 
 #include "lldb/Core/Module.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -162,7 +162,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
       return nullptr;
     }
 
-    if (auto *clang_ctx = llvm::dyn_cast_or_null<ClangASTContext>(&*type_system_or_err)) {
+    if (auto *clang_ctx = llvm::dyn_cast_or_null<TypeSystemClang>(&*type_system_or_err)) {
       DWARFASTParserClang *clang_ast_parser =
           static_cast<DWARFASTParserClang *>(clang_ctx->GetDWARFParser());
       TypeMap clang_types;
@@ -290,7 +290,7 @@ void DWARFASTParserSwift::GetClangType(lldb_private::CompileUnit &comp_unit,
 
   // The Swift projection of all Clang type is a struct; search every kind.
   decl_context.back().kind = CompilerContextKind::AnyType;
-  LanguageSet clang_languages = ClangASTContext::GetSupportedLanguagesForTypes();
+  LanguageSet clang_languages = TypeSystemClang::GetSupportedLanguagesForTypes();
   // Search any modules referenced by DWARF.
   llvm::DenseSet<SymbolFile *> searched_symbol_files;
   sym_file.FindTypes(decl_context, clang_languages, searched_symbol_files,
