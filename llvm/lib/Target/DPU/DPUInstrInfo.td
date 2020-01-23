@@ -579,6 +579,11 @@ let usesCustomInserter = 1 in {
                       "",
                       [(set i32:$rc, (OpNode ADDRESS_IN_STACK:$addr))]>;
 
+    class MRAM_LOAD64_X_mr<PatFrag OpNode> : PseudoDPUInstruction<
+                      (outs GP64_REG:$dc), (ins MEMri24:$addr),
+                      "",
+                      [(set i64:$dc, (OpNode ADDRESS_IN_STACK:$addr))]>;
+
     def MRAM_STORErm      : MRAM_STORE_X_rm<mram_store>;
     def MRAM_STORE_BYTErm : MRAM_STORE_X_rm<mram_truncstorei8>;
     def MRAM_STORE_HALFrm : MRAM_STORE_X_rm<mram_truncstorei16>;
@@ -607,8 +612,14 @@ let usesCustomInserter = 1 in {
     def MRAM_LOAD_X8mr  : MRAM_LOAD_X_mr<mram_extloadi8>;
     def MRAM_LOAD_X16mr : MRAM_LOAD_X_mr<mram_extloadi16>;
 
-    def MRAM_LOAD_DOUBLEmr: PseudoDPUInstruction<
-                      (outs GP64_REG:$dc), (ins MEMri24:$addr),
-                      "",
-                      [(set i64:$dc, (mram_load ADDRESS_IN_STACK:$addr))]>;
+    def MRAM_LOAD64_U8mr  : MRAM_LOAD64_X_mr<mram_zextloadi8>;
+    def MRAM_LOAD64_U16mr : MRAM_LOAD64_X_mr<mram_zextloadi16>;
+    def MRAM_LOAD64_U32mr : MRAM_LOAD64_X_mr<mram_zextloadi32>;
+    def MRAM_LOAD64_S8mr  : MRAM_LOAD64_X_mr<mram_sextloadi8>;
+    def MRAM_LOAD64_S16mr : MRAM_LOAD64_X_mr<mram_sextloadi16>;
+    def MRAM_LOAD64_S32mr : MRAM_LOAD64_X_mr<mram_sextloadi32>;
+    def MRAM_LOAD64_X8mr  : MRAM_LOAD64_X_mr<mram_extloadi8>;
+    def MRAM_LOAD64_X16mr : MRAM_LOAD64_X_mr<mram_extloadi16>;
+    def MRAM_LOAD64_X32mr : MRAM_LOAD64_X_mr<mram_extloadi32>;
+    def MRAM_LOAD_DOUBLEmr: MRAM_LOAD64_X_mr<mram_load>;
 }

@@ -2884,18 +2884,32 @@ DPUTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return EmitMramStoreDoubleWithCustomInserter(MI, BB);
   case DPU::MRAM_LOAD_U8mr:
     return EmitMramSubLoadWithCustomInserter(MI, BB, 7, DPU::LBUrri);
+  case DPU::MRAM_LOAD64_U8mr:
+    return EmitMramSubLoadWithCustomInserter(MI, BB, 7, DPU::LBU_Urri);
   case DPU::MRAM_LOAD_S8mr:
   case DPU::MRAM_LOAD_X8mr:
     return EmitMramSubLoadWithCustomInserter(MI, BB, 7, DPU::LBSrri);
+  case DPU::MRAM_LOAD64_S8mr:
+  case DPU::MRAM_LOAD64_X8mr:
+    return EmitMramSubLoadWithCustomInserter(MI, BB, 7, DPU::LBS_Srri);
   case DPU::MRAM_LOAD_U16mr:
     return EmitMramSubLoadWithCustomInserter(MI, BB, 6, DPU::LHUrri);
+  case DPU::MRAM_LOAD64_U16mr:
+    return EmitMramSubLoadWithCustomInserter(MI, BB, 6, DPU::LHU_Urri);
   case DPU::MRAM_LOAD_S16mr:
   case DPU::MRAM_LOAD_X16mr:
     return EmitMramSubLoadWithCustomInserter(MI, BB, 6, DPU::LHSrri);
+  case DPU::MRAM_LOAD64_S16mr:
+  case DPU::MRAM_LOAD64_X16mr:
+    return EmitMramSubLoadWithCustomInserter(MI, BB, 6, DPU::LHS_Srri);
   case DPU::MRAM_LOAD_S32mr:
   case DPU::MRAM_LOAD_U32mr:
   case DPU::MRAM_LOADmr:
     return EmitMramSubLoadWithCustomInserter(MI, BB, 4, DPU::LWrri);
+  case DPU::MRAM_LOAD64_U32mr:
+    return EmitMramSubLoadWithCustomInserter(MI, BB, 4, DPU::LW_Urri);
+  case DPU::MRAM_LOAD64_S32mr:
+    return EmitMramSubLoadWithCustomInserter(MI, BB, 4, DPU::LW_Srri);
   case DPU::MRAM_LOAD_DOUBLEmr:
     return EmitMramLoadDoubleWithCustomInserter(MI, BB);
   case DPU::LSL64rr:
