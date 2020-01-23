@@ -552,6 +552,8 @@ bool AMDGPUCodeGenPrepare::foldBinOpIntoSelect(BinaryOperator &BO) const {
 
   CastInst *CastOp;
 
+  // TODO: Should probably try to handle some cases with multiple
+  // users. Duplicating the select may be profitable for division.
   SelectInst *Sel = findSelectThroughCast(BO.getOperand(0), CastOp);
   if (!Sel || !Sel->hasOneUse()) {
     SelOpNo = 1;
@@ -568,6 +570,8 @@ bool AMDGPUCodeGenPrepare::foldBinOpIntoSelect(BinaryOperator &BO) const {
     return false;
 
   if (CastOp) {
+    if (!CastOp->hasOneUse())
+      return false;
     CT = ConstantFoldCastOperand(CastOp->getOpcode(), CT, BO.getType(), *DL);
     CF = ConstantFoldCastOperand(CastOp->getOpcode(), CF, BO.getType(), *DL);
   }
