@@ -1625,10 +1625,6 @@ void Sema::AddAssumeAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
         << E->getSourceRange();
       return;
     }
-
-    if (I > Sema::MaximumAlignment)
-      Diag(CI.getLoc(), diag::warn_assume_aligned_too_great)
-          << CI.getRange() << Sema::MaximumAlignment;
   }
 
   if (OE) {
