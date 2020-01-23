@@ -30,7 +30,7 @@ template <typename SubPatternT> struct OneUse_match {
   SubPatternT SubPat;
   OneUse_match(const SubPatternT &SP) : SubPat(SP) {}
 
-  bool match(const MachineRegisterInfo &MRI, unsigned Reg) {
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
     return MRI.hasOneUse(Reg) && SubPat.match(MRI, Reg);
   }
 };
@@ -43,7 +43,7 @@ inline OneUse_match<SubPat> m_OneUse(const SubPat &SP) {
 struct ConstantMatch {
   int64_t &CR;
   ConstantMatch(int64_t &C) : CR(C) {}
-  bool match(const MachineRegisterInfo &MRI, unsigned Reg) {
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
     if (auto MaybeCst = getConstantVRegVal(Reg, MRI)) {
       CR = *MaybeCst;
       return true;
@@ -60,7 +60,7 @@ inline ConstantMatch m_ICst(int64_t &Cst) { return ConstantMatch(Cst); }
 // that.
 
 struct operand_type_match {
-  bool match(const MachineRegisterInfo &MRI, unsigned Reg) { return true; }
+  bool match(const MachineRegisterInfo &MRI, Register Reg) { return true; }
   bool match(const MachineRegisterInfo &MRI, MachineOperand *MO) {
     return MO->isReg();
   }
@@ -123,7 +123,7 @@ template <typename BindTy> struct bind_helper {
 
 template <> struct bind_helper<MachineInstr *> {
   static bool bind(const MachineRegisterInfo &MRI, MachineInstr *&MI,
-                   unsigned Reg) {
+                   Register Reg) {
     MI = MRI.getVRegDef(Reg);
     if (MI)
       return true;
@@ -132,7 +132,7 @@ template <> struct bind_helper<MachineInstr *> {
 };
 
 template <> struct bind_helper<LLT> {
-  static bool bind(const MachineRegisterInfo &MRI, LLT &Ty, unsigned Reg) {
+  static bool bind(const MachineRegisterInfo &MRI, LLT &Ty, Register Reg) {
     Ty = MRI.getType(Reg);
     if (Ty.isValid())
       return true;
@@ -142,7 +142,7 @@ template <> struct bind_helper<LLT> {
 
 template <> struct bind_helper<const ConstantFP *> {
   static bool bind(const MachineRegisterInfo &MRI, const ConstantFP *&F,
-                   unsigned Reg) {
+                   Register Reg) {
     F = getConstantFPVRegVal(Reg, MRI);
     if (F)
       return true;
@@ -325,7 +325,7 @@ struct CheckType {
   LLT Ty;
   CheckType(const LLT &Ty) : Ty(Ty) {}
 
-  bool match(const MachineRegisterInfo &MRI, unsigned Reg) {
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
     return MRI.getType(Reg) == Ty;
   }
 };
