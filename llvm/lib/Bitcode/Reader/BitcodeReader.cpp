@@ -2630,12 +2630,13 @@ Error BitcodeReader::parseConstants() {
 
       Type *SelectorTy = Type::getInt1Ty(Context);
 
-      // The selector might be an i1 or an <n x i1>
+      // The selector might be an i1, an <n x i1>, or a <vscale x n x i1>
       // Get the type from the ValueList before getting a forward ref.
       if (VectorType *VTy = dyn_cast<VectorType>(CurTy))
         if (Value *V = ValueList[Record[0]])
           if (SelectorTy != V->getType())
-            SelectorTy = VectorType::get(SelectorTy, VTy->getNumElements());
+            SelectorTy = VectorType::get(SelectorTy,
+                                         VTy->getElementCount());
 
       V = ConstantExpr::getSelect(ValueList.getConstantFwdRef(Record[0],
                                                               SelectorTy),
@@ -2693,7 +2694,7 @@ Error BitcodeReader::parseConstants() {
       Constant *Op0 = ValueList.getConstantFwdRef(Record[0], OpTy);
       Constant *Op1 = ValueList.getConstantFwdRef(Record[1], OpTy);
       Type *ShufTy = VectorType::get(Type::getInt32Ty(Context),
-                                                 OpTy->getNumElements());
+                                     OpTy->getElementCount());
       Constant *Op2 = ValueList.getConstantFwdRef(Record[2], ShufTy);
       V = ConstantExpr::getShuffleVector(Op0, Op1, Op2);
       break;
@@ -2707,7 +2708,7 @@ Error BitcodeReader::parseConstants() {
       Constant *Op0 = ValueList.getConstantFwdRef(Record[1], OpTy);
       Constant *Op1 = ValueList.getConstantFwdRef(Record[2], OpTy);
       Type *ShufTy = VectorType::get(Type::getInt32Ty(Context),
-                                                 RTy->getNumElements());
+                                     RTy->getElementCount());
       Constant *Op2 = ValueList.getConstantFwdRef(Record[3], ShufTy);
       V = ConstantExpr::getShuffleVector(Op0, Op1, Op2);
       break;
@@ -4168,9 +4169,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Invalid record");
       if (!Vec1->getType()->isVectorTy() || !Vec2->getType()->isVectorTy())
         return error("Invalid type for value");
+
       I = new ShuffleVectorInst(Vec1, Vec2, Mask);
       FullTy = VectorType::get(FullTy->getVectorElementType(),
-                               Mask->getType()->getVectorNumElements());
+                               Mask->getType()->getVectorElementCount());
       InstructionList.push_back(I);
       break;
     }
