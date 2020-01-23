@@ -570,9 +570,20 @@ class ThreeOpFrag<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
     }
 
     return true;
-  }]
-> {
+  }]> {
   let PredicateCodeUsesOperands = 1;
+
+  // The divergence predicate is irrelevant in GlobalISel, as we have
+  // proper register bank checks. We also force all VOP instruction
+  // operands to VGPR, so we should not need to check the constant bus
+  // restriction.
+  //
+  // FIXME: With unlucky SGPR operands, we could penalize code by
+  // blocking folding SGPR->VGPR copies later.
+  // FIXME: There's no register bank verifier
+  // FIXME: Should add a way for the emitter to recognize this is a
+  // trivially true predicate to eliminate the check.
+  let GISelPredicateCode = [{return true;}];
 }
 
 let SubtargetPredicate = isGFX9Plus in {
@@ -614,7 +625,7 @@ def V_SUB_I32_gfx9 : VOP3Inst <"v_sub_i32_gfx9", VOP3_Profile<VOP_I32_I32_I32>>;
 class ThreeOp_i32_Pats <SDPatternOperator op1, SDPatternOperator op2, Instruction inst> : GCNPat <
   // This matches (op2 (op1 i32:$src0, i32:$src1), i32:$src2) with conditions.
   (ThreeOpFrag<op1, op2> i32:$src0, i32:$src1, i32:$src2),
-  (inst i32:$src0, i32:$src1, i32:$src2)
+  (inst VSrc_b32:$src0, VSrc_b32:$src1, VSrc_b32:$src2)
 >;
 
 def : ThreeOp_i32_Pats<shl, add, V_LSHL_ADD_U32>;
