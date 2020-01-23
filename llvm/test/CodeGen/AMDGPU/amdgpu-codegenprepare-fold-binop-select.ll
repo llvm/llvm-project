@@ -492,3 +492,55 @@ define i32 @select_add_zext_select(i1 %cond) {
   %op = add i32 %trunc, 42
   ret i32 %op
 }
+
+define i32 @select_add_bitcast_select(i1 %cond) {
+; IR-LABEL: @select_add_bitcast_select(
+; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i32 1065353258, i32 1073741866
+; IR-NEXT:    ret i32 [[OP]]
+;
+; GCN-LABEL: select_add_bitcast_select:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
+; GCN-NEXT:    v_mov_b32_e32 v1, 0x4000002a
+; GCN-NEXT:    v_mov_b32_e32 v2, 0x3f80002a
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %select = select i1 %cond, float 1.0, float 2.0
+  %trunc = bitcast float %select to i32
+  %op = add i32 %trunc, 42
+  ret i32 %op
+}
+
+; If we fold through a cast, we need to ensure it doesn't have
+; multiple uses.
+define <2 x half> @multi_use_cast_regression(i1 %cond) {
+; IR-LABEL: @multi_use_cast_regression(
+; IR-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], half 0xH3C00, half 0xH0000
+; IR-NEXT:    [[FPEXT:%.*]] = fpext half [[SELECT]] to float
+; IR-NEXT:    [[FSUB:%.*]] = fsub nsz float 1.000000e+00, [[FPEXT]]
+; IR-NEXT:    [[CALL:%.*]] = call nsz <2 x half> @llvm.amdgcn.cvt.pkrtz(float [[FPEXT]], float [[FSUB]])
+; IR-NEXT:    ret <2 x half> [[CALL]]
+;
+; GCN-LABEL: multi_use_cast_regression:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
+; GCN-NEXT:    v_mov_b32_e32 v1, 0x3c00
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
+; GCN-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GCN-NEXT:    v_sub_f32_e32 v1, 1.0, v0
+; GCN-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %select = select i1 %cond, half 1.000000e+00, half 0.000000e+00
+  %fpext = fpext half %select to float
+  %fsub = fsub nsz float 1.0, %fpext
+  %call = call nsz <2 x half> @llvm.amdgcn.cvt.pkrtz(float %fpext, float %fsub) #3
+  ret <2 x half> %call
+}
+
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #0
+
+attributes #0 = { nounwind readnone speculatable }
