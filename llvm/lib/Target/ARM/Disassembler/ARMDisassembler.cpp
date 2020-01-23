@@ -538,10 +538,6 @@ template<unsigned MinLog, unsigned MaxLog>
 static DecodeStatus DecodePowerTwoOperand(MCInst &Inst, unsigned Val,
                                           uint64_t Address,
                                           const void *Decoder);
-template <int shift>
-static DecodeStatus DecodeExpandedImmOperand(MCInst &Inst, unsigned Val,
-                                             uint64_t Address,
-                                             const void *Decoder);
 template<unsigned start>
 static DecodeStatus DecodeMVEPairVectorIndexOperand(MCInst &Inst, unsigned Val,
                                                     uint64_t Address,
@@ -6393,16 +6389,6 @@ static DecodeStatus DecodePowerTwoOperand(MCInst &Inst, unsigned Val,
 
   Inst.addOperand(MCOperand::createImm(1LL << Val));
   return S;
-}
-
-template <int shift>
-static DecodeStatus DecodeExpandedImmOperand(MCInst &Inst, unsigned Val,
-                                             uint64_t Address,
-                                             const void *Decoder) {
-    Val <<= shift;
-
-    Inst.addOperand(MCOperand::createImm(Val));
-    return MCDisassembler::Success;
 }
 
 template<unsigned start>
