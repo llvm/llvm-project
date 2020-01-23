@@ -217,6 +217,8 @@ enum NodeType : unsigned {
 
   LDNF1,
   LDNF1S,
+  LDFF1,
+  LDFF1S,
 
   // Unsigned gather loads.
   GLD1,
