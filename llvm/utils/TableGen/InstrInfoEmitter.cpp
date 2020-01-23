@@ -570,7 +570,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   // Emit the array of instruction names.
   InstrNames.layout();
   OS << "extern const char " << TargetName << "InstrNameData[] = {\n";
-  InstrNames.emit_string_literals(OS);
+  InstrNames.emit(OS, printChar);
   OS << "};\n\n";
 
   OS << "extern const unsigned " << TargetName <<"InstrNameIndices[] = {";
