@@ -225,7 +225,9 @@ def CC_AT    : CC_VAL<21>;  // Always true
 //===----------------------------------------------------------------------===//
 
 multiclass RMm<string opcStr, bits<8>opc,
-               RegisterClass RC, ValueType Ty, Operand immOp, Operand immOp2> {
+               RegisterClass RC, ValueType Ty,
+               Operand immOp, Operand immOp2,
+               SDPatternOperator OpNode=null_frag> {
   def rri : RM<
     opc, (outs RC:$sx), (ins RC:$sy, RC:$sz, immOp2:$imm32),
     !strconcat(opcStr, " $sx, ${imm32}($sy, ${sz})")> {
@@ -235,7 +237,8 @@ multiclass RMm<string opcStr, bits<8>opc,
   }
   def rzi : RM<
     opc, (outs RC:$sx), (ins RC:$sz, immOp2:$imm32),
-    !strconcat(opcStr, " $sx, ${imm32}(${sz})")> {
+    !strconcat(opcStr, " $sx, ${imm32}(${sz})"),
+    [(set Ty:$sx, (OpNode Ty:$sz, (Ty simm32:$imm32)))]> {
     let cy = 0;
     let sy = 0;
     let cz = 1;
@@ -254,26 +257,20 @@ multiclass RMm<string opcStr, bits<8>opc,
 
 // Multiclass for RR type instructions
 
-multiclass RRmrr<string opcStr, bits<8>opc, SDNode OpNode,
+multiclass RRmrr<string opcStr, bits<8>opc,
                  RegisterClass RCo, ValueType Tyo,
-                 RegisterClass RCi, ValueType Tyi> {
+                 RegisterClass RCi, ValueType Tyi,
+                 SDPatternOperator OpNode=null_frag> {
   def rr : RR<opc, (outs RCo:$sx), (ins RCi:$sy, RCi:$sz),
               !strconcat(opcStr, " $sx, $sy, $sz"),
               [(set Tyo:$sx, (OpNode Tyi:$sy, Tyi:$sz))]>
            { let cy = 1; let cz = 1; let hasSideEffects = 0; }
 }
 
-multiclass RRNDmrr<string opcStr, bits<8>opc,
+multiclass RRmri<string opcStr, bits<8>opc,
                  RegisterClass RCo, ValueType Tyo,
-                 RegisterClass RCi, ValueType Tyi> {
-  def rr : RR<opc, (outs RCo:$sx), (ins RCi:$sy, RCi:$sz),
-              !strconcat(opcStr, " $sx, $sy, $sz")>
-           { let cy = 1; let cz = 1; let hasSideEffects = 0; }
-}
-
-multiclass RRmri<string opcStr, bits<8>opc, SDNode OpNode,
-                 RegisterClass RCo, ValueType Tyo,
-                 RegisterClass RCi, ValueType Tyi, Operand immOp> {
+                 RegisterClass RCi, ValueType Tyi, Operand immOp,
+                 SDPatternOperator OpNode=null_frag> {
   // VE calculates (OpNode $sy, $sz), but llvm requires to have immediate
   // in RHS, so we use following definition.
   def ri : RR<opc, (outs RCo:$sx), (ins RCi:$sz, immOp:$sy),
@@ -282,9 +279,10 @@ multiclass RRmri<string opcStr, bits<8>opc, SDNode OpNode,
            { let cy = 0; let cz = 1; let hasSideEffects = 0; }
 }
 
-multiclass RRmiz<string opcStr, bits<8>opc, SDNode OpNode,
+multiclass RRmiz<string opcStr, bits<8>opc,
                  RegisterClass RCo, ValueType Tyo,
-                 RegisterClass RCi, ValueType Tyi, Operand immOp> {
+                 RegisterClass RCi, ValueType Tyi, Operand immOp,
+                 SDPatternOperator OpNode=null_frag> {
   def zi : RR<opc, (outs RCo:$sx), (ins immOp:$sy),
               !strconcat(opcStr, " $sx, $sy"),
               [(set Tyo:$sx, (OpNode (Tyi simm7:$sy), 0))]>
@@ -326,25 +324,15 @@ multiclass RRNDmim<string opcStr, bits<8>opc,
 // Used by add, mul, div, and similar commutative instructions
 //   The order of operands are "$sx, $sy, $sz"
 
-multiclass RRm<string opcStr, bits<8>opc, SDNode OpNode,
-               RegisterClass RC, ValueType Ty, Operand immOp, Operand immOp2> :
-  RRmrr<opcStr, opc, OpNode, RC, Ty, RC, Ty>,
-  RRmri<opcStr, opc, OpNode, RC, Ty, RC, Ty, immOp>,
-  RRmiz<opcStr, opc, OpNode, RC, Ty, RC, Ty, immOp>,
+multiclass RRm<string opcStr, bits<8>opc, RegisterClass RC, ValueType Ty,
+               Operand immOp, Operand immOp2,
+               SDPatternOperator OpNode=null_frag> :
+  RRmrr<opcStr, opc, RC, Ty, RC, Ty, OpNode>,
+  RRmri<opcStr, opc, RC, Ty, RC, Ty, immOp, OpNode>,
+  RRmiz<opcStr, opc, RC, Ty, RC, Ty, immOp, OpNode>,
   RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, immOp2>,
   RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, immOp2>;
 
-// Used by cmp instruction
-//   The order of operands are "$sx, $sy, $sz"
-
-multiclass RRNDm<string opcStr, bits<8>opc,
-                 RegisterClass RC, ValueType Ty,
-                 Operand immOp, Operand immOp2> :
-  RRNDmrr<opcStr, opc, RC, Ty, RC, Ty>,
-  //RRNDmir<opcStr, opc, RC, Ty, RC, Ty, immOp>,
-  //RRNDmiz<opcStr, opc, RC, Ty, RC, Ty, immOp>,
-  RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, immOp2>,
-  RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, immOp2>;
 
 // Multiclass for RR type instructions
 //   Used by sra, sla, sll, and similar instructions
@@ -432,53 +420,53 @@ defm LEA32 : RMm<"lea", 0x06, I32, i32, simm7Op32, simm32Op32>;
 
 // ADS instruction
 let cx = 0 in
-defm ADS : RRm<"adds.w.sx", 0x4A, add, I32, i32, simm7Op32, uimm6Op32>;
+defm ADS : RRm<"adds.w.sx", 0x4A, I32, i32, simm7Op32, uimm6Op32, add>;
 let cx = 1 in
-defm ADSU : RRm<"adds.w.zx", 0x4A, add, I32, i32, simm7Op32, uimm6Op32>;
+defm ADSU : RRm<"adds.w.zx", 0x4A, I32, i32, simm7Op32, uimm6Op32, add>;
 
 // ADX instruction
 let cx = 0 in
-defm ADX : RRm<"adds.l", 0x59, add, I64, i64, simm7Op64, uimm6Op64>;
+defm ADX : RRm<"adds.l", 0x59, I64, i64, simm7Op64, uimm6Op64, add>;
 
 // CMP instruction
 let cx = 0 in
-defm CMP : RRNDm<"cmpu.l", 0x55, I64, i64, simm7Op64, uimm6Op64>;
+defm CMP : RRm<"cmpu.l", 0x55, I64, i64, simm7Op64, uimm6Op64>;
 let cx = 1 in
-defm CMPUW : RRNDm<"cmpu.w", 0x55, I32, i32, simm7Op32, uimm6Op32>;
+defm CMPUW : RRm<"cmpu.w", 0x55, I32, i32, simm7Op32, uimm6Op32>;
 
 // CPS instruction
 let cx = 0 in
-defm CPS : RRNDm<"cmps.w.sx", 0x7A, I32, i32, simm7Op32, uimm6Op32>;
+defm CPS : RRm<"cmps.w.sx", 0x7A, I32, i32, simm7Op32, uimm6Op32>;
 let cx = 1 in
-defm CPSU : RRNDm<"cmps.w.zx", 0x7A, I32, i32, simm7Op32, uimm6Op32>;
+defm CPSU : RRm<"cmps.w.zx", 0x7A, I32, i32, simm7Op32, uimm6Op32>;
 
 // CPX instruction
 let cx = 0 in
-defm CPX : RRNDm<"cmps.l", 0x6A, I64, i64, simm7Op64, uimm6Op64>;
+defm CPX : RRm<"cmps.l", 0x6A, I64, i64, simm7Op64, uimm6Op64>;
 
 // cx: sx/zx, cw: max/min
 
 let cw = 0 in defm CMXa :
-  RRNDm<"maxs.l", 0x68, I64, i64, simm7Op64, uimm6Op64>;
+  RRm<"maxs.l", 0x68, I64, i64, simm7Op64, uimm6Op64>;
 
 let cx = 0, cw = 0 in defm CMSa :
-  RRNDm<"maxs.w.zx", 0x78, I32, i32, simm7Op32, uimm6Op32>;
+  RRm<"maxs.w.zx", 0x78, I32, i32, simm7Op32, uimm6Op32>;
 
 let cw = 1 in defm CMXi :
-  RRNDm<"mins.l", 0x68, I64, i64, simm7Op64, uimm6Op64>;
+  RRm<"mins.l", 0x68, I64, i64, simm7Op64, uimm6Op64>;
 
 let cx = 1, cw = 0 in defm CMSi :
-  RRNDm<"mins.w.zx", 0x78, I32, i32, simm7Op32, uimm6Op32>;
+  RRm<"mins.w.zx", 0x78, I32, i32, simm7Op32, uimm6Op32>;
 
 // 5.3.2.3. Logical Arithmetic Operation Instructions
 
 let cx = 0 in {
-  defm AND : RRm<"and", 0x44, and, I64, i64, simm7Op64, uimm6Op64>;
-  defm OR : RRm<"or", 0x45, or, I64, i64, simm7Op64, uimm6Op64>;
+  defm AND : RRm<"and", 0x44, I64, i64, simm7Op64, uimm6Op64, and>;
+  defm OR : RRm<"or", 0x45, I64, i64, simm7Op64, uimm6Op64, or>;
   let isCodeGenOnly = 1 in {
-    defm AND32 : RRm<"and", 0x44, and, I32, i32, simm7Op32, uimm6Op32>;
-    defm OR32 : RRm<"or", 0x45, or, I32, i32, simm7Op32, uimm6Op32>;
-    defm XOR32 : RRm<"xor", 0x46, xor, I32, i32, simm7Op32, uimm6Op32>;
+    defm AND32 : RRm<"and", 0x44, I32, i32, simm7Op32, uimm6Op32, and>;
+    defm OR32 : RRm<"or", 0x45, I32, i32, simm7Op32, uimm6Op32, or>;
+    defm XOR32 : RRm<"xor", 0x46, I32, i32, simm7Op32, uimm6Op32, xor>;
   }
 }
 
@@ -497,22 +485,22 @@ defm SLA : RRIm<"sla.w.sx", 0x66, shl, I32, i32, simm7Op32, uimm6Op32>;
 
 // FCP instruction
 let cx = 0 in
-defm FCP : RRNDm<"fcmp.d", 0x7E, I64, f64, simm7Op64, uimm6Op64>;
+defm FCP : RRm<"fcmp.d", 0x7E, I64, f64, simm7Op64, uimm6Op64>;
 let cx = 1 in
-defm FCPS : RRNDm<"fcmp.s", 0x7E, F32, f32, simm7Op32, uimm6Op32>;
+defm FCPS : RRm<"fcmp.s", 0x7E, F32, f32, simm7Op32, uimm6Op32>;
 
 // FCM
 let cw = 0 in {
   let cx = 0 in
-  defm FCMA : RRNDm<"fmax.d", 0x3E, I64, f64, simm7Op64, uimm6Op64>;
+  defm FCMA : RRm<"fmax.d", 0x3E, I64, f64, simm7Op64, uimm6Op64>;
   let cx = 1 in
-  defm FCMAS : RRNDm<"fmax.s", 0x3E, F32, f32, simm7Op32, uimm6Op32>;
+  defm FCMAS : RRm<"fmax.s", 0x3E, F32, f32, simm7Op32, uimm6Op32>;
 }
 let cw = 1 in {
   let cx = 0 in
-  defm FCMI : RRNDm<"fmin.d", 0x3E, I64, f64, simm7Op64, uimm6Op64>;
+  defm FCMI : RRm<"fmin.d", 0x3E, I64, f64, simm7Op64, uimm6Op64>;
   let cx = 1 in
-  defm FCMIS : RRNDm<"fmin.s", 0x3E, F32, f32, simm7Op32, uimm6Op32>;
+  defm FCMIS : RRm<"fmin.s", 0x3E, F32, f32, simm7Op32, uimm6Op32>;
 }
 
 // Load and Store instructions
