@@ -156,6 +156,14 @@ void RecursivelyDeleteTriviallyDeadInstructions(
     SmallVectorImpl<WeakTrackingVH> &DeadInsts,
     const TargetLibraryInfo *TLI = nullptr, MemorySSAUpdater *MSSAU = nullptr);
 
+/// Same functionality as RecursivelyDeleteTriviallyDeadInstructions, but allow
+/// instructions that are not trivially dead. These will be ignored.
+/// Returns true if any changes were made, i.e. any instructions trivially dead
+/// were found and deleted.
+bool RecursivelyDeleteTriviallyDeadInstructionsPermissive(
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts,
+    const TargetLibraryInfo *TLI = nullptr, MemorySSAUpdater *MSSAU = nullptr);
+
 /// If the specified value is an effectively dead PHI node, due to being a
 /// def-use chain of single-use nodes that either forms a cycle or is terminated
 /// by a trivially dead instruction, delete it. If that makes any of its

@@ -962,33 +962,6 @@ static bool isHighCostExpansion(const SCEV *S,
   return true;
 }
 
-/// If any of the instructions in the specified set are trivially dead, delete
-/// them and see if this makes any of their operands subsequently dead.
-static bool
-DeleteTriviallyDeadInstructions(SmallVectorImpl<WeakTrackingVH> &DeadInsts) {
-  bool Changed = false;
-
-  while (!DeadInsts.empty()) {
-    Value *V = DeadInsts.pop_back_val();
-    Instruction *I = dyn_cast_or_null<Instruction>(V);
-
-    if (!I || !isInstructionTriviallyDead(I))
-      continue;
-
-    for (Use &O : I->operands())
-      if (Instruction *U = dyn_cast<Instruction>(O)) {
-        O = nullptr;
-        if (U->use_empty())
-          DeadInsts.emplace_back(U);
-      }
-
-    I->eraseFromParent();
-    Changed = true;
-  }
-
-  return Changed;
-}
-
 namespace {
 
 class LSRUse;
@@ -3212,7 +3185,8 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain, SCEVExpander &Rewriter,
       IVOper = Builder.CreateTruncOrBitCast(IVOper, OperTy, "lsr.chain");
     }
     Inc.UserInst->replaceUsesOfWith(Inc.IVOperand, IVOper);
-    DeadInsts.emplace_back(Inc.IVOperand);
+    if (auto *OperandIsInstr = dyn_cast<Instruction>(Inc.IVOperand))
+      DeadInsts.emplace_back(OperandIsInstr);
   }
   // If LSR created a new, wider phi, we may also replace its postinc. We only
   // do this if we also found a wide value for the head of the chain.
@@ -5268,7 +5242,8 @@ Value *LSRInstance::Expand(const LSRUse &LU, const LSRFixup &LF,
   // form, update the ICmp's other operand.
   if (LU.Kind == LSRUse::ICmpZero) {
     ICmpInst *CI = cast<ICmpInst>(LF.UserInst);
-    DeadInsts.emplace_back(CI->getOperand(1));
+    if (auto *OperandIsInstr = dyn_cast<Instruction>(CI->getOperand(1)))
+      DeadInsts.emplace_back(OperandIsInstr);
     assert(!F.BaseGV && "ICmp does not support folding a global value and "
                            "a scale at the same time!");
     if (F.Scale == -1) {
@@ -5449,7 +5424,8 @@ void LSRInstance::Rewrite(const LSRUse &LU, const LSRFixup &LF,
       LF.UserInst->replaceUsesOfWith(LF.OperandValToReplace, FullV);
   }
 
-  DeadInsts.emplace_back(LF.OperandValToReplace);
+  if (auto *OperandIsInstr = dyn_cast<Instruction>(LF.OperandValToReplace))
+    DeadInsts.emplace_back(OperandIsInstr);
 }
 
 /// Rewrite all the fixup locations with new values, following the chosen
@@ -5490,7 +5466,7 @@ void LSRInstance::ImplementSolution(
   // instructions.
   Rewriter.clear();
 
-  Changed |= DeleteTriviallyDeadInstructions(DeadInsts);
+  Changed |= RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts);
 }
 
 LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
@@ -5727,7 +5703,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
     unsigned numFolded = Rewriter.replaceCongruentIVs(L, &DT, DeadInsts, &TTI);
     if (numFolded) {
       Changed = true;
-      DeleteTriviallyDeadInstructions(DeadInsts);
+      RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts);
       DeleteDeadPHIs(L->getHeader());
     }
   }
