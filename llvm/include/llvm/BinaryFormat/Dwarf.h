@@ -533,7 +533,7 @@ unsigned LanguageVendor(SourceLanguage L);
 Optional<unsigned> LanguageLowerBound(SourceLanguage L);
 
 /// The size of a reference determined by the DWARF 32/64-bit format.
-constexpr uint8_t getDwarfOffsetByteSize(DwarfFormat Format) {
+inline uint8_t getDwarfOffsetByteSize(DwarfFormat Format) {
   switch (Format) {
   case DwarfFormat::DWARF32:
     return 4;
@@ -569,7 +569,7 @@ struct FormParams {
 };
 
 /// Get the byte size of the unit length field depending on the DWARF format.
-constexpr uint8_t getUnitLengthFieldByteSize(DwarfFormat Format) {
+inline uint8_t getUnitLengthFieldByteSize(DwarfFormat Format) {
   switch (Format) {
   case DwarfFormat::DWARF32:
     return 4;
