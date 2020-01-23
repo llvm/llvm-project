@@ -27,7 +27,6 @@
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/LangStandard.h"
@@ -233,7 +232,7 @@ static lldb::addr_t GetVTableAddress(Process &process,
   // We have an object already read from process memory,
   // so just extract VTable pointer from it
 
-  lldb_private::DataExtractor data;
+  DataExtractor data;
   Status err;
   auto size = valobj.GetData(data, err);
   if (err.Fail() || vbtable_ptr_offset + data.GetAddressByteSize() > size)
@@ -519,7 +518,6 @@ ClangASTContext::ClangASTContext(llvm::StringRef name,
   GetASTMap().Insert(&existing_ctxt, this);
 }
 
-//----------------------------------------------------------------------
 // Destructor
 ClangASTContext::~ClangASTContext() { Finalize(); }
 
@@ -4383,7 +4381,6 @@ ClangASTContext::GetTypedefedType(lldb::opaque_compiler_type_t type) {
   return CompilerType();
 }
 
-//----------------------------------------------------------------------
 // Create related types using the current type's AST
 
 CompilerType ClangASTContext::GetBasicTypeFromAST(lldb::BasicType basic_type) {
@@ -4468,12 +4465,6 @@ ClangASTContext::GetBitSize(lldb::opaque_compiler_type_t type,
     }
   }
   return None;
-}
-
-Optional<uint64_t>
-ClangASTContext::GetByteStride(lldb::opaque_compiler_type_t type,
-                               ExecutionContextScope *exe_scope) {
-  return {};
 }
 
 llvm::Optional<size_t>

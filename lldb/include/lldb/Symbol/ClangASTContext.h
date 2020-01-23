@@ -666,7 +666,9 @@ public:
 
   llvm::Optional<uint64_t>
   GetByteStride(lldb::opaque_compiler_type_t type,
-                ExecutionContextScope *exe_scope) override;
+                ExecutionContextScope *exe_scope) override {
+    return {};
+  }
 
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                              uint64_t &count) override;
