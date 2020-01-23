@@ -591,7 +591,7 @@ class AMDGPUDimProfile<string opmod,
   AMDGPUDimProps Dim = dim;
   string OpMod = opmod; // the corresponding instruction is named IMAGE_OpMod
 
-  // These are entended to be overwritten by subclasses
+  // These are intended to be overwritten by subclasses
   bit IsSample = 0;
   bit IsAtomic = 0;
   list<LLVMType> RetTypes = [];
