@@ -3891,6 +3891,22 @@ public:
   }
 };
 
+/// Helper data structure to emit `AllocAlignAttr`.
+class AllocAlignAttrEmitter final
+    : public AbstractAssumeAlignedAttrEmitter<AllocAlignAttr> {
+public:
+  AllocAlignAttrEmitter(CodeGenFunction &CGF_, const Decl *FuncDecl,
+                        const CallArgList &CallArgs)
+      : AbstractAssumeAlignedAttrEmitter(CGF_, FuncDecl) {
+    if (!AA)
+      return;
+    // Alignment may or may not be a constant, and that is okay.
+    Alignment = CallArgs[AA->getParamIndex().getLLVMIndex()]
+                    .getRValue(CGF)
+                    .getScalarVal();
+  }
+};
+
 } // namespace
 
 RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
@@ -4487,6 +4503,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   AssumeAlignedAttrEmitter AssumeAlignedAttrEmitter(*this, TargetDecl);
   Attrs = AssumeAlignedAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);
 
+  AllocAlignAttrEmitter AllocAlignAttrEmitter(*this, TargetDecl, CallArgs);
+  Attrs = AllocAlignAttrEmitter.TryEmitAsCallSiteAttribute(Attrs);
+
   // Emit the actual call/invoke instruction.
   llvm::CallBase *CI;
   if (!InvokeDest) {
@@ -4706,14 +4725,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   // Emit the assume_aligned check on the return value.
   if (Ret.isScalar() && TargetDecl) {
     AssumeAlignedAttrEmitter.EmitAsAnAssumption(Loc, RetTy, Ret);
-
-    if (const auto *AA = TargetDecl->getAttr<AllocAlignAttr>()) {
-      llvm::Value *AlignmentVal = CallArgs[AA->getParamIndex().getLLVMIndex()]
-                                      .getRValue(*this)
-                                      .getScalarVal();
-      EmitAlignmentAssumption(Ret.getScalarVal(), RetTy, Loc, AA->getLocation(),
-                              AlignmentVal);
-    }
+    AllocAlignAttrEmitter.EmitAsAnAssumption(Loc, RetTy, Ret);
   }
 
   // Explicitly call CallLifetimeEnd::Emit just to re-use the code even though
