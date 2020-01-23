@@ -30,7 +30,7 @@ struct Empty1 { void *data; };
 struct Empty2 { void *data; };
 
 
-int main(int argc, char const *argv[]) {
+int main() { int argc = 0; char **argv = (char **)0; 
 	JustAStruct foo;
 	foo.A = 1;
 	foo.B = 3.14;

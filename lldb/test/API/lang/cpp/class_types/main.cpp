@@ -105,8 +105,8 @@ protected:
 };
 
 int
-main (int argc, char const *argv[])
-{
+main() { int argc = 0; char **argv = (char **)0;
+
     A a(12);
     B b(22,33);
     C c(44,55,66);

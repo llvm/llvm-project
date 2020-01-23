@@ -65,8 +65,8 @@ class Joiner2 : public Derived2
     int m_stuff[32];
 };
 
-int main(int argc, const char * argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     Joiner1 j1;
     Joiner2 j2;
     j1.Print();

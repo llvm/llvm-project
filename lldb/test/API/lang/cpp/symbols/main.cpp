@@ -24,8 +24,8 @@ const char getAChar()
                   //% self.expect("expression -- D", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["char", "Hello"])
 }
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     int six = twice(3);
     return 0; 
 }

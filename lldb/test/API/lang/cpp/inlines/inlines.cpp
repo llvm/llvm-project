@@ -36,8 +36,8 @@ outer_inline (int outer_input)
 }
 
 int
-main (int argc, char **argv)
-{
+main() { int argc = 0; char **argv = (char **)0;
+
   printf ("Starting...\n");
 
   int (*func_ptr) (int);

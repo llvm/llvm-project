@@ -40,7 +40,7 @@ struct contains_type {
 };
 
 
-int main (int argc, char const *argv[]) {
+int main() { int argc = 0; char **argv = (char **)0; 
   nsp_a::namespace_only a_namespace_only = { 1 };
   nsp_a::namespace_and_file a_namespace_and_file = { 2 };
   nsp_a::contains_type::in_contains_type a_in_contains_type = { 3 };

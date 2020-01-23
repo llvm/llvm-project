@@ -5,8 +5,8 @@
 #include <stdio.h>
 
 int
-main (int argc, char const **argv)
-{
+main() { int argc = 0; char **argv = (char **)0;
+
     struct stat buf;
     int i, rv = 0; // Set breakpoint here.
 

@@ -10,7 +10,7 @@ public:
   }
 };
 
-int main(int argc, char **argv) {
+int main() { int argc = 0; char **argv = (char **)0; 
   A a;
   // Break here
   a.test_abi_tag();

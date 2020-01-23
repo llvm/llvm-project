@@ -24,5 +24,32 @@ DEFINE_UNSIGNED_ENUM(ul, unsigned long)
 DEFINE_SIGNED_ENUM(l, signed long)
 DEFINE_UNSIGNED_ENUM(ull, unsigned long long)
 DEFINE_SIGNED_ENUM(ll, signed long long)
+#ifdef SIGNED_ENUM_CLASS_TYPE
+    typedef SIGNED_ENUM_CLASS_TYPE enum_integer_t;
+    enum class DayType : enum_integer_t {
+        Monday = -3,
+        Tuesday,
+        Wednesday,
+        Thursday,
+        Friday,
+        Saturday,
+        Sunday,
+        kNumDays
+    };
+    enum_integer_t day_value;
+#else
+    typedef UNSIGNED_ENUM_CLASS_TYPE enum_integer_t;
+    enum class DayType : enum_integer_t {
+        Monday = 200,
+        Tuesday,
+        Wednesday,
+        Thursday,
+        Friday,
+        Saturday,
+        Sunday,
+        kNumDays
+    };
+    enum_integer_t day_value;
+#endif
 
-int main(int argc, char const *argv[]) { return 0; }
+int main() { int argc = 0; char **argv = (char **)0; return 0; }

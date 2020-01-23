@@ -14,8 +14,8 @@ public:
   virtual int func() { return m_derived_data; }
 };
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
   Base *base = new Derived();
     return 0; //% stream = lldb.SBStream()
     //% base = self.frame().FindVariable("base")

@@ -5,8 +5,8 @@
 char my_char = 'u';
 int my_int = 0;
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     for (int i = 0; i < 3; ++i) {
         printf("my_char='%c'\n", my_char);
         ++my_char;

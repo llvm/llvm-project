@@ -5,8 +5,8 @@
 #include "lldb/API/SBTarget.h"
 
 using namespace lldb;
-int main (int argc, char **argv)
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
   // We are expecting the program path and a path to an executable to load
   if (argc != 2)
     return 1;

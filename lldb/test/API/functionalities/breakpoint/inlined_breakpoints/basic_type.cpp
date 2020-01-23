@@ -88,8 +88,8 @@ void Puts(char const *msg)
 }
 
 int 
-main (int argc, char const *argv[])
-{
+main() { int argc = 0; char **argv = (char **)0;
+
     T a = T_VALUE_1;
     T* a_ptr = &a;
     T& a_ref = a;

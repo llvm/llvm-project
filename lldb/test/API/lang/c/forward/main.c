@@ -7,8 +7,8 @@ struct bar
 };
 
 int
-main (int argc, char const *argv[])
-{
+main() { int argc = 0; char **argv = (char **)0;
+
     struct bar b= { 1, 2 };
     
     foo (&b);

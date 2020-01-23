@@ -10,8 +10,8 @@
 #endif
 
 int
-main (int argc, char **argv)
-{
+main() { int argc = 0; char **argv = (char **)0;
+
   char buffer[1024];
 
   fprintf(stdout, "stdout: %s\n", getcwd(buffer, 1024));

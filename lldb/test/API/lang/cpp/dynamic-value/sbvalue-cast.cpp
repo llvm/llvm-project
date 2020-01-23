@@ -57,8 +57,8 @@ private:
 };
 
 int
-main(int argc, char **argv)
-{
+main() { int argc = 0; char **argv = (char **)0;
+
 	DerivedA* dA = new DerivedA(10);
 	DerivedB* dB = new DerivedB(12);
 	Base *array[2] = {dA, dB};

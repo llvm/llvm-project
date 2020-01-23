@@ -216,8 +216,8 @@ void *do_one_debugger (void *in)
     return (void*) 1;
 }
 
-int main (int argc, char **argv)
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
 #if !defined(_MSC_VER)
   signal(SIGPIPE, SIG_IGN);
 #endif

@@ -4,8 +4,8 @@
 #include <cstddef>
 
 int
-main(int argc, char const *argv[])
-{
+main() { int argc = 0; char **argv = (char **)0;
+
 // PR_MPX_ENABLE_MANAGEMENT won't be defined on linux kernel versions below 3.19
 #ifndef PR_MPX_ENABLE_MANAGEMENT
     return -1;

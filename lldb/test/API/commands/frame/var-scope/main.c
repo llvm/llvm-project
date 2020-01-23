@@ -6,7 +6,11 @@ int foo(int x, int y) {
      //% self.expect("frame variable -s z", substrs=['LOCAL: (int) z = 0'])
 }
 
-int main (int argc, char const *argv[])
+int __main(int argc, char **argv)
 {
     return foo(-3,0);  //% self.expect("frame variable -s argc argv", substrs=['ARG: (int) argc ='])
+}
+
+int main() {
+    return __main(0, (char **)0);
 }

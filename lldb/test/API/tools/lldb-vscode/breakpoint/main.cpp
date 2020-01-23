@@ -15,7 +15,7 @@ namespace a {
     return 14 + i; // break 14
   }
 }
-int main(int argc, char const *argv[]) {
+int main() { int argc = 0; char **argv = (char **)0;
 #if defined(__APPLE__)
   const char *libother_name = "libother.dylib";
 #else

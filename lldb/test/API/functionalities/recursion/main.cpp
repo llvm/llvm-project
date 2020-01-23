@@ -24,8 +24,8 @@ void make_tree(node* root, int count)
 	}
 }
 
-int main (int argc, const char * argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
 	node root(1);
 	make_tree(&root,25000);
 	return 0; // Set break point at this line.

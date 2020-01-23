@@ -59,8 +59,8 @@ template <typename FLOAT> struct T1 { FLOAT f = 1.5; };
 template <typename FLOAT> struct T2 { FLOAT f = 2.5; int i = 42; };
 template <typename FLOAT, template <typename> class ...Args> class C { std::tuple<Args<FLOAT>...> V; };
 
-int main(int argc, char **argv)
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
   TestObj<1> testpos;
   TestObj<-1> testneg;
   EnumTemplate<EnumType::Member> member(123);

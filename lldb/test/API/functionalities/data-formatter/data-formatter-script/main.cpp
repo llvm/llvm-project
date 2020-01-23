@@ -25,8 +25,8 @@ struct i_am_cooler
     floating((F1 + F2)/2) {}
 };
 
-int main (int argc, const char * argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     i_am_cool one(1,3.14,'E');
     i_am_cool two(4,2.71,'G');
     

@@ -17,7 +17,7 @@ void lwp_main(void *unused) {
   foo(0, bar); // Frame lwp_main
 }
 
-int main(int argc, char **argv) {
+int main() { int argc = 0; char **argv = (char **)0; 
   ucontext_t uc;
   lwpid_t lid;
   static const size_t ssize = 16 * 1024;

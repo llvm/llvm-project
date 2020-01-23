@@ -58,8 +58,8 @@ void signal_handler (int)
 {
 }
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     if (argc < 2)
     {
         fprintf (stderr, "invalid number of command line arguments\n");

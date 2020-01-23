@@ -5,8 +5,8 @@
 
 int setup_is_complete = 0;
 
-int main(int argc, const char **argv)
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     char command[8192];
     sprintf (command,
              "/bin/rm -rf %s/MyFramework %s/MyFramework.framework %s/MyFramework.framework.dSYM",

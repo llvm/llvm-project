@@ -7,7 +7,7 @@
 #include <string>
 #include <unistd.h>
 
-int main(int argc, char const **argv) {
+int main() { int argc = 0; char **argv = (char **)0; 
   char *buf = strdup(argv[0]); // Set breakpoint 1 here
   std::string directory_name(::dirname(buf));
 

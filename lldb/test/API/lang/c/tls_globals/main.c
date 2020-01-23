@@ -20,8 +20,8 @@ void *fn_static(void *param)
 		usleep(1);
 }
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
 	pthread_t handle;
 	pthread_create(&handle, NULL, &fn_static, NULL);
         touch_shared();

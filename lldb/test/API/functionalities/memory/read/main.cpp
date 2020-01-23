@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     char my_string[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 0};
     double my_double = 1234.5678;
     int my_ints[] = {2,4,6,8,10,12,14,16,18,20,22};

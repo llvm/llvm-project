@@ -19,9 +19,9 @@ struct ThreadInfo {
     RegisterContext regs;
     ThreadInfo *next;
 };
-int main (int argc, char const *argv[], char const *envp[]);
+int main() { int argc = 0; char **argv = (char **)0;;
 
-ThreadInfo g_thread2 = { 0x2222, "thread2", { 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, (uintptr_t)&main, 0x2006, 0x2007 }, NULL       };
+ThreadInfo g_thread2 =  0x2222, "thread2", { 0x2000, 0x2001, 0x2002, 0x2003, 0x2004, (uintptr_t)&main, 0x2006, 0x2007 }, NULL       };
 ThreadInfo g_thread1 = { 0x1111, "thread1", { 0x1000, 0x1001, 0x1002, 0x1003, 0x1004, (uintptr_t)&main, 0x1006, 0x1007 }, &g_thread2 };
 ThreadInfo *g_thread_list_ptr = &g_thread1;
 

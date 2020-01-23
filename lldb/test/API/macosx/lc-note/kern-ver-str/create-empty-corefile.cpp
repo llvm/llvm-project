@@ -234,8 +234,8 @@ get_uuid_from_binary (const char *fn)
     return uuid;
 }
 
-int main (int argc, char **argv)
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     if (argc != 2 && argc != 3)
     {
         fprintf (stderr, "usage: create-empty-corefile <output-core-name> [binary-to-copy-uuid-from]\n");

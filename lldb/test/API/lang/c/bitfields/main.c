@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     struct Bits
     {
         uint32_t    : 1, // Unnamed bitfield

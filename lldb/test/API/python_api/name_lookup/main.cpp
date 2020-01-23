@@ -45,8 +45,8 @@ public:
   }
 };
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
   g g;
   g.unique_function_name();
   g.unique_function_name(argc);

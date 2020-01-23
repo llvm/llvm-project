@@ -4,8 +4,8 @@
 
 /* This program writes its arguments (separated by '\0') to stdout. */
 int
-main(int argc, char const *argv[])
-{
+main() { int argc = 0; char **argv = (char **)0;
+
     int i;
 
     FILE *output = fopen (argv[1], "w");

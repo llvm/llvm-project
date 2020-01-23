@@ -20,8 +20,7 @@ static void *a_function()
     return 0;
 }
 
-int main(int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
     {
         // Create file to signal that this process has started up.
         std::ofstream f;

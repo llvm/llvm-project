@@ -103,8 +103,8 @@ int Foo::myfunc(int a)
 }
 
 int
-main (int argc, char const *argv[])
-{
+main() { int argc = 0; char **argv = (char **)0;
+
     test_lookup_at_global_scope();
     test_lookup_at_file_scope();
     A::test_lookup_at_ns_scope();

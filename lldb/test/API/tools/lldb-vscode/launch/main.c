@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-int main(int argc, char const *argv[], char const *envp[]) {
+int main() { int argc = 0; char **argv = (char **)0; 
   for (int i=0; i<argc; ++i)
     printf("arg[%i] = \"%s\"\n", i, argv[i]);
   for (int i=0; envp[i]; ++i)

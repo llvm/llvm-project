@@ -11,8 +11,8 @@ void call_me(int argc)
 }
 
 int
-main(int argc, char **argv)
-{
+main() { int argc = 0; char **argv = (char **)0;
+
   call_me(argc);
   printf("Back out in main.\n");
 

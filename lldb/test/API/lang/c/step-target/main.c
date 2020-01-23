@@ -17,8 +17,8 @@ modifyInt(int incoming)
 }
 
 int
-main (int argc, char **argv)
-{
+main() { int argc = 0; char **argv = (char **)0;
+
   if (argc > 0)
     {
       int var_makes_block = argc + 1;

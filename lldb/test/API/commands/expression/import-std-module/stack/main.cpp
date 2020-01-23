@@ -8,7 +8,7 @@ struct C {
   int i;
 };
 
-int main(int argc, char **argv) {
+int main() { int argc = 0; char **argv = (char **)0; 
   // std::deque is the default container.
   std::stack<C> s_deque({{1}, {2}, {3}});
   std::stack<C, std::vector<C>> s_vector({{1}, {2}, {3}});

@@ -9,7 +9,7 @@ struct PointType {
 int g_global = 123;
 static int s_global = 234;
 
-int main(int argc, char const *argv[]) {
+int main() { int argc = 0; char **argv = (char **)0; 
   static float s_local = 2.25;
   PointType pt = { 11,22, {0}};
   for (int i=0; i<BUFFER_SIZE; ++i)

@@ -36,8 +36,8 @@ struct SomeOtherData
     }
 };
 
-int main (int argc, const char * argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     char strarr[32] = "Hello world!";
     char *strptr = NULL;
     strptr = "Hello world!";

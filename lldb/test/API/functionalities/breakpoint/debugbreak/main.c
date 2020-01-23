@@ -19,8 +19,8 @@ bar(int const *foo)
 }
 
 int
-main(int argc, char **argv)
-{
+main() { int argc = 0; char **argv = (char **)0;
+
     int foo = 42;
     bar(&foo);
     return 0;

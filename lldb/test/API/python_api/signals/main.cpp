@@ -9,8 +9,8 @@
 
 // This simple program is to test the lldb Python API related to process.
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
 #if defined(_WIN32)
 		::ExitProcess(1);
 #else

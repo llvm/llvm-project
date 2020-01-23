@@ -59,8 +59,8 @@ namespace c {
     };
 }
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     a::c ac;
     b::c bc;
     c::d cd;

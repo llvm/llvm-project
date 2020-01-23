@@ -13,7 +13,7 @@ void __attribute__((noinline)) func2() {
 
 void __attribute__((noinline)) func1() { sink(); /* tail */ }
 
-int __attribute__((disable_tail_calls)) main(int argc, char **) {
+int __attribute__((disable_tail_calls)) main() { int argc = 0; char **argv = (char **)0; 
   // The sequences `main -> f{1,2} -> sink` are both plausible. Test that
   // return-pc call site info allows lldb to pick the correct sequence.
   func2();

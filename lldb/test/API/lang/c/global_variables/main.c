@@ -8,8 +8,8 @@ static const char *g_file_static_cstr = "g_file_static_cstr";
 int *g_ptr = &g_file_global_int;
 
 extern int g_a;
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     g_common_1 = g_file_global_int / g_file_static_int;
     static const char *g_func_static_cstr = "g_func_static_cstr";
     printf ("%s %s\n", g_file_global_cstr, g_file_static_cstr);

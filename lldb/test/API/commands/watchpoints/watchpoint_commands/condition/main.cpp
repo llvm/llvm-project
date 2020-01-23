@@ -7,7 +7,7 @@ static void modify(int32_t &var) {
     ++var;
 }
 
-int main(int argc, char** argv) {
+int main() { int argc = 0; char **argv = (char **)0; 
     int local = 0;
     printf("&global=%p\n", &global);
     printf("about to write to 'global'...\n"); // Set break point at this line.

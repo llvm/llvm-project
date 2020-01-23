@@ -15,7 +15,7 @@ auto &ref3 = varargs;
 auto binp = &binary<int*, const int*>;
 auto &binr = binary<int*, const int*>;
 auto null = &nullary;
-int main(int argc, char **argv) {
+int main() { int argc = 0; char **argv = (char **)0; 
 //% self.expect("target var ref", substrs=["(void (&)(bool))", "ref = 0x",
 //%             "&::ref = <no summary available>"])
 //% self.expect("target var ref2",

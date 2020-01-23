@@ -89,8 +89,8 @@ void set_point (void)
     };
 }
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     // Continue to the breakpoint in set_char()
     set_char();         //// continue; var i; val -set 99 1
     set_uchar();        //// continue; var i; val -set 99 2

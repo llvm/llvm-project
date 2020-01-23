@@ -4,8 +4,8 @@
 
 volatile int release_child_flag = 0;
 
-int main(int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     pid_t child = fork();
     if (child == -1)
     {

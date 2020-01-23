@@ -10,8 +10,8 @@ recurse_crash (uint32_t depth)
 }
 
 int
-main (int argc, char const *argv[])
-{
+main() { int argc = 0; char **argv = (char **)0;
+
     // If we have more than one argument, then it should a depth to recurse to.
     // If we have just the program name as an argument, use UINT32_MAX so we
     // eventually crash the program by overflowing the stack

@@ -27,8 +27,8 @@ func_a (void)
 }
 
 int
-main (int argc, char *argv[])
-{
+main() { int argc = 0; char **argv = (char **)0;
+
 	func_a ();
 
 	return 0;

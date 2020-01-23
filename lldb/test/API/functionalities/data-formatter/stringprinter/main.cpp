@@ -1,7 +1,7 @@
 #include <string>
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     std::string stdstring("Hello\t\tWorld\nI am here\t\tto say hello\n"); //%self.addTearDownHook(lambda x: x.runCmd("setting set escape-non-printables true"))
     const char* constcharstar = stdstring.c_str();
     std::string longstring(

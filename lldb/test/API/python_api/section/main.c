@@ -7,8 +7,8 @@
 
 char my_global_var_of_char_type = 'X';
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     // this code just "does something" with the global so that it is not
     // optimised away
     if (argc > 1 && strlen(argv[1]))

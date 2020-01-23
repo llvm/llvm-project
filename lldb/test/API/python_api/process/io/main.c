@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-int main(int argc, char const *argv[]) {
+int main() { int argc = 0; char **argv = (char **)0; 
     printf("Hello world.\n"); // Set breakpoint here
     char line[100];
     if (fgets(line, sizeof(line), stdin)) {

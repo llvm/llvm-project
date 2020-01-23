@@ -3,8 +3,8 @@
 #include "a.h"
 
 static int
-main_func(int input)
-{
+main() { int argc = 0; char **argv = (char **)0;
+
   return printf("Set B breakpoint here: %d", input);
 }
 

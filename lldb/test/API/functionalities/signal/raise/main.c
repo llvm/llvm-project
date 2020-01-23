@@ -8,8 +8,8 @@ void handler(int signo)
     _exit(signo);
 }
 
-int main (int argc, char *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     if (signal(SIGTRAP, handler) == SIG_ERR)
     {
         perror("signal(SIGTRAP)");

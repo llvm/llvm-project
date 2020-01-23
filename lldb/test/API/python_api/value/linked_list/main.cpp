@@ -11,8 +11,8 @@ public:
 };
 
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     Task *task_head = NULL;
     Task *task1 = new Task(1, NULL);
     Task *task2 = new Task(2, NULL);

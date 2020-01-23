@@ -53,8 +53,8 @@ private:
 static A* my_global_A_ptr;
 
 int
-main (int argc, char **argv)
-{
+main() { int argc = 0; char **argv = (char **)0;
+
   my_global_A_ptr = new B (100, 200);
   B myB (10, 20, my_global_A_ptr);
   B *second_fake_A_ptr = new B (150, 250);

@@ -19,8 +19,8 @@ int C::foo(D* D) {
 
 }
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     D myD { D::anInt() };
     C().foo(&myD);
     return 0; 

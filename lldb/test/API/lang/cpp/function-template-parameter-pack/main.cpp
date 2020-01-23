@@ -6,8 +6,8 @@ template <class T1, class T2, class... Ts> int staticSizeof() {
   return staticSizeof<T2, Ts...>() + sizeof(T1);
 }
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
   int sz = staticSizeof<long, int, char>();
   return staticSizeof<long, int, char>() != sz; //% self.expect("expression -- sz == staticSizeof<long, int, char>()", "staticSizeof<long, int, char> worked", substrs = ["true"])
                                   //% self.expect("expression -- sz == staticSizeof<long, int>() + sizeof(char)", "staticSizeof<long, int> worked", substrs = ["true"])

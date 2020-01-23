@@ -19,7 +19,7 @@ using namespace lldb;
 
 void test(SBDebugger &dbg, std::vector<string> args);
 
-int main(int argc, char** argv) {
+int main() { int argc = 0; char **argv = (char **)0; 
 
 // Ignore SIGPIPE.  The lldb driver does this as well,
 // because we seem to get spurious SIGPIPES on some

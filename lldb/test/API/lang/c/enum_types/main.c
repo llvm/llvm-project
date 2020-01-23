@@ -9,8 +9,7 @@ struct foo {
 	ops *op;
 };
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
     enum bitfield {
         None = 0,
         A = 1 << 0,

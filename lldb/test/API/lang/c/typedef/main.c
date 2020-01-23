@@ -3,8 +3,8 @@ void test()
     typedef double * a;
     a b = 0; // Set break point 4.
 }
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     typedef float a;
     int i = 0; // Set break point 1.
     i++;

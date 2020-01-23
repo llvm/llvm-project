@@ -14,7 +14,7 @@ void __attribute__((noinline)) func2() { sink(); /* tail */ }
 
 void __attribute__((noinline)) func1() { func3(); /* tail */ }
 
-int __attribute__((disable_tail_calls)) main(int argc, char **) {
+int __attribute__((disable_tail_calls)) main() { int argc = 0; char **argv = (char **)0; 
   // The sequences `main -> func1 -> f{2,3} -> sink` are both plausible. Test
   // that lldb picks the latter sequence.
   func1();

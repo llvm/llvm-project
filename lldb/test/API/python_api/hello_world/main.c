@@ -6,8 +6,8 @@
 #include <unistd.h>
 #endif
 
-int main(int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
   lldb_enable_attach();
 
   printf("Hello world.\n"); // Set break point at this line.

@@ -59,8 +59,8 @@ struct IUseCharStar
 	IUseCharStar() : pointer("Hello world") {}
 };
 
-int main (int argc, const char * argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     
     int iAmInt = 1;
     const float& IAmFloat = float(2.45);

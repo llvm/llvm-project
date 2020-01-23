@@ -12,8 +12,8 @@ int foo(D* D) {
     return D->dump(); //% self.expect("expression -- D->dump()", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["int", "2"])
 }
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     D myD { D::anInt() };
     foo(&myD);
     return 0; 

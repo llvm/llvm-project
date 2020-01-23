@@ -241,7 +241,7 @@ static void *thread_func(void *arg) {
   return nullptr;
 }
 
-int main(int argc, char **argv) {
+int main() { int argc = 0; char **argv = (char **)0; 
   lldb_enable_attach();
 
   std::vector<std::thread> threads;

@@ -5,8 +5,8 @@ const char* my_global_str = "abc";
 const char **my_global_str_ptr = &my_global_str;
 static int my_static_int = 228;
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     printf("global char: %c\n", my_global_char);
     
     printf("global str: %s\n", my_global_str);

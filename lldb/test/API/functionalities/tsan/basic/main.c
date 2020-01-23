@@ -14,8 +14,8 @@ void *f2(void *p) {
     return NULL;
 }
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     pointer = (char *)malloc(10); // malloc line
 
     pthread_t t1, t2;

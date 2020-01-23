@@ -34,8 +34,8 @@ struct Third
     {}
 };
 
-int main (int argc, const char * argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     First first(12,34);
     Second second(65,43.25);
     Third *third = new Third(96,'E');

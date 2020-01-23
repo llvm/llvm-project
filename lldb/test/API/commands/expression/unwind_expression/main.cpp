@@ -14,8 +14,8 @@ int second_function(int x){
   return x;
 }
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     a_function_to_call();  // Set a breakpoint here to get started 
     second_function(1);
     return 0;

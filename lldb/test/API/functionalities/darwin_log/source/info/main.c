@@ -3,8 +3,8 @@
 
 #include "../../common/darwin_log_common.h"
 
-int main(int argc, char** argv)
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     os_log_t logger_sub1 = os_log_create("org.llvm.lldb.test.sub1", "cat1");
     os_log_t logger_sub2 = os_log_create("org.llvm.lldb.test.sub2", "cat2");
     if (!logger_sub1 || !logger_sub2)

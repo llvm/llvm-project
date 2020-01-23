@@ -71,8 +71,8 @@ thread_func (uint32_t thread_index)
 }
 
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     g_count = 4;
     std::thread threads[3];
 

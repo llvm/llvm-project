@@ -11,8 +11,8 @@ void recursive_function(int i)
     }
 }
 
-int main(int argc, char *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     recursive_function(0);
     return 0;
 }

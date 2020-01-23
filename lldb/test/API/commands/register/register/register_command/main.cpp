@@ -5,8 +5,8 @@
 
 long double outermost_return_long_double (long double my_long_double);
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     lldb_enable_attach();
 
     char my_string[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 0};

@@ -2,8 +2,8 @@
 #include <iostream>
 #include <string>
 #include <map>
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     std::string hello_world ("Hello World!");
     std::cout << hello_world << std::endl;
     std::cout << hello_world.length() << std::endl;

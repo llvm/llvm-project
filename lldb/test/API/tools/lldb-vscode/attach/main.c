@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-int main(int argc, char const *argv[]) {
+int main() { int argc = 0; char **argv = (char **)0;
   lldb_enable_attach();
 
   if (argc >= 2) {

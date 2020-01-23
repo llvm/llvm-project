@@ -69,8 +69,8 @@ thread_func (void *arg)
 }
 
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     uint32_t thread_index_1 = 1;
     uint32_t thread_index_2 = 2;
     uint32_t thread_index_3 = 3;

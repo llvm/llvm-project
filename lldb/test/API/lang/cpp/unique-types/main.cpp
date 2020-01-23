@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
-int main (int argc, char const *argv[], char const *envp[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     std::vector<long> longs;
     std::vector<short> shorts;  
     for (int i=0; i<12; i++)

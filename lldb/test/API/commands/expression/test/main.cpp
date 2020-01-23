@@ -9,8 +9,8 @@ a_function_to_call()
     return static_value;
 }
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     printf ("Hello world!\n");
     puts ("hello");
     // Please test many expressions while stopped at this line:

@@ -13,8 +13,8 @@ struct foo
     {}
 };
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     foo* foobar = new foo[2];
     
     foobar[0].a = 1;

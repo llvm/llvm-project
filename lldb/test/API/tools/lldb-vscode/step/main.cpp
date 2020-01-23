@@ -5,6 +5,6 @@ int function(int x) {
     return x;
 }
 
-int main(int argc, char const *argv[]) {
+int main() { int argc = 0; char **argv = (char **)0; 
   return function(2);
 }

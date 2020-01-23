@@ -8,7 +8,7 @@ struct C {
   int i;
 };
 
-int main(int argc, char **argv) {
+int main() { int argc = 0; char **argv = (char **)0; 
   // std::deque is the default container.
   std::queue<C> q_deque({{1}});
   std::queue<C, std::list<C>> q_list({{1}});

@@ -57,8 +57,8 @@ struct Plenty
     }
 };
 
-int main (int argc, const char * argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     BagOfInts int_bag(6);
     BagOfFloats float_bag(2.71);
     

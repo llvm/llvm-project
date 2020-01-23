@@ -9,8 +9,8 @@ int numberfn()
 }
 
 int
-main(int argc, char const *argv[])
-{
+main() { int argc = 0; char **argv = (char **)0;
+
     // The program writes its output to the following file:
     //
     //     o "output1.txt" for test_pass_host_env_vars() test case

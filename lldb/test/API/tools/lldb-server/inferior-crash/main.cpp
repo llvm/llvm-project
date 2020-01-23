@@ -7,7 +7,7 @@ const char *const SEGFAULT_COMMAND = "segfault";
 const char *const ABORT_COMMAND = "abort";
 }
 
-int main(int argc, char **argv) {
+int main() { int argc = 0; char **argv = (char **)0; 
   if (argc < 2) {
     std::cout << "expected at least one command provided on the command line"
               << std::endl;

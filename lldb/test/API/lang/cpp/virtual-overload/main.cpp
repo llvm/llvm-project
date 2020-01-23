@@ -9,7 +9,7 @@ struct Derived : Base {
   virtual void f(int i, int j) {}
 };
 
-int main(int argc, char **argv) {
+int main() { int argc = 0; char **argv = (char **)0; 
   Derived obj;
   obj.f(1, 2); //% self.expect("fr var", "not crashing", substrs = ["obj"])
   return 0;

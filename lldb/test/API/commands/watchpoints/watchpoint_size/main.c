@@ -8,7 +8,7 @@ uint16_t wordArray[4] = {0};
 uint64_t pad2 = 0;
 uint32_t dwordArray[2] = {0};
 
-int main(int argc, char** argv) {
+int main() { int argc = 0; char **argv = (char **)0; 
 
     int i;
     uint8_t localByte;

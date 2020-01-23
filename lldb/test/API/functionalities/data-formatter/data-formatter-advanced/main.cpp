@@ -124,8 +124,8 @@ struct VeryLong
     int z_2;
 };
 
-int main (int argc, const char * argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     
     int iAmInt = 9;
     

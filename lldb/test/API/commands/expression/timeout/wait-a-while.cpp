@@ -24,8 +24,8 @@ wait_a_while (int microseconds)
 }
 
 int
-main (int argc, char **argv)
-{
+main() { int argc = 0; char **argv = (char **)0;
+
     printf ("stop here in main.\n");
     int num_times = wait_a_while (argc * 1000);
     printf ("Done, took %d times.\n", num_times);

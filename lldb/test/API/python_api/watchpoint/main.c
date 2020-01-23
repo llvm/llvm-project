@@ -3,7 +3,7 @@
 
 int32_t global = 10; // Watchpoint variable declaration.
 
-int main(int argc, char** argv) {
+int main() { int argc = 0; char **argv = (char **)0; 
     int local = 0;
     printf("&global=%p\n", &global);
     printf("about to write to 'global'...\n"); // Set break point at this line.

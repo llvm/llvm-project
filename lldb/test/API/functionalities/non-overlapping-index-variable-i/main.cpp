@@ -18,7 +18,7 @@ public:
     {}
 };
 
-int main(int argc, char const *argv[]) {
+int main() { int argc = 0; char **argv = (char **)0; 
     Data *data[1000];
     Data **ptr = data;
     for (int i = 0; i < 1000; ++i) {

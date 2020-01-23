@@ -3,8 +3,8 @@
 #include <unistd.h>
 
 int 
-main (int argc, char **argv)
-{
+main() { int argc = 0; char **argv = (char **)0;
+
     lldb_enable_attach();
 
     int do_crash = 0;

@@ -10,8 +10,8 @@ ElemType* alloc(size_t count, std::function<ElemType(size_t)> get)
   return elems;
 }
 
-int main (int argc, const char * argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
   int* data = alloc<int>(5, [] (size_t idx) -> int {
     return 2 * idx + 1;
   });

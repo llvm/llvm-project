@@ -37,8 +37,8 @@ int f3 (char *s)
 
 
 // We want main to start on line 50
-int main (int argc, const char * argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     f1("carp");
     f3("dong");
     return 0;

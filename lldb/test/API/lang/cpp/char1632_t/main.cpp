@@ -13,8 +13,8 @@ void copy_char_seq (T (&arr)[N], const T* src)
     arr[src_len] = 0;
 }
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     char16_t as16[UASZ];
     char32_t as32[UASZ];
     auto cs16_zero = (char16_t)0;

@@ -12,8 +12,8 @@ private:
 };
 
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     Foo<int> foo_x('a');
     Foo<wchar_t> foo_y(L'a');
     const wchar_t *mazeltov = L"מזל טוב";

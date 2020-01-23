@@ -86,8 +86,8 @@ stopper ()
 }
 
 
-int main (int argc, const char **argv)
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     dispatch_queue_t work_submittor_1 = dispatch_queue_create ("com.apple.work_submittor_1", DISPATCH_QUEUE_SERIAL);
     dispatch_queue_t work_submittor_2 = dispatch_queue_create ("com.apple.work_submittor_and_quit_2", DISPATCH_QUEUE_SERIAL);
     dispatch_queue_t work_submittor_3 = dispatch_queue_create ("com.apple.work_submittor_3", DISPATCH_QUEUE_SERIAL);

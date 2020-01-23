@@ -50,8 +50,8 @@ class NameAndAddress
 
 typedef std::vector<NameAndAddress> People;
 
-int main (int argc, const char * argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
 	People p;
 	p.push_back(NameAndAddress("Enrico","123 Main Street"));
 	p.push_back(NameAndAddress("Foo","10710 Johnson Avenue")); // Set break point at this line.

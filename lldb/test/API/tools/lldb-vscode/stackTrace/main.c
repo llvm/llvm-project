@@ -7,7 +7,7 @@ int recurse(int x) {
   return recurse(x-1) + x; // recurse call
 }
 
-int main(int argc, char const *argv[]) {
+int main() { int argc = 0; char **argv = (char **)0; 
   recurse(20); // recurse invocation
   return 0;
 }

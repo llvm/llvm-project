@@ -21,7 +21,7 @@ void __attribute__((noinline)) sink(bool called_from_main) {
 
 void __attribute__((noinline)) func1() { sink(false); /* tail */ }
 
-int __attribute__((disable_tail_calls)) main(int argc, char **) {
+int __attribute__((disable_tail_calls)) main() { int argc = 0; char **argv = (char **)0; 
   // When func1 tail-calls sink, make sure that the former appears in the
   // backtrace.
   sink(true);

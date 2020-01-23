@@ -1,5 +1,5 @@
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     struct point_tag {
         int x;
         int y;

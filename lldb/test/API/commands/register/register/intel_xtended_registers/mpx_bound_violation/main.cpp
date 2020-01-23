@@ -16,8 +16,8 @@ static void violate_lower_bound (int *ptr, int size)
 }
 
 int
-main(int argc, char const *argv[])
-{
+main() { int argc = 0; char **argv = (char **)0;
+
   unsigned int rax, rbx, rcx, rdx;
   int array[5];
 

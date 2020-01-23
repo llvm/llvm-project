@@ -26,8 +26,8 @@ thread_func (uint32_t thread_index) {
 }
 
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
   std::thread threads[NUM_OF_THREADS]; 
 
   printf ("Starting thread creation with hardware breakpoint set...\n");

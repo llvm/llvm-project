@@ -7,7 +7,7 @@ enum Bar {
     BarBarBar = 42
 };
 
-int main(int argc, const char **argv) {
+int main() { int argc = 0; char **argv = (char **)0; 
   Foo f = Foo::FooBar;
   Bar b = BarBar;
   bool b1 = f == Foo::FooBar;

@@ -112,8 +112,8 @@ max_value(const std::string& lhs, const std::string& rhs)
 }
 
 int
-main (int argc, char **argv)
-{
+main() { int argc = 0; char **argv = (char **)0;
+
     
     inline_value = 0;    // Stop here and step over to set up stepping over.
 

@@ -10,8 +10,8 @@ bar()
     return static_value + id;
 }
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     bar(); // breakpoint_in_main
     return foo();
 }

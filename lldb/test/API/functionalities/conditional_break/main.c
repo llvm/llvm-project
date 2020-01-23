@@ -31,8 +31,8 @@ int c(int val)
     return val + 3;
 }
 
-int main (int argc, char const *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     int A1 = a(1);  // a(1) -> b(1) -> c(1)
     printf("a(1) returns %d\n", A1);
     

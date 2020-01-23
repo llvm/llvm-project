@@ -19,8 +19,8 @@ struct Circle : public Shape {
     Circle(int R = 6) : r(R) {}
 };
 
-int main (int argc, const char * argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
     Rectangle r1(5,6);
     Rectangle r2(9,16);
     Rectangle r3(4,4);

@@ -28,8 +28,8 @@ int foo2() {
    return foo2_f(10); // Set break point at this line.
 }
 
-int main (int argc, char *argv[])
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
   int acc = 42;
   std::function<int (int,int)> f1 = foo;
   std::function<int (int)> f2 = [acc,f1] (int x) -> int {

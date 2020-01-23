@@ -38,8 +38,8 @@ foo *new_foo(int x) {
 }
 
 	
-int main(int argc, char** argv)
-{
+int main() { int argc = 0; char **argv = (char **)0;
+
 	foo foo1(12);
 	foo foo2(121);
 	foo * newd_foo = new_foo(1);
