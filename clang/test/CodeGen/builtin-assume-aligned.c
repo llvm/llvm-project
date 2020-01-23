@@ -44,13 +44,14 @@ int test4(int *a, int b) {
 
 int *m1() __attribute__((assume_aligned(64)));
 
-// CHECK-LABEL: @test5
+// CHECK-LABEL: @test5(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[CALL:%.*]] = call align 64 i32* (...) @m1()
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[CALL]], align 4
+// CHECK-NEXT:    ret i32 [[TMP0]]
+//
 int test5() {
   return *m1();
-// CHECK: [[PTRINT5:%.+]] = ptrtoint
-// CHECK: [[MASKEDPTR5:%.+]] = and i64 [[PTRINT5]], 63
-// CHECK: [[MASKCOND5:%.+]] = icmp eq i64 [[MASKEDPTR5]], 0
-// CHECK: call void @llvm.assume(i1 [[MASKCOND5]])
 }
 
 int *m2() __attribute__((assume_aligned(64, 12)));
