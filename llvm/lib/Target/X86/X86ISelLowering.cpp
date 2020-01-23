@@ -27161,6 +27161,10 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
         break;
       }
 
+  // Check for splat rotate by zero.
+  if (0 <= CstSplatIndex && EltBits[CstSplatIndex].urem(EltSizeInBits) == 0)
+    return R;
+
   // AVX512 implicitly uses modulo rotation amounts.
   if (Subtarget.hasAVX512() && 32 <= EltSizeInBits) {
     // Attempt to rotate by immediate.
