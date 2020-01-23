@@ -10,6 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+def SDT_AArch64_LDNF1 : SDTypeProfile<1, 3, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisPtrTy<2>,
+  SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>
+]>;
+
 def SDT_AArch64_GLD1 : SDTypeProfile<1, 4, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisPtrTy<2>, SDTCisVec<3>, SDTCisVT<4, OtherVT>,
   SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>
@@ -38,6 +43,8 @@ def AArch64st1_scatter_uxtw_scaled   : SDNode<"AArch64ISD::SST1_UXTW_SCALED",   
 def AArch64st1_scatter_sxtw_scaled   : SDNode<"AArch64ISD::SST1_SXTW_SCALED",   SDT_AArch64_SST1,     [SDNPHasChain, SDNPMayStore, SDNPOptInGlue]>;
 def AArch64st1_scatter_imm           : SDNode<"AArch64ISD::SST1_IMM",           SDT_AArch64_SST1_IMM, [SDNPHasChain, SDNPMayStore, SDNPOptInGlue]>;
 
+def AArch64ldnf1                     : SDNode<"AArch64ISD::LDNF1",              SDT_AArch64_LDNF1,    [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ldff1                     : SDNode<"AArch64ISD::LDFF1",              SDT_AArch64_LDNF1,    [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 def AArch64ld1_gather                : SDNode<"AArch64ISD::GLD1",               SDT_AArch64_GLD1,     [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 def AArch64ld1_gather_scaled         : SDNode<"AArch64ISD::GLD1_SCALED",        SDT_AArch64_GLD1,     [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 def AArch64ld1_gather_uxtw           : SDNode<"AArch64ISD::GLD1_UXTW",          SDT_AArch64_GLD1,     [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
@@ -58,6 +65,7 @@ def sve_cntw_imm_neg : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, -4>">;
 def sve_cntd_imm_neg : ComplexPattern<i32, 1, "SelectRDVLImm<1, 16, -2>">;
 
 def AArch64ldnf1s                    : SDNode<"AArch64ISD::LDNF1S",             SDT_AArch64_LDNF1,    [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
+def AArch64ldff1s                    : SDNode<"AArch64ISD::LDFF1S",             SDT_AArch64_LDNF1,    [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 def AArch64ld1s_gather               : SDNode<"AArch64ISD::GLD1S",              SDT_AArch64_GLD1,     [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 def AArch64ld1s_gather_scaled        : SDNode<"AArch64ISD::GLD1S_SCALED",       SDT_AArch64_GLD1,     [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
 def AArch64ld1s_gather_uxtw          : SDNode<"AArch64ISD::GLD1S_UXTW",         SDT_AArch64_GLD1,     [SDNPHasChain, SDNPMayLoad, SDNPOptInGlue]>;
@@ -1340,6 +1348,40 @@ let Predicates = [HasSVE] in {
   // 16-element contiguous non-faulting loads
   defm : ldnf1<LDNF1B_IMM,    nxv16i8, AArch64ldnf1, nxv16i1, nxv16i8>;
 
+  multiclass ldff1<Instruction I, ValueType Ty, SDPatternOperator Load, ValueType PredTy, ValueType MemVT> {
+    // Add more complex addressing modes here as required.
+    // Base
+    def : Pat<(Ty (Load  (PredTy PPR:$gp), GPR64:$base, MemVT)),
+              (I PPR:$gp, GPR64sp:$base, XZR)>;
+  }
+
+  // 2-element contiguous first faulting loads
+  defm : ldff1<LDFF1B_D,  nxv2i64, AArch64ldff1,  nxv2i1, nxv2i8>;
+  defm : ldff1<LDFF1SB_D, nxv2i64, AArch64ldff1s, nxv2i1, nxv2i8>;
+  defm : ldff1<LDFF1H_D,  nxv2i64, AArch64ldff1,  nxv2i1, nxv2i16>;
+  defm : ldff1<LDFF1SH_D, nxv2i64, AArch64ldff1s, nxv2i1, nxv2i16>;
+  defm : ldff1<LDFF1W_D,  nxv2i64, AArch64ldff1,  nxv2i1, nxv2i32>;
+  defm : ldff1<LDFF1SW_D, nxv2i64, AArch64ldff1s, nxv2i1, nxv2i32>;
+  defm : ldff1<LDFF1D,    nxv2i64, AArch64ldff1,  nxv2i1, nxv2i64>;
+  defm : ldff1<LDFF1W_D,  nxv2f32, AArch64ldff1,  nxv2i1, nxv2f32>;
+  defm : ldff1<LDFF1D,    nxv2f64, AArch64ldff1,  nxv2i1, nxv2f64>;
+
+  // 4-element contiguous first faulting loads
+  defm : ldff1<LDFF1B_S,  nxv4i32, AArch64ldff1,  nxv4i1, nxv4i8>;
+  defm : ldff1<LDFF1SB_S, nxv4i32, AArch64ldff1s, nxv4i1, nxv4i8>;
+  defm : ldff1<LDFF1H_S,  nxv4i32, AArch64ldff1,  nxv4i1, nxv4i16>;
+  defm : ldff1<LDFF1SH_S, nxv4i32, AArch64ldff1s, nxv4i1, nxv4i16>;
+  defm : ldff1<LDFF1W,    nxv4i32, AArch64ldff1,  nxv4i1, nxv4i32>;
+  defm : ldff1<LDFF1W,    nxv4f32, AArch64ldff1,  nxv4i1, nxv4f32>;
+
+  // 8-element contiguous first faulting loads
+  defm : ldff1<LDFF1B_H,  nxv8i16, AArch64ldff1,  nxv8i1, nxv8i8>;
+  defm : ldff1<LDFF1SB_H, nxv8i16, AArch64ldff1s, nxv8i1, nxv8i8>;
+  defm : ldff1<LDFF1H,    nxv8i16, AArch64ldff1,  nxv8i1, nxv8i16>;
+  defm : ldff1<LDFF1H,    nxv8f16, AArch64ldff1,  nxv8i1, nxv8f16>;
+
+  // 16-element contiguous first faulting loads
+  defm : ldff1<LDFF1B, nxv16i8, AArch64ldff1, nxv16i1, nxv16i8>;
 }
 
 let Predicates = [HasSVE2] in {

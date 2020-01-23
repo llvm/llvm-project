@@ -1176,6 +1176,7 @@ class AdvSIMD_ScatterStore_VectorBase_Intrinsic
 def int_aarch64_sve_ldnt1 : AdvSIMD_1Vec_PredLoad_Intrinsic;
 
 def int_aarch64_sve_ldnf1 : AdvSIMD_1Vec_PredFaultingLoad_Intrinsic;
+def int_aarch64_sve_ldff1 : AdvSIMD_1Vec_PredFaultingLoad_Intrinsic;
 
 //
 // Stores
