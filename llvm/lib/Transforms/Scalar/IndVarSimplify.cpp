@@ -2781,7 +2781,8 @@ bool IndVarSimplify::run(Loop *L) {
   while (!DeadInsts.empty())
     if (Instruction *Inst =
             dyn_cast_or_null<Instruction>(DeadInsts.pop_back_val()))
-      Changed |= RecursivelyDeleteTriviallyDeadInstructions(Inst, TLI);
+      Changed |=
+          RecursivelyDeleteTriviallyDeadInstructions(Inst, TLI, MSSAU.get());
 
   // The Rewriter may not be used from this point on.
 
@@ -2795,7 +2796,7 @@ bool IndVarSimplify::run(Loop *L) {
   Changed |= rewriteFirstIterationLoopExitValues(L);
 
   // Clean up dead instructions.
-  Changed |= DeleteDeadPHIs(L->getHeader(), TLI);
+  Changed |= DeleteDeadPHIs(L->getHeader(), TLI, MSSAU.get());
 
   // Check a post-condition.
   assert(L->isRecursivelyLCSSAForm(*DT, *LI) &&
@@ -2818,6 +2819,8 @@ bool IndVarSimplify::run(Loop *L) {
     assert(!SE->isKnownPredicate(ICmpInst::ICMP_ULT, BackedgeTakenCount,
                                  NewBECount) && "indvars must preserve SCEV");
   }
+  if (VerifyMemorySSA && MSSAU)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
 #endif
 
   return Changed;
