@@ -82,8 +82,6 @@ else()
   endif()
 endif()
 
-set(FUZZER_SUPPORTED_OS ${SANITIZER_COMMON_SUPPORTED_OS})
-
 add_compiler_rt_component(fuzzer)
 
 add_compiler_rt_object_libraries(RTfuzzer
