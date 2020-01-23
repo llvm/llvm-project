@@ -8223,50 +8223,6 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
   }
 
   switch (Inst.getOpcode()) {
-  case ARM::MVE_VORNIZ0v4i32:
-  case ARM::MVE_VORNIZ0v8i16:
-  case ARM::MVE_VORNIZ8v4i32:
-  case ARM::MVE_VORNIZ8v8i16:
-  case ARM::MVE_VORNIZ16v4i32:
-  case ARM::MVE_VORNIZ24v4i32:
-  case ARM::MVE_VANDIZ0v4i32:
-  case ARM::MVE_VANDIZ0v8i16:
-  case ARM::MVE_VANDIZ8v4i32:
-  case ARM::MVE_VANDIZ8v8i16:
-  case ARM::MVE_VANDIZ16v4i32:
-  case ARM::MVE_VANDIZ24v4i32: {
-    unsigned Opcode;
-    bool imm16 = false;
-    switch(Inst.getOpcode()) {
-    case ARM::MVE_VORNIZ0v4i32: Opcode = ARM::MVE_VORRIZ0v4i32; break;
-    case ARM::MVE_VORNIZ0v8i16: Opcode = ARM::MVE_VORRIZ0v8i16; imm16 = true; break;
-    case ARM::MVE_VORNIZ8v4i32: Opcode = ARM::MVE_VORRIZ8v4i32; break;
-    case ARM::MVE_VORNIZ8v8i16: Opcode = ARM::MVE_VORRIZ8v8i16; imm16 = true; break;
-    case ARM::MVE_VORNIZ16v4i32: Opcode = ARM::MVE_VORRIZ16v4i32; break;
-    case ARM::MVE_VORNIZ24v4i32: Opcode = ARM::MVE_VORRIZ24v4i32; break;
-    case ARM::MVE_VANDIZ0v4i32: Opcode = ARM::MVE_VBICIZ0v4i32; break;
-    case ARM::MVE_VANDIZ0v8i16: Opcode = ARM::MVE_VBICIZ0v8i16; imm16 = true; break;
-    case ARM::MVE_VANDIZ8v4i32: Opcode = ARM::MVE_VBICIZ8v4i32; break;
-    case ARM::MVE_VANDIZ8v8i16: Opcode = ARM::MVE_VBICIZ8v8i16; imm16 = true; break;
-    case ARM::MVE_VANDIZ16v4i32: Opcode = ARM::MVE_VBICIZ16v4i32; break;
-    case ARM::MVE_VANDIZ24v4i32: Opcode = ARM::MVE_VBICIZ24v4i32; break;
-    default: llvm_unreachable("unexpected opcode");
-    }
-
-    MCInst TmpInst;
-    TmpInst.setOpcode(Opcode);
-    TmpInst.addOperand(Inst.getOperand(0));
-    TmpInst.addOperand(Inst.getOperand(1));
-
-    // invert immediate
-    unsigned imm = ~Inst.getOperand(2).getImm() & (imm16 ? 0xffff : 0xffffffff);
-    TmpInst.addOperand(MCOperand::createImm(imm));
-
-    TmpInst.addOperand(Inst.getOperand(3));
-    TmpInst.addOperand(Inst.getOperand(4));
-    Inst = TmpInst;
-    return true;
-  }
   // Alias for alternate form of 'ldr{,b}t Rt, [Rn], #imm' instruction.
   case ARM::LDRT_POST:
   case ARM::LDRBT_POST: {
