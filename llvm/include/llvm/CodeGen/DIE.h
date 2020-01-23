@@ -910,6 +910,9 @@ public:
   ///
   unsigned ComputeSize(const AsmPrinter *AP) const;
 
+  // TODO: move setSize() and Size to DIEValueList.
+  void setSize(unsigned size) { Size = size; }
+
   /// BestForm - Choose the best form for data.
   ///
   dwarf::Form BestForm(unsigned DwarfVersion) const {
@@ -943,6 +946,9 @@ public:
   /// ComputeSize - Calculate the size of the location expression.
   ///
   unsigned ComputeSize(const AsmPrinter *AP) const;
+
+  // TODO: move setSize() and Size to DIEValueList.
+  void setSize(unsigned size) { Size = size; }
 
   /// BestForm - Choose the best form for data.
   ///
