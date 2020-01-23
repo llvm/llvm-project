@@ -50,7 +50,7 @@ struct RunThreadArgs {
   void *argument;
 };
 
-void RunThread(void *arg) {
+void *RunThread(void *arg) {
   struct RunThreadArgs *run_args = (struct RunThreadArgs *)arg;
   SuspendedThreadsListMac suspended_threads_list;
 
@@ -59,7 +59,7 @@ void RunThread(void *arg) {
   kern_return_t err = task_threads(mach_task_self(), &threads, &num_threads);
   if (err != KERN_SUCCESS) {
     VReport(1, "Failed to get threads for task (errno %d).\n", err);
-    return;
+    return nullptr;
   }
 
   thread_t thread_self = mach_thread_self();
@@ -76,6 +76,7 @@ void RunThread(void *arg) {
   for (unsigned int i = 0; i < num_suspended; ++i) {
     thread_resume(suspended_threads_list.GetThread(i));
   }
+  return nullptr;
 }
 
 void StopTheWorld(StopTheWorldCallback callback, void *argument) {
