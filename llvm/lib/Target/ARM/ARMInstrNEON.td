@@ -509,11 +509,6 @@ def NEONvqrshrnsuImm : SDNode<"ARMISD::VQRSHRNsuIMM", SDTARMVSHXIMM>;
 def NEONvsliImm      : SDNode<"ARMISD::VSLIIMM", SDTARMVSHINSIMM>;
 def NEONvsriImm      : SDNode<"ARMISD::VSRIIMM", SDTARMVSHINSIMM>;
 
-def SDTARMVORRIMM : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
-                                           SDTCisVT<2, i32>]>;
-def NEONvorrImm   : SDNode<"ARMISD::VORRIMM", SDTARMVORRIMM>;
-def NEONvbicImm   : SDNode<"ARMISD::VBICIMM", SDTARMVORRIMM>;
-
 def NEONvbsl      : SDNode<"ARMISD::VBSL",
                            SDTypeProfile<1, 3, [SDTCisVec<0>,
                                                 SDTCisSameAs<0, 1>,
@@ -5296,7 +5291,7 @@ def VORRiv4i16 : N1ModImm<1, 0b000, {1,0,?,1}, 0, 0, 0, 1,
                           IIC_VMOVImm,
                           "vorr", "i16", "$Vd, $SIMM", "$src = $Vd",
                           [(set DPR:$Vd,
-                            (v4i16 (NEONvorrImm DPR:$src, timm:$SIMM)))]> {
+                            (v4i16 (ARMvorrImm DPR:$src, timm:$SIMM)))]> {
   let Inst{9} = SIMM{9};
 }
 
@@ -5305,7 +5300,7 @@ def VORRiv2i32 : N1ModImm<1, 0b000, {0,?,?,1}, 0, 0, 0, 1,
                           IIC_VMOVImm,
                           "vorr", "i32", "$Vd, $SIMM", "$src = $Vd",
                           [(set DPR:$Vd,
-                            (v2i32 (NEONvorrImm DPR:$src, timm:$SIMM)))]> {
+                            (v2i32 (ARMvorrImm DPR:$src, timm:$SIMM)))]> {
   let Inst{10-9} = SIMM{10-9};
 }
 
@@ -5314,7 +5309,7 @@ def VORRiv8i16 : N1ModImm<1, 0b000, {1,0,?,1}, 0, 1, 0, 1,
                           IIC_VMOVImm,
                           "vorr", "i16", "$Vd, $SIMM", "$src = $Vd",
                           [(set QPR:$Vd,
-                            (v8i16 (NEONvorrImm QPR:$src, timm:$SIMM)))]> {
+                            (v8i16 (ARMvorrImm QPR:$src, timm:$SIMM)))]> {
   let Inst{9} = SIMM{9};
 }
 
@@ -5323,7 +5318,7 @@ def VORRiv4i32 : N1ModImm<1, 0b000, {0,?,?,1}, 0, 1, 0, 1,
                           IIC_VMOVImm,
                           "vorr", "i32", "$Vd, $SIMM", "$src = $Vd",
                           [(set QPR:$Vd,
-                            (v4i32 (NEONvorrImm QPR:$src, timm:$SIMM)))]> {
+                            (v4i32 (ARMvorrImm QPR:$src, timm:$SIMM)))]> {
   let Inst{10-9} = SIMM{10-9};
 }
 
@@ -5347,7 +5342,7 @@ def VBICiv4i16 : N1ModImm<1, 0b000, {1,0,?,1}, 0, 0, 1, 1,
                           IIC_VMOVImm,
                           "vbic", "i16", "$Vd, $SIMM", "$src = $Vd",
                           [(set DPR:$Vd,
-                            (v4i16 (NEONvbicImm DPR:$src, timm:$SIMM)))]> {
+                            (v4i16 (ARMvbicImm DPR:$src, timm:$SIMM)))]> {
   let Inst{9} = SIMM{9};
 }
 
@@ -5356,7 +5351,7 @@ def VBICiv2i32 : N1ModImm<1, 0b000, {0,?,?,1}, 0, 0, 1, 1,
                           IIC_VMOVImm,
                           "vbic", "i32", "$Vd, $SIMM", "$src = $Vd",
                           [(set DPR:$Vd,
-                            (v2i32 (NEONvbicImm DPR:$src, timm:$SIMM)))]> {
+                            (v2i32 (ARMvbicImm DPR:$src, timm:$SIMM)))]> {
   let Inst{10-9} = SIMM{10-9};
 }
 
@@ -5365,7 +5360,7 @@ def VBICiv8i16 : N1ModImm<1, 0b000, {1,0,?,1}, 0, 1, 1, 1,
                           IIC_VMOVImm,
                           "vbic", "i16", "$Vd, $SIMM", "$src = $Vd",
                           [(set QPR:$Vd,
-                            (v8i16 (NEONvbicImm QPR:$src, timm:$SIMM)))]> {
+                            (v8i16 (ARMvbicImm QPR:$src, timm:$SIMM)))]> {
   let Inst{9} = SIMM{9};
 }
 
@@ -5374,7 +5369,7 @@ def VBICiv4i32 : N1ModImm<1, 0b000, {0,?,?,1}, 0, 1, 1, 1,
                           IIC_VMOVImm,
                           "vbic", "i32", "$Vd, $SIMM", "$src = $Vd",
                           [(set QPR:$Vd,
-                            (v4i32 (NEONvbicImm QPR:$src, timm:$SIMM)))]> {
+                            (v4i32 (ARMvbicImm QPR:$src, timm:$SIMM)))]> {
   let Inst{10-9} = SIMM{10-9};
 }
 
