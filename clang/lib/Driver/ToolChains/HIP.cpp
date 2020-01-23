@@ -425,7 +425,6 @@ Tool *HIPToolChain::buildLinker() const {
 
 void HIPToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
   HostTC.addClangWarningOptions(CC1Args);
-  CC1Args.push_back("-Werror=format-nonliteral");
 }
 
 ToolChain::CXXStdlibType
