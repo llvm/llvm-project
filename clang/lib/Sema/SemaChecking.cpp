@@ -5592,7 +5592,8 @@ static bool IsShiftedByte(llvm::APSInt Value) {
 /// SemaBuiltinConstantArgShiftedByte - Check if argument ArgNum of TheCall is
 /// a constant expression representing an arbitrary byte value shifted left by
 /// a multiple of 8 bits.
-bool Sema::SemaBuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum) {
+bool Sema::SemaBuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum,
+                                             unsigned ArgBits) {
   llvm::APSInt Result;
 
   // We can't check the value of a dependent argument.
@@ -5603,6 +5604,10 @@ bool Sema::SemaBuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum) {
   // Check constant-ness first.
   if (SemaBuiltinConstantArg(TheCall, ArgNum, Result))
     return true;
+
+  // Truncate to the given size.
+  Result = Result.getLoBits(ArgBits);
+  Result.setIsUnsigned(true);
 
   if (IsShiftedByte(Result))
     return false;
@@ -5617,7 +5622,8 @@ bool Sema::SemaBuiltinConstantArgShiftedByte(CallExpr *TheCall, int ArgNum) {
 /// 0x00FF, 0x01FF, ..., 0xFFFF). This strange range check is needed for some
 /// Arm MVE intrinsics.
 bool Sema::SemaBuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall,
-                                                   int ArgNum) {
+                                                   int ArgNum,
+                                                   unsigned ArgBits) {
   llvm::APSInt Result;
 
   // We can't check the value of a dependent argument.
@@ -5628,6 +5634,10 @@ bool Sema::SemaBuiltinConstantArgShiftedByteOrXXFF(CallExpr *TheCall,
   // Check constant-ness first.
   if (SemaBuiltinConstantArg(TheCall, ArgNum, Result))
     return true;
+
+  // Truncate to the given size.
+  Result = Result.getLoBits(ArgBits);
+  Result.setIsUnsigned(true);
 
   // Check to see if it's in either of the required forms.
   if (IsShiftedByte(Result) ||
