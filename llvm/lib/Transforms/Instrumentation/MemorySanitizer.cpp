@@ -1643,8 +1643,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
               // ParamTLS overflow.
               *ShadowPtr = getCleanShadow(V);
             } else {
-              *ShadowPtr = EntryIRB.CreateAlignedLoad(
-                  getShadowTy(&FArg), Base, kShadowTLSAlignment.value());
+              *ShadowPtr = EntryIRB.CreateAlignedLoad(getShadowTy(&FArg), Base,
+                                                      kShadowTLSAlignment);
             }
           }
           LLVM_DEBUG(dbgs()
@@ -1783,8 +1783,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (PropagateShadow) {
       std::tie(ShadowPtr, OriginPtr) =
           getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment, /*isStore*/ false);
-      setShadow(&I, IRB.CreateAlignedLoad(ShadowTy, ShadowPtr,
-                                          Alignment.value(), "_msld"));
+      setShadow(&I,
+                IRB.CreateAlignedLoad(ShadowTy, ShadowPtr, Alignment, "_msld"));
     } else {
       setShadow(&I, getCleanShadow(&I));
     }
@@ -1798,8 +1798,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (MS.TrackOrigins) {
       if (PropagateShadow) {
         const Align OriginAlignment = std::max(kMinOriginAlignment, Alignment);
-        setOrigin(&I, IRB.CreateAlignedLoad(MS.OriginTy, OriginPtr,
-                                            OriginAlignment.value()));
+        setOrigin(
+            &I, IRB.CreateAlignedLoad(MS.OriginTy, OriginPtr, OriginAlignment));
       } else {
         setOrigin(&I, getCleanOrigin());
       }
@@ -2481,8 +2481,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       const Align Alignment = Align::None();
       std::tie(ShadowPtr, OriginPtr) =
           getShadowOriginPtr(Addr, IRB, ShadowTy, Alignment, /*isStore*/ false);
-      setShadow(&I, IRB.CreateAlignedLoad(ShadowTy, ShadowPtr,
-                                          Alignment.value(), "_msld"));
+      setShadow(&I,
+                IRB.CreateAlignedLoad(ShadowTy, ShadowPtr, Alignment, "_msld"));
     } else {
       setShadow(&I, getCleanShadow(&I));
     }
@@ -2893,8 +2893,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (ClCheckAccessAddress)
       insertShadowCheck(Addr, &I);
 
-    Value *Shadow =
-        IRB.CreateAlignedLoad(Ty, ShadowPtr, Alignment.value(), "_ldmxcsr");
+    Value *Shadow = IRB.CreateAlignedLoad(Ty, ShadowPtr, Alignment, "_ldmxcsr");
     Value *Origin = MS.TrackOrigins ? IRB.CreateLoad(MS.OriginTy, OriginPtr)
                                     : getCleanOrigin();
     insertShadowCheck(Shadow, Origin, &I);
@@ -3381,7 +3380,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRBAfter(&*NextInsn);
     Value *RetvalShadow = IRBAfter.CreateAlignedLoad(
         getShadowTy(&I), getShadowPtrForRetval(&I, IRBAfter),
-        kShadowTLSAlignment.value(), "_msret");
+        kShadowTLSAlignment, "_msret");
     setShadow(&I, RetvalShadow);
     if (MS.TrackOrigins)
       setOrigin(&I, IRBAfter.CreateLoad(MS.OriginTy,

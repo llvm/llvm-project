@@ -2460,7 +2460,7 @@ private:
     assert(EndIndex > BeginIndex && "Empty vector!");
 
     Value *V = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                     NewAI.getAlignment(), "load");
+                                     NewAI.getAlign(), "load");
     return extractVector(IRB, V, BeginIndex, EndIndex, "vec");
   }
 
@@ -2468,7 +2468,7 @@ private:
     assert(IntTy && "We cannot insert an integer to the alloca");
     assert(!LI.isVolatile());
     Value *V = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                     NewAI.getAlignment(), "load");
+                                     NewAI.getAlign(), "load");
     V = convertValue(DL, IRB, V, IntTy);
     assert(NewBeginOffset >= NewAllocaBeginOffset && "Out of bounds offset");
     uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
@@ -2513,8 +2513,8 @@ private:
                 (IsLoadPastEnd && NewAllocaTy->isIntegerTy() &&
                  TargetTy->isIntegerTy()))) {
       LoadInst *NewLI = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                              NewAI.getAlignment(),
-                                              LI.isVolatile(), LI.getName());
+                                              NewAI.getAlign(), LI.isVolatile(),
+                                              LI.getName());
       if (AATags)
         NewLI->setAAMetadata(AATags);
       if (LI.isVolatile())
@@ -2609,7 +2609,7 @@ private:
 
       // Mix in the existing elements.
       Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                         NewAI.getAlignment(), "load");
+                                         NewAI.getAlign(), "load");
       V = insertVector(IRB, Old, V, BeginIndex, "vec");
     }
     StoreInst *Store = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlignment());
@@ -2626,7 +2626,7 @@ private:
     assert(!SI.isVolatile());
     if (DL.getTypeSizeInBits(V->getType()) != IntTy->getBitWidth()) {
       Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                         NewAI.getAlignment(), "oldload");
+                                         NewAI.getAlign(), "oldload");
       Old = convertValue(DL, IRB, Old, IntTy);
       assert(BeginOffset >= NewAllocaBeginOffset && "Out of bounds offset");
       uint64_t Offset = BeginOffset - NewAllocaBeginOffset;
@@ -2829,7 +2829,7 @@ private:
         Splat = getVectorSplat(Splat, NumElements);
 
       Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                         NewAI.getAlignment(), "oldload");
+                                         NewAI.getAlign(), "oldload");
       V = insertVector(IRB, Old, Splat, BeginIndex, "vec");
     } else if (IntTy) {
       // If this is a memset on an alloca where we can widen stores, insert the
@@ -2842,7 +2842,7 @@ private:
       if (IntTy && (BeginOffset != NewAllocaBeginOffset ||
                     EndOffset != NewAllocaBeginOffset)) {
         Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                           NewAI.getAlignment(), "oldload");
+                                           NewAI.getAlign(), "oldload");
         Old = convertValue(DL, IRB, Old, IntTy);
         uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
         V = insertInteger(DL, IRB, Old, V, Offset, "insert");
@@ -3028,11 +3028,11 @@ private:
     Value *Src;
     if (VecTy && !IsWholeAlloca && !IsDest) {
       Src = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                  NewAI.getAlignment(), "load");
+                                  NewAI.getAlign(), "load");
       Src = extractVector(IRB, Src, BeginIndex, EndIndex, "vec");
     } else if (IntTy && !IsWholeAlloca && !IsDest) {
       Src = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                  NewAI.getAlignment(), "load");
+                                  NewAI.getAlign(), "load");
       Src = convertValue(DL, IRB, Src, IntTy);
       uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
       Src = extractInteger(DL, IRB, Src, SubIntTy, Offset, "extract");
@@ -3046,11 +3046,11 @@ private:
 
     if (VecTy && !IsWholeAlloca && IsDest) {
       Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                         NewAI.getAlignment(), "oldload");
+                                         NewAI.getAlign(), "oldload");
       Src = insertVector(IRB, Old, Src, BeginIndex, "vec");
     } else if (IntTy && !IsWholeAlloca && IsDest) {
       Value *Old = IRB.CreateAlignedLoad(NewAI.getAllocatedType(), &NewAI,
-                                         NewAI.getAlignment(), "oldload");
+                                         NewAI.getAlign(), "oldload");
       Old = convertValue(DL, IRB, Old, IntTy);
       uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
       Src = insertInteger(DL, IRB, Old, Src, Offset, "insert");
@@ -3357,7 +3357,7 @@ private:
       Value *GEP =
           IRB.CreateInBoundsGEP(BaseTy, Ptr, GEPIndices, Name + ".gep");
       LoadInst *Load =
-          IRB.CreateAlignedLoad(Ty, GEP, Alignment.value(), Name + ".load");
+          IRB.CreateAlignedLoad(Ty, GEP, Alignment, Name + ".load");
       if (AATags)
         Load->setAAMetadata(AATags);
       Agg = IRB.CreateInsertValue(Agg, Load, Indices, Name + ".insert");
@@ -3860,7 +3860,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
           getAdjustedPtr(IRB, DL, BasePtr,
                          APInt(DL.getIndexSizeInBits(AS), PartOffset),
                          PartPtrTy, BasePtr->getName() + "."),
-          getAdjustedAlignment(LI, PartOffset, DL).value(),
+          getAdjustedAlignment(LI, PartOffset, DL),
           /*IsVolatile*/ false, LI->getName());
       PLoad->copyMetadata(*LI, {LLVMContext::MD_mem_parallel_loop_access,
                                 LLVMContext::MD_access_group});
@@ -4003,7 +4003,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
             getAdjustedPtr(IRB, DL, LoadBasePtr,
                            APInt(DL.getIndexSizeInBits(AS), PartOffset),
                            LoadPartPtrTy, LoadBasePtr->getName() + "."),
-            getAdjustedAlignment(LI, PartOffset, DL).value(),
+            getAdjustedAlignment(LI, PartOffset, DL),
             /*IsVolatile*/ false, LI->getName());
       }
 
