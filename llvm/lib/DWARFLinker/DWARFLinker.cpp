@@ -1437,7 +1437,7 @@ void DWARFLinker::patchRangesForUnit(const CompileUnit &Unit,
 
   for (const auto &RangeAttribute : Unit.getRangesAttributes()) {
     uint64_t Offset = RangeAttribute.get();
-    RangeAttribute.set(DwarfEmitter->getRangesSectionSize());
+    RangeAttribute.set(TheDwarfEmitter->getRangesSectionSize());
     if (Error E = RangeList.extract(RangeExtractor, &Offset)) {
       llvm::consumeError(std::move(E));
       reportWarning("invalid range list ignored.", OF);
@@ -1459,8 +1459,8 @@ void DWARFLinker::patchRangesForUnit(const CompileUnit &Unit,
       }
     }
 
-    DwarfEmitter->emitRangesEntries(UnitPcOffset, OrigLowPc, CurrRange, Entries,
-                                    AddressSize);
+    TheDwarfEmitter->emitRangesEntries(UnitPcOffset, OrigLowPc, CurrRange,
+                                       Entries, AddressSize);
   }
 }
 
@@ -1473,8 +1473,8 @@ void DWARFLinker::patchRangesForUnit(const CompileUnit &Unit,
 void DWARFLinker::generateUnitRanges(CompileUnit &Unit) const {
   auto Attr = Unit.getUnitRangesAttribute();
   if (Attr)
-    Attr->set(DwarfEmitter->getRangesSectionSize());
-  DwarfEmitter->emitUnitRangesEntries(Unit, static_cast<bool>(Attr));
+    Attr->set(TheDwarfEmitter->getRangesSectionSize());
+  TheDwarfEmitter->emitUnitRangesEntries(Unit, static_cast<bool>(Attr));
 }
 
 /// Insert the new line info sequence \p Seq into the current
@@ -1532,7 +1532,8 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
 
   // Update the cloned DW_AT_stmt_list with the correct debug_line offset.
   if (auto *OutputDIE = Unit.getOutputUnitDIE())
-    patchStmtList(*OutputDIE, DIEInteger(DwarfEmitter->getLineSectionSize()));
+    patchStmtList(*OutputDIE,
+                  DIEInteger(TheDwarfEmitter->getLineSectionSize()));
 
   RangesTy &Ranges = OF.Addresses->getValidAddressRanges();
 
@@ -1543,7 +1544,7 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
       OrigDwarf.getDWARFObj(), OrigDwarf.getDWARFObj().getLineSection(),
       OrigDwarf.isLittleEndian(), Unit.getOrigUnit().getAddressByteSize());
   if (needToTranslateStrings())
-    return DwarfEmitter->translateLineTable(LineExtractor, StmtOffset);
+    return TheDwarfEmitter->translateLineTable(LineExtractor, StmtOffset);
 
   Error Err = LineTable.parse(LineExtractor, &StmtOffset, OrigDwarf,
                               &Unit.getOrigUnit(), DWARFContext::dumpWarning);
@@ -1656,7 +1657,7 @@ void DWARFLinker::patchLineTableForUnit(CompileUnit &Unit,
     Params.DWARF2LineOpcodeBase = LineTable.Prologue.OpcodeBase;
     Params.DWARF2LineBase = LineTable.Prologue.LineBase;
     Params.DWARF2LineRange = LineTable.Prologue.LineRange;
-    DwarfEmitter->emitLineTableForUnit(
+    TheDwarfEmitter->emitLineTableForUnit(
         Params, LineData.slice(*StmtList + 4, PrologueEnd),
         LineTable.Prologue.MinInstLength, NewRows,
         Unit.getOrigUnit().getAddressByteSize());
@@ -1684,13 +1685,13 @@ void DWARFLinker::emitAppleAcceleratorEntriesForUnit(CompileUnit &Unit) {
                             Namespace.Die->getOffset() + Unit.getStartOffset());
 
   /// Add names.
-  DwarfEmitter->emitPubNamesForUnit(Unit);
+  TheDwarfEmitter->emitPubNamesForUnit(Unit);
   for (const auto &Pubname : Unit.getPubnames())
     AppleNames.addName(Pubname.Name,
                        Pubname.Die->getOffset() + Unit.getStartOffset());
 
   /// Add types.
-  DwarfEmitter->emitPubTypesForUnit(Unit);
+  TheDwarfEmitter->emitPubTypesForUnit(Unit);
   for (const auto &Pubtype : Unit.getPubtypes())
     AppleTypes.addName(
         Pubtype.Name, Pubtype.Die->getOffset() + Unit.getStartOffset(),
@@ -1778,7 +1779,7 @@ void DWARFLinker::patchFrameInfoForObject(const DwarfLinkerObjFile &OF,
     // Look if we already emitted a CIE that corresponds to the
     // referenced one (the CIE data is the key of that lookup).
     auto IteratorInserted = EmittedCIEs.insert(
-        std::make_pair(CIEData, DwarfEmitter->getFrameSectionSize()));
+        std::make_pair(CIEData, TheDwarfEmitter->getFrameSectionSize()));
     // If there is no CIE yet for this ID, emit it.
     if (IteratorInserted.second ||
         // FIXME: dsymutil-classic only caches the last used CIE for
@@ -1786,18 +1787,18 @@ void DWARFLinker::patchFrameInfoForObject(const DwarfLinkerObjFile &OF,
         // second half of the condition and the LastCIEOffset variable
         // makes the code DTRT.
         LastCIEOffset != IteratorInserted.first->getValue()) {
-      LastCIEOffset = DwarfEmitter->getFrameSectionSize();
+      LastCIEOffset = TheDwarfEmitter->getFrameSectionSize();
       IteratorInserted.first->getValue() = LastCIEOffset;
-      DwarfEmitter->emitCIE(CIEData);
+      TheDwarfEmitter->emitCIE(CIEData);
     }
 
     // Emit the FDE with updated address and CIE pointer.
     // (4 + AddrSize) is the size of the CIEId + initial_location
     // fields that will get reconstructed by emitFDE().
     unsigned FDERemainingBytes = InitialLength - (4 + AddrSize);
-    DwarfEmitter->emitFDE(IteratorInserted.first->getValue(), AddrSize,
-                          Loc + Range->second.Offset,
-                          FrameData.substr(InputOffset, FDERemainingBytes));
+    TheDwarfEmitter->emitFDE(IteratorInserted.first->getValue(), AddrSize,
+                             Loc + Range->second.Offset,
+                             FrameData.substr(InputOffset, FDERemainingBytes));
     InputOffset += FDERemainingBytes;
   }
 }
@@ -2008,8 +2009,8 @@ Error DWARFLinker::loadClangModule(
 
   UnitListTy CompileUnits;
   CompileUnits.push_back(std::move(Unit));
-  assert(DwarfEmitter);
-  DIECloner(*this, DwarfEmitter, *ErrOrObj, DIEAlloc, CompileUnits,
+  assert(TheDwarfEmitter);
+  DIECloner(*this, TheDwarfEmitter, *ErrOrObj, DIEAlloc, CompileUnits,
             Options.Update)
       .cloneAllCompileUnits(*DwarfContext, OF, StringPool, IsLittleEndian);
   return Error::success();
@@ -2166,18 +2167,18 @@ bool DWARFLinker::emitPaperTrailWarnings(const DwarfLinkerObjFile &OF,
     Size += getULEB128Size(Abbrev.getNumber());
   }
   CUDie->setSize(Size);
-  DwarfEmitter->emitPaperTrailWarningsDie(Triple, *CUDie);
+  TheDwarfEmitter->emitPaperTrailWarningsDie(TheTriple, *CUDie);
 
   return true;
 }
 
 void DWARFLinker::copyInvariantDebugSection(const object::ObjectFile &Obj) {
   if (!needToTranslateStrings())
-    DwarfEmitter->emitSectionContents(Obj, "debug_line");
-  DwarfEmitter->emitSectionContents(Obj, "debug_loc");
-  DwarfEmitter->emitSectionContents(Obj, "debug_ranges");
-  DwarfEmitter->emitSectionContents(Obj, "debug_frame");
-  DwarfEmitter->emitSectionContents(Obj, "debug_aranges");
+    TheDwarfEmitter->emitSectionContents(Obj, "debug_line");
+  TheDwarfEmitter->emitSectionContents(Obj, "debug_loc");
+  TheDwarfEmitter->emitSectionContents(Obj, "debug_ranges");
+  TheDwarfEmitter->emitSectionContents(Obj, "debug_frame");
+  TheDwarfEmitter->emitSectionContents(Obj, "debug_aranges");
 }
 
 void DWARFLinker::addObjectFile(DwarfLinkerObjFile &ObjFile) {
@@ -2188,7 +2189,7 @@ void DWARFLinker::addObjectFile(DwarfLinkerObjFile &ObjFile) {
 }
 
 bool DWARFLinker::link() {
-  assert(Options.NoOutput || DwarfEmitter);
+  assert(Options.NoOutput || TheDwarfEmitter);
 
   // A unique ID that identifies each compile unit.
   unsigned UnitID = 0;
@@ -2287,7 +2288,7 @@ bool DWARFLinker::link() {
   // later. This prevents undeterminism when analyze and clone execute
   // concurrently, as clone set the canonical DIE offset and analyze reads it.
   const uint64_t ModulesEndOffset =
-      Options.NoOutput ? 0 : DwarfEmitter->getDebugInfoSectionSize();
+      Options.NoOutput ? 0 : TheDwarfEmitter->getDebugInfoSectionSize();
 
   // These variables manage the list of processed object files.
   // The mutex and condition variable are to ensure that this is thread safe.
@@ -2369,7 +2370,7 @@ bool DWARFLinker::link() {
     // need to reset the NextValidReloc index to the beginning.
     if (OptContext.ObjectFile.Addresses->hasValidRelocs() ||
         LLVM_UNLIKELY(Options.Update)) {
-      DIECloner(*this, DwarfEmitter, OptContext.ObjectFile, DIEAlloc,
+      DIECloner(*this, TheDwarfEmitter, OptContext.ObjectFile, DIEAlloc,
                 OptContext.CompileUnits, Options.Update)
           .cloneAllCompileUnits(*OptContext.DwarfContext, OptContext.ObjectFile,
                                 OffsetsStringPool,
@@ -2390,17 +2391,17 @@ bool DWARFLinker::link() {
   auto EmitLambda = [&]() {
     // Emit everything that's global.
     if (!Options.NoOutput) {
-      DwarfEmitter->emitAbbrevs(Abbreviations, MaxDwarfVersion);
-      DwarfEmitter->emitStrings(OffsetsStringPool);
+      TheDwarfEmitter->emitAbbrevs(Abbreviations, MaxDwarfVersion);
+      TheDwarfEmitter->emitStrings(OffsetsStringPool);
       switch (Options.TheAccelTableKind) {
       case AccelTableKind::Apple:
-        DwarfEmitter->emitAppleNames(AppleNames);
-        DwarfEmitter->emitAppleNamespaces(AppleNamespaces);
-        DwarfEmitter->emitAppleTypes(AppleTypes);
-        DwarfEmitter->emitAppleObjc(AppleObjc);
+        TheDwarfEmitter->emitAppleNames(AppleNames);
+        TheDwarfEmitter->emitAppleNamespaces(AppleNamespaces);
+        TheDwarfEmitter->emitAppleTypes(AppleTypes);
+        TheDwarfEmitter->emitAppleObjc(AppleObjc);
         break;
       case AccelTableKind::Dwarf:
-        DwarfEmitter->emitDebugNames(DebugNames);
+        TheDwarfEmitter->emitDebugNames(DebugNames);
         break;
       case AccelTableKind::Default:
         llvm_unreachable("Default should have already been resolved.");
