@@ -28,4 +28,5 @@ add_lit_testsuite(check-lldb-repro
   "Running lldb shell test suite with reproducer replay"
   ${CMAKE_CURRENT_BINARY_DIR}
   PARAMS "lldb-run-with-repro=capture"
-  DEPENDS lldb-test-deps check-lldb-repro-capture)
+  DEPENDS lldb-test-deps)
+add_dependencies(check-lldb-repro check-lldb-repro-capture)
