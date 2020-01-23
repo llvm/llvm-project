@@ -221,6 +221,16 @@ void polly::splitEntryBlockForAlloca(BasicBlock *EntryBlock, Pass *P) {
   polly::splitEntryBlockForAlloca(EntryBlock, DT, LI, RI);
 }
 
+void polly::recordAssumption(polly::RecordedAssumptionsTy *RecordedAssumptions,
+                             polly::AssumptionKind Kind, isl::set Set,
+                             DebugLoc Loc, polly::AssumptionSign Sign,
+                             BasicBlock *BB) {
+  assert((Set.is_params() || BB) &&
+         "Assumptions without a basic block must be parameter sets");
+  if (RecordedAssumptions)
+    RecordedAssumptions->push_back({Kind, Sign, Set, Loc, BB});
+}
+
 /// The SCEVExpander will __not__ generate any code for an existing SDiv/SRem
 /// instruction but just use it, if it is referenced as a SCEVUnknown. We want
 /// however to generate new code if the instruction is in the analyzed region
