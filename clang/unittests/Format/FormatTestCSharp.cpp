@@ -235,19 +235,45 @@ TEST_F(FormatTestCSharp, CSharpUsing) {
   Style.SpaceBeforeParens = FormatStyle::SBPO_Always;
   verifyFormat("public void foo () {\n"
                "  using (StreamWriter sw = new StreamWriter (filenameA)) {}\n"
+               "  using () {}\n"
                "}",
                Style);
 
+  // Ensure clang-format affects top-level snippets correctly.
   verifyFormat("using (StreamWriter sw = new StreamWriter (filenameB)) {}",
                Style);
 
   Style.SpaceBeforeParens = FormatStyle::SBPO_Never;
   verifyFormat("public void foo() {\n"
                "  using(StreamWriter sw = new StreamWriter(filenameB)) {}\n"
+               "  using() {}\n"
                "}",
                Style);
 
+  // Ensure clang-format affects top-level snippets correctly.
   verifyFormat("using(StreamWriter sw = new StreamWriter(filenameB)) {}",
+               Style);
+
+  Style.SpaceBeforeParens = FormatStyle::SBPO_ControlStatements;
+  verifyFormat("public void foo() {\n"
+               "  using (StreamWriter sw = new StreamWriter(filenameA)) {}\n"
+               "  using () {}\n"
+               "}",
+               Style);
+
+  // Ensure clang-format affects top-level snippets correctly.
+  verifyFormat("using (StreamWriter sw = new StreamWriter(filenameB)) {}",
+               Style);
+
+  Style.SpaceBeforeParens = FormatStyle::SBPO_NonEmptyParentheses;
+  verifyFormat("public void foo() {\n"
+               "  using (StreamWriter sw = new StreamWriter (filenameA)) {}\n"
+               "  using() {}\n"
+               "}",
+               Style);
+
+  // Ensure clang-format affects top-level snippets correctly.
+  verifyFormat("using (StreamWriter sw = new StreamWriter (filenameB)) {}",
                Style);
 }
 

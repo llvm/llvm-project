@@ -2869,7 +2869,8 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     // space between keywords and paren e.g. "using ("
     if (Right.is(tok::l_paren))
       if (Left.is(tok::kw_using))
-        return spaceRequiredBeforeParens(Left);
+        return Style.SpaceBeforeParens == FormatStyle::SBPO_ControlStatements ||
+               spaceRequiredBeforeParens(Right);
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
       return true;
