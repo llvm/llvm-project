@@ -102,14 +102,13 @@ Non-comprehensive list of changes in this release
   the found gcc installation is older than 4.7.0. Add ``-fno-use-init-array`` to
   get the old behavior (``.ctors``).
 
-* Lax vector conversions involving floating-point vectors have been disabled
-  by default, and can no longer be enabled with ``-flax-vector-conversions``.
-  This matches the behavior of these flags in GCC, but code relying on implicit
-  vector bitcasts between integer and floating-point types that used to compile
-  with older versions of Clang is no longer accepted by default in Clang 10.
-  The old behavior can be restored with ``-flax-vector-conversions=all``.
-  In a future release of Clang, we intend to change the default to
-  ``-fno-lax-vector-conversions``.
+* The behavior of the flag ``-flax-vector-conversions`` has been modified to
+  more closely match GCC, as described below. In Clang 10 onwards, command lines
+  specifying this flag do not permit implicit vector bitcasts between integer
+  vectors and floating-point vectors. Such conversions are still permitted by
+  default, however, and the default can be explicitly requested with the
+  Clang-specific flag ``-flax-vector-conversions=all``. In a future release of
+  Clang, we intend to change the default to ``-fno-lax-vector-conversions``.
 
 New Compiler Flags
 ------------------
@@ -142,19 +141,21 @@ Modified Compiler Flags
   to the ``-march`` flag, overriding the target provided by ``-triple``.
 
 - ``-flax-vector-conversions`` has been split into three different levels of
-  laxness:
+  laxness, and has been updated to match the GCC semantics:
 
-  - ``-flax-vector-conversions=all``: This is Clang's historical default, and
+  - ``-flax-vector-conversions=all``: This is Clang's current default, and
     permits implicit vector conversions (performed as bitcasts) between any
     two vector types of the same overall bit-width.
+    Former synonym: ``-flax-vector-conversions`` (Clang <= 9).
 
-  - ``-flax-vector-conversions=integer``: This is Clang's current default,
-    and permits implicit vector conversions (performed as bitcasts) between
-    any two integer vector types of the same overall bit-width.
-    Synonym: ``-flax-vector-conversions``.
+  - ``-flax-vector-conversions=integer``: This permits implicit vector
+    conversions (performed as bitcasts) between any two integer vector types of
+    the same overall bit-width.
+    Synonym: ``-flax-vector-conversions`` (Clang >= 10).
 
   - ``-flax-vector-conversions=none``: Do not perform any implicit bitcasts
-    between vector types. Synonym: ``-fno-lax-vector-conversions``.
+    between vector types.
+    Synonym: ``-fno-lax-vector-conversions``.
 
 New Pragmas in Clang
 --------------------
