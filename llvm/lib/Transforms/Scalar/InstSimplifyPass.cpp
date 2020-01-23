@@ -40,7 +40,7 @@ static bool runImpl(Function &F, const SimplifyQuery &SQ,
       if (!SQ.DT->isReachableFromEntry(&BB))
         continue;
 
-      SmallVector<Instruction *, 8> DeadInstsInBB;
+      SmallVector<WeakTrackingVH, 8> DeadInstsInBB;
       for (Instruction &I : BB) {
         // The first time through the loop, ToSimplify is empty and we try to
         // simplify all instructions. On later iterations, ToSimplify is not

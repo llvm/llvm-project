@@ -6041,7 +6041,7 @@ ChangeStatus Attributor::run(Module &M) {
                       << ToBeDeletedInsts.size() << " instructions and "
                       << ToBeChangedUses.size() << " uses\n");
 
-    SmallVector<Instruction *, 32> DeadInsts;
+    SmallVector<WeakTrackingVH, 32> DeadInsts;
     SmallVector<Instruction *, 32> TerminatorsToFold;
 
     for (auto &It : ToBeChangedUses) {
