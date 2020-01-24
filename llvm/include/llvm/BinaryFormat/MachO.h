@@ -15,7 +15,7 @@
 
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
-#include "llvm/Support/Host.h"
+#include "llvm/Support/SwapByteOrder.h"
 
 namespace llvm {
 namespace MachO {
