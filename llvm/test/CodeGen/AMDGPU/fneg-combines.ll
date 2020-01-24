@@ -219,13 +219,30 @@ define amdgpu_kernel void @v_fneg_add_multi_use_fneg_x_f32(float addrspace(1)* %
 ; GCN-SAFE-DAG: v_mad_f32 [[A:v[0-9]+]],
 ; GCN-SAFE-DAG: v_cmp_ngt_f32_e32 {{.*}}, [[A]]
 ; GCN-SAFE-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, -[[A]]
+define amdgpu_ps float @fneg_fadd_0(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) local_unnamed_addr #0 {
+.entry:
+  %tmp7 = fdiv float 1.000000e+00, %tmp6
+  %tmp8 = fmul float 0.000000e+00, %tmp7
+  %tmp9 = fmul reassoc nnan arcp contract float 0.000000e+00, %tmp8
+  %.i188 = fadd float %tmp9, 0.000000e+00
+  %tmp10 = fcmp uge float %.i188, %tmp2
+  %tmp11 = fsub float -0.000000e+00, %.i188
+  %.i092 = select i1 %tmp10, float %tmp2, float %tmp11
+  %tmp12 = fcmp ule float %.i092, 0.000000e+00
+  %.i198 = select i1 %tmp12, float 0.000000e+00, float 0x7FF8000000000000
+  ret float %.i198
+}
+
+; This is a workaround because -enable-no-signed-zeros-fp-math does not set up
+; function attribute unsafe-fp-math automatically. Combine with the previous test
+; when that is done.
+; GCN-LABEL: {{^}}fneg_fadd_0_nsz:
 ; GCN-NSZ-DAG: v_rcp_f32_e32 [[A:v[0-9]+]],
 ; GCN-NSZ-DAG: v_mov_b32_e32 [[B:v[0-9]+]],
 ; GCN-NSZ-DAG: v_mov_b32_e32 [[C:v[0-9]+]],
 ; GCN-NSZ-DAG: v_mul_f32_e32 [[D:v[0-9]+]],
 ; GCN-NSZ-DAG: v_cmp_nlt_f32_e64 {{.*}}, -[[D]]
-
-define amdgpu_ps float @fneg_fadd_0(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) local_unnamed_addr #0 {
+define amdgpu_ps float @fneg_fadd_0_nsz(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) local_unnamed_addr #2 {
 .entry:
   %tmp7 = fdiv float 1.000000e+00, %tmp6
   %tmp8 = fmul float 0.000000e+00, %tmp7
@@ -2524,3 +2541,4 @@ declare float @llvm.amdgcn.interp.p2(float, float, i32, i32, i32) #0
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind "unsafe-fp-math"="true" }
