@@ -15,6 +15,10 @@ typedef struct {
 	void	*foo;
 } lck_grp_t;
 
+typedef struct {
+  void *foo;
+} lck_rw_t;
+
 typedef pthread_mutex_t lck_mtx_t;
 
 extern int pthread_mutex_lock(pthread_mutex_t *);
@@ -28,3 +32,8 @@ extern void lck_mtx_lock(lck_mtx_t *);
 extern void lck_mtx_unlock(lck_mtx_t *);
 extern boolean_t lck_mtx_try_lock(lck_mtx_t *);
 extern void lck_mtx_destroy(lck_mtx_t *lck, lck_grp_t *grp);
+
+extern void lck_rw_lock_exclusive(lck_rw_t *lck);
+extern void lck_rw_unlock_exclusive(lck_rw_t *lck);
+extern void lck_rw_lock_shared(lck_rw_t *lck);
+extern void lck_rw_unlock_shared(lck_rw_t *lck);
