@@ -382,9 +382,6 @@ class LowerTypeTestsModule {
 
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
-  // Set when the client has invoked this to simply drop all type test assume
-  // sequences.
-  bool DropTypeTests;
 
   Triple::ArchType Arch;
   Triple::OSType OS;
@@ -503,8 +500,7 @@ class LowerTypeTestsModule {
 
 public:
   LowerTypeTestsModule(Module &M, ModuleSummaryIndex *ExportSummary,
-                       const ModuleSummaryIndex *ImportSummary,
-                       bool DropTypeTests);
+                       const ModuleSummaryIndex *ImportSummary);
 
   bool lower();
 
@@ -520,24 +516,22 @@ struct LowerTypeTests : public ModulePass {
 
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
-  bool DropTypeTests;
 
   LowerTypeTests() : ModulePass(ID), UseCommandLine(true) {
     initializeLowerTypeTestsPass(*PassRegistry::getPassRegistry());
   }
 
   LowerTypeTests(ModuleSummaryIndex *ExportSummary,
-                 const ModuleSummaryIndex *ImportSummary, bool DropTypeTests)
+                 const ModuleSummaryIndex *ImportSummary)
       : ModulePass(ID), ExportSummary(ExportSummary),
-        ImportSummary(ImportSummary), DropTypeTests(DropTypeTests) {
+        ImportSummary(ImportSummary) {
     initializeLowerTypeTestsPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnModule(Module &M) override {
     if (UseCommandLine)
       return LowerTypeTestsModule::runForTesting(M);
-    return LowerTypeTestsModule(M, ExportSummary, ImportSummary, DropTypeTests)
-        .lower();
+    return LowerTypeTestsModule(M, ExportSummary, ImportSummary).lower();
   }
 };
 
@@ -550,9 +544,8 @@ INITIALIZE_PASS(LowerTypeTests, "lowertypetests", "Lower type metadata", false,
 
 ModulePass *
 llvm::createLowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
-                               const ModuleSummaryIndex *ImportSummary,
-                               bool DropTypeTests) {
-  return new LowerTypeTests(ExportSummary, ImportSummary, DropTypeTests);
+                               const ModuleSummaryIndex *ImportSummary) {
+  return new LowerTypeTests(ExportSummary, ImportSummary);
 }
 
 /// Build a bit set for TypeId using the object layouts in
@@ -1662,9 +1655,8 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 /// Lower all type tests in this module.
 LowerTypeTestsModule::LowerTypeTestsModule(
     Module &M, ModuleSummaryIndex *ExportSummary,
-    const ModuleSummaryIndex *ImportSummary, bool DropTypeTests)
-    : M(M), ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-      DropTypeTests(DropTypeTests) {
+    const ModuleSummaryIndex *ImportSummary)
+    : M(M), ExportSummary(ExportSummary), ImportSummary(ImportSummary) {
   assert(!(ExportSummary && ImportSummary));
   Triple TargetTriple(M.getTargetTriple());
   Arch = TargetTriple.getArch();
@@ -1691,8 +1683,7 @@ bool LowerTypeTestsModule::runForTesting(Module &M) {
   bool Changed =
       LowerTypeTestsModule(
           M, ClSummaryAction == PassSummaryAction::Export ? &Summary : nullptr,
-          ClSummaryAction == PassSummaryAction::Import ? &Summary : nullptr,
-          /*DropTypeTests*/ false)
+          ClSummaryAction == PassSummaryAction::Import ? &Summary : nullptr)
           .lower();
 
   if (!ClWriteSummary.empty()) {
@@ -1759,33 +1750,6 @@ void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
 }
 
 bool LowerTypeTestsModule::lower() {
-  Function *TypeTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::type_test));
-
-  if (DropTypeTests && TypeTestFunc) {
-    for (auto UI = TypeTestFunc->use_begin(), UE = TypeTestFunc->use_end();
-         UI != UE;) {
-      auto *CI = cast<CallInst>((*UI++).getUser());
-      // Find and erase llvm.assume intrinsics for this llvm.type.test call.
-      for (auto CIU = CI->use_begin(), CIUE = CI->use_end(); CIU != CIUE;) {
-        if (auto *AssumeCI = dyn_cast<CallInst>((*CIU++).getUser())) {
-          Function *F = AssumeCI->getCalledFunction();
-          if (F && F->getIntrinsicID() == Intrinsic::assume)
-            AssumeCI->eraseFromParent();
-        }
-      }
-      CI->eraseFromParent();
-    }
-
-    // We have deleted the type intrinsics, so we no longer have enough
-    // information to reason about the liveness of virtual function pointers
-    // in GlobalDCE.
-    for (GlobalVariable &GV : M.globals())
-      GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
-
-    return true;
-  }
-
   // If only some of the modules were split, we cannot correctly perform
   // this transformation. We already checked for the presense of type tests
   // with partially split modules during the thin link, and would have emitted
@@ -1794,6 +1758,8 @@ bool LowerTypeTestsModule::lower() {
       (ImportSummary && ImportSummary->partiallySplitLTOUnits()))
     return false;
 
+  Function *TypeTestFunc =
+      M.getFunction(Intrinsic::getName(Intrinsic::type_test));
   Function *ICallBranchFunnelFunc =
       M.getFunction(Intrinsic::getName(Intrinsic::icall_branch_funnel));
   if ((!TypeTestFunc || TypeTestFunc->use_empty()) &&
@@ -2230,9 +2196,7 @@ bool LowerTypeTestsModule::lower() {
 
 PreservedAnalyses LowerTypeTestsPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  bool Changed =
-      LowerTypeTestsModule(M, ExportSummary, ImportSummary, DropTypeTests)
-          .lower();
+  bool Changed = LowerTypeTestsModule(M, ExportSummary, ImportSummary).lower();
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();

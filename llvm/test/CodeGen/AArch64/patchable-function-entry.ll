@@ -25,6 +25,10 @@ define i32 @f1() "patchable-function-entry"="1" {
   ret i32 0
 }
 
+;; Without -function-sections, f2 is in the same text section as f1.
+;; They share the __patchable_function_entries section.
+;; With -function-sections, f1 and f2 are in different text sections.
+;; Use separate __patchable_function_entries.
 define void @f2() "patchable-function-entry"="2" {
 ; CHECK-LABEL: f2:
 ; CHECK-NEXT: .Lfunc_begin2:
@@ -61,5 +65,41 @@ define void @f5() "patchable-function-entry"="5" comdat {
 ; CHECK:       .p2align 3
 ; CHECK-NEXT:  .xword .Lfunc_begin4
   %frame = alloca i8, i32 16
+  ret void
+}
+
+;; -fpatchable-function-entry=3,2
+;; "patchable-function-prefix" emits data before the function entry label.
+define void @f3_2() "patchable-function-entry"="1" "patchable-function-prefix"="2" {
+; CHECK-LABEL: .type f3_2,@function
+; CHECK-NEXT: .Ltmp1: // @f3_2
+; CHECK-NEXT:  nop
+; CHECK-NEXT:  nop
+; CHECK-NEXT: f3_2:
+; CHECK:      // %bb.0:
+; CHECK-NEXT:  nop
+; CHECK-NEXT:  ret
+;; .size does not include the prefix.
+; CHECK:      .Lfunc_end5:
+; CHECK-NEXT: .size f3_2, .Lfunc_end5-f3_2
+; NOFSECT     .section __patchable_function_entries,"awo",@progbits,f1,unique,0
+; FSECT:      .section __patchable_function_entries,"awo",@progbits,f3_2,unique,4
+; CHECK:      .p2align 3
+; CHECK-NEXT: .xword .Ltmp1
+  ret void
+}
+
+;; When prefix data is used, arbitrarily place NOPs after prefix data.
+define void @prefix() "patchable-function-entry"="0" "patchable-function-prefix"="1" prefix i32 1 {
+; CHECK-LABEL: .type prefix,@function
+; CHECK-NEXT: .word 1 // @prefix
+; CHECK:      .Ltmp2:
+; CHECK:       nop
+; CHECK-NEXT: prefix:
+;; Emit a __patchable_function_entries entry even if "patchable-function-entry" is 0.
+; NOFSECT     .section __patchable_function_entries,"awo",@progbits,prefix,unique,0
+; FSECT:      .section __patchable_function_entries,"awo",@progbits,prefix,unique,5
+; CHECK:      .p2align 3
+; CHECK-NEXT: .xword .Ltmp2
   ret void
 }
