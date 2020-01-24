@@ -199,6 +199,13 @@ private:
 
   MUBUFAddressData parseMUBUFAddress(Register Src) const;
 
+  bool selectMUBUFAddr64Impl(MachineOperand &Root, Register &VAddr,
+                             Register &RSrcReg, Register &SOffset,
+                             int64_t &Offset) const;
+
+  bool selectMUBUFOffsetImpl(MachineOperand &Root, Register &RSrcReg,
+                             Register &SOffset, int64_t &Offset) const;
+
   InstructionSelector::ComplexRendererFns
   selectMUBUFAddr64(MachineOperand &Root) const;
 
