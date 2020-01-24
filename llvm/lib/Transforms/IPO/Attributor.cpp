@@ -6131,12 +6131,14 @@ ChangeStatus Attributor::run(Module &M) {
     for (Instruction *I : TerminatorsToFold)
       ConstantFoldTerminator(I->getParent());
 
-    for (Instruction *I : ToBeDeletedInsts) {
-      I->replaceAllUsesWith(UndefValue::get(I->getType()));
-      if (!isa<PHINode>(I) && isInstructionTriviallyDead(I))
-        DeadInsts.push_back(I);
-      else
-        I->eraseFromParent();
+    for (auto &V : ToBeDeletedInsts) {
+      if (Instruction *I = dyn_cast_or_null<Instruction>(V)) {
+        I->replaceAllUsesWith(UndefValue::get(I->getType()));
+        if (!isa<PHINode>(I) && isInstructionTriviallyDead(I))
+          DeadInsts.push_back(I);
+        else
+          I->eraseFromParent();
+      }
     }
 
     RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
