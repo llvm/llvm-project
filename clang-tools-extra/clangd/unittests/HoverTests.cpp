@@ -1762,7 +1762,7 @@ template <typename T, typename C = bool> class Foo {})",
           },
           R"(function foo
 
-🡺 ret_type
+→ ret_type
 Parameters:
 - 
 - type
