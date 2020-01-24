@@ -80,8 +80,6 @@ public:
 
   bool CompleteType(const CompilerType &compiler_type);
 
-  void CompleteDecl(clang::Decl *decl);
-
   bool CompleteTagDecl(clang::TagDecl *decl);
 
   bool CompleteTagDeclWithOrigin(clang::TagDecl *decl, clang::TagDecl *origin);
