@@ -66,6 +66,10 @@ def FeatureMutableGlobals :
       SubtargetFeature<"mutable-globals", "HasMutableGlobals", "true",
                        "Enable mutable globals">;
 
+def FeatureReferenceTypes :
+      SubtargetFeature<"reference-types", "HasReferenceTypes", "true",
+                       "Enable reference types">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //===----------------------------------------------------------------------===//

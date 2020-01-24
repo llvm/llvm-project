@@ -45,6 +45,7 @@ bool WebAssemblyTargetInfo::hasFeature(StringRef Feature) const {
       .Case("mutable-globals", HasMutableGlobals)
       .Case("multivalue", HasMultivalue)
       .Case("tail-call", HasTailCall)
+      .Case("reference-types", HasReferenceTypes)
       .Default(false);
 }
 
@@ -80,6 +81,8 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_multivalue__");
   if (HasTailCall)
     Builder.defineMacro("__wasm_tail_call__");
+  if (HasReferenceTypes)
+    Builder.defineMacro("__wasm_reference_types__");
 }
 
 void WebAssemblyTargetInfo::setSIMDLevel(llvm::StringMap<bool> &Features,
@@ -126,6 +129,8 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["multivalue"] = true;
   if (HasTailCall)
     Features["tail-call"] = true;
+  if (HasReferenceTypes)
+    Features["reference-types"] = true;
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
 }
@@ -211,6 +216,14 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
     }
     if (Feature == "-tail-call") {
       HasTailCall = false;
+      continue;
+    }
+    if (Feature == "+reference-types") {
+      HasReferenceTypes = true;
+      continue;
+    }
+    if (Feature == "-reference-types") {
+      HasReferenceTypes = false;
       continue;
     }
 
