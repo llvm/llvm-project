@@ -9553,6 +9553,126 @@ void ASTReader::diagnoseOdrViolations() {
            << SecondModule << Range << DiffType;
   };
 
+  enum ODRDiagMethodTypes {
+    DiagMethod,
+    DiagConstructor,
+    DiagDestructor,
+  };
+
+  auto ODRDiagCommonMethodChecks = [&ComputeQualTypeODRHash, &ODRDiagDeclError,
+                                    &ODRDiagDeclNote,
+                                    &ComputeODRHash](NamedDecl *FirstContainer,
+                                                     StringRef FirstModule,
+                                                     StringRef SecondModule,
+                                                     unsigned FirstMethodType,
+                                                     unsigned SecondMethodType,
+                                                     const auto *FirstMethod,
+                                                     const auto *SecondMethod) {
+    const unsigned FirstNumParameters = FirstMethod->param_size();
+    const unsigned SecondNumParameters = SecondMethod->param_size();
+    auto FirstName = FirstMethod->getDeclName();
+    auto SecondName = SecondMethod->getDeclName();
+    if (FirstNumParameters != SecondNumParameters) {
+      ODRDiagDeclError(FirstContainer, FirstModule, FirstMethod->getLocation(),
+                       FirstMethod->getSourceRange(), MethodNumberParameters)
+          << FirstMethodType << FirstName << FirstNumParameters;
+      ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
+                      SecondMethod->getSourceRange(), MethodNumberParameters)
+          << SecondMethodType << SecondName << SecondNumParameters;
+      return true;
+    }
+
+    for (unsigned I = 0; I < FirstNumParameters; ++I) {
+      const ParmVarDecl *FirstParam = FirstMethod->getParamDecl(I);
+      const ParmVarDecl *SecondParam = SecondMethod->getParamDecl(I);
+
+      QualType FirstParamType = FirstParam->getType();
+      QualType SecondParamType = SecondParam->getType();
+      if (FirstParamType != SecondParamType &&
+          ComputeQualTypeODRHash(FirstParamType) !=
+              ComputeQualTypeODRHash(SecondParamType)) {
+        if (const DecayedType *ParamDecayedType =
+                FirstParamType->getAs<DecayedType>()) {
+          ODRDiagDeclError(FirstContainer, FirstModule,
+                           FirstMethod->getLocation(),
+                           FirstMethod->getSourceRange(), MethodParameterType)
+              << FirstMethodType << FirstName << (I + 1) << FirstParamType
+              << true << ParamDecayedType->getOriginalType();
+        } else {
+          ODRDiagDeclError(FirstContainer, FirstModule,
+                           FirstMethod->getLocation(),
+                           FirstMethod->getSourceRange(), MethodParameterType)
+              << FirstMethodType << FirstName << (I + 1) << FirstParamType
+              << false;
+        }
+
+        if (const DecayedType *ParamDecayedType =
+                SecondParamType->getAs<DecayedType>()) {
+          ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
+                          SecondMethod->getSourceRange(), MethodParameterType)
+              << SecondMethodType << SecondName << (I + 1) << SecondParamType
+              << true << ParamDecayedType->getOriginalType();
+        } else {
+          ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
+                          SecondMethod->getSourceRange(), MethodParameterType)
+              << SecondMethodType << SecondName << (I + 1) << SecondParamType
+              << false;
+        }
+        return true;
+      }
+
+      DeclarationName FirstParamName = FirstParam->getDeclName();
+      DeclarationName SecondParamName = SecondParam->getDeclName();
+      if (FirstParamName != SecondParamName) {
+        ODRDiagDeclError(FirstContainer, FirstModule,
+                         FirstMethod->getLocation(),
+                         FirstMethod->getSourceRange(), MethodParameterName)
+            << FirstMethodType << FirstName << (I + 1) << FirstParamName;
+        ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
+                        SecondMethod->getSourceRange(), MethodParameterName)
+            << SecondMethodType << SecondName << (I + 1) << SecondParamName;
+        return true;
+      }
+
+      if (!isa<CXXMethodDecl>(FirstMethod))
+        continue;
+
+      const Expr *FirstInit = FirstParam->getInit();
+      const Expr *SecondInit = SecondParam->getInit();
+      if ((FirstInit == nullptr) != (SecondInit == nullptr)) {
+        ODRDiagDeclError(
+            FirstContainer, FirstModule, FirstMethod->getLocation(),
+            FirstMethod->getSourceRange(), MethodParameterSingleDefaultArgument)
+            << FirstMethodType << FirstName << (I + 1) << (FirstInit == nullptr)
+            << (FirstInit ? FirstInit->getSourceRange() : SourceRange());
+        ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
+                        SecondMethod->getSourceRange(),
+                        MethodParameterSingleDefaultArgument)
+            << SecondMethodType << SecondName << (I + 1)
+            << (SecondInit == nullptr)
+            << (SecondInit ? SecondInit->getSourceRange() : SourceRange());
+        return true;
+      }
+
+      if (FirstInit && SecondInit &&
+          ComputeODRHash(FirstInit) != ComputeODRHash(SecondInit)) {
+        ODRDiagDeclError(FirstContainer, FirstModule,
+                         FirstMethod->getLocation(),
+                         FirstMethod->getSourceRange(),
+                         MethodParameterDifferentDefaultArgument)
+            << FirstMethodType << FirstName << (I + 1)
+            << FirstInit->getSourceRange();
+        ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
+                        SecondMethod->getSourceRange(),
+                        MethodParameterDifferentDefaultArgument)
+            << SecondMethodType << SecondName << (I + 1)
+            << SecondInit->getSourceRange();
+        return true;
+      }
+    }
+    return false;
+  };
+
   auto ODRDiagField = [this, &ODRDiagDeclError, &ODRDiagDeclNote,
                        &ComputeQualTypeODRHash, &ComputeODRHash](
                           NamedDecl *FirstRecord, StringRef FirstModule,
@@ -10330,12 +10450,7 @@ void ASTReader::diagnoseOdrViolations() {
         break;
       }
       case CXXMethod: {
-        enum {
-          DiagMethod,
-          DiagConstructor,
-          DiagDestructor,
-        } FirstMethodType,
-            SecondMethodType;
+        ODRDiagMethodTypes FirstMethodType, SecondMethodType;
         auto GetMethodTypeForDiagnostics = [](const CXXMethodDecl* D) {
           if (isa<CXXConstructorDecl>(D)) return DiagConstructor;
           if (isa<CXXDestructorDecl>(D)) return DiagDestructor;
@@ -10460,123 +10575,11 @@ void ASTReader::diagnoseOdrViolations() {
           break;
         }
 
-        const unsigned FirstNumParameters = FirstMethod->param_size();
-        const unsigned SecondNumParameters = SecondMethod->param_size();
-        if (FirstNumParameters != SecondNumParameters) {
-          ODRDiagDeclError(FirstRecord, FirstModule, FirstMethod->getLocation(),
-                           FirstMethod->getSourceRange(),
-                           MethodNumberParameters)
-              << FirstMethodType << FirstName << FirstNumParameters;
-          ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
-                          SecondMethod->getSourceRange(),
-                          MethodNumberParameters)
-              << SecondMethodType << SecondName << SecondNumParameters;
-          Diagnosed = true;
+        Diagnosed = ODRDiagCommonMethodChecks(
+            FirstRecord, FirstModule, SecondModule, FirstMethodType,
+            SecondMethodType, FirstMethod, SecondMethod);
+        if (Diagnosed)
           break;
-        }
-
-        // Need this status boolean to know when break out of the switch.
-        bool ParameterMismatch = false;
-        for (unsigned I = 0; I < FirstNumParameters; ++I) {
-          const ParmVarDecl *FirstParam = FirstMethod->getParamDecl(I);
-          const ParmVarDecl *SecondParam = SecondMethod->getParamDecl(I);
-
-          QualType FirstParamType = FirstParam->getType();
-          QualType SecondParamType = SecondParam->getType();
-          if (FirstParamType != SecondParamType &&
-              ComputeQualTypeODRHash(FirstParamType) !=
-                  ComputeQualTypeODRHash(SecondParamType)) {
-            if (const DecayedType *ParamDecayedType =
-                    FirstParamType->getAs<DecayedType>()) {
-              ODRDiagDeclError(
-                  FirstRecord, FirstModule, FirstMethod->getLocation(),
-                  FirstMethod->getSourceRange(), MethodParameterType)
-                  << FirstMethodType << FirstName << (I + 1) << FirstParamType
-                  << true << ParamDecayedType->getOriginalType();
-            } else {
-              ODRDiagDeclError(
-                  FirstRecord, FirstModule, FirstMethod->getLocation(),
-                  FirstMethod->getSourceRange(), MethodParameterType)
-                  << FirstMethodType << FirstName << (I + 1) << FirstParamType
-                  << false;
-            }
-
-            if (const DecayedType *ParamDecayedType =
-                    SecondParamType->getAs<DecayedType>()) {
-              ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
-                              SecondMethod->getSourceRange(),
-                              MethodParameterType)
-                  << SecondMethodType << SecondName << (I + 1)
-                  << SecondParamType << true
-                  << ParamDecayedType->getOriginalType();
-            } else {
-              ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
-                              SecondMethod->getSourceRange(),
-                              MethodParameterType)
-                  << SecondMethodType << SecondName << (I + 1)
-                  << SecondParamType << false;
-            }
-            ParameterMismatch = true;
-            break;
-          }
-
-          DeclarationName FirstParamName = FirstParam->getDeclName();
-          DeclarationName SecondParamName = SecondParam->getDeclName();
-          if (FirstParamName != SecondParamName) {
-            ODRDiagDeclError(FirstRecord, FirstModule,
-                             FirstMethod->getLocation(),
-                             FirstMethod->getSourceRange(), MethodParameterName)
-                << FirstMethodType << FirstName << (I + 1) << FirstParamName;
-            ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
-                            SecondMethod->getSourceRange(), MethodParameterName)
-                << SecondMethodType << SecondName << (I + 1) << SecondParamName;
-            ParameterMismatch = true;
-            break;
-          }
-
-          const Expr *FirstInit = FirstParam->getInit();
-          const Expr *SecondInit = SecondParam->getInit();
-          if ((FirstInit == nullptr) != (SecondInit == nullptr)) {
-            ODRDiagDeclError(FirstRecord, FirstModule,
-                             FirstMethod->getLocation(),
-                             FirstMethod->getSourceRange(),
-                             MethodParameterSingleDefaultArgument)
-                << FirstMethodType << FirstName << (I + 1)
-                << (FirstInit == nullptr)
-                << (FirstInit ? FirstInit->getSourceRange() : SourceRange());
-            ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
-                            SecondMethod->getSourceRange(),
-                            MethodParameterSingleDefaultArgument)
-                << SecondMethodType << SecondName << (I + 1)
-                << (SecondInit == nullptr)
-                << (SecondInit ? SecondInit->getSourceRange() : SourceRange());
-            ParameterMismatch = true;
-            break;
-          }
-
-          if (FirstInit && SecondInit &&
-              ComputeODRHash(FirstInit) != ComputeODRHash(SecondInit)) {
-            ODRDiagDeclError(FirstRecord, FirstModule,
-                             FirstMethod->getLocation(),
-                             FirstMethod->getSourceRange(),
-                             MethodParameterDifferentDefaultArgument)
-                << FirstMethodType << FirstName << (I + 1)
-                << FirstInit->getSourceRange();
-            ODRDiagDeclNote(SecondModule, SecondMethod->getLocation(),
-                            SecondMethod->getSourceRange(),
-                            MethodParameterDifferentDefaultArgument)
-                << SecondMethodType << SecondName << (I + 1)
-                << SecondInit->getSourceRange();
-            ParameterMismatch = true;
-            break;
-
-          }
-        }
-
-        if (ParameterMismatch) {
-          Diagnosed = true;
-          break;
-        }
 
         const auto *FirstTemplateArgs =
             FirstMethod->getTemplateSpecializationArgs();
