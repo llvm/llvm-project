@@ -241,6 +241,10 @@ enum NodeType : unsigned {
   SST1_SXTW_SCALED,
   SST1_IMM,
 
+  // Strict (exception-raising) floating point comparison
+  STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+  STRICT_FCMPE,
+
   // NEON Load/Store with post-increment base updates
   LD2post = ISD::FIRST_TARGET_MEMORY_OPCODE,
   LD3post,
