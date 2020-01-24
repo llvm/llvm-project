@@ -1192,7 +1192,7 @@ private:
   ///{
   SmallPtrSet<Function *, 8> ToBeDeletedFunctions;
   SmallPtrSet<BasicBlock *, 8> ToBeDeletedBlocks;
-  SmallPtrSet<Instruction *, 8> ToBeDeletedInsts;
+  SmallDenseSet<WeakVH, 8> ToBeDeletedInsts;
   ///}
 };
 
