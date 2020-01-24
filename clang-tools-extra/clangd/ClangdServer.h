@@ -73,7 +73,7 @@ public:
                                     std::vector<Diag> Diagnostics) {}
     /// Called whenever the file status is updated.
     /// May be called concurrently for separate files, not for a single file.
-    virtual void onFileUpdated(PathRef File, const TUStatus &Status){};
+    virtual void onFileUpdated(PathRef File, const TUStatus &Status) {}
 
     /// Called by ClangdServer when some \p Highlightings for \p File are ready.
     /// May be called concurrently for separate files, not for a single file.
