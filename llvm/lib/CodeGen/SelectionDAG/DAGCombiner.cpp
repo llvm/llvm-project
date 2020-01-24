@@ -522,7 +522,7 @@ namespace {
     SDValue rebuildSetCC(SDValue N);
 
     bool isSetCCEquivalent(SDValue N, SDValue &LHS, SDValue &RHS,
-                           SDValue &CC) const;
+                           SDValue &CC, bool MatchStrict = false) const;
     bool isOneUseSetCC(SDValue N) const;
     bool isCheaperToUseNegatedFPOps(SDValue X, SDValue Y);
 
@@ -814,11 +814,20 @@ static void zeroExtendToMatch(APInt &LHS, APInt &RHS, unsigned Offset = 0) {
 // the appropriate nodes based on the type of node we are checking. This
 // simplifies life a bit for the callers.
 bool DAGCombiner::isSetCCEquivalent(SDValue N, SDValue &LHS, SDValue &RHS,
-                                    SDValue &CC) const {
+                                    SDValue &CC, bool MatchStrict) const {
   if (N.getOpcode() == ISD::SETCC) {
     LHS = N.getOperand(0);
     RHS = N.getOperand(1);
     CC  = N.getOperand(2);
+    return true;
+  }
+
+  if (MatchStrict &&
+      (N.getOpcode() == ISD::STRICT_FSETCC ||
+       N.getOpcode() == ISD::STRICT_FSETCCS)) {
+    LHS = N.getOperand(1);
+    RHS = N.getOperand(2);
+    CC  = N.getOperand(3);
     return true;
   }
 
@@ -7058,7 +7067,8 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   // fold !(x cc y) -> (x !cc y)
   unsigned N0Opcode = N0.getOpcode();
   SDValue LHS, RHS, CC;
-  if (TLI.isConstTrueVal(N1.getNode()) && isSetCCEquivalent(N0, LHS, RHS, CC)) {
+  if (TLI.isConstTrueVal(N1.getNode()) &&
+      isSetCCEquivalent(N0, LHS, RHS, CC, /*MatchStrict*/true)) {
     ISD::CondCode NotCC = ISD::getSetCCInverse(cast<CondCodeSDNode>(CC)->get(),
                                                LHS.getValueType());
     if (!LegalOperations ||
@@ -7071,6 +7081,21 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
       case ISD::SELECT_CC:
         return DAG.getSelectCC(SDLoc(N0), LHS, RHS, N0.getOperand(2),
                                N0.getOperand(3), NotCC);
+      case ISD::STRICT_FSETCC:
+      case ISD::STRICT_FSETCCS: {
+        if (N0.hasOneUse()) {
+          // FIXME Can we handle multiple uses? Could we token factor the chain
+          // results from the new/old setcc?
+          SDValue SetCC = DAG.getSetCC(SDLoc(N0), VT, LHS, RHS, NotCC,
+                                       N0.getOperand(0),
+                                       N0Opcode == ISD::STRICT_FSETCCS);
+          CombineTo(N, SetCC);
+          DAG.ReplaceAllUsesOfValueWith(N0.getValue(1), SetCC.getValue(1));
+          recursivelyDeleteUnusedNodes(N0.getNode());
+          return SDValue(N, 0); // Return N so it doesn't get rechecked!
+        }
+        break;
+      }
       }
     }
   }
@@ -13541,8 +13566,12 @@ SDValue DAGCombiner::visitBRCOND(SDNode *N) {
   }
 
   if (N1.hasOneUse()) {
+    // rebuildSetCC calls visitXor which may change the Chain when there is a
+    // STRICT_FSETCC/STRICT_FSETCCS involved. Use a handle to track changes.
+    HandleSDNode ChainHandle(Chain);
     if (SDValue NewN1 = rebuildSetCC(N1))
-      return DAG.getNode(ISD::BRCOND, SDLoc(N), MVT::Other, Chain, NewN1, N2);
+      return DAG.getNode(ISD::BRCOND, SDLoc(N), MVT::Other,
+                         ChainHandle.getValue(), NewN1, N2);
   }
 
   return SDValue();
