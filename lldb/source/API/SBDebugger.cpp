@@ -304,8 +304,9 @@ void SBDebugger::SetInputFileHandle(FILE *fh, bool transfer_ownership) {
   if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator())
     recorder = g->GetOrCreate<repro::CommandProvider>().GetNewDataRecorder();
 
-  static std::unique_ptr<repro::CommandLoader> loader =
-      repro::CommandLoader::Create(repro::Reproducer::Instance().GetLoader());
+  static std::unique_ptr<repro::MultiLoader<repro::CommandProvider>> loader =
+      repro::MultiLoader<repro::CommandProvider>::Create(
+          repro::Reproducer::Instance().GetLoader());
   if (loader) {
     llvm::Optional<std::string> file = loader->GetNextFile();
     fh = file ? FileSystem::Instance().Fopen(file->c_str(), "r") : nullptr;
