@@ -3005,6 +3005,43 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  Constant *getPclmulMask(IRBuilder<> &IRB, unsigned Width, bool OddElements) {
+    SmallVector<Constant *, 8> Mask;
+    for (unsigned X = OddElements ? 1 : 0; X < Width; X += 2) {
+      Constant *C = ConstantInt::get(IRB.getInt32Ty(), X);
+      Mask.push_back(C);
+      Mask.push_back(C);
+    }
+    return ConstantVector::get(Mask);
+  }
+
+  // Instrument pclmul intrinsics.
+  // These intrinsics operate either on odd or on even elements of the input
+  // vectors, depending on the constant in the 3rd argument, ignoring the rest.
+  // Replace the unused elements with copies of the used ones, ex:
+  //   (0, 1, 2, 3) -> (0, 0, 2, 2) (even case)
+  // or
+  //   (0, 1, 2, 3) -> (1, 1, 3, 3) (odd case)
+  // and then apply the usual shadow combining logic.
+  void handlePclmulIntrinsic(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Type *ShadowTy = getShadowTy(&I);
+    unsigned Width = I.getArgOperand(0)->getType()->getVectorNumElements();
+    assert(isa<ConstantInt>(I.getArgOperand(2)) &&
+           "pclmul 3rd operand must be a constant");
+    unsigned Imm = cast<ConstantInt>(I.getArgOperand(2))->getZExtValue();
+    Value *Shuf0 =
+        IRB.CreateShuffleVector(getShadow(&I, 0), UndefValue::get(ShadowTy),
+                                getPclmulMask(IRB, Width, Imm & 0x01));
+    Value *Shuf1 =
+        IRB.CreateShuffleVector(getShadow(&I, 1), UndefValue::get(ShadowTy),
+                                getPclmulMask(IRB, Width, Imm & 0x10));
+    ShadowAndOriginCombiner SOC(this, IRB);
+    SOC.Add(Shuf0, getOrigin(&I, 0));
+    SOC.Add(Shuf1, getOrigin(&I, 1));
+    SOC.Done(&I);
+  }
+
   void visitIntrinsicInst(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
     case Intrinsic::lifetime_start:
@@ -3236,6 +3273,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_bmi_pext_32:
     case Intrinsic::x86_bmi_pext_64:
       handleBmiIntrinsic(I);
+      break;
+
+    case Intrinsic::x86_pclmulqdq:
+    case Intrinsic::x86_pclmulqdq_256:
+    case Intrinsic::x86_pclmulqdq_512:
+      handlePclmulIntrinsic(I);
       break;
 
     case Intrinsic::is_constant:
