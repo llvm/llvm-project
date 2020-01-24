@@ -94,3 +94,19 @@ set(ALL_CLANG_TIDY_CHECKS ${ALL_CLANG_TIDY_CHECKS} PARENT_SCOPE)
 add_subdirectory(plugin)
 add_subdirectory(tool)
 add_subdirectory(utils)
+
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  install(DIRECTORY .
+    DESTINATION include/clang-tidy
+    COMPONENT clang-tidy-headers
+    FILES_MATCHING
+    PATTERN "*.h"
+    )
+  add_custom_target(clang-tidy-headers)
+  set_target_properties(clang-tidy-headers PROPERTIES FOLDER "Misc")
+  if(NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-clang-tidy-headers
+                             DEPENDS clang-tidy-headers
+                             COMPONENT clang-tidy-headers)
+  endif()
+endif()
