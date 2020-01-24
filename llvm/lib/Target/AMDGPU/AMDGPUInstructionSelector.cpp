@@ -1120,6 +1120,9 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
 }
 
 bool AMDGPUInstructionSelector::selectG_SELECT(MachineInstr &I) const {
+  if (selectImpl(I, *CoverageInfo))
+    return true;
+
   MachineBasicBlock *BB = I.getParent();
   const DebugLoc &DL = I.getDebugLoc();
 
