@@ -1423,6 +1423,14 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
+  const AArch64Subtarget *Subtarget =
+      &static_cast<const AArch64Subtarget &>(MF.getSubtarget());
+  if (Subtarget->requiresStrictAlign()) {
+    // We don't support this feature yet.
+    LLVM_DEBUG(dbgs() << "AArch64 GISel does not support strict-align yet\n");
+    return false;
+  }
+
   unsigned Opcode = I.getOpcode();
   // G_PHI requires same handling as PHI
   if (!isPreISelGenericOpcode(Opcode) || Opcode == TargetOpcode::G_PHI) {
