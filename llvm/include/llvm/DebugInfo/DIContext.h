@@ -133,7 +133,12 @@ enum class DINameKind { None, ShortName, LinkageName };
 /// Controls which fields of DILineInfo container should be filled
 /// with data.
 struct DILineInfoSpecifier {
-  enum class FileLineInfoKind { None, Default, AbsoluteFilePath };
+  enum class FileLineInfoKind {
+    None,
+    Default,
+    RelativeFilePath,
+    AbsoluteFilePath
+  };
   using FunctionNameKind = DINameKind;
 
   FileLineInfoKind FLIKind;
