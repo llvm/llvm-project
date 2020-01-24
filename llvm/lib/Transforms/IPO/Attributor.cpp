@@ -4131,6 +4131,12 @@ struct AANoCaptureCallSiteReturned final : AANoCaptureImpl {
 struct AAValueSimplifyImpl : AAValueSimplify {
   AAValueSimplifyImpl(const IRPosition &IRP) : AAValueSimplify(IRP) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    if (getAssociatedValue().getType()->isVoidTy())
+      indicatePessimisticFixpoint();
+  }
+
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr() const override {
     return getAssumed() ? (getKnown() ? "simplified" : "maybe-simple")
@@ -4146,7 +4152,6 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       return const_cast<Value *>(&getAssociatedValue());
     return SimplifiedAssociatedValue;
   }
-  void initialize(Attributor &A) override {}
 
   /// Helper function for querying AAValueSimplify and updating candicate.
   /// \param QueryingValue Value trying to unify with SimplifiedValue
