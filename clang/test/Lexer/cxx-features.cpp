@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -fsized-deallocation -verify %s
 //
 // RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -frelaxed-template-template-args -DRELAXED_TEMPLATE_TEMPLATE_ARGS=1 -verify %s
-// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -fconcepts-ts -DCONCEPTS_TS=1 -verify %s
+// RUN: %clang_cc1 -std=c++17 -fcxx-exceptions -fsized-deallocation -DCONCEPTS_TS=1 -verify %s
 // RUN: %clang_cc1 -std=c++14 -fno-rtti -fno-threadsafe-statics -verify %s -DNO_EXCEPTIONS -DNO_RTTI -DNO_THREADSAFE_STATICS -fsized-deallocation
 // RUN: %clang_cc1 -std=c++14 -fcoroutines-ts -DNO_EXCEPTIONS -DCOROUTINES -verify -fsized-deallocation %s
 // RUN: %clang_cc1 -std=c++14 -fchar8_t -DNO_EXCEPTIONS -DCHAR8_T -verify -fsized-deallocation %s
@@ -67,6 +67,10 @@
 #endif
 
 // init_captures checked below
+
+#if check(concepts, 0, 0, 0, 0, 201907)
+#error "wrong value for __cpp_concepts"
+#endif
 
 // --- C++17 features ---
 
@@ -296,10 +300,6 @@
 #endif
 
 // --- TS features --
-
-#if check(experimental_concepts, 0, 0, CONCEPTS_TS, CONCEPTS_TS, CONCEPTS_TS)
-#error "wrong value for __cpp_experimental_concepts"
-#endif
 
 #if defined(COROUTINES) ? check(coroutines, 201703L, 201703L, 201703L, 201703L, 201703L) : check(coroutines, 0, 0, 0, 0, 201703L)
 #error "wrong value for __cpp_coroutines"

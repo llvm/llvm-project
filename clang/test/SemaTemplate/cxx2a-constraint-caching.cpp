@@ -1,5 +1,5 @@
-// RUN:  %clang_cc1 -std=c++2a -fconcepts-ts -verify %s
-// RUN:  %clang_cc1 -std=c++2a -fconcepts-ts -verify %s -fno-concept-satisfaction-caching -DNO_CACHE
+// RUN:  %clang_cc1 -std=c++2a -verify %s
+// RUN:  %clang_cc1 -std=c++2a -verify %s -fno-concept-satisfaction-caching -DNO_CACHE
 // expected-no-diagnostics
 
 template<typename T>

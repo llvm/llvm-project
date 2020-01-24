@@ -105,6 +105,9 @@ def err_fe_invalid_wchar_type
     : Error<"invalid wchar_t type '%0'; must be one of 'char', 'short', 'int'">;
 def err_fe_invalid_exception_model
    : Error<"invalid exception model '%0' for target '%1'">;
+def warn_fe_concepts_ts_flag : Warning<
+  "-fconcepts-ts is deprecated - use '-std=c++2a' for Concepts support">,
+  InGroup<Deprecated>;
 
 def warn_fe_serialized_diag_merge_failure : Warning<
     "unable to merge a subprocess's serialized diagnostics">,
