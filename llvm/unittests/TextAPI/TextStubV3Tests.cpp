@@ -34,6 +34,11 @@ inline bool operator==(const ExportedSymbol &lhs, const ExportedSymbol &rhs) {
          std::tie(rhs.Kind, rhs.Name, rhs.WeakDefined, rhs.ThreadLocalValue);
 }
 
+inline std::string stripWhitespace(std::string s) {
+  s.erase(std::remove_if(s.begin(), s.end(), ::isspace), s.end());
+  return s;
+}
+
 static ExportedSymbol TBDv3Symbols[] = {
     {SymbolKind::GlobalSymbol, "$ld$hide$os9.0$_sym1", false, false},
     {SymbolKind::GlobalSymbol, "_sym1", false, false},
@@ -204,6 +209,13 @@ TEST(TBDv3, Platform_macOS) {
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_platform_macos),
+            stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv3, Platform_iOS) {
@@ -221,6 +233,13 @@ TEST(TBDv3, Platform_iOS) {
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_platform_ios),
+            stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv3, Platform_watchOS) {
@@ -238,6 +257,13 @@ TEST(TBDv3, Platform_watchOS) {
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_platform_watchos),
+            stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv3, Platform_tvOS) {
@@ -255,6 +281,13 @@ TEST(TBDv3, Platform_tvOS) {
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_platform_tvos),
+            stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv3, Platform_bridgeOS) {
@@ -272,6 +305,13 @@ TEST(TBDv3, Platform_bridgeOS) {
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_platform_bridgeos),
+            stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv3, Platform_macCatalyst) {
@@ -288,6 +328,16 @@ TEST(TBDv3, Platform_macCatalyst) {
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
+
+  // It's not currently possible to emit the iomac platform. Enable this once
+  // that's fixed.
+#if 0
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_platform_iosmac), stripWhitespace(Buffer.c_str()));
+#endif
 }
 
 TEST(TBDv3, Platform_zippered) {
@@ -309,6 +359,13 @@ TEST(TBDv3, Platform_zippered) {
   EXPECT_EQ(Platforms.size(), File->getPlatforms().size());
   for (auto Platform : File->getPlatforms())
 	    EXPECT_EQ(Platforms.count(Platform), 1U);
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_platform_zip),
+            stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv3, Swift_1_0) {
@@ -325,6 +382,12 @@ TEST(TBDv3, Swift_1_0) {
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(1U, File->getSwiftABIVersion());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_swift_1_0), stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv3, Swift_1_1) {
@@ -341,6 +404,12 @@ TEST(TBDv3, Swift_1_1) {
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(2U, File->getSwiftABIVersion());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_swift_1_1), stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv3, Swift_2_0) {
@@ -357,6 +426,12 @@ TEST(TBDv3, Swift_2_0) {
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(3U, File->getSwiftABIVersion());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_swift_2_0), stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv3, Swift_3_0) {
@@ -373,6 +448,12 @@ TEST(TBDv3, Swift_3_0) {
   auto File = std::move(Result.get());
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(4U, File->getSwiftABIVersion());
+
+  SmallString<4096> Buffer;
+  raw_svector_ostream OS(Buffer);
+  auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
+  EXPECT_TRUE(!WriteResult);
+  EXPECT_EQ(stripWhitespace(tbd_v3_swift_3_0), stripWhitespace(Buffer.c_str()));
 }
 
 TEST(TBDv3, Swift_4_0) {
