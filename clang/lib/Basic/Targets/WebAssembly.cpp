@@ -105,8 +105,10 @@ bool WebAssemblyTargetInfo::initFeatureMap(
   if (CPU == "bleeding-edge") {
     Features["nontrapping-fptoint"] = true;
     Features["sign-ext"] = true;
+    Features["bulk-memory"] = true;
     Features["atomics"] = true;
     Features["mutable-globals"] = true;
+    Features["tail-call"] = true;
     setSIMDLevel(Features, SIMD128);
   }
   // Other targets do not consider user-configured features here, but while we
