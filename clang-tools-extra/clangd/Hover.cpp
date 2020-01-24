@@ -26,6 +26,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
@@ -205,15 +206,23 @@ const FunctionDecl *getUnderlyingFunction(const Decl *D) {
 // Returns the decl that should be used for querying comments, either from index
 // or AST.
 const NamedDecl *getDeclForComment(const NamedDecl *D) {
-  if (auto *CTSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(D))
-    if (!CTSD->isExplicitInstantiationOrSpecialization())
-      return CTSD->getTemplateInstantiationPattern();
-  if (auto *VTSD = llvm::dyn_cast<VarTemplateSpecializationDecl>(D))
-    if (!VTSD->isExplicitInstantiationOrSpecialization())
-      return VTSD->getTemplateInstantiationPattern();
-  if (auto *FD = D->getAsFunction())
-    if (FD->isTemplateInstantiation())
-      return FD->getTemplateInstantiationPattern();
+  if (const auto *TSD = llvm::dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+    // Template may not be instantiated e.g. if the type didn't need to be
+    // complete; fallback to primary template.
+    if (TSD->getTemplateSpecializationKind() == TSK_Undeclared)
+      return TSD->getSpecializedTemplate();
+    if (const auto *TIP = TSD->getTemplateInstantiationPattern())
+      return TIP;
+  }
+  if (const auto *TSD = llvm::dyn_cast<VarTemplateSpecializationDecl>(D)) {
+    if (TSD->getTemplateSpecializationKind() == TSK_Undeclared)
+      return TSD->getSpecializedTemplate();
+    if (const auto *TIP = TSD->getTemplateInstantiationPattern())
+      return TIP;
+  }
+  if (const auto *FD = D->getAsFunction())
+    if (const auto *TIP = FD->getTemplateInstantiationPattern())
+      return TIP;
   return D;
 }
 

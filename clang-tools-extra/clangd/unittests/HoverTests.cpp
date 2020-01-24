@@ -554,6 +554,25 @@ class Foo {})cpp";
             HI.Name = "Foo<X>";
             HI.Kind = index::SymbolKind::Class;
           }},
+      {// Falls back to primary template, when the type is not instantiated.
+       R"cpp(
+          // comment from primary
+          template <typename T> class Foo {};
+          // comment from specialization
+          template <typename T> class Foo<T*> {};
+          void foo() {
+            [[Fo^o]]<int*> *x = nullptr;
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "Foo<int *>";
+         HI.Kind = index::SymbolKind::Class;
+         HI.NamespaceScope = "";
+         HI.Definition = "template <> class Foo<int *>";
+         // FIXME: Maybe force instantiation to make use of real template
+         // pattern.
+         HI.Documentation = "comment from primary";
+       }},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
