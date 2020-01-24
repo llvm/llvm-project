@@ -5074,10 +5074,14 @@ bool AAMemoryBehaviorFloating::followUsersOfUseIn(Attributor &A, const Use *U,
   // general capturing of the underlying argument. The reason is that the
   // call might the argument "through return", which we allow and for which we
   // need to check call users.
-  unsigned ArgNo = ICS.getArgumentNo(U);
-  const auto &ArgNoCaptureAA =
-      A.getAAFor<AANoCapture>(*this, IRPosition::callsite_argument(ICS, ArgNo));
-  return !ArgNoCaptureAA.isAssumedNoCapture();
+  if (U->get()->getType()->isPointerTy()) {
+    unsigned ArgNo = ICS.getArgumentNo(U);
+    const auto &ArgNoCaptureAA = A.getAAFor<AANoCapture>(
+        *this, IRPosition::callsite_argument(ICS, ArgNo));
+    return !ArgNoCaptureAA.isAssumedNoCapture();
+  }
+
+  return true;
 }
 
 void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use *U,
@@ -5123,9 +5127,12 @@ void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use *U,
 
     // Adjust the possible access behavior based on the information on the
     // argument.
-    unsigned ArgNo = ICS.getArgumentNo(U);
-    const IRPosition &ArgPos = IRPosition::callsite_argument(ICS, ArgNo);
-    const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(*this, ArgPos);
+    IRPosition Pos;
+    if (U->get()->getType()->isPointerTy())
+      Pos = IRPosition::callsite_argument(ICS, ICS.getArgumentNo(U));
+    else
+      Pos = IRPosition::callsite_function(ICS);
+    const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(*this, Pos);
     // "assumed" has at most the same bits as the MemBehaviorAA assumed
     // and at least "known".
     intersectAssumedBits(MemBehaviorAA.getAssumed());
