@@ -115,6 +115,9 @@ public:
 
   ProfileSummaryInfo *PSI;
 
+  /// The symbol for the entry in __patchable_function_entires.
+  MCSymbol *CurrentPatchableFunctionEntrySym = nullptr;
+
   /// The symbol for the current function. This is recalculated at the beginning
   /// of each call to runOnMachineFunction().
   MCSymbol *CurrentFnSym = nullptr;
@@ -460,6 +463,9 @@ public:
   /// Lower the specified "llvm.ptrauth" GlobalVariable to an MCExpr.
   virtual const MCExpr *
   lowerBlockAddressConstant(const BlockAddress *BA);
+
+  /// Emit N NOP instructions.
+  void emitNops(unsigned N);
 
   //===------------------------------------------------------------------===//
   // Symbol Lowering Routines.
