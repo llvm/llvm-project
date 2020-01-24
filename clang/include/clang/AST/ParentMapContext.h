@@ -69,7 +69,7 @@ private:
   ASTContext &ASTCtx;
   class ParentMap;
   ast_type_traits::TraversalKind Traversal = ast_type_traits::TK_AsIs;
-  std::map<ast_type_traits::TraversalKind, std::unique_ptr<ParentMap>> Parents;
+  std::unique_ptr<ParentMap> Parents;
 };
 
 class TraversalKindScope {
