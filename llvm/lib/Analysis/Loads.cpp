@@ -162,7 +162,7 @@ bool llvm::isDereferenceablePointer(const Value *V, Type *Ty,
                                     const DataLayout &DL,
                                     const Instruction *CtxI,
                                     const DominatorTree *DT) {
-  return isDereferenceableAndAlignedPointer(V, Ty, Align::None(), DL, CtxI, DT);
+  return isDereferenceableAndAlignedPointer(V, Ty, Align(1), DL, CtxI, DT);
 }
 
 /// Test if A and B will obviously have the same value.

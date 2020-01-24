@@ -3979,6 +3979,25 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     }
   }
 
+  if (FDecl && FDecl->hasAttr<AllocAlignAttr>()) {
+    auto *AA = FDecl->getAttr<AllocAlignAttr>();
+    const Expr *Arg = Args[AA->getParamIndex().getASTIndex()];
+    if (!Arg->isValueDependent()) {
+      llvm::APSInt I(64);
+      if (Arg->isIntegerConstantExpr(I, Context)) {
+        if (!I.isPowerOf2()) {
+          Diag(Arg->getExprLoc(), diag::err_alignment_not_power_of_two)
+              << Arg->getSourceRange();
+          return;
+        }
+
+        if (I > Sema::MaximumAlignment)
+          Diag(Arg->getExprLoc(), diag::warn_assume_aligned_too_great)
+              << Arg->getSourceRange() << Sema::MaximumAlignment;
+      }
+    }
+  }
+
   if (FD)
     diagnoseArgDependentDiagnoseIfAttrs(FD, ThisArg, Args, Loc);
 }
@@ -5699,11 +5718,9 @@ bool Sema::SemaBuiltinAssumeAligned(CallExpr *TheCall) {
       return Diag(TheCall->getBeginLoc(), diag::err_alignment_not_power_of_two)
              << Arg->getSourceRange();
 
-    // Alignment calculations can wrap around if it's greater than 2**29.
-    unsigned MaximumAlignment = 536870912;
-    if (Result > MaximumAlignment)
+    if (Result > Sema::MaximumAlignment)
       Diag(TheCall->getBeginLoc(), diag::warn_assume_aligned_too_great)
-          << Arg->getSourceRange() << MaximumAlignment;
+          << Arg->getSourceRange() << Sema::MaximumAlignment;
   }
 
   if (NumArgs > 2) {

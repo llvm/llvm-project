@@ -46,6 +46,7 @@ int test8(int *a, int j) {
 void test_void_assume_aligned(void) __attribute__((assume_aligned(32))); // expected-warning {{'assume_aligned' attribute only applies to return values that are pointers}}
 int test_int_assume_aligned(void) __attribute__((assume_aligned(16))); // expected-warning {{'assume_aligned' attribute only applies to return values that are pointers}}
 void *test_ptr_assume_aligned(void) __attribute__((assume_aligned(64))); // no-warning
+void *test_ptr_assume_aligned(void) __attribute__((assume_aligned(1073741824))); // expected-warning {{requested alignment must be 536870912 bytes or smaller; maximum alignment assumed}}
 
 int j __attribute__((assume_aligned(8))); // expected-warning {{'assume_aligned' attribute only applies to Objective-C methods and functions}}
 void *test_no_fn_proto() __attribute__((assume_aligned(32))); // no-warning

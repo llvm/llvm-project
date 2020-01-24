@@ -85,4 +85,15 @@ define <4 x i32> @rot_v4i32_zero_non_splat(<4 x i32> %x) {
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %2
 }
+
+define <4 x i32> @rot_v4i32_allsignbits(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: rot_v4i32_allsignbits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsrad $31, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %1 = ashr <4 x i32> %x, <i32 31, i32 31, i32 31, i32 31>
+  %2 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %1, <4 x i32> %1, <4 x i32> %y)
+  ret <4 x i32> %2
+}
+
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)

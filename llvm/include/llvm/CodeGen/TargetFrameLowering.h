@@ -75,7 +75,7 @@ private:
   bool StackRealignable;
 public:
   TargetFrameLowering(StackDirection D, Align StackAl, int LAO,
-                      Align TransAl = Align::None(), bool StackReal = true)
+                      Align TransAl = Align(1), bool StackReal = true)
       : StackDir(D), StackAlignment(StackAl), TransientStackAlignment(TransAl),
         LocalAreaOffset(LAO), StackRealignable(StackReal) {}
 

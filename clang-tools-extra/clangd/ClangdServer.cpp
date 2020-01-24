@@ -56,9 +56,10 @@ namespace {
 
 // Update the FileIndex with new ASTs and plumb the diagnostics responses.
 struct UpdateIndexCallbacks : public ParsingCallbacks {
-  UpdateIndexCallbacks(FileIndex *FIndex, DiagnosticsConsumer &DiagConsumer,
+  UpdateIndexCallbacks(FileIndex *FIndex,
+                       ClangdServer::Callbacks *ServerCallbacks,
                        bool SemanticHighlighting)
-      : FIndex(FIndex), DiagConsumer(DiagConsumer),
+      : FIndex(FIndex), ServerCallbacks(ServerCallbacks),
         SemanticHighlighting(SemanticHighlighting) {}
 
   void onPreambleAST(PathRef Path, ASTContext &Ctx,
@@ -77,25 +78,28 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     if (SemanticHighlighting)
       Highlightings = getSemanticHighlightings(AST);
 
-    Publish([&]() {
-      DiagConsumer.onDiagnosticsReady(Path, std::move(Diagnostics));
-      if (SemanticHighlighting)
-        DiagConsumer.onHighlightingsReady(Path, std::move(Highlightings));
-    });
+    if (ServerCallbacks)
+      Publish([&]() {
+        ServerCallbacks->onDiagnosticsReady(Path, std::move(Diagnostics));
+        if (SemanticHighlighting)
+          ServerCallbacks->onHighlightingsReady(Path, std::move(Highlightings));
+      });
   }
 
   void onFailedAST(PathRef Path, std::vector<Diag> Diags,
                    PublishFn Publish) override {
-    Publish([&]() { DiagConsumer.onDiagnosticsReady(Path, Diags); });
+    if (ServerCallbacks)
+      Publish([&]() { ServerCallbacks->onDiagnosticsReady(Path, Diags); });
   }
 
   void onFileUpdated(PathRef File, const TUStatus &Status) override {
-    DiagConsumer.onFileUpdated(File, Status);
+    if (ServerCallbacks)
+      ServerCallbacks->onFileUpdated(File, Status);
   }
 
 private:
   FileIndex *FIndex;
-  DiagnosticsConsumer &DiagConsumer;
+  ClangdServer::Callbacks *ServerCallbacks;
   bool SemanticHighlighting;
 };
 } // namespace
@@ -111,8 +115,7 @@ ClangdServer::Options ClangdServer::optsForTest() {
 
 ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const FileSystemProvider &FSProvider,
-                           DiagnosticsConsumer &DiagConsumer,
-                           const Options &Opts)
+                           const Options &Opts, Callbacks *Callbacks)
     : FSProvider(FSProvider),
       DynamicIdx(Opts.BuildDynamicSymbolIndex
                      ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex)
@@ -126,11 +129,10 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       // is parsed.
       // FIXME(ioeric): this can be slow and we may be able to index on less
       // critical paths.
-      WorkScheduler(
-          CDB, Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
-          std::make_unique<UpdateIndexCallbacks>(DynamicIdx.get(), DiagConsumer,
-                                                 Opts.SemanticHighlighting),
-          Opts.UpdateDebounce, Opts.RetentionPolicy) {
+      WorkScheduler(CDB, Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
+                    std::make_unique<UpdateIndexCallbacks>(
+                        DynamicIdx.get(), Callbacks, Opts.SemanticHighlighting),
+                    Opts.UpdateDebounce, Opts.RetentionPolicy) {
   // Adds an index to the stack, at higher priority than existing indexes.
   auto AddIndex = [&](SymbolIndex *Idx) {
     if (this->Index != nullptr) {
@@ -147,7 +149,11 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
         Context::current().clone(), FSProvider, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(
             [&CDB](llvm::StringRef File) { return CDB.getProjectInfo(File); }),
-        std::max(Opts.AsyncThreadsCount, 1u));
+        std::max(Opts.AsyncThreadsCount, 1u),
+        [Callbacks](BackgroundQueue::Stats S) {
+          if (Callbacks)
+            Callbacks->onBackgroundIndexProgress(S);
+        });
     AddIndex(BackgroundIdx.get());
   }
   if (DynamicIdx)

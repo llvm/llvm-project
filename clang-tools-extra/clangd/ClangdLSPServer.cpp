@@ -33,6 +33,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include <cstddef>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -499,8 +500,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     if (NegotiatedOffsetEncoding)
       WithOffsetEncoding.emplace(kCurrentOffsetEncoding,
                                  *NegotiatedOffsetEncoding);
-    Server.emplace(*CDB, FSProvider, static_cast<DiagnosticsConsumer &>(*this),
-                   ClangdServerOpts);
+    Server.emplace(*CDB, FSProvider, ClangdServerOpts,
+                   static_cast<ClangdServer::Callbacks *>(this));
   }
   applyConfiguration(Params.initializationOptions.ConfigSettings);
 
@@ -522,6 +523,9 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   SupportFileStatus = Params.initializationOptions.FileStatus;
   HoverContentFormat = Params.capabilities.HoverContentFormat;
   SupportsOffsetsInSignatureHelp = Params.capabilities.OffsetsInSignatureHelp;
+  if (Params.capabilities.WorkDoneProgress)
+    BackgroundIndexProgressState = BackgroundIndexProgress::Empty;
+  BackgroundIndexSkipCreate = Params.capabilities.ImplicitProgressCreation;
 
   // Per LSP, renameProvider can be either boolean or RenameOptions.
   // RenameOptions will be specified if the client states it supports prepare.
@@ -1376,6 +1380,74 @@ void ClangdLSPServer::onDiagnosticsReady(PathRef File,
 
   // Send a notification to the LSP client.
   publishDiagnostics(URI, std::move(LSPDiagnostics));
+}
+
+void ClangdLSPServer::onBackgroundIndexProgress(
+    const BackgroundQueue::Stats &Stats) {
+  static const char ProgressToken[] = "backgroundIndexProgress";
+  std::lock_guard<std::mutex> Lock(BackgroundIndexProgressMutex);
+
+  auto NotifyProgress = [this](const BackgroundQueue::Stats &Stats) {
+    if (BackgroundIndexProgressState != BackgroundIndexProgress::Live) {
+      WorkDoneProgressBegin Begin;
+      Begin.percentage = true;
+      Begin.title = "indexing";
+      progress(ProgressToken, std::move(Begin));
+      BackgroundIndexProgressState = BackgroundIndexProgress::Live;
+    }
+
+    if (Stats.Completed < Stats.Enqueued) {
+      assert(Stats.Enqueued > Stats.LastIdle);
+      WorkDoneProgressReport Report;
+      Report.percentage = 100.0 * (Stats.Completed - Stats.LastIdle) /
+                          (Stats.Enqueued - Stats.LastIdle);
+      Report.message =
+          llvm::formatv("{0}/{1}", Stats.Completed - Stats.LastIdle,
+                        Stats.Enqueued - Stats.LastIdle);
+      progress(ProgressToken, std::move(Report));
+    } else {
+      assert(Stats.Completed == Stats.Enqueued);
+      progress(ProgressToken, WorkDoneProgressEnd());
+      BackgroundIndexProgressState = BackgroundIndexProgress::Empty;
+    }
+  };
+
+  switch (BackgroundIndexProgressState) {
+  case BackgroundIndexProgress::Unsupported:
+    return;
+  case BackgroundIndexProgress::Creating:
+    // Cache this update for when the progress bar is available.
+    PendingBackgroundIndexProgress = Stats;
+    return;
+  case BackgroundIndexProgress::Empty: {
+    if (BackgroundIndexSkipCreate) {
+      NotifyProgress(Stats);
+      break;
+    }
+    // Cache this update for when the progress bar is available.
+    PendingBackgroundIndexProgress = Stats;
+    BackgroundIndexProgressState = BackgroundIndexProgress::Creating;
+    WorkDoneProgressCreateParams CreateRequest;
+    CreateRequest.token = ProgressToken;
+    call<std::nullptr_t>(
+        "window/workDoneProgress/create", CreateRequest,
+        [this, NotifyProgress](llvm::Expected<std::nullptr_t> E) {
+          std::lock_guard<std::mutex> Lock(BackgroundIndexProgressMutex);
+          if (E) {
+            NotifyProgress(this->PendingBackgroundIndexProgress);
+          } else {
+            elog("Failed to create background index progress bar: {0}",
+                 E.takeError());
+            // give up forever rather than thrashing about
+            BackgroundIndexProgressState = BackgroundIndexProgress::Unsupported;
+          }
+        });
+    break;
+  }
+  case BackgroundIndexProgress::Live:
+    NotifyProgress(Stats);
+    break;
+  }
 }
 
 void ClangdLSPServer::onFileUpdated(PathRef File, const TUStatus &Status) {

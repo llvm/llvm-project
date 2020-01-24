@@ -185,6 +185,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "SIOptimizeExecMasking.cpp",
     "SIOptimizeExecMaskingPreRA.cpp",
     "SIPeepholeSDWA.cpp",
+    "SIPostRABundler.cpp",
     "SIPreAllocateWWMRegs.cpp",
     "SIRegisterInfo.cpp",
     "SIRemoveShortExecBranches.cpp",

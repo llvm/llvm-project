@@ -546,11 +546,11 @@ markup::Document HoverInfo::present() const {
   // editor, as they might be long.
   if (ReturnType) {
     // For functions we display signature in a list form, e.g.:
-    // 🡺 `x`
+    // → `x`
     // Parameters:
     // - `bool param1`
     // - `int param2 = 5`
-    Output.addParagraph().appendText("🡺").appendCode(*ReturnType);
+    Output.addParagraph().appendText("→").appendCode(*ReturnType);
     if (Parameters && !Parameters->empty()) {
       Output.addParagraph().appendText("Parameters:");
       markup::BulletList &L = Output.addBulletList();

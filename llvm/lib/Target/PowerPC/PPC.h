@@ -51,10 +51,9 @@ namespace llvm {
   FunctionPass *createPPCExpandISELPass();
   FunctionPass *createPPCPreEmitPeepholePass();
   void LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
-                                    AsmPrinter &AP, bool IsDarwin);
+                                    AsmPrinter &AP);
   bool LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
-                                         MCOperand &OutMO, AsmPrinter &AP,
-                                         bool IsDarwin);
+                                         MCOperand &OutMO, AsmPrinter &AP);
 
   void initializePPCCTRLoopsPass(PassRegistry&);
 #ifndef NDEBUG

@@ -163,9 +163,9 @@ define amdgpu_kernel void @shl_i16_v_s(i16 addrspace(1)* %out, i16 addrspace(1)*
 ; GCN-LABEL: shl_i16_v_s:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s8, s[0:1], 0xd
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    s_load_dword s8, s[0:1], 0xd
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s0, s4
 ; GCN-NEXT:    s_mov_b32 s1, s5
@@ -218,9 +218,9 @@ define amdgpu_kernel void @shl_i16_v_compute_s(i16 addrspace(1)* %out, i16 addrs
 ; GCN-LABEL: shl_i16_v_compute_s:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; GCN-NEXT:    s_load_dword s8, s[0:1], 0xd
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    s_load_dword s8, s[0:1], 0xd
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_mov_b32 s0, s4
 ; GCN-NEXT:    s_mov_b32 s1, s5

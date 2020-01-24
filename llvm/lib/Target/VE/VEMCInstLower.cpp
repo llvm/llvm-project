@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/VEMCExpr.h"
 #include "VE.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -27,9 +28,11 @@ using namespace llvm;
 static MCOperand LowerSymbolOperand(const MachineInstr *MI,
                                     const MachineOperand &MO,
                                     const MCSymbol *Symbol, AsmPrinter &AP) {
+  VEMCExpr::VariantKind Kind = (VEMCExpr::VariantKind)MO.getTargetFlags();
 
   const MCSymbolRefExpr *MCSym = MCSymbolRefExpr::create(Symbol, AP.OutContext);
-  return MCOperand::createExpr(MCSym);
+  const VEMCExpr *expr = VEMCExpr::create(Kind, MCSym, AP.OutContext);
+  return MCOperand::createExpr(expr);
 }
 
 static MCOperand LowerOperand(const MachineInstr *MI, const MachineOperand &MO,
@@ -43,6 +46,8 @@ static MCOperand LowerOperand(const MachineInstr *MI, const MachineOperand &MO,
       break;
     return MCOperand::createReg(MO.getReg());
 
+  case MachineOperand::MO_GlobalAddress:
+    return LowerSymbolOperand(MI, MO, AP.getSymbol(MO.getGlobal()), AP);
   case MachineOperand::MO_Immediate:
     return MCOperand::createImm(MO.getImm());
 

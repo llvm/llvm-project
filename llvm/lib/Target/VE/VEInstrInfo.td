@@ -130,6 +130,9 @@ def fcond2cc : SDNodeXForm<cond, [{
   return CurDAG->getTargetConstant(cc, SDLoc(N), MVT::i32);
 }]>;
 
+// Addressing modes.
+def ADDRri : ComplexPattern<iPTR, 2, "SelectADDRri", [frameindex], []>;
+
 // ASX format of memory address
 def MEMri : Operand<iPTR> {
   let PrintMethod = "printMemASXOperand";
@@ -174,6 +177,9 @@ def uimm6Op64 : Operand<i64> {
 // Operand for printing out a condition code.
 let PrintMethod = "printCCOperand" in
   def CCOp : Operand<i32>;
+
+def VEhi    : SDNode<"VEISD::Hi", SDTIntUnaryOp>;
+def VElo    : SDNode<"VEISD::Lo", SDTIntUnaryOp>;
 
 //  These are target-independent nodes, but have target-specific formats.
 def SDT_SPCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i64>,
@@ -675,7 +681,43 @@ let cy = 0, sy = 0, cz = 1 in {
 let cx = 0 in
 def LDSri : RM<
     0x01, (outs I64:$sx), (ins MEMri:$addr),
-    "ld $sx, $addr">;
+    "ld $sx, $addr",
+    [(set i64:$sx, (load ADDRri:$addr))]>;
+let cx = 0 in
+def LDUri : RM<
+    0x02, (outs F32:$sx), (ins MEMri:$addr),
+    "ldu $sx, $addr",
+    [(set f32:$sx, (load ADDRri:$addr))]>;
+let cx = 0 in
+def LDLri : RM<
+    0x03, (outs I32:$sx), (ins MEMri:$addr),
+    "ldl.sx $sx, $addr",
+    [(set i32:$sx, (load ADDRri:$addr))]>;
+let cx = 1 in
+def LDLUri : RM<
+    0x03, (outs I32:$sx), (ins MEMri:$addr),
+    "ldl.zx $sx, $addr",
+    [(set i32:$sx, (load ADDRri:$addr))]>;
+let cx = 0 in
+def LD2Bri : RM<
+    0x04, (outs I32:$sx), (ins MEMri:$addr),
+    "ld2b.sx $sx, $addr",
+    [(set i32:$sx, (sextloadi16 ADDRri:$addr))]>;
+let cx = 1 in
+def LD2BUri : RM<
+    0x04, (outs I32:$sx), (ins MEMri:$addr),
+    "ld2b.zx $sx, $addr",
+    [(set i32:$sx, (zextloadi16 ADDRri:$addr))]>;
+let cx = 0 in
+def LD1Bri : RM<
+    0x05, (outs I32:$sx), (ins MEMri:$addr),
+    "ld1b.sx $sx, $addr",
+    [(set i32:$sx, (sextloadi8 ADDRri:$addr))]>;
+let cx = 1 in
+def LD1BUri : RM<
+    0x05, (outs I32:$sx), (ins MEMri:$addr),
+    "ld1b.zx $sx, $addr",
+    [(set i32:$sx, (zextloadi8 ADDRri:$addr))]>;
 }
 }
 
@@ -683,9 +725,29 @@ let mayStore = 1, hasSideEffects = 0 in {
 let cx = 0, cy = 0, sy = 0, cz = 1 in {
 def STSri : RM<
     0x11, (outs), (ins MEMri:$addr, I64:$sx),
-    "st $sx, $addr">;
+    "st $sx, $addr",
+    [(store i64:$sx, ADDRri:$addr)]>;
+def STUri : RM<
+    0x12, (outs), (ins MEMri:$addr, F32:$sx),
+    "stu $sx, $addr",
+    [(store f32:$sx, ADDRri:$addr)]>;
+def STLri : RM<
+    0x13, (outs), (ins MEMri:$addr, I32:$sx),
+    "stl $sx, $addr",
+    [(store i32:$sx, ADDRri:$addr)]>;
+def ST2Bri : RM<
+    0x14, (outs), (ins MEMri:$addr, I32:$sx),
+    "st2b $sx, $addr",
+    [(truncstorei16 i32:$sx, ADDRri:$addr)]>;
+def ST1Bri : RM<
+    0x15, (outs), (ins MEMri:$addr, I32:$sx),
+    "st1b $sx, $addr",
+    [(truncstorei8 i32:$sx, ADDRri:$addr)]>;
 }
 }
+
+def : Pat<(f64 (load ADDRri:$addr)), (LDSri ADDRri:$addr)>;
+def : Pat<(store f64:$sx, ADDRri:$addr), (STSri ADDRri:$addr, $sx)>;
 
 // Return instruction is also a special case of jump.
 let cx = 0, cx2 = 0, bpf = 0 /* NONE */, cf = 15 /* AT */, cy = 0, sy = 0,
@@ -792,6 +854,44 @@ def : Pat<(i64 (anyext i32:$sy)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $sy, sub_i32)>;
 
 
+// extload, sextload and zextload stuff
+def : Pat<(i64 (sextloadi8 ADDRri:$addr)),
+          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (LD1Bri MEMri:$addr), sub_i32)>;
+def : Pat<(i64 (zextloadi8 ADDRri:$addr)),
+          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (LD1BUri MEMri:$addr), sub_i32)>;
+def : Pat<(i64 (sextloadi16 ADDRri:$addr)),
+          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (LD2Bri MEMri:$addr), sub_i32)>;
+def : Pat<(i64 (zextloadi16 ADDRri:$addr)),
+          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (LD2BUri MEMri:$addr), sub_i32)>;
+def : Pat<(i64 (sextloadi32 ADDRri:$addr)),
+          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (LDLri MEMri:$addr), sub_i32)>;
+def : Pat<(i64 (zextloadi32 ADDRri:$addr)),
+          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (LDLUri MEMri:$addr), sub_i32)>;
+def : Pat<(i64 (extloadi8 ADDRri:$addr)),
+          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (LD1BUri MEMri:$addr), sub_i32)>;
+def : Pat<(i64 (extloadi16 ADDRri:$addr)),
+          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (LD2BUri MEMri:$addr), sub_i32)>;
+def : Pat<(i64 (extloadi32 ADDRri:$addr)),
+          (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (LDLri MEMri:$addr), sub_i32)>;
+
+// anyextload
+def : Pat<(extloadi8  ADDRri:$addr), (LD1BUri MEMri:$addr)>;
+def : Pat<(extloadi16 ADDRri:$addr), (LD2BUri MEMri:$addr)>;
+
+// truncstore
+def : Pat<(truncstorei8 i64:$src, ADDRri:$addr),
+          (ST1Bri MEMri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+def : Pat<(truncstorei16 i64:$src, ADDRri:$addr),
+          (ST2Bri MEMri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+def : Pat<(truncstorei32 i64:$src, ADDRri:$addr),
+          (STLri MEMri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+
+// Address calculation and its optimization
+def : Pat<(VEhi tglobaladdr:$in), (LEASLzzi tglobaladdr:$in)>;
+def : Pat<(VElo tglobaladdr:$in), (ANDrm0 (LEAzzi tglobaladdr:$in), 32)>;
+def : Pat<(add (VEhi tglobaladdr:$in1), (VElo tglobaladdr:$in2)),
+          (LEASLrzi (ANDrm0 (LEAzzi tglobaladdr:$in2), 32),
+                    (tglobaladdr:$in1))>;
 
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions

@@ -271,7 +271,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       R"cpp(
       struct $Class[[AA]] {
         int $Field[[A]];
-      }
+      };
       int $Variable[[B]];
       $Class[[AA]] $Variable[[A]]{$Variable[[B]]};
     )cpp",
@@ -355,6 +355,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       };
       class $Class[[Foo]] {};
       class $Class[[Bar]] {
+      public:
         $Class[[Foo]] $Field[[Fo]];
         $Enum[[En]] $Field[[E]];
         int $Field[[I]];
@@ -432,6 +433,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Class[[G]]<$Class[[F]], &$Class[[F]]::$Method[[f]]> $LocalVariable[[GG]];
         $LocalVariable[[GG]].$Method[[foo]](&$LocalVariable[[FF]]);
         $Class[[A]]<$Function[[foo]]> $LocalVariable[[AA]];
+      }
     )cpp",
       // Tokens that share a source range but have conflicting Kinds are not
       // highlighted.
@@ -466,7 +468,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Macro[[INC_VAR]]($LocalVariable[[variable]]);
       }
       void $Macro[[SOME_NAME]]();
-      $Macro[[DEF_VAR]]($Variable[[XYZ]], 567);
+      $Macro[[DEF_VAR]]($Variable[[MMMMM]], 567);
       $Macro[[DEF_VAR_REV]](756, $Variable[[AB]]);
 
       #define $Macro[[CALL_FN]](F) F();
@@ -599,7 +601,7 @@ $InactiveCode[[]]      #endif
       struct $Class[[Foo]] {
         $Class[[Foo]]<$TemplateParameter[[TT]], $TemplateParameter[[TTs]]...>
           *$Field[[t]];
-      }
+      };
     )cpp",
       // Inactive code highlighting
       R"cpp(
@@ -673,7 +675,6 @@ sizeof...($TemplateParameter[[Elements]]);
     class $Class[[A]] {
       #include "imp.h"
     };
-    #endif
   )cpp",
                      {{"imp.h", R"cpp(
     int someMethod();
@@ -695,11 +696,10 @@ sizeof...($TemplateParameter[[Elements]]);
 }
 
 TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
-  class HighlightingsCounterDiagConsumer : public DiagnosticsConsumer {
+  class HighlightingsCounter : public ClangdServer::Callbacks {
   public:
     std::atomic<int> Count = {0};
 
-    void onDiagnosticsReady(PathRef, std::vector<Diag>) override {}
     void onHighlightingsReady(
         PathRef File, std::vector<HighlightingToken> Highlightings) override {
       ++Count;
@@ -711,11 +711,11 @@ TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
   FS.Files[FooCpp] = "";
 
   MockCompilationDatabase MCD;
-  HighlightingsCounterDiagConsumer DiagConsumer;
-  ClangdServer Server(MCD, FS, DiagConsumer, ClangdServer::optsForTest());
+  HighlightingsCounter Counter;
+  ClangdServer Server(MCD, FS, ClangdServer::optsForTest(), &Counter);
   Server.addDocument(FooCpp, "int a;");
   ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for server";
-  ASSERT_EQ(DiagConsumer.Count, 1);
+  ASSERT_EQ(Counter.Count, 1);
 }
 
 TEST(SemanticHighlighting, toSemanticHighlightingInformation) {

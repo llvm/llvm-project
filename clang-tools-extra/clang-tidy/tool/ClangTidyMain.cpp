@@ -14,6 +14,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "ClangTidyMain.h"
 #include "../ClangTidy.h"
 #include "../ClangTidyForceLinker.h"
 #include "../GlobList.h"
@@ -327,7 +328,7 @@ getVfsFromFile(const std::string &OverlayFile,
   return FS;
 }
 
-static int clangTidyMain(int argc, const char **argv) {
+int clangTidyMain(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
   CommonOptionsParser OptionsParser(argc, argv, ClangTidyCategory,
                                     cl::ZeroOrMore);
@@ -488,7 +489,3 @@ static int clangTidyMain(int argc, const char **argv) {
 
 } // namespace tidy
 } // namespace clang
-
-int main(int argc, const char **argv) {
-  return clang::tidy::clangTidyMain(argc, argv);
-}

@@ -23,6 +23,10 @@ class VESubtarget;
 namespace VEISD {
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
+
+  Hi,
+  Lo, // Hi/Lo operations, typically on a global address.
+
   RET_FLAG, // Return with a flag operand.
 };
 }
@@ -59,6 +63,17 @@ public:
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
                       SelectionDAG &DAG) const override;
+
+  /// Custom Lower {
+  SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+
+  SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  /// } Custom Lower
+
+  SDValue withTargetFlags(SDValue Op, unsigned TF, SelectionDAG &DAG) const;
+  SDValue makeHiLoPair(SDValue Op, unsigned HiTF, unsigned LoTF,
+                       SelectionDAG &DAG) const;
+  SDValue makeAddress(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;

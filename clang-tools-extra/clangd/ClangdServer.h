@@ -41,23 +41,6 @@
 namespace clang {
 namespace clangd {
 
-// FIXME: find a better name.
-class DiagnosticsConsumer {
-public:
-  virtual ~DiagnosticsConsumer() = default;
-
-  /// Called by ClangdServer when \p Diagnostics for \p File are ready.
-  virtual void onDiagnosticsReady(PathRef File,
-                                  std::vector<Diag> Diagnostics) = 0;
-  /// Called whenever the file status is updated.
-  virtual void onFileUpdated(PathRef File, const TUStatus &Status){};
-
-  /// Called by ClangdServer when some \p Highlightings for \p File are ready.
-  virtual void
-  onHighlightingsReady(PathRef File,
-                       std::vector<HighlightingToken> Highlightings) {}
-};
-
 /// When set, used by ClangdServer to get clang-tidy options for each particular
 /// file. Must be thread-safe. We use this instead of ClangTidyOptionsProvider
 /// to allow reading tidy configs from the VFS used for parsing.
@@ -79,6 +62,31 @@ using ClangTidyOptionsBuilder = std::function<tidy::ClangTidyOptions(
 /// (ClangdLSPServer uses this to implement $/cancelRequest).
 class ClangdServer {
 public:
+  /// Interface with hooks for users of ClangdServer to be notified of events.
+  class Callbacks {
+  public:
+    virtual ~Callbacks() = default;
+
+    /// Called by ClangdServer when \p Diagnostics for \p File are ready.
+    /// May be called concurrently for separate files, not for a single file.
+    virtual void onDiagnosticsReady(PathRef File,
+                                    std::vector<Diag> Diagnostics) {}
+    /// Called whenever the file status is updated.
+    /// May be called concurrently for separate files, not for a single file.
+    virtual void onFileUpdated(PathRef File, const TUStatus &Status) {}
+
+    /// Called by ClangdServer when some \p Highlightings for \p File are ready.
+    /// May be called concurrently for separate files, not for a single file.
+    virtual void
+    onHighlightingsReady(PathRef File,
+                         std::vector<HighlightingToken> Highlightings) {}
+
+    /// Called when background indexing tasks are enqueued/started/completed.
+    /// Not called concurrently.
+    virtual void
+    onBackgroundIndexProgress(const BackgroundQueue::Stats &Stats) {}
+  };
+
   struct Options {
     /// To process requests asynchronously, ClangdServer spawns worker threads.
     /// If this is zero, no threads are spawned. All work is done on the calling
@@ -153,14 +161,15 @@ public:
   /// added file (i.e., when processing a first call to addDocument) and reuses
   /// those arguments for subsequent reparses. However, ClangdServer will check
   /// if compilation arguments changed on calls to forceReparse().
-  ///
-  /// After each parsing request finishes, ClangdServer reports diagnostics to
-  /// \p DiagConsumer. Note that a callback to \p DiagConsumer happens on a
-  /// worker thread. Therefore, instances of \p DiagConsumer must properly
-  /// synchronize access to shared state.
   ClangdServer(const GlobalCompilationDatabase &CDB,
-               const FileSystemProvider &FSProvider,
-               DiagnosticsConsumer &DiagConsumer, const Options &Opts);
+               const FileSystemProvider &FSProvider, const Options &Opts,
+               Callbacks *Callbacks = nullptr);
+
+  // FIXME: remove this compatibility alias.
+  ClangdServer(const GlobalCompilationDatabase &CDB,
+               const FileSystemProvider &FSProvider, Callbacks &Callbacks,
+               const Options &Opts)
+      : ClangdServer(CDB, FSProvider, Opts, &Callbacks) {}
 
   /// Add a \p File to the list of tracked C++ files or update the contents if
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
@@ -349,6 +358,9 @@ private:
   // ClangdServer.
   TUScheduler WorkScheduler;
 };
+
+// FIXME: Remove this compatibility alias.
+using DiagnosticsConsumer = ClangdServer::Callbacks;
 
 } // namespace clangd
 } // namespace clang

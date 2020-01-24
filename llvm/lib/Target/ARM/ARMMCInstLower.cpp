@@ -207,10 +207,7 @@ void ARMAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind)
   EmitToStreamer(*OutStreamer, MCInstBuilder(ARM::Bcc).addImm(20)
     .addImm(ARMCC::AL).addReg(0));
 
-  MCInst Noop;
-  Subtarget->getInstrInfo()->getNoop(Noop);
-  for (int8_t I = 0; I < NoopsInSledCount; I++)
-    OutStreamer->EmitInstruction(Noop, getSubtargetInfo());
+  emitNops(NoopsInSledCount);
 
   OutStreamer->EmitLabel(Target);
   recordSled(CurSled, MI, Kind);

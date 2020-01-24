@@ -4972,7 +4972,7 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       ScalarVT = MVT::i32;
 
     Info.memVT = MVT::getVectorVT(ScalarVT, VT.getVectorNumElements());
-    Info.align = Align::None();
+    Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOStore;
     break;
   }
@@ -4985,7 +4985,7 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     unsigned NumElts = std::min(DataVT.getVectorNumElements(),
                                 IndexVT.getVectorNumElements());
     Info.memVT = MVT::getVectorVT(DataVT.getVectorElementType(), NumElts);
-    Info.align = Align::None();
+    Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOLoad;
     break;
   }
@@ -4997,7 +4997,7 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     unsigned NumElts = std::min(DataVT.getVectorNumElements(),
                                 IndexVT.getVectorNumElements());
     Info.memVT = MVT::getVectorVT(DataVT.getVectorElementType(), NumElts);
-    Info.align = Align::None();
+    Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOStore;
     break;
   }
@@ -13319,8 +13319,7 @@ static SDValue lowerShuffleWithSHUFPS(const SDLoc &DL, MVT VT,
                                       ArrayRef<int> Mask, SDValue V1,
                                       SDValue V2, SelectionDAG &DAG) {
   SDValue LowV = V1, HighV = V2;
-  int NewMask[4] = {Mask[0], Mask[1], Mask[2], Mask[3]};
-
+  SmallVector<int, 4> NewMask(Mask.begin(), Mask.end());
   int NumV2Elements = count_if(Mask, [](int M) { return M >= 4; });
 
   if (NumV2Elements == 1) {
@@ -34586,6 +34585,28 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
       }
       SDValue Horiz = DAG.getNode(Opcode0, DL, VT0, Lo, Hi);
       return DAG.getBitcast(VT, Horiz);
+    }
+  }
+
+  // Attempt to commute shufps LHS loads:
+  // permilps(shufps(load(),x)) --> permilps(shufps(x,load()))
+  if (VT == MVT::v4f32 &&
+      (X86ISD::VPERMILPI == Opcode ||
+       (X86ISD::SHUFP == Opcode && N.getOperand(0) == N.getOperand(1)))) {
+    SDValue N0 = N.getOperand(0);
+    unsigned Imm = N.getConstantOperandVal(X86ISD::VPERMILPI == Opcode ? 1 : 2);
+    if (N0.getOpcode() == X86ISD::SHUFP && N->isOnlyUserOf(N0.getNode())) {
+      SDValue N00 = N0.getOperand(0);
+      SDValue N01 = N0.getOperand(1);
+      if (MayFoldLoad(peekThroughOneUseBitcasts(N00)) &&
+          !MayFoldLoad(peekThroughOneUseBitcasts(N01))) {
+        unsigned Imm1 = N0.getConstantOperandVal(2);
+        Imm1 = ((Imm1 & 0x0F) << 4) | ((Imm1 & 0xF0) >> 4);
+        SDValue NewN0 = DAG.getNode(X86ISD::SHUFP, DL, VT, N01, N00,
+                                    DAG.getTargetConstant(Imm1, DL, MVT::i8));
+        return DAG.getNode(X86ISD::SHUFP, DL, VT, NewN0, NewN0,
+                           DAG.getTargetConstant(Imm ^ 0xAA, DL, MVT::i8));
+      }
     }
   }
 

@@ -36,7 +36,6 @@
 
 ; Legacy PM, Index based WPD
 ; RUN: llvm-lto2 run %t3.o %t4.o -save-temps -pass-remarks=. \
-; RUN:   -whole-program-visibility \
 ; RUN:   -wholeprogramdevirt-print-index-based \
 ; RUN:   -o %t5 \
 ; RUN:   -r=%t3.o,test,px \
@@ -60,7 +59,6 @@
 
 ; New PM, Index based WPD
 ; RUN: llvm-lto2 run %t3.o %t4.o -save-temps -use-new-pm -pass-remarks=. \
-; RUN:   -whole-program-visibility \
 ; RUN:   -wholeprogramdevirt-print-index-based \
 ; RUN:   -o %t5 \
 ; RUN:   -r=%t3.o,test,px \
@@ -94,7 +92,6 @@
 
 ; Index based WPD, distributed backends
 ; RUN: llvm-lto2 run %t3.o %t4.o -save-temps -use-new-pm \
-; RUN:   -whole-program-visibility \
 ; RUN:   -thinlto-distributed-indexes -wholeprogramdevirt-print-index-based \
 ; RUN:   -o %t5 \
 ; RUN:   -r=%t3.o,test,px \
@@ -118,7 +115,6 @@
 
 ; Legacy PM
 ; RUN: llvm-lto2 run %t1.o %t2.o -save-temps -pass-remarks=. \
-; RUN:   -whole-program-visibility \
 ; RUN:   -o %t5 \
 ; RUN:   -r=%t1.o,test,px \
 ; RUN:   -r=%t1.o,_ZTV1B, \
@@ -154,7 +150,6 @@
 
 ; New PM
 ; RUN: llvm-lto2 run %t1.o %t2.o -save-temps -use-new-pm -pass-remarks=. \
-; RUN:   -whole-program-visibility \
 ; RUN:   -o %t5 \
 ; RUN:   -r=%t1.o,test,px \
 ; RUN:   -r=%t1.o,_ZTV1B, \

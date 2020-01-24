@@ -700,7 +700,7 @@ TEST_F(TUSchedulerTests, Run) {
 }
 
 TEST_F(TUSchedulerTests, TUStatus) {
-  class CaptureTUStatus : public DiagnosticsConsumer {
+  class CaptureTUStatus : public ClangdServer::Callbacks {
   public:
     void onDiagnosticsReady(PathRef File,
                             std::vector<Diag> Diagnostics) override {}
@@ -721,7 +721,7 @@ TEST_F(TUSchedulerTests, TUStatus) {
   } CaptureTUStatus;
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, CaptureTUStatus, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &CaptureTUStatus);
   Annotations Code("int m^ain () {}");
 
   // We schedule the following tasks in the queue:

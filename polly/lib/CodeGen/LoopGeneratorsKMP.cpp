@@ -468,7 +468,7 @@ GlobalVariable *ParallelLoopGeneratorKMP::createSourceLocation() {
     // Global Variable Definitions
     GlobalVariable *StrVar = new GlobalVariable(
         *M, ArrayType, true, GlobalValue::PrivateLinkage, 0, ".str.ident");
-    StrVar->setAlignment(llvm::Align::None());
+    StrVar->setAlignment(llvm::Align(1));
 
     SourceLocDummy = new GlobalVariable(
         *M, IdentTy, true, GlobalValue::PrivateLinkage, nullptr, LocName);

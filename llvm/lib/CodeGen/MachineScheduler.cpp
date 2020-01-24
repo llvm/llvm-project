@@ -1584,7 +1584,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     SUnit *SUb = MemOpRecords[Idx+1].SU;
     if (TII->shouldClusterMemOps(MemOpRecords[Idx].BaseOps,
                                  MemOpRecords[Idx + 1].BaseOps,
-                                 ClusterLength)) {
+                                 ClusterLength + 1)) {
       if (SUa->NodeNum > SUb->NodeNum)
         std::swap(SUa, SUb);
       if (DAG->addEdge(SUb, SDep(SUa, SDep::Cluster))) {

@@ -1038,14 +1038,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.TrapFuncName = Args.getLastArgValue(OPT_ftrap_function_EQ);
   Opts.UseInitArray = !Args.hasArg(OPT_fno_use_init_array);
 
-  Opts.FunctionSections = Args.hasFlag(OPT_ffunction_sections,
-                                       OPT_fno_function_sections, false);
-  Opts.DataSections = Args.hasFlag(OPT_fdata_sections,
-                                   OPT_fno_data_sections, false);
-  Opts.StackSizeSection =
-      Args.hasFlag(OPT_fstack_size_section, OPT_fno_stack_size_section, false);
-  Opts.UniqueSectionNames = Args.hasFlag(OPT_funique_section_names,
-                                         OPT_fno_unique_section_names, true);
+  Opts.FunctionSections = Args.hasArg(OPT_ffunction_sections);
+  Opts.DataSections = Args.hasArg(OPT_fdata_sections);
+  Opts.StackSizeSection = Args.hasArg(OPT_fstack_size_section);
+  Opts.UniqueSectionNames = !Args.hasArg(OPT_fno_unique_section_names);
 
   Opts.MergeFunctions = Args.hasArg(OPT_fmerge_functions);
 
@@ -1188,6 +1184,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.PatchableFunctionEntryCount =
       getLastArgIntValue(Args, OPT_fpatchable_function_entry_EQ, 0, Diags);
+  Opts.PatchableFunctionEntryOffset = getLastArgIntValue(
+      Args, OPT_fpatchable_function_entry_offset_EQ, 0, Diags);
   Opts.InstrumentForProfiling = Args.hasArg(OPT_pg);
   Opts.CallFEntry = Args.hasArg(OPT_mfentry);
   Opts.MNopMCount = Args.hasArg(OPT_mnop_mcount);
@@ -1648,9 +1646,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   Opts.PedanticErrors = Args.hasArg(OPT_pedantic_errors);
   Opts.ShowCarets = !Args.hasArg(OPT_fno_caret_diagnostics);
   Opts.ShowColors = parseShowColorsArgs(Args, DefaultDiagColor);
-  Opts.ShowColumn = Args.hasFlag(OPT_fshow_column,
-                                 OPT_fno_show_column,
-                                 /*Default=*/true);
+  Opts.ShowColumn = !Args.hasArg(OPT_fno_show_column);
   Opts.ShowFixits = !Args.hasArg(OPT_fno_diagnostics_fixit_info);
   Opts.ShowLocation = !Args.hasArg(OPT_fno_show_source_location);
   Opts.AbsolutePath = Args.hasArg(OPT_fdiagnostics_absolute_paths);
@@ -3366,18 +3362,11 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                                       systemBlacklists.end());
 
   // -fxray-instrument
-  Opts.XRayInstrument =
-      Args.hasFlag(OPT_fxray_instrument, OPT_fnoxray_instrument, false);
-
-  // -fxray-always-emit-customevents
+  Opts.XRayInstrument = Args.hasArg(OPT_fxray_instrument);
   Opts.XRayAlwaysEmitCustomEvents =
-      Args.hasFlag(OPT_fxray_always_emit_customevents,
-                   OPT_fnoxray_always_emit_customevents, false);
-
-  // -fxray-always-emit-typedevents
+      Args.hasArg(OPT_fxray_always_emit_customevents);
   Opts.XRayAlwaysEmitTypedEvents =
-      Args.hasFlag(OPT_fxray_always_emit_typedevents,
-                   OPT_fnoxray_always_emit_customevents, false);
+      Args.hasArg(OPT_fxray_always_emit_typedevents);
 
   // -fxray-{always,never}-instrument= filenames.
   Opts.XRayAlwaysInstrumentFiles =

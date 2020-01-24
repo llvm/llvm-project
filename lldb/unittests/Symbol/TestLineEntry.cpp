@@ -1,4 +1,4 @@
-//===-- TestLineEntry.cpp ------------------------------*- C++ -*-===//
+//===-- TestLineEntry.cpp -------------------------------------------------===//
 //
 //
 //                     The LLVM Compiler Infrastructure

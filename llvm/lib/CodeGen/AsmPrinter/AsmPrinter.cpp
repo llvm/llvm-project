@@ -707,6 +707,21 @@ void AsmPrinter::EmitFunctionHeader() {
     }
   }
 
+  // Emit M NOPs for -fpatchable-function-entry=N,M where M>0. We arbitrarily
+  // place prefix data before NOPs.
+  unsigned PatchableFunctionPrefix = 0;
+  (void)F.getFnAttribute("patchable-function-prefix")
+      .getValueAsString()
+      .getAsInteger(10, PatchableFunctionPrefix);
+  if (PatchableFunctionPrefix) {
+    CurrentPatchableFunctionEntrySym =
+        OutContext.createLinkerPrivateTempSymbol();
+    OutStreamer->EmitLabel(CurrentPatchableFunctionEntrySym);
+    emitNops(PatchableFunctionPrefix);
+  } else {
+    CurrentPatchableFunctionEntrySym = CurrentFnBegin;
+  }
+
   // Emit the function descriptor. This is a virtual function to allow targets
   // to emit their specific function descriptor.
   if (MAI->needsFunctionDescriptors())
@@ -1158,7 +1173,7 @@ void AsmPrinter::EmitFunctionBody() {
     // unspecified.
     if (Noop.getOpcode()) {
       OutStreamer->AddComment("avoids zero-length function");
-      OutStreamer->EmitInstruction(Noop, getSubtargetInfo());
+      emitNops(1);
     }
   }
 
@@ -2172,7 +2187,7 @@ void AsmPrinter::EmitAlignment(Align Alignment, const GlobalObject *GV) const {
   if (GV)
     Alignment = getGVAlignment(GV, GV->getParent()->getDataLayout(), Alignment);
 
-  if (Alignment == Align::None())
+  if (Alignment == Align(1))
     return; // 1-byte aligned: no need to emit alignment.
 
   if (getCurrentSection()->getKind().isText())
@@ -2884,6 +2899,13 @@ void AsmPrinter::printOffset(int64_t Offset, raw_ostream &OS) const {
     OS << Offset;
 }
 
+void AsmPrinter::emitNops(unsigned N) {
+  MCInst Nop;
+  MF->getSubtarget().getInstrInfo()->getNoop(Nop);
+  for (; N; --N)
+    EmitToStreamer(*OutStreamer, Nop);
+}
+
 //===----------------------------------------------------------------------===//
 // Symbol Lowering Routines.
 //===----------------------------------------------------------------------===//
@@ -3034,7 +3056,7 @@ void AsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) {
 
   // Emit an alignment directive for this block, if needed.
   const Align Alignment = MBB.getAlignment();
-  if (Alignment != Align::None())
+  if (Alignment != Align(1))
     EmitAlignment(Alignment);
 
   // If the block has its address taken, emit any labels that were used to
@@ -3290,11 +3312,14 @@ void AsmPrinter::recordSled(MCSymbol *Sled, const MachineInstr &MI,
 
 void AsmPrinter::emitPatchableFunctionEntries() {
   const Function &F = MF->getFunction();
-  unsigned PatchableFunctionEntry = 0;
+  unsigned PatchableFunctionPrefix = 0, PatchableFunctionEntry = 0;
+  (void)F.getFnAttribute("patchable-function-prefix")
+      .getValueAsString()
+      .getAsInteger(10, PatchableFunctionPrefix);
   (void)F.getFnAttribute("patchable-function-entry")
       .getValueAsString()
       .getAsInteger(10, PatchableFunctionEntry);
-  if (!PatchableFunctionEntry)
+  if (!PatchableFunctionPrefix && !PatchableFunctionEntry)
     return;
   const unsigned PointerSize = getPointerSize();
   if (TM.getTargetTriple().isOSBinFormatELF()) {
@@ -3323,7 +3348,7 @@ void AsmPrinter::emitPatchableFunctionEntries() {
           "__patchable_function_entries", ELF::SHT_PROGBITS, Flags));
     }
     EmitAlignment(Align(PointerSize));
-    OutStreamer->EmitSymbolValue(CurrentFnBegin, PointerSize);
+    OutStreamer->EmitSymbolValue(CurrentPatchableFunctionEntrySym, PointerSize);
   }
 }
 
