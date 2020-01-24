@@ -1354,13 +1354,13 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 %additive
 ; GFX9-NEXT:    s_cbranch_execz BB6_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
-; GFX9-NEXT:    v_mov_b32_e32 v1, s6
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mul_hi_u32 v2, s2, v1
 ; GFX9-NEXT:    s_mul_i32 s7, s3, s6
+; GFX9-NEXT:    s_mul_hi_u32 s8, s2, s6
+; GFX9-NEXT:    s_add_i32 s8, s8, s7
 ; GFX9-NEXT:    s_mul_i32 s6, s2, s6
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s6
-; GFX9-NEXT:    v_add_u32_e32 v2, s7, v2
+; GFX9-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX9-NEXT:    v_mov_b32_e32 v3, local_var64@abs32@lo
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    ds_add_rtn_u64 v[1:2], v3, v[1:2]
@@ -1399,11 +1399,12 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 %additive
 ; GFX1064-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, local_var64@abs32@lo
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    v_mul_hi_u32 v2, s2, s6
-; GFX1064-NEXT:    s_mul_i32 s7, s2, s6
-; GFX1064-NEXT:    s_mul_i32 s6, s3, s6
-; GFX1064-NEXT:    v_mov_b32_e32 v1, s7
-; GFX1064-NEXT:    v_add_nc_u32_e32 v2, s6, v2
+; GFX1064-NEXT:    s_mul_i32 s7, s3, s6
+; GFX1064-NEXT:    s_mul_hi_u32 s8, s2, s6
+; GFX1064-NEXT:    s_mul_i32 s6, s2, s6
+; GFX1064-NEXT:    s_add_i32 s8, s8, s7
+; GFX1064-NEXT:    v_mov_b32_e32 v1, s6
+; GFX1064-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX1064-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1064-NEXT:    ds_add_rtn_u64 v[1:2], v3, v[1:2]
@@ -1441,11 +1442,12 @@ define amdgpu_kernel void @add_i64_uniform(i64 addrspace(1)* %out, i64 %additive
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s5, s5
 ; GFX1032-NEXT:    v_mov_b32_e32 v3, local_var64@abs32@lo
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    v_mul_hi_u32 v2, s2, s5
-; GFX1032-NEXT:    s_mul_i32 s6, s2, s5
-; GFX1032-NEXT:    s_mul_i32 s5, s3, s5
-; GFX1032-NEXT:    v_mov_b32_e32 v1, s6
-; GFX1032-NEXT:    v_add_nc_u32_e32 v2, s5, v2
+; GFX1032-NEXT:    s_mul_i32 s6, s3, s5
+; GFX1032-NEXT:    s_mul_hi_u32 s7, s2, s5
+; GFX1032-NEXT:    s_mul_i32 s5, s2, s5
+; GFX1032-NEXT:    s_add_i32 s7, s7, s6
+; GFX1032-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1032-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX1032-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1032-NEXT:    ds_add_rtn_u64 v[1:2], v3, v[1:2]
@@ -2439,13 +2441,13 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 %subitive
 ; GFX9-NEXT:    s_cbranch_execz BB12_2
 ; GFX9-NEXT:  ; %bb.1:
 ; GFX9-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
-; GFX9-NEXT:    v_mov_b32_e32 v1, s6
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mul_hi_u32 v2, s2, v1
 ; GFX9-NEXT:    s_mul_i32 s7, s3, s6
+; GFX9-NEXT:    s_mul_hi_u32 s8, s2, s6
+; GFX9-NEXT:    s_add_i32 s8, s8, s7
 ; GFX9-NEXT:    s_mul_i32 s6, s2, s6
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s6
-; GFX9-NEXT:    v_add_u32_e32 v2, s7, v2
+; GFX9-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX9-NEXT:    v_mov_b32_e32 v3, local_var64@abs32@lo
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    ds_sub_rtn_u64 v[1:2], v3, v[1:2]
@@ -2484,11 +2486,12 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 %subitive
 ; GFX1064-NEXT:    s_bcnt1_i32_b64 s6, s[6:7]
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, local_var64@abs32@lo
 ; GFX1064-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1064-NEXT:    v_mul_hi_u32 v2, s2, s6
-; GFX1064-NEXT:    s_mul_i32 s7, s2, s6
-; GFX1064-NEXT:    s_mul_i32 s6, s3, s6
-; GFX1064-NEXT:    v_mov_b32_e32 v1, s7
-; GFX1064-NEXT:    v_add_nc_u32_e32 v2, s6, v2
+; GFX1064-NEXT:    s_mul_i32 s7, s3, s6
+; GFX1064-NEXT:    s_mul_hi_u32 s8, s2, s6
+; GFX1064-NEXT:    s_mul_i32 s6, s2, s6
+; GFX1064-NEXT:    s_add_i32 s8, s8, s7
+; GFX1064-NEXT:    v_mov_b32_e32 v1, s6
+; GFX1064-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX1064-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1064-NEXT:    ds_sub_rtn_u64 v[1:2], v3, v[1:2]
@@ -2526,11 +2529,12 @@ define amdgpu_kernel void @sub_i64_uniform(i64 addrspace(1)* %out, i64 %subitive
 ; GFX1032-NEXT:    s_bcnt1_i32_b32 s5, s5
 ; GFX1032-NEXT:    v_mov_b32_e32 v3, local_var64@abs32@lo
 ; GFX1032-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX1032-NEXT:    v_mul_hi_u32 v2, s2, s5
-; GFX1032-NEXT:    s_mul_i32 s6, s2, s5
-; GFX1032-NEXT:    s_mul_i32 s5, s3, s5
-; GFX1032-NEXT:    v_mov_b32_e32 v1, s6
-; GFX1032-NEXT:    v_add_nc_u32_e32 v2, s5, v2
+; GFX1032-NEXT:    s_mul_i32 s6, s3, s5
+; GFX1032-NEXT:    s_mul_hi_u32 s7, s2, s5
+; GFX1032-NEXT:    s_mul_i32 s5, s2, s5
+; GFX1032-NEXT:    s_add_i32 s7, s7, s6
+; GFX1032-NEXT:    v_mov_b32_e32 v1, s5
+; GFX1032-NEXT:    v_mov_b32_e32 v2, s7
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX1032-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1032-NEXT:    ds_sub_rtn_u64 v[1:2], v3, v[1:2]
