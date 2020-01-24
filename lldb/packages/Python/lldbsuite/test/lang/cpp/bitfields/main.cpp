@@ -73,7 +73,7 @@ int main(int argc, char const *argv[]) {
 
   lbd.arr[0] = 'a';
   lbd.arr[1] = 'b';
-  lbd.arr[2] = 'c';
+  lbd.arr[2] = '\0';
   lbd.a = 5;
 
 
