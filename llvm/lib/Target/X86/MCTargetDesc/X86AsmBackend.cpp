@@ -85,13 +85,13 @@ cl::opt<unsigned> X86AlignBranchBoundary(
 
 cl::opt<X86AlignBranchKind, true, cl::parser<std::string>> X86AlignBranch(
     "x86-align-branch",
-    cl::desc("Specify types of branches to align (plus separated list of "
-             "types). The branches's types are combination of jcc, fused, "
-             "jmp, call, ret, indirect."),
-    cl::value_desc("jcc indicates conditional jumps, fused indicates fused "
-                   "conditional jumps, jmp indicates unconditional jumps, call "
-                   "indicates direct and indirect calls, ret indicates rets, "
-                   "indirect indicates indirect jumps."),
+    cl::desc(
+        "Specify types of branches to align. The branches's types are "
+        "combination of jcc, fused, jmp, call, ret, indirect. jcc indicates "
+        "conditional jumps, fused indicates fused conditional jumps, jmp "
+        "indicates unconditional jumps, call indicates direct and indirect "
+        "calls, ret indicates rets, indirect indicates indirect jumps."),
+    cl::value_desc("(plus separated list of types)"),
     cl::location(X86AlignBranchKindLoc));
 
 cl::opt<bool> X86AlignBranchWithin32BBoundaries(
