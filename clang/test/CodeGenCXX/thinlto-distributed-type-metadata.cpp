@@ -22,7 +22,7 @@
 // OPT-NOT: call void @llvm.assume
 // We should have only one @llvm.assume call, the one that was expanded
 // from the builtin in the IR below, not the one fed by the type test.
-// OPT: %cmp = icmp ne %struct.A* %0, null
+// OPT: %cmp = icmp ne %struct.A* %{{.*}}, null
 // OPT: void @llvm.assume(i1 %cmp)
 // Check after the builtin assume again that we don't have a type test assume
 // sequence.
