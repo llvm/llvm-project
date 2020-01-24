@@ -33,8 +33,8 @@ def main():
     # Compute an MD5 hash based on the input arguments and the current working
     # directory.
     h = hashlib.md5()
-    h.update(' '.join(sys.argv[2:]))
-    h.update(os.getcwd())
+    h.update(' '.join(sys.argv[2:]).encode('utf-8'))
+    h.update(os.getcwd().encode('utf-8'))
     input_hash = h.hexdigest()
 
     # Use the hash to "uniquely" identify a reproducer path.
