@@ -417,10 +417,23 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0)
       .clampScalar(0, S16, S64);
   } else {
-    getActionDefinitionsBuilder({G_FSQRT, G_FFLOOR})
+    getActionDefinitionsBuilder(G_FSQRT)
       .legalFor({S32, S64})
       .scalarize(0)
       .clampScalar(0, S32, S64);
+
+    if (ST.hasFractBug()) {
+      getActionDefinitionsBuilder(G_FFLOOR)
+        .customFor({S64})
+        .legalFor({S32, S64})
+        .scalarize(0)
+        .clampScalar(0, S32, S64);
+    } else {
+      getActionDefinitionsBuilder(G_FFLOOR)
+        .legalFor({S32, S64})
+        .scalarize(0)
+        .clampScalar(0, S32, S64);
+    }
   }
 
   getActionDefinitionsBuilder(G_FPTRUNC)
@@ -1249,6 +1262,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeFlog(MI, B, numbers::ln2f / numbers::ln10f);
   case TargetOpcode::G_FEXP:
     return legalizeFExp(MI, B);
+  case TargetOpcode::G_FFLOOR:
+    return legalizeFFloor(MI, MRI, B);
   case TargetOpcode::G_BUILD_VECTOR:
     return legalizeBuildVector(MI, MRI, B);
   default:
@@ -1969,6 +1984,75 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
   auto K = B.buildFConstant(Ty, numbers::log2e);
   auto Mul = B.buildFMul(Ty, Src, K, Flags);
   B.buildFExp2(Dst, Mul, Flags);
+  MI.eraseFromParent();
+  return true;
+}
+
+// Find a source register, ignoring any possible source modifiers.
+static Register stripAnySourceMods(Register OrigSrc, MachineRegisterInfo &MRI) {
+  Register ModSrc = OrigSrc;
+  if (MachineInstr *SrcFNeg = getOpcodeDef(AMDGPU::G_FNEG, ModSrc, MRI)) {
+    ModSrc = SrcFNeg->getOperand(1).getReg();
+    if (MachineInstr *SrcFAbs = getOpcodeDef(AMDGPU::G_FABS, ModSrc, MRI))
+      ModSrc = SrcFAbs->getOperand(1).getReg();
+  } else if (MachineInstr *SrcFAbs = getOpcodeDef(AMDGPU::G_FABS, ModSrc, MRI))
+    ModSrc = SrcFAbs->getOperand(1).getReg();
+  return ModSrc;
+}
+
+bool AMDGPULegalizerInfo::legalizeFFloor(MachineInstr &MI,
+                                         MachineRegisterInfo &MRI,
+                                         MachineIRBuilder &B) const {
+  B.setInstr(MI);
+
+  const LLT S1 = LLT::scalar(1);
+  const LLT S64 = LLT::scalar(64);
+  Register Dst = MI.getOperand(0).getReg();
+  Register OrigSrc = MI.getOperand(1).getReg();
+  unsigned Flags = MI.getFlags();
+  assert(ST.hasFractBug() && MRI.getType(Dst) == S64 &&
+         "this should not have been custom lowered");
+
+  // V_FRACT is buggy on SI, so the F32 version is never used and (x-floor(x))
+  // is used instead. However, SI doesn't have V_FLOOR_F64, so the most
+  // efficient way to implement it is using V_FRACT_F64. The workaround for the
+  // V_FRACT bug is:
+  //    fract(x) = isnan(x) ? x : min(V_FRACT(x), 0.99999999999999999)
+  //
+  // Convert floor(x) to (x - fract(x))
+
+  auto Fract = B.buildIntrinsic(Intrinsic::amdgcn_fract, {S64}, false)
+    .addUse(OrigSrc)
+    .setMIFlags(Flags);
+
+  // Give source modifier matching some assistance before obscuring a foldable
+  // pattern.
+
+  // TODO: We can avoid the neg on the fract? The input sign to fract
+  // shouldn't matter?
+  Register ModSrc = stripAnySourceMods(OrigSrc, MRI);
+
+  auto Const = B.buildFConstant(S64, BitsToDouble(0x3fefffffffffffff));
+
+  Register Min = MRI.createGenericVirtualRegister(S64);
+
+  // We don't need to concern ourselves with the snan handling difference, so
+  // use the one which will directly select.
+  const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
+  if (MFI->getMode().IEEE)
+    B.buildFMinNumIEEE(Min, Fract, Const, Flags);
+  else
+    B.buildFMinNum(Min, Fract, Const, Flags);
+
+  Register CorrectedFract = Min;
+  if (!MI.getFlag(MachineInstr::FmNoNans)) {
+    auto IsNan = B.buildFCmp(CmpInst::FCMP_ORD, S1, ModSrc, ModSrc, Flags);
+    CorrectedFract = B.buildSelect(S64, IsNan, ModSrc, Min, Flags).getReg(0);
+  }
+
+  auto NegFract = B.buildFNeg(S64, CorrectedFract, Flags);
+  B.buildFAdd(Dst, OrigSrc, NegFract, Flags);
+
   MI.eraseFromParent();
   return true;
 }
