@@ -1753,7 +1753,7 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
     // fix since operations such as code generation will expect this to be so.
     if (ImportedOrErr) {
       FieldDecl *FieldFrom = dyn_cast_or_null<FieldDecl>(From);
-      Decl *ImportedDecl = (Decl*)*ImportedOrErr;
+      Decl *ImportedDecl = *ImportedOrErr;
       FieldDecl *FieldTo = dyn_cast_or_null<FieldDecl>(ImportedDecl);
       if (FieldFrom && FieldTo) {
         const RecordType *RecordFrom = FieldFrom->getType()->getAs<RecordType>();
