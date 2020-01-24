@@ -1,0 +1,7 @@
+# UNSUPPORTED: system-windows
+#
+# RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
+# RUN: %lldb -b -o 'help breakpoint set' -o 'breakpoint set -f main.c -l 2 -u 21' %t.out | FileCheck %s
+# CHECK: -u <column> ( --column <column> )
+# CHECK: Specifies the column number on which to set this breakpoint.
+# CHECK: at main.c:2:21

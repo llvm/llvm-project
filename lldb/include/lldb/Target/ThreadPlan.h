@@ -461,8 +461,12 @@ public:
   virtual void WillPop();
 
   // This pushes a plan onto the plan stack of the current plan's thread.
+  // Also sets the plans to private and not master plans.  A plan pushed by 
+  // another thread plan is never either of the above.
   void PushPlan(lldb::ThreadPlanSP &thread_plan_sp) {
     m_thread.PushPlan(thread_plan_sp);
+    thread_plan_sp->SetPrivate(false);
+    thread_plan_sp->SetIsMasterPlan(false);
   }
 
   ThreadPlanKind GetKind() const { return m_kind; }
