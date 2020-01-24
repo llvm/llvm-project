@@ -218,6 +218,14 @@ Operation *mlir::edsc::ops::linalg_pointwise(UnaryPointwiseOpBuilder unaryOp,
   return makeGenericLinalgOp(iterTypes, {I}, {O}, fun);
 }
 
+Operation *mlir::edsc::ops::linalg_pointwise_sqrt(StructuredIndexed I,
+                                                  StructuredIndexed O) {
+  ;
+  using edsc::intrinsics::sqrt;
+  UnaryPointwiseOpBuilder unOp([](ValueHandle a) -> Value { return sqrt(a); });
+  return linalg_pointwise(unOp, I, O);
+}
+
 Operation *mlir::edsc::ops::linalg_pointwise_tanh(StructuredIndexed I,
                                                   StructuredIndexed O) {
   ;

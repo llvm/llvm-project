@@ -208,6 +208,7 @@ using mulf = ValueBuilder<MulFOp>;
 using memref_cast = ValueBuilder<MemRefCastOp>;
 using ret = OperationBuilder<ReturnOp>;
 using select = ValueBuilder<SelectOp>;
+using sqrt = ValueBuilder<SqrtOp>;
 using std_load = ValueBuilder<LoadOp>;
 using std_store = OperationBuilder<StoreOp>;
 using subi = ValueBuilder<SubIOp>;

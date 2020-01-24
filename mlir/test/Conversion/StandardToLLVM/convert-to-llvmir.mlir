@@ -440,6 +440,12 @@ func @ops(f32, f32, i32, i32) -> (f32, i32) {
   %19 = shift_right_signed %arg2, %arg3 : i32
 // CHECK-NEXT: %19 = llvm.lshr %arg2, %arg3 : !llvm.i32
   %20 = shift_right_unsigned %arg2, %arg3 : i32
+// CHECK-NEXT: %20 = llvm.call @sqrtf(%arg0) : (!llvm.float) -> !llvm.float
+  %21 = std.sqrt %arg0 : f32
+// CHECK-NEXT: %21 = llvm.mlir.constant(7.900000e-01 : f64) : !llvm.double
+  %22 = constant 7.9e-01 : f64
+// CHECK-NEXT: %22 = llvm.call @sqrt(%21) : (!llvm.double) -> !llvm.double
+  %23 = std.sqrt %22 : f64
 
   return %0, %4 : f32, i32
 }

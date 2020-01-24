@@ -846,6 +846,7 @@ TEST_FUNC(affine_if_op) {
 // CHECK-SAME:      indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
 // CHECK-SAME:      iterator_types = ["parallel", "parallel"]}
 //       CHECK:     tanh
+//       CHECK:     sqrt
 //       CHECK:   }: memref<?x?xf32>, memref<?x?xf32>
 // clang-format on
 TEST_FUNC(linalg_pointwise_test) {
@@ -866,6 +867,7 @@ TEST_FUNC(linalg_pointwise_test) {
   linalg_pointwise_add(SA({i, j}), SB({i, j}), SC({i, j}));
   linalg_pointwise_max(SA({i, j}), SB({i, j}), SC({i, j}));
   linalg_pointwise_tanh(SA({i, j}), SC({i, j}));
+  linalg_pointwise_sqrt(SA({i, j}), SC({i, j}));
 
   f.print(llvm::outs());
   f.erase();

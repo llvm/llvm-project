@@ -172,6 +172,11 @@ Operation *linalg_pointwise(UnaryPointwiseOpBuilder unaryOp,
                             StructuredIndexed I, StructuredIndexed O);
 
 /// Build a linalg.pointwise with all `parallel` iterators and a region that
+/// computes `O = sqrt(I)`. The client is responsible for specifying the proper
+/// indexings when creating the StructuredIndexed.
+Operation *linalg_pointwise_sqrt(StructuredIndexed I, StructuredIndexed O);
+
+/// Build a linalg.pointwise with all `parallel` iterators and a region that
 /// computes `O = tanh(I)`. The client is responsible for specifying the proper
 /// indexings when creating the StructuredIndexed.
 Operation *linalg_pointwise_tanh(StructuredIndexed I, StructuredIndexed O);

@@ -1244,6 +1244,56 @@ struct TanhOpLowering : public LLVMLegalizationPattern<TanhOp> {
   }
 };
 
+// A `sqrt` is converted into a call to the `sqrtf/sqrt` function.
+struct SqrtOpLowering : public LLVMLegalizationPattern<SqrtOp> {
+  using LLVMLegalizationPattern<SqrtOp>::LLVMLegalizationPattern;
+
+  PatternMatchResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    using LLVMFuncOpT = LLVM::LLVMFuncOp;
+    using LLVMTypeT = LLVM::LLVMType;
+
+    OperandAdaptor<SqrtOp> transformed(operands);
+    LLVMTypeT operandType =
+        transformed.operand().getType().dyn_cast_or_null<LLVM::LLVMType>();
+
+    if (!operandType)
+      return matchFailure();
+
+    std::string functionName;
+    if (operandType.isFloatTy())
+      functionName = "sqrtf";
+    else if (operandType.isDoubleTy())
+      functionName = "sqrt";
+    else
+      return matchFailure();
+
+    // Get a reference to the sqrt function, inserting it if necessary.
+    Operation *sqrtFunc =
+        SymbolTable::lookupNearestSymbolFrom(op, functionName);
+
+    LLVMFuncOpT sqrtLLVMFunc;
+    if (sqrtFunc) {
+      sqrtLLVMFunc = cast<LLVMFuncOpT>(sqrtFunc);
+    } else {
+      PatternRewriter::InsertionGuard insertGuard(rewriter);
+      auto module = op->getParentOfType<ModuleOp>();
+      rewriter.setInsertionPointToStart(module.getBody());
+      sqrtLLVMFunc = rewriter.create<LLVMFuncOpT>(
+          module.getLoc(), functionName,
+          LLVMTypeT::getFunctionTy(operandType, operandType,
+                                   /*isVarArg=*/false));
+    }
+
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(
+        op, operandType, rewriter.getSymbolRefAttr(sqrtLLVMFunc),
+        transformed.operand());
+    return matchSuccess();
+  }
+};
+
 struct MemRefCastOpLowering : public LLVMLegalizationPattern<MemRefCastOp> {
   using LLVMLegalizationPattern<MemRefCastOp>::LLVMLegalizationPattern;
 
@@ -2109,6 +2159,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       SignedShiftRightOpLowering,
       SplatOpLowering,
       SplatNdOpLowering,
+      SqrtOpLowering,
       SubFOpLowering,
       SubIOpLowering,
       TanhOpLowering,
