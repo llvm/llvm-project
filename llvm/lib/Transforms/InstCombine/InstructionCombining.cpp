@@ -935,6 +935,15 @@ Value *InstCombiner::freelyNegateValue(Value *V) {
       return Builder.CreateTrunc(NegA, I->getType(), I->getName() + ".neg");
     return nullptr;
 
+  // 0-(A*B)  =>  (0-A)*B
+  // 0-(A*B)  =>  A*(0-B)
+  case Instruction::Mul:
+    if (Value *NegA = freelyNegateValue(I->getOperand(0)))
+      return Builder.CreateMul(NegA, I->getOperand(1), V->getName() + ".neg");
+    if (Value *NegB = freelyNegateValue(I->getOperand(1)))
+      return Builder.CreateMul(I->getOperand(0), NegB, V->getName() + ".neg");
+    return nullptr;
+
   default:
     return nullptr;
   }
