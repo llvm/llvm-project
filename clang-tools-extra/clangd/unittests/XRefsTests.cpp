@@ -447,6 +447,11 @@ TEST(LocateSymbol, All) {
         struct Fo^o<T*> {};
       )cpp",
 
+      R"cpp(// Override specifier jumps to overridden method
+        class Y { virtual void $decl[[a]]() = 0; };
+        class X : Y { void a() ^override {} };
+      )cpp",
+
       R"cpp(// Heuristic resolution of dependent method
         template <typename T>
         struct S {
