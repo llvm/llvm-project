@@ -5,7 +5,7 @@
 define amdgpu_kernel void @rcp_uint(i32 addrspace(1)* %in, float addrspace(1)* %out) {
   %load = load i32, i32 addrspace(1)* %in, align 4
   %cvt = uitofp i32 %load to float
-  %div = fdiv float 1.000000e+00, %cvt
+  %div = fdiv float 1.000000e+00, %cvt, !fpmath !0
   store float %div, float addrspace(1)* %out, align 4
   ret void
 }
@@ -15,7 +15,9 @@ define amdgpu_kernel void @rcp_uint(i32 addrspace(1)* %in, float addrspace(1)* %
 define amdgpu_kernel void @rcp_sint(i32 addrspace(1)* %in, float addrspace(1)* %out) {
   %load = load i32, i32 addrspace(1)* %in, align 4
   %cvt = sitofp i32 %load to float
-  %div = fdiv float 1.000000e+00, %cvt
+  %div = fdiv float 1.000000e+00, %cvt, !fpmath !0
   store float %div, float addrspace(1)* %out, align 4
   ret void
 }
+
+!0 = !{float 2.500000e+00}
