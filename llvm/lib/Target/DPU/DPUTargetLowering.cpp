@@ -412,12 +412,6 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "DPUISD::SubJCCZero";
   case DPUISD::Wrapper:
     return "DPUISD::Wrapper";
-  case DPUISD::WRAM_STORE_64_ALIGNED:
-    return "DPUISD::WRAM_STORE_64_ALIGNED";
-  case DPUISD::WRAM_STORE_64:
-    return "DPUISD::WRAM_STORE_64";
-  case DPUISD::MRAM_STORE_64:
-    return "DPUISD::MRAM_STORE_64";
   case DPUISD::TRUNC64:
     return "DPUISD::TRUNC64";
   case DPUISD::LSL64_32:
@@ -462,14 +456,6 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "DPUISD::MUL16_SU";
   case DPUISD::MUL16_SS:
     return "DPUISD::MUL16_SS";
-  case DPUISD::WRAM_STORE_8_IMM:
-    return "DPUISD::WRAM_STORE_8_IMM";
-  case DPUISD::WRAM_STORE_16_IMM:
-    return "DPUISD::WRAM_STORE_16_IMM";
-  case DPUISD::WRAM_STORE_32_IMM:
-    return "DPUISD::WRAM_STORE_32_IMM";
-  case DPUISD::WRAM_STORE_64_IMM:
-    return "DPUISD::WRAM_STORE_64_IMM";
   case DPUISD::Addc:
     return "DPUISD::Addc";
   case DPUISD::Subc:

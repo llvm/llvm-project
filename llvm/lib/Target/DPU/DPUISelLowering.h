@@ -39,9 +39,6 @@ enum {
   AddJCCZero,
   SubJCCZero,
   Wrapper, // Global addresses, externals...
-  WRAM_STORE_64_ALIGNED,
-  WRAM_STORE_64,
-  MRAM_STORE_64,
   TRUNC64,    // Keep the LSBits register,
   LSL64_32,   // Shift 32 positions to the left
   LSL64_LT32, // Shift by less than 32 positions to the left
@@ -64,10 +61,6 @@ enum {
   MUL16_UU,
   MUL16_SU,
   MUL16_SS,
-  WRAM_STORE_8_IMM,
-  WRAM_STORE_16_IMM,
-  WRAM_STORE_32_IMM,
-  WRAM_STORE_64_IMM,
 
   Addc,
   Subc,
