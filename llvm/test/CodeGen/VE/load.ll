@@ -191,4 +191,3 @@ define i8 @loadi8stk() {
   %1 = load i8, i8* %addr, align 16
   ret i8 %1
 }
-
