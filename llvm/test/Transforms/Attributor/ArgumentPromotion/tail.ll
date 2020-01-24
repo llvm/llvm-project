@@ -10,7 +10,7 @@ declare i8* @foo(%pair*)
 
 define internal void @bar(%pair* byval %Data) {
 ; CHECK-LABEL: define {{[^@]+}}@bar
-; CHECK-SAME: (%pair* byval [[DATA:%.*]])
+; CHECK-SAME: (%pair* noalias byval [[DATA:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call i8* @foo(%pair* [[DATA]])
 ; CHECK-NEXT:    ret void
 ;
@@ -20,8 +20,8 @@ define internal void @bar(%pair* byval %Data) {
 
 define void @zed(%pair* byval %Data) {
 ; CHECK-LABEL: define {{[^@]+}}@zed
-; CHECK-SAME: (%pair* nocapture readonly byval [[DATA:%.*]])
-; CHECK-NEXT:    call void @bar(%pair* nocapture readonly byval [[DATA]])
+; CHECK-SAME: (%pair* noalias nocapture readonly byval [[DATA:%.*]])
+; CHECK-NEXT:    call void @bar(%pair* noalias nocapture readonly byval [[DATA]])
 ; CHECK-NEXT:    ret void
 ;
   call void @bar(%pair* byval %Data)
