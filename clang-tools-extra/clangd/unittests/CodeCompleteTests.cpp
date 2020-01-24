@@ -45,11 +45,6 @@ using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
 
-class IgnoreDiagnostics : public DiagnosticsConsumer {
-  void onDiagnosticsReady(PathRef File,
-                          std::vector<Diag> Diagnostics) override {}
-};
-
 // GMock helpers for matching completion items.
 MATCHER_P(Named, Name, "") { return arg.Name == Name; }
 MATCHER_P(NameStartsWith, Prefix, "") {
@@ -143,8 +138,7 @@ CodeCompleteResult completions(llvm::StringRef Text,
   MockCompilationDatabase CDB;
   // To make sure our tests for completiopns inside templates work on Windows.
   CDB.ExtraClangFlags = {"-fno-delayed-template-parsing"};
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
   return completions(Server, Text, std::move(IndexSymbols), std::move(Opts),
                      FilePath);
 }
@@ -670,8 +664,7 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
   std::string BarHeader = testPath("sub/bar.h");
   FS.Files[BarHeader] = "";
 
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
   auto BarURI = URI::create(BarHeader).toString();
   Symbol Sym = cls("ns::X");
   Sym.CanonicalDeclaration.FileURI = BarURI.c_str();
@@ -709,8 +702,7 @@ TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
 
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
   Symbol SymX = cls("ns::X");
   Symbol SymY = cls("ns::Y");
   std::string BarHeader = testPath("bar.h");
@@ -737,8 +729,7 @@ TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
 TEST(CompletionTest, IndexSuppressesPreambleCompletions) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   FS.Files[testPath("bar.h")] =
       R"cpp(namespace ns { struct preamble { int member; }; })cpp";
@@ -787,10 +778,9 @@ TEST(CompletionTest, CompletionInPreamble) {
 TEST(CompletionTest, DynamicIndexIncludeInsertion) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
   ClangdServer::Options Opts = ClangdServer::optsForTest();
   Opts.BuildDynamicSymbolIndex = true;
-  ClangdServer Server(CDB, FS, DiagConsumer, Opts);
+  ClangdServer Server(CDB, FS, Opts);
 
   FS.Files[testPath("foo_header.h")] = R"cpp(
     #pragma once
@@ -816,10 +806,9 @@ TEST(CompletionTest, DynamicIndexIncludeInsertion) {
 TEST(CompletionTest, DynamicIndexMultiFile) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
   auto Opts = ClangdServer::optsForTest();
   Opts.BuildDynamicSymbolIndex = true;
-  ClangdServer Server(CDB, FS, DiagConsumer, Opts);
+  ClangdServer Server(CDB, FS, Opts);
 
   FS.Files[testPath("foo.h")] = R"cpp(
       namespace ns { class XYZ {}; void foo(int x) {} }
@@ -877,12 +866,11 @@ TEST(CompletionTest, Documentation) {
 TEST(CompletionTest, CommentsFromSystemHeaders) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
 
   auto Opts = ClangdServer::optsForTest();
   Opts.BuildDynamicSymbolIndex = true;
 
-  ClangdServer Server(CDB, FS, DiagConsumer, Opts);
+  ClangdServer Server(CDB, FS, Opts);
 
   FS.Files[testPath("foo.h")] = R"cpp(
     #pragma GCC system_header
@@ -1050,11 +1038,10 @@ SignatureHelp signatures(llvm::StringRef Text, Position Point,
 
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
   ClangdServer::Options Opts = ClangdServer::optsForTest();
   Opts.StaticIndex = Index.get();
 
-  ClangdServer Server(CDB, FS, DiagConsumer, Opts);
+  ClangdServer Server(CDB, FS, Opts);
   auto File = testPath("foo.cpp");
   runAddDocument(Server, File, Text);
   return llvm::cantFail(runSignatureHelp(Server, File, Point));
@@ -1502,8 +1489,7 @@ TEST(CompletionTest, DocumentationFromChangedFileCrash) {
   FS.Files[FooCpp] = "";
 
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   Annotations Source(R"cpp(
     #include "foo.h"
@@ -1537,8 +1523,7 @@ TEST(CompletionTest, NonDocComments) {
   FS.Files[FooCpp] = "";
 
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   Annotations Source(R"cpp(
     // We ignore namespace comments, for rationale see CodeCompletionStrings.h.
@@ -1602,11 +1587,10 @@ TEST(CompletionTest, CompleteOnInvalidLine) {
   auto FooCpp = testPath("foo.cpp");
 
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
   MockFSProvider FS;
   FS.Files[FooCpp] = "// empty file";
 
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
   // Run completion outside the file range.
   Position Pos;
   Pos.line = 100;
@@ -1726,8 +1710,7 @@ TEST(CompletionTest, CodeCompletionContext) {
 TEST(CompletionTest, FixItForArrowToDot) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   CodeCompleteOptions Opts;
   Opts.IncludeFixIts = true;
@@ -1766,8 +1749,7 @@ TEST(CompletionTest, FixItForArrowToDot) {
 TEST(CompletionTest, FixItForDotToArrow) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   CodeCompleteOptions Opts;
   Opts.IncludeFixIts = true;
@@ -1846,8 +1828,7 @@ TEST(CompletionTest, RenderWithFixItNonMerged) {
 TEST(CompletionTest, CompletionTokenRange) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   constexpr const char *TestCodes[] = {
       R"cpp(
@@ -2004,10 +1985,9 @@ TEST(SignatureHelpTest, IndexDocumentation) {
 TEST(SignatureHelpTest, DynamicIndexDocumentation) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
   ClangdServer::Options Opts = ClangdServer::optsForTest();
   Opts.BuildDynamicSymbolIndex = true;
-  ClangdServer Server(CDB, FS, DiagConsumer, Opts);
+  ClangdServer Server(CDB, FS, Opts);
 
   FS.Files[testPath("foo.h")] = R"cpp(
     struct Foo {
@@ -2176,8 +2156,7 @@ TEST(GuessCompletionPrefix, Filters) {
 TEST(CompletionTest, EnableSpeculativeIndexRequest) {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   auto File = testPath("foo.cpp");
   Annotations Test(R"cpp(
@@ -2235,8 +2214,7 @@ TEST(CompletionTest, NoInsertIncludeIfOnePresent) {
   std::string FooHeader = testPath("foo.h");
   FS.Files[FooHeader] = "";
 
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   std::string DeclFile = URI::create(testPath("foo")).toString();
   Symbol Sym = func("Func");
@@ -2266,8 +2244,7 @@ TEST(CompletionTest, MacroFromPreamble) {
   MockCompilationDatabase CDB;
   std::string FooHeader = testPath("foo.h");
   FS.Files[FooHeader] = "#define CLANGD_PREAMBLE_HEADER x\n";
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
   auto Results = completions(
       R"cpp(#include "foo.h"
           #define CLANGD_PREAMBLE_MAIN x
@@ -2396,8 +2373,7 @@ TEST(CompletionTest, IncludedCompletionKinds) {
   CDB.ExtraClangFlags = {SearchDirArg.c_str()};
   std::string BarHeader = testPath("sub/bar.h");
   FS.Files[BarHeader] = "";
-  IgnoreDiagnostics DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
   auto Results = completions(Server,
                              R"cpp(
         #include "^"

@@ -755,10 +755,6 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
 TEST(CrossFileRenameTests, WithUpToDateIndex) {
   MockCompilationDatabase CDB;
   CDB.ExtraClangFlags = {"-xc++"};
-  class IgnoreDiagnostics : public DiagnosticsConsumer {
-    void onDiagnosticsReady(PathRef File,
-                            std::vector<Diag> Diagnostics) override {}
-  } DiagConsumer;
   // rename is runnning on all "^" points in FooH, and "[[]]" ranges are the
   // expected rename occurrences.
   struct Case {
@@ -902,7 +898,7 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
     auto ServerOpts = ClangdServer::optsForTest();
     ServerOpts.CrossFileRename = true;
     ServerOpts.BuildDynamicSymbolIndex = true;
-    ClangdServer Server(CDB, FS, DiagConsumer, ServerOpts);
+    ClangdServer Server(CDB, FS, ServerOpts);
 
     // Add all files to clangd server to make sure the dynamic index has been
     // built.

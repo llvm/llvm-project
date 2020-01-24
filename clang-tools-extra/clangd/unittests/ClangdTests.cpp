@@ -59,7 +59,7 @@ bool diagsContainErrors(const std::vector<Diag> &Diagnostics) {
   return false;
 }
 
-class ErrorCheckingDiagConsumer : public DiagnosticsConsumer {
+class ErrorCheckingCallbacks : public ClangdServer::Callbacks {
 public:
   void onDiagnosticsReady(PathRef File,
                           std::vector<Diag> Diagnostics) override {
@@ -80,7 +80,7 @@ private:
 
 /// For each file, record whether the last published diagnostics contained at
 /// least one error.
-class MultipleErrorCheckingDiagConsumer : public DiagnosticsConsumer {
+class MultipleErrorCheckingCallbacks : public ClangdServer::Callbacks {
 public:
   void onDiagnosticsReady(PathRef File,
                           std::vector<Diag> Diagnostics) override {
@@ -142,9 +142,9 @@ protected:
       std::vector<std::pair<PathRef, llvm::StringRef>> ExtraFiles = {},
       bool ExpectErrors = false) {
     MockFSProvider FS;
-    ErrorCheckingDiagConsumer DiagConsumer;
+    ErrorCheckingCallbacks DiagConsumer;
     MockCompilationDatabase CDB;
-    ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+    ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
     for (const auto &FileWithContents : ExtraFiles)
       FS.Files[testPath(FileWithContents.first)] = FileWithContents.second;
 
@@ -194,9 +194,9 @@ int b = a;
 
 TEST_F(ClangdVFSTest, Reparse) {
   MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
+  ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
 
   const auto SourceContents = R"cpp(
 #include "foo.h"
@@ -229,9 +229,9 @@ int b = a;
 
 TEST_F(ClangdVFSTest, ReparseOnHeaderChange) {
   MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
+  ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
 
   const auto SourceContents = R"cpp(
 #include "foo.h"
@@ -274,24 +274,24 @@ TEST_F(ClangdVFSTest, PropagatesContexts) {
     }
     mutable int Got;
   } FS;
-  struct DiagConsumer : public DiagnosticsConsumer {
+  struct Callbacks : public ClangdServer::Callbacks {
     void onDiagnosticsReady(PathRef File,
                             std::vector<Diag> Diagnostics) override {
       Got = Context::current().getExisting(Secret);
     }
     int Got;
-  } DiagConsumer;
+  } Callbacks;
   MockCompilationDatabase CDB;
 
   // Verify that the context is plumbed to the FS provider and diagnostics.
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &Callbacks);
   {
     WithContextValue Entrypoint(Secret, 42);
     Server.addDocument(testPath("foo.cpp"), "void main(){}");
   }
   ASSERT_TRUE(Server.blockUntilIdleForTest());
   EXPECT_EQ(FS.Got, 42);
-  EXPECT_EQ(DiagConsumer.Got, 42);
+  EXPECT_EQ(Callbacks.Got, 42);
 }
 
 // Only enable this test on Unix
@@ -299,13 +299,13 @@ TEST_F(ClangdVFSTest, PropagatesContexts) {
 TEST_F(ClangdVFSTest, SearchLibDir) {
   // Checks that searches for GCC installation is done through vfs.
   MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
+  ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
   CDB.ExtraClangFlags.insert(CDB.ExtraClangFlags.end(),
                              {"-xc++", "-target", "x86_64-linux-unknown",
                               "-m64", "--gcc-toolchain=/randomusr",
                               "-stdlib=libstdc++"});
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
 
   // Just a random gcc version string
   SmallString<8> Version("4.9.3");
@@ -348,9 +348,9 @@ std::string x;
 
 TEST_F(ClangdVFSTest, ForceReparseCompileCommand) {
   MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
+  ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
 
   auto FooCpp = testPath("foo.cpp");
   const auto SourceContents1 = R"cpp(
@@ -384,9 +384,9 @@ struct bar { T x; };
 
 TEST_F(ClangdVFSTest, ForceReparseCompileCommandDefines) {
   MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
+  ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
 
   auto FooCpp = testPath("foo.cpp");
   const auto SourceContents = R"cpp(
@@ -437,8 +437,8 @@ int hello;
 
   MockFSProvider FS;
   MockCompilationDatabase CDB;
-  MultipleErrorCheckingDiagConsumer DiagConsumer;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  MultipleErrorCheckingCallbacks DiagConsumer;
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
 
   auto FooCpp = testPath("foo.cpp");
   auto BarCpp = testPath("bar.cpp");
@@ -480,9 +480,9 @@ int hello;
 
 TEST_F(ClangdVFSTest, MemoryUsage) {
   MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
+  ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
 
   Path FooCpp = testPath("foo.cpp");
   const auto SourceContents = R"cpp(
@@ -515,10 +515,10 @@ struct Something {
 
 TEST_F(ClangdVFSTest, InvalidCompileCommand) {
   MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
+  ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
 
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
 
   auto FooCpp = testPath("foo.cpp");
   // clang cannot create CompilerInvocation if we pass two files in the
@@ -589,7 +589,7 @@ int d;
     bool HadErrorsInLastDiags = false;
   };
 
-  class TestDiagConsumer : public DiagnosticsConsumer {
+  class TestDiagConsumer : public ClangdServer::Callbacks {
   public:
     TestDiagConsumer() : Stats(FilesCount, FileStat()) {}
 
@@ -635,7 +635,7 @@ int d;
   TestDiagConsumer DiagConsumer;
   {
     MockCompilationDatabase CDB;
-    ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+    ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
 
     // Prepare some random distributions for the test.
     std::random_device RandGen;
@@ -766,7 +766,7 @@ int d;
 }
 
 TEST_F(ClangdThreadingTest, NoConcurrentDiagnostics) {
-  class NoConcurrentAccessDiagConsumer : public DiagnosticsConsumer {
+  class NoConcurrentAccessDiagConsumer : public ClangdServer::Callbacks {
   public:
     std::atomic<int> Count = {0};
 
@@ -818,7 +818,7 @@ int d;
 
   NoConcurrentAccessDiagConsumer DiagConsumer(std::move(StartSecondPromise));
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
   Server.addDocument(FooCpp, SourceContentsWithErrors);
   StartSecond.wait();
   Server.addDocument(FooCpp, SourceContentsWithoutErrors);
@@ -828,9 +828,9 @@ int d;
 
 TEST_F(ClangdVFSTest, FormatCode) {
   MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
+  ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
 
   auto Path = testPath("foo.cpp");
   std::string Code = R"cpp(
@@ -857,9 +857,9 @@ void f() {}
 
 TEST_F(ClangdVFSTest, ChangedHeaderFromISystem) {
   MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
+  ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
 
   auto SourcePath = testPath("source/foo.cpp");
   auto HeaderPath = testPath("headers/foo.h");
@@ -932,9 +932,9 @@ TEST(ClangdTests, PreambleVFSStatCache) {
 
   llvm::StringMap<unsigned> CountStats;
   ListenStatsFSProvider FS(CountStats);
-  ErrorCheckingDiagConsumer DiagConsumer;
+  ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
 
   auto SourcePath = testPath("foo.cpp");
   auto HeaderPath = testPath("foo.h");
@@ -961,9 +961,9 @@ TEST(ClangdTests, PreambleVFSStatCache) {
 
 TEST_F(ClangdVFSTest, FallbackWhenPreambleIsNotReady) {
   MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
+  ErrorCheckingCallbacks DiagConsumer;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
 
   auto FooCpp = testPath("foo.cpp");
   Annotations Code(R"cpp(
@@ -1007,7 +1007,7 @@ TEST_F(ClangdVFSTest, FallbackWhenPreambleIsNotReady) {
 
 TEST_F(ClangdVFSTest, FallbackWhenWaitingForCompileCommand) {
   MockFSProvider FS;
-  ErrorCheckingDiagConsumer DiagConsumer;
+  ErrorCheckingCallbacks DiagConsumer;
   // Returns compile command only when notified.
   class DelayedCompilationDatabase : public GlobalCompilationDatabase {
   public:
@@ -1033,7 +1033,7 @@ TEST_F(ClangdVFSTest, FallbackWhenWaitingForCompileCommand) {
 
   Notification CanReturnCommand;
   DelayedCompilationDatabase CDB(CanReturnCommand);
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
 
   auto FooCpp = testPath("foo.cpp");
   Annotations Code(R"cpp(
