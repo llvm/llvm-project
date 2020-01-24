@@ -50,14 +50,6 @@ extern "C" const double CONCAT(DEBUGSERVER_PROGRAM_SYMBOL, VersionNumber);
 
 #define RNB_ARCH "x86_64"
 
-#elif defined(__ppc64__)
-
-#define RNB_ARCH "ppc64"
-
-#elif defined(__powerpc__) || defined(__ppc__)
-
-#define RNB_ARCH "ppc"
-
 #elif defined(__arm64__) || defined(__aarch64__)
 
 #define RNB_ARCH "arm64"
