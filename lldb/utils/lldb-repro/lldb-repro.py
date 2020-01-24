@@ -18,6 +18,7 @@ import sys
 import os
 import tempfile
 import subprocess
+import hashlib
 
 
 def help():
@@ -29,11 +30,12 @@ def main():
         help()
         return 1
 
-    # Compute a hash based on the input arguments and the current working
+    # Compute an MD5 hash based on the input arguments and the current working
     # directory.
-    args = ' '.join(sys.argv[2:])
-    cwd = os.getcwd()
-    input_hash = str(hash((cwd, args)))
+    h = hashlib.md5()
+    h.update(' '.join(sys.argv[2:]))
+    h.update(os.getcwd())
+    input_hash = h.hexdigest()
 
     # Use the hash to "uniquely" identify a reproducer path.
     reproducer_path = os.path.join(tempfile.gettempdir(), input_hash)
