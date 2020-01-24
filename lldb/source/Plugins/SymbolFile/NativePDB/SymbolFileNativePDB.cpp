@@ -19,7 +19,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamBuffer.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
@@ -331,7 +331,7 @@ void SymbolFileNativePDB::InitializeObject() {
                    std::move(err), "Failed to initialize");
   } else {
     ts_or_err->SetSymbolFile(this);
-    auto *clang = llvm::cast_or_null<ClangASTContext>(&ts_or_err.get());
+    auto *clang = llvm::cast_or_null<TypeSystemClang>(&ts_or_err.get());
     lldbassert(clang);
     m_ast = std::make_unique<PdbAstBuilder>(*m_objfile_sp, *m_index, *clang);
   }

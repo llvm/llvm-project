@@ -27,7 +27,7 @@
 #include "lldb/Core/dwarf.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ConstString.h"
@@ -284,7 +284,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
       m_result_type = lldb_private::TypeFromParser(
           element_qual_type.getAsOpaquePtr(),
-          lldb_private::ClangASTContext::GetASTContext(
+          lldb_private::TypeSystemClang::GetASTContext(
               &result_decl->getASTContext()));
     } else if (pointer_objcobjpointertype) {
       clang::QualType element_qual_type =
@@ -292,7 +292,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
       m_result_type = lldb_private::TypeFromParser(
           element_qual_type.getAsOpaquePtr(),
-          lldb_private::ClangASTContext::GetASTContext(
+          lldb_private::TypeSystemClang::GetASTContext(
               &result_decl->getASTContext()));
     } else {
       LLDB_LOG(log, "Expected result to have pointer type, but it did not");
@@ -306,7 +306,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   } else {
     m_result_type = lldb_private::TypeFromParser(
         result_var->getType().getAsOpaquePtr(),
-        lldb_private::ClangASTContext::GetASTContext(
+        lldb_private::TypeSystemClang::GetASTContext(
             &result_decl->getASTContext()));
   }
 
@@ -1093,7 +1093,7 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
 
   lldb_private::TypeFromParser result_decl_type(
       decl->getType().getAsOpaquePtr(),
-      lldb_private::ClangASTContext::GetASTContext(&decl->getASTContext()));
+      lldb_private::TypeSystemClang::GetASTContext(&decl->getASTContext()));
 
   StringRef decl_name(decl->getName());
   lldb_private::ConstString persistent_variable_name(decl_name.data(),
@@ -1224,7 +1224,7 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
       return false;
 
     lldb_private::CompilerType compiler_type(
-        lldb_private::ClangASTContext::GetASTContext(
+        lldb_private::TypeSystemClang::GetASTContext(
             &value_decl->getASTContext()),
         value_decl->getType().getAsOpaquePtr());
 

@@ -144,12 +144,12 @@ public:
   public:
     virtual ~EncodingToType();
 
-    virtual CompilerType RealizeType(ClangASTContext &ast_ctx, const char *name,
+    virtual CompilerType RealizeType(TypeSystemClang &ast_ctx, const char *name,
                                      bool for_expression) = 0;
     virtual CompilerType RealizeType(const char *name, bool for_expression);
 
   protected:
-    std::unique_ptr<ClangASTContext> m_scratch_ast_ctx_up;
+    std::unique_ptr<TypeSystemClang> m_scratch_ast_ctx_up;
   };
 
   class ObjCExceptionPrecondition : public BreakpointPrecondition {
