@@ -592,6 +592,9 @@ public:
     };
     Primary.iterateOverBlocks(Lambda);
     Secondary.iterateOverBlocks(Lambda);
+#ifdef GWP_ASAN_HOOKS
+    GuardedAlloc.iterate(reinterpret_cast<void *>(Base), Size, Callback, Arg);
+#endif
   }
 
   bool canReturnNull() {
