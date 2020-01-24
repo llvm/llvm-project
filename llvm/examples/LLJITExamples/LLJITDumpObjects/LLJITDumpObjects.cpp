@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
 
-  cl::ParseCommandLineOptions(argc, argv, "HowToUseLLJIT");
+  cl::ParseCommandLineOptions(argc, argv, "LLJITDumpObjects");
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   outs()
