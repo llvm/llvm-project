@@ -971,6 +971,8 @@ public:
       indicatePessimisticFixpoint();
       return;
     }
+    assert(!F->getReturnType()->isVoidTy() &&
+           "Did not expect a void return type!");
 
     // The map from instruction opcodes to those instructions in the function.
     auto &OpcodeInstMap = A.getInfoCache().getOpcodeInstMapForFunction(*F);
