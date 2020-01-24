@@ -35,7 +35,12 @@ class DiagnosticConsumer;
 
 namespace format {
 
-enum class ParseError { Success = 0, Error, Unsuitable };
+enum class ParseError {
+  Success = 0,
+  Error,
+  Unsuitable,
+  BinPackTrailingCommaConflict
+};
 class ParseErrorCategory final : public std::error_category {
 public:
   const char *name() const noexcept override;
@@ -543,6 +548,20 @@ struct FormatStyle {
   ///   }
   /// \endcode
   bool BinPackArguments;
+
+  /// The style of inserting trailing commas into container literals.
+  enum TrailingCommaStyle {
+    /// Do not insert trailing commas.
+    TCS_None,
+    /// Insert trailing commas in container literals that were wrapped over
+    /// multiple lines. Note that this is conceptually incompatible with
+    /// bin-packing, because the trailing comma is used as an indicator
+    /// that a container should be formatted one-per-line (i.e. not bin-packed).
+    /// So inserting a trailing comma counteracts bin-packing.
+    TCS_Wrapped,
+  };
+
+  TrailingCommaStyle InsertTrailingCommas;
 
   /// If ``false``, a function declaration's or function definition's
   /// parameters will either all be on the same line or will have one line each.

@@ -157,6 +157,13 @@ template <> struct ScalarEnumerationTraits<FormatStyle::BinPackStyle> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<FormatStyle::TrailingCommaStyle> {
+  static void enumeration(IO &IO, FormatStyle::TrailingCommaStyle &Value) {
+    IO.enumCase(Value, "None", FormatStyle::TCS_None);
+    IO.enumCase(Value, "Wrapped", FormatStyle::TCS_Wrapped);
+  }
+};
+
 template <> struct ScalarEnumerationTraits<FormatStyle::BinaryOperatorStyle> {
   static void enumeration(IO &IO, FormatStyle::BinaryOperatorStyle &Value) {
     IO.enumCase(Value, "All", FormatStyle::BOS_All);
@@ -486,6 +493,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("IndentWidth", Style.IndentWidth);
     IO.mapOptional("IndentWrappedFunctionNames",
                    Style.IndentWrappedFunctionNames);
+    IO.mapOptional("InsertTrailingCommas", Style.InsertTrailingCommas);
     IO.mapOptional("JavaImportGroups", Style.JavaImportGroups);
     IO.mapOptional("JavaScriptQuotes", Style.JavaScriptQuotes);
     IO.mapOptional("JavaScriptWrapImports", Style.JavaScriptWrapImports);
@@ -644,6 +652,8 @@ std::string ParseErrorCategory::message(int EV) const {
     return "Invalid argument";
   case ParseError::Unsuitable:
     return "Unsuitable";
+  case ParseError::BinPackTrailingCommaConflict:
+    return "trailing comma insertion cannot be used with bin packing";
   }
   llvm_unreachable("unexpected parse error");
 }
@@ -788,6 +798,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IndentPPDirectives = FormatStyle::PPDIS_None;
   LLVMStyle.IndentWrappedFunctionNames = false;
   LLVMStyle.IndentWidth = 2;
+  LLVMStyle.InsertTrailingCommas = FormatStyle::TCS_None;
   LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
   LLVMStyle.JavaScriptWrapImports = true;
   LLVMStyle.TabWidth = 8;
@@ -946,6 +957,9 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     // taze:, triple slash directives (`/// <...`), tslint:, and @see, which is
     // commonly followed by overlong URLs.
     GoogleStyle.CommentPragmas = "(taze:|^/[ \t]*<|tslint:|@see)";
+    // TODO: enable once decided, in particular re disabling bin packing.
+    // https://google.github.io/styleguide/jsguide.html#features-arrays-trailing-comma
+    // GoogleStyle.InsertTrailingCommas = FormatStyle::TCS_Wrapped;
     GoogleStyle.MaxEmptyLinesToKeep = 3;
     GoogleStyle.NamespaceIndentation = FormatStyle::NI_All;
     GoogleStyle.SpacesInContainerLiterals = false;
@@ -1211,6 +1225,11 @@ std::error_code parseConfiguration(StringRef Text, FormatStyle *Style) {
     StyleSet.Add(std::move(DefaultStyle));
   }
   *Style = *StyleSet.Get(Language);
+  if (Style->InsertTrailingCommas != FormatStyle::TCS_None &&
+      Style->BinPackArguments) {
+    // See comment on FormatStyle::TSC_Wrapped.
+    return make_error_code(ParseError::BinPackTrailingCommaConflict);
+  }
   return make_error_code(ParseError::Success);
 }
 
@@ -1464,6 +1483,75 @@ private:
 
   bool BinPackInconclusiveFunctions;
   FormattingAttemptStatus *Status;
+};
+
+/// TrailingCommaInserter inserts trailing commas into container literals.
+/// E.g.:
+///     const x = [
+///       1,
+///     ];
+/// TrailingCommaInserter runs after formatting. To avoid causing a required
+/// reformatting (and thus reflow), it never inserts a comma that'd exceed the
+/// ColumnLimit.
+///
+/// Because trailing commas disable binpacking of arrays, TrailingCommaInserter
+/// is conceptually incompatible with bin packing.
+class TrailingCommaInserter : public TokenAnalyzer {
+public:
+  TrailingCommaInserter(const Environment &Env, const FormatStyle &Style)
+      : TokenAnalyzer(Env, Style) {}
+
+  std::pair<tooling::Replacements, unsigned>
+  analyze(TokenAnnotator &Annotator,
+          SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
+          FormatTokenLexer &Tokens) override {
+    AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
+    tooling::Replacements Result;
+    insertTrailingCommas(AnnotatedLines, Result);
+    return {Result, 0};
+  }
+
+private:
+  /// Inserts trailing commas in [] and {} initializers if they wrap over
+  /// multiple lines.
+  void insertTrailingCommas(SmallVectorImpl<AnnotatedLine *> &Lines,
+                            tooling::Replacements &Result) {
+    for (AnnotatedLine *Line : Lines) {
+      insertTrailingCommas(Line->Children, Result);
+      if (!Line->Affected)
+        continue;
+      for (FormatToken *FormatTok = Line->First; FormatTok;
+           FormatTok = FormatTok->Next) {
+        if (FormatTok->NewlinesBefore == 0)
+          continue;
+        FormatToken *Matching = FormatTok->MatchingParen;
+        if (!Matching || !FormatTok->getPreviousNonComment())
+          continue;
+        if (!(FormatTok->is(tok::r_square) &&
+              Matching->is(TT_ArrayInitializerLSquare)) &&
+            !(FormatTok->is(tok::r_brace) && Matching->is(TT_DictLiteral)))
+          continue;
+        FormatToken *Prev = FormatTok->getPreviousNonComment();
+        if (Prev->is(tok::comma) || Prev->is(tok::semi))
+          continue;
+        // getEndLoc is not reliably set during re-lexing, use text length
+        // instead.
+        SourceLocation Start =
+            Prev->Tok.getLocation().getLocWithOffset(Prev->TokenText.size());
+        // If inserting a comma would push the code over the column limit, skip
+        // this location - it'd introduce an unstable formatting due to the
+        // required reflow.
+        unsigned ColumnNumber =
+            Env.getSourceManager().getSpellingColumnNumber(Start);
+        if (ColumnNumber > Style.ColumnLimit)
+          continue;
+        // Comma insertions cannot conflict with each other, and this pass has a
+        // clean set of Replacements, so the operation below cannot fail.
+        cantFail(Result.add(
+            tooling::Replacement(Env.getSourceManager(), Start, 0, ",")));
+      }
+    }
+  }
 };
 
 // This class clean up the erroneous/redundant code around the given ranges in
@@ -2434,6 +2522,12 @@ reformat(const FormatStyle &Style, StringRef Code,
   Passes.emplace_back([&](const Environment &Env) {
     return Formatter(Env, Expanded, Status).process();
   });
+
+  if (Style.Language == FormatStyle::LK_JavaScript &&
+      Style.InsertTrailingCommas == FormatStyle::TCS_Wrapped)
+    Passes.emplace_back([&](const Environment &Env) {
+      return TrailingCommaInserter(Env, Expanded).process();
+    });
 
   auto Env =
       std::make_unique<Environment>(Code, FileName, Ranges, FirstStartColumn,
