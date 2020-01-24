@@ -443,7 +443,7 @@ bool llvm::RecursivelyDeleteTriviallyDeadInstructions(
   if (!I || !isInstructionTriviallyDead(I, TLI))
     return false;
 
-  SmallVector<Instruction*, 16> DeadInsts;
+  SmallVector<WeakTrackingVH, 16> DeadInsts;
   DeadInsts.push_back(I);
   RecursivelyDeleteTriviallyDeadInstructions(DeadInsts, TLI, MSSAU);
 
@@ -451,21 +451,24 @@ bool llvm::RecursivelyDeleteTriviallyDeadInstructions(
 }
 
 void llvm::RecursivelyDeleteTriviallyDeadInstructions(
-    SmallVectorImpl<Instruction *> &DeadInsts, const TargetLibraryInfo *TLI,
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts, const TargetLibraryInfo *TLI,
     MemorySSAUpdater *MSSAU) {
   // Process the dead instruction list until empty.
   while (!DeadInsts.empty()) {
-    Instruction &I = *DeadInsts.pop_back_val();
-    assert(I.use_empty() && "Instructions with uses are not dead.");
-    assert(isInstructionTriviallyDead(&I, TLI) &&
+    Value *V = DeadInsts.pop_back_val();
+    Instruction *I = cast_or_null<Instruction>(V);
+    if (!I)
+      continue;
+    assert(isInstructionTriviallyDead(I, TLI) &&
            "Live instruction found in dead worklist!");
+    assert(I->use_empty() && "Instructions with uses are not dead.");
 
     // Don't lose the debug info while deleting the instructions.
-    salvageDebugInfo(I);
+    salvageDebugInfo(*I);
 
     // Null out all of the instruction's operands to see if any operand becomes
     // dead as we go.
-    for (Use &OpU : I.operands()) {
+    for (Use &OpU : I->operands()) {
       Value *OpV = OpU.get();
       OpU.set(nullptr);
 
@@ -480,9 +483,9 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
           DeadInsts.push_back(OpI);
     }
     if (MSSAU)
-      MSSAU->removeMemoryAccess(&I);
+      MSSAU->removeMemoryAccess(I);
 
-    I.eraseFromParent();
+    I->eraseFromParent();
   }
 }
 
