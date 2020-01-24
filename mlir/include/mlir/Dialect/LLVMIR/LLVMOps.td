@@ -494,18 +494,21 @@ def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable", []> {
 // https://llvm.org/docs/LangRef.html#linkage-types. The names are equivalent to
 // visible names in the IR rather than to enum values names in llvm::GlobalValue
 // since the latter is easier to change.
-def LinkagePrivate             : I64EnumAttrCase<"Private", 0>;
-def LinkageInternal            : I64EnumAttrCase<"Internal", 1>;
-def LinkageAvailableExternally : I64EnumAttrCase<"AvailableExternally", 2>;
-def LinkageLinkonce            : I64EnumAttrCase<"Linkonce", 3>;
-def LinkageWeak                : I64EnumAttrCase<"Weak", 4>;
-def LinkageCommon              : I64EnumAttrCase<"Common", 5>;
-def LinkageAppending           : I64EnumAttrCase<"Appending", 6>;
-def LinkageExternWeak          : I64EnumAttrCase<"ExternWeak", 7>;
-def LinkageLinkonceODR         : I64EnumAttrCase<"LinkonceODR", 8>;
-def LinkageWeakODR             : I64EnumAttrCase<"WeakODR", 9>;
-def LinkageExternal            : I64EnumAttrCase<"External", 10>;
-def Linkage : I64EnumAttr<
+def LinkagePrivate             : LLVM_EnumAttrCase<"Private", "private", 0>;
+def LinkageInternal            : LLVM_EnumAttrCase<"Internal", "internal", 1>;
+def LinkageAvailableExternally : LLVM_EnumAttrCase<"AvailableExternally",
+                                                   "available_externally", 2>;
+def LinkageLinkonce            : LLVM_EnumAttrCase<"Linkonce", "linkonce", 3>;
+def LinkageWeak                : LLVM_EnumAttrCase<"Weak", "weak", 4>;
+def LinkageCommon              : LLVM_EnumAttrCase<"Common", "common", 5>;
+def LinkageAppending           : LLVM_EnumAttrCase<"Appending", "appending", 6>;
+def LinkageExternWeak          : LLVM_EnumAttrCase<"ExternWeak",
+                                                   "extern_weak", 7>;
+def LinkageLinkonceODR         : LLVM_EnumAttrCase<"LinkonceODR",
+                                                   "linkonce_odr", 8>;
+def LinkageWeakODR             : LLVM_EnumAttrCase<"WeakODR", "weak_odr", 9>;
+def LinkageExternal            : LLVM_EnumAttrCase<"External", "external", 10>;
+def Linkage : LLVM_EnumAttr<
     "Linkage",
     "LLVM linkage types",
     [LinkagePrivate, LinkageInternal, LinkageAvailableExternally,
