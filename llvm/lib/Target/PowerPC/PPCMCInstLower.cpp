@@ -109,10 +109,10 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
   // Add ha16() / lo16() markers if required.
   switch (access) {
     case PPCII::MO_LO:
-      Expr = PPCMCExpr::createLo(Expr, IsDarwin, Ctx);
+      Expr = PPCMCExpr::createLo(Expr, Ctx);
       break;
     case PPCII::MO_HA:
-      Expr = PPCMCExpr::createHa(Expr, IsDarwin, Ctx);
+      Expr = PPCMCExpr::createHa(Expr, Ctx);
       break;
   }
 

@@ -615,12 +615,12 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       const MCExpr *DeltaExpr = MCBinaryExpr::createSub(
           MCSymbolRefExpr::create(BaseSymbol, OutContext), PB, OutContext);
 
-      const MCExpr *DeltaHi = PPCMCExpr::createHa(DeltaExpr, false, OutContext);
+      const MCExpr *DeltaHi = PPCMCExpr::createHa(DeltaExpr, OutContext);
       EmitToStreamer(
           *OutStreamer,
           MCInstBuilder(PPC::ADDIS).addReg(PICR).addReg(PICR).addExpr(DeltaHi));
 
-      const MCExpr *DeltaLo = PPCMCExpr::createLo(DeltaExpr, false, OutContext);
+      const MCExpr *DeltaLo = PPCMCExpr::createLo(DeltaExpr, OutContext);
       EmitToStreamer(
           *OutStreamer,
           MCInstBuilder(PPC::ADDI).addReg(PICR).addReg(PICR).addExpr(DeltaLo));
@@ -1495,15 +1495,13 @@ void PPCLinuxAsmPrinter::EmitFunctionBodyStart() {
         MCBinaryExpr::createSub(MCSymbolRefExpr::create(TOCSymbol, OutContext),
                                 GlobalEntryLabelExp, OutContext);
 
-      const MCExpr *TOCDeltaHi =
-        PPCMCExpr::createHa(TOCDeltaExpr, false, OutContext);
+      const MCExpr *TOCDeltaHi = PPCMCExpr::createHa(TOCDeltaExpr, OutContext);
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDIS)
                                    .addReg(PPC::X2)
                                    .addReg(PPC::X12)
                                    .addExpr(TOCDeltaHi));
 
-      const MCExpr *TOCDeltaLo =
-        PPCMCExpr::createLo(TOCDeltaExpr, false, OutContext);
+      const MCExpr *TOCDeltaLo = PPCMCExpr::createLo(TOCDeltaExpr, OutContext);
       EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDI)
                                    .addReg(PPC::X2)
                                    .addReg(PPC::X2)
