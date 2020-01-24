@@ -589,6 +589,7 @@ enum CommandArgumentType {
   eArgTypeWatchType,
   eArgRawInput,
   eArgTypeCommand,
+  eArgTypeColumnNum,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
