@@ -3420,9 +3420,10 @@ static unsigned int getKnownAlignForUse(Attributor &A,
   }
 
   const Value *UseV = U->get();
-  if (auto *SI = dyn_cast<StoreInst>(I))
-    Alignment = SI->getAlignment();
-  else if (auto *LI = dyn_cast<LoadInst>(I))
+  if (auto *SI = dyn_cast<StoreInst>(I)) {
+    if (SI->getPointerOperand() == UseV)
+      Alignment = SI->getAlignment();
+  } else if (auto *LI = dyn_cast<LoadInst>(I))
     Alignment = LI->getAlignment();
 
   if (Alignment <= 1)
