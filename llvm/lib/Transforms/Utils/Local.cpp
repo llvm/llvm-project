@@ -450,6 +450,23 @@ bool llvm::RecursivelyDeleteTriviallyDeadInstructions(
   return true;
 }
 
+bool llvm::RecursivelyDeleteTriviallyDeadInstructionsPermissive(
+    SmallVectorImpl<WeakTrackingVH> &DeadInsts, const TargetLibraryInfo *TLI,
+    MemorySSAUpdater *MSSAU) {
+  unsigned S = 0, E = DeadInsts.size(), Alive = 0;
+  for (; S != E; ++S) {
+    auto *I = cast<Instruction>(DeadInsts[S]);
+    if (!isInstructionTriviallyDead(I)) {
+      DeadInsts[S] = nullptr;
+      ++Alive;
+    }
+  }
+  if (Alive == E)
+    return false;
+  RecursivelyDeleteTriviallyDeadInstructions(DeadInsts, TLI, MSSAU);
+  return true;
+}
+
 void llvm::RecursivelyDeleteTriviallyDeadInstructions(
     SmallVectorImpl<WeakTrackingVH> &DeadInsts, const TargetLibraryInfo *TLI,
     MemorySSAUpdater *MSSAU) {
