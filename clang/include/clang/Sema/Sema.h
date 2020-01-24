@@ -372,16 +372,17 @@ class Sema final {
                                       QualType ResultTy,
                                       ArrayRef<QualType> Args);
 
+public:
   /// The maximum alignment, same as in llvm::Value. We duplicate them here
   /// because that allows us not to duplicate the constants in clang code,
   /// which we must to since we can't directly use the llvm constants.
+  /// The value is verified against llvm here: lib/CodeGen/CGValue.h
   ///
   /// This is the greatest alignment value supported by load, store, and alloca
   /// instructions, and global values.
   static const unsigned MaxAlignmentExponent = 29;
   static const unsigned MaximumAlignment = 1u << MaxAlignmentExponent;
 
-public:
   typedef OpaquePtr<DeclGroupRef> DeclGroupPtrTy;
   typedef OpaquePtr<TemplateName> TemplateTy;
   typedef OpaquePtr<QualType> TypeTy;
