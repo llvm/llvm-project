@@ -158,10 +158,10 @@ INDEXSTORE_PUBLIC bool
 indexstore_unit_event_notification_is_initial(indexstore_unit_event_notification_t);
 
 typedef enum {
-  INDEXSTORE_UNIT_EVENT_REMOVED = 1,
-  INDEXSTORE_UNIT_EVENT_MODIFIED = 2,
-  INDEXSTORE_UNIT_EVENT_DIRECTORY_DELETED = 3,
-  INDEXSTORE_UNIT_EVENT_FAILURE = 4,
+  INDEXSTORE_UNIT_EVENT_REMOVED = 2,
+  INDEXSTORE_UNIT_EVENT_MODIFIED = 3,
+  INDEXSTORE_UNIT_EVENT_DIRECTORY_DELETED = 4,
+  INDEXSTORE_UNIT_EVENT_FAILURE = 5,
 } indexstore_unit_event_kind_t;
 
 INDEXSTORE_PUBLIC indexstore_unit_event_kind_t
