@@ -1517,8 +1517,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     // Speculation tracking/SLH assumes that optimized TB(N)Z/CB(N)Z
     // instructions will not be produced, as they are conditional branch
     // instructions that do not set flags.
-    bool ProduceNonFlagSettingCondBr =
-        !MF.getFunction().hasFnAttribute(Attribute::SpeculativeLoadHardening);
     if (ProduceNonFlagSettingCondBr && selectCompareBranch(I, MF, MRI))
       return true;
 
