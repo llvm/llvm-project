@@ -1,4 +1,4 @@
-; RUN: opt -S -wholeprogramdevirt %s | FileCheck %s
+; RUN: opt -S -wholeprogramdevirt -whole-program-visibility %s | FileCheck %s
 
 ; Test that we correctly handle function type mismatches in argument counts
 ; and bitwidths. We handle an argument count mismatch by refusing
