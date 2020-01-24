@@ -51,7 +51,7 @@ Major New Features
   restores the former behavior. The ``-v`` and ``-###`` flags will print
   "(in-process)" when compilations are done in-process.
 
-- ...
+- Concepts support. Clang now supports C++2a Concepts under the -std=c++2a flag.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -122,6 +122,13 @@ New Compiler Flags
   You can also force vzeroupper insertion to be used on CPUs that normally
   wouldn't with -mvzeroupper.
 
+- The -fno-concept-satisfaction-caching can be used to disable caching for
+  satisfactions of Concepts. The C++2a draft standard does not currently permit
+  this caching, but disabling it may incur significant compile-time costs. This
+  flag is intended for experimentation purposes and may be removed at any time;
+  please let us know if you encounter a situation where you need to specify this
+  flag for correct program behavior.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -131,6 +138,8 @@ future versions of Clang.
 - -mmpx used to enable the __MPX__ preprocessor define for the Intel MPX
   instructions. There were no MPX intrinsics.
 - -mno-mpx used to disable -mmpx and is the default behavior.
+- -fconcepts-ts previously used to enable experimental concepts support. Use
+  -std=c++2a instead to enable Concepts support.
 
 - ...
 
