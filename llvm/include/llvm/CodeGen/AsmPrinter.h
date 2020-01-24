@@ -113,6 +113,9 @@ public:
 
   ProfileSummaryInfo *PSI;
 
+  /// The symbol for the entry in __patchable_function_entires.
+  MCSymbol *CurrentPatchableFunctionEntrySym = nullptr;
+
   /// The symbol for the current function. This is recalculated at the beginning
   /// of each call to runOnMachineFunction().
   MCSymbol *CurrentFnSym = nullptr;
@@ -449,6 +452,9 @@ public:
   /// instructions in verbose mode.
   virtual void emitImplicitDef(const MachineInstr *MI) const;
 
+  /// Emit N NOP instructions.
+  void emitNops(unsigned N);
+
   //===------------------------------------------------------------------===//
   // Symbol Lowering Routines.
   //===------------------------------------------------------------------===//
@@ -653,7 +659,7 @@ public:
 
   /// Return the alignment for the specified \p GV.
   static Align getGVAlignment(const GlobalValue *GV, const DataLayout &DL,
-                              Align InAlign = Align::None());
+                              Align InAlign = Align(1));
 
 private:
   /// Private state for PrintSpecial()

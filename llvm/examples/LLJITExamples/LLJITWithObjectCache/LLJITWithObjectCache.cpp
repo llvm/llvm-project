@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
 
-  cl::ParseCommandLineOptions(argc, argv, "HowToUseLLJIT");
+  cl::ParseCommandLineOptions(argc, argv, "LLJITWithObjectCache");
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   MyObjectCache MyCache;

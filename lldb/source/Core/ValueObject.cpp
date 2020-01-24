@@ -1,4 +1,4 @@
-//===-- ValueObject.cpp -----------------------------------------*- C++ -*-===//
+//===-- ValueObject.cpp ---------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,7 +25,7 @@
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Declaration.h"
@@ -2019,7 +2019,7 @@ bool ValueObject::GetBaseClassPath(Stream &s) {
         GetParent() && GetParent()->GetBaseClassPath(s);
     CompilerType compiler_type = GetCompilerType();
     llvm::Optional<std::string> cxx_class_name =
-        ClangASTContext::GetCXXClassName(compiler_type);
+        TypeSystemClang::GetCXXClassName(compiler_type);
     if (cxx_class_name) {
       if (parent_had_base_class)
         s.PutCString("::");

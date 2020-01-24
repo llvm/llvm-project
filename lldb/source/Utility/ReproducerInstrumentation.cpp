@@ -1,4 +1,4 @@
-//===-- ReproducerInstrumentation.cpp ---------------------------*- C++ -*-===//
+//===-- ReproducerInstrumentation.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/Utility/Reproducer.h"
+#include <stdio.h>
 
 using namespace lldb_private;
 using namespace lldb_private::repro;
@@ -46,6 +47,10 @@ bool Registry::Replay(llvm::StringRef buffer) {
 #ifndef LLDB_REPRO_INSTR_TRACE
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_API);
 #endif
+
+  // Disable buffering stdout so that we approximate the way things get flushed
+  // during an interactive session.
+  setvbuf(stdout, nullptr, _IONBF, 0);
 
   Deserializer deserializer(buffer);
   while (deserializer.HasData(1)) {

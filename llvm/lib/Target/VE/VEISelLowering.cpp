@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VEISelLowering.h"
+#include "MCTargetDesc/VEMCExpr.h"
 #include "VERegisterInfo.h"
 #include "VETargetMachine.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -222,6 +223,10 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::f32, &VE::F32RegClass);
   addRegisterClass(MVT::f64, &VE::I64RegClass);
 
+  // Custom legalize GlobalAddress nodes into LO/HI parts.
+  MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
+  setOperationAction(ISD::GlobalAddress, PtrVT, Custom);
+
   setStackPointerRegisterToSaveRestore(VE::SX11);
 
   // Set function alignment to 16 bytes
@@ -234,12 +239,17 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
 }
 
 const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
+#define TARGET_NODE_CASE(NAME)                                                 \
+  case VEISD::NAME:                                                            \
+    return "VEISD::" #NAME;
   switch ((VEISD::NodeType)Opcode) {
   case VEISD::FIRST_NUMBER:
     break;
-  case VEISD::RET_FLAG:
-    return "VEISD::RET_FLAG";
+    TARGET_NODE_CASE(Lo)
+    TARGET_NODE_CASE(Hi)
+    TARGET_NODE_CASE(RET_FLAG)
   }
+#undef TARGET_NODE_CASE
   return nullptr;
 }
 
@@ -247,3 +257,59 @@ EVT VETargetLowering::getSetCCResultType(const DataLayout &, LLVMContext &,
                                          EVT VT) const {
   return MVT::i32;
 }
+
+// Convert to a target node and set target flags.
+SDValue VETargetLowering::withTargetFlags(SDValue Op, unsigned TF,
+                                          SelectionDAG &DAG) const {
+  if (const GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op))
+    return DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(GA),
+                                      GA->getValueType(0), GA->getOffset(), TF);
+
+  llvm_unreachable("Unhandled address SDNode");
+}
+
+// Split Op into high and low parts according to HiTF and LoTF.
+// Return an ADD node combining the parts.
+SDValue VETargetLowering::makeHiLoPair(SDValue Op, unsigned HiTF, unsigned LoTF,
+                                       SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue Hi = DAG.getNode(VEISD::Hi, DL, VT, withTargetFlags(Op, HiTF, DAG));
+  SDValue Lo = DAG.getNode(VEISD::Lo, DL, VT, withTargetFlags(Op, LoTF, DAG));
+  return DAG.getNode(ISD::ADD, DL, VT, Hi, Lo);
+}
+
+// Build SDNodes for producing an address from a GlobalAddress, ConstantPool,
+// or ExternalSymbol SDNode.
+SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  assert(!isPositionIndependent() && "TODO implement PIC");
+
+  // This is one of the absolute code models.
+  switch (getTargetMachine().getCodeModel()) {
+  default:
+    llvm_unreachable("Unsupported absolute code model");
+  case CodeModel::Small:
+  case CodeModel::Medium:
+  case CodeModel::Large:
+    // abs64.
+    return makeHiLoPair(Op, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
+  }
+}
+
+/// Custom Lower {
+SDValue VETargetLowering::LowerGlobalAddress(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  return makeAddress(Op, DAG);
+}
+
+SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
+  switch (Op.getOpcode()) {
+  default:
+    llvm_unreachable("Should not custom lower this!");
+  case ISD::GlobalAddress:
+    return LowerGlobalAddress(Op, DAG);
+  }
+}
+/// } Custom Lower

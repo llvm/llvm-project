@@ -75,7 +75,6 @@ protected:
     auto TU = TestTU::withCode(A.code());
     TU.ExtraArgs = Flags;
     auto AST = TU.build();
-    EXPECT_THAT(AST.getDiagnostics(), ::testing::IsEmpty()) << Code;
     llvm::Annotations::Range R = A.range();
     SelectionTree Selection(AST.getASTContext(), AST.getTokens(), R.Begin,
                             R.End);
@@ -339,6 +338,24 @@ TEST_F(TargetDeclTest, ClassTemplate) {
                {"struct Test", Rel::TemplatePattern});
 }
 
+TEST_F(TargetDeclTest, Concept) {
+  Code = R"cpp(
+    template <typename T>
+    concept Fooable = requires (T t) { t.foo(); };
+
+    template <typename T> requires [[Fooable]]<T>
+    void bar(T t) {
+      t.foo();
+    }
+  )cpp";
+  Flags.push_back("-std=c++2a");
+  EXPECT_DECLS(
+      "ConceptSpecializationExpr",
+      // FIXME: Should we truncate the pretty-printed form of a concept decl
+      // somewhere?
+      {"template <typename T> concept Fooable = requires (T t) { t.foo(); };"});
+}
+
 TEST_F(TargetDeclTest, FunctionTemplate) {
   Code = R"cpp(
     // Implicit specialization.
@@ -571,14 +588,9 @@ protected:
     // FIXME: Auto-completion in a template requires disabling delayed template
     // parsing.
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
-    TU.ExtraArgs.push_back("-std=c++17");
+    TU.ExtraArgs.push_back("-std=c++2a");
 
     auto AST = TU.build();
-    for (auto &D : AST.getDiagnostics()) {
-      if (D.Severity > DiagnosticsEngine::Warning)
-        ADD_FAILURE() << D << Code;
-    }
-
     auto *TestDecl = &findDecl(AST, "foo");
     if (auto *T = llvm::dyn_cast<FunctionTemplateDecl>(TestDecl))
       TestDecl = T->getTemplatedDecl();
@@ -1091,7 +1103,27 @@ TEST_F(FindExplicitReferencesTest, All) {
         "0: targets = {foo::T}, decl\n"
         "1: targets = {foo::V}, decl\n"
         "2: targets = {vector}\n"
-        "3: targets = {foo::T}\n"}};
+        "3: targets = {foo::T}\n"},
+       // Concept
+       {
+           R"cpp(
+              template <typename T>
+              concept Drawable = requires (T t) { t.draw(); };
+
+              namespace foo {
+                template <typename $0^T> requires $1^Drawable<$2^T>
+                void $3^bar($4^T $5^t) {
+                  $6^t.draw();
+                }
+              }
+          )cpp",
+           "0: targets = {T}, decl\n"
+           "1: targets = {Drawable}\n"
+           "2: targets = {T}\n"
+           "3: targets = {foo::bar}, decl\n"
+           "4: targets = {T}\n"
+           "5: targets = {t}, decl\n"
+           "6: targets = {t}\n"}};
 
   for (const auto &C : Cases) {
     llvm::StringRef ExpectedCode = C.first;

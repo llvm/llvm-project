@@ -1848,6 +1848,8 @@ Decl *TemplateDeclInstantiator::VisitFunctionDecl(
   // FIXME: Concepts: Do not substitute into constraint expressions
   Expr *TrailingRequiresClause = D->getTrailingRequiresClause();
   if (TrailingRequiresClause) {
+    EnterExpressionEvaluationContext ConstantEvaluated(
+        SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
     ExprResult SubstRC = SemaRef.SubstExpr(TrailingRequiresClause,
                                            TemplateArgs);
     if (SubstRC.isInvalid())
@@ -2186,6 +2188,8 @@ Decl *TemplateDeclInstantiator::VisitCXXMethodDecl(
   // FIXME: Concepts: Do not substitute into constraint expressions
   Expr *TrailingRequiresClause = D->getTrailingRequiresClause();
   if (TrailingRequiresClause) {
+    EnterExpressionEvaluationContext ConstantEvaluated(
+        SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
     ExprResult SubstRC = SemaRef.SubstExpr(TrailingRequiresClause,
                                            TemplateArgs);
     if (SubstRC.isInvalid())
@@ -3729,6 +3733,8 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
   // checking satisfaction.
   Expr *InstRequiresClause = nullptr;
   if (Expr *E = L->getRequiresClause()) {
+    EnterExpressionEvaluationContext ConstantEvaluated(
+        SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
     ExprResult Res = SemaRef.SubstExpr(E, TemplateArgs);
     if (Res.isInvalid() || !Res.isUsable()) {
       return nullptr;
@@ -4252,9 +4258,9 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
         MLTAL.getInnermost(), SourceRange());
     if (Inst.isInvalid())
       return true;
-    if (addInstantiatedParametersToScope(*this, Decl,
-                                        Decl->getTemplateInstantiationPattern(),
-                                         Scope, MLTAL))
+    if (addInstantiatedParametersToScope(
+            *this, Decl, Decl->getPrimaryTemplate()->getTemplatedDecl(),
+            Scope, MLTAL))
       return true;
   }
 

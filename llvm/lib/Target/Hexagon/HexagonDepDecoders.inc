@@ -65,16 +65,6 @@ static DecodeStatus s6_3ImmDecoder(MCInst &MI, unsigned tmp,
   signedDecoder<9>(MI, tmp, Decoder);
   return MCDisassembler::Success;
 }
-static DecodeStatus s10_6ImmDecoder(MCInst &MI, unsigned tmp,
-    uint64_t, const void *Decoder) {
-  signedDecoder<16>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s10_0ImmDecoder(MCInst &MI, unsigned tmp,
-    uint64_t, const void *Decoder) {
-  signedDecoder<10>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
 static DecodeStatus s3_0ImmDecoder(MCInst &MI, unsigned tmp,
     uint64_t, const void *Decoder) {
   signedDecoder<3>(MI, tmp, Decoder);

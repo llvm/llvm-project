@@ -79,7 +79,8 @@ void FoldSingleEntryPHINodes(BasicBlock *BB,
 /// recursively delete any operands that become dead as a result. This includes
 /// tracing the def-use list from the PHI to see if it is ultimately unused or
 /// if it reaches an unused cycle. Return true if any PHIs were deleted.
-bool DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI = nullptr);
+bool DeleteDeadPHIs(BasicBlock *BB, const TargetLibraryInfo *TLI = nullptr,
+                    MemorySSAUpdater *MSSAU = nullptr);
 
 /// Attempts to merge a block into its predecessor, if possible. The return
 /// value indicates success or failure.

@@ -883,38 +883,41 @@ public:
         break;
       case ImmediateArg::BoundsType::UInt:
         lo = 0;
-        hi = IA.i1;
+        hi = llvm::APInt::getMaxValue(IA.i1).zext(128);
         break;
-      }
-
-      llvm::APInt typelo, typehi;
-      unsigned Bits = IA.ArgType->sizeInBits();
-      if (cast<ScalarType>(IA.ArgType)->kind() == ScalarTypeKind::SignedInt) {
-        typelo = llvm::APInt::getSignedMinValue(Bits).sext(128);
-        typehi = llvm::APInt::getSignedMaxValue(Bits).sext(128);
-      } else {
-        typelo = llvm::APInt::getMinValue(Bits).zext(128);
-        typehi = llvm::APInt::getMaxValue(Bits).zext(128);
       }
 
       std::string Index = utostr(kv.first);
 
-      if (lo.sle(typelo) && hi.sge(typehi))
-        SemaChecks.push_back("SemaBuiltinConstantArg(TheCall, " + Index + ")");
-      else
+      // Emit a range check if the legal range of values for the
+      // immediate is smaller than the _possible_ range of values for
+      // its type.
+      unsigned ArgTypeBits = IA.ArgType->sizeInBits();
+      llvm::APInt ArgTypeRange = llvm::APInt::getMaxValue(ArgTypeBits).zext(128);
+      llvm::APInt ActualRange = (hi-lo).trunc(64).sext(128);
+      if (ActualRange.ult(ArgTypeRange))
         SemaChecks.push_back("SemaBuiltinConstantArgRange(TheCall, " + Index +
                              ", " + signedHexLiteral(lo) + ", " +
                              signedHexLiteral(hi) + ")");
 
       if (!IA.ExtraCheckType.empty()) {
         std::string Suffix;
-        if (!IA.ExtraCheckArgs.empty())
-          Suffix = (Twine(", ") + IA.ExtraCheckArgs).str();
+        if (!IA.ExtraCheckArgs.empty()) {
+          std::string tmp;
+          StringRef Arg = IA.ExtraCheckArgs;
+          if (Arg == "!lanesize") {
+            tmp = utostr(IA.ArgType->sizeInBits());
+            Arg = tmp;
+          }
+          Suffix = (Twine(", ") + Arg).str();
+        }
         SemaChecks.push_back((Twine("SemaBuiltinConstantArg") +
                               IA.ExtraCheckType + "(TheCall, " + Index +
                               Suffix + ")")
                                  .str());
       }
+
+      assert(!SemaChecks.empty());
     }
     if (SemaChecks.empty())
       return "";
@@ -1600,6 +1603,10 @@ void MveEmitter::EmitHeader(raw_ostream &OS) {
         "#endif\n"
         "\n"
         "#include <stdint.h>\n"
+        "\n"
+        "#ifdef __cplusplus\n"
+        "extern \"C\" {\n"
+        "#endif\n"
         "\n";
 
   for (size_t i = 0; i < NumParts; ++i) {
@@ -1618,7 +1625,11 @@ void MveEmitter::EmitHeader(raw_ostream &OS) {
       OS << "#endif /* " << condition << " */\n\n";
   }
 
-  OS << "#endif /* __ARM_MVE_H */\n";
+  OS << "#ifdef __cplusplus\n"
+        "} /* extern \"C\" */\n"
+        "#endif\n"
+        "\n"
+        "#endif /* __ARM_MVE_H */\n";
 }
 
 void MveEmitter::EmitBuiltinDef(raw_ostream &OS) {

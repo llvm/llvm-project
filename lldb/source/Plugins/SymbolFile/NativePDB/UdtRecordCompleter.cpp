@@ -5,7 +5,7 @@
 #include "PdbSymUid.h"
 #include "PdbUtil.h"
 
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ClangASTImporter.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -128,7 +128,7 @@ Error UdtRecordCompleter::visitKnownMember(
 
   lldb::AccessType access =
       TranslateMemberAccess(static_data_member.getAccess());
-  ClangASTContext::AddVariableToRecordType(
+  TypeSystemClang::AddVariableToRecordType(
       m_derived_ct, static_data_member.Name, member_ct, access);
 
   // FIXME: Add a PdbSymUid namespace for field list members and update
@@ -164,7 +164,7 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 
   lldb::AccessType access = TranslateMemberAccess(data_member.getAccess());
 
-  clang::FieldDecl *decl = ClangASTContext::AddFieldToRecordType(
+  clang::FieldDecl *decl = TypeSystemClang::AddFieldToRecordType(
       m_derived_ct, data_member.Name, m_ast_builder.ToCompilerType(member_qt),
       access, bitfield_width);
   // FIXME: Add a PdbSymUid namespace for field list members and update
@@ -223,12 +223,12 @@ void UdtRecordCompleter::complete() {
   for (auto &ib : m_bases)
     bases.push_back(std::move(ib.second));
 
-  ClangASTContext &clang = m_ast_builder.clang();
+  TypeSystemClang &clang = m_ast_builder.clang();
   clang.TransferBaseClasses(m_derived_ct.GetOpaqueQualType(), std::move(bases));
 
   clang.AddMethodOverridesForCXXRecordType(m_derived_ct.GetOpaqueQualType());
-  ClangASTContext::BuildIndirectFields(m_derived_ct);
-  ClangASTContext::CompleteTagDeclarationDefinition(m_derived_ct);
+  TypeSystemClang::BuildIndirectFields(m_derived_ct);
+  TypeSystemClang::CompleteTagDeclarationDefinition(m_derived_ct);
 
   if (auto *record_decl = llvm::dyn_cast<clang::CXXRecordDecl>(&m_tag_decl)) {
     m_ast_builder.importer().SetRecordLayout(record_decl, m_layout);

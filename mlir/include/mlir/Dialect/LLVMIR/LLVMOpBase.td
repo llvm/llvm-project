@@ -56,4 +56,10 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<OpTrait> traits = []> :
 class LLVM_Op<string mnemonic, list<OpTrait> traits = []> :
     LLVM_OpBase<LLVM_Dialect, mnemonic, traits>;
 
+// Base class for LLVM intrinsics operation. It is the same as an LLVM_Op
+// but the operation has a ".intr." element in the prefix becoming
+// "llvm.intr.*".
+class LLVM_IntrOp<string mnemonic, list<OpTrait> traits = []> :
+    LLVM_Op<"intr."#mnemonic, traits>;
+
 #endif  // LLVMIR_OP_BASE

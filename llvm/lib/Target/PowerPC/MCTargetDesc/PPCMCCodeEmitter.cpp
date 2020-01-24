@@ -257,7 +257,7 @@ static unsigned getOpIdxForMO(const MCInst &MI, const MCOperand &MO) {
   return ~0U; // Silence any warnings about no return.
 }
 
-unsigned PPCMCCodeEmitter::
+uint64_t PPCMCCodeEmitter::
 getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                   SmallVectorImpl<MCFixup> &Fixups,
                   const MCSubtargetInfo &STI) const {

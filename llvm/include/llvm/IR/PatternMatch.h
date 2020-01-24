@@ -153,8 +153,10 @@ inline match_combine_and<LTy, RTy> m_CombineAnd(const LTy &L, const RTy &R) {
 
 struct apint_match {
   const APInt *&Res;
+  bool AllowUndef;
 
-  apint_match(const APInt *&R) : Res(R) {}
+  apint_match(const APInt *&Res, bool AllowUndef)
+    : Res(Res), AllowUndef(AllowUndef) {}
 
   template <typename ITy> bool match(ITy *V) {
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
@@ -163,7 +165,8 @@ struct apint_match {
     }
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
-        if (auto *CI = dyn_cast_or_null<ConstantInt>(C->getSplatValue())) {
+        if (auto *CI = dyn_cast_or_null<ConstantInt>(
+                C->getSplatValue(AllowUndef))) {
           Res = &CI->getValue();
           return true;
         }
@@ -175,7 +178,11 @@ struct apint_match {
 // function for both apint/apfloat.
 struct apfloat_match {
   const APFloat *&Res;
-  apfloat_match(const APFloat *&R) : Res(R) {}
+  bool AllowUndef;
+
+  apfloat_match(const APFloat *&Res, bool AllowUndef)
+      : Res(Res), AllowUndef(AllowUndef) {}
+
   template <typename ITy> bool match(ITy *V) {
     if (auto *CI = dyn_cast<ConstantFP>(V)) {
       Res = &CI->getValueAPF();
@@ -183,7 +190,8 @@ struct apfloat_match {
     }
     if (V->getType()->isVectorTy())
       if (const auto *C = dyn_cast<Constant>(V))
-        if (auto *CI = dyn_cast_or_null<ConstantFP>(C->getSplatValue())) {
+        if (auto *CI = dyn_cast_or_null<ConstantFP>(
+                C->getSplatValue(AllowUndef))) {
           Res = &CI->getValueAPF();
           return true;
         }
@@ -193,11 +201,37 @@ struct apfloat_match {
 
 /// Match a ConstantInt or splatted ConstantVector, binding the
 /// specified pointer to the contained APInt.
-inline apint_match m_APInt(const APInt *&Res) { return Res; }
+inline apint_match m_APInt(const APInt *&Res) {
+  // Forbid undefs by default to maintain previous behavior.
+  return apint_match(Res, /* AllowUndef */ false);
+}
+
+/// Match APInt while allowing undefs in splat vector constants.
+inline apint_match m_APIntAllowUndef(const APInt *&Res) {
+  return apint_match(Res, /* AllowUndef */ true);
+}
+
+/// Match APInt while forbidding undefs in splat vector constants.
+inline apint_match m_APIntForbidUndef(const APInt *&Res) {
+  return apint_match(Res, /* AllowUndef */ false);
+}
 
 /// Match a ConstantFP or splatted ConstantVector, binding the
 /// specified pointer to the contained APFloat.
-inline apfloat_match m_APFloat(const APFloat *&Res) { return Res; }
+inline apfloat_match m_APFloat(const APFloat *&Res) {
+  // Forbid undefs by default to maintain previous behavior.
+  return apfloat_match(Res, /* AllowUndef */ false);
+}
+
+/// Match APFloat while allowing undefs in splat vector constants.
+inline apfloat_match m_APFloatAllowUndef(const APFloat *&Res) {
+  return apfloat_match(Res, /* AllowUndef */ true);
+}
+
+/// Match APFloat while forbidding undefs in splat vector constants.
+inline apfloat_match m_APFloatForbidUndef(const APFloat *&Res) {
+  return apfloat_match(Res, /* AllowUndef */ false);
+}
 
 template <int64_t Val> struct constantint_match {
   template <typename ITy> bool match(ITy *V) {
@@ -1156,13 +1190,16 @@ struct CmpClass_match {
       : Predicate(Pred), L(LHS), R(RHS) {}
 
   template <typename OpTy> bool match(OpTy *V) {
-    if (auto *I = dyn_cast<Class>(V))
-      if ((L.match(I->getOperand(0)) && R.match(I->getOperand(1))) ||
-          (Commutable && L.match(I->getOperand(1)) &&
-           R.match(I->getOperand(0)))) {
+    if (auto *I = dyn_cast<Class>(V)) {
+      if (L.match(I->getOperand(0)) && R.match(I->getOperand(1))) {
         Predicate = I->getPredicate();
         return true;
+      } else if (Commutable && L.match(I->getOperand(1)) &&
+           R.match(I->getOperand(0))) {
+        Predicate = I->getSwappedPredicate();
+        return true;
       }
+    }
     return false;
   }
 };
@@ -1848,7 +1885,7 @@ inline AnyBinaryOp_match<LHS, RHS, true> m_c_BinOp(const LHS &L, const RHS &R) {
 }
 
 /// Matches an ICmp with a predicate over LHS and RHS in either order.
-/// Does not swap the predicate.
+/// Swaps the predicate if operands are commuted.
 template <typename LHS, typename RHS>
 inline CmpClass_match<LHS, RHS, ICmpInst, ICmpInst::Predicate, true>
 m_c_ICmp(ICmpInst::Predicate &Pred, const LHS &L, const RHS &R) {

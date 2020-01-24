@@ -1,4 +1,4 @@
-//===-- ASTResultSynthesizer.cpp --------------------------------*- C++ -*-===//
+//===-- ASTResultSynthesizer.cpp ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 
 #include "ClangPersistentVariables.h"
 
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ClangASTImporter.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -453,7 +453,7 @@ void ASTResultSynthesizer::CommitPersistentDecls() {
     return;
 
   auto *persistent_vars = llvm::cast<ClangPersistentVariables>(state);
-  ClangASTContext *scratch_ctx = ClangASTContext::GetScratch(m_target);
+  TypeSystemClang *scratch_ctx = TypeSystemClang::GetScratch(m_target);
 
   for (clang::NamedDecl *decl : m_decls) {
     StringRef name = decl->getName();

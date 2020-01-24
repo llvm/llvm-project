@@ -51,7 +51,7 @@ struct DeclStatus {
 class PdbAstBuilder {
 public:
   // Constructors and Destructors
-  PdbAstBuilder(ObjectFile &obj, PdbIndex &index, ClangASTContext &clang);
+  PdbAstBuilder(ObjectFile &obj, PdbIndex &index, TypeSystemClang &clang);
 
   lldb_private::CompilerDeclContext GetTranslationUnitDecl();
 
@@ -80,7 +80,7 @@ public:
   clang::Decl *FromCompilerDecl(CompilerDecl decl);
   clang::DeclContext *FromCompilerDeclContext(CompilerDeclContext context);
 
-  ClangASTContext &clang() { return m_clang; }
+  TypeSystemClang &clang() { return m_clang; }
   ClangASTImporter &importer() { return m_importer; }
 
   void Dump(Stream &stream);
@@ -129,7 +129,7 @@ private:
   clang::QualType CreateSimpleType(TypeIndex ti);
 
   PdbIndex &m_index;
-  ClangASTContext &m_clang;
+  TypeSystemClang &m_clang;
 
   ClangASTImporter m_importer;
 

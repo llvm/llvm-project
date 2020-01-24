@@ -129,20 +129,19 @@ public:
 private:
   unsigned getPointerAddressSpace(Value *I);
 
-  unsigned getAlignment(LoadInst *LI) const {
-    unsigned Align = LI->getAlignment();
-    if (Align != 0)
-      return Align;
+  /// TODO: Remove this function once transition to Align is over.
+  unsigned getAlignment(LoadInst *LI) const { return getAlign(LI).value(); }
 
-    return DL.getABITypeAlignment(LI->getType());
+  Align getAlign(LoadInst *LI) const {
+    return DL.getValueOrABITypeAlignment(LI->getAlign(), LI->getType());
   }
 
-  unsigned getAlignment(StoreInst *SI) const {
-    unsigned Align = SI->getAlignment();
-    if (Align != 0)
-      return Align;
+  /// TODO: Remove this function once transition to Align is over.
+  unsigned getAlignment(StoreInst *SI) const { return getAlign(SI).value(); }
 
-    return DL.getABITypeAlignment(SI->getValueOperand()->getType());
+  Align getAlign(StoreInst *SI) const {
+    return DL.getValueOrABITypeAlignment(SI->getAlign(),
+                                         SI->getValueOperand()->getType());
   }
 
   static const unsigned MaxDepth = 3;
@@ -961,7 +960,7 @@ bool Vectorizer::vectorizeStoreChain(
   unsigned VecRegSize = TTI.getLoadStoreVecRegBitWidth(AS);
   unsigned VF = VecRegSize / Sz;
   unsigned ChainSize = Chain.size();
-  unsigned Alignment = getAlignment(S0);
+  Align Alignment = getAlign(S0);
 
   if (!isPowerOf2_32(Sz) || VF < 2 || ChainSize < 2) {
     InstructionsProcessed->insert(Chain.begin(), Chain.end());
@@ -1019,7 +1018,7 @@ bool Vectorizer::vectorizeStoreChain(
   InstructionsProcessed->insert(Chain.begin(), Chain.end());
 
   // If the store is going to be misaligned, don't vectorize it.
-  if (accessIsMisaligned(SzInBytes, AS, Alignment)) {
+  if (accessIsMisaligned(SzInBytes, AS, Alignment.value())) {
     if (S0->getPointerAddressSpace() != DL.getAllocaAddrSpace()) {
       auto Chains = splitOddVectorElts(Chain, Sz);
       return vectorizeStoreChain(Chains.first, InstructionsProcessed) |
@@ -1030,10 +1029,10 @@ bool Vectorizer::vectorizeStoreChain(
                                                    StackAdjustedAlignment,
                                                    DL, S0, nullptr, &DT);
     if (NewAlign != 0)
-      Alignment = NewAlign;
+      Alignment = Align(NewAlign);
   }
 
-  if (!TTI.isLegalToVectorizeStoreChain(SzInBytes, Alignment, AS)) {
+  if (!TTI.isLegalToVectorizeStoreChain(SzInBytes, Alignment.value(), AS)) {
     auto Chains = splitOddVectorElts(Chain, Sz);
     return vectorizeStoreChain(Chains.first, InstructionsProcessed) |
            vectorizeStoreChain(Chains.second, InstructionsProcessed);
@@ -1194,7 +1193,8 @@ bool Vectorizer::vectorizeLoadChain(
 
   Value *Bitcast =
       Builder.CreateBitCast(L0->getPointerOperand(), VecTy->getPointerTo(AS));
-  LoadInst *LI = Builder.CreateAlignedLoad(VecTy, Bitcast, Alignment);
+  LoadInst *LI =
+      Builder.CreateAlignedLoad(VecTy, Bitcast, MaybeAlign(Alignment));
   propagateMetadata(LI, Chain);
 
   if (VecLoadTy) {

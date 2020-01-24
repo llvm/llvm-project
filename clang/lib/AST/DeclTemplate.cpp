@@ -488,7 +488,10 @@ static void ProfileTemplateParameterList(ASTContext &C,
     if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(D)) {
       ID.AddInteger(1);
       ID.AddBoolean(TTP->isParameterPack());
-      // TODO: Concepts: profile type-constraints.
+      ID.AddBoolean(TTP->hasTypeConstraint());
+      if (const TypeConstraint *TC = TTP->getTypeConstraint())
+        TC->getImmediatelyDeclaredConstraint()->Profile(ID, C,
+                                                        /*Canonical=*/true);
       continue;
     }
     const auto *TTP = cast<TemplateTemplateParmDecl>(D);
@@ -690,7 +693,7 @@ NonTypeTemplateParmDecl::Create(const ASTContext &C, DeclContext *DC,
                                 QualType T, bool ParameterPack,
                                 TypeSourceInfo *TInfo) {
   AutoType *AT =
-      C.getLangOpts().ConceptsTS ? T->getContainedAutoType() : nullptr;
+      C.getLangOpts().CPlusPlus2a ? T->getContainedAutoType() : nullptr;
   return new (C, DC,
               additionalSizeToAlloc<std::pair<QualType, TypeSourceInfo *>,
                                     Expr *>(0,

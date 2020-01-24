@@ -209,3 +209,12 @@ define <4 x i16> @zext_v4s8(<4 x i8> %in) {
   ret <4 x i16> %ext
 }
 
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: cannot select: RET_ReallyLR implicit $x0 (in function: strict_align_feature)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for strict_align_feature
+; FALLBACK-WITH-REPORT-OUT-LABEL: strict_align_feature
+define i64 @strict_align_feature(i64* %p) #0 {
+  %x = load i64, i64* %p, align 1
+  ret i64 %x
+}
+
+attributes #0 = { "target-features"="+strict-align" }

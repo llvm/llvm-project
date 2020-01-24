@@ -25,11 +25,6 @@ using ::testing::Field;
 using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
 
-class IgnoreDiagnostics : public DiagnosticsConsumer {
-  void onDiagnosticsReady(PathRef File,
-                          std::vector<Diag> Diagnostics) override {}
-};
-
 // GMock helpers for matching SymbolInfos items.
 MATCHER_P(QName, Name, "") {
   if (arg.containerName.empty())
@@ -56,8 +51,7 @@ ClangdServer::Options optsForTests() {
 
 class WorkspaceSymbolsTest : public ::testing::Test {
 public:
-  WorkspaceSymbolsTest()
-      : Server(CDB, FSProvider, DiagConsumer, optsForTests()) {
+  WorkspaceSymbolsTest() : Server(CDB, FSProvider, optsForTests()) {
     // Make sure the test root directory is created.
     FSProvider.Files[testPath("unused")] = "";
     CDB.ExtraClangFlags = {"-xc++"};
@@ -66,7 +60,6 @@ public:
 protected:
   MockFSProvider FSProvider;
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
   ClangdServer Server;
   int Limit = 0;
 
@@ -316,13 +309,11 @@ TEST_F(WorkspaceSymbolsTest, TempSpecs) {
 namespace {
 class DocumentSymbolsTest : public ::testing::Test {
 public:
-  DocumentSymbolsTest()
-      : Server(CDB, FSProvider, DiagConsumer, optsForTests()) {}
+  DocumentSymbolsTest() : Server(CDB, FSProvider, optsForTests()) {}
 
 protected:
   MockFSProvider FSProvider;
   MockCompilationDatabase CDB;
-  IgnoreDiagnostics DiagConsumer;
   ClangdServer Server;
 
   std::vector<DocumentSymbol> getSymbols(PathRef File) {

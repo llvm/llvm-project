@@ -1131,9 +1131,10 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
     }
   }
 
-  if (getCodeGenOpts().VirtualFunctionElimination) {
+  if (getCodeGenOpts().VirtualFunctionElimination ||
+      getCodeGenOpts().WholeProgramVTables) {
     llvm::GlobalObject::VCallVisibility TypeVis = GetVCallVisibilityLevel(RD);
     if (TypeVis != llvm::GlobalObject::VCallVisibilityPublic)
-      VTable->addVCallVisibilityMetadata(TypeVis);
+      VTable->setVCallVisibilityMetadata(TypeVis);
   }
 }

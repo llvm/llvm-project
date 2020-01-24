@@ -78,6 +78,7 @@ void PPCSubtarget::initializeEnvironment() {
   HasP8Crypto = false;
   HasP9Vector = false;
   HasP9Altivec = false;
+  HasPrefixInstrs = false;
   HasFCPSGN = false;
   HasFSQRT = false;
   HasFRE = false;

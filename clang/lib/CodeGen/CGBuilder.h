@@ -113,7 +113,7 @@ public:
   using CGBuilderBaseTy::CreateAlignedStore;
   llvm::StoreInst *CreateAlignedStore(llvm::Value *Val, llvm::Value *Addr,
                                       CharUnits Align, bool IsVolatile = false) {
-    return CreateAlignedStore(Val, Addr, Align.getQuantity(), IsVolatile);
+    return CreateAlignedStore(Val, Addr, Align.getAsAlign(), IsVolatile);
   }
 
   // FIXME: these "default-aligned" APIs should be removed,

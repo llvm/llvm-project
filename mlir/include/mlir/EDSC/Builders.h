@@ -339,6 +339,7 @@ public:
 
   /// Implicit conversion useful for automatic conversion to Container<Value>.
   operator Value() const { return getValue(); }
+  operator Type() const { return getType(); }
   operator bool() const { return hasValue(); }
 
   /// Generic mlir::Op create. This is the key to being extensible to the whole

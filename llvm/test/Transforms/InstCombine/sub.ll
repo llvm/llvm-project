@@ -541,6 +541,48 @@ define i32 @test26(i32 %x) {
   ret i32 %neg
 }
 
+define i64 @test_neg_shl_sub(i64 %a, i64 %b) {
+; CHECK-LABEL: @test_neg_shl_sub(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = shl i64 [[TMP1]], 2
+; CHECK-NEXT:    ret i64 [[NEG]]
+;
+  %sub = sub i64 %a, %b
+  %mul = shl i64 %sub, 2
+  %neg = sub i64 0, %mul
+  ret i64 %neg
+}
+
+define i64 @test_neg_shl_sub_extra_use1(i64 %a, i64 %b, i64* %p) {
+; CHECK-LABEL: @test_neg_shl_sub_extra_use1(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    store i64 [[SUB]], i64* [[P:%.*]], align 8
+; CHECK-NEXT:    [[MUL:%.*]] = shl i64 [[SUB]], 2
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[MUL]]
+; CHECK-NEXT:    ret i64 [[NEG]]
+;
+  %sub = sub i64 %a, %b
+  store i64 %sub, i64* %p
+  %mul = shl i64 %sub, 2
+  %neg = sub i64 0, %mul
+  ret i64 %neg
+}
+
+define i64 @test_neg_shl_sub_extra_use2(i64 %a, i64 %b, i64* %p) {
+; CHECK-LABEL: @test_neg_shl_sub_extra_use2(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl i64 [[SUB]], 2
+; CHECK-NEXT:    store i64 [[MUL]], i64* [[P:%.*]], align 8
+; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[MUL]]
+; CHECK-NEXT:    ret i64 [[NEG]]
+;
+  %sub = sub i64 %a, %b
+  %mul = shl i64 %sub, 2
+  store i64 %mul, i64* %p
+  %neg = sub i64 0, %mul
+  ret i64 %neg
+}
+
 define i32 @test27(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test27(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 [[Y:%.*]], 3

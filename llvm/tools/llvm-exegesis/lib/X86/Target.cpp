@@ -566,9 +566,9 @@ private:
 
   unsigned getMaxMemoryAccessSize() const override { return 64; }
 
-  void randomizeMCOperand(const Instruction &Instr, const Variable &Var,
-                          MCOperand &AssignedValue,
-                          const BitVector &ForbiddenRegs) const override;
+  Error randomizeTargetMCOperand(const Instruction &Instr, const Variable &Var,
+                                 MCOperand &AssignedValue,
+                                 const BitVector &ForbiddenRegs) const override;
 
   void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
                           unsigned Offset) const override;
@@ -644,24 +644,25 @@ unsigned ExegesisX86Target::getLoopCounterRegister(const Triple &TT) const {
   return kLoopCounterReg;
 }
 
-void ExegesisX86Target::randomizeMCOperand(
+Error ExegesisX86Target::randomizeTargetMCOperand(
     const Instruction &Instr, const Variable &Var, MCOperand &AssignedValue,
     const BitVector &ForbiddenRegs) const {
-  ExegesisTarget::randomizeMCOperand(Instr, Var, AssignedValue, ForbiddenRegs);
-
   const Operand &Op = Instr.getPrimaryOperand(Var);
   switch (Op.getExplicitOperandInfo().OperandType) {
   case X86::OperandType::OPERAND_ROUNDING_CONTROL:
     AssignedValue =
         MCOperand::createImm(randomIndex(X86::STATIC_ROUNDING::NO_EXC));
-    break;
+    return Error::success();
   case X86::OperandType::OPERAND_COND_CODE:
     AssignedValue =
         MCOperand::createImm(randomIndex(X86::CondCode::LAST_VALID_COND));
-    break;
+    return Error::success();
   default:
     break;
   }
+  return make_error<Failure>(
+      Twine("unimplemented operand type ")
+          .concat(Twine(Op.getExplicitOperandInfo().OperandType)));
 }
 
 void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,
@@ -672,12 +673,7 @@ void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,
   int MemOpIdx = X86II::getMemoryOperandNo(IT.getInstr().Description.TSFlags);
   assert(MemOpIdx >= 0 && "invalid memory operand index");
   // getMemoryOperandNo() ignores tied operands, so we have to add them back.
-  for (unsigned I = 0; I <= static_cast<unsigned>(MemOpIdx); ++I) {
-    const auto &Op = IT.getInstr().Operands[I];
-    if (Op.isTied() && Op.getTiedToIndex() < I) {
-      ++MemOpIdx;
-    }
-  }
+  MemOpIdx += X86II::getOperandBias(IT.getInstr().Description);
   setMemOp(IT, MemOpIdx + 0, MCOperand::createReg(Reg));    // BaseReg
   setMemOp(IT, MemOpIdx + 1, MCOperand::createImm(1));      // ScaleAmt
   setMemOp(IT, MemOpIdx + 2, MCOperand::createReg(0));      // IndexReg

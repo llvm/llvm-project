@@ -802,7 +802,7 @@ bool ScalarizerVisitor::visitLoadInst(LoadInst &LI) {
 
   for (unsigned I = 0; I < NumElems; ++I)
     Res[I] = Builder.CreateAlignedLoad(Layout.VecTy->getElementType(), Ptr[I],
-                                       Layout.getElemAlign(I),
+                                       Align(Layout.getElemAlign(I)),
                                        LI.getName() + ".i" + Twine(I));
   gather(&LI, Res);
   return true;
@@ -829,7 +829,7 @@ bool ScalarizerVisitor::visitStoreInst(StoreInst &SI) {
   Stores.resize(NumElems);
   for (unsigned I = 0; I < NumElems; ++I) {
     unsigned Align = Layout.getElemAlign(I);
-    Stores[I] = Builder.CreateAlignedStore(Val[I], Ptr[I], Align);
+    Stores[I] = Builder.CreateAlignedStore(Val[I], Ptr[I], MaybeAlign(Align));
   }
   transferMetadataAndIRFlags(&SI, Stores);
   return true;

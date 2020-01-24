@@ -1,4 +1,4 @@
-//===-- CommandObjectBreakpoint.cpp -----------------------------*- C++ -*-===//
+//===-- CommandObjectBreakpoint.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -274,7 +274,7 @@ public:
         m_func_name_type_mask |= eFunctionNameTypeBase;
         break;
 
-      case 'C':
+      case 'u':
         if (option_arg.getAsInteger(0, m_column))
           error.SetErrorStringWithFormat("invalid column number: %s",
                                          option_arg.str().c_str());

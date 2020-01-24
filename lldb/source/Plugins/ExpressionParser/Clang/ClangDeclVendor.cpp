@@ -1,4 +1,4 @@
-//===-- ClangDeclVendor.cpp -------------------------------------*- C++ -*-===//
+//===-- ClangDeclVendor.cpp -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangDeclVendor.h"
 
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Utility/ConstString.h"
 
 using namespace lldb_private;

@@ -250,8 +250,7 @@ void AArch64AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI)
             .getValueAsString()
             .getAsInteger(10, Num))
       return;
-    for (; Num; --Num)
-      EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::HINT).addImm(0));
+    emitNops(Num);
     return;
   }
 

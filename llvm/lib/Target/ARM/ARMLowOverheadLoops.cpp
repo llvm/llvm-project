@@ -176,6 +176,8 @@ namespace {
   struct LowOverheadLoop {
 
     MachineLoop *ML = nullptr;
+    MachineLoopInfo *MLI = nullptr;
+    ReachingDefAnalysis *RDA = nullptr;
     MachineFunction *MF = nullptr;
     MachineInstr *InsertPt = nullptr;
     MachineInstr *Start = nullptr;
@@ -189,7 +191,8 @@ namespace {
     bool Revert = false;
     bool CannotTailPredicate = false;
 
-    LowOverheadLoop(MachineLoop *ML) : ML(ML) {
+    LowOverheadLoop(MachineLoop *ML, MachineLoopInfo *MLI,
+                    ReachingDefAnalysis *RDA) : ML(ML), MLI(MLI), RDA(RDA) {
       MF = ML->getHeader()->getParent();
     }
 
@@ -209,19 +212,16 @@ namespace {
              !CannotTailPredicate && ML->getNumBlocks() == 1;
     }
 
-    bool ValidateTailPredicate(MachineInstr *StartInsertPt,
-                               ReachingDefAnalysis *RDA,
-                               MachineLoopInfo *MLI);
+    bool ValidateTailPredicate(MachineInstr *StartInsertPt);
 
     // Is it safe to define LR with DLS/WLS?
     // LR can be defined if it is the operand to start, because it's the same
     // value, or if it's going to be equivalent to the operand to Start.
-    MachineInstr *IsSafeToDefineLR(ReachingDefAnalysis *RDA);
+    MachineInstr *IsSafeToDefineLR();
 
     // Check the branch targets are within range and we satisfy our
     // restrictions.
-    void CheckLegality(ARMBasicBlockUtils *BBUtils, ReachingDefAnalysis *RDA,
-                       MachineLoopInfo *MLI);
+    void CheckLegality(ARMBasicBlockUtils *BBUtils);
 
     bool FoundAllComponents() const {
       return Start && Dec && End;
@@ -314,7 +314,7 @@ char ARMLowOverheadLoops::ID = 0;
 INITIALIZE_PASS(ARMLowOverheadLoops, DEBUG_TYPE, ARM_LOW_OVERHEAD_LOOPS_NAME,
                 false, false)
 
-MachineInstr *LowOverheadLoop::IsSafeToDefineLR(ReachingDefAnalysis *RDA) {
+MachineInstr *LowOverheadLoop::IsSafeToDefineLR() {
   // We can define LR because LR already contains the same value.
   if (Start->getOperand(0).getReg() == ARM::LR)
     return Start;
@@ -412,9 +412,7 @@ static bool IsSafeToRemove(MachineInstr *MI, ReachingDefAnalysis *RDA,
   return true;
 }
 
-bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt,
-                                            ReachingDefAnalysis *RDA,
-                                            MachineLoopInfo *MLI) {
+bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   assert(VCTP && "VCTP instruction expected but is not set");
   // All predication within the loop should be based on vctp. If the block
   // isn't predicated on entry, check whether the vctp is within the block
@@ -482,7 +480,7 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt,
   // Especially in the case of while loops, InsertBB may not be the
   // preheader, so we need to check that the register isn't redefined
   // before entering the loop.
-  auto CannotProvideElements = [&RDA](MachineBasicBlock *MBB,
+  auto CannotProvideElements = [this](MachineBasicBlock *MBB,
                                       Register NumElements) {
     // NumElements is redefined in this block.
     if (RDA->getReachingDef(&MBB->back(), NumElements) >= 0)
@@ -563,9 +561,7 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt,
   return true;
 }
 
-void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils,
-                                    ReachingDefAnalysis *RDA,
-                                    MachineLoopInfo *MLI) {
+void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils) {
   if (Revert)
     return;
 
@@ -598,7 +594,7 @@ void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils,
     return;
   }
 
-  InsertPt = Revert ? nullptr : IsSafeToDefineLR(RDA);
+  InsertPt = Revert ? nullptr : IsSafeToDefineLR();
   if (!InsertPt) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Unable to find safe insertion point.\n");
     Revert = true;
@@ -615,7 +611,7 @@ void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils,
 
   assert(ML->getBlocks().size() == 1 &&
          "Shouldn't be processing a loop with more than one block");
-  CannotTailPredicate = !ValidateTailPredicate(InsertPt, RDA, MLI);
+  CannotTailPredicate = !ValidateTailPredicate(InsertPt);
   LLVM_DEBUG(if (CannotTailPredicate)
              dbgs() << "ARM Loops: Couldn't validate tail predicate.\n");
 }
@@ -750,7 +746,7 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
     return nullptr;
   };
 
-  LowOverheadLoop LoLoop(ML);
+  LowOverheadLoop LoLoop(ML, MLI, RDA);
   // Search the preheader for the start intrinsic.
   // FIXME: I don't see why we shouldn't be supporting multiple predecessors
   // with potentially multiple set.loop.iterations, so we need to enable this.
@@ -805,7 +801,7 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
     LoLoop.ToRemove.insert(Remove.begin(), Remove.end());
   }
 
-  LoLoop.CheckLegality(BBUtils.get(), RDA, MLI);
+  LoLoop.CheckLegality(BBUtils.get());
   Expand(LoLoop);
   return true;
 }

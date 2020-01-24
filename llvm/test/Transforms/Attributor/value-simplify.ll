@@ -246,7 +246,7 @@ define %struct.X* @complicated_args_nest() {
 @S = external global %struct.X
 define internal void @test_byval(%struct.X* byval %a) {
 ; CHECK-LABEL: define {{[^@]+}}@test_byval
-; CHECK-SAME: (%struct.X* nocapture nofree nonnull writeonly byval align 8 dereferenceable(8) [[A:%.*]])
+; CHECK-SAME: (%struct.X* noalias nocapture nofree nonnull writeonly byval align 8 dereferenceable(8) [[A:%.*]])
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr [[STRUCT_X:%.*]], %struct.X* [[A]], i32 0, i32 0
 ; CHECK-NEXT:    store i8* null, i8** [[G0]], align 8
 ; CHECK-NEXT:    ret void

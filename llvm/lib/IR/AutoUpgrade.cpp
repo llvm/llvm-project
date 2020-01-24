@@ -1239,7 +1239,7 @@ static Value *UpgradeMaskedStore(IRBuilder<> &Builder,
                               llvm::PointerType::getUnqual(Data->getType()));
   const Align Alignment =
       Aligned ? Align(cast<VectorType>(Data->getType())->getBitWidth() / 8)
-              : Align::None();
+              : Align(1);
 
   // If the mask is all ones just emit a regular store.
   if (const auto *C = dyn_cast<Constant>(Mask))
@@ -1260,7 +1260,7 @@ static Value *UpgradeMaskedLoad(IRBuilder<> &Builder,
   Ptr = Builder.CreateBitCast(Ptr, llvm::PointerType::getUnqual(ValTy));
   const Align Alignment =
       Aligned ? Align(cast<VectorType>(Passthru->getType())->getBitWidth() / 8)
-              : Align::None();
+              : Align(1);
 
   // If the mask is all ones just emit a regular store.
   if (const auto *C = dyn_cast<Constant>(Mask))
@@ -1707,7 +1707,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *Extract =
           Builder.CreateExtractElement(Arg1, (uint64_t)0, "extractelement");
 
-      StoreInst *SI = Builder.CreateAlignedStore(Extract, Addr, 1);
+      StoreInst *SI = Builder.CreateAlignedStore(Extract, Addr, Align(1));
       SI->setMetadata(M->getMDKindID("nontemporal"), Node);
 
       // Remove intrinsic.
@@ -1731,8 +1731,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                         PointerType::getUnqual(Arg1->getType()),
                                         "cast");
       VectorType *VTy = cast<VectorType>(Arg1->getType());
-      StoreInst *SI = Builder.CreateAlignedStore(Arg1, BC,
-                                                 VTy->getBitWidth() / 8);
+      StoreInst *SI =
+          Builder.CreateAlignedStore(Arg1, BC, Align(VTy->getBitWidth() / 8));
       SI->setMetadata(M->getMDKindID("nontemporal"), Node);
 
       // Remove intrinsic.
@@ -1750,7 +1750,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *BC = Builder.CreateBitCast(Arg0,
                                         PointerType::getUnqual(Elt->getType()),
                                         "cast");
-      Builder.CreateAlignedStore(Elt, BC, 1);
+      Builder.CreateAlignedStore(Elt, BC, Align(1));
 
       // Remove intrinsic.
       CI->eraseFromParent();
@@ -1766,7 +1766,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Arg0 = Builder.CreateBitCast(Arg0,
                                    PointerType::getUnqual(Arg1->getType()),
                                    "cast");
-      Builder.CreateAlignedStore(Arg1, Arg0, 1);
+      Builder.CreateAlignedStore(Arg1, Arg0, Align(1));
 
       // Remove intrinsic.
       CI->eraseFromParent();
@@ -2308,7 +2308,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Type *VT = VectorType::get(EltTy, NumSrcElts);
       Value *Op = Builder.CreatePointerCast(CI->getArgOperand(0),
                                             PointerType::getUnqual(VT));
-      Value *Load = Builder.CreateAlignedLoad(VT, Op, 1);
+      Value *Load = Builder.CreateAlignedLoad(VT, Op, Align(1));
       if (NumSrcElts == 2)
         Rep = Builder.CreateShuffleVector(Load, UndefValue::get(Load->getType()),
                                           { 0, 1, 0, 1 });
@@ -3054,7 +3054,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       // Convert the type of the pointer to a pointer to the stored type.
       Value *BC =
           Builder.CreateBitCast(Ptr, PointerType::getUnqual(VTy), "cast");
-      LoadInst *LI = Builder.CreateAlignedLoad(VTy, BC, VTy->getBitWidth() / 8);
+      LoadInst *LI =
+          Builder.CreateAlignedLoad(VTy, BC, Align(VTy->getBitWidth() / 8));
       LI->setMetadata(M->getMDKindID("nontemporal"), Node);
       Rep = LI;
     } else if (IsX86 && (Name.startswith("fma.vfmadd.") ||
@@ -3436,7 +3437,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       // Cast the pointer to the right type.
       Value *Ptr = Builder.CreateBitCast(CI->getArgOperand(3),
                                  llvm::PointerType::getUnqual(Data->getType()));
-      Builder.CreateAlignedStore(Data, Ptr, 1);
+      Builder.CreateAlignedStore(Data, Ptr, Align(1));
       // Replace the original call result with the first result of the new call.
       Value *CF = Builder.CreateExtractValue(NewCall, 0);
 
@@ -3658,7 +3659,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     // Cast the pointer to the right type.
     Value *Ptr = Builder.CreateBitCast(CI->getArgOperand(0),
                                  llvm::PointerType::getUnqual(Data->getType()));
-    Builder.CreateAlignedStore(Data, Ptr, 1);
+    Builder.CreateAlignedStore(Data, Ptr, Align(1));
     // Replace the original call result with the first result of the new call.
     Value *TSC = Builder.CreateExtractValue(NewCall, 0);
 

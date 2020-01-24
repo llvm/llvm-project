@@ -42,11 +42,6 @@ using ::testing::IsEmpty;
 using ::testing::Matcher;
 using ::testing::UnorderedElementsAreArray;
 
-class IgnoreDiagnostics : public DiagnosticsConsumer {
-  void onDiagnosticsReady(PathRef File,
-                          std::vector<Diag> Diagnostics) override {}
-};
-
 MATCHER_P2(FileRange, File, Range, "") {
   return Location{URIForFile::canonicalize(File, testRoot()), Range} == arg;
 }
@@ -515,10 +510,6 @@ TEST(LocateSymbol, All) {
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
 
     auto AST = TU.build();
-    for (auto &D : AST.getDiagnostics())
-      ADD_FAILURE() << D;
-    ASSERT_TRUE(AST.getDiagnostics().empty()) << Test;
-
     auto Results = locateSymbolAt(AST, T.point());
 
     if (!WantDecl) {
@@ -696,9 +687,8 @@ int [[bar_not_preamble]];
   std::string BuildDir = testPath("build");
   MockCompilationDatabase CDB(BuildDir, RelPathPrefix);
 
-  IgnoreDiagnostics DiagConsumer;
   MockFSProvider FS;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   // Fill the filesystem.
   auto FooCpp = testPath("src/foo.cpp");
@@ -733,9 +723,8 @@ int [[bar_not_preamble]];
 
 TEST(GoToInclude, All) {
   MockFSProvider FS;
-  IgnoreDiagnostics DiagConsumer;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   auto FooCpp = testPath("foo.cpp");
   const char *SourceContents = R"cpp(
@@ -808,9 +797,8 @@ TEST(LocateSymbol, WithPreamble) {
   // Test stragety: AST should always use the latest preamble instead of last
   // good preamble.
   MockFSProvider FS;
-  IgnoreDiagnostics DiagConsumer;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   auto FooCpp = testPath("foo.cpp");
   // The trigger locations must be the same.
@@ -868,7 +856,7 @@ TEST(FindReferences, WithinAST) {
 
       R"cpp(// Forward declaration
         class [[Foo]];
-        class [[Foo]] {}
+        class [[Foo]] {};
         int main() {
           [[Fo^o]] foo;
         }
@@ -878,7 +866,7 @@ TEST(FindReferences, WithinAST) {
         int [[foo]](int) {}
         int main() {
           auto *X = &[[^foo]];
-          [[foo]](42)
+          [[foo]](42);
         }
       )cpp",
 
@@ -1182,8 +1170,6 @@ TEST(GetNonLocalDeclRefs, All) {
   for (const Case &C : Cases) {
     Annotations File(C.AnnotatedCode);
     auto AST = TestTU::withCode(File.code()).build();
-    ASSERT_TRUE(AST.getDiagnostics().empty())
-        << AST.getDiagnostics().begin()->Message;
     SourceLocation SL = llvm::cantFail(
         sourceLocationInMainFile(AST.getSourceManager(), File.point()));
 

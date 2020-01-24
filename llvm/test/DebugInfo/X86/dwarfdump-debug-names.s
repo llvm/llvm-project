@@ -98,7 +98,6 @@
 # CHECK-NEXT:   Header {
 # CHECK-NEXT:     Length: 0x60
 # CHECK-NEXT:     Version: 5
-# CHECK-NEXT:     Padding: 0x0
 # CHECK-NEXT:     CU count: 1
 # CHECK-NEXT:     Local TU count: 0
 # CHECK-NEXT:     Foreign TU count: 0
@@ -144,7 +143,6 @@
 # CHECK-NEXT:   Header {
 # CHECK-NEXT:     Length: 0x44
 # CHECK-NEXT:     Version: 5
-# CHECK-NEXT:     Padding: 0x0
 # CHECK-NEXT:     CU count: 1
 # CHECK-NEXT:     Local TU count: 0
 # CHECK-NEXT:     Foreign TU count: 0

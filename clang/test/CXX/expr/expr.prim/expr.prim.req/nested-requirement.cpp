@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -fconcepts-ts -x c++ %s -verify
+// RUN: %clang_cc1 -std=c++2a -x c++ %s -verify
 
 static_assert(requires { requires true; });
 
@@ -39,8 +39,9 @@ namespace std_example {
   using dc1 = D_check<short>; // expected-error{{constraints not satisfied for class template 'D_check' [with T = short]}}
 
   template<typename T>
-  concept C2 = requires (T a) { // expected-note{{'a' declared here}}
+  concept C2 = requires (T a) {
       requires sizeof(a) == 4; // OK
-      requires a == 0; // expected-error{{constraint variable 'a' cannot be used in an evaluated context}}
+      requires a == 0; // expected-note{{because 'a == 0' would be invalid: constraint variable 'a' cannot be used in an evaluated context}}
     };
+  static_assert(C2<int>); // expected-note{{because 'int' does not satisfy 'C2'}} expected-error{{static_assert failed}}
 }

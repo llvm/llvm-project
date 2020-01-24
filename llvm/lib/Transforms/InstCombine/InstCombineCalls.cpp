@@ -1056,7 +1056,8 @@ static Value *simplifyX86vpermv(const IntrinsicInst &II,
 // * Narrow width by halfs excluding zero/undef lanes
 Value *InstCombiner::simplifyMaskedLoad(IntrinsicInst &II) {
   Value *LoadPtr = II.getArgOperand(0);
-  unsigned Alignment = cast<ConstantInt>(II.getArgOperand(1))->getZExtValue();
+  const Align Alignment =
+      cast<ConstantInt>(II.getArgOperand(1))->getAlignValue();
 
   // If the mask is all ones or undefs, this is a plain vector load of the 1st
   // argument.
@@ -1066,9 +1067,9 @@ Value *InstCombiner::simplifyMaskedLoad(IntrinsicInst &II) {
 
   // If we can unconditionally load from this address, replace with a
   // load/select idiom. TODO: use DT for context sensitive query
-  if (isDereferenceableAndAlignedPointer(
-          LoadPtr, II.getType(), MaybeAlign(Alignment),
-          II.getModule()->getDataLayout(), &II, nullptr)) {
+  if (isDereferenceableAndAlignedPointer(LoadPtr, II.getType(), Alignment,
+                                         II.getModule()->getDataLayout(), &II,
+                                         nullptr)) {
     Value *LI = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,
                                          "unmaskedload");
     return Builder.CreateSelect(II.getArgOperand(2), LI, II.getArgOperand(3));
@@ -1331,7 +1332,7 @@ static Instruction *simplifyX86MaskedLoad(IntrinsicInst &II, InstCombiner &IC) {
 
   // The pass-through vector for an x86 masked load is a zero vector.
   CallInst *NewMaskedLoad =
-      IC.Builder.CreateMaskedLoad(PtrCast, Align::None(), BoolMask, ZeroVec);
+      IC.Builder.CreateMaskedLoad(PtrCast, Align(1), BoolMask, ZeroVec);
   return IC.replaceInstUsesWith(II, NewMaskedLoad);
 }
 
@@ -1372,7 +1373,7 @@ static bool simplifyX86MaskedStore(IntrinsicInst &II, InstCombiner &IC) {
   // on each element's most significant bit (the sign bit).
   Constant *BoolMask = getNegativeIsTrueBoolVec(ConstMask);
 
-  IC.Builder.CreateMaskedStore(Vec, PtrCast, Align::None(), BoolMask);
+  IC.Builder.CreateMaskedStore(Vec, PtrCast, Align(1), BoolMask);
 
   // 'Replace uses' doesn't work for stores. Erase the original masked store.
   IC.eraseInstFromFunction(II);
@@ -1459,7 +1460,7 @@ static Value *simplifyNeonVld1(const IntrinsicInst &II,
 
   auto *BCastInst = Builder.CreateBitCast(II.getArgOperand(0),
                                           PointerType::get(II.getType(), 0));
-  return Builder.CreateAlignedLoad(II.getType(), BCastInst, Alignment);
+  return Builder.CreateAlignedLoad(II.getType(), BCastInst, Align(Alignment));
 }
 
 // Returns true iff the 2 intrinsics have the same operands, limiting the
@@ -2380,7 +2381,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Turn PPC VSX loads into normal loads.
     Value *Ptr = Builder.CreateBitCast(II->getArgOperand(0),
                                        PointerType::getUnqual(II->getType()));
-    return new LoadInst(II->getType(), Ptr, Twine(""), false, Align::None());
+    return new LoadInst(II->getType(), Ptr, Twine(""), false, Align(1));
   }
   case Intrinsic::ppc_altivec_stvx:
   case Intrinsic::ppc_altivec_stvxl:
@@ -2398,7 +2399,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     // Turn PPC VSX stores into normal stores.
     Type *OpPtrTy = PointerType::getUnqual(II->getArgOperand(0)->getType());
     Value *Ptr = Builder.CreateBitCast(II->getArgOperand(1), OpPtrTy);
-    return new StoreInst(II->getArgOperand(0), Ptr, false, Align::None());
+    return new StoreInst(II->getArgOperand(0), Ptr, false, Align(1));
   }
   case Intrinsic::ppc_qpx_qvlfs:
     // Turn PPC QPX qvlfs -> load if the pointer is known aligned.

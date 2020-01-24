@@ -4972,7 +4972,7 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       ScalarVT = MVT::i32;
 
     Info.memVT = MVT::getVectorVT(ScalarVT, VT.getVectorNumElements());
-    Info.align = Align::None();
+    Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOStore;
     break;
   }
@@ -4985,7 +4985,7 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     unsigned NumElts = std::min(DataVT.getVectorNumElements(),
                                 IndexVT.getVectorNumElements());
     Info.memVT = MVT::getVectorVT(DataVT.getVectorElementType(), NumElts);
-    Info.align = Align::None();
+    Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOLoad;
     break;
   }
@@ -4997,7 +4997,7 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     unsigned NumElts = std::min(DataVT.getVectorNumElements(),
                                 IndexVT.getVectorNumElements());
     Info.memVT = MVT::getVectorVT(DataVT.getVectorElementType(), NumElts);
-    Info.align = Align::None();
+    Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOStore;
     break;
   }
@@ -13319,8 +13319,7 @@ static SDValue lowerShuffleWithSHUFPS(const SDLoc &DL, MVT VT,
                                       ArrayRef<int> Mask, SDValue V1,
                                       SDValue V2, SelectionDAG &DAG) {
   SDValue LowV = V1, HighV = V2;
-  int NewMask[4] = {Mask[0], Mask[1], Mask[2], Mask[3]};
-
+  SmallVector<int, 4> NewMask(Mask.begin(), Mask.end());
   int NumV2Elements = count_if(Mask, [](int M) { return M >= 4; });
 
   if (NumV2Elements == 1) {
@@ -27161,6 +27160,10 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
         break;
       }
 
+  // Check for splat rotate by zero.
+  if (0 <= CstSplatIndex && EltBits[CstSplatIndex].urem(EltSizeInBits) == 0)
+    return R;
+
   // AVX512 implicitly uses modulo rotation amounts.
   if (Subtarget.hasAVX512() && 32 <= EltSizeInBits) {
     // Attempt to rotate by immediate.
@@ -27474,7 +27477,7 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   // Finally we can emit the atomic load.
   LoadInst *Loaded =
       Builder.CreateAlignedLoad(AI->getType(), AI->getPointerOperand(),
-                                AI->getType()->getPrimitiveSizeInBits());
+                                Align(AI->getType()->getPrimitiveSizeInBits()));
   Loaded->setAtomic(Order, SSID);
   AI->replaceAllUsesWith(Loaded);
   AI->eraseFromParent();
@@ -34585,6 +34588,28 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     }
   }
 
+  // Attempt to commute shufps LHS loads:
+  // permilps(shufps(load(),x)) --> permilps(shufps(x,load()))
+  if (VT == MVT::v4f32 &&
+      (X86ISD::VPERMILPI == Opcode ||
+       (X86ISD::SHUFP == Opcode && N.getOperand(0) == N.getOperand(1)))) {
+    SDValue N0 = N.getOperand(0);
+    unsigned Imm = N.getConstantOperandVal(X86ISD::VPERMILPI == Opcode ? 1 : 2);
+    if (N0.getOpcode() == X86ISD::SHUFP && N->isOnlyUserOf(N0.getNode())) {
+      SDValue N00 = N0.getOperand(0);
+      SDValue N01 = N0.getOperand(1);
+      if (MayFoldLoad(peekThroughOneUseBitcasts(N00)) &&
+          !MayFoldLoad(peekThroughOneUseBitcasts(N01))) {
+        unsigned Imm1 = N0.getConstantOperandVal(2);
+        Imm1 = ((Imm1 & 0x0F) << 4) | ((Imm1 & 0xF0) >> 4);
+        SDValue NewN0 = DAG.getNode(X86ISD::SHUFP, DL, VT, N01, N00,
+                                    DAG.getTargetConstant(Imm1, DL, MVT::i8));
+        return DAG.getNode(X86ISD::SHUFP, DL, VT, NewN0, NewN0,
+                           DAG.getTargetConstant(Imm ^ 0xAA, DL, MVT::i8));
+      }
+    }
+  }
+
   switch (Opcode) {
   case X86ISD::VBROADCAST: {
     SDValue Src = N.getOperand(0);
@@ -34697,6 +34722,36 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
       return DAG.getBitcast(VT, Res);
     }
     return SDValue();
+  }
+  case X86ISD::VPERM2X128: {
+    // If both 128-bit values were inserted into high halves of 256-bit values,
+    // the shuffle can be reduced to a concatenation of subvectors:
+    // vperm2x128 (ins ?, X, C1), (ins ?, Y, C2), 0x31 --> concat X, Y
+    // Note: We are only looking for the exact high/high shuffle mask because we
+    //       expect to fold other similar patterns before creating this opcode.
+    SDValue Ins0 = peekThroughBitcasts(N.getOperand(0));
+    SDValue Ins1 = peekThroughBitcasts(N.getOperand(1));
+    unsigned Imm = N.getConstantOperandVal(2);
+    if (!(Imm == 0x31 &&
+          Ins0.getOpcode() == ISD::INSERT_SUBVECTOR &&
+          Ins1.getOpcode() == ISD::INSERT_SUBVECTOR &&
+          Ins0.getValueType() == Ins1.getValueType() &&
+          isa<ConstantSDNode>(Ins0.getOperand(2)) &&
+          isa<ConstantSDNode>(Ins1.getOperand(2))))
+      return SDValue();
+
+    SDValue X = Ins0.getOperand(1);
+    SDValue Y = Ins1.getOperand(1);
+    unsigned C1 = Ins0.getConstantOperandVal(2);
+    unsigned C2 = Ins1.getConstantOperandVal(2);
+    MVT SrcVT = X.getSimpleValueType();
+    unsigned SrcElts = SrcVT.getVectorNumElements();
+    if (SrcVT != Y.getSimpleValueType() || SrcVT.getSizeInBits() != 128 ||
+        C1 != SrcElts || C2 != SrcElts)
+      return SDValue();
+
+    return DAG.getBitcast(VT, DAG.getNode(ISD::CONCAT_VECTORS, DL,
+                                          Ins1.getValueType(), X, Y));
   }
   case X86ISD::PSHUFD:
   case X86ISD::PSHUFLW:

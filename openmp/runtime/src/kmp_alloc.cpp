@@ -1348,27 +1348,27 @@ omp_allocator_handle_t __kmpc_init_allocator(int gtid, omp_memspace_handle_t ms,
   al->memspace = ms; // not used currently
   for (i = 0; i < ntraits; ++i) {
     switch (traits[i].key) {
-    case OMP_ATK_THREADMODEL:
-    case OMP_ATK_ACCESS:
-    case OMP_ATK_PINNED:
+    case omp_atk_threadmodel:
+    case omp_atk_access:
+    case omp_atk_pinned:
       break;
-    case OMP_ATK_ALIGNMENT:
+    case omp_atk_alignment:
       al->alignment = traits[i].value;
       KMP_ASSERT(IS_POWER_OF_TWO(al->alignment));
       break;
-    case OMP_ATK_POOL_SIZE:
+    case omp_atk_pool_size:
       al->pool_size = traits[i].value;
       break;
-    case OMP_ATK_FALLBACK:
+    case omp_atk_fallback:
       al->fb = (omp_alloctrait_value_t)traits[i].value;
       KMP_DEBUG_ASSERT(
-          al->fb == OMP_ATV_DEFAULT_MEM_FB || al->fb == OMP_ATV_NULL_FB ||
-          al->fb == OMP_ATV_ABORT_FB || al->fb == OMP_ATV_ALLOCATOR_FB);
+          al->fb == omp_atv_default_mem_fb || al->fb == omp_atv_null_fb ||
+          al->fb == omp_atv_abort_fb || al->fb == omp_atv_allocator_fb);
       break;
-    case OMP_ATK_FB_DATA:
+    case omp_atk_fb_data:
       al->fb_data = RCAST(kmp_allocator_t *, traits[i].value);
       break;
-    case OMP_ATK_PARTITION:
+    case omp_atk_partition:
       al->memkind = RCAST(void **, traits[i].value);
       break;
     default:
@@ -1377,17 +1377,17 @@ omp_allocator_handle_t __kmpc_init_allocator(int gtid, omp_memspace_handle_t ms,
   }
   if (al->fb == 0) {
     // set default allocator
-    al->fb = OMP_ATV_DEFAULT_MEM_FB;
+    al->fb = omp_atv_default_mem_fb;
     al->fb_data = (kmp_allocator_t *)omp_default_mem_alloc;
-  } else if (al->fb == OMP_ATV_ALLOCATOR_FB) {
+  } else if (al->fb == omp_atv_allocator_fb) {
     KMP_ASSERT(al->fb_data != NULL);
-  } else if (al->fb == OMP_ATV_DEFAULT_MEM_FB) {
+  } else if (al->fb == omp_atv_default_mem_fb) {
     al->fb_data = (kmp_allocator_t *)omp_default_mem_alloc;
   }
   if (__kmp_memkind_available) {
     // Let's use memkind library if available
     if (ms == omp_high_bw_mem_space) {
-      if (al->memkind == (void *)OMP_ATV_INTERLEAVED && mk_hbw_interleave) {
+      if (al->memkind == (void *)omp_atv_interleaved && mk_hbw_interleave) {
         al->memkind = mk_hbw_interleave;
       } else if (mk_hbw_preferred) {
         // AC: do not try to use MEMKIND_HBW for now, because memkind library
@@ -1402,7 +1402,7 @@ omp_allocator_handle_t __kmpc_init_allocator(int gtid, omp_memspace_handle_t ms,
         return omp_null_allocator;
       }
     } else {
-      if (al->memkind == (void *)OMP_ATV_INTERLEAVED && mk_interleave) {
+      if (al->memkind == (void *)omp_atv_interleaved && mk_interleave) {
         al->memkind = mk_interleave;
       } else {
         al->memkind = mk_default;
@@ -1477,12 +1477,12 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
       if (used + desc.size_a > al->pool_size) {
         // not enough space, need to go fallback path
         KMP_TEST_THEN_ADD64((kmp_int64 *)&al->pool_used, -desc.size_a);
-        if (al->fb == OMP_ATV_DEFAULT_MEM_FB) {
+        if (al->fb == omp_atv_default_mem_fb) {
           al = (kmp_allocator_t *)omp_default_mem_alloc;
           ptr = kmp_mk_alloc(*mk_default, desc.size_a);
-        } else if (al->fb == OMP_ATV_ABORT_FB) {
+        } else if (al->fb == omp_atv_abort_fb) {
           KMP_ASSERT(0); // abort fallback requested
-        } else if (al->fb == OMP_ATV_ALLOCATOR_FB) {
+        } else if (al->fb == omp_atv_allocator_fb) {
           KMP_ASSERT(al != al->fb_data);
           al = al->fb_data;
           return __kmpc_alloc(gtid, size, (omp_allocator_handle_t)al);
@@ -1491,12 +1491,12 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
         // pool has enough space
         ptr = kmp_mk_alloc(*al->memkind, desc.size_a);
         if (ptr == NULL) {
-          if (al->fb == OMP_ATV_DEFAULT_MEM_FB) {
+          if (al->fb == omp_atv_default_mem_fb) {
             al = (kmp_allocator_t *)omp_default_mem_alloc;
             ptr = kmp_mk_alloc(*mk_default, desc.size_a);
-          } else if (al->fb == OMP_ATV_ABORT_FB) {
+          } else if (al->fb == omp_atv_abort_fb) {
             KMP_ASSERT(0); // abort fallback requested
-          } else if (al->fb == OMP_ATV_ALLOCATOR_FB) {
+          } else if (al->fb == omp_atv_allocator_fb) {
             KMP_ASSERT(al != al->fb_data);
             al = al->fb_data;
             return __kmpc_alloc(gtid, size, (omp_allocator_handle_t)al);
@@ -1507,12 +1507,12 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
       // custom allocator, pool size not requested
       ptr = kmp_mk_alloc(*al->memkind, desc.size_a);
       if (ptr == NULL) {
-        if (al->fb == OMP_ATV_DEFAULT_MEM_FB) {
+        if (al->fb == omp_atv_default_mem_fb) {
           al = (kmp_allocator_t *)omp_default_mem_alloc;
           ptr = kmp_mk_alloc(*mk_default, desc.size_a);
-        } else if (al->fb == OMP_ATV_ABORT_FB) {
+        } else if (al->fb == omp_atv_abort_fb) {
           KMP_ASSERT(0); // abort fallback requested
-        } else if (al->fb == OMP_ATV_ALLOCATOR_FB) {
+        } else if (al->fb == omp_atv_allocator_fb) {
           KMP_ASSERT(al != al->fb_data);
           al = al->fb_data;
           return __kmpc_alloc(gtid, size, (omp_allocator_handle_t)al);
@@ -1533,12 +1533,12 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
     if (used + desc.size_a > al->pool_size) {
       // not enough space, need to go fallback path
       KMP_TEST_THEN_ADD64((kmp_int64 *)&al->pool_used, -desc.size_a);
-      if (al->fb == OMP_ATV_DEFAULT_MEM_FB) {
+      if (al->fb == omp_atv_default_mem_fb) {
         al = (kmp_allocator_t *)omp_default_mem_alloc;
         ptr = __kmp_thread_malloc(__kmp_thread_from_gtid(gtid), desc.size_a);
-      } else if (al->fb == OMP_ATV_ABORT_FB) {
+      } else if (al->fb == omp_atv_abort_fb) {
         KMP_ASSERT(0); // abort fallback requested
-      } else if (al->fb == OMP_ATV_ALLOCATOR_FB) {
+      } else if (al->fb == omp_atv_allocator_fb) {
         KMP_ASSERT(al != al->fb_data);
         al = al->fb_data;
         return __kmpc_alloc(gtid, size, (omp_allocator_handle_t)al);
@@ -1546,14 +1546,14 @@ void *__kmpc_alloc(int gtid, size_t size, omp_allocator_handle_t allocator) {
     } else {
       // pool has enough space
       ptr = __kmp_thread_malloc(__kmp_thread_from_gtid(gtid), desc.size_a);
-      if (ptr == NULL && al->fb == OMP_ATV_ABORT_FB) {
+      if (ptr == NULL && al->fb == omp_atv_abort_fb) {
         KMP_ASSERT(0); // abort fallback requested
       } // no sense to look for another fallback because of same internal alloc
     }
   } else {
     // custom allocator, pool size not requested
     ptr = __kmp_thread_malloc(__kmp_thread_from_gtid(gtid), desc.size_a);
-    if (ptr == NULL && al->fb == OMP_ATV_ABORT_FB) {
+    if (ptr == NULL && al->fb == omp_atv_abort_fb) {
       KMP_ASSERT(0); // abort fallback requested
     } // no sense to look for another fallback because of same internal alloc
   }

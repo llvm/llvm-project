@@ -407,7 +407,6 @@ TEST(FileIndexTest, ReferencesInMainFileWithPreamble) {
   TestTU TU;
   TU.HeaderCode = "class Foo{};";
   Annotations Main(R"cpp(
-    #include "foo.h"
     void f() {
       [[Foo]] foo;
     }

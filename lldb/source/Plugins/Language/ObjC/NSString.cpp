@@ -1,5 +1,4 @@
-//===-- NSString.cpp ----------------------------------------------*- C++
-//-*-===//
+//===-- NSString.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +12,7 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/Target.h"
@@ -35,7 +34,7 @@ NSString_Additionals::GetAdditionalSummaries() {
 static CompilerType GetNSPathStore2Type(Target &target) {
   static ConstString g_type_name("__lldb_autogen_nspathstore2");
 
-  ClangASTContext *ast_ctx = ClangASTContext::GetScratch(target);
+  TypeSystemClang *ast_ctx = TypeSystemClang::GetScratch(target);
 
   if (!ast_ctx)
     return CompilerType();

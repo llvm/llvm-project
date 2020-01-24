@@ -109,8 +109,12 @@ public:
 
   /// Return the alignment of the memory that is being allocated by the
   /// instruction.
+  MaybeAlign getAlign() const {
+    return decodeMaybeAlign(getSubclassDataFromInstruction() & 31);
+  }
+  // FIXME: Remove this one transition to Align is over.
   unsigned getAlignment() const {
-    if (const auto MA = decodeMaybeAlign(getSubclassDataFromInstruction() & 31))
+    if (const auto MA = getAlign())
       return MA->value();
     return 0;
   }

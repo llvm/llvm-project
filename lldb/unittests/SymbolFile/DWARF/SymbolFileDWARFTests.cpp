@@ -1,4 +1,4 @@
-//===-- SymbolFileDWARFTests.cpp --------------------------------*- C++ -*-===//
+//===-- SymbolFileDWARFTests.cpp ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,7 +27,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -42,7 +42,7 @@ using namespace lldb_private;
 
 class SymbolFileDWARFTests : public testing::Test {
   SubsystemRAII<FileSystem, HostInfo, ObjectFilePECOFF, SymbolFileDWARF,
-                ClangASTContext, SymbolFilePDB>
+                TypeSystemClang, SymbolFilePDB>
       subsystems;
 
 public:

@@ -319,6 +319,7 @@ class IB_EltBit<int base_, Type type_ = Scalar> : ImmediateBounds {
   int base = base_;
   Type type = type_;
 }
+def IB_ExtraArg_LaneSize;
 
 // -----------------------------------------------------------------------------
 // End-user definitions for immediate arguments.
@@ -327,11 +328,13 @@ class IB_EltBit<int base_, Type type_ = Scalar> : ImmediateBounds {
 // intrinsics like vmvnq or vorrq. imm_simd_restrictive has to be an 8-bit
 // value shifted left by a whole number of bytes; imm_simd_vmvn can also be of
 // the form 0xXXFF for some byte value XX.
-def imm_simd_restrictive : Immediate<u32, IB_UEltValue> {
+def imm_simd_restrictive : Immediate<Scalar, IB_UEltValue> {
   let extra = "ShiftedByte";
+  let extraarg = "!lanesize";
 }
-def imm_simd_vmvn : Immediate<u32, IB_UEltValue> {
+def imm_simd_vmvn : Immediate<Scalar, IB_UEltValue> {
   let extra = "ShiftedByteOrXXFF";
+  let extraarg = "!lanesize";
 }
 
 // imm_1toN can take any value from 1 to N inclusive, where N is the number of
@@ -457,26 +460,31 @@ class NameOverride<string basename_> {
 
 // A wrapper to define both _m and _x versions of a predicated
 // intrinsic.
+//
+// We provide optional parameters to override the polymorphic name
+// types separately for the _m and _x variants, because sometimes they
+// polymorph differently (typically because the type of the inactive
+// parameter can be used as a disambiguator if it's present).
 multiclass IntrinsicMX<Type rettype, dag arguments, dag cg,
                        int wantXVariant = 1,
                        string nameSuffix = "",
+                       PolymorphicNameType pnt_m = PNT_Type,
                        PolymorphicNameType pnt_x = PNT_Type> {
   // The _m variant takes an initial parameter called $inactive, which
   // provides the input value of the output register, i.e. all the
   // inactive lanes in the predicated operation take their values from
   // this.
   def "_m" # nameSuffix:
-     Intrinsic<rettype, !con((args rettype:$inactive), arguments), cg>;
+     Intrinsic<rettype, !con((args rettype:$inactive), arguments), cg> {
+    let pnt = pnt_m;
+  }
 
   foreach unusedVar = !if(!eq(wantXVariant, 1), [1], []<int>) in {
     // The _x variant leaves off that parameter, and simply uses an
     // undef value of the same type.
+
     def "_x" # nameSuffix:
-       Intrinsic<rettype, arguments, (seq (undef rettype):$inactive, cg)> {
-      // Allow overriding of the polymorphic name type, because
-      // sometimes the _m and _x variants polymorph differently
-      // (typically because the type of the inactive parameter can be
-      // used as a disambiguator if it's present).
+      Intrinsic<rettype, arguments, (seq (undef rettype):$inactive, cg)> {
       let pnt = pnt_x;
     }
   }

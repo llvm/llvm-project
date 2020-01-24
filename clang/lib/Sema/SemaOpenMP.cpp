@@ -156,6 +156,7 @@ private:
     /// Reference to the taskgroup task_reduction reference expression.
     Expr *TaskgroupReductionRef = nullptr;
     llvm::DenseSet<QualType> MappedClassesQualTypes;
+    SmallVector<Expr *, 4> InnerUsedAllocators;
     /// List of globals marked as declare target link in this target region
     /// (isOpenMPTargetExecutionDirective(Directive) == true).
     llvm::SmallVector<DeclRefExpr *, 4> DeclareTargetLinkVarDecls;
@@ -899,6 +900,15 @@ public:
     assert(isOpenMPTargetExecutionDirective(getCurrentDirective()) &&
            "Expected target executable directive.");
     return getTopOfStack().DeclareTargetLinkVarDecls;
+  }
+
+  /// Adds list of allocators expressions.
+  void addInnerAllocatorExpr(Expr *E) {
+    getTopOfStack().InnerUsedAllocators.push_back(E);
+  }
+  /// Return list of used allocators.
+  ArrayRef<Expr *> getInnerAllocators() const {
+    return getTopOfStack().InnerUsedAllocators;
   }
 };
 
@@ -3917,6 +3927,9 @@ StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
     else if (Clause->getClauseKind() == OMPC_linear)
       LCs.push_back(cast<OMPLinearClause>(Clause));
   }
+  // Capture allocator expressions if used.
+  for (Expr *E : DSAStack->getInnerAllocators())
+    MarkDeclarationsReferencedInExpr(E);
   // OpenMP, 2.7.1 Loop Construct, Restrictions
   // The nonmonotonic modifier cannot be specified if an ordered clause is
   // specified.
@@ -17268,6 +17281,8 @@ OMPClause *Sema::ActOnOpenMPAllocateClause(
   if (Vars.empty())
     return nullptr;
 
+  if (Allocator)
+    DSAStack->addInnerAllocatorExpr(Allocator);
   return OMPAllocateClause::Create(Context, StartLoc, LParenLoc, Allocator,
                                    ColonLoc, EndLoc, Vars);
 }

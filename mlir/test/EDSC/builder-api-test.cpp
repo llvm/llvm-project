@@ -872,6 +872,49 @@ TEST_FUNC(linalg_pointwise_test) {
 }
 
 // clang-format off
+// CHECK-LABEL: func @linalg_pointwise_mixed_tensors
+//       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
+// CHECK-SAME: indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
+// CHECK-SAME: iterator_types = ["parallel", "parallel"]}
+//       CHECK:       addf
+//       CHECK:     }: tensor<?x?xf32>, memref<?x?xf32> -> tensor<?x?xf32>
+//       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
+// CHECK-SAME: indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
+// CHECK-SAME: iterator_types = ["parallel", "parallel"]}
+//       CHECK:       cmpf "ogt"
+//       CHECK:       select
+//       CHECK:   }: tensor<?x?xf32>, memref<?x?xf32> -> tensor<?x?xf32>
+//       CHECK:   linalg.generic {args_in = 1 : i64, args_out = 1 : i64,
+// CHECK-SAME:      indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0, d1)>],
+// CHECK-SAME:      iterator_types = ["parallel", "parallel"]}
+//       CHECK:     tanh
+//       CHECK:   }: tensor<?x?xf32> -> tensor<?x?xf32>
+// clang-format on
+TEST_FUNC(linalg_pointwise_mixed_tensors_test) {
+  using namespace edsc;
+  using namespace edsc::ops;
+
+  auto f32Type = FloatType::getF32(&globalContext());
+  auto memrefType = MemRefType::get({-1, -1}, f32Type, {}, 0);
+  auto tensorType = RankedTensorType::get({-1, -1}, f32Type);
+  auto f = makeFunction("linalg_pointwise_mixed_tensors", {},
+                        {tensorType, memrefType});
+
+  OpBuilder builder(f.getBody());
+  ScopedContext scope(builder, f.getLoc());
+  ValueHandle A(f.getArgument(0)), B(f.getArgument(1));
+  AffineExpr i, j;
+  bindDims(&globalContext(), i, j);
+  StructuredIndexed SA(A), SB(B), SC(tensorType);
+  linalg_pointwise_add(SA({i, j}), SB({i, j}), SC({i, j}));
+  linalg_pointwise_max(SA({i, j}), SB({i, j}), SC({i, j}));
+  linalg_pointwise_tanh(SA({i, j}), SC({i, j}));
+
+  f.print(llvm::outs());
+  f.erase();
+}
+
+// clang-format off
 // CHECK-LABEL: func @linalg_matmul
 //       CHECK:   linalg.generic {args_in = 2 : i64, args_out = 1 : i64,
 // CHECK-SAME: indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d2, d1)>, affine_map<(d0, d1, d2) -> (d0, d1)>],

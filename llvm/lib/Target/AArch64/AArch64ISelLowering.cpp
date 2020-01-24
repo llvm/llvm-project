@@ -1375,6 +1375,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::PTRUE:             return "AArch64ISD::PTRUE";
   case AArch64ISD::LDNF1:             return "AArch64ISD::LDNF1";
   case AArch64ISD::LDNF1S:            return "AArch64ISD::LDNF1S";
+  case AArch64ISD::LDFF1:             return "AArch64ISD::LDFF1";
+  case AArch64ISD::LDFF1S:            return "AArch64ISD::LDFF1S";
   case AArch64ISD::GLD1:              return "AArch64ISD::GLD1";
   case AArch64ISD::GLD1_SCALED:       return "AArch64ISD::GLD1_SCALED";
   case AArch64ISD::GLD1_SXTW:         return "AArch64ISD::GLD1_SXTW";
@@ -10237,6 +10239,7 @@ static SDValue performSVEAndCombine(SDNode *N,
   // perfect candidates for combining.
   switch (Src->getOpcode()) {
   case AArch64ISD::LDNF1:
+  case AArch64ISD::LDFF1:
     MemVT = cast<VTSDNode>(Src->getOperand(3))->getVT();
     break;
   case AArch64ISD::GLD1:
@@ -11298,7 +11301,7 @@ static SDValue performSTNT1Combine(SDNode *N, SelectionDAG &DAG) {
                             ISD::UNINDEXED, false, false);
 }
 
-static SDValue performLDNF1Combine(SDNode *N, SelectionDAG &DAG) {
+static SDValue performLDNF1Combine(SDNode *N, SelectionDAG &DAG, unsigned Opc) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
 
@@ -11315,7 +11318,7 @@ static SDValue performLDNF1Combine(SDNode *N, SelectionDAG &DAG) {
                     N->getOperand(3), // Base
                     DAG.getValueType(VT) };
 
-  SDValue Load = DAG.getNode(AArch64ISD::LDNF1, DL, VTs, Ops);
+  SDValue Load = DAG.getNode(Opc, DL, VTs, Ops);
   SDValue LoadChain = SDValue(Load.getNode(), 1);
 
   if (ContainerVT.isInteger() && (VT != ContainerVT))
@@ -12571,6 +12574,10 @@ performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     NewOpc = AArch64ISD::LDNF1S;
     MemVTOpNum = 3;
     break;
+  case AArch64ISD::LDFF1:
+    NewOpc = AArch64ISD::LDFF1S;
+    MemVTOpNum = 3;
+    break;
   case AArch64ISD::GLD1:
     NewOpc = AArch64ISD::GLD1S;
     break;
@@ -12706,7 +12713,9 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     case Intrinsic::aarch64_sve_ldnt1:
       return performLDNT1Combine(N, DAG);
     case Intrinsic::aarch64_sve_ldnf1:
-      return performLDNF1Combine(N, DAG);
+      return performLDNF1Combine(N, DAG, AArch64ISD::LDNF1);
+    case Intrinsic::aarch64_sve_ldff1:
+      return performLDNF1Combine(N, DAG, AArch64ISD::LDFF1);
     case Intrinsic::aarch64_sve_stnt1:
       return performSTNT1Combine(N, DAG);
     case Intrinsic::aarch64_sve_ld1_gather:

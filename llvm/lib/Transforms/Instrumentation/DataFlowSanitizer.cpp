@@ -424,7 +424,7 @@ struct DFSanFunction {
   Value *combineOperandShadows(Instruction *Inst);
   Value *loadShadow(Value *ShadowAddr, uint64_t Size, uint64_t Align,
                     Instruction *Pos);
-  void storeShadow(Value *Addr, uint64_t Size, uint64_t Align, Value *Shadow,
+  void storeShadow(Value *Addr, uint64_t Size, Align Alignment, Value *Shadow,
                    Instruction *Pos);
 };
 
@@ -1194,7 +1194,7 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
     }
   }
 
-  uint64_t ShadowAlign = Align * DFS.ShadowWidth / 8;
+  const MaybeAlign ShadowAlign(Align * DFS.ShadowWidth / 8);
   SmallVector<const Value *, 2> Objs;
   GetUnderlyingObjects(Addr, Objs, Pos->getModule()->getDataLayout());
   bool AllConstants = true;
@@ -1216,7 +1216,7 @@ Value *DFSanFunction::loadShadow(Value *Addr, uint64_t Size, uint64_t Align,
     return DFS.ZeroShadow;
   case 1: {
     LoadInst *LI = new LoadInst(DFS.ShadowTy, ShadowAddr, "", Pos);
-    LI->setAlignment(MaybeAlign(ShadowAlign));
+    LI->setAlignment(ShadowAlign);
     return LI;
   }
   case 2: {
@@ -1328,7 +1328,7 @@ void DFSanVisitor::visitLoadInst(LoadInst &LI) {
   DFSF.setShadow(&LI, Shadow);
 }
 
-void DFSanFunction::storeShadow(Value *Addr, uint64_t Size, uint64_t Align,
+void DFSanFunction::storeShadow(Value *Addr, uint64_t Size, Align Alignment,
                                 Value *Shadow, Instruction *Pos) {
   if (AllocaInst *AI = dyn_cast<AllocaInst>(Addr)) {
     const auto i = AllocaShadowMap.find(AI);
@@ -1339,7 +1339,7 @@ void DFSanFunction::storeShadow(Value *Addr, uint64_t Size, uint64_t Align,
     }
   }
 
-  uint64_t ShadowAlign = Align * DFS.ShadowWidth / 8;
+  const Align ShadowAlign(Alignment.value() * (DFS.ShadowWidth / 8));
   IRBuilder<> IRB(Pos);
   Value *ShadowAddr = DFS.getShadowAddress(Addr, Pos);
   if (Shadow == DFS.ZeroShadow) {
@@ -1386,21 +1386,17 @@ void DFSanVisitor::visitStoreInst(StoreInst &SI) {
   if (Size == 0)
     return;
 
-  uint64_t Align;
-  if (ClPreserveAlignment) {
-    Align = SI.getAlignment();
-    if (Align == 0)
-      Align = DL.getABITypeAlignment(SI.getValueOperand()->getType());
-  } else {
-    Align = 1;
-  }
+  const Align Alignement =
+      ClPreserveAlignment ? DL.getValueOrABITypeAlignment(
+                                SI.getAlign(), SI.getValueOperand()->getType())
+                          : Align(1);
 
   Value* Shadow = DFSF.getShadow(SI.getValueOperand());
   if (ClCombinePointerLabelsOnStore) {
     Value *PtrShadow = DFSF.getShadow(SI.getPointerOperand());
     Shadow = DFSF.combineShadows(Shadow, PtrShadow, &SI);
   }
-  DFSF.storeShadow(SI.getPointerOperand(), Size, Align, Shadow, &SI);
+  DFSF.storeShadow(SI.getPointerOperand(), Size, Alignement, Shadow, &SI);
 }
 
 void DFSanVisitor::visitUnaryOperator(UnaryOperator &UO) {

@@ -126,18 +126,6 @@ LoadCommands:
         reserved1:       0x00000000
         reserved2:       0x00000000
         reserved3:       0x00000000
-      - sectname:        __debug_aranges
-        segname:         __DWARF
-        addr:            0x0000000100002084
-        size:            48
-        offset:          0x00002084
-        align:           0
-        reloff:          0x00000000
-        nreloc:          0
-        flags:           0x00000000
-        reserved1:       0x00000000
-        reserved2:       0x00000000
-        reserved3:       0x00000000
       - sectname:        __debug_info
         segname:         __DWARF
         addr:            0x00000001000020B4

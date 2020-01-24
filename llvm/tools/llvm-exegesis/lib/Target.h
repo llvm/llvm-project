@@ -18,6 +18,7 @@
 
 #include "BenchmarkResult.h"
 #include "BenchmarkRunner.h"
+#include "Error.h"
 #include "LlvmState.h"
 #include "SnippetGenerator.h"
 #include "llvm/ADT/Triple.h"
@@ -108,12 +109,15 @@ public:
   virtual unsigned getMaxMemoryAccessSize() const { return 0; }
 
   // Assigns a random operand of the right type to variable Var.
-  // The default implementation only handles generic operand types.
-  // The target is responsible for handling any operand
-  // starting from OPERAND_FIRST_TARGET.
-  virtual void randomizeMCOperand(const Instruction &Instr, const Variable &Var,
-                                  MCOperand &AssignedValue,
-                                  const BitVector &ForbiddenRegs) const;
+  // The target is responsible for handling any operand starting from
+  // OPERAND_FIRST_TARGET.
+  virtual Error randomizeTargetMCOperand(const Instruction &Instr,
+                                         const Variable &Var,
+                                         MCOperand &AssignedValue,
+                                         const BitVector &ForbiddenRegs) const {
+    return make_error<Failure>(
+        "targets with target-specific operands should implement this");
+  }
 
   // Returns true if this instruction is supported as a back-to-back
   // instructions.

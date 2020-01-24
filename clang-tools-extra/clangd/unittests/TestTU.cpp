@@ -13,6 +13,7 @@
 #include "index/FileIndex.h"
 #include "index/MemIndex.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/Utils.h"
 
@@ -74,6 +75,22 @@ ParsedAST TestTU::build() const {
   if (!AST.hasValue()) {
     ADD_FAILURE() << "Failed to build code:\n" << Code;
     llvm_unreachable("Failed to build TestTU!");
+  }
+  // Check for error diagnostics and report gtest failures (unless expected).
+  // This guards against accidental syntax errors silently subverting tests.
+  // error-ok is awfully primitive - using clang -verify would be nicer.
+  // Ownership and layering makes it pretty hard.
+  if (llvm::none_of(Files, [](const auto &KV) {
+        return llvm::StringRef(KV.second).contains("error-ok");
+      })) {
+    for (const auto &D : AST->getDiagnostics())
+      if (D.Severity >= DiagnosticsEngine::Error) {
+        ADD_FAILURE()
+            << "TestTU failed to build (suppress with /*error-ok*/): \n"
+            << D << "\n\nFor code:\n"
+            << Code;
+        break; // Just report first error for simplicity.
+      }
   }
   return std::move(*AST);
 }

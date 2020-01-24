@@ -2683,7 +2683,8 @@ void AssemblyWriter::printModuleSummaryIndex() {
   // Print module path entries. To print in order, add paths to a vector
   // indexed by module slot.
   std::vector<std::pair<std::string, ModuleHash>> moduleVec;
-  std::string RegularLTOModuleName = "[Regular LTO]";
+  std::string RegularLTOModuleName =
+      ModuleSummaryIndex::getRegularLTOModuleName();
   moduleVec.resize(TheIndex->modulePaths().size());
   for (auto &ModPath : TheIndex->modulePaths())
     moduleVec[Machine.getModulePathSlot(ModPath.first())] = std::make_pair(
@@ -2900,11 +2901,15 @@ void AssemblyWriter::printAliasSummary(const AliasSummary *AS) {
 }
 
 void AssemblyWriter::printGlobalVarSummary(const GlobalVarSummary *GS) {
+  auto VTableFuncs = GS->vTableFuncs();
   Out << ", varFlags: (readonly: " << GS->VarFlags.MaybeReadOnly << ", "
       << "writeonly: " << GS->VarFlags.MaybeWriteOnly << ", "
-      << "constant: " << GS->VarFlags.Constant << ")";
+      << "constant: " << GS->VarFlags.Constant;
+  if (!VTableFuncs.empty())
+    Out << ", "
+        << "vcall_visibility: " << GS->VarFlags.VCallVisibility;
+  Out << ")";
 
-  auto VTableFuncs = GS->vTableFuncs();
   if (!VTableFuncs.empty()) {
     Out << ", vTableFuncs: (";
     FieldSeparator FS;

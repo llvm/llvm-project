@@ -1,4 +1,4 @@
-//===-- SymbolFilePDB.cpp ---------------------------------------*- C++ -*-===//
+//===-- SymbolFilePDB.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -310,8 +310,8 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
     return nullptr;
   }
 
-  ClangASTContext *clang_type_system =
-    llvm::dyn_cast_or_null<ClangASTContext>(&type_system_or_err.get());
+  TypeSystemClang *clang_type_system =
+    llvm::dyn_cast_or_null<TypeSystemClang>(&type_system_or_err.get());
   if (!clang_type_system)
     return nullptr;
   clang_type_system->GetPDBParser()->GetDeclForSymbol(pdb_func);
@@ -560,8 +560,8 @@ lldb_private::Type *SymbolFilePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
     return nullptr;
   }
 
-  ClangASTContext *clang_type_system =
-      llvm::dyn_cast_or_null<ClangASTContext>(&type_system_or_err.get());
+  TypeSystemClang *clang_type_system =
+      llvm::dyn_cast_or_null<TypeSystemClang>(&type_system_or_err.get());
   if (!clang_type_system)
     return nullptr;
   PDBASTParser *pdb = clang_type_system->GetPDBParser();
@@ -597,8 +597,8 @@ bool SymbolFilePDB::CompleteType(lldb_private::CompilerType &compiler_type) {
     return false;
   }
 
-  ClangASTContext *clang_ast_ctx =
-      llvm::dyn_cast_or_null<ClangASTContext>(&type_system_or_err.get());
+  TypeSystemClang *clang_ast_ctx =
+      llvm::dyn_cast_or_null<TypeSystemClang>(&type_system_or_err.get());
 
   if (!clang_ast_ctx)
     return false;
@@ -619,8 +619,8 @@ lldb_private::CompilerDecl SymbolFilePDB::GetDeclForUID(lldb::user_id_t uid) {
     return CompilerDecl();
   }
 
-  ClangASTContext *clang_ast_ctx =
-      llvm::dyn_cast_or_null<ClangASTContext>(&type_system_or_err.get());
+  TypeSystemClang *clang_ast_ctx =
+      llvm::dyn_cast_or_null<TypeSystemClang>(&type_system_or_err.get());
   if (!clang_ast_ctx)
     return CompilerDecl();
 
@@ -649,8 +649,8 @@ SymbolFilePDB::GetDeclContextForUID(lldb::user_id_t uid) {
     return CompilerDeclContext();
   }
 
-  ClangASTContext *clang_ast_ctx =
-      llvm::dyn_cast_or_null<ClangASTContext>(&type_system_or_err.get());
+  TypeSystemClang *clang_ast_ctx =
+      llvm::dyn_cast_or_null<TypeSystemClang>(&type_system_or_err.get());
   if (!clang_ast_ctx)
     return CompilerDeclContext();
 
@@ -679,8 +679,8 @@ SymbolFilePDB::GetDeclContextContainingUID(lldb::user_id_t uid) {
     return CompilerDeclContext();
   }
 
-  ClangASTContext *clang_ast_ctx =
-      llvm::dyn_cast_or_null<ClangASTContext>(&type_system_or_err.get());
+  TypeSystemClang *clang_ast_ctx =
+      llvm::dyn_cast_or_null<TypeSystemClang>(&type_system_or_err.get());
   if (!clang_ast_ctx)
     return CompilerDeclContext();
 
@@ -708,8 +708,8 @@ void SymbolFilePDB::ParseDeclsForContext(
     return;
   }
 
-  ClangASTContext *clang_ast_ctx =
-      llvm::dyn_cast_or_null<ClangASTContext>(&type_system_or_err.get());
+  TypeSystemClang *clang_ast_ctx =
+      llvm::dyn_cast_or_null<TypeSystemClang>(&type_system_or_err.get());
   if (!clang_ast_ctx)
     return;
 
@@ -1450,7 +1450,7 @@ void SymbolFilePDB::DumpClangAST(Stream &s) {
   }
 
   auto *clang_type_system =
-      llvm::dyn_cast_or_null<ClangASTContext>(&type_system_or_err.get());
+      llvm::dyn_cast_or_null<TypeSystemClang>(&type_system_or_err.get());
   if (!clang_type_system)
     return;
   clang_type_system->Dump(s);
@@ -1663,7 +1663,7 @@ PDBASTParser *SymbolFilePDB::GetPDBAstParser() {
   }
 
   auto *clang_type_system =
-      llvm::dyn_cast_or_null<ClangASTContext>(&type_system_or_err.get());
+      llvm::dyn_cast_or_null<TypeSystemClang>(&type_system_or_err.get());
   if (!clang_type_system)
     return nullptr;
 
@@ -1685,7 +1685,7 @@ lldb_private::CompilerDeclContext SymbolFilePDB::FindNamespace(
   }
 
   auto *clang_type_system =
-      llvm::dyn_cast_or_null<ClangASTContext>(&type_system_or_err.get());
+      llvm::dyn_cast_or_null<TypeSystemClang>(&type_system_or_err.get());
   if (!clang_type_system)
     return CompilerDeclContext();
 

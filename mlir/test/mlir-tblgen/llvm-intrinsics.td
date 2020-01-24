@@ -10,16 +10,18 @@
 //
 // RUN: cat %S/../../../llvm/include/llvm/IR/Intrinsics.td \
 // RUN: | grep -v "llvm/IR/Intrinsics" \
-// RUN: | mlir-tblgen -gen-llvmir-intrinsics -I %S/../../../llvm/include/ --llvmir-intrinsics-filter=is_constant \
+// RUN: | mlir-tblgen -gen-llvmir-intrinsics -I %S/../../../llvm/include/ --llvmir-intrinsics-filter=ptrmask \
 // RUN: | FileCheck %s
 
-// CHECK-LABEL: def LLVM_is_constant
-// CHECK: LLVM_Op<"intr
+// CHECK-LABEL: def LLVM_ptrmask
+// CHECK: LLVM_IntrOp<"ptrmask
 // CHECK: Arguments<(ins
 // CHECK: Results<(outs
 // CHECK: llvm::Function *fn = llvm::Intrinsic::getDeclaration(
-// CHECK:        module, llvm::Intrinsic::is_constant, {
+// CHECK:        module, llvm::Intrinsic::ptrmask, {
+// CHECK:        opInst.getResult(0).getType().cast<LLVM::LLVMType>().getUnderlyingType(),
 // CHECK:        opInst.getOperand(0).getType().cast<LLVM::LLVMType>().getUnderlyingType(),
+// CHECK:        opInst.getOperand(1).getType().cast<LLVM::LLVMType>().getUnderlyingType(),
 // CHECK: });
 // CHECK:        lookupValues(opInst.getOperands());
 
@@ -36,3 +38,11 @@
 // RUN: | FileCheck --check-prefix=ODS %s
 
 // ODS-LABEL: class vastart
+
+// RUN: cat %S/../../../llvm/include/llvm/IR/Intrinsics.td \
+// RUN: | grep -v "llvm/IR/Intrinsics" \
+// RUN: | mlir-tblgen -gen-llvmir-intrinsics -I %S/../../../llvm/include/ --llvmir-intrinsics-filter=ptrmask -dialect-opclass-base My_OpBase \
+// RUN: | FileCheck %s --check-prefix=DIALECT-OPBASE
+
+// DIALECT-OPBASE-LABEL: def LLVM_ptrmask
+// DIALECT-OPBASE: My_OpBase<"ptrmask

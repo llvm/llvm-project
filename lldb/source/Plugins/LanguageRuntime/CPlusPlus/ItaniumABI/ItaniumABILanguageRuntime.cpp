@@ -1,5 +1,4 @@
-//===-- ItaniumABILanguageRuntime.cpp --------------------------------------*-
-//C++ -*-===//
+//===-- ItaniumABILanguageRuntime.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,7 +20,7 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeList.h"
@@ -118,7 +117,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
             if (class_types.GetSize() == 1) {
               type_sp = class_types.GetTypeAtIndex(0);
               if (type_sp) {
-                if (ClangASTContext::IsCXXClassType(
+                if (TypeSystemClang::IsCXXClassType(
                         type_sp->GetForwardCompilerType())) {
                   LLDB_LOGF(
                       log,
@@ -150,7 +149,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
               for (i = 0; i < class_types.GetSize(); i++) {
                 type_sp = class_types.GetTypeAtIndex(i);
                 if (type_sp) {
-                  if (ClangASTContext::IsCXXClassType(
+                  if (TypeSystemClang::IsCXXClassType(
                           type_sp->GetForwardCompilerType())) {
                     LLDB_LOGF(
                         log,
@@ -238,7 +237,7 @@ bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
   if (!type)
     return true;
 
-  if (ClangASTContext::AreTypesSame(in_value.GetCompilerType(), type)) {
+  if (TypeSystemClang::AreTypesSame(in_value.GetCompilerType(), type)) {
     // The dynamic type we found was the same type, so we don't have a
     // dynamic type here...
     return false;
@@ -536,8 +535,8 @@ ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
   if (!thread_sp->SafeToCallFunctions())
     return {};
 
-  ClangASTContext *clang_ast_context =
-      ClangASTContext::GetScratch(m_process->GetTarget());
+  TypeSystemClang *clang_ast_context =
+      TypeSystemClang::GetScratch(m_process->GetTarget());
   if (!clang_ast_context)
     return {};
 

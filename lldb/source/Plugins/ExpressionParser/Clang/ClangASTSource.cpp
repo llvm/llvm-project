@@ -1,4 +1,4 @@
-//===-- ClangASTSource.cpp ---------------------------------------*- C++-*-===//
+//===-- ClangASTSource.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,7 +13,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/Function.h"
@@ -56,7 +56,7 @@ ClangASTSource::ClangASTSource(const lldb::TargetSP &target,
   m_ast_importer_sp = importer;
 }
 
-void ClangASTSource::InstallASTContext(ClangASTContext &clang_ast_context) {
+void ClangASTSource::InstallASTContext(TypeSystemClang &clang_ast_context) {
   m_ast_context = &clang_ast_context.getASTContext();
   m_clang_ast_context = &clang_ast_context;
   m_file_manager = &m_ast_context->getSourceManager().getFileManager();
@@ -73,9 +73,9 @@ ClangASTSource::~ClangASTSource() {
     return;
   // We are in the process of destruction, don't create clang ast context on
   // demand by passing false to
-  // Target::GetScratchClangASTContext(create_on_demand).
-  ClangASTContext *scratch_clang_ast_context =
-      ClangASTContext::GetScratch(*m_target, false);
+  // Target::GetScratchTypeSystemClang(create_on_demand).
+  TypeSystemClang *scratch_clang_ast_context =
+      TypeSystemClang::GetScratch(*m_target, false);
 
   if (!scratch_clang_ast_context)
     return;
@@ -319,7 +319,7 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
         // We have found a type by basename and we need to make sure the decl
         // contexts are the same before we can try to complete this type with
         // another
-        if (!ClangASTContext::DeclsAreEquivalent(tag_decl, candidate_tag_decl))
+        if (!TypeSystemClang::DeclsAreEquivalent(tag_decl, candidate_tag_decl))
           continue;
 
         if (m_ast_importer_sp->CompleteTagDeclWithOrigin(tag_decl,
@@ -950,7 +950,7 @@ bool ClangASTSource::FindObjCMethodDeclsWithOrigin(
 
   llvm::SmallVector<NamedDecl *, 1> methods;
 
-  ClangASTContext::GetCompleteDecl(original_ctx, original_interface_decl);
+  TypeSystemClang::GetCompleteDecl(original_ctx, original_interface_decl);
 
   if (ObjCMethodDecl *instance_method_decl =
           original_interface_decl->lookupInstanceMethod(original_selector)) {
@@ -1146,7 +1146,7 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
         continue;
 
       ObjCMethodDecl *method_decl =
-          ClangASTContext::DeclContextGetAsObjCMethodDecl(function_decl_ctx);
+          TypeSystemClang::DeclContextGetAsObjCMethodDecl(function_decl_ctx);
 
       if (!method_decl)
         continue;
@@ -1574,7 +1574,7 @@ bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
   BaseOffsetMap origin_base_offsets;
   BaseOffsetMap origin_virtual_base_offsets;
 
-  ClangASTContext::GetCompleteDecl(
+  TypeSystemClang::GetCompleteDecl(
       &origin_record->getASTContext(),
       const_cast<RecordDecl *>(origin_record.decl));
 
@@ -1763,11 +1763,11 @@ NamespaceDecl *ClangASTSource::AddNamespace(
   const CompilerDeclContext &namespace_decl = namespace_decls->begin()->second;
 
   clang::ASTContext *src_ast =
-      ClangASTContext::DeclContextGetClangASTContext(namespace_decl);
+      TypeSystemClang::DeclContextGetTypeSystemClang(namespace_decl);
   if (!src_ast)
     return nullptr;
   clang::NamespaceDecl *src_namespace_decl =
-      ClangASTContext::DeclContextGetAsNamespaceDecl(namespace_decl);
+      TypeSystemClang::DeclContextGetAsNamespaceDecl(namespace_decl);
 
   if (!src_namespace_decl)
     return nullptr;
@@ -1809,8 +1809,8 @@ ClangASTImporter::DeclOrigin ClangASTSource::GetDeclOrigin(const clang::Decl *de
 }
 
 CompilerType ClangASTSource::GuardedCopyType(const CompilerType &src_type) {
-  ClangASTContext *src_ast =
-      llvm::dyn_cast_or_null<ClangASTContext>(src_type.GetTypeSystem());
+  TypeSystemClang *src_ast =
+      llvm::dyn_cast_or_null<TypeSystemClang>(src_type.GetTypeSystem());
   if (src_ast == nullptr)
     return CompilerType();
 
@@ -1843,8 +1843,8 @@ clang::NamedDecl *NameSearchContext::AddVarDecl(const CompilerType &type) {
   if (!type.IsValid())
     return nullptr;
 
-  ClangASTContext *lldb_ast =
-      llvm::dyn_cast<ClangASTContext>(type.GetTypeSystem());
+  TypeSystemClang *lldb_ast =
+      llvm::dyn_cast<TypeSystemClang>(type.GetTypeSystem());
   if (!lldb_ast)
     return nullptr;
 
@@ -1870,8 +1870,8 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
   if (m_function_types.count(type))
     return nullptr;
 
-  ClangASTContext *lldb_ast =
-      llvm::dyn_cast<ClangASTContext>(type.GetTypeSystem());
+  TypeSystemClang *lldb_ast =
+      llvm::dyn_cast<TypeSystemClang>(type.GetTypeSystem());
   if (!lldb_ast)
     return nullptr;
 
@@ -1941,8 +1941,8 @@ clang::NamedDecl *NameSearchContext::AddFunDecl(const CompilerType &type,
   // will crash in clang.
   clang::OverloadedOperatorKind op_kind = clang::NUM_OVERLOADED_OPERATORS;
   if (func_proto_type &&
-      ClangASTContext::IsOperator(decl_name.getAsString().c_str(), op_kind)) {
-    if (!ClangASTContext::CheckOverloadedOperatorKindParameterCount(
+      TypeSystemClang::IsOperator(decl_name.getAsString().c_str(), op_kind)) {
+    if (!TypeSystemClang::CheckOverloadedOperatorKindParameterCount(
             false, op_kind, func_proto_type->getNumParams()))
       return nullptr;
   }

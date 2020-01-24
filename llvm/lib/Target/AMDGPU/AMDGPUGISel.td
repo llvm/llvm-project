@@ -202,9 +202,6 @@ multiclass GISelVop2IntrPat <
   def : GISelVop2CommutePat <node, inst, dst_vt, src_vt>;
 }
 
-def : GISelSop2Pat <or, S_OR_B32, i32>;
-def : GISelVop2Pat <or, V_OR_B32_e32, i32>;
-
 // Since GlobalISel is more flexible then SelectionDAG, I think we can get
 // away with adding patterns for integer types and not legalizing all
 // loads and stores to vector types.  This should help simplify the load/store
