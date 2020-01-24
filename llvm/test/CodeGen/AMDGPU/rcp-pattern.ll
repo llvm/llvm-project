@@ -10,7 +10,7 @@
 
 ; EG: RECIP_IEEE
 define amdgpu_kernel void @rcp_pat_f32(float addrspace(1)* %out, float %src) #0 {
-  %rcp = fdiv float 1.0, %src
+  %rcp = fdiv float 1.0, %src, !fpmath !0
   store float %rcp, float addrspace(1)* %out, align 4
   ret void
 }
@@ -71,7 +71,7 @@ define amdgpu_kernel void @rcp_global_fast_ulp25_pat_f32(float addrspace(1)* %ou
 ; EG: RECIP_IEEE
 define amdgpu_kernel void @rcp_fabs_pat_f32(float addrspace(1)* %out, float %src) #0 {
   %src.fabs = call float @llvm.fabs.f32(float %src)
-  %rcp = fdiv float 1.0, %src.fabs
+  %rcp = fdiv float 1.0, %src.fabs, !fpmath !0
   store float %rcp, float addrspace(1)* %out, align 4
   ret void
 }
@@ -83,7 +83,7 @@ define amdgpu_kernel void @rcp_fabs_pat_f32(float addrspace(1)* %out, float %src
 
 ; EG: RECIP_IEEE
 define amdgpu_kernel void @neg_rcp_pat_f32(float addrspace(1)* %out, float %src) #0 {
-  %rcp = fdiv float -1.0, %src
+  %rcp = fdiv float -1.0, %src, !fpmath !0
   store float %rcp, float addrspace(1)* %out, align 4
   ret void
 }
@@ -95,7 +95,7 @@ define amdgpu_kernel void @neg_rcp_pat_f32(float addrspace(1)* %out, float %src)
 define amdgpu_kernel void @rcp_fabs_fneg_pat_f32(float addrspace(1)* %out, float %src) #0 {
   %src.fabs = call float @llvm.fabs.f32(float %src)
   %src.fabs.fneg = fsub float -0.0, %src.fabs
-  %rcp = fdiv float 1.0, %src.fabs.fneg
+  %rcp = fdiv float 1.0, %src.fabs.fneg, !fpmath !0
   store float %rcp, float addrspace(1)* %out, align 4
   ret void
 }
@@ -109,7 +109,7 @@ define amdgpu_kernel void @rcp_fabs_fneg_pat_f32(float addrspace(1)* %out, float
 define amdgpu_kernel void @rcp_fabs_fneg_pat_multi_use_f32(float addrspace(1)* %out, float %src) #0 {
   %src.fabs = call float @llvm.fabs.f32(float %src)
   %src.fabs.fneg = fsub float -0.0, %src.fabs
-  %rcp = fdiv float 1.0, %src.fabs.fneg
+  %rcp = fdiv float 1.0, %src.fabs.fneg, !fpmath !0
   store volatile float %rcp, float addrspace(1)* %out, align 4
 
   %other = fmul float %src, %src.fabs.fneg
