@@ -49,6 +49,12 @@ public:
 
   bool IsVirtualStep() override;
 
+  // Plans that are implementing parts of a step in might need to follow the
+  // behavior of this plan w.r.t. StepThrough.  They can get that from here.
+  static uint32_t GetDefaultFlagsValue() {
+    return s_default_flag_values;
+  }
+
 protected:
   static bool DefaultShouldStopHereCallback(ThreadPlan *current_plan,
                                             Flags &flags,
