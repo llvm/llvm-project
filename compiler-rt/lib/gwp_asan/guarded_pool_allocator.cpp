@@ -144,16 +144,18 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
   size_t PoolBytesRequired =
       PageSize * (1 + MaxSimultaneousAllocations) +
       MaxSimultaneousAllocations * maximumAllocationSize();
-  void *GuardedPoolMemory = mapMemory(PoolBytesRequired);
+  void *GuardedPoolMemory = mapMemory(PoolBytesRequired, kGwpAsanGuardPageName);
 
   size_t BytesRequired = MaxSimultaneousAllocations * sizeof(*Metadata);
-  Metadata = reinterpret_cast<AllocationMetadata *>(mapMemory(BytesRequired));
-  markReadWrite(Metadata, BytesRequired);
+  Metadata = reinterpret_cast<AllocationMetadata *>(
+      mapMemory(BytesRequired, kGwpAsanMetadataName));
+  markReadWrite(Metadata, BytesRequired, kGwpAsanMetadataName);
 
   // Allocate memory and set up the free pages queue.
   BytesRequired = MaxSimultaneousAllocations * sizeof(*FreeSlots);
-  FreeSlots = reinterpret_cast<size_t *>(mapMemory(BytesRequired));
-  markReadWrite(FreeSlots, BytesRequired);
+  FreeSlots = reinterpret_cast<size_t *>(
+      mapMemory(BytesRequired, kGwpAsanFreeSlotsName));
+  markReadWrite(FreeSlots, BytesRequired, kGwpAsanFreeSlotsName);
 
   // Multiply the sample rate by 2 to give a good, fast approximation for (1 /
   // SampleRate) chance of sampling.
@@ -183,16 +185,18 @@ void GuardedPoolAllocator::enable() { PoolMutex.unlock(); }
 void GuardedPoolAllocator::uninitTestOnly() {
   if (GuardedPagePool) {
     unmapMemory(reinterpret_cast<void *>(GuardedPagePool),
-                GuardedPagePoolEnd - GuardedPagePool);
+                GuardedPagePoolEnd - GuardedPagePool, kGwpAsanGuardPageName);
     GuardedPagePool = 0;
     GuardedPagePoolEnd = 0;
   }
   if (Metadata) {
-    unmapMemory(Metadata, MaxSimultaneousAllocations * sizeof(*Metadata));
+    unmapMemory(Metadata, MaxSimultaneousAllocations * sizeof(*Metadata),
+                kGwpAsanMetadataName);
     Metadata = nullptr;
   }
   if (FreeSlots) {
-    unmapMemory(FreeSlots, MaxSimultaneousAllocations * sizeof(*FreeSlots));
+    unmapMemory(FreeSlots, MaxSimultaneousAllocations * sizeof(*FreeSlots),
+                kGwpAsanFreeSlotsName);
     FreeSlots = nullptr;
   }
   uninstallSignalHandlers();
@@ -228,7 +232,8 @@ void *GuardedPoolAllocator::allocate(size_t Size) {
   // If a slot is multiple pages in size, and the allocation takes up a single
   // page, we can improve overflow detection by leaving the unused pages as
   // unmapped.
-  markReadWrite(reinterpret_cast<void *>(getPageAddr(Ptr)), Size);
+  markReadWrite(reinterpret_cast<void *>(getPageAddr(Ptr)), Size,
+                kGwpAsanAliveSlotName);
 
   Meta->RecordAllocation(Ptr, Size, Backtrace);
 
@@ -260,8 +265,8 @@ void GuardedPoolAllocator::deallocate(void *Ptr) {
     Meta->RecordDeallocation(Backtrace);
   }
 
-  markInaccessible(reinterpret_cast<void *>(SlotStart),
-                   maximumAllocationSize());
+  markInaccessible(reinterpret_cast<void *>(SlotStart), maximumAllocationSize(),
+                   kGwpAsanGuardPageName);
 
   // And finally, lock again to release the slot back into the pool.
   ScopedLock L(PoolMutex);
