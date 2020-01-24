@@ -98,11 +98,11 @@ def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 
 let Predicates = [HasSVE] in {
 
-  def RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr">;
-  def RDFFRS_PPz : sve_int_rdffr_pred<0b1, "rdffrs">;
-  def RDFFR_P    : sve_int_rdffr_unpred<"rdffr">;
-  def SETFFR     : sve_int_setffr<"setffr">;
-  def WRFFR      : sve_int_wrffr<"wrffr">;
+  defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
+  def  RDFFRS_PPz : sve_int_rdffr_pred<0b1, "rdffrs">;
+  defm RDFFR_P    : sve_int_rdffr_unpred<"rdffr", int_aarch64_sve_rdffr>;
+  def  SETFFR     : sve_int_setffr<"setffr", int_aarch64_sve_setffr>;
+  def  WRFFR      : sve_int_wrffr<"wrffr", int_aarch64_sve_wrffr>;
 
   defm ADD_ZZZ   : sve_int_bin_cons_arit_0<0b000, "add", add>;
   defm SUB_ZZZ   : sve_int_bin_cons_arit_0<0b001, "sub", sub>;
