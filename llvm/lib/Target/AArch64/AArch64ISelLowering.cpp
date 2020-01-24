@@ -211,6 +211,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SETCC, MVT::f16, Custom);
   setOperationAction(ISD::SETCC, MVT::f32, Custom);
   setOperationAction(ISD::SETCC, MVT::f64, Custom);
+  setOperationAction(ISD::STRICT_FSETCC, MVT::f16, Custom);
+  setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Custom);
+  setOperationAction(ISD::STRICT_FSETCC, MVT::f64, Custom);
+  setOperationAction(ISD::STRICT_FSETCCS, MVT::f16, Custom);
+  setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
+  setOperationAction(ISD::STRICT_FSETCCS, MVT::f64, Custom);
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
   setOperationAction(ISD::BRCOND, MVT::Other, Expand);
@@ -1249,6 +1255,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case AArch64ISD::CCMN:              return "AArch64ISD::CCMN";
   case AArch64ISD::FCCMP:             return "AArch64ISD::FCCMP";
   case AArch64ISD::FCMP:              return "AArch64ISD::FCMP";
+  case AArch64ISD::STRICT_FCMP:       return "AArch64ISD::STRICT_FCMP";
+  case AArch64ISD::STRICT_FCMPE:      return "AArch64ISD::STRICT_FCMPE";
   case AArch64ISD::DUP:               return "AArch64ISD::DUP";
   case AArch64ISD::DUPLANE8:          return "AArch64ISD::DUPLANE8";
   case AArch64ISD::DUPLANE16:         return "AArch64ISD::DUPLANE16";
@@ -1685,6 +1693,17 @@ static bool isLegalArithImmed(uint64_t C) {
 static bool isCMN(SDValue Op, ISD::CondCode CC) {
   return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0)) &&
          (CC == ISD::SETEQ || CC == ISD::SETNE);
+}
+
+static SDValue emitStrictFPComparison(SDValue LHS, SDValue RHS, const SDLoc &dl,
+                                      SelectionDAG &DAG, SDValue Chain,
+                                      bool IsSignaling) {
+  EVT VT = LHS.getValueType();
+  assert(VT != MVT::f128);
+  assert(VT != MVT::f16 && "Lowering of strict fp16 not yet implemented");
+  unsigned Opcode =
+      IsSignaling ? AArch64ISD::STRICT_FCMPE : AArch64ISD::STRICT_FCMP;
+  return DAG.getNode(Opcode, dl, {VT, MVT::Other}, {Chain, LHS, RHS});
 }
 
 static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
@@ -3147,6 +3166,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::GlobalTLSAddress:
     return LowerGlobalTLSAddress(Op, DAG);
   case ISD::SETCC:
+  case ISD::STRICT_FSETCC:
+  case ISD::STRICT_FSETCCS:
     return LowerSETCC(Op, DAG);
   case ISD::BR_CC:
     return LowerBR_CC(Op, DAG);
@@ -5199,9 +5220,15 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   if (Op.getValueType().isVector())
     return LowerVSETCC(Op, DAG);
 
-  SDValue LHS = Op.getOperand(0);
-  SDValue RHS = Op.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  bool IsStrict = Op->isStrictFPOpcode();
+  bool IsSignaling = Op.getOpcode() == ISD::STRICT_FSETCCS;
+  unsigned OpNo = IsStrict ? 1 : 0;
+  SDValue Chain;
+  if (IsStrict)
+    Chain = Op.getOperand(0);
+  SDValue LHS = Op.getOperand(OpNo + 0);
+  SDValue RHS = Op.getOperand(OpNo + 1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(OpNo + 2))->get();
   SDLoc dl(Op);
 
   // We chose ZeroOrOneBooleanContents, so use zero and one.
@@ -5212,17 +5239,19 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   // Handle f128 first, since one possible outcome is a normal integer
   // comparison which gets picked up by the next if statement.
   if (LHS.getValueType() == MVT::f128) {
-    softenSetCCOperands(DAG, MVT::f128, LHS, RHS, CC, dl, LHS, RHS);
+    softenSetCCOperands(DAG, MVT::f128, LHS, RHS, CC, dl, LHS, RHS, Chain,
+                        IsSignaling);
 
     // If softenSetCCOperands returned a scalar, use it.
     if (!RHS.getNode()) {
       assert(LHS.getValueType() == Op.getValueType() &&
              "Unexpected setcc expansion!");
-      return LHS;
+      return IsStrict ? DAG.getMergeValues({LHS, Chain}, dl) : LHS;
     }
   }
 
   if (LHS.getValueType().isInteger()) {
+    assert(!IsStrict && "Unexpected integer in strict fp comparison!");
     SDValue CCVal;
     SDValue Cmp = getAArch64Cmp(
         LHS, RHS, ISD::getSetCCInverse(CC, LHS.getValueType()), CCVal, DAG, dl);
@@ -5239,10 +5268,15 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
 
   // If that fails, we'll need to perform an FCMP + CSEL sequence.  Go ahead
   // and do the comparison.
-  SDValue Cmp = emitComparison(LHS, RHS, CC, dl, DAG);
+  SDValue Cmp;
+  if (IsStrict)
+    Cmp = emitStrictFPComparison(LHS, RHS, dl, DAG, Chain, IsSignaling);
+  else
+    Cmp = emitComparison(LHS, RHS, CC, dl, DAG);
 
   AArch64CC::CondCode CC1, CC2;
   changeFPCCToAArch64CC(CC, CC1, CC2);
+  SDValue Res;
   if (CC2 == AArch64CC::AL) {
     changeFPCCToAArch64CC(ISD::getSetCCInverse(CC, LHS.getValueType()), CC1,
                           CC2);
@@ -5251,7 +5285,7 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     // Note that we inverted the condition above, so we reverse the order of
     // the true and false operands here.  This will allow the setcc to be
     // matched to a single CSINC instruction.
-    return DAG.getNode(AArch64ISD::CSEL, dl, VT, FVal, TVal, CC1Val, Cmp);
+    Res = DAG.getNode(AArch64ISD::CSEL, dl, VT, FVal, TVal, CC1Val, Cmp);
   } else {
     // Unfortunately, the mapping of LLVM FP CC's onto AArch64 CC's isn't
     // totally clean.  Some of them require two CSELs to implement.  As is in
@@ -5264,8 +5298,9 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
         DAG.getNode(AArch64ISD::CSEL, dl, VT, TVal, FVal, CC1Val, Cmp);
 
     SDValue CC2Val = DAG.getConstant(CC2, dl, MVT::i32);
-    return DAG.getNode(AArch64ISD::CSEL, dl, VT, TVal, CS1, CC2Val, Cmp);
+    Res = DAG.getNode(AArch64ISD::CSEL, dl, VT, TVal, CS1, CC2Val, Cmp);
   }
+  return IsStrict ? DAG.getMergeValues({Res, Cmp.getValue(1)}, dl) : Res;
 }
 
 SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,

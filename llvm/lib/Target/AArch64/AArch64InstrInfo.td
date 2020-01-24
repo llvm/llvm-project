@@ -420,7 +420,14 @@ def AArch64fccmp     : SDNode<"AArch64ISD::FCCMP", SDT_AArch64FCCMP>;
 
 def AArch64threadpointer : SDNode<"AArch64ISD::THREAD_POINTER", SDTPtrLeaf>;
 
-def AArch64fcmp      : SDNode<"AArch64ISD::FCMP", SDT_AArch64FCmp>;
+def AArch64fcmp         : SDNode<"AArch64ISD::FCMP", SDT_AArch64FCmp>;
+def AArch64strict_fcmp  : SDNode<"AArch64ISD::STRICT_FCMP", SDT_AArch64FCmp,
+                                 [SDNPHasChain]>;
+def AArch64strict_fcmpe : SDNode<"AArch64ISD::STRICT_FCMPE", SDT_AArch64FCmp,
+                                 [SDNPHasChain]>;
+def AArch64any_fcmp     : PatFrags<(ops node:$lhs, node:$rhs),
+                                   [(AArch64strict_fcmp node:$lhs, node:$rhs),
+                                    (AArch64fcmp node:$lhs, node:$rhs)]>;
 
 def AArch64dup       : SDNode<"AArch64ISD::DUP", SDT_AArch64Dup>;
 def AArch64duplane8  : SDNode<"AArch64ISD::DUPLANE8", SDT_AArch64DupLane>;
@@ -3559,8 +3566,8 @@ def : Pat<(f64 (fma FPR64:$Rn, (fneg FPR64:$Rm), (fneg FPR64:$Ra))),
 // Floating point comparison instructions.
 //===----------------------------------------------------------------------===//
 
-defm FCMPE : FPComparison<1, "fcmpe">;
-defm FCMP  : FPComparison<0, "fcmp", AArch64fcmp>;
+defm FCMPE : FPComparison<1, "fcmpe", AArch64strict_fcmpe>;
+defm FCMP  : FPComparison<0, "fcmp", AArch64any_fcmp>;
 
 //===----------------------------------------------------------------------===//
 // Floating point conditional comparison instructions.
