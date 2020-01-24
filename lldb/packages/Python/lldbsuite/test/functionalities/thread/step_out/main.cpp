@@ -30,7 +30,7 @@ thread_func ()
     step_out_of_here(); // Expect to stop here after step-out (clang)
 
     // Return
-    return NULL;  // Expect to stop here after step-out (icc and gcc)
+    return NULL;  // Expect to stop here after step-out (icc and gcc; arm64)
 }
 
 int main ()
