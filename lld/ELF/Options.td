@@ -479,6 +479,8 @@ def lto_cs_profile_file: J<"lto-cs-profile-file=">,
 def lto_obj_path_eq: J<"lto-obj-path=">;
 def lto_sample_profile: J<"lto-sample-profile=">,
   HelpText<"Sample profile file path">;
+def lto_whole_program_visibility: F<"lto-whole-program-visibility">,
+  HelpText<"Asserts that the LTO link has whole program visibility">;
 def disable_verify: F<"disable-verify">;
 defm mllvm: Eq<"mllvm", "Additional arguments to forward to LLVM's option processing">;
 def opt_remarks_filename: Separate<["--"], "opt-remarks-filename">,
