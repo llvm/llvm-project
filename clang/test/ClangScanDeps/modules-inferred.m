@@ -32,7 +32,7 @@ inferred a = 0;
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[SOURCEDIR]]/Inputs/frameworks/Inferred.framework/Frameworks/Sub.framework/Headers/Sub.h",
 // CHECK-NEXT:         "[[SOURCEDIR]]/Inputs/frameworks/Inferred.framework/Headers/Inferred.h",
-// CHECK-NEXT:         "[[SOURCEDIR]]/Inputs/frameworks/Inferred.framework/__inferred_module.map"
+// CHECK-NEXT:         "[[SOURCEDIR]]/Inputs/frameworks/module.modulemap"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "name": "Inferred"
 // CHECK-NEXT:     }
