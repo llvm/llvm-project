@@ -62,6 +62,8 @@
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
+#include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -86,6 +88,7 @@
 #include "llvm/PassSupport.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
@@ -115,12 +118,15 @@ static cl::opt<PassSummaryAction> ClSummaryAction(
 
 static cl::opt<std::string> ClReadSummary(
     "wholeprogramdevirt-read-summary",
-    cl::desc("Read summary from given YAML file before running pass"),
+    cl::desc(
+        "Read summary from given bitcode or YAML file before running pass"),
     cl::Hidden);
 
 static cl::opt<std::string> ClWriteSummary(
     "wholeprogramdevirt-write-summary",
-    cl::desc("Write summary to given YAML file after running pass"),
+    cl::desc("Write summary to given bitcode or YAML file after running pass. "
+             "Output file format is deduced from extension: *.bc means writing "
+             "bitcode, otherwise YAML"),
     cl::Hidden);
 
 static cl::opt<unsigned>
@@ -737,11 +743,27 @@ void updateIndexWPDForExports(
 
 } // end namespace llvm
 
+static Error checkCombinedSummaryForTesting(ModuleSummaryIndex *Summary) {
+  // Check that summary index contains regular LTO module when performing
+  // export to prevent occasional use of index from pure ThinLTO compilation
+  // (-fno-split-lto-module). This kind of summary index is passed to
+  // DevirtIndex::run, not to DevirtModule::run used by opt/runForTesting.
+  const auto &ModPaths = Summary->modulePaths();
+  if (ClSummaryAction != PassSummaryAction::Import &&
+      ModPaths.find(ModuleSummaryIndex::getRegularLTOModuleName()) ==
+          ModPaths.end())
+    return createStringError(
+        errc::invalid_argument,
+        "combined summary should contain Regular LTO module");
+  return ErrorSuccess();
+}
+
 bool DevirtModule::runForTesting(
     Module &M, function_ref<AAResults &(Function &)> AARGetter,
     function_ref<OptimizationRemarkEmitter &(Function *)> OREGetter,
     function_ref<DominatorTree &(Function &)> LookupDomTree) {
-  ModuleSummaryIndex Summary(/*HaveGVs=*/false);
+  std::unique_ptr<ModuleSummaryIndex> Summary =
+      std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
 
   // Handle the command-line summary arguments. This code is for testing
   // purposes only, so we handle errors directly.
@@ -750,28 +772,41 @@ bool DevirtModule::runForTesting(
                           ": ");
     auto ReadSummaryFile =
         ExitOnErr(errorOrToExpected(MemoryBuffer::getFile(ClReadSummary)));
-
-    yaml::Input In(ReadSummaryFile->getBuffer());
-    In >> Summary;
-    ExitOnErr(errorCodeToError(In.error()));
+    if (Expected<std::unique_ptr<ModuleSummaryIndex>> SummaryOrErr =
+            getModuleSummaryIndex(*ReadSummaryFile)) {
+      Summary = std::move(*SummaryOrErr);
+      ExitOnErr(checkCombinedSummaryForTesting(Summary.get()));
+    } else {
+      // Try YAML if we've failed with bitcode.
+      consumeError(SummaryOrErr.takeError());
+      yaml::Input In(ReadSummaryFile->getBuffer());
+      In >> *Summary;
+      ExitOnErr(errorCodeToError(In.error()));
+    }
   }
 
   bool Changed =
-      DevirtModule(
-          M, AARGetter, OREGetter, LookupDomTree,
-          ClSummaryAction == PassSummaryAction::Export ? &Summary : nullptr,
-          ClSummaryAction == PassSummaryAction::Import ? &Summary : nullptr)
+      DevirtModule(M, AARGetter, OREGetter, LookupDomTree,
+                   ClSummaryAction == PassSummaryAction::Export ? Summary.get()
+                                                                : nullptr,
+                   ClSummaryAction == PassSummaryAction::Import ? Summary.get()
+                                                                : nullptr)
           .run();
 
   if (!ClWriteSummary.empty()) {
     ExitOnError ExitOnErr(
         "-wholeprogramdevirt-write-summary: " + ClWriteSummary + ": ");
     std::error_code EC;
-    raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::OF_Text);
-    ExitOnErr(errorCodeToError(EC));
-
-    yaml::Output Out(OS);
-    Out << Summary;
+    if (StringRef(ClWriteSummary).endswith(".bc")) {
+      raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::OF_None);
+      ExitOnErr(errorCodeToError(EC));
+      WriteIndexToFile(*Summary, OS);
+    } else {
+      raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::OF_Text);
+      ExitOnErr(errorCodeToError(EC));
+      yaml::Output Out(OS);
+      Out << *Summary;
+    }
   }
 
   return Changed;
