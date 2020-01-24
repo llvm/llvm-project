@@ -68,7 +68,8 @@ void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
   // This has to be delayed as the context hash can change at the start of
   // `CompilerInstance::ExecuteAction`.
   if (MDC.ContextHash.empty()) {
-    MDC.ContextHash = Instance.getInvocation().getModuleHash();
+    MDC.ContextHash =
+        Instance.getInvocation().getModuleHash(Instance.getDiagnostics());
     MDC.Consumer.handleContextHash(MDC.ContextHash);
   }
 
@@ -178,9 +179,9 @@ void ModuleDepCollectorPP::addModuleDep(
   for (const Module *Import : M->Imports) {
     if (Import->getTopLevelModule() != M->getTopLevelModule()) {
       if (AddedModules.insert(Import->getTopLevelModule()).second)
-        MD.ClangModuleDeps.push_back(
-            {Import->getTopLevelModuleName(),
-             Instance.getInvocation().getModuleHash()});
+        MD.ClangModuleDeps.push_back({Import->getTopLevelModuleName(),
+                                      Instance.getInvocation().getModuleHash(
+                                          Instance.getDiagnostics())});
       handleTopLevelModule(Import->getTopLevelModule());
     }
   }
