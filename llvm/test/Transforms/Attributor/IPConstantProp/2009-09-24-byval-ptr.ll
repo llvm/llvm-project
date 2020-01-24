@@ -6,7 +6,7 @@
 @mystr = internal global %struct.MYstr zeroinitializer ; <%struct.MYstr*> [#uses=3]
 define internal void @vfu1(%struct.MYstr* byval align 4 %u) nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@vfu1
-; CHECK-SAME: (%struct.MYstr* nocapture nofree nonnull writeonly byval align 8 dereferenceable(8) [[U:%.*]])
+; CHECK-SAME: (%struct.MYstr* noalias nocapture nofree nonnull writeonly byval align 8 dereferenceable(8) [[U:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* [[U]], i32 0, i32 1
 ; CHECK-NEXT:    store i32 99, i32* [[TMP0]], align 4
@@ -29,7 +29,7 @@ return:                                           ; preds = %entry
 
 define internal i32 @vfu2(%struct.MYstr* byval align 4 %u) nounwind readonly {
 ; CHECK-LABEL: define {{[^@]+}}@vfu2
-; CHECK-SAME: (%struct.MYstr* nocapture nofree nonnull readonly byval align 8 dereferenceable(8) [[U:%.*]])
+; CHECK-SAME: (%struct.MYstr* noalias nocapture nofree nonnull readonly byval align 8 dereferenceable(8) [[U:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i32 0, i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]]
@@ -64,7 +64,7 @@ entry:
 
 define internal i32 @vfu2_v2(%struct.MYstr* byval align 4 %u) nounwind readonly {
 ; CHECK-LABEL: define {{[^@]+}}@vfu2_v2
-; CHECK-SAME: (%struct.MYstr* nocapture nofree nonnull byval align 8 dereferenceable(8) [[U:%.*]])
+; CHECK-SAME: (%struct.MYstr* noalias nocapture nofree nonnull byval align 8 dereferenceable(8) [[U:%.*]])
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Z:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* [[U]], i32 0, i32 1
 ; CHECK-NEXT:    store i32 99, i32* [[Z]], align 4

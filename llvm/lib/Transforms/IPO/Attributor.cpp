@@ -2386,6 +2386,14 @@ struct AANoAliasArgument final
   using Base = AAArgumentFromCallSiteArguments<AANoAlias, AANoAliasImpl>;
   AANoAliasArgument(const IRPosition &IRP) : Base(IRP) {}
 
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    Base::initialize(A);
+    // See callsite argument attribute and callee argument attribute.
+    if (hasAttr({Attribute::ByVal}))
+      indicateOptimisticFixpoint();
+  }
+
   /// See AbstractAttribute::update(...).
   ChangeStatus updateImpl(Attributor &A) override {
     // We have to make sure no-alias on the argument does not break
