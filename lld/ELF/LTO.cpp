@@ -111,8 +111,6 @@ static lto::Config createConfig() {
   c.DebugPassManager = config->ltoDebugPassManager;
   c.DwoDir = config->dwoDir;
 
-  c.HasWholeProgramVisibility = config->ltoWholeProgramVisibility;
-
   c.CSIRProfile = config->ltoCSProfileFile;
   c.RunCSIRInstr = config->ltoCSProfileGenerate;
 

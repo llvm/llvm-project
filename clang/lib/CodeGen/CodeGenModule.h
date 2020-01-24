@@ -1292,11 +1292,6 @@ public:
   /// optimization.
   bool HasHiddenLTOVisibility(const CXXRecordDecl *RD);
 
-  /// Returns whether the given record has public std LTO visibility
-  /// and therefore may not participate in (single-module) CFI and whole-program
-  /// vtable optimization.
-  bool HasLTOVisibilityPublicStd(const CXXRecordDecl *RD);
-
   /// Returns the vcall visibility of the given type. This is the scope in which
   /// a virtual function call could be made which ends up being dispatched to a
   /// member function of this class. This scope can be wider than the visibility

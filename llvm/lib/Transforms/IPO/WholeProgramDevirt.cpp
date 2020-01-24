@@ -134,22 +134,6 @@ static cl::opt<bool>
                        cl::init(false), cl::ZeroOrMore,
                        cl::desc("Print index-based devirtualization messages"));
 
-/// Provide a way to force enable whole program visibility in tests.
-/// This is needed to support legacy tests that don't contain
-/// !vcall_visibility metadata (the mere presense of type tests
-/// previously implied hidden visibility).
-cl::opt<bool>
-    WholeProgramVisibility("whole-program-visibility", cl::init(false),
-                           cl::Hidden, cl::ZeroOrMore,
-                           cl::desc("Enable whole program visibility"));
-
-/// Provide a way to force disable whole program for debugging or workarounds,
-/// when enabled via the linker.
-cl::opt<bool> DisableWholeProgramVisibility(
-    "disable-whole-program-visibility", cl::init(false), cl::Hidden,
-    cl::ZeroOrMore,
-    cl::desc("Disable whole program visibility (overrides enabling options)"));
-
 // Find the minimum offset that we may store a value of size Size bits at. If
 // IsAfter is set, look for an offset before the object, otherwise look for an
 // offset after the object.
@@ -718,49 +702,7 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   return PreservedAnalyses::none();
 }
 
-// Enable whole program visibility if enabled by client (e.g. linker) or
-// internal option, and not force disabled.
-static bool hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO) {
-  return (WholeProgramVisibilityEnabledInLTO || WholeProgramVisibility) &&
-         !DisableWholeProgramVisibility;
-}
-
 namespace llvm {
-
-/// If whole program visibility asserted, then upgrade all public vcall
-/// visibility metadata on vtable definitions to linkage unit visibility in
-/// Module IR (for regular or hybrid LTO).
-void updateVCallVisibilityInModule(Module &M,
-                                   bool WholeProgramVisibilityEnabledInLTO) {
-  if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
-    return;
-  for (GlobalVariable &GV : M.globals())
-    // Add linkage unit visibility to any variable with type metadata, which are
-    // the vtable definitions. We won't have an existing vcall_visibility
-    // metadata on vtable definitions with public visibility.
-    if (GV.hasMetadata(LLVMContext::MD_type) &&
-        GV.getVCallVisibility() == GlobalObject::VCallVisibilityPublic)
-      GV.setVCallVisibilityMetadata(GlobalObject::VCallVisibilityLinkageUnit);
-}
-
-/// If whole program visibility asserted, then upgrade all public vcall
-/// visibility metadata on vtable definition summaries to linkage unit
-/// visibility in Module summary index (for ThinLTO).
-void updateVCallVisibilityInIndex(ModuleSummaryIndex &Index,
-                                  bool WholeProgramVisibilityEnabledInLTO) {
-  if (!hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
-    return;
-  for (auto &P : Index) {
-    for (auto &S : P.second.SummaryList) {
-      auto *GVar = dyn_cast<GlobalVarSummary>(S.get());
-      if (!GVar || GVar->vTableFuncs().empty() ||
-          GVar->getVCallVisibility() != GlobalObject::VCallVisibilityPublic)
-        continue;
-      GVar->setVCallVisibility(GlobalObject::VCallVisibilityLinkageUnit);
-    }
-  }
-}
-
 void runWholeProgramDevirtOnIndex(
     ModuleSummaryIndex &Summary, std::set<GlobalValue::GUID> &ExportedGUIDs,
     std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap) {
@@ -876,12 +818,6 @@ bool DevirtModule::tryFindVirtualCallTargets(
     if (!TM.Bits->GV->isConstant())
       return false;
 
-    // We cannot perform whole program devirtualization analysis on a vtable
-    // with public LTO visibility.
-    if (TM.Bits->GV->getVCallVisibility() ==
-        GlobalObject::VCallVisibilityPublic)
-      return false;
-
     Constant *Ptr = getPointerAtOffset(TM.Bits->GV->getInitializer(),
                                        TM.Offset + ByteOffset, M);
     if (!Ptr)
@@ -927,13 +863,8 @@ bool DevirtIndex::tryFindVirtualCallTargets(
           return false;
         LocalFound = true;
       }
-      if (!GlobalValue::isAvailableExternallyLinkage(S->linkage())) {
+      if (!GlobalValue::isAvailableExternallyLinkage(S->linkage()))
         VS = cast<GlobalVarSummary>(S->getBaseObject());
-        // We cannot perform whole program devirtualization analysis on a vtable
-        // with public LTO visibility.
-        if (VS->getVCallVisibility() == GlobalObject::VCallVisibilityPublic)
-          return false;
-      }
     }
     if (!VS->isLive())
       continue;
@@ -1877,12 +1808,6 @@ bool DevirtModule::run() {
 
     removeRedundantTypeTests();
 
-    // We have lowered or deleted the type instrinsics, so we will no
-    // longer have enough information to reason about the liveness of virtual
-    // function pointers in GlobalDCE.
-    for (GlobalVariable &GV : M.globals())
-      GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
-
     // The rest of the code is only necessary when exporting or during regular
     // LTO, so we are done.
     return true;
@@ -2006,7 +1931,7 @@ bool DevirtModule::run() {
     for (VTableBits &B : Bits)
       rebuildGlobal(B);
 
-  // We have lowered or deleted the type instrinsics, so we will no
+  // We have lowered or deleted the type checked load intrinsics, so we no
   // longer have enough information to reason about the liveness of virtual
   // function pointers in GlobalDCE.
   for (GlobalVariable &GV : M.globals())

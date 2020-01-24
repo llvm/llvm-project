@@ -982,11 +982,6 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
     }
   }
 
-  // If allowed, upgrade public vcall visibility metadata to linkage unit
-  // visibility before whole program devirtualization in the optimizer.
-  updateVCallVisibilityInModule(*RegularLTO.CombinedModule,
-                                Conf.HasWholeProgramVisibility);
-
   if (Conf.PreOptModuleHook &&
       !Conf.PreOptModuleHook(0, *RegularLTO.CombinedModule))
     return Error::success();
@@ -1303,11 +1298,6 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache,
     ThinLTO.CombinedIndex.dumpSCCs(outs());
 
   std::set<GlobalValue::GUID> ExportedGUIDs;
-
-  // If allowed, upgrade public vcall visibility to linkage unit visibility in
-  // the summaries before whole program devirtualization below.
-  updateVCallVisibilityInIndex(ThinLTO.CombinedIndex,
-                               Conf.HasWholeProgramVisibility);
 
   // Perform index-based WPD. This will return immediately if there are
   // no index entries in the typeIdMetadata map (e.g. if we are instead
