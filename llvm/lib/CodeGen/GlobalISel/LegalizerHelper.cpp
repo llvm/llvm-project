@@ -1128,8 +1128,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     if (TypeIdx != 0)
       return UnableToLegalize;
 
-    if (!MI.getOperand(2).isImm())
-      return UnableToLegalize;
     int64_t SizeInBits = MI.getOperand(2).getImm();
 
     // So long as the new type has more bits than the bits we're extending we
