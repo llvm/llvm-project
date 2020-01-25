@@ -30,6 +30,7 @@ add_clang_library(clangSema
   SemaAccess.cpp
   SemaAttr.cpp
   SemaAPINotes.cpp
+  SemaAvailability.cpp
   SemaCXXScopeSpec.cpp
   SemaCast.cpp
   SemaChecking.cpp
