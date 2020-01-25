@@ -638,11 +638,19 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
                   llvm::InstrProfValueKind::IPVK_MemOPSize);
   CallInst *Call = nullptr;
   auto *TLI = &GetTLI(*Ind->getFunction());
+
+  // To support value profiling calls within Windows exception handlers, funclet
+  // information contained within operand bundles needs to be copied over to
+  // the library call. This is required for the IR to be processed by the
+  // WinEHPrepare pass.
+  SmallVector<OperandBundleDef, 1> OpBundles;
+  Ind->getOperandBundlesAsDefs(OpBundles);
   if (!IsRange) {
     Value *Args[3] = {Ind->getTargetValue(),
                       Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
                       Builder.getInt32(Index)};
-    Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI), Args);
+    Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI), Args,
+                              OpBundles);
   } else {
     Value *Args[6] = {
         Ind->getTargetValue(),
@@ -651,8 +659,8 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
         Builder.getInt64(MemOPSizeRangeStart),
         Builder.getInt64(MemOPSizeRangeLast),
         Builder.getInt64(MemOPSizeLarge == 0 ? INT64_MIN : MemOPSizeLarge)};
-    Call =
-        Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI, true), Args);
+    Call = Builder.CreateCall(getOrInsertValueProfilingCall(*M, *TLI, true),
+                              Args, OpBundles);
   }
   if (auto AK = TLI->getExtAttrForI32Param(false))
     Call->addParamAttr(2, AK);
