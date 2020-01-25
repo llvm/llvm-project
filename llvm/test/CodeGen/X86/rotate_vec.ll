@@ -101,7 +101,6 @@ define <4 x i32> @rot_v4i32_mask_ashr0(<4 x i32> %a0) {
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
 ; XOP-NEXT:    vprotd $1, %xmm0, %xmm0
-; XOP-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
 ; XOP-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; XOP-NEXT:    retq
 ;
@@ -109,7 +108,6 @@ define <4 x i32> @rot_v4i32_mask_ashr0(<4 x i32> %a0) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vprold $1, %xmm0, %xmm0
-; AVX512-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %1 = ashr <4 x i32> %a0, <i32 25, i32 26, i32 27, i32 28>
