@@ -57,6 +57,42 @@ define amdgpu_cs float @ds_ordered_add_cs(i32 addrspace(2)* inreg %gds) {
   ret float %r
 }
 
+; FUNC-LABEL: {{^}}ds_ordered_add_default_cc:
+; GCN: v_mov_b32_e32 v[[INCR:[0-9]+]], 31
+; GCN: s_mov_b32 m0, 0{{$}}
+; VIGFX9-NEXT: s_nop 0
+; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:772 gds
+; GCN-NEXT: s_waitcnt expcnt(0) lgkmcnt(0)
+define float @ds_ordered_add_default_cc() {
+  %val = call i32 @llvm.amdgcn.ds.ordered.add(i32 addrspace(2)* null, i32 31, i32 0, i32 0, i1 false, i32 1, i1 true, i1 true)
+  %r = bitcast i32 %val to float
+  ret float %r
+}
+
+; FUNC-LABEL: {{^}}ds_ordered_add_fastcc:
+; GCN: v_mov_b32_e32 v[[INCR:[0-9]+]], 31
+; GCN: s_mov_b32 m0, 0{{$}}
+; VIGFX9-NEXT: s_nop 0
+; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:772 gds
+; GCN-NEXT: s_waitcnt expcnt(0) lgkmcnt(0)
+define fastcc float @ds_ordered_add_fastcc() {
+  %val = call i32 @llvm.amdgcn.ds.ordered.add(i32 addrspace(2)* null, i32 31, i32 0, i32 0, i1 false, i32 1, i1 true, i1 true)
+  %r = bitcast i32 %val to float
+  ret float %r
+}
+
+; FUNC-LABEL: {{^}}ds_ordered_add_func:
+; GCN: v_mov_b32_e32 v[[INCR:[0-9]+]], 31
+; GCN: s_mov_b32 m0, 0{{$}}
+; VIGFX9-NEXT: s_nop 0
+; GCN-NEXT: ds_ordered_count v{{[0-9]+}}, v[[INCR]] offset:772 gds
+; GCN-NEXT: s_waitcnt expcnt(0) lgkmcnt(0)
+define float @ds_ordered_add_func() {
+  %val = call i32@llvm.amdgcn.ds.ordered.add(i32 addrspace(2)* null, i32 31, i32 0, i32 0, i1 false, i32 1, i1 true, i1 true)
+  %r = bitcast i32 %val to float
+  ret float %r
+}
+
 ; FUNC-LABEL: {{^}}ds_ordered_add_ps:
 ; GCN: v_mov_b32_e32 v[[INCR:[0-9]+]], 31
 ; GCN: s_mov_b32 m0, s0
