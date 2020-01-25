@@ -673,12 +673,7 @@ void ExegesisX86Target::fillMemoryOperands(InstructionTemplate &IT,
   int MemOpIdx = X86II::getMemoryOperandNo(IT.getInstr().Description.TSFlags);
   assert(MemOpIdx >= 0 && "invalid memory operand index");
   // getMemoryOperandNo() ignores tied operands, so we have to add them back.
-  for (unsigned I = 0; I <= static_cast<unsigned>(MemOpIdx); ++I) {
-    const auto &Op = IT.getInstr().Operands[I];
-    if (Op.isTied() && Op.getTiedToIndex() < I) {
-      ++MemOpIdx;
-    }
-  }
+  MemOpIdx += X86II::getOperandBias(IT.getInstr().Description);
   setMemOp(IT, MemOpIdx + 0, MCOperand::createReg(Reg));    // BaseReg
   setMemOp(IT, MemOpIdx + 1, MCOperand::createImm(1));      // ScaleAmt
   setMemOp(IT, MemOpIdx + 2, MCOperand::createReg(0));      // IndexReg
