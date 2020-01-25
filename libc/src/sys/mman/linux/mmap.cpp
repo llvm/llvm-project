@@ -1,4 +1,4 @@
-//===-------------- Implementation of the POSIX mmap function -------------===//
+//===---------- Linux implementation of the POSIX mmap function -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/sys/mman/mmap.h"
-#include "include/sys/syscall.h" // For syscall numbers.
+
+#include "config/linux/syscall.h" // For internal syscall function.
+#include "include/sys/syscall.h"  // For syscall numbers.
 #include "src/__support/common.h"
 #include "src/errno/llvmlibc_errno.h"
-#include "src/unistd/syscall.h" // For internal syscall function.
+
+#include <linux/param.h> // For EXEC_PAGESIZE.
 
 namespace __llvm_libc {
 
@@ -22,8 +25,12 @@ void *LLVM_LIBC_ENTRYPOINT(mmap)(void *addr, size_t size, int prot, int flags,
   // done in this function as modern linux versions do it in the syscall.
   // TODO: Perform argument validation not done by the linux syscall.
 
+  // EXEC_PAGESIZE is used for the page size. While this is OK for x86_64, it
+  // might not be correct in general.
+  // TODO: Use pagesize read from the ELF aux vector instead of EXEC_PAGESIZE.
+
 #ifdef SYS_mmap2
-  offset /= PAGE_SIZE;
+  offset /= EXEC_PAGESIZE;
   long syscall_number = SYS_mmap2;
 #elif SYS_mmap
   long syscall_number = SYS_mmap;
@@ -44,7 +51,7 @@ void *LLVM_LIBC_ENTRYPOINT(mmap)(void *addr, size_t size, int prot, int flags,
   // However, since a valid return address cannot be within the last page, a
   // return value corresponding to a location in the last page is an error
   // value.
-  if (ret_val < 0 && ret_val > -PAGE_SIZE) {
+  if (ret_val < 0 && ret_val > -EXEC_PAGESIZE) {
     llvmlibc_errno = -ret_val;
     return MAP_FAILED;
   }
