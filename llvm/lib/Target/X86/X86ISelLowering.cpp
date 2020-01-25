@@ -13316,12 +13316,10 @@ static SDValue lowerV2I64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 /// It makes no assumptions about whether this is the *best* lowering, it simply
 /// uses it.
 static SDValue lowerShuffleWithSHUFPS(const SDLoc &DL, MVT VT,
-                                      ArrayRef<int> OriginalMask, SDValue V1,
+                                      ArrayRef<int> Mask, SDValue V1,
                                       SDValue V2, SelectionDAG &DAG) {
   SDValue LowV = V1, HighV = V2;
-  SmallVector<int, 4> Mask(OriginalMask.begin(), OriginalMask.end());
-  SmallVector<int, 4> NewMask = Mask;
-
+  SmallVector<int, 4> NewMask(Mask.begin(), Mask.end());
   int NumV2Elements = count_if(Mask, [](int M) { return M >= 4; });
 
   if (NumV2Elements == 1) {
@@ -13358,14 +13356,6 @@ static SDValue lowerShuffleWithSHUFPS(const SDLoc &DL, MVT VT,
       NewMask[V2Index] = 0; // We shifted the V2 element into V2[0].
     }
   } else if (NumV2Elements == 2) {
-    // If we are likely to fold V1 but not V2, then commute the shuffle.
-    if (MayFoldLoad(V1) && !MayFoldLoad(V2)) {
-      ShuffleVectorSDNode::commuteMask(Mask);
-      NewMask = Mask;
-      std::swap(V1, V2);
-      std::swap(LowV, HighV);
-    }
-
     if (Mask[0] < 4 && Mask[1] < 4) {
       // Handle the easy case where we have V1 in the low lanes and V2 in the
       // high lanes.
@@ -34595,6 +34585,28 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
       }
       SDValue Horiz = DAG.getNode(Opcode0, DL, VT0, Lo, Hi);
       return DAG.getBitcast(VT, Horiz);
+    }
+  }
+
+  // Attempt to commute shufps LHS loads:
+  // permilps(shufps(load(),x)) --> permilps(shufps(x,load()))
+  if (VT == MVT::v4f32 &&
+      (X86ISD::VPERMILPI == Opcode ||
+       (X86ISD::SHUFP == Opcode && N.getOperand(0) == N.getOperand(1)))) {
+    SDValue N0 = N.getOperand(0);
+    unsigned Imm = N.getConstantOperandVal(X86ISD::VPERMILPI == Opcode ? 1 : 2);
+    if (N0.getOpcode() == X86ISD::SHUFP && N->isOnlyUserOf(N0.getNode())) {
+      SDValue N00 = N0.getOperand(0);
+      SDValue N01 = N0.getOperand(1);
+      if (MayFoldLoad(peekThroughOneUseBitcasts(N00)) &&
+          !MayFoldLoad(peekThroughOneUseBitcasts(N01))) {
+        unsigned Imm1 = N0.getConstantOperandVal(2);
+        Imm1 = ((Imm1 & 0x0F) << 4) | ((Imm1 & 0xF0) >> 4);
+        SDValue NewN0 = DAG.getNode(X86ISD::SHUFP, DL, VT, N01, N00,
+                                    DAG.getTargetConstant(Imm1, DL, MVT::i8));
+        return DAG.getNode(X86ISD::SHUFP, DL, VT, NewN0, NewN0,
+                           DAG.getTargetConstant(Imm ^ 0xAA, DL, MVT::i8));
+      }
     }
   }
 
