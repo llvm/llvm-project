@@ -1801,14 +1801,16 @@ private:
       return TT_BinaryOperator;
 
     // "&&(" is quite unlikely to be two successive unary "&".
-    if (Tok.is(tok::ampamp) && NextToken && NextToken->is(tok::l_paren))
+    if (Tok.is(tok::ampamp) && NextToken->is(tok::l_paren))
       return TT_BinaryOperator;
 
     // This catches some cases where evaluation order is used as control flow:
     //   aaa && aaa->f();
-    const FormatToken *NextNextToken = NextToken->getNextNonComment();
-    if (NextNextToken && NextNextToken->is(tok::arrow))
-      return TT_BinaryOperator;
+    if (NextToken->Tok.isAnyIdentifier()) {
+      const FormatToken *NextNextToken = NextToken->getNextNonComment();
+      if (NextNextToken && NextNextToken->is(tok::arrow))
+        return TT_BinaryOperator;
+    }
 
     // It is very unlikely that we are going to find a pointer or reference type
     // definition on the RHS of an assignment.

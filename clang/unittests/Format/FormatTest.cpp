@@ -7407,6 +7407,9 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("typedef typeof(int(int, int))* MyFuncPtr;", Left);
   verifyFormat("[](const decltype(*a)* ptr) {}", Left);
   verifyFormat("typedef typeof /*comment*/ (int(int, int))* MyFuncPtr;", Left);
+  verifyFormat("auto x(A&&, B&&, C&&) -> D;", Left);
+  verifyFormat("auto x = [](A&&, B&&, C&&) -> D {};", Left);
+  verifyFormat("template <class T> X(T&&, T&&, T&&) -> X<T>;", Left);
 
   verifyIndependentOfContext("a = *(x + y);");
   verifyIndependentOfContext("a = &(x + y);");
