@@ -1478,6 +1478,13 @@ bool TargetLowering::SimplifyDemandedBits(
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
 
+    // If we only want bits that already match the signbit then we don't need
+    // to shift.
+    unsigned NumHiDemandedBits = BitWidth - DemandedBits.countTrailingZeros();
+    if (TLO.DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1) >=
+        NumHiDemandedBits)
+      return TLO.CombineTo(Op, Op0);
+
     // If this is an arithmetic shift right and only the low-bit is set, we can
     // always convert this into a logical shr, even if the shift amount is
     // variable.  The low bit of the shift cannot be an input sign bit unless
