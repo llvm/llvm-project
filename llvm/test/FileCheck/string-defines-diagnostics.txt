@@ -27,11 +27,11 @@ ERRCLIVAR2: Missing variable name in command-line definition '-D='
 ; Invalid variable name: starts with a digit.
 RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck -D10VALUE=10 --input-file %s %s 2>&1 \
-RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix ERRCLIFMT
+RUN:   | FileCheck %s --strict-whitespace --match-full-lines --check-prefix ERRCLINAME
 
-ERRCLIFMT:Global defines:1:19: error: invalid variable name
-ERRCLIFMT-NEXT:Global define #1: 10VALUE=10
-ERRCLIFMT-NEXT:                  ^
+ERRCLINAME:Global defines:1:19: error: invalid variable name
+ERRCLINAME-NEXT:Global define #1: 10VALUE=10
+ERRCLINAME-NEXT:                  ^
 
 ; Invalid definition of pseudo variable.
 RUN: %ProtectFileCheckOutput \
