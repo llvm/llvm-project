@@ -21,7 +21,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
     def test_hw_break_set_delete_multi_thread_linux(self):
         self.build()
         self.setTearDownCleanup()
-        self.break_multi_thread('delete', 'breakpoint')
+        self.break_multi_thread('delete')
 
     # LLDB on linux supports hardware breakpoints for arm and aarch64
     # architectures.
@@ -30,7 +30,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
     def test_hw_break_set_disable_multi_thread_linux(self):
         self.build()
         self.setTearDownCleanup()
-        self.break_multi_thread('disable', 'breakpoint')
+        self.break_multi_thread('disable')
 
     # LLDB on darwin supports hardware breakpoints for arm, aarch64, x86_64 and
     # i386 architectures.
@@ -39,7 +39,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
     def test_hw_break_set_delete_multi_thread_macos(self):
         self.build()
         self.setTearDownCleanup()
-        self.break_multi_thread('delete', 'EXC_BREAKPOINT')
+        self.break_multi_thread('delete')
 
     # LLDB on darwin supports hardware breakpoints for arm, aarch64, x86_64 and
     # i386 architectures.
@@ -48,7 +48,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
     def test_hw_break_set_disable_multi_thread_macos(self):
         self.build()
         self.setTearDownCleanup()
-        self.break_multi_thread('disable', 'EXC_BREAKPOINT')
+        self.break_multi_thread('disable')
 
 
     def setUp(self):
@@ -60,7 +60,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
         self.first_stop = line_number(
             self.source, 'Starting thread creation with hardware breakpoint set')
 
-    def break_multi_thread(self, removal_type, stop_reason):
+    def break_multi_thread(self, removal_type):
         """Test that lldb hardware breakpoints work for multiple threads."""
         self.runCmd("file " + self.getBuildArtifact("a.out"),
                     CURRENT_EXECUTABLE_SET)
@@ -95,7 +95,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
             # The stop reason of the thread should be breakpoint.
             self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
                 substrs=[
-                    'stop reason = {}'.format(stop_reason),
+                    'stop reason = breakpoint',
                     'hw_break_function'])
 
             # Continue the loop and test that we are stopped 4 times.
