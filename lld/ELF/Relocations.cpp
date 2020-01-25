@@ -1198,10 +1198,16 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
                     getLocation(sec, sym, offset));
       if (!sym.isInPlt())
         addPltEntry(in.plt, in.gotPlt, in.relaPlt, target->pltRel, sym);
-      if (!sym.isDefined())
+      if (!sym.isDefined()) {
         replaceWithDefined(
             sym, in.plt,
             target->pltHeaderSize + target->pltEntrySize * sym.pltIndex, 0);
+        if (config->emachine == EM_PPC) {
+          // PPC32 canonical PLT entries are at the beginning of .glink
+          cast<Defined>(sym).value = in.plt->headerSize;
+          in.plt->headerSize += 16;
+        }
+      }
       sym.needsPltAddr = true;
       sec.relocations.push_back({expr, type, offset, addend, &sym});
       return;
