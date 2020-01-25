@@ -221,6 +221,27 @@ void ok29(void) {
   lck_rw_unlock_exclusive(&rw); // no-warning
 }
 
+void escape_mutex(pthread_mutex_t *m);
+void ok30(void) {
+  pthread_mutex_t local_mtx;
+  pthread_mutex_init(&local_mtx, NULL);
+  pthread_mutex_lock(&local_mtx);
+  escape_mutex(&local_mtx);
+  pthread_mutex_lock(&local_mtx); // no-warning
+  pthread_mutex_unlock(&local_mtx);
+  pthread_mutex_destroy(&local_mtx);
+}
+
+void ok31(void) {
+  pthread_mutex_t local_mtx;
+  pthread_mutex_init(&local_mtx, NULL);
+  pthread_mutex_lock(&local_mtx);
+  fake_system_function_that_takes_a_mutex(&local_mtx);
+  pthread_mutex_lock(&local_mtx); // no-warning
+  pthread_mutex_unlock(&local_mtx);
+  pthread_mutex_destroy(&local_mtx);
+}
+
 void
 bad1(void)
 {
@@ -485,4 +506,10 @@ void bad32(void) {
   lck_rw_unlock_exclusive(&rw); // FIXME: warn - should be shared?
   lck_rw_lock_exclusive(&rw);
   lck_rw_unlock_shared(&rw); // FIXME: warn - should be exclusive?
+}
+
+void bad33(void) {
+  pthread_mutex_lock(pmtx);
+  fake_system_function();
+  pthread_mutex_lock(pmtx); // expected-warning{{This lock has already been acquired}}
 }

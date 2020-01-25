@@ -66,7 +66,8 @@ public:
 };
 
 class PthreadLockChecker
-    : public Checker<check::PostCall, check::DeadSymbols> {
+    : public Checker<check::PostCall, check::DeadSymbols,
+                     check::RegionChanges> {
   BugType BT_doublelock{this, "Double locking", "Lock checker"},
           BT_doubleunlock{this, "Double unlocking", "Lock checker"},
           BT_destroylock{this, "Use destroyed lock", "Lock checker"},
@@ -155,6 +156,11 @@ class PthreadLockChecker
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
+  ProgramStateRef
+  checkRegionChanges(ProgramStateRef State, const InvalidatedSymbols *Symbols,
+                     ArrayRef<const MemRegion *> ExplicitRegions,
+                     ArrayRef<const MemRegion *> Regions,
+                     const LocationContext *LCtx, const CallEvent *Call) const;
   void printState(raw_ostream &Out, ProgramStateRef State,
                   const char *NL, const char *Sep) const override;
 };
@@ -544,6 +550,42 @@ void PthreadLockChecker::checkDeadSymbols(SymbolReaper &SymReaper,
       State = resolvePossiblyDestroyedMutex(State, lockR, &Sym);
   }
   C.addTransition(State);
+}
+
+ProgramStateRef PthreadLockChecker::checkRegionChanges(
+    ProgramStateRef State, const InvalidatedSymbols *Symbols,
+    ArrayRef<const MemRegion *> ExplicitRegions,
+    ArrayRef<const MemRegion *> Regions, const LocationContext *LCtx,
+    const CallEvent *Call) const {
+
+  bool IsLibraryFunction = false;
+  if (Call && Call->isGlobalCFunction()) {
+    // Avoid invalidating mutex state when a known supported function is called.
+    if (Callbacks.lookup(*Call))
+        return State;
+
+    if (Call->isInSystemHeader())
+      IsLibraryFunction = true;
+  }
+
+  for (auto R : Regions) {
+    // We assume that system library function wouldn't touch the mutex unless
+    // it takes the mutex explicitly as an argument.
+    // FIXME: This is a bit quadratic.
+    if (IsLibraryFunction &&
+        std::find(ExplicitRegions.begin(), ExplicitRegions.end(), R) ==
+            ExplicitRegions.end())
+      continue;
+
+    State = State->remove<LockMap>(R);
+    State = State->remove<DestroyRetVal>(R);
+
+    // TODO: We need to invalidate the lock stack as well. This is tricky
+    // to implement correctly and efficiently though, because the effects
+    // of mutex escapes on lock order may be fairly varied.
+  }
+
+  return State;
 }
 
 void ento::registerPthreadLockChecker(CheckerManager &mgr) {

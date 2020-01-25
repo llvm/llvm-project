@@ -21,6 +21,9 @@ typedef struct {
 
 typedef pthread_mutex_t lck_mtx_t;
 
+extern void fake_system_function();
+extern void fake_system_function_that_takes_a_mutex(pthread_mutex_t *mtx);
+
 extern int pthread_mutex_lock(pthread_mutex_t *);
 extern int pthread_mutex_unlock(pthread_mutex_t *);
 extern int pthread_mutex_trylock(pthread_mutex_t *);
