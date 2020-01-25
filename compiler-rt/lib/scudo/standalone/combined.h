@@ -24,12 +24,6 @@
 
 #ifdef GWP_ASAN_HOOKS
 #include "gwp_asan/guarded_pool_allocator.h"
-// GWP-ASan is declared here in order to avoid indirect call overhead. It's also
-// instantiated outside of the Allocator class, as the allocator is only
-// zero-initialised. GWP-ASan requires constant initialisation, and the Scudo
-// allocator doesn't have a constexpr constructor (see discussion here:
-// https://reviews.llvm.org/D69265#inline-624315).
-static gwp_asan::GuardedPoolAllocator GuardedAlloc;
 #endif // GWP_ASAN_HOOKS
 
 extern "C" inline void EmptyCallback() {}
@@ -153,7 +147,11 @@ public:
     Quarantine.init(
         static_cast<uptr>(getFlags()->quarantine_size_kb << 10),
         static_cast<uptr>(getFlags()->thread_local_quarantine_size_kb << 10));
+  }
 
+  // Initialize the embedded GWP-ASan instance. Requires the main allocator to
+  // be functional, best called from PostInitCallback.
+  void initGwpAsan() {
 #ifdef GWP_ASAN_HOOKS
     gwp_asan::options::Options Opt;
     Opt.Enabled = getFlags()->GWP_ASAN_Enabled;
@@ -166,6 +164,10 @@ public:
         getFlags()->GWP_ASAN_MaxSimultaneousAllocations;
     Opt.SampleRate = getFlags()->GWP_ASAN_SampleRate;
     Opt.InstallSignalHandlers = getFlags()->GWP_ASAN_InstallSignalHandlers;
+    // Embedded GWP-ASan is locked through the Scudo atfork handler (via
+    // Allocator::disable calling GWPASan.disable). Disable GWP-ASan's atfork
+    // handler.
+    Opt.InstallForkHandlers = false;
     Opt.Printf = Printf;
     GuardedAlloc.init(Opt);
 #endif // GWP_ASAN_HOOKS
@@ -176,6 +178,9 @@ public:
   void unmapTestOnly() {
     TSDRegistry.unmapTestOnly();
     Primary.unmapTestOnly();
+#ifdef GWP_ASAN_HOOKS
+    GuardedAlloc.uninitTestOnly();
+#endif // GWP_ASAN_HOOKS
   }
 
   TSDRegistryT *getTSDRegistry() { return &TSDRegistry; }
@@ -509,6 +514,9 @@ public:
   //                this function finishes. We will revisit that later.
   void disable() {
     initThreadMaybe();
+#ifdef GWP_ASAN_HOOKS
+    GuardedAlloc.disable();
+#endif
     TSDRegistry.disable();
     Stats.disable();
     Quarantine.disable();
@@ -523,6 +531,9 @@ public:
     Quarantine.enable();
     Stats.enable();
     TSDRegistry.enable();
+#ifdef GWP_ASAN_HOOKS
+    GuardedAlloc.enable();
+#endif
   }
 
   // The function returns the amount of bytes required to store the statistics,
@@ -675,6 +686,10 @@ private:
     u8 DeleteSizeMismatch : 1;  // delete_size_mismatch
     u32 QuarantineMaxChunkSize; // quarantine_max_chunk_size
   } Options;
+
+#ifdef GWP_ASAN_HOOKS
+  gwp_asan::GuardedPoolAllocator GuardedAlloc;
+#endif // GWP_ASAN_HOOKS
 
   // The following might get optimized out by the compiler.
   NOINLINE void performSanityChecks() {

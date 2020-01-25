@@ -39,3 +39,7 @@ GWP_ASAN_OPTION(
     "programs that install further signal handlers should make sure they do "
     "the same. Note, if the previously installed SIGSEGV handler is SIG_IGN, "
     "we terminate the process after dumping the error report.")
+
+GWP_ASAN_OPTION(bool, InstallForkHandlers, true,
+                "Install GWP-ASan atfork handlers to acquire internal locks "
+                "before fork and release them after.")

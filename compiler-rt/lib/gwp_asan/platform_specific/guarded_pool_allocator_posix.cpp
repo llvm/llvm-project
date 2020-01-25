@@ -8,9 +8,10 @@
 
 #include "gwp_asan/guarded_pool_allocator.h"
 
-#include <stdlib.h>
 #include <errno.h>
 #include <signal.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
@@ -28,6 +29,16 @@ void *GuardedPoolAllocator::mapMemory(size_t Size) const {
     exit(EXIT_FAILURE);
   }
   return Ptr;
+}
+
+void GuardedPoolAllocator::unmapMemory(void *Addr, size_t Size) const {
+  int Res = munmap(Addr, Size);
+
+  if (Res != 0) {
+    Printf("Failed to unmap guarded pool allocator memory, errno: %d\n", errno);
+    Printf("  unmmap(%p, %zu, ...) failed.\n", Addr, Size);
+    exit(EXIT_FAILURE);
+  }
 }
 
 void GuardedPoolAllocator::markReadWrite(void *Ptr, size_t Size) const {
@@ -58,6 +69,7 @@ size_t GuardedPoolAllocator::getPlatformPageSize() {
 }
 
 struct sigaction PreviousHandler;
+bool SignalHandlerInstalled;
 
 static void sigSegvHandler(int sig, siginfo_t *info, void *ucontext) {
   gwp_asan::GuardedPoolAllocator::reportError(
@@ -78,11 +90,31 @@ static void sigSegvHandler(int sig, siginfo_t *info, void *ucontext) {
   }
 }
 
+void GuardedPoolAllocator::installAtFork() {
+  auto Disable = []() {
+    if (auto *S = getSingleton())
+      S->disable();
+  };
+  auto Enable = []() {
+    if (auto *S = getSingleton())
+      S->enable();
+  };
+  pthread_atfork(Disable, Enable, Enable);
+}
+
 void GuardedPoolAllocator::installSignalHandlers() {
   struct sigaction Action;
   Action.sa_sigaction = sigSegvHandler;
   Action.sa_flags = SA_SIGINFO;
   sigaction(SIGSEGV, &Action, &PreviousHandler);
+  SignalHandlerInstalled = true;
+}
+
+void GuardedPoolAllocator::uninstallSignalHandlers() {
+  if (SignalHandlerInstalled) {
+    sigaction(SIGSEGV, &PreviousHandler, nullptr);
+    SignalHandlerInstalled = false;
+  }
 }
 
 uint64_t GuardedPoolAllocator::getThreadID() {
