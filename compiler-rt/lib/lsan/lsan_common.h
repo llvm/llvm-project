@@ -126,12 +126,24 @@ struct RootRegion {
   uptr size;
 };
 
+// LockStuffAndStopTheWorld can start to use Scan* calls to collect into
+// this Frontier vector before the StopTheWorldCallback actually runs.
+// This is used when the OS has a unified callback API for suspending
+// threads and enumerating roots.
+struct CheckForLeaksParam {
+  Frontier frontier;
+  LeakReport leak_report;
+  bool success = false;
+};
+
 InternalMmapVector<RootRegion> const *GetRootRegions();
 void ScanRootRegion(Frontier *frontier, RootRegion const &region,
                     uptr region_begin, uptr region_end, bool is_readable);
+void ForEachExtraStackRangeCb(uptr begin, uptr end, void* arg);
 // Run stoptheworld while holding any platform-specific locks, as well as the
 // allocator and thread registry locks.
-void LockStuffAndStopTheWorld(StopTheWorldCallback callback, void* argument);
+void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
+                              CheckForLeaksParam* argument);
 
 void ScanRangeForPointers(uptr begin, uptr end,
                           Frontier *frontier,
