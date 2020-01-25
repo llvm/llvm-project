@@ -2035,7 +2035,7 @@ CGObjCCommonMac::GenerateConstantNSString(const StringLiteral *Literal) {
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   // Don't enforce the target's minimum global alignment, since the only use
   // of the string is via this class initializer.
-  GV->setAlignment(llvm::Align::None());
+  GV->setAlignment(llvm::Align(1));
   Fields.addBitCast(GV, CGM.Int8PtrTy);
 
   // String length.

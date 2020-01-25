@@ -497,7 +497,7 @@ uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
 
   const DataLayout &DL = F.getParent()->getDataLayout();
   uint64_t ExplicitArgBytes = 0;
-  MaxAlign = Align::None();
+  MaxAlign = Align(1);
 
   for (const Argument &Arg : F.args()) {
     Type *ArgTy = Arg.getType();

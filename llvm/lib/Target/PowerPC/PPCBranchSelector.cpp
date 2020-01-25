@@ -82,7 +82,7 @@ FunctionPass *llvm::createPPCBranchSelectionPass() {
 unsigned PPCBSel::GetAlignmentAdjustment(MachineBasicBlock &MBB,
                                          unsigned Offset) {
   const Align Alignment = MBB.getAlignment();
-  if (Alignment == Align::None())
+  if (Alignment == Align(1))
     return 0;
 
   const Align ParentAlign = MBB.getParent()->getAlignment();

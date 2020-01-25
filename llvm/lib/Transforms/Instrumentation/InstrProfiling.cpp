@@ -964,7 +964,7 @@ void InstrProfiling::emitNameData() {
   // On COFF, it's important to reduce the alignment down to 1 to prevent the
   // linker from inserting padding before the start of the names section or
   // between names entries.
-  NamesVar->setAlignment(Align::None());
+  NamesVar->setAlignment(Align(1));
   UsedVars.push_back(NamesVar);
 
   for (auto *NamePtr : ReferencedNames)
