@@ -536,19 +536,24 @@ void PthreadLockChecker::checkDeadSymbols(SymbolReaper &SymReaper,
                                           CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
-  // TODO: Clean LockMap when a mutex region dies.
-
-  DestroyRetValTy TrackedSymbols = State->get<DestroyRetVal>();
-  for (DestroyRetValTy::iterator I = TrackedSymbols.begin(),
-                                 E = TrackedSymbols.end();
-       I != E; ++I) {
-    const SymbolRef Sym = I->second;
-    const MemRegion *lockR = I->first;
-    bool IsSymDead = SymReaper.isDead(Sym);
-    // Remove the dead symbol from the return value symbols map.
-    if (IsSymDead)
-      State = resolvePossiblyDestroyedMutex(State, lockR, &Sym);
+  for (auto I : State->get<DestroyRetVal>()) {
+    // Once the return value symbol dies, no more checks can be performed
+    // against it. See if the return value was checked before this point.
+    // This would remove the symbol from the map as well.
+    if (SymReaper.isDead(I.second))
+      State = resolvePossiblyDestroyedMutex(State, I.first, &I.second);
   }
+
+  for (auto I : State->get<LockMap>()) {
+    // Stop tracking dead mutex regions as well.
+    if (!SymReaper.isLiveRegion(I.first))
+      State = State->remove<LockMap>(I.first);
+  }
+
+  // TODO: We probably need to clean up the lock stack as well.
+  // It is tricky though: even if the mutex cannot be unlocked anymore,
+  // it can still participate in lock order reversal resolution.
+
   C.addTransition(State);
 }
 
