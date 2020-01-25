@@ -43,6 +43,9 @@ public:
 
   void Select(SDNode *N) override;
 
+  // Complex Pattern Selectors.
+  bool SelectADDRri(SDValue N, SDValue &Base, SDValue &Offset);
+
   StringRef getPassName() const override {
     return "VE DAG->DAG Pattern Instruction Selection";
   }
@@ -51,6 +54,39 @@ public:
 #include "VEGenDAGISel.inc"
 };
 } // end anonymous namespace
+
+bool VEDAGToDAGISel::SelectADDRri(SDValue Addr, SDValue &Base,
+                                  SDValue &Offset) {
+  auto AddrTy = Addr->getValueType(0);
+  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
+    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), AddrTy);
+    Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), MVT::i32);
+    return true;
+  }
+  if (Addr.getOpcode() == ISD::TargetExternalSymbol ||
+      Addr.getOpcode() == ISD::TargetGlobalAddress ||
+      Addr.getOpcode() == ISD::TargetGlobalTLSAddress)
+    return false; // direct calls.
+
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    ConstantSDNode *CN = cast<ConstantSDNode>(Addr.getOperand(1));
+    if (isInt<13>(CN->getSExtValue())) {
+      if (FrameIndexSDNode *FIN =
+              dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
+        // Constant offset from frame ref.
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), AddrTy);
+      } else {
+        Base = Addr.getOperand(0);
+      }
+      Offset =
+          CurDAG->getTargetConstant(CN->getZExtValue(), SDLoc(Addr), MVT::i32);
+      return true;
+    }
+  }
+  Base = Addr;
+  Offset = CurDAG->getTargetConstant(0, SDLoc(Addr), MVT::i32);
+  return true;
+}
 
 void VEDAGToDAGISel::Select(SDNode *N) {
   SDLoc dl(N);
