@@ -1443,6 +1443,12 @@ public:
     return buildInstr(TargetOpcode::G_FLOG2, {Dst}, {Src}, Flags);
   }
 
+  /// Build and insert \p Dst = G_FEXP2 \p Src
+  MachineInstrBuilder buildFExp2(const DstOp &Dst, const SrcOp &Src,
+                                Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FEXP2, {Dst}, {Src}, Flags);
+  }
+
   /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1
   MachineInstrBuilder buildFCopysign(const DstOp &Dst, const SrcOp &Src0,
                                      const SrcOp &Src1) {
