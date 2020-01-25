@@ -2176,7 +2176,7 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *buf) {
         // We already set the less-significant bit for symbols
         // marked by the `STO_MIPS_MICROMIPS` flag and for microMIPS PLT
         // records. That allows us to distinguish such symbols in
-        // the `MIPS<ELFT>::relocateOne()` routine. Now we should
+        // the `MIPS<ELFT>::relocate()` routine. Now we should
         // clear that bit for non-dynamic symbol table, so tools
         // like `objdump` will be able to deal with a correct
         // symbol position.
@@ -3428,7 +3428,7 @@ void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
       memcpy(buf + offset, cantUnwindData, sizeof(cantUnwindData));
       uint64_t s = isec->getVA();
       uint64_t p = getVA() + offset;
-      target->relocateOne(buf + offset, R_ARM_PREL31, s - p);
+      target->relocateNoSym(buf + offset, R_ARM_PREL31, s - p);
       offset += 8;
     }
   }
@@ -3436,7 +3436,7 @@ void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
   memcpy(buf + offset, cantUnwindData, sizeof(cantUnwindData));
   uint64_t s = sentinel->getVA(sentinel->getSize());
   uint64_t p = getVA() + offset;
-  target->relocateOne(buf + offset, R_ARM_PREL31, s - p);
+  target->relocateNoSym(buf + offset, R_ARM_PREL31, s - p);
   assert(size == offset + 8);
 }
 
