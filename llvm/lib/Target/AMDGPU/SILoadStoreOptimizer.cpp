@@ -510,6 +510,8 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
 
   if (InstClass == MIMG) {
     DMask = TII.getNamedOperand(*I, AMDGPU::OpName::dmask)->getImm();
+    // Offset is not considered for MIMG instructions.
+    Offset = 0;
   } else {
     int OffsetIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::offset);
     Offset = I->getOperand(OffsetIdx).getImm();
