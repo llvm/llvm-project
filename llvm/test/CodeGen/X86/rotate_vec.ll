@@ -96,4 +96,55 @@ define <4 x i32> @rot_v4i32_allsignbits(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i32> %2
 }
 
+define <4 x i32> @rot_v4i32_mask_ashr0(<4 x i32> %a0) {
+; XOP-LABEL: rot_v4i32_mask_ashr0:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    vprotd $1, %xmm0, %xmm0
+; XOP-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX512-LABEL: rot_v4i32_mask_ashr0:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vprold $1, %xmm0, %xmm0
+; AVX512-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %1 = ashr <4 x i32> %a0, <i32 25, i32 26, i32 27, i32 28>
+  %2 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %1, <4 x i32> %1, <4 x i32> <i32 1, i32 1, i32 1, i32 1>)
+  %3 = ashr <4 x i32> %2, <i32 1, i32 2, i32 3, i32 4>
+  %4 = and <4 x i32> %3, <i32 -32768, i32 -65536, i32 -32768, i32 -65536>
+  ret <4 x i32> %4
+}
+
+define <4 x i32> @rot_v4i32_mask_ashr1(<4 x i32> %a0) {
+; XOP-LABEL: rot_v4i32_mask_ashr1:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpsrad $25, %xmm0, %xmm0
+; XOP-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,3,4]
+; XOP-NEXT:    vprotd %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    vpbroadcastd %xmm0, %xmm0
+; XOP-NEXT:    vpsravd %xmm1, %xmm0, %xmm0
+; XOP-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    retq
+;
+; AVX512-LABEL: rot_v4i32_mask_ashr1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,3,4]
+; AVX512-NEXT:    vpsrad $25, %xmm0, %xmm0
+; AVX512-NEXT:    vprolvd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX512-NEXT:    vpsravd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %1 = ashr <4 x i32> %a0, <i32 25, i32 26, i32 27, i32 28>
+  %2 = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %1, <4 x i32> %1, <4 x i32> <i32 1, i32 2, i32 3, i32 4>)
+  %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> zeroinitializer
+  %4 = ashr <4 x i32> %3, <i32 1, i32 2, i32 3, i32 4>
+  %5 = and <4 x i32> %4, <i32 -4096, i32 -8192, i32 -4096, i32 -8192>
+  ret <4 x i32> %5
+}
+
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
