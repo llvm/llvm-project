@@ -1276,6 +1276,10 @@ public:
   /// or
   ///   DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   /// to TargetPassConfig::createMachineScheduler() to have an effect.
+  ///
+  /// \p BaseOps1 and \p BaseOps2 are memory operands of two memory operations.
+  /// \p NumLoads is the number of loads that will be in the cluster if this
+  /// hook returns true.
   virtual bool shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                    ArrayRef<const MachineOperand *> BaseOps2,
                                    unsigned NumLoads) const {
