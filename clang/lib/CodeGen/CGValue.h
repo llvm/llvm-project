@@ -15,11 +15,15 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGVALUE_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/Sema/Sema.h"
 #include "clang/AST/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Type.h"
 #include "Address.h"
 #include "CodeGenTBAA.h"
+
+static_assert(clang::Sema::MaximumAlignment <= llvm::Value::MaximumAlignment,
+              "Clang max alignment greater than what LLVM supports?");
 
 namespace llvm {
   class Constant;
