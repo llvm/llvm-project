@@ -15,6 +15,7 @@
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/LLVM.h"
@@ -237,7 +238,8 @@ bool DynTypedMatcher::matches(const ast_type_traits::DynTypedNode &DynNode,
   TraversalKindScope RAII(Finder->getASTContext(),
                           Implementation->TraversalKind());
 
-  auto N = Finder->getASTContext().traverseIgnored(DynNode);
+  auto N =
+      Finder->getASTContext().getParentMapContext().traverseIgnored(DynNode);
 
   if (RestrictKind.isBaseOf(N.getNodeKind()) &&
       Implementation->dynMatches(N, Finder, Builder)) {
@@ -256,7 +258,8 @@ bool DynTypedMatcher::matchesNoKindCheck(
   TraversalKindScope raii(Finder->getASTContext(),
                           Implementation->TraversalKind());
 
-  auto N = Finder->getASTContext().traverseIgnored(DynNode);
+  auto N =
+      Finder->getASTContext().getParentMapContext().traverseIgnored(DynNode);
 
   assert(RestrictKind.isBaseOf(N.getNodeKind()));
   if (Implementation->dynMatches(N, Finder, Builder)) {
