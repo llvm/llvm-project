@@ -59,8 +59,8 @@ ASTConstraintSatisfaction::Create(const ASTContext &C,
 }
 
 void ConstraintSatisfaction::Profile(
-    llvm::FoldingSetNodeID &ID, const ASTContext &C, NamedDecl *ConstraintOwner,
-    ArrayRef<TemplateArgument> TemplateArgs) {
+    llvm::FoldingSetNodeID &ID, const ASTContext &C,
+    const NamedDecl *ConstraintOwner, ArrayRef<TemplateArgument> TemplateArgs) {
   ID.AddPointer(ConstraintOwner);
   ID.AddInteger(TemplateArgs.size());
   for (auto &Arg : TemplateArgs)
