@@ -741,6 +741,12 @@ def warn_fortify_source_size_mismatch : Warning<
   "'%0' size argument is too large; destination buffer has size %1,"
   " but size argument is %2">, InGroup<FortifySource>;
 
+def warn_fortify_source_format_overflow : Warning<
+  "'%0' will always overflow; destination buffer has size %1,"
+  " but format string expands to at least %2">,
+  InGroup<FortifySource>;
+
+
 /// main()
 // static main() is not an error in C, just in C++.
 def warn_static_main : Warning<"'main' should not be declared static">,
