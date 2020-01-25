@@ -117,11 +117,11 @@ public:
   /// Get the number of operands.
   unsigned getNumOperands() const {
     auto operands = record.getValueAsListOfDefs(fieldOperands);
-    for (const llvm::Record *r : operands) {
-      (void)r;
-      assert(r->isSubClassOf("LLVMType") &&
-             "expected operands to be of LLVM type");
-    }
+    assert(llvm::all_of(operands,
+                        [](const llvm::Record *r) {
+                          return r->isSubClassOf("LLVMType");
+                        }) &&
+           "expected operands to be of LLVM type");
     return operands.size();
   }
 
