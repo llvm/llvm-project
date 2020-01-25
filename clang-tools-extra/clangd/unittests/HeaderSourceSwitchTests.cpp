@@ -249,10 +249,6 @@ TEST(HeaderSourceSwitchTest, FromSourceToHeader) {
 }
 
 TEST(HeaderSourceSwitchTest, ClangdServerIntegration) {
-  class IgnoreDiagnostics : public DiagnosticsConsumer {
-    void onDiagnosticsReady(PathRef File,
-                            std::vector<Diag> Diagnostics) override {}
-  } DiagConsumer;
   MockCompilationDatabase CDB;
   CDB.ExtraClangFlags = {"-I" +
                          testPath("src/include")}; // add search directory.
@@ -268,7 +264,7 @@ TEST(HeaderSourceSwitchTest, ClangdServerIntegration) {
   FS.Files[CppPath] = FileContent;
   auto Options = ClangdServer::optsForTest();
   Options.BuildDynamicSymbolIndex = true;
-  ClangdServer Server(CDB, FS, DiagConsumer, Options);
+  ClangdServer Server(CDB, FS, Options);
   runAddDocument(Server, CppPath, FileContent);
   EXPECT_EQ(HeaderPath,
             *llvm::cantFail(runSwitchHeaderSource(Server, CppPath)));
