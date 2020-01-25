@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
 
-  cl::ParseCommandLineOptions(argc, argv, "HowToUseLLJIT");
+  cl::ParseCommandLineOptions(argc, argv, "LLJITWithCustomObjectLinkingLayer");
   ExitOnErr.setBanner(std::string(argv[0]) + ": ");
 
   // Detect the host and set code model to small.
