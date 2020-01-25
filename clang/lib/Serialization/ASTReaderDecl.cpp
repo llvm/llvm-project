@@ -1078,6 +1078,8 @@ void ASTDeclReader::VisitObjCMethodDecl(ObjCMethodDecl *MD) {
     SelLocs.push_back(readSourceLocation());
 
   MD->setParamsAndSelLocs(Reader.getContext(), Params, SelLocs);
+  MD->ODRHash = Record.readInt();
+  MD->setHasODRHash();
 }
 
 void ASTDeclReader::VisitObjCTypeParamDecl(ObjCTypeParamDecl *D) {
@@ -1160,6 +1162,10 @@ void ASTDeclReader::MergeDefinitionData(ObjCInterfaceDecl *D,
   if (!D->known_extensions_empty() || !D->known_categories_empty() ||
       NewDD.CategoryList)
     return;
+
+  // Trigger computation for methods (if they aren't yet computed)
+  for (auto *M : D->methods())
+    M->getODRHash();
 
   if (D->getODRHash() != NewDD.ODRHash)
     DetectedOdrViolation = true;

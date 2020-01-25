@@ -18,6 +18,7 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TemplateBase.h"
+#include "clang/AST/DeclObjC.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -62,6 +63,10 @@ public:
   // Use this for ODR checking ObjC interfaces. This
   // method compares more information than the AddDecl class.
   void AddObjCInterfaceDecl(const ObjCInterfaceDecl *Record);
+
+  // Use this for ODR checking ObjC interfaces. This
+  // method compares more information than the AddDecl class.
+  void AddObjCMethodDecl(const ObjCMethodDecl *Method);
 
   // Use this for ODR checking functions between modules.  This method compares
   // more information than the AddDecl class.  SkipBody will process the

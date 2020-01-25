@@ -224,6 +224,15 @@ private:
   /// Otherwise it will return itself.
   ObjCMethodDecl *getNextRedeclarationImpl() override;
 
+  /// Store the ODR hash for this decl.
+  unsigned ODRHash = 0;
+
+  /// Whether an ODRHash has been stored.
+  bool hasODRHash() const { return ObjCMethodDeclBits.HasODRHash; }
+
+  /// State that an ODRHash has been stored.
+  void setHasODRHash(bool B = true) { ObjCMethodDeclBits.HasODRHash = B; }
+
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
@@ -540,6 +549,10 @@ public:
   static ObjCMethodDecl *castFromDeclContext(const DeclContext *DC) {
     return static_cast<ObjCMethodDecl *>(const_cast<DeclContext*>(DC));
   }
+
+  /// Get precomputed ODRHash or add a new one.
+  unsigned getODRHash();
+  unsigned getODRHash() const;
 };
 
 /// Describes the variance of a given generic parameter.

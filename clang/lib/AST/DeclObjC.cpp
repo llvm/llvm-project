@@ -829,6 +829,7 @@ ObjCMethodDecl::ObjCMethodDecl(
   setSelLocsKind(SelLoc_StandardNoSpace);
   setOverriding(false);
   setHasSkippedBody(false);
+  setHasODRHash(false);
 
   setImplicit(isImplicitlyDeclared);
 }
@@ -1427,6 +1428,25 @@ ObjCMethodDecl::findPropertyDecl(bool CheckOverrides) const {
       return Prop;
 
   return nullptr;
+}
+
+unsigned ObjCMethodDecl::getODRHash() const {
+  assert(hasODRHash());
+  return ODRHash;
+}
+
+unsigned ObjCMethodDecl::getODRHash() {
+  // Previously calculated hash is stored in DefinitionData.
+  if (hasODRHash())
+    return ODRHash;
+
+  // Only calculate hash on first call of getODRHash per record.
+  class ODRHash Hash;
+  Hash.AddObjCMethodDecl(this);
+  setHasODRHash();
+  ODRHash = Hash.CalculateHash();
+
+  return ODRHash;
 }
 
 //===----------------------------------------------------------------------===//
