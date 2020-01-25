@@ -54,7 +54,6 @@
 #include "llvm/Transforms/Coroutines.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include <algorithm>
@@ -625,13 +624,6 @@ int main(int argc, char **argv) {
            << ": error: input module is broken!\n";
     return 1;
   }
-
-  // Enable testing of whole program devirtualization on this module by invoking
-  // the facility for updating public visibility to linkage unit visibility when
-  // specified by an internal option. This is normally done during LTO which is
-  // not performed via opt.
-  updateVCallVisibilityInModule(*M,
-                                /* WholeProgramVisibilityEnabledInLTO */ false);
 
   // Figure out what stream we are supposed to write to...
   std::unique_ptr<ToolOutputFile> Out;
