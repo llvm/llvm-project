@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "TypeLocBuilder.h"
-#include "TreeTransform.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTMutationListener.h"
