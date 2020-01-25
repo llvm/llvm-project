@@ -21,7 +21,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
     def test_hw_break_set_delete_multi_thread_linux(self):
         self.build()
         self.setTearDownCleanup()
-        self.break_multi_thread('delete')
+        self.break_multi_thread('delete', False) # llvm.org/PR44659
 
     # LLDB on linux supports hardware breakpoints for arm and aarch64
     # architectures.
@@ -30,7 +30,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
     def test_hw_break_set_disable_multi_thread_linux(self):
         self.build()
         self.setTearDownCleanup()
-        self.break_multi_thread('disable')
+        self.break_multi_thread('disable', False) # llvm.org/PR44659
 
     # LLDB on darwin supports hardware breakpoints for arm, aarch64, x86_64 and
     # i386 architectures.
@@ -60,7 +60,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
         self.first_stop = line_number(
             self.source, 'Starting thread creation with hardware breakpoint set')
 
-    def break_multi_thread(self, removal_type):
+    def break_multi_thread(self, removal_type, check_hw_bp=True):
         """Test that lldb hardware breakpoints work for multiple threads."""
         self.runCmd("file " + self.getBuildArtifact("a.out"),
                     CURRENT_EXECUTABLE_SET)
@@ -101,9 +101,10 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
             # Continue the loop and test that we are stopped 4 times.
             count += 1
 
-        # Check the breakpoint list.
-        self.expect("breakpoint list", substrs=['hw_break_function', 'hardware'])
-        self.expect("breakpoint list -v", substrs=['function = hw_break_function', 'hardware = true'])
+        if check_hw_bp:
+            # Check the breakpoint list.
+            self.expect("breakpoint list", substrs=['hw_break_function', 'hardware'])
+            self.expect("breakpoint list -v", substrs=['function = hw_break_function', 'hardware = true'])
 
         if removal_type == 'delete':
             self.runCmd("settings set auto-confirm true")
