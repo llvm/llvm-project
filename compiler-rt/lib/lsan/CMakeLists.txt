@@ -12,10 +12,11 @@ set(LSAN_COMMON_SOURCES
 set(LSAN_SOURCES
   lsan.cpp
   lsan_allocator.cpp
-  lsan_linux.cpp
   lsan_interceptors.cpp
+  lsan_linux.cpp
   lsan_mac.cpp
   lsan_malloc_mac.cpp
+  lsan_posix.cpp
   lsan_preinit.cpp
   lsan_thread.cpp
   )
