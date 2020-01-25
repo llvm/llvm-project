@@ -201,12 +201,9 @@ class LowerTypeTestsPass : public PassInfoMixin<LowerTypeTestsPass> {
 public:
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
-  bool DropTypeTests;
   LowerTypeTestsPass(ModuleSummaryIndex *ExportSummary,
-                     const ModuleSummaryIndex *ImportSummary,
-                     bool DropTypeTests = false)
-      : ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-        DropTypeTests(DropTypeTests) {}
+                     const ModuleSummaryIndex *ImportSummary)
+      : ExportSummary(ExportSummary), ImportSummary(ImportSummary) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
