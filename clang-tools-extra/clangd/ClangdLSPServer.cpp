@@ -500,8 +500,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     if (NegotiatedOffsetEncoding)
       WithOffsetEncoding.emplace(kCurrentOffsetEncoding,
                                  *NegotiatedOffsetEncoding);
-    Server.emplace(*CDB, FSProvider, static_cast<DiagnosticsConsumer &>(*this),
-                   ClangdServerOpts);
+    Server.emplace(*CDB, FSProvider, ClangdServerOpts,
+                   static_cast<ClangdServer::Callbacks *>(this));
   }
   applyConfiguration(Params.initializationOptions.ConfigSettings);
 

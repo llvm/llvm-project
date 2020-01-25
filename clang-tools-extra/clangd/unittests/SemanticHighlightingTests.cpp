@@ -696,11 +696,10 @@ sizeof...($TemplateParameter[[Elements]]);
 }
 
 TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
-  class HighlightingsCounterDiagConsumer : public DiagnosticsConsumer {
+  class HighlightingsCounter : public ClangdServer::Callbacks {
   public:
     std::atomic<int> Count = {0};
 
-    void onDiagnosticsReady(PathRef, std::vector<Diag>) override {}
     void onHighlightingsReady(
         PathRef File, std::vector<HighlightingToken> Highlightings) override {
       ++Count;
@@ -712,11 +711,11 @@ TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
   FS.Files[FooCpp] = "";
 
   MockCompilationDatabase MCD;
-  HighlightingsCounterDiagConsumer DiagConsumer;
-  ClangdServer Server(MCD, FS, DiagConsumer, ClangdServer::optsForTest());
+  HighlightingsCounter Counter;
+  ClangdServer Server(MCD, FS, ClangdServer::optsForTest(), &Counter);
   Server.addDocument(FooCpp, "int a;");
   ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for server";
-  ASSERT_EQ(DiagConsumer.Count, 1);
+  ASSERT_EQ(Counter.Count, 1);
 }
 
 TEST(SemanticHighlighting, toSemanticHighlightingInformation) {

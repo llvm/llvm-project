@@ -32,7 +32,7 @@ class SymbolIndex;
 /// MessageHandler binds the implemented LSP methods (e.g. onInitialize) to
 /// corresponding JSON-RPC methods ("initialize").
 /// The server also supports $/cancelRequest (MessageHandler provides this).
-class ClangdLSPServer : private DiagnosticsConsumer {
+class ClangdLSPServer : private ClangdServer::Callbacks {
 public:
   /// If \p CompileCommandsDir has a value, compile_commands.json will be
   /// loaded only from \p CompileCommandsDir. Otherwise, clangd will look
@@ -54,7 +54,7 @@ public:
   bool run();
 
 private:
-  // Implement DiagnosticsConsumer.
+  // Implement ClangdServer::Callbacks.
   void onDiagnosticsReady(PathRef File, std::vector<Diag> Diagnostics) override;
   void onFileUpdated(PathRef File, const TUStatus &Status) override;
   void

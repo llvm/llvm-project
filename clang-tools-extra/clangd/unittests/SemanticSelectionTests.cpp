@@ -26,11 +26,6 @@ namespace clangd {
 namespace {
 using ::testing::ElementsAreArray;
 
-class IgnoreDiagnostics : public DiagnosticsConsumer {
-  void onDiagnosticsReady(PathRef File,
-                          std::vector<Diag> Diagnostics) override {}
-};
-
 TEST(SemanticSelection, All) {
   const char *Tests[] = {
       R"cpp( // Single statement in a function body.
@@ -146,9 +141,8 @@ TEST(SemanticSelection, All) {
 
 TEST(SemanticSelection, RunViaClangDServer) {
   MockFSProvider FS;
-  IgnoreDiagnostics DiagConsumer;
   MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+  ClangdServer Server(CDB, FS, ClangdServer::optsForTest());
 
   auto FooH = testPath("foo.h");
   FS.Files[FooH] = R"cpp(
