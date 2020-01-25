@@ -556,9 +556,9 @@ define amdgpu_kernel void @v_sext_v4i16_to_v4i32(i32 addrspace(1)* %out, i64 add
 ; VI-NEXT:    s_mov_b32 s7, s3
 ; VI-NEXT:    buffer_load_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_ashrrev_i32_e32 v2, 16, v1
 ; VI-NEXT:    v_ashrrev_i32_e32 v3, 16, v0
 ; VI-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; VI-NEXT:    v_ashrrev_i32_e32 v2, 16, v1
 ; VI-NEXT:    v_bfe_i32 v1, v1, 0, 16
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    buffer_store_dword v3, off, s[0:3], 0

@@ -275,8 +275,8 @@ define amdgpu_kernel void @add_i32_uniform(i32 addrspace(1)* %out, i32 %additive
 ;
 ; GFX1064-LABEL: add_i32_uniform:
 ; GFX1064:       ; %bb.0: ; %entry
-; GFX1064-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX1064-NEXT:    v_cmp_ne_u32_e64 s[2:3], 1, 0
+; GFX1064-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX1064-NEXT:    s_load_dword s0, s[0:1], 0x2c
 ; GFX1064-NEXT:    ; implicit-def: $vgpr1
 ; GFX1064-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s2, 0
@@ -1832,8 +1832,8 @@ define amdgpu_kernel void @sub_i32_uniform(i32 addrspace(1)* %out, i32 %subitive
 ;
 ; GFX1064-LABEL: sub_i32_uniform:
 ; GFX1064:       ; %bb.0: ; %entry
-; GFX1064-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX1064-NEXT:    v_cmp_ne_u32_e64 s[2:3], 1, 0
+; GFX1064-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
 ; GFX1064-NEXT:    s_load_dword s0, s[0:1], 0x2c
 ; GFX1064-NEXT:    ; implicit-def: $vgpr1
 ; GFX1064-NEXT:    v_mbcnt_lo_u32_b32_e64 v0, s2, 0
