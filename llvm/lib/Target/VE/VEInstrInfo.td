@@ -178,6 +178,9 @@ def uimm6Op64 : Operand<i64> {
 let PrintMethod = "printCCOperand" in
   def CCOp : Operand<i32>;
 
+def VEhi    : SDNode<"VEISD::Hi", SDTIntUnaryOp>;
+def VElo    : SDNode<"VEISD::Lo", SDTIntUnaryOp>;
+
 //  These are target-independent nodes, but have target-specific formats.
 def SDT_SPCallSeqStart : SDCallSeqStart<[ SDTCisVT<0, i64>,
                                           SDTCisVT<1, i64> ]>;
@@ -882,6 +885,13 @@ def : Pat<(truncstorei16 i64:$src, ADDRri:$addr),
           (ST2Bri MEMri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
 def : Pat<(truncstorei32 i64:$src, ADDRri:$addr),
           (STLri MEMri:$addr, (EXTRACT_SUBREG $src, sub_i32))>;
+
+// Address calculation and its optimization
+def : Pat<(VEhi tglobaladdr:$in), (LEASLzzi tglobaladdr:$in)>;
+def : Pat<(VElo tglobaladdr:$in), (ANDrm0 (LEAzzi tglobaladdr:$in), 32)>;
+def : Pat<(add (VEhi tglobaladdr:$in1), (VElo tglobaladdr:$in2)),
+          (LEASLrzi (ANDrm0 (LEAzzi tglobaladdr:$in2), 32),
+                    (tglobaladdr:$in1))>;
 
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions
