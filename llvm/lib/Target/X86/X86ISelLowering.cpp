@@ -2656,14 +2656,7 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, *DAG.getContext());
   CCInfo.AnalyzeReturn(Outs, RetCC_X86);
 
-  SDValue Flag;
-  SmallVector<SDValue, 6> RetOps;
-  RetOps.push_back(Chain); // Operand #0 = Chain (updated below)
-  // Operand #1 = Bytes To Pop
-  RetOps.push_back(DAG.getTargetConstant(FuncInfo->getBytesToPopOnReturn(), dl,
-                   MVT::i32));
-
-  // Copy the result values into the output registers.
+  SmallVector<std::pair<unsigned, SDValue>, 4> RetVals;
   for (unsigned I = 0, OutsIndex = 0, E = RVLocs.size(); I != E;
        ++I, ++OutsIndex) {
     CCValAssign &VA = RVLocs[I];
@@ -2715,7 +2708,7 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       // change the value to the FP stack register class.
       if (isScalarFPTypeInSSEReg(VA.getValVT()))
         ValToCopy = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f80, ValToCopy);
-      RetOps.push_back(ValToCopy);
+      RetVals.push_back(std::make_pair(VA.getLocReg(), ValToCopy));
       // Don't emit a copytoreg.
       continue;
     }
@@ -2736,31 +2729,39 @@ X86TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       }
     }
 
-    SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
-
     if (VA.needsCustom()) {
       assert(VA.getValVT() == MVT::v64i1 &&
              "Currently the only custom case is when we split v64i1 to 2 regs");
 
-      Passv64i1ArgInRegs(dl, DAG, ValToCopy, RegsToPass, VA, RVLocs[++I],
+      Passv64i1ArgInRegs(dl, DAG, ValToCopy, RetVals, VA, RVLocs[++I],
                          Subtarget);
-
-      assert(2 == RegsToPass.size() &&
-             "Expecting two registers after Pass64BitArgInRegs");
 
       // Add the second register to the CalleeSaveDisableRegs list.
       if (ShouldDisableCalleeSavedRegister)
         MF.getRegInfo().disableCalleeSavedRegister(RVLocs[I].getLocReg());
     } else {
-      RegsToPass.push_back(std::make_pair(VA.getLocReg(), ValToCopy));
+      RetVals.push_back(std::make_pair(VA.getLocReg(), ValToCopy));
+    }
+  }
+
+  SDValue Flag;
+  SmallVector<SDValue, 6> RetOps;
+  RetOps.push_back(Chain); // Operand #0 = Chain (updated below)
+  // Operand #1 = Bytes To Pop
+  RetOps.push_back(DAG.getTargetConstant(FuncInfo->getBytesToPopOnReturn(), dl,
+                   MVT::i32));
+
+  // Copy the result values into the output registers.
+  for (auto &RetVal : RetVals) {
+    if (RetVal.first == X86::FP0 || RetVal.first == X86::FP1) {
+      RetOps.push_back(RetVal.second);
+      continue; // Don't emit a copytoreg.
     }
 
-    // Add nodes to the DAG and add the values into the RetOps list
-    for (auto &Reg : RegsToPass) {
-      Chain = DAG.getCopyToReg(Chain, dl, Reg.first, Reg.second, Flag);
-      Flag = Chain.getValue(1);
-      RetOps.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
-    }
+    Chain = DAG.getCopyToReg(Chain, dl, RetVal.first, RetVal.second, Flag);
+    Flag = Chain.getValue(1);
+    RetOps.push_back(
+        DAG.getRegister(RetVal.first, RetVal.second.getValueType()));
   }
 
   // Swift calling convention does not require we copy the sret argument

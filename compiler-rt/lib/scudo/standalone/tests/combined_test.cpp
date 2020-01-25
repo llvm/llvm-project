@@ -264,6 +264,17 @@ template <class Config> static void testAllocator() {
   EXPECT_NE(Stats.find("Stats: Quarantine"), std::string::npos);
 }
 
+// Test that multiple instantiations of the allocator have not messed up the
+// process's signal handlers (GWP-ASan used to do this).
+void testSEGV() {
+  const scudo::uptr Size = 4 * scudo::getPageSizeCached();
+  scudo::MapPlatformData Data = {};
+  void *P = scudo::map(nullptr, Size, "testSEGV", MAP_NOACCESS, &Data);
+  EXPECT_NE(P, nullptr);
+  EXPECT_DEATH(memset(P, 0xaa, Size), "");
+  scudo::unmap(P, Size, UNMAP_ALL, &Data);
+}
+
 TEST(ScudoCombinedTest, BasicCombined) {
   UseQuarantine = false;
   testAllocator<scudo::AndroidSvelteConfig>();
@@ -273,6 +284,7 @@ TEST(ScudoCombinedTest, BasicCombined) {
   testAllocator<scudo::DefaultConfig>();
   UseQuarantine = true;
   testAllocator<scudo::AndroidConfig>();
+  testSEGV();
 #endif
 }
 

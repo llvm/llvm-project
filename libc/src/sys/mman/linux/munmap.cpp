@@ -1,4 +1,4 @@
-//===------------- Implementation of the POSIX munmap function ------------===//
+//===---------- Linux implementation of the POSIX munmap function ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,10 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/sys/mman/munmap.h"
-#include "include/sys/syscall.h" // For syscall numbers.
+
+#include "config/linux/syscall.h" // For internal syscall function.
+#include "include/sys/syscall.h"  // For syscall numbers.
 #include "src/__support/common.h"
 #include "src/errno/llvmlibc_errno.h"
-#include "src/unistd/syscall.h" // For internal syscall function.
 
 namespace __llvm_libc {
 

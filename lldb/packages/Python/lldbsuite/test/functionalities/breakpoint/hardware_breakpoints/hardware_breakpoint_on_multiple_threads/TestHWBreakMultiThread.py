@@ -9,26 +9,47 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-# Hardware breakpoints are supported only by platforms mentioned in oslist.
-@skipUnlessPlatform(oslist=['linux'])
 class HardwareBreakpointMultiThreadTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     mydir = TestBase.compute_mydir(__file__)
 
-    # LLDB supports hardware breakpoints for arm and aarch64 architectures.
+    # LLDB on linux supports hardware breakpoints for arm and aarch64
+    # architectures.
+    @skipUnlessPlatform(oslist=['linux'])
     @skipIf(archs=no_match(['arm', 'aarch64']))
-    def test_hw_break_set_delete_multi_thread(self):
+    def test_hw_break_set_delete_multi_thread_linux(self):
         self.build()
         self.setTearDownCleanup()
-        self.break_multi_thread('delete')
+        self.break_multi_thread('delete', 'breakpoint')
 
-    # LLDB supports hardware breakpoints for arm and aarch64 architectures.
+    # LLDB on linux supports hardware breakpoints for arm and aarch64
+    # architectures.
+    @skipUnlessPlatform(oslist=['linux'])
     @skipIf(archs=no_match(['arm', 'aarch64']))
-    def test_hw_break_set_disable_multi_thread(self):
+    def test_hw_break_set_disable_multi_thread_linux(self):
         self.build()
         self.setTearDownCleanup()
-        self.break_multi_thread('disable')
+        self.break_multi_thread('disable', 'breakpoint')
+
+    # LLDB on darwin supports hardware breakpoints for arm, aarch64, x86_64 and
+    # i386 architectures.
+    @skipUnlessDarwin
+    @skipIfOutOfTreeDebugserver
+    def test_hw_break_set_delete_multi_thread_macos(self):
+        self.build()
+        self.setTearDownCleanup()
+        self.break_multi_thread('delete', 'EXC_BREAKPOINT')
+
+    # LLDB on darwin supports hardware breakpoints for arm, aarch64, x86_64 and
+    # i386 architectures.
+    @skipUnlessDarwin
+    @skipIfOutOfTreeDebugserver
+    def test_hw_break_set_disable_multi_thread_macos(self):
+        self.build()
+        self.setTearDownCleanup()
+        self.break_multi_thread('disable', 'EXC_BREAKPOINT')
+
 
     def setUp(self):
         # Call super's setUp().
@@ -39,7 +60,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
         self.first_stop = line_number(
             self.source, 'Starting thread creation with hardware breakpoint set')
 
-    def break_multi_thread(self, removal_type):
+    def break_multi_thread(self, removal_type, stop_reason):
         """Test that lldb hardware breakpoints work for multiple threads."""
         self.runCmd("file " + self.getBuildArtifact("a.out"),
                     CURRENT_EXECUTABLE_SET)
@@ -54,8 +75,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
         # We should be stopped again due to the breakpoint.
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+                    substrs=['stopped', 'stop reason = breakpoint'])
 
         # Now set a hardware breakpoint in thread function.
         self.expect("breakpoint set -b hw_break_function --hardware",
@@ -75,7 +95,7 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
             # The stop reason of the thread should be breakpoint.
             self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
                 substrs=[
-                    'stop reason = breakpoint',
+                    'stop reason = {}'.format(stop_reason),
                     'hw_break_function'])
 
             # Continue the loop and test that we are stopped 4 times.

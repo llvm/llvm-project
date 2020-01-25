@@ -2203,12 +2203,14 @@ private:
       ModuleBegin,
       ModuleImport,
       SkippedModuleImport,
+      Failure,
     } Kind;
     Module *ModuleForHeader = nullptr;
 
     ImportAction(ActionKind AK, Module *Mod = nullptr)
         : Kind(AK), ModuleForHeader(Mod) {
-      assert((AK == None || Mod) && "no module for module action");
+      assert((AK == None || Mod || AK == Failure) &&
+             "no module for module action");
     }
   };
 

@@ -56,6 +56,7 @@ add_gen_header(
   GEN_HDR sys/mman.h
   DEPENDS
     libc_posix_types_h
+    llvm_libc_common_h
 )
 
 add_gen_header(

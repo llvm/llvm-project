@@ -43,6 +43,17 @@ void populateVectorToVectorCanonicalizationPatterns(
 void populateVectorToVectorTransformationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context);
 
+/// Collect a set of vector slices transformation patterns:
+///    ExtractSlicesOpLowering, InsertSlicesOpLowering
+/// Useful for clients that want to express all vector "slices"
+/// ops in terms of more elementary vector "slice" ops. If all
+/// "produced" tuple values are "consumed" (the most common
+/// use for "slices" ops), this lowering removes all tuple related
+/// operations as well (through DCE and folding). If tuple values
+/// "leak" coming in, however, some tuple related ops will remain.
+void populateVectorSlicesLoweringPatterns(OwningRewritePatternList &patterns,
+                                          MLIRContext *context);
+
 /// Returns the integer type required for subscripts in the vector dialect.
 IntegerType getVectorSubscriptType(Builder &builder);
 
