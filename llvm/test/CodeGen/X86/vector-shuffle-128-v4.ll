@@ -2492,3 +2492,28 @@ define  <4 x float> @shuffle_mem_v4f32_0624(<4 x float> %a0, <4 x float>* %a1) {
   %2 = shufflevector <4 x float> %1, <4 x float> %a0, <4 x i32> <i32 0, i32 6, i32 2, i32 4>
   ret <4 x float> %2
 }
+
+define  <4 x float> @shuffle_mem_v4f32_4760(<4 x float> %a0, <4 x float>* %a1) {
+; SSE-LABEL: shuffle_mem_v4f32_4760:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps (%rdi), %xmm1
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,3],xmm1[2,0]
+; SSE-NEXT:    retq
+;
+; AVX1OR2-LABEL: shuffle_mem_v4f32_4760:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vmovaps (%rdi), %xmm1
+; AVX1OR2-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,0]
+; AVX1OR2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3],xmm1[2,0]
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-LABEL: shuffle_mem_v4f32_4760:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovaps {{.*#+}} xmm1 = [0,3,2,4]
+; AVX512VL-NEXT:    vpermt2ps (%rdi), %xmm1, %xmm0
+; AVX512VL-NEXT:    retq
+  %1 = load <4 x float>, <4 x float>* %a1
+  %2 = shufflevector <4 x float> %1, <4 x float> %a0, <4 x i32> <i32 4, i32 7, i32 6, i32 0>
+  ret <4 x float> %2
+}
