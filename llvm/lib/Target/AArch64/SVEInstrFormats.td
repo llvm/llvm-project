@@ -5105,6 +5105,17 @@ class sve_int_rdffr_pred<bit s, string asm>
   let Uses = [FFR];
 }
 
+multiclass sve_int_rdffr_pred<bit s, string asm, SDPatternOperator op> {
+  def _REAL : sve_int_rdffr_pred<s, asm>;
+
+  // We need a layer of indirection because early machine code passes balk at
+  // physical register (i.e. FFR) uses that have no previous definition.
+  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
+  def "" : Pseudo<(outs PPR8:$Pd), (ins PPRAny:$Pg), [(set (nxv16i1 PPR8:$Pd), (op (nxv16i1 PPRAny:$Pg)))]>,
+           PseudoInstExpansion<(!cast<Instruction>(NAME # _REAL) PPR8:$Pd, PPRAny:$Pg)>;
+  }
+}
+
 class sve_int_rdffr_unpred<string asm> : I<
   (outs PPR8:$Pd), (ins),
   asm, "\t$Pd",
@@ -5117,11 +5128,22 @@ class sve_int_rdffr_unpred<string asm> : I<
   let Uses = [FFR];
 }
 
-class sve_int_wrffr<string asm>
+multiclass sve_int_rdffr_unpred<string asm, SDPatternOperator op> {
+  def _REAL : sve_int_rdffr_unpred<asm>;
+
+  // We need a layer of indirection because early machine code passes balk at
+  // physical register (i.e. FFR) uses that have no previous definition.
+  let hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
+  def "" : Pseudo<(outs PPR8:$Pd), (ins), [(set (nxv16i1 PPR8:$Pd), (op))]>,
+           PseudoInstExpansion<(!cast<Instruction>(NAME # _REAL) PPR8:$Pd)>;
+  }
+}
+
+class sve_int_wrffr<string asm, SDPatternOperator op>
 : I<(outs), (ins PPR8:$Pn),
   asm, "\t$Pn",
   "",
-  []>, Sched<[]> {
+  [(op (nxv16i1 PPR8:$Pn))]>, Sched<[]> {
   bits<4> Pn;
   let Inst{31-9} = 0b00100101001010001001000;
   let Inst{8-5}  = Pn;
@@ -5131,11 +5153,11 @@ class sve_int_wrffr<string asm>
   let Defs = [FFR];
 }
 
-class sve_int_setffr<string asm>
+class sve_int_setffr<string asm, SDPatternOperator op>
 : I<(outs), (ins),
   asm, "",
   "",
-  []>, Sched<[]> {
+  [(op)]>, Sched<[]> {
   let Inst{31-0} = 0b00100101001011001001000000000000;
 
   let hasSideEffects = 1;
