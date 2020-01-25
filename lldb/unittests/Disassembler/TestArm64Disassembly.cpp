@@ -1,5 +1,4 @@
-//===-- TestArm64Disassembly.cpp ------------------------------------*- C++
-//-*-===//
+//===-- TestArm64Disassembly.cpp ------------------------------------------===//
 
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
