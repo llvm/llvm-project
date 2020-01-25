@@ -3749,7 +3749,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     if (Tmp == VTBits)
       return VTBits;
 
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+    if (ConstantSDNode *C = isConstOrConstSplat(Op.getOperand(1))) {
       unsigned RotAmt = C->getAPIntValue().urem(VTBits);
 
       // Handle rotate right by N like a rotate left by 32-N.
