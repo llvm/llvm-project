@@ -1380,7 +1380,7 @@ ParseExpression(const MCExpr *&EVal) {
   PPCMCExpr::VariantKind Variant;
   const MCExpr *E = ExtractModifierFromExpr(EVal, Variant);
   if (E)
-    EVal = PPCMCExpr::create(Variant, E, false, getParser().getContext());
+    EVal = PPCMCExpr::create(Variant, E, getParser().getContext());
 
   return false;
 }
@@ -1427,7 +1427,7 @@ ParseDarwinExpression(const MCExpr *&EVal) {
     if (getLexer().isNot(AsmToken::RParen))
       return Error(Parser.getTok().getLoc(), "expected ')'");
     Parser.Lex(); // Eat the ')'
-    EVal = PPCMCExpr::create(Variant, EVal, false, getParser().getContext());
+    EVal = PPCMCExpr::create(Variant, EVal, getParser().getContext());
   }
   return false;
 }
@@ -1830,23 +1830,23 @@ PPCAsmParser::applyModifierToExpr(const MCExpr *E,
                                   MCContext &Ctx) {
   switch (Variant) {
   case MCSymbolRefExpr::VK_PPC_LO:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_LO, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_LO, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HI:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HI, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HI, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HA, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HA, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGH:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGH, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGH, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGHA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHA, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHA, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGHER:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHER, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHER, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGHERA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHERA, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHERA, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGHEST:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHEST, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHEST, E, Ctx);
   case MCSymbolRefExpr::VK_PPC_HIGHESTA:
-    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHESTA, E, false, Ctx);
+    return PPCMCExpr::create(PPCMCExpr::VK_PPC_HIGHESTA, E, Ctx);
   default:
     return nullptr;
   }
