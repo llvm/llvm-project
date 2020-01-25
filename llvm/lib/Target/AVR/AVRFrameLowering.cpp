@@ -30,8 +30,7 @@
 namespace llvm {
 
 AVRFrameLowering::AVRFrameLowering()
-    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align::None(),
-                          -2) {}
+    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(1), -2) {}
 
 bool AVRFrameLowering::canSimplifyCallFramePseudos(
     const MachineFunction &MF) const {

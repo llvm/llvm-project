@@ -355,8 +355,7 @@ static bool hasVariantSymbol(const MCInst &MI) {
 }
 
 bool X86AsmBackend::allowAutoPadding() const {
-  return (AlignBoundary != Align::None() &&
-          AlignBranchType != X86::AlignBranchNone);
+  return (AlignBoundary != Align(1) && AlignBranchType != X86::AlignBranchNone);
 }
 
 bool X86AsmBackend::needAlign(MCObjectStreamer &OS) const {
