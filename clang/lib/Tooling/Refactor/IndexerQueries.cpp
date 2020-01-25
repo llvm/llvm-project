@@ -131,7 +131,7 @@ IndexerQuery::loadResultsFromYAML(StringRef Source,
   if (QueryResults.size() != Queries.size())
     return llvm::make_error<llvm::StringError>("Mismatch in query results size",
                                                llvm::errc::invalid_argument);
-  for (const auto &QueryTuple : llvm::zip(Queries, QueryResults)) {
+  for (auto QueryTuple : llvm::zip(Queries, QueryResults)) {
     IndexerQuery *Query = std::get<0>(QueryTuple);
     const QueryYAMLNode &Result = std::get<1>(QueryTuple);
     if ((Query->NameUID && Query->NameUID != Result.Name) &&
@@ -152,7 +152,7 @@ IndexerQuery::loadResultsFromYAML(StringRef Source,
         if (PredicateResult.Name != ActualPredicate.Name)
           continue;
         std::vector<Indexed<PersistentDeclRef<Decl>>> Output;
-        for (const auto &ResultTuple :
+        for (auto ResultTuple :
              zip(DQ->getInputs(), PredicateResult.IntegerValues)) {
           const Decl *D = std::get<0>(ResultTuple);
           int Result = std::get<1>(ResultTuple);
