@@ -60,6 +60,12 @@ if( LLVM_INCLUDE_EXAMPLES )
   add_subdirectory(examples)
 endif()
 
+option(MLIR_INCLUDE_DOCS "Generate build targets for the MLIR docs."
+  ${LLVM_INCLUDE_DOCS})
+if (MLIR_INCLUDE_DOCS)
+  add_subdirectory(docs)
+endif()
+
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/mlir include/mlir-c
     DESTINATION include
