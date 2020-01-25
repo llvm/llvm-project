@@ -5,7 +5,7 @@
   "params": {
     "processId": 123,
     "rootPath": "clangd",
-    "capabilities": {},
+    "capabilities": { "window": { "workDoneProgress": true, "implicitWorkDoneProgressCreate": true} },
     "trace": "off"
   }
 }
@@ -22,6 +22,31 @@
     }
   }
 }
+# BUILD:      "method": "$/progress"
+# BUILD-NEXT: "params": {
+# BUILD-NEXT:   "token": "backgroundIndexProgress",
+# BUILD-NEXT:   "value": {
+# BUILD-NEXT:     "kind": "begin",
+# BUILD-NEXT:     "percentage": 0,
+# BUILD-NEXT:     "title": "indexing"
+# BUILD-NEXT:   }
+# BUILD-NEXT: }
+# BUILD:      "method": "$/progress"
+# BUILD-NEXT: "params": {
+# BUILD-NEXT:   "token": "backgroundIndexProgress",
+# BUILD-NEXT:   "value": {
+# BUILD-NEXT:     "kind": "report",
+# BUILD-NEXT:     "message": "0/1",
+# BUILD-NEXT:     "percentage": 0
+# BUILD-NEXT:   }
+# BUILD-NEXT: }
+#    later...
+# BUILD:          "message": "1/2",
+# BUILD-NEXT:     "percentage": 50
+#    finally...
+# BUILD:          "kind": "end"
+# when using the index, we spawn one task to read it, but not more.
+# USE-NOT:        "message": "1/2",
 ---
 {
   "jsonrpc": "2.0",
