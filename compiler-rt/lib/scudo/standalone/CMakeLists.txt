@@ -1,6 +1,5 @@
 add_compiler_rt_component(scudo_standalone)
-# FIXME: GWP-ASan is temporarily disabled, re-enable once issues are fixed.
-if (FALSE AND COMPILER_RT_HAS_GWP_ASAN)
+if (COMPILER_RT_HAS_GWP_ASAN)
   add_dependencies(scudo_standalone gwp_asan)
 endif()
 
@@ -107,7 +106,7 @@ set(SCUDO_SOURCES_CXX_WRAPPERS
 
 set(SCUDO_OBJECT_LIBS)
 
-if (FALSE AND COMPILER_RT_HAS_GWP_ASAN)
+if (COMPILER_RT_HAS_GWP_ASAN)
   list(APPEND SCUDO_OBJECT_LIBS RTGwpAsan)
   list(APPEND SCUDO_CFLAGS -DGWP_ASAN_HOOKS)
 endif()

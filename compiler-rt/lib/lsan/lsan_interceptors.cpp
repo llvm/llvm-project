@@ -22,7 +22,9 @@
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
+#if SANITIZER_POSIX
 #include "sanitizer_common/sanitizer_posix.h"
+#endif
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "lsan.h"
 #include "lsan_allocator.h"
@@ -416,7 +418,6 @@ extern "C" void *__lsan_thread_start_func(void *arg) {
   int tid = 0;
   while ((tid = atomic_load(&p->tid, memory_order_acquire)) == 0)
     internal_sched_yield();
-  SetCurrentThread(tid);
   ThreadStart(tid, GetTid());
   atomic_store(&p->tid, 0, memory_order_release);
   return callback(param);

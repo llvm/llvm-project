@@ -906,6 +906,9 @@ void Preprocessor::Lex(Token &Result) {
     }
   } while (!ReturnedToken);
 
+  if (Result.is(tok::unknown) && TheModuleLoader.HadFatalFailure)
+    return;
+
   if (Result.is(tok::code_completion) && Result.getIdentifierInfo()) {
     // Remember the identifier before code completion token.
     setCodeCompletionIdentifierInfo(Result.getIdentifierInfo());
@@ -1200,6 +1203,13 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
       Suffix[0].setAnnotationValue(Action.ModuleForHeader);
       // FIXME: Call the moduleImport callback?
       break;
+    case ImportAction::Failure:
+      assert(TheModuleLoader.HadFatalFailure &&
+             "This should be an early exit only to a fatal error");
+      Result.setKind(tok::eof);
+      CurLexer->cutOffLexing();
+      EnterTokens(Suffix);
+      return true;
     }
 
     EnterTokens(Suffix);

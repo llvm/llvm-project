@@ -740,6 +740,10 @@ def warn_fortify_source_overflow
 def warn_fortify_source_size_mismatch : Warning<
   "'%0' size argument is too large; destination buffer has size %1,"
   " but size argument is %2">, InGroup<FortifySource>;
+def warn_fortify_source_format_overflow : Warning<
+  "'%0' will always overflow; destination buffer has size %1,"
+  " but format string expands to at least %2">,
+  InGroup<FortifySource>;
 
 def err_ptrauth_disabled_target :
   Error<"this target does not support pointer authentication">;

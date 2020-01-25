@@ -8,6 +8,7 @@
 
 #include "ProBoundsArrayToPointerDecayCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ParentMapContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -35,8 +36,7 @@ AST_MATCHER_P(Expr, hasParentIgnoringImpCasts,
               ast_matchers::internal::Matcher<Expr>, InnerMatcher) {
   const Expr *E = &Node;
   do {
-    ASTContext::DynTypedNodeList Parents =
-        Finder->getASTContext().getParents(*E);
+    DynTypedNodeList Parents = Finder->getASTContext().getParents(*E);
     if (Parents.size() != 1)
       return false;
     E = Parents[0].get<Expr>();

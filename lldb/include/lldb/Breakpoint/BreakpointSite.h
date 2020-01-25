@@ -61,6 +61,8 @@ public:
   /// Sets the trap opcode
   bool SetTrapOpcode(const uint8_t *trap_opcode, uint32_t trap_opcode_size);
 
+  void SetHardwareIndex(uint32_t index) override;
+
   /// Gets the original instruction bytes that were overwritten by the trap
   uint8_t *GetSavedOpcodeBytes();
 

@@ -38,6 +38,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasMutableGlobals = false;
   bool HasMultivalue = false;
   bool HasTailCall = false;
+  bool HasReferenceTypes = false;
 
 public:
   explicit WebAssemblyTargetInfo(const llvm::Triple &T, const TargetOptions &)

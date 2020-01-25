@@ -980,7 +980,8 @@ uint32_t DNBArchMachARM::NumSupportedHardwareWatchpoints() {
 }
 
 uint32_t DNBArchMachARM::EnableHardwareBreakpoint(nub_addr_t addr,
-                                                  nub_size_t size) {
+                                                  nub_size_t size,
+                                                  bool also_set_on_task) {
   // Make sure our address isn't bogus
   if (addr & 1)
     return INVALID_NUB_HW_INDEX;
@@ -1052,7 +1053,8 @@ uint32_t DNBArchMachARM::EnableHardwareBreakpoint(nub_addr_t addr,
   return INVALID_NUB_HW_INDEX;
 }
 
-bool DNBArchMachARM::DisableHardwareBreakpoint(uint32_t hw_index) {
+bool DNBArchMachARM::DisableHardwareBreakpoint(uint32_t hw_index,
+                                               bool also_set_on_task) {
   kern_return_t kret = GetDBGState(false);
 
   const uint32_t num_hw_points = NumSupportedHardwareBreakpoints();
