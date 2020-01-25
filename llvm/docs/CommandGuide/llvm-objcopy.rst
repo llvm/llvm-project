@@ -130,6 +130,45 @@ multiple file formats.
  Set the alignment of section ``<section>`` to `<align>``. Can be specified
  multiple times to update multiple sections.
 
+.. option:: --set-section-flags <section>=<flag>[,<flag>,...]
+
+ Set section properties in the output of section ``<section>`` based on the
+ specified ``<flag>`` values. Can be specified multiple times to update multiple
+ sections.
+
+ Supported flag names are `alloc`, `load`, `noload`, `readonly`, `exclude`,
+ `debug`, `code`, `data`, `rom`, `share`, `contents`, `merge` and `strings`. Not
+ all flags are meaningful for all object file formats.
+
+ For ELF objects, the flags have the following effects:
+
+ - `alloc` = add the `SHF_ALLOC` flag.
+ - `load` = if the section has `SHT_NOBITS` type, mark it as a `SHT_PROGBITS`
+   section.
+ - `readonly` = if this flag is not specified, add the `SHF_WRITE` flag.
+ - `exclude` = add the `SHF_EXCLUDE` flag.
+ - `code` = add the `SHF_EXECINSTR` flag.
+ - `merge` = add the `SHF_MERGE` flag.
+ - `strings` = add the `SHF_STRINGS` flag.
+ - `contents` = if the section has `SHT_NOBITS` type, mark it as a `SHT_PROGBITS`
+   section.
+
+ For COFF objects, the flags have the following effects:
+
+ - `alloc` = add the `IMAGE_SCN_CNT_UNINITIALIZED_DATA` and `IMAGE_SCN_MEM_READ`
+   flags, unless the `load` flag is specified.
+ - `noload` = add the `IMAGE_SCN_LNK_REMOVE` and `IMAGE_SCN_MEM_READ` flags.
+ - `readonly` = if this flag is not specified, add the `IMAGE_SCN_MEM_WRITE`
+   flag.
+ - `exclude` = add the `IMAGE_SCN_LNK_REMOVE` and `IMAGE_SCN_MEM_READ` flags.
+ - `debug` = add the `IMAGE_SCN_CNT_INITIALIZED_DATA`,
+   `IMAGE_SCN_MEM_DISCARDABLE` and  `IMAGE_SCN_MEM_READ` flags.
+ - `code` = add the `IMAGE_SCN_CNT_CODE`, `IMAGE_SCN_MEM_EXECUTE` and
+   `IMAGE_SCN_MEM_READ` flags.
+ - `data` = add the `IMAGE_SCN_CNT_INITIALIZED_DATA` and `IMAGE_SCN_MEM_READ`
+   flags.
+ - `share` = add the `IMAGE_SCN_MEM_SHARED` and `IMAGE_SCN_MEM_READ` flags.
+
 .. option:: --strip-all-gnu
 
  Remove all symbols, debug sections and relocations from the output. This option
@@ -398,28 +437,6 @@ them.
  Rename sections called ``<old>`` to ``<new>`` in the output, and apply any
  specified ``<flag>`` values. See :option:`--set-section-flags` for a list of
  supported flags. Can be specified multiple times to rename multiple sections.
-
-.. option:: --set-section-flags <section>=<flag>[,<flag>,...]
-
- Set section properties in the output of section ``<section>`` based on the
- specified ``<flag>`` values. Can be specified multiple times to update multiple
- sections.
-
- Following is a list of supported flags and their effects:
-
- - `alloc` = add the `SHF_ALLOC` flag.
- - `load` = if the section has `SHT_NOBITS` type, mark it as a `SHT_PROGBITS`
-   section.
- - `readonly` = if this flag is not specified, add the `SHF_WRITE` flag.
- - `exclude` = add the `SHF_EXCLUDE` flag.
- - `code` = add the `SHF_EXECINSTR` flag.
- - `merge` = add the `SHF_MERGE` flag.
- - `strings` = add the `SHF_STRINGS` flag.
- - `contents` = if the section has `SHT_NOBITS` type, mark it as a `SHT_PROGBITS`
-   section.
-
- The following flags are also accepted, but are ignored for GNU compatibility:
- `noload`, `debug`, `data`, `rom`, `share`.
 
 .. option:: --set-start-addr <addr>
 
