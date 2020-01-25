@@ -62,6 +62,10 @@ def HasBulkMemory :
     Predicate<"Subtarget->hasBulkMemory()">,
     AssemblerPredicate<"FeatureBulkMemory", "bulk-memory">;
 
+def HasReferenceTypes :
+    Predicate<"Subtarget->hasReferenceTypes()">,
+    AssemblerPredicate<"FeatureReferenceTypes", "reference-types">;
+
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.
 //===----------------------------------------------------------------------===//
