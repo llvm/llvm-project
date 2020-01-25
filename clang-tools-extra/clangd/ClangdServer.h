@@ -56,6 +56,9 @@ public:
   virtual void
   onHighlightingsReady(PathRef File,
                        std::vector<HighlightingToken> Highlightings) {}
+
+  // Called when background indexing tasks are enqueued, started, or completed.
+  virtual void onBackgroundIndexProgress(const BackgroundQueue::Stats &Stats) {}
 };
 
 /// When set, used by ClangdServer to get clang-tidy options for each particular
