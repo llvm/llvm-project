@@ -546,32 +546,6 @@ void ClangASTImporter::SetRecordLayout(clang::RecordDecl *decl,
   m_record_decl_to_layout_map.insert(std::make_pair(decl, layout));
 }
 
-void ClangASTImporter::CompleteDecl(clang::Decl *decl) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-
-  LLDB_LOGF(log, "    [ClangASTImporter] CompleteDecl called on (%sDecl*)%p",
-            decl->getDeclKindName(), static_cast<void *>(decl));
-
-  if (ObjCInterfaceDecl *interface_decl = dyn_cast<ObjCInterfaceDecl>(decl)) {
-    if (!interface_decl->getDefinition()) {
-      interface_decl->startDefinition();
-      CompleteObjCInterfaceDecl(interface_decl);
-    }
-  } else if (ObjCProtocolDecl *protocol_decl =
-                 dyn_cast<ObjCProtocolDecl>(decl)) {
-    if (!protocol_decl->getDefinition())
-      protocol_decl->startDefinition();
-  } else if (TagDecl *tag_decl = dyn_cast<TagDecl>(decl)) {
-    if (!tag_decl->getDefinition() && !tag_decl->isBeingDefined()) {
-      tag_decl->startDefinition();
-      CompleteTagDecl(tag_decl);
-      tag_decl->setCompleteDefinition(true);
-    }
-  } else {
-    assert(0 && "CompleteDecl called on a Decl that can't be completed");
-  }
-}
-
 bool ClangASTImporter::CompleteTagDecl(clang::TagDecl *decl) {
   DeclOrigin decl_origin = GetDeclOrigin(decl);
 
