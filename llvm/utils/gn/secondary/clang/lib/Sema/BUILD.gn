@@ -38,6 +38,7 @@ static_library("Sema") {
     "Sema.cpp",
     "SemaAccess.cpp",
     "SemaAttr.cpp",
+    "SemaAvailability.cpp",
     "SemaCUDA.cpp",
     "SemaCXXScopeSpec.cpp",
     "SemaCast.cpp",
