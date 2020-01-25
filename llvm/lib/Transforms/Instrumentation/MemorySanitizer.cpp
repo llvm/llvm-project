@@ -62,7 +62,7 @@
 ///
 /// Origins are meaningless for fully initialized values, so MemorySanitizer
 /// avoids storing origin to memory when a fully initialized value is stored.
-/// This way it avoids needless overwritting origin of the 4-byte region on
+/// This way it avoids needless overwriting origin of the 4-byte region on
 /// a short (i.e. 1 byte) clean store, and it is also good for performance.
 ///
 ///                            Atomic handling.
@@ -611,7 +611,7 @@ void insertModuleCtor(Module &M) {
 
 /// A legacy function pass for msan instrumentation.
 ///
-/// Instruments functions to detect unitialized reads.
+/// Instruments functions to detect uninitialized reads.
 struct MemorySanitizerLegacyPass : public FunctionPass {
   // Pass identification, replacement for typeid.
   static char ID;
@@ -2533,7 +2533,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// The main purpose of this code is to do something reasonable with all
   /// random intrinsics we might encounter, most importantly - SIMD intrinsics.
   /// We recognize several classes of intrinsics by their argument types and
-  /// ModRefBehaviour and apply special intrumentation when we are reasonably
+  /// ModRefBehaviour and apply special instrumentation when we are reasonably
   /// sure that we know what the intrinsic does.
   ///
   /// We special-case intrinsics where this approach fails. See llvm.bswap
@@ -2594,7 +2594,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(Op));
   }
 
-  // Instrument vector convert instrinsic.
+  // Instrument vector convert intrinsic.
   //
   // This function instruments intrinsics like cvtsi2ss:
   // %Out = int_xxx_cvtyyy(%ConvertOp)
@@ -2697,7 +2697,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return IRB.CreateSExt(S2, T);
   }
 
-  // Instrument vector shift instrinsic.
+  // Instrument vector shift intrinsic.
   //
   // This function instruments intrinsics like int_x86_avx2_psll_w.
   // Intrinsic shifts %In by %ShiftSize bits.
@@ -2762,7 +2762,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  // Instrument vector pack instrinsic.
+  // Instrument vector pack intrinsic.
   //
   // This function instruments intrinsics like x86_mmx_packsswb, that
   // packs elements of 2 input vectors into half as many bits with saturation.
@@ -2805,7 +2805,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // Instrument sum-of-absolute-differencies intrinsic.
+  // Instrument sum-of-absolute-differences intrinsic.
   void handleVectorSadIntrinsic(IntrinsicInst &I) {
     const unsigned SignificantBitsPerResultElement = 16;
     bool isX86_MMX = I.getOperand(0)->getType()->isX86_MMXTy();
@@ -4302,7 +4302,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
       // for 128-bit FP/SIMD vn-v7).
       // We need then to propagate the shadow arguments on both regions
       // 'va::__gr_top + va::__gr_offs' and 'va::__vr_top + va::__vr_offs'.
-      // The remaning arguments are saved on shadow for 'va::stack'.
+      // The remaining arguments are saved on shadow for 'va::stack'.
       // One caveat is it requires only to propagate the non-named arguments,
       // however on the call site instrumentation 'all' the arguments are
       // saved. So to copy the shadow values from the va_arg TLS array
@@ -4403,7 +4403,7 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
     Triple TargetTriple(F.getParent()->getTargetTriple());
     // Parameter save area starts at 48 bytes from frame pointer for ABIv1,
     // and 32 bytes for ABIv2.  This is usually determined by target
-    // endianness, but in theory could be overriden by function attribute.
+    // endianness, but in theory could be overridden by function attribute.
     // For simplicity, we ignore it here (it'd only matter for QPX vectors).
     if (TargetTriple.getArch() == Triple::ppc64)
       VAArgBase = 48;
