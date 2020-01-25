@@ -114,10 +114,7 @@ extern "C" void __lsan_init() {
   InitializeInterceptors();
   InitializeThreadRegistry();
   InstallDeadlySignalHandlers(LsanOnDeadlySignal);
-  u32 tid = ThreadCreate(0, 0, true);
-  CHECK_EQ(tid, 0);
-  ThreadStart(tid, GetTid());
-  SetCurrentThread(tid);
+  InitializeMainThread();
 
   if (common_flags()->detect_leaks && common_flags()->leak_check_at_exit)
     Atexit(DoLeakCheck);
