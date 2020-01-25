@@ -514,7 +514,6 @@ MCSymbol *PPCAsmPrinter::getMCSymbolForTOCPseudoMO(const MachineOperand &MO) {
 ///
 void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   MCInst TmpInst;
-  const bool IsDarwin = TM.getTargetTriple().isOSDarwin();
   const bool IsPPC64 = Subtarget->isPPC64();
   const bool IsAIX = Subtarget->isAIXABI();
   const Module *M = MF->getFunction().getParent();
@@ -603,7 +602,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     //       addis r30, r30, {.LTOC,_GLOBAL_OFFSET_TABLE} - .L0$pb@ha
     //       addi r30, r30, {.LTOC,_GLOBAL_OFFSET_TABLE} - .L0$pb@l
     // Get the offset from the GOT Base Register to the GOT
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
     if (Subtarget->isSecurePlt() && isPositionIndependent() ) {
       unsigned PICR = TmpInst.getOperand(0).getReg();
       MCSymbol *BaseSymbol = OutContext.getOrCreateSymbol(
@@ -654,10 +653,8 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     }
   }
   case PPC::LWZtoc: {
-    assert(!IsDarwin && "TOC is an ELF/XCOFF construct.");
-
     // Transform %rN = LWZtoc @op1, %r2
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
     // Change the opcode to LWZ.
     TmpInst.setOpcode(PPC::LWZ);
@@ -712,10 +709,8 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case PPC::LDtocCPT:
   case PPC::LDtocBA:
   case PPC::LDtoc: {
-    assert(!IsDarwin && "TOC is an ELF/XCOFF construct");
-
     // Transform %x3 = LDtoc @min1, %x2
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
     // Change the opcode to LD.
     TmpInst.setOpcode(PPC::LD);
@@ -744,7 +739,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
            " AIX.");
 
     // Transform %rd = ADDIStocHA %rA, @sym(%r2)
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
     // Change the opcode to ADDIS.
     TmpInst.setOpcode(PPC::ADDIS);
@@ -774,7 +769,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
            " AIX.");
 
     // Transform %rd = LWZtocL @sym, %rs.
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
     // Change the opcode to lwz.
     TmpInst.setOpcode(PPC::LWZ);
@@ -799,10 +794,8 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::ADDIStocHA8: {
-    assert(!IsDarwin && "TOC is an ELF/XCOFF construct");
-
     // Transform %xd = ADDIStocHA8 %x2, @sym
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
     // Change the opcode to ADDIS8. If the global address is the address of
     // an external symbol, is a jump table address, is a block address, or is a
@@ -839,10 +832,8 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
   case PPC::LDtocL: {
-    assert(!IsDarwin && "TOC is an ELF/XCOFF construct");
-
     // Transform %xd = LDtocL @sym, %xs
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
     // Change the opcode to LD. If the global address is the address of
     // an external symbol, is a jump table address, is a block address, or is
@@ -875,7 +866,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   }
   case PPC::ADDItocL: {
     // Transform %xd = ADDItocL %xs, @sym
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
     // Change the opcode to ADDI8. If the global address is external, then
     // generate a TOC entry and reference that. Otherwise, reference the
@@ -915,7 +906,7 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case PPC::LDgotTprelL:
   case PPC::LDgotTprelL32: {
     // Transform %xd = LDgotTprelL @sym, %xs
-    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
+    LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
 
     // Change the opcode to LD.
     TmpInst.setOpcode(IsPPC64 ? PPC::LD : PPC::LWZ);
@@ -1145,18 +1136,16 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // suite shows a handful of test cases that fail this check for
     // Darwin.  Those need to be investigated before this sanity test
     // can be enabled for those subtargets.
-    if (!IsDarwin) {
-      unsigned OpNum = (MI->getOpcode() == PPC::STD) ? 2 : 1;
-      const MachineOperand &MO = MI->getOperand(OpNum);
-      if (MO.isGlobal() && MO.getGlobal()->getAlignment() < 4)
-        llvm_unreachable("Global must be word-aligned for LD, STD, LWA!");
-    }
+    unsigned OpNum = (MI->getOpcode() == PPC::STD) ? 2 : 1;
+    const MachineOperand &MO = MI->getOperand(OpNum);
+    if (MO.isGlobal() && MO.getGlobal()->getAlignment() < 4)
+      llvm_unreachable("Global must be word-aligned for LD, STD, LWA!");
     // Now process the instruction normally.
     break;
   }
   }
 
-  LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, IsDarwin);
+  LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
@@ -1207,7 +1196,7 @@ void PPCLinuxAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     for (const auto &MO :
          make_range(std::next(MI->operands_begin()), MI->operands_end())) {
       MCOperand MCOp;
-      if (LowerPPCMachineOperandToMCOperand(MO, MCOp, *this, false))
+      if (LowerPPCMachineOperandToMCOperand(MO, MCOp, *this))
         RetInst.addOperand(MCOp);
     }
 
