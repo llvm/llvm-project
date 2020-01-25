@@ -86,9 +86,11 @@ protected:
   enum class HardwareBreakpointAction {
     EnableWatchpoint,
     DisableWatchpoint,
+    EnableBreakpoint,
+    DisableBreakpoint,
   };
 
-  uint32_t DoHardwareBreakpointAction(const DNBBreakpoint *wp,
+  uint32_t DoHardwareBreakpointAction(const DNBBreakpoint *bp,
                                       HardwareBreakpointAction action) const;
 
   uint32_t UpdateThreadList(MachProcess *process, bool update,
