@@ -1028,6 +1028,11 @@ public:
   // and BitcodeWriter.cpp.
   static constexpr uint64_t BitcodeSummaryVersion = 8;
 
+  // Regular LTO module name for ASM writer
+  static constexpr const char *getRegularLTOModuleName() {
+    return "[Regular LTO]";
+  }
+
   bool haveGVs() const { return HaveGVs; }
 
   gvsummary_iterator begin() { return GlobalValueMap.begin(); }
