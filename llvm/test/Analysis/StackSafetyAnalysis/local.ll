@@ -368,3 +368,20 @@ entry:
   store <vscale x 4 x i32> %v, <vscale x 4 x i32>* %p, align 4
   ret void
 }
+
+%zerosize_type = type {}
+
+define void @ZeroSize(%zerosize_type *%p)  {
+; CHECK-LABEL: @ZeroSize dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT:   p[]: empty-set
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT:   x[0]: empty-set
+; CHECK-NOT: ]:
+entry:
+  %x = alloca %zerosize_type, align 4
+  store %zerosize_type undef, %zerosize_type* %x, align 4
+  store %zerosize_type undef, %zerosize_type* undef, align 4
+  %val = load %zerosize_type, %zerosize_type* %p, align 4
+  ret void
+}
