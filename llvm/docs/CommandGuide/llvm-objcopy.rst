@@ -210,13 +210,6 @@ multiple file formats.
   The order of wildcards does not matter. For example, ``-w -N '*' -N '!x'`` is
   the same as ``-w -N '!x' -N '*'``.
 
-COFF-SPECIFIC OPTIONS
----------------------
-
-The following options are implemented only for COFF objects. If used with other
-objects, :program:`llvm-objcopy` will either emit an error or silently ignore
-them.
-
 ELF-SPECIFIC OPTIONS
 --------------------
 
