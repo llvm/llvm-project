@@ -3096,8 +3096,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_udot4:
     case Intrinsic::amdgcn_sdot8:
     case Intrinsic::amdgcn_udot8:
-    case Intrinsic::amdgcn_wwm:
-    case Intrinsic::amdgcn_wqm:
       return getDefaultMappingVOP(MI);
     case Intrinsic::amdgcn_ds_swizzle:
     case Intrinsic::amdgcn_ds_permute:
@@ -3105,6 +3103,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_update_dpp:
     case Intrinsic::amdgcn_mov_dpp8:
     case Intrinsic::amdgcn_mov_dpp:
+    case Intrinsic::amdgcn_wwm:
+    case Intrinsic::amdgcn_wqm:
+    case Intrinsic::amdgcn_softwqm:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_kernarg_segment_ptr:
     case Intrinsic::amdgcn_s_getpc:
