@@ -254,12 +254,8 @@ define amdgpu_ps float @struct_buffer_load_i8_sext__sgpr_rsrc__vgpr_vindex__vgpr
   ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; CHECK:   [[BUFFER_LOAD_UBYTE_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_UBYTE_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 1 from custom "TargetCustom7", addrspace 4)
-  ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 24
-  ; CHECK:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; CHECK:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY7]], [[BUFFER_LOAD_UBYTE_BOTHEN]], implicit $exec
-  ; CHECK:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; CHECK:   [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 [[COPY8]], [[V_LSHLREV_B32_e64_]], implicit $exec
-  ; CHECK:   $vgpr0 = COPY [[V_ASHRREV_I32_e64_]]
+  ; CHECK:   [[V_BFE_I32_:%[0-9]+]]:vgpr_32 = V_BFE_I32 [[BUFFER_LOAD_UBYTE_BOTHEN]], 0, 8, implicit $exec
+  ; CHECK:   $vgpr0 = COPY [[V_BFE_I32_]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %val = call i8 @llvm.amdgcn.struct.buffer.load.i8(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   %ext = sext i8 %val to i32
@@ -306,12 +302,8 @@ define amdgpu_ps float @struct_buffer_load_i16_sext__sgpr_rsrc__vgpr_vindex__vgp
   ; CHECK:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
   ; CHECK:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY4]], %subreg.sub0, [[COPY5]], %subreg.sub1
   ; CHECK:   [[BUFFER_LOAD_USHORT_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_USHORT_BOTHEN [[REG_SEQUENCE1]], [[REG_SEQUENCE]], [[COPY6]], 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 2 from custom "TargetCustom7", align 1, addrspace 4)
-  ; CHECK:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
-  ; CHECK:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; CHECK:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 [[COPY7]], [[BUFFER_LOAD_USHORT_BOTHEN]], implicit $exec
-  ; CHECK:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; CHECK:   [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 [[COPY8]], [[V_LSHLREV_B32_e64_]], implicit $exec
-  ; CHECK:   $vgpr0 = COPY [[V_ASHRREV_I32_e64_]]
+  ; CHECK:   [[V_BFE_I32_:%[0-9]+]]:vgpr_32 = V_BFE_I32 [[BUFFER_LOAD_USHORT_BOTHEN]], 0, 16, implicit $exec
+  ; CHECK:   $vgpr0 = COPY [[V_BFE_I32_]]
   ; CHECK:   SI_RETURN_TO_EPILOG implicit $vgpr0
   %val = call i16 @llvm.amdgcn.struct.buffer.load.i16(<4 x i32> %rsrc, i32 %vindex, i32 %voffset, i32 %soffset, i32 0)
   %ext = sext i16 %val to i32
