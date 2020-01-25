@@ -226,12 +226,6 @@ void PthreadLockChecker::AcquireLock(CheckerContext &C, const CallExpr *CE,
   if (sym)
     state = resolvePossiblyDestroyedMutex(state, lockR, sym);
 
-  SVal X = C.getSVal(CE);
-  if (X.isUnknownOrUndef())
-    return;
-
-  DefinedSVal retVal = X.castAs<DefinedSVal>();
-
   if (const LockState *LState = state->get<LockMap>(lockR)) {
     if (LState->isLocked()) {
       if (!BT_doublelock)
@@ -254,25 +248,35 @@ void PthreadLockChecker::AcquireLock(CheckerContext &C, const CallExpr *CE,
   ProgramStateRef lockSucc = state;
   if (isTryLock) {
     // Bifurcate the state, and allow a mode where the lock acquisition fails.
-    ProgramStateRef lockFail;
-    switch (semantics) {
-    case PthreadSemantics:
-      std::tie(lockFail, lockSucc) = state->assume(retVal);
-      break;
-    case XNUSemantics:
-      std::tie(lockSucc, lockFail) = state->assume(retVal);
-      break;
-    default:
-      llvm_unreachable("Unknown tryLock locking semantics");
+    SVal RetVal = state->getSVal(CE, C.getLocationContext());
+    if (auto DefinedRetVal = RetVal.getAs<DefinedSVal>()) {
+      ProgramStateRef lockFail;
+      switch (semantics) {
+      case PthreadSemantics:
+        std::tie(lockFail, lockSucc) = state->assume(*DefinedRetVal);
+        break;
+      case XNUSemantics:
+        std::tie(lockSucc, lockFail) = state->assume(*DefinedRetVal);
+        break;
+      default:
+        llvm_unreachable("Unknown tryLock locking semantics");
+      }
+      assert(lockFail && lockSucc);
+      C.addTransition(lockFail);
     }
-    assert(lockFail && lockSucc);
-    C.addTransition(lockFail);
-
+    // We might want to handle the case when the mutex lock function was inlined
+    // and returned an Unknown or Undefined value.
   } else if (semantics == PthreadSemantics) {
     // Assume that the return value was 0.
-    lockSucc = state->assume(retVal, false);
-    assert(lockSucc);
-
+    SVal RetVal = state->getSVal(CE, C.getLocationContext());
+    if (auto DefinedRetVal = RetVal.getAs<DefinedSVal>()) {
+      // FIXME: If the lock function was inlined and returned true,
+      // we need to behave sanely - at least generate sink.
+      lockSucc = state->assume(*DefinedRetVal, false);
+      assert(lockSucc);
+    }
+    // We might want to handle the case when the mutex lock function was inlined
+    // and returned an Unknown or Undefined value.
   } else {
     // XNU locking semantics return void on non-try locks
     assert((semantics == XNUSemantics) && "Unknown locking semantics");
