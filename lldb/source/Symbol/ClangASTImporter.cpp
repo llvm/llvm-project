@@ -1057,10 +1057,8 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
                 static_cast<void *>(&from->getASTContext()));
     }
 
-    if (clang::NamespaceDecl *to_namespace =
-            dyn_cast<clang::NamespaceDecl>(to)) {
-      clang::NamespaceDecl *from_namespace =
-          dyn_cast<clang::NamespaceDecl>(from);
+    if (auto *to_namespace = dyn_cast<clang::NamespaceDecl>(to)) {
+      auto *from_namespace = cast<clang::NamespaceDecl>(from);
 
       NamespaceMetaMap &namespace_maps = from_context_md->m_namespace_maps;
 
@@ -1081,11 +1079,10 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
               static_cast<void *>(&to->getASTContext()));
   }
 
-  if (TagDecl *from_tag_decl = dyn_cast<TagDecl>(from)) {
-    TagDecl *to_tag_decl = dyn_cast<TagDecl>(to);
-
+  if (auto *to_tag_decl = dyn_cast<TagDecl>(to)) {
     to_tag_decl->setHasExternalLexicalStorage();
     to_tag_decl->getPrimaryContext()->setMustBuildLookupTable();
+    auto from_tag_decl = cast<TagDecl>(from);
 
     LLDB_LOGF(
         log,
@@ -1096,21 +1093,14 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
         (to_tag_decl->isCompleteDefinition() ? "complete" : "incomplete"));
   }
 
-  if (isa<NamespaceDecl>(from)) {
-    NamespaceDecl *to_namespace_decl = dyn_cast<NamespaceDecl>(to);
-
+  if (auto *to_namespace_decl = dyn_cast<NamespaceDecl>(to)) {
     m_master.BuildNamespaceMap(to_namespace_decl);
-
     to_namespace_decl->setHasExternalVisibleStorage();
   }
 
-  if (isa<ObjCContainerDecl>(from)) {
-    ObjCContainerDecl *to_container_decl = dyn_cast<ObjCContainerDecl>(to);
-
+  if (auto *to_container_decl = dyn_cast<ObjCContainerDecl>(to)) {
     to_container_decl->setHasExternalLexicalStorage();
     to_container_decl->setHasExternalVisibleStorage();
-
-    /*to_interface_decl->setExternallyCompleted();*/
 
     if (log) {
       if (ObjCInterfaceDecl *to_interface_decl =
