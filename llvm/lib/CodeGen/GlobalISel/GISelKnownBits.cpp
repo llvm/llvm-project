@@ -120,20 +120,39 @@ void GISelKnownBits::computeKnownBitsImpl(Register R, KnownBits &Known,
     TL.computeKnownBitsForTargetInstr(*this, R, Known, DemandedElts, MRI,
                                       Depth);
     break;
-  case TargetOpcode::COPY: {
-    MachineOperand Dst = MI.getOperand(0);
-    MachineOperand Src = MI.getOperand(1);
-    // Look through trivial copies but don't look through trivial copies of the
-    // form `%1:(s32) = OP %0:gpr32` known-bits analysis is currently unable to
-    // determine the bit width of a register class.
-    //
-    // We can't use NoSubRegister by name as it's defined by each target but
-    // it's always defined to be 0 by tablegen.
-    if (Dst.getSubReg() == 0 /*NoSubRegister*/ && Src.getReg().isVirtual() &&
-        Src.getSubReg() == 0 /*NoSubRegister*/ &&
-        MRI.getType(Src.getReg()).isValid()) {
-      // Don't increment Depth for this one since we didn't do any work.
-      computeKnownBitsImpl(Src.getReg(), Known, DemandedElts, Depth);
+  case TargetOpcode::COPY:
+  case TargetOpcode::G_PHI:
+  case TargetOpcode::PHI: {
+    Known.One = APInt::getAllOnesValue(BitWidth);
+    Known.Zero = APInt::getAllOnesValue(BitWidth);
+    // Destination registers should not have subregisters at this
+    // point of the pipeline, otherwise the main live-range will be
+    // defined more than once, which is against SSA.
+    assert(MI.getOperand(0).getSubReg() == 0 && "Is this code in SSA?");
+    // PHI's operand are a mix of registers and basic blocks interleaved.
+    // We only care about the register ones.
+    for (unsigned Idx = 1; Idx < MI.getNumOperands(); Idx += 2) {
+      const MachineOperand &Src = MI.getOperand(Idx);
+      Register SrcReg = Src.getReg();
+      // Look through trivial copies and phis but don't look through trivial
+      // copies or phis of the form `%1:(s32) = OP %0:gpr32`, known-bits
+      // analysis is currently unable to determine the bit width of a
+      // register class.
+      //
+      // We can't use NoSubRegister by name as it's defined by each target but
+      // it's always defined to be 0 by tablegen.
+      if (SrcReg.isVirtual() && Src.getSubReg() == 0 /*NoSubRegister*/ &&
+          MRI.getType(SrcReg).isValid()) {
+        // For COPYs we don't do anything, don't increase the depth.
+        computeKnownBitsImpl(SrcReg, Known2, DemandedElts,
+                             Depth + (Opcode != TargetOpcode::COPY));
+        Known.One &= Known2.One;
+        Known.Zero &= Known2.Zero;
+      } else {
+        // We know nothing.
+        Known = KnownBits(BitWidth);
+        break;
+      }
     }
     break;
   }
