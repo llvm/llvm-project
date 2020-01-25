@@ -88,7 +88,8 @@ legalized:       true
 regBankSelected: true
 # ALL:      registers:
 # ALL-NEXT:   - { id: 0, class: gr16[[ABCD:(_abcd)?]], preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X32-NEXT:   - { id: 1, class: gr8_abcd_l, preferred-register: '' }
+# X64-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
 # ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
@@ -148,7 +149,8 @@ legalized:       true
 regBankSelected: true
 # ALL:      registers:
 # ALL-NEXT:   - { id: 0, class: gr32[[ABCD:(_abcd)?]], preferred-register: '' }
-# ALL-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
+# X32-NEXT:   - { id: 1, class: gr8_abcd_l, preferred-register: '' }
+# X64-NEXT:   - { id: 1, class: gr8, preferred-register: '' }
 # ALL-NEXT:   - { id: 2, class: gr32, preferred-register: '' }
 registers:
   - { id: 0, class: gpr, preferred-register: '' }
