@@ -5547,8 +5547,7 @@ void PPCDAGToDAGISel::foldBoolExts(SDValue &Res, SDNode *&N) {
       SDValue O1 = UserO1.getNode() == N ? Val : UserO1;
 
       return CurDAG->FoldConstantArithmetic(User->getOpcode(), dl,
-                                            User->getValueType(0),
-                                            O0.getNode(), O1.getNode());
+                                            User->getValueType(0), {O0, O1});
     };
 
     // FIXME: When the semantics of the interaction between select and undef
