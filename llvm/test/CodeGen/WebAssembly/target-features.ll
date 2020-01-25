@@ -83,12 +83,15 @@ attributes #2 = { "target-features"="+reference-types" }
 ; SIMD128-NEXT: .int8 7
 ; SIMD128-NEXT: .ascii "simd128"
 
-; +atomics, +mutable-globals, +nontrapping-fptoint, +reference-types, +sign-ext,
-; +simd128
-; BLEEDING-EDGE-NEXT: .int8   6
+; +atomics, +bulk-memory, +mutable-globals, +nontrapping-fptoint,
+; +reference-types, +sign-ext, +simd128, +tail-call
+; BLEEDING-EDGE-NEXT: .int8   8
 ; BLEEDING-EDGE-NEXT: .int8   43
 ; BLEEDING-EDGE-NEXT: .int8   7
 ; BLEEDING-EDGE-NEXT: .ascii  "atomics"
+; BLEEDING-EDGE-NEXT: .int8   43
+; BLEEDING-EDGE-NEXT: .int8   11
+; BLEEDING-EDGE-NEXT: .ascii  "bulk-memory"
 ; BLEEDING-EDGE-NEXT: .int8   43
 ; BLEEDING-EDGE-NEXT: .int8   15
 ; BLEEDING-EDGE-NEXT: .ascii  "mutable-globals"
@@ -104,5 +107,8 @@ attributes #2 = { "target-features"="+reference-types" }
 ; BLEEDING-EDGE-NEXT: .int8   43
 ; BLEEDING-EDGE-NEXT: .int8   7
 ; BLEEDING-EDGE-NEXT: .ascii  "simd128"
+; BLEEDING-EDGE-NEXT: .int8   43
+; BLEEDING-EDGE-NEXT: .int8   9
+; BLEEDING-EDGE-NEXT: .ascii  "tail-call"
 
 ; CHECK-NEXT: .text

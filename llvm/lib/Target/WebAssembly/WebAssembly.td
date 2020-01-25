@@ -102,7 +102,8 @@ def : ProcessorModel<"generic", NoSchedModel, []>;
 def : ProcessorModel<"bleeding-edge", NoSchedModel,
                       [FeatureSIMD128, FeatureAtomics,
                        FeatureNontrappingFPToInt, FeatureSignExt,
-                       FeatureMutableGlobals]>;
+                       FeatureMutableGlobals, FeatureBulkMemory,
+                       FeatureTailCall]>;
 
 //===----------------------------------------------------------------------===//
 // Target Declaration
