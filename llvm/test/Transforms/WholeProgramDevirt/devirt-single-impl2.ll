@@ -10,7 +10,7 @@
 ; Check that opt fails to use summaries which don't contain regular LTO module
 ; when performing export.
 ; RUN: llvm-as %p/Inputs/devirt-bad-index.ll -o %t-bad.index.bc
-; RUN: not opt %s -S -wholeprogramdevirt -wholeprogramdevirt-read-summary=%t-bad1.index.bc \
+; RUN: not opt %s -S -wholeprogramdevirt -wholeprogramdevirt-read-summary=%t-bad.index.bc \
 ; RUN:     -wholeprogramdevirt-summary-action=export -o /dev/null 2>&1 | FileCheck %s --check-prefix=MISSING-MODULE
 
 ; Check single impl devirtulation in summary
