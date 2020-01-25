@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SEMA_SEMA_H
 
 #include "clang/AST/ASTConcept.h"
+#include "clang/AST/ASTFwd.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Availability.h"
 #include "clang/AST/ComparisonCategories.h"
