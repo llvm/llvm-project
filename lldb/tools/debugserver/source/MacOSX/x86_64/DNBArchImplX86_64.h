@@ -50,7 +50,13 @@ public:
   virtual bool ThreadDidStop();
   virtual bool NotifyException(MachException::Data &exc);
 
+  virtual uint32_t NumSupportedHardwareBreakpoints();
   virtual uint32_t NumSupportedHardwareWatchpoints();
+
+  virtual uint32_t EnableHardwareBreakpoint(nub_addr_t addr, nub_size_t size,
+                                            bool also_set_on_task);
+  virtual bool DisableHardwareBreakpoint(uint32_t hw_break_index,
+                                         bool also_set_on_task);
   virtual uint32_t EnableHardwareWatchpoint(nub_addr_t addr, nub_size_t size,
                                             bool read, bool write,
                                             bool also_set_on_task);
@@ -212,6 +218,9 @@ protected:
   static const DNBRegisterSetInfo *GetRegisterSetInfo(nub_size_t *num_reg_sets);
 
   static uint32_t GetRegisterContextSize();
+
+  static void SetHardwareBreakpoint(DBG &debug_state, uint32_t hw_index,
+                                    nub_addr_t addr, nub_size_t size);
 
   // Helper functions for watchpoint manipulations.
   static void SetWatchpoint(DBG &debug_state, uint32_t hw_index,
