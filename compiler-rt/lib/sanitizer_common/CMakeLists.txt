@@ -29,6 +29,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_printf.cpp
   sanitizer_procmaps_common.cpp
   sanitizer_procmaps_bsd.cpp
+  sanitizer_procmaps_fuchsia.cpp
   sanitizer_procmaps_linux.cpp
   sanitizer_procmaps_mac.cpp
   sanitizer_procmaps_solaris.cpp
