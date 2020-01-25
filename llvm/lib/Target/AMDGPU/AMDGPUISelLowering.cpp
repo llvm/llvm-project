@@ -641,8 +641,9 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(SDNode *N,
 
   unsigned NewSize = NewVT.getStoreSizeInBits();
 
-  // If we are reducing to a 32-bit load, this is always better.
-  if (NewSize == 32)
+  // If we are reducing to a 32-bit load or a smaller multi-dword load,
+  // this is always better.
+  if (NewSize >= 32)
     return true;
 
   EVT OldVT = N->getValueType(0);
