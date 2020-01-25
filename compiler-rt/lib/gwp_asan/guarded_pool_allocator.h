@@ -28,6 +28,9 @@ namespace gwp_asan {
 // otherwise).
 class GuardedPoolAllocator {
 public:
+  // Name of the GWP-ASan mapping that for `Metadata`.
+  static constexpr const char *kGwpAsanMetadataName = "GWP-ASan Metadata";
+
   static constexpr uint64_t kInvalidThreadID = UINT64_MAX;
 
   enum class Error {
@@ -154,6 +157,14 @@ public:
   static uint64_t getThreadID();
 
 private:
+  // Name of actively-occupied slot mappings.
+  static constexpr const char *kGwpAsanAliveSlotName = "GWP-ASan Alive Slot";
+  // Name of the guard pages. This includes all slots that are not actively in
+  // use (i.e. were never used, or have been free()'d).)
+  static constexpr const char *kGwpAsanGuardPageName = "GWP-ASan Guard Page";
+  // Name of the mapping for `FreeSlots`.
+  static constexpr const char *kGwpAsanFreeSlotsName = "GWP-ASan Metadata";
+
   static constexpr size_t kInvalidSlotID = SIZE_MAX;
 
   // These functions anonymously map memory or change the permissions of mapped
@@ -162,11 +173,13 @@ private:
   // return on error, instead electing to kill the calling process on failure.
   // Note that memory is initially mapped inaccessible. In order for RW
   // mappings, call mapMemory() followed by markReadWrite() on the returned
-  // pointer.
-  void *mapMemory(size_t Size) const;
-  void unmapMemory(void *Addr, size_t Size) const;
-  void markReadWrite(void *Ptr, size_t Size) const;
-  void markInaccessible(void *Ptr, size_t Size) const;
+  // pointer. Each mapping is named on platforms that support it, primarily
+  // Android. This name must be a statically allocated string, as the Android
+  // kernel uses the string pointer directly.
+  void *mapMemory(size_t Size, const char *Name) const;
+  void unmapMemory(void *Ptr, size_t Size, const char *Name) const;
+  void markReadWrite(void *Ptr, size_t Size, const char *Name) const;
+  void markInaccessible(void *Ptr, size_t Size, const char *Name) const;
 
   // Get the page size from the platform-specific implementation. Only needs to
   // be called once, and the result should be cached in PageSize in this class.
