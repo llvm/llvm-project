@@ -767,9 +767,6 @@ public:
     } Payload;
 
     PtrAuthData(unsigned FromRawData) { Payload.RawData = FromRawData; }
-    PtrAuthData(const PtrAuthData &Copy) {
-      Payload.RawData = Copy.Payload.RawData;
-    }
     PtrAuthData(unsigned Key, bool IsDiscr, unsigned Discriminator) {
       assert(Key < 8);
       assert(Discriminator <= 0xffff);
