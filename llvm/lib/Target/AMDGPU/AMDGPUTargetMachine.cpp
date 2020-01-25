@@ -235,6 +235,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIOptimizeExecMaskingPass(*PR);
   initializeSIPreAllocateWWMRegsPass(*PR);
   initializeSIFormMemoryClausesPass(*PR);
+  initializeSIPostRABundlerPass(*PR);
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
   initializeAMDGPUExternalAAWrapperPass(*PR);
@@ -980,6 +981,7 @@ void GCNPassConfig::addPostRegAlloc() {
 }
 
 void GCNPassConfig::addPreSched2() {
+  addPass(&SIPostRABundlerID);
 }
 
 void GCNPassConfig::addPreEmitPass() {

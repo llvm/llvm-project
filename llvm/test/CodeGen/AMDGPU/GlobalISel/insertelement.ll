@@ -807,9 +807,9 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; MOVREL-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; MOVREL-NEXT:    buffer_store_dword v34, off, s[0:3], s32 ; 4-byte Folded Spill
 ; MOVREL-NEXT:    v_mov_b32_e32 v34, s19
-; MOVREL-NEXT:    v_mov_b32_e32 v33, s18
 ; MOVREL-NEXT:    v_mov_b32_e32 v32, s17
 ; MOVREL-NEXT:    v_mov_b32_e32 v31, s16
+; MOVREL-NEXT:    v_mov_b32_e32 v33, s18
 ; MOVREL-NEXT:    v_mov_b32_e32 v30, s15
 ; MOVREL-NEXT:    v_mov_b32_e32 v29, s14
 ; MOVREL-NEXT:    v_mov_b32_e32 v28, s13
@@ -1113,10 +1113,10 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_s(<8 x double> inreg %vec, do
 ; MOVREL-NEXT:    v_mov_b32_e32 v3, s1
 ; MOVREL-NEXT:    v_movreld_b32_e32 v2, v0
 ; MOVREL-NEXT:    v_movreld_b32_e32 v3, v1
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[6:9], off
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[10:13], off
-; MOVREL-NEXT:    ; implicit-def: $vcc_hi
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[14:17], off
 ; MOVREL-NEXT:    s_endpgm
 entry:
@@ -2053,24 +2053,24 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_s_add_1(<8 x double> inreg %v
 ; MOVREL-NEXT:    s_movreld_b64 s[2:3], s[18:19]
 ; MOVREL-NEXT:    v_mov_b32_e32 v0, s0
 ; MOVREL-NEXT:    v_mov_b32_e32 v4, s4
-; MOVREL-NEXT:    v_mov_b32_e32 v8, s8
-; MOVREL-NEXT:    v_mov_b32_e32 v12, s12
 ; MOVREL-NEXT:    v_mov_b32_e32 v1, s1
 ; MOVREL-NEXT:    v_mov_b32_e32 v2, s2
 ; MOVREL-NEXT:    v_mov_b32_e32 v3, s3
+; MOVREL-NEXT:    v_mov_b32_e32 v8, s8
 ; MOVREL-NEXT:    v_mov_b32_e32 v5, s5
 ; MOVREL-NEXT:    v_mov_b32_e32 v6, s6
 ; MOVREL-NEXT:    v_mov_b32_e32 v7, s7
+; MOVREL-NEXT:    v_mov_b32_e32 v12, s12
 ; MOVREL-NEXT:    v_mov_b32_e32 v9, s9
 ; MOVREL-NEXT:    v_mov_b32_e32 v10, s10
 ; MOVREL-NEXT:    v_mov_b32_e32 v11, s11
 ; MOVREL-NEXT:    v_mov_b32_e32 v13, s13
 ; MOVREL-NEXT:    v_mov_b32_e32 v14, s14
 ; MOVREL-NEXT:    v_mov_b32_e32 v15, s15
+; MOVREL-NEXT:    ; implicit-def: $vcc_hi
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[0:3], off
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[4:7], off
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[8:11], off
-; MOVREL-NEXT:    ; implicit-def: $vcc_hi
 ; MOVREL-NEXT:    global_store_dwordx4 v[0:1], v[12:15], off
 ; MOVREL-NEXT:    s_endpgm
 entry:
