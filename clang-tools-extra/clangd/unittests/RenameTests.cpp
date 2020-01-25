@@ -294,7 +294,7 @@ TEST(RenameTest, WithinFileRename) {
       // Derived destructor explicit call.
       R"cpp(
         class [[Bas^e]] {};
-        class Derived : public [[Bas^e]] {}
+        class Derived : public [[Bas^e]] {};
 
         int main() {
           [[Bas^e]] *foo = new Derived();

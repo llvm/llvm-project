@@ -75,7 +75,6 @@ protected:
     auto TU = TestTU::withCode(A.code());
     TU.ExtraArgs = Flags;
     auto AST = TU.build();
-    EXPECT_THAT(AST.getDiagnostics(), ::testing::IsEmpty()) << Code;
     llvm::Annotations::Range R = A.range();
     SelectionTree Selection(AST.getASTContext(), AST.getTokens(), R.Begin,
                             R.End);
@@ -592,11 +591,6 @@ protected:
     TU.ExtraArgs.push_back("-std=c++2a");
 
     auto AST = TU.build();
-    for (auto &D : AST.getDiagnostics()) {
-      if (D.Severity > DiagnosticsEngine::Warning)
-        ADD_FAILURE() << D << Code;
-    }
-
     auto *TestDecl = &findDecl(AST, "foo");
     if (auto *T = llvm::dyn_cast<FunctionTemplateDecl>(TestDecl))
       TestDecl = T->getTemplatedDecl();

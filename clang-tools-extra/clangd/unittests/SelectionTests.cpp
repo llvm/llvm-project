@@ -259,7 +259,7 @@ TEST(SelectionTest, CommonAncestor) {
       // Tricky case: CXXConstructExpr wants to claim the whole init range.
       {
           R"cpp(
-            class X { X(int); };
+            struct X { X(int); };
             class Y {
               X x;
               Y() : [[^x(4)]] {}
@@ -308,7 +308,7 @@ TEST(SelectionTest, CommonAncestor) {
             };
             Str makeStr(const char*);
             void loop() {
-              for (const char* C : [[mak^eStr("foo"^)]])
+              for (const char C : [[mak^eStr("foo"^)]])
                 ;
             }
           )cpp",
@@ -484,7 +484,7 @@ TEST(SelectionTest, MacroArgExpansion) {
   // (This is because we don't associate the stringified token with the arg).
   Case = R"cpp(
     void die(const char*);
-    #define assert(x) (x ? (void)0 : die(#x)
+    #define assert(x) (x ? (void)0 : die(#x))
     void foo() { assert(^42); }
   )cpp";
   Test = Annotations(Case);
