@@ -101,6 +101,10 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
             # Continue the loop and test that we are stopped 4 times.
             count += 1
 
+        # Check the breakpoint list.
+        self.expect("breakpoint list", substrs=['hw_break_function', 'hardware'])
+        self.expect("breakpoint list -v", substrs=['function = hw_break_function', 'hardware = true'])
+
         if removal_type == 'delete':
             self.runCmd("settings set auto-confirm true")
 
