@@ -293,6 +293,13 @@ enum {
   /// - TempRegFlags - The register flags to set
   GIR_AddTempRegister,
 
+  /// Add a temporary register to the specified instruction
+  /// - InsnID - Instruction ID to modify
+  /// - TempRegID - The temporary register ID to add
+  /// - TempRegFlags - The register flags to set
+  /// - SubRegIndex - The subregister index to set
+  GIR_AddTempSubRegister,
+
   /// Add an immediate to the specified instruction
   /// - InsnID - Instruction ID to modify
   /// - Imm - The immediate to add

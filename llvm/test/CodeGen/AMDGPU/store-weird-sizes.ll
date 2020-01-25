@@ -215,8 +215,8 @@ define void @local_store_i17(i17 addrspace(3)* %ptr, i17 %arg) #0 {
 ; CIVI-LABEL: local_store_i17:
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CIVI-NEXT:    v_bfe_u32 v2, v1, 16, 1
 ; CIVI-NEXT:    s_mov_b32 m0, -1
+; CIVI-NEXT:    v_bfe_u32 v2, v1, 16, 1
 ; CIVI-NEXT:    ds_write_b16 v0, v1
 ; CIVI-NEXT:    ds_write_b8 v0, v2 offset:2
 ; CIVI-NEXT:    s_waitcnt lgkmcnt(0)

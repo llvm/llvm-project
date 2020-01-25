@@ -457,7 +457,7 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
   if ((isMUBUF(FirstLdSt) && isMUBUF(SecondLdSt)) ||
       (isMTBUF(FirstLdSt) && isMTBUF(SecondLdSt)) ||
       (isFLAT(FirstLdSt) && isFLAT(SecondLdSt))) {
-    const unsigned MaxGlobalLoadCluster = 6;
+    const unsigned MaxGlobalLoadCluster = 7;
     if (NumLoads > MaxGlobalLoadCluster)
       return false;
 
@@ -497,7 +497,11 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                          ? MRI.getRegClass(Reg)
                                          : RI.getPhysRegClass(Reg);
 
-  return (NumLoads * (RI.getRegSizeInBits(*DstRC) / 8)) <= LoadClusterThreshold;
+  // FIXME: NumLoads should not be subtracted 1. This is to match behavior
+  // of clusterNeighboringMemOps which was previosly passing cluster length
+  // less 1. LoadClusterThreshold should be tuned instead.
+  return ((NumLoads - 1) * (RI.getRegSizeInBits(*DstRC) / 8)) <=
+         LoadClusterThreshold;
 }
 
 // FIXME: This behaves strangely. If, for example, you have 32 load + stores,
@@ -1661,22 +1665,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     // This only gets its own opcode so that SIPreAllocateWWMRegs can tell when
     // WWM is exited.
     MI.setDesc(get(ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64));
-    break;
-  }
-  case TargetOpcode::BUNDLE: {
-    if (!MI.mayLoad() || MI.hasUnmodeledSideEffects())
-      return false;
-
-    // If it is a load it must be a memory clause
-    for (MachineBasicBlock::instr_iterator I = MI.getIterator();
-         I->isBundledWithSucc(); ++I) {
-      I->unbundleFromSucc();
-      for (MachineOperand &MO : I->operands())
-        if (MO.isReg())
-          MO.setIsInternalRead(false);
-    }
-
-    MI.eraseFromParent();
     break;
   }
   }

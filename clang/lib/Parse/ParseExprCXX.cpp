@@ -418,8 +418,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
     }
 
     if (Next.is(tok::coloncolon)) {
-      if (CheckForDestructor && GetLookAheadToken(2).is(tok::tilde) &&
-          !Actions.isNonTypeNestedNameSpecifier(getCurScope(), SS, IdInfo)) {
+      if (CheckForDestructor && GetLookAheadToken(2).is(tok::tilde)) {
         *MayBePseudoDestructor = true;
         return false;
       }
@@ -548,7 +547,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
   // Even if we didn't see any pieces of a nested-name-specifier, we
   // still check whether there is a tilde in this position, which
   // indicates a potential pseudo-destructor.
-  if (CheckForDestructor && Tok.is(tok::tilde))
+  if (CheckForDestructor && !HasScopeSpecifier && Tok.is(tok::tilde))
     *MayBePseudoDestructor = true;
 
   return false;
@@ -1689,31 +1688,42 @@ ExprResult Parser::ParseCXXUuidof() {
 
 /// Parse a C++ pseudo-destructor expression after the base,
 /// . or -> operator, and nested-name-specifier have already been
-/// parsed.
+/// parsed. We're handling this fragment of the grammar:
 ///
-///       postfix-expression: [C++ 5.2]
-///         postfix-expression . pseudo-destructor-name
-///         postfix-expression -> pseudo-destructor-name
+///       postfix-expression: [C++2a expr.post]
+///         postfix-expression . template[opt] id-expression
+///         postfix-expression -> template[opt] id-expression
 ///
-///       pseudo-destructor-name:
-///         ::[opt] nested-name-specifier[opt] type-name :: ~type-name
-///         ::[opt] nested-name-specifier template simple-template-id ::
-///                 ~type-name
-///         ::[opt] nested-name-specifier[opt] ~type-name
+///       id-expression:
+///         qualified-id
+///         unqualified-id
 ///
+///       qualified-id:
+///         nested-name-specifier template[opt] unqualified-id
+///
+///       nested-name-specifier:
+///         type-name ::
+///         decltype-specifier ::    FIXME: not implemented, but probably only
+///                                         allowed in C++ grammar by accident
+///         nested-name-specifier identifier ::
+///         nested-name-specifier template[opt] simple-template-id ::
+///         [...]
+///
+///       unqualified-id:
+///         ~ type-name
+///         ~ decltype-specifier
+///         [...]
+///
+/// ... where the all but the last component of the nested-name-specifier
+/// has already been parsed, and the base expression is not of a non-dependent
+/// class type.
 ExprResult
 Parser::ParseCXXPseudoDestructor(Expr *Base, SourceLocation OpLoc,
                                  tok::TokenKind OpKind,
                                  CXXScopeSpec &SS,
                                  ParsedType ObjectType) {
-  // We're parsing either a pseudo-destructor-name or a dependent
-  // member access that has the same form as a
-  // pseudo-destructor-name. We parse both in the same way and let
-  // the action model sort them out.
-  //
-  // Note that the ::[opt] nested-name-specifier[opt] has already
-  // been parsed, and if there was a simple-template-id, it has
-  // been coalesced into a template-id annotation token.
+  // If the last component of the (optional) nested-name-specifier is
+  // template[opt] simple-template-id, it has already been annotated.
   UnqualifiedId FirstTypeName;
   SourceLocation CCLoc;
   if (Tok.is(tok::identifier)) {
@@ -1722,14 +1732,13 @@ Parser::ParseCXXPseudoDestructor(Expr *Base, SourceLocation OpLoc,
     assert(Tok.is(tok::coloncolon) &&"ParseOptionalCXXScopeSpecifier fail");
     CCLoc = ConsumeToken();
   } else if (Tok.is(tok::annot_template_id)) {
-    // FIXME: retrieve TemplateKWLoc from template-id annotation and
-    // store it in the pseudo-dtor node (to be used when instantiating it).
     FirstTypeName.setTemplateId(
                               (TemplateIdAnnotation *)Tok.getAnnotationValue());
     ConsumeAnnotationToken();
     assert(Tok.is(tok::coloncolon) &&"ParseOptionalCXXScopeSpecifier fail");
     CCLoc = ConsumeToken();
   } else {
+    assert(SS.isEmpty() && "missing last component of nested name specifier");
     FirstTypeName.setIdentifier(nullptr, SourceLocation());
   }
 
@@ -1737,7 +1746,7 @@ Parser::ParseCXXPseudoDestructor(Expr *Base, SourceLocation OpLoc,
   assert(Tok.is(tok::tilde) && "ParseOptionalCXXScopeSpecifier fail");
   SourceLocation TildeLoc = ConsumeToken();
 
-  if (Tok.is(tok::kw_decltype) && !FirstTypeName.isValid() && SS.isEmpty()) {
+  if (Tok.is(tok::kw_decltype) && !FirstTypeName.isValid()) {
     DeclSpec DS(AttrFactory);
     ParseDecltypeSpecifier(DS);
     if (DS.getTypeSpecType() == TST_error)

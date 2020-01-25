@@ -483,28 +483,9 @@ void MachThreadList::NotifyBreakpointChanged(const DNBBreakpoint *bp) {
   }
 }
 
-uint32_t
-MachThreadList::EnableHardwareBreakpoint(const DNBBreakpoint *bp) const {
-  if (bp != NULL) {
-    const size_t num_threads = m_threads.size();
-    for (uint32_t idx = 0; idx < num_threads; ++idx)
-      m_threads[idx]->EnableHardwareBreakpoint(bp);
-  }
-  return INVALID_NUB_HW_INDEX;
-}
-
-bool MachThreadList::DisableHardwareBreakpoint(const DNBBreakpoint *bp) const {
-  if (bp != NULL) {
-    const size_t num_threads = m_threads.size();
-    for (uint32_t idx = 0; idx < num_threads; ++idx)
-      m_threads[idx]->DisableHardwareBreakpoint(bp);
-  }
-  return false;
-}
-
 uint32_t MachThreadList::DoHardwareBreakpointAction(
-    const DNBBreakpoint *wp, HardwareBreakpointAction action) const {
-  if (wp == NULL)
+    const DNBBreakpoint *bp, HardwareBreakpointAction action) const {
+  if (bp == NULL)
     return INVALID_NUB_HW_INDEX;
 
   uint32_t hw_index = INVALID_NUB_HW_INDEX;
@@ -517,11 +498,18 @@ uint32_t MachThreadList::DoHardwareBreakpointAction(
   for (uint32_t idx = 0; idx < num_threads; ++idx) {
     switch (action) {
     case HardwareBreakpointAction::EnableWatchpoint:
-      hw_index = m_threads[idx]->EnableHardwareWatchpoint(wp, also_set_on_task);
+      hw_index = m_threads[idx]->EnableHardwareWatchpoint(bp, also_set_on_task);
       break;
     case HardwareBreakpointAction::DisableWatchpoint:
       hw_index =
-          m_threads[idx]->DisableHardwareWatchpoint(wp, also_set_on_task);
+          m_threads[idx]->DisableHardwareWatchpoint(bp, also_set_on_task);
+      break;
+    case HardwareBreakpointAction::EnableBreakpoint:
+      hw_index = m_threads[idx]->EnableHardwareBreakpoint(bp, also_set_on_task);
+      break;
+    case HardwareBreakpointAction::DisableBreakpoint:
+      hw_index =
+          m_threads[idx]->DisableHardwareBreakpoint(bp, also_set_on_task);
       break;
     }
     if (hw_index == INVALID_NUB_HW_INDEX) {
@@ -551,6 +539,18 @@ MachThreadList::EnableHardwareWatchpoint(const DNBBreakpoint *wp) const {
 bool MachThreadList::DisableHardwareWatchpoint(const DNBBreakpoint *wp) const {
   return DoHardwareBreakpointAction(
              wp, HardwareBreakpointAction::DisableWatchpoint) !=
+         INVALID_NUB_HW_INDEX;
+}
+
+uint32_t
+MachThreadList::EnableHardwareBreakpoint(const DNBBreakpoint *bp) const {
+  return DoHardwareBreakpointAction(bp,
+                                    HardwareBreakpointAction::EnableBreakpoint);
+}
+
+bool MachThreadList::DisableHardwareBreakpoint(const DNBBreakpoint *bp) const {
+  return DoHardwareBreakpointAction(
+             bp, HardwareBreakpointAction::DisableBreakpoint) !=
          INVALID_NUB_HW_INDEX;
 }
 

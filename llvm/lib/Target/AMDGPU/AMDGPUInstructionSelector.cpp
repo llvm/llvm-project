@@ -88,6 +88,30 @@ bool AMDGPUInstructionSelector::isVCC(Register Reg,
   return RB->getID() == AMDGPU::VCCRegBankID;
 }
 
+bool AMDGPUInstructionSelector::constrainCopyLikeIntrin(MachineInstr &MI,
+                                                        unsigned NewOpc) const {
+  MI.setDesc(TII.get(NewOpc));
+  MI.RemoveOperand(1); // Remove intrinsic ID.
+  MI.addOperand(*MF, MachineOperand::CreateReg(AMDGPU::EXEC, false, true));
+
+  MachineOperand &Dst = MI.getOperand(0);
+  MachineOperand &Src = MI.getOperand(1);
+
+  // TODO: This should be legalized to s32 if needed
+  if (MRI->getType(Dst.getReg()) == LLT::scalar(1))
+    return false;
+
+  const TargetRegisterClass *DstRC
+    = TRI.getConstrainedRegClassForOperand(Dst, *MRI);
+  const TargetRegisterClass *SrcRC
+    = TRI.getConstrainedRegClassForOperand(Src, *MRI);
+  if (!DstRC || DstRC != SrcRC)
+    return false;
+
+  return RBI.constrainGenericRegister(Dst.getReg(), *DstRC, *MRI) &&
+         RBI.constrainGenericRegister(Src.getReg(), *SrcRC, *MRI);
+}
+
 bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
   const DebugLoc &DL = I.getDebugLoc();
   MachineBasicBlock *BB = I.getParent();
@@ -706,6 +730,12 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   }
   case Intrinsic::amdgcn_interp_p1_f16:
     return selectInterpP1F16(I);
+  case Intrinsic::amdgcn_wqm:
+    return constrainCopyLikeIntrin(I, AMDGPU::WQM);
+  case Intrinsic::amdgcn_softwqm:
+    return constrainCopyLikeIntrin(I, AMDGPU::SOFT_WQM);
+  case Intrinsic::amdgcn_wwm:
+    return constrainCopyLikeIntrin(I, AMDGPU::WWM);
   default:
     return selectImpl(I, *CoverageInfo);
   }

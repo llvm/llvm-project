@@ -169,14 +169,14 @@ define amdgpu_kernel void @v_test_imax_sge_v3i16(<3 x i16> addrspace(1)* %out, <
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s1
 ; GFX9-NEXT:    v_add_co_u32_e32 v2, vcc, s0, v4
 ; GFX9-NEXT:    v_addc_co_u32_e32 v3, vcc, 0, v3, vcc
-; GFX9-NEXT:    global_load_short_d16 v5, v[2:3], off offset:4
 ; GFX9-NEXT:    global_load_short_d16 v6, v[0:1], off offset:4
 ; GFX9-NEXT:    global_load_dword v7, v[0:1], off
+; GFX9-NEXT:    global_load_short_d16 v5, v[2:3], off offset:4
 ; GFX9-NEXT:    global_load_dword v2, v[2:3], off
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s4, v4
 ; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
-; GFX9-NEXT:    s_waitcnt vmcnt(2)
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_pk_max_i16 v3, v6, v5
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_max_i16 v2, v7, v2

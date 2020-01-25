@@ -156,6 +156,13 @@ void BreakpointSite::BumpHitCounts() {
   }
 }
 
+void BreakpointSite::SetHardwareIndex(uint32_t index) {
+  std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
+  for (BreakpointLocationSP loc_sp : m_owners.BreakpointLocations()) {
+    loc_sp->SetHardwareIndex(index);
+  }
+}
+
 bool BreakpointSite::IntersectsRange(lldb::addr_t addr, size_t size,
                                      lldb::addr_t *intersect_addr,
                                      size_t *intersect_size,

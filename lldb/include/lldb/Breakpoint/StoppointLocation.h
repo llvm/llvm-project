@@ -48,7 +48,7 @@ public:
 
   virtual void Dump(Stream *stream) const {}
 
-  void SetHardwareIndex(uint32_t index) { m_hardware_index = index; }
+  virtual void SetHardwareIndex(uint32_t index) { m_hardware_index = index; }
 
   lldb::break_id_t GetID() const { return m_loc_id; }
 

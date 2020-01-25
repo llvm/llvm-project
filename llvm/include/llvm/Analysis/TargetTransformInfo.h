@@ -342,6 +342,10 @@ public:
   /// branches.
   bool hasBranchDivergence() const;
 
+  /// Return true if the target prefers to use GPU divergence analysis to
+  /// replace the legacy version.
+  bool useGPUDivergenceAnalysis() const;
+
   /// Returns whether V is a source of divergence.
   ///
   /// This function provides the target-dependent information for
@@ -1198,6 +1202,7 @@ public:
   virtual int
   getUserCost(const User *U, ArrayRef<const Value *> Operands) = 0;
   virtual bool hasBranchDivergence() = 0;
+  virtual bool useGPUDivergenceAnalysis() = 0;
   virtual bool isSourceOfDivergence(const Value *V) = 0;
   virtual bool isAlwaysUniform(const Value *V) = 0;
   virtual unsigned getFlatAddressSpace() = 0;
@@ -1452,6 +1457,7 @@ public:
     return Impl.getUserCost(U, Operands);
   }
   bool hasBranchDivergence() override { return Impl.hasBranchDivergence(); }
+  bool useGPUDivergenceAnalysis() override { return Impl.useGPUDivergenceAnalysis(); }
   bool isSourceOfDivergence(const Value *V) override {
     return Impl.isSourceOfDivergence(V);
   }

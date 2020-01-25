@@ -1476,7 +1476,7 @@ public:
                            const SDNode *N2);
 
   SDValue FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL, EVT VT,
-                                 SDNode *N1, SDNode *N2);
+                                 ArrayRef<SDValue> Ops);
 
   SDValue FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL, EVT VT,
                                  const ConstantSDNode *C1,

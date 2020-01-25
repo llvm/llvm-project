@@ -12,6 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lsan_thread.h"
+#if SANITIZER_POSIX
+#include "lsan_posix.h"
+#endif
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 

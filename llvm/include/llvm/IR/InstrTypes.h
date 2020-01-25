@@ -1876,10 +1876,7 @@ public:
   /// OperandBundleUser to a vector of OperandBundleDefs.  Note:
   /// OperandBundeUses and OperandBundleDefs are non-trivially *different*
   /// representations of operand bundles (see documentation above).
-  void getOperandBundlesAsDefs(SmallVectorImpl<OperandBundleDef> &Defs) const {
-    for (unsigned i = 0, e = getNumOperandBundles(); i != e; ++i)
-      Defs.emplace_back(getOperandBundleAt(i));
-  }
+  void getOperandBundlesAsDefs(SmallVectorImpl<OperandBundleDef> &Defs) const;
 
   /// Return the operand bundle for the operand at index OpIdx.
   ///

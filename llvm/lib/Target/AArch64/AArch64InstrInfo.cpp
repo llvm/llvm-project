@@ -2422,7 +2422,7 @@ bool AArch64InstrInfo::shouldClusterMemOps(
     return false;
 
   // Only cluster up to a single pair.
-  if (NumLoads > 1)
+  if (NumLoads > 2)
     return false;
 
   if (!isPairableLdStInst(FirstLdSt) || !isPairableLdStInst(SecondLdSt))

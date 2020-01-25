@@ -13,6 +13,7 @@
 #include <type_traits>
 
 #include "mlir/Dialect/AffineOps/AffineOps.h"
+#include "mlir/Dialect/StandardOps/Ops.h"
 #include "mlir/Dialect/VectorOps/VectorOps.h"
 #include "mlir/Dialect/VectorOps/VectorTransforms.h"
 #include "mlir/Dialect/VectorOps/VectorUtils.h"
@@ -28,6 +29,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/Functional.h"
+#include "mlir/Support/MathExtras.h"
 #include "mlir/Support/STLExtras.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -657,6 +659,131 @@ struct TupleGetFolderOp : public OpRewritePattern<vector::TupleGetOp> {
   }
 };
 
+/// Progressive lowering of ExtractSlicesOp to tuple of StridedSliceOp.
+/// One:
+///   %x = vector.extract_slices %0
+/// is replaced by:
+///   %a = vector.strided_slice %0
+///   %b = vector.strided_slice %0
+///   ..
+///   %x = vector.tuple %a, %b, ..
+class ExtractSlicesOpLowering
+    : public OpRewritePattern<vector::ExtractSlicesOp> {
+public:
+  using OpRewritePattern<vector::ExtractSlicesOp>::OpRewritePattern;
+
+  // TODO(ajcbik): refactor slice utilities out into VectorUtils.h
+  PatternMatchResult matchAndRewrite(vector::ExtractSlicesOp op,
+                                     PatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+
+    VectorType vectorType = op.getSourceVectorType();
+    int64_t rank = vectorType.getRank();
+    auto shape = vectorType.getShape();
+
+    SmallVector<int64_t, 4> sizes;
+    op.getSizes(sizes);
+    SmallVector<int64_t, 4> strides;
+    op.getStrides(strides); // all-ones at the moment
+
+    // Compute the number of slices in each dimension.
+    SmallVector<int64_t, 4> sliceDimCounts(rank);
+    for (int64_t r = 0; r < rank; ++r)
+      sliceDimCounts[r] = ceilDiv(shape[r], sizes[r]);
+
+    // For each element in the tuple, generate the proper strided slice.
+    auto basis = computeStrides(sliceDimCounts);
+    TupleType tupleType = op.getResultTupleType();
+    int64_t tupleSize = tupleType.size();
+    SmallVector<Value, 4> tupleValues(tupleSize);
+    for (int64_t i = 0; i < tupleSize; ++i) {
+      // De-linearize w.r.t. 'basis'.
+      auto vectorOffsets = delinearize(i, basis);
+      // Convert from unrolled vector-space offsets to element-space offsets.
+      auto elementOffsets = mlir::functional::zipMap(
+          [](int64_t v1, int64_t v2) { return v1 * v2; }, vectorOffsets, sizes);
+      // Compute the size of each slice.
+      SmallVector<int64_t, 4> sliceSizes(rank);
+      for (int64_t r = 0; r < rank; ++r)
+        sliceSizes[r] = std::min(sizes[r], shape[r] - elementOffsets[r]);
+      // Insert in tuple.
+      tupleValues[i] = rewriter.create<vector::StridedSliceOp>(
+          loc, op.vector(), elementOffsets, sliceSizes, strides);
+    }
+
+    rewriter.replaceOpWithNewOp<vector::TupleOp>(op, tupleType, tupleValues);
+    return matchSuccess();
+  }
+};
+
+/// Progressive lowering of InsertSlicesOp to series of InsertStridedSliceOp.
+/// One:
+///   %x = vector.insert_slices %0
+/// is replaced by:
+///   %r0 = vector.splat 0
+//    %t1 = vector.tuple_get %0, 0
+///   %r1 = vector.insert_strided_slice %r0, %t1
+//    %t2 = vector.tuple_get %0, 1
+///   %r2 = vector.insert_strided_slice %r1, %t2
+///   ..
+///   %x  = ..
+class InsertSlicesOpLowering : public OpRewritePattern<vector::InsertSlicesOp> {
+public:
+  using OpRewritePattern<vector::InsertSlicesOp>::OpRewritePattern;
+
+  // TODO(ajcbik): refactor slice utilities out into VectorUtils.h
+  PatternMatchResult matchAndRewrite(vector::InsertSlicesOp op,
+                                     PatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+
+    VectorType vectorType = op.getResultVectorType();
+    int64_t rank = vectorType.getRank();
+    auto shape = vectorType.getShape();
+
+    SmallVector<int64_t, 4> sizes;
+    op.getSizes(sizes);
+    SmallVector<int64_t, 4> strides;
+    op.getStrides(strides); // all-ones at the moment
+
+    // Compute the number of slices in each dimension.
+    SmallVector<int64_t, 4> sliceDimCounts(rank);
+    for (int64_t r = 0; r < rank; ++r)
+      sliceDimCounts[r] = ceilDiv(shape[r], sizes[r]);
+
+    // Prepare result.
+    auto elemType = vectorType.getElementType();
+    Value zero = rewriter.create<ConstantOp>(loc, elemType,
+                                             rewriter.getZeroAttr(elemType));
+    Value result = rewriter.create<SplatOp>(loc, vectorType, zero);
+
+    // For each element in the tuple, extract the proper strided slice.
+    auto basis = computeStrides(sliceDimCounts);
+    TupleType tupleType = op.getSourceTupleType();
+    int64_t tupleSize = tupleType.size();
+    SmallVector<Value, 4> tupleValues(tupleSize);
+    for (int64_t i = 0; i < tupleSize; ++i) {
+      // De-linearize w.r.t. 'basis'.
+      auto vectorOffsets = delinearize(i, basis);
+      // Convert from unrolled vector-space offsets to element-space offsets.
+      auto elementOffsets = mlir::functional::zipMap(
+          [](int64_t v1, int64_t v2) { return v1 * v2; }, vectorOffsets, sizes);
+      // Compute the size of each slice.
+      SmallVector<int64_t, 4> sliceSizes(rank);
+      for (int64_t r = 0; r < rank; ++r)
+        sliceSizes[r] = std::min(sizes[r], shape[r] - elementOffsets[r]);
+      // Extract from tuple into the result.
+      auto index = rewriter.getI64IntegerAttr(i);
+      auto tupleGet = rewriter.create<vector::TupleGetOp>(
+          loc, tupleType.getType(i), op.getOperand(), index);
+      result = rewriter.create<vector::InsertStridedSliceOp>(
+          loc, tupleGet, result, elementOffsets, strides);
+    }
+
+    rewriter.replaceOp(op, result);
+    return matchSuccess();
+  }
+};
+
 } // namespace
 
 // TODO(andydavis) Add pattern to rewrite ExtractSlices(ConstantMaskOp).
@@ -665,4 +792,9 @@ void mlir::vector::populateVectorToVectorTransformationPatterns(
     OwningRewritePatternList &patterns, MLIRContext *context) {
   patterns.insert<SplitTransferReadOp, SplitTransferWriteOp, TupleGetFolderOp>(
       context);
+}
+
+void mlir::vector::populateVectorSlicesLoweringPatterns(
+    OwningRewritePatternList &patterns, MLIRContext *context) {
+  patterns.insert<ExtractSlicesOpLowering, InsertSlicesOpLowering>(context);
 }

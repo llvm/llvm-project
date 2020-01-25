@@ -69,6 +69,8 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -1886,9 +1888,10 @@ class LSRInstance {
   DominatorTree &DT;
   LoopInfo &LI;
   AssumptionCache &AC;
-  TargetLibraryInfo &LibInfo;
+  TargetLibraryInfo &TLI;
   const TargetTransformInfo &TTI;
   Loop *const L;
+  MemorySSAUpdater *MSSAU;
   bool FavorBackedgeIndex = false;
   bool Changed = false;
 
@@ -2026,7 +2029,7 @@ class LSRInstance {
 public:
   LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE, DominatorTree &DT,
               LoopInfo &LI, const TargetTransformInfo &TTI, AssumptionCache &AC,
-              TargetLibraryInfo &LibInfo);
+              TargetLibraryInfo &TLI, MemorySSAUpdater *MSSAU);
 
   bool getChanged() const { return Changed; }
 
@@ -3214,7 +3217,7 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain, SCEVExpander &Rewriter,
 
 void LSRInstance::CollectFixupsAndInitialFormulae() {
   BranchInst *ExitBranch = nullptr;
-  bool SaveCmp = TTI.canSaveCmp(L, &ExitBranch, &SE, &LI, &DT, &AC, &LibInfo);
+  bool SaveCmp = TTI.canSaveCmp(L, &ExitBranch, &SE, &LI, &DT, &AC, &TLI);
 
   for (const IVStrideUse &U : IU) {
     Instruction *UserInst = U.getUser();
@@ -5466,16 +5469,17 @@ void LSRInstance::ImplementSolution(
   // instructions.
   Rewriter.clear();
 
-  Changed |= RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts);
+  Changed |= RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts,
+                                                                  &TLI, MSSAU);
 }
 
 LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                          DominatorTree &DT, LoopInfo &LI,
                          const TargetTransformInfo &TTI, AssumptionCache &AC,
-                         TargetLibraryInfo &LibInfo)
-    : IU(IU), SE(SE), DT(DT), LI(LI), AC(AC), LibInfo(LibInfo), TTI(TTI), L(L),
-      FavorBackedgeIndex(EnableBackedgeIndexing &&
-                         TTI.shouldFavorBackedgeIndex(L)) {
+                         TargetLibraryInfo &TLI, MemorySSAUpdater *MSSAU)
+    : IU(IU), SE(SE), DT(DT), LI(LI), AC(AC), TLI(TLI), TTI(TTI), L(L),
+      MSSAU(MSSAU), FavorBackedgeIndex(EnableBackedgeIndexing &&
+                                       TTI.shouldFavorBackedgeIndex(L)) {
   // If LoopSimplify form is not available, stay out of trouble.
   if (!L->isLoopSimplifyForm())
     return;
@@ -5678,21 +5682,26 @@ void LoopStrengthReduce::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<IVUsersWrapperPass>();
   AU.addPreserved<IVUsersWrapperPass>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
+  AU.addPreserved<MemorySSAWrapperPass>();
 }
 
 static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                                DominatorTree &DT, LoopInfo &LI,
                                const TargetTransformInfo &TTI,
-                               AssumptionCache &AC,
-                               TargetLibraryInfo &LibInfo) {
+                               AssumptionCache &AC, TargetLibraryInfo &TLI,
+                               MemorySSA *MSSA) {
 
   bool Changed = false;
+  std::unique_ptr<MemorySSAUpdater> MSSAU;
+  if (MSSA)
+    MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
 
   // Run the main LSR transformation.
-  Changed |= LSRInstance(L, IU, SE, DT, LI, TTI, AC, LibInfo).getChanged();
+  Changed |=
+      LSRInstance(L, IU, SE, DT, LI, TTI, AC, TLI, MSSAU.get()).getChanged();
 
   // Remove any extra phis created by processing inner loops.
-  Changed |= DeleteDeadPHIs(L->getHeader());
+  Changed |= DeleteDeadPHIs(L->getHeader(), &TLI, MSSAU.get());
   if (EnablePhiElim && L->isLoopSimplifyForm()) {
     SmallVector<WeakTrackingVH, 16> DeadInsts;
     const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
@@ -5703,8 +5712,9 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
     unsigned numFolded = Rewriter.replaceCongruentIVs(L, &DT, DeadInsts, &TTI);
     if (numFolded) {
       Changed = true;
-      RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts);
-      DeleteDeadPHIs(L->getHeader());
+      RecursivelyDeleteTriviallyDeadInstructionsPermissive(DeadInsts, &TLI,
+                                                           MSSAU.get());
+      DeleteDeadPHIs(L->getHeader(), &TLI, MSSAU.get());
     }
   }
   return Changed;
@@ -5722,19 +5732,26 @@ bool LoopStrengthReduce::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
       *L->getHeader()->getParent());
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
       *L->getHeader()->getParent());
-  auto &LibInfo = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
+  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
       *L->getHeader()->getParent());
-  return ReduceLoopStrength(L, IU, SE, DT, LI, TTI, AC, LibInfo);
+  auto *MSSAAnalysis = getAnalysisIfAvailable<MemorySSAWrapperPass>();
+  MemorySSA *MSSA = nullptr;
+  if (MSSAAnalysis)
+    MSSA = &MSSAAnalysis->getMSSA();
+  return ReduceLoopStrength(L, IU, SE, DT, LI, TTI, AC, TLI, MSSA);
 }
 
 PreservedAnalyses LoopStrengthReducePass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &AR,
                                               LPMUpdater &) {
   if (!ReduceLoopStrength(&L, AM.getResult<IVUsersAnalysis>(L, AR), AR.SE,
-                          AR.DT, AR.LI, AR.TTI, AR.AC, AR.TLI))
+                          AR.DT, AR.LI, AR.TTI, AR.AC, AR.TLI, AR.MSSA))
     return PreservedAnalyses::all();
 
-  return getLoopPassPreservedAnalyses();
+  auto PA = getLoopPassPreservedAnalyses();
+  if (AR.MSSA)
+    PA.preserve<MemorySSAAnalysis>();
+  return PA;
 }
 
 char LoopStrengthReduce::ID = 0;
