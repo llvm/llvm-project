@@ -1,0 +1,5 @@
+# RUN: llvm-mc --disassemble %s -mcpu=future -triple powerpc64-unknown-linux-gnu < %s 2>&1 | FileCheck %s
+
+# paddi 1, 2, 8589934591, 1. However, RA is not zero with R=1
+# CHECK: warning: invalid instruction encoding
+0x06 0x11 0xff 0xff 0x38 0x22 0xff 0xff

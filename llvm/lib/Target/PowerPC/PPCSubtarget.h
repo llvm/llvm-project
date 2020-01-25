@@ -105,6 +105,7 @@ protected:
   bool HasP8Crypto;
   bool HasP9Vector;
   bool HasP9Altivec;
+  bool HasPrefixInstrs;
   bool HasFCPSGN;
   bool HasFSQRT;
   bool HasFRE, HasFRES, HasFRSQRTE, HasFRSQRTES;
@@ -255,6 +256,7 @@ public:
   bool hasP8Crypto() const { return HasP8Crypto; }
   bool hasP9Vector() const { return HasP9Vector; }
   bool hasP9Altivec() const { return HasP9Altivec; }
+  bool hasPrefixInstrs() const { return HasPrefixInstrs; }
   bool hasMFOCRF() const { return HasMFOCRF; }
   bool hasISEL() const { return HasISEL; }
   bool hasBPERMD() const { return HasBPERMD; }
