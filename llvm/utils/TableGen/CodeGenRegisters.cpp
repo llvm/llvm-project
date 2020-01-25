@@ -990,8 +990,12 @@ void CodeGenRegisterClass::computeSubClasses(CodeGenRegBank &RegBank) {
 Optional<std::pair<CodeGenRegisterClass *, CodeGenRegisterClass *>>
 CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
     CodeGenRegBank &RegBank, const CodeGenSubRegIndex *SubIdx) const {
-  auto SizeOrder = [](const CodeGenRegisterClass *A,
+  auto SizeOrder = [this](const CodeGenRegisterClass *A,
                       const CodeGenRegisterClass *B) {
+    // If there are multiple, identical register classes, prefer the original
+    // register class.
+    if (A->getMembers().size() == B->getMembers().size())
+      return A == this;
     return A->getMembers().size() > B->getMembers().size();
   };
 
@@ -1008,7 +1012,9 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
     if (SuperRegRCsBV[RC.EnumValue])
       SuperRegRCs.emplace_back(&RC);
   llvm::sort(SuperRegRCs, SizeOrder);
-  assert(SuperRegRCs.front() == BiggestSuperRegRC && "Biggest class wasn't first");
+
+  assert(SuperRegRCs.front() == BiggestSuperRegRC &&
+         "Biggest class wasn't first");
 
   // Find all the subreg classes and order them by size too.
   std::vector<std::pair<CodeGenRegisterClass *, BitVector>> SuperRegClasses;
