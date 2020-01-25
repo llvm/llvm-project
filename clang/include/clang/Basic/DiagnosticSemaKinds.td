@@ -4686,6 +4686,8 @@ def note_checking_constraints_for_var_spec_id_here : Note<
 def note_checking_constraints_for_class_spec_id_here : Note<
   "while checking constraint satisfaction for class template partial "
   "specialization '%0' required here">;
+def note_checking_constraints_for_function_here : Note<
+  "while checking constraint satisfaction for function '%0' required here">;
 def note_constraint_substitution_here : Note<
   "while substituting template arguments into constraint expression here">;
 def note_constraint_normalization_here : Note<

@@ -6288,7 +6288,7 @@ public:
   /// \returns true if an error occurred and satisfaction could not be checked,
   /// false otherwise.
   bool CheckConstraintSatisfaction(
-      NamedDecl *Template, ArrayRef<const Expr *> ConstraintExprs,
+      const NamedDecl *Template, ArrayRef<const Expr *> ConstraintExprs,
       ArrayRef<TemplateArgument> TemplateArgs,
       SourceRange TemplateIDRange, ConstraintSatisfaction &Satisfaction);
 
@@ -6300,6 +6300,17 @@ public:
   /// \returns true if an error occurred, false otherwise.
   bool CheckConstraintSatisfaction(const Expr *ConstraintExpr,
                                    ConstraintSatisfaction &Satisfaction);
+
+  /// Check whether the given function decl's trailing requires clause is
+  /// satisfied, if any. Returns false and updates Satisfaction with the
+  /// satisfaction verdict if successful, emits a diagnostic and returns true if
+  /// an error occured and satisfaction could not be determined.
+  ///
+  /// \returns true if an error occurred, false otherwise.
+  bool CheckFunctionConstraints(const FunctionDecl *FD,
+                                ConstraintSatisfaction &Satisfaction,
+                                SourceLocation UsageLoc = SourceLocation());
+
 
   /// \brief Ensure that the given template arguments satisfy the constraints
   /// associated with the given template, emitting a diagnostic if they do not.
