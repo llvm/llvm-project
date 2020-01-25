@@ -142,6 +142,9 @@ public:
 } // end namespace sema
 } // end namespace clang
 
+const unsigned Sema::MaxAlignmentExponent;
+const unsigned Sema::MaximumAlignment;
+
 Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
            TranslationUnitKind TUKind, CodeCompleteConsumer *CodeCompleter)
     : ExternalSource(nullptr), isMultiplexExternalSource(false),
