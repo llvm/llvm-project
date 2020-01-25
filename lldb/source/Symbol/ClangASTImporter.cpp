@@ -856,8 +856,8 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
   // into the same ASTContext where it came from (which doesn't make a lot of
   // sense).
   if (origin.Valid() && origin.ctx == &getToContext()) {
-      RegisterImportedDecl(From, origin.decl);
-      return origin.decl;
+    RegisterImportedDecl(From, origin.decl);
+    return origin.decl;
   }
 
   // This declaration came originally from another ASTContext. Instead of
