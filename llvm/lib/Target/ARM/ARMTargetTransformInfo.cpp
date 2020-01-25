@@ -1364,7 +1364,8 @@ bool ARMTTIImpl::useReductionIntrinsic(unsigned Opcode, Type *Ty,
     return false;
   case Instruction::ICmp:
   case Instruction::Add:
-    return ScalarBits < 64 && ScalarBits * Ty->getVectorNumElements() == 128;
+    return ScalarBits < 64 &&
+           (ScalarBits * Ty->getVectorNumElements()) % 128 == 0;
   default:
     llvm_unreachable("Unhandled reduction opcode");
   }
