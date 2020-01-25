@@ -1586,6 +1586,15 @@ bool TargetLowering::SimplifyDemandedBits(
     }
     break;
   }
+  case ISD::ROTL:
+  case ISD::ROTR: {
+    SDValue Op0 = Op.getOperand(0);
+
+    // If we're rotating an 0/-1 value, then it stays an 0/-1 value.
+    if (BitWidth == TLO.DAG.ComputeNumSignBits(Op0, DemandedElts, Depth + 1))
+      return TLO.CombineTo(Op, Op0);
+    break;
+  }
   case ISD::BITREVERSE: {
     SDValue Src = Op.getOperand(0);
     APInt DemandedSrcBits = DemandedBits.reverseBits();
