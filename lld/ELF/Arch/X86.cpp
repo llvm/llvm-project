@@ -35,7 +35,8 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
-  void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
+  void relocate(uint8_t *loc, const Relocation &rel,
+                uint64_t val) const override;
 
   RelExpr adjustRelaxExpr(RelType type, const uint8_t *data,
                           RelExpr expr) const override;
@@ -266,21 +267,21 @@ int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
-void X86::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
-  switch (type) {
+void X86::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  switch (rel.type) {
   case R_386_8:
     // R_386_{PC,}{8,16} are not part of the i386 psABI, but they are
     // being used for some 16-bit programs such as boot loaders, so
     // we want to support them.
-    checkIntUInt(loc, val, 8, type);
+    checkIntUInt(loc, val, 8, rel);
     *loc = val;
     break;
   case R_386_PC8:
-    checkInt(loc, val, 8, type);
+    checkInt(loc, val, 8, rel);
     *loc = val;
     break;
   case R_386_16:
-    checkIntUInt(loc, val, 16, type);
+    checkIntUInt(loc, val, 16, rel);
     write16le(loc, val);
     break;
   case R_386_PC16:
@@ -294,7 +295,7 @@ void X86::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
     // current location subtracted from it.
     // We just check that Val fits in 17 bits. This misses some cases, but
     // should have no false positives.
-    checkInt(loc, val, 17, type);
+    checkInt(loc, val, 17, rel);
     write16le(loc, val);
     break;
   case R_386_32:
@@ -316,7 +317,7 @@ void X86::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   case R_386_TLS_LE_32:
   case R_386_TLS_TPOFF:
   case R_386_TLS_TPOFF32:
-    checkInt(loc, val, 32, type);
+    checkInt(loc, val, 32, rel);
     write32le(loc, val);
     break;
   default:

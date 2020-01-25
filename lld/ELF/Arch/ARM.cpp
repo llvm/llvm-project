@@ -43,7 +43,8 @@ public:
                   int64_t a) const override;
   uint32_t getThunkSectionSpacing() const override;
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
-  void relocateOne(uint8_t *loc, RelType type, uint64_t val) const override;
+  void relocate(uint8_t *loc, const Relocation &rel,
+                uint64_t val) const override;
 };
 } // namespace
 
@@ -375,8 +376,8 @@ bool ARM::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   return distance <= range;
 }
 
-void ARM::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
-  switch (type) {
+void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
+  switch (rel.type) {
   case R_ARM_ABS32:
   case R_ARM_BASE_PREL:
   case R_ARM_GOTOFF32:
@@ -397,7 +398,7 @@ void ARM::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
     write32le(loc, val);
     break;
   case R_ARM_PREL31:
-    checkInt(loc, val, 31, type);
+    checkInt(loc, val, 31, rel);
     write32le(loc, (read32le(loc) & 0x80000000) | (val & ~0x80000000));
     break;
   case R_ARM_CALL:
@@ -406,7 +407,7 @@ void ARM::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
     if (val & 1) {
       // If bit 0 of Val is 1 the target is Thumb, we must select a BLX.
       // The BLX encoding is 0xfa:H:imm24 where Val = imm24:H:'1'
-      checkInt(loc, val, 26, type);
+      checkInt(loc, val, 26, rel);
       write32le(loc, 0xfa000000 |                    // opcode
                          ((val & 2) << 23) |         // H
                          ((val >> 2) & 0x00ffffff)); // imm24
@@ -421,16 +422,16 @@ void ARM::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   case R_ARM_JUMP24:
   case R_ARM_PC24:
   case R_ARM_PLT32:
-    checkInt(loc, val, 26, type);
+    checkInt(loc, val, 26, rel);
     write32le(loc, (read32le(loc) & ~0x00ffffff) | ((val >> 2) & 0x00ffffff));
     break;
   case R_ARM_THM_JUMP11:
-    checkInt(loc, val, 12, type);
+    checkInt(loc, val, 12, rel);
     write16le(loc, (read32le(loc) & 0xf800) | ((val >> 1) & 0x07ff));
     break;
   case R_ARM_THM_JUMP19:
     // Encoding T3: Val = S:J2:J1:imm6:imm11:0
-    checkInt(loc, val, 21, type);
+    checkInt(loc, val, 21, rel);
     write16le(loc,
               (read16le(loc) & 0xfbc0) |   // opcode cond
                   ((val >> 10) & 0x0400) | // S
@@ -454,7 +455,7 @@ void ARM::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
     if (!config->armJ1J2BranchEncoding) {
       // Older Arm architectures do not support R_ARM_THM_JUMP24 and have
       // different encoding rules and range due to J1 and J2 always being 1.
-      checkInt(loc, val, 23, type);
+      checkInt(loc, val, 23, rel);
       write16le(loc,
                 0xf000 |                     // opcode
                     ((val >> 12) & 0x07ff)); // imm11
@@ -468,7 +469,7 @@ void ARM::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
     LLVM_FALLTHROUGH;
   case R_ARM_THM_JUMP24:
     // Encoding B  T4, BL T1, BLX T2: Val = S:I1:I2:imm10:imm11:0
-    checkInt(loc, val, 25, type);
+    checkInt(loc, val, 25, rel);
     write16le(loc,
               0xf000 |                     // opcode
                   ((val >> 14) & 0x0400) | // S
@@ -514,7 +515,8 @@ void ARM::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
                   (val & 0x00ff));           // imm8
     break;
   default:
-    error(getErrorLocation(loc) + "unrecognized relocation " + toString(type));
+    error(getErrorLocation(loc) + "unrecognized relocation " +
+          toString(rel.type));
   }
 }
 
