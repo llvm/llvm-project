@@ -7,13 +7,10 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file defines the MallocAllocator and BumpPtrAllocator interfaces. Both
-/// of these conform to an LLVM "Allocator" concept which consists of an
-/// Allocate method accepting a size and alignment, and a Deallocate accepting
-/// a pointer and size. Further, the LLVM "Allocator" concept has overloads of
-/// Allocate and Deallocate for setting size and alignment based on the final
-/// type. These overloads are typically provided by a base class template \c
-/// AllocatorBase.
+/// This file defines the BumpPtrAllocator interface. BumpPtrAllocator conforms
+/// to the LLVM "Allocator" concept and is similar to MallocAllocator, but
+/// objects cannot be deallocated. Their lifetime is tied to the lifetime of the
+/// allocator.
 ///
 //===----------------------------------------------------------------------===//
 
