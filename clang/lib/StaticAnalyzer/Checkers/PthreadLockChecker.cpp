@@ -135,6 +135,8 @@ void PthreadLockChecker::checkPostStmt(const CallExpr *CE,
   else if (FName == "pthread_mutex_unlock" ||
            FName == "pthread_rwlock_unlock" ||
            FName == "lck_mtx_unlock" ||
+           FName == "lck_rw_unlock_exclusive" ||
+           FName == "lck_rw_unlock_shared" ||
            FName == "lck_rw_done")
     ReleaseLock(C, CE, C.getSVal(CE->getArg(0)));
   else if (FName == "pthread_mutex_destroy")
