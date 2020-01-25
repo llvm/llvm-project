@@ -1,4 +1,4 @@
-//===- AllocatorBase.h - Simple memory allocation abstraction -------*- C++ -*-===//
+//===- AllocatorBase.h - Simple memory allocation abstraction ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file defines the MallocAllocator and BumpPtrAllocator interfaces. Both
-/// of these conform to an LLVM "Allocator" concept which consists of an
-/// Allocate method accepting a size and alignment, and a Deallocate accepting
-/// a pointer and size. Further, the LLVM "Allocator" concept has overloads of
-/// Allocate and Deallocate for setting size and alignment based on the final
-/// type. These overloads are typically provided by a base class template \c
-/// AllocatorBase.
+/// This file defines MallocAllocator. MallocAllocator conforms to the LLVM
+/// "Allocator" concept which consists of an Allocate method accepting a size
+/// and alignment, and a Deallocate accepting a pointer and size. Further, the
+/// LLVM "Allocator" concept has overloads of Allocate and Deallocate for
+/// setting size and alignment based on the final type. These overloads are
+/// typically provided by a base class template \c AllocatorBase.
 ///
 //===----------------------------------------------------------------------===//
 
