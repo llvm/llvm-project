@@ -171,6 +171,53 @@ static Type convertStdType(Type type) {
 Type SPIRVTypeConverter::convertType(Type type) { return convertStdType(type); }
 
 //===----------------------------------------------------------------------===//
+// FuncOp Conversion Patterns
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// A pattern for rewriting function signature to convert arguments of functions
+/// to be of valid SPIR-V types.
+class FuncOpConversion final : public SPIRVOpLowering<FuncOp> {
+public:
+  using SPIRVOpLowering<FuncOp>::SPIRVOpLowering;
+
+  PatternMatchResult
+  matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+} // namespace
+
+PatternMatchResult
+FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
+                                  ConversionPatternRewriter &rewriter) const {
+  auto fnType = funcOp.getType();
+  if (fnType.getNumResults())
+    return matchFailure();
+
+  TypeConverter::SignatureConversion signatureConverter(fnType.getNumInputs());
+  for (auto argType : enumerate(funcOp.getType().getInputs())) {
+    auto convertedType = typeConverter.convertType(argType.value());
+    if (!convertedType)
+      return matchFailure();
+    signatureConverter.addInputs(argType.index(), convertedType);
+  }
+
+  rewriter.updateRootInPlace(funcOp, [&] {
+    funcOp.setType(rewriter.getFunctionType(
+        signatureConverter.getConvertedTypes(), llvm::None));
+    rewriter.applySignatureConversion(&funcOp.getBody(), signatureConverter);
+  });
+
+  return matchSuccess();
+}
+
+void mlir::populateBuiltinFuncToSPIRVPatterns(
+    MLIRContext *context, SPIRVTypeConverter &typeConverter,
+    OwningRewritePatternList &patterns) {
+  patterns.insert<FuncOpConversion>(context, typeConverter);
+}
+
+//===----------------------------------------------------------------------===//
 // Builtin Variables
 //===----------------------------------------------------------------------===//
 

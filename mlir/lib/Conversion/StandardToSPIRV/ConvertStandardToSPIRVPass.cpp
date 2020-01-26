@@ -20,51 +20,12 @@
 using namespace mlir;
 
 namespace {
-
-/// A simple pattern for rewriting function signature to convert arguments of
-/// functions to be of valid SPIR-V types.
-class FuncOpConversion final : public SPIRVOpLowering<FuncOp> {
-public:
-  using SPIRVOpLowering<FuncOp>::SPIRVOpLowering;
-
-  PatternMatchResult
-  matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
-                  ConversionPatternRewriter &rewriter) const override;
-};
-
 /// A pass converting MLIR Standard operations into the SPIR-V dialect.
 class ConvertStandardToSPIRVPass
     : public ModulePass<ConvertStandardToSPIRVPass> {
   void runOnModule() override;
 };
 } // namespace
-
-PatternMatchResult
-FuncOpConversion::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
-                                  ConversionPatternRewriter &rewriter) const {
-  auto fnType = funcOp.getType();
-  if (fnType.getNumResults()) {
-    return matchFailure();
-  }
-
-  TypeConverter::SignatureConversion signatureConverter(fnType.getNumInputs());
-  {
-    for (auto argType : enumerate(funcOp.getType().getInputs())) {
-      auto convertedType = typeConverter.convertType(argType.value());
-      if (!convertedType) {
-        return matchFailure();
-      }
-      signatureConverter.addInputs(argType.index(), convertedType);
-    }
-  }
-
-  rewriter.updateRootInPlace(funcOp, [&] {
-    funcOp.setType(rewriter.getFunctionType(
-        signatureConverter.getConvertedTypes(), llvm::None));
-    rewriter.applySignatureConversion(&funcOp.getBody(), signatureConverter);
-  });
-  return matchSuccess();
-}
 
 void ConvertStandardToSPIRVPass::runOnModule() {
   MLIRContext *context = &getContext();
@@ -73,7 +34,7 @@ void ConvertStandardToSPIRVPass::runOnModule() {
   SPIRVTypeConverter typeConverter;
   OwningRewritePatternList patterns;
   populateStandardToSPIRVPatterns(context, typeConverter, patterns);
-  patterns.insert<FuncOpConversion>(context, typeConverter);
+  populateBuiltinFuncToSPIRVPatterns(context, typeConverter, patterns);
 
   std::unique_ptr<ConversionTarget> target = spirv::SPIRVConversionTarget::get(
       spirv::lookupTargetEnvOrDefault(module), context);

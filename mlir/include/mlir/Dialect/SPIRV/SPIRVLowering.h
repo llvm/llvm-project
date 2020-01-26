@@ -49,6 +49,14 @@ protected:
   SPIRVTypeConverter &typeConverter;
 };
 
+/// Appends to a pattern list additional patterns for translating the builtin
+/// `func` op to the SPIR-V dialect. These patterns do not handle shader
+/// interface/ABI; they convert function parameters to be of SPIR-V allowed
+/// types.
+void populateBuiltinFuncToSPIRVPatterns(MLIRContext *context,
+                                        SPIRVTypeConverter &typeConverter,
+                                        OwningRewritePatternList &patterns);
+
 namespace spirv {
 class SPIRVConversionTarget : public ConversionTarget {
 public:
