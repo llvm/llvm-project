@@ -683,9 +683,9 @@ public:
   void addEntry(Symbol &sym);
   size_t getNumEntries() const { return entries.size(); }
 
-  size_t headerSize = 0;
+  size_t headerSize;
+  size_t footerSize = 0;
 
-private:
   std::vector<const Symbol *> entries;
 };
 
