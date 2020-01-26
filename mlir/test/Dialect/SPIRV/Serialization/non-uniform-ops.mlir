@@ -7,4 +7,26 @@ spv.module "Logical" "GLSL450" {
   %0 = spv.GroupNonUniformBallot "Workgroup" %predicate : vector<4xi32>
     spv.ReturnValue %0: vector<4xi32>
   }
+
+  // CHECK-LABEL: @group_non_uniform_elect
+  func @group_non_uniform_elect() -> i1 {
+    // CHECK: %{{.+}} = spv.GroupNonUniformElect "Workgroup" : i1
+    %0 = spv.GroupNonUniformElect "Workgroup" : i1
+    spv.ReturnValue %0: i1
+  }
+
+  // CHECK-LABEL: @group_non_uniform_iadd_reduce
+  func @group_non_uniform_iadd_reduce(%val: i32) -> i32 {
+    // CHECK: %{{.+}} = spv.GroupNonUniformIAdd "Workgroup" "Reduce" %{{.+}} : i32
+    %0 = spv.GroupNonUniformIAdd "Workgroup" "Reduce" %val : i32
+    spv.ReturnValue %0: i32
+  }
+
+  // CHECK-LABEL: @group_non_uniform_iadd_clustered_reduce
+  func @group_non_uniform_iadd_clustered_reduce(%val: vector<2xi32>) -> vector<2xi32> {
+    %four = spv.constant 4 : i32
+    // CHECK: %{{.+}} = spv.GroupNonUniformIAdd "Workgroup" "ClusteredReduce" %{{.+}} cluster_size(%{{.+}}) : vector<2xi32>
+    %0 = spv.GroupNonUniformIAdd "Workgroup" "ClusteredReduce" %val cluster_size(%four) : vector<2xi32>
+    spv.ReturnValue %0: vector<2xi32>
+  }
 }

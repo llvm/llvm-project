@@ -32,10 +32,12 @@ using namespace mlir;
 static constexpr const char kAlignmentAttrName[] = "alignment";
 static constexpr const char kBranchWeightAttrName[] = "branch_weights";
 static constexpr const char kCallee[] = "callee";
+static constexpr const char kClusterSize[] = "cluster_size";
 static constexpr const char kDefaultValueAttrName[] = "default_value";
 static constexpr const char kExecutionScopeAttrName[] = "execution_scope";
 static constexpr const char kEqualSemanticsAttrName[] = "equal_semantics";
 static constexpr const char kFnNameAttrName[] = "fn";
+static constexpr const char kGroupOperationAttrName[] = "group_operation";
 static constexpr const char kIndicesAttrName[] = "indices";
 static constexpr const char kInitializerAttrName[] = "initializer";
 static constexpr const char kInterfaceAttrName[] = "interface";
@@ -53,9 +55,8 @@ static constexpr const char kVariableAttrName[] = "variable";
 // Common utility functions
 //===----------------------------------------------------------------------===//
 
-static LogicalResult extractValueFromConstOp(Operation *op,
-                                             int32_t &indexValue) {
-  auto constOp = dyn_cast<spirv::ConstantOp>(op);
+static LogicalResult extractValueFromConstOp(Operation *op, int32_t &value) {
+  auto constOp = dyn_cast_or_null<spirv::ConstantOp>(op);
   if (!constOp) {
     return failure();
   }
@@ -64,7 +65,7 @@ static LogicalResult extractValueFromConstOp(Operation *op,
   if (!integerValueAttr) {
     return failure();
   }
-  indexValue = integerValueAttr.getInt();
+  value = integerValueAttr.getInt();
   return success();
 }
 
@@ -1884,6 +1885,122 @@ static LogicalResult verify(spirv::GroupNonUniformBallotOp ballotOp) {
   if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
     return ballotOp.emitOpError(
         "execution scope must be 'Workgroup' or 'Subgroup'");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GroupNonUniformElectOp
+//===----------------------------------------------------------------------===//
+
+void spirv::GroupNonUniformElectOp::build(Builder *builder,
+                                          OperationState &state,
+                                          spirv::Scope scope) {
+  build(builder, state, builder->getI1Type(), scope);
+}
+
+static ParseResult parseGroupNonUniformElectOp(OpAsmParser &parser,
+                                               OperationState &state) {
+  spirv::Scope executionScope;
+  Type resultType;
+  if (parseEnumAttribute(executionScope, parser, state,
+                         kExecutionScopeAttrName) ||
+      parser.parseColonType(resultType))
+    return failure();
+
+  return parser.addTypeToList(resultType, state.types);
+}
+
+static void print(spirv::GroupNonUniformElectOp groupOp,
+                  OpAsmPrinter &printer) {
+  printer << spirv::GroupNonUniformElectOp::getOperationName() << " \""
+          << stringifyScope(groupOp.execution_scope())
+          << "\" : " << groupOp.getType();
+}
+
+static LogicalResult verify(spirv::GroupNonUniformElectOp groupOp) {
+  spirv::Scope scope = groupOp.execution_scope();
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return groupOp.emitOpError(
+        "execution scope must be 'Workgroup' or 'Subgroup'");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spv.GroupNonUniformIAddOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseGroupNonUniformIAddOp(OpAsmParser &parser,
+                                              OperationState &state) {
+  spirv::Scope executionScope;
+  spirv::GroupOperation groupOperation;
+  OpAsmParser::OperandType valueInfo;
+  if (parseEnumAttribute(executionScope, parser, state,
+                         kExecutionScopeAttrName) ||
+      parseEnumAttribute(groupOperation, parser, state,
+                         kGroupOperationAttrName) ||
+      parser.parseOperand(valueInfo))
+    return failure();
+
+  Optional<OpAsmParser::OperandType> clusterSizeInfo;
+  if (succeeded(parser.parseOptionalKeyword(kClusterSize))) {
+    clusterSizeInfo = OpAsmParser::OperandType();
+    if (parser.parseLParen() || parser.parseOperand(*clusterSizeInfo) ||
+        parser.parseRParen())
+      return failure();
+  }
+
+  Type resultType;
+  if (parser.parseColonType(resultType))
+    return failure();
+
+  if (parser.resolveOperand(valueInfo, resultType, state.operands))
+    return failure();
+
+  if (clusterSizeInfo.hasValue()) {
+    Type i32Type = parser.getBuilder().getIntegerType(32);
+    if (parser.resolveOperand(*clusterSizeInfo, i32Type, state.operands))
+      return failure();
+  }
+
+  return parser.addTypeToList(resultType, state.types);
+}
+
+static void print(spirv::GroupNonUniformIAddOp groupOp, OpAsmPrinter &printer) {
+  printer << spirv::GroupNonUniformIAddOp::getOperationName() << " \""
+          << stringifyScope(groupOp.execution_scope()) << "\" \""
+          << stringifyGroupOperation(groupOp.group_operation()) << "\" "
+          << groupOp.value();
+  if (!groupOp.cluster_size().empty())
+    printer << " " << kClusterSize << '(' << groupOp.cluster_size() << ')';
+  printer << " : " << groupOp.getType();
+}
+
+static LogicalResult verify(spirv::GroupNonUniformIAddOp groupOp) {
+  spirv::Scope scope = groupOp.execution_scope();
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return groupOp.emitOpError(
+        "execution scope must be 'Workgroup' or 'Subgroup'");
+
+  spirv::GroupOperation operation = groupOp.group_operation();
+  if (operation == spirv::GroupOperation::ClusteredReduce &&
+      groupOp.cluster_size().empty())
+    return groupOp.emitOpError("cluster size operand must be provided for "
+                               "'ClusteredReduce' group operation");
+
+  if (!groupOp.cluster_size().empty()) {
+    Operation *sizeOp = (*groupOp.cluster_size().begin()).getDefiningOp();
+    int32_t clusterSize = 0;
+
+    // TODO(antiagainst): support specialization constant here.
+    if (failed(extractValueFromConstOp(sizeOp, clusterSize)))
+      return groupOp.emitOpError(
+          "cluster size operand must come from a constant op");
+
+    if (!llvm::isPowerOf2_32(clusterSize))
+      return groupOp.emitOpError("cluster size operand must be a power of two");
+  }
 
   return success();
 }
