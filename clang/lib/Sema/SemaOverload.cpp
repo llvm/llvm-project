@@ -6295,9 +6295,9 @@ void Sema::AddOverloadCandidate(
         return;
       }
 
-  if (Expr *RequiresClause = Function->getTrailingRequiresClause()) {
+  if (Function->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
-    if (CheckConstraintSatisfaction(RequiresClause, Satisfaction) ||
+    if (CheckFunctionConstraints(Function, Satisfaction) ||
         !Satisfaction.IsSatisfied) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
@@ -6812,9 +6812,9 @@ Sema::AddMethodCandidate(CXXMethodDecl *Method, DeclAccessPair FoundDecl,
         return;
       }
 
-  if (Expr *RequiresClause = Method->getTrailingRequiresClause()) {
+  if (Method->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
-    if (CheckConstraintSatisfaction(RequiresClause, Satisfaction) ||
+    if (CheckFunctionConstraints(Method, Satisfaction) ||
         !Satisfaction.IsSatisfied) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
@@ -7208,10 +7208,9 @@ void Sema::AddConversionCandidate(
     return;
   }
 
-  Expr *RequiresClause = Conversion->getTrailingRequiresClause();
-  if (RequiresClause) {
+  if (Conversion->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
-    if (CheckConstraintSatisfaction(RequiresClause, Satisfaction) ||
+    if (CheckFunctionConstraints(Conversion, Satisfaction) ||
         !Satisfaction.IsSatisfied) {
       Candidate.Viable = false;
       Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
@@ -9951,9 +9950,9 @@ static bool checkAddressOfFunctionIsAvailable(Sema &S, const FunctionDecl *FD,
     return false;
   }
 
-  if (const Expr *RC = FD->getTrailingRequiresClause()) {
+  if (FD->getTrailingRequiresClause()) {
     ConstraintSatisfaction Satisfaction;
-    if (S.CheckConstraintSatisfaction(RC, Satisfaction))
+    if (S.CheckFunctionConstraints(FD, Satisfaction, Loc))
       return false;
     if (!Satisfaction.IsSatisfied) {
       if (Complain) {
@@ -10978,8 +10977,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
         << (unsigned)FnKindPair.first << (unsigned)ocs_non_template
         << FnDesc /* Ignored */;
     ConstraintSatisfaction Satisfaction;
-    if (S.CheckConstraintSatisfaction(Fn->getTrailingRequiresClause(),
-                                      Satisfaction))
+    if (S.CheckFunctionConstraints(Fn, Satisfaction))
       break;
     S.DiagnoseUnsatisfiedConstraint(Satisfaction);
   }
