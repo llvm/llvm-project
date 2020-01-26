@@ -186,6 +186,19 @@ spv.module "Logical" "GLSL450" {
 
 // -----
 
+// Allow calling functions in other module-like ops
+func @callee() {
+  spv.Return
+}
+
+func @caller() {
+  // CHECK: spv.FunctionCall
+  spv.FunctionCall @callee() : () -> ()
+  spv.Return
+}
+
+// -----
+
 spv.module "Logical" "GLSL450" {
   func @f_invalid_result_type(%arg0 : i32, %arg1 : i32) -> () {
     // expected-error @+1 {{expected callee function to have 0 or 1 result, but provided 2}}
@@ -239,18 +252,10 @@ spv.module "Logical" "GLSL450" {
 
 spv.module "Logical" "GLSL450" {
   func @f_foo(%arg0 : i32, %arg1 : i32) -> i32 {
-    // expected-error @+1 {{op callee function 'f_undefined' not found in 'spv.module'}}
+    // expected-error @+1 {{op callee function 'f_undefined' not found in nearest symbol table}}
     %0 = spv.FunctionCall @f_undefined(%arg0, %arg0) : (i32, i32) -> i32
     spv.Return
   }
-}
-
-// -----
-
-func @f_foo(%arg0 : i32, %arg1 : i32) -> i32 {
-    // expected-error @+1 {{must appear in a function inside 'spv.module'}}
-    %0 = spv.FunctionCall @f_foo(%arg0, %arg0) : (i32, i32) -> i32
-    spv.Return
 }
 
 // -----
@@ -497,8 +502,16 @@ func @in_loop(%cond : i1) -> () {
 
 // -----
 
+// CHECK-LABEL: in_other_func_like_op
+func @in_other_func_like_op() {
+  // CHECK: spv.Return 
+  spv.Return
+}
+
+// -----
+
 "foo.function"() ({
-  // expected-error @+1 {{op must appear in a 'func' block}}
+  // expected-error @+1 {{op must appear in a function-like op's block}}
   spv.Return
 })  : () -> ()
 
@@ -562,7 +575,7 @@ func @in_loop(%cond : i1) -> (i32) {
 
 "foo.function"() ({
   %0 = spv.constant true
-  // expected-error @+1 {{op must appear in a 'func' block}}
+  // expected-error @+1 {{op must appear in a function-like op's block}}
   spv.ReturnValue %0 : i1
 })  : () -> ()
 

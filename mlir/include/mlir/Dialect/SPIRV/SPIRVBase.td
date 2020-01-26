@@ -2997,15 +2997,15 @@ def SPV_SelectType : AnyTypeOf<[SPV_Scalar, SPV_Vector, SPV_AnyPtr]>;
 // SPIR-V OpTrait definitions
 //===----------------------------------------------------------------------===//
 
-// Check that an op can only be used within the scope of a FuncOp.
+// Check that an op can only be used within the scope of a function-like op.
 def InFunctionScope : PredOpTrait<
-  "op must appear in a 'func' block",
-  CPred<"($_op.getParentOfType<FuncOp>())">>;
+  "op must appear in a function-like op's block",
+  CPred<"isNestedInFunctionLikeOp($_op.getParentOp())">>;
 
-// Check that an op can only be used within the scope of a SPIR-V ModuleOp.
+// Check that an op can only be used within the scope of a module-like op.
 def InModuleScope : PredOpTrait<
-  "op must appear in a 'spv.module' block",
-  CPred<"llvm::isa_and_nonnull<spirv::ModuleOp>($_op.getParentOp())">>;
+  "op must appear in a module-like op's block",
+  CPred<"isDirectInModuleLikeOp($_op.getParentOp())">>;
 
 //===----------------------------------------------------------------------===//
 // SPIR-V opcode specification
