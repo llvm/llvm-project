@@ -2496,16 +2496,15 @@ define  <4 x float> @shuffle_mem_v4f32_0624(<4 x float> %a0, <4 x float>* %a1) {
 define  <4 x float> @shuffle_mem_v4f32_4760(<4 x float> %a0, <4 x float>* %a1) {
 ; SSE-LABEL: shuffle_mem_v4f32_4760:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps (%rdi), %xmm1
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,0]
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,3],xmm1[2,0]
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],mem[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,3],xmm1[0,2]
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: shuffle_mem_v4f32_4760:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vmovaps (%rdi), %xmm1
-; AVX1OR2-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,0]
-; AVX1OR2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3],xmm1[2,0]
+; AVX1OR2-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[2,0],mem[0,0]
+; AVX1OR2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3],xmm1[0,2]
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: shuffle_mem_v4f32_4760:
