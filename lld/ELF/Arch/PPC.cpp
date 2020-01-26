@@ -198,21 +198,21 @@ void PPC::writeGotPlt(uint8_t *buf, const Symbol &s) const {
 }
 
 bool PPC::needsThunk(RelExpr expr, RelType type, const InputFile *file,
-                     uint64_t branchAddr, const Symbol &s, int64_t /*a*/) const {
-  if (type != R_PPC_REL24 && type != R_PPC_PLTREL24)
+                     uint64_t branchAddr, const Symbol &s, int64_t a) const {
+  if (type != R_PPC_LOCAL24PC && type != R_PPC_REL24 && type != R_PPC_PLTREL24)
     return false;
   if (s.isInPlt())
     return true;
   if (s.isUndefWeak())
     return false;
-  return !(expr == R_PC && PPC::inBranchRange(type, branchAddr, s.getVA()));
+  return !PPC::inBranchRange(type, branchAddr, s.getVA(a));
 }
 
 uint32_t PPC::getThunkSectionSpacing() const { return 0x2000000; }
 
 bool PPC::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   uint64_t offset = dst - src;
-  if (type == R_PPC_REL24 || type == R_PPC_PLTREL24)
+  if (type == R_PPC_LOCAL24PC || type == R_PPC_REL24 || type == R_PPC_PLTREL24)
     return isInt<26>(offset);
   llvm_unreachable("unsupported relocation type used in branch");
 }
@@ -235,13 +235,13 @@ RelExpr PPC::getRelExpr(RelType type, const Symbol &s,
     return R_DTPREL;
   case R_PPC_REL14:
   case R_PPC_REL32:
-  case R_PPC_LOCAL24PC:
   case R_PPC_REL16_LO:
   case R_PPC_REL16_HI:
   case R_PPC_REL16_HA:
     return R_PC;
   case R_PPC_GOT16:
     return R_GOT_OFF;
+  case R_PPC_LOCAL24PC:
   case R_PPC_REL24:
     return R_PLT_PC;
   case R_PPC_PLTREL24:
