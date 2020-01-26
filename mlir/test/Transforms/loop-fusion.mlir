@@ -1622,7 +1622,7 @@ func @should_fuse_after_two_loop_interchanges() {
   // dependence.
   // Once loop '%i2' is interchanged with loop '%i3', and again with loop
   // '%i5', then loop '%i0' can be fused at loop depth 2, because the loop
-  // carring the dependences have been interchanged with loops at depth > 2.
+  // carrying the dependences have been interchanged with loops at depth > 2.
 
   // CHECK:       affine.for %{{.*}} = 0 to 6 {
   // CHECK-NEXT:    affine.for %{{.*}} = 0 to 8 {
