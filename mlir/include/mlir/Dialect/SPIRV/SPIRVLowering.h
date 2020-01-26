@@ -83,8 +83,10 @@ private:
   llvm::SmallSet<Capability, 8> givenCapabilities; /// Allowed capabilities
 };
 
-/// Returns a value that represents a builtin variable value within the SPIR-V
-/// module.
+/// Returns the value for the given `builtin` variable. This function gets or
+/// inserts the global variable associated for the builtin within the nearest
+/// enclosing op that has a symbol table. Returns null Value if such an
+/// enclosing op cannot be found.
 Value getBuiltinVariableValue(Operation *op, BuiltIn builtin,
                               OpBuilder &builder);
 
