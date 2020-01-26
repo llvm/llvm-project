@@ -357,17 +357,25 @@ public:
 class FPOptions {
 public:
   FPOptions() : fp_contract(LangOptions::FPC_Off),
-                fenv_access(LangOptions::FEA_Off) {}
+                fenv_access(LangOptions::FEA_Off),
+                rounding(LangOptions::FPR_ToNearest),
+                exceptions(LangOptions::FPE_Ignore)
+        {}
 
   // Used for serializing.
   explicit FPOptions(unsigned I)
       : fp_contract(static_cast<LangOptions::FPContractModeKind>(I & 3)),
-        fenv_access(static_cast<LangOptions::FEnvAccessModeKind>((I >> 2) & 1))
+        fenv_access(static_cast<LangOptions::FEnvAccessModeKind>((I >> 2) & 1)),
+        rounding(static_cast<LangOptions::FPRoundingModeKind>((I >> 3) & 7)),
+        exceptions(static_cast<LangOptions::FPExceptionModeKind>((I >> 6) & 3))
         {}
 
   explicit FPOptions(const LangOptions &LangOpts)
       : fp_contract(LangOpts.getDefaultFPContractMode()),
-        fenv_access(LangOptions::FEA_Off) {}
+        fenv_access(LangOptions::FEA_Off),
+        rounding(LangOptions::FPR_ToNearest),
+        exceptions(LangOptions::FPE_Ignore)
+        {}
   // FIXME: Use getDefaultFEnvAccessMode() when available.
 
   bool allowFPContractWithinStatement() const {
@@ -398,14 +406,42 @@ public:
 
   void setDisallowFEnvAccess() { fenv_access = LangOptions::FEA_Off; }
 
+  LangOptions::FPRoundingModeKind getRoundingMode() const {
+    return static_cast<LangOptions::FPRoundingModeKind>(rounding);
+  }
+
+  void setRoundingMode(LangOptions::FPRoundingModeKind RM) {
+    rounding = RM;
+  }
+
+  LangOptions::FPExceptionModeKind getExceptionMode() const {
+    return static_cast<LangOptions::FPExceptionModeKind>(exceptions);
+  }
+
+  void setExceptionMode(LangOptions::FPExceptionModeKind EM) {
+    exceptions = EM;
+  }
+
+  bool isFPConstrained() const {
+    return getRoundingMode() != LangOptions::FPR_ToNearest ||
+           getExceptionMode() != LangOptions::FPE_Ignore ||
+           allowFEnvAccess();
+  }
+
   /// Used to serialize this.
-  unsigned getInt() const { return fp_contract | (fenv_access << 2); }
+  unsigned getInt() const {
+    return fp_contract | (fenv_access << 2) | (rounding << 3)
+        | (exceptions << 6);
+  }
 
 private:
-  /// Adjust BinaryOperator::FPFeatures to match the total bit-field size
-  /// of these two.
+  /// Adjust BinaryOperatorBitfields::FPFeatures and
+  /// CXXOperatorCallExprBitfields::FPFeatures to match the total bit-field size
+  /// of these fields.
   unsigned fp_contract : 2;
   unsigned fenv_access : 1;
+  unsigned rounding : 3;
+  unsigned exceptions : 2;
 };
 
 /// Describes the kind of translation unit being processed.
