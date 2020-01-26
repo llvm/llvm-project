@@ -288,9 +288,7 @@ Value mlir::spirv::getBuiltinVariableValue(Operation *op,
   spirv::GlobalVariableOp varOp =
       getOrInsertBuiltinVariable(moduleOp, op->getLoc(), builtin, builder);
   Value ptr = builder.create<spirv::AddressOfOp>(op->getLoc(), varOp);
-  return builder.create<spirv::LoadOp>(op->getLoc(), ptr,
-                                       /*memory_access =*/nullptr,
-                                       /*alignment =*/nullptr);
+  return builder.create<spirv::LoadOp>(op->getLoc(), ptr);
 }
 
 //===----------------------------------------------------------------------===//

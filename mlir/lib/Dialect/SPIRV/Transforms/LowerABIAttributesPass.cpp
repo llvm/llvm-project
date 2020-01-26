@@ -191,9 +191,7 @@ FuncOpLowering::matchAndRewrite(FuncOp funcOp, ArrayRef<Value> operands,
           spirv::ConstantOp::getZero(indexType, funcOp.getLoc(), &rewriter);
       auto loadPtr = rewriter.create<spirv::AccessChainOp>(
           funcOp.getLoc(), replacement, zero.constant());
-      replacement = rewriter.create<spirv::LoadOp>(funcOp.getLoc(), loadPtr,
-                                                   /*memory_access=*/nullptr,
-                                                   /*alignment=*/nullptr);
+      replacement = rewriter.create<spirv::LoadOp>(funcOp.getLoc(), loadPtr);
     }
     signatureConverter.remapInput(argType.index(), replacement);
   }
