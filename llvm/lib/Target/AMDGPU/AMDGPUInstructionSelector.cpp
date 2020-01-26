@@ -1627,7 +1627,8 @@ bool AMDGPUInstructionSelector::selectG_BRCOND(MachineInstr &I) const {
   return true;
 }
 
-bool AMDGPUInstructionSelector::selectG_FRAME_INDEX(MachineInstr &I) const {
+bool AMDGPUInstructionSelector::selectG_FRAME_INDEX_GLOBAL_VALUE(
+  MachineInstr &I) const {
   Register DstReg = I.getOperand(0).getReg();
   const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
   const bool IsVGPR = DstRB->getID() == AMDGPU::VGPRRegBankID;
@@ -1961,7 +1962,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_BRCOND:
     return selectG_BRCOND(I);
   case TargetOpcode::G_FRAME_INDEX:
-    return selectG_FRAME_INDEX(I);
+  case TargetOpcode::G_GLOBAL_VALUE:
+    return selectG_FRAME_INDEX_GLOBAL_VALUE(I);
   case TargetOpcode::G_PTR_MASK:
     return selectG_PTR_MASK(I);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
