@@ -1027,6 +1027,21 @@ AMDGPUInstructionSelector::splitBufferOffsets(MachineIRBuilder &B,
   return std::make_tuple(BaseReg, ImmOffset, TotalConstOffset);
 }
 
+bool AMDGPUInstructionSelector::selectEndCfIntrinsic(MachineInstr &MI) const {
+  // FIXME: Manually selecting to avoid dealiing with the SReg_1 trick
+  // SelectionDAG uses for wave32 vs wave64.
+  MachineBasicBlock *BB = MI.getParent();
+  BuildMI(*BB, &MI, MI.getDebugLoc(), TII.get(AMDGPU::SI_END_CF))
+      .add(MI.getOperand(1));
+
+  Register Reg = MI.getOperand(1).getReg();
+  MI.eraseFromParent();
+
+  if (!MRI->getRegClassOrNull(Reg))
+    MRI->setRegClass(Reg, TRI.getWaveMaskRegClass());
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectStoreIntrinsic(MachineInstr &MI,
                                                      bool IsFormat) const {
   MachineIRBuilder B(MI);
@@ -1306,23 +1321,10 @@ bool AMDGPUInstructionSelector::selectDSAppendConsume(MachineInstr &MI,
 
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     MachineInstr &I) const {
-  MachineBasicBlock *BB = I.getParent();
   unsigned IntrinsicID = I.getIntrinsicID();
   switch (IntrinsicID) {
-  case Intrinsic::amdgcn_end_cf: {
-    // FIXME: Manually selecting to avoid dealiing with the SReg_1 trick
-    // SelectionDAG uses for wave32 vs wave64.
-    BuildMI(*BB, &I, I.getDebugLoc(),
-            TII.get(AMDGPU::SI_END_CF))
-      .add(I.getOperand(1));
-
-    Register Reg = I.getOperand(1).getReg();
-    I.eraseFromParent();
-
-    if (!MRI->getRegClassOrNull(Reg))
-      MRI->setRegClass(Reg, TRI.getWaveMaskRegClass());
-    return true;
-  }
+  case Intrinsic::amdgcn_end_cf:
+    return selectEndCfIntrinsic(I);
   case Intrinsic::amdgcn_raw_buffer_store:
     return selectStoreIntrinsic(I, false);
   case Intrinsic::amdgcn_raw_buffer_store_format:
