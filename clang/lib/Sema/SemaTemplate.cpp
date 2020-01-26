@@ -2047,12 +2047,14 @@ private:
       if (const auto *TC = TTP->getTypeConstraint()) {
         TemplateArgumentListInfo TransformedArgs;
         const auto *ArgsAsWritten = TC->getTemplateArgsAsWritten();
-        if (SemaRef.Subst(ArgsAsWritten->getTemplateArgs(),
+        if (!ArgsAsWritten ||
+            SemaRef.Subst(ArgsAsWritten->getTemplateArgs(),
                           ArgsAsWritten->NumTemplateArgs, TransformedArgs,
                           Args))
           SemaRef.AttachTypeConstraint(
               TC->getNestedNameSpecifierLoc(), TC->getConceptNameInfo(),
-              TC->getNamedConcept(), &TransformedArgs, NewTTP,
+              TC->getNamedConcept(), ArgsAsWritten ? &TransformedArgs : nullptr,
+              NewTTP,
               NewTTP->isParameterPack()
                  ? cast<CXXFoldExpr>(TC->getImmediatelyDeclaredConstraint())
                      ->getEllipsisLoc()
