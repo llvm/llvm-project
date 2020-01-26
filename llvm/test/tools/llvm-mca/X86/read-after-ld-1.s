@@ -114,7 +114,7 @@ vaddps  (%rax), %xmm1, %xmm1
 # ZNVER1-NEXT:    Index     0123456789
 
 # ZNVER2-NEXT:                        0123456789
-# ZNVER2-NEXT:    Index     0123456789
+# ZNVER2-NEXT:    Index     0123456789          0
 
 # BARCELONA:      [0,0]     DeeeeeeeeeeeeeeER  .   vdivps	%xmm0, %xmm1, %xmm1
 # BARCELONA-NEXT: [0,1]     D========eeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
@@ -140,7 +140,7 @@ vaddps  (%rax), %xmm1, %xmm1
 # ZNVER1:         [0,0]     DeeeeeeeeeeeeeeeER .   vdivps	%xmm0, %xmm1, %xmm1
 # ZNVER1-NEXT:    [0,1]     D=======eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
-# ZNVER2:         [0,0]     DeeeeeeeeeeeeeeeER .   vdivps	%xmm0, %xmm1, %xmm1
+# ZNVER2:         [0,0]     DeeeeeeeeeeeeeeeER  .   vdivps	%xmm0, %xmm1, %xmm1
 # ZNVER2-NEXT:    [0,1]     D========eeeeeeeeeeER   vaddps	(%rax), %xmm1, %xmm1
 
 # ALL:            Average Wait times (based on the timeline view):
