@@ -245,8 +245,7 @@ public:
   // decide the offsets in the call stub.
   PPC32PltCallStub(const InputSection &isec, const Relocation &rel,
                    Symbol &dest)
-      : Thunk(dest, rel.type == R_PPC_PLTREL24 ? rel.addend : 0),
-        file(isec.file) {}
+      : Thunk(dest, rel.addend), file(isec.file) {}
   uint32_t size() override { return 16; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
@@ -255,6 +254,14 @@ public:
 private:
   // Records the call site of the call stub.
   const InputFile *file;
+};
+
+class PPC32LongThunk final : public Thunk {
+public:
+  PPC32LongThunk(Symbol &dest, int64_t addend) : Thunk(dest, addend) {}
+  uint32_t size() override { return config->isPic ? 32 : 16; }
+  void writeTo(uint8_t *buf) override;
+  void addSymbols(ThunkSection &isec) override;
 };
 
 // PPC64 Plt call stubs.
@@ -765,6 +772,33 @@ bool PPC32PltCallStub::isCompatibleWith(const InputSection &isec,
   return !config->isPic || (isec.file == file && rel.addend == addend);
 }
 
+void PPC32LongThunk::addSymbols(ThunkSection &isec) {
+  addSymbol(saver.save("__LongThunk_" + destination.getName()), STT_FUNC, 0,
+            isec);
+}
+
+void PPC32LongThunk::writeTo(uint8_t *buf) {
+  auto ha = [](uint32_t v) -> uint16_t { return (v + 0x8000) >> 16; };
+  auto lo = [](uint32_t v) -> uint16_t { return v; };
+  uint32_t d = destination.getVA(addend);
+  if (config->isPic) {
+    uint32_t off = d - (getThunkTargetSym()->getVA() + 8);
+    write32(buf + 0, 0x7c0802a6);            // mflr r12,0
+    write32(buf + 4, 0x429f0005);            // bcl r20,r31,.+4
+    write32(buf + 8, 0x7d8802a6);            // mtctr r12
+    write32(buf + 12, 0x3d8c0000 | ha(off)); // addis r12,r12,off@ha
+    write32(buf + 16, 0x398c0000 | lo(off)); // addi r12,r12,off@l
+    write32(buf + 20, 0x7c0803a6);           // mtlr r0
+    buf += 24;
+  } else {
+    write32(buf + 0, 0x3d800000 | ha(d));    // lis r12,d@ha
+    write32(buf + 4, 0x398c0000 | lo(d));    // addi r12,r12,d@l
+    buf += 8;
+  }
+  write32(buf + 0, 0x7d8903a6);              // mtctr r12
+  write32(buf + 4, 0x4e800420);              // bctr
+}
+
 void writePPC64LoadAndBranch(uint8_t *buf, int64_t offset) {
   uint16_t offHa = (offset + 0x8000) >> 16;
   uint16_t offLo = offset & 0xffff;
@@ -902,9 +936,12 @@ static Thunk *addThunkMips(RelType type, Symbol &s) {
 
 static Thunk *addThunkPPC32(const InputSection &isec, const Relocation &rel,
                             Symbol &s) {
-  assert((rel.type == R_PPC_REL24 || rel.type == R_PPC_PLTREL24) &&
+  assert((rel.type == R_PPC_LOCAL24PC || rel.type == R_PPC_REL24 ||
+          rel.type == R_PPC_PLTREL24) &&
          "unexpected relocation type for thunk");
-  return make<PPC32PltCallStub>(isec, rel, s);
+  if (s.isInPlt())
+    return make<PPC32PltCallStub>(isec, rel, s);
+  return make<PPC32LongThunk>(s, rel.addend);
 }
 
 static Thunk *addThunkPPC64(RelType type, Symbol &s, int64_t a) {
