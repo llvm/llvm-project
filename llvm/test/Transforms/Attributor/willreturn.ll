@@ -306,8 +306,8 @@ declare i32 @__gxx_personality_v0(...)
 ; }
 
 ; FIXME: missing willreturn
-; ATTRIBUTOR_MODULE: Function Attrs: nofree noinline nosync nounwind readonly uwtable
-; ATTRIBUTOR_CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind readonly uwtable
+; ATTRIBUTOR_MODULE: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
+; ATTRIBUTOR_CGSCC: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
 ; ATTRIBUTOR-NEXT: define i32 @loop_constant_trip_count(i32* nocapture nofree readonly %0)
 define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
   br label %3
@@ -338,8 +338,8 @@ define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
 ;     return ans;
 ; }
 ; FNATTR-NEXT: define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, i32 %3) local_unnamed_addr
-; ATTRIBUTOR_MODULE: Function Attrs: nofree noinline nosync nounwind readonly uwtable
-; ATTRIBUTOR_CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind readonly uwtable
+; ATTRIBUTOR_MODULE: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
+; ATTRIBUTOR_CGSCC: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
 ; ATTRIBUTOR-NOT: willreturn
 ; ATTRIBUTOR-NEXT: define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture nofree readonly %2, i32 %3) local_unnamed_addr
 define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, i32 %3) local_unnamed_addr #0 {
@@ -375,8 +375,8 @@ define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, 
 
 
 ; FIXME: missing willreturn
-; ATTRIBUTOR_MODULE: Function Attrs: nofree noinline nosync nounwind readonly uwtable
-; ATTRIBUTOR_CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind readonly uwtable
+; ATTRIBUTOR_MODULE: Function Attrs: argmemonly nofree noinline nosync nounwind readonly uwtable
+; ATTRIBUTOR_CGSCC: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
 ; ATTRIBUTOR-NEXT: define i32 @loop_trip_dec(i32 %0, i32* nocapture nofree readonly %1) local_unnamed_addr
 
 define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1) local_unnamed_addr #0 {

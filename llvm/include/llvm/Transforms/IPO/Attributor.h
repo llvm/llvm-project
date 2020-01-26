@@ -2508,7 +2508,8 @@ struct AAPrivatizablePtr : public StateWrapper<BooleanState, AbstractAttribute>,
   static const char ID;
 };
 
-/// An abstract interface for all memory related attributes.
+/// An abstract interface for memory access kind related attributes
+/// (readnone/readonly/writeonly).
 struct AAMemoryBehavior
     : public IRAttribute<
           Attribute::ReadNone,
@@ -2524,6 +2525,7 @@ struct AAMemoryBehavior
 
     BEST_STATE = NO_ACCESSES,
   };
+  static_assert(BEST_STATE == getBestState(), "Unexpected BEST_STATE value");
 
   /// Return true if we know that the underlying value is not read or accessed
   /// in its respective scope.
@@ -2552,6 +2554,145 @@ struct AAMemoryBehavior
   /// Create an abstract attribute view for the position \p IRP.
   static AAMemoryBehavior &createForPosition(const IRPosition &IRP,
                                              Attributor &A);
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+/// An abstract interface for all memory location attributes
+/// (readnone/argmemonly/inaccessiblememonly/inaccessibleorargmemonly).
+struct AAMemoryLocation
+    : public IRAttribute<
+          Attribute::ReadNone,
+          StateWrapper<BitIntegerState<uint32_t, 511>, AbstractAttribute>> {
+  using MemoryLocationsKind = StateType::base_t;
+
+  AAMemoryLocation(const IRPosition &IRP) : IRAttribute(IRP) {}
+
+  /// Encoding of different locations that could be accessed by a memory
+  /// access.
+  enum {
+    ALL_LOCATIONS = 0,
+    NO_LOCAL_MEM = 1 << 0,
+    NO_CONST_MEM = 1 << 1,
+    NO_GLOBAL_INTERNAL_MEM = 1 << 2,
+    NO_GLOBAL_EXTERNAL_MEM = 1 << 3,
+    NO_GLOBAL_MEM = NO_GLOBAL_INTERNAL_MEM | NO_GLOBAL_EXTERNAL_MEM,
+    NO_ARGUMENT_MEM = 1 << 4,
+    NO_INACCESSIBLE_MEM = 1 << 5,
+    NO_MALLOCED_MEM = 1 << 6,
+    NO_UNKOWN_MEM = 1 << 7,
+    NO_LOCATIONS = NO_LOCAL_MEM | NO_CONST_MEM | NO_GLOBAL_INTERNAL_MEM |
+                   NO_GLOBAL_EXTERNAL_MEM | NO_ARGUMENT_MEM |
+                   NO_INACCESSIBLE_MEM | NO_MALLOCED_MEM | NO_UNKOWN_MEM,
+
+    // Helper bit to track if we gave up or not.
+    VALID_STATE = NO_LOCATIONS + 1,
+
+    BEST_STATE = NO_LOCATIONS | VALID_STATE,
+  };
+  static_assert(BEST_STATE == getBestState(), "Unexpected BEST_STATE value");
+
+  /// Return true if we know that the associated functions has no observable
+  /// accesses.
+  bool isKnownReadNone() const { return isKnown(NO_LOCATIONS); }
+
+  /// Return true if we assume that the associated functions has no observable
+  /// accesses.
+  bool isAssumedReadNone() const {
+    return isAssumed(NO_LOCATIONS) | isAssumedStackOnly();
+  }
+
+  /// Return true if we know that the associated functions has at most
+  /// local/stack accesses.
+  bool isKnowStackOnly() const {
+    return isKnown(inverseLocation(NO_LOCAL_MEM, true, true));
+  }
+
+  /// Return true if we assume that the associated functions has at most
+  /// local/stack accesses.
+  bool isAssumedStackOnly() const {
+    return isAssumed(inverseLocation(NO_LOCAL_MEM, true, true));
+  }
+
+  /// Return true if we know that the underlying value will only access
+  /// inaccesible memory only (see Attribute::InaccessibleMemOnly).
+  bool isKnownInaccessibleMemOnly() const {
+    return isKnown(inverseLocation(NO_INACCESSIBLE_MEM, true, true));
+  }
+
+  /// Return true if we assume that the underlying value will only access
+  /// inaccesible memory only (see Attribute::InaccessibleMemOnly).
+  bool isAssumedInaccessibleMemOnly() const {
+    return isAssumed(inverseLocation(NO_INACCESSIBLE_MEM, true, true));
+  }
+
+  /// Return true if we know that the underlying value will only access
+  /// argument pointees (see Attribute::ArgMemOnly).
+  bool isKnownArgMemOnly() const {
+    return isKnown(inverseLocation(NO_ARGUMENT_MEM, true, true));
+  }
+
+  /// Return true if we assume that the underlying value will only access
+  /// argument pointees (see Attribute::ArgMemOnly).
+  bool isAssumedArgMemOnly() const {
+    return isAssumed(inverseLocation(NO_ARGUMENT_MEM, true, true));
+  }
+
+  /// Return true if we know that the underlying value will only access
+  /// inaccesible memory or argument pointees (see
+  /// Attribute::InaccessibleOrArgMemOnly).
+  bool isKnownInaccessibleOrArgMemOnly() const {
+    return isKnown(
+        inverseLocation(NO_INACCESSIBLE_MEM | NO_ARGUMENT_MEM, true, true));
+  }
+
+  /// Return true if we assume that the underlying value will only access
+  /// inaccesible memory or argument pointees (see
+  /// Attribute::InaccessibleOrArgMemOnly).
+  bool isAssumedInaccessibleOrArgMemOnly() const {
+    return isAssumed(
+        inverseLocation(NO_INACCESSIBLE_MEM | NO_ARGUMENT_MEM, true, true));
+  }
+
+  /// Return true if the underlying value may access memory through arguement
+  /// pointers of the associated function, if any.
+  bool mayAccessArgMem() const { return !isAssumed(NO_ARGUMENT_MEM); }
+
+  /// Return true if only the memory locations specififed by \p MLK are assumed
+  /// to be accessed by the associated function.
+  bool isAssumedSpecifiedMemOnly(MemoryLocationsKind MLK) const {
+    return isAssumed(MLK);
+  }
+
+  /// Return the locations that are assumed to be not accessed by the associated
+  /// function, if any.
+  MemoryLocationsKind getAssumedNotAccessedLocation() const {
+    return getAssumed();
+  }
+
+  /// Return the inverse of location \p Loc, thus for NO_XXX the return
+  /// describes ONLY_XXX. The flags \p AndLocalMem and \p AndConstMem determine
+  /// if local (=stack) and constant memory are allowed as well. Most of the
+  /// time we do want them to be included, e.g., argmemonly allows accesses via
+  /// argument pointers or local or constant memory accesses.
+  static MemoryLocationsKind
+  inverseLocation(MemoryLocationsKind Loc, bool AndLocalMem, bool AndConstMem) {
+    return NO_LOCATIONS & ~(Loc | (AndLocalMem ? NO_LOCAL_MEM : 0) |
+                            (AndConstMem ? NO_CONST_MEM : 0));
+  };
+
+  /// Return the locations encoded by \p MLK as a readable string.
+  static std::string getMemoryLocationsAsStr(MemoryLocationsKind MLK);
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAMemoryLocation &createForPosition(const IRPosition &IRP,
+                                             Attributor &A);
+
+  /// See AbstractState::getAsStr().
+  const std::string getAsStr() const override {
+    return getMemoryLocationsAsStr(getAssumedNotAccessedLocation());
+  }
 
   /// Unique ID (due to the unique address)
   static const char ID;

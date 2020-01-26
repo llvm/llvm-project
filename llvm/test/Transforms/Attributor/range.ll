@@ -20,12 +20,12 @@ define i32 @test0-range-check(i32* %p) {
 ;
 ; OLD_PM-LABEL: define {{[^@]+}}@test0-range-check
 ; OLD_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; OLD_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #0, !range !0
+; OLD_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
 ; OLD_PM-NEXT:    ret i32 [[A]]
 ;
 ; NEW_PM-LABEL: define {{[^@]+}}@test0-range-check
 ; NEW_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; NEW_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #0, !range !0
+; NEW_PM-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
 ; NEW_PM-NEXT:    ret i32 [[A]]
 ;
 ; CGSCC_OLD_PM-LABEL: define {{[^@]+}}@test0-range-check
@@ -40,7 +40,7 @@ define i32 @test0-range-check(i32* %p) {
 ;
 ; MODULE-LABEL: define {{[^@]+}}@test0-range-check
 ; MODULE-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; MODULE-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #0, !range !0
+; MODULE-NEXT:    [[A:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
 ; MODULE-NEXT:    ret i32 [[A]]
 ; CGSCC-LABEL: define {{[^@]+}}@test0-range-check
 ; CGSCC-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[P:%.*]])
@@ -65,7 +65,7 @@ define void @use3(i1, i1, i1) {
 define void @test0-icmp-check(i32* %p){
 ; OLD_PM-LABEL: define {{[^@]+}}@test0-icmp-check
 ; OLD_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; OLD_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #0, !range !0
+; OLD_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
 ; OLD_PM-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; OLD_PM-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
 ; OLD_PM-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
@@ -112,7 +112,7 @@ define void @test0-icmp-check(i32* %p){
 ;
 ; NEW_PM-LABEL: define {{[^@]+}}@test0-icmp-check
 ; NEW_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; NEW_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #0, !range !0
+; NEW_PM-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
 ; NEW_PM-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; NEW_PM-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
 ; NEW_PM-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
@@ -293,7 +293,7 @@ define void @test0-icmp-check(i32* %p){
 ;
 ; MODULE-LABEL: define {{[^@]+}}@test0-icmp-check
 ; MODULE-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; MODULE-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #0, !range !0
+; MODULE-NEXT:    [[RET:%.*]] = tail call i32 @test0(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !0
 ; MODULE-NEXT:    [[CMP_EQ_2:%.*]] = icmp eq i32 [[RET]], 9
 ; MODULE-NEXT:    [[CMP_EQ_3:%.*]] = icmp eq i32 [[RET]], 8
 ; MODULE-NEXT:    [[CMP_EQ_4:%.*]] = icmp eq i32 [[RET]], 1
@@ -505,13 +505,13 @@ define i32 @test1(i32* %p) {
 define i1 @test1-check(i32* %p) {
 ; OLD_PM-LABEL: define {{[^@]+}}@test1-check
 ; OLD_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; OLD_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #0, !range !2
+; OLD_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !2
 ; OLD_PM-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
 ; OLD_PM-NEXT:    ret i1 [[CMP]]
 ;
 ; NEW_PM-LABEL: define {{[^@]+}}@test1-check
 ; NEW_PM-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; NEW_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #0, !range !2
+; NEW_PM-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !2
 ; NEW_PM-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
 ; NEW_PM-NEXT:    ret i1 [[CMP]]
 ;
@@ -529,7 +529,7 @@ define i1 @test1-check(i32* %p) {
 ;
 ; MODULE-LABEL: define {{[^@]+}}@test1-check
 ; MODULE-SAME: (i32* nocapture nofree readonly [[P:%.*]])
-; MODULE-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #0, !range !2
+; MODULE-NEXT:    [[RES:%.*]] = tail call i32 @test1(i32* nocapture nofree readonly [[P]]) #{{[0-9]+}}, !range !2
 ; MODULE-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RES]], 500
 ; MODULE-NEXT:    ret i1 [[CMP]]
 ; CGSCC-LABEL: define {{[^@]+}}@test1-check

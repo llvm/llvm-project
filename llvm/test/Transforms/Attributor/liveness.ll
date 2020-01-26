@@ -43,7 +43,7 @@ define internal i32 @dead_internal_func(i32 %0) {
   br i1 %10, label %3, label %5
 }
 
-; CHECK: Function Attrs: nofree norecurse nounwind uwtable willreturn
+; CHECK: Function Attrs: argmemonly nofree norecurse nounwind uwtable willreturn
 define i32 @volatile_load(i32*) norecurse nounwind uwtable {
   %2 = load volatile i32, i32* %0, align 4
   ret i32 %2

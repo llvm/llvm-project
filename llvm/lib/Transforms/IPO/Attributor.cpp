@@ -134,6 +134,7 @@ PIPE_OPERATOR(AANoFree)
 PIPE_OPERATOR(AAHeapToStack)
 PIPE_OPERATOR(AAReachability)
 PIPE_OPERATOR(AAMemoryBehavior)
+PIPE_OPERATOR(AAMemoryLocation)
 PIPE_OPERATOR(AAValueConstantRange)
 PIPE_OPERATOR(AAPrivatizablePtr)
 
@@ -383,7 +384,7 @@ template <typename AAType, typename StateTy>
 static bool genericValueTraversal(
     Attributor &A, IRPosition IRP, const AAType &QueryingAA, StateTy &State,
     const function_ref<bool(Value &, StateTy &, bool)> &VisitValueCB,
-    int MaxValues = 8) {
+    int MaxValues = 8, const function_ref<Value *(Value *)> StripCB = nullptr) {
 
   const AAIsDead *LivenessAA = nullptr;
   if (IRP.getAnchorScope())
@@ -400,6 +401,8 @@ static bool genericValueTraversal(
   int Iteration = 0;
   do {
     Value *V = Worklist.pop_back_val();
+    if (StripCB)
+      V = StripCB(V);
 
     // Check if we should process the current value. To prevent endless
     // recursion keep a record of the values we followed!
@@ -733,7 +736,6 @@ void IRPosition::verify() {
   }
 }
 
-namespace {
 /// Helper function to clamp a state \p S of type \p StateType with the
 /// information in \p R and indicate/return if \p S did change (as-in update is
 /// required to be run again).
@@ -5562,7 +5564,7 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
         State.addKnownBits(NO_READS);
         break;
       default:
-        llvm_unreachable("Unexpcted attribute!");
+        llvm_unreachable("Unexpected attribute!");
       }
     }
 
@@ -5589,6 +5591,9 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
+    if (hasAttr(Attribute::ReadNone, /* IgnoreSubsumingPositions */ true))
+      return ChangeStatus::UNCHANGED;
+
     const IRPosition &IRP = getIRPosition();
 
     // Check if we would improve the existing attributes first.
@@ -5693,6 +5698,10 @@ struct AAMemoryBehaviorArgument : AAMemoryBehaviorFloating {
   }
 
   ChangeStatus manifest(Attributor &A) override {
+    // TODO: Pointer arguments are not supported on vectors of pointers yet.
+    if (!getAssociatedValue().getType()->isPointerTy())
+      return ChangeStatus::UNCHANGED;
+
     // TODO: From readattrs.ll: "inalloca parameters are always
     //                           considered written"
     if (hasAttr({Attribute::InAlloca})) {
@@ -5835,7 +5844,6 @@ struct AAMemoryBehaviorCallSite final : AAMemoryBehaviorImpl {
       STATS_DECLTRACK_CS_ATTR(writeonly)
   }
 };
-} // namespace
 
 ChangeStatus AAMemoryBehaviorFunction::updateImpl(Attributor &A) {
 
@@ -6028,6 +6036,384 @@ void AAMemoryBehaviorFloating::analyzeUseIn(Attributor &A, const Use *U,
   if (UserI->mayWriteToMemory())
     removeAssumedBits(NO_WRITES);
 }
+
+/// -------------------- Memory Locations Attributes ---------------------------
+/// Includes read-none, argmemonly, inaccessiblememonly,
+/// inaccessiblememorargmemonly
+/// ----------------------------------------------------------------------------
+
+std::string AAMemoryLocation::getMemoryLocationsAsStr(
+    AAMemoryLocation::MemoryLocationsKind MLK) {
+  if (0 == (MLK & AAMemoryLocation::NO_LOCATIONS))
+    return "all memory";
+  if (MLK == AAMemoryLocation::NO_LOCATIONS)
+    return "no memory";
+  std::string S = "memory:";
+  if (0 == (MLK & AAMemoryLocation::NO_LOCAL_MEM))
+    S += "stack,";
+  if (0 == (MLK & AAMemoryLocation::NO_CONST_MEM))
+    S += "constant,";
+  if (0 == (MLK & AAMemoryLocation::NO_GLOBAL_INTERNAL_MEM))
+    S += "internal global,";
+  if (0 == (MLK & AAMemoryLocation::NO_GLOBAL_EXTERNAL_MEM))
+    S += "external global,";
+  if (0 == (MLK & AAMemoryLocation::NO_ARGUMENT_MEM))
+    S += "argument,";
+  if (0 == (MLK & AAMemoryLocation::NO_INACCESSIBLE_MEM))
+    S += "inaccessible,";
+  if (0 == (MLK & AAMemoryLocation::NO_MALLOCED_MEM))
+    S += "malloced,";
+  if (0 == (MLK & AAMemoryLocation::NO_UNKOWN_MEM))
+    S += "unknown,";
+  S.pop_back();
+  return S;
+}
+
+struct AAMemoryLocationImpl : public AAMemoryLocation {
+
+  AAMemoryLocationImpl(const IRPosition &IRP) : AAMemoryLocation(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    intersectAssumedBits(BEST_STATE);
+    getKnownStateFromValue(getIRPosition(), getState());
+    IRAttribute::initialize(A);
+  }
+
+  /// Return the memory behavior information encoded in the IR for \p IRP.
+  static void getKnownStateFromValue(const IRPosition &IRP,
+                                     BitIntegerState &State,
+                                     bool IgnoreSubsumingPositions = false) {
+    SmallVector<Attribute, 2> Attrs;
+    IRP.getAttrs(AttrKinds, Attrs, IgnoreSubsumingPositions);
+    for (const Attribute &Attr : Attrs) {
+      switch (Attr.getKindAsEnum()) {
+      case Attribute::ReadNone:
+        State.addKnownBits(NO_LOCAL_MEM | NO_CONST_MEM);
+        break;
+      case Attribute::InaccessibleMemOnly:
+        State.addKnownBits(inverseLocation(NO_INACCESSIBLE_MEM, true, true));
+        break;
+      case Attribute::ArgMemOnly:
+        State.addKnownBits(inverseLocation(NO_ARGUMENT_MEM, true, true));
+        break;
+      case Attribute::InaccessibleMemOrArgMemOnly:
+        State.addKnownBits(
+            inverseLocation(NO_INACCESSIBLE_MEM | NO_ARGUMENT_MEM, true, true));
+        break;
+      default:
+        llvm_unreachable("Unexpected attribute!");
+      }
+    }
+  }
+
+  /// See AbstractAttribute::getDeducedAttributes(...).
+  void getDeducedAttributes(LLVMContext &Ctx,
+                            SmallVectorImpl<Attribute> &Attrs) const override {
+    assert(Attrs.size() == 0);
+    if (isAssumedReadNone()) {
+      Attrs.push_back(Attribute::get(Ctx, Attribute::ReadNone));
+    } else if (getIRPosition().getPositionKind() == IRPosition::IRP_FUNCTION) {
+      if (isAssumedInaccessibleMemOnly())
+        Attrs.push_back(Attribute::get(Ctx, Attribute::InaccessibleMemOnly));
+      else if (isAssumedArgMemOnly())
+        Attrs.push_back(Attribute::get(Ctx, Attribute::ArgMemOnly));
+      else if (isAssumedInaccessibleOrArgMemOnly())
+        Attrs.push_back(
+            Attribute::get(Ctx, Attribute::InaccessibleMemOrArgMemOnly));
+    }
+    assert(Attrs.size() <= 1);
+  }
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    const IRPosition &IRP = getIRPosition();
+
+    // Check if we would improve the existing attributes first.
+    SmallVector<Attribute, 4> DeducedAttrs;
+    getDeducedAttributes(IRP.getAnchorValue().getContext(), DeducedAttrs);
+    if (llvm::all_of(DeducedAttrs, [&](const Attribute &Attr) {
+          return IRP.hasAttr(Attr.getKindAsEnum(),
+                             /* IgnoreSubsumingPositions */ true);
+        }))
+      return ChangeStatus::UNCHANGED;
+
+    // Clear existing attributes.
+    IRP.removeAttrs(AttrKinds);
+    if (isAssumedReadNone())
+      IRP.removeAttrs(AAMemoryBehaviorImpl::AttrKinds);
+
+    // Use the generic manifest method.
+    return IRAttribute::manifest(A);
+  }
+
+protected:
+  /// Return the kind(s) of location that may be accessed by \p V.
+  AAMemoryLocation::MemoryLocationsKind
+  categorizeAccessedLocations(Attributor &A, Instruction &I, bool &Changed);
+
+  /// Update the state \p State given that \p I is an access to a \p MLK memory
+  /// location with the access pointer \p Ptr.
+  static void updateState(AAMemoryLocation::StateType &State,
+                          MemoryLocationsKind MLK, const Instruction &I,
+                          const Value *Ptr, bool &Changed) {
+    assert(isPowerOf2_32(MLK) && "Expected a single location set!");
+    State.removeAssumedBits(MLK);
+  }
+
+  /// Determine the underlying locations kinds for \p Ptr, e.g., globals or
+  /// arguments, and update the state and access map accordingly.
+  void categorizePtrValue(Attributor &A, const Instruction &I, const Value &Ptr,
+                          AAMemoryLocation::StateType &State, bool &Changed);
+
+  /// The set of IR attributes AAMemoryLocation deals with.
+  static const Attribute::AttrKind AttrKinds[4];
+};
+
+const Attribute::AttrKind AAMemoryLocationImpl::AttrKinds[] = {
+    Attribute::ReadNone, Attribute::InaccessibleMemOnly, Attribute::ArgMemOnly,
+    Attribute::InaccessibleMemOrArgMemOnly};
+
+void AAMemoryLocationImpl::categorizePtrValue(
+    Attributor &A, const Instruction &I, const Value &Ptr,
+    AAMemoryLocation::StateType &State, bool &Changed) {
+  LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Categorize pointer locations for "
+                    << Ptr << " ["
+                    << getMemoryLocationsAsStr(State.getAssumed()) << "]\n");
+
+  auto StripGEPCB = [](Value *V) -> Value * {
+    auto *GEP = dyn_cast<GEPOperator>(V);
+    while (GEP) {
+      V = GEP->getPointerOperand();
+      GEP = dyn_cast<GEPOperator>(V);
+    }
+    return V;
+  };
+
+  auto VisitValueCB = [&](Value &V, AAMemoryLocation::StateType &T,
+                          bool Stripped) -> bool {
+    assert(!isa<GEPOperator>(V) && "GEPs should have been stripped.");
+    if (isa<UndefValue>(V))
+      return true;
+    if (auto *Arg = dyn_cast<Argument>(&V)) {
+      if (Arg->hasByValAttr())
+        updateState(T, NO_LOCAL_MEM, I, &V, Changed);
+      else
+        updateState(T, NO_ARGUMENT_MEM, I, &V, Changed);
+      return true;
+    }
+    if (auto *GV = dyn_cast<GlobalValue>(&V)) {
+      if (GV->hasLocalLinkage())
+        updateState(T, NO_GLOBAL_INTERNAL_MEM, I, &V, Changed);
+      else
+        updateState(T, NO_GLOBAL_EXTERNAL_MEM, I, &V, Changed);
+      return true;
+    }
+    if (isa<AllocaInst>(V)) {
+      updateState(T, NO_LOCAL_MEM, I, &V, Changed);
+      return true;
+    }
+    if (ImmutableCallSite ICS = ImmutableCallSite(&V)) {
+      const auto &NoAliasAA =
+          A.getAAFor<AANoAlias>(*this, IRPosition::callsite_returned(ICS));
+      if (NoAliasAA.isAssumedNoAlias()) {
+        updateState(T, NO_MALLOCED_MEM, I, &V, Changed);
+        return true;
+      }
+    }
+
+    updateState(T, NO_UNKOWN_MEM, I, &V, Changed);
+    LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Ptr value cannot be categorized: "
+                      << V << " -> " << getMemoryLocationsAsStr(T.getAssumed())
+                      << "\n");
+    return true;
+  };
+
+  if (!genericValueTraversal<AAMemoryLocation, AAMemoryLocation::StateType>(
+          A, IRPosition::value(Ptr), *this, State, VisitValueCB,
+          /* MaxValues */ 32, StripGEPCB)) {
+    LLVM_DEBUG(
+        dbgs() << "[AAMemoryLocation] Pointer locations not categorized\n");
+    updateState(State, NO_UNKOWN_MEM, I, nullptr, Changed);
+  } else {
+    LLVM_DEBUG(
+        dbgs()
+        << "[AAMemoryLocation] Accessed locations with pointer locations: "
+        << getMemoryLocationsAsStr(State.getAssumed()) << "\n");
+  }
+}
+
+AAMemoryLocation::MemoryLocationsKind
+AAMemoryLocationImpl::categorizeAccessedLocations(Attributor &A, Instruction &I,
+                                                  bool &Changed) {
+  LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Categorize accessed locations for "
+                    << I << "\n");
+
+  AAMemoryLocation::StateType AccessedLocs;
+  AccessedLocs.intersectAssumedBits(NO_LOCATIONS);
+
+  if (ImmutableCallSite ICS = ImmutableCallSite(&I)) {
+
+    // First check if we assume any memory is access is visible.
+    const auto &ICSMemLocationAA =
+        A.getAAFor<AAMemoryLocation>(*this, IRPosition::callsite_function(ICS));
+    LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Categorize call site: " << I
+                      << " [" << ICSMemLocationAA << "]\n");
+
+    if (ICSMemLocationAA.isAssumedReadNone())
+      return NO_LOCATIONS;
+
+    if (ICSMemLocationAA.isAssumedInaccessibleMemOnly()) {
+      updateState(AccessedLocs, NO_INACCESSIBLE_MEM, I, nullptr, Changed);
+      return AccessedLocs.getAssumed();
+    }
+
+    uint32_t ICSAssumedNotAccessedLocs =
+        ICSMemLocationAA.getAssumedNotAccessedLocation();
+
+    // Set the argmemonly bit as we handle them separately below.
+    uint32_t ICSAssumedNotAccessedLocsNoArgMem =
+        ICSAssumedNotAccessedLocs | NO_ARGUMENT_MEM;
+
+    for (MemoryLocationsKind CurMLK = 1; CurMLK < NO_LOCATIONS; CurMLK *= 2) {
+      if (ICSAssumedNotAccessedLocsNoArgMem & CurMLK)
+        continue;
+      updateState(AccessedLocs, CurMLK, I, nullptr, Changed);
+    }
+
+    LLVM_DEBUG(
+        dbgs() << "[AAMemoryLocation] Accessed state before argument handling: "
+               << getMemoryLocationsAsStr(AccessedLocs.getAssumed()) << "\n");
+
+    // Now handle argument memory if it might be accessed.
+    bool HasArgAccesses = !(ICSAssumedNotAccessedLocs & NO_ARGUMENT_MEM);
+    if (HasArgAccesses) {
+      for (unsigned ArgNo = 0, e = ICS.getNumArgOperands(); ArgNo < e;
+           ++ArgNo) {
+
+        // Skip non-pointer arguments.
+        const Value *ArgOp = ICS.getArgOperand(ArgNo);
+        if (!ArgOp->getType()->isPtrOrPtrVectorTy())
+          continue;
+
+        // Skip readnone arguments.
+        const IRPosition &ArgOpIRP = IRPosition::callsite_argument(ICS, ArgNo);
+        const auto &ArgOpMemLocationAA = A.getAAFor<AAMemoryBehavior>(
+            *this, ArgOpIRP, /* TrackDependence */ true, DepClassTy::OPTIONAL);
+
+        if (ArgOpMemLocationAA.isAssumedReadNone())
+          continue;
+
+        // Categorize potentially accessed pointer arguments as if there was an
+        // access instruction with them as pointer.
+        categorizePtrValue(A, I, *ArgOp, AccessedLocs, Changed);
+      }
+    }
+
+    LLVM_DEBUG(
+        dbgs() << "[AAMemoryLocation] Accessed state after argument handling: "
+               << getMemoryLocationsAsStr(AccessedLocs.getAssumed()) << "\n");
+
+    return AccessedLocs.getAssumed();
+  }
+
+  if (const Value *Ptr = getPointerOperand(&I, /* AllowVolatile */ true)) {
+    LLVM_DEBUG(
+        dbgs() << "[AAMemoryLocation] Categorize memory access with pointer: "
+               << I << " [" << *Ptr << "]\n");
+    categorizePtrValue(A, I, *Ptr, AccessedLocs, Changed);
+    return AccessedLocs.getAssumed();
+  }
+
+  LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Failed to categorize instruction: "
+                    << I << "\n");
+  updateState(AccessedLocs, NO_UNKOWN_MEM, I, nullptr, Changed);
+  return AccessedLocs.getAssumed();
+}
+
+/// An AA to represent the memory behavior function attributes.
+struct AAMemoryLocationFunction final : public AAMemoryLocationImpl {
+  AAMemoryLocationFunction(const IRPosition &IRP) : AAMemoryLocationImpl(IRP) {}
+
+  /// See AbstractAttribute::updateImpl(Attributor &A).
+  virtual ChangeStatus updateImpl(Attributor &A) override {
+
+    const auto &MemBehaviorAA = A.getAAFor<AAMemoryBehavior>(
+        *this, getIRPosition(), /* TrackDependence */ false);
+    if (MemBehaviorAA.isAssumedReadNone()) {
+      if (MemBehaviorAA.isKnownReadNone())
+        return indicateOptimisticFixpoint();
+      assert(isAssumedReadNone() &&
+             "AAMemoryLocation was not read-none but AAMemoryBehavior was!");
+      A.recordDependence(MemBehaviorAA, *this, DepClassTy::OPTIONAL);
+      return ChangeStatus::UNCHANGED;
+    }
+
+    // The current assumed state used to determine a change.
+    auto AssumedState = getAssumed();
+    bool Changed = false;
+
+    auto CheckRWInst = [&](Instruction &I) {
+      MemoryLocationsKind MLK = categorizeAccessedLocations(A, I, Changed);
+      LLVM_DEBUG(dbgs() << "[AAMemoryLocation] Accessed locations for " << I
+                        << ": " << getMemoryLocationsAsStr(MLK) << "\n");
+      removeAssumedBits(inverseLocation(MLK, false, false));
+      return true;
+    };
+
+    if (!A.checkForAllReadWriteInstructions(CheckRWInst, *this))
+      return indicatePessimisticFixpoint();
+
+    Changed |= AssumedState != getAssumed();
+    return Changed ? ChangeStatus::CHANGED : ChangeStatus::UNCHANGED;
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    if (isAssumedReadNone())
+      STATS_DECLTRACK_FN_ATTR(readnone)
+    else if (isAssumedArgMemOnly())
+      STATS_DECLTRACK_FN_ATTR(argmemonly)
+    else if (isAssumedInaccessibleMemOnly())
+      STATS_DECLTRACK_FN_ATTR(inaccessiblememonly)
+    else if (isAssumedInaccessibleOrArgMemOnly())
+      STATS_DECLTRACK_FN_ATTR(inaccessiblememorargmemonly)
+  }
+};
+
+/// AAMemoryLocation attribute for call sites.
+struct AAMemoryLocationCallSite final : AAMemoryLocationImpl {
+  AAMemoryLocationCallSite(const IRPosition &IRP) : AAMemoryLocationImpl(IRP) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AAMemoryLocationImpl::initialize(A);
+    Function *F = getAssociatedFunction();
+    if (!F || !F->hasExactDefinition())
+      indicatePessimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // TODO: Once we have call site specific value information we can provide
+    //       call site specific liveness liveness information and then it makes
+    //       sense to specialize attributes for call sites arguments instead of
+    //       redirecting requests to the callee argument.
+    Function *F = getAssociatedFunction();
+    const IRPosition &FnPos = IRPosition::function(*F);
+    auto &FnAA = A.getAAFor<AAMemoryLocation>(*this, FnPos);
+    return clampStateAndIndicateChange(
+        getState(),
+        static_cast<const AAMemoryLocation::StateType &>(FnAA.getState()));
+  }
+
+  /// See AbstractAttribute::trackStatistics()
+  void trackStatistics() const override {
+    if (isAssumedReadNone())
+      STATS_DECLTRACK_CS_ATTR(readnone)
+  }
+};
+
 /// ------------------ Value Constant Range Attribute -------------------------
 
 struct AAValueConstantRangeImpl : AAValueConstantRange {
@@ -7595,6 +7981,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   // Every function might be "readnone/readonly/writeonly/...".
   getOrCreateAAFor<AAMemoryBehavior>(FPos);
 
+  // Every function can be "readnone/argmemonly/inaccessiblememonly/...".
+  getOrCreateAAFor<AAMemoryLocation>(FPos);
+
   // Every function might be applicable for Heap-To-Stack conversion.
   if (EnableHeapToStack)
     getOrCreateAAFor<AAHeapToStack>(FPos);
@@ -8010,6 +8399,7 @@ const char AAValueSimplify::ID = 0;
 const char AAHeapToStack::ID = 0;
 const char AAPrivatizablePtr::ID = 0;
 const char AAMemoryBehavior::ID = 0;
+const char AAMemoryLocation::ID = 0;
 const char AAValueConstantRange::ID = 0;
 
 // Macro magic to create the static generator function for attributes that
@@ -8110,6 +8500,7 @@ CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoRecurse)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAWillReturn)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoReturn)
 CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAReturnedValues)
+CREATE_FUNCTION_ABSTRACT_ATTRIBUTE_FOR_POSITION(AAMemoryLocation)
 
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANonNull)
 CREATE_VALUE_ABSTRACT_ATTRIBUTE_FOR_POSITION(AANoAlias)

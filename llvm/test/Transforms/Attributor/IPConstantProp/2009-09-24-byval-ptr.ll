@@ -5,22 +5,6 @@
 %struct.MYstr = type { i8, i32 }
 @mystr = internal global %struct.MYstr zeroinitializer ; <%struct.MYstr*> [#uses=3]
 define internal void @vfu1(%struct.MYstr* byval align 4 %u) nounwind {
-; CHECK-LABEL: define {{[^@]+}}@vfu1
-; CHECK-SAME: (i8 [[TMP0:%.*]], i32 [[TMP1:%.*]])
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[U_PRIV:%.*]] = alloca [[STRUCT_MYSTR:%.*]]
-; CHECK-NEXT:    [[U_PRIV_CAST:%.*]] = bitcast %struct.MYstr* [[U_PRIV]] to i8*
-; CHECK-NEXT:    store i8 [[TMP0]], i8* [[U_PRIV_CAST]]
-; CHECK-NEXT:    [[U_PRIV_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
-; CHECK-NEXT:    store i32 [[TMP1]], i32* [[U_PRIV_0_1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 1
-; CHECK-NEXT:    store i32 99, i32* [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* [[U_PRIV]], i32 0, i32 0
-; CHECK-NEXT:    store i8 97, i8* [[TMP3]], align 8
-; CHECK-NEXT:    br label [[RETURN:%.*]]
-; CHECK:       return:
-; CHECK-NEXT:    ret void
-;
 entry:
   %0 = getelementptr %struct.MYstr, %struct.MYstr* %u, i32 0, i32 1 ; <i32*> [#uses=1]
   store i32 99, i32* %0, align 4
@@ -62,16 +46,11 @@ entry:
 define i32 @unions() nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@unions()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MYSTR_CAST1:%.*]] = bitcast %struct.MYstr* @mystr to i8*
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MYSTR_CAST1]], align 1
-; CHECK-NEXT:    [[MYSTR_0_12:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i32 0, i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_12]], align 1
-; CHECK-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]])
 ; CHECK-NEXT:    [[MYSTR_CAST:%.*]] = bitcast %struct.MYstr* @mystr to i8*
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, i8* [[MYSTR_CAST]], align 1
-; CHECK-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i32 0, i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[MYSTR_0_1]], align 1
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i8 [[TMP2]], i32 [[TMP3]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MYSTR_CAST]], align 1
+; CHECK-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i32 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_1]], align 1
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i8 [[TMP0]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
@@ -114,16 +93,11 @@ entry:
 define i32 @unions_v2() nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@unions_v2()
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MYSTR_CAST1:%.*]] = bitcast %struct.MYstr* @mystr to i8*
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MYSTR_CAST1]], align 1
-; CHECK-NEXT:    [[MYSTR_0_12:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i32 0, i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_12]], align 1
-; CHECK-NEXT:    call void @vfu1(i8 [[TMP0]], i32 [[TMP1]])
 ; CHECK-NEXT:    [[MYSTR_CAST:%.*]] = bitcast %struct.MYstr* @mystr to i8*
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, i8* [[MYSTR_CAST]], align 1
-; CHECK-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i32 0, i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[MYSTR_0_1]], align 1
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i8 [[TMP2]], i32 [[TMP3]])
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[MYSTR_CAST]], align 1
+; CHECK-NEXT:    [[MYSTR_0_1:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], %struct.MYstr* @mystr, i32 0, i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[MYSTR_0_1]], align 1
+; CHECK-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i8 [[TMP0]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
 entry:
