@@ -334,9 +334,7 @@ LoadOpConversion::matchAndRewrite(LoadOp loadOp, ArrayRef<Value> operands,
   auto loadPtr = getElementPtr(rewriter, typeConverter, loadOp.getLoc(),
                                loadOp.memref().getType().cast<MemRefType>(),
                                loadOperands.memref(), loadOperands.indices());
-  rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, loadPtr,
-                                             /*memory_access =*/nullptr,
-                                             /*alignment =*/nullptr);
+  rewriter.replaceOpWithNewOp<spirv::LoadOp>(loadOp, loadPtr);
   return matchSuccess();
 }
 
@@ -381,9 +379,7 @@ StoreOpConversion::matchAndRewrite(StoreOp storeOp, ArrayRef<Value> operands,
                     storeOp.memref().getType().cast<MemRefType>(),
                     storeOperands.memref(), storeOperands.indices());
   rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, storePtr,
-                                              storeOperands.value(),
-                                              /*memory_access =*/nullptr,
-                                              /*alignment =*/nullptr);
+                                              storeOperands.value());
   return matchSuccess();
 }
 

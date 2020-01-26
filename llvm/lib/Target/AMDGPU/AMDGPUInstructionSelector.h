@@ -103,6 +103,7 @@ private:
   std::tuple<Register, unsigned, unsigned>
   splitBufferOffsets(MachineIRBuilder &B, Register OrigOffset) const;
 
+  bool selectEndCfIntrinsic(MachineInstr &MI) const;
   bool selectStoreIntrinsic(MachineInstr &MI, bool IsFormat) const;
   bool selectDSOrderedIntrinsic(MachineInstr &MI, Intrinsic::ID IID) const;
   bool selectDSGWSIntrinsic(MachineInstr &MI, Intrinsic::ID IID) const;

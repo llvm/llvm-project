@@ -4651,6 +4651,21 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
 
+  case Intrinsic::masked_gather: {
+    const APInt &Alignment =
+        cast<ConstantInt>(Call.getArgOperand(1))->getValue();
+    Assert(Alignment.isNullValue() || Alignment.isPowerOf2(),
+           "masked_gather: alignment must be 0 or a power of 2", Call);
+    break;
+  }
+  case Intrinsic::masked_scatter: {
+    const APInt &Alignment =
+        cast<ConstantInt>(Call.getArgOperand(2))->getValue();
+    Assert(Alignment.isNullValue() || Alignment.isPowerOf2(),
+           "masked_scatter: alignment must be 0 or a power of 2", Call);
+    break;
+  }
+
   case Intrinsic::experimental_guard: {
     Assert(isa<CallInst>(Call), "experimental_guard cannot be invoked", Call);
     Assert(Call.countOperandBundlesOfType(LLVMContext::OB_deopt) == 1,

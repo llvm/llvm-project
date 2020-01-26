@@ -34551,6 +34551,59 @@ combineRedundantDWordShuffle(SDValue N, MutableArrayRef<int> Mask,
   return V;
 }
 
+// Attempt to commute shufps LHS loads:
+// permilps(shufps(load(),x)) --> permilps(shufps(x,load()))
+static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
+                                      SelectionDAG &DAG) {
+  // TODO: Add general vXf32 + vXf64 support.
+  if (VT != MVT::v4f32)
+    return SDValue();
+
+  // SHUFP(LHS, RHS) -> SHUFP(RHS, LHS) iff LHS is foldable + RHS is not.
+  auto commuteSHUFP = [&VT, &DL, &DAG](SDValue Parent, SDValue V) {
+    if (V.getOpcode() != X86ISD::SHUFP || !Parent->isOnlyUserOf(V.getNode()))
+      return SDValue();
+    SDValue N0 = V.getOperand(0);
+    SDValue N1 = V.getOperand(1);
+    unsigned Imm = V.getConstantOperandVal(2);
+    if (!MayFoldLoad(peekThroughOneUseBitcasts(N0)) ||
+        MayFoldLoad(peekThroughOneUseBitcasts(N1)))
+      return SDValue();
+    Imm = ((Imm & 0x0F) << 4) | ((Imm & 0xF0) >> 4);
+    return DAG.getNode(X86ISD::SHUFP, DL, VT, N1, N0,
+                       DAG.getTargetConstant(Imm, DL, MVT::i8));
+  };
+
+  switch (N.getOpcode()) {
+  case X86ISD::VPERMILPI:
+    if (SDValue NewSHUFP = commuteSHUFP(N, N.getOperand(0))) {
+      unsigned Imm = N.getConstantOperandVal(1);
+      return DAG.getNode(X86ISD::VPERMILPI, DL, VT, NewSHUFP,
+                         DAG.getTargetConstant(Imm ^ 0xAA, DL, MVT::i8));
+    }
+    break;
+  case X86ISD::SHUFP: {
+    SDValue N0 = N.getOperand(0);
+    SDValue N1 = N.getOperand(1);
+    unsigned Imm = N.getConstantOperandVal(2);
+    if (N0 == N1) {
+      if (SDValue NewSHUFP = commuteSHUFP(N, N0))
+        return DAG.getNode(X86ISD::SHUFP, DL, VT, NewSHUFP, NewSHUFP,
+                           DAG.getTargetConstant(Imm ^ 0xAA, DL, MVT::i8));
+    } else if (SDValue NewSHUFP = commuteSHUFP(N, N0)) {
+      return DAG.getNode(X86ISD::SHUFP, DL, VT, NewSHUFP, N1,
+                         DAG.getTargetConstant(Imm ^ 0x0A, DL, MVT::i8));
+    } else if (SDValue NewSHUFP = commuteSHUFP(N, N1)) {
+      return DAG.getNode(X86ISD::SHUFP, DL, VT, N0, NewSHUFP,
+                         DAG.getTargetConstant(Imm ^ 0xA0, DL, MVT::i8));
+    }
+    break;
+  }
+  }
+
+  return SDValue();
+}
+
 /// Try to combine x86 target specific shuffles.
 static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
                                     TargetLowering::DAGCombinerInfo &DCI,
@@ -34588,27 +34641,8 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
     }
   }
 
-  // Attempt to commute shufps LHS loads:
-  // permilps(shufps(load(),x)) --> permilps(shufps(x,load()))
-  if (VT == MVT::v4f32 &&
-      (X86ISD::VPERMILPI == Opcode ||
-       (X86ISD::SHUFP == Opcode && N.getOperand(0) == N.getOperand(1)))) {
-    SDValue N0 = N.getOperand(0);
-    unsigned Imm = N.getConstantOperandVal(X86ISD::VPERMILPI == Opcode ? 1 : 2);
-    if (N0.getOpcode() == X86ISD::SHUFP && N->isOnlyUserOf(N0.getNode())) {
-      SDValue N00 = N0.getOperand(0);
-      SDValue N01 = N0.getOperand(1);
-      if (MayFoldLoad(peekThroughOneUseBitcasts(N00)) &&
-          !MayFoldLoad(peekThroughOneUseBitcasts(N01))) {
-        unsigned Imm1 = N0.getConstantOperandVal(2);
-        Imm1 = ((Imm1 & 0x0F) << 4) | ((Imm1 & 0xF0) >> 4);
-        SDValue NewN0 = DAG.getNode(X86ISD::SHUFP, DL, VT, N01, N00,
-                                    DAG.getTargetConstant(Imm1, DL, MVT::i8));
-        return DAG.getNode(X86ISD::SHUFP, DL, VT, NewN0, NewN0,
-                           DAG.getTargetConstant(Imm ^ 0xAA, DL, MVT::i8));
-      }
-    }
-  }
+  if (SDValue R = combineCommutableSHUFP(N, VT, DL, DAG))
+    return R;
 
   switch (Opcode) {
   case X86ISD::VBROADCAST: {

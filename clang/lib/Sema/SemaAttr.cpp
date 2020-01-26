@@ -940,6 +940,14 @@ void Sema::ActOnPragmaFPContract(LangOptions::FPContractModeKind FPC) {
   }
 }
 
+void Sema::setRoundingMode(LangOptions::FPRoundingModeKind FPR) {
+  FPFeatures.setRoundingMode(FPR);
+}
+
+void Sema::setExceptionMode(LangOptions::FPExceptionModeKind FPE) {
+  FPFeatures.setExceptionMode(FPE);
+}
+
 void Sema::ActOnPragmaFEnvAccess(LangOptions::FEnvAccessModeKind FPC) {
   switch (FPC) {
   case LangOptions::FEA_On:

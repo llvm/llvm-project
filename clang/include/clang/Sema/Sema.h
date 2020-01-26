@@ -1306,12 +1306,12 @@ public:
   /// should not be used elsewhere.
   void EmitCurrentDiagnostic(unsigned DiagID);
 
-  /// Records and restores the FP_CONTRACT state on entry/exit of compound
+  /// Records and restores the FPFeatures state on entry/exit of compound
   /// statements.
-  class FPContractStateRAII {
+  class FPFeaturesStateRAII {
   public:
-    FPContractStateRAII(Sema &S) : S(S), OldFPFeaturesState(S.FPFeatures) {}
-    ~FPContractStateRAII() { S.FPFeatures = OldFPFeaturesState; }
+    FPFeaturesStateRAII(Sema &S) : S(S), OldFPFeaturesState(S.FPFeatures) {}
+    ~FPFeaturesStateRAII() { S.FPFeatures = OldFPFeaturesState; }
 
   private:
     Sema& S;
@@ -9408,6 +9408,12 @@ public:
   /// ActOnPragmaFenvAccess - Called on well formed
   /// \#pragma STDC FENV_ACCESS
   void ActOnPragmaFEnvAccess(LangOptions::FEnvAccessModeKind FPC);
+
+  /// Called to set rounding mode for floating point operations.
+  void setRoundingMode(LangOptions::FPRoundingModeKind);
+
+  /// Called to set exception behavior for floating point operations.
+  void setExceptionMode(LangOptions::FPExceptionModeKind);
 
   /// AddAlignmentAttributesForRecord - Adds any needed alignment attributes to
   /// a the record decl, to handle '\#pragma pack' and '\#pragma options align'.

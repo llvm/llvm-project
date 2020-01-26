@@ -15033,8 +15033,7 @@ Reads scalar values from arbitrary memory locations and gathers them into one ve
 Arguments:
 """"""""""
 
-The first operand is a vector of pointers which holds all memory addresses to read. The second operand is an alignment of the source addresses. It must be a constant integer value. The third operand, mask, is a vector of boolean values with the same number of elements as the return type. The fourth is a pass-through value that is used to fill the masked-off lanes of the result. The return type, underlying type of the vector of pointers and the type of the '``passthru``' operand are the same vector types.
-
+The first operand is a vector of pointers which holds all memory addresses to read. The second operand is an alignment of the source addresses. It must be 0 or a power of two constant integer value. The third operand, mask, is a vector of boolean values with the same number of elements as the return type. The fourth is a pass-through value that is used to fill the masked-off lanes of the result. The return type, underlying type of the vector of pointers and the type of the '``passthru``' operand are the same vector types.
 
 Semantics:
 """"""""""
@@ -15086,8 +15085,7 @@ Writes each element from the value vector to the corresponding memory address. T
 Arguments:
 """"""""""
 
-The first operand is a vector value to be written to memory. The second operand is a vector of pointers, pointing to where the value elements should be stored. It has the same underlying type as the value operand. The third operand is an alignment of the destination addresses. The fourth operand, mask, is a vector of boolean values. The types of the mask and the value operand must have the same number of vector elements.
-
+The first operand is a vector value to be written to memory. The second operand is a vector of pointers, pointing to where the value elements should be stored. It has the same underlying type as the value operand. The third operand is an alignment of the destination addresses. It must be 0 or a power of two constant integer value. The fourth operand, mask, is a vector of boolean values. The types of the mask and the value operand must have the same number of vector elements.
 
 Semantics:
 """"""""""
