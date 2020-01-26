@@ -2084,6 +2084,29 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     MI.eraseFromParent();
     return;
   }
+  case AMDGPU::G_CTPOP: {
+    MachineIRBuilder B(MI);
+    MachineFunction &MF = B.getMF();
+
+    const RegisterBank *DstBank =
+      OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
+    if (DstBank == &AMDGPU::SGPRRegBank)
+      break;
+
+    Register SrcReg = MI.getOperand(1).getReg();
+    const LLT S32 = LLT::scalar(32);
+    LLT Ty = MRI.getType(SrcReg);
+    if (Ty == S32)
+      break;
+
+    ApplyRegBankMapping ApplyVALU(*this, MRI, &AMDGPU::VGPRRegBank);
+    GISelObserverWrapper Observer(&ApplyVALU);
+    LegalizerHelper Helper(MF, Observer, B);
+
+    if (Helper.narrowScalar(MI, 1, S32) != LegalizerHelper::Legalized)
+      llvm_unreachable("widenScalar should have succeeded");
+    return;
+  }
   case AMDGPU::G_SEXT:
   case AMDGPU::G_ZEXT: {
     Register SrcReg = MI.getOperand(1).getReg();
@@ -3172,9 +3195,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_BITCAST:
   case AMDGPU::G_INTTOPTR:
   case AMDGPU::G_PTRTOINT:
-  case AMDGPU::G_CTLZ_ZERO_UNDEF:
-  case AMDGPU::G_CTTZ_ZERO_UNDEF:
-  case AMDGPU::G_CTPOP:
   case AMDGPU::G_BSWAP:
   case AMDGPU::G_BITREVERSE:
   case AMDGPU::G_FABS:
@@ -3182,6 +3202,21 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     unsigned BankID = getRegBankID(MI.getOperand(1).getReg(), MRI, *TRI);
     OpdsMapping[0] = OpdsMapping[1] = AMDGPU::getValueMapping(BankID, Size);
+    break;
+  }
+  case AMDGPU::G_CTLZ:
+  case AMDGPU::G_CTLZ_ZERO_UNDEF:
+  case AMDGPU::G_CTTZ:
+  case AMDGPU::G_CTTZ_ZERO_UNDEF:
+  case AMDGPU::G_CTPOP: {
+    unsigned Size = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
+    unsigned BankID = getRegBankID(MI.getOperand(1).getReg(), MRI, *TRI);
+    OpdsMapping[0] = AMDGPU::getValueMapping(BankID, 32);
+
+    // This should really be getValueMappingSGPR64Only, but allowing the generic
+    // code to handle the register split just makes using LegalizerHelper more
+    // difficult.
+    OpdsMapping[1] = AMDGPU::getValueMapping(BankID, Size);
     break;
   }
   case AMDGPU::G_TRUNC: {
