@@ -278,9 +278,7 @@ getOrInsertBuiltinVariable(Block &body, Location loc, spirv::BuiltIn builtin,
 Value mlir::spirv::getBuiltinVariableValue(Operation *op,
                                            spirv::BuiltIn builtin,
                                            OpBuilder &builder) {
-  Operation *parent = op->getParentOp();
-  while (parent && !parent->hasTrait<OpTrait::SymbolTable>())
-    parent = parent->getParentOp();
+  Operation *parent = SymbolTable::getNearestSymbolTable(op->getParentOp());
   if (!parent) {
     op->emitError("expected operation to be within a module-like op");
     return nullptr;
