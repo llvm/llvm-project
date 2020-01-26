@@ -55,6 +55,24 @@ static constexpr const char kVariableAttrName[] = "variable";
 // Common utility functions
 //===----------------------------------------------------------------------===//
 
+/// Returns true if the given op is a function-like op or nested in a
+/// function-like op without a module-like op in the middle.
+static bool isNestedInFunctionLikeOp(Operation *op) {
+  if (!op)
+    return false;
+  if (op->hasTrait<OpTrait::SymbolTable>())
+    return false;
+  if (op->hasTrait<OpTrait::FunctionLike>())
+    return true;
+  return isNestedInFunctionLikeOp(op->getParentOp());
+}
+
+/// Returns true if the given op is an module-like op that maintains a symbol
+/// table.
+static bool isDirectInModuleLikeOp(Operation *op) {
+  return op && op->hasTrait<OpTrait::SymbolTable>();
+}
+
 static LogicalResult extractValueFromConstOp(Operation *op, int32_t &value) {
   auto constOp = dyn_cast_or_null<spirv::ConstantOp>(op);
   if (!constOp) {
@@ -872,9 +890,9 @@ static void print(spirv::AddressOfOp addressOfOp, OpAsmPrinter &printer) {
 }
 
 static LogicalResult verify(spirv::AddressOfOp addressOfOp) {
-  auto moduleOp = addressOfOp.getParentOfType<spirv::ModuleOp>();
-  auto varOp =
-      moduleOp.lookupSymbol<spirv::GlobalVariableOp>(addressOfOp.variable());
+  auto varOp = dyn_cast_or_null<spirv::GlobalVariableOp>(
+      SymbolTable::lookupNearestSymbolFrom(addressOfOp.getParentOp(),
+                                           addressOfOp.variable()));
   if (!varOp) {
     return addressOfOp.emitOpError("expected spv.globalVariable symbol");
   }
@@ -1679,16 +1697,11 @@ static void print(spirv::FunctionCallOp functionCallOp, OpAsmPrinter &printer) {
 static LogicalResult verify(spirv::FunctionCallOp functionCallOp) {
   auto fnName = functionCallOp.callee();
 
-  auto moduleOp = functionCallOp.getParentOfType<spirv::ModuleOp>();
-  if (!moduleOp) {
-    return functionCallOp.emitOpError(
-        "must appear in a function inside 'spv.module'");
-  }
-
-  auto funcOp = moduleOp.lookupSymbol<FuncOp>(fnName);
+  auto funcOp = dyn_cast_or_null<FuncOp>(SymbolTable::lookupNearestSymbolFrom(
+      functionCallOp.getParentOp(), fnName));
   if (!funcOp) {
     return functionCallOp.emitOpError("callee function '")
-           << fnName << "' not found in 'spv.module'";
+           << fnName << "' not found in nearest symbol table";
   }
 
   auto functionType = funcOp.getType();
@@ -1837,8 +1850,8 @@ static LogicalResult verify(spirv::GlobalVariableOp varOp) {
 
   if (auto init =
           varOp.getAttrOfType<FlatSymbolRefAttr>(kInitializerAttrName)) {
-    auto moduleOp = varOp.getParentOfType<spirv::ModuleOp>();
-    auto *initOp = moduleOp.lookupSymbol(init.getValue());
+    Operation *initOp = SymbolTable::lookupNearestSymbolFrom(
+        varOp.getParentOp(), init.getValue());
     // TODO: Currently only variable initialization with specialization
     // constants and other variables is supported. They could be normal
     // constants in the module scope as well.
@@ -2534,9 +2547,9 @@ static void print(spirv::ReferenceOfOp referenceOfOp, OpAsmPrinter &printer) {
 }
 
 static LogicalResult verify(spirv::ReferenceOfOp referenceOfOp) {
-  auto moduleOp = referenceOfOp.getParentOfType<spirv::ModuleOp>();
-  auto specConstOp =
-      moduleOp.lookupSymbol<spirv::SpecConstantOp>(referenceOfOp.spec_const());
+  auto specConstOp = dyn_cast_or_null<spirv::SpecConstantOp>(
+      SymbolTable::lookupNearestSymbolFrom(referenceOfOp.getParentOp(),
+                                           referenceOfOp.spec_const()));
   if (!specConstOp) {
     return referenceOfOp.emitOpError("expected spv.specConstant symbol");
   }
