@@ -3702,18 +3702,18 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     }
 
     // Fallback - just get the minimum number of sign bits of the operands.
-    Tmp = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Tmp == 1)
       return 1;  // Early out.
-    Tmp2 = ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
     return std::min(Tmp, Tmp2);
   }
   case ISD::UMIN:
   case ISD::UMAX:
-    Tmp = ComputeNumSignBits(Op.getOperand(0), Depth + 1);
+    Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedElts, Depth + 1);
     if (Tmp == 1)
       return 1;  // Early out.
-    Tmp2 = ComputeNumSignBits(Op.getOperand(1), Depth + 1);
+    Tmp2 = ComputeNumSignBits(Op.getOperand(1), DemandedElts, Depth + 1);
     return std::min(Tmp, Tmp2);
   case ISD::SADDO:
   case ISD::UADDO:
@@ -3749,7 +3749,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     if (Tmp == VTBits)
       return VTBits;
 
-    if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+    if (ConstantSDNode *C =
+            isConstOrConstSplat(Op.getOperand(1), DemandedElts)) {
       unsigned RotAmt = C->getAPIntValue().urem(VTBits);
 
       // Handle rotate right by N like a rotate left by 32-N.
