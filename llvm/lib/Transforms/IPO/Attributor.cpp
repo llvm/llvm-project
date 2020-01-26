@@ -2496,13 +2496,29 @@ struct AANoAliasFloating final : AANoAliasImpl {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     AANoAliasImpl::initialize(A);
-    Value &Val = getAssociatedValue();
+    Value *Val = &getAssociatedValue();
+    do {
+      CastInst *CI = dyn_cast<CastInst>(Val);
+      if (!CI)
+        break;
+      Value *Base = CI->getOperand(0);
+      if (Base->getNumUses() != 1)
+        break;
+      Val = Base;
+    } while (true);
+
     if (isa<AllocaInst>(Val))
       indicateOptimisticFixpoint();
     else if (isa<ConstantPointerNull>(Val) &&
              !NullPointerIsDefined(getAnchorScope(),
-                                   Val.getType()->getPointerAddressSpace()))
+                                   Val->getType()->getPointerAddressSpace()))
       indicateOptimisticFixpoint();
+    else if (Val != &getAssociatedValue()) {
+      const auto &ValNoAliasAA =
+          A.getAAFor<AANoAlias>(*this, IRPosition::value(*Val));
+      if (ValNoAliasAA.isKnownNoAlias())
+        indicateOptimisticFixpoint();
+    }
   }
 
   /// See AbstractAttribute::updateImpl(...).
