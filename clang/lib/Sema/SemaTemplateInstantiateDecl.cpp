@@ -4246,18 +4246,17 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
   Sema::ContextRAII savedContext(*this, Decl);
   LocalInstantiationScope Scope(*this);
 
-  MultiLevelTemplateArgumentList MLTAL =
-    getTemplateInstantiationArgs(Decl, nullptr, /*RelativeToPrimary*/true);
-
   // If this is not an explicit specialization - we need to get the instantiated
   // version of the template arguments and add them to scope for the
   // substitution.
   if (Decl->isTemplateInstantiation()) {
     InstantiatingTemplate Inst(*this, Decl->getPointOfInstantiation(),
         InstantiatingTemplate::ConstraintsCheck{}, Decl->getPrimaryTemplate(),
-        MLTAL.getInnermost(), SourceRange());
+        TemplateArgs, SourceRange());
     if (Inst.isInvalid())
       return true;
+    MultiLevelTemplateArgumentList MLTAL(
+        *Decl->getTemplateSpecializationArgs());
     if (addInstantiatedParametersToScope(
             *this, Decl, Decl->getPrimaryTemplate()->getTemplatedDecl(),
             Scope, MLTAL))
