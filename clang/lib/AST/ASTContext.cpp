@@ -636,7 +636,7 @@ comments::FullComment *ASTContext::getCommentForDecl(
   return FC;
 }
 
-void 
+void
 ASTContext::CanonicalTemplateTemplateParm::Profile(llvm::FoldingSetNodeID &ID,
                                                    const ASTContext &C,
                                                TemplateTemplateParmDecl *Parm) {
