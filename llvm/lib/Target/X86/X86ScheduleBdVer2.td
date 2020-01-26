@@ -545,8 +545,40 @@ def PdWriteBTSRm : SchedWriteRes<[PdEX01, PdLoad]> {
 def : SchedAlias<WriteBitTestSetRegRMW, PdWriteBTSRm>;
 
 // This is for simple LEAs with one or two input operands.
-// FIXME: SAGU 3-operand LEA
-def : WriteRes<WriteLEA,              [PdEX01]> { let NumMicroOps = 2; }
+def : WriteRes<WriteLEA,              [PdEX01]> { let ResourceCycles = [2]; }
+
+// This write is used for slow LEA instructions.
+def PdWrite3OpsLEA : SchedWriteRes<[PdEX01]> {
+  let Latency = 2;
+  let ResourceCycles = [2];
+}
+
+// On Piledriver, a slow LEA is either a 3Ops LEA (base, index, offset),
+// or an LEA with a `Scale` value different than 1.
+def PdSlowLEAPredicate : MCSchedPredicate<
+  CheckAny<[
+    // A 3-operand LEA (base, index, offset).
+    IsThreeOperandsLEAFn,
+    // An LEA with a "Scale" different than 1.
+    CheckAll<[
+      CheckIsImmOperand<2>,
+      CheckNot<CheckImmOperand<2, 1>>
+    ]>
+  ]>
+>;
+
+def PdWriteLEA : SchedWriteVariant<[
+    SchedVar<PdSlowLEAPredicate, [PdWrite3OpsLEA]>,
+    SchedVar<NoSchedPred,        [WriteLEA]>
+]>;
+
+def : InstRW<[PdWriteLEA], (instrs LEA32r, LEA64r, LEA64_32r)>;
+
+def PdWriteLEA16r : SchedWriteRes<[PdEX01]> {
+  let ResourceCycles = [3];
+  let NumMicroOps = 2;
+}
+def : InstRW<[PdWriteLEA16r], (instrs LEA16r)>;
 
 // Bit counts.
 defm : PdWriteResExPair<WriteBSF,     [PdEX01],          3,  [6],     6, 2>;
