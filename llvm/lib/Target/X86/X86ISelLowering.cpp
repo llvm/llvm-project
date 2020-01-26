@@ -34555,8 +34555,8 @@ combineRedundantDWordShuffle(SDValue N, MutableArrayRef<int> Mask,
 // permilps(shufps(load(),x)) --> permilps(shufps(x,load()))
 static SDValue combineCommutableSHUFP(SDValue N, MVT VT, const SDLoc &DL,
                                       SelectionDAG &DAG) {
-  // TODO: Add general vXf32 + vXf64 support.
-  if (VT != MVT::v4f32)
+  // TODO: Add vXf64 support.
+  if (VT != MVT::v4f32 && VT != MVT::v8f32 && VT != MVT::v16f32)
     return SDValue();
 
   // SHUFP(LHS, RHS) -> SHUFP(RHS, LHS) iff LHS is foldable + RHS is not.
