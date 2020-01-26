@@ -14,8 +14,6 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/Format.h"
 
 #define DEBUG_TYPE "clang-tidy"
 
@@ -106,20 +104,22 @@ void RenamerClangTidyCheck::registerMatchers(MatchFinder *Finder) {
                      this);
   Finder->addMatcher(typeLoc().bind("typeLoc"), this);
   Finder->addMatcher(nestedNameSpecifierLoc().bind("nestedNameLoc"), this);
+  auto MemberOrDependent =
+      expr(eachOf(memberExpr().bind("memberExpr"),
+                  cxxDependentScopeMemberExpr().bind("depMemberExpr")));
   Finder->addMatcher(
       functionDecl(unless(cxxMethodDecl(isImplicit())),
-                   hasBody(forEachDescendant(memberExpr().bind("memberExpr")))),
+                   hasBody(forEachDescendant(MemberOrDependent))),
       this);
   Finder->addMatcher(
-      cxxConstructorDecl(
-          unless(isImplicit()),
-          forEachConstructorInitializer(
-              allOf(isWritten(), withInitializer(forEachDescendant(
-                                     memberExpr().bind("memberExpr")))))),
+      cxxConstructorDecl(unless(isImplicit()),
+                         forEachConstructorInitializer(allOf(
+                             isWritten(), withInitializer(forEachDescendant(
+                                              MemberOrDependent))))),
       this);
-  Finder->addMatcher(fieldDecl(hasInClassInitializer(
-                         forEachDescendant(memberExpr().bind("memberExpr")))),
-                     this);
+  Finder->addMatcher(
+      fieldDecl(hasInClassInitializer(forEachDescendant(MemberOrDependent))),
+      this);
 }
 
 void RenamerClangTidyCheck::registerPPCallbacks(
@@ -269,6 +269,39 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
     addUsage(NamingCheckFailures, MemberRef->getMemberDecl(), Range,
              Result.SourceManager);
     return;
+  }
+
+  if (const auto *DepMemberRef =
+          Result.Nodes.getNodeAs<CXXDependentScopeMemberExpr>(
+              "depMemberExpr")) {
+    QualType BaseType = DepMemberRef->isArrow()
+                            ? DepMemberRef->getBaseType()->getPointeeType()
+                            : DepMemberRef->getBaseType();
+    if (BaseType.isNull())
+      return;
+    const CXXRecordDecl *Base = BaseType.getTypePtr()->getAsCXXRecordDecl();
+    if (!Base)
+      return;
+    DeclarationName DeclName = DepMemberRef->getMemberNameInfo().getName();
+    if (!DeclName.isIdentifier())
+      return;
+    StringRef DependentName = DeclName.getAsIdentifierInfo()->getName();
+    for (const FieldDecl *Field : Base->fields()) {
+      if (Field->getParent() == Base && Field->getDeclName().isIdentifier() &&
+          Field->getName().equals(DependentName)) {
+        SourceRange Range = DepMemberRef->getMemberNameInfo().getSourceRange();
+        addUsage(NamingCheckFailures, Field, Range, Result.SourceManager);
+        return;
+      }
+    }
+    for (const CXXMethodDecl *Method : Base->methods()) {
+      if (Method->getParent() == Base && Method->getDeclName().isIdentifier() &&
+          Method->getName().equals(DependentName)) {
+        SourceRange Range = DepMemberRef->getMemberNameInfo().getSourceRange();
+        addUsage(NamingCheckFailures, Method, Range, Result.SourceManager);
+        return;
+      }
+    }
   }
 
   if (const auto *Decl = Result.Nodes.getNodeAs<NamedDecl>("decl")) {
