@@ -262,9 +262,13 @@ def SPV_LoadOp : SPV_Op<"Load", []> {
     SPV_Type:$value
   );
 
-  let builders = [OpBuilder<[{Builder *builder, OperationState &state,
-                  Value basePtr, /*optional*/IntegerAttr memory_access,
-                  /*optional*/IntegerAttr alignment}]>];
+  let builders = [
+    OpBuilder<[{
+      Builder *builder, OperationState &state,
+      Value basePtr, IntegerAttr memory_access = {},
+      IntegerAttr alignment = {}
+    }]>
+  ];
 }
 
 // -----
@@ -358,7 +362,7 @@ def SPV_StoreOp : SPV_Op<"Store", []> {
 
   let builders = [
     OpBuilder<"Builder *builder, OperationState &state, "
-      "Value ptr, Value value, ArrayRef<NamedAttribute> namedAttrs", [{
+      "Value ptr, Value value, ArrayRef<NamedAttribute> namedAttrs = {}", [{
       state.addOperands(ptr);
       state.addOperands(value);
       state.addAttributes(namedAttrs);
