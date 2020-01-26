@@ -64,6 +64,11 @@ bextrl	%esi, (%rdi), %eax
 # ZNVER1-NEXT:  IPC:               0.25
 # ZNVER1-NEXT:  Block RThroughput: 0.8
 
+# ZNVER2:       Dispatch Width:    4
+# ZNVER2-NEXT:  uOps Per Cycle:    0.38
+# ZNVER2-NEXT:  IPC:               0.25
+# ZNVER2-NEXT:  Block RThroughput: 0.8
+
 # ALL:          Instruction Info:
 # ALL-NEXT:     [1]: #uOps
 # ALL-NEXT:     [2]: Latency
@@ -92,6 +97,9 @@ bextrl	%esi, (%rdi), %eax
 # ZNVER1-NEXT:   1      1     0.25                        addl	%edi, %esi
 # ZNVER1-NEXT:   2      5     0.50    *                   bextrl	%esi, (%rdi), %eax
 
+# ZNVER2-NEXT:   1      1     0.25                        addl	%edi, %esi
+# ZNVER2-NEXT:   2      5     0.33    *                   bextrl	%esi, (%rdi), %eax
+
 # ALL:          Timeline view:
 
 # BDVER2-NEXT:  Index     012345678
@@ -100,6 +108,7 @@ bextrl	%esi, (%rdi), %eax
 # HASWELL-NEXT: Index     0123456789
 # SKYLAKE-NEXT: Index     0123456789
 # ZNVER1-NEXT:  Index     01234567
+# ZNVER2-NEXT:  Index     01234567
 
 # BDVER2:       [0,0]     DeER .  .   addl	%edi, %esi
 # BDVER2-NEXT:  [0,1]     DeeeeeeER   bextrl	%esi, (%rdi), %eax
@@ -118,6 +127,9 @@ bextrl	%esi, (%rdi), %eax
 
 # ZNVER1:       [0,0]     DeER . .   addl	%edi, %esi
 # ZNVER1-NEXT:  [0,1]     DeeeeeER   bextrl	%esi, (%rdi), %eax
+
+# ZNVER2:       [0,0]     DeER . .   addl	%edi, %esi
+# ZNVER2-NEXT:  [0,1]     DeeeeeER   bextrl	%esi, (%rdi), %eax
 
 # ALL:          Average Wait times (based on the timeline view):
 # ALL-NEXT:     [0]: Executions

@@ -89,7 +89,7 @@ xor %eax, %ebx
 # ZNVER1-NEXT:     [3] Maximum number of used buffer entries.
 # ZNVER1-NEXT:     [4] Total number of buffer entries.
 
-# ZNVER2:         Scheduler's queue usage:
+# ZNVER2:          Scheduler's queue usage:
 # ZNVER2-NEXT:     [1] Resource name.
 # ZNVER2-NEXT:     [2] Average number of used buffer entries.
 # ZNVER2-NEXT:     [3] Maximum number of used buffer entries.
@@ -134,3 +134,8 @@ xor %eax, %ebx
 # ZNVER1-NEXT:     ZnAGU            0          0          28
 # ZNVER1-NEXT:     ZnALU            0          1          56
 # ZNVER1-NEXT:     ZnFPU            0          0          36
+
+# ZNVER2:           [1]            [2]        [3]        [4]
+# ZNVER2-NEXT:     Zn2AGU           0          0          28
+# ZNVER2-NEXT:     Zn2ALU           0          1          64
+# ZNVER2-NEXT:     Zn2FPU           0          0          36
