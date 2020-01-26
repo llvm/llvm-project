@@ -108,34 +108,38 @@ bool r29 = requires { { 0 } noexcept C1; };
 
 bool r30 = requires { { 0 } noexcept -> C2<int>; };
 
+namespace ns { template<typename T> concept C = true; }
+
+bool r31 = requires { { 0 } noexcept -> ns::C; };
+
 template<typename T>
 T i1 = 0;
 
-bool r31 = requires { requires false, 1; };
+bool r32 = requires { requires false, 1; };
 // expected-error@-1 {{expected ';' at end of requirement}}
 
-bool r32 = requires { 0 noexcept; };
+bool r33 = requires { 0 noexcept; };
 // expected-error@-1 {{'noexcept' can only be used in a compound requirement (with '{' '}' around the expression)}}
 
-bool r33 = requires { 0 int; };
+bool r34 = requires { 0 int; };
 // expected-error@-1 {{expected ';' at end of requirement}}
 
-bool r34 = requires { requires true };
+bool r35 = requires { requires true };
 // expected-error@-1 {{expected ';' at end of requirement}}
 
-bool r35 = requires (bool b) { requires sizeof(b) == 1; };
+bool r36 = requires (bool b) { requires sizeof(b) == 1; };
 
-void r36(bool b) requires requires { 1 } {}
+void r37(bool b) requires requires { 1 } {}
 // expected-error@-1 {{expected ';' at end of requirement}}
 
-bool r37 = requires { requires { 1; }; };
+bool r38 = requires { requires { 1; }; };
 // expected-warning@-1 {{this requires expression will only be checked for syntactic validity; did you intend to place it in a nested requirement? (add another 'requires' before the expression)}}
 
-bool r38 = requires { requires () { 1; }; };
+bool r39 = requires { requires () { 1; }; };
 // expected-warning@-1 {{this requires expression will only be checked for syntactic validity; did you intend to place it in a nested requirement? (add another 'requires' before the expression)}}
 
-bool r39 = requires { requires (int i) { i; }; };
+bool r40 = requires { requires (int i) { i; }; };
 // expected-warning@-1 {{this requires expression will only be checked for syntactic validity; did you intend to place it in a nested requirement? (add another 'requires' before the expression)}}
 
-bool r40 = requires { requires (); };
+bool r41 = requires { requires (); };
 // expected-error@-1 {{expected expression}}
