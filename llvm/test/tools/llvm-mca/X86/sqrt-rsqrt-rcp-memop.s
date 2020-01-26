@@ -35,7 +35,7 @@ rcpss (%rax), %xmm1
 # BARCELONA-NEXT:                     0123456789
 # BARCELONA-NEXT: Index     0123456789          0123
 
-# BDVER2-NEXT:                        01234567
+# BDVER2-NEXT:                        012345678
 # BDVER2-NEXT:    Index     0123456789
 
 # BROADWELL-NEXT:                     0123456789
@@ -59,8 +59,8 @@ rcpss (%rax), %xmm1
 # BARCELONA:      [0,0]     DeER .    .    .    .  .   leaq	8(%rsp,%rdi,2), %rax
 # BARCELONA-NEXT: [0,1]     D=eeeeeeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
-# BDVER2:         [0,0]     DeER .    .    . .   leaq	8(%rsp,%rdi,2), %rax
-# BDVER2-NEXT:    [0,1]     D=eeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
+# BDVER2:         [0,0]     DeeER.    .    .  .   leaq	8(%rsp,%rdi,2), %rax
+# BDVER2-NEXT:    [0,1]     D==eeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
 
 # BROADWELL:      [0,0]     DeER .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
 # BROADWELL-NEXT: [0,1]     D=eeeeeeeeeeeeeeeeER   sqrtss	(%rax), %xmm1
@@ -92,8 +92,8 @@ rcpss (%rax), %xmm1
 # BARCELONA-NEXT: 1.     1     2.0    0.0    0.0       sqrtss	(%rax), %xmm1
 # BARCELONA-NEXT:        1     1.5    0.5    0.0       <total>
 
-# BDVER2-NEXT:    1.     1     2.0    0.0    0.0       sqrtss	(%rax), %xmm1
-# BDVER2-NEXT:           1     1.5    0.5    0.0       <total>
+# BDVER2-NEXT:    1.     1     3.0    0.0    0.0       sqrtss	(%rax), %xmm1
+# BDVER2-NEXT:           1     2.0    0.5    0.0       <total>
 
 # BROADWELL-NEXT: 1.     1     2.0    0.0    0.0       sqrtss	(%rax), %xmm1
 # BROADWELL-NEXT:        1     1.5    0.5    0.0       <total>
@@ -120,7 +120,7 @@ rcpss (%rax), %xmm1
 # BARCELONA-NEXT:                     0123456789          0
 # BARCELONA-NEXT: Index     0123456789          0123456789
 
-# BDVER2-NEXT:                        01234567
+# BDVER2-NEXT:                        012345678
 # BDVER2-NEXT:    Index     0123456789
 
 # BROADWELL-NEXT:                     0123456789
@@ -144,8 +144,8 @@ rcpss (%rax), %xmm1
 # BARCELONA:      [0,0]     DeER .    .    .    .    .    .   leaq	8(%rsp,%rdi,2), %rax
 # BARCELONA-NEXT: [0,1]     D=eeeeeeeeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
-# BDVER2:         [0,0]     DeER .    .    . .   leaq	8(%rsp,%rdi,2), %rax
-# BDVER2-NEXT:    [0,1]     D=eeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
+# BDVER2:         [0,0]     DeeER.    .    .  .   leaq	8(%rsp,%rdi,2), %rax
+# BDVER2-NEXT:    [0,1]     D==eeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
 
 # BROADWELL:      [0,0]     DeER .    .    .    .   .   leaq	8(%rsp,%rdi,2), %rax
 # BROADWELL-NEXT: [0,1]     D=eeeeeeeeeeeeeeeeeeeeeER   sqrtsd	(%rax), %xmm1
@@ -177,8 +177,8 @@ rcpss (%rax), %xmm1
 # BARCELONA-NEXT: 1.     1     2.0    0.0    0.0       sqrtsd	(%rax), %xmm1
 # BARCELONA-NEXT:        1     1.5    0.5    0.0       <total>
 
-# BDVER2-NEXT:    1.     1     2.0    0.0    0.0       sqrtsd	(%rax), %xmm1
-# BDVER2-NEXT:           1     1.5    0.5    0.0       <total>
+# BDVER2-NEXT:    1.     1     3.0    0.0    0.0       sqrtsd	(%rax), %xmm1
+# BDVER2-NEXT:           1     2.0    0.5    0.0       <total>
 
 # BROADWELL-NEXT: 1.     1     2.0    0.0    0.0       sqrtsd	(%rax), %xmm1
 # BROADWELL-NEXT:        1     1.5    0.5    0.0       <total>
@@ -203,7 +203,7 @@ rcpss (%rax), %xmm1
 # ALL:            Timeline view:
 
 # BARCELONA-NEXT:                     01234
-# BDVER2-NEXT:                        0123
+# BDVER2-NEXT:                        01234
 # BROADWELL-NEXT:                     0123
 # BTVER2-NEXT:                        01
 # HASWELL-NEXT:                       0123
@@ -216,8 +216,8 @@ rcpss (%rax), %xmm1
 # BARCELONA:      [0,0]     DeER .    .   .   leaq	8(%rsp,%rdi,2), %rax
 # BARCELONA-NEXT: [0,1]     D=eeeeeeeeeeeER   rsqrtss	(%rax), %xmm1
 
-# BDVER2:         [0,0]     DeER .    .  .   leaq	8(%rsp,%rdi,2), %rax
-# BDVER2-NEXT:    [0,1]     D=eeeeeeeeeeER   rsqrtss	(%rax), %xmm1
+# BDVER2:         [0,0]     DeeER.    .   .   leaq	8(%rsp,%rdi,2), %rax
+# BDVER2-NEXT:    [0,1]     D==eeeeeeeeeeER   rsqrtss	(%rax), %xmm1
 
 # BROADWELL:      [0,0]     DeER .    .  .   leaq	8(%rsp,%rdi,2), %rax
 # BROADWELL-NEXT: [0,1]     D=eeeeeeeeeeER   rsqrtss	(%rax), %xmm1
@@ -249,8 +249,8 @@ rcpss (%rax), %xmm1
 # BARCELONA-NEXT: 1.     1     2.0    0.0    0.0       rsqrtss	(%rax), %xmm1
 # BARCELONA-NEXT:        1     1.5    0.5    0.0       <total>
 
-# BDVER2-NEXT:    1.     1     2.0    0.0    0.0       rsqrtss	(%rax), %xmm1
-# BDVER2-NEXT:           1     1.5    0.5    0.0       <total>
+# BDVER2-NEXT:    1.     1     3.0    0.0    0.0       rsqrtss	(%rax), %xmm1
+# BDVER2-NEXT:           1     2.0    0.5    0.0       <total>
 
 # BROADWELL-NEXT: 1.     1     2.0    0.0    0.0       rsqrtss	(%rax), %xmm1
 # BROADWELL-NEXT:        1     1.5    0.5    0.0       <total>
@@ -275,7 +275,7 @@ rcpss (%rax), %xmm1
 # ALL:            Timeline view:
 
 # BARCELONA-NEXT:                     01234
-# BDVER2-NEXT:                        0123
+# BDVER2-NEXT:                        01234
 # BROADWELL-NEXT:                     0123
 # BTVER2-NEXT:                        01
 # HASWELL-NEXT:                       0123
@@ -288,8 +288,8 @@ rcpss (%rax), %xmm1
 # BARCELONA:      [0,0]     DeER .    .   .   leaq	8(%rsp,%rdi,2), %rax
 # BARCELONA-NEXT: [0,1]     D=eeeeeeeeeeeER   rcpss	(%rax), %xmm1
 
-# BDVER2:         [0,0]     DeER .    .  .   leaq	8(%rsp,%rdi,2), %rax
-# BDVER2-NEXT:    [0,1]     D=eeeeeeeeeeER   rcpss	(%rax), %xmm1
+# BDVER2:         [0,0]     DeeER.    .   .   leaq	8(%rsp,%rdi,2), %rax
+# BDVER2-NEXT:    [0,1]     D==eeeeeeeeeeER   rcpss	(%rax), %xmm1
 
 # BROADWELL:      [0,0]     DeER .    .  .   leaq	8(%rsp,%rdi,2), %rax
 # BROADWELL-NEXT: [0,1]     D=eeeeeeeeeeER   rcpss	(%rax), %xmm1
@@ -321,8 +321,8 @@ rcpss (%rax), %xmm1
 # BARCELONA-NEXT: 1.     1     2.0    0.0    0.0       rcpss	(%rax), %xmm1
 # BARCELONA-NEXT:        1     1.5    0.5    0.0       <total>
 
-# BDVER2-NEXT:    1.     1     2.0    0.0    0.0       rcpss	(%rax), %xmm1
-# BDVER2-NEXT:           1     1.5    0.5    0.0       <total>
+# BDVER2-NEXT:    1.     1     3.0    0.0    0.0       rcpss	(%rax), %xmm1
+# BDVER2-NEXT:           1     2.0    0.5    0.0       <total>
 
 # BROADWELL-NEXT: 1.     1     2.0    0.0    0.0       rcpss	(%rax), %xmm1
 # BROADWELL-NEXT:        1     1.5    0.5    0.0       <total>
