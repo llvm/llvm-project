@@ -2471,9 +2471,9 @@ template <class ELFT> void ELFDumper<ELFT>::printNeededLibraries() {
     if (Entry.d_tag == ELF::DT_NEEDED)
       Libs.push_back(getDynamicString(Entry.d_un.d_val));
 
-  llvm::stable_sort(Libs);
+  llvm::sort(Libs);
 
-  for (const auto &L : Libs)
+  for (const std::string &L : Libs)
     W.startLine() << L << "\n";
 }
 

@@ -677,6 +677,10 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
                             CGM.HasHiddenLTOVisibility(RD);
   bool ShouldEmitVFEInfo = CGM.getCodeGenOpts().VirtualFunctionElimination &&
                            CGM.HasHiddenLTOVisibility(RD);
+  bool ShouldEmitWPDInfo =
+      CGM.getCodeGenOpts().WholeProgramVTables &&
+      // Don't insert type tests if we are forcing public std visibility.
+      !CGM.HasLTOVisibilityPublicStd(RD);
   llvm::Value *VirtualFn = nullptr;
 
   {
@@ -684,8 +688,9 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
     llvm::Value *TypeId = nullptr;
     llvm::Value *CheckResult = nullptr;
 
-    if (ShouldEmitCFICheck || ShouldEmitVFEInfo) {
-      // If doing CFI or VFE, we will need the metadata node to check against.
+    if (ShouldEmitCFICheck || ShouldEmitVFEInfo || ShouldEmitWPDInfo) {
+      // If doing CFI, VFE or WPD, we will need the metadata node to check
+      // against.
       llvm::Metadata *MD =
           CGM.CreateMetadataIdentifierForVirtualMemPtrType(QualType(MPT, 0));
       TypeId = llvm::MetadataAsValue::get(CGF.getLLVMContext(), MD);
@@ -709,7 +714,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
     } else {
       // When not doing VFE, emit a normal load, as it allows more
       // optimisations than type.checked.load.
-      if (ShouldEmitCFICheck) {
+      if (ShouldEmitCFICheck || ShouldEmitWPDInfo) {
         CheckResult = Builder.CreateCall(
             CGM.getIntrinsic(llvm::Intrinsic::type_test),
             {Builder.CreateBitCast(VFPAddr, CGF.Int8PtrTy), TypeId});
@@ -720,7 +725,8 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
                                             "memptr.virtualfn");
     }
     assert(VirtualFn && "Virtual fuction pointer not created!");
-    assert((!ShouldEmitCFICheck || !ShouldEmitVFEInfo || CheckResult) &&
+    assert((!ShouldEmitCFICheck || !ShouldEmitVFEInfo || !ShouldEmitWPDInfo ||
+            CheckResult) &&
            "Check result required but not created!");
 
     if (ShouldEmitCFICheck) {

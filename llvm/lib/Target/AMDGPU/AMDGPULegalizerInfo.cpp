@@ -1029,16 +1029,21 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     };
 
     auto &Builder = getActionDefinitionsBuilder(Op)
+      // Try to widen to s16 first for small types.
+      // TODO: Only do this on targets with legal s16 shifts
+      .minScalarOrEltIf(narrowerThan(LitTyIdx, 16), LitTyIdx, S16)
+
       .widenScalarToNextPow2(LitTyIdx, /*Min*/ 16)
-      // Clamp the little scalar to s8-s256 and make it a power of 2. It's not
-      // worth considering the multiples of 64 since 2*192 and 2*384 are not
-      // valid.
-      .clampScalar(LitTyIdx, S16, S256)
-      .widenScalarToNextPow2(LitTyIdx, /*Min*/ 32)
+      .lowerFor({{S16, V2S16}})
       .moreElementsIf(isSmallOddVector(BigTyIdx), oneMoreElement(BigTyIdx))
       .fewerElementsIf(all(typeIs(0, S16), vectorWiderThan(1, 32),
                            elementTypeIs(1, S16)),
                        changeTo(1, V2S16))
+      // Clamp the little scalar to s8-s256 and make it a power of 2. It's not
+      // worth considering the multiples of 64 since 2*192 and 2*384 are not
+      // valid.
+      .clampScalar(LitTyIdx, S32, S256)
+      .widenScalarToNextPow2(LitTyIdx, /*Min*/ 32)
       // Break up vectors with weird elements into scalars
       .fewerElementsIf(
         [=](const LegalityQuery &Query) { return notValidElt(Query, 0); },
@@ -1046,8 +1051,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .fewerElementsIf(
         [=](const LegalityQuery &Query) { return notValidElt(Query, 1); },
         scalarize(1))
-      .clampScalar(BigTyIdx, S32, S1024)
-      .lowerFor({{S16, V2S16}});
+      .clampScalar(BigTyIdx, S32, S1024);
 
     if (Op == G_MERGE_VALUES) {
       Builder.widenScalarIf(

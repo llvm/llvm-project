@@ -459,8 +459,9 @@ TEST_F(FormatTestJS, ContainerLiterals) {
   // Arrow functions in object literals.
   verifyFormat("var x = {\n"
                "  y: (a) => {\n"
+               "    x();\n"
                "    return a;\n"
-               "  }\n"
+               "  },\n"
                "};");
   verifyFormat("var x = {y: (a) => a};");
 
@@ -486,7 +487,8 @@ TEST_F(FormatTestJS, ContainerLiterals) {
 
   // Object literals can leave out labels.
   verifyFormat("f({a}, () => {\n"
-               "  g();  //\n"
+               "  x;\n"
+               "  g();\n"
                "});");
 
   // Keys can be quoted.
@@ -1112,8 +1114,9 @@ TEST_F(FormatTestJS, MultipleFunctionLiterals) {
 
 TEST_F(FormatTestJS, ArrowFunctions) {
   verifyFormat("var x = (a) => {\n"
+               "  x;\n"
                "  return a;\n"
-               "};");
+               "};\n");
   verifyFormat("var x = (a) => {\n"
                "  function y() {\n"
                "    return 42;\n"
@@ -1121,6 +1124,7 @@ TEST_F(FormatTestJS, ArrowFunctions) {
                "  return a;\n"
                "};");
   verifyFormat("var x = (a: type): {some: type} => {\n"
+               "  y;\n"
                "  return a;\n"
                "};");
   verifyFormat("var x = (a) => a;");
@@ -1147,8 +1151,39 @@ TEST_F(FormatTestJS, ArrowFunctions) {
                "        // break\n"
                "    );");
   verifyFormat("const f = (x: string|null): string|null => {\n"
+               "  y;\n"
                "  return x;\n"
                "}\n");
+}
+
+TEST_F(FormatTestJS, ArrowFunctionStyle) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_JavaScript);
+  Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
+  verifyFormat("const arr = () => { x; };", Style);
+  verifyFormat("const arrInlineAll = () => {};", Style);
+  Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
+  verifyFormat("const arr = () => {\n"
+               "  x;\n"
+               "};",
+               Style);
+  verifyFormat("const arrInlineNone = () => {\n"
+               "};",
+               Style);
+  Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_Empty;
+  verifyFormat("const arr = () => {\n"
+               "  x;\n"
+               "};",
+               Style);
+  verifyFormat("const arrInlineEmpty = () => {};",
+               Style);
+  Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_Inline;
+  verifyFormat("const arr = () => {\n"
+               "  x;\n"
+               "};",
+               Style);
+  verifyFormat("foo(() => {});",
+               Style);
+  verifyFormat("const arrInlineInline = () => {};", Style);
 }
 
 TEST_F(FormatTestJS, ReturnStatements) {
@@ -1711,10 +1746,12 @@ TEST_F(FormatTestJS, TypeInterfaceLineWrapping) {
 TEST_F(FormatTestJS, RemoveEmptyLinesInArrowFunctions) {
   verifyFormat("x = () => {\n"
                "  foo();\n"
+               "  bar();\n"
                "};\n",
                "x = () => {\n"
                "\n"
                "  foo();\n"
+               "  bar();\n"
                "\n"
                "};\n");
 }
@@ -1791,6 +1828,10 @@ TEST_F(FormatTestJS, Modules) {
                "];");
   verifyFormat("export default [];");
   verifyFormat("export default () => {};");
+  verifyFormat("export default () => {\n"
+               "  x;\n"
+               "  x;\n"
+               "};");
   verifyFormat("export interface Foo {\n"
                "  foo: number;\n"
                "}\n"

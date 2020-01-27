@@ -318,6 +318,27 @@ define amdgpu_ps void @ps_mesa_v5f32(<5 x float> %arg0) {
   ret void
 }
 
+; GCN-LABEL: {{^}}ps_mesa_i16:
+; SI: v_add_i32_e32 v{{[0-9]+}}, vcc, v0, v0
+; VI: v_add_u16_e32 v{{[0-9]+}}, v0, v0
+define amdgpu_ps void @ps_mesa_i16(i16 %arg0) {
+  %add = add i16 %arg0, %arg0
+  store i16 %add, i16 addrspace(1)* undef
+  ret void
+}
 
+; GCN-LABEL: {{^}}ps_mesa_inreg_i16:
+; GCN: s_add_i32 s{{[0-9]+}}, s0, s0
+define amdgpu_ps void @ps_mesa_inreg_i16(i16 inreg %arg0) {
+  %add = add i16 %arg0, %arg0
+  store i16 %add, i16 addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}ret_ps_mesa_i16:
+; GCN: s_movk_i32 s0, 0x7b
+define amdgpu_ps i16 @ret_ps_mesa_i16() {
+  ret i16 123
+}
 
 attributes #0 = { nounwind noinline }

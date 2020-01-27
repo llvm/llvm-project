@@ -312,7 +312,7 @@ LoopUnrollResult llvm::UnrollAndJamLoop(
 
   // Copy all blocks
   for (unsigned It = 1; It != Count; ++It) {
-    std::vector<BasicBlock *> NewBlocks;
+    SmallVector<BasicBlock *, 8> NewBlocks;
     // Maps Blocks[It] -> Blocks[It-1]
     DenseMap<Value *, Value *> PrevItValueMap;
 
@@ -379,9 +379,9 @@ LoopUnrollResult llvm::UnrollAndJamLoop(
     }
 
     // Remap all instructions in the most recent iteration
+    remapInstructionsInBlocks(NewBlocks, LastValueMap);
     for (BasicBlock *NewBlock : NewBlocks) {
       for (Instruction &I : *NewBlock) {
-        ::remapInstruction(&I, LastValueMap);
         if (auto *II = dyn_cast<IntrinsicInst>(&I))
           if (II->getIntrinsicID() == Intrinsic::assume)
             AC->registerAssumption(II);

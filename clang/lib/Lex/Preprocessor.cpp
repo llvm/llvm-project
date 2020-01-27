@@ -166,6 +166,8 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
       this->PPOpts->ExcludedConditionalDirectiveSkipMappings;
   if (ExcludedConditionalDirectiveSkipMappings)
     ExcludedConditionalDirectiveSkipMappings->clear();
+
+  MaxTokens = LangOpts.MaxTokens;
 }
 
 Preprocessor::~Preprocessor() {
@@ -962,8 +964,12 @@ void Preprocessor::Lex(Token &Result) {
 
   LastTokenWasAt = Result.is(tok::at);
   --LexLevel;
-  if (OnToken && LexLevel == 0 && !Result.getFlag(Token::IsReinjected))
-    OnToken(Result);
+
+  if (LexLevel == 0 && !Result.getFlag(Token::IsReinjected)) {
+    ++TokenCount;
+    if (OnToken)
+      OnToken(Result);
+  }
 }
 
 /// Lex a header-name token (including one formed from header-name-tokens if
