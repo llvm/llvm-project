@@ -243,6 +243,18 @@
 #pragma OPENCL EXTENSION cl_khr_mipmap_image : enable
 
 #if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#ifndef cl_khr_mipmap_image_writes
+#error "Missing cl_khr_mipmap_image_writes define"
+#endif
+#else
+#ifdef cl_khr_mipmap_image_writes
+#error "Incorrect cl_khr_mipmap_image_writes define"
+#endif
+// expected-warning@+2{{unsupported OpenCL extension 'cl_khr_mipmap_image_writes' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cl_khr_mipmap_image_writes : enable
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
 #ifndef cl_khr_srgb_image_writes
 #error "Missing cl_khr_srgb_image_writes define"
 #endif
