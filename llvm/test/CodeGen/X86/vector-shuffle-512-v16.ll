@@ -274,9 +274,8 @@ define <16 x float> @shuffle_v16f32_load_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_
 define <16 x float> @shuffle_v16f32_load_08_11_10_00_12_15_14_04(<16 x float> %a0, <16 x float>* %a1) {
 ; ALL-LABEL: shuffle_v16f32_load_08_11_10_00_12_15_14_04:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vmovaps (%rdi), %zmm1
-; ALL-NEXT:    vshufps {{.*#+}} zmm1 = zmm1[0,0],zmm0[2,0],zmm1[4,4],zmm0[6,4],zmm1[8,8],zmm0[10,8],zmm1[12,12],zmm0[14,12]
-; ALL-NEXT:    vshufps {{.*#+}} zmm0 = zmm0[0,3],zmm1[2,0],zmm0[4,7],zmm1[6,4],zmm0[8,11],zmm1[10,8],zmm0[12,15],zmm1[14,12]
+; ALL-NEXT:    vshufps {{.*#+}} zmm1 = zmm0[2,0],mem[0,0],zmm0[6,4],mem[4,4],zmm0[10,8],mem[8,8],zmm0[14,12],mem[12,12]
+; ALL-NEXT:    vshufps {{.*#+}} zmm0 = zmm0[0,3],zmm1[0,2],zmm0[4,7],zmm1[4,6],zmm0[8,11],zmm1[8,10],zmm0[12,15],zmm1[12,14]
 ; ALL-NEXT:    retq
   %1 = load <16 x float>, <16 x float>* %a1
   %2 = shufflevector <16 x float> %1, <16 x float> %a0, <16 x i32> <i32 16, i32 19, i32 18, i32 0, i32 20, i32 23, i32 22, i32 4, i32 24, i32 27, i32 26, i32 8, i32 28, i32 31, i32 30, i32 12>

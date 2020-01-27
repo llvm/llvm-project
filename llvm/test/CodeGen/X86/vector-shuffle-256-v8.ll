@@ -1308,16 +1308,14 @@ define <8 x float> @shuffle_v8f32_32107654_v4f32(<4 x float> %a, <4 x float> %b)
 define <8 x float> @shuffle_mem_v8f32_8BA0CFE4(<8 x float> %a0, <8 x float>* %a1) {
 ; AVX1OR2-LABEL: shuffle_mem_v8f32_8BA0CFE4:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vmovaps (%rdi), %ymm1
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,0],ymm0[2,0],ymm1[4,4],ymm0[6,4]
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],ymm1[2,0],ymm0[4,7],ymm1[6,4]
+; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm1 = ymm0[2,0],mem[0,0],ymm0[6,4],mem[4,4]
+; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],ymm1[0,2],ymm0[4,7],ymm1[4,6]
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512VL-SLOW-LABEL: shuffle_mem_v8f32_8BA0CFE4:
 ; AVX512VL-SLOW:       # %bb.0:
-; AVX512VL-SLOW-NEXT:    vmovaps (%rdi), %ymm1
-; AVX512VL-SLOW-NEXT:    vshufps {{.*#+}} ymm1 = ymm1[0,0],ymm0[2,0],ymm1[4,4],ymm0[6,4]
-; AVX512VL-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],ymm1[2,0],ymm0[4,7],ymm1[6,4]
+; AVX512VL-SLOW-NEXT:    vshufps {{.*#+}} ymm1 = ymm0[2,0],mem[0,0],ymm0[6,4],mem[4,4]
+; AVX512VL-SLOW-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,3],ymm1[0,2],ymm0[4,7],ymm1[4,6]
 ; AVX512VL-SLOW-NEXT:    retq
 ;
 ; AVX512VL-FAST-LABEL: shuffle_mem_v8f32_8BA0CFE4:

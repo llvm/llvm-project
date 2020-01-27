@@ -23,7 +23,7 @@ ParentMapContext::ParentMapContext(ASTContext &Ctx) : ASTCtx(Ctx) {}
 
 ParentMapContext::~ParentMapContext() = default;
 
-void ParentMapContext::clear() { Parents.clear(); }
+void ParentMapContext::clear() { Parents.reset(); }
 
 const Expr *ParentMapContext::traverseIgnored(const Expr *E) const {
   return traverseIgnored(const_cast<Expr *>(E));
@@ -116,10 +116,78 @@ public:
     }
   }
 
-  DynTypedNodeList getParents(const ast_type_traits::DynTypedNode &Node) {
-    if (Node.getNodeKind().hasPointerIdentity())
-      return getDynNodeFromMap(Node.getMemoizationData(), PointerParents);
+  DynTypedNodeList getParents(ast_type_traits::TraversalKind TK,
+                              const ast_type_traits::DynTypedNode &Node) {
+    if (Node.getNodeKind().hasPointerIdentity()) {
+      auto ParentList =
+          getDynNodeFromMap(Node.getMemoizationData(), PointerParents);
+      if (ParentList.size() == 1 &&
+          TK == ast_type_traits::TK_IgnoreUnlessSpelledInSource) {
+        const auto *E = ParentList[0].get<Expr>();
+        const auto *Child = Node.get<Expr>();
+        if (E && Child)
+          return AscendIgnoreUnlessSpelledInSource(E, Child);
+      }
+      return ParentList;
+    }
     return getDynNodeFromMap(Node, OtherParents);
+  }
+
+  ast_type_traits::DynTypedNode
+  AscendIgnoreUnlessSpelledInSource(const Expr *E, const Expr *Child) {
+
+    auto ShouldSkip = [](const Expr *E, const Expr *Child) {
+      if (isa<ImplicitCastExpr>(E))
+        return true;
+
+      if (isa<FullExpr>(E))
+        return true;
+
+      if (isa<MaterializeTemporaryExpr>(E))
+        return true;
+
+      if (isa<CXXBindTemporaryExpr>(E))
+        return true;
+
+      if (isa<ParenExpr>(E))
+        return true;
+
+      if (isa<ExprWithCleanups>(E))
+        return true;
+
+      auto SR = Child->getSourceRange();
+
+      if (const auto *C = dyn_cast<CXXConstructExpr>(E)) {
+        if (C->getSourceRange() == SR || !isa<CXXTemporaryObjectExpr>(C))
+          return true;
+      }
+
+      if (const auto *C = dyn_cast<CXXMemberCallExpr>(E)) {
+        if (C->getSourceRange() == SR)
+          return true;
+      }
+
+      if (const auto *C = dyn_cast<MemberExpr>(E)) {
+        if (C->getSourceRange() == SR)
+          return true;
+      }
+      return false;
+    };
+
+    while (ShouldSkip(E, Child)) {
+      auto It = PointerParents.find(E);
+      if (It == PointerParents.end())
+        break;
+      const auto *S = It->second.dyn_cast<const Stmt *>();
+      if (!S)
+        return getSingleDynTypedNodeFromParentMap(It->second);
+      const auto *P = dyn_cast<Expr>(S);
+      if (!P)
+        return ast_type_traits::DynTypedNode::create(*S);
+      Child = E;
+      E = P;
+    }
+    return ast_type_traits::DynTypedNode::create(*E);
   }
 };
 
@@ -151,8 +219,7 @@ createDynTypedNode(const NestedNameSpecifierLoc &Node) {
 class ParentMapContext::ParentMap::ASTVisitor
     : public RecursiveASTVisitor<ASTVisitor> {
 public:
-  ASTVisitor(ParentMap &Map, ParentMapContext &MapCtx)
-      : Map(Map), MapCtx(MapCtx) {}
+  ASTVisitor(ParentMap &Map) : Map(Map) {}
 
 private:
   friend class RecursiveASTVisitor<ASTVisitor>;
@@ -222,11 +289,8 @@ private:
   }
 
   bool TraverseStmt(Stmt *StmtNode) {
-    Stmt *FilteredNode = StmtNode;
-    if (auto *ExprNode = dyn_cast_or_null<Expr>(FilteredNode))
-      FilteredNode = MapCtx.traverseIgnored(ExprNode);
-    return TraverseNode(FilteredNode, FilteredNode,
-                        [&] { return VisitorBase::TraverseStmt(FilteredNode); },
+    return TraverseNode(StmtNode, StmtNode,
+                        [&] { return VisitorBase::TraverseStmt(StmtNode); },
                         &Map.PointerParents);
   }
 
@@ -245,21 +309,18 @@ private:
   }
 
   ParentMap &Map;
-  ParentMapContext &MapCtx;
   llvm::SmallVector<ast_type_traits::DynTypedNode, 16> ParentStack;
 };
 
 ParentMapContext::ParentMap::ParentMap(ASTContext &Ctx) {
-  ASTVisitor(*this, Ctx.getParentMapContext()).TraverseAST(Ctx);
+  ASTVisitor(*this).TraverseAST(Ctx);
 }
 
 DynTypedNodeList
 ParentMapContext::getParents(const ast_type_traits::DynTypedNode &Node) {
-  std::unique_ptr<ParentMap> &P = Parents[Traversal];
-  if (!P)
+  if (!Parents)
     // We build the parent map for the traversal scope (usually whole TU), as
     // hasAncestor can escape any subtree.
-    P = std::make_unique<ParentMap>(ASTCtx);
-  return P->getParents(Node);
+    Parents = std::make_unique<ParentMap>(ASTCtx);
+  return Parents->getParents(getTraversalKind(), Node);
 }
-
