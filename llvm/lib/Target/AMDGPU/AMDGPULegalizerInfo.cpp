@@ -1008,8 +1008,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
     .legalIf(isRegisterType(0));
 
-  // TODO: Don't fully scalarize v2s16 pieces
-  getActionDefinitionsBuilder(G_SHUFFLE_VECTOR).lower();
+  // TODO: Don't fully scalarize v2s16 pieces? Or combine out thosse
+  // pre-legalize.
+  if (ST.hasVOP3PInsts()) {
+    getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
+      .customFor({V2S16, V2S16})
+      .lower();
+  } else
+    getActionDefinitionsBuilder(G_SHUFFLE_VECTOR).lower();
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
@@ -1156,6 +1162,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeExtractVectorElt(MI, MRI, B);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
     return legalizeInsertVectorElt(MI, MRI, B);
+  case TargetOpcode::G_SHUFFLE_VECTOR:
+    return legalizeShuffleVector(MI, MRI, B);
   case TargetOpcode::G_FSIN:
   case TargetOpcode::G_FCOS:
     return legalizeSinCos(MI, MRI, B);
@@ -1583,6 +1591,37 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
 
   MI.eraseFromParent();
   return true;
+}
+
+static bool isLegalVOP3PShuffleMask(ArrayRef<int> Mask) {
+  assert(Mask.size() == 2);
+
+  // If one half is undef, the other is trivially in the same reg.
+  if (Mask[0] == -1 || Mask[1] == -1)
+    return true;
+  return ((Mask[0] == 0 || Mask[0] == 1) && (Mask[1] == 0 || Mask[1] == 1)) ||
+         ((Mask[0] == 2 || Mask[0] == 3) && (Mask[1] == 2 || Mask[1] == 3));
+}
+
+bool AMDGPULegalizerInfo::legalizeShuffleVector(
+  MachineInstr &MI, MachineRegisterInfo &MRI,
+  MachineIRBuilder &B) const {
+  const LLT V2S16 = LLT::vector(2, 16);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src0 = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src0);
+
+  if (SrcTy == V2S16 && DstTy == V2S16 &&
+      isLegalVOP3PShuffleMask(MI.getOperand(3).getShuffleMask()))
+    return true;
+
+  MachineIRBuilder HelperBuilder(MI);
+  GISelObserverWrapper DummyObserver;
+  LegalizerHelper Helper(B.getMF(), DummyObserver, HelperBuilder);
+  HelperBuilder.setInstr(MI);
+  return Helper.lowerShuffleVector(MI) == LegalizerHelper::Legalized;
 }
 
 bool AMDGPULegalizerInfo::legalizeSinCos(
