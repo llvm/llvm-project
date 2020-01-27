@@ -180,8 +180,30 @@ private:
   InstructionSelector::ComplexRendererFns
   selectDS1Addr1Offset(MachineOperand &Root) const;
 
+  std::pair<Register, int64_t>
+  getPtrBaseWithConstantOffset(Register Root,
+                               const MachineRegisterInfo &MRI) const;
+
+  // Parse out a chain of up to two g_ptr_add instructions.
+  // g_ptr_add (n0, _)
+  // g_ptr_add (n0, (n1 = g_ptr_add n2, n3))
+  struct MUBUFAddressData {
+    Register N0, N2, N3;
+    int64_t Offset = 0;
+  };
+
+  bool shouldUseAddr64(MUBUFAddressData AddrData) const;
+
+  void splitIllegalMUBUFOffset(MachineIRBuilder &B,
+                               Register &SOffset, int64_t &ImmOffset) const;
+
+  MUBUFAddressData parseMUBUFAddress(Register Src) const;
+
   InstructionSelector::ComplexRendererFns
   selectMUBUFAddr64(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectMUBUFOffset(MachineOperand &Root) const;
 
   void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx = -1) const;

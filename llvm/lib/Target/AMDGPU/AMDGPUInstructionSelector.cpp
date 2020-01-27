@@ -2552,32 +2552,51 @@ AMDGPUInstructionSelector::selectDS1Addr1Offset(MachineOperand &Root) const {
     }};
 }
 
+/// If \p Root is a G_PTR_ADD with a G_CONSTANT on the right hand side, return
+/// the base value with the constant offset. There may be intervening copies
+/// between \p Root and the identified constant. Returns \p Root, 0 if this does
+/// not match the pattern.
+std::pair<Register, int64_t>
+AMDGPUInstructionSelector::getPtrBaseWithConstantOffset(
+  Register Root, const MachineRegisterInfo &MRI) const {
+  MachineInstr *RootI = MRI.getVRegDef(Root);
+  if (RootI->getOpcode() != TargetOpcode::G_PTR_ADD)
+    return {Root, 0};
+
+  MachineOperand &RHS = RootI->getOperand(2);
+  Optional<ValueAndVReg> MaybeOffset
+    = getConstantVRegValWithLookThrough(RHS.getReg(), MRI, true);
+  if (!MaybeOffset)
+    return {Root, 0};
+  return {RootI->getOperand(1).getReg(), MaybeOffset->Value};
+}
+
 static void addZeroImm(MachineInstrBuilder &MIB) {
   MIB.addImm(0);
 }
 
 /// Return a resource descriptor for use with an arbitrary 64-bit pointer. If \p
-/// BasePtr is not valid, a null base pointer will be ussed.
-static Register buildRSrc(MachineInstr *MI, MachineRegisterInfo &MRI,
-                          const SIInstrInfo &TII, Register BasePtr) {
+/// BasePtr is not valid, a null base pointer will be used.
+static Register buildRSRC(MachineIRBuilder &B, MachineRegisterInfo &MRI,
+                          uint32_t FormatLo, uint32_t FormatHi,
+                          Register BasePtr) {
   Register RSrc2 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
   Register RSrc3 = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
   Register RSrcHi = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
   Register RSrc = MRI.createVirtualRegister(&AMDGPU::SGPR_128RegClass);
 
-  const DebugLoc &DL = MI->getDebugLoc();
-  MachineBasicBlock *BB = MI->getParent();
-
-  // TODO: Try to use a real pointer if available.
-  BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_MOV_B32), RSrc2)
-    .addImm(0);
-  BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_MOV_B32), RSrc3)
-    .addImm(TII.getDefaultRsrcDataFormat() >> 32);
+  B.buildInstr(AMDGPU::S_MOV_B32)
+    .addDef(RSrc2)
+    .addImm(FormatLo);
+  B.buildInstr(AMDGPU::S_MOV_B32)
+    .addDef(RSrc3)
+    .addImm(FormatHi);
 
   // Build the half of the subregister with the constants before building the
   // full 128-bit register. If we are building multiple resource descriptors,
   // this will allow CSEing of the 2-component register.
-  BuildMI(*BB, MI, DL, TII.get(AMDGPU::REG_SEQUENCE), RSrcHi)
+  B.buildInstr(AMDGPU::REG_SEQUENCE)
+    .addDef(RSrcHi)
     .addReg(RSrc2)
     .addImm(AMDGPU::sub0)
     .addReg(RSrc3)
@@ -2586,17 +2605,95 @@ static Register buildRSrc(MachineInstr *MI, MachineRegisterInfo &MRI,
   Register RSrcLo = BasePtr;
   if (!BasePtr) {
     RSrcLo = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
-    BuildMI(*BB, MI, DL, TII.get(AMDGPU::S_MOV_B64), RSrcLo)
+    B.buildInstr(AMDGPU::S_MOV_B64)
+      .addDef(RSrcLo)
       .addImm(0);
   }
 
-  BuildMI(*BB, MI, DL, TII.get(AMDGPU::REG_SEQUENCE), RSrc)
+  B.buildInstr(AMDGPU::REG_SEQUENCE)
+    .addDef(RSrc)
     .addReg(RSrcLo)
     .addImm(AMDGPU::sub0_sub1)
     .addReg(RSrcHi)
     .addImm(AMDGPU::sub2_sub3);
 
   return RSrc;
+}
+
+static Register buildAddr64RSrc(MachineIRBuilder &B, MachineRegisterInfo &MRI,
+                                const SIInstrInfo &TII, Register BasePtr) {
+  uint64_t DefaultFormat = TII.getDefaultRsrcDataFormat();
+
+  // FIXME: Why are half the "default" bits ignored based on the addressing
+  // mode?
+  return buildRSRC(B, MRI, 0, Hi_32(DefaultFormat), BasePtr);
+}
+
+static Register buildOffsetSrc(MachineIRBuilder &B, MachineRegisterInfo &MRI,
+                               const SIInstrInfo &TII, Register BasePtr) {
+  uint64_t DefaultFormat = TII.getDefaultRsrcDataFormat();
+
+  // FIXME: Why are half the "default" bits ignored based on the addressing
+  // mode?
+  return buildRSRC(B, MRI, -1, Hi_32(DefaultFormat), BasePtr);
+}
+
+AMDGPUInstructionSelector::MUBUFAddressData
+AMDGPUInstructionSelector::parseMUBUFAddress(Register Src) const {
+  MUBUFAddressData Data;
+  Data.N0 = Src;
+
+  Register PtrBase;
+  int64_t Offset;
+
+  std::tie(PtrBase, Offset) = getPtrBaseWithConstantOffset(Src, *MRI);
+  if (isUInt<32>(Offset)) {
+    Data.N0 = PtrBase;
+    Data.Offset = Offset;
+  }
+
+  if (MachineInstr *InputAdd
+      = getOpcodeDef(TargetOpcode::G_PTR_ADD, Data.N0, *MRI)) {
+    Data.N2 = InputAdd->getOperand(1).getReg();
+    Data.N3 = InputAdd->getOperand(2).getReg();
+
+    // FIXME: Need to fix extra SGPR->VGPRcopies inserted
+    // FIXME: Don't know this was defined by operand 0
+    //
+    // TODO: Remove this when we have copy folding optimizations after
+    // RegBankSelect.
+    Data.N2 = getDefIgnoringCopies(Data.N2, *MRI)->getOperand(0).getReg();
+    Data.N3 = getDefIgnoringCopies(Data.N3, *MRI)->getOperand(0).getReg();
+  }
+
+  return Data;
+}
+
+/// Return if the addr64 mubuf mode should be used for the given address.
+bool AMDGPUInstructionSelector::shouldUseAddr64(MUBUFAddressData Addr) const {
+  // (ptr_add N2, N3) -> addr64, or
+  // (ptr_add (ptr_add N2, N3), C1) -> addr64
+  if (Addr.N2)
+    return true;
+
+  const RegisterBank *N0Bank = RBI.getRegBank(Addr.N0, *MRI, TRI);
+  return N0Bank->getID() == AMDGPU::VGPRRegBankID;
+}
+
+/// Split an immediate offset \p ImmOffset depending on whether it fits in the
+/// immediate field. Modifies \p ImmOffset and sets \p SOffset to the variable
+/// component.
+void AMDGPUInstructionSelector::splitIllegalMUBUFOffset(
+  MachineIRBuilder &B, Register &SOffset, int64_t &ImmOffset) const {
+  if (SIInstrInfo::isLegalMUBUFImmOffset(ImmOffset))
+    return;
+
+  // Illegal offset, store it in soffset.
+  SOffset = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  B.buildInstr(AMDGPU::S_MOV_B32)
+    .addDef(SOffset)
+    .addImm(ImmOffset);
+  ImmOffset = 0;
 }
 
 InstructionSelector::ComplexRendererFns
@@ -2606,22 +2703,108 @@ AMDGPUInstructionSelector::selectMUBUFAddr64(MachineOperand &Root) const {
   if (!STI.hasAddr64() || STI.useFlatForGlobal())
     return {};
 
-  MachineInstr *MI = MRI->getVRegDef(Root.getReg());
-  Register VAddr = Root.getReg();
-  int64_t Offset = 0;
+  MUBUFAddressData AddrData = parseMUBUFAddress(Root.getReg());
+  if (!shouldUseAddr64(AddrData))
+    return {};
 
-  // TODO: Attempt to use addressing modes. We need to look back through regbank
-  // copies to find a 64-bit SGPR base and VGPR offset.
+  Register N0 = AddrData.N0;
+  Register N2 = AddrData.N2;
+  Register N3 = AddrData.N3;
+  int64_t Offset = AddrData.Offset;
+
+  // VGPR pointer
+  Register VAddr;
+
+  // SGPR offset.
+  Register SOffset;
+
+  // Base pointer for the SRD.
+  Register SRDPtr;
+
+  if (N2) {
+    if (RBI.getRegBank(N2, *MRI, TRI)->getID() == AMDGPU::VGPRRegBankID) {
+      assert(N3);
+      if (RBI.getRegBank(N3, *MRI, TRI)->getID() == AMDGPU::VGPRRegBankID) {
+        // Both N2 and N3 are divergent. Use N0 (the result of the add) as the
+        // addr64, and construct the default resource from a 0 address.
+        VAddr = N0;
+      } else {
+        SRDPtr = N3;
+        VAddr = N2;
+      }
+    } else {
+      // N2 is not divergent.
+      SRDPtr = N2;
+      VAddr = N3;
+    }
+  } else if (RBI.getRegBank(N0, *MRI, TRI)->getID() == AMDGPU::VGPRRegBankID) {
+    // Use the default null pointer in the resource
+    VAddr = N0;
+  } else {
+    // N0 -> offset, or
+    // (N0 + C1) -> offset
+    SRDPtr = N0;
+  }
+
+  MachineIRBuilder B(*Root.getParent());
+  Register RSrcReg = buildAddr64RSrc(B, *MRI, TII, SRDPtr);
+  splitIllegalMUBUFOffset(B, SOffset, Offset);
 
   // FIXME: Use defaulted operands for trailing 0s and remove from the complex
   // pattern.
   return {{
       [=](MachineInstrBuilder &MIB) {  // rsrc
-        MIB.addReg(buildRSrc(MI, *MRI, TII, Register()));
+        MIB.addReg(RSrcReg);
       },
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(VAddr); },  // vaddr
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); }, // soffset
-      addZeroImm, //  offset
+      [=](MachineInstrBuilder &MIB) { // vaddr
+        MIB.addReg(VAddr);
+      },
+      [=](MachineInstrBuilder &MIB) { // soffset
+        if (SOffset)
+          MIB.addReg(SOffset);
+        else
+          MIB.addImm(0);
+      },
+      [=](MachineInstrBuilder &MIB) { // offset
+        MIB.addImm(Offset);
+      },
+      addZeroImm, //  glc
+      addZeroImm, //  slc
+      addZeroImm, //  tfe
+      addZeroImm, //  dlc
+      addZeroImm  //  swz
+    }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectMUBUFOffset(MachineOperand &Root) const {
+  MUBUFAddressData AddrData = parseMUBUFAddress(Root.getReg());
+  if (shouldUseAddr64(AddrData))
+    return {};
+
+  // N0 -> offset, or
+  // (N0 + C1) -> offset
+  Register SRDPtr = AddrData.N0;
+  int64_t Offset = AddrData.Offset;
+  Register SOffset;
+
+  // TODO: Look through extensions for 32-bit soffset.
+  MachineIRBuilder B(*Root.getParent());
+
+  Register RSrcReg = buildOffsetSrc(B, *MRI, TII, SRDPtr);
+  splitIllegalMUBUFOffset(B, SOffset, Offset);
+
+  return {{
+      [=](MachineInstrBuilder &MIB) {  // rsrc
+        MIB.addReg(RSrcReg);
+      },
+      [=](MachineInstrBuilder &MIB) { // soffset
+        if (SOffset)
+          MIB.addReg(SOffset);
+        else
+          MIB.addImm(0);
+      },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); }, // offset
       addZeroImm, //  glc
       addZeroImm, //  slc
       addZeroImm, //  tfe
