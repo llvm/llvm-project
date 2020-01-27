@@ -129,9 +129,8 @@ public:
   bool legalizeAtomicIncDec(MachineInstr &MI,  MachineIRBuilder &B,
                             bool IsInc) const;
 
-  bool legalizeIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
-                         MachineIRBuilder &B) const override;
-
+  bool legalizeIntrinsic(MachineInstr &MI, MachineIRBuilder &B,
+                         GISelChangeObserver &Observer) const override;
 };
 } // End llvm namespace.
 #endif

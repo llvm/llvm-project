@@ -2768,10 +2768,10 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   return true;
 }
 
-// FIMXE: Needs observer like custom
-bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
-                                            MachineRegisterInfo &MRI,
-                                            MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeIntrinsic(
+    MachineInstr &MI, MachineIRBuilder &B,
+    GISelChangeObserver &Observer) const {
+  MachineRegisterInfo &MRI = *B.getMRI();
   // Replace the use G_BRCOND with the exec manipulate and branch pseudos.
   auto IntrID = MI.getIntrinsicID();
   switch (IntrID) {

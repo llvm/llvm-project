@@ -682,8 +682,8 @@ LegalizerInfo::findVectorLegalAction(const InstrAspect &Aspect) const {
 }
 
 bool LegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
-                                      MachineRegisterInfo &MRI,
-                                      MachineIRBuilder &MIRBuilder) const {
+                                      MachineIRBuilder &MIRBuilder,
+                                      GISelChangeObserver &Observer) const {
   return true;
 }
 
