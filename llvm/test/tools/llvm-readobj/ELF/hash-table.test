@@ -1,0 +1,117 @@
+## Check how the SHT_HASH section is dumped with --hash-table.
+
+# RUN: yaml2obj --docnum=1 %s -o %t.x64
+# RUN: yaml2obj --docnum=2 %s -o %t.x32
+
+# RUN: llvm-readobj --hash-table %t.x64 | FileCheck %s --check-prefix=HASH
+# RUN: llvm-readelf --hash-table %t.x64 | FileCheck %s --check-prefix=HASH
+
+# RUN: llvm-readobj --hash-table %t.x32 | FileCheck %s --check-prefix=HASH
+# RUN: llvm-readelf --hash-table %t.x32 | FileCheck %s --check-prefix=HASH
+
+# HASH:      HashTable {
+# HASH-NEXT:   Num Buckets: 2
+# HASH-NEXT:   Num Chains: 3
+# HASH-NEXT:   Buckets: [1, 2]
+# HASH-NEXT:   Chains: [3, 4, 5]
+# HASH-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:   .hash
+    Type:   SHT_HASH
+    Flags:  [ SHF_ALLOC ]
+    Bucket: [ 1, 2 ]
+    Chain:  [ 3, 4, 5 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type: PT_LOAD
+    Sections:
+      - Section: .hash
+      - Section: .dynamic
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name:   .hash
+    Type:   SHT_HASH
+    Flags:  [ SHF_ALLOC ]
+    Bucket: [ 1, 2 ]
+    Chain:  [ 3, 4, 5 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type: PT_LOAD
+    Sections:
+      - Section: .hash
+      - Section: .dynamic
+
+## Check we can dump the SHT_HASH section even when an object
+## does not have the section header table.
+
+# RUN: yaml2obj --docnum=3 %s -o %t.noshdr
+# RUN: llvm-readobj --hash-table %t.noshdr | FileCheck %s --check-prefix=NOSHDR
+# RUN: llvm-readelf --hash-table %t.noshdr | FileCheck %s --check-prefix=NOSHDR
+
+# NOSHDR:      HashTable {
+# NOSHDR-NEXT:   Num Buckets: 1
+# NOSHDR-NEXT:   Num Chains: 1
+# NOSHDR-NEXT:   Buckets: [0]
+# NOSHDR-NEXT:   Chains: [1]
+# NOSHDR-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+## We simulate no section header table by
+## overriding the ELF header properties.
+  SHOff:   0x0
+  SHNum:   0x0
+Sections:
+  - Name:   .hash
+    Type:   SHT_HASH
+    Flags:  [ SHF_ALLOC ]
+    Bucket: [ 0 ]
+    Chain:  [ 1 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type: PT_LOAD
+    Sections:
+      - Section: .hash
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1010
+    Sections:
+      - Section: .dynamic
