@@ -977,7 +977,7 @@ DwarfCompileUnit::getDwarf5OrGNULocationAtom(dwarf::LocationAtom Loc) const {
 }
 
 DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
-                                                 const DISubprogram *CalleeSP,
+                                                 DIE *CalleeDIE,
                                                  bool IsTail,
                                                  const MCSymbol *PCAddr,
                                                  unsigned CallReg) {
@@ -990,8 +990,7 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
     addAddress(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_target),
                MachineLocation(CallReg));
   } else {
-    DIE *CalleeDIE = getOrCreateSubprogramDIE(CalleeSP);
-    assert(CalleeDIE && "Could not create DIE for call site entry origin");
+    assert(CalleeDIE && "No DIE for call site entry origin");
     addDIEEntry(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_origin),
                 *CalleeDIE);
   }
