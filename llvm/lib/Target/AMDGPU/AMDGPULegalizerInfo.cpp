@@ -2402,37 +2402,119 @@ Register AMDGPULegalizerInfo::handleD16VData(MachineIRBuilder &B,
   return B.buildBuildVector(LLT::vector(NumElts, S32), WideRegs).getReg(0);
 }
 
-bool AMDGPULegalizerInfo::legalizeRawBufferStore(MachineInstr &MI,
-                                                 MachineRegisterInfo &MRI,
-                                                 MachineIRBuilder &B,
-                                                 bool IsFormat) const {
-  // TODO: Reject f16 format on targets where unsupported.
-  Register VData = MI.getOperand(1).getReg();
-  LLT Ty = MRI.getType(VData);
+Register AMDGPULegalizerInfo::fixStoreSourceType(
+  MachineIRBuilder &B, Register VData, bool IsFormat) const {
+  MachineRegisterInfo *MRI = B.getMRI();
+  LLT Ty = MRI->getType(VData);
 
-  B.setInstr(MI);
-
-  const LLT S32 = LLT::scalar(32);
   const LLT S16 = LLT::scalar(16);
 
   // Fixup illegal register types for i8 stores.
   if (Ty == LLT::scalar(8) || Ty == S16) {
     Register AnyExt = B.buildAnyExt(LLT::scalar(32), VData).getReg(0);
-    MI.getOperand(1).setReg(AnyExt);
-    return true;
+    return AnyExt;
   }
 
   if (Ty.isVector()) {
     if (Ty.getElementType() == S16 && Ty.getNumElements() <= 4) {
       if (IsFormat)
-        MI.getOperand(1).setReg(handleD16VData(B, MRI, VData));
-      return true;
+        return handleD16VData(B, *MRI, VData);
     }
-
-    return Ty.getElementType() == S32 && Ty.getNumElements() <= 4;
   }
 
-  return Ty == S32;
+  return VData;
+}
+
+bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
+                                              MachineRegisterInfo &MRI,
+                                              MachineIRBuilder &B,
+                                              bool IsTyped,
+                                              bool IsFormat) const {
+  B.setInstr(MI);
+
+  Register VData = MI.getOperand(1).getReg();
+  LLT Ty = MRI.getType(VData);
+  LLT EltTy = Ty.getScalarType();
+  const bool IsD16 = IsFormat && (EltTy.getSizeInBits() == 16);
+  const LLT S32 = LLT::scalar(32);
+
+  VData = fixStoreSourceType(B, VData, IsFormat);
+  Register RSrc = MI.getOperand(2).getReg();
+
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+  const int MemSize = MMO->getSize();
+
+  unsigned ImmOffset;
+  unsigned TotalOffset;
+
+  // The typed intrinsics add an immediate after the registers.
+  const unsigned NumVIndexOps = IsTyped ? 8 : 7;
+
+  // The struct intrinsic variants add one additional operand over raw.
+  const bool HasVIndex = MI.getNumOperands() == NumVIndexOps;
+  Register VIndex;
+  int OpOffset = 0;
+  if (HasVIndex) {
+    VIndex = MI.getOperand(3).getReg();
+    OpOffset = 1;
+  }
+
+  Register VOffset = MI.getOperand(3 + OpOffset).getReg();
+  Register SOffset = MI.getOperand(4 + OpOffset).getReg();
+
+  unsigned Format = 0;
+  if (IsTyped) {
+    Format = MI.getOperand(5 + OpOffset).getImm();
+    ++OpOffset;
+  }
+
+  unsigned AuxiliaryData = MI.getOperand(5 + OpOffset).getImm();
+
+  std::tie(VOffset, ImmOffset, TotalOffset) = splitBufferOffsets(B, VOffset);
+  if (TotalOffset != 0)
+    MMO = B.getMF().getMachineMemOperand(MMO, TotalOffset, MemSize);
+
+  unsigned Opc;
+  if (IsTyped) {
+    Opc = IsD16 ? AMDGPU::G_AMDGPU_TBUFFER_STORE_FORMAT_D16 :
+                  AMDGPU::G_AMDGPU_TBUFFER_STORE_FORMAT;
+  } else if (IsFormat) {
+    Opc = IsD16 ? AMDGPU::G_AMDGPU_BUFFER_STORE_FORMAT_D16 :
+                  AMDGPU::G_AMDGPU_BUFFER_STORE_FORMAT;
+  } else {
+    switch (MemSize) {
+    case 1:
+      Opc = AMDGPU::G_AMDGPU_BUFFER_STORE_BYTE;
+      break;
+    case 2:
+      Opc = AMDGPU::G_AMDGPU_BUFFER_STORE_SHORT;
+      break;
+    default:
+      Opc = AMDGPU::G_AMDGPU_BUFFER_STORE;
+      break;
+    }
+  }
+
+  if (!VIndex)
+    VIndex = B.buildConstant(S32, 0).getReg(0);
+
+  auto MIB = B.buildInstr(Opc)
+    .addUse(VData)              // vdata
+    .addUse(RSrc)               // rsrc
+    .addUse(VIndex)             // vindex
+    .addUse(VOffset)            // voffset
+    .addUse(SOffset)            // soffset
+    .addImm(ImmOffset);         // offset(imm)
+
+  if (IsTyped)
+    MIB.addImm(Format);
+
+  MIB.addImm(AuxiliaryData)      // cachepolicy, swizzled buffer(imm)
+     .addImm(HasVIndex ? -1 : 0) // idxen(imm)
+     .addMemOperand(MMO);
+
+  MI.eraseFromParent();
+  return true;
 }
 
 bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
@@ -2688,9 +2770,9 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     return true;
   }
   case Intrinsic::amdgcn_raw_buffer_store:
-    return legalizeRawBufferStore(MI, MRI, B, false);
+    return legalizeBufferStore(MI, MRI, B, false, false);
   case Intrinsic::amdgcn_raw_buffer_store_format:
-    return legalizeRawBufferStore(MI, MRI, B, true);
+    return legalizeBufferStore(MI, MRI, B, false, true);
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_struct_buffer_load:
     return legalizeBufferLoad(MI, MRI, B, false, false);
