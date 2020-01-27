@@ -1,7 +1,7 @@
-# RUN: llvm-readobj --sections --symbols --dyn-syms --needed-libs \
+# RUN: llvm-readobj --sections --symbols --dyn-syms \
 # RUN:   %p/Inputs/shared-object-test.elf-i386 | FileCheck %s
 
-# RUN: llvm-readobj --sections --symbols --dyn-syms --needed-libs \
+# RUN: llvm-readobj --sections --symbols --dyn-syms \
 # RUN:   %p/Inputs/shared-object-test.elf-x86-64 | FileCheck %s
 
 # CHECK:   Sections [
@@ -281,8 +281,3 @@
 # CHECK:     Section: Absolute (0xFFF1)
 # CHECK:   }
 # CHECK: ]
-
-# CHECK:      NeededLibraries [
-# CHECK-NEXT:  libc.so.6
-# CHECK-NEXT:  libm.so.6
-# CHECK-NEXT: ]
