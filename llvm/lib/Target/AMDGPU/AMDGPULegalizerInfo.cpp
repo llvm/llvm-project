@@ -18,12 +18,15 @@
 #define _USE_MATH_DEFINES
 #endif
 
-#include "AMDGPU.h"
 #include "AMDGPULegalizerInfo.h"
+
+#include "AMDGPU.h"
+#include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -37,7 +40,7 @@ using namespace llvm;
 using namespace LegalizeActions;
 using namespace LegalizeMutations;
 using namespace LegalityPredicates;
-
+using namespace MIPatternMatch;
 
 static LegalityPredicate isMultiple32(unsigned TypeIdx,
                                       unsigned MaxSize = 1024) {
@@ -2327,6 +2330,55 @@ bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,
   return true;
 }
 
+// The raw.(t)buffer and struct.(t)buffer intrinsics have two offset args:
+// offset (the offset that is included in bounds checking and swizzling, to be
+// split between the instruction's voffset and immoffset fields) and soffset
+// (the offset that is excluded from bounds checking and swizzling, to go in
+// the instruction's soffset field).  This function takes the first kind of
+// offset and figures out how to split it between voffset and immoffset.
+std::tuple<Register, unsigned, unsigned>
+AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
+                                        Register OrigOffset) const {
+  const unsigned MaxImm = 4095;
+  Register BaseReg;
+  unsigned TotalConstOffset;
+  MachineInstr *OffsetDef;
+  const LLT S32 = LLT::scalar(32);
+
+  std::tie(BaseReg, TotalConstOffset, OffsetDef)
+    = AMDGPU::getBaseWithConstantOffset(*B.getMRI(), OrigOffset);
+
+  unsigned ImmOffset = TotalConstOffset;
+
+  // If the immediate value is too big for the immoffset field, put the value
+  // and -4096 into the immoffset field so that the value that is copied/added
+  // for the voffset field is a multiple of 4096, and it stands more chance
+  // of being CSEd with the copy/add for another similar load/store.
+  // However, do not do that rounding down to a multiple of 4096 if that is a
+  // negative number, as it appears to be illegal to have a negative offset
+  // in the vgpr, even if adding the immediate offset makes it positive.
+  unsigned Overflow = ImmOffset & ~MaxImm;
+  ImmOffset -= Overflow;
+  if ((int32_t)Overflow < 0) {
+    Overflow += ImmOffset;
+    ImmOffset = 0;
+  }
+
+  if (Overflow != 0) {
+    if (!BaseReg) {
+      BaseReg = B.buildConstant(S32, Overflow).getReg(0);
+    } else {
+      auto OverflowVal = B.buildConstant(S32, Overflow);
+      BaseReg = B.buildAdd(S32, BaseReg, OverflowVal).getReg(0);
+    }
+  }
+
+  if (!BaseReg)
+    BaseReg = B.buildConstant(S32, 0).getReg(0);
+
+  return std::make_tuple(BaseReg, ImmOffset, TotalConstOffset);
+}
+
 /// Handle register layout difference for f16 images for some subtargets.
 Register AMDGPULegalizerInfo::handleD16VData(MachineIRBuilder &B,
                                              MachineRegisterInfo &MRI,
@@ -2381,6 +2433,72 @@ bool AMDGPULegalizerInfo::legalizeRawBufferStore(MachineInstr &MI,
   }
 
   return Ty == S32;
+}
+
+bool AMDGPULegalizerInfo::legalizeRawBufferLoad(MachineInstr &MI,
+                                                MachineRegisterInfo &MRI,
+                                                MachineIRBuilder &B,
+                                                bool IsFormat) const {
+  B.setInstr(MI);
+
+  // FIXME: Verifier should enforce 1 MMO for these intrinsics.
+  MachineMemOperand *MMO = *MI.memoperands_begin();
+  const int MemSize = MMO->getSize();
+  const LLT S32 = LLT::scalar(32);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register RSrc = MI.getOperand(2).getReg();
+  Register VOffset = MI.getOperand(3).getReg();
+  Register SOffset = MI.getOperand(4).getReg();
+  unsigned AuxiliaryData = MI.getOperand(5).getImm();
+  unsigned ImmOffset;
+  unsigned TotalOffset;
+
+  std::tie(VOffset, ImmOffset, TotalOffset) = splitBufferOffsets(B, VOffset);
+  if (TotalOffset != 0)
+    MMO = B.getMF().getMachineMemOperand(MMO, TotalOffset, MemSize);
+
+  unsigned Opc;
+  switch (MemSize) {
+  case 1:
+    if (IsFormat)
+      return false;
+    Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE;
+    break;
+  case 2:
+    if (IsFormat)
+      return false;
+    Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT;
+    break;
+  default:
+    Opc = IsFormat ? -1/*TODO*/ : AMDGPU::G_AMDGPU_BUFFER_LOAD;
+    break;
+  }
+
+  Register LoadDstReg = MemSize >= 4 ? Dst :
+    B.getMRI()->createGenericVirtualRegister(S32);
+
+  Register VIndex = B.buildConstant(S32, 0).getReg(0);
+
+  B.buildInstr(Opc)
+    .addDef(LoadDstReg)    // vdata
+    .addUse(RSrc)          // rsrc
+    .addUse(VIndex)        // vindex
+    .addUse(VOffset)       // voffset
+    .addUse(SOffset)       // soffset
+    .addImm(ImmOffset)     // offset(imm)
+    .addImm(AuxiliaryData) // cachepolicy, swizzled buffer(imm)
+    .addImm(0)             // idxen(imm)
+    .addMemOperand(MMO);
+
+  if (LoadDstReg != Dst) {
+    // Widen result for extending loads was widened.
+    B.setInsertPt(B.getMBB(), ++B.getInsertPt());
+    B.buildTrunc(Dst, LoadDstReg);
+  }
+
+  MI.eraseFromParent();
+  return true;
 }
 
 bool AMDGPULegalizerInfo::legalizeAtomicIncDec(MachineInstr &MI,
@@ -2517,6 +2635,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     return legalizeRawBufferStore(MI, MRI, B, false);
   case Intrinsic::amdgcn_raw_buffer_store_format:
     return legalizeRawBufferStore(MI, MRI, B, true);
+  case Intrinsic::amdgcn_raw_buffer_load:
+    return legalizeRawBufferLoad(MI, MRI, B, false);
   case Intrinsic::amdgcn_atomic_inc:
     return legalizeAtomicIncDec(MI, B, true);
   case Intrinsic::amdgcn_atomic_dec:
