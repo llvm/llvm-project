@@ -523,9 +523,9 @@ CallInst *IRBuilderBase::CreateMaskedIntrinsic(Intrinsic::ID Id,
 /// \p PassThru - pass-through value that is used to fill the masked-off lanes
 ///               of the result
 /// \p Name     - name of the result variable
-CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, unsigned Align,
-                                            Value *Mask,  Value *PassThru,
-                                            const Twine& Name) {
+CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, Align Alignment,
+                                            Value *Mask, Value *PassThru,
+                                            const Twine &Name) {
   auto PtrsTy = cast<VectorType>(Ptrs->getType());
   auto PtrTy = cast<PointerType>(PtrsTy->getElementType());
   unsigned NumElts = PtrsTy->getVectorNumElements();
@@ -539,7 +539,7 @@ CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, unsigned Align,
     PassThru = UndefValue::get(DataTy);
 
   Type *OverloadedTypes[] = {DataTy, PtrsTy};
-  Value * Ops[] = {Ptrs, getInt32(Align), Mask, PassThru};
+  Value *Ops[] = {Ptrs, getInt32(Alignment.value()), Mask, PassThru};
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.
@@ -555,7 +555,7 @@ CallInst *IRBuilderBase::CreateMaskedGather(Value *Ptrs, unsigned Align,
 /// \p Mask  - vector of booleans which indicates what vector lanes should
 ///            be accessed in memory
 CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
-                                             unsigned Align, Value *Mask) {
+                                             Align Alignment, Value *Mask) {
   auto PtrsTy = cast<VectorType>(Ptrs->getType());
   auto DataTy = cast<VectorType>(Data->getType());
   unsigned NumElts = PtrsTy->getVectorNumElements();
@@ -572,7 +572,7 @@ CallInst *IRBuilderBase::CreateMaskedScatter(Value *Data, Value *Ptrs,
                                      NumElts));
 
   Type *OverloadedTypes[] = {DataTy, PtrsTy};
-  Value * Ops[] = {Data, Ptrs, getInt32(Align), Mask};
+  Value *Ops[] = {Data, Ptrs, getInt32(Alignment.value()), Mask};
 
   // We specify only one type when we create this intrinsic. Types of other
   // arguments are derived from this type.

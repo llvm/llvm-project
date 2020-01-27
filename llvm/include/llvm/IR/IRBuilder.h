@@ -770,13 +770,30 @@ public:
                               Value *Mask);
 
   /// Create a call to Masked Gather intrinsic
-  CallInst *CreateMaskedGather(Value *Ptrs, unsigned Align,
-                               Value *Mask = nullptr,
-                               Value *PassThru = nullptr,
-                               const Twine& Name = "");
+  LLVM_ATTRIBUTE_DEPRECATED(
+      CallInst *CreateMaskedGather(Value *Ptrs, unsigned Alignment,
+                                   Value *Mask = nullptr,
+                                   Value *PassThru = nullptr,
+                                   const Twine &Name = ""),
+      "Use the version that takes Align instead") {
+    return CreateMaskedGather(Ptrs, Align(Alignment), Mask, PassThru, Name);
+  }
+
+  /// Create a call to Masked Gather intrinsic
+  CallInst *CreateMaskedGather(Value *Ptrs, Align Alignment,
+                               Value *Mask = nullptr, Value *PassThru = nullptr,
+                               const Twine &Name = "");
 
   /// Create a call to Masked Scatter intrinsic
-  CallInst *CreateMaskedScatter(Value *Val, Value *Ptrs, unsigned Align,
+  LLVM_ATTRIBUTE_DEPRECATED(
+      CallInst *CreateMaskedScatter(Value *Val, Value *Ptrs, unsigned Alignment,
+                                    Value *Mask = nullptr),
+      "Use the version that takes Align instead") {
+    return CreateMaskedScatter(Val, Ptrs, Align(Alignment), Mask);
+  }
+
+  /// Create a call to Masked Scatter intrinsic
+  CallInst *CreateMaskedScatter(Value *Val, Value *Ptrs, Align Alignment,
                                 Value *Mask = nullptr);
 
   /// Create an assume intrinsic call that allows the optimizer to
