@@ -66,6 +66,26 @@ void checkInvalidHandle2() {
     zx_handle_close(sa);
 }
 
+void handleDieBeforeErrorSymbol01() {
+  zx_handle_t sa, sb;
+  zx_status_t status = zx_channel_create(0, &sa, &sb);
+  if (status < 0)
+    return;
+  __builtin_trap();
+}
+
+void handleDieBeforeErrorSymbol02() {
+  zx_handle_t sa, sb;
+  zx_status_t status = zx_channel_create(0, &sa, &sb);
+  // expected-note@-1 {{Handle allocated through 2nd parameter}}
+  if (status == 0) { // expected-note {{Assuming 'status' is equal to 0}}
+                     // expected-note@-1 {{Taking true branch}}
+    return; // expected-warning {{Potential leak of handle}}
+            // expected-note@-1 {{Potential leak of handle}}
+  }
+  __builtin_trap();
+}
+
 void checkNoCrash01() {
   zx_handle_t sa, sb;
   zx_channel_create(0, &sa, &sb);

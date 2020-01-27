@@ -149,6 +149,10 @@ public:
       CASE(Kind::Released)
       CASE(Kind::Escaped)
     }
+    if (ErrorSym) {
+      OS << " ErrorSym: ";
+      ErrorSym->dumpToStream(OS);
+    }
   }
 
   LLVM_DUMP_METHOD void dump() const { dump(llvm::errs()); }
@@ -401,7 +405,13 @@ void FuchsiaHandleChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   SmallVector<SymbolRef, 2> LeakedSyms;
   HStateMapTy TrackedHandles = State->get<HStateMap>();
   for (auto &CurItem : TrackedHandles) {
-    if (!SymReaper.isDead(CurItem.first))
+    SymbolRef ErrorSym = CurItem.second.getErrorSym();
+    // Keeping zombie handle symbols. In case the error symbol is dying later
+    // than the handle symbol we might produce spurious leak warnings (in case
+    // we find out later from the status code that the handle allocation failed
+    // in the first place).
+    if (!SymReaper.isDead(CurItem.first) ||
+        (ErrorSym && !SymReaper.isDead(ErrorSym)))
       continue;
     if (CurItem.second.isAllocated() || CurItem.second.maybeAllocated())
       LeakedSyms.push_back(CurItem.first);
