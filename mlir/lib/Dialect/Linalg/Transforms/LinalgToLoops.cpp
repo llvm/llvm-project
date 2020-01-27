@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Linalg/EDSC/Builders.h"
+#include "mlir/Dialect/Linalg/EDSC/Intrinsics.h"
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/LinalgTransforms.h"
-#include "mlir/Dialect/Linalg/Utils/Intrinsics.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/LoopOps/LoopOps.h"
 #include "mlir/Dialect/StandardOps/Ops.h"
@@ -30,7 +30,6 @@ using namespace mlir;
 using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
-using namespace mlir::linalg::intrinsics;
 
 using IndexedStdValue = TemplatedIndexedValue<std_load, std_store>;
 using IndexedAffineValue = TemplatedIndexedValue<affine_load, affine_store>;
@@ -77,7 +76,8 @@ SmallVector<Value, 4> emitLoopRanges(OpBuilder &b, Location loc, AffineMap map,
   ScopedContext scope(b, loc);
   SmallVector<Value, 4> res;
   for (unsigned idx = 0, e = map.getNumResults(); idx < e; ++idx) {
-    res.push_back(range(constant_index(0), sizes[idx], constant_index(1)));
+    res.push_back(
+        linalg_range(constant_index(0), sizes[idx], constant_index(1)));
   }
   return res;
 }
