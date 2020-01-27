@@ -1,16 +1,4 @@
-# RUN: llc -run-pass=stack-coloring %s -o - | FileCheck %s
-
-## Test %stack.1 is merged into %stack.0 and there is no MemoryMemOperand
-## referencing %stack.1. This regression test is sensitive to the StackColoring
-## algorithm. Please adjust or delete this test if the merging strategy
-## changes.
-
-# CHECK:    {{^}}stack:
-# CHECK-NEXT: - { id: 0,
-# CHECK-NOT:  - { id: 1,
-# CHECK:      - { id: 2,
-# CHECK-NOT: %stack.1
-
+# RUN: llc -o - %s -start-before=stack-coloring
 --- |
   ; ModuleID = '<stdin>'
   source_filename = "<stdin>"
