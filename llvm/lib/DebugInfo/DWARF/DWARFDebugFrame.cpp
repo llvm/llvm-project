@@ -130,8 +130,8 @@ Error CFIProgram::parse(DWARFDataExtractor Data, uint64_t *Offset,
           DataExtractor Extractor(
               Data.getData().slice(*Offset, *Offset + ExprLength),
               Data.isLittleEndian(), Data.getAddressSize());
-          Instructions.back().Expression = DWARFExpression(
-              Extractor, Data.getAddressSize(), dwarf::DWARF_VERSION);
+          Instructions.back().Expression =
+              DWARFExpression(Extractor, Data.getAddressSize());
           *Offset += ExprLength;
           break;
         }
@@ -143,8 +143,8 @@ Error CFIProgram::parse(DWARFDataExtractor Data, uint64_t *Offset,
           DataExtractor Extractor(
               Data.getData().slice(*Offset, *Offset + BlockLength),
               Data.isLittleEndian(), Data.getAddressSize());
-          Instructions.back().Expression = DWARFExpression(
-              Extractor, Data.getAddressSize(), dwarf::DWARF_VERSION);
+          Instructions.back().Expression =
+              DWARFExpression(Extractor, Data.getAddressSize());
           *Offset += BlockLength;
           break;
         }

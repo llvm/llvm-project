@@ -87,8 +87,7 @@ public:
     uint64_t getRawOperand(unsigned Idx) { return Operands[Idx]; }
     uint64_t getOperandEndOffset(unsigned Idx) { return OperandEndOffsets[Idx]; }
     uint64_t getEndOffset() { return EndOffset; }
-    bool extract(DataExtractor Data, uint16_t Version, uint8_t AddressSize,
-                 uint64_t Offset);
+    bool extract(DataExtractor Data, uint8_t AddressSize, uint64_t Offset);
     bool isError() { return Error; }
     bool print(raw_ostream &OS, const DWARFExpression *Expr,
                const MCRegisterInfo *RegInfo, DWARFUnit *U, bool isEH);
@@ -107,7 +106,7 @@ public:
         : Expr(Expr), Offset(Offset) {
       Op.Error =
           Offset >= Expr->Data.getData().size() ||
-          !Op.extract(Expr->Data, Expr->Version, Expr->AddressSize, Offset);
+          !Op.extract(Expr->Data, Expr->AddressSize, Offset);
     }
 
   public:
@@ -115,7 +114,7 @@ public:
       Offset = Op.isError() ? Expr->Data.getData().size() : Op.EndOffset;
       Op.Error =
           Offset >= Expr->Data.getData().size() ||
-          !Op.extract(Expr->Data, Expr->Version, Expr->AddressSize, Offset);
+          !Op.extract(Expr->Data, Expr->AddressSize, Offset);
       return Op;
     }
 
@@ -127,8 +126,8 @@ public:
     friend bool operator==(const iterator &, const iterator &);
   };
 
-  DWARFExpression(DataExtractor Data, uint16_t Version, uint8_t AddressSize)
-      : Data(Data), Version(Version), AddressSize(AddressSize) {
+  DWARFExpression(DataExtractor Data, uint8_t AddressSize)
+      : Data(Data), AddressSize(AddressSize) {
     assert(AddressSize == 8 || AddressSize == 4 || AddressSize == 2);
   }
 
@@ -142,7 +141,6 @@ public:
 
 private:
   DataExtractor Data;
-  uint16_t Version;
   uint8_t AddressSize;
 };
 

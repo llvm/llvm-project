@@ -953,8 +953,7 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
     DWARFUnit &OrigUnit = Unit.getOrigUnit();
     DataExtractor Data(StringRef((const char *)Bytes.data(), Bytes.size()),
                        IsLittleEndian, OrigUnit.getAddressByteSize());
-    DWARFExpression Expr(Data, OrigUnit.getVersion(),
-                         OrigUnit.getAddressByteSize());
+    DWARFExpression Expr(Data, OrigUnit.getAddressByteSize());
     cloneExpression(Data, Expr, OF, Unit, Buffer);
     Bytes = Buffer;
   }
@@ -2059,8 +2058,7 @@ void DWARFLinker::DIECloner::cloneAllCompileUnits(DWARFContext &DwarfContext,
         DataExtractor Data(Bytes, IsLittleEndian,
                            OrigUnit.getAddressByteSize());
         cloneExpression(Data,
-                        DWARFExpression(Data, OrigUnit.getVersion(),
-                                        OrigUnit.getAddressByteSize()),
+                        DWARFExpression(Data, OrigUnit.getAddressByteSize()),
                         OF, *CurrentUnit, Buffer);
       };
       Emitter->emitLocationsForUnit(*CurrentUnit, DwarfContext, ProcessExpr);
