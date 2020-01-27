@@ -88,8 +88,7 @@ void DWARFExpression::UpdateValue(uint64_t const_value,
 void DWARFExpression::DumpLocation(Stream *s, const DataExtractor &data,
                                    lldb::DescriptionLevel level,
                                    ABI *abi) const {
-  llvm::DWARFExpression(data.GetAsLLVM(), llvm::dwarf::DWARF_VERSION,
-                        data.GetAddressByteSize())
+  llvm::DWARFExpression(data.GetAsLLVM(), data.GetAddressByteSize())
       .print(s->AsRawOstream(), abi ? &abi->GetMCRegisterInfo() : nullptr,
              nullptr);
 }
