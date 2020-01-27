@@ -2343,19 +2343,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(MI, MRI, 2); // M0
       return;
     }
-    case Intrinsic::amdgcn_raw_buffer_store:
-    case Intrinsic::amdgcn_raw_buffer_store_format:
-    case Intrinsic::amdgcn_raw_tbuffer_store: {
-      applyDefaultMapping(OpdMapper);
-      executeInWaterfallLoop(MI, MRI, {2, 4});
-      return;
-    }
-    case Intrinsic::amdgcn_struct_buffer_store:
-    case Intrinsic::amdgcn_struct_tbuffer_store: {
-      applyDefaultMapping(OpdMapper);
-      executeInWaterfallLoop(MI, MRI, {2, 5});
-      return;
-    }
     default: {
       if (const AMDGPU::RsrcIntrinsic *RSrcIntrin =
               AMDGPU::lookupRsrcIntrinsic(IntrID)) {
