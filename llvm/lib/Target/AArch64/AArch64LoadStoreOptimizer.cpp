@@ -66,6 +66,10 @@ static cl::opt<unsigned> LdStLimit("aarch64-load-store-scan-limit",
 static cl::opt<unsigned> UpdateLimit("aarch64-update-scan-limit", cl::init(100),
                                      cl::Hidden);
 
+// Enable register renaming to find additional store pairing opportunities.
+static cl::opt<bool> EnableRenaming("aarch64-load-store-renaming",
+                                    cl::init(false), cl::Hidden);
+
 #define AARCH64_LOAD_STORE_OPT_NAME "AArch64 load / store optimization pass"
 
 namespace {
@@ -1446,6 +1450,9 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   bool IsPromotableZeroStore = isPromotableZeroStoreInst(FirstMI);
 
   Optional<bool> MaybeCanRename = None;
+  if (!EnableRenaming)
+    MaybeCanRename = {false};
+
   SmallPtrSet<const TargetRegisterClass *, 5> RequiredClasses;
   LiveRegUnits UsedInBetween;
   UsedInBetween.init(*TRI);
