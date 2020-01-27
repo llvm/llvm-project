@@ -677,6 +677,10 @@ def as_i8imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i8);
 }]>;
 
+def as_i8timm : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
+}]>;
+
 def as_i16imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue(), SDLoc(N), MVT::i16);
 }]>;

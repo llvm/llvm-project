@@ -2155,6 +2155,15 @@ class BufferLoadGenericInstruction : AMDGPUGenericInstruction {
   let mayLoad = 1;
 }
 
+class TBufferLoadGenericInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$rsrc, type2:$vindex, type2:$voffset,
+                           type2:$soffset, untyped_imm_0:$offset, untyped_imm_0:$format,
+                           untyped_imm_0:$cachepolicy, untyped_imm_0:$idxen);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
 def G_AMDGPU_BUFFER_LOAD_UBYTE : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_SBYTE : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_USHORT : BufferLoadGenericInstruction;
@@ -2162,6 +2171,9 @@ def G_AMDGPU_BUFFER_LOAD_SSHORT : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_FORMAT : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_FORMAT_D16 : BufferLoadGenericInstruction;
+def G_AMDGPU_TBUFFER_LOAD_FORMAT : TBufferLoadGenericInstruction;
+def G_AMDGPU_TBUFFER_LOAD_FORMAT_D16 : TBufferLoadGenericInstruction;
+
 
 // Atomic cmpxchg. $cmpval ad $newval are packed in a single vector
 // operand Expects a MachineMemOperand in addition to explicit
