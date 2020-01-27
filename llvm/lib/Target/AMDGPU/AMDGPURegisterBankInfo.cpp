@@ -2263,6 +2263,27 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     executeInWaterfallLoop(MI, MRI, {1, 4});
     return;
   }
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMIN:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMAX:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMAX:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_AND:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_OR:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_XOR:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC: {
+    applyDefaultMapping(OpdMapper);
+    executeInWaterfallLoop(MI, MRI, {2, 5});
+    return;
+  }
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP: {
+    applyDefaultMapping(OpdMapper);
+    executeInWaterfallLoop(MI, MRI, {3, 6});
+    return;
+  }
   case AMDGPU::G_INTRINSIC: {
     switch (MI.getIntrinsicID()) {
     case Intrinsic::amdgcn_s_buffer_load: {
@@ -3090,6 +3111,40 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     // soffset
     OpdsMapping[4] = getSGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
+
+    // Any remaining operands are immediates and were correctly null
+    // initialized.
+    break;
+  }
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMIN:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMAX:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMAX:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_AND:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_OR:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_XOR:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC: {
+    // vdata_out
+    OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+
+    // vdata_in
+    OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+
+    // rsrc
+    OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+
+    // vindex
+    OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
+
+    // voffset
+    OpdsMapping[4] = getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
+
+    // soffset
+    OpdsMapping[5] = getSGPROpMapping(MI.getOperand(5).getReg(), MRI, *TRI);
 
     // Any remaining operands are immediates and were correctly null
     // initialized.

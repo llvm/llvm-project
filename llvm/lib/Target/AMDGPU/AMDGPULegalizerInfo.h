@@ -123,6 +123,8 @@ public:
   bool legalizeBufferLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
                           MachineIRBuilder &B, bool IsTyped,
                           bool IsFormat) const;
+  bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
+                            Intrinsic::ID IID) const;
 
   bool legalizeAtomicIncDec(MachineInstr &MI,  MachineIRBuilder &B,
                             bool IsInc) const;

@@ -153,6 +153,20 @@ def : GINodeEquiv<G_AMDGPU_ATOMIC_DEC, SIatomic_dec>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_INC, atomic_inc_glue>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_DEC, atomic_dec_glue>;
 
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_SWAP, SIbuffer_atomic_swap>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_ADD, SIbuffer_atomic_add>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_SUB, SIbuffer_atomic_sub>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_SMIN, SIbuffer_atomic_smin>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_UMIN, SIbuffer_atomic_umin>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_SMAX, SIbuffer_atomic_smax>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_UMAX, SIbuffer_atomic_umax>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_AND, SIbuffer_atomic_and>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_OR, SIbuffer_atomic_or>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_XOR, SIbuffer_atomic_xor>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_INC, SIbuffer_atomic_inc>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_DEC, SIbuffer_atomic_dec>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_CMPSWAP, SIbuffer_atomic_cmpswap>;
+
 
 class GISelSop2Pat <
   SDPatternOperator node,
