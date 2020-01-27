@@ -218,12 +218,28 @@ private:
   void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx = -1) const;
 
-  void renderTruncTImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                         int OpIdx) const;
-  void renderTruncTImm16(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                         int OpIdx) const;
+  void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                       int OpIdx) const;
+
   void renderTruncTImm1(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
+                        int OpIdx) const {
+    renderTruncTImm(MIB, MI, OpIdx);
+  }
+
+  void renderTruncTImm8(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const {
+    renderTruncTImm(MIB, MI, OpIdx);
+  }
+
+  void renderTruncTImm16(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const {
+    renderTruncTImm(MIB, MI, OpIdx);
+  }
+
+  void renderTruncTImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const {
+    renderTruncTImm(MIB, MI, OpIdx);
+  }
 
   void renderNegateImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;

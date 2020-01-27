@@ -137,6 +137,8 @@ def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_SSHORT, SIbuffer_load_short>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_SBYTE, SIbuffer_load_byte>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT, SIbuffer_load_format>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT_D16, SIbuffer_load_format_d16>;
+def : GINodeEquiv<G_AMDGPU_TBUFFER_LOAD_FORMAT, SItbuffer_load>;
+def : GINodeEquiv<G_AMDGPU_TBUFFER_LOAD_FORMAT_D16, SItbuffer_load_d16>;
 
 // FIXME: Check MMO is atomic
 def : GINodeEquiv<G_AMDGPU_ATOMIC_INC, SIatomic_inc>;
@@ -233,6 +235,9 @@ def gi_as_i32timm : GICustomOperandRenderer<"renderTruncTImm32">,
 
 def gi_as_i16timm : GICustomOperandRenderer<"renderTruncTImm16">,
   GISDNodeXFormEquiv<as_i16timm>;
+
+def gi_as_i8timm : GICustomOperandRenderer<"renderTruncTImm8">,
+  GISDNodeXFormEquiv<as_i8timm>;
 
 def gi_as_i1timm : GICustomOperandRenderer<"renderTruncTImm1">,
   GISDNodeXFormEquiv<as_i1timm>;
