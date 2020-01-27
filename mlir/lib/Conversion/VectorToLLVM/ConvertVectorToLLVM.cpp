@@ -972,9 +972,17 @@ struct LowerVectorToLLVMPass : public ModulePass<LowerVectorToLLVMPass> {
 } // namespace
 
 void LowerVectorToLLVMPass::runOnModule() {
-  // Convert to the LLVM IR dialect using the converter defined above.
-  OwningRewritePatternList patterns;
+  // Perform progressive lowering of operations on "slices".
+  // Folding and DCE get rid of all non-leaking tuple ops.
+  {
+    OwningRewritePatternList patterns;
+    populateVectorSlicesLoweringPatterns(patterns, &getContext());
+    applyPatternsGreedily(getModule(), patterns);
+  }
+
+  // Convert to the LLVM IR dialect.
   LLVMTypeConverter converter(&getContext());
+  OwningRewritePatternList patterns;
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateStdToLLVMConversionPatterns(converter, patterns);
 
