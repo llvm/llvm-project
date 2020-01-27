@@ -2243,6 +2243,15 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     return;
   }
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE: {
+    applyDefaultMapping(OpdMapper);
+    executeInWaterfallLoop(MI, MRI, {1, 4});
+    return;
+  }
   case AMDGPU::G_INTRINSIC: {
     switch (MI.getIntrinsicID()) {
     case Intrinsic::amdgcn_s_buffer_load: {
@@ -2325,9 +2334,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(MI, MRI, 2); // M0
       return;
     }
-    case Intrinsic::amdgcn_raw_buffer_load:
-    case Intrinsic::amdgcn_raw_buffer_load_format:
-    case Intrinsic::amdgcn_raw_tbuffer_load:
     case Intrinsic::amdgcn_raw_buffer_store:
     case Intrinsic::amdgcn_raw_buffer_store_format:
     case Intrinsic::amdgcn_raw_tbuffer_store: {
@@ -3059,6 +3065,26 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       unsigned Size = getSizeInBits(MI.getOperand(i).getReg(), MRI, *TRI);
       OpdsMapping[i] = AMDGPU::getValueMapping(Bank, Size);
     }
+    break;
+  }
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT: {
+    OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+
+    // rsrc
+    OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+
+    // vindex
+    OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+
+    // voffset
+    OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
+
+    // soffset
+    OpdsMapping[4] = getSGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
     break;
   }
   case AMDGPU::G_INTRINSIC: {

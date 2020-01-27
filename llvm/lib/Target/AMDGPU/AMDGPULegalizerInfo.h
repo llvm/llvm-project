@@ -105,11 +105,15 @@ public:
   bool legalizeIsAddrSpace(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B, unsigned AddrSpace) const;
 
+  std::tuple<Register, unsigned, unsigned>
+  splitBufferOffsets(MachineIRBuilder &B, Register OrigOffset) const;
+
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg) const;
   bool legalizeRawBufferStore(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B, bool IsFormat) const;
-
+  bool legalizeRawBufferLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
+                             MachineIRBuilder &B, bool IsFormat) const;
   bool legalizeAtomicIncDec(MachineInstr &MI,  MachineIRBuilder &B,
                             bool IsInc) const;
 

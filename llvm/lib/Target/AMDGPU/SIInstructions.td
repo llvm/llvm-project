@@ -2146,6 +2146,21 @@ def G_AMDGPU_FFBH_U32 : AMDGPUGenericInstruction {
   let hasSideEffects = 0;
 }
 
+class BufferLoadGenericInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$rsrc, type2:$vindex, type2:$voffset,
+                           type2:$soffset, untyped_imm_0:$offset,
+                           untyped_imm_0:$cachepolicy, untyped_imm_0:$idxen);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+def G_AMDGPU_BUFFER_LOAD_UBYTE : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_SBYTE : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_USHORT : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_SSHORT : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD : BufferLoadGenericInstruction;
+
 // Atomic cmpxchg. $cmpval ad $newval are packed in a single vector
 // operand Expects a MachineMemOperand in addition to explicit
 // operands.

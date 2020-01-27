@@ -1152,19 +1152,19 @@ let SubtargetPredicate = isGFX10Plus in {
 // MUBUF Patterns
 //===----------------------------------------------------------------------===//
 
-def extract_glc : SDNodeXForm<imm, [{
+def extract_glc : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() & 1, SDLoc(N), MVT::i8);
 }]>;
 
-def extract_slc : SDNodeXForm<imm, [{
+def extract_slc : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant((N->getZExtValue() >> 1) & 1, SDLoc(N), MVT::i8);
 }]>;
 
-def extract_dlc : SDNodeXForm<imm, [{
+def extract_dlc : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant((N->getZExtValue() >> 2) & 1, SDLoc(N), MVT::i8);
 }]>;
 
-def extract_swz : SDNodeXForm<imm, [{
+def extract_swz : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant((N->getZExtValue() >> 3) & 1, SDLoc(N), MVT::i8);
 }]>;
 
