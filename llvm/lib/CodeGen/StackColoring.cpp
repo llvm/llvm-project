@@ -960,7 +960,6 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   }
 
   // Remap all instructions to the new stack slots.
-  std::vector<std::vector<MachineMemOperand *>> SSRefs(MFI->getObjectIndexEnd());
   for (MachineBasicBlock &BB : *MF)
     for (MachineInstr &I : BB) {
       // Skip lifetime markers. We'll remove them soon.
@@ -1026,14 +1025,13 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
       SmallVector<MachineMemOperand *, 2> NewMMOs;
       bool ReplaceMemOps = false;
       for (MachineMemOperand *MMO : I.memoperands()) {
-        // Collect MachineMemOperands which reference
-        // FixedStackPseudoSourceValues with old frame indices.
         if (const auto *FSV = dyn_cast_or_null<FixedStackPseudoSourceValue>(
                 MMO->getPseudoValue())) {
           int FI = FSV->getFrameIndex();
           auto To = SlotRemap.find(FI);
           if (To != SlotRemap.end())
-            SSRefs[FI].push_back(MMO);
+            const_cast<FixedStackPseudoSourceValue *>(FSV)->setFrameIndex(
+                To->second);
         }
 
         // If this memory location can be a slot remapped here,
@@ -1072,14 +1070,6 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
       if (ReplaceMemOps)
         I.setMemRefs(*MF, NewMMOs);
     }
-
-  // Rewrite MachineMemOperands that reference old frame indices.
-  for (auto E : enumerate(SSRefs)) {
-    const PseudoSourceValue *NewSV =
-        MF->getPSVManager().getFixedStack(SlotRemap[E.index()]);
-    for (MachineMemOperand *Ref : E.value())
-      Ref->setValue(NewSV);
-  }
 
   // Update the location of C++ catch objects for the MSVC personality routine.
   if (WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo())
