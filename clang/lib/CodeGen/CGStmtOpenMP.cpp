@@ -18,6 +18,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclOpenMP.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/Basic/PrettyStackTrace.h"
@@ -1332,6 +1333,19 @@ static void emitCommonOMPParallelDirective(
   CGF.GenerateOpenMPCapturedVars(*CS, CapturedVars);
   CGF.CGM.getOpenMPRuntime().emitParallelCall(CGF, S.getBeginLoc(), OutlinedFn,
                                               CapturedVars, IfCond);
+  // Check for outer lastprivate conditional update.
+  for (const auto *C : S.getClausesOfKind<OMPReductionClause>()) {
+    for (const Expr *Ref : C->varlists())
+      CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
+  }
+  for (const auto *C : S.getClausesOfKind<OMPLastprivateClause>()) {
+    for (const Expr *Ref : C->varlists())
+      CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
+  }
+  for (const auto *C : S.getClausesOfKind<OMPLinearClause>()) {
+    for (const Expr *Ref : C->varlists())
+      CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF, Ref);
+  }
 }
 
 static void emitEmptyBoundParameters(CodeGenFunction &,
@@ -1890,7 +1904,6 @@ void CodeGenFunction::EmitOMPSimdFinal(
 static void emitOMPLoopBodyWithStopPoint(CodeGenFunction &CGF,
                                          const OMPLoopDirective &S,
                                          CodeGenFunction::JumpDest LoopExit) {
-  CGF.CGM.getOpenMPRuntime().initLastprivateConditionalCounter(CGF, S);
   CGF.EmitOMPLoopBody(S, LoopExit);
   CGF.EmitStopPoint(&S);
 }
@@ -2011,8 +2024,6 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
           CGF.EmitOMPInnerLoop(
               S, LoopScope.requiresCleanups(), S.getCond(), S.getInc(),
               [&S](CodeGenFunction &CGF) {
-                CGF.CGM.getOpenMPRuntime().initLastprivateConditionalCounter(
-                    CGF, S);
                 CGF.EmitOMPLoopBody(S, CodeGenFunction::JumpDest());
                 CGF.EmitStopPoint(&S);
               },
@@ -2667,8 +2678,6 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
                                    : S.getCond(),
                   StaticChunkedOne ? S.getDistInc() : S.getInc(),
                   [&S, LoopExit](CodeGenFunction &CGF) {
-                    CGF.CGM.getOpenMPRuntime()
-                        .initLastprivateConditionalCounter(CGF, S);
                     CGF.EmitOMPLoopBody(S, LoopExit);
                     CGF.EmitStopPoint(&S);
                   },
@@ -2851,7 +2860,6 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
       //     break;
       // }
       // .omp.sections.exit:
-      CGF.CGM.getOpenMPRuntime().initLastprivateConditionalCounter(CGF, S);
       llvm::BasicBlock *ExitBB = CGF.createBasicBlock(".omp.sections.exit");
       llvm::SwitchInst *SwitchStmt =
           CGF.Builder.CreateSwitch(CGF.EmitLoadOfScalar(IV, S.getBeginLoc()),

@@ -233,11 +233,7 @@ public:
     llvm::SmallDenseMap<CanonicalDeclPtr<const Decl>, SmallString<16>>
         DeclToUniqeName;
     LValue IVLVal;
-    SmallString<16> IVName;
-    /// True if original lvalue for loop counter can be used in codegen (simd
-    /// region or simd only mode) and no need to create threadprivate
-    /// references.
-    bool UseOriginalIV = false;
+    CodeGenFunction *CGF = nullptr;
   };
   /// Manages list of lastprivate conditional decls for the specified directive.
   class LastprivateConditionalRAII {
@@ -1691,11 +1687,6 @@ public:
   /// Checks if the \p VD variable is marked as nontemporal declaration in
   /// current context.
   bool isNontemporalDecl(const ValueDecl *VD) const;
-
-  /// Initializes global counter for lastprivate conditional.
-  virtual void
-  initLastprivateConditionalCounter(CodeGenFunction &CGF,
-                                    const OMPExecutableDirective &S);
 
   /// Checks if the provided \p LVal is lastprivate conditional and emits the
   /// code to update the value of the original variable.
