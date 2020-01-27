@@ -290,3 +290,62 @@ DynamicSymbols:
   - Name: foo
   - Name: bar
   - Name: zed
+
+## Case 8: Check what we print when:
+## a) The dynamic symbol table does not exist.
+# RUN: yaml2obj %s --docnum=7 -o %t7
+# RUN: llvm-readobj --dyn-symbols %t7 | FileCheck %s --check-prefix=NO-DYNSYM-LLVM
+# RUN: llvm-readelf --dyn-symbols %t7 | count 0
+## b) The dynamic symbol table has a size of 0.
+# RUN: yaml2obj %s --docnum=8 -o %t8
+# RUN: llvm-readobj --dyn-symbols %t8 | FileCheck %s --check-prefix=NO-DYNSYM-LLVM
+# RUN: llvm-readelf --dyn-symbols %t8 | count 0
+## c) The dynamic symbol table only contains the null symbol.
+# RUN: yaml2obj %s --docnum=9 -o %t9
+# RUN: llvm-readobj --dyn-symbols %t9 | FileCheck %s --check-prefix=DYNSYM-EMPTY-LLVM
+# RUN: llvm-readelf --dyn-symbols %t9 | FileCheck %s --check-prefix=DYNSYM-EMPTY-GNU
+
+# NO-DYNSYM-LLVM:      DynamicSymbols [
+# NO-DYNSYM-LLVM-NEXT: ]
+
+# DYNSYM-EMPTY-LLVM:      DynamicSymbols [
+# DYNSYM-EMPTY-LLVM-NEXT:  Symbol {
+# DYNSYM-EMPTY-LLVM-NEXT:  Name: (0)
+# DYNSYM-EMPTY-LLVM-NEXT:  Value: 0x0
+# DYNSYM-EMPTY-LLVM-NEXT:  Size: 0
+# DYNSYM-EMPTY-LLVM-NEXT:  Binding: Local (0x0)
+# DYNSYM-EMPTY-LLVM-NEXT:  Type: None (0x0)
+# DYNSYM-EMPTY-LLVM-NEXT:  Other: 0
+# DYNSYM-EMPTY-LLVM-NEXT:  Section: Undefined (0x0)
+# DYNSYM-EMPTY-LLVM-NEXT:  }
+# DYNSYM-EMPTY-LLVM-NEXT: ]
+
+# DYNSYM-EMPTY-GNU:      Symbol table '.dynsym' contains 1 entries:
+# DYNSYM-EMPTY-GNU-NEXT:   Num:    Value  Size Type    Bind   Vis       Ndx Name
+# DYNSYM-EMPTY-GNU-NEXT:     0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Size: 0
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+DynamicSymbols: []
