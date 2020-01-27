@@ -288,7 +288,7 @@
 .byte   0, 1, 1         # DW_LNE_end_sequence
 .Linvalid_dir_end0:
 
-# Invalid MD5 hash.
+# Invalid MD5 hash, where there is data still to be read afterwards.
 .long   .Linvalid_md5_end0-.Linvalid_md5_start0   # Length of Unit
 .Linvalid_md5_start0:
 .short  5               # DWARF version number
@@ -314,19 +314,63 @@
 .byte   3               # 3 elements per file entry
 .byte   1               # DW_LNCT_path
 .byte   0x08            # DW_FORM_string
+.byte   5               # DW_LNCT_MD5
+.byte   0x0b            # DW_FORM_data1
 .byte   2               # DW_LNCT_directory_index
 .byte   0x0b            # DW_FORM_data1
-.byte   5               # DW_LNCT_MD5
-.byte   0x09            # DW_FORM_data1
 # File table entries
 .byte   1               # 1 file
 .asciz  "a.c"
 .byte   0
+# Data to show that the rest of the prologue is skipped.
+.byte   6
 .Linvalid_md5_header_end0:
 .byte   0, 9, 2         # DW_LNE_set_address
 .quad   0x1234123412341234
 .byte   0, 1, 1         # DW_LNE_end_sequence
 .Linvalid_md5_end0:
+
+# Invalid MD5 hash, when data beyond the prologue length has
+# been read before the MD5 problem is identified.
+.long   .Linvalid_md5_end1-.Linvalid_md5_start1   # Length of Unit
+.Linvalid_md5_start1:
+.short  5               # DWARF version number
+.byte   8               # Address Size
+.byte   0               # Segment Selector Size
+.long   .Linvalid_md5_header_end1-.Linvalid_md5_params1 - 10 # Length of Prologue
+.Linvalid_md5_params1:
+.byte   1               # Minimum Instruction Length
+.byte   1               # Maximum Operations per Instruction
+.byte   1               # Default is_stmt
+.byte   -5              # Line Base
+.byte   14              # Line Range
+.byte   13              # Opcode Base
+.byte   0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 # Standard Opcode Lengths
+# Directory table format
+.byte   1               # One element per directory entry
+.byte   1               # DW_LNCT_path
+.byte   0x08            # DW_FORM_string
+# Directory table entries
+.byte   1               # 1 directory
+.asciz  "/tmp"
+# File table format
+.byte   3               # 2 elements per file entry
+.byte   1               # DW_LNCT_path
+.byte   0x08            # DW_FORM_string
+.byte   5               # DW_LNCT_MD5
+.byte   0x0b            # DW_FORM_data1
+.byte   2               # DW_LNCT_directory_index
+.byte   0x0b            # DW_FORM_data1
+# File table entries
+.byte   1               # 1 file
+.asciz  "a.c"
+.byte   6               # This byte will be consumed when reading the MD5 value.
+.byte   0xb             # This byte will not be read as part of the prologue.
+.Linvalid_md5_header_end1:
+.byte   0, 9, 2         # DW_LNE_set_address
+.quad   0x4321432143214321
+.byte   0, 1, 1         # DW_LNE_end_sequence
+.Linvalid_md5_end1:
 
 # Trailing good section.
 .long   .Lunit_good_end - .Lunit_good_start # Length of Unit (DWARF-32 format)
