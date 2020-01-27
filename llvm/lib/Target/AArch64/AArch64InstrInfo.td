@@ -3325,10 +3325,10 @@ defm FCVTNS : FPToIntegerUnscaled<0b00, 0b000, "fcvtns", int_aarch64_neon_fcvtns
 defm FCVTNU : FPToIntegerUnscaled<0b00, 0b001, "fcvtnu", int_aarch64_neon_fcvtnu>;
 defm FCVTPS : FPToIntegerUnscaled<0b01, 0b000, "fcvtps", int_aarch64_neon_fcvtps>;
 defm FCVTPU : FPToIntegerUnscaled<0b01, 0b001, "fcvtpu", int_aarch64_neon_fcvtpu>;
-defm FCVTZS : FPToIntegerUnscaled<0b11, 0b000, "fcvtzs", fp_to_sint>;
-defm FCVTZU : FPToIntegerUnscaled<0b11, 0b001, "fcvtzu", fp_to_uint>;
-defm FCVTZS : FPToIntegerScaled<0b11, 0b000, "fcvtzs", fp_to_sint>;
-defm FCVTZU : FPToIntegerScaled<0b11, 0b001, "fcvtzu", fp_to_uint>;
+defm FCVTZS : FPToIntegerUnscaled<0b11, 0b000, "fcvtzs", any_fp_to_sint>;
+defm FCVTZU : FPToIntegerUnscaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
+defm FCVTZS : FPToIntegerScaled<0b11, 0b000, "fcvtzs", any_fp_to_sint>;
+defm FCVTZU : FPToIntegerScaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
 
 multiclass FPToIntegerIntPats<Intrinsic round, string INST> {
   def : Pat<(i32 (round f16:$Rn)), (!cast<Instruction>(INST # UWHr) $Rn)>;
@@ -3400,8 +3400,8 @@ def : Pat<(i64 (llround f64:$Rn)),
 // Scaled integer to floating point conversion instructions.
 //===----------------------------------------------------------------------===//
 
-defm SCVTF : IntegerToFP<0, "scvtf", sint_to_fp>;
-defm UCVTF : IntegerToFP<1, "ucvtf", uint_to_fp>;
+defm SCVTF : IntegerToFP<0, "scvtf", any_sint_to_fp>;
+defm UCVTF : IntegerToFP<1, "ucvtf", any_uint_to_fp>;
 
 //===----------------------------------------------------------------------===//
 // Unscaled integer to floating point conversion instruction.
