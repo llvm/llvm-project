@@ -2159,6 +2159,13 @@ Instruction *InstCombiner::visitFSub(BinaryOperator &I) {
     }
   }
 
+  // (-X) - Op1 --> -(X + Op1)
+  if (I.hasNoSignedZeros() && !isa<ConstantExpr>(Op0) &&
+      match(Op0, m_OneUse(m_FNeg(m_Value(X))))) {
+    Value *FAdd = Builder.CreateFAddFMF(X, Op1, &I);
+    return UnaryOperator::CreateFNegFMF(FAdd, &I);
+  }
+
   if (isa<Constant>(Op0))
     if (SelectInst *SI = dyn_cast<SelectInst>(Op1))
       if (Instruction *NV = FoldOpIntoSelect(I, SI))
