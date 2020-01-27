@@ -2775,6 +2775,9 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
   case Intrinsic::amdgcn_raw_buffer_store_format:
   case Intrinsic::amdgcn_struct_buffer_store_format:
     return legalizeBufferStore(MI, MRI, B, false, true);
+  case Intrinsic::amdgcn_raw_tbuffer_store:
+  case Intrinsic::amdgcn_struct_tbuffer_store:
+    return legalizeBufferStore(MI, MRI, B, true, true);
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_struct_buffer_load:
     return legalizeBufferLoad(MI, MRI, B, false, false);
