@@ -74,6 +74,9 @@ void ScalarTraits<PlatformSet>::output(const PlatformSet &Values, void *IO,
   case PlatformKind::bridgeOS:
     OS << "bridgeos";
     break;
+  case PlatformKind::macCatalyst:
+    OS << "iosmac";
+    break;
   }
 }
 
