@@ -573,35 +573,27 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   // the describeLoadedValue()). For those remaining arguments in the working
   // list, for which we do not describe a loaded value by
   // the describeLoadedValue(), we try to generate an entry value expression
-  // for their call site value desctipion, if the call is within the entry MBB.
+  // for their call site value description, if the call is within the entry MBB.
   // The RegsForEntryValues maps a forwarding register into the register holding
   // the entry value.
   // TODO: Handle situations when call site parameter value can be described
-  // as the entry value within basic blocks other then the first one.
+  // as the entry value within basic blocks other than the first one.
   bool ShouldTryEmitEntryVals = MBB->getIterator() == MF->begin();
   DenseMap<unsigned, unsigned> RegsForEntryValues;
 
   // If the MI is an instruction defining one or more parameters' forwarding
-  // registers, add those defines. We can currently only describe forwarded
-  // registers that are explicitly defined, but keep track of implicit defines
-  // also to remove those registers from the work list.
+  // registers, add those defines.
   auto getForwardingRegsDefinedByMI = [&](const MachineInstr &MI,
-                                          SmallVectorImpl<unsigned> &Explicit,
-                                          SmallVectorImpl<unsigned> &Implicit) {
+                                          SmallSetVector<unsigned, 4> &Defs) {
     if (MI.isDebugInstr())
       return;
 
     for (const MachineOperand &MO : MI.operands()) {
       if (MO.isReg() && MO.isDef() &&
           Register::isPhysicalRegister(MO.getReg())) {
-        for (auto FwdReg : ForwardedRegWorklist) {
-          if (TRI->regsOverlap(FwdReg, MO.getReg())) {
-            if (MO.isImplicit())
-              Implicit.push_back(FwdReg);
-            else
-              Explicit.push_back(FwdReg);
-          }
-        }
+        for (auto FwdReg : ForwardedRegWorklist)
+          if (TRI->regsOverlap(FwdReg, MO.getReg()))
+            Defs.insert(FwdReg);
       }
     }
   };
@@ -633,18 +625,19 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     if (ForwardedRegWorklist.empty())
       return;
 
-    SmallVector<unsigned, 4> ExplicitFwdRegDefs;
-    SmallVector<unsigned, 4> ImplicitFwdRegDefs;
-    getForwardingRegsDefinedByMI(*I, ExplicitFwdRegDefs, ImplicitFwdRegDefs);
-    if (ExplicitFwdRegDefs.empty() && ImplicitFwdRegDefs.empty())
+    // Set of worklist registers that are defined by this instruction.
+    SmallSetVector<unsigned, 4> FwdRegDefs;
+
+    getForwardingRegsDefinedByMI(*I, FwdRegDefs);
+    if (FwdRegDefs.empty())
       continue;
 
     // If the MI clobbers more then one forwarding register we must remove
     // all of them from the working list.
-    for (auto Reg : concat<unsigned>(ExplicitFwdRegDefs, ImplicitFwdRegDefs))
+    for (auto Reg : FwdRegDefs)
       ForwardedRegWorklist.erase(Reg);
 
-    for (auto ParamFwdReg : ExplicitFwdRegDefs) {
+    for (auto ParamFwdReg : FwdRegDefs) {
       if (auto ParamValue = TII->describeLoadedValue(*I, ParamFwdReg)) {
         if (ParamValue->first.isImm()) {
           int64_t Val = ParamValue->first.getImm();
