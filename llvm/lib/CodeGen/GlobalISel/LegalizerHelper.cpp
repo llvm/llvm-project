@@ -977,8 +977,13 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
   case TargetOpcode::G_CTTZ:
   case TargetOpcode::G_CTTZ_ZERO_UNDEF:
   case TargetOpcode::G_CTPOP:
-    if (TypeIdx != 0)
-      return UnableToLegalize; // TODO
+    if (TypeIdx == 1)
+      switch (MI.getOpcode()) {
+      case TargetOpcode::G_CTLZ:
+        return narrowScalarCTLZ(MI, TypeIdx, NarrowTy);
+      default:
+        return UnableToLegalize;
+      }
 
     Observer.changingInstr(MI);
     narrowScalarDst(MI, NarrowTy, 0, TargetOpcode::G_ZEXT);
@@ -3847,6 +3852,37 @@ LegalizerHelper::narrowScalarSelect(MachineInstr &MI, unsigned TypeIdx,
 
   MI.eraseFromParent();
   return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::narrowScalarCTLZ(MachineInstr &MI, unsigned TypeIdx,
+                                  LLT NarrowTy) {
+  if (TypeIdx != 1)
+    return UnableToLegalize;
+
+  LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+  unsigned NarrowSize = NarrowTy.getSizeInBits();
+
+  if (SrcTy.isScalar() && SrcTy.getSizeInBits() == 2 * NarrowSize) {
+    MachineIRBuilder &B = MIRBuilder;
+    auto UnmergeSrc = B.buildUnmerge(NarrowTy, MI.getOperand(1));
+    // ctlz(Hi:Lo) -> Hi == 0 ? (NarrowSize + ctlz(Lo)) : ctlz(Hi)
+    auto C_0 = B.buildConstant(NarrowTy, 0);
+    auto HiIsZero = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
+                                UnmergeSrc.getReg(1), C_0);
+    auto LoCTLZ = B.buildCTLZ(NarrowTy, UnmergeSrc.getReg(0));
+    auto C_NarrowSize = B.buildConstant(NarrowTy, NarrowSize);
+    auto HiIsZeroCTLZ = B.buildAdd(NarrowTy, LoCTLZ, C_NarrowSize);
+    auto HiCTLZ = B.buildCTLZ_ZERO_UNDEF(NarrowTy, UnmergeSrc.getReg(1));
+    auto LoOut = B.buildSelect(NarrowTy, HiIsZero, HiIsZeroCTLZ, HiCTLZ);
+
+    B.buildMerge(MI.getOperand(0), {LoOut.getReg(0), C_0.getReg(0)});
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  return UnableToLegalize;
 }
 
 LegalizerHelper::LegalizeResult
