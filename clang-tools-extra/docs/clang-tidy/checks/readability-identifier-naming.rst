@@ -55,6 +55,7 @@ The following options are describe below:
  - :option:`GlobalFunctionCase`, :option:`GlobalFunctionPrefix`, :option:`GlobalFunctionSuffix`
  - :option:`GlobalPointerCase`, :option:`GlobalPointerPrefix`, :option:`GlobalPointerSuffix`
  - :option:`GlobalVariableCase`, :option:`GlobalVariablePrefix`, :option:`GlobalVariableSuffix`
+ - :option:`IgnoreMainLikeFunctions`
  - :option:`InlineNamespaceCase`, :option:`InlineNamespacePrefix`, :option:`InlineNamespaceSuffix`
  - :option:`LocalConstantCase`, :option:`LocalConstantPrefix`, :option:`LocalConstantSuffix`
  - :option:`LocalConstantPointerCase`, :option:`LocalConstantPointerPrefix`, :option:`LocalConstantPointerSuffix`
@@ -826,6 +827,12 @@ After:
 .. code-block:: c++
 
     int pre_global3_post;
+
+.. option:: IgnoreMainLikeFunctions
+
+    When set to `1` functions that have a similar signature to ``main`` or 
+    ``wmain`` won't enforce checks on the names of their parameters.
+    Default value is `0`.
 
 .. option:: InlineNamespaceCase
 
