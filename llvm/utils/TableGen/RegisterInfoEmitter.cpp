@@ -992,9 +992,8 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   // Emit the string table.
   RegStrings.layout();
-  OS << "extern const char " << TargetName << "RegStrings[] = {\n";
-  RegStrings.emit(OS, printChar);
-  OS << "};\n\n";
+  RegStrings.emitStringLiteralDef(OS, Twine("extern const char ") + TargetName +
+                                          "RegStrings[]");
 
   OS << "extern const MCRegisterDesc " << TargetName
      << "RegDesc[] = { // Descriptors\n";
@@ -1065,9 +1064,8 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
   OS << "} // end anonymous namespace\n\n";
 
   RegClassStrings.layout();
-  OS << "extern const char " << TargetName << "RegClassStrings[] = {\n";
-  RegClassStrings.emit(OS, printChar);
-  OS << "};\n\n";
+  RegClassStrings.emitStringLiteralDef(
+      OS, Twine("extern const char ") + TargetName + "RegClassStrings[]");
 
   OS << "extern const MCRegisterClass " << TargetName
      << "MCRegisterClasses[] = {\n";

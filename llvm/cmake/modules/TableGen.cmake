@@ -58,6 +58,14 @@ function(tablegen project ofn)
     endif()
   endif()
 
+  # MSVC can't support long string literals ("long" > 65534 bytes)[1], so if there's
+  # a possibility of generated tables being consumed by MSVC, generate arrays of
+  # char literals, instead. If we're cross-compiling, then conservatively assume
+  # that the source might be consumed by MSVC.
+  # [1] https://docs.microsoft.com/en-us/cpp/cpp/compiler-limits?view=vs-2017
+  if (MSVC AND project STREQUAL LLVM)
+    list(APPEND LLVM_TABLEGEN_FLAGS "--long-string-literals=0")
+  endif()
   if (CMAKE_GENERATOR MATCHES "Visual Studio")
     # Visual Studio has problems with llvm-tblgen's native --write-if-changed
     # behavior. Since it doesn't do restat optimizations anyway, just don't
