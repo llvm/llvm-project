@@ -654,30 +654,30 @@ class LLVM_UnaryIntrinsicOp<string func, list<OpTrait> traits = []> :
       "{$in->getType()}), {$in});"> {
 }
 
-class LLVM_BinaryIntrinsicOp<string func, list<OpTrait> traits = []> :
+class LLVM_BinarySameArgsIntrinsicOp<string func, list<OpTrait> traits = []> :
     LLVM_OneResultOp<"intr." # func,
            !listconcat([NoSideEffect, SameOperandsAndResultType], traits)>,
     Arguments<(ins LLVM_Type:$a, LLVM_Type:$b)>,
     LLVM_Builder<"$res = builder.CreateCall(llvm::Intrinsic::getDeclaration("
       "builder.GetInsertBlock()->getModule(), llvm::Intrinsic::" # func # ","
-      "{$a->getType(), $b->getType()}), {$a, $b});"> {
+      "{$a->getType()}), {$a, $b});"> {
 }
 
-class LLVM_TernaryIntrinsicOp<string func, list<OpTrait> traits = []> :
+class LLVM_TernarySameArgsIntrinsicOp<string func, list<OpTrait> traits = []> :
     LLVM_OneResultOp<"intr." # func,
            !listconcat([NoSideEffect, SameOperandsAndResultType], traits)>,
     Arguments<(ins LLVM_Type:$a, LLVM_Type:$b, LLVM_Type:$c)>,
     LLVM_Builder<"$res = builder.CreateCall(llvm::Intrinsic::getDeclaration("
       "builder.GetInsertBlock()->getModule(), llvm::Intrinsic::" # func # ","
-      "{$a->getType(), $b->getType(), $c->getType()}), {$a, $b, $c});"> {
+      "{$a->getType()}), {$a, $b, $c});"> {
 }
 
 def LLVM_ExpOp : LLVM_UnaryIntrinsicOp<"exp">;
 def LLVM_FAbsOp : LLVM_UnaryIntrinsicOp<"fabs">;
 def LLVM_FCeilOp : LLVM_UnaryIntrinsicOp<"ceil">;
 def LLVM_CosOp : LLVM_UnaryIntrinsicOp<"cos">;
-def LLVM_CopySignOp : LLVM_BinaryIntrinsicOp<"copysign">;
-def LLVM_FMulAddOp : LLVM_TernaryIntrinsicOp<"fmuladd">;
+def LLVM_CopySignOp : LLVM_BinarySameArgsIntrinsicOp<"copysign">;
+def LLVM_FMulAddOp : LLVM_TernarySameArgsIntrinsicOp<"fmuladd">;
 
 def LLVM_LogOp : LLVM_Op<"intr.log", [NoSideEffect]>,
                    Arguments<(ins LLVM_Type:$in)>,
