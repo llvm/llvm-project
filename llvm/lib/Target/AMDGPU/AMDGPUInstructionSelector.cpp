@@ -2696,27 +2696,22 @@ void AMDGPUInstructionSelector::splitIllegalMUBUFOffset(
   ImmOffset = 0;
 }
 
-InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectMUBUFAddr64(MachineOperand &Root) const {
+bool AMDGPUInstructionSelector::selectMUBUFAddr64Impl(
+  MachineOperand &Root, Register &VAddr, Register &RSrcReg,
+  Register &SOffset, int64_t &Offset) const {
   // FIXME: Predicates should stop this from reaching here.
   // addr64 bit was removed for volcanic islands.
   if (!STI.hasAddr64() || STI.useFlatForGlobal())
-    return {};
+    return false;
 
   MUBUFAddressData AddrData = parseMUBUFAddress(Root.getReg());
   if (!shouldUseAddr64(AddrData))
-    return {};
+    return false;
 
   Register N0 = AddrData.N0;
   Register N2 = AddrData.N2;
   Register N3 = AddrData.N3;
-  int64_t Offset = AddrData.Offset;
-
-  // VGPR pointer
-  Register VAddr;
-
-  // SGPR offset.
-  Register SOffset;
+  Offset = AddrData.Offset;
 
   // Base pointer for the SRD.
   Register SRDPtr;
@@ -2747,8 +2742,40 @@ AMDGPUInstructionSelector::selectMUBUFAddr64(MachineOperand &Root) const {
   }
 
   MachineIRBuilder B(*Root.getParent());
-  Register RSrcReg = buildAddr64RSrc(B, *MRI, TII, SRDPtr);
+  RSrcReg = buildAddr64RSrc(B, *MRI, TII, SRDPtr);
   splitIllegalMUBUFOffset(B, SOffset, Offset);
+  return true;
+}
+
+bool AMDGPUInstructionSelector::selectMUBUFOffsetImpl(
+  MachineOperand &Root, Register &RSrcReg, Register &SOffset,
+  int64_t &Offset) const {
+  MUBUFAddressData AddrData = parseMUBUFAddress(Root.getReg());
+  if (shouldUseAddr64(AddrData))
+    return false;
+
+  // N0 -> offset, or
+  // (N0 + C1) -> offset
+  Register SRDPtr = AddrData.N0;
+  Offset = AddrData.Offset;
+
+  // TODO: Look through extensions for 32-bit soffset.
+  MachineIRBuilder B(*Root.getParent());
+
+  RSrcReg = buildOffsetSrc(B, *MRI, TII, SRDPtr);
+  splitIllegalMUBUFOffset(B, SOffset, Offset);
+  return true;
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectMUBUFAddr64(MachineOperand &Root) const {
+  Register VAddr;
+  Register RSrcReg;
+  Register SOffset;
+  int64_t Offset = 0;
+
+  if (!selectMUBUFAddr64Impl(Root, VAddr, RSrcReg, SOffset, Offset))
+    return {};
 
   // FIXME: Use defaulted operands for trailing 0s and remove from the complex
   // pattern.
@@ -2778,21 +2805,12 @@ AMDGPUInstructionSelector::selectMUBUFAddr64(MachineOperand &Root) const {
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectMUBUFOffset(MachineOperand &Root) const {
-  MUBUFAddressData AddrData = parseMUBUFAddress(Root.getReg());
-  if (shouldUseAddr64(AddrData))
-    return {};
-
-  // N0 -> offset, or
-  // (N0 + C1) -> offset
-  Register SRDPtr = AddrData.N0;
-  int64_t Offset = AddrData.Offset;
+  Register RSrcReg;
   Register SOffset;
+  int64_t Offset = 0;
 
-  // TODO: Look through extensions for 32-bit soffset.
-  MachineIRBuilder B(*Root.getParent());
-
-  Register RSrcReg = buildOffsetSrc(B, *MRI, TII, SRDPtr);
-  splitIllegalMUBUFOffset(B, SOffset, Offset);
+  if (!selectMUBUFOffsetImpl(Root, RSrcReg, SOffset, Offset))
+    return {};
 
   return {{
       [=](MachineInstrBuilder &MIB) {  // rsrc
