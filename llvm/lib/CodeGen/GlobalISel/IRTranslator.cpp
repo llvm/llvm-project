@@ -1049,16 +1049,18 @@ bool IRTranslator::translateCast(unsigned Opcode, const User &U,
 
 bool IRTranslator::translateGetElementPtr(const User &U,
                                           MachineIRBuilder &MIRBuilder) {
-  // FIXME: support vector GEPs.
-  if (U.getType()->isVectorTy())
-    return false;
-
   Value &Op0 = *U.getOperand(0);
   Register BaseReg = getOrCreateVReg(Op0);
   Type *PtrIRTy = Op0.getType();
   LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
   Type *OffsetIRTy = DL->getIntPtrType(PtrIRTy);
   LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
+
+  // Normalize Vector GEP - all scalar operands should be converted to the
+  // splat vector.
+  unsigned VectorWidth = 0;
+  if (auto *VT = dyn_cast<VectorType>(U.getType()))
+    VectorWidth = VT->getNumElements();
 
   int64_t Offset = 0;
   for (gep_type_iterator GTI = gep_type_begin(&U), E = gep_type_end(&U);
@@ -1079,7 +1081,6 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       }
 
       if (Offset != 0) {
-        LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
         auto OffsetMIB = MIRBuilder.buildConstant({OffsetTy}, Offset);
         BaseReg = MIRBuilder.buildPtrAdd(PtrTy, BaseReg, OffsetMIB.getReg(0))
                       .getReg(0);
@@ -1087,8 +1088,15 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       }
 
       Register IdxReg = getOrCreateVReg(*Idx);
-      if (MRI->getType(IdxReg) != OffsetTy)
+      LLT IdxTy = MRI->getType(IdxReg);
+      if (IdxTy != OffsetTy) {
+        if (!IdxTy.isVector() && VectorWidth) {
+          IdxReg = MIRBuilder.buildSplatVector(
+            OffsetTy.changeElementType(IdxTy), IdxReg).getReg(0);
+        }
+
         IdxReg = MIRBuilder.buildSExtOrTrunc(OffsetTy, IdxReg).getReg(0);
+      }
 
       // N = N + Idx * ElementSize;
       // Avoid doing it for ElementSize of 1.
@@ -1107,7 +1115,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
 
   if (Offset != 0) {
     auto OffsetMIB =
-        MIRBuilder.buildConstant(getLLTForType(*OffsetIRTy, *DL), Offset);
+        MIRBuilder.buildConstant(OffsetTy, Offset);
     MIRBuilder.buildPtrAdd(getOrCreateVReg(U), BaseReg, OffsetMIB.getReg(0));
     return true;
   }
