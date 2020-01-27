@@ -5126,8 +5126,6 @@ define void @PR11210(<4 x float> %x, <4 x float>* %ptr, <4 x float> %y, <2 x i64
 ;
 ; AVX1OR2-LABEL: PR11210:
 ; AVX1OR2:       ## %bb.0:
-; AVX1OR2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX1OR2-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
 ; AVX1OR2-NEXT:    vmaskmovps %xmm0, %xmm2, (%rdi)
 ; AVX1OR2-NEXT:    vmaskmovps %xmm1, %xmm2, (%rdi)
 ; AVX1OR2-NEXT:    retq
