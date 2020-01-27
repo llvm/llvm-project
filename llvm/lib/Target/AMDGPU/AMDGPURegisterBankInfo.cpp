@@ -2247,7 +2247,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE:
-  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE: {
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16: {
     applyDefaultMapping(OpdMapper);
     executeInWaterfallLoop(MI, MRI, {1, 4});
     return;
@@ -3071,7 +3073,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
-  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT: {
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16: {
     OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
 
     // rsrc
