@@ -41716,9 +41716,16 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
   // simplify ops leading up to it. We only demand the MSB of each lane.
   SDValue Mask = Mst->getMask();
   if (Mask.getScalarValueSizeInBits() != 1) {
-    APInt DemandedMask(APInt::getSignMask(VT.getScalarSizeInBits()));
-    if (TLI.SimplifyDemandedBits(Mask, DemandedMask, DCI))
+    APInt DemandedBits(APInt::getSignMask(VT.getScalarSizeInBits()));
+    if (TLI.SimplifyDemandedBits(Mask, DemandedBits, DCI))
       return SDValue(N, 0);
+    APInt DemandedElts = APInt::getAllOnesValue(VT.getVectorNumElements());
+    if (SDValue NewMask = TLI.SimplifyMultipleUseDemandedBits(
+            Mask, DemandedBits, DemandedElts, DAG, 0))
+      return DAG.getMaskedStore(Mst->getChain(), SDLoc(N), Mst->getValue(),
+                                Mst->getBasePtr(), Mst->getOffset(), NewMask,
+                                Mst->getMemoryVT(), Mst->getMemOperand(),
+                                Mst->getAddressingMode());
   }
 
   SDValue Value = Mst->getValue();
