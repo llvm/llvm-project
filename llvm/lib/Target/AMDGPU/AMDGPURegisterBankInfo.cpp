@@ -2343,9 +2343,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       executeInWaterfallLoop(MI, MRI, {2, 4});
       return;
     }
-    case Intrinsic::amdgcn_struct_buffer_load:
     case Intrinsic::amdgcn_struct_buffer_store:
-    case Intrinsic::amdgcn_struct_tbuffer_load:
     case Intrinsic::amdgcn_struct_tbuffer_store: {
       applyDefaultMapping(OpdMapper);
       executeInWaterfallLoop(MI, MRI, {2, 5});
