@@ -2437,8 +2437,8 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
       if (CreateGatherScatter) {
         Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
         Value *VectorGep = State.get(Addr, Part);
-        NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep,
-                                            Alignment.value(), MaskPart);
+        NewSI = Builder.CreateMaskedScatter(StoredVal, VectorGep, Alignment,
+                                            MaskPart);
       } else {
         if (Reverse) {
           // If we store to reverse consecutive memory locations, then we need
@@ -2467,7 +2467,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr,
     if (CreateGatherScatter) {
       Value *MaskPart = isMaskRequired ? BlockInMaskParts[Part] : nullptr;
       Value *VectorGep = State.get(Addr, Part);
-      NewLI = Builder.CreateMaskedGather(VectorGep, Alignment.value(), MaskPart,
+      NewLI = Builder.CreateMaskedGather(VectorGep, Alignment, MaskPart,
                                          nullptr, "wide.masked.gather");
       addMetadata(NewLI, LI);
     } else {
