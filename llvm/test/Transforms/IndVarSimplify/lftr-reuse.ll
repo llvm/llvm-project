@@ -128,6 +128,7 @@ exit:
 ; Force SCEVExpander to look for an existing well-formed phi.
 ; Perform LFTR without generating extra preheader code.
 define void @guardedloop([0 x double]* %matrix, [0 x double]* %vector,
+;
 ; CHECK-LABEL: @guardedloop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 1, [[IROW:%.*]]
@@ -183,6 +184,7 @@ return:
 
 ; Avoid generating extra code to materialize a trip count. Skip LFTR.
 define void @unguardedloop([0 x double]* %matrix, [0 x double]* %vector,
+;
 ; CHECK-LABEL: @unguardedloop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[IROW:%.*]] to i64
