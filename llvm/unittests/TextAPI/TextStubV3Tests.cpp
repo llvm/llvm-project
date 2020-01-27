@@ -329,15 +329,11 @@ TEST(TBDv3, Platform_macCatalyst) {
   EXPECT_EQ(FileType::TBD_V3, File->getFileType());
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
 
-  // It's not currently possible to emit the iomac platform. Enable this once
-  // that's fixed.
-#if 0
   SmallString<4096> Buffer;
   raw_svector_ostream OS(Buffer);
   auto WriteResult = TextAPIWriter::writeToStream(OS, *File);
   EXPECT_TRUE(!WriteResult);
   EXPECT_EQ(stripWhitespace(tbd_v3_platform_iosmac), stripWhitespace(Buffer.c_str()));
-#endif
 }
 
 TEST(TBDv3, Platform_zippered) {
