@@ -114,7 +114,7 @@
 .byte   0, 1, 1        # DW_LNE_end_sequence
 .Lunit_long_prologue_end:
 
-# Over-long extended opcode.
+# Incorrect length extended opcodes.
 .long   .Lunit_long_opcode_end - .Lunit_long_opcode_start # unit length
 .Lunit_long_opcode_start:
 .short  4               # version
@@ -139,6 +139,9 @@
 .byte   0, 9, 2         # DW_LNE_set_address
 .quad   0xabbadaba
 .byte   0, 2, 1         # DW_LNE_end_sequence (too long)
+.byte   6               # DW_LNS_negate_stmt (but will be consumed with the end sequence above).
+.byte   0, 1, 4         # DW_LNE_set_discriminator (too short)
+.byte   0xa             # Parsed as argument for set_discriminator and also DW_LNS_set_prologue_end.
 .byte   0, 9, 2         # DW_LNE_set_address
 .quad   0xbabb1e45
 .byte   0, 1, 1         # DW_LNE_end_sequence
