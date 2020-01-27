@@ -1343,6 +1343,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUF(SDValue Addr, SDValue &Ptr,
                                      SDValue &TFE, SDValue &DLC,
                                      SDValue &SWZ) const {
   // Subtarget prefers to use flat instruction
+  // FIXME: This should be a pattern predicate and not reach here
   if (Subtarget->useFlatForGlobal())
     return false;
 
@@ -1438,6 +1439,7 @@ bool AMDGPUDAGToDAGISel::SelectMUBUFAddr64(SDValue Addr, SDValue &SRsrc,
   SDValue Ptr, Offen, Idxen, Addr64;
 
   // addr64 bit was removed for volcanic islands.
+  // FIXME: This should be a pattern predicate and not reach here
   if (!Subtarget->hasAddr64())
     return false;
 

@@ -180,6 +180,9 @@ private:
   InstructionSelector::ComplexRendererFns
   selectDS1Addr1Offset(MachineOperand &Root) const;
 
+  InstructionSelector::ComplexRendererFns
+  selectMUBUFAddr64(MachineOperand &Root) const;
+
   void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx = -1) const;
 
