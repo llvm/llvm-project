@@ -316,8 +316,8 @@ Value *BlockGenerator::generateArrayLoad(ScopStmt &Stmt, LoadInst *Load,
 
   Value *NewPointer =
       generateLocationAccessed(Stmt, Load, BBMap, LTS, NewAccesses);
-  Value *ScalarLoad = Builder.CreateAlignedLoad(
-      NewPointer, Load->getAlignment(), Load->getName() + "_p_scalar_");
+  Value *ScalarLoad = Builder.CreateAlignedLoad(NewPointer, Load->getAlign(),
+                                                Load->getName() + "_p_scalar_");
 
   if (PollyDebugPrinting)
     RuntimeDebugBuilder::createCPUPrinter(Builder, "Load from ", NewPointer,

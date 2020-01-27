@@ -517,8 +517,8 @@ public:
 
   LoadInst *createColumnLoad(Value *ColumnPtr, Type *EltType,
                              IRBuilder<> Builder) {
-    unsigned Align = DL.getABITypeAlignment(EltType);
-    return Builder.CreateAlignedLoad(ColumnPtr, Align, "col.load");
+    return Builder.CreateAlignedLoad(
+        ColumnPtr, Align(DL.getABITypeAlignment(EltType)), "col.load");
   }
 
   StoreInst *createColumnStore(Value *ColumnValue, Value *ColumnPtr,
