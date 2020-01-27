@@ -375,3 +375,47 @@ function(add_libc_testsuite suite_name)
   add_custom_target(${suite_name})
   add_dependencies(check-libc ${suite_name})
 endfunction(add_libc_testsuite)
+
+# Rule to add header only libraries.
+# Usage
+#    add_header_library(
+#      <target name>
+#      HDRS  <list of .h files part of the library>
+#      DEPENDS <list of dependencies>
+#    )
+function(add_header_library target_name)
+  cmake_parse_arguments(
+    "ADD_HEADER"
+    "" # No optional arguments
+    "" # No Single value arguments
+    "HDRS;DEPENDS" # Multi-value arguments
+    ${ARGN}
+  )
+
+  if(NOT ADD_HEADER_HDRS)
+    message(FATAL_ERROR "'add_header_library' target requires a HDRS list of .h files.")
+  endif()
+
+  set(FULL_HDR_PATHS "")
+  # TODO: Remove this foreach block when we can switch to the new
+  # version of the CMake policy CMP0076.
+  foreach(hdr IN LISTS ADD_HEADER_HDRS)
+    list(APPEND FULL_HDR_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/${hdr})
+  endforeach()
+
+  set(interface_target_name "${target_name}_header_library__")
+
+  add_library(${interface_target_name} INTERFACE)
+  target_sources(${interface_target_name} INTERFACE ${FULL_HDR_PATHS})
+  if(ADD_HEADER_DEPENDS)
+    add_dependencies(${interface_target_name} ${ADD_HEADER_DEPENDS})
+  endif()
+
+  add_custom_target(${target_name})
+  add_dependencies(${target_name} ${interface_target_name})
+  set_target_properties(
+    ${target_name}
+    PROPERTIES
+      "TARGET_TYPE" "HDR_LIBRARY"
+  )
+endfunction(add_header_library)
