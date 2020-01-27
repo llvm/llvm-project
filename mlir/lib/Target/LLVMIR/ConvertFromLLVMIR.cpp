@@ -30,6 +30,8 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 
+#include "mlir/Dialect/LLVMIR/LLVMConversionEnumsFromLLVM.inc"
+
 // Utility to print an LLVM value as a string for passing to emitError().
 // FIXME: Diagnostic should be able to natively handle types that have
 // operator << (raw_ostream&) defined.
@@ -363,37 +365,6 @@ Attribute Importer::getConstantAsAttr(llvm::Constant *value) {
   return nullptr;
 }
 
-/// Converts LLVM global variable linkage type into the LLVM dialect predicate.
-static LLVM::Linkage
-processLinkage(llvm::GlobalVariable::LinkageTypes linkage) {
-  switch (linkage) {
-  case llvm::GlobalValue::PrivateLinkage:
-    return LLVM::Linkage::Private;
-  case llvm::GlobalValue::InternalLinkage:
-    return LLVM::Linkage::Internal;
-  case llvm::GlobalValue::AvailableExternallyLinkage:
-    return LLVM::Linkage::AvailableExternally;
-  case llvm::GlobalValue::LinkOnceAnyLinkage:
-    return LLVM::Linkage::Linkonce;
-  case llvm::GlobalValue::WeakAnyLinkage:
-    return LLVM::Linkage::Weak;
-  case llvm::GlobalValue::CommonLinkage:
-    return LLVM::Linkage::Common;
-  case llvm::GlobalValue::AppendingLinkage:
-    return LLVM::Linkage::Appending;
-  case llvm::GlobalValue::ExternalWeakLinkage:
-    return LLVM::Linkage::ExternWeak;
-  case llvm::GlobalValue::LinkOnceODRLinkage:
-    return LLVM::Linkage::LinkonceODR;
-  case llvm::GlobalValue::WeakODRLinkage:
-    return LLVM::Linkage::WeakODR;
-  case llvm::GlobalValue::ExternalLinkage:
-    return LLVM::Linkage::External;
-  }
-
-  llvm_unreachable("unhandled linkage type");
-}
-
 GlobalOp Importer::processGlobal(llvm::GlobalVariable *GV) {
   auto it = globals.find(GV);
   if (it != globals.end())
@@ -408,7 +379,7 @@ GlobalOp Importer::processGlobal(llvm::GlobalVariable *GV) {
     return nullptr;
   GlobalOp op = b.create<GlobalOp>(
       UnknownLoc::get(context), type, GV->isConstant(),
-      processLinkage(GV->getLinkage()), GV->getName(), valueAttr);
+      convertLinkageFromLLVM(GV->getLinkage()), GV->getName(), valueAttr);
   if (GV->hasInitializer() && !valueAttr) {
     Region &r = op.getInitializerRegion();
     currentEntryBlock = b.createBlock(&r);
