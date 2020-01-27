@@ -20,6 +20,7 @@
 #include "Transport.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringSet.h"
 #include <memory>
 
 namespace clang {
@@ -123,10 +124,10 @@ private:
   /// produce '->' and '::', respectively.
   bool shouldRunCompletion(const CompletionParams &Params) const;
 
-  /// Forces a reparse of all currently opened files.  As a result, this method
-  /// may be very expensive.  This method is normally called when the
-  /// compilation database is changed.
-  void reparseOpenedFiles();
+  /// Forces a reparse of all currently opened files which were modified. As a
+  /// result, this method may be very expensive. This method is normally called
+  /// when the compilation database is changed.
+  void reparseOpenedFiles(const llvm::StringSet<> &ModifiedFiles);
   void applyConfiguration(const ConfigurationSettings &Settings);
 
   /// Sends a "publishSemanticHighlighting" notification to the LSP client.
