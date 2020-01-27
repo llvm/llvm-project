@@ -69,6 +69,9 @@ RelExpr DPU::getRelExpr(const RelType Type, const Symbol &S,
   }
 }
 
+#define ATOMIC_SECTION_OFFSET (0xF0000000ULL)
+#define IRAM_SECTION_OFFSET (0x80000000ULL)
+#define MRAM_SECTION_OFFSET (0x08000000ULL)
 uint64_t DPU::fixupTargetVA(uint64_t TargetVA) const {
   // BE CAREFUL: this code is based on the assertions defined by the DPU linker
   // script:
@@ -83,12 +86,17 @@ uint64_t DPU::fixupTargetVA(uint64_t TargetVA) const {
   // In obj:
   //  Ltmp0 + 1
   // Ltmp0 becomes 0x8xxxxxx1 at this level.
-  if (TargetVA & 0x80000000) {
-    uint64_t optional_add = TargetVA & (8 - 1);
-    // Mask with ~0xF0000000 because the shift may have introduced ones.
-    return ((TargetVA >> 3) & ~0xF0000000) + optional_add;
-  } else if (TargetVA & 0x08000000) {
-    return (TargetVA & ~0x08000000);
+
+  // Make sure MSBs are clean.
+  TargetVA &= 0xFFFFFFFF;
+
+  if ((TargetVA & ATOMIC_SECTION_OFFSET) == ATOMIC_SECTION_OFFSET) {
+    return TargetVA & ~ATOMIC_SECTION_OFFSET;
+  } else if (TargetVA & IRAM_SECTION_OFFSET) {
+    const uint32_t shift = 3;
+    return (TargetVA >> shift) + (TargetVA & ((1ULL << shift) - 1ULL));
+  } else if (TargetVA & MRAM_SECTION_OFFSET) {
+    return (TargetVA & ~MRAM_SECTION_OFFSET);
   } else {
     return TargetVA;
   }
