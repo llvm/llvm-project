@@ -900,8 +900,7 @@ MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
       SmallPtrSet<MachineInstr*, 4> Visited;
       SmallPtrSet<MachineInstr*, 4> Remove;
       SmallPtrSet<MachineInstr*, 4> Ignore = { LoLoop.Start, LoLoop.Dec,
-                                               LoLoop.End, LoLoop.VCTP,
-                                               LoLoop.InsertPt };
+                                               LoLoop.End, LoLoop.InsertPt };
       SmallVector<MachineInstr*, 4> Chain = { Def };
       while (!Chain.empty()) {
         MachineInstr *MI = Chain.back();
