@@ -1631,10 +1631,13 @@ class DeclContext {
 
     /// Indicates if the method was a definition but its body was skipped.
     uint64_t HasSkippedBody : 1;
+
+    /// True if a valid hash is stored in ODRHash.
+    uint64_t HasODRHash : 1;
   };
 
   /// Number of non-inherited bits in ObjCMethodDeclBitfields.
-  enum { NumObjCMethodDeclBits = 24 };
+  enum { NumObjCMethodDeclBits = 25 };
 
   /// Stores the bits used by ObjCContainerDecl.
   /// If modified NumObjCContainerDeclBits and the accessor

@@ -720,6 +720,7 @@ void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
   Record.push_back(NumStoredSelLocs);
   for (unsigned i = 0; i != NumStoredSelLocs; ++i)
     Record.AddSourceLocation(SelLocs[i]);
+  Record.push_back(D->getODRHash());
 
   Code = serialization::DECL_OBJC_METHOD;
 }
@@ -756,6 +757,9 @@ void ASTDeclWriter::VisitObjCInterfaceDecl(ObjCInterfaceDecl *D) {
     Record.AddSourceLocation(D->getEndOfDefinitionLoc());
     Record.push_back(Data.HasDesignatedInitializers);
 
+    // Trigger ODR hashing computation for methods.
+    for (auto *M : D->methods())
+      M->getODRHash();
     Record.push_back(D->getODRHash());
 
     // Write out the protocols that are directly referenced by the @interface.
