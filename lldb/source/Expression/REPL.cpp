@@ -488,14 +488,7 @@ void REPL::IOHandlerComplete(IOHandler &io_handler,
   current_code.append("\n");
   current_code += request.GetRawLine();
 
-  StringList matches;
-  int result = CompleteCode(current_code, matches);
-  if (result == -2) {
-    assert(matches.GetSize() == 1);
-    request.AddCompletion(matches.GetStringAtIndex(0), "",
-                          CompletionMode::RewriteLine);
-  } else
-    request.AddCompletions(matches);
+  CompleteCode(current_code, request);
 }
 
 bool QuitCommandOverrideCallback(void *baton, const char **argv) {
