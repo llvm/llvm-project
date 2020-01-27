@@ -214,6 +214,10 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
   getActionDefinitionsBuilder(G_CTTZ_ZERO_UNDEF)
       .lowerFor({{s32, s32}, {s64, s64}});
 
+  getActionDefinitionsBuilder(G_CTPOP)
+      .lowerFor({{s32, s32}})
+      .clampScalar(1, s32, s32);
+
   // FP instructions
   getActionDefinitionsBuilder(G_FCONSTANT)
       .legalFor({s32, s64});

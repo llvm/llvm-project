@@ -983,6 +983,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
         return narrowScalarCTLZ(MI, TypeIdx, NarrowTy);
       case TargetOpcode::G_CTTZ:
         return narrowScalarCTTZ(MI, TypeIdx, NarrowTy);
+      case TargetOpcode::G_CTPOP:
+        return narrowScalarCTPOP(MI, TypeIdx, NarrowTy);
       default:
         return UnableToLegalize;
       }
@@ -3919,6 +3921,30 @@ LegalizerHelper::narrowScalarCTTZ(MachineInstr &MI, unsigned TypeIdx,
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::narrowScalarCTPOP(MachineInstr &MI, unsigned TypeIdx,
+                                   LLT NarrowTy) {
+  if (TypeIdx != 1)
+    return UnableToLegalize;
+
+  LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+  unsigned NarrowSize = NarrowTy.getSizeInBits();
+
+  if (SrcTy.isScalar() && SrcTy.getSizeInBits() == 2 * NarrowSize) {
+    auto UnmergeSrc = MIRBuilder.buildUnmerge(NarrowTy, MI.getOperand(1));
+
+    auto LoCTPOP = MIRBuilder.buildCTPOP(NarrowTy, UnmergeSrc.getReg(0));
+    auto HiCTPOP = MIRBuilder.buildCTPOP(NarrowTy, UnmergeSrc.getReg(1));
+    auto Out = MIRBuilder.buildAdd(NarrowTy, HiCTPOP, LoCTPOP);
+    MIRBuilder.buildZExt(MI.getOperand(0), Out);
+
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
+  return UnableToLegalize;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   unsigned Opc = MI.getOpcode();
   auto &TII = *MI.getMF()->getSubtarget().getInstrInfo();
@@ -4015,6 +4041,57 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     }
     MI.setDesc(TII.get(TargetOpcode::G_CTPOP));
     MI.getOperand(1).setReg(MIBTmp.getReg(0));
+    return Legalized;
+  }
+  case TargetOpcode::G_CTPOP: {
+    unsigned Size = Ty.getSizeInBits();
+    MachineIRBuilder &B = MIRBuilder;
+
+    // Count set bits in blocks of 2 bits. Default approach would be
+    // B2Count = { val & 0x55555555 } + { (val >> 1) & 0x55555555 }
+    // We use following formula instead:
+    // B2Count = val - { (val >> 1) & 0x55555555 }
+    // since it gives same result in blocks of 2 with one instruction less.
+    auto C_1 = B.buildConstant(Ty, 1);
+    auto B2Set1LoTo1Hi = B.buildLShr(Ty, MI.getOperand(1).getReg(), C_1);
+    APInt B2Mask1HiTo0 = APInt::getSplat(Size, APInt(8, 0x55));
+    auto C_B2Mask1HiTo0 = B.buildConstant(Ty, B2Mask1HiTo0);
+    auto B2Count1Hi = B.buildAnd(Ty, B2Set1LoTo1Hi, C_B2Mask1HiTo0);
+    auto B2Count = B.buildSub(Ty, MI.getOperand(1).getReg(), B2Count1Hi);
+
+    // In order to get count in blocks of 4 add values from adjacent block of 2.
+    // B4Count = { B2Count & 0x33333333 } + { (B2Count >> 2) & 0x33333333 }
+    auto C_2 = B.buildConstant(Ty, 2);
+    auto B4Set2LoTo2Hi = B.buildLShr(Ty, B2Count, C_2);
+    APInt B4Mask2HiTo0 = APInt::getSplat(Size, APInt(8, 0x33));
+    auto C_B4Mask2HiTo0 = B.buildConstant(Ty, B4Mask2HiTo0);
+    auto B4HiB2Count = B.buildAnd(Ty, B4Set2LoTo2Hi, C_B4Mask2HiTo0);
+    auto B4LoB2Count = B.buildAnd(Ty, B2Count, C_B4Mask2HiTo0);
+    auto B4Count = B.buildAdd(Ty, B4HiB2Count, B4LoB2Count);
+
+    // For count in blocks of 8 bits we don't have to mask high 4 bits before
+    // addition since count value sits in range {0,...,8} and 4 bits are enough
+    // to hold such binary values. After addition high 4 bits still hold count
+    // of set bits in high 4 bit block, set them to zero and get 8 bit result.
+    // B8Count = { B4Count + (B4Count >> 4) } & 0x0F0F0F0F
+    auto C_4 = B.buildConstant(Ty, 4);
+    auto B8HiB4Count = B.buildLShr(Ty, B4Count, C_4);
+    auto B8CountDirty4Hi = B.buildAdd(Ty, B8HiB4Count, B4Count);
+    APInt B8Mask4HiTo0 = APInt::getSplat(Size, APInt(8, 0x0F));
+    auto C_B8Mask4HiTo0 = B.buildConstant(Ty, B8Mask4HiTo0);
+    auto B8Count = B.buildAnd(Ty, B8CountDirty4Hi, C_B8Mask4HiTo0);
+
+    assert(Size<=128 && "Scalar size is too large for CTPOP lower algorithm");
+    // 8 bits can hold CTPOP result of 128 bit int or smaller. Mul with this
+    // bitmask will set 8 msb in ResTmp to sum of all B8Counts in 8 bit blocks.
+    auto MulMask = B.buildConstant(Ty, APInt::getSplat(Size, APInt(8, 0x01)));
+    auto ResTmp = B.buildMul(Ty, B8Count, MulMask);
+
+    // Shift count result from 8 high bits to low bits.
+    auto C_SizeM8 = B.buildConstant(Ty, Size - 8);
+    B.buildLShr(MI.getOperand(0).getReg(), ResTmp, C_SizeM8);
+
+    MI.eraseFromParent();
     return Legalized;
   }
   }
