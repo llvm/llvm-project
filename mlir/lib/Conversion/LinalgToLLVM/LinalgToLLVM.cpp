@@ -16,7 +16,6 @@
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
-#include "mlir/Dialect/Linalg/Utils/Intrinsics.h"
 #include "mlir/EDSC/Builders.h"
 #include "mlir/EDSC/Intrinsics.h"
 #include "mlir/IR/AffineExpr.h"
@@ -47,7 +46,6 @@ using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::LLVM;
 using namespace mlir::linalg;
-using namespace mlir::linalg::intrinsics;
 
 using add = ValueBuilder<mlir::LLVM::AddOp>;
 using addi = ValueBuilder<mlir::AddIOp>;
@@ -452,7 +450,8 @@ public:
 
 /// Conversion pattern specialization for CopyOp. This kicks in when both input
 /// and output permutations are left unspecified or are the identity.
-template <> class LinalgOpConversion<CopyOp> : public OpRewritePattern<CopyOp> {
+template <>
+class LinalgOpConversion<CopyOp> : public OpRewritePattern<CopyOp> {
 public:
   using OpRewritePattern<CopyOp>::OpRewritePattern;
 
