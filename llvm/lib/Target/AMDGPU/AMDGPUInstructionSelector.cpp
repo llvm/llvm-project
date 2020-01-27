@@ -2219,6 +2219,18 @@ AMDGPUInstructionSelector::selectVOP3Mods(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3NoMods(MachineOperand &Root) const {
+  Register Reg = Root.getReg();
+  const MachineInstr *Def = getDefIgnoringCopies(Reg, *MRI);
+  if (Def && (Def->getOpcode() == AMDGPU::G_FNEG ||
+              Def->getOpcode() == AMDGPU::G_FABS))
+    return {};
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Reg); },
+  }};
+}
+
+InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3Mods_nnan(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
