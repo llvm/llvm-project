@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ObjCRuntimeSyntheticProvider.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/DeclVendor.h"
 
 #include "lldb/lldb-public.h"
@@ -91,7 +91,7 @@ ObjCRuntimeSyntheticProvider::FrontEnd::GetChildAtIndex(size_t idx) {
           const bool can_create = true;
           if (decls.empty())
             break;
-          auto *ctx = llvm::dyn_cast<ClangASTContext>(decls[0].GetTypeSystem());
+          auto *ctx = llvm::dyn_cast<TypeSystemClang>(decls[0].GetTypeSystem());
           if (!ctx)
             break;
           CompilerType type = ctx->GetTypeForDecl(decls[0].GetOpaqueDecl());

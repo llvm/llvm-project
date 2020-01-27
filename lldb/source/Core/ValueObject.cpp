@@ -26,7 +26,7 @@
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Declaration.h"
@@ -332,9 +332,9 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
   std::vector<clang::NamedDecl *> decls;
   CompilerType class_type;
   bool is_pointer_type = false;
-  if (ClangASTContext::IsObjCObjectPointerType(compiler_type, &class_type))
+  if (TypeSystemClang::IsObjCObjectPointerType(compiler_type, &class_type))
     is_pointer_type = true;
-  else if (ClangASTContext::IsObjCObjectOrInterfaceType(compiler_type))
+  else if (TypeSystemClang::IsObjCObjectOrInterfaceType(compiler_type))
     class_type = compiler_type;
   else
     return compiler_type;
@@ -368,7 +368,7 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
     if (runtime_vendor->FindDecls(class_name, false, UINT32_MAX,
                                   compiler_decls) > 0 &&
         compiler_decls.size() > 0) {
-      auto *ctx = llvm::dyn_cast<ClangASTContext>(compiler_decls[0].GetTypeSystem());
+      auto *ctx = llvm::dyn_cast<TypeSystemClang>(compiler_decls[0].GetTypeSystem());
       if (ctx) {
         CompilerType runtime_type =
             ctx->GetTypeForDecl(compiler_decls[0].GetOpaqueDecl());
@@ -2059,7 +2059,7 @@ bool ValueObject::GetBaseClassPath(Stream &s) {
         GetParent() && GetParent()->GetBaseClassPath(s);
     CompilerType compiler_type = GetCompilerType();
     llvm::Optional<std::string> cxx_class_name =
-        ClangASTContext::GetCXXClassName(compiler_type);
+        TypeSystemClang::GetCXXClassName(compiler_type);
     if (cxx_class_name) {
       if (parent_had_base_class)
         s.PutCString("::");

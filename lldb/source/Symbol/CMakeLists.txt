@@ -7,7 +7,7 @@ endif()
 add_lldb_library(lldbSymbol
   ArmUnwindInfo.cpp
   Block.cpp
-  ClangASTContext.cpp
+  TypeSystemClang.cpp
   ClangASTImporter.cpp
   ClangASTMetadata.cpp
   ClangExternalASTSourceCallbacks.cpp

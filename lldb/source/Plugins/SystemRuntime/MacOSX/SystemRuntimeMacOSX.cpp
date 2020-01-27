@@ -12,7 +12,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Process.h"
@@ -411,8 +411,8 @@ void SystemRuntimeMacOSX::ReadLibdispatchTSDIndexes() {
         }
 #endif
 
-    ClangASTContext *ast_ctx =
-        ClangASTContext::GetScratch(m_process->GetTarget());
+    TypeSystemClang *ast_ctx =
+        TypeSystemClang::GetScratch(m_process->GetTarget());
     if (m_dispatch_tsd_indexes_addr != LLDB_INVALID_ADDRESS) {
       CompilerType uint16 =
           ast_ctx->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 16);
@@ -420,20 +420,20 @@ void SystemRuntimeMacOSX::ReadLibdispatchTSDIndexes() {
           nullptr, lldb::eAccessPublic, "__lldb_dispatch_tsd_indexes_s",
           clang::TTK_Struct, lldb::eLanguageTypeC);
 
-      ClangASTContext::StartTagDeclarationDefinition(dispatch_tsd_indexes_s);
-      ClangASTContext::AddFieldToRecordType(dispatch_tsd_indexes_s,
+      TypeSystemClang::StartTagDeclarationDefinition(dispatch_tsd_indexes_s);
+      TypeSystemClang::AddFieldToRecordType(dispatch_tsd_indexes_s,
                                             "dti_version", uint16,
                                             lldb::eAccessPublic, 0);
-      ClangASTContext::AddFieldToRecordType(dispatch_tsd_indexes_s,
+      TypeSystemClang::AddFieldToRecordType(dispatch_tsd_indexes_s,
                                             "dti_queue_index", uint16,
                                             lldb::eAccessPublic, 0);
-      ClangASTContext::AddFieldToRecordType(dispatch_tsd_indexes_s,
+      TypeSystemClang::AddFieldToRecordType(dispatch_tsd_indexes_s,
                                             "dti_voucher_index", uint16,
                                             lldb::eAccessPublic, 0);
-      ClangASTContext::AddFieldToRecordType(dispatch_tsd_indexes_s,
+      TypeSystemClang::AddFieldToRecordType(dispatch_tsd_indexes_s,
                                             "dti_qos_class_index", uint16,
                                             lldb::eAccessPublic, 0);
-      ClangASTContext::CompleteTagDeclarationDefinition(dispatch_tsd_indexes_s);
+      TypeSystemClang::CompleteTagDeclarationDefinition(dispatch_tsd_indexes_s);
 
       ProcessStructReader struct_reader(m_process, m_dispatch_tsd_indexes_addr,
                                         dispatch_tsd_indexes_s);

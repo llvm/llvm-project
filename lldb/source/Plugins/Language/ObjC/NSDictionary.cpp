@@ -17,7 +17,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -65,7 +65,7 @@ NSDictionary_Additionals::GetAdditionalSynthetics() {
 static CompilerType GetLLDBNSPairType(TargetSP target_sp) {
   CompilerType compiler_type;
 
-  ClangASTContext *target_ast_context = ClangASTContext::GetScratch(*target_sp);
+  TypeSystemClang *target_ast_context = TypeSystemClang::GetScratch(*target_sp);
 
   if (target_ast_context) {
     ConstString g___lldb_autogen_nspair("__lldb_autogen_nspair");
@@ -80,14 +80,14 @@ static CompilerType GetLLDBNSPairType(TargetSP target_sp) {
           clang::TTK_Struct, lldb::eLanguageTypeC);
 
       if (compiler_type) {
-        ClangASTContext::StartTagDeclarationDefinition(compiler_type);
+        TypeSystemClang::StartTagDeclarationDefinition(compiler_type);
         CompilerType id_compiler_type =
             target_ast_context->GetBasicType(eBasicTypeObjCID);
-        ClangASTContext::AddFieldToRecordType(
+        TypeSystemClang::AddFieldToRecordType(
             compiler_type, "key", id_compiler_type, lldb::eAccessPublic, 0);
-        ClangASTContext::AddFieldToRecordType(
+        TypeSystemClang::AddFieldToRecordType(
             compiler_type, "value", id_compiler_type, lldb::eAccessPublic, 0);
-        ClangASTContext::CompleteTagDeclarationDefinition(compiler_type);
+        TypeSystemClang::CompleteTagDeclarationDefinition(compiler_type);
       }
     }
   }

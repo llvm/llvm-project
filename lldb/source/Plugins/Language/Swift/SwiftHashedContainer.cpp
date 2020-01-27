@@ -15,7 +15,7 @@
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
@@ -324,8 +324,8 @@ HashedCollectionConfig::CocoaObjectAtAddress(
   ProcessSP process_sp = exe_ctx.GetProcessSP();
   if (!process_sp)
     return nullptr;
-  ClangASTContext *clang_ast_context =
-        ClangASTContext::GetScratch(process_sp->GetTarget());
+  TypeSystemClang *clang_ast_context =
+        TypeSystemClang::GetScratch(process_sp->GetTarget());
   if (!clang_ast_context)
     return nullptr;
   CompilerType id = clang_ast_context->GetBasicType(lldb::eBasicTypeObjCID);

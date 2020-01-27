@@ -19,7 +19,7 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Core/ValueObjectRegister.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
@@ -806,10 +806,10 @@ private:
     // case 3: get from GPRs
 
     // first, check if this is a packed struct or not
-    ClangASTContext *ast =
-        llvm::dyn_cast<ClangASTContext>(m_type.GetTypeSystem());
+    TypeSystemClang *ast =
+        llvm::dyn_cast<TypeSystemClang>(m_type.GetTypeSystem());
     if (ast) {
-      clang::RecordDecl *record_decl = ClangASTContext::GetAsRecordDecl(m_type);
+      clang::RecordDecl *record_decl = TypeSystemClang::GetAsRecordDecl(m_type);
 
       if (record_decl) {
         auto attrs = record_decl->attrs();

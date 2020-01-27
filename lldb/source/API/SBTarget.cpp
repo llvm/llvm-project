@@ -43,7 +43,7 @@
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -1892,7 +1892,7 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
           if (vendor->FindDecls(const_typename, /*append*/ true,
                                 /*max_matches*/ 1, decls) > 0) {
             auto compiler_decl = decls.front();
-            auto *ctx = llvm::dyn_cast<ClangASTContext>(compiler_decl.GetTypeSystem());
+            auto *ctx = llvm::dyn_cast<TypeSystemClang>(compiler_decl.GetTypeSystem());
             if (ctx)
               if (CompilerType type =
                       ctx->GetTypeForDecl(compiler_decl.GetOpaqueDecl()))
@@ -1957,7 +1957,7 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
           if (vendor->FindDecls(const_typename, /*append*/ true,
                                 /*max_matches*/ 1, decls) > 0) {
             for (auto decl : decls) {
-              auto *ctx = llvm::dyn_cast<ClangASTContext>(decl.GetTypeSystem());
+              auto *ctx = llvm::dyn_cast<TypeSystemClang>(decl.GetTypeSystem());
               if (ctx)
                 if (CompilerType type =
                         ctx->GetTypeForDecl(decl.GetOpaqueDecl()))

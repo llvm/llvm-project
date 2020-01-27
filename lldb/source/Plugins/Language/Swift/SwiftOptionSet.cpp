@@ -14,7 +14,7 @@
 
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Core/ValueObject.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 
@@ -45,7 +45,7 @@ static clang::EnumDecl *GetAsEnumDecl(CompilerType swift_type) {
   if (!clang_type.IsValid())
     return nullptr;
 
-  if (!llvm::isa<ClangASTContext>(clang_type.GetTypeSystem()))
+  if (!llvm::isa<TypeSystemClang>(clang_type.GetTypeSystem()))
     return nullptr;
 
   auto qual_type =

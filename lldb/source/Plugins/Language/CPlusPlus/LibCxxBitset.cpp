@@ -8,7 +8,7 @@
 
 #include "LibCxx.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Target.h"
 
 using namespace lldb;

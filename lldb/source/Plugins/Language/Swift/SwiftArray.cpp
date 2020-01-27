@@ -14,7 +14,7 @@
 
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
@@ -140,8 +140,8 @@ SwiftArrayBridgedBufferHandler::SwiftArrayBridgedBufferHandler(
     ProcessSP process_sp, lldb::addr_t native_ptr)
     : SwiftArrayBufferHandler(), m_elem_type(), m_synth_array_sp(),
       m_frontend(nullptr) {
-  ClangASTContext *clang_ast_context =
-        ClangASTContext::GetScratch(process_sp->GetTarget());
+  TypeSystemClang *clang_ast_context =
+        TypeSystemClang::GetScratch(process_sp->GetTarget());
   if (!clang_ast_context)
     return;
   m_elem_type = clang_ast_context->GetBasicType(
@@ -290,8 +290,8 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
 
   if (!valobj.GetTargetSP())
     return nullptr;
-  ClangASTContext *clang_ast_context =
-      ClangASTContext::GetScratch(*valobj.GetTargetSP());
+  TypeSystemClang *clang_ast_context =
+      TypeSystemClang::GetScratch(*valobj.GetTargetSP());
   if (!clang_ast_context)
     return nullptr;
 
