@@ -141,8 +141,9 @@ public:
         static_cast<u32>(getFlags()->quarantine_max_chunk_size);
 
     Stats.initLinkerInitialized();
-    Primary.initLinkerInitialized(getFlags()->release_to_os_interval_ms);
-    Secondary.initLinkerInitialized(&Stats);
+    const s32 ReleaseToOsIntervalMs = getFlags()->release_to_os_interval_ms;
+    Primary.initLinkerInitialized(ReleaseToOsIntervalMs);
+    Secondary.initLinkerInitialized(&Stats, ReleaseToOsIntervalMs);
 
     Quarantine.init(
         static_cast<uptr>(getFlags()->quarantine_size_kb << 10),

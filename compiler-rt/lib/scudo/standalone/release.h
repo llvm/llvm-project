@@ -200,7 +200,13 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
   if (BlockSize <= PageSize && PageSize % BlockSize == 0) {
     // Each chunk affects one page only.
     for (const auto &It : FreeList) {
-      for (u32 I = 0; I < It.getCount(); I++) {
+      // If dealing with a TransferBatch, the first pointer of the batch will
+      // point to the batch itself, we do not want to mark this for release as
+      // the batch is in use, so skip the first entry.
+      const bool IsTransferBatch =
+          (It.getCount() != 0) &&
+          (reinterpret_cast<uptr>(It.get(0)) == reinterpret_cast<uptr>(&It));
+      for (u32 I = IsTransferBatch ? 1 : 0; I < It.getCount(); I++) {
         const uptr P = reinterpret_cast<uptr>(It.get(I));
         if (P >= Base && P < End)
           Counters.inc((P - Base) >> PageSizeLog);
@@ -209,7 +215,11 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList, uptr Base,
   } else {
     // In all other cases chunks might affect more than one page.
     for (const auto &It : FreeList) {
-      for (u32 I = 0; I < It.getCount(); I++) {
+      // See TransferBatch comment above.
+      const bool IsTransferBatch =
+          (It.getCount() != 0) &&
+          (reinterpret_cast<uptr>(It.get(0)) == reinterpret_cast<uptr>(&It));
+      for (u32 I = IsTransferBatch ? 1 : 0; I < It.getCount(); I++) {
         const uptr P = reinterpret_cast<uptr>(It.get(I));
         if (P >= Base && P < End)
           Counters.incRange((P - Base) >> PageSizeLog,
