@@ -428,19 +428,62 @@ INSTANTIATE_TEST_CASE_P(
            std::make_pair(4, DWARF64), // Test v4 fields and DWARF64.
            std::make_pair(5, DWARF32), std::make_pair(5, DWARF64)), );
 
-TEST_F(DebugLineBasicFixture, ErrorForInvalidExtendedOpcodeLength) {
+TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthSmallerThanExpected) {
   if (!setupGenerator())
     return;
 
   LineTable &LT = Gen->addLineTable();
-  // The Length should be 1 for an end sequence opcode.
-  LT.addExtendedOpcode(2, DW_LNE_end_sequence, {});
+  LT.addByte(0xaa);
+  // The Length should be 1 + sizeof(ULEB) for a set discriminator opcode.
+  // The operand will be read for both the discriminator opcode and then parsed
+  // again as DW_LNS_negate_stmt, to respect the claimed length.
+  LT.addExtendedOpcode(1, DW_LNE_set_discriminator,
+                       {{DW_LNS_negate_stmt, LineTable::ULEB}});
+  LT.addByte(0xbb);
+  LT.addStandardOpcode(DW_LNS_const_add_pc, {});
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
 
   generate();
 
-  checkGetOrParseLineTableEmitsFatalError(
-      "unexpected line op length at offset "
-      "0x00000030 expected 0x02 found 0x01");
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  checkError(
+      "unexpected line op length at offset 0x00000031 expected 0x01 found 0x02",
+      std::move(Recoverable));
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  ASSERT_EQ((*ExpectedLineTable)->Rows.size(), 3u);
+  EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 1u);
+  EXPECT_EQ((*ExpectedLineTable)->Rows[1].IsStmt, 0u);
+  EXPECT_EQ((*ExpectedLineTable)->Rows[1].Discriminator, DW_LNS_negate_stmt);
+}
+
+TEST_F(DebugLineBasicFixture, ErrorForExtendedOpcodeLengthLargerThanExpected) {
+  if (!setupGenerator())
+    return;
+
+  LineTable &LT = Gen->addLineTable();
+  LT.addByte(0xaa);
+  LT.addStandardOpcode(DW_LNS_const_add_pc, {});
+  // The Length should be 1 for an end sequence opcode.
+  LT.addExtendedOpcode(2, DW_LNE_end_sequence, {});
+  // The negate statement opcode will be skipped.
+  LT.addStandardOpcode(DW_LNS_negate_stmt, {});
+  LT.addByte(0xbb);
+  LT.addStandardOpcode(DW_LNS_const_add_pc, {});
+  LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
+
+  generate();
+
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  checkError(
+      "unexpected line op length at offset 0x00000032 expected 0x02 found 0x01",
+      std::move(Recoverable));
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  ASSERT_EQ((*ExpectedLineTable)->Rows.size(), 4u);
+  EXPECT_EQ((*ExpectedLineTable)->Sequences.size(), 2u);
+  ASSERT_EQ((*ExpectedLineTable)->Sequences[1].FirstRowIndex, 2u);
+  EXPECT_EQ((*ExpectedLineTable)->Rows[2].IsStmt, 1u);
 }
 
 TEST_F(DebugLineBasicFixture, ErrorForUnitLengthTooLarge) {
@@ -695,11 +738,11 @@ TEST_F(DebugLineBasicFixture, ParserReportsNonPrologueProblemsWhenParsing) {
 
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
   Parser.parseNext(RecordRecoverable, RecordUnrecoverable);
-  EXPECT_FALSE(Recoverable);
+  EXPECT_FALSE(Unrecoverable);
   ASSERT_FALSE(Parser.done());
   checkError(
       "unexpected line op length at offset 0x00000030 expected 0x42 found 0x01",
-      std::move(Unrecoverable));
+      std::move(Recoverable));
 
   // Reset the error state so that it does not confuse the next set of checks.
   Unrecoverable = Error::success();
