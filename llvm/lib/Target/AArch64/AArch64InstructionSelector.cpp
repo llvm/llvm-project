@@ -3508,8 +3508,17 @@ bool AArch64InstructionSelector::tryOptSelect(MachineInstr &I) const {
   MachineInstr *CondDef = MRI.getVRegDef(I.getOperand(1).getReg());
   while (CondDef) {
     // We can only fold if all of the defs have one use.
-    if (!MRI.hasOneUse(CondDef->getOperand(0).getReg()))
-      return false;
+    Register CondDefReg = CondDef->getOperand(0).getReg();
+    if (!MRI.hasOneUse(CondDefReg)) {
+      // Unless it's another select.
+      for (auto UI = MRI.use_instr_begin(CondDefReg), UE = MRI.use_instr_end();
+           UI != UE; ++UI) {
+        if (CondDef == &*UI)
+          continue;
+        if (UI->getOpcode() != TargetOpcode::G_SELECT)
+          return false;
+      }
+    }
 
     // We can skip over G_TRUNC since the condition is 1-bit.
     // Truncating/extending can have no impact on the value.
