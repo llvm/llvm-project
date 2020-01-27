@@ -2,6 +2,7 @@ from __future__ import print_function
 import sys
 
 import gdb.printing
+import gdb.types
 
 class Iterator:
   def __iter__(self):
@@ -315,6 +316,55 @@ class TwinePrinter:
   def to_string(self):
     return self.string_from_twine_object(self._val)
 
+def make_printer(string = None, children = None, hint = None):
+  """Create a printer from the parameters."""
+  class Printer : pass
+  printer = Printer()
+  if string:
+    setattr(printer, 'to_string', lambda: string)
+  if children:
+    setattr(printer, 'children', lambda: children)
+  if hint:
+    setattr(printer, 'display_hint', lambda: hint)
+  return printer
+
+def get_pointer_int_pair(val):
+  """Get tuple from llvm::PointerIntPair."""
+  info_name = val.type.template_argument(4).strip_typedefs().name
+  try:
+    enum_type = gdb.lookup_type(info_name + '::MaskAndShiftConstants')
+  except gdb.error:
+    return (None, None)
+  enum_dict = gdb.types.make_enum_dict(enum_type)
+  ptr_mask = enum_dict[info_name + '::PointerBitMask']
+  int_shift = enum_dict[info_name + '::IntShift']
+  int_mask = enum_dict[info_name + '::IntMask']
+  pair_union = val['Value']
+  pointer = (pair_union & ptr_mask)
+  value = ((pair_union >> int_shift) & int_mask)
+  return (pointer, value)
+
+def make_pointer_int_pair_printer(val):
+  """Factory for an llvm::PointerIntPair printer."""
+  pointer, value = get_pointer_int_pair(val)
+  if not pointer or not value:
+    return None
+  pointer_type = val.type.template_argument(0)
+  value_type = val.type.template_argument(2)
+  string = 'llvm::PointerIntPair<%s>' % pointer_type
+  children = [('pointer', pointer.cast(pointer_type)),
+              ('value', value.cast(value_type))]
+  return make_printer(string, children)
+
+def make_pointer_union_printer(val):
+  """Factory for an llvm::PointerUnion printer."""
+  pointer, value = get_pointer_int_pair(val['Val'])
+  if not pointer or not value:
+    return None
+  pointer_type = val.type.template_argument(int(value))
+  string = 'llvm::PointerUnion containing %s' % pointer_type
+  return make_printer(string, [('pointer', pointer.cast(pointer_type))])
+
 pp = gdb.printing.RegexpCollectionPrettyPrinter("LLVMSupport")
 pp.add_printer('llvm::SmallString', '^llvm::SmallString<.*>$', SmallStringPrinter)
 pp.add_printer('llvm::StringRef', '^llvm::StringRef$', StringRefPrinter)
@@ -324,4 +374,6 @@ pp.add_printer('llvm::Expected', '^llvm::Expected<.*>$', ExpectedPrinter)
 pp.add_printer('llvm::Optional', '^llvm::Optional<.*>$', OptionalPrinter)
 pp.add_printer('llvm::DenseMap', '^llvm::DenseMap<.*>$', DenseMapPrinter)
 pp.add_printer('llvm::Twine', '^llvm::Twine$', TwinePrinter)
+pp.add_printer('llvm::PointerIntPair', '^llvm::PointerIntPair<.*>$', make_pointer_int_pair_printer)
+pp.add_printer('llvm::PointerUnion', '^llvm::PointerUnion<.*>$', make_pointer_union_printer)
 gdb.printing.register_pretty_printer(gdb.current_objfile(), pp)
