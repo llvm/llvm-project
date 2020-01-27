@@ -39,3 +39,10 @@ p StringRef
 # CHECK: "\"foo\"\"bar\""
 p Twine
 
+# CHECK: llvm::PointerIntPair<int *> = {pointer = 0xabc, value = 1}
+p PointerIntPair
+
+# CHECK: llvm::PointerUnion containing int * = {pointer = 0xabc}
+p PointerUnion
+
+
