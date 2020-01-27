@@ -173,7 +173,7 @@ entry:
   %1 = tail call i8* @llvm.aarch64.ldg(i8* %0, i8* %0)
   %2 = bitcast i8* %1 to i32*
   ret i32* %2
-; CHECK ldg x0, [x0]
+; CHECK: ldg x0, [x0]
 }
 
 define i32* @get_tag1_two_parm(i32* %ret_ptr, i32* %ptr) {
@@ -184,7 +184,7 @@ entry:
   %2 = tail call i8* @llvm.aarch64.ldg(i8* %0, i8* %1)
   %3 = bitcast i8* %2 to i32*
   ret i32* %3
-; CHECK ldg x0, [x1]
+; CHECK: ldg x0, [x1]
 }
 
 define i32* @get_tag1stack() {
