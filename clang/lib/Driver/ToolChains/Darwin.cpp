@@ -1870,7 +1870,10 @@ void DarwinClang::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs
 
   bool NoStdInc = DriverArgs.hasArg(options::OPT_nostdinc);
   bool NoStdlibInc = DriverArgs.hasArg(options::OPT_nostdlibinc);
-  bool NoBuiltinInc = DriverArgs.hasArg(options::OPT_nobuiltininc);
+  bool NoBuiltinInc = DriverArgs.hasFlag(
+      options::OPT_nobuiltininc, options::OPT_ibuiltininc, /*Default=*/false);
+  bool ForceBuiltinInc = DriverArgs.hasFlag(
+      options::OPT_ibuiltininc, options::OPT_nobuiltininc, /*Default=*/false);
 
   // Add <sysroot>/usr/local/include
   if (!NoStdInc && !NoStdlibInc) {
@@ -1880,7 +1883,7 @@ void DarwinClang::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs
   }
 
   // Add the Clang builtin headers (<resource>/include)
-  if (!NoStdInc && !NoBuiltinInc) {
+  if (!(NoStdInc && !ForceBuiltinInc) && !NoBuiltinInc) {
     SmallString<128> P(D.ResourceDir);
     llvm::sys::path::append(P, "include");
     addSystemInclude(DriverArgs, CC1Args, P);
