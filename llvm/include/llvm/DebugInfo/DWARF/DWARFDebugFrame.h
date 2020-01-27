@@ -98,6 +98,15 @@ private:
     Instructions.back().Ops.push_back(Operand2);
   }
 
+  /// Add a new instruction that has three operands.
+  void addInstruction(uint8_t Opcode, uint64_t Operand1, uint64_t Operand2,
+                      uint64_t Operand3) {
+    Instructions.push_back(Instruction(Opcode));
+    Instructions.back().Ops.push_back(Operand1);
+    Instructions.back().Ops.push_back(Operand2);
+    Instructions.back().Ops.push_back(Operand3);
+  }
+
   /// Types of operands to CFI instructions
   /// In DWARF, this type is implicitly tied to a CFI instruction opcode and
   /// thus this type doesn't need to be explictly written to the file (this is
@@ -113,12 +122,13 @@ private:
     OT_SignedFactDataOffset,
     OT_UnsignedFactDataOffset,
     OT_Register,
+    OT_AddressSpace,
     OT_Expression
   };
 
   /// Retrieve the array describing the types of operands according to the enum
   /// above. This is indexed by opcode.
-  static ArrayRef<OperandType[2]> getOperandTypes();
+  static ArrayRef<OperandType[3]> getOperandTypes();
 
   /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
   void printOperand(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,

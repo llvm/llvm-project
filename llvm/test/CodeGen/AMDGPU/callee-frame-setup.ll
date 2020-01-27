@@ -196,7 +196,7 @@ define void @callee_func_sgpr_spill_no_calls(i32 %in) #0 {
 ; GCN-NEXT: ;;#ASMEND
 ; GCN-NEXT: v_readlane_b32 s42, v0, 0
 ; GCN-NEXT: s_setpc_b64
-define void @spill_only_csr_sgpr() {
+define void @spill_only_csr_sgpr() #0 {
   call void asm sideeffect "; clobber s42", "~{s42}"()
   ret void
 }
@@ -206,16 +206,16 @@ define void @spill_only_csr_sgpr() {
 ; GCN: s_waitcnt
 ; GCN-NEXT:s_mov_b32 [[FP_COPY:s[0-9]+]], s33
 ; GCN-NEXT: s_mov_b32 s33, s32
+; GCN-NEXT: s_add_u32 s32, s32, 0x300
+; GCN: buffer_store_dword v33, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
-; GCN-DAG: buffer_store_dword v33, off, s[0:3], s33 ; 4-byte Folded Spill
-; GCN-DAG: buffer_store_dword [[ZERO]], off, s[0:3], s33 offset:8
+; GCN: buffer_store_dword [[ZERO]], off, s[0:3], s33 offset:8
 
 ; GCN:	;;#ASMSTART
 ; GCN-NEXT: ; clobber v33
 ; GCN-NEXT: ;;#ASMEND
 
 ; GCN: buffer_load_dword v33, off, s[0:3], s33 ; 4-byte Folded Reload
-; GCN: s_add_u32 s32, s32, 0x300
 ; GCN-NEXT: s_sub_u32 s32, s32, 0x300
 ; GCN-NEXT: s_mov_b32 s33, s4
 ; GCN-NEXT: s_waitcnt vmcnt(0)
@@ -232,14 +232,14 @@ define void @callee_with_stack_no_fp_elim_csr_vgpr() #1 {
 ; GCN: s_waitcnt
 ; GCN-NEXT: v_writelane_b32 v1, s33, 63
 ; GCN-NEXT: s_mov_b32 s33, s32
+; GCN-NEXT: s_add_u32 s32, s32, 0x300
 ; GCN: buffer_store_dword v33, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-COUNT-63: v_writelane_b32 v1
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:8
 ; GCN: ;;#ASMSTART
 ; GCN-COUNT-63: v_readlane_b32 s{{[0-9]+}}, v1
 
-; GCN: s_add_u32 s32, s32, 0x300
-; GCN-NEXT: s_sub_u32 s32, s32, 0x300
+; GCN: s_sub_u32 s32, s32, 0x300
 ; GCN-NEXT: v_readlane_b32 s33, v1, 63
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
@@ -264,6 +264,7 @@ define void @last_lane_vgpr_for_fp_csr() #1 {
 ; GCN: s_waitcnt
 ; GCN-NEXT: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
 ; GCN-NEXT: s_mov_b32 s33, s32
+; GCN-NEXT: s_add_u32 s32, s32, 0x300
 ; GCN-NEXT: buffer_store_dword v33, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-COUNT-64: v_writelane_b32 v1,
 
@@ -272,7 +273,6 @@ define void @last_lane_vgpr_for_fp_csr() #1 {
 ; GCN-COUNT-64: v_readlane_b32 s{{[0-9]+}}, v1
 
 ; GCN: buffer_load_dword v33, off, s[0:3], s33 ; 4-byte Folded Reload
-; GCN: s_add_u32 s32, s32, 0x300
 ; GCN-NEXT: s_sub_u32 s32, s32, 0x300
 ; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
 ; GCN-NEXT: s_waitcnt vmcnt(0)
@@ -295,8 +295,8 @@ define void @no_new_vgpr_for_fp_csr() #1 {
 
 ; GCN-LABEL: {{^}}realign_stack_no_fp_elim:
 ; GCN: s_waitcnt
-; GCN-NEXT: s_add_u32 [[SCRATCH:s[0-9]+]], s32, 0x7ffc0
 ; GCN-NEXT: s_mov_b32 s4, s33
+; GCN-NEXT: s_add_u32 [[SCRATCH:s[0-9]+]], s32, 0x7ffc0
 ; GCN-NEXT: s_and_b32 s33, [[SCRATCH]], 0xfff80000
 ; GCN-NEXT: s_add_u32 s32, s32, 0x100000
 ; GCN-NEXT: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
@@ -314,14 +314,14 @@ define void @realign_stack_no_fp_elim() #1 {
 ; GCN-LABEL: {{^}}no_unused_non_csr_sgpr_for_fp:
 ; GCN: s_waitcnt
 ; GCN-NEXT: v_writelane_b32 v1, s33, 2
-; GCN-NEXT: v_writelane_b32 v1, s30, 0
 ; GCN-NEXT: s_mov_b32 s33, s32
+; GCN-NEXT: v_writelane_b32 v1, s30, 0
 ; GCN: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0
 ; GCN: v_writelane_b32 v1, s31, 1
 ; GCN: buffer_store_dword [[ZERO]], off, s[0:3], s33 offset:4
 ; GCN: ;;#ASMSTART
-; GCN: v_readlane_b32 s4, v1, 0
-; GCN-NEXT: s_add_u32 s32, s32, 0x200
+; GCN: s_add_u32 s32, s32, 0x200
+; GCN-NEXT: v_readlane_b32 s4, v1, 0
 ; GCN-NEXT: v_readlane_b32 s5, v1, 1
 ; GCN-NEXT: s_sub_u32 s32, s32, 0x200
 ; GCN-NEXT: v_readlane_b32 s33, v1, 2
@@ -348,8 +348,8 @@ define void @no_unused_non_csr_sgpr_for_fp() #1 {
 ; GCN-NEXT: buffer_store_dword [[CSR_VGPR:v[0-9]+]], off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
 ; GCN-NEXT: v_writelane_b32 v32, s33, 2
-; GCN-NEXT: v_writelane_b32 v32, s30, 0
 ; GCN-NEXT: s_mov_b32 s33, s32
+; GCN-NEXT: v_writelane_b32 v32, s30, 0
 
 ; GCN-DAG: v_writelane_b32 v32, s31, 1
 ; GCN-DAG: buffer_store_dword
@@ -395,8 +395,8 @@ define void @no_unused_non_csr_sgpr_for_fp_no_scratch_vgpr() #1 {
 ; GCN-NEXT: buffer_store_dword [[CSR_VGPR:v[0-9]+]], [[SCRATCH_VGPR]], s[0:3], s32 offen ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
 ; GCN-NEXT: v_writelane_b32 v32, s33, 2
-; GCN-NEXT: v_writelane_b32 v32, s30, 0
 ; GCN-NEXT: s_mov_b32 s33, s32
+; GCN-NEXT: v_writelane_b32 v32, s30, 0
 ; GCN-DAG: v_writelane_b32 v32, s31, 1
 ; GCN-DAG: s_add_u32 s32, s32, 0x40300{{$}}
 ; GCN-DAG: buffer_store_dword

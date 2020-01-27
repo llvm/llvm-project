@@ -89,7 +89,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
                            ArrayRef<CalleeSavedInfo> CSI,
                            LiveIntervals *LIS) {
   MachineFunction &MF = *SaveBlock.getParent();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const SIInstrInfo &TII = *MF.getSubtarget<GCNSubtarget>().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
@@ -103,8 +103,8 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       const TargetRegisterClass *RC =
         TRI->getMinimalPhysRegClass(Reg, MVT::i32);
 
-      TII.storeRegToStackSlot(SaveBlock, I, Reg, true, CS.getFrameIdx(), RC,
-                              TRI);
+      TII.storeRegToStackSlotCFI(SaveBlock, I, Reg, true, CS.getFrameIdx(), RC,
+                                 TRI);
 
       if (LIS) {
         assert(std::distance(MIS.begin(), I) == 1);

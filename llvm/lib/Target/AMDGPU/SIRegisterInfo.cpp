@@ -14,14 +14,15 @@
 #include "SIRegisterInfo.h"
 #include "AMDGPURegisterBankInfo.h"
 #include "AMDGPUSubtarget.h"
-#include "SIInstrInfo.h"
-#include "SIMachineFunctionInfo.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIInstrInfo.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/IR/Function.h"
@@ -37,6 +38,11 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::desc("Enable spilling VGPRs to SGPRs"),
   cl::ReallyHidden,
   cl::init(true));
+
+static cl::opt<bool> EnableSpillCFISavedRegs(
+    "amdgpu-spill-cfi-saved-regs",
+    cl::desc("Enable spilling the registers required for CFI emission"),
+    cl::ReallyHidden, cl::init(false));
 
 SIRegisterInfo::SIRegisterInfo(const GCNSubtarget &ST)
     : AMDGPUGenRegisterInfo(AMDGPU::PC_REG, ST.getAMDGPUDwarfFlavour()), ST(ST),
@@ -185,6 +191,10 @@ unsigned SIRegisterInfo::getSubRegFromChannel(unsigned Channel,
          "Not implemented");
   assert(Channel < array_lengthof(SubRegFromChannelTable[0]));
   return SubRegFromChannelTable[NumRegIndex][Channel];
+}
+
+bool SIRegisterInfo::isCFISavedRegsSpillEnabled() const {
+  return EnableSpillCFISavedRegs;
 }
 
 MCRegister SIRegisterInfo::reservedPrivateSegmentBufferReg(
@@ -491,51 +501,67 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
 
   switch (Op) {
   case AMDGPU::SI_SPILL_S1024_SAVE:
+  case AMDGPU::SI_SPILL_S1024_CFI_SAVE:
   case AMDGPU::SI_SPILL_S1024_RESTORE:
   case AMDGPU::SI_SPILL_V1024_SAVE:
+  case AMDGPU::SI_SPILL_V1024_CFI_SAVE:
   case AMDGPU::SI_SPILL_V1024_RESTORE:
   case AMDGPU::SI_SPILL_A1024_SAVE:
   case AMDGPU::SI_SPILL_A1024_RESTORE:
     return 32;
   case AMDGPU::SI_SPILL_S512_SAVE:
+  case AMDGPU::SI_SPILL_S512_CFI_SAVE:
   case AMDGPU::SI_SPILL_S512_RESTORE:
   case AMDGPU::SI_SPILL_V512_SAVE:
+  case AMDGPU::SI_SPILL_V512_CFI_SAVE:
   case AMDGPU::SI_SPILL_V512_RESTORE:
   case AMDGPU::SI_SPILL_A512_SAVE:
   case AMDGPU::SI_SPILL_A512_RESTORE:
     return 16;
   case AMDGPU::SI_SPILL_S256_SAVE:
+  case AMDGPU::SI_SPILL_S256_CFI_SAVE:
   case AMDGPU::SI_SPILL_S256_RESTORE:
   case AMDGPU::SI_SPILL_V256_SAVE:
+  case AMDGPU::SI_SPILL_V256_CFI_SAVE:
   case AMDGPU::SI_SPILL_V256_RESTORE:
     return 8;
   case AMDGPU::SI_SPILL_S160_SAVE:
+  case AMDGPU::SI_SPILL_S160_CFI_SAVE:
   case AMDGPU::SI_SPILL_S160_RESTORE:
   case AMDGPU::SI_SPILL_V160_SAVE:
+  case AMDGPU::SI_SPILL_V160_CFI_SAVE:
   case AMDGPU::SI_SPILL_V160_RESTORE:
     return 5;
   case AMDGPU::SI_SPILL_S128_SAVE:
+  case AMDGPU::SI_SPILL_S128_CFI_SAVE:
   case AMDGPU::SI_SPILL_S128_RESTORE:
   case AMDGPU::SI_SPILL_V128_SAVE:
+  case AMDGPU::SI_SPILL_V128_CFI_SAVE:
   case AMDGPU::SI_SPILL_V128_RESTORE:
   case AMDGPU::SI_SPILL_A128_SAVE:
   case AMDGPU::SI_SPILL_A128_RESTORE:
     return 4;
   case AMDGPU::SI_SPILL_S96_SAVE:
+  case AMDGPU::SI_SPILL_S96_CFI_SAVE:
   case AMDGPU::SI_SPILL_S96_RESTORE:
   case AMDGPU::SI_SPILL_V96_SAVE:
+  case AMDGPU::SI_SPILL_V96_CFI_SAVE:
   case AMDGPU::SI_SPILL_V96_RESTORE:
     return 3;
   case AMDGPU::SI_SPILL_S64_SAVE:
+  case AMDGPU::SI_SPILL_S64_CFI_SAVE:
   case AMDGPU::SI_SPILL_S64_RESTORE:
   case AMDGPU::SI_SPILL_V64_SAVE:
+  case AMDGPU::SI_SPILL_V64_CFI_SAVE:
   case AMDGPU::SI_SPILL_V64_RESTORE:
   case AMDGPU::SI_SPILL_A64_SAVE:
   case AMDGPU::SI_SPILL_A64_RESTORE:
     return 2;
   case AMDGPU::SI_SPILL_S32_SAVE:
+  case AMDGPU::SI_SPILL_S32_CFI_SAVE:
   case AMDGPU::SI_SPILL_S32_RESTORE:
   case AMDGPU::SI_SPILL_V32_SAVE:
+  case AMDGPU::SI_SPILL_V32_CFI_SAVE:
   case AMDGPU::SI_SPILL_V32_RESTORE:
   case AMDGPU::SI_SPILL_A32_SAVE:
   case AMDGPU::SI_SPILL_A32_RESTORE:
@@ -669,20 +695,16 @@ static bool buildMUBUFOffsetLoadStore(const GCNSubtarget &ST,
   return true;
 }
 
-void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
-                                         unsigned LoadStoreOp,
-                                         int Index,
-                                         Register ValueReg,
-                                         bool IsKill,
-                                         MCRegister ScratchRsrcReg,
-                                         MCRegister ScratchOffsetReg,
-                                         int64_t InstOffset,
-                                         MachineMemOperand *MMO,
-                                         RegScavenger *RS) const {
+void SIRegisterInfo::buildSpillLoadStore(
+    MachineBasicBlock::iterator MI, unsigned LoadStoreOp, int Index,
+    Register ValueReg, bool IsKill, MCRegister ScratchRsrcReg,
+    MCRegister ScratchOffsetReg, int64_t InstOffset, MachineMemOperand *MMO,
+    RegScavenger *RS, bool NeedsCFI) const {
   MachineBasicBlock *MBB = MI->getParent();
   MachineFunction *MF = MI->getParent()->getParent();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
+  const SIFrameLowering *TFL = ST.getFrameLowering();
 
   const MCInstrDesc &Desc = TII->get(LoadStoreOp);
   const DebugLoc &DL = MI->getDebugLoc();
@@ -697,6 +719,7 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
   unsigned Size = NumSubRegs * EltSize;
   int64_t Offset = InstOffset + MFI.getObjectOffset(Index);
   int64_t ScratchOffsetRegDelta = 0;
+  int64_t AdditionalCFIOffset = 0;
 
   Align Alignment = MFI.getObjectAlign(Index);
   const MachinePointerInfo &BasePtrInfo = MMO->getPointerInfo();
@@ -736,6 +759,8 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
     } else {
       Scavenged = true;
     }
+
+    AdditionalCFIOffset = Offset;
 
     if (ScratchOffsetReg == AMDGPU::NoRegister) {
       BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), SOffset)
@@ -795,6 +820,11 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
           .addImm(0) // swz
           .addMemOperand(NewMMO);
 
+      if (IsStore && NeedsCFI)
+        TFL->buildCFIForVGPRToVMEMSpill(*MBB, MI, DL, SubReg,
+                                        Offset * ST.getWavefrontSize() +
+                                            AdditionalCFIOffset);
+
       if (!IsStore && TmpReg != AMDGPU::NoRegister)
         MIB = BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ACCVGPR_WRITE_B32),
                       FinalReg)
@@ -813,14 +843,14 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
   }
 }
 
-bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
-                               int Index,
-                               RegScavenger *RS,
-                               bool OnlyToVGPR) const {
+bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
+                               RegScavenger *RS, bool OnlyToVGPR,
+                               bool NeedsCFI) const {
   MachineBasicBlock *MBB = MI->getParent();
   MachineFunction *MF = MBB->getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   DenseSet<unsigned> SGPRSpillVGPRDefinedSet;
+  const SIFrameLowering *TFL = ST.getFrameLowering();
 
   ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills
     = MFI->getSGPRToVGPRSpills(Index);
@@ -876,6 +906,10 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
         .addImm(Spill.Lane)
         .addReg(Spill.VGPR, VGPRDefined ? 0 : RegState::Undef);
 
+      if (NeedsCFI)
+        TFL->buildCFIForSGPRToVGPRSpill(*MBB, MI, DL, SubReg, Spill.VGPR,
+                                        Spill.Lane);
+
       // FIXME: Since this spills to another register instead of an actual
       // frame index, we should delete the frame index when all references to
       // it are fixed.
@@ -915,6 +949,8 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
         .addReg(MFI->getStackPtrOffsetReg())  // soffset
         .addImm(i * 4)                        // offset
         .addMemOperand(MMO);
+
+      // TODO: Implement CFI for SpillToVMEM if/when it is fully supported.
     }
   }
 
@@ -1012,7 +1048,18 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
   MachineBasicBlock::iterator MI,
   int FI,
   RegScavenger *RS) const {
+  bool NeedsCFI = false;
   switch (MI->getOpcode()) {
+  case AMDGPU::SI_SPILL_S1024_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S512_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S256_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S160_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S128_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S96_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S64_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S32_CFI_SAVE:
+    NeedsCFI = true;
+    LLVM_FALLTHROUGH;
   case AMDGPU::SI_SPILL_S1024_SAVE:
   case AMDGPU::SI_SPILL_S512_SAVE:
   case AMDGPU::SI_SPILL_S256_SAVE:
@@ -1021,7 +1068,7 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
   case AMDGPU::SI_SPILL_S96_SAVE:
   case AMDGPU::SI_SPILL_S64_SAVE:
   case AMDGPU::SI_SPILL_S32_SAVE:
-    return spillSGPR(MI, FI, RS, true);
+    return spillSGPR(MI, FI, RS, true, NeedsCFI);
   case AMDGPU::SI_SPILL_S1024_RESTORE:
   case AMDGPU::SI_SPILL_S512_RESTORE:
   case AMDGPU::SI_SPILL_S256_RESTORE:
@@ -1053,8 +1100,21 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
   Register FrameReg = getFrameRegister(*MF);
 
+  bool NeedsCFI = false;
+
   switch (MI->getOpcode()) {
     // SGPR register spill
+  case AMDGPU::SI_SPILL_S1024_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S512_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S256_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S160_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S128_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S96_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S64_CFI_SAVE:
+  case AMDGPU::SI_SPILL_S32_CFI_SAVE: {
+    NeedsCFI = true;
+    LLVM_FALLTHROUGH;
+  }
     case AMDGPU::SI_SPILL_S1024_SAVE:
     case AMDGPU::SI_SPILL_S512_SAVE:
     case AMDGPU::SI_SPILL_S256_SAVE:
@@ -1081,6 +1141,16 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     }
 
     // VGPR register spill
+    case AMDGPU::SI_SPILL_V1024_CFI_SAVE:
+    case AMDGPU::SI_SPILL_V512_CFI_SAVE:
+    case AMDGPU::SI_SPILL_V256_CFI_SAVE:
+    case AMDGPU::SI_SPILL_V160_CFI_SAVE:
+    case AMDGPU::SI_SPILL_V128_CFI_SAVE:
+    case AMDGPU::SI_SPILL_V96_CFI_SAVE:
+    case AMDGPU::SI_SPILL_V64_CFI_SAVE:
+    case AMDGPU::SI_SPILL_V32_CFI_SAVE:
+      NeedsCFI = true;
+      LLVM_FALLTHROUGH;
     case AMDGPU::SI_SPILL_V1024_SAVE:
     case AMDGPU::SI_SPILL_V512_SAVE:
     case AMDGPU::SI_SPILL_V256_SAVE:
@@ -1099,14 +1169,12 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
              MFI->getStackPtrOffsetReg());
 
-      buildSpillLoadStore(MI, AMDGPU::BUFFER_STORE_DWORD_OFFSET,
-            Index,
-            VData->getReg(), VData->isKill(),
-            TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc)->getReg(),
-            FrameReg,
-            TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
-            *MI->memoperands_begin(),
-            RS);
+      buildSpillLoadStore(
+          MI, AMDGPU::BUFFER_STORE_DWORD_OFFSET, Index, VData->getReg(),
+          VData->isKill(),
+          TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc)->getReg(), FrameReg,
+          TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
+          *MI->memoperands_begin(), RS, NeedsCFI);
       MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(MI->getOpcode()));
       MI->eraseFromParent();
       break;

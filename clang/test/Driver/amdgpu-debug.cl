@@ -6,6 +6,7 @@
 // CHECK-SIMPLE-DAG: "-debug-info-kind=line-tables-only"
 // CHECK-SIMPLE-DAG: "-disable-O0-optnone"
 // CHECK-SIMPLE-DAG: "-disable-O0-noinline"
+// CHECK-SIMPLE-DAG: "-mllvm" "-amdgpu-spill-cfi-saved-regs"
 // CHECK-SIMPLE-DAG: "-debugger-tuning=gdb"
 
 // Check that a debug-related option which does not affect the debug-info-kind
@@ -15,6 +16,7 @@
 // CHECK-DWARF2-DAG: "-debug-info-kind=line-tables-only"
 // CHECK-DWARF2-DAG: "-disable-O0-optnone"
 // CHECK-DWARF2-DAG: "-disable-O0-noinline"
+// CHECK-DWARF2-DAG: "-mllvm" "-amdgpu-spill-cfi-saved-regs"
 // CHECK-DWARF2-DAG: "-debugger-tuning=gdb"
 // CHECK-DWARF2-DAG: "-dwarf-version=2"
 
@@ -34,6 +36,7 @@
 // CHECK-LLDBBEFORE-DAG: "-debug-info-kind=line-tables-only"
 // CHECK-LLDBBEFORE-DAG: "-disable-O0-optnone"
 // CHECK-LLDBBEFORE-DAG: "-disable-O0-noinline"
+// CHECK-LLDBBEFORE-DAG: "-mllvm" "-amdgpu-spill-cfi-saved-regs"
 // CHECK-LLDBBEFORE-DAG: "-debugger-tuning=gdb"
 // RUN: %clang -### -target amdgcn-amd-amdhsa -x cl -c -emit-llvm -ggdb -glldb %s 2>&1 | FileCheck -check-prefix=CHECK-LLDBAFTER %s
 // CHECK-LLDBAFTER: "-cc1"

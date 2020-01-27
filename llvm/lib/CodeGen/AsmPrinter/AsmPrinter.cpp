@@ -14,6 +14,7 @@
 #include "CodeViewDebug.h"
 #include "DwarfDebug.h"
 #include "DwarfException.h"
+#include "UnwindStreamer.h"
 #include "WasmException.h"
 #include "WinCFGuard.h"
 #include "WinException.h"
@@ -135,6 +136,8 @@ static const char *const DWARFGroupName = "dwarf";
 static const char *const DWARFGroupDescription = "DWARF Emission";
 static const char *const DbgTimerName = "emit";
 static const char *const DbgTimerDescription = "Debug Info Emission";
+static const char *const UnwindTimerName = "write_unwind";
+static const char *const UnwindTimerDescription = "DWARF Unwind Writer";
 static const char *const EHTimerName = "write_exception";
 static const char *const EHTimerDescription = "DWARF Exception Writer";
 static const char *const CFGuardName = "Control Flow Guard";
@@ -320,6 +323,16 @@ bool AsmPrinter::doInitialization(Module &M) {
                             DbgTimerDescription, DWARFGroupName,
                             DWARFGroupDescription);
     }
+  }
+
+  if (MMI->hasDebugInfo() &&
+      MAI->getExceptionHandlingType() == ExceptionHandling::None &&
+      MAI->doesSupportDebugUnwindInformation()) {
+    isCFIMoveForDebugging = true;
+    Handlers.emplace_back(std::make_unique<UnwindStreamer>(this),
+                          UnwindTimerName, UnwindTimerDescription,
+                          DWARFGroupName, DWARFGroupDescription);
+    return false;
   }
 
   switch (MAI->getExceptionHandlingType()) {
@@ -992,7 +1005,8 @@ bool AsmPrinter::needsSEHMoves() {
 
 void AsmPrinter::emitCFIInstruction(const MachineInstr &MI) {
   ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
-  if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
+  if (!MAI->doesSupportDebugUnwindInformation() &&
+      ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
       ExceptionHandlingType != ExceptionHandling::ARM)
     return;
 

@@ -485,6 +485,9 @@ public: // FIXME
   Register SGPRForFPSaveRestoreCopy;
   Optional<int> FramePointerSaveIndex;
 
+  int ReturnAddressSaveIndex;
+  int EXECSaveIndex;
+
 public:
   SIMachineFunctionInfo(const MachineFunction &MF);
 

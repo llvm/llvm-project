@@ -444,6 +444,7 @@ public:
     OpRememberState,
     OpRestoreState,
     OpOffset,
+    OpLLVMDefAspaceCfa,
     OpDefCfaRegister,
     OpDefCfaOffset,
     OpDefCfa,
@@ -466,17 +467,23 @@ private:
     int Offset;
     unsigned Register2;
   };
+  unsigned AddressSpace;
   std::vector<char> Values;
 
   MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, StringRef V)
       : Operation(Op), Label(L), Register(R), Offset(O),
         Values(V.begin(), V.end()) {
-    assert(Op != OpRegister);
+    assert(Op != OpRegister && Op != OpLLVMDefAspaceCfa);
   }
 
   MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R1, unsigned R2)
       : Operation(Op), Label(L), Register(R1), Register2(R2) {
     assert(Op == OpRegister);
+  }
+
+  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int O, unsigned AS)
+      : Operation(Op), Label(L), Register(R), Offset(O), AddressSpace(AS) {
+    assert(Op == OpLLVMDefAspaceCfa);
   }
 
 public:
@@ -505,6 +512,17 @@ public:
   /// offset.
   static MCCFIInstruction createAdjustCfaOffset(MCSymbol *L, int Adjustment) {
     return MCCFIInstruction(OpAdjustCfaOffset, L, 0, Adjustment, "");
+  }
+
+  // FIXME: Update the remaining docs to use the new proposal wording.
+  /// .cfi_llvm_def_aspace_cfa defines the rule for computing the CFA to
+  /// be the result of evaluating the DWARF operation expression
+  /// `DW_OP_constu AS; DW_OP_aspace_bregx R, B` as a location description.
+  static MCCFIInstruction createLLVMDefAspaceCfa(MCSymbol *L, unsigned Register,
+                                                 int Offset,
+                                                 unsigned AddressSpace) {
+    return MCCFIInstruction(OpLLVMDefAspaceCfa, L, Register, -Offset,
+                            AddressSpace);
   }
 
   /// .cfi_offset Previous value of Register is saved at offset Offset
@@ -586,7 +604,8 @@ public:
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRestore || Operation == OpUndefined ||
            Operation == OpSameValue || Operation == OpDefCfaRegister ||
-           Operation == OpRelOffset || Operation == OpRegister);
+           Operation == OpRelOffset || Operation == OpRegister ||
+           Operation == OpLLVMDefAspaceCfa);
     return Register;
   }
 
@@ -595,10 +614,16 @@ public:
     return Register2;
   }
 
+  unsigned getAddressSpace() const {
+    assert(Operation == OpLLVMDefAspaceCfa);
+    return AddressSpace;
+  }
+
   int getOffset() const {
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRelOffset || Operation == OpDefCfaOffset ||
-           Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize);
+           Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize ||
+           Operation == OpLLVMDefAspaceCfa);
     return Offset;
   }
 

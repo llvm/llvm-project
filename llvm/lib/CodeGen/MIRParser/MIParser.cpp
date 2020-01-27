@@ -475,6 +475,7 @@ public:
   bool parseMetadataOperand(MachineOperand &Dest);
   bool parseCFIOffset(int &Offset);
   bool parseCFIRegister(Register &Reg);
+  bool parseCFIAddressSpace(unsigned &AddressSpace);
   bool parseCFIEscapeValues(std::string& Values);
   bool parseCFIOperand(MachineOperand &Dest);
   bool parseIRBlock(BasicBlock *&BB, const Function &F);
@@ -2192,6 +2193,16 @@ bool MIParser::parseCFIRegister(Register &Reg) {
   return false;
 }
 
+bool MIParser::parseCFIAddressSpace(unsigned &AddressSpace) {
+  if (Token.isNot(MIToken::IntegerLiteral))
+    return error("expected a cfi address space");
+  if (Token.integerValue().isSigned())
+    return error("expected an unsigned integer (cfi address space)");
+  AddressSpace = Token.integerValue().getZExtValue();
+  lex();
+  return false;
+}
+
 bool MIParser::parseCFIEscapeValues(std::string &Values) {
   do {
     if (Token.isNot(MIToken::HexLiteral))
@@ -2212,6 +2223,7 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
   lex();
   int Offset;
   Register Reg;
+  unsigned AddressSpace;
   unsigned CFIIndex;
   switch (Kind) {
   case MIToken::kw_cfi_same_value:
@@ -2259,6 +2271,15 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     // NB: MCCFIInstruction::createDefCfa negates the offset.
     CFIIndex =
         MF.addFrameInst(MCCFIInstruction::createDefCfa(nullptr, Reg, -Offset));
+    break;
+  case MIToken::kw_cfi_llvm_def_aspace_cfa:
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIOffset(Offset) || expectAndConsume(MIToken::comma) ||
+        parseCFIAddressSpace(AddressSpace))
+      return true;
+    // NB: MCCFIInstruction::createDefCfa negates the offset.
+    CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMDefAspaceCfa(
+        nullptr, Reg, -Offset, AddressSpace));
     break;
   case MIToken::kw_cfi_remember_state:
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
@@ -2607,6 +2628,7 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::kw_cfi_adjust_cfa_offset:
   case MIToken::kw_cfi_escape:
   case MIToken::kw_cfi_def_cfa:
+  case MIToken::kw_cfi_llvm_def_aspace_cfa:
   case MIToken::kw_cfi_register:
   case MIToken::kw_cfi_remember_state:
   case MIToken::kw_cfi_restore:

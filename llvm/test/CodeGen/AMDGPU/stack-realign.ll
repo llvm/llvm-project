@@ -124,8 +124,8 @@ define amdgpu_kernel void @kernel_call_align4_from_5() {
 }
 
 ; GCN-LABEL: {{^}}default_realign_align128:
-; GCN: s_add_u32 [[TMP:s[0-9]+]], s32, 0x1fc0
-; GCN-NEXT: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
+; GCN-DAG: s_add_u32 [[TMP:s[0-9]+]], s32, 0x1fc0
+; GCN-DAG: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
 ; GCN-NEXT: s_and_b32 s33, [[TMP]], 0xffffe000
 ; GCN-NEXT: s_add_u32 s32, s32, 0x4000
 ; GCN-NOT: s33

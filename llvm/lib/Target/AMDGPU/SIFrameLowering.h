@@ -10,11 +10,11 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIFRAMELOWERING_H
 
 #include "AMDGPUFrameLowering.h"
+#include "SIMachineFunctionInfo.h"
 
 namespace llvm {
 
 class SIInstrInfo;
-class SIMachineFunctionInfo;
 class SIRegisterInfo;
 class GCNSubtarget;
 
@@ -54,6 +54,11 @@ public:
                                 MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
 
+  bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MBBI,
+                                 const ArrayRef<CalleeSavedInfo> CSI,
+                                 const TargetRegisterInfo *TRI) const override;
+
 private:
   void emitEntryFunctionFlatScratchInit(MachineFunction &MF,
                                         MachineBasicBlock &MBB,
@@ -71,8 +76,34 @@ private:
       Register PreloadedPrivateBufferReg, Register ScratchRsrcReg,
       Register ScratchWaveOffsetReg) const;
 
+  void emitPrologueEntryCFI(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MBBI,
+                            const DebugLoc &DL) const;
+
 public:
   bool hasFP(const MachineFunction &MF) const override;
+
+  /// Create a CFI index for CFIInst and build a MachineInstr around it.
+  void buildCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                const DebugLoc &DL, const MCCFIInstruction &CFIInst) const;
+  /// Create a CFI index describing a spill of an SGPR to a single lane of
+  /// a VGPR and build a MachineInstr around it.
+  void buildCFIForSGPRToVGPRSpill(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MBBI,
+                                  const DebugLoc &DL, const Register SGPR,
+                                  const Register VGPR, const int Lane) const;
+  /// Create a CFI index describing a spill of an SGPR to multiple lanes of
+  /// VGPRs and build a MachineInstr around it.
+  void buildCFIForSGPRToVGPRSpill(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      const DebugLoc &DL, Register SGPR,
+      ArrayRef<SIMachineFunctionInfo::SpilledReg> VGPRSpills) const;
+  /// Create a CFI index describing a spill of a VGPR to VMEM and
+  /// build a MachineInstr around it.
+  void buildCFIForVGPRToVMEMSpill(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MBBI,
+                                  const DebugLoc &DL, unsigned VGPR,
+                                  int64_t Offset) const;
 };
 
 } // end namespace llvm

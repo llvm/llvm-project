@@ -3575,15 +3575,15 @@ entry attributes.
 .. table:: Attribute encodings
    :name: amdgpu-dwarf-attribute-encodings-table
 
-   ================================== ===== ====================================
-   Attribute Name                     Value Classes
-   ================================== ===== ====================================
-   DW_AT_LLVM_active_lane             *TBD* exprloc, loclist
-   DW_AT_LLVM_augmentation            *TBD* string
-   DW_AT_LLVM_lanes                   *TBD* constant
-   DW_AT_LLVM_lane_pc                 *TBD* exprloc, loclist
-   DW_AT_LLVM_vector_size             *TBD* constant
-   ================================== ===== ====================================
+   ================================== ====== ===================================
+   Attribute Name                     Value  Classes
+   ================================== ====== ===================================
+   DW_AT_LLVM_active_lane             0x3e08 exprloc, loclist
+   DW_AT_LLVM_augmentation            0x3e09 string
+   DW_AT_LLVM_lanes                   0x3e0a constant
+   DW_AT_LLVM_lane_pc                 0x3e0b exprloc, loclist
+   DW_AT_LLVM_vector_size             0x3e0c constant
+   ================================== ====== ===================================
 
 DWARF Expressions
 ~~~~~~~~~~~~~~~~~
@@ -3720,8 +3720,8 @@ instructions.
    Instruction              High 2 Low 6  Operand 1        Operand 2        Operand 3
                             Bits   Bits
    ======================== ====== ====== ================ ================ ================
-   DW_CFA_def_aspace_cfa    0      0x2f   ULEB128 register ULEB128 offset   ULEB128 address space
-   DW_CFA_def_aspace_cfa_sf 0      0x30   ULEB128 register SLEB128 offset   ULEB128 address space
+   DW_CFA_def_aspace_cfa    0      0x30   ULEB128 register ULEB128 offset   ULEB128 address space
+   DW_CFA_def_aspace_cfa_sf 0      0x31   ULEB128 register SLEB128 offset   ULEB128 address space
    ======================== ====== ====== ================ ================ ================
 
 Attributes by Tag Value (Informative)

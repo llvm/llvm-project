@@ -418,6 +418,13 @@ HANDLE_DW_AT(0x3e02, LLVM_sysroot, 0, LLVM)
 HANDLE_DW_AT(0x3e03, LLVM_tag_offset, 0, LLVM)
 // The missing numbers here are reserved for ptrauth support.
 HANDLE_DW_AT(0x3e07, LLVM_apinotes, 0, APPLE)
+// Heterogeneous Debugging Extension defined at
+// https://llvm.org/docs/AMDGPUDwarfProposalForHeterogeneousDebugging.html.
+HANDLE_DW_AT(0x3e08, LLVM_active_lane, 0, LLVM)
+HANDLE_DW_AT(0x3e09, LLVM_augmentation, 0, LLVM)
+HANDLE_DW_AT(0x3e0a, LLVM_lanes, 0, LLVM)
+HANDLE_DW_AT(0x3e0b, LLVM_lane_pc, 0, LLVM)
+HANDLE_DW_AT(0x3e0c, LLVM_vector_size, 0, LLVM)
 
 // Apple extensions.
 
@@ -670,6 +677,23 @@ HANDLE_DW_OP(0xf3, GNU_entry_value, 0, GNU)
 // Extensions for Fission proposal.
 HANDLE_DW_OP(0xfb, GNU_addr_index, 0, GNU)
 HANDLE_DW_OP(0xfc, GNU_const_index, 0, GNU)
+// Heterogeneous Debugging Extension defined at
+// https://llvm.org/docs/AMDGPUDwarfProposalForHeterogeneousDebugging.html.
+// These collide with some HP and PGI vendor extensions, but this ambiguity is
+// resolved by ensuring CIE augmentation strings and compilation unit
+// DW_AT_LLVM_augmentation strings include "[llvm:v0.0]".
+HANDLE_DW_OP(0xe1, LLVM_form_aspace_address, 0, LLVM)
+HANDLE_DW_OP(0xe2, LLVM_push_lane, 0, LLVM)
+HANDLE_DW_OP(0xe3, LLVM_offset, 0, LLVM)
+HANDLE_DW_OP(0xe4, LLVM_offset_uconst, 0, LLVM)
+HANDLE_DW_OP(0xe5, LLVM_bit_offset, 0, LLVM)
+HANDLE_DW_OP(0xe6, LLVM_call_frame_entry_reg, 0, LLVM)
+HANDLE_DW_OP(0xe7, LLVM_undefined, 0, LLVM)
+HANDLE_DW_OP(0xe8, LLVM_aspace_bregx, 0, LLVM)
+HANDLE_DW_OP(0xe9, LLVM_aspace_implicit_pointer, 0, LLVM)
+HANDLE_DW_OP(0xea, LLVM_piece_end, 0, LLVM)
+HANDLE_DW_OP(0xeb, LLVM_extend, 0, LLVM)
+HANDLE_DW_OP(0xec, LLVM_select_bit_piece, 0, LLVM)
 
 // DWARF languages.
 HANDLE_DW_LANG(0x0001, C89, 0, 2, DWARF)
@@ -896,6 +920,10 @@ HANDLE_DW_CFA_PRED(0x1d, MIPS_advance_loc8, SELECT_MIPS64)
 HANDLE_DW_CFA_PRED(0x2d, GNU_window_save, SELECT_SPARC)
 HANDLE_DW_CFA_PRED(0x2d, AARCH64_negate_ra_state, SELECT_AARCH64)
 HANDLE_DW_CFA_PRED(0x2e, GNU_args_size, SELECT_X86)
+// Heterogeneous Debugging Extension defined at
+// https://llvm.org/docs/AMDGPUDwarfProposalForHeterogeneousDebugging.html
+HANDLE_DW_CFA(0x30, LLVM_def_aspace_cfa)
+HANDLE_DW_CFA(0x31, LLVM_def_aspace_cfa_sf)
 
 // Apple Objective-C Property Attributes.
 // Keep this list in sync with clang's DeclObjCCommon.h

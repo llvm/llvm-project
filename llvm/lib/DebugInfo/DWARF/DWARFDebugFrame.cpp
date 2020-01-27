@@ -101,6 +101,16 @@ Error CFIProgram::parse(DWARFDataExtractor Data, uint64_t *Offset,
         // Operands: SLEB128
         addInstruction(Opcode, Data.getSLEB128(Offset));
         break;
+      case DW_CFA_LLVM_def_aspace_cfa:
+      case DW_CFA_LLVM_def_aspace_cfa_sf: {
+        auto RegNum = Data.getULEB128(Offset);
+        auto CfaOffset = Opcode == DW_CFA_LLVM_def_aspace_cfa
+                             ? Data.getULEB128(Offset)
+                             : Data.getSLEB128(Offset);
+        auto AddressSpace = Data.getULEB128(Offset);
+        addInstruction(Opcode, RegNum, CfaOffset, AddressSpace);
+        break;
+      }
       case DW_CFA_offset_extended:
       case DW_CFA_register:
       case DW_CFA_def_cfa:
@@ -160,19 +170,22 @@ namespace {
 
 } // end anonymous namespace
 
-ArrayRef<CFIProgram::OperandType[2]> CFIProgram::getOperandTypes() {
-  static OperandType OpTypes[DW_CFA_restore+1][2];
+ArrayRef<CFIProgram::OperandType[3]> CFIProgram::getOperandTypes() {
+  static OperandType OpTypes[DW_CFA_restore + 1][3];
   static bool Initialized = false;
   if (Initialized) {
-    return ArrayRef<OperandType[2]>(&OpTypes[0], DW_CFA_restore+1);
+    return ArrayRef<OperandType[3]>(&OpTypes[0], DW_CFA_restore + 1);
   }
   Initialized = true;
 
-#define DECLARE_OP2(OP, OPTYPE0, OPTYPE1)       \
-  do {                                          \
-    OpTypes[OP][0] = OPTYPE0;                   \
-    OpTypes[OP][1] = OPTYPE1;                   \
+#define DECLARE_OP3(OP, OPTYPE0, OPTYPE1, OPTYPE2)                             \
+  do {                                                                         \
+    OpTypes[OP][0] = OPTYPE0;                                                  \
+    OpTypes[OP][1] = OPTYPE1;                                                  \
+    OpTypes[OP][2] = OPTYPE2;                                                  \
   } while (false)
+#define DECLARE_OP2(OP, OPTYPE0, OPTYPE1)                                      \
+  DECLARE_OP3(OP, OPTYPE0, OPTYPE1, OT_None)
 #define DECLARE_OP1(OP, OPTYPE0) DECLARE_OP2(OP, OPTYPE0, OT_None)
 #define DECLARE_OP0(OP) DECLARE_OP1(OP, OT_None)
 
@@ -185,6 +198,10 @@ ArrayRef<CFIProgram::OperandType[2]> CFIProgram::getOperandTypes() {
   DECLARE_OP2(DW_CFA_def_cfa, OT_Register, OT_Offset);
   DECLARE_OP2(DW_CFA_def_cfa_sf, OT_Register, OT_SignedFactDataOffset);
   DECLARE_OP1(DW_CFA_def_cfa_register, OT_Register);
+  DECLARE_OP3(DW_CFA_LLVM_def_aspace_cfa, OT_Register, OT_Offset,
+              OT_AddressSpace);
+  DECLARE_OP3(DW_CFA_LLVM_def_aspace_cfa_sf, OT_Register,
+              OT_SignedFactDataOffset, OT_AddressSpace);
   DECLARE_OP1(DW_CFA_def_cfa_offset, OT_Offset);
   DECLARE_OP1(DW_CFA_def_cfa_offset_sf, OT_SignedFactDataOffset);
   DECLARE_OP1(DW_CFA_def_cfa_expression, OT_Expression);
@@ -210,14 +227,14 @@ ArrayRef<CFIProgram::OperandType[2]> CFIProgram::getOperandTypes() {
 #undef DECLARE_OP1
 #undef DECLARE_OP2
 
-  return ArrayRef<OperandType[2]>(&OpTypes[0], DW_CFA_restore+1);
+  return ArrayRef<OperandType[3]>(&OpTypes[0], DW_CFA_restore + 1);
 }
 
 /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
 void CFIProgram::printOperand(raw_ostream &OS, const MCRegisterInfo *MRI,
                               bool IsEH, const Instruction &Instr,
                               unsigned OperandIdx, uint64_t Operand) const {
-  assert(OperandIdx < 2);
+  assert(OperandIdx < 3);
   uint8_t Opcode = Instr.Opcode;
   OperandType Type = getOperandTypes()[Opcode][OperandIdx];
 
@@ -262,6 +279,9 @@ void CFIProgram::printOperand(raw_ostream &OS, const MCRegisterInfo *MRI,
     break;
   case OT_Register:
     OS << format(" reg%" PRId64, Operand);
+    break;
+  case OT_AddressSpace:
+    OS << format(" as%" PRId64, Operand);
     break;
   case OT_Expression:
     assert(Instr.Expression && "missing DWARFExpression object");
