@@ -202,8 +202,8 @@ entry:
 define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_base_wb_s64(<2 x i64>* %addr) {
 ; CHECK-LABEL: test_vldrdq_gather_base_wb_s64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vldrd.u64 q1, [q0, #576]!
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrd.u64 q0, [q1, #576]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -220,8 +220,8 @@ declare { <2 x i64>, <2 x i64> } @llvm.arm.mve.vldr.gather.base.wb.v2i64.v2i64(<
 define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_base_wb_u64(<2 x i64>* %addr) {
 ; CHECK-LABEL: test_vldrdq_gather_base_wb_u64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vldrd.u64 q1, [q0, #-328]!
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrd.u64 q0, [q1, #-328]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -237,9 +237,9 @@ define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_base_wb_z_s64(<2 x i64>* %a
 ; CHECK-LABEL: test_vldrdq_gather_base_wb_z_s64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrdt.u64 q1, [q0, #664]!
+; CHECK-NEXT:    vldrdt.u64 q0, [q1, #664]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -259,9 +259,9 @@ define arm_aapcs_vfpcc <2 x i64> @test_vldrdq_gather_base_wb_z_u64(<2 x i64>* %a
 ; CHECK-LABEL: test_vldrdq_gather_base_wb_z_u64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrdt.u64 q1, [q0, #656]!
+; CHECK-NEXT:    vldrdt.u64 q0, [q1, #656]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -727,8 +727,8 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @test_vldrwq_gather_base_wb_f32(<4 x i32>* %addr) {
 ; CHECK-LABEL: test_vldrwq_gather_base_wb_f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vldrw.u32 q1, [q0, #-64]!
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [q1, #-64]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -745,8 +745,8 @@ declare { <4 x float>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.v4f32.v4i32
 define arm_aapcs_vfpcc <4 x i32> @test_vldrwq_gather_base_wb_s32(<4 x i32>* %addr) {
 ; CHECK-LABEL: test_vldrwq_gather_base_wb_s32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vldrw.u32 q1, [q0, #80]!
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [q1, #80]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -763,8 +763,8 @@ declare { <4 x i32>, <4 x i32> } @llvm.arm.mve.vldr.gather.base.wb.v4i32.v4i32(<
 define arm_aapcs_vfpcc <4 x i32> @test_vldrwq_gather_base_wb_u32(<4 x i32>* %addr) {
 ; CHECK-LABEL: test_vldrwq_gather_base_wb_u32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
-; CHECK-NEXT:    vldrw.u32 q1, [q0, #480]!
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [q1, #480]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -780,9 +780,9 @@ define arm_aapcs_vfpcc <4 x float> @test_vldrwq_gather_base_wb_z_f32(<4 x i32>* 
 ; CHECK-LABEL: test_vldrwq_gather_base_wb_z_f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrwt.u32 q1, [q0, #-352]!
+; CHECK-NEXT:    vldrwt.u32 q0, [q1, #-352]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -802,9 +802,9 @@ define arm_aapcs_vfpcc <4 x i32> @test_vldrwq_gather_base_wb_z_s32(<4 x i32>* %a
 ; CHECK-LABEL: test_vldrwq_gather_base_wb_z_s32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrwt.u32 q1, [q0, #276]!
+; CHECK-NEXT:    vldrwt.u32 q0, [q1, #276]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -824,9 +824,9 @@ define arm_aapcs_vfpcc <4 x i32> @test_vldrwq_gather_base_wb_z_u32(<4 x i32>* %a
 ; CHECK-LABEL: test_vldrwq_gather_base_wb_z_u32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vldrwt.u32 q1, [q0, #88]!
+; CHECK-NEXT:    vldrwt.u32 q0, [q1, #88]!
 ; CHECK-NEXT:    vstrw.32 q1, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
