@@ -1258,7 +1258,7 @@ multiclass MUBUF_StoreIntrinsicPat<SDPatternOperator name, ValueType vt,
   def : GCNPat<
     (name vt:$vdata, v4i32:$rsrc, 0, 0, i32:$soffset, timm:$offset,
               timm:$auxiliary, 0),
-    (!cast<MUBUF_Pseudo>(opcode # _OFFSET_exact) $vdata, $rsrc, $soffset, (as_i16imm $offset),
+    (!cast<MUBUF_Pseudo>(opcode # _OFFSET_exact) getVregSrcForVT<vt>.ret:$vdata, SReg_128:$rsrc, SCSrc_b32:$soffset, (as_i16timm $offset),
       (extract_glc $auxiliary), (extract_slc $auxiliary), 0,  (extract_dlc $auxiliary),
       (extract_swz $auxiliary))
   >;
@@ -1266,8 +1266,8 @@ multiclass MUBUF_StoreIntrinsicPat<SDPatternOperator name, ValueType vt,
   def : GCNPat<
     (name vt:$vdata, v4i32:$rsrc, 0, i32:$voffset, i32:$soffset, timm:$offset,
               timm:$auxiliary, 0),
-    (!cast<MUBUF_Pseudo>(opcode # _OFFEN_exact) $vdata, $voffset, $rsrc, $soffset,
-      (as_i16imm $offset), (extract_glc $auxiliary),
+    (!cast<MUBUF_Pseudo>(opcode # _OFFEN_exact) getVregSrcForVT<vt>.ret:$vdata, VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset,
+      (as_i16timm $offset), (extract_glc $auxiliary),
       (extract_slc $auxiliary), 0,  (extract_dlc $auxiliary),
       (extract_swz $auxiliary))
   >;
@@ -1275,8 +1275,8 @@ multiclass MUBUF_StoreIntrinsicPat<SDPatternOperator name, ValueType vt,
   def : GCNPat<
     (name vt:$vdata, v4i32:$rsrc, i32:$vindex, 0, i32:$soffset, timm:$offset,
               timm:$auxiliary, timm),
-    (!cast<MUBUF_Pseudo>(opcode # _IDXEN_exact) $vdata, $vindex, $rsrc, $soffset,
-      (as_i16imm $offset), (extract_glc $auxiliary),
+    (!cast<MUBUF_Pseudo>(opcode # _IDXEN_exact) getVregSrcForVT<vt>.ret:$vdata, VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset,
+      (as_i16timm $offset), (extract_glc $auxiliary),
       (extract_slc $auxiliary), 0,  (extract_dlc $auxiliary),
       (extract_swz $auxiliary))
   >;
@@ -1285,9 +1285,9 @@ multiclass MUBUF_StoreIntrinsicPat<SDPatternOperator name, ValueType vt,
     (name vt:$vdata, v4i32:$rsrc, i32:$vindex, i32:$voffset, i32:$soffset, timm:$offset,
               timm:$auxiliary, timm),
     (!cast<MUBUF_Pseudo>(opcode # _BOTHEN_exact)
-      $vdata,
-      (REG_SEQUENCE VReg_64, $vindex, sub0, $voffset, sub1),
-      $rsrc, $soffset, (as_i16imm $offset), (extract_glc $auxiliary),
+      getVregSrcForVT<vt>.ret:$vdata,
+      (REG_SEQUENCE VReg_64, VGPR_32:$vindex, sub0, VGPR_32:$voffset, sub1),
+      SReg_128:$rsrc, SCSrc_b32:$soffset, (as_i16timm $offset), (extract_glc $auxiliary),
       (extract_slc $auxiliary), 0,  (extract_dlc $auxiliary),
       (extract_swz $auxiliary))
   >;
@@ -1305,6 +1305,7 @@ defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format, v4i32, "BUFFER_STORE_FORMA
 let SubtargetPredicate = HasUnpackedD16VMem in {
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, f16, "BUFFER_STORE_FORMAT_D16_X_gfx80">;
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, i16, "BUFFER_STORE_FORMAT_D16_X_gfx80">;
+  defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, i32, "BUFFER_STORE_FORMAT_D16_X_gfx80">;
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, v2i32, "BUFFER_STORE_FORMAT_D16_XY_gfx80">;
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, v4i32, "BUFFER_STORE_FORMAT_D16_XYZW_gfx80">;
 } // End HasUnpackedD16VMem.
@@ -1312,6 +1313,7 @@ let SubtargetPredicate = HasUnpackedD16VMem in {
 let SubtargetPredicate = HasPackedD16VMem in {
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, f16, "BUFFER_STORE_FORMAT_D16_X">;
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, i16, "BUFFER_STORE_FORMAT_D16_X">;
+  defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, i32, "BUFFER_STORE_FORMAT_D16_X">;
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, v2f16, "BUFFER_STORE_FORMAT_D16_XY">;
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, v2i16, "BUFFER_STORE_FORMAT_D16_XY">;
   defm : MUBUF_StoreIntrinsicPat<SIbuffer_store_format_d16, v4f16, "BUFFER_STORE_FORMAT_D16_XYZW">;

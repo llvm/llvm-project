@@ -114,9 +114,15 @@ public:
                               MachineIRBuilder &B, bool IsFormat) const;
   bool legalizeRawBufferLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
                              MachineIRBuilder &B, bool IsFormat) const;
+  Register fixStoreSourceType(MachineIRBuilder &B, Register VData,
+                              bool IsFormat) const;
+
+  bool legalizeBufferStore(MachineInstr &MI, MachineRegisterInfo &MRI,
+                           MachineIRBuilder &B, bool IsTyped,
+                           bool IsFormat) const;
   bool legalizeBufferLoad(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          MachineIRBuilder &B, bool IsFormat,
-                          bool IsTyped) const;
+                          MachineIRBuilder &B, bool IsTyped,
+                          bool IsFormat) const;
 
   bool legalizeAtomicIncDec(MachineInstr &MI,  MachineIRBuilder &B,
                             bool IsInc) const;
