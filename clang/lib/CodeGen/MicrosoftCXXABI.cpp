@@ -1621,6 +1621,15 @@ void MicrosoftCXXABI::emitVTableTypeMetadata(const VPtrInfo &Info,
   if (!CGM.getCodeGenOpts().LTOUnit)
     return;
 
+  // TODO: Should VirtualFunctionElimination also be supported here?
+  // See similar handling in CodeGenModule::EmitVTableTypeMetadata.
+  if (CGM.getCodeGenOpts().WholeProgramVTables) {
+    llvm::GlobalObject::VCallVisibility TypeVis =
+        CGM.GetVCallVisibilityLevel(RD);
+    if (TypeVis != llvm::GlobalObject::VCallVisibilityPublic)
+      VTable->setVCallVisibilityMetadata(TypeVis);
+  }
+
   // The location of the first virtual function pointer in the virtual table,
   // aka the "address point" on Itanium. This is at offset 0 if RTTI is
   // disabled, or sizeof(void*) if RTTI is enabled.
