@@ -383,12 +383,12 @@ TEST(RenameTest, WithinFileRename) {
 
       // Typedef.
       R"cpp(
-        namespace std {
+        namespace ns {
         class basic_string {};
         typedef basic_string [[s^tring]];
-        } // namespace std
+        } // namespace ns
 
-        std::[[s^tring]] foo();
+        ns::[[s^tring]] foo();
       )cpp",
 
       // Variable.
@@ -539,6 +539,13 @@ TEST(RenameTest, Renameable) {
          // We should detect the symbol is used outside the file from the AST.
          void fo^o() {})cpp",
        "used outside main file", !HeaderFile, nullptr /*no index*/},
+
+      {R"cpp(// disallow rename on blacklisted symbols (e.g. std symbols)
+         namespace std {
+         class str^ing {};
+         }
+       )cpp",
+       "not a supported kind", !HeaderFile, Index},
 
       {R"cpp(
          void foo(int);
