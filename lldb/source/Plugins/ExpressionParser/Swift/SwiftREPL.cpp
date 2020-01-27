@@ -533,8 +533,8 @@ bool SwiftREPL::PrintOneVariable(Debugger &debugger, StreamFileSP &output_sp,
   return handled;
 }
 
-int SwiftREPL::CompleteCode(const std::string &current_code,
-                            lldb_private::StringList &matches) {
+void SwiftREPL::CompleteCode(const std::string &current_code,
+                             CompletionRequest &request) {
   //----------------------------------------------------------------------g
   // If we use the target's SwiftASTContext for completion, it reaaallly
   // slows down subsequent expressions. The compiler team doesn't have time
@@ -546,7 +546,7 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
     auto type_system_or_err = m_target.GetScratchTypeSystemForLanguage(eLanguageTypeSwift);
     if (!type_system_or_err) {
       llvm::consumeError(type_system_or_err.takeError());
-      return 0;
+      return;
     }
 
     auto *target_swift_ast =
@@ -579,54 +579,56 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
       swift::SourceFile &repl_source_file =
           repl_module->getMainSourceFile(swift::SourceFileKind::REPL);
 
+      // Swift likes to give us strings to append to the current token but
+      // the CompletionRequest requires a replacement for the full current
+      // token. Fix this by getting the current token here and we attach
+      // the suffix we get from Swift.
+      std::string prefix = request.GetCursorArgumentPrefix();
       llvm::StringRef current_code_ref(current_code);
       completions.populate(repl_source_file, current_code_ref);
+
+      // The root is the unique completion we need to use, so let's add it
+      // to the completion list. As the completion is unique we can stop here.
       llvm::StringRef root = completions.getRoot();
       if (!root.empty()) {
-        matches.AppendString(root.data(), root.size());
-        return 1;
+        request.AddCompletion(prefix + root.str(), "", CompletionMode::Partial);
+        return;
       }
+
       // Otherwise, advance through the completion state machine.
       const swift::CompletionState completion_state = completions.getState();
       switch (completion_state) {
       case swift::CompletionState::CompletedRoot: {
-        // We completed the root. Next step is to display the completion list.
-        matches.AppendString(""); // Empty string to indicate no completion,
-        // just display other strings that come after it
+        // Display the completion list.
         llvm::ArrayRef<llvm::StringRef> llvm_matches =
             completions.getCompletionList();
         for (const auto &llvm_match : llvm_matches) {
+          // The completions here aren't really useful for actually completing
+          // the token but are more descriptive hints for the user
+          // (e.g. "isMultiple(of: Int) -> Bool"). They aren't useful for
+          // actually completing anything so let's use the current token as
+          // a placeholder that is always valid.
           if (!llvm_match.empty())
-            matches.AppendString(llvm_match.data(), llvm_match.size());
+            request.AddCompletion(prefix, llvm_match);
         }
-        // Don't include the empty string we appended above or we will display
-        // one
-        // too many we need to return the magical value of one less than our
-        // actual matches.
-        // TODO: modify all IOHandlerDelegate::IOHandlerComplete() to use a
-        // CompletionMatches
-        // class that wraps up the "StringList matches;" along with other smarts
-        // so we don't
-        // have to return magic values and incorrect sizes.
-        return matches.GetSize() - 1;
       } break;
 
       case swift::CompletionState::DisplayedCompletionList: {
         // Complete the next completion stem in the cycle.
-        llvm::StringRef stem = completions.getPreviousStem().InsertableString;
-        matches.AppendString(stem.data(), stem.size());
+        request.AddCompletion(prefix + completions.getPreviousStem().InsertableString.str());
       } break;
 
       case swift::CompletionState::Empty:
-      case swift::CompletionState::Unique:
-        // We already provided a definitive completion--nothing else to do.
-        break;
+      case swift::CompletionState::Unique: {
+        llvm::StringRef root = completions.getRoot();
+
+        if (!root.empty())
+          request.AddCompletion(prefix + root.str());
+      } break;
 
       case swift::CompletionState::Invalid:
         llvm_unreachable("got an invalid completion set?!");
       }
     }
   }
-
-  return matches.GetSize();
 }

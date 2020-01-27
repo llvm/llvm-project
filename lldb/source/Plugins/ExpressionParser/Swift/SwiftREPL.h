@@ -68,8 +68,8 @@ protected:
                         lldb::ValueObjectSP &valobj_sp,
                         ExpressionVariable *var = nullptr) override;
 
-  int CompleteCode(const std::string &current_code,
-                   StringList &matches) override;
+  void CompleteCode(const std::string &current_code,
+                    CompletionRequest &request) override;
 
 public:
   static bool classof(const REPL *repl) {
