@@ -3159,8 +3159,6 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
         // functions.
         return (Left.NestingLevel == 0 && Line.Level == 0) &&
                !Left.Children.empty();
-      default:
-        break;
       }
     }
 
