@@ -268,6 +268,5 @@ body:             |
 # CHECK-NEXT: DW_AT_abstract_origin ({{.*}} "call_int_int")
 #
 # CHECK: DW_TAG_GNU_call_site_parameter
-# FIXME: The DW_AT_location attribute should actually refer to W0! See PR44118.
-# CHECK-NEXT: DW_AT_location      (DW_OP_reg8 W8)
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg0 W0)
 # CHECK-NEXT: DW_AT_GNU_call_site_value   (DW_OP_GNU_entry_value(DW_OP_reg1 W1))

@@ -933,7 +933,6 @@ DwarfCompileUnit::getDwarf5OrGNUAttr(dwarf::Attribute Attr) const {
     return dwarf::DW_AT_GNU_call_site_target;
   case dwarf::DW_AT_call_origin:
     return dwarf::DW_AT_abstract_origin;
-  case dwarf::DW_AT_call_pc:
   case dwarf::DW_AT_call_return_pc:
     return dwarf::DW_AT_low_pc;
   case dwarf::DW_AT_call_value:
@@ -958,7 +957,7 @@ DwarfCompileUnit::getDwarf5OrGNULocationAtom(dwarf::LocationAtom Loc) const {
 }
 
 DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
-                                                 const DISubprogram *CalleeSP,
+                                                 DIE *CalleeDIE,
                                                  bool IsTail,
                                                  const MCSymbol *PCAddr,
                                                  unsigned CallReg) {
@@ -971,8 +970,7 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(DIE &ScopeDIE,
     addAddress(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_target),
                MachineLocation(CallReg));
   } else {
-    DIE *CalleeDIE = getDIE(CalleeSP);
-    assert(CalleeDIE && "Could not find DIE for call site entry origin");
+    assert(CalleeDIE && "No DIE for call site entry origin");
     addDIEEntry(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_origin),
                 *CalleeDIE);
   }

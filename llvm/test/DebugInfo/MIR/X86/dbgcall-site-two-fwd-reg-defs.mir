@@ -133,9 +133,10 @@ body:             |
 # sign-extended to 64 bits.
 
 # CHECK: DW_TAG_call_site_parameter
+# CHECK-NEXT: DW_AT_location      (DW_OP_reg5 RDI)
+# CHECK-NEXT: DW_AT_call_value    (DW_OP_breg3 RBX+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_convert ({{.*}}) "DW_ATE_signed_32", DW_OP_convert ({{.*}}) "DW_ATE_signed_64")
+#
+# CHECK: DW_TAG_call_site_parameter
 # CHECK-NEXT: DW_AT_location      (DW_OP_reg4 RSI)
 # CHECK-NEXT: DW_AT_call_value    (DW_OP_breg3 RBX+0)
 
-# CHECK: DW_TAG_call_site_parameter
-# CHECK-NEXT: DW_AT_location      (DW_OP_reg5 RDI)
-# CHECK-NEXT: DW_AT_call_value    (DW_OP_breg3 RBX+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_convert ({{.*}}) "DW_ATE_signed_32", DW_OP_convert ({{.*}}) "DW_ATE_signed_64")
