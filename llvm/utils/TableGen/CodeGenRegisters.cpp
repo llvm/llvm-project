@@ -1011,7 +1011,7 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
   for (auto &RC : RegClasses)
     if (SuperRegRCsBV[RC.EnumValue])
       SuperRegRCs.emplace_back(&RC);
-  llvm::sort(SuperRegRCs, SizeOrder);
+  llvm::stable_sort(SuperRegRCs, SizeOrder);
 
   assert(SuperRegRCs.front() == BiggestSuperRegRC &&
          "Biggest class wasn't first");
