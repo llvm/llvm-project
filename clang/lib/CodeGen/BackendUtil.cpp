@@ -51,6 +51,7 @@
 #include "llvm/Transforms/Coroutines.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
+#include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
@@ -557,6 +558,16 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
   Triple TargetTriple(TheModule->getTargetTriple());
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       createTLII(TargetTriple, CodeGenOpts));
+
+  // If we reached here with a non-empty index file name, then the index file
+  // was empty and we are not performing ThinLTO backend compilation (used in
+  // testing in a distributed build environment). Drop any the type test
+  // assume sequences inserted for whole program vtables so that codegen doesn't
+  // complain.
+  if (!CodeGenOpts.ThinLTOIndexFile.empty())
+    MPM.add(createLowerTypeTestsPass(/*ExportSummary=*/nullptr,
+                                     /*ImportSummary=*/nullptr,
+                                     /*DropTypeTests=*/true));
 
   PassManagerBuilderWrapper PMBuilder(TargetTriple, CodeGenOpts, LangOpts);
 
@@ -1127,6 +1138,15 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     bool IsLTO = CodeGenOpts.PrepareForLTO;
 
     if (CodeGenOpts.OptimizationLevel == 0) {
+      // If we reached here with a non-empty index file name, then the index
+      // file was empty and we are not performing ThinLTO backend compilation
+      // (used in testing in a distributed build environment). Drop any the type
+      // test assume sequences inserted for whole program vtables so that
+      // codegen doesn't complain.
+      if (!CodeGenOpts.ThinLTOIndexFile.empty())
+        MPM.addPass(LowerTypeTestsPass(/*ExportSummary=*/nullptr,
+                                       /*ImportSummary=*/nullptr,
+                                       /*DropTypeTests=*/true));
       if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts))
         MPM.addPass(GCOVProfilerPass(*Options));
       if (Optional<InstrProfOptions> Options =
@@ -1165,6 +1185,18 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
 
       // -f[no-]split-cold-code
       PB.setEnableHotColdSplitting(CodeGenOpts.SplitColdCode);
+
+      // If we reached here with a non-empty index file name, then the index
+      // file was empty and we are not performing ThinLTO backend compilation
+      // (used in testing in a distributed build environment). Drop any the type
+      // test assume sequences inserted for whole program vtables so that
+      // codegen doesn't complain.
+      if (!CodeGenOpts.ThinLTOIndexFile.empty())
+        PB.registerPipelineStartEPCallback([](ModulePassManager &MPM) {
+          MPM.addPass(LowerTypeTestsPass(/*ExportSummary=*/nullptr,
+                                         /*ImportSummary=*/nullptr,
+                                         /*DropTypeTests=*/true));
+        });
 
       PB.registerPipelineStartEPCallback([](ModulePassManager &MPM) {
         MPM.addPass(createModuleToFunctionPassAdaptor(

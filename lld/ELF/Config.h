@@ -165,6 +165,7 @@ struct Configuration {
   bool ltoCSProfileGenerate;
   bool ltoDebugPassManager;
   bool ltoNewPassManager;
+  bool ltoWholeProgramVisibility;
   bool mergeArmExidx;
   bool mipsN32Abi = false;
   bool mmapOutputFile;

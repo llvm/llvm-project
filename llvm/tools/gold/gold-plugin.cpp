@@ -204,6 +204,8 @@ namespace options {
   static std::string dwo_dir;
   /// Statistics output filename.
   static std::string stats_file;
+  // Asserts that LTO link has whole program visibility
+  static bool whole_program_visibility = false;
 
   // Optimization remarks filename, accepted passes and hotness options
   static std::string RemarksFilename;
@@ -283,6 +285,8 @@ namespace options {
       new_pass_manager = true;
     } else if (opt == "debug-pass-manager") {
       debug_pass_manager = true;
+    } else if (opt == "whole-program-visibility") {
+      whole_program_visibility = true;
     } else if (opt.startswith("dwo_dir=")) {
       dwo_dir = opt.substr(strlen("dwo_dir="));
     } else if (opt.startswith("opt-remarks-filename=")) {
@@ -925,6 +929,8 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.UseNewPM = options::new_pass_manager;
   // Debug new pass manager if requested
   Conf.DebugPassManager = options::debug_pass_manager;
+
+  Conf.HasWholeProgramVisibility = options::whole_program_visibility;
 
   Conf.StatsFile = options::stats_file;
   return std::make_unique<LTO>(std::move(Conf), Backend,
