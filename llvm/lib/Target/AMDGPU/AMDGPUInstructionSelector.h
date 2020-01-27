@@ -142,6 +142,9 @@ private:
   selectVOP3OMods(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods(MachineOperand &Root) const;
+
+  ComplexRendererFns selectVOP3NoMods(MachineOperand &Root) const;
+
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods_nnan(MachineOperand &Root) const;
 
