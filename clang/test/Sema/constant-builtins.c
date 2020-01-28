@@ -25,4 +25,13 @@ short somefunc();
 
 short t = __builtin_constant_p(5353) ? 42 : somefunc();
 
+// PR44684
+_Static_assert((__builtin_clz)(1u) >= 15, "");
+_Static_assert((__builtin_popcount)(1u) == 1, "");
+_Static_assert((__builtin_ctz)(2u) == 1, "");
+_Static_assert(_Generic(1u,unsigned:__builtin_clz)(1u) >= 15, "");
+_Static_assert(_Generic(1u,unsigned:__builtin_popcount)(1u) == 1, "");
+_Static_assert(_Generic(1u,unsigned:__builtin_ctz)(2u) == 1, "");
 
+__SIZE_TYPE__ strlen(const char*);
+_Static_assert((__builtin_constant_p(1) ? (***&strlen)("foo") : 0) == 3, "");
