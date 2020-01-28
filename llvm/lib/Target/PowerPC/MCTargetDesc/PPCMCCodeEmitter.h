@@ -103,6 +103,9 @@ public:
   // Get the number of bytes used to encode the given MCInst.
   unsigned getInstSizeInBytes(const MCInst &MI) const;
 
+  // Is this instruction a prefixed instruction.
+  bool isPrefixedInstruction(const MCInst &MI) const;
+
 private:
   FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
   void
