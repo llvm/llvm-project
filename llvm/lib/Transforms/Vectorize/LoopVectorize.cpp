@@ -7130,24 +7130,28 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(unsigned MinVF,
   SmallPtrSet<Instruction *, 4> DeadInstructions;
   collectTriviallyDeadInstructions(DeadInstructions);
 
+  DenseMap<Instruction *, Instruction *> &SinkAfter = Legal->getSinkAfter();
+  // Dead instructions do not need sinking. Remove them from SinkAfter.
+  for (Instruction *I : DeadInstructions)
+    SinkAfter.erase(I);
+
   for (unsigned VF = MinVF; VF < MaxVF + 1;) {
     VFRange SubRange = {VF, MaxVF + 1};
-    VPlans.push_back(
-        buildVPlanWithVPRecipes(SubRange, NeedDef, DeadInstructions));
+    VPlans.push_back(buildVPlanWithVPRecipes(SubRange, NeedDef,
+                                             DeadInstructions, SinkAfter));
     VF = SubRange.End;
   }
 }
 
 VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     VFRange &Range, SmallPtrSetImpl<Value *> &NeedDef,
-    SmallPtrSetImpl<Instruction *> &DeadInstructions) {
+    SmallPtrSetImpl<Instruction *> &DeadInstructions,
+    const DenseMap<Instruction *, Instruction *> &SinkAfter) {
 
   // Hold a mapping from predicated instructions to their recipes, in order to
   // fix their AlsoPack behavior if a user is determined to replicate and use a
   // scalar instead of vector value.
   DenseMap<Instruction *, VPReplicateRecipe *> PredInst2Recipe;
-
-  DenseMap<Instruction *, Instruction *> &SinkAfter = Legal->getSinkAfter();
 
   SmallPtrSet<const InterleaveGroup<Instruction> *, 1> InterleaveGroups;
 
