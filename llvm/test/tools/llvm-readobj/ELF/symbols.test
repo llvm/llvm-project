@@ -1,13 +1,28 @@
 ## This is a general test for --symbols option and its aliases.
 ## There are also other symbols* tests that check specific things.
 
+## For testing and behavior documenting purposes we are using ET_REL and ET_DYN inputs.
+## Relocatable ELF objects are very different by nature from executables and dynamic libraries.
+## They might never have dynamic symbols normally, for example, though we still want
+## to document the --dyn-symbols behavior.
+## There is no need to check ET_EXEC inputs because for dumpers there is no difference
+## between them and ET_DYN inputs in the context of this test.
+
 ## Case 1: Test how llvm-readobj and llvm-readelf dumps symbols.
+## a) Check relocatable objects.
 # RUN: yaml2obj %s --docnum=1 -o %t64
 # RUN: llvm-readobj --symbols %t64 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
 # RUN: llvm-readelf --symbols %t64 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU64
 # RUN: yaml2obj %s --docnum=2 -o %t32
 # RUN: llvm-readobj --symbols %t32 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
 # RUN: llvm-readelf --symbols %t32 | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU32
+## b) Check dynamic objects.
+# RUN: yaml2obj %s --docnum=3 -o %t64.so
+# RUN: llvm-readobj --symbols %t64.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
+# RUN: llvm-readelf --symbols %t64.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU64
+# RUN: yaml2obj %s --docnum=4 -o %t32.so
+# RUN: llvm-readobj --symbols %t32.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-LLVM
+# RUN: llvm-readelf --symbols %t32.so | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=SYMBOLS-GNU32
 
 #      SYMBOLS-LLVM:Symbols [
 # SYMBOLS-LLVM-NEXT:  Symbol {
@@ -107,6 +122,34 @@ FileHeader:
   Class:   ELFCLASS32
   Data:    ELFDATA2LSB
   Type:    ET_REL
+  Machine: EM_386
+Symbols:
+  - Name:  foo
+    Value: 0x1
+  - Name:  bar
+    Value: 0x2
+DynamicSymbols:
+  - Name:  zed
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Symbols:
+  - Name:  foo
+    Value: 0x1
+  - Name:  bar
+    Value: 0x2
+DynamicSymbols:
+  - Name:  zed
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
   Machine: EM_386
 Symbols:
   - Name:  foo
