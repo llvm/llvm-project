@@ -270,6 +270,35 @@ static DecodeStatus decodeMemRIX16Operands(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeMemRI34PCRelOperands(MCInst &Inst, uint64_t Imm,
+                                               int64_t Address,
+                                               const void *Decoder) {
+  // Decode the memri34_pcrel field (imm, reg), which has the low 34-bits as the
+  // displacement, and the next 5 bits as an immediate 0.
+  uint64_t Base = Imm >> 34;
+  uint64_t Disp = Imm & 0x3FFFFFFFFUL;
+
+  assert(Base < 32 && "Invalid base register");
+
+  Inst.addOperand(MCOperand::createImm(SignExtend64<34>(Disp)));
+  return decodeImmZeroOperand(Inst, Base, Address, Decoder);
+}
+
+static DecodeStatus decodeMemRI34Operands(MCInst &Inst, uint64_t Imm,
+                                          int64_t Address,
+                                          const void *Decoder) {
+  // Decode the memri34 field (imm, reg), which has the low 34-bits as the
+  // displacement, and the next 5 bits as the register #.
+  uint64_t Base = Imm >> 34;
+  uint64_t Disp = Imm & 0x3FFFFFFFFUL;
+
+  assert(Base < 32 && "Invalid base register");
+
+  Inst.addOperand(MCOperand::createImm(SignExtend64<34>(Disp)));
+  Inst.addOperand(MCOperand::createReg(RRegsNoR0[Base]));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeSPE8Operands(MCInst &Inst, uint64_t Imm,
                                          int64_t Address, const void *Decoder) {
   // Decode the spe8disp field (imm, reg), which has the low 5-bits as the

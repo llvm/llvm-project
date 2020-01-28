@@ -23,5 +23,14 @@
 # CHECK-LE: pli 1, 8589934591                     # encoding: [0xff,0xff,0x01,0x06
 # CHECK-LE-SAME:                                               0xff,0xff,0x20,0x38]
             pli 1, 8589934591
-
+# CHECK-BE: pld 1, -8589934592(3), 0              # encoding: [0x04,0x02,0x00,0x00,
+# CHECK-BE-SAME:                                               0xe4,0x23,0x00,0x00]
+# CHECK-LE: pld 1, -8589934592(3), 0              # encoding: [0x00,0x00,0x02,0x04
+# CHECK-LE-SAME:                                               0x00,0x00,0x23,0xe4]
+            pld 1, -8589934592(3), 0
+# CHECK-BE: pld 1, 8589934591(0), 1               # encoding: [0x04,0x11,0xff,0xff
+# CHECK-BE-SAME:                                               0xe4,0x20,0xff,0xff]
+# CHECK-LE: pld 1, 8589934591(0), 1               # encoding: [0xff,0xff,0x11,0x04,
+# CHECK-LE-SAME:                                               0xff,0xff,0x20,0xe4]
+            pld 1, 8589934591(0), 1
 

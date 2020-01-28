@@ -79,6 +79,7 @@ void PPCSubtarget::initializeEnvironment() {
   HasP9Vector = false;
   HasP9Altivec = false;
   HasPrefixInstrs = false;
+  HasPCRelativeMemops = false;
   HasFCPSGN = false;
   HasFSQRT = false;
   HasFRE = false;
