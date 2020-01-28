@@ -807,7 +807,7 @@ struct AAArgumentFromCallSiteArguments : public Base {
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    StateType S;
+    StateType S(StateType::getBestState(this->getState()));
     clampCallSiteArgumentStates<AAType, StateType>(A, *this, S);
     // TODO: If we know we visited all incoming values, thus no are assumed
     // dead, we can take the known information from the state T.
@@ -5449,23 +5449,13 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
   }
 };
 
-struct AAValueConstantRangeArgument final : public AAValueConstantRangeImpl {
-
+struct AAValueConstantRangeArgument final
+    : AAArgumentFromCallSiteArguments<
+          AAValueConstantRange, AAValueConstantRangeImpl, IntegerRangeState> {
   AAValueConstantRangeArgument(const IRPosition &IRP)
-      : AAValueConstantRangeImpl(IRP) {}
-
-  /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A) override {
-    // TODO: Use AAArgumentFromCallSiteArguments
-
-    IntegerRangeState S(getBitWidth());
-    clampCallSiteArgumentStates<AAValueConstantRange, IntegerRangeState>(
-        A, *this, S);
-
-    // TODO: If we know we visited all incoming values, thus no are assumed
-    // dead, we can take the known information from the state T.
-    return clampStateAndIndicateChange<IntegerRangeState>(this->getState(), S);
-  }
+      : AAArgumentFromCallSiteArguments<
+            AAValueConstantRange, AAValueConstantRangeImpl, IntegerRangeState>(
+            IRP) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {

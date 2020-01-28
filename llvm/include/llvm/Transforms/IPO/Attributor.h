@@ -1223,8 +1223,14 @@ template <typename base_ty, base_ty BestState, base_ty WorstState>
 struct IntegerStateBase : public AbstractState {
   using base_t = base_ty;
 
+  IntegerStateBase() {}
+  IntegerStateBase(base_t Assumed) : Assumed(Assumed) {}
+
   /// Return the best possible representable state.
   static constexpr base_t getBestState() { return BestState; }
+  static constexpr base_t getBestState(const IntegerStateBase &) {
+    return getBestState();
+  }
 
   /// Return the worst possible representable state.
   static constexpr base_t getWorstState() { return WorstState; }
@@ -1366,7 +1372,18 @@ template <typename base_ty = uint32_t, base_ty BestState = ~base_ty(0),
           base_ty WorstState = 0>
 struct IncIntegerState
     : public IntegerStateBase<base_ty, BestState, WorstState> {
+  using super = IntegerStateBase<base_ty, BestState, WorstState>;
   using base_t = base_ty;
+
+  IncIntegerState() : super() {}
+  IncIntegerState(base_t Assumed) : super(Assumed) {}
+
+  /// Return the best possible representable state.
+  static constexpr base_t getBestState() { return BestState; }
+  static constexpr base_t
+  getBestState(const IncIntegerState<base_ty, BestState, WorstState> &) {
+    return getBestState();
+  }
 
   /// Take minimum of assumed and \p Value.
   IncIntegerState &takeAssumedMinimum(base_t Value) {
@@ -1436,7 +1453,11 @@ private:
 
 /// Simple wrapper for a single bit (boolean) state.
 struct BooleanState : public IntegerStateBase<bool, 1, 0> {
+  using super = IntegerStateBase<bool, 1, 0>;
   using base_t = IntegerStateBase::base_t;
+
+  BooleanState() : super() {}
+  BooleanState(base_t Assumed) : super(Assumed) {}
 
   /// Set the assumed value to \p Value but never below the known one.
   void setAssumed(bool Value) { Assumed &= (Known | Value); }
@@ -1488,6 +1509,10 @@ struct IntegerRangeState : public AbstractState {
       : BitWidth(BitWidth), Assumed(ConstantRange::getEmpty(BitWidth)),
         Known(ConstantRange::getFull(BitWidth)) {}
 
+  IntegerRangeState(const ConstantRange &CR)
+      : BitWidth(CR.getBitWidth()), Assumed(CR),
+        Known(getWorstState(CR.getBitWidth())) {}
+
   /// Return the worst possible representable state.
   static ConstantRange getWorstState(uint32_t BitWidth) {
     return ConstantRange::getFull(BitWidth);
@@ -1496,6 +1521,9 @@ struct IntegerRangeState : public AbstractState {
   /// Return the best possible representable state.
   static ConstantRange getBestState(uint32_t BitWidth) {
     return ConstantRange::getEmpty(BitWidth);
+  }
+  static ConstantRange getBestState(const IntegerRangeState &IRS) {
+    return getBestState(IRS.getBitWidth());
   }
 
   /// Return associated values' bit width.
@@ -2084,6 +2112,9 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
 
 /// State for dereferenceable attribute
 struct DerefState : AbstractState {
+
+  static DerefState getBestState() { return DerefState(); }
+  static DerefState getBestState(const DerefState &) { return getBestState(); }
 
   /// State representing for dereferenceable bytes.
   IncIntegerState<> DerefBytesState;
