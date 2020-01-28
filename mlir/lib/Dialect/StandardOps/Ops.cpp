@@ -500,9 +500,8 @@ static LogicalResult verify(CallOp op) {
 }
 
 FunctionType CallOp::getCalleeType() {
-  SmallVector<Type, 4> resultTypes(getResultTypes());
   SmallVector<Type, 8> argTypes(getOperandTypes());
-  return FunctionType::get(argTypes, resultTypes, getContext());
+  return FunctionType::get(argTypes, getResultTypes(), getContext());
 }
 
 //===----------------------------------------------------------------------===//
@@ -522,8 +521,8 @@ struct SimplifyIndirectCallWithKnownCallee
       return matchFailure();
 
     // Replace with a direct call.
-    SmallVector<Type, 8> callResults(indirectCall.getResultTypes());
-    rewriter.replaceOpWithNewOp<CallOp>(indirectCall, calledFn, callResults,
+    rewriter.replaceOpWithNewOp<CallOp>(indirectCall, calledFn,
+                                        indirectCall.getResultTypes(),
                                         indirectCall.getArgOperands());
     return matchSuccess();
   }

@@ -53,8 +53,8 @@ LogicalResult mlir::detail::verifyInferredResultTypes(Operation *op) {
                                         op->getOperands(), op->getAttrs(),
                                         op->getRegions(), inferedReturnTypes)))
     return failure();
-  SmallVector<Type, 4> resultTypes(op->getResultTypes());
-  if (!retTypeFn.isCompatibleReturnTypes(inferedReturnTypes, resultTypes))
+  if (!retTypeFn.isCompatibleReturnTypes(inferedReturnTypes,
+                                         op->getResultTypes()))
     return op->emitOpError(
         "inferred type incompatible with return type of operation");
   return success();
