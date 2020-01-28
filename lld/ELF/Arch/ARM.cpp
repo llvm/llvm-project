@@ -263,7 +263,8 @@ void ARM::addPltSymbols(InputSection &isec, uint64_t off) const {
 }
 
 bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
-                     uint64_t branchAddr, const Symbol &s, int64_t /*a*/) const {
+                     uint64_t branchAddr, const Symbol &s,
+                     int64_t /*a*/) const {
   // If S is an undefined weak symbol and does not have a PLT entry then it
   // will be resolved as a branch to the next instruction.
   if (s.isUndefWeak() && !s.isInPlt())
