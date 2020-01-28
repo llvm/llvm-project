@@ -1013,6 +1013,13 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
                      SrcOps[0].getLLTTy(*getMRI()), false);
     break;
   }
+  case TargetOpcode::G_BITCAST: {
+    assert(DstOps.size() == 1 && "Invalid Dst");
+    assert(SrcOps.size() == 1 && "Invalid Srcs");
+    assert(DstOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
+           SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() && "invalid bitcast");
+    break;
+  }
   case TargetOpcode::COPY:
     assert(DstOps.size() == 1 && "Invalid Dst");
     // If the caller wants to add a subreg source it has to be done separately
