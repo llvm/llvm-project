@@ -84,6 +84,20 @@ gpu.module @kernel_module {
 // -----
 
 gpu.module @kernel_module {
+  // CHECK: llvm.func @_ocml_tanh_f32(!llvm.float) -> !llvm.float
+  // CHECK: llvm.func @_ocml_tanh_f64(!llvm.double) -> !llvm.double
+  // CHECK-LABEL: func @gpu_tanh
+  func @gpu_tanh(%arg_f32 : f32, %arg_f64 : f64) {
+    %result32 = std.tanh %arg_f32 : f32
+    // CHECK: llvm.call @_ocml_tanh_f32(%{{.*}}) : (!llvm.float) -> !llvm.float
+    %result64 = std.tanh %arg_f64 : f64
+    // CHECK: llvm.call @_ocml_tanh_f64(%{{.*}}) : (!llvm.double) -> !llvm.double
+    std.return
+  }
+}
+
+// -----
+gpu.module @kernel_module {
   // CHECK: llvm.func @_ocml_exp_f32(!llvm.float) -> !llvm.float
   // CHECK: llvm.func @_ocml_exp_f64(!llvm.double) -> !llvm.double
   // CHECK-LABEL: func @gpu_exp
