@@ -105,12 +105,19 @@ def : Pattern<(MatmulOp:$op $_, $_, $_),
                 HasLinalgTransformMarker<"VECTORIZE">,
                 PreconditionVectorizeLinalgOp
                ]>>)]>;
+def : Pattern<(FillOp:$op $_, $_),
+              [(VectorizeLinalgOp)],
+              [(Constraint<And<[
+                HasLinalgTransformMarker<"VECTORIZE">,
+                PreconditionVectorizeLinalgOp
+               ]>>)]>;
 def : Pattern<(GenericOp:$op $_, $_, $_, $_, $_, $_, $_, $_),
               [(VectorizeLinalgOp)],
               [(Constraint<And<[
                 HasLinalgTransformMarker<"VECTORIZE">,
                 PreconditionVectorizeLinalgOp
                ]>>)]>;
+
 
 //===----------------------------------------------------------------------===//
 // Linalg generic permutation patterns.
