@@ -70,6 +70,8 @@ private:
   /// Default values are 'nothing happened a long time ago'.
   const int ReachingDefDefaultVal = -(1 << 20);
 
+  using InstSet = SmallPtrSetImpl<MachineInstr*>;
+
 public:
   static char ID; // Pass identification, replacement for typeid
 
@@ -126,18 +128,18 @@ public:
   /// Provides the uses, in the same block as MI, of register that MI defines.
   /// This does not consider live-outs.
   void getReachingLocalUses(MachineInstr *MI, int PhysReg,
-                            SmallPtrSetImpl<MachineInstr*> &Uses) const;
+                            InstSet &Uses) const;
 
   /// For the given block, collect the instructions that use the live-in
   /// value of the provided register. Return whether the value is still
   /// live on exit.
   bool getLiveInUses(MachineBasicBlock *MBB, int PhysReg,
-                     SmallPtrSetImpl<MachineInstr*> &Uses) const;
+                     InstSet &Uses) const;
 
   /// Collect the users of the value stored in PhysReg, which is defined
   /// by MI.
   void getGlobalUses(MachineInstr *MI, int PhysReg,
-                     SmallPtrSetImpl<MachineInstr*> &Uses) const;
+                     InstSet &Uses) const;
 
 private:
   /// Set up LiveRegs by merging predecessor live-out values.
