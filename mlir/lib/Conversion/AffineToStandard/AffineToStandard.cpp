@@ -37,8 +37,8 @@ class AffineApplyExpander
 public:
   /// This internal class expects arguments to be non-null, checks must be
   /// performed at the call site.
-  AffineApplyExpander(OpBuilder &builder, ArrayRef<Value> dimValues,
-                      ArrayRef<Value> symbolValues, Location loc)
+  AffineApplyExpander(OpBuilder &builder, ValueRange dimValues,
+                      ValueRange symbolValues, Location loc)
       : builder(builder), dimValues(dimValues), symbolValues(symbolValues),
         loc(loc) {}
 
@@ -199,8 +199,8 @@ public:
 
 private:
   OpBuilder &builder;
-  ArrayRef<Value> dimValues;
-  ArrayRef<Value> symbolValues;
+  ValueRange dimValues;
+  ValueRange symbolValues;
 
   Location loc;
 };
@@ -209,16 +209,17 @@ private:
 /// Create a sequence of operations that implement the `expr` applied to the
 /// given dimension and symbol values.
 mlir::Value mlir::expandAffineExpr(OpBuilder &builder, Location loc,
-                                   AffineExpr expr, ArrayRef<Value> dimValues,
-                                   ArrayRef<Value> symbolValues) {
+                                   AffineExpr expr, ValueRange dimValues,
+                                   ValueRange symbolValues) {
   return AffineApplyExpander(builder, dimValues, symbolValues, loc).visit(expr);
 }
 
 /// Create a sequence of operations that implement the `affineMap` applied to
 /// the given `operands` (as it it were an AffineApplyOp).
-Optional<SmallVector<Value, 8>> static expandAffineMap(
-    OpBuilder &builder, Location loc, AffineMap affineMap,
-    ArrayRef<Value> operands) {
+Optional<SmallVector<Value, 8>> static expandAffineMap(OpBuilder &builder,
+                                                       Location loc,
+                                                       AffineMap affineMap,
+                                                       ValueRange operands) {
   auto numDims = affineMap.getNumDims();
   auto expanded = functional::map(
       [numDims, &builder, loc, operands](AffineExpr expr) {
@@ -244,8 +245,7 @@ Optional<SmallVector<Value, 8>> static expandAffineMap(
 /// dependences that wouldn't exist in a tree reduction, but is easier to
 /// recognize as a reduction by the subsequent passes.
 static Value buildMinMaxReductionSeq(Location loc, CmpIPredicate predicate,
-                                     ArrayRef<Value> values,
-                                     OpBuilder &builder) {
+                                     ValueRange values, OpBuilder &builder) {
   assert(!llvm::empty(values) && "empty min/max chain");
 
   auto valueIt = values.begin();
@@ -262,9 +262,8 @@ static Value buildMinMaxReductionSeq(Location loc, CmpIPredicate predicate,
 /// applied to the respective operands, and compute the maximum value across
 /// the results.
 Value mlir::lowerAffineLowerBound(AffineForOp op, OpBuilder &builder) {
-  SmallVector<Value, 8> boundOperands(op.getLowerBoundOperands());
   auto lbValues = expandAffineMap(builder, op.getLoc(), op.getLowerBoundMap(),
-                                  boundOperands);
+                                  op.getLowerBoundOperands());
   if (!lbValues)
     return nullptr;
   return buildMinMaxReductionSeq(op.getLoc(), CmpIPredicate::sgt, *lbValues,
@@ -275,8 +274,7 @@ Value mlir::lowerAffineLowerBound(AffineForOp op, OpBuilder &builder) {
 /// values of a (potentially) multi-output affine map applied to `operands`.
 static Value lowerAffineMapMin(OpBuilder &builder, Location loc, AffineMap map,
                                ValueRange operands) {
-  if (auto values =
-          expandAffineMap(builder, loc, map, llvm::to_vector<4>(operands)))
+  if (auto values = expandAffineMap(builder, loc, map, operands))
     return buildMinMaxReductionSeq(loc, CmpIPredicate::slt, *values, builder);
   return nullptr;
 }
