@@ -102,7 +102,10 @@ IRObjectWithUseList<OpOperand> *Value::getUseList() const {
 void Value::dropAllUses() const {
   if (BlockArgument arg = dyn_cast<BlockArgument>())
     return arg.getImpl()->dropAllUses();
-  return cast<OpResult>().getOwner()->dropAllUses(*this);
+  Operation *owner = cast<OpResult>().getOwner();
+  if (owner->hasSingleResult)
+    return owner->dropAllUses();
+  return owner->dropAllUses(*this);
 }
 
 /// Replace all uses of 'this' value with the new value, updating anything in
@@ -111,7 +114,10 @@ void Value::dropAllUses() const {
 void Value::replaceAllUsesWith(Value newValue) const {
   if (BlockArgument arg = dyn_cast<BlockArgument>())
     return arg.getImpl()->replaceAllUsesWith(newValue);
-  IRMultiObjectWithUseList<OpOperand> *useList = cast<OpResult>().getOwner();
+  Operation *owner = cast<OpResult>().getOwner();
+  IRMultiObjectWithUseList<OpOperand> *useList = owner;
+  if (owner->hasSingleResult)
+    return useList->replaceAllUsesWith(newValue);
   useList->replaceAllUsesWith(*this, newValue);
 }
 
@@ -121,21 +127,25 @@ void Value::replaceAllUsesWith(Value newValue) const {
 auto Value::use_begin() const -> use_iterator {
   if (BlockArgument arg = dyn_cast<BlockArgument>())
     return arg.getImpl()->use_begin();
-  return cast<OpResult>().getOwner()->use_begin(*this);
+  Operation *owner = cast<OpResult>().getOwner();
+  return owner->hasSingleResult ? use_iterator(owner->use_begin())
+                                : owner->use_begin(*this);
 }
 
 /// Returns true if this value has exactly one use.
 bool Value::hasOneUse() const {
   if (BlockArgument arg = dyn_cast<BlockArgument>())
     return arg.getImpl()->hasOneUse();
-  return cast<OpResult>().getOwner()->hasOneUse(*this);
+  Operation *owner = cast<OpResult>().getOwner();
+  return owner->hasSingleResult ? owner->hasOneUse() : owner->hasOneUse(*this);
 }
 
 /// Returns true if this value has no uses.
 bool Value::use_empty() const {
   if (BlockArgument arg = dyn_cast<BlockArgument>())
     return arg.getImpl()->use_empty();
-  return cast<OpResult>().getOwner()->use_empty(*this);
+  Operation *owner = cast<OpResult>().getOwner();
+  return owner->hasSingleResult ? owner->use_empty() : owner->use_empty(*this);
 }
 
 //===----------------------------------------------------------------------===//
