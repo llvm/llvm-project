@@ -431,8 +431,10 @@ ComplexPairTy ComplexExprEmitter::EmitComplexToComplexCast(ComplexPairTy Val,
   // C99 6.3.1.6: When a value of complex type is converted to another
   // complex type, both the real and imaginary parts follow the conversion
   // rules for the corresponding real types.
-  Val.first = CGF.EmitScalarConversion(Val.first, SrcType, DestType, Loc);
-  Val.second = CGF.EmitScalarConversion(Val.second, SrcType, DestType, Loc);
+  if (Val.first)
+    Val.first = CGF.EmitScalarConversion(Val.first, SrcType, DestType, Loc);
+  if (Val.second)
+    Val.second = CGF.EmitScalarConversion(Val.second, SrcType, DestType, Loc);
   return Val;
 }
 
