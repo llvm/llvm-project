@@ -44,8 +44,8 @@ inline void stringify_append<char>(llvm::raw_string_ostream &ss,
 }
 
 template <>
-inline void stringify_append<nullptr_t>(llvm::raw_string_ostream &ss,
-                                        const nullptr_t &t) {
+inline void stringify_append<std::nullptr_t>(llvm::raw_string_ostream &ss,
+                                             const std::nullptr_t &t) {
   ss << "\"nullptr\"";
 }
 
