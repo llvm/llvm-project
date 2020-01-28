@@ -15,7 +15,6 @@
 
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
-#include "sanitizer_common/sanitizer_stacktrace.h"
 #include "lsan_allocator.h"
 #include "lsan_common.h"
 #include "lsan_thread.h"
@@ -85,17 +84,6 @@ static void InitializeFlags() {
   if (common_flags()->help) parser.PrintFlagDescriptions();
 
   __sanitizer_set_report_path(common_flags()->log_path);
-}
-
-static void OnStackUnwind(const SignalContext &sig, const void *,
-                          BufferedStackTrace *stack) {
-  stack->Unwind(StackTrace::GetNextInstructionPc(sig.pc), sig.bp, sig.context,
-                common_flags()->fast_unwind_on_fatal);
-}
-
-static void LsanOnDeadlySignal(int signo, void *siginfo, void *context) {
-  HandleDeadlySignal(siginfo, context, GetCurrentThread(), &OnStackUnwind,
-                     nullptr);
 }
 
 extern "C" void __lsan_init() {
