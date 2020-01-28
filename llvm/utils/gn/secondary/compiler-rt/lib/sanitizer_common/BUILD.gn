@@ -124,6 +124,7 @@ source_set("sources") {
     "sanitizer_stacktrace_printer.h",
     "sanitizer_stacktrace_sparc.cpp",
     "sanitizer_stoptheworld.h",
+    "sanitizer_stoptheworld_fuchsia.cpp",
     "sanitizer_stoptheworld_linux_libcdep.cpp",
     "sanitizer_stoptheworld_mac.cpp",
     "sanitizer_stoptheworld_netbsd_libcdep.cpp",
