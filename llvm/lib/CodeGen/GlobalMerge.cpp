@@ -524,6 +524,7 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
     for (ssize_t k = i, idx = 0; k != j; k = GlobalSet.find_next(k), ++idx) {
       GlobalValue::LinkageTypes Linkage = Globals[k]->getLinkage();
       std::string Name = Globals[k]->getName();
+      GlobalValue::VisibilityTypes Visibility = Globals[k]->getVisibility();
       GlobalValue::DLLStorageClassTypes DLLStorage =
           Globals[k]->getDLLStorageClass();
 
@@ -549,6 +550,7 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
       if (Linkage != GlobalValue::InternalLinkage || !IsMachO) {
         GlobalAlias *GA = GlobalAlias::create(Tys[StructIdxs[idx]], AddrSpace,
                                               Linkage, Name, GEP, &M);
+        GA->setVisibility(Visibility);
         GA->setDLLStorageClass(DLLStorage);
       }
 
