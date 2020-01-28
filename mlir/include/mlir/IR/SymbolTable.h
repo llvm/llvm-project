@@ -93,6 +93,11 @@ public:
   /// with the 'OpTrait::SymbolTable' trait.
   static Operation *lookupSymbolIn(Operation *op, StringRef symbol);
   static Operation *lookupSymbolIn(Operation *op, SymbolRefAttr symbol);
+  /// A variant of 'lookupSymbolIn' that returns all of the symbols referenced
+  /// by a given SymbolRefAttr. Returns failure if any of the nested references
+  /// could not be resolved.
+  static LogicalResult lookupSymbolIn(Operation *op, SymbolRefAttr symbol,
+                                      SmallVectorImpl<Operation *> &symbols);
 
   /// Returns the operation registered with the given symbol name within the
   /// closest parent operation of, or including, 'from' with the

@@ -230,30 +230,42 @@ Operation *SymbolTable::lookupSymbolIn(Operation *symbolTableOp,
 }
 Operation *SymbolTable::lookupSymbolIn(Operation *symbolTableOp,
                                        SymbolRefAttr symbol) {
+  SmallVector<Operation *, 4> resolvedSymbols;
+  if (failed(lookupSymbolIn(symbolTableOp, symbol, resolvedSymbols)))
+    return nullptr;
+  return resolvedSymbols.back();
+}
+
+LogicalResult
+SymbolTable::lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr symbol,
+                            SmallVectorImpl<Operation *> &symbols) {
   assert(symbolTableOp->hasTrait<OpTrait::SymbolTable>());
 
   // Lookup the root reference for this symbol.
   symbolTableOp = lookupSymbolIn(symbolTableOp, symbol.getRootReference());
   if (!symbolTableOp)
-    return nullptr;
+    return failure();
+  symbols.push_back(symbolTableOp);
 
   // If there are no nested references, just return the root symbol directly.
   ArrayRef<FlatSymbolRefAttr> nestedRefs = symbol.getNestedReferences();
   if (nestedRefs.empty())
-    return symbolTableOp;
+    return success();
 
   // Verify that the root is also a symbol table.
   if (!symbolTableOp->hasTrait<OpTrait::SymbolTable>())
-    return nullptr;
+    return failure();
 
   // Otherwise, lookup each of the nested non-leaf references and ensure that
   // each corresponds to a valid symbol table.
   for (FlatSymbolRefAttr ref : nestedRefs.drop_back()) {
     symbolTableOp = lookupSymbolIn(symbolTableOp, ref.getValue());
     if (!symbolTableOp || !symbolTableOp->hasTrait<OpTrait::SymbolTable>())
-      return nullptr;
+      return failure();
+    symbols.push_back(symbolTableOp);
   }
-  return lookupSymbolIn(symbolTableOp, symbol.getLeafReference());
+  symbols.push_back(lookupSymbolIn(symbolTableOp, symbol.getLeafReference()));
+  return success(symbols.back());
 }
 
 /// Returns the operation registered with the given symbol name within the
