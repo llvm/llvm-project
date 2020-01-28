@@ -757,9 +757,6 @@ void ASTDeclWriter::VisitObjCInterfaceDecl(ObjCInterfaceDecl *D) {
     Record.AddSourceLocation(D->getEndOfDefinitionLoc());
     Record.push_back(Data.HasDesignatedInitializers);
 
-    // Trigger ODR hashing computation for methods.
-    for (auto *M : D->methods())
-      M->getODRHash();
     Record.push_back(D->getODRHash());
 
     // Write out the protocols that are directly referenced by the @interface.

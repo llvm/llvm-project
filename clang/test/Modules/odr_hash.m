@@ -265,6 +265,22 @@ M3 *m3;
 #endif
 
 #if defined(FIRST)
+@interface SuperM4
+- (void)sayHello;
+@end
+@interface M4 : SuperM4
+@end
+#elif defined(SECOND)
+@interface SuperM4
+- (void)sayHello;
+@end
+@interface M4 : SuperM4
+@end
+#else
+M4 *m4;
+#endif
+
+#if defined(FIRST)
 @interface MP1
 - (void)compute:(int)arg;
 @end
