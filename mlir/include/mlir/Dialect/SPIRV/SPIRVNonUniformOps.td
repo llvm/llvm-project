@@ -14,6 +14,35 @@
 #ifndef SPIRV_NON_UNIFORM_OPS
 #define SPIRV_NON_UNIFORM_OPS
 
+class SPV_GroupNonUniformArithmeticOp<string mnemonic, Type type,
+      list<OpTrait> traits = []> : SPV_Op<mnemonic, traits> {
+
+  let availability = [
+    MinVersion<SPV_V_1_3>,
+    MaxVersion<SPV_V_1_5>,
+    Extension<[]>,
+    Capability<[SPV_C_GroupNonUniformArithmetic,
+                SPV_C_GroupNonUniformClustered,
+                SPV_C_GroupNonUniformPartitionedNV]>
+  ];
+
+  let arguments = (ins
+    SPV_ScopeAttr:$execution_scope,
+    SPV_GroupOperationAttr:$group_operation,
+    SPV_ScalarOrVectorOf<type>:$value,
+    SPV_Optional<SPV_Integer>:$cluster_size
+  );
+
+  let results = (outs
+    SPV_ScalarOrVectorOf<type>:$result
+  );
+
+  let parser = [{ return parseGroupNonUniformArithmeticOp(parser, result); }];
+  let printer = [{ printGroupNonUniformArithmeticOp(getOperation(), p); }];
+  let verifier = [{ return ::verifyGroupNonUniformArithmeticOp(getOperation()); }];
+
+}
+
 // -----
 
 def SPV_GroupNonUniformBallotOp : SPV_Op<"GroupNonUniformBallot", []> {
@@ -120,7 +149,110 @@ def SPV_GroupNonUniformElectOp : SPV_Op<"GroupNonUniformElect", []> {
 
 // -----
 
-def SPV_GroupNonUniformIAddOp : SPV_Op<"GroupNonUniformIAdd", []> {
+def SPV_GroupNonUniformFAddOp :
+    SPV_GroupNonUniformArithmeticOp<"GroupNonUniformFAdd", SPV_Float, []> {
+  let summary = [{
+    A floating point add group operation of all Value operands contributed
+    by active invocations in the group.
+  }];
+
+  let description = [{
+    Result Type  must be a scalar or vector of floating-point type.
+
+    Execution must be Workgroup or Subgroup Scope.
+
+    The identity I for Operation is 0. If Operation is ClusteredReduce,
+    ClusterSize must be specified.
+
+     The type of Value must be the same as Result Type.  The method used to
+    perform the group operation on the contributed Value(s) from active
+    invocations is implementation defined.
+
+    ClusterSize is the size of cluster to use. ClusterSize must be a scalar
+    of integer type, whose Signedness operand is 0. ClusterSize must come
+    from a constant instruction. ClusterSize must be at least 1, and must be
+    a power of 2. If ClusterSize is greater than the declared SubGroupSize,
+    executing this instruction results in undefined behavior.
+
+    ### Custom assembly form
+
+    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"` | ...
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    non-uniform-fadd-op ::= ssa-id `=` `spv.GroupNonUniformFAdd` scope operation
+                            ssa-use ( `cluster_size` `(` ssa_use `)` )?
+                            `:` float-scalar-vector-type
+    ```
+
+    For example:
+
+    ```
+    %four = spv.constant 4 : i32
+    %scalar = ... : f32
+    %vector = ... : vector<4xf32>
+    %0 = spv.GroupNonUniformFAdd "Workgroup" "Reduce" %scalar : f32
+    %1 = spv.GroupNonUniformFAdd "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xf32>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_GroupNonUniformFMulOp :
+    SPV_GroupNonUniformArithmeticOp<"GroupNonUniformFMul", SPV_Float, []> {
+  let summary = [{
+    A floating point multiply group operation of all Value operands
+    contributed by active invocations in the group.
+  }];
+
+  let description = [{
+    Result Type  must be a scalar or vector of floating-point type.
+
+    Execution must be Workgroup or Subgroup Scope.
+
+    The identity I for Operation is 1. If Operation is ClusteredReduce,
+    ClusterSize must be specified.
+
+     The type of Value must be the same as Result Type.  The method used to
+    perform the group operation on the contributed Value(s) from active
+    invocations is implementation defined.
+
+    ClusterSize is the size of cluster to use. ClusterSize must be a scalar
+    of integer type, whose Signedness operand is 0. ClusterSize must come
+    from a constant instruction. ClusterSize must be at least 1, and must be
+    a power of 2. If ClusterSize is greater than the declared SubGroupSize,
+    executing this instruction results in undefined behavior.
+
+    ### Custom assembly form
+
+    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"` | ...
+    float-scalar-vector-type ::= float-type |
+                                 `vector<` integer-literal `x` float-type `>`
+    non-uniform-fmul-op ::= ssa-id `=` `spv.GroupNonUniformFMul` scope operation
+                            ssa-use ( `cluster_size` `(` ssa_use `)` )?
+                            `:` float-scalar-vector-type
+    ```
+
+    For example:
+
+    ```
+    %four = spv.constant 4 : i32
+    %scalar = ... : f32
+    %vector = ... : vector<4xf32>
+    %0 = spv.GroupNonUniformFMul "Workgroup" "Reduce" %scalar : f32
+    %1 = spv.GroupNonUniformFMul "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xf32>
+    ```
+  }];
+}
+
+// -----
+
+def SPV_GroupNonUniformIAddOp :
+    SPV_GroupNonUniformArithmeticOp<"GroupNonUniformIAdd", SPV_Integer, []> {
   let summary = [{
     An integer add group operation of all Value operands contributed active
     by invocations in the group.
@@ -164,24 +296,55 @@ def SPV_GroupNonUniformIAddOp : SPV_Op<"GroupNonUniformIAdd", []> {
     %1 = spv.GroupNonUniformIAdd "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xi32>
     ```
   }];
+}
 
-  let availability = [
-    MinVersion<SPV_V_1_3>,
-    MaxVersion<SPV_V_1_5>,
-    Extension<[]>,
-    Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformClustered, SPV_C_GroupNonUniformPartitionedNV]>
-  ];
+// -----
 
-  let arguments = (ins
-    SPV_ScopeAttr:$execution_scope,
-    SPV_GroupOperationAttr:$group_operation,
-    SPV_ScalarOrVectorOf<SPV_Integer>:$value,
-    SPV_Optional<SPV_Integer>:$cluster_size
-  );
+def SPV_GroupNonUniformIMulOp :
+    SPV_GroupNonUniformArithmeticOp<"GroupNonUniformIMul", SPV_Integer, []> {
+  let summary = [{
+    An integer multiply group operation of all Value operands contributed by
+    active invocations in the group.
+  }];
 
-  let results = (outs
-    SPV_ScalarOrVectorOf<SPV_Integer>:$result
-  );
+  let description = [{
+    Result Type  must be a scalar or vector of integer type.
+
+    Execution must be Workgroup or Subgroup Scope.
+
+    The identity I for Operation is 1. If Operation is ClusteredReduce,
+    ClusterSize must be specified.
+
+     The type of Value must be the same as Result Type.
+
+    ClusterSize is the size of cluster to use. ClusterSize must be a scalar
+    of integer type, whose Signedness operand is 0. ClusterSize must come
+    from a constant instruction. ClusterSize must be at least 1, and must be
+    a power of 2. If ClusterSize is greater than the declared SubGroupSize,
+    executing this instruction results in undefined behavior.
+
+    ### Custom assembly form
+
+    ```
+    scope ::= `"Workgroup"` | `"Subgroup"`
+    operation ::= `"Reduce"` | `"InclusiveScan"` | `"ExclusiveScan"` | ...
+    integer-scalar-vector-type ::= integer-type |
+                                 `vector<` integer-literal `x` integer-type `>`
+    non-uniform-imul-op ::= ssa-id `=` `spv.GroupNonUniformIMul` scope operation
+                            ssa-use ( `cluster_size` `(` ssa_use `)` )?
+                            `:` integer-scalar-vector-type
+    ```
+
+    For example:
+
+    ```
+    %four = spv.constant 4 : i32
+    %scalar = ... : i32
+    %vector = ... : vector<4xi32>
+    %0 = spv.GroupNonUniformIMul "Workgroup" "Reduce" %scalar : i32
+    %1 = spv.GroupNonUniformIMul "Subgroup" "ClusteredReduce" %vector cluster_size(%four) : vector<4xi32>
+    ```
+  }];
 }
 
 // -----
