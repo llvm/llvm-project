@@ -227,7 +227,7 @@ ReachingDefAnalysis::getClearance(MachineInstr *MI, MCPhysReg PhysReg) const {
 }
 
 void ReachingDefAnalysis::getReachingLocalUses(MachineInstr *Def, int PhysReg,
-    SmallPtrSetImpl<MachineInstr*> &Uses) const {
+                                               InstSet &Uses) const {
   MachineBasicBlock *MBB = Def->getParent();
   MachineBasicBlock::iterator MI = MachineBasicBlock::iterator(Def);
   while (++MI != MBB->end()) {
@@ -252,7 +252,7 @@ void ReachingDefAnalysis::getReachingLocalUses(MachineInstr *Def, int PhysReg,
 
 bool
 ReachingDefAnalysis::getLiveInUses(MachineBasicBlock *MBB, int PhysReg,
-                                   SmallPtrSetImpl<MachineInstr*> &Uses) const {
+                                   InstSet &Uses) const {
   for (auto &MI : *MBB) {
     if (MI.isDebugInstr())
       continue;
@@ -269,7 +269,7 @@ ReachingDefAnalysis::getLiveInUses(MachineBasicBlock *MBB, int PhysReg,
 
 void
 ReachingDefAnalysis::getGlobalUses(MachineInstr *MI, int PhysReg,
-                                   SmallPtrSetImpl<MachineInstr*> &Uses) const {
+                                   InstSet &Uses) const {
   MachineBasicBlock *MBB = MI->getParent();
 
   // Collect the uses that each def touches within the block.
