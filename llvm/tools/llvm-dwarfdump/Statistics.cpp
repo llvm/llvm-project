@@ -436,11 +436,14 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
 
   // Traverse children.
   unsigned LexicalBlockIndex = 0;
+  unsigned FormalParameterIndex = 0;
   DWARFDie Child = Die.getFirstChild();
   while (Child) {
     std::string ChildVarPrefix = VarPrefix;
     if (Child.getTag() == dwarf::DW_TAG_lexical_block)
       ChildVarPrefix += toHex(LexicalBlockIndex++) + '.';
+    if (Child.getTag() == dwarf::DW_TAG_formal_parameter)
+      ChildVarPrefix += 'p' + toHex(FormalParameterIndex++) + '.';
 
     collectStatsRecursive(Child, FnPrefix, ChildVarPrefix, BytesInScope,
                           InlineDepth, FnStatMap, GlobalStats, LocStats);
