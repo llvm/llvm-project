@@ -5,9 +5,9 @@ llvm.func @intrinsics(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm<"<8 x
   %c3 = llvm.mlir.constant(3 : i32) : !llvm.i32
   %c1 = llvm.mlir.constant(1 : i32) : !llvm.i32
   %c0 = llvm.mlir.constant(0 : i32) : !llvm.i32
-  // CHECK: call float @llvm.fmuladd.f32.f32.f32
+  // CHECK: call float @llvm.fmuladd.f32
   "llvm.intr.fmuladd"(%arg0, %arg1, %arg0) : (!llvm.float, !llvm.float, !llvm.float) -> !llvm.float
-  // CHECK: call <8 x float> @llvm.fmuladd.v8f32.v8f32.v8f32
+  // CHECK: call <8 x float> @llvm.fmuladd.v8f32
   "llvm.intr.fmuladd"(%arg2, %arg2, %arg2) : (!llvm<"<8 x float>">, !llvm<"<8 x float>">, !llvm<"<8 x float>">) -> !llvm<"<8 x float>">
   // CHECK: call void @llvm.prefetch.p0i8(i8* %3, i32 0, i32 3, i32 1)
   "llvm.intr.prefetch"(%arg3, %c0, %c3, %c1) : (!llvm<"i8*">, !llvm.i32, !llvm.i32, !llvm.i32) -> ()
@@ -87,8 +87,8 @@ llvm.func @copysign_test(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm<"<
 }
 
 // Check that intrinsics are declared with appropriate types.
-// CHECK: declare float @llvm.fmuladd.f32.f32.f32(float, float, float)
-// CHECK: declare <8 x float> @llvm.fmuladd.v8f32.v8f32.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
+// CHECK: declare float @llvm.fmuladd.f32(float, float, float)
+// CHECK: declare <8 x float> @llvm.fmuladd.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
 // CHECK: declare void @llvm.prefetch.p0i8(i8* nocapture readonly, i32 immarg, i32 immarg, i32)
 // CHECK: declare float @llvm.exp.f32(float)
 // CHECK: declare <8 x float> @llvm.exp.v8f32(<8 x float>) #0
@@ -104,3 +104,4 @@ llvm.func @copysign_test(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm<"<
 // CHECK: declare <8 x float> @llvm.ceil.v8f32(<8 x float>) #0
 // CHECK: declare float @llvm.cos.f32(float)
 // CHECK: declare <8 x float> @llvm.cos.v8f32(<8 x float>) #0
+// CHECK: declare float @llvm.copysign.f32(float, float)
