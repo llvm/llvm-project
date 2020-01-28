@@ -104,13 +104,12 @@ class AssertingInferiorTestCase(TestBase):
     def check_stop_reason(self):
         matched = lldbplatformutil.match_android_device(
             self.getArchitecture(), valid_api_levels=list(range(1, 16 + 1)))
-
-        target = self.dbg.GetTargetAtIndex(0)
-        process = target.GetProcess()
-
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonSignal)
-
-        stop_reason = 'stop reason = ' + thread.GetStopDescription(256)
+        if matched:
+            # On android until API-16 the abort() call ended in a sigsegv
+            # instead of in a sigabrt
+            stop_reason = 'stop reason = signal SIGSEGV'
+        else:
+            stop_reason = 'stop reason = signal SIGABRT'
 
         # The stop reason of the thread should be an abort signal or exception.
         self.expect("thread list", STOPPED_DUE_TO_ASSERT,
@@ -173,22 +172,6 @@ class AssertingInferiorTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
         self.check_stop_reason()
-
-        # change current frame to frame 0, since recognizer might have selected
-        # different frame.
-        target = self.dbg.GetTargetAtIndex(0)
-        self.assertTrue(target, VALID_TARGET)
-
-        process = target.GetProcess()
-        self.assertTrue(process.IsValid(), "current process is valid")
-
-        thread = process.GetSelectedThread()
-        self.assertTrue(thread.IsValid(), "current thread is valid")
-
-        thread.SetSelectedFrame(0)
-        frame = thread.GetSelectedFrame()
-
-        self.assertTrue(thread.GetFrameAtIndex(0) == frame, "Frame #0 selected")
 
         # lldb should be able to read from registers from the inferior after
         # asserting.
