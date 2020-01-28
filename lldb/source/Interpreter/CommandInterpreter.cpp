@@ -489,7 +489,10 @@ void CommandInterpreter::LoadCommandDictionary() {
   m_command_dict["language"] =
       CommandObjectSP(new CommandObjectLanguage(*this));
 
+  // clang-format off
   const char *break_regexes[][2] = {
+      {"^(.*[^[:space:]])[[:space:]]*:[[:space:]]*([[:digit:]]+)[[:space:]]*:[[:space:]]*([[:digit:]]+)[[:space:]]*$",
+       "breakpoint set --file '%1' --line %2 --column %3"},
       {"^(.*[^[:space:]])[[:space:]]*:[[:space:]]*([[:digit:]]+)[[:space:]]*$",
        "breakpoint set --file '%1' --line %2"},
       {"^/([^/]+)/$", "breakpoint set --source-pattern-regexp '%1'"},
@@ -504,6 +507,7 @@ void CommandInterpreter::LoadCommandDictionary() {
        "breakpoint set --name '%1' --skip-prologue=0"},
       {"^[\"']?(.*[^[:space:]\"'])[\"']?[[:space:]]*$",
        "breakpoint set --name '%1'"}};
+  // clang-format on
 
   size_t num_regexes = llvm::array_lengthof(break_regexes);
 
@@ -512,6 +516,9 @@ void CommandInterpreter::LoadCommandDictionary() {
           *this, "_regexp-break",
           "Set a breakpoint using one of several shorthand formats.",
           "\n"
+          "_regexp-break <filename>:<linenum>:<colnum>\n"
+          "              main.c:12:21          // Break at line 12 and column "
+          "21 of main.c\n\n"
           "_regexp-break <filename>:<linenum>\n"
           "              main.c:12             // Break at line 12 of "
           "main.c\n\n"
@@ -535,7 +542,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "current file\n"
           "                                    // containing text 'break "
           "here'.\n",
-          2,
+          3,
           CommandCompletions::eSymbolCompletion |
               CommandCompletions::eSourceFileCompletion,
           false));
@@ -562,6 +569,9 @@ void CommandInterpreter::LoadCommandDictionary() {
           *this, "_regexp-tbreak",
           "Set a one-shot breakpoint using one of several shorthand formats.",
           "\n"
+          "_regexp-break <filename>:<linenum>:<colnum>\n"
+          "              main.c:12:21          // Break at line 12 and column "
+          "21 of main.c\n\n"
           "_regexp-break <filename>:<linenum>\n"
           "              main.c:12             // Break at line 12 of "
           "main.c\n\n"
