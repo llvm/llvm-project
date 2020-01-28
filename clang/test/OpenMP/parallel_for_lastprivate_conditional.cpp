@@ -19,6 +19,8 @@ int main() {
       a = 0;
 #pragma omp parallel reduction(+:a) num_threads(10)
       a += i;
+#pragma omp atomic
+      a += i;
     }
   }
   return 0;
@@ -29,6 +31,18 @@ int main() {
 // CHECK: define internal void [[OUTLINED]](
 // CHECK: call void @__kmpc_push_num_threads(%struct.ident_t* @{{.+}}, i32 %{{.+}}, i32 10)
 // CHECK: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @{{.+}}, i32 2, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*, i32*)* @{{.+}} to void (i32*, i32*, ...)*), i32* {{.+}} i32* %{{.+}})
+// CHECK: call void @__kmpc_critical(%struct.ident_t* @{{.+}}, i32 %{{.+}}, [8 x i32]* @{{.+}})
+// CHECK: [[LAST_IV_VAL:%.+]] = load i32, i32* [[LAST_IV:@.+]],
+// CHECK: [[RES:%.+]] = icmp sle i32 [[LAST_IV_VAL]], [[IV:%.+]]
+// CHECK: br i1 [[RES]], label %[[THEN:.+]], label %[[DONE:.+]]
+// CHECK: [[THEN]]:
+// CHECK: store i32 [[IV]], i32* [[LAST_IV]],
+// CHECK: [[A_VAL:%.+]] = load i32, i32* [[A_PRIV:%.+]],
+// CHECK: store i32 [[A_VAL]], i32* [[A_GLOB:@.+]],
+// CHECK: br label %[[DONE]]
+// CHECK: [[DONE]]:
+// CHECK: call void @__kmpc_end_critical(%struct.ident_t* @{{.+}}, i32 %{{.+}}, [8 x i32]* @{{.+}})
+// CHECK: atomicrmw add i32*
 // CHECK: call void @__kmpc_critical(%struct.ident_t* @{{.+}}, i32 %{{.+}}, [8 x i32]* @{{.+}})
 // CHECK: [[LAST_IV_VAL:%.+]] = load i32, i32* [[LAST_IV:@.+]],
 // CHECK: [[RES:%.+]] = icmp sle i32 [[LAST_IV_VAL]], [[IV:%.+]]
