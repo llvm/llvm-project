@@ -29,8 +29,8 @@ template <class SecondaryT> static void testSecondaryBasic(void) {
   memset(P, 'A', Size);
   EXPECT_GE(SecondaryT::getBlockSize(P), Size);
   L->deallocate(P);
-  // If we are not using a free list, blocks are unmapped on deallocation.
-  if (SecondaryT::getMaxFreeListSize() == 0U)
+  // If the Secondary can't cache that pointer, it will be unmapped.
+  if (!SecondaryT::canCache(Size))
     EXPECT_DEATH(memset(P, 'A', Size), "");
 
   const scudo::uptr Align = 1U << 16;
@@ -55,17 +55,18 @@ template <class SecondaryT> static void testSecondaryBasic(void) {
 }
 
 TEST(ScudoSecondaryTest, SecondaryBasic) {
-  testSecondaryBasic<scudo::MapAllocator<0U>>();
+  testSecondaryBasic<scudo::MapAllocator<scudo::MapAllocatorNoCache>>();
 #if !SCUDO_FUCHSIA
-  testSecondaryBasic<scudo::MapAllocator<>>();
-  testSecondaryBasic<scudo::MapAllocator<64U>>();
+  testSecondaryBasic<scudo::MapAllocator<scudo::MapAllocatorCache<>>>();
+  testSecondaryBasic<
+      scudo::MapAllocator<scudo::MapAllocatorCache<64U, 1UL << 20>>>();
 #endif
 }
 
 #if SCUDO_FUCHSIA
-using LargeAllocator = scudo::MapAllocator<0U>;
+using LargeAllocator = scudo::MapAllocator<scudo::MapAllocatorNoCache>;
 #else
-using LargeAllocator = scudo::MapAllocator<>;
+using LargeAllocator = scudo::MapAllocator<scudo::MapAllocatorCache<>>;
 #endif
 
 // This exercises a variety of combinations of size and alignment for the

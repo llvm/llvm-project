@@ -87,8 +87,7 @@ public:
       // limit is mostly arbitrary and based on empirical observations.
       // TODO(kostyak): make the lower limit a runtime option
       Region->CanRelease = (ReleaseToOsInterval >= 0) &&
-                           (I != SizeClassMap::BatchClassId) &&
-                           (getSizeByClassId(I) >= (PageSize / 32));
+                           (getSizeByClassId(I) >= (PageSize / 64));
       Region->RandState = getRandomU32(&Seed);
     }
     ReleaseToOsIntervalMs = ReleaseToOsInterval;
@@ -401,7 +400,7 @@ private:
       if (IntervalMs < 0)
         return 0;
       if (Region->ReleaseInfo.LastReleaseAtNs +
-              static_cast<uptr>(IntervalMs) * 1000000ULL >
+              static_cast<u64>(IntervalMs) * 1000000 >
           getMonotonicTime()) {
         return 0; // Memory was returned recently.
       }
