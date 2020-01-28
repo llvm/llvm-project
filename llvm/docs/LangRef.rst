@@ -16156,7 +16156,7 @@ performed by '``llvm.experimental.constrained.fcmps``' will raise an
 exception if either operand is a NAN (QNAN or SNAN).
 
 '``llvm.experimental.constrained.fmuladd``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
