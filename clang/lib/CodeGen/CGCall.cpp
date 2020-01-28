@@ -1842,7 +1842,7 @@ static void addNoBuiltinAttributes(llvm::AttrBuilder &FuncAttrs,
     FuncAttrs.addAttribute(AttributeName);
   };
 
-  // First, handle the language options passed through -fno-builtin[-<name>]
+  // First, handle the language options passed through -fno-builtin.
   if (LangOpts.NoBuiltin) {
     // -fno-builtin disables them all.
     FuncAttrs.addAttribute("no-builtins");
