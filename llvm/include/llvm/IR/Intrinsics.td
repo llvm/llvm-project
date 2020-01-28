@@ -640,6 +640,13 @@ let IntrProperties = [IntrInaccessibleMemOnly, IntrWillReturn] in {
                                                       llvm_metadata_ty,
                                                       llvm_metadata_ty ]>;
 
+  def int_experimental_constrained_fmuladd : Intrinsic<[ llvm_anyfloat_ty ],
+                                                       [ LLVMMatchType<0>,
+                                                         LLVMMatchType<0>,
+                                                         LLVMMatchType<0>,
+                                                         llvm_metadata_ty,
+                                                         llvm_metadata_ty ]>;
+
   def int_experimental_constrained_fptosi : Intrinsic<[ llvm_anyint_ty ],
                                                     [ llvm_anyfloat_ty,
                                                       llvm_metadata_ty ]>;

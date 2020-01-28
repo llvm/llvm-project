@@ -1288,6 +1288,9 @@ public:
     case Intrinsic::fmuladd:
       ISDs.push_back(ISD::FMA);
       break;
+    case Intrinsic::experimental_constrained_fmuladd:
+      ISDs.push_back(ISD::STRICT_FMA);
+      break;
     // FIXME: We should return 0 whenever getIntrinsicCost == TCC_Free.
     case Intrinsic::lifetime_start:
     case Intrinsic::lifetime_end:
@@ -1511,6 +1514,12 @@ public:
     if (IID == Intrinsic::fmuladd)
       return ConcreteTTI->getArithmeticInstrCost(BinaryOperator::FMul, RetTy) +
              ConcreteTTI->getArithmeticInstrCost(BinaryOperator::FAdd, RetTy);
+    if (IID == Intrinsic::experimental_constrained_fmuladd)
+      return ConcreteTTI->getIntrinsicCost(
+                 Intrinsic::experimental_constrained_fmul, RetTy, Tys,
+                 nullptr) +
+             ConcreteTTI->getIntrinsicCost(
+                 Intrinsic::experimental_constrained_fadd, RetTy, Tys, nullptr);
 
     // Else, assume that we need to scalarize this intrinsic. For math builtins
     // this will emit a costly libcall, adding call overhead and spills. Make it
