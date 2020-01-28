@@ -779,6 +779,10 @@ function(cxx_link_system_libraries target)
     # (e.g. `printfw`/`scanfw`)
     target_link_libraries(${target} PRIVATE iso_stdio_wide_specifiers)
   endif()
+
+  if (ANDROID AND ANDROID_PLATFORM_LEVEL LESS 21)
+    target_link_libraries(${target} PUBLIC android_support)
+  endif()
 endfunction()
 
 # Windows-related flags =======================================================
