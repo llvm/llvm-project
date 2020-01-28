@@ -4369,6 +4369,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     visitDbgLabelIntrinsic("label", cast<DbgLabelInst>(Call));
     break;
   case Intrinsic::memcpy:
+  case Intrinsic::memcpy_inline:
   case Intrinsic::memmove:
   case Intrinsic::memset: {
     const auto *MI = cast<MemIntrinsic>(&Call);
