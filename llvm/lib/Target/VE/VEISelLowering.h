@@ -77,6 +77,11 @@ public:
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
+  /// Returns true if the target allows unaligned memory accesses of the
+  /// specified type.
+  bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, unsigned Align,
+                                      MachineMemOperand::Flags Flags,
+                                      bool *Fast) const override;
 };
 } // namespace llvm
 

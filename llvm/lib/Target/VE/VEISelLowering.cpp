@@ -206,6 +206,27 @@ bool VETargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   return VT == MVT::f32 || VT == MVT::f64;
 }
 
+/// Determine if the target supports unaligned memory accesses.
+///
+/// This function returns true if the target allows unaligned memory accesses
+/// of the specified type in the given address space. If true, it also returns
+/// whether the unaligned memory access is "fast" in the last argument by
+/// reference. This is used, for example, in situations where an array
+/// copy/move/set is converted to a sequence of store operations. Its use
+/// helps to ensure that such replacements don't generate code that causes an
+/// alignment error (trap) on the target machine.
+bool VETargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
+                                                      unsigned AddrSpace,
+                                                      unsigned Align,
+                                                      MachineMemOperand::Flags,
+                                                      bool *Fast) const {
+  if (Fast) {
+    // It's fast anytime on VE
+    *Fast = true;
+  }
+  return true;
+}
+
 VETargetLowering::VETargetLowering(const TargetMachine &TM,
                                    const VESubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
