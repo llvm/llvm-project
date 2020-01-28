@@ -167,7 +167,7 @@ define void @test13_helper() {
 }
 declare void @use_i8_ptr(i8* nofree) readnone nounwind
 define internal void @test13(i8* %a, i8* %b, i8* %c) {
-; ATTRIBUTOR: define internal void @test13(i8* nocapture nofree nonnull readnone %a, i8* nocapture nofree readnone %b, i8* nocapture nofree readnone %c)
+; ATTRIBUTOR: define internal void @test13(i8* noalias nocapture nofree nonnull readnone %a, i8* noalias nocapture nofree readnone %b, i8* noalias nocapture nofree readnone %c)
   call void @use_i8_ptr(i8* %a)
   call void @use_i8_ptr(i8* %b)
   call void @use_i8_ptr(i8* %c)
@@ -536,7 +536,7 @@ define  i32* @g1() {
 }
 
 declare void @use_i32_ptr(i32*) readnone nounwind
-; ATTRIBUTOR: define internal void @called_by_weak(i32* nocapture nonnull readnone %a)
+; ATTRIBUTOR: define internal void @called_by_weak(i32* noalias nocapture nonnull readnone %a)
 define internal void @called_by_weak(i32* %a) {
   call void @use_i32_ptr(i32* %a)
   ret void
@@ -550,7 +550,7 @@ define weak_odr void @weak_caller(i32* nonnull %a) {
 }
 
 ; Expect nonnull
-; ATTRIBUTOR: define internal void @control(i32* nocapture nonnull readnone align 16 dereferenceable(8) %a)
+; ATTRIBUTOR: define internal void @control(i32* noalias nocapture nonnull readnone align 16 dereferenceable(8) %a)
 define internal void @control(i32* dereferenceable(4) %a) {
   call void @use_i32_ptr(i32* %a)
   ret void
