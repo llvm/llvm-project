@@ -145,6 +145,9 @@ public:
 
   void DumpClangAST(lldb_private::Stream &s) override;
 
+  bool GetCompileOption(const char *option, std::string &value,
+                        lldb_private::CompileUnit *cu) override;
+
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 

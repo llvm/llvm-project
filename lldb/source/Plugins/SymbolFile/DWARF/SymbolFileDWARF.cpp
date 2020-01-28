@@ -3080,9 +3080,16 @@ bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
     const uint32_t num_compile_units = GetNumCompileUnits();
 
     if (cu) {
-      DWARFUnit *dwarf_cu = GetDWARFCompileUnit(cu);
+      auto *dwarf_cu =
+          llvm::dyn_cast_or_null<DWARFCompileUnit>(GetDWARFCompileUnit(cu));
 
       if (dwarf_cu) {
+        // GetDWARFCompileUnit() only looks up by CU#. Make sure that
+        // this is actually the correct SymbolFile by converting it
+        // back to a CompileUnit.
+        if (GetCompUnitForDWARFCompUnit(*dwarf_cu) != cu)
+          return false;
+
         const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
         if (die) {
           const char *flags =
