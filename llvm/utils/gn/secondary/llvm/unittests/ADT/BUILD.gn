@@ -46,7 +46,6 @@ unittest("ADTTests") {
     "IntervalMapTest.cpp",
     "IntrusiveRefCntPtrTest.cpp",
     "IteratorTest.cpp",
-    "MakeUniqueTest.cpp",
     "MapVectorTest.cpp",
     "MappedIteratorTest.cpp",
     "OptionalTest.cpp",
