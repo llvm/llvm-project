@@ -73,7 +73,7 @@ llvm::Optional<OpaqueType> OpaqueType::encode(ASTContext &Ctx, QualType T) {
   llvm::SmallString<128> Encoded;
   if (index::generateUSRForType(QualType(C, 0), Ctx, Encoded))
     return None;
-  return OpaqueType(Encoded.str());
+  return OpaqueType(std::string(Encoded.str()));
 }
 
 OpaqueType::OpaqueType(std::string Data) : Data(std::move(Data)) {}

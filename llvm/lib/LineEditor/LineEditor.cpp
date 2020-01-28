@@ -24,7 +24,7 @@ std::string LineEditor::getDefaultHistoryPath(StringRef ProgName) {
   SmallString<32> Path;
   if (sys::path::home_directory(Path)) {
     sys::path::append(Path, "." + ProgName + "-history");
-    return Path.str();
+    return std::string(Path.str());
   }
   return std::string();
 }
@@ -197,7 +197,7 @@ unsigned char ElCompletionFn(EditLine *EL, int ch) {
 
 LineEditor::LineEditor(StringRef ProgName, StringRef HistoryPath, FILE *In,
                        FILE *Out, FILE *Err)
-    : Prompt((ProgName + "> ").str()), HistoryPath(HistoryPath),
+    : Prompt((ProgName + "> ").str()), HistoryPath(std::string(HistoryPath)),
       Data(new InternalData) {
   if (HistoryPath.empty())
     this->HistoryPath = getDefaultHistoryPath(ProgName);

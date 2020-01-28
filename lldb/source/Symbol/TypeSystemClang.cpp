@@ -6074,7 +6074,7 @@ CompilerType TypeSystemClang::GetChildCompilerTypeAtIndex(
       if (array) {
         CompilerType element_type = GetType(array->getElementType());
         if (element_type.GetCompleteType()) {
-          child_name = llvm::formatv("[{0}]", idx);
+          child_name = std::string(llvm::formatv("[{0}]", idx));
           if (Optional<uint64_t> size =
                   element_type.GetByteSize(get_exe_scope())) {
             child_byte_size = *size;

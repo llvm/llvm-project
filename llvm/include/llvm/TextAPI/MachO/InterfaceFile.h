@@ -158,7 +158,7 @@ public:
   /// Set the path from which this file was generated (if applicable).
   ///
   /// \param Path_ The path to the source file.
-  void setPath(StringRef Path_) { Path = Path_; }
+  void setPath(StringRef Path_) { Path = std::string(Path_); }
 
   /// Get the path from which this file was generated (if applicable).
   ///
@@ -217,7 +217,9 @@ public:
   const_filtered_target_range targets(ArchitectureSet Archs) const;
 
   /// Set the install name of the library.
-  void setInstallName(StringRef InstallName_) { InstallName = InstallName_; }
+  void setInstallName(StringRef InstallName_) {
+    InstallName = std::string(InstallName_);
+  }
 
   /// Get the install name of the library.
   StringRef getInstallName() const { return InstallName; }

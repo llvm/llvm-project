@@ -78,7 +78,7 @@ Comdat *llvm::GetOrCreateFunctionComdat(Function &F, Triple &T,
   if (auto Comdat = F.getComdat()) return Comdat;
   assert(F.hasName());
   Module *M = F.getParent();
-  std::string Name = F.getName();
+  std::string Name = std::string(F.getName());
 
   // Make a unique comdat name for internal linkage things on ELF. On COFF, the
   // name of the comdat group identifies the leader symbol of the comdat group.

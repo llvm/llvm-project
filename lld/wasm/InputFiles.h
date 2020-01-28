@@ -91,7 +91,7 @@ class ObjFile : public InputFile {
 public:
   explicit ObjFile(MemoryBufferRef m, StringRef archiveName)
       : InputFile(ObjectKind, m) {
-    this->archiveName = archiveName;
+    this->archiveName = std::string(archiveName);
   }
   static bool classof(const InputFile *f) { return f->kind() == ObjectKind; }
 
@@ -154,7 +154,7 @@ class BitcodeFile : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef m, StringRef archiveName)
       : InputFile(BitcodeKind, m) {
-    this->archiveName = archiveName;
+    this->archiveName = std::string(archiveName);
   }
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
 

@@ -523,7 +523,7 @@ bool GlobalMerge::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
     const StructLayout *MergedLayout = DL.getStructLayout(MergedTy);
     for (ssize_t k = i, idx = 0; k != j; k = GlobalSet.find_next(k), ++idx) {
       GlobalValue::LinkageTypes Linkage = Globals[k]->getLinkage();
-      std::string Name = Globals[k]->getName();
+      std::string Name(Globals[k]->getName());
       GlobalValue::VisibilityTypes Visibility = Globals[k]->getVisibility();
       GlobalValue::DLLStorageClassTypes DLLStorage =
           Globals[k]->getDLLStorageClass();

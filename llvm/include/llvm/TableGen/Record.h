@@ -614,7 +614,9 @@ public:
   bool isConcrete() const override { return true; }
   std::string getAsString() const override { return "\"" + Value.str() + "\""; }
 
-  std::string getAsUnquotedString() const override { return Value; }
+  std::string getAsUnquotedString() const override {
+    return std::string(Value);
+  }
 
   Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off string");
@@ -649,7 +651,9 @@ public:
     return "[{" + Value.str() + "}]";
   }
 
-  std::string getAsUnquotedString() const override { return Value; }
+  std::string getAsUnquotedString() const override {
+    return std::string(Value);
+  }
 
   Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off string");
@@ -1098,7 +1102,7 @@ public:
 
   Init *getBit(unsigned Bit) const override;
 
-  std::string getAsString() const override { return getName(); }
+  std::string getAsString() const override { return std::string(getName()); }
 };
 
 /// Opcode{0} - Represent access to one bit of a variable or field.

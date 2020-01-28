@@ -3152,7 +3152,7 @@ void AsmPrinter::emitXRayTable() {
     std::string GroupName;
     if (F.hasComdat()) {
       Flags |= ELF::SHF_GROUP;
-      GroupName = F.getComdat()->getName();
+      GroupName = std::string(F.getComdat()->getName());
     }
 
     auto UniqueID = ++XRayFnUniqueID;
@@ -3232,7 +3232,7 @@ void AsmPrinter::emitPatchableFunctionEntries() {
       std::string GroupName;
       if (F.hasComdat()) {
         Flags |= ELF::SHF_GROUP;
-        GroupName = F.getComdat()->getName();
+        GroupName = std::string(F.getComdat()->getName());
       }
       MCSection *Section = getObjFileLowering().SectionForGlobal(&F, TM);
       unsigned UniqueID =

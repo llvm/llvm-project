@@ -199,7 +199,7 @@ std::string StringList::CopyList(const char *item_preamble,
       strm << item_preamble;
     strm << GetStringAtIndex(i);
   }
-  return strm.GetString();
+  return std::string(strm.GetString());
 }
 
 StringList &StringList::operator<<(const char *str) {

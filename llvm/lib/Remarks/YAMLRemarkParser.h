@@ -35,7 +35,7 @@ public:
   YAMLParseError(StringRef Message, SourceMgr &SM, yaml::Stream &Stream,
                  yaml::Node &Node);
 
-  YAMLParseError(StringRef Message) : Message(Message) {}
+  YAMLParseError(StringRef Message) : Message(std::string(Message)) {}
 
   void log(raw_ostream &OS) const override { OS << Message; }
   std::error_code convertToErrorCode() const override {

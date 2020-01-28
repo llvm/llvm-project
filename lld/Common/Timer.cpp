@@ -24,9 +24,9 @@ void ScopedTimer::stop() {
 
 ScopedTimer::~ScopedTimer() { stop(); }
 
-Timer::Timer(llvm::StringRef name) : name(name), parent(nullptr) {}
+Timer::Timer(llvm::StringRef name) : name(std::string(name)), parent(nullptr) {}
 Timer::Timer(llvm::StringRef name, Timer &parent)
-    : name(name), parent(&parent) {}
+    : name(std::string(name)), parent(&parent) {}
 
 void Timer::start() {
   if (parent && total.count() == 0)

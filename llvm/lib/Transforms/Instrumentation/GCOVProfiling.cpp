@@ -268,8 +268,7 @@ namespace {
         write(Lines[i]);
     }
 
-    GCOVLines(StringRef F, raw_ostream *os)
-      : Filename(F) {
+    GCOVLines(StringRef F, raw_ostream *os) : Filename(std::string(F)) {
       this->os = os;
     }
 
@@ -537,7 +536,8 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
         MDString *DataFile = dyn_cast<MDString>(N->getOperand(1));
         if (!NotesFile || !DataFile)
           continue;
-        return Notes ? NotesFile->getString() : DataFile->getString();
+        return std::string(Notes ? NotesFile->getString()
+                                 : DataFile->getString());
       }
 
       MDString *GCovFile = dyn_cast<MDString>(N->getOperand(0));
@@ -546,7 +546,7 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
 
       SmallString<128> Filename = GCovFile->getString();
       sys::path::replace_extension(Filename, Notes ? "gcno" : "gcda");
-      return Filename.str();
+      return std::string(Filename.str());
     }
   }
 
@@ -554,9 +554,10 @@ std::string GCOVProfiler::mangleName(const DICompileUnit *CU,
   sys::path::replace_extension(Filename, Notes ? "gcno" : "gcda");
   StringRef FName = sys::path::filename(Filename);
   SmallString<128> CurPath;
-  if (sys::fs::current_path(CurPath)) return FName;
+  if (sys::fs::current_path(CurPath))
+    return std::string(FName);
   sys::path::append(CurPath, FName);
-  return CurPath.str();
+  return std::string(CurPath.str());
 }
 
 bool GCOVProfiler::runOnModule(

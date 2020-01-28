@@ -85,7 +85,7 @@ protected:
     if (Preferred.empty())
       Preferred = Original;
     auto ToHeaderFile = [](llvm::StringRef Header) {
-      return HeaderFile{Header,
+      return HeaderFile{std::string(Header),
                         /*Verbatim=*/!llvm::sys::path::is_absolute(Header)};
     };
 

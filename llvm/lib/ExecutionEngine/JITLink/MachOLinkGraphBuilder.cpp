@@ -47,8 +47,8 @@ Expected<std::unique_ptr<LinkGraph>> MachOLinkGraphBuilder::buildGraph() {
 
 MachOLinkGraphBuilder::MachOLinkGraphBuilder(const object::MachOObjectFile &Obj)
     : Obj(Obj),
-      G(std::make_unique<LinkGraph>(Obj.getFileName(), getPointerSize(Obj),
-                                    getEndianness(Obj))) {}
+      G(std::make_unique<LinkGraph>(std::string(Obj.getFileName()),
+                                    getPointerSize(Obj), getEndianness(Obj))) {}
 
 void MachOLinkGraphBuilder::addCustomSectionParser(
     StringRef SectionName, SectionParserFunction Parser) {

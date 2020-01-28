@@ -307,7 +307,7 @@ std::string InputSectionBase::getLocation(uint64_t offset) {
 
   // File->sourceFile contains STT_FILE symbol that contains a
   // source file name. If it's missing, we use an object file name.
-  std::string srcFile = getFile<ELFT>()->sourceFile;
+  std::string srcFile = std::string(getFile<ELFT>()->sourceFile);
   if (srcFile.empty())
     srcFile = toString(file);
 
@@ -338,7 +338,7 @@ std::string InputSectionBase::getSrcMsg(const Symbol &sym, uint64_t offset) {
 //
 //   path/to/foo.o:(function bar) in archive path/to/bar.a
 std::string InputSectionBase::getObjMsg(uint64_t off) {
-  std::string filename = file->getName();
+  std::string filename = std::string(file->getName());
 
   std::string archive;
   if (!file->archiveName.empty())

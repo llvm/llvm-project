@@ -54,7 +54,7 @@ getSectionRefsByNameOrIndex(const object::ObjectFile *Obj,
   SecIndex = Obj->isELF() ? 0 : 1;
   for (object::SectionRef SecRef : Obj->sections()) {
     StringRef SecName = unwrapOrError(Obj->getFileName(), SecRef.getName());
-    auto NameIt = SecNames.find(SecName);
+    auto NameIt = SecNames.find(std::string(SecName));
     if (NameIt != SecNames.end())
       NameIt->second = true;
     auto IndexIt = SecIndices.find(SecIndex);

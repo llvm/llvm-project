@@ -146,7 +146,7 @@ void DependencyCollector::maybeAddDependency(StringRef Filename, bool FromModule
 
 bool DependencyCollector::addDependency(StringRef Filename) {
   if (Seen.insert(Filename).second) {
-    Dependencies.push_back(Filename);
+    Dependencies.push_back(std::string(Filename));
     return true;
   }
   return false;

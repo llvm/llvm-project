@@ -782,7 +782,7 @@ private:
       os << "Reallocation of " << ArgIndex << llvm::getOrdinalSuffix(ArgIndex)
          << " parameter failed";
 
-      return os.str();
+      return std::string(os.str());
     }
 
     std::string getMessageForReturn(const CallExpr *CallExpr) override {

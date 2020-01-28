@@ -170,7 +170,7 @@ bool ModuleDependencyCollector::getRealPath(StringRef SrcPath,
   if (DirWithSymLink == SymLinkMap.end()) {
     if (llvm::sys::fs::real_path(Dir, RealPath))
       return false;
-    SymLinkMap[Dir] = RealPath.str();
+    SymLinkMap[Dir] = std::string(RealPath.str());
   } else {
     RealPath = DirWithSymLink->second;
   }

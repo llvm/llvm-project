@@ -1763,7 +1763,7 @@ std::string Qualifiers::getAsString(const PrintingPolicy &Policy) const {
   SmallString<64> Buf;
   llvm::raw_svector_ostream StrOS(Buf);
   print(StrOS, Policy);
-  return StrOS.str();
+  return std::string(StrOS.str());
 }
 
 bool Qualifiers::isEmptyWhenPrinted(const PrintingPolicy &Policy) const {
@@ -1921,6 +1921,6 @@ void QualType::getAsStringInternal(const Type *ty, Qualifiers qs,
   SmallString<256> Buf;
   llvm::raw_svector_ostream StrOS(Buf);
   TypePrinter(policy).print(ty, qs, StrOS, buffer);
-  std::string str = StrOS.str();
+  std::string str = std::string(StrOS.str());
   buffer.swap(str);
 }

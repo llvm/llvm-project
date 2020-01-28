@@ -220,8 +220,8 @@ void AMDGCN::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
   BundlerArgs.push_back(Args.MakeArgString(BundlerTargetArg));
   BundlerArgs.push_back(Args.MakeArgString(BundlerInputArg));
 
-  auto BundlerOutputArg =
-      Args.MakeArgString(std::string("-outputs=").append(OutputFileName));
+  auto BundlerOutputArg = Args.MakeArgString(
+      std::string("-outputs=").append(std::string(OutputFileName)));
   BundlerArgs.push_back(BundlerOutputArg);
 
   const char *Bundler = Args.MakeArgString(
@@ -356,10 +356,11 @@ void HIPToolChain::addClangTargetOptions(
       WaveFrontSizeBC = "oclc_wavefrontsize64_off.amdgcn.bc";
 
     BCLibs.append({"hip.amdgcn.bc", "ocml.amdgcn.bc", "ockl.amdgcn.bc",
-                   "oclc_finite_only_off.amdgcn.bc", FlushDenormalControlBC,
+                   "oclc_finite_only_off.amdgcn.bc",
+                   std::string(FlushDenormalControlBC),
                    "oclc_correctly_rounded_sqrt_on.amdgcn.bc",
                    "oclc_unsafe_math_off.amdgcn.bc", ISAVerBC,
-                   WaveFrontSizeBC});
+                   std::string(WaveFrontSizeBC)});
   }
   for (auto Lib : BCLibs)
     addBCLib(getDriver(), DriverArgs, CC1Args, LibraryPaths, Lib);

@@ -595,7 +595,7 @@ public:
 
   // safe, returns invalid on error;
   static PythonModule ImportModule(llvm::StringRef name) {
-    std::string s = name;
+    std::string s = std::string(name);
     auto mod = Import(s.c_str());
     if (!mod) {
       llvm::consumeError(mod.takeError());

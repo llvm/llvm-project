@@ -923,7 +923,7 @@ void request_completions(const llvm::json::Object &request) {
   FillResponse(request, response);
   llvm::json::Object body;
   auto arguments = request.getObject("arguments");
-  std::string text = GetString(arguments, "text");
+  std::string text = std::string(GetString(arguments, "text"));
   auto original_column = GetSigned(arguments, "column", text.size());
   auto actual_column = original_column - 1;
   llvm::json::Array targets;
@@ -1077,8 +1077,8 @@ void request_evaluate(const llvm::json::Object &request) {
   const auto expression = GetString(arguments, "expression");
 
   if (!expression.empty() && expression[0] == '`') {
-    auto result = RunLLDBCommands(llvm::StringRef(),
-                                     {expression.substr(1)});
+    auto result =
+        RunLLDBCommands(llvm::StringRef(), {std::string(expression.substr(1))});
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
@@ -1853,10 +1853,10 @@ void request_setExceptionBreakpoints(const llvm::json::Object &request) {
 
   for (const auto &value : *filters) {
     const auto filter = GetAsString(value);
-    auto exc_bp = g_vsc.GetExceptionBreakpoint(filter);
+    auto exc_bp = g_vsc.GetExceptionBreakpoint(std::string(filter));
     if (exc_bp) {
       exc_bp->SetBreakpoint();
-      unset_filters.erase(filter);
+      unset_filters.erase(std::string(filter));
     }
   }
   for (const auto &filter : unset_filters) {
@@ -2798,7 +2798,7 @@ int main(int argc, char *argv[]) {
     const auto packet_type = GetString(object, "type");
     if (packet_type == "request") {
       const auto command = GetString(object, "command");
-      auto handler_pos = request_handlers.find(command);
+      auto handler_pos = request_handlers.find(std::string(command));
       if (handler_pos != request_handlers.end()) {
         handler_pos->second(*object);
       } else {

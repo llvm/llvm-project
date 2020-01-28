@@ -606,7 +606,7 @@ ClangModulesDeclVendor::Create(Target &target) {
     const auto &props = ModuleList::GetGlobalModuleListProperties();
     props.GetClangModulesCachePath().GetPath(path);
     std::string module_cache_argument("-fmodules-cache-path=");
-    module_cache_argument.append(path.str());
+    module_cache_argument.append(std::string(path.str()));
     compiler_invocation_arguments.push_back(module_cache_argument);
   }
 

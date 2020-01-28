@@ -362,7 +362,7 @@ MipsRegisterBankInfo::TypeInfoForMF::determineInstType(const MachineInstr *MI) {
 void MipsRegisterBankInfo::TypeInfoForMF::cleanupIfNewFunction(
     llvm::StringRef FunctionName) {
   if (MFName != FunctionName) {
-    MFName = FunctionName;
+    MFName = std::string(FunctionName);
     WaitingQueues.clear();
     Types.clear();
   }

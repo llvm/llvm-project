@@ -98,7 +98,7 @@ static Error getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
       if (!SymName)
         return SymName.takeError();
       if (Demangle)
-        Fmt << demangle(*SymName);
+        Fmt << demangle(std::string(*SymName));
       else
         Fmt << *SymName;
     }

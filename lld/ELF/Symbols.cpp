@@ -28,7 +28,7 @@ namespace lld {
 static std::string demangle(StringRef symName) {
   if (elf::config->demangle)
     return demangleItanium(symName);
-  return symName;
+  return std::string(symName);
 }
 
 std::string toString(const elf::Symbol &b) { return demangle(b.getName()); }

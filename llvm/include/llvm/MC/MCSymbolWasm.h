@@ -77,7 +77,9 @@ public:
       }
       return "env";
   }
-  void setImportModule(StringRef Name) { ImportModule = Name; }
+  void setImportModule(StringRef Name) {
+    ImportModule = std::string(std::string(Name));
+  }
 
   bool hasImportName() const { return ImportName.hasValue(); }
   const StringRef getImportName() const {
@@ -86,11 +88,15 @@ public:
       }
       return getName();
   }
-  void setImportName(StringRef Name) { ImportName = Name; }
+  void setImportName(StringRef Name) {
+    ImportName = std::string(std::string(Name));
+  }
 
   bool hasExportName() const { return ExportName.hasValue(); }
   const StringRef getExportName() const { return ExportName.getValue(); }
-  void setExportName(StringRef Name) { ExportName = Name; }
+  void setExportName(StringRef Name) {
+    ExportName = std::string(std::string(Name));
+  }
 
   void setUsedInGOT() const { IsUsedInGOT = true; }
   bool isUsedInGOT() const { return IsUsedInGOT; }

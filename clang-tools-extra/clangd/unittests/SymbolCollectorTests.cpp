@@ -115,8 +115,8 @@ public:
   void build(llvm::StringRef HeaderCode, llvm::StringRef Code = "") {
     File.HeaderFilename = HeaderName;
     File.Filename = FileName;
-    File.HeaderCode = HeaderCode;
-    File.Code = Code;
+    File.HeaderCode = std::string(HeaderCode);
+    File.Code = std::string(Code);
     AST = File.build();
   }
 

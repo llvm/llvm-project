@@ -2334,7 +2334,7 @@ bool MIParser::parseIntrinsicOperand(MachineOperand &Dest) {
   if (Token.isNot(MIToken::NamedGlobalValue))
     return error("expected syntax intrinsic(@llvm.whatever)");
 
-  std::string Name = Token.stringValue();
+  std::string Name = std::string(Token.stringValue());
   lex();
 
   if (expectAndConsume(MIToken::rparen))
@@ -3149,7 +3149,7 @@ MCSymbol *MIParser::getOrCreateMCSymbol(StringRef Name) {
 bool MIParser::parseStringConstant(std::string &Result) {
   if (Token.isNot(MIToken::StringConstant))
     return error("expected string constant");
-  Result = Token.stringValue();
+  Result = std::string(Token.stringValue());
   lex();
   return false;
 }

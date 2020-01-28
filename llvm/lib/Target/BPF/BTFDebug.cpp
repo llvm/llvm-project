@@ -259,7 +259,7 @@ void BTFTypeStruct::emitType(MCStreamer &OS) {
   }
 }
 
-std::string BTFTypeStruct::getName() { return STy->getName(); }
+std::string BTFTypeStruct::getName() { return std::string(STy->getName()); }
 
 /// The Func kind represents both subprogram and pointee of function
 /// pointers. If the FuncName is empty, it represents a pointee of function
@@ -374,7 +374,7 @@ uint32_t BTFStringTable::addString(StringRef S) {
   // Not find, add to the string table.
   uint32_t Offset = Size;
   OffsetToIdMap[Offset] = Table.size();
-  Table.push_back(S);
+  Table.push_back(std::string(S));
   Size += S.size() + 1;
   return Offset;
 }
@@ -667,7 +667,7 @@ std::string BTFDebug::populateFileContent(const DISubprogram *SP) {
   if (!File->getFilename().startswith("/") && File->getDirectory().size())
     FileName = File->getDirectory().str() + "/" + File->getFilename().str();
   else
-    FileName = File->getFilename();
+    FileName = std::string(File->getFilename());
 
   // No need to populate the contends if it has been populated!
   if (FileContent.find(FileName) != FileContent.end())
@@ -686,7 +686,7 @@ std::string BTFDebug::populateFileContent(const DISubprogram *SP) {
     Buf = std::move(*BufOrErr);
   if (Buf)
     for (line_iterator I(*Buf, false), E; I != E; ++I)
-      Content.push_back(*I);
+      Content.push_back(std::string(*I));
 
   FileContent[FileName] = Content;
   return FileName;
@@ -955,8 +955,8 @@ void BTFDebug::generateFieldReloc(const MCSymbol *ORSym, DIType *RootTy,
   FieldReloc.Label = ORSym;
   FieldReloc.OffsetNameOff = addString(IndexPattern);
   FieldReloc.TypeID = RootId;
-  FieldReloc.RelocKind = std::stoull(RelocKindStr);
-  PatchImms[AccessPattern.str()] = std::stoul(PatchImmStr);
+  FieldReloc.RelocKind = std::stoull(std::string(RelocKindStr));
+  PatchImms[AccessPattern.str()] = std::stoul(std::string(PatchImmStr));
   FieldRelocTable[SecNameOff].push_back(FieldReloc);
 }
 
@@ -1119,15 +1119,17 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
     assert(!SecName.empty());
 
     // Find or create a DataSec
-    if (DataSecEntries.find(SecName) == DataSecEntries.end()) {
-      DataSecEntries[SecName] = std::make_unique<BTFKindDataSec>(Asm, SecName);
+    if (DataSecEntries.find(std::string(SecName)) == DataSecEntries.end()) {
+      DataSecEntries[std::string(SecName)] =
+          std::make_unique<BTFKindDataSec>(Asm, std::string(SecName));
     }
 
     // Calculate symbol size
     const DataLayout &DL = Global.getParent()->getDataLayout();
     uint32_t Size = DL.getTypeAllocSize(Global.getType()->getElementType());
 
-    DataSecEntries[SecName]->addVar(VarId, Asm->getSymbol(&Global), Size);
+    DataSecEntries[std::string(SecName)]->addVar(VarId, Asm->getSymbol(&Global),
+                                                 Size);
   }
 }
 

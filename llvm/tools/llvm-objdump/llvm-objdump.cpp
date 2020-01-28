@@ -397,7 +397,7 @@ std::string getFileNameForError(const object::Archive::Child &C,
                                 unsigned Index) {
   Expected<StringRef> NameOrErr = C.getName();
   if (NameOrErr)
-    return NameOrErr.get();
+    return std::string(NameOrErr.get());
   // If we have an error getting the name then we print the index of the archive
   // member. Since we are already in an error state, we just ignore this error.
   consumeError(NameOrErr.takeError());
@@ -562,7 +562,7 @@ public:
     symbolize::LLVMSymbolizer::Options SymbolizerOpts;
     SymbolizerOpts.PrintFunctions = DILineInfoSpecifier::FunctionNameKind::None;
     SymbolizerOpts.Demangle = false;
-    SymbolizerOpts.DefaultArch = DefaultArch;
+    SymbolizerOpts.DefaultArch = std::string(DefaultArch);
     Symbolizer.reset(new symbolize::LLVMSymbolizer(SymbolizerOpts));
   }
   virtual ~SourcePrinter() = default;
@@ -1927,7 +1927,7 @@ void printSymbolTable(const ObjectFile *O, StringRef ArchiveName,
     }
 
     if (Demangle)
-      outs() << ' ' << demangle(Name) << '\n';
+      outs() << ' ' << demangle(std::string(Name)) << '\n';
     else
       outs() << ' ' << Name << '\n';
   }

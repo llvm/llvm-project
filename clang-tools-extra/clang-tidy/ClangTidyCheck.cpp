@@ -39,7 +39,7 @@ std::string ClangTidyCheck::OptionsView::get(StringRef LocalName,
   const auto &Iter = CheckOptions.find(NamePrefix + LocalName.str());
   if (Iter != CheckOptions.end())
     return Iter->second;
-  return Default;
+  return std::string(Default);
 }
 
 std::string
@@ -52,13 +52,13 @@ ClangTidyCheck::OptionsView::getLocalOrGlobal(StringRef LocalName,
   Iter = CheckOptions.find(LocalName.str());
   if (Iter != CheckOptions.end())
     return Iter->second;
-  return Default;
+  return std::string(Default);
 }
 
 void ClangTidyCheck::OptionsView::store(ClangTidyOptions::OptionMap &Options,
                                         StringRef LocalName,
                                         StringRef Value) const {
-  Options[NamePrefix + LocalName.str()] = Value;
+  Options[NamePrefix + LocalName.str()] = std::string(Value);
 }
 
 void ClangTidyCheck::OptionsView::store(ClangTidyOptions::OptionMap &Options,

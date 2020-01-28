@@ -77,7 +77,8 @@ class RewriterTestContext {
     assert(File);
 
     StringRef Found =
-        TemporaryFiles.insert(std::make_pair(Name, Path.str())).first->second;
+        TemporaryFiles.insert(std::make_pair(Name, std::string(Path.str())))
+            .first->second;
     assert(Found == Path);
     (void)Found;
     return Sources.createFileID(*File, SourceLocation(), SrcMgr::C_User);
@@ -107,7 +108,7 @@ class RewriterTestContext {
     // FIXME: Figure out whether there is a way to get the SourceManger to
     // reopen the file.
     auto FileBuffer = Files.getBufferForFile(Path);
-    return (*FileBuffer)->getBuffer();
+    return std::string((*FileBuffer)->getBuffer());
   }
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;

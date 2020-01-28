@@ -39,7 +39,7 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
 
   // Handle CPU name is 'native'.
   if (CPU == "native")
-    return llvm::sys::getHostCPUName();
+    return std::string(llvm::sys::getHostCPUName());
   else if (CPU.size())
     return CPU;
 
@@ -139,7 +139,7 @@ getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
 
   // Handle CPU name is 'native'.
   if (MtuneLowerCase == "native")
-    MtuneLowerCase = llvm::sys::getHostCPUName();
+    MtuneLowerCase = std::string(llvm::sys::getHostCPUName());
   if (MtuneLowerCase == "cyclone" || MtuneLowerCase.find("apple") == 0) {
     Features.push_back("+zcm");
     Features.push_back("+zcz");

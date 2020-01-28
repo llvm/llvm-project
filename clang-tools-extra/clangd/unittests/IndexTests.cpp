@@ -364,7 +364,7 @@ TEST(MergeIndexTest, Refs) {
   Annotations Test1Code(R"(class $Foo[[Foo]];)");
   TestTU Test;
   Test.HeaderCode = HeaderCode;
-  Test.Code = Test1Code.code();
+  Test.Code = std::string(Test1Code.code());
   Test.Filename = "test.cc";
   auto AST = Test.build();
   Dyn.updateMain(Test.Filename, AST);
@@ -381,7 +381,7 @@ TEST(MergeIndexTest, Refs) {
   Annotations Test2Code(R"(class $Foo[[Foo]] {};)");
   TestTU Test2;
   Test2.HeaderCode = HeaderCode;
-  Test2.Code = Test2Code.code();
+  Test2.Code = std::string(Test2Code.code());
   Test2.Filename = "test2.cc";
   StaticAST = Test2.build();
   StaticIndex.updateMain(Test2.Filename, StaticAST);

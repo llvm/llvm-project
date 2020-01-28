@@ -547,7 +547,7 @@ void RISCVCompressInstEmitter::emitCompressInstEmitter(raw_ostream &o,
                     "'PassSubtarget' is false. SubTargetInfo object is needed "
                     "for target features.\n");
 
-  std::string Namespace = Target.getName();
+  std::string Namespace = std::string(Target.getName());
 
   // Sort entries in CompressPatterns to handle instructions that can have more
   // than one candidate for compression\uncompression, e.g ADD can be

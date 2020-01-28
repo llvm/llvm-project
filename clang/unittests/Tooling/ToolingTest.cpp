@@ -325,9 +325,9 @@ TEST(runToolOnCodeWithArgs, TestNoDepFile) {
   std::vector<std::string> Args;
   Args.push_back("-MMD");
   Args.push_back("-MT");
-  Args.push_back(DepFilePath.str());
+  Args.push_back(std::string(DepFilePath.str()));
   Args.push_back("-MF");
-  Args.push_back(DepFilePath.str());
+  Args.push_back(std::string(DepFilePath.str()));
   EXPECT_TRUE(runToolOnCodeWithArgs(std::make_unique<SkipBodyAction>(), "", Args));
   EXPECT_FALSE(llvm::sys::fs::exists(DepFilePath.str()));
   EXPECT_FALSE(llvm::sys::fs::remove(DepFilePath.str()));
@@ -552,8 +552,9 @@ std::string getAnyTarget() {
     StringRef TargetName(Target.getName());
     if (TargetName == "x86-64")
       TargetName = "x86_64";
-    if (llvm::TargetRegistry::lookupTarget(TargetName, Error) == &Target) {
-      return TargetName;
+    if (llvm::TargetRegistry::lookupTarget(std::string(TargetName), Error) ==
+        &Target) {
+      return std::string(TargetName);
     }
   }
   return "";

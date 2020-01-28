@@ -506,7 +506,7 @@ public:
 
   /// Add a top-level header filename associated with this module.
   void addTopHeaderFilename(StringRef Filename) {
-    TopHeaderNames.push_back(Filename);
+    TopHeaderNames.push_back(std::string(Filename));
   }
 
   /// The top-level headers associated with this module.

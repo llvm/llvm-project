@@ -21,7 +21,7 @@ namespace utils {
 static std::string cleanPath(StringRef Path) {
   SmallString<256> Result = Path;
   llvm::sys::path::remove_dots(Result, true);
-  return Result.str();
+  return std::string(Result.str());
 }
 
 namespace {
@@ -186,7 +186,7 @@ public:
           CPPVar));
       return CPPVar;
     }
-    return CurHeaderGuard;
+    return std::string(CurHeaderGuard);
   }
 
   /// Checks the comment after the #endif of a header guard and fixes it

@@ -323,7 +323,7 @@ remarks::createBitstreamParserFromMeta(
              : std::make_unique<BitstreamRemarkParser>(Buf);
 
   if (ExternalFilePrependPath)
-    Parser->ExternalFilePrependPath = *ExternalFilePrependPath;
+    Parser->ExternalFilePrependPath = std::string(*ExternalFilePrependPath);
 
   return std::move(Parser);
 }

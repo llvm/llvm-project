@@ -58,7 +58,7 @@ Optional<FixItHint> UsingInserter::createUsingDeclaration(
     return None;
   }
   // Find conflicting declarations and references.
-  auto ConflictingDecl = namedDecl(hasName(UnqualifiedName));
+  auto ConflictingDecl = namedDecl(hasName(std::string(UnqualifiedName)));
   bool HasConflictingDeclaration =
       !match(findAll(ConflictingDecl), *Function, Context).empty();
   bool HasConflictingDeclRef =

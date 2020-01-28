@@ -313,8 +313,8 @@ std::string CodeEmitterGen::getInstructionCaseForEncoding(Record *R, Record *Enc
     //    bits<5> RST = { ?, ?, ?, ?, ? };
     if (RV.getPrefix() || RV.getValue()->isComplete())
       continue;
-    
-    AddCodeToMergeInOperand(R, BI, RV.getName(), NumberedOp,
+
+    AddCodeToMergeInOperand(R, BI, std::string(RV.getName()), NumberedOp,
                             NamedOpIndices, Case, Target);
   }
 

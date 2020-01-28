@@ -305,7 +305,7 @@ std::string NativeTypeEnum::getName() const {
   if (UnmodifiedType)
     return UnmodifiedType->getName();
 
-  return Record->getName();
+  return std::string(Record->getName());
 }
 
 bool NativeTypeEnum::isNested() const {

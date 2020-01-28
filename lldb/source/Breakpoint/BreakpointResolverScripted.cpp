@@ -26,12 +26,11 @@ using namespace lldb_private;
 
 // BreakpointResolverScripted:
 BreakpointResolverScripted::BreakpointResolverScripted(
-    Breakpoint *bkpt, 
-    const llvm::StringRef class_name,
-    lldb::SearchDepth depth,
+    Breakpoint *bkpt, const llvm::StringRef class_name, lldb::SearchDepth depth,
     StructuredDataImpl *args_data)
     : BreakpointResolver(bkpt, BreakpointResolver::PythonResolver),
-      m_class_name(class_name), m_depth(depth), m_args_ptr(args_data) {
+      m_class_name(std::string(class_name)), m_depth(depth),
+      m_args_ptr(args_data) {
   CreateImplementationIfNeeded();
 }
 

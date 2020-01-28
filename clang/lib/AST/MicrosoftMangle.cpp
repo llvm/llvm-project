@@ -1301,7 +1301,7 @@ void MicrosoftCXXNameMangler::mangleSourceName(StringRef Name) {
   BackRefVec::iterator Found = llvm::find(NameBackReferences, Name);
   if (Found == NameBackReferences.end()) {
     if (NameBackReferences.size() < 10)
-      NameBackReferences.push_back(Name);
+      NameBackReferences.push_back(std::string(Name));
     Out << Name << '@';
   } else {
     Out << (Found - NameBackReferences.begin());

@@ -72,7 +72,7 @@ getNamespaceNameAsWritten(SourceLocation &Loc, const SourceManager &Sources,
       if (T->is(tok::raw_identifier)) {
         StringRef ID = T->getRawIdentifier();
         if (ID != "namespace" && ID != "inline")
-          Result.append(ID);
+          Result.append(std::string(ID));
       } else if (T->is(tok::coloncolon)) {
         Result.append("::");
       } else { // Any other kind of token is unexpected here.

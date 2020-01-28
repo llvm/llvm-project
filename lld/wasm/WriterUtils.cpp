@@ -48,7 +48,7 @@ std::string toString(const WasmSignature &sig) {
     s += "void";
   else
     s += toString(sig.Returns[0]);
-  return s.str();
+  return std::string(s.str());
 }
 
 std::string toString(const WasmGlobalType &type) {

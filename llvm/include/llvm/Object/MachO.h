@@ -644,7 +644,7 @@ public:
     Version = utostr(major) + "." + utostr(minor);
     if (update != 0)
       Version += "." + utostr(update);
-    return Version.str();
+    return std::string(std::string(Version.str()));
   }
 
 private:

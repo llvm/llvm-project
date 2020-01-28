@@ -72,7 +72,7 @@ protected:
 
   void addFile(llvm::StringRef FileName, llvm::StringRef Contents) {
     auto Path = testPath(FileName);
-    FSProvider.Files[Path] = Contents;
+    FSProvider.Files[Path] = std::string(Contents);
     Server.addDocument(Path, Contents);
   }
 };
@@ -324,7 +324,7 @@ protected:
   }
 
   void addFile(llvm::StringRef FilePath, llvm::StringRef Contents) {
-    FSProvider.Files[FilePath] = Contents;
+    FSProvider.Files[FilePath] = std::string(Contents);
     Server.addDocument(FilePath, Contents);
   }
 };

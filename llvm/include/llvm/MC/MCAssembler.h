@@ -440,7 +440,7 @@ public:
 
   void addFileName(StringRef FileName) {
     if (!is_contained(FileNames, FileName))
-      FileNames.push_back(FileName);
+      FileNames.push_back(std::string(FileName));
   }
 
   /// Write the necessary bundle padding to \p OS.

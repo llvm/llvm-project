@@ -299,7 +299,8 @@ void PluginManager::RegisterPlugin(ConstString name,
                                    llvm::StringRef description,
                                    ArchitectureCreateInstance create_callback) {
   std::lock_guard<std::mutex> guard(GetArchitectureMutex());
-  GetArchitectureInstances().push_back({name, description, create_callback});
+  GetArchitectureInstances().push_back(
+      {name, std::string(description), create_callback});
 }
 
 void PluginManager::UnregisterPlugin(

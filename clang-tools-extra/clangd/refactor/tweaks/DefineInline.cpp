@@ -250,7 +250,7 @@ renameParameters(const FunctionDecl *Dest, const FunctionDecl *Source) {
       // with previous token, e.g. foo(int^) shouldn't turn into foo(intx).
       NewName = " ";
     }
-    NewName.append(SourceParam->getName());
+    NewName.append(std::string(SourceParam->getName()));
     ParamToNewName[DestParam->getCanonicalDecl()] = std::move(NewName);
   };
 

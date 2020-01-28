@@ -168,7 +168,7 @@ int main(int Argc, const char **Argv) {
     if (OutArgsInfo.empty()) {
       SmallString<128> OutputFile = InputFile;
       llvm::sys::path::replace_extension(OutputFile, "res");
-      OutArgsInfo.push_back(OutputFile.str());
+      OutArgsInfo.push_back(std::string(OutputFile.str()));
     }
 
     if (OutArgsInfo.size() != 1)

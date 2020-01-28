@@ -99,7 +99,7 @@ std::string Driver::GetResourcesPath(StringRef BinaryPath,
   // exact same string ("a/../b/" and "b/" get different hashes, for example).
 
   // Dir is bin/ or lib/, depending on where BinaryPath is.
-  std::string Dir = llvm::sys::path::parent_path(BinaryPath);
+  std::string Dir = std::string(llvm::sys::path::parent_path(BinaryPath));
 
   SmallString<128> P(Dir);
   if (CustomResourceDir != "") {
@@ -115,7 +115,7 @@ std::string Driver::GetResourcesPath(StringRef BinaryPath,
                             CLANG_VERSION_STRING);
   }
 
-  return P.str();
+  return std::string(P.str());
 }
 
 Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
@@ -131,13 +131,12 @@ Driver::Driver(StringRef ClangExecutable, StringRef TargetTriple,
       TargetTriple(TargetTriple), CCCGenericGCCName(""), Saver(Alloc),
       CheckInputsExist(true), GenReproducer(false),
       SuppressMissingInputWarning(false) {
-
   // Provide a sane fallback if no VFS is specified.
   if (!this->VFS)
     this->VFS = llvm::vfs::getRealFileSystem();
 
-  Name = llvm::sys::path::filename(ClangExecutable);
-  Dir = llvm::sys::path::parent_path(ClangExecutable);
+  Name = std::string(llvm::sys::path::filename(ClangExecutable));
+  Dir = std::string(llvm::sys::path::parent_path(ClangExecutable));
   InstalledDir = Dir; // Provide a sensible default installed dir.
 
 #if defined(CLANG_CONFIG_FILE_SYSTEM_DIR)
@@ -769,7 +768,7 @@ bool Driver::readConfigFile(StringRef FileName) {
   // Read options from config file.
   llvm::SmallString<128> CfgFileName(FileName);
   llvm::sys::path::native(CfgFileName);
-  ConfigFile = CfgFileName.str();
+  ConfigFile = std::string(CfgFileName.str());
   bool ContainErrors;
   CfgOptions = std::make_unique<InputArgList>(
       ParseArgStrings(NewCfgArgs, IsCLMode(), ContainErrors));
@@ -952,7 +951,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
     while (!CompilerPath.empty()) {
       std::pair<StringRef, StringRef> Split =
           CompilerPath.split(llvm::sys::EnvPathSeparator);
-      PrefixDirs.push_back(Split.first);
+      PrefixDirs.push_back(std::string(Split.first));
       CompilerPath = Split.second;
     }
   }
@@ -1413,7 +1412,7 @@ void Driver::generateCompilationDiagnostics(
       ScriptOS << "\n# Additional information: " << AdditionalInformation
                << "\n";
     if (Report)
-      Report->TemporaryFiles.push_back(Script.str());
+      Report->TemporaryFiles.push_back(std::string(Script.str()));
     Diag(clang::diag::note_drv_command_failed_diag_msg) << Script;
   }
 
@@ -1642,7 +1641,7 @@ void Driver::HandleAutocompletions(StringRef PassedFlags) const {
     // this code.
     for (StringRef S : DiagnosticIDs::getDiagnosticFlags())
       if (S.startswith(Cur))
-        SuggestedCompletions.push_back(S);
+        SuggestedCompletions.push_back(std::string(S));
   }
 
   // Sort the autocomplete candidates so that shells print them out in a
@@ -4662,17 +4661,17 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   SmallString<128> R(ResourceDir);
   llvm::sys::path::append(R, Name);
   if (llvm::sys::fs::exists(Twine(R)))
-    return R.str();
+    return std::string(R.str());
 
   SmallString<128> P(TC.getCompilerRTPath());
   llvm::sys::path::append(P, Name);
   if (llvm::sys::fs::exists(Twine(P)))
-    return P.str();
+    return std::string(P.str());
 
   SmallString<128> D(Dir);
   llvm::sys::path::append(D, "..", Name);
   if (llvm::sys::fs::exists(Twine(D)))
-    return D.str();
+    return std::string(D.str());
 
   if (auto P = SearchPaths(TC.getLibraryPaths()))
     return *P;
@@ -4680,7 +4679,7 @@ std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
   if (auto P = SearchPaths(TC.getFilePaths()))
     return *P;
 
-  return Name;
+  return std::string(Name);
 }
 
 void Driver::generatePrefixedToolNames(
@@ -4717,11 +4716,11 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
     if (llvm::sys::fs::is_directory(PrefixDir)) {
       SmallString<128> P(PrefixDir);
       if (ScanDirForExecutable(P, TargetSpecificExecutables))
-        return P.str();
+        return std::string(P.str());
     } else {
       SmallString<128> P((PrefixDir + Name).str());
       if (llvm::sys::fs::can_execute(Twine(P)))
-        return P.str();
+        return std::string(P.str());
     }
   }
 
@@ -4729,7 +4728,7 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
   for (const auto &Path : List) {
     SmallString<128> P(Path);
     if (ScanDirForExecutable(P, TargetSpecificExecutables))
-      return P.str();
+      return std::string(P.str());
   }
 
   // If all else failed, search the path.
@@ -4738,7 +4737,7 @@ std::string Driver::GetProgramPath(StringRef Name, const ToolChain &TC) const {
             llvm::sys::findProgramByName(TargetSpecificExecutable))
       return *P;
 
-  return Name;
+  return std::string(Name);
 }
 
 std::string Driver::GetTemporaryPath(StringRef Prefix, StringRef Suffix) const {
@@ -4749,7 +4748,7 @@ std::string Driver::GetTemporaryPath(StringRef Prefix, StringRef Suffix) const {
     return "";
   }
 
-  return Path.str();
+  return std::string(Path.str());
 }
 
 std::string Driver::GetTemporaryDirectory(StringRef Prefix) const {
@@ -4760,7 +4759,7 @@ std::string Driver::GetTemporaryDirectory(StringRef Prefix) const {
     return "";
   }
 
-  return Path.str();
+  return std::string(Path.str());
 }
 
 std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
@@ -4782,7 +4781,7 @@ std::string Driver::GetClPchPath(Compilation &C, StringRef BaseName) const {
       Output = BaseName;
     llvm::sys::path::replace_extension(Output, ".pch");
   }
-  return Output.str();
+  return std::string(Output.str());
 }
 
 const ToolChain &Driver::getToolChain(const ArgList &Args,

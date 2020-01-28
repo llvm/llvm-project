@@ -75,7 +75,7 @@ void ProcessInfo::SetExecutableFile(const FileSpec &exe_file,
 
 llvm::StringRef ProcessInfo::GetArg0() const { return m_arg0; }
 
-void ProcessInfo::SetArg0(llvm::StringRef arg) { m_arg0 = arg; }
+void ProcessInfo::SetArg0(llvm::StringRef arg) { m_arg0 = std::string(arg); }
 
 void ProcessInfo::SetArguments(char const **argv,
                                bool first_arg_is_executable) {

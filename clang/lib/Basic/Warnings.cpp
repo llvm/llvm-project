@@ -36,8 +36,9 @@ static void EmitUnknownDiagWarning(DiagnosticsEngine &Diags,
                                    StringRef Opt) {
   StringRef Suggestion = DiagnosticIDs::getNearestOption(Flavor, Opt);
   Diags.Report(diag::warn_unknown_diag_option)
-    << (Flavor == diag::Flavor::WarningOrError ? 0 : 1) << (Prefix.str() += Opt)
-    << !Suggestion.empty() << (Prefix.str() += Suggestion);
+      << (Flavor == diag::Flavor::WarningOrError ? 0 : 1)
+      << (Prefix.str() += std::string(Opt)) << !Suggestion.empty()
+      << (Prefix.str() += std::string(Suggestion));
 }
 
 void clang::ProcessWarningOptions(DiagnosticsEngine &Diags,

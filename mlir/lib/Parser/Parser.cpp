@@ -1434,7 +1434,7 @@ static std::string extractSymbolReference(Token tok) {
   // Check to see if the reference is a string literal, or a bare identifier.
   if (nameStr.front() == '"')
     return tok.getStringValue();
-  return nameStr;
+  return std::string(nameStr);
 }
 
 /// Parse an arbitrary attribute.

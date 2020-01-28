@@ -55,7 +55,8 @@ TEST(GlobalCompilationDatabaseTest, FallbackCommand) {
 }
 
 static tooling::CompileCommand cmd(llvm::StringRef File, llvm::StringRef Arg) {
-  return tooling::CompileCommand(testRoot(), File, {"clang", Arg, File}, "");
+  return tooling::CompileCommand(
+      testRoot(), File, {"clang", std::string(Arg), std::string(File)}, "");
 }
 
 class OverlayCDBTest : public ::testing::Test {

@@ -57,7 +57,7 @@ public:
       return "";
 
     const std::string &ClangBinaryName =
-        llvm::sys::path::filename(ClangBinaryPath);
+        std::string(llvm::sys::path::filename(ClangBinaryPath));
 
     std::unique_lock<std::mutex> LockGuard(CacheLock);
     const auto &CachedResourceDir = Cache.find(ClangBinaryPath);
@@ -170,7 +170,7 @@ llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
 static std::string getObjFilePath(StringRef SrcFile) {
   SmallString<128> ObjFileName(SrcFile);
   llvm::sys::path::replace_extension(ObjFileName, "o");
-  return ObjFileName.str();
+  return std::string(ObjFileName.str());
 }
 
 class SingleCommandCompilationDatabase : public tooling::CompilationDatabase {
@@ -243,7 +243,7 @@ public:
     const FullDependencies &FD = FDR.FullDeps;
 
     InputDeps ID;
-    ID.FileName = Input;
+    ID.FileName = std::string(Input);
     ID.ContextHash = std::move(FD.ContextHash);
     ID.FileDeps = std::move(FD.FileDeps);
     ID.ModuleDeps = std::move(FD.ClangModuleDeps);
@@ -456,7 +456,7 @@ int main(int argc, const char **argv) {
             AdjustedArgs.push_back(!LastO.empty() ? LastO
                                                   : getObjFilePath(FileName));
           } else {
-            AdjustedArgs.push_back(FileName);
+            AdjustedArgs.push_back(std::string(FileName));
           }
         }
         AdjustedArgs.push_back("-Xclang");
@@ -470,7 +470,7 @@ int main(int argc, const char **argv) {
               ResourceDirCache.findResourceDir(Args);
           if (!ResourceDir.empty()) {
             AdjustedArgs.push_back("-resource-dir");
-            AdjustedArgs.push_back(ResourceDir);
+            AdjustedArgs.push_back(std::string(ResourceDir));
           }
         }
         return AdjustedArgs;

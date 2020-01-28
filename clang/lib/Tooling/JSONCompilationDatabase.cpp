@@ -305,7 +305,7 @@ nodeToCommandLine(JSONCommandLineSyntax Syntax,
     Arguments = unescapeCommandLine(Syntax, Nodes[0]->getValue(Storage));
   else
     for (const auto *Node : Nodes)
-      Arguments.push_back(Node->getValue(Storage));
+      Arguments.push_back(std::string(Node->getValue(Storage)));
   // There may be multiple wrappers: using distcc and ccache together is common.
   while (unwrapCommand(Arguments))
     ;

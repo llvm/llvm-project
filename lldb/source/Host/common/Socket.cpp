@@ -309,7 +309,7 @@ bool Socket::DecodeHostAndPort(llvm::StringRef host_and_port,
   host_str.clear();
   port_str.clear();
   if (to_integer(host_and_port, port, 10) && port < UINT16_MAX) {
-    port_str = host_and_port;
+    port_str = std::string(host_and_port);
     if (error_ptr)
       error_ptr->Clear();
     return true;

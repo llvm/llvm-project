@@ -34,7 +34,7 @@ namespace {
 enum class StdVer { CXX98, CXX11, CXX14, CXX17, CXX2a };
 
 DeclarationMatcher FunctionBodyMatcher(StringRef ContainingFunction) {
-  return functionDecl(hasName(ContainingFunction),
+  return functionDecl(hasName(std::string(ContainingFunction)),
                       has(compoundStmt(has(stmt().bind("id")))));
 }
 

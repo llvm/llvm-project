@@ -64,7 +64,7 @@ static MCAsmInfo *createRISCVMCAsmInfo(const MCRegisterInfo &MRI,
 
 static MCSubtargetInfo *createRISCVMCSubtargetInfo(const Triple &TT,
                                                    StringRef CPU, StringRef FS) {
-  std::string CPUName = CPU;
+  std::string CPUName = std::string(CPU);
   if (CPUName.empty())
     CPUName = TT.isArch64Bit() ? "generic-rv64" : "generic-rv32";
   return createRISCVMCSubtargetInfoImpl(TT, CPUName, FS);

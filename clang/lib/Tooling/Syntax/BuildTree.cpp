@@ -243,9 +243,9 @@ private:
                 ? (std::next(It)->first - It->first)
                 : A.tokenBuffer().expandedTokens().end() - It->first;
 
-        R += llvm::formatv("- '{0}' covers '{1}'+{2} tokens\n",
-                           It->second.Node->kind(),
-                           It->first->text(A.sourceManager()), CoveredTokens);
+        R += std::string(llvm::formatv(
+            "- '{0}' covers '{1}'+{2} tokens\n", It->second.Node->kind(),
+            It->first->text(A.sourceManager()), CoveredTokens));
         R += It->second.Node->dump(A);
       }
       return R;

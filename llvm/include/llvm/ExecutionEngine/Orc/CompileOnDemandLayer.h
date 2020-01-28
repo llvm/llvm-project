@@ -338,12 +338,13 @@ public:
     for (auto &KV : LogicalDylibs) {
       if (auto Sym = KV.second.StubsMgr->findStub(Name, ExportedSymbolsOnly))
         return Sym;
-      if (auto Sym = findSymbolIn(KV.first, Name, ExportedSymbolsOnly))
+      if (auto Sym =
+              findSymbolIn(KV.first, std::string(Name), ExportedSymbolsOnly))
         return Sym;
       else if (auto Err = Sym.takeError())
         return std::move(Err);
     }
-    return BaseLayer.findSymbol(Name, ExportedSymbolsOnly);
+    return BaseLayer.findSymbol(std::string(Name), ExportedSymbolsOnly);
   }
 
   /// Get the address of a symbol provided by this layer, or some layer
@@ -511,11 +512,11 @@ private:
     }
 
     // Build a resolver for the globals module and add it to the base layer.
-    auto LegacyLookup = [this, &LD](const std::string &Name) -> JITSymbol {
+    auto LegacyLookup = [this, &LD](StringRef Name) -> JITSymbol {
       if (auto Sym = LD.StubsMgr->findStub(Name, false))
         return Sym;
 
-      if (auto Sym = LD.findSymbol(BaseLayer, Name, false))
+      if (auto Sym = LD.findSymbol(BaseLayer, std::string(Name), false))
         return Sym;
       else if (auto Err = Sym.takeError())
         return std::move(Err);
@@ -631,7 +632,7 @@ private:
     Module &SrcM = LD.getSourceModule(LMId);
 
     // Create the module.
-    std::string NewName = SrcM.getName();
+    std::string NewName(SrcM.getName());
     for (auto *F : Part) {
       NewName += ".";
       NewName += F->getName();
@@ -688,8 +689,8 @@ private:
 
     auto K = ES.allocateVModule();
 
-    auto LegacyLookup = [this, &LD](const std::string &Name) -> JITSymbol {
-      return LD.findSymbol(BaseLayer, Name, false);
+    auto LegacyLookup = [this, &LD](StringRef Name) -> JITSymbol {
+      return LD.findSymbol(BaseLayer, std::string(Name), false);
     };
 
     // Create memory manager and symbol resolver.

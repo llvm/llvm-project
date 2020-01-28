@@ -174,7 +174,7 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   // Compile command is set asynchronously during update, as it can be slow.
   ParseInputs Inputs;
   Inputs.FS = FS;
-  Inputs.Contents = Contents;
+  Inputs.Contents = std::string(Contents);
   Inputs.Opts = std::move(Opts);
   Inputs.Index = Index;
   bool NewFile = WorkScheduler.update(File, Inputs, WantDiags);
@@ -478,8 +478,8 @@ void ClangdServer::switchSourceHeader(
   //     the same directory.
   //  2) if 1) fails, we use the AST&Index approach, it is slower but supports
   //     different code layout.
-  if (auto CorrespondingFile =
-          getCorrespondingHeaderOrSource(Path, FSProvider.getFileSystem()))
+  if (auto CorrespondingFile = getCorrespondingHeaderOrSource(
+          std::string(Path), FSProvider.getFileSystem()))
     return CB(std::move(CorrespondingFile));
   auto Action = [Path = Path.str(), CB = std::move(CB),
                  this](llvm::Expected<InputsAndAST> InpAST) mutable {

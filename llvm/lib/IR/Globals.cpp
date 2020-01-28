@@ -143,7 +143,7 @@ std::string GlobalValue::getGlobalIdentifier(StringRef Name,
   if (Name[0] == '\1')
     Name = Name.substr(1);
 
-  std::string NewName = Name;
+  std::string NewName = std::string(Name);
   if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
     // For local symbols, prepend the main file name to distinguish them.
     // Do not include the full path in the file name since there's no guarantee

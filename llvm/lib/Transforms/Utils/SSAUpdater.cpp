@@ -56,7 +56,7 @@ void SSAUpdater::Initialize(Type *Ty, StringRef Name) {
   else
     getAvailableVals(AV).clear();
   ProtoType = Ty;
-  ProtoName = Name;
+  ProtoName = std::string(Name);
 }
 
 bool SSAUpdater::HasValueForBlock(BasicBlock *BB) const {

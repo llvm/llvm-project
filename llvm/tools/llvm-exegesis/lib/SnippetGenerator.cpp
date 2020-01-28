@@ -160,7 +160,8 @@ generateUnconstrainedCodeTemplates(const Instruction &Instr, StringRef Msg) {
   std::vector<CodeTemplate> Result;
   Result.emplace_back();
   CodeTemplate &CT = Result.back();
-  CT.Info = formatv("{0}, repeating an unconstrained assignment", Msg);
+  CT.Info =
+      std::string(formatv("{0}, repeating an unconstrained assignment", Msg));
   CT.Instructions.emplace_back(&Instr);
   return std::move(Result);
 }

@@ -119,9 +119,9 @@ public:
     std::string TypeName;
     if (!TI.isNoneType()) {
       if (TI.isSimple())
-        TypeName = TypeIndex::simpleTypeName(TI);
+        TypeName = std::string(TypeIndex::simpleTypeName(TI));
       else
-        TypeName = TypeTable.getTypeName(TI);
+        TypeName = std::string(TypeTable.getTypeName(TI));
     }
     return TypeName;
   }
@@ -183,7 +183,7 @@ StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
   if (Dir.startswith("/") || Filename.startswith("/")) {
     if (llvm::sys::path::is_absolute(Filename, llvm::sys::path::Style::posix))
       return Filename;
-    Filepath = Dir;
+    Filepath = std::string(Dir);
     if (Dir.back() != '/')
       Filepath += '/';
     Filepath += Filename;
@@ -195,7 +195,7 @@ StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
   // that would increase the IR size and probably not needed for other users.
   // For now, just concatenate and canonicalize the path here.
   if (Filename.find(':') == 1)
-    Filepath = Filename;
+    Filepath = std::string(Filename);
   else
     Filepath = (Dir + "\\" + Filename).str();
 
@@ -322,10 +322,10 @@ static std::string getQualifiedName(ArrayRef<StringRef> QualifiedNameComponents,
   std::string FullyQualifiedName;
   for (StringRef QualifiedNameComponent :
        llvm::reverse(QualifiedNameComponents)) {
-    FullyQualifiedName.append(QualifiedNameComponent);
+    FullyQualifiedName.append(std::string(QualifiedNameComponent));
     FullyQualifiedName.append("::");
   }
-  FullyQualifiedName.append(TypeName);
+  FullyQualifiedName.append(std::string(TypeName));
   return FullyQualifiedName;
 }
 
@@ -943,7 +943,8 @@ void CodeViewDebug::switchToDebugSectionForSymbol(const MCSymbol *GVSym) {
 void CodeViewDebug::emitDebugInfoForThunk(const Function *GV,
                                           FunctionInfo &FI,
                                           const MCSymbol *Fn) {
-  std::string FuncName = GlobalValue::dropLLVMManglingEscape(GV->getName());
+  std::string FuncName =
+      std::string(GlobalValue::dropLLVMManglingEscape(GV->getName()));
   const ThunkOrdinal ordinal = ThunkOrdinal::Standard; // Only supported kind.
 
   OS.AddComment("Symbol subsection for " + Twine(FuncName));
@@ -1006,7 +1007,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
 
   // If our DISubprogram name is empty, use the mangled name.
   if (FuncName.empty())
-    FuncName = GlobalValue::dropLLVMManglingEscape(GV->getName());
+    FuncName = std::string(GlobalValue::dropLLVMManglingEscape(GV->getName()));
 
   // Emit FPO data, but only on 32-bit x86. No other platforms use it.
   if (Triple(MMI->getModule()->getTargetTriple()).getArch() == Triple::x86)

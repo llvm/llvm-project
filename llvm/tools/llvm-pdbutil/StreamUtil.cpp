@@ -32,7 +32,7 @@ std::string StreamInfo::getLongName() const {
 StreamInfo StreamInfo::createStream(StreamPurpose Purpose, StringRef Name,
                                     uint32_t StreamIndex) {
   StreamInfo Result;
-  Result.Name = Name;
+  Result.Name = std::string(Name);
   Result.StreamIndex = StreamIndex;
   Result.Purpose = Purpose;
   return Result;
@@ -41,7 +41,7 @@ StreamInfo StreamInfo::createStream(StreamPurpose Purpose, StringRef Name,
 StreamInfo StreamInfo::createModuleStream(StringRef Module,
                                           uint32_t StreamIndex, uint32_t Modi) {
   StreamInfo Result;
-  Result.Name = Module;
+  Result.Name = std::string(Module);
   Result.StreamIndex = StreamIndex;
   Result.ModuleIndex = Modi;
   Result.Purpose = StreamPurpose::ModuleStream;
@@ -90,7 +90,7 @@ void llvm::pdb::discoverStreamPurposes(PDBFile &File,
   if (Info) {
     for (auto &NSE : Info->named_streams()) {
       if (NSE.second != kInvalidStreamIndex)
-        NamedStreams[NSE.second] = NSE.first();
+        NamedStreams[NSE.second] = std::string(NSE.first());
     }
   }
 

@@ -11328,12 +11328,12 @@ static void diagnoseXorMisusedAsPow(Sema &S, const ExprResult &XorLHS,
   if (XorStr == "xor")
     return;
 
-  std::string LHSStr = Lexer::getSourceText(
+  std::string LHSStr = std::string(Lexer::getSourceText(
       CharSourceRange::getTokenRange(LHSInt->getSourceRange()),
-      S.getSourceManager(), S.getLangOpts());
-  std::string RHSStr = Lexer::getSourceText(
+      S.getSourceManager(), S.getLangOpts()));
+  std::string RHSStr = std::string(Lexer::getSourceText(
       CharSourceRange::getTokenRange(RHSInt->getSourceRange()),
-      S.getSourceManager(), S.getLangOpts());
+      S.getSourceManager(), S.getLangOpts()));
 
   if (Negative) {
     RightSideValue = -RightSideValue;

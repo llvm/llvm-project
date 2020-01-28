@@ -448,7 +448,6 @@ public:
       : LabelID(LabelID_.hasValue() ? LabelID_.getValue() : ~0u),
         EmitStr(EmitStr), NumElements(NumElements), Flags(Flags),
         RawValue(RawValue) {
-
     assert((!LabelID_.hasValue() || LabelID != ~0u) &&
            "This value is reserved for non-labels");
   }
@@ -1498,7 +1497,7 @@ public:
   const StringRef getSymbolicName() const { return SymbolicName; }
   void setSymbolicName(StringRef Name) {
     assert(SymbolicName.empty() && "Operand already has a symbolic name");
-    SymbolicName = Name;
+    SymbolicName = std::string(Name);
   }
 
   /// Construct a new operand predicate and add it to the matcher.
@@ -2790,7 +2789,7 @@ private:
   std::string S;
 
 public:
-  DebugCommentAction(StringRef S) : S(S) {}
+  DebugCommentAction(StringRef S) : S(std::string(S)) {}
 
   void emitActionOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
     Table << MatchTable::Comment(S) << MatchTable::LineBreak;
@@ -3764,7 +3763,7 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
                                       CCDef->getValueAsString("ICmpPredicate");
 
         if (!PredType.empty()) {
-          OM.addPredicate<CmpPredicateOperandMatcher>(PredType);
+          OM.addPredicate<CmpPredicateOperandMatcher>(std::string(PredType));
           // Process the other 2 operands normally.
           --NumChildren;
         }
@@ -3863,9 +3862,10 @@ Error GlobalISelEmitter::importChildMatcher(
   Record *PhysReg = nullptr;
   StringRef SrcChildName = getSrcChildName(SrcChild, PhysReg);
 
-  OperandMatcher &OM = PhysReg ?
-    InsnMatcher.addPhysRegInput(PhysReg, OpIdx, TempOpIdx) :
-    InsnMatcher.addOperand(OpIdx, SrcChildName, TempOpIdx);
+  OperandMatcher &OM =
+      PhysReg
+          ? InsnMatcher.addPhysRegInput(PhysReg, OpIdx, TempOpIdx)
+          : InsnMatcher.addOperand(OpIdx, std::string(SrcChildName), TempOpIdx);
   if (OM.isSameAsAnotherOperand())
     return Error::success();
 

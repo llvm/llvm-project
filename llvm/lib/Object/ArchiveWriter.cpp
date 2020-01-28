@@ -545,7 +545,7 @@ Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To) {
   for (auto ToE = sys::path::end(PathTo); ToI != ToE; ++ToI)
     sys::path::append(Relative, sys::path::Style::posix, *ToI);
 
-  return Relative.str();
+  return std::string(Relative.str());
 }
 
 Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,

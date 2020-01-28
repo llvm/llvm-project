@@ -1520,7 +1520,7 @@ template <class ELFT> void ELFBuilder<ELFT>::readSectionHeaders() {
       continue;
     }
     auto &Sec = makeSection(Shdr);
-    Sec.Name = unwrapOrError(ElfFile.getSectionName(&Shdr));
+    Sec.Name = std::string(unwrapOrError(ElfFile.getSectionName(&Shdr)));
     Sec.Type = Sec.OriginalType = Shdr.sh_type;
     Sec.Flags = Sec.OriginalFlags = Shdr.sh_flags;
     Sec.Addr = Shdr.sh_addr;

@@ -1132,7 +1132,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
     BaseDirectory.assign(BaseDir.begin(), BaseDir.end());
   } else if (!isysroot.empty()) {
     // Write out paths relative to the sysroot if possible.
-    BaseDirectory = isysroot;
+    BaseDirectory = std::string(isysroot);
   }
 
   // Module map file

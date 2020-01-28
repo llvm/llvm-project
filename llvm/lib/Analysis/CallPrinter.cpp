@@ -29,7 +29,7 @@ template <> struct DOTGraphTraits<CallGraph *> : public DefaultDOTGraphTraits {
 
   std::string getNodeLabel(CallGraphNode *Node, CallGraph *Graph) {
     if (Function *Func = Node->getFunction())
-      return Func->getName();
+      return std::string(Func->getName());
 
     return "external node";
   }

@@ -133,7 +133,7 @@ const char *ProcessLaunchInfo::GetProcessPluginName() const {
 }
 
 void ProcessLaunchInfo::SetProcessPluginName(llvm::StringRef plugin) {
-  m_plugin_name = plugin;
+  m_plugin_name = std::string(plugin);
 }
 
 const FileSpec &ProcessLaunchInfo::GetShell() const { return m_shell; }

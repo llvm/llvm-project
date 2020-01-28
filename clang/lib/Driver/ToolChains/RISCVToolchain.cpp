@@ -119,7 +119,7 @@ std::string RISCVToolChain::computeSysRoot() const {
   if (!llvm::sys::fs::exists(SysRootDir))
     return std::string();
 
-  return SysRootDir.str();
+  return std::string(SysRootDir.str());
 }
 
 void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,

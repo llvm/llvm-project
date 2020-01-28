@@ -52,7 +52,8 @@ struct SampleProfTest : ::testing::Test {
 
   void readProfile(const Module &M, StringRef Profile,
                    StringRef RemapFile = "") {
-    auto ReaderOrErr = SampleProfileReader::create(Profile, Context, RemapFile);
+    auto ReaderOrErr = SampleProfileReader::create(
+        std::string(Profile), Context, std::string(RemapFile));
     ASSERT_TRUE(NoError(ReaderOrErr.getError()));
     Reader = std::move(ReaderOrErr.get());
     Reader->collectFuncsFrom(M);

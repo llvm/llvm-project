@@ -1174,7 +1174,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     MaxGlobalType = std::max(MaxGlobalType, VE.getTypeID(GV.getValueType()));
     if (GV.hasSection()) {
       // Give section names unique ID's.
-      unsigned &Entry = SectionMap[GV.getSection()];
+      unsigned &Entry = SectionMap[std::string(GV.getSection())];
       if (!Entry) {
         writeStringRecord(Stream, bitc::MODULE_CODE_SECTIONNAME, GV.getSection(),
                           0 /*TODO*/);
@@ -1186,7 +1186,7 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     MaxAlignment = std::max(MaxAlignment, F.getAlignment());
     if (F.hasSection()) {
       // Give section names unique ID's.
-      unsigned &Entry = SectionMap[F.getSection()];
+      unsigned &Entry = SectionMap[std::string(F.getSection())];
       if (!Entry) {
         writeStringRecord(Stream, bitc::MODULE_CODE_SECTIONNAME, F.getSection(),
                           0 /*TODO*/);
@@ -1276,7 +1276,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
                    (VE.getValueID(GV.getInitializer()) + 1));
     Vals.push_back(getEncodedLinkage(GV));
     Vals.push_back(Log2_32(GV.getAlignment())+1);
-    Vals.push_back(GV.hasSection() ? SectionMap[GV.getSection()] : 0);
+    Vals.push_back(GV.hasSection() ? SectionMap[std::string(GV.getSection())]
+                                   : 0);
     if (GV.isThreadLocal() ||
         GV.getVisibility() != GlobalValue::DefaultVisibility ||
         GV.getUnnamedAddr() != GlobalValue::UnnamedAddr::None ||
@@ -1321,7 +1322,8 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     Vals.push_back(getEncodedLinkage(F));
     Vals.push_back(VE.getAttributeListID(F.getAttributes()));
     Vals.push_back(Log2_32(F.getAlignment())+1);
-    Vals.push_back(F.hasSection() ? SectionMap[F.getSection()] : 0);
+    Vals.push_back(F.hasSection() ? SectionMap[std::string(F.getSection())]
+                                  : 0);
     Vals.push_back(getEncodedVisibility(F));
     Vals.push_back(F.hasGC() ? GCMap[F.getGC()] : 0);
     Vals.push_back(getEncodedUnnamedAddr(F));

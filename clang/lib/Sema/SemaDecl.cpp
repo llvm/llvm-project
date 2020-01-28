@@ -2741,21 +2741,19 @@ static void diagnoseMissingConstinit(Sema &S, const VarDecl *InitDecl,
   // heroics.
   std::string SuitableSpelling;
   if (S.getLangOpts().CPlusPlus2a)
-    SuitableSpelling =
-        S.PP.getLastMacroWithSpelling(InsertLoc, {tok::kw_constinit});
+    SuitableSpelling = std::string(
+        S.PP.getLastMacroWithSpelling(InsertLoc, {tok::kw_constinit}));
   if (SuitableSpelling.empty() && S.getLangOpts().CPlusPlus11)
-    SuitableSpelling = S.PP.getLastMacroWithSpelling(
-        InsertLoc,
-        {tok::l_square, tok::l_square, S.PP.getIdentifierInfo("clang"),
-         tok::coloncolon,
-         S.PP.getIdentifierInfo("require_constant_initialization"),
-         tok::r_square, tok::r_square});
+    SuitableSpelling = std::string(S.PP.getLastMacroWithSpelling(
+        InsertLoc, {tok::l_square, tok::l_square,
+                    S.PP.getIdentifierInfo("clang"), tok::coloncolon,
+                    S.PP.getIdentifierInfo("require_constant_initialization"),
+                    tok::r_square, tok::r_square}));
   if (SuitableSpelling.empty())
-    SuitableSpelling = S.PP.getLastMacroWithSpelling(
-        InsertLoc,
-        {tok::kw___attribute, tok::l_paren, tok::r_paren,
-         S.PP.getIdentifierInfo("require_constant_initialization"),
-         tok::r_paren, tok::r_paren});
+    SuitableSpelling = std::string(S.PP.getLastMacroWithSpelling(
+        InsertLoc, {tok::kw___attribute, tok::l_paren, tok::r_paren,
+                    S.PP.getIdentifierInfo("require_constant_initialization"),
+                    tok::r_paren, tok::r_paren}));
   if (SuitableSpelling.empty() && S.getLangOpts().CPlusPlus2a)
     SuitableSpelling = "constinit";
   if (SuitableSpelling.empty() && S.getLangOpts().CPlusPlus11)

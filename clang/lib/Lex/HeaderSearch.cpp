@@ -133,7 +133,7 @@ const HeaderMap *HeaderSearch::CreateHeaderMap(const FileEntry *FE) {
 void HeaderSearch::getHeaderMapFileNames(
     SmallVectorImpl<std::string> &Names) const {
   for (auto &HM : HeaderMaps)
-    Names.push_back(HM.first->getName());
+    Names.push_back(std::string(HM.first->getName()));
 }
 
 std::string HeaderSearch::getCachedModuleFileName(Module *Module) {
@@ -145,7 +145,7 @@ std::string HeaderSearch::getCachedModuleFileName(Module *Module) {
 std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
                                                     bool FileMapOnly) {
   // First check the module name to pcm file map.
-  auto i (HSOpts->PrebuiltModuleFiles.find(ModuleName));
+  auto i(HSOpts->PrebuiltModuleFiles.find(std::string(ModuleName)));
   if (i != HSOpts->PrebuiltModuleFiles.end())
     return i->second;
 
@@ -184,7 +184,8 @@ std::string HeaderSearch::getCachedModuleFileName(StringRef ModuleName,
     //
     // To avoid false-negatives, we form as canonical a path as we can, and map
     // to lower-case in case we're on a case-insensitive file system.
-    std::string Parent = llvm::sys::path::parent_path(ModuleMapPath);
+    std::string Parent =
+        std::string(llvm::sys::path::parent_path(ModuleMapPath));
     if (Parent.empty())
       Parent = ".";
     auto Dir = FileMgr.getDirectory(Parent);
@@ -468,7 +469,7 @@ getTopFrameworkDir(FileManager &FileMgr, StringRef DirName,
     // If this is a framework directory, then we're a subframework of this
     // framework.
     if (llvm::sys::path::extension(DirName) == ".framework") {
-      SubmodulePath.push_back(llvm::sys::path::stem(DirName));
+      SubmodulePath.push_back(std::string(llvm::sys::path::stem(DirName)));
       TopFrameworkDir = *Dir;
     }
   } while (true);

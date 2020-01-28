@@ -25,7 +25,8 @@ void MutatingCopyCheck::registerMatchers(MatchFinder *Finder) {
     return;
 
   const auto MemberExprOrSourceObject = anyOf(
-      memberExpr(), declRefExpr(to(decl(equalsBoundNode(SourceDeclName)))));
+      memberExpr(),
+      declRefExpr(to(decl(equalsBoundNode(std::string(SourceDeclName))))));
 
   const auto IsPartOfSource =
       allOf(unless(hasDescendant(expr(unless(MemberExprOrSourceObject)))),

@@ -88,7 +88,7 @@ OutputSection *LinkerScript::createOutputSection(StringRef name,
     if (!secRef)
       secRef = sec;
   }
-  sec->location = location;
+  sec->location = std::string(location);
   return sec;
 }
 
@@ -324,7 +324,7 @@ static std::string getFilename(InputFile *file) {
   if (!file)
     return "";
   if (file->archiveName.empty())
-    return file->getName();
+    return std::string(file->getName());
   return (file->archiveName + "(" + file->getName() + ")").str();
 }
 

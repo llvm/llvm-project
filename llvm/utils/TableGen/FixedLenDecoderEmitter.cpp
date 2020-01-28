@@ -1772,7 +1772,7 @@ static std::string findOperandDecoderMethod(TypedInit *TI) {
   StringInit *String = DecoderString ?
     dyn_cast<StringInit>(DecoderString->getValue()) : nullptr;
   if (String) {
-    Decoder = String->getValue();
+    Decoder = std::string(String->getValue());
     if (!Decoder.empty())
       return Decoder;
   }
@@ -1809,7 +1809,8 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
   StringRef InstDecoder = EncodingDef.getValueAsString("DecoderMethod");
   if (InstDecoder != "") {
     bool HasCompleteInstDecoder = EncodingDef.getValueAsBit("hasCompleteDecoder");
-    InsnOperands.push_back(OperandInfo(InstDecoder, HasCompleteInstDecoder));
+    InsnOperands.push_back(
+        OperandInfo(std::string(InstDecoder), HasCompleteInstDecoder));
     Operands[Opc] = InsnOperands;
     return true;
   }
@@ -1839,8 +1840,10 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
     if (tiedTo != -1) {
       std::pair<unsigned, unsigned> SO =
         CGI.Operands.getSubOperandNumber(tiedTo);
-      TiedNames[InOutOperands[i].second] = InOutOperands[SO.first].second;
-      TiedNames[InOutOperands[SO.first].second] = InOutOperands[i].second;
+      TiedNames[std::string(InOutOperands[i].second)] =
+          std::string(InOutOperands[SO.first].second);
+      TiedNames[std::string(InOutOperands[SO.first].second)] =
+          std::string(InOutOperands[i].second);
     }
   }
 
@@ -1936,7 +1939,7 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
       StringInit *String = DecoderString ?
         dyn_cast<StringInit>(DecoderString->getValue()) : nullptr;
       if (String && String->getValue() != "")
-        Decoder = String->getValue();
+        Decoder = std::string(String->getValue());
 
       if (Decoder == "" &&
           CGI.Operands[SO.first].MIOperandInfo &&
@@ -1963,7 +1966,7 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
       String = DecoderString ?
         dyn_cast<StringInit>(DecoderString->getValue()) : nullptr;
       if (!isReg && String && String->getValue() != "")
-        Decoder = String->getValue();
+        Decoder = std::string(String->getValue());
 
       RecordVal *HasCompleteDecoderVal =
         TypeRecord->getValue("hasCompleteDecoder");
@@ -1989,16 +1992,17 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
 
   // For each operand, see if we can figure out where it is encoded.
   for (const auto &Op : InOutOperands) {
-    if (!NumberedInsnOperands[Op.second].empty()) {
+    if (!NumberedInsnOperands[std::string(Op.second)].empty()) {
       InsnOperands.insert(InsnOperands.end(),
-                          NumberedInsnOperands[Op.second].begin(),
-                          NumberedInsnOperands[Op.second].end());
+                          NumberedInsnOperands[std::string(Op.second)].begin(),
+                          NumberedInsnOperands[std::string(Op.second)].end());
       continue;
     }
-    if (!NumberedInsnOperands[TiedNames[Op.second]].empty()) {
-      if (!NumberedInsnOperandsNoTie.count(TiedNames[Op.second])) {
+    if (!NumberedInsnOperands[TiedNames[std::string(Op.second)]].empty()) {
+      if (!NumberedInsnOperandsNoTie.count(TiedNames[std::string(Op.second)])) {
         // Figure out to which (sub)operand we're tied.
-        unsigned i = CGI.Operands.getOperandNamed(TiedNames[Op.second]);
+        unsigned i =
+            CGI.Operands.getOperandNamed(TiedNames[std::string(Op.second)]);
         int tiedTo = CGI.Operands[i].getTiedRegister();
         if (tiedTo == -1) {
           i = CGI.Operands.getOperandNamed(Op.second);
@@ -2009,8 +2013,9 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
           std::pair<unsigned, unsigned> SO =
             CGI.Operands.getSubOperandNumber(tiedTo);
 
-          InsnOperands.push_back(NumberedInsnOperands[TiedNames[Op.second]]
-                                   [SO.second]);
+          InsnOperands.push_back(
+              NumberedInsnOperands[TiedNames[std::string(Op.second)]]
+                                  [SO.second]);
         }
       }
       continue;
@@ -2065,7 +2070,7 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
       }
 
       if (Var->getName() != Op.second &&
-          Var->getName() != TiedNames[Op.second]) {
+          Var->getName() != TiedNames[std::string(Op.second)]) {
         if (Base != ~0U) {
           OpInfo.addField(Base, Width, Offset);
           Base = ~0U;
@@ -2460,7 +2465,7 @@ void FixedLenDecoderEmitter::run(raw_ostream &o) {
 
     if (populateInstruction(Target, *EncodingDef, *Inst, i, Operands)) {
       std::string DecoderNamespace =
-          EncodingDef->getValueAsString("DecoderNamespace");
+          std::string(EncodingDef->getValueAsString("DecoderNamespace"));
       if (!NumberedEncodings[i].HwModeName.empty())
         DecoderNamespace +=
             std::string("_") + NumberedEncodings[i].HwModeName.str();

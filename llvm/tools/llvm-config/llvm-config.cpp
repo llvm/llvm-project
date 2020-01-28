@@ -338,7 +338,7 @@ int main(int argc, char **argv) {
     ActiveIncludeDir = ActivePrefix + "/include";
     SmallString<256> path(StringRef(LLVM_TOOLS_INSTALL_DIR));
     sys::fs::make_absolute(ActivePrefix, path);
-    ActiveBinDir = path.str();
+    ActiveBinDir = std::string(path.str());
     ActiveLibDir = ActivePrefix + "/lib" + LLVM_LIBDIR_SUFFIX;
     ActiveCMakeDir = ActiveLibDir + "/cmake/llvm";
     ActiveIncludeOption = "-I" + ActiveIncludeDir;
@@ -352,7 +352,8 @@ int main(int argc, char **argv) {
   /// in the first place. This can't be done at configure/build time.
 
   StringRef SharedExt, SharedVersionedExt, SharedDir, SharedPrefix, StaticExt,
-      StaticPrefix, StaticDir = "lib", DirSep = "/";
+      StaticPrefix, StaticDir = "lib";
+  std::string DirSep = "/";
   const Triple HostTriple(Triple::normalize(LLVM_HOST_TRIPLE));
   if (HostTriple.isOSWindows()) {
     SharedExt = "dll";
@@ -449,7 +450,7 @@ int main(int argc, char **argv) {
         // already has the necessary prefix and suffix (e.g. `.so`) added so
         // just return it unmodified.
         assert(Lib.endswith(SharedExt) && "DyLib is missing suffix");
-        LibFileName = Lib;
+        LibFileName = std::string(Lib);
       } else {
         LibFileName = (SharedPrefix + Lib + "." + SharedExt).str();
       }

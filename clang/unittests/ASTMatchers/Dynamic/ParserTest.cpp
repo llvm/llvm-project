@@ -43,7 +43,7 @@ public:
   llvm::Optional<MatcherCtor>
   lookupMatcherCtor(StringRef MatcherName) override {
     const ExpectedMatchersTy::value_type *Matcher =
-        &*ExpectedMatchers.find(MatcherName);
+        &*ExpectedMatchers.find(std::string(MatcherName));
     return reinterpret_cast<MatcherCtor>(Matcher);
   }
 
@@ -54,7 +54,8 @@ public:
                                         Diagnostics *Error) override {
     const ExpectedMatchersTy::value_type *Matcher =
         reinterpret_cast<const ExpectedMatchersTy::value_type *>(Ctor);
-    MatcherInfo ToStore = { Matcher->first, NameRange, Args, BindID };
+    MatcherInfo ToStore = {Matcher->first, NameRange, Args,
+                           std::string(BindID)};
     Matchers.push_back(ToStore);
     return VariantMatcher::SingleMatcher(Matcher->second);
   }

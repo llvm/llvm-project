@@ -45,7 +45,7 @@ std::string toString(const elf::InputFile *f) {
 
   if (f->toStringCache.empty()) {
     if (f->archiveName.empty())
-      f->toStringCache = f->getName();
+      f->toStringCache = std::string(f->getName());
     else
       f->toStringCache = (f->archiveName + "(" + f->getName() + ")").str();
   }
@@ -222,7 +222,7 @@ void parseFile(InputFile *file) {
 
 // Concatenates arguments to construct a string representing an error location.
 static std::string createFileLineMsg(StringRef path, unsigned line) {
-  std::string filename = path::filename(path);
+  std::string filename = std::string(path::filename(path));
   std::string lineno = ":" + std::to_string(line);
   if (filename == path)
     return filename + lineno;
@@ -243,7 +243,7 @@ static std::string getSrcMsgAux(ObjFile<ELFT> &file, const Symbol &sym,
     return createFileLineMsg(fileLine->first, fileLine->second);
 
   // File.sourceFile contains STT_FILE symbol, and that is a last resort.
-  return file.sourceFile;
+  return std::string(file.sourceFile);
 }
 
 std::string InputFile::getSrcMsg(const Symbol &sym, InputSectionBase &sec,
@@ -1405,7 +1405,7 @@ static uint8_t getBitcodeMachineKind(StringRef path, const Triple &t) {
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive)
     : InputFile(BitcodeKind, mb) {
-  this->archiveName = archiveName;
+  this->archiveName = std::string(archiveName);
 
   std::string path = mb.getBufferIdentifier().str();
   if (config->thinLTOIndexOnly)
@@ -1607,7 +1607,7 @@ std::string replaceThinLTOSuffix(StringRef path) {
 
   if (path.consume_back(suffix))
     return (path + repl).str();
-  return path;
+  return std::string(path);
 }
 
 template void BitcodeFile::parse<ELF32LE>();

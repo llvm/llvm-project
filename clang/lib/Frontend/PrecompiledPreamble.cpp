@@ -269,8 +269,9 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
 
   // Tell the compiler invocation to generate a temporary precompiled header.
   FrontendOpts.ProgramAction = frontend::GeneratePCH;
-  FrontendOpts.OutputFile = StoreInMemory ? getInMemoryPreamblePath()
-                                          : Storage.asFile().getFilePath();
+  FrontendOpts.OutputFile =
+      std::string(StoreInMemory ? getInMemoryPreamblePath()
+                                : Storage.asFile().getFilePath());
   PreprocessorOpts.PrecompiledPreambleBytes.first = 0;
   PreprocessorOpts.PrecompiledPreambleBytes.second = false;
   // Inform preprocessor to record conditional stack when building the preamble.
@@ -548,7 +549,7 @@ PrecompiledPreamble::TempPCHFile::CreateNewPreamblePCHFile() {
     return EC;
   // We only needed to make sure the file exists, close the file right away.
   llvm::sys::Process::SafelyCloseFileDescriptor(FD);
-  return TempPCHFile(std::move(File).str());
+  return TempPCHFile(std::string(std::move(File).str()));
 }
 
 PrecompiledPreamble::TempPCHFile::TempPCHFile(std::string FilePath)
@@ -715,7 +716,7 @@ void PrecompiledPreamble::setupPreambleStorage(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> &VFS) {
   if (Storage.getKind() == PCHStorage::Kind::TempFile) {
     const TempPCHFile &PCHFile = Storage.asFile();
-    PreprocessorOpts.ImplicitPCHInclude = PCHFile.getFilePath();
+    PreprocessorOpts.ImplicitPCHInclude = std::string(PCHFile.getFilePath());
 
     // Make sure we can access the PCH file even if we're using a VFS
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> RealFS =
@@ -739,7 +740,7 @@ void PrecompiledPreamble::setupPreambleStorage(
     // For in-memory preamble, we have to provide a VFS overlay that makes it
     // accessible.
     StringRef PCHPath = getInMemoryPreamblePath();
-    PreprocessorOpts.ImplicitPCHInclude = PCHPath;
+    PreprocessorOpts.ImplicitPCHInclude = std::string(PCHPath);
 
     auto Buf = llvm::MemoryBuffer::getMemBuffer(Storage.asMemory().Data);
     VFS = createVFSOverlayForPreamblePCH(PCHPath, std::move(Buf), VFS);

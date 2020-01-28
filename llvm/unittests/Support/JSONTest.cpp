@@ -196,7 +196,7 @@ TEST(JSONTest, ParseErrors) {
       FAIL() << "Parsed JSON >>> " << S << " <<< but wanted error: " << Msg;
     } else {
       handleAllErrors(E.takeError(), [S, Msg](const llvm::ErrorInfoBase &E) {
-        EXPECT_THAT(E.message(), testing::HasSubstr(Msg)) << S;
+        EXPECT_THAT(E.message(), testing::HasSubstr(std::string(Msg))) << S;
       });
     }
   };

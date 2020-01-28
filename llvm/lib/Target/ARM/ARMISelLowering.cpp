@@ -15958,7 +15958,7 @@ bool ARMTargetLowering::ExpandInlineAsm(CallInst *CI) const {
   switch (AsmPieces.size()) {
   default: return false;
   case 1:
-    AsmStr = AsmPieces[0];
+    AsmStr = std::string(AsmPieces[0]);
     AsmPieces.clear();
     SplitString(AsmStr, AsmPieces, " \t,");
 

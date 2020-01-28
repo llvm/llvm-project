@@ -65,7 +65,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
       if (G)
         if (const TargetInstrInfo *TII = G->getSubtarget().getInstrInfo())
           if (getMachineOpcode() < TII->getNumOpcodes())
-            return TII->getName(getMachineOpcode());
+            return std::string(TII->getName(getMachineOpcode()));
       return "<<Unknown Machine Node #" + utostr(getOpcode()) + ">>";
     }
     if (G) {
