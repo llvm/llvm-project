@@ -412,9 +412,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                          SanitizerKind::Leak | SanitizerKind::Thread |
                          SanitizerKind::Memory | SanitizerKind::KernelAddress),
       std::make_pair(SanitizerKind::SafeStack,
-                     SanitizerKind::Address | SanitizerKind::HWAddress |
-                         SanitizerKind::Leak | SanitizerKind::Thread |
-                         SanitizerKind::Memory | SanitizerKind::KernelAddress),
+                     (TC.getTriple().isOSFuchsia() ? SanitizerMask()
+                                                   : SanitizerKind::Leak) |
+                         SanitizerKind::Address | SanitizerKind::HWAddress |
+                         SanitizerKind::Thread | SanitizerKind::Memory |
+                         SanitizerKind::KernelAddress),
       std::make_pair(SanitizerKind::KernelHWAddress,
                      SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::Leak | SanitizerKind::Thread |
@@ -831,8 +833,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   if (AllAddedKinds & SanitizerKind::SafeStack) {
-    // SafeStack runtime is built into the system on Fuchsia.
-    SafeStackRuntime = !TC.getTriple().isOSFuchsia();
+    // SafeStack runtime is built into the system on Android and Fuchsia.
+    SafeStackRuntime =
+        !TC.getTriple().isAndroid() && !TC.getTriple().isOSFuchsia();
   }
 
   LinkRuntimes =
