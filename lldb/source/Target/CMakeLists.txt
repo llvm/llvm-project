@@ -27,6 +27,7 @@ endif()
 
 add_lldb_library(lldbTarget
   ABI.cpp
+  AssertFrameRecognizer.cpp
   ExecutionContext.cpp
   InstrumentationRuntime.cpp
   InstrumentationRuntimeStopInfo.cpp

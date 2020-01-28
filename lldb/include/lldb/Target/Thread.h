@@ -216,6 +216,12 @@ public:
 
   virtual void RefreshStateAfterStop() = 0;
 
+  void SelectMostRelevantFrame();
+
+  llvm::StringRef GetStopDescription();
+
+  llvm::StringRef GetStopDescriptionRaw();
+
   void WillStop();
 
   bool ShouldStop(Event *event_ptr);

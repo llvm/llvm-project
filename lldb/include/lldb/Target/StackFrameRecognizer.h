@@ -12,6 +12,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/StopInfo.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
@@ -33,6 +34,8 @@ public:
   virtual lldb::ValueObjectSP GetExceptionObject() {
     return lldb::ValueObjectSP();
   }
+  virtual lldb::StackFrameSP GetMostRelevantFrame() { return nullptr; };
+  virtual llvm::StringRef GetStopDescription() { return ""; }
   virtual ~RecognizedStackFrame(){};
 
 protected:
