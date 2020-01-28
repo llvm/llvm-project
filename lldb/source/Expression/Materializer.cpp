@@ -1404,13 +1404,7 @@ uint32_t Materializer::AddRegister(const RegisterInfo &register_info,
   return ret;
 }
 
-Materializer::Materializer(LLVMCastKind kind)
-    : m_kind(kind), m_dematerializer_wp(), m_current_offset(0),
-      m_struct_alignment(8) {}
-
-Materializer::Materializer()
-    : m_kind(eKindBasic), m_dematerializer_wp(), m_current_offset(0),
-      m_struct_alignment(8) {}
+Materializer::Materializer(LLVMCastKind kind) : m_kind(kind) {}
 
 Materializer::~Materializer() {
   DematerializerSP dematerializer_sp = m_dematerializer_wp.lock();
