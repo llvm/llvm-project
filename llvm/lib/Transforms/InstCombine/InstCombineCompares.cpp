@@ -5369,6 +5369,27 @@ static Instruction *foldVectorCmp(CmpInst &Cmp,
     return new ShuffleVectorInst(NewCmp, UndefValue::get(NewCmp->getType()), M);
   }
 
+  // Try to canonicalize compare with splatted operand and splat constant.
+  // TODO: We could generalize this for more than splats. See/use the code in
+  //       InstCombiner::foldVectorBinop().
+  Constant *C;
+  if (!LHS->hasOneUse() || !match(RHS, m_Constant(C)))
+    return nullptr;
+
+  // Length-changing splats are ok, so adjust the constants as needed:
+  // cmp (shuffle V1, M), C --> shuffle (cmp V1, C'), M
+  Constant *ScalarC = C->getSplatValue(/* AllowUndefs */ true);
+  Constant *ScalarM = M->getSplatValue(/* AllowUndefs */ true);
+  if (ScalarC && ScalarM) {
+    // We allow undefs in matching, but this transform removes those for safety.
+    // Demanded elements analysis should be able to recover some/all of that.
+    C = ConstantVector::getSplat(V1Ty->getVectorNumElements(), ScalarC);
+    M = ConstantVector::getSplat(M->getType()->getVectorNumElements(), ScalarM);
+    Value *NewCmp = IsFP ? Builder.CreateFCmp(Pred, V1, C)
+                         : Builder.CreateICmp(Pred, V1, C);
+    return new ShuffleVectorInst(NewCmp, UndefValue::get(NewCmp->getType()), M);
+  }
+
   return nullptr;
 }
 
