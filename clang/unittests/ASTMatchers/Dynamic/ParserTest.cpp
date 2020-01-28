@@ -28,7 +28,7 @@ public:
     // 'stmt()' to be all the same matcher.
     // Use a more complex expression to prevent that.
     ast_matchers::internal::Matcher<Stmt> M = stmt(stmt(), stmt());
-    ExpectedMatchers.insert(std::make_pair(MatcherName, M));
+    ExpectedMatchers.insert(std::make_pair(std::string(MatcherName), M));
     return M.getID().second;
   }
 
