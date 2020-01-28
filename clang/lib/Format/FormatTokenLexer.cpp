@@ -74,7 +74,7 @@ void FormatTokenLexer::tryMergePreviousTokens() {
   if (Style.isCSharp()) {
     if (tryMergeCSharpKeywordVariables())
       return;
-    if (tryMergeCSharpVerbatimStringLiteral())
+    if (tryMergeCSharpStringLiteral())
       return;
     if (tryMergeCSharpDoubleQuestion())
       return;
@@ -181,18 +181,68 @@ bool FormatTokenLexer::tryMergeJSPrivateIdentifier() {
 // Search for verbatim or interpolated string literals @"ABC" or
 // $"aaaaa{abc}aaaaa" i and mark the token as TT_CSharpStringLiteral, and to
 // prevent splitting of @, $ and ".
-bool FormatTokenLexer::tryMergeCSharpVerbatimStringLiteral() {
+bool FormatTokenLexer::tryMergeCSharpStringLiteral() {
   if (Tokens.size() < 2)
     return false;
 
-  auto &String = *(Tokens.end() - 1);
-  if (!String->is(tok::string_literal))
-    return false;
+  auto &CSharpStringLiteral = *(Tokens.end() - 2);
+
+  // Interpolated strings could contain { } with " characters inside.
+  // $"{x ?? "null"}"
+  // should not be split into $"{x ?? ", null, "}" but should treated as a
+  // single string-literal.
+  //
+  // We opt not to try and format expressions inside {} within a C#
+  // interpolated string. Formatting expressions within an interpolated string
+  // would require similar work as that done for JavaScript template strings
+  // in `handleTemplateStrings()`.
+  auto &CSharpInterpolatedString = *(Tokens.end() - 2);
+  if (CSharpInterpolatedString->Type == TT_CSharpStringLiteral &&
+      (CSharpInterpolatedString->TokenText.startswith(R"($")") ||
+       CSharpInterpolatedString->TokenText.startswith(R"($@")"))) {
+    int UnmatchedOpeningBraceCount = 0;
+
+    auto TokenTextSize = CSharpInterpolatedString->TokenText.size();
+    for (size_t Index = 0; Index < TokenTextSize; ++Index) {
+      char C = CSharpInterpolatedString->TokenText[Index];
+      if (C == '{') {
+        // "{{"  inside an interpolated string is an escaped '{' so skip it.
+        if (Index + 1 < TokenTextSize &&
+            CSharpInterpolatedString->TokenText[Index + 1] == '{') {
+          ++Index;
+          continue;
+        }
+        ++UnmatchedOpeningBraceCount;
+      } else if (C == '}') {
+        // "}}"  inside an interpolated string is an escaped '}' so skip it.
+        if (Index + 1 < TokenTextSize &&
+            CSharpInterpolatedString->TokenText[Index + 1] == '}') {
+          ++Index;
+          continue;
+        }
+        --UnmatchedOpeningBraceCount;
+      }
+    }
+
+    if (UnmatchedOpeningBraceCount > 0) {
+      auto &NextToken = *(Tokens.end() - 1);
+      CSharpInterpolatedString->TokenText =
+          StringRef(CSharpInterpolatedString->TokenText.begin(),
+                    NextToken->TokenText.end() -
+                        CSharpInterpolatedString->TokenText.begin());
+      CSharpInterpolatedString->ColumnWidth += NextToken->ColumnWidth;
+      Tokens.erase(Tokens.end() - 1);
+      return true;
+    }
+  }
 
   // verbatim strings could contain "" which C# sees as an escaped ".
   // @"""Hello""" will have been tokenized as @"" "Hello" "" and needs
   // merging into a single string literal.
-  auto &CSharpStringLiteral = *(Tokens.end() - 2);
+  auto &String = *(Tokens.end() - 1);
+  if (!String->is(tok::string_literal))
+    return false;
+
   if (CSharpStringLiteral->Type == TT_CSharpStringLiteral &&
       (CSharpStringLiteral->TokenText.startswith(R"(@")") ||
        CSharpStringLiteral->TokenText.startswith(R"($@")"))) {
