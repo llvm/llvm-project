@@ -4403,7 +4403,7 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
   ChangeStatus updateImpl(Attributor &A) override {
     bool HasValueBefore = SimplifiedAssociatedValue.hasValue();
 
-    auto VisitValueCB = [&](Value &V, BooleanState, bool Stripped) -> bool {
+    auto VisitValueCB = [&](Value &V, bool, bool Stripped) -> bool {
       auto &AA = A.getAAFor<AAValueSimplify>(*this, IRPosition::value(V));
       if (!Stripped && this == &AA) {
         // TODO: Look the instruction and check recursively.
@@ -4415,9 +4415,9 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
       return checkAndUpdate(A, *this, V, SimplifiedAssociatedValue);
     };
 
-    if (!genericValueTraversal<AAValueSimplify, BooleanState>(
-            A, getIRPosition(), *this, static_cast<BooleanState &>(*this),
-            VisitValueCB))
+    bool Dummy;
+    if (!genericValueTraversal<AAValueSimplify, bool>(A, getIRPosition(), *this,
+                                                      Dummy, VisitValueCB))
       if (!askSimplifiedValueForAAValueConstantRange(A))
         return indicatePessimisticFixpoint();
 
