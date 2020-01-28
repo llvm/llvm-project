@@ -39,8 +39,8 @@ void DWARFIndex::ProcessFunctionDIE(llvm::StringRef name, DIERef ref,
   if (!SymbolFileDWARF::DIEInDeclContext(&parent_decl_ctx, die))
     return;
 
-  // In case of a full match, we just insert everything we find.
-  if (name_type_mask & eFunctionNameTypeFull) {
+  // In case of a full match, we insert functions with a matching mangled name.
+  if (name_type_mask & eFunctionNameTypeFull && die.GetMangledName() == name) {
     dies.push_back(die);
     return;
   }
