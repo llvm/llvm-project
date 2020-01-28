@@ -1109,6 +1109,7 @@ bool SwiftASTManipulator::AddExternalVariables(
         swift::VarDecl(is_static, introducer, is_capture_list, loc, name,
                        &m_source_file);
     redirected_var_decl->setInterfaceType(var_type);
+    redirected_var_decl->setTopLevelGlobal(true);
 
     swift::TopLevelCodeDecl *top_level_code =
         new (ast_context) swift::TopLevelCodeDecl(&m_source_file);
@@ -1222,6 +1223,9 @@ bool SwiftASTManipulator::AddExternalVariables(
       redirected_var_decl->setInterfaceType(interface_type);
       redirected_var_decl->setDebuggerVar(true);
       redirected_var_decl->setImplicit(true);
+      // This avoids having local variables filtered out by
+      // swift::namelookup::filterForDiscriminator().
+      redirected_var_decl->overwriteAccess(swift::AccessLevel::Public);
 
       swift::PatternBindingDecl *pattern_binding =
           GetPatternBindingForVarDecl(redirected_var_decl, containing_function);

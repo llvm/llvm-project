@@ -1254,6 +1254,17 @@ CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
   return matching_namespace;
 }
 
+bool SymbolFileDWARFDebugMap::GetCompileOption(const char *option,
+                                               std::string &value,
+                                               CompileUnit *cu) {
+  bool success = false;
+  ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
+    success |= oso_dwarf->GetCompileOption(option, value, cu);
+    return success;
+  });
+  return success;
+}
+
 void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
   ForEachSymbolFile([&s](SymbolFileDWARF *oso_dwarf) -> bool {
     oso_dwarf->DumpClangAST(s);
