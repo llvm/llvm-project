@@ -14,6 +14,8 @@
 #include "lsan_thread.h"
 #if SANITIZER_POSIX
 #include "lsan_posix.h"
+#elif SANITIZER_FUCHSIA
+#include "lsan_fuchsia.h"
 #endif
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
@@ -36,6 +38,7 @@ namespace __lsan {
 
 void InitializeInterceptors();
 void ReplaceSystemMalloc();
+void LsanOnDeadlySignal(int signo, void *siginfo, void *context);
 
 #define ENSURE_LSAN_INITED do {   \
   CHECK(!lsan_init_is_running);   \

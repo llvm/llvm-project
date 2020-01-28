@@ -5,6 +5,7 @@ append_rtti_flag(OFF LSAN_CFLAGS)
 
 set(LSAN_COMMON_SOURCES
   lsan_common.cpp
+  lsan_common_fuchsia.cpp
   lsan_common_linux.cpp
   lsan_common_mac.cpp
   )
@@ -12,6 +13,7 @@ set(LSAN_COMMON_SOURCES
 set(LSAN_SOURCES
   lsan.cpp
   lsan_allocator.cpp
+  lsan_fuchsia.cpp
   lsan_interceptors.cpp
   lsan_linux.cpp
   lsan_mac.cpp
