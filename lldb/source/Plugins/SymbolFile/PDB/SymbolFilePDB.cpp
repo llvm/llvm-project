@@ -1772,7 +1772,6 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(CompileUnit &comp_unit,
   // to do a mapping so that we can hand out indices.
   llvm::DenseMap<uint32_t, uint32_t> index_map;
   BuildSupportFileIdToSupportFileIndexMap(*compiland_up, index_map);
-  auto line_table = std::make_unique<LineTable>(&comp_unit);
 
   // Find contributions to `compiland` from all source and header files.
   auto files = m_session_up->getSourceFilesForCompiland(*compiland_up);
@@ -1781,9 +1780,10 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(CompileUnit &comp_unit,
 
   // For each source and header file, create a LineSequence for contributions
   // to the compiland from that file, and add the sequence.
+  std::vector<std::unique_ptr<LineSequence>> sequences;
   while (auto file = files->getNext()) {
-    std::unique_ptr<LineSequence> sequence(
-        line_table->CreateLineSequenceContainer());
+    std::unique_ptr<LineSequence> sequence =
+        LineTable::CreateLineSequenceContainer();
     auto lines = m_session_up->findLineNumbers(*compiland_up, *file);
     if (!lines)
       continue;
@@ -1812,12 +1812,12 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(CompileUnit &comp_unit,
       // of the previous entry's address range if the current entry resulted in
       // a gap from the previous entry.
       if (is_gap && ShouldAddLine(match_line, prev_line, prev_length)) {
-        line_table->AppendLineEntryToSequence(
+        LineTable::AppendLineEntryToSequence(
             sequence.get(), prev_addr + prev_length, prev_line, 0,
             prev_source_idx, false, false, false, false, true);
 
-        line_table->InsertSequence(sequence.release());
-        sequence = line_table->CreateLineSequenceContainer();
+        sequences.push_back(std::move(sequence));
+        sequence = LineTable::CreateLineSequenceContainer();
       }
 
       if (ShouldAddLine(match_line, lno, length)) {
@@ -1836,9 +1836,9 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(CompileUnit &comp_unit,
             is_epilogue = (addr == epilogue->getVirtualAddress());
         }
 
-        line_table->AppendLineEntryToSequence(sequence.get(), addr, lno, col,
-                                              source_idx, is_statement, false,
-                                              is_prologue, is_epilogue, false);
+        LineTable::AppendLineEntryToSequence(sequence.get(), addr, lno, col,
+                                             source_idx, is_statement, false,
+                                             is_prologue, is_epilogue, false);
       }
 
       prev_addr = addr;
@@ -1849,14 +1849,16 @@ bool SymbolFilePDB::ParseCompileUnitLineTable(CompileUnit &comp_unit,
 
     if (entry_count > 0 && ShouldAddLine(match_line, prev_line, prev_length)) {
       // The end is always a terminal entry, so insert it regardless.
-      line_table->AppendLineEntryToSequence(
+      LineTable::AppendLineEntryToSequence(
           sequence.get(), prev_addr + prev_length, prev_line, 0,
           prev_source_idx, false, false, false, false, true);
     }
 
-    line_table->InsertSequence(sequence.get());
+    sequences.push_back(std::move(sequence));
   }
 
+  auto line_table =
+      std::make_unique<LineTable>(&comp_unit, std::move(sequences));
   if (line_table->GetSize()) {
     comp_unit.SetLineTable(line_table.release());
     return true;
