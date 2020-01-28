@@ -1180,7 +1180,7 @@ void VFABI::getVectorVariantNames(
     assert(CI.getModule()->getFunction(Info.getValue().VectorName) &&
            "Vector function is missing.");
 #endif
-    VariantMappings.push_back(S);
+    VariantMappings.push_back(std::string(S));
   }
 }
 

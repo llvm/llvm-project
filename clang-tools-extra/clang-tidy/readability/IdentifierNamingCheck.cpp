@@ -256,7 +256,7 @@ static std::string fixupWithCase(StringRef Name,
   }
 
   if (Words.empty())
-    return Name;
+    return std::string(Name);
 
   std::string Fixup;
   switch (Case) {

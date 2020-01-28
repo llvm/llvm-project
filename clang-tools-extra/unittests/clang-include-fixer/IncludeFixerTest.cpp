@@ -29,7 +29,8 @@ static bool runOnCode(tooling::ToolAction *ToolAction, StringRef Code,
       new FileManager(FileSystemOptions(), InMemoryFileSystem));
   // FIXME: Investigate why -fms-compatibility breaks tests.
   std::vector<std::string> Args = {"include_fixer", "-fsyntax-only",
-                                   "-fno-ms-compatibility", FileName};
+                                   "-fno-ms-compatibility",
+                                   std::string(FileName)};
   Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
   tooling::ToolInvocation Invocation(
       Args, ToolAction, Files.get(),
@@ -102,7 +103,7 @@ static std::string runIncludeFixer(
   runOnCode(&Factory, Code, FakeFileName, ExtraArgs);
   assert(FixerContexts.size() == 1);
   if (FixerContexts.front().getHeaderInfos().empty())
-    return Code;
+    return std::string(Code);
   auto Replaces = createIncludeFixerReplacements(Code, FixerContexts.front());
   EXPECT_TRUE(static_cast<bool>(Replaces))
       << llvm::toString(Replaces.takeError()) << "\n";

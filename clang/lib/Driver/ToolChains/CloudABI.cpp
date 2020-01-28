@@ -102,7 +102,7 @@ CloudABI::CloudABI(const Driver &D, const llvm::Triple &Triple,
     : Generic_ELF(D, Triple, Args) {
   SmallString<128> P(getDriver().Dir);
   llvm::sys::path::append(P, "..", getTriple().str(), "lib");
-  getFilePaths().push_back(P.str());
+  getFilePaths().push_back(std::string(P.str()));
 }
 
 void CloudABI::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,

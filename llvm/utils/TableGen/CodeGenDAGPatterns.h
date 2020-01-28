@@ -430,7 +430,7 @@ class ScopedName {
   std::string Identifier;
 public:
   ScopedName(unsigned Scope, StringRef Identifier)
-    : Scope(Scope), Identifier(Identifier) {
+      : Scope(Scope), Identifier(std::string(Identifier)) {
     assert(Scope != 0 &&
            "Scope == 0 is used to indicate predicates without arguments");
   }
@@ -1075,8 +1075,9 @@ public:
     // The string will excute in a subclass of SelectionDAGISel.
     // Cast to std::string explicitly to avoid ambiguity with StringRef.
     std::string C = IsHwMode
-        ? std::string("MF->getSubtarget().checkFeatures(\"" + Features + "\")")
-        : std::string(Def->getValueAsString("CondString"));
+                        ? std::string("MF->getSubtarget().checkFeatures(\"" +
+                                      Features + "\")")
+                        : std::string(Def->getValueAsString("CondString"));
     if (C.empty())
       return "";
     return IfCond ? C : "!("+C+')';

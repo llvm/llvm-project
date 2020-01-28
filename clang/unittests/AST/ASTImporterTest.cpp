@@ -115,8 +115,8 @@ class TestImportBase : public CompilerOptionSpecificTest,
              const BindableMatcher<NodeType> &VerificationMatcher) {
     return testImport(
         FromCode, FromArgs, ToCode, ToArgs, Verifier,
-        translationUnitDecl(
-            has(namedDecl(hasName(DeclToImportID)).bind(DeclToImportID))),
+        translationUnitDecl(has(namedDecl(hasName(std::string(DeclToImportID)))
+                                    .bind(DeclToImportID))),
         VerificationMatcher);
   }
 

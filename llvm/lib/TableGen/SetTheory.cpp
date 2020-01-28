@@ -191,7 +191,7 @@ struct SequenceOp : public SetTheory::Operator {
 
     std::string Format;
     if (StringInit *SI = dyn_cast<StringInit>(Expr->arg_begin()[0]))
-      Format = SI->getValue();
+      Format = std::string(SI->getValue());
     else
       PrintFatalError(Loc,  "Format must be a string: " + Expr->getAsString());
 

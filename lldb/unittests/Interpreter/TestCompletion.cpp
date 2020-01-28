@@ -233,7 +233,7 @@ TEST_F(CompletionTest, DirCompletionUsername) {
   Resolver.AddKnownUser("Lars", DirFooC);
   Resolver.AddKnownUser("Jason", DirFoo);
   Resolver.AddKnownUser("Larry", DirFooA);
-  std::string sep = path::get_separator();
+  std::string sep = std::string(path::get_separator());
 
   // Just resolving current user's home directory by itself should return the
   // directory.

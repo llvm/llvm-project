@@ -838,7 +838,7 @@ JITDylib::defineMaterializing(SymbolFlagsMap SymbolFlags) {
             Symbols.erase(SI);
 
           // FIXME: Return all duplicates.
-          return make_error<DuplicateDefinition>(*Name);
+          return make_error<DuplicateDefinition>(std::string(*Name));
         }
 
         // Otherwise just make a note to discard this symbol after the loop.
@@ -1815,7 +1815,7 @@ Error JITDylib::defineImpl(MaterializationUnit &MU) {
 
   // If there were any duplicate definitions then bail out.
   if (!Duplicates.empty())
-    return make_error<DuplicateDefinition>(**Duplicates.begin());
+    return make_error<DuplicateDefinition>(std::string(**Duplicates.begin()));
 
   // Discard any overridden defs in this MU.
   for (auto &S : MUDefsOverridden)

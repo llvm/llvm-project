@@ -107,7 +107,7 @@ bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
       // object that corresponds to the help command entered.
       std::string sub_command;
       for (auto &entry : command.entries().drop_front()) {
-        sub_command = entry.ref();
+        sub_command = std::string(entry.ref());
         matches.Clear();
         if (sub_cmd_obj->IsAlias())
           sub_cmd_obj =

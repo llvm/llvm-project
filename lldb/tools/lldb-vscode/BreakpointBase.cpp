@@ -12,9 +12,9 @@
 using namespace lldb_vscode;
 
 BreakpointBase::BreakpointBase(const llvm::json::Object &obj)
-    : condition(GetString(obj, "condition")),
-      hitCondition(GetString(obj, "hitCondition")),
-      logMessage(GetString(obj, "logMessage")) {}
+    : condition(std::string(GetString(obj, "condition"))),
+      hitCondition(std::string(GetString(obj, "hitCondition"))),
+      logMessage(std::string(GetString(obj, "logMessage"))) {}
 
 void BreakpointBase::SetCondition() { bp.SetCondition(condition.c_str()); }
 

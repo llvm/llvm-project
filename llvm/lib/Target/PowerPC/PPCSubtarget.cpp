@@ -123,7 +123,7 @@ void PPCSubtarget::initializeEnvironment() {
 
 void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   // Determine default and user specified characteristics
-  std::string CPUName = CPU;
+  std::string CPUName = std::string(CPU);
   if (CPUName.empty() || CPU == "generic") {
     // If cross-compiling with -march=ppc64le without -mcpu
     if (TargetTriple.getArch() == Triple::ppc64le)

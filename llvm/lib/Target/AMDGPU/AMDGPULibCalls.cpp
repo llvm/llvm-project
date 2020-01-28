@@ -585,7 +585,7 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   assert(Callee->hasName() && "Invalid read_pipe/write_pipe function");
   auto *M = Callee->getParent();
   auto &Ctx = M->getContext();
-  std::string Name = Callee->getName();
+  std::string Name = std::string(Callee->getName());
   auto NumArg = CI->getNumArgOperands();
   if (NumArg != 4 && NumArg != 6)
     return false;

@@ -35,7 +35,7 @@ static ThreadSafeModule extractSubModule(ThreadSafeModule &TSM,
       Constant *Aliasee = A.getAliasee();
       assert(A.hasName() && "Anonymous alias?");
       assert(Aliasee->hasName() && "Anonymous aliasee");
-      std::string AliasName = A.getName();
+      std::string AliasName = std::string(A.getName());
 
       if (isa<Function>(Aliasee)) {
         auto *F = cloneFunctionDecl(*A.getParent(), *cast<Function>(Aliasee));

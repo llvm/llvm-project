@@ -31,7 +31,7 @@ std::string toString(const wasm::Symbol &sym) {
 std::string maybeDemangleSymbol(StringRef name) {
   if (wasm::config->demangle)
     return demangleItanium(name);
-  return name;
+  return std::string(name);
 }
 
 std::string toString(wasm::Symbol::Kind kind) {

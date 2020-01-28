@@ -159,7 +159,7 @@ TEST(SemanticSelection, RunViaClangDServer) {
   }]]]]
   )cpp";
   Annotations SourceAnnotations(SourceContents);
-  FS.Files[FooCpp] = SourceAnnotations.code();
+  FS.Files[FooCpp] = std::string(SourceAnnotations.code());
   Server.addDocument(FooCpp, SourceAnnotations.code());
 
   auto Ranges = runSemanticRanges(Server, FooCpp, SourceAnnotations.point());

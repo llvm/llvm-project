@@ -1327,7 +1327,7 @@ PreservedAnalyses LoopFullUnrollPass::run(Loop &L, LoopAnalysisManager &AM,
   else
     OldLoops.insert(AR.LI.begin(), AR.LI.end());
 
-  std::string LoopName = L.getName();
+  std::string LoopName = std::string(L.getName());
 
   bool Changed = tryToUnrollLoop(&L, AR.DT, &AR.LI, AR.SE, AR.TTI, AR.AC, *ORE,
                                  /*BFI*/ nullptr, /*PSI*/ nullptr,
@@ -1470,7 +1470,7 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     Optional<bool> LocalAllowPeeling = UnrollOpts.AllowPeeling;
     if (PSI && PSI->hasHugeWorkingSetSize())
       LocalAllowPeeling = false;
-    std::string LoopName = L.getName();
+    std::string LoopName = std::string(L.getName());
     // The API here is quite complex to call and we allow to select some
     // flavors of unrolling during construction time (by setting UnrollOpts).
     LoopUnrollResult Result = tryToUnrollLoop(

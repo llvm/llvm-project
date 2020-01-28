@@ -91,7 +91,8 @@ rewriteInverseTimeCall(const MatchFinder::MatchResult &Result,
                        DurationScale Scale, const Expr &Node) {
   llvm::StringRef InverseFunction = getTimeInverseForScale(Scale);
   if (const auto *MaybeCallArg = selectFirst<const Expr>(
-          "e", match(callExpr(callee(functionDecl(hasName(InverseFunction))),
+          "e", match(callExpr(callee(functionDecl(
+                                  hasName(std::string(InverseFunction)))),
                               hasArgument(0, expr().bind("e"))),
                      Node, *Result.Context))) {
     return tooling::fixit::getText(*MaybeCallArg, *Result.Context).str();

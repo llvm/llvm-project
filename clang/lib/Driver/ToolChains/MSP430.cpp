@@ -143,7 +143,7 @@ std::string MSP430ToolChain::computeSysRoot() const {
   else
     llvm::sys::path::append(Dir, getDriver().Dir, "..", getTriple().str());
 
-  return Dir.str();
+  return std::string(Dir.str());
 }
 
 void MSP430ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,

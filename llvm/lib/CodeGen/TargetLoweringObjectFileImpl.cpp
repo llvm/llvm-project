@@ -888,7 +888,7 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
     for (const auto *Option : LinkerOptions->operands()) {
       SmallVector<std::string, 4> StrOptions;
       for (const auto &Piece : cast<MDNode>(Option)->operands())
-        StrOptions.push_back(cast<MDString>(Piece)->getString());
+        StrOptions.push_back(std::string(cast<MDString>(Piece)->getString()));
       Streamer.EmitLinkerOptions(StrOptions);
     }
   }
@@ -1453,7 +1453,7 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
       for (const auto &Piece : cast<MDNode>(Option)->operands()) {
         // Lead with a space for consistency with our dllexport implementation.
         std::string Directive(" ");
-        Directive.append(cast<MDString>(Piece)->getString());
+        Directive.append(std::string(cast<MDString>(Piece)->getString()));
         Streamer.EmitBytes(Directive);
       }
     }

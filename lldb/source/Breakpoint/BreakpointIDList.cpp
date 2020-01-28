@@ -144,7 +144,7 @@ void BreakpointIDList::FindAndReplaceIDRanges(Args &old_args, Target *target,
         result.SetStatus(eReturnStatusFailed);
         return;
       } else
-        names_found.insert(current_arg);
+        names_found.insert(std::string(current_arg));
     } else if ((i + 2 < old_args.size()) &&
                BreakpointID::IsRangeIdentifier(old_args[i + 1].ref()) &&
                BreakpointID::IsValidIDExpression(current_arg) &&

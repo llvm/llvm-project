@@ -103,7 +103,7 @@ void AnalyzerStatsChecker::checkEndAnalysis(ExplodedGraph &G,
 
   NumBlocksUnreachable += unreachable;
   NumBlocks += total;
-  std::string NameOfRootFunction = output.str();
+  std::string NameOfRootFunction = std::string(output.str());
 
   output << " -> Total CFGBlocks: " << total << " | Unreachable CFGBlocks: "
       << unreachable << " | Exhausted Block: "

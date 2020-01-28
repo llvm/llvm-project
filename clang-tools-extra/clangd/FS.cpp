@@ -19,7 +19,7 @@ PreambleFileStatusCache::PreambleFileStatusCache(llvm::StringRef MainFilePath){
   assert(llvm::sys::path::is_absolute(MainFilePath));
   llvm::SmallString<256> MainFileCanonical(MainFilePath);
   llvm::sys::path::remove_dots(MainFileCanonical, /*remove_dot_dot=*/true);
-  this->MainFilePath = MainFileCanonical.str();
+  this->MainFilePath = std::string(MainFileCanonical.str());
 }
 
 void PreambleFileStatusCache::update(const llvm::vfs::FileSystem &FS,

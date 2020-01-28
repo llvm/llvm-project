@@ -118,7 +118,7 @@ std::unique_ptr<Acceptor> Acceptor::Create(StringRef name,
         return (local_port != 0) ? llvm::to_string(local_port) : "";
       };
     } else {
-      const std::string socket_name = name;
+      const std::string socket_name = std::string(name);
       local_socket_id = [socket_name]() { return socket_name; };
     }
 

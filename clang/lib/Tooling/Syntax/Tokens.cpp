@@ -183,8 +183,9 @@ llvm::ArrayRef<syntax::Token> TokenBuffer::spelledTokens(FileID FID) const {
 }
 
 std::string TokenBuffer::Mapping::str() const {
-  return llvm::formatv("spelled tokens: [{0},{1}), expanded tokens: [{2},{3})",
-                       BeginSpelled, EndSpelled, BeginExpanded, EndExpanded);
+  return std::string(
+      llvm::formatv("spelled tokens: [{0},{1}), expanded tokens: [{2},{3})",
+                    BeginSpelled, EndSpelled, BeginExpanded, EndExpanded));
 }
 
 llvm::Optional<llvm::ArrayRef<syntax::Token>>
@@ -604,19 +605,20 @@ TokenBuffer TokenCollector::consume() && {
 }
 
 std::string syntax::Token::str() const {
-  return llvm::formatv("Token({0}, length = {1})", tok::getTokenName(kind()),
-                       length());
+  return std::string(llvm::formatv("Token({0}, length = {1})",
+                                   tok::getTokenName(kind()), length()));
 }
 
 std::string syntax::Token::dumpForTests(const SourceManager &SM) const {
-  return llvm::formatv("{0}   {1}", tok::getTokenName(kind()), text(SM));
+  return std::string(
+      llvm::formatv("{0}   {1}", tok::getTokenName(kind()), text(SM)));
 }
 
 std::string TokenBuffer::dumpForTests() const {
   auto PrintToken = [this](const syntax::Token &T) -> std::string {
     if (T.kind() == tok::eof)
       return "<eof>";
-    return T.text(*SourceMgr);
+    return std::string(T.text(*SourceMgr));
   };
 
   auto DumpTokens = [this, &PrintToken](llvm::raw_ostream &OS,

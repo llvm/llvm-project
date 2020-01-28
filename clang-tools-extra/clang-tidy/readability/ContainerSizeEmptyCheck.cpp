@@ -111,9 +111,9 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
           ? MemberCall->getImplicitObjectArgument()
           : (Pointee ? Pointee : Result.Nodes.getNodeAs<Expr>("STLObject"));
   FixItHint Hint;
-  std::string ReplacementText =
+  std::string ReplacementText = std::string(
       Lexer::getSourceText(CharSourceRange::getTokenRange(E->getSourceRange()),
-                           *Result.SourceManager, getLangOpts());
+                           *Result.SourceManager, getLangOpts()));
   if (BinCmp && IsBinaryOrTernary(E)) {
     // Not just a DeclRefExpr, so parenthesize to be on the safe side.
     ReplacementText = "(" + ReplacementText + ")";

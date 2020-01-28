@@ -310,7 +310,7 @@ public:
       std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo)
       : GetAC(std::move(GetAssumptionCache)),
         GetTTI(std::move(GetTargetTransformInfo)), CoverageTracker(*this),
-        Filename(Name), RemappingFilename(RemapName),
+        Filename(std::string(Name)), RemappingFilename(std::string(RemapName)),
         IsThinLTOPreLink(IsThinLTOPreLink) {}
 
   bool doInitialization(Module &M);

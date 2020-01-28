@@ -65,7 +65,7 @@ std::string resolve(std::string Path) {
     log("Failed to resolve possible symlink {0}", Path);
     return Path;
   }
-  return Resolved.str();
+  return std::string(Resolved.str());
 }
 
 // Get a plausible full `clang` path.
@@ -97,7 +97,7 @@ std::string detectClangPath() {
   SmallString<128> ClangPath;
   ClangPath = llvm::sys::path::parent_path(ClangdExecutable);
   llvm::sys::path::append(ClangPath, "clang");
-  return ClangPath.str();
+  return std::string(ClangPath.str());
 }
 
 // On mac, /usr/bin/clang sets SDKROOT and then invokes the real clang.
@@ -171,7 +171,7 @@ void CommandMangler::adjust(std::vector<std::string> &Cmd) const {
       llvm::SmallString<128> QualifiedDriver =
           llvm::sys::path::parent_path(*ClangPath);
       llvm::sys::path::append(QualifiedDriver, Driver);
-      Driver = QualifiedDriver.str();
+      Driver = std::string(QualifiedDriver.str());
     }
   }
 }

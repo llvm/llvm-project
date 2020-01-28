@@ -1063,7 +1063,7 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
   StringRef FileName = *Name;
   if (Kind != FileLineInfoKind::AbsoluteFilePath ||
       isPathAbsoluteOnWindowsOrPosix(FileName)) {
-    Result = FileName;
+    Result = std::string(FileName);
     return true;
   }
 
@@ -1087,7 +1087,7 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
 
   // sys::path::append skips empty strings.
   sys::path::append(FilePath, Style, IncludeDir, FileName);
-  Result = FilePath.str();
+  Result = std::string(FilePath.str());
   return true;
 }
 

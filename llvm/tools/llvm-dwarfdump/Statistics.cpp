@@ -180,7 +180,7 @@ static std::string constructDieID(DWARFDie Die,
       if (LT->getFileNameByIndex(
               dwarf::toUnsigned(DeclFile, 0), U->getCompilationDir(),
               DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, File))
-        File = sys::path::filename(File);
+        File = std::string(sys::path::filename(File));
   }
   ID << ":" << (File.empty() ? "/" : File);
   ID << ":"

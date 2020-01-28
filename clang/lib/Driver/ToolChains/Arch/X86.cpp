@@ -31,7 +31,7 @@ const char *x86::getX86TargetCPU(const ArgList &Args,
     //
     // FIXME: We should also incorporate the detected target features for use
     // with -native.
-    std::string CPU = llvm::sys::getHostCPUName();
+    std::string CPU = std::string(llvm::sys::getHostCPUName());
     if (!CPU.empty() && CPU != "generic")
       return Args.MakeArgString(CPU);
   }

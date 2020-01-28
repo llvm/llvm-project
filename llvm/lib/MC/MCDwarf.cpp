@@ -620,7 +620,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
   } else {
     DirIndex = llvm::find(MCDwarfDirs, Directory) - MCDwarfDirs.begin();
     if (DirIndex >= MCDwarfDirs.size())
-      MCDwarfDirs.push_back(Directory);
+      MCDwarfDirs.push_back(std::string(Directory));
     // The DirIndex is one based, as DirIndex of 0 is used for FileNames with
     // no directories.  MCDwarfDirs[] is unlike MCDwarfFiles[] in that the
     // directory names are stored at MCDwarfDirs[DirIndex-1] where FileNames
@@ -628,7 +628,7 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory,
     DirIndex++;
   }
 
-  File.Name = FileName;
+  File.Name = std::string(FileName);
   File.DirIndex = DirIndex;
   File.Checksum = Checksum;
   trackMD5Usage(Checksum.hasValue());

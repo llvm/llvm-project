@@ -50,7 +50,7 @@ ArchAndFile::~ArchAndFile() {
 std::string getArchName(StringRef Arch) {
   if (Arch.startswith("thumb"))
     return (llvm::Twine("arm") + Arch.drop_front(5)).str();
-  return Arch;
+  return std::string(Arch);
 }
 
 static bool runLipo(StringRef SDKPath, SmallVectorImpl<StringRef> &Args) {

@@ -229,8 +229,9 @@ ParsedAST::build(std::unique_ptr<clang::CompilerInvocation> CI,
       Preamble ? &Preamble->Preamble : nullptr;
 
   StoreDiags ASTDiags;
-  std::string Content = Buffer->getBuffer();
-  std::string Filename = Buffer->getBufferIdentifier(); // Absolute.
+  std::string Content = std::string(Buffer->getBuffer());
+  std::string Filename =
+      std::string(Buffer->getBufferIdentifier()); // Absolute.
 
   auto Clang = prepareCompilerInstance(std::move(CI), PreamblePCH,
                                        std::move(Buffer), VFS, ASTDiags);

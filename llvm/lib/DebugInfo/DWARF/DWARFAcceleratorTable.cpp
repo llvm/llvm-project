@@ -871,13 +871,14 @@ void DWARFDebugNames::ValueIterator::next() {
 
 DWARFDebugNames::ValueIterator::ValueIterator(const DWARFDebugNames &AccelTable,
                                               StringRef Key)
-    : CurrentIndex(AccelTable.NameIndices.begin()), IsLocal(false), Key(Key) {
+    : CurrentIndex(AccelTable.NameIndices.begin()), IsLocal(false),
+      Key(std::string(Key)) {
   searchFromStartOfCurrentIndex();
 }
 
 DWARFDebugNames::ValueIterator::ValueIterator(
     const DWARFDebugNames::NameIndex &NI, StringRef Key)
-    : CurrentIndex(&NI), IsLocal(true), Key(Key) {
+    : CurrentIndex(&NI), IsLocal(true), Key(std::string(Key)) {
   if (!findInCurrentIndex())
     setEnd();
 }

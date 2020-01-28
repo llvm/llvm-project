@@ -215,7 +215,7 @@ StringRef ScalarTraits<UUID>::input(StringRef Scalar, void *, UUID &Value) {
   auto UUID = Split.second.trim();
   if (UUID.empty())
     return "invalid uuid string pair";
-  Value.second = UUID;
+  Value.second = std::string(UUID);
   Value.first = Target{getArchitectureFromName(Arch), PlatformKind::unknown};
   return {};
 }

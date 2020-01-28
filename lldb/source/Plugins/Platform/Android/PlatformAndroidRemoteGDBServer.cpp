@@ -117,7 +117,7 @@ Status PlatformAndroidRemoteGDBServer::ConnectRemote(Args &args) {
   if (!UriParser::Parse(url, scheme, host, remote_port, path))
     return Status("Invalid URL: %s", url);
   if (host != "localhost")
-    m_device_id = host;
+    m_device_id = std::string(host);
 
   m_socket_namespace.reset();
   if (scheme == ConnectionFileDescriptor::UNIX_CONNECT_SCHEME)

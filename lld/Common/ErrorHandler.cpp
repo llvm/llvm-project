@@ -117,7 +117,7 @@ void lld::checkError(Error e) {
 // extracted from an error message using regexps.
 std::string ErrorHandler::getLocation(const Twine &msg) {
   if (!vsDiagnostics)
-    return logName;
+    return std::string(logName);
 
   static std::regex regexes[] = {
       std::regex(
@@ -149,7 +149,7 @@ std::string ErrorHandler::getLocation(const Twine &msg) {
     return m.str(1) + "(" + m.str(2) + ")";
   }
 
-  return logName;
+  return std::string(logName);
 }
 
 void ErrorHandler::log(const Twine &msg) {

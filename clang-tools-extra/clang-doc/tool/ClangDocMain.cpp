@@ -232,7 +232,7 @@ int main(int argc, const char **argv) {
     llvm::sys::path::native(AssetsPath, IndexJS);
     llvm::sys::path::append(IndexJS, "index.js");
     CDCtx.UserStylesheets.insert(CDCtx.UserStylesheets.begin(),
-                                 DefaultStylesheet.str());
+                                 std::string(DefaultStylesheet.str()));
     CDCtx.FilesToCopy.emplace_back(IndexJS.str());
   }
 

@@ -167,7 +167,8 @@ Expected<std::unique_ptr<TarWriter>> TarWriter::create(StringRef OutputPath,
 }
 
 TarWriter::TarWriter(int FD, StringRef BaseDir)
-    : OS(FD, /*shouldClose=*/true, /*unbuffered=*/false), BaseDir(BaseDir) {}
+    : OS(FD, /*shouldClose=*/true, /*unbuffered=*/false),
+      BaseDir(std::string(BaseDir)) {}
 
 // Append a given file to an archive.
 void TarWriter::append(StringRef Path, StringRef Data) {

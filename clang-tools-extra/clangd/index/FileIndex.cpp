@@ -67,7 +67,8 @@ static SlabTuple indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
 
   const auto &SM = AST.getSourceManager();
   const auto *MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());
-  std::string FileName = MainFileEntry ? MainFileEntry->getName() : "";
+  std::string FileName =
+      std::string(MainFileEntry ? MainFileEntry->getName() : "");
 
   auto Syms = Collector.takeSymbols();
   auto Refs = Collector.takeRefs();

@@ -302,7 +302,7 @@ public:
   void AddIncludeAlias(StringRef Source, StringRef Dest) {
     if (!IncludeAliases)
       IncludeAliases.reset(new IncludeAliasMap);
-    (*IncludeAliases)[Source] = Dest;
+    (*IncludeAliases)[Source] = std::string(Dest);
   }
 
   /// Maps one header file name to a different header
@@ -321,7 +321,7 @@ public:
 
   /// Set the path to the module cache.
   void setModuleCachePath(StringRef CachePath) {
-    ModuleCachePath = CachePath;
+    ModuleCachePath = std::string(CachePath);
   }
 
   /// Retrieve the path to the module cache.

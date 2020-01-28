@@ -11979,7 +11979,7 @@ getListOfPossibleValues(OpenMPClauseKind K, unsigned First, unsigned Last,
     else if (I + Skipped + 1 != Last)
       Out << ", ";
   }
-  return Out.str();
+  return std::string(Out.str());
 }
 
 OMPClause *Sema::ActOnOpenMPDefaultClause(OpenMPDefaultClauseKind Kind,

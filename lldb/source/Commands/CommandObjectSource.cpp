@@ -63,11 +63,11 @@ class CommandObjectSourceInfo : public CommandObjectParsed {
         break;
 
       case 'f':
-        file_name = option_arg;
+        file_name = std::string(option_arg);
         break;
 
       case 'n':
-        symbol_name = option_arg;
+        symbol_name = std::string(option_arg);
         break;
 
       case 'a': {
@@ -646,11 +646,11 @@ class CommandObjectSourceList : public CommandObjectParsed {
         break;
 
       case 'f':
-        file_name = option_arg;
+        file_name = std::string(option_arg);
         break;
 
       case 'n':
-        symbol_name = option_arg;
+        symbol_name = std::string(option_arg);
         break;
 
       case 'a': {

@@ -245,7 +245,7 @@ std::error_code SampleProfileReaderText::readImpl() {
           InlineStack.pop_back();
         }
         FunctionSamples &FSamples = InlineStack.back()->functionSamplesAt(
-            LineLocation(LineOffset, Discriminator))[FName];
+            LineLocation(LineOffset, Discriminator))[std::string(FName)];
         FSamples.setName(FName);
         MergeResult(Result, FSamples.addTotalSamples(NumSamples));
         InlineStack.push_back(&FSamples);
@@ -430,7 +430,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
       return EC;
 
     FunctionSamples &CalleeProfile = FProfile.functionSamplesAt(
-        LineLocation(*LineOffset, *Discriminator))[*FName];
+        LineLocation(*LineOffset, *Discriminator))[std::string(*FName)];
     CalleeProfile.setName(*FName);
     if (std::error_code EC = readProfile(CalleeProfile))
       return EC;
@@ -1043,7 +1043,7 @@ std::error_code SampleProfileReaderGCC::readNameTable() {
     StringRef Str;
     if (!GcovBuffer.readString(Str))
       return sampleprof_error::truncated;
-    Names.push_back(Str);
+    Names.push_back(std::string(Str));
   }
 
   return sampleprof_error::success;
@@ -1107,7 +1107,7 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
     uint32_t LineOffset = Offset >> 16;
     uint32_t Discriminator = Offset & 0xffff;
     FProfile = &CallerProfile->functionSamplesAt(
-        LineLocation(LineOffset, Discriminator))[Name];
+        LineLocation(LineOffset, Discriminator))[std::string(Name)];
   }
   FProfile->setName(Name);
 

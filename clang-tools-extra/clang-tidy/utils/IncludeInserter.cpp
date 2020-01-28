@@ -50,7 +50,7 @@ IncludeInserter::CreateIncludeInsertion(FileID FileID, StringRef Header,
                                         bool IsAngled) {
   // We assume the same Header will never be included both angled and not
   // angled.
-  if (!InsertedHeaders[FileID].insert(Header).second)
+  if (!InsertedHeaders[FileID].insert(std::string(Header)).second)
     return llvm::None;
 
   if (IncludeSorterByFile.find(FileID) == IncludeSorterByFile.end()) {

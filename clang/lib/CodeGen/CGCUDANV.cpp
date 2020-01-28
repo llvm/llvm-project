@@ -211,9 +211,9 @@ std::string CGNVCUDARuntime::getDeviceSideName(const Decl *D) {
     SmallString<256> Buffer;
     llvm::raw_svector_ostream Out(Buffer);
     DeviceMC->mangleName(ND, Out);
-    DeviceSideName = Out.str();
+    DeviceSideName = std::string(Out.str());
   } else
-    DeviceSideName = ND->getIdentifier()->getName();
+    DeviceSideName = std::string(ND->getIdentifier()->getName());
   return DeviceSideName;
 }
 
@@ -551,8 +551,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     if (CudaGpuBinary) {
       // If fatbin is available from early finalization, create a string
       // literal containing the fat binary loaded from the given file.
-      FatBinStr = makeConstantString(CudaGpuBinary->getBuffer(), "",
-                                     FatbinConstantName, 8);
+      FatBinStr = makeConstantString(std::string(CudaGpuBinary->getBuffer()),
+                                     "", FatbinConstantName, 8);
     } else {
       // If fatbin is not available, create an external symbol
       // __hip_fatbin in section .hip_fatbin. The external symbol is supposed
@@ -586,7 +586,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
 
     // For CUDA, create a string literal containing the fat binary loaded from
     // the given file.
-    FatBinStr = makeConstantString(CudaGpuBinary->getBuffer(), "",
+    FatBinStr = makeConstantString(std::string(CudaGpuBinary->getBuffer()), "",
                                    FatbinConstantName, 8);
     FatMagic = CudaFatMagic;
   }
@@ -691,8 +691,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     SmallString<64> ModuleID;
     llvm::raw_svector_ostream OS(ModuleID);
     OS << ModuleIDPrefix << llvm::format("%" PRIx64, FatbinWrapper->getGUID());
-    llvm::Constant *ModuleIDConstant =
-        makeConstantString(ModuleID.str(), "", ModuleIDSectionName, 32);
+    llvm::Constant *ModuleIDConstant = makeConstantString(
+        std::string(ModuleID.str()), "", ModuleIDSectionName, 32);
 
     // Create an alias for the FatbinWrapper that nvcc will look for.
     llvm::GlobalAlias::create(llvm::GlobalValue::ExternalLinkage,
@@ -799,7 +799,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleDtorFunction() {
 
 std::string CGNVCUDARuntime::getDeviceStubName(llvm::StringRef Name) const {
   if (!CGM.getLangOpts().HIP)
-    return Name;
+    return std::string(Name);
   return (Name + ".stub").str();
 }
 

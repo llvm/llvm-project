@@ -42,7 +42,7 @@ struct PrintedDecl {
     llvm::StringRef FirstLine =
         llvm::StringRef(OS.str()).take_until([](char C) { return C == '\n'; });
     FirstLine = FirstLine.rtrim(" {");
-    Name = FirstLine.rtrim(" {");
+    Name = std::string(FirstLine.rtrim(" {"));
   }
 
   std::string Name;
@@ -584,7 +584,7 @@ protected:
   /// See actual tests for examples of annotation format.
   AllRefs annotateReferencesInFoo(llvm::StringRef Code) {
     TestTU TU;
-    TU.Code = Code;
+    TU.Code = std::string(Code);
 
     // FIXME: Auto-completion in a template requires disabling delayed template
     // parsing.
@@ -644,7 +644,7 @@ protected:
 
     std::string DumpedReferences;
     for (unsigned I = 0; I < Refs.size(); ++I)
-      DumpedReferences += llvm::formatv("{0}: {1}\n", I, Refs[I]);
+      DumpedReferences += std::string(llvm::formatv("{0}: {1}\n", I, Refs[I]));
 
     return AllRefs{std::move(AnnotatedCode), std::move(DumpedReferences)};
   }

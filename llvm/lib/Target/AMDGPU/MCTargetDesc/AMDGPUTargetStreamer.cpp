@@ -43,7 +43,7 @@ using namespace llvm::AMDGPU::HSAMD;
 
 bool AMDGPUTargetStreamer::EmitHSAMetadataV2(StringRef HSAMetadataString) {
   HSAMD::Metadata HSAMetadata;
-  if (HSAMD::fromString(HSAMetadataString, HSAMetadata))
+  if (HSAMD::fromString(std::string(HSAMetadataString), HSAMetadata))
     return false;
 
   return EmitHSAMetadata(HSAMetadata);

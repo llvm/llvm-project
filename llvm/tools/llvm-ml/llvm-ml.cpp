@@ -278,7 +278,7 @@ int main(int argc, char **argv) {
   }
   for (const auto &Arg : DebugPrefixMap) {
     const auto &KV = StringRef(Arg).split('=');
-    Ctx.addDebugPrefixMapEntry(KV.first, KV.second);
+    Ctx.addDebugPrefixMapEntry(std::string(KV.first), std::string(KV.second));
   }
   if (!MainFileName.empty())
     Ctx.setMainFileName(MainFileName);

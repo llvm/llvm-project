@@ -40,7 +40,7 @@ ArchitectureSet::operator std::string() const {
   std::string result;
   auto size = count();
   for (auto arch : *this) {
-    result.append(getArchitectureName(arch));
+    result.append(std::string(getArchitectureName(arch)));
     size -= 1;
     if (size)
       result.append(" ");

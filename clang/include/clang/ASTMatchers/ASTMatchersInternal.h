@@ -149,7 +149,7 @@ public:
   ///
   /// The node's base type should be in NodeBaseType or it will be unaccessible.
   void addNode(StringRef ID, const ast_type_traits::DynTypedNode& DynNode) {
-    NodeMap[ID] = DynNode;
+    NodeMap[std::string(ID)] = DynNode;
   }
 
   /// Returns the AST node bound to \c ID.

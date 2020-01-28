@@ -1073,7 +1073,7 @@ MATCHER_P(SigDoc, Doc, "") { return arg.documentation == Doc; }
 ///    foo([[int p1]], [[double p2]]) -> void
 Matcher<SignatureInformation> Sig(llvm::StringRef AnnotatedLabel) {
   llvm::Annotations A(AnnotatedLabel);
-  std::string Label = A.code();
+  std::string Label = std::string(A.code());
   std::vector<ExpectedParameter> Parameters;
   for (auto Range : A.ranges()) {
     Parameters.emplace_back();

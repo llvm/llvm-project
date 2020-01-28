@@ -3047,9 +3047,10 @@ llvm::Value *CGObjCCommonMac::EmitClassRefViaRuntime(
                ObjCCommonTypesHelper &ObjCTypes) {
   llvm::FunctionCallee lookUpClassFn = ObjCTypes.getLookUpClassFn();
 
-  llvm::Value *className =
-      CGF.CGM.GetAddrOfConstantCString(ID->getObjCRuntimeNameAsString())
-        .getPointer();
+  llvm::Value *className = CGF.CGM
+                               .GetAddrOfConstantCString(std::string(
+                                   ID->getObjCRuntimeNameAsString()))
+                               .getPointer();
   ASTContext &ctx = CGF.CGM.getContext();
   className =
       CGF.Builder.CreateBitCast(className,
@@ -6352,7 +6353,7 @@ llvm::GlobalVariable * CGObjCNonFragileABIMac::BuildClassRoTInitializer(
   unsigned InstanceStart,
   unsigned InstanceSize,
   const ObjCImplementationDecl *ID) {
-  std::string ClassName = ID->getObjCRuntimeNameAsString();
+  std::string ClassName = std::string(ID->getObjCRuntimeNameAsString());
 
   CharUnits beginInstance = CharUnits::fromQuantity(InstanceStart);
   CharUnits endInstance = CharUnits::fromQuantity(InstanceSize);

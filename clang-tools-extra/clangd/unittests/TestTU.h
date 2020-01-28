@@ -32,13 +32,13 @@ namespace clangd {
 struct TestTU {
   static TestTU withCode(llvm::StringRef Code) {
     TestTU TU;
-    TU.Code = Code;
+    TU.Code = std::string(Code);
     return TU;
   }
 
   static TestTU withHeaderCode(llvm::StringRef HeaderCode) {
     TestTU TU;
-    TU.HeaderCode = HeaderCode;
+    TU.HeaderCode = std::string(HeaderCode);
     return TU;
   }
 

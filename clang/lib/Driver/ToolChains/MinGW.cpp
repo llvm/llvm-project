@@ -323,7 +323,7 @@ static bool findGccVersion(StringRef LibDir, std::string &GccLibDir,
       continue;
     if (CandidateVersion <= Version)
       continue;
-    Ver = VersionText;
+    Ver = std::string(VersionText);
     GccLibDir = LI->path();
   }
   return Ver.size();
@@ -335,7 +335,7 @@ void toolchains::MinGW::findGccLibDir() {
   Archs[0] += "-w64-mingw32";
   Archs.emplace_back("mingw32");
   if (Arch.empty())
-    Arch = Archs[0].str();
+    Arch = std::string(Archs[0].str());
   // lib: Arch Linux, Ubuntu, Windows
   // lib64: openSUSE Linux
   for (StringRef CandidateLib : {"lib", "lib64"}) {
@@ -343,7 +343,7 @@ void toolchains::MinGW::findGccLibDir() {
       llvm::SmallString<1024> LibDir(Base);
       llvm::sys::path::append(LibDir, CandidateLib, "gcc", CandidateArch);
       if (findGccVersion(LibDir, GccLibDir, Ver)) {
-        Arch = CandidateArch;
+        Arch = std::string(CandidateArch);
         return;
       }
     }
@@ -372,7 +372,7 @@ llvm::ErrorOr<std::string> toolchains::MinGW::findClangRelativeSysroot() {
   StringRef Sep = llvm::sys::path::get_separator();
   for (StringRef CandidateSubdir : Subdirs) {
     if (llvm::sys::fs::is_directory(ClangRoot + Sep + CandidateSubdir)) {
-      Arch = CandidateSubdir;
+      Arch = std::string(CandidateSubdir);
       return (ClangRoot + Sep + CandidateSubdir).str();
     }
   }
@@ -389,12 +389,13 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
   // Look for <clang-bin>/../<triplet>; if found, use <clang-bin>/.. as the
   // base as it could still be a base for a gcc setup with libgcc.
   else if (llvm::ErrorOr<std::string> TargetSubdir = findClangRelativeSysroot())
-    Base = llvm::sys::path::parent_path(TargetSubdir.get());
+    Base = std::string(llvm::sys::path::parent_path(TargetSubdir.get()));
   else if (llvm::ErrorOr<std::string> GPPName = findGcc())
-    Base = llvm::sys::path::parent_path(
-        llvm::sys::path::parent_path(GPPName.get()));
+    Base = std::string(llvm::sys::path::parent_path(
+        llvm::sys::path::parent_path(GPPName.get())));
   else
-    Base = llvm::sys::path::parent_path(getDriver().getInstalledDir());
+    Base = std::string(
+        llvm::sys::path::parent_path(getDriver().getInstalledDir()));
 
   Base += llvm::sys::path::get_separator();
   findGccLibDir();

@@ -68,7 +68,8 @@ public:
   }
 
   std::pair<iterator, bool> insert(llvm::StringRef KeyEqValue) {
-    return insert(KeyEqValue.split('='));
+    auto Split = KeyEqValue.split('=');
+    return insert(std::make_pair(Split.first, std::string(Split.second)));
   }
 
   void insert(const_iterator first, const_iterator last);

@@ -82,7 +82,8 @@ template <typename T> struct QueryParser::LexOrCompleteWord {
              CaseStr.substr(0, WordCompletionPos) ==
                  Word.substr(0, WordCompletionPos))
       P->Completions.push_back(LineEditor::Completion(
-          (CaseStr.substr(WordCompletionPos) + " ").str(), CaseStr));
+          (CaseStr.substr(WordCompletionPos) + " ").str(),
+          std::string(CaseStr)));
     return *this;
   }
 

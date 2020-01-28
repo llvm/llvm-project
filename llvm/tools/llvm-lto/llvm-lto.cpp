@@ -454,7 +454,7 @@ static std::string getThinLTOOutputFile(const std::string &Path,
     if (std::error_code EC = llvm::sys::fs::create_directories(ParentPath))
       error(EC, "error creating the directory '" + ParentPath + "'");
   }
-  return NewPath.str();
+  return std::string(NewPath.str());
 }
 
 namespace thinlto {
@@ -957,7 +957,7 @@ int main(int argc, char **argv) {
       lto_symbol_attributes Attrs = Module->getSymbolAttributes(I);
       unsigned Scope = Attrs & LTO_SYMBOL_SCOPE_MASK;
       if (Scope != LTO_SYMBOL_SCOPE_DEFAULT_CAN_BE_HIDDEN)
-        KeptDSOSyms.push_back(Name);
+        KeptDSOSyms.push_back(std::string(Name));
     }
 
     // We use the first input module as the destination module when

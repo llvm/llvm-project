@@ -55,7 +55,7 @@ static std::string mangleTLIName(StringRef VectorName, const CallInst &CI,
   for (unsigned I = 0; I < CI.getNumArgOperands(); ++I)
     Out << "v";
   Out << "_" << CI.getCalledFunction()->getName() << "(" << VectorName << ")";
-  return Out.str();
+  return std::string(Out.str());
 }
 
 /// A helper function for converting Scalar types to vector types.
@@ -110,7 +110,7 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
   if (CI.isNoBuiltin() || !CI.getCalledFunction())
     return;
 
-  const std::string ScalarName = CI.getCalledFunction()->getName();
+  const std::string ScalarName = std::string(CI.getCalledFunction()->getName());
   // Nothing to be done if the TLI thinks the function is not
   // vectorizable.
   if (!TLI.isFunctionVectorizable(ScalarName))
@@ -123,7 +123,8 @@ static void addMappingsFromTLI(const TargetLibraryInfo &TLI, CallInst &CI) {
   //  All VFs in the TLI are powers of 2.
   for (unsigned VF = 2, WidestVF = TLI.getWidestVF(ScalarName); VF <= WidestVF;
        VF *= 2) {
-    const std::string TLIName = TLI.getVectorizedFunction(ScalarName, VF);
+    const std::string TLIName =
+        std::string(TLI.getVectorizedFunction(ScalarName, VF));
     if (!TLIName.empty()) {
       std::string MangledName = mangleTLIName(TLIName, CI, VF);
       if (!OriginalSetOfMappings.count(MangledName)) {

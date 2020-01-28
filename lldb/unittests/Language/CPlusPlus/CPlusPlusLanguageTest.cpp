@@ -178,7 +178,7 @@ static std::set<std::string> FindAlternate(llvm::StringRef Name) {
   EXPECT_EQ(Count, Results.size());
   std::set<std::string> Strings;
   for (ConstString Str : Results)
-    Strings.insert(Str.GetStringRef());
+    Strings.insert(std::string(Str.GetStringRef()));
   return Strings;
 }
 

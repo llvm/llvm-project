@@ -92,7 +92,9 @@ public:
         GenerateDiagnostics(GenerateDiagnostics) {}
 
   void setCompilerInstance(CompilerInstance *CI) { this->CI = CI; }
-  void setFilePath(StringRef FilePath) { this->FilePath = FilePath; }
+  void setFilePath(StringRef FilePath) {
+    this->FilePath = std::string(FilePath);
+  }
 
   /// Callback for incomplete types. If we encounter a forward declaration we
   /// have the fully qualified name ready. Just query that.

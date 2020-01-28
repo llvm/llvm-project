@@ -119,7 +119,7 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace,
     Optional<FailureInfo> Info;
     auto AppendFailure = [&](StringRef Kind, std::string &&Fixup) {
       if (!Info) {
-        Info = FailureInfo{Kind, std::move(Fixup)};
+        Info = FailureInfo{std::string(Kind), std::move(Fixup)};
       } else {
         Info->KindName += Kind;
         Info->Fixup = std::move(Fixup);
@@ -143,7 +143,7 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace,
   if (!(hasReservedDoubleUnderscore(Name, LangOpts) ||
         startsWithUnderscoreCapital(Name) ||
         startsWithUnderscoreInGlobalNamespace(Name, IsInGlobalNamespace)))
-    return FailureInfo{NonReservedTag, getNonReservedFixup(Name)};
+    return FailureInfo{NonReservedTag, getNonReservedFixup(std::string(Name))};
   return None;
 }
 

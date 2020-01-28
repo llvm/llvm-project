@@ -170,7 +170,8 @@ static void convertChangesToFileReplacements(
     std::map<std::string, tooling::Replacements> *FileToReplaces) {
   for (const auto &AtomicChange : AtomicChanges) {
     for (const auto &Replace : AtomicChange.getReplacements()) {
-      llvm::Error Err = (*FileToReplaces)[Replace.getFilePath()].add(Replace);
+      llvm::Error Err =
+          (*FileToReplaces)[std::string(Replace.getFilePath())].add(Replace);
       if (Err) {
         llvm::errs() << "Renaming failed in " << Replace.getFilePath() << "! "
                      << llvm::toString(std::move(Err)) << "\n";

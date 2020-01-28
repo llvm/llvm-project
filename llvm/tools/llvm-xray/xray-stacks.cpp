@@ -674,11 +674,12 @@ std::string CreateErrorMessage(StackTrie::AccountRecordStatus Error,
                                const FuncIdConversionHelper &Converter) {
   switch (Error) {
   case StackTrie::AccountRecordStatus::ENTRY_NOT_FOUND:
-    return formatv("Found record {0} with no matching function entry\n",
-                   format_xray_record(Record, Converter));
+    return std::string(
+        formatv("Found record {0} with no matching function entry\n",
+                format_xray_record(Record, Converter)));
   default:
-    return formatv("Unknown error type for record {0}\n",
-                   format_xray_record(Record, Converter));
+    return std::string(formatv("Unknown error type for record {0}\n",
+                               format_xray_record(Record, Converter)));
   }
 }
 

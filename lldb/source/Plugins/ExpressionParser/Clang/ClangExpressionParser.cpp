@@ -207,7 +207,8 @@ public:
     if (make_new_diagnostic) {
       // ClangDiagnostic messages are expected to have no whitespace/newlines
       // around them.
-      std::string stripped_output = llvm::StringRef(m_output).trim();
+      std::string stripped_output =
+          std::string(llvm::StringRef(m_output).trim());
 
       auto new_diagnostic = std::make_unique<ClangDiagnostic>(
           stripped_output, severity, Info.getID());
@@ -255,7 +256,7 @@ static void SetupModuleHeaderPaths(CompilerInstance *compiler,
   llvm::SmallString<128> module_cache;
   const auto &props = ModuleList::GetGlobalModuleListProperties();
   props.GetClangModulesCachePath().GetPath(module_cache);
-  search_opts.ModuleCachePath = module_cache.str();
+  search_opts.ModuleCachePath = std::string(module_cache.str());
   LLDB_LOG(log, "Using module cache path: {0}", module_cache.c_str());
 
   search_opts.ResourceDir = GetClangResourceDir().GetPath();

@@ -337,7 +337,7 @@ OperatingSystemPython::CreateRegisterContextForThread(Thread *thread,
         m_interpreter->OSPlugin_RegisterContextData(m_python_object_sp,
                                                     thread->GetID());
     if (reg_context_data) {
-      std::string value = reg_context_data->GetValue();
+      std::string value = std::string(reg_context_data->GetValue());
       DataBufferSP data_sp(new DataBufferHeap(value.c_str(), value.length()));
       if (data_sp->GetByteSize()) {
         RegisterContextMemory *reg_ctx_memory = new RegisterContextMemory(

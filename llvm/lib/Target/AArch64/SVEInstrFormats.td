@@ -2402,7 +2402,7 @@ multiclass sve2_int_mla_by_indexed_elem<bits<2> opc, bit S, string asm> {
 // SVE2 Integer Multiply-Add Long - Indexed Group
 //===----------------------------------------------------------------------===//
 
-multiclass sve2_int_mla_long_by_indexed_elem<bits<4> opc, string asm> {
+multiclass sve2_int_mla_long_by_indexed_elem<bits<4> opc, string asm, SDPatternOperator op> {
   def _S : sve2_int_mla_by_indexed_elem<0b10, { opc{3}, 0b0, opc{2-1}, ?, opc{0} },
                                         asm, ZPR32, ZPR16, ZPR3b16, VectorIndexH> {
     bits<3> Zm;
@@ -2419,6 +2419,9 @@ multiclass sve2_int_mla_long_by_indexed_elem<bits<4> opc, string asm> {
     let Inst{19-16} = Zm;
     let Inst{11} = iop{0};
   }
+
+  def : SVE_4_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv8i16, nxv8i16, i64, VectorIndexH_timm, !cast<Instruction>(NAME # _S)>;
+  def : SVE_4_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv4i32, nxv4i32, i64, VectorIndexS_timm, !cast<Instruction>(NAME # _D)>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -50,7 +50,7 @@ GlobalCompilationDatabase::getFallbackCommand(PathRef File) const {
   auto FileExtension = llvm::sys::path::extension(File);
   if (FileExtension.empty() || FileExtension == ".h")
     Argv.push_back("-xobjective-c++-header");
-  Argv.push_back(File);
+  Argv.push_back(std::string(File));
   tooling::CompileCommand Cmd(llvm::sys::path::parent_path(File),
                               llvm::sys::path::filename(File), std::move(Argv),
                               /*Output=*/"");
@@ -95,7 +95,7 @@ static std::string maybeCaseFoldPath(PathRef Path) {
 #if defined(_WIN32) || defined(__APPLE__)
   return Path.lower();
 #else
-  return Path;
+  return std::string(Path);
 #endif
 }
 
@@ -117,7 +117,7 @@ DirectoryBasedGlobalCompilationDatabase::getCDBInDirLocked(PathRef Dir) const {
     CachedCDB &Entry = R.first->second;
     std::string Error = "";
     Entry.CDB = tooling::CompilationDatabase::loadFromDirectory(Dir, Error);
-    Entry.Path = Dir;
+    Entry.Path = std::string(Dir);
   }
   return R.first->second;
 }

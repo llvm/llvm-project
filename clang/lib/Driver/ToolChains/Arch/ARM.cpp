@@ -612,14 +612,14 @@ fp16_fml_fallthrough:
 const std::string arm::getARMArch(StringRef Arch, const llvm::Triple &Triple) {
   std::string MArch;
   if (!Arch.empty())
-    MArch = Arch;
+    MArch = std::string(Arch);
   else
-    MArch = Triple.getArchName();
+    MArch = std::string(Triple.getArchName());
   MArch = StringRef(MArch).split("+").first.lower();
 
   // Handle -march=native.
   if (MArch == "native") {
-    std::string CPU = llvm::sys::getHostCPUName();
+    std::string CPU = std::string(llvm::sys::getHostCPUName());
     if (CPU != "generic") {
       // Translate the native cpu into the architecture suffix for that CPU.
       StringRef Suffix = arm::getLLVMArchSuffixForARM(CPU, MArch, Triple);
@@ -657,12 +657,12 @@ std::string arm::getARMTargetCPU(StringRef CPU, StringRef Arch,
     std::string MCPU = StringRef(CPU).split("+").first.lower();
     // Handle -mcpu=native.
     if (MCPU == "native")
-      return llvm::sys::getHostCPUName();
+      return std::string(llvm::sys::getHostCPUName());
     else
       return MCPU;
   }
 
-  return getARMCPUForMArch(Arch, Triple);
+  return std::string(getARMCPUForMArch(Arch, Triple));
 }
 
 /// getLLVMArchSuffixForARM - Get the LLVM ArchKind value to use for a

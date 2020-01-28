@@ -469,7 +469,7 @@ INITIALIZE_PASS(PGOInstrumentationGenCreateVarLegacyPass,
 
 ModulePass *
 llvm::createPGOInstrumentationGenCreateVarLegacyPass(StringRef CSInstrName) {
-  return new PGOInstrumentationGenCreateVarLegacyPass(CSInstrName);
+  return new PGOInstrumentationGenCreateVarLegacyPass(std::string(CSInstrName));
 }
 
 namespace {
@@ -1731,7 +1731,7 @@ bool PGOInstrumentationUseLegacyPass::runOnModule(Module &M) {
 
 static std::string getSimpleNodeName(const BasicBlock *Node) {
   if (!Node->getName().empty())
-    return Node->getName();
+    return std::string(Node->getName());
 
   std::string SimpleNodeName;
   raw_string_ostream OS(SimpleNodeName);
@@ -1822,7 +1822,7 @@ template <> struct DOTGraphTraits<PGOUseFunc *> : DefaultDOTGraphTraits {
       : DefaultDOTGraphTraits(isSimple) {}
 
   static std::string getGraphName(const PGOUseFunc *G) {
-    return G->getFunc().getName();
+    return std::string(G->getFunc().getName());
   }
 
   std::string getNodeLabel(const BasicBlock *Node, const PGOUseFunc *Graph) {

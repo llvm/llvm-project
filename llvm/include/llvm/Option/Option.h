@@ -130,7 +130,7 @@ public:
 
   /// Get the name of this option with the default prefix.
   std::string getPrefixedName() const {
-    std::string Ret = getPrefix();
+    std::string Ret(getPrefix());
     Ret += getName();
     return Ret;
   }

@@ -133,7 +133,7 @@ private:
       orc::SymbolNameSet Result;
 
       for (auto &S : Symbols) {
-        if (auto Sym = findSymbol(*S)) {
+        if (auto Sym = findSymbol(std::string(*S))) {
           if (!Sym.getFlags().isStrong())
             Result.insert(S);
         } else if (auto Err = Sym.takeError()) {
@@ -151,7 +151,7 @@ private:
       orc::SymbolNameSet UnresolvedSymbols;
 
       for (auto &S : Symbols) {
-        if (auto Sym = findSymbol(*S)) {
+        if (auto Sym = findSymbol(std::string(*S))) {
           if (auto Addr = Sym.getAddress()) {
             Query->notifySymbolMetRequiredState(
                 S, JITEvaluatedSymbol(*Addr, Sym.getFlags()));

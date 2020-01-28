@@ -26,9 +26,9 @@ std::string lld::demangleItanium(StringRef name) {
   // does not look like a C++ symbol name to avoid getting unexpected
   // result for a C symbol that happens to match a mangled type name.
   if (!name.startswith("_Z"))
-    return name;
+    return std::string(name);
 
-  return demangle(name);
+  return demangle(std::string(name));
 }
 
 SingleStringMatcher::SingleStringMatcher(StringRef Pattern) {

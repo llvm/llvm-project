@@ -236,7 +236,7 @@ std::string RegionBase<Tr>::getNameStr() const {
 
     getEntry()->printAsOperand(OS, false);
   } else
-    entryName = getEntry()->getName();
+    entryName = std::string(getEntry()->getName());
 
   if (getExit()) {
     if (getExit()->getName().empty()) {
@@ -244,7 +244,7 @@ std::string RegionBase<Tr>::getNameStr() const {
 
       getExit()->printAsOperand(OS, false);
     } else
-      exitName = getExit()->getName();
+      exitName = std::string(getExit()->getName());
   } else
     exitName = "<Function Return>";
 

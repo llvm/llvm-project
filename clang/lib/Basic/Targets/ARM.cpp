@@ -107,7 +107,7 @@ void ARMTargetInfo::setArchInfo() {
   StringRef ArchName = getTriple().getArchName();
 
   ArchISA = llvm::ARM::parseArchISA(ArchName);
-  CPU = llvm::ARM::getDefaultCPU(ArchName);
+  CPU = std::string(llvm::ARM::getDefaultCPU(ArchName));
   llvm::ARM::ArchKind AK = llvm::ARM::parseArch(ArchName);
   if (AK != llvm::ARM::ArchKind::INVALID)
     ArchKind = AK;

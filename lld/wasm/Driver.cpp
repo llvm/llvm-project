@@ -361,7 +361,7 @@ static void readConfigs(opt::InputArgList &args) {
     config->features =
         llvm::Optional<std::vector<std::string>>(std::vector<std::string>());
     for (StringRef s : arg->getValues())
-      config->features->push_back(s);
+      config->features->push_back(std::string(s));
   }
 }
 
@@ -572,7 +572,7 @@ static std::string createResponseFile(const opt::InputArgList &args) {
       os << toString(*arg) << "\n";
     }
   }
-  return data.str();
+  return std::string(data.str());
 }
 
 // The --wrap option is a feature to rename symbols so that you can write

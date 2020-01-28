@@ -264,7 +264,7 @@ static bool importFunctions(const char *argv0, Module &DestModule) {
     Entry.insert(F->getGUID());
   }
   auto CachedModuleLoader = [&](StringRef Identifier) {
-    return ModuleLoaderCache.takeModule(Identifier);
+    return ModuleLoaderCache.takeModule(std::string(Identifier));
   };
   FunctionImporter Importer(*Index, CachedModuleLoader);
   ExitOnErr(Importer.importFunctions(DestModule, ImportList));

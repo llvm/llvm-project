@@ -146,7 +146,8 @@ protected:
     MockCompilationDatabase CDB;
     ClangdServer Server(CDB, FS, ClangdServer::optsForTest(), &DiagConsumer);
     for (const auto &FileWithContents : ExtraFiles)
-      FS.Files[testPath(FileWithContents.first)] = FileWithContents.second;
+      FS.Files[testPath(FileWithContents.first)] =
+          std::string(FileWithContents.second);
 
     auto SourceFilename = testPath(SourceFileRelPath);
     Server.addDocument(SourceFilename, SourceContents);
@@ -1020,7 +1021,8 @@ TEST_F(ClangdVFSTest, FallbackWhenWaitingForCompileCommand) {
       // something goes wrong.
       CanReturnCommand.wait();
       auto FileName = llvm::sys::path::filename(File);
-      std::vector<std::string> CommandLine = {"clangd", "-ffreestanding", File};
+      std::vector<std::string> CommandLine = {"clangd", "-ffreestanding",
+                                              std::string(File)};
       return {tooling::CompileCommand(llvm::sys::path::parent_path(File),
                                       FileName, std::move(CommandLine), "")};
     }

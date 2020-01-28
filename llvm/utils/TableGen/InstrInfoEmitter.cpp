@@ -524,7 +524,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   OS << "namespace llvm {\n\n";
 
   CodeGenTarget &Target = CDP.getTargetInfo();
-  const std::string &TargetName = Target.getName();
+  const std::string &TargetName = std::string(Target.getName());
   Record *InstrInfo = Target.getInstructionSet();
 
   // Keep track of all of the def lists we have emitted already.
@@ -561,7 +561,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   unsigned Num = 0;
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
     // Keep a list of the instruction names.
-    InstrNames.add(Inst->TheDef->getName());
+    InstrNames.add(std::string(Inst->TheDef->getName()));
     // Emit the record into the table.
     emitRecord(*Inst, Num++, InstrInfo, EmittedLists, OperandInfoIDs, OS);
   }
@@ -578,7 +578,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     // Newline every eight entries.
     if (Num % 8 == 0)
       OS << "\n    ";
-    OS << InstrNames.get(Inst->TheDef->getName()) << "U, ";
+    OS << InstrNames.get(std::string(Inst->TheDef->getName())) << "U, ";
     ++Num;
   }
 

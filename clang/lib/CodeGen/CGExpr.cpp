@@ -2796,7 +2796,7 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
       PredefinedExpr::getIdentKindName(E->getIdentKind()), FnName};
   std::string GVName = llvm::join(NameItems, NameItems + 2, ".");
   if (auto *BD = dyn_cast_or_null<BlockDecl>(CurCodeDecl)) {
-    std::string Name = SL->getString();
+    std::string Name = std::string(SL->getString());
     if (!Name.empty()) {
       unsigned Discriminator =
           CGM.getCXXABI().getMangleContext().getBlockId(BD, true);
@@ -2805,7 +2805,8 @@ LValue CodeGenFunction::EmitPredefinedLValue(const PredefinedExpr *E) {
       auto C = CGM.GetAddrOfConstantCString(Name, GVName.c_str());
       return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
     } else {
-      auto C = CGM.GetAddrOfConstantCString(FnName, GVName.c_str());
+      auto C =
+          CGM.GetAddrOfConstantCString(std::string(FnName), GVName.c_str());
       return MakeAddrLValue(C, E->getType(), AlignmentSource::Decl);
     }
   }
@@ -2935,7 +2936,8 @@ llvm::Constant *CodeGenFunction::EmitCheckSourceLocation(SourceLocation Loc) {
         FilenameString = llvm::sys::path::filename(FilenameString);
     }
 
-    auto FilenameGV = CGM.GetAddrOfConstantCString(FilenameString, ".src");
+    auto FilenameGV =
+        CGM.GetAddrOfConstantCString(std::string(FilenameString), ".src");
     CGM.getSanitizerMetadata()->disableSanitizerForGlobal(
                           cast<llvm::GlobalVariable>(FilenameGV.getPointer()));
     Filename = FilenameGV.getPointer();

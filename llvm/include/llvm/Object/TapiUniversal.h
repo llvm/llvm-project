@@ -51,7 +51,7 @@ public:
       return Result.second;
     }
 
-    std::string getArchFlagName() const {
+    StringRef getArchFlagName() const {
       return MachO::getArchitectureName(Parent->Architectures[Index]);
     }
 

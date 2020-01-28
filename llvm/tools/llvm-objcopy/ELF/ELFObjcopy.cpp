@@ -390,7 +390,7 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
 
     const auto I = Config.SymbolsToRename.find(Sym.Name);
     if (I != Config.SymbolsToRename.end())
-      Sym.Name = I->getValue();
+      Sym.Name = std::string(I->getValue());
 
     if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
       Sym.Name = (Config.SymbolsPrefix + Sym.Name).str();
@@ -627,7 +627,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
       const auto Iter = Config.SectionsToRename.find(Sec.Name);
       if (Iter != Config.SectionsToRename.end()) {
         const SectionRename &SR = Iter->second;
-        Sec.Name = SR.NewName;
+        Sec.Name = std::string(SR.NewName);
         if (SR.NewFlags.hasValue())
           setSectionFlagsAndType(Sec, SR.NewFlags.getValue());
       }

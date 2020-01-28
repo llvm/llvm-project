@@ -547,8 +547,8 @@ static CXErrorCode clang_indexSourceFile_Impl(
     CInvok->getDiagnosticOpts().IgnoreWarnings = true;
 
   // Make sure to use the raw module format.
-  CInvok->getHeaderSearchOpts().ModuleFormat =
-    CXXIdx->getPCHContainerOperations()->getRawReader().getFormat();
+  CInvok->getHeaderSearchOpts().ModuleFormat = std::string(
+      CXXIdx->getPCHContainerOperations()->getRawReader().getFormat());
 
   auto Unit = ASTUnit::create(CInvok, Diags, CaptureDiagnostics,
                               /*UserFilesAreVolatile=*/true);

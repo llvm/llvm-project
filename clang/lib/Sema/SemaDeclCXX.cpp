@@ -952,7 +952,7 @@ static std::string printTemplateArgs(const PrintingPolicy &PrintingPolicy,
     Arg.getArgument().print(PrintingPolicy, OS);
     First = false;
   }
-  return OS.str();
+  return std::string(OS.str());
 }
 
 static bool lookupStdTypeTraitMember(Sema &S, LookupResult &TraitMemberLookup,

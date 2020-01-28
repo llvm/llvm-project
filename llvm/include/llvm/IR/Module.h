@@ -273,22 +273,22 @@ public:
   /// @{
 
   /// Set the module identifier.
-  void setModuleIdentifier(StringRef ID) { ModuleID = ID; }
+  void setModuleIdentifier(StringRef ID) { ModuleID = std::string(ID); }
 
   /// Set the module's original source file name.
-  void setSourceFileName(StringRef Name) { SourceFileName = Name; }
+  void setSourceFileName(StringRef Name) { SourceFileName = std::string(Name); }
 
   /// Set the data layout
   void setDataLayout(StringRef Desc);
   void setDataLayout(const DataLayout &Other);
 
   /// Set the target triple.
-  void setTargetTriple(StringRef T) { TargetTriple = T; }
+  void setTargetTriple(StringRef T) { TargetTriple = std::string(T); }
 
   /// Set the module-scope inline assembly blocks.
   /// A trailing newline is added if the input doesn't have one.
   void setModuleInlineAsm(StringRef Asm) {
-    GlobalScopeAsm = Asm;
+    GlobalScopeAsm = std::string(Asm);
     if (!GlobalScopeAsm.empty() && GlobalScopeAsm.back() != '\n')
       GlobalScopeAsm += '\n';
   }

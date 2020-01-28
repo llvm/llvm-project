@@ -22,7 +22,7 @@ std::vector<std::string> parseStringList(StringRef Option) {
   for (StringRef &Name : Names) {
     Name = Name.trim();
     if (!Name.empty())
-      Result.push_back(Name);
+      Result.push_back(std::string(Name));
   }
   return Result;
 }

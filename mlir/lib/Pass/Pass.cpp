@@ -601,7 +601,7 @@ void PassManager::disableMultithreading(bool disable) {
 /// of a crash or a pass failure. `outputFile` is a .mlir filename used to write
 /// the generated reproducer.
 void PassManager::enableCrashReproducerGeneration(StringRef outputFile) {
-  crashReproducerFileName = outputFile;
+  crashReproducerFileName = std::string(outputFile);
 }
 
 /// Add the provided instrumentation to the pass manager.

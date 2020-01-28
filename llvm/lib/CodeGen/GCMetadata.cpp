@@ -153,7 +153,7 @@ GCStrategy *GCModuleInfo::getGCStrategy(const StringRef Name) {
   for (auto& Entry : GCRegistry::entries()) {
     if (Name == Entry.getName()) {
       std::unique_ptr<GCStrategy> S = Entry.instantiate();
-      S->Name = Name;
+      S->Name = std::string(Name);
       GCStrategyMap[Name] = S.get();
       GCStrategyList.push_back(std::move(S));
       return GCStrategyList.back().get();

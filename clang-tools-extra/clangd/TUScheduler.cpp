@@ -644,7 +644,7 @@ void ASTWorker::startTask(llvm::StringRef Name,
     std::lock_guard<std::mutex> Lock(Mutex);
     assert(!Done && "running a task after stop()");
     Requests.push_back(
-        {std::move(Task), Name, steady_clock::now(),
+        {std::move(Task), std::string(Name), steady_clock::now(),
          Context::current().derive(kFileBeingProcessed, FileName), UpdateType});
   }
   RequestsCV.notify_all();
@@ -986,31 +986,32 @@ void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
   }
 
   std::shared_ptr<const ASTWorker> Worker = It->second->Worker.lock();
-  auto Task = [Worker, Consistency, Name = Name.str(), File = File.str(),
-               Contents = It->second->Contents,
-               Command = Worker->getCurrentCompileCommand(),
-               Ctx = Context::current().derive(kFileBeingProcessed, File),
-               ConsistentPreamble = std::move(ConsistentPreamble),
-               Action = std::move(Action), this]() mutable {
-    std::shared_ptr<const PreambleData> Preamble;
-    if (ConsistentPreamble.valid()) {
-      Preamble = ConsistentPreamble.get();
-    } else {
-      if (Consistency != PreambleConsistency::StaleOrAbsent) {
-        // Wait until the preamble is built for the first time, if preamble is
-        // required. This avoids extra work of processing the preamble headers
-        // in parallel multiple times.
-        Worker->waitForFirstPreamble();
-      }
-      Preamble = Worker->getPossiblyStalePreamble();
-    }
+  auto Task =
+      [Worker, Consistency, Name = Name.str(), File = File.str(),
+       Contents = It->second->Contents,
+       Command = Worker->getCurrentCompileCommand(),
+       Ctx = Context::current().derive(kFileBeingProcessed, std::string(File)),
+       ConsistentPreamble = std::move(ConsistentPreamble),
+       Action = std::move(Action), this]() mutable {
+        std::shared_ptr<const PreambleData> Preamble;
+        if (ConsistentPreamble.valid()) {
+          Preamble = ConsistentPreamble.get();
+        } else {
+          if (Consistency != PreambleConsistency::StaleOrAbsent) {
+            // Wait until the preamble is built for the first time, if preamble
+            // is required. This avoids extra work of processing the preamble
+            // headers in parallel multiple times.
+            Worker->waitForFirstPreamble();
+          }
+          Preamble = Worker->getPossiblyStalePreamble();
+        }
 
-    std::lock_guard<Semaphore> BarrierLock(Barrier);
-    WithContext Guard(std::move(Ctx));
-    trace::Span Tracer(Name);
-    SPAN_ATTACH(Tracer, "file", File);
-    Action(InputsAndPreamble{Contents, Command, Preamble.get()});
-  };
+        std::lock_guard<Semaphore> BarrierLock(Barrier);
+        WithContext Guard(std::move(Ctx));
+        trace::Span Tracer(Name);
+        SPAN_ATTACH(Tracer, "file", File);
+        Action(InputsAndPreamble{Contents, Command, Preamble.get()});
+      };
 
   PreambleTasks->runAsync("task:" + llvm::sys::path::filename(File),
                           std::move(Task));
@@ -1021,8 +1022,8 @@ TUScheduler::getUsedBytesPerFile() const {
   std::vector<std::pair<Path, std::size_t>> Result;
   Result.reserve(Files.size());
   for (auto &&PathAndFile : Files)
-    Result.push_back(
-        {PathAndFile.first(), PathAndFile.second->Worker->getUsedBytes()});
+    Result.push_back({std::string(PathAndFile.first()),
+                      PathAndFile.second->Worker->getUsedBytes()});
   return Result;
 }
 
@@ -1031,7 +1032,7 @@ std::vector<Path> TUScheduler::getFilesWithCachedAST() const {
   for (auto &&PathAndFile : Files) {
     if (!PathAndFile.second->Worker->isASTCached())
       continue;
-    Result.push_back(PathAndFile.first());
+    Result.push_back(std::string(PathAndFile.first()));
   }
   return Result;
 }

@@ -55,13 +55,13 @@ std::vector<SymbolID> getSymbolIDsFromIndex(llvm::StringRef QualifiedName,
   bool IsGlobalScope = QualifiedName.consume_front("::");
   auto Names = splitQualifiedName(QualifiedName);
   if (IsGlobalScope || !Names.first.empty())
-    Request.Scopes = {Names.first};
+    Request.Scopes = {std::string(Names.first)};
   else
     // QualifiedName refers to a symbol in global scope (e.g. "GlobalSymbol"),
     // add the global scope to the request.
     Request.Scopes = {""};
 
-  Request.Query = Names.second;
+  Request.Query = std::string(Names.second);
   std::vector<SymbolID> SymIDs;
   Index->fuzzyFind(Request, [&](const Symbol &Sym) {
     std::string SymQualifiedName = (Sym.Scope + Sym.Name).str();

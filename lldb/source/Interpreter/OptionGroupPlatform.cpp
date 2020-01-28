@@ -95,7 +95,7 @@ OptionGroupPlatform::SetOptionValue(uint32_t option_idx,
 
   switch (short_option) {
   case 'p':
-    m_platform_name.assign(option_arg);
+    m_platform_name.assign(std::string(option_arg));
     break;
 
   case 'v':

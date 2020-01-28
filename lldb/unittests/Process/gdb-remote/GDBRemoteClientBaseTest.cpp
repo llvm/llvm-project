@@ -34,7 +34,7 @@ struct MockDelegate : public GDBRemoteClientBase::ContinueDelegate {
   void HandleStopReply() override { ++stop_reply_called; }
 
   void HandleAsyncStructuredDataPacket(llvm::StringRef data) override {
-    structured_data_packets.push_back(data);
+    structured_data_packets.push_back(std::string(data));
   }
 };
 

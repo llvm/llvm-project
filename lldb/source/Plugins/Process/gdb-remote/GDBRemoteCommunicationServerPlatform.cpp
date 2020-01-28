@@ -173,7 +173,7 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
   uint16_t port = UINT16_MAX;
   while (packet.GetNameColonValue(name, value)) {
     if (name.equals("host"))
-      hostname = value;
+      hostname = std::string(value);
     else if (name.equals("port"))
       value.getAsInteger(0, port);
   }

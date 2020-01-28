@@ -587,7 +587,7 @@ AvailabilityResult Decl::getAvailability(std::string *Message,
         continue;
 
       if (Message)
-        ResultMessage = Deprecated->getMessage();
+        ResultMessage = std::string(Deprecated->getMessage());
 
       Result = AR_Deprecated;
       continue;
@@ -595,7 +595,7 @@ AvailabilityResult Decl::getAvailability(std::string *Message,
 
     if (const auto *Unavailable = dyn_cast<UnavailableAttr>(A)) {
       if (Message)
-        *Message = Unavailable->getMessage();
+        *Message = std::string(Unavailable->getMessage());
       return AR_Unavailable;
     }
 

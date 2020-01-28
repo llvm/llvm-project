@@ -160,7 +160,7 @@ void printHelp() {
 static std::string rewritePath(StringRef s) {
   if (fs::exists(s))
     return relativeToRoot(s);
-  return s;
+  return std::string(s);
 }
 
 // Reconstructs command line arguments so that so that you can re-run
@@ -199,7 +199,7 @@ std::string createResponseFile(const opt::InputArgList &args) {
       os << toString(*arg) << "\n";
     }
   }
-  return data.str();
+  return std::string(data.str());
 }
 
 // Find a file by concatenating given paths. If a resulting path

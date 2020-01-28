@@ -859,7 +859,7 @@ BitcodeReader::BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
                              LLVMContext &Context)
     : BitcodeReaderBase(std::move(Stream), Strtab), Context(Context),
       ValueList(Context, Stream.SizeInBytes()) {
-  this->ProducerIdentification = ProducerIdentification;
+  this->ProducerIdentification = std::string(ProducerIdentification);
 }
 
 Error BitcodeReader::materializeForwardReferencedFunctions() {

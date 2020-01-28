@@ -30,8 +30,8 @@ TEST(PerfHelperTest, FunctionalTest) {
   Measure(
       makeArrayRef(SingleEvent),
       [&](const PerfEvent &Event, int64_t Value) {
-        CallbackEventName = Event.name();
-        CallbackEventNameFullyQualifed = Event.getPfmEventString();
+        CallbackEventName = std::string(Event.name());
+        CallbackEventNameFullyQualifed = std::string(Event.getPfmEventString());
         CallbackEventCycles = Value;
       },
       EmptyFn);
