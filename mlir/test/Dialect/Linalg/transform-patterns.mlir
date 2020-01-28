@@ -205,6 +205,13 @@ func @vectorization_test_2(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
 //       CHECK: vector.contract {{.*}} :
 //                vector<8x16xf32>, vector<16x32xf32> into vector<8x32xf32>
 
+func @test_vectorize_fill(%A : memref<8x16xf32>, %arg0 : f32) {
+  linalg.fill(%A, %arg0) { __internal_linalg_transform__ = "VECTORIZE"} :  memref<8x16xf32>, f32
+  return
+}
+// CHECK-LABEL: func @test_vectorize_fill
+//       CHECK: vector.broadcast {{.*}} : f32 to vector<8x16xf32>
+
 func @fma(%a: f32, %b: f32, %c: f32) -> f32 {
           %d = mulf %a, %b: f32
           %e = addf %c, %d: f32
