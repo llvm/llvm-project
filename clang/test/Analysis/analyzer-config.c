@@ -31,6 +31,8 @@
 // CHECK-NEXT: ctu-dir = ""
 // CHECK-NEXT: ctu-import-threshold = 100
 // CHECK-NEXT: ctu-index-name = externalDefMap.txt
+// CHECK-NEXT: ctu-on-demand-parsing = false
+// CHECK-NEXT: ctu-on-demand-parsing-database = compile_commands.json
 // CHECK-NEXT: deadcode.DeadStores:ShowFixIts = false
 // CHECK-NEXT: deadcode.DeadStores:WarnForDeadNestedAssignments = true
 // CHECK-NEXT: debug.AnalysisOrder:* = false
@@ -99,4 +101,4 @@
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 96
+// CHECK-NEXT: num-entries = 98

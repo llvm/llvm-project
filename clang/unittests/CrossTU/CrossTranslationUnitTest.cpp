@@ -11,6 +11,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -162,7 +163,7 @@ TEST(CrossTranslationUnit, IndexFormatCanBeParsed) {
   IndexFile.os().flush();
   EXPECT_TRUE(llvm::sys::fs::exists(IndexFileName));
   llvm::Expected<llvm::StringMap<std::string>> IndexOrErr =
-      parseCrossTUIndex(IndexFileName, "");
+      parseCrossTUIndex(IndexFileName);
   EXPECT_TRUE((bool)IndexOrErr);
   llvm::StringMap<std::string> ParsedIndex = IndexOrErr.get();
   for (const auto &E : Index) {
@@ -187,7 +188,7 @@ TEST(CrossTranslationUnit, CTUDirIsHandledCorrectly) {
   IndexFile.os().flush();
   EXPECT_TRUE(llvm::sys::fs::exists(IndexFileName));
   llvm::Expected<llvm::StringMap<std::string>> IndexOrErr =
-      parseCrossTUIndex(IndexFileName, "/ctudir");
+      parseCrossTUIndex(IndexFileName);
   EXPECT_TRUE((bool)IndexOrErr);
   llvm::StringMap<std::string> ParsedIndex = IndexOrErr.get();
   EXPECT_EQ(ParsedIndex["a"], "/ctudir/b/c/d");
