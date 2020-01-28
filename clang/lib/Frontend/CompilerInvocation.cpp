@@ -779,8 +779,11 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.ForceDwarfFrameSection =
       Args.hasFlag(OPT_fforce_dwarf_frame, OPT_fno_force_dwarf_frame, false);
 
-  for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ))
-    Opts.DebugPrefixMap.insert(StringRef(Arg).split('='));
+  for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
+    auto Split = StringRef(Arg).split('=');
+    Opts.DebugPrefixMap.insert(
+        {std::string(Split.first), std::string(Split.second)});
+  }
 
   if (const Arg *A =
           Args.getLastArg(OPT_emit_llvm_uselists, OPT_no_emit_llvm_uselists))
@@ -2112,8 +2115,11 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   // Only the -fmodule-file=<name>=<file> form.
   for (const auto *A : Args.filtered(OPT_fmodule_file)) {
     StringRef Val = A->getValue();
-    if (Val.find('=') != StringRef::npos)
-      Opts.PrebuiltModuleFiles.insert(Val.split('='));
+    if (Val.find('=') != StringRef::npos){
+      auto Split = Val.split('=');
+      Opts.PrebuiltModuleFiles.insert(
+          {std::string(Split.first), std::string(Split.second)});
+    }
   }
   for (const auto *A : Args.filtered(OPT_fprebuilt_module_path))
     Opts.AddPrebuiltModulePath(A->getValue());
@@ -3381,8 +3387,11 @@ static void ParsePreprocessorArgs(PreprocessorOptions &Opts, ArgList &Args,
   for (const auto *A : Args.filtered(OPT_error_on_deserialized_pch_decl))
     Opts.DeserializedPCHDeclsToErrorOn.insert(A->getValue());
 
-  for (const auto &A : Args.getAllArgValues(OPT_fmacro_prefix_map_EQ))
-    Opts.MacroPrefixMap.insert(StringRef(A).split('='));
+  for (const auto &A : Args.getAllArgValues(OPT_fmacro_prefix_map_EQ)) {
+    auto Split = StringRef(A).split('=');
+    Opts.MacroPrefixMap.insert(
+        {std::string(Split.first), std::string(Split.second)});
+  }
 
   if (const Arg *A = Args.getLastArg(OPT_preamble_bytes_EQ)) {
     StringRef Value(A->getValue());
