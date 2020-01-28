@@ -27,6 +27,7 @@ enum NodeType : unsigned {
   Hi,
   Lo, // Hi/Lo operations, typically on a global address.
 
+  CALL,            // A call instruction.
   RET_FLAG, // Return with a flag operand.
 };
 }
@@ -55,6 +56,9 @@ public:
                                const SDLoc &dl, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals) const override;
 
+  SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
+                    SmallVectorImpl<SDValue> &InVals) const override;
+
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &ArgsFlags,
@@ -77,6 +81,11 @@ public:
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
+  /// Returns true if the target allows unaligned memory accesses of the
+  /// specified type.
+  bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AS, unsigned Align,
+                                      MachineMemOperand::Flags Flags,
+                                      bool *Fast) const override;
 };
 } // namespace llvm
 

@@ -14,6 +14,7 @@ add_llvm_target(VECodeGen
   VEISelDAGToDAG.cpp
   VEISelLowering.cpp
   VEInstrInfo.cpp
+  VEMachineFunctionInfo.cpp
   VEMCInstLower.cpp
   VERegisterInfo.cpp
   VESubtarget.cpp

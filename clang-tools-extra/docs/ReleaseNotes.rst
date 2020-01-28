@@ -88,8 +88,8 @@ New checks
   Flags use of the `C` standard library functions ``memset``, ``memcpy`` and
   ``memcmp`` and similar derivatives on non-trivial types.
 
-New aliases
-^^^^^^^^^^^
+New check aliases
+^^^^^^^^^^^^^^^^^
 
 - New alias :doc:`cert-dcl37-c
   <clang-tidy/checks/cert-dcl37-c>` to

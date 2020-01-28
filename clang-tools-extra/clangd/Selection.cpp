@@ -462,6 +462,14 @@ public:
              TraverseStmt(S->getRangeInit()) && TraverseStmt(S->getBody());
     });
   }
+  // OpaqueValueExpr blocks traversal, we must explicitly traverse it.
+  bool TraverseOpaqueValueExpr(OpaqueValueExpr *E) {
+    return traverseNode(E, [&] { return TraverseStmt(E->getSourceExpr()); });
+  }
+  // We only want to traverse the *syntactic form* to understand the selection.
+  bool TraversePseudoObjectExpr(PseudoObjectExpr *E) {
+    return traverseNode(E, [&] { return TraverseStmt(E->getSyntacticForm()); });
+  }
 
 private:
   using Base = RecursiveASTVisitor<SelectionVisitor>;

@@ -619,7 +619,7 @@ llvm::SmallVector<ReferenceLoc, 2> refInDecl(const Decl *D) {
 
 llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
   struct Visitor : ConstStmtVisitor<Visitor> {
-    // FIXME: handle more complicated cases, e.g. ObjC, designated initializers.
+    // FIXME: handle more complicated cases: more ObjC, designated initializers.
     llvm::SmallVector<ReferenceLoc, 2> Refs;
 
     void VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
@@ -659,6 +659,14 @@ llvm::SmallVector<ReferenceLoc, 2> refInExpr(const Expr *E) {
                                   E->getPackLoc(),
                                   /*IsDecl=*/false,
                                   {E->getPack()}});
+    }
+
+    void VisitObjCPropertyRefExpr(const ObjCPropertyRefExpr *E) {
+      Refs.push_back(ReferenceLoc{
+          NestedNameSpecifierLoc(), E->getLocation(),
+          /*IsDecl=*/false,
+          // Select the getter, setter, or @property depending on the call.
+          explicitReferenceTargets(DynTypedNode::create(*E), {})});
     }
   };
 
@@ -778,6 +786,20 @@ public:
   bool VisitExpr(Expr *E) {
     visitNode(DynTypedNode::create(*E));
     return true;
+  }
+
+  bool TraverseOpaqueValueExpr(OpaqueValueExpr *OVE) {
+    visitNode(DynTypedNode::create(*OVE));
+    // Not clear why the source expression is skipped by default...
+    // FIXME: can we just make RecursiveASTVisitor do this?
+    return RecursiveASTVisitor::TraverseStmt(OVE->getSourceExpr());
+  }
+
+  bool TraversePseudoObjectExpr(PseudoObjectExpr *POE) {
+    visitNode(DynTypedNode::create(*POE));
+    // Traverse only the syntactic form to find the *written* references.
+    // (The semantic form also contains lots of duplication)
+    return RecursiveASTVisitor::TraverseStmt(POE->getSyntacticForm());
   }
 
   // We re-define Traverse*, since there's no corresponding Visit*.

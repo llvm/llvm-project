@@ -126,6 +126,10 @@ std::unique_ptr<OpPassBase<FuncOp>> createTestLoopFusionPass();
 /// Creates a pass which inlines calls and callable operations as defined by the
 /// CallGraph.
 std::unique_ptr<Pass> createInlinerPass();
+
+/// Creates a pass which delete symbol operations that are unreachable. This
+/// pass may *only* be scheduled on an operation that defines a SymbolTable.
+std::unique_ptr<Pass> createSymbolDCEPass();
 } // end namespace mlir
 
 #endif // MLIR_TRANSFORMS_PASSES_H

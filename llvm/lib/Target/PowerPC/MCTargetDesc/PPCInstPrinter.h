@@ -71,6 +71,8 @@ public:
   void printcrbitm(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
   void printMemRegImm(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printMemRegImm34PCRel(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  void printMemRegImm34(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printMemRegReg(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 };
 } // end namespace llvm

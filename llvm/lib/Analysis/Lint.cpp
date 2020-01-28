@@ -345,6 +345,22 @@ void Lint::visitCallSite(CallSite CS) {
              "Undefined behavior: memcpy source and destination overlap", &I);
       break;
     }
+    case Intrinsic::memcpy_inline: {
+      MemCpyInlineInst *MCII = cast<MemCpyInlineInst>(&I);
+      const uint64_t Size = MCII->getLength()->getValue().getLimitedValue();
+      visitMemoryReference(I, MCII->getDest(), Size, MCII->getDestAlignment(),
+                           nullptr, MemRef::Write);
+      visitMemoryReference(I, MCII->getSource(), Size,
+                           MCII->getSourceAlignment(), nullptr, MemRef::Read);
+
+      // Check that the memcpy arguments don't overlap. The AliasAnalysis API
+      // isn't expressive enough for what we really want to do. Known partial
+      // overlap is not distinguished from the case where nothing is known.
+      const LocationSize LS = LocationSize::precise(Size);
+      Assert(AA->alias(MCII->getSource(), LS, MCII->getDest(), LS) != MustAlias,
+             "Undefined behavior: memcpy source and destination overlap", &I);
+      break;
+    }
     case Intrinsic::memmove: {
       MemMoveInst *MMI = cast<MemMoveInst>(&I);
       // TODO: If the size is known, use it.

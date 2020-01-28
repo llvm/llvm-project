@@ -536,7 +536,8 @@ TEST_F(TargetDeclTest, ObjC) {
       [[f.x]].y = 0;
     }
   )cpp";
-  EXPECT_DECLS("OpaqueValueExpr", "@property(atomic, retain, readwrite) I *x");
+  EXPECT_DECLS("ObjCPropertyRefExpr",
+               "@property(atomic, retain, readwrite) I *x");
 
   Code = R"cpp(
     @protocol Foo
@@ -589,6 +590,7 @@ protected:
     // parsing.
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
     TU.ExtraArgs.push_back("-std=c++2a");
+    TU.ExtraArgs.push_back("-xobjective-c++");
 
     auto AST = TU.build();
     auto *TestDecl = &findDecl(AST, "foo");
@@ -1123,7 +1125,37 @@ TEST_F(FindExplicitReferencesTest, All) {
            "3: targets = {foo::bar}, decl\n"
            "4: targets = {T}\n"
            "5: targets = {t}, decl\n"
-           "6: targets = {t}\n"}};
+           "6: targets = {t}\n"},
+       // Objective-C: properties
+       {
+           R"cpp(
+            @interface I {}
+            @property(retain) I* x;
+            @property(retain) I* y;
+            @end
+            I *f;
+            void foo() {
+              $0^f.$1^x.$2^y = 0;
+            }
+          )cpp",
+           "0: targets = {f}\n"
+           "1: targets = {I::x}\n"
+           "2: targets = {I::y}\n"},
+       // Objective-C: implicit properties
+       {
+           R"cpp(
+            @interface I {}
+            -(I*)x;
+            -(void)setY:(I*)y;
+            @end
+            I *f;
+            void foo() {
+              $0^f.$1^x.$2^y = 0;
+            }
+          )cpp",
+           "0: targets = {f}\n"
+           "1: targets = {I::x}\n"
+           "2: targets = {I::setY:}\n"}};
 
   for (const auto &C : Cases) {
     llvm::StringRef ExpectedCode = C.first;

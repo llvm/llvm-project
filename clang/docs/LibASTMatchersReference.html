@@ -1003,6 +1003,21 @@ cxxNewExpr()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('cxxNoexceptExpr0')"><a name="cxxNoexceptExpr0Anchor">cxxNoexceptExpr</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNoexceptExpr.html">CXXNoexceptExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="cxxNoexceptExpr0"><pre>Matches noexcept expressions.
+
+Given
+  bool a() noexcept;
+  bool b() noexcept(true);
+  bool c() noexcept(false);
+  bool d() noexcept(noexcept(a()));
+  bool e = noexcept(b()) || noexcept(c());
+cxxNoexceptExpr()
+  matches `noexcept(a())`, `noexcept(b())` and `noexcept(c())`.
+  doesn't match the noexcept specifier in the declarations a, b, c or d.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('cxxNullPtrLiteralExpr0')"><a name="cxxNullPtrLiteralExpr0Anchor">cxxNullPtrLiteralExpr</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNullPtrLiteralExpr.html">CXXNullPtrLiteralExpr</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="cxxNullPtrLiteralExpr0"><pre>Matches nullptr literal.
 </pre></td></tr>

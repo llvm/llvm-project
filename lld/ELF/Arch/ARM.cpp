@@ -263,7 +263,8 @@ void ARM::addPltSymbols(InputSection &isec, uint64_t off) const {
 }
 
 bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
-                     uint64_t branchAddr, const Symbol &s, int64_t /*a*/) const {
+                     uint64_t branchAddr, const Symbol &s,
+                     int64_t /*a*/) const {
   // If S is an undefined weak symbol and does not have a PLT entry then it
   // will be resolved as a branch to the next instruction.
   if (s.isUndefWeak() && !s.isInPlt())
@@ -276,8 +277,8 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_ARM_PLT32:
   case R_ARM_JUMP24:
     // Source is ARM, all PLT entries are ARM so no interworking required.
-    // Otherwise we need to interwork if Symbol has bit 0 set (Thumb).
-    if (expr == R_PC && ((s.getVA() & 1) == 1))
+    // Otherwise we need to interwork if STT_FUNC Symbol has bit 0 set (Thumb).
+    if (s.isFunc() && expr == R_PC && (s.getVA() & 1))
       return true;
     LLVM_FALLTHROUGH;
   case R_ARM_CALL: {
@@ -287,8 +288,8 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
     // Source is Thumb, all PLT entries are ARM so interworking is required.
-    // Otherwise we need to interwork if Symbol has bit 0 clear (ARM).
-    if (expr == R_PLT_PC || ((s.getVA() & 1) == 0))
+    // Otherwise we need to interwork if STT_FUNC Symbol has bit 0 clear (ARM).
+    if (expr == R_PLT_PC || (s.isFunc() && (s.getVA() & 1) == 0))
       return true;
     LLVM_FALLTHROUGH;
   case R_ARM_THM_CALL: {

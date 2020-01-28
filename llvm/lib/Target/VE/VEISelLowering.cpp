@@ -37,6 +37,28 @@ using namespace llvm;
 // Calling Convention Implementation
 //===----------------------------------------------------------------------===//
 
+static bool allocateFloat(unsigned ValNo, MVT ValVT, MVT LocVT,
+                          CCValAssign::LocInfo LocInfo,
+                          ISD::ArgFlagsTy ArgFlags, CCState &State) {
+  switch (LocVT.SimpleTy) {
+  case MVT::f32: {
+    // Allocate stack like below
+    //    0      4
+    //    +------+------+
+    //    | empty| float|
+    //    +------+------+
+    // Use align=8 for dummy area to align the beginning of these 2 area.
+    State.AllocateStack(4, 8); // for empty area
+    // Use align=4 for value to place it at just after the dummy area.
+    unsigned Offset = State.AllocateStack(4, 4); // for float value area
+    State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
+    return true;
+  }
+  default:
+    return false;
+  }
+}
+
 #include "VEGenCallingConv.inc"
 
 bool VETargetLowering::CanLowerReturn(
@@ -114,6 +136,8 @@ SDValue VETargetLowering::LowerFormalArguments(
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
 
+  // Get the base offset of the incoming arguments stack space.
+  unsigned ArgsBaseOffset = 176;
   // Get the size of the preserved arguments area
   unsigned ArgsPreserved = 64;
 
@@ -129,7 +153,6 @@ SDValue VETargetLowering::LowerFormalArguments(
 
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
-    assert(VA.isRegLoc() && "TODO implement argument passing on stack");
     if (VA.isRegLoc()) {
       // This argument is passed in a register.
       // All integer register arguments are promoted by the caller to i64.
@@ -166,6 +189,18 @@ SDValue VETargetLowering::LowerFormalArguments(
       InVals.push_back(Arg);
       continue;
     }
+
+    // The registers are exhausted. This argument was passed on the stack.
+    assert(VA.isMemLoc());
+    // The CC_VE_Full/Half functions compute stack offsets relative to the
+    // beginning of the arguments area at %fp+176.
+    unsigned Offset = VA.getLocMemOffset() + ArgsBaseOffset;
+    unsigned ValSize = VA.getValVT().getSizeInBits() / 8;
+    int FI = MF.getFrameInfo().CreateFixedObject(ValSize, Offset, true);
+    InVals.push_back(
+        DAG.getLoad(VA.getValVT(), DL, Chain,
+                    DAG.getFrameIndex(FI, getPointerTy(MF.getDataLayout())),
+                    MachinePointerInfo::getFixedStack(MF, FI)));
   }
 
   assert(!IsVarArg && "TODO implement var args");
@@ -198,12 +233,251 @@ Register VETargetLowering::getRegisterByName(const char *RegName, LLT VT,
 // TargetLowering Implementation
 //===----------------------------------------------------------------------===//
 
+SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
+                                    SmallVectorImpl<SDValue> &InVals) const {
+  SelectionDAG &DAG = CLI.DAG;
+  SDLoc DL = CLI.DL;
+  SDValue Chain = CLI.Chain;
+  auto PtrVT = getPointerTy(DAG.getDataLayout());
+
+  // VE target does not yet support tail call optimization.
+  CLI.IsTailCall = false;
+
+  // Get the base offset of the outgoing arguments stack space.
+  unsigned ArgsBaseOffset = 176;
+  // Get the size of the preserved arguments area
+  unsigned ArgsPreserved = 8 * 8u;
+
+  // Analyze operands of the call, assigning locations to each operand.
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CLI.CallConv, CLI.IsVarArg, DAG.getMachineFunction(), ArgLocs,
+                 *DAG.getContext());
+  // Allocate the preserved area first.
+  CCInfo.AllocateStack(ArgsPreserved, 8);
+  // We already allocated the preserved area, so the stack offset computed
+  // by CC_VE would be correct now.
+  CCInfo.AnalyzeCallOperands(CLI.Outs, CC_VE);
+
+  assert(!CLI.IsVarArg);
+
+  // Get the size of the outgoing arguments stack space requirement.
+  unsigned ArgsSize = CCInfo.getNextStackOffset();
+
+  // Keep stack frames 16-byte aligned.
+  ArgsSize = alignTo(ArgsSize, 16);
+
+  // Adjust the stack pointer to make room for the arguments.
+  // FIXME: Use hasReservedCallFrame to avoid %sp adjustments around all calls
+  // with more than 6 arguments.
+  Chain = DAG.getCALLSEQ_START(Chain, ArgsSize, 0, DL);
+
+  // Collect the set of registers to pass to the function and their values.
+  // This will be emitted as a sequence of CopyToReg nodes glued to the call
+  // instruction.
+  SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
+
+  // Collect chains from all the memory opeations that copy arguments to the
+  // stack. They must follow the stack pointer adjustment above and precede the
+  // call instruction itself.
+  SmallVector<SDValue, 8> MemOpChains;
+
+  // VE needs to get address of callee function in a register
+  // So, prepare to copy it to SX12 here.
+
+  // If the callee is a GlobalAddress node (quite common, every direct call is)
+  // turn it into a TargetGlobalAddress node so that legalize doesn't hack it.
+  // Likewise ExternalSymbol -> TargetExternalSymbol.
+  SDValue Callee = CLI.Callee;
+
+  assert(!isPositionIndependent() && "TODO PIC");
+
+  // Turn GlobalAddress/ExternalSymbol node into a value node
+  // containing the address of them here.
+  if (isa<GlobalAddressSDNode>(Callee)) {
+    Callee =
+        makeHiLoPair(Callee, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
+  } else if (isa<ExternalSymbolSDNode>(Callee)) {
+    Callee =
+        makeHiLoPair(Callee, VEMCExpr::VK_VE_HI32, VEMCExpr::VK_VE_LO32, DAG);
+  }
+
+  RegsToPass.push_back(std::make_pair(VE::SX12, Callee));
+
+  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+    CCValAssign &VA = ArgLocs[i];
+    SDValue Arg = CLI.OutVals[i];
+
+    // Promote the value if needed.
+    switch (VA.getLocInfo()) {
+    default:
+      llvm_unreachable("Unknown location info!");
+    case CCValAssign::Full:
+      break;
+    case CCValAssign::SExt:
+      Arg = DAG.getNode(ISD::SIGN_EXTEND, DL, VA.getLocVT(), Arg);
+      break;
+    case CCValAssign::ZExt:
+      Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), Arg);
+      break;
+    case CCValAssign::AExt:
+      Arg = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Arg);
+      break;
+    }
+
+    if (VA.isRegLoc()) {
+      RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
+      continue;
+    }
+
+    assert(VA.isMemLoc());
+
+    // Create a store off the stack pointer for this argument.
+    SDValue StackPtr = DAG.getRegister(VE::SX11, PtrVT);
+    // The argument area starts at %fp+176 in the callee frame,
+    // %sp+176 in ours.
+    SDValue PtrOff =
+        DAG.getIntPtrConstant(VA.getLocMemOffset() + ArgsBaseOffset, DL);
+    PtrOff = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, PtrOff);
+    MemOpChains.push_back(
+        DAG.getStore(Chain, DL, Arg, PtrOff, MachinePointerInfo()));
+  }
+
+  // Emit all stores, make sure they occur before the call.
+  if (!MemOpChains.empty())
+    Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
+
+  // Build a sequence of CopyToReg nodes glued together with token chain and
+  // glue operands which copy the outgoing args into registers. The InGlue is
+  // necessary since all emitted instructions must be stuck together in order
+  // to pass the live physical registers.
+  SDValue InGlue;
+  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
+    Chain = DAG.getCopyToReg(Chain, DL, RegsToPass[i].first,
+                             RegsToPass[i].second, InGlue);
+    InGlue = Chain.getValue(1);
+  }
+
+  // Build the operands for the call instruction itself.
+  SmallVector<SDValue, 8> Ops;
+  Ops.push_back(Chain);
+  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
+    Ops.push_back(DAG.getRegister(RegsToPass[i].first,
+                                  RegsToPass[i].second.getValueType()));
+
+  // Add a register mask operand representing the call-preserved registers.
+  const VERegisterInfo *TRI = Subtarget->getRegisterInfo();
+  const uint32_t *Mask =
+      TRI->getCallPreservedMask(DAG.getMachineFunction(), CLI.CallConv);
+  assert(Mask && "Missing call preserved mask for calling convention");
+  Ops.push_back(DAG.getRegisterMask(Mask));
+
+  // Make sure the CopyToReg nodes are glued to the call instruction which
+  // consumes the registers.
+  if (InGlue.getNode())
+    Ops.push_back(InGlue);
+
+  // Now the call itself.
+  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+  Chain = DAG.getNode(VEISD::CALL, DL, NodeTys, Ops);
+  InGlue = Chain.getValue(1);
+
+  // Revert the stack pointer immediately after the call.
+  Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(ArgsSize, DL, true),
+                             DAG.getIntPtrConstant(0, DL, true), InGlue, DL);
+  InGlue = Chain.getValue(1);
+
+  // Now extract the return values. This is more or less the same as
+  // LowerFormalArguments.
+
+  // Assign locations to each value returned by this call.
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState RVInfo(CLI.CallConv, CLI.IsVarArg, DAG.getMachineFunction(), RVLocs,
+                 *DAG.getContext());
+
+  // Set inreg flag manually for codegen generated library calls that
+  // return float.
+  if (CLI.Ins.size() == 1 && CLI.Ins[0].VT == MVT::f32 && !CLI.CS)
+    CLI.Ins[0].Flags.setInReg();
+
+  RVInfo.AnalyzeCallResult(CLI.Ins, RetCC_VE);
+
+  // Copy all of the result registers out of their specified physreg.
+  for (unsigned i = 0; i != RVLocs.size(); ++i) {
+    CCValAssign &VA = RVLocs[i];
+    unsigned Reg = VA.getLocReg();
+
+    // When returning 'inreg {i32, i32 }', two consecutive i32 arguments can
+    // reside in the same register in the high and low bits. Reuse the
+    // CopyFromReg previous node to avoid duplicate copies.
+    SDValue RV;
+    if (RegisterSDNode *SrcReg = dyn_cast<RegisterSDNode>(Chain.getOperand(1)))
+      if (SrcReg->getReg() == Reg && Chain->getOpcode() == ISD::CopyFromReg)
+        RV = Chain.getValue(0);
+
+    // But usually we'll create a new CopyFromReg for a different register.
+    if (!RV.getNode()) {
+      RV = DAG.getCopyFromReg(Chain, DL, Reg, RVLocs[i].getLocVT(), InGlue);
+      Chain = RV.getValue(1);
+      InGlue = Chain.getValue(2);
+    }
+
+    // Get the high bits for i32 struct elements.
+    if (VA.getValVT() == MVT::i32 && VA.needsCustom())
+      RV = DAG.getNode(ISD::SRL, DL, VA.getLocVT(), RV,
+                       DAG.getConstant(32, DL, MVT::i32));
+
+    // The callee promoted the return value, so insert an Assert?ext SDNode so
+    // we won't promote the value again in this function.
+    switch (VA.getLocInfo()) {
+    case CCValAssign::SExt:
+      RV = DAG.getNode(ISD::AssertSext, DL, VA.getLocVT(), RV,
+                       DAG.getValueType(VA.getValVT()));
+      break;
+    case CCValAssign::ZExt:
+      RV = DAG.getNode(ISD::AssertZext, DL, VA.getLocVT(), RV,
+                       DAG.getValueType(VA.getValVT()));
+      break;
+    default:
+      break;
+    }
+
+    // Truncate the register down to the return value type.
+    if (VA.isExtInLoc())
+      RV = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), RV);
+
+    InVals.push_back(RV);
+  }
+
+  return Chain;
+}
+
 /// isFPImmLegal - Returns true if the target can instruction select the
 /// specified FP immediate natively. If false, the legalizer will
 /// materialize the FP immediate as a load from a constant pool.
 bool VETargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                     bool ForCodeSize) const {
   return VT == MVT::f32 || VT == MVT::f64;
+}
+
+/// Determine if the target supports unaligned memory accesses.
+///
+/// This function returns true if the target allows unaligned memory accesses
+/// of the specified type in the given address space. If true, it also returns
+/// whether the unaligned memory access is "fast" in the last argument by
+/// reference. This is used, for example, in situations where an array
+/// copy/move/set is converted to a sequence of store operations. Its use
+/// helps to ensure that such replacements don't generate code that causes an
+/// alignment error (trap) on the target machine.
+bool VETargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
+                                                      unsigned AddrSpace,
+                                                      unsigned Align,
+                                                      MachineMemOperand::Flags,
+                                                      bool *Fast) const {
+  if (Fast) {
+    // It's fast anytime on VE
+    *Fast = true;
+  }
+  return true;
 }
 
 VETargetLowering::VETargetLowering(const TargetMachine &TM,
@@ -247,6 +521,7 @@ const char *VETargetLowering::getTargetNodeName(unsigned Opcode) const {
     break;
     TARGET_NODE_CASE(Lo)
     TARGET_NODE_CASE(Hi)
+    TARGET_NODE_CASE(CALL)
     TARGET_NODE_CASE(RET_FLAG)
   }
 #undef TARGET_NODE_CASE
@@ -299,6 +574,7 @@ SDValue VETargetLowering::makeAddress(SDValue Op, SelectionDAG &DAG) const {
 }
 
 /// Custom Lower {
+
 SDValue VETargetLowering::LowerGlobalAddress(SDValue Op,
                                              SelectionDAG &DAG) const {
   return makeAddress(Op, DAG);

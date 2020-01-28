@@ -13,6 +13,17 @@
 //===----------------------------------------------------------------------===//
 // Aurora VE
 //===----------------------------------------------------------------------===//
+def CC_VE_C_Stack: CallingConv<[
+  // float --> need special handling like below.
+  //    0      4
+  //    +------+------+
+  //    | empty| float|
+  //    +------+------+
+  CCIfType<[f32], CCCustom<"allocateFloat">>,
+
+  // All of the rest are assigned to the stack in 8-byte aligned units.
+  CCAssignToStack<0, 8>
+]>;
 
 def CC_VE : CallingConv<[
   // All arguments get passed in generic registers if there is space.
@@ -33,6 +44,9 @@ def CC_VE : CallingConv<[
   // long long/double --> generic 64 bit registers
   CCIfType<[i64, f64],
            CCAssignToReg<[SX0, SX1, SX2, SX3, SX4, SX5, SX6, SX7]>>,
+
+  // Alternatively, they are assigned to the stack in 8-byte aligned units.
+  CCDelegateTo<CC_VE_C_Stack>
 ]>;
 
 def RetCC_VE : CallingConv<[

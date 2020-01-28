@@ -18,6 +18,9 @@
 #include <cstring>
 #include <limits>
 #include <string>
+#if __cplusplus > 201402L
+#include <string_view>
+#endif
 #include <type_traits>
 #include <utility>
 
@@ -109,6 +112,12 @@ namespace llvm {
     /// Construct a string ref from an std::string.
     /*implicit*/ StringRef(const std::string &Str)
       : Data(Str.data()), Length(Str.length()) {}
+
+#if __cplusplus > 201402L
+    /// Construct a string ref from an std::string_view.
+    /*implicit*/ constexpr StringRef(std::string_view Str)
+        : Data(Str.data()), Length(Str.size()) {}
+#endif
 
     static StringRef withNullAsEmpty(const char *data) {
       return StringRef(data ? data : "");
@@ -266,6 +275,12 @@ namespace llvm {
     operator std::string() const {
       return str();
     }
+
+#if __cplusplus > 201402L
+    operator std::string_view() const {
+      return std::string_view(data(), size());
+    }
+#endif
 
     /// @}
     /// @name String Predicates

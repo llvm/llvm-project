@@ -48,20 +48,183 @@ static Header *getHeader(const void *Ptr) {
 
 } // namespace LargeBlock
 
-template <uptr MaxFreeListSize = 32U> class MapAllocator {
+class MapAllocatorNoCache {
 public:
-  // Ensure the freelist is disabled on Fuchsia, since it doesn't support
-  // releasing Secondary blocks yet.
-  static_assert(!SCUDO_FUCHSIA || MaxFreeListSize == 0U, "");
+  void initLinkerInitialized(UNUSED s32 ReleaseToOsInterval) {}
+  void init(UNUSED s32 ReleaseToOsInterval) {}
+  bool retrieve(UNUSED uptr Size, UNUSED LargeBlock::Header **H) {
+    return false;
+  }
+  bool store(UNUSED LargeBlock::Header *H) { return false; }
+  static bool canCache(UNUSED uptr Size) { return false; }
+  void disable() {}
+  void enable() {}
+};
 
-  void initLinkerInitialized(GlobalStats *S) {
+template <uptr MaxEntriesCount = 32U, uptr MaxEntrySize = 1UL << 19>
+class MapAllocatorCache {
+public:
+  // Fuchsia doesn't allow releasing Secondary blocks yet. Note that 0 length
+  // arrays are an extension for some compilers.
+  // FIXME(kostyak): support (partially) the cache on Fuchsia.
+  static_assert(!SCUDO_FUCHSIA || MaxEntriesCount == 0U, "");
+
+  void initLinkerInitialized(s32 ReleaseToOsInterval) {
+    ReleaseToOsIntervalMs = ReleaseToOsInterval;
+  }
+  void init(s32 ReleaseToOsInterval) {
+    memset(this, 0, sizeof(*this));
+    initLinkerInitialized(ReleaseToOsInterval);
+  }
+
+  bool store(LargeBlock::Header *H) {
+    bool EntryCached = false;
+    bool EmptyCache = false;
+    const u64 Time = getMonotonicTime();
+    {
+      ScopedLock L(Mutex);
+      if (EntriesCount == MaxEntriesCount) {
+        if (IsFullEvents++ == 4U)
+          EmptyCache = true;
+      } else {
+        for (uptr I = 0; I < MaxEntriesCount; I++) {
+          if (Entries[I].Block)
+            continue;
+          if (I != 0)
+            Entries[I] = Entries[0];
+          Entries[0].Block = reinterpret_cast<uptr>(H);
+          Entries[0].BlockEnd = H->BlockEnd;
+          Entries[0].MapBase = H->MapBase;
+          Entries[0].MapSize = H->MapSize;
+          Entries[0].Time = Time;
+          EntriesCount++;
+          EntryCached = true;
+          break;
+        }
+      }
+    }
+    if (EmptyCache)
+      empty();
+    else if (ReleaseToOsIntervalMs >= 0)
+      releaseOlderThan(Time -
+                       static_cast<u64>(ReleaseToOsIntervalMs) * 1000000);
+    return EntryCached;
+  }
+
+  bool retrieve(uptr Size, LargeBlock::Header **H) {
+    ScopedLock L(Mutex);
+    if (EntriesCount == 0)
+      return false;
+    for (uptr I = 0; I < MaxEntriesCount; I++) {
+      if (!Entries[I].Block)
+        continue;
+      const uptr BlockSize = Entries[I].BlockEnd - Entries[I].Block;
+      if (Size > BlockSize)
+        continue;
+      if (Size < BlockSize - getPageSizeCached() * 4U)
+        continue;
+      *H = reinterpret_cast<LargeBlock::Header *>(Entries[I].Block);
+      Entries[I].Block = 0;
+      (*H)->BlockEnd = Entries[I].BlockEnd;
+      (*H)->MapBase = Entries[I].MapBase;
+      (*H)->MapSize = Entries[I].MapSize;
+      EntriesCount--;
+      return true;
+    }
+    return false;
+  }
+
+  static bool canCache(uptr Size) {
+    return MaxEntriesCount != 0U && Size <= MaxEntrySize;
+  }
+
+  void disable() { Mutex.lock(); }
+
+  void enable() { Mutex.unlock(); }
+
+private:
+  void empty() {
+    struct {
+      void *MapBase;
+      uptr MapSize;
+      MapPlatformData Data;
+    } MapInfo[MaxEntriesCount];
+    uptr N = 0;
+    {
+      ScopedLock L(Mutex);
+      for (uptr I = 0; I < MaxEntriesCount; I++) {
+        if (!Entries[I].Block)
+          continue;
+        MapInfo[N].MapBase = reinterpret_cast<void *>(Entries[I].MapBase);
+        MapInfo[N].MapSize = Entries[I].MapSize;
+        MapInfo[N].Data = Entries[I].Data;
+        Entries[I].Block = 0;
+        N++;
+      }
+      EntriesCount = 0;
+      IsFullEvents = 0;
+    }
+    for (uptr I = 0; I < N; I++)
+      unmap(MapInfo[I].MapBase, MapInfo[I].MapSize, UNMAP_ALL,
+            &MapInfo[I].Data);
+  }
+
+  void releaseOlderThan(u64 Time) {
+    struct {
+      uptr Block;
+      uptr BlockSize;
+      MapPlatformData Data;
+    } BlockInfo[MaxEntriesCount];
+    uptr N = 0;
+    {
+      ScopedLock L(Mutex);
+      if (!EntriesCount)
+        return;
+      for (uptr I = 0; I < MaxEntriesCount; I++) {
+        if (!Entries[I].Block || !Entries[I].Time)
+          continue;
+        if (Entries[I].Time > Time)
+          continue;
+        BlockInfo[N].Block = Entries[I].Block;
+        BlockInfo[N].BlockSize = Entries[I].BlockEnd - Entries[I].Block;
+        BlockInfo[N].Data = Entries[I].Data;
+        Entries[I].Time = 0;
+        N++;
+      }
+    }
+    for (uptr I = 0; I < N; I++)
+      releasePagesToOS(BlockInfo[I].Block, 0, BlockInfo[I].BlockSize,
+                       &BlockInfo[I].Data);
+  }
+
+  struct CachedBlock {
+    uptr Block;
+    uptr BlockEnd;
+    uptr MapBase;
+    uptr MapSize;
+    MapPlatformData Data;
+    u64 Time;
+  };
+
+  HybridMutex Mutex;
+  CachedBlock Entries[MaxEntriesCount];
+  u32 EntriesCount;
+  uptr LargestSize;
+  u32 IsFullEvents;
+  s32 ReleaseToOsIntervalMs;
+};
+
+template <class CacheT> class MapAllocator {
+public:
+  void initLinkerInitialized(GlobalStats *S, s32 ReleaseToOsInterval = -1) {
+    Cache.initLinkerInitialized(ReleaseToOsInterval);
     Stats.initLinkerInitialized();
     if (LIKELY(S))
       S->link(&Stats);
   }
-  void init(GlobalStats *S) {
+  void init(GlobalStats *S, s32 ReleaseToOsInterval = -1) {
     memset(this, 0, sizeof(*this));
-    initLinkerInitialized(S);
+    initLinkerInitialized(S, ReleaseToOsInterval);
   }
 
   void *allocate(uptr Size, uptr AlignmentHint = 0, uptr *BlockEnd = nullptr,
@@ -79,22 +242,28 @@ public:
 
   void getStats(ScopedString *Str) const;
 
-  void disable() { Mutex.lock(); }
+  void disable() {
+    Mutex.lock();
+    Cache.disable();
+  }
 
-  void enable() { Mutex.unlock(); }
+  void enable() {
+    Cache.enable();
+    Mutex.unlock();
+  }
 
   template <typename F> void iterateOverBlocks(F Callback) const {
     for (const auto &H : InUseBlocks)
       Callback(reinterpret_cast<uptr>(&H) + LargeBlock::getHeaderSize());
   }
 
-  static uptr getMaxFreeListSize(void) { return MaxFreeListSize; }
+  static uptr canCache(uptr Size) { return CacheT::canCache(Size); }
 
 private:
+  CacheT Cache;
+
   HybridMutex Mutex;
   DoublyLinkedList<LargeBlock::Header> InUseBlocks;
-  // The free list is sorted based on the committed size of blocks.
-  DoublyLinkedList<LargeBlock::Header> FreeBlocks;
   uptr AllocatedBytes;
   uptr FreedBytes;
   uptr LargestSize;
@@ -114,35 +283,32 @@ private:
 // For allocations requested with an alignment greater than or equal to a page,
 // the committed memory will amount to something close to Size - AlignmentHint
 // (pending rounding and headers).
-template <uptr MaxFreeListSize>
-void *MapAllocator<MaxFreeListSize>::allocate(uptr Size, uptr AlignmentHint,
-                                              uptr *BlockEnd,
-                                              bool ZeroContents) {
+template <class CacheT>
+void *MapAllocator<CacheT>::allocate(uptr Size, uptr AlignmentHint,
+                                     uptr *BlockEnd, bool ZeroContents) {
   DCHECK_GE(Size, AlignmentHint);
   const uptr PageSize = getPageSizeCached();
   const uptr RoundedSize =
       roundUpTo(Size + LargeBlock::getHeaderSize(), PageSize);
 
-  if (MaxFreeListSize && AlignmentHint < PageSize) {
-    ScopedLock L(Mutex);
-    for (auto &H : FreeBlocks) {
-      const uptr FreeBlockSize = H.BlockEnd - reinterpret_cast<uptr>(&H);
-      if (FreeBlockSize < RoundedSize)
-        continue;
-      // Candidate free block should only be at most 4 pages larger.
-      if (FreeBlockSize > RoundedSize + 4 * PageSize)
-        break;
-      FreeBlocks.remove(&H);
-      InUseBlocks.push_back(&H);
-      AllocatedBytes += FreeBlockSize;
-      NumberOfAllocs++;
-      Stats.add(StatAllocated, FreeBlockSize);
+  if (AlignmentHint < PageSize && CacheT::canCache(RoundedSize)) {
+    LargeBlock::Header *H;
+    if (Cache.retrieve(RoundedSize, &H)) {
       if (BlockEnd)
-        *BlockEnd = H.BlockEnd;
-      void *Ptr = reinterpret_cast<void *>(reinterpret_cast<uptr>(&H) +
+        *BlockEnd = H->BlockEnd;
+      void *Ptr = reinterpret_cast<void *>(reinterpret_cast<uptr>(H) +
                                            LargeBlock::getHeaderSize());
       if (ZeroContents)
-        memset(Ptr, 0, H.BlockEnd - reinterpret_cast<uptr>(Ptr));
+        memset(Ptr, 0, H->BlockEnd - reinterpret_cast<uptr>(Ptr));
+      const uptr BlockSize = H->BlockEnd - reinterpret_cast<uptr>(H);
+      {
+        ScopedLock L(Mutex);
+        InUseBlocks.push_back(H);
+        AllocatedBytes += BlockSize;
+        NumberOfAllocs++;
+        Stats.add(StatAllocated, BlockSize);
+        Stats.add(StatMapped, H->MapSize);
+      }
       return Ptr;
     }
   }
@@ -191,6 +357,8 @@ void *MapAllocator<MaxFreeListSize>::allocate(uptr Size, uptr AlignmentHint,
   H->MapSize = MapEnd - MapBase;
   H->BlockEnd = CommitBase + CommitSize;
   H->Data = Data;
+  if (BlockEnd)
+    *BlockEnd = CommitBase + CommitSize;
   {
     ScopedLock L(Mutex);
     InUseBlocks.push_back(H);
@@ -201,52 +369,31 @@ void *MapAllocator<MaxFreeListSize>::allocate(uptr Size, uptr AlignmentHint,
     Stats.add(StatAllocated, CommitSize);
     Stats.add(StatMapped, H->MapSize);
   }
-  if (BlockEnd)
-    *BlockEnd = CommitBase + CommitSize;
   return reinterpret_cast<void *>(Ptr + LargeBlock::getHeaderSize());
 }
 
-template <uptr MaxFreeListSize>
-void MapAllocator<MaxFreeListSize>::deallocate(void *Ptr) {
+template <class CacheT> void MapAllocator<CacheT>::deallocate(void *Ptr) {
   LargeBlock::Header *H = LargeBlock::getHeader(Ptr);
   const uptr Block = reinterpret_cast<uptr>(H);
+  const uptr CommitSize = H->BlockEnd - Block;
   {
     ScopedLock L(Mutex);
     InUseBlocks.remove(H);
-    const uptr CommitSize = H->BlockEnd - Block;
     FreedBytes += CommitSize;
     NumberOfFrees++;
     Stats.sub(StatAllocated, CommitSize);
-    if (MaxFreeListSize && FreeBlocks.size() < MaxFreeListSize) {
-      bool Inserted = false;
-      for (auto &F : FreeBlocks) {
-        const uptr FreeBlockSize = F.BlockEnd - reinterpret_cast<uptr>(&F);
-        if (FreeBlockSize >= CommitSize) {
-          FreeBlocks.insert(H, &F);
-          Inserted = true;
-          break;
-        }
-      }
-      if (!Inserted)
-        FreeBlocks.push_back(H);
-      const uptr RoundedAllocationStart =
-          roundUpTo(Block + LargeBlock::getHeaderSize(), getPageSizeCached());
-      MapPlatformData Data = H->Data;
-      // TODO(kostyak): use release_to_os_interval_ms
-      releasePagesToOS(Block, RoundedAllocationStart - Block,
-                       H->BlockEnd - RoundedAllocationStart, &Data);
-      return;
-    }
     Stats.sub(StatMapped, H->MapSize);
   }
+  if (CacheT::canCache(CommitSize) && Cache.store(H))
+    return;
   void *Addr = reinterpret_cast<void *>(H->MapBase);
   const uptr Size = H->MapSize;
   MapPlatformData Data = H->Data;
   unmap(Addr, Size, UNMAP_ALL, &Data);
 }
 
-template <uptr MaxFreeListSize>
-void MapAllocator<MaxFreeListSize>::getStats(ScopedString *Str) const {
+template <class CacheT>
+void MapAllocator<CacheT>::getStats(ScopedString *Str) const {
   Str->append(
       "Stats: MapAllocator: allocated %zu times (%zuK), freed %zu times "
       "(%zuK), remains %zu (%zuK) max %zuM\n",
