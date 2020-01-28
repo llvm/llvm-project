@@ -204,18 +204,8 @@ TargetInfo *getTarget();
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);
 
-static inline void reportRangeError(uint8_t *loc, const Relocation &rel,
-                                    const Twine &v, int64_t min, uint64_t max) {
-  ErrorPlace errPlace = getErrorPlace(loc);
-  StringRef hint;
-  if (errPlace.isec && errPlace.isec->name.startswith(".debug"))
-    hint = "; consider recompiling with -fdebug-types-section to reduce size "
-           "of debug sections";
-
-  errorOrWarn(errPlace.loc + "relocation " + lld::toString(rel.type) +
-              " out of range: " + v.str() + " is not in [" + Twine(min).str() +
-              ", " + Twine(max).str() + "]" + hint);
-}
+void reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
+                      int64_t min, uint64_t max);
 
 // Make sure that V can be represented as an N bit signed integer.
 inline void checkInt(uint8_t *loc, int64_t v, int n, const Relocation &rel) {
