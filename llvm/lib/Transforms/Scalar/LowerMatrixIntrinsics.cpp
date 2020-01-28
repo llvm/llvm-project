@@ -10,7 +10,8 @@
 //
 // TODO:
 //  * Implement multiply & add fusion
-//  * Add remark, summarizing the available matrix optimization opportunities.
+//  * Add remark, summarizing the available matrix optimization opportunities
+//    (WIP).
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,7 +19,9 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DataLayout.h"
@@ -136,6 +139,7 @@ class LowerMatrixIntrinsics {
   Function &Func;
   const DataLayout &DL;
   const TargetTransformInfo &TTI;
+  OptimizationRemarkEmitter &ORE;
 
   /// Wrapper class representing a matrix as a set of column vectors.
   /// All column vectors must have the same vector type.
@@ -213,11 +217,12 @@ class LowerMatrixIntrinsics {
   SmallVector<Instruction *, 16> ToRemove;
 
   /// Map from instructions to their produced column matrix.
-  DenseMap<Value *, ColumnMatrixTy> Inst2ColumnMatrix;
+  MapVector<Value *, ColumnMatrixTy> Inst2ColumnMatrix;
 
 public:
-  LowerMatrixIntrinsics(Function &F, TargetTransformInfo &TTI)
-      : Func(F), DL(F.getParent()->getDataLayout()), TTI(TTI) {}
+  LowerMatrixIntrinsics(Function &F, TargetTransformInfo &TTI,
+                        OptimizationRemarkEmitter &ORE)
+      : Func(F), DL(F.getParent()->getDataLayout()), TTI(TTI), ORE(ORE) {}
 
   /// Return the set of column vectors that a matrix value is lowered to.
   ///
@@ -509,6 +514,9 @@ public:
       }
     }
 
+    RemarkGenerator RemarkGen(Inst2ColumnMatrix, ORE, DL);
+    RemarkGen.emitRemarks();
+
     for (Instruction *Inst : reverse(ToRemove))
       Inst->eraseFromParent();
 
@@ -599,6 +607,7 @@ public:
                             Shape.NumRows, VType->getElementType(), Builder);
       createColumnStore(C.value(), GEP, VType->getElementType(), Builder);
     }
+    Inst2ColumnMatrix[Inst] = ColumnMatrixTy();
 
     ToRemove.push_back(Inst);
   }
@@ -844,13 +853,301 @@ public:
     finalizeLowering(Inst, Result, Builder);
     return true;
   }
+
+  /// Helper to linearize a matrix expression tree into a string. Currently
+  /// matrix expressions are linarized by starting at an expression leaf and
+  /// linearizing bottom up.
+  struct ExprLinearizer {
+    unsigned LengthToBreak = 100;
+    std::string Str;
+    raw_string_ostream Stream;
+    unsigned LineLength = 0;
+    const DataLayout &DL;
+
+    /// Mapping from instructions to column matrixes. It is used to identify
+    /// matrix instructions.
+    const MapVector<Value *, ColumnMatrixTy> &Inst2ColumnMatrix;
+
+    /// Used to keep track of sub-expressions that get reused while linearizing
+    /// the expression. Re-used sub-expressions are marked as (reused).
+    SmallPtrSet<Value *, 8> ReusedExprs;
+
+    ExprLinearizer(const DataLayout &DL,
+                   const MapVector<Value *, ColumnMatrixTy> &Inst2ColumnMatrix)
+        : Str(), Stream(Str), DL(DL), Inst2ColumnMatrix(Inst2ColumnMatrix) {}
+
+    void indent(unsigned N) {
+      LineLength += N;
+      for (unsigned i = 0; i < N; i++)
+        Stream << " ";
+    }
+
+    void lineBreak() {
+      Stream << "\n";
+      LineLength = 0;
+    }
+
+    void maybeIndent(unsigned Indent) {
+      if (LineLength >= LengthToBreak)
+        lineBreak();
+
+      if (LineLength == 0)
+        indent(Indent);
+    }
+
+    void write(const std::string &S) {
+      LineLength += S.size();
+      Stream << S;
+    }
+
+    Value *getUnderlyingObjectThroughLoads(Value *V) {
+      if (Value *Ptr = getPointerOperand(V))
+        return getUnderlyingObjectThroughLoads(Ptr);
+      else if (V->getType()->isPointerTy())
+        return GetUnderlyingObject(V, DL);
+      return V;
+    }
+
+    /// Returns true if \p V is a matrix value.
+    bool isMatrix(Value *V) const {
+      return Inst2ColumnMatrix.find(V) != Inst2ColumnMatrix.end();
+    }
+
+    /// If \p V is a matrix value, print its shape as as NumRows x NumColumns to
+    /// \p SS.
+    void prettyPrintMatrixType(Value *V, raw_string_ostream &SS) {
+      auto M = Inst2ColumnMatrix.find(V);
+      if (M == Inst2ColumnMatrix.end())
+        SS << "unknown";
+      else {
+        SS << M->second.getNumRows();
+        SS << "x";
+        SS << M->second.getNumColumns();
+      }
+    }
+
+    /// Write the called function name. Handles calls to llvm.matrix.*
+    /// specially: we write the name, followed by the dimensions of the input
+    /// matrixes, followed by the scalar type name.
+    void writeFnName(CallInst *CI) {
+      if (!CI->getCalledFunction())
+        write("<no called fn>");
+      else {
+        StringRef Name = CI->getCalledFunction()->getName();
+        if (!Name.startswith("llvm.matrix")) {
+          write(Name);
+          return;
+        }
+        IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
+        write(StringRef(Intrinsic::getName(II->getIntrinsicID(), {}))
+                  .drop_front(StringRef("llvm.matrix.").size()));
+        write(".");
+        std::string Tmp = "";
+        raw_string_ostream SS(Tmp);
+
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::matrix_multiply:
+          prettyPrintMatrixType(II->getOperand(0), SS);
+          SS << ".";
+          prettyPrintMatrixType(II->getOperand(1), SS);
+          SS << "." << *II->getType()->getScalarType();
+          break;
+        case Intrinsic::matrix_transpose:
+          prettyPrintMatrixType(II->getOperand(0), SS);
+          SS << "." << *II->getType()->getScalarType();
+          break;
+        case Intrinsic::matrix_columnwise_load:
+          prettyPrintMatrixType(II, SS);
+          SS << "." << *II->getType()->getScalarType();
+          break;
+        case Intrinsic::matrix_columnwise_store:
+          prettyPrintMatrixType(II->getOperand(0), SS);
+          SS << "." << *II->getOperand(0)->getType()->getScalarType();
+          break;
+        default:
+          llvm_unreachable("Unhandled case");
+        }
+        SS.flush();
+        write(Tmp);
+      }
+    }
+
+    unsigned getNumShapeArgs(CallInst *CI) const {
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI)) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::matrix_multiply:
+          return 3;
+        case Intrinsic::matrix_transpose:
+        case Intrinsic::matrix_columnwise_load:
+        case Intrinsic::matrix_columnwise_store:
+          return 2;
+        default:
+          return 0;
+        }
+      }
+      return 0;
+    }
+
+    /// Special printing for values: for pointers, we print if they refer to an
+    /// (function) external address or a stack address, for other values we
+    /// either print the constant or "scalar"/"matrix" for other values.
+    void write(Value *V) {
+      V = getUnderlyingObjectThroughLoads(V);
+      if (V->getType()->isPointerTy()) {
+        if (isa<AllocaInst>(V)) {
+          Stream << "stack addr";
+          LineLength += StringRef("stack addr").size();
+        } else {
+          Stream << "addr";
+          LineLength += StringRef("addr").size();
+        }
+        if (!V->getName().empty()) {
+          Stream << " %" << V->getName() << "";
+          LineLength += V->getName().size() + 2;
+        }
+        return;
+      }
+
+      std::string Tmp;
+      raw_string_ostream TmpStream(Tmp);
+
+      if (auto *CI = dyn_cast<ConstantInt>(V))
+        TmpStream << CI->getValue();
+      else if (isa<Constant>(V))
+        TmpStream << "constant";
+      else {
+        if (isMatrix(V))
+          TmpStream << "matrix";
+        else
+          TmpStream << "scalar";
+      }
+      TmpStream.flush();
+      Tmp = StringRef(Tmp).trim();
+      LineLength += Tmp.size();
+      Stream << Tmp;
+    }
+
+    /// Linearize expression \p Expr starting at an indentation of \p Indent.
+    /// Expressions that are re-used multiple times are prefixed with (reused)
+    /// at the re-used root instruction.
+    void linearizeExpr(Value *Expr, unsigned Indent, bool ParentReused) {
+      auto *I = cast<Instruction>(Expr);
+      maybeIndent(Indent);
+      SmallVector<Value *, 8> Ops;
+
+      bool Reused = !ReusedExprs.insert(Expr).second;
+      if (Reused && !ParentReused)
+        write("(reused) ");
+
+      if (auto *CI = dyn_cast<CallInst>(I)) {
+        writeFnName(CI);
+
+        Ops.append(CallSite(CI).arg_begin(),
+                   CallSite(CI).arg_end() - getNumShapeArgs(CI));
+      } else if (isa<BitCastInst>(Expr)) {
+        // Special case bitcasts, which are used to materialize matrixes from
+        // non-matrix ops.
+        write("matrix");
+        return;
+      } else {
+        Ops.append(I->value_op_begin(), I->value_op_end());
+        write(std::string(I->getOpcodeName()));
+      }
+
+      write(std::string("("));
+
+      unsigned NumOpsToBreak = 1;
+      if (match(Expr, m_Intrinsic<Intrinsic::matrix_columnwise_load>()))
+        NumOpsToBreak = 2;
+
+      for (Value *Op : Ops) {
+        if (Ops.size() > NumOpsToBreak)
+          lineBreak();
+
+        maybeIndent(Indent + 1);
+        if (isMatrix(Op))
+          linearizeExpr(Op, Indent + 1, Reused);
+        else
+          write(Op);
+        if (Op != Ops.back())
+          write(", ");
+      }
+
+      write(")");
+    }
+
+    const std::string &getResult() {
+      Stream.flush();
+      return Str;
+    }
+  };
+
+  /// Generate remarks for matrix operations in a function. To generate remarks
+  /// for matrix expressions, the following approach is used:
+  /// 1. Collect leafs of matrix expressions (done in
+  ///    RemarkGenerator::getExpressionLeaves).  Leaves are lowered matrix
+  ///    instructions without other matrix users (like stores).
+  ///
+  /// 2. For each leaf, create a remark containing a linearizied version of the
+  ///    matrix expression.
+  ///
+  /// TODO:
+  ///  * Summarize number of vector instructions generated for each expression.
+  ///  * Account for shared sub-expressions.
+  ///  * Propagate matrix remarks up the inlining chain.
+  struct RemarkGenerator {
+    const MapVector<Value *, ColumnMatrixTy> &Inst2ColumnMatrix;
+    OptimizationRemarkEmitter &ORE;
+    const DataLayout &DL;
+
+    RemarkGenerator(const MapVector<Value *, ColumnMatrixTy> &Inst2ColumnMatrix,
+                    OptimizationRemarkEmitter &ORE, const DataLayout &DL)
+        : Inst2ColumnMatrix(Inst2ColumnMatrix), ORE(ORE), DL(DL) {}
+
+    /// Return all leafs of matrix expressions. Those are instructions in
+    /// Inst2ColumnMatrix returing void. Currently that should only include
+    /// stores.
+    SmallVector<Value *, 4> getExpressionLeaves() {
+      SmallVector<Value *, 4> Leaves;
+      for (auto &KV : Inst2ColumnMatrix)
+        if (KV.first->getType()->isVoidTy())
+          Leaves.push_back(KV.first);
+
+      return Leaves;
+    }
+
+    void emitRemarks() {
+      if (!ORE.allowExtraAnalysis(DEBUG_TYPE))
+        return;
+
+      // Find leafs of matrix expressions.
+      auto Leaves = getExpressionLeaves();
+
+      // Generate remarks for each leaf.
+      for (auto *L : Leaves) {
+        OptimizationRemark Rem(DEBUG_TYPE, "matrix-lowered",
+                               cast<Instruction>(L)->getDebugLoc(),
+                               cast<Instruction>(L)->getParent());
+        Rem << "Lowered matrix expression ";
+        Rem << ("\n" + linearize(L, DL));
+        ORE.emit(Rem);
+      }
+    }
+
+    std::string linearize(Value *L, const DataLayout &DL) {
+      ExprLinearizer Lin(DL, Inst2ColumnMatrix);
+      Lin.linearizeExpr(L, 0, false);
+      return Lin.getResult();
+    }
+  };
 };
 } // namespace
 
 PreservedAnalyses LowerMatrixIntrinsicsPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  LowerMatrixIntrinsics LMT(F, TTI);
+  auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  LowerMatrixIntrinsics LMT(F, TTI, ORE);
   if (LMT.Visit()) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -871,14 +1168,16 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
-    auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    LowerMatrixIntrinsics LMT(F, *TTI);
+    auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
+    LowerMatrixIntrinsics LMT(F, TTI, ORE);
     bool C = LMT.Visit();
     return C;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     AU.setPreservesCFG();
   }
 };
@@ -888,6 +1187,7 @@ static const char pass_name[] = "Lower the matrix intrinsics";
 char LowerMatrixIntrinsicsLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LowerMatrixIntrinsicsLegacyPass, DEBUG_TYPE, pass_name,
                       false, false)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(LowerMatrixIntrinsicsLegacyPass, DEBUG_TYPE, pass_name,
                     false, false)
 
