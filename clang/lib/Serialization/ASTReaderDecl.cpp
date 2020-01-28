@@ -1163,10 +1163,6 @@ void ASTDeclReader::MergeDefinitionData(ObjCInterfaceDecl *D,
       NewDD.CategoryList)
     return;
 
-  // Trigger computation for methods (if they aren't yet computed)
-  for (auto *M : D->methods())
-    M->getODRHash();
-
   if (D->getODRHash() != NewDD.ODRHash)
     DetectedOdrViolation = true;
 

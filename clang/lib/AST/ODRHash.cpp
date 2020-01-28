@@ -474,6 +474,10 @@ void ODRHash::AddSubDecl(const Decl *D) {
 void ODRHash::AddObjCInterfaceDecl(const ObjCInterfaceDecl *IF) {
   AddDecl(IF);
 
+  // Trigger ODR computation for methods (if not yet computed)
+  for (auto *M : IF->methods())
+    reinterpret_cast<ObjCMethodDecl *>(M)->getODRHash();
+
   auto *SuperClass = IF->getSuperClass();
   AddBoolean(SuperClass);
   if (SuperClass)
