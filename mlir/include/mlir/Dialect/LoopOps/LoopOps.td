@@ -177,6 +177,13 @@ def ParallelOp : Loop_Op<"parallel",
                        Variadic<Index>:$step);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$body);
+
+  let extraClassDeclaration = [{
+    iterator_range<Block::args_iterator> getInductionVars() {
+      Block &block = body().front();
+      return {block.args_begin(), block.args_end()};
+    }
+  }];
 }
 
 def ReduceOp : Loop_Op<"reduce", [HasParent<"ParallelOp">]> {
