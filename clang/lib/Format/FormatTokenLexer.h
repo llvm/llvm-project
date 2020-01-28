@@ -49,7 +49,7 @@ private:
   bool tryMergeLessLess();
   bool tryMergeNSStringLiteral();
   bool tryMergeJSPrivateIdentifier();
-  bool tryMergeCSharpVerbatimStringLiteral();
+  bool tryMergeCSharpStringLiteral();
   bool tryMergeCSharpKeywordVariables();
   bool tryMergeCSharpNullConditionals();
   bool tryMergeCSharpDoubleQuestion();
