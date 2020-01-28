@@ -311,7 +311,12 @@ void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
     target = &GetDummyTarget();
 
   unsigned cursor_pos = request.GetRawCursorPos();
-  llvm::StringRef code = request.GetRawLine();
+  // Get the full user input including the suffix. The suffix is necessary
+  // as OptionsWithRaw will use it to detect if the cursor is cursor is in the
+  // argument part of in the raw input part of the arguments. If we cut of
+  // of the suffix then "expr -arg[cursor] --" would interpret the "-arg" as
+  // the raw input (as the "--" is hidden in the suffix).
+  llvm::StringRef code = request.GetRawLineWithUnusedSuffix();
 
   const std::size_t original_code_size = code.size();
 
