@@ -1197,7 +1197,197 @@ define fp128 @trunc_f128(fp128 %x) #0 {
   ret fp128 %val
 }
 
-; TODO: fcmp (missing STRICT_FSETCC handling)
+; CHECK-LABEL: fcmp_olt_f128:
+; CHECK: bl __lttf2
+define i32 @fcmp_olt_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"olt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ole_f128:
+; CHECK: bl __letf2
+define i32 @fcmp_ole_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"ole", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ogt_f128:
+; CHECK: bl __gttf2
+define i32 @fcmp_ogt_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"ogt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_oge_f128:
+; CHECK: bl __getf2
+define i32 @fcmp_oge_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"oge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_oeq_f128:
+; CHECK: bl __eqtf2
+define i32 @fcmp_oeq_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_one_f128:
+; CHECK: bl __eqtf2
+define i32 @fcmp_one_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"one", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ult_f128:
+; CHECK: bl __getf2
+define i32 @fcmp_ult_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"ult", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ule_f128:
+; CHECK: bl __gttf2
+define i32 @fcmp_ule_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"ule", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ugt_f128:
+; CHECK: bl __letf2
+define i32 @fcmp_ugt_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"ugt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_uge_f128:
+; CHECK: bl __lttf2
+define i32 @fcmp_uge_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"uge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_ueq_f128:
+; CHECK: bl __eqtf2
+define i32 @fcmp_ueq_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"ueq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmp_une_f128:
+; CHECK: bl __netf2
+define i32 @fcmp_une_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f128(fp128 %a, fp128 %b, metadata !"une", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_olt_f128:
+; CHECK: bl __lttf2
+define i32 @fcmps_olt_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"olt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ole_f128:
+; CHECK: bl __letf2
+define i32 @fcmps_ole_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"ole", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ogt_f128:
+; CHECK: bl __gttf2
+define i32 @fcmps_ogt_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"ogt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_oge_f128:
+; CHECK: bl __getf2
+define i32 @fcmps_oge_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"oge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_oeq_f128:
+; CHECK: bl __eqtf2
+define i32 @fcmps_oeq_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_one_f128:
+; CHECK: bl __eqtf2
+define i32 @fcmps_one_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"one", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ult_f128:
+; CHECK: bl __getf2
+define i32 @fcmps_ult_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"ult", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ule_f128:
+; CHECK: bl __gttf2
+define i32 @fcmps_ule_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"ule", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ugt_f128:
+; CHECK: bl __letf2
+define i32 @fcmps_ugt_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"ugt", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_uge_f128:
+; CHECK: bl __lttf2
+define i32 @fcmps_uge_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"uge", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_ueq_f128:
+; CHECK: bl __eqtf2
+define i32 @fcmps_ueq_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"ueq", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; CHECK-LABEL: fcmps_une_f128:
+; CHECK: bl __netf2
+define i32 @fcmps_une_f128(fp128 %a, fp128 %b) #0 {
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"une", metadata !"fpexcept.strict") #0
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
 
 
 ; Intrinsics to convert between floating-point types
