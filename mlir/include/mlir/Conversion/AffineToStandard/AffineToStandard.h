@@ -20,6 +20,7 @@ class MLIRContext;
 class OpBuilder;
 class RewritePattern;
 class Value;
+class ValueRange;
 
 // Owning list of rewriting patterns.
 class OwningRewritePatternList;
@@ -27,7 +28,7 @@ class OwningRewritePatternList;
 /// Emit code that computes the given affine expression using standard
 /// arithmetic operations applied to the provided dimension and symbol values.
 Value expandAffineExpr(OpBuilder &builder, Location loc, AffineExpr expr,
-                       ArrayRef<Value> dimValues, ArrayRef<Value> symbolValues);
+                       ValueRange dimValues, ValueRange symbolValues);
 
 /// Collect a set of patterns to convert from the Affine dialect to the Standard
 /// dialect, in particular convert structured affine control flow into CFG
