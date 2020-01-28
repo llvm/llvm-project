@@ -271,20 +271,41 @@ Value mlir::lowerAffineLowerBound(AffineForOp op, OpBuilder &builder) {
                                  builder);
 }
 
+// Emit instructions that correspond to computing the minimum value amoung the
+// values of a (potentially) multi-output affine map applied to `operands`.
+static Value lowerAffineMapMin(OpBuilder &builder, Location loc, AffineMap map,
+                               ValueRange operands) {
+  if (auto values =
+          expandAffineMap(builder, loc, map, llvm::to_vector<4>(operands)))
+    return buildMinMaxReductionSeq(loc, CmpIPredicate::slt, *values, builder);
+  return nullptr;
+}
+
 // Emit instructions that correspond to the affine map in the upper bound
 // applied to the respective operands, and compute the minimum value across
 // the results.
 Value mlir::lowerAffineUpperBound(AffineForOp op, OpBuilder &builder) {
-  SmallVector<Value, 8> boundOperands(op.getUpperBoundOperands());
-  auto ubValues = expandAffineMap(builder, op.getLoc(), op.getUpperBoundMap(),
-                                  boundOperands);
-  if (!ubValues)
-    return nullptr;
-  return buildMinMaxReductionSeq(op.getLoc(), CmpIPredicate::slt, *ubValues,
-                                 builder);
+  return lowerAffineMapMin(builder, op.getLoc(), op.getUpperBoundMap(),
+                           op.getUpperBoundOperands());
 }
 
 namespace {
+class AffineMinLowering : public OpRewritePattern<AffineMinOp> {
+public:
+  using OpRewritePattern<AffineMinOp>::OpRewritePattern;
+
+  PatternMatchResult matchAndRewrite(AffineMinOp op,
+                                     PatternRewriter &rewriter) const override {
+    Value reduced =
+        lowerAffineMapMin(rewriter, op.getLoc(), op.map(), op.operands());
+    if (!reduced)
+      return matchFailure();
+
+    rewriter.replaceOp(op, reduced);
+    return matchSuccess();
+  }
+};
+
 // Affine terminators are removed.
 class AffineTerminatorLowering : public OpRewritePattern<AffineTerminatorOp> {
 public:
@@ -520,10 +541,19 @@ public:
 
 void mlir::populateAffineToStdConversionPatterns(
     OwningRewritePatternList &patterns, MLIRContext *ctx) {
+  // clang-format off
   patterns.insert<
-      AffineApplyLowering, AffineDmaStartLowering, AffineDmaWaitLowering,
-      AffineLoadLowering, AffinePrefetchLowering, AffineStoreLowering,
-      AffineForLowering, AffineIfLowering, AffineTerminatorLowering>(ctx);
+      AffineApplyLowering,
+      AffineDmaStartLowering,
+      AffineDmaWaitLowering,
+      AffineLoadLowering,
+      AffineMinLowering,
+      AffinePrefetchLowering,
+      AffineStoreLowering,
+      AffineForLowering,
+      AffineIfLowering,
+      AffineTerminatorLowering>(ctx);
+  // clang-format on
 }
 
 namespace {

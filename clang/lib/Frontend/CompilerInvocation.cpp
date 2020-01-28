@@ -41,6 +41,7 @@
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Sema/CodeCompleteOptions.h"
+#include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "llvm/ADT/APInt.h"
@@ -3287,6 +3288,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.CompleteMemberPointers = Args.hasArg(OPT_fcomplete_member_pointers);
   Opts.BuildingPCHWithObjectFile = Args.hasArg(OPT_building_pch_with_obj);
+
+  Opts.MaxTokens = getLastArgIntValue(Args, OPT_fmax_tokens, 0, Diags);
 }
 
 static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
@@ -3627,6 +3630,11 @@ std::string CompilerInvocation::getModuleHash() const {
   // FIXME: We'd rather use something more cryptographically sound than
   // CityHash, but this will do for now.
   hash_code code = hash_value(getClangFullRepositoryVersion());
+
+  // Also include the serialization version, in case LLVM_APPEND_VC_REV is off
+  // and getClangFullRepositoryVersion() doesn't include git revision.
+  code = hash_combine(code, serialization::VERSION_MAJOR,
+                      serialization::VERSION_MINOR);
 
   // Extend the signature with the language options
 #define LANGOPT(Name, Bits, Default, Description) \

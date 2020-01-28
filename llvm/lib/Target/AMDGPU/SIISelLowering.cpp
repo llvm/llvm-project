@@ -499,8 +499,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     // F16 - VOP1 Actions.
     setOperationAction(ISD::FP_ROUND, MVT::f16, Custom);
-    setOperationAction(ISD::FCOS, MVT::f16, Promote);
-    setOperationAction(ISD::FSIN, MVT::f16, Promote);
+    setOperationAction(ISD::FCOS, MVT::f16, Custom);
+    setOperationAction(ISD::FSIN, MVT::f16, Custom);
 
     setOperationAction(ISD::SINT_TO_FP, MVT::i16, Custom);
     setOperationAction(ISD::UINT_TO_FP, MVT::i16, Custom);

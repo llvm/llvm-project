@@ -595,8 +595,8 @@ public:
   ResultRange(Operation *op);
 
   /// Returns the types of the values within this range.
-  using type_iterator = ValueTypeIterator<iterator>;
-  iterator_range<type_iterator> getTypes() const { return {begin(), end()}; }
+  using type_iterator = ArrayRef<Type>::iterator;
+  ArrayRef<Type> getTypes() const;
 
 private:
   /// See `indexed_accessor_range` for details.

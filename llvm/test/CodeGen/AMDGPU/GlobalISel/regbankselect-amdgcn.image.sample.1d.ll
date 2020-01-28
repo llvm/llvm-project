@@ -24,8 +24,7 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__sgpr_rsrc__sgpr_samp(<8 x i32> inre
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32)
   ; CHECK:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[INT:%[0-9]+]]:vgpr(<4 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY12]](s32), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0 :: (dereferenceable load 16 from custom "TargetCustom8")
-  ; CHECK:   [[COPY13:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; CHECK:   G_STORE [[INT]](<4 x s32>), [[COPY13]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[INT]](<4 x s32>), [[DEF]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   S_ENDPGM 0
   %v = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   store <4 x float> %v, <4 x float> addrspace(1)* undef
@@ -55,8 +54,7 @@ define amdgpu_ps void @sample_1d_sgpr_vaddr__sgpr_rsrc__sgpr_samp(<8 x i32> inre
   ; CHECK:   [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
   ; CHECK:   [[COPY13:%[0-9]+]]:vgpr(s32) = COPY [[COPY12]](s32)
   ; CHECK:   [[INT:%[0-9]+]]:vgpr(<4 x s32>) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.image.sample.1d), 15, [[COPY13]](s32), [[BUILD_VECTOR]](<8 x s32>), [[BUILD_VECTOR1]](<4 x s32>), 0, 0, 0 :: (dereferenceable load 16 from custom "TargetCustom8")
-  ; CHECK:   [[COPY14:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; CHECK:   G_STORE [[INT]](<4 x s32>), [[COPY14]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[INT]](<4 x s32>), [[DEF]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   S_ENDPGM 0
   %v = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   store <4 x float> %v, <4 x float> addrspace(1)* undef
@@ -121,8 +119,7 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__sgpr_samp(<8 x i32> %rsr
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
   ; CHECK: bb.4:
-  ; CHECK:   [[COPY13:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; CHECK:   G_STORE [[INT]](<4 x s32>), [[COPY13]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[INT]](<4 x s32>), [[DEF]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   S_ENDPGM 0
   %v = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   store <4 x float> %v, <4 x float> addrspace(1)* undef
@@ -177,8 +174,7 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__sgpr_rsrc__vgpr_samp(<8 x i32> inre
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
   ; CHECK: bb.4:
-  ; CHECK:   [[COPY13:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; CHECK:   G_STORE [[INT]](<4 x s32>), [[COPY13]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[INT]](<4 x s32>), [[DEF]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   S_ENDPGM 0
   %v = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   store <4 x float> %v, <4 x float> addrspace(1)* undef
@@ -255,8 +251,7 @@ define amdgpu_ps void @sample_1d_vgpr_vaddr__vgpr_rsrc__vgpr_samp(<8 x i32> %rsr
   ; CHECK:   successors: %bb.4(0x80000000)
   ; CHECK:   $exec = S_MOV_B64_term [[S_MOV_B64_term]]
   ; CHECK: bb.4:
-  ; CHECK:   [[COPY13:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; CHECK:   G_STORE [[INT]](<4 x s32>), [[COPY13]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
+  ; CHECK:   G_STORE [[INT]](<4 x s32>), [[DEF]](p1) :: (store 16 into `<4 x float> addrspace(1)* undef`, addrspace 1)
   ; CHECK:   S_ENDPGM 0
   %v = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
   store <4 x float> %v, <4 x float> addrspace(1)* undef

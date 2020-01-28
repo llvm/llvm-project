@@ -100,7 +100,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
                                     unsigned MachineReg, unsigned MaxSize) {
   if (!llvm::Register::isPhysicalRegister(MachineReg)) {
     if (isFrameRegister(TRI, MachineReg)) {
-      DwarfRegs.push_back({-1, 0, nullptr});
+      DwarfRegs.push_back(Register::createRegister(-1, nullptr));
       return true;
     }
     return false;
@@ -110,7 +110,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
 
   // If this is a valid register number, emit it.
   if (Reg >= 0) {
-    DwarfRegs.push_back({Reg, 0, nullptr});
+    DwarfRegs.push_back(Register::createRegister(Reg, nullptr));
     return true;
   }
 
@@ -122,7 +122,7 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
       unsigned Idx = TRI.getSubRegIndex(*SR, MachineReg);
       unsigned Size = TRI.getSubRegIdxSize(Idx);
       unsigned RegOffset = TRI.getSubRegIdxOffset(Idx);
-      DwarfRegs.push_back({Reg, 0, "super-register"});
+      DwarfRegs.push_back(Register::createRegister(Reg, "super-register"));
       // Use a DW_OP_bit_piece to describe the sub-register.
       setSubRegisterPiece(Size, RegOffset);
       return true;
@@ -149,8 +149,8 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
     if (Reg < 0)
       continue;
 
-    // Intersection between the bits we already emitted and the bits
-    // covered by this subregister.
+    // Used to build the intersection between the bits we already
+    // emitted and the bits covered by this subregister.
     SmallBitVector CurSubReg(RegSize, false);
     CurSubReg.set(Offset, Offset + Size);
 
@@ -159,10 +159,13 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
     if (Offset < MaxSize && CurSubReg.test(Coverage)) {
       // Emit a piece for any gap in the coverage.
       if (Offset > CurPos)
-        DwarfRegs.push_back(
-            {-1, Offset - CurPos, "no DWARF register encoding"});
-      DwarfRegs.push_back(
-          {Reg, std::min<unsigned>(Size, MaxSize - Offset), "sub-register"});
+        DwarfRegs.push_back(Register::createSubRegister(
+            -1, Offset - CurPos, "no DWARF register encoding"));
+      if (Offset == 0 && Size >= MaxSize)
+        DwarfRegs.push_back(Register::createRegister(Reg, "sub-register"));
+      else
+        DwarfRegs.push_back(Register::createSubRegister(
+            Reg, std::min<unsigned>(Size, MaxSize - Offset), "sub-register"));
     }
     // Mark it as emitted.
     Coverage.set(Offset, Offset + Size);
@@ -173,7 +176,8 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
     return false;
   // Found a partial or complete DWARF encoding.
   if (CurPos < RegSize)
-    DwarfRegs.push_back({-1, RegSize - CurPos, "no DWARF register encoding"});
+    DwarfRegs.push_back(Register::createSubRegister(
+        -1, RegSize - CurPos, "no DWARF register encoding"));
   return true;
 }
 
@@ -249,7 +253,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
     for (auto &Reg : DwarfRegs) {
       if (Reg.DwarfRegNo >= 0)
         addReg(Reg.DwarfRegNo, Reg.Comment);
-      addOpPiece(Reg.Size);
+      addOpPiece(Reg.SubRegSize);
     }
 
     if (isEntryValue())
@@ -276,7 +280,7 @@ bool DwarfExpression::addMachineRegExpression(const TargetRegisterInfo &TRI,
   auto Reg = DwarfRegs[0];
   bool FBReg = isFrameRegister(TRI, MachineReg);
   int SignedOffset = 0;
-  assert(Reg.Size == 0 && "subregister has same size as superregister");
+  assert(!Reg.isSubRegister() && "full register expected");
 
   // Pattern-match combinations for which more efficient representations exist.
   // [Reg, DW_OP_plus_uconst, Offset] --> [DW_OP_breg, Offset].

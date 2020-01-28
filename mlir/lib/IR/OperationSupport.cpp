@@ -152,6 +152,10 @@ OperandRange::OperandRange(Operation *op)
 ResultRange::ResultRange(Operation *op)
     : ResultRange(op, /*startIndex=*/0, op->getNumResults()) {}
 
+ArrayRef<Type> ResultRange::getTypes() const {
+  return getBase()->getResultTypes();
+}
+
 /// See `indexed_accessor_range` for details.
 OpResult ResultRange::dereference(Operation *op, ptrdiff_t index) {
   return op->getResult(index);

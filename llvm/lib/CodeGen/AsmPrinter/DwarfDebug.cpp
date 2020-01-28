@@ -540,6 +540,14 @@ void DwarfDebug::constructAbstractSubprogramScopeDIE(DwarfCompileUnit &SrcCU,
   }
 }
 
+DIE &DwarfDebug::constructSubprogramDefinitionDIE(const DISubprogram *SP) {
+  DICompileUnit *Unit = SP->getUnit();
+  assert(SP->isDefinition() && "Subprogram not a definition");
+  assert(Unit && "Subprogram definition without parent unit");
+  auto &CU = getOrCreateDwarfCompileUnit(Unit);
+  return *CU.getOrCreateSubprogramDIE(SP);
+}
+
 /// Try to interpret values loaded into registers that forward parameters
 /// for \p CallMI. Store parameters with interpreted value into \p Params.
 static void collectCallSiteParameters(const MachineInstr *CallMI,
@@ -560,10 +568,38 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   // Skip the call instruction.
   auto I = std::next(CallMI->getReverseIterator());
 
-  DenseSet<unsigned> ForwardedRegWorklist;
+  // Register worklist. Each register has an associated list of parameter
+  // registers whose call site values potentially can be described using that
+  // register.
+  using FwdRegWorklist = MapVector<unsigned, SmallVector<unsigned, 2>>;
+
+  FwdRegWorklist ForwardedRegWorklist;
+
+  // If an instruction defines more than one item in the worklist, we may run
+  // into situations where a worklist register's value is (potentially)
+  // described by the previous value of another register that is also defined
+  // by that instruction.
+  //
+  // This can for example occur in cases like this:
+  //
+  //   $r1 = mov 123
+  //   $r0, $r1 = mvrr $r1, 456
+  //   call @foo, $r0, $r1
+  //
+  // When describing $r1's value for the mvrr instruction, we need to make sure
+  // that we don't finalize an entry value for $r0, as that is dependent on the
+  // previous value of $r1 (123 rather than 456).
+  //
+  // In order to not have to distinguish between those cases when finalizing
+  // entry values, we simply postpone adding new parameter registers to the
+  // worklist, by first keeping them in this temporary container until the
+  // instruction has been handled.
+  FwdRegWorklist NewWorklistItems;
+
   // Add all the forwarding registers into the ForwardedRegWorklist.
   for (auto ArgReg : CallFwdRegsInfo->second) {
-    bool InsertedReg = ForwardedRegWorklist.insert(ArgReg.Reg).second;
+    bool InsertedReg =
+        ForwardedRegWorklist.insert({ArgReg.Reg, {ArgReg.Reg}}).second;
     assert(InsertedReg && "Single register used to forward two arguments?");
     (void)InsertedReg;
   }
@@ -573,50 +609,48 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
   // the describeLoadedValue()). For those remaining arguments in the working
   // list, for which we do not describe a loaded value by
   // the describeLoadedValue(), we try to generate an entry value expression
-  // for their call site value desctipion, if the call is within the entry MBB.
-  // The RegsForEntryValues maps a forwarding register into the register holding
-  // the entry value.
+  // for their call site value description, if the call is within the entry MBB.
   // TODO: Handle situations when call site parameter value can be described
-  // as the entry value within basic blocks other then the first one.
+  // as the entry value within basic blocks other than the first one.
   bool ShouldTryEmitEntryVals = MBB->getIterator() == MF->begin();
-  DenseMap<unsigned, unsigned> RegsForEntryValues;
 
   // If the MI is an instruction defining one or more parameters' forwarding
-  // registers, add those defines. We can currently only describe forwarded
-  // registers that are explicitly defined, but keep track of implicit defines
-  // also to remove those registers from the work list.
+  // registers, add those defines.
   auto getForwardingRegsDefinedByMI = [&](const MachineInstr &MI,
-                                          SmallVectorImpl<unsigned> &Explicit,
-                                          SmallVectorImpl<unsigned> &Implicit) {
+                                          SmallSetVector<unsigned, 4> &Defs) {
     if (MI.isDebugInstr())
       return;
 
     for (const MachineOperand &MO : MI.operands()) {
       if (MO.isReg() && MO.isDef() &&
           Register::isPhysicalRegister(MO.getReg())) {
-        for (auto FwdReg : ForwardedRegWorklist) {
-          if (TRI->regsOverlap(FwdReg, MO.getReg())) {
-            if (MO.isImplicit())
-              Implicit.push_back(FwdReg);
-            else
-              Explicit.push_back(FwdReg);
-          }
-        }
+        for (auto FwdReg : ForwardedRegWorklist)
+          if (TRI->regsOverlap(FwdReg.first, MO.getReg()))
+            Defs.insert(FwdReg.first);
       }
     }
   };
 
-  auto finishCallSiteParam = [&](DbgValueLoc DbgLocVal, unsigned Reg) {
-    unsigned FwdReg = Reg;
-    if (ShouldTryEmitEntryVals) {
-      auto EntryValReg = RegsForEntryValues.find(Reg);
-      if (EntryValReg != RegsForEntryValues.end())
-        FwdReg = EntryValReg->second;
+  auto finishCallSiteParams = [&](DbgValueLoc DbgLocVal,
+                                  ArrayRef<unsigned> ParamRegs) {
+    for (auto FwdReg : ParamRegs) {
+      DbgCallSiteParam CSParm(FwdReg, DbgLocVal);
+      Params.push_back(CSParm);
+      ++NumCSParams;
     }
+  };
 
-    DbgCallSiteParam CSParm(FwdReg, DbgLocVal);
-    Params.push_back(CSParm);
-    ++NumCSParams;
+  // Add Reg to the worklist, if it's not already present, and mark that the
+  // given parameter registers' values can (potentially) be described using
+  // that register.
+  auto addToWorklist = [](FwdRegWorklist &Worklist, unsigned Reg,
+                          ArrayRef<unsigned> ParamRegs) {
+    auto I = Worklist.insert({Reg, {}});
+    for (auto ParamReg : ParamRegs) {
+      assert(!is_contained(I.first->second, ParamReg) &&
+             "Same parameter described twice by forwarding reg");
+      I.first->second.push_back(ParamReg);
+    }
   };
 
   // Search for a loading value in forwarding registers.
@@ -633,23 +667,19 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     if (ForwardedRegWorklist.empty())
       return;
 
-    SmallVector<unsigned, 4> ExplicitFwdRegDefs;
-    SmallVector<unsigned, 4> ImplicitFwdRegDefs;
-    getForwardingRegsDefinedByMI(*I, ExplicitFwdRegDefs, ImplicitFwdRegDefs);
-    if (ExplicitFwdRegDefs.empty() && ImplicitFwdRegDefs.empty())
+    // Set of worklist registers that are defined by this instruction.
+    SmallSetVector<unsigned, 4> FwdRegDefs;
+
+    getForwardingRegsDefinedByMI(*I, FwdRegDefs);
+    if (FwdRegDefs.empty())
       continue;
 
-    // If the MI clobbers more then one forwarding register we must remove
-    // all of them from the working list.
-    for (auto Reg : concat<unsigned>(ExplicitFwdRegDefs, ImplicitFwdRegDefs))
-      ForwardedRegWorklist.erase(Reg);
-
-    for (auto ParamFwdReg : ExplicitFwdRegDefs) {
+    for (auto ParamFwdReg : FwdRegDefs) {
       if (auto ParamValue = TII->describeLoadedValue(*I, ParamFwdReg)) {
         if (ParamValue->first.isImm()) {
           int64_t Val = ParamValue->first.getImm();
           DbgValueLoc DbgLocVal(ParamValue->second, Val);
-          finishCallSiteParam(DbgLocVal, ParamFwdReg);
+          finishCallSiteParams(DbgLocVal, ForwardedRegWorklist[ParamFwdReg]);
         } else if (ParamValue->first.isReg()) {
           Register RegLoc = ParamValue->first.getReg();
           // TODO: For now, there is no use of describing the value loaded into the
@@ -664,16 +694,34 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
             DbgValueLoc DbgLocVal(ParamValue->second,
                                   MachineLocation(RegLoc,
                                                   /*IsIndirect=*/IsSPorFP));
-            finishCallSiteParam(DbgLocVal, ParamFwdReg);
+            finishCallSiteParams(DbgLocVal, ForwardedRegWorklist[ParamFwdReg]);
           // TODO: Add support for entry value plus an expression.
           } else if (ShouldTryEmitEntryVals &&
                      ParamValue->second->getNumElements() == 0) {
-            ForwardedRegWorklist.insert(RegLoc);
-            RegsForEntryValues[RegLoc] = ParamFwdReg;
+            assert(RegLoc != ParamFwdReg &&
+                   "Can't handle a register that is described by itself");
+            // ParamFwdReg was described by the non-callee saved register
+            // RegLoc. Mark that the call site values for the parameters are
+            // dependent on that register instead of ParamFwdReg. Since RegLoc
+            // may be a register that will be handled in this iteration, we
+            // postpone adding the items to the worklist, and instead keep them
+            // in a temporary container.
+            addToWorklist(NewWorklistItems, RegLoc,
+                          ForwardedRegWorklist[ParamFwdReg]);
           }
         }
       }
     }
+
+    // Remove all registers that this instruction defines from the worklist.
+    for (auto ParamFwdReg : FwdRegDefs)
+      ForwardedRegWorklist.erase(ParamFwdReg);
+
+    // Now that we are done handling this instruction, add items from the
+    // temporary worklist to the real one.
+    for (auto New : NewWorklistItems)
+      addToWorklist(ForwardedRegWorklist, New.first, New.second);
+    NewWorklistItems.clear();
   }
 
   // Emit the call site parameter's value as an entry value.
@@ -682,15 +730,8 @@ static void collectCallSiteParameters(const MachineInstr *CallMI,
     DIExpression *EntryExpr = DIExpression::get(
         MF->getFunction().getContext(), {dwarf::DW_OP_LLVM_entry_value, 1});
     for (auto RegEntry : ForwardedRegWorklist) {
-      unsigned FwdReg = RegEntry;
-      auto EntryValReg = RegsForEntryValues.find(RegEntry);
-        if (EntryValReg != RegsForEntryValues.end())
-          FwdReg = EntryValReg->second;
-
-      DbgValueLoc DbgLocVal(EntryExpr, MachineLocation(RegEntry));
-      DbgCallSiteParam CSParm(FwdReg, DbgLocVal);
-      Params.push_back(CSParm);
-      ++NumCSParams;
+      DbgValueLoc DbgLocVal(EntryExpr, MachineLocation(RegEntry.first));
+      finishCallSiteParams(DbgLocVal, RegEntry.second);
     }
   }
 }
@@ -738,7 +779,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
         continue;
 
       unsigned CallReg = 0;
-      const DISubprogram *CalleeSP = nullptr;
+      DIE *CalleeDIE = nullptr;
       const Function *CalleeDecl = nullptr;
       if (CalleeOp.isReg()) {
         CallReg = CalleeOp.getReg();
@@ -748,7 +789,19 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
         CalleeDecl = dyn_cast<Function>(CalleeOp.getGlobal());
         if (!CalleeDecl || !CalleeDecl->getSubprogram())
           continue;
-        CalleeSP = CalleeDecl->getSubprogram();
+        const DISubprogram *CalleeSP = CalleeDecl->getSubprogram();
+
+        if (CalleeSP->isDefinition()) {
+          // Ensure that a subprogram DIE for the callee is available in the
+          // appropriate CU.
+          CalleeDIE = &constructSubprogramDefinitionDIE(CalleeSP);
+        } else {
+          // Create the declaration DIE if it is missing. This is required to
+          // support compilation of old bitcode with an incomplete list of
+          // retained metadata.
+          CalleeDIE = CU.getOrCreateSubprogramDIE(CalleeSP);
+        }
+        assert(CalleeDIE && "Must have a DIE for the callee");
       }
 
       // TODO: Omit call site entries for runtime calls (objc_msgSend, etc).
@@ -779,7 +832,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
                                                        ->getName(CallReg)))
                         << (IsTail ? " [IsTail]" : "") << "\n");
 
-      DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(ScopeDIE, CalleeSP,
+      DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(ScopeDIE, CalleeDIE,
                                                       IsTail, PCAddr, CallReg);
 
       // GDB and LLDB support call site parameter debug info.
@@ -895,11 +948,6 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
     finishUnitAttributes(DIUnit, NewCU);
     NewCU.setSection(Asm->getObjFileLowering().getDwarfInfoSection());
   }
-
-  // Create DIEs for function declarations used for call site debug info.
-  for (auto Scope : DIUnit->getRetainedTypes())
-    if (auto *SP = dyn_cast_or_null<DISubprogram>(Scope))
-      NewCU.getOrCreateSubprogramDIE(SP);
 
   CUMap.insert({DIUnit, &NewCU});
   CUDieMap.insert({&NewCU.getUnitDie(), &NewCU});
@@ -2177,7 +2225,7 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
   DWARFDataExtractor Data(StringRef(DebugLocs.getBytes(Entry).data(),
                                     DebugLocs.getBytes(Entry).size()),
                           Asm->getDataLayout().isLittleEndian(), PtrSize);
-  DWARFExpression Expr(Data, getDwarfVersion(), PtrSize);
+  DWARFExpression Expr(Data, PtrSize);
 
   using Encoding = DWARFExpression::Operation::Encoding;
   uint64_t Offset = 0;

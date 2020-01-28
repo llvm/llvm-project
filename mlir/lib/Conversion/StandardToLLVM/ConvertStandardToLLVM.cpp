@@ -652,8 +652,7 @@ struct OneToOneLLVMOpLowering : public LLVMLegalizationPattern<SourceOp> {
 
     Type packedType;
     if (numResults != 0) {
-      packedType = this->lowering.packFunctionResults(
-          llvm::to_vector<4>(op->getResultTypes()));
+      packedType = this->lowering.packFunctionResults(op->getResultTypes());
       if (!packedType)
         return this->matchFailure();
     }

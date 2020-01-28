@@ -1068,29 +1068,27 @@ define <4 x float> @uitofp_v4i64_v4f32(<4 x i64> %x) #0 {
 ;
 ; AVX2-64-LABEL: uitofp_v4i64_v4f32:
 ; AVX2-64:       # %bb.0:
-; AVX2-64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-64-NEXT:    vpcmpgtq %ymm0, %ymm1, %ymm1
-; AVX2-64-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-64-NEXT:    vpackssdw %xmm2, %xmm1, %xmm1
-; AVX2-64-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [1,1,1,1]
-; AVX2-64-NEXT:    vpand %ymm2, %ymm0, %ymm2
-; AVX2-64-NEXT:    vpsrlq $1, %ymm0, %ymm3
-; AVX2-64-NEXT:    vpor %ymm2, %ymm3, %ymm2
-; AVX2-64-NEXT:    vblendvpd %ymm0, %ymm2, %ymm0, %ymm0
-; AVX2-64-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX2-64-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm2
-; AVX2-64-NEXT:    vmovq %xmm0, %rax
-; AVX2-64-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm3
+; AVX2-64-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [1,1,1,1]
+; AVX2-64-NEXT:    vpand %ymm1, %ymm0, %ymm1
+; AVX2-64-NEXT:    vpsrlq $1, %ymm0, %ymm2
+; AVX2-64-NEXT:    vpor %ymm1, %ymm2, %ymm1
+; AVX2-64-NEXT:    vblendvpd %ymm0, %ymm1, %ymm0, %ymm1
+; AVX2-64-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX2-64-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm2
+; AVX2-64-NEXT:    vmovq %xmm1, %rax
+; AVX2-64-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm3
 ; AVX2-64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0],xmm2[0],xmm3[2,3]
-; AVX2-64-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-64-NEXT:    vmovq %xmm0, %rax
+; AVX2-64-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX2-64-NEXT:    vmovq %xmm1, %rax
 ; AVX2-64-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm3
 ; AVX2-64-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0],xmm2[3]
-; AVX2-64-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX2-64-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm0
-; AVX2-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[0]
-; AVX2-64-NEXT:    vaddps %xmm0, %xmm0, %xmm2
-; AVX2-64-NEXT:    vblendvps %xmm1, %xmm2, %xmm0, %xmm0
+; AVX2-64-NEXT:    vpextrq $1, %xmm1, %rax
+; AVX2-64-NEXT:    vcvtsi2ss %rax, %xmm4, %xmm1
+; AVX2-64-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0,1,2],xmm1[0]
+; AVX2-64-NEXT:    vaddps %xmm1, %xmm1, %xmm2
+; AVX2-64-NEXT:    vextracti128 $1, %ymm0, %xmm3
+; AVX2-64-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
+; AVX2-64-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX2-64-NEXT:    vzeroupper
 ; AVX2-64-NEXT:    retq
 ;

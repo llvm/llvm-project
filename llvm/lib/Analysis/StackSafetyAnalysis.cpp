@@ -131,7 +131,10 @@ raw_ostream &operator<<(raw_ostream &OS, const ParamInfo &P) {
 /// size can not be statically determined.
 uint64_t getStaticAllocaAllocationSize(const AllocaInst *AI) {
   const DataLayout &DL = AI->getModule()->getDataLayout();
-  uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
+  TypeSize TS = DL.getTypeAllocSize(AI->getAllocatedType());
+  if (TS.isScalable())
+    return 0;
+  uint64_t Size = TS.getFixedSize();
   if (AI->isArrayAllocation()) {
     auto C = dyn_cast<ConstantInt>(AI->getArraySize());
     if (!C)
@@ -211,7 +214,9 @@ class StackSafetyLocalAnalysis {
 
   ConstantRange offsetFromAlloca(Value *Addr, const Value *AllocaPtr);
   ConstantRange getAccessRange(Value *Addr, const Value *AllocaPtr,
-                               uint64_t AccessSize);
+                               ConstantRange SizeRange);
+  ConstantRange getAccessRange(Value *Addr, const Value *AllocaPtr,
+                               TypeSize Size);
   ConstantRange getMemIntrinsicAccessRange(const MemIntrinsic *MI, const Use &U,
                                            const Value *AllocaPtr);
 
@@ -244,9 +249,13 @@ StackSafetyLocalAnalysis::offsetFromAlloca(Value *Addr,
   return Offset;
 }
 
-ConstantRange StackSafetyLocalAnalysis::getAccessRange(Value *Addr,
-                                                       const Value *AllocaPtr,
-                                                       uint64_t AccessSize) {
+ConstantRange
+StackSafetyLocalAnalysis::getAccessRange(Value *Addr, const Value *AllocaPtr,
+                                         ConstantRange SizeRange) {
+  // Zero-size loads and stores do not access memory.
+  if (SizeRange.isEmptySet())
+    return ConstantRange::getEmpty(PointerSize);
+
   if (!SE.isSCEVable(Addr->getType()))
     return UnknownRange;
 
@@ -255,10 +264,18 @@ ConstantRange StackSafetyLocalAnalysis::getAccessRange(Value *Addr,
 
   ConstantRange AccessStartRange =
       SE.getUnsignedRange(Expr).zextOrTrunc(PointerSize);
-  ConstantRange SizeRange = getRange(0, AccessSize);
   ConstantRange AccessRange = AccessStartRange.add(SizeRange);
   assert(!AccessRange.isEmptySet());
   return AccessRange;
+}
+
+ConstantRange StackSafetyLocalAnalysis::getAccessRange(Value *Addr,
+                                                       const Value *AllocaPtr,
+                                                       TypeSize Size) {
+  ConstantRange SizeRange = Size.isScalable()
+                                ? ConstantRange::getFull(PointerSize)
+                                : getRange(0, Size.getFixedSize());
+  return getAccessRange(Addr, AllocaPtr, SizeRange);
 }
 
 ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
@@ -274,7 +291,8 @@ ConstantRange StackSafetyLocalAnalysis::getMemIntrinsicAccessRange(
   // Non-constant size => unsafe. FIXME: try SCEV getRange.
   if (!Len)
     return UnknownRange;
-  ConstantRange AccessRange = getAccessRange(U, AllocaPtr, Len->getZExtValue());
+  ConstantRange AccessRange =
+      getAccessRange(U, AllocaPtr, getRange(0, Len->getZExtValue()));
   return AccessRange;
 }
 

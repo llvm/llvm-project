@@ -1685,9 +1685,8 @@ static ParseResult parseFunctionCallOp(OpAsmParser &parser,
 
 static void print(spirv::FunctionCallOp functionCallOp, OpAsmPrinter &printer) {
   SmallVector<Type, 4> argTypes(functionCallOp.getOperandTypes());
-  SmallVector<Type, 1> resultTypes(functionCallOp.getResultTypes());
-  Type functionType =
-      FunctionType::get(argTypes, resultTypes, functionCallOp.getContext());
+  Type functionType = FunctionType::get(
+      argTypes, functionCallOp.getResultTypes(), functionCallOp.getContext());
 
   printer << spirv::FunctionCallOp::getOperationName() << ' '
           << functionCallOp.getAttr(kCallee) << '('

@@ -356,7 +356,7 @@ function(add_libc_unittest target_name)
     gtest
   )
 
-  target_link_libraries(${target_name} PRIVATE LibcUnitTest LLVMSupport)
+  target_link_libraries(${target_name} PRIVATE LibcUnitTest)
 
   add_custom_command(
     TARGET ${target_name}

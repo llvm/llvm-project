@@ -36,7 +36,7 @@
 # RUN: FileCheck %s --input-file=%t-malformed-off-first.err --check-prefix=ALL
 
 ## Don't stop looking for the later unit if non-fatal issues are found.
-# RUN: llvm-dwarfdump -debug-line=0x2af %t-malformed.o 2> %t-malformed-off-last.err \
+# RUN: llvm-dwarfdump -debug-line=0x2f8 %t-malformed.o 2> %t-malformed-off-last.err \
 # RUN:   | FileCheck %s --check-prefix=LAST --implicit-check-not='debug_line[{{.*}}]'
 # RUN: FileCheck %s --input-file=%t-malformed-off-last.err --check-prefix=ALL
 
@@ -96,21 +96,18 @@
 
 ## Case 6: Extended opcode with incorrect length versus expected.
 # NONFATAL:      debug_line[0x00000111]
-## Dumping prints the line table prologue and any valid operations up to the
-## point causing the problem.
 # NONFATAL-NEXT: Line table prologue
-# NONFATAL:      0x00000000abbadaba {{.*}} end_sequence
-# NONFATAL-NOT:  is_stmt
+# NONFATAL: 0x00000000abbadaba {{.*}} end_sequence
+# NONFATAL: 0x00000000babb1e45 {{.*}} 10 is_stmt prologue_end end_sequence{{$}}
 
-## For minor issues, we can dump the whole table.
 ## Case 7: No end of sequence.
-# NONFATAL:      debug_line[0x00000167]
+# NONFATAL:      debug_line[0x0000016c]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      0x00000000deadfade {{.*}} is_stmt
 # NONFATAL-NOT:  end_sequence
 
 ## Case 8: Very short prologue length for V5 (ends during parameters).
-# NONFATAL:      debug_line[0x000001ad]
+# NONFATAL:      debug_line[0x000001b2]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      standard_opcode_lengths[DW_LNS_set_isa] = 1
 # NONFATAL-NEXT: include_directories[  0] = "/tmp"
@@ -120,7 +117,7 @@
 # NONFATAL-NOT:  Address
 
 ## Case 9: V5 prologue ends during file table.
-# NONFATAL:      debug_line[0x000001ed]
+# NONFATAL:      debug_line[0x000001f2]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/tmp"
 # NONFATAL-NEXT: file_names[  0]:
@@ -129,7 +126,7 @@
 # NONFATAL-NOT:  Address
 
 ## Case 10: V5 prologue ends during directory table.
-# NONFATAL:      debug_line[0x0000022d]
+# NONFATAL:      debug_line[0x00000232]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/tmp"
 # NONFATAL-NEXT: file_names[  0]:
@@ -137,14 +134,22 @@
 # NONFATAL-NEXT:       dir_index: 1
 # NONFATAL-NOT:  Address
 
-## Case 11: V5 invalid MD5 hash form.
-# NONFATAL:      debug_line[0x0000026d]
+## Case 11: V5 invalid MD5 hash form when there is still data to be read.
+# NONFATAL:      debug_line[0x00000272]
 # NONFATAL-NEXT: Line table prologue
 # NONFATAL:      include_directories[  0] = "/tmp"
 # NONFATAL-NOT:  file_names
 # NONFATAL-NOT:  Address
 
-# LAST:          debug_line[0x000002af]
+## Case 12: V5 invalid MD5 hash form when data beyond the prologue length has
+## been read before the MD5 problem is identified.
+# NONFATAL: debug_line[0x000002b5]
+# NONFATAL-NEXT: Line table prologue
+# NONFATAL:      include_directories[  0] = "/tmp"
+# NONFATAL-NOT:  file_names
+# NONFATAL-NOT:  Address
+
+# LAST:          debug_line[0x000002f8]
 # LAST:          0x00000000cafebabe {{.*}} end_sequence
 
 # RESERVED: warning: parsing line table prologue at offset 0x00000048 unsupported reserved unit length found of value 0xfffffffe
@@ -158,10 +163,13 @@
 # ALL-NEXT: warning: parsing line table prologue at 0x00000081 should have ended at 0x000000b9 but it ended at 0x000000ba
 # ALL-NEXT: warning: parsing line table prologue at 0x000000c9 should have ended at 0x00000104 but it ended at 0x00000103
 # OTHER-NEXT: warning: unexpected line op length at offset 0x00000158 expected 0x02 found 0x01
-# OTHER-NEXT: warning: last sequence in debug line table at offset 0x00000167 is not terminated
-# ALL-NEXT: warning: parsing line table prologue at 0x000001ad should have ended at 0x000001c8 but it ended at 0x000001df
-# ALL-NEXT: warning: parsing line table prologue at 0x000001ed should have ended at 0x00000218 but it ended at 0x0000021f
-# ALL-NEXT: warning: parsing line table prologue at 0x0000022d should have ended at 0x0000024f but it ended at 0x0000025f
-# ALL-NEXT: warning: parsing line table prologue at 0x0000026d found an invalid directory or file table description at 0x000002a2
+# OTHER-NEXT: warning: unexpected line op length at offset 0x0000015c expected 0x01 found 0x02
+# OTHER-NEXT: warning: last sequence in debug line table at offset 0x0000016c is not terminated
+# ALL-NEXT: warning: parsing line table prologue at 0x000001b2 should have ended at 0x000001cd but it ended at 0x000001e4
+# ALL-NEXT: warning: parsing line table prologue at 0x000001f2 should have ended at 0x0000021d but it ended at 0x00000224
+# ALL-NEXT: warning: parsing line table prologue at 0x00000232 should have ended at 0x00000254 but it ended at 0x00000264
+# ALL-NEXT: warning: parsing line table prologue at 0x00000272 found an invalid directory or file table description at 0x000002a6
+# ALL-NEXT: warning: failed to parse file entry because the MD5 hash is invalid
+# ALL-NEXT: warning: parsing line table prologue at 0x000002b5 found an invalid directory or file table description at 0x000002e9
 # ALL-NEXT: warning: failed to parse file entry because the MD5 hash is invalid
 # ALL-NOT:  warning:

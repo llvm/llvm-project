@@ -107,8 +107,21 @@ protected:
   /// Holds information about all subregisters comprising a register location.
   struct Register {
     int DwarfRegNo;
-    unsigned Size;
+    unsigned SubRegSize;
     const char *Comment;
+
+    /// Create a full register, no extra DW_OP_piece operators necessary.
+    static Register createRegister(int RegNo, const char *Comment) {
+      return {RegNo, 0, Comment};
+    }
+
+    /// Create a subregister that needs a DW_OP_piece operator with SizeInBits.
+    static Register createSubRegister(int RegNo, unsigned SizeInBits,
+                                      const char *Comment) {
+      return {RegNo, SizeInBits, Comment};
+    }
+
+    bool isSubRegister() const { return SubRegSize; }
   };
 
   /// Whether we are currently emitting an entry value operation.

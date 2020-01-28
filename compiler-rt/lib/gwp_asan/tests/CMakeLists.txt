@@ -14,6 +14,7 @@ set(GWP_ASAN_UNITTESTS
   backtrace.cpp
   basic.cpp
   compression.cpp
+  iterate.cpp
   driver.cpp
   mutex_test.cpp
   slot_reuse.cpp

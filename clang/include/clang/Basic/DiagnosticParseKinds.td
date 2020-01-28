@@ -1046,6 +1046,8 @@ def warn_pragma_expected_section_label_or_name : Warning<
 def warn_pragma_expected_init_seg : Warning<
   "expected 'compiler', 'lib', 'user', or a string literal for the section name in '#pragma %0' - ignored">,
   InGroup<IgnoredPragmas>;
+
+def err_pragma_expected_integer : Error<"expected an integer argument in '#pragma %0'">;
 def warn_pragma_expected_integer : Warning<
   "expected integer between %0 and %1 inclusive in '#pragma %2' - ignored">,
   InGroup<IgnoredPragmas>;
@@ -1374,5 +1376,15 @@ def ext_concept_legacy_bool_keyword : ExtWarn<
 def err_placeholder_expected_auto_or_decltype_auto : Error<
   "expected 'auto' or 'decltype(auto)' after concept name">;
 }
+
+def warn_max_tokens : Warning<
+  "the number of preprocessor source tokens (%0) exceeds this token limit (%1)">,
+  InGroup<MaxTokens>;
+
+def warn_max_tokens_total : Warning<
+  "the total number of preprocessor source tokens (%0) exceeds the token limit (%1)">,
+  InGroup<MaxTokens>;
+
+def note_max_tokens_total_override : Note<"total token limit set here">;
 
 } // end of Parser diagnostics

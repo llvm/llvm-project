@@ -292,11 +292,11 @@ static void printCallOp(OpAsmPrinter &p, CallOp &op) {
   p.printOptionalAttrDict(op.getAttrs(), {"callee"});
 
   // Reconstruct the function MLIR function type from operand and result types.
-  SmallVector<Type, 1> resultTypes(op.getResultTypes());
   SmallVector<Type, 8> argTypes(
       llvm::drop_begin(op.getOperandTypes(), isDirect ? 0 : 1));
 
-  p << " : " << FunctionType::get(argTypes, resultTypes, op.getContext());
+  p << " : "
+    << FunctionType::get(argTypes, op.getResultTypes(), op.getContext());
 }
 
 // <operation> ::= `llvm.call` (function-id | ssa-use) `(` ssa-use-list `)`

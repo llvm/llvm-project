@@ -1744,6 +1744,16 @@ void foo()
       Code,
       traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
                integerLiteral(equals(3), hasParent(varDecl(hasName("i")))))));
+
+  Code = R"cpp(
+const char *SomeString{"str"};
+)cpp";
+  EXPECT_TRUE(matches(Code, traverse(ast_type_traits::TK_AsIs,
+                                     stringLiteral(hasParent(implicitCastExpr(
+                                         hasParent(initListExpr())))))));
+  EXPECT_TRUE(
+      matches(Code, traverse(ast_type_traits::TK_IgnoreUnlessSpelledInSource,
+                             stringLiteral(hasParent(initListExpr())))));
 }
 
 template <typename MatcherT>

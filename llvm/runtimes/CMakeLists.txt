@@ -430,8 +430,9 @@ else() # if this is included from LLVM's CMake
 
     foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
       set(${component}-${name} ${component})
-      set(install-${component}-${name} ${component})
-      list(APPEND ${name}_extra_targets ${component}-${name} install-${component}-${name})
+      set(install-${component}-${name} install-${component})
+      set(install-${component}-${name}-stripped install-${component}-stripped)
+      list(APPEND ${name}_extra_targets ${component}-${name} install-${component}-${name} install-${component}-${name}-stripped)
     endforeach()
 
     if(LLVM_INCLUDE_TESTS)
@@ -525,6 +526,7 @@ else() # if this is included from LLVM's CMake
           foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
             add_custom_target(${component})
             add_custom_target(install-${component})
+            add_custom_target(install-${component}-stripped)
           endforeach()
         endif()
       endif()

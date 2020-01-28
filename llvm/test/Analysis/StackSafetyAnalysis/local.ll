@@ -349,3 +349,39 @@ if.then:
 if.end:
   ret void
 }
+
+; FIXME: scalable allocas are considered to be of size zero, and scalable accesses to be full-range.
+; This effectively disables safety analysis for scalable allocations.
+define void @Scalable(<vscale x 4 x i32>* %p, <vscale x 4 x i32>* %unused, <vscale x 4 x i32> %v) {
+; CHECK-LABEL: @Scalable dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT:   p[]: full-set
+; CHECK-NEXT:   unused[]: empty-set
+; CHECK-NEXT:   v[]: full-set
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT:   x[0]: [0,1){{$}}
+; CHECK-NOT: ]:
+entry:
+  %x = alloca <vscale x 4 x i32>, align 4
+  %x1 = bitcast <vscale x 4 x i32>* %x to i8*
+  store i8 0, i8* %x1, align 1
+  store <vscale x 4 x i32> %v, <vscale x 4 x i32>* %p, align 4
+  ret void
+}
+
+%zerosize_type = type {}
+
+define void @ZeroSize(%zerosize_type *%p)  {
+; CHECK-LABEL: @ZeroSize dso_preemptable{{$}}
+; CHECK-NEXT: args uses:
+; CHECK-NEXT:   p[]: empty-set
+; CHECK-NEXT: allocas uses:
+; CHECK-NEXT:   x[0]: empty-set
+; CHECK-NOT: ]:
+entry:
+  %x = alloca %zerosize_type, align 4
+  store %zerosize_type undef, %zerosize_type* %x, align 4
+  store %zerosize_type undef, %zerosize_type* undef, align 4
+  %val = load %zerosize_type, %zerosize_type* %p, align 4
+  ret void
+}

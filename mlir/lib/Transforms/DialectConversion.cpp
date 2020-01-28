@@ -554,8 +554,7 @@ struct ConversionPatternRewriterImpl {
                            TypeConverter::SignatureConversion &conversion);
 
   /// PatternRewriter hook for replacing the results of an operation.
-  void replaceOp(Operation *op, ValueRange newValues,
-                 ValueRange valuesToRemoveIfDead);
+  void replaceOp(Operation *op, ValueRange newValues);
 
   /// Notifies that a block was split.
   void notifySplitBlock(Block *block, Block *continuation);
@@ -757,8 +756,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
 }
 
 void ConversionPatternRewriterImpl::replaceOp(Operation *op,
-                                              ValueRange newValues,
-                                              ValueRange valuesToRemoveIfDead) {
+                                              ValueRange newValues) {
   assert(newValues.size() == op->getNumResults());
 
   // Create mappings for each of the new result values.
@@ -838,11 +836,11 @@ ConversionPatternRewriter::ConversionPatternRewriter(MLIRContext *ctx,
 ConversionPatternRewriter::~ConversionPatternRewriter() {}
 
 /// PatternRewriter hook for replacing the results of an operation.
-void ConversionPatternRewriter::replaceOp(Operation *op, ValueRange newValues,
-                                          ValueRange valuesToRemoveIfDead) {
+void ConversionPatternRewriter::replaceOp(Operation *op,
+                                          ValueRange newValues) {
   LLVM_DEBUG(llvm::dbgs() << "** Replacing operation : " << op->getName()
                           << "\n");
-  impl->replaceOp(op, newValues, valuesToRemoveIfDead);
+  impl->replaceOp(op, newValues);
 }
 
 /// PatternRewriter hook for erasing a dead operation. The uses of this
@@ -852,7 +850,7 @@ void ConversionPatternRewriter::eraseOp(Operation *op) {
   LLVM_DEBUG(llvm::dbgs() << "** Erasing operation : " << op->getName()
                           << "\n");
   SmallVector<Value, 1> nullRepls(op->getNumResults(), nullptr);
-  impl->replaceOp(op, nullRepls, /*valuesToRemoveIfDead=*/llvm::None);
+  impl->replaceOp(op, nullRepls);
 }
 
 /// Apply a signature conversion to the entry block of the given region.
@@ -1706,19 +1704,11 @@ auto ConversionTarget::isLegal(Operation *op) const
 
   // Returns true if this operation instance is known to be legal.
   auto isOpLegal = [&] {
-    // Handle dynamic legality.
-    if (info->action == LegalizationAction::Dynamic) {
-      // Check for callbacks on the operation or dialect.
-      auto opFn = opLegalityFns.find(op->getName());
-      if (opFn != opLegalityFns.end())
-        return opFn->second(op);
-      auto dialectFn = dialectLegalityFns.find(op->getName().getDialect());
-      if (dialectFn != dialectLegalityFns.end())
-        return dialectFn->second(op);
-
-      // Otherwise, invoke the hook on the derived instance.
-      return isDynamicallyLegal(op);
-    }
+    // Handle dynamic legality either with the provided legality function, or
+    // the default hook on the derived instance.
+    if (info->action == LegalizationAction::Dynamic)
+      return info->legalityFn ? (*info->legalityFn)(op)
+                              : isDynamicallyLegal(op);
 
     // Otherwise, the operation is only legal if it was marked 'Legal'.
     return info->action == LegalizationAction::Legal;
@@ -1728,7 +1718,6 @@ auto ConversionTarget::isLegal(Operation *op) const
 
   // This operation is legal, compute any additional legality information.
   LegalOpDetails legalityDetails;
-
   if (info->isRecursivelyLegal) {
     auto legalityFnIt = opRecursiveLegalityFns.find(op->getName());
     if (legalityFnIt != opRecursiveLegalityFns.end())
@@ -1743,7 +1732,11 @@ auto ConversionTarget::isLegal(Operation *op) const
 void ConversionTarget::setLegalityCallback(
     OperationName name, const DynamicLegalityCallbackFn &callback) {
   assert(callback && "expected valid legality callback");
-  opLegalityFns[name] = callback;
+  auto infoIt = legalOperations.find(name);
+  assert(infoIt != legalOperations.end() &&
+         infoIt->second.action == LegalizationAction::Dynamic &&
+         "expected operation to already be marked as dynamically legal");
+  infoIt->second.legalityFn = callback;
 }
 
 /// Set the recursive legality callback for the given operation and mark the
@@ -1776,10 +1769,20 @@ auto ConversionTarget::getOpInfo(OperationName op) const
   auto it = legalOperations.find(op);
   if (it != legalOperations.end())
     return it->second;
-  // Otherwise, default to checking on the parent dialect.
+  // Check for info for the parent dialect.
   auto dialectIt = legalDialects.find(op.getDialect());
-  if (dialectIt != legalDialects.end())
-    return LegalizationInfo{dialectIt->second, /*isRecursivelyLegal=*/false};
+  if (dialectIt != legalDialects.end()) {
+    Optional<DynamicLegalityCallbackFn> callback;
+    auto dialectFn = dialectLegalityFns.find(op.getDialect());
+    if (dialectFn != dialectLegalityFns.end())
+      callback = dialectFn->second;
+    return LegalizationInfo{dialectIt->second, /*isRecursivelyLegal=*/false,
+                            callback};
+  }
+  // Otherwise, check if we mark unknown operations as dynamic.
+  if (unknownOpsDynamicallyLegal)
+    return LegalizationInfo{LegalizationAction::Dynamic,
+                            /*isRecursivelyLegal=*/false, unknownLegalityFn};
   return llvm::None;
 }
 

@@ -1126,10 +1126,8 @@ void ClangdLSPServer::onResolveTypeHierarchy(
 void ClangdLSPServer::applyConfiguration(
     const ConfigurationSettings &Settings) {
   // Per-file update to the compilation database.
-  bool ShouldReparseOpenFiles = false;
+  llvm::StringSet<> ModifiedFiles;
   for (auto &Entry : Settings.compilationDatabaseChanges) {
-    /// The opened files need to be reparsed only when some existing
-    /// entries are changed.
     PathRef File = Entry.first;
     auto Old = CDB->getCompileCommand(File);
     auto New =
@@ -1138,11 +1136,11 @@ void ClangdLSPServer::applyConfiguration(
                                 /*Output=*/"");
     if (Old != New) {
       CDB->setCompileCommand(File, std::move(New));
-      ShouldReparseOpenFiles = true;
+      ModifiedFiles.insert(File);
     }
   }
-  if (ShouldReparseOpenFiles)
-    reparseOpenedFiles();
+
+  reparseOpenedFiles(ModifiedFiles);
 }
 
 void ClangdLSPServer::publishSemanticHighlighting(
@@ -1463,10 +1461,15 @@ void ClangdLSPServer::onFileUpdated(PathRef File, const TUStatus &Status) {
   notify("textDocument/clangd.fileStatus", Status.render(File));
 }
 
-void ClangdLSPServer::reparseOpenedFiles() {
+void ClangdLSPServer::reparseOpenedFiles(
+    const llvm::StringSet<> &ModifiedFiles) {
+  if (ModifiedFiles.empty())
+    return;
+  // Reparse only opened files that were modified.
   for (const Path &FilePath : DraftMgr.getActiveFiles())
-    Server->addDocument(FilePath, *DraftMgr.getDraft(FilePath),
-                        WantDiagnostics::Auto);
+    if (ModifiedFiles.find(FilePath) != ModifiedFiles.end())
+      Server->addDocument(FilePath, *DraftMgr.getDraft(FilePath),
+                          WantDiagnostics::Auto);
 }
 
 } // namespace clangd

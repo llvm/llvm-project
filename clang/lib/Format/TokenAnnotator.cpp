@@ -3144,6 +3144,24 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
       // JavaScript top-level enum key/value pairs are put on separate lines
       // instead of bin-packing.
       return true;
+    if (Right.is(tok::r_brace) && Left.is(tok::l_brace) && Left.Previous &&
+        Left.Previous->is(TT_JsFatArrow)) {
+      // JS arrow function (=> {...}).
+      switch (Style.AllowShortLambdasOnASingleLine) {
+      case FormatStyle::SLS_All:
+        return false;
+      case FormatStyle::SLS_None:
+        return true;
+      case FormatStyle::SLS_Empty:
+        return !Left.Children.empty();
+      case FormatStyle::SLS_Inline:
+        // allow one-lining inline (e.g. in function call args) and empty arrow
+        // functions.
+        return (Left.NestingLevel == 0 && Line.Level == 0) &&
+               !Left.Children.empty();
+      }
+    }
+
     if (Right.is(tok::r_brace) && Left.is(tok::l_brace) &&
         !Left.Children.empty())
       // Support AllowShortFunctionsOnASingleLine for JavaScript.

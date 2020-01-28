@@ -133,8 +133,8 @@ public:
     return getDynNodeFromMap(Node, OtherParents);
   }
 
-  ast_type_traits::DynTypedNode
-  AscendIgnoreUnlessSpelledInSource(const Expr *E, const Expr *Child) {
+  DynTypedNodeList AscendIgnoreUnlessSpelledInSource(const Expr *E,
+                                                     const Expr *Child) {
 
     auto ShouldSkip = [](const Expr *E, const Expr *Child) {
       if (isa<ImplicitCastExpr>(E))
@@ -179,8 +179,11 @@ public:
       if (It == PointerParents.end())
         break;
       const auto *S = It->second.dyn_cast<const Stmt *>();
-      if (!S)
+      if (!S) {
+        if (auto *Vec = It->second.dyn_cast<ParentVector *>())
+          return llvm::makeArrayRef(*Vec);
         return getSingleDynTypedNodeFromParentMap(It->second);
+      }
       const auto *P = dyn_cast<Expr>(S);
       if (!P)
         return ast_type_traits::DynTypedNode::create(*S);

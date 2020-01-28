@@ -671,7 +671,7 @@ define float @test19_reassoc(float %A, float %B) {
 define float @test20(float %a, float %b, float %c) nounwind  {
 ; CHECK-LABEL: @test20(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast float [[B:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[T7:%.*]] = fsub fast float -0.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[T7:%.*]] = fneg fast float [[TMP1]]
 ; CHECK-NEXT:    ret float [[T7]]
 ;
   %t3 = fsub fast float %a, %b

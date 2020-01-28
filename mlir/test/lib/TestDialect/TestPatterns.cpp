@@ -241,7 +241,7 @@ struct TestChangeProducerTypeI32ToF32 : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     // If the type is I32, change the type to F32.
-    if (!(*op->result_type_begin()).isInteger(32))
+    if (!Type(*op->result_type_begin()).isInteger(32))
       return matchFailure();
     rewriter.replaceOpWithNewOp<TestTypeProducerOp>(op, rewriter.getF32Type());
     return matchSuccess();
@@ -254,7 +254,7 @@ struct TestChangeProducerTypeF32ToF64 : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     // If the type is F32, change the type to F64.
-    if (!(*op->result_type_begin()).isF32())
+    if (!Type(*op->result_type_begin()).isF32())
       return matchFailure();
     rewriter.replaceOpWithNewOp<TestTypeProducerOp>(op, rewriter.getF64Type());
     return matchSuccess();
@@ -399,6 +399,11 @@ struct TestLegalizePatternDriver
 
     // Handle a full conversion.
     if (mode == ConversionMode::Full) {
+      // Check support for marking unknown operations as dynamically legal.
+      target.markUnknownOpDynamicallyLegal([](Operation *op) {
+        return (bool)op->getAttrOfType<UnitAttr>("test.dynamically_legal");
+      });
+
       (void)applyFullConversion(getModule(), target, patterns, &converter);
       return;
     }
@@ -472,8 +477,7 @@ struct OneVResOneVOperandOp1Converter
     remappedOperands.push_back(rewriter.getRemappedValue(origOp));
     remappedOperands.push_back(rewriter.getRemappedValue(origOp));
 
-    SmallVector<Type, 1> resultTypes(op.getResultTypes());
-    rewriter.replaceOpWithNewOp<OneVResOneVOperandOp1>(op, resultTypes,
+    rewriter.replaceOpWithNewOp<OneVResOneVOperandOp1>(op, op.getResultTypes(),
                                                        remappedOperands);
     return matchSuccess();
   }

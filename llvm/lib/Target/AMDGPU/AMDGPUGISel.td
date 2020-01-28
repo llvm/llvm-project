@@ -31,6 +31,10 @@ def gi_vop3mods :
     GIComplexOperandMatcher<s32, "selectVOP3Mods">,
     GIComplexPatternEquiv<VOP3Mods>;
 
+def gi_vop3_no_mods :
+    GIComplexOperandMatcher<s32, "selectVOP3NoMods">,
+    GIComplexPatternEquiv<VOP3NoMods>;
+
 def gi_vop3mods_nnan :
     GIComplexOperandMatcher<s32, "selectVOP3Mods_nnan">,
     GIComplexPatternEquiv<VOP3Mods_nnan>;
@@ -84,6 +88,13 @@ def gi_ds_1addr_1offset :
     GIComplexOperandMatcher<s32, "selectDS1Addr1Offset">,
     GIComplexPatternEquiv<DS1Addr1Offset>;
 
+def gi_mubuf_addr64 :
+    GIComplexOperandMatcher<s64, "selectMUBUFAddr64">,
+    GIComplexPatternEquiv<MUBUFAddr64>;
+
+def gi_mubuf_offset :
+    GIComplexOperandMatcher<s64, "selectMUBUFOffset">,
+    GIComplexPatternEquiv<MUBUFOffset>;
 
 // Separate load nodes are defined to glue m0 initialization in
 // SelectionDAG. The GISel selector can just insert m0 initialization
@@ -119,12 +130,42 @@ def : GINodeEquiv<G_ATOMICRMW_FADD, atomic_load_fadd_glue>;
 
 def : GINodeEquiv<G_AMDGPU_FFBH_U32, AMDGPUffbh_u32>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_CMPXCHG, AMDGPUatomic_cmp_swap>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD, SIbuffer_load>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_USHORT, SIbuffer_load_ushort>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_UBYTE, SIbuffer_load_ubyte>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_SSHORT, SIbuffer_load_short>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_SBYTE, SIbuffer_load_byte>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT, SIbuffer_load_format>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD_FORMAT_D16, SIbuffer_load_format_d16>;
+def : GINodeEquiv<G_AMDGPU_TBUFFER_LOAD_FORMAT, SItbuffer_load>;
+def : GINodeEquiv<G_AMDGPU_TBUFFER_LOAD_FORMAT_D16, SItbuffer_load_d16>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_STORE, SIbuffer_store>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_STORE_SHORT, SIbuffer_store_short>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_STORE_BYTE, SIbuffer_store_byte>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_STORE_FORMAT, SIbuffer_store_format>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_STORE_FORMAT_D16, SIbuffer_store_format_d16>;
+def : GINodeEquiv<G_AMDGPU_TBUFFER_STORE_FORMAT, SItbuffer_store>;
+def : GINodeEquiv<G_AMDGPU_TBUFFER_STORE_FORMAT_D16, SItbuffer_store_d16>;
 
 // FIXME: Check MMO is atomic
 def : GINodeEquiv<G_AMDGPU_ATOMIC_INC, SIatomic_inc>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_DEC, SIatomic_dec>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_INC, atomic_inc_glue>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_DEC, atomic_dec_glue>;
+
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_SWAP, SIbuffer_atomic_swap>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_ADD, SIbuffer_atomic_add>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_SUB, SIbuffer_atomic_sub>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_SMIN, SIbuffer_atomic_smin>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_UMIN, SIbuffer_atomic_umin>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_SMAX, SIbuffer_atomic_smax>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_UMAX, SIbuffer_atomic_umax>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_AND, SIbuffer_atomic_and>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_OR, SIbuffer_atomic_or>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_XOR, SIbuffer_atomic_xor>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_INC, SIbuffer_atomic_inc>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_DEC, SIbuffer_atomic_dec>;
+def : GINodeEquiv<G_AMDGPU_BUFFER_ATOMIC_CMPSWAP, SIbuffer_atomic_cmpswap>;
 
 
 class GISelSop2Pat <
@@ -216,6 +257,9 @@ def gi_as_i32timm : GICustomOperandRenderer<"renderTruncTImm32">,
 def gi_as_i16timm : GICustomOperandRenderer<"renderTruncTImm16">,
   GISDNodeXFormEquiv<as_i16timm>;
 
+def gi_as_i8timm : GICustomOperandRenderer<"renderTruncTImm8">,
+  GISDNodeXFormEquiv<as_i8timm>;
+
 def gi_as_i1timm : GICustomOperandRenderer<"renderTruncTImm1">,
   GISDNodeXFormEquiv<as_i1timm>;
 
@@ -227,3 +271,15 @@ def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastImm">,
 
 def gi_IMMPopCount : GICustomOperandRenderer<"renderPopcntImm">,
   GISDNodeXFormEquiv<IMMPopCount>;
+
+def gi_extract_glc : GICustomOperandRenderer<"renderExtractGLC">,
+  GISDNodeXFormEquiv<extract_glc>;
+
+def gi_extract_slc : GICustomOperandRenderer<"renderExtractSLC">,
+  GISDNodeXFormEquiv<extract_slc>;
+
+def gi_extract_dlc : GICustomOperandRenderer<"renderExtractDLC">,
+  GISDNodeXFormEquiv<extract_dlc>;
+
+def gi_extract_swz : GICustomOperandRenderer<"renderExtractSWZ">,
+  GISDNodeXFormEquiv<extract_swz>;

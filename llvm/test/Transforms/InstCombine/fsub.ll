@@ -731,8 +731,8 @@ define float @fneg_fsub(float %x, float %y) {
 
 define float @fneg_fsub_nsz(float %x, float %y) {
 ; CHECK-LABEL: @fneg_fsub_nsz(
-; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = fsub nsz float [[NEGX]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd nsz float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = fneg nsz float [[TMP1]]
 ; CHECK-NEXT:    ret float [[SUB]]
 ;
   %negx = fneg float %x
@@ -743,7 +743,7 @@ define float @fneg_fsub_nsz(float %x, float %y) {
 define float @fake_fneg_fsub_fast(float %x, float %y) {
 ; CHECK-LABEL: @fake_fneg_fsub_fast(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast float [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = fsub fast float -0.000000e+00, [[TMP1]]
+; CHECK-NEXT:    [[SUB:%.*]] = fneg fast float [[TMP1]]
 ; CHECK-NEXT:    ret float [[SUB]]
 ;
   %negx = fsub float -0.0, %x
@@ -766,8 +766,8 @@ define float @fake_fneg_fsub_fast_extra_use(float %x, float %y) {
 
 define <2 x float> @fake_fneg_fsub_vec(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @fake_fneg_fsub_vec(
-; CHECK-NEXT:    [[NEGX:%.*]] = fsub <2 x float> <float -0.000000e+00, float -0.000000e+00>, [[X:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = fsub nsz <2 x float> [[NEGX]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd nsz <2 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = fneg nsz <2 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[SUB]]
 ;
   %negx = fsub <2 x float> <float -0.0, float -0.0>, %x

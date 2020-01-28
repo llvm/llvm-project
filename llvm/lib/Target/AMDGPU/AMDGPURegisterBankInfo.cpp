@@ -2243,6 +2243,47 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     return;
   }
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16:
+  case AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT:
+  case AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT_D16:
+  case AMDGPU::G_AMDGPU_BUFFER_STORE:
+  case AMDGPU::G_AMDGPU_BUFFER_STORE_BYTE:
+  case AMDGPU::G_AMDGPU_BUFFER_STORE_SHORT:
+  case AMDGPU::G_AMDGPU_BUFFER_STORE_FORMAT:
+  case AMDGPU::G_AMDGPU_BUFFER_STORE_FORMAT_D16:
+  case AMDGPU::G_AMDGPU_TBUFFER_STORE_FORMAT:
+  case AMDGPU::G_AMDGPU_TBUFFER_STORE_FORMAT_D16: {
+    applyDefaultMapping(OpdMapper);
+    executeInWaterfallLoop(MI, MRI, {1, 4});
+    return;
+  }
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMIN:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMAX:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMAX:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_AND:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_OR:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_XOR:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC: {
+    applyDefaultMapping(OpdMapper);
+    executeInWaterfallLoop(MI, MRI, {2, 5});
+    return;
+  }
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP: {
+    applyDefaultMapping(OpdMapper);
+    executeInWaterfallLoop(MI, MRI, {3, 6});
+    return;
+  }
   case AMDGPU::G_INTRINSIC: {
     switch (MI.getIntrinsicID()) {
     case Intrinsic::amdgcn_s_buffer_load: {
@@ -2323,24 +2364,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     case Intrinsic::amdgcn_s_sendmsghalt: {
       // FIXME: Should this use a waterfall loop?
       constrainOpWithReadfirstlane(MI, MRI, 2); // M0
-      return;
-    }
-    case Intrinsic::amdgcn_raw_buffer_load:
-    case Intrinsic::amdgcn_raw_buffer_load_format:
-    case Intrinsic::amdgcn_raw_tbuffer_load:
-    case Intrinsic::amdgcn_raw_buffer_store:
-    case Intrinsic::amdgcn_raw_buffer_store_format:
-    case Intrinsic::amdgcn_raw_tbuffer_store: {
-      applyDefaultMapping(OpdMapper);
-      executeInWaterfallLoop(MI, MRI, {2, 4});
-      return;
-    }
-    case Intrinsic::amdgcn_struct_buffer_load:
-    case Intrinsic::amdgcn_struct_buffer_store:
-    case Intrinsic::amdgcn_struct_tbuffer_load:
-    case Intrinsic::amdgcn_struct_tbuffer_store: {
-      applyDefaultMapping(OpdMapper);
-      executeInWaterfallLoop(MI, MRI, {2, 5});
       return;
     }
     default: {
@@ -2497,6 +2520,22 @@ AMDGPURegisterBankInfo::getImageMapping(const MachineRegisterInfo &MRI,
   return getInstructionMapping(1, 1, getOperandsMapping(OpdsMapping), NumOps);
 }
 
+/// Return the mapping for a pointer arugment.
+const RegisterBankInfo::ValueMapping *
+AMDGPURegisterBankInfo::getValueMappingForPtr(const MachineRegisterInfo &MRI,
+                                              Register PtrReg) const {
+  LLT PtrTy = MRI.getType(PtrReg);
+  unsigned Size = PtrTy.getSizeInBits();
+  if (Subtarget.useFlatForGlobal() ||
+      !SITargetLowering::isFlatGlobalAddrSpace(PtrTy.getAddressSpace()))
+    return AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+
+  // If we're using MUBUF instructions for global memory, an SGPR base register
+  // is possible. Otherwise this needs to be a VGPR.
+  const RegisterBank *PtrBank = getRegBank(PtrReg, MRI, *TRI);
+  return AMDGPU::getValueMapping(PtrBank->getID(), Size);
+}
+
 const RegisterBankInfo::InstructionMapping &
 AMDGPURegisterBankInfo::getInstrMappingForLoad(const MachineInstr &MI) const {
 
@@ -2516,12 +2555,23 @@ AMDGPURegisterBankInfo::getInstrMappingForLoad(const MachineInstr &MI) const {
   const RegisterBank *PtrBank = getRegBank(PtrReg, MRI, *TRI);
 
   if (PtrBank == &AMDGPU::SGPRRegBank &&
-      (AS != AMDGPUAS::LOCAL_ADDRESS && AS != AMDGPUAS::REGION_ADDRESS &&
-       AS != AMDGPUAS::PRIVATE_ADDRESS) &&
-      isScalarLoadLegal(MI)) {
-    // We have a uniform instruction so we want to use an SMRD load
-    ValMapping = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
-    PtrMapping = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, PtrSize);
+      SITargetLowering::isFlatGlobalAddrSpace(AS)) {
+    if (isScalarLoadLegal(MI)) {
+      // We have a uniform instruction so we want to use an SMRD load
+      ValMapping = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
+      PtrMapping = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, PtrSize);
+    } else {
+      ValMapping = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
+
+      // If we're using MUBUF instructions for global memory, an SGPR base
+      // register is possible. Otherwise this needs to be a VGPR.
+      unsigned PtrBankID = Subtarget.useFlatForGlobal() ?
+        AMDGPU::VGPRRegBankID : AMDGPU::SGPRRegBankID;
+
+      PtrMapping = AMDGPU::getValueMapping(PtrBankID, PtrSize);
+      ValMapping = AMDGPU::getValueMappingLoadSGPROnly(AMDGPU::VGPRRegBankID,
+                                                       LoadTy);
+    }
   } else {
     ValMapping = AMDGPU::getValueMappingLoadSGPROnly(AMDGPU::VGPRRegBankID, LoadTy);
     PtrMapping = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, PtrSize);
@@ -2945,21 +2995,15 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_STORE: {
     assert(MI.getOperand(0).isReg());
     unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-    // FIXME: We need to specify a different reg bank once scalar stores
-    // are supported.
+
+    // FIXME: We need to specify a different reg bank once scalar stores are
+    // supported.
     const ValueMapping *ValMapping =
         AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
-    // FIXME: Depending on the type of store, the pointer could be in
-    // the SGPR Reg bank.
-    // FIXME: Pointer size should be based on the address space.
-    const ValueMapping *PtrMapping =
-        AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 64);
-
     OpdsMapping[0] = ValMapping;
-    OpdsMapping[1] = PtrMapping;
+    OpdsMapping[1] = getValueMappingForPtr(MRI, MI.getOperand(1).getReg());
     break;
   }
-
   case AMDGPU::G_ICMP: {
     auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
     unsigned Size = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
@@ -3038,6 +3082,72 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       unsigned Size = getSizeInBits(MI.getOperand(i).getReg(), MRI, *TRI);
       OpdsMapping[i] = AMDGPU::getValueMapping(Bank, Size);
     }
+    break;
+  }
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_UBYTE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SBYTE:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_USHORT:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_SSHORT:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16:
+  case AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT:
+  case AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT_D16:
+  case AMDGPU::G_AMDGPU_BUFFER_STORE:
+  case AMDGPU::G_AMDGPU_BUFFER_STORE_BYTE:
+  case AMDGPU::G_AMDGPU_BUFFER_STORE_SHORT:
+  case AMDGPU::G_AMDGPU_BUFFER_STORE_FORMAT:
+  case AMDGPU::G_AMDGPU_BUFFER_STORE_FORMAT_D16: {
+    OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+
+    // rsrc
+    OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+
+    // vindex
+    OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+
+    // voffset
+    OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
+
+    // soffset
+    OpdsMapping[4] = getSGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
+
+    // Any remaining operands are immediates and were correctly null
+    // initialized.
+    break;
+  }
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SWAP:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_ADD:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMIN:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMIN:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SMAX:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_UMAX:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_AND:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_OR:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_XOR:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_INC:
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC: {
+    // vdata_out
+    OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+
+    // vdata_in
+    OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+
+    // rsrc
+    OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+
+    // vindex
+    OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
+
+    // voffset
+    OpdsMapping[4] = getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
+
+    // soffset
+    OpdsMapping[5] = getSGPROpMapping(MI.getOperand(5).getReg(), MRI, *TRI);
+
+    // Any remaining operands are immediates and were correctly null
+    // initialized.
     break;
   }
   case AMDGPU::G_INTRINSIC: {
@@ -3478,11 +3588,20 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_ATOMICRMW_UMAX:
   case AMDGPU::G_ATOMICRMW_UMIN:
   case AMDGPU::G_ATOMICRMW_FADD:
-  case AMDGPU::G_ATOMIC_CMPXCHG:
   case AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG:
   case AMDGPU::G_AMDGPU_ATOMIC_INC:
   case AMDGPU::G_AMDGPU_ATOMIC_DEC: {
-    return getDefaultMappingAllVGPR(MI);
+    OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+    OpdsMapping[1] = getValueMappingForPtr(MRI, MI.getOperand(1).getReg());
+    OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+    break;
+  }
+  case AMDGPU::G_ATOMIC_CMPXCHG: {
+    OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+    OpdsMapping[1] = getValueMappingForPtr(MRI, MI.getOperand(1).getReg());
+    OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+    OpdsMapping[3] = getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
+    break;
   }
   case AMDGPU::G_BRCOND: {
     unsigned Bank = getRegBankID(MI.getOperand(0).getReg(), MRI, *TRI,

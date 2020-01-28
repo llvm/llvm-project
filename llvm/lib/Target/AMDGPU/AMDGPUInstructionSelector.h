@@ -100,11 +100,7 @@ private:
   bool selectInterpP1F16(MachineInstr &MI) const;
   bool selectG_INTRINSIC(MachineInstr &I) const;
 
-  std::tuple<Register, unsigned, unsigned>
-  splitBufferOffsets(MachineIRBuilder &B, Register OrigOffset) const;
-
   bool selectEndCfIntrinsic(MachineInstr &MI) const;
-  bool selectStoreIntrinsic(MachineInstr &MI, bool IsFormat) const;
   bool selectDSOrderedIntrinsic(MachineInstr &MI, Intrinsic::ID IID) const;
   bool selectDSGWSIntrinsic(MachineInstr &MI, Intrinsic::ID IID) const;
   bool selectDSAppendConsume(MachineInstr &MI, bool IsAppend) const;
@@ -142,6 +138,9 @@ private:
   selectVOP3OMods(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods(MachineOperand &Root) const;
+
+  ComplexRendererFns selectVOP3NoMods(MachineOperand &Root) const;
+
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods_nnan(MachineOperand &Root) const;
 
@@ -180,15 +179,63 @@ private:
   InstructionSelector::ComplexRendererFns
   selectDS1Addr1Offset(MachineOperand &Root) const;
 
+  std::pair<Register, int64_t>
+  getPtrBaseWithConstantOffset(Register Root,
+                               const MachineRegisterInfo &MRI) const;
+
+  // Parse out a chain of up to two g_ptr_add instructions.
+  // g_ptr_add (n0, _)
+  // g_ptr_add (n0, (n1 = g_ptr_add n2, n3))
+  struct MUBUFAddressData {
+    Register N0, N2, N3;
+    int64_t Offset = 0;
+  };
+
+  bool shouldUseAddr64(MUBUFAddressData AddrData) const;
+
+  void splitIllegalMUBUFOffset(MachineIRBuilder &B,
+                               Register &SOffset, int64_t &ImmOffset) const;
+
+  MUBUFAddressData parseMUBUFAddress(Register Src) const;
+
+  bool selectMUBUFAddr64Impl(MachineOperand &Root, Register &VAddr,
+                             Register &RSrcReg, Register &SOffset,
+                             int64_t &Offset) const;
+
+  bool selectMUBUFOffsetImpl(MachineOperand &Root, Register &RSrcReg,
+                             Register &SOffset, int64_t &Offset) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectMUBUFAddr64(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectMUBUFOffset(MachineOperand &Root) const;
+
   void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx = -1) const;
 
-  void renderTruncTImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                         int OpIdx) const;
-  void renderTruncTImm16(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                         int OpIdx) const;
+  void renderTruncTImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                       int OpIdx) const;
+
   void renderTruncTImm1(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                        int OpIdx) const;
+                        int OpIdx) const {
+    renderTruncTImm(MIB, MI, OpIdx);
+  }
+
+  void renderTruncTImm8(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const {
+    renderTruncTImm(MIB, MI, OpIdx);
+  }
+
+  void renderTruncTImm16(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const {
+    renderTruncTImm(MIB, MI, OpIdx);
+  }
+
+  void renderTruncTImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const {
+    renderTruncTImm(MIB, MI, OpIdx);
+  }
 
   void renderNegateImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
@@ -198,6 +245,14 @@ private:
 
   void renderPopcntImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                        int OpIdx) const;
+  void renderExtractGLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
+  void renderExtractSLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
+  void renderExtractDLC(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
+  void renderExtractSWZ(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                        int OpIdx) const;
 
   bool isInlineImmediate16(int64_t Imm) const;
   bool isInlineImmediate32(int64_t Imm) const;

@@ -10,6 +10,7 @@
 ; RUN: opt -thinlto-bc -o %t4.o %p/Inputs/devirt_promote.ll
 
 ; RUN: llvm-lto -thinlto-action=run %t3.o %t4.o --thinlto-save-temps=%t5. \
+; RUN:   -whole-program-visibility \
 ; RUN:   --pass-remarks=. \
 ; RUN:   --exported-symbol=test \
 ; RUN:   --exported-symbol=test2 \

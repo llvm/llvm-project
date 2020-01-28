@@ -650,6 +650,16 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result, bool IsFirstDecl) {
     return false;
 
   case tok::eof:
+    // Check whether -fmax-tokens was reached.
+    if (PP.getMaxTokens() != 0 && PP.getTokenCount() > PP.getMaxTokens()) {
+      PP.Diag(Tok.getLocation(), diag::warn_max_tokens_total)
+          << PP.getTokenCount() << PP.getMaxTokens();
+      SourceLocation OverrideLoc = PP.getMaxTokensOverrideLoc();
+      if (OverrideLoc.isValid()) {
+        PP.Diag(OverrideLoc, diag::note_max_tokens_total_override);
+      }
+    }
+
     // Late template parsing can begin.
     if (getLangOpts().DelayedTemplateParsing)
       Actions.SetLateTemplateParser(LateTemplateParserCallback,

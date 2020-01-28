@@ -104,6 +104,11 @@ New aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`readability-redundant-string-init
+  <clang-tidy/checks/readability-redundant-string-init>` check now supports a
+  `StringNames` option enabling its application to custom string classes. The 
+  check now detects in class initializers and constructor initializers which 
+  are deemed to be redundant.
 
 Renamed checks
 ^^^^^^^^^^^^^^
