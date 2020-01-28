@@ -679,6 +679,16 @@ TEST(Matcher, DeleteExpression) {
                       cxxDeleteExpr()));
 }
 
+TEST(Matcher, NoexceptExpression) {
+  StatementMatcher NoExcept = cxxNoexceptExpr();
+  EXPECT_TRUE(matches("void foo(); bool bar = noexcept(foo());", NoExcept));
+  EXPECT_TRUE(
+      matches("void foo() noexcept; bool bar = noexcept(foo());", NoExcept));
+  EXPECT_TRUE(notMatches("void foo() noexcept;", NoExcept));
+  EXPECT_TRUE(notMatches("void foo() noexcept(1+1);", NoExcept));
+  EXPECT_TRUE(matches("void foo() noexcept(noexcept(1+1));", NoExcept));
+}
+
 TEST(Matcher, DefaultArgument) {
   StatementMatcher Arg = cxxDefaultArgExpr();
 
