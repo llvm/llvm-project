@@ -535,8 +535,20 @@ def X86any_Fmadd    : PatFrags<(ops node:$src1, node:$src2, node:$src3),
                                [(X86strict_Fmadd node:$src1, node:$src2, node:$src3),
                                 (X86Fmadd node:$src1, node:$src2, node:$src3)]>;
 def X86Fnmadd    : SDNode<"X86ISD::FNMADD",    SDTFPTernaryOp, [SDNPCommutative]>;
+def X86strict_Fnmadd : SDNode<"X86ISD::STRICT_FNMADD", SDTFPTernaryOp, [SDNPCommutative, SDNPHasChain]>;
+def X86any_Fnmadd : PatFrags<(ops node:$src1, node:$src2, node:$src3),
+                             [(X86strict_Fnmadd node:$src1, node:$src2, node:$src3),
+                              (X86Fnmadd node:$src1, node:$src2, node:$src3)]>;
 def X86Fmsub     : SDNode<"X86ISD::FMSUB",     SDTFPTernaryOp, [SDNPCommutative]>;
+def X86strict_Fmsub : SDNode<"X86ISD::STRICT_FMSUB",     SDTFPTernaryOp, [SDNPCommutative, SDNPHasChain]>;
+def X86any_Fmsub : PatFrags<(ops node:$src1, node:$src2, node:$src3),
+                            [(X86strict_Fmsub node:$src1, node:$src2, node:$src3),
+                             (X86Fmsub node:$src1, node:$src2, node:$src3)]>;
 def X86Fnmsub    : SDNode<"X86ISD::FNMSUB",    SDTFPTernaryOp, [SDNPCommutative]>;
+def X86strict_Fnmsub : SDNode<"X86ISD::STRICT_FNMSUB",    SDTFPTernaryOp, [SDNPCommutative, SDNPHasChain]>;
+def X86any_Fnmsub : PatFrags<(ops node:$src1, node:$src2, node:$src3),
+                             [(X86strict_Fnmsub node:$src1, node:$src2, node:$src3),
+                              (X86Fnmsub node:$src1, node:$src2, node:$src3)]>;
 def X86Fmaddsub  : SDNode<"X86ISD::FMADDSUB",  SDTFPTernaryOp, [SDNPCommutative]>;
 def X86Fmsubadd  : SDNode<"X86ISD::FMSUBADD",  SDTFPTernaryOp, [SDNPCommutative]>;
 
