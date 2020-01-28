@@ -748,6 +748,15 @@ bool FormatSpecifier::hasValidLengthModifier(const TargetInfo &Target,
     case LengthModifier::AsIntMax:
     case LengthModifier::AsSizeT:
     case LengthModifier::AsPtrDiff:
+      if (LM.getKind() == LengthModifier::AsSizeT &&
+          Target.getTriple().isOSMSVCRT() &&
+          !LO.isCompatibleWithMSVC(LangOptions::MSVC2015)) {
+        // The standard libraries before MSVC2015 didn't support the 'z' length
+        // modifier for size_t. So if the MS compatibility version is less than
+        // that, reject.
+        return false;
+      }
+
       switch (CS.getKind()) {
         case ConversionSpecifier::dArg:
         case ConversionSpecifier::DArg:
