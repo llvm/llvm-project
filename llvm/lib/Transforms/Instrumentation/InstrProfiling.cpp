@@ -686,10 +686,12 @@ void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
       IRBuilder<> Builder(&I);
       Type *Int64Ty = Type::getInt64Ty(M->getContext());
       GlobalVariable *Bias = M->getGlobalVariable(getInstrProfCounterBiasVarName());
-      if (!Bias)
+      if (!Bias) {
         Bias = new GlobalVariable(*M, Int64Ty, false, GlobalValue::LinkOnceODRLinkage,
                                   Constant::getNullValue(Int64Ty),
                                   getInstrProfCounterBiasVarName());
+        Bias->setVisibility(GlobalVariable::HiddenVisibility);
+      }
       LI = Builder.CreateLoad(Int64Ty, Bias);
     }
     auto *Add = Builder.CreateAdd(Builder.CreatePtrToInt(Addr, Int64Ty), LI);
