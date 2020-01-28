@@ -1866,6 +1866,7 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
          && "Expected '(' or '{'!");
 
   if (Tok.is(tok::l_brace)) {
+    PreferredType.enterTypeCast(Tok.getLocation(), TypeRep.get());
     ExprResult Init = ParseBraceInitializer();
     if (Init.isInvalid())
       return Init;
