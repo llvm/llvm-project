@@ -430,7 +430,7 @@ else() # if this is included from LLVM's CMake
 
     foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
       set(${component}-${name} ${component})
-      set(install-${component}-${name} ${component})
+      set(install-${component}-${name} install-${component})
       list(APPEND ${name}_extra_targets ${component}-${name} install-${component}-${name})
     endforeach()
 
