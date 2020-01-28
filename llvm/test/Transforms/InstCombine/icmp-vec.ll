@@ -289,3 +289,81 @@ define <2 x i1> @same_shuffle_inputs_icmp_extra_use3(<4 x i8> %x, <4 x i8> %y) {
   ret <2 x i1> %cmp
 }
 
+define <4 x i1> @splat_icmp(<4 x i8> %x) {
+; CHECK-LABEL: @splat_icmp(
+; CHECK-NEXT:    [[SPLATX:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i8> [[SPLATX]], <i8 42, i8 42, i8 42, i8 42>
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+  %splatx = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %cmp = icmp sgt <4 x i8> %splatx, <i8 42, i8 42, i8 42, i8 42>
+  ret <4 x i1> %cmp
+}
+
+define <4 x i1> @splat_icmp_undef(<4 x i8> %x) {
+; CHECK-LABEL: @splat_icmp_undef(
+; CHECK-NEXT:    [[SPLATX:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <4 x i32> <i32 2, i32 undef, i32 undef, i32 2>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <4 x i8> [[SPLATX]], <i8 undef, i8 42, i8 undef, i8 42>
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+  %splatx = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 2, i32 undef, i32 undef, i32 2>
+  %cmp = icmp ult <4 x i8> %splatx, <i8 undef, i8 42, i8 undef, i8 42>
+  ret <4 x i1> %cmp
+}
+
+define <4 x i1> @splat_icmp_larger_size(<2 x i8> %x) {
+; CHECK-LABEL: @splat_icmp_larger_size(
+; CHECK-NEXT:    [[SPLATX:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> undef, <4 x i32> <i32 1, i32 undef, i32 1, i32 undef>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i8> [[SPLATX]], <i8 42, i8 42, i8 undef, i8 42>
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+  %splatx = shufflevector <2 x i8> %x, <2 x i8> undef, <4 x i32> <i32 1, i32 undef, i32 1, i32 undef>
+  %cmp = icmp eq <4 x i8> %splatx, <i8 42, i8 42, i8 undef, i8 42>
+  ret <4 x i1> %cmp
+}
+
+define <4 x i1> @splat_fcmp_smaller_size(<5 x float> %x) {
+; CHECK-LABEL: @splat_fcmp_smaller_size(
+; CHECK-NEXT:    [[SPLATX:%.*]] = shufflevector <5 x float> [[X:%.*]], <5 x float> undef, <4 x i32> <i32 1, i32 undef, i32 1, i32 undef>
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <4 x float> [[SPLATX]], <float 4.200000e+01, float 4.200000e+01, float undef, float 4.200000e+01>
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+  %splatx = shufflevector <5 x float> %x, <5 x float> undef, <4 x i32> <i32 1, i32 undef, i32 1, i32 undef>
+  %cmp = fcmp oeq <4 x float> %splatx, <float 42.0, float 42.0, float undef, float 42.0>
+  ret <4 x i1> %cmp
+}
+
+define <4 x i1> @splat_icmp_extra_use(<4 x i8> %x) {
+; CHECK-LABEL: @splat_icmp_extra_use(
+; CHECK-NEXT:    [[SPLATX:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+; CHECK-NEXT:    call void @use_v4i8(<4 x i8> [[SPLATX]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i8> [[SPLATX]], <i8 42, i8 42, i8 42, i8 42>
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+  %splatx = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  call void @use_v4i8(<4 x i8> %splatx)
+  %cmp = icmp sgt <4 x i8> %splatx, <i8 42, i8 42, i8 42, i8 42>
+  ret <4 x i1> %cmp
+}
+
+define <4 x i1> @not_splat_icmp(<4 x i8> %x) {
+; CHECK-LABEL: @not_splat_icmp(
+; CHECK-NEXT:    [[SPLATX:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 3, i32 3>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i8> [[SPLATX]], <i8 42, i8 42, i8 42, i8 42>
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+  %splatx = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 3, i32 3>
+  %cmp = icmp sgt <4 x i8> %splatx, <i8 42, i8 42, i8 42, i8 42>
+  ret <4 x i1> %cmp
+}
+
+define <4 x i1> @not_splat_icmp2(<4 x i8> %x) {
+; CHECK-LABEL: @not_splat_icmp2(
+; CHECK-NEXT:    [[SPLATX:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <4 x i8> [[SPLATX]], <i8 43, i8 42, i8 42, i8 42>
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+  %splatx = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+  %cmp = icmp sgt <4 x i8> %splatx, <i8 43, i8 42, i8 42, i8 42>
+  ret <4 x i1> %cmp
+}
