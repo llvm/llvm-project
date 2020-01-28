@@ -5349,21 +5349,26 @@ static Instruction *foldICmpWithHighBitMask(ICmpInst &Cmp,
 
 static Instruction *foldVectorCmp(CmpInst &Cmp,
                                   InstCombiner::BuilderTy &Builder) {
-  // If both arguments of the cmp are shuffles that use the same mask and
-  // shuffle within a single vector, move the shuffle after the cmp.
+  const CmpInst::Predicate Pred = Cmp.getPredicate();
   Value *LHS = Cmp.getOperand(0), *RHS = Cmp.getOperand(1);
+  bool IsFP = isa<FCmpInst>(Cmp);
+
   Value *V1, *V2;
   Constant *M;
-  if (match(LHS, m_ShuffleVector(m_Value(V1), m_Undef(), m_Constant(M))) &&
-      match(RHS, m_ShuffleVector(m_Value(V2), m_Undef(), m_Specific(M))) &&
-      V1->getType() == V2->getType() &&
-      (LHS->hasOneUse() || RHS->hasOneUse())) {
-    // cmp (shuffle V1, M), (shuffle V2, M) --> shuffle (cmp V1, V2), M
-    CmpInst::Predicate P = Cmp.getPredicate();
-    Value *NewCmp = isa<ICmpInst>(Cmp) ? Builder.CreateICmp(P, V1, V2)
-                                       : Builder.CreateFCmp(P, V1, V2);
+  if (!match(LHS, m_ShuffleVector(m_Value(V1), m_Undef(), m_Constant(M))))
+    return nullptr;
+
+  // If both arguments of the cmp are shuffles that use the same mask and
+  // shuffle within a single vector, move the shuffle after the cmp:
+  // cmp (shuffle V1, M), (shuffle V2, M) --> shuffle (cmp V1, V2), M
+  Type *V1Ty = V1->getType();
+  if (match(RHS, m_ShuffleVector(m_Value(V2), m_Undef(), m_Specific(M))) &&
+      V1Ty == V2->getType() && (LHS->hasOneUse() || RHS->hasOneUse())) {
+    Value *NewCmp = IsFP ? Builder.CreateFCmp(Pred, V1, V2)
+                         : Builder.CreateICmp(Pred, V1, V2);
     return new ShuffleVectorInst(NewCmp, UndefValue::get(NewCmp->getType()), M);
   }
+
   return nullptr;
 }
 
