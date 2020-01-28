@@ -1,6 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fms-compatibility -triple=i386-pc-win32 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -fms-compatibility -triple=i386-pc-win32 -fms-compatibility-version=18 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -fms-compatibility -triple=i386-pc-win32 -fms-compatibility-version=19 -DSIZE_T_OK %s
 // RUN: %clang_cc1 -fsyntax-only -verify -fms-compatibility -triple=i386-pc-win32 -Wformat-non-iso -DNON_ISO_WARNING %s
 
 int printf(const char *format, ...) __attribute__((format(printf, 1, 2)));
@@ -85,13 +83,6 @@ void z_test(void *p) {
   printf("%wZ", p);
   printf("%hhZ", p); // expected-warning{{length modifier 'hh' results in undefined behavior or no effect with 'Z' conversion specifier}}
   scanf("%Z", p); // expected-warning{{invalid conversion specifier 'Z'}}
-}
-
-void size_t_test(size_t s) {
-  printf("%zu", s);
-#ifndef SIZE_T_OK
-  // expected-warning@-2 {{length modifier 'z' results in undefined behavior or no effect with 'u' conversion specifier}}
-#endif
 }
 
 #endif
