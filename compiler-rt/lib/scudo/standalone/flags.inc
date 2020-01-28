@@ -45,6 +45,6 @@ SCUDO_FLAG(bool, may_return_null, true,
            "returning NULL in otherwise non-fatal error scenarios, eg: OOM, "
            "invalid allocation alignments, etc.")
 
-SCUDO_FLAG(int, release_to_os_interval_ms, 5000,
+SCUDO_FLAG(int, release_to_os_interval_ms, SCUDO_ANDROID ? 1000 : 5000,
            "Interval (in milliseconds) at which to attempt release of unused "
            "memory to the OS. Negative values disable the feature.")
