@@ -95,6 +95,34 @@ multiclass MLS_DForm_R_SI34_RTA5_p<bits<6> opcode, dag OOL, dag IOL,
                                  !strconcat(asmstr, ", 1"), itin, []>, isPCRel;
 }
 
+class 8LS_DForm_R_D34_RTA5<bits<6> opcode, dag OOL, dag IOL, string asmstr,
+                           InstrItinClass itin, list<dag> pattern>
+  : PI<1, opcode, OOL, IOL, asmstr, itin> {
+  bits<5> RT;
+  bits<39> D_RA;
+
+  let Pattern = pattern;
+
+  // The prefix.
+  let Inst{6-10} = 0;
+  let Inst{11} = PCRel;
+  let Inst{12-13} = 0;
+  let Inst{14-31} = D_RA{33-16}; // d0
+
+  // The instruction.
+  let Inst{38-42} = RT{4-0};
+  let Inst{43-47} = D_RA{38-34}; // RA
+  let Inst{48-63} = D_RA{15-0}; // d1
+}
+
+multiclass 8LS_DForm_R_D34_RTA5_p<bits<6> opcode, dag OOL, dag IOL,
+                                  dag PCRel_IOL, string asmstr,
+                                  InstrItinClass itin> {
+  def NAME : 8LS_DForm_R_D34_RTA5<opcode, OOL, IOL,
+                                  !strconcat(asmstr, ", 0"), itin, []>;
+  def pc : 8LS_DForm_R_D34_RTA5<opcode, OOL, PCRel_IOL,
+                                !strconcat(asmstr, ", 1"), itin, []>, isPCRel;
+}
 
 def PrefixInstrs : Predicate<"PPCSubTarget->hasPrefixInstrs()">;
 
@@ -118,6 +146,20 @@ let Predicates = [PrefixInstrs] in {
     def PLI : MLS_DForm2_r0<14, (outs gprc:$RT),
                             (ins s34imm:$SI),
                             "pli $RT, $SI", IIC_IntSimple, []>;
+  }
+
+  let mayLoad = 1, mayStore = 0 in {
+    defm PLD :
+      8LS_DForm_R_D34_RTA5_p<57, (outs g8rc:$RT), (ins memri34:$D_RA),
+                             (ins memri34_pcrel:$D_RA), "pld $RT, $D_RA",
+                             IIC_LdStLFD>;
+  }
+
+  let mayStore = 1, mayLoad = 0 in {
+    defm PSTD :
+      8LS_DForm_R_D34_RTA5_p<61, (outs), (ins g8rc:$RS, memri34:$D_RA),
+                             (ins g8rc:$RS, memri34_pcrel:$D_RA),
+                             "pstd $RS, $D_RA", IIC_LdStLFD>;
   }
 }
 

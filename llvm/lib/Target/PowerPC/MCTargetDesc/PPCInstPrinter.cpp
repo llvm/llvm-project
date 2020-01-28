@@ -465,6 +465,22 @@ void PPCInstPrinter::printMemRegImm(const MCInst *MI, unsigned OpNo,
   O << ')';
 }
 
+void PPCInstPrinter::printMemRegImm34PCRel(const MCInst *MI, unsigned OpNo,
+                                           raw_ostream &O) {
+  printS34ImmOperand(MI, OpNo, O);
+  O << '(';
+  printImmZeroOperand(MI, OpNo+1, O);
+  O << ')';
+}
+
+void PPCInstPrinter::printMemRegImm34(const MCInst *MI, unsigned OpNo,
+                                        raw_ostream &O) {
+  printS34ImmOperand(MI, OpNo, O);
+  O << '(';
+  printOperand(MI, OpNo+1, O);
+  O << ')';
+}
+
 void PPCInstPrinter::printMemRegReg(const MCInst *MI, unsigned OpNo,
                                     raw_ostream &O) {
   // When used as the base register, r0 reads constant zero rather than
