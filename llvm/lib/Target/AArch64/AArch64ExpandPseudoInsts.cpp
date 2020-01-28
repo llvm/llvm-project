@@ -615,10 +615,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     Register DstReg = MI.getOperand(0).getReg();
     auto SysReg = AArch64SysReg::TPIDR_EL0;
     MachineFunction *MF = MBB.getParent();
-    if (MF->getTarget().getTargetTriple().isOSFuchsia() &&
-        MF->getTarget().getCodeModel() == CodeModel::Kernel)
-      SysReg = AArch64SysReg::TPIDR_EL1;
-    else if (MF->getSubtarget<AArch64Subtarget>().useEL3ForTP())
+    if (MF->getSubtarget<AArch64Subtarget>().useEL3ForTP())
       SysReg = AArch64SysReg::TPIDR_EL3;
     else if (MF->getSubtarget<AArch64Subtarget>().useEL2ForTP())
       SysReg = AArch64SysReg::TPIDR_EL2;
