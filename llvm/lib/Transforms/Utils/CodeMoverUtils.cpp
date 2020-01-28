@@ -61,7 +61,7 @@ public:
   /// \p BB from \p Dominator. If \p MaxLookup is non-zero, it limits the
   /// number of conditions to collect. Return None if not all conditions are
   /// collected successfully, or we hit the limit.
-  static Optional<const ControlConditions>
+  static const Optional<ControlConditions>
   collectControlConditions(const BasicBlock &BB, const BasicBlock &Dominator,
                            const DominatorTree &DT,
                            const PostDominatorTree &PDT,
@@ -94,7 +94,7 @@ private:
 };
 } // namespace
 
-Optional<const ControlConditions> ControlConditions::collectControlConditions(
+const Optional<ControlConditions> ControlConditions::collectControlConditions(
     const BasicBlock &BB, const BasicBlock &Dominator, const DominatorTree &DT,
     const PostDominatorTree &PDT, unsigned MaxLookup) {
   assert(DT.dominates(&Dominator, &BB) && "Expecting Dominator to dominate BB");
@@ -238,13 +238,13 @@ bool llvm::isControlFlowEquivalent(const BasicBlock &BB0, const BasicBlock &BB1,
                     << " and " << BB1.getName() << " is "
                     << CommonDominator->getName() << "\n");
 
-  Optional<const ControlConditions> BB0Conditions =
+  const Optional<ControlConditions> BB0Conditions =
       ControlConditions::collectControlConditions(BB0, *CommonDominator, DT,
                                                   PDT);
   if (BB0Conditions == None)
     return false;
 
-  Optional<const ControlConditions> BB1Conditions =
+  const Optional<ControlConditions> BB1Conditions =
       ControlConditions::collectControlConditions(BB1, *CommonDominator, DT,
                                                   PDT);
   if (BB1Conditions == None)
