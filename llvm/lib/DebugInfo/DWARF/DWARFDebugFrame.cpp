@@ -298,9 +298,11 @@ constexpr uint64_t getCIEId(bool IsDWARF64, bool IsEH) {
 }
 
 void CIE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
-  OS << format("%08x %08x %08x CIE", (uint32_t)Offset, (uint32_t)Length,
-               IsEH ? 0 : DW_CIE_ID)
-     << "\n";
+  OS << format("%08" PRIx64, Offset)
+     << format(" %0*" PRIx64, IsDWARF64 ? 16 : 8, Length)
+     << format(" %0*" PRIx64, IsDWARF64 && !IsEH ? 16 : 8,
+               getCIEId(IsDWARF64, IsEH))
+     << " CIE\n";
   OS << format("  Version:               %d\n", Version);
   OS << "  Augmentation:          \"" << Augmentation << "\"\n";
   if (Version >= 4) {
@@ -325,15 +327,16 @@ void CIE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
 }
 
 void FDE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
-  OS << format("%08x %08x %08x", (uint32_t)Offset, (uint32_t)Length,
-               (uint32_t)CIEPointer)
+  OS << format("%08" PRIx64, Offset)
+     << format(" %0*" PRIx64, IsDWARF64 ? 16 : 8, Length)
+     << format(" %0*" PRIx64, IsDWARF64 && !IsEH ? 16 : 8, CIEPointer)
      << " FDE cie=";
   if (LinkedCIE)
-    OS << format("%08x", (uint32_t)(LinkedCIE->getOffset()));
+    OS << format("%08" PRIx64, LinkedCIE->getOffset());
   else
     OS << "<invalid offset>";
-  OS << format(" pc=%08x...%08x\n", (uint32_t)InitialLocation,
-               (uint32_t)InitialLocation + (uint32_t)AddressRange);
+  OS << format(" pc=%08" PRIx64 "...%08" PRIx64 "\n", InitialLocation,
+               InitialLocation + AddressRange);
   if (LSDAAddress)
     OS << format("  LSDA Address: %016" PRIx64 "\n", *LSDAAddress);
   CFIs.dump(OS, MRI, IsEH);
@@ -469,10 +472,11 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
       }
 
       auto Cie = std::make_unique<CIE>(
-          StartOffset, Length, Version, AugmentationString, AddressSize,
-          SegmentDescriptorSize, CodeAlignmentFactor, DataAlignmentFactor,
-          ReturnAddressRegister, AugmentationData, FDEPointerEncoding,
-          LSDAPointerEncoding, Personality, PersonalityEncoding, Arch);
+          IsDWARF64, StartOffset, Length, Version, AugmentationString,
+          AddressSize, SegmentDescriptorSize, CodeAlignmentFactor,
+          DataAlignmentFactor, ReturnAddressRegister, AugmentationData,
+          FDEPointerEncoding, LSDAPointerEncoding, Personality,
+          PersonalityEncoding, Arch);
       CIEs[StartOffset] = Cie.get();
       Entries.emplace_back(std::move(Cie));
     } else {
@@ -522,9 +526,9 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
         AddressRange = Data.getRelocatedAddress(&Offset);
       }
 
-      Entries.emplace_back(new FDE(StartOffset, Length, CIEPointer,
-                                   InitialLocation, AddressRange,
-                                   Cie, LSDAAddress, Arch));
+      Entries.emplace_back(new FDE(IsDWARF64, StartOffset, Length, CIEPointer,
+                                   InitialLocation, AddressRange, Cie,
+                                   LSDAAddress, Arch));
     }
 
     if (Error E =
