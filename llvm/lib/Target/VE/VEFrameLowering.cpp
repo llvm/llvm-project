@@ -12,6 +12,7 @@
 
 #include "VEFrameLowering.h"
 #include "VEInstrInfo.h"
+#include "VEMachineFunctionInfo.h"
 #include "VESubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -297,9 +298,40 @@ bool VEFrameLowering::hasFP(const MachineFunction &MF) const {
 
 int VEFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
                                             unsigned &FrameReg) const {
+  const VESubtarget &Subtarget = MF.getSubtarget<VESubtarget>();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const VERegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+  const VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
+  bool isFixed = MFI.isFixedObjectIndex(FI);
+
   // Addressable stack objects are accessed using neg. offsets from
   // %fp, or positive offsets from %sp.
+  bool UseFP = true;
+
+  // VE uses FP-based references in general, even when "hasFP" is
+  // false. That function is rather a misnomer, because %fp is
+  // actually always available, unless isLeafProc.
+  if (FuncInfo->isLeafProc()) {
+    // If there's a leaf proc, all offsets need to be %sp-based,
+    // because we haven't caused %fp to actually point to our frame.
+    UseFP = false;
+  } else if (isFixed) {
+    // Otherwise, argument access should always use %fp.
+    UseFP = true;
+  } else if (RegInfo->needsStackRealignment(MF)) {
+    // If there is dynamic stack realignment, all local object
+    // references need to be via %sp, to take account of the
+    // re-alignment.
+    UseFP = false;
+  }
+
   int64_t FrameOffset = MF.getFrameInfo().getObjectOffset(FI);
+
+  if (UseFP) {
+    FrameReg = RegInfo->getFrameRegister(MF);
+    return FrameOffset;
+  }
+
   FrameReg = VE::SX11; // %sp
   return FrameOffset + MF.getFrameInfo().getStackSize();
 }
@@ -321,5 +353,8 @@ void VEFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                            RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 
-  assert(isLeafProc(MF) && "TODO implement for non-leaf procs");
+  if (isLeafProc(MF)) {
+    VEMachineFunctionInfo *MFI = MF.getInfo<VEMachineFunctionInfo>();
+    MFI->setLeafProc(true);
+  }
 }
