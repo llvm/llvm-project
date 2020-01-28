@@ -280,10 +280,12 @@ public:
 
   /// Deserialize and interpret value as T.
   template <typename T> T Deserialize() {
+    T t = Read<T>(typename serializer_tag<T>::type());
 #ifdef LLDB_REPRO_INSTR_TRACE
-    llvm::errs() << "Deserializing with " << LLVM_PRETTY_FUNCTION << "\n";
+    llvm::errs() << "Deserializing with " << LLVM_PRETTY_FUNCTION << " -> "
+                 << stringify_args(t) << "\n";
 #endif
-    return Read<T>(typename serializer_tag<T>::type());
+    return t;
   }
 
   /// Store the returned value in the index-to-object mapping.
