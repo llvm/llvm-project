@@ -878,45 +878,20 @@ unsigned SITargetLowering::getVectorTypeBreakdownForCallingConv(
     Context, CC, VT, IntermediateVT, NumIntermediates, RegisterVT);
 }
 
-static MVT memVTFromAggregate(Type *Ty) {
+// Peek through TFE struct returns to only use the data size.
+static EVT memVTFromImageReturn(Type *Ty) {
+  auto *ST = dyn_cast<StructType>(Ty);
+  if (!ST)
+    return EVT::getEVT(Ty, true);
+
+  // Some intrinsics return an aggregate type - special case to work out the
+  // correct memVT.
+  //
   // Only limited forms of aggregate type currently expected.
-  assert(Ty->isStructTy() && "Expected struct type");
-
-
-  Type *ElementType = nullptr;
-  unsigned NumElts;
-  if (Ty->getContainedType(0)->isVectorTy()) {
-    VectorType *VecComponent = cast<VectorType>(Ty->getContainedType(0));
-    ElementType = VecComponent->getElementType();
-    NumElts = VecComponent->getNumElements();
-  } else {
-    ElementType = Ty->getContainedType(0);
-    NumElts = 1;
-  }
-
-  assert((Ty->getContainedType(1) && Ty->getContainedType(1)->isIntegerTy(32)) && "Expected int32 type");
-
-  // Calculate the size of the memVT type from the aggregate
-  unsigned Pow2Elts = 0;
-  unsigned ElementSize;
-  switch (ElementType->getTypeID()) {
-    default:
-      llvm_unreachable("Unknown type!");
-    case Type::IntegerTyID:
-      ElementSize = cast<IntegerType>(ElementType)->getBitWidth();
-      break;
-    case Type::HalfTyID:
-      ElementSize = 16;
-      break;
-    case Type::FloatTyID:
-      ElementSize = 32;
-      break;
-  }
-  unsigned AdditionalElts = ElementSize == 16 ? 2 : 1;
-  Pow2Elts = 1 << Log2_32_Ceil(NumElts + AdditionalElts);
-
-  return MVT::getVectorVT(MVT::getVT(ElementType, false),
-                          Pow2Elts);
+  if (ST->getNumContainedTypes() != 2 ||
+      !ST->getContainedType(1)->isIntegerTy(32))
+    return EVT();
+  return EVT::getEVT(ST->getContainedType(0));
 }
 
 bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
@@ -946,12 +921,8 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags = MachineMemOperand::MODereferenceable;
     if (Attr.hasFnAttribute(Attribute::ReadOnly)) {
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.memVT = MVT::getVT(CI.getType(), true);
-      if (Info.memVT == MVT::Other) {
-        // Some intrinsics return an aggregate type - special case to work out
-        // the correct memVT
-        Info.memVT = memVTFromAggregate(CI.getType());
-      }
+      // TODO: Account for dmask reducing loaded size.
+      Info.memVT = memVTFromImageReturn(CI.getType());
       Info.flags |= MachineMemOperand::MOLoad;
     } else if (Attr.hasFnAttribute(Attribute::WriteOnly)) {
       Info.opc = ISD::INTRINSIC_VOID;
