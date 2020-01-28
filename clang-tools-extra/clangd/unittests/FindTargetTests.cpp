@@ -536,7 +536,8 @@ TEST_F(TargetDeclTest, ObjC) {
       [[f.x]].y = 0;
     }
   )cpp";
-  EXPECT_DECLS("OpaqueValueExpr", "@property(atomic, retain, readwrite) I *x");
+  EXPECT_DECLS("ObjCPropertyRefExpr",
+               "@property(atomic, retain, readwrite) I *x");
 
   Code = R"cpp(
     @protocol Foo

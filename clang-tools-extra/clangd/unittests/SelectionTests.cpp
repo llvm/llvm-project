@@ -323,12 +323,52 @@ TEST(SelectionTest, CommonAncestor) {
             Foo x = [[^12_ud]];
           )cpp",
           "UserDefinedLiteral"},
+
       {
           R"cpp(
         int a;
         decltype([[^a]] + a) b;
         )cpp",
           "DeclRefExpr"},
+
+      // Objective-C OpaqueValueExpr/PseudoObjectExpr has weird ASTs.
+      // Need to traverse the contents of the OpaqueValueExpr to the POE,
+      // and ensure we traverse only the syntactic form of the PseudoObjectExpr.
+      {
+          R"cpp(
+            @interface I{}
+            @property(retain) I*x;
+            @property(retain) I*y;
+            @end
+            void test(I *f) { [[^f]].x.y = 0; }
+          )cpp",
+          "DeclRefExpr"},
+      {
+          R"cpp(
+            @interface I{}
+            @property(retain) I*x;
+            @property(retain) I*y;
+            @end
+            void test(I *f) { [[f.^x]].y = 0; }
+          )cpp",
+          "ObjCPropertyRefExpr"},
+      // Examples with implicit properties.
+      {
+          R"cpp(
+            @interface I{}
+            -(int)foo;
+            @end
+            int test(I *f) { return 42 + [[^f]].foo; }
+          )cpp",
+          "DeclRefExpr"},
+      {
+          R"cpp(
+            @interface I{}
+            -(int)foo;
+            @end
+            int test(I *f) { return 42 + [[f.^foo]]; }
+          )cpp",
+          "ObjCPropertyRefExpr"},
   };
   for (const Case &C : Cases) {
     Annotations Test(C.Code);
@@ -339,6 +379,7 @@ TEST(SelectionTest, CommonAncestor) {
     // FIXME: Auto-completion in a template requires disabling delayed template
     // parsing.
     TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+    TU.ExtraArgs.push_back("-xobjective-c++");
 
     auto AST = TU.build();
     auto T = makeSelectionTree(C.Code, AST);
