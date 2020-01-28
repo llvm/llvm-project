@@ -7130,6 +7130,13 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(unsigned MinVF,
   SmallPtrSet<Instruction *, 4> DeadInstructions;
   collectTriviallyDeadInstructions(DeadInstructions);
 
+  // Add assume instructions we need to drop to DeadInstructions, to prevent
+  // them from being added to the VPlan.
+  // TODO: We only need to drop assumes in blocks that get flattend. If the
+  // control flow is preserved, we should keep them.
+  auto &ConditionalAssumes = Legal->getConditionalAssumes();
+  DeadInstructions.insert(ConditionalAssumes.begin(), ConditionalAssumes.end());
+
   DenseMap<Instruction *, Instruction *> &SinkAfter = Legal->getSinkAfter();
   // Dead instructions do not need sinking. Remove them from SinkAfter.
   for (Instruction *I : DeadInstructions)
@@ -7191,13 +7198,6 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   // Build initial VPlan: Scan the body of the loop in a topological order to
   // visit each basic block after having visited its predecessor basic blocks.
   // ---------------------------------------------------------------------------
-
-  // Add assume instructions we need to drop to DeadInstructions, to prevent
-  // them from being added to the VPlan.
-  // TODO: We only need to drop assumes in blocks that get flattend. If the
-  // control flow is preserved, we should keep them.
-  auto &ConditionalAssumes = Legal->getConditionalAssumes();
-  DeadInstructions.insert(ConditionalAssumes.begin(), ConditionalAssumes.end());
 
   // Create a dummy pre-entry VPBasicBlock to start building the VPlan.
   VPBasicBlock *VPBB = new VPBasicBlock("Pre-Entry");
