@@ -64,7 +64,7 @@
 .long   .Lunit_short_prologue_end - .Lunit_short_prologue_start # unit length
 .Lunit_short_prologue_start:
 .short  4               # version
-.long   .Lprologue_short_prologue_end-.Lprologue_short_prologue_start # Length of Prologue
+.long   .Lprologue_short_prologue_end-.Lprologue_short_prologue_start - 2 # Length of Prologue
 .Lprologue_short_prologue_start:
 .byte   1               # Minimum Instruction Length
 .byte   1               # Maximum Operations per Instruction
@@ -79,13 +79,9 @@
 .asciz "file1"          # File table
 .byte   0, 0, 0
 .asciz "file2"
-.byte   1, 2
+.byte   1, 2, 3
+.byte   0
 .Lprologue_short_prologue_end:
-.byte   6               # Read as part of the prologue,
-                        # then later again as DW_LNS_negate_stmt.
-# FIXME: There should be an additional 0 byte here, but the file name parsing
-#        code does not recognise a missing null terminator.
-# Header end
 .byte   0, 9, 2         # DW_LNE_set_address
 .quad   0x1122334455667788
 .byte   0, 1, 1         # DW_LNE_end_sequence
@@ -95,7 +91,7 @@
 .long   .Lunit_long_prologue_end - .Lunit_long_prologue_start # unit length
 .Lunit_long_prologue_start:
 .short  4               # version
-.long   .Lprologue_long_prologue_end-.Lprologue_long_prologue_start # Length of Prologue
+.long   .Lprologue_long_prologue_end-.Lprologue_long_prologue_start + 1 # Length of Prologue
 .Lprologue_long_prologue_start:
 .byte   1               # Minimum Instruction Length
 .byte   1               # Maximum Operations per Instruction
@@ -112,8 +108,6 @@
 .asciz "file2"
 .byte   1, 2, 3
 .byte   0
-# Skipped byte (treated as part of prologue).
-.byte   6
 .Lprologue_long_prologue_end:
 .byte   0, 9, 2        # DW_LNE_set_address
 .quad   0x1111222233334444
@@ -186,7 +180,7 @@
 .short  5               # DWARF version number
 .byte   8               # Address Size
 .byte   0               # Segment Selector Size
-.long   .Linvalid_description_header_end0 - .Linvalid_description_params0 # Length of Prologue (invalid)
+.long   15              # Length of Prologue (invalid)
 .Linvalid_description_params0:
 .byte   1               # Minimum Instruction Length
 .byte   1               # Maximum Operations per Instruction
@@ -194,27 +188,26 @@
 .byte   -5              # Line Base
 .byte   14              # Line Range
 .byte   13              # Opcode Base
-.byte   0, 1, 1, 1, 1, 0, 0, 0, 1, 0 # Standard Opcode Lengths
-.Linvalid_description_header_end0:
-# The bytes from here onwards will also be read as part of the main body.
-                        # --- Prologue interpretation --- | --- Main body interpretation ---
-.byte   0, 1            # More standard opcodes           | First part of DW_LNE_end_sequence
+.byte   0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 # Standard Opcode Lengths
 # Directory table format
-.byte   1               # One element per directory entry | End of DW_LNE_end_sequence
-.byte   1               # DW_LNCT_path                    | DW_LNS_copy
-.byte   0x08            # DW_FORM_string                  | DW_LNS_const_add_pc
+.byte   1               # One element per directory entry
+.byte   1               # DW_LNCT_path
+.byte   0x08            # DW_FORM_string
 # Directory table entries
-.byte   1               # 1 directory                     | DW_LNS_copy
-.asciz  "/tmp"          # Directory name                  | four special opcodes + start of DW_LNE_end_sequence
+.byte   1               # 1 directory
+.asciz  "/tmp"
 # File table format
-.byte   1               # 1 element per file entry        | DW_LNE_end_sequence length
-.byte   1               # DW_LNCT_path                    | DW_LNE_end_sequence opcode
-.byte   0x08            # DW_FORM_string                  | DW_LNS_const_add_pc
+.byte   2               # 2 elements per file entry
+.byte   1               # DW_LNCT_path
+.byte   0x08            # DW_FORM_string
+.byte   2               # DW_LNCT_directory_index
+.byte   0x0b            # DW_FORM_data1
 # File table entries
-.byte   1               # 1 file                          | DW_LNS_copy
-.asciz  "xyz"           # File name                       | three special opcodes + start of DW_LNE_set_address
-# Header end
-.byte   9, 2            # Remainder of DW_LNE_set_address
+.byte   1               # 1 file
+.asciz  "a.c"
+.byte   1
+.Linvalid_description_header_end0:
+.byte   0, 9, 2         # DW_LNE_set_address
 .quad   0xbabb1ebabb1e
 .byte   0, 1, 1         # DW_LNE_end_sequence
 .Linvalid_description_end0:
@@ -225,7 +218,7 @@
 .short  5               # DWARF version number
 .byte   8               # Address Size
 .byte   0               # Segment Selector Size
-.long   .Linvalid_file_header_end0 - .Linvalid_file_params0 # Length of Prologue (invalid)
+.long   .Linvalid_file_header_end0-.Linvalid_file_params0-7     # Length of Prologue (invalid)
 .Linvalid_file_params0:
 .byte   1               # Minimum Instruction Length
 .byte   1               # Maximum Operations per Instruction
@@ -246,16 +239,12 @@
 .byte   1               # DW_LNCT_path
 .byte   0x08            # DW_FORM_string
 .byte   2               # DW_LNCT_directory_index
-.Linvalid_file_header_end0:
-# The bytes from here onwards will also be read as part of the main body.
-                        # --- Prologue interpretation --- | --- Main body interpretation ---
-.byte   0x0b            # DW_FORM_data1                   | DW_LNS_set_epilogue_begin
+.byte   0x0b            # DW_FORM_data1
 # File table entries
-.byte   1               # 1 file                          | DW_LNS_copy
-.asciz  "xyz"           # File name                       | 3 special opcodes + start of DW_LNE_end_sequence
-.byte   1               # Dir index                       | DW_LNE_end_sequence length
-# Header end
-.byte   1               # DW_LNE_end_sequence opcode
+.byte   1               # 1 file
+.asciz  "a.c"
+.byte   1
+.Linvalid_file_header_end0:
 .byte   0, 9, 2         # DW_LNE_set_address
 .quad   0xab4acadab4a
 .byte   0, 1, 1         # DW_LNE_end_sequence
@@ -267,7 +256,7 @@
 .short  5               # DWARF version number
 .byte   8               # Address Size
 .byte   0               # Segment Selector Size
-.long   .Linvalid_dir_header_end0 - .Linvalid_dir_params0 # Length of Prologue (invalid)
+.long   .Linvalid_dir_header_end0-.Linvalid_dir_params0-16     # Length of Prologue (invalid)
 .Linvalid_dir_params0:
 .byte   1               # Minimum Instruction Length
 .byte   1               # Maximum Operations per Instruction
@@ -282,19 +271,19 @@
 .byte   0x08            # DW_FORM_string
 # Directory table entries
 .byte   1               # 1 directory
-.Linvalid_dir_header_end0:
-# The bytes from here onwards will also be read as part of the main body.
-                        # --- Prologue interpretation --- | --- Main body interpretation ---
-.asciz  "/tmp"          # Directory name                  | 4 special opcodes + start of DW_LNE_end_sequence
+.asciz  "/tmp"
 # File table format
-.byte   1               # 1 element per file entry        | DW_LNE_end_sequence length
-.byte   1               # DW_LNCT_path                    | DW_LNE_end_sequence length opcode
-.byte   0x08            # DW_FORM_string                  | DW_LNS_const_add_pc
+.byte   2               # 2 elements per file entry
+.byte   1               # DW_LNCT_path
+.byte   0x08            # DW_FORM_string
+.byte   2               # DW_LNCT_directory_index
+.byte   0x0b            # DW_FORM_data1
 # File table entries
-.byte   1               # 1 file                          | DW_LNS_copy
-.asciz  "xyz"           # File name                       | start of DW_LNE_set_address
-# Header end
-.byte   9, 2            # DW_LNE_set_address length + opcode
+.byte   1               # 1 file
+.asciz  "a.c"
+.byte   1
+.Linvalid_dir_header_end0:
+.byte   0, 9, 2         # DW_LNE_set_address
 .quad   0x4444333322221111
 .byte   0, 1, 1         # DW_LNE_end_sequence
 .Linvalid_dir_end0:
@@ -334,7 +323,7 @@
 .asciz  "a.c"
 .byte   0
 # Data to show that the rest of the prologue is skipped.
-.byte   1
+.byte   6
 .Linvalid_md5_header_end0:
 .byte   0, 9, 2         # DW_LNE_set_address
 .quad   0x1234123412341234
@@ -348,7 +337,7 @@
 .short  5               # DWARF version number
 .byte   8               # Address Size
 .byte   0               # Segment Selector Size
-.long   .Linvalid_md5_header_end1 - .Linvalid_md5_params1 # Length of Prologue
+.long   .Linvalid_md5_header_end1-.Linvalid_md5_params1 - 10 # Length of Prologue
 .Linvalid_md5_params1:
 .byte   1               # Minimum Instruction Length
 .byte   1               # Maximum Operations per Instruction
@@ -365,20 +354,20 @@
 .byte   1               # 1 directory
 .asciz  "/tmp"
 # File table format
-.byte   2               # 2 elements per file entry
+.byte   3               # 2 elements per file entry
 .byte   1               # DW_LNCT_path
 .byte   0x08            # DW_FORM_string
 .byte   5               # DW_LNCT_MD5
-.Linvalid_md5_header_end1:
-# The bytes from here onwards will also be read as part of the main body.
-                        # --- Prologue interpretation --- | --- Main body interpretation ---
-.byte   0x0b            # DW_FORM_data1                   | DW_LNS_set_epilogue_begin
+.byte   0x0b            # DW_FORM_data1
+.byte   2               # DW_LNCT_directory_index
+.byte   0x0b            # DW_FORM_data1
 # File table entries
-.byte   1               # 1 file                          | DW_LNS_copy
-.asciz  "xyz"           # File name                       | 3 special opcodes + DW_LNE_set_address start
-.byte   9               # MD5 hash value                  | DW_LNE_set_address length
-# Header end
-.byte   2               # DW_LNE_set_address opcode
+.byte   1               # 1 file
+.asciz  "a.c"
+.byte   6               # This byte will be consumed when reading the MD5 value.
+.byte   0xb             # This byte will not be read as part of the prologue.
+.Linvalid_md5_header_end1:
+.byte   0, 9, 2         # DW_LNE_set_address
 .quad   0x4321432143214321
 .byte   0, 1, 1         # DW_LNE_end_sequence
 .Linvalid_md5_end1:
