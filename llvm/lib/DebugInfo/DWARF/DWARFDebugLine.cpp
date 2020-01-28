@@ -1090,13 +1090,12 @@ bool DWARFDebugLine::Prologue::getFileNameByIndex(
     if (0 < Entry.DirIdx && Entry.DirIdx <= IncludeDirectories.size())
       IncludeDir =
           IncludeDirectories[Entry.DirIdx - 1].getAsCString().getValue();
-
-    // We may still need to append compilation directory of compile unit.
-    // We know that FileName is not absolute, the only way to have an
-    // absolute path at this point would be if IncludeDir is absolute.
-    if (!CompDir.empty() && !isPathAbsoluteOnWindowsOrPosix(IncludeDir))
-      sys::path::append(FilePath, Style, CompDir);
   }
+  // We may still need to append compilation directory of compile unit.
+  // We know that FileName is not absolute, the only way to have an
+  // absolute path at this point would be if IncludeDir is absolute.
+  if (!CompDir.empty() && !isPathAbsoluteOnWindowsOrPosix(IncludeDir))
+    sys::path::append(FilePath, Style, CompDir);
 
   // sys::path::append skips empty strings.
   sys::path::append(FilePath, Style, IncludeDir, FileName);
