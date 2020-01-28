@@ -92,7 +92,7 @@ public:
 
   StackFrameRecognizerSP GetRecognizerForFrame(StackFrameSP frame) {
     const SymbolContext &symctx =
-        frame->GetSymbolContext(eSymbolContextEverything);
+        frame->GetSymbolContext(eSymbolContextModule | eSymbolContextFunction);
     ConstString function_name = symctx.GetFunctionName();
     ModuleSP module_sp = symctx.module_sp;
     if (!module_sp) return StackFrameRecognizerSP();

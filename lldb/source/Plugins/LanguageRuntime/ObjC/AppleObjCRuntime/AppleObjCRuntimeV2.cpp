@@ -2673,10 +2673,6 @@ class ObjCExceptionRecognizedStackFrame : public RecognizedStackFrame {
   ValueObjectSP exception;
 
   lldb::ValueObjectSP GetExceptionObject() override { return exception; }
-
-  llvm::StringRef GetStopDescription() override {
-    return "hit Objective-C exception";
-  }
 };
 
 class ObjCExceptionThrowFrameRecognizer : public StackFrameRecognizer {
