@@ -40,7 +40,7 @@
 #elif defined(__arm__) && \
     SANITIZER_LINUX && !SANITIZER_ANDROID
 #define CAN_SANITIZE_LEAKS 1
-#elif SANITIZER_NETBSD
+#elif SANITIZER_NETBSD || SANITIZER_FUCHSIA
 #define CAN_SANITIZE_LEAKS 1
 #else
 #define CAN_SANITIZE_LEAKS 0
@@ -223,6 +223,7 @@ ThreadRegistry *GetThreadRegistryLocked();
 bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
                            uptr *tls_begin, uptr *tls_end, uptr *cache_begin,
                            uptr *cache_end, DTLS **dtls);
+void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches);
 void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
                             void *arg);
 // If called from the main thread, updates the main thread's TID in the thread
