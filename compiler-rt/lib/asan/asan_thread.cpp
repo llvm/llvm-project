@@ -480,6 +480,8 @@ bool GetThreadRangesLocked(tid_t os_id, uptr *stack_begin, uptr *stack_end,
   return true;
 }
 
+void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches) {}
+
 void ForEachExtraStackRange(tid_t os_id, RangeIteratorCallback callback,
                             void *arg) {
   __asan::AsanThread *t = __asan::GetAsanThreadByOsIDLocked(os_id);
