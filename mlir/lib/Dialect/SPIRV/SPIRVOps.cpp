@@ -588,6 +588,88 @@ static LogicalResult verifyAtomicUpdateOp(Operation *op) {
   return success();
 }
 
+static ParseResult parseGroupNonUniformArithmeticOp(OpAsmParser &parser,
+                                                    OperationState &state) {
+  spirv::Scope executionScope;
+  spirv::GroupOperation groupOperation;
+  OpAsmParser::OperandType valueInfo;
+  if (parseEnumAttribute(executionScope, parser, state,
+                         kExecutionScopeAttrName) ||
+      parseEnumAttribute(groupOperation, parser, state,
+                         kGroupOperationAttrName) ||
+      parser.parseOperand(valueInfo))
+    return failure();
+
+  Optional<OpAsmParser::OperandType> clusterSizeInfo;
+  if (succeeded(parser.parseOptionalKeyword(kClusterSize))) {
+    clusterSizeInfo = OpAsmParser::OperandType();
+    if (parser.parseLParen() || parser.parseOperand(*clusterSizeInfo) ||
+        parser.parseRParen())
+      return failure();
+  }
+
+  Type resultType;
+  if (parser.parseColonType(resultType))
+    return failure();
+
+  if (parser.resolveOperand(valueInfo, resultType, state.operands))
+    return failure();
+
+  if (clusterSizeInfo.hasValue()) {
+    Type i32Type = parser.getBuilder().getIntegerType(32);
+    if (parser.resolveOperand(*clusterSizeInfo, i32Type, state.operands))
+      return failure();
+  }
+
+  return parser.addTypeToList(resultType, state.types);
+}
+
+static void printGroupNonUniformArithmeticOp(Operation *groupOp,
+                                             OpAsmPrinter &printer) {
+  printer << groupOp->getName() << " \""
+          << stringifyScope(static_cast<spirv::Scope>(
+                 groupOp->getAttrOfType<IntegerAttr>(kExecutionScopeAttrName)
+                     .getInt()))
+          << "\" \""
+          << stringifyGroupOperation(static_cast<spirv::GroupOperation>(
+                 groupOp->getAttrOfType<IntegerAttr>(kGroupOperationAttrName)
+                     .getInt()))
+          << "\" " << groupOp->getOperand(0);
+
+  if (groupOp->getNumOperands() > 1)
+    printer << " " << kClusterSize << '(' << groupOp->getOperand(1) << ')';
+  printer << " : " << groupOp->getResult(0).getType();
+}
+
+static LogicalResult verifyGroupNonUniformArithmeticOp(Operation *groupOp) {
+  spirv::Scope scope = static_cast<spirv::Scope>(
+      groupOp->getAttrOfType<IntegerAttr>(kExecutionScopeAttrName).getInt());
+  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
+    return groupOp->emitOpError(
+        "execution scope must be 'Workgroup' or 'Subgroup'");
+
+  spirv::GroupOperation operation = static_cast<spirv::GroupOperation>(
+      groupOp->getAttrOfType<IntegerAttr>(kGroupOperationAttrName).getInt());
+  if (operation == spirv::GroupOperation::ClusteredReduce &&
+      groupOp->getNumOperands() == 1)
+    return groupOp->emitOpError("cluster size operand must be provided for "
+                                "'ClusteredReduce' group operation");
+  if (groupOp->getNumOperands() > 1) {
+    Operation *sizeOp = groupOp->getOperand(1).getDefiningOp();
+    int32_t clusterSize = 0;
+
+    // TODO(antiagainst): support specialization constant here.
+    if (failed(extractValueFromConstOp(sizeOp, clusterSize)))
+      return groupOp->emitOpError(
+          "cluster size operand must come from a constant op");
+
+    if (!llvm::isPowerOf2_32(clusterSize))
+      return groupOp->emitOpError(
+          "cluster size operand must be a power of two");
+  }
+  return success();
+}
+
 // Parses an op that has no inputs and no outputs.
 static ParseResult parseNoIOOp(OpAsmParser &parser, OperationState &state) {
   if (parser.parseOptionalAttrDict(state.attributes))
@@ -1939,83 +2021,7 @@ static LogicalResult verify(spirv::GroupNonUniformElectOp groupOp) {
   return success();
 }
 
-//===----------------------------------------------------------------------===//
-// spv.GroupNonUniformIAddOp
-//===----------------------------------------------------------------------===//
 
-static ParseResult parseGroupNonUniformIAddOp(OpAsmParser &parser,
-                                              OperationState &state) {
-  spirv::Scope executionScope;
-  spirv::GroupOperation groupOperation;
-  OpAsmParser::OperandType valueInfo;
-  if (parseEnumAttribute(executionScope, parser, state,
-                         kExecutionScopeAttrName) ||
-      parseEnumAttribute(groupOperation, parser, state,
-                         kGroupOperationAttrName) ||
-      parser.parseOperand(valueInfo))
-    return failure();
-
-  Optional<OpAsmParser::OperandType> clusterSizeInfo;
-  if (succeeded(parser.parseOptionalKeyword(kClusterSize))) {
-    clusterSizeInfo = OpAsmParser::OperandType();
-    if (parser.parseLParen() || parser.parseOperand(*clusterSizeInfo) ||
-        parser.parseRParen())
-      return failure();
-  }
-
-  Type resultType;
-  if (parser.parseColonType(resultType))
-    return failure();
-
-  if (parser.resolveOperand(valueInfo, resultType, state.operands))
-    return failure();
-
-  if (clusterSizeInfo.hasValue()) {
-    Type i32Type = parser.getBuilder().getIntegerType(32);
-    if (parser.resolveOperand(*clusterSizeInfo, i32Type, state.operands))
-      return failure();
-  }
-
-  return parser.addTypeToList(resultType, state.types);
-}
-
-static void print(spirv::GroupNonUniformIAddOp groupOp, OpAsmPrinter &printer) {
-  printer << spirv::GroupNonUniformIAddOp::getOperationName() << " \""
-          << stringifyScope(groupOp.execution_scope()) << "\" \""
-          << stringifyGroupOperation(groupOp.group_operation()) << "\" "
-          << groupOp.value();
-  if (!groupOp.cluster_size().empty())
-    printer << " " << kClusterSize << '(' << groupOp.cluster_size() << ')';
-  printer << " : " << groupOp.getType();
-}
-
-static LogicalResult verify(spirv::GroupNonUniformIAddOp groupOp) {
-  spirv::Scope scope = groupOp.execution_scope();
-  if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
-    return groupOp.emitOpError(
-        "execution scope must be 'Workgroup' or 'Subgroup'");
-
-  spirv::GroupOperation operation = groupOp.group_operation();
-  if (operation == spirv::GroupOperation::ClusteredReduce &&
-      groupOp.cluster_size().empty())
-    return groupOp.emitOpError("cluster size operand must be provided for "
-                               "'ClusteredReduce' group operation");
-
-  if (!groupOp.cluster_size().empty()) {
-    Operation *sizeOp = (*groupOp.cluster_size().begin()).getDefiningOp();
-    int32_t clusterSize = 0;
-
-    // TODO(antiagainst): support specialization constant here.
-    if (failed(extractValueFromConstOp(sizeOp, clusterSize)))
-      return groupOp.emitOpError(
-          "cluster size operand must come from a constant op");
-
-    if (!llvm::isPowerOf2_32(clusterSize))
-      return groupOp.emitOpError("cluster size operand must be a power of two");
-  }
-
-  return success();
-}
 
 //===----------------------------------------------------------------------===//
 // spv.IAdd
