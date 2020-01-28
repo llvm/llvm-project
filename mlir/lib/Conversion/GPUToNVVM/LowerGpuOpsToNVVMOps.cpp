@@ -746,6 +746,8 @@ void mlir::populateGpuToNVVMConversionPatterns(
                                                "__nv_cos");
   patterns.insert<OpToFuncCallLowering<ExpOp>>(converter, "__nv_expf",
                                                "__nv_exp");
+  patterns.insert<OpToFuncCallLowering<TanhOp>>(converter, "__nv_tanhf",
+                                                "__nv_tanh");
 }
 
 std::unique_ptr<OpPassBase<gpu::GPUModuleOp>>
