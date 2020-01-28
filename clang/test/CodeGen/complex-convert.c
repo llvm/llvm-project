@@ -722,3 +722,8 @@ void foo(signed char sc, unsigned char uc, signed long long sll,
   // CHECK-NEXT: store i[[LLSIZE]] %[[VAR441]], i[[LLSIZE]]* %[[VAR443]]
 }
 
+// This code used to cause a crash; test that it no longer does so.
+_Complex int a;
+void pr44624(void) {
+  (_Complex double) a;
+}
