@@ -21,7 +21,7 @@
 
 // Test environment variable HIP_DEVICE_LIB_PATH
 
-// RUN: HIP_DEVICE_LIB_PATH=%S/Inputs/hip_dev_lib \
+// RUN: env HIP_DEVICE_LIB_PATH=%S/Inputs/hip_dev_lib \
 // RUN:   %clang -### -target x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx900 \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
