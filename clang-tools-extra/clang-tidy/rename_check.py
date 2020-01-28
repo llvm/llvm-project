@@ -176,11 +176,11 @@ def add_release_notes(clang_tidy_path, old_check_name, new_check_name):
 
     for line in lines:
       if not note_added:
-        match = re.search('Improvements to clang-tidy', line)
+        match = re.search('Renamed checks', line)
         if match:
           header_found = True
         elif header_found:
-          if not line.startswith('----'):
+          if not line.startswith('^^^^'):
             f.write("""
 - The '%s' check was renamed to :doc:`%s
   <clang-tidy/checks/%s>`
