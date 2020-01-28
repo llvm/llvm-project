@@ -1376,6 +1376,9 @@ CheckBuiltinTargetSupport(Sema &S, unsigned BuiltinID, CallExpr *TheCall,
   return true;
 }
 
+static void CheckNonNullArgument(Sema &S, const Expr *ArgExpr,
+                                 SourceLocation CallSiteLoc);
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -1645,6 +1648,14 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_nontemporal_load:
   case Builtin::BI__builtin_nontemporal_store:
     return SemaBuiltinNontemporalOverloaded(TheCallResult);
+  case Builtin::BI__builtin_memcpy_inline: {
+    // __builtin_memcpy_inline size argument is a constant by definition.
+    if (TheCall->getArg(2)->EvaluateKnownConstInt(Context).isNullValue())
+      break;
+    CheckNonNullArgument(*this, TheCall->getArg(0), TheCall->getExprLoc());
+    CheckNonNullArgument(*this, TheCall->getArg(1), TheCall->getExprLoc());
+    break;
+  }
 #define BUILTIN(ID, TYPE, ATTRS)
 #define ATOMIC_BUILTIN(ID, TYPE, ATTRS) \
   case Builtin::BI##ID: \

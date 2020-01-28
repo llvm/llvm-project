@@ -200,6 +200,30 @@ CallInst *IRBuilderBase::CreateMemCpy(Value *Dst, MaybeAlign DstAlign,
   return CI;
 }
 
+CallInst *IRBuilderBase::CreateMemCpyInline(Value *Dst, MaybeAlign DstAlign,
+                                            Value *Src, MaybeAlign SrcAlign,
+                                            Value *Size) {
+  Dst = getCastedInt8PtrValue(Dst);
+  Src = getCastedInt8PtrValue(Src);
+  Value *IsVolatile = getInt1(false);
+
+  Value *Ops[] = {Dst, Src, Size, IsVolatile};
+  Type *Tys[] = {Dst->getType(), Src->getType(), Size->getType()};
+  Function *F = BB->getParent();
+  Module *M = F->getParent();
+  Function *TheFn = Intrinsic::getDeclaration(M, Intrinsic::memcpy_inline, Tys);
+
+  CallInst *CI = createCallHelper(TheFn, Ops, this);
+
+  auto *MCI = cast<MemCpyInlineInst>(CI);
+  if (DstAlign)
+    MCI->setDestAlignment(*DstAlign);
+  if (SrcAlign)
+    MCI->setSourceAlignment(*SrcAlign);
+
+  return CI;
+}
+
 CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
     Value *Dst, Align DstAlign, Value *Src, Align SrcAlign, Value *Size,
     uint32_t ElementSize, MDNode *TBAATag, MDNode *TBAAStructTag,

@@ -560,6 +560,9 @@ public:
                          MDNode *ScopeTag = nullptr,
                          MDNode *NoAliasTag = nullptr);
 
+  CallInst *CreateMemCpyInline(Value *Dst, MaybeAlign DstAlign, Value *Src,
+                               MaybeAlign SrcAlign, Value *Size);
+
   /// Create and insert an element unordered-atomic memcpy between the
   /// specified pointers.
   ///

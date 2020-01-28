@@ -2260,6 +2260,23 @@ is disallowed in general).
 Support for constant expression evaluation for the above builtins be detected
 with ``__has_feature(cxx_constexpr_string_builtins)``.
 
+Memory builtins
+---------------
+
+ * ``__builtin_memcpy_inline``
+
+.. code-block:: c
+
+  void __builtin_memcpy_inline(void *dst, const void *src, size_t size);
+
+``__builtin_memcpy_inline(dst, src, size)`` is identical to
+``__builtin_memcpy(dst, src, size)`` except that the generated code is
+guaranteed not to call any external functions. See [LLVM IR ‘llvm.memcpy.inline’
+Intrinsic](https://llvm.org/docs/LangRef.html#llvm-memcpy-inline-intrinsic) for
+more information.
+
+Note that the `size` argument must be a compile time constant.
+
 Atomic Min/Max builtins with memory ordering
 --------------------------------------------
 
