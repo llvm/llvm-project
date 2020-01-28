@@ -135,7 +135,6 @@ ThreadPlanStepOut::ThreadPlanStepOut(
                                   m_return_addr);
       LLDB_LOGF(log, "ThreadPlanStepOut(%p): %s", static_cast<void *>(this),
                 m_constructor_errors.GetData());
-      return;
     } else if (!(permissions & ePermissionsExecutable)) {
       m_constructor_errors.Printf("Return address (0x%" PRIx64
                                   ") did not point to executable memory.",
