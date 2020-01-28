@@ -322,6 +322,128 @@ entry:
   ret double %result
 }
 
+; Verify constrained fmul and fadd aren't fused.
+define float @f11(float %0, float %1, float %2) #0 {
+; NOFMA-LABEL: f11:
+; NOFMA:       # %bb.0: # %entry
+; NOFMA-NEXT:    mulss %xmm1, %xmm0
+; NOFMA-NEXT:    addss %xmm2, %xmm0
+; NOFMA-NEXT:    retq
+;
+; FMA-LABEL: f11:
+; FMA:       # %bb.0: # %entry
+; FMA-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; FMA-NEXT:    vaddss %xmm2, %xmm0, %xmm0
+; FMA-NEXT:    retq
+;
+; FMA4-LABEL: f11:
+; FMA4:       # %bb.0: # %entry
+; FMA4-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; FMA4-NEXT:    vaddss %xmm2, %xmm0, %xmm0
+; FMA4-NEXT:    retq
+entry:
+  %3 = call float @llvm.experimental.constrained.fmul.f32(float %0, float %1,
+                                                          metadata !"round.dynamic",
+                                                          metadata !"fpexcept.strict") #0
+  %4 = call float @llvm.experimental.constrained.fadd.f32(float %3, float %2,
+                                                          metadata !"round.dynamic",
+                                                          metadata !"fpexcept.strict") #0
+  ret float %4
+}
+
+; Verify constrained fmul and fadd aren't fused.
+define double @f12(double %0, double %1, double %2) #0 {
+; NOFMA-LABEL: f12:
+; NOFMA:       # %bb.0: # %entry
+; NOFMA-NEXT:    mulsd %xmm1, %xmm0
+; NOFMA-NEXT:    addsd %xmm2, %xmm0
+; NOFMA-NEXT:    retq
+;
+; FMA-LABEL: f12:
+; FMA:       # %bb.0: # %entry
+; FMA-NEXT:    vmulsd %xmm1, %xmm0, %xmm0
+; FMA-NEXT:    vaddsd %xmm2, %xmm0, %xmm0
+; FMA-NEXT:    retq
+;
+; FMA4-LABEL: f12:
+; FMA4:       # %bb.0: # %entry
+; FMA4-NEXT:    vmulsd %xmm1, %xmm0, %xmm0
+; FMA4-NEXT:    vaddsd %xmm2, %xmm0, %xmm0
+; FMA4-NEXT:    retq
+entry:
+  %3 = call double @llvm.experimental.constrained.fmul.f64(double %0, double %1,
+                                                           metadata !"round.dynamic",
+                                                           metadata !"fpexcept.strict") #0
+  %4 = call double @llvm.experimental.constrained.fadd.f64(double %3, double %2,
+                                                           metadata !"round.dynamic",
+                                                           metadata !"fpexcept.strict") #0
+  ret double %4
+}
+
+; Verify that fmuladd(3.5) isn't simplified when the rounding mode is
+; unknown.
+define float @f15() #0 {
+; NOFMA-LABEL: f15:
+; NOFMA:       # %bb.0: # %entry
+; NOFMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NOFMA-NEXT:    movaps %xmm1, %xmm0
+; NOFMA-NEXT:    mulss %xmm1, %xmm0
+; NOFMA-NEXT:    addss %xmm1, %xmm0
+; NOFMA-NEXT:    retq
+;
+; FMA-LABEL: f15:
+; FMA:       # %bb.0: # %entry
+; FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; FMA-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm0 * xmm0) + xmm0
+; FMA-NEXT:    retq
+;
+; FMA4-LABEL: f15:
+; FMA4:       # %bb.0: # %entry
+; FMA4-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; FMA4-NEXT:    vfmaddss %xmm0, %xmm0, %xmm0, %xmm0
+; FMA4-NEXT:    retq
+entry:
+  %result = call float @llvm.experimental.constrained.fmuladd.f32(
+                                               float 3.5,
+                                               float 3.5,
+                                               float 3.5,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
+; Verify that fmuladd(42.1) isn't simplified when the rounding mode is
+; unknown.
+define double @f16() #0 {
+; NOFMA-LABEL: f16:
+; NOFMA:       # %bb.0: # %entry
+; NOFMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NOFMA-NEXT:    movapd %xmm1, %xmm0
+; NOFMA-NEXT:    mulsd %xmm1, %xmm0
+; NOFMA-NEXT:    addsd %xmm1, %xmm0
+; NOFMA-NEXT:    retq
+;
+; FMA-LABEL: f16:
+; FMA:       # %bb.0: # %entry
+; FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; FMA-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm0 * xmm0) + xmm0
+; FMA-NEXT:    retq
+;
+; FMA4-LABEL: f16:
+; FMA4:       # %bb.0: # %entry
+; FMA4-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; FMA4-NEXT:    vfmaddsd %xmm0, %xmm0, %xmm0, %xmm0
+; FMA4-NEXT:    retq
+entry:
+  %result = call double @llvm.experimental.constrained.fmuladd.f64(
+                                               double 42.1,
+                                               double 42.1,
+                                               double 42.1,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
 ; Verify that fma(3.5) isn't simplified when the rounding mode is
 ; unknown.
 define float @f17() #0 {
@@ -954,7 +1076,13 @@ entry:
 
 attributes #0 = { strictfp }
 
+declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
+declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
+declare double @llvm.experimental.constrained.fmul.f64(double, double, metadata, metadata)
+declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)
 declare float @llvm.experimental.constrained.fma.f32(float, float, float, metadata, metadata)
 declare double @llvm.experimental.constrained.fma.f64(double, double, double, metadata, metadata)
 declare <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float>, <4 x float>, <4 x float>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.fma.v2f64(<2 x double>, <2 x double>, <2 x double>, metadata, metadata)
+declare float @llvm.experimental.constrained.fmuladd.f32(float, float, float, metadata, metadata)
+declare double @llvm.experimental.constrained.fmuladd.f64(double, double, double, metadata, metadata)
