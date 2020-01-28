@@ -1,4 +1,4 @@
-# RUN: toyc-ch7 %s -emit=mlir 2>&1
+# RUN: toyc-ch7 %s -emit=mlir 2>&1 | FileCheck %s
 # RUN: toyc-ch7 %s -emit=mlir -opt 2>&1 | FileCheck %s --check-prefix=OPT
 
 struct Struct {
@@ -23,6 +23,7 @@ def main() {
 
 # CHECK-LABEL:   func @multiply_transpose(
 # CHECK-SAME:                             [[VAL_0:%.*]]: !toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
+# CHECK-SAME:        attributes {sym_visibility = "private"}
 # CHECK-NEXT:      [[VAL_1:%.*]] = "toy.struct_access"([[VAL_0]]) {index = 0 : i64} : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
 # CHECK-NEXT:      [[VAL_2:%.*]] = "toy.transpose"([[VAL_1]]) : (tensor<*xf64>) -> tensor<*xf64>
 # CHECK-NEXT:      [[VAL_3:%.*]] = "toy.struct_access"([[VAL_0]]) {index = 1 : i64} : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
