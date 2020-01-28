@@ -152,6 +152,7 @@ public:
   uint32_t getNumImportedGlobals() const { return NumImportedGlobals; }
   uint32_t getNumImportedFunctions() const { return NumImportedFunctions; }
   uint32_t getNumImportedEvents() const { return NumImportedEvents; }
+  uint32_t getNumSections() const { return Sections.size(); }
   void moveSymbolNext(DataRefImpl &Symb) const override;
 
   uint32_t getSymbolFlags(DataRefImpl Symb) const override;
