@@ -1332,9 +1332,6 @@ uint32_t Materializer::AddRegister(const RegisterInfo &register_info,
   return ret;
 }
 
-Materializer::Materializer()
-    : m_dematerializer_wp(), m_current_offset(0), m_struct_alignment(8) {}
-
 Materializer::~Materializer() {
   DematerializerSP dematerializer_sp = m_dematerializer_wp.lock();
 
