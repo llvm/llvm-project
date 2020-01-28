@@ -56,6 +56,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
 #include <utility>
@@ -487,37 +488,60 @@ void LinkerDriver::main(ArrayRef<const char *> argsArr) {
   if (args.hasArg(OPT_version))
     return;
 
-  initLLVM();
-  createFiles(args);
-  if (errorCount())
-    return;
+  // Initialize time trace profiler.
+  if (config->timeTraceEnabled)
+    timeTraceProfilerInitialize(config->timeTraceGranularity, config->progName);
 
-  inferMachineType();
-  setConfigs(args);
-  checkOptions();
-  if (errorCount())
-    return;
+  {
+    llvm::TimeTraceScope timeScope("ExecuteLinker");
 
-  // The Target instance handles target-specific stuff, such as applying
-  // relocations or writing a PLT section. It also contains target-dependent
-  // values such as a default image base address.
-  target = getTarget();
+    initLLVM();
+    createFiles(args);
+    if (errorCount())
+      return;
 
-  switch (config->ekind) {
-  case ELF32LEKind:
-    link<ELF32LE>(args);
-    return;
-  case ELF32BEKind:
-    link<ELF32BE>(args);
-    return;
-  case ELF64LEKind:
-    link<ELF64LE>(args);
-    return;
-  case ELF64BEKind:
-    link<ELF64BE>(args);
-    return;
-  default:
-    llvm_unreachable("unknown Config->EKind");
+    inferMachineType();
+    setConfigs(args);
+    checkOptions();
+    if (errorCount())
+      return;
+
+    // The Target instance handles target-specific stuff, such as applying
+    // relocations or writing a PLT section. It also contains target-dependent
+    // values such as a default image base address.
+    target = getTarget();
+
+    switch (config->ekind) {
+    case ELF32LEKind:
+      link<ELF32LE>(args);
+      break;
+    case ELF32BEKind:
+      link<ELF32BE>(args);
+      break;
+    case ELF64LEKind:
+      link<ELF64LE>(args);
+      break;
+    case ELF64BEKind:
+      link<ELF64BE>(args);
+      break;
+    default:
+      llvm_unreachable("unknown Config->EKind");
+    }
+  }
+
+  if (config->timeTraceEnabled) {
+    // Write the result of the time trace profiler.
+    std::string path = args.getLastArgValue(OPT_time_trace_file_eq).str();
+    if (path.empty())
+      path = (config->outputFile + ".time-trace").str();
+    std::error_code ec;
+    raw_fd_ostream os(path, ec, sys::fs::OF_Text);
+    if (ec) {
+      error("cannot open " + path + ": " + ec.message());
+      return;
+    }
+    timeTraceProfilerWrite(os);
+    timeTraceProfilerCleanup();
   }
 }
 
@@ -958,6 +982,9 @@ static void readConfigs(opt::InputArgList &args) {
       getOldNewOptions(args, OPT_thinlto_object_suffix_replace_eq);
   config->thinLTOPrefixReplace =
       getOldNewOptions(args, OPT_thinlto_prefix_replace_eq);
+  config->timeTraceEnabled = args.hasArg(OPT_time_trace);
+  config->timeTraceGranularity =
+      args::getInteger(args, OPT_time_trace_granularity, 500);
   config->trace = args.hasArg(OPT_trace);
   config->undefined = args::getStrings(args, OPT_undefined);
   config->undefinedVersion =
@@ -1604,6 +1631,7 @@ static Symbol *addUndefined(StringRef name) {
 // Because all bitcode files that the program consists of are passed to
 // the compiler at once, it can do a whole-program optimization.
 template <class ELFT> void LinkerDriver::compileBitcodeFiles() {
+  llvm::TimeTraceScope timeScope("LTO");
   // Compile bitcode files and replace bitcode symbols.
   lto.reset(new BitcodeCompiler);
   for (BitcodeFile *file : bitcodeFiles)
@@ -1733,6 +1761,7 @@ template <class ELFT> static uint32_t getAndFeatures() {
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
+  llvm::TimeTraceScope timeScope("Link", StringRef("LinkerDriver::Link"));
   // If a -hash-style option was not given, set to a default value,
   // which varies depending on the target.
   if (!args.hasArg(OPT_hash_style)) {
@@ -1772,8 +1801,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   // symbols that we need to the symbol table. This process might
   // add files to the link, via autolinking, these files are always
   // appended to the Files vector.
-  for (size_t i = 0; i < files.size(); ++i)
-    parseFile(files[i]);
+  {
+    llvm::TimeTraceScope timeScope("Parse input files");
+    for (size_t i = 0; i < files.size(); ++i)
+      parseFile(files[i]);
+  }
 
   // Now that we have every file, we can decide if we will need a
   // dynamic symbol table.
