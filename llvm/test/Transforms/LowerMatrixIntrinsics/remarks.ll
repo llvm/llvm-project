@@ -1,7 +1,6 @@
-; RUN: opt -lower-matrix-intrinsics -pass-remarks=lower-matrix-intrinsics < %s 2>&1 | FileCheck %s
+; REQUIRES: aarch64-registered-target
 
-target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "aarch64-apple-ios"
+; RUN: opt -lower-matrix-intrinsics -pass-remarks=lower-matrix-intrinsics -mtriple=arm64-apple-iphoneos < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: remark: test.h:40:20: Lowered with 6 stores, 6 loads, 24 compute ops
 ; CHECK-NEXT: store(
