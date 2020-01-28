@@ -40,11 +40,11 @@ public:
       std::ostream &out, const AnalyzedObjectsAsFortran *asFortran = nullptr)
     : out_(out), asFortran_{asFortran} {}
 
-  constexpr const char *GetNodeName(const char *) { return "char *"; }
+  static constexpr const char *GetNodeName(const char *) { return "char *"; }
 #define NODE_NAME(T, N) \
-  constexpr const char *GetNodeName(const T &) { return N; }
+  static constexpr const char *GetNodeName(const T &) { return N; }
 #define NODE_ENUM(T, E) \
-  std::string GetNodeName(const T::E &x) { \
+  static std::string GetNodeName(const T::E &x) { \
     return #E " = "s + T::EnumToString(x); \
   }
 #define NODE(T1, T2) NODE_NAME(T1::T2, #T2)

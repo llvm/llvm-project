@@ -70,7 +70,14 @@ include(AddLLVM)
 #  https://stackoverflow.com/questions/41924375/llvm-how-to-specify-all-link-libraries-as-input-to-llvm-map-components-to-libna
 #  https://stackoverflow.com/questions/33948633/how-do-i-link-when-building-with-llvm-libraries
 
-include_directories(${LLVM_INCLUDE_DIRS})
+# Add LLVM include files as if they were SYSTEM because there are complex unused
+# parameter issues that may or may not appear depending on the environments and
+# compilers (ifdefs are involved). This allows warnings from LLVM headers to be
+# ignored while keeping -Wunused-parameter a fatal error inside f18 code base.
+# This may have to be fine-tuned if flang headers are consider part of this
+# LLVM_INCLUDE_DIRS when merging in the monorepo (Warning from flang headers
+# should not be suppressed).
+include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
 # LLVM_LIT_EXTERNAL store in cache so it could be used by AddLLVM.cmake
