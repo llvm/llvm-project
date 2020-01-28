@@ -1365,26 +1365,30 @@ WasmObjectFile::getSymbolSection(DataRefImpl Symb) const {
     return section_end();
 
   DataRefImpl Ref;
+  Ref.d.a = getSymbolSectionIdImpl(Sym);
+  return section_iterator(SectionRef(Ref, this));
+}
+
+uint32_t WasmObjectFile::getSymbolSectionId(SymbolRef Symb) const {
+  const WasmSymbol &Sym = getWasmSymbol(Symb);
+  return getSymbolSectionIdImpl(Sym);
+}
+
+uint32_t WasmObjectFile::getSymbolSectionIdImpl(const WasmSymbol &Sym) const {
   switch (Sym.Info.Kind) {
   case wasm::WASM_SYMBOL_TYPE_FUNCTION:
-    Ref.d.a = CodeSection;
-    break;
+    return CodeSection;
   case wasm::WASM_SYMBOL_TYPE_GLOBAL:
-    Ref.d.a = GlobalSection;
-    break;
+    return GlobalSection;
   case wasm::WASM_SYMBOL_TYPE_DATA:
-    Ref.d.a = DataSection;
-    break;
+    return DataSection;
   case wasm::WASM_SYMBOL_TYPE_SECTION:
-    Ref.d.a = Sym.Info.ElementIndex;
-    break;
+    return Sym.Info.ElementIndex;
   case wasm::WASM_SYMBOL_TYPE_EVENT:
-    Ref.d.a = EventSection;
-    break;
+    return EventSection;
   default:
     llvm_unreachable("Unknown WasmSymbol::SymbolType");
   }
-  return section_iterator(SectionRef(Ref, this));
 }
 
 void WasmObjectFile::moveSectionNext(DataRefImpl &Sec) const { Sec.d.a++; }
