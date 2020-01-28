@@ -4,72 +4,84 @@ Code Object Manager (Comgr)
 The Comgr library provides APIs for compiling and inspecting AMDGPU code
 objects. The API is documented in the [header file](include/amd_comgr.h).
 
-Build the Code Object Manager
------------------------------
+Building the Code Object Manager
+--------------------------------
 
 Comgr depends on [LLVM](https://github.com/RadeonOpenCompute/llvm-project) and
-[AMDDeviceLibs](https://github.com/RadeonOpenCompute/ROCm-Device-Libs). The
-`CMAKE_PREFIX_PATH` must include either the build directory or install prefix
-of both of these components. Both should be built using sources with the same
-ROCm release tag, or from the amd-stg-open branch. LLVM should be built with at
-least `LLVM_ENABLE_PROJECTS='llvm;clang;lld'` and
+[AMDDeviceLibs](https://github.com/RadeonOpenCompute/ROCm-Device-Libs). One way
+to make these visible to the Comgr build process is by setting the
+`CMAKE_PREFIX_PATH` to include either the build directory or install prefix of
+each of these components, separated by a semicolon. Both should be built using
+either sources with the same ROCm release tag, or from the `amd-stg-open`
+branch. LLVM should be built with at least
+`LLVM_ENABLE_PROJECTS='llvm;clang;lld'` and
 `LLVM_TARGETS_TO_BUILD='AMDGPU;X86'`.
 
-An example command-line to build Comgr on Linux is:
+An example `bash` session to build Comgr on Linux using GNUMakefiles is:
 
-    $ cd ~/llvm-project/
-    $ mkdir build
-    $ cd build
-    $ cmake -DCMAKE_BUILD_TYPE=Release \
+    $ LLVM_PROJECT=~/llvm-project
+    $ DEVICE_LIBS=~/device-libs
+    $ COMGR=~/support/lib/comgr
+    $ mkdir -p "$LLVM_PROJECT/build"
+    $ cd "$LLVM_PROJECT/build"
+    $ cmake \
+        -DCMAKE_BUILD_TYPE=Release \
         -DLLVM_ENABLE_PROJECTS="llvm;clang;lld" \
-        -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" ../llvm
+        -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" \
+        ../llvm
     $ make
-    $ cd ~/device-libs/
-    $ mkdir build
-    $ cd build
-    $ cmake -DLLVM_DIR=~/llvm-project/build ..
+    $ mkdir -p "$DEVICE_LIBS/build"
+    $ cd "$DEVICE_LIBS/build"
+    $ cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DLLVM_DIR="$LLVM_PROJECT/build" \
+        ..
     $ make
-    $ cd ~/support/lib/comgr
-    $ mkdir build
-    $ cd build
-    $ cmake -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_PREFIX_PATH="~/llvm/build;~/device-libs/build" ..
+    $ mkdir -p "$COMGR/build"
+    $ cd "$COMGR/build"
+    $ cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_PREFIX_PATH="$LLVM_PROJECT/build;$DEVICE_LIBS/build" \
+        ..
     $ make
     $ make test
 
-The equivalent on Windows will use another build tool, such as msbuild or
-Visual Studio:
+The equivalent on Windows in `cmd.exe` using Visual Studio project files is:
 
-    $ cd "%HOMEPATH%\llvm-project"
-    $ mkdir build
-    $ cd build
-    $ cmake -DCMAKE_BUILD_TYPE=Release \
-        -DLLVM_ENABLE_PROJECTS='llvm;clang;lld' \
-        -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" "..\llvm"
-    $ msbuild ALL_BUILD.vcxproj
-    $ cd "%HOMEPATH%\device-libs"
-    $ mkdir build
-    $ cd build
-    $ cmake -DLLVM_DIR="%HOMEPATH%\llvm-project\build" ..
-    $ msbuild ALL_BUILD.vcxproj
-    $ cd "%HOMEPATH%\support\lib\comgr"
-    $ mkdir build
-    $ cd build
-    $ cmake -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_PREFIX_PATH="%HOMEPATH%\llvm\build;%HOMEPATH%\device-libs\build" ..
-    $ msbuild ALL_BUILD.vcxproj
-    $ msbuild RUN_TESTS.vcxproj
+    > set LLVM_PROJECT="%HOMEPATH%\llvm-project"
+    > set DEVICE_LIBS="%HOMEPATH%\device-libs"
+    > set COMGR="%HOMEPATH%\support\lib\comgr"
+    > mkdir "%LLVM_PROJECT%\build"
+    > cd "%LLVM_PROJECT%\build"
+    > cmake ^
+        -DLLVM_ENABLE_PROJECTS="llvm;clang;lld" ^
+        -DLLVM_TARGETS_TO_BUILD="AMDGPU;X86" ^
+        ..\llvm
+    > msbuild /p:Configuration=Release ALL_BUILD.vcxproj
+    > mkdir "%DEVICE_LIBS%\build"
+    > cd "%DEVICE_LIBS%\build"
+    > cmake ^
+        -DLLVM_DIR="%LLVM_PROJECT%\build" ^
+        ..
+    > msbuild /p:Configuration=Release ALL_BUILD.vcxproj
+    > mkdir "%COMGR%\build"
+    > cd "%COMGR%\build"
+    > cmake ^
+        -DCMAKE_PREFIX_PATH="%LLVM_PROJECT%\build;%DEVICE_LIBS%\build" ^
+        ..
+    > msbuild /p:Configuration=Release ALL_BUILD.vcxproj
+    > msbuild /p:Configuration=Release RUN_TESTS.vcxproj
 
 Optionally,
 [AddressSanitizer](https://github.com/google/sanitizers/wiki/AddressSanitizer)
-may be enabled during development via `-DENABLE_ASAN=On` during the `cmake`
-step.
+may be enabled during development via `-DENABLE_ASAN=On` during the Comgr
+`cmake` step.
 
-Depend on the Code Object Manager
----------------------------------
+Depending on the Code Object Manager
+------------------------------------
 
 Comgr exports a CMake package named `amd_comgr` for both the build and install
-tree. This package defines a library target named `amd_comgr`. To depend on
+trees. This package defines a library target named `amd_comgr`. To depend on
 this in your CMake project, use `find_package`:
 
     find_package(amd_comgr REQUIRED CONFIG)
@@ -81,16 +93,16 @@ build or install tree can be supplied to CMake via `CMAKE_PREFIX_PATH`:
 
     cmake -DCMAKE_PREFIX_PATH=path/to/comgr/build/or/install
 
-Debug the Code Object Manager
------------------------------
+Debugging the Code Object Manager
+---------------------------------
 
 Comgr supports some environment variables to aid in debugging. These include:
 
 * `AMD_COMGR_SAVE_TEMPS`: If this is set, and is not "0", Comgr does not delete
   temporary files generated during compilation. These files do not appear in
   the current working directory, but are instead left in a platform-specific
-  temporary directory (`/tmp` on Linux and `C:\Temp` or the path found in the
-  `TEMP` environment variable on Windows).
+  temporary directory (typically `/tmp` on Linux and `C:\Temp` or the path
+  found in the `TEMP` environment variable on Windows).
 * `AMD_COMGR_REDIRECT_LOGS`: If this is not set, or is set to "0", logs are
   returned to the caller as normal. If this is set to "stdout"/"-" or "stderr",
   logs are instead redirected to the standard output or error stream,
