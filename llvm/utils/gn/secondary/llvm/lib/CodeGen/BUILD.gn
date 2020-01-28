@@ -82,6 +82,7 @@ static_library("CodeGen") {
     "LoopTraversal.cpp",
     "LowLevelType.cpp",
     "LowerEmuTLS.cpp",
+    "MBFIWrapper.cpp",
     "MIRCanonicalizerPass.cpp",
     "MIRNamerPass.cpp",
     "MIRPrinter.cpp",
