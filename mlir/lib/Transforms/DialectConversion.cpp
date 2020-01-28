@@ -554,8 +554,7 @@ struct ConversionPatternRewriterImpl {
                            TypeConverter::SignatureConversion &conversion);
 
   /// PatternRewriter hook for replacing the results of an operation.
-  void replaceOp(Operation *op, ValueRange newValues,
-                 ValueRange valuesToRemoveIfDead);
+  void replaceOp(Operation *op, ValueRange newValues);
 
   /// Notifies that a block was split.
   void notifySplitBlock(Block *block, Block *continuation);
@@ -757,8 +756,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
 }
 
 void ConversionPatternRewriterImpl::replaceOp(Operation *op,
-                                              ValueRange newValues,
-                                              ValueRange valuesToRemoveIfDead) {
+                                              ValueRange newValues) {
   assert(newValues.size() == op->getNumResults());
 
   // Create mappings for each of the new result values.
@@ -838,11 +836,11 @@ ConversionPatternRewriter::ConversionPatternRewriter(MLIRContext *ctx,
 ConversionPatternRewriter::~ConversionPatternRewriter() {}
 
 /// PatternRewriter hook for replacing the results of an operation.
-void ConversionPatternRewriter::replaceOp(Operation *op, ValueRange newValues,
-                                          ValueRange valuesToRemoveIfDead) {
+void ConversionPatternRewriter::replaceOp(Operation *op,
+                                          ValueRange newValues) {
   LLVM_DEBUG(llvm::dbgs() << "** Replacing operation : " << op->getName()
                           << "\n");
-  impl->replaceOp(op, newValues, valuesToRemoveIfDead);
+  impl->replaceOp(op, newValues);
 }
 
 /// PatternRewriter hook for erasing a dead operation. The uses of this
@@ -852,7 +850,7 @@ void ConversionPatternRewriter::eraseOp(Operation *op) {
   LLVM_DEBUG(llvm::dbgs() << "** Erasing operation : " << op->getName()
                           << "\n");
   SmallVector<Value, 1> nullRepls(op->getNumResults(), nullptr);
-  impl->replaceOp(op, nullRepls, /*valuesToRemoveIfDead=*/llvm::None);
+  impl->replaceOp(op, nullRepls);
 }
 
 /// Apply a signature conversion to the entry block of the given region.

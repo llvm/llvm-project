@@ -53,7 +53,7 @@ struct SimplifyRedundantTranspose : public mlir::OpRewritePattern<TransposeOp> {
       return matchFailure();
 
     // Use the rewriter to perform the replacement.
-    rewriter.replaceOp(op, {transposeInputOp.getOperand()}, {transposeInputOp});
+    rewriter.replaceOp(op, {transposeInputOp.getOperand()});
     return matchSuccess();
   }
 };

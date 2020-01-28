@@ -332,8 +332,7 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// PatternRewriter hook for replacing the results of an operation.
-  void replaceOp(Operation *op, ValueRange newValues,
-                 ValueRange valuesToRemoveIfDead) override;
+  void replaceOp(Operation *op, ValueRange newValues) override;
   using PatternRewriter::replaceOp;
 
   /// PatternRewriter hook for erasing a dead operation. The uses of this
