@@ -221,6 +221,15 @@ public:
   void SelectPostLoadLane(SDNode *N, unsigned NumVecs, unsigned Opc);
 
   bool SelectAddrModeFrameIndexSVE(SDValue N, SDValue &Base, SDValue &OffImm);
+  /// SVE Reg+Imm addressing mode.
+  template <int64_t Min, int64_t Max>
+  bool SelectAddrModeIndexedSVE(SDNode *Root, SDValue N, SDValue &Base,
+                                SDValue &OffImm);
+  /// SVE Reg+Reg address mode.
+  template <unsigned Scale>
+  bool SelectSVERegRegAddrMode(SDValue N, SDValue &Base, SDValue &Offset) {
+    return SelectSVERegRegAddrMode(N, Scale, Base, Offset);
+  }
 
   void SelectStore(SDNode *N, unsigned NumVecs, unsigned Opc);
   void SelectPostStore(SDNode *N, unsigned NumVecs, unsigned Opc);
@@ -282,6 +291,8 @@ private:
   bool SelectSVESignedArithImm(SDValue N, SDValue &Imm);
 
   bool SelectSVEArithImm(SDValue N, SDValue &Imm);
+  bool SelectSVERegRegAddrMode(SDValue N, unsigned Scale, SDValue &Base,
+                               SDValue &Offset);
 };
 } // end anonymous namespace
 
@@ -4426,4 +4437,73 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
 FunctionPass *llvm::createAArch64ISelDag(AArch64TargetMachine &TM,
                                          CodeGenOpt::Level OptLevel) {
   return new AArch64DAGToDAGISel(TM, OptLevel);
+}
+
+/// SelectAddrModeIndexedSVE - Attempt selection of the addressing mode:
+/// Base + OffImm * sizeof(MemVT) for Min >= OffImm <= Max
+/// where Root is the memory access using N for its address.
+template <int64_t Min, int64_t Max>
+bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
+                                                   SDValue &Base,
+                                                   SDValue &OffImm) {
+  assert(isa<MemSDNode>(Root) && "Invalid node.");
+
+  EVT MemVT = cast<MemSDNode>(Root)->getMemoryVT();
+
+  if (N.getOpcode() != ISD::ADD)
+    return false;
+
+  SDValue VScale = N.getOperand(1);
+  if (VScale.getOpcode() != ISD::VSCALE)
+    return false;
+
+  TypeSize TS = MemVT.getSizeInBits();
+  int64_t MemWidthBytes = static_cast<int64_t>(TS.getKnownMinSize()) / 8;
+  int64_t MulImm = cast<ConstantSDNode>(VScale.getOperand(0))->getSExtValue();
+
+  if ((MulImm % MemWidthBytes) != 0)
+    return false;
+
+  int64_t Offset = MulImm / MemWidthBytes;
+  if (Offset < Min || Offset > Max)
+    return false;
+
+  Base = N.getOperand(0);
+  OffImm = CurDAG->getTargetConstant(Offset, SDLoc(N), MVT::i64);
+  return true;
+}
+
+/// Select register plus register addressing mode for SVE, with scaled
+/// offset.
+bool AArch64DAGToDAGISel::SelectSVERegRegAddrMode(SDValue N, unsigned Scale,
+                                                  SDValue &Base,
+                                                  SDValue &Offset) {
+  if (N.getOpcode() != ISD::ADD)
+    return false;
+
+  // Process an ADD node.
+  const SDValue LHS = N.getOperand(0);
+  const SDValue RHS = N.getOperand(1);
+
+  // 8 bit data does not come with the SHL node, so it is treated
+  // separately.
+  if (Scale == 0) {
+    Base = LHS;
+    Offset = RHS;
+    return true;
+  }
+
+  // Check if the RHS is a shift node with a constant.
+  if (RHS.getOpcode() != ISD::SHL)
+    return false;
+
+  const SDValue ShiftRHS = RHS.getOperand(1);
+  if (auto *C = dyn_cast<ConstantSDNode>(ShiftRHS))
+    if (C->getZExtValue() == Scale) {
+      Base = LHS;
+      Offset = RHS.getOperand(0);
+      return true;
+    }
+
+  return false;
 }
