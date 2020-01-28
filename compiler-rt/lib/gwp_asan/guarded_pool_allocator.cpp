@@ -182,6 +182,17 @@ void GuardedPoolAllocator::disable() { PoolMutex.lock(); }
 
 void GuardedPoolAllocator::enable() { PoolMutex.unlock(); }
 
+void GuardedPoolAllocator::iterate(void *Base, size_t Size, iterate_callback Cb,
+                                   void *Arg) {
+  uintptr_t Start = reinterpret_cast<uintptr_t>(Base);
+  for (size_t i = 0; i < MaxSimultaneousAllocations; ++i) {
+    const AllocationMetadata &Meta = Metadata[i];
+    if (Meta.Addr && !Meta.IsDeallocated && Meta.Addr >= Start &&
+        Meta.Addr < Start + Size)
+      Cb(Meta.Addr, Meta.Size, Arg);
+  }
+}
+
 void GuardedPoolAllocator::uninitTestOnly() {
   if (GuardedPagePool) {
     unmapMemory(reinterpret_cast<void *>(GuardedPagePool),

@@ -106,6 +106,12 @@ public:
   void disable();
   void enable();
 
+  typedef void (*iterate_callback)(uintptr_t base, size_t size, void *arg);
+  // Execute the callback Cb for every allocation the lies in [Base, Base + Size).
+  // Must be called while the allocator is disabled. The callback can not
+  // allocate.
+  void iterate(void *Base, size_t Size, iterate_callback Cb, void *Arg);
+
   // Return whether the allocation should be randomly chosen for sampling.
   GWP_ASAN_ALWAYS_INLINE bool shouldSample() {
     // NextSampleCounter == 0 means we "should regenerate the counter".
