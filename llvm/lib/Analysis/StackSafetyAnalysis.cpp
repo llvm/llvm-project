@@ -252,6 +252,10 @@ StackSafetyLocalAnalysis::offsetFromAlloca(Value *Addr,
 ConstantRange
 StackSafetyLocalAnalysis::getAccessRange(Value *Addr, const Value *AllocaPtr,
                                          ConstantRange SizeRange) {
+  // Zero-size loads and stores do not access memory.
+  if (SizeRange.isEmptySet())
+    return ConstantRange::getEmpty(PointerSize);
+
   if (!SE.isSCEVable(Addr->getType()))
     return UnknownRange;
 
