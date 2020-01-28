@@ -280,13 +280,6 @@ public:
     return false;
   }
 
-  virtual int GetCompileOptions(const char *option,
-                                std::vector<std::string> &values,
-                                CompileUnit *cu = nullptr) {
-    values.clear();
-    return false;
-  }
-
   // Some symbol files might know if we should always check for inline
   // source file and line entries. This virtual function lets
   // SymbolFile subclasses control that, but a default implementation
