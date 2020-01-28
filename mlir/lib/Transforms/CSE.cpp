@@ -37,10 +37,9 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
     //   - Attributes
     //   - Result Types
     //   - Operands
-    return hash_combine(
-        op->getName(), op->getAttrList().getDictionary(),
-        hash_combine_range(op->result_type_begin(), op->result_type_end()),
-        hash_combine_range(op->operand_begin(), op->operand_end()));
+    return llvm::hash_combine(
+        op->getName(), op->getAttrList().getDictionary(), op->getResultTypes(),
+        llvm::hash_combine_range(op->operand_begin(), op->operand_end()));
   }
   static bool isEqual(const Operation *lhsC, const Operation *rhsC) {
     auto *lhs = const_cast<Operation *>(lhsC);

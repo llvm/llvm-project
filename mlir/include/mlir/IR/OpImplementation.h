@@ -191,6 +191,10 @@ operator<<(OpAsmPrinter &p,
   interleaveComma(types, p);
   return p;
 }
+inline OpAsmPrinter &operator<<(OpAsmPrinter &p, ArrayRef<Type> types) {
+  interleaveComma(types, p);
+  return p;
+}
 
 //===----------------------------------------------------------------------===//
 // OpAsmParser
