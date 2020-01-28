@@ -131,6 +131,7 @@ public:
     for (OperandType &use : llvm::make_early_inc_range(getUses(oldValue)))
       use.set(newValue);
   }
+  using BaseType::replaceAllUsesWith;
 
   //===--------------------------------------------------------------------===//
   // Uses
