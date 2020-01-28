@@ -2,6 +2,11 @@
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
 ; CHECK: "version":4
 
+; namespace test {
+;  extern int a;
+; }
+; using test::a;
+;
 ; int GlobalConst = 42;
 ; int Global;
 ;
@@ -19,9 +24,13 @@
 ; Following variables/arguments/members should be counted:
 ;     - GlobalConst,
 ;     - Global,
-;     - s, s.constant ('fn' and its arguments should be skipped),
+;     - s, s.constant,
 ;     - square::i,
 ;     - cube::i, cube::squared
+; Skipped entities:
+;     - declaration of test::a,
+;     - non-constant member S:fn,
+;     - arguments of S:fn.
 
 ; CHECK: "unique source variables":7
 ; +1 extra inline i.
@@ -100,7 +109,7 @@ attributes #2 = { noinline nounwind optnone ssp uwtable }
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "GlobalConst", scope: !2, file: !3, line: 1, type: !8, isLocal: false, isDefinition: true)
-!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 6.0.0 (trunk 310529) (llvm/trunk 310534)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5)
+!2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 6.0.0 (trunk 310529) (llvm/trunk 310534)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, imports: !48, globals: !5)
 !3 = !DIFile(filename: "/tmp/quality.cpp", directory: "/Volumes/Data/llvm")
 !4 = !{}
 !5 = !{!0, !6, !9}
@@ -146,3 +155,7 @@ attributes #2 = { noinline nounwind optnone ssp uwtable }
 !45 = !DIDerivedType(tag: DW_TAG_member, name: "fn", scope: !11, file: !3, line: 5, baseType: !46, size: 64)
 !46 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !47, size: 64)
 !47 = !DISubroutineType(types: !22)
+!48 = !{!49}
+!49 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !2, entity: !50, file: !3, line: 2)
+!50 = !DIGlobalVariable(name: "a", linkageName: "_ZN4test1aE", scope: !51, file: !3, line: 2, type: !8, isLocal: false, isDefinition: false)
+!51 = !DINamespace(name: "test", scope: !2)
