@@ -485,6 +485,14 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
         p->r_addend = sym.getVA(addend) - section->getOutputSection()->addr;
       else if (config->relocatable && type != target->noneRel)
         sec->relocations.push_back({R_ABS, type, rel.r_offset, addend, &sym});
+    } else if (config->emachine == EM_PPC && type == R_PPC_PLTREL24 &&
+               p->r_addend >= 0x8000) {
+      // Similar to R_MIPS_GPREL{16,32}. If the addend of R_PPC_PLTREL24
+      // indicates that r30 is relative to the input section .got2
+      // (r_addend>=0x8000), after linking, r30 should be relative to the output
+      // section .got2 . To compensate for the shift, adjust r_addend by
+      // ppc32Got2OutSecOff.
+      p->r_addend += sec->file->ppc32Got2OutSecOff;
     }
   }
 }
