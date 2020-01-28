@@ -56,8 +56,8 @@ define <2 x i32> @sext_vec(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 define i16 @trunc(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @trunc(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 42, i32 [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = trunc i32 [[SEL]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[Z:%.*]] to i16
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i16 42, i16 [[TMP1]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %cmp = icmp ult i32 %x, %y
