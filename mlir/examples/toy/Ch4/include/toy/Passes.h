@@ -20,7 +20,6 @@ class Pass;
 
 namespace toy {
 std::unique_ptr<Pass> createShapeInferencePass();
-std::unique_ptr<Pass> createDeadFunctionEliminationPass();
 } // end namespace toy
 } // end namespace mlir
 

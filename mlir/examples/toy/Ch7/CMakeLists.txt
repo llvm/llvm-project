@@ -14,7 +14,6 @@ add_toy_chapter(toyc-ch7
   parser/AST.cpp
   mlir/MLIRGen.cpp
   mlir/Dialect.cpp
-  mlir/DeadFunctionEliminationPass.cpp
   mlir/LowerToAffineLoops.cpp
   mlir/LowerToLLVM.cpp
   mlir/ShapeInferencePass.cpp
