@@ -413,7 +413,6 @@ public:
         }
       }
     }
-
     return swift::Identifier();
   }
 };
@@ -743,45 +742,44 @@ static void RegisterAllVariables(
   // The module scoped variables are stored at the CompUnit level, so
   // after we go through the current context, then we have to take one
   // more pass through the variables in the CompUnit.
-  bool handling_globals = false;
   VariableList variables;
 
   // Proceed from the innermost scope outwards, adding all variables
   // not already shadowed by an inner declaration.
   llvm::SmallDenseSet<const char *, 8> processed_names;
-  while (true) {
-    if (!handling_globals) {
-      constexpr bool can_create = true;
-      constexpr bool get_parent_variables = false;
-      constexpr bool stop_if_block_is_inlined_function = true;
+  bool done = false;
+  do {
+    // Iterate over all parent contexts *including* the top_block.
+    if (block == top_block)
+      done = true;
+    bool can_create = true;
+    bool get_parent_variables = false;
+    bool stop_if_block_is_inlined_function = true;
 
-      block->AppendVariables(
-          can_create, get_parent_variables, stop_if_block_is_inlined_function,
-          [](Variable *) { return true; }, &variables);
-    } else {
-      if (sc.comp_unit) {
-        lldb::VariableListSP globals_sp = sc.comp_unit->GetVariableList(true);
-        if (globals_sp)
-          variables.AddVariables(globals_sp.get());
-      }
-    }
+    block->AppendVariables(
+        can_create, get_parent_variables, stop_if_block_is_inlined_function,
+        [](Variable *) { return true; }, &variables);
 
-    // Process all variables in this scope.
-    for (size_t vi = 0, ve = variables.GetSize(); vi != ve; ++vi)
-      AddVariableInfo({variables.GetVariableAtIndex(vi)}, stack_frame_sp,
-                      ast_context, language_runtime, processed_names,
-                      local_variables);
+    if (!done)
+      block = block->GetParent();
+  } while (block && !done);
 
-    if (!handling_globals) {
-      if (block == top_block)
-        // Now add the containing module block, that's what holds the
-        // module globals:
-        handling_globals = true;
-      else
-        block = block->GetParent();
-    } else
-      break;
+  // Also add local copies of globals. This is in many cases redundant
+  // work because the globals would also be found in the expression
+  // context's Swift module, but it allows a limited form of
+  // expression evaluation to work even if the Swift module failed to
+  // load, as long as the module isn't necessary to resolve the type
+  // or aother symbols in the expression.
+  if (sc.comp_unit) {
+    lldb::VariableListSP globals_sp = sc.comp_unit->GetVariableList(true);
+    if (globals_sp)
+      variables.AddVariables(globals_sp.get());
   }
+
+  for (size_t vi = 0, ve = variables.GetSize(); vi != ve; ++vi)
+    AddVariableInfo({variables.GetVariableAtIndex(vi)}, stack_frame_sp,
+                    ast_context, language_runtime, processed_names,
+                    local_variables);
 }
 
 static void ResolveSpecialNames(
