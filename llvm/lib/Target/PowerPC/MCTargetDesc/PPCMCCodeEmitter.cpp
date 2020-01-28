@@ -159,6 +159,37 @@ unsigned PPCMCCodeEmitter::getMemRIX16Encoding(const MCInst &MI, unsigned OpNo,
   return RegBits;
 }
 
+uint64_t
+PPCMCCodeEmitter::getMemRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
+  // Encode (imm, reg) as a memri34, which has the low 34-bits as the
+  // displacement and the next 5 bits as an immediate 0.
+  assert(MI.getOperand(OpNo + 1).isImm() && "Expecting an immediate.");
+  uint64_t RegBits =
+    getMachineOpValue(MI, MI.getOperand(OpNo + 1), Fixups, STI) << 34;
+
+  if (RegBits != 0)
+    report_fatal_error("Operand must be 0");
+
+  const MCOperand &MO = MI.getOperand(OpNo);
+  return ((getMachineOpValue(MI, MO, Fixups, STI)) & 0x3FFFFFFFFUL) | RegBits;
+}
+
+uint64_t
+PPCMCCodeEmitter::getMemRI34Encoding(const MCInst &MI, unsigned OpNo,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
+  // Encode (imm, reg) as a memri34, which has the low 34-bits as the
+  // displacement and the next 5 bits as the register #.
+  assert(MI.getOperand(OpNo + 1).isReg() && "Expecting a register.");
+  uint64_t RegBits =
+    getMachineOpValue(MI, MI.getOperand(OpNo + 1), Fixups, STI) << 34;
+
+  const MCOperand &MO = MI.getOperand(OpNo);
+  return ((getMachineOpValue(MI, MO, Fixups, STI)) & 0x3FFFFFFFFUL) | RegBits;
+}
+
 unsigned PPCMCCodeEmitter::getSPE8DisEncoding(const MCInst &MI, unsigned OpNo,
                                               SmallVectorImpl<MCFixup> &Fixups,
                                               const MCSubtargetInfo &STI)

@@ -1,7 +1,7 @@
-; RUN: llc -mattr=prefix-instrs -verify-machineinstrs \
+; RUN: llc -mattr=pcrelative-memops,prefix-instrs -verify-machineinstrs \
 ; RUN:   -mtriple=powerpc64le-unknown-unknown -ppc-asm-full-reg-names \
 ; RUN:   %s -o - 2>&1 | FileCheck %s
-; RUN: llc -mattr=prefix-instrs -verify-machineinstrs \
+; RUN: llc -mattr=pcrelative-memops,prefix-instrs -verify-machineinstrs \
 ; RUN:   -mtriple=powerpc64-unknown-unknown -ppc-asm-full-reg-names \
 ; RUN:   %s -o - 2>&1 | FileCheck %s
 
