@@ -141,10 +141,29 @@ class LowerMatrixIntrinsics {
   const TargetTransformInfo &TTI;
   OptimizationRemarkEmitter &ORE;
 
+  /// Contains estimates of the number of operations (loads, stores, compute) required to lower a matrix operation.
+  struct OpInfoTy {
+    /// Number of stores emitted to generate this matrix.
+    unsigned NumStores = 0;
+    /// Number of loads emitted to generate this matrix.
+    unsigned NumLoads = 0;
+    /// Number of compute operations emitted to generate this matrix.
+    unsigned NumComputeOps = 0;
+
+    OpInfoTy &operator+=(const OpInfoTy &RHS) {
+      NumStores += RHS.NumStores;
+      NumLoads += RHS.NumLoads;
+      NumComputeOps += RHS.NumComputeOps;
+      return *this;
+    }
+  };
+
   /// Wrapper class representing a matrix as a set of column vectors.
   /// All column vectors must have the same vector type.
   class ColumnMatrixTy {
     SmallVector<Value *, 16> Columns;
+
+    OpInfoTy OpInfo;
 
   public:
     ColumnMatrixTy() : Columns() {}
@@ -167,6 +186,10 @@ class LowerMatrixIntrinsics {
 
     void addColumn(Value *V) { Columns.push_back(V); }
 
+    VectorType *getColumnTy() {
+      return cast<VectorType>(Columns[0]->getType());
+    }
+
     iterator_range<SmallVector<Value *, 8>::iterator> columns() {
       return make_range(Columns.begin(), Columns.end());
     }
@@ -177,6 +200,29 @@ class LowerMatrixIntrinsics {
       return Columns.size() == 1 ? Columns[0]
                                  : concatenateVectors(Builder, Columns);
     }
+
+    ColumnMatrixTy &addNumLoads(unsigned N) {
+      OpInfo.NumLoads += N;
+      return *this;
+    }
+
+    void setNumLoads(unsigned N) { OpInfo.NumLoads = N; }
+
+    ColumnMatrixTy &addNumStores(unsigned N) {
+      OpInfo.NumStores += N;
+      return *this;
+    }
+
+    ColumnMatrixTy &addNumComputeOps(unsigned N) {
+      OpInfo.NumComputeOps += N;
+      return *this;
+    }
+
+    unsigned getNumStores() const { return OpInfo.NumStores; }
+    unsigned getNumLoads() const { return OpInfo.NumLoads; }
+    unsigned getNumComputeOps() const { return OpInfo.NumComputeOps; }
+
+    const OpInfoTy &getOpInfo() const { return OpInfo; }
   };
 
   struct ShapeInfo {
@@ -223,6 +269,20 @@ public:
   LowerMatrixIntrinsics(Function &F, TargetTransformInfo &TTI,
                         OptimizationRemarkEmitter &ORE)
       : Func(F), DL(F.getParent()->getDataLayout()), TTI(TTI), ORE(ORE) {}
+
+  unsigned getNumOps(Type *VT) {
+    assert(isa<VectorType>(VT) && "Expected vector type");
+    return getNumOps(VT->getScalarType(),
+                     cast<VectorType>(VT)->getNumElements());
+  }
+
+  //
+  /// Return the estimated number of vector ops required for an operation on
+  /// \p VT * N.
+  unsigned getNumOps(Type *ST, unsigned N) {
+    return std::ceil((ST->getPrimitiveSizeInBits() * N).getFixedSize() /
+                     double(TTI.getRegisterBitWidth(true)));
+  }
 
   /// Return the set of column vectors that a matrix value is lowered to.
   ///
@@ -582,7 +642,10 @@ public:
       Result.addColumn(Column);
     }
 
-    finalizeLowering(Inst, Result, Builder);
+    finalizeLowering(Inst,
+                     Result.addNumLoads(getNumOps(Result.getColumnTy()) *
+                                        Result.getNumColumns()),
+                     Builder);
   }
 
   /// Lowers llvm.matrix.columnwise.load.
@@ -607,7 +670,8 @@ public:
                             Shape.NumRows, VType->getElementType(), Builder);
       createColumnStore(C.value(), GEP, VType->getElementType(), Builder);
     }
-    Inst2ColumnMatrix[Inst] = ColumnMatrixTy();
+    Inst2ColumnMatrix[Inst] = ColumnMatrixTy().addNumStores(
+        getNumOps(LM.getColumnTy()) * LM.getNumColumns());
 
     ToRemove.push_back(Inst);
   }
@@ -668,8 +732,9 @@ public:
   }
 
   Value *createMulAdd(Value *Sum, Value *A, Value *B, bool UseFPOp,
-                      IRBuilder<> &Builder, bool AllowContraction) {
-
+                      IRBuilder<> &Builder, bool AllowContraction,
+                      unsigned &NumComputeOps) {
+    NumComputeOps += getNumOps(A->getType());
     if (!Sum)
       return UseFPOp ? Builder.CreateFMul(A, B) : Builder.CreateMul(A, B);
 
@@ -681,10 +746,12 @@ public:
             Func.getParent(), Intrinsic::fmuladd, A->getType());
         return Builder.CreateCall(FMulAdd, {A, B, Sum});
       }
+      NumComputeOps += getNumOps(A->getType());
       Value *Mul = Builder.CreateFMul(A, B);
       return Builder.CreateFAdd(Sum, Mul);
     }
 
+    NumComputeOps += getNumOps(A->getType());
     Value *Mul = Builder.CreateMul(A, B);
     return Builder.CreateAdd(Sum, Mul);
   }
@@ -738,6 +805,7 @@ public:
 
     bool AllowContract = AllowContractEnabled || (isa<FPMathOperator>(MatMul) &&
                                                   MatMul->hasAllowContract());
+    unsigned NumComputeOps = 0;
     // Multiply columns from the first operand with scalars from the second
     // operand.  Then move along the K axes and accumulate the columns.  With
     // this the adds can be vectorized without reassociation.
@@ -754,11 +822,12 @@ public:
           Value *RH = Builder.CreateExtractElement(Rhs.getColumn(J), K);
           Value *Splat = Builder.CreateVectorSplat(BlockSize, RH, "splat");
           Sum = createMulAdd(Sum, L, Splat, EltType->isFloatingPointTy(),
-                             Builder, AllowContract);
+                             Builder, AllowContract, NumComputeOps);
         }
         Result.setColumn(J, insertVector(Result.getColumn(J), I, Sum, Builder));
       }
     }
+    Result.addNumComputeOps(NumComputeOps);
     finalizeLowering(MatMul, Result, Builder);
   }
 
@@ -788,7 +857,13 @@ public:
       Result.addColumn(ResultColumn);
     }
 
-    finalizeLowering(Inst, Result, Builder);
+    // TODO: Improve estimate of operations needed for transposes. Currently we
+    // just count the insertelement/extractelement instructions, but do not
+    // account for later simplifications/combines.
+    finalizeLowering(
+        Inst,
+        Result.addNumComputeOps(2 * ArgShape.NumRows * ArgShape.NumColumns),
+        Builder);
   }
 
   /// Lower load instructions, if shape information is available.
@@ -850,7 +925,10 @@ public:
       Result.addColumn(
           BuildColumnOp(LoweredLhs.getColumn(C), LoweredRhs.getColumn(C)));
 
-    finalizeLowering(Inst, Result, Builder);
+    finalizeLowering(Inst,
+                     Result.addNumComputeOps(getNumOps(Result.getColumnTy()) *
+                                             Result.getNumColumns()),
+                     Builder);
     return true;
   }
 
@@ -1116,6 +1194,23 @@ public:
       return Leaves;
     }
 
+    /// Calculate the number of exclusive and shared op counts for expression
+    /// starting at \p V. Expressions used multiple times are counted once.
+    OpInfoTy sumOpInfos(Value *Root, SmallPtrSetImpl<Value *> &ReusedExprs) {
+      auto CM = Inst2ColumnMatrix.find(Root);
+      if (CM == Inst2ColumnMatrix.end())
+        return {};
+
+      // Already counted this expression. Stop.
+      if (!ReusedExprs.insert(Root).second)
+        return {};
+
+      OpInfoTy Count = CM->second.getOpInfo();
+      for (Value *Op : cast<Instruction>(Root)->operand_values())
+        Count += sumOpInfos(Op, ReusedExprs);
+      return Count;
+    }
+
     void emitRemarks() {
       if (!ORE.allowExtraAnalysis(DEBUG_TYPE))
         return;
@@ -1125,10 +1220,16 @@ public:
 
       // Generate remarks for each leaf.
       for (auto *L : Leaves) {
+        SmallPtrSet<Value *, 8> ReusedExprs;
+        auto Counts = sumOpInfos(L, ReusedExprs);
         OptimizationRemark Rem(DEBUG_TYPE, "matrix-lowered",
                                cast<Instruction>(L)->getDebugLoc(),
                                cast<Instruction>(L)->getParent());
-        Rem << "Lowered matrix expression ";
+        Rem << "Lowered with ";
+        Rem << ore::NV("NumStores", Counts.NumStores) << " stores, "
+            << ore::NV("NumLoads", Counts.NumLoads) << " loads, "
+            << ore::NV("NumComputeOps", Counts.NumComputeOps) << " compute ops";
+
         Rem << ("\n" + linearize(L, DL));
         ORE.emit(Rem);
       }

@@ -3,7 +3,7 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "aarch64-apple-ios"
 
-; CHECK-LABEL: remark: test.h:40:20: Lowered matrix expression
+; CHECK-LABEL: remark: test.h:40:20: Lowered with 6 stores, 6 loads, 24 compute ops
 ; CHECK-NEXT: store(
 ; CHECK-NEXT:  transpose.2x6.double(load(addr %A)),
 ; CHECK-NEXT:  addr %B)
@@ -17,7 +17,7 @@ define void @transpose(<12 x double>* %A, <12 x double>* %B) !dbg !23 {
 declare <12 x double> @llvm.matrix.transpose.v12f64.v12f64(<12 x double>, i32, i32)
 
 
-; CHECK-LABEL: remark: test.h:50:20: Lowered matrix expression
+; CHECK-LABEL: remark: test.h:50:20: Lowered with 2 stores, 12 loads, 22 compute ops
 ; CHECK-NEXT:  store(
 ; CHECK-NEXT:   multiply.2x6.6x2.double(
 ; CHECK-NEXT:    load(addr %A),
@@ -33,7 +33,7 @@ define void @multiply(<12 x double>* %A, <12 x double>* %B, <4 x double>* %C) !d
 
 declare <4 x double> @llvm.matrix.multiply(<12 x double>, <12 x double>, i32, i32, i32)
 
-; CHECK-LABEL: remark: test.h:60:20: Lowered matrix expression
+; CHECK-LABEL: remark: test.h:60:20: Lowered with 6 stores, 6 loads, 0 compute ops
 ; CHECK-NEXT:  store(
 ; CHECK-NEXT:   columnwise.load.3x3.double(addr %A, 5),
 ; CHECK-NEXT:   addr %B)
@@ -45,7 +45,7 @@ define void @columnwise.load(<9 x double>* %A, <9 x double>* %B) !dbg !27 {
 
 declare <9 x double> @llvm.matrix.columnwise.load(<9 x double>*, i32, i32, i32)
 
-; CHECK-LABEL: remark: test.h:70:20: Lowered matrix expression
+; CHECK-LABEL: remark: test.h:70:20: Lowered with 6 stores, 6 loads, 0 compute ops
 ; CHECK-NEXT:  columnwise.store.3x3.double(
 ; CHECK-NEXT:   columnwise.load.3x3.double(addr %A, 5),
 ; CHECK-NEXT:   addr %B,
@@ -58,7 +58,7 @@ define void @columnwise.store(<9 x double>* %A, <9 x double>* %B) !dbg !29 {
 
 declare void @llvm.matrix.columnwise.store(<9 x double>, <9 x double>*, i32, i32, i32)
 
-; CHECK-LABEL: remark: test.h:80:20: Lowered matrix expression
+; CHECK-LABEL: remark: test.h:80:20: Lowered with 6 stores, 6 loads, 12 compute ops
 ; CHECK-NEXT:  columnwise.store.3x3.double(
 ; CHECK-NEXT:   fmul(
 ; CHECK-NEXT:    fadd(
@@ -76,7 +76,7 @@ define void @binaryops(<9 x double>* %A, <9 x double>* %B) !dbg !31 {
   ret void
 }
 
-; CHECK-LABEL: remark: test.h:90:20: Lowered matrix expression
+; CHECK-LABEL: remark: test.h:90:20: Lowered with 6 stores, 6 loads, 12 compute ops
 ; CHECK-NEXT:  columnwise.store.3x3.double(
 ; CHECK-NEXT:   fmul(
 ; CHECK-NEXT:    fadd(
@@ -85,7 +85,7 @@ define void @binaryops(<9 x double>* %A, <9 x double>* %B) !dbg !31 {
 ; CHECK-NEXT:    (reused) columnwise.load.3x3.double(addr %A, 5)),
 ; CHECK-NEXT:   addr %B,
 ; CHECK-NEXT:   10)
-; CHECK-NEXT:  remark: test.h:90:20: Lowered matrix expression
+; CHECK-NEXT:  remark: test.h:90:20: Lowered with 2 stores, 12 loads, 22 compute ops
 ; CHECK-NEXT:  store(
 ; CHECK-NEXT:   multiply.2x6.6x2.double(
 ; CHECK-NEXT:    load(addr %C),
@@ -106,7 +106,7 @@ define void @multiple_expressions(<9 x double>* %A, <9 x double>* %B, <12 x doub
   ret void
 }
 
-; CHECK-LABEL: remark: test.h:100:20: Lowered matrix expression
+; CHECK-LABEL: remark: test.h:100:20: Lowered with 6 stores, 6 loads, 12 compute ops
 ; CHECK-NEXT:  columnwise.store.3x3.double(
 ; CHECK-NEXT:   fmul(
 ; CHECK-NEXT:    fadd(
@@ -124,7 +124,7 @@ define void @stackaddresses(<9 x double>* %A) !dbg !35 {
   ret void
 }
 
-; CHECK-LABEL: remark: test.h:30:20: Lowered matrix expression
+; CHECK-LABEL: remark: test.h:30:20: Lowered with 10 stores, 9 loads, 30 compute ops
 ; CHECK-NEXT:  store(
 ; CHECK-NEXT:   transpose.5x3.double(load(addr %A)),
 ; CHECK-NEXT:   stack addr %s1)
