@@ -80,6 +80,17 @@ void InitializeMainThread() {
   ThreadStart(tid, GetTid());
 }
 
+static void OnStackUnwind(const SignalContext &sig, const void *,
+                          BufferedStackTrace *stack) {
+  stack->Unwind(StackTrace::GetNextInstructionPc(sig.pc), sig.bp, sig.context,
+                common_flags()->fast_unwind_on_fatal);
+}
+
+void LsanOnDeadlySignal(int signo, void *siginfo, void *context) {
+  HandleDeadlySignal(siginfo, context, GetCurrentThread(), &OnStackUnwind,
+                     nullptr);
+}
+
 }  // namespace __lsan
 
 #endif  // SANITIZER_POSIX
