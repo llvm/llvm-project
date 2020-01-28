@@ -1,3 +1,4 @@
+// RUN: rm -rf %t
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-lifetime-extended-temporary -verify -std=c++11 %s -DORDER=1
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -x c++ -I%S/Inputs/merge-lifetime-extended-temporary -verify -std=c++11 %s -DORDER=2
 
