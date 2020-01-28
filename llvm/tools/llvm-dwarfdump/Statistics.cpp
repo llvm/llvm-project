@@ -31,6 +31,8 @@ struct PerFunctionStats {
   unsigned TotalVarWithLoc = 0;
   /// Number of constants with location across all inlined instances.
   unsigned ConstantMembers = 0;
+  /// Number of arificial variables, parameters or members across all instances.
+  unsigned NumArtificial = 0;
   /// List of all Variables and parameters in this function.
   StringSet<> VarsInFunction;
   /// Compile units also cover a PC range, but have this flag set to false.
@@ -196,12 +198,13 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   bool HasLoc = false;
   bool HasSrcLoc = false;
   bool HasType = false;
-  bool IsArtificial = false;
   uint64_t BytesCovered = 0;
   uint64_t BytesEntryValuesCovered = 0;
   auto &FnStats = FnStatMap[FnPrefix];
   bool IsParam = Die.getTag() == dwarf::DW_TAG_formal_parameter;
   bool IsVariable = Die.getTag() == dwarf::DW_TAG_variable;
+  bool IsConstantMember = Die.getTag() == dwarf::DW_TAG_member &&
+                          Die.find(dwarf::DW_AT_const_value);
 
   if (Die.getTag() == dwarf::DW_TAG_call_site ||
       Die.getTag() == dwarf::DW_TAG_GNU_call_site) {
@@ -215,7 +218,7 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
     return;
   }
 
-  if (!IsParam && !IsVariable && Die.getTag() != dwarf::DW_TAG_member) {
+  if (!IsParam && !IsVariable && !IsConstantMember) {
     // Not a variable or constant member.
     return;
   }
@@ -230,9 +233,6 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
 
   if (Die.findRecursively(dwarf::DW_AT_type))
     HasType = true;
-
-  if (Die.find(dwarf::DW_AT_artificial))
-    IsArtificial = true;
 
   auto IsEntryValue = [&](ArrayRef<uint8_t> D) -> bool {
     DWARFUnit *U = Die.getDwarfUnit();
@@ -252,10 +252,6 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
     HasLoc = true;
     BytesCovered = BytesInScope;
   } else {
-    if (Die.getTag() == dwarf::DW_TAG_member) {
-      // Non-const member.
-      return;
-    }
     // Handle variables and function arguments.
     Expected<std::vector<DWARFLocationExpression>> Loc =
         Die.getLocations(dwarf::DW_AT_location);
@@ -307,7 +303,6 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   FnStats.VarsInFunction.insert(VarID);
 
   if (BytesInScope) {
-    FnStats.TotalVarWithLoc += (unsigned)HasLoc;
     // Turns out we have a lot of ranges that extend past the lexical scope.
     GlobalStats.ScopeBytesCovered += std::min(BytesInScope, BytesCovered);
     GlobalStats.ScopeBytes += BytesInScope;
@@ -323,29 +318,36 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
       GlobalStats.VarScopeEntryValueBytesCovered += BytesEntryValuesCovered;
     }
     assert(GlobalStats.ScopeBytesCovered <= GlobalStats.ScopeBytes);
-  } else if (Die.getTag() == dwarf::DW_TAG_member) {
-    FnStats.ConstantMembers++;
-  } else {
-    FnStats.TotalVarWithLoc += (unsigned)HasLoc;
   }
-  if (!IsArtificial) {
-    if (IsParam) {
-      FnStats.NumParams++;
-      if (HasType)
-        FnStats.NumParamTypes++;
-      if (HasSrcLoc)
-        FnStats.NumParamSourceLocations++;
-      if (HasLoc)
-        FnStats.NumParamLocations++;
-    } else if (IsVariable) {
-      FnStats.NumVars++;
-      if (HasType)
-        FnStats.NumVarTypes++;
-      if (HasSrcLoc)
-        FnStats.NumVarSourceLocations++;
-      if (HasLoc)
-        FnStats.NumVarLocations++;
-    }
+
+  if (IsConstantMember) {
+    FnStats.ConstantMembers++;
+    return;
+  }
+
+  FnStats.TotalVarWithLoc += (unsigned)HasLoc;
+
+  if (Die.find(dwarf::DW_AT_artificial)) {
+    FnStats.NumArtificial++;
+    return;
+  }
+
+  if (IsParam) {
+    FnStats.NumParams++;
+    if (HasType)
+      FnStats.NumParamTypes++;
+    if (HasSrcLoc)
+      FnStats.NumParamSourceLocations++;
+    if (HasLoc)
+      FnStats.NumParamLocations++;
+  } else if (IsVariable) {
+    FnStats.NumVars++;
+    if (HasType)
+      FnStats.NumVarTypes++;
+    if (HasSrcLoc)
+      FnStats.NumVarSourceLocations++;
+    if (HasLoc)
+      FnStats.NumVarLocations++;
   }
 }
 
@@ -527,7 +529,7 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
                          (Stats.NumFnInlined + Stats.NumFnOutOfLine);
     // Count variables in global scope.
     if (!Stats.IsFunction)
-      TotalVars += Stats.VarsInFunction.size();
+      TotalVars = Stats.NumVars + Stats.ConstantMembers + Stats.NumArtificial;
     unsigned Constants = Stats.ConstantMembers;
     VarParamWithLoc += Stats.TotalVarWithLoc + Constants;
     VarParamTotal += TotalVars;
