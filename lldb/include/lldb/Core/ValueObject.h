@@ -396,8 +396,6 @@ public:
 
   bool IsIntegerType(bool &is_signed);
 
-  virtual bool GetBaseClassPath(Stream &s);
-
   virtual void GetExpressionPath(
       Stream &s, bool qualify_cxx_base_classes,
       GetExpressionPathFormat = eGetExpressionPathFormatDereferencePointers);

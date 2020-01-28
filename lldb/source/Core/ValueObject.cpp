@@ -2013,23 +2013,6 @@ bool ValueObject::HasSyntheticValue() {
   return m_synthetic_value != nullptr;
 }
 
-bool ValueObject::GetBaseClassPath(Stream &s) {
-  if (IsBaseClass()) {
-    bool parent_had_base_class =
-        GetParent() && GetParent()->GetBaseClassPath(s);
-    CompilerType compiler_type = GetCompilerType();
-    llvm::Optional<std::string> cxx_class_name =
-        TypeSystemClang::GetCXXClassName(compiler_type);
-    if (cxx_class_name) {
-      if (parent_had_base_class)
-        s.PutCString("::");
-      s.PutCString(cxx_class_name.getValue());
-    }
-    return parent_had_base_class || cxx_class_name;
-  }
-  return false;
-}
-
 ValueObject *ValueObject::GetNonBaseClassParent() {
   if (GetParent()) {
     if (GetParent()->IsBaseClass())
@@ -2139,13 +2122,8 @@ void ValueObject::GetExpressionPath(Stream &s, bool qualify_cxx_base_classes,
       }
 
       const char *name = GetName().GetCString();
-      if (name) {
-        if (qualify_cxx_base_classes) {
-          if (GetBaseClassPath(s))
-            s.PutCString("::");
-        }
+      if (name)
         s.PutCString(name);
-      }
     }
   }
 
