@@ -35,7 +35,6 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_procmaps_solaris.cpp
   sanitizer_rtems.cpp
   sanitizer_solaris.cpp
-  sanitizer_stoptheworld_fuchsia.cpp
   sanitizer_stoptheworld_mac.cpp
   sanitizer_suppressions.cpp
   sanitizer_tls_get_addr.cpp

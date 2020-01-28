@@ -211,13 +211,6 @@ void ForEachExtraStackRangeCb(uptr begin, uptr end, void* arg) {
   ScanRangeForPointers(begin, end, frontier, "FAKE STACK", kReachable);
 }
 
-#if SANITIZER_FUCHSIA
-
-// Fuchsia handles all threads together with its own callback.
-static void ProcessThreads(SuspendedThreadsList const &, Frontier *) {}
-
-#else
-
 // Scans thread data (stacks and TLS) for heap pointers.
 static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
                            Frontier *frontier) {
@@ -314,8 +307,6 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
     }
   }
 }
-
-#endif  // SANITIZER_FUCHSIA
 
 void ScanRootRegion(Frontier *frontier, const RootRegion &root_region,
                     uptr region_begin, uptr region_end, bool is_readable) {
@@ -540,14 +531,6 @@ static void ReportIfNotSuspended(ThreadContextBase *tctx, void *arg) {
   }
 }
 
-#if SANITIZER_FUCHSIA
-
-// Fuchsia provides a libc interface that guarantees all threads are
-// covered, and SuspendedThreadList is never really used.
-static void ReportUnsuspendedThreads(const SuspendedThreadsList &) {}
-
-#else  // !SANITIZER_FUCHSIA
-
 static void ReportUnsuspendedThreads(
     const SuspendedThreadsList &suspended_threads) {
   InternalMmapVector<tid_t> threads(suspended_threads.ThreadCount());
@@ -559,8 +542,6 @@ static void ReportUnsuspendedThreads(
   GetThreadRegistryLocked()->RunCallbackForEachThreadLocked(
       &ReportIfNotSuspended, &threads);
 }
-
-#endif  // !SANITIZER_FUCHSIA
 
 static void CheckForLeaksCallback(const SuspendedThreadsList &suspended_threads,
                                   void *arg) {
