@@ -399,6 +399,11 @@ struct TestLegalizePatternDriver
 
     // Handle a full conversion.
     if (mode == ConversionMode::Full) {
+      // Check support for marking unknown operations as dynamically legal.
+      target.markUnknownOpDynamicallyLegal([](Operation *op) {
+        return (bool)op->getAttrOfType<UnitAttr>("test.dynamically_legal");
+      });
+
       (void)applyFullConversion(getModule(), target, patterns, &converter);
       return;
     }
