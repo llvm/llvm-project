@@ -1681,6 +1681,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STORE, VT, Custom);
   }
 
+  setOperationAction(ISD::STORE, MVT::v128i1, Custom);
+
   for (MVT VT : {MVT::v2i16, MVT::v4i8, MVT::v8i8, MVT::v2i32, MVT::v4i16,
                  MVT::v2i32}) {
     setCondCodeAction(ISD::SETNE,  VT, Expand);
