@@ -1952,7 +1952,8 @@ private:
   }
   bool MayBeDesignationStart();
   ExprResult ParseBraceInitializer();
-  ExprResult ParseInitializerWithPotentialDesignator();
+  ExprResult ParseInitializerWithPotentialDesignator(
+      llvm::function_ref<void(const Designation &)> CodeCompleteCB);
 
   //===--------------------------------------------------------------------===//
   // clang Expressions
