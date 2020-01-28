@@ -169,39 +169,6 @@ class FR<bits<6> op, bits<6> _funct, dag outs, dag ins, string asmstr,
 }
 
 //===----------------------------------------------------------------------===//
-// Format I instruction class in Mips : <|opcode|rs|rt|immediate|>
-//===----------------------------------------------------------------------===//
-
-class FI<bits<6> op, dag outs, dag ins, string asmstr, list<dag> pattern,
-         InstrItinClass itin>: InstSE<outs, ins, asmstr, pattern, itin, FrmI>
-{
-  bits<5>  rt;
-  bits<5>  rs;
-  bits<16> imm16;
-
-  let Opcode = op;
-
-  let Inst{25-21} = rs;
-  let Inst{20-16} = rt;
-  let Inst{15-0}  = imm16;
-}
-
-class BranchBase<bits<6> op, dag outs, dag ins, string asmstr,
-                  list<dag> pattern, InstrItinClass itin>:
-  InstSE<outs, ins, asmstr, pattern, itin, FrmI>
-{
-  bits<5>  rs;
-  bits<5>  rt;
-  bits<16> imm16;
-
-  let Opcode = op;
-
-  let Inst{25-21} = rs;
-  let Inst{20-16} = rt;
-  let Inst{15-0}  = imm16;
-}
-
-//===----------------------------------------------------------------------===//
 // Format J instruction class in Mips : <|opcode|address|>
 //===----------------------------------------------------------------------===//
 
@@ -710,20 +677,6 @@ class EI_FM<bits<1> sc> : StdArch
 //===----------------------------------------------------------------------===//
 // Format FI instruction class in Mips : <|opcode|base|ft|immediate|>
 //===----------------------------------------------------------------------===//
-
-class FFI<bits<6> op, dag outs, dag ins, string asmstr, list<dag> pattern>:
-  InstSE<outs, ins, asmstr, pattern, NoItinerary, FrmFI>
-{
-  bits<5>  ft;
-  bits<5>  base;
-  bits<16> imm16;
-
-  let Opcode = op;
-
-  let Inst{25-21} = base;
-  let Inst{20-16} = ft;
-  let Inst{15-0}  = imm16;
-}
 
 class ADDS_FM<bits<6> funct, bits<5> fmt> : StdArch {
   bits<5> fd;
