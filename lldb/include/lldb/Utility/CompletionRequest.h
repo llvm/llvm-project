@@ -115,7 +115,19 @@ public:
   CompletionRequest(llvm::StringRef command_line, unsigned raw_cursor_pos,
                     CompletionResult &result);
 
-  llvm::StringRef GetRawLine() const { return m_command; }
+  /// Returns the raw user input used to create this CompletionRequest cut off
+  /// at the cursor position. The cursor will be at the end of the raw line.
+  llvm::StringRef GetRawLine() const {
+    return m_command.substr(0, GetRawCursorPos());
+  }
+
+  /// Returns the full raw user input used to create this CompletionRequest.
+  /// This string is not cut off at the cursor position and will include
+  /// characters behind the cursor position.
+  ///
+  /// You should most likely *not* use this function unless the characters
+  /// behind the cursor position influence the completion.
+  llvm::StringRef GetRawLineWithUnusedSuffix() const { return m_command; }
 
   unsigned GetRawCursorPos() const { return m_raw_cursor_pos; }
 
