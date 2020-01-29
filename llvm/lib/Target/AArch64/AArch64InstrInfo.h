@@ -391,7 +391,7 @@ enum ElementSizeType {
 enum DestructiveInstType {
   DestructiveInstTypeMask = TSFLAG_DESTRUCTIVE_INST_TYPE(0x1),
   NotDestructive          = TSFLAG_DESTRUCTIVE_INST_TYPE(0x0),
-  Destructive             = TSFLAG_DESTRUCTIVE_INST_TYPE(0x1),
+  DestructiveOther        = TSFLAG_DESTRUCTIVE_INST_TYPE(0x1),
 };
 
 #undef TSFLAG_ELEMENT_SIZE_TYPE
