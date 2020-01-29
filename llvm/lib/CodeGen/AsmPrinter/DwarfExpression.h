@@ -279,7 +279,7 @@ protected:
   /// Finalize an entry value by emitting its size operand, and committing the
   /// DWARF block which has been emitted to the temporary buffer.
   void finalizeEntryValue();
-
+  
   ~DwarfExpression() = default;
 
 public:
@@ -336,6 +336,10 @@ public:
   /// any operands here.
   void beginEntryValueExpression(DIExpressionCursor &ExprCursor);
 
+  /// Return the index of a base type with the given properties and
+  /// create one if necessary.
+  unsigned getOrCreateBaseType(unsigned BitSize, dwarf::TypeKind Encoding);
+  
   /// Emit all remaining operations in the DIExpressionCursor.
   ///
   /// \param FragmentOffsetInBits     If this is one fragment out of multiple
