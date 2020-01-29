@@ -1990,12 +1990,12 @@ std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectVOP3ModsImpl(
   Register Src) const {
   unsigned Mods = 0;
-  MachineInstr *MI = MRI->getVRegDef(Src);
+  MachineInstr *MI = getDefIgnoringCopies(Src, *MRI);
 
   if (MI && MI->getOpcode() == AMDGPU::G_FNEG) {
     Src = MI->getOperand(1).getReg();
     Mods |= SISrcMods::NEG;
-    MI = MRI->getVRegDef(Src);
+    MI = getDefIgnoringCopies(Src, *MRI);
   }
 
   if (MI && MI->getOpcode() == AMDGPU::G_FABS) {

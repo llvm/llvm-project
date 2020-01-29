@@ -165,10 +165,7 @@ body: |
     ; GFX6-LABEL: name: fadd_s32_fneg_copy_sgpr
     ; GFX6: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX6: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX6: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
-    ; GFX6: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX6: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_XOR_B32_]]
-    ; GFX6: [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e64 0, [[COPY]], 0, [[COPY2]], 0, 0, implicit $exec
+    ; GFX6: [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e64 0, [[COPY]], 1, [[COPY1]], 0, 0, implicit $exec
     ; GFX6: S_ENDPGM 0, implicit [[V_ADD_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:sgpr(s32) = COPY $sgpr0
@@ -193,11 +190,7 @@ body: |
     ; GFX6-LABEL: name: fadd_s32_copy_fneg_copy_fabs
     ; GFX6: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX6: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; GFX6: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
-    ; GFX6: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 [[COPY1]], [[S_MOV_B32_]], implicit-def $scc
-    ; GFX6: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
-    ; GFX6: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[S_AND_B32_]], [[S_MOV_B32_1]], implicit-def $scc
-    ; GFX6: [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e64 0, [[COPY]], 0, [[S_XOR_B32_]], 0, 0, implicit $exec
+    ; GFX6: [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e64 0, [[COPY]], 3, [[COPY1]], 0, 0, implicit $exec
     ; GFX6: S_ENDPGM 0, implicit [[V_ADD_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:sgpr(s32) = COPY $sgpr0
