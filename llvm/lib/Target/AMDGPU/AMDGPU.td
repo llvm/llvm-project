@@ -360,7 +360,13 @@ def FeatureDPP8 : SubtargetFeature<"dpp8",
 def FeatureR128A16 : SubtargetFeature<"r128-a16",
   "HasR128A16",
   "true",
-  "Support 16 bit coordindates/gradients/lod/clamp/mip types on gfx9"
+  "Support gfx9-style A16 for 16-bit coordinates/gradients/lod/clamp/mip image operands, where a16 is aliased with r128"
+>;
+
+def FeatureGFX10A16 : SubtargetFeature<"a16",
+  "HasGFX10A16",
+  "true",
+  "Support gfx10-style A16 for 16-bit coordinates/gradients/lod/clamp/mip image operands"
 >;
 
 def FeatureNSAEncoding : SubtargetFeature<"nsa-encoding",
@@ -682,7 +688,8 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureAddNoCarryInsts, FeatureFmaMixInsts, FeatureGFX8Insts,
    FeatureNoSdstCMPX, FeatureVscnt, FeatureRegisterBanking,
    FeatureVOP3Literal, FeatureDPP8,
-   FeatureNoDataDepHazard, FeaturePkFmacF16Inst, FeatureDoesNotSupportSRAMECC
+   FeatureNoDataDepHazard, FeaturePkFmacF16Inst, FeatureDoesNotSupportSRAMECC,
+   FeatureGFX10A16
   ]
 >;
 
@@ -1093,6 +1100,9 @@ def HasDPP8 : Predicate<"Subtarget->hasDPP8()">,
 
 def HasR128A16 : Predicate<"Subtarget->hasR128A16()">,
   AssemblerPredicate<"FeatureR128A16">;
+
+def HasGFX10A16 : Predicate<"Subtarget->hasGFX10A16()">,
+  AssemblerPredicate<"FeatureGFX10A16">;
 
 def HasDPP16 : Predicate<"Subtarget->hasDPP()">,
   AssemblerPredicate<"!FeatureGCN3Encoding,FeatureGFX10Insts,FeatureDPP">;
