@@ -26,6 +26,7 @@ TEST(CompletionRequest, Constructor) {
   EXPECT_EQ(request.GetRawCursorPos(), cursor_pos);
   EXPECT_EQ(request.GetCursorIndex(), arg_index);
   EXPECT_EQ(request.GetCursorCharPosition(), arg_cursor_pos);
+  EXPECT_EQ(request.GetRawLineUntilCursor(), "a b");
 
   EXPECT_EQ(request.GetPartialParsedLine().GetArgumentCount(), 2u);
   EXPECT_STREQ(request.GetPartialParsedLine().GetArgumentAtIndex(1), "b");

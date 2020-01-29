@@ -104,7 +104,7 @@ public:
 
   llvm::StringRef GetRawLine() const { return m_command; }
   llvm::StringRef GetRawLineUntilCursor() const {
-    return m_command.substr(0, m_cursor_index);
+    return m_command.substr(0, m_raw_cursor_pos);
   }
 
   unsigned GetRawCursorPos() const { return m_raw_cursor_pos; }
