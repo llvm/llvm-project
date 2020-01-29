@@ -541,6 +541,27 @@ multiclass BCRm<string opcStr, string opcStrAt, bits<8> opc,
   }
 }
 
+// Multiclass for floating point conversion instructions.
+//   Used by CVS/CVD/FLT and others
+multiclass CVTm<string opcStr, bits<8> opc,
+                RegisterClass RCo, ValueType Tyo,
+                RegisterClass RCi, ValueType Tyi, Operand immOp,
+                SDPatternOperator OpNode=null_frag> {
+  def r : RR<opc, (outs RCo:$sx), (ins RCi:$sy),
+    !strconcat(opcStr, " $sx, $sy"),
+    [(set Tyo:$sx, (OpNode Tyi:$sy))]> {
+      let cy = 1;
+      let hasSideEffects = 0;
+    }
+  def i : RR<opc, (outs RCo:$sx), (ins immOp:$sy),
+    !strconcat(opcStr, " $sx, $sy"),
+    [/* (set Tyo:$sx, (OpNode (Tyi simm7:$sy))) */]> {
+      let cy = 0;
+      let hasSideEffects = 0;
+    }
+}
+
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -717,6 +738,25 @@ let cw = 1 in {
   defm FCMI : RRm<"fmin.d", 0x3E, I64, f64, simm7Op64, uimm6Op64>;
   let cx = 1 in
   defm FCMIS : RRm<"fmin.s", 0x3E, F32, f32, simm7Op32, uimm6Op32>;
+}
+
+let cx = 0, cw = 0 /* sign extend */, cz = 1, sz = 0 /* round toward zero */ in
+defm FIX : CVTm<"cvt.w.d.sx.rz", 0x4E, I32, i32, I64, f64, simm7Op32, fp_to_sint>;
+let cx = 1, cw = 0 /* sign extend */, cz = 1, sz = 0 /* round toward zero */ in
+defm FIXS : CVTm<"cvt.w.s.sx.rz", 0x4E, I32, i32, F32, f32, simm7Op32, fp_to_sint>;
+let cx = 0, cz = 1, sz = 0 /* round toward zero */ in
+defm FIXX : CVTm<"cvt.l.d.rz", 0x4F, I64, i64, I64, f64, simm7Op64, fp_to_sint>;
+let cz = 0, sz = 0 in {
+  let cx = 0 in
+  defm FLT : CVTm<"cvt.d.w", 0x5E, I64, f64, I32, i32, simm7Op32, sint_to_fp>;
+  let cx = 1 in
+  defm FLTS : CVTm<"cvt.s.w", 0x5E, F32, f32, I32, i32, simm7Op32, sint_to_fp>;
+  let cx = 0 in
+  defm FLTX : CVTm<"cvt.d.l", 0x5F, I64, f64, I64, i64, simm7Op64, sint_to_fp>;
+  let cx = 0 in
+  defm CVS : CVTm<"cvt.s.d", 0x1F, F32, f32, I64, f64, simm7Op64, fpround>;
+  let cx = 0 in
+  defm CVD : CVTm<"cvt.d.s", 0x0F, I64, f64, F32, f32, simm7Op32, fpextend>;
 }
 
 // Load and Store instructions
@@ -915,6 +955,10 @@ def : Pat<(i64 (sext i32:$sy)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (ADSrm1 $sy, 0), sub_i32)>;
 def : Pat<(i64 (zext i32:$sy)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (ADSUrm1 $sy, 0), sub_i32)>;
+def : Pat<(i64 (fp_to_sint f32:$sy)), (FIXXr (CVDr $sy))>;
+
+// Cast to f32
+def : Pat<(f32 (sint_to_fp i64:$sy)), (CVSr (FLTXr i64:$sy))>;
 
 def : Pat<(i64 (anyext i32:$sy)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $sy, sub_i32)>;
@@ -1222,6 +1266,16 @@ def : Pat<(f32 (select i32:$pred, f32:$t, f32:$f)),
                      (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $f, sub_f32)),
             sub_f32)>;
 
+// bitconvert
+def : Pat<(f64 (bitconvert i64:$src)), (COPY_TO_REGCLASS $src, I64)>;
+def : Pat<(i64 (bitconvert f64:$src)), (COPY_TO_REGCLASS $src, I64)>;
+
+def : Pat<(i32 (bitconvert f32:$op)),
+          (EXTRACT_SUBREG (SRAXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+            $op, sub_f32), 32), sub_i32)>;
+def : Pat<(f32 (bitconvert i32:$op)),
+          (EXTRACT_SUBREG (SLLri (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+            $op, sub_i32), 32), sub_f32)>;
 
 // Several special pattern matches to optimize code
 
