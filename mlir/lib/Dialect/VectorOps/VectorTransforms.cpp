@@ -29,7 +29,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/Functional.h"
-#include "mlir/Support/MathExtras.h"
 #include "mlir/Support/STLExtras.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -78,22 +77,6 @@ static int64_t linearize(ArrayRef<int64_t> offsets, ArrayRef<int64_t> basis) {
   return linearIndex;
 }
 
-/// Given a shape with sizes greater than 0 along all dimensions, returns the
-/// delinearized components of linearIndex along shape.
-static SmallVector<int64_t, 8> delinearize(int64_t linearIndex,
-                                           ArrayRef<int64_t> basis) {
-  SmallVector<int64_t, 8> res;
-  res.reserve(basis.size());
-  for (unsigned idx = 0, e = basis.size(); idx < e; ++idx) {
-    assert(basis[idx] > 0);
-    res.push_back(linearIndex / basis[idx]);
-    linearIndex %= basis[idx];
-  }
-  // Sanity check.
-  assert(linearIndex == 0 && "linear index remainder must be 0");
-  return res;
-}
-
 // Clones `op` into a new operations that takes `operands` and returns
 // `resultTypes`.
 static Operation *cloneOpWithOperandsAndTypes(PatternRewriter &builder,
@@ -128,9 +111,8 @@ static TupleType generateExtractSlicesOpResultType(VectorType vectorType,
                                                    ArrayRef<int64_t> strides,
                                                    PatternRewriter &builder) {
   assert(llvm::all_of(strides, [](int64_t s) { return s == 1; }));
-  unsigned rank = vectorType.getRank();
-  assert(sizes.size() == rank);
-  assert(strides.size() == rank);
+  assert(static_cast<int64_t>(sizes.size()) == vectorType.getRank());
+  assert(static_cast<int64_t>(strides.size()) == vectorType.getRank());
 
   // Compute shape ratio of 'shape' and 'sizes'.
   auto shape = vectorType.getShape();
@@ -139,21 +121,14 @@ static TupleType generateExtractSlicesOpResultType(VectorType vectorType,
   auto sliceDimCounts = *maybeDimSliceCounts;
 
   // Compute strides w.r.t number of slices in each dimension.
-  auto basis = computeStrides(sliceDimCounts);
+  auto sliceStrides = computeStrides(sliceDimCounts);
   int64_t sliceCount = computeMaxLinearIndex(sliceDimCounts);
   SmallVector<Type, 4> vectorTypes(sliceCount);
   for (unsigned i = 0; i < sliceCount; ++i) {
-    // De-linearize w.r.t. 'basis'.
-    auto vectorOffsets = delinearize(i, basis);
-    // Convert from unrolled vector-space offsets to element-space offsets.
-    auto offsets = zipMap([](int64_t v1, int64_t v2) { return v1 * v2; },
-                          vectorOffsets, sizes);
-    // Initialize 'sliceSizes' to target 'sizes'
-    SmallVector<int64_t, 4> sliceSizes(sizes.begin(), sizes.end());
-    for (unsigned j = 0; j < rank; ++j) {
-      // Based on 'offsets' and 'shape' clip some dim sizes for partial tiles.
-      sliceSizes[j] = std::min(sliceSizes[j], shape[j] - offsets[j]);
-    }
+    auto vectorOffsets = delinearize(sliceStrides, i);
+    auto elementOffsets =
+        computeElementOffsetsFromVectorSliceOffsets(sizes, vectorOffsets);
+    auto sliceSizes = computeSliceSizes(shape, sizes, elementOffsets);
     // Create Vector type and add to 'vectorTypes[i]'.
     vectorTypes[i] = VectorType::get(sliceSizes, vectorType.getElementType());
   }
@@ -333,7 +308,7 @@ static Value unrollSingleResultStructuredOp(Operation *op,
   }
   // Compute number of total unrolled instances.
   auto numUnrolledInstances = computeMaxLinearIndex(unrollFactors);
-  auto basis = computeStrides(unrollFactors);
+  auto sliceStrides = computeStrides(unrollFactors);
 
   auto &resultValueState = unrolledVectorState[resultIndex];
   auto unrolledResultType = VectorType::get(resultValueState.unrolledShape,
@@ -346,11 +321,9 @@ static Value unrollSingleResultStructuredOp(Operation *op,
 
   // Unroll 'numUnrolledInstances' of 'op', storing results in 'caches'.
   for (unsigned i = 0; i < numUnrolledInstances; ++i) {
-    // De-linearize w.r.t. 'basis'.
-    auto vectorOffsets = delinearize(i, basis);
-    // Convert from unrolled vector-space offsets to element-space offsets.
-    auto offsets = zipMap([](int64_t v1, int64_t v2) { return v1 * v2; },
-                          vectorOffsets, targetShape);
+    auto vectorOffsets = delinearize(sliceStrides, i);
+    auto elementOffsets =
+        computeElementOffsetsFromVectorSliceOffsets(targetShape, vectorOffsets);
     // Get cached slice (or create slice) for each operand at 'offsets'.
     SmallVector<Value, 3> operands;
     operands.resize(op->getNumOperands());
@@ -360,7 +333,7 @@ static Value unrollSingleResultStructuredOp(Operation *op,
         continue; // Output
       auto operand = op->getOperand(operandIndex);
       operands[operandIndex] = getOrCreateUnrolledVectorSlice(
-          op->getLoc(), unrolledVectorState[i], vectorOffsets, offsets,
+          op->getLoc(), unrolledVectorState[i], vectorOffsets, elementOffsets,
           vectors[i].indexMap, operand, caches[i], builder);
     }
     // Create op on sliced vector arguments.
@@ -498,22 +471,20 @@ generateTransferOpSlices(VectorType vectorType, TupleType tupleType,
   auto maybeDimSliceCounts = shapeRatio(vectorType.getShape(), sizes);
   assert(maybeDimSliceCounts.hasValue());
   auto sliceDimCounts = *maybeDimSliceCounts;
-  auto basis = computeStrides(sliceDimCounts);
+  auto sliceStrides = computeStrides(sliceDimCounts);
 
   int64_t numSlices = tupleType.size();
   unsigned numSliceIndices = indices.size();
   auto *ctx = rewriter.getContext();
   for (unsigned i = 0; i < numSlices; ++i) {
-    // De-linearize w.r.t. 'basis'.
-    auto vectorOffsets = delinearize(i, basis);
-    // Convert from unrolled vector-space offsets to element-space offsets.
-    auto offsets = zipMap([](int64_t v1, int64_t v2) { return v1 * v2; },
-                          vectorOffsets, sizes);
+    auto vectorOffsets = delinearize(sliceStrides, i);
+    auto elementOffsets =
+        computeElementOffsetsFromVectorSliceOffsets(sizes, vectorOffsets);
     // Compute 'sliceIndices' by adding 'sliceOffsets[i]' to 'indices[i]'.
     SmallVector<Value, 4> sliceIndices(numSliceIndices);
     for (auto it : llvm::enumerate(indices)) {
       auto expr = getAffineDimExpr(0, ctx) +
-                  getAffineConstantExpr(offsets[it.index()], ctx);
+                  getAffineConstantExpr(elementOffsets[it.index()], ctx);
       auto map = AffineMap::get(/*dimCount=*/1, /*symbolCount=*/0, expr);
       sliceIndices[it.index()] = rewriter.create<AffineApplyOp>(
           it.value().getLoc(), map, ArrayRef<Value>(it.value()));
@@ -672,13 +643,11 @@ class ExtractSlicesOpLowering
 public:
   using OpRewritePattern<vector::ExtractSlicesOp>::OpRewritePattern;
 
-  // TODO(ajcbik): refactor slice utilities out into VectorUtils.h
   PatternMatchResult matchAndRewrite(vector::ExtractSlicesOp op,
                                      PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
 
     VectorType vectorType = op.getSourceVectorType();
-    int64_t rank = vectorType.getRank();
     auto shape = vectorType.getShape();
 
     SmallVector<int64_t, 4> sizes;
@@ -686,26 +655,16 @@ public:
     SmallVector<int64_t, 4> strides;
     op.getStrides(strides); // all-ones at the moment
 
-    // Compute the number of slices in each dimension.
-    SmallVector<int64_t, 4> sliceDimCounts(rank);
-    for (int64_t r = 0; r < rank; ++r)
-      sliceDimCounts[r] = ceilDiv(shape[r], sizes[r]);
-
     // For each element in the tuple, generate the proper strided slice.
-    auto basis = computeStrides(sliceDimCounts);
     TupleType tupleType = op.getResultTupleType();
     int64_t tupleSize = tupleType.size();
     SmallVector<Value, 4> tupleValues(tupleSize);
+    auto sliceStrides = computeStrides(shape, sizes);
     for (int64_t i = 0; i < tupleSize; ++i) {
-      // De-linearize w.r.t. 'basis'.
-      auto vectorOffsets = delinearize(i, basis);
-      // Convert from unrolled vector-space offsets to element-space offsets.
-      auto elementOffsets = mlir::functional::zipMap(
-          [](int64_t v1, int64_t v2) { return v1 * v2; }, vectorOffsets, sizes);
-      // Compute the size of each slice.
-      SmallVector<int64_t, 4> sliceSizes(rank);
-      for (int64_t r = 0; r < rank; ++r)
-        sliceSizes[r] = std::min(sizes[r], shape[r] - elementOffsets[r]);
+      auto vectorOffsets = delinearize(sliceStrides, i);
+      auto elementOffsets =
+          computeElementOffsetsFromVectorSliceOffsets(sizes, vectorOffsets);
+      auto sliceSizes = computeSliceSizes(shape, sizes, elementOffsets);
       // Insert in tuple.
       tupleValues[i] = rewriter.create<vector::StridedSliceOp>(
           loc, op.vector(), elementOffsets, sliceSizes, strides);
@@ -731,24 +690,17 @@ class InsertSlicesOpLowering : public OpRewritePattern<vector::InsertSlicesOp> {
 public:
   using OpRewritePattern<vector::InsertSlicesOp>::OpRewritePattern;
 
-  // TODO(ajcbik): refactor slice utilities out into VectorUtils.h
   PatternMatchResult matchAndRewrite(vector::InsertSlicesOp op,
                                      PatternRewriter &rewriter) const override {
     auto loc = op.getLoc();
 
     VectorType vectorType = op.getResultVectorType();
-    int64_t rank = vectorType.getRank();
     auto shape = vectorType.getShape();
 
     SmallVector<int64_t, 4> sizes;
     op.getSizes(sizes);
     SmallVector<int64_t, 4> strides;
     op.getStrides(strides); // all-ones at the moment
-
-    // Compute the number of slices in each dimension.
-    SmallVector<int64_t, 4> sliceDimCounts(rank);
-    for (int64_t r = 0; r < rank; ++r)
-      sliceDimCounts[r] = ceilDiv(shape[r], sizes[r]);
 
     // Prepare result.
     auto elemType = vectorType.getElementType();
@@ -757,20 +709,13 @@ public:
     Value result = rewriter.create<SplatOp>(loc, vectorType, zero);
 
     // For each element in the tuple, extract the proper strided slice.
-    auto basis = computeStrides(sliceDimCounts);
     TupleType tupleType = op.getSourceTupleType();
     int64_t tupleSize = tupleType.size();
-    SmallVector<Value, 4> tupleValues(tupleSize);
+    auto sliceStrides = computeStrides(shape, sizes);
     for (int64_t i = 0; i < tupleSize; ++i) {
-      // De-linearize w.r.t. 'basis'.
-      auto vectorOffsets = delinearize(i, basis);
-      // Convert from unrolled vector-space offsets to element-space offsets.
-      auto elementOffsets = mlir::functional::zipMap(
-          [](int64_t v1, int64_t v2) { return v1 * v2; }, vectorOffsets, sizes);
-      // Compute the size of each slice.
-      SmallVector<int64_t, 4> sliceSizes(rank);
-      for (int64_t r = 0; r < rank; ++r)
-        sliceSizes[r] = std::min(sizes[r], shape[r] - elementOffsets[r]);
+      auto vectorOffsets = delinearize(sliceStrides, i);
+      auto elementOffsets =
+          computeElementOffsetsFromVectorSliceOffsets(sizes, vectorOffsets);
       // Extract from tuple into the result.
       auto index = rewriter.getI64IntegerAttr(i);
       auto tupleGet = rewriter.create<vector::TupleGetOp>(

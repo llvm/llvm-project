@@ -1,37 +1,81 @@
-//===- VectorAnalysis.cpp - Analysis for Vectorization --------------------===//
+//===- VectorUtils.cpp - MLIR Utilities for VectorOps   ------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file implements utility methods for working with the VectorOps dialect.
+//
+//===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/AffineAnalysis.h"
+#include "mlir/Dialect/VectorOps/VectorUtils.h"
 #include "mlir/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/AffineOps/AffineOps.h"
 #include "mlir/Dialect/StandardOps/Ops.h"
 #include "mlir/Dialect/VectorOps/VectorOps.h"
-#include "mlir/Dialect/VectorOps/VectorUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/Functional.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Support/MathExtras.h"
 #include "mlir/Support/STLExtras.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 
-///
-/// Implements Analysis functions specific to vectors which support
-/// the vectorization and vectorization materialization passes.
-///
-
-using namespace mlir;
-
 using llvm::SetVector;
 
-Optional<SmallVector<int64_t, 4>> mlir::shapeRatio(ArrayRef<int64_t> superShape,
-                                                   ArrayRef<int64_t> subShape) {
+namespace mlir {
+
+SmallVector<int64_t, 4> computeStrides(ArrayRef<int64_t> shape,
+                                       ArrayRef<int64_t> sizes) {
+  int64_t rank = shape.size();
+  // Compute the count for each dimension.
+  SmallVector<int64_t, 4> sliceDimCounts(rank);
+  for (int64_t r = 0; r < rank; ++r)
+    sliceDimCounts[r] = ceilDiv(shape[r], sizes[r]);
+  // Use that to compute the slice stride for each dimension.
+  SmallVector<int64_t, 4> sliceStrides(rank);
+  sliceStrides[rank - 1] = 1;
+  for (int64_t r = rank - 2; r >= 0; --r)
+    sliceStrides[r] = sliceStrides[r + 1] * sliceDimCounts[r + 1];
+  return sliceStrides;
+}
+
+SmallVector<int64_t, 4> delinearize(ArrayRef<int64_t> sliceStrides,
+                                    int64_t index) {
+  int64_t rank = sliceStrides.size();
+  SmallVector<int64_t, 4> vectorOffsets(rank);
+  for (int64_t r = 0; r < rank; ++r) {
+    assert(sliceStrides[r] > 0);
+    vectorOffsets[r] = index / sliceStrides[r];
+    index %= sliceStrides[r];
+  }
+  return vectorOffsets;
+}
+
+SmallVector<int64_t, 4>
+computeElementOffsetsFromVectorSliceOffsets(ArrayRef<int64_t> sizes,
+                                            ArrayRef<int64_t> vectorOffsets) {
+  return functional::zipMap([](int64_t v1, int64_t v2) { return v1 * v2; },
+                            vectorOffsets, sizes);
+}
+
+SmallVector<int64_t, 4> computeSliceSizes(ArrayRef<int64_t> shape,
+                                          ArrayRef<int64_t> sizes,
+                                          ArrayRef<int64_t> elementOffsets) {
+  int64_t rank = shape.size();
+  SmallVector<int64_t, 4> sliceSizes(rank);
+  for (unsigned r = 0; r < rank; ++r)
+    sliceSizes[r] = std::min(sizes[r], shape[r] - elementOffsets[r]);
+  return sliceSizes;
+}
+
+Optional<SmallVector<int64_t, 4>> shapeRatio(ArrayRef<int64_t> superShape,
+                                             ArrayRef<int64_t> subShape) {
   if (superShape.size() < subShape.size()) {
     return Optional<SmallVector<int64_t, 4>>();
   }
@@ -70,8 +114,8 @@ Optional<SmallVector<int64_t, 4>> mlir::shapeRatio(ArrayRef<int64_t> superShape,
   return SmallVector<int64_t, 4>{result.rbegin(), result.rend()};
 }
 
-Optional<SmallVector<int64_t, 4>> mlir::shapeRatio(VectorType superVectorType,
-                                                   VectorType subVectorType) {
+Optional<SmallVector<int64_t, 4>> shapeRatio(VectorType superVectorType,
+                                             VectorType subVectorType) {
   assert(superVectorType.getElementType() == subVectorType.getElementType() &&
          "vector types must be of the same elemental type");
   return shapeRatio(superVectorType.getShape(), subVectorType.getShape());
@@ -157,9 +201,9 @@ static SetVector<Operation *> getEnclosingforOps(Operation *op) {
   return getParentsOfType<AffineForOp>(op);
 }
 
-AffineMap mlir::makePermutationMap(
-    Operation *op, ArrayRef<Value> indices,
-    const DenseMap<Operation *, unsigned> &loopToVectorDim) {
+AffineMap
+makePermutationMap(Operation *op, ArrayRef<Value> indices,
+                   const DenseMap<Operation *, unsigned> &loopToVectorDim) {
   DenseMap<Operation *, unsigned> enclosingLoopToVectorDim;
   auto enclosingLoops = getEnclosingforOps(op);
   for (auto *forInst : enclosingLoops) {
@@ -168,11 +212,11 @@ AffineMap mlir::makePermutationMap(
       enclosingLoopToVectorDim.insert(*it);
     }
   }
-  return ::makePermutationMap(indices, enclosingLoopToVectorDim);
+  return makePermutationMap(indices, enclosingLoopToVectorDim);
 }
 
-bool mlir::matcher::operatesOnSuperVectorsOf(Operation &op,
-                                             VectorType subVectorType) {
+bool matcher::operatesOnSuperVectorsOf(Operation &op,
+                                       VectorType subVectorType) {
   // First, extract the vector type and distinguish between:
   //   a. ops that *must* lower a super-vector (i.e. vector.transfer_read,
   //      vector.transfer_write); and
@@ -230,3 +274,5 @@ bool mlir::matcher::operatesOnSuperVectorsOf(Operation &op,
 
   return true;
 }
+
+} // namespace mlir
