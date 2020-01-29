@@ -117,6 +117,8 @@ def Linalg_ReshapeOp : Linalg_Op<"reshape", [NoSideEffect]>,
     static StringRef getReassociationAttrName() { return "reassociation"; }
     MemRefType getViewType() { return view().getType().cast<MemRefType>(); }
   }];
+
+  let hasFolder = 1;
 }
 
 def Linalg_SliceOp : Linalg_Op<"slice", [NoSideEffect]>,
@@ -188,6 +190,8 @@ def Linalg_SliceOp : Linalg_Op<"slice", [NoSideEffect]>,
       return res;
     }
   }];
+
+  let hasFolder = 1;
 }
 
 def Linalg_TransposeOp : Linalg_Op<"transpose", [NoSideEffect]>,
@@ -222,6 +226,8 @@ def Linalg_TransposeOp : Linalg_Op<"transpose", [NoSideEffect]>,
     static StringRef getPermutationAttrName() { return "permutation"; }
     ShapedType getShapedType() { return view().getType().cast<ShapedType>(); }
   }];
+
+  let hasFolder = 1;
 }
 
 def Linalg_YieldOp : Linalg_Op<"yield", [NativeOpTrait<"IsTerminator">]>,
