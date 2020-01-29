@@ -708,7 +708,7 @@ Error WasmObjectFile::parseProducersSection(ReadContext &Ctx) {
             "Producers section contains repeated producer",
             object_error::parse_failed);
       }
-      ProducerVec->emplace_back(Name, Version);
+      ProducerVec->emplace_back(std::string(Name), std::string(Version));
     }
   }
   if (Ctx.Ptr != Ctx.End)
