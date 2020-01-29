@@ -81,7 +81,7 @@ protected:
   void appendToHeader(StringRef S) { FileContents[0].second += S; }
 
   void addFile(StringRef Filename, StringRef Content) {
-    FileContents.emplace_back(Filename, Content);
+    FileContents.emplace_back(std::string(Filename), std::string(Content));
   }
 
   llvm::Optional<std::string> rewrite(StringRef Input) {
