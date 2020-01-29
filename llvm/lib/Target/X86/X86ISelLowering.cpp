@@ -25475,8 +25475,7 @@ SDValue X86TargetLowering::LowerFLT_ROUNDS_(SDValue Op,
                             DAG.getConstant(1, DL, MVT::i16)),
                 DAG.getConstant(3, DL, MVT::i16));
 
-  return DAG.getNode((VT.getSizeInBits() < 16 ?
-                      ISD::TRUNCATE : ISD::ZERO_EXTEND), DL, VT, RetVal);
+  return DAG.getZExtOrTrunc(RetVal, DL, VT);
 }
 
 // Split an unary integer op into 2 half sized ops.
