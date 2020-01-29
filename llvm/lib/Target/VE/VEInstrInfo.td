@@ -368,6 +368,18 @@ multiclass RRNCm<string opcStr, bits<8>opc,
   RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, immOp2>,
   RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, immOp2>;
 
+// Used by fadd, fsub, and similar floating point instructions
+//   The order of operands are "$sx, $sy, $sz"
+
+multiclass RRFm<string opcStr, bits<8>opc,
+               RegisterClass RC, ValueType Ty, Operand immOp, Operand immOp2,
+               SDPatternOperator OpNode=null_frag> :
+  RRmrr<opcStr, opc, RC, Ty, RC, Ty, OpNode>,
+  RRmir<opcStr, opc, RC, Ty, RC, Ty, immOp, null_frag>,
+  RRmiz<opcStr, opc, RC, Ty, RC, Ty, immOp, null_frag>,
+  RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, immOp2>,
+  RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, immOp2>;
+
 // Multiclass for RR type instructions
 //   Used by sra, sla, sll, and similar instructions
 //   The order of operands are "$sx, $sz, $sy"
@@ -667,6 +679,26 @@ def : Pat<(i32 (srl i32:$src, i32:$val)),
             $src, sub_i32), 32), $val), sub_i32)>;
 
 // 5.3.2.5. Floating-point Arithmetic Operation Instructions
+let cx = 0 in
+defm FAD : RRFm<"fadd.d", 0x4C, I64, f64, simm7Op64, uimm6Op64, fadd>;
+let cx = 1 in
+defm FADS : RRFm<"fadd.s", 0x4C, F32, f32, simm7Op32, uimm6Op32, fadd>;
+
+let cx = 0 in
+defm FSB : RRFm<"fsub.d", 0x5C, I64, f64, simm7Op64, uimm6Op64, fsub>;
+let cx = 1 in
+defm FSBS : RRFm<"fsub.s", 0x5C, F32, f32, simm7Op32, uimm6Op32, fsub>;
+
+let cx = 0 in
+defm FMP : RRFm<"fmul.d", 0x4D, I64, f64, simm7Op64, uimm6Op64, fmul>;
+let cx = 1 in
+defm FMPS : RRFm<"fmul.s", 0x4D, F32, f32, simm7Op32, uimm6Op32, fmul>;
+
+let cx = 0 in
+defm FDV : RRFm<"fdiv.d", 0x5D, I64, f64, simm7Op64, uimm6Op64, fdiv>;
+let cx = 1 in
+defm FDVS : RRFm<"fdiv.s", 0x5D, F32, f32, simm7Op32, uimm6Op32, fdiv>;
+
 // FCP instruction
 let cx = 0 in
 defm FCP : RRm<"fcmp.d", 0x7E, I64, f64, simm7Op64, uimm6Op64>;
