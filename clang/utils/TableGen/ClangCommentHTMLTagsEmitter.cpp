@@ -23,7 +23,8 @@ void clang::EmitClangCommentHTMLTags(RecordKeeper &Records, raw_ostream &OS) {
   std::vector<Record *> Tags = Records.getAllDerivedDefinitions("Tag");
   std::vector<StringMatcher::StringPair> Matches;
   for (Record *Tag : Tags) {
-    Matches.emplace_back(Tag->getValueAsString("Spelling"), "return true;");
+    Matches.emplace_back(std::string(Tag->getValueAsString("Spelling")),
+                         "return true;");
   }
 
   emitSourceFileHeader("HTML tag name matcher", OS);
