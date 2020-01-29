@@ -43,6 +43,12 @@ inline void stringify_append<char>(llvm::raw_string_ostream &ss,
   ss << '\"' << t << '\"';
 }
 
+template <>
+inline void stringify_append<nullptr_t>(llvm::raw_string_ostream &ss,
+                                        const nullptr_t &t) {
+  ss << "\"nullptr\"";
+}
+
 template <typename Head>
 inline void stringify_helper(llvm::raw_string_ostream &ss, const Head &head) {
   stringify_append(ss, head);
@@ -648,10 +654,6 @@ public:
 
     unsigned id = registry.GetID(uintptr_t(f));
 
-#ifdef LLDB_REPRO_INSTR_TRACE
-    Log(id);
-#endif
-
     serializer.SerializeAll(id);
     serializer.SerializeAll(args...);
 
@@ -662,6 +664,10 @@ public:
       serializer.SerializeAll(0);
       m_result_recorded = true;
     }
+
+#ifdef LLDB_REPRO_INSTR_TRACE
+    Log(id, m_result_recorded);
+#endif
   }
 
   /// Records a single function call.
@@ -674,16 +680,16 @@ public:
 
     unsigned id = registry.GetID(uintptr_t(f));
 
-#ifdef LLDB_REPRO_INSTR_TRACE
-    Log(id);
-#endif
-
     serializer.SerializeAll(id);
     serializer.SerializeAll(args...);
 
     // Record result.
     serializer.SerializeAll(0);
     m_result_recorded = true;
+
+#ifdef LLDB_REPRO_INSTR_TRACE
+    Log(id, true);
+#endif
   }
 
   /// Record the result of a function call.
@@ -693,6 +699,9 @@ public:
       assert(!m_result_recorded);
       m_serializer->SerializeAll(r);
       m_result_recorded = true;
+#ifdef LLDB_REPRO_INSTR_TRACE
+      llvm::errs() << " -> " << stringify_args(r) << '\n';
+#endif
     }
     return std::forward<Result>(r);
   }
@@ -706,9 +715,11 @@ private:
   bool ShouldCapture() { return m_local_boundary; }
 
 #ifdef LLDB_REPRO_INSTR_TRACE
-  void Log(unsigned id) {
+  void Log(unsigned id, bool newline) {
     llvm::errs() << "Recording " << id << ": " << m_pretty_func << " ("
-                 << m_pretty_args << ")\n";
+                 << m_pretty_args << ")";
+    if (newline)
+      llvm::errs() << '\n';
   }
 #endif
 
