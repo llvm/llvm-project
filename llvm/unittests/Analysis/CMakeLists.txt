@@ -20,6 +20,7 @@ add_llvm_unittest(AnalysisTests
   GlobalsModRefTest.cpp
   IVDescriptorsTest.cpp
   LazyCallGraphTest.cpp
+  LoadsTest.cpp
   LoopInfoTest.cpp
   MemoryBuiltinsTest.cpp
   MemorySSATest.cpp
