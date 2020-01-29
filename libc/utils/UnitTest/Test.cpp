@@ -11,7 +11,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 
-namespace llvm_libc {
+namespace __llvm_libc {
 namespace testing {
 
 // This need not be a class as all it has is a single read-write state variable.
@@ -224,6 +224,6 @@ bool Test::testStrNe(RunContext &Ctx, const char *LHS, const char *RHS,
 }
 
 } // namespace testing
-} // namespace llvm_libc
+} // namespace __llvm_libc
 
-int main() { return llvm_libc::testing::Test::runTests(); }
+int main() { return __llvm_libc::testing::Test::runTests(); }
