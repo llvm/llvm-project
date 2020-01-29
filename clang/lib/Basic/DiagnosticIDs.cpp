@@ -289,7 +289,7 @@ namespace clang {
 
       unsigned getOrCreateDiagID(DiagnosticIDs::Level L, StringRef Message,
                                  DiagnosticIDs &Diags) {
-        DiagDesc D(L, Message);
+        DiagDesc D(L, std::string(Message));
         // Check to see if it already exists.
         std::map<DiagDesc, unsigned>::iterator I = DiagIDs.lower_bound(D);
         if (I != DiagIDs.end() && I->first == D)
