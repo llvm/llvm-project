@@ -878,6 +878,45 @@ TEST_F(FormatTestJS, ColumnLayoutForArrayLiterals) {
                "]);");
 }
 
+TEST_F(FormatTestJS, TrailingCommaInsertion) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_JavaScript);
+  Style.InsertTrailingCommas = FormatStyle::TCS_Wrapped;
+  // Insert comma in wrapped array.
+  verifyFormat("const x = [\n"
+               "  1,  //\n"
+               "  2,\n"
+               "];",
+               "const x = [\n"
+               "  1,  //\n"
+               "  2];",
+               Style);
+  // Insert comma in newly wrapped array.
+  Style.ColumnLimit = 30;
+  verifyFormat("const x = [\n"
+               "  aaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "];",
+               "const x = [aaaaaaaaaaaaaaaaaaaaaaaaa];", Style);
+  // Do not insert trailing commas if they'd exceed the colum limit
+  verifyFormat("const x = [\n"
+               "  aaaaaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "];",
+               "const x = [aaaaaaaaaaaaaaaaaaaaaaaaaaaa];", Style);
+  // Object literals.
+  verifyFormat("const x = {\n"
+               "  a: aaaaaaaaaaaaaaaaa,\n"
+               "};",
+               "const x = {a: aaaaaaaaaaaaaaaaa};", Style);
+  verifyFormat("const x = {\n"
+               "  a: aaaaaaaaaaaaaaaaaaaaaaaaa\n"
+               "};",
+               "const x = {a: aaaaaaaaaaaaaaaaaaaaaaaaa};", Style);
+  // Object literal types.
+  verifyFormat("let x: {\n"
+               "  a: aaaaaaaaaaaaaaaaaaaaa,\n"
+               "};",
+               "let x: {a: aaaaaaaaaaaaaaaaaaaaa};", Style);
+}
+
 TEST_F(FormatTestJS, FunctionLiterals) {
   FormatStyle Style = getGoogleStyle(FormatStyle::LK_JavaScript);
   Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
