@@ -1726,21 +1726,21 @@ public:
   }
 
   void addClass(std::unique_ptr<Record> R) {
-    bool Ins = Classes.insert(std::make_pair(R->getName(),
+    bool Ins = Classes.insert(std::make_pair(std::string(R->getName()),
                                              std::move(R))).second;
     (void)Ins;
     assert(Ins && "Class already exists");
   }
 
   void addDef(std::unique_ptr<Record> R) {
-    bool Ins = Defs.insert(std::make_pair(R->getName(),
+    bool Ins = Defs.insert(std::make_pair(std::string(R->getName()),
                                           std::move(R))).second;
     (void)Ins;
     assert(Ins && "Record already exists");
   }
 
   void addExtraGlobal(StringRef Name, Init *I) {
-    bool Ins = ExtraGlobals.insert(std::make_pair(Name, I)).second;
+    bool Ins = ExtraGlobals.insert(std::make_pair(std::string(Name), I)).second;
     (void)Ins;
     assert(!getDef(Name));
     assert(Ins && "Global already exists");
