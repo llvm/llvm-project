@@ -37,9 +37,6 @@ template <> struct IsIntegral<long long> : public TrueValue {};
 template <> struct IsIntegral<unsigned long long> : public TrueValue {};
 template <> struct IsIntegral<bool> : public TrueValue {};
 
-template <typename Type> struct IsIntegralNotBool : public IsIntegral<Type> {};
-template <> struct IsIntegralNotBool<bool> : public FalseValue {};
-
 template <typename T> struct IsPointerType : public FalseValue {};
 template <typename T> struct IsPointerType<T *> : public TrueValue {};
 

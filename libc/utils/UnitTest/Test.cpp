@@ -204,6 +204,11 @@ template bool Test::test<unsigned long, 0>(RunContext &Ctx, TestCondition Cond,
                                            const char *RHSStr, const char *File,
                                            unsigned long Line);
 
+template bool Test::test<bool, 0>(RunContext &Ctx, TestCondition Cond, bool LHS,
+                                  bool RHS, const char *LHSStr,
+                                  const char *RHSStr, const char *File,
+                                  unsigned long Line);
+
 template bool Test::test<unsigned long long, 0>(
     RunContext &Ctx, TestCondition Cond, unsigned long long LHS,
     unsigned long long RHS, const char *LHSStr, const char *RHSStr,
