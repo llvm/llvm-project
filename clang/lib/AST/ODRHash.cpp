@@ -566,9 +566,16 @@ void ODRHash::AddRecordDecl(const RecordDecl *Record) {
   // Filter out sub-Decls which will not be processed in order to get an
   // accurate count of Decl's.
   llvm::SmallVector<const Decl *, 16> Decls;
-  for (Decl *SubDecl : Record->decls())
+  for (Decl *SubDecl : Record->decls()) {
+    if (auto *SubRD = dyn_cast<RecordDecl>(SubDecl)) {
+      if (!SubRD->isCompleteDefinition())
+        continue;
+      ID.AddInteger(SubRD->getODRHash());
+      continue;
+    }
     if (isWhitelistedDecl(SubDecl, Record))
       Decls.push_back(SubDecl);
+  }
 
   ID.AddInteger(Decls.size());
   for (auto SubDecl : Decls)

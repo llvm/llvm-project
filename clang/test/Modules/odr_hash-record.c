@@ -283,6 +283,94 @@ struct TS3 {
 struct TS3 ts3;
 #endif
 
+#if defined(FIRST)
+struct AU {
+  union {
+    int a;
+  };
+};
+#elif defined(SECOND)
+struct AU {
+  union {
+    char a;
+  };
+};
+#else
+struct AU au;
+// expected-error@first.h:* {{'AU' has different definitions in different modules; first difference is definition in module 'FirstModule' found field 'a' with type 'int'}}
+// expected-note@second.h:* {{but in 'SecondModule' found field 'a' with type 'char'}}
+#endif
+
+#if defined(FIRST)
+struct AUS {
+  union {
+    int a;
+  };
+  struct {
+    char b;
+  };
+};
+#elif defined(SECOND)
+struct AUS {
+  union {
+    int a;
+  };
+  struct {
+    int b;
+  };
+};
+#else
+struct AUS aus;
+// expected-error@first.h:* {{'AUS' has different definitions in different modules; first difference is definition in module 'FirstModule' found field 'b' with type 'char'}}
+// expected-note@second.h:* {{but in 'SecondModule' found field 'b' with type 'int'}}
+#endif
+
+#if defined(FIRST)
+struct AUS1 {
+  union {
+    int x;
+    union {
+      int y;
+      struct {
+        int z;
+      };
+    };
+  };
+};
+#elif defined(SECOND)
+struct AUS1 {
+  union {
+    int x;
+    union {
+      int y;
+      struct {
+        char z;
+      };
+    };
+  };
+};
+#else
+struct AUS1 aus1;
+// expected-error@first.h:* {{'AUS1' has different definitions in different modules; first difference is definition in module 'FirstModule' found field 'z' with type 'int'}}
+// expected-note@second.h:* {{but in 'SecondModule' found field 'z' with type 'char'}}
+#endif
+
+#if defined(FIRST)
+union U {
+  int a;
+  char b;
+};
+#elif defined(SECOND)
+union U {
+  int a;
+  float b;
+};
+#else
+union U u;
+// expected-error@second.h:* {{'U::b' from module 'SecondModule' is not present in definition of 'union U' in module 'FirstModule'}}
+// expected-note@first.h:* {{declaration of 'b' does not match}}
+#endif
+
 // Keep macros contained to one file.
 #ifdef FIRST
 #undef FIRST
