@@ -173,7 +173,7 @@ FSEventStreamRef createFSEventStream(
       if (::realpath(P.begin(), Buffer) != nullptr)
         RealPath = Buffer;
       else
-        RealPath = std::string(Path);
+        RealPath = Path.str();
     }
 
     FSEventStreamContext Context;
