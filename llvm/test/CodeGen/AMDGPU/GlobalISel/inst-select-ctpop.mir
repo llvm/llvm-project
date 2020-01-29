@@ -123,8 +123,8 @@ body: |
     ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
     ; CHECK: [[S_BCNT1_I32_B32_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B32 [[COPY]], implicit-def $scc
-    ; CHECK: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[S_BCNT1_I32_B32_]], [[COPY1]], implicit-def $scc
-    ; CHECK: S_ENDPGM 0, implicit [[S_ADD_U32_]]
+    ; CHECK: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_BCNT1_I32_B32_]], [[COPY1]], implicit-def $scc
+    ; CHECK: S_ENDPGM 0, implicit [[S_ADD_I32_]]
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(s32) = G_CTPOP %0

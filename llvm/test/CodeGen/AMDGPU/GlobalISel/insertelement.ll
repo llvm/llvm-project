@@ -2093,7 +2093,7 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v_add_1(<8 x double> %vec, do
 ; GPRIDX-NEXT:    s_mov_b64 s[0:1], exec
 ; GPRIDX-NEXT:  BB32_1: ; =>This Inner Loop Header: Depth=1
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s2, v18
-; GPRIDX-NEXT:    s_add_u32 s3, s2, 1
+; GPRIDX-NEXT:    s_add_i32 s3, s2, 1
 ; GPRIDX-NEXT:    s_lshl_b32 s3, s3, 1
 ; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v18
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
@@ -2139,7 +2139,7 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v_add_1(<8 x double> %vec, do
 ; MOVREL-NEXT:    v_mov_b32_e32 v19, v0
 ; MOVREL-NEXT:    v_mov_b32_e32 v33, v14
 ; MOVREL-NEXT:    v_mov_b32_e32 v32, v13
-; MOVREL-NEXT:    s_add_u32 s2, s1, 1
+; MOVREL-NEXT:    s_add_i32 s2, s1, 1
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v18
 ; MOVREL-NEXT:    v_mov_b32_e32 v31, v12
 ; MOVREL-NEXT:    v_mov_b32_e32 v30, v11
