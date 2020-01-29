@@ -48,16 +48,33 @@ __global__ void kernel() { lib_fn(); }
 }
 
 // The kernel and lib function should have the same attributes.
-// CHECK: define void @kernel() [[attr:#[0-9]+]]
-// CHECK: define internal void @lib_fn() [[attr]]
+// CHECK: define void @kernel() [[kattr:#[0-9]+]]
+// CHECK: define internal void @lib_fn() [[fattr:#[0-9]+]]
 
 // FIXME: These -NOT checks do not work as intended and do not check on the same
 // line.
 
-// Check the attribute list.
-// CHECK: attributes [[attr]] = {
+// Check the attribute list for kernel.
+// CHECK: attributes [[kattr]] = {
 
 // CHECK-SAME: convergent
+// CHECK-SAME: norecurse
+
+// FTZ-NOT: "denormal-fp-math"
+
+// FTZ-SAME: "denormal-fp-math-f32"="preserve-sign,preserve-sign"
+// NOFTZ-SAME: "denormal-fp-math-f32"="ieee,ieee"
+
+// CHECK-SAME: "no-trapping-math"="true"
+
+// FAST-SAME: "unsafe-fp-math"="true"
+// NOFAST-NOT: "unsafe-fp-math"="true"
+
+// Check the attribute list for lib_fn.
+// CHECK: attributes [[fattr]] = {
+
+// CHECK-SAME: convergent
+// CHECK-NOT: norecurse
 
 // FTZ-NOT: "denormal-fp-math"
 
