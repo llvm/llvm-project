@@ -173,6 +173,7 @@ classifyToken(const FunctionDecl &F, Preprocessor &PP, Token Tok) {
   bool ContainsSomethingElse = false;
 
   Token End;
+  End.startToken();
   End.setKind(tok::eof);
   SmallVector<Token, 2> Stream{Tok, End};
 
