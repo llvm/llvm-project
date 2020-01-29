@@ -242,10 +242,10 @@ static bool
 derivedTypeHasReplacementMethod(const MatchFinder::MatchResult &Result,
                                 llvm::StringRef ReplacementMethod) {
   const auto *Class = Result.Nodes.getNodeAs<CXXRecordDecl>("class");
-  return !match(cxxRecordDecl(unless(isExpansionInFileMatching(
-                                  "gtest/gtest(-typed-test)?\\.h$")),
-                              hasMethod(cxxMethodDecl(
-                                  hasName(std::string(ReplacementMethod))))),
+  return !match(cxxRecordDecl(
+                    unless(isExpansionInFileMatching(
+                        "gtest/gtest(-typed-test)?\\.h$")),
+                    hasMethod(cxxMethodDecl(hasName(ReplacementMethod)))),
                 *Class, *Result.Context)
               .empty();
 }
