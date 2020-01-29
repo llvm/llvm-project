@@ -976,6 +976,25 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
   }
 }
 
+/// Takes a CXXMethodDecl and completes the return type if necessary. This
+/// is currently only necessary for virtual functions with covariant return
+/// types where Clang's CodeGen expects that the underlying records are already
+/// completed.
+static void MaybeCompleteReturnType(ClangASTImporter &importer,
+                                        CXXMethodDecl *to_method) {
+  if (!to_method->isVirtual())
+    return;
+  QualType return_type = to_method->getReturnType();
+  if (!return_type->isPointerType() && !return_type->isReferenceType())
+    return;
+
+  clang::RecordDecl *rd = return_type->getPointeeType()->getAsRecordDecl();
+  if (!rd)
+    return;
+
+  importer.CompleteTagDecl(rd);
+}
+
 void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
                                                      clang::Decl *to) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
@@ -1121,6 +1140,9 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
       }
     }
   }
+
+  if (clang::CXXMethodDecl *to_method = dyn_cast<CXXMethodDecl>(to))
+    MaybeCompleteReturnType(m_master, to_method);
 }
 
 clang::Decl *
