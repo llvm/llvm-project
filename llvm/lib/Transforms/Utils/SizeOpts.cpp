@@ -84,6 +84,7 @@ bool llvm::shouldOptimizeForSize(const Function *F, ProfileSummaryInfo *PSI,
 bool llvm::shouldOptimizeForSize(const BasicBlock *BB, ProfileSummaryInfo *PSI,
                                  BlockFrequencyInfo *BFI,
                                  PGSOQueryType QueryType) {
+  assert(BB);
   return shouldOptimizeForSizeImpl<BasicBlockBFIAdapter>(BB, PSI, BFI,
                                                          QueryType);
 }

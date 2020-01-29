@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineSizeOpts.h"
+#include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 
@@ -33,12 +34,27 @@ bool isColdBlock(const MachineBasicBlock *MBB,
   return Count && PSI->isColdCount(*Count);
 }
 
+bool isColdBlock(BlockFrequency BlockFreq,
+                 ProfileSummaryInfo *PSI,
+                 const MachineBlockFrequencyInfo *MBFI) {
+  auto Count = MBFI->getProfileCountFromFreq(BlockFreq.getFrequency());
+  return Count && PSI->isColdCount(*Count);
+}
+
 /// Like ProfileSummaryInfo::isHotBlockNthPercentile but for MachineBasicBlock.
 static bool isHotBlockNthPercentile(int PercentileCutoff,
                                     const MachineBasicBlock *MBB,
                                     ProfileSummaryInfo *PSI,
                                     const MachineBlockFrequencyInfo *MBFI) {
   auto Count = MBFI->getBlockProfileCount(MBB);
+  return Count && PSI->isHotCountNthPercentile(PercentileCutoff, *Count);
+}
+
+static bool isHotBlockNthPercentile(int PercentileCutoff,
+                                    BlockFrequency BlockFreq,
+                                    ProfileSummaryInfo *PSI,
+                                    const MachineBlockFrequencyInfo *MBFI) {
+  auto Count = MBFI->getProfileCountFromFreq(BlockFreq.getFrequency());
   return Count && PSI->isHotCountNthPercentile(PercentileCutoff, *Count);
 }
 
@@ -95,12 +111,24 @@ struct MachineBasicBlockBFIAdapter {
                           const MachineBlockFrequencyInfo *MBFI) {
     return machine_size_opts_detail::isColdBlock(MBB, PSI, MBFI);
   }
+  static bool isColdBlock(BlockFrequency BlockFreq,
+                          ProfileSummaryInfo *PSI,
+                          const MachineBlockFrequencyInfo *MBFI) {
+    return machine_size_opts_detail::isColdBlock(BlockFreq, PSI, MBFI);
+  }
   static bool isHotBlockNthPercentile(int CutOff,
                                       const MachineBasicBlock *MBB,
                                       ProfileSummaryInfo *PSI,
                                       const MachineBlockFrequencyInfo *MBFI) {
     return machine_size_opts_detail::isHotBlockNthPercentile(
         CutOff, MBB, PSI, MBFI);
+  }
+  static bool isHotBlockNthPercentile(int CutOff,
+                                      BlockFrequency BlockFreq,
+                                      ProfileSummaryInfo *PSI,
+                                      const MachineBlockFrequencyInfo *MBFI) {
+    return machine_size_opts_detail::isHotBlockNthPercentile(
+        CutOff, BlockFreq, PSI, MBFI);
   }
 };
 } // end anonymous namespace
@@ -117,6 +145,19 @@ bool llvm::shouldOptimizeForSize(const MachineBasicBlock *MBB,
                                  ProfileSummaryInfo *PSI,
                                  const MachineBlockFrequencyInfo *MBFI,
                                  PGSOQueryType QueryType) {
+  assert(MBB);
   return shouldOptimizeForSizeImpl<MachineBasicBlockBFIAdapter>(
       MBB, PSI, MBFI, QueryType);
+}
+
+bool llvm::shouldOptimizeForSize(const MachineBasicBlock *MBB,
+                                 ProfileSummaryInfo *PSI,
+                                 MBFIWrapper *MBFIW,
+                                 PGSOQueryType QueryType) {
+  assert(MBB);
+  if (!PSI || !MBFIW)
+    return false;
+  BlockFrequency BlockFreq = MBFIW->getBlockFreq(MBB);
+  return shouldOptimizeForSizeImpl<MachineBasicBlockBFIAdapter>(
+      BlockFreq, PSI, &MBFIW->getMBFI(), QueryType);
 }

@@ -655,8 +655,8 @@ ProfitableToMerge(MachineBasicBlock *MBB1, MachineBasicBlock *MBB2,
   MachineFunction *MF = MBB1->getParent();
   bool OptForSize =
       MF->getFunction().hasOptSize() ||
-      (llvm::shouldOptimizeForSize(MBB1, PSI, &MBBFreqInfo.getMBFI()) &&
-       llvm::shouldOptimizeForSize(MBB2, PSI, &MBBFreqInfo.getMBFI()));
+      (llvm::shouldOptimizeForSize(MBB1, PSI, &MBBFreqInfo) &&
+       llvm::shouldOptimizeForSize(MBB2, PSI, &MBBFreqInfo));
   return EffectiveTailLen >= 2 && OptForSize &&
          (FullBlockTail1 || FullBlockTail2);
 }
@@ -1511,7 +1511,7 @@ ReoptimizeBlock:
 
   bool OptForSize =
       MF.getFunction().hasOptSize() ||
-      llvm::shouldOptimizeForSize(MBB, PSI, &MBBFreqInfo.getMBFI());
+      llvm::shouldOptimizeForSize(MBB, PSI, &MBBFreqInfo);
   if (!IsEmptyBlock(MBB) && MBB->pred_size() == 1 && OptForSize) {
     // Changing "Jcc foo; foo: jmp bar;" into "Jcc bar;" might change the branch
     // direction, thereby defeating careful block placement and regressing
