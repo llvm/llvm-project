@@ -245,7 +245,8 @@ CodeCoverageTool::getSourceFile(StringRef SourceFile) {
     error(EC.message(), SourceFile);
     return EC;
   }
-  LoadedSourceFiles.emplace_back(SourceFile, std::move(Buffer.get()));
+  LoadedSourceFiles.emplace_back(std::string(SourceFile),
+                                 std::move(Buffer.get()));
   return *LoadedSourceFiles.back().second;
 }
 
