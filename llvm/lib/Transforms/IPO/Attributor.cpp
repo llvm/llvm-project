@@ -2417,8 +2417,9 @@ struct AANoAliasFloating final : AANoAliasImpl {
     Value &Val = getAssociatedValue();
     if (isa<AllocaInst>(Val))
       indicateOptimisticFixpoint();
-    if (isa<ConstantPointerNull>(Val) &&
-        Val.getType()->getPointerAddressSpace() == 0)
+    else if (isa<ConstantPointerNull>(Val) &&
+             !NullPointerIsDefined(getAnchorScope(),
+                                   Val.getType()->getPointerAddressSpace()))
       indicateOptimisticFixpoint();
   }
 
@@ -2495,6 +2496,11 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     // See callsite argument attribute and callee argument attribute.
     ImmutableCallSite ICS(&getAnchorValue());
     if (ICS.paramHasAttr(getArgNo(), Attribute::NoAlias))
+      indicateOptimisticFixpoint();
+    Value &Val = getAssociatedValue();
+    if (isa<ConstantPointerNull>(Val) &&
+        !NullPointerIsDefined(getAnchorScope(),
+                              Val.getType()->getPointerAddressSpace()))
       indicateOptimisticFixpoint();
   }
 
