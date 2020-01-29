@@ -470,6 +470,6 @@ ErrorOr<std::string> FileSystem::GetExternalPath(const FileSpec &file_spec) {
 
 void FileSystem::AddFile(const llvm::Twine &file) {
   if (m_collector && !llvm::sys::fs::is_directory(file)) {
-    m_collector->addFile(file);
+    m_collector->AddFile(file);
   }
 }
