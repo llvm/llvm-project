@@ -127,7 +127,7 @@ lldb::ConnectionStatus ConnectionGenericFile::Connect(llvm::StringRef path,
   }
 
   m_owns_file = true;
-  m_uri.assign(path);
+  m_uri = path.str();
   return eConnectionStatusSuccess;
 }
 

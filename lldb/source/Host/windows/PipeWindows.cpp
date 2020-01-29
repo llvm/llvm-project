@@ -104,7 +104,7 @@ Status PipeWindows::CreateNew(llvm::StringRef name,
   if (CanRead() || CanWrite())
     return Status(ERROR_ALREADY_EXISTS, eErrorTypeWin32);
 
-  std::string pipe_path = g_pipe_name_prefix;
+  std::string pipe_path = g_pipe_name_prefix.str();
   pipe_path.append(name.str());
 
   // Always open for overlapped i/o.  We implement blocking manually in Read
@@ -182,7 +182,7 @@ Status PipeWindows::OpenNamedPipe(llvm::StringRef name,
   SECURITY_ATTRIBUTES attributes = {};
   attributes.bInheritHandle = child_process_inherit;
 
-  std::string pipe_path = g_pipe_name_prefix;
+  std::string pipe_path = g_pipe_name_prefix.str();
   pipe_path.append(name.str());
 
   if (is_read) {
