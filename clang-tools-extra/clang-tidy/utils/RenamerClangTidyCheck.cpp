@@ -340,7 +340,7 @@ void RenamerClangTidyCheck::checkMacro(SourceManager &SourceMgr,
     return;
   FailureInfo &Info = *MaybeFailure;
   StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
-  NamingCheckId ID(MI->getDefinitionLoc(), Name);
+  NamingCheckId ID(MI->getDefinitionLoc(), std::string(Name));
   NamingCheckFailure &Failure = NamingCheckFailures[ID];
   SourceRange Range(MacroNameTok.getLocation(), MacroNameTok.getEndLoc());
 
@@ -351,7 +351,7 @@ void RenamerClangTidyCheck::checkMacro(SourceManager &SourceMgr,
 void RenamerClangTidyCheck::expandMacro(const Token &MacroNameTok,
                                         const MacroInfo *MI) {
   StringRef Name = MacroNameTok.getIdentifierInfo()->getName();
-  NamingCheckId ID(MI->getDefinitionLoc(), Name);
+  NamingCheckId ID(MI->getDefinitionLoc(), std::string(Name));
 
   auto Failure = NamingCheckFailures.find(ID);
   if (Failure == NamingCheckFailures.end())
