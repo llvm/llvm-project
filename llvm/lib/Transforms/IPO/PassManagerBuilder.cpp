@@ -13,6 +13,7 @@
 
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm-c/Transforms/PassManagerBuilder.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CFLAndersAliasAnalysis.h"
@@ -187,8 +188,13 @@ PassManagerBuilder::~PassManagerBuilder() {
 }
 
 /// Set of global extensions, automatically added as part of the standard set.
-static ManagedStatic<SmallVector<std::pair<PassManagerBuilder::ExtensionPointTy,
-   PassManagerBuilder::ExtensionFn>, 8> > GlobalExtensions;
+static ManagedStatic<
+    SmallVector<std::tuple<PassManagerBuilder::ExtensionPointTy,
+                           PassManagerBuilder::ExtensionFn,
+                           PassManagerBuilder::GlobalExtensionID>,
+                8>>
+    GlobalExtensions;
+static PassManagerBuilder::GlobalExtensionID GlobalExtensionsCounter;
 
 /// Check if GlobalExtensions is constructed and not empty.
 /// Since GlobalExtensions is a managed static, calling 'empty()' will trigger
@@ -197,10 +203,29 @@ static bool GlobalExtensionsNotEmpty() {
   return GlobalExtensions.isConstructed() && !GlobalExtensions->empty();
 }
 
-void PassManagerBuilder::addGlobalExtension(
-    PassManagerBuilder::ExtensionPointTy Ty,
-    PassManagerBuilder::ExtensionFn Fn) {
-  GlobalExtensions->push_back(std::make_pair(Ty, std::move(Fn)));
+PassManagerBuilder::GlobalExtensionID
+PassManagerBuilder::addGlobalExtension(PassManagerBuilder::ExtensionPointTy Ty,
+                                       PassManagerBuilder::ExtensionFn Fn) {
+  auto ExtensionID = GlobalExtensionsCounter++;
+  GlobalExtensions->push_back(std::make_tuple(Ty, std::move(Fn), ExtensionID));
+  return ExtensionID;
+}
+
+void PassManagerBuilder::removeGlobalExtension(
+    PassManagerBuilder::GlobalExtensionID ExtensionID) {
+  // RegisterStandardPasses may try to call this function after GlobalExtensions
+  // has already been destroyed; doing so should not generate an error.
+  if (!GlobalExtensions.isConstructed())
+    return;
+
+  auto GlobalExtension =
+      llvm::find_if(*GlobalExtensions, [ExtensionID](const auto &elem) {
+        return std::get<2>(elem) == ExtensionID;
+      });
+  assert(GlobalExtension != GlobalExtensions->end() &&
+         "The extension ID to be removed should always be valid.");
+
+  GlobalExtensions->erase(GlobalExtension);
 }
 
 void PassManagerBuilder::addExtension(ExtensionPointTy Ty, ExtensionFn Fn) {
@@ -211,8 +236,8 @@ void PassManagerBuilder::addExtensionsToPM(ExtensionPointTy ETy,
                                            legacy::PassManagerBase &PM) const {
   if (GlobalExtensionsNotEmpty()) {
     for (auto &Ext : *GlobalExtensions) {
-      if (Ext.first == ETy)
-        Ext.second(*this, PM);
+      if (std::get<0>(Ext) == ETy)
+        std::get<1>(Ext)(*this, PM);
     }
   }
   for (unsigned i = 0, e = Extensions.size(); i != e; ++i)
