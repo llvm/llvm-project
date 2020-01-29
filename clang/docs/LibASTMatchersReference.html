@@ -502,6 +502,20 @@ in
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('tagDecl0')"><a name="tagDecl0Anchor">tagDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="tagDecl0"><pre>Matches tag declarations.
+
+Example matches X, Z, U, S, E
+  class X;
+  template&lt;class T&gt; class Z {};
+  struct S {};
+  union U {};
+  enum E {
+    A, B, C
+  };
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('templateTypeParmDecl0')"><a name="templateTypeParmDecl0Anchor">templateTypeParmDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmDecl.html">TemplateTypeParmDecl</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="templateTypeParmDecl0"><pre>Matches template type parameter declarations.
 
@@ -3957,36 +3971,6 @@ functionDecl(hasAnyParameter(hasType(isVolatileQualified())))
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1RecordDecl.html">RecordDecl</a>&gt;</td><td class="name" onclick="toggle('isClass0')"><a name="isClass0Anchor">isClass</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isClass0"><pre>Matches RecordDecl object that are spelled with "class."
-
-Example matches C, but not S or U.
-  struct S {};
-  class C {};
-  union U {};
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1RecordDecl.html">RecordDecl</a>&gt;</td><td class="name" onclick="toggle('isStruct0')"><a name="isStruct0Anchor">isStruct</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isStruct0"><pre>Matches RecordDecl object that are spelled with "struct."
-
-Example matches S, but not C or U.
-  struct S {};
-  class C {};
-  union U {};
-</pre></td></tr>
-
-
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1RecordDecl.html">RecordDecl</a>&gt;</td><td class="name" onclick="toggle('isUnion0')"><a name="isUnion0Anchor">isUnion</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isUnion0"><pre>Matches RecordDecl object that are spelled with "union."
-
-Example matches U, but not C or S.
-  struct S {};
-  class C {};
-  union U {};
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('equalsBoundNode0')"><a name="equalsBoundNode0Anchor">equalsBoundNode</a></td><td>std::string ID</td></tr>
 <tr><td colspan="4" class="doc" id="equalsBoundNode0"><pre>Matches if a node equals a previously bound node.
 
@@ -4090,6 +4074,17 @@ stringLiteral(hasSize(4))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;</td><td class="name" onclick="toggle('isClass0')"><a name="isClass0Anchor">isClass</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isClass0"><pre>Matches TagDecl object that are spelled with "class."
+
+Example matches C, but not S, U or E.
+  struct S {};
+  class C {};
+  union U {};
+  enum E {};
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;</td><td class="name" onclick="toggle('isDefinition0')"><a name="isDefinition0Anchor">isDefinition</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isDefinition0"><pre>Matches if a declaration has a body attached.
 
@@ -4109,6 +4104,39 @@ Example matches A, va, fa
 
 Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCMethodDecl.html">ObjCMethodDecl</a>&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;</td><td class="name" onclick="toggle('isEnum0')"><a name="isEnum0Anchor">isEnum</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isEnum0"><pre>Matches TagDecl object that are spelled with "enum."
+
+Example matches E, but not C, S or U.
+  struct S {};
+  class C {};
+  union U {};
+  enum E {};
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;</td><td class="name" onclick="toggle('isStruct0')"><a name="isStruct0Anchor">isStruct</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isStruct0"><pre>Matches TagDecl object that are spelled with "struct."
+
+Example matches S, but not C, U or E.
+  struct S {};
+  class C {};
+  union U {};
+  enum E {};
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TagDecl.html">TagDecl</a>&gt;</td><td class="name" onclick="toggle('isUnion0')"><a name="isUnion0Anchor">isUnion</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isUnion0"><pre>Matches TagDecl object that are spelled with "union."
+
+Example matches U, but not C, S or E.
+  struct S {};
+  class C {};
+  union U {};
+  enum E {};
 </pre></td></tr>
 
 

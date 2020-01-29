@@ -493,6 +493,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(substTemplateTypeParmType);
   REGISTER_MATCHER(switchCase);
   REGISTER_MATCHER(switchStmt);
+  REGISTER_MATCHER(tagDecl);
   REGISTER_MATCHER(tagType);
   REGISTER_MATCHER(templateArgument);
   REGISTER_MATCHER(templateArgumentCountIs);
