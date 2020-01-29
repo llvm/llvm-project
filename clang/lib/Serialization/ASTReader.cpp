@@ -9355,9 +9355,10 @@ void ASTReader::diagnoseOdrViolations() {
     DeclContext *CanonDef = D->getDeclContext();
 
     // Skip ODR checking for structs without a definition for C/ObjC mode.
-    if (RecordDecl *RD = dyn_cast<RecordDecl>(CanonDef))
-      if (!RD->isCompleteDefinition())
-        continue;
+    if (!PP.getLangOpts().CPlusPlus)
+      if (RecordDecl *RD = dyn_cast<RecordDecl>(CanonDef))
+        if (!RD->isCompleteDefinition())
+          continue;
 
     bool Found = false;
     const Decl *DCanon = D->getCanonicalDecl();
@@ -9697,9 +9698,6 @@ void ASTReader::diagnoseOdrViolations() {
       return true;
     }
 
-    assert(getContext().hasSameType(FirstField->getType(),
-                                    SecondField->getType()));
-
     QualType FirstType = FirstField->getType();
     QualType SecondType = SecondField->getType();
     if (ComputeQualTypeODRHash(FirstType) !=
@@ -9713,6 +9711,9 @@ void ASTReader::diagnoseOdrViolations() {
 
       return true;
     }
+
+    assert(getContext().hasSameType(FirstField->getType(),
+                                    SecondField->getType()));
 
     const bool IsFirstBitField = FirstField->isBitField();
     const bool IsSecondBitField = SecondField->isBitField();
@@ -11122,6 +11123,31 @@ void ASTReader::diagnoseOdrViolations() {
     }
   }
 
+  auto PopulateRecordHashes = [&ComputeSubDeclODRHash](DeclHashes &Hashes,
+                                                       RecordDecl *Record,
+                                                       const DeclContext *DC) {
+    std::deque<std::pair<Decl *, const DeclContext *>> WorkList;
+    for (auto *D : Record->decls())
+      WorkList.push_back(std::make_pair(D, DC));
+
+    while (!WorkList.empty()) {
+      auto &P = WorkList.front();
+      WorkList.pop_front();
+      auto *SubRec = dyn_cast<RecordDecl>(P.first);
+      if (!SubRec) {
+        if (!ODRHash::isWhitelistedDecl(P.first, P.second))
+          continue;
+        Hashes.emplace_back(P.first, ComputeSubDeclODRHash(P.first));
+        continue;
+      }
+
+      if (!SubRec->isCompleteDefinition())
+        continue;
+      for (auto *SubD : SubRec->decls())
+        WorkList.push_front(std::make_pair(SubD, SubRec));
+    }
+  };
+
   // Issue any pending ODR-failure (for structural equivalence checks)
   // diagnostics for RecordDecl in C/ObjC, note that in C++ this is
   // done as paert of CXXRecordDecl ODR checking.
@@ -11150,8 +11176,8 @@ void ASTReader::diagnoseOdrViolations() {
       DeclHashes SecondHashes;
 
       const DeclContext *DC = FirstRecord;
-      PopulateHashes(FirstHashes, FirstRecord, DC);
-      PopulateHashes(SecondHashes, SecondRecord, DC);
+      PopulateRecordHashes(FirstHashes, FirstRecord, DC);
+      PopulateRecordHashes(SecondHashes, SecondRecord, DC);
 
       auto DR = FindTypeDiffs(FirstHashes, SecondHashes);
       ODRMismatchDecl FirstDiffType = DR.FirstDiffType;

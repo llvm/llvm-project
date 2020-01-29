@@ -2600,7 +2600,8 @@ static bool allowODRLikeMergeInC(NamedDecl *ND) {
   if (!ND)
     return false;
   // TODO: implement merge for other necessary decls.
-  if (isa<EnumConstantDecl>(ND) || isa<FieldDecl>(ND))
+  if (isa<EnumConstantDecl>(ND) || isa<FieldDecl>(ND) ||
+      isa<IndirectFieldDecl>(ND))
     return true;
   return false;
 }
