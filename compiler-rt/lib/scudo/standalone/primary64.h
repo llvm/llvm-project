@@ -87,7 +87,8 @@ public:
       // limit is mostly arbitrary and based on empirical observations.
       // TODO(kostyak): make the lower limit a runtime option
       Region->CanRelease = (ReleaseToOsInterval >= 0) &&
-                           (getSizeByClassId(I) >= (PageSize / 64));
+                           (I != SizeClassMap::BatchClassId) &&
+                           (getSizeByClassId(I) >= (PageSize / 32));
       Region->RandState = getRandomU32(&Seed);
     }
     ReleaseToOsIntervalMs = ReleaseToOsInterval;
