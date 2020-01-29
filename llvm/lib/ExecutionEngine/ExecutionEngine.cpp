@@ -307,8 +307,8 @@ const GlobalValue *ExecutionEngine::getGlobalValueAtAddress(void *Addr) {
            E = EEState.getGlobalAddressMap().end(); I != E; ++I) {
       StringRef Name = I->first();
       uint64_t Addr = I->second;
-      EEState.getGlobalAddressReverseMap().insert(std::make_pair(
-                                                          Addr, Name));
+      EEState.getGlobalAddressReverseMap().insert(
+          std::make_pair(Addr, std::string(Name)));
     }
   }
 
