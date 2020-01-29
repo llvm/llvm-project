@@ -8,12 +8,12 @@ define amdgpu_kernel void @is_private_vgpr(i8* addrspace(1)* %ptr.ptr) {
 ; CI-LABEL: is_private_vgpr:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; CI-NEXT:    v_mul_lo_u32 v2, 0, v0
-; CI-NEXT:    v_mul_lo_u32 v1, 8, v1
-; CI-NEXT:    v_mul_lo_u32 v3, 8, v0
+; CI-NEXT:    v_mul_lo_u32 v1, v1, 8
+; CI-NEXT:    v_mul_lo_u32 v2, v0, 0
+; CI-NEXT:    v_mul_lo_u32 v3, v0, 8
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; CI-NEXT:    v_mul_hi_u32 v0, 8, v0
-; CI-NEXT:    v_add_i32_e32 v1, vcc, v2, v1
+; CI-NEXT:    v_mul_hi_u32 v0, v0, 8
+; CI-NEXT:    v_add_i32_e32 v1, vcc, v1, v2
 ; CI-NEXT:    v_add_i32_e32 v1, vcc, v1, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, s0, v3
@@ -31,11 +31,11 @@ define amdgpu_kernel void @is_private_vgpr(i8* addrspace(1)* %ptr.ptr) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[6:7], 0x0
-; GFX9-NEXT:    v_mul_lo_u32 v2, 0, v0
-; GFX9-NEXT:    v_mul_hi_u32 v3, 8, v0
-; GFX9-NEXT:    v_mul_lo_u32 v1, 8, v1
-; GFX9-NEXT:    v_mul_lo_u32 v0, 8, v0
-; GFX9-NEXT:    v_add3_u32 v1, v2, v1, v3
+; GFX9-NEXT:    v_mul_lo_u32 v1, v1, 8
+; GFX9-NEXT:    v_mul_lo_u32 v2, v0, 0
+; GFX9-NEXT:    v_mul_hi_u32 v3, v0, 8
+; GFX9-NEXT:    v_mul_lo_u32 v0, v0, 8
+; GFX9-NEXT:    v_add3_u32 v1, v1, v2, v3
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
