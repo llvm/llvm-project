@@ -4053,12 +4053,10 @@ protected:
         module_spec.GetFileSpec().GetFilename() = symbol_fspec.GetFilename();
     }
 
-    // We now have a module that represents a symbol file that can be used
-    // for a module that might exist in the current target, so we need to
-    // find that module in the target
-    ModuleList matching_module_list;
+    // Now module_spec represents a symbol file for a module that might exist
+    // in the current target.  Let's find possible matches.
+    ModuleList matching_modules;
 
-    size_t num_matches = 0;
     // First extract all module specs from the symbol file
     lldb_private::ModuleSpecList symfile_module_specs;
     if (ObjectFile::GetModuleSpecifications(module_spec.GetSymbolFileSpec(),
@@ -4069,34 +4067,30 @@ protected:
       target_arch_module_spec.GetArchitecture() = target->GetArchitecture();
       if (symfile_module_specs.FindMatchingModuleSpec(target_arch_module_spec,
                                                       symfile_module_spec)) {
-        // See if it has a UUID?
         if (symfile_module_spec.GetUUID().IsValid()) {
           // It has a UUID, look for this UUID in the target modules
           ModuleSpec symfile_uuid_module_spec;
           symfile_uuid_module_spec.GetUUID() = symfile_module_spec.GetUUID();
           target->GetImages().FindModules(symfile_uuid_module_spec,
-                                          matching_module_list);
-          num_matches = matching_module_list.GetSize();
+                                          matching_modules);
         }
       }
 
-      if (num_matches == 0) {
-        // No matches yet, iterate through the module specs to find a UUID
-        // value that we can match up to an image in our target
-        const size_t num_symfile_module_specs =
-            symfile_module_specs.GetSize();
-        for (size_t i = 0; i < num_symfile_module_specs && num_matches == 0;
-              ++i) {
+      if (matching_modules.IsEmpty()) {
+        // No matches yet.  Iterate through the module specs to find a UUID
+        // value that we can match up to an image in our target.
+        const size_t num_symfile_module_specs = symfile_module_specs.GetSize();
+        for (size_t i = 0;
+             i < num_symfile_module_specs && matching_modules.IsEmpty(); ++i) {
           if (symfile_module_specs.GetModuleSpecAtIndex(
                   i, symfile_module_spec)) {
             if (symfile_module_spec.GetUUID().IsValid()) {
-              // It has a UUID, look for this UUID in the target modules
+              // It has a UUID.  Look for this UUID in the target modules.
               ModuleSpec symfile_uuid_module_spec;
               symfile_uuid_module_spec.GetUUID() =
                   symfile_module_spec.GetUUID();
               target->GetImages().FindModules(symfile_uuid_module_spec,
-                                              matching_module_list);
-              num_matches = matching_module_list.GetSize();
+                                              matching_modules);
             }
           }
         }
@@ -4104,13 +4098,11 @@ protected:
     }
 
     // Just try to match up the file by basename if we have no matches at
-    // this point
-    if (num_matches == 0) {
-      target->GetImages().FindModules(module_spec, matching_module_list);
-      num_matches = matching_module_list.GetSize();
-    }
+    // this point.  For example, module foo might have symbols in foo.debug.
+    if (matching_modules.IsEmpty())
+      target->GetImages().FindModules(module_spec, matching_modules);
 
-    while (num_matches == 0) {
+    while (matching_modules.IsEmpty()) {
       ConstString filename_no_extension(
           module_spec.GetFileSpec().GetFileNameStrippingExtension());
       // Empty string returned, let's bail
@@ -4123,82 +4115,93 @@ protected:
 
       // Replace basename with one fewer extension
       module_spec.GetFileSpec().GetFilename() = filename_no_extension;
-      target->GetImages().FindModules(module_spec, matching_module_list);
-      num_matches = matching_module_list.GetSize();
+      target->GetImages().FindModules(module_spec, matching_modules);
     }
 
-    if (num_matches > 1) {
+    if (matching_modules.IsEmpty()) {
+      StreamString ss_symfile_uuid;
+      if (module_spec.GetUUID().IsValid()) {
+        ss_symfile_uuid << " (";
+        module_spec.GetUUID().Dump(&ss_symfile_uuid);
+        ss_symfile_uuid << ')';
+      }
+      result.AppendErrorWithFormat(
+          "symbol file '%s'%s does not match any existing module%s\n",
+          symfile_path, ss_symfile_uuid.GetData(),
+          !llvm::sys::fs::is_regular_file(symbol_fspec.GetPath())
+              ? "\n       please specify the full path to the symbol file"
+              : "");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    if (matching_modules.GetSize() > 1) {
       result.AppendErrorWithFormat("multiple modules match symbol file '%s', "
                                    "use the --uuid option to resolve the "
                                    "ambiguity.\n",
                                    symfile_path);
-    } else if (num_matches == 1) {
-      ModuleSP module_sp(matching_module_list.GetModuleAtIndex(0));
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+    
+    assert(matching_modules.GetSize() == 1);
+    ModuleSP module_sp(matching_modules.GetModuleAtIndex(0));
 
-      // The module has not yet created its symbol vendor, we can just give
-      // the existing target module the symfile path to use for when it
-      // decides to create it!
-      module_sp->SetSymbolFileFileSpec(symbol_fspec);
+    // The module has not yet created its symbol vendor, we can just give
+    // the existing target module the symfile path to use for when it
+    // decides to create it!
+    module_sp->SetSymbolFileFileSpec(symbol_fspec);
 
-      SymbolFile *symbol_file =
-          module_sp->GetSymbolFile(true, &result.GetErrorStream());
-      if (symbol_file) {
-        ObjectFile *object_file = symbol_file->GetObjectFile();
-
-        if (object_file && object_file->GetFileSpec() == symbol_fspec) {
-          // Provide feedback that the symfile has been successfully added.
-          const FileSpec &module_fs = module_sp->GetFileSpec();
-          result.AppendMessageWithFormat(
-              "symbol file '%s' has been added to '%s'\n", symfile_path,
-              module_fs.GetPath().c_str());
-
-          // Let clients know something changed in the module if it is
-          // currently loaded
-          ModuleList module_list;
-          module_list.Append(module_sp);
-          target->SymbolsDidLoad(module_list);
-
-          // Make sure we load any scripting resources that may be embedded
-          // in the debug info files in case the platform supports that.
-          Status error;
-          StreamString feedback_stream;
-          module_sp->LoadScriptingResourceInTarget(target, error,
-                                                    &feedback_stream);
-          if (error.Fail() && error.AsCString())
-            result.AppendWarningWithFormat(
-                "unable to load scripting data for module %s - error "
-                "reported was %s",
-                module_sp->GetFileSpec()
-                    .GetFileNameStrippingExtension()
-                    .GetCString(),
-                error.AsCString());
-          else if (feedback_stream.GetSize())
-            result.AppendWarningWithFormat("%s", feedback_stream.GetData());
-
-          flush = true;
-          result.SetStatus(eReturnStatusSuccessFinishResult);
-          return true;
-        }
-      }
-      // Clear the symbol file spec if anything went wrong
+    SymbolFile *symbol_file =
+        module_sp->GetSymbolFile(true, &result.GetErrorStream());
+    if (!symbol_file) {
+      result.AppendErrorWithFormat("symbol file '%s' could not be loaded\n",
+                                   symfile_path);
+      result.SetStatus(eReturnStatusFailed);
       module_sp->SetSymbolFileFileSpec(FileSpec());
+      return false;
     }
 
-    namespace fs = llvm::sys::fs;
-    StreamString ss_symfile_uuid;
-    if (module_spec.GetUUID().IsValid()) {
-      ss_symfile_uuid << " (";
-      module_spec.GetUUID().Dump(&ss_symfile_uuid);
-      ss_symfile_uuid << ')';
+    ObjectFile *object_file = symbol_file->GetObjectFile();
+    if (!object_file || object_file->GetFileSpec() != symbol_fspec) {
+      result.AppendError("the object file could not be loaded\n");
+      result.SetStatus(eReturnStatusFailed);
+      module_sp->SetSymbolFileFileSpec(FileSpec());
+      return false;
     }
-    result.AppendErrorWithFormat(
-        "symbol file '%s'%s does not match any existing module%s\n",
-        symfile_path, ss_symfile_uuid.GetData(),
-        !fs::is_regular_file(symbol_fspec.GetPath())
-            ? "\n       please specify the full path to the symbol file"
-            : "");
-    result.SetStatus(eReturnStatusFailed);
-    return false;
+    
+    // Provide feedback that the symfile has been successfully added.
+    const FileSpec &module_fs = module_sp->GetFileSpec();
+    result.AppendMessageWithFormat(
+        "symbol file '%s' has been added to '%s'\n", symfile_path,
+        module_fs.GetPath().c_str());
+
+    // Let clients know something changed in the module if it is
+    // currently loaded
+    ModuleList module_list;
+    module_list.Append(module_sp);
+    target->SymbolsDidLoad(module_list);
+
+    // Make sure we load any scripting resources that may be embedded
+    // in the debug info files in case the platform supports that.
+    Status error;
+    StreamString feedback_stream;
+    module_sp->LoadScriptingResourceInTarget(target, error,
+                                             &feedback_stream);
+    if (error.Fail() && error.AsCString())
+      result.AppendWarningWithFormat(
+          "unable to load scripting data for module %s - error "
+          "reported was %s",
+          module_sp->GetFileSpec()
+              .GetFileNameStrippingExtension()
+              .GetCString(),
+          error.AsCString());
+    else if (feedback_stream.GetSize())
+      result.AppendWarning(feedback_stream.GetData());
+
+    flush = true;
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+    return true;
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
