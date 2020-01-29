@@ -2445,9 +2445,149 @@ ARM
 
 Reserve the r9 register (ARM only)
 
+.. option:: -march=<name>[+<extension>...]
+
+Specify the target Arm ISA.
+
+The list of accepted architecture names is as follows:
+``armv2``, ``armv2a``,
+``armv3``, ``armv3m``,
+``armv4``, ``armv4t``,
+``armv5t``, ``armv5te``,
+``armv6``, ``armv6k``, ``armv6t2``, ``armv6kz``, ``armv6-m``,
+``armv7-a``, ``armv7ve``, ``armv7-r``, ``armv7-m``, ``armv7e-m``,
+``armv8-a``, ``armv8.1-a``, ``armv8.2-a``, ``armv8.3-a``, ``armv8.5-a``, ``armv8-r``,
+``armv8-m.base``, ``armv8-m.main``, ``armv8.1-m.main``,
+``iwmmxt``,
+``iwmmxt2``,
+``xscale``,
+``armv7s``,
+``armv7k``
+
+Extension modifiers can be used to enable optional architecture features. The
+syntax ``+no``<extension> can be used to disable previously enabled features.
+
+Some of the extension names are generic, but have an architecture specific
+effect.  For example, the extension syntax ``+fp`` might enable FPv4-SP-D16 for
+the Armv7-M architecture, but VFPv3-D16 for the Armv7-A arrchitecture.
+
+The following extension names are recognised:
+
+``+crc``
+    Enable Cyclic Redundancy Check instructions
+``+crypto``
+    Enable cryptographic instructions
+``+sha2``
+    Enable SHA1 and SHA256 support instructions
+``+aes``
+    Enable AES support instructions
+``+dotprod``
+    Enable dot product instructions
+``+dsp``
+    Enable digital signal processing (DSP) instructions in ARM and Thumb2
+``+fp``
+    Enable floating-point instructions for the baseline FPU implementation
+    available for the given architecture
+``+fp.dp``
+    Enable optional double-precision floating-point instructions
+``+mve``
+    Enable integer-only MVE instructions. This extension also implicitly enables
+    the DSP extension.
+``+mve.fp``
+    Enable floating-point MVE instructions. This extension also implicitly
+    enables the MVE, DSP, FP16, and FPv5-sp-d16 extensions.
+``+idiv``
+    Enables the interget divide instructions in ARM and Thumb2
+``+mp``
+    Enabled the Multiprocessing extension
+``+simd``
+    Enables the baseline SIMD instructions for the given architecture
+``+sec``
+    Enable TrustZone security extension
+``+virt``
+    Enable Viritualization extensions
+``+fp16``
+    Enable half-precision floating-point instructions
+``+ras``
+    Enable Reliability, Availability, and Serviceability extensions
+``+fp16fml``
+    Enable half-precision floating-point fused multiply-add/sub instructions
+``+sb``
+    Enable v8.5a Speculation Barrier
+``+lob``
+   Enable Low Overhead Branch extensions
+
 .. option:: -mexecute-only, -mno-execute-only, -mpure-code
 
 Disallow generation of data access to code sections (ARM only)
+
+.. option:: -mfpu=<name>
+
+Specify floating-point unit (or lack thereof) that is available on the target.
+
+The accepted values for <name> are:
+
+``none``
+    Prevent the compiler from using floating-point instructions.
+``vfp``
+
+``vfpv2``
+    Enable VFPv2 instructions. Disable the Advanced SIMD extension.
+``vfpv3``
+    Enable VFPv3 instructions. Disable the Advanced SIMD extension.
+``vfpv3-fp16``
+    Enable VFPv3 instructions, including optional half-precision instructions.
+    Disable the Advanced SIMD extension.
+``vfpv3-d16``
+    Enable VFPv3 instructions, with access to only 16 double-precision
+    registers. Disable the Advanced SIMD extension.
+``vfpv3-d16-fp16``
+    Enable VFPv3 instructions, including optional half-precision instructions,
+    with access to only 16 double-precision registers. Disable the Advanced
+    SIMD extension.
+``vfpv3xd``
+    Enable VFPv3 insructions, with single-precision floating-point operations
+    only and just 16 double-precision registers. Disable the Advanced SIMD
+    extension.
+``vfpv3xd-fp16``
+    Enable VFPv3 instructions, with single-precision and half-precision,
+    floating-point operations only. Disable the Advanced SIMD extension.
+``vfpv4``
+    Enable VFPv4 instructions. Disable the Advanced SIMD extension.
+``vfpv4-d16``
+    Enable VFPv4 instructions, with access to only 16 double-precision
+    registers. Disable the Advanced SIMD extension.
+``fpv4-sp-d16``
+    Enable the Armv7-M FPv4-SP-D16 floating-point extension, with
+    single-precision floating-point operations only, and only 16
+    double-precision registers.
+``fpv5-d16``
+    Enable the Armv7-M FPv5-D16 floating-point extension, with only 16
+    double-precision registers.
+``fpv5-sp-d16``
+    Enable the Armv7-M FPv5-SP-D16 floating-point extension, with
+    single-precision floating-point operations only, and only 16
+    double-precision registers.
+``fp-armv8``
+    Enable Armv8 floaing-point extension. Disable the cryptographic extension
+    and the Advanced SIMD extension.
+``fp-armv8-fullfp16-d16``
+    Enable Armv8 floaing-point extension, with half-precision operations and
+    only 16 double-precision registers.
+``fp-armv8-fullfp16-sp-d16``
+    Enable Armv8 floaing-point extension with only single- and half-precision
+    operations and only 16 double-precision registers.
+``neon``
+    Enable VFPv3 and Advanced SIMD extensions.
+``neon-fp16``
+    Enable VFPv3, Advanced SIMD extensions, and half-precision instructions.
+``neon-vfpv4``
+    Enable VFPv4 and Advanced SIMD extensions.
+``neon-fp-armv8``
+    Enable Armv8 floaing-point and Advanced SIMD extensions.
+``crypto-neon-fp-armv8``
+    Enable the Armv8 floaing-point extension, the cryptographic extension, and
+    the Advanced SIMD extension.
 
 .. option:: -mno-movt
 
