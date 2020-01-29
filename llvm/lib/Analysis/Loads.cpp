@@ -52,7 +52,12 @@ static bool isAligned(const Value *Base, const APInt &Offset, Align Alignment,
 static bool isDereferenceableAndAlignedPointer(
     const Value *V, Align Alignment, const APInt &Size, const DataLayout &DL,
     const Instruction *CtxI, const DominatorTree *DT,
-    SmallPtrSetImpl<const Value *> &Visited) {
+    SmallPtrSetImpl<const Value *> &Visited, unsigned MaxDepth) {
+
+  // Recursion limit.
+  if (MaxDepth-- == 0)
+    return false;
+
   // Already visited?  Bail out, we've likely hit unreachable code.
   if (!Visited.insert(V).second)
     return false;
@@ -63,7 +68,8 @@ static bool isDereferenceableAndAlignedPointer(
   // bitcast instructions are no-ops as far as dereferenceability is concerned.
   if (const BitCastOperator *BC = dyn_cast<BitCastOperator>(V))
     return isDereferenceableAndAlignedPointer(BC->getOperand(0), Alignment,
-                                              Size, DL, CtxI, DT, Visited);
+                                              Size, DL, CtxI, DT, Visited,
+                                              MaxDepth);
 
   bool CheckForNonNull = false;
   APInt KnownDerefBytes(Size.getBitWidth(),
@@ -99,22 +105,22 @@ static bool isDereferenceableAndAlignedPointer(
     // addrspacecast, so we can't do arithmetic directly on the APInt values.
     return isDereferenceableAndAlignedPointer(
         Base, Alignment, Offset + Size.sextOrTrunc(Offset.getBitWidth()), DL,
-        CtxI, DT, Visited);
+        CtxI, DT, Visited, MaxDepth);
   }
 
   // For gc.relocate, look through relocations
   if (const GCRelocateInst *RelocateInst = dyn_cast<GCRelocateInst>(V))
     return isDereferenceableAndAlignedPointer(
-        RelocateInst->getDerivedPtr(), Alignment, Size, DL, CtxI, DT, Visited);
+      RelocateInst->getDerivedPtr(), Alignment, Size, DL, CtxI, DT, Visited, MaxDepth);
 
   if (const AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(V))
     return isDereferenceableAndAlignedPointer(ASC->getOperand(0), Alignment,
-                                              Size, DL, CtxI, DT, Visited);
+                                              Size, DL, CtxI, DT, Visited, MaxDepth);
 
   if (const auto *Call = dyn_cast<CallBase>(V))
     if (auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
       return isDereferenceableAndAlignedPointer(RP, Alignment, Size, DL, CtxI,
-                                                DT, Visited);
+                                                DT, Visited, MaxDepth);
 
   // If we don't know, assume the worst.
   return false;
@@ -128,11 +134,11 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
   // Note: At the moment, Size can be zero.  This ends up being interpreted as
   // a query of whether [Base, V] is dereferenceable and V is aligned (since
   // that's what the implementation happened to do).  It's unclear if this is
-  // the desired semantic, but at least SelectionDAG does exercise this case.  
-  
+  // the desired semantic, but at least SelectionDAG does exercise this case.
+
   SmallPtrSet<const Value *, 32> Visited;
   return ::isDereferenceableAndAlignedPointer(V, Alignment, Size, DL, CtxI, DT,
-                                              Visited);
+                                              Visited, 16);
 }
 
 bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
