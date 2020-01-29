@@ -365,23 +365,14 @@ bool SIInstrInfo::getMemOperandsWithOffset(
   }
 
   if (isFLAT(LdSt)) {
-    const MachineOperand *VAddr = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
-    if (VAddr) {
-      // Can't analyze 2 offsets.
-      // FIXME remove this restriction!
-      if (getNamedOperand(LdSt, AMDGPU::OpName::saddr))
-        return false;
-
-      BaseOp = VAddr;
-    } else {
-      // scratch instructions have either vaddr or saddr.
-      BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::saddr);
-    }
-
+    // Instructions have either vaddr or saddr or both.
+    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
+    if (BaseOp)
+      BaseOps.push_back(BaseOp);
+    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::saddr);
+    if (BaseOp)
+      BaseOps.push_back(BaseOp);
     Offset = getNamedOperand(LdSt, AMDGPU::OpName::offset)->getImm();
-    if (!BaseOp->isReg())
-      return false;
-    BaseOps.push_back(BaseOp);
     return true;
   }
 

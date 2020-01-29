@@ -2,11 +2,11 @@
 
 ; Test for a conv2d like sequence of loads.
 
-; GFX9: global_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} offset:16{{$}}
 ; GFX9: global_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}{{$}}
+; GFX9: global_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} offset:16{{$}}
 ; GFX9: global_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} offset:-16{{$}}
-; GFX9: global_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} offset:32{{$}}
 ; GFX9: global_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} offset:-32{{$}}
+; GFX9: global_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} offset:32{{$}}
 ; GFX9: global_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}} offset:8{{$}}
 
 define hidden amdgpu_kernel void @simpleSaddrs(i64 addrspace(1)* %dst_image, i64 addrspace(1)* %src_image ) {
@@ -45,9 +45,9 @@ entry:
   store volatile i64 %add7, i64 addrspace(1)* %ptr9
 
 ; Test various offset boundaries.
-; GFX9: global_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+}}:{{[0-9]+}}] offset:4088{{$}}
 ; GFX9: global_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, off offset:4088{{$}}
 ; GFX9: global_load_dwordx4 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+}}:{{[0-9]+}}] offset:2040{{$}}
+; GFX9: global_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[[0-9]+:[0-9]+\]}}, s[{{[0-9]+}}:{{[0-9]+}}] offset:4088{{$}}
   %gep11 = getelementptr inbounds i64, i64 addrspace(1)* %gep, i64 511
   %load11 = load i64, i64 addrspace(1)* %gep11
   %gep12 = getelementptr inbounds i64, i64 addrspace(1)* %gep, i64 1023
