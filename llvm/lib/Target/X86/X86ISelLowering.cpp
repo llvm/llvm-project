@@ -25427,8 +25427,11 @@ SDValue X86TargetLowering::LowerFLT_ROUNDS_(SDValue Op,
      2 Round to +inf
      3 Round to -inf
 
-  To perform the conversion, we do:
-    (((((FPSR & 0x800) >> 11) | ((FPSR & 0x400) >> 9)) + 1) & 3)
+  To perform the conversion, we use a packed lookup table of the four 2-bit
+  values that we can index by FPSP[11:10]
+    0x2d --> (0b00,10,11,01) --> (0,2,3,1) >> FPSR[11:10]
+
+    (0x2d >> ((FPSR & 0xc00) >> 9)) & 3
   */
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -25456,24 +25459,19 @@ SDValue X86TargetLowering::LowerFLT_ROUNDS_(SDValue Op,
   SDValue CWD =
       DAG.getLoad(MVT::i16, DL, Chain, StackSlot, MachinePointerInfo());
 
-  // Transform as necessary
-  SDValue CWD1 =
+  // Mask and turn the control bits into a shift for the lookup table.
+  SDValue Shift =
     DAG.getNode(ISD::SRL, DL, MVT::i16,
                 DAG.getNode(ISD::AND, DL, MVT::i16,
-                            CWD, DAG.getConstant(0x800, DL, MVT::i16)),
-                DAG.getConstant(11, DL, MVT::i8));
-  SDValue CWD2 =
-    DAG.getNode(ISD::SRL, DL, MVT::i16,
-                DAG.getNode(ISD::AND, DL, MVT::i16,
-                            CWD, DAG.getConstant(0x400, DL, MVT::i16)),
+                            CWD, DAG.getConstant(0xc00, DL, MVT::i16)),
                 DAG.getConstant(9, DL, MVT::i8));
+  Shift = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, Shift);
 
+  SDValue LUT = DAG.getConstant(0x2d, DL, MVT::i32);
   SDValue RetVal =
-    DAG.getNode(ISD::AND, DL, MVT::i16,
-                DAG.getNode(ISD::ADD, DL, MVT::i16,
-                            DAG.getNode(ISD::OR, DL, MVT::i16, CWD1, CWD2),
-                            DAG.getConstant(1, DL, MVT::i16)),
-                DAG.getConstant(3, DL, MVT::i16));
+    DAG.getNode(ISD::AND, DL, MVT::i32,
+                DAG.getNode(ISD::SRL, DL, MVT::i32, LUT, Shift),
+                DAG.getConstant(3, DL, MVT::i32));
 
   return DAG.getZExtOrTrunc(RetVal, DL, VT);
 }
