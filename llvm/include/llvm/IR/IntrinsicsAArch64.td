@@ -1032,6 +1032,13 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMVectorOfBitcastsToInt<0>],
                 [IntrNoMem]>;
 
+  class SVE2_2VectorArg_Pred_Long_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                 LLVMMatchType<0>,
+                 LLVMSubdivide2VectorType<0>],
+                [IntrNoMem]>;
+
   class SVE2_3VectorArg_Long_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMMatchType<0>,
@@ -1662,11 +1669,23 @@ def int_aarch64_sve_st1_scatter_scalar_offset : AdvSIMD_ScatterStore_VectorBase_
 // SVE2 - Non-widening pairwise arithmetic
 //
 
+def int_aarch64_sve_addp    : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_faddp   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_fmaxp   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_fmaxnmp : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_fminp   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_fminnmp : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_smaxp   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_sminp   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_umaxp   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_uminp   : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+//
+// SVE2 - Widening pairwise arithmetic
+//
+
+def int_aarch64_sve_sadalp : SVE2_2VectorArg_Pred_Long_Intrinsic;
+def int_aarch64_sve_uadalp : SVE2_2VectorArg_Pred_Long_Intrinsic;
 
 //
 // SVE2 - Floating-point widening multiply-accumulate
