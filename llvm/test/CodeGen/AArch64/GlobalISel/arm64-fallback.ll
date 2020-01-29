@@ -85,7 +85,7 @@ define i64 @atomic_ops(i64* %addr) {
 ; Make sure we don't mess up metadata arguments.
 declare void @llvm.write_register.i64(metadata, i64)
 
-; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: call: ' call void @llvm.write_register.i64(metadata !0, i64 0)' (in function: test_write_register_intrin)
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to legalize instruction: G_WRITE_REGISTER !0, %0:_(s64) (in function: test_write_register_intrin)
 ; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for test_write_register_intrin
 ; FALLBACK-WITH-REPORT-LABEL: test_write_register_intrin:
 define void @test_write_register_intrin() {

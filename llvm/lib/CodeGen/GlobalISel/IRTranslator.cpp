@@ -1533,6 +1533,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
         .addMetadata(cast<MDNode>(cast<MetadataAsValue>(Arg)->getMetadata()));
     return true;
   }
+  case Intrinsic::write_register: {
+    Value *Arg = CI.getArgOperand(0);
+    MIRBuilder.buildInstr(TargetOpcode::G_WRITE_REGISTER)
+      .addMetadata(cast<MDNode>(cast<MetadataAsValue>(Arg)->getMetadata()))
+      .addUse(getOrCreateVReg(*CI.getArgOperand(1)));
+    return true;
+  }
   }
   return false;
 }
