@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -226,6 +227,11 @@ ReachingDefAnalysis::getClearance(MachineInstr *MI, MCPhysReg PhysReg) const {
   return InstIds.lookup(MI) - getReachingDef(MI, PhysReg);
 }
 
+bool
+ReachingDefAnalysis::hasLocalDefBefore(MachineInstr *MI, int PhysReg) const {
+  return getReachingDef(MI, PhysReg) >= 0;
+}
+
 void ReachingDefAnalysis::getReachingLocalUses(MachineInstr *Def, int PhysReg,
                                                InstSet &Uses) const {
   MachineBasicBlock *MBB = Def->getParent();
@@ -316,6 +322,18 @@ bool ReachingDefAnalysis::isRegUsedAfter(MachineInstr *MI, int PhysReg) const {
   return false;
 }
 
+bool ReachingDefAnalysis::isRegDefinedAfter(MachineInstr *MI,
+                                            int PhysReg) const {
+  MachineBasicBlock *MBB = MI->getParent();
+  if (getReachingDef(MI, PhysReg) != getReachingDef(&MBB->back(), PhysReg))
+    return true;
+
+  if (auto *Def = getLocalLiveOutMIDef(MBB, PhysReg))
+    return Def == getReachingMIDef(MI, PhysReg);
+
+  return false;
+}
+
 bool
 ReachingDefAnalysis::isReachingDefLiveOut(MachineInstr *MI, int PhysReg) const {
   MachineBasicBlock *MBB = MI->getParent();
@@ -351,4 +369,124 @@ MachineInstr* ReachingDefAnalysis::getLocalLiveOutMIDef(MachineBasicBlock *MBB,
       return Last;
 
   return Def < 0 ? nullptr : getInstFromId(MBB, Def);
+}
+
+// Can we safely move 'From' to just before 'To'? To satisfy this, 'From' must
+// not define a register that is used by any instructions, after and including,
+// 'To'. These instructions also must not redefine any of Froms operands.
+template<typename Iterator>
+bool ReachingDefAnalysis::isSafeToMove(MachineInstr *From,
+                                       MachineInstr *To) const {
+  if (From->getParent() != To->getParent())
+    return false;
+
+  SmallSet<int, 2> Defs;
+  // First check that From would compute the same value if moved.
+  for (auto &MO : From->operands()) {
+    if (!MO.isReg() || MO.isUndef() || !MO.getReg())
+      continue;
+    if (MO.isDef())
+      Defs.insert(MO.getReg());
+    else if (!hasSameReachingDef(From, To, MO.getReg()))
+      return false;
+  }
+
+  // Now walk checking that the rest of the instructions will compute the same
+  // value.
+  for (auto I = ++Iterator(From), E = Iterator(To); I != E; ++I) {
+    for (auto &MO : I->operands())
+      if (MO.isReg() && MO.getReg() && MO.isUse() && Defs.count(MO.getReg()))
+        return false;
+  }
+  return true;
+}
+
+bool ReachingDefAnalysis::isSafeToMoveForwards(MachineInstr *From,
+                                               MachineInstr *To) const {
+  return isSafeToMove<MachineBasicBlock::reverse_iterator>(From, To);
+}
+
+bool ReachingDefAnalysis::isSafeToMoveBackwards(MachineInstr *From,
+                                                MachineInstr *To) const {
+  return isSafeToMove<MachineBasicBlock::iterator>(From, To);
+}
+
+bool ReachingDefAnalysis::isSafeToRemove(MachineInstr *MI,
+                                         InstSet &ToRemove) const {
+  SmallPtrSet<MachineInstr*, 1> Ignore;
+  SmallPtrSet<MachineInstr*, 2> Visited;
+  return isSafeToRemove(MI, Visited, ToRemove, Ignore);
+}
+
+bool
+ReachingDefAnalysis::isSafeToRemove(MachineInstr *MI, InstSet &ToRemove,
+                                    InstSet &Ignore) const {
+  SmallPtrSet<MachineInstr*, 2> Visited;
+  return isSafeToRemove(MI, Visited, ToRemove, Ignore);
+}
+
+bool
+ReachingDefAnalysis::isSafeToRemove(MachineInstr *MI, InstSet &Visited,
+                                    InstSet &ToRemove, InstSet &Ignore) const {
+  if (Visited.count(MI) || Ignore.count(MI))
+    return true;
+  else if (MI->mayLoadOrStore() || MI->hasUnmodeledSideEffects() ||
+           MI->isBranch() || MI->isTerminator() || MI->isReturn()) {
+    // Unless told to ignore the instruction, don't remove anything which has
+    // side effects.
+    return false;
+  }
+
+  Visited.insert(MI);
+  for (auto &MO : MI->operands()) {
+    if (!MO.isReg() || MO.isUse() || MO.getReg() == 0)
+      continue;
+
+    SmallPtrSet<MachineInstr*, 4> Uses;
+    getGlobalUses(MI, MO.getReg(), Uses);
+
+    for (auto I : Uses) {
+      if (Ignore.count(I) || ToRemove.count(I))
+        continue;
+      if (!isSafeToRemove(I, Visited, ToRemove, Ignore))
+        return false;
+    }
+  }
+  ToRemove.insert(MI);
+  return true;
+}
+
+bool ReachingDefAnalysis::isSafeToDefRegAt(MachineInstr *MI,
+                                           int PhysReg) const {
+  SmallPtrSet<MachineInstr*, 1> Ignore;
+  return isSafeToDefRegAt(MI, PhysReg, Ignore);
+}
+
+bool ReachingDefAnalysis::isSafeToDefRegAt(MachineInstr *MI, int PhysReg,
+                                           InstSet &Ignore) const {
+  // Check for any uses of the register after MI.
+  if (isRegUsedAfter(MI, PhysReg)) {
+    if (auto *Def = getReachingMIDef(MI, PhysReg)) {
+      SmallPtrSet<MachineInstr*, 2> Uses;
+      getReachingLocalUses(Def, PhysReg, Uses);
+      for (auto *Use : Uses)
+        if (!Ignore.count(Use))
+          return false;
+    } else
+      return false;
+  }
+
+  MachineBasicBlock *MBB = MI->getParent();
+  // Check for any defs after MI.
+  if (isRegDefinedAfter(MI, PhysReg)) {
+    auto I = MachineBasicBlock::iterator(MI);
+    for (auto E = MBB->end(); I != E; ++I) {
+      if (Ignore.count(&*I))
+        continue;
+      for (auto &MO : I->operands())
+        if (MO.isReg() && MO.isDef() && MO.getReg() == PhysReg)
+          return false;
+    }
+  }
+  return true;
 }
