@@ -30,6 +30,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -463,6 +464,15 @@ public:
     if (NumberOfProcessedInputs != NumberOfInputs)
       return Error::success();
 
+    // We will use llvm-objcopy to add target objects sections to the output
+    // fat object. These sections should have 'exclude' flag set which tells
+    // link editor to remove them from linker inputs when linking executable or
+    // shared library. llvm-objcopy currently does not support adding new
+    // section and changing flags for the added section in one invocation, and
+    // because of that we have to run it two times. First run adds sections and
+    // the second changes flags.
+    // TODO: change it to one run once llvm-objcopy starts supporting that.
+
     // Find llvm-objcopy in order to create the bundle binary.
     ErrorOr<std::string> Objcopy = sys::findProgramByName(
         "llvm-objcopy", sys::path::parent_path(BundlerExecutable));
@@ -476,7 +486,15 @@ public:
     // to pass down to llvm-objcopy.
     OS.close();
 
-    // Compose command line for the objcopy tool.
+    // Create an intermediate temporary file to save object after the first
+    // llvm-objcopy run.
+    SmallString<128u> IntermediateObj;
+    if (std::error_code EC = sys::fs::createTemporaryFile(
+            "clang-offload-bundler", "tmp", IntermediateObj))
+      return createFileError(IntermediateObj, EC);
+    FileRemover IntermediateObjRemover(IntermediateObj);
+
+    // Compose llvm-objcopy command line for add target objects' sections.
     BumpPtrAllocator Alloc;
     StringSaver SS{Alloc};
     SmallVector<StringRef, 8u> ObjcopyArgs{"llvm-objcopy"};
@@ -485,25 +503,44 @@ public:
                                     OFFLOAD_BUNDLER_MAGIC_STR + TargetNames[I] +
                                     "=" + InputFileNames[I]));
     ObjcopyArgs.push_back(InputFileNames[HostInputIndex]);
+    ObjcopyArgs.push_back(IntermediateObj);
+
+    if (Error Err = executeObjcopy(*Objcopy, ObjcopyArgs))
+      return Err;
+
+    // And run llvm-objcopy for the second time to update section flags.
+    ObjcopyArgs.resize(1);
+    for (unsigned I = 0; I < NumberOfInputs; ++I)
+      ObjcopyArgs.push_back(SS.save(Twine("--set-section-flags=") +
+                                    OFFLOAD_BUNDLER_MAGIC_STR + TargetNames[I] +
+                                    "=readonly,exclude"));
+    ObjcopyArgs.push_back(IntermediateObj);
     ObjcopyArgs.push_back(OutputFileNames.front());
 
-    // If the user asked for the commands to be printed out, we do that instead
-    // of executing it.
-    if (PrintExternalCommands) {
-      errs() << "\"" << *Objcopy << "\"";
-      for (StringRef Arg : drop_begin(ObjcopyArgs, 1))
-        errs() << " \"" << Arg << "\"";
-      errs() << "\n";
-    } else {
-      if (sys::ExecuteAndWait(*Objcopy, ObjcopyArgs))
-        return createStringError(inconvertibleErrorCode(),
-                                 "'llvm-objcopy' tool failed");
-    }
+    if (Error Err = executeObjcopy(*Objcopy, ObjcopyArgs))
+      return Err;
 
     return Error::success();
   }
 
   Error WriteBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
+    return Error::success();
+  }
+
+private:
+  static Error executeObjcopy(StringRef Objcopy, ArrayRef<StringRef> Args) {
+    // If the user asked for the commands to be printed out, we do that
+    // instead of executing it.
+    if (PrintExternalCommands) {
+      errs() << "\"" << Objcopy << "\"";
+      for (StringRef Arg : drop_begin(Args, 1))
+        errs() << " \"" << Arg << "\"";
+      errs() << "\n";
+    } else {
+      if (sys::ExecuteAndWait(Objcopy, Args))
+        return createStringError(inconvertibleErrorCode(),
+                                 "'llvm-objcopy' tool failed");
+    }
     return Error::success();
   }
 };
