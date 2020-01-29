@@ -18,7 +18,7 @@ func @main() {
     }) : (i32) -> (i32)
     %res = sitofp %xor : i32 to f32
     store %res, %kernel_dst[%tx] : memref<?xf32>
-    gpu.return
+    gpu.terminator
   }
   %U = memref_cast %dst : memref<?xf32> to memref<*xf32>
   call @print_memref_f32(%U) : (memref<*xf32>) -> ()

@@ -376,7 +376,7 @@ func @shuffle_unsupported_type(%arg0 : index, %arg1 : i32, %arg2 : i32) {
 // -----
 
 module {
-  module @gpu_funcs attributes {gpu.kernel_module} {
+  gpu.module @gpu_funcs {
     // expected-error @+1 {{custom op 'gpu.func' gpu.func requires named arguments}}
     gpu.func @kernel_1(f32, f32) {
     ^bb0(%arg0: f32):
@@ -424,6 +424,42 @@ module {
   module @gpu_funcs attributes {gpu.kernel_module} {
     // expected-error @+1 {{expected memory space 5 in attribution}}
     gpu.func @kernel() private(%0: memref<4xf32>) {
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+module {
+  module @gpu_funcs attributes {gpu.kernel_module} {
+    // expected-error @+1 {{expected memory space 5 in attribution}}
+    gpu.func @kernel() private(%0: memref<4xf32>) {
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+module {
+  gpu.module @gpu_funcs {
+    // expected-note @+1 {{return type declared here}}
+    gpu.func @kernel() {
+      %0 = constant 0 : index
+      // expected-error @+1 {{'gpu.return' op expected 0 result operands}}
+      gpu.return %0 : index
+    }
+  }
+}
+
+// -----
+
+module {
+  gpu.module @gpu_funcs {
+    // expected-error @+1 {{'gpu.func' op expected void return type for kernel function}}
+    gpu.func @kernel() -> index kernel {
+      %0 = constant 0 : index
       gpu.return
     }
   }
