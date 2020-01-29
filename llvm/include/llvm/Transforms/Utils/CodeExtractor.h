@@ -140,9 +140,11 @@ public:
     Function *extractCodeRegion(const CodeExtractorAnalysisCache &CEAC);
 
     /// Verify that assumption cache isn't stale after a region is extracted.
-    /// Returns false when verifier finds errors. AssumptionCache is passed as
+    /// Returns true when verifier finds errors. AssumptionCache is passed as
     /// parameter to make this function stateless.
-    static bool verifyAssumptionCache(const Function& F, AssumptionCache *AC);
+    static bool verifyAssumptionCache(const Function &OldFunc,
+                                      const Function &NewFunc,
+                                      AssumptionCache *AC);
 
     /// Test whether this code extractor is eligible.
     ///
