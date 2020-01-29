@@ -501,6 +501,14 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
   setOperationAction(ISD::GlobalAddress, PtrVT, Custom);
 
+  // VE has no REM or DIVREM operations.
+  for (MVT IntVT : MVT::integer_valuetypes()) {
+    setOperationAction(ISD::UREM, IntVT, Expand);
+    setOperationAction(ISD::SREM, IntVT, Expand);
+    setOperationAction(ISD::SDIVREM, IntVT, Expand);
+    setOperationAction(ISD::UDIVREM, IntVT, Expand);
+  }
+
   // VE doesn't have instructions for fp<->uint, so expand them by llvm
   setOperationAction(ISD::FP_TO_UINT, MVT::i32, Promote); // use i64
   setOperationAction(ISD::UINT_TO_FP, MVT::i32, Promote); // use i64
