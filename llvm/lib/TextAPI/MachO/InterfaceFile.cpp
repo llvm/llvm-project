@@ -81,7 +81,7 @@ void InterfaceFile::addUUID(const Target &Target_, StringRef UUID) {
     return;
   }
 
-  UUIDs.emplace(Iter, Target_, UUID);
+  UUIDs.emplace(Iter, Target_, std::string(UUID));
   return;
 }
 
