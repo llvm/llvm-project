@@ -1067,13 +1067,25 @@ define double @nearbyint_v4f64(<4 x double> %x) nounwind {
 define float @round_v4f32(<4 x float> %x) nounwind {
 ; X64-LABEL: round_v4f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    jmp roundf # TAILCALL
+; X64-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    vandps %xmm1, %xmm0, %xmm1
+; X64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
+; X64-NEXT:    vorps %xmm1, %xmm2, %xmm1
+; X64-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
+; X64-NEXT:    retq
 ;
 ; X86-LABEL: round_v4f32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
+; X86-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    vandps %xmm1, %xmm0, %xmm1
+; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [4.9999997E-1,4.9999997E-1,4.9999997E-1,4.9999997E-1]
+; X86-NEXT:    vorps %xmm1, %xmm2, %xmm1
+; X86-NEXT:    vaddss %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovss %xmm0, (%esp)
-; X86-NEXT:    calll roundf
+; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
   %v = call <4 x float> @llvm.round.v4f32(<4 x float> %x)
@@ -1084,17 +1096,32 @@ define float @round_v4f32(<4 x float> %x) nounwind {
 define double @round_v4f64(<4 x double> %x) nounwind {
 ; X64-LABEL: round_v4f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; X64-NEXT:    vandpd {{.*}}(%rip), %xmm0, %xmm1
+; X64-NEXT:    vmovddup {{.*#+}} xmm2 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; X64-NEXT:    # xmm2 = mem[0,0]
+; X64-NEXT:    vorpd %xmm1, %xmm2, %xmm1
+; X64-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
-; X64-NEXT:    jmp round # TAILCALL
+; X64-NEXT:    retq
 ;
 ; X86-LABEL: round_v4f64:
 ; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    vmovlps %xmm0, (%esp)
+; X86-NEXT:    vandpd {{\.LCPI.*}}, %xmm0, %xmm1
+; X86-NEXT:    vmovddup {{.*#+}} xmm2 = [4.9999999999999994E-1,4.9999999999999994E-1]
+; X86-NEXT:    # xmm2 = mem[0,0]
+; X86-NEXT:    vorpd %xmm1, %xmm2, %xmm1
+; X86-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
+; X86-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
+; X86-NEXT:    vmovsd %xmm0, (%esp)
+; X86-NEXT:    fldl (%esp)
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
 ; X86-NEXT:    vzeroupper
-; X86-NEXT:    calll round
-; X86-NEXT:    addl $8, %esp
 ; X86-NEXT:    retl
   %v = call <4 x double> @llvm.round.v4f64(<4 x double> %x)
   %r = extractelement <4 x double> %v, i32 0
