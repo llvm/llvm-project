@@ -1037,8 +1037,10 @@ public:
 
   bool isNeonVectorRegLo() const {
     return Kind == k_Register && Reg.Kind == RegKind::NeonVector &&
-           AArch64MCRegisterClasses[AArch64::FPR128_loRegClassID].contains(
-               Reg.RegNum);
+           (AArch64MCRegisterClasses[AArch64::FPR128_loRegClassID].contains(
+                Reg.RegNum) ||
+            AArch64MCRegisterClasses[AArch64::FPR64_loRegClassID].contains(
+                Reg.RegNum));
   }
 
   template <unsigned Class> bool isSVEVectorReg() const {

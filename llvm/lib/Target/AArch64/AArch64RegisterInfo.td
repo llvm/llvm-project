@@ -429,6 +429,10 @@ def FPR32 : RegisterClass<"AArch64", [f32, i32], 32,(sequence "S%u", 0, 31)>;
 def FPR64 : RegisterClass<"AArch64", [f64, i64, v2f32, v1f64, v8i8, v4i16, v2i32,
                                     v1i64, v4f16],
                                     64, (sequence "D%u", 0, 31)>;
+def FPR64_lo : RegisterClass<"AArch64",
+                             [v8i8, v4i16, v2i32, v1i64, v4f16, v2f32, v1f64],
+                             64, (trunc FPR64, 16)>;
+
 // We don't (yet) have an f128 legal type, so don't use that here. We
 // normalize 128-bit vectors to v2f64 for arg passing and such, so use
 // that here.
@@ -502,6 +506,9 @@ def V128 : RegisterOperand<FPR128, "printVRegOperand"> {
 def VectorRegLoAsmOperand : AsmOperandClass {
   let Name = "VectorRegLo";
   let PredicateMethod = "isNeonVectorRegLo";
+}
+def V64_lo : RegisterOperand<FPR64_lo, "printVRegOperand"> {
+  let ParserMatchClass = VectorRegLoAsmOperand;
 }
 def V128_lo : RegisterOperand<FPR128_lo, "printVRegOperand"> {
   let ParserMatchClass = VectorRegLoAsmOperand;
