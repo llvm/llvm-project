@@ -115,9 +115,11 @@ DirectoryBasedGlobalCompilationDatabase::getCDBInDirLocked(PathRef Dir) const {
   auto R = CompilationDatabases.try_emplace(Key);
   if (R.second) { // Cache miss, try to load CDB.
     CachedCDB &Entry = R.first->second;
-    std::string Error = "";
+    std::string Error;
     Entry.CDB = tooling::CompilationDatabase::loadFromDirectory(Dir, Error);
     Entry.Path = std::string(Dir);
+    if (Entry.CDB)
+      log("Loaded compilation database from {0}", Dir);
   }
   return R.first->second;
 }
