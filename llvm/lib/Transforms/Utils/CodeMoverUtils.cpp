@@ -154,7 +154,7 @@ const Optional<ControlConditions> ControlConditions::collectControlConditions(
 
 bool ControlConditions::addControlCondition(ControlCondition C) {
   bool Inserted = false;
-  if (none_of(Conditions, [&C](ControlCondition &Exists) {
+  if (none_of(Conditions, [&](ControlCondition &Exists) {
         return ControlConditions::isEquivalent(C, Exists);
       })) {
     Conditions.push_back(C);
@@ -172,8 +172,8 @@ bool ControlConditions::isEquivalent(const ControlConditions &Other) const {
   if (Conditions.size() != Other.Conditions.size())
     return false;
 
-  return all_of(Conditions, [&Other](const ControlCondition &C) {
-    return any_of(Other.Conditions, [&C](const ControlCondition &OtherC) {
+  return all_of(Conditions, [&](const ControlCondition &C) {
+    return any_of(Other.Conditions, [&](const ControlCondition &OtherC) {
       return ControlConditions::isEquivalent(C, OtherC);
     });
   });
