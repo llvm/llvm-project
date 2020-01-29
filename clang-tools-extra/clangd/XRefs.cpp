@@ -21,6 +21,7 @@
 #include "index/Relation.h"
 #include "index/SymbolLocation.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
@@ -249,31 +250,17 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     return Result;
   }
 
-  // Emit all symbol locations (declaration or definition) from AST.
-  DeclRelationSet Relations =
-      DeclRelation::TemplatePattern | DeclRelation::Alias;
-  for (const NamedDecl *D : getDeclAtPosition(AST, SourceLoc, Relations)) {
+  auto AddResultDecl = [&](const NamedDecl *D) {
     const NamedDecl *Def = getDefinition(D);
     const NamedDecl *Preferred = Def ? Def : D;
-
-    // If we're at the point of declaration of a template specialization,
-    // it's more useful to navigate to the template declaration.
-    if (SM.getMacroArgExpandedLocation(Preferred->getLocation()) ==
-        IdentStartLoc) {
-      if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(Preferred)) {
-        D = CTSD->getSpecializedTemplate();
-        Def = getDefinition(D);
-        Preferred = Def ? Def : D;
-      }
-    }
 
     auto Loc = makeLocation(AST.getASTContext(), nameLocation(*Preferred, SM),
                             *MainFilePath);
     if (!Loc)
-      continue;
+      return;
 
     Result.emplace_back();
-    Result.back().Name = printName(AST.getASTContext(), *D);
+    Result.back().Name = printName(AST.getASTContext(), *Preferred);
     Result.back().PreferredDeclaration = *Loc;
     // Preferred is always a definition if possible, so this check works.
     if (Def == Preferred)
@@ -282,6 +269,37 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     // Record SymbolID for index lookup later.
     if (auto ID = getSymbolID(Preferred))
       ResultIndex[*ID] = Result.size() - 1;
+  };
+
+  // Emit all symbol locations (declaration or definition) from AST.
+  DeclRelationSet Relations =
+      DeclRelation::TemplatePattern | DeclRelation::Alias;
+  for (const NamedDecl *D : getDeclAtPosition(AST, SourceLoc, Relations)) {
+    // Special case: void foo() ^override: jump to the overridden method.
+    if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D)) {
+      const auto *Attr = D->getAttr<OverrideAttr>();
+      const syntax::Token *Tok =
+          spelledIdentifierTouching(SourceLoc, AST.getTokens());
+      if (Attr && Tok &&
+          SM.getSpellingLoc(Attr->getLocation()) == Tok->location()) {
+        // We may be overridding multiple methods - offer them all.
+        for (const NamedDecl *ND : CMD->overridden_methods())
+          AddResultDecl(ND);
+        continue;
+      }
+    }
+
+    // Special case: the point of declaration of a template specialization,
+    // it's more useful to navigate to the template declaration.
+    if (SM.getMacroArgExpandedLocation(D->getLocation()) == IdentStartLoc) {
+      if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+        AddResultDecl(CTSD->getSpecializedTemplate());
+        continue;
+      }
+    }
+
+    // Otherwise the target declaration is the right one.
+    AddResultDecl(D);
   }
 
   // Now query the index for all Symbol IDs we found in the AST.
