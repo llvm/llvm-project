@@ -272,7 +272,7 @@ namespace llvm {
     /// @name Type Conversions
     /// @{
 
-    operator std::string() const { return str(); }
+    explicit operator std::string() const { return str(); }
 
 #if __cplusplus > 201402L
     operator std::string_view() const {

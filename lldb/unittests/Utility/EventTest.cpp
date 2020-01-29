@@ -15,7 +15,7 @@ using namespace lldb_private;
 static std::string to_string(const EventDataBytes &E) {
   StreamString S;
   E.Dump(&S);
-  return S.GetString();
+  return std::string(S.GetString());
 }
 
 TEST(EventTest, DumpEventDataBytes) {

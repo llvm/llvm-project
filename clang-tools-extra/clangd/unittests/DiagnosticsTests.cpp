@@ -332,7 +332,7 @@ TEST(DiagnosticTest, LongFixMessages) {
 n]] = 10; // error-ok
     }
   )cpp");
-  TU.Code = Source.code();
+  TU.Code = std::string(Source.code());
   EXPECT_THAT(TU.build().getDiagnostics(),
               ElementsAre(WithFix(
                   Fix(Source.range(), "ident", "change 'ide\\…' to 'ident'"))));
@@ -846,7 +846,7 @@ TEST(DiagsInHeaders, DiagInsideHeader) {
     void foo() {})cpp");
   Annotations Header("[[no_type_spec]]; // error-ok");
   TestTU TU = TestTU::withCode(Main.code());
-  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  TU.AdditionalFiles = {{"a.h", std::string(Header.code())}};
   EXPECT_THAT(TU.build().getDiagnostics(),
               UnorderedElementsAre(AllOf(
                   Diag(Main.range(), "in included file: C++ requires a "
@@ -953,7 +953,7 @@ TEST(DiagsInHeaders, OnlyErrorOrFatal) {
     [[no_type_spec]]; // error-ok
     int x = 5/0;)cpp");
   TestTU TU = TestTU::withCode(Main.code());
-  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  TU.AdditionalFiles = {{"a.h", std::string(Header.code())}};
   EXPECT_THAT(TU.build().getDiagnostics(),
               UnorderedElementsAre(AllOf(
                   Diag(Main.range(), "in included file: C++ requires "
@@ -969,7 +969,7 @@ TEST(DiagsInHeaders, FromNonWrittenSources) {
     int x = 5/0;
     int b = [[FOO]]; // error-ok)cpp");
   TestTU TU = TestTU::withCode(Main.code());
-  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  TU.AdditionalFiles = {{"a.h", std::string(Header.code())}};
   TU.ExtraArgs = {"-DFOO=NOOO"};
   EXPECT_THAT(TU.build().getDiagnostics(),
               UnorderedElementsAre(AllOf(
@@ -988,7 +988,7 @@ TEST(DiagsInHeaders, ErrorFromMacroExpansion) {
   #define X foo
   X;)cpp");
   TestTU TU = TestTU::withCode(Main.code());
-  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  TU.AdditionalFiles = {{"a.h", std::string(Header.code())}};
   EXPECT_THAT(TU.build().getDiagnostics(),
               UnorderedElementsAre(
                   Diag(Main.range(), "in included file: use of undeclared "
@@ -1005,7 +1005,7 @@ TEST(DiagsInHeaders, ErrorFromMacroArgument) {
   #define X(arg) arg
   X(foo);)cpp");
   TestTU TU = TestTU::withCode(Main.code());
-  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  TU.AdditionalFiles = {{"a.h", std::string(Header.code())}};
   EXPECT_THAT(TU.build().getDiagnostics(),
               UnorderedElementsAre(
                   Diag(Main.range(), "in included file: use of undeclared "
