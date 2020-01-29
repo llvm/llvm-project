@@ -882,6 +882,14 @@ ClangASTImporter::ASTImporterDelegate::ImportImpl(Decl *From) {
 
 void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
     clang::Decl *to, clang::Decl *from) {
+  // We might have a forward declaration from a shared library that we
+  // gave external lexical storage so that Clang asks us about the full
+  // definition when it needs it. In this case the ASTImporter isn't aware
+  // that the forward decl from the shared library is the actual import
+  // target but would create a second declaration that would then be defined.
+  // We want that 'to' is actually complete after this function so let's
+  // tell the ASTImporter that 'to' was imported from 'from'.
+  MapImported(from, to);
   ASTImporter::Imported(from, to);
 
   /*
