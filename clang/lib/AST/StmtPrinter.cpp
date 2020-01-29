@@ -75,14 +75,11 @@ namespace {
   public:
     StmtPrinter(raw_ostream &os, PrinterHelper *helper,
                 const PrintingPolicy &Policy, unsigned Indentation = 0,
-                StringRef NL = "\n",
-                const ASTContext *Context = nullptr)
+                StringRef NL = "\n", const ASTContext *Context = nullptr)
         : OS(os), IndentLevel(Indentation), Helper(helper), Policy(Policy),
           NL(NL), Context(Context) {}
 
-    void PrintStmt(Stmt *S) {
-      PrintStmt(S, Policy.Indentation);
-    }
+    void PrintStmt(Stmt *S) { PrintStmt(S, Policy.Indentation); }
 
     void PrintStmt(Stmt *S, int SubIndent) {
       IndentLevel += SubIndent;

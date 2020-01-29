@@ -229,14 +229,14 @@ private:
 
   Error parseExport() {
     COFFShortExport E;
-    E.Name = Tok.Value;
+    E.Name = std::string(Tok.Value);
     read();
     if (Tok.K == Equal) {
       read();
       if (Tok.K != Identifier)
         return createError("identifier expected, but got " + Tok.Value);
       E.ExtName = E.Name;
-      E.Name = Tok.Value;
+      E.Name = std::string(Tok.Value);
     } else {
       unget();
     }
@@ -285,7 +285,7 @@ private:
       }
       if (Tok.K == EqualEqual) {
         read();
-        E.AliasTarget = Tok.Value;
+        E.AliasTarget = std::string(Tok.Value);
         if (Machine == IMAGE_FILE_MACHINE_I386 && !isDecorated(E.AliasTarget, MingwDef))
           E.AliasTarget = std::string("_").append(E.AliasTarget);
         continue;
@@ -315,7 +315,7 @@ private:
   Error parseName(std::string *Out, uint64_t *Baseaddr) {
     read();
     if (Tok.K == Identifier) {
-      *Out = Tok.Value;
+      *Out = std::string(Tok.Value);
     } else {
       *Out = "";
       unget();

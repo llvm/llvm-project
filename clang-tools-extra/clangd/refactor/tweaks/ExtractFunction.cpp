@@ -347,16 +347,16 @@ std::string NewFunction::renderParametersForCall() const {
 }
 
 std::string NewFunction::renderCall() const {
-  return llvm::formatv(
-      "{0}{1}({2}){3}", CallerReturnsValue ? "return " : "", Name,
-      renderParametersForCall(),
-      (SemicolonPolicy.isNeededInOriginalFunction() ? ";" : ""));
+  return std::string(
+      llvm::formatv("{0}{1}({2}){3}", CallerReturnsValue ? "return " : "", Name,
+                    renderParametersForCall(),
+                    (SemicolonPolicy.isNeededInOriginalFunction() ? ";" : "")));
 }
 
 std::string NewFunction::renderDefinition(const SourceManager &SM) const {
-  return llvm::formatv("{0} {1}({2}) {\n{3}\n}\n",
-                       printType(ReturnType, *EnclosingFuncContext), Name,
-                       renderParametersForDefinition(), getFuncBody(SM));
+  return std::string(llvm::formatv(
+      "{0} {1}({2}) {\n{3}\n}\n", printType(ReturnType, *EnclosingFuncContext),
+      Name, renderParametersForDefinition(), getFuncBody(SM)));
 }
 
 std::string NewFunction::getFuncBody(const SourceManager &SM) const {
@@ -578,8 +578,9 @@ bool createParameters(NewFunction &ExtractedFunc,
     // pointers, etc by reference.
     bool IsPassedByReference = true;
     // We use the index of declaration as the ordering priority for parameters.
-    ExtractedFunc.Parameters.push_back(
-        {VD->getName(), TypeInfo, IsPassedByReference, DeclInfo.DeclIndex});
+    ExtractedFunc.Parameters.push_back({std::string(VD->getName()), TypeInfo,
+                                        IsPassedByReference,
+                                        DeclInfo.DeclIndex});
   }
   llvm::sort(ExtractedFunc.Parameters);
   return true;

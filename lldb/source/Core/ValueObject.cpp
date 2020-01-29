@@ -416,7 +416,7 @@ const char *ValueObject::GetLocationAsCStringImpl(const Value &value,
         uint32_t addr_nibble_size = data.GetAddressByteSize() * 2;
         sstr.Printf("0x%*.*llx", addr_nibble_size, addr_nibble_size,
                     value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS));
-        m_location_str = sstr.GetString();
+        m_location_str = std::string(sstr.GetString());
       } break;
       }
     }
@@ -1120,7 +1120,7 @@ const char *ValueObject::GetObjectDescription() {
     if (LanguageRuntime *runtime = process->GetLanguageRuntime(language)) {
       StreamString s;
       if (runtime->GetObjectDescription(s, *this)) {
-        m_object_desc_str.append(s.GetString());
+        m_object_desc_str.append(std::string(s.GetString()));
         return m_object_desc_str.c_str();
       }
     }

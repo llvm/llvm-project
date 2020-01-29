@@ -112,47 +112,45 @@ PrintedNamedDeclMatches(StringRef Code, const std::vector<std::string> &Args,
 PrintedNamedDeclCXX98Matches(StringRef Code, StringRef DeclName,
                              StringRef ExpectedPrinted) {
   std::vector<std::string> Args(1, "-std=c++98");
-  return PrintedNamedDeclMatches(Code,
-                                 Args,
-                                 /*SuppressUnwrittenScope*/ false,
-                                 namedDecl(hasName(DeclName)).bind("id"),
-                                 ExpectedPrinted,
-                                 "input.cc");
+  return PrintedNamedDeclMatches(
+      Code, Args,
+      /*SuppressUnwrittenScope*/ false,
+      namedDecl(hasName(std::string(DeclName))).bind("id"), ExpectedPrinted,
+      "input.cc");
 }
 
 ::testing::AssertionResult
 PrintedWrittenNamedDeclCXX11Matches(StringRef Code, StringRef DeclName,
                                     StringRef ExpectedPrinted) {
   std::vector<std::string> Args(1, "-std=c++11");
-  return PrintedNamedDeclMatches(Code,
-                                 Args,
-                                 /*SuppressUnwrittenScope*/ true,
-                                 namedDecl(hasName(DeclName)).bind("id"),
-                                 ExpectedPrinted,
-                                 "input.cc");
+  return PrintedNamedDeclMatches(
+      Code, Args,
+      /*SuppressUnwrittenScope*/ true,
+      namedDecl(hasName(std::string(DeclName))).bind("id"), ExpectedPrinted,
+      "input.cc");
 }
 
 ::testing::AssertionResult
 PrintedWrittenPropertyDeclObjCMatches(StringRef Code, StringRef DeclName,
                                    StringRef ExpectedPrinted) {
   std::vector<std::string> Args{"-std=c++11", "-xobjective-c++"};
-  return PrintedNamedDeclMatches(Code,
-                                 Args,
-                                 /*SuppressUnwrittenScope*/ true,
-                                 objcPropertyDecl(hasName(DeclName)).bind("id"),
-                                 ExpectedPrinted,
-                                 "input.m");
+  return PrintedNamedDeclMatches(
+      Code, Args,
+      /*SuppressUnwrittenScope*/ true,
+      objcPropertyDecl(hasName(std::string(DeclName))).bind("id"),
+      ExpectedPrinted, "input.m");
 }
 
 ::testing::AssertionResult
 PrintedNestedNameSpecifierMatches(StringRef Code, StringRef DeclName,
                                   StringRef ExpectedPrinted) {
   std::vector<std::string> Args{"-std=c++11"};
-  return PrintedDeclMatches(Code, Args, namedDecl(hasName(DeclName)).bind("id"),
-                            ExpectedPrinted, "input.cc",
-                            [](llvm::raw_ostream &Out, const NamedDecl *D) {
-                              D->printNestedNameSpecifier(Out);
-                            });
+  return PrintedDeclMatches(
+      Code, Args, namedDecl(hasName(std::string(DeclName))).bind("id"),
+      ExpectedPrinted, "input.cc",
+      [](llvm::raw_ostream &Out, const NamedDecl *D) {
+        D->printNestedNameSpecifier(Out);
+      });
 }
 
 } // unnamed namespace

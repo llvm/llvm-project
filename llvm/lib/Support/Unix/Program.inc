@@ -70,8 +70,7 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
   assert(!Name.empty() && "Must have a name!");
   // Use the given path verbatim if it contains any slashes; this matches
   // the behavior of sh(1) and friends.
-  if (Name.find('/') != StringRef::npos)
-    return std::string(Name);
+  if (Name.find('/') != StringRef::npos) return std::string(Name);
 
   SmallVector<StringRef, 16> EnvironmentPaths;
   if (Paths.empty())
@@ -88,7 +87,7 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
     SmallString<128> FilePath(Path);
     sys::path::append(FilePath, Name);
     if (sys::fs::can_execute(FilePath.c_str()))
-      return std::string(FilePath.str()); // Found the executable!
+      return std::string(FilePath.str());  // Found the executable!
   }
   return errc::no_such_file_or_directory;
 }
@@ -101,7 +100,7 @@ static bool RedirectIO(Optional<StringRef> Path, int FD, std::string* ErrMsg) {
     // Redirect empty paths to /dev/null
     File = "/dev/null";
   else
-    File = *Path;
+    File = std::string(*Path);
 
   // Open the file
   int InFD = open(File.c_str(), FD == 0 ? O_RDONLY : O_WRONLY|O_CREAT, 0666);
@@ -213,7 +212,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
       std::string *RedirectsStr[3] = {nullptr, nullptr, nullptr};
       for (int I = 0; I < 3; ++I) {
         if (Redirects[I]) {
-          RedirectsStorage[I] = *Redirects[I];
+          RedirectsStorage[I] = std::string(*Redirects[I]);
           RedirectsStr[I] = &RedirectsStorage[I];
         }
       }
@@ -304,7 +303,7 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
       }
 
       // Execute!
-      std::string PathStr = Program;
+      std::string PathStr = std::string(Program);
       if (Envp != nullptr)
         execve(PathStr.c_str(), const_cast<char **>(Argv),
                const_cast<char **>(Envp));

@@ -823,7 +823,8 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
   if (!omvn_initializer_array->isString())
     return false;
 
-  std::string omvn_initializer_string = omvn_initializer_array->getAsString();
+  std::string omvn_initializer_string =
+      std::string(omvn_initializer_array->getAsString());
 
   LLDB_LOG(log, "Found Objective-C selector reference \"{0}\"",
            omvn_initializer_string);
@@ -981,7 +982,8 @@ bool IRForTarget::RewriteObjCClassReference(Instruction *class_load) {
   if (!ocn_initializer_array->isString())
     return false;
 
-  std::string ocn_initializer_string = ocn_initializer_array->getAsString();
+  std::string ocn_initializer_string =
+      std::string(ocn_initializer_array->getAsString());
 
   LLDB_LOG(log, "Found Objective-C class reference \"{0}\"",
            ocn_initializer_string);

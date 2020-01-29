@@ -1773,7 +1773,7 @@ Status Thread::JumpToLine(const FileSpec &file, uint32_t line,
                 "first location:\n",
                 file.GetFilename().AsCString(), line);
     DumpAddressList(sstr, candidates, target);
-    *warnings = sstr.GetString();
+    *warnings = std::string(sstr.GetString());
   }
 
   if (!reg_ctx->SetPC(dest))

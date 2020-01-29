@@ -48,7 +48,7 @@ class DiagnosticWatcher : public clang::DiagnosticConsumer {
 public:
   DiagnosticWatcher(StringRef From, StringRef To)
       : Chained(nullptr), FromName(From), ToName("'"), SeenCount(0) {
-    ToName.append(To);
+    ToName.append(std::string(To));
     ToName.append("'");
   }
 

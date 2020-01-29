@@ -1513,8 +1513,8 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   unsigned OldSuffixSize = 2 + OldDelimiter.size();
   // We create a virtual text environment which expects a null-terminated
   // string, so we cannot use StringRef.
-  std::string RawText =
-      Current.TokenText.substr(OldPrefixSize).drop_back(OldSuffixSize);
+  std::string RawText = std::string(
+      Current.TokenText.substr(OldPrefixSize).drop_back(OldSuffixSize));
   if (NewDelimiter != OldDelimiter) {
     // Don't update to the canonical delimiter 'deli' if ')deli"' occurs in the
     // raw string.

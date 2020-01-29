@@ -21,7 +21,7 @@ const char IWYUPragma[] = "// IWYU pragma: private, include ";
 
 void CanonicalIncludes::addMapping(llvm::StringRef Path,
                                    llvm::StringRef CanonicalPath) {
-  FullPathMapping[Path] = CanonicalPath;
+  FullPathMapping[Path] = std::string(CanonicalPath);
 }
 
 /// The maximum number of path components in a key from StdSuffixHeaderMapping.

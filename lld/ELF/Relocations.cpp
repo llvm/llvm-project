@@ -761,7 +761,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
       break;
 
     // Substitute name[i].
-    newName = name;
+    newName = std::string(name);
     for (char c = '0'; c <= 'z'; ++c) {
       newName[i] = c;
       if (const Symbol *s = suggest(newName))

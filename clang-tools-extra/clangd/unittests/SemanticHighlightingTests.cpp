@@ -90,8 +90,9 @@ std::string annotate(llvm::StringRef Input,
     assert(NextChar <= StartOffset);
 
     Result += Input.substr(NextChar, StartOffset - NextChar);
-    Result += llvm::formatv("${0}[[{1}]]", T.Kind,
-                            Input.substr(StartOffset, EndOffset - StartOffset));
+    Result += std::string(
+        llvm::formatv("${0}[[{1}]]", T.Kind,
+                      Input.substr(StartOffset, EndOffset - StartOffset)));
     NextChar = EndOffset;
   }
   Result += Input.substr(NextChar);
@@ -104,7 +105,7 @@ void checkHighlightings(llvm::StringRef Code,
                             AdditionalFiles = {}) {
   Annotations Test(Code);
   TestTU TU;
-  TU.Code = Test.code();
+  TU.Code = std::string(Test.code());
 
   // FIXME: Auto-completion in a template requires disabling delayed template
   // parsing.

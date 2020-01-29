@@ -127,7 +127,8 @@ void BlockExtractor::loadFile() {
                        /*KeepEmpty=*/false);
     if (BBNames.empty())
       report_fatal_error("Missing bbs name");
-    BlocksByName.push_back({LineSplit[0], {BBNames.begin(), BBNames.end()}});
+    BlocksByName.push_back(
+        {std::string(LineSplit[0]), {BBNames.begin(), BBNames.end()}});
   }
 }
 

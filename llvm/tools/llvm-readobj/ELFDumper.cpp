@@ -490,7 +490,7 @@ ELFDumper<ELFT>::getVersionDefinitions(const Elf_Shdr *Sec) const {
     VerdAux Aux;
     Aux.Offset = VerdauxBuf - Start;
     if (Verdaux->vda_name <= StrTabOrErr->size())
-      Aux.Name = StrTabOrErr->drop_front(Verdaux->vda_name);
+      Aux.Name = std::string(StrTabOrErr->drop_front(Verdaux->vda_name));
     else
       Aux.Name = "<invalid vda_name: " + to_string(Verdaux->vda_name) + ">";
     return Aux;
@@ -600,7 +600,7 @@ ELFDumper<ELFT>::getVersionDependencies(const Elf_Shdr *Sec) const {
     VN.Offset = VerneedBuf - Start;
 
     if (Verneed->vn_file < StrTab.size())
-      VN.File = StrTab.drop_front(Verneed->vn_file);
+      VN.File = std::string(StrTab.drop_front(Verneed->vn_file));
     else
       VN.File = "<corrupt vn_file: " + to_string(Verneed->vn_file) + ">";
 
@@ -630,7 +630,7 @@ ELFDumper<ELFT>::getVersionDependencies(const Elf_Shdr *Sec) const {
       if (StrTab.size() <= Vernaux->vna_name)
         Aux.Name = "<corrupt>";
       else
-        Aux.Name = StrTab.drop_front(Vernaux->vna_name);
+        Aux.Name = std::string(StrTab.drop_front(Vernaux->vna_name));
 
       VernauxBuf += Vernaux->vna_next;
     }
@@ -806,7 +806,7 @@ private:
     std::string Str;
     unsigned Column;
 
-    Field(StringRef S, unsigned Col) : Str(S), Column(Col) {}
+    Field(StringRef S, unsigned Col) : Str(std::string(S)), Column(Col) {}
     Field(unsigned Col) : Column(Col) {}
   };
 
@@ -814,7 +814,7 @@ private:
   std::string printEnum(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
     for (const auto &EnumItem : EnumValues)
       if (EnumItem.Value == Value)
-        return EnumItem.AltName;
+        return std::string(EnumItem.AltName);
     return to_hexString(Value, false);
   }
 
@@ -988,7 +988,7 @@ template <class ELFT> Error ELFDumper<ELFT>::LoadVersionMap() const {
   auto InsertEntry = [this](unsigned N, StringRef Version, bool IsVerdef) {
     if (N >= VersionMap.size())
       VersionMap.resize(N + 1);
-    VersionMap[N] = {Version, IsVerdef};
+    VersionMap[N] = {std::string(Version), IsVerdef};
   };
 
   if (SymbolVersionDefSection) {
@@ -1036,7 +1036,7 @@ Expected<StringRef> ELFDumper<ELFT>::getSymbolVersion(const Elf_Sym *Sym,
 }
 
 static std::string maybeDemangle(StringRef Name) {
-  return opts::Demangle ? demangle(Name) : Name.str();
+  return opts::Demangle ? demangle(std::string(Name)) : Name.str();
 }
 
 template <typename ELFT>
@@ -1106,7 +1106,7 @@ std::string ELFDumper<ELFT>::getFullSymbolName(const Elf_Sym *Symbol,
       ELFDumperStyle->reportUniqueWarning(NameOrErr.takeError());
       return ("<section " + Twine(*SectionIndex) + ">").str();
     }
-    return *NameOrErr;
+    return std::string(*NameOrErr);
   }
 
   if (!IsDynamic)
@@ -3211,7 +3211,8 @@ void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Shdr *SymTab,
     const Elf_Shdr *Sec = unwrapOrError(
         this->FileName,
         Obj->getSection(Sym, SymTab, this->dumper()->getShndxTable()));
-    TargetName = unwrapOrError(this->FileName, Obj->getSectionName(Sec));
+    TargetName =
+        std::string(unwrapOrError(this->FileName, Obj->getSectionName(Sec)));
   } else if (Sym) {
     StringRef StrTable =
         unwrapOrError(this->FileName, Obj->getStringTableForSymtab(*SymTab));
@@ -3240,7 +3241,7 @@ void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Sym *Sym,
   if (Sym && (!SymbolName.empty() || Sym->getValue() != 0))
     Fields[3].Str = to_string(format_hex_no_prefix(Sym->getValue(), Width));
 
-  Fields[4].Str = SymbolName;
+  Fields[4].Str = std::string(SymbolName);
   for (const Field &F : Fields)
     printField(F);
 
@@ -3524,8 +3525,8 @@ void GNUStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
     if (SecStrTable.empty())
       Fields[1].Str = "<no-strings>";
     else
-      Fields[1].Str = unwrapOrError<StringRef>(
-          ElfObj->getFileName(), Obj->getSectionName(&Sec, SecStrTable));
+      Fields[1].Str = std::string(unwrapOrError<StringRef>(
+          ElfObj->getFileName(), Obj->getSectionName(&Sec, SecStrTable)));
     Fields[2].Str =
         getSectionTypeString(Obj->getHeader()->e_machine, Sec.sh_type);
     Fields[3].Str =
@@ -4732,7 +4733,7 @@ template <typename ELFT> static GNUAbiTag getGNUAbiTag(ArrayRef<uint8_t> Desc) {
   std::string str;
   raw_string_ostream ABI(str);
   ABI << Major << "." << Minor << "." << Patch;
-  return {OSName, ABI.str(), /*IsValid=*/true};
+  return {std::string(OSName), ABI.str(), /*IsValid=*/true};
 }
 
 static std::string getGNUBuildId(ArrayRef<uint8_t> Desc) {
@@ -5626,7 +5627,8 @@ void LLVMStyle<ELFT>::printRelocation(const ELFO *Obj, Elf_Rela Rel,
     const Elf_Shdr *Sec = unwrapOrError(
         this->FileName,
         Obj->getSection(Sym, SymTab, this->dumper()->getShndxTable()));
-    TargetName = unwrapOrError(this->FileName, Obj->getSectionName(Sec));
+    TargetName =
+        std::string(unwrapOrError(this->FileName, Obj->getSectionName(Sec)));
   } else if (Sym) {
     StringRef StrTable =
         unwrapOrError(this->FileName, Obj->getStringTableForSymtab(*SymTab));

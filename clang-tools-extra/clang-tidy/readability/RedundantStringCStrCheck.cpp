@@ -46,8 +46,8 @@ formatDereference(const ast_matchers::MatchFinder::MatchResult &Result,
   if (const auto *Op = dyn_cast<clang::UnaryOperator>(&ExprNode)) {
     if (Op->getOpcode() == UO_AddrOf) {
       // Strip leading '&'.
-      return tooling::fixit::getText(*Op->getSubExpr()->IgnoreParens(),
-                                     *Result.Context);
+      return std::string(tooling::fixit::getText(
+          *Op->getSubExpr()->IgnoreParens(), *Result.Context));
     }
   }
   StringRef Text = tooling::fixit::getText(ExprNode, *Result.Context);

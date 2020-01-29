@@ -130,7 +130,7 @@ std::error_code IndexError::convertToErrorCode() const {
 
 llvm::Expected<llvm::StringMap<std::string>>
 parseCrossTUIndex(StringRef IndexPath, StringRef CrossTUDir) {
-  std::ifstream ExternalMapFile(IndexPath);
+  std::ifstream ExternalMapFile{std::string(IndexPath)};
   if (!ExternalMapFile)
     return llvm::make_error<IndexError>(index_error_code::missing_index_file,
                                         IndexPath.str());
@@ -258,8 +258,8 @@ llvm::Expected<const T *> CrossTranslationUnitContext::getCrossTUDefinitionImpl(
     // diagnostics.
     ++NumTripleMismatch;
     return llvm::make_error<IndexError>(index_error_code::triple_mismatch,
-                                        Unit->getMainFileName(), TripleTo.str(),
-                                        TripleFrom.str());
+                                        std::string(Unit->getMainFileName()),
+                                        TripleTo.str(), TripleFrom.str());
   }
 
   const auto &LangTo = Context.getLangOpts();
@@ -356,7 +356,7 @@ CrossTranslationUnitContext::ASTFileLoader::operator()(StringRef ASTFilePath) {
       new DiagnosticsEngine(DiagID, &*DiagOpts, DiagClient));
 
   return ASTUnit::LoadFromASTFile(
-      ASTFilePath, CI.getPCHContainerOperations()->getRawReader(),
+      std::string(ASTFilePath), CI.getPCHContainerOperations()->getRawReader(),
       ASTUnit::LoadEverything, Diags, CI.getFileSystemOpts());
 }
 

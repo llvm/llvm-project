@@ -423,12 +423,12 @@ Expected<std::string> Archive::Child::getFullName() const {
     return NameOrErr.takeError();
   StringRef Name = *NameOrErr;
   if (sys::path::is_absolute(Name))
-    return Name;
+    return std::string(Name);
 
   SmallString<128> FullName = sys::path::parent_path(
       Parent->getMemoryBufferRef().getBufferIdentifier());
   sys::path::append(FullName, Name);
-  return StringRef(FullName);
+  return std::string(FullName.str());
 }
 
 Expected<StringRef> Archive::Child::getBuffer() const {

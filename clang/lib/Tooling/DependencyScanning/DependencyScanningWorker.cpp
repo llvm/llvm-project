@@ -118,7 +118,7 @@ public:
             .ExcludedConditionalDirectiveSkipMappings = PPSkipMappings;
     }
 
-    FileMgr->getFileSystemOpts().WorkingDir = WorkingDirectory;
+    FileMgr->getFileSystemOpts().WorkingDir = std::string(WorkingDirectory);
     Compiler.setFileManager(FileMgr);
     Compiler.createSourceManager(*FileMgr);
 

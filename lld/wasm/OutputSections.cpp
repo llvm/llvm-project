@@ -27,7 +27,7 @@ namespace lld {
 std::string toString(const wasm::OutputSection &sec) {
   if (!sec.name.empty())
     return (sec.getSectionName() + "(" + sec.name + ")").str();
-  return sec.getSectionName();
+  return std::string(sec.getSectionName());
 }
 
 namespace wasm {

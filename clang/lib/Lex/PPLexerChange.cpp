@@ -81,7 +81,7 @@ bool Preprocessor::EnterSourceFile(FileID FID, const DirectoryLookup *CurDir,
   if (Invalid) {
     SourceLocation FileStart = SourceMgr.getLocForStartOfFile(FID);
     Diag(Loc, diag::err_pp_error_opening_file)
-      << std::string(SourceMgr.getBufferName(FileStart)) << "";
+        << std::string(SourceMgr.getBufferName(FileStart)) << "";
     return true;
   }
 

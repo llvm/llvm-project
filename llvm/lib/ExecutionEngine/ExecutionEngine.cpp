@@ -200,7 +200,7 @@ std::string ExecutionEngine::getMangledName(const GlobalValue *GV) {
       : GV->getParent()->getDataLayout();
 
   Mangler::getNameWithPrefix(FullName, GV->getName(), DL);
-  return FullName.str();
+  return std::string(FullName.str());
 }
 
 void ExecutionEngine::addGlobalMapping(const GlobalValue *GV, void *Addr) {
@@ -223,7 +223,7 @@ void ExecutionEngine::addGlobalMapping(StringRef Name, uint64_t Addr) {
     std::string &V = EEState.getGlobalAddressReverseMap()[CurVal];
     assert((!V.empty() || !Name.empty()) &&
            "GlobalMapping already established!");
-    V = Name;
+    V = std::string(Name);
   }
 }
 
@@ -269,7 +269,7 @@ uint64_t ExecutionEngine::updateGlobalMapping(StringRef Name, uint64_t Addr) {
     std::string &V = EEState.getGlobalAddressReverseMap()[CurVal];
     assert((!V.empty() || !Name.empty()) &&
            "GlobalMapping already established!");
-    V = Name;
+    V = std::string(Name);
   }
   return OldVal;
 }
@@ -1200,8 +1200,8 @@ void ExecutionEngine::emitGlobals() {
             GV.hasAppendingLinkage() || !GV.hasName())
           continue;// Ignore external globals and globals with internal linkage.
 
-        const GlobalValue *&GVEntry =
-          LinkedGlobalsMap[std::make_pair(GV.getName(), GV.getType())];
+        const GlobalValue *&GVEntry = LinkedGlobalsMap[std::make_pair(
+            std::string(GV.getName()), GV.getType())];
 
         // If this is the first time we've seen this global, it is the canonical
         // version.
@@ -1228,8 +1228,8 @@ void ExecutionEngine::emitGlobals() {
     for (const auto &GV : M.globals()) {
       // In the multi-module case, see what this global maps to.
       if (!LinkedGlobalsMap.empty()) {
-        if (const GlobalValue *GVEntry =
-              LinkedGlobalsMap[std::make_pair(GV.getName(), GV.getType())]) {
+        if (const GlobalValue *GVEntry = LinkedGlobalsMap[std::make_pair(
+                std::string(GV.getName()), GV.getType())]) {
           // If something else is the canonical global, ignore this one.
           if (GVEntry != &GV) {
             NonCanonicalGlobals.push_back(&GV);
@@ -1243,8 +1243,8 @@ void ExecutionEngine::emitGlobals() {
       } else {
         // External variable reference. Try to use the dynamic loader to
         // get a pointer to it.
-        if (void *SymAddr =
-            sys::DynamicLibrary::SearchForAddressOfSymbol(GV.getName()))
+        if (void *SymAddr = sys::DynamicLibrary::SearchForAddressOfSymbol(
+                std::string(GV.getName())))
           addGlobalMapping(&GV, SymAddr);
         else {
           report_fatal_error("Could not resolve external global address: "
@@ -1258,8 +1258,8 @@ void ExecutionEngine::emitGlobals() {
     if (!NonCanonicalGlobals.empty()) {
       for (unsigned i = 0, e = NonCanonicalGlobals.size(); i != e; ++i) {
         const GlobalValue *GV = NonCanonicalGlobals[i];
-        const GlobalValue *CGV =
-          LinkedGlobalsMap[std::make_pair(GV->getName(), GV->getType())];
+        const GlobalValue *CGV = LinkedGlobalsMap[std::make_pair(
+            std::string(GV->getName()), GV->getType())];
         void *Ptr = getPointerToGlobalIfAvailable(CGV);
         assert(Ptr && "Canonical global wasn't codegen'd!");
         addGlobalMapping(GV, Ptr);
@@ -1271,8 +1271,8 @@ void ExecutionEngine::emitGlobals() {
     for (const auto &GV : M.globals()) {
       if (!GV.isDeclaration()) {
         if (!LinkedGlobalsMap.empty()) {
-          if (const GlobalValue *GVEntry =
-                LinkedGlobalsMap[std::make_pair(GV.getName(), GV.getType())])
+          if (const GlobalValue *GVEntry = LinkedGlobalsMap[std::make_pair(
+                  std::string(GV.getName()), GV.getType())])
             if (GVEntry != &GV)  // Not the canonical variable.
               continue;
         }

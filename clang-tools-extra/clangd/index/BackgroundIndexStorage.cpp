@@ -33,7 +33,7 @@ std::string getShardPathFromFilePath(llvm::StringRef ShardRoot,
   llvm::sys::path::append(ShardRootSS, llvm::sys::path::filename(FilePath) +
                                            "." + llvm::toHex(digest(FilePath)) +
                                            ".idx");
-  return ShardRootSS.str();
+  return std::string(ShardRootSS.str());
 }
 
 // Uses disk as a storage for index shards. Creates a directory called
@@ -47,7 +47,7 @@ public:
   DiskBackedIndexStorage(llvm::StringRef Directory) {
     llvm::SmallString<128> CDBDirectory(Directory);
     llvm::sys::path::append(CDBDirectory, ".clangd", "index");
-    DiskShardRoot = CDBDirectory.str();
+    DiskShardRoot = std::string(CDBDirectory.str());
     std::error_code OK;
     std::error_code EC = llvm::sys::fs::create_directories(DiskShardRoot);
     if (EC != OK) {

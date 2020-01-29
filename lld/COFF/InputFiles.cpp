@@ -60,7 +60,7 @@ std::string toString(const coff::InputFile *file) {
   if (!file)
     return "<internal>";
   if (file->parentName.empty() || file->kind() == coff::InputFile::ImportKind)
-    return file->getName();
+    return std::string(file->getName());
 
   return (getBasename(file->parentName) + "(" + getBasename(file->getName()) +
           ")")
@@ -849,7 +849,7 @@ void ImportFile::parse() {
   StringRef name = saver.save(StringRef(buf + sizeof(*hdr)));
   StringRef impName = saver.save("__imp_" + name);
   const char *nameStart = buf + sizeof(coff_import_header) + name.size() + 1;
-  dllName = StringRef(nameStart);
+  dllName = std::string(StringRef(nameStart));
   StringRef extName;
   switch (hdr->getNameType()) {
   case IMPORT_ORDINAL:
@@ -932,7 +932,7 @@ void BitcodeFile::parse() {
     } else if (objSym.isWeak() && objSym.isIndirect()) {
       // Weak external.
       sym = symtab->addUndefined(symName, this, true);
-      std::string fallback = objSym.getCOFFWeakExternalFallback();
+      std::string fallback = std::string(objSym.getCOFFWeakExternalFallback());
       Symbol *alias = symtab->addUndefined(saver.save(fallback));
       checkAndSetWeakAlias(symtab, this, sym, alias);
     } else if (comdatIndex != -1) {
@@ -973,7 +973,7 @@ std::string replaceThinLTOSuffix(StringRef path) {
 
   if (path.consume_back(suffix))
     return (path + repl).str();
-  return path;
+  return std::string(path);
 }
 
 } // namespace coff

@@ -326,7 +326,7 @@ formatIncremental(llvm::StringRef OriginalCode, unsigned OriginalCursor,
   tooling::Replacements Final;
   unsigned FinalCursor = OriginalCursor;
 #ifndef NDEBUG
-  std::string FinalCode = OriginalCode;
+  std::string FinalCode = std::string(OriginalCode);
   dlog("Initial code: {0}", FinalCode);
 #endif
   for (auto Pass :

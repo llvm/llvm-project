@@ -243,11 +243,13 @@ public:
     {
       std::lock_guard<std::mutex> Lock(Mu);
 
-      auto It = DriverToIncludesCache.find(Key);
+      auto It = DriverToIncludesCache.find(
+          {std::string(Key.first), std::string(Key.second)});
       if (It != DriverToIncludesCache.end())
         SystemIncludes = It->second;
       else
-        DriverToIncludesCache[Key] = SystemIncludes =
+        DriverToIncludesCache[{std::string(Key.first),
+                               std::string(Key.second)}] = SystemIncludes =
             extractSystemIncludes(Key.first, Key.second, QueryDriverRegex);
     }
 

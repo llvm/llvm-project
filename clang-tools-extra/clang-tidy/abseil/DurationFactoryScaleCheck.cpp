@@ -31,7 +31,7 @@ getScaleForFactory(llvm::StringRef FactoryName) {
        {"Minutes", DurationScale::Minutes},
        {"Hours", DurationScale::Hours}});
 
-  auto ScaleIter = ScaleMap.find(FactoryName);
+  auto ScaleIter = ScaleMap.find(std::string(FactoryName));
   if (ScaleIter == ScaleMap.end())
     return llvm::None;
 

@@ -121,7 +121,7 @@ llvm::Optional<Path> getCorrespondingHeaderOrSource(const Path &OriginalFile,
       // candidates.
       Best = It;
   }
-  return Path(Best->first());
+  return Path(std::string(Best->first()));
 }
 
 std::vector<const Decl *> getIndexableLocalDecls(ParsedAST &AST) {

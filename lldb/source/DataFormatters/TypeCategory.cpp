@@ -492,5 +492,5 @@ std::string TypeCategoryImpl::GetDescription() {
   if (print_lang)
     stream.PutCString(lang_stream.GetString());
   stream.PutChar(')');
-  return stream.GetString();
+  return std::string(stream.GetString());
 }

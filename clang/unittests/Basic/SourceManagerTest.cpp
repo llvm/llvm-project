@@ -347,7 +347,7 @@ struct MacroAction {
   unsigned MAKind : 3;
 
   MacroAction(SourceLocation Loc, StringRef Name, unsigned K)
-    : Loc(Loc), Name(Name), MAKind(K) { }
+      : Loc(Loc), Name(std::string(Name)), MAKind(K) {}
 
   bool isExpansion() const { return MAKind == kExpansion; }
   bool isDefinition() const { return MAKind & kDefinition; }

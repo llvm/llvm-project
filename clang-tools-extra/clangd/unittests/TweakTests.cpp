@@ -2214,7 +2214,7 @@ TEST_F(DefineOutlineTest, QualifyFunctionName) {
   };
   llvm::StringMap<std::string> EditedFiles;
   for (auto &Case : Cases) {
-    ExtraFiles["Test.cpp"] = Case.TestSource;
+    ExtraFiles["Test.cpp"] = std::string(Case.TestSource);
     EXPECT_EQ(apply(Case.TestHeader, &EditedFiles), Case.ExpectedHeader);
     EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
                                  testPath("Test.cpp"), Case.ExpectedSource)))

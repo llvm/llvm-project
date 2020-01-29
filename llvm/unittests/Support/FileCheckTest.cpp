@@ -262,12 +262,13 @@ TEST_F(FileCheckTest, Expression) {
 static void
 expectUndefErrors(std::unordered_set<std::string> ExpectedUndefVarNames,
                   Error Err) {
-  EXPECT_THAT_ERROR(
-      handleErrors(std::move(Err),
-                   [&](const UndefVarError &E) {
-                     EXPECT_EQ(ExpectedUndefVarNames.erase(E.getVarName()), 1U);
-                   }),
-      Succeeded());
+  EXPECT_THAT_ERROR(handleErrors(std::move(Err),
+                                 [&](const UndefVarError &E) {
+                                   EXPECT_EQ(ExpectedUndefVarNames.erase(
+                                                 std::string(E.getVarName())),
+                                             1U);
+                                 }),
+                    Succeeded());
   EXPECT_TRUE(ExpectedUndefVarNames.empty()) << toString(ExpectedUndefVarNames);
 }
 
@@ -936,12 +937,12 @@ TEST_F(FileCheckTest, FileCheckContext) {
   EXPECT_EQ(*ExpressionVal, 12U);
   ASSERT_THAT_EXPECTED(EmptyVar, Succeeded());
   EXPECT_EQ(*EmptyVar, "");
-  expectUndefErrors({UnknownVarStr}, UnknownVar.takeError());
+  expectUndefErrors({std::string(UnknownVarStr)}, UnknownVar.takeError());
 
   // Clear local variables and check they become absent.
   Cxt.clearLocalVars();
   LocalVar = Cxt.getPatternVarValue(LocalVarStr);
-  expectUndefErrors({LocalVarStr}, LocalVar.takeError());
+  expectUndefErrors({std::string(LocalVarStr)}, LocalVar.takeError());
   // Check a numeric expression's evaluation fails if called after clearing of
   // local variables, if it was created before. This is important because local
   // variable clearing due to --enable-var-scope happens after numeric

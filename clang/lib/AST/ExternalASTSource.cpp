@@ -50,7 +50,7 @@ std::string ExternalASTSource::ASTSourceDescriptor::getModuleName() const {
   if (ClangModule)
     return ClangModule->Name;
   else
-    return PCHModuleName;
+    return std::string(PCHModuleName);
 }
 
 void ExternalASTSource::FindFileRegionDecls(FileID File, unsigned Offset,

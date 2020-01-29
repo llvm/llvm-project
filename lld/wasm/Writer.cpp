@@ -128,7 +128,7 @@ void Writer::createCustomSections() {
     StringRef name = pair.first();
     LLVM_DEBUG(dbgs() << "createCustomSection: " << name << "\n");
 
-    OutputSection *sec = make<CustomSection>(name, pair.second);
+    OutputSection *sec = make<CustomSection>(std::string(name), pair.second);
     if (config->relocatable || config->emitRelocs) {
       auto *sym = make<OutputSectionSymbol>(sec);
       out.linkingSec->addToSymtab(sym);
@@ -389,14 +389,14 @@ void Writer::populateTargetFeatures() {
     for (auto &feature : file->getWasmObj()->getTargetFeatures()) {
       switch (feature.Prefix) {
       case WASM_FEATURE_PREFIX_USED:
-        used.insert({feature.Name, fileName});
+        used.insert({feature.Name, std::string(fileName)});
         break;
       case WASM_FEATURE_PREFIX_REQUIRED:
-        used.insert({feature.Name, fileName});
-        required.insert({feature.Name, fileName});
+        used.insert({feature.Name, std::string(fileName)});
+        required.insert({feature.Name, std::string(fileName)});
         break;
       case WASM_FEATURE_PREFIX_DISALLOWED:
-        disallowed.insert({feature.Name, fileName});
+        disallowed.insert({feature.Name, std::string(fileName)});
         break;
       default:
         error("Unrecognized feature policy prefix " +
@@ -415,7 +415,8 @@ void Writer::populateTargetFeatures() {
   }
 
   if (inferFeatures)
-    allowed.insert(used.keys().begin(), used.keys().end());
+    for (const auto &key : used.keys())
+      allowed.insert(std::string(key));
 
   if (allowed.count("atomics") && !config->sharedMemory) {
     if (inferFeatures)
@@ -447,7 +448,7 @@ void Writer::populateTargetFeatures() {
   // Validate that used features are allowed in output
   if (!inferFeatures) {
     for (auto &feature : used.keys()) {
-      if (!allowed.count(feature))
+      if (!allowed.count(std::string(feature)))
         error(Twine("Target feature '") + feature + "' used by " +
               used[feature] + " is not allowed.");
     }
@@ -467,7 +468,7 @@ void Writer::populateTargetFeatures() {
               ". Use --no-check-features to suppress.");
     }
     for (auto &feature : required.keys()) {
-      if (!objectFeatures.count(feature))
+      if (!objectFeatures.count(std::string(feature)))
         error(Twine("Missing target feature '") + feature + "' in " + fileName +
               ", required by " + required[feature] +
               ". Use --no-check-features to suppress.");

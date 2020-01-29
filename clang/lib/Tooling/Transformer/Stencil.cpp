@@ -81,14 +81,14 @@ struct SelectorData {
 // A stencil operation to build a member access `e.m` or `e->m`, as appropriate.
 struct AccessData {
   AccessData(StringRef BaseId, Stencil Member)
-      : BaseId(BaseId), Member(std::move(Member)) {}
+      : BaseId(std::string(BaseId)), Member(std::move(Member)) {}
   std::string BaseId;
   Stencil Member;
 };
 
 struct IfBoundData {
   IfBoundData(StringRef Id, Stencil TrueStencil, Stencil FalseStencil)
-      : Id(Id), TrueStencil(std::move(TrueStencil)),
+      : Id(std::string(Id)), TrueStencil(std::move(TrueStencil)),
         FalseStencil(std::move(FalseStencil)) {}
   std::string Id;
   Stencil TrueStencil;
@@ -303,7 +303,7 @@ Stencil transformer::detail::makeStencil(RangeSelector Selector) {
 }
 
 Stencil transformer::text(StringRef Text) {
-  return std::make_shared<StencilImpl<RawTextData>>(Text);
+  return std::make_shared<StencilImpl<RawTextData>>(std::string(Text));
 }
 
 Stencil transformer::selection(RangeSelector Selector) {
@@ -311,32 +311,32 @@ Stencil transformer::selection(RangeSelector Selector) {
 }
 
 Stencil transformer::dPrint(StringRef Id) {
-  return std::make_shared<StencilImpl<DebugPrintNodeData>>(Id);
+  return std::make_shared<StencilImpl<DebugPrintNodeData>>(std::string(Id));
 }
 
 Stencil transformer::expression(llvm::StringRef Id) {
   return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::Parens, Id);
+      UnaryNodeOperator::Parens, std::string(Id));
 }
 
 Stencil transformer::deref(llvm::StringRef ExprId) {
   return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::Deref, ExprId);
+      UnaryNodeOperator::Deref, std::string(ExprId));
 }
 
 Stencil transformer::maybeDeref(llvm::StringRef ExprId) {
   return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::MaybeDeref, ExprId);
+      UnaryNodeOperator::MaybeDeref, std::string(ExprId));
 }
 
 Stencil transformer::addressOf(llvm::StringRef ExprId) {
   return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::AddressOf, ExprId);
+      UnaryNodeOperator::AddressOf, std::string(ExprId));
 }
 
 Stencil transformer::maybeAddressOf(llvm::StringRef ExprId) {
   return std::make_shared<StencilImpl<UnaryOperationData>>(
-      UnaryNodeOperator::MaybeAddressOf, ExprId);
+      UnaryNodeOperator::MaybeAddressOf, std::string(ExprId));
 }
 
 Stencil transformer::access(StringRef BaseId, Stencil Member) {

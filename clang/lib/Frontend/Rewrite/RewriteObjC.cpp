@@ -3631,7 +3631,7 @@ void RewriteObjC::InsertBlockLiteralsWithinFunction(FunctionDecl *FD) {
 static void BuildUniqueMethodName(std::string &Name,
                                   ObjCMethodDecl *MD) {
   ObjCInterfaceDecl *IFace = MD->getClassInterface();
-  Name = IFace->getName();
+  Name = std::string(IFace->getName());
   Name += "__" + MD->getSelector().getAsString();
   // Convert colons to underscores.
   std::string::size_type loc = 0;
@@ -5819,7 +5819,8 @@ Stmt *RewriteObjCFragileABI::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
       assert(clsDeclared && "RewriteObjCIvarRefExpr(): Can't find class");
 
       // Synthesize an explicit cast to gain access to the ivar.
-      std::string RecName = clsDeclared->getIdentifier()->getName();
+      std::string RecName =
+          std::string(clsDeclared->getIdentifier()->getName());
       RecName += "_IMPL";
       IdentifierInfo *II = &Context->Idents.get(RecName);
       RecordDecl *RD = RecordDecl::Create(*Context, TTK_Struct, TUDecl,
@@ -5859,7 +5860,8 @@ Stmt *RewriteObjCFragileABI::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
       assert(clsDeclared && "RewriteObjCIvarRefExpr(): Can't find class");
 
       // Synthesize an explicit cast to gain access to the ivar.
-      std::string RecName = clsDeclared->getIdentifier()->getName();
+      std::string RecName =
+          std::string(clsDeclared->getIdentifier()->getName());
       RecName += "_IMPL";
       IdentifierInfo *II = &Context->Idents.get(RecName);
       RecordDecl *RD = RecordDecl::Create(*Context, TTK_Struct, TUDecl,

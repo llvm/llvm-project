@@ -939,7 +939,7 @@ getExpandedMacro(SourceLocation MacroLoc, const Preprocessor &PP,
 
   std::string MacroName = getMacroNameAndPrintExpansion(
       Printer, MacroLoc, *PPToUse, MacroArgMap{}, AlreadyProcessedTokens);
-  return { MacroName, OS.str() };
+  return {MacroName, std::string(OS.str())};
 }
 
 static std::string getMacroNameAndPrintExpansion(

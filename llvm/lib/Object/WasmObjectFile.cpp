@@ -732,7 +732,7 @@ Error WasmObjectFile::parseTargetFeaturesSection(ReadContext &Ctx) {
       return make_error<GenericBinaryError>("Unknown feature policy prefix",
                                             object_error::parse_failed);
     }
-    Feature.Name = readString(Ctx);
+    Feature.Name = std::string(readString(Ctx));
     if (!FeaturesSeen.insert(Feature.Name).second)
       return make_error<GenericBinaryError>(
           "Target features section contains repeated feature \"" +

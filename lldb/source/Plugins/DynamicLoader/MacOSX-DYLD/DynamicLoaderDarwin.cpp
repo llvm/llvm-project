@@ -383,9 +383,10 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
         mh->GetValueForKey("filetype")->GetAsInteger()->GetValue();
 
     if (image->HasKey("min_version_os_name")) {
-      std::string os_name = image->GetValueForKey("min_version_os_name")
-                                ->GetAsString()
-                                ->GetValue();
+      std::string os_name =
+          std::string(image->GetValueForKey("min_version_os_name")
+                          ->GetAsString()
+                          ->GetValue());
       if (os_name == "macosx")
         image_infos[i].os_type = llvm::Triple::MacOSX;
       else if (os_name == "ios" || os_name == "iphoneos")
@@ -403,9 +404,9 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
     }
     if (image->HasKey("min_version_os_sdk")) {
       image_infos[i].min_version_os_sdk =
-          image->GetValueForKey("min_version_os_sdk")
-              ->GetAsString()
-              ->GetValue();
+          std::string(image->GetValueForKey("min_version_os_sdk")
+                          ->GetAsString()
+                          ->GetValue());
     }
 
     // Fields that aren't used by DynamicLoaderDarwin so debugserver doesn't

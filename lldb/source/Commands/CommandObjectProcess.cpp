@@ -759,7 +759,7 @@ public:
 
       switch (short_option) {
       case 'p':
-        plugin_name.assign(option_arg);
+        plugin_name.assign(std::string(option_arg));
         break;
 
       default:
@@ -1252,13 +1252,13 @@ public:
 
       switch (short_option) {
       case 's':
-        stop = option_arg;
+        stop = std::string(option_arg);
         break;
       case 'n':
-        notify = option_arg;
+        notify = std::string(option_arg);
         break;
       case 'p':
-        pass = option_arg;
+        pass = std::string(option_arg);
         break;
       default:
         llvm_unreachable("Unimplemented option");

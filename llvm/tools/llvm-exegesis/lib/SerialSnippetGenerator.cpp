@@ -102,7 +102,7 @@ static void appendCodeTemplates(const LLVMState &State,
     // serial.
     CodeTemplate CT;
     CT.Execution = ExecutionModeBit;
-    CT.Info = ExecutionClassDescription;
+    CT.Info = std::string(ExecutionClassDescription);
     CT.Instructions.push_back(Instr);
     CodeTemplates.push_back(std::move(CT));
     return;
@@ -124,7 +124,7 @@ static void appendCodeTemplates(const LLVMState &State,
     setRandomAliasing(SelfAliasing, IT, IT);
     CodeTemplate CT;
     CT.Execution = ExecutionModeBit;
-    CT.Info = ExecutionClassDescription;
+    CT.Info = std::string(ExecutionClassDescription);
     CT.Instructions.push_back(std::move(IT));
     CodeTemplates.push_back(std::move(CT));
     return;
@@ -143,7 +143,7 @@ static void appendCodeTemplates(const LLVMState &State,
         setRandomAliasing(Back, OtherIT, ThisIT);
       CodeTemplate CT;
       CT.Execution = ExecutionModeBit;
-      CT.Info = ExecutionClassDescription;
+      CT.Info = std::string(ExecutionClassDescription);
       CT.Instructions.push_back(std::move(ThisIT));
       CT.Instructions.push_back(std::move(OtherIT));
       CodeTemplates.push_back(std::move(CT));

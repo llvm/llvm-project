@@ -84,7 +84,7 @@ static std::string getPrettyTypeName(QualType QT) {
   QualType PT = QT->getPointeeType();
   if (!PT.isNull() && !QT->getAs<TypedefType>())
     if (const auto *RD = PT->getAsCXXRecordDecl())
-      return RD->getName();
+      return std::string(RD->getName());
   return QT.getAsString();
 }
 

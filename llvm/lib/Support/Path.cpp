@@ -578,7 +578,7 @@ void native(SmallVectorImpl<char> &Path, Style style) {
 
 std::string convert_to_slash(StringRef path, Style style) {
   if (real_style(style) != Style::windows)
-    return path;
+    return std::string(path);
 
   std::string s = path.str();
   std::replace(s.begin(), s.end(), '\\', '/');
@@ -1114,7 +1114,7 @@ void directory_entry::replace_filename(const Twine &Filename, file_type Type,
                                        basic_file_status Status) {
   SmallString<128> PathStr = path::parent_path(Path);
   path::append(PathStr, Filename);
-  this->Path = PathStr.str();
+  this->Path = std::string(PathStr.str());
   this->Type = Type;
   this->Status = Status;
 }
@@ -1142,7 +1142,8 @@ ErrorOr<perms> getPermissions(const Twine &Path) {
 namespace llvm {
 namespace sys {
 namespace fs {
-TempFile::TempFile(StringRef Name, int FD) : TmpName(Name), FD(FD) {}
+TempFile::TempFile(StringRef Name, int FD)
+    : TmpName(std::string(Name)), FD(FD) {}
 TempFile::TempFile(TempFile &&Other) { *this = std::move(Other); }
 TempFile &TempFile::operator=(TempFile &&Other) {
   TmpName = std::move(Other.TmpName);

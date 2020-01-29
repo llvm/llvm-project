@@ -12,7 +12,7 @@
 namespace lldb_vscode {
 
 FunctionBreakpoint::FunctionBreakpoint(const llvm::json::Object &obj)
-    : BreakpointBase(obj), functionName(GetString(obj, "name")) {}
+    : BreakpointBase(obj), functionName(std::string(GetString(obj, "name"))) {}
 
 void FunctionBreakpoint::SetBreakpoint() {
   if (functionName.empty())

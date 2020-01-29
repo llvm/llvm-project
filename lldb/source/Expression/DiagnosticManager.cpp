@@ -49,7 +49,7 @@ std::string DiagnosticManager::GetString(char separator) {
 
   for (const auto &diagnostic : Diagnostics()) {
     ret.append(StringForSeverity(diagnostic->GetSeverity()));
-    ret.append(diagnostic->GetMessage());
+    ret.append(std::string(diagnostic->GetMessage()));
     ret.push_back(separator);
   }
 

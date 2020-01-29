@@ -125,7 +125,7 @@ GDBRemoteCommunication::SendPacketNoLock(llvm::StringRef payload) {
   packet.Write(payload.data(), payload.size());
   packet.PutChar('#');
   packet.PutHex8(CalculcateChecksum(payload));
-  std::string packet_str = packet.GetString();
+  std::string packet_str = std::string(packet.GetString());
 
   return SendRawPacketNoLock(packet_str);
 }

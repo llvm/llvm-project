@@ -104,12 +104,12 @@ void UniqueptrResetReleaseCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ResetCall =
       Result.Nodes.getNodeAs<CXXMemberCallExpr>("reset_call");
 
-  std::string LeftText = clang::Lexer::getSourceText(
+  std::string LeftText = std::string(clang::Lexer::getSourceText(
       CharSourceRange::getTokenRange(Left->getSourceRange()),
-      *Result.SourceManager, getLangOpts());
-  std::string RightText = clang::Lexer::getSourceText(
+      *Result.SourceManager, getLangOpts()));
+  std::string RightText = std::string(clang::Lexer::getSourceText(
       CharSourceRange::getTokenRange(Right->getSourceRange()),
-      *Result.SourceManager, getLangOpts());
+      *Result.SourceManager, getLangOpts()));
 
   if (ResetMember->isArrow())
     LeftText = "*" + LeftText;

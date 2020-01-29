@@ -748,7 +748,8 @@ void LoopConvertCheck::determineRangeDescriptor(
     ASTContext *Context, const BoundNodes &Nodes, const ForStmt *Loop,
     LoopFixerKind FixerKind, const Expr *ContainerExpr,
     const UsageResult &Usages, RangeDescriptor &Descriptor) {
-  Descriptor.ContainerString = getContainerString(Context, Loop, ContainerExpr);
+  Descriptor.ContainerString =
+      std::string(getContainerString(Context, Loop, ContainerExpr));
 
   if (FixerKind == LFK_Iterator)
     getIteratorLoopQualifiers(Context, Nodes, Descriptor);

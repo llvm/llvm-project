@@ -714,7 +714,7 @@ static std::function<void(Module &)> createDebugDumper() {
           continue;
 
         if (F.hasName()) {
-          std::string Name(F.getName());
+          std::string Name(std::string(F.getName()));
           printf("%s ", Name.c_str());
         } else
           printf("<anon> ");

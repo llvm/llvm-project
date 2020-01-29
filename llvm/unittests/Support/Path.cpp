@@ -849,7 +849,7 @@ TEST_F(FileSystemTest, DirectoryIteration) {
     }
     if (path::filename(i->path()) == "dontlookhere")
       i.no_push();
-    visited.push_back(path::filename(i->path()));
+    visited.push_back(std::string(path::filename(i->path())));
   }
   v_t::const_iterator a0 = find(visited, "a0");
   v_t::const_iterator aa1 = find(visited, "aa1");
@@ -939,10 +939,10 @@ TEST_F(FileSystemTest, BrokenSymlinkDirectoryIteration) {
     ASSERT_NO_ERROR(ec);
     if (i->status().getError() ==
         std::make_error_code(std::errc::no_such_file_or_directory)) {
-      VisitedBrokenSymlinks.push_back(path::filename(i->path()));
+      VisitedBrokenSymlinks.push_back(std::string(path::filename(i->path())));
       continue;
     }
-    VisitedNonBrokenSymlinks.push_back(path::filename(i->path()));
+    VisitedNonBrokenSymlinks.push_back(std::string(path::filename(i->path())));
   }
   EXPECT_THAT(VisitedNonBrokenSymlinks, UnorderedElementsAre("b", "d"));
   VisitedNonBrokenSymlinks.clear();
@@ -956,10 +956,10 @@ TEST_F(FileSystemTest, BrokenSymlinkDirectoryIteration) {
     ASSERT_NO_ERROR(ec);
     if (i->status().getError() ==
         std::make_error_code(std::errc::no_such_file_or_directory)) {
-      VisitedBrokenSymlinks.push_back(path::filename(i->path()));
+      VisitedBrokenSymlinks.push_back(std::string(path::filename(i->path())));
       continue;
     }
-    VisitedNonBrokenSymlinks.push_back(path::filename(i->path()));
+    VisitedNonBrokenSymlinks.push_back(std::string(path::filename(i->path())));
   }
   EXPECT_THAT(VisitedNonBrokenSymlinks,
               UnorderedElementsAre("b", "bb", "d", "da", "dd", "ddd", "ddd"));
@@ -975,10 +975,10 @@ TEST_F(FileSystemTest, BrokenSymlinkDirectoryIteration) {
     ASSERT_NO_ERROR(ec);
     if (i->status().getError() ==
         std::make_error_code(std::errc::no_such_file_or_directory)) {
-      VisitedBrokenSymlinks.push_back(path::filename(i->path()));
+      VisitedBrokenSymlinks.push_back(std::string(path::filename(i->path())));
       continue;
     }
-    VisitedNonBrokenSymlinks.push_back(path::filename(i->path()));
+    VisitedNonBrokenSymlinks.push_back(std::string(path::filename(i->path())));
   }
   EXPECT_THAT(VisitedNonBrokenSymlinks,
               UnorderedElementsAreArray({"a", "b", "ba", "bb", "bc", "c", "d",
@@ -1187,7 +1187,7 @@ static std::string remove_dots(StringRef path, bool remove_dot_dot,
                                path::Style style) {
   SmallString<256> buffer(path);
   path::remove_dots(buffer, remove_dot_dot, style);
-  return buffer.str();
+  return std::string(buffer.str());
 }
 
 TEST(Support, RemoveDots) {

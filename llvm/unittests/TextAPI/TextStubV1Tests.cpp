@@ -113,9 +113,9 @@ TEST(TBDv1, ReadFile) {
   for (const auto *Sym : File->symbols()) {
     EXPECT_FALSE(Sym->isWeakReferenced());
     EXPECT_FALSE(Sym->isUndefined());
-    Exports.emplace_back(ExportedSymbol{Sym->getKind(), Sym->getName(),
-                                        Sym->isWeakDefined(),
-                                        Sym->isThreadLocalValue()});
+    Exports.emplace_back(
+        ExportedSymbol{Sym->getKind(), std::string(Sym->getName()),
+                       Sym->isWeakDefined(), Sym->isThreadLocalValue()});
   }
   llvm::sort(Exports.begin(), Exports.end());
 

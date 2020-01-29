@@ -203,7 +203,8 @@ inline ASTEdit change(RangeSelector Target, TextGenerator Replacement) {
 ///            changeTo(cat("bar()")))
 /// \endcode
 inline ASTEdit changeTo(TextGenerator Replacement) {
-  return changeTo(node(RewriteRule::RootID), std::move(Replacement));
+  return changeTo(node(std::string(RewriteRule::RootID)),
+                  std::move(Replacement));
 }
 /// DEPRECATED: use \c changeTo.
 inline ASTEdit change(TextGenerator Replacement) {

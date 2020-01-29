@@ -628,7 +628,7 @@ DataFlowSanitizer::WrapperKind DataFlowSanitizer::getWrapperKind(Function *F) {
 }
 
 void DataFlowSanitizer::addGlobalNamePrefix(GlobalValue *GV) {
-  std::string GVName = GV->getName(), Prefix = "dfs$";
+  std::string GVName = std::string(GV->getName()), Prefix = "dfs$";
   GV->setName(Prefix + GVName);
 
   // Try to change the name of the function in module inline asm.  We only do

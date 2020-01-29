@@ -37,7 +37,7 @@ URIForFile URIForFile::canonicalize(llvm::StringRef AbsPath,
     elog("URIForFile: failed to resolve path {0} with TU path {1}: "
          "{2}.\nUsing unresolved path.",
          AbsPath, TUPath, Resolved.takeError());
-    return URIForFile(AbsPath);
+    return URIForFile(std::string(AbsPath));
   }
   return URIForFile(std::move(*Resolved));
 }

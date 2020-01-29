@@ -219,7 +219,7 @@ shouldReplaceInst(MachineFunction *MF, const MCInstrDesc *InstDesc,
                   SmallVectorImpl<const MCInstrDesc*> &InstDescRepl) {
   // Check if replacement decision is already available in the cached table.
   // if so, return it.
-  std::string Subtarget = SchedModel.getSubtargetInfo()->getCPU();
+  std::string Subtarget = std::string(SchedModel.getSubtargetInfo()->getCPU());
   auto InstID = std::make_pair(InstDesc->getOpcode(), Subtarget);
   if (SIMDInstrTable.find(InstID) != SIMDInstrTable.end())
     return SIMDInstrTable[InstID];
@@ -288,7 +288,8 @@ bool AArch64SIMDInstrOpt::shouldExitEarly(MachineFunction *MF, Subpass SP) {
 
   // For this optimization, check for all concerned instructions.
   case Interleave:
-    std::string Subtarget = SchedModel.getSubtargetInfo()->getCPU();
+    std::string Subtarget =
+        std::string(SchedModel.getSubtargetInfo()->getCPU());
     if (InterlEarlyExit.find(Subtarget) != InterlEarlyExit.end())
       return InterlEarlyExit[Subtarget];
 

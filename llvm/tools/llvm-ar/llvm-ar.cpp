@@ -650,7 +650,7 @@ static void addChildMember(std::vector<NewArchiveMember> &Members,
   // the archive it's in, so the file resolves correctly.
   if (Thin && FlattenArchive) {
     StringSaver Saver(Alloc);
-    Expected<std::string> FileNameOrErr = M.getName();
+    Expected<std::string> FileNameOrErr(M.getName());
     failIfError(FileNameOrErr.takeError());
     if (sys::path::is_absolute(*FileNameOrErr)) {
       NMOrErr->MemberName = Saver.save(sys::path::convert_to_slash(*FileNameOrErr));
@@ -792,7 +792,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
       int Pos = Ret.size();
       Expected<StringRef> NameOrErr = Child.getName();
       failIfError(NameOrErr.takeError());
-      std::string Name = NameOrErr.get();
+      std::string Name = std::string(NameOrErr.get());
       if (comparePaths(Name, RelPos)) {
         assert(AddAfter || AddBefore);
         if (AddBefore)
@@ -1058,7 +1058,7 @@ static void runMRIScript() {
         fail("editing multiple archives not supported");
       if (Saved)
         fail("file already saved");
-      ArchiveName = Rest;
+      ArchiveName = std::string(Rest);
       break;
     case MRICommand::Delete: {
       llvm::erase_if(NewMembers, [=](NewArchiveMember &M) {

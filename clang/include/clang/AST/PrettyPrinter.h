@@ -36,7 +36,9 @@ protected:
 
 public:
   /// Remap a path to a form suitable for printing.
-  virtual std::string remapPath(StringRef Path) const { return Path; }
+  virtual std::string remapPath(StringRef Path) const {
+    return std::string(Path);
+  }
 };
 
 /// Describes how types, statements, expressions, and declarations should be

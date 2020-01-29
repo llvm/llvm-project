@@ -95,7 +95,7 @@ Status OptionValueFormatEntity::SetValueFromString(llvm::StringRef value_str,
     error = FormatEntity::Parse(value_str, entry);
     if (error.Success()) {
       m_current_entry = std::move(entry);
-      m_current_format = value_str;
+      m_current_format = std::string(value_str);
       m_value_was_set = true;
       NotifyValueChanged();
     }

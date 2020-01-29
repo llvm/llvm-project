@@ -26,9 +26,10 @@ public:
   MachODebugMapParser(StringRef BinaryPath, ArrayRef<std::string> Archs,
                       StringRef PathPrefix = "",
                       bool PaperTrailWarnings = false, bool Verbose = false)
-      : BinaryPath(BinaryPath), Archs(Archs.begin(), Archs.end()),
-        PathPrefix(PathPrefix), PaperTrailWarnings(PaperTrailWarnings),
-        BinHolder(Verbose), CurrentDebugMapObject(nullptr) {}
+      : BinaryPath(std::string(BinaryPath)), Archs(Archs.begin(), Archs.end()),
+        PathPrefix(std::string(PathPrefix)),
+        PaperTrailWarnings(PaperTrailWarnings), BinHolder(Verbose),
+        CurrentDebugMapObject(nullptr) {}
 
   /// Parses and returns the DebugMaps of the input binary. The binary contains
   /// multiple maps in case it is a universal binary.
@@ -181,7 +182,7 @@ void MachODebugMapParser::switchToNewDebugMapObject(
 
 static std::string getArchName(const object::MachOObjectFile &Obj) {
   Triple T = Obj.getArchTriple();
-  return T.getArchName();
+  return std::string(T.getArchName());
 }
 
 std::unique_ptr<DebugMap>
@@ -497,7 +498,7 @@ void MachODebugMapParser::loadCurrentObjectFileSymbols(
       CurrentObjectAddresses[*Name] = None;
     } else if (Flags & SymbolRef::SF_Common) {
       CurrentObjectAddresses[*Name] = None;
-      CommonSymbols.push_back(*Name);
+      CommonSymbols.push_back(std::string(*Name));
     } else {
       CurrentObjectAddresses[*Name] = Addr;
     }

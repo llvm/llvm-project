@@ -37,14 +37,15 @@ using namespace lldb_private;
 
 // CommandObject
 
-CommandObject::CommandObject(CommandInterpreter &interpreter, llvm::StringRef name,
-  llvm::StringRef help, llvm::StringRef syntax, uint32_t flags)
-    : m_interpreter(interpreter), m_cmd_name(name),
+CommandObject::CommandObject(CommandInterpreter &interpreter,
+                             llvm::StringRef name, llvm::StringRef help,
+                             llvm::StringRef syntax, uint32_t flags)
+    : m_interpreter(interpreter), m_cmd_name(std::string(name)),
       m_cmd_help_short(), m_cmd_help_long(), m_cmd_syntax(), m_flags(flags),
       m_arguments(), m_deprecated_command_override_callback(nullptr),
       m_command_override_callback(nullptr), m_command_override_baton(nullptr) {
-  m_cmd_help_short = help;
-  m_cmd_syntax = syntax;
+  m_cmd_help_short = std::string(help);
+  m_cmd_syntax = std::string(syntax);
 }
 
 CommandObject::~CommandObject() {}
@@ -73,20 +74,28 @@ llvm::StringRef CommandObject::GetSyntax() {
       syntax_str.PutCString("-- ");
     GetFormattedCommandArguments(syntax_str);
   }
-  m_cmd_syntax = syntax_str.GetString();
+  m_cmd_syntax = std::string(syntax_str.GetString());
 
   return m_cmd_syntax;
 }
 
 llvm::StringRef CommandObject::GetCommandName() const { return m_cmd_name; }
 
-void CommandObject::SetCommandName(llvm::StringRef name) { m_cmd_name = name; }
+void CommandObject::SetCommandName(llvm::StringRef name) {
+  m_cmd_name = std::string(name);
+}
 
-void CommandObject::SetHelp(llvm::StringRef str) { m_cmd_help_short = str; }
+void CommandObject::SetHelp(llvm::StringRef str) {
+  m_cmd_help_short = std::string(str);
+}
 
-void CommandObject::SetHelpLong(llvm::StringRef str) { m_cmd_help_long = str; }
+void CommandObject::SetHelpLong(llvm::StringRef str) {
+  m_cmd_help_long = std::string(str);
+}
 
-void CommandObject::SetSyntax(llvm::StringRef str) { m_cmd_syntax = str; }
+void CommandObject::SetSyntax(llvm::StringRef str) {
+  m_cmd_syntax = std::string(str);
+}
 
 Options *CommandObject::GetOptions() {
   // By default commands don't have options unless this virtual function is
@@ -485,7 +494,7 @@ void CommandObject::GetFormattedCommandArguments(Stream &str,
         names.Printf("%s", GetArgumentName(arg_entry[j].arg_type));
       }
 
-      std::string name_str = names.GetString();
+      std::string name_str = std::string(names.GetString());
       switch (arg_entry[0].arg_repetition) {
       case eArgRepeatPlain:
         str.Printf("<%s>", name_str.c_str());
@@ -673,7 +682,7 @@ static llvm::StringRef FormatHelpTextCallback() {
 
   sstr.Flush();
 
-  help_text = sstr.GetString();
+  help_text = std::string(sstr.GetString());
 
   return help_text;
 }
@@ -691,7 +700,7 @@ static llvm::StringRef LanguageTypeHelpTextCallback() {
 
   sstr.Flush();
 
-  help_text = sstr.GetString();
+  help_text = std::string(sstr.GetString());
 
   return help_text;
 }
@@ -809,7 +818,7 @@ static llvm::StringRef ExprPathHelpTextCallback() {
 void CommandObject::FormatLongHelpText(Stream &output_strm,
                                        llvm::StringRef long_help) {
   CommandInterpreter &interpreter = GetCommandInterpreter();
-  std::stringstream lineStream(long_help);
+  std::stringstream lineStream{std::string(long_help)};
   std::string line;
   while (std::getline(lineStream, line)) {
     if (line.empty()) {

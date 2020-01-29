@@ -1411,7 +1411,7 @@ resolveFileRelativeToOriginalDir(const std::string &Filename,
     path::append(currPCHPath, "..");
   path::append(currPCHPath, fileDirI, fileDirE);
   path::append(currPCHPath, path::filename(Filename));
-  return currPCHPath.str();
+  return std::string(currPCHPath.str());
 }
 
 bool ASTReader::ReadSLocEntry(int ID) {
@@ -1838,7 +1838,7 @@ bool HeaderFileInfoTrait::EqualKey(internal_key_ref a, internal_key_ref b) {
       return nullptr;
     }
 
-    std::string Resolved = Key.Filename;
+    std::string Resolved = std::string(Key.Filename);
     Reader.ResolveImportedPath(M, Resolved);
     if (auto File = FileMgr.getFile(Resolved))
       return *File;
@@ -1913,13 +1913,13 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
     ModuleMap &ModMap =
         Reader.getPreprocessor().getHeaderSearchInfo().getModuleMap();
 
-    std::string Filename = key.Filename;
+    std::string Filename = std::string(key.Filename);
     if (key.Imported)
       Reader.ResolveImportedPath(M, Filename);
     // FIXME: This is not always the right filename-as-written, but we're not
     // going to use this information to rebuild the module, so it doesn't make
     // a lot of difference.
-    Module::Header H = { key.Filename, *FileMgr.getFile(Filename) };
+    Module::Header H = {std::string(key.Filename), *FileMgr.getFile(Filename)};
     ModMap.addHeader(Mod, H, HeaderRole, /*Imported*/true);
     HFI.isModuleHeader |= !(HeaderRole & ModuleMap::TextualHeader);
   }
@@ -2248,7 +2248,7 @@ ASTReader::readInputFileInfo(ModuleFile &F, unsigned ID) {
   R.Overridden = static_cast<bool>(Record[3]);
   R.Transient = static_cast<bool>(Record[4]);
   R.TopLevelModuleMap = static_cast<bool>(Record[5]);
-  R.Filename = Blob;
+  R.Filename = std::string(Blob);
   ResolveImportedPath(F, R.Filename);
 
   Expected<llvm::BitstreamEntry> MaybeEntry = Cursor.advance();
@@ -2309,7 +2309,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   if (File == nullptr && !F.OriginalDir.empty() && !F.BaseDirectory.empty() &&
       F.OriginalDir != F.BaseDirectory) {
     std::string Resolved = resolveFileRelativeToOriginalDir(
-        Filename, F.OriginalDir, F.BaseDirectory);
+        std::string(Filename), F.OriginalDir, F.BaseDirectory);
     if (!Resolved.empty())
       if (auto FE = FileMgr.getFile(Resolved))
         File = *FE;
@@ -2836,7 +2836,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
     case ORIGINAL_FILE:
       F.OriginalSourceFileID = FileID::get(Record[0]);
-      F.ActualOriginalSourceFileName = Blob;
+      F.ActualOriginalSourceFileName = std::string(Blob);
       F.OriginalSourceFileName = F.ActualOriginalSourceFileName;
       ResolveImportedPath(F, F.OriginalSourceFileName);
       break;
@@ -2846,11 +2846,11 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       break;
 
     case ORIGINAL_PCH_DIR:
-      F.OriginalDir = Blob;
+      F.OriginalDir = std::string(Blob);
       break;
 
     case MODULE_NAME:
-      F.ModuleName = Blob;
+      F.ModuleName = std::string(Blob);
       Diag(diag::remark_module_import)
           << F.ModuleName << F.FileName << (ImportedBy ? true : false)
           << (ImportedBy ? StringRef(ImportedBy->ModuleName) : StringRef());
@@ -2889,9 +2889,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             return OutOfDate;
           }
         }
-        F.BaseDirectory = M->Directory->getName();
+        F.BaseDirectory = std::string(M->Directory->getName());
       } else {
-        F.BaseDirectory = Blob;
+        F.BaseDirectory = std::string(Blob);
       }
       break;
     }
@@ -3793,7 +3793,7 @@ void ASTReader::ReadModuleOffsetMap(ModuleFile &F) const {
     if (!OM) {
       std::string Msg =
           "SourceLocation remap refers to unknown module, cannot find ";
-      Msg.append(Name);
+      Msg.append(std::string(Name));
       Error(Msg);
       return;
     }
@@ -5065,13 +5065,11 @@ namespace {
     SimplePCHValidator(const LangOptions &ExistingLangOpts,
                        const TargetOptions &ExistingTargetOpts,
                        const PreprocessorOptions &ExistingPPOpts,
-                       StringRef ExistingModuleCachePath,
-                       FileManager &FileMgr)
-      : ExistingLangOpts(ExistingLangOpts),
-        ExistingTargetOpts(ExistingTargetOpts),
-        ExistingPPOpts(ExistingPPOpts),
-        ExistingModuleCachePath(ExistingModuleCachePath),
-        FileMgr(FileMgr) {}
+                       StringRef ExistingModuleCachePath, FileManager &FileMgr)
+        : ExistingLangOpts(ExistingLangOpts),
+          ExistingTargetOpts(ExistingTargetOpts),
+          ExistingPPOpts(ExistingPPOpts),
+          ExistingModuleCachePath(ExistingModuleCachePath), FileMgr(FileMgr) {}
 
     bool ReadLanguageOptions(const LangOptions &LangOpts, bool Complain,
                              bool AllowCompatibleDifferences) override {
@@ -5215,7 +5213,7 @@ bool ASTReader::readASTFileControlBlock(
       Listener.ReadModuleName(Blob);
       break;
     case MODULE_DIRECTORY:
-      ModuleDir = Blob;
+      ModuleDir = std::string(Blob);
       break;
     case MODULE_MAP_FILE: {
       unsigned Idx = 0;
@@ -5267,7 +5265,7 @@ bool ASTReader::readASTFileControlBlock(
           break;
         case INPUT_FILE:
           bool Overridden = static_cast<bool>(Record[3]);
-          std::string Filename = Blob;
+          std::string Filename = std::string(Blob);
           ResolveImportedPath(Filename, ModuleDir);
           shouldContinue = Listener.visitInputFile(
               Filename, isSystemFile, Overridden, /*IsExplicitModule*/false);
@@ -5546,7 +5544,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
     }
 
     case SUBMODULE_UMBRELLA_HEADER: {
-      std::string Filename = Blob;
+      std::string Filename = std::string(Blob);
       ResolveImportedPath(F, Filename);
       if (auto Umbrella = PP.getFileManager().getFile(Filename)) {
         if (!CurrentModule->getUmbrellaHeader())
@@ -5579,7 +5577,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       break;
 
     case SUBMODULE_UMBRELLA_DIR: {
-      std::string Dirname = Blob;
+      std::string Dirname = std::string(Blob);
       ResolveImportedPath(F, Dirname);
       if (auto Umbrella = PP.getFileManager().getDirectory(Dirname)) {
         if (!CurrentModule->getUmbrellaDir())
@@ -5649,7 +5647,7 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
     case SUBMODULE_LINK_LIBRARY:
       ModMap.resolveLinkAsDependencies(CurrentModule);
       CurrentModule->LinkLibraries.push_back(
-                                         Module::LinkLibrary(Blob, Record[0]));
+          Module::LinkLibrary(std::string(Blob), Record[0]));
       break;
 
     case SUBMODULE_CONFIG_MACRO:

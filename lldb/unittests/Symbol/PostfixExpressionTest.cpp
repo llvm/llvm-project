@@ -41,27 +41,28 @@ static std::string ToString(UnaryOpNode::OpType type) {
 struct ASTPrinter : public Visitor<std::string> {
 protected:
   std::string Visit(BinaryOpNode &binary, Node *&) override {
-    return llvm::formatv("{0}({1}, {2})", ToString(binary.GetOpType()),
-                         Dispatch(binary.Left()), Dispatch(binary.Right()));
+    return std::string(
+        llvm::formatv("{0}({1}, {2})", ToString(binary.GetOpType()),
+                      Dispatch(binary.Left()), Dispatch(binary.Right())));
   }
 
   std::string Visit(InitialValueNode &, Node *&) override { return "InitialValue"; }
 
   std::string Visit(IntegerNode &integer, Node *&) override {
-    return llvm::formatv("int({0})", integer.GetValue());
+    return std::string(llvm::formatv("int({0})", integer.GetValue()));
   }
 
   std::string Visit(RegisterNode &reg, Node *&) override {
-    return llvm::formatv("reg({0})", reg.GetRegNum());
+    return std::string(llvm::formatv("reg({0})", reg.GetRegNum()));
   }
 
   std::string Visit(SymbolNode &symbol, Node *&) override {
-    return symbol.GetName();
+    return std::string(symbol.GetName());
   }
 
   std::string Visit(UnaryOpNode &unary, Node *&) override {
-    return llvm::formatv("{0}({1})", ToString(unary.GetOpType()),
-                         Dispatch(unary.Operand()));
+    return std::string(llvm::formatv("{0}({1})", ToString(unary.GetOpType()),
+                                     Dispatch(unary.Operand())));
   }
 
 public:
@@ -161,7 +162,7 @@ static std::string ParseAndGenerateDWARF(llvm::StringRef expr) {
     return "DWARF printing failed.";
   }
 
-  return result.GetString();
+  return std::string(result.GetString());
 }
 
 TEST(PostfixExpression, ToDWARF) {

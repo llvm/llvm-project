@@ -346,7 +346,7 @@ Error WindowsResourceParser::parse(WindowsResource *WR,
 
   ResourceEntryRef Entry = EntryOrErr.get();
   uint32_t Origin = InputFilenames.size();
-  InputFilenames.push_back(WR->getFileName());
+  InputFilenames.push_back(std::string(WR->getFileName()));
   bool End = false;
   while (!End) {
 
@@ -368,7 +368,7 @@ Error WindowsResourceParser::parse(ResourceSectionRef &RSR, StringRef Filename,
                                    std::vector<std::string> &Duplicates) {
   UNWRAP_REF_OR_RETURN(BaseTable, RSR.getBaseTable());
   uint32_t Origin = InputFilenames.size();
-  InputFilenames.push_back(Filename);
+  InputFilenames.push_back(std::string(Filename));
   std::vector<StringOrID> Context;
   return addChildren(Root, RSR, BaseTable, Origin, Context, Duplicates);
 }

@@ -132,7 +132,7 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
   for (auto &Pair : Replacements) {
     Function *OldF = Pair.first;
     Function *NewF = Pair.second;
-    std::string Name = OldF->getName();
+    std::string Name = std::string(OldF->getName());
     M.getFunctionList().push_back(NewF);
     OldF->replaceAllUsesWith(
         ConstantExpr::getPointerBitCastOrAddrSpaceCast(NewF, OldF->getType()));

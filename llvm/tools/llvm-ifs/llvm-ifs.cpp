@@ -346,7 +346,7 @@ int writeElfStub(const llvm::Triple &T, const std::set<IFSSymbol> &Symbols,
   }
   OS << "...\n";
 
-  std::string YamlStr = OS.str();
+  std::string YamlStr = std::string(OS.str());
 
   // Only or debugging. Not an offical format.
   LLVM_DEBUG({

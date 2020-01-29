@@ -16,7 +16,7 @@
 using namespace llvm;
 
 ToolOutputFile::CleanupInstaller::CleanupInstaller(StringRef Filename)
-    : Filename(Filename), Keep(false) {
+    : Filename(std::string(Filename)), Keep(false) {
   // Arrange for the file to be deleted if the process is killed.
   if (Filename != "-")
     sys::RemoveFileOnSignal(Filename);

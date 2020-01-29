@@ -65,7 +65,7 @@ std::string CleanPath(StringRef PathRef) {
   llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
   // FIXME: figure out why this is necessary.
   llvm::sys::path::native(Path);
-  return Path.str();
+  return std::string(Path.str());
 }
 
 // Make the Path absolute using the CurrentDir if the Path is not an absolute
@@ -785,13 +785,13 @@ void ClangMoveTool::removeDeclsInOldFiles() {
       continue;
     }
     auto CleanReplacements = format::cleanupAroundReplacements(
-        Code, Context->FileToReplacements[FilePath], *Style);
+        Code, Context->FileToReplacements[std::string(FilePath)], *Style);
 
     if (!CleanReplacements) {
       llvm::errs() << llvm::toString(CleanReplacements.takeError()) << "\n";
       continue;
     }
-    Context->FileToReplacements[FilePath] = *CleanReplacements;
+    Context->FileToReplacements[std::string(FilePath)] = *CleanReplacements;
   }
 }
 
@@ -870,7 +870,7 @@ void ClangMoveTool::moveAll(SourceManager &SM, StringRef OldFile,
     else if (Context->Spec.NewHeader == NewFile &&
              OldHeaderIncludeRangeInHeader.isValid())
       ReplaceOldInclude(OldHeaderIncludeRangeInHeader);
-    Context->FileToReplacements[NewFile] = std::move(AllCode);
+    Context->FileToReplacements[std::string(NewFile)] = std::move(AllCode);
   }
 }
 

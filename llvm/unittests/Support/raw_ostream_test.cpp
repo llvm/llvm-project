@@ -35,7 +35,7 @@ template<typename T> std::string printToString(const T &Value,
   for (unsigned i = 0; i != StartIndex; ++i)
     OS << '?';
   OS << Value;
-  return OS.str().substr(StartIndex);
+  return std::string(OS.str().substr(StartIndex));
 }
 
 template<typename T> std::string printToStringUnbuffered(const T &Value) {

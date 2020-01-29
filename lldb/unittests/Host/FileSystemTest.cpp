@@ -101,8 +101,8 @@ public:
           Path(_Path.str()) {
       for (; I != FilesAndDirs.end(); ++I) {
         if (isInPath(I->first)) {
-          CurrentEntry =
-              vfs::directory_entry(I->second.getName(), I->second.getType());
+          CurrentEntry = vfs::directory_entry(std::string(I->second.getName()),
+                                              I->second.getType());
           break;
         }
       }
@@ -111,8 +111,8 @@ public:
       ++I;
       for (; I != FilesAndDirs.end(); ++I) {
         if (isInPath(I->first)) {
-          CurrentEntry =
-              vfs::directory_entry(I->second.getName(), I->second.getType());
+          CurrentEntry = vfs::directory_entry(std::string(I->second.getName()),
+                                              I->second.getType());
           break;
         }
       }
@@ -129,7 +129,7 @@ public:
   }
 
   void addEntry(StringRef Path, const vfs::Status &Status) {
-    FilesAndDirs[Path] = Status;
+    FilesAndDirs[std::string(Path)] = Status;
   }
 
   void addRegularFile(StringRef Path, sys::fs::perms Perms = sys::fs::all_all) {

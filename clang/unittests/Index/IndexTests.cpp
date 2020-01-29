@@ -95,7 +95,7 @@ public:
                              SymbolRoleSet Roles, SourceLocation Loc) override {
     TestSymbol S;
     S.SymInfo = getSymbolInfoForMacro(*MI);
-    S.QName = Name->getName();
+    S.QName = std::string(Name->getName());
     S.WrittenPos = Position::fromSourceLocation(Loc, AST->getSourceManager());
     S.DeclPos = Position::fromSourceLocation(MI->getDefinitionLoc(),
                                              AST->getSourceManager());

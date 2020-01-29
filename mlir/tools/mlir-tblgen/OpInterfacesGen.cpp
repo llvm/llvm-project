@@ -173,7 +173,7 @@ static void emitTraitDecl(OpInterface &interface, raw_ostream &os,
   traitCtx.withOp("op");
   if (auto verify = interface.getVerify()) {
     os << "  static LogicalResult verifyTrait(Operation* op) {\n"
-       << tblgen::tgfmt(*verify, &traitCtx) << "\n  }\n";
+       << std::string(tblgen::tgfmt(*verify, &traitCtx)) << "\n  }\n";
   }
 
   os << "  };\n";

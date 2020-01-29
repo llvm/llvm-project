@@ -1344,7 +1344,7 @@ std::string CGOpenMPRuntime::getName(ArrayRef<StringRef> Parts) const {
     OS << Sep << Part;
     Sep = Separator;
   }
-  return OS.str();
+  return std::string(OS.str());
 }
 
 static llvm::Function *
@@ -5972,7 +5972,7 @@ static std::string generateUniqueName(CodeGenModule &CGM, StringRef Prefix,
       {D->isLocalVarDeclOrParm() ? D->getName() : CGM.getMangledName(D)});
   Out << Prefix << Name << "_"
       << D->getCanonicalDecl()->getBeginLoc().getRawEncoding();
-  return Out.str();
+  return std::string(Out.str());
 }
 
 /// Emits reduction initializer function:
@@ -10502,7 +10502,7 @@ static std::string mangleVectorParameters(ArrayRef<ParamAttrTy> ParamAttrs) {
       Out << 'a' << ParamAttr.Alignment;
   }
 
-  return Out.str();
+  return std::string(Out.str());
 }
 
 // Function used to add the attribute. The parameter `VLEN` is

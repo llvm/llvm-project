@@ -139,7 +139,9 @@ public:
     return (m_plugin_name.empty() ? nullptr : m_plugin_name.c_str());
   }
 
-  void SetProcessPluginName(llvm::StringRef plugin) { m_plugin_name = plugin; }
+  void SetProcessPluginName(llvm::StringRef plugin) {
+    m_plugin_name = std::string(plugin);
+  }
 
   void Clear() {
     ProcessInstanceInfo::Clear();

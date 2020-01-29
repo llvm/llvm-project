@@ -201,7 +201,7 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
   for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
     if (!Inc.Resolved.empty() && Inc.R.start.line == Pos.line) {
       LocatedSymbol File;
-      File.Name = llvm::sys::path::filename(Inc.Resolved);
+      File.Name = std::string(llvm::sys::path::filename(Inc.Resolved));
       File.PreferredDeclaration = {
           URIForFile::canonicalize(Inc.Resolved, *MainFilePath), Range{}};
       File.Definition = File.PreferredDeclaration;
@@ -219,7 +219,7 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     if (auto Loc = makeLocation(AST.getASTContext(),
                                 M->Info->getDefinitionLoc(), *MainFilePath)) {
       LocatedSymbol Macro;
-      Macro.Name = M->Name;
+      Macro.Name = std::string(M->Name);
       Macro.PreferredDeclaration = *Loc;
       Macro.Definition = Loc;
       Result.push_back(std::move(Macro));
@@ -530,8 +530,9 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
   for (const NamedDecl *D : getDeclAtPosition(AST, Loc, Relations)) {
     SymbolDetails NewSymbol;
     std::string QName = printQualifiedName(*D);
-    std::tie(NewSymbol.containerName, NewSymbol.name) =
-        splitQualifiedName(QName);
+    auto SplitQName = splitQualifiedName(QName);
+    NewSymbol.containerName = std::string(SplitQName.first);
+    NewSymbol.name = std::string(SplitQName.second);
 
     if (NewSymbol.containerName.empty()) {
       if (const auto *ParentND =
@@ -540,7 +541,7 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
     }
     llvm::SmallString<32> USR;
     if (!index::generateUSRForDecl(D, USR)) {
-      NewSymbol.USR = USR.str();
+      NewSymbol.USR = std::string(USR.str());
       NewSymbol.ID = SymbolID(NewSymbol.USR);
     }
     Results.push_back(std::move(NewSymbol));
@@ -548,11 +549,11 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
 
   if (auto M = locateMacroAt(Loc, AST.getPreprocessor())) {
     SymbolDetails NewMacro;
-    NewMacro.name = M->Name;
+    NewMacro.name = std::string(M->Name);
     llvm::SmallString<32> USR;
     if (!index::generateUSRForMacro(NewMacro.name, M->Info->getDefinitionLoc(),
                                     SM, USR)) {
-      NewMacro.USR = USR.str();
+      NewMacro.USR = std::string(USR.str());
       NewMacro.ID = SymbolID(NewMacro.USR);
     }
     Results.push_back(std::move(NewMacro));
@@ -624,7 +625,7 @@ symbolToTypeHierarchyItem(const Symbol &S, const SymbolIndex *Index,
     return llvm::None;
   }
   TypeHierarchyItem THI;
-  THI.name = S.Name;
+  THI.name = std::string(S.Name);
   THI.kind = indexSymbolKindToSymbolKind(S.SymInfo.Kind);
   THI.deprecated = (S.Flags & Symbol::Deprecated);
   THI.selectionRange = Loc->range;

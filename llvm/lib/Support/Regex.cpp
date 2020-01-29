@@ -135,7 +135,7 @@ std::string Regex::sub(StringRef Repl, StringRef String,
 
   // Return the input if there was no match.
   if (!match(String, &Matches, Error))
-    return String;
+    return std::string(String);
 
   // Otherwise splice in the replacement string, starting with the prefix before
   // the match.

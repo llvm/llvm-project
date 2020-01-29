@@ -2358,7 +2358,7 @@ void AsmParser::DiagHandler(const SMDiagnostic &Diag, void *Context) {
   // Use the CppHashFilename and calculate a line number based on the
   // CppHashInfo.Loc and CppHashInfo.LineNumber relative to this Diag's SMLoc
   // for the diagnostic.
-  const std::string &Filename = Parser->CppHashInfo.Filename;
+  const std::string &Filename = std::string(Parser->CppHashInfo.Filename);
 
   int DiagLocLineNo = DiagSrcMgr.FindLineNumber(DiagLoc, DiagBuf);
   int CppHashLocLineNo =

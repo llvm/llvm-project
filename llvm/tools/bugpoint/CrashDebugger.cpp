@@ -1216,7 +1216,7 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
     // For each remaining function, try to reduce that function's attributes.
     std::vector<std::string> FunctionNames;
     for (Function &F : BD.getProgram())
-      FunctionNames.push_back(F.getName());
+      FunctionNames.push_back(std::string(F.getName()));
 
     if (!FunctionNames.empty() && !BugpointIsInterrupted) {
       outs() << "\n*** Attempting to reduce the number of function attributes"

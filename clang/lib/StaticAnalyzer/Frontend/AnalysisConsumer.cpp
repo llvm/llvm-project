@@ -68,8 +68,9 @@ void ento::createPlistHTMLDiagnosticConsumer(
     AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
     const std::string &prefix, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
-  createHTMLDiagnosticConsumer(AnalyzerOpts, C,
-                               llvm::sys::path::parent_path(prefix), PP, CTU);
+  createHTMLDiagnosticConsumer(
+      AnalyzerOpts, C, std::string(llvm::sys::path::parent_path(prefix)), PP,
+      CTU);
   createPlistMultiFileDiagnosticConsumer(AnalyzerOpts, C, prefix, PP, CTU);
 }
 

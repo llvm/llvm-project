@@ -105,7 +105,7 @@ void ReturnValueChecker::checkPostCall(const CallEvent &Call,
 
         Out << '\'' << Name << "' returns "
             << (ExpectedValue ? "true" : "false");
-        return Out.str();
+        return std::string(Out.str());
       },
       /*IsPrunable=*/true);
 
@@ -154,7 +154,7 @@ void ReturnValueChecker::checkEndFunction(const ReturnStmt *RS,
         Out << '\'' << Name << "' returns "
             << (ExpectedValue ? "false" : "true");
 
-        return Out.str();
+        return std::string(Out.str());
       },
       /*IsPrunable=*/false);
 

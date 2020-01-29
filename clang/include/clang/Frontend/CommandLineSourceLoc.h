@@ -38,7 +38,7 @@ public:
     // If both tail splits were valid integers, return success.
     if (!ColSplit.second.getAsInteger(10, PSL.Column) &&
         !LineSplit.second.getAsInteger(10, PSL.Line)) {
-      PSL.FileName = LineSplit.first;
+      PSL.FileName = std::string(LineSplit.first);
 
       // On the command-line, stdin may be specified via "-". Inside the
       // compiler, stdin is called "<stdin>".

@@ -456,8 +456,9 @@ static void dumpObject(const ObjectFile *Obj, ScopedPrinter &Writer,
     Writer.printString("Format", Obj->getFileFormatName());
     Writer.printString("Arch", Triple::getArchTypeName(
                                    (llvm::Triple::ArchType)Obj->getArch()));
-    Writer.printString("AddressSize",
-                       formatv("{0}bit", 8 * Obj->getBytesInAddress()));
+    Writer.printString(
+        "AddressSize",
+        std::string(formatv("{0}bit", 8 * Obj->getBytesInAddress())));
     Dumper->printLoadName();
   }
 

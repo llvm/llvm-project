@@ -493,9 +493,9 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     static_cast<LLVMTargetMachine*>(
       T->createTargetMachine(TT, "generic", "", Options, None, None,
                              CodeGenOpt::Default)));
-  ARMSubtarget ST(TM->getTargetTriple(), TM->getTargetCPU(),
-                  TM->getTargetFeatureString(),
-                  *static_cast<const ARMBaseTargetMachine*>(TM.get()), false);
+  ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+                  std::string(TM->getTargetFeatureString()),
+                  *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
   const ARMBaseInstrInfo *TII = ST.getInstrInfo();
   auto MII = TM->getMCInstrInfo();
 
@@ -591,8 +591,8 @@ TEST(MachineInstr, HasSideEffects) {
   auto TM = std::unique_ptr<LLVMTargetMachine>(
       static_cast<LLVMTargetMachine *>(T->createTargetMachine(
           TT, "generic", "", Options, None, None, CodeGenOpt::Default)));
-  ARMSubtarget ST(TM->getTargetTriple(), TM->getTargetCPU(),
-                  TM->getTargetFeatureString(),
+  ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+                  std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
   const ARMBaseInstrInfo *TII = ST.getInstrInfo();
   auto MII = TM->getMCInstrInfo();

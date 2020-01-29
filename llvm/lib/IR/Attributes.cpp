@@ -466,7 +466,7 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     std::string Result;
     Result += (Twine('"') + getKindAsString() + Twine('"')).str();
 
-    std::string AttrVal = pImpl->getValueAsString();
+    std::string AttrVal = std::string(pImpl->getValueAsString());
     if (AttrVal.empty()) return Result;
 
     // Since some attribute strings contain special characters that cannot be
@@ -1481,7 +1481,7 @@ AttrBuilder &AttrBuilder::addAttribute(Attribute Attr) {
 }
 
 AttrBuilder &AttrBuilder::addAttribute(StringRef A, StringRef V) {
-  TargetDepAttrs[A] = V;
+  TargetDepAttrs[std::string(A)] = std::string(V);
   return *this;
 }
 

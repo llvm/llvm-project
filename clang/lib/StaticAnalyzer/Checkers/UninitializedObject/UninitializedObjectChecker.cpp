@@ -602,7 +602,7 @@ std::string clang::ento::getVariableName(const FieldDecl *Field) {
     llvm_unreachable("No other capture type is expected!");
   }
 
-  return Field->getName();
+  return std::string(Field->getName());
 }
 
 void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
@@ -617,7 +617,7 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   ChOpts.CheckPointeeInitialization = AnOpts.getCheckerBooleanOption(
       Chk, "CheckPointeeInitialization");
   ChOpts.IgnoredRecordsWithFieldPattern =
-      AnOpts.getCheckerStringOption(Chk, "IgnoreRecordsWithField");
+      std::string(AnOpts.getCheckerStringOption(Chk, "IgnoreRecordsWithField"));
   ChOpts.IgnoreGuardedFields =
       AnOpts.getCheckerBooleanOption(Chk, "IgnoreGuardedFields");
 

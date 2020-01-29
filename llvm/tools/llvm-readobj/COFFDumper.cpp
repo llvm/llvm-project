@@ -1135,7 +1135,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
           return;
         }
 
-        std::string PC = formatv("+{0:X}", uint32_t(Line.Offset));
+        std::string PC = std::string(formatv("+{0:X}", uint32_t(Line.Offset)));
         ListScope PCScope(W, PC);
         codeview::LineInfo LI(Line.Flags);
 

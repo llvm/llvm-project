@@ -87,7 +87,7 @@ void CommandHistory::AppendString(llvm::StringRef str, bool reject_if_dupe) {
         return;
     }
   }
-  m_history.push_back(str);
+  m_history.push_back(std::string(str));
 }
 
 void CommandHistory::Clear() {

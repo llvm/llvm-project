@@ -541,7 +541,7 @@ namespace llvm {
     const std::string &getMainFileName() const { return MainFileName; }
 
     /// Set the main file name and override the default.
-    void setMainFileName(StringRef S) { MainFileName = S; }
+    void setMainFileName(StringRef S) { MainFileName = std::string(S); }
 
     /// Creates an entry in the dwarf file and directory tables.
     Expected<unsigned> getDwarfFile(StringRef Directory, StringRef FileName,

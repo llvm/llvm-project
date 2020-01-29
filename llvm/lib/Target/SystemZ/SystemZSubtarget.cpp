@@ -28,7 +28,7 @@ void SystemZSubtarget::anchor() {}
 
 SystemZSubtarget &
 SystemZSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
-  std::string CPUName = CPU;
+  StringRef CPUName = CPU;
   if (CPUName.empty())
     CPUName = "generic";
   // Parse features string.

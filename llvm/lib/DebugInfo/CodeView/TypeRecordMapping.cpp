@@ -99,12 +99,12 @@ static std::string getMemberAttributes(CodeViewRecordIO &IO,
                                        MethodOptions Options) {
   if (!IO.isStreaming())
     return "";
-  std::string AccessSpecifier =
-      getEnumName(IO, uint8_t(Access), makeArrayRef(getMemberAccessNames()));
+  std::string AccessSpecifier = std::string(
+      getEnumName(IO, uint8_t(Access), makeArrayRef(getMemberAccessNames())));
   std::string MemberAttrs(AccessSpecifier);
   if (Kind != MethodKind::Vanilla) {
-    std::string MethodKind =
-        getEnumName(IO, unsigned(Kind), makeArrayRef(getMemberKindNames()));
+    std::string MethodKind = std::string(
+        getEnumName(IO, unsigned(Kind), makeArrayRef(getMemberKindNames())));
     MemberAttrs += ", " + MethodKind;
   }
   if (Options != MethodOptions::None) {
@@ -201,8 +201,8 @@ Error TypeRecordMapping::visitTypeBegin(CVType &CVR) {
   if (IO.isStreaming()) {
     auto RecordKind = CVR.kind();
     uint16_t RecordLen = CVR.length() - 2;
-    std::string RecordKindName =
-        getEnumName(IO, unsigned(RecordKind), makeArrayRef(LeafTypeNames));
+    std::string RecordKindName = std::string(
+        getEnumName(IO, unsigned(RecordKind), makeArrayRef(LeafTypeNames)));
     error(IO.mapInteger(RecordLen, "Record length"));
     error(IO.mapEnum(RecordKind, "Record kind: " + RecordKindName));
   }
@@ -241,7 +241,7 @@ Error TypeRecordMapping::visitMemberBegin(CVMemberRecord &Record) {
 
   MemberKind = Record.Kind;
   if (IO.isStreaming()) {
-    std::string MemberKindName = getLeafTypeName(Record.Kind);
+    std::string MemberKindName = std::string(getLeafTypeName(Record.Kind));
     MemberKindName +=
         " ( " +
         (getEnumName(IO, unsigned(Record.Kind), makeArrayRef(LeafTypeNames)))
@@ -277,8 +277,8 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ModifierRecord &Record) {
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
                                           ProcedureRecord &Record) {
-  std::string CallingConvName = getEnumName(
-      IO, uint8_t(Record.CallConv), makeArrayRef(getCallingConventions()));
+  std::string CallingConvName = std::string(getEnumName(
+      IO, uint8_t(Record.CallConv), makeArrayRef(getCallingConventions())));
   std::string FuncOptionNames =
       getFlagNames(IO, static_cast<uint16_t>(Record.Options),
                    makeArrayRef(getFunctionOptionEnum()));
@@ -293,8 +293,8 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
                                           MemberFunctionRecord &Record) {
-  std::string CallingConvName = getEnumName(
-      IO, uint8_t(Record.CallConv), makeArrayRef(getCallingConventions()));
+  std::string CallingConvName = std::string(getEnumName(
+      IO, uint8_t(Record.CallConv), makeArrayRef(getCallingConventions())));
   std::string FuncOptionNames =
       getFlagNames(IO, static_cast<uint16_t>(Record.Options),
                    makeArrayRef(getFunctionOptionEnum()));
@@ -337,12 +337,13 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, PointerRecord &Record) {
   SmallString<128> Attr("Attrs: ");
 
   if (IO.isStreaming()) {
-    std::string PtrType = getEnumName(IO, unsigned(Record.getPointerKind()),
-                                      makeArrayRef(getPtrKindNames()));
+    std::string PtrType =
+        std::string(getEnumName(IO, unsigned(Record.getPointerKind()),
+                                makeArrayRef(getPtrKindNames())));
     Attr += "[ Type: " + PtrType;
 
-    std::string PtrMode = getEnumName(IO, unsigned(Record.getMode()),
-                                      makeArrayRef(getPtrModeNames()));
+    std::string PtrMode = std::string(getEnumName(
+        IO, unsigned(Record.getMode()), makeArrayRef(getPtrModeNames())));
     Attr += ", Mode: " + PtrMode;
 
     auto PtrSizeOf = Record.getSize();
@@ -374,8 +375,8 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, PointerRecord &Record) {
 
     MemberPointerInfo &M = *Record.MemberInfo;
     error(IO.mapInteger(M.ContainingType, "ClassType"));
-    std::string PtrMemberGetRepresentation = getEnumName(
-        IO, uint16_t(M.Representation), makeArrayRef(getPtrMemberRepNames()));
+    std::string PtrMemberGetRepresentation = std::string(getEnumName(
+        IO, uint16_t(M.Representation), makeArrayRef(getPtrMemberRepNames())));
     error(IO.mapEnum(M.Representation,
                      "Representation: " + PtrMemberGetRepresentation));
   }
@@ -581,8 +582,8 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
 }
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR, LabelRecord &Record) {
-  std::string ModeName =
-      getEnumName(IO, uint16_t(Record.Mode), makeArrayRef(getLabelTypeEnum()));
+  std::string ModeName = std::string(
+      getEnumName(IO, uint16_t(Record.Mode), makeArrayRef(getLabelTypeEnum())));
   error(IO.mapEnum(Record.Mode, "Mode: " + ModeName));
   return Error::success();
 }

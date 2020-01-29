@@ -42,7 +42,7 @@ OptionGroupArchitecture::SetOptionValue(uint32_t option_idx,
 
   switch (short_option) {
   case 'a':
-    m_arch_str.assign(option_arg);
+    m_arch_str.assign(std::string(option_arg));
     break;
 
   default:
