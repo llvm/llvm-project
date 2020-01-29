@@ -8,7 +8,7 @@
 # Absolute include-dirs should not have comp-dir prepended
 # CHECK: /absolute{{/|\\}}1.cc:1:0
 # Relative include-dirs should have comp-dir prepended	
-# CHECK: /comp_dir{{/|\\}relative{{/|\\}}2.cc:2:1
+# CHECK: /comp_dir{{/|\\}}relative{{/|\\}}2.cc:2:1
 
 .Lfunc_begin0:
   .file 1 "/absolute" "1.cc"
