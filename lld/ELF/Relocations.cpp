@@ -73,6 +73,15 @@ static Optional<std::string> getLinkerScriptLocation(const Symbol &sym) {
   return None;
 }
 
+static std::string getDefinedLocation(const Symbol &sym) {
+  std::string msg = "\n>>> defined in ";
+  if (sym.file)
+    msg += toString(sym.file);
+  else if (Optional<std::string> loc = getLinkerScriptLocation(sym))
+    msg += *loc;
+  return msg;
+}
+
 // Construct a message in the following format.
 //
 // >>> defined in /home/alice/src/foo.o
@@ -80,17 +89,28 @@ static Optional<std::string> getLinkerScriptLocation(const Symbol &sym) {
 // >>>               /home/alice/src/bar.o:(.text+0x1)
 static std::string getLocation(InputSectionBase &s, const Symbol &sym,
                                uint64_t off) {
-  std::string msg = "\n>>> defined in ";
-  if (sym.file)
-    msg += toString(sym.file);
-  else if (Optional<std::string> loc = getLinkerScriptLocation(sym))
-    msg += *loc;
-
-  msg += "\n>>> referenced by ";
+  std::string msg = getDefinedLocation(sym) + "\n>>> referenced by ";
   std::string src = s.getSrcMsg(sym, off);
   if (!src.empty())
     msg += src + "\n>>>               ";
   return msg + s.getObjMsg(off);
+}
+
+void reportRangeError(uint8_t *loc, const Relocation &rel, const Twine &v,
+                      int64_t min, uint64_t max) {
+  ErrorPlace errPlace = getErrorPlace(loc);
+  std::string hint;
+  if (rel.sym && !rel.sym->isLocal())
+    hint = "; references " + lld::toString(*rel.sym) +
+           getDefinedLocation(*rel.sym);
+
+  if (errPlace.isec && errPlace.isec->name.startswith(".debug"))
+    hint += "; consider recompiling with -fdebug-types-section to reduce size "
+            "of debug sections";
+
+  errorOrWarn(errPlace.loc + "relocation " + lld::toString(rel.type) +
+              " out of range: " + v.str() + " is not in [" + Twine(min).str() +
+              ", " + Twine(max).str() + "]" + hint);
 }
 
 namespace {
