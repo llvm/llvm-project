@@ -473,7 +473,7 @@ protected:
   };
   llvm::Optional<DecodedUID> DecodeUID(lldb::user_id_t uid);
 
-  SymbolFileDWARFDwp *GetDwpSymbolFile();
+  void FindDwpSymbolFile();
 
   const lldb_private::FileSpecList &GetTypeUnitSupportFiles(DWARFTypeUnit &tu);
 
@@ -481,12 +481,14 @@ protected:
   SymbolFileDWARFDebugMap *m_debug_map_symfile;
 
   llvm::once_flag m_dwp_symfile_once_flag;
-  std::unique_ptr<SymbolFileDWARFDwp> m_dwp_symfile;
+  std::shared_ptr<SymbolFileDWARFDwo> m_dwp_symfile;
 
   lldb_private::DWARFContext m_context;
 
-  std::unique_ptr<DWARFDebugAbbrev> m_abbr;
+  llvm::once_flag m_info_once_flag;
   std::unique_ptr<DWARFDebugInfo> m_info;
+
+  std::unique_ptr<DWARFDebugAbbrev> m_abbr;
   std::unique_ptr<GlobalVariableMap> m_global_aranges_up;
 
   typedef std::unordered_map<lldb::offset_t, lldb_private::DebugMacrosSP>
