@@ -58,7 +58,7 @@ void Generator::parseCommandArgs(llvm::StringRef ArgStr, ArgVector &Args) {
     A = A.trim(' ');
     if (A.startswith(ParamNamePrefix) && A.endswith(ParamNameSuffix)) {
       A = A.drop_front(ParamNamePrefixSize).drop_back(ParamNameSuffixSize);
-      A = ArgMap[A];
+      A = ArgMap[std::string(A)];
     }
   }
 }
