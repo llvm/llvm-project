@@ -54,7 +54,7 @@ func:
 // PIC64-NEXT:      R_MIPS_PC32/R_MIPS_NONE/R_MIPS_NONE
 // RELOCS-NEXT:   }
 
-// DWARF32: 00000000 00000010 ffffffff CIE
+// DWARF32: 00000000 00000010 00000000 CIE
 // DWARF32-NEXT:     Version:               1
 // DWARF32-NEXT:     Augmentation:          "zR"
 // DWARF32-NEXT:     Code alignment factor: 1
@@ -73,7 +73,7 @@ func:
 // DWARF32-NEXT:     DW_CFA_nop:
 
 
-// DWARF64: 00000000 00000010 ffffffff CIE
+// DWARF64: 00000000 00000010 00000000 CIE
 // DWARF64-NEXT:     Version:               1
 // DWARF64-NEXT:     Augmentation:          "zR"
 // DWARF64-NEXT:     Code alignment factor: 1
