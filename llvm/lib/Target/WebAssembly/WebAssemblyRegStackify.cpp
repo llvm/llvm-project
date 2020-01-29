@@ -857,6 +857,12 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
                        !TreeWalker.isOnStack(Reg);
         if (CanMove && hasOneUse(Reg, Def, MRI, MDT, LIS)) {
           Insert = moveForSingleUse(Reg, Op, Def, MBB, Insert, LIS, MFI, MRI);
+
+          // If we are removing the frame base reg completely, remove the debug
+          // info as well.
+          // TODO: Encode this properly as a stackified value.
+          if (MFI.isFrameBaseVirtual() && MFI.getFrameBaseVreg() == Reg)
+            MFI.clearFrameBaseVreg();
         } else if (shouldRematerialize(*Def, AA, TII)) {
           Insert =
               rematerializeCheapDef(Reg, Op, *Def, MBB, Insert->getIterator(),

@@ -101,6 +101,7 @@ public:
     assert(FrameBaseVreg != -1U && "Frame base vreg hasn't been set");
     return FrameBaseVreg;
   }
+  void clearFrameBaseVreg() { FrameBaseVreg = -1U; }
   // Return true if the frame base physreg has been replaced by a virtual reg.
   bool isFrameBaseVirtual() const { return FrameBaseVreg != -1U; }
   void setFrameBaseLocal(unsigned Local) { FrameBaseLocal = Local; }

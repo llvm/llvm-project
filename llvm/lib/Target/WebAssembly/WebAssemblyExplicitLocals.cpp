@@ -77,8 +77,13 @@ static unsigned getLocalId(DenseMap<unsigned, unsigned> &Reg2Local,
   auto P = Reg2Local.insert(std::make_pair(Reg, CurLocal));
   if (P.second) {
     // Mark the local allocated for the frame base vreg.
-    if (MFI.isFrameBaseVirtual() && Reg == MFI.getFrameBaseVreg())
+    if (MFI.isFrameBaseVirtual() && Reg == MFI.getFrameBaseVreg()) {
+      LLVM_DEBUG({
+        dbgs() << "Allocating local " << CurLocal << "for VReg "
+               << Register::virtReg2Index(Reg) << '\n';
+      });
       MFI.setFrameBaseLocal(CurLocal);
+    }
     ++CurLocal;
   }
   return P.first->second;
