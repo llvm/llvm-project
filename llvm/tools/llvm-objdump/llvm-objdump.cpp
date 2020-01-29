@@ -338,7 +338,7 @@ static cl::extrahelp
     HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 
 static StringSet<> DisasmFuncsSet;
-static StringSet<> FoundSectionSet;
+StringSet<> FoundSectionSet;
 static StringRef ToolName;
 
 typedef std::vector<std::tuple<uint64_t, StringRef, uint8_t>> SectionSymbolsTy;
