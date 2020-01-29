@@ -195,8 +195,15 @@ static int ExceptionFilter(bool DumpStackAndCleanup,
   return EXCEPTION_EXECUTE_HANDLER;
 }
 
+#if defined(__clang__) && defined(_M_IX86)
+// Work around PR44697.
+__attribute__((optnone))
 static bool InvokeFunctionCall(function_ref<void()> Fn,
                                bool DumpStackAndCleanup, int &RetCode) {
+#else
+static bool InvokeFunctionCall(function_ref<void()> Fn,
+                               bool DumpStackAndCleanup, int &RetCode) {
+#endif
   __try {
     Fn();
   } __except (ExceptionFilter(DumpStackAndCleanup, GetExceptionInformation())) {
