@@ -501,6 +501,12 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
   setOperationAction(ISD::GlobalAddress, PtrVT, Custom);
 
+  // VE doesn't have instructions for fp<->uint, so expand them by llvm
+  setOperationAction(ISD::FP_TO_UINT, MVT::i32, Promote); // use i64
+  setOperationAction(ISD::UINT_TO_FP, MVT::i32, Promote); // use i64
+  setOperationAction(ISD::FP_TO_UINT, MVT::i64, Expand);
+  setOperationAction(ISD::UINT_TO_FP, MVT::i64, Expand);
+
   setStackPointerRegisterToSaveRestore(VE::SX11);
 
   // Set function alignment to 16 bytes
