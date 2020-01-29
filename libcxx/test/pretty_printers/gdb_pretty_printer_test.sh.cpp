@@ -153,6 +153,21 @@ void string_test() {
                             "\"mehmet bizim dostumuz agzi kirik testimiz\"");
 }
 
+void string_view_test() {
+  std::string_view i_am_empty;
+  ComparePrettyPrintToChars(i_am_empty, "std::string_view of length 0: \"\"");
+
+  std::string source_string("to be or not to be");
+  std::string_view to_be(source_string);
+  ComparePrettyPrintToChars(
+      to_be, "std::string_view of length 18: \"to be or not to be\"");
+
+  const char char_arr[] = "what a wonderful world";
+  std::string_view wonderful(&char_arr[7], 9);
+  ComparePrettyPrintToChars(
+      wonderful, "std::string_view of length 9: \"wonderful\"");
+}
+
 void u16string_test() {
   std::u16string test0 = u"Hello World";
   ComparePrettyPrintToChars(test0, "u\"Hello World\"");
@@ -613,6 +628,7 @@ int main(int argc, char* argv[]) {
   framework_self_test();
 
   string_test();
+  string_view_test();
 
   u32string_test();
   tuple_test();
