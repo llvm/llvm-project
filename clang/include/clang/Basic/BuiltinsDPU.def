@@ -15,5 +15,7 @@
 // The format of this database matches clang/Basic/Builtins.def.
 
 BUILTIN(__builtin_dpu_tid, "UiC", "nc")
+BUILTIN(__builtin_dpu_sdma, "vv*v*Ui", "")
+BUILTIN(__builtin_dpu_ldma, "vv*v*Ui", "")
 
 #undef BUILTIN

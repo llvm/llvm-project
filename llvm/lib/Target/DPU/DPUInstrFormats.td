@@ -6110,8 +6110,9 @@ def LDMArri: DPUInstruction {
 	let OutOperandList   = (outs);
 	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, u8_imm:$immDma);
 	let AsmString        = "ldma $ra, $rb, $immDma";
-	let Pattern          = [];
+	let Pattern          = [(SDT_Ldma SimpleRegOrCst:$ra, SimpleReg:$rb, u8_imm:$immDma)];
 	let isAsCheapAsAMove = 1;
+	let hasSideEffects   = 1;
 	bits<5> rb; bits<8> immDma; bits<5> ra;
 	let Inst{16-0} = 0b00000000000000000;
 	let Inst{19-17} = rb{2-0};
@@ -18258,8 +18259,9 @@ def SDMArri: DPUInstruction {
 	let OutOperandList   = (outs);
 	let InOperandList    = (ins SimpleRegOrCst:$ra, SimpleReg:$rb, u8_imm:$immDma);
 	let AsmString        = "sdma $ra, $rb, $immDma";
-	let Pattern          = [];
+	let Pattern          = [(SDT_Sdma SimpleRegOrCst:$ra, SimpleReg:$rb, u8_imm:$immDma)];
 	let isAsCheapAsAMove = 1;
+	let hasSideEffects   = 1;
 	bits<5> rb; bits<8> immDma; bits<5> ra;
 	let Inst{16-0} = 0b00000000000000010;
 	let Inst{19-17} = rb{2-0};

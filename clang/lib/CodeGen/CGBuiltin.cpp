@@ -17356,6 +17356,20 @@ Value *CodeGenFunction::EmitDPUBuiltinExpr(unsigned BuiltinID, const CallExpr *E
     llvm::Function *Callee = CGM.getIntrinsic(Intrinsic::dpu_tid, ResultType);
     return Builder.CreateCall(Callee);
   }
+  case DPU::BI__builtin_dpu_sdma: {
+    llvm::Function *Callee = CGM.getIntrinsic(Intrinsic::dpu_sdma);
+    Value *Arg0 = EmitPointerWithAlignment(E->getArg(0)).getPointer();
+    Value *Arg1 = EmitPointerWithAlignment(E->getArg(1)).getPointer();
+    Value *Arg2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(Callee, {Arg0, Arg1, Arg2});
+  }
+  case DPU::BI__builtin_dpu_ldma: {
+    llvm::Function *Callee = CGM.getIntrinsic(Intrinsic::dpu_ldma);
+    Value *Arg0 = EmitPointerWithAlignment(E->getArg(0)).getPointer();
+    Value *Arg1 = EmitPointerWithAlignment(E->getArg(1)).getPointer();
+    Value *Arg2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(Callee, {Arg0, Arg1, Arg2});
+  }
 
   default:
     return nullptr;

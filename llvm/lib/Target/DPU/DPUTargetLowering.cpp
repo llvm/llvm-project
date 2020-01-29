@@ -37,6 +37,9 @@ using namespace llvm;
 #include "DPUCondCodes.h"
 #include "MCTargetDesc/DPUAsmCondition.h"
 
+#define GET_SUBTARGETINFO_ENUM
+#include "DPUGenSubtargetInfo.inc"
+
 #define DEBUG_TYPE "dpu-lower"
 
 // A bunch of helper to ease code reading
@@ -94,6 +97,7 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   addRegisterClass(MVT::i64, &DPU::GP64_REGRegClass);
 
   // Compute derived properties from the register classes
+  STInfo = &STI;
   TRI = STI.getRegisterInfo();
   computeRegisterProperties(TRI);
 
@@ -386,6 +390,10 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
   default:
     return nullptr;
+  case DPUISD::LDMA:
+    return "DPUISD::LDMA";
+  case DPUISD::SDMA:
+    return "DPUISD::SDMA";
   case DPUISD::ADD_VASTART:
     return "DPUISD::ADD_VASTART";
   case DPUISD::RET_FLAG:
@@ -478,6 +486,8 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "DPUISD::Lsr1";
   case DPUISD::Lsr1x:
     return "DPUISD::Lsr1x";
+  case DPUISD::LslAdd:
+    return "DPUISD::LslAdd";
   case DPUISD::AddJcc:
     return "DPUISD::AddJcc";
   case DPUISD::AddNullJcc:
@@ -635,14 +645,24 @@ SDValue DPUTargetLowering::LowerUnsupported(SDValue Op, SelectionDAG &DAG,
                                             StringRef Message) const {
   const Function &Func = DAG.getMachineFunction().getFunction();
   const DebugLoc &DL = Op.getDebugLoc();
-  DiagnosticInfoUnsupported Diag(Func, Message, DL);
-  Func.getContext().diagnose(Diag);
+  std::string FinalMessage;
+  raw_string_ostream stream(FinalMessage);
+  stream << Message;
   if (DL.get() == NULL) {
-    report_fatal_error(
-        Message + "\n(add -g to CFLAGS for more precise diagnostic)", false);
+    stream << " (add -g to CFLAGS for more precise diagnostic)";
   } else {
-    report_fatal_error(Message, false);
+    if (auto *DIL = DL.getInlinedAt()) {
+      DebugLoc InlinedAtDL(DIL);
+      if (InlinedAtDL) {
+        stream << " (inlined @[ ";
+        InlinedAtDL.print(stream);
+        stream << " ])";
+      }
+    }
   }
+  stream.flush();
+  DiagnosticInfoUnsupported Diag(Func, FinalMessage, DL);
+  Func.getContext().diagnose(Diag);
   return Op;
 }
 
@@ -1684,6 +1704,54 @@ SDValue DPUTargetLowering::LowerShift(SDValue Op, SelectionDAG &DAG,
   }
 }
 
+SDValue DPUTargetLowering::LowerDMA(SDValue Op, SelectionDAG &DAG,
+                                    int DPUISD) const {
+  SDLoc dl(Op);
+  const EVT &evt = Op.getValueType();
+  SDValue chain = Op.getOperand(0);
+  SDValue ra = Op.getOperand(2);
+  SDValue rb = Op.getOperand(3);
+  uint64_t size;
+  SDValue immDma = Op.getOperand(4);
+
+  if (!STInfo->hasFeature(DPU::FeatureDPUDisableMramCheck)) {
+    if (auto *GVa = dyn_cast<GlobalAddressSDNode>(ra)) {
+      if (GVa->getGlobal()->getAlignment() % 8) {
+        LowerUnsupported(
+            ra, DAG, "WRAM buffer of DMA transfer needs to be 8-byte aligned");
+      }
+    }
+    if (auto *GVb = dyn_cast<GlobalAddressSDNode>(rb)) {
+      if (GVb->getGlobal()->getAlignment() % 8) {
+        LowerUnsupported(
+            rb, DAG, "MRAM buffer of DMA transfer needs to be 8-byte aligned");
+      }
+    }
+  }
+
+  if (canFetchConstantTo(immDma, &size)) {
+    if (size % 8 || size > 2048) {
+      LowerUnsupported(
+          Op, DAG,
+          "DMA transfer size needs to be a multiple of 8 in range [8; 2048]");
+    }
+    immDma = DAG.getConstant((size >> 3) - 1, dl, MVT::i32);
+  } else {
+    const EVT &raVT = ra.getValueType();
+    // to + (((nb_of_bytes >> 3) - 1) << 24);
+    SDValue tmp = DAG.getNode(ISD::SRL, dl, raVT, immDma,
+                              DAG.getConstant(3, dl, MVT::i32));
+    tmp =
+        DAG.getNode(ISD::SUB, dl, raVT, tmp, DAG.getConstant(1, dl, MVT::i32));
+    ra = DAG.getNode(DPUISD::LslAdd, dl, raVT, chain, ra, tmp,
+                     DAG.getConstant(24, dl, MVT::i32));
+    immDma = DAG.getConstant(0, dl, MVT::i32);
+  }
+
+  SDValue Ops[] = {chain, ra, rb, immDma};
+  return DAG.getNode(DPUISD, dl, evt, Ops);
+}
+
 SDValue DPUTargetLowering::LowerIntrinsic(SDValue Op, SelectionDAG &DAG,
                                           int IntrinsicType) const {
   SDLoc dl(Op);
@@ -1706,6 +1774,18 @@ SDValue DPUTargetLowering::LowerIntrinsic(SDValue Op, SelectionDAG &DAG,
   case ISD::INTRINSIC_W_CHAIN:
     break;
   case ISD::INTRINSIC_VOID:
+    switch (cast<ConstantSDNode>(Op->getOperand(1))->getZExtValue()) {
+    default:
+      break;
+    case Intrinsic::dpu_sdma: {
+      result = LowerDMA(Op, DAG, DPUISD::SDMA);
+      break;
+    }
+    case Intrinsic::dpu_ldma: {
+      result = LowerDMA(Op, DAG, DPUISD::LDMA);
+      break;
+    }
+    }
     break;
   }
 

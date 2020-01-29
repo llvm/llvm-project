@@ -27,18 +27,18 @@ enum { WRAM = 0, MRAM = 255 };
 namespace DPUISD {
 enum {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
-  RET_FLAG,       // Return with a flag operand
-  CALL,           // Call function
-  SetCC,          // SET to a condition
-  BrCC,           // Jump and branch with condition
-  BrCCi,          // Jump and branch with condition
+  RET_FLAG, // Return with a flag operand
+  CALL,     // Call function
+  SetCC,    // SET to a condition
+  BrCC,     // Jump and branch with condition
+  BrCCi,    // Jump and branch with condition
   BrCCZero, // Jump and branch with condition and one operand equal to zero
   OrJCCZero,
   AndJCCZero,
   XorJCCZero,
   AddJCCZero,
   SubJCCZero,
-  Wrapper, // Global addresses, externals...
+  Wrapper,    // Global addresses, externals...
   TRUNC64,    // Keep the LSBits register,
   LSL64_32,   // Shift 32 positions to the left
   LSL64_LT32, // Shift by less than 32 positions to the left
@@ -74,6 +74,8 @@ enum {
   Lsrx,
   Lsr1,
   Lsr1x,
+
+  LslAdd,
 
   AddJcc,
   AddNullJcc,
@@ -151,6 +153,9 @@ enum {
   LslSubNullJcc,
 
   ADD_VASTART,
+
+  LDMA,
+  SDMA,
 
   TEST_NODE
 };

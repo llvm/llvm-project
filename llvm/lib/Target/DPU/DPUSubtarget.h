@@ -35,6 +35,7 @@ class DPUSubtarget : public DPUGenSubtargetInfo {
   DPUTargetLowering TargetLowering;
   const SelectionDAGTargetInfo TSInfo;
   bool noSugar;
+  bool disableMramCheck;
 
 public:
   // This constructor initializes the data members to match that

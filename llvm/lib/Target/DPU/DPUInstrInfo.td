@@ -31,6 +31,9 @@ def SDT_Lsrx            : SDNode<"DPUISD::Lsrx" , SDT_SHIFT, [SDNPHasChain]>;
 def SDT_Lsr1            : SDNode<"DPUISD::Lsr1" , SDT_SHIFT, [SDNPHasChain]>;
 def SDT_Lsr1x           : SDNode<"DPUISD::Lsr1x", SDT_SHIFT, [SDNPHasChain]>;
 
+def SDT_SHIFT_ADD : SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisInt<1>, SDTCisInt<2>, SDTCisInt<3>]>;
+def SDT_Lsl_add         : SDNode<"DPUISD::LslAdd", SDT_SHIFT_ADD, [SDNPHasChain]>;
+
 def SDT_Mul8            : SDTypeProfile<1, 2, [SDTCisSameAs<1, 2>]>;
 def SDT_Mul8UU          : SDNode<"DPUISD::MUL8_UU", SDT_Mul8, [SDNPInGlue]>;
 def SDT_Mul8SU          : SDNode<"DPUISD::MUL8_SU", SDT_Mul8, [SDNPInGlue]>;
@@ -51,6 +54,10 @@ def DPUcallseq_end      : SDNode<"ISD::CALLSEQ_END",   SDT_DPUCallSeqEnd, [SDNPH
 
 def DPUcall             : SDNode<"DPUISD::CALL", SDT_DPUCall, [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic]>;
 
+def SDT_DMA  : SDTypeProfile<0, 3, [SDTCisInt<2>, SDTCisVT<0, iPTR>, SDTCisVT<1, iPTR>]>;
+def SDT_Ldma : SDNode<"DPUISD::LDMA", SDT_DMA, [SDNPHasChain]>;
+def SDT_Sdma : SDNode<"DPUISD::SDMA", SDT_DMA, [SDNPHasChain]>;
+
 // To promote special types of operands to registers (see the patterns below).
 def SDTDPUWrapper       : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>, SDTCisPtrTy<0>]>;
 def DPUWrapper          : SDNode<"DPUISD::Wrapper", SDTDPUWrapper>;
@@ -66,6 +73,9 @@ def ADD_VAStart: PseudoDPUInstruction<
                     [(set i32:$rc, (DPUAddVAStart i32:$ra))]>;
 
 def : Pat<(trap), (FAULTi 4)>;
+
+def : Pat<(SDT_Lsl_add SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift),
+          (LSL_ADDrrri SimpleReg:$rb, SimpleRegOrCst:$ra, u5_imm:$shift)>;
 
 // Necessary because a frameindex can't be matched directly in a pattern.
 def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;

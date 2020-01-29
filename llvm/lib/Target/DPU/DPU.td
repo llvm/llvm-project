@@ -54,3 +54,4 @@ def DPU : Target {
 }
 
 def FeatureDPUNoSugar : SubtargetFeature<"nosugar", "noSugar", "false", "Disable the use of Syntactic Sugar Instruction">;
+def FeatureDPUDisableMramCheck : SubtargetFeature<"disablemramcheck", "disableMramCheck", "false", "Disable the check of alignment of buffer of the transfer with the MRAM">;
