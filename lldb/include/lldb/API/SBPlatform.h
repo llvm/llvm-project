@@ -89,6 +89,10 @@ public:
 
   SBPlatform(const char *platform_name);
 
+  SBPlatform(const SBPlatform &rhs);
+
+  void operator=(const SBPlatform &rhs);
+
   ~SBPlatform();
 
   explicit operator bool() const;

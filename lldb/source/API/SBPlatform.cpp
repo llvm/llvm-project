@@ -273,6 +273,19 @@ SBPlatform::SBPlatform(const char *platform_name) : m_opaque_sp() {
     m_opaque_sp = Platform::Create(ConstString(platform_name), error);
 }
 
+SBPlatform::SBPlatform(const SBPlatform &rhs) {
+  LLDB_RECORD_CONSTRUCTOR(SBPlatform, (const lldb::SBPlatform &), rhs);
+
+  m_opaque_sp = rhs.m_opaque_sp;
+}
+
+void SBPlatform::operator=(const SBPlatform &rhs) {
+  LLDB_RECORD_METHOD(void, SBPlatform, operator=,(const lldb::SBPlatform &),
+                     rhs);
+
+  m_opaque_sp = rhs.m_opaque_sp;
+}
+
 SBPlatform::~SBPlatform() {}
 
 bool SBPlatform::IsValid() const {
@@ -666,6 +679,8 @@ template <>
 void RegisterMethods<SBPlatform>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBPlatform, ());
   LLDB_REGISTER_CONSTRUCTOR(SBPlatform, (const char *));
+  LLDB_REGISTER_CONSTRUCTOR(SBPlatform, (const lldb::SBPlatform &));
+  LLDB_REGISTER_METHOD(void, SBPlatform, operator=,(const lldb::SBPlatform &));
   LLDB_REGISTER_METHOD_CONST(bool, SBPlatform, IsValid, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBPlatform, operator bool, ());
   LLDB_REGISTER_METHOD(void, SBPlatform, Clear, ());
