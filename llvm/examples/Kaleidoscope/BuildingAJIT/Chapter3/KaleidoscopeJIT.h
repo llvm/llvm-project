@@ -100,13 +100,13 @@ public:
     // Build a resolver and associate it with the new key.
     Resolvers[K] = createLegacyLookupResolver(
         ES,
-        [this](const std::string &Name) -> JITSymbol {
-          if (auto Sym = CompileLayer.findSymbol(Name, false))
+        [this](StringRef Name) -> JITSymbol {
+          if (auto Sym = CompileLayer.findSymbol(std::string(Name), false))
             return Sym;
           else if (auto Err = Sym.takeError())
             return std::move(Err);
-          if (auto SymAddr =
-                  RTDyldMemoryManager::getSymbolAddressInProcess(Name))
+          if (auto SymAddr = RTDyldMemoryManager::getSymbolAddressInProcess(
+                  std::string(Name)))
             return JITSymbol(SymAddr, JITSymbolFlags::Exported);
           return nullptr;
         },

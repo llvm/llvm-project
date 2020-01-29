@@ -340,7 +340,8 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
     SmallVector<StringRef, 16> CheckersAndPackages;
     CheckerAndPackageList.split(CheckersAndPackages, ",");
     for (const StringRef &CheckerOrPackage : CheckersAndPackages)
-      Opts.CheckersAndPackages.emplace_back(CheckerOrPackage, IsEnabled);
+      Opts.CheckersAndPackages.emplace_back(std::string(CheckerOrPackage),
+                                            IsEnabled);
   }
 
   // Go through the analyzer configuration options.
