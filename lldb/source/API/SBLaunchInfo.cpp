@@ -49,11 +49,12 @@ SBLaunchInfo::SBLaunchInfo(const SBLaunchInfo &rhs) {
   m_opaque_sp = rhs.m_opaque_sp;
 }
 
-void SBLaunchInfo::operator=(const SBLaunchInfo &rhs) {
-  LLDB_RECORD_METHOD(void, SBLaunchInfo, operator=,(const lldb::SBLaunchInfo &),
-                     rhs);
+SBLaunchInfo &SBLaunchInfo::operator=(const SBLaunchInfo &rhs) {
+  LLDB_RECORD_METHOD(SBLaunchInfo &,
+                     SBLaunchInfo, operator=,(const lldb::SBLaunchInfo &), rhs);
 
   m_opaque_sp = rhs.m_opaque_sp;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBLaunchInfo::~SBLaunchInfo() {}
@@ -336,7 +337,7 @@ template <>
 void RegisterMethods<SBLaunchInfo>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBLaunchInfo, (const char **));
   LLDB_REGISTER_CONSTRUCTOR(SBLaunchInfo, (const lldb::SBLaunchInfo &));
-  LLDB_REGISTER_METHOD(void,
+  LLDB_REGISTER_METHOD(SBLaunchInfo &,
                        SBLaunchInfo, operator=,(const lldb::SBLaunchInfo &));
   LLDB_REGISTER_METHOD(lldb::pid_t, SBLaunchInfo, GetProcessID, ());
   LLDB_REGISTER_METHOD(uint32_t, SBLaunchInfo, GetUserID, ());

@@ -28,7 +28,7 @@ public:
 
   SBLaunchInfo(const SBLaunchInfo &rhs);
 
-  void operator=(const SBLaunchInfo &rhs);
+  SBLaunchInfo &operator=(const SBLaunchInfo &rhs);
 
   lldb::pid_t GetProcessID();
 
