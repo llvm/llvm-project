@@ -286,7 +286,12 @@ public:
     default:
       OpId = 0;
       break;
+    case ARM::MVE_WLSTP_8:
+    case ARM::MVE_WLSTP_16:
+    case ARM::MVE_WLSTP_32:
+    case ARM::MVE_WLSTP_64:
     case ARM::t2WLS:
+    case ARM::MVE_LETP:
     case ARM::t2LEUpdate:
       OpId = 2;
       break;
