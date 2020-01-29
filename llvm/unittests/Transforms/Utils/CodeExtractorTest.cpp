@@ -280,6 +280,6 @@ TEST(CodeExtractor, ExtractAndInvalidateAssumptionCache) {
   EXPECT_TRUE(Outlined);
   EXPECT_FALSE(verifyFunction(*Outlined));
   EXPECT_FALSE(verifyFunction(*Func));
-  EXPECT_FALSE(CE.verifyAssumptionCache(*Func, &AC));
+  EXPECT_FALSE(CE.verifyAssumptionCache(*Func, *Outlined, &AC));
 }
 } // end anonymous namespace
