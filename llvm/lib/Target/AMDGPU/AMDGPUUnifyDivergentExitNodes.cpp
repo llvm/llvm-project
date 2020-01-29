@@ -195,6 +195,8 @@ static BasicBlock *unifyReturnBlockSet(Function &F,
 
 bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
+  if (PDT.getRoots().size() <= 1)
+    return false;
 
   LegacyDivergenceAnalysis &DA = getAnalysis<LegacyDivergenceAnalysis>();
 
@@ -319,7 +321,7 @@ bool AMDGPUUnifyDivergentExitNodes::runOnFunction(Function &F) {
   if (ReturningBlocks.empty())
     return false; // No blocks return
 
-  if (ReturningBlocks.size() == 1 && !InsertExport)
+  if (ReturningBlocks.size() == 1)
     return false; // Already has a single return block
 
   const TargetTransformInfo &TTI
