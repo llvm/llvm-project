@@ -270,6 +270,8 @@ def CopyOp : LinalgStructured_Op<"copy", [NInputs<1>, NOutputs<1>]> {
     }
   }];
   let verifier = [{ return ::verify(*this); }];
+
+  let hasFolder = 1;
 }
 
 def FillOp : LinalgStructured_Op<"fill", [NInputs<0>, NOutputs<1>]> {
@@ -287,6 +289,8 @@ def FillOp : LinalgStructured_Op<"fill", [NInputs<0>, NOutputs<1>]> {
     }
   }];
   let verifier = [{ return ::verify(*this); }];
+
+  let hasFolder = 1;
 }
 
 def DotOp : LinalgStructured_Op<"dot", [NInputs<2>, NOutputs<1>]> {
@@ -302,6 +306,8 @@ def DotOp : LinalgStructured_Op<"dot", [NInputs<2>, NOutputs<1>]> {
         StringAttr::get(getReductionIteratorTypeName(), ctx), ctx);
     }
   }];
+
+  let hasFolder = 1;
 }
 
 def MatvecOp : LinalgStructured_Op<"matvec", [NInputs<2>, NOutputs<1>]> {
@@ -319,6 +325,8 @@ def MatvecOp : LinalgStructured_Op<"matvec", [NInputs<2>, NOutputs<1>]> {
       return ArrayAttr::get(iters, ctx);
     }
   }];
+
+  let hasFolder = 1;
 }
 
 def MatmulOp : LinalgStructured_Op<"matmul", [NInputs<2>, NOutputs<1>]> {
@@ -337,6 +345,8 @@ def MatmulOp : LinalgStructured_Op<"matmul", [NInputs<2>, NOutputs<1>]> {
       return ArrayAttr::get(iters, ctx);
     }
   }];
+
+  let hasFolder = 1;
 }
 
 def ConvOp : LinalgStructured_Op<"conv", [NInputs<2>, NOutputs<1>]> {
@@ -406,7 +416,10 @@ def ConvOp : LinalgStructured_Op<"conv", [NInputs<2>, NOutputs<1>]> {
         .cast<IntegerAttr>().getValue().getSExtValue();
     }
   }];
+
   let verifier = [{ return ::verify(*this); }];
+
+  let hasFolder = 1;
 }
 
 def LinalgOperand: Type<
@@ -583,7 +596,10 @@ def GenericOp : GenericOpBase<"generic"> {
     tensor SSA values are expected to be useful and will be added in the near
     future.
   }];
+
   let verifier = [{ return ::verify(*this); }];
+
+  let hasFolder = 1;
 }
 
 def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
@@ -710,7 +726,10 @@ def IndexedGenericOp : GenericOpBase<"indexed_generic"> {
     tensor SSA values are expected to be useful and will be added in the near
     future.
   }];
+
   let verifier = [{ return ::verify(*this); }];
+
+  let hasFolder = 1;
 }
 
 #endif // LINALG_STRUCTURED_OPS
