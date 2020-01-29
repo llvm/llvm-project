@@ -184,6 +184,13 @@ TEST(EnumConstant, Matches) {
   EXPECT_TRUE(notMatches("enum X {};", Matcher));
 }
 
+TEST(TagDecl, MatchesTagDecls) {
+  EXPECT_TRUE(matches("struct X {};", tagDecl(hasName("X"))));
+  EXPECT_TRUE(matches("class C {};", tagDecl(hasName("C"))));
+  EXPECT_TRUE(matches("union U {};", tagDecl(hasName("U"))));
+  EXPECT_TRUE(matches("enum E {};", tagDecl(hasName("E"))));
+}
+
 TEST(Matcher, UnresolvedLookupExpr) {
   // FIXME: The test is known to be broken on Windows with delayed template
   // parsing.
