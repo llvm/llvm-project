@@ -588,7 +588,8 @@ ExtractBlocks(BugDriver &BD,
   for (Module::iterator I = Extracted->begin(), E = Extracted->end(); I != E;
        ++I)
     if (!I->isDeclaration())
-      MisCompFunctions.emplace_back(I->getName(), I->getFunctionType());
+      MisCompFunctions.emplace_back(std::string(I->getName()),
+                                    I->getFunctionType());
 
   if (Linker::linkModules(*ProgClone, std::move(Extracted)))
     exit(1);
