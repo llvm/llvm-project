@@ -58,7 +58,7 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
   auto utf8 = str.AsUTF8();
   if (!utf8)
     return utf8.takeError();
-  return utf8.get();
+  return std::string(utf8.get());
 }
 
 void StructuredPythonObject::Serialize(llvm::json::OStream &s) const {
