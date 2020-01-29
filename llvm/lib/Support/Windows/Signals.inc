@@ -460,7 +460,7 @@ bool sys::RemoveFileOnSignal(StringRef Filename, std::string* ErrMsg) {
   if (FilesToRemove == NULL)
     FilesToRemove = new std::vector<std::string>;
 
-  FilesToRemove->push_back(Filename);
+  FilesToRemove->push_back(std::string(Filename));
 
   LeaveCriticalSection(&CriticalSection);
   return false;

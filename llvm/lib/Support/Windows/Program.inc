@@ -138,7 +138,7 @@ static HANDLE RedirectIO(Optional<StringRef> Path, int fd,
   if (Path->empty())
     fname = "NUL";
   else
-    fname = *Path;
+    fname = std::string(*Path);
 
   SECURITY_ATTRIBUTES sa;
   sa.nLength = sizeof(sa);
