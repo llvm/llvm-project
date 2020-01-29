@@ -275,6 +275,8 @@ public:
   /// Implicit conversion to StringRef.
   operator StringRef() const { return str(); }
 
+  explicit operator std::string() const { return str().str(); }
+
   // Extra operators.
   const SmallString &operator=(StringRef RHS) {
     this->clear();
