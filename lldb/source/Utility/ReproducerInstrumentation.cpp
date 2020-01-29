@@ -32,6 +32,10 @@ template <> const char *Deserializer::Deserialize<const char *>() {
     return nullptr;
   const char *str = m_buffer.data();
   m_buffer = m_buffer.drop_front(pos + 1);
+#ifdef LLDB_REPRO_INSTR_TRACE
+    llvm::errs() << "Deserializing with " << LLVM_PRETTY_FUNCTION << " -> \""
+                 << str << "\"\n";
+#endif
   return str;
 }
 
