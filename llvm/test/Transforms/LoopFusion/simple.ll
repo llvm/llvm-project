@@ -306,3 +306,88 @@ for.second.latch:
 for.end:
   ret void
 }
+
+; Test that `%add` is moved in basic block entry, and the two loops for.first
+; and for.second are fused.
+
+; CHECK: i32 @moveinsts_preheader
+; CHECK-LABEL: entry:
+; CHECK-NEXT: %add = add nsw i32 %x, 1
+; CHECK-NEXT: br label %for.first
+; CHECK-LABEL: for.first:
+; CHECK: br i1 %cmp.j, label %for.first, label %for.second.exit
+; CHECK-LABEL: for.second.exit:
+; CHECK-NEXT: ret i32 %add
+
+define i32 @moveinsts_preheader(i32* %A, i32 %x) {
+entry:
+  br label %for.first
+
+for.first:
+  %i = phi i64 [ 0, %entry ], [ %inc.i, %for.first ]
+  %Ai = getelementptr inbounds i32, i32* %A, i64 %i
+  store i32 0, i32* %Ai, align 4
+  %inc.i = add nsw i64 %i, 1
+  %cmp.i = icmp slt i64 %inc.i, 100
+  br i1 %cmp.i, label %for.first, label %for.first.exit
+
+for.first.exit:
+  %add = add nsw i32 %x, 1
+  br label %for.second
+
+for.second:
+  %j = phi i64 [ 0, %for.first.exit ], [ %inc.j, %for.second ]
+  %Aj = getelementptr inbounds i32, i32* %A, i64 %j
+  store i32 2, i32* %Aj, align 4
+  %inc.j = add nsw i64 %j, 1
+  %cmp.j = icmp slt i64 %inc.j, 100
+  br i1 %cmp.j, label %for.second, label %for.second.exit
+
+for.second.exit:
+  ret i32 %add
+}
+
+; Test that `%add` cannot be moved to basic block entry, as it uses %i, which
+; defined after basic block entry. And the two loops for.first and for.second
+; are not fused.
+
+; CHECK: i64 @unsafe_preheader
+; CHECK-LABEL: entry:
+; CHECK-NEXT: br label %for.first
+; CHECK-LABEL: for.first:
+; CHECK: br i1 %cmp.i, label %for.first, label %for.first.exit
+; CHECK-LABEL: for.first.exit:
+; CHECK-NEXT: %add = add nsw i64 %x, %i
+; CHECK-NEXT: br label %for.second
+; CHECK-LABEL: for.second:
+; CHECK: br i1 %cmp.j, label %for.second, label %for.second.exit
+; CHECK-LABEL: for.second.exit:
+; CHECK-NEXT: ret i64 %add
+
+define i64 @unsafe_preheader(i32* %A, i64 %x) {
+entry:
+  br label %for.first
+
+for.first:
+  %i = phi i64 [ 0, %entry ], [ %inc.i, %for.first ]
+  %Ai = getelementptr inbounds i32, i32* %A, i64 %i
+  store i32 0, i32* %Ai, align 4
+  %inc.i = add nsw i64 %i, 1
+  %cmp.i = icmp slt i64 %inc.i, 100
+  br i1 %cmp.i, label %for.first, label %for.first.exit
+
+for.first.exit:
+  %add = add nsw i64 %x, %i
+  br label %for.second
+
+for.second:
+  %j = phi i64 [ 0, %for.first.exit ], [ %inc.j, %for.second ]
+  %Aj = getelementptr inbounds i32, i32* %A, i64 %j
+  store i32 2, i32* %Aj, align 4
+  %inc.j = add nsw i64 %j, 1
+  %cmp.j = icmp slt i64 %inc.j, 100
+  br i1 %cmp.j, label %for.second, label %for.second.exit
+
+for.second.exit:
+  ret i64 %add
+}
