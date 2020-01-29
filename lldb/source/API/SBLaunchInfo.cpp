@@ -43,6 +43,19 @@ SBLaunchInfo::SBLaunchInfo(const char **argv)
     m_opaque_sp->GetArguments().SetArguments(argv);
 }
 
+SBLaunchInfo::SBLaunchInfo(const SBLaunchInfo &rhs) {
+  LLDB_RECORD_CONSTRUCTOR(SBLaunchInfo, (const lldb::SBLaunchInfo &), rhs);
+
+  m_opaque_sp = rhs.m_opaque_sp;
+}
+
+void SBLaunchInfo::operator=(const SBLaunchInfo &rhs) {
+  LLDB_RECORD_METHOD(void, SBLaunchInfo, operator=,(const lldb::SBLaunchInfo &),
+                     rhs);
+
+  m_opaque_sp = rhs.m_opaque_sp;
+}
+
 SBLaunchInfo::~SBLaunchInfo() {}
 
 const lldb_private::ProcessLaunchInfo &SBLaunchInfo::ref() const {
@@ -322,6 +335,9 @@ namespace repro {
 template <>
 void RegisterMethods<SBLaunchInfo>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBLaunchInfo, (const char **));
+  LLDB_REGISTER_CONSTRUCTOR(SBLaunchInfo, (const lldb::SBLaunchInfo &));
+  LLDB_REGISTER_METHOD(void,
+                       SBLaunchInfo, operator=,(const lldb::SBLaunchInfo &));
   LLDB_REGISTER_METHOD(lldb::pid_t, SBLaunchInfo, GetProcessID, ());
   LLDB_REGISTER_METHOD(uint32_t, SBLaunchInfo, GetUserID, ());
   LLDB_REGISTER_METHOD(uint32_t, SBLaunchInfo, GetGroupID, ());
