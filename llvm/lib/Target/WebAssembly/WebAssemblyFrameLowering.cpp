@@ -266,7 +266,7 @@ WebAssemblyFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
   DwarfFrameBase Loc;
   Loc.Kind = DwarfFrameBase::WasmFrameBase;
   const WebAssemblyFunctionInfo &MFI = *MF.getInfo<WebAssemblyFunctionInfo>();
-  if (needsSP(MF)) {
+  if (needsSP(MF) && MFI.isFrameBaseVirtual()) {
     unsigned LocalNum = MFI.getFrameBaseLocal();
     Loc.Location.WasmLoc = {WebAssembly::TI_LOCAL_START, LocalNum};
   } else {
