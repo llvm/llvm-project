@@ -278,7 +278,7 @@ genStylesheetsHTML(StringRef InfoPath, const ClangDocContext &CDCtx) {
                             llvm::sys::path::filename(FilePath));
     // Paths in HTML must be in posix-style
     llvm::sys::path::native(StylesheetPath, llvm::sys::path::Style::posix);
-    LinkNode->Attributes.emplace_back("href", StylesheetPath.str());
+    LinkNode->Attributes.emplace_back("href", std::string(StylesheetPath.str()));
     Out.emplace_back(std::move(LinkNode));
   }
   return Out;
@@ -293,7 +293,7 @@ genJsScriptsHTML(StringRef InfoPath, const ClangDocContext &CDCtx) {
     llvm::sys::path::append(ScriptPath, llvm::sys::path::filename(FilePath));
     // Paths in HTML must be in posix-style
     llvm::sys::path::native(ScriptPath, llvm::sys::path::Style::posix);
-    ScriptNode->Attributes.emplace_back("src", ScriptPath.str());
+    ScriptNode->Attributes.emplace_back("src", std::string(ScriptPath.str()));
     Out.emplace_back(std::move(ScriptNode));
   }
   return Out;
@@ -422,7 +422,7 @@ genReferencesBlock(const std::vector<Reference> &References,
 
   std::vector<std::unique_ptr<TagNode>> Out;
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_H2, Title));
-  Out.back()->Attributes.emplace_back("id", Title);
+  Out.back()->Attributes.emplace_back("id", std::string(Title));
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_UL));
   auto &ULBody = Out.back();
   for (const auto &R : References) {
@@ -454,7 +454,7 @@ writeFileDefinition(const Location &L,
   Node->Children.emplace_back(std::make_unique<TextNode>(" of file "));
   auto LocFileNode = std::make_unique<TagNode>(
       HTMLTag::TAG_A, llvm::sys::path::filename(FileURL));
-  LocFileNode->Attributes.emplace_back("href", FileURL.str());
+  LocFileNode->Attributes.emplace_back("href", std::string(FileURL.str()));
   Node->Children.emplace_back(std::move(LocFileNode));
   return Node;
 }
@@ -502,7 +502,7 @@ static std::unique_ptr<TagNode> genInfoFileMainNode(
 
   auto LeftSidebarNode = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
   LeftSidebarNode->Attributes.emplace_back("id", "sidebar-left");
-  LeftSidebarNode->Attributes.emplace_back("path", InfoPath);
+  LeftSidebarNode->Attributes.emplace_back("path", std::string(InfoPath));
   LeftSidebarNode->Attributes.emplace_back(
       "class", "col-xs-6 col-sm-3 col-md-2 sidebar sidebar-offcanvas-left");
 
