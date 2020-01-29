@@ -1016,18 +1016,13 @@ bool AArch64InstructionSelector::tryOptAndIntoCompareBranch(
     return false;
 
   MachineRegisterInfo &MRI = *MIB.getMRI();
-  unsigned Opc = 0;
   Register TestReg = AndInst->getOperand(1).getReg();
-  unsigned TestSize = MRI.getType(TestReg).getSizeInBits();
 
   // Only support EQ and NE. If we have LT, then it *is* possible to fold, but
   // we don't want to do this. When we have an AND and LT, we need a TST/ANDS,
   // so folding would be redundant.
-  if (Pred == CmpInst::Predicate::ICMP_EQ)
-    Opc = TestSize == 32 ? AArch64::TBZW : AArch64::TBZX;
-  else if (Pred == CmpInst::Predicate::ICMP_NE)
-    Opc = TestSize == 32 ? AArch64::TBNZW : AArch64::TBNZX;
-  else
+  if (Pred != CmpInst::Predicate::ICMP_EQ &&
+      Pred != CmpInst::Predicate::ICMP_NE)
     return false;
 
   // Check if the AND has a constant on its RHS which we can use as a mask.
@@ -1038,6 +1033,20 @@ bool AArch64InstructionSelector::tryOptAndIntoCompareBranch(
   if (!MaybeBit || !isPowerOf2_64(MaybeBit->Value))
     return false;
   uint64_t Bit = Log2_64(static_cast<uint64_t>(MaybeBit->Value));
+
+  // Choose the correct TB(N)Z opcode to use.
+  unsigned Opc = 0;
+  if (Bit < 32) {
+    // When the bit is less than 32, we have to use a TBZW even if we're on a 64
+    // bit register.
+    Opc = Pred == CmpInst::Predicate::ICMP_EQ ? AArch64::TBZW : AArch64::TBNZW;
+    TestReg = narrowExtendRegIfNeeded(TestReg, MIB);
+  } else {
+    // Same idea for when Bit >= 32. We don't have to narrow here, because if
+    // Bit > 32, then the G_CONSTANT must be outside the range of valid 32-bit
+    // values. So, we must have a s64.
+    Opc = Pred == CmpInst::Predicate::ICMP_EQ ? AArch64::TBZX : AArch64::TBNZX;
+  }
 
   // Construct the branch.
   auto BranchMI =
