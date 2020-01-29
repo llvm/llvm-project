@@ -94,6 +94,7 @@ uint64_t DPU::fixupTargetVA(uint64_t TargetVA) const {
     return TargetVA & ~ATOMIC_SECTION_OFFSET;
   } else if (TargetVA & IRAM_SECTION_OFFSET) {
     const uint32_t shift = 3;
+    TargetVA &= ~IRAM_SECTION_OFFSET;
     return (TargetVA >> shift) + (TargetVA & ((1ULL << shift) - 1ULL));
   } else if (TargetVA & MRAM_SECTION_OFFSET) {
     return (TargetVA & ~MRAM_SECTION_OFFSET);
