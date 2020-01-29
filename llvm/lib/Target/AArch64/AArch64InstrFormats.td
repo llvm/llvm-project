@@ -360,6 +360,9 @@ def am_indexed7s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexed7S128", []>;
 def am_indexedu6s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexedU6S128", []>;
 def am_indexeds9s128 : ComplexPattern<i64, 2, "SelectAddrModeIndexedS9S128", []>;
 
+def UImmS1XForm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue(), SDLoc(N), MVT::i64);
+}]>;
 def UImmS2XForm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() / 2, SDLoc(N), MVT::i64);
 }]>;
@@ -7966,6 +7969,64 @@ multiclass SIMDFPIndexedTied<bit U, bits<4> opc, string asm> {
     let Inst{11} = idx{0};
     let Inst{21} = 0;
   }
+}
+
+multiclass SIMDIndexedHSPatterns<SDPatternOperator OpNodeLane,
+                                 SDPatternOperator OpNodeLaneQ> {
+
+  def : Pat<(v4i16 (OpNodeLane
+                     (v4i16 V64:$Rn), (v4i16 V64_lo:$Rm),
+                     VectorIndexS32b:$idx)),
+            (!cast<Instruction>(NAME # v4i16_indexed) $Rn,
+              (SUBREG_TO_REG (i32 0), (v4i16 V64_lo:$Rm), dsub),
+              (UImmS1XForm $idx))>;
+
+  def : Pat<(v4i16 (OpNodeLaneQ
+                     (v4i16 V64:$Rn), (v8i16 V128_lo:$Rm),
+                     VectorIndexH32b:$idx)),
+            (!cast<Instruction>(NAME # v4i16_indexed) $Rn, $Rm,
+              (UImmS1XForm $idx))>;
+
+  def : Pat<(v8i16 (OpNodeLane
+                     (v8i16 V128:$Rn), (v4i16 V64_lo:$Rm),
+                     VectorIndexS32b:$idx)),
+            (!cast<Instruction>(NAME # v8i16_indexed) $Rn,
+              (SUBREG_TO_REG (i32 0), $Rm, dsub),
+              (UImmS1XForm $idx))>;
+
+  def : Pat<(v8i16 (OpNodeLaneQ
+                     (v8i16 V128:$Rn), (v8i16 V128_lo:$Rm),
+                     VectorIndexH32b:$idx)),
+            (!cast<Instruction>(NAME # v8i16_indexed) $Rn, $Rm,
+              (UImmS1XForm $idx))>;
+
+  def : Pat<(v2i32 (OpNodeLane
+                     (v2i32 V64:$Rn), (v2i32 V64:$Rm),
+                     VectorIndexD32b:$idx)),
+            (!cast<Instruction>(NAME # v2i32_indexed) $Rn,
+              (SUBREG_TO_REG (i32 0), (v2i32 V64_lo:$Rm), dsub),
+              (UImmS1XForm $idx))>;
+
+  def : Pat<(v2i32 (OpNodeLaneQ
+                     (v2i32 V64:$Rn), (v4i32 V128:$Rm),
+                     VectorIndexS32b:$idx)),
+            (!cast<Instruction>(NAME # v2i32_indexed) $Rn, $Rm,
+              (UImmS1XForm $idx))>;
+
+  def : Pat<(v4i32 (OpNodeLane
+                     (v4i32 V128:$Rn), (v2i32 V64:$Rm),
+                     VectorIndexD32b:$idx)),
+            (!cast<Instruction>(NAME # v4i32_indexed) $Rn,
+              (SUBREG_TO_REG (i32 0), $Rm, dsub),
+              (UImmS1XForm $idx))>;
+
+  def : Pat<(v4i32 (OpNodeLaneQ
+                     (v4i32 V128:$Rn),
+                     (v4i32 V128:$Rm),
+                     VectorIndexS32b:$idx)),
+            (!cast<Instruction>(NAME # v4i32_indexed) $Rn, $Rm,
+              (UImmS1XForm $idx))>;
+
 }
 
 multiclass SIMDIndexedHS<bit U, bits<4> opc, string asm,

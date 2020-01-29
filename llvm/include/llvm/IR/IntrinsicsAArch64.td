@@ -133,6 +133,10 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMHalfElementsVectorType<0>, llvm_anyvector_ty],
                 [IntrNoMem]>;
+  class AdvSIMD_2VectorArg_Lane_Intrinsic
+    : Intrinsic<[llvm_anyint_ty],
+                [LLVMMatchType<0>, llvm_anyint_ty, llvm_i32_ty],
+                [IntrNoMem]>;
 
   class AdvSIMD_3VectorArg_Intrinsic
       : Intrinsic<[llvm_anyvector_ty],
@@ -207,9 +211,13 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
 
   // Vector Saturating Doubling Multiply High
   def int_aarch64_neon_sqdmulh : AdvSIMD_2IntArg_Intrinsic;
+  def int_aarch64_neon_sqdmulh_lane : AdvSIMD_2VectorArg_Lane_Intrinsic;
+  def int_aarch64_neon_sqdmulh_laneq : AdvSIMD_2VectorArg_Lane_Intrinsic;
 
   // Vector Saturating Rounding Doubling Multiply High
   def int_aarch64_neon_sqrdmulh : AdvSIMD_2IntArg_Intrinsic;
+  def int_aarch64_neon_sqrdmulh_lane : AdvSIMD_2VectorArg_Lane_Intrinsic;
+  def int_aarch64_neon_sqrdmulh_laneq : AdvSIMD_2VectorArg_Lane_Intrinsic;
 
   // Vector Polynominal Multiply
   def int_aarch64_neon_pmul : AdvSIMD_2VectorArg_Intrinsic;

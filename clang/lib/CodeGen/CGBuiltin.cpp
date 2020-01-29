@@ -4969,14 +4969,22 @@ static const NeonIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP2(vqaddq_v, aarch64_neon_uqadd, aarch64_neon_sqadd, Add1ArgType | UnsignedAlts),
   NEONMAP2(vqdmlal_v, aarch64_neon_sqdmull, aarch64_neon_sqadd, 0),
   NEONMAP2(vqdmlsl_v, aarch64_neon_sqdmull, aarch64_neon_sqsub, 0),
+  NEONMAP1(vqdmulh_lane_v, aarch64_neon_sqdmulh_lane, 0),
+  NEONMAP1(vqdmulh_laneq_v, aarch64_neon_sqdmulh_laneq, 0),
   NEONMAP1(vqdmulh_v, aarch64_neon_sqdmulh, Add1ArgType),
+  NEONMAP1(vqdmulhq_lane_v, aarch64_neon_sqdmulh_lane, 0),
+  NEONMAP1(vqdmulhq_laneq_v, aarch64_neon_sqdmulh_laneq, 0),
   NEONMAP1(vqdmulhq_v, aarch64_neon_sqdmulh, Add1ArgType),
   NEONMAP1(vqdmull_v, aarch64_neon_sqdmull, Add1ArgType),
   NEONMAP2(vqmovn_v, aarch64_neon_uqxtn, aarch64_neon_sqxtn, Add1ArgType | UnsignedAlts),
   NEONMAP1(vqmovun_v, aarch64_neon_sqxtun, Add1ArgType),
   NEONMAP1(vqneg_v, aarch64_neon_sqneg, Add1ArgType),
   NEONMAP1(vqnegq_v, aarch64_neon_sqneg, Add1ArgType),
+  NEONMAP1(vqrdmulh_lane_v, aarch64_neon_sqrdmulh_lane, 0),
+  NEONMAP1(vqrdmulh_laneq_v, aarch64_neon_sqrdmulh_laneq, 0),
   NEONMAP1(vqrdmulh_v, aarch64_neon_sqrdmulh, Add1ArgType),
+  NEONMAP1(vqrdmulhq_lane_v, aarch64_neon_sqrdmulh_lane, 0),
+  NEONMAP1(vqrdmulhq_laneq_v, aarch64_neon_sqrdmulh_laneq, 0),
   NEONMAP1(vqrdmulhq_v, aarch64_neon_sqrdmulh, Add1ArgType),
   NEONMAP2(vqrshl_v, aarch64_neon_uqrshl, aarch64_neon_sqrshl, Add1ArgType | UnsignedAlts),
   NEONMAP2(vqrshlq_v, aarch64_neon_uqrshl, aarch64_neon_sqrshl, Add1ArgType | UnsignedAlts),
@@ -5753,6 +5761,24 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
         EmitNeonCall(CGM.getIntrinsic(LLVMIntrinsic, Ty), MulOps, "vqdmlal");
     Ops.resize(2);
     return EmitNeonCall(CGM.getIntrinsic(AltLLVMIntrinsic, Ty), Ops, NameHint);
+  }
+  case NEON::BI__builtin_neon_vqdmulhq_lane_v:
+  case NEON::BI__builtin_neon_vqdmulh_lane_v:
+  case NEON::BI__builtin_neon_vqrdmulhq_lane_v:
+  case NEON::BI__builtin_neon_vqrdmulh_lane_v: {
+    llvm::Type *Tys[2] = {
+        Ty, GetNeonType(this, NeonTypeFlags(Type.getEltType(), false,
+                                            /*isQuad*/ false))};
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, NameHint);
+  }
+  case NEON::BI__builtin_neon_vqdmulhq_laneq_v:
+  case NEON::BI__builtin_neon_vqdmulh_laneq_v:
+  case NEON::BI__builtin_neon_vqrdmulhq_laneq_v:
+  case NEON::BI__builtin_neon_vqrdmulh_laneq_v: {
+    llvm::Type *Tys[2] = {
+        Ty, GetNeonType(this, NeonTypeFlags(Type.getEltType(), false,
+                                            /*isQuad*/ true))};
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, NameHint);
   }
   case NEON::BI__builtin_neon_vqshl_n_v:
   case NEON::BI__builtin_neon_vqshlq_n_v:
