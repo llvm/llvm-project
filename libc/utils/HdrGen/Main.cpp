@@ -31,7 +31,7 @@ llvm::cl::list<std::string> ReplacementValues(
 void ParseArgValuePairs(std::unordered_map<std::string, std::string> &Map) {
   for (std::string &R : ReplacementValues) {
     auto Pair = llvm::StringRef(R).split('=');
-    Map[Pair.first] = Pair.second;
+    Map[std::string(Pair.first)] = std::string(Pair.second);
   }
 }
 
