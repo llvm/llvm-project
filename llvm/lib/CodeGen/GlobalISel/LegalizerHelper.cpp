@@ -4646,8 +4646,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerInsert(MachineInstr &MI) {
       ExtInsSrc = MIRBuilder.buildShl(IntDstTy, ExtInsSrc, ShiftAmt).getReg(0);
     }
 
-    APInt MaskVal = ~APInt::getBitsSet(DstTy.getSizeInBits(), Offset,
-                                       InsertTy.getSizeInBits());
+    APInt MaskVal = APInt::getBitsSetWithWrap(DstTy.getSizeInBits(),
+                                              Offset + InsertTy.getSizeInBits(),
+                                              Offset);
 
     auto Mask = MIRBuilder.buildConstant(IntDstTy, MaskVal);
     auto MaskedSrc = MIRBuilder.buildAnd(IntDstTy, Src, Mask);
