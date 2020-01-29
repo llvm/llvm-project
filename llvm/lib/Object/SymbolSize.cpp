@@ -28,7 +28,7 @@ int llvm::object::compareAddress(const SymEntry *A, const SymEntry *B) {
 static unsigned getSectionID(const ObjectFile &O, SectionRef Sec) {
   if (auto *M = dyn_cast<MachOObjectFile>(&O))
     return M->getSectionID(Sec);
-  if (const auto *M = dyn_cast<WasmObjectFile>(&O))
+  if (isa<WasmObjectFile>(&O))
     return Sec.getIndex();
 
   return cast<COFFObjectFile>(O).getSectionID(Sec);
