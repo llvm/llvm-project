@@ -72,8 +72,8 @@ private:
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
 
   // A lowering phase that runs before any selection attempts.
-
-  void preISelLower(MachineInstr &I) const;
+  // Returns true if the instruction was modified.
+  bool preISelLower(MachineInstr &I);
 
   // An early selection function that runs before the selectImpl() call.
   bool earlySelect(MachineInstr &I) const;
@@ -81,8 +81,10 @@ private:
   bool earlySelectSHL(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
   /// Eliminate same-sized cross-bank copies into stores before selectImpl().
-  void contractCrossBankCopyIntoStore(MachineInstr &I,
-                                      MachineRegisterInfo &MRI) const;
+  bool contractCrossBankCopyIntoStore(MachineInstr &I,
+                                      MachineRegisterInfo &MRI);
+
+  bool convertPtrAddToAdd(MachineInstr &I, MachineRegisterInfo &MRI);
 
   bool selectVaStartAAPCS(MachineInstr &I, MachineFunction &MF,
                           MachineRegisterInfo &MRI) const;
@@ -1332,7 +1334,7 @@ void AArch64InstructionSelector::materializeLargeCMVal(
   return;
 }
 
-void AArch64InstructionSelector::preISelLower(MachineInstr &I) const {
+bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
   MachineBasicBlock &MBB = *I.getParent();
   MachineFunction &MF = *MBB.getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -1352,10 +1354,10 @@ void AArch64InstructionSelector::preISelLower(MachineInstr &I) const {
     const LLT ShiftTy = MRI.getType(ShiftReg);
     const LLT SrcTy = MRI.getType(SrcReg);
     if (SrcTy.isVector())
-      return;
+      return false;
     assert(!ShiftTy.isVector() && "unexpected vector shift ty");
     if (SrcTy.getSizeInBits() != 32 || ShiftTy.getSizeInBits() != 64)
-      return;
+      return false;
     auto *AmtMI = MRI.getVRegDef(ShiftReg);
     assert(AmtMI && "could not find a vreg definition for shift amount");
     if (AmtMI->getOpcode() != TargetOpcode::G_CONSTANT) {
@@ -1366,14 +1368,62 @@ void AArch64InstructionSelector::preISelLower(MachineInstr &I) const {
       MRI.setRegBank(Trunc.getReg(0), RBI.getRegBank(AArch64::GPRRegBankID));
       I.getOperand(2).setReg(Trunc.getReg(0));
     }
-    return;
+    return true;
   }
   case TargetOpcode::G_STORE:
-    contractCrossBankCopyIntoStore(I, MRI);
-    return;
+    return contractCrossBankCopyIntoStore(I, MRI);
+  case TargetOpcode::G_PTR_ADD:
+    return convertPtrAddToAdd(I, MRI);
   default:
-    return;
+    return false;
   }
+}
+
+/// This lowering tries to look for G_PTR_ADD instructions and then converts
+/// them to a standard G_ADD with a COPY on the source, and G_INTTOPTR on the
+/// result. This is ok for address space 0 on AArch64 as p0 can be treated as
+/// s64.
+///
+/// The motivation behind this is to expose the add semantics to the imported
+/// tablegen patterns. We shouldn't need to check for uses being loads/stores,
+/// because the selector works bottom up, uses before defs. By the time we
+/// end up trying to select a G_PTR_ADD, we should have already attempted to
+/// fold this into addressing modes and were therefore unsuccessful.
+bool AArch64InstructionSelector::convertPtrAddToAdd(
+    MachineInstr &I, MachineRegisterInfo &MRI) {
+  assert(I.getOpcode() == TargetOpcode::G_PTR_ADD && "Expected G_PTR_ADD");
+  Register DstReg = I.getOperand(0).getReg();
+  Register AddOp1Reg = I.getOperand(1).getReg();
+  Register AddOp2Reg = I.getOperand(2).getReg();
+  const LLT PtrTy = MRI.getType(DstReg);
+  if (PtrTy.getAddressSpace() != 0)
+    return false;
+
+  MachineIRBuilder MIB(I);
+  const LLT s64 = LLT::scalar(64);
+  auto PtrToInt = MIB.buildPtrToInt(s64, AddOp1Reg);
+  auto Add = MIB.buildAdd(s64, PtrToInt, AddOp2Reg);
+  // Set regbanks on the registers.
+  MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(AArch64::GPRRegBankID));
+  MRI.setRegBank(Add.getReg(0), RBI.getRegBank(AArch64::GPRRegBankID));
+
+  // Now turn the %dst = G_PTR_ADD %base, off into:
+  // %dst = G_INTTOPTR %Add
+  I.setDesc(TII.get(TargetOpcode::G_INTTOPTR));
+  I.getOperand(1).setReg(Add.getReg(0));
+  I.RemoveOperand(2);
+
+  // We need to manually call select on these because new instructions don't
+  // get added to the selection queue.
+  if (!select(*Add)) {
+    LLVM_DEBUG(dbgs() << "Failed to select G_ADD in convertPtrAddToAdd");
+    return false;
+  }
+  if (!select(*PtrToInt)) {
+    LLVM_DEBUG(dbgs() << "Failed to select G_PTRTOINT in convertPtrAddToAdd");
+    return false;
+  }
+  return true;
 }
 
 bool AArch64InstructionSelector::earlySelectSHL(
@@ -1411,8 +1461,8 @@ bool AArch64InstructionSelector::earlySelectSHL(
   return constrainSelectedInstRegOperands(*NewI, TII, TRI, RBI);
 }
 
-void AArch64InstructionSelector::contractCrossBankCopyIntoStore(
-    MachineInstr &I, MachineRegisterInfo &MRI) const {
+bool AArch64InstructionSelector::contractCrossBankCopyIntoStore(
+    MachineInstr &I, MachineRegisterInfo &MRI) {
   assert(I.getOpcode() == TargetOpcode::G_STORE && "Expected G_STORE");
   // If we're storing a scalar, it doesn't matter what register bank that
   // scalar is on. All that matters is the size.
@@ -1430,7 +1480,7 @@ void AArch64InstructionSelector::contractCrossBankCopyIntoStore(
   // And then continue the selection process normally.
   MachineInstr *Def = getDefIgnoringCopies(I.getOperand(0).getReg(), MRI);
   if (!Def)
-    return;
+    return false;
   Register DefDstReg = Def->getOperand(0).getReg();
   LLT DefDstTy = MRI.getType(DefDstReg);
   Register StoreSrcReg = I.getOperand(0).getReg();
@@ -1439,18 +1489,19 @@ void AArch64InstructionSelector::contractCrossBankCopyIntoStore(
   // If we get something strange like a physical register, then we shouldn't
   // go any further.
   if (!DefDstTy.isValid())
-    return;
+    return false;
 
   // Are the source and dst types the same size?
   if (DefDstTy.getSizeInBits() != StoreSrcTy.getSizeInBits())
-    return;
+    return false;
 
   if (RBI.getRegBank(StoreSrcReg, MRI, TRI) ==
       RBI.getRegBank(DefDstReg, MRI, TRI))
-    return;
+    return false;
 
   // We have a cross-bank copy, which is entering a store. Let's fold it.
   I.getOperand(0).setReg(DefDstReg);
+  return true;
 }
 
 bool AArch64InstructionSelector::earlySelect(MachineInstr &I) const {
@@ -1561,7 +1612,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   // Try to do some lowering before we start instruction selecting. These
   // lowerings are purely transformations on the input G_MIR and so selection
   // must continue after any modification of the instruction.
-  preISelLower(I);
+  if (preISelLower(I)) {
+    Opcode = I.getOpcode(); // The opcode may have been modified, refresh it.
+  }
 
   // There may be patterns where the importer can't deal with them optimally,
   // but does select it to a suboptimal sequence so our custom C++ selection
