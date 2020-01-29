@@ -279,11 +279,11 @@ namespace options {
     } else if (opt == "disable-verify") {
       DisableVerify = true;
     } else if (opt.startswith("sample-profile=")) {
-      sample_profile = opt.substr(strlen("sample-profile="));
+      sample_profile = std::string(opt.substr(strlen("sample-profile=")));
     } else if (opt == "cs-profile-generate") {
       cs_pgo_gen = true;
     } else if (opt.startswith("cs-profile-path=")) {
-      cs_profile_path = opt.substr(strlen("cs-profile-path="));
+      cs_profile_path = std::string(opt.substr(strlen("cs-profile-path=")));
     } else if (opt == "new-pass-manager") {
       new_pass_manager = true;
     } else if (opt == "debug-pass-manager") {
@@ -291,17 +291,18 @@ namespace options {
     } else if (opt == "whole-program-visibility") {
       whole_program_visibility = true;
     } else if (opt.startswith("dwo_dir=")) {
-      dwo_dir = opt.substr(strlen("dwo_dir="));
+      dwo_dir = std::string(opt.substr(strlen("dwo_dir=")));
     } else if (opt.startswith("opt-remarks-filename=")) {
-      RemarksFilename = opt.substr(strlen("opt-remarks-filename="));
+      RemarksFilename =
+          std::string(opt.substr(strlen("opt-remarks-filename=")));
     } else if (opt.startswith("opt-remarks-passes=")) {
-      RemarksPasses = opt.substr(strlen("opt-remarks-passes="));
+      RemarksPasses = std::string(opt.substr(strlen("opt-remarks-passes=")));
     } else if (opt == "opt-remarks-with-hotness") {
       RemarksWithHotness = true;
     } else if (opt.startswith("opt-remarks-format=")) {
-      RemarksFormat = opt.substr(strlen("opt-remarks-format="));
+      RemarksFormat = std::string(opt.substr(strlen("opt-remarks-format=")));
     } else if (opt.startswith("stats-file=")) {
-      stats_file = opt.substr(strlen("stats-file="));
+      stats_file = std::string(opt.substr(strlen("stats-file=")));
     } else {
       // Save this option to pass to the code generator.
       // ParseCommandLineOptions() expects argv[0] to be program name. Lazily
@@ -683,7 +684,9 @@ static void getThinLTOOldAndNewSuffix(std::string &OldSuffix,
   assert(options::thinlto_object_suffix_replace.empty() ||
          options::thinlto_object_suffix_replace.find(";") != StringRef::npos);
   StringRef SuffixReplace = options::thinlto_object_suffix_replace;
-  std::tie(OldSuffix, NewSuffix) = SuffixReplace.split(';');
+  auto Split = SuffixReplace.split(';');
+  OldSuffix = Split.first;
+  NewSuffix = Split.second;
 }
 
 /// Given the original \p Path to an output file, replace any filename
