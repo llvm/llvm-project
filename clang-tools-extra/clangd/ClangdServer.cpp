@@ -316,16 +316,21 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
       return CB(InpAST.takeError());
     auto &AST = InpAST->AST;
     const auto &SM = AST.getSourceManager();
-    SourceLocation Loc =
-        SM.getMacroArgExpandedLocation(getBeginningOfIdentifier(
-            Pos, AST.getSourceManager(), AST.getLangOpts()));
-    auto Range = getTokenRange(SM, AST.getLangOpts(), Loc);
-    if (!Range)
-      return CB(llvm::None); // "rename" is not valid at the position.
+    auto Loc = sourceLocationInMainFile(SM, Pos);
+    if (!Loc)
+      return CB(Loc.takeError());
+    const auto *TouchingIdentifier =
+        spelledIdentifierTouching(*Loc, AST.getTokens());
+    if (!TouchingIdentifier)
+      return CB(llvm::None); // no rename on non-identifiers.
+
+    auto Range = halfOpenToRange(
+        SM, CharSourceRange::getCharRange(TouchingIdentifier->location(),
+                                          TouchingIdentifier->endLocation()));
 
     if (CrossFileRename)
       // FIXME: we now assume cross-file rename always succeeds, revisit this.
-      return CB(*Range);
+      return CB(Range);
 
     // Performing the local rename isn't substantially more expensive than
     // doing an AST-based check, so we just rename and throw away the results.
@@ -338,7 +343,7 @@ void ClangdServer::prepareRename(PathRef File, Position Pos,
       // the message to users (VSCode does).
       return CB(Changes.takeError());
     }
-    return CB(*Range);
+    return CB(Range);
   };
   WorkScheduler.runWithAST("PrepareRename", File, std::move(Action));
 }
