@@ -685,8 +685,8 @@ static void getThinLTOOldAndNewSuffix(std::string &OldSuffix,
          options::thinlto_object_suffix_replace.find(";") != StringRef::npos);
   StringRef SuffixReplace = options::thinlto_object_suffix_replace;
   auto Split = SuffixReplace.split(';');
-  OldSuffix = Split.first;
-  NewSuffix = Split.second;
+  OldSuffix = std::string(Split.first);
+  NewSuffix = std::string(Split.second);
 }
 
 /// Given the original \p Path to an output file, replace any filename
@@ -839,7 +839,9 @@ static void getThinLTOOldAndNewPrefix(std::string &OldPrefix,
                                       std::string &NewPrefix) {
   StringRef PrefixReplace = options::thinlto_prefix_replace;
   assert(PrefixReplace.empty() || PrefixReplace.find(";") != StringRef::npos);
-  std::tie(OldPrefix, NewPrefix) = PrefixReplace.split(';');
+  auto Split = PrefixReplace.split(';');
+  OldPrefix = std::string(Split.first);
+  NewPrefix = std::string(Split.second);
 }
 
 /// Creates instance of LTO.
