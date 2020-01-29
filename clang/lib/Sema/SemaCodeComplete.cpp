@@ -9,6 +9,7 @@
 //  This file defines the code-completion semantic actions.
 //
 //===----------------------------------------------------------------------===//
+#include "clang/AST/ASTConcept.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
@@ -16,8 +17,11 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/QualTypeNames.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Specifiers.h"
@@ -4746,6 +4750,369 @@ static RecordDecl *getAsRecordDecl(const QualType BaseType) {
   return nullptr;
 }
 
+namespace {
+// Collects completion-relevant information about a concept-constrainted type T.
+// In particular, examines the constraint expressions to find members of T.
+//
+// The design is very simple: we walk down each constraint looking for
+// expressions of the form T.foo().
+// If we're extra lucky, the return type is specified.
+// We don't do any clever handling of && or || in constraint expressions, we
+// take members from both branches.
+//
+// For example, given:
+//   template <class T> concept X = requires (T t, string& s) { t.print(s); };
+//   template <X U> void foo(U u) { u.^ }
+// We want to suggest the inferred member function 'print(string)'.
+// We see that u has type U, so X<U> holds.
+// X<U> requires t.print(s) to be valid, where t has type U (substituted for T).
+// By looking at the CallExpr we find the signature of print().
+//
+// While we tend to know in advance which kind of members (access via . -> ::)
+// we want, it's simpler just to gather them all and post-filter.
+//
+// FIXME: some of this machinery could be used for non-concept type-parms too,
+// enabling completion for type parameters based on other uses of that param.
+//
+// FIXME: there are other cases where a type can be constrained by a concept,
+// e.g. inside `if constexpr(ConceptSpecializationExpr) { ... }`
+class ConceptInfo {
+public:
+  // Describes a likely member of a type, inferred by concept constraints.
+  // Offered as a code completion for T. T-> and T:: contexts.
+  struct Member {
+    // Always non-null: we only handle members with ordinary identifier names.
+    const IdentifierInfo *Name = nullptr;
+    // Set for functions we've seen called.
+    // We don't have the declared parameter types, only the actual types of
+    // arguments we've seen. These are still valuable, as it's hard to render
+    // a useful function completion with neither parameter types nor names!
+    llvm::Optional<SmallVector<QualType, 1>> ArgTypes;
+    // Whether this is accessed as T.member, T->member, or T::member.
+    enum AccessOperator {
+      Colons,
+      Arrow,
+      Dot,
+    } Operator = Dot;
+    // What's known about the type of a variable or return type of a function.
+    const TypeConstraint *ResultType = nullptr;
+    // FIXME: also track:
+    //   - kind of entity (function/variable/type), to expose structured results
+    //   - template args kinds/types, as a proxy for template params
+
+    // For now we simply return these results as "pattern" strings.
+    CodeCompletionString *render(Sema &S, CodeCompletionAllocator &Alloc,
+                                 CodeCompletionTUInfo &Info) const {
+      CodeCompletionBuilder B(Alloc, Info);
+      // Result type
+      if (ResultType) {
+        std::string AsString;
+        {
+          llvm::raw_string_ostream OS(AsString);
+          QualType ExactType = deduceType(*ResultType);
+          if (!ExactType.isNull())
+            ExactType.print(OS, getCompletionPrintingPolicy(S));
+          else
+            ResultType->print(OS, getCompletionPrintingPolicy(S));
+        }
+        B.AddResultTypeChunk(Alloc.CopyString(AsString));
+      }
+      // Member name
+      B.AddTypedTextChunk(Alloc.CopyString(Name->getName()));
+      // Function argument list
+      if (ArgTypes) {
+        B.AddChunk(clang::CodeCompletionString::CK_LeftParen);
+        bool First = true;
+        for (QualType Arg : *ArgTypes) {
+          if (First)
+            First = false;
+          else {
+            B.AddChunk(clang::CodeCompletionString::CK_Comma);
+            B.AddChunk(clang::CodeCompletionString::CK_HorizontalSpace);
+          }
+          B.AddPlaceholderChunk(Alloc.CopyString(
+              Arg.getAsString(getCompletionPrintingPolicy(S))));
+        }
+        B.AddChunk(clang::CodeCompletionString::CK_RightParen);
+      }
+      return B.TakeString();
+    }
+  };
+
+  // BaseType is the type parameter T to infer members from.
+  // T must be accessible within S, as we use it to find the template entity
+  // that T is attached to in order to gather the relevant constraints.
+  ConceptInfo(const TemplateTypeParmType &BaseType, Scope *S) {
+    auto *TemplatedEntity = getTemplatedEntity(BaseType.getDecl(), S);
+    for (const Expr *E : constraintsForTemplatedEntity(TemplatedEntity))
+      believe(E, &BaseType);
+  }
+
+  std::vector<Member> members() {
+    std::vector<Member> Results;
+    for (const auto &E : this->Results)
+      Results.push_back(E.second);
+    llvm::sort(Results, [](const Member &L, const Member &R) {
+      return L.Name->getName() < R.Name->getName();
+    });
+    return Results;
+  }
+
+private:
+  // Infer members of T, given that the expression E (dependent on T) is true.
+  void believe(const Expr *E, const TemplateTypeParmType *T) {
+    if (!E || !T)
+      return;
+    if (auto *CSE = dyn_cast<ConceptSpecializationExpr>(E)) {
+      // If the concept is
+      //   template <class A, class B> concept CD = f<A, B>();
+      // And the concept specialization is
+      //   CD<int, T>
+      // Then we're substituting T for B, so we want to make f<A, B>() true
+      // by adding members to B - i.e. believe(f<A, B>(), B);
+      //
+      // For simplicity:
+      // - we don't attempt to substitute int for A
+      // - when T is used in other ways (like CD<T*>) we ignore it
+      ConceptDecl *CD = CSE->getNamedConcept();
+      TemplateParameterList *Params = CD->getTemplateParameters();
+      unsigned Index = 0;
+      for (const auto &Arg : CSE->getTemplateArguments()) {
+        if (Index >= Params->size())
+          break; // Won't happen in valid code.
+        if (isApprox(Arg, T)) {
+          auto *TTPD = dyn_cast<TemplateTypeParmDecl>(Params->getParam(Index));
+          if (!TTPD)
+            continue;
+          // T was used as an argument, and bound to the parameter TT.
+          auto *TT = cast<TemplateTypeParmType>(TTPD->getTypeForDecl());
+          // So now we know the constraint as a function of TT is true.
+          believe(CD->getConstraintExpr(), TT);
+          // (concepts themselves have no associated constraints to require)
+        }
+
+        ++Index;
+      }
+    } else if (auto *BO = dyn_cast<BinaryOperator>(E)) {
+      // For A && B, we can infer members from both branches.
+      // For A || B, the union is still more useful than the intersection.
+      if (BO->getOpcode() == BO_LAnd || BO->getOpcode() == BO_LOr) {
+        believe(BO->getLHS(), T);
+        believe(BO->getRHS(), T);
+      }
+    } else if (auto *RE = dyn_cast<RequiresExpr>(E)) {
+      // A requires(){...} lets us infer members from each requirement.
+      for (const concepts::Requirement *Req : RE->getRequirements()) {
+        if (!Req->isDependent())
+          continue; // Can't tell us anything about T.
+        // Now Req cannot a substitution-error: those aren't dependent.
+
+        if (auto *TR = dyn_cast<concepts::TypeRequirement>(Req)) {
+          // Do a full traversal so we get `foo` from `typename T::foo::bar`.
+          QualType AssertedType = TR->getType()->getType();
+          ValidVisitor(this, T).TraverseType(AssertedType);
+        } else if (auto *ER = dyn_cast<concepts::ExprRequirement>(Req)) {
+          ValidVisitor Visitor(this, T);
+          // If we have a type constraint on the value of the expression,
+          // AND the whole outer expression describes a member, then we'll
+          // be able to use the constraint to provide the return type.
+          if (ER->getReturnTypeRequirement().isTypeConstraint()) {
+            Visitor.OuterType =
+                ER->getReturnTypeRequirement().getTypeConstraint();
+            Visitor.OuterExpr = ER->getExpr();
+          }
+          Visitor.TraverseStmt(ER->getExpr());
+        } else if (auto *NR = dyn_cast<concepts::NestedRequirement>(Req)) {
+          believe(NR->getConstraintExpr(), T);
+        }
+      }
+    }
+  }
+
+  // This visitor infers members of T based on traversing expressions/types
+  // that involve T. It is invoked with code known to be valid for T.
+  class ValidVisitor : public RecursiveASTVisitor<ValidVisitor> {
+    ConceptInfo *Outer;
+    const TemplateTypeParmType *T;
+
+    CallExpr *Caller = nullptr;
+    Expr *Callee = nullptr;
+
+  public:
+    // If set, OuterExpr is constrained by OuterType.
+    Expr *OuterExpr = nullptr;
+    const TypeConstraint *OuterType = nullptr;
+
+    ValidVisitor(ConceptInfo *Outer, const TemplateTypeParmType *T)
+        : Outer(Outer), T(T) {
+      assert(T);
+    }
+
+    // In T.foo or T->foo, `foo` is a member function/variable.
+    bool VisitCXXDependentScopeMemberExpr(CXXDependentScopeMemberExpr *E) {
+      const Type *Base = E->getBaseType().getTypePtr();
+      bool IsArrow = E->isArrow();
+      if (Base->isPointerType() && IsArrow) {
+        IsArrow = false;
+        Base = Base->getPointeeType().getTypePtr();
+      }
+      if (isApprox(Base, T))
+        addValue(E, E->getMember(), IsArrow ? Member::Arrow : Member::Dot);
+      return true;
+    }
+
+    // In T::foo, `foo` is a static member function/variable.
+    bool VisitDependentScopeDeclRefExpr(DependentScopeDeclRefExpr *E) {
+      if (E->getQualifier() && isApprox(E->getQualifier()->getAsType(), T))
+        addValue(E, E->getDeclName(), Member::Colons);
+      return true;
+    }
+
+    // In T::typename foo, `foo` is a type.
+    bool VisitDependentNameType(DependentNameType *DNT) {
+      const auto *Q = DNT->getQualifier();
+      if (Q && isApprox(Q->getAsType(), T))
+        addType(DNT->getIdentifier());
+      return true;
+    }
+
+    // In T::foo::bar, `foo` must be a type.
+    // VisitNNS() doesn't exist, and TraverseNNS isn't always called :-(
+    bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSL) {
+      if (NNSL) {
+        NestedNameSpecifier *NNS = NNSL.getNestedNameSpecifier();
+        const auto *Q = NNS->getPrefix();
+        if (Q && isApprox(Q->getAsType(), T))
+          addType(NNS->getAsIdentifier());
+      }
+      // FIXME: also handle T::foo<X>::bar
+      return RecursiveASTVisitor::TraverseNestedNameSpecifierLoc(NNSL);
+    }
+
+    // FIXME also handle T::foo<X>
+
+    // Track the innermost caller/callee relationship so we can tell if a
+    // nested expr is being called as a function.
+    bool VisitCallExpr(CallExpr *CE) {
+      Caller = CE;
+      Callee = CE->getCallee();
+      return true;
+    }
+
+  private:
+    void addResult(Member &&M) {
+      auto R = Outer->Results.try_emplace(M.Name);
+      Member &O = R.first->second;
+      // Overwrite existing if the new member has more info.
+      // The preference of . vs :: vs -> is fairly arbitrary.
+      if (/*Inserted*/ R.second ||
+          std::make_tuple(M.ArgTypes.hasValue(), M.ResultType != nullptr,
+                          M.Operator) > std::make_tuple(O.ArgTypes.hasValue(),
+                                                        O.ResultType != nullptr,
+                                                        O.Operator))
+        O = std::move(M);
+    }
+
+    void addType(const IdentifierInfo *Name) {
+      if (!Name)
+        return;
+      Member M;
+      M.Name = Name;
+      M.Operator = Member::Colons;
+      addResult(std::move(M));
+    }
+
+    void addValue(Expr *E, DeclarationName Name,
+                  Member::AccessOperator Operator) {
+      if (!Name.isIdentifier())
+        return;
+      Member Result;
+      Result.Name = Name.getAsIdentifierInfo();
+      Result.Operator = Operator;
+      // If this is the callee of an immediately-enclosing CallExpr, then
+      // treat it as a method, otherwise it's a variable.
+      if (Caller != nullptr && Callee == E) {
+        Result.ArgTypes.emplace();
+        for (const auto *Arg : Caller->arguments())
+          Result.ArgTypes->push_back(Arg->getType());
+        if (Caller == OuterExpr) {
+          Result.ResultType = OuterType;
+        }
+      } else {
+        if (E == OuterExpr)
+          Result.ResultType = OuterType;
+      }
+      addResult(std::move(Result));
+    }
+  };
+
+  static bool isApprox(const TemplateArgument &Arg, const Type *T) {
+    return Arg.getKind() == TemplateArgument::Type &&
+           isApprox(Arg.getAsType().getTypePtr(), T);
+  }
+
+  static bool isApprox(const Type *T1, const Type *T2) {
+    return T1 && T2 &&
+           T1->getCanonicalTypeUnqualified() ==
+               T2->getCanonicalTypeUnqualified();
+  }
+
+  // Returns the DeclContext immediately enclosed by the template parameter
+  // scope. For primary templates, this is the templated (e.g.) CXXRecordDecl.
+  // For specializations, this is e.g. ClassTemplatePartialSpecializationDecl.
+  static DeclContext *getTemplatedEntity(const TemplateTypeParmDecl *D,
+                                         Scope *S) {
+    if (D == nullptr)
+      return nullptr;
+    Scope *Inner = nullptr;
+    while (S) {
+      if (S->isTemplateParamScope() && S->isDeclScope(D))
+        return Inner ? Inner->getEntity() : nullptr;
+      Inner = S;
+      S = S->getParent();
+    }
+    return nullptr;
+  }
+
+  // Gets all the type constraint expressions that might apply to the type
+  // variables associated with DC (as returned by getTemplatedEntity()).
+  static SmallVector<const Expr *, 1>
+  constraintsForTemplatedEntity(DeclContext *DC) {
+    SmallVector<const Expr *, 1> Result;
+    if (DC == nullptr)
+      return Result;
+    // Primary templates can have constraints.
+    if (const auto *TD = cast<Decl>(DC)->getDescribedTemplate())
+      TD->getAssociatedConstraints(Result);
+    // Partial specializations may have constraints.
+    if (const auto *CTPSD =
+            dyn_cast<ClassTemplatePartialSpecializationDecl>(DC))
+      CTPSD->getAssociatedConstraints(Result);
+    if (const auto *VTPSD = dyn_cast<VarTemplatePartialSpecializationDecl>(DC))
+      VTPSD->getAssociatedConstraints(Result);
+    return Result;
+  }
+
+  // Attempt to find the unique type satisfying a constraint.
+  // This lets us show e.g. `int` instead of `std::same_as<int>`.
+  static QualType deduceType(const TypeConstraint &T) {
+    // Assume a same_as<T> return type constraint is std::same_as or equivalent.
+    // In this case the return type is T.
+    DeclarationName DN = T.getNamedConcept()->getDeclName();
+    if (DN.isIdentifier() && DN.getAsIdentifierInfo()->isStr("same_as"))
+      if (const auto *Args = T.getTemplateArgsAsWritten())
+        if (Args->getNumTemplateArgs() == 1) {
+          const auto &Arg = Args->arguments().front().getArgument();
+          if (Arg.getKind() == TemplateArgument::Type)
+            return Arg.getAsType();
+        }
+    return {};
+  }
+
+  llvm::DenseMap<const IdentifierInfo *, Member> Results;
+};
+} // namespace
+
 void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
                                            Expr *OtherOpBase,
                                            SourceLocation OpLoc, bool IsArrow,
@@ -4802,15 +5169,31 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
       if (const PointerType *Ptr = BaseType->getAs<PointerType>()) {
         BaseType = Ptr->getPointeeType();
         BaseKind = VK_LValue;
-      } else if (BaseType->isObjCObjectPointerType())
-        /*Do nothing*/;
-      else
+      } else if (BaseType->isObjCObjectPointerType() ||
+                 BaseType->isTemplateTypeParmType()) {
+        // Both cases (dot/arrow) handled below.
+      } else {
         return false;
+      }
     }
 
     if (RecordDecl *RD = getAsRecordDecl(BaseType)) {
       AddRecordMembersCompletionResults(*this, Results, S, BaseType, BaseKind,
                                         RD, std::move(AccessOpFixIt));
+    } else if (const auto *TTPT =
+                   dyn_cast<TemplateTypeParmType>(BaseType.getTypePtr())) {
+      auto Operator =
+          IsArrow ? ConceptInfo::Member::Arrow : ConceptInfo::Member::Dot;
+      for (const auto &R : ConceptInfo(*TTPT, S).members()) {
+        if (R.Operator != Operator)
+          continue;
+        CodeCompletionResult Result(
+            R.render(*this, CodeCompleter->getAllocator(),
+                     CodeCompleter->getCodeCompletionTUInfo()));
+        if (AccessOpFixIt)
+          Result.FixIts.push_back(*AccessOpFixIt);
+        Results.AddResult(std::move(Result));
+      }
     } else if (!IsArrow && BaseType->isObjCObjectPointerType()) {
       // Objective-C property reference.
       AddedPropertiesSet AddedProperties;
@@ -5446,13 +5829,14 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
   // Always pretend to enter a context to ensure that a dependent type
   // resolves to a dependent record.
   DeclContext *Ctx = computeDeclContext(SS, /*EnteringContext=*/true);
-  if (!Ctx)
-    return;
 
   // Try to instantiate any non-dependent declaration contexts before
-  // we look in them.
-  if (!isDependentScopeSpecifier(SS) && RequireCompleteDeclContext(SS, Ctx))
-    return;
+  // we look in them. Bail out if we fail.
+  NestedNameSpecifier *NNS = SS.getScopeRep();
+  if (NNS != nullptr && SS.isValid() && !NNS->isDependent()) {
+    if (Ctx == nullptr || RequireCompleteDeclContext(SS, Ctx))
+      return;
+  }
 
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(), CC);
@@ -5462,21 +5846,34 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
 
   // The "template" keyword can follow "::" in the grammar, but only
   // put it into the grammar if the nested-name-specifier is dependent.
-  NestedNameSpecifier *NNS = SS.getScopeRep();
+  // FIXME: results is always empty, this appears to be dead.
   if (!Results.empty() && NNS->isDependent())
     Results.AddResult("template");
+
+  // If the scope is a concept-constrained type parameter, infer nested
+  // members based on the constraints.
+  if (const auto *TTPT =
+          dyn_cast_or_null<TemplateTypeParmType>(NNS->getAsType())) {
+    for (const auto &R : ConceptInfo(*TTPT, S).members()) {
+      if (R.Operator != ConceptInfo::Member::Colons)
+        continue;
+      Results.AddResult(CodeCompletionResult(
+          R.render(*this, CodeCompleter->getAllocator(),
+                   CodeCompleter->getCodeCompletionTUInfo())));
+    }
+  }
 
   // Add calls to overridden virtual functions, if there are any.
   //
   // FIXME: This isn't wonderful, because we don't know whether we're actually
   // in a context that permits expressions. This is a general issue with
   // qualified-id completions.
-  if (!EnteringContext)
+  if (Ctx && !EnteringContext)
     MaybeAddOverrideCalls(*this, Ctx, Results);
   Results.ExitScope();
 
-  if (CodeCompleter->includeNamespaceLevelDecls() ||
-      (!Ctx->isNamespace() && !Ctx->isTranslationUnit())) {
+  if (Ctx &&
+      (CodeCompleter->includeNamespaceLevelDecls() || !Ctx->isFileContext())) {
     CodeCompletionDeclConsumer Consumer(Results, Ctx, BaseType);
     LookupVisibleDecls(Ctx, LookupOrdinaryName, Consumer,
                        /*IncludeGlobalScope=*/true,
