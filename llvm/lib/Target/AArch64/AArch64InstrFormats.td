@@ -20,6 +20,14 @@ class Format<bits<2> val> {
 def PseudoFrm   : Format<0>;
 def NormalFrm   : Format<1>; // Do we need any others?
 
+// Enum describing whether an instruction is
+// destructive in its first source operand.
+class DestructiveInstTypeEnum<bits<1> val> {
+  bits<1> Value = val;
+}
+def NotDestructive  : DestructiveInstTypeEnum<0>;
+def Destructive     : DestructiveInstTypeEnum<1>;
+
 // AArch64 Instruction Format
 class AArch64Inst<Format f, string cstr> : Instruction {
   field bits<32> Inst; // Instruction encoding.
@@ -34,6 +42,14 @@ class AArch64Inst<Format f, string cstr> : Instruction {
   let Namespace   = "AArch64";
   Format F        = f;
   bits<2> Form    = F.Value;
+
+  // Defaults
+  DestructiveInstTypeEnum DestructiveInstType = NotDestructive;
+  ElementSizeEnum ElementSize = ElementSizeNone;
+
+  let TSFlags{3} = DestructiveInstType.Value;
+  let TSFlags{2-0} = ElementSize.Value;
+
   let Pattern     = [];
   let Constraints = cstr;
 }
@@ -56,14 +72,6 @@ class EncodedI<string cstr, list<dag> pattern> : AArch64Inst<NormalFrm, cstr> {
   let Size = 4;
 }
 
-// Enum describing whether an instruction is
-// destructive in its first source operand.
-class DestructiveInstTypeEnum<bits<1> val> {
-  bits<1> Value = val;
-}
-def NotDestructive  : DestructiveInstTypeEnum<0>;
-def Destructive     : DestructiveInstTypeEnum<1>;
-
 // Normal instructions
 class I<dag oops, dag iops, string asm, string operands, string cstr,
         list<dag> pattern>
@@ -71,13 +79,6 @@ class I<dag oops, dag iops, string asm, string operands, string cstr,
   dag OutOperandList = oops;
   dag InOperandList  = iops;
   let AsmString      = !strconcat(asm, operands);
-
-  // Destructive operations (SVE)
-  DestructiveInstTypeEnum DestructiveInstType = NotDestructive;
-  ElementSizeEnum ElementSize = ElementSizeB;
-
-  let TSFlags{3} = DestructiveInstType.Value;
-  let TSFlags{2-0} = ElementSize.Value;
 }
 
 class TriOpFrag<dag res> : PatFrag<(ops node:$LHS, node:$MHS, node:$RHS), res>;
