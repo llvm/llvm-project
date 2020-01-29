@@ -5872,38 +5872,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::amdgcn_fdiv_fast:
     return lowerFDIV_FAST(Op, DAG);
-  case Intrinsic::amdgcn_interp_p1_f16: {
-    if (getSubtarget()->getLDSBankCount() == 16) {
-      // 16 bank LDS
-      SDValue ToM0 = DAG.getCopyToReg(DAG.getEntryNode(), DL, AMDGPU::M0,
-                                      Op.getOperand(5), SDValue());
-
-      // FIXME: This implicitly will insert a second CopyToReg to M0.
-      SDValue S = DAG.getNode(
-        ISD::INTRINSIC_WO_CHAIN, DL, MVT::f32,
-        DAG.getTargetConstant(Intrinsic::amdgcn_interp_mov, DL, MVT::i32),
-        DAG.getTargetConstant(2, DL, MVT::i32), // P0
-        Op.getOperand(2),  // Attrchan
-        Op.getOperand(3),  // Attr
-        Op.getOperand(5)); // m0
-
-      SDValue Ops[] = {
-        Op.getOperand(1), // Src0
-        Op.getOperand(2), // Attrchan
-        Op.getOperand(3), // Attr
-        DAG.getTargetConstant(0, DL, MVT::i32), // $src0_modifiers
-        S, // Src2 - holds two f16 values selected by high
-        DAG.getTargetConstant(0, DL, MVT::i32), // $src2_modifiers
-        Op.getOperand(4), // high
-        DAG.getTargetConstant(0, DL, MVT::i1), // $clamp
-        DAG.getTargetConstant(0, DL, MVT::i32), // $omod
-        ToM0.getValue(1)
-      };
-      return DAG.getNode(AMDGPUISD::INTERP_P1LV_F16, DL, MVT::f32, Ops);
-    }
-
-    return SDValue();
-  }
   case Intrinsic::amdgcn_sin:
     return DAG.getNode(AMDGPUISD::SIN_HW, DL, VT, Op.getOperand(1));
 

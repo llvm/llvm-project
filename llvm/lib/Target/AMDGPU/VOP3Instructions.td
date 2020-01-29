@@ -491,15 +491,7 @@ def V_INTERP_P1LL_F16 : VOP3Interp <"v_interp_p1ll_f16", VOP3_INTERP16<[f32, f32
 }
 
 
-def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32, i32, f16]>,
-       [(set f32:$vdst, (AMDGPUinterp_p1lv_f16 f32:$src0, (i32 timm:$attrchan),
-                                                          (i32 timm:$attr),
-                                                          (i32 timm:$src0_modifiers),
-                                                          (f32 VRegSrc_32:$src2),
-                                                          (i32 timm:$src2_modifiers),
-                                                          (i1 timm:$high),
-                                                          (i1 timm:$clamp),
-                                                          (i32 timm:$omod)))]>;
+def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32, i32, f16]>>;
 } // End Uses = [M0, EXEC], FPDPRounding = 1
 
 } // End SubtargetPredicate = Has16BitInsts, isCommutable = 1
