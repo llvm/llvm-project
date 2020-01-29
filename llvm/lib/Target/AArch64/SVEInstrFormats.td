@@ -2716,7 +2716,7 @@ class sve2_int_arith_pred<bits<2> sz, bits<6> opc, string asm,
   bits<5> Zdn;
   let Inst{31-24} = 0b01000100;
   let Inst{23-22} = sz;
-  let Inst{21}    = 0b0;
+  let Inst{21-20} = 0b01;
   let Inst{20-16} = opc{5-1};
   let Inst{15-14} = 0b10;
   let Inst{13}    = opc{0};
@@ -2729,11 +2729,16 @@ class sve2_int_arith_pred<bits<2> sz, bits<6> opc, string asm,
   let ElementSize = zprty.ElementSize;
 }
 
-multiclass sve2_int_arith_pred<bits<6> opc, string asm> {
+multiclass sve2_int_arith_pred<bits<6> opc, string asm, SDPatternOperator op> {
   def _B : sve2_int_arith_pred<0b00, opc, asm, ZPR8>;
   def _H : sve2_int_arith_pred<0b01, opc, asm, ZPR16>;
   def _S : sve2_int_arith_pred<0b10, opc, asm, ZPR32>;
   def _D : sve2_int_arith_pred<0b11, opc, asm, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv16i8, op, nxv16i1, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Pat<nxv8i16, op, nxv8i1,  nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i1,  nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i1,  nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve2_int_sadd_long_accum_pairwise<bits<2> sz, bit U, string asm,
@@ -2757,10 +2762,14 @@ class sve2_int_sadd_long_accum_pairwise<bits<2> sz, bit U, string asm,
   let ElementSize = zprty1.ElementSize;
 }
 
-multiclass sve2_int_sadd_long_accum_pairwise<bit U, string asm> {
+multiclass sve2_int_sadd_long_accum_pairwise<bit U, string asm, SDPatternOperator op> {
   def _H : sve2_int_sadd_long_accum_pairwise<0b01, U, asm, ZPR16, ZPR8>;
   def _S : sve2_int_sadd_long_accum_pairwise<0b10, U, asm, ZPR32, ZPR16>;
   def _D : sve2_int_sadd_long_accum_pairwise<0b11, U, asm, ZPR64, ZPR32>;
+
+  def : SVE_3_Op_Pat<nxv8i16, op, nxv8i1, nxv8i16, nxv16i8, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i1, nxv4i32, nxv8i16, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i1, nxv2i64, nxv4i32, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve2_int_un_pred_arit<bits<2> sz, bit Q, bits<2> opc,
