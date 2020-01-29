@@ -4,8 +4,8 @@
 ; RUN: llc < %s -march=amdgcn -mcpu=gfx1010 -verify-machineinstrs | FileCheck -check-prefixes=GCN,GFX10 %s
 
 ; GCN-LABEL: {{^}}image_gather4_b_2d_v4f16:
-; UNPACKED: image_gather4_b v[0:3], v[0:3], s[0:7], s[8:11] dmask:0x4 d16{{$}}
-; PACKED: image_gather4_b v[0:1], v[0:3], s[0:7], s[8:11] dmask:0x4 d16{{$}}
+; UNPACKED: image_gather4_b v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x4 d16{{$}}
+; PACKED: image_gather4_b v[0:1], v[0:2], s[0:7], s[8:11] dmask:0x4 d16{{$}}
 ; GFX10: image_gather4_b v[0:1], v[0:2], s[0:7], s[8:11] dmask:0x4 dim:SQ_RSRC_IMG_2D d16{{$}}
 define amdgpu_ps <2 x float> @image_gather4_b_2d_v4f16(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, float %s, float %t) {
 main_body:

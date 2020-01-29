@@ -12,7 +12,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_cube:
-; GFX6789: image_gather4 v[0:3], v[0:3], s[0:7], s[8:11] dmask:0x1 da{{$}}
+; GFX6789: image_gather4 v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1 da{{$}}
 ; GFX10: image_gather4 v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_CUBE ;
 define amdgpu_ps <4 x float> @gather4_cube(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t, float %face) {
 main_body:
@@ -21,7 +21,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_2darray:
-; GFX6789: image_gather4 v[0:3], v[0:3], s[0:7], s[8:11] dmask:0x1 da{{$}}
+; GFX6789: image_gather4 v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1 da{{$}}
 ; GFX10: image_gather4 v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY ;
 define amdgpu_ps <4 x float> @gather4_2darray(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t, float %slice) {
 main_body:
@@ -30,7 +30,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_c_2d:
-; GFX6789: image_gather4_c v[0:3], v[0:3], s[0:7], s[8:11] dmask:0x1{{$}}
+; GFX6789: image_gather4_c v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1{{$}}
 ; GFX10: image_gather4_c v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D ;
 define amdgpu_ps <4 x float> @gather4_c_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s, float %t) {
 main_body:
@@ -39,7 +39,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_cl_2d:
-; GFX6789: image_gather4_cl v[0:3], v[0:3], s[0:7], s[8:11] dmask:0x1{{$}}
+; GFX6789: image_gather4_cl v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1{{$}}
 ; GFX10: image_gather4_cl v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D ;
 define amdgpu_ps <4 x float> @gather4_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t, float %clamp) {
 main_body:
@@ -57,7 +57,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_b_2d:
-; GFX6789: image_gather4_b v[0:3], v[0:3], s[0:7], s[8:11] dmask:0x1{{$}}
+; GFX6789: image_gather4_b v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1{{$}}
 ; GFX10: image_gather4_b v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D ;
 define amdgpu_ps <4 x float> @gather4_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, float %s, float %t) {
 main_body:
@@ -93,7 +93,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_l_2d:
-; GFX6789: image_gather4_l v[0:3], v[0:3], s[0:7], s[8:11] dmask:0x1{{$}}
+; GFX6789: image_gather4_l v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1{{$}}
 ; GFX10: image_gather4_l v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D ;
 define amdgpu_ps <4 x float> @gather4_l_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %t, float %lod) {
 main_body:
@@ -120,7 +120,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_c_lz_2d:
-; GFX6789: image_gather4_c_lz v[0:3], v[0:3], s[0:7], s[8:11] dmask:0x1{{$}}
+; GFX6789: image_gather4_c_lz v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1{{$}}
 ; GFX10: image_gather4_c_lz v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D ;
 define amdgpu_ps <4 x float> @gather4_c_lz_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, float %s, float %t) {
 main_body:

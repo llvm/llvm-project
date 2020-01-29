@@ -41,7 +41,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_c_cl_2d:
-; GCN: image_gather4_c_cl v[0:3], v[0:3], s[0:7], s[8:11] dmask:0x1 a16{{$}}
+; GCN: image_gather4_c_cl v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1 a16{{$}}
 define amdgpu_ps <4 x float> @gather4_c_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %t, half %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.c.cl.2d.v4f32.f32(i32 1, float %zcompare, half %s, half %t, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -57,7 +57,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_c_b_2d:
-; GCN: image_gather4_c_b v[0:3], v[0:3], s[0:7], s[8:11] dmask:0x1 a16{{$}}
+; GCN: image_gather4_c_b v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1 a16{{$}}
 define amdgpu_ps <4 x float> @gather4_c_b_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, float %zcompare, half %s, half %t) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.c.b.2d.v4f32.f32.f16(i32 1, float %bias, float %zcompare, half %s, half %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -65,7 +65,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_b_cl_2d:
-; GCN: image_gather4_b_cl v[0:3], v[0:3], s[0:7], s[8:11] dmask:0x1 a16{{$}}
+; GCN: image_gather4_b_cl v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1 a16{{$}}
 define amdgpu_ps <4 x float> @gather4_b_cl_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %bias, half %s, half %t, half %clamp) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.b.cl.2d.v4f32.f32.f16(i32 1, float %bias, half %s, half %t, half %clamp, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
@@ -89,7 +89,7 @@ main_body:
 }
 
 ; GCN-LABEL: {{^}}gather4_c_l_2d:
-; GCN: image_gather4_c_l v[0:3], v[0:3], s[0:7], s[8:11] dmask:0x1 a16{{$}}
+; GCN: image_gather4_c_l v[0:3], v[0:2], s[0:7], s[8:11] dmask:0x1 a16{{$}}
 define amdgpu_ps <4 x float> @gather4_c_l_2d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %zcompare, half %s, half %t, half %lod) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.gather4.c.l.2d.v4f32.f32(i32 1, float %zcompare, half %s, half %t, half %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
