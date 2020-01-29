@@ -231,7 +231,7 @@ public:
   }
 
   void add(const Decl *Dcl, RelSet Flags) {
-    const NamedDecl *D = llvm::dyn_cast<NamedDecl>(Dcl);
+    const NamedDecl *D = llvm::dyn_cast_or_null<NamedDecl>(Dcl);
     if (!D)
       return;
     debug(*D, Flags);
