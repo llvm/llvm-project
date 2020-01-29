@@ -25,8 +25,10 @@ def NormalFrm   : Format<1>; // Do we need any others?
 class DestructiveInstTypeEnum<bits<1> val> {
   bits<1> Value = val;
 }
-def NotDestructive  : DestructiveInstTypeEnum<0>;
-def Destructive     : DestructiveInstTypeEnum<1>;
+def NotDestructive       : DestructiveInstTypeEnum<0>;
+// Destructive in its first operand and can be MOVPRFX'd, but has no other
+// special properties.
+def DestructiveOther     : DestructiveInstTypeEnum<1>;
 
 // AArch64 Instruction Format
 class AArch64Inst<Format f, string cstr> : Instruction {
