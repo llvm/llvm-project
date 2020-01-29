@@ -28,7 +28,7 @@ public:
 
   ~SBPlatformConnectOptions();
 
-  void operator=(const SBPlatformConnectOptions &rhs);
+  SBPlatformConnectOptions &operator=(const SBPlatformConnectOptions &rhs);
 
   const char *GetURL();
 
@@ -54,6 +54,8 @@ public:
   SBPlatformShellCommand(const char *shell_command);
 
   SBPlatformShellCommand(const SBPlatformShellCommand &rhs);
+
+  SBPlatformShellCommand &operator=(const SBPlatformShellCommand &rhs);
 
   ~SBPlatformShellCommand();
 
@@ -91,7 +93,7 @@ public:
 
   SBPlatform(const SBPlatform &rhs);
 
-  void operator=(const SBPlatform &rhs);
+  SBPlatform &operator=(const SBPlatform &rhs);
 
   ~SBPlatform();
 
