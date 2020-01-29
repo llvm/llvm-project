@@ -871,11 +871,11 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef outSec) {
   }
 
   if (consume(">"))
-    cmd->memoryRegionName = next();
+    cmd->memoryRegionName = std::string(next());
 
   if (consume("AT")) {
     expect(">");
-    cmd->lmaRegionName = next();
+    cmd->lmaRegionName = std::string(next());
   }
 
   if (cmd->lmaExpr && !cmd->lmaRegionName.empty())

@@ -70,7 +70,7 @@ namespace llvm {
     }
 
     static std::string getGraphName(const SelectionDAG *G) {
-      return G->getMachineFunction().getName();
+      return std::string(G->getMachineFunction().getName());
     }
 
     static bool renderGraphFromBottomUp() {

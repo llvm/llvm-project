@@ -53,8 +53,9 @@ UserExpression::UserExpression(ExecutionContextScope &exe_scope,
                                lldb::LanguageType language,
                                ResultType desired_type,
                                const EvaluateExpressionOptions &options)
-    : Expression(exe_scope), m_expr_text(expr), m_expr_prefix(prefix),
-      m_language(language), m_desired_type(desired_type), m_options(options) {}
+    : Expression(exe_scope), m_expr_text(std::string(expr)),
+      m_expr_prefix(std::string(prefix)), m_language(language),
+      m_desired_type(desired_type), m_options(options) {}
 
 UserExpression::~UserExpression() {}
 
@@ -201,8 +202,8 @@ lldb::ExpressionResults UserExpression::Evaluate(
   llvm::StringRef option_prefix(options.GetPrefix());
   std::string full_prefix_storage;
   if (!prefix.empty() && !option_prefix.empty()) {
-    full_prefix_storage = prefix;
-    full_prefix_storage.append(option_prefix);
+    full_prefix_storage = std::string(prefix);
+    full_prefix_storage.append(std::string(option_prefix));
     full_prefix = full_prefix_storage;
   } else if (!prefix.empty())
     full_prefix = prefix;

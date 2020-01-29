@@ -40,7 +40,7 @@ class CC {
   std::vector<std::string> ccArgs; // CC-specific arguments.
   CC(StringRef ccPath, StringRef RemotePath,
      const std::vector<std::string> *CCArgs)
-      : CCPath(ccPath), RemoteClientPath(RemotePath) {
+      : CCPath(std::string(ccPath)), RemoteClientPath(std::string(RemotePath)) {
     if (CCArgs)
       ccArgs = *CCArgs;
   }

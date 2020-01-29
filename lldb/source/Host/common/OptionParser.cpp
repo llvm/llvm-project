@@ -41,7 +41,7 @@ int OptionParser::Parse(llvm::MutableArrayRef<char *> argv,
     ++longopts;
   }
   opts.push_back(option());
-  std::string opt_cstr = optstring;
+  std::string opt_cstr = std::string(optstring);
   return getopt_long_only(argv.size() - 1, argv.data(), opt_cstr.c_str(),
                           &opts[0], longindex);
 }

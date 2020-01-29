@@ -128,7 +128,7 @@ enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 struct MemoryRegion {
   MemoryRegion(StringRef name, uint64_t origin, uint64_t length, uint32_t flags,
                uint32_t negFlags)
-      : name(name), origin(origin), length(length), flags(flags),
+      : name(std::string(name)), origin(origin), length(length), flags(flags),
         negFlags(negFlags) {}
 
   std::string name;

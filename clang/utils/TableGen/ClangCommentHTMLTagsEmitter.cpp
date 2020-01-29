@@ -40,7 +40,7 @@ void clang::EmitClangCommentHTMLTagsProperties(RecordKeeper &Records,
   std::vector<StringMatcher::StringPair> MatchesEndTagOptional;
   std::vector<StringMatcher::StringPair> MatchesEndTagForbidden;
   for (Record *Tag : Tags) {
-    std::string Spelling = Tag->getValueAsString("Spelling");
+    std::string Spelling = std::string(Tag->getValueAsString("Spelling"));
     StringMatcher::StringPair Match(Spelling, "return true;");
     if (Tag->getValueAsBit("EndTagOptional"))
       MatchesEndTagOptional.push_back(Match);

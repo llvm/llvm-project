@@ -137,7 +137,7 @@ static std::string getPdbBaseName(const ObjFile *file, StringRef tSPath) {
   // Currently, type server PDBs are only created by MSVC cl, which only runs
   // on Windows, so we can assume type server paths are Windows style.
   sys::path::append(path, sys::path::filename(tSPath, sys::path::Style::windows));
-  return path.str();
+  return std::string(path.str());
 }
 
 // The casing of the PDB path stamped in the OBJ can differ from the actual path
@@ -147,7 +147,7 @@ static std::string normalizePdbPath(StringRef path) {
 #if defined(_WIN32)
   return path.lower();
 #else // LINUX
-  return path;
+  return std::string(path);
 #endif
 }
 

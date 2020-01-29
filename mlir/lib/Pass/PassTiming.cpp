@@ -281,7 +281,7 @@ void PassTiming::startPassTimer(Pass *pass) {
   Timer *timer = getTimer(pass, kind, [pass]() -> std::string {
     if (auto *adaptor = getAdaptorPassBase(pass))
       return adaptor->getName();
-    return pass->getName();
+    return std::string(pass->getName());
   });
 
   // We don't actually want to time the adaptor passes, they gather their total

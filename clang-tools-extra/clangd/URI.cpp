@@ -255,7 +255,7 @@ llvm::Expected<std::string> URI::resolvePath(llvm::StringRef AbsPath,
     return S->getAbsolutePath(U->Authority, U->Body, HintPath);
   }
   // Fallback to file: scheme which doesn't do any canonicalization.
-  return AbsPath;
+  return std::string(AbsPath);
 }
 
 llvm::Expected<std::string> URI::includeSpelling(const URI &Uri) {

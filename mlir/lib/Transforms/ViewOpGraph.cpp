@@ -109,7 +109,7 @@ struct PrintOpPass : public ModulePass<PrintOpPass> {
     auto symbolAttr =
         op.getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName());
     if (symbolAttr)
-      return symbolAttr.getValue();
+      return std::string(symbolAttr.getValue());
     ++unnamedOpCtr;
     return (op.getName().getStringRef() + llvm::utostr(unnamedOpCtr)).str();
   }

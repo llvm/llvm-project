@@ -98,9 +98,9 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
   // If typedef contains a full struct/class declaration, extract its full text.
   if (LastCxxDeclRange.isValid() && ReplaceRange.fullyContains(LastCxxDeclRange)) {
     bool Invalid;
-    Type =
+    Type = std::string(
         Lexer::getSourceText(CharSourceRange::getTokenRange(LastCxxDeclRange),
-                             *Result.SourceManager, getLangOpts(), &Invalid);
+                             *Result.SourceManager, getLangOpts(), &Invalid));
     if (Invalid)
       return;
   }

@@ -324,7 +324,8 @@ public:
 class RelocSection : public SyntheticSection {
 public:
   RelocSection(StringRef name, OutputSection *sec)
-      : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, name), sec(sec) {}
+      : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, std::string(name)),
+        sec(sec) {}
   void writeBody() override;
   bool isNeeded() const override { return sec->getNumRelocations() > 0; };
 

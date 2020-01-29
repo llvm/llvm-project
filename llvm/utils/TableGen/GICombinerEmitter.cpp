@@ -636,7 +636,8 @@ void GICombinerEmitter::emitNameMatcher(raw_ostream &OS) const {
     std::string Code;
     raw_string_ostream SS(Code);
     SS << "return " << EnumeratedRule.getID() << ";\n";
-    Cases.push_back(std::make_pair(EnumeratedRule.getName(), SS.str()));
+    Cases.push_back(
+        std::make_pair(std::string(EnumeratedRule.getName()), SS.str()));
   }
 
   OS << "static Optional<uint64_t> getRuleIdxForIdentifier(StringRef "

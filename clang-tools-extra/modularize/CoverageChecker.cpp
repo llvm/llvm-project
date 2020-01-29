@@ -282,7 +282,7 @@ CoverageChecker::collectUmbrellaHeaderHeaders(StringRef UmbrellaHeaderName) {
   Compilations.reset(new FixedCompilationDatabase(Twine(PathBuf), CommandLine));
 
   std::vector<std::string> HeaderPath;
-  HeaderPath.push_back(UmbrellaHeaderName);
+  HeaderPath.push_back(std::string(UmbrellaHeaderName));
 
   // Create the tool and run the compilation.
   ClangTool Tool(*Compilations, HeaderPath);

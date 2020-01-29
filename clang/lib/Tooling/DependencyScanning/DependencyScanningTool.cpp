@@ -37,7 +37,7 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
                               StringRef File) override {
       if (!this->Opts)
         this->Opts = std::make_unique<DependencyOutputOptions>(Opts);
-      Dependencies.push_back(File);
+      Dependencies.push_back(std::string(File));
     }
 
     void handleModuleDependency(ModuleDeps MD) override {
@@ -105,7 +105,7 @@ DependencyScanningTool::getFullDependencies(
 
     void handleFileDependency(const DependencyOutputOptions &Opts,
                               StringRef File) override {
-      Dependencies.push_back(File);
+      Dependencies.push_back(std::string(File));
     }
 
     void handleModuleDependency(ModuleDeps MD) override {

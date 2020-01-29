@@ -284,7 +284,8 @@ public:
   ///        bug path significantly shorter.
   const NoteTag *getNoteTag(StringRef Note, bool IsPrunable = false) {
     return getNoteTag(
-        [Note](BugReporterContext &, BugReport &) { return Note; }, IsPrunable);
+        [Note](BugReporterContext &, BugReport &) { return std::string(Note); },
+        IsPrunable);
   }
 
   /// Returns the word that should be used to refer to the declaration

@@ -136,7 +136,7 @@ static bool isAtLeastOneCondVarChanged(const FunctionDecl *Func,
 static std::string getCondVarNames(const Stmt *Cond) {
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
     if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl()))
-      return Var->getName();
+      return std::string(Var->getName());
   }
 
   std::string Result;

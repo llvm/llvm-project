@@ -36,7 +36,8 @@ using llvm::SmallSetVector;
 static const RecordDecl *findDefinition(StringRef RecordName,
                                         ASTContext &Context) {
   auto Results =
-      match(recordDecl(hasName(RecordName), isDefinition()).bind("recordDecl"),
+      match(recordDecl(hasName(std::string(RecordName)), isDefinition())
+                .bind("recordDecl"),
             Context);
   if (Results.empty()) {
     llvm::errs() << "Definition of " << RecordName << "  not found\n";
@@ -89,7 +90,7 @@ addReplacement(SourceRange Old, SourceRange New, const ASTContext &Context,
   tooling::Replacement R(Context.getSourceManager(),
                          CharSourceRange::getTokenRange(Old), NewText,
                          Context.getLangOpts());
-  consumeError(Replacements[R.getFilePath()].add(R));
+  consumeError(Replacements[std::string(R.getFilePath())].add(R));
 }
 
 /// Find all member fields used in the given init-list initializer expr

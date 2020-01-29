@@ -1903,7 +1903,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
                 if (SymbolicFile *O =
                         dyn_cast<SymbolicFile>(&*ChildOrErr.get())) {
                   if (PrintFileName) {
-                    ArchiveName = A->getFileName();
+                    ArchiveName = std::string(A->getFileName());
                     if (ArchFlags.size() > 1)
                       ArchitectureName = I->getArchFlagName();
                   } else {
@@ -1972,7 +1972,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
               if (SymbolicFile *O =
                       dyn_cast<SymbolicFile>(&*ChildOrErr.get())) {
                 if (PrintFileName)
-                  ArchiveName = A->getFileName();
+                  ArchiveName = std::string(A->getFileName());
                 else
                   outs() << "\n" << A->getFileName() << "(" << O->getFileName()
                          << ")"
@@ -2037,7 +2037,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
           }
           if (SymbolicFile *F = dyn_cast<SymbolicFile>(&*ChildOrErr.get())) {
             if (PrintFileName) {
-              ArchiveName = A->getFileName();
+              ArchiveName = std::string(A->getFileName());
               if (isa<MachOObjectFile>(F) && moreThanOneArch)
                 ArchitectureName = O.getArchFlagName();
             } else {

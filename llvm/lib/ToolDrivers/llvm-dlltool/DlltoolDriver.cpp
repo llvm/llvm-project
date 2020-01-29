@@ -146,7 +146,7 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
     return 1;
   }
 
-  std::string Path = Args.getLastArgValue(OPT_l);
+  std::string Path = std::string(Args.getLastArgValue(OPT_l));
 
   // If ExtName is set (if the "ExtName = Name" syntax was used), overwrite
   // Name with ExtName and clear ExtName. When only creating an import

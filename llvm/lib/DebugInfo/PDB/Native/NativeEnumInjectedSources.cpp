@@ -48,19 +48,19 @@ public:
   std::string getFileName() const override {
     StringRef Ret = cantFail(Strings.getStringForID(Entry.FileNI),
                              "InjectedSourceStream should have rejected this");
-    return Ret;
+    return std::string(Ret);
   }
 
   std::string getObjectFileName() const override {
     StringRef Ret = cantFail(Strings.getStringForID(Entry.ObjNI),
                              "InjectedSourceStream should have rejected this");
-    return Ret;
+    return std::string(Ret);
   }
 
   std::string getVirtualFileName() const override {
     StringRef Ret = cantFail(Strings.getStringForID(Entry.VFileNI),
                              "InjectedSourceStream should have rejected this");
-    return Ret;
+    return std::string(Ret);
   }
 
   uint32_t getCompression() const override { return Entry.Compression; }

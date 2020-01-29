@@ -709,7 +709,7 @@ protected:
                                          option_arg.str().c_str());
         break;
       case 'd':
-        m_data.assign(option_arg);
+        m_data.assign(std::string(option_arg));
         break;
       default:
         llvm_unreachable("Unimplemented option");

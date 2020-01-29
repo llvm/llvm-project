@@ -154,7 +154,7 @@ public:
 
   /// Should be called when starting to process new translation unit.
   void setCurrentBuildDirectory(StringRef BuildDirectory) {
-    CurrentBuildDirectory = BuildDirectory;
+    CurrentBuildDirectory = std::string(BuildDirectory);
   }
 
   /// Returns build directory of the current translation unit.

@@ -108,12 +108,9 @@ PrintedDeclCXX98Matches(StringRef Code, StringRef DeclName,
                         StringRef ExpectedPrinted,
                         PrintingPolicyModifier PolicyModifier = nullptr) {
   std::vector<std::string> Args(1, "-std=c++98");
-  return PrintedDeclMatches(Code,
-                            Args,
-                            namedDecl(hasName(DeclName)).bind("id"),
-                            ExpectedPrinted,
-                            "input.cc",
-                            PolicyModifier);
+  return PrintedDeclMatches(
+      Code, Args, namedDecl(hasName(std::string(DeclName))).bind("id"),
+      ExpectedPrinted, "input.cc", PolicyModifier);
 }
 
 ::testing::AssertionResult
@@ -133,11 +130,9 @@ PrintedDeclCXX98Matches(StringRef Code, const DeclarationMatcher &NodeMatch,
                                                    StringRef DeclName,
                                                    StringRef ExpectedPrinted) {
   std::vector<std::string> Args(1, "-std=c++11");
-  return PrintedDeclMatches(Code,
-                            Args,
-                            namedDecl(hasName(DeclName)).bind("id"),
-                            ExpectedPrinted,
-                            "input.cc");
+  return PrintedDeclMatches(
+      Code, Args, namedDecl(hasName(std::string(DeclName))).bind("id"),
+      ExpectedPrinted, "input.cc");
 }
 
 ::testing::AssertionResult PrintedDeclCXX11Matches(

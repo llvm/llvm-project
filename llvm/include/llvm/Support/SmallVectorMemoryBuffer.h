@@ -44,7 +44,7 @@ public:
   /// Construct a named SmallVectorMemoryBuffer from the given
   /// SmallVector r-value and StringRef.
   SmallVectorMemoryBuffer(SmallVectorImpl<char> &&SV, StringRef Name)
-      : SV(std::move(SV)), BufferName(Name) {
+      : SV(std::move(SV)), BufferName(std::string(Name)) {
     init(this->SV.begin(), this->SV.end(), false);
   }
 

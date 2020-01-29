@@ -158,7 +158,7 @@ static std::string getDataLayoutString(const Triple &T) {
 
 static std::string computeFSAdditions(StringRef FS, CodeGenOpt::Level OL,
                                       const Triple &TT) {
-  std::string FullFS = FS;
+  std::string FullFS = std::string(FS);
 
   // Make sure 64-bit features are available when CPUname is generic
   if (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le) {

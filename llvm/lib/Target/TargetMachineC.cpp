@@ -164,12 +164,12 @@ char* LLVMGetTargetMachineTriple(LLVMTargetMachineRef T) {
 }
 
 char* LLVMGetTargetMachineCPU(LLVMTargetMachineRef T) {
-  std::string StringRep = unwrap(T)->getTargetCPU();
+  std::string StringRep = std::string(unwrap(T)->getTargetCPU());
   return strdup(StringRep.c_str());
 }
 
 char* LLVMGetTargetMachineFeatureString(LLVMTargetMachineRef T) {
-  std::string StringRep = unwrap(T)->getTargetFeatureString();
+  std::string StringRep = std::string(unwrap(T)->getTargetFeatureString());
   return strdup(StringRep.c_str());
 }
 

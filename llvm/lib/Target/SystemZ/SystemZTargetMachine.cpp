@@ -155,7 +155,7 @@ SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
           getEffectiveSystemZCodeModel(CM, getEffectiveRelocModel(RM), JIT),
           OL),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
-      Subtarget(TT, CPU, FS, *this) {
+      Subtarget(TT, std::string(CPU), std::string(FS), *this) {
   initAsmInfo();
 }
 

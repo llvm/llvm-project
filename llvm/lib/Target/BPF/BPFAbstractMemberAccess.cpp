@@ -731,7 +731,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     if (CInfo.Kind == BPFPreserveUnionAI ||
         CInfo.Kind == BPFPreserveStructAI) {
       // struct or union type
-      TypeName = Ty->getName();
+      TypeName = std::string(Ty->getName());
       TypeMeta = Ty;
       PatchImm += FirstIndex * (Ty->getSizeInBits() >> 3);
       break;
@@ -782,7 +782,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
 
       unsigned CTag = CTy->getTag();
       if (CTag == dwarf::DW_TAG_structure_type || CTag == dwarf::DW_TAG_union_type) {
-        TypeName = CTy->getName();
+        TypeName = std::string(CTy->getName());
       } else {
         if (HasPreserveFieldInfoCall(CallStack))
           report_fatal_error("Invalid field access for llvm.preserve.field.info intrinsic");

@@ -863,7 +863,7 @@ std::string AMDGPUMangledLibFunc::mangleNameItanium() const {
   Param P;
   while ((P = I.getNextParam()).ArgType != 0)
     Mangler(S, P);
-  return S.str();
+  return std::string(S.str());
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -936,7 +936,7 @@ std::string AMDGPUMangledLibFunc::getName() const {
   SmallString<128> Buf;
   raw_svector_ostream OS(Buf);
   writeName(OS);
-  return OS.str();
+  return std::string(OS.str());
 }
 
 Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {

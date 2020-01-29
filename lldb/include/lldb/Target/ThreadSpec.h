@@ -46,9 +46,11 @@ public:
 
   void SetTID(lldb::tid_t tid) { m_tid = tid; }
 
-  void SetName(llvm::StringRef name) { m_name = name; }
+  void SetName(llvm::StringRef name) { m_name = std::string(name); }
 
-  void SetQueueName(llvm::StringRef queue_name) { m_queue_name = queue_name; }
+  void SetQueueName(llvm::StringRef queue_name) {
+    m_queue_name = std::string(queue_name);
+  }
 
   uint32_t GetIndex() const { return m_index; }
 

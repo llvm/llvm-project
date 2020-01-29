@@ -39,7 +39,7 @@ void tblgen::OpMethodSignature::writeDefTo(raw_ostream &os,
     while (!params.empty()) {
       parts = params.split("=");
       result.append(result.empty() ? "" : ", ");
-      result.append(parts.first);
+      result += parts.first;
       params = parts.second.split(",").second;
     }
     return result;

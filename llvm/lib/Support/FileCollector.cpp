@@ -51,7 +51,7 @@ bool FileCollector::getRealPath(StringRef SrcPath,
     auto EC = sys::fs::real_path(Directory, RealPath);
     if (EC)
       return false;
-    SymlinkMap[Directory] = RealPath.str();
+    SymlinkMap[Directory] = std::string(RealPath.str());
   } else {
     RealPath = DirWithSymlink->second;
   }

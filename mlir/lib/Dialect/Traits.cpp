@@ -165,7 +165,8 @@ static bool areCompatibleShapes(ArrayRef<int64_t> shape1,
 static std::string getShapeString(ArrayRef<int64_t> shape) {
   // TODO: should replace with printing shape more uniformly across here and
   // when in type.
-  return formatv("'{0:$[x]}'", llvm::make_range(shape.begin(), shape.end()));
+  return std::string(
+      formatv("'{0:$[x]}'", llvm::make_range(shape.begin(), shape.end())));
 }
 
 LogicalResult OpTrait::impl::verifyCompatibleOperandBroadcast(Operation *op) {

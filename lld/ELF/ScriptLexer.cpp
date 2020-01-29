@@ -64,7 +64,7 @@ size_t ScriptLexer::getColumnNumber() {
 }
 
 std::string ScriptLexer::getCurrentLocation() {
-  std::string filename = getCurrentMB().getBufferIdentifier();
+  std::string filename = std::string(getCurrentMB().getBufferIdentifier());
   return (filename + ":" + Twine(getLineNumber())).str();
 }
 

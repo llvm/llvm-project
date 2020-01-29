@@ -80,9 +80,9 @@ static void AddImplicitIncludeMacros(MacroBuilder &Builder, StringRef File) {
 static void AddImplicitIncludePCH(MacroBuilder &Builder, Preprocessor &PP,
                                   const PCHContainerReader &PCHContainerRdr,
                                   StringRef ImplicitIncludePCH) {
-  std::string OriginalFile =
-      ASTReader::getOriginalSourceFile(ImplicitIncludePCH, PP.getFileManager(),
-                                       PCHContainerRdr, PP.getDiagnostics());
+  std::string OriginalFile = ASTReader::getOriginalSourceFile(
+      std::string(ImplicitIncludePCH), PP.getFileManager(), PCHContainerRdr,
+      PP.getDiagnostics());
   if (OriginalFile.empty())
     return;
 

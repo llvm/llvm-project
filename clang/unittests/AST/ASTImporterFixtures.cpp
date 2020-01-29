@@ -41,7 +41,7 @@ void createVirtualFileIfNeeded(ASTUnit *ToAST, StringRef FileName,
 ASTImporterTestBase::TU::TU(StringRef Code, StringRef FileName, ArgVector Args,
                             ImporterConstructor C,
                             ASTImporter::ODRHandlingType ODRHandling)
-    : Code(Code), FileName(FileName),
+    : Code(std::string(Code)), FileName(std::string(FileName)),
       Unit(tooling::buildASTFromCodeWithArgs(this->Code, Args, this->FileName)),
       TUDecl(Unit->getASTContext().getTranslationUnitDecl()), Creator(C),
       ODRHandling(ODRHandling) {
@@ -118,7 +118,7 @@ void ASTImporterTestBase::lazyInitToAST(Language ToLang, StringRef ToSrcCode,
     return;
   ArgVector ToArgs = getArgVectorForLanguage(ToLang);
   // Source code must be a valid live buffer through the tests lifetime.
-  ToCode = ToSrcCode;
+  ToCode = std::string(ToSrcCode);
   // Build the AST from an empty file.
   ToAST = tooling::buildASTFromCodeWithArgs(ToCode, ToArgs, FileName);
   ToAST->enableSourceFileDiagnostics();

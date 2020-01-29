@@ -463,7 +463,7 @@ std::string MultiKeywordSelector::getName() const {
     OS << ':';
   }
 
-  return OS.str();
+  return std::string(OS.str());
 }
 
 std::string Selector::getAsString() const {
@@ -476,7 +476,7 @@ std::string Selector::getAsString() const {
     if (getNumArgs() == 0) {
       assert(II && "If the number of arguments is 0 then II is guaranteed to "
                    "not be null.");
-      return II->getName();
+      return std::string(II->getName());
     }
 
     if (!II)

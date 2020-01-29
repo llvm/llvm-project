@@ -1513,7 +1513,7 @@ void RenderScriptRuntime::CaptureScriptInit(RuntimeHook *hook,
       script->type = ScriptDetails::eScriptC;
       script->cache_dir = cache_dir;
       script->res_name = res_name;
-      script->shared_lib = strm.GetString();
+      script->shared_lib = std::string(strm.GetString());
       script->context = addr_t(args[eRsContext]);
     }
 

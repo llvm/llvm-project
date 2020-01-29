@@ -256,14 +256,14 @@ void SourceMgr::PrintMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
 // SMDiagnostic Implementation
 //===----------------------------------------------------------------------===//
 
-SMDiagnostic::SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN,
-                           int Line, int Col, SourceMgr::DiagKind Kind,
-                           StringRef Msg, StringRef LineStr,
-                           ArrayRef<std::pair<unsigned,unsigned>> Ranges,
+SMDiagnostic::SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN, int Line,
+                           int Col, SourceMgr::DiagKind Kind, StringRef Msg,
+                           StringRef LineStr,
+                           ArrayRef<std::pair<unsigned, unsigned>> Ranges,
                            ArrayRef<SMFixIt> Hints)
-  : SM(&sm), Loc(L), Filename(FN), LineNo(Line), ColumnNo(Col), Kind(Kind),
-    Message(Msg), LineContents(LineStr), Ranges(Ranges.vec()),
-    FixIts(Hints.begin(), Hints.end()) {
+    : SM(&sm), Loc(L), Filename(std::string(FN)), LineNo(Line), ColumnNo(Col),
+      Kind(Kind), Message(std::string(Msg)), LineContents(std::string(LineStr)),
+      Ranges(Ranges.vec()), FixIts(Hints.begin(), Hints.end()) {
   llvm::sort(FixIts);
 }
 

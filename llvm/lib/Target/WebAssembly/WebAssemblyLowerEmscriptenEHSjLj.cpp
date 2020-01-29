@@ -744,8 +744,8 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runEHOnFunction(Function &F) {
   bool Changed = false;
   SmallVector<Instruction *, 64> ToErase;
   SmallPtrSet<LandingPadInst *, 32> LandingPads;
-  bool AllowExceptions =
-      areAllExceptionsAllowed() || EHWhitelistSet.count(F.getName());
+  bool AllowExceptions = areAllExceptionsAllowed() ||
+                         EHWhitelistSet.count(std::string(F.getName()));
 
   for (BasicBlock &BB : F) {
     auto *II = dyn_cast<InvokeInst>(BB.getTerminator());

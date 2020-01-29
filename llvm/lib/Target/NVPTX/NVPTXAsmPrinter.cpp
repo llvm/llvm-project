@@ -982,7 +982,7 @@ void NVPTXAsmPrinter::emitLinkageDirective(const GlobalValue *V,
       msg.append("Error: ");
       msg.append("Symbol ");
       if (V->hasName())
-        msg.append(V->getName());
+        msg.append(std::string(V->getName()));
       msg.append("has unsupported appending linkage type");
       llvm_unreachable(msg.c_str());
     } else if (!V->hasInternalLinkage() &&
@@ -1439,7 +1439,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
     if (isKernelFunction(*F)) {
       if (isSampler(*I) || isImage(*I)) {
         if (isImage(*I)) {
-          std::string sname = I->getName();
+          std::string sname = std::string(I->getName());
           if (isImageWriteOnly(*I) || isImageReadWrite(*I)) {
             if (hasImageHandles)
               O << "\t.param .u64 .ptr .surfref ";

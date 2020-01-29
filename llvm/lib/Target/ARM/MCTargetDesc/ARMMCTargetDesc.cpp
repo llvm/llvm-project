@@ -168,7 +168,7 @@ MCSubtargetInfo *ARM_MC::createARMMCSubtargetInfo(const Triple &TT,
     if (!ArchFS.empty())
       ArchFS = (Twine(ArchFS) + "," + FS).str();
     else
-      ArchFS = FS;
+      ArchFS = std::string(FS);
   }
 
   return createARMMCSubtargetInfoImpl(TT, CPU, ArchFS);

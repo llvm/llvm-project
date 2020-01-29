@@ -322,7 +322,7 @@ static json::Object createRule(const PathDiagnostic &Diag) {
       {"name", CheckName},
       {"id", CheckName}};
 
-  std::string RuleURI = getRuleHelpURIStr(CheckName);
+  std::string RuleURI = std::string(getRuleHelpURIStr(CheckName));
   if (!RuleURI.empty())
     Ret["helpUri"] = RuleURI;
 

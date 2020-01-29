@@ -1295,7 +1295,7 @@ public:
     NewName += ".llvm.";
     NewName += utostr((uint64_t(ModHash[0]) << 32) |
                       ModHash[1]); // Take the first 64 bits
-    return NewName.str();
+    return std::string(NewName.str());
   }
 
   /// Helper to obtain the unpromoted name for a global value (or the original
@@ -1341,7 +1341,7 @@ public:
       if (It->second.first == TypeId)
         return It->second.second;
     auto It = TypeIdMap.insert(
-        {GlobalValue::getGUID(TypeId), {TypeId, TypeIdSummary()}});
+        {GlobalValue::getGUID(TypeId), {std::string(TypeId), TypeIdSummary()}});
     return It->second.second;
   }
 
@@ -1371,14 +1371,14 @@ public:
   /// the ThinLTO backends.
   TypeIdCompatibleVtableInfo &
   getOrInsertTypeIdCompatibleVtableSummary(StringRef TypeId) {
-    return TypeIdCompatibleVtableMap[TypeId];
+    return TypeIdCompatibleVtableMap[std::string(TypeId)];
   }
 
   /// For the given \p TypeId, this returns the TypeIdCompatibleVtableMap
   /// entry if present in the summary map. This may be used when importing.
   Optional<TypeIdCompatibleVtableInfo>
   getTypeIdCompatibleVtableSummary(StringRef TypeId) const {
-    auto I = TypeIdCompatibleVtableMap.find(TypeId);
+    auto I = TypeIdCompatibleVtableMap.find(std::string(TypeId));
     if (I == TypeIdCompatibleVtableMap.end())
       return None;
     return I->second;

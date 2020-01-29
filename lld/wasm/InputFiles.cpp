@@ -34,7 +34,7 @@ std::string toString(const wasm::InputFile *file) {
     return "<internal>";
 
   if (file->archiveName.empty())
-    return file->getName();
+    return std::string(file->getName());
 
   return (file->archiveName + "(" + file->getName() + ")").str();
 }

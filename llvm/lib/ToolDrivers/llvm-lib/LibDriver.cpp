@@ -65,7 +65,7 @@ static std::string getOutputPath(opt::InputArgList *Args,
     return Arg->getValue();
   SmallString<128> Val = StringRef(FirstMember.Buf->getBufferIdentifier());
   sys::path::replace_extension(Val, ".lib");
-  return Val.str();
+  return std::string(Val.str());
 }
 
 static std::vector<StringRef> getSearchPaths(opt::InputArgList *Args,

@@ -128,8 +128,8 @@ class SubtargetEmitter {
 
 public:
   SubtargetEmitter(RecordKeeper &R, CodeGenTarget &TGT)
-    : TGT(TGT), Records(R), SchedModels(TGT.getSchedModels()),
-      Target(TGT.getName()) {}
+      : TGT(TGT), Records(R), SchedModels(TGT.getSchedModels()),
+        Target(TGT.getName()) {}
 
   void run(raw_ostream &o);
 };
@@ -460,7 +460,8 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
       std::string ItinStageString;
       unsigned NStages = 0;
       if (ItinData)
-        FormItineraryStageString(Name, ItinData, ItinStageString, NStages);
+        FormItineraryStageString(std::string(Name), ItinData, ItinStageString,
+                                 NStages);
 
       // Get string and operand cycle count
       std::string ItinOperandCycleString;
@@ -470,7 +471,7 @@ EmitStageAndOperandCycleData(raw_ostream &OS,
         FormItineraryOperandCycleString(ItinData, ItinOperandCycleString,
                                         NOperandCycles);
 
-        FormItineraryBypassString(Name, ItinData, ItinBypassString,
+        FormItineraryBypassString(std::string(Name), ItinData, ItinBypassString,
                                   NOperandCycles);
       }
 

@@ -57,7 +57,7 @@ void CXXSelfAssignmentChecker::checkBeginFunction(CheckerContext &C) const {
         SmallString<256> Msg;
         llvm::raw_svector_ostream Out(Msg);
         Out << "Assuming " << MD->getParamDecl(0)->getName() << " == *this";
-        return Out.str();
+        return std::string(Out.str());
       });
   C.addTransition(SelfAssignState, SelfAssignTag);
 
@@ -67,7 +67,7 @@ void CXXSelfAssignmentChecker::checkBeginFunction(CheckerContext &C) const {
         SmallString<256> Msg;
         llvm::raw_svector_ostream Out(Msg);
         Out << "Assuming " << MD->getParamDecl(0)->getName() << " != *this";
-        return Out.str();
+        return std::string(Out.str());
       });
   C.addTransition(NonSelfAssignState, NonSelfAssignTag);
 }

@@ -245,8 +245,9 @@ void enhanceFromIndex(HoverInfo &Hover, const NamedDecl &ND,
     return;
   LookupRequest Req;
   Req.IDs.insert(*ID);
-  Index->lookup(
-      Req, [&](const Symbol &S) { Hover.Documentation = S.Documentation; });
+  Index->lookup(Req, [&](const Symbol &S) {
+    Hover.Documentation = std::string(S.Documentation);
+  });
 }
 
 // Populates Type, ReturnType, and Parameters for function-like decls.
@@ -410,7 +411,7 @@ HoverInfo getHoverContents(QualType T, ASTContext &ASTCtx,
 HoverInfo getHoverContents(const DefinedMacro &Macro, ParsedAST &AST) {
   HoverInfo HI;
   SourceManager &SM = AST.getSourceManager();
-  HI.Name = Macro.Name;
+  HI.Name = std::string(Macro.Name);
   HI.Kind = index::SymbolKind::Macro;
   // FIXME: Populate documentation
   // FIXME: Pupulate parameters
@@ -473,7 +474,7 @@ llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST) {
     Policy.SuppressTagKeyword = true;
     HI.Type = printType(E->getType(), Policy);
     HI.Value = *Val;
-    HI.Name = getNameForExpr(E);
+    HI.Name = std::string(getNameForExpr(E));
     return HI;
   }
   return llvm::None;
@@ -545,7 +546,7 @@ markup::Document HoverInfo::present() const {
   // https://github.com/microsoft/vscode/issues/88417 for details.
   markup::Paragraph &Header = Output.addHeading(3);
   if (Kind != index::SymbolKind::Unknown)
-    Header.appendText(index::getSymbolKindString(Kind));
+    Header.appendText(std::string(index::getSymbolKindString(Kind)));
   assert(!Name.empty() && "hover triggered on a nameless symbol");
   Header.appendCode(Name);
 

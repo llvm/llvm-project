@@ -1184,7 +1184,7 @@ public:
   ///
   /// These predefines are automatically injected when parsing the main file.
   void setPredefines(const char *P) { Predefines = P; }
-  void setPredefines(StringRef P) { Predefines = P; }
+  void setPredefines(StringRef P) { Predefines = std::string(P); }
 
   /// Return information about the specified preprocessor
   /// identifier token.

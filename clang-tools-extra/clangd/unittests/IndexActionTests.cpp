@@ -85,7 +85,7 @@ public:
                                      "-xc++",        "-std=c++11",
                                      "-iquote",      testRoot()};
     Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
-    Args.push_back(MainFilePath);
+    Args.push_back(std::string(MainFilePath));
 
     tooling::ToolInvocation Invocation(
         Args, std::move(Action), Files.get(),
@@ -100,7 +100,7 @@ public:
   void addFile(llvm::StringRef Path, llvm::StringRef Content) {
     InMemoryFileSystem->addFile(Path, 0,
                                 llvm::MemoryBuffer::getMemBuffer(Content));
-    FilePaths.push_back(Path);
+    FilePaths.push_back(std::string(Path));
   }
 
 protected:

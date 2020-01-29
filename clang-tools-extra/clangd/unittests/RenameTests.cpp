@@ -49,7 +49,7 @@ std::unique_ptr<RefSlab> buildRefSlab(const Annotations &Code,
                                       llvm::StringRef Path) {
   RefSlab::Builder Builder;
   TestTU TU;
-  TU.HeaderCode = Code.code();
+  TU.HeaderCode = std::string(Code.code());
   auto Symbols = TU.headerSymbols();
   const auto &SymbolID = findSymbol(Symbols, SymbolName).ID;
   std::string PathURI = URI::create(Path).toString();
@@ -666,7 +666,7 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
   MainCode = Annotations("void [[Bar]]() { [[B^ar]](); }");
   TU = TestTU::withCode(MainCode.code());
   // Set a file "bar.cc" on disk.
-  TU.AdditionalFiles["bar.cc"] = BarCode.code();
+  TU.AdditionalFiles["bar.cc"] = std::string(BarCode.code());
   AST = TU.build();
   Results = rename({MainCode.point(), NewName, AST, MainFilePath, Index.get(),
                     /*CrossFile=*/true, GetDirtyBuffer});
@@ -713,7 +713,7 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
   auto BarPath = testPath("bar.cc");
   auto TU = TestTU::withCode(MainCode.code());
   // Set a file "bar.cc" on disk.
-  TU.AdditionalFiles["bar.cc"] = BarCode.code();
+  TU.AdditionalFiles["bar.cc"] = std::string(BarCode.code());
   auto AST = TU.build();
   std::string BarPathURI = URI::create(BarPath).toString();
   Ref XRefInBarCC = refWithRange(BarCode.range(), BarPathURI);
@@ -895,8 +895,8 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
     std::string FooCCPath = testPath("foo.cc");
 
     MockFSProvider FS;
-    FS.Files[FooHPath] = FooH.code();
-    FS.Files[FooCCPath] = FooCC.code();
+    FS.Files[FooHPath] = std::string(FooH.code());
+    FS.Files[FooCCPath] = std::string(FooCC.code());
 
     auto ServerOpts = ClangdServer::optsForTest();
     ServerOpts.CrossFileRename = true;

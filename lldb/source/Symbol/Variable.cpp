@@ -684,8 +684,8 @@ static void PrivateAutoComplete(
           break;
         }
 
-        std::string token(partial_path, 0, pos);
-        remaining_partial_path = partial_path.substr(pos);
+        std::string token(std::string(partial_path), 0, pos);
+        remaining_partial_path = std::string(partial_path.substr(pos));
 
         if (compiler_type.IsValid()) {
           PrivateAutoCompleteMembers(frame, token, remaining_partial_path,

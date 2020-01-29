@@ -70,7 +70,7 @@ public:
   /// conflicts among replacements, use this to set an error description.
   /// Thereby, places that cannot be fixed automatically can be gathered when
   /// applying changes.
-  void setError(llvm::StringRef Error) { this->Error = Error; }
+  void setError(llvm::StringRef Error) { this->Error = std::string(Error); }
 
   /// Returns whether an error has been set on this list.
   bool hasError() const { return !Error.empty(); }

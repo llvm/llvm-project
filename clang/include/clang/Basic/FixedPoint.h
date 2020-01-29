@@ -165,7 +165,7 @@ class APFixedPoint {
   std::string toString() const {
     llvm::SmallString<40> S;
     toString(S);
-    return S.str();
+    return std::string(S.str());
   }
 
   // If LHS > RHS, return 1. If LHS == RHS, return 0. If LHS < RHS, return -1.

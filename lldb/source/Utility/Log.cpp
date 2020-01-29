@@ -138,7 +138,7 @@ void Log::VAPrintf(const char *format, va_list args) {
 
   Stream << Content << "\n";
 
-  WriteMessage(FinalMessage.str());
+  WriteMessage(std::string(FinalMessage.str()));
 }
 
 // Printing of errors that are not fatal.

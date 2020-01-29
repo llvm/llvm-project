@@ -2283,7 +2283,7 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix,
 std::string APInt::toString(unsigned Radix = 10, bool Signed = true) const {
   SmallString<40> S;
   toString(S, Radix, Signed, /* formatAsCLiteral = */false);
-  return S.str();
+  return std::string(S.str());
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

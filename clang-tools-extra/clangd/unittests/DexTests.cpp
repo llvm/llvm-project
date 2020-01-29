@@ -739,10 +739,10 @@ TEST(DexTest, PreferredTypesBoosting) {
   // The best candidate can change depending on the preferred type.
   Req.Limit = 1;
 
-  Req.PreferredTypes = {Sym1.Type};
+  Req.PreferredTypes = {std::string(Sym1.Type)};
   EXPECT_THAT(match(I, Req), ElementsAre("t1"));
 
-  Req.PreferredTypes = {Sym2.Type};
+  Req.PreferredTypes = {std::string(Sym2.Type)};
   EXPECT_THAT(match(I, Req), ElementsAre("t2"));
 }
 

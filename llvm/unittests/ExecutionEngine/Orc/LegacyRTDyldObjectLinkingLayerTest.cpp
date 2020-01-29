@@ -185,7 +185,7 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
   cantFail(ObjLayer.addObject(K1, std::move(Obj1)));
 
   auto K2 = ES.allocateVModule();
-  auto LegacyLookup = [&](const std::string &Name) {
+  auto LegacyLookup = [&](StringRef Name) {
     return ObjLayer.findSymbol(Name, true);
   };
 

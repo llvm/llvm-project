@@ -94,8 +94,9 @@ CudaInstallationDetector::CudaInstallationDetector(
 
         StringRef ptxasDir = llvm::sys::path::parent_path(ptxasAbsolutePath);
         if (llvm::sys::path::filename(ptxasDir) == "bin")
-          Candidates.emplace_back(llvm::sys::path::parent_path(ptxasDir),
-                                  /*StrictChecking=*/true);
+          Candidates.emplace_back(
+              std::string(llvm::sys::path::parent_path(ptxasDir)),
+              /*StrictChecking=*/true);
       }
     }
 
@@ -182,27 +183,27 @@ CudaInstallationDetector::CudaInstallationDetector(
         // capability. NVCC's choice of the libdevice library version is
         // rather peculiar and depends on the CUDA version.
         if (GpuArch == "compute_20") {
-          LibDeviceMap["sm_20"] = FilePath;
-          LibDeviceMap["sm_21"] = FilePath;
-          LibDeviceMap["sm_32"] = FilePath;
+          LibDeviceMap["sm_20"] = std::string(FilePath);
+          LibDeviceMap["sm_21"] = std::string(FilePath);
+          LibDeviceMap["sm_32"] = std::string(FilePath);
         } else if (GpuArch == "compute_30") {
-          LibDeviceMap["sm_30"] = FilePath;
+          LibDeviceMap["sm_30"] = std::string(FilePath);
           if (Version < CudaVersion::CUDA_80) {
-            LibDeviceMap["sm_50"] = FilePath;
-            LibDeviceMap["sm_52"] = FilePath;
-            LibDeviceMap["sm_53"] = FilePath;
+            LibDeviceMap["sm_50"] = std::string(FilePath);
+            LibDeviceMap["sm_52"] = std::string(FilePath);
+            LibDeviceMap["sm_53"] = std::string(FilePath);
           }
-          LibDeviceMap["sm_60"] = FilePath;
-          LibDeviceMap["sm_61"] = FilePath;
-          LibDeviceMap["sm_62"] = FilePath;
+          LibDeviceMap["sm_60"] = std::string(FilePath);
+          LibDeviceMap["sm_61"] = std::string(FilePath);
+          LibDeviceMap["sm_62"] = std::string(FilePath);
         } else if (GpuArch == "compute_35") {
-          LibDeviceMap["sm_35"] = FilePath;
-          LibDeviceMap["sm_37"] = FilePath;
+          LibDeviceMap["sm_35"] = std::string(FilePath);
+          LibDeviceMap["sm_37"] = std::string(FilePath);
         } else if (GpuArch == "compute_50") {
           if (Version >= CudaVersion::CUDA_80) {
-            LibDeviceMap["sm_50"] = FilePath;
-            LibDeviceMap["sm_52"] = FilePath;
-            LibDeviceMap["sm_53"] = FilePath;
+            LibDeviceMap["sm_50"] = std::string(FilePath);
+            LibDeviceMap["sm_52"] = std::string(FilePath);
+            LibDeviceMap["sm_53"] = std::string(FilePath);
           }
         }
       }
@@ -567,7 +568,7 @@ CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
     : ToolChain(D, Triple, Args), HostTC(HostTC),
       CudaInstallation(D, HostTC.getTriple(), Args), OK(OK) {
   if (CudaInstallation.isValid())
-    getProgramPaths().push_back(CudaInstallation.getBinPath());
+    getProgramPaths().push_back(std::string(CudaInstallation.getBinPath()));
   // Lookup binaries into the driver directory, this is used to
   // discover the clang-offload-bundler executable.
   getProgramPaths().push_back(getDriver().Dir);
@@ -584,7 +585,7 @@ std::string CudaToolChain::getInputFilename(const InputInfo &Input) const {
   // these particular file names.
   SmallString<256> Filename(ToolChain::getInputFilename(Input));
   llvm::sys::path::replace_extension(Filename, "cubin");
-  return Filename.str();
+  return std::string(Filename.str());
 }
 
 void CudaToolChain::addClangTargetOptions(

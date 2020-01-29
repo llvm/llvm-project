@@ -228,7 +228,7 @@ ARMConstantPoolSymbol::ARMConstantPoolSymbol(LLVMContext &C, StringRef s,
                                              bool AddCurrentAddress)
     : ARMConstantPoolValue(C, id, ARMCP::CPExtSymbol, PCAdj, Modifier,
                            AddCurrentAddress),
-      S(s) {}
+      S(std::string(s)) {}
 
 ARMConstantPoolSymbol *ARMConstantPoolSymbol::Create(LLVMContext &C,
                                                      StringRef s, unsigned ID,

@@ -464,12 +464,12 @@ public:
 
     case 'r':
       m_avoid_regexp.clear();
-      m_avoid_regexp.assign(option_arg);
+      m_avoid_regexp.assign(std::string(option_arg));
       break;
 
     case 't':
       m_step_in_target.clear();
-      m_step_in_target.assign(option_arg);
+      m_step_in_target.assign(std::string(option_arg));
       break;
 
     default:

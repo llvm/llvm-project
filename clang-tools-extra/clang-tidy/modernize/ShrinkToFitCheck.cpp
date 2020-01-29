@@ -62,15 +62,15 @@ void ShrinkToFitCheck::check(const MatchFinder::MatchResult &Result) {
     const LangOptions &Opts = getLangOpts();
     std::string ReplacementText;
     if (const auto *UnaryOp = llvm::dyn_cast<UnaryOperator>(Container)) {
-      ReplacementText =
+      ReplacementText = std::string(
           Lexer::getSourceText(CharSourceRange::getTokenRange(
                                    UnaryOp->getSubExpr()->getSourceRange()),
-                               *Result.SourceManager, Opts);
+                               *Result.SourceManager, Opts));
       ReplacementText += "->shrink_to_fit()";
     } else {
-      ReplacementText = Lexer::getSourceText(
+      ReplacementText = std::string(Lexer::getSourceText(
           CharSourceRange::getTokenRange(Container->getSourceRange()),
-          *Result.SourceManager, Opts);
+          *Result.SourceManager, Opts));
       ReplacementText += ".shrink_to_fit()";
     }
 

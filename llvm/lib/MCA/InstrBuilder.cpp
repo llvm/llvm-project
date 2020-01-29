@@ -502,7 +502,7 @@ Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
               "resources.";
   }
 
-  return make_error<InstructionError<MCInst>>(Message, MCI);
+  return make_error<InstructionError<MCInst>>(std::string(Message), MCI);
 }
 
 Expected<const InstrDesc &>

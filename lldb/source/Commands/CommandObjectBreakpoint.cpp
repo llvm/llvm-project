@@ -70,7 +70,7 @@ public:
       m_bp_opts.m_set_flags.Set(BreakpointOptions::eCondition);
       break;
     case 'C':
-      m_commands.push_back(option_arg);
+      m_commands.push_back(std::string(option_arg));
       break;
     case 'd':
       m_bp_opts.SetEnabled(false);
@@ -270,7 +270,7 @@ public:
         break;
 
       case 'b':
-        m_func_names.push_back(option_arg);
+        m_func_names.push_back(std::string(option_arg));
         m_func_name_type_mask |= eFunctionNameTypeBase;
         break;
 
@@ -325,7 +325,7 @@ public:
         break;
 
       case 'F':
-        m_func_names.push_back(option_arg);
+        m_func_names.push_back(std::string(option_arg));
         m_func_name_type_mask |= eFunctionNameTypeFull;
         break;
 
@@ -388,18 +388,18 @@ public:
       }
 
       case 'M':
-        m_func_names.push_back(option_arg);
+        m_func_names.push_back(std::string(option_arg));
         m_func_name_type_mask |= eFunctionNameTypeMethod;
         break;
 
       case 'n':
-        m_func_names.push_back(option_arg);
+        m_func_names.push_back(std::string(option_arg));
         m_func_name_type_mask |= eFunctionNameTypeAuto;
         break;
 
       case 'N': {
         if (BreakpointID::StringIsBreakpointName(option_arg, error))
-          m_breakpoint_names.push_back(option_arg);
+          m_breakpoint_names.push_back(std::string(option_arg));
         else
           error.SetErrorStringWithFormat("Invalid breakpoint name: %s",
                                          option_arg.str().c_str());
@@ -420,11 +420,11 @@ public:
         break;
 
       case 'p':
-        m_source_text_regexp.assign(option_arg);
+        m_source_text_regexp.assign(std::string(option_arg));
         break;
 
       case 'r':
-        m_func_regexp.assign(option_arg);
+        m_func_regexp.assign(std::string(option_arg));
         break;
 
       case 's':
@@ -432,7 +432,7 @@ public:
         break;
 
       case 'S':
-        m_func_names.push_back(option_arg);
+        m_func_names.push_back(std::string(option_arg));
         m_func_name_type_mask |= eFunctionNameTypeSelector;
         break;
 
@@ -446,7 +446,7 @@ public:
       } break;
 
       case 'X':
-        m_source_regex_func_names.insert(option_arg);
+        m_source_regex_func_names.insert(std::string(option_arg));
         break;
 
       default:
@@ -1236,7 +1236,7 @@ public:
 
       switch (short_option) {
       case 'f':
-        m_filename.assign(option_arg);
+        m_filename.assign(std::string(option_arg));
         break;
 
       case 'l':
@@ -2009,7 +2009,7 @@ public:
 
       switch (short_option) {
       case 'f':
-        m_filename.assign(option_arg);
+        m_filename.assign(std::string(option_arg));
         break;
       case 'N': {
         Status name_error;
@@ -2018,7 +2018,7 @@ public:
           error.SetErrorStringWithFormat("Invalid breakpoint name: %s",
                                          name_error.AsCString());
         }
-        m_names.push_back(option_arg);
+        m_names.push_back(std::string(option_arg));
         break;
       }
       default:
@@ -2127,7 +2127,7 @@ public:
 
       switch (short_option) {
       case 'f':
-        m_filename.assign(option_arg);
+        m_filename.assign(std::string(option_arg));
         break;
       case 'a':
         m_append = true;

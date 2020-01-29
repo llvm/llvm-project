@@ -202,7 +202,7 @@ BackgroundIndex::indexFileTask(tooling::CompileCommand Cmd) {
       elog("Indexing {0} failed: {1}", FileName, std::move(Error));
   });
   T.QueuePri = IndexFile;
-  T.Tag = filenameWithoutExtension(Cmd.Filename);
+  T.Tag = std::string(filenameWithoutExtension(Cmd.Filename));
   return T;
 }
 

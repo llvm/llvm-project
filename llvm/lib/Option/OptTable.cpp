@@ -219,7 +219,7 @@ OptTable::suggestValueCompletions(StringRef Option, StringRef Arg) const {
     std::vector<std::string> Result;
     for (StringRef Val : Candidates)
       if (Val.startswith(Arg) && Arg.compare(Val))
-        Result.push_back(Val);
+        Result.push_back(std::string(Val));
     return Result;
   }
   return {};
@@ -283,10 +283,10 @@ unsigned OptTable::findNearest(StringRef Option, std::string &NearestString,
     StringRef LHS, RHS;
     char Last = CandidateName.back();
     bool CandidateHasDelimiter = Last == '=' || Last == ':';
-    std::string NormalizedName = Option;
+    std::string NormalizedName = std::string(Option);
     if (CandidateHasDelimiter) {
       std::tie(LHS, RHS) = Option.split(Last);
-      NormalizedName = LHS;
+      NormalizedName = std::string(LHS);
       if (Option.find(Last) == LHS.size())
         NormalizedName += Last;
     }

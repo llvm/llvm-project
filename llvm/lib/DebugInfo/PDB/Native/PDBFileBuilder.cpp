@@ -95,7 +95,7 @@ Error PDBFileBuilder::addNamedStream(StringRef Name, StringRef Data) {
   if (!ExpectedIndex)
     return ExpectedIndex.takeError();
   assert(NamedStreamData.count(*ExpectedIndex) == 0);
-  NamedStreamData[*ExpectedIndex] = Data;
+  NamedStreamData[*ExpectedIndex] = std::string(Data);
   return Error::success();
 }
 

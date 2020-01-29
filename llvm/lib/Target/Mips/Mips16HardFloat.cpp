@@ -260,7 +260,7 @@ static void assureFPCallStub(Function &F, Module *M,
     return;
   LLVMContext &Context = M->getContext();
   bool LE = TM.isLittleEndian();
-  std::string Name = F.getName();
+  std::string Name(F.getName());
   std::string SectionName = ".mips16.call.fp." + Name;
   std::string StubName = "__call_stub_fp_" + Name;
   //
@@ -448,7 +448,7 @@ static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
   bool PicMode = TM.isPositionIndependent();
   bool LE = TM.isLittleEndian();
   LLVMContext &Context = M->getContext();
-  std::string Name = F->getName();
+  std::string Name(F->getName());
   std::string SectionName = ".mips16.fn." + Name;
   std::string StubName = "__fn_stub_" + Name;
   std::string LocalName = "$$__fn_local_" + Name;

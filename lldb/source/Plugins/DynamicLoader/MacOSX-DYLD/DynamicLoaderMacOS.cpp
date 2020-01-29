@@ -481,8 +481,8 @@ bool DynamicLoaderMacOS::GetSharedCacheInformation(
         info_dict->HasKey("shared_cache_base_address")) {
       base_address = info_dict->GetValueForKey("shared_cache_base_address")
                          ->GetIntegerValue(LLDB_INVALID_ADDRESS);
-      std::string uuid_str =
-          info_dict->GetValueForKey("shared_cache_uuid")->GetStringValue();
+      std::string uuid_str = std::string(
+          info_dict->GetValueForKey("shared_cache_uuid")->GetStringValue());
       if (!uuid_str.empty())
         uuid.SetFromStringRef(uuid_str);
       if (!info_dict->GetValueForKey("no_shared_cache")->GetBooleanValue())

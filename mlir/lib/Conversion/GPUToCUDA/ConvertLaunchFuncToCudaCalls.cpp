@@ -307,7 +307,7 @@ Value GpuLaunchFuncToCudaCallsPass::generateKernelNameConstant(
   std::vector<char> kernelName(name.begin(), name.end());
   kernelName.push_back('\0');
 
-  std::string globalName = llvm::formatv("{0}_kernel_name", name);
+  std::string globalName = std::string(llvm::formatv("{0}_kernel_name", name));
   return LLVM::createGlobalString(
       loc, builder, globalName, StringRef(kernelName.data(), kernelName.size()),
       LLVM::Linkage::Internal, llvmDialect);

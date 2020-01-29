@@ -39,7 +39,7 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
 
   // Handle CPU name is 'native'.
   if (CPU == "native")
-    return llvm::sys::getHostCPUName();
+    return std::string(llvm::sys::getHostCPUName());
 
   // arm64e requires v8.3a and only runs on vortex and later CPUs.
   if (Triple.getArchName() == "arm64e") {
@@ -150,7 +150,7 @@ getAArch64MicroArchFeaturesFromMtune(const Driver &D, StringRef Mtune,
 
   // Handle CPU name is 'native'.
   if (MtuneLowerCase == "native")
-    MtuneLowerCase = llvm::sys::getHostCPUName();
+    MtuneLowerCase = std::string(llvm::sys::getHostCPUName());
 
   // 'cyclone' and later have zero-cycle register moves and zeroing.
   if (MtuneLowerCase == "cyclone" || MtuneLowerCase == "vortex" ||

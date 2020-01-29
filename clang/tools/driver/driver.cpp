@@ -60,7 +60,7 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
       if (llvm::ErrorOr<std::string> P =
               llvm::sys::findProgramByName(ExecutablePath))
         ExecutablePath = *P;
-    return ExecutablePath.str();
+    return std::string(ExecutablePath.str());
   }
 
   // This just needs to be some symbol in the binary; C++ doesn't
@@ -71,7 +71,7 @@ std::string GetExecutablePath(const char *Argv0, bool CanonicalPrefixes) {
 
 static const char *GetStableCStr(std::set<std::string> &SavedStrings,
                                  StringRef S) {
-  return SavedStrings.insert(S).first->c_str();
+  return SavedStrings.insert(std::string(S)).first->c_str();
 }
 
 /// ApplyQAOverride - Apply a list of edits to the input argument lists.
@@ -265,7 +265,7 @@ static void FixupDiagPrefixExeName(TextDiagnosticPrinter *DiagClient,
   StringRef ExeBasename(llvm::sys::path::stem(Path));
   if (ExeBasename.equals_lower("cl"))
     ExeBasename = "clang-cl";
-  DiagClient->setPrefix(ExeBasename);
+  DiagClient->setPrefix(std::string(ExeBasename));
 }
 
 // This lets us create the DiagnosticsEngine with a properly-filled-out

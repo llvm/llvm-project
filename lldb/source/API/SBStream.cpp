@@ -81,7 +81,8 @@ void SBStream::RedirectToFile(const char *path, bool append) {
     // See if we have any locally backed data. If so, copy it so we can then
     // redirect it to the file so we don't lose the data
     if (!m_is_file)
-      local_data = static_cast<StreamString *>(m_opaque_up.get())->GetString();
+      local_data = std::string(
+          static_cast<StreamString *>(m_opaque_up.get())->GetString());
   }
   auto open_options = File::eOpenOptionWrite | File::eOpenOptionCanCreate;
   if (append)
@@ -129,7 +130,8 @@ void SBStream::RedirectToFile(FileSP file_sp) {
     // See if we have any locally backed data. If so, copy it so we can then
     // redirect it to the file so we don't lose the data
     if (!m_is_file)
-      local_data = static_cast<StreamString *>(m_opaque_up.get())->GetString();
+      local_data = std::string(
+          static_cast<StreamString *>(m_opaque_up.get())->GetString());
   }
 
   m_opaque_up = std::make_unique<StreamFile>(file_sp);
@@ -150,7 +152,8 @@ void SBStream::RedirectToFileDescriptor(int fd, bool transfer_fh_ownership) {
     // See if we have any locally backed data. If so, copy it so we can then
     // redirect it to the file so we don't lose the data
     if (!m_is_file)
-      local_data = static_cast<StreamString *>(m_opaque_up.get())->GetString();
+      local_data = std::string(
+          static_cast<StreamString *>(m_opaque_up.get())->GetString());
   }
 
   m_opaque_up = std::make_unique<StreamFile>(fd, transfer_fh_ownership);

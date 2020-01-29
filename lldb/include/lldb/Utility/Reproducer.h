@@ -142,7 +142,7 @@ public:
     llvm::SmallString<128> cwd;
     if (std::error_code EC = llvm::sys::fs::current_path(cwd))
       return;
-    m_cwd = cwd.str();
+    m_cwd = std::string(cwd.str());
   }
   struct Info {
     static const char *name;

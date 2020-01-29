@@ -527,7 +527,7 @@ SymbolID findSymbolIDByName(SymbolIndex *Index, llvm::StringRef Name,
                             llvm::StringRef TemplateArgs = "") {
   SymbolID Result;
   FuzzyFindRequest Request;
-  Request.Query = Name;
+  Request.Query = std::string(Name);
   Request.AnyScope = true;
   bool GotResult = false;
   Index->fuzzyFind(Request, [&](const Symbol &S) {

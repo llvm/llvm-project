@@ -86,7 +86,7 @@ bool RenderScriptRuntimeModulePass::runOnModule(llvm::Module &module) {
   llvm::StringRef real_triple =
       m_process_ptr->GetTarget().GetArchitecture().GetTriple().getTriple();
   const llvm::Target *target_info =
-      llvm::TargetRegistry::lookupTarget(real_triple, err);
+      llvm::TargetRegistry::lookupTarget(std::string(real_triple), err);
   if (!target_info) {
     if (log)
       log->Warning("couldn't determine real target architecture: '%s'",

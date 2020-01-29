@@ -692,7 +692,7 @@ public:
 
       switch (short_option) {
       case 'c':
-        m_condition = option_arg;
+        m_condition = std::string(option_arg);
         m_condition_passed = true;
         break;
       default:
@@ -934,7 +934,7 @@ protected:
         StreamString ss;
         // True to show fullpath for declaration file.
         var_sp->GetDeclaration().DumpStopContext(&ss, true);
-        wp->SetDeclInfo(ss.GetString());
+        wp->SetDeclInfo(std::string(ss.GetString()));
       }
       output_stream.Printf("Watchpoint created: ");
       wp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);

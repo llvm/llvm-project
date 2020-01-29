@@ -306,12 +306,12 @@ RealFileSystem::openFileForRead(const Twine &Name) {
 
 llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {
   if (WD)
-    return WD->Specified.str();
+    return std::string(WD->Specified.str());
 
   SmallString<128> Dir;
   if (std::error_code EC = llvm::sys::fs::current_path(Dir))
     return EC;
-  return Dir.str();
+  return std::string(Dir.str());
 }
 
 std::error_code RealFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
@@ -535,7 +535,8 @@ class InMemoryNode {
 
 public:
   InMemoryNode(llvm::StringRef FileName, InMemoryNodeKind Kind)
-      : Kind(Kind), FileName(llvm::sys::path::filename(FileName)) {}
+      : Kind(Kind), FileName(std::string(llvm::sys::path::filename(FileName))) {
+  }
   virtual ~InMemoryNode() = default;
 
   /// Get the filename of this node (the name without the directory part).
@@ -904,7 +905,7 @@ class InMemoryDirIterator : public llvm::vfs::detail::DirIterImpl {
         Type = sys::fs::file_type::directory_file;
         break;
       }
-      CurrentEntry = directory_entry(Path.str(), Type);
+      CurrentEntry = directory_entry(std::string(Path.str()), Type);
     } else {
       // When we're at the end, make CurrentEntry invalid and DirIterImpl will
       // do the rest.
@@ -960,7 +961,7 @@ std::error_code InMemoryFileSystem::setCurrentWorkingDirectory(const Twine &P) {
     llvm::sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
 
   if (!Path.empty())
-    WorkingDirectory = Path.str();
+    WorkingDirectory = std::string(Path.str());
   return {};
 }
 
@@ -1064,7 +1065,7 @@ RedirectingFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
   Path.toVector(AbsolutePath);
   if (std::error_code EC = makeAbsolute(AbsolutePath))
     return EC;
-  WorkingDirectory = AbsolutePath.str();
+  WorkingDirectory = std::string(AbsolutePath.str());
   return {};
 }
 
@@ -1347,9 +1348,9 @@ class llvm::vfs::RedirectingFileSystemParser {
           // are properly canonicalized before read into the VFS.
           Path = sys::path::remove_leading_dotslash(Path);
           sys::path::remove_dots(Path, /*remove_dot_dot=*/true);
-          Name = Path.str();
+          Name = std::string(Path.str());
         } else {
-          Name = Value;
+          Name = std::string(Value);
         }
       } else if (Key == "type") {
         if (!parseScalarString(I.getValue(), Value, Buffer))
@@ -1409,7 +1410,7 @@ class llvm::vfs::RedirectingFileSystemParser {
           FullPath = sys::path::remove_leading_dotslash(FullPath);
           sys::path::remove_dots(FullPath, /*remove_dot_dot=*/true);
         }
-        ExternalContentsPath = FullPath.str();
+        ExternalContentsPath = std::string(FullPath.str());
       } else if (Key == "use-external-name") {
         bool Val;
         if (!parseScalarBool(I.getValue(), Val))
@@ -2104,7 +2105,7 @@ std::error_code VFSFromYamlDirIterImpl::incrementContent(bool IsFirstTime) {
       Type = sys::fs::file_type::regular_file;
       break;
     }
-    CurrentEntry = directory_entry(PathStr.str(), Type);
+    CurrentEntry = directory_entry(std::string(PathStr.str()), Type);
     return {};
   }
   return incrementExternal();

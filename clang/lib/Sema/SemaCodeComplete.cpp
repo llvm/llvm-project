@@ -2712,7 +2712,7 @@ FormatFunctionParameter(const PrintingPolicy &Policy, const ParmVarDecl *Param,
     std::string Result;
 
     if (Param->getIdentifier() && !ObjCMethodParam && !SuppressName)
-      Result = Param->getIdentifier()->getName();
+      Result = std::string(Param->getIdentifier()->getName());
 
     QualType Type = Param->getType();
     if (ObjCSubsts)
@@ -2751,7 +2751,7 @@ FormatFunctionParameter(const PrintingPolicy &Policy, const ParmVarDecl *Param,
     // for the block; just use the parameter type as a placeholder.
     std::string Result;
     if (!ObjCMethodParam && Param->getIdentifier())
-      Result = Param->getIdentifier()->getName();
+      Result = std::string(Param->getIdentifier()->getName());
 
     QualType Type = Param->getType().getUnqualifiedType();
 
@@ -2966,7 +2966,7 @@ static void AddTemplateParameterChunks(
     } else if (NonTypeTemplateParmDecl *NTTP =
                    dyn_cast<NonTypeTemplateParmDecl>(*P)) {
       if (NTTP->getIdentifier())
-        PlaceholderStr = NTTP->getIdentifier()->getName();
+        PlaceholderStr = std::string(NTTP->getIdentifier()->getName());
       NTTP->getType().getAsStringInternal(PlaceholderStr, Policy);
       HasDefaultArg = NTTP->hasDefaultArgument();
     } else {
@@ -4297,7 +4297,7 @@ static void AddLambdaCompletion(ResultBuilder &Results,
         First = false;
 
       constexpr llvm::StringLiteral NamePlaceholder = "!#!NAME_GOES_HERE!#!";
-      std::string Type = NamePlaceholder;
+      std::string Type = std::string(NamePlaceholder);
       Parameter.getAsStringInternal(Type, PrintingPolicy(LangOpts));
       llvm::StringRef Prefix, Suffix;
       std::tie(Prefix, Suffix) = llvm::StringRef(Type).split(NamePlaceholder);
@@ -7613,7 +7613,7 @@ static void AddObjCKeyValueCompletions(ObjCPropertyDecl *Property,
   } Key(Allocator, PropName->getName());
 
   // The uppercased name of the property name.
-  std::string UpperKey = PropName->getName();
+  std::string UpperKey = std::string(PropName->getName());
   if (!UpperKey.empty())
     UpperKey[0] = toUppercase(UpperKey[0]);
 

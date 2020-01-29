@@ -44,7 +44,7 @@ TEST(writeFileAtomicallyTest, Test) {
   llvm::Error Err = llvm::writeFileAtomically(TempUniqTestFileModel, FinalTestfilePath, TestfileContent);
   ASSERT_FALSE(static_cast<bool>(Err));
 
-  std::ifstream FinalFileStream(FinalTestfilePath.str());
+  std::ifstream FinalFileStream(std::string(FinalTestfilePath.str()));
   std::string FinalFileContent;
   FinalFileStream >> FinalFileContent;
   ASSERT_EQ(FinalFileContent, TestfileContent);

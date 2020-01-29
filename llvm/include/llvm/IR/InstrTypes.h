@@ -1066,7 +1066,7 @@ public:
       : Tag(std::move(Tag)), Inputs(Inputs) {}
 
   explicit OperandBundleDefT(const OperandBundleUse &OBU) {
-    Tag = OBU.getTagName();
+    Tag = std::string(OBU.getTagName());
     Inputs.insert(Inputs.end(), OBU.Inputs.begin(), OBU.Inputs.end());
   }
 

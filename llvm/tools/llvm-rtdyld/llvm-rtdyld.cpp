@@ -189,7 +189,7 @@ class TrivialMemoryManager : public RTDyldMemoryManager {
 public:
   struct SectionInfo {
     SectionInfo(StringRef Name, sys::MemoryBlock MB, unsigned SectionID)
-      : Name(Name), MB(std::move(MB)), SectionID(SectionID) {}
+        : Name(std::string(Name)), MB(std::move(MB)), SectionID(SectionID) {}
     std::string Name;
     sys::MemoryBlock MB;
     unsigned SectionID = ~0U;
@@ -599,7 +599,7 @@ void applySpecificSectionMappings(RuntimeDyld &Dyld,
 
   for (StringRef Mapping : SpecificSectionMappings) {
     size_t EqualsIdx = Mapping.find_first_of("=");
-    std::string SectionIDStr = Mapping.substr(0, EqualsIdx);
+    std::string SectionIDStr = std::string(Mapping.substr(0, EqualsIdx));
     size_t ComaIdx = Mapping.find_first_of(",");
 
     if (ComaIdx == StringRef::npos)
@@ -612,7 +612,7 @@ void applySpecificSectionMappings(RuntimeDyld &Dyld,
       ExitOnErr(getSectionId(FileToSecIDMap, FileName, SectionName));
 
     auto* OldAddr = Dyld.getSectionContent(SectionID).data();
-    std::string NewAddrStr = Mapping.substr(EqualsIdx + 1);
+    std::string NewAddrStr = std::string(Mapping.substr(EqualsIdx + 1));
     uint64_t NewAddr;
 
     if (StringRef(NewAddrStr).getAsInteger(0, NewAddr))

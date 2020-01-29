@@ -26,7 +26,7 @@ std::string ppc::getPPCTargetCPU(const ArgList &Args) {
     StringRef CPUName = A->getValue();
 
     if (CPUName == "native") {
-      std::string CPU = llvm::sys::getHostCPUName();
+      std::string CPU = std::string(llvm::sys::getHostCPUName());
       if (!CPU.empty() && CPU != "generic")
         return CPU;
       else

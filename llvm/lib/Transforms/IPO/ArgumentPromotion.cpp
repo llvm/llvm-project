@@ -453,7 +453,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
           assert(It != ArgIndices.end() && "GEP not handled??");
         }
 
-        std::string NewName = I->getName();
+        std::string NewName = std::string(I->getName());
         for (unsigned i = 0, e = Operands.size(); i != e; ++i) {
           NewName += "." + utostr(Operands[i]);
         }

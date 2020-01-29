@@ -1282,7 +1282,7 @@ SBDebugger::GetInternalVariableValue(const char *var_name,
     if (value_sp) {
       StreamString value_strm;
       value_sp->DumpValue(&exe_ctx, value_strm, OptionValue::eDumpOptionValue);
-      const std::string &value_str = value_strm.GetString();
+      const std::string &value_str = std::string(value_strm.GetString());
       if (!value_str.empty()) {
         StringList string_list;
         string_list.SplitIntoLines(value_str);

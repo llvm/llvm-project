@@ -367,7 +367,7 @@ int clangTidyMain(int argc, const char **argv) {
     FileName = PathList.front();
   }
 
-  SmallString<256> FilePath = MakeAbsolute(FileName);
+  SmallString<256> FilePath = MakeAbsolute(std::string(FileName));
 
   ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
   std::vector<std::string> EnabledChecks =
