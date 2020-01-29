@@ -261,7 +261,7 @@ static bool findVCToolChainViaSetupConfig(std::string &Path,
   if (!llvm::sys::fs::is_directory(ToolchainPath))
     return false;
 
-  Path = ToolchainPath.str();
+  Path = std::string(ToolchainPath.str());
   VSLayout = MSVCToolChain::ToolsetLayout::VS2017OrNewer;
   return true;
 #endif
