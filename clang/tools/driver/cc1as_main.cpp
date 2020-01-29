@@ -245,8 +245,11 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
       std::string(Args.getLastArgValue(OPT_fdebug_compilation_dir));
   Opts.MainFileName = std::string(Args.getLastArgValue(OPT_main_file_name));
 
-  for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ))
-    Opts.DebugPrefixMap.insert(StringRef(Arg).split('='));
+  for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
+    auto Split = StringRef(Arg).split('=');
+    Opts.DebugPrefixMap.insert(
+        {std::string(Split.first), std::string(Split.second)});
+  }
 
   // Frontend Options
   if (Args.hasArg(OPT_INPUT)) {
