@@ -1208,8 +1208,6 @@ def int_aarch64_sve_sub   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_subr  : AdvSIMD_Pred2VectorArg_Intrinsic;
 
 def int_aarch64_sve_pmul       : AdvSIMD_2VectorArg_Intrinsic;
-def int_aarch64_sve_sqdmulh    : AdvSIMD_2VectorArg_Intrinsic;
-def int_aarch64_sve_sqrdmulh   : AdvSIMD_2VectorArg_Intrinsic;
 
 def int_aarch64_sve_mul        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_smulh      : AdvSIMD_Pred2VectorArg_Intrinsic;
@@ -1664,6 +1662,31 @@ def int_aarch64_sve_st1_scatter_uxtw_index
 //
 
 def int_aarch64_sve_st1_scatter_scalar_offset : AdvSIMD_ScatterStore_VectorBase_Intrinsic;
+
+//
+// SVE2 - Uniform DSP operations
+//
+
+def int_aarch64_sve_shadd         : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_shsub         : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_shsubr        : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_sqabs         : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_sqdmulh       : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_sqdmulh_lane  : AdvSIMD_2VectorArgIndexed_Intrinsic;
+def int_aarch64_sve_sqneg         : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_sqrdmlah      : AdvSIMD_3VectorArg_Intrinsic;
+def int_aarch64_sve_sqrdmlah_lane : AdvSIMD_3VectorArgIndexed_Intrinsic;
+def int_aarch64_sve_sqrdmlsh      : AdvSIMD_3VectorArg_Intrinsic;
+def int_aarch64_sve_sqrdmlsh_lane : AdvSIMD_3VectorArgIndexed_Intrinsic;
+def int_aarch64_sve_sqrdmulh      : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_sqrdmulh_lane : AdvSIMD_2VectorArgIndexed_Intrinsic;
+def int_aarch64_sve_srhadd        : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_uhadd         : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_uhsub         : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_uhsubr        : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_urecpe        : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_urhadd        : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_ursqrte       : AdvSIMD_Merged1VectorArg_Intrinsic;
 
 //
 // SVE2 - Non-widening pairwise arithmetic
