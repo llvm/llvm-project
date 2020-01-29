@@ -43,6 +43,8 @@ public:
     return pv->getKind() == PersistentExpressionState::eKindClang;
   }
 
+  lldb::ClangASTImporterSP GetClangASTImporter();
+
   lldb::ExpressionVariableSP
   CreatePersistentVariable(const lldb::ValueObjectSP &valobj_sp) override;
 
@@ -139,6 +141,7 @@ private:
       m_hand_loaded_clang_modules; ///< These are Clang modules we hand-loaded;
                                    ///these are the highest-
                                    ///< priority source for macros.
+  lldb::ClangASTImporterSP m_ast_importer_sp;
 };
 
 } // namespace lldb_private

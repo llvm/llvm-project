@@ -10,6 +10,7 @@
 #include "lldb/Expression/IRExecutionUnit.h"
 
 #include "lldb/Core/Value.h"
+#include "lldb/Symbol/ClangASTImporter.h"
 #include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -116,4 +117,11 @@ void ClangPersistentVariables::RegisterPersistentDecl(ConstString name,
 clang::NamedDecl *
 ClangPersistentVariables::GetPersistentDecl(ConstString name) {
   return m_persistent_decls.lookup(name.GetCString()).m_decl;
+}
+
+lldb::ClangASTImporterSP ClangPersistentVariables::GetClangASTImporter() {
+  if (!m_ast_importer_sp) {
+    m_ast_importer_sp = std::make_shared<ClangASTImporter>();
+  }
+  return m_ast_importer_sp;
 }
