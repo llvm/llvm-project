@@ -1105,7 +1105,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
         auto ElementSizeMIB = MIRBuilder.buildConstant(
             getLLTForType(*OffsetIRTy, *DL), ElementSize);
         GepOffsetReg =
-            MIRBuilder.buildMul(OffsetTy, ElementSizeMIB, IdxReg).getReg(0);
+            MIRBuilder.buildMul(OffsetTy, IdxReg, ElementSizeMIB).getReg(0);
       } else
         GepOffsetReg = IdxReg;
 
