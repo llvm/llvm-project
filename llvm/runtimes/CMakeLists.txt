@@ -466,7 +466,7 @@ else() # if this is included from LLVM's CMake
       endif()
     endforeach()
 
-    if(NOT RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES OR RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES)
+    if(NOT RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES AND NOT RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES)
       string(REPLACE ";" "|" LLVM_ENABLE_RUNTIMES_PASSTHROUGH "${LLVM_ENABLE_RUNTIMES}")
       list(APPEND ${name}_extra_args -DLLVM_ENABLE_RUNTIMES=${LLVM_ENABLE_RUNTIMES_PASSTHROUGH})
     endif()
