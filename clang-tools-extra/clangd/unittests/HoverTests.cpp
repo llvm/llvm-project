@@ -580,9 +580,6 @@ class Foo {})cpp";
     Annotations T(Case.Code);
     TestTU TU = TestTU::withCode(T.code());
     TU.ExtraArgs.push_back("-std=c++17");
-    // FIXME: This is no longer necessary, as the default behavior is no delayed
-    // parsing in the triplet below.
-    TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
     // Types might be different depending on the target triplet, we chose a
     // fixed one to make sure tests passes on different platform.
     TU.ExtraArgs.push_back("--target=x86_64-pc-linux-gnu");
