@@ -1734,6 +1734,12 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
 
     // TODO: We could emit code to handle the initialization somewhere.
     if (!AMDGPUTargetLowering::hasDefinedInitializer(GV)) {
+      const SITargetLowering *TLI = ST.getTargetLowering();
+      if (!TLI->shouldUseLDSConstAddress(GV)) {
+        MI.getOperand(1).setTargetFlags(SIInstrInfo::MO_ABS32_LO);
+        return true; // Leave in place;
+      }
+
       B.buildConstant(DstReg, MFI->allocateLDSGlobal(B.getDataLayout(), *GV));
       MI.eraseFromParent();
       return true;
