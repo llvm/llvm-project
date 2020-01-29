@@ -96,7 +96,8 @@ Expected<JThreadsInfo> JThreadsInfo::create(StringRef Response,
                                             ArrayRef<RegisterInfo> RegInfos) {
   JThreadsInfo jthreads_info;
 
-  StructuredData::ObjectSP json = StructuredData::ParseJSON(Response);
+  StructuredData::ObjectSP json =
+      StructuredData::ParseJSON(std::string(Response));
   StructuredData::Array *array = json->GetAsArray();
   if (!array)
     return make_parsing_error("JThreadsInfo: JSON array");

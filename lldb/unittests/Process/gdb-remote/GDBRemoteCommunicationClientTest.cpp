@@ -47,7 +47,7 @@ void HandlePacket(MockServer &server,
                   StringRef response) {
   StringExtractorGDBRemote request;
   ASSERT_EQ(PacketResult::Success, server.GetPacket(request));
-  ASSERT_THAT(request.GetStringRef(), expected);
+  ASSERT_THAT(std::string(request.GetStringRef()), expected);
   ASSERT_EQ(PacketResult::Success, server.SendPacket(response));
 }
 

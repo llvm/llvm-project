@@ -389,10 +389,10 @@ TEST(SourceCodeTests, CollectWords) {
   // this is a comment
   std::string getSomeText() { return "magic word"; }
   )cpp");
-  std::set<std::string> ActualWords(Words.keys().begin(), Words.keys().end());
-  std::set<std::string> ExpectedWords = {"define",  "fizz",    "buzz",  "this",
-                                         "comment", "string", "some", "text",
-                                         "return",  "magic",  "word"};
+  std::set<StringRef> ActualWords(Words.keys().begin(), Words.keys().end());
+  std::set<StringRef> ExpectedWords = {"define",  "fizz",   "buzz", "this",
+                                       "comment", "string", "some", "text",
+                                       "return",  "magic",  "word"};
   EXPECT_EQ(ActualWords, ExpectedWords);
 }
 

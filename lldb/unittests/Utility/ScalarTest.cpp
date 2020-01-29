@@ -157,7 +157,7 @@ TEST(ScalarTest, ExtractBitfield) {
 template <typename T> static std::string ScalarGetValue(T value) {
   StreamString stream;
   Scalar(value).GetValue(&stream, false);
-  return stream.GetString();
+  return std::string(stream.GetString());
 }
 
 TEST(ScalarTest, GetValue) {
