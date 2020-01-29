@@ -359,10 +359,15 @@ TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
 
   generate();
 
-  checkGetOrParseLineTableEmitsFatalError(
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  EXPECT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+
+  checkError(
       {"parsing line table prologue at 0x00000000 found an invalid directory "
        "or file table description at 0x00000014",
-       "failed to parse entry content descriptions because no path was found"});
+       "failed to parse entry content descriptions because no path was found"},
+      std::move(Recoverable));
 }
 
 TEST_P(DebugLineParameterisedFixture, ErrorForTooLargePrologueLength) {
@@ -379,14 +384,24 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooLargePrologueLength) {
 
   generate();
 
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  DWARFDebugLine::LineTable Result(**ExpectedLineTable);
+  // Undo the earlier modification so that it can be compared against a
+  // "default" prologue.
+  --Result.Prologue.PrologueLength;
+  checkDefaultPrologue(Version, Format, Result.Prologue, 0);
+
   uint64_t ExpectedEnd =
       Prologue.TotalLength + 1 + Prologue.sizeofTotalLength();
-  checkGetOrParseLineTableEmitsFatalError(
+  checkError(
       (Twine("parsing line table prologue at 0x00000000 should have ended at "
              "0x000000") +
        Twine::utohexstr(ExpectedEnd) + " but it ended at 0x000000" +
        Twine::utohexstr(ExpectedEnd - 1))
-          .str());
+          .str(),
+      std::move(Recoverable));
 }
 
 TEST_P(DebugLineParameterisedFixture, ErrorForTooShortPrologueLength) {
@@ -408,16 +423,29 @@ TEST_P(DebugLineParameterisedFixture, ErrorForTooShortPrologueLength) {
 
   generate();
 
+  auto ExpectedLineTable = Line.getOrParseLineTable(LineData, 0, *Context,
+                                                    nullptr, RecordRecoverable);
+  ASSERT_THAT_EXPECTED(ExpectedLineTable, Succeeded());
+  DWARFDebugLine::LineTable Result(**ExpectedLineTable);
+  // Undo the earlier modification so that it can be compared against a
+  // "default" prologue.
+  if (Version < 5)
+    Result.Prologue.PrologueLength += 2;
+  else
+    Result.Prologue.PrologueLength += 1;
+  checkDefaultPrologue(Version, Format, Result.Prologue, 0);
+
   uint64_t ExpectedEnd =
       Prologue.TotalLength - 1 + Prologue.sizeofTotalLength();
   if (Version < 5)
     --ExpectedEnd;
-  checkGetOrParseLineTableEmitsFatalError(
+  checkError(
       (Twine("parsing line table prologue at 0x00000000 should have ended at "
              "0x000000") +
        Twine::utohexstr(ExpectedEnd) + " but it ended at 0x000000" +
        Twine::utohexstr(ExpectedEnd + 1))
-          .str());
+          .str(),
+      std::move(Recoverable));
 }
 
 INSTANTIATE_TEST_CASE_P(
@@ -636,14 +664,15 @@ TEST_F(DebugLineBasicFixture, ParserSkipsCorrectly) {
   EXPECT_EQ(Parser.getOffset(), 0u);
   ASSERT_FALSE(Parser.done());
 
-  Parser.skip(RecordUnrecoverable);
+  Parser.skip(RecordRecoverable, RecordUnrecoverable);
   EXPECT_EQ(Parser.getOffset(), 62u);
   ASSERT_FALSE(Parser.done());
 
-  Parser.skip(RecordUnrecoverable);
+  Parser.skip(RecordRecoverable, RecordUnrecoverable);
   EXPECT_EQ(Parser.getOffset(), 136u);
   EXPECT_TRUE(Parser.done());
 
+  EXPECT_FALSE(Recoverable);
   EXPECT_FALSE(Unrecoverable);
 }
 
@@ -688,10 +717,11 @@ TEST_F(DebugLineBasicFixture, ParserMovesToEndForBadLengthWhenSkipping) {
   generate();
 
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
-  Parser.skip(RecordUnrecoverable);
+  Parser.skip(RecordRecoverable, RecordUnrecoverable);
 
   EXPECT_EQ(Parser.getOffset(), 4u);
   EXPECT_TRUE(Parser.done());
+  EXPECT_FALSE(Recoverable);
 
   checkError("parsing line table prologue at offset 0x00000000 unsupported "
              "reserved unit length found of value 0xfffffff0",
@@ -767,11 +797,12 @@ TEST_F(DebugLineBasicFixture,
   generate();
 
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
-  Parser.skip(RecordUnrecoverable);
+  Parser.skip(RecordRecoverable, RecordUnrecoverable);
   ASSERT_FALSE(Parser.done());
-  Parser.skip(RecordUnrecoverable);
+  Parser.skip(RecordRecoverable, RecordUnrecoverable);
 
   EXPECT_TRUE(Parser.done());
+  EXPECT_FALSE(Recoverable);
 
   checkError({"parsing line table prologue at offset 0x00000000 found "
               "unsupported version 0x00",
@@ -789,9 +820,10 @@ TEST_F(DebugLineBasicFixture, ParserIgnoresNonPrologueErrorsWhenSkipping) {
   generate();
 
   DWARFDebugLine::SectionParser Parser(LineData, *Context, CUs, TUs);
-  Parser.skip(RecordUnrecoverable);
+  Parser.skip(RecordRecoverable, RecordUnrecoverable);
 
   EXPECT_TRUE(Parser.done());
+  EXPECT_FALSE(Recoverable);
   EXPECT_FALSE(Unrecoverable);
 }
 

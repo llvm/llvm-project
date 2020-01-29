@@ -467,7 +467,7 @@ void DWARFContext::dump(
                              Optional<uint64_t> DumpOffset) {
     while (!Parser.done()) {
       if (DumpOffset && Parser.getOffset() != *DumpOffset) {
-        Parser.skip(dumpWarning);
+        Parser.skip(dumpWarning, dumpWarning);
         continue;
       }
       OS << "debug_line[" << format("0x%8.8" PRIx64, Parser.getOffset())
