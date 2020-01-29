@@ -650,6 +650,7 @@ const internal::VariadicDynCastAllOfMatcher<Decl, CXXDestructorDecl>
 const internal::VariadicDynCastAllOfMatcher<Decl, EnumDecl> enumDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, EnumConstantDecl>
     enumConstantDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, TagDecl> tagDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXMethodDecl> cxxMethodDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXConversionDecl>
     cxxConversionDecl;

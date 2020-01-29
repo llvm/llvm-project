@@ -1195,6 +1195,20 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, EnumDecl> enumDecl;
 extern const internal::VariadicDynCastAllOfMatcher<Decl, EnumConstantDecl>
     enumConstantDecl;
 
+/// Matches tag declarations.
+///
+/// Example matches X, Z, U, S, E
+/// \code
+///   class X;
+///   template<class T> class Z {};
+///   struct S {};
+///   union U {};
+///   enum E {
+///     A, B, C
+///   };
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Decl, TagDecl> tagDecl;
+
 /// Matches method declarations.
 ///
 /// Example matches y
@@ -4863,40 +4877,56 @@ AST_MATCHER_P(ImplicitCastExpr, hasImplicitDestinationType,
   return InnerMatcher.matches(Node.getType(), Finder, Builder);
 }
 
-/// Matches RecordDecl object that are spelled with "struct."
+/// Matches TagDecl object that are spelled with "struct."
 ///
-/// Example matches S, but not C or U.
+/// Example matches S, but not C, U or E.
 /// \code
 ///   struct S {};
 ///   class C {};
 ///   union U {};
+///   enum E {};
 /// \endcode
-AST_MATCHER(RecordDecl, isStruct) {
+AST_MATCHER(TagDecl, isStruct) {
   return Node.isStruct();
 }
 
-/// Matches RecordDecl object that are spelled with "union."
+/// Matches TagDecl object that are spelled with "union."
 ///
-/// Example matches U, but not C or S.
+/// Example matches U, but not C, S or E.
 /// \code
 ///   struct S {};
 ///   class C {};
 ///   union U {};
+///   enum E {};
 /// \endcode
-AST_MATCHER(RecordDecl, isUnion) {
+AST_MATCHER(TagDecl, isUnion) {
   return Node.isUnion();
 }
 
-/// Matches RecordDecl object that are spelled with "class."
+/// Matches TagDecl object that are spelled with "class."
 ///
-/// Example matches C, but not S or U.
+/// Example matches C, but not S, U or E.
 /// \code
 ///   struct S {};
 ///   class C {};
 ///   union U {};
+///   enum E {};
 /// \endcode
-AST_MATCHER(RecordDecl, isClass) {
+AST_MATCHER(TagDecl, isClass) {
   return Node.isClass();
+}
+
+/// Matches TagDecl object that are spelled with "enum."
+///
+/// Example matches E, but not C, S or U.
+/// \code
+///   struct S {};
+///   class C {};
+///   union U {};
+///   enum E {};
+/// \endcode
+AST_MATCHER(TagDecl, isEnum) {
+  return Node.isEnum();
 }
 
 /// Matches the true branch expression of a conditional operator.
