@@ -1440,6 +1440,61 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
   return RBI.constrainGenericRegister(DstReg, *DstRC, *MRI);
 }
 
+bool AMDGPUInstructionSelector::selectG_FNEG(MachineInstr &MI) const {
+  // Only manually handle the f64 SGPR case.
+  //
+  // FIXME: This is a workaround for 2.5 different tablegen problems. Because
+  // the bit ops theoretically have a second result due to the implicit def of
+  // SCC, the GlobalISelEmitter is overly conservative and rejects it. Fixing
+  // that is easy by disabling the check. The result works, but uses a
+  // nonsensical sreg32orlds_and_sreg_1 regclass.
+  //
+  // The DAG emitter is more problematic, and incorrectly adds both S_XOR_B32 to
+  // the variadic REG_SEQUENCE operands.
+
+  Register Dst = MI.getOperand(0).getReg();
+  const RegisterBank *DstRB = RBI.getRegBank(Dst, *MRI, TRI);
+  if (DstRB->getID() != AMDGPU::SGPRRegBankID ||
+      MRI->getType(Dst) != LLT::scalar(64))
+    return false;
+
+  Register Src = MI.getOperand(1).getReg();
+  MachineInstr *Fabs = getOpcodeDef(TargetOpcode::G_FABS, Src, *MRI);
+  if (Fabs)
+    Src = Fabs->getOperand(1).getReg();
+
+  if (!RBI.constrainGenericRegister(Src, AMDGPU::SReg_64RegClass, *MRI) ||
+      !RBI.constrainGenericRegister(Dst, AMDGPU::SReg_64RegClass, *MRI))
+    return false;
+
+  MachineBasicBlock *BB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  Register LoReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  Register HiReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  Register ConstReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  Register OpReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+  BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), LoReg)
+    .addReg(Src, 0, AMDGPU::sub0);
+  BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), HiReg)
+    .addReg(Src, 0, AMDGPU::sub1);
+  BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), ConstReg)
+    .addImm(0x80000000);
+
+  // Set or toggle sign bit.
+  unsigned Opc = Fabs ? AMDGPU::S_OR_B32 : AMDGPU::S_XOR_B32;
+  BuildMI(*BB, &MI, DL, TII.get(Opc), OpReg)
+    .addReg(HiReg)
+    .addReg(ConstReg);
+  BuildMI(*BB, &MI, DL, TII.get(AMDGPU::REG_SEQUENCE), Dst)
+    .addReg(LoReg)
+    .addImm(AMDGPU::sub0)
+    .addReg(OpReg)
+    .addImm(AMDGPU::sub1);
+  MI.eraseFromParent();
+  return true;
+}
+
 static bool isConstant(const MachineInstr &MI) {
   return MI.getOpcode() == TargetOpcode::G_CONSTANT;
 }
@@ -1851,6 +1906,10 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT:
     return selectG_CONSTANT(I);
+  case TargetOpcode::G_FNEG:
+    if (selectImpl(I, *CoverageInfo))
+      return true;
+    return selectG_FNEG(I);
   case TargetOpcode::G_EXTRACT:
     return selectG_EXTRACT(I);
   case TargetOpcode::G_MERGE_VALUES:
