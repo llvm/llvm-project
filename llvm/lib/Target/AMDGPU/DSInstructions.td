@@ -737,31 +737,35 @@ def : DSWritePat <DS_WRITE_B16_D16_HI, i32, store_hi16_local>;
 def : DSWritePat <DS_WRITE_B8_D16_HI, i32, truncstorei8_hi16_local>;
 }
 
-
-class DS64Bit4ByteAlignedReadPat<DS_Pseudo inst, PatFrag frag> : GCNPat <
-  (v2i32 (frag (DS64Bit4ByteAligned i32:$ptr, i8:$offset0, i8:$offset1))),
+class DS64Bit4ByteAlignedReadPat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
+  (vt:$value (frag (DS64Bit4ByteAligned i32:$ptr, i8:$offset0, i8:$offset1))),
   (inst $ptr, $offset0, $offset1, (i1 0))
 >;
 
-class DS64Bit4ByteAlignedWritePat<DS_Pseudo inst, PatFrag frag> : GCNPat<
-  (frag v2i32:$value, (DS64Bit4ByteAligned i32:$ptr, i8:$offset0, i8:$offset1)),
-  (inst $ptr, (i32 (EXTRACT_SUBREG $value, sub0)),
-              (i32 (EXTRACT_SUBREG $value, sub1)), $offset0, $offset1,
+class DS64Bit4ByteAlignedWritePat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat<
+  (frag vt:$value, (DS64Bit4ByteAligned i32:$ptr, i8:$offset0, i8:$offset1)),
+  (inst $ptr, (i32 (EXTRACT_SUBREG VReg_64:$value, sub0)),
+              (i32 (EXTRACT_SUBREG VReg_64:$value, sub1)), $offset0, $offset1,
               (i1 0))
 >;
 
+multiclass DS64Bit4ByteAlignedPat_mc<ValueType vt> {
+  let OtherPredicates = [LDSRequiresM0Init, isGFX7Plus] in {
+    def : DS64Bit4ByteAlignedReadPat<DS_READ2_B32, vt, load_local_m0>;
+    def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32, vt, store_local_m0>;
+  }
+
+  let OtherPredicates = [NotLDSRequiresM0Init] in {
+    def : DS64Bit4ByteAlignedReadPat<DS_READ2_B32_gfx9, vt, load_local>;
+    def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32_gfx9, vt, store_local>;
+  }
+}
+
 // v2i32 loads are split into i32 loads on SI during lowering, due to a bug
 // related to bounds checking.
-let OtherPredicates = [LDSRequiresM0Init, isGFX7Plus] in {
-def : DS64Bit4ByteAlignedReadPat<DS_READ2_B32, load_local_m0>;
-def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32, store_local_m0>;
+foreach vt = VReg_64.RegTypes in {
+defm : DS64Bit4ByteAlignedPat_mc<vt>;
 }
-
-let OtherPredicates = [NotLDSRequiresM0Init] in {
-def : DS64Bit4ByteAlignedReadPat<DS_READ2_B32_gfx9, load_local>;
-def : DS64Bit4ByteAlignedWritePat<DS_WRITE2_B32_gfx9, store_local>;
-}
-
 
 let AddedComplexity = 100 in {
 
