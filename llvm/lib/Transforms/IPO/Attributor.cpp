@@ -6031,6 +6031,8 @@ ChangeStatus Attributor::run(Module &M) {
         assert(DOIAAState.isAtFixpoint() && "Expected fixpoint state!");
         if (!DOIAAState.isValidState())
           InvalidAAs.insert(DepOnInvalidAA);
+        else
+          ChangedAAs.push_back(DepOnInvalidAA);
       }
       if (!RecomputeDependences)
         Worklist.insert(QuerriedAAs.OptionalAAs.begin(),
