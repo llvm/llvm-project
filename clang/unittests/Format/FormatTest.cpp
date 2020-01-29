@@ -13036,7 +13036,7 @@ TEST_F(FormatTest, ParsesConfigurationWithLanguages) {
   EXPECT_EQ(parseConfiguration("BinPackArguments: true\n"
                                "InsertTrailingCommas: Wrapped",
                                &BinPackedTCS),
-            ParseError::BinBackTrailingCommaConflict);
+            ParseError::BinPackTrailingCommaConflict);
   EXPECT_EQ(12u, Style.IndentWidth);
   CHECK_PARSE("IndentWidth: 56", IndentWidth, 56u);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style.Language);
