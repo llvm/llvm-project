@@ -30,14 +30,11 @@ void clang_analyzer_eval(bool);
 void iterator_position(const std::vector<int> v0) {
   auto b0 = v0.begin(), e0 = v0.end();
 
-  clang_analyzer_denote(clang_analyzer_iterator_position(b0), "$b0");
-  clang_analyzer_denote(clang_analyzer_iterator_position(e0), "$e0");
+  clang_analyzer_denote(clang_analyzer_container_begin(v0), "$b0");
+  clang_analyzer_denote(clang_analyzer_container_end(v0), "$e0");
 
   clang_analyzer_express(clang_analyzer_iterator_position(b0)); // expected-warning{{$b0}}
   clang_analyzer_express(clang_analyzer_iterator_position(e0)); // expected-warning{{$e0}}
-
-  clang_analyzer_express(clang_analyzer_container_begin(v0)); // expected-warning{{$b0}}
-  clang_analyzer_express(clang_analyzer_container_end(v0)); // expected-warning{{$e0}}
 
   ++b0;
 
