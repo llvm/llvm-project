@@ -217,7 +217,7 @@ namespace {
     // Is it safe to define LR with DLS/WLS?
     // LR can be defined if it is the operand to start, because it's the same
     // value, or if it's going to be equivalent to the operand to Start.
-    MachineInstr *IsSafeToDefineLR();
+    MachineInstr *isSafeToDefineLR();
 
     // Check the branch targets are within range and we satisfy our
     // restrictions.
@@ -296,7 +296,7 @@ namespace {
 
     void RevertWhile(MachineInstr *MI) const;
 
-    bool RevertLoopDec(MachineInstr *MI, bool AllowFlags = false) const;
+    bool RevertLoopDec(MachineInstr *MI) const;
 
     void RevertLoopEnd(MachineInstr *MI, bool SkipCmp = false) const;
 
@@ -314,7 +314,7 @@ char ARMLowOverheadLoops::ID = 0;
 INITIALIZE_PASS(ARMLowOverheadLoops, DEBUG_TYPE, ARM_LOW_OVERHEAD_LOOPS_NAME,
                 false, false)
 
-MachineInstr *LowOverheadLoop::IsSafeToDefineLR() {
+MachineInstr *LowOverheadLoop::isSafeToDefineLR() {
   // We can define LR because LR already contains the same value.
   if (Start->getOperand(0).getReg() == ARM::LR)
     return Start;
@@ -344,72 +344,7 @@ MachineInstr *LowOverheadLoop::IsSafeToDefineLR() {
 
   // We've found no suitable LR def and Start doesn't use LR directly. Can we
   // just define LR anyway?
-  if (!RDA->isRegUsedAfter(Start, ARM::LR))
-    return Start;
-
-  return nullptr;
-}
-
-// Can we safely move 'From' to just before 'To'? To satisfy this, 'From' must
-// not define a register that is used by any instructions, after and including,
-// 'To'. These instructions also must not redefine any of Froms operands.
-template<typename Iterator>
-static bool IsSafeToMove(MachineInstr *From, MachineInstr *To, ReachingDefAnalysis *RDA) {
-  SmallSet<int, 2> Defs;
-  // First check that From would compute the same value if moved.
-  for (auto &MO : From->operands()) {
-    if (!MO.isReg() || MO.isUndef() || !MO.getReg())
-      continue;
-    if (MO.isDef())
-      Defs.insert(MO.getReg());
-    else if (!RDA->hasSameReachingDef(From, To, MO.getReg()))
-      return false;
-  }
-
-  // Now walk checking that the rest of the instructions will compute the same
-  // value.
-  for (auto I = ++Iterator(From), E = Iterator(To); I != E; ++I) {
-    for (auto &MO : I->operands())
-      if (MO.isReg() && MO.getReg() && MO.isUse() && Defs.count(MO.getReg()))
-        return false;
-  }
-  return true;
-}
-
-static bool IsSafeToRemove(MachineInstr *MI, ReachingDefAnalysis *RDA,
-                           SmallPtrSetImpl<MachineInstr*> &Visited,
-                           SmallPtrSetImpl<MachineInstr*> &ToRemove,
-                           SmallPtrSetImpl<MachineInstr*> &Ignore) {
-  if (Visited.count(MI) || Ignore.count(MI))
-    return true;
-  else if (MI->mayLoadOrStore() || MI->hasUnmodeledSideEffects() ||
-           MI->isBranch() || MI->isTerminator() || MI->isReturn()) {
-    // Unless told to ignore the instruction, don't remove anything which has
-    // side effects.
-    LLVM_DEBUG(dbgs() << "ARM Loops: Has side effects: " << *MI);
-    return false;
-  }
-
-  Visited.insert(MI);
-  for (auto &MO : MI->operands()) {
-    if (!MO.isReg() || MO.isUse() || MO.getReg() == 0)
-      continue;
-
-    SmallPtrSet<MachineInstr*, 4> Uses;
-    RDA->getGlobalUses(MI, MO.getReg(), Uses);
-
-    for (auto I : Uses) {
-      if (Ignore.count(I) || ToRemove.count(I))
-        continue;
-      if (!IsSafeToRemove(I, RDA, Visited, ToRemove, Ignore)) {
-        LLVM_DEBUG(dbgs() << "ARM Loops: Unable to remove " << *I);
-        return false;
-      }
-    }
-  }
-  ToRemove.insert(MI);
-  LLVM_DEBUG(dbgs() << "ARM Loops: Can remove: " << *MI);
-  return true;
+  return RDA->isSafeToDefRegAt(Start, ARM::LR) ? Start : nullptr;
 }
 
 bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
@@ -446,7 +381,7 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   // If the register is defined within loop, then we can't perform TP.
   // TODO: Check whether this is just a mov of a register that would be
   // available.
-  if (RDA->getReachingDef(VCTP, NumElements) >= 0) {
+  if (RDA->hasLocalDefBefore(VCTP, NumElements)) {
     LLVM_DEBUG(dbgs() << "ARM Loops: VCTP operand is defined in the loop.\n");
     return false;
   }
@@ -457,14 +392,12 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   MachineBasicBlock *InsertBB = StartInsertPt->getParent();
   if (!RDA->isReachingDefLiveOut(StartInsertPt, NumElements)) {
     if (auto *ElemDef = RDA->getLocalLiveOutMIDef(InsertBB, NumElements)) {
-      if (IsSafeToMove<MachineBasicBlock::reverse_iterator>(
-          ElemDef, StartInsertPt, RDA)) {
+      if (RDA->isSafeToMoveForwards(ElemDef, StartInsertPt)) {
         ElemDef->removeFromParent();
         InsertBB->insert(MachineBasicBlock::iterator(StartInsertPt), ElemDef);
         LLVM_DEBUG(dbgs() << "ARM Loops: Moved element count def: "
                    << *ElemDef);
-      } else if (IsSafeToMove<MachineBasicBlock::iterator>(
-          StartInsertPt, ElemDef, RDA)) {
+      } else if (RDA->isSafeToMoveBackwards(StartInsertPt, ElemDef)) {
         StartInsertPt->removeFromParent();
         InsertBB->insertAfter(MachineBasicBlock::iterator(ElemDef),
                               StartInsertPt);
@@ -483,7 +416,7 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
   auto CannotProvideElements = [this](MachineBasicBlock *MBB,
                                       Register NumElements) {
     // NumElements is redefined in this block.
-    if (RDA->getReachingDef(&MBB->back(), NumElements) >= 0)
+    if (RDA->hasLocalDefBefore(&MBB->back(), NumElements))
       return true;
 
     // Don't continue searching up through multiple predecessors.
@@ -532,12 +465,11 @@ bool LowOverheadLoop::ValidateTailPredicate(MachineInstr *StartInsertPt) {
 
   MBB = VCTP->getParent();
   if (MachineInstr *Def = RDA->getReachingMIDef(&MBB->back(), NumElements)) {
-    SmallPtrSet<MachineInstr*, 2> Visited;
     SmallPtrSet<MachineInstr*, 2> ElementChain;
     SmallPtrSet<MachineInstr*, 2> Ignore = { VCTP };
     unsigned ExpectedVectorWidth = getTailPredVectorWidth(VCTP->getOpcode());
 
-    if (IsSafeToRemove(Def, RDA, Visited, ElementChain, Ignore)) {
+    if (RDA->isSafeToRemove(Def, ElementChain, Ignore)) {
       bool FoundSub = false;
 
       for (auto *MI : ElementChain) {
@@ -594,7 +526,7 @@ void LowOverheadLoop::CheckLegality(ARMBasicBlockUtils *BBUtils) {
     return;
   }
 
-  InsertPt = Revert ? nullptr : IsSafeToDefineLR();
+  InsertPt = Revert ? nullptr : isSafeToDefineLR();
   if (!InsertPt) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Unable to find safe insertion point.\n");
     Revert = true;
@@ -788,10 +720,9 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
     return false;
   }
 
-  SmallPtrSet<MachineInstr*, 2> Visited;
   SmallPtrSet<MachineInstr*, 2> Ignore = { LoLoop.End };
   SmallPtrSet<MachineInstr*, 4> Remove;
-  if (!IsSafeToRemove(LoLoop.Dec, RDA, Visited, Remove, Ignore)) {
+  if (!RDA->isSafeToRemove(LoLoop.Dec, Remove, Ignore)) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Unable to remove loop count chain.\n");
     LoLoop.Revert = true;
   } else {
@@ -831,16 +762,16 @@ void ARMLowOverheadLoops::RevertWhile(MachineInstr *MI) const {
   MI->eraseFromParent();
 }
 
-bool ARMLowOverheadLoops::RevertLoopDec(MachineInstr *MI,
-                                        bool SetFlags) const {
+bool ARMLowOverheadLoops::RevertLoopDec(MachineInstr *MI) const {
   LLVM_DEBUG(dbgs() << "ARM Loops: Reverting to sub: " << *MI);
   MachineBasicBlock *MBB = MI->getParent();
+  MachineInstr *Last = &MBB->back();
+  SmallPtrSet<MachineInstr*, 1> Ignore;
+  if (Last->getOpcode() == ARM::t2LoopEnd)
+    Ignore.insert(Last);
 
   // If nothing defines CPSR between LoopDec and LoopEnd, use a t2SUBS.
-  if (SetFlags &&
-      (RDA->isRegUsedAfter(MI, ARM::CPSR) ||
-       !RDA->hasSameReachingDef(MI, &MBB->back(), ARM::CPSR)))
-      SetFlags = false;
+  bool SetFlags = RDA->isSafeToDefRegAt(MI, ARM::CPSR, Ignore);
 
   MachineInstrBuilder MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
                                     TII->get(ARM::t2SUBri));
@@ -897,7 +828,6 @@ MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
     SmallVector<MachineInstr*, 4> Dead;
     if (auto *Def = RDA->getReachingMIDef(LoLoop.Start,
                                       LoLoop.Start->getOperand(0).getReg())) {
-      SmallPtrSet<MachineInstr*, 4> Visited;
       SmallPtrSet<MachineInstr*, 4> Remove;
       SmallPtrSet<MachineInstr*, 4> Ignore = { LoLoop.Start, LoLoop.Dec,
                                                LoLoop.End, LoLoop.InsertPt };
@@ -905,7 +835,7 @@ MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
       while (!Chain.empty()) {
         MachineInstr *MI = Chain.back();
         Chain.pop_back();
-        if (IsSafeToRemove(MI, RDA, Visited, Remove, Ignore)) {
+        if (RDA->isSafeToRemove(MI, Remove, Ignore)) {
           for (auto &MO : MI->operands()) {
             if (!MO.isReg() || !MO.isUse() || MO.getReg() == 0)
               continue;
@@ -1060,7 +990,7 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
       RevertWhile(LoLoop.Start);
     else
       LoLoop.Start->eraseFromParent();
-    bool FlagsAlreadySet = RevertLoopDec(LoLoop.Dec, true);
+    bool FlagsAlreadySet = RevertLoopDec(LoLoop.Dec);
     RevertLoopEnd(LoLoop.End, FlagsAlreadySet);
   } else {
     LoLoop.Start = ExpandLoopStart(LoLoop);
