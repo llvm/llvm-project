@@ -204,7 +204,7 @@ Function *ParallelLoopGenerator::createSubFnDefinition() {
 
   // Certain backends (e.g., NVPTX) do not support '.'s in function names.
   // Hence, we ensure that all '.'s are replaced by '_'s.
-  std::string FunctionName = SubFn->getName();
+  std::string FunctionName = SubFn->getName().str();
   std::replace(FunctionName.begin(), FunctionName.end(), '.', '_');
   SubFn->setName(FunctionName);
 
