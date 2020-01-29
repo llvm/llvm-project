@@ -48,7 +48,7 @@ getSectionRefsByNameOrIndex(const object::ObjectFile *Obj,
     if (!Section.getAsInteger(0, SecIndex))
       SecIndices.emplace(SecIndex, false);
     else
-      SecNames.emplace(Section, false);
+      SecNames.emplace(std::string(Section), false);
   }
 
   SecIndex = Obj->isELF() ? 0 : 1;
