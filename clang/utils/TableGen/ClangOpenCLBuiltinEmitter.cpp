@@ -597,7 +597,8 @@ void BuiltinNameEmitter::EmitStringMatcher() {
       SS << "return std::make_pair(" << CumulativeIndex << ", " << Ovl.size()
          << ");";
       SS.flush();
-      ValidBuiltins.push_back(StringMatcher::StringPair(FctName, RetStmt));
+      ValidBuiltins.push_back(
+          StringMatcher::StringPair(std::string(FctName), RetStmt));
     }
     CumulativeIndex += Ovl.size();
   }

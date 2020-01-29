@@ -66,7 +66,7 @@ void clang::EmitClangCommentHTMLNamedCharacterReferences(RecordKeeper &Records,
     }
     CLiteral.append(";");
 
-    StringMatcher::StringPair Match(Spelling, CLiteral.str());
+    StringMatcher::StringPair Match(Spelling, std::string(CLiteral.str()));
     NameToUTF8.push_back(Match);
   }
 

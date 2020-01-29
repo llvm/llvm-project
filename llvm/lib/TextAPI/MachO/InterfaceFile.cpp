@@ -67,7 +67,7 @@ void InterfaceFile::addParentUmbrella(const Target &Target_, StringRef Parent) {
     return;
   }
 
-  ParentUmbrellas.emplace(Iter, Target_, Parent);
+  ParentUmbrellas.emplace(Iter, Target_, std::string(Parent));
   return;
 }
 
