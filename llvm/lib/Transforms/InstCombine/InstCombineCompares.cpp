@@ -2928,12 +2928,9 @@ Instruction *InstCombiner::foldICmpBinOpEqualityWithConstant(ICmpInst &Cmp,
     break;
   case Instruction::Add: {
     // Replace ((add A, B) != C) with (A != C-B) if B & C are constants.
-    const APInt *BOC;
-    if (match(BOp1, m_APInt(BOC))) {
-      if (BO->hasOneUse()) {
-        Constant *SubC = ConstantExpr::getSub(RHS, cast<Constant>(BOp1));
-        return new ICmpInst(Pred, BOp0, SubC);
-      }
+    if (Constant *BOC = dyn_cast<Constant>(BOp1)) {
+      if (BO->hasOneUse())
+        return new ICmpInst(Pred, BOp0, ConstantExpr::getSub(RHS, BOC));
     } else if (C.isNullValue()) {
       // Replace ((add A, B) != 0) with (A != -B) if A or B is
       // efficiently invertible, or if the add has just this one use.
@@ -2963,11 +2960,11 @@ Instruction *InstCombiner::foldICmpBinOpEqualityWithConstant(ICmpInst &Cmp,
     break;
   case Instruction::Sub:
     if (BO->hasOneUse()) {
-      const APInt *BOC;
-      if (match(BOp0, m_APInt(BOC))) {
+      // Only check for constant LHS here, as constant RHS will be canonicalized
+      // to add and use the fold above.
+      if (Constant *BOC = dyn_cast<Constant>(BOp0)) {
         // Replace ((sub BOC, B) != C) with (B != BOC-C).
-        Constant *SubC = ConstantExpr::getSub(cast<Constant>(BOp0), RHS);
-        return new ICmpInst(Pred, BOp1, SubC);
+        return new ICmpInst(Pred, BOp1, ConstantExpr::getSub(BOC, RHS));
       } else if (C.isNullValue()) {
         // Replace ((sub A, B) != 0) with (A != B).
         return new ICmpInst(Pred, BOp0, BOp1);

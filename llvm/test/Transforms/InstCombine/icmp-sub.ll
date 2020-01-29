@@ -146,8 +146,7 @@ define <2 x i1> @test_sub_255_Y_eq_255_vec(<2 x i8> %y) {
 
 define <2 x i1> @icmp_eq_sub_undef(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_eq_sub_undef(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> <i32 15, i32 undef>, [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[SUB]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 5, i32 undef>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = sub <2 x i32> <i32 15, i32 undef>, %a
@@ -157,8 +156,7 @@ define <2 x i1> @icmp_eq_sub_undef(<2 x i32> %a) {
 
 define <2 x i1> @icmp_eq_sub_non_splat(<2 x i32> %a) {
 ; CHECK-LABEL: @icmp_eq_sub_non_splat(
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> <i32 15, i32 16>, [[A:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[SUB]], <i32 10, i32 10>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[A:%.*]], <i32 5, i32 6>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %sub = sub <2 x i32> <i32 15, i32 16>, %a
