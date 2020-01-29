@@ -10434,8 +10434,13 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   // TODO: The builtins could be removed if the SSE header files used vector
   // extension comparisons directly (vector ordered/unordered may need
   // additional support via __builtin_isnan()).
-  auto getVectorFCmpIR = [this, &Ops](CmpInst::Predicate Pred) {
-    Value *Cmp = Builder.CreateFCmp(Pred, Ops[0], Ops[1]);
+  auto getVectorFCmpIR = [this, &Ops](CmpInst::Predicate Pred,
+                                      bool IsSignaling) {
+    Value *Cmp;
+    if (IsSignaling)
+      Cmp = Builder.CreateFCmpS(Pred, Ops[0], Ops[1]);
+    else
+      Cmp = Builder.CreateFCmp(Pred, Ops[0], Ops[1]);
     llvm::VectorType *FPVecTy = cast<llvm::VectorType>(Ops[0]->getType());
     llvm::VectorType *IntVecTy = llvm::VectorType::getInteger(FPVecTy);
     Value *Sext = Builder.CreateSExt(Cmp, IntVecTy);
@@ -12238,28 +12243,28 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   // packed comparison intrinsics
   case X86::BI__builtin_ia32_cmpeqps:
   case X86::BI__builtin_ia32_cmpeqpd:
-    return getVectorFCmpIR(CmpInst::FCMP_OEQ);
+    return getVectorFCmpIR(CmpInst::FCMP_OEQ, /*IsSignaling*/false);
   case X86::BI__builtin_ia32_cmpltps:
   case X86::BI__builtin_ia32_cmpltpd:
-    return getVectorFCmpIR(CmpInst::FCMP_OLT);
+    return getVectorFCmpIR(CmpInst::FCMP_OLT, /*IsSignaling*/true);
   case X86::BI__builtin_ia32_cmpleps:
   case X86::BI__builtin_ia32_cmplepd:
-    return getVectorFCmpIR(CmpInst::FCMP_OLE);
+    return getVectorFCmpIR(CmpInst::FCMP_OLE, /*IsSignaling*/true);
   case X86::BI__builtin_ia32_cmpunordps:
   case X86::BI__builtin_ia32_cmpunordpd:
-    return getVectorFCmpIR(CmpInst::FCMP_UNO);
+    return getVectorFCmpIR(CmpInst::FCMP_UNO, /*IsSignaling*/false);
   case X86::BI__builtin_ia32_cmpneqps:
   case X86::BI__builtin_ia32_cmpneqpd:
-    return getVectorFCmpIR(CmpInst::FCMP_UNE);
+    return getVectorFCmpIR(CmpInst::FCMP_UNE, /*IsSignaling*/false);
   case X86::BI__builtin_ia32_cmpnltps:
   case X86::BI__builtin_ia32_cmpnltpd:
-    return getVectorFCmpIR(CmpInst::FCMP_UGE);
+    return getVectorFCmpIR(CmpInst::FCMP_UGE, /*IsSignaling*/true);
   case X86::BI__builtin_ia32_cmpnleps:
   case X86::BI__builtin_ia32_cmpnlepd:
-    return getVectorFCmpIR(CmpInst::FCMP_UGT);
+    return getVectorFCmpIR(CmpInst::FCMP_UGT, /*IsSignaling*/true);
   case X86::BI__builtin_ia32_cmpordps:
   case X86::BI__builtin_ia32_cmpordpd:
-    return getVectorFCmpIR(CmpInst::FCMP_ORD);
+    return getVectorFCmpIR(CmpInst::FCMP_ORD, /*IsSignaling*/false);
   case X86::BI__builtin_ia32_cmpps:
   case X86::BI__builtin_ia32_cmpps256:
   case X86::BI__builtin_ia32_cmppd:
@@ -12284,40 +12289,85 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     // Ignoring requested signaling behaviour,
     // e.g. both _CMP_GT_OS & _CMP_GT_OQ are translated to FCMP_OGT.
     FCmpInst::Predicate Pred;
-    switch (CC) {
-    case 0x00: Pred = FCmpInst::FCMP_OEQ;   break;
-    case 0x01: Pred = FCmpInst::FCMP_OLT;   break;
-    case 0x02: Pred = FCmpInst::FCMP_OLE;   break;
-    case 0x03: Pred = FCmpInst::FCMP_UNO;   break;
-    case 0x04: Pred = FCmpInst::FCMP_UNE;   break;
-    case 0x05: Pred = FCmpInst::FCMP_UGE;   break;
-    case 0x06: Pred = FCmpInst::FCMP_UGT;   break;
-    case 0x07: Pred = FCmpInst::FCMP_ORD;   break;
-    case 0x08: Pred = FCmpInst::FCMP_UEQ;   break;
-    case 0x09: Pred = FCmpInst::FCMP_ULT;   break;
-    case 0x0a: Pred = FCmpInst::FCMP_ULE;   break;
-    case 0x0b: Pred = FCmpInst::FCMP_FALSE; break;
-    case 0x0c: Pred = FCmpInst::FCMP_ONE;   break;
-    case 0x0d: Pred = FCmpInst::FCMP_OGE;   break;
-    case 0x0e: Pred = FCmpInst::FCMP_OGT;   break;
-    case 0x0f: Pred = FCmpInst::FCMP_TRUE;  break;
-    case 0x10: Pred = FCmpInst::FCMP_OEQ;   break;
-    case 0x11: Pred = FCmpInst::FCMP_OLT;   break;
-    case 0x12: Pred = FCmpInst::FCMP_OLE;   break;
-    case 0x13: Pred = FCmpInst::FCMP_UNO;   break;
-    case 0x14: Pred = FCmpInst::FCMP_UNE;   break;
-    case 0x15: Pred = FCmpInst::FCMP_UGE;   break;
-    case 0x16: Pred = FCmpInst::FCMP_UGT;   break;
-    case 0x17: Pred = FCmpInst::FCMP_ORD;   break;
-    case 0x18: Pred = FCmpInst::FCMP_UEQ;   break;
-    case 0x19: Pred = FCmpInst::FCMP_ULT;   break;
-    case 0x1a: Pred = FCmpInst::FCMP_ULE;   break;
-    case 0x1b: Pred = FCmpInst::FCMP_FALSE; break;
-    case 0x1c: Pred = FCmpInst::FCMP_ONE;   break;
-    case 0x1d: Pred = FCmpInst::FCMP_OGE;   break;
-    case 0x1e: Pred = FCmpInst::FCMP_OGT;   break;
-    case 0x1f: Pred = FCmpInst::FCMP_TRUE;  break;
+    bool IsSignaling;
+    // Predicates for 16-31 repeat the 0-15 predicates. Only the signalling
+    // behavior is inverted. We'll handle that after the switch.
+    switch (CC & 0xf) {
+    case 0x00: Pred = FCmpInst::FCMP_OEQ;   IsSignaling = false; break;
+    case 0x01: Pred = FCmpInst::FCMP_OLT;   IsSignaling = true;  break;
+    case 0x02: Pred = FCmpInst::FCMP_OLE;   IsSignaling = true;  break;
+    case 0x03: Pred = FCmpInst::FCMP_UNO;   IsSignaling = false; break;
+    case 0x04: Pred = FCmpInst::FCMP_UNE;   IsSignaling = false; break;
+    case 0x05: Pred = FCmpInst::FCMP_UGE;   IsSignaling = true;  break;
+    case 0x06: Pred = FCmpInst::FCMP_UGT;   IsSignaling = true;  break;
+    case 0x07: Pred = FCmpInst::FCMP_ORD;   IsSignaling = false; break;
+    case 0x08: Pred = FCmpInst::FCMP_UEQ;   IsSignaling = false; break;
+    case 0x09: Pred = FCmpInst::FCMP_ULT;   IsSignaling = true;  break;
+    case 0x0a: Pred = FCmpInst::FCMP_ULE;   IsSignaling = true;  break;
+    case 0x0b: Pred = FCmpInst::FCMP_FALSE; IsSignaling = false; break;
+    case 0x0c: Pred = FCmpInst::FCMP_ONE;   IsSignaling = false; break;
+    case 0x0d: Pred = FCmpInst::FCMP_OGE;   IsSignaling = true;  break;
+    case 0x0e: Pred = FCmpInst::FCMP_OGT;   IsSignaling = true;  break;
+    case 0x0f: Pred = FCmpInst::FCMP_TRUE;  IsSignaling = false; break;
     default: llvm_unreachable("Unhandled CC");
+    }
+
+    // Invert the signalling behavior for 16-31.
+    if (CC & 0x10)
+      IsSignaling = !IsSignaling;
+
+    // If the predicate is true or false and we're using constrained intrinsics,
+    // we don't have a compare intrinsic we can use. Just use the legacy X86
+    // specific intrinsic.
+    if ((Pred == FCmpInst::FCMP_TRUE || Pred == FCmpInst::FCMP_FALSE) &&
+        Builder.getIsFPConstrained()) {
+
+      Intrinsic::ID IID;
+      switch (BuiltinID) {
+      default: llvm_unreachable("Unexpected builtin");
+      case X86::BI__builtin_ia32_cmpps:
+        IID = Intrinsic::x86_sse_cmp_ps;
+        break;
+      case X86::BI__builtin_ia32_cmpps256:
+        IID = Intrinsic::x86_avx_cmp_ps_256;
+        break;
+      case X86::BI__builtin_ia32_cmppd:
+        IID = Intrinsic::x86_sse2_cmp_pd;
+        break;
+      case X86::BI__builtin_ia32_cmppd256:
+        IID = Intrinsic::x86_avx_cmp_pd_256;
+        break;
+      case X86::BI__builtin_ia32_cmpps512_mask:
+        IID = Intrinsic::x86_avx512_cmp_ps_512;
+        break;
+      case X86::BI__builtin_ia32_cmppd512_mask:
+        IID = Intrinsic::x86_avx512_cmp_pd_512;
+        break;
+      case X86::BI__builtin_ia32_cmpps128_mask:
+        IID = Intrinsic::x86_avx512_cmp_ps_128;
+        break;
+      case X86::BI__builtin_ia32_cmpps256_mask:
+        IID = Intrinsic::x86_avx512_cmp_ps_256;
+        break;
+      case X86::BI__builtin_ia32_cmppd128_mask:
+        IID = Intrinsic::x86_avx512_cmp_pd_128;
+        break;
+      case X86::BI__builtin_ia32_cmppd256_mask:
+        IID = Intrinsic::x86_avx512_cmp_pd_256;
+        break;
+      }
+
+      Function *Intr = CGM.getIntrinsic(IID);
+      if (Intr->getReturnType()->getVectorElementType()->isIntegerTy(1)) {
+        unsigned NumElts = Ops[0]->getType()->getVectorNumElements();
+        Value *MaskIn = Ops[3];
+        Ops.erase(&Ops[3]);
+
+        Value *Cmp = Builder.CreateCall(Intr, Ops);
+        return EmitX86MaskedCompareResult(*this, Cmp, NumElts, MaskIn);
+      }
+
+      return Builder.CreateCall(Intr, Ops);
     }
 
     // Builtins without the _mask suffix return a vector of integers
@@ -12329,12 +12379,17 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     case X86::BI__builtin_ia32_cmpps256_mask:
     case X86::BI__builtin_ia32_cmppd128_mask:
     case X86::BI__builtin_ia32_cmppd256_mask: {
+      // FIXME: Support SAE.
       unsigned NumElts = Ops[0]->getType()->getVectorNumElements();
-      Value *Cmp = Builder.CreateFCmp(Pred, Ops[0], Ops[1]);
+      Value *Cmp;
+      if (IsSignaling)
+        Cmp = Builder.CreateFCmpS(Pred, Ops[0], Ops[1]);
+      else
+        Cmp = Builder.CreateFCmp(Pred, Ops[0], Ops[1]);
       return EmitX86MaskedCompareResult(*this, Cmp, NumElts, Ops[3]);
     }
     default:
-      return getVectorFCmpIR(Pred);
+      return getVectorFCmpIR(Pred, IsSignaling);
     }
   }
 
