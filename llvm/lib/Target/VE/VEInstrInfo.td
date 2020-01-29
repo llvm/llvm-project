@@ -630,6 +630,38 @@ defm SBSU : RRm<"subs.w.zx", 0x5A, I32, i32, simm7Op32, uimm6Op32>;
 let cx = 0 in
 defm SBX : RRNCm<"subs.l", 0x5B, I64, i64, simm7Op64, uimm6Op64, sub>;
 
+// MPY instruction
+let cx = 0 in
+defm MPY : RRm<"mulu.l", 0x49, I64, i64, simm7Op64, uimm6Op64>;
+let cx = 1 in
+defm MPYUW : RRm<"mulu.w", 0x49, I32, i32, simm7Op32, uimm6Op32>;
+
+// MPS instruction
+let cx = 0 in
+defm MPS : RRm<"muls.w.sx", 0x4B, I32, i32, simm7Op32, uimm6Op32, mul>;
+let cx = 1 in
+defm MPSU : RRm<"muls.w.zx", 0x4B, I32, i32, simm7Op32, uimm6Op32>;
+
+// MPX instruction
+let cx = 0 in
+defm MPX : RRm<"muls.l", 0x6E, I64, i64, simm7Op64, uimm6Op64, mul>;
+
+// DIV instruction
+let cx = 0 in
+defm DIV : RRNCm<"divu.l", 0x6F, I64, i64, simm7Op64, uimm6Op64, udiv>;
+let cx = 1 in
+defm DIVUW : RRNCm<"divu.w", 0x6F, I32, i32, simm7Op32, uimm6Op32, udiv>;
+
+// DVS instruction
+let cx = 0 in
+defm DVS : RRNCm<"divs.w.sx", 0x7B, I32, i32, simm7Op32, uimm6Op32, sdiv>;
+let cx = 1 in
+defm DVSU : RRm<"divs.w.zx", 0x7B, I32, i32, simm7Op32, uimm6Op32>;
+
+// DVX instruction
+let cx = 0 in
+defm DVX : RRNCm<"divs.l", 0x7F, I64, i64, simm7Op64, uimm6Op64, sdiv>;
+
 // CMP instruction
 let cx = 0 in
 defm CMP : RRm<"cmpu.l", 0x55, I64, i64, simm7Op64, uimm6Op64>;
