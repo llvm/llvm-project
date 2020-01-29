@@ -175,7 +175,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
         auto DstRC = MRI.getRegClass(DstReg);
         if (SrcRC == DstRC) {
           MRI.replaceRegWith(DstReg, SrcReg);
-          MI.eraseFromParentAndMarkDBGValuesForRemoval();
+          MI.eraseFromParent();
         }
       }
     }
