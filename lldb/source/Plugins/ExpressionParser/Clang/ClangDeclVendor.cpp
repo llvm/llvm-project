@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/ExpressionParser/Clang/ClangDeclVendor.h"
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
-#include "lldb/Symbol/ClangUtil.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Utility/ConstString.h"
 
 using namespace lldb_private;
