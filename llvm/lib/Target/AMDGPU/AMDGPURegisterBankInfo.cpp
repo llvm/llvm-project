@@ -197,15 +197,15 @@ AMDGPURegisterBankInfo::AMDGPURegisterBankInfo(const GCNSubtarget &ST)
       TII(Subtarget.getInstrInfo()) {
 
   // HACK: Until this is fully tablegen'd.
-  static bool AlreadyInit = false;
-  if (AlreadyInit)
-    return;
+  static llvm::once_flag InitializeRegisterBankFlag;
 
-  AlreadyInit = true;
+  static auto InitializeRegisterBankOnce = [this]() {
+    assert(&getRegBank(AMDGPU::SGPRRegBankID) == &AMDGPU::SGPRRegBank &&
+           &getRegBank(AMDGPU::VGPRRegBankID) == &AMDGPU::VGPRRegBank &&
+           &getRegBank(AMDGPU::AGPRRegBankID) == &AMDGPU::AGPRRegBank);
+  };
 
-  assert(&getRegBank(AMDGPU::SGPRRegBankID) == &AMDGPU::SGPRRegBank &&
-         &getRegBank(AMDGPU::VGPRRegBankID) == &AMDGPU::VGPRRegBank &&
-         &getRegBank(AMDGPU::AGPRRegBankID) == &AMDGPU::AGPRRegBank);
+  llvm::call_once(InitializeRegisterBankFlag, InitializeRegisterBankOnce);
 }
 
 static bool isVectorRegisterBank(const RegisterBank &Bank) {
