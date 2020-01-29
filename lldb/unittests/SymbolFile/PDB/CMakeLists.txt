@@ -8,6 +8,7 @@ add_lldb_unittest(SymbolFilePDBTests
     lldbPluginObjectFilePECOFF
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
+    lldbPluginTypeSystemClang
     lldbUtilityHelpers
     LLVMTestingSupport
   LINK_COMPONENTS
