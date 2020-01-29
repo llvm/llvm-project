@@ -2601,7 +2601,7 @@ static void emitMatchRegisterName(CodeGenTarget &Target, Record *AsmParser,
     if (Reg.TheDef->getValueAsString("AsmName").empty())
       continue;
 
-    Matches.emplace_back(Reg.TheDef->getValueAsString("AsmName"),
+    Matches.emplace_back(std::string(Reg.TheDef->getValueAsString("AsmName")),
                          "return " + utostr(Reg.EnumValue) + ";");
   }
 
@@ -2633,7 +2633,7 @@ static void emitMatchRegisterAltName(CodeGenTarget &Target, Record *AsmParser,
       if (AltName.empty())
         continue;
 
-      Matches.emplace_back(AltName,
+      Matches.emplace_back(std::string(AltName),
                            "return " + utostr(Reg.EnumValue) + ";");
     }
   }
