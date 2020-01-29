@@ -497,8 +497,9 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::f32, &VE::F32RegClass);
   addRegisterClass(MVT::f64, &VE::I64RegClass);
 
-  // Custom legalize GlobalAddress nodes into LO/HI parts.
+  // Custom legalize address nodes into LO/HI parts.
   MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
+  setOperationAction(ISD::BlockAddress, PtrVT, Custom);
   setOperationAction(ISD::GlobalAddress, PtrVT, Custom);
 
   // VE has no REM or DIVREM operations.
@@ -554,6 +555,10 @@ SDValue VETargetLowering::withTargetFlags(SDValue Op, unsigned TF,
     return DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(GA),
                                       GA->getValueType(0), GA->getOffset(), TF);
 
+  if (const BlockAddressSDNode *BA = dyn_cast<BlockAddressSDNode>(Op))
+    return DAG.getTargetBlockAddress(BA->getBlockAddress(), Op.getValueType(),
+                                     0, TF);
+
   llvm_unreachable("Unhandled address SDNode");
 }
 
@@ -594,10 +599,17 @@ SDValue VETargetLowering::LowerGlobalAddress(SDValue Op,
   return makeAddress(Op, DAG);
 }
 
+SDValue VETargetLowering::LowerBlockAddress(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  return makeAddress(Op, DAG);
+}
+
 SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default:
     llvm_unreachable("Should not custom lower this!");
+  case ISD::BlockAddress:
+    return LowerBlockAddress(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
   }

@@ -131,9 +131,15 @@ def fcond2cc : SDNodeXForm<cond, [{
 }]>;
 
 // Addressing modes.
+def ADDRrr : ComplexPattern<iPTR, 2, "SelectADDRrr", [], []>;
 def ADDRri : ComplexPattern<iPTR, 2, "SelectADDRri", [frameindex], []>;
 
 // ASX format of memory address
+def MEMrr : Operand<iPTR> {
+  let PrintMethod = "printMemASXOperand";
+  let MIOperandInfo = (ops ptr_rc, ptr_rc);
+}
+
 def MEMri : Operand<iPTR> {
   let PrintMethod = "printMemASXOperand";
   let MIOperandInfo = (ops ptr_rc, i64imm);
@@ -539,6 +545,55 @@ multiclass BCRm<string opcStr, string opcStrAt, bits<8> opc,
     let cz = 1;
     let hasSideEffects = 0;
   }
+  def ir : CF<
+    opc, (outs),
+    (ins CCOp:$cf, immOp:$sy, RC:$sz, brtarget32:$imm32),
+    !strconcat(opcStr, " $sy, $sz, $imm32")> {
+    let cy = 0;
+    let cz = 1;
+    let hasSideEffects = 0;
+  }
+  def rm0 : CF<
+    opc, (outs), (ins CCOp:$cf, RC:$sy, immOp2:$sz, brtarget32:$imm32),
+    !strconcat(opcStr, " $sy, (${sz})0, $imm32"), []> {
+    let cy = 1;
+    let cz = 0;
+    let sz{6} = 1;
+    let hasSideEffects = 0;
+  }
+  def rm1 : CF<
+    opc, (outs), (ins CCOp:$cf, RC:$sy, immOp2:$sz, brtarget32:$imm32),
+    !strconcat(opcStr, " $sy, (${sz})1, $imm32"), []> {
+    let cy = 1;
+    let cz = 0;
+    let hasSideEffects = 0;
+  }
+  def im0 : CF<
+    opc, (outs), (ins CCOp:$cf, immOp:$sy, immOp2:$sz, brtarget32:$imm32),
+    !strconcat(opcStr, " $sy, (${sz})0, $imm32"), []> {
+    let cy = 0;
+    let cz = 0;
+    let sz{6} = 1;
+    let hasSideEffects = 0;
+  }
+  def im1 : CF<
+    opc, (outs), (ins CCOp:$cf, immOp:$sy, immOp2:$sz, brtarget32:$imm32),
+    !strconcat(opcStr, " $sy, (${sz})1, $imm32"), []> {
+    let cy = 0;
+    let cz = 0;
+    let hasSideEffects = 0;
+  }
+  def a : CF<
+    opc, (outs), (ins brtarget32:$imm32),
+    !strconcat(opcStrAt, " $imm32"), []> {
+    let cy = 0;
+    let sy = 0;
+    let cz = 0;
+    let sz = 0;
+    let cf = 15;  /* AT */
+    let isBarrier = 1;
+    let hasSideEffects = 0;
+  }
 }
 
 // Multiclass for floating point conversion instructions.
@@ -866,6 +921,39 @@ def ST1Bri : RM<
 def : Pat<(f64 (load ADDRri:$addr)), (LDSri ADDRri:$addr)>;
 def : Pat<(store f64:$sx, ADDRri:$addr), (STSri ADDRri:$addr, $sx)>;
 
+// Control-flow
+
+// Jump instruction
+let cx = 0, cx2 = 0, bpf = 0 /* NONE */, cy = 1, cz = 1,
+    isBranch = 1, isTerminator = 1, hasDelaySlot = 1, hasSideEffects = 0 in
+def BC : CF<
+    0x19, (outs), (ins CCOp:$cf, I64:$sy, brtarget32:$imm32),
+    "b.${cf}.l $sy, $imm32">;
+
+// Jump always instruction is treated as a special case of jump in order
+// to make finding unconditional jump easy.
+let cx = 0, cx2 = 0, bpf = 0 /* NONE */, cf = 15 /* AT */, cy = 0, sy = 0,
+    cz = 1,
+    isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1,
+    hasDelaySlot = 1, isCodeGenOnly = 1, hasSideEffects = 0 in {
+def BArr : CF<
+    0x19, (outs), (ins MEMrr:$addr),
+    "b.l $addr",
+    [(brind ADDRrr:$addr)]>;
+def BAri : CF<
+    0x19, (outs), (ins MEMri:$addr),
+    "b.l $addr",
+    [(brind ADDRri:$addr)]>;
+}
+
+// Jump never instruction is also a special case of jump.
+let cx = 0, cx2 = 0, bpf = 0 /* NONE */, cf = 0 /* AF */, cy = 1, sy = 0,
+    cz = 1,
+    isBranch = 1, isTerminator = 1, hasDelaySlot = 1, hasSideEffects = 0 in
+def BN : CF<
+    0x19, (outs), (ins brtarget32:$imm32),
+    "b.af.l $imm32">;
+
 // Return instruction is also a special case of jump.
 let cx = 0, cx2 = 0, bpf = 0 /* NONE */, cf = 15 /* AT */, cy = 0, sy = 0,
     cz = 1, sz = 0x10 /* SX10 */, imm32 = 0, Uses = [SX10],
@@ -879,6 +967,12 @@ def RET : CF<
 // Branch instruction
 let cx = 0, cx2 = 0, bpf = 0 /* NONE */ in
 defm BCRL : BCRm<"br${cf}.l", "br.l", 0x18, I64, i64, simm7Op64, uimm6Op64>;
+let cx = 1, cx2 = 0, bpf = 0 /* NONE */ in
+defm BCRW : BCRm<"br${cf}.w", "br.w", 0x18, I32, i32, simm7Op32, uimm6Op32>;
+let cx = 0, cx2 = 1, bpf = 0 /* NONE */ in
+defm BCRD : BCRm<"br${cf}.d", "br.d", 0x18, I64, f64, simm7Op64, uimm6Op64>;
+let cx = 1, cx2 = 1, bpf = 0 /* NONE */ in
+defm BCRS : BCRm<"br${cf}.s", "br.s", 0x18, F32, f32, simm7Op32, uimm6Op32>;
 
 let cx = 0, cy = 0, cz = 1, hasSideEffects = 0 in {
 let sy = 3 in
@@ -1041,6 +1135,22 @@ def : Pat<(call tglobaladdr:$dst),
 def : Pat<(call i64:$dst),
           (CALLr i64:$dst)>;
 
+// Branches
+def : Pat<(br bb:$addr), (BCRLa bb:$addr)>;
+
+// brcc
+def : Pat<(brcc CCSIOp:$cond, i32:$l, i32:$r, bb:$addr),
+          (BCRWrr (icond2cc $cond), $l, $r, bb:$addr)>;
+def : Pat<(brcc CCUIOp:$cond, i32:$l, i32:$r, bb:$addr),
+          (BCRWir (icond2cc $cond), 0, (CMPUWrr $r, $l), bb:$addr)>;
+def : Pat<(brcc CCSIOp:$cond, i64:$l, i64:$r, bb:$addr),
+          (BCRLrr (icond2cc $cond), $l, $r, bb:$addr)>;
+def : Pat<(brcc CCUIOp:$cond, i64:$l, i64:$r, bb:$addr),
+          (BCRLir (icond2cc $cond), 0, (CMPrr $r, $l), bb:$addr)>;
+def : Pat<(brcc cond:$cond, f32:$l, f32:$r, bb:$addr),
+          (BCRSrr (fcond2cc $cond), $l, $r, bb:$addr)>;
+def : Pat<(brcc cond:$cond, f64:$l, f64:$r, bb:$addr),
+          (BCRDrr (fcond2cc $cond), $l, $r, bb:$addr)>;
 
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions
