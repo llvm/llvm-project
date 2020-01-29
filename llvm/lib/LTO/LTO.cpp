@@ -12,6 +12,7 @@
 
 #include "llvm/LTO/LTO.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -781,8 +782,15 @@ Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
                           bool LivenessFromIndex) {
   std::vector<GlobalValue *> Keep;
   for (GlobalValue *GV : Mod.Keep) {
-    if (LivenessFromIndex && !ThinLTO.CombinedIndex.isGUIDLive(GV->getGUID()))
+    if (LivenessFromIndex && !ThinLTO.CombinedIndex.isGUIDLive(GV->getGUID())) {
+      if (Function *F = dyn_cast<Function>(GV)) {
+        OptimizationRemarkEmitter ORE(F);
+        ORE.emit(OptimizationRemark(DEBUG_TYPE, "deadfunction", F)
+                 << ore::NV("Function", F)
+                 << " not added to the combined module ");
+      }
       continue;
+    }
 
     if (!GV->hasAvailableExternallyLinkage()) {
       Keep.push_back(GV);
@@ -931,17 +939,6 @@ Error LTO::run(AddStreamFn AddStream, NativeObjectCache Cache) {
     return StatsFileOrErr.takeError();
   std::unique_ptr<ToolOutputFile> StatsFile = std::move(StatsFileOrErr.get());
 
-  // Finalize linking of regular LTO modules containing summaries now that
-  // we have computed liveness information.
-  for (auto &M : RegularLTO.ModsWithSummaries)
-    if (Error Err = linkRegularLTO(std::move(M),
-                                   /*LivenessFromIndex=*/true))
-      return Err;
-
-  // Ensure we don't have inconsistently split LTO units with type tests.
-  if (Error Err = checkPartiallySplit())
-    return Err;
-
   Error Result = runRegularLTO(AddStream);
   if (!Result)
     Result = runThinLTO(AddStream, Cache, GUIDPreservedSymbols);
@@ -953,6 +950,27 @@ Error LTO::run(AddStreamFn AddStream, NativeObjectCache Cache) {
 }
 
 Error LTO::runRegularLTO(AddStreamFn AddStream) {
+  // Setup optimization remarks.
+  auto DiagFileOrErr = lto::setupOptimizationRemarks(
+      RegularLTO.CombinedModule->getContext(), Conf.RemarksFilename,
+      Conf.RemarksPasses, Conf.RemarksFormat, Conf.RemarksWithHotness);
+  if (!DiagFileOrErr)
+    return DiagFileOrErr.takeError();
+
+  // Finalize linking of regular LTO modules containing summaries now that
+  // we have computed liveness information.
+  for (auto &M : RegularLTO.ModsWithSummaries)
+    if (Error Err = linkRegularLTO(std::move(M),
+                                   /*LivenessFromIndex=*/true))
+      return Err;
+
+  // Ensure we don't have inconsistently split LTO units with type tests.
+  // FIXME: this checks both LTO and ThinLTO. It happens to work as we take
+  // this path both cases but eventually this should be split into two and
+  // do the ThinLTO checks in `runThinLTO`.
+  if (Error Err = checkPartiallySplit())
+    return Err;
+
   // Make sure commons have the right size/alignment: we kept the largest from
   // all the prevailing when adding the inputs, and we apply it here.
   const DataLayout &DL = RegularLTO.CombinedModule->getDataLayout();
@@ -1017,8 +1035,12 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
         !Conf.PostInternalizeModuleHook(0, *RegularLTO.CombinedModule))
       return Error::success();
   }
-  return backend(Conf, AddStream, RegularLTO.ParallelCodeGenParallelismLevel,
-                 std::move(RegularLTO.CombinedModule), ThinLTO.CombinedIndex);
+  if (Error Err =
+          backend(Conf, AddStream, RegularLTO.ParallelCodeGenParallelismLevel,
+                  std::move(RegularLTO.CombinedModule), ThinLTO.CombinedIndex))
+    return Err;
+
+  return finalizeOptimizationRemarks(std::move(*DiagFileOrErr));
 }
 
 static const char *libcallRoutineNames[] = {
