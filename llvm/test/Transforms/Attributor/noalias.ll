@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=attributor -aa-pipeline='basic-aa' -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=3 < %s | FileCheck %s
+; RUN: opt -S -passes=attributor -aa-pipeline='basic-aa' -attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=4 < %s | FileCheck %s
 
 ; TEST 1 - negative.
 
@@ -152,27 +152,39 @@ define i8* @test8(i32* %0) nounwind uwtable {
 
 ; TEST 9
 ; Simple Argument Test
-declare void @use_i8(i8* nocapture) readnone
+declare void @use_i8(i8* nocapture)
 define internal void @test9a(i8* %a, i8* %b) {
 ; CHECK: define internal void @test9a()
   ret void
 }
 define internal void @test9b(i8* %a, i8* %b) {
-; CHECK: define internal void @test9b(i8* noalias nocapture readnone %a, i8* nocapture readnone %b)
+; FIXME: %b should be noalias
+; CHECK: define internal void @test9b(i8* noalias nocapture %a, i8* nocapture %b)
   call void @use_i8(i8* %a)
   call void @use_i8(i8* %b)
   ret void
 }
+define internal void @test9c(i8* %a, i8* %b, i8* %c) {
+; CHECK: define internal void @test9c(i8* noalias nocapture %a, i8* nocapture %b, i8* nocapture %c)
+  call void @use_i8(i8* %a)
+  call void @use_i8(i8* %b)
+  call void @use_i8(i8* %c)
+  ret void
+}
 define void @test9_helper(i8* %a, i8* %b) {
-; CHECK: define void @test9_helper(i8* nocapture readnone %a, i8* nocapture readnone %b)
+; CHECK: define void @test9_helper(i8* nocapture %a, i8* nocapture %b)
 ; CHECK:  tail call void @test9a()
 ; CHECK:  tail call void @test9a()
-; CHECK:  tail call void @test9b(i8* noalias nocapture readnone %a, i8* nocapture readnone %b)
-; CHECK:  tail call void @test9b(i8* noalias nocapture readnone %b, i8* noalias nocapture readnone %a)
+; CHECK:  tail call void @test9b(i8* noalias nocapture %a, i8* nocapture %b)
+; CHECK:  tail call void @test9b(i8* noalias nocapture %b, i8* noalias nocapture %a)
+; CHECK:  tail call void @test9c(i8* noalias nocapture %a, i8* nocapture %b, i8* nocapture %b)
+; CHECK:  tail call void @test9c(i8* noalias nocapture %b, i8* noalias nocapture %a, i8* noalias nocapture %a)
   tail call void @test9a(i8* noalias %a, i8* %b)
   tail call void @test9a(i8* noalias %b, i8* noalias %a)
   tail call void @test9b(i8* noalias %a, i8* %b)
   tail call void @test9b(i8* noalias %b, i8* noalias %a)
+  tail call void @test9c(i8* noalias %a, i8* %b, i8* %b)
+  tail call void @test9c(i8* noalias %b, i8* noalias %a, i8* noalias %a)
   ret void
 }
 

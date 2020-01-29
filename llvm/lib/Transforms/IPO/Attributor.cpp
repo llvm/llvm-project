@@ -2504,8 +2504,57 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
       indicateOptimisticFixpoint();
   }
 
-  /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A) override {
+  /// Determine if the underlying value may alias with the call site argument
+  /// \p OtherArgNo of \p ICS (= the underlying call site).
+  bool mayAliasWithArgument(Attributor &A, AAResults *&AAR,
+                            const AAMemoryBehavior &MemBehaviorAA,
+                            ImmutableCallSite ICS, unsigned OtherArgNo) {
+    // We do not need to worry about aliasing with the underlying IRP.
+    if (this->getArgNo() == (int)OtherArgNo)
+      return false;
+
+    // If it is not a pointer or pointer vector we do not alias.
+    const Value *ArgOp = ICS.getArgOperand(OtherArgNo);
+    if (!ArgOp->getType()->isPtrOrPtrVectorTy())
+      return false;
+
+    auto &ICSArgMemBehaviorAA = A.getAAFor<AAMemoryBehavior>(
+        *this, IRPosition::callsite_argument(ICS, OtherArgNo),
+        /* TrackDependence */ false);
+
+    // If the argument is readnone, there is no read-write aliasing.
+    if (ICSArgMemBehaviorAA.isAssumedReadNone()) {
+      A.recordDependence(ICSArgMemBehaviorAA, *this, DepClassTy::OPTIONAL);
+      return false;
+    }
+
+    // If the argument is readonly and the underlying value is readonly, there
+    // is no read-write aliasing.
+    bool IsReadOnly = MemBehaviorAA.isAssumedReadOnly();
+    if (ICSArgMemBehaviorAA.isAssumedReadOnly() && IsReadOnly) {
+      A.recordDependence(MemBehaviorAA, *this, DepClassTy::OPTIONAL);
+      A.recordDependence(ICSArgMemBehaviorAA, *this, DepClassTy::OPTIONAL);
+      return false;
+    }
+
+    // We have to utilize actual alias analysis queries so we need the object.
+    if (!AAR)
+      AAR = A.getInfoCache().getAAResultsForFunction(*getAnchorScope());
+
+    // Try to rule it out at the call site.
+    bool IsAliasing = !AAR || !AAR->isNoAlias(&getAssociatedValue(), ArgOp);
+    LLVM_DEBUG(dbgs() << "[NoAliasCSArg] Check alias between "
+                         "callsite arguments: "
+                      << getAssociatedValue() << " " << *ArgOp << " => "
+                      << (IsAliasing ? "" : "no-") << "alias \n");
+
+    return IsAliasing;
+  }
+
+  bool
+  isKnownNoAliasDueToNoAliasPreservation(Attributor &A, AAResults *&AAR,
+                                         const AAMemoryBehavior &MemBehaviorAA,
+                                         const AANoAlias &NoAliasAA) {
     // We can deduce "noalias" if the following conditions hold.
     // (i)   Associated value is assumed to be noalias in the definition.
     // (ii)  Associated value is assumed to be no-capture in all the uses
@@ -2513,62 +2562,64 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     // (iii) There is no other pointer argument which could alias with the
     //       value.
 
-    const Value &V = getAssociatedValue();
-    const IRPosition IRP = IRPosition::value(V);
+    bool AssociatedValueIsNoAliasAtDef = NoAliasAA.isAssumedNoAlias();
+    if (!AssociatedValueIsNoAliasAtDef) {
+      LLVM_DEBUG(dbgs() << "[AANoAlias] " << getAssociatedValue()
+                        << " is not no-alias at the definition\n");
+      return false;
+    }
 
-    // (i) Check whether noalias holds in the definition.
-
-    auto &NoAliasAA = A.getAAFor<AANoAlias>(*this, IRP);
-    LLVM_DEBUG(dbgs() << "[AANoAliasCSArg] check definition: " << V
-                      << " :: " << NoAliasAA << "\n");
-
-    if (!NoAliasAA.isAssumedNoAlias())
-      return indicatePessimisticFixpoint();
-
-    LLVM_DEBUG(dbgs() << "[AANoAliasCSArg] " << V
-                      << " is assumed NoAlias in the definition\n");
-
-    // (ii) Check whether the value is captured in the scope using AANoCapture.
-    //      FIXME: This is conservative though, it is better to look at CFG and
-    //             check only uses possibly executed before this callsite.
-
-    auto &NoCaptureAA = A.getAAFor<AANoCapture>(*this, IRP);
+    const IRPosition &VIRP = IRPosition::value(getAssociatedValue());
+    auto &NoCaptureAA =
+        A.getAAFor<AANoCapture>(*this, VIRP, /* TrackDependence */ false);
+    // Check whether the value is captured in the scope using AANoCapture.
+    // FIXME: This is conservative though, it is better to look at CFG and
+    //        check only uses possibly executed before this callsite.
     if (!NoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
       LLVM_DEBUG(
-          dbgs() << "[AANoAliasCSArg] " << V
+          dbgs() << "[AANoAliasCSArg] " << getAssociatedValue()
                  << " cannot be noalias as it is potentially captured\n");
-      return indicatePessimisticFixpoint();
+      return false;
     }
+    A.recordDependence(NoCaptureAA, *this, DepClassTy::OPTIONAL);
 
-    // (iii) Check there is no other pointer argument which could alias with the
-    // value.
+    // Check there is no other pointer argument which could alias with the
+    // value passed at this call site.
     // TODO: AbstractCallSite
     ImmutableCallSite ICS(&getAnchorValue());
-    for (unsigned i = 0; i < ICS.getNumArgOperands(); i++) {
-      if (getArgNo() == (int)i)
-        continue;
-      const Value *ArgOp = ICS.getArgOperand(i);
-      if (!ArgOp->getType()->isPointerTy())
-        continue;
+    for (unsigned OtherArgNo = 0; OtherArgNo < ICS.getNumArgOperands();
+         OtherArgNo++)
+      if (mayAliasWithArgument(A, AAR, MemBehaviorAA, ICS, OtherArgNo))
+        return false;
 
-      if (const Function *F = getAnchorScope()) {
-        if (AAResults *AAR = A.getInfoCache().getAAResultsForFunction(*F)) {
-          bool IsAliasing = !AAR->isNoAlias(&getAssociatedValue(), ArgOp);
-          LLVM_DEBUG(dbgs()
-                     << "[NoAliasCSArg] Check alias between "
-                        "callsite arguments "
-                     << AAR->isNoAlias(&getAssociatedValue(), ArgOp) << " "
-                     << getAssociatedValue() << " " << *ArgOp << " => "
-                     << (IsAliasing ? "" : "no-") << "alias \n");
+    return true;
+  }
 
-          if (!IsAliasing)
-            continue;
-        }
-      }
-      return indicatePessimisticFixpoint();
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    // If the argument is readnone we are done as there are no accesses via the
+    // argument.
+    auto &MemBehaviorAA =
+        A.getAAFor<AAMemoryBehavior>(*this, getIRPosition(),
+                                     /* TrackDependence */ false);
+    if (MemBehaviorAA.isAssumedReadNone()) {
+      A.recordDependence(MemBehaviorAA, *this, DepClassTy::OPTIONAL);
+      return ChangeStatus::UNCHANGED;
     }
 
-    return ChangeStatus::UNCHANGED;
+    const IRPosition &VIRP = IRPosition::value(getAssociatedValue());
+    const auto &NoAliasAA = A.getAAFor<AANoAlias>(*this, VIRP,
+                                                  /* TrackDependence */ false);
+
+    AAResults *AAR = nullptr;
+    if (isKnownNoAliasDueToNoAliasPreservation(A, AAR, MemBehaviorAA,
+                                               NoAliasAA)) {
+      LLVM_DEBUG(
+          dbgs() << "[AANoAlias] No-Alias deduced via no-alias preservation\n");
+      return ChangeStatus::UNCHANGED;
+    }
+
+    return indicatePessimisticFixpoint();
   }
 
   /// See AbstractAttribute::trackStatistics()

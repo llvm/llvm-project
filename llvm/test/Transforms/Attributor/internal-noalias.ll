@@ -21,11 +21,7 @@ entry:
 }
 
 
-; FIXME: Should be something like this.
-; define internal i32 @noalias_args_argmem(i32* noalias nocapture readonly %A, i32* noalias nocapture readonly %B)
-; CHECK: define internal i32 @noalias_args_argmem(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) %A, i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) %B)
-
-;
+; CHECK: define internal i32 @noalias_args_argmem(i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) %A, i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) %B)
 define internal i32 @noalias_args_argmem(i32* %A, i32* %B) #1 {
 entry:
   %0 = load i32, i32* %A, align 4
@@ -42,6 +38,35 @@ entry:
   %call2 = call i32 @noalias_args_argmem(i32* %A, i32* nonnull %B)
   %add = add nsw i32 %call1, %call2
   ret i32 %add
+}
+
+; CHECK: define internal i32 @noalias_args_argmem_ro(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) %A, i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) %B)
+define internal i32 @noalias_args_argmem_ro(i32* %A, i32* %B) #1 {
+  %t0 = load i32, i32* %A, align 4
+  %t1 = load i32, i32* %B, align 4
+  %add = add nsw i32 %t0, %t1
+  ret i32 %add
+}
+
+define i32 @visible_local_2() {
+  %B = alloca i32, align 4
+  store i32 5, i32* %B, align 4
+  %call = call i32 @noalias_args_argmem_ro(i32* %B, i32* %B)
+  ret i32 %call
+}
+
+; CHECK: define internal i32 @noalias_args_argmem_rn(i32* noalias nocapture nofree nonnull align 4 dereferenceable(4) %B)
+define internal i32 @noalias_args_argmem_rn(i32* %A, i32* %B) #1 {
+  %t0 = load i32, i32* %B, align 4
+  store i32 0, i32* %B
+  ret i32 %t0
+}
+
+define i32 @visible_local_3() {
+  %B = alloca i32, align 4
+  store i32 5, i32* %B, align 4
+  %call = call i32 @noalias_args_argmem_rn(i32* %B, i32* %B)
+  ret i32 %call
 }
 
 attributes #0 = { noinline nounwind uwtable willreturn }
