@@ -3437,30 +3437,20 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
   if (N0.isUndef() || N1.isUndef())
     return DAG.getConstant(0, SDLoc(N), VT);
 
-  bool N0IsConst = false;
   bool N1IsConst = false;
   bool N1IsOpaqueConst = false;
-  bool N0IsOpaqueConst = false;
-  APInt ConstValue0, ConstValue1;
+  APInt ConstValue1;
+
   // fold vector ops
   if (VT.isVector()) {
     if (SDValue FoldedVOp = SimplifyVBinOp(N))
       return FoldedVOp;
 
-    N0IsConst = ISD::isConstantSplatVector(N0.getNode(), ConstValue0);
     N1IsConst = ISD::isConstantSplatVector(N1.getNode(), ConstValue1);
-    assert((!N0IsConst ||
-            ConstValue0.getBitWidth() == VT.getScalarSizeInBits()) &&
-           "Splat APInt should be element width");
     assert((!N1IsConst ||
             ConstValue1.getBitWidth() == VT.getScalarSizeInBits()) &&
            "Splat APInt should be element width");
   } else {
-    N0IsConst = isa<ConstantSDNode>(N0);
-    if (N0IsConst) {
-      ConstValue0 = cast<ConstantSDNode>(N0)->getAPIntValue();
-      N0IsOpaqueConst = cast<ConstantSDNode>(N0)->isOpaque();
-    }
     N1IsConst = isa<ConstantSDNode>(N1);
     if (N1IsConst) {
       ConstValue1 = cast<ConstantSDNode>(N1)->getAPIntValue();
@@ -3469,16 +3459,18 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
   }
 
   // fold (mul c1, c2) -> c1*c2
-  if (N0IsConst && N1IsConst && !N0IsOpaqueConst && !N1IsOpaqueConst)
-    return DAG.FoldConstantArithmetic(ISD::MUL, SDLoc(N), VT, {N0, N1});
+  if (SDValue C = DAG.FoldConstantArithmetic(ISD::MUL, SDLoc(N), VT, {N0, N1}))
+    return C;
 
   // canonicalize constant to RHS (vector doesn't have to splat)
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
     return DAG.getNode(ISD::MUL, SDLoc(N), VT, N1, N0);
+
   // fold (mul x, 0) -> 0
   if (N1IsConst && ConstValue1.isNullValue())
     return N1;
+
   // fold (mul x, 1) -> x
   if (N1IsConst && ConstValue1.isOneValue())
     return N0;
@@ -3492,6 +3484,7 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
     return DAG.getNode(ISD::SUB, DL, VT,
                        DAG.getConstant(0, DL, VT), N0);
   }
+
   // fold (mul x, (1 << c)) -> x << c
   if (isConstantOrConstantVector(N1, /*NoOpaques*/ true) &&
       DAG.isKnownToBeAPowerOfTwo(N1) &&
@@ -3502,6 +3495,7 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
     SDValue Trunc = DAG.getZExtOrTrunc(LogBase2, DL, ShiftVT);
     return DAG.getNode(ISD::SHL, DL, VT, N0, Trunc);
   }
+
   // fold (mul x, -(1 << c)) -> -(x << c) or (-x) << c
   if (N1IsConst && !N1IsOpaqueConst && (-ConstValue1).isPowerOf2()) {
     unsigned Log2Val = (-ConstValue1).logBase2();
