@@ -156,7 +156,7 @@ public:
 
   void setSwiftBridge(const Optional<StringRef> &swiftType) {
     if (swiftType)
-      SwiftBridge = *swiftType;
+      SwiftBridge = std::string(*swiftType);
     else
       SwiftBridge = None;
   }
@@ -171,7 +171,7 @@ public:
 
   void setNSErrorDomain(const Optional<StringRef> &domain) {
     if (domain)
-      NSErrorDomain = *domain;
+      NSErrorDomain = std::string(*domain);
     else
       NSErrorDomain = None;
   }

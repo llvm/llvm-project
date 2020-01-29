@@ -37,10 +37,10 @@ class IndexUnitWriter::PathStorage {
 
 public:
   PathStorage(StringRef workDir, StringRef sysrootPath) {
-    WorkDir = workDir;
+    WorkDir = std::string(workDir);
     if (sysrootPath == "/")
       sysrootPath = StringRef();
-    SysrootPath = sysrootPath;
+    SysrootPath = std::string(sysrootPath);
   }
 
   StringRef getPathsBuffer() const { return PathsBuf.str(); }
@@ -120,16 +120,16 @@ IndexUnitWriter::IndexUnitWriter(FileManager &FileMgr,
 : FileMgr(FileMgr) {
   this->UnitsPath = StorePath;
   store::appendUnitSubDir(this->UnitsPath);
-  this->ProviderIdentifier = ProviderIdentifier;
-  this->ProviderVersion = ProviderVersion;
-  this->OutputFile = OutputFile;
-  this->ModuleName = ModuleName;
+  this->ProviderIdentifier = std::string(ProviderIdentifier);
+  this->ProviderVersion = std::string(ProviderVersion);
+  this->OutputFile = std::string(OutputFile);
+  this->ModuleName = std::string(ModuleName);
   this->MainFile = MainFile;
   this->IsSystemUnit = IsSystem;
   this->IsModuleUnit = IsModuleUnit;
   this->IsDebugCompilation = IsDebugCompilation;
-  this->TargetTriple = TargetTriple;
-  this->SysrootPath = SysrootPath;
+  this->TargetTriple = std::string(TargetTriple);
+  this->SysrootPath = std::string(SysrootPath);
   this->GetInfoForModuleFn = GetInfoForModule;
 }
 
@@ -161,7 +161,7 @@ int IndexUnitWriter::addFileDependency(const FileEntry *File, bool IsSystem,
 void IndexUnitWriter::addRecordFile(StringRef RecordFile, const FileEntry *File,
                                     bool IsSystem, writer::OpaqueModule Mod) {
   int Dep = File ? addFileDependency(File, IsSystem, /*module=*/nullptr) : -1;
-  Records.push_back(RecordOrUnitData{RecordFile, Dep, addModule(Mod), IsSystem});
+  Records.push_back(RecordOrUnitData{std::string(RecordFile), Dep, addModule(Mod), IsSystem});
 }
 
 void IndexUnitWriter::addASTFileDependency(const FileEntry *File, bool IsSystem,
@@ -181,7 +181,7 @@ void IndexUnitWriter::addUnitDependency(StringRef UnitFile,
                                         const FileEntry *File, bool IsSystem,
                                         writer::OpaqueModule Mod) {
   int Dep = File ? addFileDependency(File, IsSystem, /*module=*/nullptr) : -1;
-  ASTFileUnits.emplace_back(RecordOrUnitData{UnitFile, Dep, addModule(Mod), IsSystem});
+  ASTFileUnits.emplace_back(RecordOrUnitData{std::string(UnitFile), Dep, addModule(Mod), IsSystem});
 }
 
 bool IndexUnitWriter::addInclude(const FileEntry *Source, unsigned Line,
@@ -329,7 +329,7 @@ bool IndexUnitWriter::write(std::string &Error) {
       return true;
     }
   }
-  WorkDir = CWDPath.str();
+  WorkDir = std::string(CWDPath.str());
 
   SmallString<512> Buffer;
   BitstreamWriter Stream(Buffer);

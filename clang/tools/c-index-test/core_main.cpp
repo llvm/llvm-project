@@ -411,7 +411,7 @@ static std::string findRecordNameForFile(indexstore::IndexStore &store,
     Reader.foreachDependency([&](indexstore::IndexUnitDependency Dep) -> bool {
       if (Dep.getKind() == indexstore::IndexUnitDependency::DependencyKind::Record) {
         if (Dep.getFilePath() == filePath) {
-          recName = Dep.getName();
+          recName = std::string(Dep.getName());
           return false;
         }
         return true;
@@ -800,7 +800,7 @@ bool deconstructPathAndRange(StringRef input,
   std::tie(path, range) = input.split(':');
   StringRef start, end;
   std::tie(start, end) = range.split(':');
-  filepath = path;
+  filepath = std::string(path);
   lineCount = 0;
   if (start.empty())
     return false;
