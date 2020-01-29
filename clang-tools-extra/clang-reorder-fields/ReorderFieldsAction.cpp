@@ -36,8 +36,7 @@ using llvm::SmallSetVector;
 static const RecordDecl *findDefinition(StringRef RecordName,
                                         ASTContext &Context) {
   auto Results =
-      match(recordDecl(hasName(std::string(RecordName)), isDefinition())
-                .bind("recordDecl"),
+      match(recordDecl(hasName(RecordName), isDefinition()).bind("recordDecl"),
             Context);
   if (Results.empty()) {
     llvm::errs() << "Definition of " << RecordName << "  not found\n";
