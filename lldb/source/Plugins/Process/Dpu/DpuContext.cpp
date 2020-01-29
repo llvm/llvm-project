@@ -176,8 +176,9 @@ void DpuContext::ResetLastResumeThreads() {
   }
 }
 
-bool DpuContext::DpuIsRunning() {
-  for (unsigned int each_thread = 0; each_thread < nr_threads; each_thread++) {
+bool DpuContext::DpuIsRunning(int nr_running_threads) {
+  for (unsigned int each_thread = 0; each_thread < nr_running_threads;
+       each_thread++) {
     if (running_threads[each_thread] != 0xff)
       return true;
   }

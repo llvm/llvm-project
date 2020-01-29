@@ -58,7 +58,7 @@ public:
   bool ScheduledThread(uint32_t thread);
   bool ContextReadyForResumeOrStep();
 
-  bool DpuIsRunning();
+  bool DpuIsRunning(int nr_running_threads);
 
 private:
   bool AddThreadInScheduling(unsigned int thread);

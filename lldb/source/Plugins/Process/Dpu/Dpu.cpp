@@ -228,8 +228,9 @@ StateType Dpu::PollStatus(unsigned int *exit_status) {
   if (dpu_is_in_fault) {
     result_state = StateType::eStateStopped;
   } else if (!dpu_is_running) {
-    result_state = m_context->DpuIsRunning() ? StateType::eStateStopped
-                                             : StateType::eStateExited;
+    result_state = m_context->DpuIsRunning(nr_threads)
+                       ? StateType::eStateStopped
+                       : StateType::eStateExited;
   } else {
     return StateType::eStateRunning;
   }
@@ -394,7 +395,7 @@ StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
 
   if (ret != DPU_OK)
     return StateType::eStateCrashed;
-  if (!m_context->DpuIsRunning()) {
+  if (!m_context->DpuIsRunning(nr_threads)) {
     *exit_status = m_context->GetExitStatus();
     return StateType::eStateExited;
   }
