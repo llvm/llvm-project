@@ -348,6 +348,21 @@ void DwarfExpression::finalizeEntryValue() {
   IsEmittingEntryValue = false;
 }
 
+unsigned DwarfExpression::getOrCreateBaseType(unsigned BitSize,
+                                              dwarf::TypeKind Encoding) {
+  // Reuse the base_type if we already have one in this CU otherwise we
+  // create a new one.
+  unsigned I = 0, E = CU.ExprRefedBaseTypes.size();
+  for (; I != E; ++I)
+    if (CU.ExprRefedBaseTypes[I].BitSize == BitSize &&
+        CU.ExprRefedBaseTypes[I].Encoding == Encoding)
+      break;
+
+  if (I == E)
+    CU.ExprRefedBaseTypes.emplace_back(BitSize, Encoding);
+  return I;
+}
+
 /// Assuming a well-formed expression, match "DW_OP_deref* DW_OP_LLVM_fragment?".
 static bool isMemoryLocation(DIExpressionCursor ExprCursor) {
   while (ExprCursor) {
@@ -455,24 +470,13 @@ void DwarfExpression::addExpression(DIExpressionCursor &&ExprCursor,
       dwarf::TypeKind Encoding = static_cast<dwarf::TypeKind>(Op->getArg(1));
       if (DwarfVersion >= 5) {
         emitOp(dwarf::DW_OP_convert);
-        // Reuse the base_type if we already have one in this CU otherwise we
-        // create a new one.
-        unsigned I = 0, E = CU.ExprRefedBaseTypes.size();
-        for (; I != E; ++I)
-          if (CU.ExprRefedBaseTypes[I].BitSize == BitSize &&
-              CU.ExprRefedBaseTypes[I].Encoding == Encoding)
-            break;
-
-        if (I == E)
-          CU.ExprRefedBaseTypes.emplace_back(BitSize, Encoding);
-
         // If targeting a location-list; simply emit the index into the raw
         // byte stream as ULEB128, DwarfDebug::emitDebugLocEntry has been
         // fitted with means to extract it later.
         // If targeting a inlined DW_AT_location; insert a DIEBaseTypeRef
         // (containing the index and a resolve mechanism during emit) into the
         // DIE value list.
-        emitBaseTypeRef(I);
+        emitBaseTypeRef(getOrCreateBaseType(BitSize, Encoding));
       } else {
         if (PrevConvertOp && PrevConvertOp->getArg(0) < BitSize) {
           if (Encoding == dwarf::DW_ATE_signed)
