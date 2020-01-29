@@ -379,27 +379,20 @@ void EventThreadFunction() {
         if (event_mask & lldb::SBTarget::eBroadcastBitBreakpointChanged) {
           auto event_type =
               lldb::SBBreakpoint::GetBreakpointEventTypeFromEvent(event);
-          const auto num_locs =
-              lldb::SBBreakpoint::GetNumBreakpointLocationsFromEvent(event);
           auto bp = lldb::SBBreakpoint::GetBreakpointFromEvent(event);
-          bool added = event_type & lldb::eBreakpointEventTypeLocationsAdded;
-          bool removed =
-              event_type & lldb::eBreakpointEventTypeLocationsRemoved;
-          if (added || removed) {
-            for (size_t i = 0; i < num_locs; ++i) {
-              auto bp_loc =
-                  lldb::SBBreakpoint::GetBreakpointLocationAtIndexFromEvent(
-                      event, i);
-              auto bp_event = CreateEventObject("breakpoint");
-              llvm::json::Object body;
-              body.try_emplace("breakpoint", CreateBreakpoint(bp_loc));
-              if (added)
-                body.try_emplace("reason", "new");
-              else
-                body.try_emplace("reason", "removed");
-              bp_event.try_emplace("body", std::move(body));
-              g_vsc.SendJSON(llvm::json::Value(std::move(bp_event)));
-            }
+          // If the breakpoint was originated from the IDE, it will have the
+          // BreakpointBase::GetBreakpointLabel() label attached. Regardless
+          // of wether the locations were added or removed, the breakpoint
+          // ins't going away, so we the reason is always "changed".
+          if ((event_type & lldb::eBreakpointEventTypeLocationsAdded ||
+               event_type & lldb::eBreakpointEventTypeLocationsRemoved) &&
+              bp.MatchesName(BreakpointBase::GetBreakpointLabel())) {
+            auto bp_event = CreateEventObject("breakpoint");
+            llvm::json::Object body;
+            body.try_emplace("breakpoint", CreateBreakpoint(bp));
+            body.try_emplace("reason", "changed");
+            bp_event.try_emplace("body", std::move(body));
+            g_vsc.SendJSON(llvm::json::Value(std::move(bp_event)));
           }
         }
       } else if (event.BroadcasterMatchesRef(g_vsc.broadcaster)) {
