@@ -277,6 +277,38 @@ getAssumedConstant(Attributor &A, const Value &V, const AbstractAttribute &AA,
   return CI;
 }
 
+/// Get pointer operand of memory accessing instruction. If \p I is
+/// not a memory accessing instruction, return nullptr. If \p AllowVolatile,
+/// is set to false and the instruction is volatile, return nullptr.
+static const Value *getPointerOperand(const Instruction *I,
+                                      bool AllowVolatile) {
+  if (auto *LI = dyn_cast<LoadInst>(I)) {
+    if (!AllowVolatile && LI->isVolatile())
+      return nullptr;
+    return LI->getPointerOperand();
+  }
+
+  if (auto *SI = dyn_cast<StoreInst>(I)) {
+    if (!AllowVolatile && SI->isVolatile())
+      return nullptr;
+    return SI->getPointerOperand();
+  }
+
+  if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(I)) {
+    if (!AllowVolatile && CXI->isVolatile())
+      return nullptr;
+    return CXI->getPointerOperand();
+  }
+
+  if (auto *RMWI = dyn_cast<AtomicRMWInst>(I)) {
+    if (!AllowVolatile && RMWI->isVolatile())
+      return nullptr;
+    return RMWI->getPointerOperand();
+  }
+
+  return nullptr;
+}
+
 /// Recursively visit all values that might become \p IRP at some point. This
 /// will be done by looking through cast instructions, selects, phis, and calls
 /// with the "returned" attribute. Once we cannot look through the value any
@@ -417,8 +449,7 @@ static const Value *
 getBasePointerOfAccessPointerOperand(const Instruction *I, int64_t &BytesOffset,
                                      const DataLayout &DL,
                                      bool AllowNonInbounds = false) {
-  const Value *Ptr =
-      Attributor::getPointerOperand(I, /* AllowVolatile */ false);
+  const Value *Ptr = getPointerOperand(I, /* AllowVolatile */ false);
   if (!Ptr)
     return nullptr;
 
@@ -1800,7 +1831,7 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
   int64_t Offset;
   if (const Value *Base = getBasePointerOfAccessPointerOperand(I, Offset, DL)) {
     if (Base == &AssociatedValue &&
-        Attributor::getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
+        getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
       int64_t DerefBytes =
           (int64_t)DL.getTypeStoreSize(PtrTy->getPointerElementType()) + Offset;
 
@@ -1813,7 +1844,7 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
   if (const Value *Base = getBasePointerOfAccessPointerOperand(
           I, Offset, DL, /*AllowNonInbounds*/ true)) {
     if (Offset == 0 && Base == &AssociatedValue &&
-        Attributor::getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
+        getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
       int64_t DerefBytes =
           (int64_t)DL.getTypeStoreSize(PtrTy->getPointerElementType());
       IsNonNull |= !NullPointerIsDefined;
@@ -2058,8 +2089,7 @@ struct AAUndefinedBehaviorImpl : public AAUndefinedBehavior {
       // If we reach here, we know we have an instruction
       // that accesses memory through a pointer operand,
       // for which getPointerOperand() should give it to us.
-      const Value *PtrOp =
-          Attributor::getPointerOperand(&I, /* AllowVolatile */ true);
+      const Value *PtrOp = getPointerOperand(&I, /* AllowVolatile */ true);
       assert(PtrOp &&
              "Expected pointer operand of memory accessing instruction");
 
@@ -3218,7 +3248,7 @@ struct AADereferenceableImpl : AADereferenceable {
     if (const Value *Base = getBasePointerOfAccessPointerOperand(
             I, Offset, DL, /*AllowNonInbounds*/ true)) {
       if (Base == &getAssociatedValue() &&
-          Attributor::getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
+          getPointerOperand(I, /* AllowVolatile */ false) == UseV) {
         uint64_t Size = DL.getTypeStoreSize(PtrTy->getPointerElementType());
         addAccessedBytes(Offset, Size);
       }
