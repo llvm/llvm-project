@@ -9,16 +9,16 @@
 # If all of these hold, we should produce a tbnz or a tbz.
 ...
 ---
-name:            tbnz_and_s64
+name:            tbnzx_and
 alignment:       4
 legalized:       true
 regBankSelected: true
 body:             |
-  ; CHECK-LABEL: name: tbnz_and_s64
+  ; CHECK-LABEL: name: tbnzx_and
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-  ; CHECK:   TBNZX [[COPY]], 3, %bb.1
+  ; CHECK:   TBNZX [[COPY]], 33, %bb.1
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
   ; CHECK:   RET_ReallyLR
@@ -26,7 +26,7 @@ body:             |
     successors: %bb.0, %bb.1
     liveins: $x0
     %0:gpr(s64) = COPY $x0
-    %1:gpr(s64) = G_CONSTANT i64 8 ; Power of 2 => TBNZ uses 3 as mask
+    %1:gpr(s64) = G_CONSTANT i64 8589934592 ; Bit number 33 => TBNZX
     %3:gpr(s64) = G_CONSTANT i64 0
     %2:gpr(s64) = G_AND %0, %1
     %5:gpr(s32) = G_ICMP intpred(ne), %2(s64), %3
@@ -38,18 +38,18 @@ body:             |
 
 ...
 ---
-name:            tbz_and_s64
+name:            tbzx_and
 alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: name: tbz_and_s64
+  ; CHECK-LABEL: name: tbzx_and
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   liveins: $x0
   ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY $x0
-  ; CHECK:   TBZX [[COPY]], 4, %bb.1
+  ; CHECK:   TBZX [[COPY]], 33, %bb.1
   ; CHECK:   B %bb.0
   ; CHECK: bb.1:
   ; CHECK:   RET_ReallyLR
@@ -57,7 +57,7 @@ body:             |
     successors: %bb.0, %bb.1
     liveins: $x0
     %0:gpr(s64) = COPY $x0
-    %1:gpr(s64) = G_CONSTANT i64 16 ; Power of 2 => TBNZ uses 4 as mask
+    %1:gpr(s64) = G_CONSTANT i64 8589934592 ; Bit number 33 => TBNZX
     %3:gpr(s64) = G_CONSTANT i64 0
     %2:gpr(s64) = G_AND %0, %1
     %5:gpr(s32) = G_ICMP intpred(eq), %2(s64), %3
@@ -69,13 +69,13 @@ body:             |
 
 ...
 ---
-name:            tbnz_and_s32
+name:            tbnzw_and
 alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: name: tbnz_and_s32
+  ; CHECK-LABEL: name: tbnzw_and
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   liveins: $w0
@@ -88,7 +88,7 @@ body:             |
     successors: %bb.0, %bb.1
     liveins: $w0
     %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = G_CONSTANT i32 1 ; Power of 2 => TBNZ uses 0 as mask
+    %1:gpr(s32) = G_CONSTANT i32 1
     %3:gpr(s32) = G_CONSTANT i32 0
     %2:gpr(s32) = G_AND %0, %1
     %5:gpr(s32) = G_ICMP intpred(ne), %2(s32), %3
@@ -100,13 +100,13 @@ body:             |
 
 ...
 ---
-name:            tbz_and_s32
+name:            tbzw_and
 alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
 body:             |
-  ; CHECK-LABEL: name: tbz_and_s32
+  ; CHECK-LABEL: name: tbzw_and
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK:   liveins: $w0
@@ -119,7 +119,7 @@ body:             |
     successors: %bb.0, %bb.1
     liveins: $w0
     %0:gpr(s32) = COPY $w0
-    %1:gpr(s32) = G_CONSTANT i32 1 ; Power of 2 => TBNZ uses 0 as mask
+    %1:gpr(s32) = G_CONSTANT i32 1
     %3:gpr(s32) = G_CONSTANT i32 0
     %2:gpr(s32) = G_AND %0, %1
     %5:gpr(s32) = G_ICMP intpred(eq), %2(s32), %3
