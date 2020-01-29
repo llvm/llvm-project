@@ -375,6 +375,7 @@ private:
 /// Partial specialization for C-style strings. We read the string value
 /// instead of treating it as pointer.
 template <> const char *Deserializer::Deserialize<const char *>();
+template <> const char **Deserializer::Deserialize<const char **>();
 template <> char *Deserializer::Deserialize<char *>();
 
 /// Helpers to auto-synthesize function replay code. It deserializes the replay
@@ -602,6 +603,22 @@ private:
   void Serialize(const char *t) {
     m_stream << t;
     m_stream.write(0x0);
+  }
+
+  void Serialize(const char **t) {
+    // Compute the size of the array.
+    const char *const *temp = t;
+    size_t size = 0;
+    while (*temp++)
+      size++;
+    Serialize(size);
+
+    // Serialize the content of the array.
+    while (*t) {
+      m_stream << *t;
+      m_stream.write(0x0);
+      ++t;
+    }
   }
 
   /// Serialization stream.

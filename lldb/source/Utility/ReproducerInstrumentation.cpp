@@ -9,6 +9,7 @@
 #include "lldb/Utility/ReproducerInstrumentation.h"
 #include "lldb/Utility/Reproducer.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 using namespace lldb_private;
 using namespace lldb_private::repro;
@@ -37,6 +38,15 @@ template <> const char *Deserializer::Deserialize<const char *>() {
                  << str << "\"\n";
 #endif
   return str;
+}
+
+template <> const char **Deserializer::Deserialize<const char **>() {
+  size_t size = Deserialize<size_t>();
+  const char **r =
+      reinterpret_cast<const char **>(calloc(size + 1, sizeof(char *)));
+  for (size_t i = 0; i < size; ++i)
+    r[i] = Deserialize<const char *>();
+  return r;
 }
 
 bool Registry::Replay(const FileSpec &file) {
