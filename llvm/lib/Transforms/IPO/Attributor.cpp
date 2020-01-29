@@ -2513,13 +2513,13 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     // (i) Check whether noalias holds in the definition.
 
     auto &NoAliasAA = A.getAAFor<AANoAlias>(*this, IRP);
-    LLVM_DEBUG(dbgs() << "[Attributor][AANoAliasCSArg] check definition: " << V
+    LLVM_DEBUG(dbgs() << "[AANoAliasCSArg] check definition: " << V
                       << " :: " << NoAliasAA << "\n");
 
     if (!NoAliasAA.isAssumedNoAlias())
       return indicatePessimisticFixpoint();
 
-    LLVM_DEBUG(dbgs() << "[Attributor][AANoAliasCSArg] " << V
+    LLVM_DEBUG(dbgs() << "[AANoAliasCSArg] " << V
                       << " is assumed NoAlias in the definition\n");
 
     // (ii) Check whether the value is captured in the scope using AANoCapture.
@@ -2529,7 +2529,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
     auto &NoCaptureAA = A.getAAFor<AANoCapture>(*this, IRP);
     if (!NoCaptureAA.isAssumedNoCaptureMaybeReturned()) {
       LLVM_DEBUG(
-          dbgs() << "[Attributor][AANoAliasCSArg] " << V
+          dbgs() << "[AANoAliasCSArg] " << V
                  << " cannot be noalias as it is potentially captured\n");
       return indicatePessimisticFixpoint();
     }
@@ -2549,7 +2549,7 @@ struct AANoAliasCallSiteArgument final : AANoAliasImpl {
         if (AAResults *AAR = A.getInfoCache().getAAResultsForFunction(*F)) {
           bool IsAliasing = !AAR->isNoAlias(&getAssociatedValue(), ArgOp);
           LLVM_DEBUG(dbgs()
-                     << "[Attributor][NoAliasCSArg] Check alias between "
+                     << "[NoAliasCSArg] Check alias between "
                         "callsite arguments "
                      << AAR->isNoAlias(&getAssociatedValue(), ArgOp) << " "
                      << getAssociatedValue() << " " << *ArgOp << " => "
@@ -4233,7 +4233,7 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     if (AccumulatedSimplifiedValue.hasValue())
       return AccumulatedSimplifiedValue == QueryingValueSimplified;
 
-    LLVM_DEBUG(dbgs() << "[Attributor][ValueSimplify] " << QueryingValue
+    LLVM_DEBUG(dbgs() << "[ValueSimplify] " << QueryingValue
                       << " is assumed to be "
                       << QueryingValueSimplifiedUnwrapped << "\n");
 
@@ -4275,8 +4275,8 @@ struct AAValueSimplifyImpl : AAValueSimplify {
       // We can replace the AssociatedValue with the constant.
       Value &V = getAssociatedValue();
       if (!V.user_empty() && &V != C && V.getType() == C->getType()) {
-        LLVM_DEBUG(dbgs() << "[Attributor][ValueSimplify] " << V << " -> " << *C
-                          << "\n");
+        LLVM_DEBUG(dbgs() << "[ValueSimplify] " << V << " -> " << *C
+                          << " :: " << *this << "\n");
         A.changeValueAfterManifest(V, *C);
         Changed = ChangeStatus::CHANGED;
       }
@@ -4408,9 +4408,8 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
       if (!Stripped && this == &AA) {
         // TODO: Look the instruction and check recursively.
 
-        LLVM_DEBUG(
-            dbgs() << "[Attributor][ValueSimplify] Can't be stripped more : "
-                   << V << "\n");
+        LLVM_DEBUG(dbgs() << "[ValueSimplify] Can't be stripped more : " << V
+                          << "\n");
         return false;
       }
       return checkAndUpdate(A, *this, V, SimplifiedAssociatedValue);
@@ -5480,8 +5479,8 @@ struct AAValueConstantRangeFloating : AAValueConstantRangeImpl {
     // Otherwise we give up.
     indicatePessimisticFixpoint();
 
-    LLVM_DEBUG(dbgs() << "[Attributor][AAValueConstantRange] We give up: "
-                      << getAssociatedValue());
+    LLVM_DEBUG(dbgs() << "[AAValueConstantRange] We give up: "
+                      << getAssociatedValue() << "\n");
   }
 
   bool calculateBinaryOperator(Attributor &A, BinaryOperator *BinOp,
