@@ -38,6 +38,243 @@ VEInstrInfo::VEInstrInfo(VESubtarget &ST)
     : VEGenInstrInfo(VE::ADJCALLSTACKDOWN, VE::ADJCALLSTACKUP), RI(),
       Subtarget(ST) {}
 
+static bool IsIntegerCC(unsigned CC) { return (CC < VECC::CC_AF); }
+
+static VECC::CondCodes GetOppositeBranchCondition(VECC::CondCodes CC) {
+  switch(CC) {
+  case VECC::CC_IG:     return VECC::CC_ILE;
+  case VECC::CC_IL:     return VECC::CC_IGE;
+  case VECC::CC_INE:    return VECC::CC_IEQ;
+  case VECC::CC_IEQ:    return VECC::CC_INE;
+  case VECC::CC_IGE:    return VECC::CC_IL;
+  case VECC::CC_ILE:    return VECC::CC_IG;
+  case VECC::CC_AF:     return VECC::CC_AT;
+  case VECC::CC_G:      return VECC::CC_LENAN;
+  case VECC::CC_L:      return VECC::CC_GENAN;
+  case VECC::CC_NE:     return VECC::CC_EQNAN;
+  case VECC::CC_EQ:     return VECC::CC_NENAN;
+  case VECC::CC_GE:     return VECC::CC_LNAN;
+  case VECC::CC_LE:     return VECC::CC_GNAN;
+  case VECC::CC_NUM:    return VECC::CC_NAN;
+  case VECC::CC_NAN:    return VECC::CC_NUM;
+  case VECC::CC_GNAN:   return VECC::CC_LE;
+  case VECC::CC_LNAN:   return VECC::CC_GE;
+  case VECC::CC_NENAN:  return VECC::CC_EQ;
+  case VECC::CC_EQNAN:  return VECC::CC_NE;
+  case VECC::CC_GENAN:  return VECC::CC_L;
+  case VECC::CC_LENAN:  return VECC::CC_G;
+  case VECC::CC_AT:     return VECC::CC_AF;
+  }
+  llvm_unreachable("Invalid cond code");
+}
+
+// Treat br.l [BCR AT] as unconditional branch
+static bool isUncondBranchOpcode(int Opc) {
+  return Opc == VE::BCRLa || Opc == VE::BCRWa ||
+         Opc == VE::BCRDa || Opc == VE::BCRSa;
+}
+
+static bool isCondBranchOpcode(int Opc) {
+  return Opc == VE::BCRLrr  || Opc == VE::BCRLir  ||
+         Opc == VE::BCRLrm0 || Opc == VE::BCRLrm1 ||
+         Opc == VE::BCRLim0 || Opc == VE::BCRLim1 ||
+         Opc == VE::BCRWrr  || Opc == VE::BCRWir  ||
+         Opc == VE::BCRWrm0 || Opc == VE::BCRWrm1 ||
+         Opc == VE::BCRWim0 || Opc == VE::BCRWim1 ||
+         Opc == VE::BCRDrr  || Opc == VE::BCRDir  ||
+         Opc == VE::BCRDrm0 || Opc == VE::BCRDrm1 ||
+         Opc == VE::BCRDim0 || Opc == VE::BCRDim1 ||
+         Opc == VE::BCRSrr  || Opc == VE::BCRSir  ||
+         Opc == VE::BCRSrm0 || Opc == VE::BCRSrm1 ||
+         Opc == VE::BCRSim0 || Opc == VE::BCRSim1;
+}
+
+static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
+                            SmallVectorImpl<MachineOperand> &Cond) {
+  Cond.push_back(MachineOperand::CreateImm(LastInst->getOperand(0).getImm()));
+  Cond.push_back(LastInst->getOperand(1));
+  Cond.push_back(LastInst->getOperand(2));
+  Target = LastInst->getOperand(3).getMBB();
+}
+
+bool VEInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
+                                   MachineBasicBlock *&TBB,
+                                   MachineBasicBlock *&FBB,
+                                   SmallVectorImpl<MachineOperand> &Cond,
+                                   bool AllowModify) const {
+  MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
+  if (I == MBB.end())
+    return false;
+
+  if (!isUnpredicatedTerminator(*I))
+    return false;
+
+  // Get the last instruction in the block.
+  MachineInstr *LastInst = &*I;
+  unsigned LastOpc = LastInst->getOpcode();
+
+  // If there is only one terminator instruction, process it.
+  if (I == MBB.begin() || !isUnpredicatedTerminator(*--I)) {
+    if (isUncondBranchOpcode(LastOpc)) {
+      TBB = LastInst->getOperand(0).getMBB();
+      return false;
+    }
+    if (isCondBranchOpcode(LastOpc)) {
+      // Block ends with fall-through condbranch.
+      parseCondBranch(LastInst, TBB, Cond);
+      return false;
+    }
+    return true; // Can't handle indirect branch.
+  }
+
+  // Get the instruction before it if it is a terminator.
+  MachineInstr *SecondLastInst = &*I;
+  unsigned SecondLastOpc = SecondLastInst->getOpcode();
+
+  // If AllowModify is true and the block ends with two or more unconditional
+  // branches, delete all but the first unconditional branch.
+  if (AllowModify && isUncondBranchOpcode(LastOpc)) {
+    while (isUncondBranchOpcode(SecondLastOpc)) {
+      LastInst->eraseFromParent();
+      LastInst = SecondLastInst;
+      LastOpc = LastInst->getOpcode();
+      if (I == MBB.begin() || !isUnpredicatedTerminator(*--I)) {
+        // Return now the only terminator is an unconditional branch.
+        TBB = LastInst->getOperand(0).getMBB();
+        return false;
+      }
+      SecondLastInst = &*I;
+      SecondLastOpc = SecondLastInst->getOpcode();
+    }
+  }
+
+  // If there are three terminators, we don't know what sort of block this is.
+  if (SecondLastInst && I != MBB.begin() && isUnpredicatedTerminator(*--I))
+    return true;
+
+  // If the block ends with a B and a Bcc, handle it.
+  if (isCondBranchOpcode(SecondLastOpc) && isUncondBranchOpcode(LastOpc)) {
+    parseCondBranch(SecondLastInst, TBB, Cond);
+    FBB = LastInst->getOperand(0).getMBB();
+    return false;
+  }
+
+  // If the block ends with two unconditional branches, handle it.  The second
+  // one is not executed.
+  if (isUncondBranchOpcode(SecondLastOpc) && isUncondBranchOpcode(LastOpc)) {
+    TBB = SecondLastInst->getOperand(0).getMBB();
+    return false;
+  }
+
+  // TODO ...likewise if it ends with an indirect branch followed by an unconditional
+  // branch.
+  // if (isIndirectBranchOpcode(SecondLastOpc) && isUncondBranchOpcode(LastOpc)) {
+  //   I = LastInst;
+  //   if (AllowModify)
+  //     I->eraseFromParent();
+  //   return true;
+  // }
+
+  // Otherwise, can't handle this.
+  return true;
+}
+
+unsigned VEInstrInfo::insertBranch(MachineBasicBlock &MBB,
+                                      MachineBasicBlock *TBB,
+                                      MachineBasicBlock *FBB,
+                                      ArrayRef<MachineOperand> Cond,
+                                      const DebugLoc &DL,
+                                      int *BytesAdded) const {
+  assert(TBB && "insertBranch must not be told to insert a fallthrough");
+  assert((Cond.size() == 3 || Cond.size() == 0) &&
+         "VE branch conditions should have three component!");
+  assert(!BytesAdded && "code size not handled");
+  if (Cond.empty()) {
+    // Uncondition branch
+    assert(!FBB && "Unconditional branch with multiple successors!");
+    BuildMI(&MBB, DL, get(VE::BCRLa))
+        .addMBB(TBB);
+    return 1;
+  }
+
+  // Conditional branch
+  //   (BCRir CC sy sz addr)
+  assert(Cond[0].isImm() && Cond[2].isReg() && "not implemented");
+
+  unsigned opc[2];
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  MachineFunction *MF = MBB.getParent();
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+  unsigned Reg = Cond[2].getReg();
+  if (IsIntegerCC(Cond[0].getImm())) {
+    if (TRI->getRegSizeInBits(Reg, MRI) == 32) {
+      opc[0] = VE::BCRWir;
+      opc[1] = VE::BCRWrr;
+    } else {
+      opc[0] = VE::BCRLir;
+      opc[1] = VE::BCRLrr;
+    }
+  } else {
+    if (TRI->getRegSizeInBits(Reg, MRI) == 32) {
+      opc[0] = VE::BCRSir;
+      opc[1] = VE::BCRSrr;
+    } else {
+      opc[0] = VE::BCRDir;
+      opc[1] = VE::BCRDrr;
+    }
+  }
+  if (Cond[1].isImm()) {
+      BuildMI(&MBB, DL, get(opc[0]))
+          .add(Cond[0]) // condition code
+          .add(Cond[1]) // lhs
+          .add(Cond[2]) // rhs
+          .addMBB(TBB);
+  } else {
+      BuildMI(&MBB, DL, get(opc[1]))
+          .add(Cond[0])
+          .add(Cond[1])
+          .add(Cond[2])
+          .addMBB(TBB);
+  }
+
+  if (!FBB)
+    return 1;
+
+  BuildMI(&MBB, DL, get(VE::BCRLa))
+      .addMBB(FBB);
+  return 2;
+}
+
+unsigned VEInstrInfo::removeBranch(MachineBasicBlock &MBB,
+                                   int *BytesRemoved) const {
+  assert(!BytesRemoved && "code size not handled");
+
+  MachineBasicBlock::iterator I = MBB.end();
+  unsigned Count = 0;
+  while (I != MBB.begin()) {
+    --I;
+
+    if (I->isDebugValue())
+      continue;
+
+    if (!isUncondBranchOpcode(I->getOpcode()) &&
+        !isCondBranchOpcode(I->getOpcode()))
+      break; // Not a branch
+
+    I->eraseFromParent();
+    I = MBB.end();
+    ++Count;
+  }
+  return Count;
+}
+
+bool VEInstrInfo::reverseBranchCondition(
+    SmallVectorImpl<MachineOperand> &Cond) const {
+  VECC::CondCodes CC = static_cast<VECC::CondCodes>(Cond[0].getImm());
+  Cond[0].setImm(GetOppositeBranchCondition(CC));
+  return false;
+}
+
 static bool IsAliasOfSX(Register Reg) {
   return VE::I8RegClass.contains(Reg) || VE::I16RegClass.contains(Reg) ||
          VE::I32RegClass.contains(Reg) || VE::I64RegClass.contains(Reg) ||
