@@ -86,7 +86,9 @@ STATISTIC(UnknownTripCount, "Loop has unknown trip count");
 STATISTIC(UncomputableTripCount, "SCEV cannot compute trip count of loop");
 STATISTIC(NonEqualTripCount, "Loop trip counts are not the same");
 STATISTIC(NonAdjacent, "Loops are not adjacent");
-STATISTIC(NonEmptyPreheader, "Loop has a non-empty preheader");
+STATISTIC(
+    NonEmptyPreheader,
+    "Loop has a non-empty preheader with instructions that cannot be moved");
 STATISTIC(FusionNotBeneficial, "Fusion is not beneficial");
 STATISTIC(NonIdenticalGuards, "Candidates have different guards");
 STATISTIC(NonEmptyExitBlock, "Candidate has a non-empty exit block");
@@ -738,19 +740,21 @@ private:
             continue;
           }
 
-          // The following three checks look for empty blocks in FC0 and FC1. If
-          // any of these blocks are non-empty, we do not fuse. This is done
-          // because we currently do not have the safety checks to determine if
-          // it is safe to move the blocks past other blocks in the loop. Once
-          // these checks are added, these conditions can be relaxed.
-          if (!isEmptyPreheader(*FC1)) {
-            LLVM_DEBUG(dbgs() << "Fusion candidate does not have empty "
-                                 "preheader. Not fusing.\n");
+          if (!isSafeToMoveBefore(*FC1->Preheader,
+                                  *FC0->Preheader->getTerminator(), DT, PDT,
+                                  DI)) {
+            LLVM_DEBUG(dbgs() << "Fusion candidate contains unsafe "
+                                 "instructions in preheader. Not fusing.\n");
             reportLoopFusion<OptimizationRemarkMissed>(*FC0, *FC1,
                                                        NonEmptyPreheader);
             continue;
           }
 
+          // The following two checks look for empty blocks in FC0 and FC1. If
+          // any of these blocks are non-empty, we do not fuse. This is done
+          // because we currently do not have the safety checks to determine if
+          // it is safe to move the blocks past other blocks in the loop. Once
+          // these checks are added, these conditions can be relaxed.
           if (FC0->GuardBranch && !isEmptyExitBlock(*FC0)) {
             LLVM_DEBUG(dbgs() << "Fusion candidate does not have empty exit "
                                  "block. Not fusing.\n");
@@ -1165,6 +1169,10 @@ private:
 
     LLVM_DEBUG(dbgs() << "Fusion Candidate 0: \n"; FC0.dump();
                dbgs() << "Fusion Candidate 1: \n"; FC1.dump(););
+
+    // Move instructions from the preheader of FC1 to the end of the preheader
+    // of FC0.
+    moveInstructionsToTheEnd(*FC1.Preheader, *FC0.Preheader, DT, PDT, DI);
 
     // Fusing guarded loops is handled slightly differently than non-guarded
     // loops and has been broken out into a separate method instead of trying to

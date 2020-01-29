@@ -63,3 +63,59 @@ bb15:                               ; preds = %bb9
 bb12:                                        ; preds = %bb15, %bb14
   ret void
 }
+
+; Test that `%add` is moved in for.first.preheader, and the two loops for.first
+; and for.second are fused.
+
+; CHECK: void @moveinsts_preheader
+; CHECK-LABEL: for.first.guard:
+; CHECK: br i1 %cmp.guard, label %for.first.preheader, label %for.end
+; CHECK-LABEL: for.first.preheader:
+; CHECK-NEXT:  %add = add nsw i32 %x, 1
+; CHECK-NEXT:  br label %for.first
+; CHECK-LABEL: for.first:
+; CHECK:   br i1 %cmp.j, label %for.first, label %for.second.exit
+; CHECK-LABEL: for.second.exit:
+; CHECK-NEXT:   br label %for.end
+; CHECK-LABEL: for.end:
+; CHECK-NEXT:   ret void
+define void @moveinsts_preheader(i32* noalias %A, i32* noalias %B, i64 %N, i32 %x) {
+for.first.guard:
+  %cmp.guard = icmp slt i64 0, %N
+  br i1 %cmp.guard, label %for.first.preheader, label %for.second.guard
+
+for.first.preheader:
+  br label %for.first
+
+for.first:
+  %i = phi i64 [ %inc.i, %for.first ], [ 0, %for.first.preheader ]
+  %Ai = getelementptr inbounds i32, i32* %A, i64 %i
+  store i32 0, i32* %Ai, align 4
+  %inc.i = add nsw i64 %i, 1
+  %cmp.i = icmp slt i64 %inc.i, %N
+  br i1 %cmp.i, label %for.first, label %for.first.exit
+
+for.first.exit:
+  br label %for.second.guard
+
+for.second.guard:
+  br i1 %cmp.guard, label %for.second.preheader, label %for.end
+
+for.second.preheader:
+  %add = add nsw i32 %x, 1
+  br label %for.second
+
+for.second:
+  %j = phi i64 [ %inc.j, %for.second ], [ 0, %for.second.preheader ]
+  %Bj = getelementptr inbounds i32, i32* %B, i64 %j
+  store i32 0, i32* %Bj, align 4
+  %inc.j = add nsw i64 %j, 1
+  %cmp.j = icmp slt i64 %inc.j, %N
+  br i1 %cmp.j, label %for.second, label %for.second.exit
+
+for.second.exit:
+  br label %for.end
+
+for.end:
+  ret void
+}
