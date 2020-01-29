@@ -44,7 +44,7 @@ std::unique_ptr<ASTUnit> buildASTFromCode(const Twine &Code) {
 }
 
 ExprMatcher declRefTo(StringRef Name) {
-  return declRefExpr(to(namedDecl(hasName(std::string(Name)))));
+  return declRefExpr(to(namedDecl(hasName(Name))));
 }
 
 StmtMatcher withEnclosingCompound(ExprMatcher Matcher) {

@@ -108,11 +108,11 @@ void TimeSubtractionCheck::registerMatchers(MatchFinder *Finder) {
     // a 'Duration'. If we know the result is a 'Duration', we can then infer
     // that the second operand must be a 'Time'.
     auto CallMatcher =
-        callExpr(callee(functionDecl(
-                     hasName(std::string(getDurationFactoryForScale(*Scale))))),
-                 hasArgument(0, binaryOperator(hasOperatorName("-"),
-                                               hasLHS(TimeInverseMatcher))
-                                    .bind("binop")))
+        callExpr(
+            callee(functionDecl(hasName(getDurationFactoryForScale(*Scale)))),
+            hasArgument(0, binaryOperator(hasOperatorName("-"),
+                                          hasLHS(TimeInverseMatcher))
+                               .bind("binop")))
             .bind("outer_call");
     Finder->addMatcher(CallMatcher, this);
 
@@ -160,8 +160,8 @@ void TimeSubtractionCheck::check(const MatchFinder::MatchResult &Result) {
     // latter case (addressed first), we also need to worry about parenthesis.
     const auto *MaybeCallArg = selectFirst<const CallExpr>(
         "arg", match(expr(hasAncestor(
-                         callExpr(callee(functionDecl(hasName(std::string(
-                                      getDurationFactoryForScale(*Scale))))))
+                         callExpr(callee(functionDecl(hasName(
+                                      getDurationFactoryForScale(*Scale)))))
                              .bind("arg"))),
                      *BinOp, *Result.Context));
     if (MaybeCallArg && MaybeCallArg->getArg(0)->IgnoreImpCasts() == BinOp &&

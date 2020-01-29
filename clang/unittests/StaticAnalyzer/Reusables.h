@@ -34,7 +34,7 @@ const T *findNode(const Decl *Where, MatcherT What) {
 template <typename T>
 const T *findDeclByName(const Decl *Where, StringRef Name) {
   using namespace ast_matchers;
-  return findNode<T>(Where, namedDecl(hasName(std::string(Name))));
+  return findNode<T>(Where, namedDecl(hasName(Name)));
 }
 
 // A re-usable consumer that constructs ExprEngine out of CompilerInvocation.
