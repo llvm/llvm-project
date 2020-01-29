@@ -23,7 +23,7 @@ typedef const char *(*clangd_xpc_get_bundle_identifier_t)(void);
 using namespace llvm;
 using namespace clang;
 
-std::string getLibraryPath() {
+static std::string getLibraryPath() {
   Dl_info info;
   if (dladdr((void *)(uintptr_t)getLibraryPath, &info) == 0)
     llvm_unreachable("Call to dladdr() failed");
