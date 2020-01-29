@@ -32,7 +32,7 @@ std::string getLibraryPath() {
       llvm::sys::path::parent_path(info.dli_fname));
   llvm::sys::path::append(LibClangPath, "lib", "ClangdXPC.framework",
                           "ClangdXPC");
-  return LibClangPath.str();
+  return std::string(LibClangPath.str());
 }
 
 static void dumpXPCObject(xpc_object_t Object, llvm::raw_ostream &OS) {

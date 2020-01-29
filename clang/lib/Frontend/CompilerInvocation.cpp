@@ -2096,7 +2096,7 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       << "ARC migration" << "ObjC migration";
   }
 
-  Opts.IndexStorePath = Args.getLastArgValue(OPT_index_store_path);
+  Opts.IndexStorePath = std::string(Args.getLastArgValue(OPT_index_store_path));
   Opts.IndexIgnoreSystemSymbols = Args.hasArg(OPT_index_ignore_system_symbols);
   Opts.IndexRecordCodegenName = Args.hasArg(OPT_index_record_codegen_name);
 

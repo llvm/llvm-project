@@ -271,7 +271,7 @@ IndexRecordWriter::beginRecord(StringRef Filename, hash_code RecordHash,
   }
 
   // Write the record header.
-  auto *State = new RecordState(RecordPath.str());
+  auto *State = new RecordState(std::string(RecordPath.str()));
   Record = State;
   llvm::BitstreamWriter &Stream = State->Stream;
   Stream.Emit('I', 8);

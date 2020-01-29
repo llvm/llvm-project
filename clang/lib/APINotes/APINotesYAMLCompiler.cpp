@@ -674,7 +674,7 @@ namespace {
       outInfo.Unavailable = (in.Mode == APIAvailability::None);
       outInfo.UnavailableInSwift = (in.Mode == APIAvailability::NonSwift);
       if (outInfo.Unavailable || outInfo.UnavailableInSwift) {
-        outInfo.UnavailableMsg = in.Msg;
+        outInfo.UnavailableMsg = std::string(in.Msg);
       } else {
         if (!in.Msg.empty()) {
           emitError("availability message for available API '" +
@@ -690,7 +690,7 @@ namespace {
         if (p.Nullability)
           pi.setNullabilityAudited(*p.Nullability);
         pi.setNoEscape(p.NoEscape);
-        pi.setType(p.Type);
+        pi.setType(std::string(p.Type));
         pi.setRetainCountConvention(p.RetainCountConvention);
         while (outInfo.Params.size() <= p.Position) {
           outInfo.Params.push_back(ParamInfo());
@@ -733,7 +733,7 @@ namespace {
                        StringRef apiName) {
       convertAvailability(common.Availability, info, apiName);
       info.setSwiftPrivate(common.SwiftPrivate);
-      info.SwiftName = common.SwiftName;
+      info.SwiftName = std::string(common.SwiftName);
       return false;
     }
     
@@ -781,7 +781,7 @@ namespace {
         emitError("'FactoryAsInit' is no longer valid; "
                   "use 'SwiftName' instead");
       }
-      mInfo.ResultType = meth.ResultType;
+      mInfo.ResultType = std::string(meth.ResultType);
 
       // Translate parameter information.
       convertParams(meth.Params, mInfo);
@@ -857,12 +857,12 @@ namespace {
         ObjCPropertyInfo pInfo;
         convertAvailability(prop.Availability, pInfo, prop.Name);
         pInfo.setSwiftPrivate(prop.SwiftPrivate);
-        pInfo.SwiftName = prop.SwiftName;
+        pInfo.SwiftName = std::string(prop.SwiftName);
         if (prop.Nullability)
           pInfo.setNullabilityAudited(*prop.Nullability);
         if (prop.SwiftImportAsAccessors)
           pInfo.setSwiftImportAsAccessors(*prop.SwiftImportAsAccessors);
-        pInfo.setType(prop.Type);
+        pInfo.setType(std::string(prop.Type));
         if (prop.Kind) {
           Writer->addObjCProperty(clID, prop.Name,
                                   *prop.Kind == MethodKind::Instance, pInfo,
@@ -914,10 +914,10 @@ namespace {
         GlobalVariableInfo info;
         convertAvailability(global.Availability, info, global.Name);
         info.setSwiftPrivate(global.SwiftPrivate);
-        info.SwiftName = global.SwiftName;
+        info.SwiftName = std::string(global.SwiftName);
         if (global.Nullability)
           info.setNullabilityAudited(*global.Nullability);
-        info.setType(global.Type);
+        info.setType(std::string(global.Type));
         Writer->addGlobalVariable(global.Name, info, swiftVersion);
       }
 
@@ -934,12 +934,12 @@ namespace {
         GlobalFunctionInfo info;
         convertAvailability(function.Availability, info, function.Name);
         info.setSwiftPrivate(function.SwiftPrivate);
-        info.SwiftName = function.SwiftName;
+        info.SwiftName = std::string(function.SwiftName);
         convertParams(function.Params, info);
         convertNullability(function.Nullability,
                            function.NullabilityOfRet,
                            info, function.Name);
-        info.ResultType = function.ResultType;
+        info.ResultType = std::string(function.ResultType);
         info.setRetainCountConvention(function.RetainCountConvention);
         Writer->addGlobalFunction(function.Name, info, swiftVersion);
       }
@@ -957,7 +957,7 @@ namespace {
         EnumConstantInfo info;
         convertAvailability(enumConstant.Availability, info, enumConstant.Name);
         info.setSwiftPrivate(enumConstant.SwiftPrivate);
-        info.SwiftName = enumConstant.SwiftName;
+        info.SwiftName = std::string(enumConstant.SwiftName);
         Writer->addEnumConstant(enumConstant.Name, info, swiftVersion);
       }
 

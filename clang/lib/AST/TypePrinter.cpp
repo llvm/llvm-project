@@ -1772,7 +1772,7 @@ std::string PointerAuthQualifier::getAsString(const PrintingPolicy &P) const {
   SmallString<64> Buf;
   llvm::raw_svector_ostream StrOS(Buf);
   print(StrOS, P);
-  return StrOS.str();
+  return std::string(StrOS.str());
 }
 
 bool PointerAuthQualifier::isEmptyWhenPrinted(const PrintingPolicy &P) const {

@@ -375,7 +375,7 @@ public:
   void setSourceManager(SourceManager *SourceMgr) {
     this->SourceMgr = SourceMgr;
   }
-  void setSysrootPath(StringRef sysroot) { SysrootPath = sysroot; }
+  void setSysrootPath(StringRef sysroot) { SysrootPath = std::string(sysroot); }
 
   void visitFileDependencies(
       const CompilerInstance &CI,
@@ -572,7 +572,7 @@ static std::string getClangVersion() {
   size_t DashOffset = BuildNumber.find('-');
   if (BuildNumber.startswith("clang") && DashOffset != StringRef::npos) {
     BuildNumber = BuildNumber.substr(DashOffset + 1);
-    return BuildNumber;
+    return std::string(BuildNumber);
   }
   // Fallback to the generic version.
   return CLANG_VERSION_STRING;
@@ -617,7 +617,7 @@ void IndexRecordActionBase::finish(CompilerInstance &CI) {
 
   std::string OutputFile = CI.getFrontendOpts().OutputFile;
   if (OutputFile.empty()) {
-    OutputFile = CI.getFrontendOpts().Inputs[0].getFile();
+    OutputFile = std::string(CI.getFrontendOpts().Inputs[0].getFile());
     OutputFile += ".o";
   }
 

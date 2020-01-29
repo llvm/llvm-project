@@ -193,7 +193,7 @@ void IndexingContext::setSysrootPath(StringRef path) {
   // treated as system one.
   if (path == "/")
     path = StringRef();
-  SysrootPath = path;
+  SysrootPath = std::string(path);
 }
 
 bool IndexingContext::isSystemFile(FileID FID) {
