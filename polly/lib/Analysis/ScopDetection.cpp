@@ -696,6 +696,8 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
       return false;
     case FMRB_DoesNotAccessMemory:
     case FMRB_OnlyReadsMemory:
+    case FMRB_OnlyReadsInaccessibleMem:
+    case FMRB_OnlyReadsInaccessibleOrArgMem:
       // Implicitly disable delinearization since we have an unknown
       // accesses with an unknown access function.
       Context.HasUnknownAccess = true;
@@ -705,6 +707,7 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
       return true;
     case FMRB_OnlyReadsArgumentPointees:
     case FMRB_OnlyAccessesArgumentPointees:
+    case FMRB_OnlyWritesArgumentPointees:
       for (const auto &Arg : CI.arg_operands()) {
         if (!Arg->getType()->isPointerTy())
           continue;
@@ -728,7 +731,9 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
       // pointer into the alias set.
       Context.AST.addUnknown(&CI);
       return true;
-    case FMRB_DoesNotReadMemory:
+    case FMRB_OnlyWritesMemory:
+    case FMRB_OnlyWritesInaccessibleMem:
+    case FMRB_OnlyWritesInaccessibleOrArgMem:
     case FMRB_OnlyAccessesInaccessibleMem:
     case FMRB_OnlyAccessesInaccessibleOrArgMem:
       return false;
