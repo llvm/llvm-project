@@ -1946,7 +1946,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
 
       if (SuperClass) {
         std::pair<llvm::Constant*, int> v{classStruct, 1};
-        EarlyInitList.emplace_back(SuperClass->getName(), std::move(v));
+        EarlyInitList.emplace_back(std::string(SuperClass->getName()),
+                                   std::move(v));
       }
 
     }

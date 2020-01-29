@@ -2269,7 +2269,7 @@ bool arcmt::getFileRemappingsFromFileList(
       continue;
     }
 
-    remap.emplace_back(I->first->getName(), TempFile);
+    remap.emplace_back(std::string(I->first->getName()), TempFile);
   }
 
   return hasErrorOccurred;
