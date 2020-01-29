@@ -931,7 +931,7 @@ public:
   uint64_t getScratchRsrcWords23() const;
 
   bool isLowLatencyInstruction(const MachineInstr &MI) const;
-  bool isHighLatencyInstruction(const MachineInstr &MI) const;
+  bool isHighLatencyDef(int Opc) const override;
 
   /// Return the descriptor of the target-specific machine instruction
   /// that corresponds to the specified pseudo or native opcode.
