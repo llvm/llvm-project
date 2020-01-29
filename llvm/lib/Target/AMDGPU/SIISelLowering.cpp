@@ -4411,6 +4411,14 @@ bool SITargetLowering::shouldEmitPCReloc(const GlobalValue *GV) const {
   return !shouldEmitFixup(GV) && !shouldEmitGOTReloc(GV);
 }
 
+bool SITargetLowering::shouldUseLDSConstAddress(const GlobalValue *GV) const {
+  if (!GV->hasExternalLinkage())
+    return true;
+
+  const auto OS = getTargetMachine().getTargetTriple().getOS();
+  return OS == Triple::AMDHSA || OS == Triple::AMDPAL;
+}
+
 /// This transforms the control flow intrinsics to get the branch destination as
 /// last parameter, also switches branch target with BR if the need arise
 SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND,
@@ -5046,9 +5054,7 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
   GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);
   const GlobalValue *GV = GSD->getGlobal();
   if ((GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
-       (!GV->hasExternalLinkage() ||
-        getTargetMachine().getTargetTriple().getOS() == Triple::AMDHSA ||
-        getTargetMachine().getTargetTriple().getOS() == Triple::AMDPAL)) ||
+       shouldUseLDSConstAddress(GV)) ||
       GSD->getAddressSpace() == AMDGPUAS::REGION_ADDRESS ||
       GSD->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
     return AMDGPUTargetLowering::LowerGlobalAddress(MFI, Op, DAG);

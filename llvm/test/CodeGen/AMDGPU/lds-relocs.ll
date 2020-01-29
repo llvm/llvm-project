@@ -47,10 +47,8 @@ main_body:
   %gep0 = getelementptr [0 x i32], [0 x i32] addrspace(3)* @lds.external, i32 0, i32 %arg1
   %tmp = load i32, i32 addrspace(3)* %gep0
 
-  %mask = call i64 @llvm.amdgcn.icmp.i64.i32(i32 %tmp, i32 0, i32 0)
-  %mask.32 = trunc i64 %mask to i32
   %gep1 = getelementptr [8 x i32], [8 x i32] addrspace(3)* @lds.defined, i32 0, i32 %wave
-  store i32 %mask.32, i32 addrspace(3)* %gep1
+  store i32 123, i32 addrspace(3)* %gep1
 
   %r = bitcast i32 %tmp to float
   ret float %r
