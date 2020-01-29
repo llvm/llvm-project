@@ -174,7 +174,8 @@ public:
     return DiagLevelAndFormatString(
         static_cast<DiagnosticIDs::Level>(
             DiagEngine->getDiagnosticLevel(DiagnosticID, Loc)),
-        DiagEngine->getDiagnosticIDs()->getDescription(DiagnosticID));
+        std::string(
+            DiagEngine->getDiagnosticIDs()->getDescription(DiagnosticID)));
   }
 
 private:
