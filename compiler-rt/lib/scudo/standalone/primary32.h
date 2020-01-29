@@ -74,7 +74,8 @@ public:
       Sci->RandState = getRandomU32(&Seed);
       // See comment in the 64-bit primary about releasing smaller size classes.
       Sci->CanRelease = (ReleaseToOsInterval >= 0) &&
-                        (getSizeByClassId(I) >= (PageSize / 64));
+                        (I != SizeClassMap::BatchClassId) &&
+                        (getSizeByClassId(I) >= (PageSize / 32));
     }
     ReleaseToOsIntervalMs = ReleaseToOsInterval;
   }
