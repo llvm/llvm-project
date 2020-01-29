@@ -10,6 +10,7 @@
  .syntax unified
 
  .weak target
+ .type target, %function
 
  .text
  .global _start
