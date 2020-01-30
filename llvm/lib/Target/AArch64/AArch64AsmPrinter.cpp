@@ -1000,6 +1000,26 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   switch (MI->getOpcode()) {
   default:
     break;
+  case AArch64::HINT: {
+    // CurrentPatchableFunctionEntrySym can be CurrentFnBegin only for
+    // -fpatchable-function-entry=N,0. The entry MBB is guaranteed to be
+    // non-empty. If MI is the initial BTI, place the
+    // __patchable_function_entries label after BTI.
+    if (CurrentPatchableFunctionEntrySym &&
+        CurrentPatchableFunctionEntrySym == CurrentFnBegin &&
+        MI == &MF->front().front()) {
+      int64_t Imm = MI->getOperand(0).getImm();
+      if ((Imm & 32) && (Imm & 6)) {
+        MCInst Inst;
+        MCInstLowering.Lower(MI, Inst);
+        EmitToStreamer(*OutStreamer, Inst);
+        CurrentPatchableFunctionEntrySym = createTempSymbol("patch");
+        OutStreamer->EmitLabel(CurrentPatchableFunctionEntrySym);
+        return;
+      }
+    }
+    break;
+  }
     case AArch64::MOVMCSym: {
       Register DestReg = MI->getOperand(0).getReg();
       const MachineOperand &MO_Sym = MI->getOperand(1);

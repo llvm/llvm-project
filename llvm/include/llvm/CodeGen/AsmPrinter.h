@@ -135,7 +135,6 @@ public:
   MapVector<const MCSymbol *, GOTEquivUsePair> GlobalGOTEquivs;
 
 private:
-  MCSymbol *CurrentFnBegin = nullptr;
   MCSymbol *CurrentFnEnd = nullptr;
   MCSymbol *CurExceptionSym = nullptr;
 
@@ -148,6 +147,8 @@ private:
   static char ID;
 
 protected:
+  MCSymbol *CurrentFnBegin = nullptr;
+
   /// Protected struct HandlerInfo and Handlers permit target extended
   /// AsmPrinter adds their own handlers.
   struct HandlerInfo {
