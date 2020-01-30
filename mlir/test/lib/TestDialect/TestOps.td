@@ -1062,4 +1062,64 @@ def AsmDialectInterfaceOp : TEST_Op<"asm_dialect_interface_op"> {
   let results = (outs AnyType);
 }
 
+//===----------------------------------------------------------------------===//
+// Test Op Asm Format
+//===----------------------------------------------------------------------===//
+
+def FormatLiteralOp : TEST_Op<"format_literal_op"> {
+  let assemblyFormat = [{
+    `keyword_$.` `->` `:` `,` `=` `<` `>` `(` `)` `[` `]` attr-dict
+  }];
+}
+
+// Test that we elide attributes that are within the syntax.
+def FormatAttrOp : TEST_Op<"format_attr_op"> {
+  let arguments = (ins I64Attr:$attr);
+  let assemblyFormat = "$attr attr-dict";
+}
+
+// Test that we don't need to provide types in the format if they are buildable.
+def FormatBuildableTypeOp : TEST_Op<"format_buildable_type_op"> {
+  let arguments = (ins I64:$buildable);
+  let results = (outs I64:$buildable_res);
+  let assemblyFormat = "$buildable attr-dict";
+}
+
+// Test various mixings of result type formatting.
+class FormatResultBase<string name, string fmt> : TEST_Op<name> {
+  let results = (outs I64:$buildable_res, AnyMemRef:$result);
+  let assemblyFormat = fmt;
+}
+def FormatResultAOp : FormatResultBase<"format_result_a_op", [{
+  type($result) attr-dict
+}]>;
+def FormatResultBOp : FormatResultBase<"format_result_b_op", [{
+  type(results) attr-dict
+}]>;
+def FormatResultCOp : FormatResultBase<"format_result_c_op", [{
+  functional-type($buildable_res, $result) attr-dict
+}]>;
+
+// Test various mixings of operand type formatting.
+class FormatOperandBase<string name, string fmt> : TEST_Op<name> {
+  let arguments = (ins I64:$buildable, AnyMemRef:$operand);
+  let assemblyFormat = fmt;
+}
+
+def FormatOperandAOp : FormatOperandBase<"format_operand_a_op", [{
+  operands `:` type(operands) attr-dict
+}]>;
+def FormatOperandBOp : FormatOperandBase<"format_operand_b_op", [{
+  operands `:` type($operand) attr-dict
+}]>;
+def FormatOperandCOp : FormatOperandBase<"format_operand_c_op", [{
+  $buildable `,` $operand `:` type(operands) attr-dict
+}]>;
+def FormatOperandDOp : FormatOperandBase<"format_operand_d_op", [{
+  $buildable `,` $operand `:` type($operand) attr-dict
+}]>;
+def FormatOperandEOp : FormatOperandBase<"format_operand_e_op", [{
+  $buildable `,` $operand `:` type($buildable) `,` type($operand) attr-dict
+}]>;
+
 #endif // TEST_OPS
