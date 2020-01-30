@@ -165,8 +165,9 @@ static void emitSymToStrFnForIntEnum(const Record &enumDef, raw_ostream &os) {
   os << "  switch (val) {\n";
   for (const auto &enumerant : enumerants) {
     auto symbol = enumerant.getSymbol();
+    auto str = enumerant.getStr();
     os << formatv("    case {0}::{1}: return \"{2}\";\n", enumName,
-                  makeIdentifier(symbol), symbol);
+                  makeIdentifier(symbol), str);
   }
   os << "  }\n";
   os << "  return \"\";\n";
@@ -219,7 +220,8 @@ static void emitStrToSymFnForIntEnum(const Record &enumDef, raw_ostream &os) {
                 enumName);
   for (const auto &enumerant : enumerants) {
     auto symbol = enumerant.getSymbol();
-    os << formatv("      .Case(\"{1}\", {0}::{2})\n", enumName, symbol,
+    auto str = enumerant.getStr();
+    os << formatv("      .Case(\"{1}\", {0}::{2})\n", enumName, str,
                   makeIdentifier(symbol));
   }
   os << "      .Default(llvm::None);\n";

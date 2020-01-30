@@ -94,3 +94,21 @@ TEST(EnumsGenTest, GeneratedOperator) {
   EXPECT_FALSE(bitEnumContains(BitEnumWithNone::Bit1 & BitEnumWithNone::Bit3,
                                BitEnumWithNone::Bit1));
 }
+
+TEST(EnumsGenTest, GeneratedSymbolToCustomStringFn) {
+  EXPECT_EQ(stringifyPrettyIntEnum(PrettyIntEnum::Case1), "case_one");
+  EXPECT_EQ(stringifyPrettyIntEnum(PrettyIntEnum::Case2), "case_two");
+}
+
+TEST(EnumsGenTest, GeneratedCustomStringToSymbolFn) {
+  auto one = symbolizePrettyIntEnum("case_one");
+  EXPECT_TRUE(one);
+  EXPECT_EQ(*one, PrettyIntEnum::Case1);
+
+  auto two = symbolizePrettyIntEnum("case_two");
+  EXPECT_TRUE(two);
+  EXPECT_EQ(*two, PrettyIntEnum::Case2);
+
+  auto none = symbolizePrettyIntEnum("Case1");
+  EXPECT_FALSE(none);
+}
