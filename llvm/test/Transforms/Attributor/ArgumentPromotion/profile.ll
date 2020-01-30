@@ -8,7 +8,8 @@ define void @caller() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@caller()
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32
 ; CHECK-NEXT:    store i32 42, i32* [[X]], align 4
-; CHECK-NEXT:    call void @promote_i32_ptr(i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[X]]), !prof !0
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[X]], align 1
+; CHECK-NEXT:    call void @promote_i32_ptr(i32 [[TMP1]]), !prof !0
 ; CHECK-NEXT:    ret void
 ;
   %x = alloca i32
@@ -19,8 +20,10 @@ define void @caller() #0 {
 
 define internal void @promote_i32_ptr(i32* %xp) {
 ; CHECK-LABEL: define {{[^@]+}}@promote_i32_ptr
-; CHECK-SAME: (i32* noalias nocapture nonnull readonly align 4 dereferenceable(4) [[XP:%.*]])
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[XP]], align 4
+; CHECK-SAME: (i32 [[TMP0:%.*]])
+; CHECK-NEXT:    [[XP_PRIV:%.*]] = alloca i32
+; CHECK-NEXT:    store i32 [[TMP0]], i32* [[XP_PRIV]]
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[XP_PRIV]], align 4
 ; CHECK-NEXT:    call void @use_i32(i32 [[X]])
 ; CHECK-NEXT:    ret void
 ;

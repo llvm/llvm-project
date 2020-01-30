@@ -40,7 +40,7 @@ entry:
   ret i32 %add
 }
 
-; CHECK: define internal i32 @noalias_args_argmem_ro(i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) %A, i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) %B)
+; CHECK: define internal i32 @noalias_args_argmem_ro(i32 %0, i32 %1)
 define internal i32 @noalias_args_argmem_ro(i32* %A, i32* %B) #1 {
   %t0 = load i32, i32* %A, align 4
   %t1 = load i32, i32* %B, align 4
