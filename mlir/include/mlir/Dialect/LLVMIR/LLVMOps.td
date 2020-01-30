@@ -269,8 +269,9 @@ def LLVM_AllocaOp :
 def LLVM_GEPOp : LLVM_OneResultOp<"getelementptr", [NoSideEffect]>,
                  Arguments<(ins LLVM_Type:$base, Variadic<LLVM_Type>:$indices)>,
                  LLVM_Builder<"$res = builder.CreateGEP($base, $indices);"> {
-  let parser = [{ return parseGEPOp(parser, result); }];
-  let printer = [{ printGEPOp(p, *this); }];
+  let assemblyFormat = [{
+    $base `[` $indices `]` attr-dict `:` functional-type(operands, results)
+  }];
 }
 def LLVM_LoadOp : LLVM_OneResultOp<"load">, Arguments<(ins LLVM_Type:$addr)>,
                   LLVM_Builder<"$res = builder.CreateLoad($addr);"> {
@@ -541,8 +542,7 @@ def LLVM_AddressOfOp
     GlobalOp getGlobal();
   }];
 
-  let printer = "printAddressOfOp(p, *this);";
-  let parser = "return parseAddressOfOp(parser, result);";
+  let assemblyFormat = "$global_name attr-dict `:` type($res)";
   let verifier = "return ::verify(*this);";
 }
 
@@ -659,23 +659,20 @@ def LLVM_NullOp
     : LLVM_OneResultOp<"mlir.null", [NoSideEffect]>,
       LLVM_Builder<"$res = llvm::ConstantPointerNull::get("
                    "    cast<llvm::PointerType>($_resultType));"> {
-  let parser = [{ return parseNullOp(parser, result); }];
-  let printer = [{ printNullOp(p, *this); }];
+  let assemblyFormat = "attr-dict `:` type($res)";
   let verifier = [{ return ::verify(*this); }];
 }
 
 def LLVM_UndefOp : LLVM_OneResultOp<"mlir.undef", [NoSideEffect]>,
                    LLVM_Builder<"$res = llvm::UndefValue::get($_resultType);"> {
-  let parser = [{ return parseUndefOp(parser, result); }];
-  let printer = [{ printUndefOp(p, *this); }];
+  let assemblyFormat = "attr-dict `:` type($res)";
 }
 def LLVM_ConstantOp
     : LLVM_OneResultOp<"mlir.constant", [NoSideEffect]>,
       Arguments<(ins AnyAttr:$value)>,
       LLVM_Builder<"$res = getLLVMConstant($_resultType, $value, $_location);">
 {
-  let parser = [{ return parseConstantOp(parser, result); }];
-  let printer = [{ printConstantOp(p, *this); }];
+  let assemblyFormat = "`(` $value `)` attr-dict `:` type($res)";
 }
 
 // Operations that correspond to LLVM intrinsics. With MLIR operation set being

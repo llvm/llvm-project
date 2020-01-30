@@ -63,28 +63,28 @@ func @alloca_nonpositive_alignment(%size : !llvm.i64) {
 // -----
 
 func @gep_missing_input_result_type(%pos : !llvm.i64, %base : !llvm<"float*">) {
-  // expected-error@+1 {{expected trailing function type with at least one argument and one result}}
+  // expected-error@+1 {{2 operands present, but expected 0}}
   llvm.getelementptr %base[%pos] : () -> ()
 }
 
 // -----
 
 func @gep_missing_input_type(%pos : !llvm.i64, %base : !llvm<"float*">) {
-  // expected-error@+1 {{expected trailing function type with at least one argument and one result}}
+  // expected-error@+1 {{2 operands present, but expected 0}}
   llvm.getelementptr %base[%pos] : () -> (!llvm<"float*">)
 }
 
 // -----
 
 func @gep_missing_result_type(%pos : !llvm.i64, %base : !llvm<"float*">) {
-  // expected-error@+1 {{expected trailing function type with at least one argument and one result}}
+  // expected-error@+1 {{op requires one result}}
   llvm.getelementptr %base[%pos] : (!llvm<"float *">, !llvm.i64) -> ()
 }
 
 // -----
 
 func @gep_non_function_type(%pos : !llvm.i64, %base : !llvm<"float*">) {
-  // expected-error@+1 {{expected trailing function type with at least one argument and one result}}
+  // expected-error@+1 {{invalid kind of type specified}}
   llvm.getelementptr %base[%pos] : !llvm<"float*">
 }
 
