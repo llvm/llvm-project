@@ -1100,7 +1100,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                 [LLVMMatchType<0>,
                  LLVMSubdivide2VectorType<0>,
                  LLVMSubdivide2VectorType<0>,
-                 llvm_i64_ty],
+                 llvm_i32_ty],
                 [IntrNoMem, ImmArg<3>]>;
 
   // NOTE: There is no relationship between these intrinsics beyond an attempt
@@ -1791,13 +1791,17 @@ def int_aarch64_sve_sqshrunt  : SVE2_2VectorArg_Imm_Narrowing_Intrinsic;
 def int_aarch64_sve_sqrshrunb : SVE2_1VectorArg_Imm_Narrowing_Intrinsic;
 def int_aarch64_sve_sqrshrunt : SVE2_2VectorArg_Imm_Narrowing_Intrinsic;
 
-def int_aarch64_sve_smlalb    : SVE2_3VectorArg_Indexed_Intrinsic;
-def int_aarch64_sve_smlalt    : SVE2_3VectorArg_Indexed_Intrinsic;
-def int_aarch64_sve_umlalb    : SVE2_3VectorArg_Indexed_Intrinsic;
-def int_aarch64_sve_umlalt    : SVE2_3VectorArg_Indexed_Intrinsic;
-def int_aarch64_sve_smlslb    : SVE2_3VectorArg_Indexed_Intrinsic;
-def int_aarch64_sve_smlslt    : SVE2_3VectorArg_Indexed_Intrinsic;
-def int_aarch64_sve_umlslb    : SVE2_3VectorArg_Indexed_Intrinsic;
-def int_aarch64_sve_umlslt    : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_smlalb_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_smlalt_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_umlalb_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_umlalt_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_smlslb_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_smlslt_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_umlslb_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_umlslt_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_sqdmlalb_lane : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_sqdmlalt_lane : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_sqdmlslb_lane : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_sqdmlslt_lane : SVE2_3VectorArg_Indexed_Intrinsic;
 
 }
