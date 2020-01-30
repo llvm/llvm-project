@@ -97,7 +97,7 @@ public:
     std::vector<std::pair<Path, bool>> Result;
     std::lock_guard<std::mutex> Lock(Mutex);
     for (const auto &It : LastDiagsHadError)
-      Result.emplace_back(It.first(), It.second);
+      Result.emplace_back(std::string(It.first()), It.second);
     return Result;
   }
 
