@@ -2015,7 +2015,7 @@ Instruction *InstCombiner::matchBSwap(BinaryOperator &Or) {
   LastInst->removeFromParent();
 
   for (auto *Inst : Insts)
-    Worklist.Add(Inst);
+    Worklist.push(Inst);
   return LastInst;
 }
 
@@ -3109,7 +3109,7 @@ Instruction *InstCombiner::visitXor(BinaryOperator &I) {
       if (match(Op0, m_Or(m_Value(X), m_APInt(C))) &&
           MaskedValueIsZero(X, *C, 0, &I)) {
         Constant *NewC = ConstantInt::get(I.getType(), *C ^ *RHSC);
-        Worklist.Add(cast<Instruction>(Op0));
+        Worklist.push(cast<Instruction>(Op0));
         I.setOperand(0, X);
         I.setOperand(1, NewC);
         return &I;

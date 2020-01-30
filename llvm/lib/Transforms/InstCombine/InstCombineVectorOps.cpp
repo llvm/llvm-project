@@ -400,7 +400,7 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
       // If the inserted and extracted elements are constants, they must not
       // be the same value, extract from the pre-inserted value instead.
       if (isa<Constant>(IE->getOperand(2)) && IndexC) {
-        Worklist.AddValue(SrcVec);
+        Worklist.pushValue(SrcVec);
         EI.setOperand(0, IE->getOperand(0));
         return &EI;
       }
