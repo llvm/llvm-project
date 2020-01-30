@@ -998,7 +998,11 @@ static Register getTestBitReg(Register Reg, MachineRegisterInfo &MRI) {
     Register NextReg;
 
     // (tbz (any_ext x), b) -> (tbz x, b) if we don't use the extended bits.
-    if (Opc == TargetOpcode::G_ANYEXT || Opc == TargetOpcode::G_ZEXT)
+    //
+    // (tbz (trunc x), b) -> (tbz x, b) is always safe, because the bit number
+    // on the truncated x is the same as the bit number on x.
+    if (Opc == TargetOpcode::G_ANYEXT || Opc == TargetOpcode::G_ZEXT ||
+        Opc == TargetOpcode::G_TRUNC)
       NextReg = MI->getOperand(1).getReg();
 
     // Did we find something worth folding?
