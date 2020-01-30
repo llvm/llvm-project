@@ -154,7 +154,7 @@ static Optional<std::string> findFile(StringRef path1, const Twine &path2) {
   SmallString<128> s;
   path::append(s, path1, path2);
   if (fs::exists(s))
-    return s.str().str();
+    return std::string(s);
   return None;
 }
 
