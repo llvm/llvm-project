@@ -332,6 +332,15 @@ struct IRPosition {
     return *cast<CallBase>(AnchorVal)->getArgOperand(getArgNo());
   }
 
+  /// Return the type this abstract attribute is associated with.
+  Type *getAssociatedType() const {
+    assert(KindOrArgNo != IRP_INVALID &&
+           "Invalid position does not have an associated type!");
+    if (getPositionKind() == IRPosition::IRP_RETURNED)
+      return getAssociatedFunction()->getReturnType();
+    return getAssociatedValue().getType();
+  }
+
   /// Return the argument number of the associated value if it is an argument or
   /// call site argument, otherwise a negative value.
   int getArgNo() const { return KindOrArgNo; }
@@ -2447,8 +2456,7 @@ struct AAValueConstantRange : public IntegerRangeState,
                               public AbstractAttribute,
                               public IRPosition {
   AAValueConstantRange(const IRPosition &IRP)
-      : IntegerRangeState(
-            IRP.getAssociatedValue().getType()->getIntegerBitWidth()),
+      : IntegerRangeState(IRP.getAssociatedType()->getIntegerBitWidth()),
         IRPosition(IRP) {}
 
   /// Return an IR position, see struct IRPosition.

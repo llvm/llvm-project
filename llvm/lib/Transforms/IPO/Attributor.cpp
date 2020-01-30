@@ -740,13 +740,13 @@ struct AAComposeTwoGenericDeduction
 
 /// Helper class for generic deduction: return value -> returned position.
 template <typename AAType, typename Base,
-          typename StateType = typename AAType::StateType>
+          typename StateType = typename Base::StateType>
 struct AAReturnedFromReturnedValues : public Base {
   AAReturnedFromReturnedValues(const IRPosition &IRP) : Base(IRP) {}
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
-    StateType S;
+    StateType S(StateType::getBestState(this->getState()));
     clampReturnedValueStates<AAType, StateType>(A, *this, S);
     // TODO: If we know we visited all returned values, thus no are assumed
     // dead, we can take the known information from the state T.
@@ -817,7 +817,7 @@ struct AAArgumentFromCallSiteArguments : public Base {
 
 /// Helper class for generic replication: function returned -> cs returned.
 template <typename AAType, typename Base,
-          typename StateType = typename AAType::StateType>
+          typename StateType = typename Base::StateType>
 struct AACallSiteReturnedFromReturned : public Base {
   AACallSiteReturnedFromReturned(const IRPosition &IRP) : Base(IRP) {}
 
@@ -837,7 +837,7 @@ struct AACallSiteReturnedFromReturned : public Base {
     IRPosition FnPos = IRPosition::returned(*AssociatedFunction);
     const AAType &AA = A.getAAFor<AAType>(*this, FnPos);
     return clampStateAndIndicateChange(
-        S, static_cast<const typename AAType::StateType &>(AA.getState()));
+        S, static_cast<const StateType &>(AA.getState()));
   }
 };
 
@@ -3440,11 +3440,10 @@ struct AADereferenceableFloating
 
 /// Dereferenceable attribute for a return value.
 struct AADereferenceableReturned final
-    : AAReturnedFromReturnedValues<AADereferenceable, AADereferenceableImpl,
-                                   DerefState> {
+    : AAReturnedFromReturnedValues<AADereferenceable, AADereferenceableImpl> {
   AADereferenceableReturned(const IRPosition &IRP)
-      : AAReturnedFromReturnedValues<AADereferenceable, AADereferenceableImpl,
-                                     DerefState>(IRP) {}
+      : AAReturnedFromReturnedValues<AADereferenceable, AADereferenceableImpl>(
+            IRP) {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -3455,9 +3454,9 @@ struct AADereferenceableReturned final
 /// Dereferenceable attribute for an argument
 struct AADereferenceableArgument final
     : AAArgumentFromCallSiteArgumentsAndMustBeExecutedContext<
-          AADereferenceable, AADereferenceableImpl, DerefState> {
+          AADereferenceable, AADereferenceableImpl> {
   using Base = AAArgumentFromCallSiteArgumentsAndMustBeExecutedContext<
-      AADereferenceable, AADereferenceableImpl, DerefState>;
+      AADereferenceable, AADereferenceableImpl>;
   AADereferenceableArgument(const IRPosition &IRP) : Base(IRP) {}
 
   /// See AbstractAttribute::trackStatistics()
@@ -5463,23 +5462,15 @@ struct AAValueConstantRangeArgument final
   }
 };
 
-struct AAValueConstantRangeReturned : AAValueConstantRangeImpl {
-  AAValueConstantRangeReturned(const IRPosition &IRP)
-      : AAValueConstantRangeImpl(IRP) {}
+struct AAValueConstantRangeReturned
+    : AAReturnedFromReturnedValues<AAValueConstantRange,
+                                   AAValueConstantRangeImpl> {
+  using Base = AAReturnedFromReturnedValues<AAValueConstantRange,
+                                            AAValueConstantRangeImpl>;
+  AAValueConstantRangeReturned(const IRPosition &IRP) : Base(IRP) {}
 
-  /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A) override {
-    // TODO: Use AAReturnedFromReturnedValues
-
-    // TODO: If we know we visited all returned values, thus no are assumed
-    // dead, we can take the known information from the state T.
-
-    IntegerRangeState S(getBitWidth());
-
-    clampReturnedValueStates<AAValueConstantRange, IntegerRangeState>(A, *this,
-                                                                      S);
-    return clampStateAndIndicateChange<StateType>(this->getState(), S);
-  }
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {}
 
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override {
@@ -5668,9 +5659,12 @@ struct AAValueConstantRangeCallSite : AAValueConstantRangeFunction {
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(value_range) }
 };
 
-struct AAValueConstantRangeCallSiteReturned : AAValueConstantRangeReturned {
+struct AAValueConstantRangeCallSiteReturned
+    : AACallSiteReturnedFromReturned<AAValueConstantRange,
+                                     AAValueConstantRangeImpl> {
   AAValueConstantRangeCallSiteReturned(const IRPosition &IRP)
-      : AAValueConstantRangeReturned(IRP) {}
+      : AACallSiteReturnedFromReturned<AAValueConstantRange,
+                                       AAValueConstantRangeImpl>(IRP) {}
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
@@ -5679,7 +5673,7 @@ struct AAValueConstantRangeCallSiteReturned : AAValueConstantRangeReturned {
       if (auto *RangeMD = CI->getMetadata(LLVMContext::MD_range))
         intersectKnown(getConstantRangeFromMetadata(*RangeMD));
 
-    AAValueConstantRangeReturned::initialize(A);
+    AAValueConstantRangeImpl::initialize(A);
   }
 
   /// See AbstractAttribute::trackStatistics()
