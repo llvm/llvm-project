@@ -1642,7 +1642,7 @@ bool Scanner::scanBlockScalar(bool IsLiteral) {
   Token T;
   T.Kind = Token::TK_BlockScalar;
   T.Range = StringRef(Start, Current - Start);
-  T.Value = Str.str().str();
+  T.Value = std::string(Str);
   TokenQueue.push_back(T);
   return true;
 }

@@ -1096,7 +1096,7 @@ TEST_F(InMemoryFileSystemTest, GetRealPath) {
     SmallString<16> Output;
     auto EC = FS.getRealPath(P, Output);
     EXPECT_FALSE(EC);
-    return Output.str().str();
+    return std::string(Output);
   };
 
   FS.setCurrentWorkingDirectory("a");
