@@ -408,6 +408,8 @@ def SPV_UndefOp : SPV_Op<"undef", []> {
 
   let hasOpcode = 0;
   let autogenSerialization = 0;
+
+  let assemblyFormat = "attr-dict `:` type($result)";
 }
 
 // -----
