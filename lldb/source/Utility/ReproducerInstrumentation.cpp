@@ -42,6 +42,8 @@ template <> const char *Deserializer::Deserialize<const char *>() {
 
 template <> const char **Deserializer::Deserialize<const char **>() {
   size_t size = Deserialize<size_t>();
+  if (size == 0)
+    return nullptr;
   const char **r =
       reinterpret_cast<const char **>(calloc(size + 1, sizeof(char *)));
   for (size_t i = 0; i < size; ++i)
