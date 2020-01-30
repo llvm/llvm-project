@@ -530,10 +530,10 @@ public:
 
     // Create an intermediate temporary file to save object after the first
     // llvm-objcopy run.
-    Expected<SmallString<128u>> IntermediateObjOrErr = TempFiles.Create(None);
+    Expected<StringRef> IntermediateObjOrErr = TempFiles.Create(None);
     if (!IntermediateObjOrErr)
       return IntermediateObjOrErr.takeError();
-    const SmallString<128u> &IntermediateObj = *IntermediateObjOrErr;
+    StringRef IntermediateObj = *IntermediateObjOrErr;
 
     // Compose llvm-objcopy command line for add target objects' sections.
     BumpPtrAllocator Alloc;
