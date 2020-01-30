@@ -31,47 +31,43 @@ namespace {
 class ContainerModeling
   : public Checker<check::PostCall, check::LiveSymbols, check::DeadSymbols> {
 
-  void handleBegin(CheckerContext &C, const Expr *CE, const SVal &RetVal,
-                   const SVal &Cont) const;
-  void handleEnd(CheckerContext &C, const Expr *CE, const SVal &RetVal,
-                 const SVal &Cont) const;
-  void handleAssignment(CheckerContext &C, const SVal &Cont,
-                        const Expr *CE = nullptr,
-                        const SVal &OldCont = UndefinedVal()) const;
-  void handleAssign(CheckerContext &C, const SVal &Cont) const;
-  void handleClear(CheckerContext &C, const SVal &Cont) const;
-  void handlePushBack(CheckerContext &C, const SVal &Cont) const;
-  void handlePopBack(CheckerContext &C, const SVal &Cont) const;
-  void handlePushFront(CheckerContext &C, const SVal &Cont) const;
-  void handlePopFront(CheckerContext &C, const SVal &Cont) const;
-  void handleInsert(CheckerContext &C, const SVal &Cont,
-                    const SVal &Iter) const;
-  void handleErase(CheckerContext &C, const SVal &Cont, const SVal &Iter) const;
-  void handleErase(CheckerContext &C, const SVal &Cont, const SVal &Iter1,
-                   const SVal &Iter2) const;
-  void handleEraseAfter(CheckerContext &C, const SVal &Cont,
-                        const SVal &Iter) const;
-  void handleEraseAfter(CheckerContext &C, const SVal &Cont, const SVal &Iter1,
-                        const SVal &Iter2) const;
+  void handleBegin(CheckerContext &C, const Expr *CE, SVal RetVal,
+                   SVal Cont) const;
+  void handleEnd(CheckerContext &C, const Expr *CE, SVal RetVal,
+                 SVal Cont) const;
+  void handleAssignment(CheckerContext &C, SVal Cont, const Expr *CE = nullptr,
+                        SVal OldCont = UndefinedVal()) const;
+  void handleAssign(CheckerContext &C, SVal Cont, const Expr *ContE) const;
+  void handleClear(CheckerContext &C, SVal Cont, const Expr *ContE) const;
+  void handlePushBack(CheckerContext &C, SVal Cont, const Expr *ContE) const;
+  void handlePopBack(CheckerContext &C, SVal Cont, const Expr *ContE) const;
+  void handlePushFront(CheckerContext &C, SVal Cont, const Expr *ContE) const;
+  void handlePopFront(CheckerContext &C, SVal Cont, const Expr *ContE) const;
+  void handleInsert(CheckerContext &C, SVal Cont, SVal Iter) const;
+  void handleErase(CheckerContext &C, SVal Cont, SVal Iter) const;
+  void handleErase(CheckerContext &C, SVal Cont, SVal Iter1, SVal Iter2) const;
+  void handleEraseAfter(CheckerContext &C, SVal Cont, SVal Iter) const;
+  void handleEraseAfter(CheckerContext &C, SVal Cont, SVal Iter1,
+                        SVal Iter2) const;
+  const NoteTag *getChangeTag(CheckerContext &C, StringRef Text,
+                              const MemRegion *ContReg,
+                              const Expr *ContE) const;
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
 
 public:
-  ContainerModeling() {}
+  ContainerModeling() = default;
 
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void checkLiveSymbols(ProgramStateRef State, SymbolReaper &SR) const;
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;
 
-  typedef void (ContainerModeling::*NoItParamFn)(CheckerContext &,
-                                                 const SVal &) const;
-  typedef void (ContainerModeling::*OneItParamFn)(CheckerContext &,
-                                                  const SVal &,
-                                                  const SVal &) const;
-  typedef void (ContainerModeling::*TwoItParamFn)(CheckerContext &,
-                                                  const SVal &,
-                                                  const SVal &,
-                                                  const SVal &) const;
+  using NoItParamFn = void (ContainerModeling::*)(CheckerContext &, SVal,
+                                                  const Expr *) const;
+  using OneItParamFn = void (ContainerModeling::*)(CheckerContext &, SVal,
+                                                   SVal) const;
+  using TwoItParamFn = void (ContainerModeling::*)(CheckerContext &, SVal, SVal,
+                                                   SVal) const;
 
   CallDescriptionMap<NoItParamFn> NoIterParamFunctions = {
     {{0, "clear", 0},
@@ -184,7 +180,8 @@ void ContainerModeling::checkPostCall(const CallEvent &Call,
     if (const auto *InstCall = dyn_cast<CXXInstanceCall>(&Call)) {
       const NoItParamFn *Handler0 = NoIterParamFunctions.lookup(Call);
       if (Handler0) {
-        (this->**Handler0)(C, InstCall->getCXXThisVal());
+        (this->**Handler0)(C, InstCall->getCXXThisVal(),
+                           InstCall->getCXXThisExpr());
         return;
       }
 
@@ -259,7 +256,7 @@ void ContainerModeling::checkDeadSymbols(SymbolReaper &SR,
 }
 
 void ContainerModeling::handleBegin(CheckerContext &C, const Expr *CE,
-                                   const SVal &RetVal, const SVal &Cont) const {
+                                   SVal RetVal, SVal Cont) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -281,7 +278,7 @@ void ContainerModeling::handleBegin(CheckerContext &C, const Expr *CE,
 }
 
 void ContainerModeling::handleEnd(CheckerContext &C, const Expr *CE,
-                                 const SVal &RetVal, const SVal &Cont) const {
+                                 SVal RetVal, SVal Cont) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -302,9 +299,8 @@ void ContainerModeling::handleEnd(CheckerContext &C, const Expr *CE,
   C.addTransition(State);
 }
 
-void ContainerModeling::handleAssignment(CheckerContext &C, const SVal &Cont,
-                                         const Expr *CE,
-                                         const SVal &OldCont) const {
+void ContainerModeling::handleAssignment(CheckerContext &C, SVal Cont,
+                                         const Expr *CE, SVal OldCont) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -379,8 +375,8 @@ void ContainerModeling::handleAssignment(CheckerContext &C, const SVal &Cont,
   C.addTransition(State);
 }
 
-void ContainerModeling::handleAssign(CheckerContext &C,
-                                     const SVal &Cont) const {
+void ContainerModeling::handleAssign(CheckerContext &C, SVal Cont,
+                                     const Expr *ContE) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -393,7 +389,8 @@ void ContainerModeling::handleAssign(CheckerContext &C,
   C.addTransition(State);
 }
 
-void ContainerModeling::handleClear(CheckerContext &C, const SVal &Cont) const {
+void ContainerModeling::handleClear(CheckerContext &C, SVal Cont,
+                                    const Expr *ContE) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -415,12 +412,14 @@ void ContainerModeling::handleClear(CheckerContext &C, const SVal &Cont) const {
       }
     }
   }
+  const NoteTag *ChangeTag =
+    getChangeTag(C, "became empty", ContReg, ContE);
   State = invalidateAllIteratorPositions(State, ContReg);
-  C.addTransition(State);
+  C.addTransition(State, ChangeTag);
 }
 
-void ContainerModeling::handlePushBack(CheckerContext &C,
-                                      const SVal &Cont) const {
+void ContainerModeling::handlePushBack(CheckerContext &C, SVal Cont,
+                                       const Expr *ContE) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -452,13 +451,15 @@ void ContainerModeling::handlePushBack(CheckerContext &C,
                     nonloc::SymbolVal(EndSym),
                     nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
                     SymMgr.getType(EndSym)).getAsSymbol();
+    const NoteTag *ChangeTag =
+      getChangeTag(C, "extended to the back by 1 position", ContReg, ContE);
     State = setContainerData(State, ContReg, CData->newEnd(newEndSym));
+    C.addTransition(State, ChangeTag);
   }
-  C.addTransition(State);
 }
 
-void ContainerModeling::handlePopBack(CheckerContext &C,
-                                     const SVal &Cont) const {
+void ContainerModeling::handlePopBack(CheckerContext &C, SVal Cont,
+                                      const Expr *ContE) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -479,6 +480,8 @@ void ContainerModeling::handlePopBack(CheckerContext &C,
                     nonloc::SymbolVal(EndSym),
                     nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
                     SymMgr.getType(EndSym)).getAsSymbol();
+    const NoteTag *ChangeTag =
+      getChangeTag(C, "shrank from the back by 1 position", ContReg, ContE);
     // For vector-like and deque-like containers invalidate the last and the
     // past-end iterator positions. For list-like containers only invalidate
     // the last position
@@ -491,12 +494,12 @@ void ContainerModeling::handlePopBack(CheckerContext &C,
     }
     auto newEndSym = BackSym;
     State = setContainerData(State, ContReg, CData->newEnd(newEndSym));
-    C.addTransition(State);
+    C.addTransition(State, ChangeTag);
   }
 }
 
-void ContainerModeling::handlePushFront(CheckerContext &C,
-                                       const SVal &Cont) const {
+void ContainerModeling::handlePushFront(CheckerContext &C, SVal Cont,
+                                        const Expr *ContE) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -522,14 +525,16 @@ void ContainerModeling::handlePushFront(CheckerContext &C,
                       nonloc::SymbolVal(BeginSym),
                       nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
                       SymMgr.getType(BeginSym)).getAsSymbol();
+      const NoteTag *ChangeTag =
+        getChangeTag(C, "extended to the front by 1 position", ContReg, ContE);
       State = setContainerData(State, ContReg, CData->newBegin(newBeginSym));
-      C.addTransition(State);
+      C.addTransition(State, ChangeTag);
     }
   }
 }
 
-void ContainerModeling::handlePopFront(CheckerContext &C,
-                                      const SVal &Cont) const {
+void ContainerModeling::handlePopFront(CheckerContext &C, SVal Cont,
+                                       const Expr *ContE) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -557,13 +562,15 @@ void ContainerModeling::handlePopFront(CheckerContext &C,
                     nonloc::SymbolVal(BeginSym),
                     nonloc::ConcreteInt(BVF.getValue(llvm::APSInt::get(1))),
                     SymMgr.getType(BeginSym)).getAsSymbol();
+    const NoteTag *ChangeTag =
+      getChangeTag(C, "shrank from the front by 1 position", ContReg, ContE);
     State = setContainerData(State, ContReg, CData->newBegin(newBeginSym));
-    C.addTransition(State);
+    C.addTransition(State, ChangeTag);
   }
 }
 
-void ContainerModeling::handleInsert(CheckerContext &C, const SVal &Cont,
-                                     const SVal &Iter) const {
+void ContainerModeling::handleInsert(CheckerContext &C, SVal Cont,
+                                     SVal Iter) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -593,8 +600,8 @@ void ContainerModeling::handleInsert(CheckerContext &C, const SVal &Cont,
   }
 }
 
-void ContainerModeling::handleErase(CheckerContext &C, const SVal &Cont,
-                                    const SVal &Iter) const {
+void ContainerModeling::handleErase(CheckerContext &C, SVal Cont,
+                                    SVal Iter) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -627,9 +634,8 @@ void ContainerModeling::handleErase(CheckerContext &C, const SVal &Cont,
   C.addTransition(State);
 }
 
-void ContainerModeling::handleErase(CheckerContext &C, const SVal &Cont,
-                                    const SVal &Iter1,
-                                    const SVal &Iter2) const {
+void ContainerModeling::handleErase(CheckerContext &C, SVal Cont, SVal Iter1,
+                                    SVal Iter2) const {
   const auto *ContReg = Cont.getAsRegion();
   if (!ContReg)
     return;
@@ -664,8 +670,8 @@ void ContainerModeling::handleErase(CheckerContext &C, const SVal &Cont,
   C.addTransition(State);
 }
 
-void ContainerModeling::handleEraseAfter(CheckerContext &C, const SVal &Cont,
-                                        const SVal &Iter) const {
+void ContainerModeling::handleEraseAfter(CheckerContext &C, SVal Cont,
+                                        SVal Iter) const {
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Iter);
   if (!Pos)
@@ -685,9 +691,8 @@ void ContainerModeling::handleEraseAfter(CheckerContext &C, const SVal &Cont,
   C.addTransition(State);
 }
 
-void ContainerModeling::handleEraseAfter(CheckerContext &C, const SVal &Cont,
-                                         const SVal &Iter1,
-                                         const SVal &Iter2) const {
+void ContainerModeling::handleEraseAfter(CheckerContext &C, SVal Cont,
+                                         SVal Iter1, SVal Iter2) const {
   auto State = C.getState();
   const auto *Pos1 = getIteratorPosition(State, Iter1);
   const auto *Pos2 = getIteratorPosition(State, Iter2);
@@ -698,6 +703,30 @@ void ContainerModeling::handleEraseAfter(CheckerContext &C, const SVal &Cont,
   State = invalidateIteratorPositions(State, Pos1->getOffset(), BO_GT,
                                       Pos2->getOffset(), BO_LT);
   C.addTransition(State);
+}
+
+const NoteTag *ContainerModeling::getChangeTag(CheckerContext &C,
+                                               StringRef Text,
+                                               const MemRegion *ContReg,
+                                               const Expr *ContE) const {
+  StringRef Name;
+  // First try to get the name of the variable from the region
+  if (const auto *DR = dyn_cast<DeclRegion>(ContReg)) {
+    Name = DR->getDecl()->getName();
+  // If the region is not a `DeclRegion` then use the expression instead
+  } else if (const auto *DRE =
+             dyn_cast<DeclRefExpr>(ContE->IgnoreParenCasts())) {
+    Name = DRE->getDecl()->getName();
+  }
+
+  return C.getNoteTag(
+      [Text, Name, ContReg](PathSensitiveBugReport &BR) -> std::string {
+        SmallString<256> Msg;
+        llvm::raw_svector_ostream Out(Msg);
+        Out << "Container " << (!Name.empty() ? ("'" + Name.str() + "' ") : "" )
+            << Text;
+        return std::string(Out.str());
+      });
 }
 
 void ContainerModeling::printState(raw_ostream &Out, ProgramStateRef State,
