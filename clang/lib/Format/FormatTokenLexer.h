@@ -79,6 +79,8 @@ private:
   // nested template parts by balancing curly braces.
   void handleTemplateStrings();
 
+  void handleCSharpVerbatimAndInterpolatedStrings();
+
   void tryParsePythonComment();
 
   bool tryMerge_TMacro();
