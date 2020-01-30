@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import io
 import yaml
 # Try to use the C parser.
 try:
@@ -272,7 +273,7 @@ def get_remarks(input_file, filter_=None):
     all_remarks = dict()
     file_remarks = defaultdict(functools.partial(defaultdict, list))
 
-    with open(input_file) as f:
+    with io.open(input_file, encoding = 'utf-8') as f:
         docs = yaml.load_all(f, Loader=Loader)
 
         filter_e = None
