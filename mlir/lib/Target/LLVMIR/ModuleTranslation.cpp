@@ -307,6 +307,34 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
     return success(result->getType()->isVoidTy());
   }
 
+  if (auto invOp = dyn_cast<LLVM::InvokeOp>(opInst)) {
+    auto operands = lookupValues(opInst.getOperands());
+    ArrayRef<llvm::Value *> operandsRef(operands);
+    if (auto attr = opInst.getAttrOfType<FlatSymbolRefAttr>("callee"))
+      builder.CreateInvoke(functionMapping.lookup(attr.getValue()),
+                           blockMapping[invOp.getSuccessor(0)],
+                           blockMapping[invOp.getSuccessor(1)], operandsRef);
+    else
+      builder.CreateInvoke(
+          operandsRef.front(), blockMapping[invOp.getSuccessor(0)],
+          blockMapping[invOp.getSuccessor(1)], operandsRef.drop_front());
+    return success();
+  }
+
+  if (auto lpOp = dyn_cast<LLVM::LandingpadOp>(opInst)) {
+    llvm::Type *ty = lpOp.getType().dyn_cast<LLVMType>().getUnderlyingType();
+    llvm::LandingPadInst *lpi =
+        builder.CreateLandingPad(ty, lpOp.getNumOperands());
+
+    // Add clauses
+    for (auto operand : lookupValues(lpOp.getOperands())) {
+      // All operands should be constant - checked by verifier
+      if (auto constOperand = dyn_cast<llvm::Constant>(operand))
+        lpi->addClause(constOperand);
+    }
+    return success();
+  }
+
   // Emit branches.  We need to look up the remapped blocks and ignore the block
   // arguments that were transformed into PHI nodes.
   if (auto brOp = dyn_cast<LLVM::BrOp>(opInst)) {

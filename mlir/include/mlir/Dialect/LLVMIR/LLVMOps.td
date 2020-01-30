@@ -315,6 +315,41 @@ def LLVM_FPExtOp : LLVM_CastOp<"fpext", "CreateFPExt">;
 def LLVM_FPTruncOp : LLVM_CastOp<"fptrunc", "CreateFPTrunc">;
 
 // Call-related operations.
+def LLVM_InvokeOp : LLVM_Op<"invoke", [Terminator]>,
+                    Arguments<(ins OptionalAttr<FlatSymbolRefAttr>:$callee,
+                               Variadic<LLVM_Type>)>,
+                    Results<(outs Variadic<LLVM_Type>)> {
+  let builders = [OpBuilder<
+    "Builder *b, OperationState &result, ArrayRef<Type> tys, "
+    "FlatSymbolRefAttr callee, ValueRange ops, Block* normal, "
+    "ValueRange normalOps, Block* unwind, ValueRange unwindOps",
+    [{
+      result.addAttribute("callee", callee);
+      build(b, result, tys, ops, normal, normalOps, unwind, unwindOps);
+    }]>,
+    OpBuilder<
+    "Builder *b, OperationState &result, ArrayRef<Type> tys, "
+    "ValueRange ops, Block* normal, "
+    "ValueRange normalOps, Block* unwind, ValueRange unwindOps",
+    [{
+      result.addTypes(tys);
+      result.addOperands(ops);
+      result.addSuccessor(normal, normalOps);
+      result.addSuccessor(unwind, unwindOps);
+    }]>];
+  let verifier = [{ return ::verify(*this);  }];
+  let parser = [{ return parseInvokeOp(parser, result); }];
+  let printer = [{ printInvokeOp(p, *this); }];
+}
+
+def LLVM_LandingpadOp : LLVM_OneResultOp<"landingpad">,
+                        Arguments<(ins UnitAttr:$cleanup, 
+                                       Variadic<LLVM_Type>)> {
+  let verifier = [{ return ::verify(*this); }];
+  let parser = [{ return parseLandingpadOp(parser, result); }];
+  let printer = [{ printLandingpadOp(p, *this); }];
+}
+
 def LLVM_CallOp : LLVM_Op<"call">,
                   Arguments<(ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                              Variadic<LLVM_Type>)>,

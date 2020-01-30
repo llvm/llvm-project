@@ -76,7 +76,7 @@ private:
   /// `br` branches to `target`. Append the block arguments to attach to the
   /// generated branch op to `blockArguments`. These should be in the same order
   /// as the PHIs in `target`.
-  LogicalResult processBranchArgs(llvm::BranchInst *br,
+  LogicalResult processBranchArgs(llvm::Instruction *br,
                                   llvm::BasicBlock *target,
                                   SmallVectorImpl<Value> &blockArguments);
   /// Returns the standard type equivalent to be used in attributes for the
@@ -422,21 +422,26 @@ GlobalOp Importer::processGlobal(llvm::GlobalVariable *GV) {
 }
 
 Value Importer::processConstant(llvm::Constant *c) {
+  OpBuilder bEntry(currentEntryBlock, currentEntryBlock->begin());
   if (Attribute attr = getConstantAsAttr(c)) {
     // These constants can be represented as attributes.
     OpBuilder b(currentEntryBlock, currentEntryBlock->begin());
     LLVMType type = processType(c->getType());
     if (!type)
       return nullptr;
-    return instMap[c] = b.create<ConstantOp>(unknownLoc, type, attr);
+    return instMap[c] = bEntry.create<ConstantOp>(unknownLoc, type, attr);
   }
   if (auto *cn = dyn_cast<llvm::ConstantPointerNull>(c)) {
-    OpBuilder b(currentEntryBlock, currentEntryBlock->begin());
     LLVMType type = processType(cn->getType());
     if (!type)
       return nullptr;
-    return instMap[c] = b.create<NullOp>(unknownLoc, type);
+    return instMap[c] = bEntry.create<NullOp>(unknownLoc, type);
   }
+  if (auto *GV = dyn_cast<llvm::GlobalVariable>(c))
+    return bEntry.create<AddressOfOp>(UnknownLoc::get(context),
+                                      processGlobal(GV),
+                                      ArrayRef<NamedAttribute>());
+
   if (auto *ce = dyn_cast<llvm::ConstantExpr>(c)) {
     llvm::Instruction *i = ce->getAsInstruction();
     OpBuilder::InsertionGuard guard(b);
@@ -471,16 +476,6 @@ Value Importer::processValue(llvm::Value *value) {
     return unknownInstMap[value]->getResult(0);
   }
 
-  if (auto *GV = dyn_cast<llvm::GlobalVariable>(value)) {
-    auto global = processGlobal(GV);
-    if (!global)
-      return nullptr;
-    return b.create<AddressOfOp>(UnknownLoc::get(context), global,
-                                 ArrayRef<NamedAttribute>());
-  }
-
-  // Note, constant global variables are both GlobalVariables and Constants,
-  // so we handle GlobalVariables first above.
   if (auto *c = dyn_cast<llvm::Constant>(value))
     return processConstant(c);
 
@@ -570,7 +565,7 @@ static ICmpPredicate getICmpPredicate(llvm::CmpInst::Predicate p) {
 // `br` branches to `target`. Return the branch arguments to `br`, in the
 // same order of the PHIs in `target`.
 LogicalResult
-Importer::processBranchArgs(llvm::BranchInst *br, llvm::BasicBlock *target,
+Importer::processBranchArgs(llvm::Instruction *br, llvm::BasicBlock *target,
                             SmallVectorImpl<Value> &blockArguments) {
   for (auto inst = target->begin(); isa<llvm::PHINode>(inst); ++inst) {
     auto *PN = cast<llvm::PHINode>(&*inst);
@@ -716,6 +711,49 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
       op = b.create<CallOp>(loc, tys, ops, ArrayRef<NamedAttribute>());
     }
     if (!ci->getType()->isVoidTy())
+      v = op->getResult(0);
+    return success();
+  }
+  case llvm::Instruction::LandingPad: {
+    llvm::LandingPadInst *lpi = cast<llvm::LandingPadInst>(inst);
+    SmallVector<Value, 4> ops;
+
+    for (unsigned i = 0, ie = lpi->getNumClauses(); i < ie; i++)
+      ops.push_back(processConstant(lpi->getClause(i)));
+
+    b.create<LandingpadOp>(loc, processType(lpi->getType()), lpi->isCleanup(),
+                           ops);
+    return success();
+  }
+  case llvm::Instruction::Invoke: {
+    llvm::InvokeInst *ii = cast<llvm::InvokeInst>(inst);
+
+    SmallVector<Type, 2> tys;
+    if (!ii->getType()->isVoidTy())
+      tys.push_back(processType(inst->getType()));
+
+    SmallVector<Value, 4> ops;
+    ops.reserve(inst->getNumOperands() + 1);
+    for (auto &op : ii->arg_operands())
+      ops.push_back(processValue(op.get()));
+
+    SmallVector<Value, 4> normalArgs, unwindArgs;
+    processBranchArgs(ii, ii->getNormalDest(), normalArgs);
+    processBranchArgs(ii, ii->getUnwindDest(), unwindArgs);
+
+    Operation *op;
+    if (llvm::Function *callee = ii->getCalledFunction()) {
+      op = b.create<InvokeOp>(loc, tys, b.getSymbolRefAttr(callee->getName()),
+                              ops, blocks[ii->getNormalDest()], normalArgs,
+                              blocks[ii->getUnwindDest()], unwindArgs);
+    } else {
+      ops.insert(ops.begin(), processValue(ii->getCalledValue()));
+      op = b.create<InvokeOp>(loc, tys, ops, blocks[ii->getNormalDest()],
+                              normalArgs, blocks[ii->getUnwindDest()],
+                              unwindArgs);
+    }
+
+    if (!ii->getType()->isVoidTy())
       v = op->getResult(0);
     return success();
   }
