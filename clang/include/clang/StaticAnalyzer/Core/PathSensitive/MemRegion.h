@@ -112,7 +112,7 @@ public:
 
   virtual void Profile(llvm::FoldingSetNodeID& ID) const = 0;
 
-  virtual MemRegionManager* getMemRegionManager() const = 0;
+  virtual MemRegionManager &getMemRegionManager() const = 0;
 
   const MemSpaceRegion *getMemorySpace() const;
 
@@ -198,14 +198,13 @@ public:
 ///  for example, the set of global variables, the stack frame, etc.
 class MemSpaceRegion : public MemRegion {
 protected:
-  MemRegionManager *Mgr;
+  MemRegionManager &Mgr;
 
-  MemSpaceRegion(MemRegionManager *mgr, Kind k) : MemRegion(k), Mgr(mgr) {
+  MemSpaceRegion(MemRegionManager &mgr, Kind k) : MemRegion(k), Mgr(mgr) {
     assert(classof(this));
-    assert(mgr);
   }
 
-  MemRegionManager* getMemRegionManager() const override { return Mgr; }
+  MemRegionManager &getMemRegionManager() const override { return Mgr; }
 
 public:
   bool isBoundable() const override { return false; }
@@ -223,7 +222,7 @@ public:
 class CodeSpaceRegion : public MemSpaceRegion {
   friend class MemRegionManager;
 
-  CodeSpaceRegion(MemRegionManager *mgr)
+  CodeSpaceRegion(MemRegionManager &mgr)
       : MemSpaceRegion(mgr, CodeSpaceRegionKind) {}
 
 public:
@@ -238,7 +237,7 @@ class GlobalsSpaceRegion : public MemSpaceRegion {
   virtual void anchor();
 
 protected:
-  GlobalsSpaceRegion(MemRegionManager *mgr, Kind k) : MemSpaceRegion(mgr, k) {
+  GlobalsSpaceRegion(MemRegionManager &mgr, Kind k) : MemSpaceRegion(mgr, k) {
     assert(classof(this));
   }
 
@@ -259,7 +258,7 @@ class StaticGlobalSpaceRegion : public GlobalsSpaceRegion {
 
   const CodeTextRegion *CR;
 
-  StaticGlobalSpaceRegion(MemRegionManager *mgr, const CodeTextRegion *cr)
+  StaticGlobalSpaceRegion(MemRegionManager &mgr, const CodeTextRegion *cr)
       : GlobalsSpaceRegion(mgr, StaticGlobalSpaceRegionKind), CR(cr) {
     assert(cr);
   }
@@ -286,7 +285,7 @@ class NonStaticGlobalSpaceRegion : public GlobalsSpaceRegion {
   void anchor() override;
 
 protected:
-  NonStaticGlobalSpaceRegion(MemRegionManager *mgr, Kind k)
+  NonStaticGlobalSpaceRegion(MemRegionManager &mgr, Kind k)
       : GlobalsSpaceRegion(mgr, k) {
     assert(classof(this));
   }
@@ -304,7 +303,7 @@ public:
 class GlobalSystemSpaceRegion : public NonStaticGlobalSpaceRegion {
   friend class MemRegionManager;
 
-  GlobalSystemSpaceRegion(MemRegionManager *mgr)
+  GlobalSystemSpaceRegion(MemRegionManager &mgr)
       : NonStaticGlobalSpaceRegion(mgr, GlobalSystemSpaceRegionKind) {}
 
 public:
@@ -323,7 +322,7 @@ public:
 class GlobalImmutableSpaceRegion : public NonStaticGlobalSpaceRegion {
   friend class MemRegionManager;
 
-  GlobalImmutableSpaceRegion(MemRegionManager *mgr)
+  GlobalImmutableSpaceRegion(MemRegionManager &mgr)
       : NonStaticGlobalSpaceRegion(mgr, GlobalImmutableSpaceRegionKind) {}
 
 public:
@@ -340,7 +339,7 @@ public:
 class GlobalInternalSpaceRegion : public NonStaticGlobalSpaceRegion {
   friend class MemRegionManager;
 
-  GlobalInternalSpaceRegion(MemRegionManager *mgr)
+  GlobalInternalSpaceRegion(MemRegionManager &mgr)
       : NonStaticGlobalSpaceRegion(mgr, GlobalInternalSpaceRegionKind) {}
 
 public:
@@ -354,7 +353,7 @@ public:
 class HeapSpaceRegion : public MemSpaceRegion {
   friend class MemRegionManager;
 
-  HeapSpaceRegion(MemRegionManager *mgr)
+  HeapSpaceRegion(MemRegionManager &mgr)
       : MemSpaceRegion(mgr, HeapSpaceRegionKind) {}
 
 public:
@@ -368,7 +367,7 @@ public:
 class UnknownSpaceRegion : public MemSpaceRegion {
   friend class MemRegionManager;
 
-  UnknownSpaceRegion(MemRegionManager *mgr)
+  UnknownSpaceRegion(MemRegionManager &mgr)
       : MemSpaceRegion(mgr, UnknownSpaceRegionKind) {}
 
 public:
@@ -385,7 +384,7 @@ class StackSpaceRegion : public MemSpaceRegion {
   const StackFrameContext *SFC;
 
 protected:
-  StackSpaceRegion(MemRegionManager *mgr, Kind k, const StackFrameContext *sfc)
+  StackSpaceRegion(MemRegionManager &mgr, Kind k, const StackFrameContext *sfc)
       : MemSpaceRegion(mgr, k), SFC(sfc) {
     assert(classof(this));
     assert(sfc);
@@ -405,7 +404,7 @@ public:
 class StackLocalsSpaceRegion : public StackSpaceRegion {
   friend class MemRegionManager;
 
-  StackLocalsSpaceRegion(MemRegionManager *mgr, const StackFrameContext *sfc)
+  StackLocalsSpaceRegion(MemRegionManager &mgr, const StackFrameContext *sfc)
       : StackSpaceRegion(mgr, StackLocalsSpaceRegionKind, sfc) {}
 
 public:
@@ -420,7 +419,7 @@ class StackArgumentsSpaceRegion : public StackSpaceRegion {
 private:
   friend class MemRegionManager;
 
-  StackArgumentsSpaceRegion(MemRegionManager *mgr, const StackFrameContext *sfc)
+  StackArgumentsSpaceRegion(MemRegionManager &mgr, const StackFrameContext *sfc)
       : StackSpaceRegion(mgr, StackArgumentsSpaceRegionKind, sfc) {}
 
 public:
@@ -449,12 +448,7 @@ public:
     return superRegion;
   }
 
-  /// getExtent - Returns the size of the region in bytes.
-  virtual DefinedOrUnknownSVal getExtent(SValBuilder &svalBuilder) const {
-    return UnknownVal();
-  }
-
-  MemRegionManager* getMemRegionManager() const override;
+  MemRegionManager &getMemRegionManager() const override;
 
   bool isSubRegionOf(const MemRegion* R) const override;
 
@@ -490,8 +484,6 @@ public:
   const Expr *getExpr() const { return Ex; }
 
   bool isBoundable() const override { return true; }
-
-  DefinedOrUnknownSVal getExtent(SValBuilder &svalBuilder) const override;
 
   void Profile(llvm::FoldingSetNodeID& ID) const override;
 
@@ -551,8 +543,6 @@ public:
     QualType T = getValueType();
     return T.getTypePtrOrNull() ? T.getDesugaredType(Context) : T;
   }
-
-  DefinedOrUnknownSVal getExtent(SValBuilder &svalBuilder) const override;
 
   static bool classof(const MemRegion* R) {
     unsigned k = R->getKind();
@@ -782,8 +772,6 @@ public:
 
   bool isBoundable() const override { return true; }
 
-  DefinedOrUnknownSVal getExtent(SValBuilder &svalBuilder) const override;
-
   void Profile(llvm::FoldingSetNodeID& ID) const override;
 
   static void ProfileRegion(llvm::FoldingSetNodeID& ID,
@@ -816,8 +804,6 @@ public:
   const StringLiteral *getStringLiteral() const { return Str; }
 
   QualType getValueType() const override { return Str->getType(); }
-
-  DefinedOrUnknownSVal getExtent(SValBuilder &svalBuilder) const override;
 
   bool isBoundable() const override { return false; }
 
@@ -1020,8 +1006,6 @@ public:
     // FIXME: We can cache this if needed.
     return getDecl()->getType();
   }
-
-  DefinedOrUnknownSVal getExtent(SValBuilder &svalBuilder) const override;
 
   void dumpToStream(raw_ostream &os) const override;
 
@@ -1242,8 +1226,9 @@ const RegionTy* MemRegion::castAs() const {
 //===----------------------------------------------------------------------===//
 
 class MemRegionManager {
-  ASTContext &C;
+  ASTContext &Ctx;
   llvm::BumpPtrAllocator& A;
+
   llvm::FoldingSet<MemRegion> Regions;
 
   GlobalInternalSpaceRegion *InternalGlobals = nullptr;
@@ -1262,12 +1247,17 @@ class MemRegionManager {
   CodeSpaceRegion *code = nullptr;
 
 public:
-  MemRegionManager(ASTContext &c, llvm::BumpPtrAllocator &a) : C(c), A(a) {}
+  MemRegionManager(ASTContext &c, llvm::BumpPtrAllocator &a) : Ctx(c), A(a) {}
   ~MemRegionManager();
 
-  ASTContext &getContext() { return C; }
+  ASTContext &getContext() { return Ctx; }
 
   llvm::BumpPtrAllocator &getAllocator() { return A; }
+
+  /// \returns The static size in bytes of the region \p MR.
+  /// \note The region \p MR must be a 'SubRegion'.
+  DefinedOrUnknownSVal getStaticSize(const MemRegion *MR,
+                                     SValBuilder &SVB) const;
 
   /// getStackLocalsRegion - Retrieve the memory region associated with the
   ///  specified stack frame.
@@ -1434,7 +1424,7 @@ private:
 //===----------------------------------------------------------------------===//
 
 inline ASTContext &MemRegion::getContext() const {
-  return getMemRegionManager()->getContext();
+  return getMemRegionManager().getContext();
 }
 
 //===----------------------------------------------------------------------===//

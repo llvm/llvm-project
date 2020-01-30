@@ -57,6 +57,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
@@ -1402,15 +1403,16 @@ ProgramStateRef MallocChecker::addExtentSize(CheckerContext &C,
   CharUnits TypeSize = AstContext.getTypeSizeInChars(ElementType);
 
   if (ElementCount.getAs<NonLoc>()) {
-    DefinedOrUnknownSVal Extent = Region->getExtent(svalBuilder);
+    DefinedOrUnknownSVal DynSize = getDynamicSize(State, Region, svalBuilder);
+
     // size in Bytes = ElementCount*TypeSize
     SVal SizeInBytes = svalBuilder.evalBinOpNN(
         State, BO_Mul, ElementCount.castAs<NonLoc>(),
         svalBuilder.makeArrayIndex(TypeSize.getQuantity()),
         svalBuilder.getArrayIndexType());
-    DefinedOrUnknownSVal extentMatchesSize = svalBuilder.evalEQ(
-        State, Extent, SizeInBytes.castAs<DefinedOrUnknownSVal>());
-    State = State->assume(extentMatchesSize, true);
+    DefinedOrUnknownSVal DynSizeMatchesSize = svalBuilder.evalEQ(
+        State, DynSize, SizeInBytes.castAs<DefinedOrUnknownSVal>());
+    State = State->assume(DynSizeMatchesSize, true);
   }
   return State;
 }
@@ -1542,12 +1544,12 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
     return nullptr;
   if (Optional<DefinedOrUnknownSVal> DefinedSize =
           Size.getAs<DefinedOrUnknownSVal>()) {
-    SValBuilder &svalBuilder = C.getSValBuilder();
-    DefinedOrUnknownSVal Extent = R->getExtent(svalBuilder);
-    DefinedOrUnknownSVal extentMatchesSize =
-        svalBuilder.evalEQ(State, Extent, *DefinedSize);
+    DefinedOrUnknownSVal DynSize = getDynamicSize(State, R, svalBuilder);
 
-    State = State->assume(extentMatchesSize, true);
+    DefinedOrUnknownSVal DynSizeMatchesSize =
+        svalBuilder.evalEQ(State, DynSize, *DefinedSize);
+
+    State = State->assume(DynSizeMatchesSize, true);
     assert(State);
   }
 

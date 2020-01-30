@@ -142,7 +142,7 @@ bool SubRegion::isSubRegionOf(const MemRegion* R) const {
   return false;
 }
 
-MemRegionManager* SubRegion::getMemRegionManager() const {
+MemRegionManager &SubRegion::getMemRegionManager() const {
   const SubRegion* r = this;
   do {
     const MemRegion *superRegion = r->getSuperRegion();
@@ -157,56 +157,6 @@ MemRegionManager* SubRegion::getMemRegionManager() const {
 const StackFrameContext *VarRegion::getStackFrame() const {
   const auto *SSR = dyn_cast<StackSpaceRegion>(getMemorySpace());
   return SSR ? SSR->getStackFrame() : nullptr;
-}
-
-//===----------------------------------------------------------------------===//
-// Region extents.
-//===----------------------------------------------------------------------===//
-
-DefinedOrUnknownSVal TypedValueRegion::getExtent(SValBuilder &svalBuilder) const {
-  ASTContext &Ctx = svalBuilder.getContext();
-  QualType T = getDesugaredValueType(Ctx);
-
-  if (isa<VariableArrayType>(T))
-    return nonloc::SymbolVal(svalBuilder.getSymbolManager().getExtentSymbol(this));
-  if (T->isIncompleteType())
-    return UnknownVal();
-
-  CharUnits size = Ctx.getTypeSizeInChars(T);
-  QualType sizeTy = svalBuilder.getArrayIndexType();
-  return svalBuilder.makeIntVal(size.getQuantity(), sizeTy);
-}
-
-DefinedOrUnknownSVal FieldRegion::getExtent(SValBuilder &svalBuilder) const {
-  // Force callers to deal with bitfields explicitly.
-  if (getDecl()->isBitField())
-    return UnknownVal();
-
-  DefinedOrUnknownSVal Extent = DeclRegion::getExtent(svalBuilder);
-
-  // A zero-length array at the end of a struct often stands for dynamically-
-  // allocated extra memory.
-  if (Extent.isZeroConstant()) {
-    QualType T = getDesugaredValueType(svalBuilder.getContext());
-
-    if (isa<ConstantArrayType>(T))
-      return UnknownVal();
-  }
-
-  return Extent;
-}
-
-DefinedOrUnknownSVal AllocaRegion::getExtent(SValBuilder &svalBuilder) const {
-  return nonloc::SymbolVal(svalBuilder.getSymbolManager().getExtentSymbol(this));
-}
-
-DefinedOrUnknownSVal SymbolicRegion::getExtent(SValBuilder &svalBuilder) const {
-  return nonloc::SymbolVal(svalBuilder.getSymbolManager().getExtentSymbol(this));
-}
-
-DefinedOrUnknownSVal StringRegion::getExtent(SValBuilder &svalBuilder) const {
-  return svalBuilder.makeIntVal(getStringLiteral()->getByteLength()+1,
-                                svalBuilder.getArrayIndexType());
 }
 
 ObjCIvarRegion::ObjCIvarRegion(const ObjCIvarDecl *ivd, const SubRegion *sReg)
@@ -717,11 +667,78 @@ SourceRange MemRegion::sourceRange() const {
 // MemRegionManager methods.
 //===----------------------------------------------------------------------===//
 
+static DefinedOrUnknownSVal getTypeSize(QualType Ty, ASTContext &Ctx,
+                                          SValBuilder &SVB) {
+  CharUnits Size = Ctx.getTypeSizeInChars(Ty);
+  QualType SizeTy = SVB.getArrayIndexType();
+  return SVB.makeIntVal(Size.getQuantity(), SizeTy);
+}
+
+DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
+                                                     SValBuilder &SVB) const {
+  const auto *SR = cast<SubRegion>(MR);
+  SymbolManager &SymMgr = SVB.getSymbolManager();
+
+  switch (SR->getKind()) {
+  case MemRegion::AllocaRegionKind:
+  case MemRegion::SymbolicRegionKind:
+    return nonloc::SymbolVal(SymMgr.getExtentSymbol(SR));
+  case MemRegion::StringRegionKind:
+    return SVB.makeIntVal(
+        cast<StringRegion>(SR)->getStringLiteral()->getByteLength() + 1,
+        SVB.getArrayIndexType());
+  case MemRegion::CompoundLiteralRegionKind:
+  case MemRegion::CXXBaseObjectRegionKind:
+  case MemRegion::CXXDerivedObjectRegionKind:
+  case MemRegion::CXXTempObjectRegionKind:
+  case MemRegion::CXXThisRegionKind:
+  case MemRegion::ObjCIvarRegionKind:
+  case MemRegion::VarRegionKind:
+  case MemRegion::ElementRegionKind:
+  case MemRegion::ObjCStringRegionKind: {
+    QualType Ty = cast<TypedValueRegion>(SR)->getDesugaredValueType(Ctx);
+    if (isa<VariableArrayType>(Ty))
+      return nonloc::SymbolVal(SymMgr.getExtentSymbol(SR));
+
+    if (Ty->isIncompleteType())
+      return UnknownVal();
+
+    return getTypeSize(Ty, Ctx, SVB);
+  }
+  case MemRegion::FieldRegionKind: {
+    // Force callers to deal with bitfields explicitly.
+    if (cast<FieldRegion>(SR)->getDecl()->isBitField())
+      return UnknownVal();
+
+    QualType Ty = cast<TypedValueRegion>(SR)->getDesugaredValueType(Ctx);
+    DefinedOrUnknownSVal Size = getTypeSize(Ty, Ctx, SVB);
+
+    // A zero-length array at the end of a struct often stands for dynamically
+    // allocated extra memory.
+    if (Size.isZeroConstant()) {
+      if (isa<ConstantArrayType>(Ty))
+        return UnknownVal();
+    }
+
+    return Size;
+  }
+    // FIXME: The following are being used in 'SimpleSValBuilder' and in
+    // 'ArrayBoundChecker::checkLocation' because there is no symbol to
+    // represent the regions more appropriately.
+  case MemRegion::BlockDataRegionKind:
+  case MemRegion::BlockCodeRegionKind:
+  case MemRegion::FunctionCodeRegionKind:
+    return nonloc::SymbolVal(SymMgr.getExtentSymbol(SR));
+  default:
+    llvm_unreachable("Unhandled region");
+  }
+}
+
 template <typename REG>
 const REG *MemRegionManager::LazyAllocate(REG*& region) {
   if (!region) {
     region = A.Allocate<REG>();
-    new (region) REG(this);
+    new (region) REG(*this);
   }
 
   return region;
@@ -746,7 +763,7 @@ MemRegionManager::getStackLocalsRegion(const StackFrameContext *STC) {
     return R;
 
   R = A.Allocate<StackLocalsSpaceRegion>();
-  new (R) StackLocalsSpaceRegion(this, STC);
+  new (R) StackLocalsSpaceRegion(*this, STC);
   return R;
 }
 
@@ -759,7 +776,7 @@ MemRegionManager::getStackArgumentsRegion(const StackFrameContext *STC) {
     return R;
 
   R = A.Allocate<StackArgumentsSpaceRegion>();
-  new (R) StackArgumentsSpaceRegion(this, STC);
+  new (R) StackArgumentsSpaceRegion(*this, STC);
   return R;
 }
 
@@ -781,7 +798,7 @@ const GlobalsSpaceRegion
     return R;
 
   R = A.Allocate<StaticGlobalSpaceRegion>();
-  new (R) StaticGlobalSpaceRegion(this, CR);
+  new (R) StaticGlobalSpaceRegion(*this, CR);
   return R;
 }
 
@@ -850,7 +867,7 @@ const VarRegion* MemRegionManager::getVarRegion(const VarDecl *D,
   if (D->hasGlobalStorage() && !D->isStaticLocal()) {
 
     // First handle the globals defined in system headers.
-    if (C.getSourceManager().isInSystemHeader(D->getLocation())) {
+    if (Ctx.getSourceManager().isInSystemHeader(D->getLocation())) {
       // Whitelist the system globals which often DO GET modified, assume the
       // rest are immutable.
       if (D->getName().find("errno") != StringRef::npos)
@@ -914,7 +931,7 @@ const VarRegion* MemRegionManager::getVarRegion(const VarDecl *D,
           T = getContext().getBlockPointerType(T);
 
           const BlockCodeRegion *BTR =
-            getBlockCodeRegion(BD, C.getCanonicalType(T),
+            getBlockCodeRegion(BD, Ctx.getCanonicalType(T),
                                STC->getAnalysisDeclContext());
           sReg = getGlobalsRegion(MemRegion::StaticGlobalSpaceRegionKind,
                                   BTR);
@@ -1476,7 +1493,7 @@ RegionOffset MemRegion::getAsOffset() const {
 
 std::pair<const VarRegion *, const VarRegion *>
 BlockDataRegion::getCaptureRegions(const VarDecl *VD) {
-  MemRegionManager &MemMgr = *getMemRegionManager();
+  MemRegionManager &MemMgr = getMemRegionManager();
   const VarRegion *VR = nullptr;
   const VarRegion *OriginalVR = nullptr;
 
@@ -1511,7 +1528,7 @@ void BlockDataRegion::LazyInitializeReferencedVars() {
     return;
   }
 
-  MemRegionManager &MemMgr = *getMemRegionManager();
+  MemRegionManager &MemMgr = getMemRegionManager();
   llvm::BumpPtrAllocator &A = MemMgr.getAllocator();
   BumpVectorContext BC(A);
 

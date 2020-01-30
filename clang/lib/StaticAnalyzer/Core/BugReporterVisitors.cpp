@@ -358,7 +358,7 @@ class NoStoreFuncVisitor final : public BugReporterVisitor {
 
 public:
   NoStoreFuncVisitor(const SubRegion *R, bugreporter::TrackingKind TKind)
-      : RegionOfInterest(R), MmrMgr(*R->getMemRegionManager()),
+      : RegionOfInterest(R), MmrMgr(R->getMemRegionManager()),
         SM(MmrMgr.getContext().getSourceManager()),
         PP(MmrMgr.getContext().getPrintingPolicy()), TKind(TKind) {}
 

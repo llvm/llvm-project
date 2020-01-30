@@ -14,12 +14,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "Taint.h"
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
@@ -165,13 +166,14 @@ void VLASizeChecker::checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
   SVal ArraySizeVal = svalBuilder.evalBinOpNN(
       state, BO_Mul, ArrayLength, EleSizeVal.castAs<NonLoc>(), SizeTy);
 
-  // Finally, assume that the array's extent matches the given size.
+  // Finally, assume that the array's size matches the given size.
   const LocationContext *LC = C.getLocationContext();
-  DefinedOrUnknownSVal Extent =
-    state->getRegion(VD, LC)->getExtent(svalBuilder);
+  DefinedOrUnknownSVal DynSize =
+      getDynamicSize(state, state->getRegion(VD, LC), svalBuilder);
+
   DefinedOrUnknownSVal ArraySize = ArraySizeVal.castAs<DefinedOrUnknownSVal>();
   DefinedOrUnknownSVal sizeIsKnown =
-    svalBuilder.evalEQ(state, Extent, ArraySize);
+      svalBuilder.evalEQ(state, DynSize, ArraySize);
   state = state->assume(sizeIsKnown, true);
 
   // Assume should not fail at this point.
