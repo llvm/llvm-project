@@ -41,18 +41,6 @@ static void printNVVMIntrinsicOp(OpAsmPrinter &p, Operation *op) {
     p << " : " << op->getResultTypes();
 }
 
-// <operation> ::= `llvm.nvvm.XYZ` : type
-static ParseResult parseNVVMSpecialRegisterOp(OpAsmParser &parser,
-                                              OperationState &result) {
-  Type type;
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(type))
-    return failure();
-
-  result.addTypes(type);
-  return success();
-}
-
 static LLVM::LLVMDialect *getLlvmDialect(OpAsmParser &parser) {
   return parser.getBuilder()
       .getContext()
@@ -101,41 +89,6 @@ static ParseResult parseNVVMVoteBallotOp(OpAsmParser &parser,
                  parser.addTypeToList(type, result.types) ||
                  parser.resolveOperands(ops, {int32Ty, int1Ty},
                                         parser.getNameLoc(), result.operands));
-}
-
-// <operation> ::= `llvm.nvvm.mma.sync %lhs... %rhs... %acc...`
-//                 : signature_type
-static ParseResult parseNVVMMmaOp(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 12> ops;
-  Type type;
-  llvm::SMLoc typeLoc;
-  if (parser.parseOperandList(ops) ||
-      parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
-      parser.getCurrentLocation(&typeLoc) || parser.parseType(type)) {
-    return failure();
-  }
-
-  auto signature = type.dyn_cast<FunctionType>();
-  if (!signature) {
-    return parser.emitError(
-        typeLoc, "expected the type to be the full list of input and output");
-  }
-
-  if (signature.getNumResults() != 1) {
-    return parser.emitError(typeLoc, "expected single result");
-  }
-
-  return failure(parser.addTypeToList(signature.getResult(0), result.types) ||
-                 parser.resolveOperands(ops, signature.getInputs(),
-                                        parser.getNameLoc(), result.operands));
-}
-
-static void printNVVMMmaOp(OpAsmPrinter &p, MmaOp &op) {
-  p << op.getOperationName() << " " << op.getOperands();
-  p.printOptionalAttrDict(op.getAttrs());
-  p << " : "
-    << FunctionType::get(llvm::to_vector<12>(op.getOperandTypes()),
-                         op.getType(), op.getContext());
 }
 
 static LogicalResult verify(MmaOp op) {
