@@ -135,19 +135,34 @@ struct DynRegionInfo {
 
   /// Name of the file. Used for error reporting.
   StringRef FileName;
+  /// Error prefix. Used for error reporting to provide more information.
+  std::string Context;
+  /// Region size name. Used for error reporting.
+  StringRef SizePrintName = "size";
+  /// Entry size name. Used for error reporting. If this field is empty, errors
+  /// will not mention the entry size.
+  StringRef EntSizePrintName = "entry size";
 
   template <typename Type> ArrayRef<Type> getAsArrayRef() const {
     const Type *Start = reinterpret_cast<const Type *>(Addr);
     if (!Start)
       return {Start, Start};
-    if (EntSize != sizeof(Type) || Size % EntSize) {
-      // TODO: Add a section index to this warning.
-      reportWarning(createError("invalid section size (" + Twine(Size) +
-                                ") or entity size (" + Twine(EntSize) + ")"),
-                    FileName);
-      return {Start, Start};
-    }
-    return {Start, Start + (Size / EntSize)};
+    if (EntSize == sizeof(Type) && (Size % EntSize == 0))
+      return {Start, Start + (Size / EntSize)};
+
+    std::string Msg;
+    if (!Context.empty())
+      Msg += Context + " has ";
+
+    Msg += ("invalid " + SizePrintName + " (0x" + Twine::utohexstr(Size) + ")")
+               .str();
+    if (!EntSizePrintName.empty())
+      Msg +=
+          (" or " + EntSizePrintName + " (0x" + Twine::utohexstr(EntSize) + ")")
+              .str();
+
+    reportWarning(createError(Msg.c_str()), FileName);
+    return {Start, Start};
   }
 };
 
@@ -1847,6 +1862,9 @@ void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
   bool IsPhdrTableValid = false;
   if (DynamicPhdr) {
     FromPhdr = createDRIFrom(DynamicPhdr, sizeof(Elf_Dyn));
+    FromPhdr.SizePrintName = "PT_DYNAMIC size";
+    FromPhdr.EntSizePrintName = "";
+
     IsPhdrTableValid = !FromPhdr.getAsArrayRef<Elf_Dyn>().empty();
   }
 
@@ -1860,6 +1878,11 @@ void ELFDumper<ELFT>::loadDynamicTable(const ELFFile<ELFT> *Obj) {
     FromSec =
         checkDRI({ObjF->getELFFile()->base() + DynamicSec->sh_offset,
                   DynamicSec->sh_size, sizeof(Elf_Dyn), ObjF->getFileName()});
+    FromSec.Context = ("section with index " +
+                       Twine(DynamicSec - &cantFail(Obj->sections()).front()))
+                          .str();
+    FromSec.EntSizePrintName = "";
+
     IsSecTableValid = !FromSec.getAsArrayRef<Elf_Dyn>().empty();
   }
 
@@ -1920,8 +1943,9 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
       DynPLTRelRegion(ObjF->getFileName()), DynSymRegion(ObjF->getFileName()),
       DynamicTable(ObjF->getFileName()) {
   const ELFFile<ELFT> *Obj = ObjF->getELFFile();
-  for (const Elf_Shdr &Sec :
-       unwrapOrError(ObjF->getFileName(), Obj->sections())) {
+  typename ELFT::ShdrRange Sections =
+      unwrapOrError(ObjF->getFileName(), Obj->sections());
+  for (const Elf_Shdr &Sec : Sections) {
     switch (Sec.sh_type) {
     case ELF::SHT_SYMTAB:
       if (!DotSymtabSec)
@@ -1930,6 +1954,8 @@ ELFDumper<ELFT>::ELFDumper(const object::ELFObjectFile<ELFT> *ObjF,
     case ELF::SHT_DYNSYM:
       if (!DynSymRegion.Size) {
         DynSymRegion = createDRIFrom(&Sec);
+        DynSymRegion.Context =
+            ("section with index " + Twine(&Sec - &Sections.front())).str();
         // This is only used (if Elf_Shdr present)for naming section in GNU
         // style
         DynSymtabName =
@@ -2030,6 +2056,7 @@ void ELFDumper<ELFT>::parseDynamicTable(const ELFFile<ELFT> *Obj) {
 
         DynSymRegion.Addr = VA;
         DynSymRegion.EntSize = sizeof(Elf_Sym);
+        DynSymRegion.EntSizePrintName = "";
       }
       break;
     }
@@ -2038,9 +2065,11 @@ void ELFDumper<ELFT>::parseDynamicTable(const ELFFile<ELFT> *Obj) {
       break;
     case ELF::DT_RELASZ:
       DynRelaRegion.Size = Dyn.getVal();
+      DynRelaRegion.SizePrintName = "DT_RELASZ value";
       break;
     case ELF::DT_RELAENT:
       DynRelaRegion.EntSize = Dyn.getVal();
+      DynRelaRegion.EntSizePrintName = "DT_RELAENT value";
       break;
     case ELF::DT_SONAME:
       SONameOffset = Dyn.getVal();
@@ -2050,9 +2079,11 @@ void ELFDumper<ELFT>::parseDynamicTable(const ELFFile<ELFT> *Obj) {
       break;
     case ELF::DT_RELSZ:
       DynRelRegion.Size = Dyn.getVal();
+      DynRelRegion.SizePrintName = "DT_RELSZ value";
       break;
     case ELF::DT_RELENT:
       DynRelRegion.EntSize = Dyn.getVal();
+      DynRelRegion.EntSizePrintName = "DT_RELENT value";
       break;
     case ELF::DT_RELR:
     case ELF::DT_ANDROID_RELR:
@@ -2061,10 +2092,16 @@ void ELFDumper<ELFT>::parseDynamicTable(const ELFFile<ELFT> *Obj) {
     case ELF::DT_RELRSZ:
     case ELF::DT_ANDROID_RELRSZ:
       DynRelrRegion.Size = Dyn.getVal();
+      DynRelrRegion.SizePrintName = Dyn.d_tag == ELF::DT_RELRSZ
+                                        ? "DT_RELRSZ value"
+                                        : "DT_ANDROID_RELRSZ value";
       break;
     case ELF::DT_RELRENT:
     case ELF::DT_ANDROID_RELRENT:
       DynRelrRegion.EntSize = Dyn.getVal();
+      DynRelrRegion.EntSizePrintName = Dyn.d_tag == ELF::DT_RELRENT
+                                           ? "DT_RELRENT value"
+                                           : "DT_ANDROID_RELRENT value";
       break;
     case ELF::DT_PLTREL:
       if (Dyn.getVal() == DT_REL)
@@ -2075,12 +2112,14 @@ void ELFDumper<ELFT>::parseDynamicTable(const ELFFile<ELFT> *Obj) {
         reportError(createError(Twine("unknown DT_PLTREL value of ") +
                                 Twine((uint64_t)Dyn.getVal())),
                     ObjF->getFileName());
+      DynPLTRelRegion.EntSizePrintName = "";
       break;
     case ELF::DT_JMPREL:
       DynPLTRelRegion.Addr = toMappedAddr(Dyn.getTag(), Dyn.getPtr());
       break;
     case ELF::DT_PLTRELSZ:
       DynPLTRelRegion.Size = Dyn.getVal();
+      DynPLTRelRegion.SizePrintName = "DT_PLTRELSZ value";
       break;
     }
   }
