@@ -149,7 +149,7 @@ parseCrossTUIndex(StringRef IndexPath, StringRef CrossTUDir) {
       StringRef FileName = LineRef.substr(Pos + 1);
       SmallString<256> FilePath = CrossTUDir;
       llvm::sys::path::append(FilePath, FileName);
-      Result[LookupName] = FilePath.str().str();
+      Result[LookupName] = std::string(FilePath);
     } else
       return llvm::make_error<IndexError>(
           index_error_code::invalid_index_format, IndexPath.str(), LineNo);

@@ -252,8 +252,8 @@ TEST(ASTFrontendAction, ExternalSemaSource) {
   ASSERT_TRUE(Compiler.ExecuteAction(TestAction));
   // There should be one error correcting to 'moo' and a note attached to it.
   EXPECT_EQ("use of undeclared identifier 'foo'; did you mean 'moo'?",
-            TDC->Error.str().str());
-  EXPECT_EQ("This is a note", TDC->Note.str().str());
+            std::string(TDC->Error));
+  EXPECT_EQ("This is a note", std::string(TDC->Note));
 }
 
 TEST(GeneratePCHFrontendAction, CacheGeneratedPCH) {
