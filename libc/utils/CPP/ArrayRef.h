@@ -81,7 +81,7 @@ public:
   T *data() const { return const_cast<T *>(ArrayRef<T>::data()); }
 
   iterator begin() const { return data(); }
-  iterator end() const { return data() + size(); }
+  iterator end() const { return data() + this->size(); }
 
   T &operator[](size_t Index) const { return data()[Index]; }
 };
