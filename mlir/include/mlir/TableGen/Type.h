@@ -36,6 +36,10 @@ public:
 
   // Returns true if this is a variadic type constraint.
   bool isVariadic() const;
+
+  // Returns the builder call for this constraint if this is a buildable type,
+  // returns None otherwise.
+  Optional<StringRef> getBuilderCall() const;
 };
 
 // Wrapper class with helper methods for accessing Types defined in TableGen.

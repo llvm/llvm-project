@@ -29,6 +29,18 @@ bool TypeConstraint::isVariadic() const {
   return def->isSubClassOf("Variadic");
 }
 
+// Returns the builder call for this constraint if this is a buildable type,
+// returns None otherwise.
+Optional<StringRef> TypeConstraint::getBuilderCall() const {
+  const llvm::Record *baseType = def;
+  if (isVariadic())
+    baseType = baseType->getValueAsDef("baseType");
+
+  if (!baseType->isSubClassOf("BuildableType"))
+    return None;
+  return baseType->getValueAsString("builderCall");
+}
+
 Type::Type(const llvm::Record *record) : TypeConstraint(record) {}
 
 StringRef Type::getTypeDescription() const {
