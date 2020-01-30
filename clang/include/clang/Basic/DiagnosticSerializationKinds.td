@@ -277,6 +277,12 @@ def err_module_odr_violation_mismatch_decl_diff : Error<
   "%select{no direct|direct}4 method|"
   "instance variable '%4' access control is "
     "%select{|@private|@protected|@public|@package}5|"
+  "property name %4|"
+  "property %4 with type %5|"
+  "%select{default |}5'%select{none|readonly|getter|assign|readwrite|"
+    "retain|copy|nonatomic|setter|atomic|weak|strong|"
+    "unsafe_unretained|nullability|null_resettable|class|}4'"
+    " property attribute|"
   "}3">;
 
 def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
@@ -355,6 +361,9 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "%select{no direct|direct}2 method|"
   "instance variable '%2' access control is "
     "%select{|@private|@protected|@public|@package}3|"
+  "property name %2|"
+  "property %2 with type %3|"
+  "no written or default attribute for property|"
   "}1">;
 
 def err_module_odr_violation_function : Error<
@@ -411,13 +420,13 @@ def err_module_odr_violation_mismatch_decl_unknown : Error<
   "%q0 %select{with definition in module '%2'|defined here}1 has different "
   "definitions in different modules; first difference is this "
   "%select{||||static assert|field|method|type alias|typedef|data member|"
-  "friend declaration|unexpected decl|method|instance variable}3">;
+  "friend declaration|unexpected decl|method|instance variable|property}3">;
 def note_module_odr_violation_mismatch_decl_unknown : Note<
   "but in '%0' found "
   "%select{||||different static assert|different field|different method|"
   "different type alias|different typedef|different data member|"
   "different friend declaration|another unexpected decl|method|"
-  "instance variable}1">;
+  "instance variable|property}1">;
 
 def warn_duplicate_module_file_extension : Warning<
   "duplicate module file extension block name '%0'">,
