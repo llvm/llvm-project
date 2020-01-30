@@ -26,6 +26,12 @@ namespace ento {
 DefinedOrUnknownSVal getDynamicSize(ProgramStateRef State, const MemRegion *MR,
                                     SValBuilder &SVB);
 
+/// Get the stored element count of the region \p MR.
+DefinedOrUnknownSVal getDynamicElementCount(ProgramStateRef State,
+                                            const MemRegion *MR,
+                                            SValBuilder &SVB,
+                                            QualType ElementTy);
+
 } // namespace ento
 } // namespace clang
 

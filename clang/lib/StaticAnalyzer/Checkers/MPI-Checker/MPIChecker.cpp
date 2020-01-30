@@ -16,6 +16,7 @@
 
 #include "MPIChecker.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 
 namespace clang {
 namespace ento {
@@ -160,10 +161,11 @@ void MPIChecker::allRegionsUsedByWait(
       return;
     }
 
-    const auto &Size = Ctx.getStoreManager().getSizeInElements(
-        Ctx.getState(), SuperRegion,
+    DefinedOrUnknownSVal ElementCount = getDynamicElementCount(
+        Ctx.getState(), SuperRegion, Ctx.getSValBuilder(),
         CE.getArgExpr(1)->getType()->getPointeeType());
-    const llvm::APSInt &ArrSize = Size.getAs<nonloc::ConcreteInt>()->getValue();
+    const llvm::APSInt &ArrSize =
+        ElementCount.getAs<nonloc::ConcreteInt>()->getValue();
 
     for (size_t i = 0; i < ArrSize; ++i) {
       const NonLoc Idx = Ctx.getSValBuilder().makeArrayIndex(i);
