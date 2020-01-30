@@ -98,7 +98,7 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
     sb_recorder.Record(data.GetSerializer(), data.GetRegistry(),               \
                        &lldb_private::repro::construct<Class Signature>::doit, \
                        __VA_ARGS__);                                           \
-    sb_recorder.RecordResult(this);                                            \
+    sb_recorder.RecordResult(this, false);                                     \
   }
 
 #define LLDB_RECORD_CONSTRUCTOR_NO_ARGS(Class)                                 \
@@ -107,7 +107,7 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
     sb_recorder.Record(data.GetSerializer(), data.GetRegistry(),               \
                        &lldb_private::repro::construct<Class()>::doit);        \
-    sb_recorder.RecordResult(this);                                            \
+    sb_recorder.RecordResult(this, false);                                     \
   }
 
 #define LLDB_RECORD_METHOD(Result, Class, Method, Signature, ...)              \
@@ -175,7 +175,7 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
                        static_cast<Result (*)()>(&Class::Method));             \
   }
 
-#define LLDB_RECORD_RESULT(Result) sb_recorder.RecordResult(Result);
+#define LLDB_RECORD_RESULT(Result) sb_recorder.RecordResult(Result, true);
 
 /// The LLDB_RECORD_DUMMY macro is special because it doesn't actually record
 /// anything. It's used to track API boundaries when we cannot record for
@@ -716,8 +716,16 @@ public:
   }
 
   /// Record the result of a function call.
-  template <typename Result> Result RecordResult(Result &&r) {
-    UpdateBoundary();
+  template <typename Result>
+  Result RecordResult(Result &&r, bool update_boundary) {
+    // When recording the result from the LLDB_RECORD_RESULT macro, we need to
+    // update the boundary so we capture the copy constructor. However, when
+    // called to record the this pointer of the (copy) constructor, the
+    // boundary should not be toggled, because it is called from the
+    // LLDB_RECORD_CONSTRUCTOR macro, which might be followed by other API
+    // calls.
+    if (update_boundary)
+      UpdateBoundary();
     if (m_serializer && ShouldCapture()) {
       assert(!m_result_recorded);
       m_serializer->SerializeAll(r);
