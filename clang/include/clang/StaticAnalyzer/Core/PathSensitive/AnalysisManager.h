@@ -16,6 +16,7 @@
 
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/PathDiagnostic.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
@@ -32,6 +33,7 @@ class AnalysisManager : public BugReporterData {
   AnalysisDeclContextManager AnaCtxMgr;
 
   ASTContext &Ctx;
+  Preprocessor &PP;
   const LangOptions &LangOpts;
   PathDiagnosticConsumers PathConsumers;
 
@@ -44,7 +46,7 @@ class AnalysisManager : public BugReporterData {
 public:
   AnalyzerOptions &options;
 
-  AnalysisManager(ASTContext &ctx,
+  AnalysisManager(ASTContext &ctx, Preprocessor &PP,
                   const PathDiagnosticConsumers &Consumers,
                   StoreManagerCreator storemgr,
                   ConstraintManagerCreator constraintmgr,
@@ -60,6 +62,8 @@ public:
   AnalysisDeclContextManager& getAnalysisDeclContextManager() {
     return AnaCtxMgr;
   }
+
+  Preprocessor &getPreprocessor() override { return PP; }
 
   StoreManagerCreator getStoreManagerCreator() {
     return CreateStoreMgr;
