@@ -69,9 +69,15 @@ void MCXCOFFStreamer::EmitInstToData(const MCInst &Inst,
   raw_svector_ostream VecOS(Code);
   Assembler.getEmitter().encodeInstruction(Inst, VecOS, Fixups, STI);
 
-  // TODO: Handle Fixups later
-
+  // Add the fixups and data.
   MCDataFragment *DF = getOrCreateDataFragment(&STI);
+  const size_t ContentsSize = DF->getContents().size();
+  auto &DataFragmentFixups = DF->getFixups();
+  for (auto &Fixup : Fixups) {
+    Fixup.setOffset(Fixup.getOffset() + ContentsSize);
+    DataFragmentFixups.push_back(Fixup);
+  }
+
   DF->setHasInstructions(STI);
   DF->getContents().append(Code.begin(), Code.end());
 }

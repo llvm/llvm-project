@@ -1674,6 +1674,16 @@ void PPCAIXAsmPrinter::EmitEndOfAsmFile(Module &M) {
   PPCTargetStreamer &TS =
       static_cast<PPCTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
+  const unsigned EntryByteSize = Subtarget->isPPC64() ? 8 : 4;
+  const unsigned TOCEntriesByteSize = TOC.size() * EntryByteSize;
+  // TODO: If TOC entries' size is larger than 32768, then we run out of
+  // positive displacement to reach the TOC entry. We need to decide how to
+  // handle entries' size larger than that later.
+  if (TOCEntriesByteSize > 32767) {
+    report_fatal_error("Handling of TOC entry displacement larger than 32767 "
+                       "is not yet implemented.");
+  }
+
   for (auto &I : TOC) {
     // Setup the csect for the current TC entry.
     MCSectionXCOFF *TCEntry = cast<MCSectionXCOFF>(
