@@ -738,9 +738,6 @@ namespace ISD {
     /// past it.
     ANNOTATION_LABEL,
 
-    /// CATCHPAD - Represents a catchpad instruction.
-    CATCHPAD,
-
     /// CATCHRET - Represents a return from a catch block funclet. Used for
     /// MSVC compatible exception handling. Takes a chain operand and a
     /// destination basic block operand.

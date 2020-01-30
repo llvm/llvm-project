@@ -331,14 +331,6 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     MBB.erase(MBBI);
     return true;
   }
-  case X86::EH_RESTORE: {
-    // Restore ESP and EBP, and optionally ESI if required.
-    bool IsSEH = isAsynchronousEHPersonality(classifyEHPersonality(
-        MBB.getParent()->getFunction().getPersonalityFn()));
-    X86FL->restoreWin32EHStackPointers(MBB, MBBI, DL, /*RestoreSP=*/IsSEH);
-    MBBI->eraseFromParent();
-    return true;
-  }
   case X86::LCMPXCHG8B_SAVE_EBX:
   case X86::LCMPXCHG16B_SAVE_RBX: {
     // Perform the following transformation.

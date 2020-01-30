@@ -1497,12 +1497,6 @@ MachineBasicBlock *AArch64TargetLowering::EmitLoweredCatchRet(
   return BB;
 }
 
-MachineBasicBlock *AArch64TargetLowering::EmitLoweredCatchPad(
-     MachineInstr &MI, MachineBasicBlock *BB) const {
-  MI.eraseFromParent();
-  return BB;
-}
-
 MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
   switch (MI.getOpcode()) {
@@ -1521,8 +1515,6 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
 
   case AArch64::CATCHRET:
     return EmitLoweredCatchRet(MI, BB);
-  case AArch64::CATCHPAD:
-    return EmitLoweredCatchPad(MI, BB);
   }
 }
 

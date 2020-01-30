@@ -3628,10 +3628,6 @@ let isTerminator = 1, hasSideEffects = 1, isBarrier = 1, hasCtrlDep = 1,
                     Sched<[]>;
 }
 
-let hasSideEffects = 1, hasCtrlDep = 1, isCodeGenOnly = 1,
-    usesCustomInserter = 1 in
-def CATCHPAD : Pseudo<(outs), (ins), [(catchpad)]>, Sched<[]>;
-
 //===----------------------------------------------------------------------===//
 // Floating point immediate move.
 //===----------------------------------------------------------------------===//
