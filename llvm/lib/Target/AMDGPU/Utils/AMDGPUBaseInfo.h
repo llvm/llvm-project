@@ -648,9 +648,19 @@ bool isInlinableLiteralV216(int32_t Literal, bool HasInv2Pi);
 
 bool isArgPassedInSGPR(const Argument *Arg);
 
-/// \returns The encoding that will be used for \p ByteOffset in the SMRD
-/// offset field.
-int64_t getSMRDEncodedOffset(const MCSubtargetInfo &ST, int64_t ByteOffset);
+/// Convert \p ByteOffset to dwords if the subtarget uses dword SMRD immediate
+/// offsets.
+uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST, uint64_t ByteOffset);
+
+/// \returns The encoding that will be used for \p ByteOffset in the SMRD offset
+/// field, or None if it won't fit. This is useful on all subtargets.
+Optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
+                                       int64_t ByteOffset);
+
+/// \return The encoding that can be used for a 32-bit literal offset in an SMRD
+/// instruction. This is only useful on CI.s
+Optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
+                                                int64_t ByteOffset);
 
 /// \returns true if this offset is small enough to fit in the SMRD
 /// offset field.  \p ByteOffset should be the offset in bytes and
