@@ -40,6 +40,7 @@ do_openmp="yes"
 do_lld="yes"
 do_lldb="no"
 do_polly="yes"
+do_mlir="yes"
 BuildDir="`pwd`"
 ExtraConfigureFlags=""
 ExportBranch=""
@@ -72,6 +73,7 @@ function usage() {
     echo " -lldb                Enable check-out & build lldb"
     echo " -no-lldb             Disable check-out & build lldb (default)"
     echo " -no-polly            Disable check-out & build Polly"
+    echo " -no-mlir             Disable check-out & build MLIR"
 }
 
 while [ $# -gt 0 ]; do
@@ -167,6 +169,9 @@ while [ $# -gt 0 ]; do
         -no-polly )
             do_polly="no"
             ;;
+        -no-mlir )
+            do_mlir="no"
+            ;;
         -help | --help | -h | --h | -\? )
             usage
             exit 0
@@ -252,6 +257,9 @@ if [ $do_lldb = "yes" ]; then
 fi
 if [ $do_polly = "yes" ]; then
   projects="$projects polly"
+fi
+if [ $do_mlir = "yes" ]; then
+  projects="$projects mlir"
 fi
 
 # Go to the build directory (may be different from CWD)
