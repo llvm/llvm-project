@@ -101,3 +101,77 @@
 // CHECK-NOSYSROOT: "-internal-isystem" "/usr/local/include"
 // CHECK-NOSYSROOT: "-internal-isystem" "[[RESOURCE]]/include"
 // CHECK-NOSYSROOT: "-internal-externc-isystem" "/usr/include"
+
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-apple-darwin \
+// RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:     -nostdinc -ibuiltininc \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:               -DRESOURCE=%S/Inputs/resource_dir \
+// RUN:               --check-prefix=CHECK-NOSTDINC-BUILTINC %s
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-apple-darwin \
+// RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:     -ibuiltininc -nostdinc \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:               -DRESOURCE=%S/Inputs/resource_dir \
+// RUN:               --check-prefix=CHECK-NOSTDINC-BUILTINC %s
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-apple-darwin \
+// RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:     -nostdinc -nobuiltininc -ibuiltininc \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:               -DRESOURCE=%S/Inputs/resource_dir \
+// RUN:               --check-prefix=CHECK-NOSTDINC-BUILTINC %s
+// CHECK-NOSTDINC-BUILTINC: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
+// CHECK-NOSTDINC-BUILTINC-NOT: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// CHECK-NOSTDINC-BUILTINC: "-internal-isystem" "[[RESOURCE]]/include"
+// CHECK-NOSTDINC-BUILTINC-NOT: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
+
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-apple-darwin \
+// RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:     -nobuiltininc -ibuiltininc \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:               -DRESOURCE=%S/Inputs/resource_dir \
+// RUN:               --check-prefix=CHECK-NOBUILTININC-BUILTINC %s
+// CHECK-NOBUILTININC-BUILTINC: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
+// CHECK-NOBUILTININC-BUILTINC: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// CHECK-NOBUILTININC-BUILTINC: "-internal-isystem" "[[RESOURCE]]/include"
+// CHECK-NOBUILTININC-BUILTINC: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
+
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-apple-darwin \
+// RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:     -nostdinc -ibuiltininc -nobuiltininc \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:               -DRESOURCE=%S/Inputs/resource_dir \
+// RUN:               --check-prefix=CHECK-NOSTDINC-NO-BUILTINC %s
+// CHECK-NOSTDINC-NO-BUILTINC: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
+// CHECK-NOSTDINC-NO-BUILTINC-NOT: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// CHECK-NOSTDINC-NO-BUILTINC-NOT: "-internal-isystem" "[[RESOURCE]]/include"
+// CHECK-NOSTDINC-NO-BUILTINC-NOT: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
+
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-apple-darwin \
+// RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:     -ibuiltininc -nobuiltininc \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_and_usr_local \
+// RUN:               -DRESOURCE=%S/Inputs/resource_dir \
+// RUN:               --check-prefix=CHECK-BUILTINC-NOBUILTININC %s
+// CHECK-BUILTINC-NOBUILTININC: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
+// CHECK-BUILTINC-NOBUILTININC: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
+// CHECK-BUILTINC-NOBUILTININC-NOT: "-internal-isystem" "[[RESOURCE]]/include"
+// CHECK-BUILTINC-NOBUILTININC: "-internal-externc-isystem" "[[SYSROOT]]/usr/include"
