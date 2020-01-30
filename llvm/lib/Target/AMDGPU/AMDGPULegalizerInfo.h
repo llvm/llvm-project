@@ -126,6 +126,11 @@ public:
   bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
                             Intrinsic::ID IID) const;
 
+  bool legalizeImageIntrinsic(
+      MachineInstr &MI, MachineIRBuilder &B,
+      GISelChangeObserver &Observer,
+      const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) const;
+
   bool legalizeAtomicIncDec(MachineInstr &MI,  MachineIRBuilder &B,
                             bool IsInc) const;
 
