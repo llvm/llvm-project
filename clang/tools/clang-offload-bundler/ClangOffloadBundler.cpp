@@ -30,7 +30,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -365,6 +364,41 @@ public:
   }
 };
 
+namespace {
+
+// This class implements a list of temporary files that are removed upon
+// object destruction.
+class TempFileHandlerRAII {
+public:
+  ~TempFileHandlerRAII() {
+    for (const auto &File : Files)
+      sys::fs::remove(File);
+  }
+
+  // Creates temporary file with given contents.
+  Expected<StringRef> Create(Optional<ArrayRef<char>> Contents) {
+    SmallString<128u> File;
+    if (std::error_code EC =
+            sys::fs::createTemporaryFile("clang-offload-bundler", "tmp", File))
+      return createFileError(File, EC);
+    Files.push_back(File);
+
+    if (Contents) {
+      std::error_code EC;
+      raw_fd_ostream OS(File, EC);
+      if (EC)
+        return createFileError(File, EC);
+      OS.write(Contents->data(), Contents->size());
+    }
+    return Files.back();
+  }
+
+private:
+  SmallVector<SmallString<128u>, 4u> Files;
+};
+
+} // end anonymous namespace
+
 /// Handler for object files. The bundles are organized by sections with a
 /// designated name.
 ///
@@ -433,11 +467,16 @@ public:
   Error ReadBundleEnd(MemoryBuffer &Input) final { return Error::success(); }
 
   Error ReadBundle(raw_fd_ostream &OS, MemoryBuffer &Input) final {
-    Expected<StringRef> Content = CurrentSection->getContents();
-    if (!Content)
-      return Content.takeError();
+    Expected<StringRef> ContentOrErr = CurrentSection->getContents();
+    if (!ContentOrErr)
+      return ContentOrErr.takeError();
+    StringRef Content = *ContentOrErr;
 
-    OS.write(Content->data(), Content->size());
+    // Copy fat object contents to the output when extracting host bundle.
+    if (Content.size() == 1u && Content.front() == 0)
+      Content = StringRef(Input.getBufferStart(), Input.getBufferSize());
+
+    OS.write(Content.data(), Content.size());
     return Error::success();
   }
 
@@ -486,22 +525,37 @@ public:
     // to pass down to llvm-objcopy.
     OS.close();
 
+    // Temporary files that need to be removed.
+    TempFileHandlerRAII TempFiles;
+
     // Create an intermediate temporary file to save object after the first
     // llvm-objcopy run.
-    SmallString<128u> IntermediateObj;
-    if (std::error_code EC = sys::fs::createTemporaryFile(
-            "clang-offload-bundler", "tmp", IntermediateObj))
-      return createFileError(IntermediateObj, EC);
-    FileRemover IntermediateObjRemover(IntermediateObj);
+    Expected<SmallString<128u>> IntermediateObjOrErr = TempFiles.Create(None);
+    if (!IntermediateObjOrErr)
+      return IntermediateObjOrErr.takeError();
+    const SmallString<128u> &IntermediateObj = *IntermediateObjOrErr;
 
     // Compose llvm-objcopy command line for add target objects' sections.
     BumpPtrAllocator Alloc;
     StringSaver SS{Alloc};
     SmallVector<StringRef, 8u> ObjcopyArgs{"llvm-objcopy"};
-    for (unsigned I = 0; I < NumberOfInputs; ++I)
+    for (unsigned I = 0; I < NumberOfInputs; ++I) {
+      StringRef InputFile = InputFileNames[I];
+      if (I == HostInputIndex) {
+        // Special handling for the host bundle. We do not need to add a
+        // standard bundle for the host object since we are going to use fat
+        // object as a host object. Therefore use dummy contents (one zero byte)
+        // when creating section for the host bundle.
+        Expected<StringRef> TempFileOrErr = TempFiles.Create(ArrayRef<char>(0));
+        if (!TempFileOrErr)
+          return TempFileOrErr.takeError();
+        InputFile = *TempFileOrErr;
+      }
+
       ObjcopyArgs.push_back(SS.save(Twine("--add-section=") +
                                     OFFLOAD_BUNDLER_MAGIC_STR + TargetNames[I] +
-                                    "=" + InputFileNames[I]));
+                                    "=" + InputFile));
+    }
     ObjcopyArgs.push_back(InputFileNames[HostInputIndex]);
     ObjcopyArgs.push_back(IntermediateObj);
 
