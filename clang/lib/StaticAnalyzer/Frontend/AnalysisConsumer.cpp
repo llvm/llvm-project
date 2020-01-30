@@ -193,7 +193,7 @@ class AnalysisConsumer : public AnalysisASTConsumer,
 
 public:
   ASTContext *Ctx;
-  const Preprocessor &PP;
+  Preprocessor &PP;
   const std::string OutDir;
   AnalyzerOptionsRef Opts;
   ArrayRef<std::string> Plugins;
@@ -336,8 +336,8 @@ public:
     checkerMgr = createCheckerManager(
         *Ctx, *Opts, Plugins, CheckerRegistrationFns, PP.getDiagnostics());
 
-    Mgr = std::make_unique<AnalysisManager>(*Ctx, PathConsumers, CreateStoreMgr,
-                                            CreateConstraintMgr,
+    Mgr = std::make_unique<AnalysisManager>(*Ctx, PP, PathConsumers,
+                                            CreateStoreMgr, CreateConstraintMgr,
                                             checkerMgr.get(), *Opts, Injector);
   }
 
