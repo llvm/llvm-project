@@ -23,6 +23,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
@@ -876,7 +877,7 @@ collectSubRegionBindings(SmallVectorImpl<BindingPair> &Bindings,
 
   // Find the length (in bits) of the region being invalidated.
   uint64_t Length = UINT64_MAX;
-  SVal Extent = Top->getExtent(SVB);
+  SVal Extent = Top->getMemRegionManager().getStaticSize(Top, SVB);
   if (Optional<nonloc::ConcreteInt> ExtentCI =
           Extent.getAs<nonloc::ConcreteInt>()) {
     const llvm::APSInt &ExtentInt = ExtentCI->getValue();
@@ -1394,7 +1395,7 @@ DefinedOrUnknownSVal
 RegionStoreManager::getSizeInElements(ProgramStateRef state,
                                       const MemRegion *R,
                                       QualType EleTy) {
-  SVal Size = cast<SubRegion>(R)->getExtent(svalBuilder);
+  DefinedOrUnknownSVal Size = getDynamicSize(state, R, svalBuilder);
   const llvm::APSInt *SizeInt = svalBuilder.getKnownValue(state, Size);
   if (!SizeInt)
     return UnknownVal();

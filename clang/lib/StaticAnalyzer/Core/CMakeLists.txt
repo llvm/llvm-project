@@ -16,6 +16,7 @@ add_clang_library(clangStaticAnalyzerCore
   CommonBugCategories.cpp
   ConstraintManager.cpp
   CoreEngine.cpp
+  DynamicSize.cpp
   DynamicType.cpp
   Environment.cpp
   ExplodedGraph.cpp
