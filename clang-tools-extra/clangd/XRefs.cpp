@@ -22,6 +22,7 @@
 #include "index/SymbolLocation.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
@@ -277,7 +278,9 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
   for (const NamedDecl *D : getDeclAtPosition(AST, SourceLoc, Relations)) {
     // Special case: void foo() ^override: jump to the overridden method.
     if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D)) {
-      const auto *Attr = D->getAttr<OverrideAttr>();
+      const InheritableAttr* Attr = D->getAttr<OverrideAttr>();
+      if (!Attr)
+        Attr = D->getAttr<FinalAttr>();
       const syntax::Token *Tok =
           spelledIdentifierTouching(SourceLoc, AST.getTokens());
       if (Attr && Tok &&
