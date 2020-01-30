@@ -1399,6 +1399,10 @@ bool AArch64InstructionSelector::convertPtrAddToAdd(
   if (PtrTy.getAddressSpace() != 0)
     return false;
 
+  // Only do this for scalars for now.
+  if (PtrTy.isVector())
+    return false;
+
   MachineIRBuilder MIB(I);
   const LLT s64 = LLT::scalar(64);
   auto PtrToInt = MIB.buildPtrToInt(s64, AddOp1Reg);
