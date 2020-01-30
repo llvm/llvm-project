@@ -587,6 +587,25 @@ operand and returns one result of the same type. This type may be a float
 scalar type, a vector whose element type is float, or a tensor of floats. It
 has no standard attributes.
 
+### 'sqrt' operation
+
+Syntax:
+
+```
+operation ::= ssa-id `=` `sqrt` ssa-use `:` type
+```
+
+Examples:
+
+```mlir
+// Scalar square root value.
+%a = sqrt %b : f64
+// SIMD vector element-wise square root value.
+%f = sqrt %g : vector<4xf32>
+// Tensor element-wise square root value.
+%x = sqrt %y : tensor<4x?xf32>
+```
+
 ### 'tanh' operation
 
 Syntax:
