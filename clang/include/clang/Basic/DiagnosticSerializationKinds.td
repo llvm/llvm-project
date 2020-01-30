@@ -191,11 +191,13 @@ def err_module_odr_violation_mismatch_decl : Error<
   "%select{definition in module '%2'|defined here}1 found "
   "%select{end of class|public access specifier|private access specifier|"
   "protected access specifier|static assert|field|method|type alias|typedef|"
-  "data member|friend declaration|function template|method}3">;
+  "data member|friend declaration|function template|method|"
+  "instance variable}3">;
 def note_module_odr_violation_mismatch_decl : Note<"but in '%0' found "
   "%select{end of class|public access specifier|private access specifier|"
   "protected access specifier|static assert|field|method|type alias|typedef|"
-  "data member|friend declaration|function template|method}1">;
+  "data member|friend declaration|function template|method|"
+  "instance variable}1">;
 
 def err_module_odr_violation_mismatch_decl_diff : Error<
   "%q0 has different definitions in different modules; first difference is "
@@ -273,6 +275,8 @@ def err_module_odr_violation_mismatch_decl_diff : Error<
   "%select{class|instance}4 method|"
   "method with %select{no designater initializer|designater initializer}4|"
   "%select{no direct|direct}4 method|"
+  "instance variable '%4' access control is "
+    "%select{|@private|@protected|@public|@package}5|"
   "}3">;
 
 def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
@@ -349,6 +353,8 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "%select{class|instance}2 method|"
   "method with %select{no designater initializer|designater initializer}2|"
   "%select{no direct|direct}2 method|"
+  "instance variable '%2' access control is "
+    "%select{|@private|@protected|@public|@package}3|"
   "}1">;
 
 def err_module_odr_violation_function : Error<

@@ -9486,6 +9486,7 @@ void ASTReader::diagnoseOdrViolations() {
     Friend,
     FunctionTemplate,
     ObjCMethod,
+    ObjCIvar,
     Other
   };
 
@@ -9541,7 +9542,8 @@ void ASTReader::diagnoseOdrViolations() {
     ObjCMethodName,
     ObjCMethodInstanceOrClass,
     ObjCDesignatedInitializer,
-    ObjCDirectMethod
+    ObjCDirectMethod,
+    ObjCIvarAccess
   };
 
   // These lambdas have the common portions of the ODR diagnostics.  This
@@ -9928,6 +9930,8 @@ void ASTReader::diagnoseOdrViolations() {
       return FunctionTemplate;
     case Decl::ObjCMethod:
       return ObjCMethod;
+    case Decl::ObjCIvar:
+      return ObjCIvar;
     }
   };
 
@@ -10397,6 +10401,7 @@ void ASTReader::diagnoseOdrViolations() {
       case PrivateSpecifer:
       case ProtectedSpecifer:
       case ObjCMethod:
+      case ObjCIvar:
         llvm_unreachable("Invalid diff type");
 
       case StaticAssert: {
@@ -11208,6 +11213,7 @@ void ASTReader::diagnoseOdrViolations() {
       case EndOfClass:
       case Other:
       case ObjCMethod:
+      case ObjCIvar:
       // C++ only, invalid in this context.
       case PublicSpecifer:
       case PrivateSpecifer:
@@ -11541,6 +11547,30 @@ void ASTReader::diagnoseOdrViolations() {
       case FunctionTemplate:
         llvm_unreachable("Invalid diff type");
 
+      case ObjCIvar: {
+        Diagnosed = ODRDiagField(FirstID, FirstModule, SecondModule,
+                                 cast<FieldDecl>(FirstDecl),
+                                 cast<FieldDecl>(SecondDecl));
+        if (Diagnosed)
+          break;
+
+        // Check if the access match.
+        ObjCIvarDecl *FirstIvar = cast<ObjCIvarDecl>(FirstDecl);
+        ObjCIvarDecl *SecondIvar = cast<ObjCIvarDecl>(SecondDecl);
+        if (FirstIvar->getCanonicalAccessControl() !=
+            SecondIvar->getCanonicalAccessControl()) {
+          ODRDiagDeclError(FirstID, FirstModule, FirstIvar->getLocation(),
+                           FirstIvar->getSourceRange(), ObjCIvarAccess)
+              << FirstIvar->getName()
+              << (int)FirstIvar->getCanonicalAccessControl();
+          ODRDiagDeclNote(SecondModule, SecondIvar->getLocation(),
+                          SecondIvar->getSourceRange(), ObjCIvarAccess)
+              << SecondIvar->getName()
+              << (int)SecondIvar->getCanonicalAccessControl();
+          Diagnosed = true;
+        }
+        break;
+      }
       case ObjCMethod: {
         Diagnosed = ODRDiagObjCMethod(FirstID, FirstModule, SecondModule,
                                       cast<ObjCMethodDecl>(FirstDecl),
