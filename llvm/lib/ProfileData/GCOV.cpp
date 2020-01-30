@@ -693,7 +693,7 @@ std::string FileInfo::getCoveragePath(StringRef Filename,
     MD5::MD5Result Result;
     Hasher.update(Filename.str());
     Hasher.final(Result);
-    CoveragePath += "##" + Result.digest().str().str();
+    CoveragePath += "##" + std::string(Result.digest());
   }
   CoveragePath += ".gcov";
   return CoveragePath;

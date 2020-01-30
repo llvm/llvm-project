@@ -38,7 +38,8 @@ TEST(writeFileAtomicallyTest, Test) {
 
   SmallString<128> FinalTestfilePath(RootTestDirectory);
   sys::path::append(FinalTestfilePath, "foo.txt");
-  const std::string TempUniqTestFileModel = FinalTestfilePath.str().str() + "-%%%%%%%%";
+  const std::string TempUniqTestFileModel =
+      std::string(FinalTestfilePath) + "-%%%%%%%%";
   const std::string TestfileContent = "fooFOOfoo";
 
   llvm::Error Err = llvm::writeFileAtomically(TempUniqTestFileModel, FinalTestfilePath, TestfileContent);
