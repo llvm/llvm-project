@@ -100,3 +100,217 @@ ProgramHeaders:
     Sections:
       - Section: .gnu.hash
       - Section: .dynamic
+
+## Check we report a warning if there is no dynamic symbol section in the object.
+
+# RUN: yaml2obj --docnum=3 %s -o %t.nodynsym
+# RUN: llvm-readobj --gnu-hash-table %t.nodynsym 2>&1 | FileCheck %s -DFILE=%t.nodynsym --check-prefix=NODYNSYM
+# RUN: llvm-readelf --gnu-hash-table %t.nodynsym 2>&1 | FileCheck %s -DFILE=%t.nodynsym --check-prefix=NODYNSYM
+
+# NODYNSYM:      GnuHashTable {
+# NODYNSYM-NEXT:   Num Buckets: 1
+# NODYNSYM-NEXT:   First Hashed Symbol Index: 0
+# NODYNSYM-NEXT:   Num Mask Words: 1
+# NODYNSYM-NEXT:   Shift Count: 0
+# NODYNSYM-NEXT:   Bloom Filter: [0x0]
+# NODYNSYM-NEXT:   Buckets: [0]
+# NODYNSYM-NEXT: warning: '[[FILE]]': unable to dump 'Values' for the SHT_GNU_HASH section: no dynamic symbol table found
+# NODYNSYM-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x0
+      Shift2: 0x0
+    BloomFilter: [ 0x0 ]
+    HashBuckets: [ 0x0 ]
+    HashValues:  [ 0x0 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Entries:
+      - Tag:   DT_GNU_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Sections:
+      - Section: .gnu.hash
+      - Section: .dynamic
+
+## Check what we do when the index of the first symbol in the dynamic symbol table
+## included in the hash table is larger than the number of dynamic symbols.
+
+# RUN: yaml2obj --docnum=4 %s -o %t.brokensymndx
+# RUN: llvm-readobj --gnu-hash-table %t.brokensymndx 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.brokensymndx --check-prefix=SYMNDX
+# RUN: llvm-readelf --gnu-hash-table %t.brokensymndx 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.brokensymndx --check-prefix=SYMNDX
+
+# SYMNDX:      GnuHashTable {
+# SYMNDX-NEXT:   Num Buckets: 1
+# SYMNDX-NEXT:   First Hashed Symbol Index: 2
+# SYMNDX-NEXT:   Num Mask Words: 1
+# SYMNDX-NEXT:   Shift Count: 0
+# SYMNDX-NEXT:   Bloom Filter: [0x1]
+# SYMNDX-NEXT:   Buckets: [2]
+# SYMNDX-NEXT: warning: '[[FILE]]': the first hashed symbol index (2) is larger than the number of dynamic symbols (2)
+# SYMNDX-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x2
+      Shift2: 0x0
+    BloomFilter: [ 0x1 ]
+    HashBuckets: [ 0x2 ]
+    HashValues:  [ 0x3 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Link:  0
+    Entries:
+      - Tag:   DT_GNU_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols:
+  - Name:    aaa
+    Binding: STB_GLOBAL
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Sections:
+      - Section: .gnu.hash
+      - Section: .dynamic
+
+## Check we emit a warning when the dynamic symbol table is empty.
+## A valid dynamic symbol table should have at least one symbol: the symbol with index 0.
+
+# RUN: yaml2obj --docnum=5 %s -o %t.emptydynsym
+# RUN: llvm-readobj --gnu-hash-table %t.emptydynsym 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.emptydynsym --check-prefix=EMPTY-DYNSYM
+# RUN: llvm-readelf --gnu-hash-table %t.emptydynsym 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.emptydynsym --check-prefix=EMPTY-DYNSYM
+
+# EMPTY-DYNSYM:      GnuHashTable {
+# EMPTY-DYNSYM-NEXT:   Num Buckets: 1
+# EMPTY-DYNSYM-NEXT:   First Hashed Symbol Index: 0
+# EMPTY-DYNSYM-NEXT:   Num Mask Words: 1
+# EMPTY-DYNSYM-NEXT:   Shift Count: 0
+# EMPTY-DYNSYM-NEXT:   Bloom Filter: [0x0]
+# EMPTY-DYNSYM-NEXT:   Buckets: [0]
+# EMPTY-DYNSYM-NEXT: warning: '[[FILE]]': unable to dump 'Values' for the SHT_GNU_HASH section: the dynamic symbol table is empty
+# EMPTY-DYNSYM-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x0
+      Shift2: 0x0
+    BloomFilter: [ 0x0 ]
+    HashBuckets: [ 0x0 ]
+    HashValues:  [ 0x0 ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Link:  0
+    Entries:
+      - Tag:   DT_GNU_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Size: 0
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Sections:
+      - Section: .gnu.hash
+      - Section: .dynamic
+
+## Linkers might produce an empty no-op SHT_GNU_HASH section when
+## there are no dynamic symbols or when all dynamic symbols are undefined.
+## Such sections normally have a single zero entry in the bloom
+## filter, a single zero entry in the hash bucket and no values.
+##
+## The index of the first symbol in the dynamic symbol table
+## included in the hash table can be set to the number of dynamic symbols,
+## which is one larger than the index of the last dynamic symbol.
+## For empty tables however, this value is unimportant and can be ignored.
+
+# RUN: yaml2obj --docnum=6 %s -o %t.empty
+# RUN: llvm-readobj --gnu-hash-table %t.empty 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.empty --check-prefix=EMPTY --implicit-check-not="warning:"
+# RUN: llvm-readelf --gnu-hash-table %t.empty 2>&1 \
+# RUN:   | FileCheck %s -DFILE=%t.empty --check-prefix=EMPTY --implicit-check-not="warning:"
+
+# EMPTY:      GnuHashTable {
+# EMPTY-NEXT:   Num Buckets: 1
+# EMPTY-NEXT:   First Hashed Symbol Index: 1
+# EMPTY-NEXT:   Num Mask Words: 1
+# EMPTY-NEXT:   Shift Count: 0
+# EMPTY-NEXT:   Bloom Filter: [0x0]
+# EMPTY-NEXT:   Buckets: [0]
+# EMPTY-NEXT:   Values: []
+# EMPTY-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:  .gnu.hash
+    Type:  SHT_GNU_HASH
+    Flags: [ SHF_ALLOC ]
+    Header:
+      SymNdx: 0x1
+      Shift2: 0x0
+    BloomFilter: [ 0x0 ]
+    HashBuckets: [ 0x0 ]
+    HashValues:  [ ]
+  - Name:  .dynamic
+    Type:  SHT_DYNAMIC
+    Flags: [ SHF_ALLOC ]
+    Link:  0
+    Entries:
+      - Tag:   DT_GNU_HASH
+        Value: 0x0
+      - Tag:   DT_NULL
+        Value: 0x0
+DynamicSymbols: []
+ProgramHeaders:
+  - Type:  PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Sections:
+      - Section: .gnu.hash
+      - Section: .dynamic
