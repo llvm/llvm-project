@@ -99,7 +99,7 @@ static gpu::LaunchFuncOp inlineBeneficiaryOps(gpu::GPUFuncOp kernelFunc,
 }
 
 // Outline the `gpu.launch` operation body into a kernel function. Replace
-// `gpu.return` operations by `std.return` in the generated function.
+// `gpu.terminator` operations by `gpu.return` in the generated function.
 static gpu::GPUFuncOp outlineKernelFunc(gpu::LaunchOp launchOp) {
   Location loc = launchOp.getLoc();
   // Create a builder with no insertion point, insertion will happen separately
@@ -116,6 +116,12 @@ static gpu::GPUFuncOp outlineKernelFunc(gpu::LaunchOp launchOp) {
                        builder.getUnitAttr());
   outlinedFunc.body().takeBody(launchOp.body());
   injectGpuIndexOperations(loc, outlinedFunc.body());
+  outlinedFunc.walk([](gpu::TerminatorOp op) {
+    OpBuilder replacer(op);
+    replacer.create<gpu::ReturnOp>(op.getLoc());
+    op.erase();
+  });
+
   return outlinedFunc;
 }
 

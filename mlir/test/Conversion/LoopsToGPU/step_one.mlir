@@ -73,8 +73,8 @@ func @step_1(%A : memref<?x?x?x?xf32>, %B : memref<?x?x?x?xf32>) {
           // CHECK-22-NEXT:   store {{.*}}, %{{.*}}[%[[i]], %[[j]], %[[ii]], %[[jj]]] : memref<?x?x?x?xf32>
           store %0, %B[%i, %j, %ii, %jj] : memref<?x?x?x?xf32>
 
-          // CHECK-11: gpu.return
-          // CHECK-22: gpu.return
+          // CHECK-11: gpu.terminator
+          // CHECK-22: gpu.terminator
         }
       }
     }

@@ -270,18 +270,19 @@ static LogicalResult verify(LaunchOp op) {
   }
 
   // Block terminators without successors are expected to exit the kernel region
-  // and must be `gpu.launch`.
+  // and must be `gpu.terminator`.
   for (Block &block : op.body()) {
     if (block.empty())
       continue;
     if (block.back().getNumSuccessors() != 0)
       continue;
-    if (!isa<gpu::ReturnOp>(&block.back())) {
+    if (!isa<gpu::TerminatorOp>(&block.back())) {
       return block.back()
-                 .emitError("expected 'gpu.terminator' or a terminator with "
-                            "successors")
-                 .attachNote(op.getLoc())
-             << "in '" << LaunchOp::getOperationName() << "' body region";
+          .emitError()
+          .append("expected '", gpu::TerminatorOp::getOperationName(),
+                  "' or a terminator with successors")
+          .attachNote(op.getLoc())
+          .append("in '", LaunchOp::getOperationName(), "' body region");
     }
   }
 
@@ -680,7 +681,7 @@ static ParseResult parseGPUFuncOp(OpAsmParser &parser, OperationState &result) {
            << "gpu.func requires named arguments";
 
   // Construct the function type. More types will be added to the region, but
-  // not to the functiont type.
+  // not to the function type.
   Builder &builder = parser.getBuilder();
   auto type = builder.getFunctionType(argTypes, resultTypes);
   result.addAttribute(GPUFuncOp::getTypeAttrName(), TypeAttr::get(type));
@@ -767,6 +768,10 @@ LogicalResult GPUFuncOp::verifyType() {
   if (!type.isa<FunctionType>())
     return emitOpError("requires '" + getTypeAttrName() +
                        "' attribute of function type");
+
+  if (isKernel() && getType().getNumResults() != 0)
+    return emitOpError() << "expected void return type for kernel function";
+
   return success();
 }
 
@@ -811,6 +816,45 @@ LogicalResult GPUFuncOp::verifyBody() {
                                 GPUDialect::getPrivateAddressSpace())))
     return failure();
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ReturnOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseReturnOp(OpAsmParser &parser, OperationState &result) {
+  llvm::SmallVector<OpAsmParser::OperandType, 4> operands;
+  llvm::SmallVector<Type, 4> types;
+  if (parser.parseOperandList(operands) ||
+      parser.parseOptionalColonTypeList(types) ||
+      parser.resolveOperands(operands, types, parser.getCurrentLocation(),
+                             result.operands))
+    return failure();
+
+  return success();
+}
+
+static LogicalResult verify(gpu::ReturnOp returnOp) {
+  GPUFuncOp function = returnOp.getParentOfType<GPUFuncOp>();
+
+  FunctionType funType = function.getType();
+
+  if (funType.getNumResults() != returnOp.operands().size())
+    return returnOp.emitOpError()
+        .append("expected ", funType.getNumResults(), " result operands")
+        .attachNote(function.getLoc())
+        .append("return type declared here");
+
+  for (auto pair : llvm::enumerate(
+           llvm::zip(function.getType().getResults(), returnOp.operands()))) {
+    Type type;
+    Value operand;
+    std::tie(type, operand) = pair.value();
+    if (type != operand.getType())
+      return returnOp.emitOpError() << "unexpected type `" << operand.getType()
+                                    << "' for operand #" << pair.index();
+  }
   return success();
 }
 
