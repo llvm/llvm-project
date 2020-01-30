@@ -65,6 +65,8 @@ def SPV_SubgroupBallotKHROp : SPV_Op<"SubgroupBallotKHR", []> {
   );
 
   let verifier = [{ return success(); }];
+
+  let assemblyFormat = "$predicate attr-dict `:` type($result)";
 }
 
 // -----

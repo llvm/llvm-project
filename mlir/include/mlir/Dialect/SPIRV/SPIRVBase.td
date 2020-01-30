@@ -2954,7 +2954,7 @@ def SPV_IsStructType : CPred<"$_self.isa<::mlir::spirv::StructType>()">;
 // for the definition of the following types and type categories.
 
 def SPV_Void : TypeAlias<NoneType, "void type">;
-def SPV_Bool : IntOfWidths<[1]>;
+def SPV_Bool : I<1>;
 def SPV_Integer : IntOfWidths<[8, 16, 32, 64]>;
 def SPV_Float : FloatOfWidths<[16, 32, 64]>;
 def SPV_Float16or32 : FloatOfWidths<[16, 32]>;
