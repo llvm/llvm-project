@@ -2495,12 +2495,50 @@ template <typename ELFT> void ELFDumper<ELFT>::printGnuHashTable() {
   W.printNumber("First Hashed Symbol Index", GnuHashTable->symndx);
   W.printNumber("Num Mask Words", GnuHashTable->maskwords);
   W.printNumber("Shift Count", GnuHashTable->shift2);
-  W.printHexList("Bloom Filter", GnuHashTable->filter());
-  W.printList("Buckets", GnuHashTable->buckets());
-  Elf_Sym_Range Syms = dynamic_symbols();
-  unsigned NumSyms = std::distance(Syms.begin(), Syms.end());
-  if (!NumSyms)
-    reportError(createError("No dynamic symbol section"), ObjF->getFileName());
+
+  ArrayRef<typename ELFT::Off> BloomFilter = GnuHashTable->filter();
+  W.printHexList("Bloom Filter", BloomFilter);
+
+  ArrayRef<Elf_Word> Buckets = GnuHashTable->buckets();
+  W.printList("Buckets", Buckets);
+
+  if (!DynSymRegion.Addr) {
+    reportWarning(createError("unable to dump 'Values' for the SHT_GNU_HASH "
+                              "section: no dynamic symbol table found"),
+                  ObjF->getFileName());
+    return;
+  }
+
+  size_t NumSyms = dynamic_symbols().size();
+  if (!NumSyms) {
+    reportWarning(createError("unable to dump 'Values' for the SHT_GNU_HASH "
+                              "section: the dynamic symbol table is empty"),
+                  ObjF->getFileName());
+    return;
+  }
+
+  if (GnuHashTable->symndx >= NumSyms) {
+    // A normal empty GNU hash table section produced by linker might have
+    // symndx set to the number of dynamic symbols + 1 (for the zero symbol)
+    // and have dummy null values in the Bloom filter and in the buckets
+    // vector. It happens because the value of symndx is not important for
+    // dynamic loaders when the GNU hash table is empty. They just skip the
+    // whole object during symbol lookup. In such cases, the symndx value is
+    // irrelevant and we should not report a warning.
+    bool IsEmptyHashTable =
+        llvm::all_of(Buckets, [](Elf_Word V) { return V == 0; });
+
+    if (!IsEmptyHashTable) {
+      reportWarning(
+          createError("the first hashed symbol index (" +
+                      Twine(GnuHashTable->symndx) +
+                      ") is larger than the number of dynamic symbols (" +
+                      Twine(NumSyms) + ")"),
+          ObjF->getFileName());
+      return;
+    }
+  }
+
   W.printHexList("Values", GnuHashTable->values(NumSyms));
 }
 
