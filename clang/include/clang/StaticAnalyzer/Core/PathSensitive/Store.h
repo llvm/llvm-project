@@ -148,14 +148,6 @@ public:
 
   virtual SVal getLValueElement(QualType elementType, NonLoc offset, SVal Base);
 
-  // FIXME: This should soon be eliminated altogether; clients should deal with
-  // region extents directly.
-  virtual DefinedOrUnknownSVal getSizeInElements(ProgramStateRef state,
-                                                 const MemRegion *region,
-                                                 QualType EleTy) {
-    return UnknownVal();
-  }
-
   /// ArrayToPointer - Used by ExprEngine::VistCast to handle implicit
   ///  conversions between arrays and pointers.
   virtual SVal ArrayToPointer(Loc Array, QualType ElementTy) = 0;
