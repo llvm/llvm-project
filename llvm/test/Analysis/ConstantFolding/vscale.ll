@@ -164,3 +164,15 @@ define <vscale x 4 x i32> @xor() {
   %r = xor <vscale x 4 x i32> undef, undef
   ret <vscale x 4 x i32> %r
 }
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Other Operations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+define <vscale x 4 x i32> @select() {
+; CHECK-LABEL: @select(
+; CHECK-NEXT:    ret <vscale x 4 x i32> undef
+;
+  %r = select <vscale x 4 x i1> undef, <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> undef
+  ret <vscale x 4 x i32> %r
+}
