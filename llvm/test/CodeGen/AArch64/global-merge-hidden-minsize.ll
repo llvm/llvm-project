@@ -1,4 +1,3 @@
-; RUN: llc %s -mtriple=arm-none-linux-gnu -o - | FileCheck %s
 ; RUN: llc %s -mtriple=aarch64-none-linux-gnu -o - | FileCheck %s
 
 @x = hidden global i32 0, align 4
