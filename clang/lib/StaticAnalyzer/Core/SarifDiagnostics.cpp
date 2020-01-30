@@ -106,7 +106,7 @@ static std::string fileNameToURI(StringRef Filename) {
     }
   });
 
-  return Ret.str().str();
+  return std::string(Ret);
 }
 
 static json::Object createArtifactLocation(const FileEntry &FE) {

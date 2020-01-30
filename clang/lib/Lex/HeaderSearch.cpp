@@ -159,7 +159,7 @@ std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
     llvm::sys::fs::make_absolute(Result);
     llvm::sys::path::append(Result, ModuleName + ".pcm");
     if (getFileMgr().getFile(Result.str()))
-      return Result.str().str();
+      return std::string(Result);
   }
   return {};
 }
