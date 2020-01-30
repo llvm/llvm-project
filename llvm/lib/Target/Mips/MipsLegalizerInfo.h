@@ -29,8 +29,8 @@ public:
                       MachineIRBuilder &MIRBuilder,
                       GISelChangeObserver &Observer) const override;
 
-  bool legalizeIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
-                         MachineIRBuilder &MIRBuilder) const override;
+  bool legalizeIntrinsic(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                         GISelChangeObserver &Observer) const override;
 };
 } // end namespace llvm
 #endif

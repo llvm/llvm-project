@@ -640,13 +640,13 @@ bool AArch64LegalizerInfo::legalizeCustom(MachineInstr &MI,
 }
 
 bool AArch64LegalizerInfo::legalizeIntrinsic(
-    MachineInstr &MI, MachineRegisterInfo &MRI,
-    MachineIRBuilder &MIRBuilder) const {
+    MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+    GISelChangeObserver &Observer) const {
   switch (MI.getIntrinsicID()) {
   case Intrinsic::memcpy:
   case Intrinsic::memset:
   case Intrinsic::memmove:
-    if (createMemLibcall(MIRBuilder, MRI, MI) ==
+    if (createMemLibcall(MIRBuilder, *MIRBuilder.getMRI(), MI) ==
         LegalizerHelper::UnableToLegalize)
       return false;
     MI.eraseFromParent();
