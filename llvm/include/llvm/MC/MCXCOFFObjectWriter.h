@@ -28,6 +28,13 @@ public:
   }
   bool is64Bit() const { return Is64Bit; }
 
+  // Returns relocation info such as type, sign and size.
+  // First element of the pair contains type,
+  // second element contains sign and size.
+  virtual std::pair<uint8_t, uint8_t>
+  getRelocTypeAndSignSize(const MCValue &Target, const MCFixup &Fixup,
+                          bool IsPCRel) const = 0;
+
 private:
   bool Is64Bit;
 };
