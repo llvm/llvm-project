@@ -133,7 +133,7 @@ static void addUsage(RenamerClangTidyCheck::NamingCheckFailureMap &Failures,
                      const RenamerClangTidyCheck::NamingCheckId &Decl,
                      SourceRange Range, SourceManager *SourceMgr = nullptr) {
   // Do nothing if the provided range is invalid.
-  if (Range.getBegin().isInvalid() || Range.getEnd().isInvalid())
+  if (Range.isInvalid())
     return;
 
   // If we have a source manager, use it to convert to the spelling location for
@@ -290,11 +290,9 @@ void RenamerClangTidyCheck::check(const MatchFinder::MatchResult &Result) {
               Value->getReturnType().getTypePtr()->getAs<TypedefType>())
         addUsage(NamingCheckFailures, Typedef->getDecl(),
                  Value->getSourceRange());
-      for (unsigned i = 0; i < Value->getNumParams(); ++i) {
-        if (const TypedefType *Typedef = Value->parameters()[i]
-                                             ->getType()
-                                             .getTypePtr()
-                                             ->getAs<TypedefType>())
+      for (const ParmVarDecl *Param : Value->parameters()) {
+        if (const TypedefType *Typedef =
+                Param->getType().getTypePtr()->getAs<TypedefType>())
           addUsage(NamingCheckFailures, Typedef->getDecl(),
                    Value->getSourceRange());
       }
