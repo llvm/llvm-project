@@ -2346,8 +2346,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
 
     // Generate the PtrAdd and truncating stores.
     LLT PtrTy = MRI.getType(PtrReg);
-    auto OffsetCst =
-        MIRBuilder.buildConstant(LLT::scalar(64), LargeSplitSize / 8);
+    auto OffsetCst = MIRBuilder.buildConstant(
+            LLT::scalar(PtrTy.getSizeInBits()), LargeSplitSize / 8);
     Register PtrAddReg = MRI.createGenericVirtualRegister(PtrTy);
     auto SmallPtr =
         MIRBuilder.buildPtrAdd(PtrAddReg, PtrReg, OffsetCst.getReg(0));
