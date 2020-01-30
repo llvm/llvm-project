@@ -59,6 +59,15 @@ llvm.func @fabs_test(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">) {
   llvm.return
 }
 
+// CHECK-LABEL: @sqrt_test
+llvm.func @sqrt_test(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">) {
+  // CHECK: call float @llvm.sqrt.f32
+  "llvm.intr.sqrt"(%arg0) : (!llvm.float) -> !llvm.float
+  // CHECK: call <8 x float> @llvm.sqrt.v8f32
+  "llvm.intr.sqrt"(%arg1) : (!llvm<"<8 x float>">) -> !llvm<"<8 x float>">
+  llvm.return
+}
+
 // CHECK-LABEL: @ceil_test
 llvm.func @ceil_test(%arg0: !llvm.float, %arg1: !llvm<"<8 x float>">) {
   // CHECK: call float @llvm.ceil.f32
@@ -100,6 +109,8 @@ llvm.func @copysign_test(%arg0: !llvm.float, %arg1: !llvm.float, %arg2: !llvm<"<
 // CHECK: declare <8 x float> @llvm.log2.v8f32(<8 x float>) #0
 // CHECK: declare float @llvm.fabs.f32(float)
 // CHECK: declare <8 x float> @llvm.fabs.v8f32(<8 x float>) #0
+// CHECK: declare float @llvm.sqrt.f32(float)
+// CHECK: declare <8 x float> @llvm.sqrt.v8f32(<8 x float>) #0
 // CHECK: declare float @llvm.ceil.f32(float)
 // CHECK: declare <8 x float> @llvm.ceil.v8f32(<8 x float>) #0
 // CHECK: declare float @llvm.cos.f32(float)

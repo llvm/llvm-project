@@ -807,6 +807,9 @@ struct SignedDivIOpLowering
     : public BinaryOpLLVMOpLowering<SignedDivIOp, LLVM::SDivOp> {
   using Super::Super;
 };
+struct SqrtOpLowering : public UnaryOpLLVMOpLowering<SqrtOp, LLVM::SqrtOp> {
+  using Super::Super;
+};
 struct UnsignedDivIOpLowering
     : public BinaryOpLLVMOpLowering<UnsignedDivIOp, LLVM::UDivOp> {
   using Super::Super;
@@ -2108,6 +2111,7 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
       SignedShiftRightOpLowering,
       SplatOpLowering,
       SplatNdOpLowering,
+      SqrtOpLowering,
       SubFOpLowering,
       SubIOpLowering,
       TanhOpLowering,
