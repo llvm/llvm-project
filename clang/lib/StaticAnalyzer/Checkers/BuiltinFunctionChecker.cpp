@@ -10,12 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 
 using namespace clang;
 using namespace ento;
@@ -90,10 +91,10 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
       return true; // Return true to model purity.
 
     SValBuilder& svalBuilder = C.getSValBuilder();
-    DefinedOrUnknownSVal Extent = R->getExtent(svalBuilder);
-    DefinedOrUnknownSVal extentMatchesSizeArg =
-      svalBuilder.evalEQ(state, Extent, Size.castAs<DefinedOrUnknownSVal>());
-    state = state->assume(extentMatchesSizeArg, true);
+    DefinedOrUnknownSVal DynSize = getDynamicSize(state, R, svalBuilder);
+    DefinedOrUnknownSVal DynSizeMatchesSizeArg =
+        svalBuilder.evalEQ(state, DynSize, Size.castAs<DefinedOrUnknownSVal>());
+    state = state->assume(DynSizeMatchesSizeArg, true);
     assert(state && "The region should not have any previous constraints");
 
     C.addTransition(state->BindExpr(CE, LCtx, loc::MemRegionVal(R)));

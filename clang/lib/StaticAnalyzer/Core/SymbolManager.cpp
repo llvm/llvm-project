@@ -329,7 +329,7 @@ QualType SymbolDerived::getType() const {
 }
 
 QualType SymbolExtent::getType() const {
-  ASTContext &Ctx = R->getMemRegionManager()->getContext();
+  ASTContext &Ctx = R->getMemRegionManager().getContext();
   return Ctx.getSizeType();
 }
 

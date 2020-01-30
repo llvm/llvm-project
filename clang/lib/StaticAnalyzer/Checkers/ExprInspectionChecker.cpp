@@ -13,6 +13,7 @@
 #include "clang/StaticAnalyzer/Core/IssueHash.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ScopedPrinter.h"
 
@@ -234,8 +235,9 @@ void ExprInspectionChecker::analyzerGetExtent(const CallExpr *CE,
   }
 
   ProgramStateRef State = C.getState();
-  State = State->BindExpr(CE, C.getLocationContext(),
-                          MR->getExtent(C.getSValBuilder()));
+  DefinedOrUnknownSVal Size = getDynamicSize(State, MR, C.getSValBuilder());
+
+  State = State->BindExpr(CE, C.getLocationContext(), Size);
   C.addTransition(State);
 }
 

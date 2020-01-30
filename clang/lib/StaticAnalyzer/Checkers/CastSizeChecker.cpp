@@ -10,12 +10,14 @@
 // whether the size of the symbolic region is a multiple of the size of T.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+
 #include "clang/AST/CharUnits.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 
 using namespace clang;
 using namespace ento;
@@ -109,12 +111,13 @@ void CastSizeChecker::checkPreStmt(const CastExpr *CE,CheckerContext &C) const {
     return;
 
   SValBuilder &svalBuilder = C.getSValBuilder();
-  SVal extent = SR->getExtent(svalBuilder);
-  const llvm::APSInt *extentInt = svalBuilder.getKnownValue(state, extent);
-  if (!extentInt)
+
+  DefinedOrUnknownSVal Size = getDynamicSize(state, SR, svalBuilder);
+  const llvm::APSInt *SizeInt = svalBuilder.getKnownValue(state, Size);
+  if (!SizeInt)
     return;
 
-  CharUnits regionSize = CharUnits::fromQuantity(extentInt->getSExtValue());
+  CharUnits regionSize = CharUnits::fromQuantity(SizeInt->getZExtValue());
   CharUnits typeSize = C.getASTContext().getTypeSizeInChars(ToPointeeTy);
 
   // Ignore void, and a few other un-sizeable types.
