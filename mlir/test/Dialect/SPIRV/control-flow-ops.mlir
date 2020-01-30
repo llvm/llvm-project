@@ -202,7 +202,7 @@ func @caller() {
 spv.module "Logical" "GLSL450" {
   func @f_invalid_result_type(%arg0 : i32, %arg1 : i32) -> () {
     // expected-error @+1 {{expected callee function to have 0 or 1 result, but provided 2}}
-    %0 = spv.FunctionCall @f_invalid_result_type(%arg0, %arg1) : (i32, i32) -> (i32, i32)
+    %0:2 = spv.FunctionCall @f_invalid_result_type(%arg0, %arg1) : (i32, i32) -> (i32, i32)
     spv.Return
   }
 }

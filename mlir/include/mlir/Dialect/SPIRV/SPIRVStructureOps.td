@@ -57,6 +57,8 @@ def SPV_AddressOfOp : SPV_Op<"_address_of", [InFunctionScope, NoSideEffect]> {
 
   let builders = [OpBuilder<[{Builder *builder, OperationState &state,
                               spirv::GlobalVariableOp var}]>];
+
+  let assemblyFormat = "$variable attr-dict `:` type($pointer)";
 }
 
 def SPV_ConstantOp : SPV_Op<"constant", [NoSideEffect]> {
@@ -409,6 +411,8 @@ def SPV_ReferenceOfOp : SPV_Op<"_reference_of", [NoSideEffect]> {
   let hasOpcode = 0;
 
   let autogenSerialization = 0;
+
+  let assemblyFormat = "$spec_const attr-dict `:` type($reference)";
 }
 
 def SPV_SpecConstantOp : SPV_Op<"specConstant", [InModuleScope, Symbol]> {
