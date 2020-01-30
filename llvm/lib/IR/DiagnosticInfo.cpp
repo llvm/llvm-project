@@ -244,11 +244,8 @@ OptimizationRemark::OptimizationRemark(const char *PassName,
                                    RemarkName, *Inst->getParent()->getParent(),
                                    Inst->getDebugLoc(), Inst->getParent()) {}
 
-// Helper to allow for an assert before attempting to return an invalid
-// reference.
-static const BasicBlock &getFirstFunctionBlock(const Function *Func) {
-  assert(!Func->empty() && "Function does not have a body");
-  return Func->front();
+static const BasicBlock *getFirstFunctionBlock(const Function *Func) {
+  return Func->empty() ? nullptr : &Func->front();
 }
 
 OptimizationRemark::OptimizationRemark(const char *PassName,
@@ -256,7 +253,7 @@ OptimizationRemark::OptimizationRemark(const char *PassName,
                                        const Function *Func)
     : DiagnosticInfoIROptimization(DK_OptimizationRemark, DS_Remark, PassName,
                                    RemarkName, *Func, Func->getSubprogram(),
-                                   &getFirstFunctionBlock(Func)) {}
+                                   getFirstFunctionBlock(Func)) {}
 
 bool OptimizationRemark::isEnabled() const {
   const Function &Fn = getFunction();
