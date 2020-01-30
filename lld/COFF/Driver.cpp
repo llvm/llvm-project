@@ -1095,7 +1095,7 @@ Optional<std::string> getReproduceFile(const opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_linkrepro)) {
     SmallString<64> path = StringRef(arg->getValue());
     sys::path::append(path, "repro.tar");
-    return path.str().str();
+    return std::string(path);
   }
 
   return None;
