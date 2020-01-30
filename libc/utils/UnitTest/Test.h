@@ -63,9 +63,8 @@ protected:
   // is the result of the |Cond| operation on |LHS| and |RHS|. Though not bad,
   // |Cond| on mismatched |LHS| and |RHS| types can potentially succeed because
   // of type promotion.
-  template <
-      typename ValType,
-      cpp::EnableIfType<cpp::IsIntegralNotBool<ValType>::Value, ValType> = 0>
+  template <typename ValType,
+            cpp::EnableIfType<cpp::IsIntegral<ValType>::Value, ValType> = 0>
   static bool test(RunContext &Ctx, TestCondition Cond, ValType LHS,
                    ValType RHS, const char *LHSStr, const char *RHSStr,
                    const char *File, unsigned long Line) {
@@ -175,4 +174,16 @@ private:
                                         __FILE__, __LINE__)
 #define ASSERT_STRNE(LHS, RHS)                                                 \
   if (!EXPECT_STRNE(LHS, RHS))                                                 \
+  return
+
+#define EXPECT_TRUE(VAL) EXPECT_EQ((VAL), true)
+
+#define ASSERT_TRUE(VAL)                                                       \
+  if (!EXPECT_TRUE(VAL))                                                       \
+  return
+
+#define EXPECT_FALSE(VAL) EXPECT_EQ((VAL), false)
+
+#define ASSERT_FALSE(VAL)                                                      \
+  if (!EXPECT_FALSE(VAL))                                                      \
   return
