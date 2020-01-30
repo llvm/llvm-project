@@ -108,15 +108,7 @@ public:
     bool totalLengthIsValid() const;
 
     /// Length of the prologue in bytes.
-    uint32_t getLength() const {
-      return PrologueLength + sizeofTotalLength() + sizeof(getVersion()) +
-             sizeofPrologueLength();
-    }
-
-    /// Length of the line table data in bytes (not including the prologue).
-    uint32_t getStatementTableLength() const {
-      return TotalLength + sizeofTotalLength() - getLength();
-    }
+    uint64_t getLength() const;
 
     int32_t getMaxLineIncrementForSpecialOpcode() const {
       return LineBase + (int8_t)LineRange - 1;
