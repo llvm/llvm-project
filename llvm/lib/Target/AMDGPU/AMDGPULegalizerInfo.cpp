@@ -457,7 +457,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        .scalarize(0);
 
   auto &FPToI = getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-    .legalFor({{S32, S32}, {S32, S64}, {S32, S16}});
+    .legalFor({{S32, S32}, {S32, S64}, {S32, S16}})
+    .customFor({{S64, S64}});
   if (ST.has16BitInsts())
     FPToI.legalFor({{S16, S16}});
   else
@@ -1161,6 +1162,10 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeITOFP(MI, MRI, B, true);
   case TargetOpcode::G_UITOFP:
     return legalizeITOFP(MI, MRI, B, false);
+  case TargetOpcode::G_FPTOSI:
+    return legalizeFPTOI(MI, MRI, B, true);
+  case TargetOpcode::G_FPTOUI:
+    return legalizeFPTOI(MI, MRI, B, false);
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINNUM_IEEE:
@@ -1519,6 +1524,42 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
   // TODO: Should this propagate fast-math-flags?
   B.buildFAdd(Dst, LdExp, CvtLo);
   MI.eraseFromParent();
+  return true;
+}
+
+// TODO: Copied from DAG implementation. Verify logic and document how this
+// actually works.
+bool AMDGPULegalizerInfo::legalizeFPTOI(
+  MachineInstr &MI, MachineRegisterInfo &MRI,
+  MachineIRBuilder &B, bool Signed) const {
+  B.setInstr(MI);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  const LLT S64 = LLT::scalar(64);
+  const LLT S32 = LLT::scalar(32);
+
+  assert(MRI.getType(Src) == S64 && MRI.getType(Dst) == S64);
+
+  unsigned Flags = MI.getFlags();
+
+  auto Trunc = B.buildIntrinsicTrunc(S64, Src, Flags);
+  auto K0 = B.buildFConstant(S64, BitsToDouble(UINT64_C(0x3df0000000000000)));
+  auto K1 = B.buildFConstant(S64, BitsToDouble(UINT64_C(0xc1f0000000000000)));
+
+  auto Mul = B.buildFMul(S64, Trunc, K0, Flags);
+  auto FloorMul = B.buildFFloor(S64, Mul, Flags);
+  auto Fma = B.buildFMA(S64, FloorMul, K1, Trunc, Flags);
+
+  auto Hi = Signed ?
+    B.buildFPTOSI(S32, FloorMul) :
+    B.buildFPTOUI(S32, FloorMul);
+  auto Lo = B.buildFPTOUI(S32, Fma);
+
+  B.buildMerge(Dst, { Lo.getReg(0), Hi.getReg(0) });
+  MI.eraseFromParent();
+
   return true;
 }
 
