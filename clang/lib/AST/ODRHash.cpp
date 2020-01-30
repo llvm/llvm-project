@@ -320,6 +320,12 @@ public:
     Inherited::VisitStaticAssertDecl(D);
   }
 
+  void VisitObjCIvarDecl(const ObjCIvarDecl *D) {
+    ID.AddInteger(D->getAccessControl());
+    Hash.AddBoolean(D->getSynthesize());
+    Inherited::VisitFieldDecl(static_cast<const FieldDecl *>(D));
+  }
+
   void VisitFieldDecl(const FieldDecl *D) {
     const bool IsBitfield = D->isBitField();
     Hash.AddBoolean(IsBitfield);
@@ -461,6 +467,7 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const DeclContext *Parent) {
     case Decl::Typedef:
     case Decl::Var:
     case Decl::ObjCMethod:
+    case Decl::ObjCIvar:
       return true;
   }
 }
