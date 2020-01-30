@@ -347,5 +347,11 @@ unsigned PPCMCCodeEmitter::getInstSizeInBytes(const MCInst &MI) const {
   return Desc.getSize();
 }
 
+bool PPCMCCodeEmitter::isPrefixedInstruction(const MCInst &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  const PPCInstrInfo *InstrInfo = static_cast<const PPCInstrInfo*>(&MCII);
+  return InstrInfo->isPrefixed(Opcode);
+}
+
 #define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "PPCGenMCCodeEmitter.inc"

@@ -189,6 +189,10 @@ public:
   bool isXFormMemOp(unsigned Opcode) const {
     return get(Opcode).TSFlags & PPCII::XFormMemOp;
   }
+  bool isPrefixed(unsigned Opcode) const {
+    return get(Opcode).TSFlags & PPCII::Prefixed;
+  }
+
   static bool isSameClassPhysRegCopy(unsigned Opcode) {
     unsigned CopyOpcodes[] =
       { PPC::OR, PPC::OR8, PPC::FMR, PPC::VOR, PPC::XXLOR, PPC::XXLORf,
