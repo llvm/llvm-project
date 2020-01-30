@@ -350,6 +350,77 @@ MDT *mdt;
 // expected-note@second.h:* {{but in 'SecondModule' found no direct method}}
 #endif
 
+#if defined(FIRST)
+@interface IV1 {
+  int a;
+}
+@end
+#elif defined(SECOND)
+@interface IV1 {
+  char a;
+}
+@end
+#else
+IV1 *iv1;
+// expected-error@first.h:* {{'IV1' has different definitions in different modules; first difference is definition in module 'FirstModule' found field 'a' with type 'int'}}
+// expected-note@second.h:* {{but in 'SecondModule' found field 'a' with type 'char'}}
+#endif
+
+#if defined(FIRST)
+@interface IV2 {
+  int a;
+}
+@end
+@interface IV3 {
+}
+@end
+#elif defined(SECOND)
+@interface IV2 {
+}
+@end
+@interface IV3 {
+  int a;
+}
+@end
+#else
+IV2 *iv2;
+// expected-error@first.h:* {{'IV2' has different definitions in different modules; first difference is definition in module 'FirstModule' found instance variable}}
+// expected-note@second.h:* {{but in 'SecondModule' found end of class}}
+IV3 *iv3;
+// expected-error@first.h:* {{'IV3' has different definitions in different modules; first difference is definition in module 'FirstModule' found end of class}}
+// expected-note@second.h:* {{but in 'SecondModule' found instance variable}}
+#endif
+
+#if defined(FIRST)
+@interface IV4 {
+  int a;
+}
+@end
+@interface IV5 {
+@public
+  int b;
+}
+@end
+#elif defined(SECOND)
+@interface IV4 {
+@private
+  int a;
+}
+@end
+@interface IV5 {
+@package
+  int b;
+}
+@end
+#else
+IV4 *iv4;
+// expected-error@first.h:* {{'IV4' has different definitions in different modules; first difference is definition in module 'FirstModule' found instance variable 'a' access control is @protected}}
+// expected-note@second.h:* {{but in 'SecondModule' found instance variable 'a' access control is @private}}
+IV5 *iv5;
+// expected-error@first.h:* {{'IV5' has different definitions in different modules; first difference is definition in module 'FirstModule' found instance variable 'b' access control is @public}}
+// expected-note@second.h:* {{but in 'SecondModule' found instance variable 'b' access control is @package}}
+#endif
+
 // Keep macros contained to one file.
 #ifdef FIRST
 #undef FIRST

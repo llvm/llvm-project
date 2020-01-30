@@ -9486,6 +9486,7 @@ void ASTReader::diagnoseOdrViolations() {
     Friend,
     FunctionTemplate,
     ObjCMethod,
+    ObjCIvar,
     Other
   };
 
@@ -9541,7 +9542,8 @@ void ASTReader::diagnoseOdrViolations() {
     ObjCMethodName,
     ObjCMethodInstanceOrClass,
     ObjCDesignatedInitializer,
-    ObjCDirectMethod
+    ObjCDirectMethod,
+    ObjCIvarAccess
   };
 
   // These lambdas have the common portions of the ODR diagnostics.  This
@@ -9928,6 +9930,8 @@ void ASTReader::diagnoseOdrViolations() {
       return FunctionTemplate;
     case Decl::ObjCMethod:
       return ObjCMethod;
+    case Decl::ObjCIvar:
+      return ObjCIvar;
     }
   };
 
@@ -10002,34 +10006,38 @@ void ASTReader::diagnoseOdrViolations() {
     }
   };
 
-  auto DiagnoseODRMismatch =
-      [this](DiffResult &DR, NamedDecl *FirstRecord, StringRef FirstModule,
-             NamedDecl *SecondRecord, StringRef SecondModule) {
-        SourceLocation FirstLoc;
-        SourceRange FirstRange;
-        auto *FirstTag = dyn_cast<TagDecl>(FirstRecord);
-        if (DR.FirstDiffType == EndOfClass && FirstTag) {
-          FirstLoc = FirstTag->getBraceRange().getEnd();
-        } else {
-          FirstLoc = DR.FirstDecl->getLocation();
-          FirstRange = DR.FirstDecl->getSourceRange();
-        }
-        Diag(FirstLoc, diag::err_module_odr_violation_mismatch_decl)
-            << FirstRecord << FirstModule.empty() << FirstModule << FirstRange
-            << DR.FirstDiffType;
+  auto DiagnoseODRMismatchGetLoc = [](NamedDecl *Container, auto DiffType,
+                                      auto *DiffDecl) {
+    SourceLocation Loc = Container->getEndLoc();
+    SourceRange Range;
+    if (DiffType != EndOfClass) {
+      if (DiffDecl)
+        return std::make_pair(DiffDecl->getLocation(),
+                              DiffDecl->getSourceRange());
+      return std::make_pair(Loc, Range);
+    }
 
-        SourceLocation SecondLoc;
-        SourceRange SecondRange;
-        auto *SecondTag = dyn_cast<TagDecl>(SecondRecord);
-        if (DR.SecondDiffType == EndOfClass && SecondTag) {
-          SecondLoc = SecondTag->getBraceRange().getEnd();
-        } else {
-          SecondLoc = DR.SecondDecl->getLocation();
-          SecondRange = DR.SecondDecl->getSourceRange();
-        }
-        Diag(SecondLoc, diag::note_module_odr_violation_mismatch_decl)
-            << SecondModule << SecondRange << DR.SecondDiffType;
-      };
+    if (auto *T = dyn_cast<TagDecl>(Container))
+      return std::make_pair(T->getBraceRange().getEnd(), Range);
+
+    return std::make_pair(Loc, Range);
+  };
+
+  auto DiagnoseODRMismatch = [this, &DiagnoseODRMismatchGetLoc](
+                                 DiffResult &DR, NamedDecl *FirstRecord,
+                                 StringRef FirstModule, NamedDecl *SecondRecord,
+                                 StringRef SecondModule) {
+    auto FirstDiagInfo =
+        DiagnoseODRMismatchGetLoc(FirstRecord, DR.FirstDiffType, DR.FirstDecl);
+    Diag(FirstDiagInfo.first, diag::err_module_odr_violation_mismatch_decl)
+        << FirstRecord << FirstModule.empty() << FirstModule
+        << FirstDiagInfo.second << DR.FirstDiffType;
+
+    auto SecondDiagInfo = DiagnoseODRMismatchGetLoc(
+        SecondRecord, DR.SecondDiffType, DR.SecondDecl);
+    Diag(SecondDiagInfo.first, diag::note_module_odr_violation_mismatch_decl)
+        << SecondModule << SecondDiagInfo.second << DR.SecondDiffType;
+  };
 
   // Issue any pending ODR-failure diagnostics.
   for (auto &Merge : OdrMergeFailures) {
@@ -10393,6 +10401,7 @@ void ASTReader::diagnoseOdrViolations() {
       case PrivateSpecifer:
       case ProtectedSpecifer:
       case ObjCMethod:
+      case ObjCIvar:
         llvm_unreachable("Invalid diff type");
 
       case StaticAssert: {
@@ -11204,6 +11213,7 @@ void ASTReader::diagnoseOdrViolations() {
       case EndOfClass:
       case Other:
       case ObjCMethod:
+      case ObjCIvar:
       // C++ only, invalid in this context.
       case PublicSpecifer:
       case PrivateSpecifer:
@@ -11327,6 +11337,44 @@ void ASTReader::diagnoseOdrViolations() {
         // for @implementation.
         return false;
       };
+
+  auto DiagnoseODRMismatchObjCGetLoc = [](NamedDecl *Container, auto DiffType,
+                                          auto *DiffDecl,
+                                          auto *DefinitionData) {
+    SourceLocation Loc = Container->getEndLoc();
+    SourceRange Range;
+    if (DiffType != EndOfClass) {
+      if (DiffDecl)
+        return std::make_pair(DiffDecl->getLocation(),
+                              DiffDecl->getSourceRange());
+      return std::make_pair(Loc, Range);
+    }
+
+    if (auto *I = dyn_cast<ObjCInterfaceDecl>(Container))
+      if (I->hasDefinition())
+        return std::make_pair(DefinitionData->EndLoc, Range);
+
+    return std::make_pair(Loc, Range);
+  };
+
+  auto DiagnoseODRMismatchObjC = [this, &DiagnoseODRMismatchObjCGetLoc](
+                                     DiffResult &DR, NamedDecl *FirstRecord,
+                                     StringRef FirstModule,
+                                     NamedDecl *SecondRecord,
+                                     StringRef SecondModule,
+                                     auto *FirstDData,
+                                     auto *SecondDData) {
+    auto FirstDiagInfo = DiagnoseODRMismatchObjCGetLoc(
+        FirstRecord, DR.FirstDiffType, DR.FirstDecl, FirstDData);
+    Diag(FirstDiagInfo.first, diag::err_module_odr_violation_mismatch_decl)
+        << FirstRecord << FirstModule.empty() << FirstModule
+        << FirstDiagInfo.second << DR.FirstDiffType;
+
+    auto SecondDiagInfo = DiagnoseODRMismatchObjCGetLoc(
+        SecondRecord, DR.SecondDiffType, DR.SecondDecl, SecondDData);
+    Diag(SecondDiagInfo.first, diag::note_module_odr_violation_mismatch_decl)
+        << SecondModule << SecondDiagInfo.second << DR.SecondDiffType;
+  };
 
   for (auto &Merge : ObjCInterfaceOdrMergeFailures) {
     // If we've already pointed out a specific problem with this interface,
@@ -11475,7 +11523,8 @@ void ASTReader::diagnoseOdrViolations() {
       }
 
       if (FirstDiffType != SecondDiffType) {
-        DiagnoseODRMismatch(DR, FirstID, FirstModule, SecondID, SecondModule);
+        DiagnoseODRMismatchObjC(DR, FirstID, FirstModule, SecondID,
+                                SecondModule, FirstDD, SecondDD);
         Diagnosed = true;
         break;
       }
@@ -11498,6 +11547,30 @@ void ASTReader::diagnoseOdrViolations() {
       case FunctionTemplate:
         llvm_unreachable("Invalid diff type");
 
+      case ObjCIvar: {
+        Diagnosed = ODRDiagField(FirstID, FirstModule, SecondModule,
+                                 cast<FieldDecl>(FirstDecl),
+                                 cast<FieldDecl>(SecondDecl));
+        if (Diagnosed)
+          break;
+
+        // Check if the access match.
+        ObjCIvarDecl *FirstIvar = cast<ObjCIvarDecl>(FirstDecl);
+        ObjCIvarDecl *SecondIvar = cast<ObjCIvarDecl>(SecondDecl);
+        if (FirstIvar->getCanonicalAccessControl() !=
+            SecondIvar->getCanonicalAccessControl()) {
+          ODRDiagDeclError(FirstID, FirstModule, FirstIvar->getLocation(),
+                           FirstIvar->getSourceRange(), ObjCIvarAccess)
+              << FirstIvar->getName()
+              << (int)FirstIvar->getCanonicalAccessControl();
+          ODRDiagDeclNote(SecondModule, SecondIvar->getLocation(),
+                          SecondIvar->getSourceRange(), ObjCIvarAccess)
+              << SecondIvar->getName()
+              << (int)SecondIvar->getCanonicalAccessControl();
+          Diagnosed = true;
+        }
+        break;
+      }
       case ObjCMethod: {
         Diagnosed = ODRDiagObjCMethod(FirstID, FirstModule, SecondModule,
                                       cast<ObjCMethodDecl>(FirstDecl),
