@@ -208,6 +208,15 @@ struct OperationFormat {
     buildableResultTypes.resize(op.getNumResults(), llvm::None);
   }
 
+  /// Generate the operation parser from this format.
+  void genParser(Operator &op, OpClass &opClass);
+  /// Generate the c++ to resolve the types of operands and results during
+  /// parsing.
+  void genParserTypeResolution(Operator &op, OpMethodBody &body);
+
+  /// Generate the operation printer from this format.
+  void genPrinter(Operator &op, OpClass &opClass);
+
   /// The various elements in this format.
   std::vector<std::unique_ptr<Element>> elements;
 
@@ -222,6 +231,366 @@ struct OperationFormat {
   std::vector<Optional<int>> buildableOperandTypes, buildableResultTypes;
 };
 } // end anonymous namespace
+
+//===----------------------------------------------------------------------===//
+// Parser Gen
+
+/// The code snippet used to generate a parser call for an attribute.
+///
+/// {0}: The storage type of the attribute.
+/// {1}: The name of the attribute.
+const char *const attrParserCode = R"(
+  {0} {1}Attr;
+  if (parser.parseAttribute({1}Attr, "{1}", result.attributes))
+    return failure();
+)";
+
+/// The code snippet used to generate a parser call for an operand.
+///
+/// {0}: The name of the operand.
+const char *const variadicOperandParserCode = R"(
+  llvm::SMLoc {0}OperandsLoc = parser.getCurrentLocation();
+  (void){0}OperandsLoc;
+  SmallVector<OpAsmParser::OperandType, 4> {0}Operands;
+  if (parser.parseOperandList({0}Operands))
+    return failure();
+)";
+const char *const operandParserCode = R"(
+  llvm::SMLoc {0}OperandsLoc = parser.getCurrentLocation();
+  (void){0}OperandsLoc;
+  OpAsmParser::OperandType {0}RawOperands[1];
+  if (parser.parseOperand({0}RawOperands[0]))
+    return failure();
+  ArrayRef<OpAsmParser::OperandType> {0}Operands({0}RawOperands);
+)";
+
+/// The code snippet used to generate a parser call for a type list.
+///
+/// {0}: The name for the type list.
+const char *const variadicTypeParserCode = R"(
+  SmallVector<Type, 1> {0}Types;
+  if (parser.parseTypeList({0}Types))
+    return failure();
+)";
+const char *const typeParserCode = R"(
+  Type {0}RawTypes[1] = {{nullptr};
+  if (parser.parseType({0}RawTypes[0]))
+    return failure();
+  ArrayRef<Type> {0}Types({0}RawTypes);
+)";
+
+/// The code snippet used to generate a parser call for a functional type.
+///
+/// {0}: The name for the input type list.
+/// {1}: The name for the result type list.
+const char *const functionalTypeParserCode = R"(
+  FunctionType {0}__{1}_functionType;
+  if (parser.parseType({0}__{1}_functionType))
+    return failure();
+  ArrayRef<Type> {0}Types = {0}__{1}_functionType.getInputs();
+  ArrayRef<Type> {1}Types = {0}__{1}_functionType.getResults();
+)";
+
+/// Get the name used for the type list for the given type directive operand.
+/// 'isVariadic' is set to true if the operand has variadic types.
+static StringRef getTypeListName(Element *arg, bool &isVariadic) {
+  if (auto *operand = dyn_cast<OperandVariable>(arg)) {
+    isVariadic = operand->getVar()->isVariadic();
+    return operand->getVar()->name;
+  }
+  if (auto *result = dyn_cast<ResultVariable>(arg)) {
+    isVariadic = result->getVar()->isVariadic();
+    return result->getVar()->name;
+  }
+  isVariadic = true;
+  if (isa<OperandsDirective>(arg))
+    return "allOperand";
+  if (isa<ResultsDirective>(arg))
+    return "allResult";
+  llvm_unreachable("unknown 'type' directive argument");
+}
+
+/// Generate the parser for a literal value.
+static void genLiteralParser(StringRef value, OpMethodBody &body) {
+  body << "  if (parser.parse";
+
+  // Handle the case of a keyword/identifier.
+  if (value.front() == '_' || isalpha(value.front())) {
+    body << "Keyword(\"" << value << "\")";
+  } else {
+    body << (StringRef)llvm::StringSwitch<StringRef>(value)
+                .Case("->", "Arrow()")
+                .Case(":", "Colon()")
+                .Case(",", "Comma()")
+                .Case("=", "Equal()")
+                .Case("<", "Less()")
+                .Case(">", "Greater()")
+                .Case("(", "LParen()")
+                .Case(")", "RParen()")
+                .Case("[", "LSquare()")
+                .Case("]", "RSquare()");
+  }
+  body << ")\n    return failure();\n";
+}
+
+void OperationFormat::genParser(Operator &op, OpClass &opClass) {
+  auto &method = opClass.newMethod(
+      "ParseResult", "parse", "OpAsmParser &parser, OperationState &result",
+      OpMethod::MP_Static);
+  auto &body = method.body();
+
+  // Generate parsers for each of the elements.
+  for (auto &element : elements) {
+    /// Literals.
+    if (LiteralElement *literal = dyn_cast<LiteralElement>(element.get())) {
+      genLiteralParser(literal->getLiteral(), body);
+
+      /// Arguments.
+    } else if (auto *attr = dyn_cast<AttributeVariable>(element.get())) {
+      const NamedAttribute *var = attr->getVar();
+      body << formatv(attrParserCode, var->attr.getStorageType(), var->name);
+    } else if (auto *operand = dyn_cast<OperandVariable>(element.get())) {
+      bool isVariadic = operand->getVar()->isVariadic();
+      body << formatv(isVariadic ? variadicOperandParserCode
+                                 : operandParserCode,
+                      operand->getVar()->name);
+
+      /// Directives.
+    } else if (isa<AttrDictDirective>(element.get())) {
+      body << "  if (parser.parseOptionalAttrDict(result.attributes))\n"
+           << "    return failure();\n";
+    } else if (isa<OperandsDirective>(element.get())) {
+      body << "  llvm::SMLoc allOperandLoc = parser.getCurrentLocation();\n"
+           << "  SmallVector<OpAsmParser::OperandType, 4> allOperands;\n"
+           << "  if (parser.parseOperandList(allOperands))\n"
+           << "    return failure();\n";
+    } else if (auto *dir = dyn_cast<TypeDirective>(element.get())) {
+      bool isVariadic = false;
+      StringRef listName = getTypeListName(dir->getOperand(), isVariadic);
+      body << formatv(isVariadic ? variadicTypeParserCode : typeParserCode,
+                      listName);
+    } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element.get())) {
+      bool ignored = false;
+      body << formatv(functionalTypeParserCode,
+                      getTypeListName(dir->getInputs(), ignored),
+                      getTypeListName(dir->getResults(), ignored));
+    } else {
+      llvm_unreachable("unknown format element");
+    }
+  }
+
+  // Generate the code to resolve the operand and result types now that they
+  // have been parsed.
+  genParserTypeResolution(op, body);
+  body << "  return success();\n";
+}
+
+void OperationFormat::genParserTypeResolution(Operator &op,
+                                              OpMethodBody &body) {
+  // Initialize the set of buildable types.
+  for (auto &it : buildableTypes)
+    body << "  Type odsBuildableType" << it.second << " = parser.getBuilder()."
+         << it.first << ";\n";
+
+  // Resolve each of the result types.
+  if (allResultTypes) {
+    body << "  result.addTypes(allResultTypes);\n";
+  } else {
+    for (unsigned i = 0, e = op.getNumResults(); i != e; ++i) {
+      body << "  result.addTypes(";
+      if (Optional<int> val = buildableResultTypes[i])
+        body << "odsBuildableType" << *val;
+      else
+        body << op.getResultName(i) << "Types";
+      body << ");\n";
+    }
+  }
+
+  // Early exit if there are no operands.
+  if (op.getNumOperands() == 0)
+    return;
+
+  // Flag indicating if operands were dumped all together in a group.
+  bool hasAllOperands = llvm::any_of(
+      elements, [](auto &elt) { return isa<OperandsDirective>(elt.get()); });
+
+  // Handle the case where all operand types are in one group.
+  if (allOperandTypes) {
+    // If we have all operands together, use the full operand list directly.
+    if (hasAllOperands) {
+      body << "  if (parser.resolveOperands(allOperands, allOperandTypes, "
+              "allOperandLoc, result.operands))\n"
+              "    return failure();\n";
+      return;
+    }
+
+    // Otherwise, use llvm::concat to merge the disjoint operand lists together.
+    // llvm::concat does not allow the case of a single range, so guard it here.
+    body << "  if (parser.resolveOperands(";
+    if (op.getNumOperands() > 1) {
+      body << "llvm::concat<const OpAsmParser::OperandType>(";
+      interleaveComma(op.getOperands(), body, [&](auto &operand) {
+        body << operand.name << "Operands";
+      });
+      body << ")";
+    } else {
+      body << op.operand_begin()->name << "Operands";
+    }
+    body << ", allOperandTypes, parser.getNameLoc(), result.operands))\n"
+         << "    return failure();\n";
+    return;
+  }
+  // Handle the case where all of the operands were grouped together.
+  if (hasAllOperands) {
+    body << "  if (parser.resolveOperands(allOperands, ";
+
+    // Group all of the operand types together to perform the resolution all at
+    // once. Use llvm::concat to perform the merge. llvm::concat does not allow
+    // the case of a single range, so guard it here.
+    if (op.getNumOperands() > 1) {
+      body << "llvm::concat<const Type>(";
+      interleaveComma(llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
+        if (Optional<int> val = buildableOperandTypes[i])
+          body << "ArrayRef<Type>(odsBuildableType" << *val << ")";
+        else
+          body << op.getOperand(i).name << "Types";
+      });
+      body << ")";
+    } else {
+      body << op.operand_begin()->name << "Types";
+    }
+
+    body << ", allOperandLoc, result.operands))\n"
+         << "    return failure();\n";
+    return;
+  }
+
+  // The final case is the one where each of the operands types are resolved
+  // separately.
+  for (unsigned i = 0, e = op.getNumOperands(); i != e; ++i) {
+    NamedTypeConstraint &operand = op.getOperand(i);
+    body << "  if (parser.resolveOperands(" << operand.name << "Operands, ";
+    if (Optional<int> val = buildableOperandTypes[i])
+      body << "odsBuildableType" << *val << ", ";
+    else
+      body << operand.name << "Types, " << operand.name << "OperandsLoc, ";
+    body << "result.operands))\n    return failure();\n";
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// PrinterGen
+
+/// Generate the printer for the 'attr-dict' directive.
+static void genAttrDictPrinter(OperationFormat &fmt, OpMethodBody &body) {
+  // Collect all of the attributes used in the format, these will be elided.
+  SmallVector<const NamedAttribute *, 1> usedAttributes;
+  for (auto &it : fmt.elements)
+    if (auto *attr = dyn_cast<AttributeVariable>(it.get()))
+      usedAttributes.push_back(attr->getVar());
+
+  body << "  p.printOptionalAttrDict(getAttrs(), /*elidedAttrs=*/{";
+  interleaveComma(usedAttributes, body, [&](const NamedAttribute *attr) {
+    body << "\"" << attr->name << "\"";
+  });
+  body << "});\n";
+}
+
+/// Generate the printer for a literal value. `shouldEmitSpace` is true if a
+/// space should be emitted before this element. `lastWasPunctuation` is true if
+/// the previous element was a punctuation literal.
+static void genLiteralPrinter(StringRef value, OpMethodBody &body,
+                              bool &shouldEmitSpace, bool &lastWasPunctuation) {
+  body << "  p";
+
+  // Don't insert a space for certain punctuation.
+  auto shouldPrintSpaceBeforeLiteral = [&] {
+    if (value.size() != 1 && value != "->")
+      return true;
+    if (lastWasPunctuation)
+      return !StringRef(">)}],").contains(value.front());
+    return !StringRef("<>(){}[],").contains(value.front());
+  };
+  if (shouldEmitSpace && shouldPrintSpaceBeforeLiteral())
+    body << " << \" \"";
+  body << " << \"" << value << "\";\n";
+
+  // Insert a space after certain literals.
+  shouldEmitSpace =
+      value.size() != 1 || !StringRef("<({[").contains(value.front());
+  lastWasPunctuation = !(value.front() == '_' || isalpha(value.front()));
+}
+
+/// Generate the c++ for an operand to a (*-)type directive.
+static OpMethodBody &genTypeOperandPrinter(Element *arg, OpMethodBody &body) {
+  if (isa<OperandsDirective>(arg))
+    return body << "getOperation()->getOperandTypes()";
+  if (isa<ResultsDirective>(arg))
+    return body << "getOperation()->getResultTypes()";
+  auto *operand = dyn_cast<OperandVariable>(arg);
+  auto *var = operand ? operand->getVar() : cast<ResultVariable>(arg)->getVar();
+  if (var->isVariadic())
+    return body << var->name << "().getTypes()";
+  return body << "ArrayRef<Type>(" << var->name << "().getType())";
+}
+
+void OperationFormat::genPrinter(Operator &op, OpClass &opClass) {
+  auto &method = opClass.newMethod("void", "print", "OpAsmPrinter &p");
+  auto &body = method.body();
+
+  // Emit the operation name, trimming the prefix if this is the standard
+  // dialect.
+  body << "  p << \"";
+  std::string opName = op.getOperationName();
+  if (op.getDialectName() == "std")
+    body << StringRef(opName).drop_front(4);
+  else
+    body << opName;
+  body << "\";\n";
+
+  // Flags for if we should emit a space, and if the last element was
+  // punctuation.
+  bool shouldEmitSpace = true, lastWasPunctuation = false;
+  for (auto &element : elements) {
+    // Emit a literal element.
+    if (LiteralElement *literal = dyn_cast<LiteralElement>(element.get())) {
+      genLiteralPrinter(literal->getLiteral(), body, shouldEmitSpace,
+                        lastWasPunctuation);
+      continue;
+    }
+
+    // Emit the attribute dictionary.
+    if (isa<AttrDictDirective>(element.get())) {
+      genAttrDictPrinter(*this, body);
+      lastWasPunctuation = false;
+      continue;
+    }
+
+    // Optionally insert a space before the next element. The AttrDict printer
+    // already adds a space as necessary.
+    if (shouldEmitSpace || !lastWasPunctuation)
+      body << "  p << \" \";\n";
+    lastWasPunctuation = false;
+    shouldEmitSpace = true;
+
+    if (auto *attr = dyn_cast<AttributeVariable>(element.get())) {
+      body << "  p << " << attr->getVar()->name << "Attr();\n";
+    } else if (auto *operand = dyn_cast<OperandVariable>(element.get())) {
+      body << "  p << " << operand->getVar()->name << "();\n";
+    } else if (isa<OperandsDirective>(element.get())) {
+      body << "  p << getOperation()->getOperands();\n";
+    } else if (auto *dir = dyn_cast<TypeDirective>(element.get())) {
+      body << "  p << ";
+      genTypeOperandPrinter(dir->getOperand(), body) << ";\n";
+    } else if (auto *dir = dyn_cast<FunctionalTypeDirective>(element.get())) {
+      body << "  p.printFunctionalType(";
+      genTypeOperandPrinter(dir->getInputs(), body) << ", ";
+      genTypeOperandPrinter(dir->getResults(), body) << ");\n";
+    } else {
+      llvm_unreachable("unknown format element");
+    }
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // FormatLexer
@@ -797,4 +1166,8 @@ void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass) {
   OperationFormat format(op);
   if (failed(FormatParser(mgr, format, op).parse()))
     return;
+
+  // Generate the printer and parser based on the parsed format.
+  format.genParser(op, opClass);
+  format.genPrinter(op, opClass);
 }
