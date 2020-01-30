@@ -52,6 +52,7 @@ static_library("MCTargetDesc") {
   sources = [
     "PPCAsmBackend.cpp",
     "PPCELFObjectWriter.cpp",
+    "PPCELFStreamer.cpp",
     "PPCInstPrinter.cpp",
     "PPCMCAsmInfo.cpp",
     "PPCMCCodeEmitter.cpp",
