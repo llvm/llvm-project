@@ -3124,5 +3124,45 @@ TEST(ClassTemplateSpecializationDecl, HasSpecializedTemplate) {
   EXPECT_TRUE(notMatches("template<typename T> class A {};", Matcher));
 }
 
+TEST(CXXNewExpr, Array) {
+  StatementMatcher NewArray = cxxNewExpr(isArray());
+
+  EXPECT_TRUE(matches("void foo() { int *Ptr = new int[10]; }", NewArray));
+  EXPECT_TRUE(notMatches("void foo() { int *Ptr = new int; }", NewArray));
+
+  StatementMatcher NewArraySize10 =
+      cxxNewExpr(hasArraySize(integerLiteral(equals(10))));
+  EXPECT_TRUE(
+      matches("void foo() { int *Ptr = new int[10]; }", NewArraySize10));
+  EXPECT_TRUE(
+      notMatches("void foo() { int *Ptr = new int[20]; }", NewArraySize10));
+}
+
+TEST(CXXNewExpr, PlacementArgs) {
+  StatementMatcher IsPlacementNew = cxxNewExpr(hasAnyPlacementArg(anything()));
+
+  EXPECT_TRUE(matches(R"(
+    void* operator new(decltype(sizeof(void*)), void*); 
+    int *foo(void* Storage) {
+      return new (Storage) int; 
+    })",
+                      IsPlacementNew));
+
+  EXPECT_TRUE(matches(R"(
+    void* operator new(decltype(sizeof(void*)), void*, unsigned); 
+    int *foo(void* Storage) {
+      return new (Storage, 16) int; 
+    })",
+                      cxxNewExpr(hasPlacementArg(
+                          1, ignoringImpCasts(integerLiteral(equals(16)))))));
+
+  EXPECT_TRUE(notMatches(R"(
+    void* operator new(decltype(sizeof(void*)), void*); 
+    int *foo(void* Storage) {
+      return new int; 
+    })",
+                         IsPlacementNew));
+}
+
 } // namespace ast_matchers
 } // namespace clang
