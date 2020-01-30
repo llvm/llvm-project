@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OpFormatGen.h"
 #include "mlir/Support/STLExtras.h"
 #include "mlir/Support/StringExtras.h"
 #include "mlir/TableGen/Format.h"
@@ -306,6 +307,7 @@ OpEmitter::OpEmitter(const Operator &op)
   genCanonicalizerDecls();
   genFolderDecls();
   genOpInterfaceMethods();
+  generateOpFormat(op, opClass);
 }
 
 void OpEmitter::emitDecl(const Operator &op, raw_ostream &os) {
@@ -1065,7 +1067,8 @@ void OpEmitter::genOpInterfaceMethods() {
 }
 
 void OpEmitter::genParser() {
-  if (!hasStringAttribute(def, "parser"))
+  if (!hasStringAttribute(def, "parser") ||
+      hasStringAttribute(def, "assemblyFormat"))
     return;
 
   auto &method = opClass.newMethod(
@@ -1078,6 +1081,9 @@ void OpEmitter::genParser() {
 }
 
 void OpEmitter::genPrinter() {
+  if (hasStringAttribute(def, "assemblyFormat"))
+    return;
+
   auto valueInit = def.getValueInit("printer");
   CodeInit *codeInit = dyn_cast<CodeInit>(valueInit);
   if (!codeInit)
