@@ -45,4 +45,85 @@ p PointerIntPair
 # CHECK: llvm::PointerUnion containing int * = {pointer = 0xabc}
 p PointerUnion
 
+# Switch to print pretty adds newlines to the following statements.
+set print pretty
 
+# CHECK: {
+# CHECK:   [0] = {
+# CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<A> >> = {
+# CHECK:       prev = [[Ilist_Sentinel:0x.*]] <Ilist>,
+# CHECK:       next = [[Node_14:0x.*]]
+# CHECK:     },
+# CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<B> >> = {
+# CHECK:       prev = [[Node_14]],
+# CHECK:       next = [[SimpleIlist_Sentinel:0x.*]] <SimpleIlist>
+# CHECK:     },
+# CHECK:     members of IlistNode:
+# CHECK:     Value = 13
+# CHECK:   },
+# CHECK:   [1] = {
+# CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<A> >> = {
+# CHECK:       prev = [[Node_13:0x.*]],
+# CHECK:       next = [[Node_15:0x.*]]
+# CHECK:     },
+# CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<B> >> = {
+# CHECK:       prev = [[Node_15]],
+# CHECK:       next = [[Node_13]]
+# CHECK:     },
+# CHECK:     members of IlistNode:
+# CHECK:     Value = 14
+# CHECK:   },
+# CHECK:   [2] = {
+# CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<A> >> = {
+# CHECK:       prev = [[Node_14]],
+# CHECK:       next = [[Ilist_Sentinel]] <Ilist>
+# CHECK:     },
+# CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<B> >> = {
+# CHECK:       prev = [[SimpleIlist_Sentinel]] <SimpleIlist>,
+# CHECK:       next = [[Node_14]]
+# CHECK:     },
+# CHECK:     members of IlistNode:
+# CHECK:     Value = 15
+# CHECK:   }
+# CHECK: }
+p Ilist
+
+# CHECK: {
+# CHECK:   [0] = {
+# CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<A> >> = {
+# CHECK:       prev = [[Node_14]],
+# CHECK:       next = [[Ilist_Sentinel]] <Ilist>
+# CHECK:     },
+# CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<B> >> = {
+# CHECK:       prev = [[SimpleIlist_Sentinel]] <SimpleIlist>,
+# CHECK:       next = [[Node_14]]
+# CHECK:     },
+# CHECK:     members of IlistNode:
+# CHECK:     Value = 15
+# CHECK:   },
+# CHECK:   [1] = {
+# CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<A> >> = {
+# CHECK:       prev = [[Node_13]],
+# CHECK:       next = [[Node_15]]
+# CHECK:     },
+# CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<B> >> = {
+# CHECK:       prev = [[Node_15]],
+# CHECK:       next = [[Node_13]]
+# CHECK:     },
+# CHECK:     members of IlistNode:
+# CHECK:     Value = 14
+# CHECK:   },
+# CHECK:   [2] = {
+# CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<A> >> = {
+# CHECK:       prev = [[Ilist_Sentinel]] <Ilist>,
+# CHECK:       next = [[Node_14]]
+# CHECK:     },
+# CHECK:     <llvm::ilist_node<IlistNode, llvm::ilist_tag<B> >> = {
+# CHECK:       prev = [[Node_14]],
+# CHECK:       next = [[SimpleIlist_Sentinel]] <SimpleIlist>
+# CHECK:     },
+# CHECK:     members of IlistNode:
+# CHECK:     Value = 13
+# CHECK:   }
+# CHECK: }
+p SimpleIlist
