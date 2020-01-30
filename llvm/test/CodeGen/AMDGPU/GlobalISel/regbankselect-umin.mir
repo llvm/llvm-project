@@ -36,11 +36,13 @@ body: |
     ; FAST-LABEL: name: umin_s32_sv
     ; FAST: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; FAST: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; FAST: [[UMIN:%[0-9]+]]:vgpr(s32) = G_UMIN [[COPY]], [[COPY1]]
+    ; FAST: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; FAST: [[UMIN:%[0-9]+]]:vgpr(s32) = G_UMIN [[COPY2]], [[COPY1]]
     ; GREEDY-LABEL: name: umin_s32_sv
     ; GREEDY: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GREEDY: [[UMIN:%[0-9]+]]:vgpr(s32) = G_UMIN [[COPY]], [[COPY1]]
+    ; GREEDY: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; GREEDY: [[UMIN:%[0-9]+]]:vgpr(s32) = G_UMIN [[COPY2]], [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = G_UMIN %0, %1
@@ -62,7 +64,8 @@ body: |
     ; GREEDY-LABEL: name: umin_s32_vs
     ; GREEDY: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; GREEDY: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; GREEDY: [[UMIN:%[0-9]+]]:vgpr(s32) = G_UMIN [[COPY]], [[COPY1]]
+    ; GREEDY: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; GREEDY: [[UMIN:%[0-9]+]]:vgpr(s32) = G_UMIN [[COPY]], [[COPY2]]
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $sgpr0
     %2:_(s32) = G_UMIN %0, %1

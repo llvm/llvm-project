@@ -12,8 +12,9 @@ body: |
     ; CHECK-LABEL: name: fadd_ss
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK: [[FADD:%[0-9]+]]:vgpr(s32) = G_FADD [[COPY]], [[COPY2]]
+    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; CHECK: [[FADD:%[0-9]+]]:vgpr(s32) = G_FADD [[COPY2]], [[COPY3]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $sgpr1
     %2:_(s32) = G_FADD %0, %1
@@ -29,7 +30,8 @@ body: |
     ; CHECK-LABEL: name: fadd_sv
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[FADD:%[0-9]+]]:vgpr(s32) = G_FADD [[COPY]], [[COPY1]]
+    ; CHECK: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; CHECK: [[FADD:%[0-9]+]]:vgpr(s32) = G_FADD [[COPY2]], [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = G_FADD %0, %1

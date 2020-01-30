@@ -11,9 +11,10 @@ define amdgpu_kernel void @is_local_vgpr(i8* addrspace(1)* %ptr.ptr) {
 ; CI-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; CI-NEXT:    v_lshl_b64 v[0:1], v[0:1], 3
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
-; CI-NEXT:    v_mov_b32_e32 v2, s1
-; CI-NEXT:    v_addc_u32_e32 v1, vcc, v2, v1, vcc
+; CI-NEXT:    v_mov_b32_e32 v3, s1
+; CI-NEXT:    v_mov_b32_e32 v2, s0
+; CI-NEXT:    v_add_i32_e32 v0, vcc, v2, v0
+; CI-NEXT:    v_addc_u32_e32 v1, vcc, v3, v1, vcc
 ; CI-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
 ; CI-NEXT:    s_load_dword s0, s[4:5], 0x10
 ; CI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -28,9 +29,10 @@ define amdgpu_kernel void @is_local_vgpr(i8* addrspace(1)* %ptr.ptr) {
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX9-NEXT:    v_lshlrev_b64 v[0:1], 3, v[0:1]
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v2, s1
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v2, v1, vcc
+; GFX9-NEXT:    v_mov_b32_e32 v3, s1
+; GFX9-NEXT:    v_mov_b32_e32 v2, s0
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v2, v0
+; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, v3, v1, vcc
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
 ; GFX9-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_SH_MEM_BASES, 16, 16)
 ; GFX9-NEXT:    s_lshl_b32 s0, s0, 16
