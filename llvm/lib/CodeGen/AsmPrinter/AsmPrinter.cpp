@@ -746,7 +746,9 @@ void AsmPrinter::EmitFunctionHeader() {
   }
 
   // Emit the function descriptor. This is a virtual function to allow targets
-  // to emit their specific function descriptor.
+  // to emit their specific function descriptor. Right now it is only used by
+  // the AIX target. The PowerPC 64-bit V1 ELF target also uses function
+  // descriptors and should be converted to use this hook as well.
   if (MAI->needsFunctionDescriptors())
     EmitFunctionDescriptor();
 
@@ -1700,9 +1702,11 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   const Function &F = MF.getFunction();
 
   // Get the function symbol.
-  if (MAI->needsFunctionDescriptors()) {
-    assert(TM.getTargetTriple().isOSAIX() && "Function descriptor is only"
-                                             " supported on AIX.");
+  if (TM.getTargetTriple().isOSAIX()) {
+    // AIX is unique here in that the name of the symbol emitted for the
+    // function body does not have the same name as the source function's
+    // C-linkage name.
+    assert(MAI->needsFunctionDescriptors() && "AIX ABI is descriptor based.");
     assert(CurrentFnDescSym && "The function descriptor symbol needs to be"
 		                           " initalized first.");
 
@@ -1710,9 +1714,9 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
     CurrentFnSym =
         OutContext.getOrCreateSymbol("." + CurrentFnDescSym->getName());
 
+    // Set the containing csect.
     MCSectionXCOFF *FnEntryPointSec =
         cast<MCSectionXCOFF>(getObjFileLowering().SectionForGlobal(&F, TM));
-    // Set the containing csect.
     cast<MCSymbolXCOFF>(CurrentFnSym)->setContainingCsect(FnEntryPointSec);
   } else {
     CurrentFnSym = getSymbol(&MF.getFunction());
