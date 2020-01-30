@@ -15,7 +15,6 @@ using namespace lldb_private;
 using namespace lldb_private::repro;
 
 void *IndexToObject::GetObjectForIndexImpl(unsigned idx) {
-  assert(m_mapping.count(idx) && "No object for index");
   return m_mapping.lookup(idx);
 }
 
