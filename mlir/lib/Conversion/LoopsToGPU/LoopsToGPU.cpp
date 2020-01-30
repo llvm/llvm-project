@@ -403,10 +403,10 @@ void LoopToGpuConverter::createLaunch(OpTy rootForOp, OpTy innermostForOp,
   Value constOne = (numBlockDims < 3 || numThreadDims < 3)
                        ? builder.create<ConstantIndexOp>(rootForOp.getLoc(), 1)
                        : nullptr;
-  Value gridSizeX = dims[0];
+  Value gridSizeX = numBlockDims > 0 ? dims[0] : constOne;
   Value gridSizeY = numBlockDims > 1 ? dims[1] : constOne;
   Value gridSizeZ = numBlockDims > 2 ? dims[2] : constOne;
-  Value blockSizeX = dims[numBlockDims];
+  Value blockSizeX = numThreadDims > 0 ? dims[numBlockDims] : constOne;
   Value blockSizeY = numThreadDims > 1 ? dims[numBlockDims + 1] : constOne;
   Value blockSizeZ = numThreadDims > 2 ? dims[numBlockDims + 2] : constOne;
 
