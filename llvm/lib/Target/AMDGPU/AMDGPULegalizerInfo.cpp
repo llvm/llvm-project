@@ -526,8 +526,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // FIXME: fexp, flog2, flog10 needs to be custom lowered.
   getActionDefinitionsBuilder({G_FPOW, G_FEXP, G_FEXP2,
-                               G_FLOG, G_FLOG2, G_FLOG10})
+                               G_FLOG2})
     .legalFor({S32})
+    .scalarize(0);
+
+  getActionDefinitionsBuilder({G_FLOG, G_FLOG10})
+    .customFor({S32})
+    .clampScalar(0, S32, S32)
     .scalarize(0);
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
@@ -1180,6 +1185,10 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeFDIV(MI, MRI, B);
   case TargetOpcode::G_ATOMIC_CMPXCHG:
     return legalizeAtomicCmpXChg(MI, MRI, B);
+  case TargetOpcode::G_FLOG:
+    return legalizeFlog(MI, B, 1.0f / numbers::log2ef);
+  case TargetOpcode::G_FLOG10:
+    return legalizeFlog(MI, B, numbers::ln2f / numbers::ln10f);
   default:
     return false;
   }
@@ -1846,6 +1855,22 @@ bool AMDGPULegalizerInfo::legalizeAtomicCmpXChg(
     .addUse(PackedVal)
     .setMemRefs(MI.memoperands());
 
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeFlog(
+  MachineInstr &MI, MachineIRBuilder &B, double Log2BaseInverted) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT Ty = B.getMRI()->getType(Dst);
+  unsigned Flags = MI.getFlags();
+  B.setInstr(MI);
+
+  auto Log2Operand = B.buildFLog2(Ty, Src, Flags);
+  auto Log2BaseInvertedOperand = B.buildFConstant(Ty, Log2BaseInverted);
+
+  B.buildFMul(Dst, Log2Operand, Log2BaseInvertedOperand, Flags);
   MI.eraseFromParent();
   return true;
 }
