@@ -1579,6 +1579,9 @@ class Op<Dialect dialect, string mnemonic, list<OpTrait> props = []> {
   // Custom printer.
   code printer = ?;
 
+  // Custom assembly format.
+  string assemblyFormat = ?;
+
   // Custom verifier.
   code verifier = ?;
 
