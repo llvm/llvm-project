@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=OMP45
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple x86_64-apple-darwin10 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple x86_64-apple-darwin10 -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s -check-prefix=CHECK -check-prefix=OMP45
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -DLAMBDA -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=LAMBDA %s
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -fblocks -DBLOCKS -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck -check-prefix=BLOCKS %s
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=50 -DOMP5 -x c++ -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=OMP50
@@ -283,8 +283,12 @@ int main() {
 
 //
 // CHECK: define internal void [[MAIN_MICROTASK1]](i{{[0-9]+}}* noalias [[GTID_ADDR:%.+]], i{{[0-9]+}}* noalias %{{.+}})
-// CHECK: [[X_PRIV:%.+]] = alloca double,
+// OMP45: [[X_PRIV:%.+]] = alloca double,
+// OMP50: [[X_STRUCT:%.+]] = alloca [[STRUCT:%struct[.].*]],
 // CHECK-NOT: alloca double
+// OMP50: [[FIRED:%.+]] = getelementptr inbounds [[STRUCT]], [[STRUCT]]* [[X_STRUCT]], i{{.+}} 0, i{{.+}} 1
+// OMP50: store i8 0, i8* [[FIRED]],
+// OMP50: [[X_PRIV:%.+]] = getelementptr inbounds [[STRUCT]], [[STRUCT]]* [[X_STRUCT]], i{{.+}} 0, i{{.+}} 0
 
 // Check for default initialization.
 // CHECK-NOT: [[X_PRIV]]
