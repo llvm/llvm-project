@@ -63,6 +63,12 @@ protected:
                             ArrayRef<TemplateArgument> ConvertedArgs,
                             const ConstraintSatisfaction *Satisfaction);
 
+  ConceptSpecializationExpr(const ASTContext &C, ConceptDecl *NamedConcept,
+                            ArrayRef<TemplateArgument> ConvertedArgs,
+                            const ConstraintSatisfaction *Satisfaction,
+                            bool Dependent,
+                            bool ContainsUnexpandedParameterPack);
+
   ConceptSpecializationExpr(EmptyShell Empty, unsigned NumTemplateArgs);
 
 public:
@@ -74,6 +80,13 @@ public:
          const ASTTemplateArgumentListInfo *ArgsAsWritten,
          ArrayRef<TemplateArgument> ConvertedArgs,
          const ConstraintSatisfaction *Satisfaction);
+
+  static ConceptSpecializationExpr *
+  Create(const ASTContext &C, ConceptDecl *NamedConcept,
+         ArrayRef<TemplateArgument> ConvertedArgs,
+         const ConstraintSatisfaction *Satisfaction,
+         bool Dependent,
+         bool ContainsUnexpandedParameterPack);
 
   static ConceptSpecializationExpr *
   Create(ASTContext &C, EmptyShell Empty, unsigned NumTemplateArgs);

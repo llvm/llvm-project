@@ -756,12 +756,8 @@ canonicalizeImmediatelyDeclaredConstraint(const ASTContext &C, Expr *IDC,
       NewConverted.push_back(Arg);
   }
   Expr *NewIDC = ConceptSpecializationExpr::Create(
-      C, NestedNameSpecifierLoc(), /*TemplateKWLoc=*/SourceLocation(),
-      CSE->getConceptNameInfo(), /*FoundDecl=*/CSE->getNamedConcept(),
-      CSE->getNamedConcept(),
-      // Actually canonicalizing a TemplateArgumentLoc is difficult so we
-      // simply omit the ArgsAsWritten
-      /*ArgsAsWritten=*/nullptr, NewConverted, nullptr);
+      C, CSE->getNamedConcept(), NewConverted, nullptr,
+      CSE->isInstantiationDependent(), CSE->containsUnexpandedParameterPack());
 
   if (auto *OrigFold = dyn_cast<CXXFoldExpr>(IDC))
     NewIDC = new (C) CXXFoldExpr(OrigFold->getType(), SourceLocation(), NewIDC,
