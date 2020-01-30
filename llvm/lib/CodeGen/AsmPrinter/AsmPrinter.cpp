@@ -709,15 +709,21 @@ void AsmPrinter::EmitFunctionHeader() {
   // Emit M NOPs for -fpatchable-function-entry=N,M where M>0. We arbitrarily
   // place prefix data before NOPs.
   unsigned PatchableFunctionPrefix = 0;
+  unsigned PatchableFunctionEntry = 0;
   (void)F.getFnAttribute("patchable-function-prefix")
       .getValueAsString()
       .getAsInteger(10, PatchableFunctionPrefix);
+  (void)F.getFnAttribute("patchable-function-entry")
+      .getValueAsString()
+      .getAsInteger(10, PatchableFunctionEntry);
   if (PatchableFunctionPrefix) {
     CurrentPatchableFunctionEntrySym =
         OutContext.createLinkerPrivateTempSymbol();
     OutStreamer->EmitLabel(CurrentPatchableFunctionEntrySym);
     emitNops(PatchableFunctionPrefix);
-  } else {
+  } else if (PatchableFunctionEntry) {
+    // May be reassigned when emitting the body, to reference the label after
+    // the initial BTI (AArch64) or endbr32/endbr64 (x86).
     CurrentPatchableFunctionEntrySym = CurrentFnBegin;
   }
 
