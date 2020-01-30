@@ -183,8 +183,6 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
 class LinalgStructuredBase_Op<string mnemonic, list<OpTrait> props>
   : Op<Linalg_Dialect, mnemonic,
        !listconcat(props, [StructuredOpTraits, LinalgStructuredInterface])> {
-  let parser = [{ return parseLinalgStructuredOp(parser, result); }];
-  let printer = [{ printLinalgStructuredOp(p, *this); }];
 }
 
 class LinalgStructured_Op<string mnemonic, list<OpTrait> props>
@@ -194,6 +192,7 @@ class LinalgStructured_Op<string mnemonic, list<OpTrait> props>
       return generateLibraryCallName(getOperation());
     }
   }];
+  let assemblyFormat = "`(` operands `)` attr-dict `:` type(operands)";
 }
 
 ////////////////////////////////////////////////////////////////////////////////
