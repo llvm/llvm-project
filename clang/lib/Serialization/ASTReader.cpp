@@ -10002,34 +10002,38 @@ void ASTReader::diagnoseOdrViolations() {
     }
   };
 
-  auto DiagnoseODRMismatch =
-      [this](DiffResult &DR, NamedDecl *FirstRecord, StringRef FirstModule,
-             NamedDecl *SecondRecord, StringRef SecondModule) {
-        SourceLocation FirstLoc;
-        SourceRange FirstRange;
-        auto *FirstTag = dyn_cast<TagDecl>(FirstRecord);
-        if (DR.FirstDiffType == EndOfClass && FirstTag) {
-          FirstLoc = FirstTag->getBraceRange().getEnd();
-        } else {
-          FirstLoc = DR.FirstDecl->getLocation();
-          FirstRange = DR.FirstDecl->getSourceRange();
-        }
-        Diag(FirstLoc, diag::err_module_odr_violation_mismatch_decl)
-            << FirstRecord << FirstModule.empty() << FirstModule << FirstRange
-            << DR.FirstDiffType;
+  auto DiagnoseODRMismatchGetLoc = [](NamedDecl *Container, auto DiffType,
+                                      auto *DiffDecl) {
+    SourceLocation Loc = Container->getEndLoc();
+    SourceRange Range;
+    if (DiffType != EndOfClass) {
+      if (DiffDecl)
+        return std::make_pair(DiffDecl->getLocation(),
+                              DiffDecl->getSourceRange());
+      return std::make_pair(Loc, Range);
+    }
 
-        SourceLocation SecondLoc;
-        SourceRange SecondRange;
-        auto *SecondTag = dyn_cast<TagDecl>(SecondRecord);
-        if (DR.SecondDiffType == EndOfClass && SecondTag) {
-          SecondLoc = SecondTag->getBraceRange().getEnd();
-        } else {
-          SecondLoc = DR.SecondDecl->getLocation();
-          SecondRange = DR.SecondDecl->getSourceRange();
-        }
-        Diag(SecondLoc, diag::note_module_odr_violation_mismatch_decl)
-            << SecondModule << SecondRange << DR.SecondDiffType;
-      };
+    if (auto *T = dyn_cast<TagDecl>(Container))
+      return std::make_pair(T->getBraceRange().getEnd(), Range);
+
+    return std::make_pair(Loc, Range);
+  };
+
+  auto DiagnoseODRMismatch = [this, &DiagnoseODRMismatchGetLoc](
+                                 DiffResult &DR, NamedDecl *FirstRecord,
+                                 StringRef FirstModule, NamedDecl *SecondRecord,
+                                 StringRef SecondModule) {
+    auto FirstDiagInfo =
+        DiagnoseODRMismatchGetLoc(FirstRecord, DR.FirstDiffType, DR.FirstDecl);
+    Diag(FirstDiagInfo.first, diag::err_module_odr_violation_mismatch_decl)
+        << FirstRecord << FirstModule.empty() << FirstModule
+        << FirstDiagInfo.second << DR.FirstDiffType;
+
+    auto SecondDiagInfo = DiagnoseODRMismatchGetLoc(
+        SecondRecord, DR.SecondDiffType, DR.SecondDecl);
+    Diag(SecondDiagInfo.first, diag::note_module_odr_violation_mismatch_decl)
+        << SecondModule << SecondDiagInfo.second << DR.SecondDiffType;
+  };
 
   // Issue any pending ODR-failure diagnostics.
   for (auto &Merge : OdrMergeFailures) {
