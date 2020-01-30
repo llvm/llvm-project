@@ -5,12 +5,14 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 
 define internal i32 @callee(i1 %C, i32* %P) {
 ; CHECK-LABEL: define {{[^@]+}}@callee
-; CHECK-SAME: (i1 [[C:%.*]], i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[P:%.*]])
+; CHECK-SAME: (i1 [[C:%.*]], i32 [[TMP0:%.*]])
+; CHECK-NEXT:    [[P_PRIV:%.*]] = alloca i32
+; CHECK-NEXT:    store i32 [[TMP0]], i32* [[P_PRIV]]
 ; CHECK-NEXT:    br label [[F:%.*]]
 ; CHECK:       T:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       F:
-; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, i32* [[P_PRIV]], align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   br i1 %C, label %T, label %F
@@ -27,7 +29,8 @@ define i32 @foo() {
 ; CHECK-LABEL: define {{[^@]+}}@foo()
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32
 ; CHECK-NEXT:    store i32 17, i32* [[A]], align 4
-; CHECK-NEXT:    [[X:%.*]] = call i32 @callee(i1 false, i32* noalias nocapture nofree nonnull readonly align 4 dereferenceable(4) [[A]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A]], align 1
+; CHECK-NEXT:    [[X:%.*]] = call i32 @callee(i1 false, i32 [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %A = alloca i32         ; <i32*> [#uses=2]
