@@ -22,6 +22,20 @@ spv.module "Logical" "GLSL450" {
     spv.ReturnValue %0: f32
   }
 
+  // CHECK-LABEL: @group_non_uniform_fmax_reduce
+  func @group_non_uniform_fmax_reduce(%val: f32) -> f32 {
+    // CHECK: %{{.+}} = spv.GroupNonUniformFMax "Workgroup" "Reduce" %{{.+}} : f32
+    %0 = spv.GroupNonUniformFMax "Workgroup" "Reduce" %val : f32
+    spv.ReturnValue %0: f32
+  }
+
+  // CHECK-LABEL: @group_non_uniform_fmin_reduce
+  func @group_non_uniform_fmin_reduce(%val: f32) -> f32 {
+    // CHECK: %{{.+}} = spv.GroupNonUniformFMin "Workgroup" "Reduce" %{{.+}} : f32
+    %0 = spv.GroupNonUniformFMin "Workgroup" "Reduce" %val : f32
+    spv.ReturnValue %0: f32
+  }
+
   // CHECK-LABEL: @group_non_uniform_fmul_reduce
   func @group_non_uniform_fmul_reduce(%val: f32) -> f32 {
     // CHECK: %{{.+}} = spv.GroupNonUniformFMul "Workgroup" "Reduce" %{{.+}} : f32
@@ -51,4 +65,31 @@ spv.module "Logical" "GLSL450" {
     spv.ReturnValue %0: i32
   }
 
+  // CHECK-LABEL: @group_non_uniform_smax_reduce
+  func @group_non_uniform_smax_reduce(%val: i32) -> i32 {
+    // CHECK: %{{.+}} = spv.GroupNonUniformSMax "Workgroup" "Reduce" %{{.+}} : i32
+    %0 = spv.GroupNonUniformSMax "Workgroup" "Reduce" %val : i32
+    spv.ReturnValue %0: i32
+  }
+
+  // CHECK-LABEL: @group_non_uniform_smin_reduce
+  func @group_non_uniform_smin_reduce(%val: i32) -> i32 {
+    // CHECK: %{{.+}} = spv.GroupNonUniformSMin "Workgroup" "Reduce" %{{.+}} : i32
+    %0 = spv.GroupNonUniformSMin "Workgroup" "Reduce" %val : i32
+    spv.ReturnValue %0: i32
+  }
+
+  // CHECK-LABEL: @group_non_uniform_umax_reduce
+  func @group_non_uniform_umax_reduce(%val: i32) -> i32 {
+    // CHECK: %{{.+}} = spv.GroupNonUniformUMax "Workgroup" "Reduce" %{{.+}} : i32
+    %0 = spv.GroupNonUniformUMax "Workgroup" "Reduce" %val : i32
+    spv.ReturnValue %0: i32
+  }
+
+  // CHECK-LABEL: @group_non_uniform_umin_reduce
+  func @group_non_uniform_umin_reduce(%val: i32) -> i32 {
+    // CHECK: %{{.+}} = spv.GroupNonUniformUMin "Workgroup" "Reduce" %{{.+}} : i32
+    %0 = spv.GroupNonUniformUMin "Workgroup" "Reduce" %val : i32
+    spv.ReturnValue %0: i32
+  }
 }
