@@ -474,38 +474,6 @@ void ExtractSlicesOp::build(Builder *builder, OperationState &result,
   result.addAttribute(getStridesAttrName(), stridesAttr);
 }
 
-static ParseResult parseExtractSlicesOp(OpAsmParser &parser,
-                                        OperationState &result) {
-  OpAsmParser::OperandType operandInfo;
-  ArrayAttr sizesAttr;
-  StringRef sizesAttrName = ExtractSlicesOp::getSizesAttrName();
-  ArrayAttr stridesAttr;
-  StringRef stridesAttrName = ExtractSlicesOp::getStridesAttrName();
-  VectorType vectorType;
-  TupleType resultTupleType;
-  return failure(
-      parser.parseOperand(operandInfo) || parser.parseComma() ||
-      parser.parseAttribute(sizesAttr, sizesAttrName, result.attributes) ||
-      parser.parseComma() ||
-      parser.parseAttribute(stridesAttr, stridesAttrName, result.attributes) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(vectorType) ||
-      parser.parseKeywordType("into", resultTupleType) ||
-      parser.resolveOperand(operandInfo, vectorType, result.operands) ||
-      parser.addTypeToList(resultTupleType, result.types));
-}
-
-static void print(OpAsmPrinter &p, ExtractSlicesOp op) {
-  p << op.getOperationName() << ' ' << op.vector() << ", ";
-  p << op.sizes() << ", " << op.strides();
-  p.printOptionalAttrDict(
-      op.getAttrs(),
-      /*elidedAttrs=*/{ExtractSlicesOp::getSizesAttrName(),
-                       ExtractSlicesOp::getStridesAttrName()});
-  p << " : " << op.vector().getType();
-  p << " into " << op.getResultTupleType();
-}
-
 static LogicalResult
 isValidExtractOrInsertSlicesType(Operation *op, VectorType vectorType,
                                  TupleType tupleType, ArrayRef<int64_t> sizes,
@@ -572,11 +540,6 @@ void ExtractSlicesOp::getStrides(SmallVectorImpl<int64_t> &results) {
 // BroadcastOp
 //===----------------------------------------------------------------------===//
 
-static void print(OpAsmPrinter &p, BroadcastOp op) {
-  p << op.getOperationName() << " " << op.source() << " : "
-    << op.getSourceType() << " to " << op.getVectorType();
-}
-
 static LogicalResult verify(BroadcastOp op) {
   VectorType srcVectorType = op.getSourceType().dyn_cast<VectorType>();
   VectorType dstVectorType = op.getVectorType();
@@ -599,18 +562,6 @@ static LogicalResult verify(BroadcastOp op) {
     }
   }
   return success();
-}
-
-static ParseResult parseBroadcastOp(OpAsmParser &parser,
-                                    OperationState &result) {
-  OpAsmParser::OperandType source;
-  Type sourceType;
-  VectorType vectorType;
-  return failure(parser.parseOperand(source) ||
-                 parser.parseColonType(sourceType) ||
-                 parser.parseKeywordType("to", vectorType) ||
-                 parser.resolveOperand(source, sourceType, result.operands) ||
-                 parser.addTypeToList(vectorType, result.types));
 }
 
 //===----------------------------------------------------------------------===//
@@ -807,38 +758,6 @@ static LogicalResult verify(InsertOp op) {
 //===----------------------------------------------------------------------===//
 // InsertSlicesOp
 //===----------------------------------------------------------------------===//
-
-static ParseResult parseInsertSlicesOp(OpAsmParser &parser,
-                                       OperationState &result) {
-  OpAsmParser::OperandType operandInfo;
-  ArrayAttr sizesAttr;
-  StringRef sizesAttrName = InsertSlicesOp::getSizesAttrName();
-  ArrayAttr stridesAttr;
-  StringRef stridesAttrName = InsertSlicesOp::getStridesAttrName();
-  TupleType tupleType;
-  VectorType resultVectorType;
-  return failure(
-      parser.parseOperand(operandInfo) || parser.parseComma() ||
-      parser.parseAttribute(sizesAttr, sizesAttrName, result.attributes) ||
-      parser.parseComma() ||
-      parser.parseAttribute(stridesAttr, stridesAttrName, result.attributes) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(tupleType) ||
-      parser.parseKeywordType("into", resultVectorType) ||
-      parser.resolveOperand(operandInfo, tupleType, result.operands) ||
-      parser.addTypeToList(resultVectorType, result.types));
-}
-
-static void print(OpAsmPrinter &p, InsertSlicesOp op) {
-  p << op.getOperationName() << ' ' << op.vectors() << ", ";
-  p << op.sizes() << ", " << op.strides();
-  p.printOptionalAttrDict(
-      op.getAttrs(),
-      /*elidedAttrs=*/{InsertSlicesOp::getSizesAttrName(),
-                       InsertSlicesOp::getStridesAttrName()});
-  p << " : " << op.vectors().getType();
-  p << " into " << op.getResultVectorType();
-}
 
 static LogicalResult verify(InsertSlicesOp op) {
   SmallVector<int64_t, 4> sizes;
@@ -1231,27 +1150,6 @@ void StridedSliceOp::build(Builder *builder, OperationState &result,
   result.addAttribute(getStridesAttrName(), stridesAttr);
 }
 
-static void print(OpAsmPrinter &p, StridedSliceOp op) {
-  p << op.getOperationName() << " " << op.vector();
-  p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.vector().getType() << " to " << op.getResult().getType();
-}
-
-static ParseResult parseStridedSliceOp(OpAsmParser &parser,
-                                       OperationState &result) {
-  llvm::SMLoc attributeLoc, typeLoc;
-  OpAsmParser::OperandType vector;
-  VectorType vectorType, resultVectorType;
-  return failure(parser.parseOperand(vector) ||
-                 parser.getCurrentLocation(&attributeLoc) ||
-                 parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.getCurrentLocation(&typeLoc) ||
-                 parser.parseColonType(vectorType) ||
-                 parser.parseKeywordType("to", resultVectorType) ||
-                 parser.resolveOperand(vector, vectorType, result.operands) ||
-                 parser.addTypeToList(resultVectorType, result.types));
-}
-
 static LogicalResult verify(StridedSliceOp op) {
   auto type = op.getVectorType();
   auto offsets = op.offsets();
@@ -1519,35 +1417,6 @@ static LogicalResult verify(TransferReadOp op) {
 //===----------------------------------------------------------------------===//
 // TransferWriteOp
 //===----------------------------------------------------------------------===//
-static void print(OpAsmPrinter &p, TransferWriteOp op) {
-  p << op.getOperationName() << " " << op.vector() << ", " << op.memref() << "["
-    << op.indices() << "]";
-  p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.getVectorType() << ", " << op.getMemRefType();
-}
-
-static ParseResult parseTransferWriteOp(OpAsmParser &parser,
-                                        OperationState &result) {
-  llvm::SMLoc typesLoc;
-  OpAsmParser::OperandType storeValueInfo;
-  OpAsmParser::OperandType memRefInfo;
-  SmallVector<OpAsmParser::OperandType, 4> indexInfo;
-  SmallVector<Type, 2> types;
-  if (parser.parseOperand(storeValueInfo) || parser.parseComma() ||
-      parser.parseOperand(memRefInfo) ||
-      parser.parseOperandList(indexInfo, OpAsmParser::Delimiter::Square) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.getCurrentLocation(&typesLoc) || parser.parseColonTypeList(types))
-    return failure();
-  if (types.size() != 2)
-    return parser.emitError(typesLoc, "two types required");
-  auto indexType = parser.getBuilder().getIndexType();
-  Type vectorType = types[0], memRefType = types[1];
-  return failure(
-      parser.resolveOperand(storeValueInfo, vectorType, result.operands) ||
-      parser.resolveOperand(memRefInfo, memRefType, result.operands) ||
-      parser.resolveOperands(indexInfo, indexType, result.operands));
-}
 
 static LogicalResult verify(TransferWriteOp op) {
   // Consistency of elemental types in memref and vector.
@@ -1676,23 +1545,6 @@ OpFoldResult TupleGetOp::fold(ArrayRef<Attribute> operands) {
 // ConstantMaskOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseConstantMaskOp(OpAsmParser &parser,
-                                       OperationState &result) {
-  Type resultType;
-  ArrayAttr maskDimSizesAttr;
-  StringRef attrName = ConstantMaskOp::getMaskDimSizesAttrName();
-  return failure(
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseAttribute(maskDimSizesAttr, attrName, result.attributes) ||
-      parser.parseColonType(resultType) ||
-      parser.addTypeToList(resultType, result.types));
-}
-
-static void print(OpAsmPrinter &p, ConstantMaskOp op) {
-  p << op.getOperationName() << ' ' << op.mask_dim_sizes() << " : "
-    << op.getResult().getType();
-}
-
 static LogicalResult verify(ConstantMaskOp &op) {
   // Verify that array attr size matches the rank of the vector result.
   auto resultType = op.getResult().getType().cast<VectorType>();
@@ -1724,23 +1576,6 @@ static LogicalResult verify(ConstantMaskOp &op) {
 // CreateMaskOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseCreateMaskOp(OpAsmParser &parser,
-                                     OperationState &result) {
-  auto indexType = parser.getBuilder().getIndexType();
-  Type resultType;
-  SmallVector<OpAsmParser::OperandType, 4> operandInfo;
-  return failure(
-      parser.parseOperandList(operandInfo) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(resultType) ||
-      parser.resolveOperands(operandInfo, indexType, result.operands) ||
-      parser.addTypeToList(resultType, result.types));
-}
-
-static void print(OpAsmPrinter &p, CreateMaskOp op) {
-  p << op.getOperationName() << ' ' << op.operands() << " : " << op.getType();
-}
-
 static LogicalResult verify(CreateMaskOp op) {
   // Verify that an operand was specified for each result vector each dimension.
   if (op.getNumOperands() !=
@@ -1748,23 +1583,6 @@ static LogicalResult verify(CreateMaskOp op) {
     return op.emitOpError(
         "must specify an operand for each result vector dimension");
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// PrintOp
-//===----------------------------------------------------------------------===//
-
-static ParseResult parsePrintOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType source;
-  Type sourceType;
-  return failure(parser.parseOperand(source) ||
-                 parser.parseColonType(sourceType) ||
-                 parser.resolveOperand(source, sourceType, result.operands));
-}
-
-static void print(OpAsmPrinter &p, PrintOp op) {
-  p << op.getOperationName() << ' ' << op.source() << " : "
-    << op.getPrintType();
 }
 
 namespace {

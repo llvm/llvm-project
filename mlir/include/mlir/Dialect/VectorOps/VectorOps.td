@@ -203,6 +203,7 @@ def Vector_BroadcastOp :
       return vector().getType().cast<VectorType>();
     }
   }];
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($vector)";
 }
 
 def Vector_ShuffleOp :
@@ -364,6 +365,10 @@ def Vector_ExtractSlicesOp :
     static StringRef getSizesAttrName() { return "sizes"; }
     static StringRef getStridesAttrName() { return "strides"; }
   }];
+  let assemblyFormat = [{
+    $vector `,` $sizes `,` $strides attr-dict `:` type($vector) `into`
+    type(results)
+  }];
 }
 
 def Vector_InsertElementOp :
@@ -481,6 +486,10 @@ def Vector_InsertSlicesOp :
     void getStrides(SmallVectorImpl<int64_t> &results);
     static StringRef getSizesAttrName() { return "sizes"; }
     static StringRef getStridesAttrName() { return "strides"; }
+  }];
+  let assemblyFormat = [{
+    $vectors `,` $sizes `,` $strides attr-dict `:` type($vectors) `into`
+    type(results)
   }];
 }
 
@@ -727,6 +736,7 @@ def Vector_StridedSliceOp :
     void getOffsets(SmallVectorImpl<int64_t> &results);
   }];
   let hasCanonicalizer = 1;
+  let assemblyFormat = "$vector attr-dict `:` type($vector) `to` type(results)";
 }
 
 def Vector_TransferReadOp :
@@ -939,6 +949,10 @@ def Vector_TransferWriteOp :
       return memref().getType().cast<MemRefType>();
     }
   }];
+  let assemblyFormat = [{
+    $vector `,` $memref `[` $indices `]` attr-dict `:` type($vector) `,`
+    type($memref)
+  }];
 }
 
 def Vector_TypeCastOp :
@@ -1017,6 +1031,7 @@ def Vector_ConstantMaskOp :
   let extraClassDeclaration = [{
     static StringRef getMaskDimSizesAttrName() { return "mask_dim_sizes"; }
   }];
+  let assemblyFormat = "$mask_dim_sizes attr-dict `:` type(results)";
 }
 
 def Vector_CreateMaskOp :
@@ -1048,6 +1063,7 @@ def Vector_CreateMaskOp :
   }];
 
   let hasCanonicalizer = 1;
+  let assemblyFormat = "$operands attr-dict `:` type(results)";
 }
 
 def Vector_TupleOp :
@@ -1148,6 +1164,7 @@ def Vector_PrintOp :
       return source().getType();
     }
   }];
+  let assemblyFormat = "$source attr-dict `:` type($source)";
 }
 
 #endif // VECTOR_OPS
