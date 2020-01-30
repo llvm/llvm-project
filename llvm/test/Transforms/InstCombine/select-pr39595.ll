@@ -2,7 +2,7 @@
 
 define i32 @foo(i32 %x, i32 %y) {
 ; CHECK-LABEL: foo
-; CHECK:      [[TMP1:%.*]] = icmp ult i32 %y, %x
+; CHECK:      [[TMP1:%.*]] = icmp ugt i32 %x, %y
 ; CHECK-NEXT: [[TMP2:%.*]] = select i1 [[TMP1]], i32 %x, i32 %y, !prof ![[$MD0:[0-9]+]]
 ; CHECK-NEXT: [[TMP3:%.*]] = xor i32 [[TMP2]], -1
 ; CHECK-NEXT: ret i32 [[TMP3:%.*]]

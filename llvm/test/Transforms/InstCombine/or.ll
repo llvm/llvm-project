@@ -161,7 +161,7 @@ define i1 @test25(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test25(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[D:%.*]] = icmp ne i32 [[B:%.*]], 57
-; CHECK-NEXT:    [[F:%.*]] = and i1 [[D]], [[C]]
+; CHECK-NEXT:    [[F:%.*]] = and i1 [[C]], [[D]]
 ; CHECK-NEXT:    ret i1 [[F]]
 ;
   %C = icmp eq i32 %A, 0
@@ -333,8 +333,8 @@ define <4 x i32> @test32(<4 x i1> %and.i1352, <4 x i32> %vecinit6.i176, <4 x i32
 
 define i1 @test33(i1 %X, i1 %Y) {
 ; CHECK-LABEL: @test33(
-; CHECK-NEXT:    [[B:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[B]]
+; CHECK-NEXT:    [[A:%.*]] = or i1 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[A]]
 ;
   %a = or i1 %X, %Y
   %b = or i1 %a, %X
@@ -343,8 +343,8 @@ define i1 @test33(i1 %X, i1 %Y) {
 
 define i32 @test34(i32 %X, i32 %Y) {
 ; CHECK-LABEL: @test34(
-; CHECK-NEXT:    [[B:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i32 [[B]]
+; CHECK-NEXT:    [[A:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[A]]
 ;
   %a = or i32 %X, %Y
   %b = or i32 %Y, %a
