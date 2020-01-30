@@ -342,6 +342,10 @@
 #    define _LIBCPP_HAS_ALIGNED_ALLOC
 #    define _LIBCPP_HAS_QUICK_EXIT
 #    define _LIBCPP_HAS_C11_FEATURES
+#    if __FreeBSD_version >= 1300064 || \
+       (__FreeBSD_version >= 1201504 && __FreeBSD_version < 1300000)
+#      define _LIBCPP_HAS_TIMESPEC_GET
+#    endif
 #  elif defined(__BIONIC__)
 #    define _LIBCPP_HAS_C11_FEATURES
 #    if __ANDROID_API__ >= 21
