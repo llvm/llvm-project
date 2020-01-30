@@ -835,6 +835,9 @@ MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
       while (!Chain.empty()) {
         MachineInstr *MI = Chain.back();
         Chain.pop_back();
+        if (TII->getPredicate(*MI) != ARMCC::AL)
+          continue;
+
         if (RDA->isSafeToRemove(MI, Remove, Ignore)) {
           for (auto &MO : MI->operands()) {
             if (!MO.isReg() || !MO.isUse() || MO.getReg() == 0)
