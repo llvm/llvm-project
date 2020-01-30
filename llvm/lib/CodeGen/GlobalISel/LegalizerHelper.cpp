@@ -2438,6 +2438,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerSITOFP(MI, TypeIdx, Ty);
   case G_FPTOUI:
     return lowerFPTOUI(MI, TypeIdx, Ty);
+  case G_FPTOSI:
+    return lowerFPTOSI(MI);
   case G_SMIN:
   case G_SMAX:
   case G_UMIN:
@@ -4310,6 +4312,73 @@ LegalizerHelper::lowerFPTOUI(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   MachineInstrBuilder FCMP =
       MIRBuilder.buildFCmp(CmpInst::FCMP_ULT, S1, Src, Threshold);
   MIRBuilder.buildSelect(Dst, FCMP, FPTOSI, Res);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPTOSI(MachineInstr &MI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Src);
+  const LLT S64 = LLT::scalar(64);
+  const LLT S32 = LLT::scalar(32);
+
+  // FIXME: Only f32 to i64 conversions are supported.
+  if (SrcTy.getScalarType() != S32 || DstTy.getScalarType() != S64)
+    return UnableToLegalize;
+
+  // Expand f32 -> i64 conversion
+  // This algorithm comes from compiler-rt's implementation of fixsfdi:
+  // https://github.com/llvm/llvm-project/blob/master/compiler-rt/lib/builtins/fixsfdi.c
+
+  unsigned SrcEltBits = SrcTy.getScalarSizeInBits();
+
+  auto ExponentMask = MIRBuilder.buildConstant(SrcTy, 0x7F800000);
+  auto ExponentLoBit = MIRBuilder.buildConstant(SrcTy, 23);
+
+  auto AndExpMask = MIRBuilder.buildAnd(SrcTy, Src, ExponentMask);
+  auto ExponentBits = MIRBuilder.buildLShr(SrcTy, AndExpMask, ExponentLoBit);
+
+  auto SignMask = MIRBuilder.buildConstant(SrcTy,
+                                           APInt::getSignMask(SrcEltBits));
+  auto AndSignMask = MIRBuilder.buildAnd(SrcTy, Src, SignMask);
+  auto SignLowBit = MIRBuilder.buildConstant(SrcTy, SrcEltBits - 1);
+  auto Sign = MIRBuilder.buildAShr(SrcTy, AndSignMask, SignLowBit);
+  Sign = MIRBuilder.buildSExt(DstTy, Sign);
+
+  auto MantissaMask = MIRBuilder.buildConstant(SrcTy, 0x007FFFFF);
+  auto AndMantissaMask = MIRBuilder.buildAnd(SrcTy, Src, MantissaMask);
+  auto K = MIRBuilder.buildConstant(SrcTy, 0x00800000);
+
+  auto R = MIRBuilder.buildOr(SrcTy, AndMantissaMask, K);
+  R = MIRBuilder.buildZExt(DstTy, R);
+
+  auto Bias = MIRBuilder.buildConstant(SrcTy, 127);
+  auto Exponent = MIRBuilder.buildSub(SrcTy, ExponentBits, Bias);
+  auto SubExponent = MIRBuilder.buildSub(SrcTy, Exponent, ExponentLoBit);
+  auto ExponentSub = MIRBuilder.buildSub(SrcTy, ExponentLoBit, Exponent);
+
+  auto Shl = MIRBuilder.buildShl(DstTy, R, SubExponent);
+  auto Srl = MIRBuilder.buildLShr(DstTy, R, ExponentSub);
+
+  const LLT S1 = LLT::scalar(1);
+  auto CmpGt = MIRBuilder.buildICmp(CmpInst::ICMP_SGT,
+                                    S1, Exponent, ExponentLoBit);
+
+  R = MIRBuilder.buildSelect(DstTy, CmpGt, Shl, Srl);
+
+  auto XorSign = MIRBuilder.buildXor(DstTy, R, Sign);
+  auto Ret = MIRBuilder.buildSub(DstTy, XorSign, Sign);
+
+  auto ZeroSrcTy = MIRBuilder.buildConstant(SrcTy, 0);
+
+  auto ExponentLt0 = MIRBuilder.buildICmp(CmpInst::ICMP_SLT,
+                                          S1, Exponent, ZeroSrcTy);
+
+  auto ZeroDstTy = MIRBuilder.buildConstant(DstTy, 0);
+  MIRBuilder.buildSelect(Dst, ExponentLt0, ZeroDstTy, Ret);
 
   MI.eraseFromParent();
   return Legalized;
