@@ -114,7 +114,7 @@ private:
 
   /// MachineRegisterInfo callback to notify when new virtual
   /// registers are created.
-  void MRI_NoteNewVirtualRegister(unsigned VReg) override;
+  void MRI_NoteNewVirtualRegister(Register VReg) override;
 
   /// Check if MachineOperand \p MO is a last use/kill either in the
   /// main live range of \p LI or in one of the matching subregister ranges.
