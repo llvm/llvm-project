@@ -299,6 +299,14 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
   return Error::success();
 }
 
+uint64_t DWARFDebugLine::Prologue::getLength() const {
+  uint64_t Length = PrologueLength + sizeofTotalLength() +
+                    sizeof(getVersion()) + sizeofPrologueLength();
+  if (getVersion() >= 5)
+    Length += 2; // Address + Segment selector sizes.
+  return Length;
+}
+
 Error DWARFDebugLine::Prologue::parse(
     const DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
     function_ref<void(Error)> RecoverableErrorCallback, const DWARFContext &Ctx,
