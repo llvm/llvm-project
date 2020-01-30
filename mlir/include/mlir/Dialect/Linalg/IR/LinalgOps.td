@@ -56,6 +56,7 @@ def Linalg_RangeOp :
 
   // Fully specified by traits.
   let verifier = ?;
+  let assemblyFormat = "$min `:` $max `:` $step attr-dict `:` type(results)";
 }
 
 def Linalg_ReshapeOp : Linalg_Op<"reshape", [NoSideEffect]>,
@@ -117,7 +118,9 @@ def Linalg_ReshapeOp : Linalg_Op<"reshape", [NoSideEffect]>,
     static StringRef getReassociationAttrName() { return "reassociation"; }
     MemRefType getViewType() { return view().getType().cast<MemRefType>(); }
   }];
-
+  let assemblyFormat = [{
+    $view $reassociation attr-dict `:` type($view) `into` type(results)
+  }];
   let hasFolder = 1;
 }
 

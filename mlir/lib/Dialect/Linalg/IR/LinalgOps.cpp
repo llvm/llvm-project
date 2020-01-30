@@ -380,30 +380,6 @@ static LogicalResult verify(GenericOp op) { return verifyGenericOp(op); }
 static LogicalResult verify(IndexedGenericOp op) { return verifyGenericOp(op); }
 
 //===----------------------------------------------------------------------===//
-// RangeOp
-//===----------------------------------------------------------------------===//
-
-static void print(OpAsmPrinter &p, RangeOp op) {
-  p << op.getOperationName() << " " << op.min() << ":" << op.max() << ":"
-    << op.step();
-  p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.getResult().getType();
-}
-
-static ParseResult parseRangeOp(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 3> rangeInfo(3);
-  RangeType type;
-  auto indexTy = parser.getBuilder().getIndexType();
-  return failure(parser.parseOperand(rangeInfo[0]) || parser.parseColon() ||
-                 parser.parseOperand(rangeInfo[1]) || parser.parseColon() ||
-                 parser.parseOperand(rangeInfo[2]) ||
-                 parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(type) ||
-                 parser.resolveOperands(rangeInfo, indexTy, result.operands) ||
-                 parser.addTypeToList(type, result.types));
-}
-
-//===----------------------------------------------------------------------===//
 // ReshapeOp
 //===----------------------------------------------------------------------===//
 
@@ -581,28 +557,6 @@ void mlir::linalg::ReshapeOp::build(
   build(b, result, resultType, view, attrs);
   result.addAttribute(ReshapeOp::getReassociationAttrName(),
                       b->getAffineMapArrayAttr(maps));
-}
-
-static void print(OpAsmPrinter &p, ReshapeOp op) {
-  p << op.getOperationName() << " " << op.view() << " " << op.reassociation();
-  p.printOptionalAttrDict(op.getAttrs(),
-                          {ReshapeOp::getReassociationAttrName()});
-  p << " : " << op.getViewType() << " into " << op.getResult().getType();
-}
-
-static ParseResult parseReshapeOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType view;
-  ArrayAttr reassociation;
-  MemRefType type, resultType;
-  return failure(parser.parseOperand(view) ||
-                 parser.parseAttribute(reassociation,
-                                       ReshapeOp::getReassociationAttrName(),
-                                       result.attributes) ||
-                 parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(type) ||
-                 parser.parseKeywordType("into", resultType) ||
-                 parser.resolveOperand(view, type, result.operands) ||
-                 parser.addTypeToList(resultType, result.types));
 }
 
 static LogicalResult verify(ReshapeOp op) {
@@ -838,43 +792,6 @@ static LogicalResult verify(YieldOp op) {
 }
 
 /////// Operations corresponding to library calls defined with Tablegen ////////
-// For such operations correspond to library calls (i.e. defined in
-// LinalgStructuredOps.td), we define an overloaded `print` function and a
-// parse`className` function.
-
-// A LinalgStructuredOp prints as:
-//
-// ```mlir
-//   concrete_op_name (ssa-inputs, ssa-outputs) : view-types
-// ```
-//
-// for example:
-//
-// ```
-//   linalg.matmul(%0, %1, %2) :
-//     memref<?x?xf32, stride_specification>,
-//     memref<?x?xf32, stride_specification>,
-//     memref<?x?xf32, stride_specification>
-// ```
-//
-// Where %0, %1 and %2 are ssa-values of type MemRefType with strides.
-static void printLinalgStructuredOp(OpAsmPrinter &p, Operation *op) {
-  assert(op->getAbstractOperation() && "unregistered operation");
-  p << op->getName().getStringRef() << "(" << op->getOperands() << ")";
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : " << op->getOperandTypes();
-}
-
-static ParseResult parseLinalgStructuredOp(OpAsmParser &parser,
-                                           OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 3> ops;
-  SmallVector<Type, 3> types;
-  return failure(
-      parser.parseOperandList(ops, OpAsmParser::Delimiter::Paren) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonTypeList(types) ||
-      parser.resolveOperands(ops, types, parser.getNameLoc(), result.operands));
-}
 
 static LogicalResult verify(FillOp op) {
   auto viewType = op.getOutputShapedType(0);

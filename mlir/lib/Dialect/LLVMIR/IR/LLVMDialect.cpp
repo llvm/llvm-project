@@ -153,51 +153,6 @@ static ParseResult parseAllocaOp(OpAsmParser &parser, OperationState &result) {
 }
 
 //===----------------------------------------------------------------------===//
-// Printing/parsing for LLVM::GEPOp.
-//===----------------------------------------------------------------------===//
-
-static void printGEPOp(OpAsmPrinter &p, GEPOp &op) {
-  SmallVector<Type, 8> types(op.getOperandTypes());
-  auto funcTy = FunctionType::get(types, op.getType(), op.getContext());
-
-  p << op.getOperationName() << ' ' << op.base() << '['
-    << op.getOperands().drop_front() << ']';
-  p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << funcTy;
-}
-
-// <operation> ::= `llvm.getelementptr` ssa-use `[` ssa-use-list `]`
-//                 attribute-dict? `:` type
-static ParseResult parseGEPOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType base;
-  SmallVector<OpAsmParser::OperandType, 8> indices;
-  Type type;
-  llvm::SMLoc trailingTypeLoc;
-  if (parser.parseOperand(base) ||
-      parser.parseOperandList(indices, OpAsmParser::Delimiter::Square) ||
-      parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
-      parser.getCurrentLocation(&trailingTypeLoc) || parser.parseType(type))
-    return failure();
-
-  // Deconstruct the trailing function type to extract the types of the base
-  // pointer and result (same type) and the types of the indices.
-  auto funcType = type.dyn_cast<FunctionType>();
-  if (!funcType || funcType.getNumResults() != 1 ||
-      funcType.getNumInputs() == 0)
-    return parser.emitError(trailingTypeLoc,
-                            "expected trailing function type with at least "
-                            "one argument and one result");
-
-  if (parser.resolveOperand(base, funcType.getInput(0), result.operands) ||
-      parser.resolveOperands(indices, funcType.getInputs().drop_front(),
-                             parser.getNameLoc(), result.operands))
-    return failure();
-
-  result.addTypes(funcType.getResults());
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // Printing/parsing for LLVM::LoadOp.
 //===----------------------------------------------------------------------===//
 
@@ -957,29 +912,7 @@ static ParseResult parseReturnOp(OpAsmParser &parser, OperationState &result) {
 }
 
 //===----------------------------------------------------------------------===//
-// Printing/parsing for LLVM::UndefOp.
-//===----------------------------------------------------------------------===//
-
-static void printUndefOp(OpAsmPrinter &p, UndefOp &op) {
-  p << op.getOperationName();
-  p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.res().getType();
-}
-
-// <operation> ::= `llvm.mlir.undef` attribute-dict? : type
-static ParseResult parseUndefOp(OpAsmParser &parser, OperationState &result) {
-  Type type;
-
-  if (parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(type))
-    return failure();
-
-  result.addTypes(type);
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// Printer, parser and verifier for LLVM::AddressOfOp.
+// Verifier for LLVM::AddressOfOp.
 //===----------------------------------------------------------------------===//
 
 GlobalOp AddressOfOp::getGlobal() {
@@ -989,27 +922,6 @@ GlobalOp AddressOfOp::getGlobal() {
   assert(module && "unexpected operation outside of a module");
   return dyn_cast_or_null<LLVM::GlobalOp>(
       mlir::SymbolTable::lookupSymbolIn(module, global_name()));
-}
-
-static void printAddressOfOp(OpAsmPrinter &p, AddressOfOp op) {
-  p << op.getOperationName() << " ";
-  p.printSymbolName(op.global_name());
-  p.printOptionalAttrDict(op.getAttrs(), {"global_name"});
-  p << " : " << op.getResult().getType();
-}
-
-static ParseResult parseAddressOfOp(OpAsmParser &parser,
-                                    OperationState &result) {
-  Attribute symRef;
-  Type type;
-  if (parser.parseAttribute(symRef, "global_name", result.attributes) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(type) || parser.addTypeToList(type, result.types))
-    return failure();
-
-  if (!symRef.isa<SymbolRefAttr>())
-    return parser.emitError(parser.getNameLoc(), "expected symbol reference");
-  return success();
 }
 
 static LogicalResult verify(AddressOfOp op) {
@@ -1023,32 +935,6 @@ static LogicalResult verify(AddressOfOp op) {
     return op.emitOpError(
         "the type must be a pointer to the type of the referred global");
 
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// Printing/parsing for LLVM::ConstantOp.
-//===----------------------------------------------------------------------===//
-
-static void printConstantOp(OpAsmPrinter &p, ConstantOp &op) {
-  p << op.getOperationName() << '(' << op.value() << ')';
-  p.printOptionalAttrDict(op.getAttrs(), {"value"});
-  p << " : " << op.res().getType();
-}
-
-// <operation> ::= `llvm.mlir.constant` `(` attribute `)` attribute-list? : type
-static ParseResult parseConstantOp(OpAsmParser &parser,
-                                   OperationState &result) {
-  Attribute valueAttr;
-  Type type;
-
-  if (parser.parseLParen() ||
-      parser.parseAttribute(valueAttr, "value", result.attributes) ||
-      parser.parseRParen() || parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(type))
-    return failure();
-
-  result.addTypes(type);
   return success();
 }
 
@@ -1516,22 +1402,8 @@ static LogicalResult verify(LLVMFuncOp op) {
 }
 
 //===----------------------------------------------------------------------===//
-// Printing, parsing and verification for LLVM::NullOp.
+// Verification for LLVM::NullOp.
 //===----------------------------------------------------------------------===//
-
-static void printNullOp(OpAsmPrinter &p, LLVM::NullOp op) {
-  p << NullOp::getOperationName();
-  p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.getType();
-}
-
-// <operation> = `llvm.mlir.null` : type
-static ParseResult parseNullOp(OpAsmParser &parser, OperationState &result) {
-  Type type;
-  return failure(parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(type) ||
-                 parser.addTypeToList(type, result.types));
-}
 
 // Only LLVM pointer types are supported.
 static LogicalResult verify(LLVM::NullOp op) {
