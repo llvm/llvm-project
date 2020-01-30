@@ -16,16 +16,13 @@ namespace clang {
 namespace tidy {
 namespace cert {
 
-AST_MATCHER(CXXNewExpr, isPlacementNew) {
-  return Node.getNumPlacementArgs() > 0;
-}
-
 void DefaultOperatorNewAlignmentCheck::registerMatchers(MatchFinder *Finder) {
   // Check not applicable in C++17 (or newer).
   if (getLangOpts().CPlusPlus17)
     return;
 
-  Finder->addMatcher(cxxNewExpr(unless(isPlacementNew())).bind("new"), this);
+  Finder->addMatcher(
+      cxxNewExpr(unless(hasAnyPlacementArg(anything()))).bind("new"), this);
 }
 
 void DefaultOperatorNewAlignmentCheck::check(
