@@ -1880,7 +1880,7 @@ attributes are supported:
     not imply preference (it is logically a set). The compiler is free
     to pick any listed vector function of its choosing.
 
-    The syntax for the mangled names is as follows:
+    The syntax for the mangled names is as follows:::
 
         _ZGV<isa><mask><vlen><parameters>_<scalar_name>[(<vector_redirection>)]
 
@@ -1907,34 +1907,34 @@ attributes are supported:
     ``<isa>`` token that can be used to create scalar-to-vector
     mappings for functions that are not directly associated to any of
     the target ISAs (for example, some of the mappings stored in the
-    TargetLibraryInfo). Valid values for the ``<isa>`` token are:
+    TargetLibraryInfo). Valid values for the ``<isa>`` token are:::
 
-    <isa>:= b | c | d | e  -> X86 SSE, AVX, AVX2, AVX512
-          | n | s          -> Armv8 Advanced SIMD, SVE
-          | __LLVM__       -> Internal LLVM Vector ISA
+        <isa>:= b | c | d | e  -> X86 SSE, AVX, AVX2, AVX512
+              | n | s          -> Armv8 Advanced SIMD, SVE
+              | __LLVM__       -> Internal LLVM Vector ISA
 
     For all targets currently supported (x86, Arm and Internal LLVM),
-    the remaining tokens can have the following values:
+    the remaining tokens can have the following values:::
 
-    <mask>:= M | N         -> mask | no mask
+        <mask>:= M | N         -> mask | no mask
 
-    <vlen>:= number        -> number of lanes
-           | x             -> VLA (Vector Length Agnostic)
+        <vlen>:= number        -> number of lanes
+               | x             -> VLA (Vector Length Agnostic)
 
-    <parameters>:= v              -> vector
-                 | l | l <number> -> linear
-                 | R | R <number> -> linear with ref modifier
-                 | L | L <number> -> linear with val modifier
-                 | U | U <number> -> linear with uval modifier
-                 | ls <pos>       -> runtime linear
-                 | Rs <pos>       -> runtime linear with ref modifier
-                 | Ls <pos>       -> runtime linear with val modifier
-                 | Us <pos>       -> runtime linear with uval modifier
-                 | u              -> uniform
+        <parameters>:= v              -> vector
+                     | l | l <number> -> linear
+                     | R | R <number> -> linear with ref modifier
+                     | L | L <number> -> linear with val modifier
+                     | U | U <number> -> linear with uval modifier
+                     | ls <pos>       -> runtime linear
+                     | Rs <pos>       -> runtime linear with ref modifier
+                     | Ls <pos>       -> runtime linear with val modifier
+                     | Us <pos>       -> runtime linear with uval modifier
+                     | u              -> uniform
 
-    <scalar_name>:= name of the scalar function
+        <scalar_name>:= name of the scalar function
 
-    <vector_redirection>:= optional, custom name of the vector function
+        <vector_redirection>:= optional, custom name of the vector function
 
 .. _glattrs:
 
