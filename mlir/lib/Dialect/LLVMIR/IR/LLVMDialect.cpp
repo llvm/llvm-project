@@ -1079,44 +1079,8 @@ void GlobalOp::build(Builder *builder, OperationState &result, LLVMType type,
   result.addRegion();
 }
 
-// Returns the textual representation of the given linkage.
-static StringRef linkageToStr(LLVM::Linkage linkage) {
-  switch (linkage) {
-  case LLVM::Linkage::Private:
-    return "private";
-  case LLVM::Linkage::Internal:
-    return "internal";
-  case LLVM::Linkage::AvailableExternally:
-    return "available_externally";
-  case LLVM::Linkage::Linkonce:
-    return "linkonce";
-  case LLVM::Linkage::Weak:
-    return "weak";
-  case LLVM::Linkage::Common:
-    return "common";
-  case LLVM::Linkage::Appending:
-    return "appending";
-  case LLVM::Linkage::ExternWeak:
-    return "extern_weak";
-  case LLVM::Linkage::LinkonceODR:
-    return "linkonce_odr";
-  case LLVM::Linkage::WeakODR:
-    return "weak_odr";
-  case LLVM::Linkage::External:
-    return "external";
-  }
-  llvm_unreachable("unknown linkage type");
-}
-
-// Prints the keyword for the linkage type using the printer.
-static void printLinkage(OpAsmPrinter &p, LLVM::Linkage linkage) {
-  p << linkageToStr(linkage);
-}
-
 static void printGlobalOp(OpAsmPrinter &p, GlobalOp op) {
-  p << op.getOperationName() << ' ';
-  printLinkage(p, op.linkage());
-  p << ' ';
+  p << op.getOperationName() << ' ' << stringifyLinkage(op.linkage()) << ' ';
   if (op.constant())
     p << "constant ";
   p.printSymbolName(op.sym_name());
@@ -1150,22 +1114,30 @@ static int parseOptionalKeywordAlternative(OpAsmParser &parser,
   return -1;
 }
 
-// Parses one of the linkage keywords and, if succeeded, appends the "linkage"
-// integer attribute with the corresponding value to `result`.
-//
-// linkage ::= `private` | `internal` | `available_externally` | `linkonce`
-//           | `weak` | `common` | `appending` | `extern_weak`
-//           | `linkonce_odr` | `weak_odr` | `external
-static ParseResult parseOptionalLinkageKeyword(OpAsmParser &parser,
-                                               OperationState &result) {
-  int index = parseOptionalKeywordAlternative(
-      parser, {"private", "internal", "available_externally", "linkonce",
-               "weak", "common", "appending", "extern_weak", "linkonce_odr",
-               "weak_odr", "external"});
+namespace {
+template <typename Ty> struct EnumTraits {};
+
+#define REGISTER_ENUM_TYPE(Ty)                                                 \
+  template <> struct EnumTraits<Ty> {                                          \
+    static StringRef stringify(Ty value) { return stringify##Ty(value); }      \
+    static unsigned getMaxEnumVal() { return getMaxEnumValFor##Ty(); }         \
+  }
+
+REGISTER_ENUM_TYPE(Linkage);
+} // end namespace
+
+template <typename EnumTy>
+static ParseResult parseOptionalLLVMKeyword(OpAsmParser &parser,
+                                            OperationState &result,
+                                            StringRef name) {
+  SmallVector<StringRef, 10> names;
+  for (unsigned i = 0, e = getMaxEnumValForLinkage(); i <= e; ++i)
+    names.push_back(EnumTraits<EnumTy>::stringify(static_cast<EnumTy>(i)));
+
+  int index = parseOptionalKeywordAlternative(parser, names);
   if (index == -1)
     return failure();
-  result.addAttribute(getLinkageAttrName(),
-                      parser.getBuilder().getI64IntegerAttr(index));
+  result.addAttribute(name, parser.getBuilder().getI64IntegerAttr(index));
   return success();
 }
 
@@ -1175,7 +1147,8 @@ static ParseResult parseOptionalLinkageKeyword(OpAsmParser &parser,
 // The type can be omitted for string attributes, in which case it will be
 // inferred from the value of the string as [strlen(value) x i8].
 static ParseResult parseGlobalOp(OpAsmParser &parser, OperationState &result) {
-  if (failed(parseOptionalLinkageKeyword(parser, result)))
+  if (failed(parseOptionalLLVMKeyword<Linkage>(parser, result,
+                                               getLinkageAttrName())))
     return parser.emitError(parser.getCurrentLocation(), "expected linkage");
 
   if (succeeded(parser.parseOptionalKeyword("constant")))
@@ -1398,7 +1371,8 @@ static Type buildLLVMFunctionType(OpAsmParser &parser, llvm::SMLoc loc,
 static ParseResult parseLLVMFuncOp(OpAsmParser &parser,
                                    OperationState &result) {
   // Default to external linkage if no keyword is provided.
-  if (failed(parseOptionalLinkageKeyword(parser, result)))
+  if (failed(parseOptionalLLVMKeyword<Linkage>(parser, result,
+                                               getLinkageAttrName())))
     result.addAttribute(getLinkageAttrName(),
                         parser.getBuilder().getI64IntegerAttr(
                             static_cast<int64_t>(LLVM::Linkage::External)));
@@ -1441,10 +1415,8 @@ static ParseResult parseLLVMFuncOp(OpAsmParser &parser,
 // the external linkage since it is the default value.
 static void printLLVMFuncOp(OpAsmPrinter &p, LLVMFuncOp op) {
   p << op.getOperationName() << ' ';
-  if (op.linkage() != LLVM::Linkage::External) {
-    printLinkage(p, op.linkage());
-    p << ' ';
-  }
+  if (op.linkage() != LLVM::Linkage::External)
+    p << stringifyLinkage(op.linkage()) << ' ';
   p.printSymbolName(op.getName());
 
   LLVMType fnType = op.getType();
@@ -1510,16 +1482,16 @@ unsigned LLVMFuncOp::getNumFuncResults() {
 static LogicalResult verify(LLVMFuncOp op) {
   if (op.linkage() == LLVM::Linkage::Common)
     return op.emitOpError()
-           << "functions cannot have '" << linkageToStr(LLVM::Linkage::Common)
-           << "' linkage";
+           << "functions cannot have '"
+           << stringifyLinkage(LLVM::Linkage::Common) << "' linkage";
 
   if (op.isExternal()) {
     if (op.linkage() != LLVM::Linkage::External &&
         op.linkage() != LLVM::Linkage::ExternWeak)
       return op.emitOpError()
              << "external functions must have '"
-             << linkageToStr(LLVM::Linkage::External) << "' or '"
-             << linkageToStr(LLVM::Linkage::ExternWeak) << "' linkage";
+             << stringifyLinkage(LLVM::Linkage::External) << "' or '"
+             << stringifyLinkage(LLVM::Linkage::ExternWeak) << "' linkage";
     return success();
   }
 

@@ -62,4 +62,15 @@ class LLVM_Op<string mnemonic, list<OpTrait> traits = []> :
 class LLVM_IntrOp<string mnemonic, list<OpTrait> traits = []> :
     LLVM_Op<"intr."#mnemonic, traits>;
 
+// Case of the LLVM enum attribute backed by I64Attr with customized string
+// representation that corresponds to what is visible in the textual IR form.
+class LLVM_EnumAttrCase<string cppSym, string irSym, int val> :
+    I64EnumAttrCase<cppSym, val, irSym>;
+
+// LLVM enum attribute backed by I64Attr with string representation
+// corresponding to what is visible in the textual IR form.
+class LLVM_EnumAttr<string name, string description,
+                    list<LLVM_EnumAttrCase> cases> :
+    I64EnumAttr<name, description, cases>;
+
 #endif  // LLVMIR_OP_BASE

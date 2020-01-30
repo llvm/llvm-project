@@ -31,3 +31,9 @@ def BitEnumWithNone : BitEnumAttr<"BitEnumWithNone", "A test enum",
 
 def BitEnumWithoutNone : BitEnumAttr<"BitEnumWithoutNone", "A test enum",
                                      [Bit1, Bit3]>;
+
+def PrettyIntEnumCase1: I32EnumAttrCase<"Case1", 1, "case_one">;
+def PrettyIntEnumCase2: I32EnumAttrCase<"Case2", 2, "case_two">;
+
+def PrettyIntEnum: I32EnumAttr<"PrettyIntEnum", "A test enum",
+                               [PrettyIntEnumCase1, PrettyIntEnumCase2]>;
