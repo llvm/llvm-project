@@ -313,7 +313,7 @@ SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
 }
 
 size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
-  LLDB_RECORD_METHOD(size_t, SBThread, GetStopDescription, (char *, size_t),
+  LLDB_RECORD_DUMMY(size_t, SBThread, GetStopDescription, (char *, size_t),
                      dst, dst_len);
 
   std::unique_lock<std::recursive_mutex> lock;
