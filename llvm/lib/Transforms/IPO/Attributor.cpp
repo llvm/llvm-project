@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/IPO/Attributor.h"
+#include "llvm/Transforms/IPO/Attributor.h" 
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/STLExtras.h"
@@ -4992,7 +4992,6 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
     // Helper to check if for the given call site the associated argument is
     // passed to a callback where the privatization would be different.
     auto IsCompatiblePrivArgOfCallback = [&](CallSite CS) {
-      Value *CSArgOp = CS.getArgOperand(ArgNo);
       SmallVector<const Use *, 4> CBUses;
       AbstractCallSite::getCallbackUses(CS, CBUses);
       for (const Use *U : CBUses) {
@@ -5010,7 +5009,8 @@ struct AAPrivatizablePtrArgument final : public AAPrivatizablePtrImpl {
                    "callback ("
                 << CBArgNo << "@" << CBACS.getCalledFunction()->getName()
                 << ")\n[AAPrivatizablePtr] " << CBArg << " : "
-                << CBACS.getCallArgOperand(CBArg) << " vs " << CSArgOp << "\n"
+                << CBACS.getCallArgOperand(CBArg) << " vs "
+                << CS.getArgOperand(ArgNo) << "\n"
                 << "[AAPrivatizablePtr] " << CBArg << " : "
                 << CBACS.getCallArgOperandNo(CBArg) << " vs " << ArgNo << "\n";
           });
