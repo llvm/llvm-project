@@ -3159,6 +3159,32 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // initialized.
     break;
   }
+  case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP: {
+    // vdata_out
+    OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
+
+    // vdata_in
+    OpdsMapping[1] = getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
+
+    // cmp
+    OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
+
+    // rsrc
+    OpdsMapping[3] = getSGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI);
+
+    // vindex
+    OpdsMapping[4] = getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
+
+    // voffset
+    OpdsMapping[5] = getVGPROpMapping(MI.getOperand(5).getReg(), MRI, *TRI);
+
+    // soffset
+    OpdsMapping[6] = getSGPROpMapping(MI.getOperand(6).getReg(), MRI, *TRI);
+
+    // Any remaining operands are immediates and were correctly null
+    // initialized.
+    break;
+  }
   case AMDGPU::G_INTRINSIC: {
     switch (MI.getIntrinsicID()) {
     default:
