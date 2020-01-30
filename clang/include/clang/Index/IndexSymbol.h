@@ -54,6 +54,9 @@ enum class SymbolKind : uint8_t {
 
   Parameter,
   Using,
+  TemplateTypeParm,
+  TemplateTemplateParm,
+  NonTypeTemplateParm,
 };
 
 enum class SymbolLanguage : uint8_t {

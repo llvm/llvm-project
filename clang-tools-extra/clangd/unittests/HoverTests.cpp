@@ -573,6 +573,42 @@ class Foo {})cpp";
          // pattern.
          HI.Documentation = "comment from primary";
        }},
+      {// Template Type Parameter
+       R"cpp(
+          template <typename [[^T]] = int> void foo();
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "T";
+         HI.Kind = index::SymbolKind::TemplateTypeParm;
+         HI.NamespaceScope = "";
+         HI.Definition = "typename T = int";
+         HI.LocalScope = "foo::";
+         HI.Type = "typename";
+       }},
+      {// TemplateTemplate Type Parameter
+       R"cpp(
+          template <template<typename> class [[^T]]> void foo();
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "T";
+         HI.Kind = index::SymbolKind::TemplateTemplateParm;
+         HI.NamespaceScope = "";
+         HI.Definition = "template <typename> class T";
+         HI.LocalScope = "foo::";
+         HI.Type = "template <typename> class";
+       }},
+      {// NonType Template Parameter
+       R"cpp(
+          template <int [[^T]] = 5> void foo();
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "T";
+         HI.Kind = index::SymbolKind::NonTypeTemplateParm;
+         HI.NamespaceScope = "";
+         HI.Definition = "int T = 5";
+         HI.LocalScope = "foo::";
+         HI.Type = "int";
+       }},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
