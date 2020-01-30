@@ -369,8 +369,9 @@ static bool MSA2OpIntrinsicToGeneric(MachineInstr &MI, unsigned Opcode,
 }
 
 bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
-                                          MachineRegisterInfo &MRI,
-                                          MachineIRBuilder &MIRBuilder) const {
+                                          MachineIRBuilder &MIRBuilder,
+                                          GISelChangeObserver &Observer) const {
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   const MipsSubtarget &ST =
       static_cast<const MipsSubtarget &>(MI.getMF()->getSubtarget());
   const MipsInstrInfo &TII = *ST.getInstrInfo();
