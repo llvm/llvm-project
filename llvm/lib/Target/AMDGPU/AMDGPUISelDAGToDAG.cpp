@@ -1852,8 +1852,7 @@ bool AMDGPUDAGToDAGISel::SelectSMRDImm(SDValue Addr, SDValue &SBase,
 bool AMDGPUDAGToDAGISel::SelectSMRDImm32(SDValue Addr, SDValue &SBase,
                                          SDValue &Offset) const {
 
-  if (Subtarget->getGeneration() != AMDGPUSubtarget::SEA_ISLANDS)
-    return false;
+  assert(Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS);
 
   bool Imm;
   if (!SelectSMRD(Addr, SBase, Offset, Imm))
@@ -1877,8 +1876,7 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBufferImm(SDValue Addr,
 
 bool AMDGPUDAGToDAGISel::SelectSMRDBufferImm32(SDValue Addr,
                                                SDValue &Offset) const {
-  if (Subtarget->getGeneration() != AMDGPUSubtarget::SEA_ISLANDS)
-    return false;
+  assert(Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS);
 
   bool Imm;
   if (!SelectSMRDOffset(Addr, Offset, Imm))
