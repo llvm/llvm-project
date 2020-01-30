@@ -2698,6 +2698,9 @@ static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
   case Intrinsic::amdgcn_raw_buffer_atomic_dec:
   case Intrinsic::amdgcn_struct_buffer_atomic_dec:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC;
+  case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
+  case Intrinsic::amdgcn_struct_buffer_atomic_cmpswap:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP;
   default:
     llvm_unreachable("unhandled atomic opcode");
   }
@@ -2729,7 +2732,7 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   const bool HasVIndex = MI.getNumOperands() == NumVIndexOps;
   Register VIndex;
   if (HasVIndex) {
-    VIndex = MI.getOperand(4).getReg();
+    VIndex = MI.getOperand(4 + OpOffset).getReg();
     ++OpOffset;
   }
 
