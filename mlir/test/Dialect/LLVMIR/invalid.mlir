@@ -509,3 +509,55 @@ func @cmpxchg_failure_acq_rel(%i32_ptr : !llvm<"i32*">, %i32 : !llvm.i32) {
   %0 = llvm.cmpxchg %i32_ptr, %i32, %i32 acq_rel acq_rel : !llvm.i32
   llvm.return
 }
+
+// -----
+
+llvm.func @foo(!llvm.i32) -> !llvm.i32
+llvm.func @__gxx_personality_v0(...) -> !llvm.i32
+
+llvm.func @bad_landingpad(%arg0: !llvm<"i8**">) {
+  %0 = llvm.mlir.constant(3 : i32) : !llvm.i32
+  %1 = llvm.mlir.constant(2 : i32) : !llvm.i32
+  %2 = llvm.invoke @foo(%1) to ^bb1 unwind ^bb2 : (!llvm.i32) -> !llvm.i32
+^bb1:  // pred: ^bb0
+  llvm.return %1 : !llvm.i32
+^bb2:  // pred: ^bb0
+  // expected-error@+1 {{clause #0 is not a known constant - null, addressof, bitcast}}
+  %3 = llvm.landingpad cleanup (catch %1 : !llvm.i32) (catch %arg0 : !llvm<"i8**">) : !llvm<"{ i8*, i32 }">
+  llvm.return %0 : !llvm.i32
+}
+
+// -----
+
+llvm.func @foo(!llvm.i32) -> !llvm.i32
+llvm.func @__gxx_personality_v0(...) -> !llvm.i32
+
+llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 {
+  %0 = llvm.mlir.constant(1 : i32) : !llvm.i32
+  %1 = llvm.alloca %0 x !llvm<"i8*"> : (!llvm.i32) -> !llvm<"i8**">
+  // expected-note@+1 {{global addresses expected as operand to bitcast used in clauses for landingpad}}
+  %2 = llvm.bitcast %1 : !llvm<"i8**"> to !llvm<"i8*">
+  %3 = llvm.invoke @foo(%0) to ^bb1 unwind ^bb2 : (!llvm.i32) -> !llvm.i32
+^bb1: // pred: ^bb0
+  llvm.return %0 : !llvm.i32
+^bb2: // pred: ^bb0
+  // expected-error@+1 {{constant clauses expected}}
+  %5 = llvm.landingpad (catch %2 : !llvm<"i8*">) : !llvm<"{ i8*, i32 }">
+  llvm.return %0 : !llvm.i32
+}
+
+// -----
+
+llvm.func @foo(!llvm.i32) -> !llvm.i32
+llvm.func @__gxx_personality_v0(...) -> !llvm.i32
+
+llvm.func @caller(%arg0: !llvm.i32) -> !llvm.i32 {
+  %0 = llvm.mlir.constant(1 : i32) : !llvm.i32
+  %1 = llvm.invoke @foo(%0) to ^bb1 unwind ^bb2 : (!llvm.i32) -> !llvm.i32
+^bb1: // pred: ^bb0
+  llvm.return %0 : !llvm.i32
+^bb2: // pred: ^bb0
+  // expected-error@+1 {{landingpad instruction expects at least one clause or cleanup attribute}}
+  %2 = llvm.landingpad : !llvm<"{ i8*, i32 }">
+  llvm.return %0 : !llvm.i32
+}
