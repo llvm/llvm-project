@@ -73,8 +73,7 @@ public:
       SizeClassInfo *Sci = getSizeClassInfo(I);
       Sci->RandState = getRandomU32(&Seed);
       // See comment in the 64-bit primary about releasing smaller size classes.
-      Sci->CanRelease = (ReleaseToOsInterval >= 0) &&
-                        (I != SizeClassMap::BatchClassId) &&
+      Sci->CanRelease = (I != SizeClassMap::BatchClassId) &&
                         (getSizeByClassId(I) >= (PageSize / 32));
     }
     ReleaseToOsIntervalMs = ReleaseToOsInterval;
@@ -178,8 +177,6 @@ public:
   uptr releaseToOS() {
     uptr TotalReleasedBytes = 0;
     for (uptr I = 0; I < NumClasses; I++) {
-      if (I == SizeClassMap::BatchClassId)
-        continue;
       SizeClassInfo *Sci = getSizeClassInfo(I);
       ScopedLock L(Sci->Mutex);
       TotalReleasedBytes += releaseToOSMaybe(Sci, I, /*Force=*/true);

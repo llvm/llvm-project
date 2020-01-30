@@ -59,6 +59,7 @@ public:
   static bool canCache(UNUSED uptr Size) { return false; }
   void disable() {}
   void enable() {}
+  void releaseToOS() {}
 };
 
 template <uptr MaxEntriesCount = 32U, uptr MaxEntrySize = 1UL << 19>
@@ -112,6 +113,7 @@ public:
   }
 
   bool retrieve(uptr Size, LargeBlock::Header **H) {
+    const uptr PageSize = getPageSizeCached();
     ScopedLock L(Mutex);
     if (EntriesCount == 0)
       return false;
@@ -121,7 +123,7 @@ public:
       const uptr BlockSize = Entries[I].BlockEnd - Entries[I].Block;
       if (Size > BlockSize)
         continue;
-      if (Size < BlockSize - getPageSizeCached() * 4U)
+      if (Size < BlockSize - PageSize * 4U)
         continue;
       *H = reinterpret_cast<LargeBlock::Header *>(Entries[I].Block);
       Entries[I].Block = 0;
@@ -137,6 +139,8 @@ public:
   static bool canCache(uptr Size) {
     return MaxEntriesCount != 0U && Size <= MaxEntrySize;
   }
+
+  void releaseToOS() { releaseOlderThan(UINT64_MAX); }
 
   void disable() { Mutex.lock(); }
 
@@ -258,6 +262,8 @@ public:
   }
 
   static uptr canCache(uptr Size) { return CacheT::canCache(Size); }
+
+  void releaseToOS() { Cache.releaseToOS(); }
 
 private:
   CacheT Cache;

@@ -567,6 +567,7 @@ public:
   void releaseToOS() {
     initThreadMaybe();
     Primary.releaseToOS();
+    Secondary.releaseToOS();
   }
 
   // Iterate over all chunks and call a callback for all busy chunks located
