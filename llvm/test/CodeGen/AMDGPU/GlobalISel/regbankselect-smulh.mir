@@ -16,8 +16,9 @@ body: |
     ; GFX6-LABEL: name: smulh_s32_ss
     ; GFX6: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GFX6: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; GFX6: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; GFX6: [[SMULH:%[0-9]+]]:vgpr(s32) = G_SMULH [[COPY]], [[COPY2]]
+    ; GFX6: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; GFX6: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
+    ; GFX6: [[SMULH:%[0-9]+]]:vgpr(s32) = G_SMULH [[COPY2]], [[COPY3]]
     ; GFX9-LABEL: name: smulh_s32_ss
     ; GFX9: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GFX9: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
@@ -38,11 +39,13 @@ body: |
     ; GFX6-LABEL: name: smulh_s32_sv
     ; GFX6: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GFX6: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX6: [[SMULH:%[0-9]+]]:vgpr(s32) = G_SMULH [[COPY]], [[COPY1]]
+    ; GFX6: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; GFX6: [[SMULH:%[0-9]+]]:vgpr(s32) = G_SMULH [[COPY2]], [[COPY1]]
     ; GFX9-LABEL: name: smulh_s32_sv
     ; GFX9: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; GFX9: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; GFX9: [[SMULH:%[0-9]+]]:vgpr(s32) = G_SMULH [[COPY]], [[COPY1]]
+    ; GFX9: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
+    ; GFX9: [[SMULH:%[0-9]+]]:vgpr(s32) = G_SMULH [[COPY2]], [[COPY1]]
     %0:_(s32) = COPY $sgpr0
     %1:_(s32) = COPY $vgpr0
     %2:_(s32) = G_SMULH %0, %1
