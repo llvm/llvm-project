@@ -4,6 +4,7 @@
 ; RUN: opt -thinlto-bc %s -o %t1.bc
 ; RUN: opt -thinlto-bc %p/Inputs/import-constant.ll -o %t2.bc
 ; RUN: llvm-lto2 run -save-temps %t1.bc %t2.bc -o %t-out \
+; RUN:    -import-constants-with-refs \
 ; RUN:    -r=%t1.bc,main,plx \
 ; RUN:    -r=%t1.bc,_Z6getObjv,l \
 ; RUN:    -r=%t2.bc,_Z6getObjv,pl \
