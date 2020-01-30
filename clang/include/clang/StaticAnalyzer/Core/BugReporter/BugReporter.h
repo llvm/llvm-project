@@ -17,12 +17,13 @@
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporterVisitors.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -566,6 +567,7 @@ public:
   virtual ASTContext &getASTContext() = 0;
   virtual SourceManager &getSourceManager() = 0;
   virtual AnalyzerOptions &getAnalyzerOptions() = 0;
+  virtual Preprocessor &getPreprocessor() = 0;
 };
 
 /// BugReporter is a utility class for generating PathDiagnostics for analysis.
@@ -607,6 +609,8 @@ public:
   const SourceManager &getSourceManager() { return D.getSourceManager(); }
 
   const AnalyzerOptions &getAnalyzerOptions() { return D.getAnalyzerOptions(); }
+
+  Preprocessor &getPreprocessor() { return D.getPreprocessor(); }
 
   /// Add the given report to the set of reports tracked by BugReporter.
   ///

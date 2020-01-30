@@ -107,6 +107,8 @@ public:
     return getBugReporter().getSourceManager();
   }
 
+  Preprocessor &getPreprocessor() { return getBugReporter().getPreprocessor(); }
+
   SValBuilder &getSValBuilder() {
     return Eng.getSValBuilder();
   }
