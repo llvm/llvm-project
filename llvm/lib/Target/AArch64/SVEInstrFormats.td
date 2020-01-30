@@ -2414,7 +2414,7 @@ multiclass sve2_int_mla_by_indexed_elem<bits<2> opc, bit S, string asm,
 
 multiclass sve2_int_mla_long_by_indexed_elem<bits<4> opc, string asm, SDPatternOperator op> {
   def _S : sve2_int_mla_by_indexed_elem<0b10, { opc{3}, 0b0, opc{2-1}, ?, opc{0} },
-                                        asm, ZPR32, ZPR16, ZPR3b16, VectorIndexH> {
+                                        asm, ZPR32, ZPR16, ZPR3b16, VectorIndexH32b> {
     bits<3> Zm;
     bits<3> iop;
     let Inst{20-19} = iop{2-1};
@@ -2422,7 +2422,7 @@ multiclass sve2_int_mla_long_by_indexed_elem<bits<4> opc, string asm, SDPatternO
     let Inst{11} = iop{0};
   }
   def _D : sve2_int_mla_by_indexed_elem<0b11, { opc{3}, 0b0, opc{2-1}, ?, opc{0} },
-                                        asm, ZPR64, ZPR32, ZPR4b32, VectorIndexS> {
+                                        asm, ZPR64, ZPR32, ZPR4b32, VectorIndexS32b> {
     bits<4> Zm;
     bits<2> iop;
     let Inst{20} = iop{1};
@@ -2430,8 +2430,8 @@ multiclass sve2_int_mla_long_by_indexed_elem<bits<4> opc, string asm, SDPatternO
     let Inst{11} = iop{0};
   }
 
-  def : SVE_4_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv8i16, nxv8i16, i64, VectorIndexH_timm, !cast<Instruction>(NAME # _S)>;
-  def : SVE_4_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv4i32, nxv4i32, i64, VectorIndexS_timm, !cast<Instruction>(NAME # _D)>;
+  def : SVE_4_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv8i16, nxv8i16, i32, VectorIndexH32b_timm, !cast<Instruction>(NAME # _S)>;
+  def : SVE_4_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv4i32, nxv4i32, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME # _D)>;
 }
 
 //===----------------------------------------------------------------------===//
