@@ -14,11 +14,12 @@ run again but this time every invocation of lldb replays the previously
 recorded session.
 """
 
-import sys
-import os
-import tempfile
-import subprocess
 import hashlib
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
 
 
 def help():
