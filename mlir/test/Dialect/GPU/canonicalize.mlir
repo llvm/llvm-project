@@ -21,7 +21,7 @@ func @propagate_constant(%arg1: memref<?xf32>) {
 
     // CHECK: "bar"(%[[inner_arg]])
     "bar"(%y) : (memref<?xf32>) -> ()
-    gpu.return
+    gpu.terminator
   }
   return
 }

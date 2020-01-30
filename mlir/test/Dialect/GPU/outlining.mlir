@@ -31,7 +31,7 @@ func @launch() {
     "use"(%arg0): (f32) -> ()
     "some_op"(%bx, %block_x) : (index, index) -> ()
     %42 = load %arg1[%tx] : memref<?xf32, 1>
-    gpu.return
+    gpu.terminator
   }
   return
 }
@@ -68,14 +68,14 @@ func @multiple_launches() {
                                        %grid_z = %cst)
              threads(%tx, %ty, %tz) in (%block_x = %cst, %block_y = %cst,
                                         %block_z = %cst) {
-    gpu.return
+    gpu.terminator
   }
   // CHECK: "gpu.launch_func"(%[[CST]], %[[CST]], %[[CST]], %[[CST]], %[[CST]], %[[CST]]) {kernel = "multiple_launches_kernel", kernel_module = @multiple_launches_kernel_0} : (index, index, index, index, index, index) -> ()
   gpu.launch blocks(%bx2, %by2, %bz2) in (%grid_x2 = %cst, %grid_y2 = %cst,
                                           %grid_z2 = %cst)
              threads(%tx2, %ty2, %tz2) in (%block_x2 = %cst, %block_y2 = %cst,
                                            %block_z2 = %cst) {
-    gpu.return
+    gpu.terminator
   }
   return
 }
@@ -99,7 +99,7 @@ func @extra_constants(%arg0 : memref<?xf32>) {
                                         %block_z = %cst)
              args(%kernel_arg0 = %cst2, %kernel_arg1 = %arg0, %kernel_arg2 = %cst3) : index, memref<?xf32>, index {
     "use"(%kernel_arg0, %kernel_arg1, %kernel_arg2) : (index, memref<?xf32>, index) -> ()
-    gpu.return
+    gpu.terminator
   }
   return
 }
@@ -121,19 +121,19 @@ func @function_call(%arg0 : memref<?xf32>) {
     call @device_function() : () -> ()
     call @device_function() : () -> ()
     %0 = llvm.mlir.addressof @global : !llvm<"i64*">
-    gpu.return
+    gpu.terminator
   }
   return
 }
 
 func @device_function() {
   call @recursive_device_function() : () -> ()
-  gpu.return
+  return
 }
 
 func @recursive_device_function() {
   call @recursive_device_function() : () -> ()
-  gpu.return
+  return
 }
 
 // CHECK: gpu.module @function_call_kernel {
@@ -141,6 +141,7 @@ func @recursive_device_function() {
 // CHECK:     call @device_function() : () -> ()
 // CHECK:     call @device_function() : () -> ()
 // CHECK:     llvm.mlir.addressof @global : !llvm<"i64*">
+// CHECK:     gpu.return
 //
 // CHECK:   llvm.mlir.global internal @global(42 : i64) : !llvm.i64
 //

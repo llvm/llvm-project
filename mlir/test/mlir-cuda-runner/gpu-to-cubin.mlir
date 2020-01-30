@@ -7,7 +7,7 @@ func @other_func(%arg0 : f32, %arg1 : memref<?xf32>) {
              threads(%tx, %ty, %tz) in (%block_x = %cst2, %block_y = %cst, %block_z = %cst)
              args(%kernel_arg0 = %arg0, %kernel_arg1 = %arg1) : f32, memref<?xf32> {
     store %kernel_arg0, %kernel_arg1[%tx] : memref<?xf32>
-    gpu.return
+    gpu.terminator
   }
   return
 }

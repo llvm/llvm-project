@@ -23,7 +23,7 @@ func @foo(%arg0: memref<?xf32>, %arg1 : index) {
       // CHECK: %[[prod_j:.*]] = muli %{{.*}}, %{{.*}} : index
       // CHECK: addi %{{.*}}, %[[prod_j]] : index
 
-      // CHECK: gpu.return
+      // CHECK: gpu.terminator
     }
   }
   return

@@ -472,8 +472,24 @@ def GPU_LaunchOp : GPU_Op<"launch", [IsolatedFromAbove]>,
   let verifier = [{ return ::verify(*this); }];
 }
 
-def GPU_ReturnOp : GPU_Op<"return", [Terminator]>, Arguments<(ins)>,
-    Results<(outs)> {
+def GPU_ReturnOp : GPU_Op<"return", [HasParent<"GPUFuncOp">, Terminator]>,
+    Arguments<(ins Variadic<AnyType>:$operands)>, Results<(outs)> {
+  let summary = "Terminator for GPU functions.";
+  let description = [{
+    A terminator operation for regions that appear in the body of  `gpu.func`
+    functions. The operands to the `gpu.return` are the result values returned
+    by an incovation of the `gpu.func`.
+  }];
+
+  let builders = [OpBuilder<"Builder *builder, OperationState &result", " // empty">];
+
+  let parser = [{ return parseReturnOp(parser, result); }];
+  let printer = [{ p << getOperationName(); }];
+  let verifier = [{ return ::verify(*this); }];
+}
+
+def GPU_TerminatorOp : GPU_Op<"terminator", [HasParent<"LaunchOp">, Terminator]>,
+    Arguments<(ins)>, Results<(outs)> {
   let summary = "Terminator for GPU launch regions.";
   let description = [{
     A terminator operation for regions that appear in the body of `gpu.launch`
