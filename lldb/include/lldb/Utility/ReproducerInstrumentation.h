@@ -606,9 +606,14 @@ private:
   }
 
   void Serialize(const char **t) {
+    size_t size = 0;
+    if (!t) {
+      Serialize(size);
+      return;
+    }
+
     // Compute the size of the array.
     const char *const *temp = t;
-    size_t size = 0;
     while (*temp++)
       size++;
     Serialize(size);
