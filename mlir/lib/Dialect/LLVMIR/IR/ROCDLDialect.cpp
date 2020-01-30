@@ -31,24 +31,6 @@ using namespace mlir;
 using namespace ROCDL;
 
 //===----------------------------------------------------------------------===//
-// Printing/parsing for ROCDL ops
-//===----------------------------------------------------------------------===//
-
-static void printROCDLOp(OpAsmPrinter &p, Operation *op) {
-  p << op->getName() << " " << op->getOperands();
-  if (op->getNumResults() > 0)
-    p << " : " << op->getResultTypes();
-}
-
-// <operation> ::= `rocdl.XYZ` : type
-static ParseResult parseROCDLOp(OpAsmParser &parser, OperationState &result) {
-  Type type;
-  return failure(parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(type) ||
-                 parser.addTypeToList(type, result.types));
-}
-
-//===----------------------------------------------------------------------===//
 // ROCDLDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 

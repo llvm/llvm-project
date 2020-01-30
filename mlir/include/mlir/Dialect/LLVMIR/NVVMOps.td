@@ -42,8 +42,7 @@ class NVVM_SpecialRegisterOp<string mnemonic,
   Results<(outs LLVM_Type:$res)>, Arguments<(ins)> {
   string llvmBuilder = "$res = createIntrinsicCall(builder,"
     # "llvm::Intrinsic::nvvm_" # !subst(".","_", mnemonic) # ");";
-  let parser = [{ return parseNVVMSpecialRegisterOp(parser, result); }];
-  let printer = [{ printNVVMIntrinsicOp(p, this->getOperation()); }];
+  let assemblyFormat = "attr-dict `:` type($res)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -77,8 +76,7 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
   string llvmBuilder = [{
       createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier0);
   }];
-  let parser = [{ return success(); }];
-  let printer = [{ printNVVMIntrinsicOp(p, this->getOperation()); }];
+  let assemblyFormat = "attr-dict";
 }
 
 def NVVM_ShflBflyOp :
@@ -129,8 +127,7 @@ def NVVM_MmaOp :
     $res = createIntrinsicCall(
         builder, llvm::Intrinsic::nvvm_mma_m8n8k4_row_row_f32_f32, $args);
   }];
-  let parser = [{ return parseNVVMMmaOp(parser, result); }];
-  let printer = [{ printNVVMMmaOp(p, *this); }];
+  let assemblyFormat = "$args attr-dict `:` functional-type($args, $res)";
   let verifier = [{ return ::verify(*this); }];
 }
 

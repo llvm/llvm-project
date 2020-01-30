@@ -446,29 +446,6 @@ void BranchOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
 // CallOp
 //===----------------------------------------------------------------------===//
 
-static ParseResult parseCallOp(OpAsmParser &parser, OperationState &result) {
-  FlatSymbolRefAttr calleeAttr;
-  FunctionType calleeType;
-  SmallVector<OpAsmParser::OperandType, 4> operands;
-  auto calleeLoc = parser.getNameLoc();
-  if (parser.parseAttribute(calleeAttr, "callee", result.attributes) ||
-      parser.parseOperandList(operands, OpAsmParser::Delimiter::Paren) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(calleeType) ||
-      parser.addTypesToList(calleeType.getResults(), result.types) ||
-      parser.resolveOperands(operands, calleeType.getInputs(), calleeLoc,
-                             result.operands))
-    return failure();
-
-  return success();
-}
-
-static void print(OpAsmPrinter &p, CallOp op) {
-  p << "call " << op.getAttr("callee") << '(' << op.getOperands() << ')';
-  p.printOptionalAttrDict(op.getAttrs(), /*elidedAttrs=*/{"callee"});
-  p << " : " << op.getCalleeType();
-}
-
 static LogicalResult verify(CallOp op) {
   // Check that the callee attribute was specified.
   auto fnAttr = op.getAttrOfType<FlatSymbolRefAttr>("callee");
@@ -1184,19 +1161,6 @@ struct SimplifyDeadDealloc : public OpRewritePattern<DeallocOp> {
 };
 } // end anonymous namespace.
 
-static void print(OpAsmPrinter &p, DeallocOp op) {
-  p << "dealloc " << op.memref() << " : " << op.memref().getType();
-}
-
-static ParseResult parseDeallocOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType memrefInfo;
-  MemRefType type;
-
-  return failure(parser.parseOperand(memrefInfo) ||
-                 parser.parseColonType(type) ||
-                 parser.resolveOperand(memrefInfo, type, result.operands));
-}
-
 static LogicalResult verify(DeallocOp op) {
   if (!op.memref().getType().isa<MemRefType>())
     return op.emitOpError("operand must be a memref");
@@ -1843,20 +1807,6 @@ LogicalResult PrefetchOp::fold(ArrayRef<Attribute> cstOperands,
 //===----------------------------------------------------------------------===//
 // RankOp
 //===----------------------------------------------------------------------===//
-
-static void print(OpAsmPrinter &p, RankOp op) {
-  p << "rank " << op.getOperand() << " : " << op.getOperand().getType();
-}
-
-static ParseResult parseRankOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType operandInfo;
-  Type type;
-  Type indexType = parser.getBuilder().getIndexType();
-  return failure(parser.parseOperand(operandInfo) ||
-                 parser.parseColonType(type) ||
-                 parser.resolveOperand(operandInfo, type, result.operands) ||
-                 parser.addTypeToList(indexType, result.types));
-}
 
 OpFoldResult RankOp::fold(ArrayRef<Attribute> operands) {
   // Constant fold rank when the rank of the tensor is known.
