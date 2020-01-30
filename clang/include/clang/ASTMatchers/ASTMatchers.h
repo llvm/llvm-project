@@ -6783,6 +6783,35 @@ AST_MATCHER(CXXNewExpr, isArray) {
   return Node.isArray();
 }
 
+/// Matches placement new expression arguments.
+///
+/// Given:
+/// \code
+///   MyClass *p1 = new (Storage, 16) MyClass();
+/// \endcode
+/// cxxNewExpr(hasPlacementArg(1, integerLiteral(equals(16))))
+///   matches the expression 'new (Storage, 16) MyClass()'.
+AST_MATCHER_P2(CXXNewExpr, hasPlacementArg, unsigned, Index,
+               internal::Matcher<Expr>, InnerMatcher) {
+  return Node.getNumPlacementArgs() > Index &&
+         InnerMatcher.matches(*Node.getPlacementArg(Index), Finder, Builder);
+}
+
+/// Matches any placement new expression arguments.
+///
+/// Given:
+/// \code
+///   MyClass *p1 = new (Storage) MyClass();
+/// \endcode
+/// cxxNewExpr(hasAnyPlacementArg(anything()))
+///   matches the expression 'new (Storage, 16) MyClass()'.
+AST_MATCHER_P(CXXNewExpr, hasAnyPlacementArg, internal::Matcher<Expr>,
+              InnerMatcher) {
+  return llvm::any_of(Node.placement_arguments(), [&](const Expr *Arg) {
+    return InnerMatcher.matches(*Arg, Finder, Builder);
+  });
+}
+
 /// Matches array new expressions with a given array size.
 ///
 /// Given:

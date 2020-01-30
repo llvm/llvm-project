@@ -5311,6 +5311,16 @@ Example matches A() in the last line
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;</td><td class="name" onclick="toggle('hasAnyPlacementArg0')"><a name="hasAnyPlacementArg0Anchor">hasAnyPlacementArg</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyPlacementArg0"><pre>Matches any placement new expression arguments.
+
+Given:
+  MyClass *p1 = new (Storage) MyClass();
+cxxNewExpr(hasAnyPlacementArg(anything()))
+  matches the expression 'new (Storage, 16) MyClass()'.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;</td><td class="name" onclick="toggle('hasArraySize0')"><a name="hasArraySize0Anchor">hasArraySize</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasArraySize0"><pre>Matches array new expressions with a given array size.
 
@@ -5352,6 +5362,16 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Addr
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TagType.html">TagType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateTypeParmType.html">TemplateTypeParmType</a>&gt;, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TypedefType.html">TypedefType</a>&gt;,
   Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1UnresolvedUsingType.html">UnresolvedUsingType</a>&gt;
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXNewExpr.html">CXXNewExpr</a>&gt;</td><td class="name" onclick="toggle('hasPlacementArg0')"><a name="hasPlacementArg0Anchor">hasPlacementArg</a></td><td>unsigned Index, Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasPlacementArg0"><pre>Matches placement new expression arguments.
+
+Given:
+  MyClass *p1 = new (Storage, 16) MyClass();
+cxxNewExpr(hasPlacementArg(1, integerLiteral(equals(16))))
+  matches the expression 'new (Storage, 16) MyClass()'.
 </pre></td></tr>
 
 
