@@ -721,6 +721,9 @@ const NoteTag *ContainerModeling::getChangeTag(CheckerContext &C,
 
   return C.getNoteTag(
       [Text, Name, ContReg](PathSensitiveBugReport &BR) -> std::string {
+        if (!BR.isInteresting(ContReg))
+          return "";
+
         SmallString<256> Msg;
         llvm::raw_svector_ostream Out(Msg);
         Out << "Container " << (!Name.empty() ? ("'" + Name.str() + "' ") : "" )
