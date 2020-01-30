@@ -96,7 +96,7 @@ static std::string findInputFile(StringRef File, ArrayRef<StringRef> Paths) {
     SmallString<128> Path = Dir;
     sys::path::append(Path, File);
     if (sys::fs::exists(Path))
-      return Path.str().str();
+      return std::string(Path);
   }
   return "";
 }

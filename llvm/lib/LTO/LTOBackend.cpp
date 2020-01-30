@@ -349,7 +349,7 @@ void codegen(const Config &Conf, TargetMachine *TM, AddStreamFn AddStream,
 
     DwoFile = Conf.DwoDir;
     sys::path::append(DwoFile, std::to_string(Task) + ".dwo");
-    TM->Options.MCOptions.SplitDwarfFile = DwoFile.str().str();
+    TM->Options.MCOptions.SplitDwarfFile = std::string(DwoFile);
   } else
     TM->Options.MCOptions.SplitDwarfFile = Conf.SplitDwarfFile;
 
