@@ -465,7 +465,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     FPToI.minScalar(1, S32);
 
   FPToI.minScalar(0, S32)
-       .scalarize(0);
+       .scalarize(0)
+       .lower();
 
   getActionDefinitionsBuilder(G_INTRINSIC_ROUND)
     .scalarize(0)
