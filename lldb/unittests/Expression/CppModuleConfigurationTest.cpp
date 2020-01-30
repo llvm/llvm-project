@@ -28,7 +28,7 @@ static std::string ResourceInc() {
   llvm::SmallString<256> resource_dir;
   llvm::sys::path::append(resource_dir, GetClangResourceDir().GetPath(),
                           "include");
-  return resource_dir.str().str();
+  return std::string(resource_dir);
 }
 
 /// Utility function turningn a list of paths into a FileSpecList.
