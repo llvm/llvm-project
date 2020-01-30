@@ -501,7 +501,7 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
                                                                             : 4;
     break;
   case S_BUFFER_LOAD_IMM:
-    EltSize = AMDGPU::getSMRDEncodedOffset(STM, 4);
+    EltSize = AMDGPU::convertSMRDOffsetUnits(STM, 4);
     break;
   default:
     EltSize = 4;
