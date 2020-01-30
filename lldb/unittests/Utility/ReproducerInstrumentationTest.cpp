@@ -393,6 +393,57 @@ TEST(SerializationRountripTest, SerializeDeserializeCString) {
   EXPECT_STREQ(cstr, deserializer.Deserialize<const char *>());
 }
 
+TEST(SerializationRountripTest, SerializeDeserializeCStringArray) {
+  const char *foo = "foo";
+  const char *bar = "bar";
+  const char *baz = "baz";
+  const char *arr[4] = {foo, bar, baz, nullptr};
+
+  std::string str;
+  llvm::raw_string_ostream os(str);
+
+  Serializer serializer(os);
+  serializer.SerializeAll(static_cast<const char **>(arr));
+
+  llvm::StringRef buffer(os.str());
+  Deserializer deserializer(buffer);
+
+  const char **deserialized = deserializer.Deserialize<const char **>();
+  EXPECT_STREQ("foo", deserialized[0]);
+  EXPECT_STREQ("bar", deserialized[1]);
+  EXPECT_STREQ("baz", deserialized[2]);
+}
+
+TEST(SerializationRountripTest, SerializeDeserializeCStringArrayNullptrElem) {
+  const char *arr[1] = {nullptr};
+
+  std::string str;
+  llvm::raw_string_ostream os(str);
+
+  Serializer serializer(os);
+  serializer.SerializeAll(static_cast<const char **>(arr));
+
+  llvm::StringRef buffer(os.str());
+  Deserializer deserializer(buffer);
+
+  const char **deserialized = deserializer.Deserialize<const char **>();
+  EXPECT_EQ(nullptr, deserialized);
+}
+
+TEST(SerializationRountripTest, SerializeDeserializeCStringArrayNullptr) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+
+  Serializer serializer(os);
+  serializer.SerializeAll(static_cast<const char **>(nullptr));
+
+  llvm::StringRef buffer(os.str());
+  Deserializer deserializer(buffer);
+
+  const char **deserialized = deserializer.Deserialize<const char **>();
+  EXPECT_EQ(nullptr, deserialized);
+}
+
 TEST(SerializationRountripTest, SerializeDeserializeObjectPointer) {
   Foo foo;
   Bar bar;
