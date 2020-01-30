@@ -694,7 +694,9 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
   // whether we can convert that predicate using tail predication.
   for (auto *MBB : reverse(ML->getBlocks())) {
     for (auto &MI : *MBB) {
-      if (MI.getOpcode() == ARM::t2LoopDec)
+      if (MI.isDebugValue())
+        continue;
+      else if (MI.getOpcode() == ARM::t2LoopDec)
         LoLoop.Dec = &MI;
       else if (MI.getOpcode() == ARM::t2LoopEnd)
         LoLoop.End = &MI;
