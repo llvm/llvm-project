@@ -2352,10 +2352,14 @@ multiclass sve2_int_mla<bit S, string asm, SDPatternOperator op> {
   def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
-multiclass sve2_int_mla_long<bits<5> opc, string asm> {
+multiclass sve2_int_mla_long<bits<5> opc, string asm, SDPatternOperator op> {
   def _H : sve2_int_mla<0b01, opc, asm, ZPR16, ZPR8>;
   def _S : sve2_int_mla<0b10, opc, asm, ZPR32, ZPR16>;
   def _D : sve2_int_mla<0b11, opc, asm, ZPR64, ZPR32>;
+
+  def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _D)>;
 }
 
 //===----------------------------------------------------------------------===//
