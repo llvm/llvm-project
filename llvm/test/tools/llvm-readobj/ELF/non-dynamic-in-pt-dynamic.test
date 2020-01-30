@@ -11,7 +11,7 @@
 # RUN:   | FileCheck %s --DFILE=%t1.o --check-prefixes=WARNING,GNU
 
 # WARNING: warning: '[[FILE]]': The SHT_DYNAMIC section '.dynamic' is not at the start of PT_DYNAMIC segment
-# WARNING: warning: '[[FILE]]': invalid section size (33) or entity size (16)
+# WARNING: warning: '[[FILE]]': invalid PT_DYNAMIC size (0x21){{$}}
 # WARNING: warning: '[[FILE]]': SHT_DYNAMIC section header and PT_DYNAMIC program header disagree about the location of the dynamic table
 # WARNING: warning: '[[FILE]]': PT_DYNAMIC dynamic table is invalid: SHT_DYNAMIC will be used
 
@@ -122,7 +122,7 @@ ProgramHeaders:
 # RUN: llvm-readobj --dynamic-table %t3.o 2>&1 | FileCheck %s --DFILE=%t3.o --check-prefixes=WARNING2,LLVM3
 # RUN: llvm-readelf --dynamic-table %t3.o 2>&1 | FileCheck %s --DFILE=%t3.o --check-prefixes=WARNING2,GNU3
 
-# WARNING2: warning: '[[FILE]]': invalid section size (257) or entity size (16)
+# WARNING2: warning: '[[FILE]]': invalid PT_DYNAMIC size (0x101){{$}}
 # WARNING2: warning: '[[FILE]]': PT_DYNAMIC dynamic table is invalid: SHT_DYNAMIC will be used
 
 # LLVM3:      DynamicSection [ (2 entries)

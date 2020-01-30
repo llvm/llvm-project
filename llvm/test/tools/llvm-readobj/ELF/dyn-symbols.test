@@ -349,3 +349,55 @@ FileHeader:
   Type:    ET_DYN
   Machine: EM_386
 DynamicSymbols: []
+
+## Case 9: Check what we print when:
+## a) The size of the dynamic symbol table is not a multiple of its entry size.
+# RUN: yaml2obj %s --docnum=10 -o %t10
+# RUN: llvm-readobj --dyn-symbols %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=DYNSYM-SIZE-INVALID1
+# RUN: llvm-readelf --dyn-symbols %t10 2>&1 | FileCheck %s -DFILE=%t10 --check-prefix=DYNSYM-SIZE-INVALID1
+## b) The same, but the DT_SYMTAB tag is present. In this case the dynamic tag has priority over the
+##    information about a location and an entity size of the dynamic symbol table from the section header.
+##    The code uses sizeof(Elf_Sym) for an entity size, so it can't be incorrect and
+##    the message printed is a bit shorter.
+# RUN: yaml2obj %s --docnum=11 -o %t11
+# RUN: llvm-readobj --dyn-symbols %t11 2>&1 | FileCheck %s -DFILE=%t11 --check-prefix=DYNSYM-SIZE-INVALID2
+# RUN: llvm-readelf --dyn-symbols %t11 2>&1 | FileCheck %s -DFILE=%t11 --check-prefix=DYNSYM-SIZE-INVALID2
+
+# DYNSYM-SIZE-INVALID1: warning: '[[FILE]]': section with index 1 has invalid size (0x1) or entry size (0x10)
+
+# DYNSYM-SIZE-INVALID2: warning: '[[FILE]]': section with index 2 has invalid size (0x1){{$}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_386
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Size: 0x1
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_SYMTAB
+        Value: 0x100
+      - Tag:   DT_NULL
+        Value: 0
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    Address: 0x100
+    Size:    0x1
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x100
+    Sections:
+      - Section: .dynsym
