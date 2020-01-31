@@ -69,7 +69,6 @@ computeConversionSet(iterator_range<Region::iterator> region,
   return success();
 }
 
-#ifndef NDEBUG
 /// A utility function to log a successful result for the given reason.
 template <typename... Args>
 static void logSuccess(llvm::ScopedPrinter &os, StringRef fmt,
@@ -95,7 +94,6 @@ static void logFailure(llvm::ScopedPrinter &os, StringRef fmt,
                    << "\n";
   });
 }
-#endif
 
 //===----------------------------------------------------------------------===//
 // Multi-Level Value Mapper
