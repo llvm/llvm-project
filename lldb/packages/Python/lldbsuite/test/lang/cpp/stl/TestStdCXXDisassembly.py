@@ -45,9 +45,14 @@ class StdCXXDisassembleTestCase(TestBase):
         process = target.GetProcess()
 
         # The process should be in a 'stopped' state.
-        self.expect(str(process), STOPPED_DUE_TO_BREAKPOINT, exe=False,
-                    substrs=["a.out",
-                             "stopped"])
+        self.expect(
+            str(process),
+            STOPPED_DUE_TO_BREAKPOINT,
+            exe=False,
+            substrs=[
+                "stopped",
+                "a.out",
+            ])
 
         # Disassemble the functions on the call stack.
         self.runCmd("thread backtrace")
