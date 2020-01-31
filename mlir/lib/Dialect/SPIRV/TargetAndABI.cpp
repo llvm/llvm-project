@@ -45,6 +45,17 @@ spirv::getEntryPointABIAttr(ArrayRef<int32_t> localSize, MLIRContext *context) {
       context);
 }
 
+spirv::ResourceLimitsAttr
+spirv::getDefaultResourceLimits(MLIRContext *context) {
+  auto i32Type = IntegerType::get(32, context);
+  auto v3i32Type = VectorType::get(3, i32Type);
+
+  // These numbers are from "Table 46. Required Limits" of the Vulkan spec.
+  return spirv::ResourceLimitsAttr ::get(
+      IntegerAttr::get(i32Type, 128),
+      DenseIntElementsAttr::get<int32_t>(v3i32Type, {128, 128, 64}), context);
+}
+
 StringRef spirv::getTargetEnvAttrName() { return "spv.target_env"; }
 
 spirv::TargetEnvAttr spirv::getDefaultTargetEnv(MLIRContext *context) {
@@ -54,7 +65,7 @@ spirv::TargetEnvAttr spirv::getDefaultTargetEnv(MLIRContext *context) {
       builder.getI32ArrayAttr({}),
       builder.getI32ArrayAttr(
           {static_cast<uint32_t>(spirv::Capability::Shader)}),
-      context);
+      spirv::getDefaultResourceLimits(context), context);
 }
 
 spirv::TargetEnvAttr spirv::lookupTargetEnvOrDefault(Operation *op) {
