@@ -18,6 +18,7 @@
 #include "mlir/EDSC/Helpers.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/STLExtras.h"
@@ -28,6 +29,33 @@ using namespace mlir::edsc;
 using namespace mlir::edsc::intrinsics;
 using namespace mlir::linalg;
 using namespace mlir::loop;
+
+Optional<RegionMatcher::BinaryOpKind>
+RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
+  auto &region = op.region();
+  if (!has_single_element(region))
+    return llvm::None;
+
+  Block &block = region.front();
+  if (block.getNumArguments() != 2 ||
+      !block.getArgument(0).getType().isIntOrFloat() ||
+      !block.getArgument(1).getType().isIntOrFloat())
+    return llvm::None;
+
+  auto &ops = block.getOperations();
+  if (!has_single_element(block.without_terminator()))
+    return llvm::None;
+
+  using mlir::matchers::m_Val;
+  auto a = m_Val(block.getArgument(0));
+  auto b = m_Val(block.getArgument(1));
+
+  auto addPattern = m_Op<linalg::YieldOp>(m_Op<AddIOp>(a, b));
+  if (addPattern.match(&ops.back()))
+    return BinaryOpKind::IAdd;
+
+  return llvm::None;
+}
 
 static Value emitOrFoldComposedAffineApply(OpBuilder &b, Location loc,
                                            AffineMap map,

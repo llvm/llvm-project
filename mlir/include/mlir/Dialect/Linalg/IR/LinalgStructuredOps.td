@@ -54,6 +54,11 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       "Query the number of loops within the current operation.",
       "unsigned", "getNumLoops">,
 
+    InterfaceMethod<
+      [{Returns true if the current operation has only one loop and it's a
+        reduction loop}],
+      "unsigned", "hasSingleReductionLoop">,
+
     //========================================================================//
     // Input arguments handling.
     //========================================================================//

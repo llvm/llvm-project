@@ -93,6 +93,12 @@ public:
         cast<ConcreteType>(this->getOperation()).iterator_types());
   }
 
+  bool hasSingleReductionLoop() {
+    auto iterators = cast<ConcreteType>(this->getOperation()).iterator_types();
+    return iterators.size() == 1 &&
+           getNumIterators(getReductionIteratorTypeName(), iterators);
+  }
+
   //==========================================================================//
   // Input arguments handling.
   //==========================================================================//
