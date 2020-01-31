@@ -181,12 +181,7 @@ TypeFromUser ClangExpressionDeclMap::DeportType(TypeSystemClang &target,
   assert((TypeSystem *)&source == parser_type.GetTypeSystem());
   assert(&source.getASTContext() == m_ast_context);
 
-  if (m_ast_importer_sp) {
-    return TypeFromUser(m_ast_importer_sp->DeportType(target, parser_type));
-  } else {
-    lldbassert(0 && "No mechanism for deporting a type!");
-    return TypeFromUser();
-  }
+  return TypeFromUser(m_ast_importer_sp->DeportType(target, parser_type));
 }
 
 bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
@@ -682,9 +677,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     }
 
     ClangASTImporter::NamespaceMapSP namespace_map =
-        m_ast_importer_sp
-            ? m_ast_importer_sp->GetNamespaceMap(namespace_context)
-            : ClangASTImporter::NamespaceMapSP();
+        m_ast_importer_sp->GetNamespaceMap(namespace_context);
 
     if (!namespace_map)
       return;
