@@ -430,7 +430,7 @@ static const Target *getTarget(const ObjectFile *Obj = nullptr) {
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget =
-      TargetRegistry::lookupTarget(ArchName, TheTriple, Error);
+      TargetRegistry::lookupTarget(std::string(ArchName), TheTriple, Error);
   if (!TheTarget) {
     if (Obj)
       report_error(Obj->getFileName(), "can't find target: " + Error);
@@ -467,7 +467,7 @@ public:
     symbolize::LLVMSymbolizer::Options SymbolizerOpts;
     SymbolizerOpts.PrintFunctions = DILineInfoSpecifier::FunctionNameKind::None;
     SymbolizerOpts.Demangle = false;
-    SymbolizerOpts.DefaultArch = DefaultArch;
+    SymbolizerOpts.DefaultArch = std::string(DefaultArch);
     Symbolizer.reset(new symbolize::LLVMSymbolizer(SymbolizerOpts));
   }
   virtual ~SourcePrinter() = default;
@@ -503,7 +503,7 @@ void SourcePrinter::printSourceLine(raw_ostream &OS,
     return;
   DILineInfo LineInfo = DILineInfo();
   auto ExpectecLineInfo =
-      Symbolizer->symbolizeCode(Obj->getFileName(), Address);
+      Symbolizer->symbolizeCode(std::string(Obj->getFileName()), Address);
   if (!ExpectecLineInfo)
     consumeError(ExpectecLineInfo.takeError());
   else

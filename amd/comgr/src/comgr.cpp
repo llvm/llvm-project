@@ -430,7 +430,7 @@ ArrayRef<std::string> DataAction::getOptions(bool IsDeviceLibs) {
     else
       OptionsRef.split(OptionRefs, ' ');
     for (auto &Option : OptionRefs)
-      ListOptions.push_back(Option);
+      ListOptions.push_back(std::string(Option));
   }
 
   return ListOptions;

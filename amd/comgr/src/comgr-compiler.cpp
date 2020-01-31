@@ -217,7 +217,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
 
   // Target Options
   Opts.Triple = llvm::Triple::normalize(Args.getLastArgValue(OPT_triple));
-  Opts.CPU = Args.getLastArgValue(OPT_target_cpu);
+  Opts.CPU = std::string(Args.getLastArgValue(OPT_target_cpu));
   Opts.Features = Args.getAllArgValues(OPT_target_feature);
 
   // Use the default target triple if unspecified.
@@ -248,10 +248,10 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
 
   Opts.RelaxELFRelocations = Args.hasArg(OPT_mrelax_relocations);
   Opts.DwarfVersion = getLastArgIntValue(Args, OPT_dwarf_version_EQ, 2, Diags);
-  Opts.DwarfDebugFlags = Args.getLastArgValue(OPT_dwarf_debug_flags);
-  Opts.DwarfDebugProducer = Args.getLastArgValue(OPT_dwarf_debug_producer);
-  Opts.DebugCompilationDir = Args.getLastArgValue(OPT_fdebug_compilation_dir);
-  Opts.MainFileName = Args.getLastArgValue(OPT_main_file_name);
+  Opts.DwarfDebugFlags = std::string(Args.getLastArgValue(OPT_dwarf_debug_flags));
+  Opts.DwarfDebugProducer = std::string(Args.getLastArgValue(OPT_dwarf_debug_producer));
+  Opts.DebugCompilationDir = std::string(Args.getLastArgValue(OPT_fdebug_compilation_dir));
+  Opts.MainFileName = std::string(Args.getLastArgValue(OPT_main_file_name));
 
   // Frontend Options
   if (Args.hasArg(OPT_INPUT)) {
@@ -267,7 +267,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
     }
   }
   Opts.LLVMArgs = Args.getAllArgValues(OPT_mllvm);
-  Opts.OutputPath = Args.getLastArgValue(OPT_o);
+  Opts.OutputPath = std::string(Args.getLastArgValue(OPT_o));
   if (Arg *A = Args.getLastArg(OPT_filetype)) {
     StringRef Name = A->getValue();
     unsigned OutputType = StringSwitch<unsigned>(Name)
@@ -294,7 +294,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.RelaxAll = Args.hasArg(OPT_mrelax_all);
   Opts.NoExecStack = Args.hasArg(OPT_mno_exec_stack);
   Opts.FatalWarnings = Args.hasArg(OPT_massembler_fatal_warnings);
-  Opts.RelocationModel = Args.getLastArgValue(OPT_mrelocation_model, "pic");
+  Opts.RelocationModel = std::string(Args.getLastArgValue(OPT_mrelocation_model, "pic"));
   Opts.IncrementalLinkerCompatible =
       Args.hasArg(OPT_mincremental_linker_compatible);
   Opts.SymbolDefs = Args.getAllArgValues(OPT_defsym);

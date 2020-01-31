@@ -150,7 +150,7 @@ static amd_comgr_status_t getElfMetadataRoot(const ELFObjectFile<ELFT> *Obj,
                (Note.getName() == "AMDGPU" &&
                 Note.getType() == ELF::NT_AMDGPU_METADATA)) {
       MetaP->MetaDoc->EmitIntegerBooleans = true;
-      MetaP->MetaDoc->RawDocument = DescString;
+      MetaP->MetaDoc->RawDocument = std::string(DescString);
       if (!MetaP->MetaDoc->Document.readFromBlob(MetaP->MetaDoc->RawDocument,
                                                  false))
         return false;
