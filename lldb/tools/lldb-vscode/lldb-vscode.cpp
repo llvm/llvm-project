@@ -951,9 +951,17 @@ void request_completions(const llvm::json::Object &request) {
   for (size_t i = 0; i < count; i++) {
     std::string match = matches.GetStringAtIndex(i);
     std::string description = descriptions.GetStringAtIndex(i);
-
+    
     llvm::json::Object item;
-    EmplaceSafeString(item, "text", match);
+
+    llvm::StringRef match_ref = match;
+    for(llvm::StringRef commit_point: {".", "->"}) {
+      if (match_ref.contains(commit_point)){
+        match_ref = match_ref.rsplit(commit_point).second;
+      }
+    }
+    EmplaceSafeString(item, "text", match_ref);
+
     if (description.empty())
       EmplaceSafeString(item, "label", match);
     else
