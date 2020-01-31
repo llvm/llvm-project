@@ -207,7 +207,7 @@ private:
   static const uptr PrimarySize = RegionSize * NumClasses;
 
   // Call map for user memory with at least this size.
-  static const uptr MapSizeIncrement = 1UL << 17;
+  static const uptr MapSizeIncrement = 1UL << 18;
   // Fill at most this number of batches from the newly map'd memory.
   static const u32 MaxNumBatches = 8U;
 
