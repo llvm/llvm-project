@@ -231,7 +231,6 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
         var->GetParserVars(GetParserID());
 
     parser_vars->m_named_decl = decl;
-    parser_vars->m_parser_type = parser_type;
 
     var->EnableJITVars(GetParserID());
 
@@ -305,7 +304,6 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
       var->GetParserVars(GetParserID());
 
   parser_vars->m_named_decl = decl;
-  parser_vars->m_parser_type = parser_type;
 
   return true;
 }
@@ -1611,7 +1609,6 @@ void ClangExpressionDeclMap::AddOneVariable(NameSearchContext &context,
   entity->EnableParserVars(GetParserID());
   ClangExpressionVariable::ParserVars *parser_vars =
       entity->GetParserVars(GetParserID());
-  parser_vars->m_parser_type = pt;
   parser_vars->m_named_decl = var_decl;
   parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_value = var_location;
@@ -1650,7 +1647,6 @@ void ClangExpressionDeclMap::AddOneVariable(NameSearchContext &context,
   ClangExpressionVariable::ParserVars *parser_vars =
       llvm::cast<ClangExpressionVariable>(pvar_sp.get())
           ->GetParserVars(GetParserID());
-  parser_vars->m_parser_type = parser_type;
   parser_vars->m_named_decl = var_decl;
   parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_value.Clear();
@@ -1704,7 +1700,6 @@ void ClangExpressionDeclMap::AddOneGenericVariable(NameSearchContext &context,
   parser_vars->m_lldb_value.GetScalar() = symbol_load_addr;
   parser_vars->m_lldb_value.SetValueType(Value::eValueTypeLoadAddress);
 
-  parser_vars->m_parser_type = parser_type;
   parser_vars->m_named_decl = var_decl;
   parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_sym = &symbol;
@@ -1744,7 +1739,6 @@ void ClangExpressionDeclMap::AddOneRegister(NameSearchContext &context,
   entity->EnableParserVars(GetParserID());
   ClangExpressionVariable::ParserVars *parser_vars =
       entity->GetParserVars(GetParserID());
-  parser_vars->m_parser_type = parser_clang_type;
   parser_vars->m_named_decl = var_decl;
   parser_vars->m_llvm_value = nullptr;
   parser_vars->m_lldb_value.Clear();
