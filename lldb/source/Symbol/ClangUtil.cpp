@@ -28,6 +28,11 @@ bool ClangUtil::IsClangType(const CompilerType &ct) {
   return true;
 }
 
+clang::Decl *ClangUtil::GetDecl(const CompilerDecl &decl) {
+  assert(llvm::isa<TypeSystemClang>(decl.GetTypeSystem()));
+  return static_cast<clang::Decl *>(decl.GetOpaqueDecl());
+}
+
 QualType ClangUtil::GetQualType(const CompilerType &ct) {
   // Make sure we have a clang type before making a clang::QualType
   if (!IsClangType(ct))
