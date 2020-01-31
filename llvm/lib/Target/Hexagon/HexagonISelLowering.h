@@ -302,9 +302,8 @@ namespace HexagonISD {
     /// the immediate into a register.
     bool isLegalICmpImmediate(int64_t Imm) const override;
 
-    EVT getOptimalMemOpType(uint64_t Size, unsigned DstAlign,
-        unsigned SrcAlign, bool IsMemset, bool ZeroMemset, bool MemcpyStrSrc,
-        const AttributeList &FuncAttributes) const override;
+    EVT getOptimalMemOpType(const MemOp &Op,
+                            const AttributeList &FuncAttributes) const override;
 
     bool allowsMisalignedMemoryAccesses(EVT VT, unsigned AddrSpace,
         unsigned Align, MachineMemOperand::Flags Flags, bool *Fast)

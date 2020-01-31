@@ -428,13 +428,11 @@ public:
 
   bool shouldConsiderGEPOffsetSplit() const override;
 
-  EVT getOptimalMemOpType(uint64_t Size, unsigned DstAlign, unsigned SrcAlign,
-                          bool IsMemset, bool ZeroMemset, bool MemcpyStrSrc,
+  EVT getOptimalMemOpType(const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
-  LLT getOptimalMemOpLLT(uint64_t Size, unsigned DstAlign, unsigned SrcAlign,
-                          bool IsMemset, bool ZeroMemset, bool MemcpyStrSrc,
-                          const AttributeList &FuncAttributes) const override;
+  LLT getOptimalMemOpLLT(const MemOp &Op,
+                         const AttributeList &FuncAttributes) const override;
 
   /// Return true if the addressing mode represented by AM is legal for this
   /// target, for a load/store of the specified type.
