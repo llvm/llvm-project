@@ -4859,8 +4859,8 @@ Decl *Sema::ActOnMethodDeclaration(
           } else if (ObjCMethod->isDirectMethod() || IMD->isDirectMethod()) {
             Diag(ObjCMethod->getLocation(),
                  diag::err_objc_direct_duplicate_decl)
-                << ObjCMethod->isDirectMethod() << IMD->isDirectMethod()
-                << ObjCMethod->getDeclName();
+                << ObjCMethod->isDirectMethod() << /* method */ 0
+                << IMD->isDirectMethod() << ObjCMethod->getDeclName();
             Diag(IMD->getLocation(), diag::note_previous_declaration);
           }
         }

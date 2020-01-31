@@ -107,7 +107,7 @@
 // CHECK-NEXT: ObjCClassStub (SubjectMatchRule_objc_interface)
 // CHECK-NEXT: ObjCDesignatedInitializer (SubjectMatchRule_objc_method)
 // CHECK-NEXT: ObjCDirect (SubjectMatchRule_objc_method)
-// CHECK-NEXT: ObjCDirectMembers (SubjectMatchRule_objc_implementation, SubjectMatchRule_objc_category)
+// CHECK-NEXT: ObjCDirectMembers (SubjectMatchRule_objc_implementation, SubjectMatchRule_objc_interface, SubjectMatchRule_objc_category)
 // CHECK-NEXT: ObjCException (SubjectMatchRule_objc_interface)
 // CHECK-NEXT: ObjCExplicitProtocolImpl (SubjectMatchRule_objc_protocol)
 // CHECK-NEXT: ObjCExternallyRetained (SubjectMatchRule_variable_not_is_parameter, SubjectMatchRule_function, SubjectMatchRule_block, SubjectMatchRule_objc_method)

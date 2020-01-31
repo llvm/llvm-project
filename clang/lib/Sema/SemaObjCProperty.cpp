@@ -2421,6 +2421,40 @@ void Sema::ProcessPropertyDecl(ObjCPropertyDecl *property) {
   DiagnosePropertyAccessorMismatch(property, GetterMethod,
                                    property->getLocation());
 
+  // synthesizing accessors must not result in a direct method that is not
+  // monomorphic
+  if (!GetterMethod) {
+    if (const ObjCCategoryDecl *CatDecl = dyn_cast<ObjCCategoryDecl>(CD)) {
+      auto *ExistingGetter = CatDecl->getClassInterface()->lookupMethod(
+          property->getGetterName(), !IsClassProperty, true, false, CatDecl);
+      if (ExistingGetter) {
+        if (ExistingGetter->isDirectMethod() || property->isDirectProperty()) {
+          Diag(property->getLocation(), diag::err_objc_direct_duplicate_decl)
+              << property->isDirectProperty() << 1 /* property */
+              << ExistingGetter->isDirectMethod()
+              << ExistingGetter->getDeclName();
+          Diag(ExistingGetter->getLocation(), diag::note_previous_declaration);
+        }
+      }
+    }
+  }
+
+  if (!property->isReadOnly() && !SetterMethod) {
+    if (const ObjCCategoryDecl *CatDecl = dyn_cast<ObjCCategoryDecl>(CD)) {
+      auto *ExistingSetter = CatDecl->getClassInterface()->lookupMethod(
+          property->getSetterName(), !IsClassProperty, true, false, CatDecl);
+      if (ExistingSetter) {
+        if (ExistingSetter->isDirectMethod() || property->isDirectProperty()) {
+          Diag(property->getLocation(), diag::err_objc_direct_duplicate_decl)
+              << property->isDirectProperty() << 1 /* property */
+              << ExistingSetter->isDirectMethod()
+              << ExistingSetter->getDeclName();
+          Diag(ExistingSetter->getLocation(), diag::note_previous_declaration);
+        }
+      }
+    }
+  }
+
   if (!property->isReadOnly() && SetterMethod) {
     if (Context.getCanonicalType(SetterMethod->getReturnType()) !=
         Context.VoidTy)
