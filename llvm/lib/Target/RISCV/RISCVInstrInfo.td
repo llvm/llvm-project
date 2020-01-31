@@ -222,6 +222,18 @@ def call_symbol : Operand<XLenVT> {
   let ParserMatchClass = CallSymbol;
 }
 
+def PseudoJumpSymbol : AsmOperandClass {
+  let Name = "PseudoJumpSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidPseudoJumpSymbol";
+  let ParserMethod = "parsePseudoJumpSymbol";
+}
+
+// A bare symbol used for pseudo jumps only.
+def pseudo_jump_symbol : Operand<XLenVT> {
+  let ParserMatchClass = PseudoJumpSymbol;
+}
+
 def TPRelAddSymbol : AsmOperandClass {
   let Name = "TPRelAddSymbol";
   let RenderMethod = "addImmOperands";
@@ -967,6 +979,12 @@ def : Pat<(riscv_tail (iPTR tglobaladdr:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
 def : Pat<(riscv_tail (iPTR texternalsym:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
+
+let isCall = 0, isBarrier = 0, isCodeGenOnly = 0, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoJump : Pseudo<(outs GPR:$rd), (ins pseudo_jump_symbol:$target), []> {
+  let AsmString = "jump\t$target, $rd";
+}
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
