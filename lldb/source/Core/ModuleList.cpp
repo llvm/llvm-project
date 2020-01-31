@@ -590,10 +590,6 @@ size_t ModuleList::GetSize() const {
 }
 
 void ModuleList::Dump(Stream *s) const {
-  //  s.Printf("%.*p: ", (int)sizeof(void*) * 2, this);
-  //  s.Indent();
-  //  s << "ModuleList\n";
-
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
   for (pos = m_modules.begin(); pos != end; ++pos) {
