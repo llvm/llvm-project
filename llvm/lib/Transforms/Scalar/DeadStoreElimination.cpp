@@ -607,26 +607,26 @@ static bool memoryIsNotModifiedBetween(Instruction *FirstI,
   BasicBlock *SecondBB = SecondI->getParent();
   MemoryLocation MemLoc = MemoryLocation::get(SecondI);
 
-  // Start checking the store-block.
+  // Start checking the SecondBB.
   WorkList.push_back(SecondBB);
   bool isFirstBlock = true;
 
-  // Check all blocks going backward until we reach the load-block.
+  // Check all blocks going backward until we reach the FirstBB.
   while (!WorkList.empty()) {
     BasicBlock *B = WorkList.pop_back_val();
 
-    // Ignore instructions before LI if this is the FirstBB.
+    // Ignore instructions before FirstI if this is the FirstBB.
     BasicBlock::iterator BI = (B == FirstBB ? FirstBBI : B->begin());
 
     BasicBlock::iterator EI;
     if (isFirstBlock) {
-      // Ignore instructions after SI if this is the first visit of SecondBB.
+      // Ignore instructions after SecondI if this is the first visit of SecondBB.
       assert(B == SecondBB && "first block is not the store block");
       EI = SecondBBI;
       isFirstBlock = false;
     } else {
       // It's not SecondBB or (in case of a loop) the second visit of SecondBB.
-      // In this case we also have to look at instructions after SI.
+      // In this case we also have to look at instructions after SecondI.
       EI = B->end();
     }
     for (; BI != EI; ++BI) {
