@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-def llvm_mram_ptr_ty : LLVMQualPointerType<llvm_void_ty, 255>;
-def llvm_wram_ptr_ty : LLVMQualPointerType<llvm_void_ty, 0>;
+def llvm_mram_ptr_ty : LLVMQualPointerType<llvm_i8_ty, 255>;
+def llvm_wram_ptr_ty : LLVMQualPointerType<llvm_i8_ty, 0>;
 
 let TargetPrefix = "dpu" in {
 
