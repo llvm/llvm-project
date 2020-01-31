@@ -749,6 +749,18 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       return Vec;
     break;
   }
+  case ISD::INSERT_SUBVECTOR: {
+    // If we don't demand the inserted subvector, return the base vector.
+    SDValue Vec = Op.getOperand(0);
+    SDValue Sub = Op.getOperand(1);
+    auto *CIdx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
+    unsigned NumVecElts = Vec.getValueType().getVectorNumElements();
+    unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
+    if (CIdx && CIdx->getAPIntValue().ule(NumVecElts - NumSubElts))
+      if (DemandedElts.extractBits(NumSubElts, CIdx->getZExtValue()) == 0)
+        return Vec;
+    break;
+  }
   case ISD::VECTOR_SHUFFLE: {
     ArrayRef<int> ShuffleMask = cast<ShuffleVectorSDNode>(Op)->getMask();
 
