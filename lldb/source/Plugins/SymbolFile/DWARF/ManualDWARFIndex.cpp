@@ -100,7 +100,7 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, IndexSet &set) {
         unit.GetOffset());
   }
 
-  const LanguageType cu_language = unit.GetLanguageType();
+  const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
 
   IndexUnitImpl(unit, cu_language, set);
 
