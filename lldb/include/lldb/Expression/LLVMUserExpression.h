@@ -71,8 +71,6 @@ public:
   /// translation unit.
   const char *Text() override { return m_transformed_text.c_str(); }
 
-  lldb::ModuleSP GetJITModule() override;
-
 protected:
   lldb::ExpressionResults
   DoExecute(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,

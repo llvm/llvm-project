@@ -357,8 +357,3 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
   return true;
 }
 
-lldb::ModuleSP LLVMUserExpression::GetJITModule() {
-  if (m_execution_unit_sp)
-    return m_execution_unit_sp->GetJITModule();
-  return lldb::ModuleSP();
-}
