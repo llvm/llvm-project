@@ -31,6 +31,12 @@ static cl::opt<bool> PropagateAttrs("propagate-attrs", cl::init(true),
                                     cl::Hidden,
                                     cl::desc("Propagate attributes in index"));
 
+// FIXME: Enable again when thin link compile time regressions understood and
+// addressed
+static cl::opt<bool> ImportConstantsWithRefs(
+    "import-constants-with-refs", cl::init(false), cl::Hidden,
+    cl::desc("Import constant global variables with references"));
+
 FunctionSummary FunctionSummary::ExternalNode =
     FunctionSummary::makeDummyFunctionSummary({});
 
@@ -221,8 +227,8 @@ bool ModuleSummaryIndex::canImportGlobalVar(GlobalValueSummary *S,
     // c) Link error (external declaration with internal definition).
     // However we do not promote objects referenced by writeonly GV
     // initializer by means of converting it to 'zeroinitializer'
-    return !GVS->isConstant() && !isReadOnly(GVS) && !isWriteOnly(GVS) &&
-           GVS->refs().size();
+    return !(ImportConstantsWithRefs && GVS->isConstant()) &&
+           !isReadOnly(GVS) && !isWriteOnly(GVS) && GVS->refs().size();
   };
   auto *GVS = cast<GlobalVarSummary>(S->getBaseObject());
 

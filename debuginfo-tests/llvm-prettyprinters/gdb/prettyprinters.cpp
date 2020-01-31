@@ -6,6 +6,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/ilist.h"
 #include "llvm/Support/Error.h"
 
 int Array[] = {1, 2, 3};
@@ -24,5 +25,26 @@ llvm::StringRef StringRef = "bar";
 llvm::Twine Twine = llvm::Twine(SmallString) + StringRef;
 llvm::PointerIntPair<int *, 1> PointerIntPair(IntPtr, 1);
 llvm::PointerUnion<float *, int *> PointerUnion(IntPtr);
+
+using IlistTag = llvm::ilist_tag<struct A>;
+using SimpleIlistTag = llvm::ilist_tag<struct B>;
+struct IlistNode : llvm::ilist_node<IlistNode, IlistTag>,
+                   llvm::ilist_node<IlistNode, SimpleIlistTag> {
+  int Value;
+};
+auto Ilist = [] {
+  llvm::ilist<IlistNode, IlistTag> Result;
+  for (int I : {13, 14, 15}) {
+    Result.push_back(new IlistNode);
+    Result.back().Value = I;
+  }
+  return Result;
+}();
+auto SimpleIlist = []() {
+  llvm::simple_ilist<IlistNode, SimpleIlistTag> Result;
+  for (auto &Node : Ilist)
+    Result.push_front(Node);
+  return Result;
+}();
 
 int main() { return 0; }

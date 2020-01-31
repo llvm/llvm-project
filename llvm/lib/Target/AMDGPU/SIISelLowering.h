@@ -60,7 +60,7 @@ private:
   SDValue lowerImage(SDValue Op, const AMDGPU::ImageDimIntrinsicInfo *Intr,
                      SelectionDAG &DAG) const;
   SDValue lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc, SDValue Offset,
-                       SDValue GLC, SDValue DLC, SelectionDAG &DAG) const;
+                       SDValue CachePolicy, SelectionDAG &DAG) const;
 
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
@@ -198,6 +198,10 @@ public:
   /// \returns True if PC-relative relocation needs to be emitted for given
   /// global value \p GV, false otherwise.
   bool shouldEmitPCReloc(const GlobalValue *GV) const;
+
+  /// \returns true if this should use a literal constant for an LDS address,
+  /// and not emit a relocation for an LDS global.
+  bool shouldUseLDSConstAddress(const GlobalValue *GV) const;
 
 private:
   // Analyze a combined offset from an amdgcn_buffer_ intrinsic and store the

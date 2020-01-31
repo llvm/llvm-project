@@ -38,6 +38,8 @@
 using namespace clang;
 using namespace sema;
 
+using AllowedExplicit = Sema::AllowedExplicit;
+
 static bool functionHasPassObjectSizeParams(const FunctionDecl *FD) {
   return llvm::any_of(FD->parameters(), [](const ParmVarDecl *P) {
     return P->hasAttr<PassObjectSizeAttr>();
@@ -91,9 +93,8 @@ static OverloadingResult
 IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
                         UserDefinedConversionSequence& User,
                         OverloadCandidateSet& Conversions,
-                        bool AllowExplicit,
+                        AllowedExplicit AllowExplicit,
                         bool AllowObjCConversionOnExplicit);
-
 
 static ImplicitConversionSequence::CompareKind
 CompareStandardConversionSequences(Sema &S, SourceLocation Loc,
@@ -1317,7 +1318,7 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
 static ImplicitConversionSequence
 TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
                          bool SuppressUserConversions,
-                         bool AllowExplicit,
+                         AllowedExplicit AllowExplicit,
                          bool InOverloadResolution,
                          bool CStyle,
                          bool AllowObjCWritebackConversion,
@@ -1420,7 +1421,7 @@ TryUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
 static ImplicitConversionSequence
 TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
                       bool SuppressUserConversions,
-                      bool AllowExplicit,
+                      AllowedExplicit AllowExplicit,
                       bool InOverloadResolution,
                       bool CStyle,
                       bool AllowObjCWritebackConversion,
@@ -1475,13 +1476,12 @@ TryImplicitConversion(Sema &S, Expr *From, QualType ToType,
 ImplicitConversionSequence
 Sema::TryImplicitConversion(Expr *From, QualType ToType,
                             bool SuppressUserConversions,
-                            bool AllowExplicit,
+                            AllowedExplicit AllowExplicit,
                             bool InOverloadResolution,
                             bool CStyle,
                             bool AllowObjCWritebackConversion) {
-  return ::TryImplicitConversion(*this, From, ToType,
-                                 SuppressUserConversions, AllowExplicit,
-                                 InOverloadResolution, CStyle,
+  return ::TryImplicitConversion(*this, From, ToType, SuppressUserConversions,
+                                 AllowExplicit, InOverloadResolution, CStyle,
                                  AllowObjCWritebackConversion,
                                  /*AllowObjCConversionOnExplicit=*/false);
 }
@@ -1514,10 +1514,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                                       From->getType(), From);
   ICS = ::TryImplicitConversion(*this, From, ToType,
                                 /*SuppressUserConversions=*/false,
-                                AllowExplicit,
+                                AllowExplicit ? AllowedExplicit::All
+                                              : AllowedExplicit::None,
                                 /*InOverloadResolution=*/false,
-                                /*CStyle=*/false,
-                                AllowObjCWritebackConversion,
+                                /*CStyle=*/false, AllowObjCWritebackConversion,
                                 /*AllowObjCConversionOnExplicit=*/false);
   return PerformImplicitConversion(From, ToType, ICS, Action);
 }
@@ -3397,9 +3397,10 @@ static OverloadingResult
 IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
                         UserDefinedConversionSequence &User,
                         OverloadCandidateSet &CandidateSet,
-                        bool AllowExplicit,
+                        AllowedExplicit AllowExplicit,
                         bool AllowObjCConversionOnExplicit) {
-  assert(AllowExplicit || !AllowObjCConversionOnExplicit);
+  assert(AllowExplicit != AllowedExplicit::None ||
+         !AllowObjCConversionOnExplicit);
   CandidateSet.clear(OverloadCandidateSet::CSK_InitByUserDefinedConversion);
 
   // Whether we will only visit constructors.
@@ -3432,7 +3433,8 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
       if (InitListExpr *InitList = dyn_cast<InitListExpr>(From)) {
         // But first, see if there is an init-list-constructor that will work.
         OverloadingResult Result = IsInitializerListConstructorConversion(
-            S, From, ToType, ToRecordDecl, User, CandidateSet, AllowExplicit);
+            S, From, ToType, ToRecordDecl, User, CandidateSet,
+            AllowExplicit == AllowedExplicit::All);
         if (Result != OR_No_Viable_Function)
           return Result;
         // Never mind.
@@ -3471,14 +3473,16 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
                 Info.ConstructorTmpl, Info.FoundDecl,
                 /*ExplicitArgs*/ nullptr, llvm::makeArrayRef(Args, NumArgs),
                 CandidateSet, SuppressUserConversions,
-                /*PartialOverloading*/ false, AllowExplicit);
+                /*PartialOverloading*/ false,
+                AllowExplicit == AllowedExplicit::All);
           else
             // Allow one user-defined conversion when user specifies a
             // From->ToType conversion via an static cast (c-style, etc).
             S.AddOverloadCandidate(Info.Constructor, Info.FoundDecl,
                                    llvm::makeArrayRef(Args, NumArgs),
                                    CandidateSet, SuppressUserConversions,
-                                   /*PartialOverloading*/ false, AllowExplicit);
+                                   /*PartialOverloading*/ false,
+                                   AllowExplicit == AllowedExplicit::All);
         }
       }
     }
@@ -3511,11 +3515,12 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
         if (ConvTemplate)
           S.AddTemplateConversionCandidate(
               ConvTemplate, FoundDecl, ActingContext, From, ToType,
-              CandidateSet, AllowObjCConversionOnExplicit, AllowExplicit);
+              CandidateSet, AllowObjCConversionOnExplicit,
+              AllowExplicit != AllowedExplicit::None);
         else
-          S.AddConversionCandidate(
-              Conv, FoundDecl, ActingContext, From, ToType, CandidateSet,
-              AllowObjCConversionOnExplicit, AllowExplicit);
+          S.AddConversionCandidate(Conv, FoundDecl, ActingContext, From, ToType,
+                                   CandidateSet, AllowObjCConversionOnExplicit,
+                                   AllowExplicit != AllowedExplicit::None);
       }
     }
   }
@@ -3601,7 +3606,7 @@ Sema::DiagnoseMultipleUserDefinedConversion(Expr *From, QualType ToType) {
                                     OverloadCandidateSet::CSK_Normal);
   OverloadingResult OvResult =
     IsUserDefinedConversion(*this, From, ToType, ICS.UserDefined,
-                            CandidateSet, false, false);
+                            CandidateSet, AllowedExplicit::None, false);
 
   if (!(OvResult == OR_Ambiguous ||
         (OvResult == OR_No_Viable_Function && !CandidateSet.empty())))
@@ -4862,7 +4867,7 @@ TryReferenceInit(Sema &S, Expr *Init, QualType DeclType,
   //   cv-qualification is subsumed by the initialization itself
   //   and does not constitute a conversion.
   ICS = TryImplicitConversion(S, Init, T1, SuppressUserConversions,
-                              /*AllowExplicit=*/false,
+                              AllowedExplicit::None,
                               /*InOverloadResolution=*/false,
                               /*CStyle=*/false,
                               /*AllowObjCWritebackConversion=*/false,
@@ -5031,7 +5036,7 @@ TryListConversion(Sema &S, InitListExpr *From, QualType ToType,
   if (ToType->isRecordType() && !ToType->isAggregateType()) {
     // This function can deal with initializer lists.
     return TryUserDefinedConversion(S, From, ToType, SuppressUserConversions,
-                                    /*AllowExplicit=*/false,
+                                    AllowedExplicit::None,
                                     InOverloadResolution, /*CStyle=*/false,
                                     AllowObjCWritebackConversion,
                                     /*AllowObjCConversionOnExplicit=*/false);
@@ -5183,7 +5188,7 @@ TryCopyInitialization(Sema &S, Expr *From, QualType ToType,
 
   return TryImplicitConversion(S, From, ToType,
                                SuppressUserConversions,
-                               /*AllowExplicit=*/false,
+                               AllowedExplicit::None,
                                InOverloadResolution,
                                /*CStyle=*/false,
                                AllowObjCWritebackConversion,
@@ -5431,7 +5436,7 @@ static ImplicitConversionSequence
 TryContextuallyConvertToBool(Sema &S, Expr *From) {
   return TryImplicitConversion(S, From, S.Context.BoolTy,
                                /*SuppressUserConversions=*/false,
-                               /*AllowExplicit=*/true,
+                               AllowedExplicit::Conversions,
                                /*InOverloadResolution=*/false,
                                /*CStyle=*/false,
                                /*AllowObjCWritebackConversion=*/false,
@@ -5703,7 +5708,7 @@ TryContextuallyConvertToObjCPointer(Sema &S, Expr *From) {
     = TryImplicitConversion(S, From, Ty,
                             // FIXME: Are these flags correct?
                             /*SuppressUserConversions=*/false,
-                            /*AllowExplicit=*/true,
+                            AllowedExplicit::Conversions,
                             /*InOverloadResolution=*/false,
                             /*CStyle=*/false,
                             /*AllowObjCWritebackConversion=*/false,
@@ -9273,17 +9278,31 @@ Sema::AddArgumentDependentLookupCandidates(DeclarationName Name,
       if (ExplicitTemplateArgs)
         continue;
 
-      AddOverloadCandidate(FD, FoundDecl, Args, CandidateSet,
-                           /*SuppressUserConversions=*/false, PartialOverloading,
-                           /*AllowExplicit*/ true,
-                           /*AllowExplicitConversions*/ false,
-                           ADLCallKind::UsesADL);
+      AddOverloadCandidate(
+          FD, FoundDecl, Args, CandidateSet, /*SuppressUserConversions=*/false,
+          PartialOverloading, /*AllowExplicit=*/true,
+          /*AllowExplicitConversions=*/false, ADLCallKind::UsesADL);
+      if (CandidateSet.getRewriteInfo().shouldAddReversed(Context, FD)) {
+        AddOverloadCandidate(
+            FD, FoundDecl, {Args[1], Args[0]}, CandidateSet,
+            /*SuppressUserConversions=*/false, PartialOverloading,
+            /*AllowExplicit=*/true, /*AllowExplicitConversions=*/false,
+            ADLCallKind::UsesADL, None, OverloadCandidateParamOrder::Reversed);
+      }
     } else {
+      auto *FTD = cast<FunctionTemplateDecl>(*I);
       AddTemplateOverloadCandidate(
-          cast<FunctionTemplateDecl>(*I), FoundDecl, ExplicitTemplateArgs, Args,
-          CandidateSet,
+          FTD, FoundDecl, ExplicitTemplateArgs, Args, CandidateSet,
           /*SuppressUserConversions=*/false, PartialOverloading,
-          /*AllowExplicit*/true, ADLCallKind::UsesADL);
+          /*AllowExplicit=*/true, ADLCallKind::UsesADL);
+      if (CandidateSet.getRewriteInfo().shouldAddReversed(
+              Context, FTD->getTemplatedDecl())) {
+        AddTemplateOverloadCandidate(
+            FTD, FoundDecl, ExplicitTemplateArgs, {Args[1], Args[0]},
+            CandidateSet, /*SuppressUserConversions=*/false, PartialOverloading,
+            /*AllowExplicit=*/true, ADLCallKind::UsesADL,
+            OverloadCandidateParamOrder::Reversed);
+      }
     }
   }
 }

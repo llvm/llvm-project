@@ -2954,7 +2954,7 @@ def SPV_IsStructType : CPred<"$_self.isa<::mlir::spirv::StructType>()">;
 // for the definition of the following types and type categories.
 
 def SPV_Void : TypeAlias<NoneType, "void type">;
-def SPV_Bool : IntOfWidths<[1]>;
+def SPV_Bool : I<1>;
 def SPV_Integer : IntOfWidths<[8, 16, 32, 64]>;
 def SPV_Float : FloatOfWidths<[16, 32, 64]>;
 def SPV_Float16or32 : FloatOfWidths<[16, 32]>;
@@ -3161,6 +3161,12 @@ def SPV_OC_OpGroupNonUniformIAdd       : I32EnumAttrCase<"OpGroupNonUniformIAdd"
 def SPV_OC_OpGroupNonUniformFAdd       : I32EnumAttrCase<"OpGroupNonUniformFAdd", 350>;
 def SPV_OC_OpGroupNonUniformIMul       : I32EnumAttrCase<"OpGroupNonUniformIMul", 351>;
 def SPV_OC_OpGroupNonUniformFMul       : I32EnumAttrCase<"OpGroupNonUniformFMul", 352>;
+def SPV_OC_OpGroupNonUniformSMin       : I32EnumAttrCase<"OpGroupNonUniformSMin", 353>;
+def SPV_OC_OpGroupNonUniformUMin       : I32EnumAttrCase<"OpGroupNonUniformUMin", 354>;
+def SPV_OC_OpGroupNonUniformFMin       : I32EnumAttrCase<"OpGroupNonUniformFMin", 355>;
+def SPV_OC_OpGroupNonUniformSMax       : I32EnumAttrCase<"OpGroupNonUniformSMax", 356>;
+def SPV_OC_OpGroupNonUniformUMax       : I32EnumAttrCase<"OpGroupNonUniformUMax", 357>;
+def SPV_OC_OpGroupNonUniformFMax       : I32EnumAttrCase<"OpGroupNonUniformFMax", 358>;
 def SPV_OC_OpSubgroupBallotKHR         : I32EnumAttrCase<"OpSubgroupBallotKHR", 4421>;
 
 def SPV_OpcodeAttr :
@@ -3210,6 +3216,9 @@ def SPV_OpcodeAttr :
       SPV_OC_OpGroupNonUniformElect, SPV_OC_OpGroupNonUniformBallot,
       SPV_OC_OpGroupNonUniformIAdd, SPV_OC_OpGroupNonUniformFAdd,
       SPV_OC_OpGroupNonUniformIMul, SPV_OC_OpGroupNonUniformFMul,
+      SPV_OC_OpGroupNonUniformSMin, SPV_OC_OpGroupNonUniformUMin,
+      SPV_OC_OpGroupNonUniformFMin, SPV_OC_OpGroupNonUniformSMax,
+      SPV_OC_OpGroupNonUniformUMax, SPV_OC_OpGroupNonUniformFMax,
       SPV_OC_OpSubgroupBallotKHR
     ]>;
 

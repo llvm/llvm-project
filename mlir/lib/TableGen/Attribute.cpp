@@ -154,6 +154,10 @@ StringRef tblgen::EnumAttrCase::getSymbol() const {
   return def->getValueAsString("symbol");
 }
 
+StringRef tblgen::EnumAttrCase::getStr() const {
+  return def->getValueAsString("str");
+}
+
 int64_t tblgen::EnumAttrCase::getValue() const {
   return def->getValueAsInt("value");
 }

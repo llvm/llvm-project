@@ -121,7 +121,7 @@ static std::string getCPUName(const HSACodeObject *CodeObject) {
       SmallString<6> OutStr;
       raw_svector_ostream OS(OutStr);
       OS << "gfx" << Isa->major << Isa->minor << Isa->stepping;
-      return OS.str();
+      return std::string(OS.str());
     }
   }
   return "";
@@ -275,7 +275,7 @@ void CodeObjectDisassembler::printFunctionCode(const MCDisassembler &InstDisasm,
     if (!CS.str().empty())
       OS << " // " << CS.str();
 
-    AsmStreamer->getStreamer().EmitRawText(OS.str());
+    AsmStreamer->getStreamer().EmitRawText(std::string(OS.str()));
 
     Address += EatenBytesNum;
     Index += EatenBytesNum;

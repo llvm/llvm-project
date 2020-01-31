@@ -618,11 +618,11 @@ TEST(FormatVariadicTest, Adapter) {
 TEST(FormatVariadicTest, MoveConstructor) {
   auto fmt = formatv("{0} {1}", 1, 2);
   auto fmt2 = std::move(fmt);
-  std::string S = fmt2;
+  std::string S = std::string(fmt2);
   EXPECT_EQ("1 2", S);
 }
 TEST(FormatVariadicTest, ImplicitConversions) {
-  std::string S = formatv("{0} {1}", 1, 2);
+  std::string S = std::string(formatv("{0} {1}", 1, 2));
   EXPECT_EQ("1 2", S);
 
   SmallString<4> S2 = formatv("{0} {1}", 1, 2);

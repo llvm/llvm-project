@@ -2,6 +2,7 @@
 ; RUN: llc -global-isel -march=amdgcn -mcpu=tonga -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -check-prefix=GFX8 %s
 ; RUN: llc -global-isel -march=amdgcn -mcpu=gfx1010 -amdgpu-dpp-combine=false -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10 %s
 
+; XFAIL: *
 ; FIXME: Merge with DAG test
 
 define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in1, i32 %in2) {
@@ -18,7 +19,6 @@ define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in1, i32 %in2) 
 ; GFX8-NEXT:    v_mov_b32_dpp v2, v3 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8-NEXT:    s_endpgm
-;
 ; GFX10-LABEL: dpp_test:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
@@ -39,18 +39,13 @@ define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in1, i32 %in2) 
 define amdgpu_kernel void @update_dpp64_test(i64 addrspace(1)* %arg, i64 %in1, i64 %in2) {
 ; GFX8-LABEL: update_dpp64_test:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX8-NEXT:    v_mul_lo_u32 v2, 0, v0
-; GFX8-NEXT:    v_mul_lo_u32 v1, 8, v1
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX8-NEXT:    v_mul_hi_u32 v3, 8, v0
-; GFX8-NEXT:    v_mul_lo_u32 v0, 8, v0
-; GFX8-NEXT:    v_add_u32_e32 v1, vcc, v2, v1
-; GFX8-NEXT:    v_add_u32_e32 v1, vcc, v1, v3
+; GFX8-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX8-NEXT:    v_lshlrev_b64 v[0:1], 3, v[0:1]
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v4, s1
+; GFX8-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, v4, v1, vcc
+; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, v2, v1, vcc
 ; GFX8-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
 ; GFX8-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX8-NEXT:    v_mov_b32_e32 v4, s2
@@ -60,19 +55,18 @@ define amdgpu_kernel void @update_dpp64_test(i64 addrspace(1)* %arg, i64 %in1, i
 ; GFX8-NEXT:    v_mov_b32_dpp v4, v2 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
 ; GFX8-NEXT:    flat_store_dwordx2 v[0:1], v[4:5]
 ; GFX8-NEXT:    s_endpgm
-;
 ; GFX10-LABEL: update_dpp64_test:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GFX10-NEXT:    v_mul_lo_u32 v2, 0, v0
-; GFX10-NEXT:    v_mul_hi_u32 v3, 8, v0
-; GFX10-NEXT:    v_mul_lo_u32 v0, 8, v0
-; GFX10-NEXT:    v_mul_lo_u32 v1, 8, v1
+; GFX10-NEXT:    v_mul_lo_u32 v2, v0, 0
+; GFX10-NEXT:    v_mul_hi_u32 v3, v0, 8
+; GFX10-NEXT:    v_mul_lo_u32 v0, v0, 8
+; GFX10-NEXT:    v_mul_lo_u32 v1, v1, 8
 ; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    v_add_co_u32_e64 v6, vcc_lo, s0, v0
-; GFX10-NEXT:    v_add3_u32 v1, v2, v1, v3
+; GFX10-NEXT:    v_add3_u32 v1, v1, v2, v3
 ; GFX10-NEXT:    v_mov_b32_e32 v5, s3
 ; GFX10-NEXT:    v_mov_b32_e32 v4, s2
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, s1, v1, vcc_lo

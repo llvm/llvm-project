@@ -131,7 +131,7 @@ std::string asBool(StringRef text, bool NeedsStaticCast) {
   if (NeedsStaticCast)
     return ("static_cast<bool>(" + text + ")").str();
 
-  return text;
+  return std::string(text);
 }
 
 bool needsNullPtrComparison(const Expr *E) {

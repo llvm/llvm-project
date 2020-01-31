@@ -21,3 +21,7 @@ void baz() = delete;
 struct quux {
   int quux() = default; // expected-error{{constructor cannot have a return type}}
 };
+
+struct attrs {
+  [[noreturn]] friend void deleted_with_attrs() = delete;
+};

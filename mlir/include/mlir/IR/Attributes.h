@@ -359,6 +359,13 @@ public:
   static bool kindof(unsigned kind) {
     return kind == StandardAttributes::Integer;
   }
+
+  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
+                                                    MLIRContext *ctx, Type type,
+                                                    int64_t value);
+  static LogicalResult verifyConstructionInvariants(Optional<Location> loc,
+                                                    MLIRContext *ctx, Type type,
+                                                    const APInt &value);
 };
 
 //===----------------------------------------------------------------------===//

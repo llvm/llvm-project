@@ -86,8 +86,8 @@ public:
       // memory accesses which ends up being fairly costly. The current lower
       // limit is mostly arbitrary and based on empirical observations.
       // TODO(kostyak): make the lower limit a runtime option
-      Region->CanRelease = (ReleaseToOsInterval >= 0) &&
-                           (getSizeByClassId(I) >= (PageSize / 64));
+      Region->CanRelease = (I != SizeClassMap::BatchClassId) &&
+                           (getSizeByClassId(I) >= (PageSize / 32));
       Region->RandState = getRandomU32(&Seed);
     }
     ReleaseToOsIntervalMs = ReleaseToOsInterval;
@@ -189,8 +189,6 @@ public:
   uptr releaseToOS() {
     uptr TotalReleasedBytes = 0;
     for (uptr I = 0; I < NumClasses; I++) {
-      if (I == SizeClassMap::BatchClassId)
-        continue;
       RegionInfo *Region = getRegionInfo(I);
       ScopedLock L(Region->Mutex);
       TotalReleasedBytes += releaseToOSMaybe(Region, I, /*Force=*/true);

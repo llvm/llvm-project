@@ -176,7 +176,7 @@ XRayArgs::XRayArgs(const ToolChain &TC, const ArgList &Args) {
         else if (M == "all")
           llvm::copy(XRaySupportedModes, std::back_inserter(Modes));
         else
-          Modes.push_back(M);
+          Modes.push_back(std::string(M));
     }
 
   // Then we want to sort and unique the modes we've collected.

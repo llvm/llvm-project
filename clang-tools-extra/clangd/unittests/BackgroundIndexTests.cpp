@@ -594,7 +594,8 @@ protected:
     std::string ReadName;
     LookupRequest Req;
     Req.IDs.insert(TestSymbol.ID);
-    Target.lookup(Req, [&](const Symbol &S) { ReadName = S.Name; });
+    Target.lookup(Req,
+                  [&](const Symbol &S) { ReadName = std::string(S.Name); });
     // The index was rebuild if the name is up to date.
     return ReadName == VersionStorage.back();
   }

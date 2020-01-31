@@ -118,7 +118,7 @@ func @bar() {
 func @foo() {
   // The attribute parser will consume the first colon-type, so we put two of
   // them to trigger the attribute type mismatch error.
-  // expected-error @+1 {{expected symbol reference}}
+  // expected-error @+1 {{invalid kind of attribute specified}}
   llvm.mlir.addressof "foo" : i64 : !llvm<"void ()*">
 }
 

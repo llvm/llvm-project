@@ -352,7 +352,8 @@ struct SourceMgrDiagnosticHandlerImpl {
     // Otherwise, try to load the source file.
     const llvm::MemoryBuffer *newBuf = nullptr;
     std::string ignored;
-    if (auto newBufID = mgr.AddIncludeFile(filename, llvm::SMLoc(), ignored))
+    if (auto newBufID =
+            mgr.AddIncludeFile(std::string(filename), llvm::SMLoc(), ignored))
       newBuf = mgr.getMemoryBuffer(newBufID);
     return filenameToBuf[filename] = newBuf;
   }

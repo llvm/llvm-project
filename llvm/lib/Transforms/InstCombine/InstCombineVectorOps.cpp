@@ -432,7 +432,6 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
       // nothing.
       if (CI->hasOneUse() && (CI->getOpcode() != Instruction::BitCast)) {
         Value *EE = Builder.CreateExtractElement(CI->getOperand(0), Index);
-        Worklist.AddValue(EE);
         return CastInst::Create(CI->getOpcode(), EE, EI.getType());
       }
     }

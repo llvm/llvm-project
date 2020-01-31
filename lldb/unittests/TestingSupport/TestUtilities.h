@@ -43,7 +43,8 @@ public:
   llvm::StringRef name() { return *Name; }
 
 private:
-  TestFile(llvm::StringRef Name, llvm::FileRemover &&Remover) : Name(Name) {
+  TestFile(llvm::StringRef Name, llvm::FileRemover &&Remover)
+      : Name(std::string(Name)) {
     Remover.releaseFile();
   }
   void operator=(const TestFile &) = delete;

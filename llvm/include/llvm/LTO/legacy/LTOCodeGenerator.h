@@ -92,8 +92,8 @@ struct LTOCodeGenerator {
   /// The default is CGFT_ObjectFile.
   void setFileType(CodeGenFileType FT) { FileType = FT; }
 
-  void setCpu(StringRef MCpu) { this->MCpu = MCpu; }
-  void setAttr(StringRef MAttr) { this->MAttr = MAttr; }
+  void setCpu(StringRef MCpu) { this->MCpu = std::string(MCpu); }
+  void setAttr(StringRef MAttr) { this->MAttr = std::string(MAttr); }
   void setOptLevel(unsigned OptLevel);
 
   void setShouldInternalize(bool Value) { ShouldInternalize = Value; }

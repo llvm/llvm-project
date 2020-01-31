@@ -657,7 +657,7 @@ bool CommandObjectExpression::DoExecute(llvm::StringRef command,
       std::string fixed_command("expression ");
       if (args.HasArgs()) {
         // Add in any options that might have been in the original command:
-        fixed_command.append(args.GetArgStringWithDelimiter());
+        fixed_command.append(std::string(args.GetArgStringWithDelimiter()));
         fixed_command.append(m_fixed_expression);
       } else
         fixed_command.append(m_fixed_expression);

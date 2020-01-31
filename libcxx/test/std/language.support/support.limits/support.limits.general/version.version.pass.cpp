@@ -88,6 +88,7 @@
     __cpp_lib_string_udls                          201304L [C++14]
     __cpp_lib_string_view                          201606L [C++17]
     __cpp_lib_three_way_comparison                 201711L [C++2a]
+    __cpp_lib_to_array                             201907L [C++2a]
     __cpp_lib_to_chars                             201611L [C++17]
     __cpp_lib_transformation_trait_aliases         201304L [C++14]
     __cpp_lib_transparent_operators                201210L [C++14]
@@ -400,6 +401,10 @@
 
 # ifdef __cpp_lib_three_way_comparison
 #   error "__cpp_lib_three_way_comparison should not be defined before c++2a"
+# endif
+
+# ifdef __cpp_lib_to_array
+#   error "__cpp_lib_to_array should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_to_chars
@@ -792,6 +797,10 @@
 
 # ifdef __cpp_lib_three_way_comparison
 #   error "__cpp_lib_three_way_comparison should not be defined before c++2a"
+# endif
+
+# ifdef __cpp_lib_to_array
+#   error "__cpp_lib_to_array should not be defined before c++2a"
 # endif
 
 # ifdef __cpp_lib_to_chars
@@ -1388,6 +1397,10 @@
 
 # ifdef __cpp_lib_three_way_comparison
 #   error "__cpp_lib_three_way_comparison should not be defined before c++2a"
+# endif
+
+# ifdef __cpp_lib_to_array
+#   error "__cpp_lib_to_array should not be defined before c++2a"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -2134,6 +2147,13 @@
 #   ifdef __cpp_lib_three_way_comparison
 #     error "__cpp_lib_three_way_comparison should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_to_array
+#   error "__cpp_lib_to_array should be defined in c++2a"
+# endif
+# if __cpp_lib_to_array != 201907L
+#   error "__cpp_lib_to_array should have the value 201907L in c++2a"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

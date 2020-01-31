@@ -134,6 +134,9 @@ public:
   // Returns the symbol of this enum attribute case.
   StringRef getSymbol() const;
 
+  // Returns the textual representation of this enum attribute case.
+  StringRef getStr() const;
+
   // Returns the value of this enum attribute case.
   int64_t getValue() const;
 

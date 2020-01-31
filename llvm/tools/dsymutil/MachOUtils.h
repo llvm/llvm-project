@@ -30,7 +30,7 @@ struct ArchAndFile {
   llvm::Error createTempFile();
   llvm::StringRef path() const;
 
-  ArchAndFile(StringRef Arch) : Arch(Arch) {}
+  ArchAndFile(StringRef Arch) : Arch(std::string(Arch)) {}
   ArchAndFile(ArchAndFile &&A) = default;
   ArchAndFile &operator=(ArchAndFile &&A) = default;
   ~ArchAndFile();

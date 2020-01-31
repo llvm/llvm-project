@@ -239,11 +239,11 @@ public:
   }
 
   void AddVFSOverlayFile(StringRef Name) {
-    VFSOverlayFiles.push_back(Name);
+    VFSOverlayFiles.push_back(std::string(Name));
   }
 
   void AddPrebuiltModulePath(StringRef Name) {
-    PrebuiltModulePaths.push_back(Name);
+    PrebuiltModulePaths.push_back(std::string(Name));
   }
 };
 

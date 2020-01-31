@@ -951,7 +951,7 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
   for (unsigned i = 0, e = NoAliasArgs.size(); i != e; ++i) {
     const Argument *A = NoAliasArgs[i];
 
-    std::string Name = CalledFunc->getName();
+    std::string Name = std::string(CalledFunc->getName());
     if (A->hasName()) {
       Name += ": %";
       Name += A->getName();
@@ -1002,8 +1002,7 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
         IsFuncCall = true;
         if (CalleeAAR) {
           FunctionModRefBehavior MRB = CalleeAAR->getModRefBehavior(Call);
-          if (MRB == FMRB_OnlyAccessesArgumentPointees ||
-              MRB == FMRB_OnlyReadsArgumentPointees)
+          if (AAResults::onlyAccessesArgPointees(MRB))
             IsArgMemOnlyCall = true;
         }
 

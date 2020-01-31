@@ -156,7 +156,7 @@ protected:
     }
 
     // Store into a std::string since we're about to shift the channel off.
-    const std::string channel = args[0].ref();
+    const std::string channel = std::string(args[0].ref());
     args.Shift(); // Shift off the channel
     char log_file[PATH_MAX];
     if (m_options.log_file)
@@ -229,7 +229,7 @@ protected:
       return false;
     }
 
-    const std::string channel = args[0].ref();
+    const std::string channel = std::string(args[0].ref());
     args.Shift(); // Shift off the channel
     if (channel == "all") {
       Log::DisableAllLogChannels();

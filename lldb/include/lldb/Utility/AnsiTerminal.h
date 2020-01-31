@@ -111,7 +111,7 @@ inline std::string FormatAnsiTerminalCodes(llvm::StringRef format,
     llvm::StringRef left, right;
     std::tie(left, right) = format.split(tok_hdr);
 
-    fmt.append(left);
+    fmt += left;
 
     if (left == format && right.empty()) {
       // The header was not found.  Just exit.

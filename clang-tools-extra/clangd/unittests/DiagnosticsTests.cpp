@@ -208,7 +208,7 @@ TEST(DiagnosticsTest, DeduplicatedClangTidyDiagnostics) {
       func(2.0);
     }
   )cpp");
-  TU.Code = Test.code();
+  TU.Code = std::string(Test.code());
   // The check doesn't handle template instantiations which ends up emitting
   // duplicated messages, verify that we deduplicate them.
   EXPECT_THAT(
@@ -332,7 +332,7 @@ TEST(DiagnosticTest, LongFixMessages) {
 n]] = 10; // error-ok
     }
   )cpp");
-  TU.Code = Source.code();
+  TU.Code = std::string(Source.code());
   EXPECT_THAT(TU.build().getDiagnostics(),
               ElementsAre(WithFix(
                   Fix(Source.range(), "ident", "change 'ide\\…' to 'ident'"))));
@@ -433,7 +433,7 @@ TEST(DiagnosticsTest, ToLSP) {
   D.InsideMainFile = true;
   D.Severity = DiagnosticsEngine::Error;
   D.File = "foo/bar/main.cpp";
-  D.AbsFile = MainFile.file();
+  D.AbsFile = std::string(MainFile.file());
 
   clangd::Note NoteInMain;
   NoteInMain.Message = "declared somewhere in the main file";
@@ -441,7 +441,7 @@ TEST(DiagnosticsTest, ToLSP) {
   NoteInMain.Severity = DiagnosticsEngine::Remark;
   NoteInMain.File = "../foo/bar/main.cpp";
   NoteInMain.InsideMainFile = true;
-  NoteInMain.AbsFile = MainFile.file();
+  NoteInMain.AbsFile = std::string(MainFile.file());
 
   D.Notes.push_back(NoteInMain);
 
@@ -451,7 +451,7 @@ TEST(DiagnosticsTest, ToLSP) {
   NoteInHeader.Severity = DiagnosticsEngine::Note;
   NoteInHeader.File = "../foo/baz/header.h";
   NoteInHeader.InsideMainFile = false;
-  NoteInHeader.AbsFile = HeaderFile.file();
+  NoteInHeader.AbsFile = std::string(HeaderFile.file());
   D.Notes.push_back(NoteInHeader);
 
   clangd::Fix F;
@@ -738,7 +738,7 @@ $insert[[]]namespace ns {
 void g() {  ns::$[[scope]]::X_Y();  }
   )cpp");
   TestTU TU;
-  TU.Code = Test.code();
+  TU.Code = std::string(Test.code());
   // FIXME: Figure out why this is needed and remove it, PR43662.
   TU.ExtraArgs.push_back("-fno-ms-compatibility");
   auto Index = buildIndexWithSymbol(
@@ -764,7 +764,7 @@ void f() {
 }
   )cpp");
   TestTU TU;
-  TU.Code = Test.code();
+  TU.Code = std::string(Test.code());
   // FIXME: Figure out why this is needed and remove it, PR43662.
   TU.ExtraArgs.push_back("-fno-ms-compatibility");
   auto Index = buildIndexWithSymbol(
@@ -846,7 +846,7 @@ TEST(DiagsInHeaders, DiagInsideHeader) {
     void foo() {})cpp");
   Annotations Header("[[no_type_spec]]; // error-ok");
   TestTU TU = TestTU::withCode(Main.code());
-  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  TU.AdditionalFiles = {{"a.h", std::string(Header.code())}};
   EXPECT_THAT(TU.build().getDiagnostics(),
               UnorderedElementsAre(AllOf(
                   Diag(Main.range(), "in included file: C++ requires a "
@@ -953,7 +953,7 @@ TEST(DiagsInHeaders, OnlyErrorOrFatal) {
     [[no_type_spec]]; // error-ok
     int x = 5/0;)cpp");
   TestTU TU = TestTU::withCode(Main.code());
-  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  TU.AdditionalFiles = {{"a.h", std::string(Header.code())}};
   EXPECT_THAT(TU.build().getDiagnostics(),
               UnorderedElementsAre(AllOf(
                   Diag(Main.range(), "in included file: C++ requires "
@@ -969,7 +969,7 @@ TEST(DiagsInHeaders, FromNonWrittenSources) {
     int x = 5/0;
     int b = [[FOO]]; // error-ok)cpp");
   TestTU TU = TestTU::withCode(Main.code());
-  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  TU.AdditionalFiles = {{"a.h", std::string(Header.code())}};
   TU.ExtraArgs = {"-DFOO=NOOO"};
   EXPECT_THAT(TU.build().getDiagnostics(),
               UnorderedElementsAre(AllOf(
@@ -988,7 +988,7 @@ TEST(DiagsInHeaders, ErrorFromMacroExpansion) {
   #define X foo
   X;)cpp");
   TestTU TU = TestTU::withCode(Main.code());
-  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  TU.AdditionalFiles = {{"a.h", std::string(Header.code())}};
   EXPECT_THAT(TU.build().getDiagnostics(),
               UnorderedElementsAre(
                   Diag(Main.range(), "in included file: use of undeclared "
@@ -1005,7 +1005,7 @@ TEST(DiagsInHeaders, ErrorFromMacroArgument) {
   #define X(arg) arg
   X(foo);)cpp");
   TestTU TU = TestTU::withCode(Main.code());
-  TU.AdditionalFiles = {{"a.h", Header.code()}};
+  TU.AdditionalFiles = {{"a.h", std::string(Header.code())}};
   EXPECT_THAT(TU.build().getDiagnostics(),
               UnorderedElementsAre(
                   Diag(Main.range(), "in included file: use of undeclared "

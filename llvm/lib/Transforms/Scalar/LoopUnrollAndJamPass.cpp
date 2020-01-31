@@ -450,7 +450,6 @@ static bool tryToUnrollAndJamLoop(Function &F, DominatorTree &DT, LoopInfo &LI,
   internal::appendLoopsToWorklist(reverse(LI), Worklist);
   while (!Worklist.empty()) {
     Loop *L = Worklist.pop_back_val();
-    formLCSSA(*L, DT, &LI, &SE);
     LoopUnrollResult Result =
         tryToUnrollAndJamLoop(L, DT, &LI, SE, TTI, AC, DI, ORE, OptLevel);
     if (Result != LoopUnrollResult::Unmodified)

@@ -31,6 +31,8 @@
 using namespace mlir;
 using namespace mlir::LLVM;
 
+#include "mlir/Dialect/LLVMIR/LLVMConversionEnumsToLLVM.inc"
+
 /// Builds a constant of a sequential LLVM type `type`, potentially containing
 /// other sequential types recursively, from the individual constant values
 /// provided in `constants`. `shape` contains the number of elements in nested
@@ -307,6 +309,34 @@ LogicalResult ModuleTranslation::convertOperation(Operation &opInst,
     return success(result->getType()->isVoidTy());
   }
 
+  if (auto invOp = dyn_cast<LLVM::InvokeOp>(opInst)) {
+    auto operands = lookupValues(opInst.getOperands());
+    ArrayRef<llvm::Value *> operandsRef(operands);
+    if (auto attr = opInst.getAttrOfType<FlatSymbolRefAttr>("callee"))
+      builder.CreateInvoke(functionMapping.lookup(attr.getValue()),
+                           blockMapping[invOp.getSuccessor(0)],
+                           blockMapping[invOp.getSuccessor(1)], operandsRef);
+    else
+      builder.CreateInvoke(
+          operandsRef.front(), blockMapping[invOp.getSuccessor(0)],
+          blockMapping[invOp.getSuccessor(1)], operandsRef.drop_front());
+    return success();
+  }
+
+  if (auto lpOp = dyn_cast<LLVM::LandingpadOp>(opInst)) {
+    llvm::Type *ty = lpOp.getType().dyn_cast<LLVMType>().getUnderlyingType();
+    llvm::LandingPadInst *lpi =
+        builder.CreateLandingPad(ty, lpOp.getNumOperands());
+
+    // Add clauses
+    for (auto operand : lookupValues(lpOp.getOperands())) {
+      // All operands should be constant - checked by verifier
+      if (auto constOperand = dyn_cast<llvm::Constant>(operand))
+        lpi->addClause(constOperand);
+    }
+    return success();
+  }
+
   // Emit branches.  We need to look up the remapped blocks and ignore the block
   // arguments that were transformed into PHI nodes.
   if (auto brOp = dyn_cast<LLVM::BrOp>(opInst)) {
@@ -372,35 +402,6 @@ LogicalResult ModuleTranslation::convertBlock(Block &bb, bool ignoreArguments) {
   return success();
 }
 
-/// Convert the LLVM dialect linkage type to LLVM IR linkage type.
-llvm::GlobalVariable::LinkageTypes convertLinkageType(LLVM::Linkage linkage) {
-  switch (linkage) {
-  case LLVM::Linkage::Private:
-    return llvm::GlobalValue::PrivateLinkage;
-  case LLVM::Linkage::Internal:
-    return llvm::GlobalValue::InternalLinkage;
-  case LLVM::Linkage::AvailableExternally:
-    return llvm::GlobalValue::AvailableExternallyLinkage;
-  case LLVM::Linkage::Linkonce:
-    return llvm::GlobalValue::LinkOnceAnyLinkage;
-  case LLVM::Linkage::Weak:
-    return llvm::GlobalValue::WeakAnyLinkage;
-  case LLVM::Linkage::Common:
-    return llvm::GlobalValue::CommonLinkage;
-  case LLVM::Linkage::Appending:
-    return llvm::GlobalValue::AppendingLinkage;
-  case LLVM::Linkage::ExternWeak:
-    return llvm::GlobalValue::ExternalWeakLinkage;
-  case LLVM::Linkage::LinkonceODR:
-    return llvm::GlobalValue::LinkOnceODRLinkage;
-  case LLVM::Linkage::WeakODR:
-    return llvm::GlobalValue::WeakODRLinkage;
-  case LLVM::Linkage::External:
-    return llvm::GlobalValue::ExternalLinkage;
-  }
-  llvm_unreachable("unknown linkage type");
-}
-
 /// Create named global variables that correspond to llvm.mlir.global
 /// definitions.
 void ModuleTranslation::convertGlobals() {
@@ -430,7 +431,7 @@ void ModuleTranslation::convertGlobals() {
       cst = cast<llvm::Constant>(valueMapping.lookup(ret.getOperand(0)));
     }
 
-    auto linkage = convertLinkageType(op.linkage());
+    auto linkage = convertLinkageToLLVM(op.linkage());
     bool anyExternalLinkage =
         (linkage == llvm::GlobalVariable::ExternalLinkage ||
          linkage == llvm::GlobalVariable::ExternalWeakLinkage);

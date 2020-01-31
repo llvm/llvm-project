@@ -33,11 +33,187 @@ define i64 @ull() {
   ret i64 2147483648
 }
 
+define signext i8 @d2c(double %x) {
+; CHECK-LABEL: d2c:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.w.d.sx.rz %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptosi double %x to i8
+  ret i8 %r
+}
+
+define zeroext i8 @d2uc(double %x) {
+; CHECK-LABEL: d2uc:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.w.d.sx.rz %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptoui double %x to i8
+  ret i8 %r
+}
+
+define signext i16 @d2s(double %x) {
+; CHECK-LABEL: d2s:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.w.d.sx.rz %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptosi double %x to i16
+  ret i16 %r
+}
+
+define zeroext i16 @d2us(double %x) {
+; CHECK-LABEL: d2us:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.w.d.sx.rz %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptoui double %x to i16
+  ret i16 %r
+}
+
+define i32 @d2i(double %x) {
+; CHECK-LABEL: d2i:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.w.d.sx.rz %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptosi double %x to i32
+  ret i32 %r
+}
+
+define i32 @d2ui(double %x) {
+; CHECK-LABEL: d2ui:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.l.d.rz %s0, %s0
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptoui double %x to i32
+  ret i32 %r
+}
+
+define i64 @d2ll(double %x) {
+; CHECK-LABEL: d2ll:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.l.d.rz %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptosi double %x to i64
+  ret i64 %r
+}
+
+define i64 @d2ull(double %x) {
+; CHECK-LABEL: d2ull:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    lea.sl %s1, 1138753536
+; CHECK-NEXT:    fcmp.d %s2, %s0, %s1
+; CHECK-NEXT:    fsub.d %s1, %s0, %s1
+; CHECK-NEXT:    cvt.l.d.rz %s1, %s1
+; CHECK-NEXT:    lea.sl %s3, -2147483648
+; CHECK-NEXT:    xor %s1, %s1, %s3
+; CHECK-NEXT:    cvt.l.d.rz %s0, %s0
+; CHECK-NEXT:    cmov.d.lt %s1, %s0, %s2
+; CHECK-NEXT:    or %s0, 0, %s1
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptoui double %x to i64
+  ret i64 %r
+}
+
+define float @d2f(double %x) {
+; CHECK-LABEL: d2f:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.s.d %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptrunc double %x to float
+  ret float %r
+}
+
 define double @d2d(double returned %0) {
 ; CHECK-LABEL: d2d:
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s11, 0, %s9
   ret double %0
+}
+
+define signext i8 @f2c(float %x) {
+; CHECK-LABEL: f2c:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.w.s.sx.rz %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptosi float %x to i8
+  ret i8 %r
+}
+
+define zeroext i8 @f2uc(float %x) {
+; CHECK-LABEL: f2uc:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.w.s.sx.rz %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptoui float %x to i8
+  ret i8 %r
+}
+
+define signext i16 @f2s(float %x) {
+; CHECK-LABEL: f2s:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.w.s.sx.rz %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptosi float %x to i16
+  ret i16 %r
+}
+
+define zeroext i16 @f2us(float %x) {
+; CHECK-LABEL: f2us:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.w.s.sx.rz %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptoui float %x to i16
+  ret i16 %r
+}
+
+define i32 @f2i(float %x) {
+; CHECK-LABEL: f2i:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.w.s.sx.rz %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptosi float %x to i32
+  ret i32 %r
+}
+
+define i32 @f2ui(float %x) {
+; CHECK-LABEL: f2ui:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.d.s %s0, %s0
+; CHECK-NEXT:    cvt.l.d.rz %s0, %s0
+; CHECK-NEXT:    adds.w.sx %s0, %s0, (0)1
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptoui float %x to i32
+  ret i32 %r
+}
+
+define i64 @f2ll(float %x) {
+; CHECK-LABEL: f2ll:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.d.s %s0, %s0
+; CHECK-NEXT:    cvt.l.d.rz %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptosi float %x to i64
+  ret i64 %r
+}
+
+define i64 @f2ull(float %x) {
+; CHECK-LABEL: f2ull:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    lea.sl %s1, 1593835520
+; CHECK-NEXT:    or %s1, 0, %s1
+; CHECK-NEXT:    fcmp.s %s2, %s0, %s1
+; CHECK-NEXT:    fsub.s %s1, %s0, %s1
+; CHECK-NEXT:    cvt.d.s %s1, %s1
+; CHECK-NEXT:    cvt.l.d.rz %s1, %s1
+; CHECK-NEXT:    lea.sl %s3, -2147483648
+; CHECK-NEXT:    xor %s1, %s1, %s3
+; CHECK-NEXT:    cvt.d.s %s0, %s0
+; CHECK-NEXT:    cvt.l.d.rz %s0, %s0
+; CHECK-NEXT:    cmov.s.lt %s1, %s0, %s2
+; CHECK-NEXT:    or %s0, 0, %s1
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fptoui float %x to i64
+  ret i64 %r
 }
 
 define float @f2f(float returned %0) {
@@ -46,6 +222,16 @@ define float @f2f(float returned %0) {
 ; CHECK-NEXT:    or %s11, 0, %s9
   ret float %0
 }
+
+define double @f2d(float %x) {
+; CHECK-LABEL: f2d:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.d.s %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = fpext float %x to double
+  ret double %r
+}
+
 define signext i8 @ll2c(i64 %0) {
 ; CHECK-LABEL: ll2c:
 ; CHECK:       .LBB{{[0-9]+}}_2:
@@ -116,6 +302,25 @@ define i64 @ll2ull(i64 returned %0) {
 ; CHECK:       .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:    or %s11, 0, %s9
   ret i64 %0
+}
+
+define float @ll2f(i64 %x) {
+; CHECK-LABEL: ll2f:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.d.l %s0, %s0
+; CHECK-NEXT:    cvt.s.d %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = sitofp i64 %x to float
+  ret float %r
+}
+
+define double @ll2d(i64 %x) {
+; CHECK-LABEL: ll2d:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.d.l %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = sitofp i64 %x to double
+  ret double %r
 }
 
 define signext i8 @ull2c(i64 %0) {
@@ -190,6 +395,46 @@ define i64 @ull2ull(i64 returned %0) {
   ret i64 %0
 }
 
+define float @ull2f(i64 %x) {
+; CHECK-LABEL: ull2f:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    or %s1, 0, (0)1
+; CHECK-NEXT:    cmps.l %s2, %s0, %s1
+; CHECK-NEXT:    cvt.d.l %s1, %s0
+; CHECK-NEXT:    cvt.s.d %s1, %s1
+; CHECK-NEXT:    srl %s3, %s0, 1
+; CHECK-NEXT:    and %s0, 1, %s0
+; CHECK-NEXT:    or %s0, %s0, %s3
+; CHECK-NEXT:    cvt.d.l %s0, %s0
+; CHECK-NEXT:    cvt.s.d %s0, %s0
+; CHECK-NEXT:    fadd.s %s0, %s0, %s0
+; CHECK-NEXT:    cmov.l.lt %s1, %s0, %s2
+; CHECK-NEXT:    or %s0, 0, %s1
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = uitofp i64 %x to float
+  ret float %r
+}
+
+define double @ull2d(i64 %x) {
+; CHECK-LABEL: ull2d:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    srl %s1, %s0, 32
+; CHECK-NEXT:    lea.sl %s2, 1160773632
+; CHECK-NEXT:    or %s1, %s1, %s2
+; CHECK-NEXT:    lea %s2, 1048576
+; CHECK-NEXT:    lea.sl %s2, -986710016(%s2)
+; CHECK-NEXT:    fadd.d %s1, %s1, %s2
+; CHECK-NEXT:    lea %s2, -1
+; CHECK-NEXT:    and %s2, %s2, (32)0
+; CHECK-NEXT:    and %s0, %s0, %s2
+; CHECK-NEXT:    lea.sl %s2, 1127219200
+; CHECK-NEXT:    or %s0, %s0, %s2
+; CHECK-NEXT:    fadd.d %s0, %s0, %s1
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = uitofp i64 %x to double
+  ret double %r
+}
+
 define signext i8 @i2c(i32 %0) {
 ; CHECK-LABEL: i2c:
 ; CHECK:       .LBB{{[0-9]+}}_2:
@@ -258,6 +503,24 @@ define i64 @i2ull(i32 %0) {
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = sext i32 %0 to i64
   ret i64 %2
+}
+
+define float @i2f(i32 %x) {
+; CHECK-LABEL: i2f:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.s.w %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = sitofp i32 %x to float
+  ret float %r
+}
+
+define double @i2d(i32 %x) {
+; CHECK-LABEL: i2d:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.d.w %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = sitofp i32 %x to double
+  ret double %r
 }
 
 define signext i8 @ui2c(i32 %0) {
@@ -330,6 +593,27 @@ define i64 @ui2ull(i32 %0) {
   ret i64 %2
 }
 
+define float @ui2f(i32 %x) {
+; CHECK-LABEL: ui2f:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
+; CHECK-NEXT:    cvt.d.l %s0, %s0
+; CHECK-NEXT:    cvt.s.d %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = uitofp i32 %x to float
+  ret float %r
+}
+
+define double @ui2d(i32 %x) {
+; CHECK-LABEL: ui2d:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
+; CHECK-NEXT:    cvt.d.l %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = uitofp i32 %x to double
+  ret double %r
+}
+
 define signext i8 @s2c(i16 signext %0) {
 ; CHECK-LABEL: s2c:
 ; CHECK:       .LBB{{[0-9]+}}_2:
@@ -396,6 +680,24 @@ define i64 @s2ull(i16 signext %0) {
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = sext i16 %0 to i64
   ret i64 %2
+}
+
+define float @s2f(i16 signext %x) {
+; CHECK-LABEL: s2f:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.s.w %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = sitofp i16 %x to float
+  ret float %r
+}
+
+define double @s2d(i16 signext %x) {
+; CHECK-LABEL: s2d:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.d.w %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = sitofp i16 %x to double
+  ret double %r
 }
 
 define signext i8 @us2c(i16 zeroext %0) {
@@ -467,6 +769,24 @@ define i64 @us2ull(i16 zeroext %0) {
   ret i64 %2
 }
 
+define float @us2f(i16 zeroext %x) {
+; CHECK-LABEL: us2f:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.s.w %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = uitofp i16 %x to float
+  ret float %r
+}
+
+define double @us2d(i16 zeroext %x) {
+; CHECK-LABEL: us2d:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.d.w %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = uitofp i16 %x to double
+  ret double %r
+}
+
 define signext i8 @c2c(i8 returned signext %0) {
 ; CHECK-LABEL: c2c:
 ; CHECK:       .LBB{{[0-9]+}}_2:
@@ -533,6 +853,24 @@ define i64 @c2ull(i8 signext %0) {
   ret i64 %2
 }
 
+define float @c2f(i8 signext %x) {
+; CHECK-LABEL: c2f:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.s.w %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = sitofp i8 %x to float
+  ret float %r
+}
+
+define double @c2d(i8 signext %x) {
+; CHECK-LABEL: c2d:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.d.w %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = sitofp i8 %x to double
+  ret double %r
+}
+
 define signext i8 @uc2c(i8 returned zeroext %0) {
 ; CHECK-LABEL: uc2c:
 ; CHECK:       .LBB{{[0-9]+}}_2:
@@ -597,6 +935,24 @@ define i64 @uc2ull(i8 zeroext %0) {
 ; CHECK-NEXT:    or %s11, 0, %s9
   %2 = zext i8 %0 to i64
   ret i64 %2
+}
+
+define float @uc2f(i8 zeroext %x) {
+; CHECK-LABEL: uc2f:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.s.w %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = uitofp i8 %x to float
+  ret float %r
+}
+
+define double @uc2d(i8 zeroext %x) {
+; CHECK-LABEL: uc2d:
+; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK-NEXT:    cvt.d.w %s0, %s0
+; CHECK-NEXT:    or %s11, 0, %s9
+  %r = uitofp i8 %x to double
+  ret double %r
 }
 
 ; Function Attrs: norecurse nounwind readnone

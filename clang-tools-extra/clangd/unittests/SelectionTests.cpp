@@ -374,7 +374,7 @@ TEST(SelectionTest, CommonAncestor) {
     Annotations Test(C.Code);
 
     TestTU TU;
-    TU.Code = Test.code();
+    TU.Code = std::string(Test.code());
 
     // FIXME: Auto-completion in a template requires disabling delayed template
     // parsing.

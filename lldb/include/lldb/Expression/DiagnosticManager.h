@@ -78,7 +78,7 @@ public:
                      bool precede_with_newline = true) {
     if (precede_with_newline)
       m_message.push_back('\n');
-    m_message.append(message);
+    m_message += message;
   }
 
 protected:

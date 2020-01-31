@@ -354,7 +354,7 @@ TEST(RemoteObjectLayer, FindSymbol) {
           if (Name == "foobar")
             return JITSymbol(0x12348765, JITSymbolFlags::Exported);
           if (Name == "badsymbol")
-            return make_error<JITSymbolNotFound>(Name);
+            return make_error<JITSymbolNotFound>(std::string(Name));
           return nullptr;
         };
       return 42;
@@ -435,7 +435,7 @@ TEST(RemoteObjectLayer, FindSymbolIn) {
         [](StringRef Name, bool ExportedSymbolsOnly) -> JITSymbol {
           if (Name == "foobar")
             return JITSymbol(0x12348765, JITSymbolFlags::Exported);
-          return make_error<JITSymbolNotFound>(Name);
+          return make_error<JITSymbolNotFound>(std::string(Name));
         };
       // Dummy symbol table entry - this should not be visible to
       // findSymbolIn.
@@ -443,7 +443,7 @@ TEST(RemoteObjectLayer, FindSymbolIn) {
         [](StringRef Name, bool ExportedSymbolsOnly) -> JITSymbol {
           if (Name == "barbaz")
             return JITSymbol(0xdeadbeef, JITSymbolFlags::Exported);
-          return make_error<JITSymbolNotFound>(Name);
+          return make_error<JITSymbolNotFound>(std::string(Name));
         };
 
       return 42;

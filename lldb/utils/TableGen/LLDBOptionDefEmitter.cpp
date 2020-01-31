@@ -55,18 +55,18 @@ struct CommandOption {
     Required = Option->getValue("Required");
 
     // Add the full and short name for this option.
-    FullName = Option->getValueAsString("FullName");
-    ShortName = Option->getValueAsString("ShortName");
+    FullName = std::string(Option->getValueAsString("FullName"));
+    ShortName = std::string(Option->getValueAsString("ShortName"));
 
     if (auto A = Option->getValue("ArgType"))
       ArgType = A->getValue()->getAsUnquotedString();
     OptionalArg = Option->getValue("OptionalArg") != nullptr;
 
     if (Option->getValue("Validator"))
-      Validator = Option->getValueAsString("Validator");
+      Validator = std::string(Option->getValueAsString("Validator"));
 
     if (Option->getValue("ArgEnum"))
-      ArgEnum = Option->getValueAsString("ArgEnum");
+      ArgEnum = std::string(Option->getValueAsString("ArgEnum"));
 
     if (Option->getValue("Completions"))
       Completions = Option->getValueAsListOfStrings("Completions");

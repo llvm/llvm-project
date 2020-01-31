@@ -23,7 +23,7 @@ define <2 x i32 addrspace(1)*> @vector_gep_v2p1_index_v2i64(<2 x i32 addrspace(1
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV2]](s64), [[MV3]](s64)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-  ; CHECK:   [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[BUILD_VECTOR2]], [[BUILD_VECTOR1]]
+  ; CHECK:   [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[BUILD_VECTOR1]], [[BUILD_VECTOR2]]
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(<2 x p1>) = G_PTR_ADD [[BUILD_VECTOR]], [[MUL]](<2 x s64>)
   ; CHECK:   [[COPY9:%[0-9]+]]:_(<2 x p1>) = COPY [[PTR_ADD]](<2 x p1>)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY9]](<2 x p1>)
@@ -51,7 +51,7 @@ define <2 x i32 addrspace(3)*> @vector_gep_v2p3_index_v2i32(<2 x i32 addrspace(3
   ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32)
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
-  ; CHECK:   [[MUL:%[0-9]+]]:_(<2 x s32>) = G_MUL [[BUILD_VECTOR2]], [[BUILD_VECTOR1]]
+  ; CHECK:   [[MUL:%[0-9]+]]:_(<2 x s32>) = G_MUL [[BUILD_VECTOR1]], [[BUILD_VECTOR2]]
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(<2 x p3>) = G_PTR_ADD [[BUILD_VECTOR]], [[MUL]](<2 x s32>)
   ; CHECK:   [[COPY5:%[0-9]+]]:_(<2 x p3>) = COPY [[PTR_ADD]](<2 x p3>)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY5]](<2 x p3>)
@@ -82,7 +82,7 @@ define <2 x i32 addrspace(1)*> @vector_gep_v2p1_index_v2i32(<2 x i32 addrspace(1
   ; CHECK:   [[SEXT:%[0-9]+]]:_(<2 x s64>) = G_SEXT [[BUILD_VECTOR1]](<2 x s32>)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-  ; CHECK:   [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[BUILD_VECTOR2]], [[SEXT]]
+  ; CHECK:   [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[SEXT]], [[BUILD_VECTOR2]]
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(<2 x p1>) = G_PTR_ADD [[BUILD_VECTOR]], [[MUL]](<2 x s64>)
   ; CHECK:   [[COPY7:%[0-9]+]]:_(<2 x p1>) = COPY [[PTR_ADD]](<2 x p1>)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY7]](<2 x p1>)
@@ -116,7 +116,7 @@ define <2 x i32 addrspace(1)*> @vector_gep_v2p1_index_i64(<2 x i32 addrspace(1)*
   ; CHECK:   [[COPY7:%[0-9]+]]:_(<2 x s64>) = COPY [[BUILD_VECTOR1]](<2 x s64>)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-  ; CHECK:   [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[BUILD_VECTOR2]], [[COPY7]]
+  ; CHECK:   [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[COPY7]], [[BUILD_VECTOR2]]
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(<2 x p1>) = G_PTR_ADD [[BUILD_VECTOR]], [[MUL]](<2 x s64>)
   ; CHECK:   [[COPY8:%[0-9]+]]:_(<2 x p1>) = COPY [[PTR_ADD]](<2 x p1>)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY8]](<2 x p1>)
@@ -148,7 +148,7 @@ define <2 x i32 addrspace(1)*> @vector_gep_v2p1_index_i32(<2 x i32 addrspace(1)*
   ; CHECK:   [[SEXT:%[0-9]+]]:_(<2 x s64>) = G_SEXT [[BUILD_VECTOR1]](<2 x s32>)
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-  ; CHECK:   [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[BUILD_VECTOR2]], [[SEXT]]
+  ; CHECK:   [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[SEXT]], [[BUILD_VECTOR2]]
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(<2 x p1>) = G_PTR_ADD [[BUILD_VECTOR]], [[MUL]](<2 x s64>)
   ; CHECK:   [[COPY6:%[0-9]+]]:_(<2 x p1>) = COPY [[PTR_ADD]](<2 x p1>)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY6]](<2 x p1>)
@@ -187,7 +187,7 @@ define <2 x i32 addrspace(1)*> @vector_gep_v2p1_index_v2i64_constant(<2 x i32 ad
   ; CHECK:   [[BUILD_VECTOR2:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C1]](s64)
   ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK:   [[BUILD_VECTOR3:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C2]](s64), [[C2]](s64)
-  ; CHECK:   [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[BUILD_VECTOR3]], [[BUILD_VECTOR2]]
+  ; CHECK:   [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[BUILD_VECTOR2]], [[BUILD_VECTOR3]]
   ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(<2 x p1>) = G_PTR_ADD [[BUILD_VECTOR]], [[MUL]](<2 x s64>)
   ; CHECK:   [[COPY9:%[0-9]+]]:_(<2 x p1>) = COPY [[PTR_ADD]](<2 x p1>)
   ; CHECK:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY9]](<2 x p1>)

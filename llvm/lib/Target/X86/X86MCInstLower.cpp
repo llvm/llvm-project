@@ -137,6 +137,10 @@ MachineModuleInfoMachO &X86MCInstLower::getMachOMMI() const {
 /// GetSymbolFromOperand - Lower an MO_GlobalAddress or MO_ExternalSymbol
 /// operand to an MCSymbol.
 MCSymbol *X86MCInstLower::GetSymbolFromOperand(const MachineOperand &MO) const {
+  const Triple &TT = TM.getTargetTriple();
+  if (MO.isGlobal() && TT.isOSBinFormatELF())
+    return AsmPrinter.getSymbolPreferLocal(*MO.getGlobal());
+
   const DataLayout &DL = MF.getDataLayout();
   assert((MO.isGlobal() || MO.isSymbol() || MO.isMBB()) &&
          "Isn't a symbol reference");

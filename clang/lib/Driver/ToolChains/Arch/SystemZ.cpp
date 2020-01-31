@@ -21,14 +21,14 @@ std::string systemz::getSystemZTargetCPU(const ArgList &Args) {
     llvm::StringRef CPUName = A->getValue();
 
     if (CPUName == "native") {
-      std::string CPU = llvm::sys::getHostCPUName();
+      std::string CPU = std::string(llvm::sys::getHostCPUName());
       if (!CPU.empty() && CPU != "generic")
         return CPU;
       else
         return "";
     }
 
-    return CPUName;
+    return std::string(CPUName);
   }
   return "z10";
 }

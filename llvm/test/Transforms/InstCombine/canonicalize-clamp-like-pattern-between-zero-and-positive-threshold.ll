@@ -26,9 +26,9 @@
 define i32 @t0_ult_slt_65536(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 ; CHECK-LABEL: @t0_ult_slt_65536(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[X]], 65536
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], 65535
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[TMP3]], i32 [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[REPLACEMENT_HIGH:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = icmp slt i32 %x, 65536
@@ -40,9 +40,9 @@ define i32 @t0_ult_slt_65536(i32 %x, i32 %replacement_low, i32 %replacement_high
 define i32 @t1_ult_slt_0(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 ; CHECK-LABEL: @t1_ult_slt_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[X]], 65536
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], 65535
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[TMP3]], i32 [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[REPLACEMENT_HIGH:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = icmp slt i32 %x, 0
@@ -55,9 +55,9 @@ define i32 @t1_ult_slt_0(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 define i32 @t2_ult_sgt_65536(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 ; CHECK-LABEL: @t2_ult_sgt_65536(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[X]], 65536
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], 65535
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[TMP3]], i32 [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[REPLACEMENT_HIGH:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = icmp sgt i32 %x, 65535
@@ -69,9 +69,9 @@ define i32 @t2_ult_sgt_65536(i32 %x, i32 %replacement_low, i32 %replacement_high
 define i32 @t3_ult_sgt_neg1(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 ; CHECK-LABEL: @t3_ult_sgt_neg1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[X]], 65536
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], 65535
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[TMP3]], i32 [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[REPLACEMENT_HIGH:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = icmp sgt i32 %x, -1
@@ -84,9 +84,9 @@ define i32 @t3_ult_sgt_neg1(i32 %x, i32 %replacement_low, i32 %replacement_high)
 define i32 @t4_ugt_slt_65536(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 ; CHECK-LABEL: @t4_ugt_slt_65536(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[X]], 65536
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], 65535
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[TMP3]], i32 [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[REPLACEMENT_HIGH:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = icmp slt i32 %x, 65536
@@ -98,9 +98,9 @@ define i32 @t4_ugt_slt_65536(i32 %x, i32 %replacement_low, i32 %replacement_high
 define i32 @t5_ugt_slt_0(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 ; CHECK-LABEL: @t5_ugt_slt_0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[X]], 65536
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], 65535
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[TMP3]], i32 [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[REPLACEMENT_HIGH:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = icmp slt i32 %x, 0
@@ -113,9 +113,9 @@ define i32 @t5_ugt_slt_0(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 define i32 @t6_ugt_sgt_65536(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 ; CHECK-LABEL: @t6_ugt_sgt_65536(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[X]], 65536
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], 65535
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[TMP3]], i32 [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[REPLACEMENT_HIGH:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = icmp sgt i32 %x, 65535
@@ -127,9 +127,9 @@ define i32 @t6_ugt_sgt_65536(i32 %x, i32 %replacement_low, i32 %replacement_high
 define i32 @t7_ugt_sgt_neg1(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 ; CHECK-LABEL: @t7_ugt_sgt_neg1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[X]], 65536
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[X]], 65535
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i32 [[REPLACEMENT_LOW:%.*]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[TMP3]], i32 [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP2]], i32 [[REPLACEMENT_HIGH:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = icmp sgt i32 %x, -1
@@ -312,9 +312,9 @@ define i32 @n16_oneuse6(i32 %x, i32 %replacement_low, i32 %replacement_high) {
 define <2 x i32> @t17_ult_slt_vec_splat(<2 x i32> %x, <2 x i32> %replacement_low, <2 x i32> %replacement_high) {
 ; CHECK-LABEL: @t17_ult_slt_vec_splat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <2 x i32> [[X]], <i32 65536, i32 65536>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i32> [[X]], <i32 65535, i32 65535>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[REPLACEMENT_LOW:%.*]], <2 x i32> [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[REPLACEMENT_HIGH:%.*]], <2 x i32> [[TMP3]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t0 = icmp slt <2 x i32> %x, <i32 65536, i32 65536>
@@ -326,9 +326,9 @@ define <2 x i32> @t17_ult_slt_vec_splat(<2 x i32> %x, <2 x i32> %replacement_low
 define <2 x i32> @t18_ult_slt_vec_nonsplat(<2 x i32> %x, <2 x i32> %replacement_low, <2 x i32> %replacement_high) {
 ; CHECK-LABEL: @t18_ult_slt_vec_nonsplat(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <2 x i32> [[X]], <i32 65536, i32 32768>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <2 x i32> [[X]], <i32 65535, i32 32767>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP1]], <2 x i32> [[REPLACEMENT_LOW:%.*]], <2 x i32> [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[TMP3]], <2 x i32> [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[REPLACEMENT_HIGH:%.*]], <2 x i32> [[TMP3]]
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %t0 = icmp slt <2 x i32> %x, <i32 65536, i32 32768>
@@ -341,9 +341,9 @@ define <2 x i32> @t18_ult_slt_vec_nonsplat(<2 x i32> %x, <2 x i32> %replacement_
 define <3 x i32> @t19_ult_slt_vec_undef0(<3 x i32> %x, <3 x i32> %replacement_low, <3 x i32> %replacement_high) {
 ; CHECK-LABEL: @t19_ult_slt_vec_undef0(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <3 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <3 x i32> [[X]], <i32 65536, i32 65536, i32 65536>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <3 x i32> [[X]], <i32 65535, i32 65535, i32 65535>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <3 x i1> [[TMP1]], <3 x i32> [[REPLACEMENT_LOW:%.*]], <3 x i32> [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP2]], <3 x i32> [[TMP3]], <3 x i32> [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP2]], <3 x i32> [[REPLACEMENT_HIGH:%.*]], <3 x i32> [[TMP3]]
 ; CHECK-NEXT:    ret <3 x i32> [[R]]
 ;
   %t0 = icmp slt <3 x i32> %x, <i32 65536, i32 undef, i32 65536>
@@ -355,9 +355,9 @@ define <3 x i32> @t19_ult_slt_vec_undef0(<3 x i32> %x, <3 x i32> %replacement_lo
 define <3 x i32> @t20_ult_slt_vec_undef1(<3 x i32> %x, <3 x i32> %replacement_low, <3 x i32> %replacement_high) {
 ; CHECK-LABEL: @t20_ult_slt_vec_undef1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <3 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <3 x i32> [[X]], <i32 65536, i32 undef, i32 65536>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <3 x i32> [[X]], <i32 65535, i32 65535, i32 65535>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <3 x i1> [[TMP1]], <3 x i32> [[REPLACEMENT_LOW:%.*]], <3 x i32> [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP2]], <3 x i32> [[TMP3]], <3 x i32> [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP2]], <3 x i32> [[REPLACEMENT_HIGH:%.*]], <3 x i32> [[TMP3]]
 ; CHECK-NEXT:    ret <3 x i32> [[R]]
 ;
   %t0 = icmp slt <3 x i32> %x, <i32 65536, i32 65537, i32 65536>
@@ -369,9 +369,9 @@ define <3 x i32> @t20_ult_slt_vec_undef1(<3 x i32> %x, <3 x i32> %replacement_lo
 define <3 x i32> @t21_ult_slt_vec_undef2(<3 x i32> %x, <3 x i32> %replacement_low, <3 x i32> %replacement_high) {
 ; CHECK-LABEL: @t21_ult_slt_vec_undef2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <3 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <3 x i32> [[X]], <i32 65536, i32 undef, i32 65536>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <3 x i32> [[X]], <i32 65535, i32 65535, i32 65535>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <3 x i1> [[TMP1]], <3 x i32> [[REPLACEMENT_LOW:%.*]], <3 x i32> [[X]]
-; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP2]], <3 x i32> [[TMP3]], <3 x i32> [[REPLACEMENT_HIGH:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP2]], <3 x i32> [[REPLACEMENT_HIGH:%.*]], <3 x i32> [[TMP3]]
 ; CHECK-NEXT:    ret <3 x i32> [[R]]
 ;
   %t0 = icmp slt <3 x i32> %x, <i32 65536, i32 undef, i32 65536>

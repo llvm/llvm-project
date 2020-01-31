@@ -59,7 +59,7 @@ BackgroundIndexLoader::loadShard(PathRef StartSourceFile, PathRef DependentTU) {
     return {LS, Edges};
 
   LS.AbsolutePath = StartSourceFile.str();
-  LS.DependentTU = DependentTU;
+  LS.DependentTU = std::string(DependentTU);
   BackgroundIndexStorage *Storage = IndexStorageFactory(LS.AbsolutePath);
   auto Shard = Storage->loadShard(StartSourceFile);
   if (!Shard || !Shard->Sources) {

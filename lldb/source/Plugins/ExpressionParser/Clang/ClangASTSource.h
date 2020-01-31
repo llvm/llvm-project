@@ -356,6 +356,10 @@ public:
   ///     True if lookup succeeded; false otherwise.
   ClangASTImporter::DeclOrigin GetDeclOrigin(const clang::Decl *decl);
 
+  /// Returns the TypeSystem that uses this ClangASTSource instance as it's
+  /// ExternalASTSource.
+  TypeSystemClang *GetTypeSystem() const { return m_clang_ast_context; }
+
 protected:
   bool FindObjCMethodDeclsWithOrigin(
       unsigned int current_id, NameSearchContext &context,

@@ -13,7 +13,6 @@ add_llvm_library(MLIRAnalysis STATIC
   TestMemRefDependenceCheck.cpp
   TestParallelismDetection.cpp
   Utils.cpp
-  VectorAnalysis.cpp
   Verifier.cpp
 
   ADDITIONAL_HEADER_DIRS

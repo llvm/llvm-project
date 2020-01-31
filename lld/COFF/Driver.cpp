@@ -237,9 +237,9 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
 }
 
 void LinkerDriver::enqueuePath(StringRef path, bool wholeArchive, bool lazy) {
-  auto future =
-      std::make_shared<std::future<MBErrPair>>(createFutureForFile(path));
-  std::string pathStr = path;
+  auto future = std::make_shared<std::future<MBErrPair>>(
+      createFutureForFile(std::string(path)));
+  std::string pathStr = std::string(path);
   enqueueTask([=]() {
     auto mbOrErr = future->get();
     if (mbOrErr.second) {
@@ -452,7 +452,7 @@ Optional<StringRef> LinkerDriver::findFile(StringRef filename) {
   }
 
   if (path.endswith_lower(".lib"))
-    visitedLibs.insert(sys::path::filename(path));
+    visitedLibs.insert(std::string(sys::path::filename(path)));
   return path;
 }
 
@@ -641,7 +641,7 @@ static std::string createResponseFile(const opt::InputArgList &args,
   for (StringRef path : filePaths)
     os << quote(relativeToRoot(path)) << "\n";
 
-  return data.str();
+  return std::string(data.str());
 }
 
 enum class DebugKind { Unknown, None, Full, FastLink, GHash, Dwarf, Symtab };
@@ -721,10 +721,10 @@ static std::string getMapFile(const opt::InputArgList &args) {
 
 static std::string getImplibPath() {
   if (!config->implib.empty())
-    return config->implib;
+    return std::string(config->implib);
   SmallString<128> out = StringRef(config->outputFile);
   sys::path::replace_extension(out, ".lib");
-  return out.str();
+  return std::string(out.str());
 }
 
 // The import name is calculated as follows:
@@ -748,16 +748,16 @@ static std::string getImportName(bool asLib) {
                                    (config->dll || asLib) ? ".dll" : ".exe");
   }
 
-  return out.str();
+  return std::string(out.str());
 }
 
 static void createImportLibrary(bool asLib) {
   std::vector<COFFShortExport> exports;
   for (Export &e1 : config->exports) {
     COFFShortExport e2;
-    e2.Name = e1.name;
-    e2.SymbolName = e1.symbolName;
-    e2.ExtName = e1.extName;
+    e2.Name = std::string(e1.name);
+    e2.SymbolName = std::string(e1.symbolName);
+    e2.ExtName = std::string(e1.extName);
     e2.Ordinal = e1.ordinal;
     e2.Noname = e1.noname;
     e2.Data = e1.data;
@@ -818,8 +818,8 @@ static void parseModuleDefs(StringRef path) {
       mb->getMemBufferRef(), config->machine, config->mingw));
 
   if (config->outputFile.empty())
-    config->outputFile = saver.save(m.OutputFile);
-  config->importName = saver.save(m.ImportName);
+    config->outputFile = std::string(saver.save(m.OutputFile));
+  config->importName = std::string(saver.save(m.ImportName));
   if (m.ImageBase)
     config->imageBase = m.ImageBase;
   if (m.StackReserve)
@@ -904,7 +904,8 @@ static void parseOrderFile(StringRef arg) {
   // All symbols that were not present in a given order file are
   // considered to have the lowest priority 0 and are placed at
   // end of an output section.
-  for (std::string s : args::getLines(mb->getMemBufferRef())) {
+  for (StringRef arg : args::getLines(mb->getMemBufferRef())) {
+    std::string s(arg);
     if (config->machine == I386 && !isDecorated(s))
       s = "_" + s;
 
@@ -1094,7 +1095,7 @@ Optional<std::string> getReproduceFile(const opt::InputArgList &args) {
   if (auto *arg = args.getLastArg(OPT_linkrepro)) {
     SmallString<64> path = StringRef(arg->getValue());
     sys::path::append(path, "repro.tar");
-    return path.str().str();
+    return std::string(path);
   }
 
   return None;

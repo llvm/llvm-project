@@ -102,7 +102,7 @@ class APIGenerator {
 
   std::string getTypeAsString(llvm::Record *TypeRecord) {
     if (isaNamedType(TypeRecord) || isaStructType(TypeRecord)) {
-      return TypeRecord->getValueAsString("Name");
+      return std::string(TypeRecord->getValueAsString("Name"));
     } else if (isaPtrType(TypeRecord)) {
       return getTypeAsString(TypeRecord->getValueAsDef("PointeeType")) + " *";
     } else if (isaConstType(TypeRecord)) {
@@ -123,15 +123,17 @@ class APIGenerator {
         auto MacroSpecList = HeaderSpec->getValueAsListOfDefs("Macros");
         // TODO: Trigger a fatal error on duplicate specs.
         for (llvm::Record *MacroSpec : MacroSpecList)
-          MacroSpecMap[MacroSpec->getValueAsString("Name")] = MacroSpec;
+          MacroSpecMap[std::string(MacroSpec->getValueAsString("Name"))] =
+              MacroSpec;
 
         auto TypeSpecList = HeaderSpec->getValueAsListOfDefs("Types");
         for (llvm::Record *TypeSpec : TypeSpecList)
-          TypeSpecMap[TypeSpec->getValueAsString("Name")] = TypeSpec;
+          TypeSpecMap[std::string(TypeSpec->getValueAsString("Name"))] =
+              TypeSpec;
 
         auto FunctionSpecList = HeaderSpec->getValueAsListOfDefs("Functions");
         for (llvm::Record *FunctionSpec : FunctionSpecList) {
-          FunctionSpecMap[FunctionSpec->getValueAsString("Name")] =
+          FunctionSpecMap[std::string(FunctionSpec->getValueAsString("Name"))] =
               FunctionSpec;
         }
       }
@@ -144,19 +146,19 @@ class APIGenerator {
     // generating the API.
     auto MacroDefList = PublicAPI->getValueAsListOfDefs("Macros");
     for (llvm::Record *MacroDef : MacroDefList)
-      MacroDefsMap[MacroDef->getValueAsString("Name")] = MacroDef;
+      MacroDefsMap[std::string(MacroDef->getValueAsString("Name"))] = MacroDef;
 
     auto TypeDeclList = PublicAPI->getValueAsListOfDefs("TypeDeclarations");
     for (llvm::Record *TypeDecl : TypeDeclList)
-      TypeDeclsMap[TypeDecl->getValueAsString("Name")] = TypeDecl;
+      TypeDeclsMap[std::string(TypeDecl->getValueAsString("Name"))] = TypeDecl;
 
     auto StructList = PublicAPI->getValueAsListOfStrings("Structs");
     for (llvm::StringRef StructName : StructList)
-      Structs.insert(StructName);
+      Structs.insert(std::string(StructName));
 
     auto FunctionList = PublicAPI->getValueAsListOfStrings("Functions");
     for (llvm::StringRef FunctionName : FunctionList)
-      Functions.insert(FunctionName);
+      Functions.insert(std::string(FunctionName));
   }
 
   void index(llvm::RecordKeeper &Records) {

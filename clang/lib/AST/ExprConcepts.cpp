@@ -46,24 +46,12 @@ ConceptSpecializationExpr::ConceptSpecializationExpr(const ASTContext &C,
                    ASTConstraintSatisfaction::Create(C, *Satisfaction) :
                    nullptr) {
   setTemplateArguments(ConvertedArgs);
-}
-
-ConceptSpecializationExpr::ConceptSpecializationExpr(EmptyShell Empty,
-    unsigned NumTemplateArgs)
-    : Expr(ConceptSpecializationExprClass, Empty), ConceptReference(),
-      NumTemplateArgs(NumTemplateArgs) { }
-
-void ConceptSpecializationExpr::setTemplateArguments(
-    ArrayRef<TemplateArgument> Converted) {
-  assert(Converted.size() == NumTemplateArgs);
-  std::uninitialized_copy(Converted.begin(), Converted.end(),
-                          getTrailingObjects<TemplateArgument>());
   bool IsInstantiationDependent = false;
   bool ContainsUnexpandedParameterPack = false;
-  for (const TemplateArgument& Arg : Converted) {
-    if (Arg.isInstantiationDependent())
+  for (const TemplateArgumentLoc& ArgLoc : ArgsAsWritten->arguments()) {
+    if (ArgLoc.getArgument().isInstantiationDependent())
       IsInstantiationDependent = true;
-    if (Arg.containsUnexpandedParameterPack())
+    if (ArgLoc.getArgument().containsUnexpandedParameterPack())
       ContainsUnexpandedParameterPack = true;
     if (ContainsUnexpandedParameterPack && IsInstantiationDependent)
       break;
@@ -78,6 +66,18 @@ void ConceptSpecializationExpr::setTemplateArguments(
   setContainsUnexpandedParameterPack(ContainsUnexpandedParameterPack);
   assert((!isValueDependent() || isInstantiationDependent()) &&
          "should not be value-dependent");
+}
+
+ConceptSpecializationExpr::ConceptSpecializationExpr(EmptyShell Empty,
+    unsigned NumTemplateArgs)
+    : Expr(ConceptSpecializationExprClass, Empty), ConceptReference(),
+      NumTemplateArgs(NumTemplateArgs) { }
+
+void ConceptSpecializationExpr::setTemplateArguments(
+    ArrayRef<TemplateArgument> Converted) {
+  assert(Converted.size() == NumTemplateArgs);
+  std::uninitialized_copy(Converted.begin(), Converted.end(),
+                          getTrailingObjects<TemplateArgument>());
 }
 
 ConceptSpecializationExpr *
@@ -96,6 +96,39 @@ ConceptSpecializationExpr::Create(const ASTContext &C,
                                                 ConceptNameInfo, FoundDecl,
                                                 NamedConcept, ArgsAsWritten,
                                                 ConvertedArgs, Satisfaction);
+}
+
+ConceptSpecializationExpr::ConceptSpecializationExpr(
+    const ASTContext &C, ConceptDecl *NamedConcept,
+    ArrayRef<TemplateArgument> ConvertedArgs,
+    const ConstraintSatisfaction *Satisfaction, bool Dependent,
+    bool ContainsUnexpandedParameterPack)
+    : Expr(ConceptSpecializationExprClass, C.BoolTy, VK_RValue, OK_Ordinary,
+           /*TypeDependent=*/false,
+           /*ValueDependent=*/!Satisfaction, Dependent,
+           ContainsUnexpandedParameterPack),
+      ConceptReference(NestedNameSpecifierLoc(), SourceLocation(),
+                       DeclarationNameInfo(), NamedConcept,
+                       NamedConcept, nullptr),
+      NumTemplateArgs(ConvertedArgs.size()),
+      Satisfaction(Satisfaction ?
+                   ASTConstraintSatisfaction::Create(C, *Satisfaction) :
+                   nullptr) {
+  setTemplateArguments(ConvertedArgs);
+}
+
+ConceptSpecializationExpr *
+ConceptSpecializationExpr::Create(const ASTContext &C,
+                                  ConceptDecl *NamedConcept,
+                                  ArrayRef<TemplateArgument> ConvertedArgs,
+                                  const ConstraintSatisfaction *Satisfaction,
+                                  bool Dependent,
+                                  bool ContainsUnexpandedParameterPack) {
+  void *Buffer = C.Allocate(totalSizeToAlloc<TemplateArgument>(
+                                ConvertedArgs.size()));
+  return new (Buffer) ConceptSpecializationExpr(
+      C, NamedConcept, ConvertedArgs, Satisfaction, Dependent,
+      ContainsUnexpandedParameterPack);
 }
 
 ConceptSpecializationExpr *

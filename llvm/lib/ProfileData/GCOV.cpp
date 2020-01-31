@@ -672,7 +672,7 @@ static std::string mangleCoveragePath(StringRef Filename, bool PreservePaths) {
 
   if (S < I)
     Result.append(S, I);
-  return Result.str();
+  return std::string(Result.str());
 }
 
 std::string FileInfo::getCoveragePath(StringRef Filename,
@@ -681,7 +681,7 @@ std::string FileInfo::getCoveragePath(StringRef Filename,
     // This is probably a bug in gcov, but when -n is specified, paths aren't
     // mangled at all, and the -l and -p options are ignored. Here, we do the
     // same.
-    return Filename;
+    return std::string(Filename);
 
   std::string CoveragePath;
   if (Options.LongFileNames && !Filename.equals(MainFilename))
@@ -693,7 +693,7 @@ std::string FileInfo::getCoveragePath(StringRef Filename,
     MD5::MD5Result Result;
     Hasher.update(Filename.str());
     Hasher.final(Result);
-    CoveragePath += "##" + Result.digest().str().str();
+    CoveragePath += "##" + std::string(Result.digest());
   }
   CoveragePath += ".gcov";
   return CoveragePath;

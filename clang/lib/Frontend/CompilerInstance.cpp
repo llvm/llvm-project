@@ -474,7 +474,7 @@ std::string CompilerInstance::getSpecificModuleCachePath() {
   if (!SpecificModuleCache.empty() && !getHeaderSearchOpts().DisableModuleHash)
     llvm::sys::path::append(SpecificModuleCache,
                             getInvocation().getModuleHash());
-  return SpecificModuleCache.str();
+  return std::string(SpecificModuleCache.str());
 }
 
 // ASTContext
@@ -713,13 +713,13 @@ std::unique_ptr<llvm::raw_pwrite_stream> CompilerInstance::createOutputFile(
 
   std::string OutFile, TempFile;
   if (!OutputPath.empty()) {
-    OutFile = OutputPath;
+    OutFile = std::string(OutputPath);
   } else if (InFile == "-") {
     OutFile = "-";
   } else if (!Extension.empty()) {
     SmallString<128> Path(InFile);
     llvm::sys::path::replace_extension(Path, Extension);
-    OutFile = Path.str();
+    OutFile = std::string(Path.str());
   } else {
     OutFile = "-";
   }
@@ -774,7 +774,7 @@ std::unique_ptr<llvm::raw_pwrite_stream> CompilerInstance::createOutputFile(
 
     if (!EC) {
       OS.reset(new llvm::raw_fd_ostream(fd, /*shouldClose=*/true));
-      OSFile = TempFile = TempPath.str();
+      OSFile = TempFile = std::string(TempPath.str());
     }
     // If we failed to create the temporary, fallback to writing to the file
     // directly. This handles the corner case where we cannot write to the
@@ -1073,7 +1073,7 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
       ImportingInstance.getInvocation().getLangOpts()->ModuleName;
 
   // Note the name of the module we're building.
-  Invocation->getLangOpts()->CurrentModule = ModuleName;
+  Invocation->getLangOpts()->CurrentModule = std::string(ModuleName);
 
   // Make sure that the failed-module structure has been allocated in
   // the importing instance, and propagate the pointer to the newly-created
@@ -1093,7 +1093,7 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   FrontendOpts.DisableFree = false;
   FrontendOpts.GenerateGlobalModuleIndex = false;
   FrontendOpts.BuildingImplicitModule = true;
-  FrontendOpts.OriginalModuleMap = OriginalModuleMapFile;
+  FrontendOpts.OriginalModuleMap = std::string(OriginalModuleMapFile);
   // Force implicitly-built modules to hash the content of the module file.
   HSOpts.ModulesHashContent = true;
   FrontendOpts.Inputs = {Input};
@@ -1638,7 +1638,7 @@ selectModuleSource(Module *M, StringRef ModuleName, std::string &ModuleFilename,
 
   // Check to see if the module has been built as part of this compilation
   // via a module build pragma.
-  auto BuiltModuleIt = BuiltModules.find(ModuleName);
+  auto BuiltModuleIt = BuiltModules.find(std::string(ModuleName));
   if (BuiltModuleIt != BuiltModules.end()) {
     ModuleFilename = BuiltModuleIt->second;
     return MS_ModuleBuildPragma;
@@ -2077,7 +2077,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
   // Build the module, inheriting any modules that we've built locally.
   if (compileModuleImpl(*this, ImportLoc, ModuleName, Input, StringRef(),
                         ModuleFileName, PreBuildStep, PostBuildStep)) {
-    BuiltModules[ModuleName] = ModuleFileName.str();
+    BuiltModules[std::string(ModuleName)] = std::string(ModuleFileName.str());
     llvm::sys::RemoveFileOnSignal(ModuleFileName);
   }
 }

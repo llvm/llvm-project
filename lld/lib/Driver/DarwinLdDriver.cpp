@@ -147,11 +147,11 @@ std::vector<std::unique_ptr<File>> loadFile(MachOLinkingContext &ctx,
 static std::string canonicalizePath(StringRef path) {
   char sep = llvm::sys::path::get_separator().front();
   if (sep != '/') {
-    std::string fixedPath = path;
+    std::string fixedPath = std::string(path);
     std::replace(fixedPath.begin(), fixedPath.end(), sep, '/');
     return fixedPath;
   } else {
-    return path;
+    return std::string(path);
   }
 }
 

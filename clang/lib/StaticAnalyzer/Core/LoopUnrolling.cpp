@@ -130,10 +130,10 @@ static internal::Matcher<Stmt> hasSuspiciousStmt(StringRef NodeName) {
             // Escaping and not known mutation of the loop counter is handled
             // by exclusion of assigning and address-of operators and
             // pass-by-ref function calls on the loop counter from the body.
-            changeIntBoundNode(equalsBoundNode(NodeName)),
-            callByRef(equalsBoundNode(NodeName)),
-            getAddrTo(equalsBoundNode(NodeName)),
-            assignedToRef(equalsBoundNode(NodeName)))));
+            changeIntBoundNode(equalsBoundNode(std::string(NodeName))),
+            callByRef(equalsBoundNode(std::string(NodeName))),
+            getAddrTo(equalsBoundNode(std::string(NodeName))),
+            assignedToRef(equalsBoundNode(std::string(NodeName))))));
 }
 
 static internal::Matcher<Stmt> forLoopMatcher() {

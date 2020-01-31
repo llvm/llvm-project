@@ -245,6 +245,11 @@ def SPV_FunctionCallOp : SPV_Op<"FunctionCall", [
   );
 
   let autogenSerialization = 0;
+
+  let assemblyFormat = [{
+    $callee `(` $arguments `)` attr-dict `:`
+    functional-type($arguments, results)
+  }];
 }
 
 // -----
@@ -412,6 +417,8 @@ def SPV_ReturnValueOp : SPV_Op<"ReturnValue", [InFunctionScope, Terminator]> {
   );
 
   let results = (outs);
+
+  let assemblyFormat = "$value attr-dict `:` type($value)";
 }
 
 def SPV_SelectionOp : SPV_Op<"selection", [InFunctionScope]> {

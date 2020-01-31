@@ -232,3 +232,53 @@ func @cmpxchg(%ptr : !llvm<"float*">, %cmp : !llvm.float, %new : !llvm.float) {
   %0 = llvm.cmpxchg %ptr, %cmp, %new acq_rel monotonic : !llvm.float
   llvm.return
 }
+
+llvm.mlir.global external constant @_ZTIi() : !llvm<"i8*">
+llvm.func @bar(!llvm<"i8*">, !llvm<"i8*">, !llvm<"i8*">)
+llvm.func @__gxx_personality_v0(...) -> !llvm.i32
+
+// CHECK-LABEL: @invokeLandingpad
+llvm.func @invokeLandingpad() -> !llvm.i32 {
+// CHECK-NEXT: %[[a0:[0-9]+]] = llvm.mlir.constant(0 : i32) : !llvm.i32
+// CHECK-NEXT: %{{[0-9]+}} = llvm.mlir.constant(3 : i32) : !llvm.i32
+// CHECK-NEXT: %[[a2:[0-9]+]] = llvm.mlir.constant("\01") : !llvm<"[1 x i8]">
+// CHECK-NEXT: %[[a3:[0-9]+]] = llvm.mlir.null : !llvm<"i8**">
+// CHECK-NEXT: %[[a4:[0-9]+]] = llvm.mlir.null : !llvm<"i8*">
+// CHECK-NEXT: %[[a5:[0-9]+]] = llvm.mlir.addressof @_ZTIi : !llvm<"i8**">
+// CHECK-NEXT: %[[a6:[0-9]+]] = llvm.bitcast %[[a5]] : !llvm<"i8**"> to !llvm<"i8*">
+// CHECK-NEXT: %[[a7:[0-9]+]] = llvm.mlir.constant(1 : i32) : !llvm.i32
+// CHECK-NEXT: %[[a8:[0-9]+]] = llvm.alloca %[[a7]] x !llvm.i8 : (!llvm.i32) -> !llvm<"i8*">
+// CHECK-NEXT: %{{[0-9]+}} = llvm.invoke @foo(%[[a7]]) to ^bb2 unwind ^bb1 : (!llvm.i32) -> !llvm<"{ i32, double, i32 }">
+  %0 = llvm.mlir.constant(0 : i32) : !llvm.i32
+  %1 = llvm.mlir.constant(3 : i32) : !llvm.i32
+  %2 = llvm.mlir.constant("\01") : !llvm<"[1 x i8]">
+  %3 = llvm.mlir.null : !llvm<"i8**">
+  %4 = llvm.mlir.null : !llvm<"i8*">
+  %5 = llvm.mlir.addressof @_ZTIi : !llvm<"i8**">
+  %6 = llvm.bitcast %5 : !llvm<"i8**"> to !llvm<"i8*">
+  %7 = llvm.mlir.constant(1 : i32) : !llvm.i32
+  %8 = llvm.alloca %7 x !llvm.i8 : (!llvm.i32) -> !llvm<"i8*">
+  %9 = llvm.invoke @foo(%7) to ^bb2 unwind ^bb1 : (!llvm.i32) -> !llvm<"{ i32, double, i32 }">
+
+// CHECK-NEXT: ^bb1:
+// CHECK-NEXT:   %{{[0-9]+}} = llvm.landingpad cleanup (catch %[[a3]] : !llvm<"i8**">) (catch %[[a6]] : !llvm<"i8*">) (filter %[[a2]] : !llvm<"[1 x i8]">) : !llvm<"{ i8*, i32 }">
+// CHECK-NEXT:   llvm.br ^bb3
+^bb1:
+  %10 = llvm.landingpad cleanup (catch %3 : !llvm<"i8**">) (catch %6 : !llvm<"i8*">) (filter %2 : !llvm<"[1 x i8]">) : !llvm<"{ i8*, i32 }">
+  llvm.br ^bb3
+
+// CHECK-NEXT: ^bb2:
+// CHECK-NEXT:   llvm.return %[[a7]] : !llvm.i32
+^bb2:
+  llvm.return %7 : !llvm.i32
+
+// CHECK-NEXT: ^bb3:
+// CHECK-NEXT:   llvm.invoke @bar(%[[a8]], %[[a6]], %[[a4]]) to ^bb2 unwind ^bb1 : (!llvm<"i8*">, !llvm<"i8*">, !llvm<"i8*">) -> ()
+^bb3:
+  llvm.invoke @bar(%8, %6, %4) to ^bb2 unwind ^bb1 : (!llvm<"i8*">, !llvm<"i8*">, !llvm<"i8*">) -> ()
+
+// CHECK-NEXT: ^bb4:
+// CHECK-NEXT:   llvm.return %[[a0]] : !llvm.i32
+^bb4:
+  llvm.return %0 : !llvm.i32
+}

@@ -261,14 +261,14 @@ struct CodeCompletionBuilder {
     if (C.SemaResult) {
       assert(ASTCtx);
       Completion.Origin |= SymbolOrigin::AST;
-      Completion.Name = llvm::StringRef(SemaCCS->getTypedText());
+      Completion.Name = std::string(llvm::StringRef(SemaCCS->getTypedText()));
       if (Completion.Scope.empty()) {
         if ((C.SemaResult->Kind == CodeCompletionResult::RK_Declaration) ||
             (C.SemaResult->Kind == CodeCompletionResult::RK_Pattern))
           if (const auto *D = C.SemaResult->getDeclaration())
             if (const auto *ND = dyn_cast<NamedDecl>(D))
-              Completion.Scope =
-                  splitQualifiedName(printQualifiedName(*ND)).first;
+              Completion.Scope = std::string(
+                  splitQualifiedName(printQualifiedName(*ND)).first);
       }
       Completion.Kind = toCompletionItemKind(
           C.SemaResult->Kind, C.SemaResult->Declaration, ContextKind);
@@ -291,11 +291,11 @@ struct CodeCompletionBuilder {
     if (C.IndexResult) {
       Completion.Origin |= C.IndexResult->Origin;
       if (Completion.Scope.empty())
-        Completion.Scope = C.IndexResult->Scope;
+        Completion.Scope = std::string(C.IndexResult->Scope);
       if (Completion.Kind == CompletionItemKind::Missing)
         Completion.Kind = toCompletionItemKind(C.IndexResult->SymInfo.Kind);
       if (Completion.Name.empty())
-        Completion.Name = C.IndexResult->Name;
+        Completion.Name = std::string(C.IndexResult->Name);
       // If the completion was visible to Sema, no qualifier is needed. This
       // avoids unneeded qualifiers in cases like with `using ns::X`.
       if (Completion.RequiredQualifier.empty() && !C.SemaResult) {
@@ -306,14 +306,14 @@ struct CodeCompletionBuilder {
               Qualifier.size() < ShortestQualifier.size())
             ShortestQualifier = Qualifier;
         }
-        Completion.RequiredQualifier = ShortestQualifier;
+        Completion.RequiredQualifier = std::string(ShortestQualifier);
       }
       Completion.Deprecated |= (C.IndexResult->Flags & Symbol::Deprecated);
     }
     if (C.IdentifierResult) {
       Completion.Origin |= SymbolOrigin::Identifier;
       Completion.Kind = CompletionItemKind::Text;
-      Completion.Name = C.IdentifierResult->Name;
+      Completion.Name = std::string(C.IdentifierResult->Name);
     }
 
     // Turn absolute path into a literal string that can be #included.
@@ -367,13 +367,13 @@ struct CodeCompletionBuilder {
                    &Completion.RequiredQualifier, IsPattern);
       S.ReturnType = getReturnType(*SemaCCS);
     } else if (C.IndexResult) {
-      S.Signature = C.IndexResult->Signature;
-      S.SnippetSuffix = C.IndexResult->CompletionSnippetSuffix;
-      S.ReturnType = C.IndexResult->ReturnType;
+      S.Signature = std::string(C.IndexResult->Signature);
+      S.SnippetSuffix = std::string(C.IndexResult->CompletionSnippetSuffix);
+      S.ReturnType = std::string(C.IndexResult->ReturnType);
     }
     if (ExtractDocumentation && Completion.Documentation.empty()) {
       if (C.IndexResult)
-        Completion.Documentation = C.IndexResult->Documentation;
+        Completion.Documentation = std::string(C.IndexResult->Documentation);
       else if (C.SemaResult)
         Completion.Documentation = getDocComment(*ASTCtx, *C.SemaResult,
                                                  /*CommentsFromHeader=*/false);
@@ -565,7 +565,7 @@ getQueryScopes(CodeCompletionContext &CCContext, const Sema &CCSema,
       StringRef SpelledSpecifier = HeuristicPrefix.Qualifier;
       if (SpelledSpecifier.consume_front("::"))
         Scopes.AccessibleScopes = {""};
-      Scopes.UnresolvedQualifier = SpelledSpecifier;
+      Scopes.UnresolvedQualifier = std::string(SpelledSpecifier);
       return {Scopes.scopesForIndexQuery(), false};
     }
     // The enclosing namespace must be first, it gets a quality boost.
@@ -590,7 +590,7 @@ getQueryScopes(CodeCompletionContext &CCContext, const Sema &CCSema,
       CCSema.SourceMgr, clang::LangOptions());
   if (SpelledSpecifier.consume_front("::"))
     Scopes.AccessibleScopes = {""};
-  Scopes.UnresolvedQualifier = SpelledSpecifier;
+  Scopes.UnresolvedQualifier = std::string(SpelledSpecifier);
   // Sema excludes the trailing "::".
   if (!Scopes.UnresolvedQualifier->empty())
     *Scopes.UnresolvedQualifier += "::";
@@ -859,7 +859,7 @@ public:
       }
       Index->lookup(IndexRequest, [&](const Symbol &S) {
         if (!S.Documentation.empty())
-          FetchedDocs[S.ID] = S.Documentation;
+          FetchedDocs[S.ID] = std::string(S.Documentation);
       });
       log("SigHelp: requested docs for {0} symbols from the index, got {1} "
           "symbols with non-empty docs in the response",
@@ -925,7 +925,7 @@ private:
     ParameterInformation Info;
     Info.labelOffsets.emplace(ParamStartOffset, ParamEndOffset);
     // FIXME: only set 'labelOffsets' when all clients migrate out of it.
-    Info.labelString = ChunkText;
+    Info.labelString = std::string(ChunkText);
 
     Signature.parameters.push_back(std::move(Info));
   }
@@ -1054,7 +1054,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   ParseInputs ParseInput;
   ParseInput.CompileCommand = Input.Command;
   ParseInput.FS = VFS;
-  ParseInput.Contents = Input.Contents;
+  ParseInput.Contents = std::string(Input.Contents);
   ParseInput.Opts = ParseOptions();
 
   IgnoreDiagnostics IgnoreDiags;
@@ -1069,7 +1069,7 @@ bool semaCodeComplete(std::unique_ptr<CodeCompleteConsumer> Consumer,
   CI->getLangOpts()->SpellChecking = false;
   // Setup code completion.
   FrontendOpts.CodeCompleteOpts = Options;
-  FrontendOpts.CodeCompletionAt.FileName = Input.FileName;
+  FrontendOpts.CodeCompletionAt.FileName = std::string(Input.FileName);
   std::tie(FrontendOpts.CodeCompletionAt.Line,
            FrontendOpts.CodeCompletionAt.Column) =
       offsetToClangLineColumn(Input.Contents, Input.Offset);
@@ -1167,7 +1167,7 @@ std::future<SymbolSlab> startAsyncFuzzyFind(const SymbolIndex &Index,
 // source code.
 FuzzyFindRequest speculativeFuzzyFindRequestForCompletion(
     FuzzyFindRequest CachedReq, const CompletionPrefix &HeuristicPrefix) {
-  CachedReq.Query = HeuristicPrefix.Name;
+  CachedReq.Query = std::string(HeuristicPrefix.Name);
   return CachedReq;
 }
 
@@ -1377,9 +1377,10 @@ public:
       AllScopes = Opts.AllScopes;
     else if (HeuristicPrefix.Qualifier.startswith("::")) {
       Scopes.AccessibleScopes = {""};
-      Scopes.UnresolvedQualifier = HeuristicPrefix.Qualifier.drop_front(2);
+      Scopes.UnresolvedQualifier =
+          std::string(HeuristicPrefix.Qualifier.drop_front(2));
     } else
-      Scopes.UnresolvedQualifier = HeuristicPrefix.Qualifier;
+      Scopes.UnresolvedQualifier = std::string(HeuristicPrefix.Qualifier);
     // First scope is the (modified) enclosing scope.
     QueryScopes = Scopes.scopesForIndexQuery();
     ScopeProximity.emplace(QueryScopes);
@@ -1478,14 +1479,14 @@ private:
     FuzzyFindRequest Req;
     if (Opts.Limit)
       Req.Limit = Opts.Limit;
-    Req.Query = Filter->pattern();
+    Req.Query = std::string(Filter->pattern());
     Req.RestrictForCodeCompletion = true;
     Req.Scopes = QueryScopes;
     Req.AnyScope = AllScopes;
     // FIXME: we should send multiple weighted paths here.
-    Req.ProximityPaths.push_back(FileName);
+    Req.ProximityPaths.push_back(std::string(FileName));
     if (PreferredType)
-      Req.PreferredTypes.push_back(PreferredType->raw());
+      Req.PreferredTypes.push_back(std::string(PreferredType->raw()));
     vlog("Code complete: fuzzyFind({0:2})", toJSON(Req));
 
     if (SpecFuzzyFind)
@@ -1807,8 +1808,9 @@ CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
               RequiredQualifier + Name + Signature;
 
   LSP.kind = Kind;
-  LSP.detail = BundleSize > 1 ? llvm::formatv("[{0} overloads]", BundleSize)
-                              : ReturnType;
+  LSP.detail = BundleSize > 1
+                   ? std::string(llvm::formatv("[{0} overloads]", BundleSize))
+                   : ReturnType;
   LSP.deprecated = Deprecated;
   if (InsertInclude)
     LSP.detail += "\n" + InsertInclude->Header;

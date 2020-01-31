@@ -63,7 +63,7 @@ void clang::EmitClangCommentCommandInfo(RecordKeeper &Records, raw_ostream &OS) 
   std::vector<StringMatcher::StringPair> Matches;
   for (size_t i = 0, e = Tags.size(); i != e; ++i) {
     Record &Tag = *Tags[i];
-    std::string Name = Tag.getValueAsString("Name");
+    std::string Name = std::string(Tag.getValueAsString("Name"));
     std::string Return;
     raw_string_ostream(Return) << "return &Commands[" << i << "];";
     Matches.emplace_back(std::move(Name), std::move(Return));

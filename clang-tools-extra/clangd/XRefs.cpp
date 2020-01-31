@@ -21,6 +21,8 @@
 #include "index/Relation.h"
 #include "index/SymbolLocation.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
+#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
@@ -201,7 +203,7 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
   for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
     if (!Inc.Resolved.empty() && Inc.R.start.line == Pos.line) {
       LocatedSymbol File;
-      File.Name = llvm::sys::path::filename(Inc.Resolved);
+      File.Name = std::string(llvm::sys::path::filename(Inc.Resolved));
       File.PreferredDeclaration = {
           URIForFile::canonicalize(Inc.Resolved, *MainFilePath), Range{}};
       File.Definition = File.PreferredDeclaration;
@@ -219,7 +221,7 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     if (auto Loc = makeLocation(AST.getASTContext(),
                                 M->Info->getDefinitionLoc(), *MainFilePath)) {
       LocatedSymbol Macro;
-      Macro.Name = M->Name;
+      Macro.Name = std::string(M->Name);
       Macro.PreferredDeclaration = *Loc;
       Macro.Definition = Loc;
       Result.push_back(std::move(Macro));
@@ -249,31 +251,17 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     return Result;
   }
 
-  // Emit all symbol locations (declaration or definition) from AST.
-  DeclRelationSet Relations =
-      DeclRelation::TemplatePattern | DeclRelation::Alias;
-  for (const NamedDecl *D : getDeclAtPosition(AST, SourceLoc, Relations)) {
+  auto AddResultDecl = [&](const NamedDecl *D) {
     const NamedDecl *Def = getDefinition(D);
     const NamedDecl *Preferred = Def ? Def : D;
-
-    // If we're at the point of declaration of a template specialization,
-    // it's more useful to navigate to the template declaration.
-    if (SM.getMacroArgExpandedLocation(Preferred->getLocation()) ==
-        IdentStartLoc) {
-      if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(Preferred)) {
-        D = CTSD->getSpecializedTemplate();
-        Def = getDefinition(D);
-        Preferred = Def ? Def : D;
-      }
-    }
 
     auto Loc = makeLocation(AST.getASTContext(), nameLocation(*Preferred, SM),
                             *MainFilePath);
     if (!Loc)
-      continue;
+      return;
 
     Result.emplace_back();
-    Result.back().Name = printName(AST.getASTContext(), *D);
+    Result.back().Name = printName(AST.getASTContext(), *Preferred);
     Result.back().PreferredDeclaration = *Loc;
     // Preferred is always a definition if possible, so this check works.
     if (Def == Preferred)
@@ -282,6 +270,39 @@ std::vector<LocatedSymbol> locateSymbolAt(ParsedAST &AST, Position Pos,
     // Record SymbolID for index lookup later.
     if (auto ID = getSymbolID(Preferred))
       ResultIndex[*ID] = Result.size() - 1;
+  };
+
+  // Emit all symbol locations (declaration or definition) from AST.
+  DeclRelationSet Relations =
+      DeclRelation::TemplatePattern | DeclRelation::Alias;
+  for (const NamedDecl *D : getDeclAtPosition(AST, SourceLoc, Relations)) {
+    // Special case: void foo() ^override: jump to the overridden method.
+    if (const auto *CMD = llvm::dyn_cast<CXXMethodDecl>(D)) {
+      const InheritableAttr* Attr = D->getAttr<OverrideAttr>();
+      if (!Attr)
+        Attr = D->getAttr<FinalAttr>();
+      const syntax::Token *Tok =
+          spelledIdentifierTouching(SourceLoc, AST.getTokens());
+      if (Attr && Tok &&
+          SM.getSpellingLoc(Attr->getLocation()) == Tok->location()) {
+        // We may be overridding multiple methods - offer them all.
+        for (const NamedDecl *ND : CMD->overridden_methods())
+          AddResultDecl(ND);
+        continue;
+      }
+    }
+
+    // Special case: the point of declaration of a template specialization,
+    // it's more useful to navigate to the template declaration.
+    if (SM.getMacroArgExpandedLocation(D->getLocation()) == IdentStartLoc) {
+      if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+        AddResultDecl(CTSD->getSpecializedTemplate());
+        continue;
+      }
+    }
+
+    // Otherwise the target declaration is the right one.
+    AddResultDecl(D);
   }
 
   // Now query the index for all Symbol IDs we found in the AST.
@@ -530,8 +551,9 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
   for (const NamedDecl *D : getDeclAtPosition(AST, Loc, Relations)) {
     SymbolDetails NewSymbol;
     std::string QName = printQualifiedName(*D);
-    std::tie(NewSymbol.containerName, NewSymbol.name) =
-        splitQualifiedName(QName);
+    auto SplitQName = splitQualifiedName(QName);
+    NewSymbol.containerName = std::string(SplitQName.first);
+    NewSymbol.name = std::string(SplitQName.second);
 
     if (NewSymbol.containerName.empty()) {
       if (const auto *ParentND =
@@ -540,7 +562,7 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
     }
     llvm::SmallString<32> USR;
     if (!index::generateUSRForDecl(D, USR)) {
-      NewSymbol.USR = USR.str();
+      NewSymbol.USR = std::string(USR.str());
       NewSymbol.ID = SymbolID(NewSymbol.USR);
     }
     Results.push_back(std::move(NewSymbol));
@@ -548,11 +570,11 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
 
   if (auto M = locateMacroAt(Loc, AST.getPreprocessor())) {
     SymbolDetails NewMacro;
-    NewMacro.name = M->Name;
+    NewMacro.name = std::string(M->Name);
     llvm::SmallString<32> USR;
     if (!index::generateUSRForMacro(NewMacro.name, M->Info->getDefinitionLoc(),
                                     SM, USR)) {
-      NewMacro.USR = USR.str();
+      NewMacro.USR = std::string(USR.str());
       NewMacro.ID = SymbolID(NewMacro.USR);
     }
     Results.push_back(std::move(NewMacro));
@@ -624,7 +646,7 @@ symbolToTypeHierarchyItem(const Symbol &S, const SymbolIndex *Index,
     return llvm::None;
   }
   TypeHierarchyItem THI;
-  THI.name = S.Name;
+  THI.name = std::string(S.Name);
   THI.kind = indexSymbolKindToSymbolKind(S.SymInfo.Kind);
   THI.deprecated = (S.Flags & Symbol::Deprecated);
   THI.selectionRange = Loc->range;

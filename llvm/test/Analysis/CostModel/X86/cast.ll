@@ -177,7 +177,7 @@ define i32 @zext_sext(<8 x i1> %in) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %D = zext <4 x i32> undef to <4 x i64>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %D1 = zext <8 x i32> undef to <8 x i64>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %D2 = sext <8 x i32> undef to <8 x i64>
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %D3 = zext <16 x i16> undef to <16 x i32>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %D3 = zext <16 x i16> undef to <16 x i32>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %D4 = zext <16 x i8> undef to <16 x i32>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %D5 = zext <16 x i1> undef to <16 x i32>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %E = trunc <4 x i64> undef to <4 x i32>

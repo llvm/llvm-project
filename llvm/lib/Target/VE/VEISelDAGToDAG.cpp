@@ -44,6 +44,7 @@ public:
   void Select(SDNode *N) override;
 
   // Complex Pattern Selectors.
+  bool SelectADDRrr(SDValue N, SDValue &R1, SDValue &R2);
   bool SelectADDRri(SDValue N, SDValue &Base, SDValue &Offset);
 
   StringRef getPassName() const override {
@@ -54,6 +55,29 @@ public:
 #include "VEGenDAGISel.inc"
 };
 } // end anonymous namespace
+
+bool VEDAGToDAGISel::SelectADDRrr(SDValue Addr, SDValue &R1, SDValue &R2) {
+  if (Addr.getOpcode() == ISD::FrameIndex)
+    return false;
+  if (Addr.getOpcode() == ISD::TargetExternalSymbol ||
+      Addr.getOpcode() == ISD::TargetGlobalAddress ||
+      Addr.getOpcode() == ISD::TargetGlobalTLSAddress)
+    return false; // direct calls.
+
+  if (Addr.getOpcode() == ISD::ADD) {
+    if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1)))
+      if (isInt<13>(CN->getSExtValue()))
+        return false; // Let the reg+imm pattern catch this!
+    if (Addr.getOperand(0).getOpcode() == VEISD::Lo ||
+        Addr.getOperand(1).getOpcode() == VEISD::Lo)
+      return false; // Let the reg+imm pattern catch this!
+    R1 = Addr.getOperand(0);
+    R2 = Addr.getOperand(1);
+    return true;
+  }
+
+  return false; // Let the reg+imm pattern catch this!
+}
 
 bool VEDAGToDAGISel::SelectADDRri(SDValue Addr, SDValue &Base,
                                   SDValue &Offset) {

@@ -302,7 +302,7 @@ std::string IncludeFixerSemaSource::minimizeInclude(
     StringRef Include, const clang::SourceManager &SourceManager,
     clang::HeaderSearch &HeaderSearch) const {
   if (!MinimizeIncludePaths)
-    return Include;
+    return std::string(Include);
 
   // Get the FileEntry for the include.
   StringRef StrippedInclude = Include.trim("\"<>");
@@ -311,7 +311,7 @@ std::string IncludeFixerSemaSource::minimizeInclude(
   // If the file doesn't exist return the path from the database.
   // FIXME: This should never happen.
   if (!Entry)
-    return Include;
+    return std::string(Include);
 
   bool IsSystem = false;
   std::string Suggestion =
@@ -352,7 +352,8 @@ IncludeFixerSemaSource::query(StringRef Query, StringRef ScopedQualifiers,
   if (!GenerateDiagnostics && !QuerySymbolInfos.empty()) {
     if (ScopedQualifiers == QuerySymbolInfos.front().ScopedQualifiers &&
         Query == QuerySymbolInfos.front().RawIdentifier) {
-      QuerySymbolInfos.push_back({Query.str(), ScopedQualifiers, Range});
+      QuerySymbolInfos.push_back(
+          {Query.str(), std::string(ScopedQualifiers), Range});
     }
     return {};
   }
@@ -367,7 +368,8 @@ IncludeFixerSemaSource::query(StringRef Query, StringRef ScopedQualifiers,
       CI->getSourceManager().getLocForStartOfFile(
           CI->getSourceManager().getMainFileID()));
 
-  QuerySymbolInfos.push_back({Query.str(), ScopedQualifiers, Range});
+  QuerySymbolInfos.push_back(
+      {Query.str(), std::string(ScopedQualifiers), Range});
 
   // Query the symbol based on C++ name Lookup rules.
   // Firstly, lookup the identifier with scoped namespace contexts;

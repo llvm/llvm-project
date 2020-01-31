@@ -494,6 +494,18 @@ func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: %{{[0-9]+}} = shift_right_unsigned %cst_4, %cst_4 : tensor<42xi32>
   %138 = shift_right_unsigned %tci32, %tci32 : tensor<42 x i32>
 
+  // CHECK: %{{[0-9]+}} = sqrt %arg1 : f32
+  %139 = "std.sqrt"(%f) : (f32) -> f32
+
+  // CHECK: %{{[0-9]+}} = sqrt %arg1 : f32
+  %140 = sqrt %f : f32
+
+  // CHECK: %{{[0-9]+}} = sqrt %cst_8 : vector<4xf32>
+  %141 = sqrt %vcf32 : vector<4xf32>
+
+  // CHECK: %{{[0-9]+}} = sqrt %arg0 : tensor<4x4x?xf32>
+  %142 = sqrt %t : tensor<4x4x?xf32>
+
   return
 }
 

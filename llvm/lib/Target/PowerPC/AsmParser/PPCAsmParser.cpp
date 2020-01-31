@@ -1570,12 +1570,12 @@ bool PPCAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // instruction name, to match what TableGen is doing.
   std::string NewOpcode;
   if (parseOptionalToken(AsmToken::Plus)) {
-    NewOpcode = Name;
+    NewOpcode = std::string(Name);
     NewOpcode += '+';
     Name = NewOpcode;
   }
   if (parseOptionalToken(AsmToken::Minus)) {
-    NewOpcode = Name;
+    NewOpcode = std::string(Name);
     NewOpcode += '-';
     Name = NewOpcode;
   }

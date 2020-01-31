@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OpFormatGen.h"
 #include "mlir/Support/STLExtras.h"
 #include "mlir/Support/StringExtras.h"
 #include "mlir/TableGen/Format.h"
@@ -114,9 +115,9 @@ static inline bool hasStringAttribute(const Record &record,
 static std::string getArgumentName(const Operator &op, int index) {
   const auto &operand = op.getOperand(index);
   if (!operand.name.empty())
-    return operand.name;
+    return std::string(operand.name);
   else
-    return formatv("{0}_{1}", generatedArgName, index);
+    return std::string(formatv("{0}_{1}", generatedArgName, index));
 }
 
 // Returns true if we can use unwrapped value for the given `attr` in builders.
@@ -306,6 +307,7 @@ OpEmitter::OpEmitter(const Operator &op)
   genCanonicalizerDecls();
   genFolderDecls();
   genOpInterfaceMethods();
+  generateOpFormat(op, opClass);
 }
 
 void OpEmitter::emitDecl(const Operator &op, raw_ostream &os) {
@@ -340,8 +342,8 @@ void OpEmitter::genAttrGetters() {
       // Returns the default value if not set.
       // TODO: this is inefficient, we are recreating the attribute for every
       // call. This should be set instead.
-      std::string defaultValue =
-          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue());
+      std::string defaultValue = std::string(
+          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
       body << "    if (!attr)\n      return "
            << tgfmt(attr.getConvertFromStorageCall(),
                     &fctx.withSelf(defaultValue))
@@ -867,9 +869,9 @@ void OpEmitter::buildParamList(std::string &paramList,
     // Add parameters for all return types
     for (int i = 0; i < numResults; ++i) {
       const auto &result = op.getResult(i);
-      std::string resultName = result.name;
+      std::string resultName = std::string(result.name);
       if (resultName.empty())
-        resultName = formatv("resultType{0}", i);
+        resultName = std::string(formatv("resultType{0}", i));
 
       paramList.append(result.isVariadic() ? ", ArrayRef<Type> " : ", Type ");
       paramList.append(resultName);
@@ -930,18 +932,18 @@ void OpEmitter::buildParamList(std::string &paramList,
 
       switch (attrParamKind) {
       case AttrParamKind::WrappedAttr:
-        paramList.append(attr.getStorageType());
+        paramList.append(std::string(attr.getStorageType()));
         break;
       case AttrParamKind::UnwrappedValue:
         if (canUseUnwrappedRawValue(attr)) {
-          paramList.append(attr.getReturnType());
+          paramList.append(std::string(attr.getReturnType()));
         } else {
-          paramList.append(attr.getStorageType());
+          paramList.append(std::string(attr.getStorageType()));
         }
         break;
       }
       paramList.append(" ");
-      paramList.append(namedAttr.name);
+      paramList.append(std::string(namedAttr.name));
 
       // Attach default value if requested and possible.
       if (attrParamKind == AttrParamKind::UnwrappedValue &&
@@ -950,7 +952,7 @@ void OpEmitter::buildParamList(std::string &paramList,
         paramList.append(" = ");
         if (isString)
           paramList.append("\"");
-        paramList.append(attr.getDefaultValue());
+        paramList.append(std::string(attr.getDefaultValue()));
         if (isString)
           paramList.append("\"");
       }
@@ -981,7 +983,8 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
         FmtContext fctx;
         fctx.withBuilder("(*odsBuilder)");
 
-        std::string builderTemplate = attr.getConstBuilderTemplate();
+        std::string builderTemplate =
+            std::string(attr.getConstBuilderTemplate());
 
         // For StringAttr, its constant builder call will wrap the input in
         // quotes, which is correct for normal string literals, but incorrect
@@ -990,7 +993,8 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(OpMethodBody &body,
         if (StringRef(builderTemplate).contains("\"$0\""))
           builderTemplate = replaceAllSubstrs(builderTemplate, "\"$0\"", "$0");
 
-        std::string value = tgfmt(builderTemplate, &fctx, namedAttr.name);
+        std::string value =
+            std::string(tgfmt(builderTemplate, &fctx, namedAttr.name));
         body << formatv("  {0}.addAttribute(\"{1}\", {2});\n", builderOpState,
                         namedAttr.name, value);
       } else {
@@ -1063,7 +1067,8 @@ void OpEmitter::genOpInterfaceMethods() {
 }
 
 void OpEmitter::genParser() {
-  if (!hasStringAttribute(def, "parser"))
+  if (!hasStringAttribute(def, "parser") ||
+      hasStringAttribute(def, "assemblyFormat"))
     return;
 
   auto &method = opClass.newMethod(
@@ -1076,6 +1081,9 @@ void OpEmitter::genParser() {
 }
 
 void OpEmitter::genPrinter() {
+  if (hasStringAttribute(def, "assemblyFormat"))
+    return;
+
   auto valueInit = def.getValueInit("printer");
   CodeInit *codeInit = dyn_cast<CodeInit>(valueInit);
   if (!codeInit)
@@ -1251,9 +1259,9 @@ void OpEmitter::genRegionVerifier(OpMethodBody &body) {
   for (unsigned i = 0; i < numRegions; ++i) {
     const auto &region = op.getRegion(i);
 
-    std::string name = formatv("#{0}", i);
+    std::string name = std::string(formatv("#{0}", i));
     if (!region.name.empty()) {
-      name += formatv(" ('{0}')", region.name);
+      name += std::string(formatv(" ('{0}')", region.name));
     }
 
     auto getRegion = formatv("this->getOperation()->getRegion({0})", i).str();

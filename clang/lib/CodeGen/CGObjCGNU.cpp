@@ -203,7 +203,8 @@ protected:
   /// the start of the string.  The result of this function can be used anywhere
   /// where the C code specifies const char*.
   llvm::Constant *MakeConstantString(StringRef Str, const char *Name = "") {
-    ConstantAddress Array = CGM.GetAddrOfConstantCString(Str, Name);
+    ConstantAddress Array =
+        CGM.GetAddrOfConstantCString(std::string(Str), Name);
     return llvm::ConstantExpr::getGetElementPtr(Array.getElementType(),
                                                 Array.getPointer(), Zeros);
   }
@@ -1433,7 +1434,7 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
   llvm::Constant  *GetTypeString(llvm::StringRef TypeEncoding) {
     if (TypeEncoding.empty())
       return NULLPtr;
-    std::string MangledTypes = TypeEncoding;
+    std::string MangledTypes = std::string(TypeEncoding);
     std::replace(MangledTypes.begin(), MangledTypes.end(),
       '@', '\1');
     std::string TypesVarName = ".objc_sel_types_" + MangledTypes;
@@ -1945,7 +1946,8 @@ class CGObjCGNUstep2 : public CGObjCGNUstep {
 
       if (SuperClass) {
         std::pair<llvm::Constant*, int> v{classStruct, 1};
-        EarlyInitList.emplace_back(SuperClass->getName(), std::move(v));
+        EarlyInitList.emplace_back(std::string(SuperClass->getName()),
+                                   std::move(v));
       }
 
     }
@@ -2412,7 +2414,8 @@ llvm::Constant *CGObjCGNUstep::GetEHType(QualType T) {
   assert(PT && "Invalid @catch type.");
   const ObjCInterfaceType *IT = PT->getInterfaceType();
   assert(IT && "Invalid @catch type.");
-  std::string className = IT->getDecl()->getIdentifier()->getName();
+  std::string className =
+      std::string(IT->getDecl()->getIdentifier()->getName());
 
   std::string typeinfoName = "__objc_eh_typeinfo_" + className;
 

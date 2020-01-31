@@ -58,7 +58,7 @@ protected:
     Context.createInMemoryFile(HeaderName, HeaderContent);
     clang::FileID InputFileID = Context.createInMemoryFile(CCName, NewCode);
 
-    tooling::USRFindingAction FindingAction({}, {OldName}, false);
+    tooling::USRFindingAction FindingAction({}, {std::string(OldName)}, false);
     std::unique_ptr<tooling::FrontendActionFactory> USRFindingActionFactory =
         tooling::newFrontendActionFactory(&FindingAction);
 
@@ -70,7 +70,7 @@ protected:
 
     const std::vector<std::vector<std::string>> &USRList =
         FindingAction.getUSRList();
-    std::vector<std::string> NewNames = {NewName};
+    std::vector<std::string> NewNames = {std::string(NewName)};
     std::map<std::string, tooling::Replacements> FileToReplacements;
     tooling::QualifiedRenamingAction RenameAction(NewNames, USRList,
                                                   FileToReplacements);

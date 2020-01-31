@@ -59,6 +59,7 @@ config("compiler_defaults") {
     }
     if (is_optimized) {
       cflags += [
+        # FIXME: evaluate /Gw (not part of /O2)
         "/O2",
         "/Zc:inline",
       ]

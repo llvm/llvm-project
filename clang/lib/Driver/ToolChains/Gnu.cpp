@@ -1767,7 +1767,7 @@ Generic_GCC::GCCVersion Generic_GCC::GCCVersion::Parse(StringRef VersionText) {
   StringRef MinorStr = Second.first;
   if (Second.second.empty()) {
     if (size_t EndNumber = MinorStr.find_first_not_of("0123456789")) {
-      GoodVersion.PatchSuffix = MinorStr.substr(EndNumber);
+      GoodVersion.PatchSuffix = std::string(MinorStr.substr(EndNumber));
       MinorStr = MinorStr.slice(0, EndNumber);
     }
   }
@@ -1793,7 +1793,7 @@ Generic_GCC::GCCVersion Generic_GCC::GCCVersion::Parse(StringRef VersionText) {
       if (PatchText.slice(0, EndNumber).getAsInteger(10, GoodVersion.Patch) ||
           GoodVersion.Patch < 0)
         return BadVersion;
-      GoodVersion.PatchSuffix = PatchText.substr(EndNumber);
+      GoodVersion.PatchSuffix = std::string(PatchText.substr(EndNumber));
     }
   }
 
@@ -1848,7 +1848,7 @@ void Generic_GCC::GCCInstallationDetector::init(
     if (GCCToolchainDir.back() == '/')
       GCCToolchainDir = GCCToolchainDir.drop_back(); // remove the /
 
-    Prefixes.push_back(GCCToolchainDir);
+    Prefixes.push_back(std::string(GCCToolchainDir));
   } else {
     // If we have a SysRoot, try that first.
     if (!D.SysRoot.empty()) {
@@ -2460,7 +2460,7 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
       StringRef VersionText = llvm::sys::path::filename(LI->path());
       GCCVersion CandidateVersion = GCCVersion::Parse(VersionText);
       if (CandidateVersion.Major != -1) // Filter obviously bad entries.
-        if (!CandidateGCCInstallPaths.insert(LI->path()).second)
+        if (!CandidateGCCInstallPaths.insert(std::string(LI->path())).second)
           continue; // Saw this path before; no need to look at it again.
       if (CandidateVersion.isOlderThan(4, 1, 1))
         continue;
@@ -2696,7 +2696,7 @@ static std::string DetectLibcxxIncludePath(llvm::vfs::FileSystem &vfs,
         !VersionText.slice(1, StringRef::npos).getAsInteger(10, Version)) {
       if (Version > MaxVersion) {
         MaxVersion = Version;
-        MaxVersionString = VersionText;
+        MaxVersionString = std::string(VersionText);
       }
     }
   }

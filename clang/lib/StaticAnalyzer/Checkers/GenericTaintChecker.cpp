@@ -396,7 +396,7 @@ void GenericTaintChecker::parseConfiguration(CheckerManager &Mgr,
 template <typename T>
 auto GenericTaintChecker::findFunctionInConfig(const ConfigDataMap<T> &Map,
                                                const FunctionData &FData) {
-  auto Range = Map.equal_range(FData.Name);
+  auto Range = Map.equal_range(std::string(FData.Name));
   auto It =
       std::find_if(Range.first, Range.second, [&FData](const auto &Entry) {
         const auto &Value = Entry.second;

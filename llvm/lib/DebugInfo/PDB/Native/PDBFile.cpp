@@ -41,7 +41,8 @@ typedef FixedStreamArray<support::ulittle32_t> ulittle_array;
 
 PDBFile::PDBFile(StringRef Path, std::unique_ptr<BinaryStream> PdbFileBuffer,
                  BumpPtrAllocator &Allocator)
-    : FilePath(Path), Allocator(Allocator), Buffer(std::move(PdbFileBuffer)) {}
+    : FilePath(std::string(Path)), Allocator(Allocator),
+      Buffer(std::move(PdbFileBuffer)) {}
 
 PDBFile::~PDBFile() = default;
 

@@ -146,10 +146,10 @@ std::string DomainSocket::GetSocketName() const {
 
 std::string DomainSocket::GetRemoteConnectionURI() const {
   if (m_socket != kInvalidSocketValue) {
-    return llvm::formatv("{0}://{1}",
-                         GetNameOffset() == 0 ? "unix-connect"
-                                              : "unix-abstract-connect",
-                         GetSocketName());
+    return std::string(llvm::formatv(
+        "{0}://{1}",
+        GetNameOffset() == 0 ? "unix-connect" : "unix-abstract-connect",
+        GetSocketName()));
   }
   return "";
 }

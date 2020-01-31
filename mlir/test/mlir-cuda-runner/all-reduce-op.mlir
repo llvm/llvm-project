@@ -20,7 +20,7 @@ func @main() {
     %val = sitofp %t3 : i32 to f32
     %sum = "gpu.all_reduce"(%val) ({}) { op = "add" } : (f32) -> (f32)
     store %sum, %kernel_dst[%tz, %ty, %tx] : memref<?x?x?xf32>
-    gpu.return
+    gpu.terminator
   }
   %U = memref_cast %dst : memref<?x?x?xf32> to memref<*xf32>
   call @print_memref_f32(%U) : (memref<*xf32>) -> ()

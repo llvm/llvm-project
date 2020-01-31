@@ -3294,7 +3294,7 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
     // To instantiate a multiclass, we need to first get the multiclass, then
     // instantiate each def contained in the multiclass with the SubClassRef
     // template parameters.
-    MultiClass *MC = MultiClasses[Ref.Rec->getName()].get();
+    MultiClass *MC = MultiClasses[std::string(Ref.Rec->getName())].get();
     assert(MC && "Didn't lookup multiclass correctly?");
     ArrayRef<Init*> TemplateVals = Ref.TemplateArgs;
 

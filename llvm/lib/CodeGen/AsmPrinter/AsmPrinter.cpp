@@ -450,6 +450,21 @@ MCSymbol *AsmPrinter::getSymbol(const GlobalValue *GV) const {
   return TM.getSymbol(GV);
 }
 
+MCSymbol *AsmPrinter::getSymbolPreferLocal(const GlobalValue &GV) const {
+  // On ELF, use .Lfoo$local if GV is a non-interposable GlobalObject with an
+  // exact definion (intersection of GlobalValue::hasExactDefinition() and
+  // !isInterposable()). These linkages include: external, appending, internal,
+  // private. It may be profitable to use a local alias for external. The
+  // assembler would otherwise be conservative and assume a global default
+  // visibility symbol can be interposable, even if the code generator already
+  // assumed it.
+  if (TM.getTargetTriple().isOSBinFormatELF() &&
+      GlobalObject::isExternalLinkage(GV.getLinkage()) && GV.isDSOLocal() &&
+      !GV.isDeclaration() && isa<GlobalObject>(GV))
+    return getSymbolWithGlobalValueBase(&GV, "$local");
+  return TM.getSymbol(&GV);
+}
+
 /// EmitGlobalVariable - Emit the specified global variable to the .s file.
 void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   bool IsEmuTLSVar = TM.useEmulatedTLS() && GV->isThreadLocal();
@@ -631,6 +646,9 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
   EmitAlignment(Alignment, GV);
 
   OutStreamer->EmitLabel(EmittedInitSym);
+  MCSymbol *LocalAlias = getSymbolPreferLocal(*GV);
+  if (LocalAlias != EmittedInitSym)
+    OutStreamer->EmitLabel(LocalAlias);
 
   EmitGlobalConstant(GV->getParent()->getDataLayout(), GV->getInitializer());
 
@@ -709,20 +727,28 @@ void AsmPrinter::EmitFunctionHeader() {
   // Emit M NOPs for -fpatchable-function-entry=N,M where M>0. We arbitrarily
   // place prefix data before NOPs.
   unsigned PatchableFunctionPrefix = 0;
+  unsigned PatchableFunctionEntry = 0;
   (void)F.getFnAttribute("patchable-function-prefix")
       .getValueAsString()
       .getAsInteger(10, PatchableFunctionPrefix);
+  (void)F.getFnAttribute("patchable-function-entry")
+      .getValueAsString()
+      .getAsInteger(10, PatchableFunctionEntry);
   if (PatchableFunctionPrefix) {
     CurrentPatchableFunctionEntrySym =
         OutContext.createLinkerPrivateTempSymbol();
     OutStreamer->EmitLabel(CurrentPatchableFunctionEntrySym);
     emitNops(PatchableFunctionPrefix);
-  } else {
+  } else if (PatchableFunctionEntry) {
+    // May be reassigned when emitting the body, to reference the label after
+    // the initial BTI (AArch64) or endbr32/endbr64 (x86).
     CurrentPatchableFunctionEntrySym = CurrentFnBegin;
   }
 
   // Emit the function descriptor. This is a virtual function to allow targets
-  // to emit their specific function descriptor.
+  // to emit their specific function descriptor. Right now it is only used by
+  // the AIX target. The PowerPC 64-bit V1 ELF target also uses function
+  // descriptors and should be converted to use this hook as well.
   if (MAI->needsFunctionDescriptors())
     EmitFunctionDescriptor();
 
@@ -767,7 +793,13 @@ void AsmPrinter::EmitFunctionEntryLabel() {
     report_fatal_error("'" + Twine(CurrentFnSym->getName()) +
                        "' label emitted multiple times to assembly file");
 
-  return OutStreamer->EmitLabel(CurrentFnSym);
+  OutStreamer->EmitLabel(CurrentFnSym);
+
+  if (TM.getTargetTriple().isOSBinFormatELF()) {
+    MCSymbol *Sym = getSymbolPreferLocal(MF->getFunction());
+    if (Sym != CurrentFnSym)
+      OutStreamer->EmitLabel(Sym);
+  }
 }
 
 /// emitComments - Pretty-print comments for instructions.
@@ -1670,9 +1702,11 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
   const Function &F = MF.getFunction();
 
   // Get the function symbol.
-  if (MAI->needsFunctionDescriptors()) {
-    assert(TM.getTargetTriple().isOSAIX() && "Function descriptor is only"
-                                             " supported on AIX.");
+  if (TM.getTargetTriple().isOSAIX()) {
+    // AIX is unique here in that the name of the symbol emitted for the
+    // function body does not have the same name as the source function's
+    // C-linkage name.
+    assert(MAI->needsFunctionDescriptors() && "AIX ABI is descriptor based.");
     assert(CurrentFnDescSym && "The function descriptor symbol needs to be"
 		                           " initalized first.");
 
@@ -1680,9 +1714,9 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
     CurrentFnSym =
         OutContext.getOrCreateSymbol("." + CurrentFnDescSym->getName());
 
+    // Set the containing csect.
     MCSectionXCOFF *FnEntryPointSec =
         cast<MCSectionXCOFF>(getObjFileLowering().SectionForGlobal(&F, TM));
-    // Set the containing csect.
     cast<MCSymbolXCOFF>(CurrentFnSym)->setContainingCsect(FnEntryPointSec);
   } else {
     CurrentFnSym = getSymbol(&MF.getFunction());
@@ -3152,7 +3186,7 @@ void AsmPrinter::emitXRayTable() {
     std::string GroupName;
     if (F.hasComdat()) {
       Flags |= ELF::SHF_GROUP;
-      GroupName = F.getComdat()->getName();
+      GroupName = std::string(F.getComdat()->getName());
     }
 
     auto UniqueID = ++XRayFnUniqueID;
@@ -3232,7 +3266,7 @@ void AsmPrinter::emitPatchableFunctionEntries() {
       std::string GroupName;
       if (F.hasComdat()) {
         Flags |= ELF::SHF_GROUP;
-        GroupName = F.getComdat()->getName();
+        GroupName = std::string(F.getComdat()->getName());
       }
       MCSection *Section = getObjFileLowering().SectionForGlobal(&F, TM);
       unsigned UniqueID =

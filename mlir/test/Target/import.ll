@@ -77,11 +77,12 @@ define internal dso_local i32 @f1(i64 %a) norecurse {
 entry:
 ; CHECK: %{{[0-9]+}} = llvm.inttoptr %arg0 : !llvm.i64 to !llvm<"i64*">
   %aa = inttoptr i64 %a to i64*
-; CHECK: %[[addrof:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm<"double*">
-; CHECK: %{{[0-9]+}} = llvm.ptrtoint %[[addrof]] : !llvm<"double*"> to !llvm.i64
+; %[[addrof:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm<"double*">
+; %[[addrof2:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm<"double*">
+; %{{[0-9]+}} = llvm.inttoptr %arg0 : !llvm.i64 to !llvm<"i64*">
+; %{{[0-9]+}} = llvm.ptrtoint %[[addrof2]] : !llvm<"double*"> to !llvm.i64
+; %{{[0-9]+}} = llvm.getelementptr %[[addrof]][%3] : (!llvm<"double*">, !llvm.i32) -> !llvm<"double*">
   %bb = ptrtoint double* @g2 to i64
-; CHECK-DAG: %[[addrof2:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm<"double*">
-; CHECK: %{{[0-9]+}} = llvm.getelementptr %[[addrof2]][%[[c2]]] : (!llvm<"double*">, !llvm.i32) -> !llvm<"double*">
   %cc = getelementptr double, double* @g2, i32 2
 ; CHECK: %[[b:[0-9]+]] = llvm.trunc %arg0 : !llvm.i64 to !llvm.i32
   %b = trunc i64 %a to i32
@@ -259,4 +260,40 @@ define i32 @postcaller() {
   ; CHECK: llvm.call %[[indir]]()
   %3 = call i32 %2()
   ret i32 %3
+}
+
+@_ZTIi = external dso_local constant i8*
+@_ZTIii= external dso_local constant i8**
+declare void @foo(i8*)
+declare i8* @bar(i8*)
+declare i32 @__gxx_personality_v0(...)
+
+; CHECK-LABEL: @invokeLandingpad
+define i32 @invokeLandingpad() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+  ; CHECK: %[[a1:[0-9]+]] = llvm.bitcast %{{[0-9]+}} : !llvm<"i8***"> to !llvm<"i8*">
+  ; CHECK: %[[a3:[0-9]+]] = llvm.alloca %{{[0-9]+}} x !llvm.i8 : (!llvm.i32) -> !llvm<"i8*">
+  %1 = alloca i8
+  ; CHECK: llvm.invoke @foo(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm<"i8*">) -> ()
+  invoke void @foo(i8* %1) to label %4 unwind label %2
+
+; CHECK: ^bb1:
+  ; CHECK: %{{[0-9]+}} = llvm.landingpad (catch %{{[0-9]+}} : !llvm<"i8**">) (catch %[[a1]] : !llvm<"i8*">) (filter %{{[0-9]+}} : !llvm<"[1 x i8]">) : !llvm<"{ i8*, i32 }">
+  %3 = landingpad { i8*, i32 } catch i8** @_ZTIi catch i8* bitcast (i8*** @_ZTIii to i8*)
+  ; FIXME: Change filter to a constant array once they are handled. 
+  ; Currently, even though it parses this, LLVM module is broken
+          filter [1 x i8] [i8 1]
+  ; CHECK: llvm.br ^bb3
+  br label %5
+
+; CHECK: ^bb2:
+  ; CHECK: llvm.return %{{[0-9]+}} : !llvm.i32
+  ret i32 1
+
+; CHECK: ^bb3:
+  ; CHECK: %{{[0-9]+}} = llvm.invoke @bar(%[[a3]]) to ^bb2 unwind ^bb1 : (!llvm<"i8*">) -> !llvm<"i8*">
+  %6 = invoke i8* @bar(i8* %1) to label %4 unwind label %2
+
+; CHECK: ^bb4:
+  ; CHECK: llvm.return %{{[0-9]+}} : !llvm.i32
+  ret i32 0
 }

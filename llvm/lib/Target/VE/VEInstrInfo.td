@@ -131,9 +131,15 @@ def fcond2cc : SDNodeXForm<cond, [{
 }]>;
 
 // Addressing modes.
+def ADDRrr : ComplexPattern<iPTR, 2, "SelectADDRrr", [], []>;
 def ADDRri : ComplexPattern<iPTR, 2, "SelectADDRri", [frameindex], []>;
 
 // ASX format of memory address
+def MEMrr : Operand<iPTR> {
+  let PrintMethod = "printMemASXOperand";
+  let MIOperandInfo = (ops ptr_rc, ptr_rc);
+}
+
 def MEMri : Operand<iPTR> {
   let PrintMethod = "printMemASXOperand";
   let MIOperandInfo = (ops ptr_rc, i64imm);
@@ -368,6 +374,18 @@ multiclass RRNCm<string opcStr, bits<8>opc,
   RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, immOp2>,
   RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, immOp2>;
 
+// Used by fadd, fsub, and similar floating point instructions
+//   The order of operands are "$sx, $sy, $sz"
+
+multiclass RRFm<string opcStr, bits<8>opc,
+               RegisterClass RC, ValueType Ty, Operand immOp, Operand immOp2,
+               SDPatternOperator OpNode=null_frag> :
+  RRmrr<opcStr, opc, RC, Ty, RC, Ty, OpNode>,
+  RRmir<opcStr, opc, RC, Ty, RC, Ty, immOp, null_frag>,
+  RRmiz<opcStr, opc, RC, Ty, RC, Ty, immOp, null_frag>,
+  RRNDmrm<opcStr, opc, RC, Ty, RC, Ty, immOp2>,
+  RRNDmim<opcStr, opc, RC, Ty, RC, Ty, immOp, immOp2>;
+
 // Multiclass for RR type instructions
 //   Used by sra, sla, sll, and similar instructions
 //   The order of operands are "$sx, $sz, $sy"
@@ -527,7 +545,77 @@ multiclass BCRm<string opcStr, string opcStrAt, bits<8> opc,
     let cz = 1;
     let hasSideEffects = 0;
   }
+  def ir : CF<
+    opc, (outs),
+    (ins CCOp:$cf, immOp:$sy, RC:$sz, brtarget32:$imm32),
+    !strconcat(opcStr, " $sy, $sz, $imm32")> {
+    let cy = 0;
+    let cz = 1;
+    let hasSideEffects = 0;
+  }
+  def rm0 : CF<
+    opc, (outs), (ins CCOp:$cf, RC:$sy, immOp2:$sz, brtarget32:$imm32),
+    !strconcat(opcStr, " $sy, (${sz})0, $imm32"), []> {
+    let cy = 1;
+    let cz = 0;
+    let sz{6} = 1;
+    let hasSideEffects = 0;
+  }
+  def rm1 : CF<
+    opc, (outs), (ins CCOp:$cf, RC:$sy, immOp2:$sz, brtarget32:$imm32),
+    !strconcat(opcStr, " $sy, (${sz})1, $imm32"), []> {
+    let cy = 1;
+    let cz = 0;
+    let hasSideEffects = 0;
+  }
+  def im0 : CF<
+    opc, (outs), (ins CCOp:$cf, immOp:$sy, immOp2:$sz, brtarget32:$imm32),
+    !strconcat(opcStr, " $sy, (${sz})0, $imm32"), []> {
+    let cy = 0;
+    let cz = 0;
+    let sz{6} = 1;
+    let hasSideEffects = 0;
+  }
+  def im1 : CF<
+    opc, (outs), (ins CCOp:$cf, immOp:$sy, immOp2:$sz, brtarget32:$imm32),
+    !strconcat(opcStr, " $sy, (${sz})1, $imm32"), []> {
+    let cy = 0;
+    let cz = 0;
+    let hasSideEffects = 0;
+  }
+  def a : CF<
+    opc, (outs), (ins brtarget32:$imm32),
+    !strconcat(opcStrAt, " $imm32"), []> {
+    let cy = 0;
+    let sy = 0;
+    let cz = 0;
+    let sz = 0;
+    let cf = 15;  /* AT */
+    let isBarrier = 1;
+    let hasSideEffects = 0;
+  }
 }
+
+// Multiclass for floating point conversion instructions.
+//   Used by CVS/CVD/FLT and others
+multiclass CVTm<string opcStr, bits<8> opc,
+                RegisterClass RCo, ValueType Tyo,
+                RegisterClass RCi, ValueType Tyi, Operand immOp,
+                SDPatternOperator OpNode=null_frag> {
+  def r : RR<opc, (outs RCo:$sx), (ins RCi:$sy),
+    !strconcat(opcStr, " $sx, $sy"),
+    [(set Tyo:$sx, (OpNode Tyi:$sy))]> {
+      let cy = 1;
+      let hasSideEffects = 0;
+    }
+  def i : RR<opc, (outs RCo:$sx), (ins immOp:$sy),
+    !strconcat(opcStr, " $sx, $sy"),
+    [/* (set Tyo:$sx, (OpNode (Tyi simm7:$sy))) */]> {
+      let cy = 0;
+      let hasSideEffects = 0;
+    }
+}
+
 
 //===----------------------------------------------------------------------===//
 // Instructions
@@ -596,6 +684,38 @@ defm SBSU : RRm<"subs.w.zx", 0x5A, I32, i32, simm7Op32, uimm6Op32>;
 // SBX instruction
 let cx = 0 in
 defm SBX : RRNCm<"subs.l", 0x5B, I64, i64, simm7Op64, uimm6Op64, sub>;
+
+// MPY instruction
+let cx = 0 in
+defm MPY : RRm<"mulu.l", 0x49, I64, i64, simm7Op64, uimm6Op64>;
+let cx = 1 in
+defm MPYUW : RRm<"mulu.w", 0x49, I32, i32, simm7Op32, uimm6Op32>;
+
+// MPS instruction
+let cx = 0 in
+defm MPS : RRm<"muls.w.sx", 0x4B, I32, i32, simm7Op32, uimm6Op32, mul>;
+let cx = 1 in
+defm MPSU : RRm<"muls.w.zx", 0x4B, I32, i32, simm7Op32, uimm6Op32>;
+
+// MPX instruction
+let cx = 0 in
+defm MPX : RRm<"muls.l", 0x6E, I64, i64, simm7Op64, uimm6Op64, mul>;
+
+// DIV instruction
+let cx = 0 in
+defm DIV : RRNCm<"divu.l", 0x6F, I64, i64, simm7Op64, uimm6Op64, udiv>;
+let cx = 1 in
+defm DIVUW : RRNCm<"divu.w", 0x6F, I32, i32, simm7Op32, uimm6Op32, udiv>;
+
+// DVS instruction
+let cx = 0 in
+defm DVS : RRNCm<"divs.w.sx", 0x7B, I32, i32, simm7Op32, uimm6Op32, sdiv>;
+let cx = 1 in
+defm DVSU : RRm<"divs.w.zx", 0x7B, I32, i32, simm7Op32, uimm6Op32>;
+
+// DVX instruction
+let cx = 0 in
+defm DVX : RRNCm<"divs.l", 0x7F, I64, i64, simm7Op64, uimm6Op64, sdiv>;
 
 // CMP instruction
 let cx = 0 in
@@ -667,6 +787,26 @@ def : Pat<(i32 (srl i32:$src, i32:$val)),
             $src, sub_i32), 32), $val), sub_i32)>;
 
 // 5.3.2.5. Floating-point Arithmetic Operation Instructions
+let cx = 0 in
+defm FAD : RRFm<"fadd.d", 0x4C, I64, f64, simm7Op64, uimm6Op64, fadd>;
+let cx = 1 in
+defm FADS : RRFm<"fadd.s", 0x4C, F32, f32, simm7Op32, uimm6Op32, fadd>;
+
+let cx = 0 in
+defm FSB : RRFm<"fsub.d", 0x5C, I64, f64, simm7Op64, uimm6Op64, fsub>;
+let cx = 1 in
+defm FSBS : RRFm<"fsub.s", 0x5C, F32, f32, simm7Op32, uimm6Op32, fsub>;
+
+let cx = 0 in
+defm FMP : RRFm<"fmul.d", 0x4D, I64, f64, simm7Op64, uimm6Op64, fmul>;
+let cx = 1 in
+defm FMPS : RRFm<"fmul.s", 0x4D, F32, f32, simm7Op32, uimm6Op32, fmul>;
+
+let cx = 0 in
+defm FDV : RRFm<"fdiv.d", 0x5D, I64, f64, simm7Op64, uimm6Op64, fdiv>;
+let cx = 1 in
+defm FDVS : RRFm<"fdiv.s", 0x5D, F32, f32, simm7Op32, uimm6Op32, fdiv>;
+
 // FCP instruction
 let cx = 0 in
 defm FCP : RRm<"fcmp.d", 0x7E, I64, f64, simm7Op64, uimm6Op64>;
@@ -685,6 +825,25 @@ let cw = 1 in {
   defm FCMI : RRm<"fmin.d", 0x3E, I64, f64, simm7Op64, uimm6Op64>;
   let cx = 1 in
   defm FCMIS : RRm<"fmin.s", 0x3E, F32, f32, simm7Op32, uimm6Op32>;
+}
+
+let cx = 0, cw = 0 /* sign extend */, cz = 1, sz = 0 /* round toward zero */ in
+defm FIX : CVTm<"cvt.w.d.sx.rz", 0x4E, I32, i32, I64, f64, simm7Op32, fp_to_sint>;
+let cx = 1, cw = 0 /* sign extend */, cz = 1, sz = 0 /* round toward zero */ in
+defm FIXS : CVTm<"cvt.w.s.sx.rz", 0x4E, I32, i32, F32, f32, simm7Op32, fp_to_sint>;
+let cx = 0, cz = 1, sz = 0 /* round toward zero */ in
+defm FIXX : CVTm<"cvt.l.d.rz", 0x4F, I64, i64, I64, f64, simm7Op64, fp_to_sint>;
+let cz = 0, sz = 0 in {
+  let cx = 0 in
+  defm FLT : CVTm<"cvt.d.w", 0x5E, I64, f64, I32, i32, simm7Op32, sint_to_fp>;
+  let cx = 1 in
+  defm FLTS : CVTm<"cvt.s.w", 0x5E, F32, f32, I32, i32, simm7Op32, sint_to_fp>;
+  let cx = 0 in
+  defm FLTX : CVTm<"cvt.d.l", 0x5F, I64, f64, I64, i64, simm7Op64, sint_to_fp>;
+  let cx = 0 in
+  defm CVS : CVTm<"cvt.s.d", 0x1F, F32, f32, I64, f64, simm7Op64, fpround>;
+  let cx = 0 in
+  defm CVD : CVTm<"cvt.d.s", 0x0F, I64, f64, F32, f32, simm7Op32, fpextend>;
 }
 
 // Load and Store instructions
@@ -762,6 +921,39 @@ def ST1Bri : RM<
 def : Pat<(f64 (load ADDRri:$addr)), (LDSri ADDRri:$addr)>;
 def : Pat<(store f64:$sx, ADDRri:$addr), (STSri ADDRri:$addr, $sx)>;
 
+// Control-flow
+
+// Jump instruction
+let cx = 0, cx2 = 0, bpf = 0 /* NONE */, cy = 1, cz = 1,
+    isBranch = 1, isTerminator = 1, hasDelaySlot = 1, hasSideEffects = 0 in
+def BC : CF<
+    0x19, (outs), (ins CCOp:$cf, I64:$sy, brtarget32:$imm32),
+    "b.${cf}.l $sy, $imm32">;
+
+// Jump always instruction is treated as a special case of jump in order
+// to make finding unconditional jump easy.
+let cx = 0, cx2 = 0, bpf = 0 /* NONE */, cf = 15 /* AT */, cy = 0, sy = 0,
+    cz = 1,
+    isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1,
+    hasDelaySlot = 1, isCodeGenOnly = 1, hasSideEffects = 0 in {
+def BArr : CF<
+    0x19, (outs), (ins MEMrr:$addr),
+    "b.l $addr",
+    [(brind ADDRrr:$addr)]>;
+def BAri : CF<
+    0x19, (outs), (ins MEMri:$addr),
+    "b.l $addr",
+    [(brind ADDRri:$addr)]>;
+}
+
+// Jump never instruction is also a special case of jump.
+let cx = 0, cx2 = 0, bpf = 0 /* NONE */, cf = 0 /* AF */, cy = 1, sy = 0,
+    cz = 1,
+    isBranch = 1, isTerminator = 1, hasDelaySlot = 1, hasSideEffects = 0 in
+def BN : CF<
+    0x19, (outs), (ins brtarget32:$imm32),
+    "b.af.l $imm32">;
+
 // Return instruction is also a special case of jump.
 let cx = 0, cx2 = 0, bpf = 0 /* NONE */, cf = 15 /* AT */, cy = 0, sy = 0,
     cz = 1, sz = 0x10 /* SX10 */, imm32 = 0, Uses = [SX10],
@@ -775,6 +967,12 @@ def RET : CF<
 // Branch instruction
 let cx = 0, cx2 = 0, bpf = 0 /* NONE */ in
 defm BCRL : BCRm<"br${cf}.l", "br.l", 0x18, I64, i64, simm7Op64, uimm6Op64>;
+let cx = 1, cx2 = 0, bpf = 0 /* NONE */ in
+defm BCRW : BCRm<"br${cf}.w", "br.w", 0x18, I32, i32, simm7Op32, uimm6Op32>;
+let cx = 0, cx2 = 1, bpf = 0 /* NONE */ in
+defm BCRD : BCRm<"br${cf}.d", "br.d", 0x18, I64, f64, simm7Op64, uimm6Op64>;
+let cx = 1, cx2 = 1, bpf = 0 /* NONE */ in
+defm BCRS : BCRm<"br${cf}.s", "br.s", 0x18, F32, f32, simm7Op32, uimm6Op32>;
 
 let cx = 0, cy = 0, cz = 1, hasSideEffects = 0 in {
 let sy = 3 in
@@ -883,6 +1081,10 @@ def : Pat<(i64 (sext i32:$sy)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (ADSrm1 $sy, 0), sub_i32)>;
 def : Pat<(i64 (zext i32:$sy)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), (ADSUrm1 $sy, 0), sub_i32)>;
+def : Pat<(i64 (fp_to_sint f32:$sy)), (FIXXr (CVDr $sy))>;
+
+// Cast to f32
+def : Pat<(f32 (sint_to_fp i64:$sy)), (CVSr (FLTXr i64:$sy))>;
 
 def : Pat<(i64 (anyext i32:$sy)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $sy, sub_i32)>;
@@ -933,6 +1135,22 @@ def : Pat<(call tglobaladdr:$dst),
 def : Pat<(call i64:$dst),
           (CALLr i64:$dst)>;
 
+// Branches
+def : Pat<(br bb:$addr), (BCRLa bb:$addr)>;
+
+// brcc
+def : Pat<(brcc CCSIOp:$cond, i32:$l, i32:$r, bb:$addr),
+          (BCRWrr (icond2cc $cond), $l, $r, bb:$addr)>;
+def : Pat<(brcc CCUIOp:$cond, i32:$l, i32:$r, bb:$addr),
+          (BCRWir (icond2cc $cond), 0, (CMPUWrr $r, $l), bb:$addr)>;
+def : Pat<(brcc CCSIOp:$cond, i64:$l, i64:$r, bb:$addr),
+          (BCRLrr (icond2cc $cond), $l, $r, bb:$addr)>;
+def : Pat<(brcc CCUIOp:$cond, i64:$l, i64:$r, bb:$addr),
+          (BCRLir (icond2cc $cond), 0, (CMPrr $r, $l), bb:$addr)>;
+def : Pat<(brcc cond:$cond, f32:$l, f32:$r, bb:$addr),
+          (BCRSrr (fcond2cc $cond), $l, $r, bb:$addr)>;
+def : Pat<(brcc cond:$cond, f64:$l, f64:$r, bb:$addr),
+          (BCRDrr (fcond2cc $cond), $l, $r, bb:$addr)>;
 
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions
@@ -1190,6 +1408,16 @@ def : Pat<(f32 (select i32:$pred, f32:$t, f32:$f)),
                      (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $f, sub_f32)),
             sub_f32)>;
 
+// bitconvert
+def : Pat<(f64 (bitconvert i64:$src)), (COPY_TO_REGCLASS $src, I64)>;
+def : Pat<(i64 (bitconvert f64:$src)), (COPY_TO_REGCLASS $src, I64)>;
+
+def : Pat<(i32 (bitconvert f32:$op)),
+          (EXTRACT_SUBREG (SRAXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+            $op, sub_f32), 32), sub_i32)>;
+def : Pat<(f32 (bitconvert i32:$op)),
+          (EXTRACT_SUBREG (SLLri (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+            $op, sub_i32), 32), sub_f32)>;
 
 // Several special pattern matches to optimize code
 

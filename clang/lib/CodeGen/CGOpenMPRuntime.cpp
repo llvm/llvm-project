@@ -1344,7 +1344,7 @@ std::string CGOpenMPRuntime::getName(ArrayRef<StringRef> Parts) const {
     OS << Sep << Part;
     Sep = Separator;
   }
-  return OS.str();
+  return std::string(OS.str());
 }
 
 static llvm::Function *
@@ -1801,16 +1801,17 @@ void CGOpenMPRuntime::functionFinished(CodeGenFunction &CGF) {
     OpenMPLocThreadIDMap.erase(CGF.CurFn);
   }
   if (FunctionUDRMap.count(CGF.CurFn) > 0) {
-    for(auto *D : FunctionUDRMap[CGF.CurFn])
+    for(const auto *D : FunctionUDRMap[CGF.CurFn])
       UDRMap.erase(D);
     FunctionUDRMap.erase(CGF.CurFn);
   }
   auto I = FunctionUDMMap.find(CGF.CurFn);
   if (I != FunctionUDMMap.end()) {
-    for(auto *D : I->second)
+    for(const auto *D : I->second)
       UDMMap.erase(D);
     FunctionUDMMap.erase(I);
   }
+  LastprivateConditionalToTypes.erase(CGF.CurFn);
 }
 
 llvm::Type *CGOpenMPRuntime::getIdentTyPointerTy() {
@@ -5972,7 +5973,7 @@ static std::string generateUniqueName(CodeGenModule &CGM, StringRef Prefix,
       {D->isLocalVarDeclOrParm() ? D->getName() : CGM.getMangledName(D)});
   Out << Prefix << Name << "_"
       << D->getCanonicalDecl()->getBeginLoc().getRawEncoding();
-  return Out.str();
+  return std::string(Out.str());
 }
 
 /// Emits reduction initializer function:
@@ -10502,7 +10503,7 @@ static std::string mangleVectorParameters(ArrayRef<ParamAttrTy> ParamAttrs) {
       Out << 'a' << ParamAttr.Alignment;
   }
 
-  return Out.str();
+  return std::string(Out.str());
 }
 
 // Function used to add the attribute. The parameter `VLEN` is
@@ -11333,17 +11334,101 @@ bool CGOpenMPRuntime::isNontemporalDecl(const ValueDecl *VD) const {
       [VD](const NontemporalDeclsSet &Set) { return Set.count(VD) > 0; });
 }
 
+void CGOpenMPRuntime::LastprivateConditionalRAII::tryToDisableInnerAnalysis(
+    const OMPExecutableDirective &S,
+    llvm::DenseSet<CanonicalDeclPtr<const Decl>> &NeedToAddForLPCsAsDisabled)
+    const {
+  llvm::DenseSet<CanonicalDeclPtr<const Decl>> NeedToCheckForLPCs;
+  // Vars in target/task regions must be excluded completely.
+  if (isOpenMPTargetExecutionDirective(S.getDirectiveKind()) ||
+      isOpenMPTaskingDirective(S.getDirectiveKind())) {
+    SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
+    getOpenMPCaptureRegions(CaptureRegions, S.getDirectiveKind());
+    const CapturedStmt *CS = S.getCapturedStmt(CaptureRegions.front());
+    for (const CapturedStmt::Capture &Cap : CS->captures()) {
+      if (Cap.capturesVariable() || Cap.capturesVariableByCopy())
+        NeedToCheckForLPCs.insert(Cap.getCapturedVar());
+    }
+  }
+  // Exclude vars in private clauses.
+  for (const auto *C : S.getClausesOfKind<OMPPrivateClause>()) {
+    for (const Expr *Ref : C->varlists()) {
+      if (!Ref->getType()->isScalarType())
+        continue;
+      const auto *DRE = dyn_cast<DeclRefExpr>(Ref->IgnoreParenImpCasts());
+      if (!DRE)
+        continue;
+      NeedToCheckForLPCs.insert(DRE->getDecl());
+    }
+  }
+  for (const auto *C : S.getClausesOfKind<OMPFirstprivateClause>()) {
+    for (const Expr *Ref : C->varlists()) {
+      if (!Ref->getType()->isScalarType())
+        continue;
+      const auto *DRE = dyn_cast<DeclRefExpr>(Ref->IgnoreParenImpCasts());
+      if (!DRE)
+        continue;
+      NeedToCheckForLPCs.insert(DRE->getDecl());
+    }
+  }
+  for (const auto *C : S.getClausesOfKind<OMPLastprivateClause>()) {
+    for (const Expr *Ref : C->varlists()) {
+      if (!Ref->getType()->isScalarType())
+        continue;
+      const auto *DRE = dyn_cast<DeclRefExpr>(Ref->IgnoreParenImpCasts());
+      if (!DRE)
+        continue;
+      NeedToCheckForLPCs.insert(DRE->getDecl());
+    }
+  }
+  for (const auto *C : S.getClausesOfKind<OMPReductionClause>()) {
+    for (const Expr *Ref : C->varlists()) {
+      if (!Ref->getType()->isScalarType())
+        continue;
+      const auto *DRE = dyn_cast<DeclRefExpr>(Ref->IgnoreParenImpCasts());
+      if (!DRE)
+        continue;
+      NeedToCheckForLPCs.insert(DRE->getDecl());
+    }
+  }
+  for (const auto *C : S.getClausesOfKind<OMPLinearClause>()) {
+    for (const Expr *Ref : C->varlists()) {
+      if (!Ref->getType()->isScalarType())
+        continue;
+      const auto *DRE = dyn_cast<DeclRefExpr>(Ref->IgnoreParenImpCasts());
+      if (!DRE)
+        continue;
+      NeedToCheckForLPCs.insert(DRE->getDecl());
+    }
+  }
+  for (const Decl *VD : NeedToCheckForLPCs) {
+    for (const LastprivateConditionalData &Data :
+         llvm::reverse(CGM.getOpenMPRuntime().LastprivateConditionalStack)) {
+      if (Data.DeclToUniqueName.count(VD) > 0) {
+        if (!Data.Disabled)
+          NeedToAddForLPCsAsDisabled.insert(VD);
+        break;
+      }
+    }
+  }
+}
+
 CGOpenMPRuntime::LastprivateConditionalRAII::LastprivateConditionalRAII(
     CodeGenFunction &CGF, const OMPExecutableDirective &S, LValue IVLVal)
     : CGM(CGF.CGM),
-      NeedToPush(llvm::any_of(S.getClausesOfKind<OMPLastprivateClause>(),
-                              [](const OMPLastprivateClause *C) {
-                                return C->getKind() ==
-                                       OMPC_LASTPRIVATE_conditional;
-                              })) {
+      Action((CGM.getLangOpts().OpenMP >= 50 &&
+              llvm::any_of(S.getClausesOfKind<OMPLastprivateClause>(),
+                           [](const OMPLastprivateClause *C) {
+                             return C->getKind() ==
+                                    OMPC_LASTPRIVATE_conditional;
+                           }))
+                 ? ActionToDo::PushAsLastprivateConditional
+                 : ActionToDo::DoNotPush) {
   assert(CGM.getLangOpts().OpenMP && "Not in OpenMP mode.");
-  if (!NeedToPush)
+  if (CGM.getLangOpts().OpenMP < 50 || Action == ActionToDo::DoNotPush)
     return;
+  assert(Action == ActionToDo::PushAsLastprivateConditional &&
+         "Expected a push action.");
   LastprivateConditionalData &Data =
       CGM.getOpenMPRuntime().LastprivateConditionalStack.emplace_back();
   for (const auto *C : S.getClausesOfKind<OMPLastprivateClause>()) {
@@ -11351,60 +11436,136 @@ CGOpenMPRuntime::LastprivateConditionalRAII::LastprivateConditionalRAII(
       continue;
 
     for (const Expr *Ref : C->varlists()) {
-      Data.DeclToUniqeName.try_emplace(
+      Data.DeclToUniqueName.insert(std::make_pair(
           cast<DeclRefExpr>(Ref->IgnoreParenImpCasts())->getDecl(),
-          generateUniqueName(CGM, "pl_cond", Ref));
+          SmallString<16>(generateUniqueName(CGM, "pl_cond", Ref))));
     }
   }
   Data.IVLVal = IVLVal;
-  Data.CGF = &CGF;
+  Data.Fn = CGF.CurFn;
+}
+
+CGOpenMPRuntime::LastprivateConditionalRAII::LastprivateConditionalRAII(
+    CodeGenFunction &CGF, const OMPExecutableDirective &S)
+    : CGM(CGF.CGM), Action(ActionToDo::DoNotPush) {
+  assert(CGM.getLangOpts().OpenMP && "Not in OpenMP mode.");
+  if (CGM.getLangOpts().OpenMP < 50)
+    return;
+  llvm::DenseSet<CanonicalDeclPtr<const Decl>> NeedToAddForLPCsAsDisabled;
+  tryToDisableInnerAnalysis(S, NeedToAddForLPCsAsDisabled);
+  if (!NeedToAddForLPCsAsDisabled.empty()) {
+    Action = ActionToDo::DisableLastprivateConditional;
+    LastprivateConditionalData &Data =
+        CGM.getOpenMPRuntime().LastprivateConditionalStack.emplace_back();
+    for (const Decl *VD : NeedToAddForLPCsAsDisabled)
+      Data.DeclToUniqueName.insert(std::make_pair(VD, SmallString<16>()));
+    Data.Fn = CGF.CurFn;
+    Data.Disabled = true;
+  }
+}
+
+CGOpenMPRuntime::LastprivateConditionalRAII
+CGOpenMPRuntime::LastprivateConditionalRAII::disable(
+    CodeGenFunction &CGF, const OMPExecutableDirective &S) {
+  return LastprivateConditionalRAII(CGF, S);
 }
 
 CGOpenMPRuntime::LastprivateConditionalRAII::~LastprivateConditionalRAII() {
-  if (!NeedToPush)
+  if (CGM.getLangOpts().OpenMP < 50)
     return;
-  CGM.getOpenMPRuntime().LastprivateConditionalStack.pop_back();
+  if (Action == ActionToDo::DisableLastprivateConditional) {
+    assert(CGM.getOpenMPRuntime().LastprivateConditionalStack.back().Disabled &&
+           "Expected list of disabled private vars.");
+    CGM.getOpenMPRuntime().LastprivateConditionalStack.pop_back();
+  }
+  if (Action == ActionToDo::PushAsLastprivateConditional) {
+    assert(
+        !CGM.getOpenMPRuntime().LastprivateConditionalStack.back().Disabled &&
+        "Expected list of lastprivate conditional vars.");
+    CGM.getOpenMPRuntime().LastprivateConditionalStack.pop_back();
+  }
+}
+
+Address CGOpenMPRuntime::emitLastprivateConditionalInit(CodeGenFunction &CGF,
+                                                        const VarDecl *VD) {
+  ASTContext &C = CGM.getContext();
+  auto I = LastprivateConditionalToTypes.find(CGF.CurFn);
+  if (I == LastprivateConditionalToTypes.end())
+    I = LastprivateConditionalToTypes.try_emplace(CGF.CurFn).first;
+  QualType NewType;
+  const FieldDecl *VDField;
+  const FieldDecl *FiredField;
+  LValue BaseLVal;
+  auto VI = I->getSecond().find(VD);
+  if (VI == I->getSecond().end()) {
+    RecordDecl *RD = C.buildImplicitRecord("lasprivate.conditional");
+    RD->startDefinition();
+    VDField = addFieldToRecordDecl(C, RD, VD->getType().getNonReferenceType());
+    FiredField = addFieldToRecordDecl(C, RD, C.CharTy);
+    RD->completeDefinition();
+    NewType = C.getRecordType(RD);
+    Address Addr = CGF.CreateMemTemp(NewType, C.getDeclAlign(VD), VD->getName());
+    BaseLVal = CGF.MakeAddrLValue(Addr, NewType, AlignmentSource::Decl);
+    I->getSecond().try_emplace(VD, NewType, VDField, FiredField, BaseLVal);
+  } else {
+    NewType = std::get<0>(VI->getSecond());
+    VDField = std::get<1>(VI->getSecond());
+    FiredField = std::get<2>(VI->getSecond());
+    BaseLVal = std::get<3>(VI->getSecond());
+  }
+  LValue FiredLVal =
+      CGF.EmitLValueForField(BaseLVal, FiredField);
+  CGF.EmitStoreOfScalar(
+      llvm::ConstantInt::getNullValue(CGF.ConvertTypeForMem(C.CharTy)),
+      FiredLVal);
+  return CGF.EmitLValueForField(BaseLVal, VDField).getAddress(CGF);
 }
 
 namespace {
 /// Checks if the lastprivate conditional variable is referenced in LHS.
 class LastprivateConditionalRefChecker final
     : public ConstStmtVisitor<LastprivateConditionalRefChecker, bool> {
-  CodeGenFunction &CGF;
   ArrayRef<CGOpenMPRuntime::LastprivateConditionalData> LPM;
   const Expr *FoundE = nullptr;
   const Decl *FoundD = nullptr;
   StringRef UniqueDeclName;
   LValue IVLVal;
+  llvm::Function *FoundFn = nullptr;
   SourceLocation Loc;
 
 public:
   bool VisitDeclRefExpr(const DeclRefExpr *E) {
     for (const CGOpenMPRuntime::LastprivateConditionalData &D :
          llvm::reverse(LPM)) {
-      auto It = D.DeclToUniqeName.find(E->getDecl());
-      if (It == D.DeclToUniqeName.end())
+      auto It = D.DeclToUniqueName.find(E->getDecl());
+      if (It == D.DeclToUniqueName.end())
         continue;
+      if (D.Disabled)
+        return false;
       FoundE = E;
       FoundD = E->getDecl()->getCanonicalDecl();
-      UniqueDeclName = It->getSecond();
+      UniqueDeclName = It->second;
       IVLVal = D.IVLVal;
+      FoundFn = D.Fn;
       break;
     }
     return FoundE == E;
   }
   bool VisitMemberExpr(const MemberExpr *E) {
-    if (!CGF.IsWrappedCXXThis(E->getBase()))
+    if (!CodeGenFunction::IsWrappedCXXThis(E->getBase()))
       return false;
     for (const CGOpenMPRuntime::LastprivateConditionalData &D :
          llvm::reverse(LPM)) {
-      auto It = D.DeclToUniqeName.find(E->getMemberDecl());
-      if (It == D.DeclToUniqeName.end())
+      auto It = D.DeclToUniqueName.find(E->getMemberDecl());
+      if (It == D.DeclToUniqueName.end())
         continue;
+      if (D.Disabled)
+        return false;
       FoundE = E;
       FoundD = E->getMemberDecl()->getCanonicalDecl();
-      UniqueDeclName = It->getSecond();
+      UniqueDeclName = It->second;
       IVLVal = D.IVLVal;
+      FoundFn = D.Fn;
       break;
     }
     return FoundE == E;
@@ -11422,30 +11583,20 @@ public:
     return false;
   }
   explicit LastprivateConditionalRefChecker(
-      CodeGenFunction &CGF,
       ArrayRef<CGOpenMPRuntime::LastprivateConditionalData> LPM)
-      : CGF(CGF), LPM(LPM) {}
-  std::tuple<const Expr *, const Decl *, StringRef, LValue>
+      : LPM(LPM) {}
+  std::tuple<const Expr *, const Decl *, StringRef, LValue, llvm::Function *>
   getFoundData() const {
-    return std::make_tuple(FoundE, FoundD, UniqueDeclName, IVLVal);
+    return std::make_tuple(FoundE, FoundD, UniqueDeclName, IVLVal, FoundFn);
   }
 };
 } // namespace
 
-void CGOpenMPRuntime::checkAndEmitLastprivateConditional(CodeGenFunction &CGF,
-                                                         const Expr *LHS) {
-  if (CGF.getLangOpts().OpenMP < 50 || LastprivateConditionalStack.empty() ||
-      LastprivateConditionalStack.back().CGF != &CGF)
-    return;
-  LastprivateConditionalRefChecker Checker(CGF, LastprivateConditionalStack);
-  if (!Checker.Visit(LHS))
-    return;
-  const Expr *FoundE;
-  const Decl *FoundD;
-  StringRef UniqueDeclName;
-  LValue IVLVal;
-  std::tie(FoundE, FoundD, UniqueDeclName, IVLVal) = Checker.getFoundData();
-
+void CGOpenMPRuntime::emitLastprivateConditionalUpdate(CodeGenFunction &CGF,
+                                                       LValue IVLVal,
+                                                       StringRef UniqueDeclName,
+                                                       LValue LVal,
+                                                       SourceLocation Loc) {
   // Last updated loop counter for the lastprivate conditional var.
   // int<xx> last_iv = 0;
   llvm::Type *LLIVTy = CGF.ConvertTypeForMem(IVLVal.getType());
@@ -11455,21 +11606,18 @@ void CGOpenMPRuntime::checkAndEmitLastprivateConditional(CodeGenFunction &CGF,
       IVLVal.getAlignment().getAsAlign());
   LValue LastIVLVal = CGF.MakeNaturalAlignAddrLValue(LastIV, IVLVal.getType());
 
-  // Private address of the lastprivate conditional in the current context.
-  // priv_a
-  LValue LVal = CGF.EmitLValue(FoundE);
   // Last value of the lastprivate conditional.
   // decltype(priv_a) last_a;
   llvm::Constant *Last = getOrCreateInternalVariable(
-      LVal.getAddress(CGF).getElementType(), UniqueDeclName);
+      CGF.ConvertTypeForMem(LVal.getType()), UniqueDeclName);
   cast<llvm::GlobalVariable>(Last)->setAlignment(
       LVal.getAlignment().getAsAlign());
   LValue LastLVal =
       CGF.MakeAddrLValue(Last, LVal.getType(), LVal.getAlignment());
 
   // Global loop counter. Required to handle inner parallel-for regions.
-  // global_iv
-  llvm::Value *IVVal = CGF.EmitLoadOfScalar(IVLVal, FoundE->getExprLoc());
+  // iv
+  llvm::Value *IVVal = CGF.EmitLoadOfScalar(IVLVal, Loc);
 
   // #pragma omp critical(a)
   // if (last_iv <= iv) {
@@ -11477,11 +11625,10 @@ void CGOpenMPRuntime::checkAndEmitLastprivateConditional(CodeGenFunction &CGF,
   //   last_a = priv_a;
   // }
   auto &&CodeGen = [&LastIVLVal, &IVLVal, IVVal, &LVal, &LastLVal,
-                    FoundE](CodeGenFunction &CGF, PrePostActionTy &Action) {
+                    Loc](CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);
-    llvm::Value *LastIVVal =
-        CGF.EmitLoadOfScalar(LastIVLVal, FoundE->getExprLoc());
-    // (last_iv <= global_iv) ? Check if the variable is updated and store new
+    llvm::Value *LastIVVal = CGF.EmitLoadOfScalar(LastIVLVal, Loc);
+    // (last_iv <= iv) ? Check if the variable is updated and store new
     // value in global var.
     llvm::Value *CmpRes;
     if (IVLVal.getType()->isSignedIntegerType()) {
@@ -11497,19 +11644,18 @@ void CGOpenMPRuntime::checkAndEmitLastprivateConditional(CodeGenFunction &CGF,
     // {
     CGF.EmitBlock(ThenBB);
 
-    //   last_iv = global_iv;
+    //   last_iv = iv;
     CGF.EmitStoreOfScalar(IVVal, LastIVLVal);
 
     //   last_a = priv_a;
     switch (CGF.getEvaluationKind(LVal.getType())) {
     case TEK_Scalar: {
-      llvm::Value *PrivVal = CGF.EmitLoadOfScalar(LVal, FoundE->getExprLoc());
+      llvm::Value *PrivVal = CGF.EmitLoadOfScalar(LVal, Loc);
       CGF.EmitStoreOfScalar(PrivVal, LastLVal);
       break;
     }
     case TEK_Complex: {
-      CodeGenFunction::ComplexPairTy PrivVal =
-          CGF.EmitLoadOfComplex(LVal, FoundE->getExprLoc());
+      CodeGenFunction::ComplexPairTy PrivVal = CGF.EmitLoadOfComplex(LVal, Loc);
       CGF.EmitStoreOfComplex(PrivVal, LastLVal, /*isInit=*/false);
       break;
     }
@@ -11529,7 +11675,100 @@ void CGOpenMPRuntime::checkAndEmitLastprivateConditional(CodeGenFunction &CGF,
     RegionCodeGenTy ThenRCG(CodeGen);
     ThenRCG(CGF);
   } else {
-    emitCriticalRegion(CGF, UniqueDeclName, CodeGen, FoundE->getExprLoc());
+    emitCriticalRegion(CGF, UniqueDeclName, CodeGen, Loc);
+  }
+}
+
+void CGOpenMPRuntime::checkAndEmitLastprivateConditional(CodeGenFunction &CGF,
+                                                         const Expr *LHS) {
+  if (CGF.getLangOpts().OpenMP < 50 || LastprivateConditionalStack.empty())
+    return;
+  LastprivateConditionalRefChecker Checker(LastprivateConditionalStack);
+  if (!Checker.Visit(LHS))
+    return;
+  const Expr *FoundE;
+  const Decl *FoundD;
+  StringRef UniqueDeclName;
+  LValue IVLVal;
+  llvm::Function *FoundFn;
+  std::tie(FoundE, FoundD, UniqueDeclName, IVLVal, FoundFn) =
+      Checker.getFoundData();
+  if (FoundFn != CGF.CurFn) {
+    // Special codegen for inner parallel regions.
+    // ((struct.lastprivate.conditional*)&priv_a)->Fired = 1;
+    auto It = LastprivateConditionalToTypes[FoundFn].find(FoundD);
+    assert(It != LastprivateConditionalToTypes[FoundFn].end() &&
+           "Lastprivate conditional is not found in outer region.");
+    QualType StructTy = std::get<0>(It->getSecond());
+    const FieldDecl* FiredDecl = std::get<2>(It->getSecond());
+    LValue PrivLVal = CGF.EmitLValue(FoundE);
+    Address StructAddr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+        PrivLVal.getAddress(CGF),
+        CGF.ConvertTypeForMem(CGF.getContext().getPointerType(StructTy)));
+    LValue BaseLVal =
+        CGF.MakeAddrLValue(StructAddr, StructTy, AlignmentSource::Decl);
+    LValue FiredLVal = CGF.EmitLValueForField(BaseLVal, FiredDecl);
+    CGF.EmitAtomicStore(RValue::get(llvm::ConstantInt::get(
+                            CGF.ConvertTypeForMem(FiredDecl->getType()), 1)),
+                        FiredLVal, llvm::AtomicOrdering::Unordered,
+                        /*IsVolatile=*/true, /*isInit=*/false);
+    return;
+  }
+
+  // Private address of the lastprivate conditional in the current context.
+  // priv_a
+  LValue LVal = CGF.EmitLValue(FoundE);
+  emitLastprivateConditionalUpdate(CGF, IVLVal, UniqueDeclName, LVal,
+                                   FoundE->getExprLoc());
+}
+
+void CGOpenMPRuntime::checkAndEmitSharedLastprivateConditional(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D,
+    const llvm::DenseSet<CanonicalDeclPtr<const VarDecl>> &IgnoredDecls) {
+  if (CGF.getLangOpts().OpenMP < 50 || LastprivateConditionalStack.empty())
+    return;
+  auto Range = llvm::reverse(LastprivateConditionalStack);
+  auto It = llvm::find_if(
+      Range, [](const LastprivateConditionalData &D) { return !D.Disabled; });
+  if (It == Range.end() || It->Fn != CGF.CurFn)
+    return;
+  auto LPCI = LastprivateConditionalToTypes.find(It->Fn);
+  assert(LPCI != LastprivateConditionalToTypes.end() &&
+         "Lastprivates must be registered already.");
+  SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
+  getOpenMPCaptureRegions(CaptureRegions, D.getDirectiveKind());
+  const CapturedStmt *CS = D.getCapturedStmt(CaptureRegions.back());
+  for (const auto &Pair : It->DeclToUniqueName) {
+    const auto *VD = cast<VarDecl>(Pair.first->getCanonicalDecl());
+    if (!CS->capturesVariable(VD) || IgnoredDecls.count(VD) > 0)
+      continue;
+    auto I = LPCI->getSecond().find(Pair.first);
+    assert(I != LPCI->getSecond().end() &&
+           "Lastprivate must be rehistered already.");
+    // bool Cmp = priv_a.Fired != 0;
+    LValue BaseLVal = std::get<3>(I->getSecond());
+    LValue FiredLVal =
+        CGF.EmitLValueForField(BaseLVal, std::get<2>(I->getSecond()));
+    llvm::Value *Res = CGF.EmitLoadOfScalar(FiredLVal, D.getBeginLoc());
+    llvm::Value *Cmp = CGF.Builder.CreateIsNotNull(Res);
+    llvm::BasicBlock *ThenBB = CGF.createBasicBlock("lpc.then");
+    llvm::BasicBlock *DoneBB = CGF.createBasicBlock("lpc.done");
+    // if (Cmp) {
+    CGF.Builder.CreateCondBr(Cmp, ThenBB, DoneBB);
+    CGF.EmitBlock(ThenBB);
+    Address Addr = CGF.GetAddrOfLocalVar(VD);
+    LValue LVal;
+    if (VD->getType()->isReferenceType())
+      LVal = CGF.EmitLoadOfReferenceLValue(Addr, VD->getType(),
+                                           AlignmentSource::Decl);
+    else
+      LVal = CGF.MakeAddrLValue(Addr, VD->getType().getNonReferenceType(),
+                                AlignmentSource::Decl);
+    emitLastprivateConditionalUpdate(CGF, It->IVLVal, Pair.second, LVal,
+                                     D.getBeginLoc());
+    auto AL = ApplyDebugLocation::CreateArtificial(CGF);
+    CGF.EmitBlock(DoneBB, /*IsFinal=*/true);
+    // }
   }
 }
 
@@ -11538,10 +11777,10 @@ void CGOpenMPRuntime::emitLastprivateConditionalFinalUpdate(
     SourceLocation Loc) {
   if (CGF.getLangOpts().OpenMP < 50)
     return;
-  auto It = LastprivateConditionalStack.back().DeclToUniqeName.find(VD);
-  assert(It != LastprivateConditionalStack.back().DeclToUniqeName.end() &&
+  auto It = LastprivateConditionalStack.back().DeclToUniqueName.find(VD);
+  assert(It != LastprivateConditionalStack.back().DeclToUniqueName.end() &&
          "Unknown lastprivate conditional variable.");
-  StringRef UniqueName = It->getSecond();
+  StringRef UniqueName = It->second;
   llvm::GlobalVariable *GV = CGM.getModule().getNamedGlobal(UniqueName);
   // The variable was not updated in the region - exit.
   if (!GV)

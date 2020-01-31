@@ -30,6 +30,6 @@ std::string TestBase::getLogFileName() {
   sys::path::append(DirStr, std::string("server-") +
                                 test_info->test_case_name() + "-" +
                                 test_info->name() + ".log");
-  return DirStr.str();
+  return std::string(DirStr.str());
 }
 

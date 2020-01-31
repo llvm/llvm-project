@@ -7,8 +7,8 @@ module attributes {gpu.container_module} {
     // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}) threads(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %{{.*}}, %{{.*}} = %{{.*}}, %{{.*}} = %{{.*}})
     gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %sz, %grid_y = %sz, %grid_z = %sz)
                threads(%tx, %ty, %tz) in (%block_x = %sz, %block_y = %sz, %block_z = %sz) {
-      // CHECK: gpu.return
-      gpu.return
+      // CHECK: gpu.terminator
+      gpu.terminator
     }
     return
   }
@@ -19,8 +19,8 @@ module attributes {gpu.container_module} {
     gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %blk, %grid_y = %blk, %grid_z = %blk)
                threads(%tx, %ty, %tz) in (%block_x = %thrd, %block_y = %thrd, %block_z = %thrd)
                args(%kernel_arg0 = %float, %kernel_arg1 = %data) : f32, memref<?xf32, 1> {
-      // CHECK: gpu.return
-      gpu.return
+      // CHECK: gpu.terminator
+      gpu.terminator
     }
     return
   }
@@ -34,8 +34,8 @@ module attributes {gpu.container_module} {
                args(%kernel_arg0 = %float, %kernel_arg1 = %data) : f32, memref<?xf32, 1> {
       // CHECK: "use"(%{{.*}})
       "use"(%kernel_arg0): (f32) -> ()
-      // CHECK: gpu.return
-      gpu.return
+      // CHECK: gpu.terminator
+      gpu.terminator
     }
     return
   }
@@ -54,8 +54,8 @@ module attributes {gpu.container_module} {
           "use"(%val) : (index) -> ()
         }) : () -> ()
       }) : () -> ()
-      // CHECK: gpu.return
-      gpu.return
+      // CHECK: gpu.terminator
+      gpu.terminator
     }
     return
   }
@@ -118,11 +118,11 @@ module attributes {gpu.container_module} {
   }
 
   module @gpu_funcs attributes {gpu.kernel_module} {
-    // CHECK-LABEL: gpu.func @kernel_1({{.*}}: f32) -> f32
+    // CHECK-LABEL: gpu.func @kernel_1({{.*}}: f32)
     // CHECK:       workgroup
     // CHECK:       private
     // CHECK:       attributes
-    gpu.func @kernel_1(%arg0: f32) -> f32
+    gpu.func @kernel_1(%arg0: f32)
         workgroup(%arg1: memref<42xf32, 3>)
         private(%arg2: memref<2xf32, 5>, %arg3: memref<1xf32, 5>)
         kernel

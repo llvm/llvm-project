@@ -46,7 +46,7 @@ using ast_type_traits::DynTypedNode;
 
 LLVM_ATTRIBUTE_UNUSED std::string
 nodeToString(const ast_type_traits::DynTypedNode &N) {
-  std::string S = N.getNodeKind().asStringRef();
+  std::string S = std::string(N.getNodeKind().asStringRef());
   {
     llvm::raw_string_ostream OS(S);
     OS << ": ";
@@ -231,7 +231,7 @@ public:
   }
 
   void add(const Decl *Dcl, RelSet Flags) {
-    const NamedDecl *D = llvm::dyn_cast<NamedDecl>(Dcl);
+    const NamedDecl *D = llvm::dyn_cast_or_null<NamedDecl>(Dcl);
     if (!D)
       return;
     debug(*D, Flags);

@@ -73,14 +73,14 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
   auto Names = splitQualifiedName(Query);
 
   FuzzyFindRequest Req;
-  Req.Query = Names.second;
+  Req.Query = std::string(Names.second);
 
   // FuzzyFind doesn't want leading :: qualifier
   bool IsGlobalQuery = Names.first.consume_front("::");
   // Restrict results to the scope in the query string if present (global or
   // not).
   if (IsGlobalQuery || !Names.first.empty())
-    Req.Scopes = {Names.first};
+    Req.Scopes = {std::string(Names.first)};
   else
     Req.AnyScope = true;
   if (Limit)
@@ -96,11 +96,11 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
     }
 
     SymbolKind SK = indexSymbolKindToSymbolKind(Sym.SymInfo.Kind);
-    std::string Scope = Sym.Scope;
+    std::string Scope = std::string(Sym.Scope);
     llvm::StringRef ScopeRef = Scope;
     ScopeRef.consume_back("::");
     SymbolInformation Info = {(Sym.Name + Sym.TemplateSpecializationArgs).str(),
-                              SK, *Loc, ScopeRef};
+                              SK, *Loc, std::string(ScopeRef)};
 
     SymbolQualitySignals Quality;
     Quality.merge(Sym);

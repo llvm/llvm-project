@@ -190,7 +190,7 @@ bool TestRefactoringResultConsumer::handleAllResults() {
               const PartialDiagnosticAt &Diag = Err.getDiagnostic();
               llvm::SmallString<100> DiagText;
               Diag.second.EmitToString(getDiags(), DiagText);
-              ErrorMessage = DiagText.str().str();
+              ErrorMessage = std::string(DiagText);
             });
       }
       if (!CanonicalResult && !CanonicalErrorMessage) {

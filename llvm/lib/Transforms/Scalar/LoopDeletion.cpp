@@ -214,7 +214,7 @@ PreservedAnalyses LoopDeletionPass::run(Loop &L, LoopAnalysisManager &AM,
 
   LLVM_DEBUG(dbgs() << "Analyzing Loop for deletion: ");
   LLVM_DEBUG(L.dump());
-  std::string LoopName = L.getName();
+  std::string LoopName = std::string(L.getName());
   auto Result = deleteLoopIfDead(&L, AR.DT, AR.SE, AR.LI, AR.MSSA);
   if (Result == LoopDeletionResult::Unmodified)
     return PreservedAnalyses::all();

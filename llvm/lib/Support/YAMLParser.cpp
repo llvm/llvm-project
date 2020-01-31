@@ -1642,7 +1642,7 @@ bool Scanner::scanBlockScalar(bool IsLiteral) {
   Token T;
   T.Kind = Token::TK_BlockScalar;
   T.Range = StringRef(Start, Current - Start);
-  T.Value = Str.str().str();
+  T.Value = std::string(Str);
   TokenQueue.push_back(T);
   return true;
 }
@@ -1819,11 +1819,11 @@ std::string Node::getVerbatimTag() const {
   if (!Raw.empty() && Raw != "!") {
     std::string Ret;
     if (Raw.find_last_of('!') == 0) {
-      Ret = Doc->getTagMap().find("!")->second;
+      Ret = std::string(Doc->getTagMap().find("!")->second);
       Ret += Raw.substr(1);
       return Ret;
     } else if (Raw.startswith("!!")) {
-      Ret = Doc->getTagMap().find("!!")->second;
+      Ret = std::string(Doc->getTagMap().find("!!")->second);
       Ret += Raw.substr(2);
       return Ret;
     } else {
@@ -1831,7 +1831,7 @@ std::string Node::getVerbatimTag() const {
       std::map<StringRef, StringRef>::const_iterator It =
           Doc->getTagMap().find(TagHandle);
       if (It != Doc->getTagMap().end())
-        Ret = It->second;
+        Ret = std::string(It->second);
       else {
         Token T;
         T.Kind = Token::TK_Tag;

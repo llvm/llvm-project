@@ -457,14 +457,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        .scalarize(0);
 
   auto &FPToI = getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
-    .legalFor({{S32, S32}, {S32, S64}, {S32, S16}});
+    .legalFor({{S32, S32}, {S32, S64}, {S32, S16}})
+    .customFor({{S64, S64}});
   if (ST.has16BitInsts())
     FPToI.legalFor({{S16, S16}});
   else
     FPToI.minScalar(1, S32);
 
   FPToI.minScalar(0, S32)
-       .scalarize(0);
+       .scalarize(0)
+       .lower();
 
   getActionDefinitionsBuilder(G_INTRINSIC_ROUND)
     .scalarize(0)
@@ -526,8 +528,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // FIXME: fexp, flog2, flog10 needs to be custom lowered.
   getActionDefinitionsBuilder({G_FPOW, G_FEXP, G_FEXP2,
-                               G_FLOG, G_FLOG2, G_FLOG10})
+                               G_FLOG2})
     .legalFor({S32})
+    .scalarize(0);
+
+  getActionDefinitionsBuilder({G_FLOG, G_FLOG10})
+    .customFor({S32})
+    .clampScalar(0, S32, S32)
     .scalarize(0);
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
@@ -1156,6 +1163,10 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeITOFP(MI, MRI, B, true);
   case TargetOpcode::G_UITOFP:
     return legalizeITOFP(MI, MRI, B, false);
+  case TargetOpcode::G_FPTOSI:
+    return legalizeFPTOI(MI, MRI, B, true);
+  case TargetOpcode::G_FPTOUI:
+    return legalizeFPTOI(MI, MRI, B, false);
   case TargetOpcode::G_FMINNUM:
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINNUM_IEEE:
@@ -1180,6 +1191,10 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeFDIV(MI, MRI, B);
   case TargetOpcode::G_ATOMIC_CMPXCHG:
     return legalizeAtomicCmpXChg(MI, MRI, B);
+  case TargetOpcode::G_FLOG:
+    return legalizeFlog(MI, B, 1.0f / numbers::log2ef);
+  case TargetOpcode::G_FLOG10:
+    return legalizeFlog(MI, B, numbers::ln2f / numbers::ln10f);
   default:
     return false;
   }
@@ -1513,6 +1528,42 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
   return true;
 }
 
+// TODO: Copied from DAG implementation. Verify logic and document how this
+// actually works.
+bool AMDGPULegalizerInfo::legalizeFPTOI(
+  MachineInstr &MI, MachineRegisterInfo &MRI,
+  MachineIRBuilder &B, bool Signed) const {
+  B.setInstr(MI);
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+
+  const LLT S64 = LLT::scalar(64);
+  const LLT S32 = LLT::scalar(32);
+
+  assert(MRI.getType(Src) == S64 && MRI.getType(Dst) == S64);
+
+  unsigned Flags = MI.getFlags();
+
+  auto Trunc = B.buildIntrinsicTrunc(S64, Src, Flags);
+  auto K0 = B.buildFConstant(S64, BitsToDouble(UINT64_C(0x3df0000000000000)));
+  auto K1 = B.buildFConstant(S64, BitsToDouble(UINT64_C(0xc1f0000000000000)));
+
+  auto Mul = B.buildFMul(S64, Trunc, K0, Flags);
+  auto FloorMul = B.buildFFloor(S64, Mul, Flags);
+  auto Fma = B.buildFMA(S64, FloorMul, K1, Trunc, Flags);
+
+  auto Hi = Signed ?
+    B.buildFPTOSI(S32, FloorMul) :
+    B.buildFPTOUI(S32, FloorMul);
+  auto Lo = B.buildFPTOUI(S32, Fma);
+
+  B.buildMerge(Dst, { Lo.getReg(0), Hi.getReg(0) });
+  MI.eraseFromParent();
+
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(
   MachineInstr &MI, MachineRegisterInfo &MRI,
   MachineIRBuilder &B) const {
@@ -1734,6 +1785,12 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
 
     // TODO: We could emit code to handle the initialization somewhere.
     if (!AMDGPUTargetLowering::hasDefinedInitializer(GV)) {
+      const SITargetLowering *TLI = ST.getTargetLowering();
+      if (!TLI->shouldUseLDSConstAddress(GV)) {
+        MI.getOperand(1).setTargetFlags(SIInstrInfo::MO_ABS32_LO);
+        return true; // Leave in place;
+      }
+
       B.buildConstant(DstReg, MFI->allocateLDSGlobal(B.getDataLayout(), *GV));
       MI.eraseFromParent();
       return true;
@@ -1840,6 +1897,22 @@ bool AMDGPULegalizerInfo::legalizeAtomicCmpXChg(
     .addUse(PackedVal)
     .setMemRefs(MI.memoperands());
 
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeFlog(
+  MachineInstr &MI, MachineIRBuilder &B, double Log2BaseInverted) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT Ty = B.getMRI()->getType(Dst);
+  unsigned Flags = MI.getFlags();
+  B.setInstr(MI);
+
+  auto Log2Operand = B.buildFLog2(Ty, Src, Flags);
+  auto Log2BaseInvertedOperand = B.buildFConstant(Ty, Log2BaseInverted);
+
+  B.buildFMul(Dst, Log2Operand, Log2BaseInvertedOperand, Flags);
   MI.eraseFromParent();
   return true;
 }
@@ -2692,6 +2765,9 @@ static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
   case Intrinsic::amdgcn_raw_buffer_atomic_dec:
   case Intrinsic::amdgcn_struct_buffer_atomic_dec:
     return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_DEC;
+  case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
+  case Intrinsic::amdgcn_struct_buffer_atomic_cmpswap:
+    return AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP;
   default:
     llvm_unreachable("unhandled atomic opcode");
   }
@@ -2723,7 +2799,7 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   const bool HasVIndex = MI.getNumOperands() == NumVIndexOps;
   Register VIndex;
   if (HasVIndex) {
-    VIndex = MI.getOperand(4).getReg();
+    VIndex = MI.getOperand(4 + OpOffset).getReg();
     ++OpOffset;
   }
 
@@ -2762,10 +2838,72 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   return true;
 }
 
-// FIMXE: Needs observer like custom
+bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
+    MachineInstr &MI, MachineIRBuilder &B,
+    GISelChangeObserver &Observer,
+    const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) const {
+  // We are only processing the operands of d16 image operations on subtargets
+  // that use the unpacked register layout.
+  if (!ST.hasUnpackedD16VMem())
+    return true;
+
+  const AMDGPU::MIMGBaseOpcodeInfo *BaseOpcode =
+    AMDGPU::getMIMGBaseOpcodeInfo(ImageDimIntr->BaseOpcode);
+
+  if (BaseOpcode->Atomic) // No d16 atomics
+    return true;
+
+  MachineRegisterInfo *MRI = B.getMRI();
+  const LLT S32 = LLT::scalar(32);
+  const LLT S16 = LLT::scalar(16);
+
+  if (BaseOpcode->Store) {
+    Register VData = MI.getOperand(1).getReg();
+    LLT Ty = MRI->getType(VData);
+    if (!Ty.isVector() || Ty.getElementType() != S16)
+      return true;
+
+    B.setInstr(MI);
+
+    Observer.changingInstr(MI);
+    MI.getOperand(1).setReg(handleD16VData(B, *MRI, VData));
+    Observer.changedInstr(MI);
+    return true;
+  }
+
+  // Must be an image load.
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT Ty = MRI->getType(DstReg);
+  if (!Ty.isVector() || Ty.getElementType() != S16)
+    return true;
+
+  B.setInsertPt(*MI.getParent(), ++MI.getIterator());
+
+  LLT WidenedTy = Ty.changeElementType(S32);
+  Register WideDstReg = MRI->createGenericVirtualRegister(WidenedTy);
+
+  Observer.changingInstr(MI);
+  MI.getOperand(0).setReg(WideDstReg);
+  Observer.changedInstr(MI);
+
+  // FIXME: Just vector trunc should be sufficent, but legalization currently
+  // broken.
+  auto Unmerge = B.buildUnmerge(S32, WideDstReg);
+
+  int NumOps = Unmerge->getNumOperands() - 1;
+  SmallVector<Register, 4> RemergeParts(NumOps);
+  for (int I = 0; I != NumOps; ++I)
+    RemergeParts[I] = B.buildTrunc(S16, Unmerge.getReg(I)).getReg(0);
+
+  B.buildBuildVector(DstReg, RemergeParts);
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
-                                            MachineRegisterInfo &MRI,
-                                            MachineIRBuilder &B) const {
+                                            MachineIRBuilder &B,
+                                            GISelChangeObserver &Observer) const {
+  MachineRegisterInfo &MRI = *B.getMRI();
+
   // Replace the use G_BRCOND with the exec manipulate and branch pseudos.
   auto IntrID = MI.getIntrinsicID();
   switch (IntrID) {
@@ -2926,8 +3064,12 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
     return legalizeAtomicIncDec(MI, B, true);
   case Intrinsic::amdgcn_atomic_dec:
     return legalizeAtomicIncDec(MI, B, false);
-  default:
+  default: {
+    if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
+            AMDGPU::getImageDimIntrinsicInfo(IntrID))
+      return legalizeImageIntrinsic(MI, B, Observer, ImageDimIntr);
     return true;
+  }
   }
 
   return true;

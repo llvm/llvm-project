@@ -49,7 +49,7 @@ std::unique_ptr<RefSlab> buildRefSlab(const Annotations &Code,
                                       llvm::StringRef Path) {
   RefSlab::Builder Builder;
   TestTU TU;
-  TU.HeaderCode = Code.code();
+  TU.HeaderCode = std::string(Code.code());
   auto Symbols = TU.headerSymbols();
   const auto &SymbolID = findSymbol(Symbols, SymbolName).ID;
   std::string PathURI = URI::create(Path).toString();
@@ -383,12 +383,12 @@ TEST(RenameTest, WithinFileRename) {
 
       // Typedef.
       R"cpp(
-        namespace std {
+        namespace ns {
         class basic_string {};
         typedef basic_string [[s^tring]];
-        } // namespace std
+        } // namespace ns
 
-        std::[[s^tring]] foo();
+        ns::[[s^tring]] foo();
       )cpp",
 
       // Variable.
@@ -540,6 +540,13 @@ TEST(RenameTest, Renameable) {
          void fo^o() {})cpp",
        "used outside main file", !HeaderFile, nullptr /*no index*/},
 
+      {R"cpp(// disallow rename on blacklisted symbols (e.g. std symbols)
+         namespace std {
+         class str^ing {};
+         }
+       )cpp",
+       "not a supported kind", !HeaderFile, Index},
+
       {R"cpp(
          void foo(int);
          void foo(char);
@@ -666,7 +673,7 @@ TEST(CrossFileRenameTests, DirtyBuffer) {
   MainCode = Annotations("void [[Bar]]() { [[B^ar]](); }");
   TU = TestTU::withCode(MainCode.code());
   // Set a file "bar.cc" on disk.
-  TU.AdditionalFiles["bar.cc"] = BarCode.code();
+  TU.AdditionalFiles["bar.cc"] = std::string(BarCode.code());
   AST = TU.build();
   Results = rename({MainCode.point(), NewName, AST, MainFilePath, Index.get(),
                     /*CrossFile=*/true, GetDirtyBuffer});
@@ -713,7 +720,7 @@ TEST(CrossFileRenameTests, DeduplicateRefsFromIndex) {
   auto BarPath = testPath("bar.cc");
   auto TU = TestTU::withCode(MainCode.code());
   // Set a file "bar.cc" on disk.
-  TU.AdditionalFiles["bar.cc"] = BarCode.code();
+  TU.AdditionalFiles["bar.cc"] = std::string(BarCode.code());
   auto AST = TU.build();
   std::string BarPathURI = URI::create(BarPath).toString();
   Ref XRefInBarCC = refWithRange(BarCode.range(), BarPathURI);
@@ -895,8 +902,8 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
     std::string FooCCPath = testPath("foo.cc");
 
     MockFSProvider FS;
-    FS.Files[FooHPath] = FooH.code();
-    FS.Files[FooCCPath] = FooCC.code();
+    FS.Files[FooHPath] = std::string(FooH.code());
+    FS.Files[FooCCPath] = std::string(FooCC.code());
 
     auto ServerOpts = ClangdServer::optsForTest();
     ServerOpts.CrossFileRename = true;

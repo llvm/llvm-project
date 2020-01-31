@@ -42,9 +42,9 @@ class APFloat;
 /// create a new virtual register in the correct class.
 ///
 /// \return The virtual register constrained to the right register class.
-unsigned constrainRegToClass(MachineRegisterInfo &MRI,
+Register constrainRegToClass(MachineRegisterInfo &MRI,
                              const TargetInstrInfo &TII,
-                             const RegisterBankInfo &RBI, unsigned Reg,
+                             const RegisterBankInfo &RBI, Register Reg,
                              const TargetRegisterClass &RegClass);
 
 /// Constrain the Register operand OpIdx, so that it is now constrained to the
@@ -54,7 +54,7 @@ unsigned constrainRegToClass(MachineRegisterInfo &MRI,
 /// definition. The debug location of \p InsertPt is used for the new copy.
 ///
 /// \return The virtual register constrained to the right register class.
-unsigned constrainOperandRegClass(const MachineFunction &MF,
+Register constrainOperandRegClass(const MachineFunction &MF,
                                   const TargetRegisterInfo &TRI,
                                   MachineRegisterInfo &MRI,
                                   const TargetInstrInfo &TII,
@@ -72,7 +72,7 @@ unsigned constrainOperandRegClass(const MachineFunction &MF,
 /// InsertPt is used for the new copy.
 ///
 /// \return The virtual register constrained to the right register class.
-unsigned constrainOperandRegClass(const MachineFunction &MF,
+Register constrainOperandRegClass(const MachineFunction &MF,
                                   const TargetRegisterInfo &TRI,
                                   MachineRegisterInfo &MRI,
                                   const TargetInstrInfo &TII,
@@ -110,13 +110,13 @@ void reportGISelFailure(MachineFunction &MF, const TargetPassConfig &TPC,
 
 /// If \p VReg is defined by a G_CONSTANT fits in int64_t
 /// returns it.
-Optional<int64_t> getConstantVRegVal(unsigned VReg,
+Optional<int64_t> getConstantVRegVal(Register VReg,
                                      const MachineRegisterInfo &MRI);
 /// Simple struct used to hold a constant integer value and a virtual
 /// register.
 struct ValueAndVReg {
   int64_t Value;
-  unsigned VReg;
+  Register VReg;
 };
 /// If \p VReg is defined by a statically evaluable chain of
 /// instructions rooted on a G_F/CONSTANT (\p LookThroughInstrs == true)
@@ -126,10 +126,10 @@ struct ValueAndVReg {
 /// getConstantVRegVal.
 /// When \p HandleFConstants == false the function bails on G_FCONSTANTs.
 Optional<ValueAndVReg>
-getConstantVRegValWithLookThrough(unsigned VReg, const MachineRegisterInfo &MRI,
+getConstantVRegValWithLookThrough(Register VReg, const MachineRegisterInfo &MRI,
                                   bool LookThroughInstrs = true,
                                   bool HandleFConstants = true);
-const ConstantFP* getConstantFPVRegVal(unsigned VReg,
+const ConstantFP* getConstantFPVRegVal(Register VReg,
                                        const MachineRegisterInfo &MRI);
 
 /// See if Reg is defined by an single def instruction that is

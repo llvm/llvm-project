@@ -689,10 +689,10 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
           MC->mangleName(ND, Out);
 
         if (!Buffer.empty() && Buffer.front() == '\01')
-          return Buffer.substr(1);
-        return Buffer.str();
+          return std::string(Buffer.substr(1));
+        return std::string(Buffer.str());
       } else
-        return ND->getIdentifier()->getName();
+        return std::string(ND->getIdentifier()->getName());
     }
     return "";
   }
@@ -711,7 +711,7 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
       Out << ComputeName(IK, DCBlock);
     else if (auto *DCDecl = dyn_cast<Decl>(DC))
       Out << ComputeName(IK, DCDecl) << "_block_invoke";
-    return Out.str();
+    return std::string(Out.str());
   }
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(CurrentDecl)) {
     if (IK != PrettyFunction && IK != PrettyFunctionNoVirtual &&
@@ -856,7 +856,7 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
 
     Out << Proto;
 
-    return Name.str().str();
+    return std::string(Name);
   }
   if (const CapturedDecl *CD = dyn_cast<CapturedDecl>(CurrentDecl)) {
     for (const DeclContext *DC = CD->getParent(); DC; DC = DC->getParent())
@@ -887,7 +887,7 @@ std::string PredefinedExpr::ComputeName(IdentKind IK, const Decl *CurrentDecl) {
     MD->getSelector().print(Out);
     Out <<  ']';
 
-    return Name.str().str();
+    return std::string(Name);
   }
   if (isa<TranslationUnitDecl>(CurrentDecl) && IK == PrettyFunction) {
     // __PRETTY_FUNCTION__ -> "top level", the others produce an empty string.
@@ -962,7 +962,7 @@ std::string FixedPointLiteral::getValueAsString(unsigned Radix) const {
   SmallString<64> S;
   FixedPointValueToString(
       S, llvm::APSInt::getUnsigned(getValue().getZExtValue()), Scale);
-  return S.str();
+  return std::string(S.str());
 }
 
 FloatingLiteral::FloatingLiteral(const ASTContext &C, const llvm::APFloat &V,

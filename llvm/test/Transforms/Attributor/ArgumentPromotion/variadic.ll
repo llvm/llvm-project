@@ -29,7 +29,7 @@ entry:
 ; Function Attrs: nounwind uwtable
 define internal void @callee_t0f(i8* nocapture readnone %tp13, i8* nocapture readnone %tp14, i8* nocapture readnone %tp15, i8* nocapture readnone %tp16, i8* nocapture readnone %tp17, ...) {
 ; CHECK-LABEL: define {{[^@]+}}@callee_t0f
-; CHECK-SAME: (i8* nocapture nofree nonnull readnone [[TP13:%.*]], i8* nocapture nofree nonnull readnone [[TP14:%.*]], i8* nocapture nofree nonnull readnone [[TP15:%.*]], i8* nocapture nofree nonnull readnone [[TP16:%.*]], i8* nocapture nofree nonnull readnone [[TP17:%.*]], ...)
+; CHECK-SAME: (i8* noalias nocapture nofree nonnull readnone [[TP13:%.*]], i8* noalias nocapture nofree nonnull readnone [[TP14:%.*]], i8* noalias nocapture nofree nonnull readnone [[TP15:%.*]], i8* noalias nocapture nofree nonnull readnone [[TP16:%.*]], i8* noalias nocapture nofree nonnull readnone [[TP17:%.*]], ...)
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
 ;

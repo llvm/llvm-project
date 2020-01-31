@@ -1062,6 +1062,18 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   if (auto *VT = dyn_cast<VectorType>(U.getType()))
     VectorWidth = VT->getNumElements();
 
+  // We might need to splat the base pointer into a vector if the offsets
+  // are vectors.
+  if (VectorWidth && !PtrTy.isVector()) {
+    BaseReg =
+        MIRBuilder.buildSplatVector(LLT::vector(VectorWidth, PtrTy), BaseReg)
+            .getReg(0);
+    PtrIRTy = VectorType::get(PtrIRTy, VectorWidth);
+    PtrTy = getLLTForType(*PtrIRTy, *DL);
+    OffsetIRTy = DL->getIntPtrType(PtrIRTy);
+    OffsetTy = getLLTForType(*OffsetIRTy, *DL);
+  }
+
   int64_t Offset = 0;
   for (gep_type_iterator GTI = gep_type_begin(&U), E = gep_type_end(&U);
        GTI != E; ++GTI) {
@@ -1105,7 +1117,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
         auto ElementSizeMIB = MIRBuilder.buildConstant(
             getLLTForType(*OffsetIRTy, *DL), ElementSize);
         GepOffsetReg =
-            MIRBuilder.buildMul(OffsetTy, ElementSizeMIB, IdxReg).getReg(0);
+            MIRBuilder.buildMul(OffsetTy, IdxReg, ElementSizeMIB).getReg(0);
       } else
         GepOffsetReg = IdxReg;
 
@@ -1531,6 +1543,13 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     MIRBuilder
         .buildInstr(TargetOpcode::G_READ_REGISTER, {getOrCreateVReg(CI)}, {})
         .addMetadata(cast<MDNode>(cast<MetadataAsValue>(Arg)->getMetadata()));
+    return true;
+  }
+  case Intrinsic::write_register: {
+    Value *Arg = CI.getArgOperand(0);
+    MIRBuilder.buildInstr(TargetOpcode::G_WRITE_REGISTER)
+      .addMetadata(cast<MDNode>(cast<MetadataAsValue>(Arg)->getMetadata()))
+      .addUse(getOrCreateVReg(*CI.getArgOperand(1)));
     return true;
   }
   }

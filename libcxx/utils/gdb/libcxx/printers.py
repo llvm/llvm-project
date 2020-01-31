@@ -69,6 +69,8 @@ def _remove_generics(typename):
 _common_substitutions = [
     ("std::basic_string<char, std::char_traits<char>, std::allocator<char> >",
      "std::string"),
+    ("std::basic_string_view<char, std::char_traits<char> >",
+     "std::string_view"),
 ]
 
 
@@ -241,6 +243,32 @@ class StdStringPrinter(object):
 
     def display_hint(self):
         return "string"
+
+
+class StdStringViewPrinter(object):
+    """Print a std::string_view."""
+
+    def __init__(self, val):
+      self.val = val
+
+    def to_string(self):  # pylint: disable=g-bad-name
+      """GDB calls this to compute the pretty-printed form."""
+
+      ptr = self.val["__data"]
+      length = self.val["__size"]
+      print_length = length
+      # We print more than just a simple string (i.e. we also print
+      # "of length %d").  Thus we can't use the "string" display_hint,
+      # and thus we have to handle "print elements" ourselves.
+      # For reference sake, gdb ensures limit == None or limit > 0.
+      limit = gdb.parameter("print elements")
+      if limit is not None:
+        print_length = min(print_length, limit)
+      # FIXME: Passing ISO-8859-1 here isn't always correct.
+      string = ptr.string("ISO-8859-1", "ignore", print_length)
+      if length > print_length:
+        string += "..."
+      return "std::string_view of length %d: \"%s\"" % (length, string)
 
 
 class StdUniquePtrPrinter(object):
@@ -904,6 +932,7 @@ class LibcxxPrettyPrinter(object):
         self.lookup = {
             "basic_string": StdStringPrinter,
             "string": StdStringPrinter,
+            "string_view": StdStringViewPrinter,
             "tuple": StdTuplePrinter,
             "unique_ptr": StdUniquePtrPrinter,
             "shared_ptr": StdSharedPointerPrinter,

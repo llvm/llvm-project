@@ -90,8 +90,9 @@ std::string annotate(llvm::StringRef Input,
     assert(NextChar <= StartOffset);
 
     Result += Input.substr(NextChar, StartOffset - NextChar);
-    Result += llvm::formatv("${0}[[{1}]]", T.Kind,
-                            Input.substr(StartOffset, EndOffset - StartOffset));
+    Result += std::string(
+        llvm::formatv("${0}[[{1}]]", T.Kind,
+                      Input.substr(StartOffset, EndOffset - StartOffset)));
     NextChar = EndOffset;
   }
   Result += Input.substr(NextChar);
@@ -104,7 +105,7 @@ void checkHighlightings(llvm::StringRef Code,
                             AdditionalFiles = {}) {
   Annotations Test(Code);
   TestTU TU;
-  TU.Code = Test.code();
+  TU.Code = std::string(Test.code());
 
   // FIXME: Auto-completion in a template requires disabling delayed template
   // parsing.
@@ -112,7 +113,7 @@ void checkHighlightings(llvm::StringRef Code,
   TU.ExtraArgs.push_back("-std=c++2a");
 
   for (auto File : AdditionalFiles)
-    TU.AdditionalFiles.insert({File.first, File.second});
+    TU.AdditionalFiles.insert({File.first, std::string(File.second)});
   auto AST = TU.build();
 
   EXPECT_EQ(Code, annotate(Test.code(), getSemanticHighlightings(AST)));

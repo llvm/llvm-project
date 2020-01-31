@@ -165,12 +165,6 @@ public:
                const FileSystemProvider &FSProvider, const Options &Opts,
                Callbacks *Callbacks = nullptr);
 
-  // FIXME: remove this compatibility alias.
-  ClangdServer(const GlobalCompilationDatabase &CDB,
-               const FileSystemProvider &FSProvider, Callbacks &Callbacks,
-               const Options &Opts)
-      : ClangdServer(CDB, FSProvider, Opts, &Callbacks) {}
-
   /// Add a \p File to the list of tracked C++ files or update the contents if
   /// \p File is already tracked. Also schedules parsing of the AST for it on a
   /// separate thread. When the parsing is complete, DiagConsumer passed in
@@ -358,9 +352,6 @@ private:
   // ClangdServer.
   TUScheduler WorkScheduler;
 };
-
-// FIXME: Remove this compatibility alias.
-using DiagnosticsConsumer = ClangdServer::Callbacks;
 
 } // namespace clangd
 } // namespace clang

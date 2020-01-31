@@ -1083,7 +1083,7 @@ bool DevirtModule::trySingleImplDevirt(
     AddCalls(SlotInfo, TheFnVI);
 
   Res->TheKind = WholeProgramDevirtResolution::SingleImpl;
-  Res->SingleImplName = TheFn->getName();
+  Res->SingleImplName = std::string(TheFn->getName());
 
   return true;
 }
@@ -1132,10 +1132,10 @@ bool DevirtIndex::trySingleImplDevirt(MutableArrayRef<ValueInfo> TargetsForSlot,
           TheFn.name(), ExportSummary.getModuleHash(S->modulePath()));
     else {
       LocalWPDTargetsMap[TheFn].push_back(SlotSummary);
-      Res->SingleImplName = TheFn.name();
+      Res->SingleImplName = std::string(TheFn.name());
     }
   } else
-    Res->SingleImplName = TheFn.name();
+    Res->SingleImplName = std::string(TheFn.name());
 
   // Name will be empty if this thin link driven off of serialized combined
   // index (e.g. llvm-lto). However, WPD is not supported/invoked for the
@@ -2003,7 +2003,7 @@ bool DevirtModule::run() {
       if (RemarksEnabled)
         for (const auto &T : TargetsForSlot)
           if (T.WasDevirt)
-            DevirtTargets[T.Fn->getName()] = T.Fn;
+            DevirtTargets[std::string(T.Fn->getName())] = T.Fn;
     }
 
     // CFI-specific: if we are exporting and any llvm.type.checked.load

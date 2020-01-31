@@ -1078,6 +1078,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FRINT,      RoundedTy,  Legal);
       setOperationAction(ISD::FNEARBYINT,        RoundedTy,  Legal);
       setOperationAction(ISD::STRICT_FNEARBYINT, RoundedTy,  Legal);
+
+      setOperationAction(ISD::FROUND,            RoundedTy,  Custom);
     }
 
     setOperationAction(ISD::SMAX,               MVT::v16i8, Legal);
@@ -1170,6 +1172,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FRINT,      VT, Legal);
       setOperationAction(ISD::FNEARBYINT,        VT, Legal);
       setOperationAction(ISD::STRICT_FNEARBYINT, VT, Legal);
+
+      setOperationAction(ISD::FROUND,            VT, Custom);
+
       setOperationAction(ISD::FNEG,              VT, Custom);
       setOperationAction(ISD::FABS,              VT, Custom);
       setOperationAction(ISD::FCOPYSIGN,         VT, Custom);
@@ -1534,6 +1539,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FRINT,      VT, Legal);
       setOperationAction(ISD::FNEARBYINT,        VT, Legal);
       setOperationAction(ISD::STRICT_FNEARBYINT, VT, Legal);
+
+      setOperationAction(ISD::FROUND,            VT, Custom);
 
       setOperationAction(ISD::SELECT,           VT, Custom);
     }
@@ -20450,6 +20457,30 @@ SDValue X86TargetLowering::lowerFaddFsub(SDValue Op, SelectionDAG &DAG) const {
   return lowerAddSubToHorizontalOp(Op, DAG, Subtarget);
 }
 
+/// ISD::FROUND is defined to round to nearest with ties rounding away from 0.
+/// This mode isn't supported in hardware on X86. But as long as we aren't
+/// compiling with trapping math, we can emulate this with
+/// floor(X + copysign(nextafter(0.5, 0.0), X)).
+static SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) {
+  SDValue N0 = Op.getOperand(0);
+  SDLoc dl(Op);
+  MVT VT = Op.getSimpleValueType();
+
+  // N0 += copysign(nextafter(0.5, 0.0), N0)
+  const fltSemantics &Sem = SelectionDAG::EVTToAPFloatSemantics(VT);
+  bool Ignored;
+  APFloat Point5Pred = APFloat(0.5f);
+  Point5Pred.convert(Sem, APFloat::rmNearestTiesToEven, &Ignored);
+  Point5Pred.next(/*nextDown*/true);
+
+  SDValue Adder = DAG.getNode(ISD::FCOPYSIGN, dl, VT,
+                              DAG.getConstantFP(Point5Pred, dl, VT), N0);
+  N0 = DAG.getNode(ISD::FADD, dl, VT, N0, Adder);
+
+  // Truncate the result to remove fraction.
+  return DAG.getNode(ISD::FTRUNC, dl, VT, N0);
+}
+
 /// The only differences between FABS and FNEG are the mask and the logic op.
 /// FNEG also has a folding opportunity for FNEG(FABS(x)).
 static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
@@ -25427,8 +25458,11 @@ SDValue X86TargetLowering::LowerFLT_ROUNDS_(SDValue Op,
      2 Round to +inf
      3 Round to -inf
 
-  To perform the conversion, we do:
-    (((((FPSR & 0x800) >> 11) | ((FPSR & 0x400) >> 9)) + 1) & 3)
+  To perform the conversion, we use a packed lookup table of the four 2-bit
+  values that we can index by FPSP[11:10]
+    0x2d --> (0b00,10,11,01) --> (0,2,3,1) >> FPSR[11:10]
+
+    (0x2d >> ((FPSR & 0xc00) >> 9)) & 3
   */
 
   MachineFunction &MF = DAG.getMachineFunction();
@@ -25456,27 +25490,21 @@ SDValue X86TargetLowering::LowerFLT_ROUNDS_(SDValue Op,
   SDValue CWD =
       DAG.getLoad(MVT::i16, DL, Chain, StackSlot, MachinePointerInfo());
 
-  // Transform as necessary
-  SDValue CWD1 =
+  // Mask and turn the control bits into a shift for the lookup table.
+  SDValue Shift =
     DAG.getNode(ISD::SRL, DL, MVT::i16,
                 DAG.getNode(ISD::AND, DL, MVT::i16,
-                            CWD, DAG.getConstant(0x800, DL, MVT::i16)),
-                DAG.getConstant(11, DL, MVT::i8));
-  SDValue CWD2 =
-    DAG.getNode(ISD::SRL, DL, MVT::i16,
-                DAG.getNode(ISD::AND, DL, MVT::i16,
-                            CWD, DAG.getConstant(0x400, DL, MVT::i16)),
+                            CWD, DAG.getConstant(0xc00, DL, MVT::i16)),
                 DAG.getConstant(9, DL, MVT::i8));
+  Shift = DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, Shift);
 
+  SDValue LUT = DAG.getConstant(0x2d, DL, MVT::i32);
   SDValue RetVal =
-    DAG.getNode(ISD::AND, DL, MVT::i16,
-                DAG.getNode(ISD::ADD, DL, MVT::i16,
-                            DAG.getNode(ISD::OR, DL, MVT::i16, CWD1, CWD2),
-                            DAG.getConstant(1, DL, MVT::i16)),
-                DAG.getConstant(3, DL, MVT::i16));
+    DAG.getNode(ISD::AND, DL, MVT::i32,
+                DAG.getNode(ISD::SRL, DL, MVT::i32, LUT, Shift),
+                DAG.getConstant(3, DL, MVT::i32));
 
-  return DAG.getNode((VT.getSizeInBits() < 16 ?
-                      ISD::TRUNCATE : ISD::ZERO_EXTEND), DL, VT, RetVal);
+  return DAG.getZExtOrTrunc(RetVal, DL, VT);
 }
 
 // Split an unary integer op into 2 half sized ops.
@@ -28626,6 +28654,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STORE:              return LowerStore(Op, Subtarget, DAG);
   case ISD::FADD:
   case ISD::FSUB:               return lowerFaddFsub(Op, DAG);
+  case ISD::FROUND:             return LowerFROUND(Op, DAG);
   case ISD::FABS:
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);

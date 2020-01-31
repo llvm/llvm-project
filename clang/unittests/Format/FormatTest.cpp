@@ -13031,6 +13031,12 @@ TEST_F(FormatTest, ParsesConfigurationWithLanguages) {
                                "IndentWidth: 34",
                                &Style),
             ParseError::Unsuitable);
+  FormatStyle BinPackedTCS = {};
+  BinPackedTCS.Language = FormatStyle::LK_JavaScript;
+  EXPECT_EQ(parseConfiguration("BinPackArguments: true\n"
+                               "InsertTrailingCommas: Wrapped",
+                               &BinPackedTCS),
+            ParseError::BinPackTrailingCommaConflict);
   EXPECT_EQ(12u, Style.IndentWidth);
   CHECK_PARSE("IndentWidth: 56", IndentWidth, 56u);
   EXPECT_EQ(FormatStyle::LK_Cpp, Style.Language);

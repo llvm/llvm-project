@@ -62,7 +62,7 @@ Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCode(const ObjectFile &Obj,
                               object::SectionedAddress ModuleOffset) {
   StringRef ModuleName = Obj.getFileName();
-  auto I = Modules.find(ModuleName);
+  auto I = Modules.find(std::string(ModuleName));
   if (I != Modules.end())
     return symbolizeCodeCommon(I->second.get(), ModuleOffset);
 
@@ -184,7 +184,7 @@ std::string getDarwinDWARFResourceForPath(
   }
   sys::path::append(ResourceName, "Contents", "Resources", "DWARF");
   sys::path::append(ResourceName, Basename);
-  return ResourceName.str();
+  return std::string(ResourceName.str());
 }
 
 bool checkFileCRC(StringRef Path, uint32_t CRCHash) {
@@ -205,14 +205,14 @@ bool findDebugBinary(const std::string &OrigPath,
   // Try relative/path/to/original_binary/debuglink_name
   llvm::sys::path::append(DebugPath, DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = DebugPath.str();
+    Result = std::string(DebugPath.str());
     return true;
   }
   // Try relative/path/to/original_binary/.debug/debuglink_name
   DebugPath = OrigDir;
   llvm::sys::path::append(DebugPath, ".debug", DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = DebugPath.str();
+    Result = std::string(DebugPath.str());
     return true;
   }
   // Make the path absolute so that lookups will go to
@@ -234,7 +234,7 @@ bool findDebugBinary(const std::string &OrigPath,
   llvm::sys::path::append(DebugPath, llvm::sys::path::relative_path(OrigDir),
                           DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
-    Result = DebugPath.str();
+    Result = std::string(DebugPath.str());
     return true;
   }
   return false;
@@ -342,7 +342,7 @@ bool findDebugBinary(const std::vector<std::string> &DebugFileDirectory,
 #endif
     );
     if (llvm::sys::fs::exists(Path)) {
-      Result = Path.str();
+      Result = std::string(Path.str());
       return true;
     }
   } else {
@@ -350,7 +350,7 @@ bool findDebugBinary(const std::vector<std::string> &DebugFileDirectory,
       // Try <debug-file-directory>/.build-id/../...
       SmallString<128> Path = getDebugPath(Directory);
       if (llvm::sys::fs::exists(Path)) {
-        Result = Path.str();
+        Result = std::string(Path.str());
         return true;
       }
     }
@@ -366,9 +366,11 @@ ObjectFile *LLVMSymbolizer::lookUpDsymFile(const std::string &ExePath,
   // resource directory.
   std::vector<std::string> DsymPaths;
   StringRef Filename = sys::path::filename(ExePath);
-  DsymPaths.push_back(getDarwinDWARFResourceForPath(ExePath, Filename));
+  DsymPaths.push_back(
+      getDarwinDWARFResourceForPath(ExePath, std::string(Filename)));
   for (const auto &Path : Opts.DsymHints) {
-    DsymPaths.push_back(getDarwinDWARFResourceForPath(Path, Filename));
+    DsymPaths.push_back(
+        getDarwinDWARFResourceForPath(Path, std::string(Filename)));
   }
   for (const auto &Path : DsymPaths) {
     auto DbgObjOrErr = getOrCreateObject(Path, ArchName);
@@ -509,8 +511,8 @@ LLVMSymbolizer::createModuleInfo(const ObjectFile *Obj,
   std::unique_ptr<SymbolizableModule> SymMod;
   if (InfoOrErr)
     SymMod = std::move(*InfoOrErr);
-  auto InsertResult =
-      Modules.insert(std::make_pair(ModuleName, std::move(SymMod)));
+  auto InsertResult = Modules.insert(
+      std::make_pair(std::string(ModuleName), std::move(SymMod)));
   assert(InsertResult.second);
   if (std::error_code EC = InfoOrErr.getError())
     return errorCodeToError(EC);

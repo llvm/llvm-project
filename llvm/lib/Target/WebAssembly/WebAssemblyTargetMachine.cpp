@@ -210,8 +210,8 @@ private:
   FeatureBitset coalesceFeatures(const Module &M) {
     FeatureBitset Features =
         WasmTM
-            ->getSubtargetImpl(WasmTM->getTargetCPU(),
-                               WasmTM->getTargetFeatureString())
+            ->getSubtargetImpl(std::string(WasmTM->getTargetCPU()),
+                               std::string(WasmTM->getTargetFeatureString()))
             ->getFeatureBits();
     for (auto &F : M)
       Features |= WasmTM->getSubtargetImpl(F)->getFeatureBits();

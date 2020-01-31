@@ -84,7 +84,7 @@ InstructionBenchmark BenchmarkRunner::runConfiguration(
     const SnippetRepetitor &Repetitor, bool DumpObjectToDisk) const {
   InstructionBenchmark InstrBenchmark;
   InstrBenchmark.Mode = Mode;
-  InstrBenchmark.CpuName = State.getTargetMachine().getTargetCPU();
+  InstrBenchmark.CpuName = std::string(State.getTargetMachine().getTargetCPU());
   InstrBenchmark.LLVMTriple =
       State.getTargetMachine().getTargetTriple().normalize();
   InstrBenchmark.NumRepetitions = NumRepetitions;
@@ -165,7 +165,7 @@ BenchmarkRunner::writeObjectFile(const BenchmarkCode &BC,
   raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
   assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
                    BC.LiveIns, BC.Key.RegisterInitialValues, FillFunction, OFS);
-  return ResultPath.str();
+  return std::string(ResultPath.str());
 }
 
 BenchmarkRunner::FunctionExecutor::~FunctionExecutor() {}

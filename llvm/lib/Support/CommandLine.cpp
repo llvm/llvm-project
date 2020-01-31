@@ -606,7 +606,7 @@ static Option *LookupNearestOption(StringRef Arg,
         Best = O;
         BestDistance = Distance;
         if (RHS.empty() || !PermitValue)
-          NearestString = Name;
+          NearestString = std::string(Name);
         else
           NearestString = (Twine(Name) + "=" + RHS).str();
       }
@@ -1324,7 +1324,7 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   argc = static_cast<int>(newArgv.size());
 
   // Copy the program name into ProgName, making sure not to overflow it.
-  ProgramName = sys::path::filename(StringRef(argv[0]));
+  ProgramName = std::string(sys::path::filename(StringRef(argv[0])));
 
   ProgramOverview = Overview;
   bool IgnoreErrors = Errs;
@@ -2482,7 +2482,7 @@ public:
     OS << " with assertions";
 #endif
 #if LLVM_VERSION_PRINTER_SHOW_HOST_TARGET_INFO
-    std::string CPU = sys::getHostCPUName();
+    std::string CPU = std::string(sys::getHostCPUName());
     if (CPU == "generic")
       CPU = "(unknown)";
     OS << ".\n"

@@ -1865,6 +1865,77 @@ example:
     function has not changed between the function prolog and eiplog. It is
     currently x86_64-specific.
 
+Call Site Attributes
+----------------------
+
+In addition to function attributes the following call site only
+attributes are supported:
+
+``vector-function-abi-variant``
+    This attribute can be attached to a :ref:`call <i_call>` to list
+    the vector functions associated to the function. Notice that the
+    attribute cannot be attached to a :ref:`invoke <i_invoke>` or a
+    :ref:`callbr <i_callbr>` instruction. The attribute consists of a
+    comma separated list of mangled names. The order of the list does
+    not imply preference (it is logically a set). The compiler is free
+    to pick any listed vector function of its choosing.
+
+    The syntax for the mangled names is as follows:::
+
+        _ZGV<isa><mask><vlen><parameters>_<scalar_name>[(<vector_redirection>)]
+
+    When present, the attribute informs the compiler that the function
+    ``<scalar_name>`` has a corresponding vector variant that can be
+    used to perform the concurrent invocation of ``<scalar_name>`` on
+    vectors. The shape of the vector function is described by the
+    tokens between the prefix ``_ZGV`` and the ``<scalar_name>``
+    token. The standard name of the vector function is
+    ``_ZGV<isa><mask><vlen><parameters>_<scalar_name>``. When present,
+    the optional token ``(<vector_redirection>)`` informs the compiler
+    that a custom name is provided in addition to the standard one
+    (custom names can be provided for example via the use of ``declare
+    variant`` in OpenMP 5.0). The declaration of the variant must be
+    present in the IR Module. The signature of the vector variant is
+    determined by the rules of the Vector Function ABI (VFABI)
+    specifications of the target. For Arm and X86, the VFABI can be
+    found at https://github.com/ARM-software/software-standards and
+    https://software.intel.com/en-us/articles/vector-simd-function-abi,
+    respectively.
+
+    For X86 and Arm targets, the values of the tokens in the standard
+    name are those that are defined in the VFABI. LLVM has an internal
+    ``<isa>`` token that can be used to create scalar-to-vector
+    mappings for functions that are not directly associated to any of
+    the target ISAs (for example, some of the mappings stored in the
+    TargetLibraryInfo). Valid values for the ``<isa>`` token are:::
+
+        <isa>:= b | c | d | e  -> X86 SSE, AVX, AVX2, AVX512
+              | n | s          -> Armv8 Advanced SIMD, SVE
+              | __LLVM__       -> Internal LLVM Vector ISA
+
+    For all targets currently supported (x86, Arm and Internal LLVM),
+    the remaining tokens can have the following values:::
+
+        <mask>:= M | N         -> mask | no mask
+
+        <vlen>:= number        -> number of lanes
+               | x             -> VLA (Vector Length Agnostic)
+
+        <parameters>:= v              -> vector
+                     | l | l <number> -> linear
+                     | R | R <number> -> linear with ref modifier
+                     | L | L <number> -> linear with val modifier
+                     | U | U <number> -> linear with uval modifier
+                     | ls <pos>       -> runtime linear
+                     | Rs <pos>       -> runtime linear with ref modifier
+                     | Ls <pos>       -> runtime linear with val modifier
+                     | Us <pos>       -> runtime linear with uval modifier
+                     | u              -> uniform
+
+        <scalar_name>:= name of the scalar function
+
+        <vector_redirection>:= optional, custom name of the vector function
+
 .. _glattrs:
 
 Global Attributes

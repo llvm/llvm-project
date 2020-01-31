@@ -893,12 +893,15 @@ SymbolFileDWARF::GetTypeUnitSupportFiles(DWARFTypeUnit &tu) {
     llvm::DWARFDataExtractor data = m_context.getOrLoadLineData().GetAsLLVM();
     llvm::DWARFContext &ctx = m_context.GetAsLLVM();
     llvm::DWARFDebugLine::Prologue prologue;
-    llvm::Error error = prologue.parse(data, &line_table_offset, ctx);
-    if (error) {
+    auto report = [](llvm::Error error) {
       Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
       LLDB_LOG_ERROR(log, std::move(error),
                      "SymbolFileDWARF::GetTypeUnitSupportFiles failed to parse "
                      "the line table prologue");
+    };
+    llvm::Error error = prologue.parse(data, &line_table_offset, report, ctx);
+    if (error) {
+      report(std::move(error));
     } else {
       list = ParseSupportFilesFromPrologue(GetObjectFile()->GetModule(),
                                            prologue, tu.GetPathStyle());

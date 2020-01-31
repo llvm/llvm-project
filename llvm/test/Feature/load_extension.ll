@@ -1,6 +1,3 @@
-; This is currently failing on multiple platforms. Disable while investigation occurs.
-; UNSUPPORTED: darwin
-
 ; RUN: opt %s %loadbye -goodbye -wave-goodbye -disable-output 2>&1 | FileCheck %s
 ; REQUIRES: plugins, examples
 ; CHECK: Bye

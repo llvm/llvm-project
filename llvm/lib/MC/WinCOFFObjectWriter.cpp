@@ -118,7 +118,7 @@ public:
   COFFSymbol *Symbol = nullptr;
   relocations Relocations;
 
-  COFFSection(StringRef Name) : Name(Name) {}
+  COFFSection(StringRef Name) : Name(std::string(Name)) {}
 };
 
 class WinCOFFObjectWriter : public MCObjectWriter {

@@ -454,8 +454,8 @@ struct InlineAsmKeyType {
 
   InlineAsm *create(TypeClass *Ty) const {
     assert(PointerType::getUnqual(FTy) == Ty);
-    return new InlineAsm(FTy, AsmString, Constraints, HasSideEffects,
-                         IsAlignStack, AsmDialect);
+    return new InlineAsm(FTy, std::string(AsmString), std::string(Constraints),
+                         HasSideEffects, IsAlignStack, AsmDialect);
   }
 };
 

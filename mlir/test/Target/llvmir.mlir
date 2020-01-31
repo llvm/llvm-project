@@ -1130,3 +1130,44 @@ llvm.func @cmpxchg(%ptr : !llvm<"float*">, %cmp : !llvm.float, %val: !llvm.float
   %2 = llvm.extractvalue %0[1] : !llvm<"{ float, i1 }">
   llvm.return
 }
+
+llvm.mlir.global external constant @_ZTIi() : !llvm<"i8*">
+llvm.func @foo(!llvm<"i8*">)
+llvm.func @bar(!llvm<"i8*">) -> !llvm<"i8*">
+llvm.func @__gxx_personality_v0(...) -> !llvm.i32
+
+// CHECK-LABEL: @invokeLandingpad
+llvm.func @invokeLandingpad() -> !llvm.i32 {
+// CHECK: %[[a1:[0-9]+]] = alloca i8
+  %0 = llvm.mlir.constant(0 : i32) : !llvm.i32
+  %1 = llvm.mlir.constant("\01") : !llvm<"[1 x i8]">
+  %2 = llvm.mlir.addressof @_ZTIi : !llvm<"i8**">
+  %3 = llvm.bitcast %2 : !llvm<"i8**"> to !llvm<"i8*">
+  %4 = llvm.mlir.null : !llvm<"i8**">
+  %5 = llvm.mlir.constant(1 : i32) : !llvm.i32
+  %6 = llvm.alloca %5 x !llvm.i8 : (!llvm.i32) -> !llvm<"i8*">
+// CHECK: invoke void @foo(i8* %[[a1]])
+// CHECK-NEXT: to label %[[normal:[0-9]+]] unwind label %[[unwind:[0-9]+]]
+  llvm.invoke @foo(%6) to ^bb2 unwind ^bb1 : (!llvm<"i8*">) -> ()
+
+// CHECK: [[unwind]]:
+^bb1:
+// CHECK: %{{[0-9]+}} = landingpad { i8*, i32 }
+// CHECK-NEXT:             catch i8** null
+// CHECK-NEXT:             catch i8* bitcast (i8** @_ZTIi to i8*)
+// CHECK-NEXT:             filter [1 x i8] c"\01"
+  %7 = llvm.landingpad (catch %4 : !llvm<"i8**">) (catch %3 : !llvm<"i8*">) (filter %1 : !llvm<"[1 x i8]">) : !llvm<"{ i8*, i32 }">
+// CHECK: br label %[[final:[0-9]+]]
+  llvm.br ^bb3
+
+// CHECK: [[normal]]:
+// CHECK-NEXT: ret i32 1
+^bb2:	// 2 preds: ^bb0, ^bb3
+  llvm.return %5 : !llvm.i32
+
+// CHECK: [[final]]:
+// CHECK-NEXT: %{{[0-9]+}} = invoke i8* @bar(i8* %[[a1]])
+// CHECK-NEXT:          to label %[[normal]] unwind label %[[unwind]]
+^bb3:	// pred: ^bb1
+  %8 = llvm.invoke @bar(%6) to ^bb2 unwind ^bb1 : (!llvm<"i8*">) -> !llvm<"i8*">
+}

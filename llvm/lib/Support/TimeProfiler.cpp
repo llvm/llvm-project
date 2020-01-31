@@ -166,7 +166,7 @@ struct TimeTraceProfiler {
     // Combine all CountAndTotalPerName from threads into one.
     StringMap<CountAndDurationType> AllCountAndTotalPerName;
     auto combineStat = [&](const auto &Stat) {
-      std::string Key = Stat.getKey();
+      StringRef Key = Stat.getKey();
       auto Value = Stat.getValue();
       auto &CountAndTotal = AllCountAndTotalPerName[Key];
       CountAndTotal.first += Value.first;
@@ -184,7 +184,7 @@ struct TimeTraceProfiler {
     std::vector<NameAndCountAndDurationType> SortedTotals;
     SortedTotals.reserve(AllCountAndTotalPerName.size());
     for (const auto &Total : AllCountAndTotalPerName)
-      SortedTotals.emplace_back(Total.getKey(), Total.getValue());
+      SortedTotals.emplace_back(std::string(Total.getKey()), Total.getValue());
 
     llvm::sort(SortedTotals.begin(), SortedTotals.end(),
                [](const NameAndCountAndDurationType &A,
@@ -275,13 +275,14 @@ void timeTraceProfilerWrite(raw_pwrite_stream &OS) {
 
 void timeTraceProfilerBegin(StringRef Name, StringRef Detail) {
   if (TimeTraceProfilerInstance != nullptr)
-    TimeTraceProfilerInstance->begin(Name, [&]() { return Detail; });
+    TimeTraceProfilerInstance->begin(std::string(Name),
+                                     [&]() { return std::string(Detail); });
 }
 
 void timeTraceProfilerBegin(StringRef Name,
                             llvm::function_ref<std::string()> Detail) {
   if (TimeTraceProfilerInstance != nullptr)
-    TimeTraceProfilerInstance->begin(Name, Detail);
+    TimeTraceProfilerInstance->begin(std::string(Name), Detail);
 }
 
 void timeTraceProfilerEnd() {

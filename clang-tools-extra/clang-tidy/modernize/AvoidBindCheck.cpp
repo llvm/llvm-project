@@ -149,7 +149,8 @@ initializeBindArgumentForCallExpr(const MatchFinder::MatchResult &Result,
   if (isCallExprNamed(CE, "boost::ref") || isCallExprNamed(CE, "std::ref")) {
     B.Kind = BK_Other;
     B.CM = CM_ByRef;
-    B.UsageIdentifier = getSourceTextForExpr(Result, CE->getArg(0));
+    B.UsageIdentifier =
+        std::string(getSourceTextForExpr(Result, CE->getArg(0)));
   } else {
     B.Kind = BK_CallExpr;
     B.CM = CM_InitExpression;
@@ -188,7 +189,7 @@ static bool tryCaptureAsLocalVariable(const MatchFinder::MatchResult &Result,
     return false;
 
   B.CM = CM_ByValue;
-  B.UsageIdentifier = getSourceTextForExpr(Result, E);
+  B.UsageIdentifier = std::string(getSourceTextForExpr(Result, E));
   B.CaptureIdentifier = B.UsageIdentifier;
   return true;
 }
@@ -204,7 +205,7 @@ static bool tryCaptureAsMemberVariable(const MatchFinder::MatchResult &Result,
   E = E->IgnoreImplicit();
   if (isa<CXXThisExpr>(E)) {
     B.CM = CM_ByValue;
-    B.UsageIdentifier = getSourceTextForExpr(Result, E);
+    B.UsageIdentifier = std::string(getSourceTextForExpr(Result, E));
     B.CaptureIdentifier = "this";
     return true;
   }
@@ -217,7 +218,7 @@ static bool tryCaptureAsMemberVariable(const MatchFinder::MatchResult &Result,
     return false;
 
   B.CM = CM_ByValue;
-  B.UsageIdentifier = getSourceTextForExpr(Result, E);
+  B.UsageIdentifier = std::string(getSourceTextForExpr(Result, E));
   B.CaptureIdentifier = "this";
   return true;
 }
@@ -252,7 +253,7 @@ buildBindArguments(const MatchFinder::MatchResult &Result,
     SmallVector<StringRef, 2> Matches;
     if (MatchPlaceholder.match(B.SourceTokens, &Matches)) {
       B.Kind = BK_Placeholder;
-      B.PlaceHolderIndex = std::stoi(Matches[1]);
+      B.PlaceHolderIndex = std::stoi(std::string(Matches[1]));
       B.UsageIdentifier = "PH" + llvm::utostr(B.PlaceHolderIndex);
       B.CaptureIdentifier = B.UsageIdentifier;
       continue;
@@ -503,9 +504,10 @@ getLambdaProperties(const MatchFinder::MatchResult &Result) {
   LP.Callable.SourceTokens = getSourceTextForExpr(Result, CalleeExpr);
   if (LP.Callable.Materialization == CMK_VariableRef) {
     LP.Callable.CM = CM_ByValue;
-    LP.Callable.UsageIdentifier = getSourceTextForExpr(Result, CalleeExpr);
-    LP.Callable.CaptureIdentifier =
-        getSourceTextForExpr(Result, ignoreTemporariesAndPointers(CalleeExpr));
+    LP.Callable.UsageIdentifier =
+        std::string(getSourceTextForExpr(Result, CalleeExpr));
+    LP.Callable.CaptureIdentifier = std::string(
+        getSourceTextForExpr(Result, ignoreTemporariesAndPointers(CalleeExpr)));
   } else if (LP.Callable.Materialization == CMK_CallExpression) {
     LP.Callable.CM = CM_InitExpression;
     LP.Callable.UsageIdentifier = "Func";

@@ -276,7 +276,7 @@ bool Module::directlyUses(const Module *Requested) const {
 void Module::addRequirement(StringRef Feature, bool RequiredState,
                             const LangOptions &LangOpts,
                             const TargetInfo &Target) {
-  Requirements.push_back(Requirement(Feature, RequiredState));
+  Requirements.push_back(Requirement(std::string(Feature), RequiredState));
 
   // If this feature is currently available, we're done.
   if (hasFeature(Feature, LangOpts, Target) == RequiredState)

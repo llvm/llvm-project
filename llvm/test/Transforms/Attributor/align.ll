@@ -147,11 +147,11 @@ define align 4 i32* @test7(i32* align 32 %p) #0 {
 ; Function Attrs: nounwind readnone ssp uwtable
 define internal i8* @f1b(i8* readnone %0) local_unnamed_addr #0 {
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@f1b
-; ATTRIBUTOR-SAME: (i8* nofree nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" [[TMP0:%.*]]) local_unnamed_addr
+; ATTRIBUTOR-SAME: (i8* noalias nofree nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" [[TMP0:%.*]]) local_unnamed_addr
 ; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP0]], null
 ; ATTRIBUTOR-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
 ; ATTRIBUTOR:       3:
-; ATTRIBUTOR-NEXT:    [[TMP4:%.*]] = tail call align 8 i8* @f2b(i8* nofree nonnull readnone align 8 dereferenceable(1) @a1)
+; ATTRIBUTOR-NEXT:    [[TMP4:%.*]] = tail call align 8 i8* @f2b(i8* noalias nofree nonnull readnone align 8 dereferenceable(1) @a1)
 ; ATTRIBUTOR-NEXT:    [[L:%.*]] = load i8, i8* [[TMP4]], align 8
 ; ATTRIBUTOR-NEXT:    store i8 [[L]], i8* @a1, align 8
 ; ATTRIBUTOR-NEXT:    br label [[TMP5]]
@@ -177,14 +177,14 @@ define internal i8* @f1b(i8* readnone %0) local_unnamed_addr #0 {
 define internal i8* @f2b(i8* readnone %0) local_unnamed_addr #0 {
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@f2b
-; ATTRIBUTOR-SAME: (i8* nofree nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" [[TMP0:%.*]]) local_unnamed_addr
+; ATTRIBUTOR-SAME: (i8* noalias nofree nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" [[TMP0:%.*]]) local_unnamed_addr
 ; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = icmp eq i8* @a1, null
 ; ATTRIBUTOR-NEXT:    br i1 [[TMP2]], label [[TMP5:%.*]], label [[TMP3:%.*]]
 ; ATTRIBUTOR:       3:
-; ATTRIBUTOR-NEXT:    [[TMP4:%.*]] = tail call i8* @f1b(i8* nofree nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" @a1)
+; ATTRIBUTOR-NEXT:    [[TMP4:%.*]] = tail call i8* @f1b(i8* noalias nofree nonnull readnone align 8 dereferenceable(1) "no-capture-maybe-returned" @a1)
 ; ATTRIBUTOR-NEXT:    br label [[TMP7:%.*]]
 ; ATTRIBUTOR:       5:
-; ATTRIBUTOR-NEXT:    [[TMP6:%.*]] = tail call i8* @f3b(i8* nofree nonnull readnone align 16 dereferenceable(1) @a2)
+; ATTRIBUTOR-NEXT:    [[TMP6:%.*]] = tail call i8* @f3b(i8* noalias nofree nonnull readnone align 16 dereferenceable(1) @a2)
 ; ATTRIBUTOR-NEXT:    br label [[TMP7]]
 ; ATTRIBUTOR:       7:
 ; ATTRIBUTOR-NEXT:    [[TMP8:%.*]] = phi i8* [ [[TMP4]], [[TMP3]] ], [ [[TMP6]], [[TMP5]] ]
@@ -211,11 +211,11 @@ define internal i8* @f2b(i8* readnone %0) local_unnamed_addr #0 {
 define internal i8* @f3b(i8* readnone %0) local_unnamed_addr #0 {
 ;
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@f3b
-; ATTRIBUTOR-SAME: (i8* nocapture nofree nonnull readnone align 16 dereferenceable(1) [[TMP0:%.*]]) local_unnamed_addr
+; ATTRIBUTOR-SAME: (i8* noalias nocapture nofree nonnull readnone align 16 dereferenceable(1) [[TMP0:%.*]]) local_unnamed_addr
 ; ATTRIBUTOR-NEXT:    [[TMP2:%.*]] = icmp eq i8* @a2, null
 ; ATTRIBUTOR-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
 ; ATTRIBUTOR:       3:
-; ATTRIBUTOR-NEXT:    [[TMP4:%.*]] = tail call i8* @f1b(i8* nofree nonnull readnone align 16 dereferenceable(1) @a2)
+; ATTRIBUTOR-NEXT:    [[TMP4:%.*]] = tail call i8* @f1b(i8* noalias nofree nonnull readnone align 16 dereferenceable(1) @a2)
 ; ATTRIBUTOR-NEXT:    br label [[TMP5]]
 ; ATTRIBUTOR:       5:
 ; ATTRIBUTOR-NEXT:    [[TMP6:%.*]] = phi i8* [ [[TMP4]], [[TMP3]] ], [ @a1, [[TMP1:%.*]] ]
@@ -236,7 +236,7 @@ define internal i8* @f3b(i8* readnone %0) local_unnamed_addr #0 {
 define align 4 i32* @test7b(i32* align 32 %p) #0 {
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@test7b
 ; ATTRIBUTOR-SAME: (i32* nofree readnone returned align 32 "no-capture-maybe-returned" [[P:%.*]])
-; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = tail call i8* @f1b(i8* nofree nonnull readnone align 8 dereferenceable(1) @a1)
+; ATTRIBUTOR-NEXT:    [[TMP1:%.*]] = tail call i8* @f1b(i8* noalias nofree nonnull readnone align 8 dereferenceable(1) @a1)
 ; ATTRIBUTOR-NEXT:    ret i32* [[P]]
 ;
   tail call i8* @f1b(i8* align 8 dereferenceable(1) @a1)
@@ -252,17 +252,17 @@ define void @test8_helper() {
   %ptr2 = tail call align 8 i32* @unknown()
 
   tail call void @test8(i32* %ptr1, i32* %ptr1, i32* %ptr0)
-; ATTRIBUTOR: tail call void @test8(i32* readnone align 4 %ptr1, i32* readnone align 4 %ptr1, i32* readnone %ptr0)
+; ATTRIBUTOR: tail call void @test8(i32* noalias readnone align 4 %ptr1, i32* noalias readnone align 4 %ptr1, i32* noalias readnone %ptr0)
   tail call void @test8(i32* %ptr2, i32* %ptr1, i32* %ptr1)
-; ATTRIBUTOR: tail call void @test8(i32* readnone align 8 %ptr2, i32* readnone align 4 %ptr1, i32* readnone align 4 %ptr1)
+; ATTRIBUTOR: tail call void @test8(i32* noalias readnone align 8 %ptr2, i32* noalias readnone align 4 %ptr1, i32* noalias readnone align 4 %ptr1)
   tail call void @test8(i32* %ptr2, i32* %ptr1, i32* %ptr1)
-; ATTRIBUTOR: tail call void @test8(i32* readnone align 8 %ptr2, i32* readnone align 4 %ptr1, i32* readnone align 4 %ptr1)
+; ATTRIBUTOR: tail call void @test8(i32* noalias readnone align 8 %ptr2, i32* noalias readnone align 4 %ptr1, i32* noalias readnone align 4 %ptr1)
   ret void
 }
 
 declare void @user_i32_ptr(i32*) readnone nounwind
 define internal void @test8(i32* %a, i32* %b, i32* %c) {
-; ATTRIBUTOR: define internal void @test8(i32* nocapture readnone align 4 %a, i32* nocapture readnone align 4 %b, i32* nocapture readnone %c)
+; ATTRIBUTOR: define internal void @test8(i32* noalias nocapture readnone align 4 %a, i32* noalias nocapture readnone align 4 %b, i32* noalias nocapture readnone %c)
   call void @user_i32_ptr(i32* %a)
   call void @user_i32_ptr(i32* %b)
   call void @user_i32_ptr(i32* %c)

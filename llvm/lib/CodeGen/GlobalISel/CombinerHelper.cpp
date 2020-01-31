@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "gi-combiner"
@@ -1381,6 +1382,30 @@ bool CombinerHelper::applyPtrAddImmedChain(MachineInstr &MI,
   Observer.changingInstr(MI);
   MI.getOperand(1).setReg(MatchInfo.Base);
   MI.getOperand(2).setReg(NewOffset.getReg(0));
+  Observer.changedInstr(MI);
+  return true;
+}
+
+bool CombinerHelper::matchCombineMulToShl(MachineInstr &MI,
+                                          unsigned &ShiftVal) {
+  assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");
+  auto MaybeImmVal =
+      getConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
+  if (!MaybeImmVal || !isPowerOf2_64(MaybeImmVal->Value))
+    return false;
+  ShiftVal = Log2_64(MaybeImmVal->Value);
+  return true;
+}
+
+bool CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
+                                          unsigned &ShiftVal) {
+  assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");
+  MachineIRBuilder MIB(MI);
+  LLT ShiftTy = MRI.getType(MI.getOperand(0).getReg());
+  auto ShiftCst = MIB.buildConstant(ShiftTy, ShiftVal);
+  Observer.changingInstr(MI);
+  MI.setDesc(MIB.getTII().get(TargetOpcode::G_SHL));
+  MI.getOperand(2).setReg(ShiftCst.getReg(0));
   Observer.changedInstr(MI);
   return true;
 }

@@ -1055,7 +1055,7 @@ void LowerTypeTestsModule::importFunction(
   assert(F->getType()->getAddressSpace() == 0);
 
   GlobalValue::VisibilityTypes Visibility = F->getVisibility();
-  std::string Name = F->getName();
+  std::string Name = std::string(F->getName());
 
   if (F->isDeclarationForLinker() && isJumpTableCanonical) {
     // Non-dso_local functions may be overriden at run time,
@@ -1523,13 +1523,13 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
           F->getType());
       if (Functions[I]->isExported()) {
         if (IsJumpTableCanonical) {
-          ExportSummary->cfiFunctionDefs().insert(F->getName());
+          ExportSummary->cfiFunctionDefs().insert(std::string(F->getName()));
         } else {
           GlobalAlias *JtAlias = GlobalAlias::create(
               F->getValueType(), 0, GlobalValue::ExternalLinkage,
               F->getName() + ".cfi_jt", CombinedGlobalElemPtr, &M);
           JtAlias->setVisibility(GlobalValue::HiddenVisibility);
-          ExportSummary->cfiFunctionDecls().insert(F->getName());
+          ExportSummary->cfiFunctionDecls().insert(std::string(F->getName()));
         }
       }
       if (!IsJumpTableCanonical) {
@@ -1821,9 +1821,10 @@ bool LowerTypeTestsModule::lower() {
       // have the same name, but it's not the one we are looking for.
       if (F.hasLocalLinkage())
         continue;
-      if (ImportSummary->cfiFunctionDefs().count(F.getName()))
+      if (ImportSummary->cfiFunctionDefs().count(std::string(F.getName())))
         Defs.push_back(&F);
-      else if (ImportSummary->cfiFunctionDecls().count(F.getName()))
+      else if (ImportSummary->cfiFunctionDecls().count(
+                   std::string(F.getName())))
         Decls.push_back(&F);
     }
 

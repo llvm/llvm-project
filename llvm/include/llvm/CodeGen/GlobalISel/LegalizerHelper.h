@@ -252,6 +252,7 @@ public:
   LegalizeResult lowerUITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult lowerSITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult lowerFPTOUI(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult lowerFPTOSI(MachineInstr &MI);
   LegalizeResult lowerMinMax(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult lowerFCopySign(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult lowerFMinNumMaxNum(MachineInstr &MI);
@@ -265,7 +266,7 @@ public:
   LegalizeResult lowerSADDO_SSUBO(MachineInstr &MI);
   LegalizeResult lowerBswap(MachineInstr &MI);
   LegalizeResult lowerBitreverse(MachineInstr &MI);
-  LegalizeResult lowerReadRegister(MachineInstr &MI);
+  LegalizeResult lowerReadWriteRegister(MachineInstr &MI);
 
 private:
   MachineRegisterInfo &MRI;

@@ -265,37 +265,34 @@ bool SIInstrInfo::getMemOperandsWithOffset(
     return false;
 
   unsigned Opc = LdSt.getOpcode();
-  const MachineOperand *BaseOp;
+  const MachineOperand *BaseOp, *OffsetOp;
 
   if (isDS(LdSt)) {
-    const MachineOperand *OffsetImm =
-        getNamedOperand(LdSt, AMDGPU::OpName::offset);
-    if (OffsetImm) {
+    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::addr);
+    OffsetOp = getNamedOperand(LdSt, AMDGPU::OpName::offset);
+    if (OffsetOp) {
       // Normal, single offset LDS instruction.
-      BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::addr);
-      // TODO: ds_consume/ds_append use M0 for the base address. Is it safe to
-      // report that here?
-      if (!BaseOp || !BaseOp->isReg())
+      if (!BaseOp) {
+        // DS_CONSUME/DS_APPEND use M0 for the base address.
+        // TODO: find the implicit use operand for M0 and use that as BaseOp?
+        return false;
+      }
+      BaseOps.push_back(BaseOp);
+      Offset = OffsetOp->getImm();
+    } else {
+      // The 2 offset instructions use offset0 and offset1 instead. We can treat
+      // these as a load with a single offset if the 2 offsets are consecutive.
+      // We will use this for some partially aligned loads.
+      const MachineOperand *Offset0Op =
+          getNamedOperand(LdSt, AMDGPU::OpName::offset0);
+      const MachineOperand *Offset1Op =
+          getNamedOperand(LdSt, AMDGPU::OpName::offset1);
+
+      unsigned Offset0 = Offset0Op->getImm();
+      unsigned Offset1 = Offset1Op->getImm();
+      if (Offset0 + 1 != Offset1)
         return false;
 
-      BaseOps.push_back(BaseOp);
-      Offset = OffsetImm->getImm();
-
-      return true;
-    }
-
-    // The 2 offset instructions use offset0 and offset1 instead. We can treat
-    // these as a load with a single offset if the 2 offsets are consecutive. We
-    // will use this for some partially aligned loads.
-    const MachineOperand *Offset0Imm =
-        getNamedOperand(LdSt, AMDGPU::OpName::offset0);
-    const MachineOperand *Offset1Imm =
-        getNamedOperand(LdSt, AMDGPU::OpName::offset1);
-
-    uint8_t Offset0 = Offset0Imm->getImm();
-    uint8_t Offset1 = Offset1Imm->getImm();
-
-    if (Offset1 > Offset0 && Offset1 - Offset0 == 1) {
       // Each of these offsets is in element sized units, so we need to convert
       // to bytes of the individual reads.
 
@@ -311,17 +308,10 @@ bool SIInstrInfo::getMemOperandsWithOffset(
       if (isStride64(Opc))
         EltSize *= 64;
 
-      BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::addr);
-      if (!BaseOp->isReg())
-        return false;
-
       BaseOps.push_back(BaseOp);
       Offset = EltSize * Offset0;
-
-      return true;
     }
-
-    return false;
+    return true;
   }
 
   if (isMUBUF(LdSt) || isMTBUF(LdSt)) {
@@ -365,39 +355,24 @@ bool SIInstrInfo::getMemOperandsWithOffset(
   }
 
   if (isSMRD(LdSt)) {
-    const MachineOperand *OffsetImm =
-        getNamedOperand(LdSt, AMDGPU::OpName::offset);
-    if (!OffsetImm)
+    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::sbase);
+    if (!BaseOp) // e.g. S_MEMTIME
       return false;
-
-    const MachineOperand *SBaseReg = getNamedOperand(LdSt, AMDGPU::OpName::sbase);
-    BaseOp = SBaseReg;
-    Offset = OffsetImm->getImm();
-    if (!BaseOp->isReg())
-      return false;
-
     BaseOps.push_back(BaseOp);
+    OffsetOp = getNamedOperand(LdSt, AMDGPU::OpName::offset);
+    Offset = OffsetOp ? OffsetOp->getImm() : 0;
     return true;
   }
 
   if (isFLAT(LdSt)) {
-    const MachineOperand *VAddr = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
-    if (VAddr) {
-      // Can't analyze 2 offsets.
-      // FIXME remove this restriction!
-      if (getNamedOperand(LdSt, AMDGPU::OpName::saddr))
-        return false;
-
-      BaseOp = VAddr;
-    } else {
-      // scratch instructions have either vaddr or saddr.
-      BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::saddr);
-    }
-
+    // Instructions have either vaddr or saddr or both.
+    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
+    if (BaseOp)
+      BaseOps.push_back(BaseOp);
+    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::saddr);
+    if (BaseOp)
+      BaseOps.push_back(BaseOp);
     Offset = getNamedOperand(LdSt, AMDGPU::OpName::offset)->getImm();
-    if (!BaseOp->isReg())
-      return false;
-    BaseOps.push_back(BaseOp);
     return true;
   }
 
@@ -6021,10 +5996,9 @@ bool SIInstrInfo::isLowLatencyInstruction(const MachineInstr &MI) const {
   return isSMRD(Opc);
 }
 
-bool SIInstrInfo::isHighLatencyInstruction(const MachineInstr &MI) const {
-  unsigned Opc = MI.getOpcode();
-
-  return isMUBUF(Opc) || isMTBUF(Opc) || isMIMG(Opc);
+bool SIInstrInfo::isHighLatencyDef(int Opc) const {
+  return get(Opc).mayLoad() &&
+         (isMUBUF(Opc) || isMTBUF(Opc) || isMIMG(Opc) || isFLAT(Opc));
 }
 
 unsigned SIInstrInfo::isStackAccess(const MachineInstr &MI,

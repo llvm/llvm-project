@@ -414,7 +414,7 @@ private:
 } // End anonymous namespace
 
 static std::string getOpcodeName(Record *Op, CodeGenDAGPatterns &CGP) {
-  return CGP.getSDNodeInfo(Op).getEnumName();
+  return std::string(CGP.getSDNodeInfo(Op).getEnumName());
 }
 
 static std::string getLegalCName(std::string OpName) {
@@ -719,22 +719,20 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
             MVT::SimpleValueType RetVT = RI->first;
             const PredMap &PM = RI->second;
 
-            OS << "unsigned fastEmit_"
-               << getLegalCName(Opcode)
-               << "_" << getLegalCName(getName(VT))
-               << "_" << getLegalCName(getName(RetVT)) << "_";
+            OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_"
+               << getLegalCName(std::string(getName(VT))) << "_"
+               << getLegalCName(std::string(getName(RetVT))) << "_";
             Operands.PrintManglingSuffix(OS, ImmediatePredicates);
             OS << "(";
             Operands.PrintParameters(OS);
             OS << ") {\n";
 
-            emitInstructionCode(OS, Operands, PM, getName(RetVT));
+            emitInstructionCode(OS, Operands, PM, std::string(getName(RetVT)));
           }
 
           // Emit one function for the type that demultiplexes on return type.
-          OS << "unsigned fastEmit_"
-             << getLegalCName(Opcode) << "_"
-             << getLegalCName(getName(VT)) << "_";
+          OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_"
+             << getLegalCName(std::string(getName(VT))) << "_";
           Operands.PrintManglingSuffix(OS, ImmediatePredicates);
           OS << "(MVT RetVT";
           if (!Operands.empty())
@@ -745,8 +743,9 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
                RI != RE; ++RI) {
             MVT::SimpleValueType RetVT = RI->first;
             OS << "  case " << getName(RetVT) << ": return fastEmit_"
-               << getLegalCName(Opcode) << "_" << getLegalCName(getName(VT))
-               << "_" << getLegalCName(getName(RetVT)) << "_";
+               << getLegalCName(Opcode) << "_"
+               << getLegalCName(std::string(getName(VT))) << "_"
+               << getLegalCName(std::string(getName(RetVT))) << "_";
             Operands.PrintManglingSuffix(OS, ImmediatePredicates);
             OS << "(";
             Operands.PrintArguments(OS);
@@ -756,9 +755,8 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
 
         } else {
           // Non-variadic return type.
-          OS << "unsigned fastEmit_"
-             << getLegalCName(Opcode) << "_"
-             << getLegalCName(getName(VT)) << "_";
+          OS << "unsigned fastEmit_" << getLegalCName(Opcode) << "_"
+             << getLegalCName(std::string(getName(VT))) << "_";
           Operands.PrintManglingSuffix(OS, ImmediatePredicates);
           OS << "(MVT RetVT";
           if (!Operands.empty())
@@ -788,7 +786,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
       for (TypeRetPredMap::const_iterator TI = TM.begin(), TE = TM.end();
            TI != TE; ++TI) {
         MVT::SimpleValueType VT = TI->first;
-        std::string TypeName = getName(VT);
+        std::string TypeName = std::string(getName(VT));
         OS << "  case " << TypeName << ": return fastEmit_"
            << getLegalCName(Opcode) << "_" << getLegalCName(TypeName) << "_";
         Operands.PrintManglingSuffix(OS, ImmediatePredicates);

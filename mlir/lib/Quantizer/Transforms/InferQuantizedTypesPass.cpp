@@ -141,11 +141,11 @@ void InferQuantizedTypesPass::runWithConfig(SolverContext &solverContext,
   // TODO: Only dump the GraphViz if a flag is set and move to a utility.
   // GraphViz.
   if (!solverContext.getDebugCAGDotPath().empty()) {
-    auto actFileName =
-        llvm::WriteGraph(const_cast<const CAGSlice *>(&cag), "CAG",
-                         /*ShortNames=*/false,
-                         /*Title=*/"CAG",
-                         /*Filename=*/solverContext.getDebugCAGDotPath());
+    auto actFileName = llvm::WriteGraph(
+        const_cast<const CAGSlice *>(&cag), "CAG",
+        /*ShortNames=*/false,
+        /*Title=*/"CAG",
+        /*Filename=*/std::string(solverContext.getDebugCAGDotPath()));
     llvm::errs() << "Wrote graphviz file: " << actFileName << "\n";
   }
 

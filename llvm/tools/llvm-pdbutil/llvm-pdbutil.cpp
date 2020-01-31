@@ -1507,7 +1507,7 @@ int main(int Argc, const char **Argv) {
     if (opts::yaml2pdb::YamlPdbOutputFile.empty()) {
       SmallString<16> OutputFilename(opts::yaml2pdb::InputFilename.getValue());
       sys::path::replace_extension(OutputFilename, ".pdb");
-      opts::yaml2pdb::YamlPdbOutputFile = OutputFilename.str();
+      opts::yaml2pdb::YamlPdbOutputFile = std::string(OutputFilename.str());
     }
     yamlToPdb(opts::yaml2pdb::InputFilename);
   } else if (opts::DiaDumpSubcommand) {

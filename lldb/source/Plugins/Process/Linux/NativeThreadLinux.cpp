@@ -99,7 +99,7 @@ std::string NativeThreadLinux::GetName() {
   auto BufferOrError = getProcFile(process.GetID(), GetID(), "comm");
   if (!BufferOrError)
     return "";
-  return BufferOrError.get()->getBuffer().rtrim('\n');
+  return std::string(BufferOrError.get()->getBuffer().rtrim('\n'));
 }
 
 lldb::StateType NativeThreadLinux::GetState() { return m_state; }

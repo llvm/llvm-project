@@ -324,7 +324,7 @@ int main(int argc, char **argv) {
   processViewOptions();
 
   if (!MCPU.compare("native"))
-    MCPU = llvm::sys::getHostCPUName();
+    MCPU = std::string(llvm::sys::getHostCPUName());
 
   std::unique_ptr<MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, MCPU, MATTR));

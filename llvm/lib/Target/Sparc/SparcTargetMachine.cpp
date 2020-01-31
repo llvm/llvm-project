@@ -99,7 +99,8 @@ SparcTargetMachine::SparcTargetMachine(
                             CM, getEffectiveRelocModel(RM), is64bit, JIT),
                         OL),
       TLOF(std::make_unique<SparcELFTargetObjectFile>()),
-      Subtarget(TT, CPU, FS, *this, is64bit), is64Bit(is64bit) {
+      Subtarget(TT, std::string(CPU), std::string(FS), *this, is64bit),
+      is64Bit(is64bit) {
   initAsmInfo();
 }
 

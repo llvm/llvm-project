@@ -33,9 +33,10 @@ RewriteRule invertIf() {
   RewriteRule Rule = tooling::makeRule(
       ifStmt(hasCondition(expr().bind(C)), hasThen(stmt().bind(T)),
              hasElse(stmt().bind(E))),
-      change(
-          statement(RewriteRule::RootID),
-          cat("if(!(", node(C), ")) ", statement(E), " else ", statement(T))),
+      change(statement(std::string(RewriteRule::RootID)),
+             cat("if(!(", node(std::string(C)), ")) ",
+                 statement(std::string(E)), " else ",
+                 statement(std::string(T)))),
       cat("negate condition and reverse `then` and `else` branches"));
   return Rule;
 }

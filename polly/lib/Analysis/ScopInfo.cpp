@@ -1465,7 +1465,7 @@ StringMap<std::string> KnownNames = {
 static std::string getCallParamName(CallInst *Call) {
   std::string Result;
   raw_string_ostream OS(Result);
-  std::string Name = Call->getCalledFunction()->getName();
+  std::string Name = Call->getCalledFunction()->getName().str();
 
   auto Iterator = KnownNames.find(Name);
   if (Iterator != KnownNames.end())
@@ -1496,7 +1496,7 @@ void Scop::createParameterId(const SCEV *Parameter) {
       // we use this name as it is likely to be unique and more useful than just
       // a number.
       if (Val->hasName())
-        ParameterName = Val->getName();
+        ParameterName = Val->getName().str();
       else if (LoadInst *LI = dyn_cast<LoadInst>(Val)) {
         auto *LoadOrigin = LI->getPointerOperand()->stripInBoundsOffsets();
         if (LoadOrigin->hasName()) {

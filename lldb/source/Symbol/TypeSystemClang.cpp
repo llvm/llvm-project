@@ -6074,7 +6074,7 @@ CompilerType TypeSystemClang::GetChildCompilerTypeAtIndex(
       if (array) {
         CompilerType element_type = GetType(array->getElementType());
         if (element_type.GetCompleteType()) {
-          child_name = llvm::formatv("[{0}]", idx);
+          child_name = std::string(llvm::formatv("[{0}]", idx));
           if (Optional<uint64_t> size =
                   element_type.GetByteSize(get_exe_scope())) {
             child_byte_size = *size;
@@ -9262,7 +9262,7 @@ TypeSystemClangForExpressions::TypeSystemClangForExpressions(
       m_target_wp(target.shared_from_this()),
       m_persistent_variables(new ClangPersistentVariables) {
   m_scratch_ast_source_up.reset(new ClangASTSource(
-      target.shared_from_this(), target.GetClangASTImporter()));
+      target.shared_from_this(), m_persistent_variables->GetClangASTImporter()));
   m_scratch_ast_source_up->InstallASTContext(*this);
   llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
       m_scratch_ast_source_up->CreateProxy());

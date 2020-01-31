@@ -3160,6 +3160,7 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
         return (Left.NestingLevel == 0 && Line.Level == 0) &&
                !Left.Children.empty();
       }
+      llvm_unreachable("Unknown FormatStyle::ShortLambdaStyle enum");
     }
 
     if (Right.is(tok::r_brace) && Left.is(tok::l_brace) &&

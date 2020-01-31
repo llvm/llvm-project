@@ -23,6 +23,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicSize.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
@@ -622,15 +623,6 @@ public: // Part of public interface to class.
                               SymbolReaper& SymReaper) override;
 
   //===------------------------------------------------------------------===//
-  // Region "extents".
-  //===------------------------------------------------------------------===//
-
-  // FIXME: This method will soon be eliminated; see the note in Store.h.
-  DefinedOrUnknownSVal getSizeInElements(ProgramStateRef state,
-                                         const MemRegion* R,
-                                         QualType EleTy) override;
-
-  //===------------------------------------------------------------------===//
   // Utility methods.
   //===------------------------------------------------------------------===//
 
@@ -876,7 +868,7 @@ collectSubRegionBindings(SmallVectorImpl<BindingPair> &Bindings,
 
   // Find the length (in bits) of the region being invalidated.
   uint64_t Length = UINT64_MAX;
-  SVal Extent = Top->getExtent(SVB);
+  SVal Extent = Top->getMemRegionManager().getStaticSize(Top, SVB);
   if (Optional<nonloc::ConcreteInt> ExtentCI =
           Extent.getAs<nonloc::ConcreteInt>()) {
     const llvm::APSInt &ExtentInt = ExtentCI->getValue();
@@ -1384,37 +1376,6 @@ RegionStoreManager::invalidateRegions(Store store,
   }
 
   return StoreRef(B.asStore(), *this);
-}
-
-//===----------------------------------------------------------------------===//
-// Extents for regions.
-//===----------------------------------------------------------------------===//
-
-DefinedOrUnknownSVal
-RegionStoreManager::getSizeInElements(ProgramStateRef state,
-                                      const MemRegion *R,
-                                      QualType EleTy) {
-  SVal Size = cast<SubRegion>(R)->getExtent(svalBuilder);
-  const llvm::APSInt *SizeInt = svalBuilder.getKnownValue(state, Size);
-  if (!SizeInt)
-    return UnknownVal();
-
-  CharUnits RegionSize = CharUnits::fromQuantity(SizeInt->getSExtValue());
-
-  if (Ctx.getAsVariableArrayType(EleTy)) {
-    // FIXME: We need to track extra state to properly record the size
-    // of VLAs.  Returning UnknownVal here, however, is a stop-gap so that
-    // we don't have a divide-by-zero below.
-    return UnknownVal();
-  }
-
-  CharUnits EleSize = Ctx.getTypeSizeInChars(EleTy);
-
-  // If a variable is reinterpreted as a type that doesn't fit into a larger
-  // type evenly, round it down.
-  // This is a signed value, since it's used in arithmetic with signed indices.
-  return svalBuilder.makeIntVal(RegionSize / EleSize,
-                                svalBuilder.getArrayIndexType());
 }
 
 //===----------------------------------------------------------------------===//

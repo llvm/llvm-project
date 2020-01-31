@@ -242,7 +242,7 @@ public:
                .Case("u", ScalarTypeKind::UnsignedInt)
                .Case("f", ScalarTypeKind::Float);
     Bits = Record->getValueAsInt("size");
-    NameOverride = Record->getValueAsString("nameOverride");
+    NameOverride = std::string(Record->getValueAsString("nameOverride"));
   }
   unsigned sizeInBits() const override { return Bits; }
   ScalarTypeKind kind() const { return Kind; }
@@ -423,16 +423,16 @@ struct CodeGenParamAllocator {
       // variable we should be keeping things in.
       int MapValue = (*ParamNumberMap)[nparams++];
       if (MapValue < 0)
-        return Value;
+        return std::string(Value);
       ParamNumber = MapValue;
     }
 
     // If we've allocated a new parameter variable for the first time, store
     // its type and value to be retrieved after codegen.
     if (ParamTypes && ParamTypes->size() == ParamNumber)
-      ParamTypes->push_back(Type);
+      ParamTypes->push_back(std::string(Type));
     if (ParamValues && ParamValues->size() == ParamNumber)
-      ParamValues->push_back(Value);
+      ParamValues->push_back(std::string(Value));
 
     // Unimaginative naming scheme for parameter variables.
     return "Param" + utostr(ParamNumber);
@@ -515,7 +515,7 @@ public:
     VarNameUsed = true;
     return VarName;
   }
-  void setVarname(const StringRef s) { VarName = s; }
+  void setVarname(const StringRef s) { VarName = std::string(s); }
   bool varnameUsed() const { return VarNameUsed; }
 
   // Emit code to generate this result as a Value *.
@@ -714,7 +714,8 @@ public:
   std::vector<Ptr> Args;
   IRIntrinsicResult(StringRef IntrinsicID, std::vector<const Type *> ParamTypes,
                     std::vector<Ptr> Args)
-      : IntrinsicID(IntrinsicID), ParamTypes(ParamTypes), Args(Args) {}
+      : IntrinsicID(std::string(IntrinsicID)), ParamTypes(ParamTypes),
+        Args(Args) {}
   void genCode(raw_ostream &OS,
                CodeGenParamAllocator &ParamAlloc) const override {
     std::string IntNo = ParamAlloc.allocParam(
@@ -866,7 +867,7 @@ public:
     llvm::APInt i = iOrig.trunc(64);
     SmallString<40> s;
     i.toString(s, 16, true, true);
-    return s.str();
+    return std::string(s.str());
   }
 
   std::string genSema() const {
@@ -955,7 +956,7 @@ public:
   // maps stored in this object.
   const VoidType *getVoidType() { return &Void; }
   const ScalarType *getScalarType(StringRef Name) {
-    return ScalarTypes[Name].get();
+    return ScalarTypes[std::string(Name)].get();
   }
   const ScalarType *getScalarType(Record *R) {
     return getScalarType(R->getName());
@@ -1132,7 +1133,7 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
           getCodeForDag(cast<DagInit>(D->getArg(i)), SubScope, Param);
       StringRef ArgName = D->getArgNameStr(i);
       if (!ArgName.empty())
-        SubScope[ArgName] = V;
+        SubScope[std::string(ArgName)] = V;
       if (PrevV)
         V->setPredecessor(PrevV);
       PrevV = V;
@@ -1190,7 +1191,7 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
         if (sp->isSubClassOf("IRBuilderAddrParam")) {
           AddressArgs.insert(Index);
         } else if (sp->isSubClassOf("IRBuilderIntParam")) {
-          IntegerArgs[Index] = sp->getValueAsString("type");
+          IntegerArgs[Index] = std::string(sp->getValueAsString("type"));
         }
       }
       return std::make_shared<IRBuilderResult>(Op->getValueAsString("prefix"),
@@ -1199,7 +1200,7 @@ Result::Ptr MveEmitter::getCodeForDag(DagInit *D, const Result::Scope &Scope,
       std::vector<const Type *> ParamTypes;
       for (Record *RParam : Op->getValueAsListOfDefs("params"))
         ParamTypes.push_back(getType(RParam, Param));
-      std::string IntName = Op->getValueAsString("intname");
+      std::string IntName = std::string(Op->getValueAsString("intname"));
       if (Op->getValueAsBit("appendKind"))
         IntName += "_" + toLetter(cast<ScalarType>(Param)->kind());
       return std::make_shared<IRIntrinsicResult>(IntName, ParamTypes, Args);
@@ -1219,7 +1220,7 @@ Result::Ptr MveEmitter::getCodeForDagArg(DagInit *D, unsigned ArgNum,
     if (!isa<UnsetInit>(Arg))
       PrintFatalError(
           "dag operator argument should not have both a value and a name");
-    auto it = Scope.find(Name);
+    auto it = Scope.find(std::string(Name));
     if (it == Scope.end())
       PrintFatalError("unrecognized variable name '" + Name + "'");
     return it->second;
@@ -1274,7 +1275,8 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
       (R->isSubClassOf("NameOverride") ? R->getValueAsString("basename")
                                        : R->getName());
   StringRef overrideLetter = R->getValueAsString("overrideKindLetter");
-  FullName = (Twine(BaseName) + Param->acleSuffix(overrideLetter)).str();
+  FullName =
+      (Twine(BaseName) + Param->acleSuffix(std::string(overrideLetter))).str();
 
   // Derive the intrinsic's polymorphic name, by removing components from the
   // full name as specified by its 'pnt' member ('polymorphic name type'),
@@ -1364,7 +1366,8 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
     // into the variable-name scope that the code gen will refer to.
     StringRef ArgName = ArgsDag->getArgNameStr(i);
     if (!ArgName.empty())
-      Scope[ArgName] = ME.getCodeForArg(i, ArgType, Promote, Immediate);
+      Scope[std::string(ArgName)] =
+          ME.getCodeForArg(i, ArgType, Promote, Immediate);
   }
 
   // Finally, go through the codegen dag and translate it into a Result object
@@ -1382,9 +1385,9 @@ ACLEIntrinsic::ACLEIntrinsic(MveEmitter &ME, Record *R, const Type *Param)
       if (Name.empty()) {
         PrintFatalError("Operands to CustomCodegen should have names");
       } else if (auto *II = dyn_cast<IntInit>(CodeDag->getArg(i))) {
-        CustomCodeGenArgs[Name] = itostr(II->getValue());
+        CustomCodeGenArgs[std::string(Name)] = itostr(II->getValue());
       } else if (auto *SI = dyn_cast<StringInit>(CodeDag->getArg(i))) {
-        CustomCodeGenArgs[Name] = SI->getValue();
+        CustomCodeGenArgs[std::string(Name)] = std::string(SI->getValue());
       } else {
         PrintFatalError("Operands to CustomCodegen should be integers");
       }
@@ -1403,7 +1406,7 @@ MveEmitter::MveEmitter(RecordKeeper &Records) {
   // use it for operations such as 'find the unsigned version of this signed
   // integer type'.
   for (Record *R : Records.getAllDerivedDefinitions("PrimitiveType"))
-    ScalarTypes[R->getName()] = std::make_unique<ScalarType>(R);
+    ScalarTypes[std::string(R->getName())] = std::make_unique<ScalarType>(R);
 
   // Now go through the instances of Intrinsic, and for each one, iterate
   // through its list of type parameters making an ACLEIntrinsic for each one.
@@ -1645,12 +1648,12 @@ void MveEmitter::EmitBuiltinDef(raw_ostream &OS) {
     const ACLEIntrinsic &Int = *kv.second;
     if (Int.polymorphic()) {
       StringRef Name = Int.shortName();
-      if (ShortNamesSeen.find(Name) == ShortNamesSeen.end()) {
+      if (ShortNamesSeen.find(std::string(Name)) == ShortNamesSeen.end()) {
         OS << "BUILTIN(__builtin_arm_mve_" << Name << ", \"vi.\", \"nt";
         if (Int.nonEvaluating())
           OS << "u"; // indicate that this builtin doesn't evaluate its args
         OS << "\")\n";
-        ShortNamesSeen.insert(Name);
+        ShortNamesSeen.insert(std::string(Name));
       }
     }
   }

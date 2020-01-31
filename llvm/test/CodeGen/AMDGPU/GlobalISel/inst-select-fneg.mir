@@ -200,9 +200,13 @@ body: |
     liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: fneg_s64_ss
     ; GCN: liveins: $sgpr0_sgpr1
-    ; GCN: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; GCN: [[FNEG:%[0-9]+]]:sreg_64(s64) = G_FNEG [[COPY]]
-    ; GCN: $sgpr0_sgpr1 = COPY [[FNEG]](s64)
+    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
+    ; GCN: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GCN: [[S_XOR_B32_:%[0-9]+]]:sreg_32 = S_XOR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def $scc
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_XOR_B32_]], %subreg.sub1
+    ; GCN: $sgpr0_sgpr1 = COPY [[REG_SEQUENCE]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_FNEG %0
     $sgpr0_sgpr1 = COPY %1
@@ -462,10 +466,13 @@ body: |
     liveins: $sgpr0_sgpr1
     ; GCN-LABEL: name: fneg_fabs_s64_ss
     ; GCN: liveins: $sgpr0_sgpr1
-    ; GCN: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; GCN: [[FABS:%[0-9]+]]:sgpr(s64) = G_FABS [[COPY]]
-    ; GCN: [[FNEG:%[0-9]+]]:sreg_64(s64) = G_FNEG [[FABS]]
-    ; GCN: $sgpr0_sgpr1 = COPY [[FNEG]](s64)
+    ; GCN: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; GCN: [[COPY1:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub0
+    ; GCN: [[COPY2:%[0-9]+]]:sreg_32 = COPY [[COPY]].sub1
+    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GCN: [[S_OR_B32_:%[0-9]+]]:sreg_32 = S_OR_B32 [[COPY2]], [[S_MOV_B32_]], implicit-def $scc
+    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[S_OR_B32_]], %subreg.sub1
+    ; GCN: $sgpr0_sgpr1 = COPY [[REG_SEQUENCE]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s64) = G_FABS %0
     %2:sgpr(s64) = G_FNEG %1

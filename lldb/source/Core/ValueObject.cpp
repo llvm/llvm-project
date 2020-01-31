@@ -25,7 +25,6 @@
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Host/Config.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Declaration.h"
@@ -416,7 +415,7 @@ const char *ValueObject::GetLocationAsCStringImpl(const Value &value,
         uint32_t addr_nibble_size = data.GetAddressByteSize() * 2;
         sstr.Printf("0x%*.*llx", addr_nibble_size, addr_nibble_size,
                     value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS));
-        m_location_str = sstr.GetString();
+        m_location_str = std::string(sstr.GetString());
       } break;
       }
     }
@@ -1120,7 +1119,7 @@ const char *ValueObject::GetObjectDescription() {
     if (LanguageRuntime *runtime = process->GetLanguageRuntime(language)) {
       StreamString s;
       if (runtime->GetObjectDescription(s, *this)) {
-        m_object_desc_str.append(s.GetString());
+        m_object_desc_str.append(std::string(s.GetString()));
         return m_object_desc_str.c_str();
       }
     }
@@ -2013,23 +2012,6 @@ bool ValueObject::HasSyntheticValue() {
   return m_synthetic_value != nullptr;
 }
 
-bool ValueObject::GetBaseClassPath(Stream &s) {
-  if (IsBaseClass()) {
-    bool parent_had_base_class =
-        GetParent() && GetParent()->GetBaseClassPath(s);
-    CompilerType compiler_type = GetCompilerType();
-    llvm::Optional<std::string> cxx_class_name =
-        TypeSystemClang::GetCXXClassName(compiler_type);
-    if (cxx_class_name) {
-      if (parent_had_base_class)
-        s.PutCString("::");
-      s.PutCString(cxx_class_name.getValue());
-    }
-    return parent_had_base_class || cxx_class_name;
-  }
-  return false;
-}
-
 ValueObject *ValueObject::GetNonBaseClassParent() {
   if (GetParent()) {
     if (GetParent()->IsBaseClass())
@@ -2139,13 +2121,8 @@ void ValueObject::GetExpressionPath(Stream &s, bool qualify_cxx_base_classes,
       }
 
       const char *name = GetName().GetCString();
-      if (name) {
-        if (qualify_cxx_base_classes) {
-          if (GetBaseClassPath(s))
-            s.PutCString("::");
-        }
+      if (name)
         s.PutCString(name);
-      }
     }
   }
 
@@ -3301,12 +3278,12 @@ ValueObjectSP ValueObject::Persist() {
   ValueObjectSP const_result_sp =
       ValueObjectConstResult::Create(target_sp.get(), GetValue(), name);
 
-  ExpressionVariableSP clang_var_sp =
+  ExpressionVariableSP persistent_var_sp =
       persistent_state->CreatePersistentVariable(const_result_sp);
-  clang_var_sp->m_live_sp = clang_var_sp->m_frozen_sp;
-  clang_var_sp->m_flags |= ExpressionVariable::EVIsProgramReference;
+  persistent_var_sp->m_live_sp = persistent_var_sp->m_frozen_sp;
+  persistent_var_sp->m_flags |= ExpressionVariable::EVIsProgramReference;
 
-  return clang_var_sp->GetValueObject();
+  return persistent_var_sp->GetValueObject();
 }
 
 bool ValueObject::IsSyntheticChildrenGenerated() {

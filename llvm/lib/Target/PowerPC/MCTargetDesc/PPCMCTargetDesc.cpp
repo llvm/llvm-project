@@ -13,6 +13,7 @@
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCAsmInfo.h"
+#include "PPCELFStreamer.h"
 #include "PPCTargetStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -20,11 +21,14 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -95,6 +99,15 @@ static MCAsmInfo *createPPCMCAsmInfo(const MCRegisterInfo &MRI,
   MAI->addInitialFrameState(Inst);
 
   return MAI;
+}
+
+static MCStreamer *createPPCMCStreamer(const Triple &T, MCContext &Context,
+                                       std::unique_ptr<MCAsmBackend> &&MAB,
+                                       std::unique_ptr<MCObjectWriter> &&OW,
+                                       std::unique_ptr<MCCodeEmitter> &&Emitter,
+                                       bool RelaxAll) {
+  return createPPCELFStreamer(Context, std::move(MAB), std::move(OW),
+                              std::move(Emitter));
 }
 
 namespace {
@@ -312,6 +325,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializePowerPCTargetMC() {
 
     // Register the asm backend.
     TargetRegistry::RegisterMCAsmBackend(*T, createPPCAsmBackend);
+
+    // Register the elf streamer.
+    TargetRegistry::RegisterELFStreamer(*T, createPPCMCStreamer);
 
     // Register the object target streamer.
     TargetRegistry::RegisterObjectTargetStreamer(*T,

@@ -368,8 +368,8 @@ static void DoEmitAvailabilityWarning(Sema &S, AvailabilityResult K,
     unsigned Warning = UseNewWarning ? diag::warn_unguarded_availability_new
                                      : diag::warn_unguarded_availability;
 
-    std::string PlatformName = AvailabilityAttr::getPrettyPlatformName(
-        S.getASTContext().getTargetInfo().getPlatformName());
+    std::string PlatformName(AvailabilityAttr::getPrettyPlatformName(
+        S.getASTContext().getTargetInfo().getPlatformName()));
 
     S.Diag(Loc, Warning) << OffendingDecl << PlatformName
                          << Introduced.getAsString();
@@ -767,8 +767,8 @@ void DiagnoseUnguardedAvailability::DiagnoseDeclAvailability(
             ? diag::warn_unguarded_availability_new
             : diag::warn_unguarded_availability;
 
-    std::string PlatformName = AvailabilityAttr::getPrettyPlatformName(
-        SemaRef.getASTContext().getTargetInfo().getPlatformName());
+    std::string PlatformName(AvailabilityAttr::getPrettyPlatformName(
+        SemaRef.getASTContext().getTargetInfo().getPlatformName()));
 
     SemaRef.Diag(Range.getBegin(), DiagKind)
         << Range << D << PlatformName << Introduced.getAsString();

@@ -913,11 +913,12 @@ void llvm::gatherImportedSummariesForModule(
     const FunctionImporter::ImportMapTy &ImportList,
     std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex) {
   // Include all summaries from the importing module.
-  ModuleToSummariesForIndex[ModulePath] =
+  ModuleToSummariesForIndex[std::string(ModulePath)] =
       ModuleToDefinedGVSummaries.lookup(ModulePath);
   // Include summaries for imports.
   for (auto &ILI : ImportList) {
-    auto &SummariesForIndex = ModuleToSummariesForIndex[ILI.first()];
+    auto &SummariesForIndex =
+        ModuleToSummariesForIndex[std::string(ILI.first())];
     const auto &DefinedGVSummaries =
         ModuleToDefinedGVSummaries.lookup(ILI.first());
     for (auto &GI : ILI.second) {
@@ -1291,7 +1292,7 @@ static bool doImportingForModule(Module &M) {
 
   // Perform the import now.
   auto ModuleLoader = [&M](StringRef Identifier) {
-    return loadFile(Identifier, M.getContext());
+    return loadFile(std::string(Identifier), M.getContext());
   };
   FunctionImporter Importer(*Index, ModuleLoader);
   Expected<bool> Result = Importer.importFunctions(M, ImportList);

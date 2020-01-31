@@ -23,7 +23,8 @@ void clang::EmitClangCommentHTMLTags(RecordKeeper &Records, raw_ostream &OS) {
   std::vector<Record *> Tags = Records.getAllDerivedDefinitions("Tag");
   std::vector<StringMatcher::StringPair> Matches;
   for (Record *Tag : Tags) {
-    Matches.emplace_back(Tag->getValueAsString("Spelling"), "return true;");
+    Matches.emplace_back(std::string(Tag->getValueAsString("Spelling")),
+                         "return true;");
   }
 
   emitSourceFileHeader("HTML tag name matcher", OS);
@@ -40,7 +41,7 @@ void clang::EmitClangCommentHTMLTagsProperties(RecordKeeper &Records,
   std::vector<StringMatcher::StringPair> MatchesEndTagOptional;
   std::vector<StringMatcher::StringPair> MatchesEndTagForbidden;
   for (Record *Tag : Tags) {
-    std::string Spelling = Tag->getValueAsString("Spelling");
+    std::string Spelling = std::string(Tag->getValueAsString("Spelling"));
     StringMatcher::StringPair Match(Spelling, "return true;");
     if (Tag->getValueAsBit("EndTagOptional"))
       MatchesEndTagOptional.push_back(Match);

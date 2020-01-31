@@ -512,12 +512,12 @@ void SDBM::print(raw_ostream &os) {
       return "cst";
     matrixPos -= 1;
     if (matrixPos < numDims)
-      return llvm::formatv("d{0}", matrixPos);
+      return std::string(llvm::formatv("d{0}", matrixPos));
     matrixPos -= numDims;
     if (matrixPos < numSymbols)
-      return llvm::formatv("s{0}", matrixPos);
+      return std::string(llvm::formatv("s{0}", matrixPos));
     matrixPos -= numSymbols;
-    return llvm::formatv("t{0}", matrixPos);
+    return std::string(llvm::formatv("t{0}", matrixPos));
   };
 
   // Header row.

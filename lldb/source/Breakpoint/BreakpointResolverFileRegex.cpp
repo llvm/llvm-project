@@ -65,7 +65,7 @@ BreakpointResolver *BreakpointResolverFileRegex::CreateFromStructuredData(
             "BRFR::CFSD: Malformed element %zu in the names array.", i);
         return nullptr;
       }
-      names_set.insert(name);
+      names_set.insert(std::string(name));
     }
   }
 

@@ -26,7 +26,7 @@ public:
   virtual ~StringExtractor();
 
   void Reset(llvm::StringRef str) {
-    m_packet = str;
+    m_packet = std::string(str);
     m_index = 0;
   }
 

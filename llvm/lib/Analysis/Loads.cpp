@@ -52,7 +52,12 @@ static bool isAligned(const Value *Base, const APInt &Offset, Align Alignment,
 static bool isDereferenceableAndAlignedPointer(
     const Value *V, Align Alignment, const APInt &Size, const DataLayout &DL,
     const Instruction *CtxI, const DominatorTree *DT,
-    SmallPtrSetImpl<const Value *> &Visited) {
+    SmallPtrSetImpl<const Value *> &Visited, unsigned MaxDepth) {
+
+  // Recursion limit.
+  if (MaxDepth-- == 0)
+    return false;
+
   // Already visited?  Bail out, we've likely hit unreachable code.
   if (!Visited.insert(V).second)
     return false;
@@ -63,7 +68,8 @@ static bool isDereferenceableAndAlignedPointer(
   // bitcast instructions are no-ops as far as dereferenceability is concerned.
   if (const BitCastOperator *BC = dyn_cast<BitCastOperator>(V))
     return isDereferenceableAndAlignedPointer(BC->getOperand(0), Alignment,
-                                              Size, DL, CtxI, DT, Visited);
+                                              Size, DL, CtxI, DT, Visited,
+                                              MaxDepth);
 
   bool CheckForNonNull = false;
   APInt KnownDerefBytes(Size.getBitWidth(),
@@ -99,22 +105,22 @@ static bool isDereferenceableAndAlignedPointer(
     // addrspacecast, so we can't do arithmetic directly on the APInt values.
     return isDereferenceableAndAlignedPointer(
         Base, Alignment, Offset + Size.sextOrTrunc(Offset.getBitWidth()), DL,
-        CtxI, DT, Visited);
+        CtxI, DT, Visited, MaxDepth);
   }
 
   // For gc.relocate, look through relocations
   if (const GCRelocateInst *RelocateInst = dyn_cast<GCRelocateInst>(V))
     return isDereferenceableAndAlignedPointer(
-        RelocateInst->getDerivedPtr(), Alignment, Size, DL, CtxI, DT, Visited);
+      RelocateInst->getDerivedPtr(), Alignment, Size, DL, CtxI, DT, Visited, MaxDepth);
 
   if (const AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(V))
     return isDereferenceableAndAlignedPointer(ASC->getOperand(0), Alignment,
-                                              Size, DL, CtxI, DT, Visited);
+                                              Size, DL, CtxI, DT, Visited, MaxDepth);
 
   if (const auto *Call = dyn_cast<CallBase>(V))
     if (auto *RP = getArgumentAliasingToReturnedPointer(Call, true))
       return isDereferenceableAndAlignedPointer(RP, Alignment, Size, DL, CtxI,
-                                                DT, Visited);
+                                                DT, Visited, MaxDepth);
 
   // If we don't know, assume the worst.
   return false;
@@ -128,11 +134,11 @@ bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Align Alignment,
   // Note: At the moment, Size can be zero.  This ends up being interpreted as
   // a query of whether [Base, V] is dereferenceable and V is aligned (since
   // that's what the implementation happened to do).  It's unclear if this is
-  // the desired semantic, but at least SelectionDAG does exercise this case.  
-  
+  // the desired semantic, but at least SelectionDAG does exercise this case.
+
   SmallPtrSet<const Value *, 32> Visited;
   return ::isDereferenceableAndAlignedPointer(V, Alignment, Size, DL, CtxI, DT,
-                                              Visited);
+                                              Visited, 16);
 }
 
 bool llvm::isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
@@ -375,6 +381,28 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load,
       ScanFrom, MaxInstsToScan, AA, IsLoad, NumScanedInst);
 }
 
+// Check if the load and the store have the same base, constant offsets and
+// non-overlapping access ranges.
+static bool AreNonOverlapSameBaseLoadAndStore(
+    Value *LoadPtr, Type *LoadTy, Value *StorePtr, Type *StoreTy,
+    const DataLayout &DL) {
+  APInt LoadOffset(DL.getTypeSizeInBits(LoadPtr->getType()), 0);
+  APInt StoreOffset(DL.getTypeSizeInBits(StorePtr->getType()), 0);
+  Value *LoadBase = LoadPtr->stripAndAccumulateConstantOffsets(
+      DL, LoadOffset, /* AllowNonInbounds */ false);
+  Value *StoreBase = StorePtr->stripAndAccumulateConstantOffsets(
+      DL, StoreOffset, /* AllowNonInbounds */ false);
+  if (LoadBase != StoreBase)
+    return false;
+  auto LoadAccessSize = LocationSize::precise(DL.getTypeStoreSize(LoadTy));
+  auto StoreAccessSize = LocationSize::precise(DL.getTypeStoreSize(StoreTy));
+  ConstantRange LoadRange(LoadOffset,
+                          LoadOffset + LoadAccessSize.toRaw());
+  ConstantRange StoreRange(StoreOffset,
+                           StoreOffset + StoreAccessSize.toRaw());
+  return LoadRange.intersectWith(StoreRange).isEmptySet();
+}
+
 Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
                                        bool AtLeastAtomic, BasicBlock *ScanBB,
                                        BasicBlock::iterator &ScanFrom,
@@ -453,10 +481,21 @@ Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
           StrippedPtr != StorePtr)
         continue;
 
-      // If we have alias analysis and it says the store won't modify the loaded
-      // value, ignore the store.
-      if (AA && !isModSet(AA->getModRefInfo(SI, StrippedPtr, AccessSize)))
-        continue;
+      if (!AA) {
+        // When AA isn't available, but if the load and the store have the same
+        // base, constant offsets and non-overlapping access ranges, ignore the
+        // store. This is a simple form of alias analysis that is used by the
+        // inliner. FIXME: use BasicAA if possible.
+        if (AreNonOverlapSameBaseLoadAndStore(
+                Ptr, AccessTy, SI->getPointerOperand(),
+                SI->getValueOperand()->getType(), DL))
+          continue;
+      } else {
+        // If we have alias analysis and it says the store won't modify the
+        // loaded value, ignore the store.
+        if (!isModSet(AA->getModRefInfo(SI, StrippedPtr, AccessSize)))
+          continue;
+      }
 
       // Otherwise the store that may or may not alias the pointer, bail out.
       ++ScanFrom;

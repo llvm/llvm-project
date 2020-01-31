@@ -1440,6 +1440,61 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
   return RBI.constrainGenericRegister(DstReg, *DstRC, *MRI);
 }
 
+bool AMDGPUInstructionSelector::selectG_FNEG(MachineInstr &MI) const {
+  // Only manually handle the f64 SGPR case.
+  //
+  // FIXME: This is a workaround for 2.5 different tablegen problems. Because
+  // the bit ops theoretically have a second result due to the implicit def of
+  // SCC, the GlobalISelEmitter is overly conservative and rejects it. Fixing
+  // that is easy by disabling the check. The result works, but uses a
+  // nonsensical sreg32orlds_and_sreg_1 regclass.
+  //
+  // The DAG emitter is more problematic, and incorrectly adds both S_XOR_B32 to
+  // the variadic REG_SEQUENCE operands.
+
+  Register Dst = MI.getOperand(0).getReg();
+  const RegisterBank *DstRB = RBI.getRegBank(Dst, *MRI, TRI);
+  if (DstRB->getID() != AMDGPU::SGPRRegBankID ||
+      MRI->getType(Dst) != LLT::scalar(64))
+    return false;
+
+  Register Src = MI.getOperand(1).getReg();
+  MachineInstr *Fabs = getOpcodeDef(TargetOpcode::G_FABS, Src, *MRI);
+  if (Fabs)
+    Src = Fabs->getOperand(1).getReg();
+
+  if (!RBI.constrainGenericRegister(Src, AMDGPU::SReg_64RegClass, *MRI) ||
+      !RBI.constrainGenericRegister(Dst, AMDGPU::SReg_64RegClass, *MRI))
+    return false;
+
+  MachineBasicBlock *BB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+  Register LoReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  Register HiReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  Register ConstReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  Register OpReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+
+  BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), LoReg)
+    .addReg(Src, 0, AMDGPU::sub0);
+  BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), HiReg)
+    .addReg(Src, 0, AMDGPU::sub1);
+  BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), ConstReg)
+    .addImm(0x80000000);
+
+  // Set or toggle sign bit.
+  unsigned Opc = Fabs ? AMDGPU::S_OR_B32 : AMDGPU::S_XOR_B32;
+  BuildMI(*BB, &MI, DL, TII.get(Opc), OpReg)
+    .addReg(HiReg)
+    .addReg(ConstReg);
+  BuildMI(*BB, &MI, DL, TII.get(AMDGPU::REG_SEQUENCE), Dst)
+    .addReg(LoReg)
+    .addImm(AMDGPU::sub0)
+    .addReg(OpReg)
+    .addImm(AMDGPU::sub1);
+  MI.eraseFromParent();
+  return true;
+}
+
 static bool isConstant(const MachineInstr &MI) {
   return MI.getOpcode() == TargetOpcode::G_CONSTANT;
 }
@@ -1572,7 +1627,8 @@ bool AMDGPUInstructionSelector::selectG_BRCOND(MachineInstr &I) const {
   return true;
 }
 
-bool AMDGPUInstructionSelector::selectG_FRAME_INDEX(MachineInstr &I) const {
+bool AMDGPUInstructionSelector::selectG_FRAME_INDEX_GLOBAL_VALUE(
+  MachineInstr &I) const {
   Register DstReg = I.getOperand(0).getReg();
   const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
   const bool IsVGPR = DstRB->getID() == AMDGPU::VGPRRegBankID;
@@ -1851,6 +1907,10 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT:
     return selectG_CONSTANT(I);
+  case TargetOpcode::G_FNEG:
+    if (selectImpl(I, *CoverageInfo))
+      return true;
+    return selectG_FNEG(I);
   case TargetOpcode::G_EXTRACT:
     return selectG_EXTRACT(I);
   case TargetOpcode::G_MERGE_VALUES:
@@ -1902,7 +1962,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_BRCOND:
     return selectG_BRCOND(I);
   case TargetOpcode::G_FRAME_INDEX:
-    return selectG_FRAME_INDEX(I);
+  case TargetOpcode::G_GLOBAL_VALUE:
+    return selectG_FRAME_INDEX_GLOBAL_VALUE(I);
   case TargetOpcode::G_PTR_MASK:
     return selectG_PTR_MASK(I);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
@@ -1931,12 +1992,12 @@ std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectVOP3ModsImpl(
   Register Src) const {
   unsigned Mods = 0;
-  MachineInstr *MI = MRI->getVRegDef(Src);
+  MachineInstr *MI = getDefIgnoringCopies(Src, *MRI);
 
   if (MI && MI->getOpcode() == AMDGPU::G_FNEG) {
     Src = MI->getOperand(1).getReg();
     Mods |= SISrcMods::NEG;
-    MI = MRI->getVRegDef(Src);
+    MI = getDefIgnoringCopies(Src, *MRI);
   }
 
   if (MI && MI->getOpcode() == AMDGPU::G_FABS) {
@@ -2338,6 +2399,50 @@ AMDGPUInstructionSelector::selectDS1Addr1Offset(MachineOperand &Root) const {
     }};
 }
 
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectDS64Bit4ByteAligned(MachineOperand &Root) const {
+  const MachineInstr *RootDef = MRI->getVRegDef(Root.getReg());
+  if (!RootDef) {
+    return {{
+        [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(1); }
+      }};
+  }
+
+  int64_t ConstAddr = 0;
+  Register PtrBase;
+  int64_t Offset;
+
+  std::tie(PtrBase, Offset) =
+    getPtrBaseWithConstantOffset(Root.getReg(), *MRI);
+
+  if (Offset) {
+    int64_t DWordOffset0 = Offset / 4;
+    int64_t DWordOffset1 = DWordOffset0 + 1;
+    if (isDSOffsetLegal(PtrBase, DWordOffset1, 8)) {
+      // (add n0, c0)
+      return {{
+          [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrBase); },
+          [=](MachineInstrBuilder &MIB) { MIB.addImm(DWordOffset0); },
+          [=](MachineInstrBuilder &MIB) { MIB.addImm(DWordOffset1); }
+        }};
+    }
+  } else if (RootDef->getOpcode() == AMDGPU::G_SUB) {
+    // TODO
+
+  } else if (mi_match(Root.getReg(), *MRI, m_ICst(ConstAddr))) {
+    // TODO
+
+  }
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(1); }
+    }};
+}
+
 /// If \p Root is a G_PTR_ADD with a G_CONSTANT on the right hand side, return
 /// the base value with the constant offset. There may be intervening copies
 /// between \p Root and the identified constant. Returns \p Root, 0 if this does
@@ -2622,9 +2727,7 @@ void AMDGPUInstructionSelector::renderTruncImm32(MachineInstrBuilder &MIB,
                                                  int OpIdx) const {
   assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
          "Expected G_CONSTANT");
-  Optional<int64_t> CstVal = getConstantVRegVal(MI.getOperand(0).getReg(), *MRI);
-  assert(CstVal && "Expected constant value");
-  MIB.addImm(CstVal.getValue());
+  MIB.addImm(MI.getOperand(1).getCImm()->getSExtValue());
 }
 
 void AMDGPUInstructionSelector::renderNegateImm(MachineInstrBuilder &MIB,

@@ -358,7 +358,7 @@ public:
       SmallString<40> Mangled;
       auto Prefix = getClassSymbolPrefix(Kind, OCD->getASTContext());
       llvm::Mangler::getNameWithPrefix(Mangled, Prefix + ClassName, DL);
-      return Mangled.str();
+      return std::string(Mangled.str());
     };
 
     return {

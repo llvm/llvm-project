@@ -35,7 +35,7 @@ public:
 
   // Optional path to write a debug DOT file for the CAG.
   StringRef getDebugCAGDotPath() const { return debugCAGDotPath; }
-  void setDebugCAGDotPath(StringRef p) { debugCAGDotPath = p; }
+  void setDebugCAGDotPath(StringRef p) { debugCAGDotPath = std::string(p); }
 
 private:
   MLIRContext &mlirContext;

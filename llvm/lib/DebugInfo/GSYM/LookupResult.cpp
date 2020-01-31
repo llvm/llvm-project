@@ -21,7 +21,7 @@ std::string LookupResult::getSourceFile(uint32_t Index) const {
   if (Index < Locations.size()) {
     if (!Locations[Index].Dir.empty()) {
       if (Locations[Index].Base.empty()) {
-        Fullpath = Locations[Index].Dir;
+        Fullpath = std::string(Locations[Index].Dir);
       } else {
         llvm::SmallString<64> Storage;
         llvm::sys::path::append(Storage, Locations[Index].Dir,
@@ -29,7 +29,7 @@ std::string LookupResult::getSourceFile(uint32_t Index) const {
         Fullpath.assign(Storage.begin(), Storage.end());
       }
     } else if (!Locations[Index].Base.empty())
-      Fullpath = Locations[Index].Base;
+      Fullpath = std::string(Locations[Index].Base);
   }
   return Fullpath;
 }

@@ -83,7 +83,7 @@ private:
 
     if (Store)
       // This is an actual directive to be remembered.
-      Stack.push_back({Loc, MacroName});
+      Stack.push_back({Loc, std::string(MacroName)});
   }
 
   ClangTidyCheck &Check;

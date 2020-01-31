@@ -497,9 +497,24 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::f32, &VE::F32RegClass);
   addRegisterClass(MVT::f64, &VE::I64RegClass);
 
-  // Custom legalize GlobalAddress nodes into LO/HI parts.
+  // Custom legalize address nodes into LO/HI parts.
   MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
+  setOperationAction(ISD::BlockAddress, PtrVT, Custom);
   setOperationAction(ISD::GlobalAddress, PtrVT, Custom);
+
+  // VE has no REM or DIVREM operations.
+  for (MVT IntVT : MVT::integer_valuetypes()) {
+    setOperationAction(ISD::UREM, IntVT, Expand);
+    setOperationAction(ISD::SREM, IntVT, Expand);
+    setOperationAction(ISD::SDIVREM, IntVT, Expand);
+    setOperationAction(ISD::UDIVREM, IntVT, Expand);
+  }
+
+  // VE doesn't have instructions for fp<->uint, so expand them by llvm
+  setOperationAction(ISD::FP_TO_UINT, MVT::i32, Promote); // use i64
+  setOperationAction(ISD::UINT_TO_FP, MVT::i32, Promote); // use i64
+  setOperationAction(ISD::FP_TO_UINT, MVT::i64, Expand);
+  setOperationAction(ISD::UINT_TO_FP, MVT::i64, Expand);
 
   setStackPointerRegisterToSaveRestore(VE::SX11);
 
@@ -539,6 +554,10 @@ SDValue VETargetLowering::withTargetFlags(SDValue Op, unsigned TF,
   if (const GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Op))
     return DAG.getTargetGlobalAddress(GA->getGlobal(), SDLoc(GA),
                                       GA->getValueType(0), GA->getOffset(), TF);
+
+  if (const BlockAddressSDNode *BA = dyn_cast<BlockAddressSDNode>(Op))
+    return DAG.getTargetBlockAddress(BA->getBlockAddress(), Op.getValueType(),
+                                     0, TF);
 
   llvm_unreachable("Unhandled address SDNode");
 }
@@ -580,10 +599,17 @@ SDValue VETargetLowering::LowerGlobalAddress(SDValue Op,
   return makeAddress(Op, DAG);
 }
 
+SDValue VETargetLowering::LowerBlockAddress(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  return makeAddress(Op, DAG);
+}
+
 SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default:
     llvm_unreachable("Should not custom lower this!");
+  case ISD::BlockAddress:
+    return LowerBlockAddress(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
   }

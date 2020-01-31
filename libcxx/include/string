@@ -2858,8 +2858,8 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
         }
         traits_type::move(__p + __pos, __s, __n2);
 __finish:
-// __sz += __n2 - __n1; in this and the below function below can cause unsigned integer overflow,
-// but this is a safe operation, so we disable the check.
+// __sz += __n2 - __n1; in this and the below function below can cause unsigned
+// integer overflow, but this is a safe operation, so we disable the check.
         __sz += __n2 - __n1;
         __set_size(__sz);
         __invalidate_iterators_past(__sz);

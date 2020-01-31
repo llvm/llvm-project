@@ -61,7 +61,7 @@ Error Writer::write() {
   // Write the header.
   uint8_t *Ptr = Buf.getBufferStart();
   Ptr = std::copy(Obj.Header.Magic.begin(), Obj.Header.Magic.end(), Ptr);
-  memcpy(Ptr, &Obj.Header.Version, sizeof(Obj.Header.Version));
+  support::endian::write32le(Ptr, Obj.Header.Version);
   Ptr += sizeof(Obj.Header.Version);
 
   // Write each section.

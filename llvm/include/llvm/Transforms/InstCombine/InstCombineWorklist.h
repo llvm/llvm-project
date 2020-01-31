@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Compiler.h"
@@ -26,6 +27,10 @@ namespace llvm {
 class InstCombineWorklist {
   SmallVector<Instruction *, 256> Worklist;
   DenseMap<Instruction *, unsigned> WorklistMap;
+  /// These instructions will be added in reverse order after the current
+  /// combine has finished. This means that these instructions will be visited
+  /// in the order they have been added.
+  SmallSetVector<Instruction *, 16> Deferred;
 
 public:
   InstCombineWorklist() = default;
@@ -50,6 +55,17 @@ public:
   void AddValue(Value *V) {
     if (Instruction *I = dyn_cast<Instruction>(V))
       Add(I);
+  }
+
+  void AddDeferred(Instruction *I) {
+    if (Deferred.insert(I))
+      LLVM_DEBUG(dbgs() << "IC: ADD DEFERRED: " << *I << '\n');
+  }
+
+  void AddDeferredInstructions() {
+    for (Instruction *I : reverse(Deferred))
+      Add(I);
+    Deferred.clear();
   }
 
   /// AddInitialGroup - Add the specified batch of stuff in reverse order.
@@ -77,6 +93,7 @@ public:
     Worklist[It->second] = nullptr;
 
     WorklistMap.erase(It);
+    Deferred.remove(I);
   }
 
   Instruction *RemoveOne() {
@@ -99,6 +116,7 @@ public:
   /// the map if it is large.
   void Zap() {
     assert(WorklistMap.empty() && "Worklist empty, but map not?");
+    assert(Deferred.empty() && "Deferred instructions left over");
 
     // Do an explicit clear, this shrinks the map if needed.
     WorklistMap.clear();

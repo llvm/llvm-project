@@ -43,6 +43,12 @@ inline void stringify_append<char>(llvm::raw_string_ostream &ss,
   ss << '\"' << t << '\"';
 }
 
+template <>
+inline void stringify_append<std::nullptr_t>(llvm::raw_string_ostream &ss,
+                                             const std::nullptr_t &t) {
+  ss << "\"nullptr\"";
+}
+
 template <typename Head>
 inline void stringify_helper(llvm::raw_string_ostream &ss, const Head &head) {
   stringify_append(ss, head);
@@ -92,7 +98,7 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
     sb_recorder.Record(data.GetSerializer(), data.GetRegistry(),               \
                        &lldb_private::repro::construct<Class Signature>::doit, \
                        __VA_ARGS__);                                           \
-    sb_recorder.RecordResult(this);                                            \
+    sb_recorder.RecordResult(this, false);                                     \
   }
 
 #define LLDB_RECORD_CONSTRUCTOR_NO_ARGS(Class)                                 \
@@ -101,7 +107,7 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
     sb_recorder.Record(data.GetSerializer(), data.GetRegistry(),               \
                        &lldb_private::repro::construct<Class()>::doit);        \
-    sb_recorder.RecordResult(this);                                            \
+    sb_recorder.RecordResult(this, false);                                     \
   }
 
 #define LLDB_RECORD_METHOD(Result, Class, Method, Signature, ...)              \
@@ -169,7 +175,7 @@ template <typename... Ts> inline std::string stringify_args(const Ts &... ts) {
                        static_cast<Result (*)()>(&Class::Method));             \
   }
 
-#define LLDB_RECORD_RESULT(Result) sb_recorder.RecordResult(Result);
+#define LLDB_RECORD_RESULT(Result) sb_recorder.RecordResult(Result, true);
 
 /// The LLDB_RECORD_DUMMY macro is special because it doesn't actually record
 /// anything. It's used to track API boundaries when we cannot record for
@@ -247,7 +253,8 @@ struct NotImplementedTag {};
 
 /// Return the deserialization tag for the given type T.
 template <class T> struct serializer_tag {
-  typedef typename std::conditional<std::is_trivially_copyable<T>::value, ValueTag, NotImplementedTag>::type type;
+  typedef typename std::conditional<std::is_trivially_copyable<T>::value,
+                                    ValueTag, NotImplementedTag>::type type;
 };
 template <class T> struct serializer_tag<T *> {
   typedef
@@ -280,10 +287,12 @@ public:
 
   /// Deserialize and interpret value as T.
   template <typename T> T Deserialize() {
+    T t = Read<T>(typename serializer_tag<T>::type());
 #ifdef LLDB_REPRO_INSTR_TRACE
-    llvm::errs() << "Deserializing with " << LLVM_PRETTY_FUNCTION << "\n";
+    llvm::errs() << "Deserializing with " << LLVM_PRETTY_FUNCTION << " -> "
+                 << stringify_args(t) << "\n";
 #endif
-    return Read<T>(typename serializer_tag<T>::type());
+    return t;
   }
 
   /// Store the returned value in the index-to-object mapping.
@@ -367,6 +376,7 @@ private:
 /// Partial specialization for C-style strings. We read the string value
 /// instead of treating it as pointer.
 template <> const char *Deserializer::Deserialize<const char *>();
+template <> const char **Deserializer::Deserialize<const char **>();
 template <> char *Deserializer::Deserialize<char *>();
 
 /// Helpers to auto-synthesize function replay code. It deserializes the replay
@@ -596,6 +606,27 @@ private:
     m_stream.write(0x0);
   }
 
+  void Serialize(const char **t) {
+    size_t size = 0;
+    if (!t) {
+      Serialize(size);
+      return;
+    }
+
+    // Compute the size of the array.
+    const char *const *temp = t;
+    while (*temp++)
+      size++;
+    Serialize(size);
+
+    // Serialize the content of the array.
+    while (*t) {
+      m_stream << *t;
+      m_stream.write(0x0);
+      ++t;
+    }
+  }
+
   /// Serialization stream.
   llvm::raw_ostream &m_stream;
 
@@ -646,10 +677,6 @@ public:
 
     unsigned id = registry.GetID(uintptr_t(f));
 
-#ifdef LLDB_REPRO_INSTR_TRACE
-    Log(id);
-#endif
-
     serializer.SerializeAll(id);
     serializer.SerializeAll(args...);
 
@@ -660,6 +687,10 @@ public:
       serializer.SerializeAll(0);
       m_result_recorded = true;
     }
+
+#ifdef LLDB_REPRO_INSTR_TRACE
+    Log(id, m_result_recorded);
+#endif
   }
 
   /// Records a single function call.
@@ -672,25 +703,36 @@ public:
 
     unsigned id = registry.GetID(uintptr_t(f));
 
-#ifdef LLDB_REPRO_INSTR_TRACE
-    Log(id);
-#endif
-
     serializer.SerializeAll(id);
     serializer.SerializeAll(args...);
 
     // Record result.
     serializer.SerializeAll(0);
     m_result_recorded = true;
+
+#ifdef LLDB_REPRO_INSTR_TRACE
+    Log(id, true);
+#endif
   }
 
   /// Record the result of a function call.
-  template <typename Result> Result RecordResult(Result &&r) {
-    UpdateBoundary();
+  template <typename Result>
+  Result RecordResult(Result &&r, bool update_boundary) {
+    // When recording the result from the LLDB_RECORD_RESULT macro, we need to
+    // update the boundary so we capture the copy constructor. However, when
+    // called to record the this pointer of the (copy) constructor, the
+    // boundary should not be toggled, because it is called from the
+    // LLDB_RECORD_CONSTRUCTOR macro, which might be followed by other API
+    // calls.
+    if (update_boundary)
+      UpdateBoundary();
     if (m_serializer && ShouldCapture()) {
       assert(!m_result_recorded);
       m_serializer->SerializeAll(r);
       m_result_recorded = true;
+#ifdef LLDB_REPRO_INSTR_TRACE
+      llvm::errs() << " -> " << stringify_args(r) << '\n';
+#endif
     }
     return std::forward<Result>(r);
   }
@@ -704,9 +746,11 @@ private:
   bool ShouldCapture() { return m_local_boundary; }
 
 #ifdef LLDB_REPRO_INSTR_TRACE
-  void Log(unsigned id) {
+  void Log(unsigned id, bool newline) {
     llvm::errs() << "Recording " << id << ": " << m_pretty_func << " ("
-                 << m_pretty_args << ")\n";
+                 << m_pretty_args << ")";
+    if (newline)
+      llvm::errs() << '\n';
   }
 #endif
 

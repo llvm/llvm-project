@@ -450,8 +450,7 @@ void LiveRangeEdit::eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
 // Keep track of new virtual registers created via
 // MachineRegisterInfo::createVirtualRegister.
 void
-LiveRangeEdit::MRI_NoteNewVirtualRegister(unsigned VReg)
-{
+LiveRangeEdit::MRI_NoteNewVirtualRegister(Register VReg) {
   if (VRM)
     VRM->grow();
 

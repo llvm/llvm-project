@@ -339,7 +339,7 @@ public:
     explicit String(llvm::StringRef S)
         : Object(lldb::eStructuredDataTypeString), m_value(S) {}
 
-    void SetValue(llvm::StringRef S) { m_value = S; }
+    void SetValue(llvm::StringRef S) { m_value = std::string(S); }
 
     llvm::StringRef GetValue() { return m_value; }
 

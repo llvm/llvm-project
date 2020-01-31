@@ -59,7 +59,7 @@ void checkNodesAreInitialized(const IndexFileIn &IndexFile,
 std::map<std::string, const IncludeGraphNode &> toMap(const IncludeGraph &IG) {
   std::map<std::string, const IncludeGraphNode &> Nodes;
   for (auto &I : IG)
-    Nodes.emplace(I.getKey(), I.getValue());
+    Nodes.emplace(std::string(I.getKey()), I.getValue());
   return Nodes;
 }
 
@@ -85,7 +85,7 @@ public:
                                      "-xc++",        "-std=c++11",
                                      "-iquote",      testRoot()};
     Args.insert(Args.end(), ExtraArgs.begin(), ExtraArgs.end());
-    Args.push_back(MainFilePath);
+    Args.push_back(std::string(MainFilePath));
 
     tooling::ToolInvocation Invocation(
         Args, std::move(Action), Files.get(),
@@ -100,7 +100,7 @@ public:
   void addFile(llvm::StringRef Path, llvm::StringRef Content) {
     InMemoryFileSystem->addFile(Path, 0,
                                 llvm::MemoryBuffer::getMemBuffer(Content));
-    FilePaths.push_back(Path);
+    FilePaths.push_back(std::string(Path));
   }
 
 protected:

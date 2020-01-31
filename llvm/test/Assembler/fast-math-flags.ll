@@ -189,3 +189,30 @@ entry:
 ; CHECK:  ret float %f
   ret float %f
 }
+
+; CHECK: @fmf_calls(
+define float @fmf_calls(float %x, float %y) {
+entry:
+; CHECK:  %vec = load <3 x float>, <3 x float>* @vec
+  %vec    = load <3 x float>, <3 x float>* @vec
+; CHECK:  %select = load i1, i1* @select
+  %select = load i1, i1* @select
+; CHECK:  %arr = load [3 x float], [3 x float]* @arr
+  %arr    = load [3 x float], [3 x float]* @arr
+
+; CHECK:  %a = call nnan ninf afn float @extfunc(float %x, float %y)
+  %a = call ninf nnan afn float @extfunc(float %x, float %y)
+; CHECK:  %a_vec = call reassoc nnan <3 x float> @extfunc_vec(<3 x float> %vec, <3 x float> %vec)
+  %a_vec = call reassoc nnan <3 x float> @extfunc_vec(<3 x float> %vec, <3 x float> %vec)
+; CHECK:  %b = call nnan ninf afn float (...) @var_extfunc(float %x, float %y)
+  %b = call ninf nnan afn float (...) @var_extfunc(float %x, float %y)
+; CHECK:  %b_vec = call reassoc nnan <3 x float> (...) @var_extfunc_vec(<3 x float> %vec, <3 x float> %vec)
+  %b_vec = call reassoc nnan <3 x float> (...) @var_extfunc_vec(<3 x float> %vec, <3 x float> %vec)
+; CHECK:  ret float %a
+  ret float %a
+}
+
+declare float @extfunc(float, float)
+declare <3 x float> @extfunc_vec(<3 x float>, <3 x float>)
+declare float @var_extfunc(...)
+declare <3 x float> @var_extfunc_vec(...)

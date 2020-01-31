@@ -200,7 +200,7 @@ AtomicChange::AtomicChange(const SourceManager &SM,
       FullKeyPosition.getSpellingLoc().getDecomposedLoc();
   const FileEntry *FE = SM.getFileEntryForID(FileIDAndOffset.first);
   assert(FE && "Cannot create AtomicChange with invalid location.");
-  FilePath = FE->getName();
+  FilePath = std::string(FE->getName());
   Key = FilePath + ":" + std::to_string(FileIDAndOffset.second);
 }
 
@@ -284,11 +284,11 @@ llvm::Error AtomicChange::insert(const SourceManager &SM, SourceLocation Loc,
 }
 
 void AtomicChange::addHeader(llvm::StringRef Header) {
-  InsertedHeaders.push_back(Header);
+  InsertedHeaders.push_back(std::string(Header));
 }
 
 void AtomicChange::removeHeader(llvm::StringRef Header) {
-  RemovedHeaders.push_back(Header);
+  RemovedHeaders.push_back(std::string(Header));
 }
 
 llvm::Expected<std::string>

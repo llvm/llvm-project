@@ -154,7 +154,7 @@ const Optional<ControlConditions> ControlConditions::collectControlConditions(
 
 bool ControlConditions::addControlCondition(ControlCondition C) {
   bool Inserted = false;
-  if (none_of(Conditions, [&C](ControlCondition &Exists) {
+  if (none_of(Conditions, [&](ControlCondition &Exists) {
         return ControlConditions::isEquivalent(C, Exists);
       })) {
     Conditions.push_back(C);
@@ -172,8 +172,8 @@ bool ControlConditions::isEquivalent(const ControlConditions &Other) const {
   if (Conditions.size() != Other.Conditions.size())
     return false;
 
-  return all_of(Conditions, [&Other](const ControlCondition &C) {
-    return any_of(Other.Conditions, [&C](const ControlCondition &OtherC) {
+  return all_of(Conditions, [&](const ControlCondition &C) {
+    return any_of(Other.Conditions, [&](const ControlCondition &OtherC) {
       return ControlConditions::isEquivalent(C, OtherC);
     });
   });
@@ -380,6 +380,17 @@ bool llvm::isSafeToMoveBefore(Instruction &I, Instruction &InsertPoint,
   return true;
 }
 
+bool llvm::isSafeToMoveBefore(BasicBlock &BB, Instruction &InsertPoint,
+                              DominatorTree &DT, const PostDominatorTree &PDT,
+                              DependenceInfo &DI) {
+  return llvm::all_of(BB, [&](Instruction &I) {
+    if (BB.getTerminator() == &I)
+      return true;
+
+    return isSafeToMoveBefore(I, InsertPoint, DT, PDT, DI);
+  });
+}
+
 void llvm::moveInstructionsToTheBeginning(BasicBlock &FromBB, BasicBlock &ToBB,
                                           DominatorTree &DT,
                                           const PostDominatorTree &PDT,
@@ -390,6 +401,18 @@ void llvm::moveInstructionsToTheBeginning(BasicBlock &FromBB, BasicBlock &ToBB,
     // Increment the iterator before modifying FromBB.
     ++It;
 
+    if (isSafeToMoveBefore(I, *MovePos, DT, PDT, DI))
+      I.moveBefore(MovePos);
+  }
+}
+
+void llvm::moveInstructionsToTheEnd(BasicBlock &FromBB, BasicBlock &ToBB,
+                                    DominatorTree &DT,
+                                    const PostDominatorTree &PDT,
+                                    DependenceInfo &DI) {
+  Instruction *MovePos = ToBB.getTerminator();
+  while (FromBB.size() > 1) {
+    Instruction &I = FromBB.front();
     if (isSafeToMoveBefore(I, *MovePos, DT, PDT, DI))
       I.moveBefore(MovePos);
   }

@@ -5388,7 +5388,7 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
     ImplicitConversionSequence ICS =
         TryImplicitConversion(VariantRef, FnPtrType.getUnqualifiedType(),
                               /*SuppressUserConversions=*/false,
-                              /*AllowExplicit=*/false,
+                              AllowedExplicit::None,
                               /*InOverloadResolution=*/false,
                               /*CStyle=*/false,
                               /*AllowObjCWritebackConversion=*/false);
@@ -11979,7 +11979,7 @@ getListOfPossibleValues(OpenMPClauseKind K, unsigned First, unsigned Last,
     else if (I + Skipped + 1 != Last)
       Out << ", ";
   }
-  return Out.str();
+  return std::string(Out.str());
 }
 
 OMPClause *Sema::ActOnOpenMPDefaultClause(OpenMPDefaultClauseKind Kind,

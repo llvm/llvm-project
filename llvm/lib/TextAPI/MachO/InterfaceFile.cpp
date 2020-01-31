@@ -63,11 +63,11 @@ void InterfaceFile::addParentUmbrella(const Target &Target_, StringRef Parent) {
                              Target RHS) { return LHS.first < RHS; });
 
   if ((Iter != ParentUmbrellas.end()) && !(Target_ < Iter->first)) {
-    Iter->second = Parent;
+    Iter->second = std::string(Parent);
     return;
   }
 
-  ParentUmbrellas.emplace(Iter, Target_, Parent);
+  ParentUmbrellas.emplace(Iter, Target_, std::string(Parent));
   return;
 }
 
@@ -77,11 +77,11 @@ void InterfaceFile::addUUID(const Target &Target_, StringRef UUID) {
                              Target RHS) { return LHS.first < RHS; });
 
   if ((Iter != UUIDs.end()) && !(Target_ < Iter->first)) {
-    Iter->second = UUID;
+    Iter->second = std::string(UUID);
     return;
   }
 
-  UUIDs.emplace(Iter, Target_, UUID);
+  UUIDs.emplace(Iter, Target_, std::string(UUID));
   return;
 }
 

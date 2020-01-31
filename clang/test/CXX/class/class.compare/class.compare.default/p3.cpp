@@ -190,3 +190,15 @@ bool operator<(const G&, const G&);
 bool operator<=(const G&, const G&);
 bool operator>(const G&, const G&);
 bool operator>=(const G&, const G&);
+
+namespace PR44721 {
+  template <typename T> bool operator==(T const &, T const &) { return true; }
+  template <typename T, typename U> bool operator!=(T const &, U const &) { return true; }
+  template <typename T> int operator<=>(T const &, T const &) { return 0; }
+
+  struct S {
+    friend bool operator==(const S &, const S &) = default;
+    friend bool operator<=>(const S &, const S &) = default;
+    int x;
+  };
+}

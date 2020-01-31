@@ -68,8 +68,8 @@ MCContext::MCContext(const MCAsmInfo *mai, const MCRegisterInfo *mri,
   SecureLogFile = AsSecureLogFileName;
 
   if (SrcMgr && SrcMgr->getNumBuffers())
-    MainFileName =
-        SrcMgr->getMemoryBuffer(SrcMgr->getMainFileID())->getBufferIdentifier();
+    MainFileName = std::string(SrcMgr->getMemoryBuffer(SrcMgr->getMainFileID())
+                                   ->getBufferIdentifier());
 }
 
 MCContext::~MCContext() {
@@ -593,7 +593,7 @@ void MCContext::RemapDebugPaths() {
   };
 
   // Remap compilation directory.
-  std::string CompDir = CompilationDir.str();
+  std::string CompDir = std::string(CompilationDir.str());
   RemapDebugPath(CompDir);
   CompilationDir = CompDir;
 

@@ -78,7 +78,8 @@ private:
 static dynamic_error_category categorySingleton;
 
 std::error_code make_dynamic_error_code(StringRef msg) {
-  return std::error_code(categorySingleton.add(msg), categorySingleton);
+  return std::error_code(categorySingleton.add(std::string(msg)),
+                         categorySingleton);
 }
 
 char GenericError::ID = 0;

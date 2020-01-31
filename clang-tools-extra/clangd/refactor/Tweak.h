@@ -81,7 +81,7 @@ public:
 
     static Effect showMessage(StringRef S) {
       Effect E;
-      E.ShowMessage = S;
+      E.ShowMessage = std::string(S);
       return E;
     }
 

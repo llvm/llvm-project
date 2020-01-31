@@ -133,6 +133,10 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMHalfElementsVectorType<0>, llvm_anyvector_ty],
                 [IntrNoMem]>;
+  class AdvSIMD_2VectorArg_Lane_Intrinsic
+    : Intrinsic<[llvm_anyint_ty],
+                [LLVMMatchType<0>, llvm_anyint_ty, llvm_i32_ty],
+                [IntrNoMem]>;
 
   class AdvSIMD_3VectorArg_Intrinsic
       : Intrinsic<[llvm_anyvector_ty],
@@ -207,9 +211,13 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
 
   // Vector Saturating Doubling Multiply High
   def int_aarch64_neon_sqdmulh : AdvSIMD_2IntArg_Intrinsic;
+  def int_aarch64_neon_sqdmulh_lane : AdvSIMD_2VectorArg_Lane_Intrinsic;
+  def int_aarch64_neon_sqdmulh_laneq : AdvSIMD_2VectorArg_Lane_Intrinsic;
 
   // Vector Saturating Rounding Doubling Multiply High
   def int_aarch64_neon_sqrdmulh : AdvSIMD_2IntArg_Intrinsic;
+  def int_aarch64_neon_sqrdmulh_lane : AdvSIMD_2VectorArg_Lane_Intrinsic;
+  def int_aarch64_neon_sqrdmulh_laneq : AdvSIMD_2VectorArg_Lane_Intrinsic;
 
   // Vector Polynominal Multiply
   def int_aarch64_neon_pmul : AdvSIMD_2VectorArg_Intrinsic;
@@ -1032,6 +1040,13 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                  LLVMVectorOfBitcastsToInt<0>],
                 [IntrNoMem]>;
 
+  class SVE2_2VectorArg_Pred_Long_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                 LLVMMatchType<0>,
+                 LLVMSubdivide2VectorType<0>],
+                [IntrNoMem]>;
+
   class SVE2_3VectorArg_Long_Intrinsic
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMMatchType<0>,
@@ -1079,6 +1094,14 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
                   [LLVMSubdivide2VectorType<0>, llvm_anyvector_ty,
                    llvm_i32_ty],
                   [IntrNoMem, ImmArg<2>]>;
+
+  class SVE2_3VectorArg_Indexed_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>,
+                 LLVMSubdivide2VectorType<0>,
+                 LLVMSubdivide2VectorType<0>,
+                 llvm_i32_ty],
+                [IntrNoMem, ImmArg<3>]>;
 
   // NOTE: There is no relationship between these intrinsics beyond an attempt
   // to reuse currently identical class definitions.
@@ -1193,8 +1216,6 @@ def int_aarch64_sve_sub   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_subr  : AdvSIMD_Pred2VectorArg_Intrinsic;
 
 def int_aarch64_sve_pmul       : AdvSIMD_2VectorArg_Intrinsic;
-def int_aarch64_sve_sqdmulh    : AdvSIMD_2VectorArg_Intrinsic;
-def int_aarch64_sve_sqrdmulh   : AdvSIMD_2VectorArg_Intrinsic;
 
 def int_aarch64_sve_mul        : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_smulh      : AdvSIMD_Pred2VectorArg_Intrinsic;
@@ -1651,14 +1672,51 @@ def int_aarch64_sve_st1_scatter_uxtw_index
 def int_aarch64_sve_st1_scatter_scalar_offset : AdvSIMD_ScatterStore_VectorBase_Intrinsic;
 
 //
+// SVE2 - Uniform DSP operations
+//
+
+def int_aarch64_sve_shadd         : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_shsub         : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_shsubr        : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_sqabs         : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_sqdmulh       : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_sqdmulh_lane  : AdvSIMD_2VectorArgIndexed_Intrinsic;
+def int_aarch64_sve_sqneg         : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_sqrdmlah      : AdvSIMD_3VectorArg_Intrinsic;
+def int_aarch64_sve_sqrdmlah_lane : AdvSIMD_3VectorArgIndexed_Intrinsic;
+def int_aarch64_sve_sqrdmlsh      : AdvSIMD_3VectorArg_Intrinsic;
+def int_aarch64_sve_sqrdmlsh_lane : AdvSIMD_3VectorArgIndexed_Intrinsic;
+def int_aarch64_sve_sqrdmulh      : AdvSIMD_2VectorArg_Intrinsic;
+def int_aarch64_sve_sqrdmulh_lane : AdvSIMD_2VectorArgIndexed_Intrinsic;
+def int_aarch64_sve_srhadd        : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_uhadd         : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_uhsub         : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_uhsubr        : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_urecpe        : AdvSIMD_Merged1VectorArg_Intrinsic;
+def int_aarch64_sve_urhadd        : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_ursqrte       : AdvSIMD_Merged1VectorArg_Intrinsic;
+
+//
 // SVE2 - Non-widening pairwise arithmetic
 //
 
+def int_aarch64_sve_addp    : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_faddp   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_fmaxp   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_fmaxnmp : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_fminp   : AdvSIMD_Pred2VectorArg_Intrinsic;
 def int_aarch64_sve_fminnmp : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_smaxp   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_sminp   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_umaxp   : AdvSIMD_Pred2VectorArg_Intrinsic;
+def int_aarch64_sve_uminp   : AdvSIMD_Pred2VectorArg_Intrinsic;
+
+//
+// SVE2 - Widening pairwise arithmetic
+//
+
+def int_aarch64_sve_sadalp : SVE2_2VectorArg_Pred_Long_Intrinsic;
+def int_aarch64_sve_uadalp : SVE2_2VectorArg_Pred_Long_Intrinsic;
 
 //
 // SVE2 - Floating-point widening multiply-accumulate
@@ -1732,4 +1790,18 @@ def int_aarch64_sve_sqshrunt  : SVE2_2VectorArg_Imm_Narrowing_Intrinsic;
 
 def int_aarch64_sve_sqrshrunb : SVE2_1VectorArg_Imm_Narrowing_Intrinsic;
 def int_aarch64_sve_sqrshrunt : SVE2_2VectorArg_Imm_Narrowing_Intrinsic;
+
+def int_aarch64_sve_smlalb_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_smlalt_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_umlalb_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_umlalt_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_smlslb_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_smlslt_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_umlslb_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_umlslt_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_sqdmlalb_lane : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_sqdmlalt_lane : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_sqdmlslb_lane : SVE2_3VectorArg_Indexed_Intrinsic;
+def int_aarch64_sve_sqdmlslt_lane : SVE2_3VectorArg_Indexed_Intrinsic;
+
 }

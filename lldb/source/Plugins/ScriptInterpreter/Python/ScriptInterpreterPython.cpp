@@ -853,7 +853,7 @@ static std::string GenerateUniqueName(const char *base_name_wanted,
   else
     sstr.Printf("%s_%p", base_name_wanted, name_token);
 
-  return sstr.GetString();
+  return std::string(sstr.GetString());
 }
 
 bool ScriptInterpreterPythonImpl::GetEmbeddedInterpreterModuleObjects() {
@@ -3035,7 +3035,7 @@ bool ScriptInterpreterPythonImpl::GetDocumentationForItem(const char *item,
     StreamString str_stream;
     str_stream.Printf(
         "Function %s was not found. Containing module might be missing.", item);
-    dest = str_stream.GetString();
+    dest = std::string(str_stream.GetString());
     return false;
   }
 }

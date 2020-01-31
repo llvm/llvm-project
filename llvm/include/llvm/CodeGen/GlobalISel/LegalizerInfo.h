@@ -1155,8 +1155,8 @@ public:
 
   /// Return true if MI is either legal or has been legalized and false
   /// if not legal.
-  virtual bool legalizeIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
-                                 MachineIRBuilder &MIRBuilder) const;
+  virtual bool legalizeIntrinsic(MachineInstr &MI, MachineIRBuilder &MIRBuilder,
+                                 GISelChangeObserver &Observer) const;
 
   /// Return the opcode (SEXT/ZEXT/ANYEXT) that should be performed while
   /// widening a constant of type SmallTy which targets can override.

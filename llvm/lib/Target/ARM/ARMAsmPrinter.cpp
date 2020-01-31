@@ -606,11 +606,12 @@ void ARMAsmPrinter::emitAttributes() {
     if (!ArchFS.empty())
       ArchFS = (Twine(ArchFS) + "," + FS).str();
     else
-      ArchFS = FS;
+      ArchFS = std::string(FS);
   }
   const ARMBaseTargetMachine &ATM =
       static_cast<const ARMBaseTargetMachine &>(TM);
-  const ARMSubtarget STI(TT, CPU, ArchFS, ATM, ATM.isLittleEndian());
+  const ARMSubtarget STI(TT, std::string(CPU), ArchFS, ATM,
+                         ATM.isLittleEndian());
 
   // Emit build attributes for the available hardware.
   ATS.emitTargetAttributes(STI);

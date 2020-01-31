@@ -41,7 +41,7 @@ StateType GDBRemoteClientBase::SendContinuePacketAndWaitForResponse(
 
   {
     std::lock_guard<std::mutex> lock(m_mutex);
-    m_continue_packet = payload;
+    m_continue_packet = std::string(payload);
     m_should_stop = false;
   }
   ContinueLock cont_lock(*this);

@@ -11,7 +11,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 
-namespace llvm_libc {
+namespace __llvm_libc {
 namespace testing {
 
 // This need not be a class as all it has is a single read-write state variable.
@@ -204,6 +204,11 @@ template bool Test::test<unsigned long, 0>(RunContext &Ctx, TestCondition Cond,
                                            const char *RHSStr, const char *File,
                                            unsigned long Line);
 
+template bool Test::test<bool, 0>(RunContext &Ctx, TestCondition Cond, bool LHS,
+                                  bool RHS, const char *LHSStr,
+                                  const char *RHSStr, const char *File,
+                                  unsigned long Line);
+
 template bool Test::test<unsigned long long, 0>(
     RunContext &Ctx, TestCondition Cond, unsigned long long LHS,
     unsigned long long RHS, const char *LHSStr, const char *RHSStr,
@@ -224,6 +229,6 @@ bool Test::testStrNe(RunContext &Ctx, const char *LHS, const char *RHS,
 }
 
 } // namespace testing
-} // namespace llvm_libc
+} // namespace __llvm_libc
 
-int main() { return llvm_libc::testing::Test::runTests(); }
+int main() { return __llvm_libc::testing::Test::runTests(); }

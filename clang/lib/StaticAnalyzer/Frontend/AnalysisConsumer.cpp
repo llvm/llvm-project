@@ -68,8 +68,9 @@ void ento::createPlistHTMLDiagnosticConsumer(
     AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
     const std::string &prefix, const Preprocessor &PP,
     const cross_tu::CrossTranslationUnitContext &CTU) {
-  createHTMLDiagnosticConsumer(AnalyzerOpts, C,
-                               llvm::sys::path::parent_path(prefix), PP, CTU);
+  createHTMLDiagnosticConsumer(
+      AnalyzerOpts, C, std::string(llvm::sys::path::parent_path(prefix)), PP,
+      CTU);
   createPlistMultiFileDiagnosticConsumer(AnalyzerOpts, C, prefix, PP, CTU);
 }
 
@@ -192,7 +193,7 @@ class AnalysisConsumer : public AnalysisASTConsumer,
 
 public:
   ASTContext *Ctx;
-  const Preprocessor &PP;
+  Preprocessor &PP;
   const std::string OutDir;
   AnalyzerOptionsRef Opts;
   ArrayRef<std::string> Plugins;
@@ -335,8 +336,8 @@ public:
     checkerMgr = createCheckerManager(
         *Ctx, *Opts, Plugins, CheckerRegistrationFns, PP.getDiagnostics());
 
-    Mgr = std::make_unique<AnalysisManager>(*Ctx, PathConsumers, CreateStoreMgr,
-                                            CreateConstraintMgr,
+    Mgr = std::make_unique<AnalysisManager>(*Ctx, PP, PathConsumers,
+                                            CreateStoreMgr, CreateConstraintMgr,
                                             checkerMgr.get(), *Opts, Injector);
   }
 

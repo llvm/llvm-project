@@ -983,7 +983,7 @@ public:
         indent(Indent);
     }
 
-    void write(const std::string &S) {
+    void write(StringRef S) {
       LineLength += S.size();
       Stream << S;
     }
@@ -1110,7 +1110,7 @@ public:
           TmpStream << "scalar";
       }
       TmpStream.flush();
-      Tmp = StringRef(Tmp).trim();
+      Tmp = std::string(StringRef(Tmp).trim());
       LineLength += Tmp.size();
       Stream << Tmp;
     }

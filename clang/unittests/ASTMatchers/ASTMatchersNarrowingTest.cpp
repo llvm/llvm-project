@@ -2504,6 +2504,13 @@ TEST(IsScopedEnum, MatchesScopedEnum) {
   EXPECT_TRUE(notMatches("enum X {};", enumDecl(isScoped())));
 }
 
+TEST(TagDeclKind, MatchesTagDeclKind) {
+  EXPECT_TRUE(matches("struct X {};", tagDecl(isStruct())));
+  EXPECT_TRUE(matches("class C {};", tagDecl(isClass())));
+  EXPECT_TRUE(matches("union U {};", tagDecl(isUnion())));
+  EXPECT_TRUE(matches("enum E {};", tagDecl(isEnum())));
+}
+
 TEST(HasTrailingReturn, MatchesTrailingReturn) {
   EXPECT_TRUE(matches("auto Y() -> int { return 0; }",
                       functionDecl(hasTrailingReturn())));

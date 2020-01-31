@@ -41,7 +41,7 @@ public:
       Inc.R = halfOpenToRange(SM, FilenameRange);
       Inc.Written =
           (IsAngled ? "<" + FileName + ">" : "\"" + FileName + "\"").str();
-      Inc.Resolved = File ? File->tryGetRealPathName() : "";
+      Inc.Resolved = std::string(File ? File->tryGetRealPathName() : "");
       Inc.HashOffset = SM.getFileOffset(HashLoc);
       Inc.FileKind = FileKind;
     }
@@ -120,7 +120,7 @@ void IncludeStructure::recordInclude(llvm::StringRef IncludingName,
                                      llvm::StringRef IncludedRealName) {
   auto Child = fileIndex(IncludedName);
   if (!IncludedRealName.empty() && RealPathNames[Child].empty())
-    RealPathNames[Child] = IncludedRealName;
+    RealPathNames[Child] = std::string(IncludedRealName);
   auto Parent = fileIndex(IncludingName);
   IncludeChildren[Parent].push_back(Child);
 }

@@ -365,6 +365,66 @@ def make_pointer_union_printer(val):
   string = 'llvm::PointerUnion containing %s' % pointer_type
   return make_printer(string, [('pointer', pointer.cast(pointer_type))])
 
+class IlistNodePrinter:
+  """Print an llvm::ilist_node object."""
+
+  def __init__(self, val):
+    impl_type = val.type.fields()[0].type
+    base_type = impl_type.fields()[0].type
+    derived_type = val.type.template_argument(0)
+
+    def get_prev_and_sentinel(base):
+      # One of Prev and PrevAndSentinel exists. Depending on #defines used to
+      # compile LLVM, the base_type's template argument is either true of false.
+      if base_type.template_argument(0):
+        return get_pointer_int_pair(base['PrevAndSentinel'])
+      return base['Prev'], None
+
+    # Casts a base_type pointer to the appropriate derived type.
+    def cast_pointer(pointer):
+      sentinel = get_prev_and_sentinel(pointer.dereference())[1]
+      pointer = pointer.cast(impl_type.pointer())
+      if sentinel:
+          return pointer
+      return pointer.cast(derived_type.pointer())
+
+    # Repeated cast becaue val.type's base_type is ambiguous when using tags.
+    base = val.cast(impl_type).cast(base_type)
+    (prev, sentinel) = get_prev_and_sentinel(base)
+    prev = prev.cast(base_type.pointer())
+    self.prev = cast_pointer(prev)
+    self.next = cast_pointer(val['Next'])
+    self.sentinel = sentinel
+
+  def children(self):
+    if self.sentinel:
+      yield 'sentinel', 'yes'
+    yield 'prev', self.prev
+    yield 'next', self.next
+
+class IlistPrinter:
+  """Print an llvm::simple_ilist or llvm::iplist object."""
+
+  def __init__(self, val):
+    self.node_type = val.type.template_argument(0)
+    sentinel = val['Sentinel']
+    # First field is common base type of sentinel and ilist_node.
+    base_type = sentinel.type.fields()[0].type
+    self.sentinel = sentinel.address.cast(base_type.pointer())
+
+  def _pointers(self):
+    pointer = self.sentinel
+    while True:
+      pointer = pointer['Next'].cast(pointer.type)
+      if pointer == self.sentinel:
+        return
+      yield pointer.cast(self.node_type.pointer())
+
+  def children(self):
+    for k, v in enumerate(self._pointers()):
+      yield ('[%d]' % k, v.dereference())
+
+
 pp = gdb.printing.RegexpCollectionPrettyPrinter("LLVMSupport")
 pp.add_printer('llvm::SmallString', '^llvm::SmallString<.*>$', SmallStringPrinter)
 pp.add_printer('llvm::StringRef', '^llvm::StringRef$', StringRefPrinter)
@@ -376,4 +436,7 @@ pp.add_printer('llvm::DenseMap', '^llvm::DenseMap<.*>$', DenseMapPrinter)
 pp.add_printer('llvm::Twine', '^llvm::Twine$', TwinePrinter)
 pp.add_printer('llvm::PointerIntPair', '^llvm::PointerIntPair<.*>$', make_pointer_int_pair_printer)
 pp.add_printer('llvm::PointerUnion', '^llvm::PointerUnion<.*>$', make_pointer_union_printer)
+pp.add_printer('llvm::ilist_node', '^llvm::ilist_node<.*>$', IlistNodePrinter)
+pp.add_printer('llvm::iplist', '^llvm::iplist<.*>$', IlistPrinter)
+pp.add_printer('llvm::simple_ilist', '^llvm::simple_ilist<.*>$', IlistPrinter)
 gdb.printing.register_pretty_printer(gdb.current_objfile(), pp)

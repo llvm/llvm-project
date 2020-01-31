@@ -1936,7 +1936,7 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
   using map_type = std::map<std::string, T>;
 
   static void inputOne(IO &io, StringRef key, map_type &v) {
-    io.mapRequired(key.str().c_str(), v[key]);
+    io.mapRequired(key.str().c_str(), v[std::string(key)]);
   }
 
   static void output(IO &io, map_type &v) {

@@ -62,9 +62,11 @@ static void emitEnumClass(const Record &enumDef, StringRef enumName,
 
 static void emitDenseMapInfo(StringRef enumName, std::string underlyingType,
                              StringRef cppNamespace, raw_ostream &os) {
-  std::string qualName = formatv("{0}::{1}", cppNamespace, enumName);
+  std::string qualName =
+      std::string(formatv("{0}::{1}", cppNamespace, enumName));
   if (underlyingType.empty())
-    underlyingType = formatv("std::underlying_type<{0}>::type", qualName);
+    underlyingType =
+        std::string(formatv("std::underlying_type<{0}>::type", qualName));
 
   const char *const mapInfo = R"(
 namespace llvm {
@@ -133,7 +135,7 @@ getAllBitsUnsetCase(llvm::ArrayRef<EnumAttrCase> cases) {
 static void emitOperators(const Record &enumDef, raw_ostream &os) {
   EnumAttr enumAttr(enumDef);
   StringRef enumName = enumAttr.getEnumClassName();
-  std::string underlyingType = enumAttr.getUnderlyingType();
+  std::string underlyingType = std::string(enumAttr.getUnderlyingType());
   os << formatv("inline {0} operator|({0} lhs, {0} rhs) {{\n", enumName)
      << formatv("  return static_cast<{0}>("
                 "static_cast<{1}>(lhs) | static_cast<{1}>(rhs));\n",
@@ -163,8 +165,9 @@ static void emitSymToStrFnForIntEnum(const Record &enumDef, raw_ostream &os) {
   os << "  switch (val) {\n";
   for (const auto &enumerant : enumerants) {
     auto symbol = enumerant.getSymbol();
+    auto str = enumerant.getStr();
     os << formatv("    case {0}::{1}: return \"{2}\";\n", enumName,
-                  makeIdentifier(symbol), symbol);
+                  makeIdentifier(symbol), str);
   }
   os << "  }\n";
   os << "  return \"\";\n";
@@ -217,7 +220,8 @@ static void emitStrToSymFnForIntEnum(const Record &enumDef, raw_ostream &os) {
                 enumName);
   for (const auto &enumerant : enumerants) {
     auto symbol = enumerant.getSymbol();
-    os << formatv("      .Case(\"{1}\", {0}::{2})\n", enumName, symbol,
+    auto str = enumerant.getStr();
+    os << formatv("      .Case(\"{1}\", {0}::{2})\n", enumName, str,
                   makeIdentifier(symbol));
   }
   os << "      .Default(llvm::None);\n";
@@ -227,7 +231,7 @@ static void emitStrToSymFnForIntEnum(const Record &enumDef, raw_ostream &os) {
 static void emitStrToSymFnForBitEnum(const Record &enumDef, raw_ostream &os) {
   EnumAttr enumAttr(enumDef);
   StringRef enumName = enumAttr.getEnumClassName();
-  std::string underlyingType = enumAttr.getUnderlyingType();
+  std::string underlyingType = std::string(enumAttr.getUnderlyingType());
   StringRef strToSymFnName = enumAttr.getStringToSymbolFnName();
   StringRef separator = enumDef.getValueAsString("separator");
   auto enumerants = enumAttr.getAllCases();
@@ -273,7 +277,7 @@ static void emitUnderlyingToSymFnForIntEnum(const Record &enumDef,
                                             raw_ostream &os) {
   EnumAttr enumAttr(enumDef);
   StringRef enumName = enumAttr.getEnumClassName();
-  std::string underlyingType = enumAttr.getUnderlyingType();
+  std::string underlyingType = std::string(enumAttr.getUnderlyingType());
   StringRef underlyingToSymFnName = enumAttr.getUnderlyingToSymbolFnName();
   auto enumerants = enumAttr.getAllCases();
 
@@ -304,7 +308,7 @@ static void emitUnderlyingToSymFnForBitEnum(const Record &enumDef,
                                             raw_ostream &os) {
   EnumAttr enumAttr(enumDef);
   StringRef enumName = enumAttr.getEnumClassName();
-  std::string underlyingType = enumAttr.getUnderlyingType();
+  std::string underlyingType = std::string(enumAttr.getUnderlyingType());
   StringRef underlyingToSymFnName = enumAttr.getUnderlyingToSymbolFnName();
   auto enumerants = enumAttr.getAllCases();
   auto allBitsUnsetCase = getAllBitsUnsetCase(enumerants);
@@ -319,7 +323,7 @@ static void emitUnderlyingToSymFnForBitEnum(const Record &enumDef,
   llvm::SmallVector<std::string, 8> values;
   for (const auto &enumerant : enumerants) {
     if (auto val = enumerant.getValue())
-      values.push_back(formatv("{0}u", val));
+      values.push_back(std::string(formatv("{0}u", val)));
   }
   os << formatv("  if (value & ~({0})) return llvm::None;\n",
                 llvm::join(values, " | "));
@@ -331,7 +335,7 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
   EnumAttr enumAttr(enumDef);
   StringRef enumName = enumAttr.getEnumClassName();
   StringRef cppNamespace = enumAttr.getCppNamespace();
-  std::string underlyingType = enumAttr.getUnderlyingType();
+  std::string underlyingType = std::string(enumAttr.getUnderlyingType());
   StringRef description = enumAttr.getDescription();
   StringRef strToSymFnName = enumAttr.getStringToSymbolFnName();
   StringRef symToStrFnName = enumAttr.getSymbolToStringFnName();

@@ -108,15 +108,7 @@ public:
     bool totalLengthIsValid() const;
 
     /// Length of the prologue in bytes.
-    uint32_t getLength() const {
-      return PrologueLength + sizeofTotalLength() + sizeof(getVersion()) +
-             sizeofPrologueLength();
-    }
-
-    /// Length of the line table data in bytes (not including the prologue).
-    uint32_t getStatementTableLength() const {
-      return TotalLength + sizeofTotalLength() - getLength();
-    }
+    uint64_t getLength() const;
 
     int32_t getMaxLineIncrementForSpecialOpcode() const {
       return LineBase + (int8_t)LineRange - 1;
@@ -138,6 +130,7 @@ public:
     void clear();
     void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;
     Error parse(const DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
+                function_ref<void(Error)> RecoverableErrorCallback,
                 const DWARFContext &Ctx, const DWARFUnit *U = nullptr);
   };
 
@@ -341,9 +334,12 @@ public:
     /// Skip the current line table and go to the following line table (if
     /// present) immediately.
     ///
-    /// \param ErrorCallback - report any prologue parsing issues via this
-    /// callback.
-    void skip(function_ref<void(Error)> ErrorCallback);
+    /// \param RecoverableErrorCallback - report any recoverable prologue
+    /// parsing issues via this callback.
+    /// \param UnrecoverableErrorCallback - report any unrecoverable prologue
+    /// parsing issues via this callback.
+    void skip(function_ref<void(Error)> RecoverableErrorCallback,
+              function_ref<void(Error)> UnrecoverableErrorCallback);
 
     /// Indicates if the parser has parsed as much as possible.
     ///

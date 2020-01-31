@@ -74,7 +74,7 @@ AVRToolChain::AVRToolChain(const Driver &D, const llvm::Triple &Triple,
         // No avr-libc found and so no runtime linked.
         D.Diag(diag::warn_drv_avr_libc_not_found);
       } else { // We have enough information to link stdlibs
-        std::string GCCRoot = GCCInstallation.getInstallPath();
+        std::string GCCRoot = std::string(GCCInstallation.getInstallPath());
         std::string LibcRoot = AVRLibcRoot.getValue();
 
         getFilePaths().push_back(LibcRoot + std::string("/lib/") +

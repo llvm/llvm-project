@@ -10627,7 +10627,7 @@ Sema::getTemplateArgumentBindingsText(const TemplateParameterList *Params,
   }
 
   Out << ']';
-  return Out.str();
+  return std::string(Out.str());
 }
 
 void Sema::MarkAsLateParsedTemplate(FunctionDecl *FD, Decl *FnD,

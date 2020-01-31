@@ -171,7 +171,7 @@ private:
   ///   ::= identifier
   ///   ::= identifier '(' expression ')'
   std::unique_ptr<ExprAST> parseIdentifierExpr() {
-    std::string name = lexer.getId();
+    std::string name(lexer.getId());
 
     auto loc = lexer.getLastLocation();
     lexer.getNextToken(); // eat identifier.
@@ -321,7 +321,7 @@ private:
     if (lexer.getCurToken() != tok_identifier)
       return parseError<VarDeclExprAST>("identified",
                                         "after 'var' declaration");
-    std::string id = lexer.getId();
+    std::string id(lexer.getId());
     lexer.getNextToken(); // eat id
 
     std::unique_ptr<VarType> type; // Type is optional, it can be inferred
@@ -400,7 +400,7 @@ private:
     if (lexer.getCurToken() != tok_identifier)
       return parseError<PrototypeAST>("function name", "in prototype");
 
-    std::string fnName = lexer.getId();
+    std::string fnName(lexer.getId());
     lexer.consume(tok_identifier);
 
     if (lexer.getCurToken() != '(')
@@ -410,7 +410,7 @@ private:
     std::vector<std::unique_ptr<VariableExprAST>> args;
     if (lexer.getCurToken() != ')') {
       do {
-        std::string name = lexer.getId();
+        std::string name(lexer.getId());
         auto loc = lexer.getLastLocation();
         lexer.consume(tok_identifier);
         auto decl = std::make_unique<VariableExprAST>(std::move(loc), name);

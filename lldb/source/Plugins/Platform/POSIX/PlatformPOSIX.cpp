@@ -429,7 +429,7 @@ std::string PlatformPOSIX::GetPlatformSpecificConnectionInformation() {
   if (GetLocalCacheDirectory() && *GetLocalCacheDirectory())
     stream.Printf("cache dir: %s", GetLocalCacheDirectory());
   if (stream.GetSize())
-    return stream.GetString();
+    return std::string(stream.GetString());
   else
     return "";
 }
@@ -679,7 +679,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   static const char *dlopen_wrapper_name = "__lldb_dlopen_wrapper";
   Process *process = exe_ctx.GetProcessSP().get();
   // Insert the dlopen shim defines into our generic expression:
-  std::string expr(GetLibdlFunctionDeclarations(process));
+  std::string expr(std::string(GetLibdlFunctionDeclarations(process)));
   expr.append(dlopen_wrapper_code);
   Status utility_error;
   DiagnosticManager diagnostics;

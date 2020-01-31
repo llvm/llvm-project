@@ -91,9 +91,17 @@ add_library(libc-benchmark
     LibcBenchmark.h
 )
 add_dependencies(libc-benchmark google-benchmark)
-target_include_directories(libc-benchmark PUBLIC "${GOOGLE_BENCHMARK_LIBC_INSTALL}/include")
-target_link_options(libc-benchmark PUBLIC "${GOOGLE_BENCHMARK_LINK_FLAGS}")
-target_link_libraries(libc-benchmark PUBLIC LLVMSupport -lbenchmark Threads::Threads)
+target_include_directories(libc-benchmark
+    PUBLIC
+    "${GOOGLE_BENCHMARK_LIBC_INSTALL}/include"
+)
+target_link_libraries(libc-benchmark
+    PUBLIC
+    "${GOOGLE_BENCHMARK_LINK_FLAGS}" # FIXME: Move to `target_link_options`
+    -lbenchmark                      # FIXME: Move to `target_link_options`
+    LLVMSupport
+    Threads::Threads
+)
 fix_rtti(libc-benchmark)
 
 add_libc_benchmark_unittest(libc-benchmark-test

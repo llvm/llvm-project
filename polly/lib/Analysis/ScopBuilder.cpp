@@ -1809,16 +1809,21 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
     llvm_unreachable("Unknown mod ref behaviour cannot be represented.");
   case FMRB_DoesNotAccessMemory:
     return true;
-  case FMRB_DoesNotReadMemory:
+  case FMRB_OnlyWritesMemory:
+  case FMRB_OnlyWritesInaccessibleMem:
+  case FMRB_OnlyWritesInaccessibleOrArgMem:
   case FMRB_OnlyAccessesInaccessibleMem:
   case FMRB_OnlyAccessesInaccessibleOrArgMem:
     return false;
   case FMRB_OnlyReadsMemory:
+  case FMRB_OnlyReadsInaccessibleMem:
+  case FMRB_OnlyReadsInaccessibleOrArgMem:
     GlobalReads.emplace_back(Stmt, CI);
     return true;
   case FMRB_OnlyReadsArgumentPointees:
     ReadOnly = true;
     LLVM_FALLTHROUGH;
+  case FMRB_OnlyWritesArgumentPointees:
   case FMRB_OnlyAccessesArgumentPointees: {
     auto AccType = ReadOnly ? MemoryAccess::READ : MemoryAccess::MAY_WRITE;
     Loop *L = LI.getLoopFor(Inst->getParent());

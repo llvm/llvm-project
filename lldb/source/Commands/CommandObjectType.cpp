@@ -531,7 +531,7 @@ private:
         m_skip_pointers = true;
         break;
       case 'w':
-        m_category.assign(option_value);
+        m_category.assign(std::string(option_value));
         break;
       case 'r':
         m_skip_references = true;
@@ -540,7 +540,7 @@ private:
         m_regex = true;
         break;
       case 't':
-        m_custom_type_name.assign(option_value);
+        m_custom_type_name.assign(std::string(option_value));
         break;
       default:
         llvm_unreachable("Unimplemented option");
@@ -1206,11 +1206,11 @@ Status CommandObjectTypeSummaryAdd::CommandOptions::SetOptionValue(
     m_name.SetString(option_arg);
     break;
   case 'o':
-    m_python_script = option_arg;
+    m_python_script = std::string(option_arg);
     m_is_add_script = true;
     break;
   case 'F':
-    m_python_function = option_arg;
+    m_python_function = std::string(option_arg);
     m_is_add_script = true;
     break;
   case 'P':
@@ -1326,7 +1326,7 @@ bool CommandObjectTypeSummaryAdd::Execute_ScriptSummary(
         return false;
       }
 
-      options->m_target_types << entry.ref();
+      options->m_target_types << std::string(entry.ref());
     }
 
     m_interpreter.GetPythonCommandsFromIOHandler(
@@ -2225,7 +2225,7 @@ bool CommandObjectTypeSynthAdd::Execute_HandwritePython(
       return false;
     }
 
-    options->m_target_types << entry.ref();
+    options->m_target_types << std::string(entry.ref());
   }
 
   m_interpreter.GetPythonCommandsFromIOHandler(
@@ -2390,7 +2390,7 @@ private:
                                          option_arg.str().c_str());
         break;
       case 'c':
-        m_expr_paths.push_back(option_arg);
+        m_expr_paths.push_back(std::string(option_arg));
         has_child_list = true;
         break;
       case 'p':
@@ -2705,7 +2705,7 @@ public:
       return true;
     });
 
-    m_cmd_help_long = stream.GetString();
+    m_cmd_help_long = std::string(stream.GetString());
     return m_cmd_help_long;
   }
 

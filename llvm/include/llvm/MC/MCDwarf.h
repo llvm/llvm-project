@@ -252,8 +252,8 @@ public:
   void setRootFile(StringRef Directory, StringRef FileName,
                    Optional<MD5::MD5Result> Checksum,
                    Optional<StringRef> Source) {
-    CompilationDir = Directory;
-    RootFile.Name = FileName;
+    CompilationDir = std::string(Directory);
+    RootFile.Name = std::string(FileName);
     RootFile.DirIndex = 0;
     RootFile.Checksum = Checksum;
     RootFile.Source = Source;
@@ -325,8 +325,8 @@ public:
 
   void setRootFile(StringRef Directory, StringRef FileName,
                    Optional<MD5::MD5Result> Checksum, Optional<StringRef> Source) {
-    Header.CompilationDir = Directory;
-    Header.RootFile.Name = FileName;
+    Header.CompilationDir = std::string(Directory);
+    Header.RootFile.Name = std::string(FileName);
     Header.RootFile.DirIndex = 0;
     Header.RootFile.Checksum = Checksum;
     Header.RootFile.Source = Source;

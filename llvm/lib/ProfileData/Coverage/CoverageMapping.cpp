@@ -222,7 +222,8 @@ Error CoverageMapping::loadFunctionRecord(
                                                 Record.FunctionHash, Counts)) {
     instrprof_error IPE = InstrProfError::take(std::move(E));
     if (IPE == instrprof_error::hash_mismatch) {
-      FuncHashMismatches.emplace_back(Record.FunctionName, Record.FunctionHash);
+      FuncHashMismatches.emplace_back(std::string(Record.FunctionName),
+                                      Record.FunctionHash);
       return Error::success();
     } else if (IPE != instrprof_error::unknown_function)
       return make_error<InstrProfError>(IPE);

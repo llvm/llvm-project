@@ -174,7 +174,7 @@ bool {0}::classof(mlir::Attribute attr))";
     auto name = field.getName();
     auto type = field.getType();
     std::string condition =
-        tgfmt(type.getConditionTemplate(), &fctx.withSelf(name));
+        std::string(tgfmt(type.getConditionTemplate(), &fctx.withSelf(name)));
     os << llvm::formatv(classofArgInfo, name, condition);
   }
 

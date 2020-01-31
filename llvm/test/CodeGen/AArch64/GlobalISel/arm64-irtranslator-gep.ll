@@ -12,15 +12,15 @@ define i32 @cse_gep([4 x i32]* %ptr, i32 %idx) {
   ; O0:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
   ; O0:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY1]](s32)
   ; O0:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; O0:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[C]], [[SEXT]]
-  ; O0:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
-  ; O0:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[GEP]](p0)
+  ; O0:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
+  ; O0:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
+  ; O0:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
   ; O0:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load 4 from %ir.gep1)
-  ; O0:   [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[C]], [[SEXT]]
-  ; O0:   [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL1]](s64)
+  ; O0:   [[MUL1:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
+  ; O0:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL1]](s64)
   ; O0:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; O0:   [[GEP2:%[0-9]+]]:_(p0) = G_PTR_ADD [[GEP1]], [[C1]](s64)
-  ; O0:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP2]](p0) :: (load 4 from %ir.gep2)
+  ; O0:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD1]], [[C1]](s64)
+  ; O0:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load 4 from %ir.gep2)
   ; O0:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD1]], [[LOAD1]]
   ; O0:   $w0 = COPY [[ADD]](s32)
   ; O0:   RET_ReallyLR implicit $w0
@@ -31,13 +31,13 @@ define i32 @cse_gep([4 x i32]* %ptr, i32 %idx) {
   ; O3:   [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
   ; O3:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[COPY1]](s32)
   ; O3:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; O3:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[C]], [[SEXT]]
-  ; O3:   [[GEP:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
-  ; O3:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[GEP]](p0)
+  ; O3:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[SEXT]], [[C]]
+  ; O3:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[MUL]](s64)
+  ; O3:   [[COPY2:%[0-9]+]]:_(p0) = COPY [[PTR_ADD]](p0)
   ; O3:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY2]](p0) :: (load 4 from %ir.gep1)
   ; O3:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
-  ; O3:   [[GEP1:%[0-9]+]]:_(p0) = G_PTR_ADD [[GEP]], [[C1]](s64)
-  ; O3:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP1]](p0) :: (load 4 from %ir.gep2)
+  ; O3:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[PTR_ADD]], [[C1]](s64)
+  ; O3:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load 4 from %ir.gep2)
   ; O3:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD1]], [[LOAD1]]
   ; O3:   $w0 = COPY [[ADD]](s32)
   ; O3:   RET_ReallyLR implicit $w0

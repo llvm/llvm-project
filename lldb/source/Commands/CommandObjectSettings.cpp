@@ -343,7 +343,7 @@ public:
 
       switch (short_option) {
       case 'f':
-        m_filename.assign(option_arg);
+        m_filename.assign(std::string(option_arg));
         break;
       case 'a':
         m_append = true;
@@ -444,7 +444,7 @@ public:
 
       switch (short_option) {
       case 'f':
-        m_filename.assign(option_arg);
+        m_filename.assign(std::string(option_arg));
         break;
       default:
         llvm_unreachable("Unimplemented option");

@@ -85,7 +85,7 @@ void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
   StringRef FileName =
       llvm::sys::path::remove_leading_dotslash(File->getName());
 
-  MDC.MainDeps.push_back(FileName);
+  MDC.MainDeps.push_back(std::string(FileName));
 }
 
 void ModuleDepCollectorPP::InclusionDirective(
@@ -96,7 +96,7 @@ void ModuleDepCollectorPP::InclusionDirective(
   if (!File && !Imported) {
     // This is a non-modular include that HeaderSearch failed to find. Add it
     // here as `FileChanged` will never see it.
-    MDC.MainDeps.push_back(FileName);
+    MDC.MainDeps.push_back(std::string(FileName));
   }
   handleImport(Imported);
 }
@@ -118,8 +118,8 @@ void ModuleDepCollectorPP::handleImport(const Module *Imported) {
 
 void ModuleDepCollectorPP::EndOfMainFile() {
   FileID MainFileID = Instance.getSourceManager().getMainFileID();
-  MDC.MainFile =
-      Instance.getSourceManager().getFileEntryForID(MainFileID)->getName();
+  MDC.MainFile = std::string(
+      Instance.getSourceManager().getFileEntryForID(MainFileID)->getName());
 
   for (const Module *M : DirectDeps) {
     handleTopLevelModule(M);
@@ -148,9 +148,9 @@ void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
                                    .getModuleMap()
                                    .getContainingModuleMapFile(M);
 
-  MD.ClangModuleMapFile = ModuleMap ? ModuleMap->getName() : "";
+  MD.ClangModuleMapFile = std::string(ModuleMap ? ModuleMap->getName() : "");
   MD.ModuleName = M->getFullModuleName();
-  MD.ImplicitModulePCMPath = M->getASTFile()->getName();
+  MD.ImplicitModulePCMPath = std::string(M->getASTFile()->getName());
   MD.ContextHash = MDC.ContextHash;
   serialization::ModuleFile *MF =
       MDC.Instance.getASTReader()->getModuleManager().lookup(M->getASTFile());
@@ -179,7 +179,7 @@ void ModuleDepCollectorPP::addModuleDep(
     if (Import->getTopLevelModule() != M->getTopLevelModule()) {
       if (AddedModules.insert(Import->getTopLevelModule()).second)
         MD.ClangModuleDeps.push_back(
-            {Import->getTopLevelModuleName(),
+            {std::string(Import->getTopLevelModuleName()),
              Instance.getInvocation().getModuleHash()});
       handleTopLevelModule(Import->getTopLevelModule());
     }

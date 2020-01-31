@@ -149,8 +149,8 @@ TEST(LocateSymbol, WithIndex) {
     )cpp");
 
   TestTU TU;
-  TU.Code = SymbolCpp.code();
-  TU.HeaderCode = SymbolHeader.code();
+  TU.Code = std::string(SymbolCpp.code());
+  TU.HeaderCode = std::string(SymbolHeader.code());
   auto Index = TU.index();
   auto LocateWithIndex = [&Index](const Annotations &Main) {
     auto AST = TestTU::withCode(Main.code()).build();
@@ -197,7 +197,7 @@ TEST(LocateSymbol, WithIndexPreferredLocation) {
         void $f[[func]]() {};
       )cpp");
   TestTU TU;
-  TU.HeaderCode = SymbolHeader.code();
+  TU.HeaderCode = std::string(SymbolHeader.code());
   TU.HeaderFilename = "x.proto"; // Prefer locations in codegen files.
   auto Index = TU.index();
 
@@ -447,6 +447,16 @@ TEST(LocateSymbol, All) {
         struct Fo^o<T*> {};
       )cpp",
 
+      R"cpp(// Override specifier jumps to overridden method
+        class Y { virtual void $decl[[a]]() = 0; };
+        class X : Y { void a() ^override {} };
+      )cpp",
+
+      R"cpp(// Final specifier jumps to overridden method
+        class Y { virtual void $decl[[a]]() = 0; };
+        class X : Y { void a() ^final {} };
+      )cpp",
+
       R"cpp(// Heuristic resolution of dependent method
         template <typename T>
         struct S {
@@ -503,7 +513,7 @@ TEST(LocateSymbol, All) {
       WantDef = T.range("def");
 
     TestTU TU;
-    TU.Code = T.code();
+    TU.Code = std::string(T.code());
 
     // FIXME: Auto-completion in a template requires disabling delayed template
     // parsing.
@@ -558,7 +568,7 @@ TEST(LocateSymbol, Warnings) {
       WantDef = T.range("def");
 
     TestTU TU;
-    TU.Code = T.code();
+    TU.Code = std::string(T.code());
 
     auto AST = TU.build();
     auto Results = locateSymbolAt(AST, T.point());
@@ -694,9 +704,10 @@ int [[bar_not_preamble]];
   auto FooCpp = testPath("src/foo.cpp");
   FS.Files[FooCpp] = "";
   auto HeaderInPreambleH = testPath("src/header_in_preamble.h");
-  FS.Files[HeaderInPreambleH] = HeaderInPreambleAnnotations.code();
+  FS.Files[HeaderInPreambleH] = std::string(HeaderInPreambleAnnotations.code());
   auto HeaderNotInPreambleH = testPath("src/header_not_in_preamble.h");
-  FS.Files[HeaderNotInPreambleH] = HeaderNotInPreambleAnnotations.code();
+  FS.Files[HeaderNotInPreambleH] =
+      std::string(HeaderNotInPreambleAnnotations.code());
 
   runAddDocument(Server, FooCpp, SourceAnnotations.code());
 
@@ -736,14 +747,14 @@ TEST(GoToInclude, All) {
   #in$5^clude "$6^foo.h"$7^
   )cpp";
   Annotations SourceAnnotations(SourceContents);
-  FS.Files[FooCpp] = SourceAnnotations.code();
+  FS.Files[FooCpp] = std::string(SourceAnnotations.code());
   auto FooH = testPath("foo.h");
 
   const char *HeaderContents = R"cpp([[]]#pragma once
                                      int a;
                                      )cpp";
   Annotations HeaderAnnotations(HeaderContents);
-  FS.Files[FooH] = HeaderAnnotations.code();
+  FS.Files[FooH] = std::string(HeaderAnnotations.code());
 
   Server.addDocument(FooH, HeaderAnnotations.code());
   Server.addDocument(FooCpp, SourceAnnotations.code());
@@ -785,7 +796,7 @@ TEST(GoToInclude, All) {
   #import "^foo.h"
   )objc");
   auto FooM = testPath("foo.m");
-  FS.Files[FooM] = ObjC.code();
+  FS.Files[FooM] = std::string(ObjC.code());
 
   Server.addDocument(FooM, ObjC.code());
   Locations = runLocateSymbolAt(Server, FooM, ObjC.point());
@@ -805,11 +816,11 @@ TEST(LocateSymbol, WithPreamble) {
   Annotations FooWithHeader(R"cpp(#include "fo^o.h")cpp");
   Annotations FooWithoutHeader(R"cpp(double    [[fo^o]]();)cpp");
 
-  FS.Files[FooCpp] = FooWithHeader.code();
+  FS.Files[FooCpp] = std::string(FooWithHeader.code());
 
   auto FooH = testPath("foo.h");
   Annotations FooHeader(R"cpp([[]])cpp");
-  FS.Files[FooH] = FooHeader.code();
+  FS.Files[FooH] = std::string(FooHeader.code());
 
   runAddDocument(Server, FooCpp, FooWithHeader.code());
   // LocateSymbol goes to a #include file: the result comes from the preamble.
@@ -1010,7 +1021,7 @@ TEST(FindReferences, NeedsIndexForSymbols) {
   const char *Header = "int foo();";
   Annotations Main("int main() { [[f^oo]](); }");
   TestTU TU;
-  TU.Code = Main.code();
+  TU.Code = std::string(Main.code());
   TU.HeaderCode = Header;
   auto AST = TU.build();
 
@@ -1024,7 +1035,7 @@ TEST(FindReferences, NeedsIndexForSymbols) {
 
   // References from indexed files are included.
   TestTU IndexedTU;
-  IndexedTU.Code = IndexedMain.code();
+  IndexedTU.Code = std::string(IndexedMain.code());
   IndexedTU.Filename = "Indexed.cpp";
   IndexedTU.HeaderCode = Header;
   EXPECT_THAT(
@@ -1049,7 +1060,7 @@ TEST(FindReferences, NeedsIndexForMacro) {
     }
   )cpp");
   TestTU TU;
-  TU.Code = Main.code();
+  TU.Code = std::string(Main.code());
   TU.HeaderCode = Header;
   auto AST = TU.build();
 
@@ -1066,7 +1077,7 @@ TEST(FindReferences, NeedsIndexForMacro) {
 
   // References from indexed files are included.
   TestTU IndexedTU;
-  IndexedTU.Code = IndexedMain.code();
+  IndexedTU.Code = std::string(IndexedMain.code());
   IndexedTU.Filename = "Indexed.cpp";
   IndexedTU.HeaderCode = Header;
   EXPECT_THAT(
@@ -1116,7 +1127,7 @@ TEST(FindReferences, NoQueryForLocalSymbols) {
 TEST(GetNonLocalDeclRefs, All) {
   struct Case {
     llvm::StringRef AnnotatedCode;
-    std::vector<llvm::StringRef> ExpectedDecls;
+    std::vector<std::string> ExpectedDecls;
   } Cases[] = {
       {
           // VarDecl and ParamVarDecl
@@ -1198,7 +1209,7 @@ TEST(DocumentLinks, All) {
     )cpp");
 
   TestTU TU;
-  TU.Code = MainCpp.code();
+  TU.Code = std::string(MainCpp.code());
   TU.AdditionalFiles = {{"foo.h", ""}, {"bar.h", ""}};
   auto AST = TU.build();
 

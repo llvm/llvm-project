@@ -532,11 +532,12 @@ void CGDebugInfo::CreateCompileUnit() {
   // file to determine the real absolute path for the file.
   std::string MainFileDir;
   if (const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID())) {
-    MainFileDir = MainFile->getDir()->getName();
+    MainFileDir = std::string(MainFile->getDir()->getName());
     if (!llvm::sys::path::is_absolute(MainFileName)) {
       llvm::SmallString<1024> MainFileDirSS(MainFileDir);
       llvm::sys::path::append(MainFileDirSS, MainFileName);
-      MainFileName = llvm::sys::path::remove_leading_dotslash(MainFileDirSS);
+      MainFileName =
+          std::string(llvm::sys::path::remove_leading_dotslash(MainFileDirSS));
     }
     // If the main file name provided is identical to the input file name, and
     // if the input file is a preprocessed source, use the module name for

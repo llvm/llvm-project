@@ -1032,11 +1032,11 @@ struct PragmaLoopHintInfo {
 static std::string PragmaLoopHintString(Token PragmaName, Token Option) {
   StringRef Str = PragmaName.getIdentifierInfo()->getName();
   std::string ClangLoopStr = (llvm::Twine("clang loop ") + Str).str();
-  return llvm::StringSwitch<StringRef>(Str)
-      .Case("loop", ClangLoopStr)
-      .Case("unroll_and_jam", Str)
-      .Case("unroll", Str)
-      .Default("");
+  return std::string(llvm::StringSwitch<StringRef>(Str)
+                         .Case("loop", ClangLoopStr)
+                         .Case("unroll_and_jam", Str)
+                         .Case("unroll", Str)
+                         .Default(""));
 }
 
 bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {

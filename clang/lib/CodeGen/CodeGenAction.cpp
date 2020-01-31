@@ -994,7 +994,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   std::unique_ptr<BackendConsumer> Result(new BackendConsumer(
       BA, CI.getDiagnostics(), CI.getHeaderSearchOpts(),
       CI.getPreprocessorOpts(), CI.getCodeGenOpts(), CI.getTargetOpts(),
-      CI.getLangOpts(), CI.getFrontendOpts().ShowTimers, InFile,
+      CI.getLangOpts(), CI.getFrontendOpts().ShowTimers, std::string(InFile),
       std::move(LinkModules), std::move(OS), *VMContext, CoverageInfo));
   BEConsumer = Result.get();
 

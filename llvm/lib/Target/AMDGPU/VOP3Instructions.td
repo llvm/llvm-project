@@ -491,15 +491,7 @@ def V_INTERP_P1LL_F16 : VOP3Interp <"v_interp_p1ll_f16", VOP3_INTERP16<[f32, f32
 }
 
 
-def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32, i32, f16]>,
-       [(set f32:$vdst, (AMDGPUinterp_p1lv_f16 f32:$src0, (i32 timm:$attrchan),
-                                                          (i32 timm:$attr),
-                                                          (i32 timm:$src0_modifiers),
-                                                          (f32 VRegSrc_32:$src2),
-                                                          (i32 timm:$src2_modifiers),
-                                                          (i1 timm:$high),
-                                                          (i1 timm:$clamp),
-                                                          (i32 timm:$omod)))]>;
+def V_INTERP_P1LV_F16 : VOP3Interp <"v_interp_p1lv_f16", VOP3_INTERP16<[f32, f32, i32, f16]>>;
 } // End Uses = [M0, EXEC], FPDPRounding = 1
 
 } // End SubtargetPredicate = Has16BitInsts, isCommutable = 1
@@ -654,8 +646,8 @@ class PermlanePat<SDPatternOperator permlane,
   Instruction inst> : GCNPat<
   (permlane i32:$vdst_in, i32:$src0, i32:$src1, i32:$src2,
             timm:$fi, timm:$bc),
-  (inst (as_i1imm $fi), $src0, (as_i1imm $bc),
-        $src1, 0, $src2, $vdst_in)
+  (inst (as_i1timm $fi), VGPR_32:$src0, (as_i1timm $bc),
+        SCSrc_b32:$src1, 0, SCSrc_b32:$src2, VGPR_32:$vdst_in)
 >;
 
 // Permlane intrinsic that has either fetch invalid or bound control
@@ -667,13 +659,19 @@ class BoundControlOrFetchInvalidPermlane<SDPatternOperator permlane> :
                     $src1, node:$src2, node:$fi, node:$bc)> {
   let PredicateCode = [{ return N->getConstantOperandVal(5) != 0 ||
                                 N->getConstantOperandVal(6) != 0; }];
+  let GISelPredicateCode = [{
+    return MI.getOperand(6).getImm() != 0 ||
+           MI.getOperand(7).getImm() != 0;
+  }];
 }
 
 // Drop the input value if it won't be read.
 class PermlaneDiscardVDstIn<SDPatternOperator permlane,
                             Instruction inst> : GCNPat<
-  (permlane srcvalue, i32:$src0, i32:$src1, i32:$src2, timm:$fi, timm:$bc),
-  (inst (as_i1imm $fi), $src0, (as_i1imm $bc), $src1, 0, $src2,
+  (permlane srcvalue, i32:$src0, i32:$src1, i32:$src2,
+            timm:$fi, timm:$bc),
+  (inst (as_i1timm $fi), VGPR_32:$src0, (as_i1timm $bc),
+        SCSrc_b32:$src1, 0, SCSrc_b32:$src2,
         (IMPLICIT_DEF))
 >;
 
@@ -696,7 +694,6 @@ let SubtargetPredicate = isGFX10Plus in {
   def : PermlaneDiscardVDstIn<
     BoundControlOrFetchInvalidPermlane<int_amdgcn_permlanex16>,
     V_PERMLANEX16_B32>;
-
 } // End SubtargetPredicate = isGFX10Plus
 
 //===----------------------------------------------------------------------===//

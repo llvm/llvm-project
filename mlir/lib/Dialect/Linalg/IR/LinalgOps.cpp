@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Linalg/IR/LinalgOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
+#include "mlir/Dialect/StandardOps/Ops.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -30,6 +31,89 @@
 
 using namespace mlir;
 using namespace mlir::linalg;
+
+/// Determines whether it is possible to fold it away in the parent Linalg op:
+///
+/// ```mlir
+///   %1 = memref_cast %0 : memref<8x16xf32> to memref<?x?xf32>
+///   %2 = linalg.slice %1 ... : memref<?x?xf32> ...
+///   // or
+///   %1 = memref_cast %0 : memref<8x16xf32, affine_map<(i, j)->(16 * i + j)>>
+///          to memref<?x?xf32>
+///   linalg.generic(%1 ...) : memref<?x?xf32> ...
+/// ```
+///
+/// into
+///
+/// ```mlir
+///   %2 = linalg.slice %0 ... : memref<8x16xf32> ...
+///   // or
+///   linalg.generic(%0 ... : memref<8x16xf32, affine_map<(i, j)->(16 * i + j)>>
+/// ```
+///
+static bool canFold(MemRefCastOp castOp) {
+  MemRefType sourceType = castOp.source().getType().dyn_cast<MemRefType>();
+  MemRefType resultType = castOp.getType().dyn_cast<MemRefType>();
+
+  // If we don't have MemRefType as source and destination, bail out.
+  if (!sourceType || !resultType)
+    return false;
+
+  // If resultType has a map, it needs to be the same as the source type to
+  // canonicalize.
+  if (!resultType.getAffineMaps().empty() &&
+      sourceType.getAffineMaps() != resultType.getAffineMaps())
+    return false;
+
+  // Ensure that:
+  //   1. source is static
+  //   2. source and target have the same rank (will be extended when needed)
+  //   3. if result is partially static, ensure sizes match.
+  if (!sourceType.hasStaticShape() ||
+      sourceType.getRank() != resultType.getRank())
+    return false;
+
+  for (auto it : llvm::zip(sourceType.getShape(), resultType.getShape())) {
+    auto sourceSize = std::get<0>(it);
+    auto resultSize = std::get<1>(it);
+    if (ShapedType::isDynamic(resultSize))
+      continue;
+    if (sourceSize != resultSize)
+      return false;
+  }
+
+  // If source has a map, it can only canonicalize if it is the canonical
+  // strided layout map.
+  if (sourceType.getAffineMaps().empty())
+    return true;
+
+  int64_t offset;
+  SmallVector<int64_t, 4> strides;
+  auto res = getStridesAndOffset(sourceType, strides, offset);
+  (void)res;
+  assert(succeeded(res));
+  auto stridedMap =
+      makeStridedLinearLayoutMap(strides, offset, castOp.getContext());
+  AffineMap sourceMap = sourceType.getAffineMaps().front();
+  return sourceMap == stridedMap;
+}
+
+/// This is a common class used for patterns of the form
+/// ```
+///    someop(memrefcast) -> someop
+/// ```
+/// It folds the source of any memref_cast into the root operation directly.
+static LogicalResult foldMemRefCast(Operation *op) {
+  bool folded = false;
+  for (OpOperand &operand : op->getOpOperands()) {
+    auto castOp = dyn_cast_or_null<MemRefCastOp>(operand.get().getDefiningOp());
+    if (castOp && canFold(castOp)) {
+      operand.set(castOp.getOperand());
+      folded = true;
+    }
+  }
+  return success(folded);
+}
 
 ///////////////////// Operations defined with Tablegen /////////////////////////
 // For such operations that do not correspond to library calls (i.e. defined in
@@ -296,30 +380,6 @@ static LogicalResult verify(GenericOp op) { return verifyGenericOp(op); }
 static LogicalResult verify(IndexedGenericOp op) { return verifyGenericOp(op); }
 
 //===----------------------------------------------------------------------===//
-// RangeOp
-//===----------------------------------------------------------------------===//
-
-static void print(OpAsmPrinter &p, RangeOp op) {
-  p << op.getOperationName() << " " << op.min() << ":" << op.max() << ":"
-    << op.step();
-  p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.getResult().getType();
-}
-
-static ParseResult parseRangeOp(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 3> rangeInfo(3);
-  RangeType type;
-  auto indexTy = parser.getBuilder().getIndexType();
-  return failure(parser.parseOperand(rangeInfo[0]) || parser.parseColon() ||
-                 parser.parseOperand(rangeInfo[1]) || parser.parseColon() ||
-                 parser.parseOperand(rangeInfo[2]) ||
-                 parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(type) ||
-                 parser.resolveOperands(rangeInfo, indexTy, result.operands) ||
-                 parser.addTypeToList(type, result.types));
-}
-
-//===----------------------------------------------------------------------===//
 // ReshapeOp
 //===----------------------------------------------------------------------===//
 
@@ -497,28 +557,6 @@ void mlir::linalg::ReshapeOp::build(
   build(b, result, resultType, view, attrs);
   result.addAttribute(ReshapeOp::getReassociationAttrName(),
                       b->getAffineMapArrayAttr(maps));
-}
-
-static void print(OpAsmPrinter &p, ReshapeOp op) {
-  p << op.getOperationName() << " " << op.view() << " " << op.reassociation();
-  p.printOptionalAttrDict(op.getAttrs(),
-                          {ReshapeOp::getReassociationAttrName()});
-  p << " : " << op.getViewType() << " into " << op.getResult().getType();
-}
-
-static ParseResult parseReshapeOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType view;
-  ArrayAttr reassociation;
-  MemRefType type, resultType;
-  return failure(parser.parseOperand(view) ||
-                 parser.parseAttribute(reassociation,
-                                       ReshapeOp::getReassociationAttrName(),
-                                       result.attributes) ||
-                 parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(type) ||
-                 parser.parseKeywordType("into", resultType) ||
-                 parser.resolveOperand(view, type, result.operands) ||
-                 parser.addTypeToList(resultType, result.types));
 }
 
 static LogicalResult verify(ReshapeOp op) {
@@ -754,43 +792,6 @@ static LogicalResult verify(YieldOp op) {
 }
 
 /////// Operations corresponding to library calls defined with Tablegen ////////
-// For such operations correspond to library calls (i.e. defined in
-// LinalgStructuredOps.td), we define an overloaded `print` function and a
-// parse`className` function.
-
-// A LinalgStructuredOp prints as:
-//
-// ```mlir
-//   concrete_op_name (ssa-inputs, ssa-outputs) : view-types
-// ```
-//
-// for example:
-//
-// ```
-//   linalg.matmul(%0, %1, %2) :
-//     memref<?x?xf32, stride_specification>,
-//     memref<?x?xf32, stride_specification>,
-//     memref<?x?xf32, stride_specification>
-// ```
-//
-// Where %0, %1 and %2 are ssa-values of type MemRefType with strides.
-static void printLinalgStructuredOp(OpAsmPrinter &p, Operation *op) {
-  assert(op->getAbstractOperation() && "unregistered operation");
-  p << op->getName().getStringRef() << "(" << op->getOperands() << ")";
-  p.printOptionalAttrDict(op->getAttrs());
-  p << " : " << op->getOperandTypes();
-}
-
-static ParseResult parseLinalgStructuredOp(OpAsmParser &parser,
-                                           OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 3> ops;
-  SmallVector<Type, 3> types;
-  return failure(
-      parser.parseOperandList(ops, OpAsmParser::Delimiter::Paren) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonTypeList(types) ||
-      parser.resolveOperands(ops, types, parser.getNameLoc(), result.operands));
-}
 
 static LogicalResult verify(FillOp op) {
   auto viewType = op.getOutputShapedType(0);
@@ -1076,4 +1077,55 @@ ArrayAttr mlir::linalg::MatmulOp::indexing_maps() {
 }
 ArrayAttr mlir::linalg::MatvecOp::indexing_maps() {
   return getIndexingMaps(getOperation());
+}
+
+// TODO(ntv, rriddle): Consider making all this boilerplate easy to autogenerate
+// with Tablegen. This seems a desirable property in the context of OpInterfaces
+// where a Linalg "named" op **isa** LinalgOp.
+LogicalResult ConvOp::fold(ArrayRef<Attribute>,
+                           SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult CopyOp::fold(ArrayRef<Attribute>,
+                           SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult DotOp::fold(ArrayRef<Attribute>,
+                          SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult FillOp::fold(ArrayRef<Attribute>,
+                           SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult GenericOp::fold(ArrayRef<Attribute>,
+                              SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult IndexedGenericOp::fold(ArrayRef<Attribute>,
+                                     SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult MatvecOp::fold(ArrayRef<Attribute>,
+                             SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+LogicalResult MatmulOp::fold(ArrayRef<Attribute>,
+                             SmallVectorImpl<OpFoldResult> &) {
+  return foldMemRefCast(*this);
+}
+OpFoldResult ReshapeOp::fold(ArrayRef<Attribute>) {
+  if (succeeded(foldMemRefCast(*this)))
+    return getResult();
+  return {};
+}
+OpFoldResult SliceOp::fold(ArrayRef<Attribute>) {
+  if (succeeded(foldMemRefCast(*this)))
+    return getResult();
+  return {};
+}
+OpFoldResult TransposeOp::fold(ArrayRef<Attribute>) {
+  if (succeeded(foldMemRefCast(*this)))
+    return getResult();
+  return {};
 }

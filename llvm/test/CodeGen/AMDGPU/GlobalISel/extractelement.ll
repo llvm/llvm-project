@@ -979,7 +979,7 @@ define amdgpu_ps double @dyn_extract_v8f64_s_s_offsetm1(<8 x double> inreg %vec,
 ; GPRIDX:       ; %bb.0: ; %entry
 ; GPRIDX-NEXT:    s_mov_b32 s0, s2
 ; GPRIDX-NEXT:    s_mov_b32 s1, s3
-; GPRIDX-NEXT:    s_add_u32 m0, s18, -1
+; GPRIDX-NEXT:    s_add_i32 m0, s18, -1
 ; GPRIDX-NEXT:    s_mov_b32 s2, s4
 ; GPRIDX-NEXT:    s_mov_b32 s3, s5
 ; GPRIDX-NEXT:    s_mov_b32 s4, s6
@@ -1001,7 +1001,7 @@ define amdgpu_ps double @dyn_extract_v8f64_s_s_offsetm1(<8 x double> inreg %vec,
 ; MOVREL:       ; %bb.0: ; %entry
 ; MOVREL-NEXT:    s_mov_b32 s0, s2
 ; MOVREL-NEXT:    s_mov_b32 s1, s3
-; MOVREL-NEXT:    s_add_u32 m0, s18, -1
+; MOVREL-NEXT:    s_add_i32 m0, s18, -1
 ; MOVREL-NEXT:    s_mov_b32 s2, s4
 ; MOVREL-NEXT:    s_mov_b32 s3, s5
 ; MOVREL-NEXT:    s_mov_b32 s4, s6
@@ -1031,7 +1031,7 @@ define double @dyn_extract_v8f64_v_v_offset3(<8 x double> %vec, i32 %sel) {
 ; GPRIDX-NEXT:    s_mov_b64 s[4:5], exec
 ; GPRIDX-NEXT:  BB22_1: ; =>This Inner Loop Header: Depth=1
 ; GPRIDX-NEXT:    v_readfirstlane_b32 s6, v16
-; GPRIDX-NEXT:    s_add_u32 s7, s6, 3
+; GPRIDX-NEXT:    s_add_i32 s7, s6, 3
 ; GPRIDX-NEXT:    s_lshl_b32 s7, s7, 1
 ; GPRIDX-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v16
 ; GPRIDX-NEXT:    s_set_gpr_idx_on s7, gpr_idx(SRC0)
@@ -1056,7 +1056,7 @@ define double @dyn_extract_v8f64_v_v_offset3(<8 x double> %vec, i32 %sel) {
 ; MOVREL-NEXT:  BB22_1: ; =>This Inner Loop Header: Depth=1
 ; MOVREL-NEXT:    v_readfirstlane_b32 s6, v16
 ; MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, s6, v16
-; MOVREL-NEXT:    s_add_u32 s6, s6, 3
+; MOVREL-NEXT:    s_add_i32 s6, s6, 3
 ; MOVREL-NEXT:    s_lshl_b32 m0, s6, 1
 ; MOVREL-NEXT:    v_movrels_b32_e32 v17, v0
 ; MOVREL-NEXT:    v_movrels_b32_e32 v18, v1

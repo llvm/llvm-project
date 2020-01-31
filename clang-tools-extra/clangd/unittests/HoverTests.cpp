@@ -580,7 +580,9 @@ class Foo {})cpp";
     Annotations T(Case.Code);
     TestTU TU = TestTU::withCode(T.code());
     TU.ExtraArgs.push_back("-std=c++17");
-    TU.ExtraArgs.push_back("-fno-delayed-template-parsing");
+    // Types might be different depending on the target triplet, we chose a
+    // fixed one to make sure tests passes on different platform.
+    TU.ExtraArgs.push_back("--target=x86_64-pc-linux-gnu");
     auto AST = TU.build();
 
     auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
@@ -1587,6 +1589,26 @@ TEST(Hover, All) {
             HI.Parameters = {
                 {std::string("int"), std::string("x"), llvm::None}};
           }},
+      {
+          R"cpp(// sizeof expr
+          void foo() {
+            (void)[[size^of]](char);
+          })cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "expression";
+            HI.Type = "unsigned long";
+            HI.Value = "1";
+          }},
+      {
+          R"cpp(// alignof expr
+          void foo() {
+            (void)[[align^of]](char);
+          })cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "expression";
+            HI.Type = "unsigned long";
+            HI.Value = "1";
+          }},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.
@@ -1604,6 +1626,9 @@ TEST(Hover, All) {
     TestTU TU = TestTU::withCode(T.code());
     TU.ExtraArgs.push_back("-std=c++17");
     TU.ExtraArgs.push_back("-Wno-gnu-designator");
+    // Types might be different depending on the target triplet, we chose a
+    // fixed one to make sure tests passes on different platform.
+    TU.ExtraArgs.push_back("--target=x86_64-pc-linux-gnu");
     auto AST = TU.build();
 
     auto H = getHover(AST, T.point(), format::getLLVMStyle(), Index.get());
@@ -1835,46 +1860,6 @@ Value = val
 
 def)pt";
   EXPECT_EQ(HI.present().asPlainText(), ExpectedPlaintext);
-}
-
-TEST(Hover, ExprTests) {
-  struct {
-    const char *const Code;
-    const std::function<void(HoverInfo &)> ExpectedBuilder;
-  } Cases[] = {
-      {
-          R"cpp(// sizeof expr
-          void foo() {
-            (void)[[size^of]](char);
-          })cpp",
-          [](HoverInfo &HI) {
-            HI.Name = "expression";
-            HI.Type = "unsigned long";
-            HI.Value = "1";
-          }},
-      {
-          R"cpp(// alignof expr
-          void foo() {
-            (void)[[align^of]](char);
-          })cpp",
-          [](HoverInfo &HI) {
-            HI.Name = "expression";
-            HI.Type = "unsigned long";
-            HI.Value = "1";
-          }},
-  };
-  for (const auto &C : Cases) {
-    Annotations T(C.Code);
-    TestTU TU = TestTU::withCode(T.code());
-    auto AST = TU.build();
-    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
-    ASSERT_TRUE(H);
-    HoverInfo ExpectedHover;
-    C.ExpectedBuilder(ExpectedHover);
-    // We don't check for Type as it might differ on different platforms.
-    EXPECT_EQ(H->Name, ExpectedHover.Name);
-    EXPECT_EQ(H->Value, ExpectedHover.Value);
-  }
 }
 } // namespace
 } // namespace clangd

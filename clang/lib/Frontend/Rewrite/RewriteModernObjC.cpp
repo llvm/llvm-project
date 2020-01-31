@@ -860,7 +860,7 @@ RewriteModernObjC::getIvarAccessString(ObjCIvarDecl *D) {
       // ivar in class extensions requires special treatment.
       if (ObjCCategoryDecl *CatDecl = dyn_cast<ObjCCategoryDecl>(CDecl))
         CDecl = CatDecl->getClassInterface();
-      std::string RecName = CDecl->getName();
+      std::string RecName = std::string(CDecl->getName());
       RecName += "_IMPL";
       RecordDecl *RD =
           RecordDecl::Create(*Context, TTK_Struct, TUDecl, SourceLocation(),
@@ -4442,7 +4442,7 @@ void RewriteModernObjC::InsertBlockLiteralsWithinFunction(FunctionDecl *FD) {
 static void BuildUniqueMethodName(std::string &Name,
                                   ObjCMethodDecl *MD) {
   ObjCInterfaceDecl *IFace = MD->getClassInterface();
-  Name = IFace->getName();
+  Name = std::string(IFace->getName());
   Name += "__" + MD->getSelector().getAsString();
   // Convert colons to underscores.
   std::string::size_type loc = 0;
@@ -7506,7 +7506,7 @@ Stmt *RewriteModernObjC::RewriteObjCIvarRefExpr(ObjCIvarRefExpr *IV) {
           // ivar in class extensions requires special treatment.
           if (ObjCCategoryDecl *CatDecl = dyn_cast<ObjCCategoryDecl>(CDecl))
             CDecl = CatDecl->getClassInterface();
-          std::string RecName = CDecl->getName();
+          std::string RecName = std::string(CDecl->getName());
           RecName += "_IMPL";
           RecordDecl *RD = RecordDecl::Create(
               *Context, TTK_Struct, TUDecl, SourceLocation(), SourceLocation(),

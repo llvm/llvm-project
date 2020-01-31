@@ -1620,7 +1620,7 @@ void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAG) {
 
     unsigned ChainPredID = DAG->SUnits.size();
     for (const SDep &Pred : SU.Preds) {
-      if (Pred.isCtrl()) {
+      if (Pred.isCtrl() && !Pred.isArtificial()) {
         ChainPredID = Pred.getSUnit()->NodeNum;
         break;
       }
@@ -3695,7 +3695,7 @@ struct DOTGraphTraits<ScheduleDAGMI*> : public DefaultDOTGraphTraits {
   DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
   static std::string getGraphName(const ScheduleDAG *G) {
-    return G->MF.getName();
+    return std::string(G->MF.getName());
   }
 
   static bool renderGraphFromBottomUp() {

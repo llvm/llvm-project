@@ -4,7 +4,8 @@
 
 ## Check we are able to find a function symbol that encloses
 ## a given location when reporting error messages.
-# CHECK: {{.*}}.o:(function func: .text.func+0x3): relocation R_X86_64_32S out of range: -281474974609120 is not in [-2147483648, 2147483647]
+# CHECK: {{.*}}.o:(function func: .text.func+0x3): relocation R_X86_64_32S out of range: -281474974609120 is not in [-2147483648, 2147483647]; references func
+# CHECK-NEXT: >>> defined in {{.*}}.o
 
 # This mergeable section will be garbage collected. We had a crash issue in that case. Test it.
 .section .rodata.str1,"aMS",@progbits,1

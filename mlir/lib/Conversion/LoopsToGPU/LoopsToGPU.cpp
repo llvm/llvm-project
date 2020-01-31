@@ -306,9 +306,9 @@ createLaunchBody(OpBuilder &builder, OpTy rootForOp, gpu::LaunchOp launchOp,
                  unsigned numBlockDims, unsigned numThreadDims) {
   OpBuilder::InsertionGuard bodyInsertionGuard(builder);
   builder.setInsertionPointToEnd(&launchOp.body().front());
-  auto returnOp = builder.create<gpu::ReturnOp>(launchOp.getLoc());
+  auto terminatorOp = builder.create<gpu::TerminatorOp>(launchOp.getLoc());
 
-  rootForOp.getOperation()->moveBefore(returnOp);
+  rootForOp.getOperation()->moveBefore(terminatorOp);
   SmallVector<Value, 3> workgroupID, numWorkGroups;
   packIdAndNumId(launchOp.getBlockIds(), launchOp.getGridSize(), numBlockDims,
                  workgroupID, numWorkGroups);
@@ -435,7 +435,7 @@ void LoopToGpuConverter::createLaunch(OpTy rootForOp, OpTy innermostForOp,
   Location terminatorLoc = terminator.getLoc();
   terminator.erase();
   builder.setInsertionPointToEnd(innermostForOp.getBody());
-  builder.create<gpu::ReturnOp>(terminatorLoc);
+  builder.create<gpu::TerminatorOp>(terminatorLoc, llvm::None);
   launchOp.body().front().getOperations().splice(
       launchOp.body().front().begin(),
       innermostForOp.getBody()->getOperations());

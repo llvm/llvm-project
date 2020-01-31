@@ -548,8 +548,8 @@ struct GPUFuncOpLowering : LLVMOpLowering {
       auto elementType =
           lowering.convertType(type.getElementType()).cast<LLVM::LLVMType>();
       auto arrayType = LLVM::LLVMType::getArrayTy(elementType, numElements);
-      std::string name =
-          llvm::formatv("__wg_{0}_{1}", gpuFuncOp.getName(), en.index());
+      std::string name = std::string(
+          llvm::formatv("__wg_{0}_{1}", gpuFuncOp.getName(), en.index()));
       auto globalOp = rewriter.create<LLVM::GlobalOp>(
           gpuFuncOp.getLoc(), arrayType, /*isConstant=*/false,
           LLVM::Linkage::Internal, name, /*value=*/Attribute(),

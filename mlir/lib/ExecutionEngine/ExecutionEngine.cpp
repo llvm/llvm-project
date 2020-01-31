@@ -238,7 +238,7 @@ Expected<std::unique_ptr<ExecutionEngine>> ExecutionEngine::create(
         errs() << "Fail to create MemoryBuffer for: " << libPath << "\n";
         continue;
       }
-      auto &JD = session.createJITDylib(libPath);
+      auto &JD = session.createJITDylib(std::string(libPath));
       auto loaded = DynamicLibrarySearchGenerator::Load(
           libPath.data(), dataLayout.getGlobalPrefix());
       if (!loaded) {

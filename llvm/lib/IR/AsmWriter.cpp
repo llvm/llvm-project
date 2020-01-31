@@ -2693,7 +2693,7 @@ void AssemblyWriter::printModuleSummaryIndex() {
         // A module id of -1 is a special entry for a regular LTO module created
         // during the thin link.
         ModPath.second.first == -1u ? RegularLTOModuleName
-                                    : (std::string)ModPath.first(),
+                                    : (std::string)std::string(ModPath.first()),
         ModPath.second.second);
 
   unsigned i = 0;

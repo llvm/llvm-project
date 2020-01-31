@@ -307,7 +307,7 @@ std::string InputSectionBase::getLocation(uint64_t offset) {
 
   // File->sourceFile contains STT_FILE symbol that contains a
   // source file name. If it's missing, we use an object file name.
-  std::string srcFile = getFile<ELFT>()->sourceFile;
+  std::string srcFile = std::string(getFile<ELFT>()->sourceFile);
   if (srcFile.empty())
     srcFile = toString(file);
 
@@ -338,7 +338,7 @@ std::string InputSectionBase::getSrcMsg(const Symbol &sym, uint64_t offset) {
 //
 //   path/to/foo.o:(function bar) in archive path/to/bar.a
 std::string InputSectionBase::getObjMsg(uint64_t off) {
-  std::string filename = file->getName();
+  std::string filename = std::string(file->getName());
 
   std::string archive;
   if (!file->archiveName.empty())
@@ -485,6 +485,14 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
         p->r_addend = sym.getVA(addend) - section->getOutputSection()->addr;
       else if (config->relocatable && type != target->noneRel)
         sec->relocations.push_back({R_ABS, type, rel.r_offset, addend, &sym});
+    } else if (config->emachine == EM_PPC && type == R_PPC_PLTREL24 &&
+               p->r_addend >= 0x8000) {
+      // Similar to R_MIPS_GPREL{16,32}. If the addend of R_PPC_PLTREL24
+      // indicates that r30 is relative to the input section .got2
+      // (r_addend>=0x8000), after linking, r30 should be relative to the output
+      // section .got2 . To compensate for the shift, adjust r_addend by
+      // ppc32Got2OutSecOff.
+      p->r_addend += sec->file->ppc32Got2OutSecOff;
     }
   }
 }

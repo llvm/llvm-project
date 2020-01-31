@@ -1832,6 +1832,42 @@ void CodeGenModule::AddDefaultFnAttrs(llvm::Function &F) {
   F.addAttributes(llvm::AttributeList::FunctionIndex, FuncAttrs);
 }
 
+static void addNoBuiltinAttributes(llvm::AttrBuilder &FuncAttrs,
+                                   const LangOptions &LangOpts,
+                                   const NoBuiltinAttr *NBA = nullptr) {
+  auto AddNoBuiltinAttr = [&FuncAttrs](StringRef BuiltinName) {
+    SmallString<32> AttributeName;
+    AttributeName += "no-builtin-";
+    AttributeName += BuiltinName;
+    FuncAttrs.addAttribute(AttributeName);
+  };
+
+  // First, handle the language options passed through -fno-builtin.
+  if (LangOpts.NoBuiltin) {
+    // -fno-builtin disables them all.
+    FuncAttrs.addAttribute("no-builtins");
+    return;
+  }
+
+  // Then, add attributes for builtins specified through -fno-builtin-<name>.
+  llvm::for_each(LangOpts.NoBuiltinFuncs, AddNoBuiltinAttr);
+
+  // Now, let's check the __attribute__((no_builtin("...")) attribute added to
+  // the source.
+  if (!NBA)
+    return;
+
+  // If there is a wildcard in the builtin names specified through the
+  // attribute, disable them all.
+  if (llvm::is_contained(NBA->builtinNames(), "*")) {
+    FuncAttrs.addAttribute("no-builtins");
+    return;
+  }
+
+  // And last, add the rest of the builtin names.
+  llvm::for_each(NBA->builtinNames(), AddNoBuiltinAttr);
+}
+
 void CodeGenModule::ConstructAttributeList(
     StringRef Name, const CGFunctionInfo &FI, CGCalleeInfo CalleeInfo,
     llvm::AttributeList &AttrList, unsigned &CallingConv, bool AttrOnCallSite) {
@@ -1850,6 +1886,8 @@ void CodeGenModule::ConstructAttributeList(
   const Decl *TargetDecl = CalleeInfo.getCalleeDecl().getDecl();
 
   bool HasOptnone = false;
+  // The NoBuiltinAttr attached to a TargetDecl (only allowed on FunctionDecls).
+  const NoBuiltinAttr *NBA = nullptr;
   // FIXME: handle sseregparm someday...
   if (TargetDecl) {
     if (TargetDecl->hasAttr<ReturnsTwiceAttr>())
@@ -1875,22 +1913,7 @@ void CodeGenModule::ConstructAttributeList(
       if (!(AttrOnCallSite && IsVirtualCall)) {
         if (Fn->isNoReturn())
           FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
-
-        const auto *NBA = Fn->getAttr<NoBuiltinAttr>();
-        bool HasWildcard = NBA && llvm::is_contained(NBA->builtinNames(), "*");
-        if (getLangOpts().NoBuiltin || HasWildcard)
-          FuncAttrs.addAttribute("no-builtins");
-        else {
-          auto AddNoBuiltinAttr = [&FuncAttrs](StringRef BuiltinName) {
-            SmallString<32> AttributeName;
-            AttributeName += "no-builtin-";
-            AttributeName += BuiltinName;
-            FuncAttrs.addAttribute(AttributeName);
-          };
-          llvm::for_each(getLangOpts().NoBuiltinFuncs, AddNoBuiltinAttr);
-          if (NBA)
-            llvm::for_each(NBA->builtinNames(), AddNoBuiltinAttr);
-        }
+        NBA = Fn->getAttr<NoBuiltinAttr>();
       }
     }
 
@@ -1924,6 +1947,14 @@ void CodeGenModule::ConstructAttributeList(
                                  NumElemsParam);
     }
   }
+
+  // Attach "no-builtins" attributes to:
+  // * call sites: both `nobuiltin` and "no-builtins" or "no-builtin-<name>".
+  // * definitions: "no-builtins" or "no-builtin-<name>" only.
+  // The attributes can come from:
+  // * LangOpts: -ffreestanding, -fno-builtin, -fno-builtin-<name>
+  // * FunctionDecl attributes: __attribute__((no_builtin(...)))
+  addNoBuiltinAttributes(FuncAttrs, getLangOpts(), NBA);
 
   ConstructDefaultFnAttrList(Name, HasOptnone, AttrOnCallSite, FuncAttrs);
 
@@ -2339,9 +2370,6 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       auto FieldIndex = ArgI.getInAllocaFieldIndex();
       Address V =
           Builder.CreateStructGEP(ArgStruct, FieldIndex, Arg->getName());
-      if (ArgI.getInAllocaIndirect())
-        V = Address(Builder.CreateLoad(V),
-                    getContext().getTypeAlignInChars(Ty));
       ArgVals.push_back(ParamValue::forIndirect(V));
       break;
     }
@@ -4041,39 +4069,18 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       assert(NumIRArgs == 0);
       assert(getTarget().getTriple().getArch() == llvm::Triple::x86);
       if (I->isAggregate()) {
+        // Replace the placeholder with the appropriate argument slot GEP.
         Address Addr = I->hasLValue()
                            ? I->getKnownLValue().getAddress(*this)
                            : I->getKnownRValue().getAggregateAddress();
         llvm::Instruction *Placeholder =
             cast<llvm::Instruction>(Addr.getPointer());
-
-        if (!ArgInfo.getInAllocaIndirect()) {
-          // Replace the placeholder with the appropriate argument slot GEP.
-          CGBuilderTy::InsertPoint IP = Builder.saveIP();
-          Builder.SetInsertPoint(Placeholder);
-          Addr = Builder.CreateStructGEP(ArgMemory,
-                                         ArgInfo.getInAllocaFieldIndex());
-          Builder.restoreIP(IP);
-        } else {
-          // For indirect things such as overaligned structs, replace the
-          // placeholder with a regular aggregate temporary alloca. Store the
-          // address of this alloca into the struct.
-          Addr = CreateMemTemp(info_it->type, "inalloca.indirect.tmp");
-          Address ArgSlot = Builder.CreateStructGEP(
-              ArgMemory, ArgInfo.getInAllocaFieldIndex());
-          Builder.CreateStore(Addr.getPointer(), ArgSlot);
-        }
-        deferPlaceholderReplacement(Placeholder, Addr.getPointer());
-      } else if (ArgInfo.getInAllocaIndirect()) {
-        // Make a temporary alloca and store the address of it into the argument
-        // struct.
-        Address Addr = CreateMemTempWithoutCast(
-            I->Ty, getContext().getTypeAlignInChars(I->Ty),
-            "indirect-arg-temp");
-        I->copyInto(*this, Addr);
-        Address ArgSlot =
+        CGBuilderTy::InsertPoint IP = Builder.saveIP();
+        Builder.SetInsertPoint(Placeholder);
+        Addr =
             Builder.CreateStructGEP(ArgMemory, ArgInfo.getInAllocaFieldIndex());
-        Builder.CreateStore(Addr.getPointer(), ArgSlot);
+        Builder.restoreIP(IP);
+        deferPlaceholderReplacement(Placeholder, Addr.getPointer());
       } else {
         // Store the RValue into the argument struct.
         Address Addr =

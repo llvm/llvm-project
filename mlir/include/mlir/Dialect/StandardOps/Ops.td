@@ -304,6 +304,10 @@ def CallOp : Std_Op<"call", [CallOpInterface]> {
       return getAttrOfType<SymbolRefAttr>("callee");
     }
   }];
+
+  let assemblyFormat = [{
+    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+  }];
 }
 
 def CallIndirectOp : Std_Op<"call_indirect", [CallOpInterface]> {
@@ -651,6 +655,7 @@ def DeallocOp : Std_Op<"dealloc"> {
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let assemblyFormat = "$memref attr-dict `:` type($memref)";
 }
 
 def DimOp : Std_Op<"dim", [NoSideEffect]> {
@@ -987,6 +992,7 @@ def RankOp : Std_Op<"rank", [NoSideEffect]> {
     }]>];
 
   let hasFolder = 1;
+  let assemblyFormat = "operands attr-dict `:` type(operands)";
 }
 
 def RemFOp : FloatArithmeticOp<"remf"> {
@@ -1400,6 +1406,16 @@ def SubViewOp : Std_Op<"subview", [AttrSizedOperandSegments, NoSideEffect]> {
   }];
 
   let hasCanonicalizer = 1;
+}
+
+def SqrtOp : FloatUnaryOp<"sqrt"> {
+  let summary = "sqrt of the specified value";
+  let description = [{
+    The `sqrt` operation computes the square root. It takes one operand and
+    returns one result of the same type. This type may be a float scalar type, a
+    vector whose element type is float, or a tensor of floats. It has no standard
+    attributes.
+  }];
 }
 
 def TanhOp : FloatUnaryOp<"tanh"> {

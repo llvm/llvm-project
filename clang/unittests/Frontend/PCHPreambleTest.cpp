@@ -117,7 +117,7 @@ private:
     for (const auto &RemappedFile : RemappedFiles) {
       std::unique_ptr<MemoryBuffer> buf = MemoryBuffer::getMemBufferCopy(
         RemappedFile.second, RemappedFile.first());
-      Remapped.emplace_back(RemappedFile.first(), buf.release());
+      Remapped.emplace_back(std::string(RemappedFile.first()), buf.release());
     }
     return Remapped;
   }

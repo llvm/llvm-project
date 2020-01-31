@@ -67,7 +67,7 @@ Tool *BareMetal::buildLinker() const {
 std::string BareMetal::getRuntimesDir() const {
   SmallString<128> Dir(getDriver().ResourceDir);
   llvm::sys::path::append(Dir, "lib", "baremetal");
-  return Dir.str();
+  return std::string(Dir.str());
 }
 
 void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,

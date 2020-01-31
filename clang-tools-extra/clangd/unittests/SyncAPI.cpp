@@ -125,7 +125,7 @@ runDocumentSymbols(ClangdServer &Server, PathRef File) {
 
 SymbolSlab runFuzzyFind(const SymbolIndex &Index, llvm::StringRef Query) {
   FuzzyFindRequest Req;
-  Req.Query = Query;
+  Req.Query = std::string(Query);
   Req.AnyScope = true;
   return runFuzzyFind(Index, Req);
 }
