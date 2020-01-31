@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Symbol/TypeSystemClang.h"
+#include "TypeSystemClang.h"
 
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -39,9 +39,13 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
+#include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
+#include "Plugins/ExpressionParser/Clang/ClangExternalASTSourceCallbacks.h"
 #include "Plugins/ExpressionParser/Clang/ClangFunctionCaller.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "Plugins/ExpressionParser/Clang/ClangUserExpression.h"
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtilityFunction.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Flags.h"
@@ -52,10 +56,6 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
-#include "lldb/Symbol/ClangASTImporter.h"
-#include "lldb/Symbol/ClangASTMetadata.h"
-#include "lldb/Symbol/ClangExternalASTSourceCallbacks.h"
-#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ExecutionContext.h"

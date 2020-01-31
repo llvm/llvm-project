@@ -20,6 +20,7 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/lldb-enumerations.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -35,7 +36,6 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/TypeList.h"

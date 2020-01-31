@@ -9,7 +9,7 @@
 #ifndef liblldb_ClangExternalASTSourceCallbacks_h_
 #define liblldb_ClangExternalASTSourceCallbacks_h_
 
-#include "lldb/Symbol/TypeSystemClang.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "clang/AST/ExternalASTSource.h"
 
 namespace lldb_private {

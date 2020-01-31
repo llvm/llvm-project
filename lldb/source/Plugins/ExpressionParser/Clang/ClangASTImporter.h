@@ -23,8 +23,9 @@
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
-#include "lldb/Symbol/CxxModuleHandler.h"
 #include "lldb/lldb-types.h"
+
+#include "Plugins/ExpressionParser/Clang/CxxModuleHandler.h"
 
 #include "llvm/ADT/DenseMap.h"
 

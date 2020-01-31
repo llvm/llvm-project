@@ -17,7 +17,6 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/VectorIterator.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
@@ -27,6 +26,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 using namespace lldb;
 using namespace lldb_private;

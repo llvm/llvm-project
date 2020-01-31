@@ -11,6 +11,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "Utility/PPC64LE_DWARF_Registers.h"
 #include "Utility/PPC64_DWARF_Registers.h"
 #include "lldb/Core/Module.h"
@@ -19,7 +20,6 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Core/ValueObjectRegister.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"

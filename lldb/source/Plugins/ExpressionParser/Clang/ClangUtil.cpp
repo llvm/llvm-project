@@ -8,8 +8,8 @@
 // types and decls.
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Symbol/ClangUtil.h"
-#include "lldb/Symbol/TypeSystemClang.h"
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 using namespace clang;
 using namespace lldb_private;
