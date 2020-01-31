@@ -7,67 +7,67 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/memory_utils/utils.h"
-#include "utils/CPP/ArrayRef.h"
+#include "utils/CPP/Array.h"
 #include "utils/UnitTest/Test.h"
 
 namespace __llvm_libc {
 
 TEST(UtilsTest, IsPowerOfTwoOrZero) {
-  static const cpp::ArrayRef<bool> kExpectedValues({
+  static const cpp::Array<bool, 65> kExpectedValues{
       1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, // 0-15
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 16-31
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 32-47
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 48-63
       1                                               // 64
-  });
+  };
   for (size_t i = 0; i < kExpectedValues.size(); ++i)
     EXPECT_EQ(is_power2_or_zero(i), kExpectedValues[i]);
 }
 
 TEST(UtilsTest, IsPowerOfTwo) {
-  static const cpp::ArrayRef<bool> kExpectedValues({
+  static const cpp::Array<bool, 65> kExpectedValues{
       0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, // 0-15
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 16-31
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 32-47
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 48-63
       1                                               // 64
-  });
+  };
   for (size_t i = 0; i < kExpectedValues.size(); ++i)
     EXPECT_EQ(is_power2(i), kExpectedValues[i]);
 }
 
 TEST(UtilsTest, Log2) {
-  static const cpp::ArrayRef<size_t> kExpectedValues({
+  static const cpp::Array<size_t, 65> kExpectedValues{
       0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, // 0-15
       4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, // 16-31
       5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, // 32-47
       5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, // 48-63
       6                                               // 64
-  });
+  };
   for (size_t i = 0; i < kExpectedValues.size(); ++i)
     EXPECT_EQ(log2(i), kExpectedValues[i]);
 }
 
 TEST(UtilsTest, LEPowerOf2) {
-  static const cpp::ArrayRef<size_t> kExpectedValues({
+  static const cpp::Array<size_t, 65> kExpectedValues{
       0,  1,  2,  2,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8,  8,  // 0-15
       16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, // 16-31
       32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, // 32-47
       32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, // 48-63
       64                                                              // 64
-  });
+  };
   for (size_t i = 0; i < kExpectedValues.size(); ++i)
     EXPECT_EQ(le_power2(i), kExpectedValues[i]);
 }
 
 TEST(UtilsTest, GEPowerOf2) {
-  static const cpp::ArrayRef<size_t> kExpectedValues({
+  static const cpp::Array<size_t, 66> kExpectedValues{
       0,  1,  2,  4,  4,  8,  8,  8,  8,  16, 16, 16, 16, 16, 16, 16, // 0-15
       16, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, // 16-31
       32, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, // 32-47
       64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, // 48-63
       64, 128                                                         // 64-65
-  });
+  };
   for (size_t i = 0; i < kExpectedValues.size(); ++i)
     EXPECT_EQ(ge_power2(i), kExpectedValues[i]);
 }
