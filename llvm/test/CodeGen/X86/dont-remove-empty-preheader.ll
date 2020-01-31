@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -S < %s | FileCheck %s
+; RUN: opt -mtriple=x86_64 -codegenprepare -S < %s | FileCheck %s
 ; CHECK: for.body.preheader
 
 @N = common global i32 0, align 4
