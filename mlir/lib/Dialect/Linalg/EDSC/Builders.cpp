@@ -89,6 +89,7 @@ ValueHandle LoopNestRangeBuilder::LoopNestRangeBuilder::operator()(
 
 namespace mlir {
 namespace edsc {
+
 template <>
 GenericLoopNestRangeBuilder<loop::ForOp>::GenericLoopNestRangeBuilder(
     ArrayRef<edsc::ValueHandle *> ivs, ArrayRef<Value> ranges) {
@@ -105,12 +106,28 @@ GenericLoopNestRangeBuilder<AffineForOp>::GenericLoopNestRangeBuilder(
     assert(range.getType() && "expected linalg.range type");
     assert(range.getDefiningOp() && "need operations to extract range parts");
     RangeOp rangeOp = cast<RangeOp>(range.getDefiningOp());
-    lbs.emplace_back(ValueHandle(rangeOp.min()));
-    ubs.emplace_back(ValueHandle(rangeOp.max()));
-    steps.emplace_back(ValueHandle(rangeOp.step()));
+    lbs.emplace_back(rangeOp.min());
+    ubs.emplace_back(rangeOp.max());
+    steps.emplace_back(rangeOp.step());
   }
   builder = std::make_unique<AffineLoopNestBuilder>(ivs, lbs, ubs, steps);
 }
+
+template <>
+GenericLoopNestRangeBuilder<loop::ParallelOp>::GenericLoopNestRangeBuilder(
+    ArrayRef<ValueHandle *> ivs, ArrayRef<Value> ranges) {
+  SmallVector<ValueHandle, 4> lbs, ubs, steps;
+  for (Value range : ranges) {
+    assert(range.getType() && "expected linalg.range type");
+    assert(range.getDefiningOp() && "need operations to extract range parts");
+    RangeOp rangeOp = cast<RangeOp>(range.getDefiningOp());
+    lbs.emplace_back(rangeOp.min());
+    ubs.emplace_back(rangeOp.max());
+    steps.emplace_back(rangeOp.step());
+  }
+  builder = std::make_unique<ParallelLoopNestBuilder>(ivs, lbs, ubs, steps);
+}
+
 } // namespace edsc
 } // namespace mlir
 
