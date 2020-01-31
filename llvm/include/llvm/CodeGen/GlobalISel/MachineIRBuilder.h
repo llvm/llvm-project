@@ -847,8 +847,8 @@ public:
   MachineInstrBuilder buildConcatVectors(const DstOp &Res,
                                          ArrayRef<Register> Ops);
 
-  MachineInstrBuilder buildInsert(Register Res, Register Src,
-                                  Register Op, unsigned Index);
+  MachineInstrBuilder buildInsert(const DstOp &Res, const SrcOp &Src,
+                                  const SrcOp &Op, unsigned Index);
 
   /// Build and insert either a G_INTRINSIC (if \p HasSideEffects is false) or
   /// G_INTRINSIC_W_SIDE_EFFECTS instruction. Its first operand will be the
