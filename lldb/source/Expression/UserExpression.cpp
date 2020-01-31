@@ -139,12 +139,12 @@ lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
   return ret;
 }
 
-lldb::ExpressionResults UserExpression::Evaluate(
-    ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
-    llvm::StringRef expr, llvm::StringRef prefix,
-    lldb::ValueObjectSP &result_valobj_sp, Status &error,
-    std::string *fixed_expression, lldb::ModuleSP *jit_module_sp_ptr,
-    ValueObject *ctx_obj) {
+lldb::ExpressionResults
+UserExpression::Evaluate(ExecutionContext &exe_ctx,
+                         const EvaluateExpressionOptions &options,
+                         llvm::StringRef expr, llvm::StringRef prefix,
+                         lldb::ValueObjectSP &result_valobj_sp, Status &error,
+                         std::string *fixed_expression, ValueObject *ctx_obj) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS |
                                                   LIBLLDB_LOG_STEP));
 
@@ -302,11 +302,6 @@ lldb::ExpressionResults UserExpression::Evaluate(
   }
 
   if (parse_success) {
-    // If a pointer to a lldb::ModuleSP was passed in, return the JIT'ed module
-    // if one was created
-    if (jit_module_sp_ptr)
-      *jit_module_sp_ptr = user_expression_sp->GetJITModule();
-
     lldb::ExpressionVariableSP expr_result;
 
     if (execution_policy == eExecutionPolicyNever &&
