@@ -44,8 +44,8 @@ using LLVMTypeConverterMaker =
     std::function<std::unique_ptr<LLVMTypeConverter>(MLIRContext *)>;
 
 /// Collect a set of patterns to convert memory-related operations from the
-/// Standard dialect to the LLVM dialect, excluding the memory-related
-/// operations.
+/// Standard dialect to the LLVM dialect, excluding non-memory-related
+/// operations and FuncOp.
 void populateStdToLLVMMemoryConversionPatters(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
 
@@ -54,9 +54,20 @@ void populateStdToLLVMMemoryConversionPatters(
 void populateStdToLLVMNonMemoryConversionPatterns(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
 
-/// Collect a set of patterns to convert from the Standard dialect to LLVM.
+/// Collect the default pattern to convert a FuncOp to the LLVM dialect.
+void populateStdToLLVMDefaultFuncOpConversionPattern(
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+
+/// Collect a set of default patterns to convert from the Standard dialect to
+/// LLVM.
 void populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                          OwningRewritePatternList &patterns);
+
+/// Collect a set of patterns to convert from the Standard dialect to
+/// LLVM using the bare pointer calling convention for MemRef function
+/// arguments.
+void populateStdToLLVMBarePtrConversionPatterns(
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
 
 /// Creates a pass to convert the Standard dialect into the LLVMIR dialect.
 /// By default stdlib malloc/free are used for allocating MemRef payloads.
