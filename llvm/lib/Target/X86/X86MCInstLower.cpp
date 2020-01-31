@@ -2005,6 +2005,25 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     break;
   }
 
+  case X86::ENDBR32:
+  case X86::ENDBR64: {
+    // CurrentPatchableFunctionEntrySym can be CurrentFnBegin only for
+    // -fpatchable-function-entry=N,0. The entry MBB is guaranteed to be
+    // non-empty. If MI is the initial ENDBR, place the
+    // __patchable_function_entries label after ENDBR.
+    if (CurrentPatchableFunctionEntrySym &&
+        CurrentPatchableFunctionEntrySym == CurrentFnBegin &&
+        MI == &MF->front().front()) {
+      MCInst Inst;
+      MCInstLowering.Lower(MI, Inst);
+      EmitAndCountInstruction(Inst);
+      CurrentPatchableFunctionEntrySym = createTempSymbol("patch");
+      OutStreamer->EmitLabel(CurrentPatchableFunctionEntrySym);
+      return;
+    }
+    break;
+  }
+
   case X86::TAILJMPr:
   case X86::TAILJMPm:
   case X86::TAILJMPd:
