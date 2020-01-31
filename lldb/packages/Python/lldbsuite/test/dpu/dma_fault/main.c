@@ -3,6 +3,6 @@
 
 int main() {
         uint64_t buffer;
-        mram_read8(0xffffffff, &buffer);
+        mram_read(0xffffffff, &buffer, sizeof(uint64_t));
         return (int)buffer;
 }
