@@ -69,7 +69,7 @@ void PersistentExpressionState::RegisterExecutionUnit(
       // of the demangled name will find the mangled one (needed for looking up
       // metadata pointers.)
       Mangled mangler(global_var.m_name);
-      mangler.GetDemangledName(lldb::eLanguageTypeUnknown);
+      mangler.GetDemangledName();
       m_symbol_map[global_var.m_name.GetCString()] = global_var.m_remote_addr;
       LLDB_LOGF(log, "  Symbol: %s at 0x%" PRIx64 ".",
                 global_var.m_name.GetCString(), global_var.m_remote_addr);

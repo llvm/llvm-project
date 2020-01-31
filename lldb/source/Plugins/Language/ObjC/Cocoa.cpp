@@ -902,8 +902,7 @@ bool lldb_private::formatters::ObjCClassSummaryProvider(
   if (class_name.IsEmpty())
     return false;
 
-  if (ConstString cs =
-          Mangled(class_name).GetDemangledName(lldb::eLanguageTypeUnknown))
+  if (ConstString cs = Mangled(class_name).GetDemangledName())
     class_name = cs;
 
   stream.Printf("%s", class_name.AsCString("<unknown class>"));

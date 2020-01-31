@@ -68,9 +68,7 @@ const char *SBSymbol::GetDisplayName() const {
 
   const char *name = nullptr;
   if (m_opaque_ptr)
-    name = m_opaque_ptr->GetMangled()
-               .GetDisplayDemangledName(m_opaque_ptr->GetLanguage())
-               .AsCString();
+    name = m_opaque_ptr->GetMangled().GetDisplayDemangledName().AsCString();
 
   return name;
 }

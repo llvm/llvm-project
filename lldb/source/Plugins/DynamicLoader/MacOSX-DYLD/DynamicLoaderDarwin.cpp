@@ -839,8 +839,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
     std::vector<Address> addresses;
 
     if (current_symbol->IsTrampoline()) {
-      ConstString trampoline_name = current_symbol->GetMangled().GetName(
-          current_symbol->GetLanguage(), Mangled::ePreferMangled);
+      ConstString trampoline_name =
+          current_symbol->GetMangled().GetName(Mangled::ePreferMangled);
 
       if (trampoline_name) {
         const ModuleList &images = target_sp->GetImages();
@@ -981,8 +981,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
 void DynamicLoaderDarwin::FindEquivalentSymbols(
     lldb_private::Symbol *original_symbol, lldb_private::ModuleList &images,
     lldb_private::SymbolContextList &equivalent_symbols) {
-  ConstString trampoline_name = original_symbol->GetMangled().GetName(
-      original_symbol->GetLanguage(), Mangled::ePreferMangled);
+  ConstString trampoline_name =
+      original_symbol->GetMangled().GetName(Mangled::ePreferMangled);
   if (!trampoline_name)
     return;
 
