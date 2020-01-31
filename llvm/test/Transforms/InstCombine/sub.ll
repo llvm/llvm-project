@@ -689,10 +689,9 @@ define i32 @test_neg_trunc_shl_lshr(i64 %a, i64 %b) {
 
 define i64 @test_neg_mul_sub(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: @test_neg_mul_sub(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[SUB]], [[C:%.*]]
-; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[MUL]]
-; CHECK-NEXT:    ret i64 [[NEG]]
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub i64 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i64 [[SUB_NEG]], [[C:%.*]]
+; CHECK-NEXT:    ret i64 [[MUL_NEG]]
 ;
   %sub = sub i64 %a, %b
   %mul = mul i64 %sub, %c
@@ -700,13 +699,12 @@ define i64 @test_neg_mul_sub(i64 %a, i64 %b, i64 %c) {
   ret i64 %neg
 }
 
-define i64 @test_neg_mul_sub_communted(i64 %a, i64 %b, i64 %c) {
-; CHECK-LABEL: @test_neg_mul_sub_communted(
+define i64 @test_neg_mul_sub_commuted(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: @test_neg_mul_sub_commuted(
 ; CHECK-NEXT:    [[COMPLEX:%.*]] = mul i64 [[C:%.*]], [[C]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[COMPLEX]], [[SUB]]
-; CHECK-NEXT:    [[NEG:%.*]] = sub i64 0, [[MUL]]
-; CHECK-NEXT:    ret i64 [[NEG]]
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub i64 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[MUL_NEG:%.*]] = mul i64 [[COMPLEX]], [[SUB_NEG]]
+; CHECK-NEXT:    ret i64 [[MUL_NEG]]
 ;
   %complex = mul i64 %c, %c
   %sub = sub i64 %a, %b
