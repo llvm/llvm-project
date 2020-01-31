@@ -46,7 +46,13 @@ class MTCSimpleTestCase(TestBase):
 
         self.expect(
             "thread info -s",
-            substrs=["instrumentation_class", "api_name", "class_name", "selector", "description"])
+            substrs=[
+                "api_name",
+                "class_name",
+                "description",
+                "instrumentation_class",
+                "selector"
+            ])
         self.assertEqual(thread.GetStopReason(), lldb.eStopReasonInstrumentation)
         output_lines = self.res.GetOutput().split('\n')
         json_line = '\n'.join(output_lines[2:])
