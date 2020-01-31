@@ -2716,7 +2716,7 @@ Parser::ParseCXXClassMemberDeclaration(AccessSpecifier AS,
     // C++11 [dcl.attr.grammar] p4: If an attribute-specifier-seq appertains
     // to a friend declaration, that declaration shall be a definition.
     if (DeclaratorInfo.isFunctionDeclarator() &&
-        DefinitionKind != FDK_Definition && DS.isFriendSpecified()) {
+        DefinitionKind == FDK_Declaration && DS.isFriendSpecified()) {
       // Diagnose attributes that appear before decl specifier:
       // [[]] friend int foo();
       ProhibitAttributes(FnAttrs);
