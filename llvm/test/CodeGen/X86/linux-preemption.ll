@@ -40,9 +40,9 @@ define i32* @get_external_default_global() {
 define i32* @get_strong_local_global() {
   ret i32* @strong_local_global
 }
-; CHECK: leaq strong_local_global(%rip), %rax
-; STATIC: movl $strong_local_global, %eax
-; CHECK32: leal strong_local_global@GOTOFF(%eax), %eax
+; CHECK: leaq .Lstrong_local_global$local(%rip), %rax
+; STATIC: movl $.Lstrong_local_global$local, %eax
+; CHECK32: leal .Lstrong_local_global$local@GOTOFF(%eax), %eax
 
 @weak_local_global = weak dso_local global i32 42
 define i32* @get_weak_local_global() {
@@ -175,9 +175,9 @@ define void()* @get_strong_local_function() {
 }
 ; COMMON:     {{^}}strong_local_function:
 ; COMMON-NEXT .Lstrong_local_function:
-; CHECK: leaq strong_local_function(%rip), %rax
-; STATIC: movl $strong_local_function, %eax
-; CHECK32: leal strong_local_function@GOTOFF(%eax), %eax
+; CHECK: leaq .Lstrong_local_function$local(%rip), %rax
+; STATIC: movl $.Lstrong_local_function$local, %eax
+; CHECK32: leal .Lstrong_local_function$local@GOTOFF(%eax), %eax
 
 define weak dso_local void @weak_local_function() {
   ret void
