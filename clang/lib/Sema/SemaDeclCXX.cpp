@@ -7373,7 +7373,14 @@ private:
     ///   resolution [...]
     CandidateSet.exclude(FD);
 
-    S.LookupOverloadedBinOp(CandidateSet, OO, Fns, Args);
+    if (Args[0]->getType()->isOverloadableType())
+      S.LookupOverloadedBinOp(CandidateSet, OO, Fns, Args);
+    else {
+      // FIXME: We determine whether this is a valid expression by checking to
+      // see if there's a viable builtin operator candidate for it. That isn't
+      // really what the rules ask us to do, but should give the right results.
+      S.AddBuiltinOperatorCandidates(OO, FD->getLocation(), Args, CandidateSet);
+    }
 
     Result R;
 
@@ -7826,10 +7833,14 @@ private:
       return StmtError();
 
     OverloadedOperatorKind OO = FD->getOverloadedOperator();
-    ExprResult Op = S.CreateOverloadedBinOp(
-        Loc, BinaryOperator::getOverloadedOpcode(OO), Fns,
-        Obj.first.get(), Obj.second.get(), /*PerformADL=*/true,
-        /*AllowRewrittenCandidates=*/true, FD);
+    BinaryOperatorKind Opc = BinaryOperator::getOverloadedOpcode(OO);
+    ExprResult Op;
+    if (Type->isOverloadableType())
+      Op = S.CreateOverloadedBinOp(Loc, Opc, Fns, Obj.first.get(),
+                                   Obj.second.get(), /*PerformADL=*/true,
+                                   /*AllowRewrittenCandidates=*/true, FD);
+    else
+      Op = S.CreateBuiltinBinOp(Loc, Opc, Obj.first.get(), Obj.second.get());
     if (Op.isInvalid())
       return StmtError();
 
@@ -7869,8 +7880,12 @@ private:
       llvm::APInt ZeroVal(S.Context.getIntWidth(S.Context.IntTy), 0);
       Expr *Zero =
           IntegerLiteral::Create(S.Context, ZeroVal, S.Context.IntTy, Loc);
-      ExprResult Comp = S.CreateOverloadedBinOp(Loc, BO_NE, Fns, VDRef.get(),
-                                                Zero, true, true, FD);
+      ExprResult Comp;
+      if (VDRef.get()->getType()->isOverloadableType())
+        Comp = S.CreateOverloadedBinOp(Loc, BO_NE, Fns, VDRef.get(), Zero, true,
+                                       true, FD);
+      else
+        Comp = S.CreateBuiltinBinOp(Loc, BO_NE, VDRef.get(), Zero);
       if (Comp.isInvalid())
         return StmtError();
       Sema::ConditionResult Cond = S.ActOnCondition(
