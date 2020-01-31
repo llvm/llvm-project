@@ -10,9 +10,7 @@ class TestStepIntoOverride(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
-    @skipIfLinux
     def test_swift_stepping(self):
-        """Tests that we can step reliably in swift code."""
         self.build()
         self.do_test()
 
@@ -38,27 +36,7 @@ class TestStepIntoOverride(lldbtest.TestBase):
         exe_name = "a.out"
         exe = self.getBuildArtifact(exe_name)
 
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, lldbtest.VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.main_source_spec)
-        self.assertTrue(
-            breakpoint.GetNumLocations() > 0, lldbtest.VALID_BREAKPOINT)
-        
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, lldbtest.PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        thread = threads[0]
+        target, process, thread, breakpoint = lldbutil.run_to_source_breakpoint(self, 'break here', self.main_source_spec)
 
         # Step into the function.
         thread.StepInto()
