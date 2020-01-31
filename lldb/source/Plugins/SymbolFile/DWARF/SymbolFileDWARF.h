@@ -222,11 +222,7 @@ public:
 
   DWARFDebugAbbrev *DebugAbbrev();
 
-  const DWARFDebugAbbrev *DebugAbbrev() const;
-
   DWARFDebugInfo *DebugInfo();
-
-  const DWARFDebugInfo *DebugInfo() const;
 
   DWARFDebugRanges *GetDebugRanges();
 
@@ -316,16 +312,7 @@ protected:
   typedef llvm::DenseMap<lldb::opaque_compiler_type_t, lldb::user_id_t>
       ClangTypeToDIE;
 
-  struct DWARFDataSegment {
-    llvm::once_flag m_flag;
-    lldb_private::DWARFDataExtractor m_data;
-  };
-
   DISALLOW_COPY_AND_ASSIGN(SymbolFileDWARF);
-
-  const lldb_private::DWARFDataExtractor &
-  GetCachedSectionData(lldb::SectionType sect_type,
-                       DWARFDataSegment &data_segment);
 
   virtual void LoadSectionData(lldb::SectionType sect_type,
                                lldb_private::DWARFDataExtractor &data);
@@ -483,11 +470,6 @@ protected:
 
   lldb_private::DWARFContext m_context;
 
-  DWARFDataSegment m_data_debug_loc;
-  DWARFDataSegment m_data_debug_loclists;
-
-  // The unique pointer items below are generated on demand if and when someone
-  // accesses them through a non const version of this class.
   std::unique_ptr<DWARFDebugAbbrev> m_abbr;
   std::unique_ptr<DWARFDebugInfo> m_info;
   std::unique_ptr<GlobalVariableMap> m_global_aranges_up;
