@@ -16,4 +16,9 @@ func doSomething(b: Int) {
 	a += b //% self.expect("expr a", substrs=['Int', '= 1'])
 }
 
-doSomething(b:2)
+func withLocalShadow() {
+  let a = 23
+  doSomething(b: a) //% self.expect("log enable lldb expr");self.expect("expr a", substrs=['Int', '= 23'])
+}
+
+withLocalShadow()

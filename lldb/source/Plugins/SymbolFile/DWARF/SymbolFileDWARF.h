@@ -223,9 +223,6 @@ public:
   bool GetCompileOption(const char *option, std::string &value,
                         lldb_private::CompileUnit *cu = nullptr) override;
 
-  int GetCompileOptions(const char *option, std::vector<std::string> &value,
-                        lldb_private::CompileUnit *cu = nullptr) override;
-
   void PreloadSymbols() override;
 
   std::recursive_mutex &GetModuleMutex() const override;

@@ -3099,9 +3099,16 @@ bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
     const uint32_t num_compile_units = GetNumCompileUnits();
 
     if (cu) {
-      DWARFUnit *dwarf_cu = GetDWARFCompileUnit(cu);
+      auto *dwarf_cu =
+          llvm::dyn_cast_or_null<DWARFCompileUnit>(GetDWARFCompileUnit(cu));
 
       if (dwarf_cu) {
+        // GetDWARFCompileUnit() only looks up by CU#. Make sure that
+        // this is actually the correct SymbolFile by converting it
+        // back to a CompileUnit.
+        if (GetCompUnitForDWARFCompUnit(*dwarf_cu) != cu)
+          return false;
+
         const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
         if (die) {
           const char *flags =
@@ -3142,60 +3149,6 @@ bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
   }
 
   return false;
-}
-
-int SymbolFileDWARF::GetCompileOptions(const char *option,
-                                       std::vector<std::string> &values,
-                                       CompileUnit *cu) {
-  DWARFDebugInfo *debug_info = DebugInfo();
-
-  if (debug_info) {
-    if (cu) {
-      DWARFUnit *dwarf_cu = GetDWARFCompileUnit(cu);
-
-      if (dwarf_cu) {
-        const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
-        if (die) {
-          const char *flags =
-              die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
-
-          if (flags) {
-            if (strstr(flags, option)) {
-              Args compiler_args(flags);
-
-              return OptionParsing::GetOptionValuesAsStrings(compiler_args,
-                                                             option, values);
-            }
-          }
-        }
-      }
-    } else {
-      const uint32_t num_compile_units = GetNumCompileUnits();
-
-      for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
-        DWARFUnit *dwarf_cu = debug_info->GetUnitAtIndex(cu_idx);
-
-        if (dwarf_cu) {
-          const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
-          if (die) {
-            const char *flags =
-                die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
-
-            if (flags) {
-              if (strstr(flags, option)) {
-                Args compiler_args(flags);
-
-                return OptionParsing::GetOptionValuesAsStrings(compiler_args,
-                                                               option, values);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return 0;
 }
 
 TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
