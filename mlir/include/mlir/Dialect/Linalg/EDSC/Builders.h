@@ -231,6 +231,27 @@ Operation *linalg_pointwise_max(StructuredIndexed I1, StructuredIndexed I2,
 /// ```
 Operation *linalg_matmul(ValueHandle vA, ValueHandle vB, ValueHandle vC);
 
+/// Build a linalg.generic, under the current ScopedContext, at the current
+/// insert point, that computes:
+/// ```
+///    (m, n, k) = (par, par, seq)
+///    |
+///    |  C(m, n) = sum_k(A(m, k) * B(k, n))
+/// ```
+/// and returns the tensor `C`.
+Operation *linalg_matmul(ValueHandle vA, ValueHandle vB, RankedTensorType tC);
+
+/// Build a linalg.generic, under the current ScopedContext, at the current
+/// insert point, that computes:
+/// ```
+///    (m, n, k) = (par, par, seq)
+///    |
+///    |  D(m, n) = C(m, n) + sum_k(A(m, k) * B(k, n))
+/// ```
+/// and returns the tensor `D`.
+Operation *linalg_matmul(ValueHandle vA, ValueHandle vB, ValueHandle vC,
+                         RankedTensorType tD);
+
 template <typename Container> Operation *linalg_matmul(Container values) {
   assert(values.size() == 3 && "Expected exactly 3 values");
   return linalg_matmul(values[0], values[1], values[2]);
