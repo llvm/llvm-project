@@ -2956,8 +2956,8 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
             }
 
             if (try_resolving_type) {
-              DWARFDeclContext type_dwarf_decl_ctx =
-                  GetDWARFDeclContext(type_die);
+              DWARFDeclContext type_dwarf_decl_ctx;
+              GetDWARFDeclContext(type_die, type_dwarf_decl_ctx);
 
               if (log) {
                 GetObjectFile()->GetModule()->LogMessage(
@@ -3374,10 +3374,12 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
         // declaration context.
         if ((parent_tag == DW_TAG_compile_unit ||
              parent_tag == DW_TAG_partial_unit) &&
-            Language::LanguageIsCPlusPlus(GetLanguage(*die.GetCU())))
-          mangled = GetDWARFDeclContext(die)
-                        .GetQualifiedNameAsConstString()
-                        .GetCString();
+            Language::LanguageIsCPlusPlus(GetLanguage(*die.GetCU()))) {
+          DWARFDeclContext decl_ctx;
+
+          GetDWARFDeclContext(die, decl_ctx);
+          mangled = decl_ctx.GetQualifiedNameAsConstString().GetCString();
+        }
       }
 
       if (tag == DW_TAG_formal_parameter)
@@ -3979,13 +3981,14 @@ SymbolFileDWARF::GetContainingDeclContext(const DWARFDIE &die) {
   return CompilerDeclContext();
 }
 
-DWARFDeclContext SymbolFileDWARF::GetDWARFDeclContext(const DWARFDIE &die) {
-  if (!die.IsValid())
-    return {};
-  DWARFDeclContext dwarf_decl_ctx =
-      die.GetDIE()->GetDWARFDeclContext(die.GetCU());
+void SymbolFileDWARF::GetDWARFDeclContext(const DWARFDIE &die,
+                                          DWARFDeclContext &dwarf_decl_ctx) {
+  if (!die.IsValid()) {
+    dwarf_decl_ctx.Clear();
+    return;
+  }
   dwarf_decl_ctx.SetLanguage(GetLanguage(*die.GetCU()));
-  return dwarf_decl_ctx;
+  die.GetDIE()->GetDWARFDeclContext(die.GetCU(), dwarf_decl_ctx);
 }
 
 LanguageType SymbolFileDWARF::LanguageTypeFromDWARF(uint64_t val) {
