@@ -10,8 +10,7 @@ func @main() {
   %sz = dim %dst, 0 : memref<?x?x?xf32>
   call @mcuMemHostRegisterMemRef3dFloat(%dst) : (memref<?x?x?xf32>) -> ()
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %one, %grid_y = %one, %grid_z = %one)
-             threads(%tx, %ty, %tz) in (%block_x = %sx, %block_y = %sy, %block_z = %sz)
-             args(%kernel_dst = %dst) : memref<?x?x?xf32> {
+             threads(%tx, %ty, %tz) in (%block_x = %sx, %block_y = %sy, %block_z = %sz) {
     %t0 = muli %tz, %block_y : index
     %t1 = addi %ty, %t0 : index
     %t2 = muli %t1, %block_x : index
@@ -19,7 +18,7 @@ func @main() {
     %t3 = index_cast %idx : index to i32
     %val = sitofp %t3 : i32 to f32
     %sum = "gpu.all_reduce"(%val) ({}) { op = "add" } : (f32) -> (f32)
-    store %sum, %kernel_dst[%tz, %ty, %tx] : memref<?x?x?xf32>
+    store %sum, %dst[%tz, %ty, %tx] : memref<?x?x?xf32>
     gpu.terminator
   }
   %U = memref_cast %dst : memref<?x?x?xf32> to memref<*xf32>
