@@ -139,7 +139,7 @@ entry:
 
 define i32 @f7() {
 ; X32-LABEL: f7:
-; X32:         movl $__emutls_v.i4, (%esp)
+; X32:         movl $.L__emutls_v.i4$local, (%esp)
 ; X32-NEXT:    calll __emutls_get_address
 ; X32-NEXT:    movl (%eax), %eax
 ; X32-NEXT:    addl $12, %esp
@@ -153,7 +153,7 @@ entry:
 
 define i32* @f8() {
 ; X32-LABEL: f8:
-; X32:         movl $__emutls_v.i4, (%esp)
+; X32:         movl $.L__emutls_v.i4$local, (%esp)
 ; X32-NEXT:    calll __emutls_get_address
 ; X32-NEXT:    addl $12, %esp
 ; X32-NEXT:    .cfi_def_cfa_offset 4
