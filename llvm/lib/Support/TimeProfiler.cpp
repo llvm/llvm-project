@@ -24,16 +24,22 @@
 #include <vector>
 
 using namespace std::chrono;
+using namespace llvm;
 
 namespace {
 std::mutex Mu;
-std::vector<llvm::TimeTraceProfiler *>
+// List of all instances
+std::vector<TimeTraceProfiler *>
     ThreadTimeTraceProfilerInstances; // guarded by Mu
+// Per Thread instance
+LLVM_THREAD_LOCAL TimeTraceProfiler *TimeTraceProfilerInstance = nullptr;
 } // namespace
 
 namespace llvm {
 
-LLVM_THREAD_LOCAL TimeTraceProfiler *TimeTraceProfilerInstance = nullptr;
+TimeTraceProfiler *getTimeTraceProfilerInstance() {
+  return TimeTraceProfilerInstance;
+}
 
 typedef duration<steady_clock::rep, steady_clock::period> DurationType;
 typedef time_point<steady_clock> TimePointType;
