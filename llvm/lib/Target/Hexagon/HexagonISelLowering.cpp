@@ -3379,19 +3379,21 @@ bool HexagonTargetLowering::IsEligibleForTailCallOptimization(
 /// zero. 'MemcpyStrSrc' indicates whether the memcpy source is constant so it
 /// does not need to be loaded.  It returns EVT::Other if the type should be
 /// determined using generic target-independent logic.
-EVT HexagonTargetLowering::getOptimalMemOpType(uint64_t Size,
-      unsigned DstAlign, unsigned SrcAlign, bool IsMemset, bool ZeroMemset,
-      bool MemcpyStrSrc, const AttributeList &FuncAttributes) const {
+EVT HexagonTargetLowering::getOptimalMemOpType(
+    const MemOp &Op, const AttributeList &FuncAttributes) const {
 
   auto Aligned = [](unsigned GivenA, unsigned MinA) -> bool {
     return (GivenA % MinA) == 0;
   };
 
-  if (Size >= 8 && Aligned(DstAlign, 8) && (IsMemset || Aligned(SrcAlign, 8)))
+  if (Op.Size >= 8 && Aligned(Op.DstAlign, 8) &&
+      (Op.IsMemset || Aligned(Op.SrcAlign, 8)))
     return MVT::i64;
-  if (Size >= 4 && Aligned(DstAlign, 4) && (IsMemset || Aligned(SrcAlign, 4)))
+  if (Op.Size >= 4 && Aligned(Op.DstAlign, 4) &&
+      (Op.IsMemset || Aligned(Op.SrcAlign, 4)))
     return MVT::i32;
-  if (Size >= 2 && Aligned(DstAlign, 2) && (IsMemset || Aligned(SrcAlign, 2)))
+  if (Op.Size >= 2 && Aligned(Op.DstAlign, 2) &&
+      (Op.IsMemset || Aligned(Op.SrcAlign, 2)))
     return MVT::i16;
 
   return MVT::Other;

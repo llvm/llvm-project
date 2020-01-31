@@ -576,8 +576,9 @@ int ARMTTIImpl::getMemcpyCost(const Instruction *I) {
   // loaded and stored. That's why we multiply the number of elements by 2 to
   // get the cost for this memcpy.
   if (getTLI()->findOptimalMemOpLowering(
-          MemOps, Limit, Size, DstAlign, SrcAlign, false /*IsMemset*/,
-          false /*ZeroMemset*/, false /*MemcpyStrSrc*/, false /*AllowOverlap*/,
+          MemOps, Limit,
+          MemOp::Copy(Size, /*DstAlignCanChange*/ false, DstAlign, SrcAlign,
+                      /*IsVolatile*/ true),
           MI->getDestAddressSpace(), MI->getSourceAddressSpace(),
           F->getAttributes()))
     return MemOps.size() * 2;
