@@ -406,9 +406,8 @@ SymbolFileDWARF::SymbolFileDWARF(ObjectFileSP objfile_sp,
                                   // contain the .o file index/ID
       m_debug_map_module_wp(), m_debug_map_symfile(nullptr),
       m_context(m_objfile_sp->GetModule()->GetSectionList(), dwo_section_list),
-      m_data_debug_loc(), m_abbr(), m_info(), m_fetched_external_modules(false),
-      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate),
-      m_unique_ast_type_map() {}
+      m_fetched_external_modules(false),
+      m_supports_DW_AT_APPLE_objc_complete_type(eLazyBoolCalculate) {}
 
 SymbolFileDWARF::~SymbolFileDWARF() {}
 
@@ -561,15 +560,6 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
   return abilities;
 }
 
-const DWARFDataExtractor &
-SymbolFileDWARF::GetCachedSectionData(lldb::SectionType sect_type,
-                                      DWARFDataSegment &data_segment) {
-  llvm::call_once(data_segment.m_flag, [this, sect_type, &data_segment] {
-    this->LoadSectionData(sect_type, std::ref(data_segment.m_data));
-  });
-  return data_segment.m_data;
-}
-
 void SymbolFileDWARF::LoadSectionData(lldb::SectionType sect_type,
                                       DWARFDataExtractor &data) {
   ModuleSP module_sp(m_objfile_sp->GetModule());
@@ -606,10 +596,6 @@ DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   return m_abbr.get();
 }
 
-const DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() const {
-  return m_abbr.get();
-}
-
 DWARFDebugInfo *SymbolFileDWARF::DebugInfo() {
   if (m_info == nullptr) {
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
@@ -618,10 +604,6 @@ DWARFDebugInfo *SymbolFileDWARF::DebugInfo() {
     if (m_context.getOrLoadDebugInfoData().GetByteSize() > 0)
       m_info = std::make_unique<DWARFDebugInfo>(*this, m_context);
   }
-  return m_info.get();
-}
-
-const DWARFDebugInfo *SymbolFileDWARF::DebugInfo() const {
   return m_info.get();
 }
 
