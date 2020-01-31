@@ -1334,7 +1334,7 @@ void PdbAstBuilder::ParseDeclsForContext(clang::DeclContext &context) {
 }
 
 CompilerDecl PdbAstBuilder::ToCompilerDecl(clang::Decl &decl) {
-  return {&m_clang, &decl};
+  return m_clang.GetCompilerDecl(&decl);
 }
 
 CompilerType PdbAstBuilder::ToCompilerType(clang::QualType qt) {

@@ -407,6 +407,16 @@ public:
       llvm::DenseMap<const clang::CXXRecordDecl *, clang::CharUnits>
           &vbase_offsets);
 
+  /// Creates a CompilerDecl from the given Decl with the current
+  /// TypeSystemClang instance as its typesystem.
+  /// The Decl has to come from the ASTContext of this
+  /// TypeSystemClang.
+  CompilerDecl GetCompilerDecl(clang::Decl *decl) {
+    assert(&decl->getASTContext() == &getASTContext() &&
+           "CreateCompilerDecl for Decl from wrong ASTContext?");
+    return CompilerDecl(this, decl);
+  }
+
   // CompilerDecl override functions
   ConstString DeclGetName(void *opaque_decl) override;
 

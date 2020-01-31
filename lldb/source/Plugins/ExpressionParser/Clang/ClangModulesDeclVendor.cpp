@@ -384,7 +384,7 @@ ClangModulesDeclVendorImpl::FindDecls(ConstString name, bool append,
     if (num_matches >= max_matches)
       return num_matches;
 
-    decls.push_back(CompilerDecl(m_ast_context.get(), named_decl));
+    decls.push_back(m_ast_context->GetCompilerDecl(named_decl));
     ++num_matches;
   }
 
