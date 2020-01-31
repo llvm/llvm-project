@@ -4,6 +4,7 @@
 // TILE-23004-DAG: #[[S0x10p90:.*]] = affine_map<()[s0] -> (s0 * 10 + 90)>
 // TILE-23004-DAG: #[[strided4D:.*]] = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3)>
 // TILE-23004-DAG: #[[strided4D_dynamic:.*]] = affine_map<(d0, d1, d2, d3)[s0, s1, s2, s3, s4] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3 + d3 * s4)>
+// TILE-23004-DAG: #[[bound_map:.*]] = affine_map<(d0, d1, d2) -> (d0, d1 - d2)>
 
 func @conv(%arg0: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, %arg1: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, %arg2: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>) {
   linalg.conv(%arg0, %arg1, %arg2) {dilations = [10, 20], strides = [30, 40]} : memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>
@@ -25,16 +26,20 @@ func @conv(%arg0: memref<?x?x?x?xf32, offset: ?, strides: [?, ?, ?, 1]>, %arg1: 
 //       TILE-23004:       loop.for %[[ivK:.*]] = %{{.*}} to %[[Q]] step %{{.*}} {
 //       TILE-23004:         %[[Z0:.*]] = dim %{{.*}}, 0 : memref<?x?x?x?xf32, #[[strided4D]]>
 //       TILE-23004:         %[[Z1:.*]] = dim %{{.*}}, 1 : memref<?x?x?x?xf32, #[[strided4D]]>
+//       TILE-23004:         %[[Z2:.*]] = dim %{{.*}}, 2 : memref<?x?x?x?xf32, #[[strided4D]]>
+//       TILE-23004:         %[[szK:.*]] = affine.min #[[bound_map]](%[[C4]], %[[Z2]], %[[ivK]])
 //       TILE-23004:         %[[K:.*]] = dim %{{.*}}, 3 : memref<?x?x?x?xf32, #[[strided4D]]>
-//       TILE-23004:         %[[FilterView:.*]] = std.subview %{{.*}}[%[[C0]], %[[C0]], %[[ivK]], %[[C0]]][%[[Z0]], %[[Z1]], %[[C4]], %[[K]]][%[[C1]], %[[C1]], %[[C1]], %[[C1]]] : memref<?x?x?x?xf32, #[[strided4D]]> to memref<?x?x?x?xf32, #[[strided4D_dynamic]]>
+//       TILE-23004:         %[[FilterView:.*]] = std.subview %{{.*}}[%[[C0]], %[[C0]], %[[ivK]], %[[C0]]][%[[Z0]], %[[Z1]], %[[szK]], %[[K]]][%[[C1]], %[[C1]], %[[C1]], %[[C1]]] : memref<?x?x?x?xf32, #[[strided4D]]> to memref<?x?x?x?xf32, #[[strided4D_dynamic]]>
 //
 //       TILE-23004:         %[[J1:.*]] = affine.apply #[[D0x30pS0x10]](%[[ivJ]])
 //       T__ILE-23004:         %[[I1pStep:.*]] = affine.apply #[[S0x10p90]]()[%[[I1]]]
 //       TILE-23004:         %[[SZ2:.*]] = dim %{{.*}}, 2 : memref<?x?x?x?xf32, #[[strided4D]]>
-//       TILE-23004:         %[[InputView:.*]] = std.subview %{{.*}}[%[[ivI]], %[[J1]], %[[C0]], %[[ivK]]][%[[C2]], %{{.*}}, %[[SZ2]], %[[C4]]][%[[C1]], %[[C1]], %[[C1]], %[[C1]]] : memref<?x?x?x?xf32, #[[strided4D]]> to memref<?x?x?x?xf32, #[[strided4D_dynamic]]>
+//       TILE-23004:         %[[dim3:.*]] = dim %{{.*}}, 3
+//       TILE-23004:         %[[sz3:.*]] = affine.min #[[bound_map]](%[[C4]], %[[dim3]], %[[ivK]]
+//       TILE-23004:         %[[InputView:.*]] = std.subview %{{.*}}[%[[ivI]], %[[J1]], %[[C0]], %[[ivK]]][%{{.*}}, %{{.*}}, %[[SZ2]], %[[sz3]]][%[[C1]], %[[C1]], %[[C1]], %[[C1]]] : memref<?x?x?x?xf32, #[[strided4D]]> to memref<?x?x?x?xf32, #[[strided4D_dynamic]]>
 //
 //       TILE-23004:         %[[X0:.*]] = dim %{{.*}}, 2 : memref<?x?x?x?xf32, #[[strided4D]]>
 //       TILE-23004:         %[[X1:.*]] = dim %{{.*}}, 3 : memref<?x?x?x?xf32, #[[strided4D]]>
-//       TILE-23004:         %[[OutputView:.*]] = std.subview %{{.*}}[%[[ivI]], %[[ivJ]], %[[C0]], %[[C0]]][%[[C2]], %[[C3]], %[[X0]], %[[X1]]][%[[C1]], %[[C1]], %[[C1]], %[[C1]]] : memref<?x?x?x?xf32, #[[strided4D]]> to memref<?x?x?x?xf32, #[[strided4D_dynamic]]>
+//       TILE-23004:         %[[OutputView:.*]] = std.subview %{{.*}}[%[[ivI]], %[[ivJ]], %[[C0]], %[[C0]]][%{{.*}}, %{{.*}}, %[[X0]], %[[X1]]][%[[C1]], %[[C1]], %[[C1]], %[[C1]]] : memref<?x?x?x?xf32, #[[strided4D]]> to memref<?x?x?x?xf32, #[[strided4D_dynamic]]>
 //
 //       TILE-23004:         linalg.conv(%[[FilterView]], %[[InputView]], %[[OutputView]]) {dilations = [10, 20], strides = [30, 40]} : memref<?x?x?x?xf32, #[[strided4D_dynamic]]>, memref<?x?x?x?xf32, #[[strided4D_dynamic]]>, memref<?x?x?x?xf32, #[[strided4D_dynamic]]>

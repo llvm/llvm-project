@@ -260,7 +260,8 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
   for (unsigned viewIndex = 0; viewIndex < linalgOp.getNumInputsAndOutputs();
        ++viewIndex) {
     Value view = *(viewIteratorBegin + viewIndex);
-    unsigned rank = view.getType().cast<MemRefType>().getRank();
+    auto viewType = view.getType().cast<MemRefType>();
+    unsigned rank = viewType.getRank();
     auto map = loopToOperandRangesMaps(linalgOp)[viewIndex];
     // If the view is not tiled, we can use it as is.
     if (!isTiled(map, tileSizes)) {
@@ -287,12 +288,29 @@ makeTiledViews(OpBuilder &b, Location loc, LinalgOp linalgOp,
       auto offset = applyMapToValues(b, loc, m, lbs, folder).front();
       offsets.push_back(offset);
       auto size = applyMapToValues(b, loc, m, subViewSizes, folder).front();
+
+      // The size of the subview should be trimmed to avoid out-of-bounds
+      // accesses, unless we statically know the subview size divides the view
+      // size evenly.
+      int64_t viewSize = viewType.getDimSize(r);
+      auto sizeCst = dyn_cast_or_null<ConstantIndexOp>(size.getDefiningOp());
+      if (ShapedType::isDynamic(viewSize) || !sizeCst ||
+          (viewSize % sizeCst.getValue()) != 0) {
+        // Compute min(size, dim - offset) to avoid out-of-bounds accesses.
+        auto minMap = AffineMap::get(
+            /*dimCount=*/3, /*symbolCount=*/0,
+            {getAffineDimExpr(/*position=*/0, b.getContext()),
+             getAffineDimExpr(/*position=*/1, b.getContext()) -
+                 getAffineDimExpr(/*position=*/2, b.getContext())});
+        auto d = dim(folder, view, r);
+        size = affine_min(folder, b.getIndexType(), minMap,
+                          ValueRange{size, d, offset});
+      }
+
       sizes.push_back(size);
       strides.push_back(constant_index(folder, 1));
     }
-    // TODO(b/144419024) Atm std.subview is not guaranteed in-bounds. Depending
-    // on the semantics we attach to it, we may need to use min(size, dim) here
-    // and canonicalize later.
+
     res.push_back(b.create<SubViewOp>(loc, view, offsets, sizes, strides));
   }
 
