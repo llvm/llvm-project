@@ -7019,7 +7019,7 @@ public:
   /// Get a template argument mapping the given template parameter to itself,
   /// e.g. for X in \c template<int X>, this would return an expression template
   /// argument referencing X.
-  TemplateArgumentLoc getIdentityTemplateArgumentLoc(Decl *Param,
+  TemplateArgumentLoc getIdentityTemplateArgumentLoc(NamedDecl *Param,
                                                      SourceLocation Location);
 
   void translateTemplateArguments(const ASTTemplateArgsPtr &In,
