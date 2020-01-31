@@ -377,12 +377,6 @@ def CSR_AArch64_AAPCS : CalleeSavedRegs<(add X19, X20, X21, X22, X23, X24,
                                            D8,  D9,  D10, D11,
                                            D12, D13, D14, D15)>;
 
-// Darwin puts the frame-record at the top of the callee-save area.
-def CSR_Darwin_AArch64_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
-                                           X23, X24, X25, X26, X27, X28,
-                                           D8,  D9,  D10, D11,
-                                           D12, D13, D14, D15)>;
-
 // Win64 has unwinding codes for an (FP,LR) pair, save_fplr and save_fplr_x.
 // We put FP before LR, so that frame lowering logic generates (FP,LR) pairs,
 // and not (LR,FP) pairs.
@@ -421,6 +415,44 @@ def CSR_AArch64_SVE_AAPCS : CalleeSavedRegs<(add (sequence "Z%u", 8, 23),
 def CSR_AArch64_AAPCS_ThisReturn : CalleeSavedRegs<(add CSR_AArch64_AAPCS, X0)>;
 
 def CSR_AArch64_AAPCS_SwiftError
+    : CalleeSavedRegs<(sub CSR_AArch64_AAPCS, X21)>;
+
+// The ELF stub used for TLS-descriptor access saves every feasible
+// register. Only X0 and LR are clobbered.
+def CSR_AArch64_TLS_ELF
+    : CalleeSavedRegs<(add (sequence "X%u", 1, 28), FP,
+                           (sequence "Q%u", 0, 31))>;
+
+def CSR_AArch64_AllRegs
+    : CalleeSavedRegs<(add (sequence "W%u", 0, 30), WSP,
+                           (sequence "X%u", 0, 28), FP, LR, SP,
+                           (sequence "B%u", 0, 31), (sequence "H%u", 0, 31),
+                           (sequence "S%u", 0, 31), (sequence "D%u", 0, 31),
+                           (sequence "Q%u", 0, 31))>;
+
+def CSR_AArch64_NoRegs : CalleeSavedRegs<(add)>;
+
+def CSR_AArch64_RT_MostRegs :  CalleeSavedRegs<(add CSR_AArch64_AAPCS,
+                                                (sequence "X%u", 9, 15))>;
+def CSR_AArch64_StackProbe_Windows
+    : CalleeSavedRegs<(add (sequence "X%u", 0, 15),
+                           (sequence "X%u", 18, 28), FP, SP,
+                           (sequence "Q%u", 0, 31))>;
+
+// Darwin variants of AAPCS.
+// Darwin puts the frame-record at the top of the callee-save area.
+def CSR_Darwin_AArch64_AAPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21, X22,
+                                                X23, X24, X25, X26, X27, X28,
+                                                D8,  D9,  D10, D11,
+                                                D12, D13, D14, D15)>;
+
+def CSR_Darwin_AArch64_AAVPCS : CalleeSavedRegs<(add LR, FP, X19, X20, X21,
+                                                 X22, X23, X24, X25, X26, X27,
+                                                 X28, (sequence "Q%u", 8, 23))>;
+def CSR_Darwin_AArch64_AAPCS_ThisReturn
+    : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS, X0)>;
+
+def CSR_Darwin_AArch64_AAPCS_SwiftError
     : CalleeSavedRegs<(sub CSR_Darwin_AArch64_AAPCS, X21)>;
 
 // The function used by Darwin to obtain the address of a thread-local variable
@@ -449,28 +481,8 @@ def CSR_AArch64_CXX_TLS_Darwin_PE
 def CSR_AArch64_CXX_TLS_Darwin_ViaCopy
     : CalleeSavedRegs<(sub CSR_AArch64_CXX_TLS_Darwin, LR, FP)>;
 
-// The ELF stub used for TLS-descriptor access saves every feasible
-// register. Only X0 and LR are clobbered.
-def CSR_AArch64_TLS_ELF
-    : CalleeSavedRegs<(add (sequence "X%u", 1, 28), FP,
-                           (sequence "Q%u", 0, 31))>;
-
-def CSR_AArch64_AllRegs
-    : CalleeSavedRegs<(add (sequence "W%u", 0, 30), WSP,
-                           (sequence "X%u", 0, 28), FP, LR, SP,
-                           (sequence "B%u", 0, 31), (sequence "H%u", 0, 31),
-                           (sequence "S%u", 0, 31), (sequence "D%u", 0, 31),
-                           (sequence "Q%u", 0, 31))>;
-
-def CSR_AArch64_NoRegs : CalleeSavedRegs<(add)>;
-
-def CSR_AArch64_RT_MostRegs :  CalleeSavedRegs<(add CSR_AArch64_AAPCS,
-                                                (sequence "X%u", 9, 15))>;
-
-def CSR_AArch64_StackProbe_Windows
-    : CalleeSavedRegs<(add (sequence "X%u", 0, 15),
-                           (sequence "X%u", 18, 28), FP, SP,
-                           (sequence "Q%u", 0, 31))>;
+def CSR_Darwin_AArch64_RT_MostRegs
+    : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS, (sequence "X%u", 9, 15))>;
 
 // Variants of the standard calling conventions for shadow call stack.
 // These all preserve x18 in addition to any other registers.
@@ -490,3 +502,7 @@ def CSR_AArch64_SVE_AAPCS_SCS
     : CalleeSavedRegs<(add CSR_AArch64_SVE_AAPCS, X18)>;
 def CSR_AArch64_AAPCS_SCS
     : CalleeSavedRegs<(add CSR_AArch64_AAPCS, X18)>;
+def CSR_Darwin_AArch64_AAPCS_SCS
+    : CalleeSavedRegs<(add CSR_Darwin_AArch64_AAPCS, X18)>;
+
+
