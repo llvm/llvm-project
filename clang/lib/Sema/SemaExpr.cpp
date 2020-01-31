@@ -245,8 +245,8 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
     return true;
   }
 
-  // See if this is a deleted function.
   if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+    // See if this is a deleted function.
     if (FD->isDeleted()) {
       auto *Ctor = dyn_cast<CXXConstructorDecl>(FD);
       if (Ctor && Ctor->isInheritingConstructor())
@@ -257,6 +257,29 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
         Diag(Loc, diag::err_deleted_function_use);
       NoteDeletedFunction(FD);
       return true;
+    }
+
+    // [expr.prim.id]p4
+    //   A program that refers explicitly or implicitly to a function with a
+    //   trailing requires-clause whose constraint-expression is not satisfied,
+    //   other than to declare it, is ill-formed. [...]
+    //
+    // See if this is a function with constraints that need to be satisfied.
+    // Check this before deducing the return type, as it might instantiate the
+    // definition.
+    if (FD->getTrailingRequiresClause()) {
+      ConstraintSatisfaction Satisfaction;
+      if (CheckFunctionConstraints(FD, Satisfaction, Loc))
+        // A diagnostic will have already been generated (non-constant
+        // constraint expression, for example)
+        return true;
+      if (!Satisfaction.IsSatisfied) {
+        Diag(Loc,
+             diag::err_reference_to_function_with_unsatisfied_constraints)
+            << D;
+        DiagnoseUnsatisfiedConstraint(Satisfaction);
+        return true;
+      }
     }
 
     // If the function has a deduced return type, and we can't deduce it,
@@ -325,29 +348,6 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
   DiagnoseUnusedOfDecl(*this, D, Loc);
 
   diagnoseUseOfInternalDeclInInlineFunction(*this, D, Loc);
-
-  // [expr.prim.id]p4
-  //   A program that refers explicitly or implicitly to a function with a
-  //   trailing requires-clause whose constraint-expression is not satisfied,
-  //   other than to declare it, is ill-formed. [...]
-  //
-  // See if this is a function with constraints that need to be satisfied.
-  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-    if (FD->getTrailingRequiresClause()) {
-      ConstraintSatisfaction Satisfaction;
-      if (CheckFunctionConstraints(FD, Satisfaction, Loc))
-        // A diagnostic will have already been generated (non-constant
-        // constraint expression, for example)
-        return true;
-      if (!Satisfaction.IsSatisfied) {
-        Diag(Loc,
-             diag::err_reference_to_function_with_unsatisfied_constraints)
-            << D;
-        DiagnoseUnsatisfiedConstraint(Satisfaction);
-        return true;
-      }
-    }
-  }
 
   if (isa<ParmVarDecl>(D) && isa<RequiresExprBodyDecl>(D->getDeclContext()) &&
       !isUnevaluatedContext()) {
