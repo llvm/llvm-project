@@ -92,7 +92,10 @@ class LLDBTest(TestFormat):
                 cmd,
                 env=test.config.environment,
                 timeout=litConfig.maxIndividualTestTime)
-        except lit.util.ExecuteCommandTimeoutException:
+        except lit.util.ExecuteCommandTimeoutException as e:
+            out = e.out
+            err = e.err
+            exitCode = e.exitCode
             timeoutInfo = 'Reached timeout of {} seconds'.format(
                 litConfig.maxIndividualTestTime)
 
