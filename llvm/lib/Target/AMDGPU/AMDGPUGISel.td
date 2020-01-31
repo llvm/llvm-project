@@ -100,6 +100,14 @@ def gi_mubuf_offset :
     GIComplexOperandMatcher<s64, "selectMUBUFOffset">,
     GIComplexPatternEquiv<MUBUFOffset>;
 
+def gi_mubuf_addr64_atomic :
+    GIComplexOperandMatcher<s64, "selectMUBUFAddr64Atomic">,
+    GIComplexPatternEquiv<MUBUFAddr64Atomic>;
+
+def gi_mubuf_offset_atomic :
+    GIComplexOperandMatcher<s64, "selectMUBUFOffsetAtomic">,
+    GIComplexPatternEquiv<MUBUFOffsetAtomic>;
+
 // Separate load nodes are defined to glue m0 initialization in
 // SelectionDAG. The GISel selector can just insert m0 initialization
 // directly before before selecting a glue-less load, so hide this
