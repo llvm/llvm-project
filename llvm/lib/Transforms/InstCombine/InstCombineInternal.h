@@ -683,6 +683,13 @@ public:
     return &I;
   }
 
+  /// Replace operand of instruction and add old operand to the worklist.
+  Instruction *replaceOperand(Instruction &I, unsigned OpNum, Value *V) {
+    Worklist.addValue(I.getOperand(OpNum));
+    I.setOperand(OpNum, V);
+    return &I;
+  }
+
   /// Creates a result tuple for an overflow intrinsic \p II with a given
   /// \p Result and a constant \p Overflow value.
   Instruction *CreateOverflowTuple(IntrinsicInst *II, Value *Result,

@@ -1204,19 +1204,15 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {
 
   if (IsTZ) {
     // cttz(-x) -> cttz(x)
-    if (match(Op0, m_Neg(m_Value(X)))) {
-      II.setOperand(0, X);
-      return &II;
-    }
+    if (match(Op0, m_Neg(m_Value(X))))
+      return IC.replaceOperand(II, 0, X);
 
     // cttz(abs(x)) -> cttz(x)
     // cttz(nabs(x)) -> cttz(x)
     Value *Y;
     SelectPatternFlavor SPF = matchSelectPattern(Op0, X, Y).Flavor;
-    if (SPF == SPF_ABS || SPF == SPF_NABS) {
-      II.setOperand(0, X);
-      return &II;
-    }
+    if (SPF == SPF_ABS || SPF == SPF_NABS)
+      return IC.replaceOperand(II, 0, X);
   }
 
   KnownBits Known = IC.computeKnownBits(Op0, 0, &II);
@@ -1242,10 +1238,8 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {
   if (!Known.One.isNullValue() ||
       isKnownNonZero(Op0, IC.getDataLayout(), 0, &IC.getAssumptionCache(), &II,
                      &IC.getDominatorTree())) {
-    if (!match(II.getArgOperand(1), m_One())) {
-      II.setOperand(1, IC.Builder.getTrue());
-      return &II;
-    }
+    if (!match(II.getArgOperand(1), m_One()))
+      return IC.replaceOperand(II, 1, IC.Builder.getTrue());
   }
 
   // Add range metadata since known bits can't completely reflect what we know.
@@ -1270,10 +1264,8 @@ static Instruction *foldCtpop(IntrinsicInst &II, InstCombiner &IC) {
   Value *X;
   // ctpop(bitreverse(x)) -> ctpop(x)
   // ctpop(bswap(x)) -> ctpop(x)
-  if (match(Op0, m_BitReverse(m_Value(X))) || match(Op0, m_BSwap(m_Value(X)))) {
-    II.setOperand(0, X);
-    return &II;
-  }
+  if (match(Op0, m_BitReverse(m_Value(X))) || match(Op0, m_BSwap(m_Value(X))))
+    return IC.replaceOperand(II, 0, X);
 
   // FIXME: Try to simplify vectors of integers.
   auto *IT = dyn_cast<IntegerType>(Op0->getType());
@@ -3959,8 +3951,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       break;
 
     // If bound_ctrl = 1, row mask = bank mask = 0xf we can omit old value.
-    II->setOperand(0, UndefValue::get(Old->getType()));
-    return II;
+    return replaceOperand(*II, 0, UndefValue::get(Old->getType()));
   }
   case Intrinsic::amdgcn_permlane16:
   case Intrinsic::amdgcn_permlanex16: {
@@ -3974,8 +3965,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (!FetchInvalid->getZExtValue() && !BoundCtrl->getZExtValue())
       break;
 
-    II->setArgOperand(0, UndefValue::get(VDstIn->getType()));
-    return II;
+    return replaceOperand(*II, 0, UndefValue::get(VDstIn->getType()));
   }
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_readlane: {
@@ -4135,8 +4125,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     if (GCR.getBasePtr() == GCR.getDerivedPtr() &&
         GCR.getBasePtrIndex() != GCR.getDerivedPtrIndex()) {
       auto *OpIntTy = GCR.getOperand(2)->getType();
-      II->setOperand(2, ConstantInt::get(OpIntTy, GCR.getBasePtrIndex()));
-      return II;
+      return replaceOperand(*II, 2,
+          ConstantInt::get(OpIntTy, GCR.getBasePtrIndex()));
     }
     
     // Translate facts known about a pointer before relocating into

@@ -187,9 +187,7 @@ static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
       return nullptr;
 
     // Canonicalize it.
-    Value *V = IC.Builder.getInt32(1);
-    AI.setOperand(0, V);
-    return &AI;
+    return IC.replaceOperand(AI, 0, IC.Builder.getInt32(1));
   }
 
   // Convert: alloca Ty, C - where C is a constant != 1 into: alloca [C x Ty], 1
@@ -230,8 +228,7 @@ static Instruction *simplifyAllocaArraySize(InstCombiner &IC, AllocaInst &AI) {
   Type *IntPtrTy = IC.getDataLayout().getIntPtrType(AI.getType());
   if (AI.getArraySize()->getType() != IntPtrTy) {
     Value *V = IC.Builder.CreateIntCast(AI.getArraySize(), IntPtrTy, false);
-    AI.setOperand(0, V);
-    return &AI;
+    return IC.replaceOperand(AI, 0, V);
   }
 
   return nullptr;
@@ -355,10 +352,9 @@ Instruction *InstCombiner::visitAllocaInst(AllocaInst &AI) {
       // For a zero sized alloca there is no point in doing an array allocation.
       // This is helpful if the array size is a complicated expression not used
       // elsewhere.
-      if (AI.isArrayAllocation()) {
-        AI.setOperand(0, ConstantInt::get(AI.getArraySize()->getType(), 1));
-        return &AI;
-      }
+      if (AI.isArrayAllocation())
+        return replaceOperand(AI, 0,
+            ConstantInt::get(AI.getArraySize()->getType(), 1));
 
       // Get the first instruction in the entry block.
       BasicBlock &EntryBlock = AI.getParent()->getParent()->getEntryBlock();
@@ -1048,18 +1044,14 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
       // load (select (cond, null, P)) -> load P
       if (isa<ConstantPointerNull>(SI->getOperand(1)) &&
           !NullPointerIsDefined(SI->getFunction(),
-                                LI.getPointerAddressSpace())) {
-        LI.setOperand(0, SI->getOperand(2));
-        return &LI;
-      }
+                                LI.getPointerAddressSpace()))
+        return replaceOperand(LI, 0, SI->getOperand(2));
 
       // load (select (cond, P, null)) -> load P
       if (isa<ConstantPointerNull>(SI->getOperand(2)) &&
           !NullPointerIsDefined(SI->getFunction(),
-                                LI.getPointerAddressSpace())) {
-        LI.setOperand(0, SI->getOperand(1));
-        return &LI;
-      }
+                                LI.getPointerAddressSpace()))
+        return replaceOperand(LI, 0, SI->getOperand(1));
     }
   }
   return nullptr;
@@ -1463,11 +1455,8 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
   // store X, null    -> turns into 'unreachable' in SimplifyCFG
   // store X, GEP(null, Y) -> turns into 'unreachable' in SimplifyCFG
   if (canSimplifyNullStoreOrGEP(SI)) {
-    if (!isa<UndefValue>(Val)) {
-      SI.setOperand(0, UndefValue::get(Val->getType()));
-      if (Instruction *U = dyn_cast<Instruction>(Val))
-        Worklist.push(U);  // Dropped a use.
-    }
+    if (!isa<UndefValue>(Val))
+      return replaceOperand(SI, 0, UndefValue::get(Val->getType()));
     return nullptr;  // Do not modify these!
   }
 

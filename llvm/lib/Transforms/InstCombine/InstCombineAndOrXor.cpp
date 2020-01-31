@@ -143,8 +143,7 @@ Instruction *InstCombiner::OptAndOp(BinaryOperator *Op,
           // the XOR is to toggle the bit.  If it is clear, then the ADD has
           // no effect.
           if ((AddRHS & AndRHSV).isNullValue()) { // Bit is not set, noop
-            TheAnd.setOperand(0, X);
-            return &TheAnd;
+            return replaceOperand(TheAnd, 0, X);
           } else {
             // Pull the XOR out of the AND.
             Value *NewAnd = Builder.CreateAnd(X, AndRHS);
