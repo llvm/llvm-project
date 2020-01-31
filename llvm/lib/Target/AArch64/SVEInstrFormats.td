@@ -2988,7 +2988,8 @@ class sve2_int_bin_shift_imm<bits<4> tsz8_64, bit opc, string asm,
   let Constraints = "$Zd = $_Zd";
 }
 
-multiclass sve2_int_bin_shift_imm_left<bit opc, string asm> {
+multiclass sve2_int_bin_shift_imm_left<bit opc, string asm,
+                                       SDPatternOperator op> {
   def _B : sve2_int_bin_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftL8>;
   def _H : sve2_int_bin_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftL16> {
     let Inst{19} = imm{3};
@@ -3000,9 +3001,15 @@ multiclass sve2_int_bin_shift_imm_left<bit opc, string asm> {
     let Inst{22}    = imm{5};
     let Inst{20-19} = imm{4-3};
   }
+
+  def : SVE_3_Op_Imm_Pat<nxv16i8, op, nxv16i8, nxv16i8, i32, tvecshiftL8,  !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Imm_Pat<nxv8i16, op, nxv8i16, nxv8i16, i32, tvecshiftL16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv4i32, i32, tvecshiftL32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv2i64, i32, tvecshiftL64, !cast<Instruction>(NAME # _D)>;
 }
 
-multiclass sve2_int_bin_shift_imm_right<bit opc, string asm> {
+multiclass sve2_int_bin_shift_imm_right<bit opc, string asm,
+                                        SDPatternOperator op> {
   def _B : sve2_int_bin_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftR8>;
   def _H : sve2_int_bin_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftR16> {
     let Inst{19} = imm{3};
@@ -3014,6 +3021,11 @@ multiclass sve2_int_bin_shift_imm_right<bit opc, string asm> {
     let Inst{22}    = imm{5};
     let Inst{20-19} = imm{4-3};
   }
+
+  def : SVE_3_Op_Imm_Pat<nxv16i8, op, nxv16i8, nxv16i8, i32, tvecshiftR8,  !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Imm_Pat<nxv8i16, op, nxv8i16, nxv8i16, i32, tvecshiftR16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv4i32, i32, tvecshiftR32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv2i64, i32, tvecshiftR64, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve2_int_bin_accum_shift_imm<bits<4> tsz8_64, bits<2> opc, string asm,
@@ -3039,7 +3051,8 @@ class sve2_int_bin_accum_shift_imm<bits<4> tsz8_64, bits<2> opc, string asm,
   let ElementSize = ElementSizeNone;
 }
 
-multiclass sve2_int_bin_accum_shift_imm_right<bits<2> opc, string asm> {
+multiclass sve2_int_bin_accum_shift_imm_right<bits<2> opc, string asm,
+                                              SDPatternOperator op> {
   def _B : sve2_int_bin_accum_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftR8>;
   def _H : sve2_int_bin_accum_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftR16> {
     let Inst{19} = imm{3};
@@ -3051,6 +3064,11 @@ multiclass sve2_int_bin_accum_shift_imm_right<bits<2> opc, string asm> {
     let Inst{22}    = imm{5};
     let Inst{20-19} = imm{4-3};
   }
+
+  def : SVE_3_Op_Imm_Pat<nxv16i8, op, nxv16i8, nxv16i8, i32, tvecshiftR8,  !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Imm_Pat<nxv8i16, op, nxv8i16, nxv8i16, i32, tvecshiftR16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Imm_Pat<nxv4i32, op, nxv4i32, nxv4i32, i32, tvecshiftR32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Imm_Pat<nxv2i64, op, nxv2i64, nxv2i64, i32, tvecshiftR64, !cast<Instruction>(NAME # _D)>;
 }
 
 class sve2_int_cadd<bits<2> sz, bit opc, string asm, ZPRRegOp zprty>
@@ -3101,11 +3119,16 @@ class sve2_int_absdiff_accum<bits<2> sz, bits<4> opc, string asm,
   let ElementSize = ElementSizeNone;
 }
 
-multiclass sve2_int_absdiff_accum<bit opc, string asm> {
+multiclass sve2_int_absdiff_accum<bit opc, string asm, SDPatternOperator op> {
   def _B : sve2_int_absdiff_accum<0b00, { 0b111, opc }, asm, ZPR8, ZPR8>;
   def _H : sve2_int_absdiff_accum<0b01, { 0b111, opc }, asm, ZPR16, ZPR16>;
   def _S : sve2_int_absdiff_accum<0b10, { 0b111, opc }, asm, ZPR32, ZPR32>;
   def _D : sve2_int_absdiff_accum<0b11, { 0b111, opc }, asm, ZPR64, ZPR64>;
+
+  def : SVE_3_Op_Pat<nxv16i8, op, nxv16i8, nxv16i8, nxv16i8, !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Pat<nxv8i16, op, nxv8i16, nxv8i16, nxv8i16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Pat<nxv4i32, op, nxv4i32, nxv4i32, nxv4i32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Pat<nxv2i64, op, nxv2i64, nxv2i64, nxv2i64, !cast<Instruction>(NAME # _D)>;
 }
 
 multiclass sve2_int_absdiff_accum_long<bits<2> opc, string asm> {
@@ -4391,8 +4414,7 @@ multiclass sve_int_index_rr<string asm> {
 // SVE Bitwise Shift - Predicated Group
 //===----------------------------------------------------------------------===//
 class sve_int_bin_pred_shift_imm<bits<4> tsz8_64, bits<4> opc, string asm,
-                                 ZPRRegOp zprty, Operand immtype,
-                                 ElementSizeEnum size>
+                                 ZPRRegOp zprty, Operand immtype>
 : I<(outs zprty:$Zdn), (ins PPR3bAny:$Pg, zprty:$_Zdn, immtype:$imm),
   asm, "\t$Zdn, $Pg/m, $_Zdn, $imm",
   "",
@@ -4412,41 +4434,53 @@ class sve_int_bin_pred_shift_imm<bits<4> tsz8_64, bits<4> opc, string asm,
 
   let Constraints = "$Zdn = $_Zdn";
   let DestructiveInstType = DestructiveOther;
-  let ElementSize = size;
+  let ElementSize = zprty.ElementSize;
 }
 
 multiclass sve_int_bin_pred_shift_imm_left<bits<4> opc, string asm> {
-  def _B : sve_int_bin_pred_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftL8,
-                                      ElementSizeB>;
-  def _H : sve_int_bin_pred_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftL16,
-                                      ElementSizeH> {
+  def _B : sve_int_bin_pred_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftL8>;
+  def _H : sve_int_bin_pred_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftL16> {
     let Inst{8} = imm{3};
   }
-  def _S : sve_int_bin_pred_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftL32,
-                                      ElementSizeS> {
+  def _S : sve_int_bin_pred_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftL32> {
     let Inst{9-8} = imm{4-3};
   }
-  def _D : sve_int_bin_pred_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftL64,
-                                      ElementSizeD> {
+  def _D : sve_int_bin_pred_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftL64> {
     let Inst{22}  = imm{5};
     let Inst{9-8} = imm{4-3};
   }
 }
 
-multiclass sve_int_bin_pred_shift_imm_right<bits<4> opc, string asm,
-                                            SDPatternOperator op = null_frag> {
-  def _B : sve_int_bin_pred_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftR8,
-                                      ElementSizeB>;
-  def _H : sve_int_bin_pred_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftR16,
-                                      ElementSizeH> {
+multiclass sve2_int_bin_pred_shift_imm_left<bits<4> opc, string asm,
+                                            SDPatternOperator op> {
+  def _B : sve_int_bin_pred_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftL8>;
+  def _H : sve_int_bin_pred_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftL16> {
     let Inst{8} = imm{3};
   }
-  def _S : sve_int_bin_pred_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftR32,
-                                      ElementSizeS> {
+  def _S : sve_int_bin_pred_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftL32> {
     let Inst{9-8} = imm{4-3};
   }
-  def _D : sve_int_bin_pred_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftR64,
-                                      ElementSizeD> {
+  def _D : sve_int_bin_pred_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftL64> {
+    let Inst{22}  = imm{5};
+    let Inst{9-8} = imm{4-3};
+  }
+
+  def : SVE_3_Op_Imm_Pat<nxv16i8, op, nxv16i1, nxv16i8, i32, tvecshiftL8,  !cast<Instruction>(NAME # _B)>;
+  def : SVE_3_Op_Imm_Pat<nxv8i16, op, nxv8i1,  nxv8i16, i32, tvecshiftL16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_3_Op_Imm_Pat<nxv4i32, op, nxv4i1,  nxv4i32, i32, tvecshiftL32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_3_Op_Imm_Pat<nxv2i64, op, nxv2i1,  nxv2i64, i32, tvecshiftL64, !cast<Instruction>(NAME # _D)>;
+}
+
+multiclass sve_int_bin_pred_shift_imm_right<bits<4> opc, string asm,
+                                            SDPatternOperator op = null_frag> {
+  def _B : sve_int_bin_pred_shift_imm<{0,0,0,1}, opc, asm, ZPR8, vecshiftR8>;
+  def _H : sve_int_bin_pred_shift_imm<{0,0,1,?}, opc, asm, ZPR16, vecshiftR16> {
+    let Inst{8} = imm{3};
+  }
+  def _S : sve_int_bin_pred_shift_imm<{0,1,?,?}, opc, asm, ZPR32, vecshiftR32> {
+    let Inst{9-8} = imm{4-3};
+  }
+  def _D : sve_int_bin_pred_shift_imm<{1,?,?,?}, opc, asm, ZPR64, vecshiftR64> {
     let Inst{22}  = imm{5};
     let Inst{9-8} = imm{4-3};
   }
