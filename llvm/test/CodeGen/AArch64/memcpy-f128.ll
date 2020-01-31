@@ -7,9 +7,6 @@
 
 define void @test1() {
 ; CHECK-LABEL: @test1
-; CHECK: adrp
-; CHECK: ldr q0
-; CHECK: str q0
 ; CHECK: ret
 entry:
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 undef, i8* align 8 bitcast (%structA* @stubA to i8*), i64 48, i1 false)
