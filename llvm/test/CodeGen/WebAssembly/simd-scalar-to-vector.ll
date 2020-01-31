@@ -24,7 +24,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: foo:
-; CHECK: i32x4.splat
+; CHECK: i64x2.splat
 define void @foo() {
 entry:
   %a = load <2 x i16>, <2 x i16>* undef, align 1
