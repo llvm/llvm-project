@@ -55,8 +55,8 @@ class Char1632TestCase(TestBase):
             "frame variable cs16 cs32",
             substrs=[
                 '(const char16_t *) cs16 = ',
-                '(const char32_t *) cs32 = ',
                 'u"hello world ྒྙྐ"',
+                '(const char32_t *) cs32 = ',
                 'U"hello world ྒྙྐ"'])
 
         # Check that we correctly report the non-const types
@@ -64,8 +64,8 @@ class Char1632TestCase(TestBase):
             "frame variable s16 s32",
             substrs=[
                 '(char16_t *) s16 = ',
-                '(char32_t *) s32 = ',
                 'u"ﺸﺵۻ"',
+                '(char32_t *) s32 = ',
                 'U"ЕЙРГЖО"'])
 
         # Check that we correctly report the array types
@@ -92,8 +92,8 @@ class Char1632TestCase(TestBase):
             "frame variable s16 s32",
             substrs=[
                 '(char16_t *) s16 = 0x',
-                '(char32_t *) s32 = ',
                 '"色ハ匂ヘト散リヌルヲ"',
+                '(char32_t *) s32 = ',
                 '"෴"'])
 
         # check the same as above for arrays
