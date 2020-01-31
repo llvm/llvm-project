@@ -2488,7 +2488,7 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
     case TemplateArgument::Template:
     case TemplateArgument::TemplateExpansion: {
       NestedNameSpecifierLocBuilder Builder;
-      TemplateName Template = Arg.getAsTemplate();
+      TemplateName Template = Arg.getAsTemplateOrTemplatePattern();
       if (DependentTemplateName *DTN = Template.getAsDependentTemplateName())
         Builder.MakeTrivial(Context, DTN->getQualifier(), Loc);
       else if (QualifiedTemplateName *QTN =
@@ -2514,27 +2514,10 @@ Sema::getTrivialTemplateArgumentLoc(const TemplateArgument &Arg,
 }
 
 TemplateArgumentLoc
-Sema::getIdentityTemplateArgumentLoc(Decl *TemplateParm,
+Sema::getIdentityTemplateArgumentLoc(NamedDecl *TemplateParm,
                                      SourceLocation Location) {
-  if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(TemplateParm))
-    return getTrivialTemplateArgumentLoc(
-        TemplateArgument(
-            Context.getTemplateTypeParmType(TTP->getDepth(), TTP->getIndex(),
-                                            TTP->isParameterPack(), TTP)),
-        QualType(), Location.isValid() ? Location : TTP->getLocation());
-  else if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TemplateParm))
-    return getTrivialTemplateArgumentLoc(TemplateArgument(TemplateName(TTP)),
-                                         QualType(),
-                                         Location.isValid() ? Location :
-                                         TTP->getLocation());
-  auto *NTTP = cast<NonTypeTemplateParmDecl>(TemplateParm);
-  CXXScopeSpec SS;
-  DeclarationNameInfo Info(NTTP->getDeclName(),
-                           Location.isValid() ? Location : NTTP->getLocation());
-  Expr *E = BuildDeclarationNameExpr(SS, Info, NTTP).get();
-  return getTrivialTemplateArgumentLoc(TemplateArgument(E), NTTP->getType(),
-                                       Location.isValid() ? Location :
-                                       NTTP->getLocation());
+  return getTrivialTemplateArgumentLoc(
+      Context.getInjectedTemplateArg(TemplateParm), QualType(), Location);
 }
 
 /// Convert the given deduced template argument and add it to the set of
