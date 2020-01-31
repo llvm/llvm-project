@@ -315,7 +315,8 @@ public:
   static lldb_private::CompilerDeclContext
   GetContainingDeclContext(const DWARFDIE &die);
 
-  static DWARFDeclContext GetDWARFDeclContext(const DWARFDIE &die);
+  static void GetDWARFDeclContext(const DWARFDIE &die,
+                                  DWARFDeclContext &dwarf_decl_ctx);
 
   static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
 
