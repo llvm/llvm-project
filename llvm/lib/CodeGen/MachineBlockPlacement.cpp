@@ -2082,8 +2082,7 @@ MachineBlockPlacement::findBestLoopTop(const MachineLoop &L,
   // In practice this never happens though: there always seems to be a preheader
   // that can fallthrough and that is also placed before the header.
   bool OptForSize = F->getFunction().hasOptSize() ||
-                    llvm::shouldOptimizeForSize(L.getHeader(), PSI,
-                                                &MBFI->getMBFI());
+                    llvm::shouldOptimizeForSize(L.getHeader(), PSI, MBFI.get());
   if (OptForSize)
     return L.getHeader();
 
@@ -2841,7 +2840,7 @@ void MachineBlockPlacement::alignBlocks() {
       continue;
 
     // If the global profiles indicates so, don't align it.
-    if (llvm::shouldOptimizeForSize(ChainBB, PSI, &MBFI->getMBFI()) &&
+    if (llvm::shouldOptimizeForSize(ChainBB, PSI, MBFI.get()) &&
         !TLI->alignLoopsWithOptSize())
       continue;
 
@@ -3088,7 +3087,7 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
     if (OptForSize)
       TailDupSize = 1;
     bool PreRegAlloc = false;
-    TailDup.initMF(MF, PreRegAlloc, MBPI, &MBFI->getMBFI(), PSI,
+    TailDup.initMF(MF, PreRegAlloc, MBPI, MBFI.get(), PSI,
                    /* LayoutMode */ true, TailDupSize);
     precomputeTriangleChains();
   }
