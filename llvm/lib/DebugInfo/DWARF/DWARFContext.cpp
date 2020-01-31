@@ -438,14 +438,14 @@ void DWARFContext::dump(
                                    DObj->getEHFrameSection().Data))
     getEHFrame()->dump(OS, getRegisterInfo(), *Off);
 
-  if (DumpType & DIDT_DebugMacro) {
-    if (Explicit || !getDebugMacro()->empty()) {
-      OS << "\n.debug_macinfo contents:\n";
-      getDebugMacro()->dump(OS);
-    } else if (ExplicitDWO || !getDebugMacroDWO()->empty()) {
-      OS << "\n.debug_macinfo.dwo contents:\n";
-      getDebugMacroDWO()->dump(OS);
-    }
+  if (shouldDump(Explicit, ".debug_macinfo", DIDT_ID_DebugMacro,
+                 DObj->getMacinfoSection())) {
+    getDebugMacro()->dump(OS);
+  }
+
+  if (shouldDump(Explicit, ".debug_macinfo.dwo", DIDT_ID_DebugMacro,
+                 DObj->getMacinfoDWOSection())) {
+    getDebugMacroDWO()->dump(OS);
   }
 
   if (shouldDump(Explicit, ".debug_aranges", DIDT_ID_DebugAranges,
