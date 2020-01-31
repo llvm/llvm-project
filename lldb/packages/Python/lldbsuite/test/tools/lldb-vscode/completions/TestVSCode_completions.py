@@ -113,3 +113,76 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                 }
             ],
         )
+
+        self.verify_completions(
+            self.vscode.get_completions("foo1.v"),
+            [
+                {
+                    "text": "var1",
+                    "label": "foo1.var1 -- int"
+                }
+            ]
+        )
+
+        self.verify_completions(
+            self.vscode.get_completions("foo1.my_bar_object.v"),
+            [
+                {
+                    "text": "var1",
+                    "label": "foo1.my_bar_object.var1 -- int"
+                }
+            ]
+        )
+
+        self.verify_completions(
+            self.vscode.get_completions("foo1.var1 + foo1.v"),
+            [
+                {
+                    "text": "var1",
+                    "label": "foo1.var1 -- int"
+                }
+            ]
+        )
+
+        self.verify_completions(
+            self.vscode.get_completions("foo1.var1 + v"),
+            [
+                {
+                    "text": "var1",
+                    "label": "var1 -- int &"
+                }
+            ]
+        )
+
+        #should correctly handle spaces between objects and member operators
+        self.verify_completions(
+            self.vscode.get_completions("foo1 .v"),
+            [
+                {
+                    "text": "var1",
+                    "label": ".var1 -- int"
+                }
+            ],
+            [
+                {
+                    "text": "var2",
+                    "label": ".var2 -- int"
+                }
+            ]
+        )
+
+        self.verify_completions(
+            self.vscode.get_completions("foo1 . v"),
+            [
+                {
+                    "text": "var1",
+                    "label": "var1 -- int"
+                }
+            ], 
+            [
+                {
+                    "text": "var2",
+                    "label": "var2 -- int"
+                }
+            ]
+        )
