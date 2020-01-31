@@ -301,6 +301,26 @@ public:
 
   lldb_private::FileSpec GetFile(DWARFUnit &unit, size_t file_idx);
 
+  static llvm::Expected<lldb_private::TypeSystem &>
+  GetTypeSystem(DWARFUnit &unit);
+
+  static DWARFASTParser *GetDWARFParser(DWARFUnit &unit);
+
+  // CompilerDecl related functions
+
+  static lldb_private::CompilerDecl GetDecl(const DWARFDIE &die);
+
+  static lldb_private::CompilerDeclContext GetDeclContext(const DWARFDIE &die);
+
+  static lldb_private::CompilerDeclContext
+  GetContainingDeclContext(const DWARFDIE &die);
+
+  static DWARFDeclContext GetDWARFDeclContext(const DWARFDIE &die);
+
+  static lldb::LanguageType LanguageTypeFromDWARF(uint64_t val);
+
+  static lldb::LanguageType GetLanguage(DWARFUnit &unit);
+
 protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>
       DIEToTypePtr;

@@ -514,10 +514,6 @@ lldb::ByteOrder DWARFUnit::GetByteOrder() const {
   return m_dwarf.GetObjectFile()->GetByteOrder();
 }
 
-llvm::Expected<TypeSystem &> DWARFUnit::GetTypeSystem() {
-  return m_dwarf.GetTypeSystemForLanguage(GetLanguageType());
-}
-
 void DWARFUnit::SetBaseAddress(dw_addr_t base_addr) { m_base_addr = base_addr; }
 
 // Compare function DWARFDebugAranges::Range structures
@@ -655,28 +651,17 @@ uint32_t DWARFUnit::GetProducerVersionUpdate() {
     ParseProducerInfo();
   return m_producer_version_update;
 }
-LanguageType DWARFUnit::LanguageTypeFromDWARF(uint64_t val) {
-  // Note: user languages between lo_user and hi_user must be handled
-  // explicitly here.
-  switch (val) {
-  case DW_LANG_Mips_Assembler:
-    return eLanguageTypeMipsAssembler;
-  case DW_LANG_GOOGLE_RenderScript:
-    return eLanguageTypeExtRenderScript;
-  default:
-    return static_cast<LanguageType>(val);
-  }
-}
 
-LanguageType DWARFUnit::GetLanguageType() {
-  if (m_language_type != eLanguageTypeUnknown)
-    return m_language_type;
+uint64_t DWARFUnit::GetDWARFLanguageType() {
+  if (m_language_type)
+    return *m_language_type;
 
   const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
-  if (die)
-    m_language_type = LanguageTypeFromDWARF(
-        die->GetAttributeValueAsUnsigned(this, DW_AT_language, 0));
-  return m_language_type;
+  if (!die)
+    m_language_type = 0;
+  else
+    m_language_type = die->GetAttributeValueAsUnsigned(this, DW_AT_language, 0);
+  return *m_language_type;
 }
 
 bool DWARFUnit::GetIsOptimized() {
