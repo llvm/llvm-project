@@ -1235,10 +1235,7 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
     MRI.setType(GetReg, S32);
 
     auto ShiftAmt = B.buildConstant(S32, WidthM1 + 1);
-    B.buildInstr(TargetOpcode::G_SHL)
-      .addDef(ApertureReg)
-      .addUse(GetReg)
-      .addUse(ShiftAmt.getReg(0));
+    B.buildShl(ApertureReg, GetReg, ShiftAmt);
 
     return ApertureReg;
   }
@@ -1365,9 +1362,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
   // Coerce the type of the low half of the result so we can use merge_values.
   Register SrcAsInt = MRI.createGenericVirtualRegister(S32);
-  B.buildInstr(TargetOpcode::G_PTRTOINT)
-    .addDef(SrcAsInt)
-    .addUse(Src);
+  B.buildPtrToInt(SrcAsInt, Src);
 
   // TODO: Should we allow mismatched types but matching sizes in merges to
   // avoid the ptrtoint?
@@ -1420,7 +1415,7 @@ bool AMDGPULegalizerInfo::legalizeFceil(
   // if (src > 0.0 && src != result)
   //   result += 1.0
 
-  auto Trunc = B.buildInstr(TargetOpcode::G_INTRINSIC_TRUNC, {S64}, {Src});
+  auto Trunc = B.buildIntrinsicTrunc(S64, Src);
 
   const auto Zero = B.buildFConstant(S64, 0.0);
   const auto One = B.buildFConstant(S64, 1.0);
