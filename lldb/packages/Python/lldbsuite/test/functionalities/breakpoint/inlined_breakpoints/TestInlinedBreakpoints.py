@@ -62,5 +62,5 @@ class InlinedBreakpointsTestCase(TestBase):
         # And it should break at basic_type.cpp:176.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
                     substrs=['stopped',
-                             'stop reason = breakpoint',
-                             'basic_type.cpp:%d' % self.line])
+                             'basic_type.cpp:%d' % self.line,
+                             'stop reason = breakpoint',])
