@@ -147,6 +147,47 @@ let params = T.Usual in {
       (select $pred, (splat $s), $inactive), 1, "_n", PNT_NType, PNT_None>;
 }
 
+multiclass vxdup_mc<dag paramsIn, dag paramsOut> {
+  defvar UnpredInt     = IRInt<NAME, [Vector]>;
+  defvar PredInt       = IRInt<NAME # "_predicated", [Vector, Predicate]>;
+  defvar UnpredIntCall = !con((UnpredInt $base), paramsOut);
+  defvar PredIntCall   = !con((PredInt $inactive, $base), paramsOut, (? $pred));
+
+  // Straightforward case with neither writeback nor predication
+  let pnt = PNT_N in
+    def q_n: Intrinsic<Vector, !con((args u32:$base), paramsIn),
+                       (xval UnpredIntCall, 0)>;
+
+  // Predicated form without writeback
+  defm q: IntrinsicMX<
+      Vector, !con((args u32:$base), paramsIn, (? Predicate:$pred)),
+      (xval PredIntCall, 0), 1, "_n", PNT_NType, PNT_N>;
+
+  // Writeback without predication
+  let pnt = PNT_WB in
+    def q_wb: Intrinsic<
+      Vector, !con((args Ptr<u32>:$baseaddr), paramsIn),
+      (seq (load $baseaddr):$base,
+           UnpredIntCall:$pair,
+           (store (xval $pair, 1), $baseaddr),
+           (xval $pair, 0))>;
+
+  // Both writeback and predicated
+  defm q: IntrinsicMX<
+      Vector, !con((args Ptr<u32>:$baseaddr), paramsIn, (? Predicate:$pred)),
+      (seq (load $baseaddr):$base,
+           PredIntCall:$pair,
+           (store (xval $pair, 1), $baseaddr),
+           (xval $pair, 0)), 1, "_wb", PNT_WBType, PNT_WB>;
+}
+
+let params = T.Unsigned in {
+  defm vidup:  vxdup_mc<(?             imm_1248:$step), (?         $step)>;
+  defm vddup:  vxdup_mc<(?             imm_1248:$step), (?         $step)>;
+  defm viwdup: vxdup_mc<(? u32:$limit, imm_1248:$step), (? $limit, $step)>;
+  defm vdwdup: vxdup_mc<(? u32:$limit, imm_1248:$step), (? $limit, $step)>;
+}
+
 // The bitcasting below is not overcomplicating the IR because while
 // Vector and UVector may be different vector types at the C level i.e.
 // vectors of same size signed/unsigned ints. Once they're lowered
