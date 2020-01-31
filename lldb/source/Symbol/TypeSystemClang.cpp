@@ -4129,7 +4129,7 @@ TypeSystemClang::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
               else
                 kind = lldb::eMemberFunctionKindInstanceMethod;
               clang_type = GetType(cxx_method_decl->getType());
-              clang_decl = CompilerDecl(this, cxx_method_decl);
+              clang_decl = GetCompilerDecl(cxx_method_decl);
             }
           }
         }
@@ -4155,7 +4155,7 @@ TypeSystemClang::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
             clang::ObjCMethodDecl *objc_method_decl =
                 method_iter->getCanonicalDecl();
             if (objc_method_decl) {
-              clang_decl = CompilerDecl(this, objc_method_decl);
+              clang_decl = GetCompilerDecl(objc_method_decl);
               name = objc_method_decl->getSelector().getAsString();
               if (objc_method_decl->isClassMethod())
                 kind = lldb::eMemberFunctionKindStaticMethod;
@@ -4185,7 +4185,7 @@ TypeSystemClang::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
               clang::ObjCMethodDecl *objc_method_decl =
                   method_iter->getCanonicalDecl();
               if (objc_method_decl) {
-                clang_decl = CompilerDecl(this, objc_method_decl);
+                clang_decl = GetCompilerDecl(objc_method_decl);
                 name = objc_method_decl->getSelector().getAsString();
                 if (objc_method_decl->isClassMethod())
                   kind = lldb::eMemberFunctionKindStaticMethod;
@@ -8980,14 +8980,14 @@ std::vector<CompilerDecl> TypeSystemClang::DeclContextFindDeclByName(
                 IdentifierInfo *ii = nd->getIdentifier();
                 if (ii != nullptr &&
                     ii->getName().equals(name.AsCString(nullptr)))
-                  found_decls.push_back(CompilerDecl(this, nd));
+                  found_decls.push_back(GetCompilerDecl(nd));
               }
             }
           } else if (clang::NamedDecl *nd =
                          llvm::dyn_cast<clang::NamedDecl>(child)) {
             IdentifierInfo *ii = nd->getIdentifier();
             if (ii != nullptr && ii->getName().equals(name.AsCString(nullptr)))
-              found_decls.push_back(CompilerDecl(this, nd));
+              found_decls.push_back(GetCompilerDecl(nd));
           }
         }
       }
