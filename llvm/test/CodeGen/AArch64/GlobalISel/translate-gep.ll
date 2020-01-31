@@ -117,3 +117,24 @@ define i32* @var_then_const(%type1* %addr, i64 %idx) {
   %res = getelementptr %type1, %type1* %addr, i64 %idx, i32 2, i32 2
   ret i32* %res
 }
+
+@arr = external global [8 x i32]
+
+define <2 x i32*> @vec_gep_scalar_base(<2 x i64> %offs) {
+  ; CHECK-LABEL: name: vec_gep_scalar_base
+  ; CHECK: bb.1.entry:
+  ; CHECK:   liveins: $q0
+  ; CHECK:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+  ; CHECK:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @arr
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[GV]](p0), [[GV]](p0)
+  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
+  ; CHECK:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+  ; CHECK:   [[MUL:%[0-9]+]]:_(<2 x s64>) = G_MUL [[COPY]], [[BUILD_VECTOR1]]
+  ; CHECK:   [[PTR_ADD:%[0-9]+]]:_(<2 x p0>) = G_PTR_ADD [[BUILD_VECTOR]], [[MUL]](<2 x s64>)
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(<2 x p0>) = COPY [[PTR_ADD]](<2 x p0>)
+  ; CHECK:   $q0 = COPY [[COPY1]](<2 x p0>)
+  ; CHECK:   RET_ReallyLR implicit $q0
+entry:
+  %0 = getelementptr inbounds [8 x i32], [8 x i32]* @arr, i64 0, <2 x i64> %offs
+  ret <2 x i32*> %0
+}

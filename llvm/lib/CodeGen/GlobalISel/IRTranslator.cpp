@@ -1062,6 +1062,18 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   if (auto *VT = dyn_cast<VectorType>(U.getType()))
     VectorWidth = VT->getNumElements();
 
+  // We might need to splat the base pointer into a vector if the offsets
+  // are vectors.
+  if (VectorWidth && !PtrTy.isVector()) {
+    BaseReg =
+        MIRBuilder.buildSplatVector(LLT::vector(VectorWidth, PtrTy), BaseReg)
+            .getReg(0);
+    PtrIRTy = VectorType::get(PtrIRTy, VectorWidth);
+    PtrTy = getLLTForType(*PtrIRTy, *DL);
+    OffsetIRTy = DL->getIntPtrType(PtrIRTy);
+    OffsetTy = getLLTForType(*OffsetIRTy, *DL);
+  }
+
   int64_t Offset = 0;
   for (gep_type_iterator GTI = gep_type_begin(&U), E = gep_type_end(&U);
        GTI != E; ++GTI) {
