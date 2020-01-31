@@ -421,9 +421,6 @@ void Platform::GetStatus(Stream &strm) {
     strm.EOL();
   }
 
-  if (GetOSKernelDescription(s))
-    strm.Printf("    Kernel: %s\n", s.c_str());
-
   if (IsHost()) {
     strm.Printf("  Hostname: %s\n", GetHostname());
   } else {
@@ -443,6 +440,9 @@ void Platform::GetStatus(Stream &strm) {
 
   if (!specific_info.empty())
     strm.Printf("Platform-specific connection: %s\n", specific_info.c_str());
+
+  if (GetOSKernelDescription(s))
+    strm.Printf("    Kernel: %s\n", s.c_str());
 }
 
 llvm::VersionTuple Platform::GetOSVersion(Process *process) {
