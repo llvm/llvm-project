@@ -1950,8 +1950,7 @@ SymbolFilePDB::GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func) {
     // here for the same symbol:
     //   non-empty undecorated name from PDB
     //   empty undecorated name from LLDB
-    if (!func_undecorated_name.empty() &&
-        mangled.GetDemangledName(mangled.GuessLanguage()).IsEmpty())
+    if (!func_undecorated_name.empty() && mangled.GetDemangledName().IsEmpty())
       mangled.SetDemangledName(ConstString(func_undecorated_name));
 
     // LLDB uses several flags to control how a C++ decorated name is
@@ -1960,8 +1959,7 @@ SymbolFilePDB::GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func) {
     // PDB source unless we also apply same flags in getting undecorated
     // name through PDBSymbolFunc::getUndecoratedNameEx method.
     if (!func_undecorated_name.empty() &&
-        mangled.GetDemangledName(mangled.GuessLanguage()) !=
-            ConstString(func_undecorated_name))
+        mangled.GetDemangledName() != ConstString(func_undecorated_name))
       mangled.SetDemangledName(ConstString(func_undecorated_name));
   } else if (!func_undecorated_name.empty()) {
     mangled.SetDemangledName(ConstString(func_undecorated_name));

@@ -2230,8 +2230,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
       if (!mangled_name.empty())
         mangled.SetMangledName(ConstString((mangled_name + suffix).str()));
 
-      ConstString demangled =
-          mangled.GetDemangledName(lldb::eLanguageTypeUnknown);
+      ConstString demangled = mangled.GetDemangledName();
       llvm::StringRef demangled_name = demangled.GetStringRef();
       if (!demangled_name.empty())
         mangled.SetDemangledName(ConstString((demangled_name + suffix).str()));

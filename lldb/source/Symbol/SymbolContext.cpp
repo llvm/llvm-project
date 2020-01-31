@@ -117,9 +117,7 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
       Block *inlined_block = block->GetContainingInlinedBlock();
       const InlineFunctionInfo *inlined_block_info =
           inlined_block->GetInlinedFunctionInfo();
-      s->Printf(
-          " [inlined] %s",
-          inlined_block_info->GetName(function->GetLanguage()).GetCString());
+      s->Printf(" [inlined] %s", inlined_block_info->GetName().GetCString());
 
       lldb_private::AddressRange block_range;
       if (inlined_block->GetRangeContainingAddress(addr, block_range)) {
@@ -657,12 +655,12 @@ SymbolContext::GetFunctionName(Mangled::NamePreference preference) const {
         const InlineFunctionInfo *inline_info =
             inlined_block->GetInlinedFunctionInfo();
         if (inline_info)
-          return inline_info->GetName(function->GetLanguage());
+          return inline_info->GetName();
       }
     }
-    return function->GetMangled().GetName(function->GetLanguage(), preference);
+    return function->GetMangled().GetName(preference);
   } else if (symbol && symbol->ValueIsAddress()) {
-    return symbol->GetMangled().GetName(symbol->GetLanguage(), preference);
+    return symbol->GetMangled().GetName(preference);
   } else {
     // No function, return an empty string.
     return ConstString();
@@ -1076,19 +1074,17 @@ bool SymbolContextSpecifier::SymbolContextMatches(SymbolContext &sc) {
       if (inline_info != nullptr) {
         was_inlined = true;
         const Mangled &name = inline_info->GetMangled();
-        if (!name.NameMatches(func_name, sc.function->GetLanguage()))
+        if (!name.NameMatches(func_name))
           return false;
       }
     }
     //  If it wasn't inlined, check the name in the function or symbol:
     if (!was_inlined) {
       if (sc.function != nullptr) {
-        if (!sc.function->GetMangled().NameMatches(func_name,
-                                                   sc.function->GetLanguage()))
+        if (!sc.function->GetMangled().NameMatches(func_name))
           return false;
       } else if (sc.symbol != nullptr) {
-        if (!sc.symbol->GetMangled().NameMatches(func_name,
-                                                 sc.symbol->GetLanguage()))
+        if (!sc.symbol->GetMangled().NameMatches(func_name))
           return false;
       }
     }
