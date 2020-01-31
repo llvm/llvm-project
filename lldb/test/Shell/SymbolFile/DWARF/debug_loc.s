@@ -3,6 +3,7 @@
 # "reasonable".
 
 # REQUIRES: x86
+# UNSUPPORTED: lldb-repro
 
 # RUN: llvm-mc -triple=x86_64-pc-linux -filetype=obj %s --defsym LOC=0 > %t
 # RUN: %lldb %t -o "image lookup -v -a 0" -o "image lookup -v -a 2" \
