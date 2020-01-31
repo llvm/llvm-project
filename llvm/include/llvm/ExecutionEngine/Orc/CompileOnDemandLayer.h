@@ -406,7 +406,7 @@ private:
           if (auto Sym = LD.findSymbol(BaseLayer, MangledName, false))
             continue;
           else if (auto Err = Sym.takeError())
-            return std::move(Err);
+            return Err;
         }
 
         // Record all functions defined by this module.
