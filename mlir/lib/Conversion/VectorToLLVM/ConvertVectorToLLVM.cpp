@@ -548,7 +548,7 @@ public:
     auto stridedSliceInnerOp = rewriter.create<InsertStridedSliceOp>(
         loc, op.source(), extracted,
         getI64SubArray(op.offsets(), /*dropFront=*/rankDiff),
-        getI64SubArray(op.strides(), /*dropFront=*/rankDiff));
+        getI64SubArray(op.strides(), /*dropFront=*/0));
     rewriter.replaceOpWithNewOp<InsertOp>(
         op, stridedSliceInnerOp.getResult(), op.dest(),
         getI64SubArray(op.offsets(), /*dropFront=*/0,
