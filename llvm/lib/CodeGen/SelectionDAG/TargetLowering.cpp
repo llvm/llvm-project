@@ -947,6 +947,22 @@ bool TargetLowering::SimplifyDemandedBits(
         Known.One &= KnownBase.One;
         Known.Zero &= KnownBase.Zero;
     }
+
+    // Attempt to avoid multi-use src if we don't need anything from it.
+    if (!DemandedBits.isAllOnesValue() || !SubElts.isAllOnesValue() ||
+        !BaseElts.isAllOnesValue()) {
+      SDValue NewSub = SimplifyMultipleUseDemandedBits(
+          Sub, DemandedBits, SubElts, TLO.DAG, Depth + 1);
+      SDValue NewBase = SimplifyMultipleUseDemandedBits(
+          Base, DemandedBits, BaseElts, TLO.DAG, Depth + 1);
+      if (NewSub || NewBase) {
+        NewSub = NewSub ? NewSub : Sub;
+        NewBase = NewBase ? NewBase : Base;
+        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, NewBase, NewSub,
+                                        Op.getOperand(2));
+        return TLO.CombineTo(Op, NewOp);
+      }
+    }
     break;
   }
   case ISD::EXTRACT_SUBVECTOR: {
