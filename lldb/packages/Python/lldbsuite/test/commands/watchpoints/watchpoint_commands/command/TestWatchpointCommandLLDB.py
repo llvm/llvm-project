@@ -86,8 +86,8 @@ class WatchpointLLDBCommandTestCase(TestBase):
         self.expect(
             "watchpoint list -v",
             substrs=[
-                'old value: 0', 'new value: 1', 'hw_index = 0',
-                'hit_count = 1', 'ignore_count = 0'
+                'old value: 0', 'new value: 1', 'hit_count = 1',
+                'ignore_count = 0'
             ])
 
         # The watchpoint command "forced" our global variable 'cookie' to
