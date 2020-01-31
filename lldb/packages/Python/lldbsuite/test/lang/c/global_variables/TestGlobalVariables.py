@@ -79,6 +79,7 @@ class GlobalVariablesTestCase(TestBase):
         self.expect(
             "frame variable --show-types --scope --show-globals --no-args",
             VARIABLES_DISPLAYED_CORRECTLY,
+            ordered=False,
             substrs=[
                 'STATIC: (const char *) g_func_static_cstr',
                 '"g_func_static_cstr"',
