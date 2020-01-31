@@ -18,7 +18,6 @@ __attribute__((objc_root_class))
 + (void)classRootDirect __attribute__((objc_direct)); // expected-note {{previous declaration is here}};
 - (void)otherRootDirect __attribute__((objc_direct)); // expected-note {{direct method 'otherRootDirect' declared here}}
 + (void)otherClassRootDirect __attribute__((objc_direct)); // expected-note {{direct method 'otherClassRootDirect' declared here}}
-+ (void)otherOtherClassRootDirect __attribute__((objc_direct)); // expected-note {{direct method 'otherOtherClassRootDirect' declared here}}
 - (void)notDirectInIface;                             // expected-note {{previous declaration is here}}
 + (void)classNotDirectInIface;                        // expected-note {{previous declaration is here}}
 @end
@@ -47,6 +46,11 @@ __attribute__((objc_direct_members))
 + (void)classRootCategoryRegular;                              // expected-note {{previous declaration is here}}
 - (void)rootCategoryDirect2 __attribute__((objc_direct));      // expected-note {{previous declaration is here}}
 + (void)classRootCategoryDirect2 __attribute__((objc_direct)); // expected-note {{previous declaration is here}}
+@end
+
+__attribute__((objc_root_class, objc_direct_members)) // expected-error {{'objc_direct_members' attribute only applies to Objective-C implementation declarations and Objective-C containers}}
+@interface SubDirectFail : Root
+- (instancetype)init;
 @end
 
 @interface Sub : Root <Proto>
@@ -90,8 +94,6 @@ __attribute__((objc_direct_members))
 + (void)otherClassRootDirect {
   [self someRootDirectMethod]; // expected-error {{messaging a Class with a method that is possibly direct}}
 }
-+ (void)otherOtherClassRootDirect {
-}
 - (void)rootExtensionDirect {
 }
 + (void)classRootExtensionDirect {
@@ -132,9 +134,6 @@ __attribute__((objc_direct_members))
 @implementation ValidSub
 - (void)someValidSubMethod {
   [super otherRootDirect]; // expected-error {{messaging super with a direct method}}
-}
-+ (void)someValidSubMethod {
-  [super otherOtherClassRootDirect]; // expected-error {{messaging super with a direct method}}
 }
 @end
 
