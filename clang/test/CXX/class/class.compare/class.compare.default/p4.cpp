@@ -122,7 +122,7 @@ namespace NoInjectionIfOperatorEqualsDeclared {
   bool test_a = A() == A(); // expected-error {{invalid operands}}
 
   struct B {
-    friend void operator==(int, struct Q); // expected-note {{not viable}}
+    friend void operator==(int, struct Q); // expected-note 2{{not viable}}
     std::strong_ordering operator<=>(const B&) const = default;
   };
   bool test_b = B() == B(); // expected-error {{invalid operands}}
