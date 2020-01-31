@@ -65,6 +65,8 @@ class ELFDumper {
   dumpLinkerOptionsSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::DependentLibrariesSection *>
   dumpDependentLibrariesSection(const Elf_Shdr *Shdr);
+  Expected<ELFYAML::CallGraphProfileSection *>
+  dumpCallGraphProfileSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::DynamicSection *> dumpDynamicSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::RelocationSection *> dumpRelocSection(const Elf_Shdr *Shdr);
   Expected<ELFYAML::RelrSection *> dumpRelrSection(const Elf_Shdr *Shdr);
@@ -341,6 +343,14 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     case ELF::SHT_LLVM_DEPENDENT_LIBRARIES: {
       Expected<ELFYAML::DependentLibrariesSection *> SecOrErr =
           dumpDependentLibrariesSection(&Sec);
+      if (!SecOrErr)
+        return SecOrErr.takeError();
+      Y->Chunks.emplace_back(*SecOrErr);
+      break;
+    }
+    case ELF::SHT_LLVM_CALL_GRAPH_PROFILE: {
+      Expected<ELFYAML::CallGraphProfileSection *> SecOrErr =
+          dumpCallGraphProfileSection(&Sec);
       if (!SecOrErr)
         return SecOrErr.takeError();
       Y->Chunks.emplace_back(*SecOrErr);
@@ -675,6 +685,62 @@ ELFDumper<ELFT>::dumpDependentLibrariesSection(const Elf_Shdr *Shdr) {
   }
 
   return DL.release();
+}
+
+template <class ELFT>
+Expected<ELFYAML::CallGraphProfileSection *>
+ELFDumper<ELFT>::dumpCallGraphProfileSection(const Elf_Shdr *Shdr) {
+  auto S = std::make_unique<ELFYAML::CallGraphProfileSection>();
+  if (Error E = dumpCommonSection(Shdr, *S))
+    return std::move(E);
+
+  Expected<ArrayRef<uint8_t>> ContentOrErr = Obj.getSectionContents(Shdr);
+  if (!ContentOrErr)
+    return ContentOrErr.takeError();
+  ArrayRef<uint8_t> Content = *ContentOrErr;
+
+  // Dump the section by using the Content key when it is truncated.
+  // There is no need to create either "Content" or "Entries" fields when the
+  // section is empty.
+  if (Content.empty() || Content.size() % 16 != 0) {
+    if (!Content.empty())
+      S->Content = yaml::BinaryRef(Content);
+    return S.release();
+  }
+
+  std::vector<ELFYAML::CallGraphEntry> Entries(Content.size() / 16);
+  DataExtractor Data(Content, Obj.isLE(), /*AddressSize=*/0);
+  DataExtractor::Cursor Cur(0);
+  auto ReadEntry = [&](ELFYAML::CallGraphEntry &E) {
+    uint32_t FromSymIndex = Data.getU32(Cur);
+    uint32_t ToSymIndex = Data.getU32(Cur);
+    E.Weight = Data.getU64(Cur);
+    if (!Cur) {
+      consumeError(Cur.takeError());
+      return false;
+    }
+
+    Expected<StringRef> From = getSymbolName(Shdr->sh_link, FromSymIndex);
+    Expected<StringRef> To = getSymbolName(Shdr->sh_link, ToSymIndex);
+    if (From && To) {
+      E.From = *From;
+      E.To = *To;
+      return true;
+    }
+    consumeError(From.takeError());
+    consumeError(To.takeError());
+    return false;
+  };
+
+  for (ELFYAML::CallGraphEntry &E : Entries) {
+    if (ReadEntry(E))
+      continue;
+    S->Content = yaml::BinaryRef(Content);
+    return S.release();
+  }
+
+  S->Entries = std::move(Entries);
+  return S.release();
 }
 
 template <class ELFT>
