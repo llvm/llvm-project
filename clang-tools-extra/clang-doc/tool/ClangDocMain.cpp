@@ -294,9 +294,8 @@ int main(int argc, const char **argv) {
       }
 
       doc::Info *I = Reduced.get().get();
-      auto InfoPath =
-          getInfoOutputFile(OutDirectory, I->getRelativeFilePath(""),
-                            I->getFileBaseName(), "." + Format);
+      auto InfoPath = getInfoOutputFile(OutDirectory, I->Path, I->extractName(),
+                                        "." + Format);
       if (!InfoPath) {
         llvm::errs() << toString(InfoPath.takeError()) << "\n";
         Error = true;
@@ -305,9 +304,9 @@ int main(int argc, const char **argv) {
       std::error_code FileErr;
       llvm::raw_fd_ostream InfoOS(InfoPath.get(), FileErr,
                                   llvm::sys::fs::OF_None);
-      if (FileErr) {
-        llvm::errs() << "Error opening info file " << InfoPath.get() << ": "
-                     << FileErr.message() << "\n";
+      if (FileErr != OK) {
+        llvm::errs() << "Error opening info file: " << FileErr.message()
+                     << "\n";
         return;
       }
 
