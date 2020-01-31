@@ -423,10 +423,10 @@ public:
   }
 
   /// Return true if this global's definition can be substituted with an
-  /// *arbitrary* definition at link time.  We cannot do any IPO or inlinining
-  /// across interposable call edges, since the callee can be replaced with
-  /// something arbitrary at link time.
-  bool isInterposable() const { return isInterposableLinkage(getLinkage()); }
+  /// *arbitrary* definition at link time or load time. We cannot do any IPO or
+  /// inlining across interposable call edges, since the callee can be
+  /// replaced with something arbitrary.
+  bool isInterposable() const;
 
   bool hasExternalLinkage() const { return isExternalLinkage(getLinkage()); }
   bool hasAvailableExternallyLinkage() const {

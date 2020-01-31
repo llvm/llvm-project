@@ -555,6 +555,20 @@ Metadata *Module::getProfileSummary(bool IsCS) {
                : getModuleFlag("ProfileSummary"));
 }
 
+bool Module::getSemanticInterposition() const {
+  Metadata *MF = getModuleFlag("SemanticInterposition");
+
+  auto *Val = cast_or_null<ConstantAsMetadata>(MF);
+  if (!Val)
+    return false;
+
+  return cast<ConstantInt>(Val->getValue())->getZExtValue();
+}
+
+void Module::setSemanticInterposition(bool SI) {
+  addModuleFlag(ModFlagBehavior::Error, "SemanticInterposition", SI);
+}
+
 void Module::setOwnedMemoryBuffer(std::unique_ptr<MemoryBuffer> MB) {
   OwnedMemoryBuffer = std::move(MB);
 }
