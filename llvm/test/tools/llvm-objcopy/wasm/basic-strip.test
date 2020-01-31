@@ -1,0 +1,46 @@
+## Test that debug, name, and producers sections are stripped with --strip-all.
+## Other sections (unknown to LLVM, such as foo) are not stripped by --strip-all.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-strip --strip-all %t
+# RUN: obj2yaml %t | FileCheck --implicit-check-not producers --implicit-check-not .debug --implicit-check-not name %s
+
+## The default no-arg behavior is the same as --strip-all.
+# RUN: llvm-strip %t
+# RUN: obj2yaml %t | FileCheck --implicit-check-not producers --implicit-check-not .debug --implicit-check-not name %s
+
+# CHECK:      Sections:
+# CHECK-NEXT:   - Type: TYPE
+# CHECK:          Name: foo
+
+--- !WASM
+FileHeader:
+  Version: 0x00000001
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes: []
+        ReturnTypes: []
+  - Type: FUNCTION
+    FunctionTypes: [ 0 ]
+  - Type: CODE
+    Functions:
+      - Index: 0
+        Locals: []
+        Body: 0B
+  - Type: CUSTOM
+    Name: name
+    FunctionNames:
+     - Index:          0
+       Name:           foo
+  - Type: CUSTOM
+    Name: producers
+    Tools:
+      - Name:   clang
+        Version: 9.0.0
+  - Type: CUSTOM
+    Name: .debug_info
+    Payload: DEADBEEF
+  - Type: CUSTOM
+    Name: foo
+    Payload: CAFE
