@@ -775,6 +775,7 @@ void OMPClauseProfiler::VisitOMPNontemporalClause(
   for (auto *E : C->private_refs())
     Profiler->VisitStmt(E);
 }
+void OMPClauseProfiler::VisitOMPOrderClause(const OMPOrderClause *C) {}
 } // namespace
 
 void
