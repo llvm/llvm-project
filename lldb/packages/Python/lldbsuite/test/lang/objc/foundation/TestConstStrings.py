@@ -41,8 +41,8 @@ class ConstStringTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
         self.expect("process status", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=[" at %s:%d" % (self.main_source, self.line),
-                             "stop reason = breakpoint"])
+                    substrs=["stop reason = breakpoint",
+                             " at %s:%d" % (self.main_source, self.line)])
 
         self.expect('expression (int)[str compare:@"hello"]',
                     startstr="(int) $0 = 0")

@@ -87,8 +87,8 @@ class WatchpointPythonCommandTestCase(TestBase):
 
         # Check that the watchpoint snapshoting mechanism is working.
         self.expect("watchpoint list -v",
-                    substrs=['old value:', ' = 0',
-                             'new value:', ' = 1'])
+                    substrs=['old value: 0',
+                             'new value: 1'])
 
         # The watchpoint command "forced" our global variable 'cookie' to
         # become 777.

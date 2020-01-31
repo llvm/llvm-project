@@ -77,7 +77,7 @@ class NSStringDataFormatterTestCase(TestBase):
 
     def nsstring_data_formatter_commands(self):
         self.expect('frame variable str0 str1 str2 str3 str4 str5 str6 str8 str9 str10 str11 label1 label2 processName str12',
-                    substrs=['(NSString *) str1 = ', ' @"A rather short ASCII NSString object is here"',
+                    substrs=[
                              # '(NSString *) str0 = ',' @"255"',
                              '(NSString *) str1 = ', ' @"A rather short ASCII NSString object is here"',
                              '(NSString *) str2 = ', ' @"A rather short UTF8 NSString object is here"',
