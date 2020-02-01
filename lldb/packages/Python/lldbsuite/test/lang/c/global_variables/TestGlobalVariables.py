@@ -80,15 +80,16 @@ class GlobalVariablesTestCase(TestBase):
             "frame variable --show-types --scope --show-globals --no-args",
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=[
-                'STATIC: (const int) g_file_static_int = 2',
                 'STATIC: (const char *) g_func_static_cstr',
+                '"g_func_static_cstr"',
+                'GLOBAL: (int *) g_ptr',
+                'STATIC: (const int) g_file_static_int = 2',
+                'GLOBAL: (int) g_common_1 = 21',
+                'GLOBAL: (int) g_file_global_int = 42',
+                'STATIC: (const char *) g_file_static_cstr',
+                '"g_file_static_cstr"',
                 'GLOBAL: (const char *) g_file_global_cstr',
                 '"g_file_global_cstr"',
-                'GLOBAL: (int) g_file_global_int = 42',
-                'GLOBAL: (int) g_common_1 = 21',
-                'GLOBAL: (int *) g_ptr',
-                'STATIC: (const char *) g_file_static_cstr',
-                '"g_file_static_cstr"'
             ])
 
         # 'frame variable' should support address-of operator.
