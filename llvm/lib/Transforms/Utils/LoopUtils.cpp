@@ -937,6 +937,11 @@ llvm::getShuffleReduction(IRBuilder<> &Builder, Value *Src, unsigned Op,
     }
     if (!RedOps.empty())
       propagateIRFlags(TmpVec, RedOps);
+
+    // We may compute the reassociated scalar ops in a way that does not
+    // preserve nsw/nuw etc. Conservatively, drop those flags.
+    if (auto *ReductionInst = dyn_cast<Instruction>(TmpVec))
+      ReductionInst->dropPoisonGeneratingFlags();
   }
   // The result is in the first element of the vector.
   return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
