@@ -13,8 +13,6 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
-#include "lldb/Symbol/TypeSystemClang.h"
-#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -24,7 +22,9 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecordLayout.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include <memory>
 #include <vector>

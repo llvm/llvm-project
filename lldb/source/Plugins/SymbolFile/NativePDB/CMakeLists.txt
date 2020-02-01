@@ -14,6 +14,7 @@ add_lldb_library(lldbPluginSymbolFileNativePDB PLUGIN
     lldbCore
     lldbSymbol
     lldbUtility
+    lldbPluginTypeSystemClang
   CLANG_LIBS
     clangAST
     clangLex

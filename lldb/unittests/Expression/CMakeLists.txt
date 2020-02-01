@@ -17,6 +17,7 @@ add_lldb_unittest(ExpressionTests
   LINK_LIBS
     lldbCore
     lldbPluginExpressionParserClang
+    lldbPluginTypeSystemClang
     lldbUtility
     lldbUtilityHelpers
     LLVMTestingSupport

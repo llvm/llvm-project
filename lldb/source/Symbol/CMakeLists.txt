@@ -23,17 +23,11 @@ endif()
 add_lldb_library(lldbSymbol
   ArmUnwindInfo.cpp
   Block.cpp
-  TypeSystemClang.cpp
-  ClangASTImporter.cpp
-  ClangASTMetadata.cpp
-  ClangExternalASTSourceCallbacks.cpp
-  ClangUtil.cpp
   CompactUnwindInfo.cpp
   CompileUnit.cpp
   CompilerDecl.cpp
   CompilerDeclContext.cpp
   CompilerType.cpp
-  CxxModuleHandler.cpp
   DWARFCallFrameInfo.cpp
   DebugMacros.cpp
   Declaration.cpp
@@ -71,18 +65,8 @@ add_lldb_library(lldbSymbol
     lldbHost
     lldbTarget
     lldbUtility
-    lldbPluginExpressionParserClang
-    lldbPluginSymbolFileDWARF
-    lldbPluginSymbolFilePDB
     lldbPluginObjCLanguage
-    lldbPluginPlatformMacOSX
-    lldbPluginObjCRuntime
     ${SWIFT_LIBS}
-
-  CLANG_LIBS
-    clangAST
-    clangBasic
-    clangFrontend
 
   LINK_COMPONENTS
     Support
