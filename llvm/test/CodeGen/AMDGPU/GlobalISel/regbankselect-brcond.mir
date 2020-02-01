@@ -80,8 +80,9 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; CHECK:   [[TRUNC:%[0-9]+]]:vcc(s1) = G_TRUNC [[COPY]](s32)
-  ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.1
+  ; CHECK:   [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+  ; CHECK:   G_BRCOND [[COPY1]](s1), %bb.1
   ; CHECK: bb.1:
   bb.0.entry:
     successors: %bb.1
@@ -105,10 +106,11 @@ body:             |
   ; CHECK: bb.0.entry:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-  ; CHECK:   [[TRUNC:%[0-9]+]]:vcc(s1) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.1
+  ; CHECK:   [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+  ; CHECK:   G_BRCOND [[COPY1]](s1), %bb.1
   ; CHECK: bb.2:
   bb.0.entry:
     successors: %bb.1
@@ -134,8 +136,9 @@ body:             |
   ; CHECK:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   [[TRUNC:%[0-9]+]]:vcc(s1) = G_TRUNC [[COPY]](s32)
-  ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.1
+  ; CHECK:   [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+  ; CHECK:   G_BRCOND [[COPY1]](s1), %bb.1
   ; CHECK: bb.2:
   bb.0.entry:
     successors: %bb.1
@@ -160,9 +163,10 @@ body:             |
   ; CHECK:   [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   [[TRUNC:%[0-9]+]]:vcc(s1) = G_TRUNC [[COPY]](s32)
+  ; CHECK:   [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
   ; CHECK:   S_NOP 0
-  ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.1
+  ; CHECK:   [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
+  ; CHECK:   G_BRCOND [[COPY1]](s1), %bb.1
   ; CHECK: bb.2:
   bb.0.entry:
     successors: %bb.1

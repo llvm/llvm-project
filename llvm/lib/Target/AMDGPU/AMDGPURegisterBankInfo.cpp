@@ -2906,9 +2906,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned Bank = getRegBankID(Src, MRI, *TRI);
     unsigned DstSize = getSizeInBits(Dst, MRI, *TRI);
     unsigned SrcSize = getSizeInBits(Src, MRI, *TRI);
-    OpdsMapping[0] = DstSize == 1 && Bank != AMDGPU::SGPRRegBankID ?
-      AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, DstSize) :
-      AMDGPU::getValueMapping(Bank, DstSize);
+    OpdsMapping[0] = AMDGPU::getValueMapping(Bank, DstSize);
     OpdsMapping[1] = AMDGPU::getValueMapping(Bank, SrcSize);
     break;
   }
