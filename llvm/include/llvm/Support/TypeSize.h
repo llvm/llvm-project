@@ -16,7 +16,6 @@
 #define LLVM_SUPPORT_TYPESIZE_H
 
 #include <cassert>
-#include <tuple>
 
 namespace llvm {
 
@@ -70,8 +69,7 @@ public:
   // not guaranteed to be the same size at runtime, so they are never
   // considered to be equal.
   friend bool operator==(const TypeSize &LHS, const TypeSize &RHS) {
-    return std::tie(LHS.MinSize, LHS.IsScalable) ==
-           std::tie(RHS.MinSize, RHS.IsScalable);
+    return LHS.MinSize == RHS.MinSize && LHS.IsScalable == RHS.IsScalable;
   }
 
   friend bool operator!=(const TypeSize &LHS, const TypeSize &RHS) {
