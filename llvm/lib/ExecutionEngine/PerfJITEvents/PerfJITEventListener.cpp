@@ -328,7 +328,7 @@ bool PerfJITEventListener::InitDebuggingDir() {
     return false;
   }
 
-  JitPath = UniqueDebugDir.str();
+  JitPath = std::string(UniqueDebugDir.str());
 
   return true;
 }
