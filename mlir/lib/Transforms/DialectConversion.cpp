@@ -1109,10 +1109,12 @@ bool OperationLegalizer::isIllegal(Operation *op) const {
 LogicalResult
 OperationLegalizer::legalize(Operation *op,
                              ConversionPatternRewriter &rewriter) {
+#ifndef NDEBUG
   const char *logLineComment =
       "//===-------------------------------------------===//\n";
 
   auto &rewriterImpl = rewriter.getImpl();
+#endif
   LLVM_DEBUG({
     auto &os = rewriterImpl.logger;
     os.getOStream() << "\n";
@@ -1124,12 +1126,14 @@ OperationLegalizer::legalize(Operation *op,
 
   // Check if this operation is legal on the target.
   if (auto legalityInfo = target.isLegal(op)) {
-    logSuccess(
-        rewriterImpl.logger, "operation marked legal by the target{0}",
-        legalityInfo->isRecursivelyLegal
-            ? "; NOTE: operation is recursively legal; skipping internals"
-            : "");
-    LLVM_DEBUG(rewriterImpl.logger.startLine() << logLineComment);
+    LLVM_DEBUG({
+      logSuccess(
+          rewriterImpl.logger, "operation marked legal by the target{0}",
+          legalityInfo->isRecursivelyLegal
+              ? "; NOTE: operation is recursively legal; skipping internals"
+              : "");
+      rewriterImpl.logger.startLine() << logLineComment;
+    });
 
     // If this operation is recursively legal, mark its children as ignored so
     // that we don't consider them for legalization.
@@ -1140,9 +1144,11 @@ OperationLegalizer::legalize(Operation *op,
 
   // Check to see if the operation is ignored and doesn't need to be converted.
   if (rewriter.getImpl().isOpIgnored(op)) {
-    logSuccess(rewriterImpl.logger,
-               "operation marked 'ignored' during conversion");
-    LLVM_DEBUG(rewriterImpl.logger.startLine() << logLineComment);
+    LLVM_DEBUG({
+      logSuccess(rewriterImpl.logger,
+                 "operation marked 'ignored' during conversion");
+      rewriterImpl.logger.startLine() << logLineComment;
+    });
     return success();
   }
 
@@ -1150,30 +1156,38 @@ OperationLegalizer::legalize(Operation *op,
   // TODO(riverriddle) Should we always try to do this, even if the op is
   // already legal?
   if (succeeded(legalizeWithFold(op, rewriter))) {
-    logSuccess(rewriterImpl.logger, "operation was folded");
-    LLVM_DEBUG(rewriterImpl.logger.startLine() << logLineComment);
+    LLVM_DEBUG({
+      logSuccess(rewriterImpl.logger, "operation was folded");
+      rewriterImpl.logger.startLine() << logLineComment;
+    });
     return success();
   }
 
   // Otherwise, we need to apply a legalization pattern to this operation.
   auto it = legalizerPatterns.find(op->getName());
   if (it == legalizerPatterns.end()) {
-    logFailure(rewriterImpl.logger, "no known legalization path");
-    LLVM_DEBUG(rewriterImpl.logger.startLine() << logLineComment);
+    LLVM_DEBUG({
+      logFailure(rewriterImpl.logger, "no known legalization path");
+      rewriterImpl.logger.startLine() << logLineComment;
+    });
     return failure();
   }
 
   // The patterns are sorted by expected benefit, so try to apply each in-order.
   for (auto *pattern : it->second) {
     if (succeeded(legalizePattern(op, pattern, rewriter))) {
-      logSuccess(rewriterImpl.logger, "");
-      LLVM_DEBUG(rewriterImpl.logger.startLine() << logLineComment);
+      LLVM_DEBUG({
+        logSuccess(rewriterImpl.logger, "");
+        rewriterImpl.logger.startLine() << logLineComment;
+      });
       return success();
     }
   }
 
-  logFailure(rewriterImpl.logger, "no matched legalization pattern");
-  LLVM_DEBUG(rewriterImpl.logger.startLine() << logLineComment);
+  LLVM_DEBUG({
+    logFailure(rewriterImpl.logger, "no matched legalization pattern");
+    rewriterImpl.logger.startLine() << logLineComment;
+  });
   return failure();
 }
 
@@ -1192,7 +1206,7 @@ OperationLegalizer::legalizeWithFold(Operation *op,
   SmallVector<Value, 2> replacementValues;
   rewriter.setInsertionPoint(op);
   if (failed(rewriter.tryFold(op, replacementValues))) {
-    logFailure(rewriterImpl.logger, "unable to fold");
+    LLVM_DEBUG(logFailure(rewriterImpl.logger, "unable to fold"));
     return failure();
   }
 
@@ -1204,14 +1218,15 @@ OperationLegalizer::legalizeWithFold(Operation *op,
        i != e; ++i) {
     Operation *cstOp = rewriterImpl.createdOps[i];
     if (failed(legalize(cstOp, rewriter))) {
-      logFailure(rewriterImpl.logger, "generated constant '{0}' was illegal",
-                 cstOp->getName());
+      LLVM_DEBUG(logFailure(rewriterImpl.logger,
+                            "generated constant '{0}' was illegal",
+                            cstOp->getName()));
       rewriterImpl.resetState(curState);
       return failure();
     }
   }
 
-  logSuccess(rewriterImpl.logger, "");
+  LLVM_DEBUG(logSuccess(rewriterImpl.logger, ""));
   return success();
 }
 
@@ -1233,7 +1248,7 @@ OperationLegalizer::legalizePattern(Operation *op, RewritePattern *pattern,
   // TODO(riverriddle) We could eventually converge, but that requires more
   // complicated analysis.
   if (!appliedPatterns.insert(pattern).second) {
-    logFailure(rewriterImpl.logger, "pattern was already applied");
+    LLVM_DEBUG(logFailure(rewriterImpl.logger, "pattern was already applied"));
     return failure();
   }
 
@@ -1253,7 +1268,7 @@ OperationLegalizer::legalizePattern(Operation *op, RewritePattern *pattern,
 #endif
 
   if (!matchedPattern) {
-    logFailure(rewriterImpl.logger, "pattern failed to match");
+    LLVM_DEBUG(logFailure(rewriterImpl.logger, "pattern failed to match"));
     return cleanupFailure();
   }
 
@@ -1270,7 +1285,8 @@ OperationLegalizer::legalizePattern(Operation *op, RewritePattern *pattern,
 
     // Convert the block signature.
     if (failed(rewriterImpl.convertBlockSignature(action.block))) {
-      logFailure(rewriterImpl.logger, "failed to convert types of moved block");
+      LLVM_DEBUG(logFailure(rewriterImpl.logger,
+                            "failed to convert types of moved block"));
       return cleanupFailure();
     }
   }
@@ -1306,8 +1322,9 @@ OperationLegalizer::legalizePattern(Operation *op, RewritePattern *pattern,
        i != e; ++i) {
     auto &state = rewriterImpl.rootUpdates[i];
     if (failed(legalize(state.getOperation(), rewriter))) {
-      logFailure(rewriterImpl.logger,
-                 "operation updated in-place '{0}' was illegal", op->getName());
+      LLVM_DEBUG(logFailure(rewriterImpl.logger,
+                            "operation updated in-place '{0}' was illegal",
+                            op->getName()));
       return cleanupFailure();
     }
   }
@@ -1317,14 +1334,14 @@ OperationLegalizer::legalizePattern(Operation *op, RewritePattern *pattern,
        i != e; ++i) {
     Operation *op = rewriterImpl.createdOps[i];
     if (failed(legalize(op, rewriter))) {
-      logFailure(rewriterImpl.logger,
-                 "generated operation '{0}'({1}) was illegal", op->getName(),
-                 op);
+      LLVM_DEBUG(logFailure(rewriterImpl.logger,
+                            "generated operation '{0}'({1}) was illegal",
+                            op->getName(), op));
       return cleanupFailure();
     }
   }
 
-  logSuccess(rewriterImpl.logger, "pattern applied successfully");
+  LLVM_DEBUG(logSuccess(rewriterImpl.logger, "pattern applied successfully"));
   appliedPatterns.erase(pattern);
   return success();
 }
