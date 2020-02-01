@@ -473,6 +473,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 0;
   case RISCV::PseudoCALLReg:
   case RISCV::PseudoCALL:
+  case RISCV::PseudoJump:
   case RISCV::PseudoTAIL:
   case RISCV::PseudoLLA:
   case RISCV::PseudoLA:
