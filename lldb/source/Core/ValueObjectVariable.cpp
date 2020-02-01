@@ -166,6 +166,27 @@ bool ValueObjectVariable::UpdateValue() {
 
       Value::ValueType value_type = m_value.GetValueType();
 
+      // The size of the buffer within m_value can be less than the size
+      // prescribed by its type. E.g. this can happen when an expression only
+      // partially describes an object (say, because it contains DW_OP_piece).
+      //
+      // In this case, grow m_value to the expected size. An alternative way to
+      // handle this is to teach Value::GetValueAsData() and ValueObjectChild
+      // not to read past the end of a host buffer, but this gets impractically
+      // complicated as a Value's host buffer may be shared with a distant
+      // ancestor or sibling in the ValueObject hierarchy.
+      //
+      // FIXME: When we grow m_value, we should represent the added bits as
+      // undefined somehow instead of as 0's.
+      if (value_type == Value::eValueTypeHostAddress &&
+          compiler_type.IsValid()) {
+        if (size_t value_buf_size = m_value.GetBuffer().GetByteSize()) {
+          size_t value_size = m_value.GetValueByteSize(&m_error, &exe_ctx);
+          if (m_error.Success() && value_buf_size < value_size)
+            m_value.ResizeData(value_size);
+        }
+      }
+
       Process *process = exe_ctx.GetProcessPtr();
       const bool process_is_alive = process && process->IsAlive();
 
