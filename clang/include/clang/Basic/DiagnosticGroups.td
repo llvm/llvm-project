@@ -384,7 +384,10 @@ def GNULabelsAsValue : DiagGroup<"gnu-label-as-value">;
 def LiteralRange : DiagGroup<"literal-range">;
 def LocalTypeTemplateArgs : DiagGroup<"local-type-template-args",
                                       [CXX98CompatLocalTypeTemplateArgs]>;
-def RangeLoopAnalysis : DiagGroup<"range-loop-analysis">;
+def RangeLoopConstruct : DiagGroup<"range-loop-construct">;
+def RangeLoopBindReference : DiagGroup<"range-loop-bind-reference">;
+def RangeLoopAnalysis : DiagGroup<"range-loop-analysis",
+                                  [RangeLoopConstruct, RangeLoopBindReference]>;
 def ForLoopAnalysis : DiagGroup<"for-loop-analysis">;
 def LoopAnalysis : DiagGroup<"loop-analysis", [ForLoopAnalysis,
                                                RangeLoopAnalysis]>;
@@ -860,14 +863,15 @@ def Most : DiagGroup<"most", [
     Comment,
     DeleteNonVirtualDtor,
     Format,
+    ForLoopAnalysis,
     Implicit,
     InfiniteRecursion,
     IntInBoolContext,
-    LoopAnalysis,
     MismatchedTags,
     MissingBraces,
     Move,
     MultiChar,
+    RangeLoopConstruct,
     Reorder,
     ReturnType,
     SelfAssignment,
