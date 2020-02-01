@@ -48,13 +48,14 @@ class CompactVectorsFormattingTestCase(TestBase):
             'frame variable',
             substrs=[
                 '(vFloat) valueFL = (1.25, 0, 0.25, 0)',
+                '(vDouble) valueDL = (1.25, 2.25)',
                 '(int16_t [8]) valueI16 = (1, 0, 4, 0, 0, 1, 0, 4)',
                 '(int32_t [4]) valueI32 = (1, 0, 4, 0)',
-                '(vDouble) valueDL = (1.25, 2.25)',
                 '(vUInt8) valueU8 = (0x01, 0x00, 0x04, 0x00, 0x00, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)',
                 '(vUInt16) valueU16 = (1, 0, 4, 0, 0, 1, 0, 4)',
                 '(vUInt32) valueU32 = (1, 2, 3, 4)',
-                "(vSInt8) valueS8 = (1, 0, 4, 0, 0, 1, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0)",
+                '(vSInt8) valueS8 = (1, 0, 4, 0, 0, 1, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0)',
                 '(vSInt16) valueS16 = (1, 0, 4, 0, 0, 1, 0, 4)',
                 '(vSInt32) valueS32 = (4, 3, 2, 1)',
-                '(vBool32) valueBool32 = (0, 1, 0, 1)'])
+                '(vBool32) valueBool32 = (0, 1, 0, 1)',
+            ])
