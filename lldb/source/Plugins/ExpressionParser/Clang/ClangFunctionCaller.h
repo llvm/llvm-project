@@ -12,7 +12,6 @@
 #include "ClangExpressionHelper.h"
 
 #include "lldb/Core/Address.h"
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Expression/FunctionCaller.h"

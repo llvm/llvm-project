@@ -10,7 +10,6 @@
 #ifndef liblldb_IRForTarget_h_
 #define liblldb_IRForTarget_h_
 
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Symbol/TaggedASTType.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
@@ -36,6 +35,10 @@ class Module;
 class StoreInst;
 class DataLayout;
 class Value;
+}
+
+namespace clang {
+class NamedDecl;
 }
 
 namespace lldb_private {
