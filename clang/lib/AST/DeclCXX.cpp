@@ -2038,17 +2038,36 @@ CXXMethodDecl::getCorrespondingMethodInClass(const CXXRecordDecl *RD,
   if (auto *MD = getCorrespondingMethodDeclaredInClass(RD, MayBeBase))
     return MD;
 
+  llvm::SmallVector<CXXMethodDecl*, 4> FinalOverriders;
+  auto AddFinalOverrider = [&](CXXMethodDecl *D) {
+    // If this function is overridden by a candidate final overrider, it is not
+    // a final overrider.
+    for (CXXMethodDecl *OtherD : FinalOverriders) {
+      if (declaresSameEntity(D, OtherD) || recursivelyOverrides(OtherD, D))
+        return;
+    }
+
+    // Other candidate final overriders might be overridden by this function.
+    FinalOverriders.erase(
+        std::remove_if(FinalOverriders.begin(), FinalOverriders.end(),
+                       [&](CXXMethodDecl *OtherD) {
+                         return recursivelyOverrides(D, OtherD);
+                       }),
+        FinalOverriders.end());
+
+    FinalOverriders.push_back(D);
+  };
+
   for (const auto &I : RD->bases()) {
     const RecordType *RT = I.getType()->getAs<RecordType>();
     if (!RT)
       continue;
     const auto *Base = cast<CXXRecordDecl>(RT->getDecl());
-    CXXMethodDecl *T = this->getCorrespondingMethodInClass(Base);
-    if (T)
-      return T;
+    if (CXXMethodDecl *D = this->getCorrespondingMethodInClass(Base))
+      AddFinalOverrider(D);
   }
 
-  return nullptr;
+  return FinalOverriders.size() == 1 ? FinalOverriders.front() : nullptr;
 }
 
 CXXMethodDecl *CXXMethodDecl::Create(ASTContext &C, CXXRecordDecl *RD,
@@ -2104,6 +2123,11 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
   // There may be a method corresponding to MD in a derived class.
   CXXMethodDecl *DevirtualizedMethod =
       getCorrespondingMethodInClass(BestDynamicDecl);
+
+  // If there final overrider in the dynamic type is ambiguous, we can't
+  // devirtualize this call.
+  if (!DevirtualizedMethod)
+    return nullptr;
 
   // If that method is pure virtual, we can't devirtualize. If this code is
   // reached, the result would be UB, not a direct call to the derived class
