@@ -366,12 +366,13 @@ simply say ${var.z} because that symbol refers to the pointer z. In order to
 dereference it and get the pointed value, you should say ``${*var.z}``. The
 ``${*var`` tells LLDB to get the object that the expression paths leads to, and
 then dereference it. In this example is it equivalent to ``*(bObject.z)`` in
-C/C++ syntax. Because . and -> operators can both be used, there is no need to
-have dereferences in the middle of an expression path (e.g. you do not need to
-type ``${*(var.x).x}``) to read A::x as contained in ``*(B::x)``. To achieve
-that effect you can simply write ``${var.x->x}``, or even ``${var.x.x}``. The
-``*`` operator only binds to the result of the whole expression path, rather
-than piecewise, and there is no way to use parentheses to change that behavior.
+C/C++ syntax. Because ``.`` and ``->`` operators can both be used, there is no
+need to have dereferences in the middle of an expression path (e.g. you do not
+need to type ``${*(var.x).x}``) to read A::x as contained in ``*(B::x)``. To
+achieve that effect you can simply write ``${var.x->x}``, or even
+``${var.x.x}``. The ``*`` operator only binds to the result of the whole
+expression path, rather than piecewise, and there is no way to use parentheses
+to change that behavior.
 
 Of course, a summary string can contain more than one ${var specifier, and can
 use ``${var`` and ``${*var`` specifiers together.
@@ -573,7 +574,7 @@ the pointer value. However, because pointers have no notion of their size, the
 empty brackets [] operator does not work, and you must explicitly provide
 higher and lower bounds.
 
-In general, LLDB needs the square brackets operator [] in order to handle
+In general, LLDB needs the square brackets ``operator []`` in order to handle
 arrays and pointers correctly, and for pointers it also needs a range. However,
 a few special cases are defined to make your life easier:
 
@@ -845,7 +846,7 @@ adheres to a given interface (the word is italicized because Python has no
 explicit notion of interface, by that word we mean a given set of methods must
 be implemented by the Python class):
 
-::
+.. code-block:: python
 
    class SyntheticChildrenProvider:
       def __init__(self, valobj, internal_dict):
@@ -882,9 +883,30 @@ As a shortcut for this, you can inherit from lldb.SBSyntheticValueProvider, and
 just define get_value as other methods are defaulted in the superclass as
 returning default no-children responses.
 
-If a synthetic child provider supplies a special child named $$dereference$$
-then it will be used when evaluating opertaor* and operator-> in the frame
-variable command and related SB API functions.
+If a synthetic child provider supplies a special child named
+``$$dereference$$`` then it will be used when evaluating ``operator *`` and
+``operator ->`` in the frame variable command and related SB API
+functions. It is possible to declare this synthetic child without
+including it in the range of children displayed by LLDB. For example,
+this subset of a synthetic children provider class would allow the
+synthetic value to be dereferenced without actually showing any
+synthtic children in the UI:
+
+.. code-block:: python
+
+      class SyntheticChildrenProvider:
+          [...]
+          def num_children(self):
+              return 0
+          def get_child_index(self, name):
+              if name == '$$dereference$$':
+                  return 0
+              return -1
+          def get_child_at_index(self, index):
+              if index == 0:
+                  return <valobj resulting from dereference>
+              return None
+
 
 For examples of how synthetic children are created, you are encouraged to look
 at examples/synthetic in the LLDB trunk. Please, be aware that the code in
@@ -960,10 +982,10 @@ expression:
    Error [IRForTarget]: Call to a function '_ZNSt33vector<int, std::allocator<int> >ixEm' that is not present in the target
    error: Couldn't convert the expression to DWARF
 
-The reason for this is that classes might have an overloaded operator [], or
-other special provisions and the expression command chooses to ignore synthetic
-children in the interest of equivalency with code you asked to have compiled
-from source.
+The reason for this is that classes might have an overloaded ``operator []``,
+or other special provisions and the expression command chooses to ignore
+synthetic children in the interest of equivalency with code you asked to have
+compiled from source.
 
 Filters
 -------
