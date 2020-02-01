@@ -2194,7 +2194,7 @@ bool X86FastISel::X86FastEmitSSESelect(MVT RetVT, const Instruction *I) {
   unsigned CmpRHSReg = getRegForValue(CmpRHS);
   bool CmpRHSIsKill = hasTrivialKill(CmpRHS);
 
-  if (!LHSReg || !RHSReg || !CmpLHS || !CmpRHS)
+  if (!LHSReg || !RHSReg || !CmpLHSReg || !CmpRHSReg)
     return false;
 
   const TargetRegisterClass *RC = TLI.getRegClassFor(RetVT);
