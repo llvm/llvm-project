@@ -28,7 +28,6 @@ target(asan_target_type, "asan") {
   }
 
   deps = [
-    ":asan_cxx",
     "//compiler-rt/lib/interception:sources",
     "//compiler-rt/lib/lsan:common_sources",
     "//compiler-rt/lib/sanitizer_common:sources",
@@ -39,6 +38,7 @@ target(asan_target_type, "asan") {
   if (asan_target_type == "static_library") {
     complete_static_lib = true
     configs -= [ "//llvm/utils/gn/build:thin_archive" ]
+    deps += [ ":asan_cxx" ]
   } else {
     deps += [ ":cxx_sources" ]
     defines = [ "ASAN_DYNAMIC" ]
