@@ -326,6 +326,15 @@ public:
     Inherited::VisitFieldDecl(static_cast<const FieldDecl *>(D));
   }
 
+  void VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
+    ID.AddInteger(D->getPropertyAttributes());
+    ID.AddInteger(D->getPropertyImplementation());
+    AddQualType(D->getType());
+    AddDecl(D);
+
+    Inherited::VisitObjCPropertyDecl(D);
+  }
+
   void VisitFieldDecl(const FieldDecl *D) {
     const bool IsBitfield = D->isBitField();
     Hash.AddBoolean(IsBitfield);
@@ -468,6 +477,7 @@ bool ODRHash::isWhitelistedDecl(const Decl *D, const DeclContext *Parent) {
     case Decl::Var:
     case Decl::ObjCMethod:
     case Decl::ObjCIvar:
+    case Decl::ObjCProperty:
       return true;
   }
 }
