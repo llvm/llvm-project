@@ -34,10 +34,12 @@ class FrameRecognizerTestCase(TestBase):
 
         self.runCmd("frame recognizer add -l recognizer.MyOtherFrameRecognizer -s a.out -n bar -x")
 
-        self.expect("frame recognizer list",
-                    substrs=['0: recognizer.MyFrameRecognizer, module a.out, function foo',
-                             '1: recognizer.MyOtherFrameRecognizer, module a.out, function bar (regexp)'
-                    ])
+        self.expect(
+            "frame recognizer list",
+            substrs=[
+                '1: recognizer.MyOtherFrameRecognizer, module a.out, function bar (regexp)',
+                '0: recognizer.MyFrameRecognizer, module a.out, function foo'
+            ])
 
         self.runCmd("frame recognizer delete 0")
 
