@@ -583,7 +583,7 @@ uint32_t AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
                    current_id, result_iface_type.getAsString(), isa_value);
         }
 
-        decls.push_back(CompilerDecl(&m_ast_ctx, result_iface_decl));
+        decls.push_back(m_ast_ctx.GetCompilerDecl(result_iface_decl));
         ret++;
         break;
       } else {
@@ -626,7 +626,7 @@ uint32_t AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
                new_iface_type.getAsString(), (uint64_t)isa);
     }
 
-    decls.push_back(CompilerDecl(&m_ast_ctx, iface_decl));
+    decls.push_back(m_ast_ctx.GetCompilerDecl(iface_decl));
     ret++;
     break;
   } while (false);

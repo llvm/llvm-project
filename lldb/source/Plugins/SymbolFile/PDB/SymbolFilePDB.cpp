@@ -636,7 +636,7 @@ lldb_private::CompilerDecl SymbolFilePDB::GetDeclForUID(lldb::user_id_t uid) {
   if (!decl)
     return CompilerDecl();
 
-  return CompilerDecl(clang_ast_ctx, decl);
+  return clang_ast_ctx->GetCompilerDecl(decl);
 }
 
 lldb_private::CompilerDeclContext

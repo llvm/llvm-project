@@ -2182,7 +2182,7 @@ void DWARFASTParserClang::EnsureAllDIEsInDeclContextHaveBeenParsed(
 CompilerDecl DWARFASTParserClang::GetDeclForUIDFromDWARF(const DWARFDIE &die) {
   clang::Decl *clang_decl = GetClangDeclForDIE(die);
   if (clang_decl != nullptr)
-    return CompilerDecl(&m_ast, clang_decl);
+    return m_ast.GetCompilerDecl(clang_decl);
   return CompilerDecl();
 }
 
