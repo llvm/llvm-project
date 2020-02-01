@@ -18,3 +18,5 @@ add_entrypoint_object(
   DEPENDS
     string_h
 )
+
+add_subdirectory(memory_utils)
