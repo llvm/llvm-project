@@ -758,6 +758,8 @@ CXXRecordDecl::getFinalOverriders(CXXFinalOverriderMap &FinalOverriders) const {
         return false;
       };
 
+      // FIXME: IsHidden reads from Overriding from the middle of a remove_if
+      // over the same sequence! Is this guaranteed to work?
       Overriding.erase(
           std::remove_if(Overriding.begin(), Overriding.end(), IsHidden),
           Overriding.end());
