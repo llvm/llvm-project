@@ -421,6 +421,91 @@ IV5 *iv5;
 // expected-note@second.h:* {{but in 'SecondModule' found instance variable 'b' access control is @package}}
 #endif
 
+#if defined(FIRST)
+@interface IP1
+@property (nonatomic, assign) float f;
+@end
+#elif defined(SECOND)
+@interface IP1
+@property (nonatomic, assign) float d;
+@end
+#else
+IP1 *ip1;
+// expected-error@first.h:* {{'IP1' has different definitions in different modules; first difference is definition in module 'FirstModule' found property name 'f'}}
+// expected-note@second.h:* {{but in 'SecondModule' found property name 'd'}}
+#endif
+
+#if defined(FIRST)
+@interface IP2
+@property (nonatomic, assign) float x;
+@end
+#elif defined(SECOND)
+@interface IP2
+@property (nonatomic, assign) int x;
+@end
+#else
+IP2 *ip2;
+// expected-error@first.h:* {{'IP2' has different definitions in different modules; first difference is definition in module 'FirstModule' found property 'x' with type 'float'}}
+// expected-note@second.h:* {{but in 'SecondModule' found property 'x' with type 'int'}}
+#endif
+
+#if defined(FIRST)
+@class NSArray;
+@interface IP3
+@property (assign, readwrite, atomic, unsafe_unretained) NSArray* NA;
+@end
+@interface IP4
+@property () NSArray* NA; // empty list defaults to: readwrite atomic strong
+@end
+@interface IP5
+@property () NSArray* NA;
+@end
+@interface IP6
+@property () NSArray* NA;
+@end
+@interface IP7
+@property (weak) NSArray* NA;
+@end
+@interface IP8
+@property (strong) NSArray* NA;
+@end
+#elif defined(SECOND)
+@class NSArray;
+@interface IP3
+@property () NSArray* NA;
+@end
+@interface IP4
+@property (assign, readwrite, atomic, unsafe_unretained) NSArray* NA;
+@end
+@interface IP5
+@property () NSArray* NA;
+@end
+@interface IP6
+@property (readwrite, atomic, strong) NSArray* NA;
+@end
+@interface IP7
+@property (strong) NSArray* NA;
+@end
+@interface IP8
+@property (weak) NSArray* NA;
+@end
+#else
+IP3 *ip3;
+// expected-error@first.h:* {{'IP3' has different definitions in different modules; first difference is definition in module 'FirstModule' found 'assign' property attribute}}
+// expected-note@second.h:* {{but in 'SecondModule' found no written or default attribute for property}}
+IP4 *ip4;
+// expected-error@second.h:* {{'IP4' has different definitions in different modules; first difference is definition in module 'SecondModule' found 'assign' property attribute}}
+// expected-note@first.h:* {{but in 'FirstModule' found no written or default attribute for property}}
+IP5 *ip5;
+IP6 *ip6;
+IP7 *ip7;
+// expected-error@first.h:* {{'IP7' has different definitions in different modules; first difference is definition in module 'FirstModule' found 'weak' property attribute}}
+// expected-note@second.h:* {{but in 'SecondModule' found no written or default attribute for property}}
+IP8 *ip8;
+// expected-error@second.h:* {{'IP8' has different definitions in different modules; first difference is definition in module 'SecondModule' found 'weak' property attribute}}
+// expected-note@first.h:* {{but in 'FirstModule' found no written or default attribute for property}}
+#endif
+
 // Keep macros contained to one file.
 #ifdef FIRST
 #undef FIRST

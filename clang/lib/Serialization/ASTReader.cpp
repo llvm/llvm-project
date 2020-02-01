@@ -9487,6 +9487,7 @@ void ASTReader::diagnoseOdrViolations() {
     FunctionTemplate,
     ObjCMethod,
     ObjCIvar,
+    ObjCProperty,
     Other
   };
 
@@ -9543,7 +9544,10 @@ void ASTReader::diagnoseOdrViolations() {
     ObjCMethodInstanceOrClass,
     ObjCDesignatedInitializer,
     ObjCDirectMethod,
-    ObjCIvarAccess
+    ObjCIvarAccess,
+    ObjCPropertyName,
+    ObjCPropertyType,
+    ObjCPropertyAttributes
   };
 
   // These lambdas have the common portions of the ODR diagnostics.  This
@@ -9932,6 +9936,8 @@ void ASTReader::diagnoseOdrViolations() {
       return ObjCMethod;
     case Decl::ObjCIvar:
       return ObjCIvar;
+    case Decl::ObjCProperty:
+      return ObjCProperty;
     }
   };
 
@@ -10402,6 +10408,7 @@ void ASTReader::diagnoseOdrViolations() {
       case ProtectedSpecifer:
       case ObjCMethod:
       case ObjCIvar:
+      case ObjCProperty:
         llvm_unreachable("Invalid diff type");
 
       case StaticAssert: {
@@ -11214,6 +11221,7 @@ void ASTReader::diagnoseOdrViolations() {
       case Other:
       case ObjCMethod:
       case ObjCIvar:
+      case ObjCProperty:
       // C++ only, invalid in this context.
       case PublicSpecifer:
       case PrivateSpecifer:
@@ -11259,6 +11267,73 @@ void ASTReader::diagnoseOdrViolations() {
       Diagnosed = true;
     }
   }
+  auto ODRDiagObjCProperty =
+      [&ComputeQualTypeODRHash, &ODRDiagDeclError,
+       &ODRDiagDeclNote](NamedDecl *FirstObjCContainer, StringRef FirstModule,
+                         StringRef SecondModule, ObjCPropertyDecl *FirstProp,
+                         ObjCPropertyDecl *SecondProp) {
+        IdentifierInfo *FirstII = FirstProp->getIdentifier();
+        IdentifierInfo *SecondII = SecondProp->getIdentifier();
+        if (FirstII->getName() != SecondII->getName()) {
+          ODRDiagDeclError(FirstObjCContainer, FirstModule,
+                           FirstProp->getLocation(),
+                           FirstProp->getSourceRange(), ObjCPropertyName)
+              << FirstII;
+          ODRDiagDeclNote(SecondModule, SecondProp->getLocation(),
+                          SecondProp->getSourceRange(), ObjCPropertyName)
+              << SecondII;
+
+          return true;
+        }
+        if (ComputeQualTypeODRHash(FirstProp->getType()) !=
+            ComputeQualTypeODRHash(SecondProp->getType())) {
+          ODRDiagDeclError(FirstObjCContainer, FirstModule,
+                           FirstProp->getLocation(),
+                           FirstProp->getSourceRange(), ObjCPropertyType)
+              << FirstII << FirstProp->getType();
+          ODRDiagDeclNote(SecondModule, SecondProp->getLocation(),
+                          SecondProp->getSourceRange(), ObjCPropertyType)
+              << SecondII << SecondProp->getType();
+          return true;
+        }
+
+        // Go over the attributes and stop at the first mismatch
+        unsigned FirstAttrs = (unsigned)FirstProp->getPropertyAttributes();
+        unsigned SecondAttrs = (unsigned)SecondProp->getPropertyAttributes();
+        unsigned FirstAttrsAsWritten =
+            (unsigned)FirstProp->getPropertyAttributesAsWritten();
+        unsigned SecondAttrsAsWritten =
+            (unsigned)SecondProp->getPropertyAttributesAsWritten();
+        if (FirstAttrs == SecondAttrs) // Nothing left to check
+          return false;
+
+        for (unsigned i = 0; i < ObjCPropertyDecl::NumPropertyAttrsBits; ++i) {
+          if ((FirstAttrs & 0x1) == (SecondAttrs & 0x1)) {
+            FirstAttrs >>= 1;
+            SecondAttrs >>= 1;
+            continue;
+          }
+
+          // If a attribute is found first in the second property, swap the
+          // diagnostics order and start there.
+          if ((FirstAttrs & 0x1) == 0) {
+            std::swap(FirstProp, SecondProp);
+            std::swap(FirstAttrsAsWritten, SecondAttrsAsWritten);
+            std::swap(FirstModule, SecondModule);
+          }
+
+          bool isFirstWritten = (FirstAttrsAsWritten >> i) & 0x1;
+          ODRDiagDeclError(FirstObjCContainer, FirstModule,
+                           FirstProp->getLParenLoc(),
+                           FirstProp->getSourceRange(), ObjCPropertyAttributes)
+              << (i + 1) << isFirstWritten;
+          ODRDiagDeclNote(SecondModule, SecondProp->getLParenLoc(),
+                          SecondProp->getSourceRange(), ObjCPropertyAttributes);
+          return true;
+        }
+
+        return false;
+      };
 
   auto ODRDiagObjCMethod =
       [&ComputeQualTypeODRHash, &ODRDiagDeclError, &ODRDiagDeclNote,
@@ -11569,6 +11644,12 @@ void ASTReader::diagnoseOdrViolations() {
               << (int)SecondIvar->getCanonicalAccessControl();
           Diagnosed = true;
         }
+        break;
+      }
+      case ObjCProperty: {
+        Diagnosed = ODRDiagObjCProperty(FirstID, FirstModule, SecondModule,
+                                        cast<ObjCPropertyDecl>(FirstDecl),
+                                        cast<ObjCPropertyDecl>(SecondDecl));
         break;
       }
       case ObjCMethod: {
