@@ -46,8 +46,8 @@ mlir::edsc::LoopRangeBuilder::LoopRangeBuilder(ValueHandle *iv,
   enter(body, /*prev=*/1);
 }
 
-ValueHandle mlir::edsc::LoopRangeBuilder::
-operator()(std::function<void(void)> fun) {
+ValueHandle
+mlir::edsc::LoopRangeBuilder::operator()(std::function<void(void)> fun) {
   if (fun)
     fun();
   exit();
@@ -77,8 +77,8 @@ mlir::edsc::LoopNestRangeBuilder::LoopNestRangeBuilder(
     : LoopNestRangeBuilder(
           ivs, SmallVector<ValueHandle, 4>(ranges.begin(), ranges.end())) {}
 
-ValueHandle LoopNestRangeBuilder::LoopNestRangeBuilder::
-operator()(std::function<void(void)> fun) {
+ValueHandle LoopNestRangeBuilder::LoopNestRangeBuilder::operator()(
+    std::function<void(void)> fun) {
   if (fun)
     fun();
   for (auto &lit : reverse(loops)) {
@@ -205,6 +205,13 @@ Operation *mlir::edsc::makeGenericLinalgOp(
   return op;
 }
 
+static void mulRegionBuilder(ArrayRef<BlockArgument> args) {
+  using edsc::op::operator*;
+  assert(args.size() == 2 && "expected 2 block arguments");
+  ValueHandle a(args[0]), b(args[1]);
+  linalg_yield((a * b).getValue());
+}
+
 void mlir::edsc::ops::macRegionBuilder(ArrayRef<BlockArgument> args) {
   using edsc::op::operator+;
   using edsc::op::operator*;
@@ -294,6 +301,34 @@ Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
     {IterType::Parallel, IterType::Parallel, IterType::Reduction},
     {A({m, k}), B({k, n})},
     {C({m, n})},
+    macRegionBuilder);
+  // clang-format on
+}
+
+Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
+                                          RankedTensorType tC) {
+  // clang-format off
+  AffineExpr m, n, k;
+  bindDims(ScopedContext::getContext(), m, n, k);
+  StructuredIndexed A(vA), B(vB), C(tC);
+  return makeGenericLinalgOp(
+    {IterType::Parallel, IterType::Parallel, IterType::Reduction},
+    {A({m, k}), B({k, n})},
+    {C({m, n})},
+    mulRegionBuilder);
+  // clang-format on
+}
+
+Operation *mlir::edsc::ops::linalg_matmul(ValueHandle vA, ValueHandle vB,
+                                          ValueHandle vC, RankedTensorType tD) {
+  // clang-format off
+  AffineExpr m, n, k;
+  bindDims(ScopedContext::getContext(), m, n, k);
+  StructuredIndexed A(vA), B(vB), C(vC), D(tD);
+  return makeGenericLinalgOp(
+    {IterType::Parallel, IterType::Parallel, IterType::Reduction},
+    {A({m, k}), B({k, n}), C({m, n})},
+    {D({m, n})},
     macRegionBuilder);
   // clang-format on
 }

@@ -8,10 +8,10 @@
 
 #include "ASTResultSynthesizer.h"
 
+#include "ClangASTImporter.h"
 #include "ClangPersistentVariables.h"
 
-#include "lldb/Symbol/TypeSystemClang.h"
-#include "lldb/Symbol/ClangASTImporter.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"

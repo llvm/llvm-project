@@ -93,10 +93,13 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
 
             # We should be stopped in hw_break_function
             # The stop reason of the thread should be breakpoint.
-            self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
+            self.expect(
+                "thread list",
+                STOPPED_DUE_TO_BREAKPOINT,
                 substrs=[
+                    'hw_break_function',
                     'stop reason = breakpoint',
-                    'hw_break_function'])
+                ])
 
             # Continue the loop and test that we are stopped 4 times.
             count += 1

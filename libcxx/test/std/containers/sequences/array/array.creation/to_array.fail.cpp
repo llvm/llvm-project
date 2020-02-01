@@ -17,17 +17,25 @@
 int main(int, char**) {
   {
     char source[3][6] = {"hi", "world"};
-    std::to_array(source); // expected-error {{here}}
+    // expected-error@array:* {{to_array does not accept multidimensional arrays}}
+    // expected-error@array:* {{to_array requires copy constructible elements}}
+    // expected-error@array:* 3 {{cannot initialize}}
+    // expected-error@array:* {{suggest braces}}
+    std::to_array(source); // expected-note {{requested here}}
   }
 
   {
     MoveOnly mo[] = {MoveOnly{3}};
-    std::to_array(mo); // expected-error {{here}}
+    // expected-error@array:* {{to_array requires copy constructible elements}}
+    // expected-error@array:* {{calling a private constructor}}
+    std::to_array(mo); // expected-note {{requested here}}
   }
 
   {
     const MoveOnly cmo[] = {MoveOnly{3}};
-    std::to_array(std::move(cmo)); // expected-error {{here}}
+    // expected-error@array:* {{to_array requires move constructible elements}}
+    // expected-error@array:* {{calling a private constructor}}
+    std::to_array(std::move(cmo)); // expected-note {{requested here}}
   }
 
   return 0;

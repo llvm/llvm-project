@@ -347,10 +347,7 @@ class VectorType;
                                         MachineMemOperand::Flags Flags,
                                         bool *Fast) const override;
 
-    EVT getOptimalMemOpType(uint64_t Size,
-                            unsigned DstAlign, unsigned SrcAlign,
-                            bool IsMemset, bool ZeroMemset,
-                            bool MemcpyStrSrc,
+    EVT getOptimalMemOpType(const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;

@@ -6,19 +6,24 @@ add_lldb_library(lldbPluginExpressionParserClang PLUGIN
   ASTResultSynthesizer.cpp
   ASTStructExtractor.cpp
   ASTUtils.cpp
+  ClangASTImporter.cpp
+  ClangASTMetadata.cpp
   ClangASTSource.cpp
   ClangDeclVendor.cpp
   ClangExpressionDeclMap.cpp
   ClangExpressionParser.cpp
   ClangExpressionSourceCode.cpp
   ClangExpressionVariable.cpp
+  ClangExternalASTSourceCallbacks.cpp
   ClangFunctionCaller.cpp
   ClangHost.cpp
   ClangModulesDeclVendor.cpp
   ClangPersistentVariables.cpp
   ClangUserExpression.cpp
+  ClangUtil.cpp
   ClangUtilityFunction.cpp
   CppModuleConfiguration.cpp
+  CxxModuleHandler.cpp
   IRForTarget.cpp
   IRDynamicChecks.cpp
 
@@ -35,6 +40,9 @@ add_lldb_library(lldbPluginExpressionParserClang PLUGIN
     lldbUtility
     lldbPluginCPlusPlusLanguage
     lldbPluginCPPRuntime
+    lldbPluginObjCRuntime
+    lldbPluginRenderScriptRuntime
+    lldbPluginTypeSystemClang
   CLANG_LIBS
     clangAST
     clangCodeGen

@@ -68,7 +68,7 @@ lldb::LanguageType Variable::GetLanguage() const {
 }
 
 ConstString Variable::GetName() const {
-  ConstString name = m_mangled.GetName(GetLanguage());
+  ConstString name = m_mangled.GetName();
   if (name)
     return name;
   return m_name;
@@ -82,16 +82,13 @@ bool Variable::NameMatches(ConstString name) const {
   SymbolContext variable_sc;
   m_owner_scope->CalculateSymbolContext(&variable_sc);
 
-  LanguageType language = eLanguageTypeUnknown;
-  if (variable_sc.comp_unit)
-    language = variable_sc.comp_unit->GetLanguage();
-  return m_mangled.NameMatches(name, language);
+  return m_mangled.NameMatches(name);
 }
 bool Variable::NameMatches(const RegularExpression &regex) const {
   if (regex.Execute(m_name.AsCString()))
     return true;
   if (m_mangled)
-    return m_mangled.NameMatches(regex, GetLanguage());
+    return m_mangled.NameMatches(regex);
   return false;
 }
 

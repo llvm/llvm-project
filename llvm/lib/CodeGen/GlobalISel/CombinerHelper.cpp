@@ -855,37 +855,30 @@ static bool shouldLowerMemFuncForSize(const MachineFunction &MF) {
 
 // Returns a list of types to use for memory op lowering in MemOps. A partial
 // port of findOptimalMemOpLowering in TargetLowering.
-static bool findGISelOptimalMemOpLowering(
-    std::vector<LLT> &MemOps, unsigned Limit, uint64_t Size, unsigned DstAlign,
-    unsigned SrcAlign, bool IsMemset, bool ZeroMemset, bool MemcpyStrSrc,
-    bool AllowOverlap, unsigned DstAS, unsigned SrcAS,
-    const AttributeList &FuncAttributes, const TargetLowering &TLI) {
-  // If 'SrcAlign' is zero, that means the memory operation does not need to
-  // load the value, i.e. memset or memcpy from constant string. Otherwise,
-  // it's the inferred alignment of the source. 'DstAlign', on the other hand,
-  // is the specified alignment of the memory operation. If it is zero, that
-  // means it's possible to change the alignment of the destination.
-  // 'MemcpyStrSrc' indicates whether the memcpy source is constant so it does
-  // not need to be loaded.
-  if (SrcAlign != 0 && SrcAlign < DstAlign)
+static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
+                                          unsigned Limit, const MemOp &Op,
+                                          unsigned DstAS, unsigned SrcAS,
+                                          const AttributeList &FuncAttributes,
+                                          const TargetLowering &TLI) {
+  if (Op.SrcAlign != 0 && Op.SrcAlign < Op.DstAlign)
     return false;
 
-  LLT Ty = TLI.getOptimalMemOpLLT(Size, DstAlign, SrcAlign, IsMemset,
-                                  ZeroMemset, MemcpyStrSrc, FuncAttributes);
+  LLT Ty = TLI.getOptimalMemOpLLT(Op, FuncAttributes);
 
   if (Ty == LLT()) {
     // Use the largest scalar type whose alignment constraints are satisfied.
     // We only need to check DstAlign here as SrcAlign is always greater or
     // equal to DstAlign (or zero).
     Ty = LLT::scalar(64);
-    while (DstAlign && DstAlign < Ty.getSizeInBytes() &&
-           !TLI.allowsMisalignedMemoryAccesses(Ty, DstAS, DstAlign))
+    while (Op.DstAlign && Op.DstAlign < Ty.getSizeInBytes() &&
+           !TLI.allowsMisalignedMemoryAccesses(Ty, DstAS, Op.DstAlign))
       Ty = LLT::scalar(Ty.getSizeInBytes());
     assert(Ty.getSizeInBits() > 0 && "Could not find valid type");
     // FIXME: check for the largest legal type we can load/store to.
   }
 
   unsigned NumMemOps = 0;
+  auto Size = Op.Size;
   while (Size != 0) {
     unsigned TySize = Ty.getSizeInBytes();
     while (TySize > Size) {
@@ -904,9 +897,9 @@ static bool findGISelOptimalMemOpLowering(
       bool Fast;
       // Need to get a VT equivalent for allowMisalignedMemoryAccesses().
       MVT VT = getMVTForLLT(Ty);
-      if (NumMemOps && AllowOverlap && NewTySize < Size &&
+      if (NumMemOps && Op.AllowOverlap && NewTySize < Size &&
           TLI.allowsMisalignedMemoryAccesses(
-              VT, DstAS, DstAlign, MachineMemOperand::MONone, &Fast) &&
+              VT, DstAS, Op.DstAlign, MachineMemOperand::MONone, &Fast) &&
           Fast)
         TySize = Size;
       else {
@@ -988,12 +981,13 @@ bool CombinerHelper::optimizeMemset(MachineInstr &MI, Register Dst, Register Val
   auto ValVRegAndVal = getConstantVRegValWithLookThrough(Val, MRI);
   bool IsZeroVal = ValVRegAndVal && ValVRegAndVal->Value == 0;
 
-  if (!findGISelOptimalMemOpLowering(
-          MemOps, Limit, KnownLen, (DstAlignCanChange ? 0 : Align), 0,
-          /*IsMemset=*/true,
-          /*ZeroMemset=*/IsZeroVal, /*MemcpyStrSrc=*/false,
-          /*AllowOverlap=*/!IsVolatile, DstPtrInfo.getAddrSpace(), ~0u,
-          MF.getFunction().getAttributes(), TLI))
+  if (!findGISelOptimalMemOpLowering(MemOps, Limit,
+                                     MemOp::Set(KnownLen, DstAlignCanChange,
+                                                Align,
+                                                /*IsZeroMemset=*/IsZeroVal,
+                                                /*IsVolatile=*/IsVolatile),
+                                     DstPtrInfo.getAddrSpace(), ~0u,
+                                     MF.getFunction().getAttributes(), TLI))
     return false;
 
   if (DstAlignCanChange) {
@@ -1107,12 +1101,11 @@ bool CombinerHelper::optimizeMemcpy(MachineInstr &MI, Register Dst,
   MachinePointerInfo SrcPtrInfo = SrcMMO.getPointerInfo();
 
   if (!findGISelOptimalMemOpLowering(
-          MemOps, Limit, KnownLen, (DstAlignCanChange ? 0 : Alignment),
-          SrcAlign,
-          /*IsMemset=*/false,
-          /*ZeroMemset=*/false, /*MemcpyStrSrc=*/false,
-          /*AllowOverlap=*/!IsVolatile, DstPtrInfo.getAddrSpace(),
-          SrcPtrInfo.getAddrSpace(), MF.getFunction().getAttributes(), TLI))
+          MemOps, Limit,
+          MemOp::Copy(KnownLen, DstAlignCanChange, Alignment, SrcAlign,
+                      IsVolatile),
+          DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
+          MF.getFunction().getAttributes(), TLI))
     return false;
 
   if (DstAlignCanChange) {
@@ -1214,12 +1207,11 @@ bool CombinerHelper::optimizeMemmove(MachineInstr &MI, Register Dst,
   // to a bug in it's findOptimalMemOpLowering implementation. For now do the
   // same thing here.
   if (!findGISelOptimalMemOpLowering(
-          MemOps, Limit, KnownLen, (DstAlignCanChange ? 0 : Alignment),
-          SrcAlign,
-          /*IsMemset=*/false,
-          /*ZeroMemset=*/false, /*MemcpyStrSrc=*/false,
-          /*AllowOverlap=*/false, DstPtrInfo.getAddrSpace(),
-          SrcPtrInfo.getAddrSpace(), MF.getFunction().getAttributes(), TLI))
+          MemOps, Limit,
+          MemOp::Copy(KnownLen, DstAlignCanChange, Alignment, SrcAlign,
+                      /*IsVolatile*/ true),
+          DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
+          MF.getFunction().getAttributes(), TLI))
     return false;
 
   if (DstAlignCanChange) {

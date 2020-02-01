@@ -723,11 +723,9 @@ MemRefType mlir::canonicalizeStridedLayout(MemRefType t) {
   auto simplifiedLayoutExpr =
       simplifyAffineExpr(m.getResult(0), m.getNumDims(), m.getNumSymbols());
   if (expr != simplifiedLayoutExpr)
-    return MemRefType::get(t.getShape(), t.getElementType(),
-                           {AffineMap::get(m.getNumDims(), m.getNumSymbols(),
-                                           {simplifiedLayoutExpr})});
-
-  return MemRefType::get(t.getShape(), t.getElementType(), {});
+    return MemRefType::Builder(t).setAffineMaps({AffineMap::get(
+        m.getNumDims(), m.getNumSymbols(), {simplifiedLayoutExpr})});
+  return MemRefType::Builder(t).setAffineMaps({});
 }
 
 /// Return true if the layout for `t` is compatible with strided semantics.

@@ -393,6 +393,21 @@ TEST(SerializationRountripTest, SerializeDeserializeCString) {
   EXPECT_STREQ(cstr, deserializer.Deserialize<const char *>());
 }
 
+TEST(SerializationRountripTest, SerializeDeserializeCStringNull) {
+  const char *cstr = nullptr;
+
+  std::string str;
+  llvm::raw_string_ostream os(str);
+
+  Serializer serializer(os);
+  serializer.SerializeAll(cstr);
+
+  llvm::StringRef buffer(os.str());
+  Deserializer deserializer(buffer);
+
+  EXPECT_EQ(nullptr, deserializer.Deserialize<const char *>());
+}
+
 TEST(SerializationRountripTest, SerializeDeserializeCStringArray) {
   const char *foo = "foo";
   const char *bar = "bar";

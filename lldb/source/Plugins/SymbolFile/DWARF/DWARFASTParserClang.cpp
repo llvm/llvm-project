@@ -17,13 +17,13 @@
 #include "SymbolFileDWARFDebugMap.h"
 #include "UniqueDWARFASTType.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
+#include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Symbol/ClangASTImporter.h"
-#include "lldb/Symbol/ClangASTMetadata.h"
-#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -155,7 +155,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromClangModule(const SymbolContext &sc,
 
   // The type in the Clang module must have the same language as the current CU.
   LanguageSet languages;
-  languages.Insert(die.GetCU()->GetLanguageType());
+  languages.Insert(SymbolFileDWARF::GetLanguage(*die.GetCU()));
   llvm::DenseSet<SymbolFile *> searched_symbol_files;
   clang_module_sp->GetSymbolFile()->FindTypes(decl_context, languages,
                                               searched_symbol_files, pcm_types);
@@ -504,7 +504,7 @@ DWARFASTParserClang::ParseTypeModifier(const SymbolContext &sc,
                                         DWARF_LOG_LOOKUPS));
   SymbolFileDWARF *dwarf = die.GetDWARF();
   const dw_tag_t tag = die.Tag();
-  LanguageType cu_language = die.GetLanguage();
+  LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
   Type::ResolveState resolve_state = Type::ResolveState::Unresolved;
   Type::EncodingDataType encoding_data_type = Type::eEncodingIsUID;
   TypeSP type_sp;
@@ -727,7 +727,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
       return type_sp;
 
     DWARFDeclContext die_decl_ctx;
-    die.GetDWARFDeclContext(die_decl_ctx);
+    SymbolFileDWARF::GetDWARFDeclContext(die, die_decl_ctx);
 
     type_sp = dwarf->FindDefinitionTypeForDWARFDeclContext(die_decl_ctx);
 
@@ -1383,7 +1383,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   CompilerType clang_type;
   const dw_tag_t tag = die.Tag();
   SymbolFileDWARF *dwarf = die.GetDWARF();
-  LanguageType cu_language = die.GetLanguage();
+  LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_TYPE_COMPLETION |
                                           DWARF_LOG_LOOKUPS);
 
@@ -1516,7 +1516,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       return type_sp;
 
     DWARFDeclContext die_decl_ctx;
-    die.GetDWARFDeclContext(die_decl_ctx);
+    SymbolFileDWARF::GetDWARFDeclContext(die, die_decl_ctx);
 
     // type_sp = FindDefinitionTypeForDIE (dwarf_cu, die,
     // type_name_const_str);
@@ -2182,7 +2182,7 @@ void DWARFASTParserClang::EnsureAllDIEsInDeclContextHaveBeenParsed(
 CompilerDecl DWARFASTParserClang::GetDeclForUIDFromDWARF(const DWARFDIE &die) {
   clang::Decl *clang_decl = GetClangDeclForDIE(die);
   if (clang_decl != nullptr)
-    return CompilerDecl(&m_ast, clang_decl);
+    return m_ast.GetCompilerDecl(clang_decl);
   return CompilerDecl();
 }
 
@@ -2311,9 +2311,11 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
         func_name.SetValue(ConstString(mangled), true);
       else if ((die.GetParent().Tag() == DW_TAG_compile_unit ||
                 die.GetParent().Tag() == DW_TAG_partial_unit) &&
-               Language::LanguageIsCPlusPlus(die.GetLanguage()) &&
-               !Language::LanguageIsObjC(die.GetLanguage()) && name &&
-               strcmp(name, "main") != 0) {
+               Language::LanguageIsCPlusPlus(
+                   SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
+               !Language::LanguageIsObjC(
+                   SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
+               name && strcmp(name, "main") != 0) {
         // If the mangled name is not present in the DWARF, generate the
         // demangled name using the decl context. We skip if the function is
         // "main" as its name is never mangled.
@@ -2326,7 +2328,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
         DWARFDeclContext decl_ctx;
         StreamString sstr;
 
-        die.GetDWARFDeclContext(decl_ctx);
+        SymbolFileDWARF::GetDWARFDeclContext(die, decl_ctx);
         sstr << decl_ctx.GetQualifiedName();
 
         clang::DeclContext *containing_decl_ctx =
@@ -3274,7 +3276,7 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
     SymbolFileDWARF *dwarf = die.GetDWARF();
     DWARFDIE imported_uid = die.GetAttributeValueAsReferenceDIE(DW_AT_import);
     if (imported_uid) {
-      CompilerDecl imported_decl = imported_uid.GetDecl();
+      CompilerDecl imported_decl = SymbolFileDWARF::GetDecl(imported_uid);
       if (imported_decl) {
         clang::DeclContext *decl_context =
             TypeSystemClang::DeclContextGetAsDeclContext(
@@ -3293,7 +3295,8 @@ clang::Decl *DWARFASTParserClang::GetClangDeclForDIE(const DWARFDIE &die) {
     DWARFDIE imported_uid = die.GetAttributeValueAsReferenceDIE(DW_AT_import);
 
     if (imported_uid) {
-      CompilerDeclContext imported_decl_ctx = imported_uid.GetDeclContext();
+      CompilerDeclContext imported_decl_ctx =
+          SymbolFileDWARF::GetDeclContext(imported_uid);
       if (imported_decl_ctx) {
         clang::DeclContext *decl_context =
             TypeSystemClang::DeclContextGetAsDeclContext(
@@ -3641,9 +3644,9 @@ bool DWARFASTParserClang::CopyUniqueClassMethodTypes(
   }
 
   DWARFASTParserClang *src_dwarf_ast_parser =
-      (DWARFASTParserClang *)src_die.GetDWARFParser();
+      (DWARFASTParserClang *)SymbolFileDWARF::GetDWARFParser(*src_die.GetCU());
   DWARFASTParserClang *dst_dwarf_ast_parser =
-      (DWARFASTParserClang *)dst_die.GetDWARFParser();
+      (DWARFASTParserClang *)SymbolFileDWARF::GetDWARFParser(*dst_die.GetCU());
 
   // Now do the work of linking the DeclContexts and Types.
   if (fast_path) {

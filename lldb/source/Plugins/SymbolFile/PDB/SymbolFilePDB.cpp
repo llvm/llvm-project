@@ -13,9 +13,9 @@
 
 #include "clang/Lex/Lexer.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -636,7 +636,7 @@ lldb_private::CompilerDecl SymbolFilePDB::GetDeclForUID(lldb::user_id_t uid) {
   if (!decl)
     return CompilerDecl();
 
-  return CompilerDecl(clang_ast_ctx, decl);
+  return clang_ast_ctx->GetCompilerDecl(decl);
 }
 
 lldb_private::CompilerDeclContext
@@ -1950,8 +1950,7 @@ SymbolFilePDB::GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func) {
     // here for the same symbol:
     //   non-empty undecorated name from PDB
     //   empty undecorated name from LLDB
-    if (!func_undecorated_name.empty() &&
-        mangled.GetDemangledName(mangled.GuessLanguage()).IsEmpty())
+    if (!func_undecorated_name.empty() && mangled.GetDemangledName().IsEmpty())
       mangled.SetDemangledName(ConstString(func_undecorated_name));
 
     // LLDB uses several flags to control how a C++ decorated name is
@@ -1960,8 +1959,7 @@ SymbolFilePDB::GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func) {
     // PDB source unless we also apply same flags in getting undecorated
     // name through PDBSymbolFunc::getUndecoratedNameEx method.
     if (!func_undecorated_name.empty() &&
-        mangled.GetDemangledName(mangled.GuessLanguage()) !=
-            ConstString(func_undecorated_name))
+        mangled.GetDemangledName() != ConstString(func_undecorated_name))
       mangled.SetDemangledName(ConstString(func_undecorated_name));
   } else if (!func_undecorated_name.empty()) {
     mangled.SetDemangledName(ConstString(func_undecorated_name));

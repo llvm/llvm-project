@@ -86,8 +86,9 @@ Module::~Module() {
   IFuncList.clear();
 }
 
-std::unique_ptr<RandomNumberGenerator> Module::createRNG(const Pass* P) const {
-  SmallString<32> Salt(P->getPassName());
+std::unique_ptr<RandomNumberGenerator>
+Module::createRNG(const StringRef Name) const {
+  SmallString<32> Salt(Name);
 
   // This RNG is guaranteed to produce the same random stream only
   // when the Module ID and thus the input filename is the same. This
@@ -101,7 +102,8 @@ std::unique_ptr<RandomNumberGenerator> Module::createRNG(const Pass* P) const {
   // store salt metadata from the Module constructor.
   Salt += sys::path::filename(getModuleIdentifier());
 
-  return std::unique_ptr<RandomNumberGenerator>(new RandomNumberGenerator(Salt));
+  return std::unique_ptr<RandomNumberGenerator>(
+      new RandomNumberGenerator(Salt));
 }
 
 /// getNamedValue - Return the first global value in the module with
@@ -553,6 +555,20 @@ void Module::setProfileSummary(Metadata *M, ProfileSummary::Kind Kind) {
 Metadata *Module::getProfileSummary(bool IsCS) {
   return (IsCS ? getModuleFlag("CSProfileSummary")
                : getModuleFlag("ProfileSummary"));
+}
+
+bool Module::getSemanticInterposition() const {
+  Metadata *MF = getModuleFlag("SemanticInterposition");
+
+  auto *Val = cast_or_null<ConstantAsMetadata>(MF);
+  if (!Val)
+    return false;
+
+  return cast<ConstantInt>(Val->getValue())->getZExtValue();
+}
+
+void Module::setSemanticInterposition(bool SI) {
+  addModuleFlag(ModFlagBehavior::Error, "SemanticInterposition", SI);
 }
 
 void Module::setOwnedMemoryBuffer(std::unique_ptr<MemoryBuffer> MB) {

@@ -16,7 +16,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Host/FileSystem.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ABI.h"
@@ -32,6 +31,7 @@
 #include "lldb/Utility/State.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 //#define ENABLE_DEBUG_PRINTF // COMMENT THIS LINE OUT PRIOR TO CHECKIN
 #ifdef ENABLE_DEBUG_PRINTF
@@ -839,8 +839,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
     std::vector<Address> addresses;
 
     if (current_symbol->IsTrampoline()) {
-      ConstString trampoline_name = current_symbol->GetMangled().GetName(
-          current_symbol->GetLanguage(), Mangled::ePreferMangled);
+      ConstString trampoline_name =
+          current_symbol->GetMangled().GetName(Mangled::ePreferMangled);
 
       if (trampoline_name) {
         const ModuleList &images = target_sp->GetImages();
@@ -981,8 +981,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
 void DynamicLoaderDarwin::FindEquivalentSymbols(
     lldb_private::Symbol *original_symbol, lldb_private::ModuleList &images,
     lldb_private::SymbolContextList &equivalent_symbols) {
-  ConstString trampoline_name = original_symbol->GetMangled().GetName(
-      original_symbol->GetLanguage(), Mangled::ePreferMangled);
+  ConstString trampoline_name =
+      original_symbol->GetMangled().GetName(Mangled::ePreferMangled);
   if (!trampoline_name)
     return;
 

@@ -2873,6 +2873,13 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
       if (Left.is(tok::kw_using))
         return Style.SpaceBeforeParens == FormatStyle::SBPO_ControlStatements ||
                spaceRequiredBeforeParens(Right);
+    // space between ']' and '{'
+    if (Left.is(tok::r_square) && Right.is(tok::l_brace))
+      return true;
+    // space before '{' in "new MyType {"
+    if (Right.is(tok::l_brace) && Left.Previous &&
+        Left.Previous->is(tok::kw_new))
+      return true;
   } else if (Style.Language == FormatStyle::LK_JavaScript) {
     if (Left.is(TT_JsFatArrow))
       return true;

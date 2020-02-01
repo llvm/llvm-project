@@ -23,7 +23,6 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -37,6 +36,8 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "clang/AST/Type.h"
+
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include <vector>
 

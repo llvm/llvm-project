@@ -23,14 +23,20 @@ class ObjCDataFormatterNSContainer(ObjCDataFormatterTestCase):
         self.expect(
             'frame variable newArray nsDictionary newDictionary nscfDictionary cfDictionaryRef newMutableDictionary cfarray_ref mutable_array_ref',
             substrs=[
-                '(NSArray *) newArray = ', '@"50 elements"',
-                '(NSDictionary *) newDictionary = ', ' 12 key/value pairs',
+                '(NSArray *) newArray = ',
+                ' @"50 elements"',
+                '(NSDictionary *) nsDictionary = ',
+                ' 2 key/value pairs',
+                '(NSDictionary *) newDictionary = ',
+                ' 12 key/value pairs',
+                '(CFDictionaryRef) cfDictionaryRef = ',
+                ' 3 key/value pairs',
                 '(NSDictionary *) newMutableDictionary = ',
-                ' 21 key/value pairs', '(NSDictionary *) nsDictionary = ',
-                ' 2 key/value pairs', '(CFDictionaryRef) cfDictionaryRef = ',
-                ' 3 key/value pairs', '(CFArrayRef) cfarray_ref = ',
-                '@"3 elements"', '(CFMutableArrayRef) mutable_array_ref = ',
-                '@"11 elements"'
+                ' 21 key/value pairs',
+                '(CFArrayRef) cfarray_ref = ',
+                ' @"3 elements"',
+                '(CFMutableArrayRef) mutable_array_ref = ',
+                ' @"11 elements"',
             ])
 
         self.expect(

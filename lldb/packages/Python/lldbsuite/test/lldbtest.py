@@ -2364,7 +2364,8 @@ FileCheck output:
                     break
 
         self.assertTrue(matched if matching else not matched,
-                        msg if msg else EXP_MSG(str, output, exe))
+                        msg + "\nCommand output:\n" + EXP_MSG(str, output, exe)
+                        if msg else EXP_MSG(str, output, exe))
 
     def expect_expr(
             self,

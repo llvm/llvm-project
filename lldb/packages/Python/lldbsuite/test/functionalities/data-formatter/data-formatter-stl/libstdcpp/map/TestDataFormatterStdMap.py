@@ -147,41 +147,27 @@ class StdMapDataFormatterTestCase(TestBase):
 
         self.runCmd("c")
 
-        self.expect("frame variable si",
-                    substrs=['map has 5 items',
-                             '[0] = ',
-                             'first = \"zero\"',
-                             'second = 0',
-                             '[1] = ',
-                             'first = \"one\"',
-                             'second = 1',
-                             '[2] = ',
-                             'first = \"two\"',
-                             'second = 2',
-                             '[3] = ',
-                             'first = \"three\"',
-                             'second = 3',
-                             '[4] = ',
-                             'first = \"four\"',
-                             'second = 4'])
+        self.expect(
+            "frame variable si",
+            substrs=[
+                'map has 5 items',
+                '[0] = (first = "four", second = 4)',
+                '[1] = (first = "one", second = 1)',
+                '[2] = (first = "three", second = 3)',
+                '[3] = (first = "two", second = 2)',
+                '[4] = (first = "zero", second = 0)',
+            ])
 
-        self.expect("p si",
-                    substrs=['map has 5 items',
-                             '[0] = ',
-                             'first = \"zero\"',
-                             'second = 0',
-                             '[1] = ',
-                             'first = \"one\"',
-                             'second = 1',
-                             '[2] = ',
-                             'first = \"two\"',
-                             'second = 2',
-                             '[3] = ',
-                             'first = \"three\"',
-                             'second = 3',
-                             '[4] = ',
-                             'first = \"four\"',
-                             'second = 4'])
+        self.expect(
+            "p si",
+            substrs=[
+                'map has 5 items',
+                '[0] = (first = "four", second = 4)',
+                '[1] = (first = "one", second = 1)',
+                '[2] = (first = "three", second = 3)',
+                '[3] = (first = "two", second = 2)',
+                '[4] = (first = "zero", second = 0)',
+            ])
 
         # check access-by-index
         self.expect("frame variable si[0]",

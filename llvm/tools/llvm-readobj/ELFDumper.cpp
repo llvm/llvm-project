@@ -4030,21 +4030,35 @@ RelSymbol<ELFT> getSymbolForReloc(const ELFFile<ELFT> *Obj, StringRef FileName,
                                   const ELFDumper<ELFT> *Dumper,
                                   const typename ELFT::Rela &Reloc) {
   uint32_t SymIndex = Reloc.getSymbol(Obj->isMips64EL());
-  const typename ELFT::Sym *Sym = Dumper->dynamic_symbols().begin() + SymIndex;
-  Expected<StringRef> ErrOrName = Sym->getName(Dumper->getDynamicStringTable());
-
-  std::string Name;
-  if (ErrOrName) {
-    Name = maybeDemangle(*ErrOrName);
-  } else {
+  auto WarnAndReturn = [&](const typename ELFT::Sym *Sym,
+                           const Twine &Reason) -> RelSymbol<ELFT> {
     reportWarning(
         createError("unable to get name of the dynamic symbol with index " +
-                    Twine(SymIndex) + ": " + toString(ErrOrName.takeError())),
+                    Twine(SymIndex) + ": " + Reason),
         FileName);
-    Name = "<corrupt>";
-  }
+    return {Sym, "<corrupt>"};
+  };
 
-  return {Sym, std::move(Name)};
+  ArrayRef<typename ELFT::Sym> Symbols = Dumper->dynamic_symbols();
+  const typename ELFT::Sym *FirstSym = Symbols.begin();
+  if (!FirstSym)
+    return WarnAndReturn(nullptr, "no dynamic symbol table found");
+
+  // We might have an object without a section header. In this case the size of
+  // Symbols is zero, because there is no way to know the size of the dynamic
+  // table. We should allow this case and not print a warning.
+  if (!Symbols.empty() && SymIndex >= Symbols.size())
+    return WarnAndReturn(
+        nullptr,
+        "index is greater than or equal to the number of dynamic symbols (" +
+            Twine(Symbols.size()) + ")");
+
+  const typename ELFT::Sym *Sym = FirstSym + SymIndex;
+  Expected<StringRef> ErrOrName = Sym->getName(Dumper->getDynamicStringTable());
+  if (!ErrOrName)
+    return WarnAndReturn(Sym, toString(ErrOrName.takeError()));
+
+  return {Sym, maybeDemangle(*ErrOrName)};
 }
 } // namespace
 

@@ -8,6 +8,7 @@
 
 #include "ItaniumABILanguageRuntime.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
@@ -20,7 +21,6 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/TypeList.h"
@@ -72,9 +72,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
         Symbol *symbol = sc.symbol;
         if (symbol != nullptr) {
           const char *name =
-              symbol->GetMangled()
-                  .GetDemangledName(lldb::eLanguageTypeC_plus_plus)
-                  .AsCString();
+              symbol->GetMangled().GetDemangledName().AsCString();
           if (name && strstr(name, vtable_demangled_prefix) == name) {
             Log *log(
                 lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
@@ -357,8 +355,7 @@ protected:
 
       Mangled mangled(name);
       if (mangled.GuessLanguage() == lldb::eLanguageTypeC_plus_plus) {
-        ConstString demangled(
-            mangled.GetDisplayDemangledName(lldb::eLanguageTypeC_plus_plus));
+        ConstString demangled(mangled.GetDisplayDemangledName());
         demangled_any = true;
         result.AppendMessageWithFormat("%s ---> %s\n", entry.c_str(),
                                        demangled.GetCString());

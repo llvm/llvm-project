@@ -8,8 +8,8 @@
 // types and decls.
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Symbol/ClangUtil.h"
-#include "lldb/Symbol/TypeSystemClang.h"
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 using namespace clang;
 using namespace lldb_private;
@@ -26,6 +26,11 @@ bool ClangUtil::IsClangType(const CompilerType &ct) {
     return false;
 
   return true;
+}
+
+clang::Decl *ClangUtil::GetDecl(const CompilerDecl &decl) {
+  assert(llvm::isa<TypeSystemClang>(decl.GetTypeSystem()));
+  return static_cast<clang::Decl *>(decl.GetOpaqueDecl());
 }
 
 QualType ClangUtil::GetQualType(const CompilerType &ct) {

@@ -1609,6 +1609,22 @@ TEST(Hover, All) {
             HI.Type = "unsigned long";
             HI.Value = "1";
           }},
+      {
+          R"cpp(
+          template <typename T = int>
+          void foo(const T& = T()) {
+            [[f^oo]]<>(3);
+          })cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "foo";
+            HI.Kind = index::SymbolKind::Function;
+            HI.Type = "void (const int &)";
+            HI.ReturnType = "void";
+            HI.Parameters = {
+                {std::string("const int &"), llvm::None, std::string("T()")}};
+            HI.Definition = "template <> void foo<int>(const int &)";
+            HI.NamespaceScope = "";
+          }},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.

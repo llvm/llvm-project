@@ -14,11 +14,11 @@
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Demangle/MicrosoftDemangle.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Symbol/TypeSystemClang.h"
-#include "lldb/Symbol/ClangASTMetadata.h"
-#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/LLDBAssert.h"
 
@@ -1334,7 +1334,7 @@ void PdbAstBuilder::ParseDeclsForContext(clang::DeclContext &context) {
 }
 
 CompilerDecl PdbAstBuilder::ToCompilerDecl(clang::Decl &decl) {
-  return {&m_clang, &decl};
+  return m_clang.GetCompilerDecl(&decl);
 }
 
 CompilerType PdbAstBuilder::ToCompilerType(clang::QualType qt) {
@@ -1347,7 +1347,7 @@ PdbAstBuilder::ToCompilerDeclContext(clang::DeclContext &context) {
 }
 
 clang::Decl * PdbAstBuilder::FromCompilerDecl(CompilerDecl decl) {
-  return static_cast<clang::Decl *>(decl.GetOpaqueDecl());
+  return ClangUtil::GetDecl(decl);
 }
 
 clang::DeclContext *

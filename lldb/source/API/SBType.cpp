@@ -802,7 +802,7 @@ const char *SBTypeMemberFunction::GetDemangledName() {
     ConstString mangled_str = m_opaque_sp->GetMangledName();
     if (mangled_str) {
       Mangled mangled(mangled_str);
-      return mangled.GetDemangledName(mangled.GuessLanguage()).GetCString();
+      return mangled.GetDemangledName().GetCString();
     }
   }
   return nullptr;

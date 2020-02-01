@@ -110,10 +110,10 @@ private:
     MIRBuilder.getMBB().addLiveIn(PhysReg);
   }
 
-  void buildLoad(Register Val, const CCValAssign &VA) {
+  MachineInstrBuilder buildLoad(const DstOp &Res, const CCValAssign &VA) {
     MachineMemOperand *MMO;
     Register Addr = getStackAddress(VA, MMO);
-    MIRBuilder.buildLoad(Val, Addr, *MMO);
+    return MIRBuilder.buildLoad(Res, Addr, *MMO);
   }
 };
 
@@ -192,10 +192,7 @@ Register IncomingValueHandler::getStackAddress(const CCValAssign &VA,
   unsigned Align = MinAlign(TFL->getStackAlignment(), Offset);
   MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, Size, Align);
 
-  Register AddrReg = MRI.createGenericVirtualRegister(LLT::pointer(0, 32));
-  MIRBuilder.buildFrameIndex(AddrReg, FI);
-
-  return AddrReg;
+  return MIRBuilder.buildFrameIndex(LLT::pointer(0, 32), FI).getReg(0);
 }
 
 void IncomingValueHandler::assignValueToAddress(Register ValVReg,
@@ -203,9 +200,8 @@ void IncomingValueHandler::assignValueToAddress(Register ValVReg,
   if (VA.getLocInfo() == CCValAssign::SExt ||
       VA.getLocInfo() == CCValAssign::ZExt ||
       VA.getLocInfo() == CCValAssign::AExt) {
-    Register LoadReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
-    buildLoad(LoadReg, VA);
-    MIRBuilder.buildTrunc(ValVReg, LoadReg);
+    auto Load = buildLoad(LLT::scalar(32), VA);
+    MIRBuilder.buildTrunc(ValVReg, Load);
   } else
     buildLoad(ValVReg, VA);
 }
@@ -291,15 +287,12 @@ Register OutgoingValueHandler::getStackAddress(const CCValAssign &VA,
 
   LLT p0 = LLT::pointer(0, 32);
   LLT s32 = LLT::scalar(32);
-  Register SPReg = MRI.createGenericVirtualRegister(p0);
-  MIRBuilder.buildCopy(SPReg, Register(Mips::SP));
+  auto SPReg = MIRBuilder.buildCopy(p0, Register(Mips::SP));
 
-  Register OffsetReg = MRI.createGenericVirtualRegister(s32);
   unsigned Offset = VA.getLocMemOffset();
-  MIRBuilder.buildConstant(OffsetReg, Offset);
+  auto OffsetReg = MIRBuilder.buildConstant(s32, Offset);
 
-  Register AddrReg = MRI.createGenericVirtualRegister(p0);
-  MIRBuilder.buildPtrAdd(AddrReg, SPReg, OffsetReg);
+  auto AddrReg = MIRBuilder.buildPtrAdd(p0, SPReg, OffsetReg);
 
   MachinePointerInfo MPO =
       MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
@@ -307,7 +300,7 @@ Register OutgoingValueHandler::getStackAddress(const CCValAssign &VA,
   unsigned Align = MinAlign(TFL->getStackAlignment(), Offset);
   MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOStore, Size, Align);
 
-  return AddrReg;
+  return AddrReg.getReg(0);
 }
 
 void OutgoingValueHandler::assignValueToAddress(Register ValVReg,
@@ -323,19 +316,13 @@ Register OutgoingValueHandler::extendRegister(Register ValReg,
   LLT LocTy{VA.getLocVT()};
   switch (VA.getLocInfo()) {
   case CCValAssign::SExt: {
-    Register ExtReg = MRI.createGenericVirtualRegister(LocTy);
-    MIRBuilder.buildSExt(ExtReg, ValReg);
-    return ExtReg;
+    return MIRBuilder.buildSExt(LocTy, ValReg).getReg(0);
   }
   case CCValAssign::ZExt: {
-    Register ExtReg = MRI.createGenericVirtualRegister(LocTy);
-    MIRBuilder.buildZExt(ExtReg, ValReg);
-    return ExtReg;
+    return MIRBuilder.buildZExt(LocTy, ValReg).getReg(0);
   }
   case CCValAssign::AExt: {
-    Register ExtReg = MRI.createGenericVirtualRegister(LocTy);
-    MIRBuilder.buildAnyExt(ExtReg, ValReg);
-    return ExtReg;
+    return MIRBuilder.buildAnyExt(LocTy, ValReg).getReg(0);
   }
   // TODO : handle upper extends
   case CCValAssign::Full:

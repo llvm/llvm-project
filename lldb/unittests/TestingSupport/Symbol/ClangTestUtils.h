@@ -9,9 +9,9 @@
 #ifndef LLDB_UNITTESTS_TESTINGSUPPORT_SYMBOL_CLANGTESTUTILS_H
 #define LLDB_UNITTESTS_TESTINGSUPPORT_SYMBOL_CLANGTESTUTILS_H
 
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/TypeSystemClang.h"
-#include "lldb/Symbol/ClangUtil.h"
 
 namespace lldb_private {
 namespace clang_utils {

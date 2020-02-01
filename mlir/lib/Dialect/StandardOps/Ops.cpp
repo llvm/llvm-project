@@ -350,9 +350,8 @@ struct SimplifyAllocConst : public OpRewritePattern<AllocOp> {
     }
 
     // Create new memref type (which will have fewer dynamic dimensions).
-    auto newMemRefType = MemRefType::get(
-        newShapeConstants, memrefType.getElementType(),
-        memrefType.getAffineMaps(), memrefType.getMemorySpace());
+    MemRefType newMemRefType =
+        MemRefType::Builder(memrefType).setShape(newShapeConstants);
     assert(static_cast<int64_t>(newOperands.size()) ==
            newMemRefType.getNumDynamicDims());
 
@@ -2453,9 +2452,9 @@ struct ViewOpShapeFolder : public OpRewritePattern<ViewOp> {
                                      rewriter.getContext());
 
     // Create new memref type with constant folded dims and/or offset/strides.
-    auto newMemRefType =
-        MemRefType::get(newShapeConstants, memrefType.getElementType(), {map},
-                        memrefType.getMemorySpace());
+    MemRefType newMemRefType = MemRefType::Builder(memrefType)
+                                   .setShape(newShapeConstants)
+                                   .setAffineMaps({map});
     (void)dynamicOffsetOperandCount; // unused in opt mode
     assert(static_cast<int64_t>(newOperands.size()) ==
            dynamicOffsetOperandCount + newMemRefType.getNumDynamicDims());
@@ -2509,7 +2508,6 @@ static Type inferSubViewResultType(MemRefType memRefType) {
   auto rank = memRefType.getRank();
   int64_t offset;
   SmallVector<int64_t, 4> strides;
-  Type elementType = memRefType.getElementType();
   auto res = getStridesAndOffset(memRefType, strides, offset);
   assert(succeeded(res) && "SubViewOp expected strided memref type");
   (void)res;
@@ -2524,8 +2522,9 @@ static Type inferSubViewResultType(MemRefType memRefType) {
   auto stridedLayout =
       makeStridedLinearLayoutMap(strides, offset, memRefType.getContext());
   SmallVector<int64_t, 4> sizes(rank, ShapedType::kDynamicSize);
-  return MemRefType::get(sizes, elementType, stridedLayout,
-                         memRefType.getMemorySpace());
+  return MemRefType::Builder(memRefType)
+      .setShape(sizes)
+      .setAffineMaps(stridedLayout);
 }
 
 void mlir::SubViewOp::build(Builder *b, OperationState &result, Value source,
@@ -2774,9 +2773,8 @@ public:
       assert(defOp);
       staticShape[size.index()] = cast<ConstantIndexOp>(defOp).getValue();
     }
-    MemRefType newMemRefType = MemRefType::get(
-        staticShape, subViewType.getElementType(), subViewType.getAffineMaps(),
-        subViewType.getMemorySpace());
+    MemRefType newMemRefType =
+        MemRefType::Builder(subViewType).setShape(staticShape);
     auto newSubViewOp = rewriter.create<SubViewOp>(
         subViewOp.getLoc(), subViewOp.source(), subViewOp.offsets(),
         ArrayRef<Value>(), subViewOp.strides(), newMemRefType);
@@ -2825,8 +2823,7 @@ public:
     AffineMap layoutMap = makeStridedLinearLayoutMap(
         staticStrides, resultOffset, rewriter.getContext());
     MemRefType newMemRefType =
-        MemRefType::get(subViewType.getShape(), subViewType.getElementType(),
-                        layoutMap, subViewType.getMemorySpace());
+        MemRefType::Builder(subViewType).setAffineMaps(layoutMap);
     auto newSubViewOp = rewriter.create<SubViewOp>(
         subViewOp.getLoc(), subViewOp.source(), subViewOp.offsets(),
         subViewOp.sizes(), ArrayRef<Value>(), newMemRefType);
@@ -2877,8 +2874,7 @@ public:
     AffineMap layoutMap = makeStridedLinearLayoutMap(
         resultStrides, staticOffset, rewriter.getContext());
     MemRefType newMemRefType =
-        MemRefType::get(subViewType.getShape(), subViewType.getElementType(),
-                        layoutMap, subViewType.getMemorySpace());
+        MemRefType::Builder(subViewType).setAffineMaps(layoutMap);
     auto newSubViewOp = rewriter.create<SubViewOp>(
         subViewOp.getLoc(), subViewOp.source(), ArrayRef<Value>(),
         subViewOp.sizes(), subViewOp.strides(), newMemRefType);

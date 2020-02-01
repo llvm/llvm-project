@@ -2356,11 +2356,9 @@ ExpressionResults Target::EvaluateExpression(
   } else {
     llvm::StringRef prefix = GetExpressionPrefixContents();
     Status error;
-    execution_results =
-        UserExpression::Evaluate(exe_ctx, options, expr, prefix,
-                                 result_valobj_sp, error, fixed_expression,
-                                 nullptr, // Module
-                                 ctx_obj);
+    execution_results = UserExpression::Evaluate(exe_ctx, options, expr, prefix,
+                                                 result_valobj_sp, error,
+                                                 fixed_expression, ctx_obj);
   }
 
   return execution_results;

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Symbol/ClangASTMetadata.h"
+#include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;

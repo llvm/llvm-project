@@ -904,6 +904,12 @@ Strip (or keep only, if negative) a given number of path components when emittin
 
 Turn on runtime checks for various forms of undefined or suspicious behavior. See user manual for available checks
 
+.. option:: -fno-semantic-interposition, -fsemantic-interposition
+
+Enable semantic interposition. Semantic interposition allows for the
+interposition of a symbol by another at runtime, thus preventing a range of
+inter-procedural optimisation.
+
 .. option:: -moutline, -mno-outline
 
 Enable function outlining (AArch64 only)

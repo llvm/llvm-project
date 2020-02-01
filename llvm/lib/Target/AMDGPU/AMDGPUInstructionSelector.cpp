@@ -2107,15 +2107,14 @@ AMDGPUInstructionSelector::selectSmrdImm(MachineOperand &Root) const {
     return None;
 
   const GEPInfo &GEPInfo = AddrInfo[0];
-
-  if (!AMDGPU::isLegalSMRDImmOffset(STI, GEPInfo.Imm))
+  Optional<int64_t> EncodedImm = AMDGPU::getSMRDEncodedOffset(STI, GEPInfo.Imm);
+  if (!EncodedImm)
     return None;
 
   unsigned PtrReg = GEPInfo.SgprParts[0];
-  int64_t EncodedImm = AMDGPU::getSMRDEncodedOffset(STI, GEPInfo.Imm);
   return {{
     [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrReg); },
-    [=](MachineInstrBuilder &MIB) { MIB.addImm(EncodedImm); }
+    [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedImm); }
   }};
 }
 
@@ -2129,13 +2128,14 @@ AMDGPUInstructionSelector::selectSmrdImm32(MachineOperand &Root) const {
 
   const GEPInfo &GEPInfo = AddrInfo[0];
   unsigned PtrReg = GEPInfo.SgprParts[0];
-  int64_t EncodedImm = AMDGPU::getSMRDEncodedOffset(STI, GEPInfo.Imm);
-  if (!isUInt<32>(EncodedImm))
+  Optional<int64_t> EncodedImm =
+      AMDGPU::getSMRDEncodedLiteralOffset32(STI, GEPInfo.Imm);
+  if (!EncodedImm)
     return None;
 
   return {{
     [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrReg); },
-    [=](MachineInstrBuilder &MIB) { MIB.addImm(EncodedImm); }
+    [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedImm); }
   }};
 }
 
@@ -2719,6 +2719,62 @@ AMDGPUInstructionSelector::selectMUBUFOffset(MachineOperand &Root) const {
       addZeroImm, //  tfe
       addZeroImm, //  dlc
       addZeroImm  //  swz
+    }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectMUBUFAddr64Atomic(MachineOperand &Root) const {
+  Register VAddr;
+  Register RSrcReg;
+  Register SOffset;
+  int64_t Offset = 0;
+
+  if (!selectMUBUFAddr64Impl(Root, VAddr, RSrcReg, SOffset, Offset))
+    return {};
+
+  // FIXME: Use defaulted operands for trailing 0s and remove from the complex
+  // pattern.
+  return {{
+      [=](MachineInstrBuilder &MIB) {  // rsrc
+        MIB.addReg(RSrcReg);
+      },
+      [=](MachineInstrBuilder &MIB) { // vaddr
+        MIB.addReg(VAddr);
+      },
+      [=](MachineInstrBuilder &MIB) { // soffset
+        if (SOffset)
+          MIB.addReg(SOffset);
+        else
+          MIB.addImm(0);
+      },
+      [=](MachineInstrBuilder &MIB) { // offset
+        MIB.addImm(Offset);
+      },
+      addZeroImm //  slc
+    }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectMUBUFOffsetAtomic(MachineOperand &Root) const {
+  Register RSrcReg;
+  Register SOffset;
+  int64_t Offset = 0;
+
+  if (!selectMUBUFOffsetImpl(Root, RSrcReg, SOffset, Offset))
+    return {};
+
+  return {{
+      [=](MachineInstrBuilder &MIB) {  // rsrc
+        MIB.addReg(RSrcReg);
+      },
+      [=](MachineInstrBuilder &MIB) { // soffset
+        if (SOffset)
+          MIB.addReg(SOffset);
+        else
+          MIB.addImm(0);
+      },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); }, // offset
+      addZeroImm //  slc
     }};
 }
 

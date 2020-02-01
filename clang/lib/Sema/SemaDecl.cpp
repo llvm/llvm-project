@@ -12523,6 +12523,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       var->getDeclContext()->getRedeclContext()->isFileContext() &&
       var->isExternallyVisible() && var->hasLinkage() &&
       !var->isInline() && !var->getDescribedVarTemplate() &&
+      !isa<VarTemplatePartialSpecializationDecl>(var) &&
       !isTemplateInstantiation(var->getTemplateSpecializationKind()) &&
       !getDiagnostics().isIgnored(diag::warn_missing_variable_declarations,
                                   var->getLocation())) {

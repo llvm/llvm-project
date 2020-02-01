@@ -39,15 +39,16 @@ struct DefaultConfig {
 struct AndroidConfig {
   using SizeClassMap = AndroidSizeClassMap;
 #if SCUDO_CAN_USE_PRIMARY64
-  // 128MB regions
-  typedef SizeClassAllocator64<SizeClassMap, 27U,
+  // 256MB regions
+  typedef SizeClassAllocator64<SizeClassMap, 28U,
                                /*MaySupportMemoryTagging=*/true>
       Primary;
 #else
-  // 512KB regions
-  typedef SizeClassAllocator32<SizeClassMap, 19U> Primary;
+  // 256KB regions
+  typedef SizeClassAllocator32<SizeClassMap, 18U> Primary;
 #endif
-  typedef MapAllocator<MapAllocatorCache<>> Secondary;
+  // Cache blocks up to 2MB
+  typedef MapAllocator<MapAllocatorCache<32U, 2UL << 20>> Secondary;
   template <class A>
   using TSDRegistryT = TSDRegistrySharedT<A, 2U>; // Shared, max 2 TSDs.
 };

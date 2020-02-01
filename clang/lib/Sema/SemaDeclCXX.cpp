@@ -7445,6 +7445,31 @@ private:
 
       if (OO == OO_Spaceship && FD->getReturnType()->isUndeducedAutoType()) {
         if (auto *BestFD = Best->Function) {
+          // If any callee has an undeduced return type, deduce it now.
+          // FIXME: It's not clear how a failure here should be handled. For
+          // now, we produce an eager diagnostic, because that is forward
+          // compatible with most (all?) other reasonable options.
+          if (BestFD->getReturnType()->isUndeducedType() &&
+              S.DeduceReturnType(BestFD, FD->getLocation(),
+                                 /*Diagnose=*/false)) {
+            // Don't produce a duplicate error when asked to explain why the
+            // comparison is deleted: we diagnosed that when initially checking
+            // the defaulted operator.
+            if (Diagnose == NoDiagnostics) {
+              S.Diag(
+                  FD->getLocation(),
+                  diag::err_defaulted_comparison_cannot_deduce_undeduced_auto)
+                  << Subobj.Kind << Subobj.Decl;
+              S.Diag(
+                  Subobj.Loc,
+                  diag::note_defaulted_comparison_cannot_deduce_undeduced_auto)
+                  << Subobj.Kind << Subobj.Decl;
+              S.Diag(BestFD->getLocation(),
+                     diag::note_defaulted_comparison_cannot_deduce_callee)
+                  << Subobj.Kind << Subobj.Decl;
+            }
+            return Result::deleted();
+          }
           if (auto *Info = S.Context.CompCategories.lookupInfoForType(
               BestFD->getCallResultType())) {
             R.Category = Info->Kind;

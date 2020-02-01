@@ -108,8 +108,7 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
 
             // First we find the original symbol in the .o file's symbol table
             Symbol *oso_fun_symbol = oso_symtab->FindFirstSymbolWithNameAndType(
-                exe_symbol->GetMangled().GetName(lldb::eLanguageTypeUnknown,
-                                                 Mangled::ePreferMangled),
+                exe_symbol->GetMangled().GetName(Mangled::ePreferMangled),
                 eSymbolTypeCode, Symtab::eDebugNo, Symtab::eVisibilityAny);
             if (oso_fun_symbol) {
               // Add the inverse OSO file address to debug map entry mapping
@@ -139,8 +138,7 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
             // in the .o file
             Symbol *oso_gsym_symbol =
                 oso_symtab->FindFirstSymbolWithNameAndType(
-                    exe_symbol->GetMangled().GetName(lldb::eLanguageTypeUnknown,
-                                                     Mangled::ePreferMangled),
+                    exe_symbol->GetMangled().GetName(Mangled::ePreferMangled),
                     eSymbolTypeData, Symtab::eDebugNo, Symtab::eVisibilityAny);
             if (exe_symbol && oso_gsym_symbol && exe_symbol->ValueIsAddress() &&
                 oso_gsym_symbol->ValueIsAddress()) {

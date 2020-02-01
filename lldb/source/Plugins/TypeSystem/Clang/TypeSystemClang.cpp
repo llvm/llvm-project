@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Symbol/TypeSystemClang.h"
+#include "TypeSystemClang.h"
 
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -39,9 +39,13 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
+#include "Plugins/ExpressionParser/Clang/ClangASTMetadata.h"
+#include "Plugins/ExpressionParser/Clang/ClangExternalASTSourceCallbacks.h"
 #include "Plugins/ExpressionParser/Clang/ClangFunctionCaller.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "Plugins/ExpressionParser/Clang/ClangUserExpression.h"
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/ExpressionParser/Clang/ClangUtilityFunction.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Flags.h"
@@ -52,10 +56,6 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
-#include "lldb/Symbol/ClangASTImporter.h"
-#include "lldb/Symbol/ClangASTMetadata.h"
-#include "lldb/Symbol/ClangExternalASTSourceCallbacks.h"
-#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -1259,7 +1259,7 @@ namespace {
 }
 
 static TemplateParameterList *CreateTemplateParameterList(
-    ASTContext *ast,
+    ASTContext &ast,
     const TypeSystemClang::TemplateParameterInfos &template_param_infos,
     llvm::SmallVector<NamedDecl *, 8> &template_param_decls) {
   const bool parameter_pack = false;
@@ -1267,51 +1267,49 @@ static TemplateParameterList *CreateTemplateParameterList(
   const unsigned depth = 0;
   const size_t num_template_params = template_param_infos.args.size();
   DeclContext *const decl_context =
-      ast->getTranslationUnitDecl(); // Is this the right decl context?,
+      ast.getTranslationUnitDecl(); // Is this the right decl context?,
   for (size_t i = 0; i < num_template_params; ++i) {
     const char *name = template_param_infos.names[i];
 
     IdentifierInfo *identifier_info = nullptr;
     if (name && name[0])
-      identifier_info = &ast->Idents.get(name);
+      identifier_info = &ast.Idents.get(name);
     if (IsValueParam(template_param_infos.args[i])) {
       template_param_decls.push_back(NonTypeTemplateParmDecl::Create(
-          *ast, decl_context,
-          SourceLocation(), SourceLocation(), depth, i, identifier_info,
-          template_param_infos.args[i].getIntegralType(), parameter_pack,
-          nullptr));
+          ast, decl_context, SourceLocation(), SourceLocation(), depth, i,
+          identifier_info, template_param_infos.args[i].getIntegralType(),
+          parameter_pack, nullptr));
 
     } else {
       template_param_decls.push_back(TemplateTypeParmDecl::Create(
-          *ast, decl_context,
-          SourceLocation(), SourceLocation(), depth, i, identifier_info,
-          is_typename, parameter_pack));
+          ast, decl_context, SourceLocation(), SourceLocation(), depth, i,
+          identifier_info, is_typename, parameter_pack));
     }
   }
 
   if (template_param_infos.packed_args) {
     IdentifierInfo *identifier_info = nullptr;
     if (template_param_infos.pack_name && template_param_infos.pack_name[0])
-      identifier_info = &ast->Idents.get(template_param_infos.pack_name);
+      identifier_info = &ast.Idents.get(template_param_infos.pack_name);
     const bool parameter_pack_true = true;
 
     if (!template_param_infos.packed_args->args.empty() &&
         IsValueParam(template_param_infos.packed_args->args[0])) {
       template_param_decls.push_back(NonTypeTemplateParmDecl::Create(
-          *ast, decl_context, SourceLocation(), SourceLocation(), depth,
+          ast, decl_context, SourceLocation(), SourceLocation(), depth,
           num_template_params, identifier_info,
           template_param_infos.packed_args->args[0].getIntegralType(),
           parameter_pack_true, nullptr));
     } else {
       template_param_decls.push_back(TemplateTypeParmDecl::Create(
-          *ast, decl_context, SourceLocation(), SourceLocation(), depth,
+          ast, decl_context, SourceLocation(), SourceLocation(), depth,
           num_template_params, identifier_info, is_typename,
           parameter_pack_true));
     }
   }
   clang::Expr *const requires_clause = nullptr; // TODO: Concepts
   TemplateParameterList *template_param_list = TemplateParameterList::Create(
-      *ast, SourceLocation(), SourceLocation(), template_param_decls,
+      ast, SourceLocation(), SourceLocation(), template_param_decls,
       SourceLocation(), requires_clause);
   return template_param_list;
 }
@@ -1325,7 +1323,7 @@ clang::FunctionTemplateDecl *TypeSystemClang::CreateFunctionTemplateDecl(
   llvm::SmallVector<NamedDecl *, 8> template_param_decls;
 
   TemplateParameterList *template_param_list = CreateTemplateParameterList(
-      &ast, template_param_infos, template_param_decls);
+      ast, template_param_infos, template_param_decls);
   FunctionTemplateDecl *func_tmpl_decl = FunctionTemplateDecl::Create(
       ast, decl_ctx, func_decl->getLocation(), func_decl->getDeclName(),
       template_param_list, func_decl);
@@ -1377,7 +1375,7 @@ ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
   llvm::SmallVector<NamedDecl *, 8> template_param_decls;
 
   TemplateParameterList *template_param_list = CreateTemplateParameterList(
-      &ast, template_param_infos, template_param_decls);
+      ast, template_param_infos, template_param_decls);
 
   CXXRecordDecl *template_cxx_decl = CXXRecordDecl::Create(
       ast, (TagDecl::TagKind)kind,
@@ -1431,7 +1429,7 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
 
   TypeSystemClang::TemplateParameterInfos template_param_infos;
   TemplateParameterList *template_param_list = CreateTemplateParameterList(
-      &ast, template_param_infos, template_param_decls);
+      ast, template_param_infos, template_param_decls);
 
   // LLDB needs to create those decls only to be able to display a
   // type that includes a template template argument. Only the name matters for
@@ -4129,7 +4127,7 @@ TypeSystemClang::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
               else
                 kind = lldb::eMemberFunctionKindInstanceMethod;
               clang_type = GetType(cxx_method_decl->getType());
-              clang_decl = CompilerDecl(this, cxx_method_decl);
+              clang_decl = GetCompilerDecl(cxx_method_decl);
             }
           }
         }
@@ -4155,7 +4153,7 @@ TypeSystemClang::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
             clang::ObjCMethodDecl *objc_method_decl =
                 method_iter->getCanonicalDecl();
             if (objc_method_decl) {
-              clang_decl = CompilerDecl(this, objc_method_decl);
+              clang_decl = GetCompilerDecl(objc_method_decl);
               name = objc_method_decl->getSelector().getAsString();
               if (objc_method_decl->isClassMethod())
                 kind = lldb::eMemberFunctionKindStaticMethod;
@@ -4185,7 +4183,7 @@ TypeSystemClang::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
               clang::ObjCMethodDecl *objc_method_decl =
                   method_iter->getCanonicalDecl();
               if (objc_method_decl) {
-                clang_decl = CompilerDecl(this, objc_method_decl);
+                clang_decl = GetCompilerDecl(objc_method_decl);
                 name = objc_method_decl->getSelector().getAsString();
                 if (objc_method_decl->isClassMethod())
                   kind = lldb::eMemberFunctionKindStaticMethod;
@@ -8980,14 +8978,14 @@ std::vector<CompilerDecl> TypeSystemClang::DeclContextFindDeclByName(
                 IdentifierInfo *ii = nd->getIdentifier();
                 if (ii != nullptr &&
                     ii->getName().equals(name.AsCString(nullptr)))
-                  found_decls.push_back(CompilerDecl(this, nd));
+                  found_decls.push_back(GetCompilerDecl(nd));
               }
             }
           } else if (clang::NamedDecl *nd =
                          llvm::dyn_cast<clang::NamedDecl>(child)) {
             IdentifierInfo *ii = nd->getIdentifier();
             if (ii != nullptr && ii->getName().equals(name.AsCString(nullptr)))
-              found_decls.push_back(CompilerDecl(this, nd));
+              found_decls.push_back(GetCompilerDecl(nd));
           }
         }
       }

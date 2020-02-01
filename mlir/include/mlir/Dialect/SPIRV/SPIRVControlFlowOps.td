@@ -453,14 +453,22 @@ def SPV_SelectionOp : SPV_Op<"selection", [InFunctionScope]> {
   let regions = (region AnyRegion:$body);
 
   let extraClassDeclaration = [{
-    // Returns the selection header block.
+    /// Returns the selection header block.
     Block *getHeaderBlock();
 
-    // Returns the selection merge block.
+    /// Returns the selection merge block.
     Block *getMergeBlock();
 
-    // Adds a selection merge block containing one spv._merge op.
+    /// Adds a selection merge block containing one spv._merge op.
     void addMergeBlock();
+
+    /// Creates a spv.selection op for `if (<condition>) then { <thenBody> }`
+    /// with `builder`. `builder`'s insertion point will remain at after the
+    /// newly inserted spv.selection op afterwards.
+    static SelectionOp createIfThen(
+        Location loc, Value condition,
+        function_ref<void(OpBuilder *builder)> thenBody,
+        OpBuilder *builder);
   }];
 
   let hasOpcode = 0;

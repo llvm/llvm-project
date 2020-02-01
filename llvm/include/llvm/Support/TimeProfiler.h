@@ -14,7 +14,7 @@
 namespace llvm {
 
 struct TimeTraceProfiler;
-extern LLVM_THREAD_LOCAL TimeTraceProfiler *TimeTraceProfilerInstance;
+TimeTraceProfiler *getTimeTraceProfilerInstance();
 
 /// Initialize the time trace profiler.
 /// This sets up the global \p TimeTraceProfilerInstance
@@ -30,7 +30,7 @@ void timeTraceProfilerFinishThread();
 
 /// Is the time trace profiler enabled, i.e. initialized?
 inline bool timeTraceProfilerEnabled() {
-  return TimeTraceProfilerInstance != nullptr;
+  return getTimeTraceProfilerInstance() != nullptr;
 }
 
 /// Write profiling data to output file.
@@ -62,19 +62,19 @@ struct TimeTraceScope {
   TimeTraceScope &operator=(TimeTraceScope &&) = delete;
 
   TimeTraceScope(StringRef Name) {
-    if (TimeTraceProfilerInstance != nullptr)
+    if (getTimeTraceProfilerInstance() != nullptr)
       timeTraceProfilerBegin(Name, StringRef(""));
   }
   TimeTraceScope(StringRef Name, StringRef Detail) {
-    if (TimeTraceProfilerInstance != nullptr)
+    if (getTimeTraceProfilerInstance() != nullptr)
       timeTraceProfilerBegin(Name, Detail);
   }
   TimeTraceScope(StringRef Name, llvm::function_ref<std::string()> Detail) {
-    if (TimeTraceProfilerInstance != nullptr)
+    if (getTimeTraceProfilerInstance() != nullptr)
       timeTraceProfilerBegin(Name, Detail);
   }
   ~TimeTraceScope() {
-    if (TimeTraceProfilerInstance != nullptr)
+    if (getTimeTraceProfilerInstance() != nullptr)
       timeTraceProfilerEnd();
   }
 };

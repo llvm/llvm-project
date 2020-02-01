@@ -15069,35 +15069,27 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   return false;
 }
 
-/// getOptimalMemOpType - Returns the target specific optimal type for load
-/// and store operations as a result of memset, memcpy, and memmove
-/// lowering. If DstAlign is zero that means it's safe to destination
-/// alignment can satisfy any constraint. Similarly if SrcAlign is zero it
-/// means there isn't a need to check it against alignment requirement,
-/// probably because the source does not need to be loaded. If 'IsMemset' is
-/// true, that means it's expanding a memset. If 'ZeroMemset' is true, that
-/// means it's a memset of zero. 'MemcpyStrSrc' indicates whether the memcpy
-/// source is constant so it does not need to be loaded.
 /// It returns EVT::Other if the type should be determined using generic
 /// target-independent logic.
 EVT PPCTargetLowering::getOptimalMemOpType(
-    uint64_t Size, unsigned DstAlign, unsigned SrcAlign, bool IsMemset,
-    bool ZeroMemset, bool MemcpyStrSrc,
-    const AttributeList &FuncAttributes) const {
+    const MemOp &Op, const AttributeList &FuncAttributes) const {
   if (getTargetMachine().getOptLevel() != CodeGenOpt::None) {
     // When expanding a memset, require at least two QPX instructions to cover
     // the cost of loading the value to be stored from the constant pool.
-    if (Subtarget.hasQPX() && Size >= 32 && (!IsMemset || Size >= 64) &&
-       (!SrcAlign || SrcAlign >= 32) && (!DstAlign || DstAlign >= 32) &&
+    if (Subtarget.hasQPX() && Op.Size >= 32 &&
+        (!Op.IsMemset || Op.Size >= 64) &&
+        (!Op.SrcAlign || Op.SrcAlign >= 32) &&
+        (!Op.DstAlign || Op.DstAlign >= 32) &&
         !FuncAttributes.hasFnAttribute(Attribute::NoImplicitFloat)) {
       return MVT::v4f64;
     }
 
     // We should use Altivec/VSX loads and stores when available. For unaligned
     // addresses, unaligned VSX loads are only fast starting with the P8.
-    if (Subtarget.hasAltivec() && Size >= 16 &&
-        (((!SrcAlign || SrcAlign >= 16) && (!DstAlign || DstAlign >= 16)) ||
-         ((IsMemset && Subtarget.hasVSX()) || Subtarget.hasP8Vector())))
+    if (Subtarget.hasAltivec() && Op.Size >= 16 &&
+        (((!Op.SrcAlign || Op.SrcAlign >= 16) &&
+          (!Op.DstAlign || Op.DstAlign >= 16)) ||
+         ((Op.IsMemset && Subtarget.hasVSX()) || Subtarget.hasP8Vector())))
       return MVT::v4i32;
   }
 

@@ -195,6 +195,7 @@ using addf = ValueBuilder<AddFOp>;
 using affine_apply = ValueBuilder<AffineApplyOp>;
 using affine_if = OperationBuilder<AffineIfOp>;
 using affine_load = ValueBuilder<AffineLoadOp>;
+using affine_min = ValueBuilder<AffineMinOp>;
 using affine_store = OperationBuilder<AffineStoreOp>;
 using alloc = ValueBuilder<AllocOp>;
 using call = OperationBuilder<mlir::CallOp>;

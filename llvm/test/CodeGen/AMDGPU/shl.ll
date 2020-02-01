@@ -301,7 +301,7 @@ define amdgpu_kernel void @shl_i16_computed_amount(i16 addrspace(1)* %out, i16 a
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, 3, v0
 ; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, v0, v2
+; GCN-NEXT:    v_lshl_b32_e32 v0, v2, v0
 ; GCN-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 ;
@@ -425,8 +425,8 @@ define amdgpu_kernel void @shl_v2i16(<2 x i16> addrspace(1)* %out, <2 x i16> add
 ; GCN-NEXT:    v_and_b32_e32 v0, s0, v0
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GCN-NEXT:    v_lshlrev_b32_e32 v0, v0, v1
-; GCN-NEXT:    v_lshlrev_b32_e32 v1, v3, v2
+; GCN-NEXT:    v_lshl_b32_e32 v0, v1, v0
+; GCN-NEXT:    v_lshl_b32_e32 v1, v2, v3
 ; GCN-NEXT:    v_and_b32_e32 v0, s0, v0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
@@ -500,10 +500,10 @@ define amdgpu_kernel void @shl_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> add
 ; GCN-NEXT:    v_and_b32_e32 v9, s8, v5
 ; GCN-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
 ; GCN-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
-; GCN-NEXT:    v_lshlrev_b32_e32 v5, v5, v7
-; GCN-NEXT:    v_lshlrev_b32_e32 v3, v9, v3
-; GCN-NEXT:    v_lshlrev_b32_e32 v4, v4, v6
-; GCN-NEXT:    v_lshlrev_b32_e32 v2, v8, v2
+; GCN-NEXT:    v_lshl_b32_e32 v5, v7, v5
+; GCN-NEXT:    v_lshl_b32_e32 v3, v3, v9
+; GCN-NEXT:    v_lshl_b32_e32 v4, v6, v4
+; GCN-NEXT:    v_lshl_b32_e32 v2, v2, v8
 ; GCN-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
 ; GCN-NEXT:    v_and_b32_e32 v3, s8, v3
 ; GCN-NEXT:    v_lshlrev_b32_e32 v4, 16, v4

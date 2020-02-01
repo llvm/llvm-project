@@ -2131,17 +2131,19 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     Register LHS = MI.getOperand(2).getReg();
     Register RHS = MI.getOperand(3).getReg();
 
-    MIRBuilder.buildMul(Res, LHS, RHS);
-
     unsigned Opcode = MI.getOpcode() == TargetOpcode::G_SMULO
                           ? TargetOpcode::G_SMULH
                           : TargetOpcode::G_UMULH;
 
-    Register HiPart = MRI.createGenericVirtualRegister(Ty);
-    MIRBuilder.buildInstr(Opcode)
-      .addDef(HiPart)
-      .addUse(LHS)
-      .addUse(RHS);
+    Observer.changingInstr(MI);
+    const auto &TII = MIRBuilder.getTII();
+    MI.setDesc(TII.get(TargetOpcode::G_MUL));
+    MI.RemoveOperand(1);
+    Observer.changedInstr(MI);
+
+    MIRBuilder.setInsertPt(MIRBuilder.getMBB(), ++MIRBuilder.getInsertPt());
+
+    auto HiPart = MIRBuilder.buildInstr(Opcode, {Ty}, {LHS, RHS});
 
     Register Zero = MRI.createGenericVirtualRegister(Ty);
     MIRBuilder.buildConstant(Zero, 0);
@@ -2149,18 +2151,12 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     // For *signed* multiply, overflow is detected by checking:
     // (hi != (lo >> bitwidth-1))
     if (Opcode == TargetOpcode::G_SMULH) {
-      Register Shifted = MRI.createGenericVirtualRegister(Ty);
-      Register ShiftAmt = MRI.createGenericVirtualRegister(Ty);
-      MIRBuilder.buildConstant(ShiftAmt, Ty.getSizeInBits() - 1);
-      MIRBuilder.buildInstr(TargetOpcode::G_ASHR)
-        .addDef(Shifted)
-        .addUse(Res)
-        .addUse(ShiftAmt);
+      auto ShiftAmt = MIRBuilder.buildConstant(Ty, Ty.getSizeInBits() - 1);
+      auto Shifted = MIRBuilder.buildAShr(Ty, Res, ShiftAmt);
       MIRBuilder.buildICmp(CmpInst::ICMP_NE, Overflow, HiPart, Shifted);
     } else {
       MIRBuilder.buildICmp(CmpInst::ICMP_NE, Overflow, HiPart, Zero);
     }
-    MI.eraseFromParent();
     return Legalized;
   }
   case TargetOpcode::G_FNEG: {

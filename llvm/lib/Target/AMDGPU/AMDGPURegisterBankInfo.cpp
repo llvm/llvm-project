@@ -1180,8 +1180,7 @@ bool AMDGPURegisterBankInfo::applyMappingWideLoad(MachineInstr &MI,
   B.setInsertPt(*RepairInst->getParent(), RepairInst);
 
   for (unsigned DefIdx = 0, e = DefRegs.size(); DefIdx != e; ++DefIdx) {
-    Register IdxReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
-    B.buildConstant(IdxReg, DefIdx);
+    Register IdxReg = B.buildConstant(LLT::scalar(32), DefIdx).getReg(0);
     MRI.setRegBank(IdxReg, AMDGPU::VGPRRegBank);
     B.buildExtractVectorElement(DefRegs[DefIdx], TmpReg, IdxReg);
   }
@@ -2802,6 +2801,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_FCANONICALIZE:
   case AMDGPU::G_INTRINSIC_TRUNC:
   case AMDGPU::G_AMDGPU_FFBH_U32:
+  case AMDGPU::G_AMDGPU_FMIN_LEGACY:
+  case AMDGPU::G_AMDGPU_FMAX_LEGACY:
     return getDefaultMappingVOP(MI);
   case AMDGPU::G_UMULH:
   case AMDGPU::G_SMULH: {
@@ -2905,9 +2906,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     unsigned Bank = getRegBankID(Src, MRI, *TRI);
     unsigned DstSize = getSizeInBits(Dst, MRI, *TRI);
     unsigned SrcSize = getSizeInBits(Src, MRI, *TRI);
-    OpdsMapping[0] = DstSize == 1 && Bank != AMDGPU::SGPRRegBankID ?
-      AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, DstSize) :
-      AMDGPU::getValueMapping(Bank, DstSize);
+    OpdsMapping[0] = AMDGPU::getValueMapping(Bank, DstSize);
     OpdsMapping[1] = AMDGPU::getValueMapping(Bank, SrcSize);
     break;
   }

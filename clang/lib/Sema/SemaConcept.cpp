@@ -676,6 +676,10 @@ static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
                   ArgsAsWritten->arguments().back().getSourceRange().getEnd()));
   if (S.SubstTemplateArguments(*Atomic.ParameterMapping, MLTAL, SubstArgs))
     return true;
+  Atomic.ParameterMapping.emplace(
+        MutableArrayRef<TemplateArgumentLoc>(
+            new (S.Context) TemplateArgumentLoc[SubstArgs.size()],
+            SubstArgs.size()));
   std::copy(SubstArgs.arguments().begin(), SubstArgs.arguments().end(),
             N.getAtomicConstraint()->ParameterMapping->begin());
   return false;

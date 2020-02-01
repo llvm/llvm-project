@@ -28,6 +28,26 @@ struct FusionInfo {
   LinalgOp fusedProducer;
 };
 
+/// A struct containing common matchers over linalg op's region.
+struct RegionMatcher {
+  enum class BinaryOpKind {
+    IAdd,
+  };
+
+  /// Matches the given linalg op if its body is performing binary operation on
+  /// int or float scalar values and returns the binary op kind.
+  ///
+  /// The linalg op's region is expected to be
+  /// ```
+  /// {
+  ///   ^bb(%a: <scalar-type>, %b: <scalar-type>):
+  ///     %0 = <binary-op> %a, %b: <scalar-type>
+  ///     linalg.yield %0: <scalar-type>
+  /// }
+  /// ```
+  static Optional<BinaryOpKind> matchAsScalarBinaryOp(GenericOp op);
+};
+
 /// Checks whether the specific `producer` is the last write to exactly the
 /// whole `consumedView`. This checks structural dominance, that the dependence
 /// is a RAW without any interleaved write to any piece of `consumedView`.

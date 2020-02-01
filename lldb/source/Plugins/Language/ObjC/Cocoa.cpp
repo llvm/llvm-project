@@ -8,6 +8,7 @@
 
 #include "Cocoa.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -15,7 +16,6 @@
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Host/Time.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessStructReader.h"
@@ -902,8 +902,7 @@ bool lldb_private::formatters::ObjCClassSummaryProvider(
   if (class_name.IsEmpty())
     return false;
 
-  if (ConstString cs =
-          Mangled(class_name).GetDemangledName(lldb::eLanguageTypeUnknown))
+  if (ConstString cs = Mangled(class_name).GetDemangledName())
     class_name = cs;
 
   stream.Printf("%s", class_name.AsCString("<unknown class>"));

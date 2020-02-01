@@ -8397,6 +8397,12 @@ def note_defaulted_comparison_cannot_deduce : Note<
   "return type of defaulted 'operator<=>' cannot be deduced because "
   "return type %2 of three-way comparison for %select{|member|base class}0 %1 "
   "is not a standard comparison category type">;
+def err_defaulted_comparison_cannot_deduce_undeduced_auto : Error<
+  "return type of defaulted 'operator<=>' cannot be deduced because "
+  "three-way comparison for %select{|member|base class}0 %1 "
+  "has a deduced return type and is not yet defined">;
+def note_defaulted_comparison_cannot_deduce_undeduced_auto : Note<
+  "%select{|member|base class}0 %1 declared here">;
 def note_defaulted_comparison_cannot_deduce_callee : Note<
   "selected 'operator<=>' for %select{|member|base class}0 %1 declared here">;
 def err_incorrect_defaulted_comparison_constexpr : Error<

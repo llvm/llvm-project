@@ -167,8 +167,8 @@ class GenericTester(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
         self.expect("process status", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=[" at basic_type.cpp:%d" % break_line,
-                             "stop reason = breakpoint"])
+                    substrs=["stop reason = breakpoint",
+                             " at basic_type.cpp:%d" % break_line,])
 
         #self.runCmd("frame variable --show-types")
 
@@ -263,8 +263,8 @@ class GenericTester(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
         self.expect("process status", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=[" at basic_type.cpp:%d" % break_line,
-                             "stop reason = breakpoint"])
+                    substrs=["stop reason = breakpoint",
+                             " at basic_type.cpp:%d" % break_line])
 
         #self.runCmd("frame variable --show-types")
 

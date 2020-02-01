@@ -62,10 +62,9 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
     int FI = MFI.CreateFixedObject(Size, Offset, true);
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
-    Register AddrReg = MRI.createGenericVirtualRegister(LLT::pointer(0, 64));
-    MIRBuilder.buildFrameIndex(AddrReg, FI);
+    auto AddrReg = MIRBuilder.buildFrameIndex(LLT::pointer(0, 64), FI);
     StackUsed = std::max(StackUsed, Size + Offset);
-    return AddrReg;
+    return AddrReg.getReg(0);
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
@@ -147,23 +146,19 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
     if (IsTailCall) {
       Offset += FPDiff;
       int FI = MF.getFrameInfo().CreateFixedObject(Size, Offset, true);
-      Register FIReg = MRI.createGenericVirtualRegister(p0);
-      MIRBuilder.buildFrameIndex(FIReg, FI);
+      auto FIReg = MIRBuilder.buildFrameIndex(p0, FI);
       MPO = MachinePointerInfo::getFixedStack(MF, FI);
-      return FIReg;
+      return FIReg.getReg(0);
     }
 
-    Register SPReg = MRI.createGenericVirtualRegister(p0);
-    MIRBuilder.buildCopy(SPReg, Register(AArch64::SP));
+    auto SPReg = MIRBuilder.buildCopy(p0, Register(AArch64::SP));
 
-    Register OffsetReg = MRI.createGenericVirtualRegister(s64);
-    MIRBuilder.buildConstant(OffsetReg, Offset);
+    auto OffsetReg = MIRBuilder.buildConstant(s64, Offset);
 
-    Register AddrReg = MRI.createGenericVirtualRegister(p0);
-    MIRBuilder.buildPtrAdd(AddrReg, SPReg, OffsetReg);
+    auto AddrReg = MIRBuilder.buildPtrAdd(p0, SPReg, OffsetReg);
 
     MPO = MachinePointerInfo::getStack(MF, Offset);
-    return AddrReg;
+    return AddrReg.getReg(0);
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,

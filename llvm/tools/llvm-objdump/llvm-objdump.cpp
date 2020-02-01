@@ -1431,6 +1431,14 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         outs() << CommentStream.str();
         Comments.clear();
 
+        // If disassembly has failed, continue with the next instruction, to
+        // avoid analysing invalid/incomplete instruction information.
+        if (!Disassembled) {
+          outs() << "\n";
+          Index += Size;
+          continue;
+        }
+
         // Try to resolve the target of a call, tail call, etc. to a specific
         // symbol.
         if (MIA && (MIA->isCall(Inst) || MIA->isUnconditionalBranch(Inst) ||

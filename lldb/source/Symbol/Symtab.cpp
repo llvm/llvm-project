@@ -299,7 +299,7 @@ void Symtab::InitNameIndexes() {
 
       // Symbol name strings that didn't match a Mangled::ManglingScheme, are
       // stored in the demangled field.
-      if (ConstString name = mangled.GetDemangledName(symbol->GetLanguage())) {
+      if (ConstString name = mangled.GetDemangledName()) {
         m_name_to_index.Append(name, value);
 
         if (symbol->ContainsLinkerAnnotations()) {
@@ -425,7 +425,7 @@ void Symtab::AppendSymbolNamesToMap(const IndexCollection &indexes,
 
       const Mangled &mangled = symbol->GetMangled();
       if (add_demangled) {
-        if (ConstString name = mangled.GetDemangledName(symbol->GetLanguage()))
+        if (ConstString name = mangled.GetDemangledName())
           name_to_index_map.Append(name, value);
       }
 

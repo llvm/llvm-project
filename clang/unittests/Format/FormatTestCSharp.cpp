@@ -457,5 +457,34 @@ var x = foo(className, $@"some code:
   EXPECT_EQ(Code, format(Code, Style));
 }
 
+TEST_F(FormatTestCSharp, CSharpObjectInitializers) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_CSharp);
+
+  // Start code fragemnts with a comment line so that C++ raw string literals
+  // as seen are identical to expected formatted code.
+
+  verifyFormat(R"(//
+Shape[] shapes = new[] {
+    new Circle {
+        Radius = 2.7281,
+        Colour = Colours.Red,
+    },
+    new Square {
+        Side = 101.1,
+        Colour = Colours.Yellow,
+    },
+};)",
+               Style);
+
+  // Omitted final `,`s will change the formatting.
+  verifyFormat(R"(//
+Shape[] shapes = new[] {new Circle {Radius = 2.7281, Colour = Colours.Red},
+                        new Square {
+                            Side = 101.1,
+                            Colour = Colours.Yellow,
+                        }};)",
+               Style);
+}
+
 } // namespace format
 } // end namespace clang

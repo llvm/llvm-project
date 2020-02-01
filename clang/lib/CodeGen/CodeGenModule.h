@@ -868,6 +868,17 @@ public:
   /// Returns the assumed alignment of an opaque pointer to the given class.
   CharUnits getClassPointerAlignment(const CXXRecordDecl *CD);
 
+  /// Returns the minimum object size for an object of the given class type
+  /// (or a class derived from it).
+  CharUnits getMinimumClassObjectSize(const CXXRecordDecl *CD);
+
+  /// Returns the minimum object size for an object of the given type.
+  CharUnits getMinimumObjectSize(QualType Ty) {
+    if (CXXRecordDecl *RD = Ty->getAsCXXRecordDecl())
+      return getMinimumClassObjectSize(RD);
+    return getContext().getTypeSizeInChars(Ty);
+  }
+
   /// Returns the assumed alignment of a virtual base of a class.
   CharUnits getVBaseAlignment(CharUnits DerivedAlign,
                               const CXXRecordDecl *Derived,

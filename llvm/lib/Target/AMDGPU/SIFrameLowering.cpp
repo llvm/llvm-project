@@ -587,7 +587,7 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const GCNSubtarget &ST,
                                        16, 4);
     unsigned Offset = Fn.getCallingConv() == CallingConv::AMDGPU_CS ? 16 : 0;
     const GCNSubtarget &Subtarget = MF.getSubtarget<GCNSubtarget>();
-    unsigned EncodedOffset = AMDGPU::getSMRDEncodedOffset(Subtarget, Offset);
+    unsigned EncodedOffset = AMDGPU::convertSMRDOffsetUnits(Subtarget, Offset);
     BuildMI(MBB, I, DL, LoadDwordX4, ScratchRsrcReg)
       .addReg(Rsrc01)
       .addImm(EncodedOffset) // offset

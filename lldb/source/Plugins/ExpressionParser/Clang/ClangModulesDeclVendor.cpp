@@ -24,10 +24,10 @@
 #include "ClangModulesDeclVendor.h"
 #include "ModuleDependencyCollector.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Target/Target.h"
@@ -384,7 +384,7 @@ ClangModulesDeclVendorImpl::FindDecls(ConstString name, bool append,
     if (num_matches >= max_matches)
       return num_matches;
 
-    decls.push_back(CompilerDecl(m_ast_context.get(), named_decl));
+    decls.push_back(m_ast_context->GetCompilerDecl(named_decl));
     ++num_matches;
   }
 

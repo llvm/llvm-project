@@ -67,6 +67,7 @@
 #include "IRForTarget.h"
 #include "ModuleDependencyCollector.h"
 
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
@@ -75,7 +76,6 @@
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
@@ -91,6 +91,7 @@
 #include "lldb/Utility/StringList.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+#include "Plugins/LanguageRuntime/RenderScript/RenderScriptRuntime/RenderScriptRuntime.h"
 
 #include <cctype>
 #include <memory>
@@ -392,9 +393,13 @@ ClangExpressionParser::ClangExpressionParser(
   // target. In this case, a specialized language runtime is available and we
   // can query it for extra options. For 99% of use cases, this will not be
   // needed and should be provided when basic platform detection is not enough.
-  if (lang_rt)
+  // FIXME: Generalize this. Only RenderScriptRuntime currently supports this
+  // currently. Hardcoding this isn't ideal but it's better than LanguageRuntime
+  // having knowledge of clang::TargetOpts.
+  if (auto *renderscript_rt =
+          llvm::dyn_cast_or_null<RenderScriptRuntime>(lang_rt))
     overridden_target_opts =
-        lang_rt->GetOverrideExprOptions(m_compiler->getTargetOpts());
+        renderscript_rt->GetOverrideExprOptions(m_compiler->getTargetOpts());
 
   if (overridden_target_opts)
     if (log && log->GetVerbose()) {

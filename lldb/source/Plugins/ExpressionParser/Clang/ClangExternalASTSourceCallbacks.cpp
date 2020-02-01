@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Symbol/ClangExternalASTSourceCallbacks.h"
-#include "lldb/Symbol/TypeSystemClang.h"
+#include "Plugins/ExpressionParser/Clang/ClangExternalASTSourceCallbacks.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include "clang/AST/Decl.h"
 

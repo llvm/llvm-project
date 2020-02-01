@@ -485,7 +485,7 @@ class SettingsCommandTestCase(TestBase):
 
     def test_settings_list(self):
         # List settings (and optionally test the filter to only show 'target' settings).
-        self.expect("settings list target", substrs=["language", "arg0", "detach-on-error"])
+        self.expect("settings list target", substrs=["arg0", "detach-on-error", "language"])
         self.expect("settings list target", matching=False, substrs=["packet-timeout"])
         self.expect("settings list", substrs=["language", "arg0", "detach-on-error", "packet-timeout"])
 
@@ -537,33 +537,34 @@ class SettingsCommandTestCase(TestBase):
                              "term-width",
                              "thread-format",
                              "use-external-editor",
-                             "target.default-arch",
-                             "target.move-to-nearest-code",
-                             "target.expr-prefix",
-                             "target.language",
-                             "target.prefer-dynamic-value",
-                             "target.enable-synthetic-value",
-                             "target.skip-prologue",
-                             "target.source-map",
-                             "target.exec-search-paths",
-                             "target.max-children-count",
-                             "target.max-string-summary-length",
                              "target.breakpoints-use-platform-avoid-list",
-                             "target.run-args",
-                             "target.env-vars",
-                             "target.inherit-env",
-                             "target.input-path",
-                             "target.output-path",
-                             "target.error-path",
+                             "target.default-arch",
                              "target.disable-aslr",
                              "target.disable-stdio",
                              "target.x86-disassembly-flavor",
-                             "target.use-hex-immediates",
+                             "target.enable-synthetic-value",
+                             "target.env-vars",
+                             "target.error-path",
+                             "target.exec-search-paths",
+                             "target.expr-prefix",
                              "target.hex-immediate-style",
+                             "target.inherit-env",
+                             "target.input-path",
+                             "target.language",
+                             "target.max-children-count",
+                             "target.max-string-summary-length",
+                             "target.move-to-nearest-code",
+                             "target.output-path",
+                             "target.prefer-dynamic-value",
+                             "target.run-args",
+                             "target.skip-prologue",
+                             "target.source-map",
+                             "target.use-hex-immediates",
                              "target.process.disable-memory-cache",
                              "target.process.extra-startup-command",
+                             "target.process.thread.trace-thread",
                              "target.process.thread.step-avoid-regexp",
-                             "target.process.thread.trace-thread"])
+                             ])
 
     # settings under an ".experimental" domain should have two properties:
     #   1. If the name does not exist with "experimental" in the name path,

@@ -13,8 +13,6 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
-#include "lldb/Symbol/TypeSystemClang.h"
-#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -24,7 +22,9 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecordLayout.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include <memory>
 #include <vector>
@@ -52,8 +52,9 @@ private:
 ClangASTSource::ClangASTSource(const lldb::TargetSP &target,
                                const lldb::ClangASTImporterSP &importer)
     : m_import_in_progress(false), m_lookups_enabled(false), m_target(target),
-      m_ast_context(nullptr), m_active_lexical_decls(), m_active_lookups() {
-  m_ast_importer_sp = importer;
+      m_ast_context(nullptr), m_ast_importer_sp(importer),
+      m_active_lexical_decls(), m_active_lookups() {
+  assert(m_ast_importer_sp && "No ClangASTImporter passed to ClangASTSource?");
 }
 
 void ClangASTSource::InstallASTContext(TypeSystemClang &clang_ast_context) {
@@ -64,9 +65,6 @@ void ClangASTSource::InstallASTContext(TypeSystemClang &clang_ast_context) {
 }
 
 ClangASTSource::~ClangASTSource() {
-  if (!m_ast_importer_sp)
-    return;
-
   m_ast_importer_sp->ForgetDestination(m_ast_context);
 
   if (!m_target)
@@ -216,10 +214,6 @@ void ClangASTSource::CompleteType(TagDecl *tag_decl) {
   m_active_lexical_decls.insert(tag_decl);
   ScopedLexicalDeclEraser eraser(m_active_lexical_decls, tag_decl);
 
-  if (!m_ast_importer_sp) {
-    return;
-  }
-
   if (!m_ast_importer_sp->CompleteTagDecl(tag_decl)) {
     // We couldn't complete the type.  Maybe there's a definition somewhere
     // else that can be completed.
@@ -343,11 +337,6 @@ void ClangASTSource::CompleteType(clang::ObjCInterfaceDecl *interface_decl) {
   LLDB_LOG(log, "      [COID] Before:\n{0}",
            ClangUtil::DumpDecl(interface_decl));
 
-  if (!m_ast_importer_sp) {
-    lldbassert(0 && "No mechanism for completing a type!");
-    return;
-  }
-
   ClangASTImporter::DeclOrigin original = m_ast_importer_sp->GetDeclOrigin(interface_decl);
 
   if (original.Valid()) {
@@ -419,9 +408,6 @@ void ClangASTSource::FindExternalLexicalDecls(
     const DeclContext *decl_context,
     llvm::function_ref<bool(Decl::Kind)> predicate,
     llvm::SmallVectorImpl<Decl *> &decls) {
-
-  if (!m_ast_importer_sp)
-    return;
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
@@ -587,8 +573,8 @@ void ClangASTSource::FindExternalVisibleDecls(NameSearchContext &context) {
 
   if (const NamespaceDecl *namespace_context =
           dyn_cast<NamespaceDecl>(context.m_decl_context)) {
-    ClangASTImporter::NamespaceMapSP namespace_map =  m_ast_importer_sp ?
-        m_ast_importer_sp->GetNamespaceMap(namespace_context) : nullptr;
+    ClangASTImporter::NamespaceMapSP namespace_map =
+        m_ast_importer_sp->GetNamespaceMap(namespace_context);
 
     if (log && log->GetVerbose())
       LLDB_LOG(log,
@@ -1791,21 +1777,11 @@ NamespaceDecl *ClangASTSource::AddNamespace(
 }
 
 clang::Decl *ClangASTSource::CopyDecl(Decl *src_decl) {
-  if (m_ast_importer_sp) {
-    return m_ast_importer_sp->CopyDecl(m_ast_context, src_decl);
-  } else {
-    lldbassert(0 && "No mechanism for copying a decl!");
-    return nullptr;
-  }
+  return m_ast_importer_sp->CopyDecl(m_ast_context, src_decl);
 }
 
 ClangASTImporter::DeclOrigin ClangASTSource::GetDeclOrigin(const clang::Decl *decl) {
-  if (m_ast_importer_sp) {
-    return m_ast_importer_sp->GetDeclOrigin(decl);
-  } else {
-    // this can happen early enough that no ExternalASTSource is installed.
-    return ClangASTImporter::DeclOrigin();
-  }
+  return m_ast_importer_sp->GetDeclOrigin(decl);
 }
 
 CompilerType ClangASTSource::GuardedCopyType(const CompilerType &src_type) {
@@ -1816,15 +1792,8 @@ CompilerType ClangASTSource::GuardedCopyType(const CompilerType &src_type) {
 
   SetImportInProgress(true);
 
-  QualType copied_qual_type;
-
-  if (m_ast_importer_sp) {
-    copied_qual_type = ClangUtil::GetQualType(
-        m_ast_importer_sp->CopyType(*m_clang_ast_context, src_type));
-  } else {
-    lldbassert(0 && "No mechanism for copying a type!");
-    return CompilerType();
-  }
+  QualType copied_qual_type = ClangUtil::GetQualType(
+      m_ast_importer_sp->CopyType(*m_clang_ast_context, src_type));
 
   SetImportInProgress(false);
 

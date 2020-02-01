@@ -647,7 +647,6 @@ define <16 x i16> @insert_v16i16(<16 x i16> %x, i16 %y, i16* %ptr) {
 ; CHECK-LABEL: insert_v16i16:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpinsrw $1, (%rsi), %xmm0, %xmm1
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpinsrw $1, %edi, %xmm0, %xmm0
 ; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
@@ -700,7 +699,6 @@ define <32 x i8> @insert_v32i8(<32 x i8> %x, i8 %y, i8* %ptr) {
 ; CHECK-LABEL: insert_v32i8:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpinsrb $1, (%rsi), %xmm0, %xmm1
-; CHECK-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; CHECK-NEXT:    vpinsrb $1, %edi, %xmm0, %xmm0
 ; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0

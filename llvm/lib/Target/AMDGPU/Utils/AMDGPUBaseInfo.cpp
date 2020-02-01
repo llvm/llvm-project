@@ -1247,16 +1247,43 @@ static bool hasSMEMByteOffset(const MCSubtargetInfo &ST) {
   return isGCN3Encoding(ST) || isGFX10(ST);
 }
 
-int64_t getSMRDEncodedOffset(const MCSubtargetInfo &ST, int64_t ByteOffset) {
+static bool isLegalSMRDEncodedImmOffset(const MCSubtargetInfo &ST,
+                                        int64_t EncodedOffset) {
+  return hasSMEMByteOffset(ST) ? isUInt<20>(EncodedOffset)
+                               : isUInt<8>(EncodedOffset);
+}
+
+static bool isDwordAligned(uint64_t ByteOffset) {
+  return (ByteOffset & 3) == 0;
+}
+
+uint64_t convertSMRDOffsetUnits(const MCSubtargetInfo &ST,
+                                uint64_t ByteOffset) {
   if (hasSMEMByteOffset(ST))
     return ByteOffset;
+
+  assert(isDwordAligned(ByteOffset));
   return ByteOffset >> 2;
 }
 
-bool isLegalSMRDImmOffset(const MCSubtargetInfo &ST, int64_t ByteOffset) {
-  int64_t EncodedOffset = getSMRDEncodedOffset(ST, ByteOffset);
-  return (hasSMEMByteOffset(ST)) ?
-    isUInt<20>(EncodedOffset) : isUInt<8>(EncodedOffset);
+Optional<int64_t> getSMRDEncodedOffset(const MCSubtargetInfo &ST,
+                                       int64_t ByteOffset) {
+  if (!isDwordAligned(ByteOffset) && !hasSMEMByteOffset(ST))
+    return None;
+
+  int64_t EncodedOffset = convertSMRDOffsetUnits(ST, ByteOffset);
+  return isLegalSMRDEncodedImmOffset(ST, EncodedOffset) ?
+    Optional<int64_t>(EncodedOffset) : None;
+}
+
+Optional<int64_t> getSMRDEncodedLiteralOffset32(const MCSubtargetInfo &ST,
+                                                int64_t ByteOffset) {
+  if (!isDwordAligned(ByteOffset) && !hasSMEMByteOffset(ST))
+    return None;
+
+  assert(isCI(ST));
+  int64_t EncodedOffset = convertSMRDOffsetUnits(ST, ByteOffset);
+  return isUInt<32>(EncodedOffset) ? Optional<int64_t>(EncodedOffset) : None;
 }
 
 // Given Imm, split it into the values to put into the SOffset and ImmOffset
