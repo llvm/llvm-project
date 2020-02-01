@@ -21,8 +21,6 @@
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
 
-#include "clang/Basic/TargetOptions.h"
-
 namespace lldb_private {
 
 class ExceptionSearchFilter : public SearchFilter {
@@ -161,13 +159,6 @@ public:
   }
 
   virtual void ModulesDidLoad(const ModuleList &module_list) {}
-
-  // Called by the Clang expression evaluation engine to allow runtimes to
-  // alter the set of target options provided to the compiler. If the options
-  // prototype is modified, runtimes must return true, false otherwise.
-  virtual bool GetOverrideExprOptions(clang::TargetOptions &prototype) {
-    return false;
-  }
 
   // Called by ClangExpressionParser::PrepareForExecution to query for any
   // custom LLVM IR passes that need to be run before an expression is
