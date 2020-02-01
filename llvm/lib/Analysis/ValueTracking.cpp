@@ -2578,15 +2578,6 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
                                        const APInt &DemandedElts,
                                        unsigned Depth, const Query &Q);
 
-static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
-                                       const Query &Q) {
-  Type *Ty = V->getType();
-  APInt DemandedElts = Ty->isVectorTy()
-                           ? APInt::getAllOnesValue(Ty->getVectorNumElements())
-                           : APInt(1, 1);
-  return ComputeNumSignBitsImpl(V, DemandedElts, Depth, Q);
-}
-
 static unsigned ComputeNumSignBits(const Value *V, const APInt &DemandedElts,
                                    unsigned Depth, const Query &Q) {
   unsigned Result = ComputeNumSignBitsImpl(V, DemandedElts, Depth, Q);
