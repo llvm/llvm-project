@@ -24,6 +24,10 @@ namespace lldb_private {
 struct ClangUtil {
   static bool IsClangType(const CompilerType &ct);
 
+  /// Returns the clang::Decl of the given CompilerDecl.
+  /// CompilerDecl has to be valid and represent a clang::Decl.
+  static clang::Decl *GetDecl(const CompilerDecl &decl);
+
   static clang::QualType GetQualType(const CompilerType &ct);
 
   static clang::QualType GetCanonicalQualType(const CompilerType &ct);
