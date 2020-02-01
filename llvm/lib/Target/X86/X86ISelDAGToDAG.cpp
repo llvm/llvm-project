@@ -1409,18 +1409,20 @@ static bool isDispSafeForFrameIndex(int64_t Val) {
 
 bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
                                             X86ISelAddressMode &AM) {
-  // If there's no offset to fold, we don't need to do any work.
-  if (Offset == 0)
-    return false;
-
-  // Cannot combine ExternalSymbol displacements with integer offsets.
-  if (AM.ES || AM.MCSym)
-    return true;
+  // We may have already matched a displacement and the caller just added the
+  // symbolic displacement. So we still need to do the checks even if Offset
+  // is zero.
 
   int64_t Val = AM.Disp + Offset;
+
+  // Cannot combine ExternalSymbol displacements with integer offsets.
+  if (Val != 0 && (AM.ES || AM.MCSym))
+    return true;
+
   CodeModel::Model M = TM.getCodeModel();
   if (Subtarget->is64Bit()) {
-    if (!X86::isOffsetSuitableForCodeModel(Val, M,
+    if (Val != 0 &&
+        !X86::isOffsetSuitableForCodeModel(Val, M,
                                            AM.hasSymbolicDisplacement()))
       return true;
     // In addition to the checks required for a register base, check that
@@ -1581,24 +1583,13 @@ bool X86DAGToDAGISel::matchAdd(SDValue &N, X86ISelAddressMode &AM,
   if (!matchAddressRecursively(N.getOperand(0), AM, Depth+1) &&
       !matchAddressRecursively(Handle.getValue().getOperand(1), AM, Depth+1))
     return false;
-
-  // Don't try commuting operands if the address is in the form of
-  // sym+disp(%rip). foldOffsetIntoAddress() currently does not know there is a
-  // symbolic displacement and would fold disp. If disp is just a bit smaller
-  // than 2**31, it can easily cause a relocation overflow.
-  bool NoCommutate = false;
-  if (AM.isRIPRelative() && AM.hasSymbolicDisplacement())
-    if (ConstantSDNode *Cst =
-            dyn_cast<ConstantSDNode>(Handle.getValue().getOperand(1)))
-      NoCommutate = Cst->getSExtValue() != 0;
-
   AM = Backup;
-  if (!NoCommutate) {
-    // Try again after commutating the operands.
-    if (!matchAddressRecursively(Handle.getValue().getOperand(1), AM, Depth + 1) &&
-        !matchAddressRecursively(Handle.getValue().getOperand(0), AM, Depth + 1))
-      return false;
-  }
+
+  // Try again after commutating the operands.
+  if (!matchAddressRecursively(Handle.getValue().getOperand(1), AM,
+                               Depth + 1) &&
+      !matchAddressRecursively(Handle.getValue().getOperand(0), AM, Depth + 1))
+    return false;
   AM = Backup;
 
   // If we couldn't fold both operands into the address at the same time,
