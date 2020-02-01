@@ -465,7 +465,7 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
       if (!RelTy::IsRela)
         addend = target->getImplicitAddend(bufLoc, type);
 
-      if (config->emachine == EM_MIPS && config->relocatable &&
+      if (config->emachine == EM_MIPS &&
           target->getRelExpr(type, sym, bufLoc) == R_MIPS_GOTREL) {
         // Some MIPS relocations depend on "gp" value. By default,
         // this value has 0x7ff0 offset from a .got section. But
