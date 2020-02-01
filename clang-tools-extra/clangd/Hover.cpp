@@ -250,6 +250,20 @@ void enhanceFromIndex(HoverInfo &Hover, const NamedDecl &ND,
   });
 }
 
+// Default argument might exist but be unavailable, in the case of unparsed
+// arguments for example. This function returns the default argument if it is
+// available.
+const Expr *getDefaultArg(const ParmVarDecl *PVD) {
+  // Default argument can be unparsed or uninstatiated. For the former we
+  // can't do much, as token information is only stored in Sema and not
+  // attached to the AST node. For the latter though, it is safe to proceed as
+  // the expression is still valid.
+  if (!PVD->hasDefaultArg() || PVD->hasUnparsedDefaultArg())
+    return nullptr;
+  return PVD->hasUninstantiatedDefaultArg() ? PVD->getUninstantiatedDefaultArg()
+                                            : PVD->getDefaultArg();
+}
+
 // Populates Type, ReturnType, and Parameters for function-like decls.
 void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
                                const FunctionDecl *FD,
@@ -269,10 +283,10 @@ void fillFunctionTypeAndParams(HoverInfo &HI, const Decl *D,
     }
     if (!PVD->getName().empty())
       P.Name = PVD->getNameAsString();
-    if (PVD->hasDefaultArg()) {
+    if (const Expr *DefArg = getDefaultArg(PVD)) {
       P.Default.emplace();
       llvm::raw_string_ostream Out(*P.Default);
-      PVD->getDefaultArg()->printPretty(Out, nullptr, Policy);
+      DefArg->printPretty(Out, nullptr, Policy);
     }
   }
 
