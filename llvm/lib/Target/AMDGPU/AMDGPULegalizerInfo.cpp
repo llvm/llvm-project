@@ -788,6 +788,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
               // Split if it's too large for the address space.
               if (Query.MMODescrs[0].SizeInBits > MaxSize) {
                 unsigned NumElts = DstTy.getNumElements();
+                unsigned EltSize = EltTy.getSizeInBits();
+
+                if (MaxSize % EltSize == 0) {
+                  return std::make_pair(
+                    0, LLT::scalarOrVector(MaxSize / EltSize, EltTy));
+                }
+
                 unsigned NumPieces = Query.MMODescrs[0].SizeInBits / MaxSize;
 
                 // FIXME: Refine when odd breakdowns handled
