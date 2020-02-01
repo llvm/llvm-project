@@ -1,7 +1,7 @@
 ## Test how we create SHT_RELR sections.
 
 ## Test that the content of SHT_RELR sections for 64-bit little endian targets is correct.
-# RUN: yaml2obj --docnum=1 %s -o %t.le64
+# RUN: yaml2obj --docnum=1 -D ENCODE=LSB %s -o %t.le64
 # RUN: llvm-readobj --sections --section-data %t.le64 | FileCheck %s --check-prefix=LE64
 
 # LE64:      Name: .relr.dyn
@@ -21,22 +21,8 @@
 # LE64-NEXT:   0010: 66554433 00000010 AA998877 00000010
 # LE64-NEXT: )
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name:    .relr.dyn
-    Type:    SHT_RELR
-## Set an arbitrary flag to demonstrate flags are set when requested.
-    Flags:   [ SHF_ALLOC ]
-    Entries: [ 0x00000000AABBCCDD, 0x00000000EEFF1122,
-               0x1000000033445566, 0x10000000778899AA ]
-
 ## Test that the content of SHT_RELR sections for 64-bit big endian targets is correct.
-# RUN: yaml2obj --docnum=2 %s -o %t.be64
+# RUN: yaml2obj --docnum=1 -D ENCODE=MSB %s -o %t.be64
 # RUN: llvm-readobj --sections --section-data %t.be64 | FileCheck %s --check-prefix=BE64
 
 # BE64:      Name: .relr.dyn
@@ -48,7 +34,7 @@ Sections:
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
-  Data:    ELFDATA2MSB
+  Data:    ELFDATA2[[ENCODE]]
   Type:    ET_DYN
   Machine: EM_X86_64
 Sections:
@@ -60,7 +46,7 @@ Sections:
                0x1000000033445566, 0x10000000778899AA ]
 
 ## Test that the content of SHT_RELR sections for 32-bit little endian targets is correct.
-# RUN: yaml2obj --docnum=3 %s -o %t.le32
+# RUN: yaml2obj --docnum=2 -D ENCODE=LSB %s -o %t.le32
 # RUN: llvm-readobj --sections --section-data %t.le32 | FileCheck %s --check-prefix=LE32
 
 # LE32:      Name: .relr.dyn
@@ -79,22 +65,8 @@ Sections:
 # LE32-NEXT:   0000: DDCCBBAA BBAAFFEE BBAAFFEE BCAAFFEE
 # LE32-NEXT: )
 
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
-Sections:
-  - Name:    .relr.dyn
-    Type:    SHT_RELR
-## Set an arbitrary flag to demonstrate flags are set when requested.
-    Flags:   [ SHF_ALLOC ]
-    Entries: [ 0xAABBCCDD, 0xEEFFAABB,
-               0xEEFFAABB, 0xEEFFAABC ]
-
 ## Test that the content of SHT_RELR sections for 32-bit big endian targets is correct.
-# RUN: yaml2obj --docnum=4 %s -o %t.be32
+# RUN: yaml2obj --docnum=2 -D ENCODE=MSB %s -o %t.be32
 # RUN: llvm-readobj --sections --section-data %t.be32 | FileCheck %s --check-prefix=BE32
 
 # BE32:      Name: .relr.dyn
@@ -105,7 +77,7 @@ Sections:
 --- !ELF
 FileHeader:
   Class:   ELFCLASS32
-  Data:    ELFDATA2MSB
+  Data:    ELFDATA2[[ENCODE]]
   Type:    ET_DYN
   Machine: EM_386
 Sections:
@@ -117,7 +89,7 @@ Sections:
                0xEEFFAABB, 0xEEFFAABC ]
 
 ## Test we can use "Content" to describe SHT_RELR section.
-# RUN: yaml2obj --docnum=5 %s -o %t.content
+# RUN: yaml2obj --docnum=3 %s -o %t.content
 # RUN: llvm-readobj --sections --section-data %t.content | FileCheck %s --check-prefix=CONTENT
 
 # CONTENT:      Name: .relr.dyn
@@ -137,7 +109,7 @@ Sections:
     Content: "112233"
 
 ## Check we are able to set an arbitrary sh_entsize.
-# RUN: yaml2obj --docnum=6 %s -o %t.entsize
+# RUN: yaml2obj --docnum=4 %s -o %t.entsize
 # RUN: llvm-readelf --sections %t.entsize | FileCheck %s --check-prefix=ENTSIZE
 
 # ENTSIZE: [Nr] Name      Type Address  Off    Size   ES
@@ -156,7 +128,7 @@ Sections:
     Content: "12"
 
 ## Test we can't use 64-bit offsets/bitmaps when creating a 32-bit object.
-# RUN: yaml2obj --docnum=7 %s -o %t.nottoolarge
+# RUN: yaml2obj --docnum=5 %s -o %t.nottoolarge
 # RUN: llvm-readobj --sections --section-data %t.nottoolarge | FileCheck %s --check-prefix=NOT-TOO-LARGE
 
 # NOT-TOO-LARGE:      Name: .relr.dyn
@@ -164,7 +136,7 @@ Sections:
 # NOT-TOO-LARGE-NEXT:   0000: FFFFFFFF
 # NOT-TOO-LARGE-NEXT: )
 
-# RUN: not yaml2obj --docnum=8 %s 2>&1 | FileCheck %s --check-prefix=TOO-LARGE
+# RUN: not yaml2obj --docnum=6 %s 2>&1 | FileCheck %s --check-prefix=TOO-LARGE
 # TOO-LARGE: error: .relr.dyn: the value is too large for 32-bits: 0x100000000
 
 --- !ELF
@@ -190,7 +162,7 @@ Sections:
     Entries: [ 0x0000000100000000 ]
 
 ## Test we can't specify "Entries" and "Content" properties at the same time.
-# RUN: not yaml2obj --docnum=9 %s 2>&1 | FileCheck %s --check-prefix=BOTH
+# RUN: not yaml2obj --docnum=7 %s 2>&1 | FileCheck %s --check-prefix=BOTH
 
 # BOTH: error: "Entries" and "Content" can't be used together
 

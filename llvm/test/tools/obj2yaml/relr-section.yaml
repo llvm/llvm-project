@@ -3,14 +3,14 @@
 ## Test we use the "Entries" property when it is possible do
 ## dump values correctly.
 
-# RUN: yaml2obj --docnum=1 %s -o %t.64le
-# RUN: obj2yaml %t.64le | FileCheck %s --check-prefix=ELF64LE
-# RUN: yaml2obj --docnum=2 %s -o %t.32le
+# RUN: yaml2obj --docnum=1 -D BITS=32 -D ENCODE=LSB %s -o %t.32le
 # RUN: obj2yaml %t.32le | FileCheck %s --check-prefix=ELF32LE
-# RUN: yaml2obj --docnum=3 %s -o %t.64be
-# RUN: obj2yaml %t.64be | FileCheck %s --check-prefix=ELF64BE
-# RUN: yaml2obj --docnum=4 %s -o %t.32be
+# RUN: yaml2obj --docnum=1 -D BITS=32 -D ENCODE=MSB %s -o %t.32be
 # RUN: obj2yaml %t.32be | FileCheck %s --check-prefix=ELF32BE
+# RUN: yaml2obj --docnum=1 -D BITS=64 -D ENCODE=LSB %s -o %t.64le
+# RUN: obj2yaml %t.64le | FileCheck %s --check-prefix=ELF64LE
+# RUN: yaml2obj --docnum=1 -D BITS=64 -D ENCODE=MSB %s -o %t.64be
+# RUN: obj2yaml %t.64be | FileCheck %s --check-prefix=ELF64BE
 
 # ELF64LE:      Sections:
 # ELF64LE-NEXT:   - Name:    .relr.dyn
@@ -38,43 +38,10 @@
 
 --- !ELF
 FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2LSB
+  Class:   ELFCLASS[[BITS]]
+  Data:    ELFDATA2[[ENCODE]]
   Type:    ET_DYN
   Machine: EM_X86_64
-Sections:
-  - Name: .relr.dyn
-    Type: SHT_RELR
-    Content: "1122334455667788"
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2LSB
-  Type:    ET_DYN
-  Machine: EM_386
-Sections:
-  - Name: .relr.dyn
-    Type: SHT_RELR
-    Content: "1122334455667788"
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS64
-  Data:    ELFDATA2MSB
-  Type:    ET_DYN
-  Machine: EM_X86_64
-Sections:
-  - Name: .relr.dyn
-    Type: SHT_RELR
-    Content: "1122334455667788"
-
---- !ELF
-FileHeader:
-  Class:   ELFCLASS32
-  Data:    ELFDATA2MSB
-  Type:    ET_DYN
-  Machine: EM_386
 Sections:
   - Name: .relr.dyn
     Type: SHT_RELR
@@ -82,7 +49,7 @@ Sections:
 
 ## Test we use the "Content" property when a SHT_RELR section is truncated.
 
-# RUN: yaml2obj --docnum=5 %s -o %t.content
+# RUN: yaml2obj --docnum=2 %s -o %t.content
 # RUN: obj2yaml %t.content | FileCheck %s --check-prefix=CONTENT
 
 # CONTENT:      - Name:    .relr.dyn
