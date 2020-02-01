@@ -12,11 +12,11 @@
 
 #include "SwiftOptionSet.h"
 
-#include "lldb/Utility/StreamString.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ValueObject.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/SwiftASTContext.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "swift/AST/Decl.h"
 #include "swift/ClangImporter/ClangImporter.h"

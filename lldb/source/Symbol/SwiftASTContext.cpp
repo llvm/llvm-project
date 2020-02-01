@@ -84,9 +84,11 @@
 #include "swift/Strings.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangHost.h"
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/ExpressionParser/Swift/SwiftDiagnostic.h"
 #include "Plugins/ExpressionParser/Swift/SwiftHost.h"
 #include "Plugins/ExpressionParser/Swift/SwiftUserExpression.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
@@ -101,8 +103,6 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Host/XML.h"
-#include "lldb/Symbol/TypeSystemClang.h"
-#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SourceModule.h"
@@ -114,11 +114,11 @@
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
+#include "llvm/ADT/ScopeExit.h"
 
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
@@ -1068,10 +1068,10 @@ StringRef SwiftASTContext::GetResourceDir(const llvm::Triple &triple) {
   if (it != g_resource_dir_cache.end())
     return it->getValue();
 
-  auto value =
-    GetResourceDir(platform_sdk_path.str(), swift_stdlib_os_dir,
-                     GetSwiftResourceDir().GetPath(), GetXcodeContentsPath(),
-                     GetCurrentToolchainPath(), GetCurrentCLToolsPath());
+  auto value = GetResourceDir(
+      platform_sdk_path.str(), swift_stdlib_os_dir,
+      GetSwiftResourceDir().GetPath(), GetXcodeContentsPath().str(),
+      GetCurrentToolchainPath(), GetCurrentCLToolsPath());
   g_resource_dir_cache.insert({key, value});
   return g_resource_dir_cache[key];
 }
@@ -1141,7 +1141,7 @@ std::string SwiftASTContext::GetResourceDir(StringRef platform_sdk_path,
       if (IsDirectory(FileSpec(path))) {
         StringRef resource_dir = path;
         llvm::sys::path::append(path, swift_stdlib_os_dir);
-        std::string s = path.str();
+        std::string s(path);
         if (IsDirectory(FileSpec(path))) {
           LOG_PRINTF(LIBLLDB_LOG_TYPES,
                      "found Swift resource dir via "
@@ -1426,7 +1426,7 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
           if (last_sdk_path.size() > invocation.getSDKPath().size())
             invocation.setSDKPath(last_sdk_path);
       }
-      last_sdk_path = invocation.getSDKPath();
+      last_sdk_path = invocation.getSDKPath().str();
     }
   }
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "Picking SDK path \"%s\".",
@@ -3012,7 +3012,8 @@ public:
           match.Printf("%s:%u:", diagnostic.bufferName.str().c_str(),
                        diagnostic.line);
           const size_t match_len = match.GetString().size();
-          size_t match_pos = diagnostic.description.find(match.GetString());
+          size_t match_pos =
+              diagnostic.description.find(match.GetString().str());
           if (match_pos != std::string::npos) {
             // We have some <file>:<line>:" instances that need to be updated.
             StreamString fixed_description;
@@ -3026,8 +3027,8 @@ public:
                   "%s:%u:", diagnostic.bufferName.str().c_str(),
                   diagnostic.line - first_line + 1);
               start_pos = match_pos + match_len;
-              match_pos =
-                  diagnostic.description.find(match.GetString(), start_pos);
+              match_pos = diagnostic.description.find(match.GetString().str(),
+                                                      start_pos);
             } while (match_pos != std::string::npos);
 
             // Append any last remaining text.
@@ -6912,7 +6913,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
       break;
 
     auto property = stored_properties[idx];
-    name = property->getBaseName().userFacingName();
+    name = property->getBaseName().userFacingName().str();
 
     // We cannot reliably get layout information without an execution
     // context.

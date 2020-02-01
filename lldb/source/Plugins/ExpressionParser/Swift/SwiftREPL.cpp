@@ -584,7 +584,7 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
       // the CompletionRequest requires a replacement for the full current
       // token. Fix this by getting the current token here and we attach
       // the suffix we get from Swift.
-      std::string prefix = request.GetCursorArgumentPrefix();
+      std::string prefix = request.GetCursorArgumentPrefix().str();
       llvm::StringRef current_code_ref(current_code);
       completions.populate(repl_source_file, current_code_ref);
 

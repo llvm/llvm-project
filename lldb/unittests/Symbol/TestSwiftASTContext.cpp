@@ -120,7 +120,7 @@ TEST_F(TestSwiftASTContext, ResourceDir) {
     SmallString path = m_base_dir.str();
     path::append(path, dir);
     ASSERT_NO_ERROR(fs::create_directories(path));
-    abs_paths.push_back(path.str());
+    abs_paths.push_back(std::string(path));
   }
 
   llvm::StringRef macosx_sdk = path::parent_path(abs_paths[3]);
@@ -149,11 +149,14 @@ TEST_F(TestSwiftASTContext, ResourceDir) {
     llvm::Triple host("x86_64-apple-macosx10.14");
     llvm::Triple target(triple_string);
     return SwiftASTContextTester::GetResourceDir(
-        sdk_path, SwiftASTContextTester::GetSwiftStdlibOSDir(target, host),
-        swift_dir.str(), xcode_contents.str(), toolchain.str(), cl_tools.str());
+        sdk_path,
+        SwiftASTContextTester::GetSwiftStdlibOSDir(target, host).str(),
+        std::string(swift_dir), std::string(xcode_contents),
+        std::string(toolchain), std::string(cl_tools));
   };
 
-  EXPECT_EQ(GetResourceDir({"x86_64-apple-macosx10.14"}, macosx_sdk), tc_rdir);
+  EXPECT_EQ(GetResourceDir({"x86_64-apple-macosx10.14"}, macosx_sdk),
+            tc_rdir.str());
   EXPECT_EQ(GetResourceDir("x86_64-apple-darwin", macosx_sdk), tc_rdir);
   EXPECT_EQ(GetResourceDir("aarch64-apple-ios11.3", ios_sdk), tc_rdir);
   // Old-style simulator triple with missing environment.
@@ -171,13 +174,13 @@ TEST_F(TestSwiftASTContext, ResourceDir) {
   // Custom toolchain.
   toolchain = path::parent_path(
       path::parent_path(path::parent_path(path::parent_path(abs_paths[7]))));
-  std::string custom_tc = path::parent_path(abs_paths[7]);
+  std::string custom_tc = path::parent_path(abs_paths[7]).str();
   EXPECT_EQ(GetResourceDir("x86_64-apple-macosx", macosx_sdk), custom_tc);
 
   // CLTools.
   xcode_contents = "";
   toolchain = "";
-  std::string cl_tools_rd = path::parent_path(abs_paths[8]);
+  std::string cl_tools_rd = path::parent_path(abs_paths[8]).str();
   EXPECT_EQ(GetResourceDir("x86_64-apple-macosx", macosx_sdk), cl_tools_rd);
 
   // Local builds.
