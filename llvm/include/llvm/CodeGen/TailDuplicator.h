@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/MBFIWrapper.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include <utility>
 #include <vector>
@@ -42,7 +43,7 @@ class TailDuplicator {
   const MachineModuleInfo *MMI;
   MachineRegisterInfo *MRI;
   MachineFunction *MF;
-  const MachineBlockFrequencyInfo *MBFI;
+  MBFIWrapper *MBFI;
   ProfileSummaryInfo *PSI;
   bool PreRegAlloc;
   bool LayoutMode;
@@ -69,7 +70,7 @@ public:
   ///     default implies using the command line value TailDupSize.
   void initMF(MachineFunction &MF, bool PreRegAlloc,
               const MachineBranchProbabilityInfo *MBPI,
-              const MachineBlockFrequencyInfo *MBFI,
+              MBFIWrapper *MBFI,
               ProfileSummaryInfo *PSI,
               bool LayoutMode, unsigned TailDupSize = 0);
 

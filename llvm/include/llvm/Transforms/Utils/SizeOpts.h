@@ -63,10 +63,9 @@ bool shouldFuncOptimizeForSizeImpl(const FuncT *F, ProfileSummaryInfo *PSI,
       F, PSI, *BFI);
 }
 
-template<typename AdapterT, typename BlockT, typename BFIT>
-bool shouldOptimizeForSizeImpl(const BlockT *BB, ProfileSummaryInfo *PSI,
+template<typename AdapterT, typename BlockTOrBlockFreq, typename BFIT>
+bool shouldOptimizeForSizeImpl(BlockTOrBlockFreq BBOrBlockFreq, ProfileSummaryInfo *PSI,
                                BFIT *BFI, PGSOQueryType QueryType) {
-  assert(BB);
   if (!PSI || !BFI || !PSI->hasProfileSummary())
     return false;
   if (ForcePGSO)
@@ -81,11 +80,11 @@ bool shouldOptimizeForSizeImpl(const BlockT *BB, ProfileSummaryInfo *PSI,
   if (PGSOColdCodeOnly ||
       (PGSOLargeWorkingSetSizeOnly && !PSI->hasLargeWorkingSetSize())) {
     // Even if the working set size isn't large, size-optimize cold code.
-    return AdapterT::isColdBlock(BB, PSI, BFI);
+    return AdapterT::isColdBlock(BBOrBlockFreq, PSI, BFI);
   }
   return !AdapterT::isHotBlockNthPercentile(
       PSI->hasSampleProfile() ? PgsoCutoffSampleProf : PgsoCutoffInstrProf,
-      BB, PSI, BFI);
+      BBOrBlockFreq, PSI, BFI);
 }
 
 /// Returns true if function \p F is suggested to be size-optimized based on the
