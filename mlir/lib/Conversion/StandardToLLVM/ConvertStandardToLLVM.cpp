@@ -13,7 +13,6 @@
 
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/ADT/TypeSwitch.h"
-#include "mlir/Conversion/LoopToStandard/ConvertLoopToStandard.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/StandardOps/Ops.h"
@@ -2239,7 +2238,6 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
       return signalPassFailure();
 
     OwningRewritePatternList patterns;
-    populateLoopToStdConversionPatterns(patterns, m.getContext());
     patternListFiller(*typeConverter, patterns);
 
     ConversionTarget target(getContext());
