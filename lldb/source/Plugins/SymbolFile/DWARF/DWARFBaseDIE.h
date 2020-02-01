@@ -57,10 +57,6 @@ public:
 
   llvm::Optional<DIERef> GetDIERef() const;
 
-  llvm::Expected<lldb_private::TypeSystem &> GetTypeSystem() const;
-
-  DWARFASTParser *GetDWARFParser() const;
-
   void Set(DWARFUnit *cu, DWARFDebugInfoEntry *die) {
     if (cu && die) {
       m_cu = cu;
@@ -97,8 +93,6 @@ public:
   lldb::user_id_t GetID() const;
 
   const char *GetName() const;
-
-  lldb::LanguageType GetLanguage() const;
 
   lldb::ModuleSP GetModule() const;
 

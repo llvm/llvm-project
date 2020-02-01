@@ -74,13 +74,6 @@ const char *DWARFBaseDIE::GetName() const {
     return nullptr;
 }
 
-lldb::LanguageType DWARFBaseDIE::GetLanguage() const {
-  if (IsValid())
-    return m_cu->GetLanguageType();
-  else
-    return lldb::eLanguageTypeUnknown;
-}
-
 lldb::ModuleSP DWARFBaseDIE::GetModule() const {
   SymbolFileDWARF *dwarf = GetDWARF();
   if (dwarf)
@@ -101,24 +94,6 @@ SymbolFileDWARF *DWARFBaseDIE::GetDWARF() const {
     return &m_cu->GetSymbolFileDWARF();
   else
     return nullptr;
-}
-
-llvm::Expected<lldb_private::TypeSystem &> DWARFBaseDIE::GetTypeSystem() const {
-  if (!m_cu)
-    return llvm::make_error<llvm::StringError>(
-        "Unable to get TypeSystem, no compilation unit available",
-        llvm::inconvertibleErrorCode());
-  return m_cu->GetTypeSystem();
-}
-
-DWARFASTParser *DWARFBaseDIE::GetDWARFParser() const {
-  auto type_system_or_err = GetTypeSystem();
-  if (auto err = type_system_or_err.takeError()) {
-    LLDB_LOG_ERROR(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS),
-                   std::move(err), "Unable to get DWARFASTParser");
-    return nullptr;
-  }
-  return type_system_or_err->GetDWARFParser();
 }
 
 bool DWARFBaseDIE::HasChildren() const {
