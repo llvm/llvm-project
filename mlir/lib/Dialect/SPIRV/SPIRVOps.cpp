@@ -43,13 +43,11 @@ static constexpr const char kInitializerAttrName[] = "initializer";
 static constexpr const char kInterfaceAttrName[] = "interface";
 static constexpr const char kMemoryScopeAttrName[] = "memory_scope";
 static constexpr const char kSemanticsAttrName[] = "semantics";
-static constexpr const char kSpecConstAttrName[] = "spec_const";
 static constexpr const char kSpecIdAttrName[] = "spec_id";
 static constexpr const char kTypeAttrName[] = "type";
 static constexpr const char kUnequalSemanticsAttrName[] = "unequal_semantics";
 static constexpr const char kValueAttrName[] = "value";
 static constexpr const char kValuesAttrName[] = "values";
-static constexpr const char kVariableAttrName[] = "variable";
 
 //===----------------------------------------------------------------------===//
 // Common utility functions
@@ -2657,6 +2655,38 @@ void spirv::SelectionOp::addMergeBlock() {
 
   // Add a spv._merge op into the merge block.
   builder.create<spirv::MergeOp>(getLoc());
+}
+
+spirv::SelectionOp spirv::SelectionOp::createIfThen(
+    Location loc, Value condition,
+    function_ref<void(OpBuilder *builder)> thenBody, OpBuilder *builder) {
+  auto selectionControl = builder->getI32IntegerAttr(
+      static_cast<uint32_t>(spirv::SelectionControl::None));
+  auto selectionOp = builder->create<spirv::SelectionOp>(loc, selectionControl);
+
+  selectionOp.addMergeBlock();
+  Block *mergeBlock = selectionOp.getMergeBlock();
+  Block *thenBlock = nullptr;
+
+  // Build the "then" block.
+  {
+    OpBuilder::InsertionGuard guard(*builder);
+    thenBlock = builder->createBlock(mergeBlock);
+    thenBody(builder);
+    builder->create<spirv::BranchOp>(loc, mergeBlock);
+  }
+
+  // Build the header block.
+  {
+    OpBuilder::InsertionGuard guard(*builder);
+    builder->createBlock(thenBlock);
+    builder->create<spirv::BranchConditionalOp>(
+        loc, condition, thenBlock,
+        /*trueArguments=*/ArrayRef<Value>(), mergeBlock,
+        /*falseArguments=*/ArrayRef<Value>());
+  }
+
+  return selectionOp;
 }
 
 namespace {
