@@ -480,7 +480,7 @@ computeReshapeCollapsedType(MemRefType type,
 
   // Early-exit: if `type` is contiguous, the result must be contiguous.
   if (canonicalizeStridedLayout(type).getAffineMaps().empty())
-    return MemRefType::get(newSizes, type.getElementType(), {});
+    return MemRefType::Builder(type).setShape(newSizes).setAffineMaps({});
 
   // Convert back to int64_t because we don't have enough information to create
   // new strided layouts from AffineExpr only. This corresponds to a case where
@@ -499,7 +499,7 @@ computeReshapeCollapsedType(MemRefType type,
   auto layout =
       makeStridedLinearLayoutMap(intStrides, intOffset, type.getContext());
   return canonicalizeStridedLayout(
-      MemRefType::get(newSizes, type.getElementType(), {layout}));
+      MemRefType::Builder(type).setShape(newSizes).setAffineMaps({layout}));
 }
 
 /// Helper functions assert Attribute of the proper type in attr and returns the
@@ -613,11 +613,10 @@ void mlir::linalg::SliceOp::build(Builder *b, OperationState &result,
   unsigned rank = memRefType.getRank();
   // TODO(ntv): propagate static size and stride information when available.
   SmallVector<int64_t, 4> sizes(rank, -1); // -1 encodes dynamic size.
-  Type elementType = memRefType.getElementType();
-  result.addTypes({MemRefType::get(
-      sizes, elementType,
-      {makeStridedLinearLayoutMap(strides, offset, b->getContext())},
-      memRefType.getMemorySpace())});
+  result.addTypes({MemRefType::Builder(memRefType)
+                       .setShape(sizes)
+                       .setAffineMaps(makeStridedLinearLayoutMap(
+                           strides, offset, b->getContext()))});
 }
 
 static void print(OpAsmPrinter &p, SliceOp op) {
@@ -698,8 +697,8 @@ void mlir::linalg::TransposeOp::build(Builder *b, OperationState &result,
   auto map = makeStridedLinearLayoutMap(strides, offset, b->getContext());
   map = permutationMap ? map.compose(permutationMap) : map;
   // Compute result type.
-  auto resultType = MemRefType::get(sizes, memRefType.getElementType(), map,
-                                    memRefType.getMemorySpace());
+  MemRefType resultType =
+      MemRefType::Builder(memRefType).setShape(sizes).setAffineMaps(map);
 
   build(b, result, resultType, view, attrs);
   result.addAttribute(TransposeOp::getPermutationAttrName(), permutation);

@@ -168,8 +168,8 @@ inline Type castElementType(Type t, Type newElementType) {
     case StandardTypes::Kind::UnrankedTensor:
       return UnrankedTensorType::get(newElementType);
     case StandardTypes::Kind::MemRef:
-      return MemRefType::get(st.getShape(), newElementType,
-                             st.cast<MemRefType>().getAffineMaps());
+      return MemRefType::Builder(st.cast<MemRefType>())
+          .setElementType(newElementType);
     }
   }
   assert(t.isIntOrFloat());
