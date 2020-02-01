@@ -711,7 +711,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
   if (SanOpts.has(SanitizerKind::ObjectSize) &&
       !SkippedChecks.has(SanitizerKind::ObjectSize) &&
       !Ty->isIncompleteType()) {
-    uint64_t TySize = getContext().getTypeSizeInChars(Ty).getQuantity();
+    uint64_t TySize = CGM.getMinimumObjectSize(Ty).getQuantity();
     llvm::Value *Size = llvm::ConstantInt::get(IntPtrTy, TySize);
     if (ArraySize)
       Size = Builder.CreateMul(Size, ArraySize);
@@ -742,7 +742,9 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
       !SkippedChecks.has(SanitizerKind::Alignment)) {
     AlignVal = Alignment.getQuantity();
     if (!Ty->isIncompleteType() && !AlignVal)
-      AlignVal = getContext().getTypeAlignInChars(Ty).getQuantity();
+      AlignVal =
+          getNaturalTypeAlignment(Ty, nullptr, nullptr, /*ForPointeeType=*/true)
+              .getQuantity();
 
     // The glvalue must be suitably aligned.
     if (AlignVal > 1 &&
