@@ -387,8 +387,8 @@ unsigned FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
 }
 
 unsigned FunctionLoweringInfo::CreateRegs(const Value *V) {
-  return CreateRegs(V->getType(), DA && !TLI->requiresUniformRegister(*MF, V) &&
-                                      DA->isDivergent(V));
+  return CreateRegs(V->getType(), DA && DA->isDivergent(V) &&
+                    !TLI->requiresUniformRegister(*MF, V));
 }
 
 /// GetLiveOutRegInfo - Gets LiveOutInfo for a register, returning NULL if the
