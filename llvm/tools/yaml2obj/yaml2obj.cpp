@@ -31,9 +31,9 @@ using namespace llvm;
 static cl::opt<std::string>
   Input(cl::Positional, cl::desc("<input>"), cl::init("-"));
 
-cl::opt<unsigned>
-DocNum("docnum", cl::init(1),
-       cl::desc("Read specified document from input (default = 1)"));
+static cl::opt<unsigned>
+    DocNum("docnum", cl::init(1),
+           cl::desc("Read specified document from input (default = 1)"));
 
 static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"));
