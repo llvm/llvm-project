@@ -2017,6 +2017,29 @@ the configuration (without a prefix: ``Auto``).
          [self onOperationDone];
      }];
 
+**ObjCBreakBeforeNestedBlockParam** (``bool``)
+  Break parameters list into lines when there is nested block
+  parameters in a fuction call.
+
+  .. code-block:: c++
+
+    false:
+     - (void)_aMethod
+     {
+         [self.test1 t:self w:self callback:^(typeof(self) self, NSNumber *u, NSNumber *v) {
+             u = c;
+         }]
+     }
+     true:
+     - (void)_aMethod
+     {
+        [self.test1 t:self
+                     w:self
+            callback:^(typeof(self) self, NSNumber *u, NSNumber *v) {
+                 u = c;
+             }]
+     }
+
 **ObjCSpaceAfterProperty** (``bool``)
   Add a space after ``@property`` in Objective-C, i.e. use
   ``@property (readonly)`` instead of ``@property(readonly)``.

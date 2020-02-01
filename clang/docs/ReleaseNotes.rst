@@ -158,8 +158,11 @@ clang-format
   It helps avoid having the closing bracket align with the switch statement's
   closing bracket (when ``IndentCaseLabels`` is ``false``).
 
+- Option ``ObjCBreakBeforeNestedBlockParam`` has been added to optionally apply
+  linebreaks for function arguments declarations before nested blocks.
+
   .. code-block:: c++
-  
+
     switch (fool) {                vs.     switch (fool) {
     case 1:                                case 1: {
       {                                      bar();

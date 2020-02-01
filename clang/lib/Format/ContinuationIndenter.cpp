@@ -861,8 +861,10 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
   // Any break on this level means that the parent level has been broken
   // and we need to avoid bin packing there.
   bool NestedBlockSpecialCase =
-      !Style.isCpp() && Current.is(tok::r_brace) && State.Stack.size() > 1 &&
-      State.Stack[State.Stack.size() - 2].NestedBlockInlined;
+      (!Style.isCpp() && Current.is(tok::r_brace) && State.Stack.size() > 1 &&
+       State.Stack[State.Stack.size() - 2].NestedBlockInlined) ||
+      (Style.Language == FormatStyle::LK_ObjC && Current.is(tok::r_brace) &&
+       State.Stack.size() > 1 && !Style.ObjCBreakBeforeNestedBlockParam);
   if (!NestedBlockSpecialCase)
     for (unsigned i = 0, e = State.Stack.size() - 1; i != e; ++i)
       State.Stack[i].BreakBeforeParameter = true;
@@ -1380,7 +1382,8 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
           (!BinPackInconclusiveFunctions &&
            Current.PackingKind == PPK_Inconclusive)));
 
-    if (Current.is(TT_ObjCMethodExpr) && Current.MatchingParen) {
+    if (Current.is(TT_ObjCMethodExpr) && Current.MatchingParen &&
+        Style.ObjCBreakBeforeNestedBlockParam) {
       if (Style.ColumnLimit) {
         // If this '[' opens an ObjC call, determine whether all parameters fit
         // into one line and put one per line if they don't.
