@@ -158,7 +158,8 @@ public:
     return HasChildren() ? this + 1 : nullptr;
   }
 
-  DWARFDeclContext GetDWARFDeclContext(DWARFUnit *cu) const;
+  void GetDWARFDeclContext(DWARFUnit *cu,
+                           DWARFDeclContext &dwarf_decl_ctx) const;
 
   DWARFDIE GetParentDeclContextDIE(DWARFUnit *cu) const;
   DWARFDIE GetParentDeclContextDIE(DWARFUnit *cu,
