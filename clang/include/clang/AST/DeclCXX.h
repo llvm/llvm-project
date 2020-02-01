@@ -1696,6 +1696,10 @@ public:
   /// actually abstract.
   bool mayBeAbstract() const;
 
+  /// Determine whether it's impossible for a class to be derived from this
+  /// class. This is best-effort, and may conservatively return false.
+  bool isEffectivelyFinal() const;
+
   /// If this is the closure type of a lambda expression, retrieve the
   /// number to be used for name mangling in the Itanium C++ ABI.
   ///

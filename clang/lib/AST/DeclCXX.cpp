@@ -1942,6 +1942,18 @@ bool CXXRecordDecl::mayBeAbstract() const {
   return false;
 }
 
+bool CXXRecordDecl::isEffectivelyFinal() const {
+  auto *Def = getDefinition();
+  if (!Def)
+    return false;
+  if (Def->hasAttr<FinalAttr>())
+    return true;
+  if (const auto *Dtor = Def->getDestructor())
+    if (Dtor->hasAttr<FinalAttr>())
+      return true;
+  return false;
+}
+
 void CXXDeductionGuideDecl::anchor() {}
 
 bool ExplicitSpecifier::isEquivalent(const ExplicitSpecifier Other) const {
@@ -2148,12 +2160,8 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
   // Similarly, if the class itself or its destructor is marked 'final',
   // the class can't be derived from and we can therefore devirtualize the 
   // member function call.
-  if (BestDynamicDecl->hasAttr<FinalAttr>())
+  if (BestDynamicDecl->isEffectivelyFinal())
     return DevirtualizedMethod;
-  if (const auto *dtor = BestDynamicDecl->getDestructor()) {
-    if (dtor->hasAttr<FinalAttr>())
-      return DevirtualizedMethod;
-  }
 
   if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
     if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
