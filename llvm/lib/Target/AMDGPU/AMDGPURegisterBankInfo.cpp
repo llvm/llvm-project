@@ -1180,8 +1180,7 @@ bool AMDGPURegisterBankInfo::applyMappingWideLoad(MachineInstr &MI,
   B.setInsertPt(*RepairInst->getParent(), RepairInst);
 
   for (unsigned DefIdx = 0, e = DefRegs.size(); DefIdx != e; ++DefIdx) {
-    Register IdxReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
-    B.buildConstant(IdxReg, DefIdx);
+    Register IdxReg = B.buildConstant(LLT::scalar(32), DefIdx).getReg(0);
     MRI.setRegBank(IdxReg, AMDGPU::VGPRRegBank);
     B.buildExtractVectorElement(DefRegs[DefIdx], TmpReg, IdxReg);
   }
