@@ -1688,6 +1688,29 @@ struct FormatStyle {
   /// ``@property (readonly)`` instead of ``@property(readonly)``.
   bool ObjCSpaceAfterProperty;
 
+  /// Break parameters list into lines when there is nested block
+  /// parameters in a fuction call.
+  /// \code
+  ///   false:
+  ///    - (void)_aMethod
+  ///    {
+  ///        [self.test1 t:self w:self callback:^(typeof(self) self, NSNumber
+  ///        *u, NSNumber *v) {
+  ///            u = c;
+  ///        }]
+  ///    }
+  ///    true:
+  ///    - (void)_aMethod
+  ///    {
+  ///       [self.test1 t:self
+  ///                    w:self
+  ///           callback:^(typeof(self) self, NSNumber *u, NSNumber *v) {
+  ///                u = c;
+  ///            }]
+  ///    }
+  /// \endcode
+  bool ObjCBreakBeforeNestedBlockParam;
+
   /// Add a space in front of an Objective-C protocol list, i.e. use
   /// ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
   bool ObjCSpaceBeforeProtocolList;
@@ -2178,6 +2201,8 @@ struct FormatStyle {
            NamespaceMacros == R.NamespaceMacros &&
            ObjCBinPackProtocolList == R.ObjCBinPackProtocolList &&
            ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
+           ObjCBreakBeforeNestedBlockParam ==
+               R.ObjCBreakBeforeNestedBlockParam &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
            PenaltyBreakAssignment == R.PenaltyBreakAssignment &&
