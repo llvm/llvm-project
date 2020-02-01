@@ -199,11 +199,11 @@ public:
   ///     The stream to which to dump the object description.
   void Dump(Stream *s, bool show_fullpaths) const;
 
-  void DumpStopContext(Stream *s, lldb::LanguageType language) const;
+  void DumpStopContext(Stream *s) const;
 
-  ConstString GetName(lldb::LanguageType language) const;
+  ConstString GetName() const;
 
-  ConstString GetDisplayName(lldb::LanguageType language) const;
+  ConstString GetDisplayName() const;
 
   /// Get accessor for the call site declaration information.
   ///

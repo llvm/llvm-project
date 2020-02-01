@@ -1418,7 +1418,7 @@ protected:
           base_object_sp = m_backend.GetSyntheticBase(
               0, base_type, true,
               Mangled(base_type_name)
-                  .GetDemangledName(lldb::eLanguageTypeSwift));
+                  .GetDemangledName());
           return base_object_sp;
         } else
           return nullptr;
@@ -1815,7 +1815,7 @@ protected:
     stream.Printf("kind=%s",
                   SwiftDemangleNodeKindToCString(node_ptr->getKind()));
     if (node_ptr->hasText()) {
-      std::string Text = node_ptr->getText();
+      std::string Text = node_ptr->getText().str();
       stream.Printf(", text=\"%s\"", Text.c_str());
     }
     if (node_ptr->hasIndex())

@@ -354,7 +354,7 @@ bool SwiftRuntimeReporting::NotifyBreakpointHit(
     std::string description = report->GetAsDictionary()
                                 ->GetValueForKey("description")
                                 ->GetAsString()
-                                ->GetValue();
+      ->GetValue().str();
     thread_sp->SetStopInfo(
         InstrumentationRuntimeStopInfo::CreateStopReasonWithInstrumentationData(
             *thread_sp, description, report));

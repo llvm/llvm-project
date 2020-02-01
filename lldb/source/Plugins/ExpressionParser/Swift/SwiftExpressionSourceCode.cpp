@@ -119,7 +119,7 @@ bool SwiftExpressionSourceCode::GetText(
                                         os_vers.str(),
                                         first_body_line);
 
-    text = wrap_stream.GetString();
+    text = wrap_stream.GetString().str();
   } else {
     text.append(m_body);
   }

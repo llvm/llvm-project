@@ -1555,7 +1555,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
                 sc->block->GetInlinedFunctionInfo();
             if (inline_info) {
               s.PutCString(" [inlined] ");
-              inline_info->GetName(sc->function->GetLanguage()).Dump(&s);
+              inline_info->GetName().Dump(&s);
             }
           }
         }
@@ -1639,8 +1639,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
           if (inline_info) {
             s.PutCString(cstr);
             s.PutCString(" [inlined] ");
-            cstr =
-                inline_info->GetName(sc->function->GetLanguage()).GetCString();
+            cstr = inline_info->GetName().GetCString();
           }
 
           VariableList args;
@@ -1761,12 +1760,11 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   case Entry::Type::FunctionMangledName: {
     const char *name = nullptr;
     if (sc->symbol)
-      name = sc->symbol->GetMangled()
-                 .GetName(sc->symbol->GetLanguage(), Mangled::ePreferMangled)
-                 .AsCString();
+      name =
+          sc->symbol->GetMangled().GetName(Mangled::ePreferMangled).AsCString();
     else if (sc->function)
       name = sc->function->GetMangled()
-                 .GetName(sc->symbol->GetLanguage(), Mangled::ePreferMangled)
+                 .GetName(Mangled::ePreferMangled)
                  .AsCString();
 
     if (!name)
@@ -1777,7 +1775,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       if (const InlineFunctionInfo *inline_info =
               sc->block->GetInlinedFunctionInfo()) {
         s.PutCString(" [inlined] ");
-        inline_info->GetName(sc->function->GetLanguage()).Dump(&s);
+        inline_info->GetName().Dump(&s);
       }
     }
     return true;

@@ -69,9 +69,7 @@ const char *SBFunction::GetDisplayName() const {
 
   const char *cstr = nullptr;
   if (m_opaque_ptr)
-    cstr = m_opaque_ptr->GetMangled()
-               .GetDisplayDemangledName(m_opaque_ptr->GetLanguage())
-               .AsCString();
+    cstr = m_opaque_ptr->GetMangled().GetDisplayDemangledName().AsCString();
 
   return cstr;
 }

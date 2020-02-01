@@ -35,7 +35,7 @@ std::string lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
               SkipsPointers() ? " (skip pointers)" : "",
               SkipsReferences() ? " (skip references)" : "",
               HideNames(nullptr) ? " (hide member names)" : "");
-  return sstr.GetString();
+  return sstr.GetString().str();
 }
 
 // if this ValueObject is an Optional<T> with the Some(T) case selected,
@@ -160,7 +160,7 @@ bool lldb_private::formatters::swift::SwiftOptionalSummaryProvider::
 
   bool is_ok =
       SwiftOptional_SummaryProvider_Impl(*target_valobj_sp, stream, options);
-  dest.assign(stream.GetString());
+  dest.assign(stream.GetString().str());
 
   return is_ok;
 }

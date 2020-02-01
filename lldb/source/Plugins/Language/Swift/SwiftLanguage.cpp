@@ -1546,7 +1546,7 @@ bool SwiftLanguage::GetFunctionDisplayName(
             s.PutCString(cstr);
             s.PutCString(" [inlined] ");
             cstr =
-                inline_info->GetName(sc->function->GetLanguage()).GetCString();
+                inline_info->GetName().GetCString();
           }
 
           VariableList args;

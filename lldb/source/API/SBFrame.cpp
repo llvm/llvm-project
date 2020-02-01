@@ -1256,8 +1256,7 @@ const char *SBFrame::GetFunctionName() const {
           if (inlined_block) {
             const InlineFunctionInfo *inlined_info =
                 inlined_block->GetInlinedFunctionInfo();
-            name =
-                inlined_info->GetName(sc.function->GetLanguage()).AsCString();
+            name = inlined_info->GetName().AsCString();
           }
         }
 
@@ -1300,8 +1299,7 @@ const char *SBFrame::GetDisplayFunctionName() {
           if (inlined_block) {
             const InlineFunctionInfo *inlined_info =
                 inlined_block->GetInlinedFunctionInfo();
-            name = inlined_info->GetDisplayName(sc.function->GetLanguage())
-                       .AsCString();
+            name = inlined_info->GetDisplayName().AsCString();
           }
         }
 

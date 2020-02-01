@@ -150,7 +150,7 @@ __builtin_logger_initialize()
   llvm::raw_svector_ostream os(buffer);
   if (!os_version.empty())
     os << "@available(" << os_version << ", *)";
-  std::string availability = os.str();
+  std::string availability = std::string(buffer);
 
   StreamString wrapped_expr_text;
   wrapped_expr_text.Printf("do\n"

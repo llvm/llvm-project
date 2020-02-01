@@ -186,9 +186,8 @@ void Mangled::Clear() {
 
 // Compare the string values.
 int Mangled::Compare(const Mangled &a, const Mangled &b) {
-  return ConstString::Compare(
-      a.GetName(lldb::eLanguageTypeUnknown, ePreferMangled),
-      b.GetName(lldb::eLanguageTypeUnknown, ePreferMangled));
+  return ConstString::Compare(a.GetName(ePreferMangled),
+                              b.GetName(ePreferMangled));
 }
 
 // Set the string value in this objects. If "mangled" is true, then the mangled
@@ -339,8 +338,7 @@ bool Mangled::DemangleWithRichManglingInfo(
 // class will need to use this accessor if it wishes to decode the demangled
 // name. The result is cached and will be kept until a new string value is
 // supplied to this object, or until the end of the object's lifetime.
-ConstString Mangled::GetDemangledName(lldb::LanguageType language,
-                                      // BEGIN SWIFT
+ConstString Mangled::GetDemangledName(// BEGIN SWIFT
                                       const SymbolContext *sc
                                       // END SWIFT
                                       ) const {
@@ -412,9 +410,10 @@ ConstString Mangled::GetDemangledName(lldb::LanguageType language,
   return m_demangled;
 }
 
-ConstString Mangled::GetDisplayDemangledName(lldb::LanguageType language,
+ConstString Mangled::GetDisplayDemangledName(
 // BEGIN SWIFT
-                                             const SymbolContext *sc) const {
+                                             const SymbolContext *sc
+                                             ) const {
   ConstString demangled;
   if (m_mangled) {
     do {
@@ -440,23 +439,21 @@ ConstString Mangled::GetDisplayDemangledName(lldb::LanguageType language,
     } while (0);
   }
   if (!demangled)
-    demangled = GetDemangledName(language);
+    demangled = GetDemangledName();
   return demangled ? demangled : m_mangled;
 // END SWIFT
 }
 
-bool Mangled::NameMatches(const RegularExpression &regex,
-                          lldb::LanguageType language) const {
+bool Mangled::NameMatches(const RegularExpression &regex) const {
   if (m_mangled && regex.Execute(m_mangled.AsCString()))
     return true;
 
-  ConstString demangled = GetDemangledName(language);
+  ConstString demangled = GetDemangledName();
   return demangled && regex.Execute(demangled.AsCString());
 }
 
 // Get the demangled name if there is one, else return the mangled name.
-ConstString Mangled::GetName(lldb::LanguageType language,
-                             Mangled::NamePreference preference,
+ConstString Mangled::GetName(Mangled::NamePreference preference,
                              // BEGIN SWIFT
                              const SymbolContext *sc
                              // END SWIFT
@@ -464,9 +461,8 @@ ConstString Mangled::GetName(lldb::LanguageType language,
   if (preference == ePreferMangled && m_mangled)
     return m_mangled;
 
-  ConstString demangled = GetDemangledName(language
-                                           // BEGIN SWIFT
-                                           , sc
+  ConstString demangled = GetDemangledName(// BEGIN SWIFT
+                                           sc
                                            // END SWIFT
                                            );
 
@@ -534,7 +530,7 @@ lldb::LanguageType Mangled::GuessLanguage() const {
   } else {
     // ObjC names aren't really mangled, so they won't necessarily be in the
     // mangled name slot.
-    ConstString demangled_name = GetDemangledName(lldb::eLanguageTypeUnknown);
+    ConstString demangled_name = GetDemangledName();
     if (demangled_name 
         && ObjCLanguage::IsPossibleObjCMethodName(demangled_name.GetCString()))
       return lldb::eLanguageTypeObjC;
@@ -548,8 +544,7 @@ Stream &operator<<(Stream &s, const Mangled &obj) {
   if (obj.GetMangledName())
     s << "mangled = '" << obj.GetMangledName() << "'";
 
-  ConstString demangled =
-      obj.GetDemangledName(lldb::eLanguageTypeUnknown);
+  ConstString demangled = obj.GetDemangledName();
   if (demangled)
     s << ", demangled = '" << demangled << '\'';
   else
