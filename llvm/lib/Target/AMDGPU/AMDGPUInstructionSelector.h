@@ -214,6 +214,12 @@ private:
   InstructionSelector::ComplexRendererFns
   selectMUBUFOffset(MachineOperand &Root) const;
 
+  InstructionSelector::ComplexRendererFns
+  selectMUBUFOffsetAtomic(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectMUBUFAddr64Atomic(MachineOperand &Root) const;
+
   void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx = -1) const;
 
