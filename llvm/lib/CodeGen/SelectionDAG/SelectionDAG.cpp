@@ -5908,13 +5908,12 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   bool CopyFromConstant = isMemSrcFromConstant(Src, Slice);
   bool isZeroConstant = CopyFromConstant && Slice.Array == nullptr;
   unsigned Limit = AlwaysInline ? ~0U : TLI.getMaxStoresPerMemcpy(OptSize);
-
   if (!TLI.findOptimalMemOpLowering(
-          MemOps, Limit, Size, (DstAlignCanChange ? 0 : Alignment),
-          (isZeroConstant ? 0 : SrcAlign), /*IsMemset=*/false,
-          /*ZeroMemset=*/false, /*MemcpyStrSrc=*/CopyFromConstant,
-          /*AllowOverlap=*/!isVol, DstPtrInfo.getAddrSpace(),
-          SrcPtrInfo.getAddrSpace(), MF.getFunction().getAttributes()))
+          MemOps, Limit,
+          MemOp::Copy(Size, DstAlignCanChange, Alignment,
+                      isZeroConstant ? 0 : SrcAlign, isVol, CopyFromConstant),
+          DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
+          MF.getFunction().getAttributes()))
     return SDValue();
 
   if (DstAlignCanChange) {
@@ -6088,14 +6087,11 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   if (Align > SrcAlign)
     SrcAlign = Align;
   unsigned Limit = AlwaysInline ? ~0U : TLI.getMaxStoresPerMemmove(OptSize);
-  // FIXME: `AllowOverlap` should really be `!isVol` but there is a bug in
-  // findOptimalMemOpLowering. Meanwhile, setting it to `false` produces the
-  // correct code.
-  bool AllowOverlap = false;
   if (!TLI.findOptimalMemOpLowering(
-          MemOps, Limit, Size, (DstAlignCanChange ? 0 : Align), SrcAlign,
-          /*IsMemset=*/false, /*ZeroMemset=*/false, /*MemcpyStrSrc=*/false,
-          AllowOverlap, DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
+          MemOps, Limit,
+          MemOp::Copy(Size, DstAlignCanChange, Align, SrcAlign,
+                      /*IsVolatile*/ true),
+          DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
           MF.getFunction().getAttributes()))
     return SDValue();
 
@@ -6193,11 +6189,9 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   bool IsZeroVal =
     isa<ConstantSDNode>(Src) && cast<ConstantSDNode>(Src)->isNullValue();
   if (!TLI.findOptimalMemOpLowering(
-          MemOps, TLI.getMaxStoresPerMemset(OptSize), Size,
-          (DstAlignCanChange ? 0 : Align), 0, /*IsMemset=*/true,
-          /*ZeroMemset=*/IsZeroVal, /*MemcpyStrSrc=*/false,
-          /*AllowOverlap=*/!isVol, DstPtrInfo.getAddrSpace(), ~0u,
-          MF.getFunction().getAttributes()))
+          MemOps, TLI.getMaxStoresPerMemset(OptSize),
+          MemOp::Set(Size, DstAlignCanChange, Align, IsZeroVal, isVol),
+          DstPtrInfo.getAddrSpace(), ~0u, MF.getFunction().getAttributes()))
     return SDValue();
 
   if (DstAlignCanChange) {

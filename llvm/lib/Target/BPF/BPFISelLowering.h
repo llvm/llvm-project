@@ -99,10 +99,9 @@ private:
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
 
-  EVT getOptimalMemOpType(uint64_t Size, unsigned DstAlign, unsigned SrcAlign,
-                          bool IsMemset, bool ZeroMemset, bool MemcpyStrSrc,
+  EVT getOptimalMemOpType(const MemOp &Op,
                           const AttributeList &FuncAttributes) const override {
-    return Size >= 8 ? MVT::i64 : MVT::i32;
+    return Op.Size >= 8 ? MVT::i64 : MVT::i32;
   }
 
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,

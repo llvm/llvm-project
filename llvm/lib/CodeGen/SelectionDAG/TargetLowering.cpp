@@ -176,16 +176,9 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
   return LowerCallTo(CLI);
 }
 
-bool
-TargetLowering::findOptimalMemOpLowering(std::vector<EVT> &MemOps,
-                                         unsigned Limit, uint64_t Size,
-                                         unsigned DstAlign, unsigned SrcAlign,
-                                         bool IsMemset,
-                                         bool ZeroMemset,
-                                         bool MemcpyStrSrc,
-                                         bool AllowOverlap,
-                                         unsigned DstAS, unsigned SrcAS,
-                                         const AttributeList &FuncAttributes) const {
+bool TargetLowering::findOptimalMemOpLowering(
+    std::vector<EVT> &MemOps, unsigned Limit, const MemOp &Op, unsigned DstAS,
+    unsigned SrcAS, const AttributeList &FuncAttributes) const {
   // If 'SrcAlign' is zero, that means the memory operation does not need to
   // load the value, i.e. memset or memcpy from constant string. Otherwise,
   // it's the inferred alignment of the source. 'DstAlign', on the other hand,
@@ -193,20 +186,18 @@ TargetLowering::findOptimalMemOpLowering(std::vector<EVT> &MemOps,
   // means it's possible to change the alignment of the destination.
   // 'MemcpyStrSrc' indicates whether the memcpy source is constant so it does
   // not need to be loaded.
-  if (!(SrcAlign == 0 || SrcAlign >= DstAlign))
+  if (!(Op.SrcAlign == 0 || Op.SrcAlign >= Op.DstAlign))
     return false;
 
-  EVT VT = getOptimalMemOpType(Size, DstAlign, SrcAlign,
-                               IsMemset, ZeroMemset, MemcpyStrSrc,
-                               FuncAttributes);
+  EVT VT = getOptimalMemOpType(Op, FuncAttributes);
 
   if (VT == MVT::Other) {
     // Use the largest integer type whose alignment constraints are satisfied.
     // We only need to check DstAlign here as SrcAlign is always greater or
     // equal to DstAlign (or zero).
     VT = MVT::i64;
-    while (DstAlign && DstAlign < VT.getSizeInBits() / 8 &&
-           !allowsMisalignedMemoryAccesses(VT, DstAS, DstAlign))
+    while (Op.DstAlign && Op.DstAlign < VT.getSizeInBits() / 8 &&
+           !allowsMisalignedMemoryAccesses(VT, DstAS, Op.DstAlign))
       VT = (MVT::SimpleValueType)(VT.getSimpleVT().SimpleTy - 1);
     assert(VT.isInteger());
 
@@ -223,6 +214,7 @@ TargetLowering::findOptimalMemOpLowering(std::vector<EVT> &MemOps,
   }
 
   unsigned NumMemOps = 0;
+  auto Size = Op.Size;
   while (Size != 0) {
     unsigned VTSize = VT.getSizeInBits() / 8;
     while (VTSize > Size) {
@@ -257,8 +249,8 @@ TargetLowering::findOptimalMemOpLowering(std::vector<EVT> &MemOps,
       // If the new VT cannot cover all of the remaining bits, then consider
       // issuing a (or a pair of) unaligned and overlapping load / store.
       bool Fast;
-      if (NumMemOps && AllowOverlap && NewVTSize < Size &&
-          allowsMisalignedMemoryAccesses(VT, DstAS, DstAlign,
+      if (NumMemOps && Op.AllowOverlap && NewVTSize < Size &&
+          allowsMisalignedMemoryAccesses(VT, DstAS, Op.DstAlign,
                                          MachineMemOperand::MONone, &Fast) &&
           Fast)
         VTSize = Size;

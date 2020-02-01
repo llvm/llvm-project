@@ -1320,18 +1320,16 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
 }
 
 EVT SITargetLowering::getOptimalMemOpType(
-    uint64_t Size, unsigned DstAlign, unsigned SrcAlign, bool IsMemset,
-    bool ZeroMemset, bool MemcpyStrSrc,
-    const AttributeList &FuncAttributes) const {
+    const MemOp &Op, const AttributeList &FuncAttributes) const {
   // FIXME: Should account for address space here.
 
   // The default fallback uses the private pointer size as a guess for a type to
   // use. Make sure we switch these to 64-bit accesses.
 
-  if (Size >= 16 && DstAlign >= 4) // XXX: Should only do for global
+  if (Op.Size >= 16 && Op.DstAlign >= 4) // XXX: Should only do for global
     return MVT::v4i32;
 
-  if (Size >= 8 && DstAlign >= 4)
+  if (Op.Size >= 8 && Op.DstAlign >= 4)
     return MVT::v2i32;
 
   // Use the default.
