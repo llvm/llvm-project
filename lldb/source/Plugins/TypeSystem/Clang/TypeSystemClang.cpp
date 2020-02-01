@@ -1259,7 +1259,7 @@ namespace {
 }
 
 static TemplateParameterList *CreateTemplateParameterList(
-    ASTContext *ast,
+    ASTContext &ast,
     const TypeSystemClang::TemplateParameterInfos &template_param_infos,
     llvm::SmallVector<NamedDecl *, 8> &template_param_decls) {
   const bool parameter_pack = false;
@@ -1267,51 +1267,49 @@ static TemplateParameterList *CreateTemplateParameterList(
   const unsigned depth = 0;
   const size_t num_template_params = template_param_infos.args.size();
   DeclContext *const decl_context =
-      ast->getTranslationUnitDecl(); // Is this the right decl context?,
+      ast.getTranslationUnitDecl(); // Is this the right decl context?,
   for (size_t i = 0; i < num_template_params; ++i) {
     const char *name = template_param_infos.names[i];
 
     IdentifierInfo *identifier_info = nullptr;
     if (name && name[0])
-      identifier_info = &ast->Idents.get(name);
+      identifier_info = &ast.Idents.get(name);
     if (IsValueParam(template_param_infos.args[i])) {
       template_param_decls.push_back(NonTypeTemplateParmDecl::Create(
-          *ast, decl_context,
-          SourceLocation(), SourceLocation(), depth, i, identifier_info,
-          template_param_infos.args[i].getIntegralType(), parameter_pack,
-          nullptr));
+          ast, decl_context, SourceLocation(), SourceLocation(), depth, i,
+          identifier_info, template_param_infos.args[i].getIntegralType(),
+          parameter_pack, nullptr));
 
     } else {
       template_param_decls.push_back(TemplateTypeParmDecl::Create(
-          *ast, decl_context,
-          SourceLocation(), SourceLocation(), depth, i, identifier_info,
-          is_typename, parameter_pack));
+          ast, decl_context, SourceLocation(), SourceLocation(), depth, i,
+          identifier_info, is_typename, parameter_pack));
     }
   }
 
   if (template_param_infos.packed_args) {
     IdentifierInfo *identifier_info = nullptr;
     if (template_param_infos.pack_name && template_param_infos.pack_name[0])
-      identifier_info = &ast->Idents.get(template_param_infos.pack_name);
+      identifier_info = &ast.Idents.get(template_param_infos.pack_name);
     const bool parameter_pack_true = true;
 
     if (!template_param_infos.packed_args->args.empty() &&
         IsValueParam(template_param_infos.packed_args->args[0])) {
       template_param_decls.push_back(NonTypeTemplateParmDecl::Create(
-          *ast, decl_context, SourceLocation(), SourceLocation(), depth,
+          ast, decl_context, SourceLocation(), SourceLocation(), depth,
           num_template_params, identifier_info,
           template_param_infos.packed_args->args[0].getIntegralType(),
           parameter_pack_true, nullptr));
     } else {
       template_param_decls.push_back(TemplateTypeParmDecl::Create(
-          *ast, decl_context, SourceLocation(), SourceLocation(), depth,
+          ast, decl_context, SourceLocation(), SourceLocation(), depth,
           num_template_params, identifier_info, is_typename,
           parameter_pack_true));
     }
   }
   clang::Expr *const requires_clause = nullptr; // TODO: Concepts
   TemplateParameterList *template_param_list = TemplateParameterList::Create(
-      *ast, SourceLocation(), SourceLocation(), template_param_decls,
+      ast, SourceLocation(), SourceLocation(), template_param_decls,
       SourceLocation(), requires_clause);
   return template_param_list;
 }
@@ -1325,7 +1323,7 @@ clang::FunctionTemplateDecl *TypeSystemClang::CreateFunctionTemplateDecl(
   llvm::SmallVector<NamedDecl *, 8> template_param_decls;
 
   TemplateParameterList *template_param_list = CreateTemplateParameterList(
-      &ast, template_param_infos, template_param_decls);
+      ast, template_param_infos, template_param_decls);
   FunctionTemplateDecl *func_tmpl_decl = FunctionTemplateDecl::Create(
       ast, decl_ctx, func_decl->getLocation(), func_decl->getDeclName(),
       template_param_list, func_decl);
@@ -1377,7 +1375,7 @@ ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
   llvm::SmallVector<NamedDecl *, 8> template_param_decls;
 
   TemplateParameterList *template_param_list = CreateTemplateParameterList(
-      &ast, template_param_infos, template_param_decls);
+      ast, template_param_infos, template_param_decls);
 
   CXXRecordDecl *template_cxx_decl = CXXRecordDecl::Create(
       ast, (TagDecl::TagKind)kind,
@@ -1431,7 +1429,7 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
 
   TypeSystemClang::TemplateParameterInfos template_param_infos;
   TemplateParameterList *template_param_list = CreateTemplateParameterList(
-      &ast, template_param_infos, template_param_decls);
+      ast, template_param_infos, template_param_decls);
 
   // LLDB needs to create those decls only to be able to display a
   // type that includes a template template argument. Only the name matters for
