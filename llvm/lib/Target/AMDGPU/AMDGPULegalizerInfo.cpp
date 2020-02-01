@@ -632,7 +632,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   // TODO: Should load to s16 be legal? Most loads extend to 32-bits, but we
   // handle some operations by just promoting the register during
   // selection. There are also d16 loads on GFX9+ which preserve the high bits.
-  auto maxSizeForAddrSpace = [this](unsigned AS) -> unsigned {
+  auto maxSizeForAddrSpace = [this](unsigned AS, bool IsLoad) -> unsigned {
     switch (AS) {
     // FIXME: Private element size.
     case AMDGPUAS::PRIVATE_ADDRESS:
@@ -649,13 +649,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     // a kernel.
     case AMDGPUAS::CONSTANT_ADDRESS:
     case AMDGPUAS::GLOBAL_ADDRESS:
-      return 512;
+      return IsLoad ? 512 : 128;
     default:
       return 128;
     }
   };
 
-  const auto needToSplitLoad = [=](const LegalityQuery &Query) -> bool {
+  const auto needToSplitMemOp = [=](const LegalityQuery &Query, bool IsLoad) -> bool {
     const LLT DstTy = Query.Types[0];
 
     // Split vector extloads.
@@ -670,7 +670,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     const LLT PtrTy = Query.Types[1];
     unsigned AS = PtrTy.getAddressSpace();
-    if (MemSize > maxSizeForAddrSpace(AS))
+    if (MemSize > maxSizeForAddrSpace(AS, IsLoad))
       return true;
 
     // Catch weird sized loads that don't evenly divide into the access sizes
@@ -744,7 +744,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .customIf(typeIs(1, Constant32Ptr))
         .narrowScalarIf(
             [=](const LegalityQuery &Query) -> bool {
-              return !Query.Types[0].isVector() && needToSplitLoad(Query);
+              return !Query.Types[0].isVector() &&
+                     needToSplitMemOp(Query, Op == G_LOAD);
             },
             [=](const LegalityQuery &Query) -> std::pair<unsigned, LLT> {
               const LLT DstTy = Query.Types[0];
@@ -763,7 +764,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                 return std::make_pair(0, LLT::scalar(32 * (DstSize / 32)));
               }
 
-              unsigned MaxSize = maxSizeForAddrSpace(PtrTy.getAddressSpace());
+              unsigned MaxSize = maxSizeForAddrSpace(PtrTy.getAddressSpace(),
+                                                     Op == G_LOAD);
               if (MemSize > MaxSize)
                 return std::make_pair(0, LLT::scalar(MaxSize));
 
@@ -772,14 +774,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
             })
         .fewerElementsIf(
             [=](const LegalityQuery &Query) -> bool {
-              return Query.Types[0].isVector() && needToSplitLoad(Query);
+              return Query.Types[0].isVector() &&
+                     needToSplitMemOp(Query, Op == G_LOAD);
             },
             [=](const LegalityQuery &Query) -> std::pair<unsigned, LLT> {
               const LLT DstTy = Query.Types[0];
               const LLT PtrTy = Query.Types[1];
 
               LLT EltTy = DstTy.getElementType();
-              unsigned MaxSize = maxSizeForAddrSpace(PtrTy.getAddressSpace());
+              unsigned MaxSize = maxSizeForAddrSpace(PtrTy.getAddressSpace(),
+                                                     Op == G_LOAD);
 
               // Split if it's too large for the address space.
               if (Query.MMODescrs[0].SizeInBits > MaxSize) {
