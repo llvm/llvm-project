@@ -2107,15 +2107,14 @@ AMDGPUInstructionSelector::selectSmrdImm(MachineOperand &Root) const {
     return None;
 
   const GEPInfo &GEPInfo = AddrInfo[0];
-
-  if (!AMDGPU::isLegalSMRDImmOffset(STI, GEPInfo.Imm))
+  Optional<int64_t> EncodedImm = AMDGPU::getSMRDEncodedOffset(STI, GEPInfo.Imm);
+  if (!EncodedImm)
     return None;
 
   unsigned PtrReg = GEPInfo.SgprParts[0];
-  int64_t EncodedImm = AMDGPU::getSMRDEncodedOffset(STI, GEPInfo.Imm);
   return {{
     [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrReg); },
-    [=](MachineInstrBuilder &MIB) { MIB.addImm(EncodedImm); }
+    [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedImm); }
   }};
 }
 
@@ -2129,13 +2128,14 @@ AMDGPUInstructionSelector::selectSmrdImm32(MachineOperand &Root) const {
 
   const GEPInfo &GEPInfo = AddrInfo[0];
   unsigned PtrReg = GEPInfo.SgprParts[0];
-  int64_t EncodedImm = AMDGPU::getSMRDEncodedOffset(STI, GEPInfo.Imm);
-  if (!isUInt<32>(EncodedImm))
+  Optional<int64_t> EncodedImm =
+      AMDGPU::getSMRDEncodedLiteralOffset32(STI, GEPInfo.Imm);
+  if (!EncodedImm)
     return None;
 
   return {{
     [=](MachineInstrBuilder &MIB) { MIB.addReg(PtrReg); },
-    [=](MachineInstrBuilder &MIB) { MIB.addImm(EncodedImm); }
+    [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedImm); }
   }};
 }
 
