@@ -602,8 +602,12 @@ private:
   }
 
   void Serialize(const char *t) {
-    m_stream << t;
-    m_stream.write(0x0);
+    const size_t size = t ? strlen(t) : std::numeric_limits<size_t>::max();
+    Serialize(size);
+    if (t) {
+      m_stream << t;
+      m_stream.write(0x0);
+    }
   }
 
   void Serialize(const char **t) {
@@ -620,11 +624,8 @@ private:
     Serialize(size);
 
     // Serialize the content of the array.
-    while (*t) {
-      m_stream << *t;
-      m_stream.write(0x0);
-      ++t;
-    }
+    while (*t)
+      Serialize(*t++);
   }
 
   /// Serialization stream.
