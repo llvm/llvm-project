@@ -2153,58 +2153,56 @@ define <8 x i32> @fptoui_8f32_to_8i32_const(<8 x float> %a) {
 define <4 x i32> @fptosi_2f16_to_4i32(<2 x half> %a) nounwind {
 ; SSE-LABEL: fptosi_2f16_to_4i32:
 ; SSE:       # %bb.0:
+; SSE-NEXT:    pushq %rbp
+; SSE-NEXT:    pushq %rbx
 ; SSE-NEXT:    pushq %rax
-; SSE-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; SSE-NEXT:    movaps %xmm1, %xmm0
-; SSE-NEXT:    callq __gnu_f2h_ieee
-; SSE-NEXT:    movzwl %ax, %edi
+; SSE-NEXT:    movl %esi, %ebx
+; SSE-NEXT:    movzwl %di, %edi
 ; SSE-NEXT:    callq __gnu_h2f_ieee
-; SSE-NEXT:    movss %xmm0, (%rsp) # 4-byte Spill
-; SSE-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    callq __gnu_f2h_ieee
-; SSE-NEXT:    movzwl %ax, %edi
+; SSE-NEXT:    cvttss2si %xmm0, %ebp
+; SSE-NEXT:    movzwl %bx, %edi
 ; SSE-NEXT:    callq __gnu_h2f_ieee
 ; SSE-NEXT:    cvttss2si %xmm0, %eax
-; SSE-NEXT:    cvttss2si (%rsp), %ecx # 4-byte Folded Reload
-; SSE-NEXT:    movd %ecx, %xmm0
-; SSE-NEXT:    movd %eax, %xmm1
+; SSE-NEXT:    movd %eax, %xmm0
+; SSE-NEXT:    movd %ebp, %xmm1
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
-; SSE-NEXT:    popq %rax
+; SSE-NEXT:    addq $8, %rsp
+; SSE-NEXT:    popq %rbx
+; SSE-NEXT:    popq %rbp
 ; SSE-NEXT:    retq
 ;
 ; VEX-LABEL: fptosi_2f16_to_4i32:
 ; VEX:       # %bb.0:
+; VEX-NEXT:    pushq %rbp
+; VEX-NEXT:    pushq %rbx
 ; VEX-NEXT:    pushq %rax
-; VEX-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; VEX-NEXT:    vmovaps %xmm1, %xmm0
-; VEX-NEXT:    callq __gnu_f2h_ieee
-; VEX-NEXT:    movzwl %ax, %edi
+; VEX-NEXT:    movl %esi, %ebx
+; VEX-NEXT:    movzwl %di, %edi
 ; VEX-NEXT:    callq __gnu_h2f_ieee
-; VEX-NEXT:    vmovss %xmm0, (%rsp) # 4-byte Spill
-; VEX-NEXT:    vmovss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
-; VEX-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; VEX-NEXT:    callq __gnu_f2h_ieee
-; VEX-NEXT:    movzwl %ax, %edi
+; VEX-NEXT:    vcvttss2si %xmm0, %ebp
+; VEX-NEXT:    movzwl %bx, %edi
 ; VEX-NEXT:    callq __gnu_h2f_ieee
 ; VEX-NEXT:    vcvttss2si %xmm0, %eax
-; VEX-NEXT:    vcvttss2si (%rsp), %ecx # 4-byte Folded Reload
-; VEX-NEXT:    vmovd %ecx, %xmm0
-; VEX-NEXT:    vmovd %eax, %xmm1
+; VEX-NEXT:    vmovd %eax, %xmm0
+; VEX-NEXT:    vmovd %ebp, %xmm1
 ; VEX-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
 ; VEX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; VEX-NEXT:    popq %rax
+; VEX-NEXT:    addq $8, %rsp
+; VEX-NEXT:    popq %rbx
+; VEX-NEXT:    popq %rbp
 ; VEX-NEXT:    retq
 ;
 ; AVX512-LABEL: fptosi_2f16_to_4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtps2ph $4, %xmm1, %xmm1
-; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm1
-; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; AVX512-NEXT:    movswl %di, %eax
+; AVX512-NEXT:    vmovd %eax, %xmm0
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvttss2si %xmm0, %eax
-; AVX512-NEXT:    vcvttss2si %xmm1, %ecx
+; AVX512-NEXT:    movswl %si, %ecx
+; AVX512-NEXT:    vmovd %ecx, %xmm0
+; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
+; AVX512-NEXT:    vcvttss2si %xmm0, %ecx
 ; AVX512-NEXT:    vmovd %ecx, %xmm0
 ; AVX512-NEXT:    vmovd %eax, %xmm1
 ; AVX512-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]

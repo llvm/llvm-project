@@ -124,6 +124,8 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
         Mapped |= 128;
       if (ResId && PromotedFloats.find(ResId) != PromotedFloats.end())
         Mapped |= 256;
+      if (ResId && SoftPromotedHalfs.find(ResId) != SoftPromotedHalfs.end())
+        Mapped |= 512;
 
       if (Node.getNodeId() != Processed) {
         // Since we allow ReplacedValues to map deleted nodes, it may map nodes
@@ -168,6 +170,8 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
           dbgs() << " WidenedVectors";
         if (Mapped & 256)
           dbgs() << " PromotedFloats";
+        if (Mapped & 512)
+          dbgs() << " SoftPromoteHalfs";
         dbgs() << "\n";
         llvm_unreachable(nullptr);
       }
@@ -276,6 +280,10 @@ bool DAGTypeLegalizer::run() {
         PromoteFloatResult(N, i);
         Changed = true;
         goto NodeDone;
+      case TargetLowering::TypeSoftPromoteHalf:
+        SoftPromoteHalfResult(N, i);
+        Changed = true;
+        goto NodeDone;
       }
     }
 
@@ -330,6 +338,10 @@ ScanOperands:
         break;
       case TargetLowering::TypePromoteFloat:
         NeedsReanalyzing = PromoteFloatOperand(N, i);
+        Changed = true;
+        break;
+      case TargetLowering::TypeSoftPromoteHalf:
+        NeedsReanalyzing = SoftPromoteHalfOperand(N, i);
         Changed = true;
         break;
       }
@@ -715,6 +727,16 @@ void DAGTypeLegalizer::SetPromotedFloat(SDValue Op, SDValue Result) {
   AnalyzeNewValue(Result);
 
   auto &OpIdEntry = PromotedFloats[getTableId(Op)];
+  assert((OpIdEntry == 0) && "Node is already promoted!");
+  OpIdEntry = getTableId(Result);
+}
+
+void DAGTypeLegalizer::SetSoftPromotedHalf(SDValue Op, SDValue Result) {
+  assert(Result.getValueType() == MVT::i16 &&
+         "Invalid type for soft-promoted half");
+  AnalyzeNewValue(Result);
+
+  auto &OpIdEntry = SoftPromotedHalfs[getTableId(Op)];
   assert((OpIdEntry == 0) && "Node is already promoted!");
   OpIdEntry = getTableId(Result);
 }

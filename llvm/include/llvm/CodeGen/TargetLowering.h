@@ -174,7 +174,8 @@ public:
     TypeScalarizeVector, // Replace this one-element vector with its element.
     TypeSplitVector,     // Split this vector into two of half the size.
     TypeWidenVector,     // This vector should be widened into a larger vector.
-    TypePromoteFloat     // Replace this float with a larger one.
+    TypePromoteFloat,    // Replace this float with a larger one.
+    TypeSoftPromoteHalf, // Soften half to i16 and use float to do arithmetic.
   };
 
   /// LegalizeKind holds the legalization kind that needs to happen to EVT
@@ -373,6 +374,12 @@ public:
     // The default action for other vectors is to promote
     return TypePromoteInteger;
   }
+
+  // Return true if the half type should be passed around as i16, but promoted
+  // to float around arithmetic. The default behavior is to pass around as
+  // float and convert around loads/stores/bitcasts and other places where
+  // the size matters.
+  virtual bool softPromoteHalfType() const { return false; }
 
   // There are two general methods for expanding a BUILD_VECTOR node:
   //  1. Use SCALAR_TO_VECTOR on the defined scalar values and then shuffle
