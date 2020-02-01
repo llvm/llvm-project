@@ -385,10 +385,12 @@ def V_TRIG_PREOP_F64 : VOP3Inst <"v_trig_preop_f64", VOP3_Profile<VOP_F64_F64_I3
 }
 
 let SchedRW = [Write64Bit] in {
-let SubtargetPredicate = isGFX6GFX7GFX10 in {
+let SubtargetPredicate = isGFX6GFX7 in {
 def V_LSHL_B64 : VOP3Inst <"v_lshl_b64", VOP3_Profile<VOP_I64_I64_I32>, shl>;
 def V_LSHR_B64 : VOP3Inst <"v_lshr_b64", VOP3_Profile<VOP_I64_I64_I32>, srl>;
 def V_ASHR_I64 : VOP3Inst <"v_ashr_i64", VOP3_Profile<VOP_I64_I64_I32>, sra>;
+} // End SubtargetPredicate = isGFX6GFX7
+let SubtargetPredicate = isGFX6GFX7GFX10 in {
 def V_MULLIT_F32 : VOP3Inst <"v_mullit_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
 } // End SubtargetPredicate = isGFX6GFX7GFX10
 
