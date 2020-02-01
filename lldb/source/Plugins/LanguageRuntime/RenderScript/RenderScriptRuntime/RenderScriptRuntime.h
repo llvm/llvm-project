@@ -24,6 +24,10 @@
 
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 
+namespace clang {
+class TargetOptions;
+};
+
 namespace lldb_private {
 namespace lldb_renderscript {
 
@@ -402,6 +406,8 @@ public:
     return false;
   }
 
+  bool GetOverrideExprOptions(clang::TargetOptions &prototype);
+
   // PluginInterface protocol
   lldb_private::ConstString GetPluginName() override;
 
@@ -576,8 +582,6 @@ private:
   // removes
   // any previous stored allocation which has the same address.
   AllocationDetails *CreateAllocation(lldb::addr_t address);
-
-  bool GetOverrideExprOptions(clang::TargetOptions &prototype) override;
 
   bool GetIRPasses(LLVMUserExpression::IRPasses &passes) override;
 };
