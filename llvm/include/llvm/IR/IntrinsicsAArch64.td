@@ -1816,6 +1816,7 @@ def int_aarch64_sve_sqshrunt  : SVE2_2VectorArg_Imm_Narrowing_Intrinsic;
 def int_aarch64_sve_sqrshrunb : SVE2_1VectorArg_Imm_Narrowing_Intrinsic;
 def int_aarch64_sve_sqrshrunt : SVE2_2VectorArg_Imm_Narrowing_Intrinsic;
 
+// SVE2 MLA LANE.
 def int_aarch64_sve_smlalb_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
 def int_aarch64_sve_smlalt_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
 def int_aarch64_sve_umlalb_lane   : SVE2_3VectorArg_Indexed_Intrinsic;
@@ -1828,5 +1829,23 @@ def int_aarch64_sve_sqdmlalb_lane : SVE2_3VectorArg_Indexed_Intrinsic;
 def int_aarch64_sve_sqdmlalt_lane : SVE2_3VectorArg_Indexed_Intrinsic;
 def int_aarch64_sve_sqdmlslb_lane : SVE2_3VectorArg_Indexed_Intrinsic;
 def int_aarch64_sve_sqdmlslt_lane : SVE2_3VectorArg_Indexed_Intrinsic;
+
+// SVE2 MLA Unpredicated.
+def int_aarch64_sve_smlalb      : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_smlalt      : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_umlalb      : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_umlalt      : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_smlslb      : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_smlslt      : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_umlslb      : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_umlslt      : SVE2_3VectorArg_Long_Intrinsic;
+
+def int_aarch64_sve_sqdmlalb    : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sqdmlalt    : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sqdmlslb    : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sqdmlslt    : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sqdmlalbt   : SVE2_3VectorArg_Long_Intrinsic;
+def int_aarch64_sve_sqdmlslbt   : SVE2_3VectorArg_Long_Intrinsic;
+
 
 }
