@@ -33,4 +33,4 @@ class ObjCDataFormatterNSError(ObjCDataFormatterTestCase):
 
         self.expect(
             'frame variable nserror->_userInfo --ptr-depth 1 -d run-target',
-            substrs=['@"a"', '@"b"', "1", "2"])
+            substrs=['@"a"', "1", '@"b"', "2"])
