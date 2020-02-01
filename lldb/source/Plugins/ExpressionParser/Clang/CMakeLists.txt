@@ -41,6 +41,7 @@ add_lldb_library(lldbPluginExpressionParserClang PLUGIN
     lldbPluginCPlusPlusLanguage
     lldbPluginCPPRuntime
     lldbPluginObjCRuntime
+    lldbPluginRenderScriptRuntime
     lldbPluginTypeSystemClang
   CLANG_LIBS
     clangAST
