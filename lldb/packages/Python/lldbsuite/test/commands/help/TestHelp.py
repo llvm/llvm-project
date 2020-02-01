@@ -78,7 +78,7 @@ class HelpCommandTestCase(TestBase):
     def test_help_arch(self):
         """Test 'help arch' which should list of supported architectures."""
         self.expect("help arch",
-                    substrs=['arm', 'x86_64', 'i386'])
+                    substrs=['arm', 'i386', 'x86_64'])
 
     @no_debug_info_test
     def test_help_version(self):
