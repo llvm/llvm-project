@@ -256,6 +256,22 @@ main_body:
   ret void
 }
 
+; dwordx8 s.buffer.load
+; GCN-LABEL: {{^}}s_buffer_load_dwordx8_v8f32:
+; VIGFX9_10: s_buffer_load_dwordx8 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]:[0-9]}}], 0x80
+; SICI: s_buffer_load_dwordx8 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]:[0-9]}}], 0x20
+define amdgpu_ps void @s_buffer_load_dwordx8_v8f32(<4 x i32> addrspace(4)* inreg %arg, <4 x i32> addrspace(4)* inreg %arg1, <32 x i8> addrspace(4)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, <4 x i32> addrspace(4)* inreg %in) #0 {
+main_body:
+  %tmp22 = load <4 x i32>, <4 x i32> addrspace(4)* %in
+  %s.buffer = call <8 x float> @llvm.amdgcn.s.buffer.load.v8f32(<4 x i32> %tmp22, i32 128, i32 0)
+  %s.buffer.0 = extractelement <8 x float> %s.buffer, i32 0
+  %s.buffer.1 = extractelement <8 x float> %s.buffer, i32 2
+  %s.buffer.2 = extractelement <8 x float> %s.buffer, i32 5
+  %s.buffer.3 = extractelement <8 x float> %s.buffer, i32 7
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %s.buffer.0, float %s.buffer.1, float %s.buffer.2, float %s.buffer.3, i1 true, i1 true) #0
+  ret void
+}
+
 ; dwordx16 s.buffer.load
 ; GCN-LABEL: {{^}}s_buffer_load_dwordx16:
 ; VIGFX9_10: s_buffer_load_dwordx16 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]:[0-9]}}], 0x80
@@ -273,6 +289,21 @@ main_body:
   %s.buffer.3 = extractelement <16 x i32> %s.buffer, i32 15
   %s.buffer.3.float = bitcast i32 %s.buffer.3 to float
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %s.buffer.0.float, float %s.buffer.1.float, float %s.buffer.2.float, float %s.buffer.3.float, i1 true, i1 true) #0
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_buffer_load_dwordx16_v16f32:
+; VIGFX9_10: s_buffer_load_dwordx16 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]:[0-9]}}], 0x80
+; SICI: s_buffer_load_dwordx16 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]:[0-9]}}], 0x20
+define amdgpu_ps void @s_buffer_load_dwordx16_v16f32(<4 x i32> addrspace(4)* inreg %arg, <4 x i32> addrspace(4)* inreg %arg1, <32 x i8> addrspace(4)* inreg %arg2, i32 inreg %arg3, <2 x i32> %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <3 x i32> %arg7, <2 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, float %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, <4 x i32> addrspace(4)* inreg %in) #0 {
+main_body:
+  %tmp22 = load <4 x i32>, <4 x i32> addrspace(4)* %in
+  %s.buffer = call <16 x float> @llvm.amdgcn.s.buffer.load.v16f32(<4 x i32> %tmp22, i32 128, i32 0)
+  %s.buffer.0 = extractelement <16 x float> %s.buffer, i32 0
+  %s.buffer.1 = extractelement <16 x float> %s.buffer, i32 3
+  %s.buffer.2 = extractelement <16 x float> %s.buffer, i32 12
+  %s.buffer.3 = extractelement <16 x float> %s.buffer, i32 15
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %s.buffer.0, float %s.buffer.1, float %s.buffer.2, float %s.buffer.3, i1 true, i1 true) #0
   ret void
 }
 
