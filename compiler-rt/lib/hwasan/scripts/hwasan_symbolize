@@ -28,6 +28,7 @@ class Symbolizer:
     self.__binary_prefixes = binary_prefixes
     self.__paths_to_cut = paths_to_cut
     self.__log = False
+    self.__warnings = set()
 
   def enable_logging(self, enable):
     self.__log = enable
@@ -73,7 +74,9 @@ class Symbolizer:
       full_path = os.path.join(p, os.path.basename(name))
       if os.path.exists(full_path):
         return full_path
-    print >>sys.stderr, "Could not find symbols for", name
+    if name not in self.__warnings:
+      print >>sys.stderr, "Could not find symbols for", name
+      self.__warnings.add(name)
     return None
 
   def iter_locals(self, binary, addr):
