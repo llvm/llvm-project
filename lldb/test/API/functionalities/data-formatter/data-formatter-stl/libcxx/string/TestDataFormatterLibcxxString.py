@@ -51,6 +51,8 @@ class LibcxxStringDataFormatterTestCase(TestBase):
                 "settings set target.max-children-count 256",
                 check=False)
 
+        is_64_bit = self.process().GetAddressByteSize() == 8
+
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
 
@@ -114,3 +116,10 @@ class LibcxxStringDataFormatterTestCase(TestBase):
                 '(%s::basic_string<unsigned char, %s::char_traits<unsigned char>, '
                 '%s::allocator<unsigned char> >) uchar = "aaaaa"'%(ns,ns,ns),
         ])
+
+        if is_64_bit:
+            self.expect("frame variable garbage1", substrs=['garbage1 = Summary Unavailable'])
+            self.expect("frame variable garbage2", substrs=['garbage2 = Summary Unavailable'])
+            self.expect("frame variable garbage3", substrs=['garbage3 = Summary Unavailable'])
+            self.expect("frame variable garbage4", substrs=['garbage4 = Summary Unavailable'])
+            self.expect("frame variable garbage5", substrs=['garbage5 = Summary Unavailable'])
