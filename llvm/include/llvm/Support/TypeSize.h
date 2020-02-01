@@ -20,6 +20,8 @@
 
 namespace llvm {
 
+template <typename T> struct DenseMapInfo;
+
 class ElementCount {
 public:
   unsigned Min;  // Minimum number of vector elements.
@@ -200,6 +202,21 @@ inline TypeSize alignTo(TypeSize Size, uint64_t Align) {
   return {(Size.getKnownMinSize() + Align - 1) / Align * Align,
           Size.isScalable()};
 }
+
+template <> struct DenseMapInfo<ElementCount> {
+  static inline ElementCount getEmptyKey() { return {~0U, true}; }
+  static inline ElementCount getTombstoneKey() { return {~0U - 1, false}; }
+  static unsigned getHashValue(const ElementCount& EltCnt) {
+    if (EltCnt.Scalable)
+      return (EltCnt.Min * 37U) - 1U;
+
+    return EltCnt.Min * 37U;
+  }
+
+  static bool isEqual(const ElementCount& LHS, const ElementCount& RHS) {
+    return LHS == RHS;
+  }
+};
 
 } // end namespace llvm
 
