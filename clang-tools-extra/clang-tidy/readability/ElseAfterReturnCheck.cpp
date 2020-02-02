@@ -27,6 +27,8 @@ static const char WarningMessage[] = "do not use 'else' after '%0'";
 static const char WarnOnUnfixableStr[] = "WarnOnUnfixable";
 
 const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
+  if (!Node)
+    return nullptr;
   if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Node)) {
     if (DeclRef->getDecl()->getID() == DeclIdentifier) {
       return DeclRef;
@@ -44,6 +46,8 @@ const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
 const DeclRefExpr *
 findUsageRange(const Stmt *Node,
                const llvm::iterator_range<int64_t *> &DeclIdentifiers) {
+  if (!Node)
+    return nullptr;
   if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Node)) {
     if (llvm::is_contained(DeclIdentifiers, DeclRef->getDecl()->getID())) {
       return DeclRef;
