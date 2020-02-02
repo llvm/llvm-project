@@ -330,21 +330,32 @@ const llvm::Value *llvm::getSplatValue(const Value *V) {
 // adjusted if needed.
 const unsigned MaxDepth = 6;
 
-bool llvm::isSplatValue(const Value *V, unsigned Depth) {
+bool llvm::isSplatValue(const Value *V, int Index, unsigned Depth) {
   assert(Depth <= MaxDepth && "Limit Search Depth");
 
   if (isa<VectorType>(V->getType())) {
     if (isa<UndefValue>(V))
       return true;
-    // FIXME: Constant splat analysis does not allow undef elements.
+    // FIXME: We can allow undefs, but if Index was specified, we may want to
+    //        check that the constant is defined at that index.
     if (auto *C = dyn_cast<Constant>(V))
       return C->getSplatValue() != nullptr;
   }
 
-  // FIXME: Constant splat analysis does not allow undef elements.
-  Constant *Mask;
-  if (match(V, m_ShuffleVector(m_Value(), m_Value(), m_Constant(Mask))))
-    return Mask->getSplatValue() != nullptr;
+  if (auto *Shuf = dyn_cast<ShuffleVectorInst>(V)) {
+    // FIXME: We can safely allow undefs here. If Index was specified, we will
+    //        check that the mask elt is defined at the required index.
+    if (!Shuf->getMask()->getSplatValue())
+      return false;
+
+    // Match any index.
+    if (Index == -1)
+      return true;
+
+    // Match a specific element. The mask should be defined at and match the
+    // specified index.
+    return Shuf->getMaskValue(Index) == Index;
+  }
 
   // The remaining tests are all recursive, so bail out if we hit the limit.
   if (Depth++ == MaxDepth)
@@ -353,12 +364,12 @@ bool llvm::isSplatValue(const Value *V, unsigned Depth) {
   // If both operands of a binop are splats, the result is a splat.
   Value *X, *Y, *Z;
   if (match(V, m_BinOp(m_Value(X), m_Value(Y))))
-    return isSplatValue(X, Depth) && isSplatValue(Y, Depth);
+    return isSplatValue(X, Index, Depth) && isSplatValue(Y, Index, Depth);
 
   // If all operands of a select are splats, the result is a splat.
   if (match(V, m_Select(m_Value(X), m_Value(Y), m_Value(Z))))
-    return isSplatValue(X, Depth) && isSplatValue(Y, Depth) &&
-           isSplatValue(Z, Depth);
+    return isSplatValue(X, Index, Depth) && isSplatValue(Y, Index, Depth) &&
+           isSplatValue(Z, Index, Depth);
 
   // TODO: Add support for unary ops (fneg), casts, intrinsics (overflow ops).
 
