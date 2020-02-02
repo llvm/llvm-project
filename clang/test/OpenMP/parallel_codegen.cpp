@@ -57,7 +57,7 @@ int main (int argc, char **argv) {
 // ALL-NEXT:  [[RET:%.+]] = call {{[a-z\_\b]*[ ]?i32}} [[TMAIN:@.+tmain.+]](i8** [[ARGV]])
 // ALL:       ret i32
 // ALL-NEXT:  }
-// ALL-DEBUG-LABEL: define i32 @main(i32 %argc, i8** %argv)
+// ALL-DEBUG-LABEL: define dso_local i32 @main(i32 %argc, i8** %argv)
 // CHECK-DEBUG:       [[LOC_2_ADDR:%.+]] = alloca %struct.ident_t
 // CHECK-DEBUG:       [[KMPC_LOC_VOIDPTR:%.+]] = bitcast %struct.ident_t* [[LOC_2_ADDR]] to i8*
 // CHECK-DEBUG-NEXT:  [[KMPC_DEFAULT_LOC_VOIDPTR:%.+]] = bitcast %struct.ident_t* [[DEF_LOC_2]] to i8*

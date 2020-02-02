@@ -1,5 +1,5 @@
 // Verify that coroutine promise and allocated memory are freed up on exception.
-// RUN: %clang_cc1 -std=c++1z -fcoroutines-ts -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -fexceptions -fcxx-exceptions -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -std=c++1z -fcoroutines-ts -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -fexceptions -fcxx-exceptions -disable-llvm-passes -fsemantic-interposition | FileCheck %s
 
 namespace std::experimental {
 template <typename... T> struct coroutine_traits;
@@ -37,7 +37,7 @@ template <> struct std::experimental::coroutine_traits<void> {
 struct Cleanup { ~Cleanup(); };
 void may_throw();
 
-// CHECK-LABEL: define void @_Z1fv(
+// CHECK-LABEL: define dso_local void @_Z1fv(
 void f() {
   // CHECK: call i8* @_Znwm(i64
 
