@@ -12,7 +12,7 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/lldb-private.h"
 
-class ABISysV_ppc64 : public lldb_private::ABI {
+class ABISysV_ppc64 : public lldb_private::RegInfoBasedABI {
 public:
   ~ABISysV_ppc64() override = default;
 
@@ -96,11 +96,7 @@ protected:
   bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
 
 private:
-  ABISysV_ppc64(lldb::ProcessSP process_sp,
-                std::unique_ptr<llvm::MCRegisterInfo> info_up)
-      : lldb_private::ABI(std::move(process_sp), std::move(info_up)) {
-    // Call CreateInstance instead.
-  }
+  using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
 
   lldb::ByteOrder GetByteOrder() const;
 };
