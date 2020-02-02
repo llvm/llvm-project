@@ -1572,6 +1572,13 @@ void Verifier::verifyAttributeTypes(AttributeSet Attrs, bool IsFunction,
     if (A.isStringAttribute())
       continue;
 
+    if (A.isIntAttribute() !=
+        Attribute::doesAttrKindHaveArgument(A.getKindAsEnum())) {
+      CheckFailed("Attribute '" + A.getAsString() + "' should have an Argument",
+                  V);
+      return;
+    }
+
     if (isFuncOnlyAttr(A.getKindAsEnum())) {
       if (!IsFunction) {
         CheckFailed("Attribute '" + A.getAsString() +
