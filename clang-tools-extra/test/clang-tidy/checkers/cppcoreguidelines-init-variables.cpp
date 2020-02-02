@@ -78,3 +78,9 @@ void init_unit_tests() {
   int parens(42);
   int braces{42};
 }
+
+template <typename RANGE>
+void f(RANGE r) {
+  for (char c : r) {
+  }
+}
