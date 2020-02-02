@@ -35,7 +35,6 @@ static Value getLocalInvocationDimSize(Operation *op, int dim, Location loc,
       loc, xType, invocation, builder->getI32ArrayAttr({dim}));
 }
 
-
 //===----------------------------------------------------------------------===//
 // Reduction (single workgroup)
 //===----------------------------------------------------------------------===//

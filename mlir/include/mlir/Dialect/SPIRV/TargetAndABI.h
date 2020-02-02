@@ -25,7 +25,76 @@ class Value;
 #include "mlir/Dialect/SPIRV/TargetAndABI.h.inc"
 
 namespace spirv {
+enum class Capability : uint32_t;
+enum class Extension;
 enum class StorageClass : uint32_t;
+enum class Version : uint32_t;
+
+namespace detail {
+struct TargetEnvAttributeStorage;
+} // namespace detail
+
+/// SPIR-V dialect-specific attribute kinds.
+// TODO(antiagainst): move to a more suitable place if we have more attributes.
+namespace AttrKind {
+enum Kind {
+  TargetEnv = Attribute::FIRST_SPIRV_ATTR,
+};
+} // namespace AttrKind
+
+/// An attribute that specifies the target version, allowed extensions and
+/// capabilities, and resource limits. These information describles a SPIR-V
+/// target environment.
+class TargetEnvAttr
+    : public Attribute::AttrBase<TargetEnvAttr, Attribute,
+                                 detail::TargetEnvAttributeStorage> {
+public:
+  using Base::Base;
+
+  /// Gets a TargetEnvAttr instance.
+  static TargetEnvAttr get(IntegerAttr version, ArrayAttr extensions,
+                           ArrayAttr capabilities, DictionaryAttr limits);
+
+  /// Returns the attribute kind's name (without the 'spv.' prefix).
+  static StringRef getKindName();
+
+  /// Returns the target version.
+  Version getVersion();
+
+  struct ext_iterator final
+      : public llvm::mapped_iterator<ArrayAttr::iterator,
+                                     Extension (*)(Attribute)> {
+    explicit ext_iterator(ArrayAttr::iterator it);
+  };
+  using ext_range = llvm::iterator_range<ext_iterator>;
+
+  /// Returns the target extensions.
+  ext_range getExtensions();
+  /// Returns the target extensions as a string array attribute.
+  ArrayAttr getExtensionsAttr();
+
+  struct cap_iterator final
+      : public llvm::mapped_iterator<ArrayAttr::iterator,
+                                     Capability (*)(Attribute)> {
+    explicit cap_iterator(ArrayAttr::iterator it);
+  };
+  using cap_range = llvm::iterator_range<cap_iterator>;
+
+  /// Returns the target capabilities.
+  cap_range getCapabilities();
+  /// Returns the target capabilities as an integer array attribute.
+  ArrayAttr getCapabilitiesAttr();
+
+  /// Returns the target resource limits.
+  DictionaryAttr getResourceLimits();
+
+  static bool kindof(unsigned kind) { return kind == AttrKind::TargetEnv; }
+
+  static LogicalResult
+  verifyConstructionInvariants(Optional<Location> loc, MLIRContext *context,
+                               IntegerAttr version, ArrayAttr extensions,
+                               ArrayAttr capabilities, DictionaryAttr limits);
+};
 
 /// Returns the attribute name for specifying argument ABI information.
 StringRef getInterfaceVarABIAttrName();

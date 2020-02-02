@@ -16,6 +16,119 @@ using namespace mlir;
 
 namespace mlir {
 #include "mlir/Dialect/SPIRV/TargetAndABI.cpp.inc"
+
+namespace spirv {
+namespace detail {
+struct TargetEnvAttributeStorage : public AttributeStorage {
+  using KeyTy = std::tuple<Attribute, Attribute, Attribute, Attribute>;
+
+  TargetEnvAttributeStorage(Attribute version, Attribute extensions,
+                            Attribute capabilities, Attribute limits)
+      : version(version), extensions(extensions), capabilities(capabilities),
+        limits(limits) {}
+
+  bool operator==(const KeyTy &key) const {
+    return std::get<0>(key) == version && std::get<1>(key) == extensions &&
+           std::get<2>(key) == capabilities && std::get<3>(key) == limits;
+  }
+
+  static TargetEnvAttributeStorage *
+  construct(AttributeStorageAllocator &allocator, const KeyTy &key) {
+    return new (allocator.allocate<TargetEnvAttributeStorage>())
+        TargetEnvAttributeStorage(std::get<0>(key), std::get<1>(key),
+                                  std::get<2>(key), std::get<3>(key));
+  }
+
+  Attribute version;
+  Attribute extensions;
+  Attribute capabilities;
+  Attribute limits;
+};
+} // namespace detail
+} // namespace spirv
+} // namespace mlir
+
+spirv::TargetEnvAttr spirv::TargetEnvAttr::get(IntegerAttr version,
+                                               ArrayAttr extensions,
+                                               ArrayAttr capabilities,
+                                               DictionaryAttr limits) {
+  assert(version && extensions && capabilities && limits);
+  MLIRContext *context = version.getContext();
+  return Base::get(context, spirv::AttrKind::TargetEnv, version, extensions,
+                   capabilities, limits);
+}
+
+StringRef spirv::TargetEnvAttr::getKindName() { return "target_env"; }
+
+spirv::Version spirv::TargetEnvAttr::getVersion() {
+  return static_cast<spirv::Version>(
+      getImpl()->version.cast<IntegerAttr>().getValue().getZExtValue());
+}
+
+spirv::TargetEnvAttr::ext_iterator::ext_iterator(ArrayAttr::iterator it)
+    : llvm::mapped_iterator<ArrayAttr::iterator,
+                            spirv::Extension (*)(Attribute)>(
+          it, [](Attribute attr) {
+            return *symbolizeExtension(attr.cast<StringAttr>().getValue());
+          }) {}
+
+spirv::TargetEnvAttr::ext_range spirv::TargetEnvAttr::getExtensions() {
+  auto range = getExtensionsAttr().getValue();
+  return {ext_iterator(range.begin()), ext_iterator(range.end())};
+}
+
+ArrayAttr spirv::TargetEnvAttr::getExtensionsAttr() {
+  return getImpl()->extensions.cast<ArrayAttr>();
+}
+
+spirv::TargetEnvAttr::cap_iterator::cap_iterator(ArrayAttr::iterator it)
+    : llvm::mapped_iterator<ArrayAttr::iterator,
+                            spirv::Capability (*)(Attribute)>(
+          it, [](Attribute attr) {
+            return *symbolizeCapability(
+                attr.cast<IntegerAttr>().getValue().getZExtValue());
+          }) {}
+
+spirv::TargetEnvAttr::cap_range spirv::TargetEnvAttr::getCapabilities() {
+  auto range = getCapabilitiesAttr().getValue();
+  return {cap_iterator(range.begin()), cap_iterator(range.end())};
+}
+
+ArrayAttr spirv::TargetEnvAttr::getCapabilitiesAttr() {
+  return getImpl()->capabilities.cast<ArrayAttr>();
+}
+
+DictionaryAttr spirv::TargetEnvAttr::getResourceLimits() {
+  return getImpl()->limits.cast<DictionaryAttr>();
+}
+
+LogicalResult spirv::TargetEnvAttr::verifyConstructionInvariants(
+    Optional<Location> loc, MLIRContext *context, IntegerAttr version,
+    ArrayAttr extensions, ArrayAttr capabilities, DictionaryAttr limits) {
+  if (!version.getType().isInteger(32))
+    return emitOptionalError(loc, "expected 32-bit integer for version");
+
+  if (!llvm::all_of(extensions.getValue(), [](Attribute attr) {
+        if (auto strAttr = attr.dyn_cast<StringAttr>())
+          if (spirv::symbolizeExtension(strAttr.getValue()))
+            return true;
+        return false;
+      }))
+    return emitOptionalError(loc, "unknown extension in extension list");
+
+  if (!llvm::all_of(capabilities.getValue(), [](Attribute attr) {
+        if (auto intAttr = attr.dyn_cast<IntegerAttr>())
+          if (spirv::symbolizeCapability(intAttr.getValue().getZExtValue()))
+            return true;
+        return false;
+      }))
+    return emitOptionalError(loc, "unknown capability in capability list");
+
+  if (!limits.isa<spirv::ResourceLimitsAttr>())
+    return emitOptionalError(loc,
+                             "expected spirv::ResourceLimitsAttr for limits");
+
+  return success();
 }
 
 StringRef spirv::getInterfaceVarABIAttrName() {
@@ -65,7 +178,7 @@ spirv::TargetEnvAttr spirv::getDefaultTargetEnv(MLIRContext *context) {
       builder.getI32ArrayAttr({}),
       builder.getI32ArrayAttr(
           {static_cast<uint32_t>(spirv::Capability::Shader)}),
-      spirv::getDefaultResourceLimits(context), context);
+      spirv::getDefaultResourceLimits(context));
 }
 
 spirv::TargetEnvAttr spirv::lookupTargetEnvOrDefault(Operation *op) {
