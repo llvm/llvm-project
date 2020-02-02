@@ -24,8 +24,7 @@
 
 namespace llvm {
 
-class DbgDeclareInst;
-class DbgValueInst;
+class DbgVariableIntrinsic;
 class Instruction;
 class Module;
 
@@ -77,10 +76,8 @@ public:
   /// Process a single instruction and collect debug info anchors.
   void processInstruction(const Module &M, const Instruction &I);
 
-  /// Process DbgDeclareInst.
-  void processDeclare(const Module &M, const DbgDeclareInst *DDI);
-  /// Process DbgValueInst.
-  void processValue(const Module &M, const DbgValueInst *DVI);
+  /// Process DbgVariableIntrinsic.
+  void processVariable(const Module &M, const DbgVariableIntrinsic &DVI);
   /// Process debug info location.
   void processLocation(const Module &M, const DILocation *Loc);
 
