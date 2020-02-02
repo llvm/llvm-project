@@ -716,7 +716,7 @@ private:
   bool isSameMemGeneration(unsigned EarlierGeneration, unsigned LaterGeneration,
                            Instruction *EarlierInst, Instruction *LaterInst);
 
-  void removeMSSA(Instruction *Inst) {
+  void removeMSSA(Instruction &Inst) {
     if (!MSSA)
       return;
     if (VerifyMemorySSA)
@@ -727,7 +727,7 @@ private:
     // is handled by MemorySSA when passing OptimizePhis = true to
     // removeMemoryAccess.  The non-optimized MemoryUse case is lazily updated
     // by MemorySSA's getClobberingMemoryAccess.
-    MSSAUpdater->removeMemoryAccess(Inst, true);
+    MSSAUpdater->removeMemoryAccess(&Inst, true);
   }
 };
 
@@ -897,20 +897,18 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
   // See if any instructions in the block can be eliminated.  If so, do it.  If
   // not, add them to AvailableValues.
-  for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;) {
-    Instruction *Inst = &*I++;
-
+  for (Instruction &Inst : make_early_inc_range(BB->getInstList())) {
     // Dead instructions should just be removed.
-    if (isInstructionTriviallyDead(Inst, &TLI)) {
-      LLVM_DEBUG(dbgs() << "EarlyCSE DCE: " << *Inst << '\n');
+    if (isInstructionTriviallyDead(&Inst, &TLI)) {
+      LLVM_DEBUG(dbgs() << "EarlyCSE DCE: " << Inst << '\n');
       if (!DebugCounter::shouldExecute(CSECounter)) {
         LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
         continue;
       }
 
-      salvageDebugInfoOrMarkUndef(*Inst);
+      salvageDebugInfoOrMarkUndef(Inst);
       removeMSSA(Inst);
-      Inst->eraseFromParent();
+      Inst.eraseFromParent();
       Changed = true;
       ++NumSimplify;
       continue;
@@ -920,21 +918,21 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     // they're marked as such to ensure preservation of control dependencies),
     // and this pass will not bother with its removal. However, we should mark
     // its condition as true for all dominated blocks.
-    if (match(Inst, m_Intrinsic<Intrinsic::assume>())) {
+    if (match(&Inst, m_Intrinsic<Intrinsic::assume>())) {
       auto *CondI =
-          dyn_cast<Instruction>(cast<CallInst>(Inst)->getArgOperand(0));
+          dyn_cast<Instruction>(cast<CallInst>(Inst).getArgOperand(0));
       if (CondI && SimpleValue::canHandle(CondI)) {
-        LLVM_DEBUG(dbgs() << "EarlyCSE considering assumption: " << *Inst
+        LLVM_DEBUG(dbgs() << "EarlyCSE considering assumption: " << Inst
                           << '\n');
         AvailableValues.insert(CondI, ConstantInt::getTrue(BB->getContext()));
       } else
-        LLVM_DEBUG(dbgs() << "EarlyCSE skipping assumption: " << *Inst << '\n');
+        LLVM_DEBUG(dbgs() << "EarlyCSE skipping assumption: " << Inst << '\n');
       continue;
     }
 
     // Skip sideeffect intrinsics, for the same reason as assume intrinsics.
-    if (match(Inst, m_Intrinsic<Intrinsic::sideeffect>())) {
-      LLVM_DEBUG(dbgs() << "EarlyCSE skipping sideeffect: " << *Inst << '\n');
+    if (match(&Inst, m_Intrinsic<Intrinsic::sideeffect>())) {
+      LLVM_DEBUG(dbgs() << "EarlyCSE skipping sideeffect: " << Inst << '\n');
       continue;
     }
 
@@ -951,21 +949,21 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     // store 40, i8* p
     // We can DSE the store to 30, since the store 40 to invariant location p
     // causes undefined behaviour.
-    if (match(Inst, m_Intrinsic<Intrinsic::invariant_start>())) {
+    if (match(&Inst, m_Intrinsic<Intrinsic::invariant_start>())) {
       // If there are any uses, the scope might end.
-      if (!Inst->use_empty())
+      if (!Inst.use_empty())
         continue;
-      auto *CI = cast<CallInst>(Inst);
-      MemoryLocation MemLoc = MemoryLocation::getForArgument(CI, 1, TLI);
+      MemoryLocation MemLoc =
+          MemoryLocation::getForArgument(&cast<CallInst>(Inst), 1, TLI);
       // Don't start a scope if we already have a better one pushed
       if (!AvailableInvariants.count(MemLoc))
         AvailableInvariants.insert(MemLoc, CurrentGeneration);
       continue;
     }
 
-    if (isGuard(Inst)) {
+    if (isGuard(&Inst)) {
       if (auto *CondI =
-              dyn_cast<Instruction>(cast<CallInst>(Inst)->getArgOperand(0))) {
+              dyn_cast<Instruction>(cast<CallInst>(Inst).getArgOperand(0))) {
         if (SimpleValue::canHandle(CondI)) {
           // Do we already know the actual value of this condition?
           if (auto *KnownCond = AvailableValues.lookup(CondI)) {
@@ -973,14 +971,14 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
             if (isa<ConstantInt>(KnownCond) &&
                 cast<ConstantInt>(KnownCond)->isOne()) {
               LLVM_DEBUG(dbgs()
-                         << "EarlyCSE removing guard: " << *Inst << '\n');
+                         << "EarlyCSE removing guard: " << Inst << '\n');
               removeMSSA(Inst);
-              Inst->eraseFromParent();
+              Inst.eraseFromParent();
               Changed = true;
               continue;
             } else
               // Use the known value if it wasn't true.
-              cast<CallInst>(Inst)->setArgOperand(0, KnownCond);
+              cast<CallInst>(Inst).setArgOperand(0, KnownCond);
           }
           // The condition we're on guarding here is true for all dominated
           // locations.
@@ -997,20 +995,20 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // If the instruction can be simplified (e.g. X+0 = X) then replace it with
     // its simpler value.
-    if (Value *V = SimplifyInstruction(Inst, SQ)) {
-      LLVM_DEBUG(dbgs() << "EarlyCSE Simplify: " << *Inst << "  to: " << *V
+    if (Value *V = SimplifyInstruction(&Inst, SQ)) {
+      LLVM_DEBUG(dbgs() << "EarlyCSE Simplify: " << Inst << "  to: " << *V
                         << '\n');
       if (!DebugCounter::shouldExecute(CSECounter)) {
         LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
       } else {
         bool Killed = false;
-        if (!Inst->use_empty()) {
-          Inst->replaceAllUsesWith(V);
+        if (!Inst.use_empty()) {
+          Inst.replaceAllUsesWith(V);
           Changed = true;
         }
-        if (isInstructionTriviallyDead(Inst, &TLI)) {
+        if (isInstructionTriviallyDead(&Inst, &TLI)) {
           removeMSSA(Inst);
-          Inst->eraseFromParent();
+          Inst.eraseFromParent();
           Changed = true;
           Killed = true;
         }
@@ -1022,31 +1020,31 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     }
 
     // If this is a simple instruction that we can value number, process it.
-    if (SimpleValue::canHandle(Inst)) {
+    if (SimpleValue::canHandle(&Inst)) {
       // See if the instruction has an available value.  If so, use it.
-      if (Value *V = AvailableValues.lookup(Inst)) {
-        LLVM_DEBUG(dbgs() << "EarlyCSE CSE: " << *Inst << "  to: " << *V
+      if (Value *V = AvailableValues.lookup(&Inst)) {
+        LLVM_DEBUG(dbgs() << "EarlyCSE CSE: " << Inst << "  to: " << *V
                           << '\n');
         if (!DebugCounter::shouldExecute(CSECounter)) {
           LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
         if (auto *I = dyn_cast<Instruction>(V))
-          I->andIRFlags(Inst);
-        Inst->replaceAllUsesWith(V);
+          I->andIRFlags(&Inst);
+        Inst.replaceAllUsesWith(V);
         removeMSSA(Inst);
-        Inst->eraseFromParent();
+        Inst.eraseFromParent();
         Changed = true;
         ++NumCSE;
         continue;
       }
 
       // Otherwise, just remember that this value is available.
-      AvailableValues.insert(Inst, Inst);
+      AvailableValues.insert(&Inst, &Inst);
       continue;
     }
 
-    ParseMemoryInst MemInst(Inst, TTI);
+    ParseMemoryInst MemInst(&Inst, TTI);
     // If this is a non-volatile load, process it.
     if (MemInst.isValid() && MemInst.isLoad()) {
       // (conservatively) we can't peak past the ordering implied by this
@@ -1062,7 +1060,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         // We conservatively treat the invariant_load as that moment.  If we
         // pass a invariant load after already establishing a scope, don't
         // restart it since we want to preserve the earliest point seen.
-        auto MemLoc = MemoryLocation::get(Inst);
+        auto MemLoc = MemoryLocation::get(&Inst);
         if (!AvailableInvariants.count(MemLoc))
           AvailableInvariants.insert(MemLoc, CurrentGeneration);
       }
@@ -1081,21 +1079,21 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
           !MemInst.isVolatile() && MemInst.isUnordered() &&
           // We can't replace an atomic load with one which isn't also atomic.
           InVal.IsAtomic >= MemInst.isAtomic() &&
-          (isOperatingOnInvariantMemAt(Inst, InVal.Generation) ||
+          (isOperatingOnInvariantMemAt(&Inst, InVal.Generation) ||
            isSameMemGeneration(InVal.Generation, CurrentGeneration,
-                               InVal.DefInst, Inst))) {
-        Value *Op = getOrCreateResult(InVal.DefInst, Inst->getType());
+                               InVal.DefInst, &Inst))) {
+        Value *Op = getOrCreateResult(InVal.DefInst, Inst.getType());
         if (Op != nullptr) {
-          LLVM_DEBUG(dbgs() << "EarlyCSE CSE LOAD: " << *Inst
+          LLVM_DEBUG(dbgs() << "EarlyCSE CSE LOAD: " << Inst
                             << "  to: " << *InVal.DefInst << '\n');
           if (!DebugCounter::shouldExecute(CSECounter)) {
             LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
             continue;
           }
-          if (!Inst->use_empty())
-            Inst->replaceAllUsesWith(Op);
+          if (!Inst.use_empty())
+            Inst.replaceAllUsesWith(Op);
           removeMSSA(Inst);
-          Inst->eraseFromParent();
+          Inst.eraseFromParent();
           Changed = true;
           ++NumCSELoad;
           continue;
@@ -1103,10 +1101,10 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
       }
 
       // Otherwise, remember that we have this instruction.
-      AvailableLoads.insert(
-          MemInst.getPointerOperand(),
-          LoadValue(Inst, CurrentGeneration, MemInst.getMatchingId(),
-                    MemInst.isAtomic()));
+      AvailableLoads.insert(MemInst.getPointerOperand(),
+                            LoadValue(&Inst, CurrentGeneration,
+                                      MemInst.getMatchingId(),
+                                      MemInst.isAtomic()));
       LastStore = nullptr;
       continue;
     }
@@ -1117,36 +1115,35 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     // may override this (e.g. so that a store intrinsic does not read from
     // memory, and thus will be treated the same as a regular store for
     // commoning purposes).
-    if ((Inst->mayReadFromMemory() || Inst->mayThrow()) &&
+    if ((Inst.mayReadFromMemory() || Inst.mayThrow()) &&
         !(MemInst.isValid() && !MemInst.mayReadFromMemory()))
       LastStore = nullptr;
 
     // If this is a read-only call, process it.
-    if (CallValue::canHandle(Inst)) {
+    if (CallValue::canHandle(&Inst)) {
       // If we have an available version of this call, and if it is the right
       // generation, replace this instruction.
-      std::pair<Instruction *, unsigned> InVal = AvailableCalls.lookup(Inst);
+      std::pair<Instruction *, unsigned> InVal = AvailableCalls.lookup(&Inst);
       if (InVal.first != nullptr &&
           isSameMemGeneration(InVal.second, CurrentGeneration, InVal.first,
-                              Inst)) {
-        LLVM_DEBUG(dbgs() << "EarlyCSE CSE CALL: " << *Inst
+                              &Inst)) {
+        LLVM_DEBUG(dbgs() << "EarlyCSE CSE CALL: " << Inst
                           << "  to: " << *InVal.first << '\n');
         if (!DebugCounter::shouldExecute(CSECounter)) {
           LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
-        if (!Inst->use_empty())
-          Inst->replaceAllUsesWith(InVal.first);
+        if (!Inst.use_empty())
+          Inst.replaceAllUsesWith(InVal.first);
         removeMSSA(Inst);
-        Inst->eraseFromParent();
+        Inst.eraseFromParent();
         Changed = true;
         ++NumCSECall;
         continue;
       }
 
       // Otherwise, remember that we have this instruction.
-      AvailableCalls.insert(
-          Inst, std::pair<Instruction *, unsigned>(Inst, CurrentGeneration));
+      AvailableCalls.insert(&Inst, std::make_pair(&Inst, CurrentGeneration));
       continue;
     }
 
@@ -1155,9 +1152,9 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     // result, we don't need to consider it as writing to memory and don't need
     // to advance the generation.  We do need to prevent DSE across the fence,
     // but that's handled above.
-    if (FenceInst *FI = dyn_cast<FenceInst>(Inst))
+    if (auto *FI = dyn_cast<FenceInst>(&Inst))
       if (FI->getOrdering() == AtomicOrdering::Release) {
-        assert(Inst->mayReadFromMemory() && "relied on to prevent DSE above");
+        assert(Inst.mayReadFromMemory() && "relied on to prevent DSE above");
         continue;
       }
 
@@ -1169,13 +1166,13 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     if (MemInst.isValid() && MemInst.isStore()) {
       LoadValue InVal = AvailableLoads.lookup(MemInst.getPointerOperand());
       if (InVal.DefInst &&
-          InVal.DefInst == getOrCreateResult(Inst, InVal.DefInst->getType()) &&
+          InVal.DefInst == getOrCreateResult(&Inst, InVal.DefInst->getType()) &&
           InVal.MatchingId == MemInst.getMatchingId() &&
           // We don't yet handle removing stores with ordering of any kind.
           !MemInst.isVolatile() && MemInst.isUnordered() &&
-          (isOperatingOnInvariantMemAt(Inst, InVal.Generation) ||
+          (isOperatingOnInvariantMemAt(&Inst, InVal.Generation) ||
            isSameMemGeneration(InVal.Generation, CurrentGeneration,
-                               InVal.DefInst, Inst))) {
+                               InVal.DefInst, &Inst))) {
         // It is okay to have a LastStore to a different pointer here if MemorySSA
         // tells us that the load and store are from the same memory generation.
         // In that case, LastStore should keep its present value since we're
@@ -1185,13 +1182,13 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
                     MemInst.getPointerOperand() ||
                 MSSA) &&
                "can't have an intervening store if not using MemorySSA!");
-        LLVM_DEBUG(dbgs() << "EarlyCSE DSE (writeback): " << *Inst << '\n');
+        LLVM_DEBUG(dbgs() << "EarlyCSE DSE (writeback): " << Inst << '\n');
         if (!DebugCounter::shouldExecute(CSECounter)) {
           LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
           continue;
         }
         removeMSSA(Inst);
-        Inst->eraseFromParent();
+        Inst.eraseFromParent();
         Changed = true;
         ++NumDSE;
         // We can avoid incrementing the generation count since we were able
@@ -1203,7 +1200,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
     // Okay, this isn't something we can CSE at all.  Check to see if it is
     // something that could modify memory.  If so, our available memory values
     // cannot be used so bump the generation count.
-    if (Inst->mayWriteToMemory()) {
+    if (Inst.mayWriteToMemory()) {
       ++CurrentGeneration;
 
       if (MemInst.isValid() && MemInst.isStore()) {
@@ -1221,11 +1218,11 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
                  "Violated invariant");
           if (LastStoreMemInst.isMatchingMemLoc(MemInst)) {
             LLVM_DEBUG(dbgs() << "EarlyCSE DEAD STORE: " << *LastStore
-                              << "  due to: " << *Inst << '\n');
+                              << "  due to: " << Inst << '\n');
             if (!DebugCounter::shouldExecute(CSECounter)) {
               LLVM_DEBUG(dbgs() << "Skipping due to debug counter\n");
             } else {
-              removeMSSA(LastStore);
+              removeMSSA(*LastStore);
               LastStore->eraseFromParent();
               Changed = true;
               ++NumDSE;
@@ -1240,10 +1237,10 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         // version of the pointer.  It is safe to forward from volatile stores
         // to non-volatile loads, so we don't have to check for volatility of
         // the store.
-        AvailableLoads.insert(
-            MemInst.getPointerOperand(),
-            LoadValue(Inst, CurrentGeneration, MemInst.getMatchingId(),
-                      MemInst.isAtomic()));
+        AvailableLoads.insert(MemInst.getPointerOperand(),
+                              LoadValue(&Inst, CurrentGeneration,
+                                        MemInst.getMatchingId(),
+                                        MemInst.isAtomic()));
 
         // Remember that this was the last unordered store we saw for DSE. We
         // don't yet handle DSE on ordered or volatile stores since we don't
@@ -1253,7 +1250,7 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
         // it's not clear this is a profitable transform. Another option would
         // be to merge the ordering with that of the post dominating store.
         if (MemInst.isUnordered() && !MemInst.isVolatile())
-          LastStore = Inst;
+          LastStore = &Inst;
         else
           LastStore = nullptr;
       }
