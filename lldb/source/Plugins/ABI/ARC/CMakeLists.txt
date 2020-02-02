@@ -1,10 +1,11 @@
-add_lldb_library(lldbPluginABISysV_arm64 PLUGIN
-  ABISysV_arm64.cpp
+add_lldb_library(lldbPluginABIARC PLUGIN
+  ABISysV_arc.cpp
 
   LINK_LIBS
     lldbCore
     lldbSymbol
     lldbTarget
+    lldbPluginProcessUtility
   LINK_COMPONENTS
     Support
   )

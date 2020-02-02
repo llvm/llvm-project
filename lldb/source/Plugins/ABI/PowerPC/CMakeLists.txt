@@ -1,4 +1,5 @@
-add_lldb_library(lldbPluginABISysV_ppc64 PLUGIN
+add_lldb_library(lldbPluginABIPowerPC PLUGIN
+  ABISysV_ppc.cpp
   ABISysV_ppc64.cpp
 
   LINK_LIBS
