@@ -173,7 +173,6 @@
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
-#include "llvm/Transforms/Utils/KnowledgeRetention.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
