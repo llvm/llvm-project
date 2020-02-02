@@ -107,6 +107,10 @@ public:
                                         const Optional<unsigned> &NumElemsArg);
   static Attribute getWithByValType(LLVMContext &Context, Type *Ty);
 
+  static Attribute::AttrKind getAttrKindFromName(StringRef AttrName);
+
+  static StringRef getNameFromAttrKind(Attribute::AttrKind AttrKind);
+
   //===--------------------------------------------------------------------===//
   // Attribute Accessors
   //===--------------------------------------------------------------------===//

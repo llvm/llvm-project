@@ -127,17 +127,8 @@ unsigned LLVMGetMDKindID(const char *Name, unsigned SLen) {
   return LLVMGetMDKindIDInContext(LLVMGetGlobalContext(), Name, SLen);
 }
 
-static Attribute::AttrKind getAttrKindFromName(StringRef AttrName) {
-  return StringSwitch<Attribute::AttrKind>(AttrName)
-#define GET_ATTR_NAMES
-#define ATTRIBUTE_ENUM(ENUM_NAME, DISPLAY_NAME)                                \
-  .Case(#DISPLAY_NAME, Attribute::ENUM_NAME)
-#include "llvm/IR/Attributes.inc"
-      .Default(Attribute::None);
-}
-
 unsigned LLVMGetEnumAttributeKindForName(const char *Name, size_t SLen) {
-  return getAttrKindFromName(StringRef(Name, SLen));
+  return Attribute::getAttrKindFromName(StringRef(Name, SLen));
 }
 
 unsigned LLVMGetLastEnumAttributeKind(void) {
