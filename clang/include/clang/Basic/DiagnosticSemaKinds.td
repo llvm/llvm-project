@@ -2383,7 +2383,7 @@ def note_for_range_begin_end : Note<
 def warn_for_range_const_reference_copy : Warning<
   "loop variable %0 "
   "%diff{has type $ but is initialized with type $"
-  "| is initialized with a value of a different type}1,2 resulting in a copy">,
+  "|is initialized with a value of a different type}1,2 resulting in a copy">,
   InGroup<RangeLoopConstruct>, DefaultIgnore;
 def note_use_type_or_non_reference : Note<
   "use non-reference type %0 to keep the copy or type %1 to prevent copying">;
