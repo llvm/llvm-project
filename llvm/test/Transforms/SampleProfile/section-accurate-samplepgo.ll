@@ -1,3 +1,4 @@
+; REQUIRES: x86-registered-target
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -codegenprepare -S | FileCheck %s
 ; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline.prof -codegenprepare -profile-sample-accurate -S | FileCheck %s --check-prefix ACCURATE
 
