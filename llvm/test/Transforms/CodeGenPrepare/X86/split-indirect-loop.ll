@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -S < %s | FileCheck %s
+; RUN: opt -codegenprepare -S -mtriple=x86_64 < %s | FileCheck %s
 
 ; Test that an invalid CFG is not created by splitIndirectCriticalEdges
 ; transformation when the 'target' block is a loop to itself.

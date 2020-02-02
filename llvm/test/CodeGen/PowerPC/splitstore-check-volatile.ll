@@ -1,6 +1,6 @@
 ; Test that CodeGenPrepare respect the volatile flag when splitting a store.
 ;
-; RUN: opt -S -codegenprepare -force-split-store < %s  | FileCheck %s
+; RUN: opt -S -mtriple=powerpc64le -codegenprepare -force-split-store < %s  | FileCheck %s
 
 define void @fun(i16* %Src, i16* %Dst) {
 ; CHECK: store volatile i16 %8, i16* %Dst 
