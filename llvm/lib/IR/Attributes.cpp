@@ -1850,49 +1850,8 @@ adjustNullPointerValidAttr(Function &Caller, const Function &Callee) {
   }
 }
 
-struct EnumAttr {
-  static bool isSet(const Function &Fn,
-                    Attribute::AttrKind Kind) {
-    return Fn.hasFnAttribute(Kind);
-  }
-
-  static void set(Function &Fn,
-                  Attribute::AttrKind Kind, bool Val) {
-    if (Val)
-      Fn.addFnAttr(Kind);
-    else
-      Fn.removeFnAttr(Kind);
-  }
-};
-
-struct StrBoolAttr {
-  static bool isSet(const Function &Fn,
-                    StringRef Kind) {
-    auto A = Fn.getFnAttribute(Kind);
-    return A.getValueAsString().equals("true");
-  }
-
-  static void set(Function &Fn,
-                  StringRef Kind, bool Val) {
-    Fn.addFnAttr(Kind, Val ? "true" : "false");
-  }
-};
-
-#define GET_ATTR_NAMES
-#define ATTRIBUTE_ENUM(ENUM_NAME, DISPLAY_NAME)                                \
-  struct ENUM_NAME##Attr : EnumAttr {                                          \
-    static enum Attribute::AttrKind getKind() {                                \
-      return llvm::Attribute::ENUM_NAME;                                       \
-    }                                                                          \
-  };
-#define ATTRIBUTE_STRBOOL(ENUM_NAME, DISPLAY_NAME)                             \
-  struct ENUM_NAME##Attr : StrBoolAttr {                                       \
-    static StringRef getKind() { return #DISPLAY_NAME; }                       \
-  };
-#include "llvm/IR/Attributes.inc"
-
 #define GET_ATTR_COMPAT_FUNC
-#include "llvm/IR/Attributes.inc"
+#include "AttributesCompatFunc.inc"
 
 bool AttributeFuncs::areInlineCompatible(const Function &Caller,
                                          const Function &Callee) {
