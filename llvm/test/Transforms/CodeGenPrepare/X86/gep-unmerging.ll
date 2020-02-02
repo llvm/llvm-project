@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -S < %s | FileCheck %s
+; RUN: opt -codegenprepare -S -mtriple=x86_64 < %s | FileCheck %s
 
 @exit_addr = constant i8* blockaddress(@gep_unmerging, %exit)
 @op1_addr = constant i8* blockaddress(@gep_unmerging, %op1)
@@ -25,8 +25,8 @@ entry:
 
 op1:
 ; CHECK-LABEL: op1:
-; CHECK-NEXT: %p1_inc2 = getelementptr i8, i8* %p_postinc, i64 2
-; CHECK-NEXT: %p1_inc1 = getelementptr i8, i8* %p_postinc, i64 1
+; CHECK-NEXT: %p1_inc2 = getelementptr i8, i8* %p_preinc, i64 3
+; CHECK-NEXT: %p1_inc1 = getelementptr i8, i8* %p_preinc, i64 2
   %p1_inc2 = getelementptr i8, i8* %p_preinc, i64 3
   %p1_inc1 = getelementptr i8, i8* %p_preinc, i64 2
   %a10 = load i8, i8* %p_postinc
@@ -37,7 +37,7 @@ op1:
 
 op2:
 ; CHECK-LABEL: op2:
-; CHECK-NEXT: %p2_inc = getelementptr i8, i8* %p_postinc, i64 1
+; CHECK-NEXT: %p2_inc = getelementptr i8, i8* %p_preinc, i64 2
   %p2_inc = getelementptr i8, i8* %p_preinc, i64 2
   %a2 = load i8, i8* %p_postinc
   store i8 %a2, i8* @dummy
