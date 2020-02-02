@@ -145,7 +145,6 @@
 ; CHECK-NEXT:      Machine Natural Loop Construction
 ; CHECK-NEXT:      Machine Block Frequency Analysis
 ; CHECK-NEXT:      If Converter
-; CHECK-NEXT:      ReachingDefAnalysis
 ; CHECK-NEXT:      MVE VPT block insertion pass
 ; CHECK-NEXT:      Thumb IT blocks insertion pass
 ; CHECK-NEXT:      MachineDominator Tree Construction

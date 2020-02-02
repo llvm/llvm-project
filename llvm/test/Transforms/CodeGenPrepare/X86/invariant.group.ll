@@ -1,4 +1,4 @@
-; RUN: opt -codegenprepare -S < %s | FileCheck %s
+; RUN: opt -codegenprepare -S -mtriple=x86_64 < %s | FileCheck %s
 
 @tmp = global i8 0
 
