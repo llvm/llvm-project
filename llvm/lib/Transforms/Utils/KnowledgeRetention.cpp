@@ -128,6 +128,11 @@ struct AssumeBuilderState {
     SmallVector<OperandBundleDef, 8> OpBundle;
     for (const AssumedKnowledge &Elem : AssumedKnowledgeSet) {
       SmallVector<Value *, 2> Args;
+      assert(Attribute::getAttrKindFromName(Elem.Name) ==
+                 Attribute::AttrKind::None ||
+             static_cast<bool>(Elem.Argument) ==
+                 Attribute::doesAttrKindHaveArgument(
+                     Attribute::getAttrKindFromName(Elem.Name)));
       if (Elem.WasOn.getPointer())
         Args.push_back(Elem.WasOn.getPointer());
       if (Elem.Argument)
