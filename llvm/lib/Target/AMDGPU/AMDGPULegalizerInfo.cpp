@@ -3204,22 +3204,38 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = B.getMRI()->getType(Dst);
   unsigned Size = Ty.getSizeInBits();
+  MachineFunction &MF = B.getMF();
+
+  Observer.changingInstr(MI);
+
+  // FIXME: We don't really need this intermediate instruction. The intrinsic
+  // should be fixed to have a memory operand. Since it's readnone, we're not
+  // allowed to add one.
+  MI.setDesc(B.getTII().get(AMDGPU::G_AMDGPU_S_BUFFER_LOAD));
+  MI.RemoveOperand(1); // Remove intrinsic ID
+
+  // FIXME: When intrinsic definition is fixed, this should have an MMO already.
+  // TODO: Should this use datalayout alignment?
+  const unsigned MemSize = (Size + 7) / 8;
+  const unsigned MemAlign = 4;
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+    MachinePointerInfo(),
+    MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+    MachineMemOperand::MOInvariant, MemSize, MemAlign);
+  MI.addMemOperand(MF, MMO);
 
   // There are no 96-bit result scalar loads, but widening to 128-bit should
   // always be legal. We may need to restore this to a 96-bit result if it turns
   // out this needs to be converted to a vector load during RegBankSelect.
-  if (isPowerOf2_32(Size))
-    return true;
+  if (!isPowerOf2_32(Size)) {
+    LegalizerHelper Helper(MF, *this, Observer, B);
+    B.setInstr(MI);
 
-  LegalizerHelper Helper(B.getMF(), *this, Observer, B);
-  B.setInstr(MI);
-
-  Observer.changingInstr(MI);
-
-  if (Ty.isVector())
-    Helper.moreElementsVectorDst(MI, getPow2VectorType(Ty), 0);
-  else
-    Helper.widenScalarDst(MI, getPow2ScalarType(Ty), 0);
+    if (Ty.isVector())
+      Helper.moreElementsVectorDst(MI, getPow2VectorType(Ty), 0);
+    else
+      Helper.widenScalarDst(MI, getPow2ScalarType(Ty), 0);
+  }
 
   Observer.changedInstr(MI);
   return true;
