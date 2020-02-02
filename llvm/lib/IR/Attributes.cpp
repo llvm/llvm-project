@@ -176,6 +176,29 @@ Attribute::getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
   return get(Context, AllocSize, packAllocSizeArgs(ElemSizeArg, NumElemsArg));
 }
 
+Attribute::AttrKind Attribute::getAttrKindFromName(StringRef AttrName) {
+  return StringSwitch<Attribute::AttrKind>(AttrName)
+#define GET_ATTR_NAMES
+#define ATTRIBUTE_ENUM(ENUM_NAME, DISPLAY_NAME)                                \
+  .Case(#DISPLAY_NAME, Attribute::ENUM_NAME)
+#include "llvm/IR/Attributes.inc"
+      .Default(Attribute::None);
+}
+
+StringRef Attribute::getNameFromAttrKind(Attribute::AttrKind AttrKind) {
+  switch (AttrKind) {
+#define GET_ATTR_NAMES
+#define ATTRIBUTE_ENUM(ENUM_NAME, DISPLAY_NAME)                                \
+  case AttrKind::ENUM_NAME:                                                    \
+    return #DISPLAY_NAME;
+#include "llvm/IR/Attributes.inc"
+  case AttrKind::None:
+    return "none";
+  default:
+    llvm_unreachable("invalid Kind");
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Attribute Accessor Methods
 //===----------------------------------------------------------------------===//
