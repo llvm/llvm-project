@@ -70,7 +70,8 @@ public:
   enum AttrKind {
     // IR-Level Attributes
     None,                  ///< No attributes have been set
-    #define GET_ATTR_ENUM
+    #define GET_ATTR_NAMES
+    #define ATTRIBUTE_ENUM(ENUM_NAME, OTHER) ENUM_NAME,
     #include "llvm/IR/Attributes.inc"
     EndAttrKinds           ///< Sentinal value useful for loops
   };
