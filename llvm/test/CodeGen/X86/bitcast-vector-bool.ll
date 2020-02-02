@@ -640,3 +640,90 @@ define i32 @bitcast_v64i8_to_v2i32(<64 x i8> %a0) nounwind {
   %5 = add i32 %3, %4
   ret i32 %5
 }
+
+define i64 @bitcast_v128i8_to_v2i64(<128 x i8> %a0) nounwind {
+; SSE2-SSSE3-LABEL: bitcast_v128i8_to_v2i64:
+; SSE2-SSSE3:       # %bb.0:
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm4, %eax
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm5, %ecx
+; SSE2-SSSE3-NEXT:    shll $16, %ecx
+; SSE2-SSSE3-NEXT:    orl %eax, %ecx
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm6, %eax
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm7, %edx
+; SSE2-SSSE3-NEXT:    shll $16, %edx
+; SSE2-SSSE3-NEXT:    orl %eax, %edx
+; SSE2-SSSE3-NEXT:    shlq $32, %rdx
+; SSE2-SSSE3-NEXT:    orq %rcx, %rdx
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm1, %ecx
+; SSE2-SSSE3-NEXT:    shll $16, %ecx
+; SSE2-SSSE3-NEXT:    orl %eax, %ecx
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm2, %esi
+; SSE2-SSSE3-NEXT:    pmovmskb %xmm3, %eax
+; SSE2-SSSE3-NEXT:    shll $16, %eax
+; SSE2-SSSE3-NEXT:    orl %esi, %eax
+; SSE2-SSSE3-NEXT:    shlq $32, %rax
+; SSE2-SSSE3-NEXT:    orq %rcx, %rax
+; SSE2-SSSE3-NEXT:    addq %rdx, %rax
+; SSE2-SSSE3-NEXT:    retq
+;
+; AVX1-LABEL: bitcast_v128i8_to_v2i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpmovmskb %xmm2, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm2
+; AVX1-NEXT:    vpmovmskb %xmm2, %edx
+; AVX1-NEXT:    shll $16, %edx
+; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    vpmovmskb %xmm3, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm2
+; AVX1-NEXT:    vpmovmskb %xmm2, %ecx
+; AVX1-NEXT:    shll $16, %ecx
+; AVX1-NEXT:    orl %eax, %ecx
+; AVX1-NEXT:    shlq $32, %rcx
+; AVX1-NEXT:    orq %rdx, %rcx
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %edx
+; AVX1-NEXT:    shll $16, %edx
+; AVX1-NEXT:    orl %eax, %edx
+; AVX1-NEXT:    vpmovmskb %xmm1, %esi
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    shll $16, %eax
+; AVX1-NEXT:    orl %esi, %eax
+; AVX1-NEXT:    shlq $32, %rax
+; AVX1-NEXT:    orq %rdx, %rax
+; AVX1-NEXT:    addq %rcx, %rax
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: bitcast_v128i8_to_v2i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmovmskb %ymm3, %eax
+; AVX2-NEXT:    shlq $32, %rax
+; AVX2-NEXT:    vpmovmskb %ymm2, %ecx
+; AVX2-NEXT:    orq %rax, %rcx
+; AVX2-NEXT:    vpmovmskb %ymm1, %edx
+; AVX2-NEXT:    shlq $32, %rdx
+; AVX2-NEXT:    vpmovmskb %ymm0, %eax
+; AVX2-NEXT:    orq %rdx, %rax
+; AVX2-NEXT:    addq %rcx, %rax
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: bitcast_v128i8_to_v2i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovb2m %zmm1, %k0
+; AVX512-NEXT:    kmovq %k0, %rcx
+; AVX512-NEXT:    vpmovb2m %zmm0, %k0
+; AVX512-NEXT:    kmovq %k0, %rax
+; AVX512-NEXT:    addq %rcx, %rax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %1 = icmp slt <128 x i8> %a0, zeroinitializer
+  %2 = bitcast <128 x i1> %1 to <2 x i64>
+  %3 = extractelement <2 x i64> %2, i32 0
+  %4 = extractelement <2 x i64> %2, i32 1
+  %5 = add i64 %3, %4
+  ret i64 %5
+}
