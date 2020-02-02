@@ -199,14 +199,6 @@ StringRef Attribute::getNameFromAttrKind(Attribute::AttrKind AttrKind) {
   }
 }
 
-bool Attribute::doesAttrKindHaveArgument(Attribute::AttrKind AttrKind) {
-  return AttrKind == Attribute::Alignment ||
-         AttrKind == Attribute::StackAlignment ||
-         AttrKind == Attribute::Dereferenceable ||
-         AttrKind == Attribute::AllocSize ||
-         AttrKind == Attribute::DereferenceableOrNull;
-}
-
 //===----------------------------------------------------------------------===//
 // Attribute Accessor Methods
 //===----------------------------------------------------------------------===//
@@ -1480,7 +1472,8 @@ void AttrBuilder::clear() {
 
 AttrBuilder &AttrBuilder::addAttribute(Attribute::AttrKind Val) {
   assert((unsigned)Val < Attribute::EndAttrKinds && "Attribute out of range!");
-  assert(!Attribute::doesAttrKindHaveArgument(Val) &&
+  assert(Val != Attribute::Alignment && Val != Attribute::StackAlignment &&
+         Val != Attribute::Dereferenceable && Val != Attribute::AllocSize &&
          "Adding integer attribute without adding a value!");
   Attrs[Val] = true;
   return *this;
