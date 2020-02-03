@@ -157,6 +157,13 @@ public:
     return KnownBits(Zero.zextOrTrunc(BitWidth), One.zextOrTrunc(BitWidth));
   }
 
+  /// Return a KnownBits with the extracted bits
+  /// [bitPosition,bitPosition+numBits).
+  KnownBits extractBits(unsigned NumBits, unsigned BitPosition) const {
+    return KnownBits(Zero.extractBits(NumBits, BitPosition),
+                     One.extractBits(NumBits, BitPosition));
+  }
+
   /// Returns the minimum number of trailing zero bits.
   unsigned countMinTrailingZeros() const {
     return Zero.countTrailingOnes();

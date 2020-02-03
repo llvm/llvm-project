@@ -32721,6 +32721,28 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.Zero &= Known2.Zero;
     break;
   }
+  case X86ISD::BEXTR: {
+    SDValue Op0 = Op.getOperand(0);
+    SDValue Op1 = Op.getOperand(1);
+
+    if (auto* Cst1 = dyn_cast<ConstantSDNode>(Op1)) {
+      unsigned Shift = Cst1->getAPIntValue().extractBitsAsZExtValue(8, 0);
+      unsigned Length = Cst1->getAPIntValue().extractBitsAsZExtValue(8, 8);
+
+      // If the length is 0, the result is 0.
+      if (Length == 0) {
+        Known.setAllZero();
+        break;
+      }
+
+      if ((Shift + Length) <= BitWidth) {
+        Known = DAG.computeKnownBits(Op0, Depth + 1);
+        Known = Known.extractBits(Length, Shift);
+        Known = Known.zextOrTrunc(BitWidth, true /* ExtBitsAreKnownZero */);
+      }
+    }
+    break;
+  }
   }
 
   // Handle target shuffles.
