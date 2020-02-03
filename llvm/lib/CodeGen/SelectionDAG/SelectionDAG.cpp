@@ -5908,12 +5908,14 @@ static SDValue getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
   bool CopyFromConstant = isMemSrcFromConstant(Src, Slice);
   bool isZeroConstant = CopyFromConstant && Slice.Array == nullptr;
   unsigned Limit = AlwaysInline ? ~0U : TLI.getMaxStoresPerMemcpy(OptSize);
+  const MemOp Op = isZeroConstant
+                       ? MemOp::Set(Size, DstAlignCanChange, Alignment,
+                                    /*IsZeroMemset*/ true, isVol)
+                       : MemOp::Copy(Size, DstAlignCanChange, Alignment,
+                                     SrcAlign, isVol, CopyFromConstant);
   if (!TLI.findOptimalMemOpLowering(
-          MemOps, Limit,
-          MemOp::Copy(Size, DstAlignCanChange, Alignment,
-                      isZeroConstant ? 0 : SrcAlign, isVol, CopyFromConstant),
-          DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
-          MF.getFunction().getAttributes()))
+          MemOps, Limit, Op, DstPtrInfo.getAddrSpace(),
+          SrcPtrInfo.getAddrSpace(), MF.getFunction().getAttributes()))
     return SDValue();
 
   if (DstAlignCanChange) {
