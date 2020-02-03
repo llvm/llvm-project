@@ -864,6 +864,8 @@ const AstTypeMatcher<BuiltinType> builtinType;
 const AstTypeMatcher<ArrayType> arrayType;
 const AstTypeMatcher<ComplexType> complexType;
 const AstTypeMatcher<ConstantArrayType> constantArrayType;
+const AstTypeMatcher<DeducedTemplateSpecializationType>
+    deducedTemplateSpecializationType;
 const AstTypeMatcher<DependentSizedArrayType> dependentSizedArrayType;
 const AstTypeMatcher<IncompleteArrayType> incompleteArrayType;
 const AstTypeMatcher<VariableArrayType> variableArrayType;
