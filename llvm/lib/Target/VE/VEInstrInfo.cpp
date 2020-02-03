@@ -97,11 +97,10 @@ static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
   Target = LastInst->getOperand(3).getMBB();
 }
 
-bool VEInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
-                                   MachineBasicBlock *&TBB,
-                                   MachineBasicBlock *&FBB,
-                                   SmallVectorImpl<MachineOperand> &Cond,
-                                   bool AllowModify) const {
+bool VEInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+                                MachineBasicBlock *&FBB,
+                                SmallVectorImpl<MachineOperand> &Cond,
+                                bool AllowModify) const {
   MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
   if (I == MBB.end())
     return false;
@@ -180,11 +179,10 @@ bool VEInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 }
 
 unsigned VEInstrInfo::insertBranch(MachineBasicBlock &MBB,
-                                      MachineBasicBlock *TBB,
-                                      MachineBasicBlock *FBB,
-                                      ArrayRef<MachineOperand> Cond,
-                                      const DebugLoc &DL,
-                                      int *BytesAdded) const {
+                                   MachineBasicBlock *TBB,
+                                   MachineBasicBlock *FBB,
+                                   ArrayRef<MachineOperand> Cond,
+                                   const DebugLoc &DL, int *BytesAdded) const {
   assert(TBB && "insertBranch must not be told to insert a fallthrough");
   assert((Cond.size() == 3 || Cond.size() == 0) &&
          "VE branch conditions should have three component!");
