@@ -47,20 +47,20 @@ void bar5() {
   fwd_decl_avx();
 }
 
-// LINUX: @foo.ifunc = weak_odr dso_local ifunc i32 (), i32 ()* ()* @foo.resolver
-// LINUX: @foo_inline.ifunc = weak_odr dso_local ifunc i32 (), i32 ()* ()* @foo_inline.resolver
-// LINUX: @foo_decls.ifunc = weak_odr dso_local ifunc void (), void ()* ()* @foo_decls.resolver
-// LINUX: @foo_multi.ifunc = weak_odr dso_local ifunc void (i32, double), void (i32, double)* ()* @foo_multi.resolver
-// LINUX: @fwd_decl_default.ifunc = weak_odr dso_local ifunc i32 (), i32 ()* ()* @fwd_decl_default.resolver
-// LINUX: @fwd_decl_avx.ifunc = weak_odr dso_local ifunc i32 (), i32 ()* ()* @fwd_decl_avx.resolver
+// LINUX: @foo.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo.resolver
+// LINUX: @foo_inline.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @foo_inline.resolver
+// LINUX: @foo_decls.ifunc = weak_odr ifunc void (), void ()* ()* @foo_decls.resolver
+// LINUX: @foo_multi.ifunc = weak_odr ifunc void (i32, double), void (i32, double)* ()* @foo_multi.resolver
+// LINUX: @fwd_decl_default.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @fwd_decl_default.resolver
+// LINUX: @fwd_decl_avx.ifunc = weak_odr ifunc i32 (), i32 ()* ()* @fwd_decl_avx.resolver
 
-// LINUX: define dso_local i32 @foo.sse4.2()
+// LINUX: define i32 @foo.sse4.2()
 // LINUX: ret i32 0
-// LINUX: define dso_local i32 @foo.arch_ivybridge()
+// LINUX: define i32 @foo.arch_ivybridge()
 // LINUX: ret i32 1
-// LINUX: define dso_local i32 @foo()
+// LINUX: define i32 @foo()
 // LINUX: ret i32 2
-// LINUX: define dso_local i32 @bar()
+// LINUX: define i32 @bar()
 // LINUX: call i32 @foo.ifunc()
 
 // WINDOWS: define dso_local i32 @foo.sse4.2()
@@ -86,7 +86,7 @@ void bar5() {
 // WINDOWS: call i32 @foo.sse4.2
 // WINDOWS: call i32 @foo
 
-// LINUX: define dso_local i32 @bar2()
+// LINUX: define i32 @bar2()
 // LINUX: call i32 @foo_inline.ifunc()
 
 // WINDOWS: define dso_local i32 @bar2()
@@ -106,7 +106,7 @@ void bar5() {
 // WINDOWS: call i32 @foo_inline.sse4.2
 // WINDOWS: call i32 @foo_inline
 
-// LINUX: define dso_local void @bar3()
+// LINUX: define void @bar3()
 // LINUX: call void @foo_decls.ifunc()
 
 // WINDOWS: define dso_local void @bar3()
@@ -120,7 +120,7 @@ void bar5() {
 // WINDOWS: call void @foo_decls.sse4.2
 // WINDOWS: call void @foo_decls
 
-// LINUX: define dso_local void @bar4()
+// LINUX: define void @bar4()
 // LINUX: call void @foo_multi.ifunc(i32 1, double 5.{{[0+e]*}})
 
 // WINDOWS: define dso_local void @bar4()
@@ -156,11 +156,11 @@ void bar5() {
 // WINDOWS: call void @foo_multi(i32 %0, double %1)
 // WINDOWS-NEXT: ret void
 
-// LINUX: define dso_local i32 @fwd_decl_default()
+// LINUX: define i32 @fwd_decl_default()
 // LINUX: ret i32 2
-// LINUX: define dso_local i32 @fwd_decl_avx.avx()
+// LINUX: define i32 @fwd_decl_avx.avx()
 // LINUX: ret i32 2
-// LINUX: define dso_local i32 @fwd_decl_avx()
+// LINUX: define i32 @fwd_decl_avx()
 // LINUX: ret i32 2
 
 // WINDOWS: define dso_local i32 @fwd_decl_default()
@@ -170,7 +170,7 @@ void bar5() {
 // WINDOWS: define dso_local i32 @fwd_decl_avx()
 // WINDOWS: ret i32 2
 
-// LINUX: define dso_local void @bar5()
+// LINUX: define void @bar5()
 // LINUX: call i32 @fwd_decl_default.ifunc()
 // LINUX: call i32 @fwd_decl_avx.ifunc()
 
@@ -197,7 +197,7 @@ void bar5() {
 // LINUX: declare i32 @foo.arch_sandybridge()
 // WINDOWS: declare dso_local i32 @foo.arch_sandybridge()
 
-// LINUX: define linkonce dso_local i32 @foo_inline.sse4.2()
+// LINUX: define linkonce i32 @foo_inline.sse4.2()
 // LINUX: ret i32 0
 
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline.sse4.2()
@@ -207,9 +207,9 @@ void bar5() {
 
 // WINDOWS: declare dso_local i32 @foo_inline.arch_sandybridge()
 
-// LINUX: define linkonce dso_local i32 @foo_inline.arch_ivybridge()
+// LINUX: define linkonce i32 @foo_inline.arch_ivybridge()
 // LINUX: ret i32 1
-// LINUX: define linkonce dso_local i32 @foo_inline()
+// LINUX: define linkonce i32 @foo_inline()
 // LINUX: ret i32 2
 
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline.arch_ivybridge()
@@ -217,16 +217,16 @@ void bar5() {
 // WINDOWS: define linkonce_odr dso_local i32 @foo_inline()
 // WINDOWS: ret i32 2
 
-// LINUX: define linkonce dso_local void @foo_decls()
-// LINUX: define linkonce dso_local void @foo_decls.sse4.2()
+// LINUX: define linkonce void @foo_decls()
+// LINUX: define linkonce void @foo_decls.sse4.2()
 
 // WINDOWS: define linkonce_odr dso_local void @foo_decls()
 // WINDOWS: define linkonce_odr dso_local void @foo_decls.sse4.2()
 
-// LINUX: define linkonce dso_local void @foo_multi(i32 %{{[^,]+}}, double %{{[^\)]+}})
-// LINUX: define linkonce dso_local void @foo_multi.avx_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
-// LINUX: define linkonce dso_local void @foo_multi.fma4_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
-// LINUX: define linkonce dso_local void @foo_multi.arch_ivybridge_fma4_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
+// LINUX: define linkonce void @foo_multi(i32 %{{[^,]+}}, double %{{[^\)]+}})
+// LINUX: define linkonce void @foo_multi.avx_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
+// LINUX: define linkonce void @foo_multi.fma4_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
+// LINUX: define linkonce void @foo_multi.arch_ivybridge_fma4_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
 
 // WINDOWS: define linkonce_odr dso_local void @foo_multi(i32 %{{[^,]+}}, double %{{[^\)]+}})
 // WINDOWS: define linkonce_odr dso_local void @foo_multi.avx_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})

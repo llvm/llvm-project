@@ -103,7 +103,7 @@ S<float> var(3);
 int main() {
   static int sivar;
 #ifdef LAMBDA
-  // HLAMBDA: [[G:@.+]] = dso_local global i{{[0-9]+}} 1212,
+  // HLAMBDA: [[G:@.+]] = global i{{[0-9]+}} 1212,
   // HLAMBDA-LABEL: @main
   // HLAMBDA: call void [[OUTER_LAMBDA:@.+]](
   [&]() {

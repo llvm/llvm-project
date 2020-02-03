@@ -1,5 +1,5 @@
 // Verify that we synthesized the coroutine for a lambda inside of a function template.
-// RUN: %clang_cc1 -std=c++1z -fcoroutines-ts -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -fexceptions -fcxx-exceptions -disable-llvm-passes -fsemantic-interposition | FileCheck %s
+// RUN: %clang_cc1 -std=c++1z -fcoroutines-ts -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -fexceptions -fcxx-exceptions -disable-llvm-passes | FileCheck %s
 
 namespace std::experimental {
 template <typename R, typename... T> struct coroutine_traits {

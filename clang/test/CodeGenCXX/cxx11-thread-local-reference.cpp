@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-linux-gnu -fsemantic-interposition | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
 // RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-apple-darwin12 | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
 
 int &f();
 
-// LINUX: @r = thread_local dso_local global i32* null
+// LINUX: @r = thread_local global i32* null
 // DARWIN: @r = internal thread_local global i32* null
 thread_local int &r = f();
 
@@ -16,7 +16,7 @@ int &g() { return r; }
 // CHECK: call dereferenceable({{[0-9]+}}) i32* @_Z1fv()
 // CHECK: store i32* %{{.*}}, i32** @r, align 8
 
-// CHECK-LABEL: define dso_local dereferenceable({{[0-9]+}}) i32* @_Z1gv()
+// CHECK-LABEL: define dereferenceable({{[0-9]+}}) i32* @_Z1gv()
 // LINUX: call i32* @_ZTW1r()
 // DARWIN: call cxx_fast_tlscc i32* @_ZTW1r()
 // CHECK: ret i32* %{{.*}}

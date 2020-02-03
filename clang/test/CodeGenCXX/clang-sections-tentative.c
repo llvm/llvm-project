@@ -28,12 +28,12 @@ const int cz; // not assigned a rodata section attribute
 const int cx; // stays in .rodata.1
 const int cy; // .rodata.2
 
-// CHECK: @x = dso_local global i32 0, align 4 #0
-// CHECK: @y = dso_local global i32 0, align 4 #1
-// CHECK: @z = common dso_local global i32 0, align 4
-// CHECK: @cx = dso_local constant i32 0, align 4 #2
-// CHECK: @cy = dso_local constant i32 0, align 4 #3
-// CHECK: @cz = dso_local constant i32 0, align 4 #1
+// CHECK: @x = global i32 0, align 4 #0
+// CHECK: @y = global i32 0, align 4 #1
+// CHECK: @z = common global i32 0, align 4
+// CHECK: @cx = constant i32 0, align 4 #2
+// CHECK: @cy = constant i32 0, align 4 #3
+// CHECK: @cz = constant i32 0, align 4 #1
 
 // CHECK: attributes #0 = { "bss-section"=".bss.1" }
 // CHECK: attributes #1 = { "bss-section"=".bss.2" }

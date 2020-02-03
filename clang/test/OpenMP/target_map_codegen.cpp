@@ -370,7 +370,7 @@ void implicit_maps_nested_integer_and_enum (int a){
 #ifdef CK6
 // CK6-LABEL: @.__omp_offloading_{{.*}}implicit_maps_host_global{{.*}}_l397.region_id = weak constant i8 0
 
-// CK6-DAG: [[GBL:@Gi]] = dso_local global i32 0
+// CK6-DAG: [[GBL:@Gi]] = global i32 0
 // CK6-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i64] [i64 4]
 // Map types: OMP_MAP_PRIVATE_VAL | OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 800
 // CK6-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 800]

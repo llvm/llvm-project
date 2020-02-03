@@ -2,7 +2,7 @@
 // Verifies that parameter copies are destroyed
 // Vefifies that parameter copies are used in the body of the coroutine
 // Verifies that parameter copies are used to construct the promise type, if that type has a matching constructor
-// RUN: %clang_cc1 -std=c++1z -fcoroutines-ts -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -disable-llvm-passes -fexceptions -fsemantic-interposition | FileCheck %s
+// RUN: %clang_cc1 -std=c++1z -fcoroutines-ts -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -disable-llvm-passes -fexceptions | FileCheck %s
 
 namespace std::experimental {
 template <typename... T> struct coroutine_traits;
@@ -62,7 +62,7 @@ struct MoveAndCopy {
 void consume(int,int,int) noexcept;
 
 // TODO: Add support for CopyOnly params
-// CHECK: define dso_local void @_Z1fi8MoveOnly11MoveAndCopy(i32 %val, %struct.MoveOnly* %[[MoParam:.+]], %struct.MoveAndCopy* %[[McParam:.+]]) #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*
+// CHECK: define void @_Z1fi8MoveOnly11MoveAndCopy(i32 %val, %struct.MoveOnly* %[[MoParam:.+]], %struct.MoveAndCopy* %[[McParam:.+]]) #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*
 void f(int val, MoveOnly moParam, MoveAndCopy mcParam) {
   // CHECK: %[[MoCopy:.+]] = alloca %struct.MoveOnly
   // CHECK: %[[McCopy:.+]] = alloca %struct.MoveAndCopy

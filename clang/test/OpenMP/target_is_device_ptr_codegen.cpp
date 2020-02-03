@@ -21,7 +21,7 @@
 
 double *g;
 
-// CK1: @g = dso_local global double*
+// CK1: @g = global double*
 // CK1: [[SIZES00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} {{8|4}}]
 // CK1: [[TYPES00:@.+]] = {{.+}}constant [1 x i64] [i64 288]
 

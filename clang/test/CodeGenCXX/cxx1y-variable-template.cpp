@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++1y -triple x86_64-linux-gnu -emit-llvm -o - %s -fsemantic-interposition | FileCheck %s
+// RUN: %clang_cc1 -std=c++1y -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 // Check that we keep the 'extern' when we instantiate the definition of this
 // variable template specialization.

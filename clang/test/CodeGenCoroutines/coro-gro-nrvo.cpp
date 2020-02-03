@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -emit-llvm %s -o - -disable-llvm-passes -fsemantic-interposition | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fcoroutines-ts -std=c++14 -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 
 #include "Inputs/coroutine.h"
 
@@ -34,7 +34,7 @@ struct coro {
 };
 
 // Verify that the NRVO is applied to the Gro object.
-// CHECK-LABEL: define dso_local void @_Z1fi(%struct.coro* noalias sret %agg.result, i32 %0)
+// CHECK-LABEL: define void @_Z1fi(%struct.coro* noalias sret %agg.result, i32 %0)
 coro f(int) {
 // CHECK: %call = call i8* @_Znwm(
 // CHECK-NEXT: br label %[[CoroInit:.*]]

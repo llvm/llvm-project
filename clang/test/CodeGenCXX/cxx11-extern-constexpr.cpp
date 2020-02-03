@@ -6,8 +6,8 @@
 struct A {
   static const int Foo = 123;
 };
-// X86: @_ZN1A3FooE = dso_local constant i32 123, align 4
-// AMD: @_ZN1A3FooE = addrspace(4) dso_local constant i32 123, align 4
+// X86: @_ZN1A3FooE = constant i32 123, align 4
+// AMD: @_ZN1A3FooE = addrspace(4) constant i32 123, align 4
 const int *p = &A::Foo; // emit available_externally
 const int A::Foo;       // convert to full definition
 
@@ -35,7 +35,7 @@ struct MutableBar {
 
 struct Foo {
   // CXX11X86: @_ZN3Foo21ConstexprStaticMemberE = available_externally constant i32 42,
-  // CXX17X86: @_ZN3Foo21ConstexprStaticMemberE = linkonce_odr dso_local constant i32 42,
+  // CXX17X86: @_ZN3Foo21ConstexprStaticMemberE = linkonce_odr constant i32 42,
   // CXX11AMD: @_ZN3Foo21ConstexprStaticMemberE = available_externally addrspace(4) constant i32 42,
   // CXX17AMD: @_ZN3Foo21ConstexprStaticMemberE = linkonce_odr addrspace(4) constant i32 42,
   static constexpr int ConstexprStaticMember = 42;
@@ -44,13 +44,13 @@ struct Foo {
   static const int ConstStaticMember = 43;
 
   // CXX11X86: @_ZN3Foo23ConstStaticStructMemberE = available_externally constant %struct.Bar { i32 44 },
-  // CXX17X86: @_ZN3Foo23ConstStaticStructMemberE = linkonce_odr dso_local constant %struct.Bar { i32 44 },
+  // CXX17X86: @_ZN3Foo23ConstStaticStructMemberE = linkonce_odr constant %struct.Bar { i32 44 },
   // CXX11AMD: @_ZN3Foo23ConstStaticStructMemberE = available_externally addrspace(1) constant %struct.Bar { i32 44 },
   // CXX17AMD: @_ZN3Foo23ConstStaticStructMemberE = linkonce_odr addrspace(1) constant %struct.Bar { i32 44 },
   static constexpr Bar ConstStaticStructMember = {44};
 
   // CXX11X86: @_ZN3Foo34ConstexprStaticMutableStructMemberE = external global %struct.MutableBar,
-  // CXX17X86: @_ZN3Foo34ConstexprStaticMutableStructMemberE = linkonce_odr dso_local global %struct.MutableBar { i32 45 },
+  // CXX17X86: @_ZN3Foo34ConstexprStaticMutableStructMemberE = linkonce_odr global %struct.MutableBar { i32 45 },
   // CXX11AMD: @_ZN3Foo34ConstexprStaticMutableStructMemberE = external addrspace(1) global %struct.MutableBar,
   // CXX17AMD: @_ZN3Foo34ConstexprStaticMutableStructMemberE = linkonce_odr addrspace(1) global %struct.MutableBar { i32 45 },
   static constexpr MutableBar ConstexprStaticMutableStructMember = {45};

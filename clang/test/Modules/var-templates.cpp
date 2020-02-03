@@ -20,5 +20,5 @@ inline int f() { return n<0>; }
 
 #pragma clang module import B
 
-// CHECK: @_Z1nILi0EE = linkonce_odr dso_local global i32 42, comdat
+// CHECK: @_Z1nILi0EE = linkonce_odr global i32 42, comdat
 int g() { return f(); }

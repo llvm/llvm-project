@@ -98,10 +98,10 @@ void use_F() {
 
 // C has no key function, so its vtable should have weak_odr linkage
 // and hidden visibility (rdar://problem/7523229).
-// CHECK-DAG: @_ZTV1C = linkonce_odr dso_local unnamed_addr constant {{.*}}, comdat, align 8{{$}}
-// CHECK-DAG: @_ZTS1C = linkonce_odr dso_local constant {{.*}}, comdat, align 1{{$}}
-// CHECK-DAG: @_ZTI1C = linkonce_odr dso_local constant {{.*}}, comdat, align 8{{$}}
-// CHECK-DAG: @_ZTT1C = linkonce_odr dso_local unnamed_addr constant {{.*}}, comdat, align 8{{$}}
+// CHECK-DAG: @_ZTV1C = linkonce_odr unnamed_addr constant {{.*}}, comdat, align 8{{$}}
+// CHECK-DAG: @_ZTS1C = linkonce_odr constant {{.*}}, comdat, align 1{{$}}
+// CHECK-DAG: @_ZTI1C = linkonce_odr constant {{.*}}, comdat, align 8{{$}}
+// CHECK-DAG: @_ZTT1C = linkonce_odr unnamed_addr constant {{.*}}, comdat, align 8{{$}}
 
 // D has a key function that is defined in this translation unit so its vtable is
 // defined in the translation unit.

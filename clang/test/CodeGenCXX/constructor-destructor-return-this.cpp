@@ -32,10 +32,10 @@ private:
 B::B(int *i) : i_(i) { }
 B::~B() { }
 
-// CHECKGEN-LABEL: define dso_local void @_ZN1BC2EPi(%class.B* %this, i32* %i)
-// CHECKGEN-LABEL: define dso_local void @_ZN1BC1EPi(%class.B* %this, i32* %i)
-// CHECKGEN-LABEL: define dso_local void @_ZN1BD2Ev(%class.B* %this)
-// CHECKGEN-LABEL: define dso_local void @_ZN1BD1Ev(%class.B* %this)
+// CHECKGEN-LABEL: define void @_ZN1BC2EPi(%class.B* %this, i32* %i)
+// CHECKGEN-LABEL: define void @_ZN1BC1EPi(%class.B* %this, i32* %i)
+// CHECKGEN-LABEL: define void @_ZN1BD2Ev(%class.B* %this)
+// CHECKGEN-LABEL: define void @_ZN1BD1Ev(%class.B* %this)
 
 // CHECKARM-LABEL: define %class.B* @_ZN1BC2EPi(%class.B* returned %this, i32* %i)
 // CHECKARM-LABEL: define %class.B* @_ZN1BC1EPi(%class.B* returned %this, i32* %i)
@@ -47,10 +47,10 @@ B::~B() { }
 // CHECKIOS5-LABEL: define %class.B* @_ZN1BD2Ev(%class.B* %this)
 // CHECKIOS5-LABEL: define %class.B* @_ZN1BD1Ev(%class.B* %this)
 
-// CHECKFUCHSIA-LABEL: define dso_local %class.B* @_ZN1BC2EPi(%class.B* returned %this, i32* %i)
-// CHECKFUCHSIA-LABEL: define dso_local %class.B* @_ZN1BC1EPi(%class.B* returned %this, i32* %i)
-// CHECKFUCHSIA-LABEL: define dso_local %class.B* @_ZN1BD2Ev(%class.B* returned %this)
-// CHECKFUCHSIA-LABEL: define dso_local %class.B* @_ZN1BD1Ev(%class.B* returned %this)
+// CHECKFUCHSIA-LABEL: define %class.B* @_ZN1BC2EPi(%class.B* returned %this, i32* %i)
+// CHECKFUCHSIA-LABEL: define %class.B* @_ZN1BC1EPi(%class.B* returned %this, i32* %i)
+// CHECKFUCHSIA-LABEL: define %class.B* @_ZN1BD2Ev(%class.B* returned %this)
+// CHECKFUCHSIA-LABEL: define %class.B* @_ZN1BD1Ev(%class.B* returned %this)
 
 // CHECKMS-LABEL: define dso_local x86_thiscallcc %class.B* @"??0B@@QAE@PAH@Z"(%class.B* returned %this, i32* %i)
 // CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1B@@UAE@XZ"(%class.B* %this)
@@ -66,13 +66,13 @@ private:
 C::C(int *i, char *c) : B(i), c_(c) { }
 C::~C() { }
 
-// CHECKGEN-LABEL: define dso_local void @_ZN1CC2EPiPc(%class.C* %this, i32* %i, i8* %c)
-// CHECKGEN-LABEL: define dso_local void @_ZN1CC1EPiPc(%class.C* %this, i32* %i, i8* %c)
-// CHECKGEN-LABEL: define dso_local void @_ZN1CD2Ev(%class.C* %this)
-// CHECKGEN-LABEL: define dso_local void @_ZN1CD1Ev(%class.C* %this)
-// CHECKGEN-LABEL: define dso_local void @_ZThn8_N1CD1Ev(%class.C* %this)
-// CHECKGEN-LABEL: define dso_local void @_ZN1CD0Ev(%class.C* %this)
-// CHECKGEN-LABEL: define dso_local void @_ZThn8_N1CD0Ev(%class.C* %this)
+// CHECKGEN-LABEL: define void @_ZN1CC2EPiPc(%class.C* %this, i32* %i, i8* %c)
+// CHECKGEN-LABEL: define void @_ZN1CC1EPiPc(%class.C* %this, i32* %i, i8* %c)
+// CHECKGEN-LABEL: define void @_ZN1CD2Ev(%class.C* %this)
+// CHECKGEN-LABEL: define void @_ZN1CD1Ev(%class.C* %this)
+// CHECKGEN-LABEL: define void @_ZThn8_N1CD1Ev(%class.C* %this)
+// CHECKGEN-LABEL: define void @_ZN1CD0Ev(%class.C* %this)
+// CHECKGEN-LABEL: define void @_ZThn8_N1CD0Ev(%class.C* %this)
 
 // CHECKARM-LABEL: define %class.C* @_ZN1CC2EPiPc(%class.C* returned %this, i32* %i, i8* %c)
 // CHECKARM-LABEL: define %class.C* @_ZN1CC1EPiPc(%class.C* returned %this, i32* %i, i8* %c)
@@ -90,13 +90,13 @@ C::~C() { }
 // CHECKIOS5-LABEL: define void @_ZN1CD0Ev(%class.C* %this)
 // CHECKIOS5-LABEL: define void @_ZThn8_N1CD0Ev(%class.C* %this)
 
-// CHECKFUCHSIA-LABEL: define dso_local %class.C* @_ZN1CC2EPiPc(%class.C* returned %this, i32* %i, i8* %c)
-// CHECKFUCHSIA-LABEL: define dso_local %class.C* @_ZN1CC1EPiPc(%class.C* returned %this, i32* %i, i8* %c)
-// CHECKFUCHSIA-LABEL: define dso_local %class.C* @_ZN1CD2Ev(%class.C* returned %this)
-// CHECKFUCHSIA-LABEL: define dso_local %class.C* @_ZN1CD1Ev(%class.C* returned %this)
-// CHECKFUCHSIA-LABEL: define dso_local %class.C* @_ZThn16_N1CD1Ev(%class.C* %this)
-// CHECKFUCHSIA-LABEL: define dso_local void @_ZN1CD0Ev(%class.C* %this)
-// CHECKFUCHSIA-LABEL: define dso_local void @_ZThn16_N1CD0Ev(%class.C* %this)
+// CHECKFUCHSIA-LABEL: define %class.C* @_ZN1CC2EPiPc(%class.C* returned %this, i32* %i, i8* %c)
+// CHECKFUCHSIA-LABEL: define %class.C* @_ZN1CC1EPiPc(%class.C* returned %this, i32* %i, i8* %c)
+// CHECKFUCHSIA-LABEL: define %class.C* @_ZN1CD2Ev(%class.C* returned %this)
+// CHECKFUCHSIA-LABEL: define %class.C* @_ZN1CD1Ev(%class.C* returned %this)
+// CHECKFUCHSIA-LABEL: define %class.C* @_ZThn16_N1CD1Ev(%class.C* %this)
+// CHECKFUCHSIA-LABEL: define void @_ZN1CD0Ev(%class.C* %this)
+// CHECKFUCHSIA-LABEL: define void @_ZThn16_N1CD0Ev(%class.C* %this)
 
 // CHECKMS-LABEL: define dso_local x86_thiscallcc %class.C* @"??0C@@QAE@PAHPAD@Z"(%class.C* returned %this, i32* %i, i8* %c)
 // CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1C@@UAE@XZ"(%class.C* %this)
@@ -110,10 +110,10 @@ public:
 D::D() { }
 D::~D() { }
 
-// CHECKGEN-LABEL: define dso_local void @_ZN1DC2Ev(%class.D* %this, i8** %vtt)
-// CHECKGEN-LABEL: define dso_local void @_ZN1DC1Ev(%class.D* %this)
-// CHECKGEN-LABEL: define dso_local void @_ZN1DD2Ev(%class.D* %this, i8** %vtt)
-// CHECKGEN-LABEL: define dso_local void @_ZN1DD1Ev(%class.D* %this)
+// CHECKGEN-LABEL: define void @_ZN1DC2Ev(%class.D* %this, i8** %vtt)
+// CHECKGEN-LABEL: define void @_ZN1DC1Ev(%class.D* %this)
+// CHECKGEN-LABEL: define void @_ZN1DD2Ev(%class.D* %this, i8** %vtt)
+// CHECKGEN-LABEL: define void @_ZN1DD1Ev(%class.D* %this)
 
 // CHECKARM-LABEL: define %class.D* @_ZN1DC2Ev(%class.D* returned %this, i8** %vtt)
 // CHECKARM-LABEL: define %class.D* @_ZN1DC1Ev(%class.D* returned %this)
@@ -125,10 +125,10 @@ D::~D() { }
 // CHECKIOS5-LABEL: define %class.D* @_ZN1DD2Ev(%class.D* %this, i8** %vtt)
 // CHECKIOS5-LABEL: define %class.D* @_ZN1DD1Ev(%class.D* %this)
 
-// CHECKFUCHSIA-LABEL: define dso_local %class.D* @_ZN1DC2Ev(%class.D* returned %this, i8** %vtt)
-// CHECKFUCHSIA-LABEL: define dso_local %class.D* @_ZN1DC1Ev(%class.D* returned %this)
-// CHECKFUCHSIA-LABEL: define dso_local %class.D* @_ZN1DD2Ev(%class.D* returned %this, i8** %vtt)
-// CHECKFUCHSIA-LABEL: define dso_local %class.D* @_ZN1DD1Ev(%class.D* returned %this)
+// CHECKFUCHSIA-LABEL: define %class.D* @_ZN1DC2Ev(%class.D* returned %this, i8** %vtt)
+// CHECKFUCHSIA-LABEL: define %class.D* @_ZN1DC1Ev(%class.D* returned %this)
+// CHECKFUCHSIA-LABEL: define %class.D* @_ZN1DD2Ev(%class.D* returned %this, i8** %vtt)
+// CHECKFUCHSIA-LABEL: define %class.D* @_ZN1DD1Ev(%class.D* returned %this)
 
 // CHECKMS-LABEL: define dso_local x86_thiscallcc %class.D* @"??0D@@QAE@XZ"(%class.D* returned %this, i32 %is_most_derived)
 // CHECKMS-LABEL: define dso_local x86_thiscallcc void @"??1D@@UAE@XZ"(%class.D* %this)
@@ -147,7 +147,7 @@ void test_destructor() {
   e2->~E();
 }
 
-// CHECKARM-LABEL,CHECKFUCHSIA-LABEL: define dso_local void @_Z15test_destructorv()
+// CHECKARM-LABEL,CHECKFUCHSIA-LABEL: define void @_Z15test_destructorv()
 
 // Verify that virtual calls to destructors are not marked with a 'returned'
 // this parameter at the call site...

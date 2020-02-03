@@ -37,7 +37,7 @@ struct __attribute__((visibility("default"))) X2 {
 extern template struct X1<float>;
 
 void use(X0 *x0, X1<int> *x1, X2 *x2, X1<float> *x3) {
-  // CHECK-LABEL: define linkonce_odr dso_local void @_ZN2X02f1Ev
+  // CHECK-LABEL: define linkonce_odr void @_ZN2X02f1Ev
   x0->f1();
   // CHECK-LABEL: define linkonce_odr hidden void @_ZN2X02f2Ev
   x0->f2();
@@ -47,7 +47,7 @@ void use(X0 *x0, X1<int> *x1, X2 *x2, X1<float> *x3) {
   X0::f5();
   // CHECK-LABEL: define linkonce_odr hidden void @_ZN2X02f6Ev
   x0->X0::f6();
-  // CHECK-LABEL: define linkonce_odr dso_local void @_ZN2X1IiE2f1Ev
+  // CHECK-LABEL: define linkonce_odr void @_ZN2X1IiE2f1Ev
   x1->f1();
   // CHECK-LABEL: define linkonce_odr hidden void @_ZN2X1IiE2f2Ev
   x1->f2();
@@ -106,7 +106,7 @@ namespace PR11642 {
   };
   extern template class Foo<int>;
   template class Foo<int>;
-  // CHECK-LABEL: define weak_odr dso_local i32 @_ZN7PR116423FooIiE3fooEi
+  // CHECK-LABEL: define weak_odr i32 @_ZN7PR116423FooIiE3fooEi
 }
 
 // Test that clang implements the new gcc behaviour for inline functions.
@@ -122,7 +122,7 @@ namespace test3 {
     foo();
     zed<int>();
   }
-  // CHECK-LABEL: define weak_odr dso_local void @_ZN5test33zedIfEEvv
+  // CHECK-LABEL: define weak_odr void @_ZN5test33zedIfEEvv
   // CHECK-LABEL: define linkonce_odr hidden void @_ZN5test33fooEv
   // CHECK-LABEL: define linkonce_odr hidden void @_ZN5test33zedIiEEvv
 }

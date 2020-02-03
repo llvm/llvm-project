@@ -846,7 +846,7 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
   const auto &CGOpts = CGM.getCodeGenOpts();
   llvm::Reloc::Model RM = CGOpts.RelocationModel;
   const auto &LOpts = CGM.getLangOpts();
-  if (RM != llvm::Reloc::Static && LOpts.SemanticInterposition)
+  if (RM != llvm::Reloc::Static && !LOpts.PIE)
     return false;
 
   // A definition cannot be preempted from an executable.
@@ -868,7 +868,7 @@ static bool shouldAssumeDSOLocal(const CodeGenModule &CGM,
   // If we can use copy relocations we can assume it is local.
   if (auto *Var = dyn_cast<llvm::GlobalVariable>(GV))
     if (!Var->isThreadLocal() &&
-        (RM == llvm::Reloc::Static || (LOpts.PIE && CGOpts.PIECopyRelocations)))
+        (RM == llvm::Reloc::Static || CGOpts.PIECopyRelocations))
       return true;
 
   // If we can use a plt entry as the symbol address we can assume it

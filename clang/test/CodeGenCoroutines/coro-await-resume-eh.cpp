@@ -28,7 +28,7 @@ struct throwing_task {
   };
 };
 
-// CHECK-LABEL: define dso_local void @_Z1fv()
+// CHECK-LABEL: define void @_Z1fv()
 throwing_task f() {
   // A variable RESUMETHREW is used to keep track of whether the body
   // of 'await_resume' threw an exception. Exceptions thrown in
