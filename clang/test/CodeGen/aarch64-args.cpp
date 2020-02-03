@@ -16,15 +16,15 @@
 struct Empty {};
 
 // CHECK: define i32 @empty_arg(i32 %a)
-// CHECK-GNU-C: define i32 @empty_arg(i32 %a)
-// CHECK-GNU-CXX: define i32 @empty_arg(i8 %e.coerce, i32 %a)
+// CHECK-GNU-C: define dso_local i32 @empty_arg(i32 %a)
+// CHECK-GNU-CXX: define dso_local i32 @empty_arg(i8 %e.coerce, i32 %a)
 EXTERNC int empty_arg(struct Empty e, int a) {
   return a;
 }
 
 // CHECK: define void @empty_ret()
-// CHECK-GNU-C: define void @empty_ret()
-// CHECK-GNU-CXX: define void @empty_ret()
+// CHECK-GNU-C: define dso_local void @empty_ret()
+// CHECK-GNU-CXX: define dso_local void @empty_ret()
 EXTERNC struct Empty empty_ret() {
   struct Empty e;
   return e;
@@ -39,8 +39,8 @@ struct SuperEmpty {
 };
 
 // CHECK: define i32 @super_empty_arg(i32 %a)
-// CHECK-GNU-C: define i32 @super_empty_arg(i32 %a)
-// CHECK-GNU-CXX: define i32 @super_empty_arg(i32 %a)
+// CHECK-GNU-C: define dso_local i32 @super_empty_arg(i32 %a)
+// CHECK-GNU-CXX: define dso_local i32 @super_empty_arg(i32 %a)
 EXTERNC int super_empty_arg(struct SuperEmpty e, int a) {
   return a;
 }
@@ -52,15 +52,15 @@ struct SortOfEmpty {
 };
 
 // CHECK: define i32 @sort_of_empty_arg(i32 %a)
-// CHECK-GNU-C: define i32 @sort_of_empty_arg(i32 %a)
-// CHECK-GNU-CXX: define i32 @sort_of_empty_arg(i8 %e.coerce, i32 %a)
+// CHECK-GNU-C: define dso_local i32 @sort_of_empty_arg(i32 %a)
+// CHECK-GNU-CXX: define dso_local i32 @sort_of_empty_arg(i8 %e.coerce, i32 %a)
 EXTERNC int sort_of_empty_arg(struct Empty e, int a) {
   return a;
 }
 
 // CHECK: define void @sort_of_empty_ret()
-// CHECK-GNU-C: define void @sort_of_empty_ret()
-// CHECK-GNU-CXX: define void @sort_of_empty_ret()
+// CHECK-GNU-C: define dso_local void @sort_of_empty_ret()
+// CHECK-GNU-CXX: define dso_local void @sort_of_empty_ret()
 EXTERNC struct SortOfEmpty sort_of_empty_ret() {
   struct SortOfEmpty e;
   return e;

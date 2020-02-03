@@ -367,7 +367,7 @@ class C : public A, public B // align=16
 // offset. The pointer before subtraction doesn't need to be aligned for
 // the destination type.
 
-// CHECK-LABEL: define void @_Z16downcast_pointerP1B(%class.B* %b)
+// CHECK-LABEL: define dso_local void @_Z16downcast_pointerP1B(%class.B* %b)
 void downcast_pointer(B *b) {
   (void) static_cast<C*>(b);
   // Alignment check from EmitTypeCheck(TCK_DowncastPointer, ...)
@@ -384,7 +384,7 @@ void downcast_pointer(B *b) {
   // CHECK-NEXT: br i1 [[AND]]
 }
 
-// CHECK-LABEL: define void @_Z18downcast_referenceR1B(%class.B* dereferenceable({{[0-9]+}}) %b)
+// CHECK-LABEL: define dso_local void @_Z18downcast_referenceR1B(%class.B* dereferenceable({{[0-9]+}}) %b)
 void downcast_reference(B &b) {
   (void) static_cast<C&>(b);
   // Alignment check from EmitTypeCheck(TCK_DowncastReference, ...)
@@ -473,34 +473,34 @@ void force_irgen() {
   B::q();
 }
 
-// CHECK-LABEL: define void @_ZN29FunctionSanitizerVirtualCalls1B1fEv
+// CHECK-LABEL: define dso_local void @_ZN29FunctionSanitizerVirtualCalls1B1fEv
 // CHECK-NOT: prologue
 //
-// CHECK-LABEL: define void @_ZTv0_n24_N29FunctionSanitizerVirtualCalls1B1fEv
+// CHECK-LABEL: define dso_local void @_ZTv0_n24_N29FunctionSanitizerVirtualCalls1B1fEv
 // CHECK-NOT: prologue
 //
-// CHECK-LABEL: define void @_ZN29FunctionSanitizerVirtualCalls11force_irgenEv()
+// CHECK-LABEL: define dso_local void @_ZN29FunctionSanitizerVirtualCalls11force_irgenEv()
 // CHECK: prologue
 //
-// CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1AC1Ev
+// CHECK-LABEL: define linkonce_odr dso_local void @_ZN29FunctionSanitizerVirtualCalls1AC1Ev
 // CHECK-NOT: prologue
 //
-// CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1A1gEv
+// CHECK-LABEL: define linkonce_odr dso_local void @_ZN29FunctionSanitizerVirtualCalls1A1gEv
 // CHECK-NOT: prologue
 //
-// CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1A1hEv
+// CHECK-LABEL: define linkonce_odr dso_local void @_ZN29FunctionSanitizerVirtualCalls1A1hEv
 // CHECK-NOT: prologue
 //
-// CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1BC1Ev
+// CHECK-LABEL: define linkonce_odr dso_local void @_ZN29FunctionSanitizerVirtualCalls1BC1Ev
 // CHECK-NOT: prologue
 //
-// CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1B1bEv
+// CHECK-LABEL: define linkonce_odr dso_local void @_ZN29FunctionSanitizerVirtualCalls1B1bEv
 // CHECK-NOT: prologue
 //
-// CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1B1gEv
+// CHECK-LABEL: define linkonce_odr dso_local void @_ZN29FunctionSanitizerVirtualCalls1B1gEv
 // CHECK-NOT: prologue
 //
-// CHECK-LABEL: define linkonce_odr void @_ZN29FunctionSanitizerVirtualCalls1B1qEv
+// CHECK-LABEL: define linkonce_odr dso_local void @_ZN29FunctionSanitizerVirtualCalls1B1qEv
 // CHECK: prologue
 
 }

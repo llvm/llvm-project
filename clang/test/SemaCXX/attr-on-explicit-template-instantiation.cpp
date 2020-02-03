@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s
 
 // PR39118
 // Make sure that attributes are properly applied to explicit template

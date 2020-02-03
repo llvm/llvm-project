@@ -4,7 +4,7 @@
 // CHECK: internal global i32* @"_ZZNK17pr18020_constexpr3$_1clEvE2l1"
 // CHECK: @_ZZL14deduced_returnvE1n = internal global i32 42
 // CHECK: @_ZZZL20block_deduced_returnvEUb_E1n = internal global i32 42
-// CHECK: @_ZZ18static_local_labelPvE1q = linkonce_odr global i8* blockaddress(@_Z18static_local_labelPv, %{{.*}})
+// CHECK: @_ZZ18static_local_labelPvE1q = linkonce_odr dso_local global i8* blockaddress(@_Z18static_local_labelPv, %{{.*}})
 // CHECK: @"_ZZNK3$_2clEvE1x" = internal global i32 42
 
 namespace pr6769 {
@@ -87,7 +87,7 @@ struct pr18020_class {
 static pr18020_class x;
 int pr18020_f() { return x()(); }
 
-// CHECK-LABEL: define linkonce_odr i32 @_ZZN13pr18020_classclEvEN1UclEv
+// CHECK-LABEL: define linkonce_odr dso_local i32 @_ZZN13pr18020_classclEvEN1UclEv
 // CHECK: load i32, i32* @_ZZN13pr18020_classclEvE2l1
 
 // In this test case, the function containing the static local will not be
@@ -102,7 +102,7 @@ extern "C" int call_deduced_return_operator() {
   return *decltype(deduced_return())()();
 }
 
-// CHECK-LABEL: define i32 @call_deduced_return_operator()
+// CHECK-LABEL: define dso_local i32 @call_deduced_return_operator()
 // CHECK: call i32* @_ZZL14deduced_returnvEN1SclEv(
 // CHECK: load i32, i32* %
 // CHECK: ret i32 %
@@ -122,7 +122,7 @@ extern "C" int call_block_deduced_return() {
   return *decltype(block_deduced_return())()();
 }
 
-// CHECK-LABEL: define i32 @call_block_deduced_return()
+// CHECK-LABEL: define dso_local i32 @call_block_deduced_return()
 // CHECK: call i32* @_ZZZL20block_deduced_returnvEUb_EN1SclEv(
 // CHECK: load i32, i32* %
 // CHECK: ret i32 %
@@ -141,7 +141,7 @@ label:
 }
 void *global_label = decltype(static_local_label(0))::get();
 
-// CHECK-LABEL: define linkonce_odr i8* @_ZZ18static_local_labelPvEN1S3getEv()
+// CHECK-LABEL: define linkonce_odr dso_local i8* @_ZZ18static_local_labelPvEN1S3getEv()
 // CHECK: %[[lbl:[^ ]*]] = load i8*, i8** @_ZZ18static_local_labelPvE1q
 // CHECK: ret i8* %[[lbl]]
 
@@ -153,7 +153,7 @@ auto global_lambda = []() {
 extern "C" int use_global_lambda() {
   return *decltype(global_lambda())::get();
 }
-// CHECK-LABEL: define i32 @use_global_lambda()
+// CHECK-LABEL: define dso_local i32 @use_global_lambda()
 // CHECK: call i32* @"_ZZNK3$_2clEvEN1S3getEv"()
 
 // CHECK-LABEL: define internal i32* @"_ZZNK3$_2clEvEN1S3getEv"()

@@ -30,7 +30,7 @@ namespace test1 {
   struct A { A(int); A(int, int); ~A(); void *p; };
 
   A *a() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test11aEv()
+    // CHECK:    define dso_local [[A:%.*]]* @_ZN5test11aEv()
     // CHECK:      [[NEW:%.*]] = call i8* @_Znwm(i64 8)
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
     // CHECK-NEXT: invoke void @_ZN5test11AC1Ei([[A]]* [[CAST]], i32 5)
@@ -40,7 +40,7 @@ namespace test1 {
   }
 
   A *b() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test11bEv()
+    // CHECK:    define dso_local [[A:%.*]]* @_ZN5test11bEv()
     // CHECK:      [[NEW:%.*]] = call i8* @_Znwm(i64 8)
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
     // CHECK-NEXT: [[FOO:%.*]] = invoke i32 @_ZN5test13fooEv()
@@ -55,7 +55,7 @@ namespace test1 {
   B makeB();
 
   A *c() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test11cEv()
+    // CHECK:    define dso_local [[A:%.*]]* @_ZN5test11cEv()
     // CHECK:      [[ACTIVE:%.*]] = alloca i1
     // CHECK-NEXT: [[NEW:%.*]] = call i8* @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, i1* [[ACTIVE]] 
@@ -84,7 +84,7 @@ namespace test1 {
   // CHECK98-NEXT:   unreachable
 
   A *d() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test11dEv()
+    // CHECK:    define dso_local [[A:%.*]]* @_ZN5test11dEv()
     // CHECK:      [[ACTIVE:%.*]] = alloca i1
     // CHECK-NEXT: [[NEW:%.*]] = call i8* @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, i1* [[ACTIVE]] 
@@ -105,7 +105,7 @@ namespace test1 {
   }
 
   A *e() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test11eEv()
+    // CHECK:    define dso_local [[A:%.*]]* @_ZN5test11eEv()
     // CHECK:      [[ACTIVE:%.*]] = alloca i1
     // CHECK-NEXT: [[NEW:%.*]] = call i8* @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, i1* [[ACTIVE]] 
@@ -140,7 +140,7 @@ namespace test1 {
   }
 
   A *i() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test11iEv()
+    // CHECK:    define dso_local [[A:%.*]]* @_ZN5test11iEv()
     // CHECK:      [[X:%.*]] = alloca [[A]]*, align 8
     // CHECK:      [[ACTIVE:%.*]] = alloca i1
     // CHECK:      [[NEW:%.*]] = call i8* @_Znwm(i64 8)
@@ -178,7 +178,7 @@ namespace test2 {
   };
 
   A *a() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test21aEv()
+    // CHECK:    define dso_local [[A:%.*]]* @_ZN5test21aEv()
     // CHECK:      [[NEW:%.*]] = call i8* @_ZN5test21AnwEm(i64 8)
     // CHECK-NEXT: [[CAST:%.*]] = bitcast i8* [[NEW]] to [[A]]*
     // CHECK-NEXT: invoke void @_ZN5test21AC1Ei([[A]]* [[CAST]], i32 5)
@@ -205,7 +205,7 @@ namespace test3 {
   A makeA(), *makeAPtr();
 
   A *a() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test31aEv()
+    // CHECK:    define dso_local [[A:%.*]]* @_ZN5test31aEv()
     // CHECK:      [[FOO:%.*]] = call i8* @_ZN5test33fooEv()
     // CHECK:      [[BAR:%.*]] = call double @_ZN5test33barEv()
     // CHECK:      [[NEW:%.*]] = call i8* @_ZN5test31AnwEmPvd(i64 8, i8* [[FOO]], double [[BAR]])
@@ -223,7 +223,7 @@ namespace test3 {
   // rdar://problem/8439196
   A *b(bool cond) {
 
-    // CHECK:    define [[A:%.*]]* @_ZN5test31bEb(i1 zeroext
+    // CHECK:    define dso_local [[A:%.*]]* @_ZN5test31bEb(i1 zeroext
     // CHECK:      [[SAVED0:%.*]] = alloca i8*
     // CHECK-NEXT: [[SAVED1:%.*]] = alloca i8*
     // CHECK-NEXT: [[CLEANUPACTIVE:%.*]] = alloca i1
@@ -273,7 +273,7 @@ namespace test4 {
   };
 
   A *a() {
-    // CHECK:    define [[A:%.*]]* @_ZN5test41aEv()
+    // CHECK:    define dso_local [[A:%.*]]* @_ZN5test41aEv()
     // CHECK:      [[FOO:%.*]] = call i8* @_ZN5test43fooEv()
     // CHECK-NEXT: [[BAR:%.*]] = call i8* @_ZN5test43barEv()
     // CHECK-NEXT: [[NEW:%.*]] = call i8* @_ZN5test41AnwEmPvS1_(i64 8, i8* [[FOO]], i8* [[BAR]])
@@ -297,7 +297,7 @@ namespace test5 {
 
   void foo();
 
-  // CHECK-LABEL:    define void @_ZN5test54testEv()
+  // CHECK-LABEL:    define dso_local void @_ZN5test54testEv()
   // CHECK:      [[EXNSLOT:%.*]] = alloca i8*
   // CHECK-NEXT: [[SELECTORSLOT:%.*]] = alloca i32
   // CHECK-NEXT: [[A:%.*]] = alloca [[A_T:%.*]], align 1
@@ -349,7 +349,7 @@ namespace test7 {
   };
 
   B *test() {
-    // CHECK: define [[B:%.*]]* @_ZN5test74testEv()
+    // CHECK: define dso_local [[B:%.*]]* @_ZN5test74testEv()
     // CHECK:      [[OUTER_NEW:%.*]] = alloca i1
     // CHECK-NEXT: alloca [[A:%.*]],
     // CHECK-NEXT: alloca i8*
@@ -439,7 +439,7 @@ namespace test8 {
   void test() {
     throw makeA();
   }
-  // CHECK-LABEL: define void @_ZN5test84testEv
+  // CHECK-LABEL: define dso_local void @_ZN5test84testEv
 }
 
 // Make sure we generate the correct code for the delete[] call which
@@ -454,7 +454,7 @@ namespace test9 {
   A* test() {
     return new A[10];
   }
-  // CHECK: define {{%.*}}* @_ZN5test94testEv
+  // CHECK: define dso_local {{%.*}}* @_ZN5test94testEv
   // CHECK: [[TEST9_NEW:%.*]] = call i8* @_Znam
   // CHECK: call void @_ZdaPv(i8* [[TEST9_NEW]])
 }
@@ -468,14 +468,14 @@ namespace test10 {
 
   struct A { ~A(); };
   A::~A() try { cleanup(); } catch (...) { return; }
-  // CHECK-LABEL:    define void @_ZN6test101AD1Ev(
+  // CHECK-LABEL:    define dso_local void @_ZN6test101AD1Ev(
   // CHECK:      invoke void @_ZN6test107cleanupEv()
   // CHECK-NOT:  rethrow
   // CHECK:      ret void
 
   struct B { ~B(); };
   B::~B() try { cleanup(); } catch (...) {}
-  // CHECK-LABEL:    define void @_ZN6test101BD1Ev(
+  // CHECK-LABEL:    define dso_local void @_ZN6test101BD1Ev(
   // CHECK:      invoke void @_ZN6test107cleanupEv()
   // CHECK:      call i8* @__cxa_begin_catch
   // CHECK-NEXT: invoke void @__cxa_rethrow()
@@ -483,7 +483,7 @@ namespace test10 {
 
   struct C { ~C(); };
   C::~C() try { cleanup(); } catch (...) { if (suppress) return; }
-  // CHECK-LABEL:    define void @_ZN6test101CD1Ev(
+  // CHECK-LABEL:    define dso_local void @_ZN6test101CD1Ev(
   // CHECK:      invoke void @_ZN6test107cleanupEv()
   // CHECK:      call i8* @__cxa_begin_catch
   // CHECK-NEXT: load i8, i8* @_ZN6test108suppressE, align 1
@@ -517,7 +517,7 @@ namespace test11 {
   C::C() {
     throw 0;
   }
-  // CHECK-LABEL:    define void @_ZN6test111CC2Ev(
+  // CHECK-LABEL:    define dso_local void @_ZN6test111CC2Ev(
   // CHECK:      [[THIS:%.*]] = load [[C:%.*]]*, [[C:%.*]]** {{%.*}}
   //   Construct single.
   // CHECK-NEXT: [[SINGLE:%.*]] = getelementptr inbounds [[C]], [[C]]* [[THIS]], i32 0, i32 0

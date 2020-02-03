@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -I%S -fvisibility hidden -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -I%S -fvisibility hidden -triple x86_64-linux-gnu -emit-llvm -o - -fsemantic-interposition | FileCheck %s
 
 #include <stdarg.h>
 #include <typeinfo>

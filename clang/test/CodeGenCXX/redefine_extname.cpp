@@ -25,7 +25,7 @@ int f() {
 }
 extern "C" {
   int foo() { return 1; }
-// CHECK: define i32 @bar()
+// CHECK: define dso_local i32 @bar()
 }
 
 // Check that #pragma redefine_extname applies to C code only, and shouldn't be

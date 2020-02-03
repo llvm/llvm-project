@@ -35,7 +35,7 @@ void *operator new(size_t, void*, bool) throw();
 void *operator new[](size_t, void*, bool) throw();
 
 
-// CHECK-LABEL: define void @test_basic(
+// CHECK-LABEL: define dso_local void @test_basic(
 extern "C" void test_basic() {
   // CHECK: call i8* @_Znwm(i64 4) [[ATTR_BUILTIN_NEW:#[^ ]*]]
   // CHECK: call void @_ZdlPv({{.*}}) [[ATTR_BUILTIN_DELETE:#[^ ]*]]
@@ -45,7 +45,7 @@ extern "C" void test_basic() {
 // CHECK: declare noalias i8* @_Znwm(i64) [[ATTR_NOBUILTIN:#[^ ]*]]
 // CHECK: declare void @_ZdlPv(i8*) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
 
-// CHECK-LABEL: define void @test_aligned_alloc(
+// CHECK-LABEL: define dso_local void @test_aligned_alloc(
 extern "C" void test_aligned_alloc() {
   // CHECK: call i8* @_ZnwmSt11align_val_t(i64 4, i64 4) [[ATTR_BUILTIN_NEW:#[^ ]*]]
   // CHECK: call void @_ZdlPvSt11align_val_t({{.*}}, i64 4) [[ATTR_BUILTIN_DELETE:#[^ ]*]]
@@ -55,7 +55,7 @@ extern "C" void test_aligned_alloc() {
 // CHECK: declare void @_ZdlPvSt11align_val_t(i8*, i64) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
 
 
-// CHECK-LABEL: define void @test_sized_delete(
+// CHECK-LABEL: define dso_local void @test_sized_delete(
 extern "C" void test_sized_delete() {
   // CHECK: call i8* @_Znwm(i64 4) [[ATTR_BUILTIN_NEW:#[^ ]*]]
   // CHECK: call void @_ZdlPvm({{.*}}, i64 4) [[ATTR_BUILTIN_DELETE:#[^ ]*]]
