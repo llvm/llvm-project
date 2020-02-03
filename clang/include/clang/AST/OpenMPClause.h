@@ -6367,6 +6367,85 @@ public:
   }
 };
 
+/// This represents 'order' clause in the '#pragma omp ...' directive.
+///
+/// \code
+/// #pragma omp simd order(concurrent)
+/// \endcode
+/// In this example directive '#pragma omp parallel' has simple 'order'
+/// clause with kind 'concurrent'.
+class OMPOrderClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// A kind of the 'default' clause.
+  OpenMPOrderClauseKind Kind = OMPC_ORDER_unknown;
+
+  /// Start location of the kind in source code.
+  SourceLocation KindKwLoc;
+
+  /// Set kind of the clause.
+  ///
+  /// \param K Argument of clause.
+  void setKind(OpenMPOrderClauseKind K) { Kind = K; }
+
+  /// Set argument location.
+  ///
+  /// \param KLoc Argument location.
+  void setKindKwLoc(SourceLocation KLoc) { KindKwLoc = KLoc; }
+
+public:
+  /// Build 'order' clause with argument \p A ('concurrent').
+  ///
+  /// \param A Argument of the clause ('concurrent').
+  /// \param ALoc Starting location of the argument.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPOrderClause(OpenMPOrderClauseKind A, SourceLocation ALoc,
+                 SourceLocation StartLoc, SourceLocation LParenLoc,
+                 SourceLocation EndLoc)
+      : OMPClause(OMPC_order, StartLoc, EndLoc), LParenLoc(LParenLoc), Kind(A),
+        KindKwLoc(ALoc) {}
+
+  /// Build an empty clause.
+  OMPOrderClause()
+      : OMPClause(OMPC_order, SourceLocation(), SourceLocation()) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns kind of the clause.
+  OpenMPOrderClauseKind getKind() const { return Kind; }
+
+  /// Returns location of clause kind.
+  SourceLocation getKindKwLoc() const { return KindKwLoc; }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_order;
+  }
+};
+
 /// This class implements a simple visitor for OMPClause
 /// subclasses.
 template<class ImplClass, template <typename> class Ptr, typename RetTy>

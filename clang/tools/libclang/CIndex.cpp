@@ -2466,6 +2466,7 @@ void OMPClauseEnqueue::VisitOMPNontemporalClause(
   for (const auto *E : C->private_refs())
     Visitor->AddStmt(E);
 }
+void OMPClauseEnqueue::VisitOMPOrderClause(const OMPOrderClause *C) {}
 }
 
 void EnqueueVisitor::EnqueueChildren(const OMPClause *S) {
