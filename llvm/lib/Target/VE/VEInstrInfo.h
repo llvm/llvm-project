@@ -37,7 +37,6 @@ public:
   ///
   const VERegisterInfo &getRegisterInfo() const { return RI; }
 
-
   /// Branch Analysis & Modification {
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
