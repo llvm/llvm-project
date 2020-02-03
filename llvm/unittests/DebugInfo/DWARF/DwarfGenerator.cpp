@@ -27,6 +27,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.inc"
 #include "llvm/PassAnalysisSupport.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -175,7 +176,7 @@ DWARFDebugLine::Prologue dwarfgen::LineTable::createBasicPrologue() const {
     P.TotalLength += 4;
     P.FormParams.Format = DWARF64;
   }
-  P.TotalLength += Contents.size();
+  P.TotalLength += getContentsSize();
   P.FormParams.Version = Version;
   P.MinInstLength = 1;
   P.MaxOpsPerInst = 1;
@@ -257,6 +258,24 @@ void dwarfgen::LineTable::writeData(ArrayRef<ValueAndLength> Data,
     }
     llvm_unreachable("unsupported ValueAndLength Length value");
   }
+}
+
+size_t dwarfgen::LineTable::getContentsSize() const {
+  size_t Size = 0;
+  for (auto Entry : Contents) {
+    switch (Entry.Length) {
+    case ULEB:
+      Size += getULEB128Size(Entry.Value);
+      break;
+    case SLEB:
+      Size += getSLEB128Size(Entry.Value);
+      break;
+    default:
+      Size += Entry.Length;
+      break;
+    }
+  }
+  return Size;
 }
 
 MCSymbol *dwarfgen::LineTable::writeDefaultPrologue(AsmPrinter &Asm) const {
