@@ -2354,63 +2354,37 @@ LLVMTypeConverter::promoteMemRefDescriptors(Location loc, ValueRange opOperands,
   return promotedOperands;
 }
 
-/// Create an instance of LLVMTypeConverter in the given context.
-static std::unique_ptr<LLVMTypeConverter>
-makeStandardToLLVMTypeConverter(MLIRContext *context) {
-  LLVMTypeConverterCustomization customs;
-  customs.funcArgConverter = structFuncArgTypeConverter;
-  return std::make_unique<LLVMTypeConverter>(context, customs);
-}
-
-/// Create an instance of BarePtrTypeConverter in the given context.
-static std::unique_ptr<LLVMTypeConverter>
-makeStandardToLLVMBarePtrTypeConverter(MLIRContext *context) {
-  LLVMTypeConverterCustomization customs;
-  customs.funcArgConverter = barePtrFuncArgTypeConverter;
-  return std::make_unique<LLVMTypeConverter>(context, customs);
-}
-
 namespace {
 /// A pass converting MLIR operations into the LLVM IR dialect.
 struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
-  // By default, the patterns are those converting Standard operations to the
-  // LLVMIR dialect.
-  explicit LLVMLoweringPass(
-      bool useAlloca = false,
-      LLVMPatternListFiller patternListFiller =
-          populateStdToLLVMConversionPatterns,
-      LLVMTypeConverterMaker converterBuilder = makeStandardToLLVMTypeConverter)
-      : patternListFiller(patternListFiller),
-        typeConverterMaker(converterBuilder) {}
+  /// Creates an LLVM lowering pass.
+  explicit LLVMLoweringPass(bool useAlloca = false,
+                            bool useBarePtrCallConv = false)
+      : useBarePtrCallConv(useBarePtrCallConv) {}
 
-  // Run the dialect converter on the module.
+  /// Run the dialect converter on the module.
   void runOnModule() override {
-    if (!typeConverterMaker || !patternListFiller)
-      return signalPassFailure();
-
     ModuleOp m = getModule();
     LLVM::ensureDistinctSuccessors(m);
-    std::unique_ptr<LLVMTypeConverter> typeConverter =
-        typeConverterMaker(&getContext());
-    if (!typeConverter)
-      return signalPassFailure();
+
+    LLVMTypeConverterCustomization customs;
+    customs.funcArgConverter = useBarePtrCallConv ? barePtrFuncArgTypeConverter
+                                                  : structFuncArgTypeConverter;
+    LLVMTypeConverter typeConverter(&getContext(), customs);
 
     OwningRewritePatternList patterns;
-    patternListFiller(*typeConverter, patterns);
+    if (useBarePtrCallConv)
+      populateStdToLLVMBarePtrConversionPatterns(typeConverter, patterns);
+    else
+      populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
     ConversionTarget target(getContext());
     target.addLegalDialect<LLVM::LLVMDialect>();
-    if (failed(applyPartialConversion(m, target, patterns, &*typeConverter)))
+    if (failed(applyPartialConversion(m, target, patterns, &typeConverter)))
       signalPassFailure();
   }
 
-  // Callback for creating a list of patterns.  It is called every time in
-  // runOnModule since applyPartialConversion consumes the list.
-  LLVMPatternListFiller patternListFiller;
-
-  // Callback for creating an instance of type converter.  The converter
-  // constructor needs an MLIRContext, which is not available until runOnModule.
-  LLVMTypeConverterMaker typeConverterMaker;
+  bool useBarePtrCallConv;
 };
 } // end namespace
 
@@ -2419,23 +2393,11 @@ mlir::createLowerToLLVMPass(bool useAlloca) {
   return std::make_unique<LLVMLoweringPass>(useAlloca);
 }
 
-std::unique_ptr<OpPassBase<ModuleOp>>
-mlir::createLowerToLLVMPass(LLVMPatternListFiller patternListFiller,
-                            LLVMTypeConverterMaker typeConverterMaker,
-                            bool useAlloca) {
-  return std::make_unique<LLVMLoweringPass>(useAlloca, patternListFiller,
-                                            typeConverterMaker);
-}
-
 static PassRegistration<LLVMLoweringPass>
     pass("convert-std-to-llvm",
          "Convert scalar and vector operations from the "
          "Standard to the LLVM dialect",
          [] {
            return std::make_unique<LLVMLoweringPass>(
-               clUseAlloca.getValue(),
-               clUseBarePtrCallConv ? populateStdToLLVMBarePtrConversionPatterns
-                                    : populateStdToLLVMConversionPatterns,
-               clUseBarePtrCallConv ? makeStandardToLLVMBarePtrTypeConverter
-                                    : makeStandardToLLVMTypeConverter);
+               clUseAlloca.getValue(), clUseBarePtrCallConv.getValue());
          });
