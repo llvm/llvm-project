@@ -1254,8 +1254,6 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
       /*Keep tokens*/ false);
   module.addFile(*source_file);
 
-  bool done = false;
-
   LLDBNameLookup *external_lookup;
   if (options.GetPlaygroundTransformEnabled() || options.GetREPLEnabled()) {
     external_lookup = new LLDBREPLNameLookup(*source_file, variable_map, sc,
@@ -1270,22 +1268,13 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   //        inserting them in.
   swift_ast_context->AddDebuggerClient(external_lookup);
 
-  swift::PersistentParserState persistent_state(*ast_context);
+  // Note, we disable delayed parsing for the swift expression parser.
+  swift::parseIntoSourceFile(*source_file, buffer_id,
+                             /*PersistentState=*/nullptr,
+                             /*DelayBodyParsing=*/false);
 
-  while (!done) {
-    // Note, we disable delayed parsing for the swift expression parser.
-    swift::parseIntoSourceFile(*source_file, buffer_id, &done, nullptr,
-                               &persistent_state,
-                               /*DelayBodyParsing=*/false);
-
-    if (swift_ast_context->HasErrors())
-      return make_error<SwiftASTContextError>();
-  }
-
-  if (!done)
-    return make_error<llvm::StringError>(
-        "Parse did not consume the whole expression.",
-        inconvertibleErrorCode());
+  if (swift_ast_context->HasErrors())
+    return make_error<SwiftASTContextError>();
 
   std::unique_ptr<SwiftASTManipulator> code_manipulator;
   if (repl || !playground) {
