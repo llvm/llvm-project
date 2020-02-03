@@ -430,7 +430,10 @@ bool fromJSON(const llvm::json::Value &Params, DidCloseTextDocumentParams &R) {
 
 bool fromJSON(const llvm::json::Value &Params, DidChangeTextDocumentParams &R) {
   llvm::json::ObjectMapper O(Params);
-  return O && O.map("textDocument", R.textDocument) &&
+  if (!O)
+    return false;
+  O.map("forceRebuild", R.forceRebuild);  // Optional clangd extension.
+  return O.map("textDocument", R.textDocument) &&
          O.map("contentChanges", R.contentChanges) &&
          O.map("wantDiagnostics", R.wantDiagnostics);
 }

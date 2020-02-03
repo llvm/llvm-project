@@ -616,6 +616,53 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   ASSERT_FALSE(DoUpdate(OtherSourceContents));
 }
 
+TEST_F(TUSchedulerTests, ForceRebuild) {
+  TUScheduler S(CDB, optsForTest(), captureDiags());
+
+  auto Source = testPath("foo.cpp");
+  auto Header = testPath("foo.h");
+
+  auto SourceContents = R"cpp(
+      #include "foo.h"
+      int b = a;
+    )cpp";
+
+  ParseInputs Inputs = getInputs(Source, SourceContents);
+
+  // Update the source contents, which should trigger an initial build with
+  // the header file missing.
+  updateWithDiags(S, Source, Inputs, WantDiagnostics::Yes,
+                  [](std::vector<Diag> Diags) {
+    EXPECT_THAT(
+        Diags,
+        ElementsAre(
+            Field(&Diag::Message, "'foo.h' file not found"),
+            Field(&Diag::Message, "use of undeclared identifier 'a'")));
+  });
+
+  // Add the header file. We need to recreate the inputs since we changed a
+  // file from underneath the test FS.
+  Files[Header] = "int a;";
+  Timestamps[Header] = time_t(1);
+  Inputs = getInputs(Source, SourceContents);
+
+  // The addition of the missing header file shouldn't trigger a rebuild since
+  // we don't track missing files.
+  updateWithDiags(S, Source, Inputs, WantDiagnostics::Yes,
+                  [](std::vector<Diag> Diags) {
+    ADD_FAILURE() << "Did not expect diagnostics for missing header update";
+  });
+
+  // Forcing the reload should should cause a rebuild which no longer has any
+  // errors.
+  Inputs.ForceRebuild = true;
+  updateWithDiags(S, Source, Inputs, WantDiagnostics::Yes,
+                  [](std::vector<Diag> Diags) {
+    EXPECT_THAT(Diags, IsEmpty());
+  });
+
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+}
 TEST_F(TUSchedulerTests, NoChangeDiags) {
   TUScheduler S(CDB, optsForTest(), captureDiags());
 
@@ -722,7 +769,8 @@ TEST_F(TUSchedulerTests, CommandLineErrors) {
   TUScheduler S(CDB, optsForTest(), captureDiags());
   std::vector<Diag> Diagnostics;
   updateWithDiags(S, testPath("foo.cpp"), "void test() {}",
-                  WantDiagnostics::Yes, [&](std::vector<Diag> D) {
+                  WantDiagnostics::Yes,
+                  [&](std::vector<Diag> D) {
                     Diagnostics = std::move(D);
                     Ready.notify();
                   });
@@ -746,7 +794,8 @@ TEST_F(TUSchedulerTests, CommandLineWarnings) {
   TUScheduler S(CDB, optsForTest(), captureDiags());
   std::vector<Diag> Diagnostics;
   updateWithDiags(S, testPath("foo.cpp"), "void test() {}",
-                  WantDiagnostics::Yes, [&](std::vector<Diag> D) {
+                  WantDiagnostics::Yes,
+                  [&](std::vector<Diag> D) {
                     Diagnostics = std::move(D);
                     Ready.notify();
                   });
