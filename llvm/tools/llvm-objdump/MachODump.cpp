@@ -1782,8 +1782,9 @@ static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
         uint32_t sect_size = BytesStr.size();
         uint64_t sect_addr = Section.getAddress();
 
-        outs() << "Contents of (" << SegName << "," << SectName
-               << ") section\n";
+        if (!NoLeadingHeaders)
+          outs() << "Contents of (" << SegName << "," << SectName
+                 << ") section\n";
 
         if (verbose) {
           if ((section_flags & MachO::S_ATTR_PURE_INSTRUCTIONS) ||
