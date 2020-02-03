@@ -119,5 +119,7 @@ GOMP_4.0 {
 } GOMP_3.0;
 GOMP_4.5 {
 } GOMP_4.0;
+GOMP_5.0 {
+} GOMP_4.5;
 
 # end of file #
