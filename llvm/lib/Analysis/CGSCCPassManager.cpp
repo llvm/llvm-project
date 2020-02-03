@@ -498,8 +498,8 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     RefSCC &TargetRC = TargetC.getOuterRefSCC();
     (void)TargetRC;
     // TODO: This only allows trivial edges to be added for now.
-    assert(RC == &TargetRC ||
-           RC->isAncestorOf(TargetRC) && "New ref edge is not trivial!");
+    assert((RC == &TargetRC ||
+           RC->isAncestorOf(TargetRC)) && "New ref edge is not trivial!");
     RC->insertTrivialRefEdge(N, *RefTarget);
   }
 
@@ -509,8 +509,8 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
     RefSCC &TargetRC = TargetC.getOuterRefSCC();
     (void)TargetRC;
     // TODO: This only allows trivial edges to be added for now.
-    assert(RC == &TargetRC ||
-           RC->isAncestorOf(TargetRC) && "New call edge is not trivial!");
+    assert((RC == &TargetRC ||
+           RC->isAncestorOf(TargetRC)) && "New call edge is not trivial!");
     RC->insertTrivialCallEdge(N, *CallTarget);
   }
 
