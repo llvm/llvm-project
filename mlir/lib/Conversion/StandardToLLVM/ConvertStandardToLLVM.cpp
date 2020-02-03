@@ -2255,7 +2255,8 @@ void mlir::populateStdToLLVMNonMemoryConversionPatterns(
 }
 
 void mlir::populateStdToLLVMMemoryConversionPatters(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    bool useAlloca) {
   // clang-format off
   patterns.insert<
       DimOpLowering,
@@ -2267,7 +2268,7 @@ void mlir::populateStdToLLVMMemoryConversionPatters(
   patterns.insert<
       AllocOpLowering,
       DeallocOpLowering>(
-        *converter.getDialect(), converter, clUseAlloca.getValue());
+        *converter.getDialect(), converter, useAlloca);
   // clang-format on
 }
 
@@ -2277,10 +2278,11 @@ void mlir::populateStdToLLVMDefaultFuncOpConversionPattern(
 }
 
 void mlir::populateStdToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    bool useAlloca) {
   populateStdToLLVMDefaultFuncOpConversionPattern(converter, patterns);
   populateStdToLLVMNonMemoryConversionPatterns(converter, patterns);
-  populateStdToLLVMMemoryConversionPatters(converter, patterns);
+  populateStdToLLVMMemoryConversionPatters(converter, patterns, useAlloca);
 }
 
 static void populateStdToLLVMBarePtrFuncOpConversionPattern(
@@ -2289,10 +2291,11 @@ static void populateStdToLLVMBarePtrFuncOpConversionPattern(
 }
 
 void mlir::populateStdToLLVMBarePtrConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns) {
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    bool useAlloca) {
   populateStdToLLVMBarePtrFuncOpConversionPattern(converter, patterns);
   populateStdToLLVMNonMemoryConversionPatterns(converter, patterns);
-  populateStdToLLVMMemoryConversionPatters(converter, patterns);
+  populateStdToLLVMMemoryConversionPatters(converter, patterns, useAlloca);
 }
 
 // Convert types using the stored LLVM IR module.
@@ -2360,7 +2363,7 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
   /// Creates an LLVM lowering pass.
   explicit LLVMLoweringPass(bool useAlloca = false,
                             bool useBarePtrCallConv = false)
-      : useBarePtrCallConv(useBarePtrCallConv) {}
+      : useAlloca(useAlloca), useBarePtrCallConv(useBarePtrCallConv) {}
 
   /// Run the dialect converter on the module.
   void runOnModule() override {
@@ -2374,9 +2377,10 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
 
     OwningRewritePatternList patterns;
     if (useBarePtrCallConv)
-      populateStdToLLVMBarePtrConversionPatterns(typeConverter, patterns);
+      populateStdToLLVMBarePtrConversionPatterns(typeConverter, patterns,
+                                                 useAlloca);
     else
-      populateStdToLLVMConversionPatterns(typeConverter, patterns);
+      populateStdToLLVMConversionPatterns(typeConverter, patterns, useAlloca);
 
     ConversionTarget target(getContext());
     target.addLegalDialect<LLVM::LLVMDialect>();
@@ -2384,6 +2388,10 @@ struct LLVMLoweringPass : public ModulePass<LLVMLoweringPass> {
       signalPassFailure();
   }
 
+  /// Use `alloca` instead of `call @malloc` for converting std.alloc.
+  bool useAlloca;
+
+  /// Convert memrefs to bare pointers in function signatures.
   bool useBarePtrCallConv;
 };
 } // end namespace
