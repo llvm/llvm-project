@@ -53,6 +53,10 @@ static cl::opt<bool> DeleteFn("delete",
                               cl::desc("Delete specified Globals from Module"),
                               cl::cat(ExtractCat));
 
+static cl::opt<bool> KeepConstInit("keep-const-init",
+                              cl::desc("Keep initializers of constants"),
+                              cl::cat(ExtractCat));
+
 static cl::opt<bool>
     Recursive("recursive", cl::desc("Recursively extract all called functions"),
               cl::cat(ExtractCat));
@@ -333,7 +337,7 @@ int main(int argc, char **argv) {
   {
     std::vector<GlobalValue *> Gvs(GVs.begin(), GVs.end());
     legacy::PassManager Extract;
-    Extract.add(createGVExtractionPass(Gvs, DeleteFn));
+    Extract.add(createGVExtractionPass(Gvs, DeleteFn, KeepConstInit));
     Extract.run(*M);
 
     // Now that we have all the GVs we want, mark the module as fully
