@@ -2001,6 +2001,33 @@ let Predicates = [HasMVEInt] in {
             (MVE_VDUP32 (MVE_VMOV_from_lane_32 MQPR:$src, imm:$lane))>;
   def : Pat<(v8f16 (ARMvduplane (v8f16 MQPR:$src), imm:$lane)),
             (MVE_VDUP16 (MVE_VMOV_from_lane_u16 MQPR:$src, imm:$lane))>;
+
+  // Match a vselect with an ARMvdup as a predicated MVE_VDUP
+  def : Pat<(v16i8 (vselect (v16i1 VCCR:$pred),
+                            (v16i8 (ARMvdup (i32 rGPR:$elem))),
+                            (v16i8 MQPR:$inactive))),
+            (MVE_VDUP8  rGPR:$elem, ARMVCCThen, (v16i1 VCCR:$pred),
+                        (v16i8 MQPR:$inactive))>;
+  def : Pat<(v8i16 (vselect (v8i1 VCCR:$pred),
+                            (v8i16 (ARMvdup (i32 rGPR:$elem))),
+                            (v8i16 MQPR:$inactive))),
+            (MVE_VDUP16 rGPR:$elem, ARMVCCThen, (v8i1 VCCR:$pred),
+                            (v8i16 MQPR:$inactive))>;
+  def : Pat<(v4i32 (vselect (v4i1 VCCR:$pred),
+                            (v4i32 (ARMvdup (i32 rGPR:$elem))),
+                            (v4i32 MQPR:$inactive))),
+            (MVE_VDUP32 rGPR:$elem, ARMVCCThen, (v4i1 VCCR:$pred),
+                            (v4i32 MQPR:$inactive))>;
+  def : Pat<(v4f32 (vselect (v4i1 VCCR:$pred),
+                            (v4f32 (ARMvdup (f32 SPR:$elem))),
+                            (v4f32 MQPR:$inactive))),
+            (MVE_VDUP32 (i32 (COPY_TO_REGCLASS (f32 SPR:$elem), rGPR)),
+                      ARMVCCThen, (v4i1 VCCR:$pred), (v4f32 MQPR:$inactive))>;
+  def : Pat<(v8f16 (vselect (v8i1 VCCR:$pred),
+                            (v8f16 (ARMvdup (f16 HPR:$elem))),
+                            (v8f16 MQPR:$inactive))),
+            (MVE_VDUP16 (i32 (COPY_TO_REGCLASS (f16 HPR:$elem), rGPR)),
+                      ARMVCCThen, (v8i1 VCCR:$pred), (v8f16 MQPR:$inactive))>;
 }
 
 
