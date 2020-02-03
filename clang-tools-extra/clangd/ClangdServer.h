@@ -149,6 +149,8 @@ public:
     std::function<bool(const Tweak &)> TweakFilter = [](const Tweak &T) {
       return !T.hidden(); // only enable non-hidden tweaks.
     };
+
+    explicit operator TUScheduler::Options() const;
   };
   // Sensible default options for use in tests.
   // Features like indexing must be enabled if desired.
