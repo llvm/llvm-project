@@ -20,12 +20,19 @@ class VEMachineFunctionInfo : public MachineFunctionInfo {
   virtual void anchor();
 
 private:
+  /// VarArgsFrameOffset - Frame offset to start of varargs area.
+  int VarArgsFrameOffset;
+
   /// IsLeafProc - True if the function is a leaf procedure.
   bool IsLeafProc;
 
 public:
-  VEMachineFunctionInfo() : IsLeafProc(false) {}
-  explicit VEMachineFunctionInfo(MachineFunction &MF) : IsLeafProc(false) {}
+  VEMachineFunctionInfo() : VarArgsFrameOffset(0), IsLeafProc(false) {}
+  explicit VEMachineFunctionInfo(MachineFunction &MF)
+      : VarArgsFrameOffset(0), IsLeafProc(false) {}
+
+  int getVarArgsFrameOffset() const { return VarArgsFrameOffset; }
+  void setVarArgsFrameOffset(int Offset) { VarArgsFrameOffset = Offset; }
 
   void setLeafProc(bool rhs) { IsLeafProc = rhs; }
   bool isLeafProc() const { return IsLeafProc; }
