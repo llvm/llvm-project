@@ -1931,6 +1931,10 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.OverrideRecordLayoutsFile =
       std::string(Args.getLastArgValue(OPT_foverride_record_layout_EQ));
   Opts.AuxTriple = std::string(Args.getLastArgValue(OPT_aux_triple));
+  if (Args.hasArg(OPT_aux_target_cpu))
+    Opts.AuxTargetCPU = std::string(Args.getLastArgValue(OPT_aux_target_cpu));
+  if (Args.hasArg(OPT_aux_target_feature))
+    Opts.AuxTargetFeatures = Args.getAllArgValues(OPT_aux_target_feature);
   Opts.StatsFile = std::string(Args.getLastArgValue(OPT_stats_file));
 
   if (const Arg *A = Args.getLastArg(OPT_arcmt_check,
