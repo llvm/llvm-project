@@ -578,8 +578,6 @@ int GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
   }
 }
 
-
-
 static bool isArgPassedInSGPR(const Argument *A) {
   const Function *F = A->getParent();
 
@@ -604,6 +602,54 @@ static bool isArgPassedInSGPR(const Argument *A) {
     // TODO: Should calls support inreg for SGPR inputs?
     return false;
   }
+}
+
+/// Analyze if the results of inline asm are divergent. If \p Indices is empty,
+/// this is analyzing the collective result of all output registers. Otherwise,
+/// this is only querying a specific result index if this returns multiple
+/// registers in a struct.
+bool GCNTTIImpl::isInlineAsmSourceOfDivergence(
+  const CallInst *CI, ArrayRef<unsigned> Indices) const {
+  // TODO: Handle complex extract indices
+  if (Indices.size() > 1)
+    return true;
+
+  const DataLayout &DL = CI->getModule()->getDataLayout();
+  const SIRegisterInfo *TRI = ST->getRegisterInfo();
+  ImmutableCallSite CS(CI);
+  TargetLowering::AsmOperandInfoVector TargetConstraints
+    = TLI->ParseConstraints(DL, ST->getRegisterInfo(), CS);
+
+  const int TargetOutputIdx = Indices.empty() ? -1 : Indices[0];
+
+  int OutputIdx = 0;
+  for (auto &TC : TargetConstraints) {
+    if (TC.Type != InlineAsm::isOutput)
+      continue;
+
+    // Skip outputs we don't care about.
+    if (TargetOutputIdx != -1 && TargetOutputIdx != OutputIdx++)
+      continue;
+
+    TLI->ComputeConstraintToUse(TC, SDValue());
+
+    Register AssignedReg;
+    const TargetRegisterClass *RC;
+    std::tie(AssignedReg, RC) = TLI->getRegForInlineAsmConstraint(
+      TRI, TC.ConstraintCode, TC.ConstraintVT);
+    if (AssignedReg) {
+      // FIXME: This is a workaround for getRegForInlineAsmConstraint
+      // returning VS_32
+      RC = TRI->getPhysRegClass(AssignedReg);
+    }
+
+    // For AGPR constraints null is returned on subtargets without AGPRs, so
+    // assume divergent for null.
+    if (!RC || !TRI->isSGPRClass(RC))
+      return true;
+  }
+
+  return false;
 }
 
 /// \returns true if the new GPU divergence analysis is enabled.
@@ -638,7 +684,14 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
     return AMDGPU::isIntrinsicSourceOfDivergence(Intrinsic->getIntrinsicID());
 
   // Assume all function calls are a source of divergence.
-  if (isa<CallInst>(V) || isa<InvokeInst>(V))
+  if (const CallInst *CI = dyn_cast<CallInst>(V)) {
+    if (isa<InlineAsm>(CI->getCalledValue()))
+      return isInlineAsmSourceOfDivergence(CI);
+    return true;
+  }
+
+  // Assume all function calls are a source of divergence.
+  if (isa<InvokeInst>(V))
     return true;
 
   return false;
@@ -656,6 +709,19 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
       return true;
     }
   }
+
+  const ExtractValueInst *ExtValue = dyn_cast<ExtractValueInst>(V);
+  if (!ExtValue)
+    return false;
+
+  if (const CallInst *CI = dyn_cast<CallInst>(ExtValue->getOperand(0))) {
+    // If we have inline asm returning mixed SGPR and VGPR results, we inferred
+    // divergent for the overall struct return. We need to override it in the
+    // case we're extracting an SGPR component here.
+    if (isa<InlineAsm>(CI->getCalledValue()))
+      return !isInlineAsmSourceOfDivergence(CI, ExtValue->getIndices());
+  }
+
   return false;
 }
 
