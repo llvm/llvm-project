@@ -1575,11 +1575,8 @@ Instruction *InstCombiner::foldICmpXorConstant(ICmpInst &Cmp,
 
     // If the sign bit of the XorCst is not set, there is no change to
     // the operation, just stop using the Xor.
-    if (!XorC->isNegative()) {
-      Cmp.setOperand(0, X);
-      Worklist.push(Xor);
-      return &Cmp;
-    }
+    if (!XorC->isNegative())
+      return replaceOperand(Cmp, 0, X);
 
     // Emit the opposite comparison.
     if (TrueIfSigned)
@@ -1705,8 +1702,7 @@ Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
 
     // Compute X & (C2 << Y).
     Value *NewAnd = Builder.CreateAnd(Shift->getOperand(0), NewShift);
-    Cmp.setOperand(0, NewAnd);
-    return &Cmp;
+    return replaceOperand(Cmp, 0, NewAnd);
   }
 
   return nullptr;
@@ -1812,8 +1808,7 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
       }
       if (NewOr) {
         Value *NewAnd = Builder.CreateAnd(A, NewOr, And->getName());
-        Cmp.setOperand(0, NewAnd);
-        return &Cmp;
+        return replaceOperand(Cmp, 0, NewAnd);
       }
     }
   }
