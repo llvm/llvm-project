@@ -925,7 +925,7 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
   SmallVector<const Argument *, 4> NoAliasArgs;
 
   for (const Argument &Arg : CalledFunc->args())
-    if (Arg.hasNoAliasAttr() && !Arg.use_empty())
+    if (CS.paramHasAttr(Arg.getArgNo(), Attribute::NoAlias) && !Arg.use_empty())
       NoAliasArgs.push_back(&Arg);
 
   if (NoAliasArgs.empty())
@@ -1058,7 +1058,7 @@ static void AddAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap,
         // completely describe the aliasing properties using alias.scope
         // metadata (and, thus, won't add any).
         if (const Argument *A = dyn_cast<Argument>(V)) {
-          if (!A->hasNoAliasAttr())
+          if (!CS.paramHasAttr(A->getArgNo(), Attribute::NoAlias))
             UsesAliasingPtr = true;
         } else {
           UsesAliasingPtr = true;
