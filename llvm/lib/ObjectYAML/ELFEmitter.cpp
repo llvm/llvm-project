@@ -1230,12 +1230,9 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     return;
   }
 
-  for (const ELFYAML::AddrsigSymbol &Sym : *Section.Symbols) {
-    uint64_t Val =
-        Sym.Name ? toSymbolIndex(*Sym.Name, Section.Name, /*IsDynamic=*/false)
-                 : (uint32_t)*Sym.Index;
-    SHeader.sh_size += encodeULEB128(Val, OS);
-  }
+  for (StringRef Sym : *Section.Symbols)
+    SHeader.sh_size += encodeULEB128(
+        toSymbolIndex(Sym, Section.Name, /*IsDynamic=*/false), OS);
 }
 
 template <class ELFT>

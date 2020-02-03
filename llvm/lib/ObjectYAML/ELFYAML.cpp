@@ -1383,11 +1383,6 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
 
     if (!Sec->Symbols)
       return {};
-
-    for (const ELFYAML::AddrsigSymbol &AS : *Sec->Symbols)
-      if (AS.Index && AS.Name)
-        return "\"Index\" and \"Name\" cannot be used together when defining a "
-               "symbol";
     return {};
   }
 
@@ -1602,12 +1597,6 @@ void MappingTraits<ELFYAML::Object>::mapping(IO &IO, ELFYAML::Object &Object) {
   IO.mapOptional("Symbols", Object.Symbols);
   IO.mapOptional("DynamicSymbols", Object.DynamicSymbols);
   IO.setContext(nullptr);
-}
-
-void MappingTraits<ELFYAML::AddrsigSymbol>::mapping(IO &IO, ELFYAML::AddrsigSymbol &Sym) {
-  assert(IO.getContext() && "The IO context is not initialized");
-  IO.mapOptional("Name", Sym.Name);
-  IO.mapOptional("Index", Sym.Index);
 }
 
 void MappingTraits<ELFYAML::LinkerOption>::mapping(IO &IO,

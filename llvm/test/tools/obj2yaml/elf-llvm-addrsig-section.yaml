@@ -7,21 +7,13 @@
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: obj2yaml %t1 | FileCheck %s --check-prefix=NAME
 
-# NAME:      - Name: .llvm_addrsig
-# NAME-NEXT:   Type: SHT_LLVM_ADDRSIG
-# NAME-NEXT:   Link: .symtab
-# NAME-NEXT:   Symbols:
-# NAME-NEXT:     - Name:  foo
-# NAME-NEXT:     - Name:  bar
-# NAME-NEXT:     - Index: 0x00000003
-# NAME-NEXT:     - Index: 0xFFFFFFFF
+# NAME:      - Name:    .llvm_addrsig
+# NAME-NEXT:   Type:    SHT_LLVM_ADDRSIG
+# NAME-NEXT:   Link:    .symtab
+# NAME-NEXT:   Symbols: [ foo, bar, '3', '4294967295' ]
 # NAME:      - Name: .llvm_addrsig_unlinked
 # NAME-NEXT:   Type: SHT_LLVM_ADDRSIG
-# NAME-NEXT:   Symbols:
-# NAME-NEXT:     - Index: 0x00000001
-# NAME-NEXT:     - Index: 0x00000002
-# NAME-NEXT:     - Index: 0x00000003
-# NAME-NEXT:     - Index: 0xFFFFFFFF
+# NAME-NEXT:   Symbols: [ '1', '2', '3', '4294967295' ]
 
 --- !ELF
 FileHeader:
@@ -32,19 +24,11 @@ FileHeader:
 Sections:
   - Name: .llvm_addrsig
     Type: SHT_LLVM_ADDRSIG
-    Symbols:
-      - Index: 1
-      - Index: 2
-      - Index: 3
-      - Index: 0xFFFFFFFF
+    Symbols: [ 1, 2, 3, 0xFFFFFFFF ]
   - Name: .llvm_addrsig_unlinked
     Type: SHT_LLVM_ADDRSIG
     Link: 0
-    Symbols:
-      - Index: 1
-      - Index: 2
-      - Index: 3
-      - Index: 0xFFFFFFFF
+    Symbols: [ 1, 2, 3, 0xFFFFFFFF ]
 Symbols:
   - Name:    foo
     Type:    STT_FUNC
@@ -82,7 +66,7 @@ Sections:
 
 # EMPTY:      - Name:    .llvm_addrsig
 # EMPTY-NEXT:   Type:    SHT_LLVM_ADDRSIG
-# EMPTY-NEXT:   Symbols: []
+# EMPTY-NEXT:   Symbols: [ ]
 
 --- !ELF
 FileHeader:
