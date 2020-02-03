@@ -549,9 +549,8 @@ TEST_F(DebugLineBasicFixture, ErrorForUnitLengthTooLarge) {
   LT.addStandardOpcode(DW_LNS_const_add_pc, {});
   LT.addExtendedOpcode(1, DW_LNE_end_sequence, {});
   DWARFDebugLine::Prologue Prologue = LT.createBasicPrologue();
-  // Set the total length to 1 higher than the actual length. The program body
-  // has size 5.
-  Prologue.TotalLength += 6;
+  // Set the total length to 1 higher than the actual length.
+  ++Prologue.TotalLength;
   LT.setPrologue(Prologue);
 
   generate();

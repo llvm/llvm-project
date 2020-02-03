@@ -175,6 +175,7 @@ DWARFDebugLine::Prologue dwarfgen::LineTable::createBasicPrologue() const {
     P.TotalLength += 4;
     P.FormParams.Format = DWARF64;
   }
+  P.TotalLength += Contents.size();
   P.FormParams.Version = Version;
   P.MinInstLength = 1;
   P.MaxOpsPerInst = 1;
