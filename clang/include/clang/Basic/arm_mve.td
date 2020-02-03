@@ -1063,7 +1063,7 @@ foreach desttype = T.All in {
       !if(!eq(!cast<string>(desttype),!cast<string>(srctype)),[],[srctype])))
   in {
     def "vreinterpretq_" # desttype: Intrinsic<
-        VecOf<desttype>, (args Vector:$x), (bitcast $x, VecOf<desttype>)>;
+        VecOf<desttype>, (args Vector:$x), (vreinterpret $x, VecOf<desttype>)>;
   }
 }
 
