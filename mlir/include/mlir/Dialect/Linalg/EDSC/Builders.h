@@ -76,9 +76,14 @@ public:
   void operator()(std::function<void(void)> fun = nullptr) { (*builder)(fun); }
 
 private:
-  typedef typename std::conditional<std::is_same<LoopTy, AffineForOp>::value,
-                                    AffineLoopNestBuilder,
-                                    LoopNestRangeBuilder>::type BuilderType;
+  using LoopOrAffineLoopBuilder =
+      typename std::conditional_t<std::is_same<LoopTy, AffineForOp>::value,
+                                  AffineLoopNestBuilder, LoopNestRangeBuilder>;
+  using BuilderType =
+      typename std::conditional_t<std::is_same<LoopTy, loop::ParallelOp>::value,
+                                  ParallelLoopNestBuilder,
+                                  LoopOrAffineLoopBuilder>;
+
   std::unique_ptr<BuilderType> builder;
 };
 

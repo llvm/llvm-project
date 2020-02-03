@@ -33,6 +33,10 @@ createLinalgPromotionPass(bool dynamicBuffers);
 /// std.load/std.store accesses.
 std::unique_ptr<OpPassBase<FuncOp>> createConvertLinalgToLoopsPass();
 
+/// Create a pass to convert Linalg operations to loop.parallel loops and
+/// std.load/std.store accesses.
+std::unique_ptr<OpPassBase<FuncOp>> createConvertLinalgToParallelLoopsPass();
+
 /// Create a pass to convert Linalg operations to affine.for loops and
 /// affine_load/affine_store accesses.
 /// Placeholder for now, this is NYI.
