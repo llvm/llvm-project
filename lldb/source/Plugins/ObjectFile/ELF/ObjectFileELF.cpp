@@ -206,7 +206,9 @@ unsigned ELFRelocation::RelocAddend64(const ELFRelocation &rel) {
 
 } // end anonymous namespace
 
-static user_id_t SegmentID(size_t PHdrIndex) { return ~PHdrIndex; }
+static user_id_t SegmentID(size_t PHdrIndex) {
+  return ~user_id_t(PHdrIndex);
+}
 
 bool ELFNote::Parse(const DataExtractor &data, lldb::offset_t *offset) {
   // Read all fields.
