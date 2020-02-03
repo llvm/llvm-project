@@ -241,7 +241,7 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
   LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Variant has a score of " << Score
                     << "\n");
   return Score;
-};
+}
 
 int llvm::omp::getBestVariantMatchForContext(
     const SmallVectorImpl<VariantMatchInfo> &VMIs, const OMPContext &Ctx) {
@@ -293,6 +293,7 @@ llvm::omp::getOpenMPContextTraitSetForProperty(TraitProperty Property) {
     return TraitSet::TraitSetEnum;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
   }
+  llvm_unreachable("Unknown trait set!");
 }
 StringRef llvm::omp::getOpenMPContextTraitSetName(TraitSet Kind) {
   switch (Kind) {
@@ -319,6 +320,7 @@ llvm::omp::getOpenMPContextTraitSelectorForProperty(TraitProperty Property) {
     return TraitSelector::TraitSelectorEnum;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
   }
+  llvm_unreachable("Unknown trait set!");
 }
 StringRef llvm::omp::getOpenMPContextTraitSelectorName(TraitSelector Kind) {
   switch (Kind) {
