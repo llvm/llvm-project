@@ -21,11 +21,30 @@ entry:
 }
 
 
-; CHECK: {{^}}branch_on_asm:
-; Make sure inline assembly is treted as divergent.
-; CHECK: s_mov_b32 s{{[0-9]+}}, 0
+; CHECK-LABEL: {{^}}branch_on_asm_vgpr:
+; Make sure VGPR inline assembly is treated as divergent.
+; CHECK: v_mov_b32 v{{[0-9]+}}, 0
+; CHECK: v_cmp_eq_u32
 ; CHECK: s_and_saveexec_b64
-define amdgpu_kernel void @branch_on_asm(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @branch_on_asm_vgpr(i32 addrspace(1)* %out) {
+	%zero = call i32 asm "v_mov_b32 $0, 0", "=v"()
+	%cmp = icmp eq i32 %zero, 0
+	br i1 %cmp, label %if, label %endif
+
+if:
+	store i32 0, i32 addrspace(1)* %out
+	br label %endif
+
+endif:
+  ret void
+}
+
+; CHECK-LABEL: {{^}}branch_on_asm_sgpr:
+; Make sure SGPR inline assembly is treated as uniform
+; CHECK: s_mov_b32 s{{[0-9]+}}, 0
+; CHECK: s_cmp_lg_u32
+; CHECK: s_cbranch_scc0
+define amdgpu_kernel void @branch_on_asm_sgpr(i32 addrspace(1)* %out) {
 	%zero = call i32 asm "s_mov_b32 $0, 0", "=s"()
 	%cmp = icmp eq i32 %zero, 0
 	br i1 %cmp, label %if, label %endif
