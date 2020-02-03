@@ -332,16 +332,22 @@ static void fuseLinalgOpsGreedily(FuncOp f) {
       linalgOps.push_back(op);
   });
 
-  Aliases aliases;
-  LinalgDependenceGraph G(aliases, linalgOps);
+  // TODO(pifon, ntv): LinalgDependenceGraph should be able to update itself.
+  // The current naive and expensive reconstruction of the graph should be
+  // removed.
   for (auto *op : llvm::reverse(linalgOps)) {
-    for (unsigned consumerIdx = 0, e = LinalgOp(op).getNumInputs();
-         consumerIdx < e; ++consumerIdx) {
-      if (auto fusionInfo = fuseProducerOf(b, op, consumerIdx, G, &folder))
-        eraseSet.insert(fusionInfo->originalProducer.getOperation());
+    for (unsigned id = 0, e = LinalgOp(op).getNumInputs(); id < e; ++id) {
+      linalg::Aliases aliases;
+      linalg::LinalgDependenceGraph graph(aliases, linalgOps);
+      if (auto info = fuseProducerOf(b, op, id, graph, &folder)) {
+        auto *originalOp = info->originalProducer.getOperation();
+        eraseSet.insert(originalOp);
+        auto *originalOpInLinalgOpsVector =
+            std::find(linalgOps.begin(), linalgOps.end(), originalOp);
+        *originalOpInLinalgOpsVector = info->fusedProducer.getOperation();
+      }
     }
   }
-
   // The `fuseProducerOf` function performs structural checks and in particular
   // that no covering read or write exist between the consumer and the producer.
   // As a consequence, the only fusions that may occur preserve subsequent
