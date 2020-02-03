@@ -9,8 +9,11 @@
 #ifndef liblldb_ClangDeclVendor_h_
 #define liblldb_ClangDeclVendor_h_
 
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Symbol/DeclVendor.h"
+
+namespace clang {
+class NamedDecl;
+}
 
 namespace lldb_private {
 

@@ -15,7 +15,6 @@
 
 #include "ClangExpressionHelper.h"
 
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"

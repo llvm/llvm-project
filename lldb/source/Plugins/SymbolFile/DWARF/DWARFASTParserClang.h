@@ -19,7 +19,6 @@
 #include "DWARFDefines.h"
 #include "DWARFFormValue.h"
 #include "LogChannelDWARF.h"
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Core/PluginInterface.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"

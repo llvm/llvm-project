@@ -17,7 +17,6 @@
 #include "ClangASTSource.h"
 #include "ClangExpressionVariable.h"
 
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Symbol/SymbolContext.h"

@@ -15,13 +15,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
 
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/lldb-enumerations.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
