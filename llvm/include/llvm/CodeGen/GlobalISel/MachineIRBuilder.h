@@ -518,6 +518,11 @@ public:
   /// \return The newly created instruction.
   MachineInstrBuilder buildSExt(const DstOp &Res, const SrcOp &Op);
 
+  /// Build and insert \p Res = G_SEXT_INREG \p Op, ImmOp
+  MachineInstrBuilder buildSExtInReg(const DstOp &Res, const SrcOp &Op, int64_t ImmOp) {
+    return buildInstr(TargetOpcode::G_SEXT_INREG, {Res}, {Op, SrcOp(ImmOp)});
+  }
+
   /// Build and insert \p Res = G_FPEXT \p Op
   MachineInstrBuilder buildFPExt(const DstOp &Res, const SrcOp &Op,
                                  Optional<unsigned> Flags = None) {
