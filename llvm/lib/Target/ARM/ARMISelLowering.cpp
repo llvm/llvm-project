@@ -1605,6 +1605,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::WIN__DBZCHK:   return "ARMISD::WIN__DBZCHK";
 
   case ARMISD::PREDICATE_CAST: return "ARMISD::PREDICATE_CAST";
+  case ARMISD::VECTOR_REG_CAST: return "ARMISD::VECTOR_REG_CAST";
   case ARMISD::VCMP:          return "ARMISD::VCMP";
   case ARMISD::VCMPZ:         return "ARMISD::VCMPZ";
   case ARMISD::VTST:          return "ARMISD::VTST";
@@ -3776,6 +3777,9 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
   case Intrinsic::arm_mve_pred_i2v:
   case Intrinsic::arm_mve_pred_v2i:
     return DAG.getNode(ARMISD::PREDICATE_CAST, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1));
+  case Intrinsic::arm_mve_vreinterpretq:
+    return DAG.getNode(ARMISD::VECTOR_REG_CAST, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1));
   }
 }

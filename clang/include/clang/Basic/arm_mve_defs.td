@@ -57,6 +57,10 @@ class CGHelperFn<string func> : IRBuilderBase {
   // an argument.
   let prefix = func # "(Builder, ";
 }
+class CGFHelperFn<string func> : IRBuilderBase {
+  // Like CGHelperFn, but also takes the CodeGenFunction itself.
+  let prefix = func # "(Builder, this, ";
+}
 def add: IRBuilder<"CreateAdd">;
 def mul: IRBuilder<"CreateMul">;
 def not: IRBuilder<"CreateNot">;
@@ -89,6 +93,7 @@ def ielt_var: IRBuilder<"CreateInsertElement">;
 def xelt_var: IRBuilder<"CreateExtractElement">;
 def trunc: IRBuilder<"CreateTrunc">;
 def bitcast: IRBuilder<"CreateBitCast">;
+def vreinterpret: CGFHelperFn<"ARMMVEVectorReinterpret">;
 def extend: CGHelperFn<"SignOrZeroExtend"> {
   let special_params = [IRBuilderIntParam<2, "bool">];
 }
