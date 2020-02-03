@@ -991,7 +991,7 @@ static void changeFCMPPredToAArch64CC(CmpInst::Predicate P,
 }
 
 /// Return a register which can be used as a bit to test in a TB(N)Z.
-static Register getTestBitReg(Register Reg, uint64_t Bit,
+static Register getTestBitReg(Register Reg, uint64_t &Bit,
                               MachineRegisterInfo &MRI) {
   assert(Reg.isValid() && "Expected valid register!");
   while (MachineInstr *MI = getDefIgnoringCopies(Reg, MRI)) {
@@ -1031,6 +1031,15 @@ static Register getTestBitReg(Register Reg, uint64_t Bit,
       }
       if (VRegAndVal)
         C = VRegAndVal->Value;
+      break;
+    }
+    case TargetOpcode::G_SHL: {
+      TestReg = MI->getOperand(1).getReg();
+      auto VRegAndVal =
+          getConstantVRegValWithLookThrough(MI->getOperand(2).getReg(), MRI);
+      if (VRegAndVal)
+        C = VRegAndVal->Value;
+      break;
     }
     }
 
@@ -1048,6 +1057,14 @@ static Register getTestBitReg(Register Reg, uint64_t Bit,
       // (tbz (and x, m), b) -> (tbz x, b) when the b-th bit of m is set.
       if ((*C >> Bit) & 1)
         NextReg = TestReg;
+      break;
+    case TargetOpcode::G_SHL:
+      // (tbz (shl x, c), b) -> (tbz x, b-c) when b-c is positive and fits in
+      // the type of the register.
+      if (*C <= Bit && (Bit - *C) < MRI.getType(TestReg).getSizeInBits()) {
+        NextReg = TestReg;
+        Bit = Bit - *C;
+      }
       break;
     }
 
