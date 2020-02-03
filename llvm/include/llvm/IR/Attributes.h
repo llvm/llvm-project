@@ -111,6 +111,9 @@ public:
 
   static StringRef getNameFromAttrKind(Attribute::AttrKind AttrKind);
 
+  /// Return true if and only if the attribute has an Argument.
+  static bool doesAttrKindHaveArgument(Attribute::AttrKind AttrKind);
+
   //===--------------------------------------------------------------------===//
   // Attribute Accessors
   //===--------------------------------------------------------------------===//
