@@ -27,7 +27,7 @@
 // Declare the __builtin_strlen intrinsic for MSVC so it can be used in
 // constexpr context.
 #if defined(_MSC_VER)
-extern "C" size_t __builtin_strlen(const char *);
+extern "C" constexpr size_t __builtin_strlen(const char *);
 #endif
 
 namespace llvm {
