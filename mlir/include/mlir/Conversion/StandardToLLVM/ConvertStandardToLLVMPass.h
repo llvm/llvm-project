@@ -21,7 +21,8 @@ class OwningRewritePatternList;
 /// Standard dialect to the LLVM dialect, excluding non-memory-related
 /// operations and FuncOp.
 void populateStdToLLVMMemoryConversionPatters(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    bool useAlloca);
 
 /// Collect a set of patterns to convert from the Standard dialect to the LLVM
 /// dialect, excluding the memory-related operations.
@@ -33,15 +34,19 @@ void populateStdToLLVMDefaultFuncOpConversionPattern(
     LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
 
 /// Collect a set of default patterns to convert from the Standard dialect to
-/// LLVM.
+/// LLVM. If `useAlloca` is set, the patterns for AllocOp and DeallocOp will
+/// generate `llvm.alloca` instead of calls to "malloc".
 void populateStdToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                         OwningRewritePatternList &patterns);
+                                         OwningRewritePatternList &patterns,
+                                         bool useAlloca = false);
 
 /// Collect a set of patterns to convert from the Standard dialect to
 /// LLVM using the bare pointer calling convention for MemRef function
-/// arguments.
+/// arguments. If `useAlloca` is set, the patterns for AllocOp and DeallocOp
+/// will generate `llvm.alloca` instead of calls to "malloc".
 void populateStdToLLVMBarePtrConversionPatterns(
-    LLVMTypeConverter &converter, OwningRewritePatternList &patterns);
+    LLVMTypeConverter &converter, OwningRewritePatternList &patterns,
+    bool useAlloca = false);
 
 /// Creates a pass to convert the Standard dialect into the LLVMIR dialect.
 /// By default stdlib malloc/free are used for allocating MemRef payloads.
