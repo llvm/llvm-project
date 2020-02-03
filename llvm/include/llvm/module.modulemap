@@ -251,6 +251,7 @@ module LLVM_intrinsic_gen {
   module Analysis_DomTreeUpdater { header "Analysis/DomTreeUpdater.h" export * }
   module IR_IRBuilder { header "IR/IRBuilder.h" export * }
   module IR_PassManager { header "IR/PassManager.h" export * }
+  module IR_PassManagerImpl { header "IR/PassManagerImpl.h" export * }
   module IR_PredIteratorCache { header "IR/PredIteratorCache.h" export * }
   module IR_Verifier { header "IR/Verifier.h" export * }
   module IR_InstIterator { header "IR/InstIterator.h" export * }
