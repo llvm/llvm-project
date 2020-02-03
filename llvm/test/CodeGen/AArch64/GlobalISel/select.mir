@@ -106,8 +106,8 @@ registers:
 
 # CHECK:  body:
 # CHECK: %0:gpr64 = COPY $x0
-# CHECK: %5:gpr32 = MOVi32imm 10000
-# CHECK: %1:gpr64 = SUBREG_TO_REG 0, %5, %subreg.sub_32
+# CHECK: %4:gpr32 = MOVi32imm 10000
+# CHECK: %1:gpr64 = SUBREG_TO_REG 0, %4, %subreg.sub_32
 # CHECK: %{{[0-9]+}}:gpr64 = ADDXrr %0, %1
 body:             |
   bb.0:
