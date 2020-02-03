@@ -1,18 +1,18 @@
-// RUN: %clang_cc1 -std=c++11 -S -emit-llvm -o - %s -triple x86_64-linux-gnu -fsemantic-interposition | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -S -emit-llvm -o - %s -triple x86_64-linux-gnu | FileCheck %s
 
 struct A { int a, b; int f(); };
 
 namespace NonAggregateCopyInAggregateInit { // PR32044
   struct A { constexpr A(int n) : x(n), y() {} int x, y; } extern a;
-  // CHECK-DAG: @_ZN31NonAggregateCopyInAggregateInit1bE = dso_local global %{{.*}} { %[[A:.*]]* @_ZN31NonAggregateCopyInAggregateInit1aE }
+  // CHECK-DAG: @_ZN31NonAggregateCopyInAggregateInit1bE = global %{{.*}} { %[[A:.*]]* @_ZN31NonAggregateCopyInAggregateInit1aE }
   struct B { A &p; } b{{a}};
   // CHECK-DAG: @_ZGRN31NonAggregateCopyInAggregateInit1cE_ = internal global %[[A]] { i32 1, i32 0 }
-  // CHECK-DAG: @_ZN31NonAggregateCopyInAggregateInit1cE = dso_local global %{{.*}} { %{{.*}}* @_ZGRN31NonAggregateCopyInAggregateInit1cE_ }
+  // CHECK-DAG: @_ZN31NonAggregateCopyInAggregateInit1cE = global %{{.*}} { %{{.*}}* @_ZGRN31NonAggregateCopyInAggregateInit1cE_ }
   struct C { A &&p; } c{{1}};
 }
 
 namespace NearlyZeroInit {
-  // CHECK-DAG: @_ZN14NearlyZeroInit1aE = dso_local global {{.*}} <{ i32 1, i32 2, i32 3, [120 x i32] zeroinitializer }>
+  // CHECK-DAG: @_ZN14NearlyZeroInit1aE = global {{.*}} <{ i32 1, i32 2, i32 3, [120 x i32] zeroinitializer }>
   int a[123] = {1, 2, 3};
   // CHECK-DAG: @_ZN14NearlyZeroInit1bE = global {{.*}} { i32 1, <{ i32, [2147483647 x i32] }> <{ i32 2, [2147483647 x i32] zeroinitializer }> }
   struct B { int n; int arr[1024 * 1024 * 1024 * 2u]; } b = {1, {2}};

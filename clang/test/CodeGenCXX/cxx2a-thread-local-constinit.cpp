@@ -6,7 +6,7 @@ extern thread_local int a;
 // CHECK-DAG: @b = external thread_local global i32
 extern thread_local constinit int b;
 
-// CHECK-LABEL: define dso_local i32 @_Z1fv()
+// CHECK-LABEL: define i32 @_Z1fv()
 // CHECK: call i32* @_ZTW1a()
 // CHECK: }
 int f() { return a; }
@@ -16,7 +16,7 @@ int f() { return a; }
 // CHECK: call void @_ZTH1a()
 // CHECK: }
 
-// CHECK-LABEL: define dso_local i32 @_Z1gv()
+// CHECK-LABEL: define i32 @_Z1gv()
 // CHECK-NOT: call
 // CHECK: load i32, i32* @b
 // CHECK-NOT: call
@@ -27,7 +27,7 @@ int g() { return b; }
 
 extern thread_local int c;
 
-// CHECK-LABEL: define dso_local i32 @_Z1hv()
+// CHECK-LABEL: define i32 @_Z1hv()
 // CHECK: call i32* @_ZTW1c()
 // CHECK: load i32, i32* %
 // CHECK: }
@@ -55,7 +55,7 @@ struct Destructed {
 };
 
 extern thread_local constinit Destructed e;
-// CHECK-LABEL: define dso_local i32 @_Z1iv()
+// CHECK-LABEL: define i32 @_Z1iv()
 // CHECK: call {{.*}}* @_ZTW1e()
 // CHECK: }
 int i() { return e.n; }

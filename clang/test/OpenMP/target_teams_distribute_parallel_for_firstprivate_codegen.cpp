@@ -89,22 +89,22 @@ T tmain() {
   return T();
 }
 
-// HCHECK-DAG: [[TEST:@.+]] = dso_local global [[S_FLOAT_TY]] zeroinitializer,
+// HCHECK-DAG: [[TEST:@.+]] = global [[S_FLOAT_TY]] zeroinitializer,
 S<float> test;
-// HCHECK-DAG: [[T_VAR:@.+]] = dso_local global i{{[0-9]+}} 333,
+// HCHECK-DAG: [[T_VAR:@.+]] = global i{{[0-9]+}} 333,
 int t_var = 333;
-// HCHECK-DAG: [[VEC:@.+]] = dso_local global [2 x i{{[0-9]+}}] [i{{[0-9]+}} 1, i{{[0-9]+}} 2],
+// HCHECK-DAG: [[VEC:@.+]] = global [2 x i{{[0-9]+}}] [i{{[0-9]+}} 1, i{{[0-9]+}} 2],
 int vec[] = {1, 2};
-// HCHECK-DAG: [[S_ARR:@.+]] = dso_local global [2 x [[S_FLOAT_TY]]] zeroinitializer,
+// HCHECK-DAG: [[S_ARR:@.+]] = global [2 x [[S_FLOAT_TY]]] zeroinitializer,
 S<float> s_arr[] = {1, 2};
-// HCHECK-DAG: [[VAR:@.+]] = dso_local global [[S_FLOAT_TY]] zeroinitializer,
+// HCHECK-DAG: [[VAR:@.+]] = global [[S_FLOAT_TY]] zeroinitializer,
 S<float> var(3);
 // HCHECK-DAG: [[SIVAR:@.+]] = internal global i{{[0-9]+}} 0,
 
 int main() {
   static int sivar;
 #ifdef LAMBDA
-  // HLAMBDA: [[G:@.+]] = dso_local global i{{[0-9]+}} 1212,
+  // HLAMBDA: [[G:@.+]] = global i{{[0-9]+}} 1212,
   // HLAMBDA-LABEL: @main
   // HLAMBDA: call void [[OUTER_LAMBDA:@.+]](
   [&]() {

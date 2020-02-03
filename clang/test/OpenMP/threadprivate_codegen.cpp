@@ -127,7 +127,7 @@ struct S5 {
 // CHECK-DAG:  [[GS1]].cache. = common global i8** null
 // CHECK-DAG:  [[DEFAULT_LOC:@.+]] = private unnamed_addr global [[IDENT]] { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* {{@.+}}, i32 0, i32 0) }
 // CHECK-DAG:  [[GS2:@.+]] = internal global [[S2]] zeroinitializer
-// CHECK-DAG:  [[ARR_X:@.+]] = dso_local global [2 x [3 x [[S1]]]] zeroinitializer
+// CHECK-DAG:  [[ARR_X:@.+]] = global [2 x [3 x [[S1]]]] zeroinitializer
 // CHECK-DAG:  [[ARR_X]].cache. = common global i8** null
 // CHECK-DAG:  [[SM:@.+]] = internal global [[SMAIN]] zeroinitializer
 // CHECK-DAG:  [[SM]].cache. = common global i8** null
@@ -135,11 +135,11 @@ struct S5 {
 // CHECK-DAG:  [[STATIC_S]].cache. = common global i8** null
 // CHECK-DAG:  [[GS3:@.+]] = external global [[S5]]
 // CHECK-DAG:  [[GS3]].cache. = common global i8** null
-// CHECK-DAG:  [[ST_INT_ST:@.+]] = linkonce_odr dso_local global i32 23
+// CHECK-DAG:  [[ST_INT_ST:@.+]] = linkonce_odr global i32 23
 // CHECK-DAG:  [[ST_INT_ST]].cache. = common global i8** null
-// CHECK-DAG:  [[ST_FLOAT_ST:@.+]] = linkonce_odr dso_local global float 2.300000e+01
+// CHECK-DAG:  [[ST_FLOAT_ST:@.+]] = linkonce_odr global float 2.300000e+01
 // CHECK-DAG:  [[ST_FLOAT_ST]].cache. = common global i8** null
-// CHECK-DAG:  [[ST_S4_ST:@.+]] = linkonce_odr dso_local global %struct.S4 zeroinitializer
+// CHECK-DAG:  [[ST_S4_ST:@.+]] = linkonce_odr global %struct.S4 zeroinitializer
 // CHECK-DAG:  [[ST_S4_ST]].cache. = common global i8** null
 // CHECK-NOT:  .cache. = common global i8** null
 // There is no cache for gs2 - it is not threadprivate. Check that there is only
@@ -147,13 +147,13 @@ struct S5 {
 // ST<float>::st, ST<S4>::st)
 // CHECK-DEBUG-DAG: [[GS1:@.+]] = internal global [[S1]] zeroinitializer
 // CHECK-DEBUG-DAG: [[GS2:@.+]] = internal global [[S2]] zeroinitializer
-// CHECK-DEBUG-DAG: [[ARR_X:@.+]] = dso_local global [2 x [3 x [[S1]]]] zeroinitializer
+// CHECK-DEBUG-DAG: [[ARR_X:@.+]] = global [2 x [3 x [[S1]]]] zeroinitializer
 // CHECK-DEBUG-DAG: [[SM:@.+]] = internal global [[SMAIN]] zeroinitializer
 // CHECK-DEBUG-DAG: [[STATIC_S:@.+]] = external global [[S3]]
 // CHECK-DEBUG-DAG: [[GS3:@.+]] = external global [[S5]]
-// CHECK-DEBUG-DAG: [[ST_INT_ST:@.+]] = linkonce_odr dso_local global i32 23
-// CHECK-DEBUG-DAG: [[ST_FLOAT_ST:@.+]] = linkonce_odr dso_local global float 2.300000e+01
-// CHECK-DEBUG-DAG: [[ST_S4_ST:@.+]] = linkonce_odr dso_local global %struct.S4 zeroinitializer
+// CHECK-DEBUG-DAG: [[ST_INT_ST:@.+]] = linkonce_odr global i32 23
+// CHECK-DEBUG-DAG: [[ST_FLOAT_ST:@.+]] = linkonce_odr global float 2.300000e+01
+// CHECK-DEBUG-DAG: [[ST_S4_ST:@.+]] = linkonce_odr global %struct.S4 zeroinitializer
 // CHECK-DEBUG-DAG: [[LOC1:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;;201;1;;\00"
 // CHECK-DEBUG-DAG: [[LOC2:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;;256;1;;\00"
 // CHECK-DEBUG-DAG: [[LOC3:@.*]] = private unnamed_addr constant [{{[0-9]+}} x i8] c";{{.*}}threadprivate_codegen.cpp;;343;19;;\00"

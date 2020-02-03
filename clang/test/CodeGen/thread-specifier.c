@@ -6,11 +6,11 @@
 // CHECK: @d.e = internal thread_local global
 // CHECK: @d.f = internal thread_local global
 // CHECK: @f.a = internal thread_local(initialexec) global
-// CHECK: @a = dso_local thread_local global
-// CHECK: @g = dso_local thread_local global
-// CHECK: @h = dso_local thread_local(localdynamic) global
-// CHECK: @i = dso_local thread_local(initialexec) global
-// CHECK: @j = dso_local thread_local(localexec) global
+// CHECK: @a = thread_local global
+// CHECK: @g = thread_local global
+// CHECK: @h = thread_local(localdynamic) global
+// CHECK: @i = thread_local(initialexec) global
+// CHECK: @j = thread_local(localexec) global
 
 // CHECK-NOT: @_ZTW
 // CHECK-NOT: @_ZTH

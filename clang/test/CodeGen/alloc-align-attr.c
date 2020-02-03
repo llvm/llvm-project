@@ -4,7 +4,7 @@ __INT32_TYPE__*m1(__INT32_TYPE__ i) __attribute__((alloc_align(1)));
 
 // Condition where parameter to m1 is not size_t.
 __INT32_TYPE__ test1(__INT32_TYPE__ a) {
-// CHECK: define dso_local i32 @test1
+// CHECK: define i32 @test1
   return *m1(a);
 // CHECK: call i32* @m1(i32 [[PARAM1:%[^\)]+]])
 // CHECK: [[ALIGNCAST1:%.+]] = zext i32 [[PARAM1]] to i64
@@ -16,7 +16,7 @@ __INT32_TYPE__ test1(__INT32_TYPE__ a) {
 }
 // Condition where test2 param needs casting.
 __INT32_TYPE__ test2(__SIZE_TYPE__ a) {
-// CHECK: define dso_local i32 @test2
+// CHECK: define i32 @test2
   return *m1(a);
 // CHECK: [[CONV2:%.+]] = trunc i64 %{{.+}} to i32
 // CHECK: call i32* @m1(i32 [[CONV2]])
@@ -31,7 +31,7 @@ __INT32_TYPE__ *m2(__SIZE_TYPE__ i) __attribute__((alloc_align(1)));
 
 // test3 param needs casting, but 'm2' is correct.
 __INT32_TYPE__ test3(__INT32_TYPE__ a) {
-// CHECK: define dso_local i32 @test3
+// CHECK: define i32 @test3
   return *m2(a);
 // CHECK: [[CONV3:%.+]] = sext i32 %{{.+}} to i64
 // CHECK: call i32* @m2(i64 [[CONV3]])
@@ -44,7 +44,7 @@ __INT32_TYPE__ test3(__INT32_TYPE__ a) {
 
 // Every type matches, canonical example.
 __INT32_TYPE__ test4(__SIZE_TYPE__ a) {
-// CHECK: define dso_local i32 @test4
+// CHECK: define i32 @test4
   return *m2(a);
 // CHECK: call i32* @m2(i64 [[PARAM4:%[^\)]+]])
 // CHECK: [[MASK4:%.+]] = sub i64 [[PARAM4]], 1
@@ -61,7 +61,7 @@ struct MultiArgs { __INT64_TYPE__ a, b;};
 // Truncation to i64 is permissible, since alignments of greater than 2^64 are insane.
 __INT32_TYPE__ *m3(struct Empty s, __int128_t i) __attribute__((alloc_align(2)));
 __INT32_TYPE__ test5(__int128_t a) {
-// CHECK: define dso_local i32 @test5
+// CHECK: define i32 @test5
   struct Empty e;
   return *m3(e, a);
 // CHECK: call i32* @m3(i64 %{{.*}}, i64 %{{.*}})
@@ -75,7 +75,7 @@ __INT32_TYPE__ test5(__int128_t a) {
 // Struct parameter takes up 2 parameters, 'i' takes up 2.
 __INT32_TYPE__ *m4(struct MultiArgs s, __int128_t i) __attribute__((alloc_align(2)));
 __INT32_TYPE__ test6(__int128_t a) {
-// CHECK: define dso_local i32 @test6
+// CHECK: define i32 @test6
   struct MultiArgs e;
   return *m4(e, a);
 // CHECK: call i32* @m4(i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}})

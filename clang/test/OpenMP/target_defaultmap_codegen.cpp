@@ -1230,7 +1230,7 @@ void implicit_maps_pointer (){
 
 double *g;
 
-// CK23: @g = dso_local global double*
+// CK23: @g = global double*
 // CK23: [[SIZES00:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} {{8|4}}]
 // CK23: [[TYPES00:@.+]] = {{.+}}constant [1 x i64] [i64 288]
 

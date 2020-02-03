@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -S -triple x86_64-none-linux-gnu -emit-llvm -o - %s -fsemantic-interposition | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -S -triple x86_64-none-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 namespace std {
   typedef decltype(sizeof(int)) size_t;
@@ -37,7 +37,7 @@ namespace std {
 std::initializer_list<int> globalInitList1 = {1, 2, 3};
 
 void fn1(int i) {
-  // CHECK-LABEL: define dso_local void @_Z3fn1i
+  // CHECK-LABEL: define void @_Z3fn1i
   // temporary array
   // CHECK: [[array:%[^ ]+]] = alloca [3 x i32]
   // CHECK: getelementptr inbounds [3 x i32], [3 x i32]* [[array]], i{{32|64}} 0
@@ -66,7 +66,7 @@ struct destroyme2 {
 
 
 void fn2() {
-  // CHECK-LABEL: define dso_local void @_Z3fn2v
+  // CHECK-LABEL: define void @_Z3fn2v
   void target(std::initializer_list<destroyme1>);
   // objects should be destroyed before dm2, after call returns
   target({ destroyme1(), destroyme1() });
@@ -76,7 +76,7 @@ void fn2() {
 }
 
 void fn3() {
-  // CHECK-LABEL: define dso_local void @_Z3fn3v
+  // CHECK-LABEL: define void @_Z3fn3v
   // objects should be destroyed after dm2
   auto list = { destroyme1(), destroyme1() };
   destroyme2 dm2;

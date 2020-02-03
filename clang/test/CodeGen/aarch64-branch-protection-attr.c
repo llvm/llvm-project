@@ -6,63 +6,63 @@
 // RUN:                               | FileCheck %s --check-prefix=CHECK --check-prefix=OVERRIDE
 
 void missing() {}
-// NO-OVERRIDE: define dso_local void @missing() #[[#NONE:]]
-// OVERRIDE: define dso_local void @missing() #[[#STD:]]
+// NO-OVERRIDE: define void @missing() #[[#NONE:]]
+// OVERRIDE: define void @missing() #[[#STD:]]
 
 __attribute__ ((target("branch-protection=none")))
 void none() {}
-// NO-OVERRIDE: define dso_local void @none() #[[#NONE]]
-// OVERRIDE: define dso_local void @none() #[[#NONE:]]
+// NO-OVERRIDE: define void @none() #[[#NONE]]
+// OVERRIDE: define void @none() #[[#NONE:]]
 
   __attribute__ ((target("branch-protection=standard")))
 void std() {}
-// NO-OVERRIDE: define dso_local void @std() #[[#STD:]]
-// OVERRIDE: define dso_local void @std() #[[#STD]]
+// NO-OVERRIDE: define void @std() #[[#STD:]]
+// OVERRIDE: define void @std() #[[#STD]]
 
 __attribute__ ((target("branch-protection=bti")))
 void btionly() {}
-// NO-OVERRIDE: define dso_local void @btionly() #[[#BTI:]]
-// OVERRIDE: define dso_local void @btionly() #[[#BTI:]]
+// NO-OVERRIDE: define void @btionly() #[[#BTI:]]
+// OVERRIDE: define void @btionly() #[[#BTI:]]
 
 __attribute__ ((target("branch-protection=pac-ret")))
 void paconly() {}
-// NO-OVERRIDE: define dso_local void @paconly() #[[#PAC:]]
-// OVERRIDE: define dso_local void @paconly() #[[#PAC:]]
+// NO-OVERRIDE: define void @paconly() #[[#PAC:]]
+// OVERRIDE: define void @paconly() #[[#PAC:]]
 
 __attribute__ ((target("branch-protection=pac-ret+bti")))
 void pacbti0() {}
-// NO-OVERRIDE: define dso_local void @pacbti0() #[[#PACBTI:]]
-// OVERRIDE: define dso_local void @pacbti0() #[[#PACBTI:]]
+// NO-OVERRIDE: define void @pacbti0() #[[#PACBTI:]]
+// OVERRIDE: define void @pacbti0() #[[#PACBTI:]]
 
 __attribute__ ((target("branch-protection=bti+pac-ret")))
 void pacbti1() {}
-// NO-OVERRIDE: define dso_local void @pacbti1() #[[#PACBTI]]
-// OVERRIDE: define dso_local void @pacbti1() #[[#PACBTI]]
+// NO-OVERRIDE: define void @pacbti1() #[[#PACBTI]]
+// OVERRIDE: define void @pacbti1() #[[#PACBTI]]
 
 __attribute__ ((target("branch-protection=pac-ret+leaf")))
 void leaf() {}
-// NO-OVERRIDE: define dso_local void @leaf() #[[#PACLEAF:]]
-// OVERRIDE: define dso_local void @leaf() #[[#PACLEAF:]]
+// NO-OVERRIDE: define void @leaf() #[[#PACLEAF:]]
+// OVERRIDE: define void @leaf() #[[#PACLEAF:]]
 
 __attribute__ ((target("branch-protection=pac-ret+b-key")))
 void bkey() {}
-// NO-OVERRIDE: define dso_local void @bkey() #[[#PACBKEY:]]
-// OVERRIDE: define dso_local void @bkey() #[[#PACBKEY:]]
+// NO-OVERRIDE: define void @bkey() #[[#PACBKEY:]]
+// OVERRIDE: define void @bkey() #[[#PACBKEY:]]
 
 __attribute__ ((target("branch-protection=pac-ret+b-key+leaf")))
 void bkeyleaf0() {}
-// NO-OVERRIDE: define dso_local void @bkeyleaf0()  #[[#PACBKEYLEAF:]]
-// OVERRIDE: define dso_local void @bkeyleaf0()  #[[#PACBKEYLEAF:]]
+// NO-OVERRIDE: define void @bkeyleaf0()  #[[#PACBKEYLEAF:]]
+// OVERRIDE: define void @bkeyleaf0()  #[[#PACBKEYLEAF:]]
 
 __attribute__ ((target("branch-protection=pac-ret+leaf+b-key")))
 void bkeyleaf1() {}
-// NO-OVERRIDE: define dso_local void @bkeyleaf1()  #[[#PACBKEYLEAF]]
-// OVERRIDE: define dso_local void @bkeyleaf1()  #[[#PACBKEYLEAF]]
+// NO-OVERRIDE: define void @bkeyleaf1()  #[[#PACBKEYLEAF]]
+// OVERRIDE: define void @bkeyleaf1()  #[[#PACBKEYLEAF]]
 
 __attribute__ ((target("branch-protection=pac-ret+leaf+bti")))
 void btileaf() {}
-// NO-OVERRIDE: define dso_local void @btileaf() #[[#BTIPACLEAF:]]
-// OVERRIDE: define dso_local void @btileaf() #[[#BTIPACLEAF:]]
+// NO-OVERRIDE: define void @btileaf() #[[#BTIPACLEAF:]]
+// OVERRIDE: define void @btileaf() #[[#BTIPACLEAF:]]
 
 // CHECK-DAG: attributes #[[#NONE]]
 

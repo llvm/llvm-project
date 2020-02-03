@@ -4,5 +4,5 @@ int foo() {
   return 1;
 }
 
-// CHECK: define dso_local i32 @_Z3foov() #[[ATTRS:[0-9]+]] {
+// CHECK: define i32 @_Z3foov() #[[ATTRS:[0-9]+]] {
 // CHECK-DAG: attributes #[[ATTRS]] = {{.*}} "xray-ignore-loops" {{.*}}

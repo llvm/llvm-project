@@ -30,10 +30,10 @@ int bar(int n){
   return sum;
 }
 
-// CHECK-HOST: [[VAR:@.+]] = dso_local global double 1.000000e+01
+// CHECK-HOST: [[VAR:@.+]] = global double 1.000000e+01
 // CHECK-HOST: [[VAR_DECL_TGT_LINK_PTR:@.+]] = weak global double* [[VAR]]
 
-// CHECK-HOST: [[TO_VAR:@.+]] = dso_local global double 2.000000e+01
+// CHECK-HOST: [[TO_VAR:@.+]] = global double 2.000000e+01
 // CHECK-HOST: [[VAR_DECL_TGT_TO_PTR:@.+]] = weak global double* [[TO_VAR]]
 
 // CHECK-HOST: [[OFFLOAD_SIZES:@.+]] = private unnamed_addr constant [2 x i64] [i64 4, i64 8]

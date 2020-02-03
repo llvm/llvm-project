@@ -56,7 +56,7 @@ int res_i;
 int res_ui;
 int res_f;
 
-// CHECK-LABEL: define dso_local void @test1
+// CHECK-LABEL: define void @test1
 void test1() {
 
   /* vec_abs */
@@ -907,7 +907,7 @@ void test1() {
 
 }
 
-// CHECK-LABEL: define dso_local void @test2
+// CHECK-LABEL: define void @test2
 void test2() {
   /* vec_avg */
   res_vsc = vec_avg(vsc, vsc);
@@ -1063,7 +1063,7 @@ void test2() {
 // CHECK-LE: @llvm.ppc.altivec.vcmpgefp
 }
 
-// CHECK-LABEL: define dso_local void @test5
+// CHECK-LABEL: define void @test5
 void test5() {
 
   /* vec_cmpgt */
@@ -1153,7 +1153,7 @@ void test5() {
 // CHECK-LE: @llvm.ppc.altivec.vcmpgefp
 }
 
-// CHECK-LABEL: define dso_local void @test6
+// CHECK-LABEL: define void @test6
 void test6() {
   /* vec_cmplt */
   res_vbc = vec_cmplt(vsc, vsc);
@@ -9034,7 +9034,7 @@ void test6() {
 }
 
 /* ------------------------------ Relational Operators ------------------------------ */
-// CHECK-LABEL: define dso_local void @test7
+// CHECK-LABEL: define void @test7
 void test7() {
   vector signed char vsc1 = (vector signed char)(-1);
   vector signed char vsc2 = (vector signed char)(-2);
@@ -9221,8 +9221,8 @@ void test7() {
 
 /* ------------------------------ optional ---------------------------------- */
 void test8() {
-// CHECK-LABEL: define dso_local void @test8
-// CHECK-LE-LABEL: define dso_local void @test8
+// CHECK-LABEL: define void @test8
+// CHECK-LE-LABEL: define void @test8
   res_vbc = vec_reve(vbc);
   // CHECK: shufflevector <16 x i8> %{{[0-9]+}}, <16 x i8> %{{[0-9]+}}, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
   // CHECK-LE: shufflevector <16 x i8> %{{[0-9]+}}, <16 x i8> %{{[0-9]+}}, <16 x i32> <i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
@@ -9352,8 +9352,8 @@ void test8() {
 
 /* ------------------------------ vec_xl ------------------------------------ */
 void test9() {
-  // CHECK-LABEL: define dso_local void @test9
-  // CHECK-LE-LABEL: define dso_local void @test9
+  // CHECK-LABEL: define void @test9
+  // CHECK-LE-LABEL: define void @test9
   res_vsc = vec_xl(param_sll, &param_sc);
   // CHECK: load <16 x i8>, <16 x i8>* %{{[0-9]+}}, align 1
   // CHECK-LE: load <16 x i8>, <16 x i8>* %{{[0-9]+}}, align 1
@@ -9385,8 +9385,8 @@ void test9() {
 
 /* ------------------------------ vec_xst ----------------------------------- */
 void test10() {
-  // CHECK-LABEL: define dso_local void @test10
-  // CHECK-LE-LABEL: define dso_local void @test10
+  // CHECK-LABEL: define void @test10
+  // CHECK-LE-LABEL: define void @test10
   vec_xst(vsc, param_sll, &param_sc);
   // CHECK: store <16 x i8> %{{[0-9]+}}, <16 x i8>* %{{[0-9]+}}, align 1
   // CHECK-LE: store <16 x i8> %{{[0-9]+}}, <16 x i8>* %{{[0-9]+}}, align 1
@@ -9418,8 +9418,8 @@ void test10() {
 
 /* ----------------------------- vec_xl_be ---------------------------------- */
 void test11() {
-  // CHECK-LABEL: define dso_local void @test11
-  // CHECK-LE-LABEL: define dso_local void @test11
+  // CHECK-LABEL: define void @test11
+  // CHECK-LE-LABEL: define void @test11
   res_vsc = vec_xl_be(param_sll, &param_sc);
   // CHECK: load <16 x i8>, <16 x i8>* %{{[0-9]+}}, align 1
   // CHECK-LE: call <2 x double> @llvm.ppc.vsx.lxvd2x.be(i8* %{{[0-9]+}})
@@ -9455,8 +9455,8 @@ void test11() {
 
 /* ----------------------------- vec_xst_be --------------------------------- */
 void test12() {
-  // CHECK-LABEL: define dso_local void @test12
-  // CHECK-LE-LABEL: define dso_local void @test12
+  // CHECK-LABEL: define void @test12
+  // CHECK-LE-LABEL: define void @test12
   vec_xst_be(vsc, param_sll, &param_sc);
   // CHECK: store <16 x i8> %{{[0-9]+}}, <16 x i8>* %{{[0-9]+}}, align 1
   // CHECK-LE: shufflevector <16 x i8> %{{[0-9]+}}, <16 x i8> %{{[0-9]+}}, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>

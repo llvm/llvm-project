@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm -o - %s -fsemantic-interposition | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 // CHECK: @test2 = alias i32 (), i32 ()* @_Z5test1v
 
@@ -26,7 +26,7 @@ void C::bar3() { }
 void C::bar4() { }
 
 // PR6635
-// CHECK-LABEL: define dso_local i32 @_Z5test1v()
+// CHECK-LABEL: define i32 @_Z5test1v()
 int test1() { return 10; }
 // CHECK at top of file
 extern "C" int test2() __attribute__((alias("_Z5test1v")));

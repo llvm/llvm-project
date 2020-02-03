@@ -21,7 +21,7 @@
 
 double *g;
 
-// CK1: @g = dso_local global double*
+// CK1: @g = global double*
 // CK1: [[MTYPE00:@.+]] = {{.*}}constant [1 x i64] [i64 99]
 // CK1: [[MTYPE01:@.+]] = {{.*}}constant [1 x i64] [i64 99]
 // CK1: [[MTYPE03:@.+]] = {{.*}}constant [1 x i64] [i64 99]

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple=armv7-unknown-unknown -emit-llvm -o - -fsemantic-interposition | FileCheck %s
-// RUN: %clang_cc1 %s -triple=armv7-unknown-unknown -emit-llvm -o - -fsemantic-interposition | FileCheck -check-prefix=CHECK-LATE %s
+// RUN: %clang_cc1 %s -triple=armv7-unknown-unknown -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=armv7-unknown-unknown -emit-llvm -o - | FileCheck -check-prefix=CHECK-LATE %s
 
 // The 'a' variants ask for the vtable first.
 // The 'b' variants ask for the vtable second.
