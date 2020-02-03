@@ -1486,7 +1486,7 @@ Value *InstCombiner::Descale(Value *Val, APInt Scale, bool &NoSignedWrap) {
   assert(Op != Parent.first->getOperand(Parent.second) &&
          "Descaling was a no-op?");
   Parent.first->setOperand(Parent.second, Op);
-  Worklist.Add(Parent.first);
+  Worklist.push(Parent.first);
 
   // Now work back up the expression correcting nsw flags.  The logic is based
   // on the following observation: if X * Y is known not to overflow as a signed
@@ -1504,7 +1504,7 @@ Value *InstCombiner::Descale(Value *Val, APInt Scale, bool &NoSignedWrap) {
       NoSignedWrap &= OpNoSignedWrap;
       if (NoSignedWrap != OpNoSignedWrap) {
         BO->setHasNoSignedWrap(NoSignedWrap);
-        Worklist.Add(Ancestor);
+        Worklist.push(Ancestor);
       }
     } else if (Ancestor->getOpcode() == Instruction::Trunc) {
       // The fact that the descaled input to the trunc has smaller absolute
@@ -2741,7 +2741,7 @@ Instruction *InstCombiner::visitReturnInst(ReturnInst &RI) {
   // determine the value. If so, constant fold it.
   KnownBits Known = computeKnownBits(ResultOp, 0, &RI);
   if (Known.isConstant()) {
-    Worklist.AddValue(ResultOp);
+    Worklist.pushValue(ResultOp);
     RI.setOperand(0, Constant::getIntegerValue(VTy, Known.getConstant()));
     return &RI;
   }
@@ -2777,7 +2777,7 @@ Instruction *InstCombiner::visitBranchInst(BranchInst &BI) {
     CmpInst *Cond = cast<CmpInst>(BI.getCondition());
     Cond->setPredicate(CmpInst::getInversePredicate(Pred));
     BI.swapSuccessors();
-    Worklist.Add(Cond);
+    Worklist.push(Cond);
     return &BI;
   }
 
@@ -3409,7 +3409,7 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock) {
 
 bool InstCombiner::run() {
   while (!Worklist.isEmpty()) {
-    Instruction *I = Worklist.RemoveOne();
+    Instruction *I = Worklist.removeOne();
     if (I == nullptr) continue;  // skip null values.
 
     // Check to see if we can DCE the instruction.
@@ -3495,7 +3495,7 @@ bool InstCombiner::run() {
             // worklist
             for (Use &U : I->operands())
               if (Instruction *OpI = dyn_cast<Instruction>(U.get()))
-                Worklist.Add(OpI);
+                Worklist.push(OpI);
           }
         }
       }
@@ -3538,8 +3538,8 @@ bool InstCombiner::run() {
         InstParent->getInstList().insert(InsertPos, Result);
 
         // Push the new instruction and any users onto the worklist.
-        Worklist.AddUsersToWorkList(*Result);
-        Worklist.Add(Result);
+        Worklist.pushUsersToWorkList(*Result);
+        Worklist.push(Result);
 
         eraseInstFromFunction(*I);
       } else {
@@ -3551,16 +3551,16 @@ bool InstCombiner::run() {
         if (isInstructionTriviallyDead(I, &TLI)) {
           eraseInstFromFunction(*I);
         } else {
-          Worklist.AddUsersToWorkList(*I);
-          Worklist.Add(I);
+          Worklist.pushUsersToWorkList(*I);
+          Worklist.push(I);
         }
       }
       MadeIRChange = true;
     }
-    Worklist.AddDeferredInstructions();
+    Worklist.addDeferredInstructions();
   }
 
-  Worklist.Zap();
+  Worklist.zap();
   return MadeIRChange;
 }
 
@@ -3684,7 +3684,7 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
   // of the function down.  This jives well with the way that it adds all uses
   // of instructions to the worklist after doing a transformation, thus avoiding
   // some N^2 behavior in pathological cases.
-  ICWorklist.AddInitialGroup(InstrsForInstCombineWorklist);
+  ICWorklist.addInitialGroup(InstrsForInstCombineWorklist);
 
   return MadeIRChange;
 }
@@ -3737,7 +3737,7 @@ static bool combineInstructionsOverFunction(
   IRBuilder<TargetFolder, IRBuilderCallbackInserter> Builder(
       F.getContext(), TargetFolder(DL),
       IRBuilderCallbackInserter([&Worklist, &AC](Instruction *I) {
-        Worklist.AddDeferred(I);
+        Worklist.add(I);
         if (match(I, m_Intrinsic<Intrinsic::assume>()))
           AC.registerAssumption(cast<CallInst>(I));
       }));

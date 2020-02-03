@@ -4898,7 +4898,7 @@ bool InstCombiner::transformConstExprCastCall(CallBase &Call) {
         // Otherwise, it's a call, just insert cast right after the call.
         InsertNewInstBefore(NC, *Caller);
       }
-      Worklist.AddUsersToWorkList(*Caller);
+      Worklist.pushUsersToWorkList(*Caller);
     } else {
       NV = UndefValue::get(Caller->getType());
     }

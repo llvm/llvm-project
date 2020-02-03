@@ -1309,7 +1309,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
     // If this is inserting an element that isn't demanded, remove this
     // insertelement.
     if (IdxNo >= VWidth || !DemandedElts[IdxNo]) {
-      Worklist.Add(I);
+      Worklist.push(I);
       return I->getOperand(0);
     }
 
@@ -1590,7 +1590,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
       // use Arg0 if DemandedElts[0] is clear like we do for other intrinsics.
       // Instead we should return a zero vector.
       if (!DemandedElts[0]) {
-        Worklist.Add(II);
+        Worklist.push(II);
         return ConstantAggregateZero::get(II->getType());
       }
 
@@ -1609,7 +1609,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
 
       // If lowest element of a scalar op isn't used then use Arg0.
       if (!DemandedElts[0]) {
-        Worklist.Add(II);
+        Worklist.push(II);
         return II->getArgOperand(0);
       }
       // TODO: If only low elt lower SQRT to FSQRT (with rounding/exceptions
@@ -1629,7 +1629,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
 
       // If lowest element of a scalar op isn't used then use Arg0.
       if (!DemandedElts[0]) {
-        Worklist.Add(II);
+        Worklist.push(II);
         return II->getArgOperand(0);
       }
 
@@ -1656,7 +1656,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
 
       // If lowest element of a scalar op isn't used then use Arg0.
       if (!DemandedElts[0]) {
-        Worklist.Add(II);
+        Worklist.push(II);
         return II->getArgOperand(0);
       }
 
@@ -1690,7 +1690,7 @@ Value *InstCombiner::SimplifyDemandedVectorElts(Value *V, APInt DemandedElts,
 
       // If lowest element of a scalar op isn't used then use Arg0.
       if (!DemandedElts[0]) {
-        Worklist.Add(II);
+        Worklist.push(II);
         return II->getArgOperand(0);
       }
 

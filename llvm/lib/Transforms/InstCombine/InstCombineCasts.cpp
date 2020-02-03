@@ -1821,7 +1821,7 @@ Instruction *InstCombiner::commonPointerCastTransforms(CastInst &CI) {
       // Changing the cast operand is usually not a good idea but it is safe
       // here because the pointer operand is being replaced with another
       // pointer operand so the opcode doesn't need to change.
-      Worklist.Add(GEP);
+      Worklist.push(GEP);
       CI.setOperand(0, GEP->getOperand(0));
       return &CI;
     }
@@ -2363,7 +2363,7 @@ Instruction *InstCombiner::optimizeBitCastFromPhi(CastInst &CI, PHINode *PN) {
         auto *NewBC =
           cast<BitCastInst>(Builder.CreateBitCast(NewPN, SrcTy));
         SI->setOperand(0, NewBC);
-        Worklist.Add(SI);
+        Worklist.push(SI);
         assert(hasStoreUsersOnly(*NewBC));
       }
       else if (auto *BCI = dyn_cast<BitCastInst>(V)) {

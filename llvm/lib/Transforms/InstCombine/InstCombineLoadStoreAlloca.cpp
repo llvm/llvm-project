@@ -973,7 +973,7 @@ Instruction *InstCombiner::visitLoadInst(LoadInst &LI) {
 
   // Replace GEP indices if possible.
   if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Op, LI)) {
-      Worklist.Add(NewGEPI);
+      Worklist.push(NewGEPI);
       return &LI;
   }
 
@@ -1384,7 +1384,7 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
 
   // Replace GEP indices if possible.
   if (Instruction *NewGEPI = replaceGEPIdxWithZero(*this, Ptr, SI)) {
-      Worklist.Add(NewGEPI);
+      Worklist.push(NewGEPI);
       return &SI;
   }
 
@@ -1434,7 +1434,7 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
         // Manually add back the original store to the worklist now, so it will
         // be processed after the operands of the removed store, as this may
         // expose additional DSE opportunities.
-        Worklist.Add(&SI);
+        Worklist.push(&SI);
         eraseInstFromFunction(*PrevSI);
         return nullptr;
       }
@@ -1466,7 +1466,7 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
     if (!isa<UndefValue>(Val)) {
       SI.setOperand(0, UndefValue::get(Val->getType()));
       if (Instruction *U = dyn_cast<Instruction>(Val))
-        Worklist.Add(U);  // Dropped a use.
+        Worklist.push(U);  // Dropped a use.
     }
     return nullptr;  // Do not modify these!
   }
