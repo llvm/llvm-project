@@ -59,7 +59,7 @@ if( LLVM_ENABLE_ASSERTIONS )
   if( NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
     # NOTE: use `add_compile_options` rather than `add_definitions` since
     # `add_definitions` does not support generator expressions.
-    add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:-UNDEBUG>)
+    add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
 
     # Also remove /D NDEBUG to avoid MSVC warnings about conflicting defines.
     foreach (flags_var_to_scrub
