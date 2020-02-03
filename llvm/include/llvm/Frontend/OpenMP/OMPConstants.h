@@ -20,7 +20,6 @@
 namespace llvm {
 class Type;
 class Module;
-class ArrayType;
 class StructType;
 class PointerType;
 class FunctionType;
@@ -86,9 +85,6 @@ StringRef getOpenMPDirectiveName(Directive D);
 namespace types {
 
 #define OMP_TYPE(VarName, InitValue) extern Type *VarName;
-#define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
-  extern ArrayType *VarName##Ty;                                               \
-  extern PointerType *VarName##PtrTy;
 #define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
   extern FunctionType *VarName;                                                \
   extern PointerType *VarName##Ptr;
