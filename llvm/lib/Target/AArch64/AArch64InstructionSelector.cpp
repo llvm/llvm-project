@@ -991,7 +991,7 @@ static void changeFCMPPredToAArch64CC(CmpInst::Predicate P,
 }
 
 /// Return a register which can be used as a bit to test in a TB(N)Z.
-static Register getTestBitReg(Register Reg, uint64_t &Bit,
+static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
                               MachineRegisterInfo &MRI) {
   assert(Reg.isValid() && "Expected valid register!");
   while (MachineInstr *MI = getDefIgnoringCopies(Reg, MRI)) {
@@ -1018,7 +1018,8 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit,
     switch (Opc) {
     default:
       break;
-    case TargetOpcode::G_AND: {
+    case TargetOpcode::G_AND:
+    case TargetOpcode::G_XOR: {
       TestReg = MI->getOperand(1).getReg();
       Register ConstantReg = MI->getOperand(2).getReg();
       auto VRegAndVal = getConstantVRegValWithLookThrough(ConstantReg, MRI);
@@ -1065,6 +1066,19 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit,
         NextReg = TestReg;
         Bit = Bit - *C;
       }
+      break;
+    case TargetOpcode::G_XOR:
+      // We can walk through a G_XOR by inverting whether we use tbz/tbnz when
+      // appropriate.
+      //
+      // e.g. If x' = xor x, c, and the b-th bit is set in c then
+      //
+      // tbz x', b -> tbnz x, b
+      //
+      // Because x' only has the b-th bit set if x does not.
+      if ((*C >> Bit) & 1)
+        Invert = !Invert;
+      NextReg = TestReg;
       break;
     }
 
@@ -1124,20 +1138,21 @@ bool AArch64InstructionSelector::tryOptAndIntoCompareBranch(
   // Try to optimize the TB(N)Z.
   uint64_t Bit = Log2_64(static_cast<uint64_t>(MaybeBit->Value));
   Register TestReg = AndInst->getOperand(1).getReg();
-  TestReg = getTestBitReg(TestReg, Bit, MRI);
+  bool Invert = Pred == CmpInst::Predicate::ICMP_NE;
+  TestReg = getTestBitReg(TestReg, Bit, Invert, MRI);
 
   // Choose the correct TB(N)Z opcode to use.
   unsigned Opc = 0;
   if (Bit < 32) {
     // When the bit is less than 32, we have to use a TBZW even if we're on a 64
     // bit register.
-    Opc = Pred == CmpInst::Predicate::ICMP_EQ ? AArch64::TBZW : AArch64::TBNZW;
+    Opc = Invert ? AArch64::TBNZW : AArch64::TBZW;
     TestReg = narrowExtendRegIfNeeded(TestReg, MIB);
   } else {
     // Same idea for when Bit >= 32. We don't have to narrow here, because if
     // Bit > 32, then the G_CONSTANT must be outside the range of valid 32-bit
     // values. So, we must have a s64.
-    Opc = Pred == CmpInst::Predicate::ICMP_EQ ? AArch64::TBZX : AArch64::TBNZX;
+    Opc = Invert ? AArch64::TBNZX : AArch64::TBZX;
   }
 
   // Construct the branch.
