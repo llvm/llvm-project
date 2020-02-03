@@ -847,18 +847,16 @@ struct TUScheduler::FileData {
 };
 
 TUScheduler::TUScheduler(const GlobalCompilationDatabase &CDB,
-                         unsigned AsyncThreadsCount,
-                         bool StorePreamblesInMemory,
-                         std::unique_ptr<ParsingCallbacks> Callbacks,
-                         std::chrono::steady_clock::duration UpdateDebounce,
-                         ASTRetentionPolicy RetentionPolicy)
-    : CDB(CDB), StorePreamblesInMemory(StorePreamblesInMemory),
+                         const Options &Opts,
+                         std::unique_ptr<ParsingCallbacks> Callbacks)
+    : CDB(CDB), StorePreamblesInMemory(Opts.StorePreamblesInMemory),
       Callbacks(Callbacks ? move(Callbacks)
                           : std::make_unique<ParsingCallbacks>()),
-      Barrier(AsyncThreadsCount),
-      IdleASTs(std::make_unique<ASTCache>(RetentionPolicy.MaxRetainedASTs)),
-      UpdateDebounce(UpdateDebounce) {
-  if (0 < AsyncThreadsCount) {
+      Barrier(Opts.AsyncThreadsCount),
+      IdleASTs(
+          std::make_unique<ASTCache>(Opts.RetentionPolicy.MaxRetainedASTs)),
+      UpdateDebounce(Opts.UpdateDebounce) {
+  if (0 < Opts.AsyncThreadsCount) {
     PreambleTasks.emplace();
     WorkerThreads.emplace();
   }
