@@ -49,8 +49,9 @@ private:
 };
 }
 
-ClangASTSource::ClangASTSource(const lldb::TargetSP &target,
-                               const lldb::ClangASTImporterSP &importer)
+ClangASTSource::ClangASTSource(
+    const lldb::TargetSP &target,
+    const std::shared_ptr<ClangASTImporter> &importer)
     : m_import_in_progress(false), m_lookups_enabled(false), m_target(target),
       m_ast_context(nullptr), m_ast_importer_sp(importer),
       m_active_lexical_decls(), m_active_lookups() {

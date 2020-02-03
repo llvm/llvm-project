@@ -31,6 +31,9 @@
 
 namespace lldb_private {
 
+class ClangASTMetadata;
+class TypeSystemClang;
+
 class ClangASTImporter {
 public:
   struct LayoutInfo {

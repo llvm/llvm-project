@@ -28,6 +28,7 @@ class CommandObjectObjC_ClassTable_Dump;
 
 namespace lldb_private {
 
+class TypeSystemClang;
 class UtilityFunction;
 
 class ObjCLanguageRuntime : public LanguageRuntime {

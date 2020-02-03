@@ -896,7 +896,7 @@ void ClangUserExpression::ClangUserExpressionHelper::ResetDeclMap(
     Materializer::PersistentVariableDelegate &delegate,
     bool keep_result_in_memory,
     ValueObject *ctx_obj) {
-  lldb::ClangASTImporterSP ast_importer;
+  std::shared_ptr<ClangASTImporter> ast_importer;
   auto *state = exe_ctx.GetTargetSP()->GetPersistentExpressionStateForLanguage(
       lldb::eLanguageTypeC);
   if (state) {
