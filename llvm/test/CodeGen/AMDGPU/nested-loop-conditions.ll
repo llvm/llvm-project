@@ -24,7 +24,7 @@
 ; IR: bb10:
 ; IR-NEXT: %tmp11 = phi i32 [ %6, %Flow ]
 ; IR-NEXT: %tmp12 = phi i1 [ %5, %Flow ]
-; IR-NEXT: %3 = call i64 @llvm.amdgcn.if.break.i64.i64(i1 %tmp12, i64 %phi.broken)
+; IR-NEXT: %3 = call i64 @llvm.amdgcn.if.break.i64(i1 %tmp12, i64 %phi.broken)
 ; IR-NEXT: %4 = call i1 @llvm.amdgcn.loop.i64(i64 %3)
 ; IR-NEXT: br i1 %4, label %bb23, label %bb5
 
@@ -150,7 +150,7 @@ bb23:                                             ; preds = %bb10
 ; IR-NEXT: %14 = phi i1 [ %18, %bb21 ], [ false, %bb14 ]
 ; IR-NEXT: %15 = phi i1 [ false, %bb21 ], [ true, %bb14 ]
 ; IR-NEXT: call void @llvm.amdgcn.end.cf.i64(i64 %10)
-; IR-NEXT: %16 = call i64 @llvm.amdgcn.if.break.i64.i64(i1 %13, i64 %phi.broken)
+; IR-NEXT: %16 = call i64 @llvm.amdgcn.if.break.i64(i1 %13, i64 %phi.broken)
 ; IR-NEXT: %17 = call i1 @llvm.amdgcn.loop.i64(i64 %16)
 ; IR-NEXT: br i1 %17, label %Flow2, label %bb14
 
