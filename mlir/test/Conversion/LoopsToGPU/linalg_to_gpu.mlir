@@ -14,7 +14,6 @@ func @foo(%arg0: memref<?xf32>, %arg1 : index) {
       // CHECK:      gpu.launch
       // CHECK-SAME: blocks
       // CHECK-SAME: threads
-      // CHECK-SAME: args
 
       // Replacements of loop induction variables.  Take a product with the
       // step and add the lower bound.
