@@ -621,11 +621,11 @@ bool InstCombiner::simplifyDivRemOfSelectWithZeroOp(BinaryOperator &I) {
          I != E; ++I) {
       if (*I == SI) {
         *I = SI->getOperand(NonNullOperand);
-        Worklist.Add(&*BBI);
+        Worklist.push(&*BBI);
       } else if (*I == SelectCond) {
         *I = NonNullOperand == 1 ? ConstantInt::getTrue(CondTy)
                                  : ConstantInt::getFalse(CondTy);
-        Worklist.Add(&*BBI);
+        Worklist.push(&*BBI);
       }
     }
 
@@ -1418,7 +1418,7 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
     const APInt *Y;
     // X % -Y -> X % Y
     if (match(Op1, m_Negative(Y)) && !Y->isMinSignedValue()) {
-      Worklist.AddValue(I.getOperand(1));
+      Worklist.pushValue(I.getOperand(1));
       I.setOperand(1, ConstantInt::get(I.getType(), -*Y));
       return &I;
     }
@@ -1469,7 +1469,7 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
 
       Constant *NewRHSV = ConstantVector::get(Elts);
       if (NewRHSV != C) {  // Don't loop on -MININT
-        Worklist.AddValue(I.getOperand(1));
+        Worklist.pushValue(I.getOperand(1));
         I.setOperand(1, NewRHSV);
         return &I;
       }

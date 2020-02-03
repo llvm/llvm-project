@@ -2404,7 +2404,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     SI.setOperand(1, FalseVal);
     SI.setOperand(2, TrueVal);
     SI.swapProfMetadata();
-    Worklist.Add(Cond);
+    Worklist.push(Cond);
     return &SI;
   }
 
@@ -2747,14 +2747,14 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     if (auto *TrueBOSI = dyn_cast<SelectInst>(TrueBO->getOperand(0))) {
       if (TrueBOSI->getCondition() == CondVal) {
         TrueBO->setOperand(0, TrueBOSI->getTrueValue());
-        Worklist.Add(TrueBO);
+        Worklist.push(TrueBO);
         return &SI;
       }
     }
     if (auto *TrueBOSI = dyn_cast<SelectInst>(TrueBO->getOperand(1))) {
       if (TrueBOSI->getCondition() == CondVal) {
         TrueBO->setOperand(1, TrueBOSI->getTrueValue());
-        Worklist.Add(TrueBO);
+        Worklist.push(TrueBO);
         return &SI;
       }
     }
@@ -2767,14 +2767,14 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     if (auto *FalseBOSI = dyn_cast<SelectInst>(FalseBO->getOperand(0))) {
       if (FalseBOSI->getCondition() == CondVal) {
         FalseBO->setOperand(0, FalseBOSI->getFalseValue());
-        Worklist.Add(FalseBO);
+        Worklist.push(FalseBO);
         return &SI;
       }
     }
     if (auto *FalseBOSI = dyn_cast<SelectInst>(FalseBO->getOperand(1))) {
       if (FalseBOSI->getCondition() == CondVal) {
         FalseBO->setOperand(1, FalseBOSI->getFalseValue());
-        Worklist.Add(FalseBO);
+        Worklist.push(FalseBO);
         return &SI;
       }
     }
