@@ -175,6 +175,11 @@ clang-format
       }
     }
 
+- Option ``InsertTrailingCommas`` can be set to ``TCS_Wrapped`` to insert
+  trailing commas in container literals (arrays and objects) that wrap across
+  multiple lines. It is currently only available for JavaScript and disabled by
+  default (``TCS_None``).
+
 libclang
 --------
 
