@@ -62,7 +62,7 @@ define float @bextr_uitofp(i32 %x, i32 %y) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl $3855, %eax # imm = 0xF0F
 ; X64-NEXT:    bextrl %eax, %edi, %eax
-; X64-NEXT:    cvtsi2ss %rax, %xmm0
+; X64-NEXT:    cvtsi2ss %eax, %xmm0
 ; X64-NEXT:    retq
   %1 = tail call i32 @llvm.x86.bmi.bextr.32(i32 %x, i32 3855)
   %2 = uitofp i32 %1 to float
