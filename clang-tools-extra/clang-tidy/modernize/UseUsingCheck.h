@@ -23,7 +23,7 @@ class UseUsingCheck : public ClangTidyCheck {
 
   const bool IgnoreMacros;
   SourceLocation LastReplacementEnd;
-  SourceRange LastCxxDeclRange;
+  SourceRange LastTagDeclRange;
   std::string FirstTypedefType;
   std::string FirstTypedefName;
 
