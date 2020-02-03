@@ -6450,6 +6450,37 @@ body: |
 
     ; CI-LABEL: name: test_load_constant_v16s32_align32
     ; CI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
+    ; CI: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p4) :: (load 64, align 32, addrspace 4)
+    ; CI: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[LOAD]](<16 x s32>)
+    ; VI-LABEL: name: test_load_constant_v16s32_align32
+    ; VI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
+    ; VI: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p4) :: (load 64, align 32, addrspace 4)
+    ; VI: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[LOAD]](<16 x s32>)
+    ; GFX9-LABEL: name: test_load_constant_v16s32_align32
+    ; GFX9: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
+    ; GFX9: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p4) :: (load 64, align 32, addrspace 4)
+    ; GFX9: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[LOAD]](<16 x s32>)
+    ; CI-MESA-LABEL: name: test_load_constant_v16s32_align32
+    ; CI-MESA: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
+    ; CI-MESA: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p4) :: (load 64, align 32, addrspace 4)
+    ; CI-MESA: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[LOAD]](<16 x s32>)
+    ; GFX9-MESA-LABEL: name: test_load_constant_v16s32_align32
+    ; GFX9-MESA: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
+    ; GFX9-MESA: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p4) :: (load 64, align 32, addrspace 4)
+    ; GFX9-MESA: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[LOAD]](<16 x s32>)
+    %0:_(p4) = COPY $vgpr0_vgpr1
+    %1:_(<16 x s32>) = G_LOAD %0 :: (load 64, align 32, addrspace 4)
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %1
+...
+
+---
+name: test_load_constant_v16s32_align32_extload_from_16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; CI-LABEL: name: test_load_constant_v16s32_align32_extload_from_16
+    ; CI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; CI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p4) :: (load 4, align 32, addrspace 4)
     ; CI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
     ; CI: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY]], [[C]](s64)
@@ -6498,7 +6529,7 @@ body: |
     ; CI: [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD14]](p4) :: (load 4, addrspace 4)
     ; CI: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32), [[LOAD8]](s32), [[LOAD9]](s32), [[LOAD10]](s32), [[LOAD11]](s32), [[LOAD12]](s32), [[LOAD13]](s32), [[LOAD14]](s32), [[LOAD15]](s32)
     ; CI: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[BUILD_VECTOR]](<16 x s32>)
-    ; VI-LABEL: name: test_load_constant_v16s32_align32
+    ; VI-LABEL: name: test_load_constant_v16s32_align32_extload_from_16
     ; VI: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; VI: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p4) :: (load 4, align 32, addrspace 4)
     ; VI: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
@@ -6548,7 +6579,7 @@ body: |
     ; VI: [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD14]](p4) :: (load 4, addrspace 4)
     ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32), [[LOAD8]](s32), [[LOAD9]](s32), [[LOAD10]](s32), [[LOAD11]](s32), [[LOAD12]](s32), [[LOAD13]](s32), [[LOAD14]](s32), [[LOAD15]](s32)
     ; VI: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[BUILD_VECTOR]](<16 x s32>)
-    ; GFX9-LABEL: name: test_load_constant_v16s32_align32
+    ; GFX9-LABEL: name: test_load_constant_v16s32_align32_extload_from_16
     ; GFX9: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; GFX9: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p4) :: (load 4, align 32, addrspace 4)
     ; GFX9: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
@@ -6598,7 +6629,7 @@ body: |
     ; GFX9: [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD14]](p4) :: (load 4, addrspace 4)
     ; GFX9: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32), [[LOAD8]](s32), [[LOAD9]](s32), [[LOAD10]](s32), [[LOAD11]](s32), [[LOAD12]](s32), [[LOAD13]](s32), [[LOAD14]](s32), [[LOAD15]](s32)
     ; GFX9: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[BUILD_VECTOR]](<16 x s32>)
-    ; CI-MESA-LABEL: name: test_load_constant_v16s32_align32
+    ; CI-MESA-LABEL: name: test_load_constant_v16s32_align32_extload_from_16
     ; CI-MESA: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; CI-MESA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p4) :: (load 4, align 32, addrspace 4)
     ; CI-MESA: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
@@ -6648,7 +6679,7 @@ body: |
     ; CI-MESA: [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD14]](p4) :: (load 4, addrspace 4)
     ; CI-MESA: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32), [[LOAD8]](s32), [[LOAD9]](s32), [[LOAD10]](s32), [[LOAD11]](s32), [[LOAD12]](s32), [[LOAD13]](s32), [[LOAD14]](s32), [[LOAD15]](s32)
     ; CI-MESA: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[BUILD_VECTOR]](<16 x s32>)
-    ; GFX9-MESA-LABEL: name: test_load_constant_v16s32_align32
+    ; GFX9-MESA-LABEL: name: test_load_constant_v16s32_align32_extload_from_16
     ; GFX9-MESA: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
     ; GFX9-MESA: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p4) :: (load 4, align 32, addrspace 4)
     ; GFX9-MESA: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
