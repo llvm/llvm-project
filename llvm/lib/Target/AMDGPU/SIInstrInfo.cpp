@@ -337,12 +337,14 @@ bool SIInstrInfo::getMemOperandsWithOffset(
       return true;
     }
 
-    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
-    if (!BaseOp)
+    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::srsrc);
+    if (!BaseOp) // e.g. BUFFER_WBINVL1_VOL
       return false;
-    const MachineOperand *RSrc = getNamedOperand(LdSt, AMDGPU::OpName::srsrc);
-    BaseOps.push_back(RSrc);
     BaseOps.push_back(BaseOp);
+
+    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
+    if (BaseOp)
+      BaseOps.push_back(BaseOp);
 
     const MachineOperand *OffsetImm =
         getNamedOperand(LdSt, AMDGPU::OpName::offset);

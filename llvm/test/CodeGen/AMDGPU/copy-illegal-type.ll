@@ -437,9 +437,9 @@ define amdgpu_kernel void @test_copy_v3i8_align4(<3 x i8> addrspace(1)* %out, <3
 ; VI-NEXT:    s_mov_b32 s4, s0
 ; VI-NEXT:    s_mov_b32 s5, s1
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; VI-NEXT:    buffer_store_short v0, off, s[4:7], 0
-; VI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; VI-NEXT:    buffer_store_byte v0, off, s[4:7], 0 offset:2
+; VI-NEXT:    buffer_store_byte v1, off, s[4:7], 0 offset:2
 ; VI-NEXT:    s_endpgm
   %tid.x = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <3 x i8>, <3 x i8> addrspace(1)* %in, i32 %tid.x
