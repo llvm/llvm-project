@@ -4384,6 +4384,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
 
+  if (Args.hasFlag(options::OPT_fsemantic_interposition,
+                   options::OPT_fno_semantic_interposition, false) &&
+      RelocationModel != llvm::Reloc::Static && !IsPIE)
+    CmdArgs.push_back("-fsemantic-interposition");
+
   CmdArgs.push_back("-mthread-model");
   if (Arg *A = Args.getLastArg(options::OPT_mthread_model)) {
     if (!TC.isThreadModelSupported(A->getValue()))
@@ -5035,10 +5040,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_femulated_tls,
                   options::OPT_fno_emulated_tls);
   Args.AddLastArg(CmdArgs, options::OPT_fkeep_static_consts);
-
-  if (Args.hasFlag(options::OPT_fsemantic_interposition,
-                   options::OPT_fno_semantic_interposition, false))
-    CmdArgs.push_back("-fsemantic-interposition");
 
   // AltiVec-like language extensions aren't relevant for assembling.
   if (!isa<PreprocessJobAction>(JA) || Output.getType() != types::TY_PP_Asm)
