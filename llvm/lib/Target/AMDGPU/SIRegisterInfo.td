@@ -612,7 +612,7 @@ def VReg_96 : RegisterClass<"AMDGPU", [v3i32, v3f32], 32, (add VGPR_96)> {
   let AllocationPriority = 3;
 }
 
-def VReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64], 32,
+def VReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v2i64, v2f64, i128], 32,
                              (add VGPR_128)> {
   let Size = 128;
 
