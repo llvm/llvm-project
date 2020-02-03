@@ -268,6 +268,11 @@ private:
   void SelectMVE_VLD(SDNode *N, unsigned NumVecs,
                      const uint16_t *const *Opcodes, bool HasWriteback);
 
+  /// SelectMVE_VxDUP - Select MVE incrementing-dup instructions. Opcodes is an
+  /// array of 3 elements for the 8, 16 and 32-bit lane sizes.
+  void SelectMVE_VxDUP(SDNode *N, const uint16_t *Opcodes,
+                       bool Wrapping, bool Predicated);
+
   /// SelectVLDDup - Select NEON load-duplicate intrinsics.  NumVecs
   /// should be 1, 2, 3 or 4.  The opcode array specifies the instructions used
   /// for loading D registers.
@@ -2738,6 +2743,49 @@ void ARMDAGToDAGISel::SelectMVE_VLD(SDNode *N, unsigned NumVecs,
   CurDAG->RemoveDeadNode(N);
 }
 
+void ARMDAGToDAGISel::SelectMVE_VxDUP(SDNode *N, const uint16_t *Opcodes,
+                                      bool Wrapping, bool Predicated) {
+  EVT VT = N->getValueType(0);
+  SDLoc Loc(N);
+
+  uint16_t Opcode;
+  switch (VT.getScalarSizeInBits()) {
+  case 8:
+    Opcode = Opcodes[0];
+    break;
+  case 16:
+    Opcode = Opcodes[1];
+    break;
+  case 32:
+    Opcode = Opcodes[2];
+    break;
+  default:
+    llvm_unreachable("bad vector element size in SelectMVE_VxDUP");
+  }
+
+  SmallVector<SDValue, 8> Ops;
+  unsigned OpIdx = 1;
+
+  SDValue Inactive;
+  if (Predicated)
+    Inactive = N->getOperand(OpIdx++);
+
+  Ops.push_back(N->getOperand(OpIdx++));     // base
+  if (Wrapping)
+    Ops.push_back(N->getOperand(OpIdx++));   // limit
+
+  SDValue ImmOp = N->getOperand(OpIdx++);    // step
+  int ImmValue = cast<ConstantSDNode>(ImmOp)->getZExtValue();
+  Ops.push_back(getI32Imm(ImmValue, Loc));
+
+  if (Predicated)
+    AddMVEPredicateToOps(Ops, Loc, N->getOperand(OpIdx), Inactive);
+  else
+    AddEmptyMVEPredicateToOps(Ops, Loc, N->getValueType(0));
+
+  CurDAG->SelectNodeTo(N, Opcode, N->getVTList(), makeArrayRef(Ops));
+}
+
 void ARMDAGToDAGISel::SelectVLDDup(SDNode *N, bool IsIntrinsic,
                                    bool isUpdating, unsigned NumVecs,
                                    const uint16_t *DOpcodes,
@@ -4624,6 +4672,46 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       };
       SelectMVE_VRMLLDAVH(N, IntNo == Intrinsic::arm_mve_vrmlldavha_predicated,
                           OpcodesS, OpcodesU);
+      return;
+    }
+
+    case Intrinsic::arm_mve_vidup:
+    case Intrinsic::arm_mve_vidup_predicated: {
+      static const uint16_t Opcodes[] = {
+          ARM::MVE_VIDUPu8, ARM::MVE_VIDUPu16, ARM::MVE_VIDUPu32,
+      };
+      SelectMVE_VxDUP(N, Opcodes, false,
+                      IntNo == Intrinsic::arm_mve_vidup_predicated);
+      return;
+    }
+
+    case Intrinsic::arm_mve_vddup:
+    case Intrinsic::arm_mve_vddup_predicated: {
+      static const uint16_t Opcodes[] = {
+          ARM::MVE_VDDUPu8, ARM::MVE_VDDUPu16, ARM::MVE_VDDUPu32,
+      };
+      SelectMVE_VxDUP(N, Opcodes, false,
+                      IntNo == Intrinsic::arm_mve_vddup_predicated);
+      return;
+    }
+
+    case Intrinsic::arm_mve_viwdup:
+    case Intrinsic::arm_mve_viwdup_predicated: {
+      static const uint16_t Opcodes[] = {
+          ARM::MVE_VIWDUPu8, ARM::MVE_VIWDUPu16, ARM::MVE_VIWDUPu32,
+      };
+      SelectMVE_VxDUP(N, Opcodes, true,
+                      IntNo == Intrinsic::arm_mve_viwdup_predicated);
+      return;
+    }
+
+    case Intrinsic::arm_mve_vdwdup:
+    case Intrinsic::arm_mve_vdwdup_predicated: {
+      static const uint16_t Opcodes[] = {
+          ARM::MVE_VDWDUPu8, ARM::MVE_VDWDUPu16, ARM::MVE_VDWDUPu32,
+      };
+      SelectMVE_VxDUP(N, Opcodes, true,
+                      IntNo == Intrinsic::arm_mve_vdwdup_predicated);
       return;
     }
     }
