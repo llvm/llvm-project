@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=1 -fmodules %s -o - -fsemantic-interposition | FileCheck %s --check-prefixes=CHECK,CHECK-IMPORT,CHECK-NO-NS,CHECK-IMPORT-NO-NS --implicit-check-not=unused
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=1 -DNS -fmodules %s -o - -fsemantic-interposition | FileCheck %s --check-prefixes=CHECK,CHECK-IMPORT,CHECK-NS,CHECK-IMPORT-NS --implicit-check-not=unused
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=2 -fmodules %s -o - -fsemantic-interposition | FileCheck %s --check-prefixes=CHECK,CHECK-NO-NS --implicit-check-not=unused
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=2 -DNS -fmodules %s -o - -fsemantic-interposition | FileCheck %s --check-prefixes=CHECK,CHECK-NS --implicit-check-not=unused
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -fmodules %s -o - -fsemantic-interposition | FileCheck %s --check-prefixes=CHECK,CHECK-NO-NS --implicit-check-not=unused
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DNS -fmodules %s -o - -fsemantic-interposition | FileCheck %s --check-prefixes=CHECK,CHECK-NS --implicit-check-not=unused
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=1 -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-IMPORT,CHECK-NO-NS,CHECK-IMPORT-NO-NS --implicit-check-not=unused
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=1 -DNS -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-IMPORT,CHECK-NS,CHECK-IMPORT-NS --implicit-check-not=unused
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=2 -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NO-NS --implicit-check-not=unused
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DIMPORT=2 -DNS -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NS --implicit-check-not=unused
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NO-NS --implicit-check-not=unused
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -emit-llvm -DNS -fmodules %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NS --implicit-check-not=unused
 
 // Check that we behave sensibly when importing a header containing strong and
 // weak, ordered and unordered global initializers.
@@ -123,8 +123,8 @@ inline void use(bool b, ...) {
 #pragma clang module load m
 #endif
 
-// CHECK-IMPORT-NO-NS-DAG: @[[A:a]] = dso_local global i32 0, align 4
-// CHECK-IMPORT-NO-NS-DAG: @[[B:b]] = linkonce_odr dso_local global i32 0, comdat, align 4
+// CHECK-IMPORT-NO-NS-DAG: @[[A:a]] = global i32 0, align 4
+// CHECK-IMPORT-NO-NS-DAG: @[[B:b]] = linkonce_odr global i32 0, comdat, align 4
 // CHECK-IMPORT-NO-NS-DAG: @[[C:c]] = thread_local global i32 0, align 4
 // CHECK-IMPORT-NO-NS-DAG: @[[D:d]] = linkonce_odr thread_local global i32 0, comdat, align 4
 // CHECK-NO-NS-DAG: @[[E:_Z1eIiE]] = linkonce_odr global i32 0, comdat, align 4

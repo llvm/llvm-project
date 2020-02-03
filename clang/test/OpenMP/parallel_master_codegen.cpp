@@ -25,7 +25,7 @@ void parallel_master() {
   foo();
 }
 
-// CK1-LABEL: define dso_local void @{{.+}}parallel_master{{.+}}
+// CK1-LABEL: define void @{{.+}}parallel_master{{.+}}
 // CK1:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*))
 
 // CK1:       define internal {{.*}}void [[OMP_OUTLINED]](i32* noalias [[GTID:%.+]], i32* noalias [[BTID:%.+]])
@@ -60,7 +60,7 @@ void parallel_master_private() {
   a++;
 }
 
-// CK2-LABEL: define dso_local void @{{.+}}parallel_master_private{{.+}}
+// CK2-LABEL: define void @{{.+}}parallel_master_private{{.+}}
 // CK2:       [[A_PRIV:%.+]] = alloca i32
 // CK2:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*))
 
@@ -96,7 +96,7 @@ void parallel_master_private() {
   a++;
 }
 
-// CK3-LABEL: define dso_local void @{{.+}}parallel_master{{.+}}
+// CK3-LABEL: define void @{{.+}}parallel_master{{.+}}
 // CK3:       [[A_VAL:%.+]] = alloca i32
 // CK3:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* {{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* [[OMP_OUTLINED:@.+]] to void 
 
@@ -139,7 +139,7 @@ void parallel_master_firstprivate() {
   a++;
 }
 
-// CK4-LABEL: define dso_local void @{{.+}}parallel_master_firstprivate{{.+}}
+// CK4-LABEL: define void @{{.+}}parallel_master_firstprivate{{.+}}
 // CK4:       [[A_VAL:%.+]] = alloca i32
 // CK4:       [[A_CASTED:%.+]] = alloca i64
 // CK4:       [[ZERO:%.+]] = load i32, i32* [[A_VAL]]
@@ -206,10 +206,10 @@ void parallel_master_copyin() {
   a++;
 }
 
-// CK5-LABEL: define dso_local void @{{.+}}parallel_master_copyin{{.+}}
+// CK5-LABEL: define void @{{.+}}parallel_master_copyin{{.+}}
 // CK5:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_1]], i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*))
 // CK5: ret void
-// TLS-CHECK-LABEL: define dso_local void @{{.+}}parallel_master_copyin{{.+}}
+// TLS-CHECK-LABEL: define void @{{.+}}parallel_master_copyin{{.+}}
 // TLS-CHECK:       call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* [[DEF_LOC_2]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* [[OMP_OUTLINED:@.+]] to void (i32*, i32*, ...)*)
 // TLS-CHECK: ret void
 

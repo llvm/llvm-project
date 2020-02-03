@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -o - %s -fsemantic-interposition | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 #pragma GCC visibility push(hidden)
 struct x {
@@ -42,7 +42,7 @@ template<> void x5<int>::y() {}
 #pragma GCC visibility push(hidden)
 namespace n __attribute((visibility("default"))) {
   void f() {}
-  // CHECK-LABEL: define dso_local void @_ZN1n1fEv
+  // CHECK-LABEL: define void @_ZN1n1fEv
 }
 #pragma GCC visibility pop
 
@@ -70,5 +70,5 @@ namespace test2 {
     bar<int>::f();
   }
   // CHECK-LABEL: define linkonce_odr hidden void @_ZN5test23barINS_3fooEE1fEv
-  // CHECK-LABEL: define linkonce_odr dso_local void @_ZN5test23barIiE1fEv
+  // CHECK-LABEL: define linkonce_odr void @_ZN5test23barIiE1fEv
 }

@@ -13,13 +13,13 @@ void foo() {
   s.Func();
 }
 
-// LINUX: @_ZN1S4FuncEv = weak_odr dso_local alias void (%struct.S*), void (%struct.S*)* @_ZN1S4FuncEv.ifunc
-// LINUX: @_ZN1S4FuncEv.ifunc = weak_odr dso_local ifunc void (%struct.S*), void (%struct.S*)* ()* @_ZN1S4FuncEv.resolver
+// LINUX: @_ZN1S4FuncEv = weak_odr alias void (%struct.S*), void (%struct.S*)* @_ZN1S4FuncEv.ifunc
+// LINUX: @_ZN1S4FuncEv.ifunc = weak_odr ifunc void (%struct.S*), void (%struct.S*)* ()* @_ZN1S4FuncEv.resolver
 // LINUX: define weak_odr void (%struct.S*)* @_ZN1S4FuncEv.resolver
 // LINUX: ret void (%struct.S*)* @_ZN1S4FuncEv.S
 // LINUX: ret void (%struct.S*)* @_ZN1S4FuncEv.O
 // LINUX: declare void @_ZN1S4FuncEv.S
-// LINUX: define linkonce_odr dso_local void @_ZN1S4FuncEv.O
+// LINUX: define linkonce_odr void @_ZN1S4FuncEv.O
 
 // WINDOWS: define weak_odr dso_local void @"?Func@S@@QEAAXXZ"(%struct.S* %0) comdat
 // WINDOWS: musttail call void @"?Func@S@@QEAAXXZ.S"(%struct.S* %0)

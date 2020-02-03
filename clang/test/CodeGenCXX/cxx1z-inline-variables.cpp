@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -std=c++1z %s -emit-llvm -o - -triple x86_64-linux-gnu -fsemantic-interposition | FileCheck %s
+// RUN: %clang_cc1 -std=c++1z %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
 
 struct Q {
-  // CHECK: @_ZN1Q1kE = linkonce_odr dso_local constant i32 5, comdat
+  // CHECK: @_ZN1Q1kE = linkonce_odr constant i32 5, comdat
   static constexpr int k = 5;
 };
 const int &r = Q::k;
@@ -9,7 +9,7 @@ const int &r = Q::k;
 int f();
 
 // const does not imply internal linkage.
-// CHECK: @external_inline = linkonce_odr dso_local constant i32 5, comdat
+// CHECK: @external_inline = linkonce_odr constant i32 5, comdat
 inline const int external_inline = 5;
 const int &use1 = external_inline;
 
@@ -19,8 +19,8 @@ static inline const int internal_inline = 5;
 const int &use2 = internal_inline;
 
 int a = f();
-// CHECK: @b = linkonce_odr dso_local global i32 0, comdat
-// CHECK: @_ZGV1b = linkonce_odr dso_local global i64 0, comdat($b)
+// CHECK: @b = linkonce_odr global i32 0, comdat
+// CHECK: @_ZGV1b = linkonce_odr global i64 0, comdat($b)
 inline int b = f();
 int c = f();
 
@@ -46,13 +46,13 @@ constexpr inline int compat::g;
 const int &compat_use_after_redecl1 = compat::c;
 const int &compat_use_after_redecl2 = compat::d;
 const int &compat_use_after_redecl3 = compat::g;
-// CHECK-DAG: @_ZN6compat1bE = weak_odr dso_local constant i32 2
-// CHECK-DAG: @_ZN6compat1aE = weak_odr dso_local constant i32 1
-// CHECK-DAG: @_ZN6compat1cE = weak_odr dso_local constant i32 3
-// CHECK-DAG: @_ZN6compat1dE = linkonce_odr dso_local constant i32 4
-// CHECK-DAG: @_ZN6compat1eE = dso_local constant i32 5
-// CHECK-DAG: @_ZN6compat1fE = weak_odr dso_local constant i32 6
-// CHECK-DAG: @_ZN6compat1gE = linkonce_odr dso_local constant i32 7
+// CHECK-DAG: @_ZN6compat1bE = weak_odr constant i32 2
+// CHECK-DAG: @_ZN6compat1aE = weak_odr constant i32 1
+// CHECK-DAG: @_ZN6compat1cE = weak_odr constant i32 3
+// CHECK-DAG: @_ZN6compat1dE = linkonce_odr constant i32 4
+// CHECK-DAG: @_ZN6compat1eE = constant i32 5
+// CHECK-DAG: @_ZN6compat1fE = weak_odr constant i32 6
+// CHECK-DAG: @_ZN6compat1gE = linkonce_odr constant i32 7
 
 template<typename T> struct X {
   static int a;
@@ -61,11 +61,11 @@ template<typename T> struct X {
   static const int d;
   static int e;
 };
-// CHECK: @_ZN1XIiE1aE = linkonce_odr dso_local global i32 10
-// CHECK: @_ZN1XIiE1bE = dso_local global i32 20
+// CHECK: @_ZN1XIiE1aE = linkonce_odr global i32 10
+// CHECK: @_ZN1XIiE1bE = global i32 20
 // CHECK-NOT: @_ZN1XIiE1cE
-// CHECK: @_ZN1XIiE1dE = linkonce_odr dso_local constant i32 40
-// CHECK: @_ZN1XIiE1eE = linkonce_odr dso_local global i32 50
+// CHECK: @_ZN1XIiE1dE = linkonce_odr constant i32 40
+// CHECK: @_ZN1XIiE1eE = linkonce_odr global i32 50
 template<> inline int X<int>::a = 10;
 int &use3 = X<int>::a;
 template<> int X<int>::b = 20;

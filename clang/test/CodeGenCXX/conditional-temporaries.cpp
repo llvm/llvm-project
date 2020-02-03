@@ -42,7 +42,7 @@ Checker c;
 
 }
 
-// CHECK-OPT-LABEL: define dso_local i32 @_Z12getCtorCallsv()
+// CHECK-OPT-LABEL: define i32 @_Z12getCtorCallsv()
 int getCtorCalls() {
   // CHECK-LEGACY-OPT: ret i32 5
   // X64-NEWPM-OPT: ret i32 5

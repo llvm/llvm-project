@@ -14,16 +14,16 @@ v4sf foo1(struct ssf a, v4sf b, struct ssf2 c) {
   return a.v + b;
 }
 
-// ALL-LABEL: define dso_local <4 x float> @foo1(<4 x float> inreg %a.coerce, <4 x float> %b, [2 x i128] %c.coerce)
+// ALL-LABEL: define <4 x float> @foo1(<4 x float> inreg %a.coerce, <4 x float> %b, [2 x i128] %c.coerce)
 // ALL: ret <4 x float>
 
 v4df foo2(struct sdf a, v4df b, struct sdf2 c) {
   return a.v + b;
 }
 
-// QPX-LABEL: define dso_local <4 x double> @foo2(<4 x double> inreg %a.coerce, <4 x double> %b, [2 x i256] %c.coerce)
+// QPX-LABEL: define <4 x double> @foo2(<4 x double> inreg %a.coerce, <4 x double> %b, [2 x i256] %c.coerce)
 // QPX: ret <4 x double>
 
-// NORMAL-LABEL: define dso_local void @foo2(<4 x double>* noalias sret %agg.result, [2 x i128] %a.coerce, <4 x double>* %0, [4 x i128] %c.coerce)
+// NORMAL-LABEL: define void @foo2(<4 x double>* noalias sret %agg.result, [2 x i128] %a.coerce, <4 x double>* %0, [4 x i128] %c.coerce)
 // NORMAL: ret void
 

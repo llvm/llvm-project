@@ -20,7 +20,7 @@ volatile double d0;
 short s0;
 
 void foo(void) {
-  // CHECK-LABEL: define dso_local void @foo()
+  // CHECK-LABEL: define void @foo()
 
   // Check unary ops
 

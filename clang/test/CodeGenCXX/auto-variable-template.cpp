@@ -8,7 +8,7 @@ template <typename T> auto vtemplate = f{};
 
 int main() { vtemplate<int>(); }
 
-// CHECK: @_Z9vtemplateIiE = linkonce_odr dso_local global %struct.f undef, comdat
+// CHECK: @_Z9vtemplateIiE = linkonce_odr global %struct.f undef, comdat
 
-// CHECK: define dso_local i32 @main()
+// CHECK: define i32 @main()
 // CHECK: call void @_ZNK1fclEv(%struct.f* @_Z9vtemplateIiE)

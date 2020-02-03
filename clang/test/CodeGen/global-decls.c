@@ -5,12 +5,12 @@ extern int g0_ext __attribute__((weak));
 // RUN: grep 'declare extern_weak i32 @g1_ext()' %t
 extern int __attribute__((weak)) g1_ext (void);
 
-// RUN: grep '@g0_common = weak dso_local global i32' %t
+// RUN: grep '@g0_common = weak global i32' %t
 int g0_common __attribute__((weak));
 
-// RUN: grep '@g0_def = weak dso_local global i32' %t
+// RUN: grep '@g0_def = weak global i32' %t
 int g0_def __attribute__((weak)) = 52;
-// RUN: grep 'define weak dso_local i32 @g1_def()' %t
+// RUN: grep 'define weak i32 @g1_def()' %t
 int __attribute__((weak)) g1_def (void) { return 0; }
 
 // Force _ext references

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=i686 -emit-llvm -o - %s -fsemantic-interposition | FileCheck %s
+// RUN: %clang_cc1 -triple=i686 -emit-llvm -o - %s | FileCheck %s
 
 
 struct X;
