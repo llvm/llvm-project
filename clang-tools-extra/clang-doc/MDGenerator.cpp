@@ -50,10 +50,20 @@ static void writeHeader(const Twine &Text, unsigned int Num, raw_ostream &OS) {
   OS << std::string(Num, '#') + " " + Text << "\n\n";
 }
 
-static void writeFileDefinition(const Location &L, raw_ostream &OS) {
-  OS << genItalic("Defined at line " + std::to_string(L.LineNumber) + " of " +
-                  L.Filename)
-     << "\n\n";
+static void writeFileDefinition(const ClangDocContext &CDCtx, const Location &L,
+                                raw_ostream &OS) {
+
+  if (!CDCtx.RepositoryUrl) {
+    OS << "*Defined at " << L.Filename << "#" << std::to_string(L.LineNumber)
+       << "*";
+  } else {
+    OS << "*Defined at [" << L.Filename << "#" << std::to_string(L.LineNumber)
+       << "](" << StringRef{CDCtx.RepositoryUrl.getValue()}
+       << llvm::sys::path::relative_path(L.Filename) << "#"
+       << std::to_string(L.LineNumber) << ")"
+       << "*";
+  }
+  OS << "\n\n";
 }
 
 static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
@@ -104,7 +114,16 @@ static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
   }
 }
 
-static void genMarkdown(const EnumInfo &I, llvm::raw_ostream &OS) {
+static void writeNameLink(const StringRef &CurrentPath, const Reference &R,
+                          llvm::raw_ostream &OS) {
+
+  llvm::SmallString<64> Path = R.getRelativeFilePath(CurrentPath);
+  llvm::sys::path::append(Path, R.getFileBaseName() + ".md");
+  OS << "[" << R.Name << "](" << Path << ")";
+}
+
+static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
+                        llvm::raw_ostream &OS) {
   if (I.Scoped)
     writeLine("| enum class " + I.Name + " |", OS);
   else
@@ -118,13 +137,14 @@ static void genMarkdown(const EnumInfo &I, llvm::raw_ostream &OS) {
       Members << "| " << N << " |\n";
   writeLine(Members.str(), OS);
   if (I.DefLoc)
-    writeFileDefinition(I.DefLoc.getValue(), OS);
+    writeFileDefinition(CDCtx, I.DefLoc.getValue(), OS);
 
   for (const auto &C : I.Description)
     writeDescription(C, OS);
 }
 
-static void genMarkdown(const FunctionInfo &I, llvm::raw_ostream &OS) {
+static void genMarkdown(const ClangDocContext &CDCtx, const FunctionInfo &I,
+                        llvm::raw_ostream &OS) {
   std::string Buffer;
   llvm::raw_string_ostream Stream(Buffer);
   bool First = true;
@@ -145,13 +165,14 @@ static void genMarkdown(const FunctionInfo &I, llvm::raw_ostream &OS) {
                         Stream.str() + ")"),
               OS);
   if (I.DefLoc)
-    writeFileDefinition(I.DefLoc.getValue(), OS);
+    writeFileDefinition(CDCtx, I.DefLoc.getValue(), OS);
 
   for (const auto &C : I.Description)
     writeDescription(C, OS);
 }
 
-static void genMarkdown(const NamespaceInfo &I, llvm::raw_ostream &OS) {
+static void genMarkdown(const ClangDocContext &CDCtx, const NamespaceInfo &I,
+                        llvm::raw_ostream &OS) {
   if (I.Name == "")
     writeHeader("Global Namespace", 1, OS);
   else
@@ -164,36 +185,47 @@ static void genMarkdown(const NamespaceInfo &I, llvm::raw_ostream &OS) {
     writeNewLine(OS);
   }
 
+  llvm::SmallString<64> BasePath = I.getRelativeFilePath("");
+
   if (!I.ChildNamespaces.empty()) {
     writeHeader("Namespaces", 2, OS);
-    for (const auto &R : I.ChildNamespaces)
-      writeLine(R.Name, OS);
+    for (const auto &R : I.ChildNamespaces) {
+      OS << "* ";
+      writeNameLink(BasePath, R, OS);
+      OS << "\n";
+    }
     writeNewLine(OS);
   }
+
   if (!I.ChildRecords.empty()) {
     writeHeader("Records", 2, OS);
-    for (const auto &R : I.ChildRecords)
-      writeLine(R.Name, OS);
+    for (const auto &R : I.ChildRecords) {
+      OS << "* ";
+      writeNameLink(BasePath, R, OS);
+      OS << "\n";
+    }
     writeNewLine(OS);
   }
+
   if (!I.ChildFunctions.empty()) {
     writeHeader("Functions", 2, OS);
     for (const auto &F : I.ChildFunctions)
-      genMarkdown(F, OS);
+      genMarkdown(CDCtx, F, OS);
     writeNewLine(OS);
   }
   if (!I.ChildEnums.empty()) {
     writeHeader("Enums", 2, OS);
     for (const auto &E : I.ChildEnums)
-      genMarkdown(E, OS);
+      genMarkdown(CDCtx, E, OS);
     writeNewLine(OS);
   }
 }
 
-static void genMarkdown(const RecordInfo &I, llvm::raw_ostream &OS) {
+static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
+                        llvm::raw_ostream &OS) {
   writeHeader(getTagType(I.TagType) + " " + I.Name, 1, OS);
   if (I.DefLoc)
-    writeFileDefinition(I.DefLoc.getValue(), OS);
+    writeFileDefinition(CDCtx, I.DefLoc.getValue(), OS);
 
   if (!I.Description.empty()) {
     for (const auto &C : I.Description)
@@ -234,17 +266,86 @@ static void genMarkdown(const RecordInfo &I, llvm::raw_ostream &OS) {
   if (!I.ChildFunctions.empty()) {
     writeHeader("Functions", 2, OS);
     for (const auto &F : I.ChildFunctions)
-      genMarkdown(F, OS);
+      genMarkdown(CDCtx, F, OS);
     writeNewLine(OS);
   }
   if (!I.ChildEnums.empty()) {
     writeHeader("Enums", 2, OS);
     for (const auto &E : I.ChildEnums)
-      genMarkdown(E, OS);
+      genMarkdown(CDCtx, E, OS);
     writeNewLine(OS);
   }
 }
 
+static void serializeReference(llvm::raw_fd_ostream &OS, Index &I, int Level) {
+  // Write out the heading level starting at ##
+  OS << "##" << std::string(Level, '#') << " ";
+  writeNameLink("", I, OS);
+  OS << "\n";
+}
+
+static llvm::Error serializeIndex(ClangDocContext &CDCtx) {
+  std::error_code FileErr;
+  llvm::SmallString<128> FilePath;
+  llvm::sys::path::native(CDCtx.OutDirectory, FilePath);
+  llvm::sys::path::append(FilePath, "all_files.md");
+  llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_None);
+  if (FileErr)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "error creating index file: " +
+                                       FileErr.message());
+
+  CDCtx.Idx.sort();
+  OS << "# All Files";
+  if (!CDCtx.ProjectName.empty())
+    OS << " for " << CDCtx.ProjectName;
+  OS << "\n\n";
+
+  for (auto C : CDCtx.Idx.Children)
+    serializeReference(OS, C, 0);
+
+  return llvm::Error::success();
+}
+
+static llvm::Error genIndex(ClangDocContext &CDCtx) {
+  std::error_code FileErr;
+  llvm::SmallString<128> FilePath;
+  llvm::sys::path::native(CDCtx.OutDirectory, FilePath);
+  llvm::sys::path::append(FilePath, "index.md");
+  llvm::raw_fd_ostream OS(FilePath, FileErr, llvm::sys::fs::OF_None);
+  if (FileErr)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "error creating index file: " +
+                                       FileErr.message());
+  CDCtx.Idx.sort();
+  OS << "# " << CDCtx.ProjectName << " C/C++ Reference\n\n";
+  for (auto C : CDCtx.Idx.Children) {
+    if (!C.Children.empty()) {
+      const char *Type;
+      switch (C.RefType) {
+      case InfoType::IT_namespace:
+        Type = "Namespace";
+        break;
+      case InfoType::IT_record:
+        Type = "Type";
+        break;
+      case InfoType::IT_enum:
+        Type = "Enum";
+        break;
+      case InfoType::IT_function:
+        Type = "Function";
+        break;
+      case InfoType::IT_default:
+        Type = "Other";
+      }
+      OS << "* " << Type << ": [" << C.Name << "](";
+      if (!C.Path.empty())
+        OS << C.Path << "/";
+      OS << C.Name << ")\n";
+    }
+  }
+  return llvm::Error::success();
+}
 /// Generator for Markdown documentation.
 class MDGenerator : public Generator {
 public:
@@ -252,6 +353,7 @@ public:
 
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
+  llvm::Error createResources(ClangDocContext &CDCtx) override;
 };
 
 const char *MDGenerator::Format = "md";
@@ -260,16 +362,16 @@ llvm::Error MDGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                             const ClangDocContext &CDCtx) {
   switch (I->IT) {
   case InfoType::IT_namespace:
-    genMarkdown(*static_cast<clang::doc::NamespaceInfo *>(I), OS);
+    genMarkdown(CDCtx, *static_cast<clang::doc::NamespaceInfo *>(I), OS);
     break;
   case InfoType::IT_record:
-    genMarkdown(*static_cast<clang::doc::RecordInfo *>(I), OS);
+    genMarkdown(CDCtx, *static_cast<clang::doc::RecordInfo *>(I), OS);
     break;
   case InfoType::IT_enum:
-    genMarkdown(*static_cast<clang::doc::EnumInfo *>(I), OS);
+    genMarkdown(CDCtx, *static_cast<clang::doc::EnumInfo *>(I), OS);
     break;
   case InfoType::IT_function:
-    genMarkdown(*static_cast<clang::doc::FunctionInfo *>(I), OS);
+    genMarkdown(CDCtx, *static_cast<clang::doc::FunctionInfo *>(I), OS);
     break;
   case InfoType::IT_default:
     return createStringError(llvm::inconvertibleErrorCode(),
@@ -278,11 +380,25 @@ llvm::Error MDGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
   return llvm::Error::success();
 }
 
+llvm::Error MDGenerator::createResources(ClangDocContext &CDCtx) {
+  // Write an all_files.md
+  auto Err = serializeIndex(CDCtx);
+  if (Err)
+    return Err;
+
+  // Generate the index page.
+  Err = genIndex(CDCtx);
+  if (Err)
+    return Err;
+
+  return llvm::Error::success();
+}
+
 static GeneratorRegistry::Add<MDGenerator> MD(MDGenerator::Format,
                                               "Generator for MD output.");
 
-// This anchor is used to force the linker to link in the generated object file
-// and thus register the generator.
+// This anchor is used to force the linker to link in the generated object
+// file and thus register the generator.
 volatile int MDGeneratorAnchorSource = 0;
 
 } // namespace doc
