@@ -22253,7 +22253,6 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
       Cmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32,
                         CmpOp0, DAG.getConstant(1, DL, CmpOp0.getValueType()));
-      Cmp = ConvertCmpIfNecessary(Cmp, DAG);
 
       SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
       SDValue Zero = DAG.getConstant(0, DL, Op.getValueType());
@@ -22368,7 +22367,6 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   // a >= b ? -1 :  0 -> RES = setcc_carry
   // a >= b ?  0 : -1 -> RES = ~setcc_carry
   if (Cond.getOpcode() == X86ISD::SUB) {
-    Cond = ConvertCmpIfNecessary(Cond, DAG);
     unsigned CondCode = cast<ConstantSDNode>(CC)->getZExtValue();
 
     if ((CondCode == X86::COND_AE || CondCode == X86::COND_B) &&
