@@ -96,7 +96,7 @@ SmallVector<Value, 4> applyMapToValues(OpBuilder &b, Location loc,
 
 struct TiledLinalgOp {
   LinalgOp op;
-  SmallVector<loop::ForOp, 8> loops;
+  SmallVector<Operation *, 8> loops;
 };
 
 /// Performs standalone tiling of a single LinalgOp by `tileSizes`.
