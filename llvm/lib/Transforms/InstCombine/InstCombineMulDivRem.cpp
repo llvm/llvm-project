@@ -1417,11 +1417,8 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
   {
     const APInt *Y;
     // X % -Y -> X % Y
-    if (match(Op1, m_Negative(Y)) && !Y->isMinSignedValue()) {
-      Worklist.pushValue(I.getOperand(1));
-      I.setOperand(1, ConstantInt::get(I.getType(), -*Y));
-      return &I;
-    }
+    if (match(Op1, m_Negative(Y)) && !Y->isMinSignedValue())
+      return replaceOperand(I, 1, ConstantInt::get(I.getType(), -*Y));
   }
 
   // -X srem Y --> -(X srem Y)
@@ -1468,11 +1465,8 @@ Instruction *InstCombiner::visitSRem(BinaryOperator &I) {
       }
 
       Constant *NewRHSV = ConstantVector::get(Elts);
-      if (NewRHSV != C) {  // Don't loop on -MININT
-        Worklist.pushValue(I.getOperand(1));
-        I.setOperand(1, NewRHSV);
-        return &I;
-      }
+      if (NewRHSV != C)  // Don't loop on -MININT
+        return replaceOperand(I, 1, NewRHSV);
     }
   }
 
