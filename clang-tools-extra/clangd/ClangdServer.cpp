@@ -113,6 +113,15 @@ ClangdServer::Options ClangdServer::optsForTest() {
   return Opts;
 }
 
+ClangdServer::Options::operator TUScheduler::Options() const {
+  TUScheduler::Options Opts;
+  Opts.AsyncThreadsCount = AsyncThreadsCount;
+  Opts.RetentionPolicy = RetentionPolicy;
+  Opts.StorePreamblesInMemory = StorePreamblesInMemory;
+  Opts.UpdateDebounce = UpdateDebounce;
+  return Opts;
+}
+
 ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const FileSystemProvider &FSProvider,
                            const Options &Opts, Callbacks *Callbacks)
@@ -129,10 +138,10 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       // is parsed.
       // FIXME(ioeric): this can be slow and we may be able to index on less
       // critical paths.
-      WorkScheduler(CDB, Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
-                    std::make_unique<UpdateIndexCallbacks>(
-                        DynamicIdx.get(), Callbacks, Opts.SemanticHighlighting),
-                    Opts.UpdateDebounce, Opts.RetentionPolicy) {
+      WorkScheduler(
+          CDB, TUScheduler::Options(Opts),
+          std::make_unique<UpdateIndexCallbacks>(DynamicIdx.get(), Callbacks,
+                                                 Opts.SemanticHighlighting)) {
   // Adds an index to the stack, at higher priority than existing indexes.
   auto AddIndex = [&](SymbolIndex *Idx) {
     if (this->Index != nullptr) {

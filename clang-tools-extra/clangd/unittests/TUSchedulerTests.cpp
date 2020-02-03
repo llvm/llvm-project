@@ -42,6 +42,10 @@ MATCHER_P2(TUState, State, ActionName, "") {
   return arg.Action.S == State && arg.Action.Name == ActionName;
 }
 
+TUScheduler::Options optsForTest() {
+  return TUScheduler::Options(ClangdServer::optsForTest());
+}
+
 class TUSchedulerTests : public ::testing::Test {
 protected:
   ParseInputs getInputs(PathRef File, std::string Contents) {
@@ -125,10 +129,7 @@ Key<llvm::unique_function<void(PathRef File, std::vector<Diag>)>>
     TUSchedulerTests::DiagsCallbackKey;
 
 TEST_F(TUSchedulerTests, MissingFiles) {
-  TUScheduler S(CDB, getDefaultAsyncThreadsCount(),
-                /*StorePreamblesInMemory=*/true, /*ASTCallbacks=*/nullptr,
-                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-                ASTRetentionPolicy());
+  TUScheduler S(CDB, optsForTest());
 
   auto Added = testPath("added.cpp");
   Files[Added] = "x";
@@ -179,11 +180,7 @@ TEST_F(TUSchedulerTests, WantDiagnostics) {
     // To avoid a racy test, don't allow tasks to actually run on the worker
     // thread until we've scheduled them all.
     Notification Ready;
-    TUScheduler S(
-        CDB, getDefaultAsyncThreadsCount(),
-        /*StorePreamblesInMemory=*/true, captureDiags(),
-        /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-        ASTRetentionPolicy());
+    TUScheduler S(CDB, optsForTest(), captureDiags());
     auto Path = testPath("foo.cpp");
     updateWithDiags(S, Path, "", WantDiagnostics::Yes,
                     [&](std::vector<Diag>) { Ready.wait(); });
@@ -210,10 +207,9 @@ TEST_F(TUSchedulerTests, WantDiagnostics) {
 TEST_F(TUSchedulerTests, Debounce) {
   std::atomic<int> CallbackCount(0);
   {
-    TUScheduler S(CDB, getDefaultAsyncThreadsCount(),
-                  /*StorePreamblesInMemory=*/true, captureDiags(),
-                  /*UpdateDebounce=*/std::chrono::seconds(1),
-                  ASTRetentionPolicy());
+    auto Opts = optsForTest();
+    Opts.UpdateDebounce = std::chrono::seconds(1);
+    TUScheduler S(CDB, Opts, captureDiags());
     // FIXME: we could probably use timeouts lower than 1 second here.
     auto Path = testPath("foo.cpp");
     updateWithDiags(S, Path, "auto (debounced)", WantDiagnostics::Auto,
@@ -245,11 +241,7 @@ TEST_F(TUSchedulerTests, PreambleConsistency) {
   std::atomic<int> CallbackCount(0);
   {
     Notification InconsistentReadDone; // Must live longest.
-    TUScheduler S(
-        CDB, getDefaultAsyncThreadsCount(), /*StorePreamblesInMemory=*/true,
-        /*ASTCallbacks=*/nullptr,
-        /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-        ASTRetentionPolicy());
+    TUScheduler S(CDB, optsForTest());
     auto Path = testPath("foo.cpp");
     // Schedule two updates (A, B) and two preamble reads (stale, consistent).
     // The stale read should see A, and the consistent read should see B.
@@ -302,11 +294,7 @@ TEST_F(TUSchedulerTests, Cancellation) {
   std::vector<std::string> DiagsSeen, ReadsSeen, ReadsCanceled;
   {
     Notification Proceed; // Ensure we schedule everything.
-    TUScheduler S(
-        CDB, getDefaultAsyncThreadsCount(), /*StorePreamblesInMemory=*/true,
-        /*ASTCallbacks=*/captureDiags(),
-        /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-        ASTRetentionPolicy());
+    TUScheduler S(CDB, optsForTest(), captureDiags());
     auto Path = testPath("foo.cpp");
     // Helper to schedule a named update and return a function to cancel it.
     auto Update = [&](std::string ID) -> Canceler {
@@ -372,10 +360,9 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
 
   // Run TUScheduler and collect some stats.
   {
-    TUScheduler S(CDB, getDefaultAsyncThreadsCount(),
-                  /*StorePreamblesInMemory=*/true, captureDiags(),
-                  /*UpdateDebounce=*/std::chrono::milliseconds(50),
-                  ASTRetentionPolicy());
+    auto Opts = optsForTest();
+    Opts.UpdateDebounce = std::chrono::milliseconds(50);
+    TUScheduler S(CDB, Opts, captureDiags());
 
     std::vector<std::string> Files;
     for (int I = 0; I < FilesCount; ++I) {
@@ -461,13 +448,10 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
 
 TEST_F(TUSchedulerTests, EvictedAST) {
   std::atomic<int> BuiltASTCounter(0);
-  ASTRetentionPolicy Policy;
-  Policy.MaxRetainedASTs = 2;
-  TUScheduler S(CDB,
-                /*AsyncThreadsCount=*/1, /*StorePreambleInMemory=*/true,
-                /*ASTCallbacks=*/nullptr,
-                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-                Policy);
+  auto Opts = optsForTest();
+  Opts.AsyncThreadsCount = 1;
+  Opts.RetentionPolicy.MaxRetainedASTs = 2;
+  TUScheduler S(CDB, Opts);
 
   llvm::StringLiteral SourceContents = R"cpp(
     int* a;
@@ -514,11 +498,7 @@ TEST_F(TUSchedulerTests, EvictedAST) {
 }
 
 TEST_F(TUSchedulerTests, EmptyPreamble) {
-  TUScheduler S(CDB,
-                /*AsyncThreadsCount=*/4, /*StorePreambleInMemory=*/true,
-                /*ASTCallbacks=*/nullptr,
-                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-                ASTRetentionPolicy());
+  TUScheduler S(CDB, optsForTest());
 
   auto Foo = testPath("foo.cpp");
   auto Header = testPath("foo.h");
@@ -559,11 +539,7 @@ TEST_F(TUSchedulerTests, EmptyPreamble) {
 TEST_F(TUSchedulerTests, RunWaitsForPreamble) {
   // Testing strategy: we update the file and schedule a few preamble reads at
   // the same time. All reads should get the same non-null preamble.
-  TUScheduler S(CDB,
-                /*AsyncThreadsCount=*/4, /*StorePreambleInMemory=*/true,
-                /*ASTCallbacks=*/nullptr,
-                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-                ASTRetentionPolicy());
+  TUScheduler S(CDB, optsForTest());
   auto Foo = testPath("foo.cpp");
   auto NonEmptyPreamble = R"cpp(
     #define FOO 1
@@ -591,11 +567,7 @@ TEST_F(TUSchedulerTests, RunWaitsForPreamble) {
 }
 
 TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
-  TUScheduler S(CDB,
-                /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
-                /*StorePreambleInMemory=*/true, captureDiags(),
-                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-                ASTRetentionPolicy());
+  TUScheduler S(CDB, optsForTest(), captureDiags());
 
   auto Source = testPath("foo.cpp");
   auto Header = testPath("foo.h");
@@ -644,11 +616,7 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
 }
 
 TEST_F(TUSchedulerTests, NoChangeDiags) {
-  TUScheduler S(CDB,
-                /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
-                /*StorePreambleInMemory=*/true, captureDiags(),
-                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-                ASTRetentionPolicy());
+  TUScheduler S(CDB, optsForTest(), captureDiags());
 
   auto FooCpp = testPath("foo.cpp");
   auto Contents = "int a; int b;";
@@ -679,10 +647,7 @@ TEST_F(TUSchedulerTests, NoChangeDiags) {
 }
 
 TEST_F(TUSchedulerTests, Run) {
-  TUScheduler S(CDB, /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
-                /*StorePreambleInMemory=*/true, /*ASTCallbacks=*/nullptr,
-                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-                ASTRetentionPolicy());
+  TUScheduler S(CDB, optsForTest());
   std::atomic<int> Counter(0);
   S.run("add 1", [&] { ++Counter; });
   S.run("add 2", [&] { Counter += 2; });
@@ -753,11 +718,7 @@ TEST_F(TUSchedulerTests, CommandLineErrors) {
   // (!) 'Ready' must live longer than TUScheduler.
   Notification Ready;
 
-  TUScheduler S(CDB, /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
-                /*StorePreambleInMemory=*/true, /*ASTCallbacks=*/captureDiags(),
-                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-                ASTRetentionPolicy());
-
+  TUScheduler S(CDB, optsForTest(), captureDiags());
   std::vector<Diag> Diagnostics;
   updateWithDiags(S, testPath("foo.cpp"), "void test() {}",
                   WantDiagnostics::Yes, [&](std::vector<Diag> D) {
@@ -781,11 +742,7 @@ TEST_F(TUSchedulerTests, CommandLineWarnings) {
   // (!) 'Ready' must live longer than TUScheduler.
   Notification Ready;
 
-  TUScheduler S(CDB, /*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
-                /*StorePreambleInMemory=*/true, /*ASTCallbacks=*/captureDiags(),
-                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
-                ASTRetentionPolicy());
-
+  TUScheduler S(CDB, optsForTest(), captureDiags());
   std::vector<Diag> Diagnostics;
   updateWithDiags(S, testPath("foo.cpp"), "void test() {}",
                   WantDiagnostics::Yes, [&](std::vector<Diag> D) {

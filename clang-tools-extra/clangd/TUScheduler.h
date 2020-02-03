@@ -20,6 +20,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include <chrono>
 
 namespace clang {
 namespace clangd {
@@ -143,14 +144,28 @@ public:
 /// and scheduling tasks.
 /// Callbacks are run on a threadpool and it's appropriate to do slow work in
 /// them. Each task has a name, used for tracing (should be UpperCamelCase).
-/// FIXME(sammccall): pull out a scheduler options struct.
 class TUScheduler {
 public:
-  TUScheduler(const GlobalCompilationDatabase &CDB, unsigned AsyncThreadsCount,
-              bool StorePreamblesInMemory,
-              std::unique_ptr<ParsingCallbacks> ASTCallbacks,
-              std::chrono::steady_clock::duration UpdateDebounce,
-              ASTRetentionPolicy RetentionPolicy);
+  struct Options {
+    /// Number of concurrent actions.
+    /// Governs per-file worker threads and threads spawned for other tasks.
+    /// (This does not prevent threads being spawned, but rather blocks them).
+    /// If 0, executes actions synchronously on the calling thread.
+    unsigned AsyncThreadsCount = getDefaultAsyncThreadsCount();
+
+    /// Cache (large) preamble data in RAM rather than temporary files on disk.
+    bool StorePreamblesInMemory = false;
+
+    /// Time to wait after an update to see if another one comes along.
+    /// This tries to ensure we rebuild once the user stops typing.
+    std::chrono::steady_clock::duration UpdateDebounce = /*zero*/ {};
+
+    /// Determines when to keep idle ASTs in memory for future use.
+    ASTRetentionPolicy RetentionPolicy;
+  };
+
+  TUScheduler(const GlobalCompilationDatabase &CDB, const Options &Opts,
+              std::unique_ptr<ParsingCallbacks> ASTCallbacks = nullptr);
   ~TUScheduler();
 
   /// Returns estimated memory usage for each of the currently open files.
