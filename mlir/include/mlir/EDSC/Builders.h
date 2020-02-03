@@ -155,6 +155,13 @@ public:
   static LoopBuilder makeAffine(ValueHandle *iv,
                                 ArrayRef<ValueHandle> lbHandles,
                                 ArrayRef<ValueHandle> ubHandles, int64_t step);
+  /// Constructs a new loop::ParallelOp and captures the associated induction
+  /// variables. An array of ValueHandle pointers is passed as the first
+  /// argument and is the *only* way to capture loop induction variables.
+  static LoopBuilder makeParallel(ArrayRef<ValueHandle *> ivs,
+                                  ArrayRef<ValueHandle> lbHandles,
+                                  ArrayRef<ValueHandle> ubHandles,
+                                  ArrayRef<ValueHandle> steps);
   /// Constructs a new loop::ForOp and captures the associated induction
   /// variable. A ValueHandle pointer is passed as the first argument and is the
   /// *only* way to capture the loop induction variable.
@@ -207,6 +214,20 @@ public:
                         ArrayRef<ValueHandle> ubs, int64_t step);
   AffineLoopNestBuilder(ArrayRef<ValueHandle *> ivs, ArrayRef<ValueHandle> lbs,
                         ArrayRef<ValueHandle> ubs, ArrayRef<int64_t> steps);
+
+  void operator()(function_ref<void(void)> fun = nullptr);
+
+private:
+  SmallVector<LoopBuilder, 4> loops;
+};
+
+/// Helper class to sugar building loop.parallel loop nests from lower/upper
+/// bounds and step sizes.
+class ParallelLoopNestBuilder {
+public:
+  ParallelLoopNestBuilder(ArrayRef<ValueHandle *> ivs,
+                          ArrayRef<ValueHandle> lbs, ArrayRef<ValueHandle> ubs,
+                          ArrayRef<ValueHandle> steps);
 
   void operator()(function_ref<void(void)> fun = nullptr);
 
