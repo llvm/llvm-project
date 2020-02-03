@@ -13,6 +13,7 @@
 
 #include "VEISelLowering.h"
 #include "MCTargetDesc/VEMCExpr.h"
+#include "VEMachineFunctionInfo.h"
 #include "VERegisterInfo.h"
 #include "VETargetMachine.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -203,7 +204,20 @@ SDValue VETargetLowering::LowerFormalArguments(
                     MachinePointerInfo::getFixedStack(MF, FI)));
   }
 
-  assert(!IsVarArg && "TODO implement var args");
+  if (!IsVarArg)
+    return Chain;
+
+  // This function takes variable arguments, some of which may have been passed
+  // in registers %s0-%s8.
+  //
+  // The va_start intrinsic needs to know the offset to the first variable
+  // argument.
+  // TODO: need to calculate offset correctly once we support f128.
+  unsigned ArgOffset = ArgLocs.size() * 8;
+  VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
+  // Skip the 176 bytes of register save area.
+  FuncInfo->setVarArgsFrameOffset(ArgOffset + ArgsBaseOffset);
+
   return Chain;
 }
 
@@ -258,7 +272,16 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // by CC_VE would be correct now.
   CCInfo.AnalyzeCallOperands(CLI.Outs, CC_VE);
 
-  assert(!CLI.IsVarArg);
+  // VE requires to use both register and stack for varargs or no-prototyped
+  // functions.
+  bool UseBoth = CLI.IsVarArg;
+
+  // Analyze operands again if it is required to store BOTH.
+  SmallVector<CCValAssign, 16> ArgLocs2;
+  CCState CCInfo2(CLI.CallConv, CLI.IsVarArg, DAG.getMachineFunction(),
+                  ArgLocs2, *DAG.getContext());
+  if (UseBoth)
+    CCInfo2.AnalyzeCallOperands(CLI.Outs, CC_VE2);
 
   // Get the size of the outgoing arguments stack space requirement.
   unsigned ArgsSize = CCInfo.getNextStackOffset();
@@ -326,7 +349,9 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     if (VA.isRegLoc()) {
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
-      continue;
+      if (!UseBoth)
+        continue;
+      VA = ArgLocs2[i];
     }
 
     assert(VA.isMemLoc());
@@ -502,6 +527,15 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BlockAddress, PtrVT, Custom);
   setOperationAction(ISD::GlobalAddress, PtrVT, Custom);
 
+  /// VAARG handling {
+  setOperationAction(ISD::VASTART, MVT::Other, Custom);
+  // VAARG needs to be lowered to access with 8 bytes alignment.
+  setOperationAction(ISD::VAARG, MVT::Other, Custom);
+  // Use the default implementation.
+  setOperationAction(ISD::VACOPY, MVT::Other, Expand);
+  setOperationAction(ISD::VAEND, MVT::Other, Expand);
+  /// } VAARG handling
+
   // VE has no REM or DIVREM operations.
   for (MVT IntVT : MVT::integer_valuetypes()) {
     setOperationAction(ISD::UREM, IntVT, Expand);
@@ -604,6 +638,66 @@ SDValue VETargetLowering::LowerBlockAddress(SDValue Op,
   return makeAddress(Op, DAG);
 }
 
+SDValue VETargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  VEMachineFunctionInfo *FuncInfo = MF.getInfo<VEMachineFunctionInfo>();
+  auto PtrVT = getPointerTy(DAG.getDataLayout());
+
+  // Need frame address to find the address of VarArgsFrameIndex.
+  MF.getFrameInfo().setFrameAddressIsTaken(true);
+
+  // vastart just stores the address of the VarArgsFrameIndex slot into the
+  // memory location argument.
+  SDLoc DL(Op);
+  SDValue Offset =
+      DAG.getNode(ISD::ADD, DL, PtrVT, DAG.getRegister(VE::SX9, PtrVT),
+                  DAG.getIntPtrConstant(FuncInfo->getVarArgsFrameOffset(), DL));
+  const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
+  return DAG.getStore(Op.getOperand(0), DL, Offset, Op.getOperand(1),
+                      MachinePointerInfo(SV));
+}
+
+SDValue VETargetLowering::LowerVAARG(SDValue Op, SelectionDAG &DAG) const {
+  SDNode *Node = Op.getNode();
+  EVT VT = Node->getValueType(0);
+  SDValue InChain = Node->getOperand(0);
+  SDValue VAListPtr = Node->getOperand(1);
+  EVT PtrVT = VAListPtr.getValueType();
+  const Value *SV = cast<SrcValueSDNode>(Node->getOperand(2))->getValue();
+  SDLoc DL(Node);
+  SDValue VAList =
+      DAG.getLoad(PtrVT, DL, InChain, VAListPtr, MachinePointerInfo(SV));
+  SDValue Chain = VAList.getValue(1);
+  SDValue NextPtr;
+
+  if (VT == MVT::f32) {
+    // float --> need special handling like below.
+    //    0      4
+    //    +------+------+
+    //    | empty| float|
+    //    +------+------+
+    // Increment the pointer, VAList, by 8 to the next vaarg.
+    NextPtr =
+        DAG.getNode(ISD::ADD, DL, PtrVT, VAList, DAG.getIntPtrConstant(8, DL));
+    // Then, adjust VAList.
+    unsigned InternalOffset = 4;
+    VAList = DAG.getNode(ISD::ADD, DL, PtrVT, VAList,
+                         DAG.getConstant(InternalOffset, DL, PtrVT));
+  } else {
+    // Increment the pointer, VAList, by 8 to the next vaarg.
+    NextPtr =
+        DAG.getNode(ISD::ADD, DL, PtrVT, VAList, DAG.getIntPtrConstant(8, DL));
+  }
+
+  // Store the incremented VAList to the legalized pointer.
+  InChain = DAG.getStore(Chain, DL, NextPtr, VAListPtr, MachinePointerInfo(SV));
+
+  // Load the actual argument out of the pointer VAList.
+  // We can't count on greater alignment than the word size.
+  return DAG.getLoad(VT, DL, InChain, VAList, MachinePointerInfo(),
+                     std::min(PtrVT.getSizeInBits(), VT.getSizeInBits()) / 8);
+}
+
 SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default:
@@ -612,6 +706,10 @@ SDValue VETargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerBlockAddress(Op, DAG);
   case ISD::GlobalAddress:
     return LowerGlobalAddress(Op, DAG);
+  case ISD::VASTART:
+    return LowerVASTART(Op, DAG);
+  case ISD::VAARG:
+    return LowerVAARG(Op, DAG);
   }
 }
 /// } Custom Lower
