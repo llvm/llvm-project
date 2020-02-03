@@ -1354,9 +1354,9 @@ std::string NVPTXTargetLowering::getPrototype(
     assert(PTy && "Param with byval attribute should be a pointer type");
     Type *ETy = PTy->getElementType();
 
-    unsigned align = Outs[OIdx].Flags.getByValAlign();
+    Align align = Outs[OIdx].Flags.getNonZeroByValAlign();
     unsigned sz = DL.getTypeAllocSize(ETy);
-    O << ".param .align " << align << " .b8 ";
+    O << ".param .align " << align.value() << " .b8 ";
     O << "_";
     O << "[" << sz << "]";
   }
@@ -1581,7 +1581,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // declare .param .align <align> .b8 .param<n>[<size>];
     unsigned sz = Outs[OIdx].Flags.getByValSize();
     SDVTList DeclareParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-    unsigned ArgAlign = Outs[OIdx].Flags.getByValAlign();
+    Align ArgAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
     // The ByValAlign in the Outs[OIdx].Flags is alway set at this point,
     // so we don't need to worry about natural alignment or not.
     // See TargetLowering::LowerCallTo().
@@ -1589,18 +1589,19 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // Enforce minumum alignment of 4 to work around ptxas miscompile
     // for sm_50+. See corresponding alignment adjustment in
     // emitFunctionParamList() for details.
-    if (ArgAlign < 4)
-      ArgAlign = 4;
-    SDValue DeclareParamOps[] = {Chain, DAG.getConstant(ArgAlign, dl, MVT::i32),
-                                 DAG.getConstant(paramCount, dl, MVT::i32),
-                                 DAG.getConstant(sz, dl, MVT::i32), InFlag};
+    if (ArgAlign < Align(4))
+      ArgAlign = Align(4);
+    SDValue DeclareParamOps[] = {
+        Chain, DAG.getConstant(ArgAlign.value(), dl, MVT::i32),
+        DAG.getConstant(paramCount, dl, MVT::i32),
+        DAG.getConstant(sz, dl, MVT::i32), InFlag};
     Chain = DAG.getNode(NVPTXISD::DeclareParam, dl, DeclareParamVTs,
                         DeclareParamOps);
     InFlag = Chain.getValue(1);
     for (unsigned j = 0, je = VTs.size(); j != je; ++j) {
       EVT elemtype = VTs[j];
       int curOffset = Offsets[j];
-      unsigned PartAlign = GreatestCommonDivisor64(ArgAlign, curOffset);
+      unsigned PartAlign = GreatestCommonDivisor64(ArgAlign.value(), curOffset);
       auto PtrVT = getPointerTy(DL);
       SDValue srcAddr = DAG.getNode(ISD::ADD, dl, PtrVT, OutVals[OIdx],
                                     DAG.getConstant(curOffset, dl, PtrVT));
