@@ -20,7 +20,8 @@ set(GWP_ASAN_UNITTESTS
   slot_reuse.cpp
   thread_contention.cpp
   harness.cpp
-  enable_disable.cpp)
+  enable_disable.cpp
+  late_init.cpp)
 
 set(GWP_ASAN_UNIT_TEST_HEADERS
   ${GWP_ASAN_HEADERS}
