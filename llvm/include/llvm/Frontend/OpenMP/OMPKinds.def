@@ -287,3 +287,135 @@ __OMP_PROC_BIND_KIND(unknown, 7)
 #undef OMP_PROC_BIND_KIND
 
 ///}
+
+/// OpenMP context related definitions:
+///  - trait set selector
+///  - trait selector
+///  - trait property
+///
+///{
+
+#ifndef OMP_TRAIT_SET
+#define OMP_TRAIT_SET(Enum, Str)
+#endif
+#ifndef OMP_TRAIT_SELECTOR
+#define OMP_TRAIT_SELECTOR(Enum, TraitSetEnum, Str, RequiresProperty)
+#endif
+#ifndef OMP_TRAIT_PROPERTY
+#define OMP_TRAIT_PROPERTY(Enum, TraitSetEnum, TraitSelectorEnum, Str)
+#endif
+
+#define __OMP_TRAIT_SET(Name) OMP_TRAIT_SET(Name, #Name)
+#define __OMP_TRAIT_SELECTOR(TraitSet, Name, RequiresProperty)                 \
+  OMP_TRAIT_SELECTOR(TraitSet##_##Name, TraitSet, #Name, RequiresProperty)
+#define __OMP_TRAIT_SELECTOR_AND_PROPERTY(TraitSet, Name)                      \
+  OMP_TRAIT_SELECTOR(TraitSet##_##Name, TraitSet, #Name, false)                \
+  OMP_TRAIT_PROPERTY(TraitSet##_##Name##_##Name, TraitSet, TraitSet##_##Name,  \
+                     #Name)
+#define __OMP_TRAIT_PROPERTY(TraitSet, TraitSelector, Name)                    \
+  OMP_TRAIT_PROPERTY(TraitSet##_##TraitSelector##_##Name, TraitSet,            \
+                     TraitSet##_##TraitSelector, #Name)
+
+// "invalid" must go first.
+OMP_TRAIT_SET(invalid, "invalid")
+OMP_TRAIT_SELECTOR(invalid, invalid, "invalid", false)
+OMP_TRAIT_PROPERTY(invalid, invalid, invalid, "invalid")
+
+__OMP_TRAIT_SET(construct)
+__OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, target)
+__OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, teams)
+__OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, parallel)
+__OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, for)
+__OMP_TRAIT_SELECTOR_AND_PROPERTY(construct, simd)
+
+__OMP_TRAIT_SET(device)
+
+__OMP_TRAIT_SELECTOR(device, kind, true)
+
+__OMP_TRAIT_PROPERTY(device, kind, host)
+__OMP_TRAIT_PROPERTY(device, kind, nohost)
+__OMP_TRAIT_PROPERTY(device, kind, cpu)
+__OMP_TRAIT_PROPERTY(device, kind, gpu)
+__OMP_TRAIT_PROPERTY(device, kind, fpga)
+__OMP_TRAIT_PROPERTY(device, kind, any)
+
+__OMP_TRAIT_SELECTOR(device, isa, true)
+
+// TODO: What do we want for ISA?
+
+__OMP_TRAIT_SELECTOR(device, arch, true)
+
+__OMP_TRAIT_PROPERTY(device, arch, arm)
+__OMP_TRAIT_PROPERTY(device, arch, armeb)
+__OMP_TRAIT_PROPERTY(device, arch, aarch64)
+__OMP_TRAIT_PROPERTY(device, arch, aarch64_be)
+__OMP_TRAIT_PROPERTY(device, arch, aarch64_32)
+__OMP_TRAIT_PROPERTY(device, arch, ppc)
+__OMP_TRAIT_PROPERTY(device, arch, ppc64)
+__OMP_TRAIT_PROPERTY(device, arch, ppc64le)
+__OMP_TRAIT_PROPERTY(device, arch, x86)
+__OMP_TRAIT_PROPERTY(device, arch, x86_64)
+__OMP_TRAIT_PROPERTY(device, arch, amdgcn)
+__OMP_TRAIT_PROPERTY(device, arch, nvptx)
+__OMP_TRAIT_PROPERTY(device, arch, nvptx64)
+
+__OMP_TRAIT_SET(implementation)
+
+__OMP_TRAIT_SELECTOR(implementation, vendor, true)
+
+__OMP_TRAIT_PROPERTY(implementation, vendor, amd)
+__OMP_TRAIT_PROPERTY(implementation, vendor, arm)
+__OMP_TRAIT_PROPERTY(implementation, vendor, bsc)
+__OMP_TRAIT_PROPERTY(implementation, vendor, cray)
+__OMP_TRAIT_PROPERTY(implementation, vendor, fujitsu)
+__OMP_TRAIT_PROPERTY(implementation, vendor, gnu)
+__OMP_TRAIT_PROPERTY(implementation, vendor, ibm)
+__OMP_TRAIT_PROPERTY(implementation, vendor, intel)
+__OMP_TRAIT_PROPERTY(implementation, vendor, llvm)
+__OMP_TRAIT_PROPERTY(implementation, vendor, pgi)
+__OMP_TRAIT_PROPERTY(implementation, vendor, ti)
+__OMP_TRAIT_PROPERTY(implementation, vendor, unknown)
+
+__OMP_TRAIT_SELECTOR(implementation, extension, true)
+
+__OMP_TRAIT_SET(user)
+
+__OMP_TRAIT_SELECTOR(user, condition, true)
+
+__OMP_TRAIT_PROPERTY(user, condition, true)
+__OMP_TRAIT_PROPERTY(user, condition, false)
+__OMP_TRAIT_PROPERTY(user, condition, unknown)
+
+#undef OMP_TRAIT_SET
+#undef __OMP_TRAIT_SET
+///}
+
+/// Traits for the requires directive
+///
+/// These will (potentially) become trait selectors for the OpenMP context if
+/// the OMP_REQUIRES_TRAIT macro is not defined.
+///
+///{
+
+#ifdef OMP_REQUIRES_TRAIT
+#define __OMP_REQUIRES_TRAIT(Name)                                             \
+  OMP_REQUIRES_TRAIT(OMP_REQUIRES_TRAIT_##Name, #Name)
+#else
+#define __OMP_REQUIRES_TRAIT(Name)                                             \
+  __OMP_TRAIT_SELECTOR_AND_PROPERTY(implementation, Name)
+#endif
+
+__OMP_REQUIRES_TRAIT(unified_address)
+__OMP_REQUIRES_TRAIT(unified_shared_memory)
+__OMP_REQUIRES_TRAIT(reverse_offload)
+__OMP_REQUIRES_TRAIT(dynamic_allocators)
+__OMP_REQUIRES_TRAIT(atomic_default_mem_order)
+
+#undef __OMP_TRAIT_SELECTOR_AND_PROPERTY
+#undef OMP_TRAIT_SELECTOR
+#undef __OMP_TRAIT_SELECTOR
+#undef OMP_TRAIT_PROPERTY
+#undef __OMP_TRAIT_PROPERTY
+#undef __OMP_REQUIRES_TRAIT
+#undef OMP_REQUIRES_TRAIT
+///}
