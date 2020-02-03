@@ -929,8 +929,9 @@ void TUScheduler::run(llvm::StringRef Name,
                       llvm::unique_function<void()> Action) {
   if (!PreambleTasks)
     return Action();
-  PreambleTasks->runAsync(Name, [Ctx = Context::current().clone(),
+  PreambleTasks->runAsync(Name, [this, Ctx = Context::current().clone(),
                                  Action = std::move(Action)]() mutable {
+    std::lock_guard<Semaphore> BarrierLock(Barrier);
     WithContext WC(std::move(Ctx));
     Action();
   });
