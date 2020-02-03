@@ -561,6 +561,7 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
       MIB.add(ImmOp);
       MIB.add(OldMI->getOperand(3));
       OpStart = 4;
+      Changed = true;
     } else if (HII->getAddrMode(*OldMI) == HexagonII::BaseImmOffset) {
       short NewOpCode = HII->changeAddrMode_io_abs(*OldMI);
       assert(NewOpCode >= 0 && "Invalid New opcode\n");
@@ -570,10 +571,8 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
       MIB.addGlobalAddress(GV, Offset, ImmOp.getTargetFlags());
       MIB.add(OldMI->getOperand(2));
       OpStart = 3;
+      Changed = true;
     }
-    Changed = true;
-    LLVM_DEBUG(dbgs() << "[Changing]: " << *OldMI << "\n");
-    LLVM_DEBUG(dbgs() << "[TO]: " << *MIB << "\n");
   } else if (ImmOpNum == 1 && OldMI->getOperand(2).getImm() == 0) {
     short NewOpCode = HII->changeAddrMode_rr_io(*OldMI);
     assert(NewOpCode >= 0 && "Invalid New opcode\n");
@@ -582,12 +581,14 @@ bool HexagonOptAddrMode::changeStore(MachineInstr *OldMI, MachineOperand ImmOp,
     MIB.add(ImmOp);
     OpStart = 3;
     Changed = true;
+  }
+  if (Changed) {
     LLVM_DEBUG(dbgs() << "[Changing]: " << *OldMI << "\n");
     LLVM_DEBUG(dbgs() << "[TO]: " << *MIB << "\n");
-  }
-  if (Changed)
+
     for (unsigned i = OpStart; i < OpEnd; ++i)
       MIB.add(OldMI->getOperand(i));
+  }
 
   return Changed;
 }
