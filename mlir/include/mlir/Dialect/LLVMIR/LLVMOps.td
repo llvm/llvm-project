@@ -344,7 +344,7 @@ def LLVM_InvokeOp : LLVM_Op<"invoke", [Terminator]>,
 }
 
 def LLVM_LandingpadOp : LLVM_OneResultOp<"landingpad">,
-                        Arguments<(ins UnitAttr:$cleanup, 
+                        Arguments<(ins UnitAttr:$cleanup,
                                        Variadic<LLVM_Type>)> {
   let verifier = [{ return ::verify(*this); }];
   let parser = [{ return parseLandingpadOp(parser, result); }];
@@ -354,9 +354,18 @@ def LLVM_LandingpadOp : LLVM_OneResultOp<"landingpad">,
 def LLVM_CallOp : LLVM_Op<"call">,
                   Arguments<(ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                              Variadic<LLVM_Type>)>,
-                  Results<(outs Variadic<LLVM_Type>)>,
-                  LLVM_TwoBuilders<LLVM_OneResultOpBuilder,
-                                   LLVM_ZeroResultOpBuilder> {
+                  Results<(outs Variadic<LLVM_Type>)> {
+  let builders = [OpBuilder<
+    "Builder *builder, OperationState &result, LLVMFuncOp func,"
+    "ValueRange operands, ArrayRef<NamedAttribute> attributes = {}",
+    [{
+      LLVMType resultType = func.getType().getFunctionResultType();
+      if (!resultType.isVoidTy())
+        result.addTypes(resultType);
+      result.addAttribute("callee", builder->getSymbolRefAttr(func));
+      result.addAttributes(attributes);
+      result.addOperands(operands);
+    }]>];
   let verifier = [{
     if (getNumResults() > 1)
       return emitOpError("must have 0 or 1 result");

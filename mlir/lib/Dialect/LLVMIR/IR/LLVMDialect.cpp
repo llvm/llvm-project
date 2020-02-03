@@ -1313,7 +1313,7 @@ static void printLLVMFuncOp(OpAsmPrinter &p, LLVMFuncOp op) {
     argTypes.push_back(fnType.getFunctionParamType(i));
 
   LLVMType returnType = fnType.getFunctionResultType();
-  if (!returnType.getUnderlyingType()->isVoidTy())
+  if (!returnType.isVoidTy())
     resTypes.push_back(returnType);
 
   impl::printFunctionSignature(p, op, argTypes, op.isVarArg(), resTypes);
@@ -1348,14 +1348,12 @@ unsigned LLVMFuncOp::getNumFuncArguments() {
 // Hook for OpTrait::FunctionLike, returns the number of function results.
 // Depends on the type attribute being correct as checked by verifyType
 unsigned LLVMFuncOp::getNumFuncResults() {
-  llvm::FunctionType *funcType =
-      cast<llvm::FunctionType>(getType().getUnderlyingType());
   // We model LLVM functions that return void as having zero results,
   // and all others as having one result.
   // If we modeled a void return as one result, then it would be possible to
   // attach an MLIR result attribute to it, and it isn't clear what semantics we
   // would assign to that.
-  if (funcType->getReturnType()->isVoidTy())
+  if (getType().getFunctionResultType().isVoidTy())
     return 0;
   return 1;
 }
@@ -1900,9 +1898,12 @@ LLVMType LLVMType::getVectorTy(LLVMType elementType, unsigned numElements) {
     return llvm::VectorType::get(elementType.getUnderlyingType(), numElements);
   });
 }
+
 LLVMType LLVMType::getVoidTy(LLVMDialect *dialect) {
   return dialect->impl->voidTy;
 }
+
+bool LLVMType::isVoidTy() { return getUnderlyingType()->isVoidTy(); }
 
 //===----------------------------------------------------------------------===//
 // Utility functions.
