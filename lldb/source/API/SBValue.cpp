@@ -1154,7 +1154,7 @@ bool SBValue::GetExpressionPath(SBStream &description) {
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    value_sp->GetExpressionPath(description.ref(), false);
+    value_sp->GetExpressionPath(description.ref());
     return true;
   }
   return false;
@@ -1168,7 +1168,7 @@ bool SBValue::GetExpressionPath(SBStream &description,
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    value_sp->GetExpressionPath(description.ref(), qualify_cxx_base_classes);
+    value_sp->GetExpressionPath(description.ref());
     return true;
   }
   return false;

@@ -397,7 +397,7 @@ public:
   bool IsIntegerType(bool &is_signed);
 
   virtual void GetExpressionPath(
-      Stream &s, bool qualify_cxx_base_classes,
+      Stream &s,
       GetExpressionPathFormat = eGetExpressionPathFormatDereferencePointers);
 
   lldb::ValueObjectSP GetValueForExpressionPath(
