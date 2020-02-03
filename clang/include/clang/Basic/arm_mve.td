@@ -138,6 +138,15 @@ let params = !listconcat(T.Int16, T.Int32) in {
     (select $pred, (or $v, (splat (Scalar $imm))), $v)>;
 }
 
+let params = T.Usual in {
+  let pnt = PNT_None in
+    def vdupq_n: Intrinsic<Vector, (args unpromoted<Scalar>:$s), (splat $s)>;
+
+  defm vdupq: IntrinsicMX<
+      Vector, (args unpromoted<Scalar>:$s, Predicate:$pred),
+      (select $pred, (splat $s), $inactive), 1, "_n", PNT_NType, PNT_None>;
+}
+
 // The bitcasting below is not overcomplicating the IR because while
 // Vector and UVector may be different vector types at the C level i.e.
 // vectors of same size signed/unsigned ints. Once they're lowered
