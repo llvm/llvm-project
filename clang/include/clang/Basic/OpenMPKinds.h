@@ -194,6 +194,13 @@ enum OpenMPLastprivateModifier {
   OMPC_LASTPRIVATE_unknown,
 };
 
+/// OpenMP attributes for 'order' clause.
+enum OpenMPOrderClauseKind {
+#define OPENMP_ORDER_KIND(Name) OMPC_ORDER_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_ORDER_unknown,
+};
+
 /// Scheduling data for loop-based OpenMP directives.
 struct OpenMPScheduleTy final {
   OpenMPScheduleClauseKind Schedule = OMPC_SCHEDULE_unknown;
