@@ -12,7 +12,6 @@
 #include "ClangExpressionVariable.h"
 #include "ClangFunctionCaller.h"
 
-#include "lldb/Core/ClangForward.h"
 #include "clang/Sema/SemaConsumer.h"
 
 namespace lldb_private {
