@@ -96,6 +96,9 @@ bool SIRemoveShortExecBranches::mustRetainExeczBranch(
       if (TII->hasUnwantedEffectsWhenEXECEmpty(*I))
         return true;
 
+      if (TII->isKillTerminator(I->getOpcode()))
+        return true;
+
       // These instructions are potentially expensive even if EXEC = 0.
       if (TII->isSMRD(*I) || TII->isVMEM(*I) || TII->isFLAT(*I) ||
           I->getOpcode() == AMDGPU::S_WAITCNT)
