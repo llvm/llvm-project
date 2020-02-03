@@ -284,7 +284,7 @@ LLT LegalizerHelper::extractGCDType(SmallVectorImpl<Register> &Parts, LLT DstTy,
                                     LLT NarrowTy, Register SrcReg) {
   LLT SrcTy = MRI.getType(SrcReg);
 
-  LLT GCDTy = getGCDType(getGCDType(SrcTy, NarrowTy), DstTy);
+  LLT GCDTy = getGCDType(DstTy, getGCDType(SrcTy, NarrowTy));
   if (SrcTy == GCDTy) {
     // If the source already evenly divides the result type, we don't need to do
     // anything.
@@ -298,10 +298,9 @@ LLT LegalizerHelper::extractGCDType(SmallVectorImpl<Register> &Parts, LLT DstTy,
   return GCDTy;
 }
 
-void LegalizerHelper::buildLCMMerge(Register DstReg, LLT NarrowTy, LLT GCDTy,
-                                    SmallVectorImpl<Register> &VRegs,
-                                    unsigned PadStrategy) {
-  LLT DstTy = MRI.getType(DstReg);
+LLT LegalizerHelper::buildLCMMergePieces(LLT DstTy, LLT NarrowTy, LLT GCDTy,
+                                         SmallVectorImpl<Register> &VRegs,
+                                         unsigned PadStrategy) {
   LLT LCMTy = getLCMType(DstTy, NarrowTy);
 
   int NumParts = LCMTy.getSizeInBits() / NarrowTy.getSizeInBits();
@@ -388,12 +387,34 @@ void LegalizerHelper::buildLCMMerge(Register DstReg, LLT NarrowTy, LLT GCDTy,
       AllPadReg = Remerge[I];
   }
 
+  VRegs = std::move(Remerge);
+  return LCMTy;
+}
+
+void LegalizerHelper::buildWidenedRemergeToDst(Register DstReg, LLT LCMTy,
+                                               ArrayRef<Register> RemergeRegs) {
+  LLT DstTy = MRI.getType(DstReg);
+
   // Create the merge to the widened source, and extract the relevant bits into
   // the result.
-  if (DstTy == LCMTy)
-    MIRBuilder.buildMerge(DstReg, Remerge);
-  else
-    MIRBuilder.buildTrunc(DstReg, MIRBuilder.buildMerge(LCMTy, Remerge));
+
+  if (DstTy == LCMTy) {
+    MIRBuilder.buildMerge(DstReg, RemergeRegs);
+    return;
+  }
+
+  auto Remerge = MIRBuilder.buildMerge(LCMTy, RemergeRegs);
+  if (DstTy.isScalar() && LCMTy.isScalar()) {
+    MIRBuilder.buildTrunc(DstReg, Remerge);
+    return;
+  }
+
+  if (LCMTy.isVector()) {
+    MIRBuilder.buildExtract(DstReg, Remerge, 0);
+    return;
+  }
+
+  llvm_unreachable("unhandled case");
 }
 
 static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
@@ -3180,6 +3201,28 @@ LegalizerHelper::reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx,
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::fewerElementsVectorSextInReg(MachineInstr &MI, unsigned TypeIdx,
+                                              LLT NarrowTy) {
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  int64_t Imm = MI.getOperand(2).getImm();
+
+  LLT DstTy = MRI.getType(DstReg);
+
+  SmallVector<Register, 8> Parts;
+  LLT GCDTy = extractGCDType(Parts, DstTy, NarrowTy, SrcReg);
+  LLT LCMTy = buildLCMMergePieces(DstTy, NarrowTy, GCDTy, Parts);
+
+  for (Register &R : Parts)
+    R = MIRBuilder.buildSExtInReg(NarrowTy, R, Imm).getReg(0);
+
+  buildWidenedRemergeToDst(DstReg, LCMTy, Parts);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
                                      LLT NarrowTy) {
   using namespace TargetOpcode;
@@ -3275,6 +3318,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_LOAD:
   case G_STORE:
     return reduceLoadStoreWidth(MI, TypeIdx, NarrowTy);
+  case G_SEXT_INREG:
+    return fewerElementsVectorSextInReg(MI, TypeIdx, NarrowTy);
   default:
     return UnableToLegalize;
   }
@@ -3888,7 +3933,9 @@ LegalizerHelper::narrowScalarExt(MachineInstr &MI, unsigned TypeIdx,
 
   SmallVector<Register, 8> Parts;
   LLT GCDTy = extractGCDType(Parts, DstTy, NarrowTy, SrcReg);
-  buildLCMMerge(DstReg, NarrowTy, GCDTy, Parts, MI.getOpcode());
+  LLT LCMTy = buildLCMMergePieces(DstTy, NarrowTy, GCDTy, Parts, MI.getOpcode());
+  buildWidenedRemergeToDst(DstReg, LCMTy, Parts);
+
   MI.eraseFromParent();
   return Legalized;
 }
