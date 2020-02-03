@@ -285,6 +285,18 @@ void CFIProgram::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
   }
 }
 
+// Returns the CIE identifier to be used by the requested format.
+// CIE ids for .debug_frame sections are defined in Section 7.24 of DWARFv5.
+// For CIE ID in .eh_frame sections see
+// https://refspecs.linuxfoundation.org/LSB_5.0.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
+constexpr uint64_t getCIEId(bool IsDWARF64, bool IsEH) {
+  if (IsEH)
+    return 0;
+  if (IsDWARF64)
+    return DW64_CIE_ID;
+  return DW_CIE_ID;
+}
+
 void CIE::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const {
   OS << format("%08x %08x %08x CIE", (uint32_t)Offset, (uint32_t)Length,
                IsEH ? 0 : DW_CIE_ID)
@@ -379,10 +391,7 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
     // The Id field's size depends on the DWARF format
     bool IsDWARF64 = Format == DWARF64;
     Id = Data.getRelocatedValue((IsDWARF64 && !IsEH) ? 8 : 4, &Offset);
-    bool IsCIE =
-        ((IsDWARF64 && Id == DW64_CIE_ID) || Id == DW_CIE_ID || (IsEH && !Id));
-
-    if (IsCIE) {
+    if (Id == getCIEId(IsDWARF64, IsEH)) {
       uint8_t Version = Data.getU8(&Offset);
       const char *Augmentation = Data.getCStr(&Offset);
       StringRef AugmentationString(Augmentation ? Augmentation : "");
