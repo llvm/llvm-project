@@ -5669,7 +5669,7 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
 
   if (NumElts == 8 || NumElts == 16) {
     NumLoads = NumElts / 4;
-    LoadVT = MVT::v4i32;
+    LoadVT = MVT::getVectorVT(LoadVT.getScalarType(), 4);
   }
 
   SDVTList VTList = DAG.getVTList({LoadVT, MVT::Glue});
@@ -5695,7 +5695,7 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
                                         LoadVT, MMO, DAG));
   }
 
-  if (VT == MVT::v8i32 || VT == MVT::v16i32)
+  if (NumElts == 8 || NumElts == 16)
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Loads);
 
   return Loads[0];
