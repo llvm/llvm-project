@@ -13,8 +13,7 @@ define i32 @bextr_zero_length(i32 %x, i32 %y) {
 ;
 ; X64-LABEL: bextr_zero_length:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    bextrl %eax, %edi, %eax
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
   %1 = and i32 %y, 255
   %2 = tail call i32 @llvm.x86.bmi.bextr.32(i32 %x, i32 %1)
