@@ -3157,9 +3157,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       Opts.setDefaultCallingConv(DefaultCC);
   }
 
-  // -fsemantic-interposition
-  Opts.SemanticInterposition =
-      Args.hasArg(OPT_fsemantic_interposition) && Opts.PICLevel && !Opts.PIE;
+  Opts.SemanticInterposition = Args.hasArg(OPT_fsemantic_interposition);
 
   // -mrtd option
   if (Arg *A = Args.getLastArg(OPT_mrtd)) {
