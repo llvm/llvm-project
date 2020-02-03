@@ -15,6 +15,7 @@
 #ifndef LLVM_SUPPORT_TYPESIZE_H
 #define LLVM_SUPPORT_TYPESIZE_H
 
+#include <cstdint>
 #include <cassert>
 
 namespace llvm {
