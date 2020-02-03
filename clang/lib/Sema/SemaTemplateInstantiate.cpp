@@ -18,6 +18,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/PrettyDeclStackTrace.h"
+#include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Sema/DeclSpec.h"
@@ -2145,6 +2146,94 @@ void Sema::SubstExceptionSpec(FunctionDecl *New, const FunctionProtoType *Proto,
   UpdateExceptionSpec(New, ESI);
 }
 
+namespace {
+
+  struct GetContainedInventedTypeParmVisitor :
+    public TypeVisitor<GetContainedInventedTypeParmVisitor,
+                       TemplateTypeParmDecl *> {
+    using TypeVisitor<GetContainedInventedTypeParmVisitor,
+                      TemplateTypeParmDecl *>::Visit;
+
+    TemplateTypeParmDecl *Visit(QualType T) {
+      if (T.isNull())
+        return nullptr;
+      return Visit(T.getTypePtr());
+    }
+    // The deduced type itself.
+    TemplateTypeParmDecl *VisitTemplateTypeParmType(
+        const TemplateTypeParmType *T) {
+      if (!T->getDecl()->isImplicit())
+        return nullptr;
+      return T->getDecl();
+    }
+
+    // Only these types can contain 'auto' types, and subsequently be replaced
+    // by references to invented parameters.
+
+    TemplateTypeParmDecl *VisitElaboratedType(const ElaboratedType *T) {
+      return Visit(T->getNamedType());
+    }
+
+    TemplateTypeParmDecl *VisitPointerType(const PointerType *T) {
+      return Visit(T->getPointeeType());
+    }
+
+    TemplateTypeParmDecl *VisitBlockPointerType(const BlockPointerType *T) {
+      return Visit(T->getPointeeType());
+    }
+
+    TemplateTypeParmDecl *VisitReferenceType(const ReferenceType *T) {
+      return Visit(T->getPointeeTypeAsWritten());
+    }
+
+    TemplateTypeParmDecl *VisitMemberPointerType(const MemberPointerType *T) {
+      return Visit(T->getPointeeType());
+    }
+
+    TemplateTypeParmDecl *VisitArrayType(const ArrayType *T) {
+      return Visit(T->getElementType());
+    }
+
+    TemplateTypeParmDecl *VisitDependentSizedExtVectorType(
+      const DependentSizedExtVectorType *T) {
+      return Visit(T->getElementType());
+    }
+
+    TemplateTypeParmDecl *VisitVectorType(const VectorType *T) {
+      return Visit(T->getElementType());
+    }
+
+    TemplateTypeParmDecl *VisitFunctionProtoType(const FunctionProtoType *T) {
+      return VisitFunctionType(T);
+    }
+
+    TemplateTypeParmDecl *VisitFunctionType(const FunctionType *T) {
+      return Visit(T->getReturnType());
+    }
+
+    TemplateTypeParmDecl *VisitParenType(const ParenType *T) {
+      return Visit(T->getInnerType());
+    }
+
+    TemplateTypeParmDecl *VisitAttributedType(const AttributedType *T) {
+      return Visit(T->getModifiedType());
+    }
+
+    TemplateTypeParmDecl *VisitMacroQualifiedType(const MacroQualifiedType *T) {
+      return Visit(T->getUnderlyingType());
+    }
+
+    TemplateTypeParmDecl *VisitAdjustedType(const AdjustedType *T) {
+      return Visit(T->getOriginalType());
+    }
+
+    TemplateTypeParmDecl *VisitPackExpansionType(const PackExpansionType *T) {
+      return Visit(T->getPattern());
+    }
+  };
+
+} // namespace
+
 ParmVarDecl *Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
                             const MultiLevelTemplateArgumentList &TemplateArgs,
                                     int indexAdjustment,
@@ -2190,6 +2279,46 @@ ParmVarDecl *Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
   if (NewDI->getType()->isVoidType()) {
     Diag(OldParm->getLocation(), diag::err_param_with_void_type);
     return nullptr;
+  }
+
+  // In abbreviated templates, TemplateTypeParmDecls with possible
+  // TypeConstraints are created when the parameter list is originally parsed.
+  // The TypeConstraints can therefore reference other functions parameters in
+  // the abbreviated function template, which is why we must instantiate them
+  // here, when the instantiated versions of those referenced parameters are in
+  // scope.
+  if (TemplateTypeParmDecl *TTP =
+          GetContainedInventedTypeParmVisitor().Visit(OldDI->getType())) {
+    if (const TypeConstraint *TC = TTP->getTypeConstraint()) {
+      auto *Inst = cast<TemplateTypeParmDecl>(
+          FindInstantiatedDecl(TTP->getLocation(), TTP, TemplateArgs));
+      // We will first get here when instantiating the abbreviated function
+      // template's described function, but we might also get here later.
+      // Make sure we do not instantiate the TypeConstraint more than once.
+      if (Inst && !Inst->hasTypeConstraint()) {
+        // TODO: Concepts: do not instantiate the constraint (delayed constraint
+        // substitution)
+        const ASTTemplateArgumentListInfo *TemplArgInfo
+          = TC->getTemplateArgsAsWritten();
+        TemplateArgumentListInfo InstArgs;
+
+        if (TemplArgInfo) {
+          InstArgs.setLAngleLoc(TemplArgInfo->LAngleLoc);
+          InstArgs.setRAngleLoc(TemplArgInfo->RAngleLoc);
+          if (Subst(TemplArgInfo->getTemplateArgs(),
+                    TemplArgInfo->NumTemplateArgs, InstArgs, TemplateArgs))
+            return nullptr;
+        }
+        if (AttachTypeConstraint(
+                TC->getNestedNameSpecifierLoc(), TC->getConceptNameInfo(),
+                TC->getNamedConcept(), &InstArgs, Inst,
+                TTP->isParameterPack()
+                    ? cast<CXXFoldExpr>(TC->getImmediatelyDeclaredConstraint())
+                        ->getEllipsisLoc()
+                    : SourceLocation()))
+          return nullptr;
+      }
+    }
   }
 
   ParmVarDecl *NewParm = CheckParameter(Context.getTranslationUnitDecl(),
