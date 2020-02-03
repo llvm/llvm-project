@@ -863,12 +863,12 @@ Constant *llvm::ConstantFoldInsertElementInstruction(Constant *Val,
 Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1,
                                                      Constant *V2,
                                                      Constant *Mask) {
-  unsigned MaskNumElts = Mask->getType()->getVectorNumElements();
+  ElementCount MaskEltCount = Mask->getType()->getVectorElementCount();
   Type *EltTy = V1->getType()->getVectorElementType();
 
   // Undefined shuffle mask -> undefined value.
   if (isa<UndefValue>(Mask))
-    return UndefValue::get(VectorType::get(EltTy, MaskNumElts));
+    return UndefValue::get(VectorType::get(EltTy, MaskEltCount));
 
   // Don't break the bitcode reader hack.
   if (isa<ConstantExpr>(Mask)) return nullptr;
@@ -879,6 +879,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1,
   if (ValTy->isScalable())
     return nullptr;
 
+  unsigned MaskNumElts = MaskEltCount.Min;
   unsigned SrcNumElts = V1->getType()->getVectorNumElements();
 
   // Loop over the shuffle mask, evaluating each element.
