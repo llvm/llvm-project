@@ -522,6 +522,25 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::f32, &VE::F32RegClass);
   addRegisterClass(MVT::f64, &VE::I64RegClass);
 
+  /// Load & Store {
+  // Turn FP extload into load/fpextend
+  for (MVT VT : MVT::fp_valuetypes()) {
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::f64, Expand);
+  }
+
+  // VE doesn't have i1 sign extending load
+  for (MVT VT : MVT::integer_valuetypes()) {
+    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
+    setTruncStoreAction(VT, MVT::i1, Expand);
+  }
+
+  // Turn FP truncstore into trunc + store.
+  setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+  /// } Load & Store
+
   // Custom legalize address nodes into LO/HI parts.
   MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
   setOperationAction(ISD::BlockAddress, PtrVT, Custom);
