@@ -1045,11 +1045,13 @@ define amdgpu_kernel void @idot4_acc16_vecMul(<4 x i8> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    v_mov_b32_e32 v3, 0xffff
 ; GFX10-DL-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-DL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-DL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX10-DL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-DL-NEXT:    global_load_ushort v3, v[0:1], off
-; GFX10-DL-NEXT:    s_load_dword s0, s[4:5], 0x0
-; GFX10-DL-NEXT:    s_load_dword s1, s[6:7], 0x0
+; GFX10-DL-NEXT:    v_mov_b32_e32 v0, s2
+; GFX10-DL-NEXT:    v_mov_b32_e32 v1, s3
+; GFX10-DL-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; GFX10-DL-NEXT:    global_load_ushort v2, v[0:1], off
+; GFX10-DL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-DL-NEXT:    s_load_dword s0, s[0:1], 0x0
+; GFX10-DL-NEXT:    s_load_dword s1, s[2:3], 0x0
 ; GFX10-DL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-DL-NEXT:    s_bfe_i32 s4, s0, 0x80000
 ; GFX10-DL-NEXT:    s_bfe_i32 s3, s1, 0x80000

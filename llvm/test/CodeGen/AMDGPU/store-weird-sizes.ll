@@ -181,8 +181,8 @@ define amdgpu_kernel void @local_store_i65(i65 addrspace(3)* %ptr, i65 %arg) #0 
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    s_and_b32 s3, s3, 1
-; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s3
+; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    ds_write_b8 v2, v3 offset:8
 ; GFX9-NEXT:    ds_write_b64 v2, v[0:1]
 ; GFX9-NEXT:    s_endpgm
@@ -216,7 +216,6 @@ define void @local_store_i17(i17 addrspace(3)* %ptr, i17 %arg) #0 {
 ; CIVI:       ; %bb.0:
 ; CIVI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CIVI-NEXT:    s_mov_b32 m0, -1
-; CIVI-NEXT:    v_bfe_u32 v2, v1, 16, 1
 ; CIVI-NEXT:    ds_write_b16 v0, v1
 ; CIVI-NEXT:    v_bfe_u32 v1, v1, 16, 1
 ; CIVI-NEXT:    ds_write_b8 v0, v1 offset:2
