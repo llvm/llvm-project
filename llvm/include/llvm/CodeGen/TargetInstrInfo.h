@@ -976,7 +976,7 @@ public:
   /// is true, the register operand is the last use and must be marked kill.
   virtual void storeRegToStackSlot(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MI,
-                                   unsigned SrcReg, bool isKill, int FrameIndex,
+                                   Register SrcReg, bool isKill, int FrameIndex,
                                    const TargetRegisterClass *RC,
                                    const TargetRegisterInfo *TRI) const {
     llvm_unreachable("Target didn't implement "
@@ -988,7 +988,7 @@ public:
   /// machine basic block before the specified machine instruction.
   virtual void loadRegFromStackSlot(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MI,
-                                    unsigned DestReg, int FrameIndex,
+                                    Register DestReg, int FrameIndex,
                                     const TargetRegisterClass *RC,
                                     const TargetRegisterInfo *TRI) const {
     llvm_unreachable("Target didn't implement "
