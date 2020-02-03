@@ -1408,9 +1408,7 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
 }
 
 /// This lowering tries to look for G_PTR_ADD instructions and then converts
-/// them to a standard G_ADD with a COPY on the source, and G_INTTOPTR on the
-/// result. This is ok for address space 0 on AArch64 as p0 can be treated as
-/// s64.
+/// them to a standard G_ADD with a COPY on the source.
 ///
 /// The motivation behind this is to expose the add semantics to the imported
 /// tablegen patterns. We shouldn't need to check for uses being loads/stores,
@@ -1422,7 +1420,6 @@ bool AArch64InstructionSelector::convertPtrAddToAdd(
   assert(I.getOpcode() == TargetOpcode::G_PTR_ADD && "Expected G_PTR_ADD");
   Register DstReg = I.getOperand(0).getReg();
   Register AddOp1Reg = I.getOperand(1).getReg();
-  Register AddOp2Reg = I.getOperand(2).getReg();
   const LLT PtrTy = MRI.getType(DstReg);
   if (PtrTy.getAddressSpace() != 0)
     return false;
@@ -1434,23 +1431,14 @@ bool AArch64InstructionSelector::convertPtrAddToAdd(
   MachineIRBuilder MIB(I);
   const LLT s64 = LLT::scalar(64);
   auto PtrToInt = MIB.buildPtrToInt(s64, AddOp1Reg);
-  auto Add = MIB.buildAdd(s64, PtrToInt, AddOp2Reg);
   // Set regbanks on the registers.
   MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(AArch64::GPRRegBankID));
-  MRI.setRegBank(Add.getReg(0), RBI.getRegBank(AArch64::GPRRegBankID));
 
-  // Now turn the %dst = G_PTR_ADD %base, off into:
-  // %dst = G_INTTOPTR %Add
-  I.setDesc(TII.get(TargetOpcode::G_INTTOPTR));
-  I.getOperand(1).setReg(Add.getReg(0));
-  I.RemoveOperand(2);
-
-  // We need to manually call select on these because new instructions don't
-  // get added to the selection queue.
-  if (!select(*Add)) {
-    LLVM_DEBUG(dbgs() << "Failed to select G_ADD in convertPtrAddToAdd");
-    return false;
-  }
+  // Now turn the %dst(p0) = G_PTR_ADD %base, off into:
+  // %dst(s64) = G_ADD %intbase, off
+  I.setDesc(TII.get(TargetOpcode::G_ADD));
+  MRI.setType(DstReg, s64);
+  I.getOperand(1).setReg(PtrToInt.getReg(0));
   if (!select(*PtrToInt)) {
     LLVM_DEBUG(dbgs() << "Failed to select G_PTRTOINT in convertPtrAddToAdd");
     return false;
