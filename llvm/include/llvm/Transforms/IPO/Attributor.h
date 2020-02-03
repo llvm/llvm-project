@@ -980,9 +980,11 @@ struct Attributor {
   /// This method will evaluate \p Pred on call sites and return
   /// true if \p Pred holds in every call sites. However, this is only possible
   /// all call sites are known, hence the function has internal linkage.
+  /// If true is returned, \p AllCallSitesKnown is set if all possible call
+  /// sites of the function have been visited.
   bool checkForAllCallSites(const function_ref<bool(AbstractCallSite)> &Pred,
                             const AbstractAttribute &QueryingAA,
-                            bool RequireAllCallSites);
+                            bool RequireAllCallSites, bool &AllCallSitesKnown);
 
   /// Check \p Pred on all values potentially returned by \p F.
   ///
@@ -1040,9 +1042,12 @@ private:
   /// This method will evaluate \p Pred on call sites and return
   /// true if \p Pred holds in every call sites. However, this is only possible
   /// all call sites are known, hence the function has internal linkage.
+  /// If true is returned, \p AllCallSitesKnown is set if all possible call
+  /// sites of the function have been visited.
   bool checkForAllCallSites(const function_ref<bool(AbstractCallSite)> &Pred,
                             const Function &Fn, bool RequireAllCallSites,
-                            const AbstractAttribute *QueryingAA);
+                            const AbstractAttribute *QueryingAA,
+                            bool &AllCallSitesKnown);
 
   /// The private version of getAAFor that allows to omit a querying abstract
   /// attribute. See also the public getAAFor method.
@@ -2093,6 +2098,9 @@ struct AAIsDead : public StateWrapper<BooleanState, AbstractAttribute>,
 
   /// Returns true if the underlying value is assumed dead.
   virtual bool isAssumedDead() const = 0;
+
+  /// Returns true if the underlying value is known dead.
+  virtual bool isKnownDead() const = 0;
 
   /// Returns true if \p BB is assumed dead.
   virtual bool isAssumedDead(const BasicBlock *BB) const = 0;
