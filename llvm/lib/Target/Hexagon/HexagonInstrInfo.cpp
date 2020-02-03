@@ -888,7 +888,7 @@ void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 }
 
 void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator I, unsigned SrcReg, bool isKill, int FI,
+      MachineBasicBlock::iterator I, Register SrcReg, bool isKill, int FI,
       const TargetRegisterClass *RC, const TargetRegisterInfo *TRI) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
@@ -934,7 +934,7 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 }
 
 void HexagonInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, unsigned DestReg,
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
     int FI, const TargetRegisterClass *RC,
     const TargetRegisterInfo *TRI) const {
   DebugLoc DL = MBB.findDebugLoc(I);

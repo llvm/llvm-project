@@ -357,7 +357,7 @@ void XCoreInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
 void XCoreInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator I,
-                                         unsigned SrcReg, bool isKill,
+                                         Register SrcReg, bool isKill,
                                          int FrameIndex,
                                          const TargetRegisterClass *RC,
                                          const TargetRegisterInfo *TRI) const
@@ -380,7 +380,7 @@ void XCoreInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
 void XCoreInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator I,
-                                          unsigned DestReg, int FrameIndex,
+                                          Register DestReg, int FrameIndex,
                                           const TargetRegisterClass *RC,
                                           const TargetRegisterInfo *TRI) const
 {
