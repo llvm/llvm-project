@@ -36,16 +36,14 @@ StringRef llvm::omp::getOpenMPDirectiveName(Directive Kind) {
   llvm_unreachable("Invalid OpenMP directive kind");
 }
 
-/// Declarations for LLVM-IR types (simple, array, function and structure) are
+/// Declarations for LLVM-IR types (simple, function and structure) are
 /// generated below. Their names are defined and used in OpenMPKinds.def. Here
 /// we provide the declarations, the initializeTypes function will provide the
 /// values.
 ///
 ///{
+
 #define OMP_TYPE(VarName, InitValue) Type *llvm::omp::types::VarName = nullptr;
-#define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
-  ArrayType *llvm::omp::types::VarName##Ty = nullptr;                          \
-  PointerType *llvm::omp::types::VarName##PtrTy = nullptr;
 #define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
   FunctionType *llvm::omp::types::VarName = nullptr;                           \
   PointerType *llvm::omp::types::VarName##Ptr = nullptr;
@@ -65,9 +63,6 @@ void llvm::omp::types::initializeTypes(Module &M) {
   // the llvm::PointerTypes of them for easy access later.
   StructType *T;
 #define OMP_TYPE(VarName, InitValue) VarName = InitValue;
-#define OMP_ARRAY_TYPE(VarName, ElemTy, ArraySize)                             \
-  VarName##Ty = ArrayType::get(ElemTy, ArraySize);                             \
-  VarName##PtrTy = PointerType::getUnqual(VarName##Ty);
 #define OMP_FUNCTION_TYPE(VarName, IsVarArg, ReturnType, ...)                  \
   VarName = FunctionType::get(ReturnType, {__VA_ARGS__}, IsVarArg);            \
   VarName##Ptr = PointerType::getUnqual(VarName);
