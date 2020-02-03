@@ -131,6 +131,7 @@ class VectorType;
       LE,           // Low-overhead loops, Loop End
 
       PREDICATE_CAST, // Predicate cast for MVE i1 types
+      VECTOR_REG_CAST, // Reinterpret the current contents of a vector register
 
       VCMP,         // Vector compare.
       VCMPZ,        // Vector compare to zero.

@@ -7019,6 +7019,32 @@ static llvm::Value *ARMMVEVectorSplat(CGBuilderTy &Builder, llvm::Value *V) {
   return Builder.CreateVectorSplat(Elements, V);
 }
 
+static llvm::Value *ARMMVEVectorReinterpret(CGBuilderTy &Builder,
+                                            CodeGenFunction *CGF,
+                                            llvm::Value *V,
+                                            llvm::Type *DestType) {
+  // Convert one MVE vector type into another by reinterpreting its in-register
+  // format.
+  //
+  // Little-endian, this is identical to a bitcast (which reinterprets the
+  // memory format). But big-endian, they're not necessarily the same, because
+  // the register and memory formats map to each other differently depending on
+  // the lane size.
+  //
+  // We generate a bitcast whenever we can (if we're little-endian, or if the
+  // lane sizes are the same anyway). Otherwise we fall back to an IR intrinsic
+  // that performs the different kind of reinterpretation.
+  if (CGF->getTarget().isBigEndian() &&
+      V->getType()->getScalarSizeInBits() != DestType->getScalarSizeInBits()) {
+    return Builder.CreateCall(
+        CGF->CGM.getIntrinsic(Intrinsic::arm_mve_vreinterpretq,
+                              {DestType, V->getType()}),
+        V);
+  } else {
+    return Builder.CreateBitCast(V, DestType);
+  }
+}
+
 Value *CodeGenFunction::EmitARMMVEBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E,
                                               ReturnValueSlot ReturnValue,
