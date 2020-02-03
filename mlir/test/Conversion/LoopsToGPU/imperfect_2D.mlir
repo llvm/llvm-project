@@ -8,16 +8,16 @@ module {
     %1 = dim %arg0, 1 : memref<?x?xf32>
     %c0 = constant 0 : index
     %c1 = constant 1 : index
-    // CHECK: gpu.launch blocks([[ARG5:%.*]], [[ARG6:%.*]], [[ARG7:%.*]]) in ([[ARG11:%.*]] = {{%.*}}, [[ARG12:%.*]] = {{%.*}}, [[ARG13:%.*]] = {{%.*}}) threads([[ARG8:%.*]], [[ARG9:%.*]], [[ARG10:%.*]]) in ([[ARG14:%.*]] = {{%.*}}, [[ARG15:%.*]] = {{%.*}}, [[ARG16:%.*]] = {{%.*}}) args([[ARG17:%.*]] = [[ARG3]], [[ARG18:%.*]] = [[ARG4]], [[ARG19:%.*]] = [[ARG1]], [[ARG20:%.*]] = {{%.*}}, {{%.*}} = {{%.*}}, [[ARG22:%.*]] = [[ARG0]], [[ARG23:%.*]] = [[ARG2]]
-    // CHECK: [[TEMP1:%.*]] = muli [[ARG17]], [[ARG6]] : index
+    // CHECK: gpu.launch blocks([[ARG5:%.*]], [[ARG6:%.*]], [[ARG7:%.*]]) in ([[ARG11:%.*]] = {{%.*}}, [[ARG12:%.*]] = {{%.*}}, [[ARG13:%.*]] = {{%.*}}) threads([[ARG8:%.*]], [[ARG9:%.*]], [[ARG10:%.*]]) in ([[ARG14:%.*]] = {{%.*}}, [[ARG15:%.*]] = {{%.*}}, [[ARG16:%.*]] = {{%.*}})
+    // CHECK: [[TEMP1:%.*]] = muli [[ARG3]], [[ARG6]] : index
     // CHECK: [[BLOCKLOOPYLB:%.*]] = addi {{%.*}}, [[TEMP1]] : index
-    // CHECK: [[BLOCKLOOPYSTEP:%.*]] = muli [[ARG17]], [[ARG12]] : index
+    // CHECK: [[BLOCKLOOPYSTEP:%.*]] = muli [[ARG3]], [[ARG12]] : index
     // CHECK: loop.for [[BLOCKLOOPYIV:%.*]] = [[BLOCKLOOPYLB]] to {{%.*}} step [[BLOCKLOOPYSTEP]]
     loop.for %iv1 = %c0 to %0 step %arg3 {
 
-      // CHECK: [[TEMP2:%.*]] = muli [[ARG18]], [[ARG5]] : index
+      // CHECK: [[TEMP2:%.*]] = muli [[ARG4]], [[ARG5]] : index
       // CHECK: [[BLOCKLOOPXLB:%.*]] = addi  {{%.*}}, [[TEMP2]] : index
-      // CHECK: [[BLOCKLOOPXSTEP:%.*]] = muli [[ARG18]], [[ARG11]] : index
+      // CHECK: [[BLOCKLOOPXSTEP:%.*]] = muli [[ARG4]], [[ARG11]] : index
       // CHECK: loop.for [[BLOCKLOOPXIV:%.*]] = [[BLOCKLOOPXLB]] to {{%.*}} step [[BLOCKLOOPXSTEP]]
 
       loop.for %iv2 = %c0 to %1 step %arg4 {
@@ -27,7 +27,7 @@ module {
         %2 = alloc(%arg3, %arg4) : memref<?x?xf32>
 
         // Load transpose tile
-        // CHECK: [[TEMP3:%.*]] = muli [[ARG20]], [[ARG9:%.*]] : index
+        // CHECK: [[TEMP3:%.*]] = muli [[ARG20:%.*]], [[ARG9:%.*]] : index
         // CHECK: [[THREADLOOP1YLB:%.*]] = addi {{%.*}}, [[TEMP3]] : index
         // CHECK: [[THREADLOOP1YSTEP:%.*]] = muli [[ARG20]], [[ARG15]] : index
         // CHECK: loop.for [[THREADLOOP1YIV:%.*]] = [[THREADLOOP1YLB]] to {{%.*}} step [[THREADLOOP1YSTEP]]
@@ -41,7 +41,7 @@ module {
             %10 = addi %iv1, %iv3 : index
             // CHECK: [[INDEX1:%.*]] = addi [[BLOCKLOOPXIV]], [[THREADLOOP1XIV]] : index
             %11 = addi %iv2, %iv4 : index
-            // CHECK: [[VAL1:%.*]] = load [[ARG19]]{{\[}}[[INDEX1]], [[INDEX2]]{{\]}} : memref<?x?xf32>
+            // CHECK: [[VAL1:%.*]] = load [[ARG1]]{{\[}}[[INDEX1]], [[INDEX2]]{{\]}} : memref<?x?xf32>
             %12 = load %arg1[%11, %10] : memref<?x?xf32>
             // CHECK: store [[VAL1]], [[SCRATCHSPACE:%.*]]{{\[}}[[THREADLOOP1XIV]], [[THREADLOOP1YIV]]{{\]}} : memref<?x?xf32>
             store %12, %2[%iv4, %iv3] : memref<?x?xf32>
@@ -67,10 +67,10 @@ module {
             %14 = addi %iv2, %iv4 : index
             // CHECK: {{%.*}} = load [[SCRATCHSPACE]]{{\[}}[[THREADLOOP2XIV]], [[THREADLOOP2YIV]]{{\]}} : memref<?x?xf32>
             %15 = load %2[%iv4, %iv3] : memref<?x?xf32>
-            // CHECK: {{%.*}} = load [[ARG22]]{{\[}}[[INDEX3]], [[INDEX4]]{{\]}}
+            // CHECK: {{%.*}} = load [[ARG0]]{{\[}}[[INDEX3]], [[INDEX4]]{{\]}}
             %16 = load %arg0[%13, %14] : memref<?x?xf32>
             %17 = mulf %15, %16 : f32
-            // CHECK: store {{%.*}}, [[ARG23]]{{\[}}[[INDEX3]], [[INDEX4]]{{\]}}
+            // CHECK: store {{%.*}}, [[ARG2]]{{\[}}[[INDEX3]], [[INDEX4]]{{\]}}
             store %17, %arg2[%13, %14] : memref<?x?xf32>
           }
         }

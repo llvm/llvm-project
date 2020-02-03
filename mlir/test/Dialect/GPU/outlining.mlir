@@ -1,4 +1,4 @@
-// RUN: mlir-opt -gpu-kernel-outlining -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -gpu-kernel-outlining -split-input-file -verify-diagnostics %s | FileCheck %s -dump-input-on-failure
 
 // CHECK: module attributes {gpu.container_module}
 
@@ -26,11 +26,10 @@ func @launch() {
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY,
                                        %grid_z = %gDimZ)
              threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY,
-                                        %block_z = %bDimZ)
-             args(%arg0 = %0, %arg1 = %1) : f32, memref<?xf32, 1> {
-    "use"(%arg0): (f32) -> ()
+                                        %block_z = %bDimZ) {
+    "use"(%0): (f32) -> ()
     "some_op"(%bx, %block_x) : (index, index) -> ()
-    %42 = load %arg1[%tx] : memref<?xf32, 1>
+    %42 = load %1[%tx] : memref<?xf32, 1>
     gpu.terminator
   }
   return
@@ -96,9 +95,8 @@ func @extra_constants(%arg0 : memref<?xf32>) {
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %cst, %grid_y = %cst,
                                        %grid_z = %cst)
              threads(%tx, %ty, %tz) in (%block_x = %cst, %block_y = %cst,
-                                        %block_z = %cst)
-             args(%kernel_arg0 = %cst2, %kernel_arg1 = %arg0, %kernel_arg2 = %cst3) : index, memref<?xf32>, index {
-    "use"(%kernel_arg0, %kernel_arg1, %kernel_arg2) : (index, memref<?xf32>, index) -> ()
+                                        %block_z = %cst) {
+    "use"(%cst2, %arg0, %cst3) : (index, memref<?xf32>, index) -> ()
     gpu.terminator
   }
   return
