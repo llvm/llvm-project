@@ -1039,6 +1039,7 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
         C = VRegAndVal->Value;
       break;
     }
+    case TargetOpcode::G_ASHR:
     case TargetOpcode::G_SHL: {
       TestReg = MI->getOperand(1).getReg();
       auto VRegAndVal =
@@ -1056,6 +1057,7 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
     // We found a suitable instruction with a constant. Check to see if we can
     // walk through the instruction.
     Register NextReg;
+    unsigned TestRegSize = MRI.getType(TestReg).getSizeInBits();
     switch (Opc) {
     default:
       break;
@@ -1067,10 +1069,18 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
     case TargetOpcode::G_SHL:
       // (tbz (shl x, c), b) -> (tbz x, b-c) when b-c is positive and fits in
       // the type of the register.
-      if (*C <= Bit && (Bit - *C) < MRI.getType(TestReg).getSizeInBits()) {
+      if (*C <= Bit && (Bit - *C) < TestRegSize) {
         NextReg = TestReg;
         Bit = Bit - *C;
       }
+      break;
+    case TargetOpcode::G_ASHR:
+      // (tbz (ashr x, c), b) -> (tbz x, b+c) or (tbz x, msb) if b+c is > # bits
+      // in x
+      NextReg = TestReg;
+      Bit = Bit + *C;
+      if (Bit >= TestRegSize)
+        Bit = TestRegSize - 1;
       break;
     case TargetOpcode::G_XOR:
       // We can walk through a G_XOR by inverting whether we use tbz/tbnz when
