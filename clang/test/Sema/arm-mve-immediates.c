@@ -273,3 +273,20 @@ void test_simd_vmvn(void)
     w = vmvnq_n_u32(0x0001FFFF); // expected-error {{argument should be an 8-bit value shifted by a multiple of 8 bits, or in the form 0x??FF}}
     w = vmvnq_n_u32(0x000001FF);
 }
+
+void test_vidup(void)
+{
+    vidupq_n_u16(0x12345678, 1);
+    vidupq_n_u16(0x12345678, 2);
+    vidupq_n_u16(0x12345678, 4);
+    vidupq_n_u16(0x12345678, 8);
+
+    vidupq_n_u16(0x12345678, 0); // expected-error {{argument value 0 is outside the valid range [1, 8]}}
+    vidupq_n_u16(0x12345678, 16); // expected-error {{argument value 16 is outside the valid range [1, 8]}}
+    vidupq_n_u16(0x12345678, -1); // expected-error {{argument value -1 is outside the valid range [1, 8]}}
+    vidupq_n_u16(0x12345678, -2); // expected-error {{argument value -2 is outside the valid range [1, 8]}}
+    vidupq_n_u16(0x12345678, -4); // expected-error {{argument value -4 is outside the valid range [1, 8]}}
+    vidupq_n_u16(0x12345678, -8); // expected-error {{argument value -8 is outside the valid range [1, 8]}}
+    vidupq_n_u16(0x12345678, 3); // expected-error {{argument should be a power of 2}}
+    vidupq_n_u16(0x12345678, 7); // expected-error {{argument should be a power of 2}}
+}

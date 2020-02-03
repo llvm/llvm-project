@@ -1132,4 +1132,22 @@ defm int_arm_mve_vrmlldavha: MVEPredicated<
   [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
    llvm_i32_ty, llvm_i32_ty, llvm_anyvector_ty, LLVMMatchType<0>],
   llvm_anyvector_ty>;
+
+defm int_arm_mve_vidup: MVEMXPredicated<
+   [llvm_anyvector_ty /* output */, llvm_i32_ty /* written-back base */], [],
+   [llvm_i32_ty /* base */, llvm_i32_ty /* step */],
+   LLVMMatchType<0>, llvm_anyvector_ty>;
+defm int_arm_mve_vddup: MVEMXPredicated<
+   [llvm_anyvector_ty /* output */, llvm_i32_ty /* written-back base */], [],
+   [llvm_i32_ty /* base */, llvm_i32_ty /* step */],
+   LLVMMatchType<0>, llvm_anyvector_ty>;
+defm int_arm_mve_viwdup: MVEMXPredicated<
+   [llvm_anyvector_ty /* output */, llvm_i32_ty /* written-back base */], [],
+   [llvm_i32_ty /* base */, llvm_i32_ty /* limit */, llvm_i32_ty /* step */],
+   LLVMMatchType<0>, llvm_anyvector_ty>;
+defm int_arm_mve_vdwdup: MVEMXPredicated<
+   [llvm_anyvector_ty /* output */, llvm_i32_ty /* written-back base */], [],
+   [llvm_i32_ty /* base */, llvm_i32_ty /* limit */, llvm_i32_ty /* step */],
+   LLVMMatchType<0>, llvm_anyvector_ty>;
+
 } // end TargetPrefix
