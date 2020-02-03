@@ -46,14 +46,6 @@ public:
     return BO;
   }
 
-  Instruction *CreateNSWAdd(Constant *LHS, Constant *RHS) const {
-    return BinaryOperator::CreateNSWAdd(LHS, RHS);
-  }
-
-  Instruction *CreateNUWAdd(Constant *LHS, Constant *RHS) const {
-    return BinaryOperator::CreateNUWAdd(LHS, RHS);
-  }
-
   Instruction *CreateFAdd(Constant *LHS, Constant *RHS) const {
     return BinaryOperator::CreateFAdd(LHS, RHS);
   }
@@ -66,14 +58,6 @@ public:
     return BO;
   }
 
-  Instruction *CreateNSWSub(Constant *LHS, Constant *RHS) const {
-    return BinaryOperator::CreateNSWSub(LHS, RHS);
-  }
-
-  Instruction *CreateNUWSub(Constant *LHS, Constant *RHS) const {
-    return BinaryOperator::CreateNUWSub(LHS, RHS);
-  }
-
   Instruction *CreateFSub(Constant *LHS, Constant *RHS) const {
     return BinaryOperator::CreateFSub(LHS, RHS);
   }
@@ -84,14 +68,6 @@ public:
     if (HasNUW) BO->setHasNoUnsignedWrap();
     if (HasNSW) BO->setHasNoSignedWrap();
     return BO;
-  }
-
-  Instruction *CreateNSWMul(Constant *LHS, Constant *RHS) const {
-    return BinaryOperator::CreateNSWMul(LHS, RHS);
-  }
-
-  Instruction *CreateNUWMul(Constant *LHS, Constant *RHS) const {
-    return BinaryOperator::CreateNUWMul(LHS, RHS);
   }
 
   Instruction *CreateFMul(Constant *LHS, Constant *RHS) const {
