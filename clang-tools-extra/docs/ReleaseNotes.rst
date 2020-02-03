@@ -105,7 +105,7 @@ Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Improved :doc:`readability-qualified-auto
-  <clang-tidy/checks/readability-qualified-about>` check now supports a 
+  <clang-tidy/checks/readability-qualified-auto>` check now supports a 
   `AddConstToQualified` to enable adding ``const`` qualifiers to variables
   typed with ``auto *`` and ``auto &``.
 
