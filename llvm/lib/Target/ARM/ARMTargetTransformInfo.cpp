@@ -566,8 +566,8 @@ int ARMTTIImpl::getMemcpyCost(const Instruction *I) {
     return LibCallCost;
 
   const unsigned Size = C->getValue().getZExtValue();
-  const unsigned DstAlign = MI->getDestAlignment();
-  const unsigned SrcAlign = MI->getSourceAlignment();
+  const Align DstAlign = *MI->getDestAlign();
+  const Align SrcAlign = *MI->getSourceAlign();
   const Function *F = I->getParent()->getParent();
   const unsigned Limit = TLI->getMaxStoresPerMemmove(F->hasMinSize());
   std::vector<EVT> MemOps;

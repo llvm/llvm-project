@@ -19,6 +19,7 @@
 
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/Support/Alignment.h"
 
 namespace llvm {
 
@@ -189,13 +190,13 @@ public:
 private:
   // Memcpy family optimization helpers.
   bool optimizeMemcpy(MachineInstr &MI, Register Dst, Register Src,
-                      unsigned KnownLen, unsigned DstAlign, unsigned SrcAlign,
+                      unsigned KnownLen, Align DstAlign, Align SrcAlign,
                       bool IsVolatile);
   bool optimizeMemmove(MachineInstr &MI, Register Dst, Register Src,
-                      unsigned KnownLen, unsigned DstAlign, unsigned SrcAlign,
-                      bool IsVolatile);
+                       unsigned KnownLen, Align DstAlign, Align SrcAlign,
+                       bool IsVolatile);
   bool optimizeMemset(MachineInstr &MI, Register Dst, Register Val,
-                      unsigned KnownLen, unsigned DstAlign, bool IsVolatile);
+                      unsigned KnownLen, Align DstAlign, bool IsVolatile);
 
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a post-indexing operation.
