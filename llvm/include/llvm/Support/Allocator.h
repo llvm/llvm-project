@@ -59,22 +59,16 @@ void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t BytesAllocated,
 /// The BumpPtrAllocatorImpl template defaults to using a MallocAllocator
 /// object, which wraps malloc, to allocate memory, but it can be changed to
 /// use a custom allocator.
-///
-/// The GrowthDelay specifies after how many allocated slabs the allocator
-/// increases the size of the slabs.
 template <typename AllocatorT = MallocAllocator, size_t SlabSize = 4096,
-          size_t SizeThreshold = SlabSize, size_t GrowthDelay = 128>
+          size_t SizeThreshold = SlabSize>
 class BumpPtrAllocatorImpl
-    : public AllocatorBase<BumpPtrAllocatorImpl<AllocatorT, SlabSize,
-                                                SizeThreshold, GrowthDelay>> {
+    : public AllocatorBase<
+          BumpPtrAllocatorImpl<AllocatorT, SlabSize, SizeThreshold>> {
 public:
   static_assert(SizeThreshold <= SlabSize,
                 "The SizeThreshold must be at most the SlabSize to ensure "
                 "that objects larger than a slab go into their own memory "
                 "allocation.");
-  static_assert(GrowthDelay > 0,
-                "GrowthDelay must be at least 1 which already increases the"
-                "slab size after each allocated slab.");
 
   BumpPtrAllocatorImpl() = default;
 
@@ -320,11 +314,10 @@ private:
 
   static size_t computeSlabSize(unsigned SlabIdx) {
     // Scale the actual allocated slab size based on the number of slabs
-    // allocated. Every GrowthDelay slabs allocated, we double
-    // the allocated size to reduce allocation frequency, but saturate at
-    // multiplying the slab size by 2^30.
-    return SlabSize *
-           ((size_t)1 << std::min<size_t>(30, SlabIdx / GrowthDelay));
+    // allocated. Every 128 slabs allocated, we double the allocated size to
+    // reduce allocation frequency, but saturate at multiplying the slab size by
+    // 2^30.
+    return SlabSize * ((size_t)1 << std::min<size_t>(30, SlabIdx / 128));
   }
 
   /// Allocate a new slab and move the bump pointers over into the new
@@ -428,12 +421,10 @@ public:
 
 } // end namespace llvm
 
-template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold,
-          size_t GrowthDelay>
-void *
-operator new(size_t Size,
-             llvm::BumpPtrAllocatorImpl<AllocatorT, SlabSize, SizeThreshold,
-                                        GrowthDelay> &Allocator) {
+template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold>
+void *operator new(size_t Size,
+                   llvm::BumpPtrAllocatorImpl<AllocatorT, SlabSize,
+                                              SizeThreshold> &Allocator) {
   struct S {
     char c;
     union {
@@ -447,11 +438,9 @@ operator new(size_t Size,
       Size, std::min((size_t)llvm::NextPowerOf2(Size), offsetof(S, x)));
 }
 
-template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold,
-          size_t GrowthDelay>
-void operator delete(void *,
-                     llvm::BumpPtrAllocatorImpl<AllocatorT, SlabSize,
-                                                SizeThreshold, GrowthDelay> &) {
+template <typename AllocatorT, size_t SlabSize, size_t SizeThreshold>
+void operator delete(
+    void *, llvm::BumpPtrAllocatorImpl<AllocatorT, SlabSize, SizeThreshold> &) {
 }
 
 #endif // LLVM_SUPPORT_ALLOCATOR_H
