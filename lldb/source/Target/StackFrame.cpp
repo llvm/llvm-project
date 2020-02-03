@@ -673,7 +673,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         if (actual_is_ptr != expr_is_ptr) {
           // Incorrect use of "." with a pointer, or "->" with a
           // class/union/struct instance or reference.
-          valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+          valobj_sp->GetExpressionPath(var_expr_path_strm);
           if (actual_is_ptr)
             error.SetErrorStringWithFormat(
                 "\"%s\" is a pointer and . was used to attempt to access "
@@ -709,7 +709,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                 "this frame",
                 name_const_string.GetCString());
           } else {
-            valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+            valobj_sp->GetExpressionPath(var_expr_path_strm);
             if (child_name) {
               error.SetErrorStringWithFormat(
                   "\"%s\" is not a member of \"(%s) %s\"",
@@ -782,7 +782,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           Status error;
           ValueObjectSP temp(valobj_sp->Dereference(error));
           if (error.Fail()) {
-            valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+            valobj_sp->GetExpressionPath(var_expr_path_strm);
             error.SetErrorStringWithFormat(
                 "could not dereference \"(%s) %s\"",
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
@@ -800,7 +800,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           Status error;
           ValueObjectSP temp(valobj_sp->GetChildAtIndex(0, true));
           if (error.Fail()) {
-            valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+            valobj_sp->GetExpressionPath(var_expr_path_strm);
             error.SetErrorStringWithFormat(
                 "could not get item 0 for \"(%s) %s\"",
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
@@ -837,7 +837,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                 || synthetic == valobj_sp) /* synthetic is the same as
                                               the original object */
             {
-              valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+              valobj_sp->GetExpressionPath(var_expr_path_strm);
               error.SetErrorStringWithFormat(
                   "\"(%s) %s\" is not an array type",
                   valobj_sp->GetTypeName().AsCString("<invalid type>"),
@@ -846,7 +846,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                 static_cast<uint32_t>(child_index) >=
                 synthetic
                     ->GetNumChildren() /* synthetic does not have that many values */) {
-              valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+              valobj_sp->GetExpressionPath(var_expr_path_strm);
               error.SetErrorStringWithFormat(
                   "array index %ld is not valid for \"(%s) %s\"", child_index,
                   valobj_sp->GetTypeName().AsCString("<invalid type>"),
@@ -854,7 +854,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
             } else {
               child_valobj_sp = synthetic->GetChildAtIndex(child_index, true);
               if (!child_valobj_sp) {
-                valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+                valobj_sp->GetExpressionPath(var_expr_path_strm);
                 error.SetErrorStringWithFormat(
                     "array index %ld is not valid for \"(%s) %s\"", child_index,
                     valobj_sp->GetTypeName().AsCString("<invalid type>"),
@@ -865,7 +865,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
             child_valobj_sp =
                 valobj_sp->GetSyntheticArrayMember(child_index, true);
             if (!child_valobj_sp) {
-              valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+              valobj_sp->GetExpressionPath(var_expr_path_strm);
               error.SetErrorStringWithFormat(
                   "failed to use pointer as array for index %ld for "
                   "\"(%s) %s\"",
@@ -893,7 +893,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                 valobj_sp->GetSyntheticArrayMember(child_index, true);
 
           if (!child_valobj_sp) {
-            valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+            valobj_sp->GetExpressionPath(var_expr_path_strm);
             error.SetErrorStringWithFormat(
                 "array index %ld is not valid for \"(%s) %s\"", child_index,
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
@@ -904,7 +904,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           child_valobj_sp = valobj_sp->GetSyntheticBitFieldChild(
               child_index, child_index, true);
           if (!child_valobj_sp) {
-            valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+            valobj_sp->GetExpressionPath(var_expr_path_strm);
             error.SetErrorStringWithFormat(
                 "bitfield range %ld-%ld is not valid for \"(%s) %s\"",
                 child_index, child_index,
@@ -918,7 +918,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
               || synthetic == valobj_sp) /* synthetic is the same as the
                                             original object */
           {
-            valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+            valobj_sp->GetExpressionPath(var_expr_path_strm);
             error.SetErrorStringWithFormat(
                 "\"(%s) %s\" is not an array type",
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
@@ -927,7 +927,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
               static_cast<uint32_t>(child_index) >=
               synthetic
                   ->GetNumChildren() /* synthetic does not have that many values */) {
-            valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+            valobj_sp->GetExpressionPath(var_expr_path_strm);
             error.SetErrorStringWithFormat(
                 "array index %ld is not valid for \"(%s) %s\"", child_index,
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
@@ -935,7 +935,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           } else {
             child_valobj_sp = synthetic->GetChildAtIndex(child_index, true);
             if (!child_valobj_sp) {
-              valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+              valobj_sp->GetExpressionPath(var_expr_path_strm);
               error.SetErrorStringWithFormat(
                   "array index %ld is not valid for \"(%s) %s\"", child_index,
                   valobj_sp->GetTypeName().AsCString("<invalid type>"),
@@ -991,7 +991,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         Status error;
         ValueObjectSP temp(valobj_sp->Dereference(error));
         if (error.Fail()) {
-          valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+          valobj_sp->GetExpressionPath(var_expr_path_strm);
           error.SetErrorStringWithFormat(
               "could not dereference \"(%s) %s\"",
               valobj_sp->GetTypeName().AsCString("<invalid type>"),
@@ -1008,7 +1008,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         Status error;
         ValueObjectSP temp(valobj_sp->GetChildAtIndex(0, true));
         if (error.Fail()) {
-          valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+          valobj_sp->GetExpressionPath(var_expr_path_strm);
           error.SetErrorStringWithFormat(
               "could not get item 0 for \"(%s) %s\"",
               valobj_sp->GetTypeName().AsCString("<invalid type>"),
@@ -1022,7 +1022,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       child_valobj_sp =
           valobj_sp->GetSyntheticBitFieldChild(child_index, final_index, true);
       if (!child_valobj_sp) {
-        valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+        valobj_sp->GetExpressionPath(var_expr_path_strm);
         error.SetErrorStringWithFormat(
             "bitfield range %ld-%ld is not valid for \"(%s) %s\"", child_index,
             final_index, valobj_sp->GetTypeName().AsCString("<invalid type>"),
@@ -1048,7 +1048,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     default:
       // Failure...
       {
-        valobj_sp->GetExpressionPath(var_expr_path_strm, false);
+        valobj_sp->GetExpressionPath(var_expr_path_strm);
         error.SetErrorStringWithFormat(
             "unexpected char '%c' encountered after \"%s\" in \"%s\"",
             separator_type, var_expr_path_strm.GetData(),

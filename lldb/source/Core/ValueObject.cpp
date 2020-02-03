@@ -1525,7 +1525,7 @@ bool ValueObject::DumpPrintableRepresentation(
       break;
 
     case eValueObjectRepresentationStyleExpressionPath:
-      GetExpressionPath(strm, false);
+      GetExpressionPath(strm);
       str = strm.GetString();
       break;
     }
@@ -2132,7 +2132,7 @@ bool ValueObject::IsBaseClass(uint32_t &depth) {
   return true;
 }
 
-void ValueObject::GetExpressionPath(Stream &s, bool qualify_cxx_base_classes,
+void ValueObject::GetExpressionPath(Stream &s,
                                     GetExpressionPathFormat epformat) {
   // synthetic children do not actually "exist" as part of the hierarchy, and
   // sometimes they are consed up in ways that don't make sense from an
@@ -2181,7 +2181,7 @@ void ValueObject::GetExpressionPath(Stream &s, bool qualify_cxx_base_classes,
   ValueObject *parent = GetParent();
 
   if (parent)
-    parent->GetExpressionPath(s, qualify_cxx_base_classes, epformat);
+    parent->GetExpressionPath(s, epformat);
 
   // if we are a deref_of_parent just because we are synthetic array members
   // made up to allow ptr[%d] syntax to work in variable printing, then add our
@@ -2942,7 +2942,7 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     return m_deref_valobj->GetSP();
   } else {
     StreamString strm;
-    GetExpressionPath(strm, true);
+    GetExpressionPath(strm);
 
     if (is_pointer_or_reference_type)
       error.SetErrorStringWithFormat("dereference failed: (%s) %s",
@@ -2968,7 +2968,7 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
     switch (address_type) {
     case eAddressTypeInvalid: {
       StreamString expr_path_strm;
-      GetExpressionPath(expr_path_strm, true);
+      GetExpressionPath(expr_path_strm);
       error.SetErrorStringWithFormat("'%s' is not in memory",
                                      expr_path_strm.GetData());
     } break;
@@ -2991,7 +2991,7 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
     }
   } else {
     StreamString expr_path_strm;
-    GetExpressionPath(expr_path_strm, true);
+    GetExpressionPath(expr_path_strm);
     error.SetErrorStringWithFormat("'%s' doesn't have a valid address",
                                    expr_path_strm.GetData());
   }

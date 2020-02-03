@@ -172,8 +172,7 @@ protected:
                      Stream &stream) -> bool {
       const ValueObject::GetExpressionPathFormat format = ValueObject::
           GetExpressionPathFormat::eGetExpressionPathFormatHonorPointers;
-      const bool qualify_cxx_base_classes = false;
-      valobj_sp->GetExpressionPath(stream, qualify_cxx_base_classes, format);
+      valobj_sp->GetExpressionPath(stream, format);
       stream.PutCString(" =");
       return true;
     };

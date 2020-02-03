@@ -357,7 +357,6 @@ bool ValueObjectRegister::ResolveValue(Scalar &scalar) {
 }
 
 void ValueObjectRegister::GetExpressionPath(Stream &s,
-                                            bool qualify_cxx_base_classes,
                                             GetExpressionPathFormat epformat) {
   s.Printf("$%s", m_reg_info.name);
 }
