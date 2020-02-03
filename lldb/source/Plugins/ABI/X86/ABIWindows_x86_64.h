@@ -9,10 +9,9 @@
 #ifndef liblldb_ABIWindows_x86_64_h_
 #define liblldb_ABIWindows_x86_64_h_
 
-#include "lldb/Target/ABI.h"
-#include "lldb/lldb-private.h"
+#include "Plugins/ABI/X86/ABIX86_64.h"
 
-class ABIWindows_x86_64 : public lldb_private::RegInfoBasedABI {
+class ABIWindows_x86_64 : public ABIX86_64 {
 public:
   ~ABIWindows_x86_64() override = default;
 
@@ -56,9 +55,6 @@ public:
     return true;
   }
 
-  const lldb_private::RegisterInfo *
-  GetRegisterInfoArray(uint32_t &count) override;
-
   bool GetPointerReturnRegister(const char *&name) override;
 
   //------------------------------------------------------------------
@@ -89,9 +85,10 @@ protected:
                              lldb_private::CompilerType &ast_type) const;
 
   bool RegisterIsCalleeSaved(const lldb_private::RegisterInfo *reg_info);
+  uint32_t GetGenericNum(llvm::StringRef reg) override;
 
 private:
-  using lldb_private::RegInfoBasedABI::RegInfoBasedABI; // Call CreateInstance instead.
+  using ABIX86_64::ABIX86_64; // Call CreateInstance instead.
 };
 
 #endif // liblldb_ABISysV_x86_64_h_

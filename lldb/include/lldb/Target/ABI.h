@@ -163,6 +163,28 @@ protected:
   virtual const RegisterInfo *GetRegisterInfoArray(uint32_t &count) = 0;
 };
 
+class MCBasedABI : public ABI {
+public:
+  void AugmentRegisterInfo(RegisterInfo &info) override;
+
+  /// If the register name is of the form "<from_prefix>[<number>]" then change
+  /// the name to "<to_prefix>[<number>]". Otherwise, leave the name unchanged.
+  static void MapRegisterName(std::string &reg, llvm::StringRef from_prefix,
+               llvm::StringRef to_prefix);
+protected:
+  using ABI::ABI;
+
+  /// Return eh_frame and dwarf numbers for the given register.
+  virtual std::pair<uint32_t, uint32_t> GetEHAndDWARFNums(llvm::StringRef reg);
+
+  /// Return the generic number of the given register.
+  virtual uint32_t GetGenericNum(llvm::StringRef reg) = 0;
+
+  /// For the given (capitalized) lldb register name, return the name of this
+  /// register in the MCRegisterInfo struct.
+  virtual std::string GetMCName(std::string reg) { return reg; }
+};
+
 } // namespace lldb_private
 
 #endif // liblldb_ABI_h_
