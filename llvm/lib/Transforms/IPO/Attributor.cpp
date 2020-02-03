@@ -2082,14 +2082,33 @@ struct AANoRecurseFunction final : AANoRecurseImpl {
   void initialize(Attributor &A) override {
     AANoRecurseImpl::initialize(A);
     if (const Function *F = getAnchorScope())
-      if (A.getInfoCache().getSccSize(*F) == 1)
-        return;
-    indicatePessimisticFixpoint();
+      if (A.getInfoCache().getSccSize(*F) != 1)
+        indicatePessimisticFixpoint();
   }
 
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
 
+    // If all live call sites are known to be no-recurse, we are as well.
+    auto CallSitePred = [&](AbstractCallSite ACS) {
+      const auto &NoRecurseAA = A.getAAFor<AANoRecurse>(
+          *this, IRPosition::function(*ACS.getInstruction()->getFunction()),
+          /* TrackDependence */ false, DepClassTy::OPTIONAL);
+      return NoRecurseAA.isKnownNoRecurse();
+    };
+    bool AllCallSitesKnown;
+    if (A.checkForAllCallSites(CallSitePred, *this, true, AllCallSitesKnown)) {
+      // If we know all call sites and all are known no-recurse, we are done.
+      // If all known call sites, which might not be all that exist, are known
+      // to be no-recurse, we are not done but we can continue to assume
+      // no-recurse. If one of the call sites we have not visited will become
+      // live, another update is triggered.
+      if (AllCallSitesKnown)
+        indicateOptimisticFixpoint();
+      return ChangeStatus::UNCHANGED;
+    }
+
+    // If the above check does not hold anymore we look at the calls.
     auto CheckForNoRecurse = [&](Instruction &I) {
       ImmutableCallSite ICS(&I);
       if (ICS.hasFnAttr(Attribute::NoRecurse))

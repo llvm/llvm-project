@@ -1,4 +1,4 @@
-; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=2 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR
+; RUN: opt -passes=attributor --attributor-disable=false -attributor-max-iterations-verify -attributor-annotate-decl-cs -attributor-max-iterations=4 -S < %s | FileCheck %s --check-prefixes=ATTRIBUTOR
 ; Copied from Transforms/FunctoinAttrs/norecurse.ll
 
 ; ATTRIBUTOR: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
@@ -59,8 +59,7 @@ define void @intrinsic(i8* %dest, i8* %src, i32 %len) {
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8*, i8*, i32, i1)
 
 ; ATTRIBUTOR: Function Attrs
-; FIXME: missing "norecurse"
-; ATTRIBUTOR-SAME: nosync readnone
+; ATTRIBUTOR-SAME: norecurse nosync readnone
 define internal i32 @called_by_norecurse() {
   %a = call i32 @k()
   ret i32 %a
@@ -73,19 +72,22 @@ define void @m() norecurse {
 }
 
 ; ATTRIBUTOR: Function Attrs
-; FIXME: missing "norecurse"
-; ATTRIBUTOR-SAME: nosync
+; ATTRIBUTOR-SAME: norecurse nosync readnone
+; ATTRIBUTOR-NEXT: @called_by_norecurse_indirectly
 define internal i32 @called_by_norecurse_indirectly() {
   %a = call i32 @k()
   ret i32 %a
 }
-define internal void @o() {
+; ATTRIBUTOR: Function Attrs
+; ATTRIBUTOR-SAME: norecurse nosync readnone
+; ATTRIBUTOR-NEXT: @o
+define internal i32 @o() {
   %a = call i32 @called_by_norecurse_indirectly()
-  ret void
+  ret i32 %a
 }
-define void @p() norecurse {
-  call void @o()
-  ret void
+define i32 @p() norecurse {
+  %a = call i32 @o()
+  ret i32 %a
 }
 
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind
