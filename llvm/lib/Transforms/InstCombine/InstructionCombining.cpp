@@ -1687,7 +1687,7 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
   // Try to reassociate to sink a splat shuffle after a binary operation.
   if (Inst.isAssociative() && Inst.isCommutative()) {
     // Canonicalize shuffle operand as LHS.
-    if (auto *ShufR = dyn_cast<ShuffleVectorInst>(RHS))
+    if (isa<ShuffleVectorInst>(RHS))
       std::swap(LHS, RHS);
 
     Value *X;
