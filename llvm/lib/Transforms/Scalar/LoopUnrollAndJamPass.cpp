@@ -446,8 +446,10 @@ static bool tryToUnrollAndJamLoop(Function &F, DominatorTree &DT, LoopInfo &LI,
     DidSomething |= formLCSSARecursively(*L, DT, &LI, &SE);
   }
 
+  // Add the loop nests in the reverse order of LoopInfo. See method
+  // declaration.
   SmallPriorityWorklist<Loop *, 4> Worklist;
-  internal::appendLoopsToWorklist(reverse(LI), Worklist);
+  appendLoopsToWorklist(LI, Worklist);
   while (!Worklist.empty()) {
     Loop *L = Worklist.pop_back_val();
     LoopUnrollResult Result =

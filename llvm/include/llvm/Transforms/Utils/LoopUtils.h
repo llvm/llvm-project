@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -400,6 +401,30 @@ int rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 void setProfileInfoAfterUnrolling(Loop *OrigLoop, Loop *UnrolledLoop,
                                   Loop *RemainderLoop, uint64_t UF);
 
+/// Utility that implements appending of loops onto a worklist given a range.
+/// We want to process loops in postorder, but the worklist is a LIFO data
+/// structure, so we append to it in *reverse* postorder.
+/// For trees, a preorder traversal is a viable reverse postorder, so we
+/// actually append using a preorder walk algorithm.
+template <typename RangeT>
+void appendLoopsToWorklist(RangeT &&, SmallPriorityWorklist<Loop *, 4> &);
+/// Utility that implements appending of loops onto a worklist given a range.
+/// It has the same behavior as appendLoopsToWorklist, but assumes the range of
+/// loops has already been reversed, so it processes loops in the given order.
+template <typename RangeT>
+void appendReversedLoopsToWorklist(RangeT &&,
+                                   SmallPriorityWorklist<Loop *, 4> &);
+
+/// Utility that implements appending of loops onto a worklist given LoopInfo.
+/// Calls the templated utility taking a Range of loops, handing it the Loops
+/// in LoopInfo, iterated in reverse. This is because the loops are stored in
+/// RPO w.r.t. the control flow graph in LoopInfo. For the purpose of unrolling,
+/// loop deletion, and LICM, we largely want to work forward across the CFG so
+/// that we visit defs before uses and can propagate simplifications from one
+/// loop nest into the next. Calls appendReversedLoopsToWorklist with the
+/// already reversed loops in LI.
+/// FIXME: Consider changing the order in LoopInfo.
+void appendLoopsToWorklist(LoopInfo &, SmallPriorityWorklist<Loop *, 4> &);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_LOOPUTILS_H
