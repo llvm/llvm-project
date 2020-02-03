@@ -60,6 +60,7 @@
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -1681,6 +1682,54 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
       Value *NewRHS = ConstOp1 ? NewC : V1;
       return createBinOpShuffle(NewLHS, NewRHS, Mask);
     }
+  }
+
+  // Try to reassociate to sink a splat shuffle after a binary operation.
+  if (Inst.isAssociative() && Inst.isCommutative()) {
+    // Canonicalize shuffle operand as LHS.
+    if (auto *ShufR = dyn_cast<ShuffleVectorInst>(RHS))
+      std::swap(LHS, RHS);
+
+    Value *X;
+    Constant *MaskC;
+    const APInt *SplatIndex;
+    BinaryOperator *BO;
+    if (!match(LHS, m_OneUse(m_ShuffleVector(m_Value(X), m_Undef(),
+                                             m_Constant(MaskC)))) ||
+        !match(MaskC, m_APIntAllowUndef(SplatIndex)) ||
+        X->getType() != Inst.getType() || !match(RHS, m_OneUse(m_BinOp(BO))) ||
+        BO->getOpcode() != Opcode)
+      return nullptr;
+
+    Value *Y, *OtherOp;
+    if (isSplatValue(BO->getOperand(0), SplatIndex->getZExtValue())) {
+      Y = BO->getOperand(0);
+      OtherOp = BO->getOperand(1);
+    } else if (isSplatValue(BO->getOperand(1), SplatIndex->getZExtValue())) {
+      Y = BO->getOperand(1);
+      OtherOp = BO->getOperand(0);
+    } else {
+      return nullptr;
+    }
+
+    // X and Y are splatted values, so perform the binary operation on those
+    // values followed by a splat followed by the 2nd binary operation:
+    // bo (splat X), (bo Y, OtherOp) --> bo (splat (bo X, Y)), OtherOp
+    Value *NewBO = Builder.CreateBinOp(Opcode, X, Y);
+    UndefValue *Undef = UndefValue::get(Inst.getType());
+    Constant *NewMask = ConstantInt::get(MaskC->getType(), *SplatIndex);
+    Value *NewSplat = Builder.CreateShuffleVector(NewBO, Undef, NewMask);
+    Instruction *R = BinaryOperator::Create(Opcode, NewSplat, OtherOp);
+
+    // Intersect FMF on both new binops. Other (poison-generating) flags are
+    // dropped to be safe.
+    if (isa<FPMathOperator>(R)) {
+      R->copyFastMathFlags(&Inst);
+      R->andIRFlags(BO);
+    }
+    if (auto *NewInstBO = dyn_cast<BinaryOperator>(NewBO))
+      NewInstBO->copyIRFlags(R);
+    return R;
   }
 
   return nullptr;

@@ -1457,9 +1457,9 @@ define <4 x float> @insert_subvector_crash_invalid_mask_elt(<2 x float> %x, <4 x
 
 define <4 x i32> @splat_assoc_add(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @splat_assoc_add(
-; CHECK-NEXT:    [[SPLATX:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[A:%.*]] = add <4 x i32> [[Y:%.*]], <i32 317426, i32 317426, i32 317426, i32 317426>
-; CHECK-NEXT:    [[R:%.*]] = add <4 x i32> [[SPLATX]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[X:%.*]], <i32 317426, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = add <4 x i32> [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[R]]
 ;
   %splatx = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -1468,11 +1468,13 @@ define <4 x i32> @splat_assoc_add(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i32> %r
 }
 
+; Non-zero splat index; commute operands; FMF intersect
+
 define <2 x float> @splat_assoc_fmul(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @splat_assoc_fmul(
-; CHECK-NEXT:    [[SPLATX:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> undef, <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[A:%.*]] = fmul reassoc nsz <2 x float> [[Y:%.*]], <float 3.000000e+00, float 3.000000e+00>
-; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nnan nsz <2 x float> [[A]], [[SPLATX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz <2 x float> [[X:%.*]], <float undef, float 3.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> undef, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz <2 x float> [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %splatx = shufflevector <2 x float> %x, <2 x float> undef, <2 x i32> <i32 1, i32 1>
@@ -1481,12 +1483,13 @@ define <2 x float> @splat_assoc_fmul(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %r
 }
 
+; Two splat shuffles; drop poison-generating flags
+
 define <3 x i8> @splat_assoc_mul(<3 x i8> %x, <3 x i8> %y, <3 x i8> %z) {
 ; CHECK-LABEL: @splat_assoc_mul(
-; CHECK-NEXT:    [[SPLATX:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> undef, <3 x i32> <i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[SPLATZ:%.*]] = shufflevector <3 x i8> [[Z:%.*]], <3 x i8> undef, <3 x i32> <i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[A:%.*]] = mul nsw <3 x i8> [[SPLATZ]], [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = mul <3 x i8> [[A]], [[SPLATX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <3 x i8> [[X:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i8> [[TMP1]], <3 x i8> undef, <3 x i32> <i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[R:%.*]] = mul <3 x i8> [[TMP2]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <3 x i8> [[R]]
 ;
   %splatx = shufflevector <3 x i8> %x, <3 x i8> undef, <3 x i32> <i32 2, i32 2, i32 2>
@@ -1496,7 +1499,7 @@ define <3 x i8> @splat_assoc_mul(<3 x i8> %x, <3 x i8> %y, <3 x i8> %z) {
   ret <3 x i8> %r
 }
 
-; Mismatched splat elements
+; Negative test - mismatched splat elements
 
 define <3 x i8> @splat_assoc_or(<3 x i8> %x, <3 x i8> %y, <3 x i8> %z) {
 ; CHECK-LABEL: @splat_assoc_or(
@@ -1513,7 +1516,7 @@ define <3 x i8> @splat_assoc_or(<3 x i8> %x, <3 x i8> %y, <3 x i8> %z) {
   ret <3 x i8> %r
 }
 
-; Not associative
+; Negative test - not associative
 
 define <2 x float> @splat_assoc_fdiv(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @splat_assoc_fdiv(
@@ -1528,7 +1531,7 @@ define <2 x float> @splat_assoc_fdiv(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %r
 }
 
-; Extra use
+; Negative test - extra use
 
 define <2 x float> @splat_assoc_fadd(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @splat_assoc_fadd(
@@ -1545,7 +1548,7 @@ define <2 x float> @splat_assoc_fadd(<2 x float> %x, <2 x float> %y) {
   ret <2 x float> %r
 }
 
-; Narrowing splat
+; Negative test - narrowing splat
 
 define <3 x i32> @splat_assoc_and(<4 x i32> %x, <3 x i32> %y) {
 ; CHECK-LABEL: @splat_assoc_and(
@@ -1560,7 +1563,7 @@ define <3 x i32> @splat_assoc_and(<4 x i32> %x, <3 x i32> %y) {
   ret <3 x i32> %r
 }
 
-; Widening splat
+; Negative test - widening splat
 
 define <5 x i32> @splat_assoc_xor(<4 x i32> %x, <5 x i32> %y) {
 ; CHECK-LABEL: @splat_assoc_xor(
@@ -1575,7 +1578,7 @@ define <5 x i32> @splat_assoc_xor(<4 x i32> %x, <5 x i32> %y) {
   ret <5 x i32> %r
 }
 
-; Opcode mismatch
+; Negative test - opcode mismatch
 
 define <4 x i32> @splat_assoc_add_mul(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @splat_assoc_add_mul(
