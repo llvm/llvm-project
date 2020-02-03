@@ -35,7 +35,7 @@ MSP430InstrInfo::MSP430InstrInfo(MSP430Subtarget &STI)
 
 void MSP430InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MI,
-                                    unsigned SrcReg, bool isKill, int FrameIdx,
+                                    Register SrcReg, bool isKill, int FrameIdx,
                                           const TargetRegisterClass *RC,
                                           const TargetRegisterInfo *TRI) const {
   DebugLoc DL;
@@ -62,7 +62,7 @@ void MSP430InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
 void MSP430InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MI,
-                                           unsigned DestReg, int FrameIdx,
+                                           Register DestReg, int FrameIdx,
                                            const TargetRegisterClass *RC,
                                            const TargetRegisterInfo *TRI) const{
   DebugLoc DL;

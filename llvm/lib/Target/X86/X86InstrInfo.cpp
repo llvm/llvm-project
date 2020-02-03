@@ -3243,7 +3243,7 @@ static unsigned getLoadRegOpcode(unsigned DestReg,
 
 void X86InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MI,
-                                       unsigned SrcReg, bool isKill, int FrameIdx,
+                                       Register SrcReg, bool isKill, int FrameIdx,
                                        const TargetRegisterClass *RC,
                                        const TargetRegisterInfo *TRI) const {
   const MachineFunction &MF = *MBB.getParent();
@@ -3260,7 +3260,7 @@ void X86InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
 void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
-                                        unsigned DestReg, int FrameIdx,
+                                        Register DestReg, int FrameIdx,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI) const {
   const MachineFunction &MF = *MBB.getParent();
