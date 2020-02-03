@@ -427,7 +427,7 @@ for.end:
 ; UNROLL:   %[[i1:.+]] = or i64 %index, 1
 ; UNROLL:   %[[i2:.+]] = or i64 %index, 2
 ; UNROLL:   %[[i3:.+]] = or i64 %index, 3
-; UNROLL:   %step.add3 = add <2 x i32> %vec.ind2, <i32 2, i32 2>
+; UNROLL:   %[[add:.+]]= add <2 x i32> %[[splat:.+]], <i32 2, i32 undef>
 ; UNROLL:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %index, i32 1
 ; UNROLL:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %[[i1]], i32 1
 ; UNROLL:   getelementptr inbounds %pair.i16, %pair.i16* %p, i64 %[[i2]], i32 1
