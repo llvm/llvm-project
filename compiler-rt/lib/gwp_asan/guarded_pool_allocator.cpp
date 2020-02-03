@@ -164,6 +164,9 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
   else
     AdjustedSampleRatePlusOne = 2;
 
+  ThreadLocals.NextSampleCounter =
+      (getRandomUnsigned32() % (AdjustedSampleRatePlusOne - 1)) + 1;
+
   GuardedPagePool = reinterpret_cast<uintptr_t>(GuardedPoolMemory);
   GuardedPagePoolEnd =
       reinterpret_cast<uintptr_t>(GuardedPoolMemory) + PoolBytesRequired;
