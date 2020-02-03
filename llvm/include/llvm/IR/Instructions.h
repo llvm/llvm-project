@@ -1060,13 +1060,13 @@ public:
                                    Ptr->getType()->getPointerAddressSpace());
     // Vector GEP
     if (Ptr->getType()->isVectorTy()) {
-      ElementCount EltCount = Ptr->getType()->getVectorElementCount();
-      return VectorType::get(PtrTy, EltCount);
+      unsigned NumElem = Ptr->getType()->getVectorNumElements();
+      return VectorType::get(PtrTy, NumElem);
     }
     for (Value *Index : IdxList)
       if (Index->getType()->isVectorTy()) {
-        ElementCount EltCount = Index->getType()->getVectorElementCount();
-        return VectorType::get(PtrTy, EltCount);
+        unsigned NumElem = Index->getType()->getVectorNumElements();
+        return VectorType::get(PtrTy, NumElem);
       }
     // Scalar GEP
     return PtrTy;
