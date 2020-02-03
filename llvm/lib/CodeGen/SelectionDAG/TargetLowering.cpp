@@ -881,6 +881,12 @@ bool TargetLowering::SimplifyDemandedBits(
     if (getTargetConstantFromLoad(LD)) {
       Known = TLO.DAG.computeKnownBits(Op, DemandedElts, Depth);
       return false; // Don't fall through, will infinitely loop.
+    } else if (ISD::isZEXTLoad(Op.getNode()) && Op.getResNo() == 0) {
+      // If this is a ZEXTLoad and we are looking at the loaded value.
+      EVT VT = LD->getMemoryVT();
+      unsigned MemBits = VT.getScalarSizeInBits();
+      Known.Zero.setBitsFrom(MemBits);
+      return false; // Don't fall through, will infinitely loop.
     }
     break;
   }
