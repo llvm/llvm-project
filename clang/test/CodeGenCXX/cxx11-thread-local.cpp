@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
-// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -O2 -disable-llvm-passes -o - -triple x86_64-linux-gnu | FileCheck --check-prefix=CHECK --check-prefix=LINUX --check-prefix=CHECK-OPT %s
-// RUN: %clang_cc1 -std=c++11 -femulated-tls -emit-llvm %s -o - \
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-linux-gnu -fsemantic-interposition | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -O2 -disable-llvm-passes -o - -triple x86_64-linux-gnu -fsemantic-interposition | FileCheck --check-prefix=CHECK --check-prefix=LINUX --check-prefix=CHECK-OPT %s
+// RUN: %clang_cc1 -std=c++11 -femulated-tls -emit-llvm %s -o - -fsemantic-interposition \
 // RUN:     -triple x86_64-linux-gnu 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
 // RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-apple-darwin12 | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
 
-// RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
-// RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -emit-llvm %s -O2 -disable-llvm-passes -o - -triple x86_64-linux-gnu | FileCheck --check-prefix=CHECK --check-prefix=LINUX --check-prefix=CHECK-OPT %s
-// RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -femulated-tls -emit-llvm %s -o - \
+// RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -emit-llvm %s -o - -triple x86_64-linux-gnu -fsemantic-interposition | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
+// RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -emit-llvm %s -O2 -disable-llvm-passes -o - -triple x86_64-linux-gnu -fsemantic-interposition | FileCheck --check-prefix=CHECK --check-prefix=LINUX --check-prefix=CHECK-OPT %s
+// RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -femulated-tls -emit-llvm %s -o - -fsemantic-interposition \
 // RUN:     -triple x86_64-linux-gnu 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
 // RUN: %clang_cc1 -std=c++11 -fno-use-cxa-atexit -emit-llvm %s -o - -triple x86_64-apple-darwin12 | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
 

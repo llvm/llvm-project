@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm %s -o - -verify | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm -pic-level 2 -fsemantic-interposition %s -o - -verify | FileCheck %s
 
 // CHECK: @weakvar = weak global
 // CHECK: @__weakvar_alias = common global

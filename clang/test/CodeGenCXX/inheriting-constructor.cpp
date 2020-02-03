@@ -15,16 +15,16 @@ struct C { template<typename T> C(T); };
 struct D : C { using C::C; };
 D d(123);
 
-// ITANIUM-LABEL: define void @_ZN1BD2Ev
-// ITANIUM-LABEL: define void @_ZN1BD1Ev
-// ITANIUM-LABEL: define void @_ZN1BD0Ev
+// ITANIUM-LABEL: define dso_local void @_ZN1BD2Ev
+// ITANIUM-LABEL: define dso_local void @_ZN1BD1Ev
+// ITANIUM-LABEL: define dso_local void @_ZN1BD0Ev
 // WIN32-LABEL: define {{.*}}void @"??1B@@UAE@XZ"
 // WIN64-LABEL: define {{.*}}void @"??1B@@UEAA@XZ"
 
-// ITANIUM-LABEL: define linkonce_odr void @_ZN1BCI11AEi(
+// ITANIUM-LABEL: define linkonce_odr dso_local void @_ZN1BCI11AEi(
 // ITANIUM: call void @_ZN1BCI21AEi(
 
-// ITANIUM-LABEL: define linkonce_odr void @_ZN1DCI11CIiEET_(
+// ITANIUM-LABEL: define linkonce_odr dso_local void @_ZN1DCI11CIiEET_(
 // ITANIUM: call void @_ZN1DCI21CIiEET_(
 
 // WIN32-LABEL: define internal {{.*}} @"??0B@@QAE@H@Z"(
@@ -51,7 +51,7 @@ namespace noninline_nonvirt {
   // ITANIUM: call i32 @__cxa_atexit(
 
   // Complete object ctor for B delegates to base object ctor.
-  // ITANIUM-LABEL: define linkonce_odr void @_ZN17noninline_nonvirt1BCI1NS_1AEEiO1QPvU17pass_object_size0(
+  // ITANIUM-LABEL: define linkonce_odr dso_local void @_ZN17noninline_nonvirt1BCI1NS_1AEEiO1QPvU17pass_object_size0(
   // ITANIUM: call void @_ZN17noninline_nonvirt1BCI2NS_1AEEiO1QPvU17pass_object_size0({{.*}}, i32 {{.*}}, %{{.*}}* {{.*}}, i8* {{.*}}, i{{32|64}} {{.*}})
 
   // In MSABI, we don't have ctor variants. B ctor forwards to A ctor.
@@ -63,7 +63,7 @@ namespace noninline_nonvirt {
   struct C : B { using B::B; };
   C c(1, 2, &c);
   // Complete object ctor for C delegates.
-  // ITANIUM-LABEL: define linkonce_odr void @_ZN17noninline_nonvirt1CCI1NS_1AEEiO1QPvU17pass_object_size0(
+  // ITANIUM-LABEL: define linkonce_odr dso_local void @_ZN17noninline_nonvirt1CCI1NS_1AEEiO1QPvU17pass_object_size0(
   // ITANIUM: call void @_ZN17noninline_nonvirt1CCI2NS_1AEEiO1QPvU17pass_object_size0({{.*}}, i32 {{.*}}, %{{.*}}* {{.*}}, i8* {{.*}}, i{{32|64}} {{.*}})
 
   // MSABI-LABEL: define internal {{.*}} @"??0C@noninline_nonvirt@@Q{{AE|EAA}}@H$$Q{{E?}}AUQ@@P{{E?}}AXW4__pass_object_size0@__clang@@@Z"(%{{.*}}, i32{{.*}}, %{{.*}}, i8*{{.*}}, i{{32|64}}{{.*}})
@@ -75,7 +75,7 @@ namespace noninline_virt {
   struct B : Z, virtual A { Z z; using A::A; };
   B b(1, 2, &b);
   // Complete object ctor forwards to A ctor then constructs Zs.
-  // ITANIUM-LABEL: define linkonce_odr void @_ZN14noninline_virt1BCI1NS_1AEEiO1QPvU17pass_object_size0(
+  // ITANIUM-LABEL: define linkonce_odr dso_local void @_ZN14noninline_virt1BCI1NS_1AEEiO1QPvU17pass_object_size0(
   // ITANIUM: call void @_ZN14noninline_virt1AC2EiO1QPvU17pass_object_size0({{.*}} %{{.*}}, i32 %{{.*}}, %{{.*}}* {{.*}}, i8* {{.*}}, i{{32|64}} %{{.*}}
   // ITANIUM: call void @_ZN1ZC2Ev(
   // ITANIUM: store {{.*}} @_ZTVN14noninline_virt1BE
@@ -115,7 +115,7 @@ namespace inalloca_nonvirt {
   struct B : Z, A { Z z; using A::A; };
   B b(1, 2, 3, 4);
   // No inlining implied for Itanium.
-  // ITANIUM-LABEL: define linkonce_odr void @_ZN16inalloca_nonvirt1BCI1NS_1AEE1QiS1_OS1_(
+  // ITANIUM-LABEL: define linkonce_odr dso_local void @_ZN16inalloca_nonvirt1BCI1NS_1AEE1QiS1_OS1_(
   // ITANIUM: call void @_ZN16inalloca_nonvirt1BCI2NS_1AEE1QiS1_OS1_(
 
   // MSABI-LABEL: define internal void @"??__Eb@inalloca_nonvirt@@YAXXZ"(
@@ -243,7 +243,7 @@ namespace inalloca_virt {
 
   struct C : B { using B::B; };
   C c(1, 2, 3, 4);
-  // ITANIUM-LABEL: define linkonce_odr void @_ZN13inalloca_virt1CD1Ev(
+  // ITANIUM-LABEL: define linkonce_odr dso_local void @_ZN13inalloca_virt1CD1Ev(
 
   // MSABI-LABEL: define internal void @"??__Ec@inalloca_virt@@YAXXZ"(
 
@@ -370,7 +370,7 @@ namespace inline_virt {
   // ITANIUM: call void @_ZN1QD1Ev(
 
   // B base object inheriting constructor does not get passed arguments.
-  // ITANIUM-LABEL: define linkonce_odr void @_ZN11inline_virt1BCI2NS_1AEE1QiS1_OS1_z(
+  // ITANIUM-LABEL: define linkonce_odr dso_local void @_ZN11inline_virt1BCI2NS_1AEE1QiS1_OS1_z(
   // ITANIUM-NOT: call
   // ITANIUM: call void @_ZN1ZC2Ev(
   // ITANIUM-NOT: call
@@ -382,13 +382,13 @@ namespace inline_virt {
   // ITANIUM: }
 }
 
-// ITANIUM-LABEL: define linkonce_odr void @_ZN1BCI21AEi(
+// ITANIUM-LABEL: define linkonce_odr dso_local void @_ZN1BCI21AEi(
 // ITANIUM: call void @_ZN1AC2Ei(
 
-// ITANIUM-LABEL: define linkonce_odr void @_ZN1DCI21CIiEET_(
+// ITANIUM-LABEL: define linkonce_odr dso_local void @_ZN1DCI21CIiEET_(
 // ITANIUM: call void @_ZN1CC2IiEET_(
 
-// ITANIUM-LABEL: define linkonce_odr void @_ZN17noninline_nonvirt1BCI2NS_1AEEiO1QPvU17pass_object_size0(
+// ITANIUM-LABEL: define linkonce_odr dso_local void @_ZN17noninline_nonvirt1BCI2NS_1AEEiO1QPvU17pass_object_size0(
 // ITANIUM: call void @_ZN1ZC2Ev(
 // ITANIUM: call void @_ZN17noninline_nonvirt1AC2EiO1QPvU17pass_object_size0(
 

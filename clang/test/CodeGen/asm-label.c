@@ -11,7 +11,7 @@ int *test(void) {
 }
 
 // LINUX: @bar = internal global i32 0
-// LINUX: @foo = common global i32 0
+// LINUX: @foo = common dso_local global i32 0
 // LINUX: declare i8* @alias(i32)
 
 // DARWIN: @"\01bar" = internal global i32 0

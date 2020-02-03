@@ -81,7 +81,7 @@ namespace test4 {
   // see both destructors.
   // NOOPT: define internal void @__cxx_global_var_init.2()
   // NOOPT: call i32 @__cxa_atexit{{.*}}@_ZN5test41BD2Ev
-  // NOOPT: define linkonce_odr void @_ZN5test41BD2Ev({{.*}} comdat align
+  // NOOPT: define linkonce_odr dso_local void @_ZN5test41BD2Ev({{.*}} comdat align
   struct A {
     virtual ~A() {}
   };

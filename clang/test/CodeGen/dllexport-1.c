@@ -4,13 +4,13 @@
 // Export const variable.
 
 // CHECK-MSVC: @x = dso_local dllexport constant i32 3, align 4
-// CHECK-LNX: @x = constant i32 3, align 4
+// CHECK-LNX: @x = dso_local constant i32 3, align 4
 
 // CHECK-MSVC: @z = dso_local constant i32 4, align 4
-// CHECK-LNX: @z = constant i32 4, align 4
+// CHECK-LNX: @z = dso_local constant i32 4, align 4
 
 // CHECK-MSVC: @y = common dso_local dllexport global i32 0, align 4
-// CHECK-LNX: @y = common global i32 0, align 4
+// CHECK-LNX: @y = common dso_local global i32 0, align 4
 
 __declspec(dllexport) int const x = 3;
 __declspec(dllexport) const int y;

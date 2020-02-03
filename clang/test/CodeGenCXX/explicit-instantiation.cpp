@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -emit-llvm -triple i686-pc-win32 -std=c++1y -o - %s | FileCheck %s --check-prefix=CHECK-MS
 
 // This check logically is attached to 'template int S<int>::i;' below.
-// CHECK: @_ZN1SIiE1iE = weak_odr global i32
+// CHECK: @_ZN1SIiE1iE = weak_odr dso_local global i32
 
 // This check is logically attached to 'template int ExportedStaticLocal::f<int>()' below.
 // CHECK-OPT: @_ZZN19ExportedStaticLocal1fIiEEvvE1i = linkonce_odr global
@@ -18,7 +18,7 @@ Result plus<T, U, Result>::operator()(const T& t, const U& u) const {
   return t + u;
 }
 
-// CHECK-LABEL: define weak_odr i32 @_ZNK4plusIillEclERKiRKl
+// CHECK-LABEL: define weak_odr dso_local i32 @_ZNK4plusIillEclERKiRKl
 template struct plus<int, long, long>;
 
 namespace EarlyInstantiation {
@@ -38,10 +38,10 @@ namespace EarlyInstantiation {
   constexpr int c = S<int>().constexpr_function();
   int d = S<int>().deduced_return_type();
 
-  // CHECK: define weak_odr i32 @_ZN18EarlyInstantiation1SIcE18constexpr_functionEv(
-  // CHECK: define weak_odr i32 @_ZN18EarlyInstantiation1SIcE19deduced_return_typeEv(
-  // CHECK: define weak_odr i32 @_ZN18EarlyInstantiation1SIiE18constexpr_functionEv(
-  // CHECK: define weak_odr i32 @_ZN18EarlyInstantiation1SIiE19deduced_return_typeEv(
+  // CHECK: define weak_odr dso_local i32 @_ZN18EarlyInstantiation1SIcE18constexpr_functionEv(
+  // CHECK: define weak_odr dso_local i32 @_ZN18EarlyInstantiation1SIcE19deduced_return_typeEv(
+  // CHECK: define weak_odr dso_local i32 @_ZN18EarlyInstantiation1SIiE18constexpr_functionEv(
+  // CHECK: define weak_odr dso_local i32 @_ZN18EarlyInstantiation1SIiE19deduced_return_typeEv(
   template struct S<char>;
   template struct S<int>;
 
@@ -59,9 +59,9 @@ namespace EarlyInstantiation {
   int h = deduced_return_type<int>();
 
   // The FIXMEs below are for PR19551.
-  // CHECK: define weak_odr i32 @_ZN18EarlyInstantiation18constexpr_functionIcEEiv(
+  // CHECK: define weak_odr dso_local i32 @_ZN18EarlyInstantiation18constexpr_functionIcEEiv(
   // FIXME: define weak_odr i32 @_ZN18EarlyInstantiation19deduced_return_typeIcEEiv(
-  // CHECK: define weak_odr i32 @_ZN18EarlyInstantiation18constexpr_functionIiEEiv(
+  // CHECK: define weak_odr dso_local i32 @_ZN18EarlyInstantiation18constexpr_functionIiEEiv(
   // FIXME: define weak_odr i32 @_ZN18EarlyInstantiation19deduced_return_typeIiEEiv(
   template int constexpr_function<char>();
   // FIXME template auto deduced_return_type<char>();
@@ -86,8 +86,8 @@ namespace LateInstantiation {
 
   // Check that we declare, define, or provide an available-externally
   // definition as appropriate.
-  // CHECK: define linkonce_odr i32 @_ZN17LateInstantiation1SIcE1fEv(
-  // CHECK: define linkonce_odr i32 @_ZN17LateInstantiation1fIcEEiv(
+  // CHECK: define linkonce_odr dso_local i32 @_ZN17LateInstantiation1SIcE1fEv(
+  // CHECK: define linkonce_odr dso_local i32 @_ZN17LateInstantiation1fIcEEiv(
   // CHECK-NO-OPT: declare i32 @_ZN17LateInstantiation1SIiE1fEv(
   // CHECK-NO-OPT: declare i32 @_ZN17LateInstantiation1fIiEEiv(
   // CHECK-OPT: define available_externally i32 @_ZN17LateInstantiation1SIiE1fEv(
@@ -100,7 +100,7 @@ namespace PR21718 {
 // same function twice.
 template <typename T>
 struct S {
-// CHECK-LABEL: define weak_odr i32 @_ZN7PR217181SIiE1fEv
+// CHECK-LABEL: define weak_odr dso_local i32 @_ZN7PR217181SIiE1fEv
   __attribute__((used)) constexpr int f() { return 0; }
 };
 int g() { return S<int>().f(); }
@@ -118,7 +118,7 @@ namespace NestedClasses {
   // Explicit instantiation definition of Outer causes explicit instantiation
   // definition of Inner.
   template struct Outer<int>;
-  // CHECK: define weak_odr void @_ZN13NestedClasses5OuterIiE5Inner1fEv
+  // CHECK: define weak_odr dso_local void @_ZN13NestedClasses5OuterIiE5Inner1fEv
   // CHECK-MS: define weak_odr dso_local x86_thiscallcc void @"?f@Inner@?$Outer@H@NestedClasses@@QAEXXZ"
 
   // Explicit instantiation declaration of Outer causes explicit instantiation
@@ -140,16 +140,16 @@ template <typename T> struct S {
   };
 };
 
-// CHECK-LABEL: define weak_odr void @_ZN1SIiE1fEv
+// CHECK-LABEL: define weak_odr dso_local void @_ZN1SIiE1fEv
 template void S<int>::f();
 
-// CHECK-LABEL: define weak_odr void @_ZN1SIiE1gEv
+// CHECK-LABEL: define weak_odr dso_local void @_ZN1SIiE1gEv
 template void S<int>::g();
 
 // See the check line at the top of the file.
 template int S<int>::i;
 
-// CHECK-LABEL: define weak_odr void @_ZN1SIiE2S21hEv
+// CHECK-LABEL: define weak_odr dso_local void @_ZN1SIiE2S21hEv
 template void S<int>::S2::h();
 
 template <typename T> void S<T>::f() {}

@@ -108,7 +108,7 @@ void call_in_dtor();
 
 struct H : G { virtual ~H(); } h;
 H::~H() { call_in_dtor(); }
-// CHECK-ITANIUM-LABEL: define void @_ZN1HD0Ev(
+// CHECK-ITANIUM-LABEL: define dso_local void @_ZN1HD0Ev(
 // CHECK-ITANIUM-NOT: call
 // CHECK-ITANIUM: getelementptr {{.*}}, i64 24
 // CHECK-ITANIUM-NOT: call
@@ -135,7 +135,7 @@ H::~H() { call_in_dtor(); }
 
 struct I : H { virtual ~I(); alignas(32) char buffer[32]; } i;
 I::~I() { call_in_dtor(); }
-// CHECK-ITANIUM-LABEL: define void @_ZN1ID0Ev(
+// CHECK-ITANIUM-LABEL: define dso_local void @_ZN1ID0Ev(
 // CHECK-ITANIUM-NOT: call
 // CHECK-ITANIUM: getelementptr {{.*}}, i64 24
 // CHECK-ITANIUM-NOT: call

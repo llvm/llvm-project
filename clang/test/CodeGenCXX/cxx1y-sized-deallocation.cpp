@@ -49,7 +49,7 @@ template void del<F>();
 
 D::D() {}
 
-// CHECK-LABEL: define weak_odr void @_Z3delIiEvv()
+// CHECK-LABEL: define weak_odr dso_local void @_Z3delIiEvv()
 // CHECK: call void @_ZdlPvm(i8* %{{[^ ]*}}, i64 4)
 // CHECK: call void @_ZdaPv(i8* %{{[^ ]*}})
 //
@@ -58,14 +58,14 @@ D::D() {}
 
 // CHECK-LABEL: declare void @_ZdlPvm(i8*
 
-// CHECK-LABEL: define weak_odr void @_Z3delI1BEvv()
+// CHECK-LABEL: define weak_odr dso_local void @_Z3delI1BEvv()
 // CHECK: call void @_ZdlPvm(i8* %{{[^ ]*}}, i64 4)
 // CHECK: call void @_ZdaPv(i8* %{{[^ ]*}})
 //
 // CHECK: call void @_ZdlPvm(i8* %{{[^ ]*}}, i64 4)
 // CHECK: call void @_ZdaPv(i8* %{{[^ ]*}})
 
-// CHECK-LABEL: define weak_odr void @_Z3delI1CEvv()
+// CHECK-LABEL: define weak_odr dso_local void @_Z3delI1CEvv()
 // CHECK: call void @_ZdlPvm(i8* %{{[^ ]*}}, i64 1)
 // CHECK: mul i64 1, %{{[^ ]*}}
 // CHECK: add i64 %{{[^ ]*}}, 8
@@ -78,7 +78,7 @@ D::D() {}
 
 // CHECK-LABEL: declare void @_ZdaPvm(i8*
 
-// CHECK-LABEL: define weak_odr void @_Z3delI1DEvv()
+// CHECK-LABEL: define weak_odr dso_local void @_Z3delI1DEvv()
 // CHECK: call void @_ZdlPvm(i8* %{{[^ ]*}}, i64 8)
 // CHECK: mul i64 8, %{{[^ ]*}}
 // CHECK: add i64 %{{[^ ]*}}, 8
@@ -91,14 +91,14 @@ D::D() {}
 // CHECK: add i64 %{{[^ ]*}}, 8
 // CHECK: call void @_ZdaPvm(i8* %{{[^ ]*}}, i64 %{{[^ ]*}})
 
-// CHECK-LABEL: define weak_odr void @_Z3delI1EEvv()
+// CHECK-LABEL: define weak_odr dso_local void @_Z3delI1EEvv()
 // CHECK: call void @_ZdlPvm(i8* %{{[^ ]*}}, i64 1)
 // CHECK: call void @_ZdaPv(i8* %{{[^ ]*}})
 //
 // CHECK: call void @_ZN1EdlEPv(i8* %{{[^ ]*}})
 // CHECK: call void @_ZN1EdaEPv(i8* %{{[^ ]*}})
 
-// CHECK-LABEL: define weak_odr void @_Z3delI1FEvv()
+// CHECK-LABEL: define weak_odr dso_local void @_Z3delI1FEvv()
 // CHECK: call void @_ZdlPvm(i8* %{{[^ ]*}}, i64 1)
 // CHECK: mul i64 1, %{{[^ ]*}}
 // CHECK: add i64 %{{[^ ]*}}, 8
@@ -110,5 +110,5 @@ D::D() {}
 // CHECK: call void @_ZN1FdaEPvm(i8* %{{[^ ]*}}, i64 %{{[^ ]*}})
 
 
-// CHECK-LABEL: define linkonce_odr void @_ZN1DD0Ev(%{{[^ ]*}}* %this)
+// CHECK-LABEL: define linkonce_odr dso_local void @_ZN1DD0Ev(%{{[^ ]*}}* %this)
 // CHECK: call void @_ZdlPvm(i8* %{{[^ ]*}}, i64 8)

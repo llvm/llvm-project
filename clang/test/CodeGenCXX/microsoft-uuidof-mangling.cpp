@@ -37,12 +37,12 @@ int main(int argc, const char * argv[])
     return 0;
 }
 
-// CHECK: define i32 @main
+// CHECK: define dso_local i32 @main
 // CHECK: call void @_ZN8UUIDTestI10TestStructXu8__uuidoftS0_EEC1Ev
 // CHECK: call void @_Z15test_uuidofTypeI10TestStructEvPPv(i8** null)
 // CHECK: call void @_Z15test_uuidofExprI9HasMemberEvPPv(i8** null)
 
-// CHECK: define linkonce_odr void @_ZN8UUIDTestI10TestStructXu8__uuidoftS0_EEC1Ev
-// CHECK: define linkonce_odr void @_Z15test_uuidofTypeI10TestStructEvPPv
-// CHECK: define linkonce_odr void @_Z15test_uuidofExprI9HasMemberEvPPv
-// CHECK: define linkonce_odr void @_ZN8UUIDTestI10TestStructXu8__uuidoftS0_EEC2Ev
+// CHECK: define linkonce_odr dso_local void @_ZN8UUIDTestI10TestStructXu8__uuidoftS0_EEC1Ev
+// CHECK: define linkonce_odr dso_local void @_Z15test_uuidofTypeI10TestStructEvPPv
+// CHECK: define linkonce_odr dso_local void @_Z15test_uuidofExprI9HasMemberEvPPv
+// CHECK: define linkonce_odr dso_local void @_ZN8UUIDTestI10TestStructXu8__uuidoftS0_EEC2Ev

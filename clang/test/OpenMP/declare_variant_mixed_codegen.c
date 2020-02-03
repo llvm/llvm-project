@@ -19,7 +19,7 @@ int hst(double i) { return 1; }
 #pragma omp declare variant(dev) match(device = {kind(gpu)})
 int base();
 
-// HOST-LABEL: define void @foo()
+// HOST-LABEL: define dso_local void @foo()
 // HOST: call i32 (double, ...) bitcast (i32 (double)* @base to i32 (double, ...)*)(double -1.000000e+00)
 // HOST: call i32 @hst(double -2.000000e+00)
 // HOST: call void [[OFFL:@.+_foo_l29]]()

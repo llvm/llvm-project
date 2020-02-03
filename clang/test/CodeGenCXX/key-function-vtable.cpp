@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-none-linux-gnu %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-none-linux-gnu %s -emit-llvm -o - -fsemantic-interposition | FileCheck %s
 // RUN: %clang_cc1 -triple arm-apple-darwin %s -emit-llvm -o - | FileCheck %s
 
 // Simple key function test

@@ -23,8 +23,8 @@ struct Y bar() {
 }
 
 
-// X86_32: define void @foo(%struct.Y* %P)
+// X86_32: define dso_local void @foo(%struct.Y* %P)
 // X86_32:   call void @bar(%struct.Y* sret %{{[^),]*}})
 
-// X86_32: define void @bar(%struct.Y* noalias sret %{{[^,)]*}})
+// X86_32: define dso_local void @bar(%struct.Y* noalias sret %{{[^,)]*}})
 // X86_32:   ret void

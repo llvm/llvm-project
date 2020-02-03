@@ -1,24 +1,24 @@
-// RUN: %clang_cc1 -fopenmp -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=X86
-// RUN: %clang_cc1 -fopenmp -triple x86_64-unknown-unknown -target-feature +avx -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX
-// RUN: %clang_cc1 -fopenmp -triple x86_64-unknown-unknown -target-feature +avx512f -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX512
-// RUN: %clang_cc1 -fopenmp -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=X86
-// RUN: %clang_cc1 -fopenmp -triple i386-unknown-unknown -target-feature +avx -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX
-// RUN: %clang_cc1 -fopenmp -triple i386-unknown-unknown -target-feature +avx512f -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX512
-// RUN: %clang_cc1 -fopenmp -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=PPC
-// RUN: %clang_cc1 -fopenmp -triple powerpc64-unknown-unknown -target-abi elfv1-qpx -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=PPC-QPX
+// RUN: %clang_cc1 -fopenmp -triple x86_64-unknown-unknown -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=X86
+// RUN: %clang_cc1 -fopenmp -triple x86_64-unknown-unknown -target-feature +avx -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX
+// RUN: %clang_cc1 -fopenmp -triple x86_64-unknown-unknown -target-feature +avx512f -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX512
+// RUN: %clang_cc1 -fopenmp -triple i386-unknown-unknown -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=X86
+// RUN: %clang_cc1 -fopenmp -triple i386-unknown-unknown -target-feature +avx -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX
+// RUN: %clang_cc1 -fopenmp -triple i386-unknown-unknown -target-feature +avx512f -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX512
+// RUN: %clang_cc1 -fopenmp -triple powerpc64-unknown-unknown -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=PPC
+// RUN: %clang_cc1 -fopenmp -triple powerpc64-unknown-unknown -target-abi elfv1-qpx -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=PPC-QPX
 
-// RUN: %clang_cc1 -fopenmp-simd -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=X86
-// RUN: %clang_cc1 -fopenmp-simd -triple x86_64-unknown-unknown -target-feature +avx -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX
-// RUN: %clang_cc1 -fopenmp-simd -triple x86_64-unknown-unknown -target-feature +avx512f -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX512
-// RUN: %clang_cc1 -fopenmp-simd -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=X86
-// RUN: %clang_cc1 -fopenmp-simd -triple i386-unknown-unknown -target-feature +avx -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX
-// RUN: %clang_cc1 -fopenmp-simd -triple i386-unknown-unknown -target-feature +avx512f -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX512
-// RUN: %clang_cc1 -fopenmp-simd -triple powerpc64-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=PPC
-// RUN: %clang_cc1 -fopenmp-simd -triple powerpc64-unknown-unknown -target-abi elfv1-qpx -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=PPC-QPX
+// RUN: %clang_cc1 -fopenmp-simd -triple x86_64-unknown-unknown -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=X86
+// RUN: %clang_cc1 -fopenmp-simd -triple x86_64-unknown-unknown -target-feature +avx -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX
+// RUN: %clang_cc1 -fopenmp-simd -triple x86_64-unknown-unknown -target-feature +avx512f -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX512
+// RUN: %clang_cc1 -fopenmp-simd -triple i386-unknown-unknown -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=X86
+// RUN: %clang_cc1 -fopenmp-simd -triple i386-unknown-unknown -target-feature +avx -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX
+// RUN: %clang_cc1 -fopenmp-simd -triple i386-unknown-unknown -target-feature +avx512f -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=X86-AVX512
+// RUN: %clang_cc1 -fopenmp-simd -triple powerpc64-unknown-unknown -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=PPC
+// RUN: %clang_cc1 -fopenmp-simd -triple powerpc64-unknown-unknown -target-abi elfv1-qpx -emit-llvm %s -o - -fsemantic-interposition | FileCheck %s -check-prefix=CHECK -check-prefix=PPC-QPX
 
 void h1(float *c, float *a, double b[], int size)
 {
-// CHECK-LABEL: define void @h1
+// CHECK-LABEL: define dso_local void @h1
   int t = 0;
 #pragma omp simd safelen(16) linear(t) aligned(c:32) aligned(a,b)
 // CHECK:         [[C_PTRINT:%.+]] = ptrtoint

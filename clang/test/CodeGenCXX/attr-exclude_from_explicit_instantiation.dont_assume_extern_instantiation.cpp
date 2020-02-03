@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -O0 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -O0 -o - %s -fsemantic-interposition | FileCheck %s
 
 // Test that we do not assume that entities marked with the
 // exclude_from_explicit_instantiation attribute are instantiated
@@ -44,25 +44,25 @@ void use() {
   // An inline non-static member function marked with the attribute is not
   // part of the extern template declaration, so a definition must be emitted
   // in this TU.
-  // CHECK-DAG: define linkonce_odr void @_ZN3FooIiE27non_static_member_function1Ev
+  // CHECK-DAG: define linkonce_odr dso_local void @_ZN3FooIiE27non_static_member_function1Ev
   f.non_static_member_function1();
 
   // A non-inline non-static member function marked with the attribute is
   // not part of the extern template declaration, so a definition must be
   // emitted in this TU.
-  // CHECK-DAG: define linkonce_odr void @_ZN3FooIiE27non_static_member_function2Ev
+  // CHECK-DAG: define linkonce_odr dso_local void @_ZN3FooIiE27non_static_member_function2Ev
   f.non_static_member_function2();
 
   // An inline static member function marked with the attribute is not
   // part of the extern template declaration, so a definition must be
   // emitted in this TU.
-  // CHECK-DAG: define linkonce_odr void @_ZN3FooIiE23static_member_function1Ev
+  // CHECK-DAG: define linkonce_odr dso_local void @_ZN3FooIiE23static_member_function1Ev
   Foo<int>::static_member_function1();
 
   // A non-inline static member function marked with the attribute is not
   // part of the extern template declaration, so a definition must be
   // emitted in this TU.
-  // CHECK-DAG: define linkonce_odr void @_ZN3FooIiE23static_member_function2Ev
+  // CHECK-DAG: define linkonce_odr dso_local void @_ZN3FooIiE23static_member_function2Ev
   Foo<int>::static_member_function2();
 
   // A static data member marked with the attribute is not part of the
