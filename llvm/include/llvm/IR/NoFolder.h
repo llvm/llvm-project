@@ -235,6 +235,11 @@ public:
     return CastInst::CreatePointerCast(C, DestTy);
   }
 
+  Instruction *CreatePointerBitCastOrAddrSpaceCast(
+      Constant *C, Type *DestTy) const {
+    return CastInst::CreatePointerBitCastOrAddrSpaceCast(C, DestTy);
+  }
+
   Instruction *CreateIntCast(Constant *C, Type *DestTy,
                        bool isSigned) const {
     return CastInst::CreateIntegerCast(C, DestTy, isSigned);
