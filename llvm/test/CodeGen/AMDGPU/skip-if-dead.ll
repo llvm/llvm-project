@@ -396,8 +396,52 @@ bb9:                                              ; preds = %bb4
   ret void
 }
 
+; CHECK-LABEL: {{^}}cbranch_kill:
+; CHECK-NOT: exp null off, off, off, off done vm
+define amdgpu_ps void @cbranch_kill(i32 inreg %0, <2 x float> %1) {
+.entry:
+  %val0 = extractelement <2 x float> %1, i32 0
+  %val1 = extractelement <2 x float> %1, i32 1
+  %p0 = call float @llvm.amdgcn.interp.p1(float %val0, i32 immarg 0, i32 immarg 1, i32 %0) #2
+  %sample = call float @llvm.amdgcn.image.sample.l.2darray.f32.f32(i32 1, float %p0, float %p0, float %p0, float 0.000000e+00, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0)
+  %cond0 = fcmp ugt float %sample, 0.000000e+00
+  br i1 %cond0, label %live, label %kill
+
+kill:
+  call void @llvm.amdgcn.kill(i1 false)
+  br label %export
+
+live:
+  %i0 = call float @llvm.amdgcn.interp.p1(float %val0, i32 immarg 0, i32 immarg 0, i32 %0) #2
+  %i1 = call float @llvm.amdgcn.interp.p2(float %i0, float %val1, i32 immarg 0, i32 immarg 0, i32 %0) #2
+  %i2 = call float @llvm.amdgcn.interp.p1(float %val0, i32 immarg 1, i32 immarg 0, i32 %0) #2
+  %i3 = call float @llvm.amdgcn.interp.p2(float %i2, float %val1, i32 immarg 1, i32 immarg 0, i32 %0) #2
+  %scale.i0 = fmul reassoc nnan nsz arcp contract float %i0, %sample
+  %scale.i1 = fmul reassoc nnan nsz arcp contract float %i1, %sample
+  %scale.i2 = fmul reassoc nnan nsz arcp contract float %i2, %sample
+  %scale.i3 = fmul reassoc nnan nsz arcp contract float %i3, %sample
+  br label %export
+
+export:
+  %proxy.0.0 = phi float [ undef, %kill ], [ %scale.i0, %live ]
+  %proxy.0.1 = phi float [ undef, %kill ], [ %scale.i1, %live ]
+  %proxy.0.2 = phi float [ undef, %kill ], [ %scale.i2, %live ]
+  %proxy.0.3 = phi float [ undef, %kill ], [ %scale.i3, %live ]
+  %out.0 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %proxy.0.0, float %proxy.0.1) #2
+  %out.1 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %proxy.0.2, float %proxy.0.3) #2
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 immarg 0, i32 immarg 15, <2 x half> %out.0, <2 x half> %out.1, i1 immarg true, i1 immarg true) #3
+  ret void
+}
+
+declare float @llvm.amdgcn.interp.p1(float, i32 immarg, i32 immarg, i32) #2
+declare float @llvm.amdgcn.interp.p2(float, float, i32 immarg, i32 immarg, i32) #2
+declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2 x half>, i1 immarg, i1 immarg) #3
+declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #2
+declare float @llvm.amdgcn.image.sample.l.2darray.f32.f32(i32 immarg, float, float, float, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #1
 declare <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #1
 declare void @llvm.amdgcn.kill(i1) #0
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readonly }
+attributes #2 = { nounwind readnone speculatable }
+attributes #3 = { inaccessiblememonly nounwind writeonly }
