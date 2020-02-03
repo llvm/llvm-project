@@ -125,13 +125,19 @@ namespace ISD {
     bool isPointer()  const { return IsPointer; }
     void setPointer() { IsPointer = 1; }
 
-    unsigned getByValAlign() const {
+    LLVM_ATTRIBUTE_DEPRECATED(unsigned getByValAlign() const,
+                              "Use getNonZeroByValAlign() instead") {
       MaybeAlign A = decodeMaybeAlign(ByValAlign);
       return A ? A->value() : 0;
     }
+    Align getNonZeroByValAlign() const {
+      MaybeAlign A = decodeMaybeAlign(ByValAlign);
+      assert(A && "ByValAlign must be defined");
+      return *A;
+    }
     void setByValAlign(Align A) {
       ByValAlign = encode(A);
-      assert(getByValAlign() == A.value() && "bitfield overflow");
+      assert(getNonZeroByValAlign() == A && "bitfield overflow");
     }
 
     unsigned getOrigAlign() const {

@@ -969,18 +969,50 @@ public:
   /// stack arguments from being clobbered.
   SDValue getStackArgumentTokenFactor(SDValue Chain);
 
+  LLVM_ATTRIBUTE_DEPRECATED(SDValue getMemcpy(SDValue Chain, const SDLoc &dl,
+                                              SDValue Dst, SDValue Src,
+                                              SDValue Size, unsigned Align,
+                                              bool isVol, bool AlwaysInline,
+                                              bool isTailCall,
+                                              MachinePointerInfo DstPtrInfo,
+                                              MachinePointerInfo SrcPtrInfo),
+                            "Use the version that takes Align instead") {
+    return getMemcpy(Chain, dl, Dst, Src, Size, llvm::Align(Align), isVol,
+                     AlwaysInline, isTailCall, DstPtrInfo, SrcPtrInfo);
+  }
+
   SDValue getMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
-                    SDValue Size, unsigned Align, bool isVol, bool AlwaysInline,
-                    bool isTailCall, MachinePointerInfo DstPtrInfo,
+                    SDValue Size, Align Alignment, bool isVol,
+                    bool AlwaysInline, bool isTailCall,
+                    MachinePointerInfo DstPtrInfo,
                     MachinePointerInfo SrcPtrInfo);
 
+  LLVM_ATTRIBUTE_DEPRECATED(SDValue getMemmove(SDValue Chain, const SDLoc &dl,
+                                               SDValue Dst, SDValue Src,
+                                               SDValue Size, unsigned Align,
+                                               bool isVol, bool isTailCall,
+                                               MachinePointerInfo DstPtrInfo,
+                                               MachinePointerInfo SrcPtrInfo),
+                            "Use the version that takes Align instead") {
+    return getMemmove(Chain, dl, Dst, Src, Size, llvm::Align(Align), isVol,
+                      isTailCall, DstPtrInfo, SrcPtrInfo);
+  }
   SDValue getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
-                     SDValue Size, unsigned Align, bool isVol, bool isTailCall,
+                     SDValue Size, Align Alignment, bool isVol, bool isTailCall,
                      MachinePointerInfo DstPtrInfo,
                      MachinePointerInfo SrcPtrInfo);
 
+  LLVM_ATTRIBUTE_DEPRECATED(SDValue getMemset(SDValue Chain, const SDLoc &dl,
+                                              SDValue Dst, SDValue Src,
+                                              SDValue Size, unsigned Align,
+                                              bool isVol, bool isTailCall,
+                                              MachinePointerInfo DstPtrInfo),
+                            "Use the version that takes Align instead") {
+    return getMemset(Chain, dl, Dst, Src, Size, llvm::Align(Align), isVol,
+                     isTailCall, DstPtrInfo);
+  }
   SDValue getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst, SDValue Src,
-                    SDValue Size, unsigned Align, bool isVol, bool isTailCall,
+                    SDValue Size, Align Alignment, bool isVol, bool isTailCall,
                     MachinePointerInfo DstPtrInfo);
 
   SDValue getAtomicMemcpy(SDValue Chain, const SDLoc &dl, SDValue Dst,

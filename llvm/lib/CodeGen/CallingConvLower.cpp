@@ -44,7 +44,7 @@ void CCState::HandleByVal(unsigned ValNo, MVT ValVT, MVT LocVT,
                           CCValAssign::LocInfo LocInfo, int MinSize,
                           int MinAlignment, ISD::ArgFlagsTy ArgFlags) {
   Align MinAlign(MinAlignment);
-  Align Alignment(ArgFlags.getByValAlign());
+  Align Alignment = ArgFlags.getNonZeroByValAlign();
   unsigned Size  = ArgFlags.getByValSize();
   if (MinSize > (int)Size)
     Size = MinSize;
