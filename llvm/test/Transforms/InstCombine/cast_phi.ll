@@ -2,6 +2,8 @@
 ; RUN: opt < %s -instcombine -S | FileCheck %s
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
+target datalayout = "n32:64"
+
 define void @MainKernel(i32 %iNumSteps, i32 %tid, i32 %base) {
 ; CHECK-LABEL: @MainKernel(
 ; CHECK-NEXT:    [[CALLA:%.*]] = alloca [258 x float], align 4
@@ -170,4 +172,144 @@ define void @MainKernel(i32 %iNumSteps, i32 %tid, i32 %base) {
   %sub = add i32 %i12.06, -4
   %cmp13 = icmp sgt i32 %sub, 0
   br i1 %cmp13, label %.bb3, label %.bb8
+}
+
+declare i32 @get_i32()
+declare i3 @get_i3()
+declare void @bar()
+
+define i37 @zext_from_legal_to_illegal_type(i32 %x) {
+; CHECK-LABEL: @zext_from_legal_to_illegal_type(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 42
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @get_i32()
+; CHECK-NEXT:    [[PHITMP:%.*]] = zext i32 [[Y]] to i37
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       f:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i37 [ [[PHITMP]], [[T]] ], [ 3, [[F]] ]
+; CHECK-NEXT:    ret i37 [[P]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 42
+  br i1 %cmp, label %t, label %f
+
+t:
+  %y = call i32 @get_i32()
+  br label %exit
+
+f:
+  call void @bar()
+  br label %exit
+
+exit:
+  %p = phi i32 [ %y, %t ], [ 3, %f ]
+  %r = zext i32 %p to i37
+  ret i37 %r
+}
+
+define i37 @zext_from_illegal_to_illegal_type(i32 %x) {
+; CHECK-LABEL: @zext_from_illegal_to_illegal_type(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 42
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    [[Y:%.*]] = call i3 @get_i3()
+; CHECK-NEXT:    [[PHITMP:%.*]] = zext i3 [[Y]] to i37
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       f:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i37 [ [[PHITMP]], [[T]] ], [ 3, [[F]] ]
+; CHECK-NEXT:    ret i37 [[P]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 42
+  br i1 %cmp, label %t, label %f
+
+t:
+  %y = call i3 @get_i3()
+  br label %exit
+
+f:
+  call void @bar()
+  br label %exit
+
+exit:
+  %p = phi i3 [ %y, %t ], [ 3, %f ]
+  %r = zext i3 %p to i37
+  ret i37 %r
+}
+
+define i64 @zext_from_legal_to_legal_type(i32 %x) {
+; CHECK-LABEL: @zext_from_legal_to_legal_type(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 42
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @get_i32()
+; CHECK-NEXT:    [[PHITMP:%.*]] = zext i32 [[Y]] to i64
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       f:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[PHITMP]], [[T]] ], [ 3, [[F]] ]
+; CHECK-NEXT:    ret i64 [[P]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 42
+  br i1 %cmp, label %t, label %f
+
+t:
+  %y = call i32 @get_i32()
+  br label %exit
+
+f:
+  call void @bar()
+  br label %exit
+
+exit:
+  %p = phi i32 [ %y, %t ], [ 3, %f ]
+  %r = zext i32 %p to i64
+  ret i64 %r
+}
+
+define i64 @zext_from_illegal_to_legal_type(i32 %x) {
+; CHECK-LABEL: @zext_from_illegal_to_legal_type(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 42
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    [[Y:%.*]] = call i3 @get_i3()
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       f:
+; CHECK-NEXT:    call void @bar()
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i3 [ [[Y]], [[T]] ], [ 3, [[F]] ]
+; CHECK-NEXT:    [[R:%.*]] = zext i3 [[P]] to i64
+; CHECK-NEXT:    ret i64 [[R]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 42
+  br i1 %cmp, label %t, label %f
+
+t:
+  %y = call i3 @get_i3()
+  br label %exit
+
+f:
+  call void @bar()
+  br label %exit
+
+exit:
+  %p = phi i3 [ %y, %t ], [ 3, %f ]
+  %r = zext i3 %p to i64
+  ret i64 %r
 }
