@@ -847,18 +847,16 @@ struct TUScheduler::FileData {
 };
 
 TUScheduler::TUScheduler(const GlobalCompilationDatabase &CDB,
-                         unsigned AsyncThreadsCount,
-                         bool StorePreamblesInMemory,
-                         std::unique_ptr<ParsingCallbacks> Callbacks,
-                         std::chrono::steady_clock::duration UpdateDebounce,
-                         ASTRetentionPolicy RetentionPolicy)
-    : CDB(CDB), StorePreamblesInMemory(StorePreamblesInMemory),
+                         const Options &Opts,
+                         std::unique_ptr<ParsingCallbacks> Callbacks)
+    : CDB(CDB), StorePreamblesInMemory(Opts.StorePreamblesInMemory),
       Callbacks(Callbacks ? move(Callbacks)
                           : std::make_unique<ParsingCallbacks>()),
-      Barrier(AsyncThreadsCount),
-      IdleASTs(std::make_unique<ASTCache>(RetentionPolicy.MaxRetainedASTs)),
-      UpdateDebounce(UpdateDebounce) {
-  if (0 < AsyncThreadsCount) {
+      Barrier(Opts.AsyncThreadsCount),
+      IdleASTs(
+          std::make_unique<ASTCache>(Opts.RetentionPolicy.MaxRetainedASTs)),
+      UpdateDebounce(Opts.UpdateDebounce) {
+  if (0 < Opts.AsyncThreadsCount) {
     PreambleTasks.emplace();
     WorkerThreads.emplace();
   }
@@ -931,8 +929,9 @@ void TUScheduler::run(llvm::StringRef Name,
                       llvm::unique_function<void()> Action) {
   if (!PreambleTasks)
     return Action();
-  PreambleTasks->runAsync(Name, [Ctx = Context::current().clone(),
+  PreambleTasks->runAsync(Name, [this, Ctx = Context::current().clone(),
                                  Action = std::move(Action)]() mutable {
+    std::lock_guard<Semaphore> BarrierLock(Barrier);
     WithContext WC(std::move(Ctx));
     Action();
   });

@@ -26,7 +26,7 @@
 
 namespace clang {
 class TargetOptions;
-};
+}
 
 namespace lldb_private {
 namespace lldb_renderscript {

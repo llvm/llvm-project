@@ -2001,6 +2001,33 @@ let Predicates = [HasMVEInt] in {
             (MVE_VDUP32 (MVE_VMOV_from_lane_32 MQPR:$src, imm:$lane))>;
   def : Pat<(v8f16 (ARMvduplane (v8f16 MQPR:$src), imm:$lane)),
             (MVE_VDUP16 (MVE_VMOV_from_lane_u16 MQPR:$src, imm:$lane))>;
+
+  // Match a vselect with an ARMvdup as a predicated MVE_VDUP
+  def : Pat<(v16i8 (vselect (v16i1 VCCR:$pred),
+                            (v16i8 (ARMvdup (i32 rGPR:$elem))),
+                            (v16i8 MQPR:$inactive))),
+            (MVE_VDUP8  rGPR:$elem, ARMVCCThen, (v16i1 VCCR:$pred),
+                        (v16i8 MQPR:$inactive))>;
+  def : Pat<(v8i16 (vselect (v8i1 VCCR:$pred),
+                            (v8i16 (ARMvdup (i32 rGPR:$elem))),
+                            (v8i16 MQPR:$inactive))),
+            (MVE_VDUP16 rGPR:$elem, ARMVCCThen, (v8i1 VCCR:$pred),
+                            (v8i16 MQPR:$inactive))>;
+  def : Pat<(v4i32 (vselect (v4i1 VCCR:$pred),
+                            (v4i32 (ARMvdup (i32 rGPR:$elem))),
+                            (v4i32 MQPR:$inactive))),
+            (MVE_VDUP32 rGPR:$elem, ARMVCCThen, (v4i1 VCCR:$pred),
+                            (v4i32 MQPR:$inactive))>;
+  def : Pat<(v4f32 (vselect (v4i1 VCCR:$pred),
+                            (v4f32 (ARMvdup (f32 SPR:$elem))),
+                            (v4f32 MQPR:$inactive))),
+            (MVE_VDUP32 (i32 (COPY_TO_REGCLASS (f32 SPR:$elem), rGPR)),
+                      ARMVCCThen, (v4i1 VCCR:$pred), (v4f32 MQPR:$inactive))>;
+  def : Pat<(v8f16 (vselect (v8i1 VCCR:$pred),
+                            (v8f16 (ARMvdup (f16 HPR:$elem))),
+                            (v8f16 MQPR:$inactive))),
+            (MVE_VDUP16 (i32 (COPY_TO_REGCLASS (f16 HPR:$elem), rGPR)),
+                      ARMVCCThen, (v8i1 VCCR:$pred), (v8f16 MQPR:$inactive))>;
 }
 
 
@@ -3932,8 +3959,22 @@ let Predicates = [HasMVEInt] in {
 // example when moving between rGPR and VPR.P0 as part of predicate vector
 // shuffles. We also sometimes need to cast between different predicate
 // vector types (v4i1<>v8i1, etc.) also as part of lowering vector shuffles.
-
 def predicate_cast : SDNode<"ARMISD::PREDICATE_CAST", SDTUnaryOp>;
+
+// 'vector_reg_cast' is an operation that reinterprets the contents of an MVE
+// vector register as a different vector type, without changing the contents of
+// the register. It differs from 'bitconvert' in that bitconvert reinterprets
+// the _memory_ storage format of the vector, whereas vector_reg_cast
+// reinterprets the _register_ format - and in big-endian, the memory and
+// register formats are different, so they are different operations.
+//
+// For example, 'vector_reg_cast' between v8i16 and v16i8 will map the LSB of
+// the zeroth i16 lane to the zeroth i8 lane, regardless of system endianness,
+// whereas 'bitconvert' will map it to the high byte in big-endian mode,
+// because that's what VSTRH.16 followed by VLDRB.8 would do. So the bitconvert
+// would have to emit a VREV16.8 instruction, whereas the vector_reg_cast emits
+// no code at all if the vector is already in a register.
+def vector_reg_cast : SDNode<"ARMISD::VECTOR_REG_CAST", SDTUnaryOp>;
 
 let Predicates = [HasMVEInt] in {
   foreach VT = [ v4i1, v8i1, v16i1 ] in {
@@ -3946,6 +3987,10 @@ let Predicates = [HasMVEInt] in {
       def : Pat<(VT  (predicate_cast (VT2 VCCR:$src))),
                 (VT  (COPY_TO_REGCLASS (VT2 VCCR:$src), VCCR))>;
   }
+
+  foreach VT = [ v16i8, v8i16, v8f16, v4i32, v4f32, v2i64, v2f64 ] in
+    foreach VT2 = [ v16i8, v8i16, v8f16, v4i32, v4f32, v2i64, v2f64 ] in
+      def : Pat<(VT (vector_reg_cast (VT2 MQPR:$src))), (VT MQPR:$src)>;
 }
 
 // end of MVE compares

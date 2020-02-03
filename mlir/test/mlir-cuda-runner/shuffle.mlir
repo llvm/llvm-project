@@ -8,8 +8,7 @@ func @main() {
   %sx = dim %dst, 0 : memref<?xf32>
   call @mcuMemHostRegisterMemRef1dFloat(%dst) : (memref<?xf32>) -> ()
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %one, %grid_y = %one, %grid_z = %one)
-             threads(%tx, %ty, %tz) in (%block_x = %sx, %block_y = %one, %block_z = %one)
-             args(%kernel_dst = %dst) : memref<?xf32> {
+             threads(%tx, %ty, %tz) in (%block_x = %sx, %block_y = %one, %block_z = %one) {
     %t0 = index_cast %tx : index to i32
     %val = sitofp %t0 : i32 to f32
     %width = index_cast %block_x : index to i32
@@ -20,7 +19,7 @@ func @main() {
     %m1 = constant -1.0 : f32
     br ^bb1(%m1 : f32)
   ^bb1(%value : f32):
-    store %value, %kernel_dst[%tx] : memref<?xf32>
+    store %value, %dst[%tx] : memref<?xf32>
     gpu.terminator
   }
   %U = memref_cast %dst : memref<?xf32> to memref<*xf32>

@@ -795,6 +795,8 @@ def int_arm_mve_pred_i2v : Intrinsic<
   [llvm_anyvector_ty], [llvm_i32_ty], [IntrNoMem]>;
 def int_arm_mve_pred_v2i : Intrinsic<
   [llvm_i32_ty], [llvm_anyvector_ty], [IntrNoMem]>;
+def int_arm_mve_vreinterpretq : Intrinsic<
+  [llvm_anyvector_ty], [llvm_anyvector_ty], [IntrNoMem]>;
 
 multiclass IntrinsicSignSuffix<list<LLVMType> rets, list<LLVMType> params = [],
                                     list<IntrinsicProperty> props = [],
@@ -1132,4 +1134,22 @@ defm int_arm_mve_vrmlldavha: MVEPredicated<
   [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
    llvm_i32_ty, llvm_i32_ty, llvm_anyvector_ty, LLVMMatchType<0>],
   llvm_anyvector_ty>;
+
+defm int_arm_mve_vidup: MVEMXPredicated<
+   [llvm_anyvector_ty /* output */, llvm_i32_ty /* written-back base */], [],
+   [llvm_i32_ty /* base */, llvm_i32_ty /* step */],
+   LLVMMatchType<0>, llvm_anyvector_ty>;
+defm int_arm_mve_vddup: MVEMXPredicated<
+   [llvm_anyvector_ty /* output */, llvm_i32_ty /* written-back base */], [],
+   [llvm_i32_ty /* base */, llvm_i32_ty /* step */],
+   LLVMMatchType<0>, llvm_anyvector_ty>;
+defm int_arm_mve_viwdup: MVEMXPredicated<
+   [llvm_anyvector_ty /* output */, llvm_i32_ty /* written-back base */], [],
+   [llvm_i32_ty /* base */, llvm_i32_ty /* limit */, llvm_i32_ty /* step */],
+   LLVMMatchType<0>, llvm_anyvector_ty>;
+defm int_arm_mve_vdwdup: MVEMXPredicated<
+   [llvm_anyvector_ty /* output */, llvm_i32_ty /* written-back base */], [],
+   [llvm_i32_ty /* base */, llvm_i32_ty /* limit */, llvm_i32_ty /* step */],
+   LLVMMatchType<0>, llvm_anyvector_ty>;
+
 } // end TargetPrefix

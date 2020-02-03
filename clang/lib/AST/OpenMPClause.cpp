@@ -137,6 +137,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_device_type:
   case OMPC_match:
   case OMPC_nontemporal:
+  case OMPC_order:
     break;
   }
 
@@ -216,6 +217,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_device_type:
   case OMPC_match:
   case OMPC_nontemporal:
+  case OMPC_order:
     break;
   }
 
@@ -1690,4 +1692,9 @@ void OMPClausePrinter::VisitOMPNontemporalClause(OMPNontemporalClause *Node) {
     VisitOMPClauseList(Node, '(');
     OS << ")";
   }
+}
+
+void OMPClausePrinter::VisitOMPOrderClause(OMPOrderClause *Node) {
+  OS << "order(" << getOpenMPSimpleClauseTypeName(OMPC_order, Node->getKind())
+     << ")";
 }

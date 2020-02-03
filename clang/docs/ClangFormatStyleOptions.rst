@@ -717,6 +717,26 @@ the configuration (without a prefix: ``Auto``).
         aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa);
     }
 
+
+**InsertTrailingCommas** (``TrailingCommaStyle``) can be set to ``TCS_Wrapped``
+  to insert trailing commas in container literals (arrays and objects) that wrap
+  across multiple lines. It is currently only available for JavaScript and
+  disabled by default (``TCS_None``).
+
+  ``InsertTrailingCommas`` cannot be used together with ``BinPackArguments`` as
+  inserting the comma disables bin-packing.
+
+  .. code-block:: c++
+
+    TSC_Wrapped:
+    const someArray = [
+      aaaaaaaaaaaaaaaaaaaaaaaaaa,
+      aaaaaaaaaaaaaaaaaaaaaaaaaa,
+      aaaaaaaaaaaaaaaaaaaaaaaaaa,
+      //                        ^ inserted
+    ]
+
+
 **BinPackParameters** (``bool``)
   If ``false``, a function declaration's or function definition's
   parameters will either all be on the same line or will have one line each.

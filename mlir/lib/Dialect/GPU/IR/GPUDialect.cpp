@@ -196,11 +196,10 @@ static ParseResult parseShuffleOp(OpAsmParser &parser, OperationState &state) {
 
 void LaunchOp::build(Builder *builder, OperationState &result, Value gridSizeX,
                      Value gridSizeY, Value gridSizeZ, Value blockSizeX,
-                     Value blockSizeY, Value blockSizeZ, ValueRange operands) {
+                     Value blockSizeY, Value blockSizeZ) {
   // Add grid and block sizes as op operands, followed by the data operands.
   result.addOperands(
       {gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ});
-  result.addOperands(operands);
 
   // Create a kernel body region with kNumConfigRegionAttributes + N arguments,
   // where the first kNumConfigRegionAttributes arguments have `index` type and
@@ -209,7 +208,6 @@ void LaunchOp::build(Builder *builder, OperationState &result, Value gridSizeX,
   Block *body = new Block();
   body->addArguments(
       std::vector<Type>(kNumConfigRegionAttributes, builder->getIndexType()));
-  body->addArguments(llvm::to_vector<4>(operands.getTypes()));
   kernelRegion->push_back(body);
 }
 
@@ -237,25 +235,12 @@ KernelDim3 LaunchOp::getBlockSize() {
   return KernelDim3{args[9], args[10], args[11]};
 }
 
-LaunchOp::operand_range LaunchOp::getKernelOperandValues() {
-  return llvm::drop_begin(getOperands(), kNumConfigOperands);
-}
-
-LaunchOp::operand_type_range LaunchOp::getKernelOperandTypes() {
-  return llvm::drop_begin(getOperandTypes(), kNumConfigOperands);
-}
-
 KernelDim3 LaunchOp::getGridSizeOperandValues() {
   return KernelDim3{getOperand(0), getOperand(1), getOperand(2)};
 }
 
 KernelDim3 LaunchOp::getBlockSizeOperandValues() {
   return KernelDim3{getOperand(3), getOperand(4), getOperand(5)};
-}
-
-iterator_range<Block::args_iterator> LaunchOp::getKernelArguments() {
-  auto args = body().getBlocks().front().getArguments();
-  return llvm::drop_begin(args, LaunchOp::kNumConfigRegionAttributes);
 }
 
 static LogicalResult verify(LaunchOp op) {
@@ -312,25 +297,6 @@ static void printLaunchOp(OpAsmPrinter &p, LaunchOp op) {
   printSizeAssignment(p, op.getBlockSize(), operands.slice(3, 3),
                       op.getThreadIds());
 
-  // From now on, the first kNumConfigOperands operands corresponding to grid
-  // and block sizes are irrelevant, so we can drop them.
-  operands = operands.drop_front(LaunchOp::kNumConfigOperands);
-
-  // Print the data argument remapping.
-  if (!op.body().empty() && !operands.empty()) {
-    p << ' ' << op.getArgsKeyword() << '(';
-    Block *entryBlock = &op.body().front();
-    interleaveComma(llvm::seq<int>(0, operands.size()), p, [&](int i) {
-      p << entryBlock->getArgument(LaunchOp::kNumConfigRegionAttributes + i)
-        << " = " << operands[i];
-    });
-    p << ") ";
-  }
-
-  // Print the types of data arguments.
-  if (!operands.empty())
-    p << ": " << operands.getTypes();
-
   p.printRegion(op.body(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(op.getAttrs());
 }
@@ -368,8 +334,7 @@ parseSizeAssignment(OpAsmParser &parser,
 // Parses a Launch operation.
 // operation ::= `gpu.launch` `blocks` `(` ssa-id-list `)` `in` ssa-reassignment
 //                           `threads` `(` ssa-id-list `)` `in` ssa-reassignment
-//                             (`args` ssa-reassignment `:` type-list)?
-//                             region attr-dict?
+//                            region attr-dict?
 // ssa-reassignment ::= `(` ssa-id `=` ssa-use (`,` ssa-id `=` ssa-use)* `)`
 static ParseResult parseLaunchOp(OpAsmParser &parser, OperationState &result) {
   // Sizes of the grid and block.
@@ -402,101 +367,15 @@ static ParseResult parseLaunchOp(OpAsmParser &parser, OperationState &result) {
                              result.operands))
     return failure();
 
-  // If kernel argument renaming segment is present, parse it.  When present,
-  // the segment should have at least one element.  If this segment is present,
-  // so is the trailing type list.  Parse it as well and use the parsed types
-  // to resolve the operands passed to the kernel arguments.
-  SmallVector<Type, 4> dataTypes;
-  if (!parser.parseOptionalKeyword(LaunchOp::getArgsKeyword())) {
-    llvm::SMLoc argsLoc = parser.getCurrentLocation();
-
-    regionArgs.push_back({});
-    dataOperands.push_back({});
-    if (parser.parseLParen() || parser.parseRegionArgument(regionArgs.back()) ||
-        parser.parseEqual() || parser.parseOperand(dataOperands.back()))
-      return failure();
-
-    while (!parser.parseOptionalComma()) {
-      regionArgs.push_back({});
-      dataOperands.push_back({});
-      if (parser.parseRegionArgument(regionArgs.back()) ||
-          parser.parseEqual() || parser.parseOperand(dataOperands.back()))
-        return failure();
-    }
-
-    if (parser.parseRParen() || parser.parseColonTypeList(dataTypes) ||
-        parser.resolveOperands(dataOperands, dataTypes, argsLoc,
-                               result.operands))
-      return failure();
-  }
-
-  // Introduce the body region and parse it.  The region has
-  // kNumConfigRegionAttributes leading arguments that correspond to
+  // Introduce the body region and parse it. The region has
+  // kNumConfigRegionAttributes arguments that correspond to
   // block/thread identifiers and grid/block sizes, all of the `index` type.
-  // Follow the actual kernel arguments.
   Type index = parser.getBuilder().getIndexType();
-  dataTypes.insert(dataTypes.begin(), LaunchOp::kNumConfigRegionAttributes,
-                   index);
+  SmallVector<Type, LaunchOp::kNumConfigRegionAttributes> dataTypes(
+      LaunchOp::kNumConfigRegionAttributes, index);
   Region *body = result.addRegion();
   return failure(parser.parseRegion(*body, regionArgs, dataTypes) ||
                  parser.parseOptionalAttrDict(result.attributes));
-}
-
-void LaunchOp::eraseKernelArgument(unsigned index) {
-  Block &entryBlock = body().front();
-  assert(index < entryBlock.getNumArguments() - kNumConfigRegionAttributes &&
-         "kernel argument index overflow");
-  entryBlock.eraseArgument(kNumConfigRegionAttributes + index);
-  getOperation()->eraseOperand(kNumConfigOperands + index);
-}
-
-namespace {
-// Clone any known constants passed as operands to the kernel into its body.
-class PropagateConstantBounds : public OpRewritePattern<LaunchOp> {
-  using OpRewritePattern<LaunchOp>::OpRewritePattern;
-
-  PatternMatchResult matchAndRewrite(LaunchOp launchOp,
-                                     PatternRewriter &rewriter) const override {
-    rewriter.startRootUpdate(launchOp);
-    PatternRewriter::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(&launchOp.body().front());
-
-    // Traverse operands passed to kernel and check if some of them are known
-    // constants.  If so, clone the constant operation inside the kernel region
-    // and use it instead of passing the value from the parent region.  Perform
-    // the traversal in the inverse order to simplify index arithmetics when
-    // dropping arguments.
-    auto operands = launchOp.getKernelOperandValues();
-    auto kernelArgs = launchOp.getKernelArguments();
-    bool found = false;
-    for (unsigned i = operands.size(); i > 0; --i) {
-      unsigned index = i - 1;
-      Value operand = operands[index];
-      if (!isa_and_nonnull<ConstantOp>(operand.getDefiningOp()))
-        continue;
-
-      found = true;
-      Value internalConstant =
-          rewriter.clone(*operand.getDefiningOp())->getResult(0);
-      Value kernelArg = *std::next(kernelArgs.begin(), index);
-      kernelArg.replaceAllUsesWith(internalConstant);
-      launchOp.eraseKernelArgument(index);
-    }
-
-    if (!found) {
-      rewriter.cancelRootUpdate(launchOp);
-      return matchFailure();
-    }
-
-    rewriter.finalizeRootUpdate(launchOp);
-    return matchSuccess();
-  }
-};
-} // end namespace
-
-void LaunchOp::getCanonicalizationPatterns(OwningRewritePatternList &results,
-                                           MLIRContext *context) {
-  results.insert<PropagateConstantBounds>(context);
 }
 
 //===----------------------------------------------------------------------===//

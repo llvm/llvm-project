@@ -90,6 +90,7 @@ class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
 #endif
 
   unsigned BBDupThreshold;
+  unsigned DefaultBBDupThreshold;
 
 public:
   JumpThreadingPass(int T = -1);

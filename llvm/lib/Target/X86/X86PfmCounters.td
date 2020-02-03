@@ -223,3 +223,13 @@ def ZnVer1PfmCounters : ProcPfmCounters {
   ];
 }
 def : PfmCountersBinding<"znver1", ZnVer1PfmCounters>;
+
+def ZnVer2PfmCounters : ProcPfmCounters {
+  let CycleCounter = PfmCounter<"cycles_not_in_halt">;
+  let UopsCounter = PfmCounter<"retired_uops">;
+  let IssueCounters = [
+    PfmIssueCounter<"Zn2AGU", "ls_dispatch:ld_dispatch + ls_dispatch:store_dispatch">,
+    PfmIssueCounter<"Zn2Divider", "div_op_count">
+  ];
+}
+def : PfmCountersBinding<"znver2", ZnVer2PfmCounters>;

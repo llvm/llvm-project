@@ -501,8 +501,17 @@ public:
   }
 
   void setPredecessor(Ptr p) {
-    assert(!Predecessor);
-    Predecessor = p;
+    // If the user has nested one 'seq' node inside another, and this
+    // method is called on the return value of the inner 'seq' (i.e.
+    // the final item inside it), then we can't link _this_ node to p,
+    // because it already has a predecessor. Instead, walk the chain
+    // until we find the first item in the inner seq, and link that to
+    // p, so that nesting seqs has the obvious effect of linking
+    // everything together into one long sequential chain.
+    Result *r = this;
+    while (r->Predecessor)
+      r = r->Predecessor.get();
+    r->Predecessor = p;
   }
 
   // Each Result will be assigned a variable name in the output code, but not

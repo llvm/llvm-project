@@ -176,12 +176,19 @@ def ParallelOp : Loop_Op<"parallel",
                        Variadic<Index>:$upperBound,
                        Variadic<Index>:$step);
   let results = (outs Variadic<AnyType>:$results);
-  let regions = (region SizedRegion<1>:$body);
+  let regions = (region SizedRegion<1>:$region);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<"Builder *builder, OperationState &result, "
+              "ValueRange lowerBounds, ValueRange upperBounds, "
+              "ValueRange steps">
+  ];
 
   let extraClassDeclaration = [{
+    Block *getBody() { return &region().front(); }
     iterator_range<Block::args_iterator> getInductionVars() {
-      Block &block = body().front();
-      return {block.args_begin(), block.args_end()};
+      return {getBody()->args_begin(), getBody()->args_end()};
     }
   }];
 }

@@ -645,7 +645,7 @@ def COM_Fpr80  : FpI_  <(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP,
 
 let SchedRW = [WriteFCom], mayRaiseFPException = 1 in {
 // CC = ST(0) cmp ST(i)
-let Defs = [EFLAGS, FPCW], Uses = [FPCW] in {
+let Defs = [EFLAGS, FPSW], Uses = [FPCW] in {
 def UCOM_FpIr32: FpI_<(outs), (ins RFP32:$lhs, RFP32:$rhs), CompareFP,
                   [(set EFLAGS, (X86any_fcmp RFP32:$lhs, RFP32:$rhs))]>,
                   Requires<[FPStackf32, HasCMov]>;

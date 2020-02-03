@@ -54,14 +54,14 @@ public:
 
   void storeRegToStack(MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator MBBI,
-                       unsigned SrcReg, bool isKill, int FrameIndex,
+                       Register SrcReg, bool isKill, int FrameIndex,
                        const TargetRegisterClass *RC,
                        const TargetRegisterInfo *TRI,
                        int64_t Offset) const override;
 
   void loadRegFromStack(MachineBasicBlock &MBB,
                         MachineBasicBlock::iterator MBBI,
-                        unsigned DestReg, int FrameIndex,
+                        Register DestReg, int FrameIndex,
                         const TargetRegisterClass *RC,
                         const TargetRegisterInfo *TRI,
                         int64_t Offset) const override;

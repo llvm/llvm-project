@@ -10,9 +10,9 @@ RUN: %t-exe -runs=100 2>&1 | FileCheck %s --check-prefix=FOCUS_NONE
 FOCUS_NONE-NOT: INFO: Focus function is set to
 FOCUS_NONE-NOT: INFO: {{.*}} inputs touch the focus function
 
-RUN: %t-exe -runs=100 -focus_function=WRONG 2>&1 | FileCheck %s --check-prefix=FOCUS_WRONG
+RUN: not %t-exe -runs=100 -focus_function=WRONG 2>&1 | FileCheck %s --check-prefix=FOCUS_WRONG
 FOCUS_WRONG-NOT: INFO: Focus function is set to
-FOCUS_WRONG: INFO: 0/1 inputs touch the focus function
+FOCUS_WRONG: ERROR: Failed to set focus function
 
 RUN: %t-exe -runs=100 -focus_function=f0 2>&1 | FileCheck %s --check-prefix=FOCUS_F0
 FOCUS_F0: INFO: Focus function is set to 'f0'

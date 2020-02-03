@@ -28,9 +28,9 @@ define amdgpu_vs void @multi_else_break(<4 x float> %vec, i32 %ub, i32 %cont) {
 ; OPT-NEXT:    [[TMP5:%.*]] = phi i1 [ [[TMP51:%.*]], [[ENDIF]] ], [ true, [[LOOP]] ]
 ; OPT-NEXT:    [[TMP6:%.*]] = phi i1 [ [[TMP11:%.*]], [[ENDIF]] ], [ true, [[LOOP]] ]
 ; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP3]])
-; OPT-NEXT:    [[TMP7]] = call i64 @llvm.amdgcn.if.break.i64.i64(i1 [[TMP6]], i64 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP7]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP6]], i64 [[PHI_BROKEN]])
 ; OPT-NEXT:    [[TMP8:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP7]])
-; OPT-NEXT:    [[TMP9]] = call i64 @llvm.amdgcn.if.break.i64.i64(i1 [[TMP5]], i64 [[PHI_BROKEN2]])
+; OPT-NEXT:    [[TMP9]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP5]], i64 [[PHI_BROKEN2]])
 ; OPT-NEXT:    br i1 [[TMP8]], label [[FLOW1]], label [[LOOP]]
 ; OPT:       Flow1:
 ; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP7]])
@@ -146,7 +146,7 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; OPT:       Flow4:
 ; OPT-NEXT:    [[TMP3:%.*]] = phi i1 [ [[TMP12:%.*]], [[FLOW5]] ], [ [[TMP8:%.*]], [[FLOW]] ]
 ; OPT-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP13:%.*]], [[FLOW5]] ], [ [[TMP9:%.*]], [[FLOW]] ]
-; OPT-NEXT:    [[TMP5]] = call i64 @llvm.amdgcn.if.break.i64.i64(i1 [[TMP3]], i64 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP5]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP3]], i64 [[PHI_BROKEN]])
 ; OPT-NEXT:    [[TMP6:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP5]])
 ; OPT-NEXT:    br i1 [[TMP6]], label [[FLOW6:%.*]], label [[BB1]]
 ; OPT:       case0:

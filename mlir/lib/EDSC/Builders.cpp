@@ -188,6 +188,23 @@ mlir::edsc::LoopBuilder mlir::edsc::LoopBuilder::makeAffine(
   return result;
 }
 
+mlir::edsc::LoopBuilder mlir::edsc::LoopBuilder::makeParallel(
+    ArrayRef<ValueHandle *> ivs, ArrayRef<ValueHandle> lbHandles,
+    ArrayRef<ValueHandle> ubHandles, ArrayRef<ValueHandle> steps) {
+  mlir::edsc::LoopBuilder result;
+  auto opHandle = OperationHandle::create<loop::ParallelOp>(
+      SmallVector<Value, 4>(lbHandles.begin(), lbHandles.end()),
+      SmallVector<Value, 4>(ubHandles.begin(), ubHandles.end()),
+      SmallVector<Value, 4>(steps.begin(), steps.end()));
+
+  loop::ParallelOp parallelOp =
+      cast<loop::ParallelOp>(*opHandle.getOperation());
+  for (size_t i = 0, e = ivs.size(); i < e; ++i)
+    *ivs[i] = ValueHandle(parallelOp.getBody()->getArgument(i));
+  result.enter(parallelOp.getBody(), /*prev=*/1);
+  return result;
+}
+
 mlir::edsc::LoopBuilder
 mlir::edsc::LoopBuilder::makeLoop(ValueHandle *iv, ValueHandle lbHandle,
                                   ValueHandle ubHandle,
@@ -243,6 +260,29 @@ mlir::edsc::AffineLoopNestBuilder::AffineLoopNestBuilder(
 }
 
 void mlir::edsc::AffineLoopNestBuilder::operator()(
+    function_ref<void(void)> fun) {
+  if (fun)
+    fun();
+  // Iterate on the calling operator() on all the loops in the nest.
+  // The iteration order is from innermost to outermost because enter/exit needs
+  // to be asymmetric (i.e. enter() occurs on LoopBuilder construction, exit()
+  // occurs on calling operator()). The asymmetry is required for properly
+  // nesting imperfectly nested regions (see LoopBuilder::operator()).
+  for (auto lit = loops.rbegin(), eit = loops.rend(); lit != eit; ++lit)
+    (*lit)();
+}
+
+mlir::edsc::ParallelLoopNestBuilder::ParallelLoopNestBuilder(
+    ArrayRef<ValueHandle *> ivs, ArrayRef<ValueHandle> lbs,
+    ArrayRef<ValueHandle> ubs, ArrayRef<ValueHandle> steps) {
+  assert(ivs.size() == lbs.size() && "Mismatch in number of arguments");
+  assert(ivs.size() == ubs.size() && "Mismatch in number of arguments");
+  assert(ivs.size() == steps.size() && "Mismatch in number of arguments");
+
+  loops.emplace_back(LoopBuilder::makeParallel(ivs, lbs, ubs, steps));
+}
+
+void mlir::edsc::ParallelLoopNestBuilder::operator()(
     function_ref<void(void)> fun) {
   if (fun)
     fun();

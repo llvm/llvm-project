@@ -57,6 +57,10 @@ class CGHelperFn<string func> : IRBuilderBase {
   // an argument.
   let prefix = func # "(Builder, ";
 }
+class CGFHelperFn<string func> : IRBuilderBase {
+  // Like CGHelperFn, but also takes the CodeGenFunction itself.
+  let prefix = func # "(Builder, this, ";
+}
 def add: IRBuilder<"CreateAdd">;
 def mul: IRBuilder<"CreateMul">;
 def not: IRBuilder<"CreateNot">;
@@ -89,6 +93,7 @@ def ielt_var: IRBuilder<"CreateInsertElement">;
 def xelt_var: IRBuilder<"CreateExtractElement">;
 def trunc: IRBuilder<"CreateTrunc">;
 def bitcast: IRBuilder<"CreateBitCast">;
+def vreinterpret: CGFHelperFn<"ARMMVEVectorReinterpret">;
 def extend: CGHelperFn<"SignOrZeroExtend"> {
   let special_params = [IRBuilderIntParam<2, "bool">];
 }
@@ -359,7 +364,7 @@ def imm_lane : Immediate<sint, IB_LaneIndex>;
 def imm_1to32 : Immediate<sint, IB_ConstRange<1, 32>>;
 
 // imm_1248 can be 1, 2, 4 or 8. (e.g. vidupq)
-def imm_1248 : Immediate<u32, IB_ConstRange<1, 8>> {
+def imm_1248 : Immediate<sint, IB_ConstRange<1, 8>> {
   let extra = "Power2";
 }
 

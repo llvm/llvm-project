@@ -651,7 +651,7 @@ Error ExegesisX86Target::randomizeTargetMCOperand(
   switch (Op.getExplicitOperandInfo().OperandType) {
   case X86::OperandType::OPERAND_ROUNDING_CONTROL:
     AssignedValue =
-        MCOperand::createImm(randomIndex(X86::STATIC_ROUNDING::NO_EXC));
+        MCOperand::createImm(randomIndex(X86::STATIC_ROUNDING::TO_ZERO));
     return Error::success();
   case X86::OperandType::OPERAND_COND_CODE:
     AssignedValue =

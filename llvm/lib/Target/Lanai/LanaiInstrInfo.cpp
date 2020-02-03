@@ -48,7 +48,7 @@ void LanaiInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
 void LanaiInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
-    unsigned SourceRegister, bool IsKill, int FrameIndex,
+    Register SourceRegister, bool IsKill, int FrameIndex,
     const TargetRegisterClass *RegisterClass,
     const TargetRegisterInfo * /*RegisterInfo*/) const {
   DebugLoc DL;
@@ -68,7 +68,7 @@ void LanaiInstrInfo::storeRegToStackSlot(
 
 void LanaiInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
-    unsigned DestinationRegister, int FrameIndex,
+    Register DestinationRegister, int FrameIndex,
     const TargetRegisterClass *RegisterClass,
     const TargetRegisterInfo * /*RegisterInfo*/) const {
   DebugLoc DL;

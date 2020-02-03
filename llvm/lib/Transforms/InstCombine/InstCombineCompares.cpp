@@ -1575,11 +1575,8 @@ Instruction *InstCombiner::foldICmpXorConstant(ICmpInst &Cmp,
 
     // If the sign bit of the XorCst is not set, there is no change to
     // the operation, just stop using the Xor.
-    if (!XorC->isNegative()) {
-      Cmp.setOperand(0, X);
-      Worklist.Add(Xor);
-      return &Cmp;
-    }
+    if (!XorC->isNegative())
+      return replaceOperand(Cmp, 0, X);
 
     // Emit the opposite comparison.
     if (TrueIfSigned)
@@ -1687,7 +1684,7 @@ Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
         APInt NewAndCst = IsShl ? C2.lshr(*C3) : C2.shl(*C3);
         And->setOperand(1, ConstantInt::get(And->getType(), NewAndCst));
         And->setOperand(0, Shift->getOperand(0));
-        Worklist.Add(Shift); // Shift is dead.
+        Worklist.push(Shift); // Shift is dead.
         return &Cmp;
       }
     }
@@ -1705,8 +1702,7 @@ Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
 
     // Compute X & (C2 << Y).
     Value *NewAnd = Builder.CreateAnd(Shift->getOperand(0), NewShift);
-    Cmp.setOperand(0, NewAnd);
-    return &Cmp;
+    return replaceOperand(Cmp, 0, NewAnd);
   }
 
   return nullptr;
@@ -1812,8 +1808,7 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
       }
       if (NewOr) {
         Value *NewAnd = Builder.CreateAnd(A, NewOr, And->getName());
-        Cmp.setOperand(0, NewAnd);
-        return &Cmp;
+        return replaceOperand(Cmp, 0, NewAnd);
       }
     }
   }
@@ -4658,7 +4653,7 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
   Function *F = Intrinsic::getDeclaration(
       I.getModule(), Intrinsic::umul_with_overflow, MulType);
   CallInst *Call = Builder.CreateCall(F, {MulA, MulB}, "umul");
-  IC.Worklist.Add(MulInstr);
+  IC.Worklist.push(MulInstr);
 
   // If there are uses of mul result other than the comparison, we know that
   // they are truncation or binary AND. Change them to use result of
@@ -4685,11 +4680,11 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
       } else {
         llvm_unreachable("Unexpected Binary operation");
       }
-      IC.Worklist.Add(cast<Instruction>(U));
+      IC.Worklist.push(cast<Instruction>(U));
     }
   }
   if (isa<Instruction>(OtherVal))
-    IC.Worklist.Add(cast<Instruction>(OtherVal));
+    IC.Worklist.push(cast<Instruction>(OtherVal));
 
   // The original icmp gets replaced with the overflow value, maybe inverted
   // depending on predicate.

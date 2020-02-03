@@ -2865,11 +2865,11 @@ static void storeRegPairToStackSlot(const TargetRegisterInfo &TRI,
                                     MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator InsertBefore,
                                     const MCInstrDesc &MCID,
-                                    unsigned SrcReg, bool IsKill,
+                                    Register SrcReg, bool IsKill,
                                     unsigned SubIdx0, unsigned SubIdx1, int FI,
                                     MachineMemOperand *MMO) {
-  unsigned SrcReg0 = SrcReg;
-  unsigned SrcReg1 = SrcReg;
+  Register SrcReg0 = SrcReg;
+  Register SrcReg1 = SrcReg;
   if (Register::isPhysicalRegister(SrcReg)) {
     SrcReg0 = TRI.getSubReg(SrcReg, SubIdx0);
     SubIdx0 = 0;
@@ -2885,7 +2885,7 @@ static void storeRegPairToStackSlot(const TargetRegisterInfo &TRI,
 }
 
 void AArch64InstrInfo::storeRegToStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, unsigned SrcReg,
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
     bool isKill, int FI, const TargetRegisterClass *RC,
     const TargetRegisterInfo *TRI) const {
   MachineFunction &MF = *MBB.getParent();
@@ -3005,11 +3005,11 @@ static void loadRegPairFromStackSlot(const TargetRegisterInfo &TRI,
                                      MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator InsertBefore,
                                      const MCInstrDesc &MCID,
-                                     unsigned DestReg, unsigned SubIdx0,
+                                     Register DestReg, unsigned SubIdx0,
                                      unsigned SubIdx1, int FI,
                                      MachineMemOperand *MMO) {
-  unsigned DestReg0 = DestReg;
-  unsigned DestReg1 = DestReg;
+  Register DestReg0 = DestReg;
+  Register DestReg1 = DestReg;
   bool IsUndef = true;
   if (Register::isPhysicalRegister(DestReg)) {
     DestReg0 = TRI.getSubReg(DestReg, SubIdx0);
@@ -3027,7 +3027,7 @@ static void loadRegPairFromStackSlot(const TargetRegisterInfo &TRI,
 }
 
 void AArch64InstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, unsigned DestReg,
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DestReg,
     int FI, const TargetRegisterClass *RC,
     const TargetRegisterInfo *TRI) const {
   MachineFunction &MF = *MBB.getParent();

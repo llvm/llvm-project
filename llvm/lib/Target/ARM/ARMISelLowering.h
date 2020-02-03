@@ -84,7 +84,9 @@ class VectorType;
       CMN,          // ARM CMN instructions.
       CMPZ,         // ARM compare that sets only Z flag.
       CMPFP,        // ARM VFP compare instruction, sets FPSCR.
+      CMPFPE,       // ARM VFP signalling compare instruction, sets FPSCR.
       CMPFPw0,      // ARM VFP compare against zero instruction, sets FPSCR.
+      CMPFPEw0,     // ARM VFP signalling compare against zero instruction, sets FPSCR.
       FMSTAT,       // ARM fmstat instruction.
 
       CMOV,         // ARM conditional move instructions.
@@ -131,6 +133,7 @@ class VectorType;
       LE,           // Low-overhead loops, Loop End
 
       PREDICATE_CAST, // Predicate cast for MVE i1 types
+      VECTOR_REG_CAST, // Reinterpret the current contents of a vector register
 
       VCMP,         // Vector compare.
       VCMPZ,        // Vector compare to zero.
@@ -730,6 +733,7 @@ class VectorType;
     SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerFSETCC(SDValue Op, SelectionDAG &DAG) const;
     void lowerABS(SDNode *N, SmallVectorImpl<SDValue> &Results,
                   SelectionDAG &DAG) const;
     void LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
@@ -820,7 +824,7 @@ class VectorType;
     SDValue getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                       SDValue &ARMcc, SelectionDAG &DAG, const SDLoc &dl) const;
     SDValue getVFPCmp(SDValue LHS, SDValue RHS, SelectionDAG &DAG,
-                      const SDLoc &dl) const;
+                      const SDLoc &dl, bool Signaling = false) const;
     SDValue duplicateCmp(SDValue Cmp, SelectionDAG &DAG) const;
 
     SDValue OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const;

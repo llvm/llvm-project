@@ -40,9 +40,24 @@ public:
 
   bool isEmpty() const { return Worklist.empty(); }
 
-  /// Add - Add the specified instruction to the worklist if it isn't already
-  /// in it.
-  void Add(Instruction *I) {
+  /// Add instruction to the worklist.
+  /// Instructions will be visited in the order they are added.
+  /// You likely want to use this method.
+  void add(Instruction *I) {
+    if (Deferred.insert(I))
+      LLVM_DEBUG(dbgs() << "IC: ADD DEFERRED: " << *I << '\n');
+  }
+
+  /// Add value to the worklist if it is an instruction.
+  /// Instructions will be visited in the order they are added.
+  void addValue(Value *V) {
+    if (Instruction *I = dyn_cast<Instruction>(V))
+      add(I);
+  }
+
+  /// Push the instruction onto the worklist stack.
+  /// Instructions that have been added first will be visited last.
+  void push(Instruction *I) {
     assert(I);
     assert(I->getParent() && "Instruction not inserted yet?");
 
@@ -52,26 +67,21 @@ public:
     }
   }
 
-  void AddValue(Value *V) {
+  void pushValue(Value *V) {
     if (Instruction *I = dyn_cast<Instruction>(V))
-      Add(I);
+      push(I);
   }
 
-  void AddDeferred(Instruction *I) {
-    if (Deferred.insert(I))
-      LLVM_DEBUG(dbgs() << "IC: ADD DEFERRED: " << *I << '\n');
-  }
-
-  void AddDeferredInstructions() {
+  void addDeferredInstructions() {
     for (Instruction *I : reverse(Deferred))
-      Add(I);
+      push(I);
     Deferred.clear();
   }
 
   /// AddInitialGroup - Add the specified batch of stuff in reverse order.
   /// which should only be done when the worklist is empty and when the group
   /// has no duplicates.
-  void AddInitialGroup(ArrayRef<Instruction *> List) {
+  void addInitialGroup(ArrayRef<Instruction *> List) {
     assert(Worklist.empty() && "Worklist must be empty to add initial group");
     Worklist.reserve(List.size()+16);
     WorklistMap.reserve(List.size());
@@ -84,8 +94,8 @@ public:
     }
   }
 
-  // Remove - remove I from the worklist if it exists.
-  void Remove(Instruction *I) {
+  /// Remove I from the worklist if it exists.
+  void remove(Instruction *I) {
     DenseMap<Instruction*, unsigned>::iterator It = WorklistMap.find(I);
     if (It == WorklistMap.end()) return; // Not in worklist.
 
@@ -96,25 +106,22 @@ public:
     Deferred.remove(I);
   }
 
-  Instruction *RemoveOne() {
+  Instruction *removeOne() {
     Instruction *I = Worklist.pop_back_val();
     WorklistMap.erase(I);
     return I;
   }
 
-  /// AddUsersToWorkList - When an instruction is simplified, add all users of
-  /// the instruction to the work lists because they might get more simplified
-  /// now.
-  ///
-  void AddUsersToWorkList(Instruction &I) {
+  /// When an instruction is simplified, add all users of the instruction
+  /// to the work lists because they might get more simplified now.
+  void pushUsersToWorkList(Instruction &I) {
     for (User *U : I.users())
-      Add(cast<Instruction>(U));
+      push(cast<Instruction>(U));
   }
 
 
-  /// Zap - check that the worklist is empty and nuke the backing store for
-  /// the map if it is large.
-  void Zap() {
+  /// Check that the worklist is empty and nuke the backing store for the map.
+  void zap() {
     assert(WorklistMap.empty() && "Worklist empty, but map not?");
     assert(Deferred.empty() && "Deferred instructions left over");
 

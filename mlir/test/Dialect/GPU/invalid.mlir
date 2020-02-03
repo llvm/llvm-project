@@ -1,7 +1,7 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s
 
 func @not_enough_sizes(%sz : index) {
-  // expected-error@+1 {{expected 6 or more operands}}
+  // expected-error@+1 {{expected 6 operands, but found 5}}
   "gpu.launch"(%sz, %sz, %sz, %sz, %sz) ({
     gpu.return
   }) : (index, index, index, index, index) -> ()
@@ -15,59 +15,6 @@ func @no_region_attrs(%sz : index) {
  "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
   ^bb1(%bx: index, %by: index, %bz: index,
        %tx: index, %ty: index, %tz: index):
-    gpu.return
-  }) : (index, index, index, index, index, index) -> ()
-  return
-}
-
-// -----
-
-func @isolation_arg(%sz : index) {
- // expected-note@+1 {{required by region isolation constraints}}
- "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
-  ^bb1(%bx: index, %by: index, %bz: index,
-       %tx: index, %ty: index, %tz: index,
-       %szbx: index, %szby: index, %szbz: index,
-       %sztx: index, %szty: index, %sztz: index):
-    // expected-error@+1 {{using value defined outside the region}}
-    "use"(%sz) : (index) -> ()
-    gpu.return
-  }) : (index, index, index, index, index, index) -> ()
-  return
-}
-
-// -----
-
-func @isolation_op(%sz : index) {
- %val = "produce"() : () -> (index)
- // expected-note@+1 {{required by region isolation constraints}}
- "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
-  ^bb1(%bx: index, %by: index, %bz: index,
-       %tx: index, %ty: index, %tz: index,
-       %szbx: index, %szby: index, %szbz: index,
-       %sztx: index, %szty: index, %sztz: index):
-    // expected-error@+1 {{using value defined outside the region}}
-    "use"(%val) : (index) -> ()
-    gpu.return
-  }) : (index, index, index, index, index, index) -> ()
-  return
-}
-
-// -----
-
-func @nested_isolation(%sz : index) {
-  // expected-note@+1 {{required by region isolation constraints}}
-  "gpu.launch"(%sz, %sz, %sz, %sz, %sz, %sz) ({
-  ^bb1(%bx: index, %by: index, %bz: index,
-       %tx: index, %ty: index, %tz: index,
-       %szbx: index, %szby: index, %szbz: index,
-       %sztx: index, %szty: index, %sztz: index):
-    "region"() ({
-      "region"() ({
-        // expected-error@+1 {{using value defined outside the region}}
-        "use"(%sz) : (index) -> ()
-      }) : () -> ()
-    }) : () -> ()
     gpu.return
   }) : (index, index, index, index, index, index) -> ()
   return

@@ -74,6 +74,10 @@ LogicalResult tileAndFuseLinalgOpAndSetMarker(
 template <typename ConcreteOp>
 LogicalResult linalgOpToLoops(PatternRewriter &rewriter, Operation *op);
 
+/// Emits a loop nest of `loop.parallel` with the proper body for `op`.
+template <typename ConcreteOp>
+LogicalResult linalgOpToParallelLoops(PatternRewriter &rewriter, Operation *op);
+
 /// Emits a loop nest of `affine.for` with the proper body for `op`.
 template <typename ConcreteOp>
 LogicalResult linalgOpToAffineLoops(PatternRewriter &rewriter, Operation *op);

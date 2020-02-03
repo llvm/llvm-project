@@ -605,7 +605,7 @@ static Value *getShiftedValue(Value *V, unsigned NumBits, bool isLeftShift,
   }
 
   Instruction *I = cast<Instruction>(V);
-  IC.Worklist.Add(I);
+  IC.Worklist.push(I);
 
   switch (I->getOpcode()) {
   default: llvm_unreachable("Inconsistency with CanEvaluateShifted");

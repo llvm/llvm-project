@@ -754,13 +754,13 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (Out.Flags.isByVal() && Out.Flags.getByValSize() != 0) {
       auto &MFI = MF.getFrameInfo();
       int FI = MFI.CreateStackObject(Out.Flags.getByValSize(),
-                                     Out.Flags.getByValAlign(),
+                                     Out.Flags.getNonZeroByValAlign(),
                                      /*isSS=*/false);
       SDValue SizeNode =
           DAG.getConstant(Out.Flags.getByValSize(), DL, MVT::i32);
       SDValue FINode = DAG.getFrameIndex(FI, getPointerTy(Layout));
       Chain = DAG.getMemcpy(
-          Chain, DL, FINode, OutVal, SizeNode, Out.Flags.getByValAlign(),
+          Chain, DL, FINode, OutVal, SizeNode, Out.Flags.getNonZeroByValAlign(),
           /*isVolatile*/ false, /*AlwaysInline=*/false,
           /*isTailCall*/ false, MachinePointerInfo(), MachinePointerInfo());
       OutVal = FINode;

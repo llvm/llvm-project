@@ -1931,6 +1931,9 @@ void CodeGenFunction::EmitOMPSimdInit(const OMPLoopDirective &D,
   LoopStack.setParallel(!IsMonotonic);
   LoopStack.setVectorizeEnable();
   emitSimdlenSafelenClause(*this, D, IsMonotonic);
+  if (const auto *C = D.getSingleClause<OMPOrderClause>())
+    if (C->getKind() == OMPC_ORDER_concurrent)
+      LoopStack.setParallel(/*Enable=*/true);
 }
 
 void CodeGenFunction::EmitOMPSimdFinal(
@@ -2202,10 +2205,14 @@ void CodeGenFunction::EmitOMPOuterLoop(
       [&S, IsMonotonic](CodeGenFunction &CGF, PrePostActionTy &) {
         // Generate !llvm.loop.parallel metadata for loads and stores for loops
         // with dynamic/guided scheduling and without ordered clause.
-        if (!isOpenMPSimdDirective(S.getDirectiveKind()))
+        if (!isOpenMPSimdDirective(S.getDirectiveKind())) {
           CGF.LoopStack.setParallel(!IsMonotonic);
-        else
+          if (const auto *C = S.getSingleClause<OMPOrderClause>())
+            if (C->getKind() == OMPC_ORDER_concurrent)
+              CGF.LoopStack.setParallel(/*Enable=*/true);
+        } else {
           CGF.EmitOMPSimdInit(S, IsMonotonic);
+        }
       },
       [&S, &LoopArgs, LoopExit, &CodeGenLoop, IVSize, IVSigned, &CodeGenOrdered,
        &LoopScope](CodeGenFunction &CGF, PrePostActionTy &) {
@@ -2720,8 +2727,12 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
         emitCommonSimdLoop(
             *this, S,
             [&S](CodeGenFunction &CGF, PrePostActionTy &) {
-              if (isOpenMPSimdDirective(S.getDirectiveKind()))
+              if (isOpenMPSimdDirective(S.getDirectiveKind())) {
                 CGF.EmitOMPSimdInit(S, /*IsMonotonic=*/true);
+              } else if (const auto *C = S.getSingleClause<OMPOrderClause>()) {
+                if (C->getKind() == OMPC_ORDER_concurrent)
+                  CGF.LoopStack.setParallel(/*Enable=*/true);
+              }
             },
             [IVSize, IVSigned, Ordered, IL, LB, UB, ST, StaticChunkedOne, Chunk,
              &S, ScheduleKind, LoopExit,
@@ -4463,6 +4474,7 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_device_type:
   case OMPC_match:
   case OMPC_nontemporal:
+  case OMPC_order:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
 }

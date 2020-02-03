@@ -6030,6 +6030,21 @@ extern const AstTypeMatcher<EnumType> enumType;
 extern const AstTypeMatcher<TemplateSpecializationType>
     templateSpecializationType;
 
+/// Matches C++17 deduced template specialization types, e.g. deduced class
+/// template types.
+///
+/// Given
+/// \code
+///   template <typename T>
+///   class C { public: C(T); };
+///
+///   C c(123);
+/// \endcode
+/// \c deducedTemplateSpecializationType() matches the type in the declaration
+/// of the variable \c c.
+extern const AstTypeMatcher<DeducedTemplateSpecializationType>
+    deducedTemplateSpecializationType;
+
 /// Matches types nodes representing unary type transformations.
 ///
 /// Given:

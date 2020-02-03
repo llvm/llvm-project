@@ -1458,6 +1458,12 @@ TEST(TypeMatching, MatchesTemplateSpecializationType) {
                       templateSpecializationType()));
 }
 
+TEST(TypeMatching, MatchesDeucedTemplateSpecializationType) {
+  EXPECT_TRUE(matches("template <typename T> class A{ public: A(T) {} }; A a(1);",
+                      deducedTemplateSpecializationType(),
+                      LanguageMode::Cxx17OrLater));
+}
+
 TEST(TypeMatching, MatchesRecordType) {
   EXPECT_TRUE(matches("class C{}; C c;", recordType()));
   EXPECT_TRUE(matches("struct S{}; S s;",

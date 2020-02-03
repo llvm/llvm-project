@@ -331,26 +331,24 @@ bool SIInstrInfo::getMemOperandsWithOffset(
 
       const MachineOperand *OffsetImm =
         getNamedOperand(LdSt, AMDGPU::OpName::offset);
+      BaseOps.push_back(RSrc);
       BaseOps.push_back(SOffset);
       Offset = OffsetImm->getImm();
       return true;
     }
 
-    const MachineOperand *AddrReg = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
-    if (!AddrReg)
+    BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
+    if (!BaseOp)
       return false;
+    const MachineOperand *RSrc = getNamedOperand(LdSt, AMDGPU::OpName::srsrc);
+    BaseOps.push_back(RSrc);
+    BaseOps.push_back(BaseOp);
 
     const MachineOperand *OffsetImm =
         getNamedOperand(LdSt, AMDGPU::OpName::offset);
-    BaseOp = AddrReg;
     Offset = OffsetImm->getImm();
     if (SOffset) // soffset can be an inline immediate.
       Offset += SOffset->getImm();
-
-    if (!BaseOp->isReg())
-      return false;
-
-    BaseOps.push_back(BaseOp);
     return true;
   }
 
@@ -1121,7 +1119,7 @@ static unsigned getAGPRSpillSaveOpcode(unsigned Size) {
 
 void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator MI,
-                                      unsigned SrcReg, bool isKill,
+                                      Register SrcReg, bool isKill,
                                       int FrameIndex,
                                       const TargetRegisterClass *RC,
                                       const TargetRegisterInfo *TRI) const {
@@ -1251,7 +1249,7 @@ static unsigned getAGPRSpillRestoreOpcode(unsigned Size) {
 
 void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator MI,
-                                       unsigned DestReg, int FrameIndex,
+                                       Register DestReg, int FrameIndex,
                                        const TargetRegisterClass *RC,
                                        const TargetRegisterInfo *TRI) const {
   MachineFunction *MF = MBB.getParent();

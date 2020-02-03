@@ -104,6 +104,11 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`readability-qualified-auto
+  <clang-tidy/checks/readability-qualified-auto>` check now supports a 
+  `AddConstToQualified` to enable adding ``const`` qualifiers to variables
+  typed with ``auto *`` and ``auto &``.
+
 - Improved :doc:`readability-redundant-string-init
   <clang-tidy/checks/readability-redundant-string-init>` check now supports a
   `StringNames` option enabling its application to custom string classes. The 
