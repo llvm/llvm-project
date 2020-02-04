@@ -23,7 +23,7 @@ namespace llvm {
 struct DenormalMode {
   /// Represent handled modes for denormal (aka subnormal) modes in the floating
   /// point environment.
-  enum DenormalModeKind : char {
+  enum DenormalModeKind : int8_t {
     Invalid = -1,
 
     /// IEEE-754 denormal numbers preserved.
