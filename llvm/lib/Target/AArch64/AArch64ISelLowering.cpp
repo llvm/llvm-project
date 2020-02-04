@@ -9436,9 +9436,9 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
   // Only use AdvSIMD to implement memset of 32-byte and above. It would have
   // taken one instruction to materialize the v2i64 zero and one store (with
   // restrictive addressing mode). Just do i64 stores.
-  bool IsSmallMemset = Op.IsMemset && Op.Size < 32;
+  bool IsSmallMemset = Op.isMemset() && Op.size() < 32;
   auto AlignmentIsAcceptable = [&](EVT VT, unsigned AlignCheck) {
-    if (memOpAlign(Op.SrcAlign, Op.DstAlign, AlignCheck))
+    if (memOpAlign(Op.getSrcAlign(), Op.getDstAlign(), AlignCheck))
       return true;
     bool Fast;
     return allowsMisalignedMemoryAccesses(VT, 0, 1, MachineMemOperand::MONone,
@@ -9446,14 +9446,14 @@ EVT AArch64TargetLowering::getOptimalMemOpType(
            Fast;
   };
 
-  if (CanUseNEON && Op.IsMemset && !IsSmallMemset &&
+  if (CanUseNEON && Op.isMemset() && !IsSmallMemset &&
       AlignmentIsAcceptable(MVT::v2i64, 16))
     return MVT::v2i64;
   if (CanUseFP && !IsSmallMemset && AlignmentIsAcceptable(MVT::f128, 16))
     return MVT::f128;
-  if (Op.Size >= 8 && AlignmentIsAcceptable(MVT::i64, 8))
+  if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::i64, 8))
     return MVT::i64;
-  if (Op.Size >= 4 && AlignmentIsAcceptable(MVT::i32, 4))
+  if (Op.size() >= 4 && AlignmentIsAcceptable(MVT::i32, 4))
     return MVT::i32;
   return MVT::Other;
 }
@@ -9467,9 +9467,9 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
   // Only use AdvSIMD to implement memset of 32-byte and above. It would have
   // taken one instruction to materialize the v2i64 zero and one store (with
   // restrictive addressing mode). Just do i64 stores.
-  bool IsSmallMemset = Op.IsMemset && Op.Size < 32;
+  bool IsSmallMemset = Op.isMemset() && Op.size() < 32;
   auto AlignmentIsAcceptable = [&](EVT VT, unsigned AlignCheck) {
-    if (memOpAlign(Op.SrcAlign, Op.DstAlign, AlignCheck))
+    if (memOpAlign(Op.getSrcAlign(), Op.getDstAlign(), AlignCheck))
       return true;
     bool Fast;
     return allowsMisalignedMemoryAccesses(VT, 0, 1, MachineMemOperand::MONone,
@@ -9477,14 +9477,14 @@ LLT AArch64TargetLowering::getOptimalMemOpLLT(
            Fast;
   };
 
-  if (CanUseNEON && Op.IsMemset && !IsSmallMemset &&
+  if (CanUseNEON && Op.isMemset() && !IsSmallMemset &&
       AlignmentIsAcceptable(MVT::v2i64, 16))
     return LLT::vector(2, 64);
   if (CanUseFP && !IsSmallMemset && AlignmentIsAcceptable(MVT::f128, 16))
     return LLT::scalar(128);
-  if (Op.Size >= 8 && AlignmentIsAcceptable(MVT::i64, 8))
+  if (Op.size() >= 8 && AlignmentIsAcceptable(MVT::i64, 8))
     return LLT::scalar(64);
-  if (Op.Size >= 4 && AlignmentIsAcceptable(MVT::i32, 4))
+  if (Op.size() >= 4 && AlignmentIsAcceptable(MVT::i32, 4))
     return LLT::scalar(32);
   return LLT();
 }

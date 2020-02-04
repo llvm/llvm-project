@@ -2252,16 +2252,17 @@ unsigned X86TargetLowering::getByValTypeAlignment(Type *Ty,
 EVT X86TargetLowering::getOptimalMemOpType(
     const MemOp &Op, const AttributeList &FuncAttributes) const {
   if (!FuncAttributes.hasFnAttribute(Attribute::NoImplicitFloat)) {
-    if (Op.Size >= 16 && (!Subtarget.isUnalignedMem16Slow() ||
-                          ((Op.DstAlign == 0 || Op.DstAlign >= 16) &&
-                           (Op.SrcAlign == 0 || Op.SrcAlign >= 16)))) {
+    if (Op.size() >= 16 &&
+        (!Subtarget.isUnalignedMem16Slow() ||
+         ((Op.getDstAlign() == 0 || Op.getDstAlign() >= 16) &&
+          (Op.getSrcAlign() == 0 || Op.getSrcAlign() >= 16)))) {
       // FIXME: Check if unaligned 64-byte accesses are slow.
-      if (Op.Size >= 64 && Subtarget.hasAVX512() &&
+      if (Op.size() >= 64 && Subtarget.hasAVX512() &&
           (Subtarget.getPreferVectorWidth() >= 512)) {
         return Subtarget.hasBWI() ? MVT::v64i8 : MVT::v16i32;
       }
       // FIXME: Check if unaligned 32-byte accesses are slow.
-      if (Op.Size >= 32 && Subtarget.hasAVX() &&
+      if (Op.size() >= 32 && Subtarget.hasAVX() &&
           (Subtarget.getPreferVectorWidth() >= 256)) {
         // Although this isn't a well-supported type for AVX1, we'll let
         // legalization and shuffle lowering produce the optimal codegen. If we
@@ -2277,8 +2278,8 @@ EVT X86TargetLowering::getOptimalMemOpType(
       if (Subtarget.hasSSE1() && (Subtarget.is64Bit() || Subtarget.hasX87()) &&
           (Subtarget.getPreferVectorWidth() >= 128))
         return MVT::v4f32;
-    } else if ((!Op.IsMemset || Op.ZeroMemset) && !Op.MemcpyStrSrc &&
-               Op.Size >= 8 && !Subtarget.is64Bit() && Subtarget.hasSSE2()) {
+    } else if ((!Op.isMemset() || Op.isZeroMemset()) && !Op.isMemcpyStrSrc() &&
+               Op.size() >= 8 && !Subtarget.is64Bit() && Subtarget.hasSSE2()) {
       // Do not use f64 to lower memcpy if source is string constant. It's
       // better to use i32 to avoid the loads.
       // Also, do not use f64 to lower memset unless this is a memset of zeros.
@@ -2291,7 +2292,7 @@ EVT X86TargetLowering::getOptimalMemOpType(
   // This is a compromise. If we reach here, unaligned accesses may be slow on
   // this target. However, creating smaller, aligned accesses could be even
   // slower and would certainly be a lot more code.
-  if (Subtarget.is64Bit() && Op.Size >= 8)
+  if (Subtarget.is64Bit() && Op.size() >= 8)
     return MVT::i64;
   return MVT::i32;
 }

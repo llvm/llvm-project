@@ -101,7 +101,7 @@ private:
 
   EVT getOptimalMemOpType(const MemOp &Op,
                           const AttributeList &FuncAttributes) const override {
-    return Op.Size >= 8 ? MVT::i64 : MVT::i32;
+    return Op.size() >= 8 ? MVT::i64 : MVT::i32;
   }
 
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,

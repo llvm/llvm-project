@@ -15027,17 +15027,17 @@ static bool memOpAlign(unsigned DstAlign, unsigned SrcAlign,
 EVT ARMTargetLowering::getOptimalMemOpType(
     const MemOp &Op, const AttributeList &FuncAttributes) const {
   // See if we can use NEON instructions for this...
-  if ((!Op.IsMemset || Op.ZeroMemset) && Subtarget->hasNEON() &&
+  if ((!Op.isMemset() || Op.isZeroMemset()) && Subtarget->hasNEON() &&
       !FuncAttributes.hasFnAttribute(Attribute::NoImplicitFloat)) {
     bool Fast;
-    if (Op.Size >= 16 &&
-        (memOpAlign(Op.SrcAlign, Op.DstAlign, 16) ||
+    if (Op.size() >= 16 &&
+        (memOpAlign(Op.getSrcAlign(), Op.getDstAlign(), 16) ||
          (allowsMisalignedMemoryAccesses(MVT::v2f64, 0, 1,
                                          MachineMemOperand::MONone, &Fast) &&
           Fast))) {
       return MVT::v2f64;
-    } else if (Op.Size >= 8 &&
-               (memOpAlign(Op.SrcAlign, Op.DstAlign, 8) ||
+    } else if (Op.size() >= 8 &&
+               (memOpAlign(Op.getSrcAlign(), Op.getDstAlign(), 8) ||
                 (allowsMisalignedMemoryAccesses(
                      MVT::f64, 0, 1, MachineMemOperand::MONone, &Fast) &&
                  Fast))) {
