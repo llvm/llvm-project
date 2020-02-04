@@ -23,6 +23,10 @@ void IndexToObject::AddObjectForIndexImpl(unsigned idx, void *object) {
   m_mapping[idx] = object;
 }
 
+template <> const uint8_t *Deserializer::Deserialize<const uint8_t *>() {
+  return Deserialize<uint8_t *>();
+}
+
 template <> char *Deserializer::Deserialize<char *>() {
   return const_cast<char *>(Deserialize<const char *>());
 }
