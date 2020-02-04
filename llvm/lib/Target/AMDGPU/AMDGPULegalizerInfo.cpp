@@ -248,6 +248,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     S32, S64, S16, V2S16
   };
 
+  const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
   const LLT MinLegalScalarShiftTy = ST.has16BitInsts() ? S16 : S32;
 
   setAction({G_BRCOND, S1}, Legal); // VCC branches
@@ -528,10 +529,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .scalarize(0);
 
   // FIXME: fexp, flog2, flog10 needs to be custom lowered.
-  getActionDefinitionsBuilder({G_FPOW, G_FEXP, G_FEXP2,
-                               G_FLOG2})
-    .legalFor({S32})
-    .scalarize(0);
+  auto &FExp2Ops = getActionDefinitionsBuilder({G_FPOW, G_FEXP,
+                                                G_FEXP2, G_FLOG2});
+  if (ST.has16BitInsts())
+    FExp2Ops.legalFor({{S32}, {S16}});
+  else
+    FExp2Ops.legalFor({S32});
+  FExp2Ops.clampScalar(0, MinScalarFPTy, S32);
+  FExp2Ops.scalarize(0);
 
   getActionDefinitionsBuilder({G_FLOG, G_FLOG10})
     .customFor({S32})
