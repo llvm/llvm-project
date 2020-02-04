@@ -410,9 +410,15 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
 void OperationFormat::genParserTypeResolution(Operator &op,
                                               OpMethodBody &body) {
   // Initialize the set of buildable types.
-  for (auto &it : buildableTypes)
-    body << "  Type odsBuildableType" << it.second << " = parser.getBuilder()."
-         << it.first << ";\n";
+  if (!buildableTypes.empty()) {
+    body << "  Builder &builder = parser.getBuilder();\n";
+
+    FmtContext typeBuilderCtx;
+    typeBuilderCtx.withBuilder("builder");
+    for (auto &it : buildableTypes)
+      body << "  Type odsBuildableType" << it.second << " = "
+           << tgfmt(it.first, &typeBuilderCtx) << ";\n";
+  }
 
   // Resolve each of the result types.
   if (allResultTypes) {
