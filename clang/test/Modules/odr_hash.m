@@ -531,30 +531,96 @@ WI1 *wi1;
 @protocol W2
 @property (nonatomic, assign) float f;
 @end
+@protocol W3
+@optional
+@property (nonatomic, assign) int a;
+@end
+@protocol W4
+@required
+@property (nonatomic, assign) int a;
+@end
+@protocol W5
+@required
+@property (nonatomic, assign) int a;
+@end
 #elif defined(SECOND)
 @protocol W2
 @property (nonatomic, assign) float d;
+@end
+@protocol W3
+@property (nonatomic, assign) int a;
+@end
+@protocol W4
+@optional
+@property (nonatomic, assign) int a;
+@end
+@protocol W5
+@property (nonatomic, assign) int a;
 @end
 #else
 @interface IW2 <W2>
 @end
 // expected-error@first.h:* {{'W2' has different definitions in different modules; first difference is definition in module 'FirstModule' found property name 'f'}}
 // expected-note@second.h:* {{but in 'SecondModule' found property name 'd'}}
+@interface IW3 <W3>
+@end
+// expected-error@first.h:* {{'W3' has different definitions in different modules; first difference is definition in module 'FirstModule' found 'optional' property control}}
+// expected-note@second.h:* {{but in 'SecondModule' found no property control}}
+@interface IW4 <W4>
+@end
+// expected-error@first.h:* {{'W4' has different definitions in different modules; first difference is definition in module 'FirstModule' found 'required' property control}}
+// expected-note@second.h:* {{but in 'SecondModule' found 'optional' property control}}
+@interface IW5 <W5>
+@end
+// expected-error@first.h:* {{'W5' has different definitions in different modules; first difference is definition in module 'FirstModule' found 'required' property control}}
+// expected-note@second.h:* {{but in 'SecondModule' found no property control}}
 #endif
 
 #if defined(FIRST)
 @protocol MW2
 - (void)compute:(int)arg0;
 @end
+@protocol MW3
+@optional
+- (void)compute:(int)arg0;
+@end
+@protocol MW4
+@required
+- (void)compute:(int)arg0;
+@end
+@protocol MW5
+@required
+- (void)compute:(int)arg0;
+@end
 #elif defined(SECOND)
 @protocol MW2
 - (void)compute:(int)arg1;
+@end
+@protocol MW3
+- (void)compute:(int)arg0;
+@end
+@protocol MW4
+@optional
+- (void)compute:(int)arg0;
+@end
+@protocol MW5
+- (void)compute:(int)arg0;
 @end
 #else
 @interface IMW2 <MW2>
 @end
 // expected-error@first.h:* {{'MW2' has different definitions in different modules; first difference is definition in module 'FirstModule' found method 'compute:' with 1st parameter named 'arg0'}}
 // expected-note@second.h:* {{but in 'SecondModule' found method 'compute:' with 1st parameter named 'arg1'}}
+@interface IMW3 <MW3>
+@end
+// expected-error@first.h:* {{'MW3' has different definitions in different modules; first difference is definition in module 'FirstModule' found 'optional' method control}}
+// expected-note@second.h:* {{but in 'SecondModule' found 'required' method control}}
+@interface IMW4 <MW4>
+@end
+// expected-error@first.h:* {{'MW4' has different definitions in different modules; first difference is definition in module 'FirstModule' found 'required' method control}}
+// expected-note@second.h:* {{but in 'SecondModule' found 'optional' method control}}
+@interface IMW5 <MW5> // No diagnostics: @required is the default.
+@end
 #endif
 
 // Keep macros contained to one file.
