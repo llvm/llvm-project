@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=z10 -mattr=soft-float -O0 < %s | FileCheck %s
+; RUN: llc -mtriple=s390x-linux-gnu -mcpu=z10 -mattr=soft-float -O0 < %s | FileCheck %s
 
 ; Arithmetic functions
 

@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mcpu=z13 -mattr=soft-float -O3 2>&1 | FileCheck %s
+; RUN: not llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -mattr=soft-float -O3 2>&1 | FileCheck %s
 ;
 ; Verify that inline asms cannot use fp/vector registers with soft-float.
 
