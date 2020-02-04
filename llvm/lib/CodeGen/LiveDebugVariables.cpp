@@ -166,6 +166,10 @@ class UserValue {
   /// Map of slot indices where this value is live.
   LocMap locInts;
 
+  /// Set of interval start indexes that have been trimmed to the
+  /// lexical scope.
+  SmallSet<SlotIndex, 2> trimmedDefs;
+
   /// Insert a DBG_VALUE into MBB at Idx for LocNo.
   void insertDebugValue(MachineBasicBlock *MBB, SlotIndex StartIdx,
                         SlotIndex StopIdx, DbgValueLocation Loc, bool Spilled,
@@ -910,6 +914,11 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
     SlotIndex RStart = LIS.getInstructionIndex(*Range.first);
     SlotIndex REnd = LIS.getInstructionIndex(*Range.second);
 
+    // Variable locations at the first instruction of a block should be
+    // based on the block's SlotIndex, not the first instruction's index.
+    if (Range.first == Range.first->getParent()->begin())
+      RStart = LIS.getSlotIndexes()->getIndexBefore(*Range.first);
+
     // At the start of each iteration I has been advanced so that
     // I.stop() >= PrevEnd. Check for overlap.
     if (PrevEnd && I.start() < PrevEnd) {
@@ -922,7 +931,8 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
       ++I;
 
       // If the interval also overlaps the start of the "next" (i.e.
-      // current) range create a new interval for the remainder
+      // current) range create a new interval for the remainder (which
+      // may be further trimmed).
       if (RStart < IStop)
         I.insert(RStart, IStop, Loc);
     }
@@ -931,6 +941,13 @@ void UserValue::computeIntervals(MachineRegisterInfo &MRI,
     I.advanceTo(RStart);
     if (!I.valid())
       return;
+
+    if (I.start() < RStart) {
+      // Interval start overlaps range - trim to the scope range.
+      I.setStartUnchecked(RStart);
+      // Remember that this interval was trimmed.
+      trimmedDefs.insert(RStart);
+    }
 
     // The end of a lexical scope range is the last instruction in the
     // range. To convert to an interval we need the index of the
@@ -1344,6 +1361,12 @@ void UserValue::emitDebugValues(VirtRegMap *VRM, LiveIntervals &LIS,
         !Loc.isUndef() ? SpillOffsets.find(Loc.locNo()) : SpillOffsets.end();
     bool Spilled = SpillIt != SpillOffsets.end();
     unsigned SpillOffset = Spilled ? SpillIt->second : 0;
+
+    // If the interval start was trimmed to the lexical scope insert the
+    // DBG_VALUE at the previous index (otherwise it appears after the
+    // first instruction in the range).
+    if (trimmedDefs.count(Start))
+      Start = Start.getPrevIndex();
 
     LLVM_DEBUG(dbgs() << "\t[" << Start << ';' << Stop << "):" << Loc.locNo());
     MachineFunction::iterator MBB = LIS.getMBBFromIndex(Start)->getIterator();
