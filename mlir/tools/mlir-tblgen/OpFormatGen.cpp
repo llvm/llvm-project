@@ -20,6 +20,8 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
@@ -27,6 +29,11 @@
 
 using namespace mlir;
 using namespace mlir::tblgen;
+
+static llvm::cl::opt<bool> formatErrorIsFatal(
+    "asmformat-error-is-fatal",
+    llvm::cl::desc("Emit a fatal error if format parsing fails"),
+    llvm::cl::init(true));
 
 //===----------------------------------------------------------------------===//
 // Element
@@ -1287,8 +1294,15 @@ void mlir::tblgen::generateOpFormat(const Operator &constOp, OpClass &opClass) {
   mgr.AddNewSourceBuffer(llvm::MemoryBuffer::getMemBuffer(formatStr),
                          llvm::SMLoc());
   OperationFormat format(op);
-  if (failed(FormatParser(mgr, format, op).parse()))
+  if (failed(FormatParser(mgr, format, op).parse())) {
+    // Exit the process if format errors are treated as fatal.
+    if (formatErrorIsFatal) {
+      // Invoke the interrupt handlers to run the file cleanup handlers.
+      llvm::sys::RunInterruptHandlers();
+      std::exit(1);
+    }
     return;
+  }
 
   // Generate the printer and parser based on the parsed format.
   format.genParser(op, opClass);
