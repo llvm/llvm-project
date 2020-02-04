@@ -118,6 +118,9 @@ Optional<TiledLinalgOp> tileLinalgOp(OpBuilder &b, LinalgOp op,
                                      ArrayRef<Value> tileSizes,
                                      ArrayRef<unsigned> permutation = {},
                                      OperationFolder *folder = nullptr);
+Optional<TiledLinalgOp> tileLinalgOpToParallelLoops(
+    OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
+    ArrayRef<unsigned> permutation = {}, OperationFolder *folder = nullptr);
 
 /// Performs standalone tiling of a single LinalgOp by constant `tileSizes`.
 /// and permute the loop nest according to `permutation`
@@ -138,6 +141,9 @@ Optional<TiledLinalgOp> tileLinalgOp(OpBuilder &b, LinalgOp op,
                                      ArrayRef<int64_t> tileSizes,
                                      ArrayRef<unsigned> permutation = {},
                                      OperationFolder *folder = nullptr);
+Optional<TiledLinalgOp> tileLinalgOpToParallelLoops(
+    OpBuilder &b, LinalgOp op, ArrayRef<int64_t> tileSizes,
+    ArrayRef<unsigned> permutation = {}, OperationFolder *folder = nullptr);
 
 template <typename... Args>
 Optional<TiledLinalgOp> tileLinalgOperation(OpBuilder &b, Operation *op,
