@@ -26,6 +26,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -45,6 +46,8 @@
 #include <vector>
 
 #define DEBUG_TYPE "block-freq"
+
+extern llvm::cl::opt<bool> CheckBFIUnknownBlockQueries;
 
 namespace llvm {
 
@@ -1043,6 +1046,15 @@ void BlockFrequencyInfoImpl<BT>::calculate(const FunctionT &F,
   computeMassInFunction();
   unwrapLoops();
   finalizeMetrics();
+
+  if (CheckBFIUnknownBlockQueries) {
+    // To detect BFI queries for unknown blocks, add entries for unreachable
+    // blocks, if any. This is to distinguish between known/existing unreachable
+    // blocks and unknown blocks.
+    for (const BlockT &BB : F)
+      if (!Nodes.count(&BB))
+        setBlockFreq(&BB, 0);
+  }
 }
 
 template <class BT>
