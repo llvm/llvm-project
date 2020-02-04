@@ -372,7 +372,7 @@ bool ARMTargetInfo::initFeatureMap(
   llvm::ARM::getFPUFeatures(FPUKind, TargetFeatures);
 
   // get default Extension features
-  unsigned Extensions = llvm::ARM::getDefaultExtensions(CPU, Arch);
+  uint64_t Extensions = llvm::ARM::getDefaultExtensions(CPU, Arch);
   llvm::ARM::getExtensionFeatures(Extensions, TargetFeatures);
 
   for (auto Feature : TargetFeatures)

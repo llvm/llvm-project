@@ -57,7 +57,7 @@ void arm::getARMArchCPUFromArgs(const ArgList &Args, llvm::StringRef &Arch,
 static void getARMHWDivFeatures(const Driver &D, const Arg *A,
                                 const ArgList &Args, StringRef HWDiv,
                                 std::vector<StringRef> &Features) {
-  unsigned HWDivID = llvm::ARM::parseHWDiv(HWDiv);
+  uint64_t HWDivID = llvm::ARM::parseHWDiv(HWDiv);
   if (!llvm::ARM::getHWDivFeatures(HWDivID, Features))
     D.Diag(clang::diag::err_drv_clang_unsupported) << A->getAsString(Args);
 }
@@ -91,7 +91,7 @@ static void DecodeARMFeaturesFromCPU(const Driver &D, StringRef CPU,
   CPU = CPU.split("+").first;
   if (CPU != "generic") {
     llvm::ARM::ArchKind ArchKind = llvm::ARM::parseCPUArch(CPU);
-    unsigned Extension = llvm::ARM::getDefaultExtensions(CPU, ArchKind);
+    uint64_t Extension = llvm::ARM::getDefaultExtensions(CPU, ArchKind);
     llvm::ARM::getExtensionFeatures(Extension, Features);
   }
 }
