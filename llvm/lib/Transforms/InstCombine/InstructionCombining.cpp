@@ -1701,6 +1701,9 @@ Instruction *InstCombiner::foldVectorBinop(BinaryOperator &Inst) {
         BO->getOpcode() != Opcode)
       return nullptr;
 
+    // FIXME: This may not be safe if the analysis allows undef elements. By
+    //        moving 'Y' before the splat shuffle, we are implicitly assuming
+    //        that it is not undef/poison at the splat index.
     Value *Y, *OtherOp;
     if (isSplatValue(BO->getOperand(0), SplatIndex->getZExtValue())) {
       Y = BO->getOperand(0);
