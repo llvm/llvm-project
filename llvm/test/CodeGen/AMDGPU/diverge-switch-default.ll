@@ -1,5 +1,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -print-after=si-annotate-control-flow %s -o /dev/null 2>&1 | FileCheck %s
 
+target datalayout = "n32"
+
 ; CHECK-LABEL: @switch_unreachable_default
 
 define amdgpu_kernel void @switch_unreachable_default(i32 addrspace(1)* %out, i8 addrspace(1)* %in0, i8 addrspace(1)* %in1) #0 {
