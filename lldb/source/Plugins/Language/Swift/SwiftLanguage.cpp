@@ -930,9 +930,9 @@ SwiftLanguage::GetStringPrinterEscapingHelper(
     return
         [this](uint8_t *buffer, uint8_t *buffer_end,
                uint8_t *&next) -> lldb_private::formatters::StringPrinter::
-            StringPrinterBufferPointer<> {
+            StringPrinterBufferPointer {
               lldb_private::formatters::StringPrinter::
-                  StringPrinterBufferPointer<>
+                  StringPrinterBufferPointer
                       retval{nullptr};
 
               auto isprint32 = [](char32_t codepoint) -> bool {
@@ -1053,9 +1053,9 @@ SwiftLanguage::GetStringPrinterEscapingHelper(
   case lldb_private::formatters::StringPrinter::GetPrintableElementType::ASCII:
     return [](uint8_t *buffer, uint8_t *buffer_end,
               uint8_t *&next) -> lldb_private::formatters::StringPrinter::
-               StringPrinterBufferPointer<> {
+               StringPrinterBufferPointer {
                  lldb_private::formatters::StringPrinter::
-                     StringPrinterBufferPointer<>
+                     StringPrinterBufferPointer
                          retval = {nullptr};
 
                  switch (*buffer) {
