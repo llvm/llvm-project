@@ -27,7 +27,7 @@ static StringRef getHWDivSynonym(StringRef HWDiv) {
 ARM::ArchKind ARM::parseArch(StringRef Arch) {
   Arch = getCanonicalArchName(Arch);
   StringRef Syn = getArchSynonym(Arch);
-  for (const auto A : ARCHNames) {
+  for (const auto &A : ARCHNames) {
     if (A.getName().endswith(Syn))
       return A.ID;
   }
