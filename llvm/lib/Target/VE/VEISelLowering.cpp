@@ -523,10 +523,14 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::f64, &VE::I64RegClass);
 
   /// Load & Store {
-  // Turn FP extload into load/fpextend
-  for (MVT VT : MVT::fp_valuetypes()) {
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
-    setLoadExtAction(ISD::EXTLOAD, VT, MVT::f64, Expand);
+  for (MVT FPVT : MVT::fp_valuetypes()) {
+    for (MVT OtherFPVT : MVT::fp_valuetypes()) {
+      // Turn FP extload into load/fpextend
+      setLoadExtAction(ISD::EXTLOAD, FPVT, OtherFPVT, Expand);
+
+      // Turn FP truncstore into trunc + store.
+      setTruncStoreAction(FPVT, OtherFPVT, Expand);
+    }
   }
 
   // VE doesn't have i1 sign extending load
@@ -536,9 +540,6 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::i1, Promote);
     setTruncStoreAction(VT, MVT::i1, Expand);
   }
-
-  // Turn FP truncstore into trunc + store.
-  setTruncStoreAction(MVT::f64, MVT::f32, Expand);
   /// } Load & Store
 
   // Custom legalize address nodes into LO/HI parts.
@@ -563,11 +564,19 @@ VETargetLowering::VETargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UDIVREM, IntVT, Expand);
   }
 
+  /// Conversion {
   // VE doesn't have instructions for fp<->uint, so expand them by llvm
   setOperationAction(ISD::FP_TO_UINT, MVT::i32, Promote); // use i64
   setOperationAction(ISD::UINT_TO_FP, MVT::i32, Promote); // use i64
   setOperationAction(ISD::FP_TO_UINT, MVT::i64, Expand);
   setOperationAction(ISD::UINT_TO_FP, MVT::i64, Expand);
+
+  // fp16 not supported
+  for (MVT FPVT : MVT::fp_valuetypes()) {
+    setOperationAction(ISD::FP16_TO_FP, FPVT, Expand);
+    setOperationAction(ISD::FP_TO_FP16, FPVT, Expand);
+  }
+  /// } Conversion
 
   setStackPointerRegisterToSaveRestore(VE::SX11);
 
@@ -611,6 +620,10 @@ SDValue VETargetLowering::withTargetFlags(SDValue Op, unsigned TF,
   if (const BlockAddressSDNode *BA = dyn_cast<BlockAddressSDNode>(Op))
     return DAG.getTargetBlockAddress(BA->getBlockAddress(), Op.getValueType(),
                                      0, TF);
+
+  if (const ExternalSymbolSDNode *ES = dyn_cast<ExternalSymbolSDNode>(Op))
+    return DAG.getTargetExternalSymbol(ES->getSymbol(), ES->getValueType(0),
+                                       TF);
 
   llvm_unreachable("Unhandled address SDNode");
 }
