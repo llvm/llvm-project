@@ -710,6 +710,12 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
     }
   }
 
+  if (const CallInst *CI = dyn_cast<CallInst>(V)) {
+    if (isa<InlineAsm>(CI->getCalledValue()))
+      return !isInlineAsmSourceOfDivergence(CI);
+    return false;
+  }
+
   const ExtractValueInst *ExtValue = dyn_cast<ExtractValueInst>(V);
   if (!ExtValue)
     return false;
