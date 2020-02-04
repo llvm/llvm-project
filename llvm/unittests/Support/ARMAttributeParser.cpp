@@ -1,5 +1,6 @@
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/ELFAttributes.h"
 #include "gtest/gtest.h"
 #include <string>
 
@@ -36,8 +37,8 @@ bool testBuildAttr(unsigned Tag, unsigned Value,
   ARMAttributeParser Parser;
   cantFail(Parser.parse(Bytes, support::little));
 
-  return (Parser.hasAttribute(ExpectedTag) &&
-    Parser.getAttributeValue(ExpectedTag) == ExpectedValue);
+  Optional<unsigned> Attr = Parser.getAttributeValue(ExpectedTag);
+  return Attr.hasValue() && Attr.getValue() == ExpectedValue;
 }
 
 void testParseError(ArrayRef<uint8_t> bytes, const char *msg) {
@@ -47,34 +48,8 @@ void testParseError(ArrayRef<uint8_t> bytes, const char *msg) {
 }
 
 bool testTagString(unsigned Tag, const char *name) {
-  return ARMBuildAttrs::AttrTypeAsString(Tag).str() == name;
-}
-
-TEST(ARMAttributeParser, UnrecognizedFormatVersion) {
-  static const uint8_t bytes[] = {1};
-  testParseError(bytes, "unrecognized format-version: 0x1");
-}
-
-TEST(ARMAttributeParser, InvalidSubsectionLength) {
-  static const uint8_t bytes[] = {'A', 3, 0, 0, 0};
-  testParseError(bytes, "invalid subsection length 3 at offset 0x1");
-}
-
-TEST(ARMAttributeParser, UnrecognizedVendorName) {
-  static const uint8_t bytes[] = {'A', 7, 0, 0, 0, 'x', 'y', 0};
-  testParseError(bytes, "unrecognized vendor-name: xy");
-}
-
-TEST(ARMAttributeParser, InvalidAttributeSize) {
-  static const uint8_t bytes[] = {'A', 15,  0, 0, 0, 'a', 'e', 'a',
-                                  'b', 'i', 0, 4, 4, 0,   0,   0};
-  testParseError(bytes, "invalid attribute size 4 at offset 0xb");
-}
-
-TEST(ARMAttributeParser, UnrecognizedTag) {
-  static const uint8_t bytes[] = {'A', 15,  0, 0, 0, 'a', 'e', 'a',
-                                  'b', 'i', 0, 4, 5, 0,   0,   0};
-  testParseError(bytes, "unrecognized tag 0x4 at offset 0xb");
+  return ELFAttrs::attrTypeAsString(Tag, ARMBuildAttrs::ARMAttributeTags)
+             .str() == name;
 }
 
 TEST(ARMAttributeParser, UnknownCPU_arch) {
