@@ -71,7 +71,7 @@ static void invokeCreateWithInferedReturnType(Operation *op) {
   assert(fop.getNumArguments() >= 2);
   for (int i = 0, e = fop.getNumArguments(); i < e; ++i) {
     for (int j = 0; j < e; ++j) {
-      std::array<Value, 2> values = {fop.getArgument(i), fop.getArgument(j)};
+      std::array<Value, 2> values = {{fop.getArgument(i), fop.getArgument(j)}};
       SmallVector<Type, 2> inferedReturnTypes;
       if (succeeded(OpTy::inferReturnTypes(context, llvm::None, values,
                                            op->getAttrs(), op->getRegions(),
