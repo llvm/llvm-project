@@ -782,40 +782,6 @@ static ParseResult parseInsertValueOp(OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
-// Printing/parsing for LLVM::SelectOp.
-//===----------------------------------------------------------------------===//
-
-static void printSelectOp(OpAsmPrinter &p, SelectOp &op) {
-  p << op.getOperationName() << ' ' << op.condition() << ", " << op.trueValue()
-    << ", " << op.falseValue();
-  p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.condition().getType() << ", " << op.trueValue().getType();
-}
-
-// <operation> ::= `llvm.select` ssa-use `,` ssa-use `,` ssa-use
-//                 attribute-dict? `:` type, type
-static ParseResult parseSelectOp(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType condition, trueValue, falseValue;
-  Type conditionType, argType;
-
-  if (parser.parseOperand(condition) || parser.parseComma() ||
-      parser.parseOperand(trueValue) || parser.parseComma() ||
-      parser.parseOperand(falseValue) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(conditionType) || parser.parseComma() ||
-      parser.parseType(argType))
-    return failure();
-
-  if (parser.resolveOperand(condition, conditionType, result.operands) ||
-      parser.resolveOperand(trueValue, argType, result.operands) ||
-      parser.resolveOperand(falseValue, argType, result.operands))
-    return failure();
-
-  result.addTypes(argType);
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // Printing/parsing for LLVM::BrOp.
 //===----------------------------------------------------------------------===//
 

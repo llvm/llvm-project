@@ -1066,54 +1066,6 @@ void spirv::BitcastOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
-// spv.BitFieldInsert
-//===----------------------------------------------------------------------===//
-
-static ParseResult parseBitFieldInsertOp(OpAsmParser &parser,
-                                         OperationState &state) {
-  SmallVector<OpAsmParser::OperandType, 4> operandInfo;
-  Type baseType;
-  Type offsetType;
-  Type countType;
-  auto loc = parser.getCurrentLocation();
-
-  if (parser.parseOperandList(operandInfo, 4) || parser.parseColon() ||
-      parser.parseType(baseType) || parser.parseComma() ||
-      parser.parseType(offsetType) || parser.parseComma() ||
-      parser.parseType(countType) ||
-      parser.resolveOperands(operandInfo,
-                             {baseType, baseType, offsetType, countType}, loc,
-                             state.operands)) {
-    return failure();
-  }
-  state.addTypes(baseType);
-  return success();
-}
-
-static void print(spirv::BitFieldInsertOp bitFieldInsertOp,
-                  OpAsmPrinter &printer) {
-  printer << spirv::BitFieldInsertOp::getOperationName() << ' '
-          << bitFieldInsertOp.getOperands() << " : "
-          << bitFieldInsertOp.base().getType() << ", "
-          << bitFieldInsertOp.offset().getType() << ", "
-          << bitFieldInsertOp.count().getType();
-}
-
-static LogicalResult verify(spirv::BitFieldInsertOp bitFieldOp) {
-  auto baseType = bitFieldOp.base().getType();
-  auto insertType = bitFieldOp.insert().getType();
-  auto resultType = bitFieldOp.getResult().getType();
-
-  if ((baseType != insertType) || (baseType != resultType)) {
-    return bitFieldOp.emitError("expected the same type for the base operand, "
-                                "insert operand, and "
-                                "result, but provided ")
-           << baseType << ", " << insertType << " and " << resultType;
-  }
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // spv.BranchOp
 //===----------------------------------------------------------------------===//
 
@@ -2522,42 +2474,9 @@ void spirv::SelectOp::build(Builder *builder, OperationState &state, Value cond,
   build(builder, state, trueValue.getType(), cond, trueValue, falseValue);
 }
 
-static ParseResult parseSelectOp(OpAsmParser &parser, OperationState &state) {
-  OpAsmParser::OperandType condition;
-  SmallVector<OpAsmParser::OperandType, 2> operands;
-  SmallVector<Type, 2> types;
-  auto loc = parser.getCurrentLocation();
-  if (parser.parseOperand(condition) || parser.parseComma() ||
-      parser.parseOperandList(operands, 2) ||
-      parser.parseColonTypeList(types)) {
-    return failure();
-  }
-  if (types.size() != 2) {
-    return parser.emitError(
-        loc, "need exactly two trailing types for select condition and object");
-  }
-  if (parser.resolveOperand(condition, types[0], state.operands) ||
-      parser.resolveOperands(operands, types[1], state.operands)) {
-    return failure();
-  }
-  return parser.addTypesToList(types[1], state.types);
-}
-
-static void print(spirv::SelectOp op, OpAsmPrinter &printer) {
-  printer << spirv::SelectOp::getOperationName() << " " << op.getOperands()
-          << " : " << op.condition().getType() << ", " << op.result().getType();
-}
-
 static LogicalResult verify(spirv::SelectOp op) {
-  auto resultTy = op.result().getType();
-  if (op.true_value().getType() != resultTy) {
-    return op.emitOpError("result type and true value type must be the same");
-  }
-  if (op.false_value().getType() != resultTy) {
-    return op.emitOpError("result type and false value type must be the same");
-  }
   if (auto conditionTy = op.condition().getType().dyn_cast<VectorType>()) {
-    auto resultVectorTy = resultTy.dyn_cast<VectorType>();
+    auto resultVectorTy = op.result().getType().dyn_cast<VectorType>();
     if (!resultVectorTy) {
       return op.emitOpError("result expected to be of vector type when "
                             "condition is of vector type");

@@ -1658,7 +1658,9 @@ class AllMatchSameOperatorTrait<list<string> names, string operator,
                                 string description> :
     PredOpTrait<
         "all of {" # StrJoin<names>.result # "} have same " # description,
-        AllMatchSameOperatorPred<names, operator>>;
+        AllMatchSameOperatorPred<names, operator>> {
+  list<string> values = names;
+}
 
 class AllElementCountsMatch<list<string> names> :
     AllMatchSameOperatorTrait<names, ElementCount<"_self">.result,

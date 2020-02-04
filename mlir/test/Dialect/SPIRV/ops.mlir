@@ -227,7 +227,7 @@ func @bit_field_insert_vec(%base: vector<3xi32>, %insert: vector<3xi32>, %offset
 // -----
 
 func @bit_field_insert_invalid_insert_type(%base: vector<3xi32>, %insert: vector<2xi32>, %offset: i32, %count: i16) -> vector<3xi32> {
-  // expected-error @+1 {{expected the same type for the base operand, insert operand, and result, but provided 'vector<3xi32>', 'vector<2xi32>' and 'vector<3xi32>'}}
+  // expected-error @+1 {{all of {base, insert, result} have same type}}
   %0 = "spv.BitFieldInsert" (%base, %insert, %offset, %count) : (vector<3xi32>, vector<2xi32>, i32, i16) -> vector<3xi32>
   spv.ReturnValue %0 : vector<3xi32>
 }
@@ -856,7 +856,7 @@ func @select_op_vec_condn_vec(%arg0: vector<3xi1>) -> () {
 func @select_op(%arg0: i1) -> () {
   %0 = spv.constant 2 : i32
   %1 = spv.constant 3 : i32
-  // expected-error @+1 {{need exactly two trailing types for select condition and object}}
+  // expected-error @+2 {{expected ','}}
   %2 = spv.Select %arg0, %0, %1 : i1
   return
 }
@@ -886,7 +886,7 @@ func @select_op(%arg1: vector<4xi1>) -> () {
 func @select_op(%arg1: vector<4xi1>) -> () {
   %0 = spv.constant dense<[2.0, 3.0, 4.0]> : vector<3xf32>
   %1 = spv.constant dense<[5, 6, 7]> : vector<3xi32>
-  // expected-error @+1 {{op result type and true value type must be the same}}
+  // expected-error @+1 {{all of {true_value, false_value, result} have same type}}
   %2 = "spv.Select"(%arg1, %0, %1) : (vector<4xi1>, vector<3xf32>, vector<3xi32>) -> vector<3xi32>
   return
 }
@@ -896,7 +896,7 @@ func @select_op(%arg1: vector<4xi1>) -> () {
 func @select_op(%arg1: vector<4xi1>) -> () {
   %0 = spv.constant dense<[2.0, 3.0, 4.0]> : vector<3xf32>
   %1 = spv.constant dense<[5, 6, 7]> : vector<3xi32>
-  // expected-error @+1 {{op result type and false value type must be the same}}
+  // expected-error @+1 {{all of {true_value, false_value, result} have same type}}
   %2 = "spv.Select"(%arg1, %1, %0) : (vector<4xi1>, vector<3xi32>, vector<3xf32>) -> vector<3xi32>
   return
 }

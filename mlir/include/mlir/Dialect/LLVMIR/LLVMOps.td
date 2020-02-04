@@ -444,7 +444,8 @@ def LLVM_ShuffleVectorOp
 
 // Misc operations.
 def LLVM_SelectOp
-    : LLVM_OneResultOp<"select", [NoSideEffect]>,
+    : LLVM_OneResultOp<"select",
+          [NoSideEffect, AllTypesMatch<["trueValue", "falseValue", "res"]>]>,
       Arguments<(ins LLVM_Type:$condition, LLVM_Type:$trueValue,
                  LLVM_Type:$falseValue)>,
       LLVM_Builder<
@@ -454,8 +455,7 @@ def LLVM_SelectOp
     "Value rhs", [{
       build(b, result, lhs.getType(), condition, lhs, rhs);
     }]>];
-  let parser = [{ return parseSelectOp(parser, result); }];
-  let printer = [{ printSelectOp(p, *this); }];
+  let assemblyFormat = "operands attr-dict `:` type($condition) `,` type($res)";
 }
 
 // Terminators.
