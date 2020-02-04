@@ -1510,7 +1510,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         lldb_private::ValueObject *vobj = retVal.get();
 
         // Check if the return value is valid
-        if (vobj == nullptr || retVal.empty()) {
+        if (vobj == nullptr || !retVal) {
           error.SetErrorToGenericError();
           error.SetErrorStringWithFormat("unable to get the return value");
           return false;

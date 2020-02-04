@@ -39,7 +39,6 @@ add_lldb_library(lldbUtility
   ReproducerInstrumentation.cpp
   Scalar.cpp
   SelectHelper.cpp
-  SharingPtr.cpp
   State.cpp
   Status.cpp
   Stream.cpp

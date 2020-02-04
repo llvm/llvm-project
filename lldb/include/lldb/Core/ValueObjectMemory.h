@@ -64,10 +64,12 @@ protected:
   CompilerType m_compiler_type;
 
 private:
-  ValueObjectMemory(ExecutionContextScope *exe_scope, llvm::StringRef name,
+  ValueObjectMemory(ExecutionContextScope *exe_scope,
+                    ValueObjectManager &manager, llvm::StringRef name,
                     const Address &address, lldb::TypeSP &type_sp);
 
-  ValueObjectMemory(ExecutionContextScope *exe_scope, llvm::StringRef name,
+  ValueObjectMemory(ExecutionContextScope *exe_scope,
+                    ValueObjectManager &manager, llvm::StringRef name,
                     const Address &address, const CompilerType &ast_type);
   // For ValueObject only
   DISALLOW_COPY_AND_ASSIGN(ValueObjectMemory);
