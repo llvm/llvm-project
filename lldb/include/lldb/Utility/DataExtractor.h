@@ -535,13 +535,13 @@ public:
                              uint32_t bitfield_bit_size,
                              uint32_t bitfield_bit_offset) const;
 
-  /// Extract an signed integer of size \a byte_size from \a *offset_ptr, then
-  /// extract and signe extend the bitfield from this value if \a
+  /// Extract an signed integer of size \a size from \a *offset_ptr, then
+  /// extract and sign-extend the bitfield from this value if \a
   /// bitfield_bit_size is non-zero.
   ///
-  /// Extract a single signed integer value (sign extending if required) and
+  /// Extract a single signed integer value (sign-extending if required) and
   /// update the offset pointed to by \a offset_ptr. The size of the extracted
-  /// integer is specified by the \a byte_size argument. \a byte_size must
+  /// integer is specified by the \a size argument. \a size must
   /// have a value greater than or equal to one and less than or equal to
   /// eight since the return value is 64 bits wide.
   ///

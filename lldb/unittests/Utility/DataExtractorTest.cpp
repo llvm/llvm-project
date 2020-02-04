@@ -25,6 +25,9 @@ TEST(DataExtractorTest, GetBitfield) {
   offset = 0;
   ASSERT_EQ(buffer[1], BE.GetMaxU64Bitfield(&offset, sizeof(buffer), 8, 8));
   offset = 0;
+  ASSERT_EQ(static_cast<uint64_t>(0xEFCDAB8967452301),
+            LE.GetMaxU64Bitfield(&offset, sizeof(buffer), 64, 0));
+  offset = 0;
   ASSERT_EQ(static_cast<uint64_t>(0x0123456789ABCDEF),
             BE.GetMaxU64Bitfield(&offset, sizeof(buffer), 64, 0));
   offset = 0;
@@ -40,6 +43,12 @@ TEST(DataExtractorTest, GetBitfield) {
   offset = 0;
   ASSERT_EQ(int8_t(buffer[1]),
             BE.GetMaxS64Bitfield(&offset, sizeof(buffer), 8, 8));
+  offset = 0;
+  ASSERT_EQ(static_cast<int64_t>(0xEFCDAB8967452301),
+            LE.GetMaxS64Bitfield(&offset, sizeof(buffer), 64, 0));
+  offset = 0;
+  ASSERT_EQ(static_cast<int64_t>(0x0123456789ABCDEF),
+            BE.GetMaxS64Bitfield(&offset, sizeof(buffer), 64, 0));
 }
 
 TEST(DataExtractorTest, PeekData) {
