@@ -46,6 +46,9 @@ static MCOperand LowerOperand(const MachineInstr *MI, const MachineOperand &MO,
       break;
     return MCOperand::createReg(MO.getReg());
 
+  case MachineOperand::MO_ExternalSymbol:
+    return LowerSymbolOperand(
+        MI, MO, AP.GetExternalSymbolSymbol(MO.getSymbolName()), AP);
   case MachineOperand::MO_GlobalAddress:
     return LowerSymbolOperand(MI, MO, AP.getSymbol(MO.getGlobal()), AP);
   case MachineOperand::MO_Immediate:
