@@ -1302,8 +1302,8 @@ def int_matrix_columnwise_load : Intrinsic<[llvm_anyvector_ty],
                                             llvm_i32_ty,
                                             llvm_i32_ty,
                                             llvm_i32_ty],
-                                           [IntrReadMem, IntrWillReturn,
-                                            ImmArg<2>, ImmArg<3>]>;
+                                           [IntrArgMemOnly, IntrReadMem,
+                                            IntrWillReturn, ImmArg<2>, ImmArg<3>]>;
 
 def int_matrix_columnwise_store : Intrinsic<[],
                                             [llvm_anyvector_ty,
@@ -1311,7 +1311,8 @@ def int_matrix_columnwise_store : Intrinsic<[],
                                              llvm_i32_ty,
                                              llvm_i32_ty,
                                              llvm_i32_ty],
-                                            [WriteOnly<1>, IntrWillReturn,
+                                            [IntrArgMemOnly, IntrWillReturn,
+                                             IntrWriteMem, WriteOnly<1>,
                                              ImmArg<3>, ImmArg<4>]>;
 
 //===---------- Intrinsics to control hardware supported loops ----------===//
