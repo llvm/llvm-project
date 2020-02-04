@@ -28,22 +28,28 @@
 
 using namespace llvm;
 
-static cl::opt<std::string>
-  Input(cl::Positional, cl::desc("<input>"), cl::init("-"));
+namespace {
+cl::OptionCategory Cat("yaml2obj Options");
 
-static cl::opt<unsigned>
+cl::opt<std::string> Input(cl::Positional, cl::desc("<input file>"),
+                           cl::init("-"), cl::cat(Cat));
+
+cl::opt<unsigned>
     DocNum("docnum", cl::init(1),
-           cl::desc("Read specified document from input (default = 1)"));
+           cl::desc("Read specified document from input (default = 1)"),
+           cl::cat(Cat));
 
-static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
-                                           cl::value_desc("filename"));
+cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
+                                    cl::value_desc("filename"), cl::init("-"),
+                                    cl::Prefix, cl::cat(Cat));
+} // namespace
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
-  cl::ParseCommandLineOptions(argc, argv);
-
-  if (OutputFilename.empty())
-    OutputFilename = "-";
+  cl::HideUnrelatedOptions(Cat);
+  cl::ParseCommandLineOptions(
+      argc, argv, "Create an object file from a YAML description", nullptr,
+      nullptr, /*LongOptionsUseDoubleDash=*/true);
 
   auto ErrHandler = [](const Twine &Msg) {
     WithColor::error(errs(), "yaml2obj") << Msg << "\n";
