@@ -71,6 +71,7 @@ class GVNLegacyPass;
 struct GVNOptions {
   Optional<bool> AllowPRE = None;
   Optional<bool> AllowLoadPRE = None;
+  Optional<bool> AllowLoadInLoopPRE = None;
   Optional<bool> AllowMemDep = None;
 
   GVNOptions() = default;
@@ -84,6 +85,11 @@ struct GVNOptions {
   /// Enables or disables PRE of loads in GVN.
   GVNOptions &setLoadPRE(bool LoadPRE) {
     AllowLoadPRE = LoadPRE;
+    return *this;
+  }
+
+  GVNOptions &setLoadInLoopPRE(bool LoadInLoopPRE) {
+    AllowLoadInLoopPRE = LoadInLoopPRE;
     return *this;
   }
 
@@ -122,6 +128,7 @@ public:
 
   bool isPREEnabled() const;
   bool isLoadPREEnabled() const;
+  bool isLoadInLoopPREEnabled() const;
   bool isMemDepEnabled() const;
 
   /// This class holds the mapping between values and value numbers.  It is used
