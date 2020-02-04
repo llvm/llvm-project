@@ -1820,27 +1820,27 @@ example:
     not introduce any new floating-point instructions that may trap.
 
 ``"denormal-fp-math"``
-  This indicates the denormal (subnormal) handling that may be assumed
-   for the default floating-point environment. This may be one of
-   ``"ieee"``, ``"preserve-sign"``, or ``"positive-zero"``.  If this
-   is attribute is not specified, the default is ``"ieee"``. If the
-   mode is ``"preserve-sign"``, or ``"positive-zero"``, denormal
-   outputs may be flushed to zero by standard floating point
-   operations. It is not mandated that flushing to zero occurs, but if
-   a denormal output is flushed to zero, it must respect the sign
-   mode. Not all targets support all modes. While this indicates the
-   expected floating point mode the function will be executed with,
-   this does not make any attempt to ensure the mode is
-   consistent. User or platform code is expected to set the floating
-   point mode appropriately before function entry.
+    This indicates the denormal (subnormal) handling that may be assumed
+    for the default floating-point environment. This may be one of
+    ``"ieee"``, ``"preserve-sign"``, or ``"positive-zero"``.  If this
+    is attribute is not specified, the default is ``"ieee"``. If the
+    mode is ``"preserve-sign"``, or ``"positive-zero"``, denormal
+    outputs may be flushed to zero by standard floating point
+    operations. It is not mandated that flushing to zero occurs, but if
+    a denormal output is flushed to zero, it must respect the sign
+    mode. Not all targets support all modes. While this indicates the
+    expected floating point mode the function will be executed with,
+    this does not make any attempt to ensure the mode is
+    consistent. User or platform code is expected to set the floating
+    point mode appropriately before function entry.
 
 ``"denormal-fp-math-f32"``
-   Same as ``"denormal-fp-math"``, but only controls the behavior of
-   the 32-bit float type (or vectors of 32-bit floats). If both are
-   are present, this overrides ``"denormal-fp-math"``. Not all targets
-   support separately setting the denormal mode per type, and no
-   attempt is made to diagnose unsupported uses. Currently this
-   attribute is respected by the AMDGPU and NVPTX backends.
+    Same as ``"denormal-fp-math"``, but only controls the behavior of
+    the 32-bit float type (or vectors of 32-bit floats). If both are
+    are present, this overrides ``"denormal-fp-math"``. Not all targets
+    support separately setting the denormal mode per type, and no
+    attempt is made to diagnose unsupported uses. Currently this
+    attribute is respected by the AMDGPU and NVPTX backends.
 
 ``"thunk"``
     This attribute indicates that the function will delegate to some other
