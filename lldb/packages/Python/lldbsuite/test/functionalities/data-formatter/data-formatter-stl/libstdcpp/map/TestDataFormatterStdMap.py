@@ -203,33 +203,17 @@ class StdMapDataFormatterTestCase(TestBase):
 
         self.expect("frame variable is",
                     substrs=['map has 4 items',
-                             '[0] = ',
-                             'second = \"goofy\"',
-                             'first = 85',
-                             '[1] = ',
-                             'second = \"is\"',
-                             'first = 1',
-                             '[2] = ',
-                             'second = \"smart\"',
-                             'first = 2',
-                             '[3] = ',
-                             'second = \"!!!\"',
-                             'first = 3'])
+                             '[0] = (first = 1, second = "is")',
+                             '[1] = (first = 2, second = "smart")',
+                             '[2] = (first = 3, second = "!!!")',
+                             '[3] = (first = 85, second = "goofy")')
 
         self.expect("p is",
                     substrs=['map has 4 items',
-                             '[0] = ',
-                             'second = \"goofy\"',
-                             'first = 85',
-                             '[1] = ',
-                             'second = \"is\"',
-                             'first = 1',
-                             '[2] = ',
-                             'second = \"smart\"',
-                             'first = 2',
-                             '[3] = ',
-                             'second = \"!!!\"',
-                             'first = 3'])
+                             '[0] = (first = 1, second = "is")',
+                             '[1] = (first = 2, second = "smart")',
+                             '[2] = (first = 3, second = "!!!")',
+                             '[3] = (first = 85, second = "goofy")')
 
         # check access-by-index
         self.expect("frame variable is[0]",
