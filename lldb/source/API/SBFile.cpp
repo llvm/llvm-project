@@ -17,19 +17,36 @@ using namespace lldb_private;
 SBFile::~SBFile() {}
 
 SBFile::SBFile(FileSP file_sp) : m_opaque_sp(file_sp) {
-  LLDB_RECORD_DUMMY(void, SBfile, SBFile, (FileSP), file_sp);
+  // We have no way to capture the incoming FileSP as the class isn't
+  // instrumented, so pretend that it's always null.
+  LLDB_RECORD_CONSTRUCTOR(SBFile, (lldb::FileSP), nullptr);
+}
+
+SBFile::SBFile(const SBFile &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_RECORD_CONSTRUCTOR(SBFile, (const lldb::SBFile&), rhs);
+}
+
+SBFile &SBFile ::operator=(const SBFile &rhs) {
+  LLDB_RECORD_METHOD(lldb::SBFile &,
+                     SBFile, operator=,(const lldb::SBFile &), rhs);
+
+  if (this != &rhs)
+    m_opaque_sp = rhs.m_opaque_sp;
+  return LLDB_RECORD_RESULT(*this);
 }
 
 SBFile::SBFile() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBFile); }
 
 SBFile::SBFile(FILE *file, bool transfer_ownership) {
-  LLDB_RECORD_DUMMY(void, SBFile, (FILE *, bool), file, transfer_ownership);
+  LLDB_RECORD_CONSTRUCTOR(SBFile, (FILE *, bool), file, transfer_ownership);
+
   m_opaque_sp = std::make_shared<NativeFile>(file, transfer_ownership);
 }
 
 SBFile::SBFile(int fd, const char *mode, bool transfer_owndership) {
-  LLDB_RECORD_DUMMY(void, SBFile, (int, const char *, bool), fd, mode,
-                    transfer_owndership);
+  LLDB_RECORD_CONSTRUCTOR(SBFile, (int, const char *, bool), fd, mode,
+                          transfer_owndership);
+
   auto options = File::GetOptionsFromMode(mode);
   if (!options) {
     llvm::consumeError(options.takeError());
@@ -40,8 +57,9 @@ SBFile::SBFile(int fd, const char *mode, bool transfer_owndership) {
 }
 
 SBError SBFile::Read(uint8_t *buf, size_t num_bytes, size_t *bytes_read) {
-  LLDB_RECORD_DUMMY(lldb::SBError, SBFile, Read, (uint8_t *, size_t, size_t *),
-                    buf, num_bytes, bytes_read);
+  LLDB_RECORD_METHOD(lldb::SBError, SBFile, Read, (uint8_t *, size_t, size_t *),
+                     buf, num_bytes, bytes_read);
+
   SBError error;
   if (!m_opaque_sp) {
     error.SetErrorString("invalid SBFile");
@@ -56,9 +74,10 @@ SBError SBFile::Read(uint8_t *buf, size_t num_bytes, size_t *bytes_read) {
 
 SBError SBFile::Write(const uint8_t *buf, size_t num_bytes,
                       size_t *bytes_written) {
-  LLDB_RECORD_DUMMY(lldb::SBError, SBFile, Write,
-                    (const uint8_t *, size_t, size_t *), buf, num_bytes,
-                    bytes_written);
+  LLDB_RECORD_METHOD(lldb::SBError, SBFile, Write,
+                     (const uint8_t *, size_t, size_t *), buf, num_bytes,
+                     bytes_written);
+
   SBError error;
   if (!m_opaque_sp) {
     error.SetErrorString("invalid SBFile");
@@ -73,6 +92,7 @@ SBError SBFile::Write(const uint8_t *buf, size_t num_bytes,
 
 SBError SBFile::Flush() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBError, SBFile, Flush);
+
   SBError error;
   if (!m_opaque_sp) {
     error.SetErrorString("invalid SBFile");
@@ -119,8 +139,10 @@ namespace repro {
 template <> void RegisterMethods<SBFile>(Registry &R) {
   LLDB_REGISTER_CONSTRUCTOR(SBFile, ());
   LLDB_REGISTER_CONSTRUCTOR(SBFile, (FileSP));
+  LLDB_REGISTER_CONSTRUCTOR(SBFile, (const SBFile&));
   LLDB_REGISTER_CONSTRUCTOR(SBFile, (FILE *, bool));
   LLDB_REGISTER_CONSTRUCTOR(SBFile, (int, const char *, bool));
+  LLDB_REGISTER_METHOD(SBFile&, SBFile, operator=,(const SBFile&));
   LLDB_REGISTER_METHOD(lldb::SBError, SBFile, Flush, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBFile, IsValid, ());
   LLDB_REGISTER_METHOD_CONST(bool, SBFile, operator bool,());
