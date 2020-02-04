@@ -7233,6 +7233,45 @@ defm VCVTSD2USI64Z: avx512_cvt_s_int_round<0x79, f64x_info, i64x_info, X86cvts2u
                                    X86cvts2usiRnd, WriteCvtSD2I, "cvtsd2usi", "{q}">,
                                    XD, VEX_W, EVEX_CD8<64, CD8VT1>;
 
+multiclass avx512_cvt_s<bits<8> opc, string asm, X86VectorVTInfo SrcVT,
+                        X86VectorVTInfo DstVT, SDNode OpNode,
+                        X86FoldableSchedWrite sched,
+                        string aliasStr> {
+  let Predicates = [HasAVX512], ExeDomain = SrcVT.ExeDomain in {
+    let isCodeGenOnly = 1 in {
+    def rr : AVX512<opc, MRMSrcReg, (outs DstVT.RC:$dst), (ins SrcVT.FRC:$src),
+                !strconcat(asm,"\t{$src, $dst|$dst, $src}"),
+                [(set DstVT.RC:$dst, (OpNode SrcVT.FRC:$src))]>,
+                EVEX, VEX_LIG, Sched<[sched]>, SIMD_EXC;
+    def rm : AVX512<opc, MRMSrcMem, (outs DstVT.RC:$dst), (ins SrcVT.ScalarMemOp:$src),
+                !strconcat(asm,"\t{$src, $dst|$dst, $src}"),
+                [(set DstVT.RC:$dst, (OpNode (SrcVT.ScalarLdFrag addr:$src)))]>,
+                EVEX, VEX_LIG, Sched<[sched.Folded, sched.ReadAfterFold]>, SIMD_EXC;
+    }
+  } // Predicates = [HasAVX512]
+}
+
+defm VCVTSS2SIZ: avx512_cvt_s<0x2D, "vcvtss2si", f32x_info, i32x_info,
+                       lrint, WriteCvtSS2I,
+                       "{l}">, XS, EVEX_CD8<32, CD8VT1>;
+defm VCVTSS2SI64Z: avx512_cvt_s<0x2D, "vcvtss2si", f32x_info, i64x_info,
+                       llrint, WriteCvtSS2I,
+                       "{q}">, VEX_W, XS, EVEX_CD8<32, CD8VT1>;
+defm VCVTSD2SIZ: avx512_cvt_s<0x2D, "vcvtsd2si", f64x_info, i32x_info,
+                       lrint, WriteCvtSD2I,
+                       "{l}">, XD, EVEX_CD8<64, CD8VT1>;
+defm VCVTSD2SI64Z: avx512_cvt_s<0x2D, "vcvtsd2si", f64x_info, i64x_info,
+                       llrint, WriteCvtSD2I,
+                       "{q}">, VEX_W, XD, EVEX_CD8<64, CD8VT1>;
+
+let Predicates = [HasAVX512] in {
+  def : Pat<(i64 (lrint FR32:$src)), (VCVTSS2SI64Zrr FR32:$src)>;
+  def : Pat<(i64 (lrint (loadf32 addr:$src))), (VCVTSS2SI64Zrm addr:$src)>;
+
+  def : Pat<(i64 (lrint FR64:$src)), (VCVTSD2SI64Zrr FR64:$src)>;
+  def : Pat<(i64 (lrint (loadf64 addr:$src))), (VCVTSD2SI64Zrm addr:$src)>;
+}
+
 // Patterns used for matching vcvtsi2s{s,d} intrinsic sequences from clang
 // which produce unnecessary vmovs{s,d} instructions
 let Predicates = [HasAVX512] in {
