@@ -15,7 +15,6 @@
 
 #include "Plugins/ExpressionParser/Clang/IRForTarget.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Expression/ExpressionParser.h"
 #include "lldb/Expression/Materializer.h"

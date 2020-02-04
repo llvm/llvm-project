@@ -27,7 +27,6 @@
 #include "llvm/Support/Casting.h"
 
 // Project includes
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Symbol/TaggedASTType.h"
