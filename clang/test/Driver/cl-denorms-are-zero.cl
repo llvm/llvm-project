@@ -14,7 +14,7 @@
 // RUN: %clang -### -target amdgcn--amdhsa -c -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefixes=AMDGCN,AMDGCN-DENORM %s
 // RUN: %clang -### -cl-denorms-are-zero -o - -target amdgcn--amdhsa -c -mcpu=gfx900 %s 2>&1 | FileCheck -check-prefixes=AMDGCN,AMDGCN-FLUSH %s
 
-// AMDGCN-FLUSH: "-fdenormal-fp-math-f32=preserve-sign"
+// AMDGCN-FLUSH: "-fdenormal-fp-math-f32=preserve-sign,preserve-sign"
 
 // This should be omitted and default to ieee
 // AMDGCN-DENORM-NOT: "-fdenormal-fp-math-f32"

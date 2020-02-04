@@ -1749,14 +1749,14 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
       FuncAttrs.addAttribute("null-pointer-is-valid", "true");
 
     // TODO: Omit attribute when the default is IEEE.
-    if (CodeGenOpts.FPDenormalMode != llvm::DenormalMode::Invalid)
+    if (CodeGenOpts.FPDenormalMode.isValid())
       FuncAttrs.addAttribute("denormal-fp-math",
-                             llvm::denormalModeName(CodeGenOpts.FPDenormalMode));
-
-    if (CodeGenOpts.FP32DenormalMode != llvm::DenormalMode::Invalid)
+                             CodeGenOpts.FPDenormalMode.str());
+    if (CodeGenOpts.FP32DenormalMode.isValid()) {
       FuncAttrs.addAttribute(
           "denormal-fp-math-f32",
-          llvm::denormalModeName(CodeGenOpts.FP32DenormalMode));
+          CodeGenOpts.FP32DenormalMode.str());
+    }
 
     FuncAttrs.addAttribute("no-trapping-math",
                            llvm::toStringRef(CodeGenOpts.NoTrappingMath));
