@@ -249,12 +249,11 @@ struct ReferenceTag {};
 struct ValueTag {};
 struct FundamentalPointerTag {};
 struct FundamentalReferenceTag {};
-struct NotImplementedTag {};
 
 /// Return the deserialization tag for the given type T.
 template <class T> struct serializer_tag {
   typedef typename std::conditional<std::is_trivially_copyable<T>::value,
-                                    ValueTag, NotImplementedTag>::type type;
+                                    ValueTag, ReferenceTag>::type type;
 };
 template <class T> struct serializer_tag<T *> {
   typedef
@@ -321,11 +320,6 @@ public:
   }
 
 private:
-  template <typename T> T Read(NotImplementedTag) {
-    m_buffer = m_buffer.drop_front(sizeof(T));
-    return T();
-  }
-
   template <typename T> T Read(ValueTag) {
     assert(HasData(sizeof(T)));
     T t;
