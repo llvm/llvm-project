@@ -2241,7 +2241,7 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
         uint64_t Offset =
             CU->ExprRefedBaseTypes[Op.getRawOperand(I)].Die->getOffset();
         assert(Offset < (1ULL << (ULEB128PadSize * 7)) && "Offset wont fit");
-        Asm->EmitULEB128(Offset, nullptr, ULEB128PadSize);
+        Streamer.EmitULEB128(Offset, "", ULEB128PadSize);
         // Make sure comments stay aligned.
         for (unsigned J = 0; J < ULEB128PadSize; ++J)
           if (Comment != End)
