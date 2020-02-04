@@ -259,12 +259,14 @@ class Dialect {
 class Type<Pred condition, string descr = ""> :
     TypeConstraint<condition, descr> {
   string typeDescription = "";
+  string builderCall = "";
 }
 
 // Allows providing an alternative name and description to an existing type def.
 class TypeAlias<Type t, string description = t.description> :
     Type<t.predicate, description> {
   let typeDescription = t.typeDescription;
+  let builderCall = t.builderCall;
 }
 
 // A type of a specific dialect.
@@ -289,7 +291,6 @@ class Variadic<Type type> : TypeConstraint<type.predicate, type.description> {
 // making some Types and some Attrs buildable.
 class BuildableType<code builder> {
   // The builder call to invoke (if specified) to construct the BuildableType.
-  // Format: this will be affixed to the builder.
   code builderCall = builder;
 }
 
@@ -313,13 +314,13 @@ def AnyInteger : Type<CPred<"$_self.isa<IntegerType>()">, "integer">;
 
 // Index type.
 def Index : Type<CPred<"$_self.isa<IndexType>()">, "index">,
-            BuildableType<"getIndexType()">;
+            BuildableType<"$_builder.getIndexType()">;
 
 // Integer type of a specific width.
 class I<int width>
     : Type<CPred<"$_self.isInteger(" # width # ")">,
                   width # "-bit integer">,
-      BuildableType<"getIntegerType(" # width # ")"> {
+      BuildableType<"$_builder.getIntegerType(" # width # ")"> {
   int bitwidth = width;
 }
 
@@ -342,7 +343,7 @@ def AnyFloat : Type<CPred<"$_self.isa<FloatType>()">, "floating-point">;
 class F<int width>
     : Type<CPred<"$_self.isF" # width # "()">,
                 width # "-bit float">,
-      BuildableType<"getF" # width # "Type()"> {
+      BuildableType<"$_builder.getF" # width # "Type()"> {
   int bitwidth = width;
 }
 
@@ -355,7 +356,7 @@ def F32 : F<32>;
 def F64 : F<64>;
 
 def BF16 : Type<CPred<"$_self.isBF16()">, "bfloat16 type">,
-           BuildableType<"getBF16Type()">;
+           BuildableType<"$_builder.getBF16Type()">;
 
 class Complex<Type type>
     : Type<And<[
@@ -482,8 +483,8 @@ class 3DTensorOf<list<Type> allowedTypes> : TensorRankOf<allowedTypes, [3]>;
 class 4DTensorOf<list<Type> allowedTypes> : TensorRankOf<allowedTypes, [4]>;
 
 // Unranked Memref type
-def AnyUnrankedMemRef : 
-    ShapedContainerType<[AnyType], 
+def AnyUnrankedMemRef :
+    ShapedContainerType<[AnyType],
                         IsUnrankedMemRefTypePred, "unranked.memref">;
 // Memref type.
 
@@ -685,7 +686,7 @@ class OptionalAttr<Attr attr> : Attr<attr.predicate, attr.description> {
 class TypedAttrBase<BuildableType attrValType, string attrKind,
                     Pred condition, string descr> :
     Attr<condition, descr> {
-  let constBuilderCall = "$_builder.get" # attrKind # "($_builder." #
+  let constBuilderCall = "$_builder.get" # attrKind # "(" #
                          attrValType.builderCall # ", $0)";
   let storageType = attrKind;
 }
