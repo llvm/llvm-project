@@ -9588,17 +9588,15 @@ bool clang::isBetterOverloadCandidate(
       if (RC1 && RC2) {
         bool AtLeastAsConstrained1, AtLeastAsConstrained2;
         if (S.IsAtLeastAsConstrained(Cand1.Function, {RC1}, Cand2.Function,
-                                     {RC2}, AtLeastAsConstrained1))
-          return false;
-        if (!AtLeastAsConstrained1)
-          return false;
-        if (S.IsAtLeastAsConstrained(Cand2.Function, {RC2}, Cand1.Function,
+                                     {RC2}, AtLeastAsConstrained1) ||
+            S.IsAtLeastAsConstrained(Cand2.Function, {RC2}, Cand1.Function,
                                      {RC1}, AtLeastAsConstrained2))
           return false;
-        if (!AtLeastAsConstrained2)
-          return true;
-      } else if (RC1 || RC2)
+        if (AtLeastAsConstrained1 != AtLeastAsConstrained2)
+          return AtLeastAsConstrained1;
+      } else if (RC1 || RC2) {
         return RC1 != nullptr;
+      }
     }
   }
 
