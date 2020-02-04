@@ -153,6 +153,7 @@ struct Chunk {
     Fill,
     LinkerOptions,
     DependentLibraries,
+    CallGraphProfile
   };
 
   ChunkKind Kind;
@@ -385,6 +386,27 @@ struct DependentLibrariesSection : Section {
   }
 };
 
+// Represents the call graph profile section entry.
+struct CallGraphEntry {
+  // The symbol of the source of the edge.
+  StringRef From;
+  // The symbol index of the destination of the edge.
+  StringRef To;
+  // The weight of the edge.
+  uint64_t Weight;
+};
+
+struct CallGraphProfileSection : Section {
+  Optional<std::vector<CallGraphEntry>> Entries;
+  Optional<yaml::BinaryRef> Content;
+
+  CallGraphProfileSection() : Section(ChunkKind::CallGraphProfile) {}
+
+  static bool classof(const Chunk *S) {
+    return S->Kind == ChunkKind::CallGraphProfile;
+  }
+};
+
 struct SymverSection : Section {
   std::vector<uint16_t> Entries;
 
@@ -514,6 +536,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::AddrsigSymbol)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::StackSizeEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::LinkerOption)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::CallGraphEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::NoteEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::ProgramHeader)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<llvm::ELFYAML::Chunk>)
@@ -683,6 +706,10 @@ template <> struct MappingTraits<ELFYAML::AddrsigSymbol> {
 
 template <> struct MappingTraits<ELFYAML::LinkerOption> {
   static void mapping(IO &IO, ELFYAML::LinkerOption &Sym);
+};
+
+template <> struct MappingTraits<ELFYAML::CallGraphEntry> {
+  static void mapping(IO &IO, ELFYAML::CallGraphEntry &E);
 };
 
 template <> struct MappingTraits<ELFYAML::Relocation> {
