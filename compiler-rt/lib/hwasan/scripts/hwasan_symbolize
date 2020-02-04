@@ -119,7 +119,7 @@ class Symbolizer:
 
 def symbolize_line(line, symbolizer_path):
   #0 0x7f6e35cf2e45  (/blah/foo.so+0x11fe45)
-  match = re.match(r'^(.*?)#([0-9]+)( *)(0x[0-9a-f]+) *\((.*)\+(0x[0-9a-f]+)\)', line, re.UNICODE)
+  match = re.match(r'^(.*?)#([0-9]+)( *)(0x[0-9a-f]*) *\((.*)\+(0x[0-9a-f]+)\)', line, re.UNICODE)
   if match:
     frameno = match.group(2)
     binary = match.group(5)
@@ -144,7 +144,7 @@ def save_access_address(line):
   match = re.match(r'^(.*?)HWAddressSanitizer: tag-mismatch on address (0x[0-9a-f]+) ', line, re.UNICODE)
   if match:
     last_access_address = int(match.group(2), 16)
-  match = re.match(r'^(.*?) of size [0-9]+ at 0x[0-9a-f]+ tags: ([0-9a-f]+)/[0-9a-f]+ \(ptr/mem\)', line, re.UNICODE)
+  match = re.match(r'^(.*?) of size [0-9]+ at 0x[0-9a-f]* tags: ([0-9a-f]+)/[0-9a-f]+ \(ptr/mem\)', line, re.UNICODE)
   if match:
     last_access_tag = int(match.group(2), 16)
 
