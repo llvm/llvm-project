@@ -6786,7 +6786,7 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
   // First check for the ARM-specific .req directive.
   if (Parser.getTok().is(AsmToken::Identifier) &&
-      Parser.getTok().getIdentifier() == ".req") {
+      Parser.getTok().getIdentifier().lower() == ".req") {
     parseDirectiveReq(Name, NameLoc);
     // We always return 'error' for this, as we're done with this
     // statement and don't need to match the 'instruction."
@@ -10502,7 +10502,7 @@ bool ARMAsmParser::ParseDirective(AsmToken DirectiveID) {
   bool IsMachO = Format == MCObjectFileInfo::IsMachO;
   bool IsCOFF = Format == MCObjectFileInfo::IsCOFF;
 
-  StringRef IDVal = DirectiveID.getIdentifier();
+  std::string IDVal = DirectiveID.getIdentifier().lower();
   if (IDVal == ".word")
     parseLiteralValues(4, DirectiveID.getLoc());
   else if (IDVal == ".short" || IDVal == ".hword")
