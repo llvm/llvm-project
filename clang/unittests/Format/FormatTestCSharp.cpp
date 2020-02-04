@@ -228,6 +228,11 @@ TEST_F(FormatTestCSharp, Attributes) {
                "    set;\n"
                "    get;\n"
                "}");
+
+  verifyFormat(
+      "[DllImport(\"Hello\", EntryPoint = \"hello_world\")]\n"
+      "// The const char* returned by hello_world must not be deleted.\n"
+      "private static extern IntPtr HelloFromCpp();)");
 }
 
 TEST_F(FormatTestCSharp, CSharpUsing) {
