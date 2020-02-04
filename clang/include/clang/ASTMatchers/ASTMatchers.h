@@ -311,10 +311,10 @@ AST_MATCHER_P(clang::Stmt, isExpandedFromMacro, llvm::StringRef, MacroName) {
   // Verifies that the statement' beginning and ending are both expanded from
   // the same instance of the given macro.
   auto& Context = Finder->getASTContext();
-  auto B =
+  llvm::Optional<SourceLocation> B =
       internal::getExpansionLocOfMacro(MacroName, Node.getBeginLoc(), Context);
   if (!B) return false;
-  auto E =
+  llvm::Optional<SourceLocation> E =
       internal::getExpansionLocOfMacro(MacroName, Node.getEndLoc(), Context);
   if (!E) return false;
   return *B == *E;

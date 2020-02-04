@@ -99,6 +99,15 @@ TEST(IsExpandedFromMacro, ShouldMatchObjectMacro) {
   EXPECT_TRUE(matches(input, binaryOperator(isExpandedFromMacro("PLUS"))));
 }
 
+TEST(IsExpandedFromMacro, ShouldMatchFromCommandLine) {
+  std::string input = R"cc(
+    void Test() { FOUR_PLUS_FOUR; }
+  )cc";
+  EXPECT_TRUE(matchesConditionally(input,
+                                   binaryOperator(isExpandedFromMacro("FOUR_PLUS_FOUR")),
+                                   true, {"-std=c++11", "-DFOUR_PLUS_FOUR=4+4"}));
+}
+
 TEST(IsExpandedFromMacro, ShouldNotMatchBeginOnly) {
   std::string input = R"cc(
 #define ONE_PLUS 1+

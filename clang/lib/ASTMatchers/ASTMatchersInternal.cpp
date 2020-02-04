@@ -603,22 +603,23 @@ static bool isTokenAtLoc(const SourceManager &SM, const LangOptions &LangOpts,
   bool Invalid = false;
   // Since `Loc` may point into an expansion buffer, which has no corresponding
   // source, we need to look at the spelling location to read the actual source.
-  StringRef TokenText = clang::Lexer::getSpelling(
-      SM.getSpellingLoc(Loc), Buffer, SM, LangOpts, &Invalid);
+  StringRef TokenText = Lexer::getSpelling(SM.getSpellingLoc(Loc), Buffer, SM,
+                                           LangOpts, &Invalid);
   return !Invalid && Text == TokenText;
 }
 
 llvm::Optional<SourceLocation>
 getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
                        const ASTContext &Context) {
-  auto& SM = Context.getSourceManager();
-  const auto& LangOpts = Context.getLangOpts();
+  auto &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
   while (Loc.isMacroID()) {
-    auto Expansion = SM.getSLocEntry(SM.getFileID(Loc)).getExpansion();
+    SrcMgr::ExpansionInfo Expansion =
+        SM.getSLocEntry(SM.getFileID(Loc)).getExpansion();
     if (Expansion.isMacroArgExpansion())
       // Check macro argument for an expansion of the given macro. For example,
       // `F(G(3))`, where `MacroName` is `G`.
-      if (auto ArgLoc = getExpansionLocOfMacro(
+      if (llvm::Optional<SourceLocation> ArgLoc = getExpansionLocOfMacro(
               MacroName, Expansion.getSpellingLoc(), Context))
         return ArgLoc;
     Loc = Expansion.getExpansionLocStart();
