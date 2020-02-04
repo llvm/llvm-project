@@ -280,7 +280,8 @@ ConstantExpr::ConstantExpr(Expr *subexpr, ResultStorageKind StorageKind)
 }
 
 ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
-                                   ResultStorageKind StorageKind) {
+                                   ResultStorageKind StorageKind,
+                                   bool IsImmediateInvocation) {
   assert(!isa<ConstantExpr>(E));
   AssertResultStorageKind(StorageKind);
   unsigned Size = totalSizeToAlloc<APValue, uint64_t>(
@@ -288,6 +289,8 @@ ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
       StorageKind == ConstantExpr::RSK_Int64);
   void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
   ConstantExpr *Self = new (Mem) ConstantExpr(E, StorageKind);
+  Self->ConstantExprBits.IsImmediateInvocation =
+      IsImmediateInvocation;
   return Self;
 }
 
@@ -317,7 +320,7 @@ ConstantExpr *ConstantExpr::CreateEmpty(const ASTContext &Context,
 }
 
 void ConstantExpr::MoveIntoResult(APValue &Value, const ASTContext &Context) {
-  assert(getStorageKind(Value) == ConstantExprBits.ResultKind &&
+  assert(getStorageKind(Value) <= ConstantExprBits.ResultKind &&
          "Invalid storage for this value kind");
   ConstantExprBits.APValueKind = Value.getKind();
   switch (ConstantExprBits.ResultKind) {

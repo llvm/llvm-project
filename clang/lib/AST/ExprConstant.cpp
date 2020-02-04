@@ -2005,6 +2005,17 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
   APValue::LValueBase Base = LVal.getLValueBase();
   const SubobjectDesignator &Designator = LVal.getLValueDesignator();
 
+  if (auto *VD = LVal.getLValueBase().dyn_cast<const ValueDecl *>()) {
+    if (auto *FD = dyn_cast<FunctionDecl>(VD)) {
+      if (FD->isConsteval()) {
+        Info.FFDiag(Loc, diag::note_consteval_address_accessible)
+            << !Type->isAnyPointerType();
+        Info.Note(FD->getLocation(), diag::note_declared_at);
+        return false;
+      }
+    }
+  }
+
   // Check that the object is a global. Note that the fake 'this' object we
   // manufacture when checking potential constant expressions is conservatively
   // assumed to be global here.
@@ -2114,6 +2125,11 @@ static bool CheckMemberPointerConstantExpression(EvalInfo &Info,
   const auto *FD = dyn_cast_or_null<CXXMethodDecl>(Member);
   if (!FD)
     return true;
+  if (FD->isConsteval()) {
+    Info.FFDiag(Loc, diag::note_consteval_address_accessible) << /*pointer*/ 0;
+    Info.Note(FD->getLocation(), diag::note_declared_at);
+    return false;
+  }
   return Usage == Expr::EvaluateForMangling || FD->isVirtual() ||
          !FD->hasAttr<DLLImportAttr>();
 }
@@ -3548,7 +3564,13 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
   APValue *BaseVal = nullptr;
   QualType BaseType = getType(LVal.Base);
 
-  if (const ValueDecl *D = LVal.Base.dyn_cast<const ValueDecl*>()) {
+  if (const ConstantExpr *CE =
+          dyn_cast_or_null<ConstantExpr>(LVal.Base.dyn_cast<const Expr *>())) {
+    /// Nested immediate invocation have been previously removed so if we found
+    /// a ConstantExpr it can only be the EvaluatingDecl.
+    assert(CE->isImmediateInvocation() && CE == Info.EvaluatingDecl);
+    BaseVal = Info.EvaluatingDeclValue;
+  } else if (const ValueDecl *D = LVal.Base.dyn_cast<const ValueDecl *>()) {
     // In C++98, const, non-volatile integers initialized with ICEs are ICEs.
     // In C++11, constexpr, non-volatile variables initialized with constant
     // expressions are constant expressions too. Inside constexpr functions,
@@ -7369,6 +7391,8 @@ public:
 //    from the AST (FIXME).
 //  * A MaterializeTemporaryExpr that has static storage duration, with no
 //    CallIndex, for a lifetime-extended temporary.
+//  * The ConstantExpr that is currently being evaluated during evaluation of an
+//    immediate invocation.
 // plus an offset in bytes.
 //===----------------------------------------------------------------------===//
 namespace {
@@ -13827,7 +13851,7 @@ bool Expr::EvaluateAsLValue(EvalResult &Result, const ASTContext &Ctx,
 }
 
 bool Expr::EvaluateAsConstantExpr(EvalResult &Result, ConstExprUsage Usage,
-                                  const ASTContext &Ctx) const {
+                                  const ASTContext &Ctx, bool InPlace) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
@@ -13835,7 +13859,14 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, ConstExprUsage Usage,
   EvalInfo Info(Ctx, Result, EM);
   Info.InConstantContext = true;
 
-  if (!::Evaluate(Result.Val, Info, this) || Result.HasSideEffects)
+  if (InPlace) {
+    Info.setEvaluatingDecl(this, Result.Val);
+    LValue LVal;
+    LVal.set(this);
+    if (!::EvaluateInPlace(Result.Val, Info, LVal, this) ||
+        Result.HasSideEffects)
+      return false;
+  } else if (!::Evaluate(Result.Val, Info, this) || Result.HasSideEffects)
     return false;
 
   if (!Info.discardCleanups())

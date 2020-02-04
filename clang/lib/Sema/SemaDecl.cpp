@@ -8930,9 +8930,24 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // C++11 [dcl.constexpr]p3: functions declared constexpr are required to
       // be either constructors or to return a literal type. Therefore,
       // destructors cannot be declared constexpr.
-      if (isa<CXXDestructorDecl>(NewFD) && !getLangOpts().CPlusPlus2a) {
+      if (isa<CXXDestructorDecl>(NewFD) &&
+          (!getLangOpts().CPlusPlus2a || ConstexprKind == CSK_consteval)) {
         Diag(D.getDeclSpec().getConstexprSpecLoc(), diag::err_constexpr_dtor)
             << ConstexprKind;
+        NewFD->setConstexprKind(getLangOpts().CPlusPlus2a ? CSK_unspecified : CSK_constexpr);
+      }
+      // C++20 [dcl.constexpr]p2: An allocation function, or a
+      // deallocation function shall not be declared with the consteval
+      // specifier.
+      if (ConstexprKind == CSK_consteval &&
+          (NewFD->getOverloadedOperator() == OO_New ||
+           NewFD->getOverloadedOperator() == OO_Array_New ||
+           NewFD->getOverloadedOperator() == OO_Delete ||
+           NewFD->getOverloadedOperator() == OO_Array_Delete)) {
+        Diag(D.getDeclSpec().getConstexprSpecLoc(),
+             diag::err_invalid_consteval_decl_kind)
+            << NewFD;
+        NewFD->setConstexprKind(CSK_constexpr);
       }
     }
 
@@ -13649,7 +13664,9 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   // Do not push if it is a lambda because one is already pushed when building
   // the lambda in ActOnStartOfLambdaDefinition().
   if (!isLambdaCallOperator(FD))
-    PushExpressionEvaluationContext(ExprEvalContexts.back().Context);
+    PushExpressionEvaluationContext(
+        FD->isConsteval() ? ExpressionEvaluationContext::ConstantEvaluated
+                          : ExprEvalContexts.back().Context);
 
   // Check for defining attributes before the check for redefinition.
   if (const auto *Attr = FD->getAttr<AliasAttr>()) {

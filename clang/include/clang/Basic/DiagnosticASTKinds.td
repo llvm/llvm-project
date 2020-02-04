@@ -57,6 +57,9 @@ def note_constexpr_non_global : Note<
 def note_constexpr_dynamic_alloc : Note<
   "%select{pointer|reference}0 to %select{|subobject of }1"
   "heap-allocated object is not a constant expression">;
+def note_consteval_address_accessible : Note<
+  "%select{pointer|reference}0 to a consteval declaration "
+  "is not a constant expression">;
 def note_constexpr_uninitialized : Note<
   "%select{|sub}0object of type %1 is not initialized">;
 def note_constexpr_subobject_declared_here : Note<
