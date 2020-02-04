@@ -104,8 +104,8 @@ define <4 x i1> @t32_tautological(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v5.4s
 ; CHECK-NEXT:    ldr q5, [x8, :lo12:.LCPI4_4]
 ; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mls v0.4s, v3.4s, v4.4s
+; CHECK-NEXT:    bit v1.16b, v0.16b, v3.16b
+; CHECK-NEXT:    mls v0.4s, v1.4s, v4.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, v5.4s
 ; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret

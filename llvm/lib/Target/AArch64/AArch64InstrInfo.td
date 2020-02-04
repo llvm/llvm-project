@@ -468,7 +468,7 @@ def AArch64urshri : SDNode<"AArch64ISD::URSHR_I", SDT_AArch64vshift>;
 
 def AArch64not: SDNode<"AArch64ISD::NOT", SDT_AArch64unvec>;
 def AArch64bit: SDNode<"AArch64ISD::BIT", SDT_AArch64trivec>;
-def AArch64bsl: SDNode<"AArch64ISD::BSL", SDT_AArch64trivec>;
+def AArch64bsp: SDNode<"AArch64ISD::BSP", SDT_AArch64trivec>;
 
 def AArch64cmeq: SDNode<"AArch64ISD::CMEQ", SDT_AArch64binvec>;
 def AArch64cmge: SDNode<"AArch64ISD::CMGE", SDT_AArch64binvec>;
@@ -3955,33 +3955,36 @@ defm : SIMDThreeSameVectorExtraPatterns<"UQSUB", usubsat>;
 defm AND : SIMDLogicalThreeVector<0, 0b00, "and", and>;
 defm BIC : SIMDLogicalThreeVector<0, 0b01, "bic",
                                   BinOpFrag<(and node:$LHS, (vnot node:$RHS))> >;
-defm BIF : SIMDLogicalThreeVector<1, 0b11, "bif">;
-defm BIT : SIMDLogicalThreeVectorTied<1, 0b10, "bit", AArch64bit>;
-defm BSL : SIMDLogicalThreeVectorTied<1, 0b01, "bsl",
-    TriOpFrag<(or (and node:$LHS, node:$MHS), (and (vnot node:$LHS), node:$RHS))>>;
 defm EOR : SIMDLogicalThreeVector<1, 0b00, "eor", xor>;
 defm ORN : SIMDLogicalThreeVector<0, 0b11, "orn",
                                   BinOpFrag<(or node:$LHS, (vnot node:$RHS))> >;
 defm ORR : SIMDLogicalThreeVector<0, 0b10, "orr", or>;
 
+// Pseudo bitwise select pattern BSP.
+// It is expanded into BSL/BIT/BIF after register allocation.
+defm BSP : SIMDLogicalThreeVectorPseudo<TriOpFrag<(or (and node:$LHS, node:$MHS),
+                                                      (and (vnot node:$LHS), node:$RHS))>>;
+defm BSL : SIMDLogicalThreeVectorTied<1, 0b01, "bsl">;
+defm BIT : SIMDLogicalThreeVectorTied<1, 0b10, "bit", AArch64bit>;
+defm BIF : SIMDLogicalThreeVectorTied<1, 0b11, "bif">;
 
-def : Pat<(AArch64bsl (v8i8 V64:$Rd), V64:$Rn, V64:$Rm),
-          (BSLv8i8 V64:$Rd, V64:$Rn, V64:$Rm)>;
-def : Pat<(AArch64bsl (v4i16 V64:$Rd), V64:$Rn, V64:$Rm),
-          (BSLv8i8 V64:$Rd, V64:$Rn, V64:$Rm)>;
-def : Pat<(AArch64bsl (v2i32 V64:$Rd), V64:$Rn, V64:$Rm),
-          (BSLv8i8 V64:$Rd, V64:$Rn, V64:$Rm)>;
-def : Pat<(AArch64bsl (v1i64 V64:$Rd), V64:$Rn, V64:$Rm),
-          (BSLv8i8 V64:$Rd, V64:$Rn, V64:$Rm)>;
+def : Pat<(AArch64bsp (v8i8 V64:$Rd), V64:$Rn, V64:$Rm),
+          (BSPv8i8 V64:$Rd, V64:$Rn, V64:$Rm)>;
+def : Pat<(AArch64bsp (v4i16 V64:$Rd), V64:$Rn, V64:$Rm),
+          (BSPv8i8 V64:$Rd, V64:$Rn, V64:$Rm)>;
+def : Pat<(AArch64bsp (v2i32 V64:$Rd), V64:$Rn, V64:$Rm),
+          (BSPv8i8 V64:$Rd, V64:$Rn, V64:$Rm)>;
+def : Pat<(AArch64bsp (v1i64 V64:$Rd), V64:$Rn, V64:$Rm),
+          (BSPv8i8 V64:$Rd, V64:$Rn, V64:$Rm)>;
 
-def : Pat<(AArch64bsl (v16i8 V128:$Rd), V128:$Rn, V128:$Rm),
-          (BSLv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
-def : Pat<(AArch64bsl (v8i16 V128:$Rd), V128:$Rn, V128:$Rm),
-          (BSLv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
-def : Pat<(AArch64bsl (v4i32 V128:$Rd), V128:$Rn, V128:$Rm),
-          (BSLv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
-def : Pat<(AArch64bsl (v2i64 V128:$Rd), V128:$Rn, V128:$Rm),
-          (BSLv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
+def : Pat<(AArch64bsp (v16i8 V128:$Rd), V128:$Rn, V128:$Rm),
+          (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
+def : Pat<(AArch64bsp (v8i16 V128:$Rd), V128:$Rn, V128:$Rm),
+          (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
+def : Pat<(AArch64bsp (v4i32 V128:$Rd), V128:$Rn, V128:$Rm),
+          (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
+def : Pat<(AArch64bsp (v2i64 V128:$Rd), V128:$Rn, V128:$Rm),
+          (BSPv16i8 V128:$Rd, V128:$Rn, V128:$Rm)>;
 
 def : InstAlias<"mov{\t$dst.16b, $src.16b|.16b\t$dst, $src}",
                 (ORRv16i8 V128:$dst, V128:$src, V128:$src), 1>;

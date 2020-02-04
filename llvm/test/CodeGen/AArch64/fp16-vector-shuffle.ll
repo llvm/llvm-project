@@ -5,8 +5,7 @@
 define <4 x half> @select_64(<4 x half> %a, <4 x half> %b, <4 x i16> %c) #0 {
 ; CHECK-LABEL: select_64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    bsl v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <4 x half> %a to <4 x i16>
@@ -23,8 +22,7 @@ entry:
 define <8 x half> @select_128(<8 x half> %a, <8 x half> %b, <8 x i16> %c) #0 {
 ; CHECK-LABEL: select_128:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast <8 x half> %a to <8 x i16>

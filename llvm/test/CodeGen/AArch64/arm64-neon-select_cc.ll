@@ -9,8 +9,7 @@ define <8x i8> @test_select_cc_v8i8_i8(i8 %a, i8 %b, <8x i8> %c, <8x i8> %d ) {
 ; CHECK-NEXT:    fmov s3, w0
 ; CHECK-NEXT:    cmeq v2.8b, v3.8b, v2.8b
 ; CHECK-NEXT:    dup v2.8b, v2.b[0]
-; CHECK-NEXT:    bsl v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %cmp31 = icmp eq i8 %a, %b
   %e = select i1 %cmp31, <8x i8> %c, <8x i8> %d
@@ -49,8 +48,7 @@ define <16x i8> @test_select_cc_v16i8_i8(i8 %a, i8 %b, <16x i8> %c, <16x i8> %d 
 ; CHECK-NEXT:    fmov s3, w0
 ; CHECK-NEXT:    cmeq v2.16b, v3.16b, v2.16b
 ; CHECK-NEXT:    dup v2.16b, v2.b[0]
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %cmp31 = icmp eq i8 %a, %b
   %e = select i1 %cmp31, <16x i8> %c, <16x i8> %d
@@ -92,8 +90,7 @@ define <4x i16> @test_select_cc_v4i16(i16 %a, i16 %b, <4x i16> %c, <4x i16> %d )
 ; CHECK-NEXT:    fmov s3, w0
 ; CHECK-NEXT:    cmeq v2.4h, v3.4h, v2.4h
 ; CHECK-NEXT:    dup v2.4h, v2.h[0]
-; CHECK-NEXT:    bsl v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %cmp31 = icmp eq i16 %a, %b
   %e = select i1 %cmp31, <4x i16> %c, <4x i16> %d
@@ -107,8 +104,7 @@ define <8x i16> @test_select_cc_v8i16(i16 %a, i16 %b, <8x i16> %c, <8x i16> %d )
 ; CHECK-NEXT:    fmov s3, w0
 ; CHECK-NEXT:    cmeq v2.8h, v3.8h, v2.8h
 ; CHECK-NEXT:    dup v2.8h, v2.h[0]
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %cmp31 = icmp eq i16 %a, %b
   %e = select i1 %cmp31, <8x i16> %c, <8x i16> %d
@@ -122,8 +118,7 @@ define <2x i32> @test_select_cc_v2i32(i32 %a, i32 %b, <2x i32> %c, <2x i32> %d )
 ; CHECK-NEXT:    fmov s3, w0
 ; CHECK-NEXT:    cmeq v2.2s, v3.2s, v2.2s
 ; CHECK-NEXT:    dup v2.2s, v2.s[0]
-; CHECK-NEXT:    bsl v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %cmp31 = icmp eq i32 %a, %b
   %e = select i1 %cmp31, <2x i32> %c, <2x i32> %d
@@ -137,8 +132,7 @@ define <4x i32> @test_select_cc_v4i32(i32 %a, i32 %b, <4x i32> %c, <4x i32> %d )
 ; CHECK-NEXT:    fmov s3, w0
 ; CHECK-NEXT:    cmeq v2.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    dup v2.4s, v2.s[0]
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %cmp31 = icmp eq i32 %a, %b
   %e = select i1 %cmp31, <4x i32> %c, <4x i32> %d
@@ -151,8 +145,7 @@ define <1x i64> @test_select_cc_v1i64(i64 %a, i64 %b, <1x i64> %c, <1x i64> %d )
 ; CHECK-NEXT:    fmov d2, x1
 ; CHECK-NEXT:    fmov d3, x0
 ; CHECK-NEXT:    cmeq d2, d3, d2
-; CHECK-NEXT:    bsl v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %cmp31 = icmp eq i64 %a, %b
   %e = select i1 %cmp31, <1x i64> %c, <1x i64> %d
@@ -166,8 +159,7 @@ define <2x i64> @test_select_cc_v2i64(i64 %a, i64 %b, <2x i64> %c, <2x i64> %d )
 ; CHECK-NEXT:    fmov d3, x0
 ; CHECK-NEXT:    cmeq v2.2d, v3.2d, v2.2d
 ; CHECK-NEXT:    dup v2.2d, v2.d[0]
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %cmp31 = icmp eq i64 %a, %b
   %e = select i1 %cmp31, <2x i64> %c, <2x i64> %d
@@ -222,8 +214,7 @@ define <4x float> @test_select_cc_v4f32_icmp(i32 %a, i32 %b, <4x float> %c, <4x 
 ; CHECK-NEXT:    fmov s3, w0
 ; CHECK-NEXT:    cmeq v2.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    dup v2.4s, v2.s[0]
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %cmp31 = icmp eq i32 %a, %b
   %e = select i1 %cmp31, <4x float> %c, <4x float> %d
@@ -247,8 +238,7 @@ define <1 x double> @test_select_cc_v1f64_icmp(i64 %a, i64 %b, <1 x double> %c, 
 ; CHECK-NEXT:    fmov d2, x1
 ; CHECK-NEXT:    fmov d3, x0
 ; CHECK-NEXT:    cmeq d2, d3, d2
-; CHECK-NEXT:    bsl v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %cmp31 = icmp eq i64 %a, %b
   %e = select i1 %cmp31, <1 x double> %c, <1 x double> %d
@@ -278,8 +268,7 @@ define <2 x i32> @test_select_cc_v2i32_icmpi1(i1 %cc, <2 x i32> %a, <2 x i32> %b
 ; CHECK-NEXT:    tst w0, #0x1
 ; CHECK-NEXT:    csetm w8, ne
 ; CHECK-NEXT:    dup v2.2s, w8
-; CHECK-NEXT:    bsl v2.8b, v0.8b, v1.8b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    ret
   %cmp = icmp ne i1 %cc, 0
   %e = select i1 %cmp, <2 x i32> %a, <2 x i32> %b
@@ -294,8 +283,7 @@ define <3 x float> @test_select_cc_v3f32_fcmp_f32(<3 x float> %a, <3 x float> %b
 ; CHECK-NEXT:    // kill: def $s3 killed $s3 def $q3
 ; CHECK-NEXT:    fcmeq v2.4s, v2.4s, v3.4s
 ; CHECK-NEXT:    dup v2.4s, v2.s[0]
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %cc = fcmp oeq float %c1, %c2
   %r = select i1 %cc, <3 x float> %a, <3 x float> %b
@@ -309,8 +297,7 @@ define <3 x float> @test_select_cc_v3f32_fcmp_f64(<3 x float> %a, <3 x float> %b
 ; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-NEXT:    fcmeq v2.2d, v2.2d, v3.2d
 ; CHECK-NEXT:    dup v2.2d, v2.d[0]
-; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %cc = fcmp oeq double %c1, %c2
   %r = select i1 %cc, <3 x float> %a, <3 x float> %b
