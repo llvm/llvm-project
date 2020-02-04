@@ -224,8 +224,9 @@ void DIEHash::hashLocList(const DIELocList &LocList) {
   HashingByteStreamer Streamer(*this);
   DwarfDebug &DD = *AP->getDwarfDebug();
   const DebugLocStream &Locs = DD.getDebugLocs();
-  for (const auto &Entry : Locs.getEntries(Locs.getList(LocList.getValue())))
-    DD.emitDebugLocEntry(Streamer, Entry, nullptr);
+  const DebugLocStream::List &List = Locs.getList(LocList.getValue());
+  for (const DebugLocStream::Entry &Entry : Locs.getEntries(List))
+    DD.emitDebugLocEntry(Streamer, Entry, List.CU);
 }
 
 // Hash an individual attribute \param Attr based on the type of attribute and
