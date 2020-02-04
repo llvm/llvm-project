@@ -4522,6 +4522,13 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V) {
   if (isa<ConstantInt>(V) || isa<GlobalVariable>(V))
     return true;
 
+  if (auto PN = dyn_cast<PHINode>(V)) {
+    if (llvm::all_of(PN->incoming_values(), [](const Use &U) {
+          return isa<ConstantInt>(U.get());
+        }))
+      return true;
+  }
+
   return false;
 }
 
