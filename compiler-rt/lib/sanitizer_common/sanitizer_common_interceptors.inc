@@ -9731,6 +9731,24 @@ INTERCEPTOR(void, qsort_r, void *base, SIZE_T nmemb, SIZE_T size,
 #define INIT_QSORT_R
 #endif
 
+#if SANITIZER_INTERCEPT_SIGALTSTACK
+INTERCEPTOR(int, sigaltstack, void *ss, void *oss) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, sigaltstack, ss, oss);
+  if (ss != nullptr) {
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, ss, struct_stack_t_sz);
+  }
+  int r = REAL(sigaltstack)(ss, oss);
+  if (r == 0 && oss != nullptr) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, oss, struct_stack_t_sz);
+  }
+  return r;
+}
+#define INIT_SIGALTSTACK COMMON_INTERCEPT_FUNCTION(sigaltstack)
+#else
+#define INIT_SIGALTSTACK
+#endif
+
 #include "sanitizer_common_interceptors_netbsd_compat.inc"
 
 static void InitializeCommonInterceptors() {
@@ -10036,6 +10054,7 @@ static void InitializeCommonInterceptors() {
   INIT_GETENTROPY;
   INIT_QSORT;
   INIT_QSORT_R;
+  INIT_SIGALTSTACK;
 
   INIT___PRINTF_CHK;
 }
