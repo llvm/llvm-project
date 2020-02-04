@@ -29,11 +29,12 @@ class LLVM_LIBRARY_VISIBILITY SystemZTargetInfo : public TargetInfo {
   int ISARevision;
   bool HasTransactionalExecution;
   bool HasVector;
+  bool SoftFloat;
 
 public:
   SystemZTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple), CPU("z10"), ISARevision(8),
-        HasTransactionalExecution(false), HasVector(false) {
+        HasTransactionalExecution(false), HasVector(false), SoftFloat(false) {
     IntMaxType = SignedLong;
     Int64Type = SignedLong;
     TLSSupported = true;
@@ -109,12 +110,17 @@ public:
                             DiagnosticsEngine &Diags) override {
     HasTransactionalExecution = false;
     HasVector = false;
+    SoftFloat = false;
     for (const auto &Feature : Features) {
       if (Feature == "+transactional-execution")
         HasTransactionalExecution = true;
       else if (Feature == "+vector")
         HasVector = true;
+      else if (Feature == "+soft-float")
+        SoftFloat = true;
     }
+    HasVector &= !SoftFloat;
+
     // If we use the vector ABI, vector types are 64-bit aligned.
     if (HasVector) {
       MaxVectorAlign = 64;
