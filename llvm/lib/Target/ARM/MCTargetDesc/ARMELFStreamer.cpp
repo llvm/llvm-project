@@ -238,7 +238,7 @@ void ARMTargetAsmStreamer::finishAttributeSection() {}
 
 void
 ARMTargetAsmStreamer::AnnotateTLSDescriptorSequence(const MCSymbolRefExpr *S) {
-  OS << "\t.tlsdescseq\t" << S->getSymbol().getName();
+  OS << "\t.tlsdescseq\t" << S->getSymbol().getName() << "\n";
 }
 
 void ARMTargetAsmStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {
