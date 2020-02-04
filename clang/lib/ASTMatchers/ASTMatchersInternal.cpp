@@ -19,6 +19,7 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/None.h"
@@ -593,6 +594,38 @@ bool HasNameMatcher::matchesNode(const NamedDecl &Node) const {
     return matchesNodeUnqualified(Node);
   }
   return matchesNodeFullFast(Node);
+}
+
+// Checks whether \p Loc points to a token with source text of \p TokenText.
+static bool isTokenAtLoc(const SourceManager &SM, const LangOptions &LangOpts,
+                         StringRef Text, SourceLocation Loc) {
+  llvm::SmallString<16> Buffer;
+  bool Invalid = false;
+  // Since `Loc` may point into an expansion buffer, which has no corresponding
+  // source, we need to look at the spelling location to read the actual source.
+  StringRef TokenText = clang::Lexer::getSpelling(
+      SM.getSpellingLoc(Loc), Buffer, SM, LangOpts, &Invalid);
+  return !Invalid && Text == TokenText;
+}
+
+llvm::Optional<SourceLocation>
+getExpansionLocOfMacro(StringRef MacroName, SourceLocation Loc,
+                       const ASTContext &Context) {
+  auto& SM = Context.getSourceManager();
+  const auto& LangOpts = Context.getLangOpts();
+  while (Loc.isMacroID()) {
+    auto Expansion = SM.getSLocEntry(SM.getFileID(Loc)).getExpansion();
+    if (Expansion.isMacroArgExpansion())
+      // Check macro argument for an expansion of the given macro. For example,
+      // `F(G(3))`, where `MacroName` is `G`.
+      if (auto ArgLoc = getExpansionLocOfMacro(
+              MacroName, Expansion.getSpellingLoc(), Context))
+        return ArgLoc;
+    Loc = Expansion.getExpansionLocStart();
+    if (isTokenAtLoc(SM, LangOpts, MacroName, Loc))
+      return Loc;
+  }
+  return llvm::None;
 }
 
 } // end namespace internal
