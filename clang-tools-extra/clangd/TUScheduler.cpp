@@ -61,6 +61,7 @@
 #include "llvm/Support/Threading.h"
 #include <algorithm>
 #include <memory>
+#include <mutex>
 #include <queue>
 #include <thread>
 
@@ -164,7 +165,7 @@ class ASTWorker {
   friend class ASTWorkerHandle;
   ASTWorker(PathRef FileName, const GlobalCompilationDatabase &CDB,
             TUScheduler::ASTCache &LRUCache, Semaphore &Barrier, bool RunSync,
-            steady_clock::duration UpdateDebounce, bool StorePreamblesInMemory,
+            DebouncePolicy UpdateDebounce, bool StorePreamblesInMemory,
             ParsingCallbacks &Callbacks);
 
 public:
@@ -176,7 +177,7 @@ public:
   static ASTWorkerHandle
   create(PathRef FileName, const GlobalCompilationDatabase &CDB,
          TUScheduler::ASTCache &IdleASTs, AsyncTaskRunner *Tasks,
-         Semaphore &Barrier, steady_clock::duration UpdateDebounce,
+         Semaphore &Barrier, DebouncePolicy UpdateDebounce,
          bool StorePreamblesInMemory, ParsingCallbacks &Callbacks);
   ~ASTWorker();
 
@@ -242,7 +243,7 @@ private:
   TUScheduler::ASTCache &IdleASTs;
   const bool RunSync;
   /// Time to wait after an update to see whether another update obsoletes it.
-  const steady_clock::duration UpdateDebounce;
+  const DebouncePolicy UpdateDebounce;
   /// File that ASTWorker is responsible for.
   const Path FileName;
   const GlobalCompilationDatabase &CDB;
@@ -263,6 +264,9 @@ private:
   /// be consumed by clients of ASTWorker.
   std::shared_ptr<const ParseInputs> FileInputs;         /* GUARDED_BY(Mutex) */
   std::shared_ptr<const PreambleData> LastBuiltPreamble; /* GUARDED_BY(Mutex) */
+  /// Times of recent AST rebuilds, used for UpdateDebounce computation.
+  llvm::SmallVector<DebouncePolicy::clock::duration, 8>
+      RebuildTimes; /* GUARDED_BY(Mutex) */
   /// Becomes ready when the first preamble build finishes.
   Notification PreambleWasBuilt;
   /// Set to true to signal run() to finish processing.
@@ -326,7 +330,7 @@ private:
 ASTWorkerHandle
 ASTWorker::create(PathRef FileName, const GlobalCompilationDatabase &CDB,
                   TUScheduler::ASTCache &IdleASTs, AsyncTaskRunner *Tasks,
-                  Semaphore &Barrier, steady_clock::duration UpdateDebounce,
+                  Semaphore &Barrier, DebouncePolicy UpdateDebounce,
                   bool StorePreamblesInMemory, ParsingCallbacks &Callbacks) {
   std::shared_ptr<ASTWorker> Worker(
       new ASTWorker(FileName, CDB, IdleASTs, Barrier, /*RunSync=*/!Tasks,
@@ -340,7 +344,7 @@ ASTWorker::create(PathRef FileName, const GlobalCompilationDatabase &CDB,
 
 ASTWorker::ASTWorker(PathRef FileName, const GlobalCompilationDatabase &CDB,
                      TUScheduler::ASTCache &LRUCache, Semaphore &Barrier,
-                     bool RunSync, steady_clock::duration UpdateDebounce,
+                     bool RunSync, DebouncePolicy UpdateDebounce,
                      bool StorePreamblesInMemory, ParsingCallbacks &Callbacks)
     : IdleASTs(LRUCache), RunSync(RunSync), UpdateDebounce(UpdateDebounce),
       FileName(FileName), CDB(CDB),
@@ -488,6 +492,7 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
 
     // Get the AST for diagnostics.
     llvm::Optional<std::unique_ptr<ParsedAST>> AST = IdleASTs.take(this);
+    auto RebuildStartTime = DebouncePolicy::clock::now();
     if (!AST) {
       llvm::Optional<ParsedAST> NewAST =
           buildAST(FileName, std::move(Invocation), CompilerInvocationDiags,
@@ -510,6 +515,19 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     // spam us with updates.
     // Note *AST can still be null if buildAST fails.
     if (*AST) {
+      {
+        // Try to record the AST-build time, to inform future update debouncing.
+        // This is best-effort only: if the lock is held, don't bother.
+        auto RebuildDuration = DebouncePolicy::clock::now() - RebuildStartTime;
+        std::unique_lock<std::mutex> Lock(Mutex, std::try_to_lock);
+        if (Lock.owns_lock()) {
+          // Do not let RebuildTimes grow beyond its small-size (i.e. capacity).
+          if (RebuildTimes.size() == RebuildTimes.capacity())
+            RebuildTimes.erase(RebuildTimes.begin());
+          RebuildTimes.push_back(RebuildDuration);
+          Mutex.unlock();
+        }
+      }
       trace::Span Span("Running main AST callback");
 
       Callbacks.onMainAST(FileName, **AST, RunPublish);
@@ -750,13 +768,13 @@ Deadline ASTWorker::scheduleLocked() {
   assert(!Requests.empty() && "skipped the whole queue");
   // Some updates aren't dead yet, but never end up being used.
   // e.g. the first keystroke is live until obsoleted by the second.
-  // We debounce "maybe-unused" writes, sleeping 500ms in case they become dead.
+  // We debounce "maybe-unused" writes, sleeping in case they become dead.
   // But don't delay reads (including updates where diagnostics are needed).
   for (const auto &R : Requests)
     if (R.UpdateType == None || R.UpdateType == WantDiagnostics::Yes)
       return Deadline::zero();
   // Front request needs to be debounced, so determine when we're ready.
-  Deadline D(Requests.front().AddTime + UpdateDebounce);
+  Deadline D(Requests.front().AddTime + UpdateDebounce.compute(RebuildTimes));
   return D;
 }
 
@@ -1034,6 +1052,34 @@ std::vector<Path> TUScheduler::getFilesWithCachedAST() const {
     Result.push_back(std::string(PathAndFile.first()));
   }
   return Result;
+}
+
+DebouncePolicy::clock::duration
+DebouncePolicy::compute(llvm::ArrayRef<clock::duration> History) const {
+  assert(Min <= Max && "Invalid policy");
+  if (History.empty())
+    return Max; // Arbitrary.
+
+  // Base the result on the median rebuild.
+  // nth_element needs a mutable array, take the chance to bound the data size.
+  History = History.take_back(15);
+  llvm::SmallVector<clock::duration, 15> Recent(History.begin(), History.end());
+  auto Median = Recent.begin() + Recent.size() / 2;
+  std::nth_element(Recent.begin(), Median, Recent.end());
+
+  clock::duration Target =
+      std::chrono::duration_cast<clock::duration>(RebuildRatio * *Median);
+  if (Target > Max)
+    return Max;
+  if (Target < Min)
+    return Min;
+  return Target;
+}
+
+DebouncePolicy DebouncePolicy::fixed(clock::duration T) {
+  DebouncePolicy P;
+  P.Min = P.Max = T;
+  return P;
 }
 
 } // namespace clangd
