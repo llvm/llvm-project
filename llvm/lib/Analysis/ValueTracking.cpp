@@ -4529,6 +4529,13 @@ bool llvm::isGuaranteedNotToBeUndefOrPoison(const Value *V) {
       return true;
   }
 
+  if (auto II = dyn_cast<ICmpInst>(V)) {
+    if (llvm::all_of(II->operands(), [](const Value *V) {
+          return isGuaranteedNotToBeUndefOrPoison(V);
+        }))
+      return true;
+  }
+
   return false;
 }
 
