@@ -1299,10 +1299,10 @@ EVT SITargetLowering::getOptimalMemOpType(
   // use. Make sure we switch these to 64-bit accesses.
 
   if (Op.size() >= 16 &&
-      Op.getDstAlign() >= 4) // XXX: Should only do for global
+      Op.isDstAligned(Align(4))) // XXX: Should only do for global
     return MVT::v4i32;
 
-  if (Op.size() >= 8 && Op.getDstAlign() >= 4)
+  if (Op.size() >= 8 && Op.isDstAligned(Align(4)))
     return MVT::v2i32;
 
   // Use the default.

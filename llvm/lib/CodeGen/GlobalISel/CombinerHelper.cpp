@@ -860,7 +860,7 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
                                           unsigned DstAS, unsigned SrcAS,
                                           const AttributeList &FuncAttributes,
                                           const TargetLowering &TLI) {
-  if (Op.getSrcAlign() != 0 && Op.getSrcAlign() < Op.getDstAlign())
+  if (Op.isMemcpyWithFixedDstAlign() && Op.getSrcAlign() < Op.getDstAlign())
     return false;
 
   LLT Ty = TLI.getOptimalMemOpLLT(Op, FuncAttributes);
@@ -870,16 +870,18 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
     // We only need to check DstAlign here as SrcAlign is always greater or
     // equal to DstAlign (or zero).
     Ty = LLT::scalar(64);
-    while (Op.getDstAlign() && Op.getDstAlign() < Ty.getSizeInBytes() &&
-           !TLI.allowsMisalignedMemoryAccesses(Ty, DstAS, Op.getDstAlign()))
-      Ty = LLT::scalar(Ty.getSizeInBytes());
+    if (Op.isFixedDstAlign())
+      while (Op.getDstAlign() < Ty.getSizeInBytes() &&
+             !TLI.allowsMisalignedMemoryAccesses(Ty, DstAS,
+                                                 Op.getDstAlign().value()))
+        Ty = LLT::scalar(Ty.getSizeInBytes());
     assert(Ty.getSizeInBits() > 0 && "Could not find valid type");
     // FIXME: check for the largest legal type we can load/store to.
   }
 
   unsigned NumMemOps = 0;
-  auto Size = Op.size();
-  while (Size != 0) {
+  uint64_t Size = Op.size();
+  while (Size) {
     unsigned TySize = Ty.getSizeInBytes();
     while (TySize > Size) {
       // For now, only use non-vector load / store's for the left-over pieces.
@@ -899,7 +901,8 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
       MVT VT = getMVTForLLT(Ty);
       if (NumMemOps && Op.allowOverlap() && NewTySize < Size &&
           TLI.allowsMisalignedMemoryAccesses(
-              VT, DstAS, Op.getDstAlign(), MachineMemOperand::MONone, &Fast) &&
+              VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign().value() : 0,
+              MachineMemOperand::MONone, &Fast) &&
           Fast)
         TySize = Size;
       else {

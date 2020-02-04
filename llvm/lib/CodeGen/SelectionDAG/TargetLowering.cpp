@@ -179,14 +179,7 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
 bool TargetLowering::findOptimalMemOpLowering(
     std::vector<EVT> &MemOps, unsigned Limit, const MemOp &Op, unsigned DstAS,
     unsigned SrcAS, const AttributeList &FuncAttributes) const {
-  // If 'SrcAlign' is zero, that means the memory operation does not need to
-  // load the value, i.e. memset or memcpy from constant string. Otherwise,
-  // it's the inferred alignment of the source. 'DstAlign', on the other hand,
-  // is the specified alignment of the memory operation. If it is zero, that
-  // means it's possible to change the alignment of the destination.
-  // 'MemcpyStrSrc' indicates whether the memcpy source is constant so it does
-  // not need to be loaded.
-  if (!(Op.getSrcAlign() == 0 || Op.getSrcAlign() >= Op.getDstAlign()))
+  if (Op.isMemcpyWithFixedDstAlign() && Op.getSrcAlign() < Op.getDstAlign())
     return false;
 
   EVT VT = getOptimalMemOpType(Op, FuncAttributes);
@@ -196,9 +189,11 @@ bool TargetLowering::findOptimalMemOpLowering(
     // We only need to check DstAlign here as SrcAlign is always greater or
     // equal to DstAlign (or zero).
     VT = MVT::i64;
-    while (Op.getDstAlign() && Op.getDstAlign() < VT.getSizeInBits() / 8 &&
-           !allowsMisalignedMemoryAccesses(VT, DstAS, Op.getDstAlign()))
-      VT = (MVT::SimpleValueType)(VT.getSimpleVT().SimpleTy - 1);
+    if (Op.isFixedDstAlign())
+      while (
+          Op.getDstAlign() < (VT.getSizeInBits() / 8) &&
+          !allowsMisalignedMemoryAccesses(VT, DstAS, Op.getDstAlign().value()))
+        VT = (MVT::SimpleValueType)(VT.getSimpleVT().SimpleTy - 1);
     assert(VT.isInteger());
 
     // Find the largest legal integer type.
@@ -214,8 +209,8 @@ bool TargetLowering::findOptimalMemOpLowering(
   }
 
   unsigned NumMemOps = 0;
-  auto Size = Op.size();
-  while (Size != 0) {
+  uint64_t Size = Op.size();
+  while (Size) {
     unsigned VTSize = VT.getSizeInBits() / 8;
     while (VTSize > Size) {
       // For now, only use non-vector load / store's for the left-over pieces.
@@ -250,8 +245,9 @@ bool TargetLowering::findOptimalMemOpLowering(
       // issuing a (or a pair of) unaligned and overlapping load / store.
       bool Fast;
       if (NumMemOps && Op.allowOverlap() && NewVTSize < Size &&
-          allowsMisalignedMemoryAccesses(VT, DstAS, Op.getDstAlign(),
-                                         MachineMemOperand::MONone, &Fast) &&
+          allowsMisalignedMemoryAccesses(
+              VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign().value() : 0,
+              MachineMemOperand::MONone, &Fast) &&
           Fast)
         VTSize = Size;
       else {

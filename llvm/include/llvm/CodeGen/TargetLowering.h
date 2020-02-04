@@ -154,15 +154,35 @@ public:
   }
 
   uint64_t size() const { return Size; }
-  uint64_t getDstAlign() const {
-    return DstAlignCanChange ? 0 : DstAlign.value();
+  Align getDstAlign() const {
+    assert(!DstAlignCanChange);
+    return DstAlign;
   }
+  bool isFixedDstAlign() const { return !DstAlignCanChange; }
   bool allowOverlap() const { return AllowOverlap; }
   bool isMemset() const { return IsMemset; }
   bool isMemcpy() const { return !IsMemset; }
-  bool isZeroMemset() const { return ZeroMemset; }
-  bool isMemcpyStrSrc() const { return MemcpyStrSrc; }
-  uint64_t getSrcAlign() const { return isMemset() ? 0 : SrcAlign.value(); }
+  bool isMemcpyWithFixedDstAlign() const {
+    return isMemcpy() && !DstAlignCanChange;
+  }
+  bool isZeroMemset() const { return isMemset() && ZeroMemset; }
+  bool isMemcpyStrSrc() const {
+    assert(isMemcpy() && "Must be a memcpy");
+    return MemcpyStrSrc;
+  }
+  Align getSrcAlign() const {
+    assert(isMemcpy() && "Must be a memcpy");
+    return SrcAlign;
+  }
+  bool isSrcAligned(Align AlignCheck) const {
+    return isMemset() || llvm::isAligned(AlignCheck, SrcAlign.value());
+  }
+  bool isDstAligned(Align AlignCheck) const {
+    return DstAlignCanChange || llvm::isAligned(AlignCheck, DstAlign.value());
+  }
+  bool isAligned(Align AlignCheck) const {
+    return isSrcAligned(AlignCheck) && isDstAligned(AlignCheck);
+  }
 };
 
 /// This base class for TargetLowering contains the SelectionDAG-independent
