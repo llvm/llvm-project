@@ -50,7 +50,7 @@ define void @f2_1() "patchable-function-entry"="1" "patchable-function-prefix"="
 ; CHECK-NEXT:  ret
 ; CHECK:      .Lfunc_end2:
 ; CHECK-NEXT: .size f2_1, .Lfunc_end2-f2_1
-; CHECK:      .section __patchable_function_entries,"awo",@progbits,f1,unique,0
+; CHECK:      .section __patchable_function_entries,"awo",@progbits,f2_1,unique,0
 ; 32-NEXT:    .p2align 2
 ; 32-NEXT:    .long .Ltmp0
 ; 64-NEXT:    .p2align 3
@@ -73,7 +73,7 @@ define internal void @f1i() "patchable-function-entry"="1" {
 ; CHECK-NOT:  .Lpatch0:
 ;; Another basic block has ENDBR, but it doesn't affect our decision to not create .Lpatch0
 ; CHECK:       endbr
-; CHECK:      .section __patchable_function_entries,"awo",@progbits,f1,unique,0
+; CHECK:      .section __patchable_function_entries,"awo",@progbits,f1i,unique,0
 ; 32-NEXT:    .p2align 2
 ; 32-NEXT:    .long .Lfunc_begin3
 ; 64-NEXT:    .p2align 3
