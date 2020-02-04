@@ -1,4 +1,5 @@
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
+// RUN: %libomp-compile -DNOWAIT && %libomp-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // UNSUPPORTED: gcc
 #include "callback.h"
@@ -11,14 +12,17 @@
 #endif
 
 int main() {
-  int sum = 0;
+  int sum = 0, a = 0, b = 0;
   int i;
 #pragma omp parallel num_threads(5)
-#pragma omp for reduction(+ : sum) FOR_CLAUSE
+// for 32-bit architecture we need at least 3 variables to trigger tree
+#pragma omp for reduction(+ : sum, a, b) FOR_CLAUSE
   for (i = 0; i < 10000; i++) {
-    sum += i;
+    a = b = sum += i;
   }
 
+
+  printf("%i\n", sum);
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin:
