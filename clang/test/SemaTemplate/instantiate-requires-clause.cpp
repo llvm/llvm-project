@@ -58,3 +58,12 @@ struct S3 {
 };
 
 static_assert((S3<int>::f(), true));
+
+template<typename T>
+struct S4 {
+    template<typename>
+    void foo() requires (*this, true) { }
+    void goo() requires (*this, true) { }
+};
+
+static_assert((S4<int>{}.foo<int>(), S4<int>{}.goo(), true));
