@@ -189,18 +189,20 @@ bool BPFAbstractMemberAccess::runOnModule(Module &M) {
   return doTransformation(M);
 }
 
-static bool SkipDIDerivedTag(unsigned Tag) {
+static bool SkipDIDerivedTag(unsigned Tag, bool skipTypedef) {
   if (Tag != dwarf::DW_TAG_typedef && Tag != dwarf::DW_TAG_const_type &&
       Tag != dwarf::DW_TAG_volatile_type &&
       Tag != dwarf::DW_TAG_restrict_type &&
       Tag != dwarf::DW_TAG_member)
-     return false;
+    return false;
+  if (Tag == dwarf::DW_TAG_typedef && !skipTypedef)
+    return false;
   return true;
 }
 
-static DIType * stripQualifiers(DIType *Ty) {
+static DIType * stripQualifiers(DIType *Ty, bool skipTypedef = true) {
   while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
-    if (!SkipDIDerivedTag(DTy->getTag()))
+    if (!SkipDIDerivedTag(DTy->getTag(), skipTypedef))
       break;
     Ty = DTy->getBaseType();
   }
@@ -209,7 +211,7 @@ static DIType * stripQualifiers(DIType *Ty) {
 
 static const DIType * stripQualifiers(const DIType *Ty) {
   while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
-    if (!SkipDIDerivedTag(DTy->getTag()))
+    if (!SkipDIDerivedTag(DTy->getTag(), true))
       break;
     Ty = DTy->getBaseType();
   }
@@ -710,7 +712,7 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
   // calculated here as all debuginfo types are available.
 
   // Get type name and calculate the first index.
-  // We only want to get type name from structure or union.
+  // We only want to get type name from typedef, structure or union.
   // If user wants a relocation like
   //    int *p; ... __builtin_preserve_access_index(&p[4]) ...
   // or
@@ -727,12 +729,15 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
     if (!Base)
       Base = CInfo.Base;
 
-    DIType *Ty = stripQualifiers(cast<DIType>(CInfo.Metadata));
+    DIType *PossibleTypeDef = stripQualifiers(cast<DIType>(CInfo.Metadata),
+                                              false);
+    DIType *Ty = stripQualifiers(PossibleTypeDef);
     if (CInfo.Kind == BPFPreserveUnionAI ||
         CInfo.Kind == BPFPreserveStructAI) {
-      // struct or union type
-      TypeName = std::string(Ty->getName());
-      TypeMeta = Ty;
+      // struct or union type. If the typedef is in the metadata, always
+      // use the typedef.
+      TypeName = std::string(PossibleTypeDef->getName());
+      TypeMeta = PossibleTypeDef;
       PatchImm += FirstIndex * (Ty->getSizeInBits() >> 3);
       break;
     }
