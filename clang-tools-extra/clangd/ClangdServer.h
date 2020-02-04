@@ -130,8 +130,8 @@ public:
     llvm::Optional<std::string> ResourceDir = llvm::None;
 
     /// Time to wait after a new file version before computing diagnostics.
-    DebouncePolicy UpdateDebounce =
-        DebouncePolicy::fixed(std::chrono::milliseconds(500));
+    std::chrono::steady_clock::duration UpdateDebounce =
+        std::chrono::milliseconds(500);
 
     bool SuggestMissingIncludes = false;
 

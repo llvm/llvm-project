@@ -106,7 +106,7 @@ private:
 
 ClangdServer::Options ClangdServer::optsForTest() {
   ClangdServer::Options Opts;
-  Opts.UpdateDebounce = DebouncePolicy::fixed(/*zero*/ {});
+  Opts.UpdateDebounce = std::chrono::steady_clock::duration::zero(); // Faster!
   Opts.StorePreamblesInMemory = true;
   Opts.AsyncThreadsCount = 4; // Consistent!
   Opts.SemanticHighlighting = true;
