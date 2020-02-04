@@ -90,12 +90,13 @@ MCCodeEmitter *llvm::createRISCVMCCodeEmitter(const MCInstrInfo &MCII,
 }
 
 // Expand PseudoCALL(Reg), PseudoTAIL and PseudoJump to AUIPC and JALR with
-// relocation types. We those pseudo-instructions while encoding them, meaning
-// AUIPC and JALR won't go through RISCV MC to MC compressed instruction
-// transformation. This is acceptable because AUIPC has no 16-bit form and
-// C_JALR have no immediate operand field.  We let linker relaxation deal with
-// it. When linker relaxation enabled, AUIPC and JALR have chance relax to JAL.
-// If C extension is enabled, JAL has chance relax to C_JAL.
+// relocation types. We expand those pseudo-instructions while encoding them,
+// meaning AUIPC and JALR won't go through RISCV MC to MC compressed
+// instruction transformation. This is acceptable because AUIPC has no 16-bit
+// form and C_JALR has no immediate operand field.  We let linker relaxation
+// deal with it. When linker relaxation is enabled, AUIPC and JALR have a
+// chance to relax to JAL.
+// If the C extension is enabled, JAL has a chance relax to C_JAL.
 void RISCVMCCodeEmitter::expandFunctionCall(const MCInst &MI, raw_ostream &OS,
                                             SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {
