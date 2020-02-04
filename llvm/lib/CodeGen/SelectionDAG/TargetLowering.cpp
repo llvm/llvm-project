@@ -186,7 +186,7 @@ bool TargetLowering::findOptimalMemOpLowering(
   // means it's possible to change the alignment of the destination.
   // 'MemcpyStrSrc' indicates whether the memcpy source is constant so it does
   // not need to be loaded.
-  if (!(Op.SrcAlign == 0 || Op.SrcAlign >= Op.DstAlign))
+  if (!(Op.getSrcAlign() == 0 || Op.getSrcAlign() >= Op.getDstAlign()))
     return false;
 
   EVT VT = getOptimalMemOpType(Op, FuncAttributes);
@@ -196,8 +196,8 @@ bool TargetLowering::findOptimalMemOpLowering(
     // We only need to check DstAlign here as SrcAlign is always greater or
     // equal to DstAlign (or zero).
     VT = MVT::i64;
-    while (Op.DstAlign && Op.DstAlign < VT.getSizeInBits() / 8 &&
-           !allowsMisalignedMemoryAccesses(VT, DstAS, Op.DstAlign))
+    while (Op.getDstAlign() && Op.getDstAlign() < VT.getSizeInBits() / 8 &&
+           !allowsMisalignedMemoryAccesses(VT, DstAS, Op.getDstAlign()))
       VT = (MVT::SimpleValueType)(VT.getSimpleVT().SimpleTy - 1);
     assert(VT.isInteger());
 
@@ -214,7 +214,7 @@ bool TargetLowering::findOptimalMemOpLowering(
   }
 
   unsigned NumMemOps = 0;
-  auto Size = Op.Size;
+  auto Size = Op.size();
   while (Size != 0) {
     unsigned VTSize = VT.getSizeInBits() / 8;
     while (VTSize > Size) {
@@ -249,8 +249,8 @@ bool TargetLowering::findOptimalMemOpLowering(
       // If the new VT cannot cover all of the remaining bits, then consider
       // issuing a (or a pair of) unaligned and overlapping load / store.
       bool Fast;
-      if (NumMemOps && Op.AllowOverlap && NewVTSize < Size &&
-          allowsMisalignedMemoryAccesses(VT, DstAS, Op.DstAlign,
+      if (NumMemOps && Op.allowOverlap() && NewVTSize < Size &&
+          allowsMisalignedMemoryAccesses(VT, DstAS, Op.getDstAlign(),
                                          MachineMemOperand::MONone, &Fast) &&
           Fast)
         VTSize = Size;

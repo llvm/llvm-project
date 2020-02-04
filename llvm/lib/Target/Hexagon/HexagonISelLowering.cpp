@@ -3385,14 +3385,14 @@ EVT HexagonTargetLowering::getOptimalMemOpType(
     return (GivenA % MinA) == 0;
   };
 
-  if (Op.Size >= 8 && Aligned(Op.DstAlign, 8) &&
-      (Op.IsMemset || Aligned(Op.SrcAlign, 8)))
+  if (Op.size() >= 8 && Aligned(Op.getDstAlign(), 8) &&
+      (Op.isMemset() || Aligned(Op.getSrcAlign(), 8)))
     return MVT::i64;
-  if (Op.Size >= 4 && Aligned(Op.DstAlign, 4) &&
-      (Op.IsMemset || Aligned(Op.SrcAlign, 4)))
+  if (Op.size() >= 4 && Aligned(Op.getDstAlign(), 4) &&
+      (Op.isMemset() || Aligned(Op.getSrcAlign(), 4)))
     return MVT::i32;
-  if (Op.Size >= 2 && Aligned(Op.DstAlign, 2) &&
-      (Op.IsMemset || Aligned(Op.SrcAlign, 2)))
+  if (Op.size() >= 2 && Aligned(Op.getDstAlign(), 2) &&
+      (Op.isMemset() || Aligned(Op.getSrcAlign(), 2)))
     return MVT::i16;
 
   return MVT::Other;

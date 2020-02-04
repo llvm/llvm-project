@@ -1326,10 +1326,11 @@ EVT SITargetLowering::getOptimalMemOpType(
   // The default fallback uses the private pointer size as a guess for a type to
   // use. Make sure we switch these to 64-bit accesses.
 
-  if (Op.Size >= 16 && Op.DstAlign >= 4) // XXX: Should only do for global
+  if (Op.size() >= 16 &&
+      Op.getDstAlign() >= 4) // XXX: Should only do for global
     return MVT::v4i32;
 
-  if (Op.Size >= 8 && Op.DstAlign >= 4)
+  if (Op.size() >= 8 && Op.getDstAlign() >= 4)
     return MVT::v2i32;
 
   // Use the default.
