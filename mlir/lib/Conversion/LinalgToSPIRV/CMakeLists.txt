@@ -10,6 +10,7 @@ add_llvm_library(MLIRLinalgToSPIRVTransforms
 target_link_libraries(MLIRLinalgToSPIRVTransforms
   MLIRIR
   MLIRLinalgOps
+  MLIRLinalgUtils
   MLIRPass
   MLIRSPIRV
   MLIRSupport

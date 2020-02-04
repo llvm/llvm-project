@@ -11,4 +11,4 @@ add_llvm_library(MLIRVectorOps
 add_dependencies(MLIRVectorOps MLIRVectorOpsIncGen)
 add_dependencies(MLIRVectorOps MLIRVectorTransformPatternsIncGen)
 
-target_link_libraries(MLIRVectorOps MLIRIR)
+target_link_libraries(MLIRVectorOps MLIRAnalysis MLIRIR MLIRStandardOps MLIRAffineOps MLIRLoopOps)
