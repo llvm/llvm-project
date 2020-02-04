@@ -83,13 +83,13 @@ def Vector_ContractionOp :
 
       // 2D vector contraction with one contracting dimension (matmul).
       #contraction_accesses = [
-        (i, j, k) -> (i, k),
-        (i, j, k) -> (k, j),
-        (i, j, k) -> (i, j)
+        affine_map<(i, j, k) -> (i, k)>,
+        affine_map<(i, j, k) -> (k, j)>,
+        affine_map<(i, j, k) -> (i, j)>
       ]
       #contraction_trait = {
         indexing_maps = #contraction_accesses,
-        iterator_types = [parallel, parallel, reduction]
+        iterator_types = ["parallel", "parallel", "reduction"]
       }
 
       %3 = vector.contract #contraction_trait %0, %1, %2
@@ -98,13 +98,14 @@ def Vector_ContractionOp :
       // 4D to 3D vector contraction with two contracting dimensions and
       // one batch dimension.
       #contraction_accesses = [
-        (b0, f0, f1, c0, c1) -> (c0, b0, c1, f0),
-        (b0, f0, f1, c0, c1) -> (b0, c1, c0, f1),
-        (b0, f0, f1, c0, c1) -> (b0, f0, f1)
+        affine_map<(b0, f0, f1, c0, c1) -> (c0, b0, c1, f0)>,
+        affine_map<(b0, f0, f1, c0, c1) -> (b0, c1, c0, f1)>,
+        affine_map<(b0, f0, f1, c0, c1) -> (b0, f0, f1)>
       ]
       #contraction_trait = {
         indexing_maps = #contraction_accesses,
-        iterator_types = [parallel, parallel, parallel reduction, reduction]
+        iterator_types = ["parallel", "parallel", "parallel",
+	                  "reduction", "reduction"]
       }
 
       %4 = vector.contract #contraction_trait %0, %1, %2
