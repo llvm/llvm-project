@@ -1,6 +1,7 @@
 set(LIBS
 
   MLIRIR
+  MLIRStandardOps
   )
 
 add_llvm_library(MLIRLinalgOps

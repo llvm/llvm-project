@@ -15,4 +15,6 @@ target_link_libraries(MLIRGPUtoNVVMTransforms
   MLIRLLVMIR
   MLIRNVVMIR
   MLIRPass
+  MLIRStandardToLLVM
+  MLIRTransformUtils
   )

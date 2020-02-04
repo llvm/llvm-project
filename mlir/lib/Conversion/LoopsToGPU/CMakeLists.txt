@@ -1,5 +1,6 @@
 set(LIBS
   MLIRAffineOps
+  MLIRAffineToStandard
   MLIRGPU
   MLIRIR
   MLIRLinalgOps

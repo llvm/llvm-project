@@ -22,6 +22,8 @@ target_link_libraries(MLIRGPU
   MLIRIR
   MLIRLLVMIR
   MLIRLoopOps
+  MLIRPass
+  MLIRStandardOps
   MLIRSupport
   MLIRTransformUtils
   LLVMSupport)
