@@ -734,6 +734,26 @@ bool AMDGPUTargetLowering::isSDNodeAlwaysUniform(const SDNode * N) const {
   }
 }
 
+char AMDGPUTargetLowering::isNegatibleForFree(SDValue Op, SelectionDAG &DAG,
+                                              bool LegalOperations,
+                                              bool ForCodeSize,
+                                              unsigned Depth) const {
+  switch (Op.getOpcode()) {
+    case ISD::FMA:
+    case ISD::FMAD: {
+      // Negating a fma is not free if it has users without source mods.
+      if (!allUsesHaveSourceMods(Op.getNode()))
+        return 0;
+      break;
+    }
+    default:
+      break;
+  }
+
+  return TargetLowering::isNegatibleForFree(Op, DAG, LegalOperations,
+                                            ForCodeSize, Depth);
+}
+
 //===---------------------------------------------------------------------===//
 // Target Properties
 //===---------------------------------------------------------------------===//
