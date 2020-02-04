@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=z14 -O3 -mattr=soft-float < %s  | FileCheck %s
+; RUN: llc -mtriple=s390x-linux-gnu -mcpu=z14 -O3 -mattr=soft-float < %s  | FileCheck %s
 ;
 ; Check that this function with soft-float does not result in a s390.tdc
 ; intrinsic (which cannot be handled by SoftenFloatOperand).
