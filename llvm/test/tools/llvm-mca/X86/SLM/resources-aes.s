@@ -29,17 +29,17 @@ aeskeygenassist $22, (%rax), %xmm2
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      8     5.00                        aesdec	%xmm0, %xmm2
-# CHECK-NEXT:  1      8     5.00    *                   aesdec	(%rax), %xmm2
+# CHECK-NEXT:  1      11    5.00    *                   aesdec	(%rax), %xmm2
 # CHECK-NEXT:  1      8     5.00                        aesdeclast	%xmm0, %xmm2
-# CHECK-NEXT:  1      8     5.00    *                   aesdeclast	(%rax), %xmm2
+# CHECK-NEXT:  1      11    5.00    *                   aesdeclast	(%rax), %xmm2
 # CHECK-NEXT:  1      8     5.00                        aesenc	%xmm0, %xmm2
-# CHECK-NEXT:  1      8     5.00    *                   aesenc	(%rax), %xmm2
+# CHECK-NEXT:  1      11    5.00    *                   aesenc	(%rax), %xmm2
 # CHECK-NEXT:  1      8     5.00                        aesenclast	%xmm0, %xmm2
-# CHECK-NEXT:  1      8     5.00    *                   aesenclast	(%rax), %xmm2
+# CHECK-NEXT:  1      11    5.00    *                   aesenclast	(%rax), %xmm2
 # CHECK-NEXT:  1      8     5.00                        aesimc	%xmm0, %xmm2
-# CHECK-NEXT:  1      8     5.00    *                   aesimc	(%rax), %xmm2
+# CHECK-NEXT:  1      11    5.00    *                   aesimc	(%rax), %xmm2
 # CHECK-NEXT:  1      8     5.00                        aeskeygenassist	$22, %xmm0, %xmm2
-# CHECK-NEXT:  1      8     5.00    *                   aeskeygenassist	$22, (%rax), %xmm2
+# CHECK-NEXT:  1      11    5.00    *                   aeskeygenassist	$22, (%rax), %xmm2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SLMDivider
