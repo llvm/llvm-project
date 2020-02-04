@@ -1,6 +1,10 @@
-; RUN: llc -dwarf-version=5 -filetype=obj -O0 < %s | llvm-dwarfdump -debug-loclists - | FileCheck %s
+; RUN: llc -dwarf-version=5 -filetype=obj -O0 < %s | llvm-dwarfdump -debug-info -debug-loclists - | FileCheck %s
+; RUN: llc -dwarf-version=5 -split-dwarf-file=foo.dwo -filetype=obj -O0 < %s | llvm-dwarfdump -debug-info -debug-loclists - | FileCheck %s
 
-; CHECK: DW_LLE_offset_pair (0x0000000000000006, 0x000000000000000c): DW_OP_consts +7, DW_OP_convert 0x27, DW_OP_stack_value
+; CHECK: 0x{{0*}}[[TYPE:.*]]: DW_TAG_base_type
+; CHECK-NEXT:                DW_AT_name ("DW_ATE_unsigned_32")
+
+; CHECK: DW_LLE_offset_pair (0x0000000000000006, 0x000000000000000c): DW_OP_consts +7, DW_OP_convert 0x[[TYPE]], DW_OP_stack_value
 
 
 ; Function Attrs: uwtable
