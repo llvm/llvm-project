@@ -1090,6 +1090,8 @@ private:
       std::pair<CXXRecordDecl *, struct CXXRecordDecl::DefinitionData *>;
   using IDDataPointers = std::pair<ObjCInterfaceDecl *,
                                    struct ObjCInterfaceDecl::DefinitionData *>;
+  using ProtoDataPointers = std::pair<ObjCProtocolDecl *,
+                                   struct ObjCProtocolDecl::DefinitionData *>;
 
   /// Record definitions in which we found an ODR violation.
   llvm::SmallDenseMap<CXXRecordDecl *, llvm::SmallVector<DataPointers, 2>, 2>
@@ -1111,6 +1113,11 @@ private:
   llvm::SmallDenseMap<ObjCInterfaceDecl *, llvm::SmallVector<IDDataPointers, 2>,
                       2>
       PendingObjCInterfaceOdrMergeFailures;
+
+  /// ObjCProtocolDecl in which we found an ODR violation.
+  llvm::SmallDenseMap<ObjCProtocolDecl *, llvm::SmallVector<ProtoDataPointers, 2>,
+                      2>
+      PendingObjCProtocolOdrMergeFailures;
 
   /// DeclContexts in which we have diagnosed an ODR violation.
   llvm::SmallPtrSet<DeclContext*, 2> DiagnosedOdrMergeFailures;

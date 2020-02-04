@@ -2120,6 +2120,12 @@ class ObjCProtocolDecl : public ObjCContainerDecl,
 
     /// Referenced protocols
     ObjCProtocolList ReferencedProtocols;
+
+    /// Tracks whether a ODR hash has been computed for this protocol.
+    unsigned HasODRHash : 1;
+
+    /// A hash of parts of the class to help in ODR checking.
+    unsigned ODRHash = 0;
   };
 
   /// Contains a pointer to the data associated with this class,
@@ -2155,6 +2161,10 @@ class ObjCProtocolDecl : public ObjCContainerDecl,
   ObjCProtocolDecl *getMostRecentDeclImpl() override {
     return getMostRecentDecl();
   }
+
+  /// True if a valid hash is stored in ODRHash.
+  bool hasODRHash() const;
+  void setHasODRHash(bool Hash = true);
 
 public:
   friend class ASTDeclReader;
@@ -2310,6 +2320,9 @@ public:
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ObjCProtocol; }
+
+  /// Get precomputed ODRHash or add a new one.
+  unsigned getODRHash();
 };
 
 /// ObjCCategoryDecl - Represents a category declaration. A category allows

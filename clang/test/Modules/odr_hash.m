@@ -214,8 +214,8 @@ B3 *b3;
 @interface B4 : NSObject <P2>
 @end
 #else
-// FIXME: Silently accept this for now. Clang should emit an error when
-// ODR hash for protocols is implemented.
+// expected-error@first.h:* {{'B4' has different definitions in different modules; first difference is definition in module 'FirstModule' found with 1st protocol named 'P1'}}
+// expected-note@second.h:* {{but in 'SecondModule' found with 1st protocol named 'P2'}}
 B4 *b4;
 #endif
 
@@ -504,6 +504,57 @@ IP7 *ip7;
 IP8 *ip8;
 // expected-error@second.h:* {{'IP8' has different definitions in different modules; first difference is definition in module 'SecondModule' found 'weak' property attribute}}
 // expected-note@first.h:* {{but in 'FirstModule' found no written or default attribute for property}}
+#endif
+
+#if defined(FIRST)
+@protocol W1 <P1>
+@end
+@interface WI1 <P1>
+@end
+#elif defined(SECOND)
+@protocol W1 <P2>
+@end
+@interface WI1 <P2>
+@end
+#else
+@interface IFP1 <W1>
+@end
+IFP1 *ifp1;
+// expected-error@first.h:* {{'W1' has different definitions in different modules; first difference is definition in module 'FirstModule' found with 1st protocol named 'P1'}}
+// expected-note@second.h:* {{but in 'SecondModule' found with 1st protocol named 'P2'}}
+WI1 *wi1;
+// expected-error@first.h:* {{'WI1' has different definitions in different modules; first difference is definition in module 'FirstModule' found with 1st protocol named 'P1'}}
+// expected-note@second.h:* {{but in 'SecondModule' found with 1st protocol named 'P2'}}
+#endif
+
+#if defined(FIRST)
+@protocol W2
+@property (nonatomic, assign) float f;
+@end
+#elif defined(SECOND)
+@protocol W2
+@property (nonatomic, assign) float d;
+@end
+#else
+@interface IW2 <W2>
+@end
+// expected-error@first.h:* {{'W2' has different definitions in different modules; first difference is definition in module 'FirstModule' found property name 'f'}}
+// expected-note@second.h:* {{but in 'SecondModule' found property name 'd'}}
+#endif
+
+#if defined(FIRST)
+@protocol MW2
+- (void)compute:(int)arg0;
+@end
+#elif defined(SECOND)
+@protocol MW2
+- (void)compute:(int)arg1;
+@end
+#else
+@interface IMW2 <MW2>
+@end
+// expected-error@first.h:* {{'MW2' has different definitions in different modules; first difference is definition in module 'FirstModule' found method 'compute:' with 1st parameter named 'arg0'}}
+// expected-note@second.h:* {{but in 'SecondModule' found method 'compute:' with 1st parameter named 'arg1'}}
 #endif
 
 // Keep macros contained to one file.
