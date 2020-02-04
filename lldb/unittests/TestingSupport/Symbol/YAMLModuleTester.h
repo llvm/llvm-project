@@ -11,10 +11,10 @@
 
 #include "Plugins/SymbolFile/DWARF/DWARFUnit.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Symbol/TypeSystemClang.h"
 
 namespace lldb_private {
 
