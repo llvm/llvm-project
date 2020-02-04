@@ -2698,6 +2698,8 @@ class ObjCExceptionRecognizedStackFrame : public RecognizedStackFrame {
 
     m_arguments = ValueObjectListSP(new ValueObjectList());
     m_arguments->Append(exception);
+
+    m_stop_desc = "hit Objective-C exception";
   }
 
   ValueObjectSP exception;
