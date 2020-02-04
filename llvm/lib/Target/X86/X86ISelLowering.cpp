@@ -22231,25 +22231,25 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       SDValue Y = isAllOnesConstant(Op2) ? Op1 : Op2;
       SDValue CmpOp0 = Cmp.getOperand(0);
 
-      SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
-
       // Apply further optimizations for special cases
       // (select (x != 0), -1, 0) -> neg & sbb
       // (select (x == 0), 0, -1) -> neg & sbb
       if (isNullConstant(Y) &&
           (isAllOnesConstant(Op1) == (CondCode == X86::COND_NE))) {
         SDValue Zero = DAG.getConstant(0, DL, CmpOp0.getValueType());
-        SDValue Neg = DAG.getNode(X86ISD::SUB, DL, VTs, Zero, CmpOp0);
+        SDValue CmpZero = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Zero, CmpOp0);
+        SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
         Zero = DAG.getConstant(0, DL, Op.getValueType());
-        return DAG.getNode(X86ISD::SBB, DL, VTs, Zero, Zero, Neg.getValue(1));
+        return DAG.getNode(X86ISD::SBB, DL, VTs, Zero, Zero, CmpZero);
       }
 
-      Cmp = DAG.getNode(X86ISD::SUB, DL, VTs,
+      Cmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32,
                         CmpOp0, DAG.getConstant(1, DL, CmpOp0.getValueType()));
 
+      SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
       SDValue Zero = DAG.getConstant(0, DL, Op.getValueType());
       SDValue Res =   // Res = 0 or -1.
-        DAG.getNode(X86ISD::SBB, DL, VTs, Zero, Zero, Cmp.getValue(1));
+        DAG.getNode(X86ISD::SBB, DL, VTs, Zero, Zero, Cmp);
 
       if (isAllOnesConstant(Op1) != (CondCode == X86::COND_E))
         Res = DAG.getNOT(DL, Res, Res.getValueType());
@@ -44981,18 +44981,15 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
     if ((IsSub && CC == X86::COND_E && ConstantX->isNullValue()) ||
         (!IsSub && CC == X86::COND_NE && ConstantX->isAllOnesValue())) {
       SDValue One = DAG.getConstant(1, DL, ZVT);
-      SDVTList X86SubVTs = DAG.getVTList(ZVT, MVT::i32);
-      SDValue Cmp1 = DAG.getNode(X86ISD::SUB, DL, X86SubVTs, Z, One);
+      SDValue Cmp1 = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Z, One);
       return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
-                         DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
-                         Cmp1.getValue(1));
+                         DAG.getTargetConstant(X86::COND_B, DL, MVT::i8), Cmp1);
     }
   }
 
   // (cmp Z, 1) sets the carry flag if Z is 0.
   SDValue One = DAG.getConstant(1, DL, ZVT);
-  SDVTList X86SubVTs = DAG.getVTList(ZVT, MVT::i32);
-  SDValue Cmp1 = DAG.getNode(X86ISD::SUB, DL, X86SubVTs, Z, One);
+  SDValue Cmp1 = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Z, One);
 
   // Add the flags type for ADC/SBB nodes.
   SDVTList VTs = DAG.getVTList(VT, MVT::i32);
@@ -45001,12 +44998,12 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   // X + (Z != 0) --> add X, (zext(setne Z, 0)) --> sbb X, -1, (cmp Z, 1)
   if (CC == X86::COND_NE)
     return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL, VTs, X,
-                       DAG.getConstant(-1ULL, DL, VT), Cmp1.getValue(1));
+                       DAG.getConstant(-1ULL, DL, VT), Cmp1);
 
   // X - (Z == 0) --> sub X, (zext(sete  Z, 0)) --> sbb X, 0, (cmp Z, 1)
   // X + (Z == 0) --> add X, (zext(sete  Z, 0)) --> adc X, 0, (cmp Z, 1)
   return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL, VTs, X,
-                     DAG.getConstant(0, DL, VT), Cmp1.getValue(1));
+                     DAG.getConstant(0, DL, VT), Cmp1);
 }
 
 static SDValue combineLoopMAddPattern(SDNode *N, SelectionDAG &DAG,
