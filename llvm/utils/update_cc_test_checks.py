@@ -76,6 +76,10 @@ def get_line2spell_and_mangled(args, clang_args):
     if line is None:
       common.debug('Skipping function without line number:', node['name'], '@', node['loc'])
       return
+    # If there is no 'inner' object, it is a function declaration -> skip
+    if 'inner' not in node:
+      common.debug('Skipping function without body:', node['name'], '@', node['loc'])
+      return
     spell = node['name']
     mangled = node.get('mangledName', spell)
     ret[int(line)-1] = (spell, mangled)
