@@ -11415,7 +11415,7 @@ void ASTReader::diagnoseOdrViolations() {
 
   auto DiagnoseODRMismatchObjCGetLoc = [](NamedDecl *Container, auto DiffType,
                                           auto *DiffDecl,
-                                          auto *DefinitionData) {
+                                          SourceLocation DefinitionDataLoc) {
     SourceLocation Loc = Container->getEndLoc();
     SourceRange Range;
     if (DiffType != EndOfClass) {
@@ -11427,7 +11427,7 @@ void ASTReader::diagnoseOdrViolations() {
 
     if (auto *I = dyn_cast<ObjCInterfaceDecl>(Container))
       if (I->hasDefinition())
-        return std::make_pair(DefinitionData->EndLoc, Range);
+        return std::make_pair(DefinitionDataLoc, Range);
 
     return std::make_pair(Loc, Range);
   };
@@ -11437,18 +11437,69 @@ void ASTReader::diagnoseOdrViolations() {
                                      StringRef FirstModule,
                                      NamedDecl *SecondRecord,
                                      StringRef SecondModule,
-                                     auto *FirstDData,
-                                     auto *SecondDData) {
+                                     SourceLocation FirstDDataLoc,
+                                     SourceLocation SecondDDataLoc) {
     auto FirstDiagInfo = DiagnoseODRMismatchObjCGetLoc(
-        FirstRecord, DR.FirstDiffType, DR.FirstDecl, FirstDData);
+        FirstRecord, DR.FirstDiffType, DR.FirstDecl, FirstDDataLoc);
     Diag(FirstDiagInfo.first, diag::err_module_odr_violation_mismatch_decl)
         << FirstRecord << FirstModule.empty() << FirstModule
         << FirstDiagInfo.second << DR.FirstDiffType;
 
     auto SecondDiagInfo = DiagnoseODRMismatchObjCGetLoc(
-        SecondRecord, DR.SecondDiffType, DR.SecondDecl, SecondDData);
+        SecondRecord, DR.SecondDiffType, DR.SecondDecl, SecondDDataLoc);
     Diag(SecondDiagInfo.first, diag::note_module_odr_violation_mismatch_decl)
         << SecondModule << SecondDiagInfo.second << DR.SecondDiffType;
+  };
+
+  // Keep this in sync with
+  // err_module_odr_violation_objc_container_definition_data and
+  // note_module_odr_violation_objc_container_definition_data.
+  enum ODRObjCDefDataDifference {
+    SuperClassType,
+    ReferencedProtocols
+  };
+  auto ODRDiagObjCDDataError = [this](const ObjCContainerDecl *C, StringRef FirstModule,
+                                 SourceLocation Loc, SourceRange Range,
+                                 ODRObjCDefDataDifference DiffType) {
+    using namespace diag;
+    return Diag(Loc,
+                err_module_odr_violation_objc_container_definition_data)
+           << C << FirstModule.empty() << FirstModule << Range
+           << DiffType;
+  };
+  auto ODRDiagObjCDDataNote = [this](StringRef SecondModule, SourceLocation Loc,
+                                SourceRange Range,
+                                ODRObjCDefDataDifference DiffType) {
+    using namespace diag;
+    return Diag(Loc,
+                note_module_odr_violation_objc_container_definition_data)
+           << SecondModule << Range << DiffType;
+  };
+  auto GetProtoListSourceRange = [](const ObjCContainerDecl *C,
+                                    const ObjCProtocolList &PL) {
+    if (!PL.size())
+      return C->getSourceRange();
+    return SourceRange(*PL.loc_begin(), *std::prev(PL.loc_end()));
+  };
+
+  auto ODRDiagObjCProtocolList = [&ODRDiagObjCDDataError, &ODRDiagObjCDDataNote, &GetProtoListSourceRange](
+      const ObjCProtocolList &FirstProtos, const ObjCContainerDecl *FirstC, StringRef FirstModule,
+      const ObjCProtocolList &SecondProtos, const ObjCContainerDecl *SecondC, StringRef SecondModule) {
+    if (FirstProtos.size() != SecondProtos.size()) {
+      ODRDiagObjCDDataError(FirstC, FirstModule, FirstC->getLocation(),
+                       GetProtoListSourceRange(FirstC, FirstProtos),
+                       ReferencedProtocols)
+          << FirstProtos.size();
+      ODRDiagObjCDDataNote(SecondModule, SecondC->getLocation(),
+                      GetProtoListSourceRange(SecondC, SecondProtos),
+                      ReferencedProtocols)
+          << SecondProtos.size();
+      return true;
+    }
+
+    // FIXME: add support for checking the actual protocols once support
+    // for ODR hash in protocols land.
+    return false;
   };
 
   for (auto &Merge : ObjCInterfaceOdrMergeFailures) {
@@ -11476,31 +11527,6 @@ void ASTReader::diagnoseOdrViolations() {
       // FIXME: as part of definition data handling, add support for checking
       // matching protocols, ivars and categories
       if (FirstDD != SecondDD) {
-        // Keep this in sync with
-        // err_module_odr_violation_obj_interface_definition_data and
-        // note_module_odr_violation_obj_interface_definition_data.
-        enum ODRDefinitionDataDifference {
-          SuperClassType,
-          ReferencedProtocols
-        };
-        auto ODRDiagBaseError = [FirstID, &FirstModule,
-                                 this](SourceLocation Loc, SourceRange Range,
-                                       ODRDefinitionDataDifference DiffType) {
-          using namespace diag;
-          return Diag(Loc,
-                      err_module_odr_violation_obj_interface_definition_data)
-                 << FirstID << FirstModule.empty() << FirstModule << Range
-                 << DiffType;
-        };
-        auto ODRDiagBaseNote = [&SecondModule,
-                                this](SourceLocation Loc, SourceRange Range,
-                                      ODRDefinitionDataDifference DiffType) {
-          using namespace diag;
-          return Diag(Loc,
-                      note_module_odr_violation_obj_interface_definition_data)
-                 << SecondModule << Range << DiffType;
-        };
-
         // Check for matching super class.
         auto GetSuperClassSourceRange = [](TypeSourceInfo *SuperInfo,
                                            ObjCInterfaceDecl *ID) {
@@ -11527,7 +11553,7 @@ void ASTReader::diagnoseOdrViolations() {
           if (FirstSuperInfo)
             FirstType = FirstSuperInfo->getType();
 
-          ODRDiagBaseError(FirstID->getLocation(),
+          ODRDiagObjCDDataError(FirstID, FirstModule, FirstID->getLocation(),
                            GetSuperClassSourceRange(FirstSuperInfo, FirstID),
                            SuperClassType)
               << (bool)FirstSuperInfo << FirstType;
@@ -11536,7 +11562,7 @@ void ASTReader::diagnoseOdrViolations() {
           if (SecondSuperInfo)
             SecondType = SecondSuperInfo->getType();
 
-          ODRDiagBaseNote(SecondID->getLocation(),
+          ODRDiagObjCDDataNote(SecondModule, SecondID->getLocation(),
                           GetSuperClassSourceRange(SecondSuperInfo, SecondID),
                           SuperClassType)
               << (bool)SecondSuperInfo << SecondType;
@@ -11544,29 +11570,13 @@ void ASTReader::diagnoseOdrViolations() {
           break;
         }
 
-        // Check both interfaces reference the same number of protocols.
-        // FIXME: add support for checking the actual protocols once support
-        // for ODR hash in protocols land.
-        auto GetProtoListSourceRange = [](ObjCInterfaceDecl *ID,
-                                          const ObjCProtocolList &PL) {
-          if (!PL.size())
-            return ID->getSourceRange();
-          return SourceRange(*PL.loc_begin(), *std::prev(PL.loc_end()));
-        };
+        // Check both interfaces reference the same protocols.
         auto &FirstProtos = FirstID->getReferencedProtocols();
         auto &SecondProtos = SecondDD->ReferencedProtocols;
-        if (FirstProtos.size() != SecondProtos.size()) {
-          ODRDiagBaseError(FirstID->getLocation(),
-                           GetProtoListSourceRange(FirstID, FirstProtos),
-                           ReferencedProtocols)
-              << FirstProtos.size();
-          ODRDiagBaseNote(SecondID->getLocation(),
-                          GetProtoListSourceRange(SecondID, SecondProtos),
-                          ReferencedProtocols)
-              << SecondProtos.size();
-          Diagnosed = true;
+        Diagnosed = ODRDiagObjCProtocolList(FirstProtos, FirstID, FirstModule,
+                                            SecondProtos, SecondID, SecondModule);
+        if (Diagnosed)
           break;
-        }
       }
 
       // FIXME: Improve PopulateHashes above and only have one version.
@@ -11599,7 +11609,7 @@ void ASTReader::diagnoseOdrViolations() {
 
       if (FirstDiffType != SecondDiffType) {
         DiagnoseODRMismatchObjC(DR, FirstID, FirstModule, SecondID,
-                                SecondModule, FirstDD, SecondDD);
+                                SecondModule, FirstDD->EndLoc, SecondDD->EndLoc);
         Diagnosed = true;
         break;
       }
