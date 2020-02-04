@@ -13,4 +13,5 @@ module lldb_TestingSupport_Host {
 module lldb_TestingSupport_Symbol {
   requires cplusplus
   module ClangTestUtils { header "Symbol/ClangTestUtils.h" export * }
+  module YAMLModuleTester { header "Symbol/YAMLModuleTester.h" export * }
 }
