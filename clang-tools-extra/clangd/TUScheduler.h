@@ -61,28 +61,6 @@ struct ASTRetentionPolicy {
   unsigned MaxRetainedASTs = 3;
 };
 
-/// Clangd may wait after an update to see if another one comes along.
-/// This is so we rebuild once the user stops typing, not when they start.
-/// Debounce may be disabled/interrupted if we must build this version.
-/// The debounce time is responsive to user preferences and rebuild time.
-/// In the future, we could also consider different types of edits.
-struct DebouncePolicy {
-  using clock = std::chrono::steady_clock;
-
-  /// The minimum time that we always debounce for.
-  clock::duration Min = /*zero*/ {};
-  /// The maximum time we may debounce for.
-  clock::duration Max = /*zero*/ {};
-  /// Target debounce, as a fraction of file rebuild time.
-  /// e.g. RebuildRatio = 2, recent builds took 200ms => debounce for 400ms.
-  float RebuildRatio = 1;
-
-  /// Compute the time to debounce based on this policy and recent build times.
-  clock::duration compute(llvm::ArrayRef<clock::duration> History) const;
-  /// A policy that always returns the same duration, useful for tests.
-  static DebouncePolicy fixed(clock::duration);
-};
-
 struct TUAction {
   enum State {
     Queued,           // The TU is pending in the thread task queue to be built.
@@ -180,7 +158,7 @@ public:
 
     /// Time to wait after an update to see if another one comes along.
     /// This tries to ensure we rebuild once the user stops typing.
-    DebouncePolicy UpdateDebounce;
+    std::chrono::steady_clock::duration UpdateDebounce = /*zero*/ {};
 
     /// Determines when to keep idle ASTs in memory for future use.
     ASTRetentionPolicy RetentionPolicy;
@@ -295,7 +273,7 @@ private:
   // asynchronously.
   llvm::Optional<AsyncTaskRunner> PreambleTasks;
   llvm::Optional<AsyncTaskRunner> WorkerThreads;
-  DebouncePolicy UpdateDebounce;
+  std::chrono::steady_clock::duration UpdateDebounce;
 };
 
 } // namespace clangd
