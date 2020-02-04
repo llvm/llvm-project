@@ -1163,7 +1163,10 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
       return parseRegisterNumber(Constraint, &SystemZ::GR64BitRegClass,
                                  SystemZMC::GR64Regs, 16);
     }
-    if (Constraint[1] == 'f' && !useSoftFloat()) {
+    if (Constraint[1] == 'f') {
+      if (useSoftFloat())
+        return std::make_pair(
+            0u, static_cast<const TargetRegisterClass *>(nullptr));
       if (VT == MVT::f32)
         return parseRegisterNumber(Constraint, &SystemZ::FP32BitRegClass,
                                    SystemZMC::FP32Regs, 16);
@@ -1174,6 +1177,9 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
                                  SystemZMC::FP64Regs, 16);
     }
     if (Constraint[1] == 'v') {
+      if (!Subtarget.hasVector())
+        return std::make_pair(
+            0u, static_cast<const TargetRegisterClass *>(nullptr));
       if (VT == MVT::f32)
         return parseRegisterNumber(Constraint, &SystemZ::VR32BitRegClass,
                                    SystemZMC::VR32Regs, 32);
