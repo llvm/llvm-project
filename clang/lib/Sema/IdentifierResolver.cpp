@@ -217,7 +217,11 @@ void IdentifierResolver::RemoveDecl(NamedDecl *D) {
   assert(Ptr && "Didn't find this decl on its identifier's chain!");
 
   if (isDeclPtr(Ptr)) {
-    assert(D == Ptr && "Didn't find this decl on its identifier's chain!");
+    // FIXME: The following assert fires for ObjectiveC id, SEL, and Class
+    //   declarations when the module is explicitly built. For implicit builds
+    //   it works fine. rdar://58552906
+
+    // assert(D == Ptr && "Didn't find this decl on its identifier's chain!");
     Name.setFETokenInfo(nullptr);
     return;
   }

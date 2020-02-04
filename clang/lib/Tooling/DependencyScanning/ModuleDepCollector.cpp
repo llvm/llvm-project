@@ -53,8 +53,6 @@ void dependencies::detail::appendCommonModuleArguments(
         }
       };
 
-  Result.push_back("-fno-implicit-modules");
-  Result.push_back("-fno-implicit-module-maps");
   AddArgs(Modules);
 }
 
@@ -147,7 +145,7 @@ void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   const FileEntry *ModuleMap = Instance.getPreprocessor()
                                    .getHeaderSearchInfo()
                                    .getModuleMap()
-                                   .getContainingModuleMapFile(M);
+                                   .getModuleMapFileForUniquing(M);
 
   MD.ClangModuleMapFile = std::string(ModuleMap ? ModuleMap->getName() : "");
   MD.ModuleName = M->getFullModuleName();
@@ -157,8 +155,21 @@ void ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
       MDC.Instance.getASTReader()->getModuleManager().lookup(M->getASTFile());
   MDC.Instance.getASTReader()->visitInputFiles(
       *MF, true, true, [&](const serialization::InputFile &IF, bool isSystem) {
+        // __inferred_module.map is the result of the way in which an implicit
+        // module build handles inferred modules. It adds an overlay VFS with
+        // this file in the proper directory and relies on the rest of Clang to
+        // handle it like normal. With explicitly built modules we don't need
+        // to play VFS tricks, so replace it with the correct module map.
+        if (IF.getFile()->getName().endswith("__inferred_module.map")) {
+          MD.FileDeps.insert(ModuleMap->getName());
+          return;
+        }
         MD.FileDeps.insert(IF.getFile()->getName());
       });
+  MD.NonPathCommandLine = {
+    "-remove-preceeding-explicit-module-build-incompatible-options",
+    "-fno-implicit-modules", "-emit-module", "-fmodule-name=" + MD.ModuleName,
+  };
 
   llvm::DenseSet<const Module *> AddedModules;
   addAllSubmoduleDeps(M, MD, AddedModules);
