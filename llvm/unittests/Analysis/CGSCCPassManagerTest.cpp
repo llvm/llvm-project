@@ -1685,5 +1685,54 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses10) {
   MPM.run(*M, MAM);
 }
 
+TEST_F(CGSCCPassManagerTest, TestInsertionOfNewRefSCC) {
+  std::unique_ptr<Module> M = parseIR("define void @f() {\n"
+                                      "entry:\n"
+                                      "  call void @f()\n"
+                                      "  ret void\n"
+                                      "}\n");
+
+  CGSCCPassManager CGPM(/*DebugLogging*/ true);
+  CGPM.addPass(LambdaSCCPassNoPreserve(
+      [&](LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+          CGSCCUpdateResult &UR) {
+        for (auto &N : C) {
+          auto &F = N.getFunction();
+          if (F.getName() != "f")
+            continue;
+          auto *Call = dyn_cast<CallInst>(F.begin()->begin());
+          if (!Call || Call->getCalledFunction()->getName() != "f")
+            continue;
+
+          // Create a new function 'g'.
+          auto *G = Function::Create(F.getFunctionType(), F.getLinkage(),
+                                     F.getAddressSpace(), "g", F.getParent());
+          BasicBlock::Create(F.getParent()->getContext(), "entry", G);
+          // Instruct the LazyCallGraph to create a new node for 'g', as the
+          // single node in a new SCC, into the call graph. As a result
+          // the call graph is composed of a single RefSCC with two SCCs:
+          // [(f), (g)].
+          CG.addNewFunctionIntoRefSCC(*G, C.getOuterRefSCC());
+
+          // "Demote" the 'f -> f' call egde to a ref edge.
+          // 1. Erase the call edge from 'f' to 'f'.
+          Call->eraseFromParent();
+          // 2. Insert a ref edge from 'f' to 'f'.
+          (void)CastInst::CreatePointerCast(&F,
+                                            Type::getInt8PtrTy(F.getContext()),
+                                            "f.ref", &*F.begin()->begin());
+
+          ASSERT_NO_FATAL_FAILURE(
+              updateCGAndAnalysisManagerForCGSCCPass(CG, C, N, AM, UR))
+              << "Updating the call graph with a demoted, self-referential "
+                 "call edge 'f -> f', and a newly inserted ref edge 'f -> g', "
+                 "caused a fatal failure";
+        }
+      }));
+
+  ModulePassManager MPM(/*DebugLogging*/ true);
+  MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+  MPM.run(*M, MAM);
+}
 #endif
 } // namespace

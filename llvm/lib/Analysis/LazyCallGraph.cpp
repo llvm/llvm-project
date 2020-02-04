@@ -1567,12 +1567,17 @@ void LazyCallGraph::removeDeadFunction(Function &F) {
 }
 
 void LazyCallGraph::addNewFunctionIntoSCC(Function &NewF, SCC &C) {
-  Node &CGNode = get(NewF);
-  CGNode.DFSNumber = CGNode.LowLink = -1;
-  CGNode.populate();
-  C.Nodes.push_back(&CGNode);
-  SCCMap[&CGNode] = &C;
-  NodeMap[&NewF] = &CGNode;
+  addNodeToSCC(C, createNode(NewF));
+}
+
+void LazyCallGraph::addNewFunctionIntoRefSCC(Function &NewF, RefSCC &RC) {
+  Node &N = createNode(NewF);
+
+  auto *C = createSCC(RC, SmallVector<Node *, 1>());
+  addNodeToSCC(*C, N);
+
+  RC.SCCIndices[C] = RC.SCCIndices.size();
+  RC.SCCs.push_back(C);
 }
 
 LazyCallGraph::Node &LazyCallGraph::insertInto(Function &F, Node *&MappedN) {
@@ -1587,6 +1592,21 @@ void LazyCallGraph::updateGraphPtrs() {
 
   for (auto *RC : PostOrderRefSCCs)
     RC->G = this;
+}
+
+LazyCallGraph::Node &LazyCallGraph::createNode(Function &F) {
+  assert(!lookup(F) && "node already exists");
+
+  Node &N = get(F);
+  NodeMap[&F] = &N;
+  N.DFSNumber = N.LowLink = -1;
+  N.populate();
+  return N;
+}
+
+void LazyCallGraph::addNodeToSCC(LazyCallGraph::SCC &C, Node &N) {
+  C.Nodes.push_back(&N);
+  SCCMap[&N] = &C;
 }
 
 template <typename RootsT, typename GetBeginT, typename GetEndT,
