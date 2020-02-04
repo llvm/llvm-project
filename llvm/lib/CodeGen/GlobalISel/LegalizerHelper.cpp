@@ -327,13 +327,11 @@ LLT LegalizerHelper::buildLCMMergePieces(LLT DstTy, LLT NarrowTy, LLT GCDTy,
   }
 
   // Registers for the final merge to be produced.
-  SmallVector<Register, 4> Remerge;
-  Remerge.resize(NumParts);
+  SmallVector<Register, 4> Remerge(NumParts);
 
   // Registers needed for intermediate merges, which will be merged into a
   // source for Remerge.
-  SmallVector<Register, 4> SubMerge;
-  SubMerge.resize(NumSubParts);
+  SmallVector<Register, 4> SubMerge(NumSubParts);
 
   // Once we've fully read off the end of the original source bits, we can reuse
   // the same high bits for remaining padding elements.
@@ -1055,10 +1053,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     return Legalized;
   case TargetOpcode::G_PHI: {
     unsigned NumParts = SizeOp0 / NarrowSize;
-    SmallVector<Register, 2> DstRegs;
-    SmallVector<SmallVector<Register, 2>, 2> SrcRegs;
-    DstRegs.resize(NumParts);
-    SrcRegs.resize(MI.getNumOperands() / 2);
+    SmallVector<Register, 2> DstRegs(NumParts);
+    SmallVector<SmallVector<Register, 2>, 2> SrcRegs(MI.getNumOperands() / 2);
     Observer.changingInstr(MI);
     for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
       MachineBasicBlock &OpMBB = *MI.getOperand(i + 1).getMBB();
@@ -3723,10 +3719,10 @@ LegalizerHelper::narrowScalarMul(MachineInstr &MI, LLT NarrowTy) {
   bool IsMulHigh = MI.getOpcode() == TargetOpcode::G_UMULH;
   unsigned DstTmpParts = NumDstParts * (IsMulHigh ? 2 : 1);
 
-  SmallVector<Register, 2> Src1Parts, Src2Parts, DstTmpRegs;
+  SmallVector<Register, 2> Src1Parts, Src2Parts;
+  SmallVector<Register, 2> DstTmpRegs(DstTmpParts);
   extractParts(Src1, NarrowTy, NumSrcParts, Src1Parts);
   extractParts(Src2, NarrowTy, NumSrcParts, Src2Parts);
-  DstTmpRegs.resize(DstTmpParts);
   multiplyRegisters(DstTmpRegs, Src1Parts, Src2Parts, NarrowTy);
 
   // Take only high half of registers if this is high mul.
