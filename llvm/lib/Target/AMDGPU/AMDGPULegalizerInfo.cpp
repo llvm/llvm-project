@@ -528,20 +528,22 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(1, S32, S64)
     .scalarize(0);
 
-  // FIXME: fexp, flog2, flog10 needs to be custom lowered.
-  auto &FExp2Ops = getActionDefinitionsBuilder({G_FPOW, G_FEXP,
-                                                G_FEXP2, G_FLOG2});
+  // FIXME: fpow has a selection pattern that should move to custom lowering.
+  auto &Exp2Ops = getActionDefinitionsBuilder({G_FEXP2, G_FLOG2, G_FPOW});
   if (ST.has16BitInsts())
-    FExp2Ops.legalFor({{S32}, {S16}});
+    Exp2Ops.legalFor({S32, S16});
   else
-    FExp2Ops.legalFor({S32});
-  FExp2Ops.clampScalar(0, MinScalarFPTy, S32);
-  FExp2Ops.scalarize(0);
+    Exp2Ops.legalFor({S32});
+  Exp2Ops.clampScalar(0, MinScalarFPTy, S32);
+  Exp2Ops.scalarize(0);
 
-  getActionDefinitionsBuilder({G_FLOG, G_FLOG10})
-    .customFor({S32})
-    .clampScalar(0, S32, S32)
-    .scalarize(0);
+  auto &ExpOps = getActionDefinitionsBuilder({G_FEXP, G_FLOG, G_FLOG10});
+  if (ST.has16BitInsts())
+    ExpOps.customFor({{S32}, {S16}});
+  else
+    ExpOps.customFor({S32});
+  ExpOps.clampScalar(0, MinScalarFPTy, S32)
+        .scalarize(0);
 
   // The 64-bit versions produce 32-bit results, but only on the SALU.
   getActionDefinitionsBuilder({G_CTLZ, G_CTLZ_ZERO_UNDEF,
@@ -1228,6 +1230,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeFlog(MI, B, 1.0f / numbers::log2ef);
   case TargetOpcode::G_FLOG10:
     return legalizeFlog(MI, B, numbers::ln2f / numbers::ln10f);
+  case TargetOpcode::G_FEXP:
+    return legalizeFExp(MI, B);
   default:
     return false;
   }
@@ -1931,6 +1935,22 @@ bool AMDGPULegalizerInfo::legalizeFlog(
   auto Log2BaseInvertedOperand = B.buildFConstant(Ty, Log2BaseInverted);
 
   B.buildFMul(Dst, Log2Operand, Log2BaseInvertedOperand, Flags);
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
+                                       MachineIRBuilder &B) const {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  unsigned Flags = MI.getFlags();
+  LLT Ty = B.getMRI()->getType(Dst);
+  B.setInstr(MI);
+
+  auto K = B.buildFConstant(Ty, numbers::log2e);
+  auto Mul = B.buildFMul(Ty, Src, K, Flags);
+  B.buildFExp2(Dst, Mul, Flags);
+
   MI.eraseFromParent();
   return true;
 }
