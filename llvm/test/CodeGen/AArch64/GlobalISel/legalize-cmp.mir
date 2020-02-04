@@ -47,11 +47,10 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-  ; CHECK:   [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
   ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967296
-  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[DEF1]](s64), [[C1]]
-  ; CHECK:   [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[DEF1]](s64), [[C1]]
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[DEF]](s64), [[C1]]
+  ; CHECK:   [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[DEF]](s64), [[C1]]
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP1]](s32)
   ; CHECK:   [[ICMP2:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[DEF]](s64), [[C]]
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY [[ICMP2]](s32)
