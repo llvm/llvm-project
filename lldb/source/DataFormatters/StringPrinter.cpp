@@ -28,7 +28,7 @@ using namespace lldb_private::formatters;
 // we define this for all values of type but only implement it for those we
 // care about that's good because we get linker errors for any unsupported type
 template <lldb_private::formatters::StringPrinter::StringElementType type>
-static StringPrinter::StringPrinterBufferPointer<>
+static StringPrinter::StringPrinterBufferPointer
 GetPrintableImpl(uint8_t *buffer, uint8_t *buffer_end, uint8_t *&next);
 
 // mimic isprint() for Unicode codepoints
@@ -60,11 +60,11 @@ static bool isprint(char32_t codepoint) {
 }
 
 template <>
-StringPrinter::StringPrinterBufferPointer<>
+StringPrinter::StringPrinterBufferPointer
 GetPrintableImpl<StringPrinter::StringElementType::ASCII>(uint8_t *buffer,
                                                           uint8_t *buffer_end,
                                                           uint8_t *&next) {
-  StringPrinter::StringPrinterBufferPointer<> retval = {nullptr};
+  StringPrinter::StringPrinterBufferPointer retval = {nullptr};
 
   switch (*buffer) {
   case 0:
@@ -125,11 +125,11 @@ static char32_t ConvertUTF8ToCodePoint(unsigned char c0, unsigned char c1,
 }
 
 template <>
-StringPrinter::StringPrinterBufferPointer<>
+StringPrinter::StringPrinterBufferPointer
 GetPrintableImpl<StringPrinter::StringElementType::UTF8>(uint8_t *buffer,
                                                          uint8_t *buffer_end,
                                                          uint8_t *&next) {
-  StringPrinter::StringPrinterBufferPointer<> retval{nullptr};
+  StringPrinter::StringPrinterBufferPointer retval{nullptr};
 
   unsigned utf8_encoded_len = llvm::getNumBytesForUTF8(*buffer);
 
@@ -224,7 +224,7 @@ GetPrintableImpl<StringPrinter::StringElementType::UTF8>(uint8_t *buffer,
 // Given a sequence of bytes, this function returns: a sequence of bytes to
 // actually print out + a length the following unscanned position of the buffer
 // is in next
-static StringPrinter::StringPrinterBufferPointer<>
+static StringPrinter::StringPrinterBufferPointer
 GetPrintable(StringPrinter::StringElementType type, uint8_t *buffer,
              uint8_t *buffer_end, uint8_t *&next) {
   if (!buffer)
@@ -247,13 +247,13 @@ StringPrinter::GetDefaultEscapingHelper(GetPrintableElementType elem_type) {
   switch (elem_type) {
   case GetPrintableElementType::UTF8:
     return [](uint8_t *buffer, uint8_t *buffer_end,
-              uint8_t *&next) -> StringPrinter::StringPrinterBufferPointer<> {
+              uint8_t *&next) -> StringPrinter::StringPrinterBufferPointer {
       return GetPrintable(StringPrinter::StringElementType::UTF8, buffer,
                           buffer_end, next);
     };
   case GetPrintableElementType::ASCII:
     return [](uint8_t *buffer, uint8_t *buffer_end,
-              uint8_t *&next) -> StringPrinter::StringPrinterBufferPointer<> {
+              uint8_t *&next) -> StringPrinter::StringPrinterBufferPointer {
       return GetPrintable(StringPrinter::StringElementType::ASCII, buffer,
                           buffer_end, next);
     };
