@@ -43891,18 +43891,6 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (N0.getOpcode() == ISD::TRUNCATE &&
-      N0.hasOneUse() &&
-      N0.getOperand(0).hasOneUse()) {
-    SDValue N00 = N0.getOperand(0);
-    if (N00.getOpcode() == X86ISD::SETCC_CARRY) {
-      return DAG.getNode(ISD::AND, dl, VT,
-                         DAG.getNode(X86ISD::SETCC_CARRY, dl, VT,
-                                     N00.getOperand(0), N00.getOperand(1)),
-                         DAG.getConstant(1, dl, VT));
-    }
-  }
-
   if (SDValue NewCMov = combineToExtendCMOV(N, DAG))
     return NewCMov;
 
