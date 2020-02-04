@@ -3077,6 +3077,8 @@ void __sanitizer_syscall_pre_impl_rt_sigaction(long signum, long act,
                                                long oldact, long sz);
 void __sanitizer_syscall_post_impl_rt_sigaction(long res, long signum, long act,
                                                 long oldact, long sz);
+void __sanitizer_syscall_pre_impl_sigaltstack(long ss, long oss);
+void __sanitizer_syscall_post_impl_sigaltstack(long res, long ss, long oss);
 #ifdef __cplusplus
 }  // extern "C"
 #endif
