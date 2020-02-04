@@ -70,12 +70,13 @@ class UbsanBasicTestCase(TestBase):
             "thread info -s",
             "The extended stop info should contain the UBSan provided fields",
             substrs=[
-                "instrumentation_class",
-                "memory_address",
+                "col",
                 "description",
                 "filename",
+                "instrumentation_class",
                 "line",
-                "col"])
+                "memory_address",
+            ])
 
         output_lines = self.res.GetOutput().split('\n')
         json_line = '\n'.join(output_lines[2:])
