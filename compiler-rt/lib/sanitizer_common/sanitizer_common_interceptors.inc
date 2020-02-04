@@ -113,6 +113,7 @@
 #define setitimer __setitimer50
 #define setlocale __setlocale50
 #define shmctl __shmctl50
+#define sigaltstack __sigaltstack14
 #define sigemptyset __sigemptyset14
 #define sigfillset __sigfillset14
 #define sigpending __sigpending14
