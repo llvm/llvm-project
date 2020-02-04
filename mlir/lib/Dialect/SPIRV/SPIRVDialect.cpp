@@ -664,8 +664,8 @@ LogicalResult SPIRVDialect::verifyOperationAttribute(Operation *op,
              << symbol
              << "' must be a dictionary attribute containing one 32-bit "
                 "integer attribute 'version', one string array attribute "
-                "'extensions', and one 32-bit integer array attribute "
-                "'capabilities'";
+                "'extensions', one 32-bit integer array attribute "
+                "'capabilities', and one dictionary attribute 'limits'";
   } else {
     return op->emitError("found unsupported '")
            << symbol << "' attribute on operation";
