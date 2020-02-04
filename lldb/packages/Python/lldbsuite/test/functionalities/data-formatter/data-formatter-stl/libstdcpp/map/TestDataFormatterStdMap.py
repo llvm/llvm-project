@@ -251,35 +251,25 @@ class StdMapDataFormatterTestCase(TestBase):
 
         self.runCmd("c")
 
-        self.expect("frame variable ss",
-                    substrs=['map has 4 items',
-                             '[0] = ',
-                             'second = \"hello\"',
-                             'first = \"ciao\"',
-                             '[1] = ',
-                             'second = \"house\"',
-                             'first = \"casa\"',
-                             '[2] = ',
-                             'second = \"cat\"',
-                             'first = \"gatto\"',
-                             '[3] = ',
-                             'second = \"..is always a Mac!\"',
-                             'first = \"a Mac..\"'])
+        self.expect(
+            "frame variable ss",
+            substrs=[
+                'map has 4 items',
+                '[0] = (first = "a Mac..", second = "..is always a Mac!")',
+                '[1] = (first = "casa", second = "house")',
+                '[2] = (first = "ciao", second = "hello")',
+                '[3] = (first = "gatto", second = "cat")'
+            ])
 
-        self.expect("p ss",
-                    substrs=['map has 4 items',
-                             '[0] = ',
-                             'second = \"hello\"',
-                             'first = \"ciao\"',
-                             '[1] = ',
-                             'second = \"house\"',
-                             'first = \"casa\"',
-                             '[2] = ',
-                             'second = \"cat\"',
-                             'first = \"gatto\"',
-                             '[3] = ',
-                             'second = \"..is always a Mac!\"',
-                             'first = \"a Mac..\"'])
+        self.expect(
+            "p ss",
+            substrs=[
+                'map has 4 items',
+                '[0] = (first = "a Mac..", second = "..is always a Mac!")',
+                '[1] = (first = "casa", second = "house")',
+                '[2] = (first = "ciao", second = "hello")',
+                '[3] = (first = "gatto", second = "cat")'
+            ])
 
         # check access-by-index
         self.expect("frame variable ss[3]",
