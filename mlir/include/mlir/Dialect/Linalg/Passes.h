@@ -27,6 +27,9 @@ std::unique_ptr<OpPassBase<FuncOp>>
 createLinalgTilingPass(ArrayRef<int64_t> tileSizes = {});
 
 std::unique_ptr<OpPassBase<FuncOp>>
+createLinalgTilingToParallelLoopsPass(ArrayRef<int64_t> tileSizes = {});
+
+std::unique_ptr<OpPassBase<FuncOp>>
 createLinalgPromotionPass(bool dynamicBuffers);
 
 /// Create a pass to convert Linalg operations to loop.for loops and
