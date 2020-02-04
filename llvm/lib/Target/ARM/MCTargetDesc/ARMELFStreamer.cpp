@@ -93,7 +93,7 @@ class ARMTargetAsmStreamer : public ARMTargetStreamer {
   void emitIntTextAttribute(unsigned Attribute, unsigned IntValue,
                             StringRef StringValue) override;
   void emitArch(ARM::ArchKind Arch) override;
-  void emitArchExtension(unsigned ArchExt) override;
+  void emitArchExtension(uint64_t ArchExt) override;
   void emitObjectArch(ARM::ArchKind Arch) override;
   void emitFPU(unsigned FPU) override;
   void emitInst(uint32_t Inst, char Suffix = '\0') override;
@@ -222,7 +222,7 @@ void ARMTargetAsmStreamer::emitArch(ARM::ArchKind Arch) {
   OS << "\t.arch\t" << ARM::getArchName(Arch) << "\n";
 }
 
-void ARMTargetAsmStreamer::emitArchExtension(unsigned ArchExt) {
+void ARMTargetAsmStreamer::emitArchExtension(uint64_t ArchExt) {
   OS << "\t.arch_extension\t" << ARM::getArchExtName(ArchExt) << "\n";
 }
 
