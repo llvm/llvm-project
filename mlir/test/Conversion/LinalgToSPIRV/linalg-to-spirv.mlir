@@ -18,7 +18,11 @@ module attributes {
   spv.target_env = {
     version = 3 : i32,
     extensions = [],
-    capabilities = [1: i32, 63: i32] // Shader, GroupNonUniformArithmetic
+    capabilities = [1: i32, 63: i32], // Shader, GroupNonUniformArithmetic
+    limits = {
+      max_compute_workgroup_invocations = 128 : i32,
+      max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>
+    }
   }
 } {
 
@@ -79,7 +83,11 @@ module attributes {
   spv.target_env = {
     version = 3 : i32,
     extensions = [],
-    capabilities = [1: i32, 63: i32] // Shader, GroupNonUniformArithmetic
+    capabilities = [1: i32, 63: i32], // Shader, GroupNonUniformArithmetic
+    limits = {
+      max_compute_workgroup_invocations = 128 : i32,
+      max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>
+    }
   }
 } {
 func @single_workgroup_reduction(%input: memref<16xi32>, %output: memref<1xi32>) {
@@ -111,7 +119,11 @@ module attributes {
   spv.target_env = {
     version = 3 : i32,
     extensions = [],
-    capabilities = [1: i32, 63: i32] // Shader, GroupNonUniformArithmetic
+    capabilities = [1: i32, 63: i32], // Shader, GroupNonUniformArithmetic
+    limits = {
+      max_compute_workgroup_invocations = 128 : i32,
+      max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>
+    }
   }
 } {
 func @single_workgroup_reduction(%input: memref<16xi32>, %output: memref<1xi32>) attributes {
@@ -145,7 +157,11 @@ module attributes {
   spv.target_env = {
     version = 3 : i32,
     extensions = [],
-    capabilities = [1: i32, 63: i32] // Shader, GroupNonUniformArithmetic
+    capabilities = [1: i32, 63: i32], // Shader, GroupNonUniformArithmetic
+    limits = {
+      max_compute_workgroup_invocations = 128 : i32,
+      max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>
+    }
   }
 } {
 func @single_workgroup_reduction(%input: memref<16x8xi32>, %output: memref<16xi32>) attributes {

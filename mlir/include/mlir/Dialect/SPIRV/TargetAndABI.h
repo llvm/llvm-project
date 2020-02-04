@@ -43,6 +43,10 @@ StringRef getEntryPointABIAttrName();
 EntryPointABIAttr getEntryPointABIAttr(ArrayRef<int32_t> localSize,
                                        MLIRContext *context);
 
+/// Returns a default resource limits attribute that uses numbers from
+/// "Table 46. Required Limits" of the Vulkan spec.
+ResourceLimitsAttr getDefaultResourceLimits(MLIRContext *context);
+
 /// Returns the attribute name for specifying SPIR-V target environment.
 StringRef getTargetEnvAttrName();
 

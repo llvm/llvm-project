@@ -106,28 +106,28 @@ func @interface_var() -> (f32 {spv.interface_var_abi = {
 // spv.target_env
 //===----------------------------------------------------------------------===//
 
-// expected-error @+1 {{'spv.target_env' must be a dictionary attribute containing one 32-bit integer attribute 'version', one string array attribute 'extensions', and one 32-bit integer array attribute 'capabilities'}}
+// expected-error @+1 {{'spv.target_env' must be a dictionary attribute containing one 32-bit integer attribute 'version', one string array attribute 'extensions', one 32-bit integer array attribute 'capabilities', and one dictionary attribute 'limits'}}
 func @target_env_wrong_type() attributes {
   spv.target_env = 64
 } { return }
 
 // -----
 
-// expected-error @+1 {{'spv.target_env' must be a dictionary attribute containing one 32-bit integer attribute 'version', one string array attribute 'extensions', and one 32-bit integer array attribute 'capabilities'}}
+// expected-error @+1 {{'spv.target_env' must be a dictionary attribute containing one 32-bit integer attribute 'version', one string array attribute 'extensions', one 32-bit integer array attribute 'capabilities', and one dictionary attribute 'limits'}}
 func @target_env_missing_fields() attributes {
   spv.target_env = {version = 0: i32}
 } { return }
 
 // -----
 
-// expected-error @+1 {{'spv.target_env' must be a dictionary attribute containing one 32-bit integer attribute 'version', one string array attribute 'extensions', and one 32-bit integer array attribute 'capabilities'}}
+// expected-error @+1 {{'spv.target_env' must be a dictionary attribute containing one 32-bit integer attribute 'version', one string array attribute 'extensions', one 32-bit integer array attribute 'capabilities', and one dictionary attribute 'limits'}}
 func @target_env_wrong_extension_type() attributes {
   spv.target_env = {version = 0: i32, extensions = [32: i32], capabilities = [1: i32]}
 } { return }
 
 // -----
 
-// expected-error @+1 {{'spv.target_env' must be a dictionary attribute containing one 32-bit integer attribute 'version', one string array attribute 'extensions', and one 32-bit integer array attribute 'capabilities'}}
+// expected-error @+1 {{'spv.target_env' must be a dictionary attribute containing one 32-bit integer attribute 'version', one string array attribute 'extensions', one 32-bit integer array attribute 'capabilities', and one dictionary attribute 'limits'}}
 func @target_env_wrong_extension() attributes {
   spv.target_env = {version = 0: i32, extensions = ["SPV_Something"], capabilities = [1: i32]}
 } { return }
@@ -135,13 +135,21 @@ func @target_env_wrong_extension() attributes {
 // -----
 
 func @target_env() attributes {
-  // CHECK: spv.target_env = {capabilities = [1 : i32], extensions = ["SPV_KHR_storage_buffer_storage_class"], version = 0 : i32}
-  spv.target_env = {version = 0: i32, extensions = ["SPV_KHR_storage_buffer_storage_class"], capabilities = [1: i32]}
+  // CHECK: spv.target_env = {capabilities = [1 : i32], extensions = ["SPV_KHR_storage_buffer_storage_class"], limits = {max_compute_workgroup_invocations = 128 : i32, max_compute_workgroup_size = dense<[128, 64, 64]> : vector<3xi32>}, version = 0 : i32}
+  spv.target_env = {
+    version = 0: i32,
+    extensions = ["SPV_KHR_storage_buffer_storage_class"],
+    capabilities = [1: i32],
+    limits = {
+      max_compute_workgroup_invocations = 128 : i32,
+      max_compute_workgroup_size = dense<[128, 64, 64]> : vector<3xi32>
+    }
+  }
 } { return }
 
 // -----
 
-// expected-error @+1 {{'spv.target_env' must be a dictionary attribute containing one 32-bit integer attribute 'version', one string array attribute 'extensions', and one 32-bit integer array attribute 'capabilities'}}
+// expected-error @+1 {{'spv.target_env' must be a dictionary attribute containing one 32-bit integer attribute 'version', one string array attribute 'extensions', one 32-bit integer array attribute 'capabilities', and one dictionary attribute 'limits'}}
 func @target_env_extra_fields() attributes {
   spv.target_env = {version = 0: i32, extensions = ["SPV_KHR_storage_buffer_storage_class"], capabilities = [1: i32], extra = 32}
 } { return }
