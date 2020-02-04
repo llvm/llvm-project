@@ -6565,10 +6565,11 @@ namespace {
 
 class SystemZABIInfo : public SwiftABIInfo {
   bool HasVector;
+  bool IsSoftFloatABI;
 
 public:
-  SystemZABIInfo(CodeGenTypes &CGT, bool HV)
-    : SwiftABIInfo(CGT), HasVector(HV) {}
+  SystemZABIInfo(CodeGenTypes &CGT, bool HV, bool SF)
+    : SwiftABIInfo(CGT), HasVector(HV), IsSoftFloatABI(SF) {}
 
   bool isPromotableIntegerType(QualType Ty) const;
   bool isCompoundType(QualType Ty) const;
@@ -6600,8 +6601,8 @@ public:
 
 class SystemZTargetCodeGenInfo : public TargetCodeGenInfo {
 public:
-  SystemZTargetCodeGenInfo(CodeGenTypes &CGT, bool HasVector)
-    : TargetCodeGenInfo(new SystemZABIInfo(CGT, HasVector)) {}
+  SystemZTargetCodeGenInfo(CodeGenTypes &CGT, bool HasVector, bool SoftFloatABI)
+    : TargetCodeGenInfo(new SystemZABIInfo(CGT, HasVector, SoftFloatABI)) {}
 };
 
 }
@@ -6640,6 +6641,9 @@ bool SystemZABIInfo::isVectorArgumentType(QualType Ty) const {
 }
 
 bool SystemZABIInfo::isFPArgumentType(QualType Ty) const {
+  if (IsSoftFloatABI)
+    return false;
+
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>())
     switch (BT->getKind()) {
     case BuiltinType::Float:
@@ -6725,7 +6729,7 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   } else {
     if (AI.getCoerceToType())
       ArgTy = AI.getCoerceToType();
-    InFPRs = ArgTy->isFloatTy() || ArgTy->isDoubleTy();
+    InFPRs = (!IsSoftFloatABI && (ArgTy->isFloatTy() || ArgTy->isDoubleTy()));
     IsVector = ArgTy->isVectorTy();
     UnpaddedSize = TyInfo.first;
     DirectAlign = TyInfo.second;
@@ -9900,8 +9904,9 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   }
 
   case llvm::Triple::systemz: {
-    bool HasVector = getTarget().getABI() == "vector";
-    return SetCGInfo(new SystemZTargetCodeGenInfo(Types, HasVector));
+    bool SoftFloat = CodeGenOpts.FloatABI == "soft";
+    bool HasVector = !SoftFloat && getTarget().getABI() == "vector";
+    return SetCGInfo(new SystemZTargetCodeGenInfo(Types, HasVector, SoftFloat));
   }
 
   case llvm::Triple::tce:

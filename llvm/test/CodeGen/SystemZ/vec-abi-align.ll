@@ -32,6 +32,15 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -mattr=-vector | \
 ; RUN:   FileCheck -check-prefix=CHECK-NOVECTOR %s
 
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -mattr=+soft-float | \
+; RUN:   FileCheck -check-prefix=CHECK-NOVECTOR %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 \
+; RUN:   -mattr=soft-float,-soft-float | \
+; RUN:   FileCheck -check-prefix=CHECK-VECTOR %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 \
+; RUN:   -mattr=-soft-float,soft-float | \
+; RUN:   FileCheck -check-prefix=CHECK-NOVECTOR %s
+
 %struct.S = type { i8, <2 x i64> }
 
 define void @test(%struct.S* %s) nounwind {
