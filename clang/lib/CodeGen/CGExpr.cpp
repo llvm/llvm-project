@@ -4042,17 +4042,17 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
   return CGF.Builder.CreateStructGEP(base, idx, field->getName());
 }
 
-static Address emitPreserveStructAccess(CodeGenFunction &CGF, Address base,
-                                        const FieldDecl *field) {
+static Address emitPreserveStructAccess(CodeGenFunction &CGF, LValue base,
+                                        Address addr, const FieldDecl *field) {
   const RecordDecl *rec = field->getParent();
-  llvm::DIType *DbgInfo = CGF.getDebugInfo()->getOrCreateRecordType(
-      CGF.getContext().getRecordType(rec), rec->getLocation());
+  llvm::DIType *DbgInfo = CGF.getDebugInfo()->getOrCreateStandaloneType(
+      base.getType(), rec->getLocation());
 
   unsigned idx =
       CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
 
   return CGF.Builder.CreatePreserveStructAccessIndex(
-      base, idx, CGF.getDebugInfoFIndex(rec, field->getFieldIndex()), DbgInfo);
+      addr, idx, CGF.getDebugInfoFIndex(rec, field->getFieldIndex()), DbgInfo);
 }
 
 static bool hasAnyVptr(const QualType Type, const ASTContext &Context) {
@@ -4176,8 +4176,8 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     if (IsInPreservedAIRegion ||
         (getDebugInfo() && rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
       // Remember the original union field index
-      llvm::DIType *DbgInfo = getDebugInfo()->getOrCreateRecordType(
-          getContext().getRecordType(rec), rec->getLocation());
+      llvm::DIType *DbgInfo = getDebugInfo()->getOrCreateStandaloneType(base.getType(),
+          rec->getLocation());
       addr = Address(
           Builder.CreatePreserveUnionAccessIndex(
               addr.getPointer(), getDebugInfoFIndex(rec, field->getFieldIndex()), DbgInfo),
@@ -4194,7 +4194,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
       addr = emitAddrOfFieldStorage(*this, addr, field);
     else
       // Remember the original struct field index
-      addr = emitPreserveStructAccess(*this, addr, field);
+      addr = emitPreserveStructAccess(*this, base, addr, field);
   }
 
   // If this is a reference field, load the reference right now.
