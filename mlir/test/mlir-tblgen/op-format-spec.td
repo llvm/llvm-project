@@ -1,4 +1,4 @@
-// RUN: mlir-tblgen -gen-op-decls -I %S/../../include %s 2>&1 | FileCheck %s --dump-input-on-failure
+// RUN: mlir-tblgen -gen-op-decls -asmformat-error-is-fatal=false -I %S/../../include %s 2>&1 | FileCheck %s --dump-input-on-failure
 
 // This file contains tests for the specification of the declarative op format.
 
