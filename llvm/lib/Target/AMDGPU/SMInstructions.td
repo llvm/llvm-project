@@ -770,14 +770,16 @@ multiclass SMLoad_Pattern <string Instr, ValueType vt> {
   def : GCNPat <
     (SIsbuffer_load v4i32:$sbase, (SMRDBufferImm i32:$offset), timm:$cachepolicy),
     (vt (!cast<SM_Pseudo>(Instr#"_IMM") $sbase, $offset, (extract_glc $cachepolicy),
-                                        (extract_dlc $cachepolicy)))
-  >;
+                                        (extract_dlc $cachepolicy)))> {
+    let AddedComplexity = 2;
+  }
 
   // 2. 32-bit IMM offset on CI
   def : GCNPat <
     (vt (SIsbuffer_load v4i32:$sbase, (SMRDBufferImm32 i32:$offset), timm:$cachepolicy)),
     (!cast<InstSI>(Instr#"_IMM_ci") $sbase, $offset, (extract_glc $cachepolicy), (extract_dlc $cachepolicy))> {
     let OtherPredicates = [isGFX7Only];
+    let AddedComplexity = 1;
   }
 
   // 3. Offset loaded in an 32bit SGPR
