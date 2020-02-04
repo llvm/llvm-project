@@ -487,7 +487,7 @@ void ClangASTSource::FindExternalLexicalDecls(
 
   // Indicates whether we skipped any Decls of the original DeclContext.
   bool SkippedDecls = false;
-  for (TagDecl::decl_iterator iter = original_decl_context->decls_begin();
+  for (DeclContext::decl_iterator iter = original_decl_context->decls_begin();
        iter != original_decl_context->decls_end(); ++iter) {
     Decl *decl = *iter;
 
