@@ -50,8 +50,8 @@ entry:
 }
 
 ; ASM-LABEL: f: # @f
-; ASM: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X:[0-9]+]], DW_OP_deref] $rsp
-; ASM: movl    %ecx, [[OFF_X]](%rsp)
+; ASM: movl    %ecx, [[OFF_X:[0-9]+]](%rsp)
+; ASM: #DEBUG_VALUE: f:x <- [DW_OP_plus_uconst [[OFF_X]], DW_OP_deref] $rsp
 ; ASM: callq   escape
 ; ASM: #DEBUG_VALUE: f:x <- 1
 ; ASM: movl    $1, global(%rip)
