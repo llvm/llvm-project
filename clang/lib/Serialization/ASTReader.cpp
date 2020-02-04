@@ -9553,7 +9553,7 @@ void ASTReader::diagnoseOdrViolations() {
   // These lambdas have the common portions of the ODR diagnostics.  This
   // has the same return as Diag(), so addition parameters can be passed
   // in with operator<<
-  auto ODRDiagDeclError = [this](NamedDecl *FirstRecord, StringRef FirstModule,
+  auto ODRDiagDeclError = [this](const NamedDecl *FirstRecord, StringRef FirstModule,
                                  SourceLocation Loc, SourceRange Range,
                                  ODRMismatchDeclDifference DiffType) {
     return Diag(Loc, diag::err_module_odr_violation_mismatch_decl_diff)
