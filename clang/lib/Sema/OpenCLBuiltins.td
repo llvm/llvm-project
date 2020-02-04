@@ -120,7 +120,7 @@ class VectorType<Type _Ty, int _VecWidth> : Type<_Ty.Name, _Ty.QTName> {
 
 // OpenCL pointer types (e.g. int*, float*, ...).
 class PointerType<Type _Ty, AddressSpace _AS = DefaultAS> :
-                                      Type<_Ty.Name, _Ty.QTName> {
+    Type<_Ty.Name, _Ty.QTName> {
   let AddrSpace = _AS.Name;
   // Inherited fields
   let VecWidth = _Ty.VecWidth;
@@ -154,7 +154,7 @@ class VolatileType<Type _Ty> : Type<_Ty.Name, _Ty.QTName> {
 
 // OpenCL image types (e.g. image2d).
 class ImageType<Type _Ty, string _AccessQualifier> :
-          Type<_Ty.Name, QualType<_Ty.QTName.Name#_AccessQualifier#"Ty", 0>> {
+    Type<_Ty.Name, QualType<_Ty.QTName.Name#_AccessQualifier#"Ty", 0>> {
   let VecWidth = 0;
   let AccessQualifier = _AccessQualifier;
   // Inherited fields
@@ -165,8 +165,7 @@ class ImageType<Type _Ty, string _AccessQualifier> :
 }
 
 // List of Types.
-class TypeList<string _Name, list<Type> _Type> {
-  string Name = _Name;
+class TypeList<list<Type> _Type> {
   list<Type> List = _Type;
 }
 
@@ -195,7 +194,7 @@ class TypeList<string _Name, list<Type> _Type> {
 //      A declaration f(GenT, SGenT) results in the combinations
 //        f(half, half), f(half2, half), f(int, int), f(int2, int) .
 class GenericType<string _Ty, TypeList _TypeList, IntList _VectorList> :
-                                            Type<_Ty, QualType<"null", 1>> {
+    Type<_Ty, QualType<"null", 1>> {
   // Possible element types of the generic type.
   TypeList TypeList = _TypeList;
   // Possible vector sizes of the types in the TypeList.
@@ -260,7 +259,7 @@ def Size      : Type<"size_t",    QualType<"getSizeType()">>;
 def PtrDiff   : Type<"ptrdiff_t", QualType<"getPointerDiffType()">>;
 def IntPtr    : Type<"intptr_t",  QualType<"getIntPtrType()">>;
 def UIntPtr   : Type<"uintPtr_t", QualType<"getUIntPtrType()">>;
-def Void      : Type<"void_t",    QualType<"VoidTy">>;
+def Void      : Type<"void",      QualType<"VoidTy">>;
 
 // OpenCL v1.0/1.2/2.0 s6.1.2: Built-in Vector Data Types.
 // Built-in vector data types are created by TableGen's OpenCLBuiltinEmitter.
@@ -268,21 +267,21 @@ def Void      : Type<"void_t",    QualType<"VoidTy">>;
 // OpenCL v1.0/1.2/2.0 s6.1.3: Other Built-in Data Types.
 // The image definitions are "abstract".  They should not be used without
 // specifying an access qualifier (RO/WO/RW).
-def Image1d               : Type<"Image1d", QualType<"OCLImage1d", 1>>;
-def Image2d               : Type<"Image2d", QualType<"OCLImage2d", 1>>;
-def Image3d               : Type<"Image3d", QualType<"OCLImage3d", 1>>;
-def Image1dArray          : Type<"Image1dArray", QualType<"OCLImage1dArray", 1>>;
-def Image1dBuffer         : Type<"Image1dBuffer", QualType<"OCLImage1dBuffer", 1>>;
-def Image2dArray          : Type<"Image2dArray", QualType<"OCLImage2dArray", 1>>;
-def Image2dDepth          : Type<"Image2dDepth", QualType<"OCLImage2dDepth", 1>>;
-def Image2dArrayDepth     : Type<"Image2dArrayDepth", QualType<"OCLImage2dArrayDepth", 1>>;
-def Image2dMsaa           : Type<"Image2dMsaa", QualType<"OCLImage2dMSAA", 1>>;
-def Image2dArrayMsaa      : Type<"Image2dArrayMsaa", QualType<"OCLImage2dArrayMSAA", 1>>;
-def Image2dMsaaDepth      : Type<"Image2dMsaaDepth", QualType<"OCLImage2dMSAADepth", 1>>;
-def Image2dArrayMsaaDepth : Type<"Image2dArrayMsaaDepth", QualType<"OCLImage2dArrayMSAADepth", 1>>;
+def Image1d               : Type<"image1d_t", QualType<"OCLImage1d", 1>>;
+def Image2d               : Type<"image2d_t", QualType<"OCLImage2d", 1>>;
+def Image3d               : Type<"image3d_t", QualType<"OCLImage3d", 1>>;
+def Image1dArray          : Type<"image1d_array_t", QualType<"OCLImage1dArray", 1>>;
+def Image1dBuffer         : Type<"image1d_buffer_t", QualType<"OCLImage1dBuffer", 1>>;
+def Image2dArray          : Type<"image2d_array_t", QualType<"OCLImage2dArray", 1>>;
+def Image2dDepth          : Type<"image2d_depth_t", QualType<"OCLImage2dDepth", 1>>;
+def Image2dArrayDepth     : Type<"image2d_array_depth_t", QualType<"OCLImage2dArrayDepth", 1>>;
+def Image2dMsaa           : Type<"image2d_msaa_t", QualType<"OCLImage2dMSAA", 1>>;
+def Image2dArrayMsaa      : Type<"image2d_array_msaa_t", QualType<"OCLImage2dArrayMSAA", 1>>;
+def Image2dMsaaDepth      : Type<"image2d_msaa_depth_t", QualType<"OCLImage2dMSAADepth", 1>>;
+def Image2dArrayMsaaDepth : Type<"image2d_array_msaa_depth_t", QualType<"OCLImage2dArrayMSAADepth", 1>>;
 
-def Sampler           : Type<"Sampler", QualType<"OCLSamplerTy">>;
-def Event             : Type<"Event", QualType<"OCLEventTy">>;
+def Sampler               : Type<"sampler_t", QualType<"OCLSamplerTy">>;
+def Event                 : Type<"event_t", QualType<"OCLEventTy">>;
 
 //===----------------------------------------------------------------------===//
 //                 Definitions of OpenCL gentype variants
@@ -305,20 +304,20 @@ def Vec16       : IntList<"Vec16", [16]>;
 def Vec1234     : IntList<"Vec1234", [1, 2, 3, 4]>;
 
 // Type lists.
-def TLAll         : TypeList<"TLAll", [Char,  UChar, Short,  UShort, Int,  UInt, Long,  ULong, Float, Double, Half]>;
-def TLAllUnsigned : TypeList<"TLAllUnsigned", [UChar, UChar, UShort, UShort, UInt, UInt, ULong, ULong, UInt,  ULong,  UShort]>;
-def TLFloat : TypeList<"TLFloat", [Float, Double, Half]>;
-def TLSignedInts   : TypeList<"TLSignedInts", [Char, Short, Int, Long]>;
-def TLUnsignedInts : TypeList<"TLUnsignedInts", [UChar, UShort, UInt, ULong]>;
+def TLAll           : TypeList<[Char,  UChar, Short,  UShort, Int,  UInt, Long,  ULong, Float, Double, Half]>;
+def TLAllUnsigned   : TypeList<[UChar, UChar, UShort, UShort, UInt, UInt, ULong, ULong, UInt,  ULong,  UShort]>;
+def TLFloat         : TypeList<[Float, Double, Half]>;
+def TLSignedInts    : TypeList<[Char, Short, Int, Long]>;
+def TLUnsignedInts  : TypeList<[UChar, UShort, UInt, ULong]>;
 
-def TLIntLongFloats : TypeList<"TLIntLongFloats", [Int, UInt, Long, ULong, Float, Double, Half]>;
+def TLIntLongFloats : TypeList<[Int, UInt, Long, ULong, Float, Double, Half]>;
 
 // All unsigned integer types twice, to facilitate unsigned return types for e.g.
 // uchar abs(char) and
 // uchar abs(uchar).
-def TLAllUIntsTwice : TypeList<"TLAllUIntsTwice", [UChar, UChar, UShort, UShort, UInt, UInt, ULong, ULong]>;
+def TLAllUIntsTwice : TypeList<[UChar, UChar, UShort, UShort, UInt, UInt, ULong, ULong]>;
 
-def TLAllInts : TypeList<"TLAllInts", [Char, UChar, Short, UShort, Int, UInt, Long, ULong]>;
+def TLAllInts       : TypeList<[Char, UChar, Short, UShort, Int, UInt, Long, ULong]>;
 
 // GenType definitions for multiple base types (e.g. all floating point types,
 // or all integer types).
@@ -348,8 +347,7 @@ foreach Type = [Char, UChar, Short, UShort,
   foreach VecSizes = [VecAndScalar, VecNoScalar] in {
     def "GenType" # Type # VecSizes :
               GenericType<"GenType" # Type # VecSizes,
-                          TypeList<"GL" # Type.Name, [Type]>,
-                          VecSizes>;
+                          TypeList<[Type]>, VecSizes>;
   }
 }
 
@@ -357,8 +355,7 @@ foreach Type = [Char, UChar, Short, UShort,
 foreach Type = [Float, Double, Half] in {
   def "GenType" # Type # Vec1234 :
               GenericType<"GenType" # Type # Vec1234,
-                          TypeList<"GL" # Type.Name, [Type]>,
-                          Vec1234>;
+                          TypeList<[Type]>, Vec1234>;
 }
 
 
