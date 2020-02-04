@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Section.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 

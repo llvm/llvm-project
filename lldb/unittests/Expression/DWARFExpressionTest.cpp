@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/DWARFExpression.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/dwarf.h"
