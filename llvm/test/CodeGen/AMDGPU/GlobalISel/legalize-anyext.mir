@@ -275,6 +275,25 @@ body: |
 ...
 
 ---
+name: test_anyext_s32_to_s96
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: test_anyext_s32_to_s96
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY]](s32), [[DEF]](s32)
+    ; CHECK: [[DEF1:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK: [[MV1:%[0-9]+]]:_(s192) = G_MERGE_VALUES [[MV]](s64), [[DEF1]](s64), [[DEF1]](s64)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s96) = G_TRUNC [[MV1]](s192)
+    ; CHECK: S_ENDPGM 0, implicit [[TRUNC]](s96)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s96) = G_ANYEXT %0
+    S_ENDPGM 0, implicit %1
+...
+
+---
 name: test_anyext_s32_to_s128
 body: |
   bb.0:
