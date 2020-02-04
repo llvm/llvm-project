@@ -248,7 +248,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   };
 
   const LLT MinScalarFPTy = ST.has16BitInsts() ? S16 : S32;
-  const LLT MinLegalScalarShiftTy = ST.has16BitInsts() ? S16 : S32;
 
   setAction({G_BRCOND, S1}, Legal); // VCC branches
   setAction({G_BRCOND, S32}, Legal); // SCC branches
@@ -1129,10 +1128,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(1);
   }
 
-  // TODO: Make legal for s32, s64. s64 case needs break down in regbankselect.
-  auto &SextInReg = getActionDefinitionsBuilder(G_SEXT_INREG);
+  // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
+  // RegBankSelect.
+  auto &SextInReg = getActionDefinitionsBuilder(G_SEXT_INREG)
+    .legalFor({{S32}, {S64}});
+
   if (ST.hasVOP3PInsts()) {
-    SextInReg.lowerFor({{S32}, {S64}, {S16}, {V2S16}})
+    SextInReg.lowerFor({{V2S16}})
       // Prefer to reduce vector widths for 16-bit vectors before lowering, to
       // get more vector shift opportunities, since we'll get those when
       // expanded.
@@ -1147,7 +1149,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   SextInReg
     .scalarize(0)
-    .clampScalar(0, MinLegalScalarShiftTy, S64)
+    .clampScalar(0, S32, S64)
     .lower();
 
   getActionDefinitionsBuilder(G_READCYCLECOUNTER)
