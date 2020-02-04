@@ -50,7 +50,7 @@ public:
   }
   void EmitULEB128(uint64_t DWord, const Twine &Comment, unsigned PadTo) override {
     AP.OutStreamer->AddComment(Comment);
-    AP.EmitULEB128(DWord);
+    AP.EmitULEB128(DWord, nullptr, PadTo);
   }
 };
 
