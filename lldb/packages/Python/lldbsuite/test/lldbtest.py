@@ -2261,6 +2261,7 @@ FileCheck output:
             substrs=None,
             trace=False,
             error=False,
+            ordered=True,
             matching=True,
             exe=True,
             inHistory=False):
@@ -2272,6 +2273,10 @@ FileCheck output:
         message.  We expect the output from running the command to start with
         'startstr', matches the substrings contained in 'substrs', and regexp
         matches the patterns contained in 'patterns'.
+
+        When matching is true and ordered is true, which are both the default,
+        the strings in the substrs array have to appear in the command output
+        in the order in which they appear in the array.
 
         If the keyword argument error is set to True, it signifies that the API
         client is expecting the command to fail.  In this case, the error stream
@@ -2341,8 +2346,11 @@ FileCheck output:
         # Look for sub strings, if specified.
         keepgoing = matched if matching else not matched
         if substrs and keepgoing:
+            start = 0
             for substr in substrs:
-                matched = output.find(substr) != -1
+                index = output[start:].find(substr)
+                start = start + index if ordered and matching else 0
+                matched = index != -1
                 with recording(self, trace) as sbuf:
                     print("%s sub string: %s" % (heading, substr), file=sbuf)
                     print("Matched" if matched else "Not matched", file=sbuf)

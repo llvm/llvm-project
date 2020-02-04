@@ -245,6 +245,7 @@ class targetCommandTestCase(TestBase):
         # It will find all the global and static variables in the current
         # compile unit.
         self.expect("target variable",
+                    ordered=False,
                     substrs=['my_global_char',
                              'my_static_int',
                              'my_global_str',
