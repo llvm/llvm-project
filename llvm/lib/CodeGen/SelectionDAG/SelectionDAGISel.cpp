@@ -215,6 +215,7 @@ namespace llvm {
     OptLevelChanger(SelectionDAGISel &ISel,
                     CodeGenOpt::Level NewOptLevel) : IS(ISel) {
       SavedOptLevel = IS.OptLevel;
+      SavedFastISel = IS.TM.Options.EnableFastISel;
       if (NewOptLevel == SavedOptLevel)
         return;
       IS.OptLevel = NewOptLevel;
@@ -223,7 +224,6 @@ namespace llvm {
                         << IS.MF->getFunction().getName() << "\n");
       LLVM_DEBUG(dbgs() << "\tBefore: -O" << SavedOptLevel << " ; After: -O"
                         << NewOptLevel << "\n");
-      SavedFastISel = IS.TM.Options.EnableFastISel;
       if (NewOptLevel == CodeGenOpt::None) {
         IS.TM.setFastISel(IS.TM.getO0WantsFastISel());
         LLVM_DEBUG(
