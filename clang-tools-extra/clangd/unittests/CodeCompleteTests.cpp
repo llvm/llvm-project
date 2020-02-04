@@ -2664,6 +2664,17 @@ TEST(CompletionTest, DerivedMethodsAreAlwaysVisible) {
               ElementsAre(AllOf(ReturnType("int"), Named("size"))));
 }
 
+TEST(CompletionTest, NoCrashWithIncompleteLambda) {
+  auto Completions = completions("auto&& x = []{^").Completions;
+  // The completion of x itself can cause a problem: in the code completion
+  // callback, its type is not known, which affects the linkage calculation.
+  // A bad linkage value gets cached, and subsequently updated.
+  EXPECT_THAT(Completions, Contains(Named("x")));
+
+  auto Signatures = signatures("auto x() { x(^").signatures;
+  EXPECT_THAT(Signatures, Contains(Sig("x() -> auto")));
+}
+
 TEST(NoCompileCompletionTest, Basic) {
   auto Results = completionsNoCompile(R"cpp(
     void func() {
