@@ -32,14 +32,14 @@ const char *ARMArch[] = {
 };
 
 bool testARMCPU(StringRef CPUName, StringRef ExpectedArch,
-                StringRef ExpectedFPU, unsigned ExpectedFlags,
+                StringRef ExpectedFPU, uint64_t ExpectedFlags,
                 StringRef CPUAttr) {
   ARM::ArchKind AK = ARM::parseCPUArch(CPUName);
   bool pass = ARM::getArchName(AK).equals(ExpectedArch);
   unsigned FPUKind = ARM::getDefaultFPU(CPUName, AK);
   pass &= ARM::getFPUName(FPUKind).equals(ExpectedFPU);
 
-  unsigned ExtKind = ARM::getDefaultExtensions(CPUName, AK);
+  uint64_t ExtKind = ARM::getDefaultExtensions(CPUName, AK);
   if (ExtKind > 1 && (ExtKind & ARM::AEK_NONE))
     pass &= ((ExtKind ^ ARM::AEK_NONE) == ExpectedFlags);
   else
@@ -565,7 +565,7 @@ TEST(TargetParserTest, ARMFPURestriction) {
 }
 
 TEST(TargetParserTest, ARMExtensionFeatures) {
-  std::map<unsigned, std::vector<StringRef>> Extensions;
+  std::map<uint64_t, std::vector<StringRef>> Extensions;
 
   for (auto &Ext : ARM::ARCHExtNames) {
     if (Ext.Feature && Ext.NegFeature)
