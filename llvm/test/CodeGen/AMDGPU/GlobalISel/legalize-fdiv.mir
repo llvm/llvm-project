@@ -9,8 +9,10 @@
 name: test_fdiv_s16
 machineFunctionInfo:
   mode:
-    fp32-denormals: true
-    fp64-fp16-denormals: true
+    fp32-input-denormals: true
+    fp32-output-denormals: true
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
@@ -100,8 +102,10 @@ body: |
 name: test_fdiv_s32_denorms_on
 machineFunctionInfo:
   mode:
-    fp32-denormals: true
-    fp64-fp16-denormals: true
+    fp32-input-denormals: true
+    fp32-output-denormals: true
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
@@ -191,8 +195,10 @@ body: |
 name: test_fdiv_s32_denorms_off
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
-    fp64-fp16-denormals: true
+    fp32-input-denormals: false
+    fp32-output-denormals: false
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
@@ -290,8 +296,10 @@ body: |
 name: test_fdiv_s32_denorms_off_arcp
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
-    fp64-fp16-denormals: true
+    fp32-input-denormals: false
+    fp32-output-denormals: false
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
@@ -337,8 +345,10 @@ body: |
 name: test_fdiv_s64
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
-    fp64-fp16-denormals: true
+    fp32-input-denormals: false
+    fp32-output-denormals: false
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
@@ -467,8 +477,10 @@ body: |
 name: test_fdiv_v2s32
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
-    fp64-fp16-denormals: true
+    fp32-input-denormals: false
+    fp32-output-denormals: false
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:
@@ -2223,8 +2235,10 @@ body: |
 name: test_fdiv_s64_constant_one_rcp
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
-    fp64-fp16-denormals: true
+    fp32-input-denormals: false
+    fp32-output-denormals: false
+    fp64-fp16-output-denormals: true
+    fp64-fp16-input-denormals: true
 
 body: |
   bb.0:
@@ -2347,8 +2361,10 @@ body: |
 name: test_fdiv_s64_constant_negative_one_rcp
 machineFunctionInfo:
   mode:
-    fp32-denormals: false
-    fp64-fp16-denormals: true
+    fp32-input-denormals: false
+    fp32-output-denormals: false
+    fp64-fp16-input-denormals: true
+    fp64-fp16-output-denormals: true
 
 body: |
   bb.0:

@@ -1874,11 +1874,11 @@ bool AMDGPULegalizerInfo::legalizeFMad(
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   // TODO: Always legal with future ftz flag.
-  if (Ty == LLT::scalar(32) && !MFI->getMode().FP32Denormals)
+  // FIXME: Do we need just output?
+  if (Ty == LLT::scalar(32) && !MFI->getMode().allFP32Denormals())
     return true;
-  if (Ty == LLT::scalar(16) && !MFI->getMode().FP64FP16Denormals)
+  if (Ty == LLT::scalar(16) && !MFI->getMode().allFP64FP16Denormals())
     return true;
-
 
   MachineIRBuilder HelperBuilder(MI);
   GISelObserverWrapper DummyObserver;
@@ -2081,7 +2081,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
     return false;
 
   if (!Unsafe && ResTy == S32 &&
-      MF.getInfo<SIMachineFunctionInfo>()->getMode().FP32Denormals)
+      MF.getInfo<SIMachineFunctionInfo>()->getMode().allFP32Denormals())
     return false;
 
   if (auto CLHS = getConstantFPVRegVal(LHS, MRI)) {
@@ -2162,15 +2162,13 @@ static void toggleSPDenormMode(bool Enable,
                                AMDGPU::SIModeRegisterDefaults Mode) {
   // Set SP denorm mode to this value.
   unsigned SPDenormMode =
-    Enable ? FP_DENORM_FLUSH_NONE : FP_DENORM_FLUSH_IN_FLUSH_OUT;
+    Enable ? FP_DENORM_FLUSH_NONE : Mode.fpDenormModeSPValue();
 
   if (ST.hasDenormModeInst()) {
     // Preserve default FP64FP16 denorm mode while updating FP32 mode.
-    unsigned DPDenormModeDefault = Mode.FP64FP16Denormals
-                                   ? FP_DENORM_FLUSH_NONE
-                                   : FP_DENORM_FLUSH_IN_FLUSH_OUT;
+    uint32_t DPDenormModeDefault = Mode.fpDenormModeDPValue();
 
-    unsigned NewDenormModeValue = SPDenormMode | (DPDenormModeDefault << 2);
+    uint32_t NewDenormModeValue = SPDenormMode | (DPDenormModeDefault << 2);
     B.buildInstr(AMDGPU::S_DENORM_MODE)
       .addImm(NewDenormModeValue);
 
@@ -2223,7 +2221,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
 
   // FIXME: Doesn't correctly model the FP mode switch, and the FP operations
   // aren't modeled as reading it.
-  if (!Mode.FP32Denormals)
+  if (!Mode.allFP32Denormals())
     toggleSPDenormMode(true, B, ST, Mode);
 
   auto Fma0 = B.buildFMA(S32, NegDivScale0, ApproxRcp, One, Flags);
@@ -2233,7 +2231,7 @@ bool AMDGPULegalizerInfo::legalizeFDIV32(MachineInstr &MI,
   auto Fma3 = B.buildFMA(S32, Fma2, Fma1, Mul, Flags);
   auto Fma4 = B.buildFMA(S32, NegDivScale0, Fma3, NumeratorScaled, Flags);
 
-  if (!Mode.FP32Denormals)
+  if (!Mode.allFP32Denormals())
     toggleSPDenormMode(false, B, ST, Mode);
 
   auto Fmas = B.buildIntrinsic(Intrinsic::amdgcn_div_fmas, {S32}, false)

@@ -1381,8 +1381,8 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
   case AMDGPU::V_MUL_F32_e64:
   case AMDGPU::V_MUL_F16_e64: {
     // If output denormals are enabled, omod is ignored.
-    if ((Op == AMDGPU::V_MUL_F32_e64 && MFI->getMode().FP32Denormals) ||
-        (Op == AMDGPU::V_MUL_F16_e64 && MFI->getMode().FP64FP16Denormals))
+    if ((Op == AMDGPU::V_MUL_F32_e64 && MFI->getMode().FP32OutputDenormals) ||
+        (Op == AMDGPU::V_MUL_F16_e64 && MFI->getMode().FP64FP16OutputDenormals))
       return std::make_pair(nullptr, SIOutMods::NONE);
 
     const MachineOperand *RegOp = nullptr;
@@ -1411,8 +1411,8 @@ SIFoldOperands::isOMod(const MachineInstr &MI) const {
   case AMDGPU::V_ADD_F32_e64:
   case AMDGPU::V_ADD_F16_e64: {
     // If output denormals are enabled, omod is ignored.
-    if ((Op == AMDGPU::V_ADD_F32_e64 && MFI->getMode().FP32Denormals) ||
-        (Op == AMDGPU::V_ADD_F16_e64 && MFI->getMode().FP64FP16Denormals))
+    if ((Op == AMDGPU::V_ADD_F32_e64 && MFI->getMode().FP32OutputDenormals) ||
+        (Op == AMDGPU::V_ADD_F16_e64 && MFI->getMode().FP64FP16OutputDenormals))
       return std::make_pair(nullptr, SIOutMods::NONE);
 
     // Look through the DAGCombiner canonicalization fmul x, 2 -> fadd x, x

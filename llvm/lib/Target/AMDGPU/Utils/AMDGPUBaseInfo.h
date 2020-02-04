@@ -687,20 +687,21 @@ struct SIModeRegisterDefaults {
 
   /// If this is set, neither input or output denormals are flushed for most f32
   /// instructions.
-  ///
-  /// TODO: Split into separate input and output fields if necessary like the
-  /// control bits really provide?
-  bool FP32Denormals : 1;
+  bool FP32InputDenormals : 1;
+  bool FP32OutputDenormals : 1;
 
   /// If this is set, neither input or output denormals are flushed for both f64
   /// and f16/v2f16 instructions.
-  bool FP64FP16Denormals : 1;
+  bool FP64FP16InputDenormals : 1;
+  bool FP64FP16OutputDenormals : 1;
 
   SIModeRegisterDefaults() :
     IEEE(true),
     DX10Clamp(true),
-    FP32Denormals(true),
-    FP64FP16Denormals(true) {}
+    FP32InputDenormals(true),
+    FP32OutputDenormals(true),
+    FP64FP16InputDenormals(true),
+    FP64FP16OutputDenormals(true) {}
 
   // FIXME: Should not depend on the subtarget
   SIModeRegisterDefaults(const Function &F, const GCNSubtarget &ST);
@@ -711,15 +712,51 @@ struct SIModeRegisterDefaults {
     SIModeRegisterDefaults Mode;
     Mode.DX10Clamp = true;
     Mode.IEEE = IsCompute;
-    Mode.FP32Denormals = false; // FIXME: Should be on by default.
-    Mode.FP64FP16Denormals = true;
+    Mode.FP32InputDenormals = false; // FIXME: Should be on by default.
+    Mode.FP32OutputDenormals = false; // FIXME: Should be on by default.
+    Mode.FP64FP16InputDenormals = true;
+    Mode.FP64FP16OutputDenormals = true;
     return Mode;
   }
 
   bool operator ==(const SIModeRegisterDefaults Other) const {
     return IEEE == Other.IEEE && DX10Clamp == Other.DX10Clamp &&
-           FP32Denormals == Other.FP32Denormals &&
-           FP64FP16Denormals == Other.FP64FP16Denormals;
+           FP32InputDenormals == Other.FP32InputDenormals &&
+           FP32OutputDenormals == Other.FP32OutputDenormals &&
+           FP64FP16InputDenormals == Other.FP64FP16InputDenormals &&
+           FP64FP16OutputDenormals == Other.FP64FP16OutputDenormals;
+  }
+
+  bool allFP32Denormals() const {
+    return FP32InputDenormals && FP32OutputDenormals;
+  }
+
+  bool allFP64FP16Denormals() const {
+    return FP64FP16InputDenormals && FP64FP16OutputDenormals;
+  }
+
+  /// Get the encoding value for the FP_DENORM bits of the mode register for the
+  /// FP32 denormal mode.
+  uint32_t fpDenormModeSPValue() const {
+    if (FP32InputDenormals && FP32OutputDenormals)
+      return FP_DENORM_FLUSH_NONE;
+    if (FP32InputDenormals)
+      return FP_DENORM_FLUSH_OUT;
+    if (FP32OutputDenormals)
+      return FP_DENORM_FLUSH_IN;
+    return FP_DENORM_FLUSH_IN_FLUSH_OUT;
+  }
+
+  /// Get the encoding value for the FP_DENORM bits of the mode register for the
+  /// FP64/FP16 denormal mode.
+  uint32_t fpDenormModeDPValue() const {
+    if (FP64FP16InputDenormals && FP64FP16OutputDenormals)
+      return FP_DENORM_FLUSH_NONE;
+    if (FP64FP16InputDenormals)
+      return FP_DENORM_FLUSH_OUT;
+    if (FP64FP16OutputDenormals)
+      return FP_DENORM_FLUSH_IN;
+    return FP_DENORM_FLUSH_IN_FLUSH_OUT;
   }
 
   /// Returns true if a flag is compatible if it's enabled in the callee, but
@@ -737,8 +774,10 @@ struct SIModeRegisterDefaults {
       return false;
 
     // Allow inlining denormals enabled into denormals flushed functions.
-    return oneWayCompatible(FP64FP16Denormals, CalleeMode.FP64FP16Denormals) &&
-           oneWayCompatible(FP32Denormals, CalleeMode.FP32Denormals);
+    return oneWayCompatible(FP64FP16InputDenormals, CalleeMode.FP64FP16InputDenormals) &&
+           oneWayCompatible(FP64FP16OutputDenormals, CalleeMode.FP64FP16OutputDenormals) &&
+           oneWayCompatible(FP32InputDenormals, CalleeMode.FP32InputDenormals) &&
+           oneWayCompatible(FP32OutputDenormals, CalleeMode.FP32OutputDenormals);
   }
 };
 
