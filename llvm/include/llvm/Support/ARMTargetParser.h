@@ -78,7 +78,7 @@ const ExtName ARCHExtNames[] = {
 const struct {
   const char *NameCStr;
   size_t NameLength;
-  unsigned ID;
+  uint64_t ID;
 
   StringRef getName() const { return StringRef(NameCStr, NameLength); }
 } HWDivNames[] = {
