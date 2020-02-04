@@ -72,7 +72,9 @@ Improvements to Clang's diagnostics
 - -Wrange-loop-analysis got several improvements. It no longer warns about a
   copy being made when the result is bound to an rvalue reference. It no longer
   warns when an object of a small, trivially copyable type is copied. The
-  warning now offers fixits. It is now part of -Wall.
+  warning now offers fixits. Excluding -Wrange-loop-bind-reference it is now
+  part of -Wall. To reduce the number of false positives the diagnostic is
+  disabled in macros and template instantiations.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
