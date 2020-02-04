@@ -2,7 +2,7 @@
 ## containing architecture specific dynamic tags.
 
 ## Check we can handle MIPS specific tags.
-# RUN: yaml2obj -docnum=1 %s -o %t1
+# RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: obj2yaml %t1 | FileCheck %s --check-prefix=MIPS
 
 # MIPS:      - Tag:             DT_MIPS_RLD_VERSION
@@ -202,7 +202,7 @@ Sections:
         Value:           0x000000000000002E
 
 ## Check we can handle Hexagon specific tags.
-# RUN: yaml2obj -docnum=2 %s -o %t2
+# RUN: yaml2obj --docnum=2 %s -o %t2
 # RUN: obj2yaml %t2 | FileCheck %s --check-prefix=HEXAGON
 
 # HEXAGON:      - Tag:             DT_HEXAGON_SYMSZ
@@ -230,7 +230,7 @@ Sections:
         Value:           0x0000000000000003
 
 ## Check we can handle PPC specific tags.
-# RUN: yaml2obj -docnum=3 %s -o %t3
+# RUN: yaml2obj --docnum=3 %s -o %t3
 # RUN: obj2yaml %t3 | FileCheck %s --check-prefix=EM_PPC
 
 # EM_PPC:      - Tag:             DT_PPC_GOT
@@ -254,7 +254,7 @@ Sections:
         Value:           0x0000000000000001
 
 ## Check we can handle PPC64 specific tags.
-# RUN: yaml2obj -docnum=4 %s -o %t4
+# RUN: yaml2obj --docnum=4 %s -o %t4
 # RUN: obj2yaml %t4 | FileCheck %s --check-prefix=EM_PPC64
 
 # EM_PPC64:      - Tag:             DT_PPC64_GLINK
@@ -274,7 +274,7 @@ Sections:
         Value:           0x0000000000000001
 
 ## Check we can handle AARCH64 specific tags.
-# RUN: yaml2obj -docnum=5 %s -o %t2
+# RUN: yaml2obj --docnum=5 %s -o %t2
 # RUN: obj2yaml %t2 | FileCheck %s --check-prefix=AARCH64
 
 # AARCH64:      - Tag:             DT_AARCH64_BTI_PLT
@@ -302,7 +302,7 @@ Sections:
 ## Here for EM_PPC64 we are trying to use DT_HEXAGON_SYMSZ
 ## instead of DT_PPC64_GLINK. They both have value of 0x70000000.
 
-# RUN: not yaml2obj -docnum=6 %s 2>&1 | FileCheck %s --check-prefix=ERR
+# RUN: not yaml2obj --docnum=6 %s 2>&1 | FileCheck %s --check-prefix=ERR
 # ERR:      error: invalid hex64 number
 # ERR-NEXT: - Tag: DT_HEXAGON_SYMSZ
 
