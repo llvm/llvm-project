@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=z13 -mattr=soft-float -O3 < %s | FileCheck %s
+; RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -mattr=soft-float -O3 < %s | FileCheck %s
 ;
 ; Test that arguments and return values of fp/vector types are always handled
 ; with gprs with soft-float.
