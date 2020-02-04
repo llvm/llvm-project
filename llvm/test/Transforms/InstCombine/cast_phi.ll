@@ -185,14 +185,14 @@ define i37 @zext_from_legal_to_illegal_type(i32 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @get_i32()
-; CHECK-NEXT:    [[PHITMP:%.*]] = zext i32 [[Y]] to i37
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi i37 [ [[PHITMP]], [[T]] ], [ 3, [[F]] ]
-; CHECK-NEXT:    ret i37 [[P]]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[Y]], [[T]] ], [ 3, [[F]] ]
+; CHECK-NEXT:    [[R:%.*]] = zext i32 [[P]] to i37
+; CHECK-NEXT:    ret i37 [[R]]
 ;
 entry:
   %cmp = icmp eq i32 %x, 42
@@ -219,14 +219,14 @@ define i37 @zext_from_illegal_to_illegal_type(i32 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[Y:%.*]] = call i3 @get_i3()
-; CHECK-NEXT:    [[PHITMP:%.*]] = zext i3 [[Y]] to i37
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi i37 [ [[PHITMP]], [[T]] ], [ 3, [[F]] ]
-; CHECK-NEXT:    ret i37 [[P]]
+; CHECK-NEXT:    [[P:%.*]] = phi i3 [ [[Y]], [[T]] ], [ 3, [[F]] ]
+; CHECK-NEXT:    [[R:%.*]] = zext i3 [[P]] to i37
+; CHECK-NEXT:    ret i37 [[R]]
 ;
 entry:
   %cmp = icmp eq i32 %x, 42
@@ -287,14 +287,14 @@ define i64 @zext_from_illegal_to_legal_type(i32 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[Y:%.*]] = call i3 @get_i3()
+; CHECK-NEXT:    [[PHITMP:%.*]] = zext i3 [[Y]] to i64
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi i3 [ [[Y]], [[T]] ], [ 3, [[F]] ]
-; CHECK-NEXT:    [[R:%.*]] = zext i3 [[P]] to i64
-; CHECK-NEXT:    ret i64 [[R]]
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[PHITMP]], [[T]] ], [ 3, [[F]] ]
+; CHECK-NEXT:    ret i64 [[P]]
 ;
 entry:
   %cmp = icmp eq i32 %x, 42
