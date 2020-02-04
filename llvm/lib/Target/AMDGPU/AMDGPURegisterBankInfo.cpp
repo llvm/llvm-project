@@ -1798,6 +1798,58 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     return;
   }
+  case AMDGPU::G_SEXT_INREG: {
+    const RegisterBank *SrcBank =
+      OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
+
+    // We can directly handle all 64-bit cases with s_bfe_i64.
+    if (SrcBank == &AMDGPU::SGPRRegBank)
+      break;
+
+    const LLT S32 = LLT::scalar(32);
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT Ty = MRI.getType(DstReg);
+    if (Ty == S32)
+      break;
+
+    MachineIRBuilder B(MI);
+    ApplyRegBankMapping O(*this, MRI, &AMDGPU::VGPRRegBank);
+    GISelObserverWrapper Observer(&O);
+    B.setChangeObserver(Observer);
+
+    int Amt = MI.getOperand(2).getImm();
+    if (Amt <= 32) {
+      // Don't use LegalizerHelper's narrowScalar. It produces unwanted G_SEXTs
+      // we would need to further expand, and doesn't let us directly set the
+      // result registers.
+      SmallVector<Register, 2> DstRegs(OpdMapper.getVRegs(0));
+      SmallVector<Register, 2> SrcRegs(OpdMapper.getVRegs(1));
+
+      if (SrcRegs.empty())
+        split64BitValueForMapping(B, SrcRegs, S32, SrcReg);
+      // Extend in the low bits and propagate the sign bit to the high half.
+      auto ShiftAmt = B.buildConstant(S32, 31);
+      if (Amt == 32) {
+        B.buildCopy(DstRegs[0], SrcRegs[0]);
+        B.buildAShr(DstRegs[1], DstRegs[0], ShiftAmt);
+      } else {
+        B.buildSExtInReg(DstRegs[0], SrcRegs[0], Amt);
+        B.buildAShr(DstRegs[1], DstRegs[0], ShiftAmt);
+      }
+    } else {
+      assert(empty(OpdMapper.getVRegs(0)) && empty(OpdMapper.getVRegs(1)));
+      const LLT S64 = LLT::scalar(64);
+      // This straddles two registers. Expand with 64-bit shifts.
+      auto ShiftAmt = B.buildConstant(S32, 64 - Amt);
+      auto Shl = B.buildShl(S64, SrcReg, ShiftAmt);
+      B.buildAShr(DstReg, Shl, ShiftAmt);
+    }
+
+    MRI.setRegBank(DstReg, AMDGPU::VGPRRegBank);
+    MI.eraseFromParent();
+    return;
+  }
   case AMDGPU::G_SEXT:
   case AMDGPU::G_ZEXT: {
     Register SrcReg = MI.getOperand(1).getReg();
@@ -2942,6 +2994,24 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[1] = AMDGPU::getValueMappingSGPR64Only(SrcBank->getID(),
                                                          SrcSize);
     }
+    break;
+  }
+  case AMDGPU::G_SEXT_INREG: {
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+    Register Amt = MI.getOperand(2).getImm();
+    unsigned Size = getSizeInBits(Dst, MRI, *TRI);
+    unsigned BankID = getRegBank(Src, MRI, *TRI)->getID();
+
+    if (Amt <= 32) {
+      OpdsMapping[0] = AMDGPU::getValueMappingSGPR64Only(BankID, Size);
+    } else {
+      // If we need to expand a 64 bit for the VALU, this will straddle two
+      // registers. Just expand this with 64-bit shifts.
+      OpdsMapping[0] = AMDGPU::getValueMapping(BankID, Size);
+    }
+
+    OpdsMapping[1] = OpdsMapping[0];
     break;
   }
   case AMDGPU::G_FCMP: {
