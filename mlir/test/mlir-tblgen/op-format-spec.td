@@ -7,7 +7,8 @@ include "mlir/IR/OpBase.td"
 def TestDialect : Dialect {
   let name = "test";
 }
-class TestFormat_Op<string name, string fmt> : Op<TestDialect, name> {
+class TestFormat_Op<string name, string fmt, list<OpTrait> traits = []>
+    : Op<TestDialect, name, traits> {
   let assemblyFormat = fmt;
 }
 
@@ -233,4 +234,25 @@ def ZCoverageValidB : TestFormat_Op<"variable_valid_b", [{
 def ZCoverageValidC : TestFormat_Op<"variable_valid_c", [{
   operands functional-type(operands, results) attr-dict
 }]>, Arguments<(ins AnyMemRef:$operand)>, Results<(outs AnyMemRef:$result)>;
+
+// Check that we can infer type equalities from certain traits.
+def ZCoverageValidD : TestFormat_Op<"variable_valid_d", [{
+  operands type($result) attr-dict
+}], [SameOperandsAndResultType]>, Arguments<(ins AnyMemRef:$operand)>,
+     Results<(outs AnyMemRef:$result)>;
+def ZCoverageValidE : TestFormat_Op<"variable_valid_e", [{
+  $operand type($operand) attr-dict
+}], [SameOperandsAndResultType]>, Arguments<(ins AnyMemRef:$operand)>,
+     Results<(outs AnyMemRef:$result)>;
+def ZCoverageValidF : TestFormat_Op<"variable_valid_f", [{
+  operands type($other) attr-dict
+}], [SameTypeOperands]>, Arguments<(ins AnyMemRef:$operand, AnyMemRef:$other)>;
+def ZCoverageValidG : TestFormat_Op<"variable_valid_g", [{
+  operands type($other) attr-dict
+}], [AllTypesMatch<["operand", "other"]>]>,
+     Arguments<(ins AnyMemRef:$operand, AnyMemRef:$other)>;
+def ZCoverageValidH : TestFormat_Op<"variable_valid_h", [{
+  operands type($result) attr-dict
+}], [AllTypesMatch<["operand", "result"]>]>,
+     Arguments<(ins AnyMemRef:$operand)>, Results<(outs AnyMemRef:$result)>;
 

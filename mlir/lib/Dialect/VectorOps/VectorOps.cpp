@@ -700,31 +700,6 @@ void InsertOp::build(Builder *builder, OperationState &result, Value source,
   result.addAttribute(getPositionAttrName(), positionAttr);
 }
 
-static void print(OpAsmPrinter &p, InsertOp op) {
-  p << op.getOperationName() << " " << op.source() << ", " << op.dest()
-    << op.position();
-  p.printOptionalAttrDict(op.getAttrs(), {InsertOp::getPositionAttrName()});
-  p << " : " << op.getSourceType() << " into " << op.getDestVectorType();
-}
-
-static ParseResult parseInsertOp(OpAsmParser &parser, OperationState &result) {
-  SmallVector<NamedAttribute, 4> attrs;
-  OpAsmParser::OperandType source, dest;
-  Type sourceType;
-  VectorType destType;
-  Attribute attr;
-  return failure(parser.parseOperand(source) || parser.parseComma() ||
-                 parser.parseOperand(dest) ||
-                 parser.parseAttribute(attr, InsertOp::getPositionAttrName(),
-                                       result.attributes) ||
-                 parser.parseOptionalAttrDict(attrs) ||
-                 parser.parseColonType(sourceType) ||
-                 parser.parseKeywordType("into", destType) ||
-                 parser.resolveOperand(source, sourceType, result.operands) ||
-                 parser.resolveOperand(dest, destType, result.operands) ||
-                 parser.addTypeToList(destType, result.types));
-}
-
 static LogicalResult verify(InsertOp op) {
   auto positionAttr = op.position().getValue();
   if (positionAttr.empty())
@@ -791,27 +766,6 @@ void InsertStridedSliceOp::build(Builder *builder, OperationState &result,
   result.addTypes(dest.getType());
   result.addAttribute(getOffsetsAttrName(), offsetsAttr);
   result.addAttribute(getStridesAttrName(), stridesAttr);
-}
-
-static void print(OpAsmPrinter &p, InsertStridedSliceOp op) {
-  p << op.getOperationName() << " " << op.source() << ", " << op.dest() << " ";
-  p.printOptionalAttrDict(op.getAttrs());
-  p << " : " << op.getSourceVectorType() << " into " << op.getDestVectorType();
-}
-
-static ParseResult parseInsertStridedSliceOp(OpAsmParser &parser,
-                                             OperationState &result) {
-  OpAsmParser::OperandType source, dest;
-  VectorType sourceVectorType, destVectorType;
-  return failure(
-      parser.parseOperand(source) || parser.parseComma() ||
-      parser.parseOperand(dest) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(sourceVectorType) ||
-      parser.parseKeywordType("into", destVectorType) ||
-      parser.resolveOperand(source, sourceVectorType, result.operands) ||
-      parser.resolveOperand(dest, destVectorType, result.operands) ||
-      parser.addTypeToList(destVectorType, result.types));
 }
 
 // TODO(ntv) Should be moved to Tablegen Confined attributes.
