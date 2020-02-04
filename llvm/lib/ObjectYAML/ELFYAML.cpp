@@ -1149,6 +1149,12 @@ static void sectionMapping(IO &IO,
   IO.mapOptional("Content", Section.Content);
 }
 
+static void sectionMapping(IO &IO, ELFYAML::CallGraphProfileSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapOptional("Entries", Section.Entries);
+  IO.mapOptional("Content", Section.Content);
+}
+
 void MappingTraits<ELFYAML::SectionOrType>::mapping(
     IO &IO, ELFYAML::SectionOrType &sectionOrType) {
   IO.mapRequired("SectionOrType", sectionOrType.sectionNameOrType);
@@ -1281,6 +1287,11 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
       Section.reset(new ELFYAML::DependentLibrariesSection());
     sectionMapping(IO,
                    *cast<ELFYAML::DependentLibrariesSection>(Section.get()));
+    break;
+  case ELF::SHT_LLVM_CALL_GRAPH_PROFILE:
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::CallGraphProfileSection());
+    sectionMapping(IO, *cast<ELFYAML::CallGraphProfileSection>(Section.get()));
     break;
   default:
     if (!IO.outputting()) {
@@ -1463,6 +1474,12 @@ StringRef MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
     return {};
   }
 
+  if (const auto *CGP = dyn_cast<ELFYAML::CallGraphProfileSection>(C.get())) {
+    if (CGP->Entries && CGP->Content)
+      return "\"Entries\" and \"Content\" can't be used together";
+    return {};
+  }
+
   return {};
 }
 
@@ -1598,6 +1615,14 @@ void MappingTraits<ELFYAML::LinkerOption>::mapping(IO &IO,
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapRequired("Name", Opt.Key);
   IO.mapRequired("Value", Opt.Value);
+}
+
+void MappingTraits<ELFYAML::CallGraphEntry>::mapping(
+    IO &IO, ELFYAML::CallGraphEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+  IO.mapRequired("From", E.From);
+  IO.mapRequired("To", E.To);
+  IO.mapRequired("Weight", E.Weight);
 }
 
 LLVM_YAML_STRONG_TYPEDEF(uint8_t, MIPS_AFL_REG)

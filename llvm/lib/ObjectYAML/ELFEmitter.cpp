@@ -210,6 +210,9 @@ template <class ELFT> class ELFState {
   void writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::DependentLibrariesSection &Section,
                            ContiguousBlobAccumulator &CBA);
+  void writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::CallGraphProfileSection &Section,
+                           ContiguousBlobAccumulator &CBA);
 
   void writeFill(ELFYAML::Fill &Fill, ContiguousBlobAccumulator &CBA);
 
@@ -491,6 +494,8 @@ void ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     } else if (auto S = dyn_cast<ELFYAML::GnuHashSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::DependentLibrariesSection>(Sec)) {
+      writeSectionContent(SHeader, *S, CBA);
+    } else if (auto S = dyn_cast<ELFYAML::CallGraphProfileSection>(Sec)) {
       writeSectionContent(SHeader, *S, CBA);
     } else {
       llvm_unreachable("Unknown section type");
@@ -979,6 +984,41 @@ void ELFState<ELFT>::writeSectionContent(
     OS.write(Lib.data(), Lib.size());
     OS.write('\0');
     SHeader.sh_size += Lib.size() + 1;
+  }
+}
+
+template <class ELFT>
+void ELFState<ELFT>::writeSectionContent(
+    Elf_Shdr &SHeader, const ELFYAML::CallGraphProfileSection &Section,
+    ContiguousBlobAccumulator &CBA) {
+  raw_ostream &OS =
+      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+
+  if (Section.EntSize)
+    SHeader.sh_entsize = *Section.EntSize;
+  else
+    SHeader.sh_entsize = 16;
+
+  unsigned Link = 0;
+  if (Section.Link.empty() && SN2I.lookup(".symtab", Link))
+    SHeader.sh_link = Link;
+
+  if (Section.Content) {
+    SHeader.sh_size = writeContent(OS, Section.Content, None);
+    return;
+  }
+
+  if (!Section.Entries)
+    return;
+
+  for (const ELFYAML::CallGraphEntry &E : *Section.Entries) {
+    unsigned From = toSymbolIndex(E.From, Section.Name, /*IsDynamic=*/false);
+    unsigned To = toSymbolIndex(E.To, Section.Name, /*IsDynamic=*/false);
+
+    support::endian::write<uint32_t>(OS, From, ELFT::TargetEndianness);
+    support::endian::write<uint32_t>(OS, To, ELFT::TargetEndianness);
+    support::endian::write<uint64_t>(OS, E.Weight, ELFT::TargetEndianness);
+    SHeader.sh_size += 16;
   }
 }
 
