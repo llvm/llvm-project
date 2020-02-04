@@ -451,10 +451,24 @@ mlir::linalg::tileLinalgOp(OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
   return tileLinalgOpImpl<loop::ForOp>(b, op, tileSizes, permutation, folder);
 }
 
+Optional<TiledLinalgOp> mlir::linalg::tileLinalgOpToParallelLoops(
+    OpBuilder &b, LinalgOp op, ArrayRef<Value> tileSizes,
+    ArrayRef<unsigned> permutation, OperationFolder *folder) {
+  return tileLinalgOpImpl<loop::ParallelOp>(b, op, tileSizes, permutation,
+                                            folder);
+}
+
 Optional<TiledLinalgOp> mlir::linalg::tileLinalgOp(
     OpBuilder &b, LinalgOp op, ArrayRef<int64_t> tileSizes,
     ArrayRef<unsigned> permutation, OperationFolder *folder) {
   return tileLinalgOpImpl<loop::ForOp>(b, op, tileSizes, permutation, folder);
+}
+
+Optional<TiledLinalgOp> mlir::linalg::tileLinalgOpToParallelLoops(
+    OpBuilder &b, LinalgOp op, ArrayRef<int64_t> tileSizes,
+    ArrayRef<unsigned> permutation, OperationFolder *folder) {
+  return tileLinalgOpImpl<loop::ParallelOp>(b, op, tileSizes, permutation,
+                                            folder);
 }
 
 template <typename LoopTy>
@@ -501,9 +515,23 @@ mlir::createLinalgTilingPass(ArrayRef<int64_t> tileSizes) {
   return std::make_unique<LinalgTilingPass<loop::ForOp>>(tileSizes);
 }
 
+std::unique_ptr<OpPassBase<FuncOp>>
+mlir::createLinalgTilingToParallelLoopsPass(ArrayRef<int64_t> tileSizes) {
+  return std::make_unique<LinalgTilingPass<loop::ParallelOp>>(tileSizes);
+}
+
 static PassRegistration<LinalgTilingPass<loop::ForOp>>
-    pass("linalg-tile", "Tile operations in the linalg dialect", [] {
+    tiling_pass("linalg-tile", "Tile operations in the linalg dialect", [] {
       auto pass = std::make_unique<LinalgTilingPass<loop::ForOp>>();
       pass->tileSizes.assign(clTileSizes.begin(), clTileSizes.end());
       return pass;
     });
+
+static PassRegistration<LinalgTilingPass<loop::ParallelOp>>
+    tiling_to_parallel_loops(
+        "linalg-tile-to-parallel-loops",
+        "Tile operations in the linalg dialect to parallel loops", [] {
+          auto pass = std::make_unique<LinalgTilingPass<loop::ParallelOp>>();
+          pass->tileSizes.assign(clTileSizes.begin(), clTileSizes.end());
+          return pass;
+        });
