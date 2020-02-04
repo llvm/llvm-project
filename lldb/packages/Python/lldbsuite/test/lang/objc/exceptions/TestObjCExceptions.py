@@ -25,8 +25,8 @@ class ObjCExceptionsTestCase(TestBase):
         launch_info = lldb.SBLaunchInfo(["a.out", "0"])
         lldbutil.run_to_name_breakpoint(self, "objc_exception_throw", launch_info=launch_info)
 
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped', 'stop reason = breakpoint'])
+        self.expect("thread list",
+            substrs=['stopped', 'stop reason = hit Objective-C exception'])
 
         self.expect('thread exception', substrs=[
                 '(NSException *) exception = ',

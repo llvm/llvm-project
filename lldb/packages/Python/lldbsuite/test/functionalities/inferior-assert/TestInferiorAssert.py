@@ -107,16 +107,22 @@ class AssertingInferiorTestCase(TestBase):
         if matched:
             # On android until API-16 the abort() call ended in a sigsegv
             # instead of in a sigabrt
-            stop_reason = 'stop reason = signal SIGSEGV'
+            stop_reason = 'signal SIGSEGV'
         else:
-            stop_reason = 'stop reason = signal SIGABRT'
+            stop_reason = 'signal SIGABRT'
+
+        target = self.dbg.GetTargetAtIndex(0)
+        process = target.GetProcess()
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonSignal)
+
+        pattern = "stop reason = (" + stop_reason + "|hit program assert)"
 
         # The stop reason of the thread should be an abort signal or exception.
         self.expect("thread list", STOPPED_DUE_TO_ASSERT,
-                    substrs=['stopped',
-                             stop_reason])
+                    patterns=[pattern],
+                    substrs=['stopped'])
 
-        return stop_reason
+        return pattern
 
     def setUp(self):
         # Call super's setUp().
@@ -134,12 +140,13 @@ class AssertingInferiorTestCase(TestBase):
 
         # And it should report a backtrace that includes the assert site.
         self.expect("thread backtrace all",
-                    substrs=[stop_reason, 'main', 'argc', 'argv'])
+                    patterns=[stop_reason],
+                    substrs=['main', 'argc', 'argv'])
 
         # And it should report the correct line number.
         self.expect("thread backtrace all",
-                    substrs=[stop_reason,
-                             'main.c:%d' % self.line])
+                    patterns=[stop_reason],
+                    substrs=['main.c:%d' % self.line])
 
     def inferior_asserting_python(self):
         """Inferior asserts upon launching; lldb should catch the event and stop."""
@@ -172,6 +179,10 @@ class AssertingInferiorTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
         self.check_stop_reason()
+
+        # change current frame to frame 0, since recognizer might have selected
+        # different frame.
+        self.runCmd("frame select 0", RUN_SUCCEEDED)
 
         # lldb should be able to read from registers from the inferior after
         # asserting.
@@ -311,5 +322,5 @@ class AssertingInferiorTestCase(TestBase):
 
         # And it should report the correct line number.
         self.expect("thread backtrace all",
-                    substrs=[stop_reason,
-                             'main.c:%d' % self.line])
+                    patterns=[stop_reason],
+                    substrs=['main.c:%d' % self.line])
