@@ -1129,6 +1129,13 @@ def : Pat<(add (VEhi tglobaladdr:$in1), (VElo tglobaladdr:$in2)),
           (LEASLrzi (ANDrm0 (LEAzzi tglobaladdr:$in2), 32),
                     (tglobaladdr:$in1))>;
 
+// Address calculation and its optimization
+def : Pat<(VEhi texternalsym:$in), (LEASLzzi texternalsym:$in)>;
+def : Pat<(VElo texternalsym:$in), (ANDrm0 (LEAzzi texternalsym:$in), 32)>;
+def : Pat<(add (VEhi texternalsym:$in1), (VElo texternalsym:$in2)),
+          (LEASLrzi (ANDrm0 (LEAzzi texternalsym:$in2), 32),
+                    (texternalsym:$in1))>;
+
 // Calls
 def : Pat<(call tglobaladdr:$dst),
           (CALL tglobaladdr:$dst)>;
