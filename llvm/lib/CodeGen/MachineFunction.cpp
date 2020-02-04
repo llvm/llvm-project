@@ -290,7 +290,7 @@ DenormalMode MachineFunction::getDenormalMode(const fltSemantics &FPType) const 
   // target by default.
   StringRef Val = Attr.getValueAsString();
   if (Val.empty())
-    return DenormalMode::Invalid;
+    return DenormalMode::getInvalid();
 
   return parseDenormalFPAttribute(Val);
 }

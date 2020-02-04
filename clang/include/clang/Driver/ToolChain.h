@@ -617,7 +617,7 @@ public:
       Action::OffloadKind DeviceOffloadKind,
       const llvm::fltSemantics *FPType = nullptr) const {
     // FIXME: This should be IEEE when default handling is fixed.
-    return llvm::DenormalMode::Invalid;
+    return llvm::DenormalMode::getInvalid();
   }
 };
 
