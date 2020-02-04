@@ -349,13 +349,6 @@ def : Pat<(i32 (sext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
 def : Pat<(i64 (sext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
           (SETB_C64r)>;
 
-// We canonicalize 'setb' to "(and (sbb reg,reg), 1)" on the hope that the and
-// will be eliminated and that the sbb can be extended up to a wider type.  When
-// this happens, it is great.  However, if we are left with an 8-bit sbb and an
-// and, we might as well just match it as a setb.
-def : Pat<(and (i8 (X86setcc_c X86_COND_B, EFLAGS)), 1),
-          (SETCCr (i8 2))>;
-
 // Patterns to give priority when both inputs are zero so that we don't use
 // an immediate for the RHS.
 // TODO: Should we use a 32-bit sbb for 8/16 to push the extract_subreg out?
