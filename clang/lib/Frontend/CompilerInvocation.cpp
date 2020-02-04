@@ -3320,7 +3320,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   Opts.CompleteMemberPointers = Args.hasArg(OPT_fcomplete_member_pointers);
   Opts.BuildingPCHWithObjectFile = Args.hasArg(OPT_building_pch_with_obj);
 
-  Opts.MaxTokens = getLastArgIntValue(Args, OPT_fmax_tokens, 0, Diags);
+  Opts.MaxTokens = getLastArgIntValue(Args, OPT_fmax_tokens_EQ, 0, Diags);
 }
 
 static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
