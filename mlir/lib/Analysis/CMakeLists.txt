@@ -6,12 +6,8 @@ add_llvm_library(MLIRAnalysis STATIC
   InferTypeOpInterface.cpp
   Liveness.cpp
   LoopAnalysis.cpp
-  MemRefBoundCheck.cpp
   NestedMatcher.cpp
-  OpStats.cpp
   SliceAnalysis.cpp
-  TestMemRefDependenceCheck.cpp
-  TestParallelismDetection.cpp
   Utils.cpp
   Verifier.cpp
 
