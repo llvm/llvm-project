@@ -51,13 +51,13 @@ pcmpgtq     (%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        crc32q	%rax, %rcx
 # CHECK-NEXT:  1      6     1.00    *                   crc32q	(%rax), %rcx
 # CHECK-NEXT:  1      21    21.00                       pcmpestri	$1, %xmm0, %xmm2
-# CHECK-NEXT:  1      21    21.00   *                   pcmpestri	$1, (%rax), %xmm2
+# CHECK-NEXT:  1      24    21.00   *                   pcmpestri	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      17    17.00                       pcmpestrm	$1, %xmm0, %xmm2
-# CHECK-NEXT:  1      17    17.00   *                   pcmpestrm	$1, (%rax), %xmm2
+# CHECK-NEXT:  1      20    17.00   *                   pcmpestrm	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      17    17.00                       pcmpistri	$1, %xmm0, %xmm2
-# CHECK-NEXT:  1      17    17.00   *                   pcmpistri	$1, (%rax), %xmm2
+# CHECK-NEXT:  1      20    17.00   *                   pcmpistri	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      13    13.00                       pcmpistrm	$1, %xmm0, %xmm2
-# CHECK-NEXT:  1      13    13.00   *                   pcmpistrm	$1, (%rax), %xmm2
+# CHECK-NEXT:  1      16    13.00   *                   pcmpistrm	$1, (%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        pcmpgtq	%xmm0, %xmm2
 # CHECK-NEXT:  1      4     1.00    *                   pcmpgtq	(%rax), %xmm2
 
