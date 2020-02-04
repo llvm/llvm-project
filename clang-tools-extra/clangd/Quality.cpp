@@ -275,8 +275,9 @@ computeScope(const NamedDecl *D) {
   }
   if (InClass)
     return SymbolRelevanceSignals::ClassScope;
-  // This threshold could be tweaked, e.g. to treat module-visible as global.
-  if (D->getLinkageInternal() < ExternalLinkage)
+  // ExternalLinkage threshold could be tweaked, e.g. module-visible as global.
+  // Avoid caching linkage if it may change after enclosing code completion.
+  if (hasUnstableLinkage(D) || D->getLinkageInternal() < ExternalLinkage)
     return SymbolRelevanceSignals::FileScope;
   return SymbolRelevanceSignals::GlobalScope;
 }
