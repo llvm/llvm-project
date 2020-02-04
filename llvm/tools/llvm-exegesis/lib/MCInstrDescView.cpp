@@ -119,8 +119,10 @@ Instruction::create(const MCInstrInfo &InstrInfo,
     if (OpInfo.RegClass >= 0)
       Operand.Tracker = &RATC.getRegisterClass(OpInfo.RegClass);
     int TiedToIndex = Description->getOperandConstraint(OpIndex, MCOI::TIED_TO);
-    assert(TiedToIndex == -1 ||
-           TiedToIndex < std::numeric_limits<uint8_t>::max());
+    assert((TiedToIndex == -1 ||
+            (0 <= TiedToIndex &&
+             TiedToIndex < std::numeric_limits<uint8_t>::max())) &&
+           "Unknown Operand Constraint");
     if (TiedToIndex >= 0)
       Operand.TiedToIndex = TiedToIndex;
     Operand.Info = &OpInfo;
