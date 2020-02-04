@@ -123,7 +123,7 @@ public:
   void printFunctionalType(InputRangeT &&inputs, ResultRangeT &&results) {
     auto &os = getStream();
     os << "(";
-    interleaveComma(inputs, os);
+    interleaveComma(inputs, *this);
     os << ")";
     printArrowTypeList(results);
   }
