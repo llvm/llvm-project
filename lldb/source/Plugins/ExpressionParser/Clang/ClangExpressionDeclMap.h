@@ -28,6 +28,8 @@
 
 namespace lldb_private {
 
+class ClangPersistentVariables;
+
 /// \class ClangExpressionDeclMap ClangExpressionDeclMap.h
 /// "lldb/Expression/ClangExpressionDeclMap.h" Manages named entities that are
 /// defined in LLDB's debug information.
@@ -78,8 +80,8 @@ public:
   ClangExpressionDeclMap(
       bool keep_result_in_memory,
       Materializer::PersistentVariableDelegate *result_delegate,
-      const lldb::TargetSP &target, const lldb::ClangASTImporterSP &importer,
-      ValueObject *ctx_obj);
+      const lldb::TargetSP &target,
+      const std::shared_ptr<ClangASTImporter> &importer, ValueObject *ctx_obj);
 
   /// Destructor
   ~ClangExpressionDeclMap() override;

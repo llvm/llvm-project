@@ -42,7 +42,7 @@ public:
   /// \param[in] importer
   ///     The ClangASTImporter to use.
   ClangASTSource(const lldb::TargetSP &target,
-                 const lldb::ClangASTImporterSP &importer);
+                 const std::shared_ptr<ClangASTImporter> &importer);
 
   /// Destructor
   ~ClangASTSource() override;
@@ -379,7 +379,7 @@ protected:
   /// The file manager paired with the AST context.
   clang::FileManager *m_file_manager;
   /// The target's AST importer.
-  lldb::ClangASTImporterSP m_ast_importer_sp;
+  std::shared_ptr<ClangASTImporter> m_ast_importer_sp;
   std::set<const clang::Decl *> m_active_lexical_decls;
   std::set<const char *> m_active_lookups;
 };

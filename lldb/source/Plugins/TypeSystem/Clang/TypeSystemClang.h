@@ -41,6 +41,8 @@ class PDBASTParser;
 
 namespace lldb_private {
 
+class ClangASTMetadata;
+class ClangASTSource;
 class Declaration;
 
 class TypeSystemClang : public TypeSystem {
