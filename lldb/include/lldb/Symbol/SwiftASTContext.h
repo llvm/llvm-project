@@ -14,7 +14,6 @@
 #define liblldb_SwiftASTContext_h_
 
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
-#include "lldb/Core/ClangForward.h"
 #include "lldb/Core/SwiftForward.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Core/ThreadSafeDenseSet.h"
@@ -32,6 +31,10 @@
 
 #include <map>
 #include <set>
+
+namespace llvm {
+class LLVMContext;
+}
 
 namespace swift {
 enum class IRGenDebugInfoLevel : unsigned;

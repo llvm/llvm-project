@@ -23,6 +23,10 @@
 #include <string>
 #include <unordered_map>
 
+namespace clang {
+class TypeDecl;
+}
+
 namespace lldb_private {
 
 /// \class ClangPersistentVariables ClangPersistentVariables.h
