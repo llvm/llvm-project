@@ -991,11 +991,21 @@ CGDebugInfo::getOrCreateRecordFwdDecl(const RecordType *Ty,
   uint64_t Size = 0;
   uint32_t Align = 0;
 
+  llvm::DINode::DIFlags Flags = llvm::DINode::FlagFwdDecl;
+
+  // Add flag to nontrivial forward declarations. To be consistent with MSVC,
+  // add the flag if a record has no definition because we don't know whether
+  // it will be trivial or not.
+  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    if (!CXXRD->hasDefinition() ||
+        (CXXRD->hasDefinition() && !CXXRD->isTrivial()))
+      Flags |= llvm::DINode::FlagNonTrivial;
+
   // Create the type.
   SmallString<256> Identifier = getTypeIdentifier(Ty, CGM, TheCU);
   llvm::DICompositeType *RetTy = DBuilder.createReplaceableCompositeType(
-      getTagForRecord(RD), RDName, Ctx, DefUnit, Line, 0, Size, Align,
-      llvm::DINode::FlagFwdDecl, Identifier);
+      getTagForRecord(RD), RDName, Ctx, DefUnit, Line, 0, Size, Align, Flags,
+      Identifier);
   if (CGM.getCodeGenOpts().DebugFwdTemplateParams)
     if (auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD))
       DBuilder.replaceArrays(RetTy, llvm::DINodeArray(),
