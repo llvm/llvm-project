@@ -29,6 +29,9 @@ class TypeDecl;
 
 namespace lldb_private {
 
+class ClangASTImporter;
+class TypeSystemClang;
+
 /// \class ClangPersistentVariables ClangPersistentVariables.h
 /// "lldb/Expression/ClangPersistentVariables.h" Manages persistent values
 /// that need to be preserved between expression invocations.
@@ -47,7 +50,7 @@ public:
     return pv->getKind() == PersistentExpressionState::eKindClang;
   }
 
-  lldb::ClangASTImporterSP GetClangASTImporter();
+  std::shared_ptr<ClangASTImporter> GetClangASTImporter();
 
   lldb::ExpressionVariableSP
   CreatePersistentVariable(const lldb::ValueObjectSP &valobj_sp) override;
@@ -145,7 +148,7 @@ private:
       m_hand_loaded_clang_modules; ///< These are Clang modules we hand-loaded;
                                    ///these are the highest-
                                    ///< priority source for macros.
-  lldb::ClangASTImporterSP m_ast_importer_sp;
+  std::shared_ptr<ClangASTImporter> m_ast_importer_sp;
 };
 
 } // namespace lldb_private

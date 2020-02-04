@@ -65,8 +65,8 @@ const char *g_lldb_local_vars_namespace_cstr = "$__lldb_local_vars";
 ClangExpressionDeclMap::ClangExpressionDeclMap(
     bool keep_result_in_memory,
     Materializer::PersistentVariableDelegate *result_delegate,
-    const lldb::TargetSP &target, const lldb::ClangASTImporterSP &importer,
-    ValueObject *ctx_obj)
+    const lldb::TargetSP &target,
+    const std::shared_ptr<ClangASTImporter> &importer, ValueObject *ctx_obj)
     : ClangASTSource(target, importer), m_found_entities(), m_struct_members(),
       m_keep_result_in_memory(keep_result_in_memory),
       m_result_delegate(result_delegate), m_ctx_obj(ctx_obj), m_parser_vars(),

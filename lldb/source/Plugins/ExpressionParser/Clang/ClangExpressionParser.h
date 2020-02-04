@@ -31,6 +31,7 @@ class CompilerInstance;
 namespace lldb_private {
 
 class IRExecutionUnit;
+class TypeSystemClang;
 
 /// \class ClangExpressionParser ClangExpressionParser.h
 /// "lldb/Expression/ClangExpressionParser.h" Encapsulates an instance of
