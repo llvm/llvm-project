@@ -1468,6 +1468,19 @@ define <4 x i32> @splat_assoc_add(<4 x i32> %x, <4 x i32> %y) {
   ret <4 x i32> %r
 }
 
+define <4 x i32> @splat_assoc_add_undef_constant_elts(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @splat_assoc_add_undef_constant_elts(
+; CHECK-NEXT:    [[SPLATX:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[A:%.*]] = add <4 x i32> [[Y:%.*]], <i32 undef, i32 42, i32 undef, i32 42>
+; CHECK-NEXT:    [[R:%.*]] = add <4 x i32> [[SPLATX]], [[A]]
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %splatx = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> zeroinitializer
+  %a = add <4 x i32> %y, <i32 undef, i32 42, i32 undef, i32 42>
+  %r = add <4 x i32> %splatx, %a
+  ret <4 x i32> %r
+}
+
 ; Non-zero splat index; commute operands; FMF intersect
 
 define <2 x float> @splat_assoc_fmul(<2 x float> %x, <2 x float> %y) {
@@ -1496,6 +1509,21 @@ define <3 x i8> @splat_assoc_mul(<3 x i8> %x, <3 x i8> %y, <3 x i8> %z) {
   %splatz = shufflevector <3 x i8> %z, <3 x i8> undef, <3 x i32> <i32 2, i32 2, i32 2>
   %a = mul nsw <3 x i8> %y, %splatz
   %r = mul <3 x i8> %a, %splatx
+  ret <3 x i8> %r
+}
+
+define <3 x i8> @splat_assoc_mul_undef_elts(<3 x i8> %x, <3 x i8> %y, <3 x i8> %z) {
+; CHECK-LABEL: @splat_assoc_mul_undef_elts(
+; CHECK-NEXT:    [[SPLATX:%.*]] = shufflevector <3 x i8> [[X:%.*]], <3 x i8> undef, <3 x i32> <i32 2, i32 undef, i32 2>
+; CHECK-NEXT:    [[SPLATZ:%.*]] = shufflevector <3 x i8> [[Z:%.*]], <3 x i8> undef, <3 x i32> <i32 2, i32 2, i32 undef>
+; CHECK-NEXT:    [[A:%.*]] = mul nsw <3 x i8> [[SPLATZ]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = mul nuw nsw <3 x i8> [[A]], [[SPLATX]]
+; CHECK-NEXT:    ret <3 x i8> [[R]]
+;
+  %splatx = shufflevector <3 x i8> %x, <3 x i8> undef, <3 x i32> <i32 2, i32 undef, i32 2>
+  %splatz = shufflevector <3 x i8> %z, <3 x i8> undef, <3 x i32> <i32 2, i32 2, i32 undef>
+  %a = mul nsw <3 x i8> %y, %splatz
+  %r = mul nsw nuw <3 x i8> %a, %splatx
   ret <3 x i8> %r
 }
 
