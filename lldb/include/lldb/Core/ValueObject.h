@@ -892,7 +892,6 @@ protected:
       m_is_synthetic_children_generated : 1;
 
   friend class ValueObjectChild;
-  friend class ClangExpressionDeclMap; // For GetValue
   friend class ExpressionVariable;     // For SetName
   friend class Target;                 // For SetName
   friend class ValueObjectConstResultImpl;
