@@ -2136,7 +2136,7 @@ void AMDGPUDAGToDAGISel::SelectFMAD_FMA(SDNode *N) {
   bool Sel1 = SelectVOP3PMadMixModsImpl(Src1, Src1, Src1Mods);
   bool Sel2 = SelectVOP3PMadMixModsImpl(Src2, Src2, Src2Mods);
 
-  assert((IsFMA || !Mode.FP32Denormals) &&
+  assert((IsFMA || !Mode.allFP32Denormals()) &&
          "fmad selected with denormals enabled");
   // TODO: We can select this with f32 denormals enabled if all the sources are
   // converted from f16 (in which case fmad isn't legal).
