@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++2a -fsyntax-only -Wno-unused-value %s -verify
 
+typedef __SIZE_TYPE__ size_t;
+
 namespace basic_sema {
 
 consteval int f1(int i) {
@@ -103,7 +105,7 @@ auto f1() {
 }
 
 namespace invalid_function {
-using size_t = unsigned long;
+
 struct A {
   consteval void *operator new(size_t count);
   // expected-error@-1 {{'operator new' cannot be declared consteval}}
