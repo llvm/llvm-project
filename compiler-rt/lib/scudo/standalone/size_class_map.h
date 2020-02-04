@@ -66,11 +66,11 @@ public:
     DCHECK_LE(Size, MaxSize);
     if (Size <= MidSize)
       return (Size + MinSize - 1) >> MinSizeLog;
+    Size -= 1;
     const uptr L = getMostSignificantSetBitIndex(Size);
-    const uptr HBits = (Size >> (L - S)) & M;
-    const uptr LBits = Size & ((1UL << (L - S)) - 1);
-    const uptr L1 = L - MidSizeLog;
-    return MidClass + (L1 << S) + HBits + (LBits > 0);
+    const uptr LBits = (Size >> (L - S)) - (1 << S);
+    const uptr HBits = (L - MidSizeLog) << S;
+    return MidClass + 1 + HBits + LBits;
   }
 
   static u32 getMaxCachedHint(uptr Size) {
