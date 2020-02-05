@@ -9558,6 +9558,7 @@ void ASTReader::diagnoseOdrViolations() {
     ObjCPropertyName,
     ObjCPropertyType,
     ObjCPropertyAttributes,
+    ObjCImplementationControl,
     ObjCReferencedProtocolName
   };
 
@@ -11278,8 +11279,29 @@ void ASTReader::diagnoseOdrViolations() {
       Diagnosed = true;
     }
   }
+
+  // Diagnose property implementation mismatches (@required/@optional),
+  // this used by @protocol's but not for @interface's.
+  auto ODRDiagObjCImplControl =
+      [&ODRDiagDeclError, &ODRDiagDeclNote](NamedDecl *Container, StringRef FirstModule,
+                         StringRef SecondModule, auto *FirstProp,
+                         auto *SecondProp, unsigned FirstImplControl, unsigned SecondImplControl) {
+    bool IsMethod = isa<ObjCMethodDecl>(FirstProp);
+    if (FirstImplControl != SecondImplControl) {
+      ODRDiagDeclError(Container, FirstModule,
+                       FirstProp->getLocation(),
+                       FirstProp->getSourceRange(), ObjCImplementationControl)
+          << FirstImplControl << IsMethod;
+      ODRDiagDeclNote(SecondModule, SecondProp->getLocation(),
+                      SecondProp->getSourceRange(), ObjCImplementationControl)
+          << SecondImplControl << IsMethod;
+      return true;
+    }
+    return false;
+  };
+
   auto ODRDiagObjCProperty =
-      [&ComputeQualTypeODRHash, &ODRDiagDeclError,
+      [&ComputeQualTypeODRHash, &ODRDiagDeclError, &ODRDiagObjCImplControl,
        &ODRDiagDeclNote](NamedDecl *FirstObjCContainer, StringRef FirstModule,
                          StringRef SecondModule, ObjCPropertyDecl *FirstProp,
                          ObjCPropertyDecl *SecondProp) {
@@ -11307,6 +11329,11 @@ void ASTReader::diagnoseOdrViolations() {
               << SecondII << SecondProp->getType();
           return true;
         }
+
+        if (ODRDiagObjCImplControl(FirstObjCContainer, FirstModule, SecondModule,
+                               FirstProp, SecondProp, FirstProp->getPropertyImplementation(),
+                               SecondProp->getPropertyImplementation()))
+          return true;
 
         // Go over the attributes and stop at the first mismatch
         unsigned FirstAttrs = (unsigned)FirstProp->getPropertyAttributes();
@@ -11348,7 +11375,7 @@ void ASTReader::diagnoseOdrViolations() {
 
   auto ODRDiagObjCMethod =
       [&ComputeQualTypeODRHash, &ODRDiagDeclError, &ODRDiagDeclNote,
-       &ODRDiagCommonMethodChecks](
+       &ODRDiagCommonMethodChecks, &ODRDiagObjCImplControl](
           NamedDecl *FirstObjCContainer, StringRef FirstModule,
           StringRef SecondModule, ObjCMethodDecl *FirstMethod,
           ObjCMethodDecl *SecondMethod) {
@@ -11374,6 +11401,10 @@ void ASTReader::diagnoseOdrViolations() {
           return true;
 
         }
+        if (ODRDiagObjCImplControl(FirstObjCContainer, FirstModule, SecondModule,
+                               FirstMethod, SecondMethod, FirstMethod->getImplementationControl(),
+                               SecondMethod->getImplementationControl()))
+          return true;
 
         if (FirstMethod->isThisDeclarationADesignatedInitializer() !=
             SecondMethod->isThisDeclarationADesignatedInitializer()) {

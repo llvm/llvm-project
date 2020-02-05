@@ -283,6 +283,7 @@ def err_module_odr_violation_mismatch_decl_diff : Error<
     "retain|copy|nonatomic|setter|atomic|weak|strong|"
     "unsafe_unretained|nullability|null_resettable|class|}4'"
     " property attribute|"
+  "%select{no|'required'|'optional'}4 %select{property|method}5 control|"
   "with %ordinal4 protocol named %5|"
   "}3">;
 
@@ -365,6 +366,7 @@ def note_module_odr_violation_mismatch_decl_diff : Note<"but in '%0' found "
   "property name %2|"
   "property %2 with type %3|"
   "no written or default attribute for property|"
+  "%select{no|'required'|'optional'}2 %select{property|method}3 control|"
   "with %ordinal2 protocol named %3|"
   "}1">;
 
