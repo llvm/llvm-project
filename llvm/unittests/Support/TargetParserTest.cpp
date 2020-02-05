@@ -637,6 +637,27 @@ TEST(TargetParserTest, ARMArchExtFeature) {
   }
 }
 
+static bool
+testArchExtDependency(const char *ArchExt,
+                      const std::initializer_list<const char *> &Expected) {
+  std::vector<StringRef> Features;
+
+  if (!ARM::appendArchExtFeatures("", ARM::ArchKind::ARMV8_1MMainline, ArchExt,
+                                  Features))
+    return false;
+
+  return llvm::all_of(Expected, [&](StringRef Ext) {
+    return llvm::is_contained(Features, Ext);
+  });
+}
+
+TEST(TargetParserTest, ARMArchExtDependencies) {
+  EXPECT_TRUE(testArchExtDependency("mve", {"+mve", "+dsp"}));
+  EXPECT_TRUE(testArchExtDependency("mve.fp", {"+mve.fp", "+mve", "+dsp"}));
+  EXPECT_TRUE(testArchExtDependency("nodsp", {"-dsp", "-mve", "-mve.fp"}));
+  EXPECT_TRUE(testArchExtDependency("nomve", {"-mve", "-mve.fp"}));
+}
+
 TEST(TargetParserTest, ARMparseHWDiv) {
   const char *hwdiv[] = {"thumb", "arm", "arm,thumb", "thumb,arm"};
 
