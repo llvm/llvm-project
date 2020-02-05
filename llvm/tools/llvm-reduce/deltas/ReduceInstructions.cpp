@@ -59,7 +59,7 @@ static unsigned countInstructions(Module *Program) {
 }
 
 void llvm::reduceInstructionsDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing Instructions...\n";
+  outs() << "*** Reducing Insructions...\n";
   unsigned InstCount = countInstructions(Test.getProgram());
   runDeltaPass(Test, InstCount, extractInstrFromModule);
 }
