@@ -15,15 +15,12 @@
 }
 
 module attributes {
-  spv.target_env = {
-    version = 3 : i32,
-    extensions = [],
-    capabilities = [1: i32, 63: i32], // Shader, GroupNonUniformArithmetic
-    limits = {
+  spv.target_env = #spv.target_env<
+    V_1_3, [], [Shader, GroupNonUniformArithmetic],
+    {
       max_compute_workgroup_invocations = 128 : i32,
       max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>
-    }
-  }
+    }>
 } {
 
 // CHECK:      spv.globalVariable
@@ -80,15 +77,12 @@ func @single_workgroup_reduction(%input: memref<16xi32>, %output: memref<1xi32>)
 }
 
 module attributes {
-  spv.target_env = {
-    version = 3 : i32,
-    extensions = [],
-    capabilities = [1: i32, 63: i32], // Shader, GroupNonUniformArithmetic
-    limits = {
+  spv.target_env = #spv.target_env<
+    V_1_3, [], [Shader, GroupNonUniformArithmetic],
+    {
       max_compute_workgroup_invocations = 128 : i32,
       max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>
-    }
-  }
+    }>
 } {
 func @single_workgroup_reduction(%input: memref<16xi32>, %output: memref<1xi32>) {
   // expected-error @+1 {{failed to legalize operation 'linalg.generic'}}
@@ -116,15 +110,12 @@ func @single_workgroup_reduction(%input: memref<16xi32>, %output: memref<1xi32>)
 }
 
 module attributes {
-  spv.target_env = {
-    version = 3 : i32,
-    extensions = [],
-    capabilities = [1: i32, 63: i32], // Shader, GroupNonUniformArithmetic
-    limits = {
+  spv.target_env = #spv.target_env<
+    V_1_3, [], [Shader, GroupNonUniformArithmetic],
+    {
       max_compute_workgroup_invocations = 128 : i32,
       max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>
-    }
-  }
+    }>
 } {
 func @single_workgroup_reduction(%input: memref<16xi32>, %output: memref<1xi32>) attributes {
   spv.entry_point_abi = {local_size = dense<[32, 1, 1]>: vector<3xi32>}
@@ -154,15 +145,12 @@ func @single_workgroup_reduction(%input: memref<16xi32>, %output: memref<1xi32>)
 }
 
 module attributes {
-  spv.target_env = {
-    version = 3 : i32,
-    extensions = [],
-    capabilities = [1: i32, 63: i32], // Shader, GroupNonUniformArithmetic
-    limits = {
+  spv.target_env = #spv.target_env<
+    V_1_3, [], [Shader, GroupNonUniformArithmetic],
+    {
       max_compute_workgroup_invocations = 128 : i32,
       max_compute_workgroup_size = dense<[128, 128, 64]> : vector<3xi32>
-    }
-  }
+    }>
 } {
 func @single_workgroup_reduction(%input: memref<16x8xi32>, %output: memref<16xi32>) attributes {
   spv.entry_point_abi = {local_size = dense<[16, 8, 1]>: vector<3xi32>}

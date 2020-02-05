@@ -117,6 +117,8 @@ SPIRVDialect::SPIRVDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context) {
   addTypes<ArrayType, ImageType, PointerType, RuntimeArrayType, StructType>();
 
+  addAttributes<TargetEnvAttr>();
+
   // Add SPIR-V ops.
   addOperations<
 #define GET_OP_LIST
@@ -626,6 +628,175 @@ void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   default:
     llvm_unreachable("unhandled SPIR-V type");
   }
+}
+
+//===----------------------------------------------------------------------===//
+// Attribute Parsing
+//===----------------------------------------------------------------------===//
+
+/// Parses a comma-separated list of keywords, invokes `processKeyword` on each
+/// of the parsed keyword, and returns failure if any error occurs.
+static ParseResult parseKeywordList(
+    DialectAsmParser &parser,
+    function_ref<LogicalResult(llvm::SMLoc, StringRef)> processKeyword) {
+  if (parser.parseLSquare())
+    return failure();
+
+  // Special case for empty list.
+  if (succeeded(parser.parseOptionalRSquare()))
+    return success();
+
+  // Keep parsing the keyword and an optional comma following it. If the comma
+  // is successfully parsed, then we have more keywords to parse.
+  do {
+    auto loc = parser.getCurrentLocation();
+    StringRef keyword;
+    if (parser.parseKeyword(&keyword) || failed(processKeyword(loc, keyword)))
+      return failure();
+  } while (succeeded(parser.parseOptionalComma()));
+
+  if (parser.parseRSquare())
+    return failure();
+
+  return success();
+}
+
+/// Parses a spirv::TargetEnvAttr.
+static Attribute parseTargetAttr(DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return {};
+
+  Builder &builder = parser.getBuilder();
+
+  IntegerAttr versionAttr;
+  {
+    auto loc = parser.getCurrentLocation();
+    StringRef version;
+    if (parser.parseKeyword(&version) || parser.parseComma())
+      return {};
+
+    if (auto versionSymbol = spirv::symbolizeVersion(version)) {
+      versionAttr =
+          builder.getI32IntegerAttr(static_cast<uint32_t>(*versionSymbol));
+    } else {
+      parser.emitError(loc, "unknown version: ") << version;
+      return {};
+    }
+  }
+
+  ArrayAttr extensionsAttr;
+  {
+    SmallVector<Attribute, 1> extensions;
+    llvm::SMLoc errorloc;
+    StringRef errorKeyword;
+
+    auto processExtension = [&](llvm::SMLoc loc, StringRef extension) {
+      if (spirv::symbolizeExtension(extension)) {
+        extensions.push_back(builder.getStringAttr(extension));
+        return success();
+      }
+      return errorloc = loc, errorKeyword = extension, failure();
+    };
+    if (parseKeywordList(parser, processExtension) || parser.parseComma()) {
+      if (!errorKeyword.empty())
+        parser.emitError(errorloc, "unknown extension: ") << errorKeyword;
+      return {};
+    }
+
+    extensionsAttr = builder.getArrayAttr(extensions);
+  }
+
+  ArrayAttr capabilitiesAttr;
+  {
+    SmallVector<Attribute, 4> capabilities;
+    llvm::SMLoc errorloc;
+    StringRef errorKeyword;
+
+    auto processCapability = [&](llvm::SMLoc loc, StringRef capability) {
+      if (auto capSymbol = spirv::symbolizeCapability(capability)) {
+        capabilities.push_back(
+            builder.getI32IntegerAttr(static_cast<uint32_t>(*capSymbol)));
+        return success();
+      }
+      return errorloc = loc, errorKeyword = capability, failure();
+    };
+    if (parseKeywordList(parser, processCapability) || parser.parseComma()) {
+      if (!errorKeyword.empty())
+        parser.emitError(errorloc, "unknown capability: ") << errorKeyword;
+      return {};
+    }
+
+    capabilitiesAttr = builder.getArrayAttr(capabilities);
+  }
+
+  DictionaryAttr limitsAttr;
+  {
+    auto loc = parser.getCurrentLocation();
+    if (parser.parseAttribute(limitsAttr))
+      return {};
+
+    if (!limitsAttr.isa<spirv::ResourceLimitsAttr>()) {
+      parser.emitError(
+          loc,
+          "limits must be a dictionary attribute containing two 32-bit integer "
+          "attributes 'max_compute_workgroup_invocations' and "
+          "'max_compute_workgroup_size'");
+      return {};
+    }
+  }
+
+  if (parser.parseGreater())
+    return {};
+
+  return spirv::TargetEnvAttr::get(versionAttr, extensionsAttr,
+                                   capabilitiesAttr, limitsAttr);
+}
+
+Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
+                                       Type type) const {
+  // SPIR-V attributes are dictionaries so they do not have type.
+  if (type) {
+    parser.emitError(parser.getNameLoc(), "unexpected type");
+    return {};
+  }
+
+  // Parse the kind keyword first.
+  StringRef attrKind;
+  if (parser.parseKeyword(&attrKind))
+    return {};
+
+  if (attrKind == spirv::TargetEnvAttr::getKindName())
+    return parseTargetAttr(parser);
+
+  parser.emitError(parser.getNameLoc(), "unknown SPIR-V attriubte kind: ")
+      << attrKind;
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// Attribute Printing
+//===----------------------------------------------------------------------===//
+
+static void print(spirv::TargetEnvAttr targetEnv, DialectAsmPrinter &printer) {
+  auto &os = printer.getStream();
+  printer << spirv::TargetEnvAttr::getKindName() << "<"
+          << spirv::stringifyVersion(targetEnv.getVersion()) << ", [";
+  interleaveComma(targetEnv.getExtensionsAttr(), os, [&](Attribute attr) {
+    os << attr.cast<StringAttr>().getValue();
+  });
+  printer << "], [";
+  interleaveComma(targetEnv.getCapabilities(), os, [&](spirv::Capability cap) {
+    os << spirv::stringifyCapability(cap);
+  });
+  printer << "], " << targetEnv.getResourceLimits() << ">";
+}
+
+void SPIRVDialect::printAttribute(Attribute attr,
+                                  DialectAsmPrinter &printer) const {
+  if (auto targetEnv = attr.dyn_cast<TargetEnvAttr>())
+    print(targetEnv, printer);
+  else
+    llvm_unreachable("unhandled SPIR-V attribute kind");
 }
 
 //===----------------------------------------------------------------------===//

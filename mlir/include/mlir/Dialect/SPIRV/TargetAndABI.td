@@ -59,13 +59,4 @@ def SPV_ResourceLimitsAttr : StructAttr<"ResourceLimitsAttr", SPV_Dialect, [
     StructFieldAttr<"max_compute_workgroup_size", I32ElementsAttr>
 ]>;
 
-// For the generated SPIR-V module, this attribute specifies the target version,
-// allowed extensions and capabilities, and resource limits.
-def SPV_TargetEnvAttr : StructAttr<"TargetEnvAttr", SPV_Dialect, [
-    StructFieldAttr<"version", SPV_VersionAttr>,
-    StructFieldAttr<"extensions", SPV_ExtensionArrayAttr>,
-    StructFieldAttr<"capabilities", SPV_CapabilityArrayAttr>,
-    StructFieldAttr<"limits", SPV_ResourceLimitsAttr>
-]>;
-
 #endif // SPIRV_TARGET_AND_ABI

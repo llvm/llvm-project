@@ -26,15 +26,15 @@ public:
 
   static StringRef getDialectNamespace() { return "spv"; }
 
+  //===--------------------------------------------------------------------===//
+  // Type
+  //===--------------------------------------------------------------------===//
+
   /// Checks if the given `type` is valid in SPIR-V dialect.
   static bool isValidType(Type type);
 
   /// Checks if the given `scalar type` is valid in SPIR-V dialect.
   static bool isValidScalarType(Type type);
-
-  /// Returns the attribute name to use when specifying decorations on results
-  /// of operations.
-  static std::string getAttributeName(Decoration decoration);
 
   /// Parses a type registered to this dialect.
   Type parseType(DialectAsmParser &parser) const override;
@@ -42,9 +42,19 @@ public:
   /// Prints a type registered to this dialect.
   void printType(Type type, DialectAsmPrinter &os) const override;
 
-  /// Provides a hook for materializing a constant to this dialect.
-  Operation *materializeConstant(OpBuilder &builder, Attribute value, Type type,
-                                 Location loc) override;
+  //===--------------------------------------------------------------------===//
+  // Attribute
+  //===--------------------------------------------------------------------===//
+
+  /// Returns the attribute name to use when specifying decorations on results
+  /// of operations.
+  static std::string getAttributeName(Decoration decoration);
+
+  /// Parses an attribute registered to this dialect.
+  Attribute parseAttribute(DialectAsmParser &parser, Type type) const override;
+
+  /// Prints an attribute registered to this dialect.
+  void printAttribute(Attribute, DialectAsmPrinter &printer) const override;
 
   /// Provides a hook for verifying SPIR-V dialect attributes attached to the
   /// given op.
@@ -62,6 +72,14 @@ public:
   LogicalResult verifyRegionResultAttribute(Operation *op, unsigned regionIndex,
                                             unsigned resultIndex,
                                             NamedAttribute attribute) override;
+
+  //===--------------------------------------------------------------------===//
+  // Constant
+  //===--------------------------------------------------------------------===//
+
+  /// Provides a hook for materializing a constant to this dialect.
+  Operation *materializeConstant(OpBuilder &builder, Attribute value, Type type,
+                                 Location loc) override;
 };
 
 } // end namespace spirv
