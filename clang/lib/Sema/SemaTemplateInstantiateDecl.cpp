@@ -4271,7 +4271,13 @@ bool Sema::CheckInstantiatedFunctionTemplateConstraints(
             Scope, MLTAL))
       return true;
   }
-
+  Qualifiers ThisQuals;
+  CXXRecordDecl *Record = nullptr;
+  if (auto *Method = dyn_cast<CXXMethodDecl>(Decl)) {
+    ThisQuals = Method->getMethodQualifiers();
+    Record = Method->getParent();
+  }
+  CXXThisScopeRAII ThisScope(*this, Record, ThisQuals, Record != nullptr);
   return CheckConstraintSatisfaction(Template, TemplateAC, TemplateArgs,
                                      PointOfInstantiation, Satisfaction);
 }
