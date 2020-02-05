@@ -177,6 +177,20 @@ ProgramStateRef setIteratorPosition(ProgramStateRef State, const SVal &Val,
   return nullptr;
 }
 
+ProgramStateRef createIteratorPosition(ProgramStateRef State, const SVal &Val,
+                                       const MemRegion *Cont, const Stmt* S,
+                                       const LocationContext *LCtx,
+                                       unsigned blockCount) {
+  auto &StateMgr = State->getStateManager();
+  auto &SymMgr = StateMgr.getSymbolManager();
+  auto &ACtx = StateMgr.getContext();
+
+  auto Sym = SymMgr.conjureSymbol(S, LCtx, ACtx.LongTy, blockCount);
+  State = assumeNoOverflow(State, Sym, 4);
+  return setIteratorPosition(State, Val,
+                             IteratorPosition::getPosition(Cont, Sym));
+}
+
 ProgramStateRef advancePosition(ProgramStateRef State, const SVal &Iter,
                                 OverloadedOperatorKind Op,
                                 const SVal &Distance) {
