@@ -19,8 +19,8 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
-#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Object/IRSymtab.h"
@@ -87,9 +87,9 @@ std::string getThinLTOOutputFile(const std::string &Path,
 
 /// Setup optimization remarks.
 Expected<std::unique_ptr<ToolOutputFile>>
-setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
-                         StringRef RemarksPasses, StringRef RemarksFormat,
-                         bool RemarksWithHotness, int Count = -1);
+setupLLVMOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
+                             StringRef RemarksPasses, StringRef RemarksFormat,
+                             bool RemarksWithHotness, int Count = -1);
 
 /// Setups the output file for saving statistics.
 Expected<std::unique_ptr<ToolOutputFile>>
