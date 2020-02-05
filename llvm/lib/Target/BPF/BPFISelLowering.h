@@ -109,6 +109,19 @@ private:
     return true;
   }
 
+  // Prevent reducing load width during SelectionDag phase.
+  // Otherwise, we may transform the following
+  //   ctx = ctx + reloc_offset
+  //   ... (*(u32 *)ctx) & 0x8000...
+  // to
+  //   ctx = ctx + reloc_offset
+  //   ... (*(u8 *)(ctx + 1)) & 0x80 ...
+  // which will be rejected by the verifier.
+  bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
+                             EVT NewVT) const override {
+    return false;
+  }
+
   unsigned EmitSubregExt(MachineInstr &MI, MachineBasicBlock *BB, unsigned Reg,
                          bool isSigned) const;
 
