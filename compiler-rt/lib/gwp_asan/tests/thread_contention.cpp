@@ -24,7 +24,7 @@ void asyncTask(gwp_asan::GuardedPoolAllocator *GPA,
   // Get ourselves a new allocation.
   for (unsigned i = 0; i < NumIterations; ++i) {
     volatile char *Ptr = reinterpret_cast<volatile char *>(
-        GPA->allocate(GPA->maximumAllocationSize()));
+        GPA->allocate(GPA->getAllocatorState()->maximumAllocationSize()));
     // Do any other threads have access to this page?
     EXPECT_EQ(*Ptr, 0);
 

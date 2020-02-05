@@ -16,6 +16,7 @@
 #include "gwp_asan/guarded_pool_allocator.h"
 #include "gwp_asan/optional/backtrace.h"
 #include "gwp_asan/options.h"
+#include "gwp_asan/optional/segv_handler.h"
 
 namespace gwp_asan {
 namespace test {
@@ -23,7 +24,7 @@ namespace test {
 // their own signal-safe Printf function. In LLVM, we use
 // `optional/printf_sanitizer_common.cpp` which supplies the __sanitizer::Printf
 // for this purpose.
-options::Printf_t getPrintfFunction();
+crash_handler::Printf_t getPrintfFunction();
 
 // First call returns true, all the following calls return false.
 bool OnlyOnce();
@@ -38,7 +39,6 @@ public:
     Opts.setDefaults();
     MaxSimultaneousAllocations = Opts.MaxSimultaneousAllocations;
 
-    Opts.Printf = gwp_asan::test::getPrintfFunction();
     Opts.InstallForkHandlers = gwp_asan::test::OnlyOnce();
     GPA.init(Opts);
   }
@@ -62,7 +62,6 @@ public:
     Opts.MaxSimultaneousAllocations = MaxSimultaneousAllocationsArg;
     MaxSimultaneousAllocations = MaxSimultaneousAllocationsArg;
 
-    Opts.Printf = gwp_asan::test::getPrintfFunction();
     Opts.InstallForkHandlers = gwp_asan::test::OnlyOnce();
     GPA.init(Opts);
   }
@@ -81,14 +80,19 @@ public:
     gwp_asan::options::Options Opts;
     Opts.setDefaults();
 
-    Opts.Printf = gwp_asan::test::getPrintfFunction();
     Opts.Backtrace = gwp_asan::options::getBacktraceFunction();
-    Opts.PrintBacktrace = gwp_asan::options::getPrintBacktraceFunction();
     Opts.InstallForkHandlers = gwp_asan::test::OnlyOnce();
     GPA.init(Opts);
+
+    gwp_asan::crash_handler::installSignalHandlers(
+        &GPA, gwp_asan::test::getPrintfFunction(),
+        gwp_asan::options::getPrintBacktraceFunction(), Opts.Backtrace);
   }
 
-  void TearDown() override { GPA.uninitTestOnly(); }
+  void TearDown() override {
+    GPA.uninitTestOnly();
+    gwp_asan::crash_handler::uninstallSignalHandlers();
+  }
 
 protected:
   gwp_asan::GuardedPoolAllocator GPA;
