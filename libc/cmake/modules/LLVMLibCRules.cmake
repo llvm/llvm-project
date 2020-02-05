@@ -287,7 +287,7 @@ function(add_redirector_library target_name)
   )
 endfunction(add_redirector_library)
 
-# Rule to add a gtest unittest.
+# Rule to add a libc unittest.
 # Usage
 #    add_libc_unittest(
 #      <target name>
@@ -353,7 +353,6 @@ function(add_libc_unittest target_name)
   add_dependencies(
     ${target_name}
     ${LIBC_UNITTEST_DEPENDS}
-    gtest
   )
 
   target_link_libraries(${target_name} PRIVATE LibcUnitTest)
