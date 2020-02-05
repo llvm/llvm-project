@@ -270,5 +270,13 @@ def : SourceOfDivergence<int_amdgcn_mfma_i32_32x32x8i8>;
 def : SourceOfDivergence<int_amdgcn_mfma_f32_32x32x2bf16>;
 def : SourceOfDivergence<int_amdgcn_mfma_f32_32x32x4bf16>;
 
+// The dummy boolean output is divergent from the IR's perspective,
+// but the mask results are uniform. These produce a divergent and
+// uniform result, so the returned struct is collectively divergent.
+// isAlwaysUniform can override the extract of the uniform component.
+def : SourceOfDivergence<int_amdgcn_if>;
+def : SourceOfDivergence<int_amdgcn_else>;
+def : SourceOfDivergence<int_amdgcn_loop>;
+
 foreach intr = AMDGPUImageDimAtomicIntrinsics in
 def : SourceOfDivergence<intr>;
