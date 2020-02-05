@@ -323,8 +323,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_BITCAST)
     // Don't worry about the size constraint.
     .legalIf(all(isRegisterType(0), isRegisterType(1)))
-    // FIXME: Testing hack
-    .legalForCartesianProduct({S16, LLT::vector(2, 8), })
     .lower();
 
 
