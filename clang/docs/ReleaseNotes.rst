@@ -194,6 +194,12 @@ Windows Support
 
     error LNK2005: "bool const std::_Is_integral<int>" (??$_Is_integral@H@std@@3_NB) already defined
 
+- The ``.exe`` output suffix is now added implicitly in MinGW mode, when
+  Clang is running on Windows (matching GCC's behaviour)
+
+- Fixed handling of TLS variables that are shared between object files
+  in MinGW environments
+
 C Language Changes in Clang
 ---------------------------
 
