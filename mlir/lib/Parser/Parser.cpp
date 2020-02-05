@@ -3573,8 +3573,9 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
 ///  operation         ::= op-result-list?
 ///                        (generic-operation | custom-operation)
 ///                        trailing-location?
-///  generic-operation ::= string-literal '(' ssa-use-list? ')' attribute-dict?
-///                        `:` function-type
+///  generic-operation ::= string-literal `(` ssa-use-list? `)`
+///                        successor-list? (`(` region-list `)`)?
+///                        attribute-dict? `:` function-type
 ///  custom-operation  ::= bare-id custom-operation-format
 ///  op-result-list    ::= op-result (`,` op-result)* `=`
 ///  op-result         ::= ssa-id (`:` integer-literal)
