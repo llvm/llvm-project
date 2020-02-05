@@ -723,18 +723,14 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
     return false;
   }
 
-  SmallPtrSet<MachineInstr*, 2> Ignore = { LoLoop.End };
-  SmallPtrSet<MachineInstr*, 4> Remove;
-  if (!RDA->isSafeToRemove(LoLoop.Dec, Remove, Ignore)) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: Unable to remove loop count chain.\n");
+  // Check that the only instruction using LoopDec is LoopEnd.
+  // TODO: Check for copy chains that really have no effect.
+  SmallPtrSet<MachineInstr*, 2> Uses;
+  RDA->getReachingLocalUses(LoLoop.Dec, ARM::LR, Uses);
+  if (Uses.size() > 1 || !Uses.count(LoLoop.End)) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Unable to remove LoopDec.\n");
     LoLoop.Revert = true;
-  } else {
-    LLVM_DEBUG(dbgs() << "ARM Loops: Will need to remove:\n";
-               for (auto *I : Remove)
-                 dbgs() << " - " << *I);
-    LoLoop.ToRemove.insert(Remove.begin(), Remove.end());
   }
-
   LoLoop.CheckLegality(BBUtils.get());
   Expand(LoLoop);
   return true;
@@ -970,6 +966,7 @@ void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {
     MIB.add(End->getOperand(0));
     MIB.add(End->getOperand(1));
     LLVM_DEBUG(dbgs() << "ARM Loops: Inserted LE: " << *MIB);
+    LoLoop.Dec->eraseFromParent();
     End->eraseFromParent();
     return &*MIB;
   };
