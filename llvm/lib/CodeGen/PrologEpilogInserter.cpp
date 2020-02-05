@@ -237,7 +237,7 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
     stashEntryDbgValues(*SaveBlock, EntryDbgValues);
 
   // Handle CSR spilling and restoring, for targets that need it.
-  if (MF.getTarget().usesPhysRegsForValues())
+  if (MF.getTarget().usesPhysRegsForPEI())
     spillCalleeSavedRegs(MF);
 
   // Allow the target machine to make final modifications to the function
