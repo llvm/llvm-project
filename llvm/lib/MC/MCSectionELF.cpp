@@ -172,9 +172,9 @@ void MCSectionELF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   }
 
   if (Flags & ELF::SHF_LINK_ORDER) {
-    assert(AssociatedSymbol);
+    assert(LinkedToSym);
     OS << ",";
-    printName(OS, AssociatedSymbol->getName());
+    printName(OS, LinkedToSym->getName());
   }
 
   if (isUnique())
